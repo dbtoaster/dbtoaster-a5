@@ -1,0 +1,66 @@
+To compute the confidence of the tuple $(i, \vec{r})$, we gather the set of all tuples $(i,\vec{r},\phi_i)$.  The conjunctive clauses $\phi_i$ combine disjunctively; only one clause needs to be satisfied for the tuple to be present in the possible world.  Given the probabilities of each individual clause, a technique pioneered by Karp and Luby \cite{KL1983} may be used to probabilistically compute the overlap between clauses; This overlap and the sum of individual probabilities multiply to generate an estimate of the tuple's confidence.
+
+This is similar to the approach taken by MAYBMS \cite{AKO-VLDBDEMO-2007}, with three critical differences.
+\begin{enumerate}
+\item The atoms that comprise a clause are broader; An equality atom has a probability of zero, so atoms must be composed of inequalities.
+\item Because equality atoms no longer exist, atoms relating two (or more) variables can not be represented by enumerating all possibilities.
+\item Because atoms now create dependencies between multiple variables, the probability of the clause itself may not be a straightforward integration.
+\end{enumerate}
+
+Also note that $X < Y + C$ (where either X or Y can take the value ZERO) is representative of all possible 2-variable inequalities.  Additionally, because a given point has 0 probability, there is no distinction between $<$ and LEQ.
+
+{\footnotesize
+\begin{center}
+\begin{tabular}{rcl}
+$X + C < Y$ & $\rightarrow$ & $X < Y - C$ \\
+$X > Y + C$ & $\rightarrow$ & $Y < X - C$ \\
+$X + C > Y$ & $\rightarrow$ & $Y < X + C$ \\
+$X < C$ & $\rightarrow$ & $X < ZERO + C$ \\
+$X > C$ & $\rightarrow$ & $ZERO < X - C$ \\
+\end{tabular}
+\end{center}
+}
+
+
+We can view the variables that comprise the atoms as a hyperspace with one dimension for each variable with every point in this space representing a possible world.  The hyperspace is weighted by the probability density at each point; the mass at a point corresponds to the product of the probability density functions for all variables.  In this space, each atom defines a 2-dimensional bounding plane.  Consequently every conjunctive clause defines a convex subspace.  Disjunctions of conjunctive clauses define a non-convex subspace from the union of multiple, potentially overlapping convex subspaces.  Obtaining the probability of a DNF formula, or its confidence, is equivalent to finding the mass contained within the subspace defined by the DNF.
+
+Pip employs a similar variant of the the Karp-Luby DNF estimator as the one used in Maybms.  This monte-carlo style algorithm uses the independent probabilities of each conjunctive clause to compute their joint probability by estimating the frequency of overlap between clauses.  This algorithm is shown in Figure \ref{fig:karpluby}.  After repeated invocations, the algorithm's return value's average converges towards the ratio of the confidence to the sum of the independent probabilities.  The sum of independent probabilities may then be used to produce the confidence.
+
+\begin{figure}
+\footnotesize
+\begin{center}
+\begin{enumerate}
+\item Select a clause $C$ randomly, weighted by the independent probability of $C$.
+\item Generate a variable mapping $M$ according to each variable's distribution that satisfies $C$
+\item Count the number of clauses that are satisfied by $M$.
+\item Return the reciprocal of the count.
+\end{enumerate}
+\caption{The Karp-Luby estimator}
+\label{fig:karpluby}
+\end{center}
+\end{figure}
+
+There are three major optimization challenges involved in modifying this algorithm for the continuous case.  Firstly, computing the independent probability of each conjunctive clause is equivalent to performing a multivariate integral.  Each 2-variable atom makes 2 variables in the integral inseparable; many 2-variable atoms can render the integral computationally difficult to evaluate.  Secondly, generating a variable mapping that satisfies a clause may require repeatedly discarding generated variables.  A naive generate-then-check approach suffers from this problem, especially if the probability mass contained in the clause is small.  Finally, we consider mechanisms for deterministically generating clause-satisfying variables from arbitrary probability distributions.  By understanding the relative costs of each mechanism used to generate a satisfying variable assignment, the dbms can choose the optimal one for the current situation.
+
+\subsection{Integration}
+The Karp-Luby estimator requires that the independent confidence in each conjunctive clause be known beforehand.  The naive approach to this would require computing the sum of all mass contained within each clause.  While variables not involved in the clause have no impact on its confidence and may be skipped, this still requires a potentially large and inseparable multivariate integral.
+
+Fortunately, variables that appear only in single-variable atoms are independent of the other variables.  Extending this idea a bit further, consider the graph where each variable is a vertex and each edge represents a two-variable atom in the clause.  Each connected component of the graph may be evaluated independently.  In the (hopefully) common case where this graph is extremely sparse (ie, most atoms have only 1 variable), this means we can significantly limit the number of variables simultaneously being integrated.
+
+Because our distribution functions are provided as CDFs, integrating a single variable is trivial.  Integrating multiple variables requires more effort.  There are several ways to go about this.  If the variable distributions may be expressed as integrable formulas, the joint distribution may be computed algebraically and subsequently computed.  However, we must also be able to address instances where the distribution is provided programatically.
+
+%cite Numerical Recipes?
+As numerical multivariate integration can be expensive, the traditional approach to this problem is to perform a Monte-Carlo integration; Repeatedly select values for all relevant variables and test whether the selected point is in the area in question.  This approach is extremely expensive when the mass in the area in question is small.  Under such conditions, a large number of samples must be taken before a statistically meaningful result can be obtained.  
+
+Another possibility is to integrate via the same Karp-Luby estimation technique described above.  The probability mass contained within each atom can be obtained easily.  For a single clause, only one evaluation of the CDF is required.  For a two-variable clause, a two-variable integration of the PDF is required.  However, this is a one-dimensional integral as the inner variable has already been integrated for us; To evaluate the probability that $X < Y + C$ is satisfied, we integrate:
+$$\int_{-\infty}^{\infty} PDF_X(x) \int_{-\infty}^{x-C} PDF_Y(y)\ dy\ dx = \int_{-\infty}^{\infty} PDF_X(x) \cdot CDF_Y(x-C) dx$$
+
+We now perform an iterative traversal of the atoms.  We begin with two atoms.  Using the normal Karp-Luby approach we can compute the ratio of the sum of the probability mass of X and Y independently to their shared mass.  Dividing the sum of the atom masses by this computed value produces the shared probability mass.  We continue this process, iteratively combining the next atom with the shared mass of the previous atom.
+
+\subsection{Variable Generation}
+
+
+\subsection{Deterministic Variable Generation}
+
+
+

@@ -1,0 +1,24 @@
+Our implementation is built on top of PostgreSQL by adding a set of variables and functions for manipulating those variables.  This includes a modified version of a comparison operator in a select.  Our implementation rewrites SELECT commands as necessary to take advantage of the modified function.  We first describe the variables to be introduced.
+
+\paragraph{lineage} Every variable of this type expresses an atom in a variable's lineage.  The atom consists of three elements: A constant C, and two variable IDs X and Y (see pVar below).  The corresponding atom is X > Y + C.  The special distribution identifier 0 indicates that the variable should be ignored and treated as a zero (for the creation of 1-variable atoms).
+
+\paragraph{pVar} Every variable of this type indicates a probabilistic variable.  The variable consists of a distribution identifier (indexing into the distribution table) and a variable identifier (indexing into the distribution's variable table).  
+\\
+\\
+We next describe new meta-tables.
+\paragraph{pip-distributions} This table contains a mapping between unique distribution identifiers, names of the distribution functions, references to user-defined functions to generate variables from those distributions, and and distribution variable tables.  Identifier 0 is reserved, and corresponds to the constant ZERO.
+
+\paragraph{distribution-variable} A series of tables, one per distribution.  Every such table includes one row for every variable allocated by pVarCreate().  Columns include the identifier, as well as all parameters required to generate a variable of the type.
+\\
+\\
+Finally, we describe new functions
+
+\paragraph{CreateDistribution} This function takes in a name, a function identifier, as well as a table name and creates the corresponding row in the pip-distributions table.  The function returns the created row.  This function has side effects.
+
+\paragraph{pVarCreate} This function takes in a string identifying a previously defined distribution, as well as a row of parameters.  The function creates a new row in the distribution's variable table and returns a new pVar that corresponds to the variable.  This function has side effects.
+
+\paragraph{pVarCompare} This is actually three functions, each of which returns a lineage atom.  Two of the functions take in a pVar corresponding to either X or Y, as well as a Float that corresponds to C.  Whichever variable is not passed in is set to 0.  The third takes in both pVars X and Y, as well as the Float C.  This function does not have side effects. 
+
+\paragraph{conf-accum} This function is the accumulator step of an aggregator that computes the confidence of a set of rows.  It probes each input row for lineage tuples and appends to an ARRAY OF ( [ ARRAY OF ( lineage ), Float ]  ).  Each inner array is a conjunctive clause while the outer array is a disjunction of the conjunctive clauses.  The function also computes the independent probability of the row.
+
+\paragraph{conf-final} This function is the final step of an aggregator that computes the confidence of a set of rows.  It takes in an ARRAY OF ( [ ARRAY OF ( lineage ), Float ] ) and performs a Karp/Luby style integration.  This approach is likely to be entirely in-memory; A later release should instead perform the aggregate computation as a two pass algorithm, first to compute the independent probability of a given set of clauses, and then later to compute the actual values.
