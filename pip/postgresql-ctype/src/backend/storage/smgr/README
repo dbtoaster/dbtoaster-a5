@@ -1,0 +1,31 @@
+# $PostgreSQL: pgsql/src/backend/storage/smgr/README,v 1.3 2004/02/10 01:55:26 tgl Exp $
+
+In the original Berkeley Postgres system, there were several storage managers,
+of which only the "magnetic disk" manager remains.  (At Berkeley there were
+also managers for the Sony WORM optical disk jukebox and persistent main
+memory, but these were never supported in any externally released Postgres,
+nor in any version of PostgreSQL.)  However, we retain the notion of a storage
+manager switch in case anyone wants to reintroduce other kinds of storage
+managers.
+
+In Berkeley Postgres each relation was tagged with the ID of the storage
+manager to use for it.  This is gone.  It would be more reasonable to
+associate storage managers with tablespaces (a feature not present as this
+text is being written, but one likely to emerge soon).
+
+The files in this directory, and their contents, are
+
+    smgrtype.c	Storage manager type -- maps string names to storage manager
+		IDs and provides simple comparison operators.  This is the
+		regproc support for type 'smgr' in the system catalogs.
+		(This is vestigial since no columns of type smgr exist
+		in the catalogs anymore.)
+
+    smgr.c	The storage manager switch dispatch code.  The routines in
+		this file call the appropriate storage manager to do hardware
+		accesses requested by the backend.  smgr.c also manages the
+		file handle cache (SMgrRelation table).
+
+    md.c	The magnetic disk storage manager.
+
+Note that md.c in turn relies on src/backend/storage/file/fd.c.
