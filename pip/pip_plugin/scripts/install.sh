@@ -50,9 +50,10 @@ if [ DROPALL = "yes" ] ; then
 fi
 
 if [ "0" != `cat upgrade.del.sql | wc -l` ] ; then
-  echo "Removing old code..."
+  echo "Removing old code (this may trigger errors; it's safe to ignore them)..."
   psql $DB -f upgrade.del.sql > /dev/null 2> ./status
   cat status | grep -v NOTICE
+  echo "----- Ignore any errors above this line -----";
 fi
 
 echo "Installing..."
