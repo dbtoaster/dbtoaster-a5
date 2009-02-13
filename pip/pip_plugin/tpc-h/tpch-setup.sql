@@ -143,28 +143,28 @@ CREATE TABLE "LINEITEM"
 WITH (OIDS=FALSE);
 
 COPY "REGION" ( "R_REGIONKEY", "R_NAME", "R_COMMENT" )
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/region.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/region.tbl' WITH DELIMITER '|';
 
 COPY "NATION" ( "N_NATIONKEY", "N_NAME", "N_REGIONKEY", "N_COMMENT" )
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/nation.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/nation.tbl' WITH DELIMITER '|';
 
 COPY "CUSTOMER"("C_CUSTKEY", "C_NAME", "C_ADDRESS", "C_NATIONKEY", "C_PHONE", "C_ACCTBAL", "C_MKTSEGMENT", "C_COMMENT")
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/customer.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/customer.tbl' WITH DELIMITER '|';
 
 COPY "SUPPLIER" ( "S_SUPPKEY", "S_NAME", "S_ADDRESS", "S_NATIONKEY", "S_PHONE", "S_ACCTBAL", "S_COMMENT" )
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/supplier.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/supplier.tbl' WITH DELIMITER '|';
 
 COPY "PART" ( "P_PARTKEY", "P_NAME", "P_MFGR", "P_BRAND", "P_TYPE", "P_SIZE", "P_CONTAINER", "P_RETAILPRICE", "P_COMMENT" )
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/part.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/part.tbl' WITH DELIMITER '|';
 
 COPY "PARTSUPP" ( "PS_PARTKEY", "PS_SUPPKEY", "PS_AVAILQTY", "PS_SUPPLYCOST", "PS_COMMENT" )
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/partsupp.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/partsupp.tbl' WITH DELIMITER '|';
 
 COPY "ORDERS" ( "O_ORDERKEY", "O_CUSTKEY", "O_ORDERSTATUS", "O_TOTALPRICE", "O_ORDERDATE", "O_ORDERPRIORITY", "O_CLERK", "O_SHIPPRIORITY", "O_COMMENT" ) 
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/orders.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/orders.tbl' WITH DELIMITER '|';
   
 COPY "LINEITEM" ( "L_ORDERKEY", "L_PARTKEY", "L_SUPPKEY", "L_LINENUMBER", "L_QUANTITY", "L_EXTENDEDPRICE", "L_DISCOUNT", "L_TAX", "L_RETURNFLAG", "L_LINESTATUS", "L_SHIPDATE", "L_COMMITDATE", "L_RECEIPTDATE", "L_SHIPINSTRUCT", "L_SHIPMODE", "L_COMMENT" ) 
-  FROM '/Users/xthemage/Documents/Projects/Applications/tpch_2_8_0/sample_set/data/lineitem.notail.tbl' WITH DELIMITER '|';
+  FROM '%localdir%/tpch_data/lineitem.tbl' WITH DELIMITER '|';
 
 
 ALTER TABLE REGION ADD CONSTRAINT "REGION_pkey" PRIMARY KEY ("R_REGIONKEY");
