@@ -17,7 +17,7 @@ static Oid pip_atom_oid();
 
 static Oid pip_atom_oid()
 {
-  static Oid PIP_ATOM_OID = (Oid)50500;
+  static Oid PIP_ATOM_OID = (Oid)0;
   
   //a little bit of a hack, but it gets the job done.  This uses SPI to issue a query that
   //generates a dummy pip_atom and extracts an OID based on the response.  It's ugly, and 
@@ -80,7 +80,9 @@ int pip_extract_clause(HeapTupleHeader row, pip_atom ***out)
   
   if(*out == NULL){
     for(i = 0; i < tupDesc->natts; i++){
+	
       if(tupDesc->attrs[i]->atttypid == pip_atom_oid()){ 
+	
         count++;
       }
     }

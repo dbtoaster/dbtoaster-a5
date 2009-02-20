@@ -27,6 +27,7 @@ PG_FUNCTION_INFO_V1(pip_eqn_out);
 PG_FUNCTION_INFO_V1(pip_expectation);
 PG_FUNCTION_INFO_V1(pip_expectation_max_g);
 PG_FUNCTION_INFO_V1(pip_expectation_sum_g);
+PG_FUNCTION_INFO_V1(pip_expectation_sum_g_one);
 PG_FUNCTION_INFO_V1(pip_eqn_sum_ee);
 PG_FUNCTION_INFO_V1(pip_eqn_sum_ei);
 PG_FUNCTION_INFO_V1(pip_eqn_sum_ie);

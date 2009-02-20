@@ -24,6 +24,7 @@ CREATE FUNCTION expectation(pip_eqn, record)                       RETURNS doubl
 CREATE FUNCTION expectation(pip_eqn, record, integer)              RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_max_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_max_g' LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_sum_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_sum_g' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record) RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
 
 CREATE FUNCTION pip_eqn_sum(pip_eqn,pip_eqn)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ee' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_eqn_sum(pip_eqn,integer)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ei' LANGUAGE C IMMUTABLE STRICT;
@@ -168,10 +169,9 @@ CREATE AGGREGATE expectation_max_hist (pip_eqn, record)
 CREATE AGGREGATE expectation_sum (pip_eqn, record) 
 (
   CONSTRAINTTYPE,  --HACKED_SQL_ONLY
-  sfunc = expectation_sum_g,
-  stype = pip_sample_set,
-  finalfunc = pip_sample_set_expect,
-  initcond = '?1000/1'
+  sfunc = expectation_sum_g_one,
+  stype = double precision,
+  initcond = '0.0'
 );
 CREATE AGGREGATE expectation_sum_hist (pip_eqn, record) 
 (
@@ -231,6 +231,12 @@ CREATE OPERATOR * (  PROCEDURE=pip_eqn_mul,  LEFTARG=integer         ,  RIGHTARG
 CREATE OPERATOR * (  PROCEDURE=pip_eqn_mul,  LEFTARG=pip_eqn         ,  RIGHTARG=integer           );
 CREATE OPERATOR * (  PROCEDURE=pip_eqn_mul,  LEFTARG=double precision,  RIGHTARG=pip_eqn           );
 CREATE OPERATOR * (  PROCEDURE=pip_eqn_mul,  LEFTARG=pip_eqn         ,  RIGHTARG=double precision  );
+
+CREATE OPERATOR - (  PROCEDURE=pip_eqn_sub,  LEFTARG=pip_eqn         ,  RIGHTARG=pip_eqn           );
+CREATE OPERATOR - (  PROCEDURE=pip_eqn_sub,  LEFTARG=integer         ,  RIGHTARG=pip_eqn           );
+CREATE OPERATOR - (  PROCEDURE=pip_eqn_sub,  LEFTARG=pip_eqn         ,  RIGHTARG=integer           );
+CREATE OPERATOR - (  PROCEDURE=pip_eqn_sub,  LEFTARG=double precision,  RIGHTARG=pip_eqn           );
+CREATE OPERATOR - (  PROCEDURE=pip_eqn_sub,  LEFTARG=pip_eqn         ,  RIGHTARG=double precision  );
 
 CREATE OPERATOR | (  PROCEDURE=pip_world_presence_union,  LEFTARG=pip_world_presence,  RIGHTARG=pip_world_presence  );
 

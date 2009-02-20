@@ -59,8 +59,7 @@ Datum   pip_expectation (PG_FUNCTION_ARGS)
 Datum   pip_expectation_max_g (PG_FUNCTION_ARGS)
 {
   pip_sample_set     *set = (pip_sample_set *)PG_GETARG_BYTEA_P(0);
-  pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);
-  
+  pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);  
   set = pip_sample_set_vector_max(eqn, set);
   
   PG_RETURN_POINTER(set);
@@ -75,6 +74,21 @@ Datum   pip_expectation_sum_g (PG_FUNCTION_ARGS)
   set = pip_sample_set_vector_sum(eqn, set);
   
   PG_RETURN_POINTER(set);
+}
+Datum   pip_expectation_sum_g_one (PG_FUNCTION_ARGS)
+{
+  float8              val = PG_GETARG_FLOAT8(0);
+  pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);
+  HeapTupleHeader     row = PG_GETARG_HEAPTUPLEHEADER(2);
+  int                 atom_count = 0;
+  pip_atom          **atoms = NULL;
+  
+  SPI_connect();
+  atom_count = pip_extract_clause(row, &atoms);
+  val += pip_compute_expectation(eqn, atom_count, atoms, 1000);
+  SPI_finish();
+  
+  PG_RETURN_FLOAT8(val);
 }
 
 Datum   pip_eqn_sum_ee (PG_FUNCTION_ARGS)

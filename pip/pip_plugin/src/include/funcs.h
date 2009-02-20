@@ -28,6 +28,7 @@ Datum   pip_eqn_out (PG_FUNCTION_ARGS) ;
 Datum   pip_expectation (PG_FUNCTION_ARGS) ;
 Datum   pip_expectation_max_g (PG_FUNCTION_ARGS) ;
 Datum   pip_expectation_sum_g (PG_FUNCTION_ARGS) ;
+Datum   pip_expectation_sum_g_one (PG_FUNCTION_ARGS) ;
 Datum   pip_eqn_sum_ee (PG_FUNCTION_ARGS) ;
 Datum   pip_eqn_sum_ei (PG_FUNCTION_ARGS) ;
 Datum   pip_eqn_sum_ie (PG_FUNCTION_ARGS) ;

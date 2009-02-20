@@ -74,6 +74,8 @@ static bool cdf_sample_var(pip_cset *set, pip_var *var, pip_sampler_state *state
     return false;
   }
   
+  //elog(NOTICE, "Solving CDF with bounds: %lf, %lf", (double)bounds[0], (double)bounds[1]);
+  
   for(; state->curr_sample < state->samples->sample_cnt; state->curr_sample++){
     do {
       sample = pip_var_gen_w_range(var, bounds[0], bounds[1]);
@@ -83,7 +85,8 @@ static bool cdf_sample_var(pip_cset *set, pip_var *var, pip_sampler_state *state
       }
       pip_sample_val_set(state->samples, &var->vid, state->curr_sample, sample);
       cnt++;
-    } while(pip_sample_test_clause(
+    } while(
+      !pip_sample_test_clause(
           state->samples, 
           state->curr_sample, 
           state->last_atom-state->first_atom, 
@@ -113,6 +116,8 @@ static int sample_lineage_group(pip_cset *set, pip_cset_element *group, pip_samp
   state->curr_sample = 0;
   
   pip_cset_iterate_group(set, group, (pip_cset_iterator *)&populate_sample_vars, state);
+  
+  //elog(NOTICE, "Figuring out group of size %d", pip_cset_group_size(set, group));
 
   //this is where we figure out the best way to sample. 
   //for now, all we do is rejection sampling

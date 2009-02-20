@@ -8,7 +8,7 @@ TABLE_FILES := nation.tbl\
                region.tbl
 TABLE_TARGETS := $(patsubst %,tpch_data/%,$(TABLE_FILES))
 
-all: tables
+all: tables install
 
 tables: tpch $(TABLE_TARGETS)
 	rm -f tpch
