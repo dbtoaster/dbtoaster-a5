@@ -10,7 +10,9 @@
 
 #include "pip.h"
 
+#ifdef NORMAL_CDF_USE_TABLE
 #include "normal.dist"
+#endif
 
 void    pip_normal_init (pip_var *var, HeapTupleHeader params);
 float8  pip_normal_gen  (pip_var *var, int64 seed);
@@ -80,13 +82,18 @@ float8  pip_normal_pdf  (pip_var *var, float8 point)
 }
 float8  pip_normal_cdf  (pip_var *var, float8 point)
 {
+#ifdef NORMAL_CDF_USE_TABLE
   int index;
   double interpolation;
   double result;
-  
+#endif
+
   point -= ((float8 *)var->group_state)[0]; //mean
   point /= ((float8 *)var->group_state)[1]; //stddev
   
+#ifndef NORMAL_CDF_USE_TABLE
+  return erf(point);
+#else
   index = 
     (int)(
       ((point < 0.0) ? (-1.0) : (1.0)) * 
@@ -114,9 +121,16 @@ float8  pip_normal_cdf  (pip_var *var, float8 point)
   }
   
   return (float8)((point < 0) ? (0.5 - result) : (0.5 + result));
+#endif
 }
+
+extern double ltqnorm(double p); //library/ldqnorm.c
+
 float8  pip_normal_icdf (pip_var *var, float8 point)
 {
+#ifndef NORMAL_CDF_USE_TABLE
+  return (ltqnorm(point) * ((float8 *)var->group_state)[1]) + ((float8 *)var->group_state)[0];
+#else
   float8 cdf = (point < 0.5) ? (0.5 - point) : (point - 0.5);
   int index_low = 0, index_high = pip_normal_cdf_precomp_size-1, midpoint;
 
@@ -160,6 +174,7 @@ float8  pip_normal_icdf (pip_var *var, float8 point)
         cdf)
       + ((float8 *)var->group_state)[0];
   }
+#endif
 }
 int pip_normal_in   (pip_var *var, char *str)
 {

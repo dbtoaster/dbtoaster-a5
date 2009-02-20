@@ -8,6 +8,7 @@ PG_FUNCTIONS :=$(wildcard src/funcs/*.c)
 DISTRIBUTIONS:=$(wildcard src/dist/*.c)
 TYPES        :=$(wildcard src/type/*.c)
 SAMPLING     :=$(wildcard src/sample/*.c)
+LIBRARYCODE  :=$(wildcard src/library/*.c)
 CORE         :=src/pip.c src/list_utils.c
 GENERATED    :=src/disttable.c src/funcs.c
 SCRIPTS      :=src/dist/normal.dist
@@ -16,7 +17,7 @@ SCRIPTS      :=src/dist/normal.dist
 # file as the functions themselves... we don't include the
 # function files here.  Instead, they get included indirectly
 # via funcs.c
-SOURCEFILES=$(CORE) $(GENERATED) $(DISTRIBUTIONS) $(TYPES) $(SAMPLING)
+SOURCEFILES=$(CORE) $(GENERATED) $(DISTRIBUTIONS) $(TYPES) $(SAMPLING) $(LIBRARYCODE)
 OBJS =$(subst .c,.o,$(SOURCEFILES))
 
 PG_CONFIG=pg_config
