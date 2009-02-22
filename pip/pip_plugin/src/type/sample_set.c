@@ -123,27 +123,42 @@ float8 pip_sample_var_val(pip_sample_set *set, int sample, pip_var *var)
   return val;
 }
 
-pip_sample_set *pip_sample_set_vector_max (pip_eqn *eqn, pip_sample_set *set)
+pip_sample_set *pip_sample_set_vector_max (pip_eqn *eqn, pip_sample_set *set, int clause_cnt, pip_atom **clause)
 {
-  int i;
+  int i, j;
   for(i = 0; i < set->sample_cnt; i++){
-    float8 val = pip_eqn_evaluate_seed(eqn, pip_sample_seed(set, i));
-    if(isnan(SAMPLE_SET_ENTRY(0)->val[i]) || (SAMPLE_SET_ENTRY(0)->val[i] < val)){
-      SAMPLE_SET_ENTRY(0)->val[i] = val;
+    float8 val;
+    for(j = 0; j < clause_cnt; j++){
+      if(!pip_atom_evaluate_seed(clause[j], pip_sample_seed(set, i))) break;
+    }
+    if(j >= clause_cnt){
+      val = pip_eqn_evaluate_seed(eqn, pip_sample_seed(set, i));
+      if(isnan(SAMPLE_SET_ENTRY(0)->val[i]) || (SAMPLE_SET_ENTRY(0)->val[i] < val)){
+        SAMPLE_SET_ENTRY(0)->val[i] = val;
+      }
+    } else if(isnan(SAMPLE_SET_ENTRY(0)->val[i])){
+      SAMPLE_SET_ENTRY(0)->val[i] = 0;
     }
   }
   return set;
 }
-pip_sample_set *pip_sample_set_vector_sum (pip_eqn *eqn, pip_sample_set *set)
+pip_sample_set *pip_sample_set_vector_sum (pip_eqn *eqn, pip_sample_set *set, int clause_cnt, pip_atom **clause)
 {
-  int i;
-  
+  int i, j;
   for(i = 0; i < set->sample_cnt; i++){
-    float8 val = pip_eqn_evaluate_seed(eqn, pip_sample_seed(set, i));
-    if(isnan(SAMPLE_SET_ENTRY(0)->val[i])){
-      SAMPLE_SET_ENTRY(0)->val[i] = val;    
-    } else {
-      SAMPLE_SET_ENTRY(0)->val[i] += val;
+    float8 val;
+    for(j = 0; j < clause_cnt; j++){
+      if(!pip_atom_evaluate_seed(clause[j], pip_sample_seed(set, i))) break;
+    }
+    if(j >= clause_cnt){
+      val = pip_eqn_evaluate_seed(eqn, pip_sample_seed(set, i));
+      if(isnan(SAMPLE_SET_ENTRY(0)->val[i])){
+        SAMPLE_SET_ENTRY(0)->val[i] = val;    
+      } else {
+        SAMPLE_SET_ENTRY(0)->val[i] += val;
+      }
+    } else if(isnan(SAMPLE_SET_ENTRY(0)->val[i])){
+      SAMPLE_SET_ENTRY(0)->val[i] = 0;
     }
   }
   return set;

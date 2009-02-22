@@ -59,8 +59,17 @@ Datum   pip_expectation (PG_FUNCTION_ARGS)
 Datum   pip_expectation_max_g (PG_FUNCTION_ARGS)
 {
   pip_sample_set     *set = (pip_sample_set *)PG_GETARG_BYTEA_P(0);
-  pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);  
-  set = pip_sample_set_vector_max(eqn, set);
+  pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1); 
+  HeapTupleHeader     row = (fcinfo->nargs > 2) ? (PG_GETARG_HEAPTUPLEHEADER(2)) : (NULL);
+  int                 atom_count = 0;
+  pip_atom          **atoms = NULL; 
+  
+  SPI_connect();
+  if(row){
+    atom_count = pip_extract_clause(row, &atoms);
+  }
+  set = pip_sample_set_vector_max(eqn, set, atom_count, atoms);
+  SPI_finish();
   
   PG_RETURN_POINTER(set);
 }
@@ -68,10 +77,18 @@ Datum   pip_expectation_sum_g (PG_FUNCTION_ARGS)
 {
   pip_sample_set     *set = (pip_sample_set *)PG_GETARG_BYTEA_P(0);
   pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);
+  HeapTupleHeader     row = (fcinfo->nargs > 2) ? PG_GETARG_HEAPTUPLEHEADER(2) : (NULL);
+  int                 atom_count = 0;
+  pip_atom          **atoms = NULL;
   
   //log_eqn("Expect Sum", eqn->data);
 
-  set = pip_sample_set_vector_sum(eqn, set);
+  SPI_connect();
+  if(row){
+    atom_count = pip_extract_clause(row, &atoms);
+  }
+  set = pip_sample_set_vector_sum(eqn, set, atom_count, atoms);
+  SPI_finish();
   
   PG_RETURN_POINTER(set);
 }

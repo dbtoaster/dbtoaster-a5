@@ -40,8 +40,8 @@ int64       pip_sample_seed          (pip_sample_set *set, int sample);
 float8 pip_sample_var_val(pip_sample_set *set, int sample, pip_var *var);
 
 // Vector sampleset manipulation functions
-pip_sample_set *pip_sample_set_vector_max (pip_eqn *eqn, pip_sample_set *set);
-pip_sample_set *pip_sample_set_vector_sum (pip_eqn *eqn, pip_sample_set *set);
+pip_sample_set *pip_sample_set_vector_max (pip_eqn *eqn, pip_sample_set *set, int clause_cnt, pip_atom **clause);
+pip_sample_set *pip_sample_set_vector_sum (pip_eqn *eqn, pip_sample_set *set, int clause_cnt, pip_atom **clause);
 
 
 #endif
