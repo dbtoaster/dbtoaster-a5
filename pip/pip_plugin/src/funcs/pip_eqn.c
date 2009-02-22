@@ -301,3 +301,38 @@ Datum   pip_eqn_subscript (PG_FUNCTION_ARGS)
 
   PG_RETURN_POINTER(sub_eqn);
 }
+
+Datum   pip_eqn_compile_sum (PG_FUNCTION_ARGS)
+{
+  pip_eqn            *left  = (pip_eqn *)PG_GETARG_BYTEA_P(0);
+  pip_eqn            *right = (pip_eqn *)PG_GETARG_BYTEA_P(1);
+  HeapTupleHeader     row;
+  pip_atom          **atoms = NULL;
+  int                 atom_count = 0;
+  int                 size = VARSIZE(right) - sizeof(pip_eqn);
+  int                 i;
+  
+  SPI_connect();
+  if(fcinfo->nargs > 2){
+    row = PG_GETARG_HEAPTUPLEHEADER(2);
+    atom_count = pip_extract_clause(row, &atoms);
+    for(i = 0; i < atom_count; i++){
+      size += sizeof(pip_eqn_component) + VARSIZE(atoms[i]);
+    }
+  }
+  
+  i = 0;
+  left = pip_eqn_append_slot_ee(PIP_EQN_ADD, left, size, &i);
+  if(fcinfo->nargs > 2){
+    size = pip_eqn_fill_in_constraints(left->data, i, atoms, atom_count);
+  } else {
+    size = i;
+  }
+  
+  memcpy(DEREF_CMPNT(left->data, size), right->data, VARSIZE(right) - sizeof(pip_eqn));
+  pip_eqn_cmpnt_update_pointers(left->data+size, 0, size);
+
+  SPI_finish();
+  
+  PG_RETURN_POINTER(left);
+}

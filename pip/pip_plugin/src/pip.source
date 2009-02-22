@@ -31,6 +31,8 @@ CREATE FUNCTION pip_eqn_sum(pip_eqn,integer)          RETURNS pip_eqn AS '_OBJWD
 CREATE FUNCTION pip_eqn_sum(integer,pip_eqn)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ie' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_eqn_sum(pip_eqn,double precision) RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ef' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_eqn_sum(double precision,pip_eqn) RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_fe' LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_eqn_compile_sum(pip_eqn,pip_eqn,record) RETURNS pip_eqn AS '_OBJWD_','pip_eqn_compile_sum' LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_eqn_compile_sum(pip_eqn,pip_eqn       ) RETURNS pip_eqn AS '_OBJWD_','pip_eqn_compile_sum' LANGUAGE C IMMUTABLE STRICT;
 
 CREATE FUNCTION pip_eqn_mul(pip_eqn,pip_eqn)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_mul_ee' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_eqn_mul(pip_eqn,integer)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_mul_ei' LANGUAGE C IMMUTABLE STRICT;
@@ -212,7 +214,24 @@ CREATE AGGREGATE expectation_max (pip_value_bundle)
   stype = pip_value_bundle,
   finalfunc = pip_value_bundle_expect
 );
-
+CREATE AGGREGATE sum(pip_eqn, record)
+(
+  --We label this as a constraint type, since it can be applied on
+  --constrained columns... the corresponding constraints are pulled into the eqn.
+  CONSTRAINTTYPE,  --HACKED_SQL_ONLY
+  sfunc = pip_eqn_compile_sum,
+  stype = pip_eqn,
+  initcond = '(0)'
+);
+CREATE AGGREGATE sum(pip_eqn)
+(
+  --We label this as a constraint type, since it can be applied on
+  --constrained columns... the corresponding constraints are pulled into the eqn.
+  CONSTRAINTTYPE,  --HACKED_SQL_ONLY
+  sfunc = pip_eqn_compile_sum,
+  stype = pip_eqn,
+  initcond = '(0)'
+);
 
 --------------- FUNCTIONS IN SQL ---------------
 CREATE FUNCTION create_variable(varchar, anyelement)       RETURNS pip_eqn AS $$

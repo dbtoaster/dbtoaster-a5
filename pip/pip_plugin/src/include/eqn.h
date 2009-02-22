@@ -20,6 +20,7 @@ typedef struct pip_eqn_component {
     PIP_EQN_MULT,  // val.branch.ptr_left * val.branch.ptr_right
     PIP_EQN_ADD,   // val.branch.ptr_left + val.branch.ptr_right
     PIP_EQN_NEGA,  // - val.ptr
+    PIP_EQN_CNSTRT,// val.branch.ptr_left SUCH THAT val.branch.ptr_right
     PIP_EQN_SUB    // val.subscript.ptr [ val.subscript.subscript ]
   } type;
   union {
@@ -42,11 +43,15 @@ typedef struct eqn_cref {
   char data[0];
 } eqn_cref;
 
-#define COMPONENT(cref) ((pip_eqn_component *)((eqn_cref *)base+offset))
-#define BRANCH_LEFT(cref) (COMPONENT(cref)->val.branch.ptr_left)
-#define BRANCH_RIGHT(cref) (COMPONENT(cref)->val.branch.ptr_right)
-
 void log_eqn(int loglevel, char *label, char *base);
+
+#define DEREF_CMPNT(base,offset) ((pip_eqn_component *)(base + (offset)))
+#define DEREF_ATOM(base,offset)  ((pip_atom *)(base + (offset)))
+#define EQN_CMPNT_VAR_SIZE(var) (VARSIZE(var) + sizeof(pip_eqn_component) - sizeof(pip_var))
+#define EQN_CMPNT_SET_VAR(base,offset,varptr) do { \
+  memcpy(&DEREF_CMPNT(base,offset)->val.var, varptr, VARSIZE(varptr));\
+  DEREF_CMPNT(base,offset)->type = PIP_EQN_VAR;\
+} while(0)
 
 ////////////////////// Equation Operations
 
@@ -65,6 +70,8 @@ pip_eqn *pip_eqn_compose_ee(enum pip_eqn_component_type node_type, pip_eqn *eqn_
 pip_eqn *pip_eqn_compose_ef(enum pip_eqn_component_type node_type, pip_eqn *eqn_left, float8 eqn_right);
 pip_eqn *pip_eqn_compose_one(enum pip_eqn_component_type node_type, pip_eqn *child);
 pip_eqn *pip_eqn_compose_sub(enum pip_eqn_component_type node_type, pip_eqn *child, int64 sub);
+pip_eqn *pip_eqn_append_slot_ee(enum pip_eqn_component_type node_type, pip_eqn *child, int size, int *offset);
+int pip_eqn_fill_in_constraints(char *base, int offset, pip_atom **atoms, int atom_count);
 
 ////////////////////// Equation Component Operations
 

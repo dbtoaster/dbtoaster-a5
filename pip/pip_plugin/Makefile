@@ -11,7 +11,7 @@ SAMPLING     :=$(wildcard src/sample/*.c)
 LIBRARYCODE  :=$(wildcard src/library/*.c)
 CORE         :=src/pip.c src/list_utils.c
 GENERATED    :=src/disttable.c src/funcs.c
-SCRIPTS      :=src/dist/normal.dist
+SCRIPTS      := #src/dist/normal.dist
 
 # because postgres likes to have the function info in the same
 # file as the functions themselves... we don't include the

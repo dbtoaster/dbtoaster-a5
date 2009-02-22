@@ -11,13 +11,7 @@
 
 #include "pip.h"
 #include "eqn.h"
-
-#define DEREF_CMPNT(base,offset) ((pip_eqn_component *)(base + (offset)))
-#define EQN_CMPNT_VAR_SIZE(var) (VARSIZE(var) + sizeof(pip_eqn_component) - sizeof(pip_var))
-#define EQN_CMPNT_SET_VAR(base,offset,varptr) do { \
-  memcpy(&DEREF_CMPNT(base,offset)->val.var, varptr, VARSIZE(varptr));\
-  DEREF_CMPNT(base,offset)->type = PIP_EQN_VAR;\
-} while(0)
+#include "atom.h"
 
 void log_eqn(int loglevel, char *label, char *base)
 {
@@ -49,6 +43,25 @@ pip_var *pip_eqn_cmpnt_to_cset(char *base, int offset, pip_cset *set)
       return right;
     case PIP_EQN_NEGA:
       return pip_eqn_cmpnt_to_cset(base, cmp->val.ptr, set);
+    case PIP_EQN_CNSTRT:
+      left  = pip_eqn_cmpnt_to_cset(base, cmp->val.branch.ptr_left , set);
+      right = pip_eqn_cmpnt_to_cset(DEREF_ATOM(base,cmp->val.branch.ptr_right)->data,
+                                    DEREF_ATOM(base,cmp->val.branch.ptr_right)->ptr_right, set);
+      if(left){
+        if(right){
+          pip_cset_link(set, left, right);
+        }
+        right = left;
+      }
+      left  = pip_eqn_cmpnt_to_cset(DEREF_ATOM(base,cmp->val.branch.ptr_right)->data,
+                                    DEREF_ATOM(base,cmp->val.branch.ptr_right)->ptr_left, set);
+      if(left){
+        if(right){
+          pip_cset_link(set, left, right);
+        }
+        return left;
+      }
+      return right;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -79,6 +92,12 @@ int pip_eqn_cmpnt_sprint(char *str, int len, char *base, int offset)
     case PIP_EQN_NEGA:
       str[0] = '-';
       return pip_eqn_cmpnt_sprint(str+1, len-1, base, cmp->val.ptr) + 1;
+    case PIP_EQN_CNSTRT:
+      str[0] = '|';
+      c = 1;
+      c += pip_eqn_cmpnt_sprint(str+c, len-c, base, cmp->val.branch.ptr_left);
+      c += pip_atom_sprint(str+c, len-c, DEREF_ATOM(base, cmp->val.branch.ptr_right));
+      return c;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -131,6 +150,22 @@ int pip_eqn_cmpnt_parse(char *str, char *base, int offset, int *size)
       }
       if(size){ size += sizeof(pip_eqn_component); };
       return pip_eqn_cmpnt_parse(str+1, base, offset+sizeof(pip_eqn_component), size) + 1;
+      
+    case '|'://constraint
+      {
+        int atom_size = 0;
+        pip_atom *atom;
+        c = sizeof(pip_eqn_component);
+        nextchar = str+1;
+        if(base){ DEREF_CMPNT(base,offset)->type = PIP_EQN_CNSTRT; }
+        if(base){ DEREF_CMPNT(base,offset)->val.branch.ptr_left = offset+c; }
+        nextchar += pip_eqn_cmpnt_parse(nextchar, base, offset+c, &c);
+        if(base){ DEREF_CMPNT(base,offset)->val.branch.ptr_right = offset+c; }
+        atom = DEREF_ATOM(base,offset+c);
+        nextchar += pip_atom_parse(nextchar, &atom, &atom_size);
+        if(size) { (*size) += c+atom_size; }
+        return nextchar - str;
+      }
   }
   return 0;
 }
@@ -188,6 +223,11 @@ float8 pip_eqn_cmpnt_evaluate_seed(char *base, int offset, int64 seed)
       return val;
     case PIP_EQN_NEGA:
       return 0.0 - pip_eqn_cmpnt_evaluate_seed(base, cmp->val.ptr, seed);
+    case PIP_EQN_CNSTRT:
+      return 
+        pip_atom_evaluate_seed(DEREF_ATOM(base, cmp->val.branch.ptr_right), seed) ? 
+          pip_eqn_cmpnt_evaluate_seed(base, cmp->val.branch.ptr_left, seed) :
+          0.0;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -216,6 +256,11 @@ float8 pip_eqn_cmpnt_evaluate_sample(char *base, int offset, pip_sample_set *set
       return val;
     case PIP_EQN_NEGA:
       return 0.0 - pip_eqn_cmpnt_evaluate_sample(base, cmp->val.ptr, set, sample);
+    case PIP_EQN_CNSTRT:
+      return 
+        pip_atom_evaluate_sample(DEREF_ATOM(base, cmp->val.branch.ptr_right), set, sample) ? 
+          pip_eqn_cmpnt_evaluate_sample(base, cmp->val.branch.ptr_left, set, sample) :
+          0.0;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -240,6 +285,10 @@ bool pip_eqn_cmpnt_has_var(char *base, int offset, pip_var *var)
         pip_eqn_cmpnt_has_var(base, cmp->val.branch.ptr_right, var);
     case PIP_EQN_NEGA:
       return pip_eqn_cmpnt_has_var(base, cmp->val.ptr, var);
+    case PIP_EQN_CNSTRT:
+      return
+        pip_eqn_cmpnt_has_var(base, cmp->val.branch.ptr_left , var) ||
+        pip_atom_has_var(DEREF_ATOM(base, cmp->val.branch.ptr_right), var);
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -263,6 +312,12 @@ void pip_eqn_cmpnt_update_pointers(char *base, int offset, int shift)
     case PIP_EQN_NEGA:
       pip_eqn_cmpnt_update_pointers(base, cmp->val.ptr, shift);
       cmp->val.ptr += shift;
+      return;
+    case PIP_EQN_CNSTRT:
+      pip_eqn_cmpnt_update_pointers(base, cmp->val.branch.ptr_left , shift);
+      //the atom's pointers are all self-contained.  no need to update them.
+      cmp->val.branch.ptr_left  += shift;
+      cmp->val.branch.ptr_right += shift;
       return;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
@@ -397,6 +452,59 @@ pip_eqn *pip_eqn_compose_sub(enum pip_eqn_component_type node_type, pip_eqn *chi
   
   return eqn;
 }
+pip_eqn *pip_eqn_append_slot_ee(enum pip_eqn_component_type node_type, pip_eqn *source, int size, int *offset)
+{
+  pip_eqn_component *topnode, *bottomnode;
+  int eqn_size = (VARSIZE(source) + sizeof(pip_eqn_component) + size), strpos = 0;
+  pip_eqn *eqn;
+  
+  eqn = SPI_palloc(eqn_size);
+  bzero(eqn, eqn_size);
+  
+  if(DEREF_CMPNT(source->data, 0)->type == node_type){
+    //if there's already a node of this type at the head...
+    //append_slot assumes that nodes of this type are transitive.
+    //consequently, we don't need to rewrite the entire tree.
+    memcpy(eqn, source, VARSIZE(source)-sizeof(source->vl_len_));
+    SET_VARSIZE(eqn, eqn_size);
+    strpos = VARSIZE(source) - sizeof(pip_eqn);
+    topnode = DEREF_CMPNT(eqn->data, 0);
+    bottomnode = DEREF_CMPNT(eqn->data, strpos);
+    bottomnode->type = node_type;
+    bottomnode->val.branch.ptr_left = topnode->val.branch.ptr_right;
+    topnode->val.branch.ptr_right = strpos;
+    strpos += sizeof(pip_eqn_component);
+    bottomnode->val.branch.ptr_right = strpos;
+    *offset = strpos;
+  } else {
+    SET_VARSIZE(eqn, eqn_size);
+    strpos = sizeof(pip_eqn_component);
+    topnode = DEREF_CMPNT(eqn->data, 0);
+    topnode->type = node_type;
+    topnode->val.branch.ptr_left = strpos;
+    memcpy(eqn->data+strpos, source->data, VARSIZE(source)-sizeof(pip_eqn));
+    pip_eqn_cmpnt_update_pointers(eqn->data+strpos, 0, strpos);
+    strpos += VARSIZE(source)-sizeof(pip_eqn);
+    topnode->val.branch.ptr_right = strpos;
+    *offset = strpos;
+  }
+  return eqn;
+}
+
+int pip_eqn_fill_in_constraints(char *base, int offset, pip_atom **atoms, int atom_count)
+{
+  int i;
+  
+  for(i = 0; i < atom_count; i++){
+    DEREF_CMPNT(base, offset)->type = PIP_EQN_CNSTRT;
+    DEREF_CMPNT(base, offset)->val.branch.ptr_right = offset+sizeof(pip_eqn_component);
+    DEREF_CMPNT(base, offset)->val.branch.ptr_left  = offset+sizeof(pip_eqn_component)+VARSIZE(atoms[i]);
+    memcpy(DEREF_ATOM(base, offset+sizeof(pip_eqn_component)), atoms[i], VARSIZE(atoms[i]));
+    offset += sizeof(pip_eqn_component)+VARSIZE(atoms[i]);
+  }
+  
+  return offset;
+}
 
 bool pip_eqn_cmpnt_identical_structure(char *leftbase, int leftoffset, char *rightbase, int rightoffset)
 {
@@ -417,6 +525,8 @@ bool pip_eqn_cmpnt_identical_structure(char *leftbase, int leftoffset, char *rig
     case PIP_EQN_NEGA:
       return 
         pip_eqn_cmpnt_identical_structure(leftbase, lcmp->val.ptr,  rightbase, rcmp->val.ptr );
+    case PIP_EQN_CNSTRT:
+      //unhandled case
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", lcmp->type, __FUNCTION__, __FILE__, __LINE__);
   }
@@ -466,6 +576,9 @@ bool pip_eqn_cmpnt_simplify_1var(char *base, int offset, float8 *c, float8 *m, p
         }
         return false;
       }
+    case PIP_EQN_CNSTRT:
+      //These just muck things up entirely.  Nothing to do but fail.
+      return false;
     default:
       elog(NOTICE, "Unhandled equation component type: %d (%s(); %s:%d)", cmp->type, __FUNCTION__, __FILE__, __LINE__);
   }

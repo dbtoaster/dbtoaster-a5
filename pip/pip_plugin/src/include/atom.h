@@ -12,6 +12,7 @@
 #define PIP_ATOM_H
 
 int pip_atom_sprint(char *str, int len, pip_atom *atom);
+int pip_atom_parse(char *str, pip_atom **atom, int *size_ret);
 void pip_atom_log(pip_atom *atom);
 int pip_extract_clause(HeapTupleHeader row, pip_atom ***out);
 pip_atom *pip_atom_compose_cmpnt(pip_eqn_component *left, int left_size, pip_eqn_component *right, int right_size);

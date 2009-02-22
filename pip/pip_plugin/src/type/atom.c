@@ -52,6 +52,45 @@ int pip_atom_sprint(char *str, int len, pip_atom *atom)
   c += pip_eqn_cmpnt_sprint(str+c, len-c, atom->data, atom->ptr_right);
   return c;
 }
+int pip_atom_parse(char *str, pip_atom **atom, int *size_ret)
+{
+  int lcount, rcount, size, left_size = 0, right_size = 0;
+  
+  if((str[0] != '>') && (str[0] != '<')){
+    ereport(ERROR,
+            (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+             errmsg("invalid atom type (must be < or >): '%c'", str[0])));
+  }
+  
+  if((lcount = pip_eqn_cmpnt_parse(str+1, NULL, 0, &left_size)) < 0){
+    ereport(ERROR,
+            (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+             errmsg("invalid atom string; left side unparsable ('%s';%d;%d)", str+1, lcount, left_size)));
+  }
+  if((rcount = pip_eqn_cmpnt_parse(str+1+lcount, NULL, 0, &right_size)) < 0){
+    ereport(ERROR,
+            (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+             errmsg("invalid atom string; right side unparsable ('%s';%d)", str+lcount+1, right_size)));
+  }
+  
+  size = left_size + right_size + sizeof(pip_atom);
+  if(size_ret) *size_ret = size;
+  if(!atom) return lcount+1+rcount;
+  
+  if(*atom == NULL){
+    *atom = SPI_palloc(size);
+  }
+  bzero(*atom, size);
+  SET_VARSIZE(*atom, size);
+  
+  pip_eqn_cmpnt_parse(str+1,        (*atom)->data, 0,         NULL);
+  pip_eqn_cmpnt_parse(str+1+lcount, (*atom)->data, left_size, NULL);
+  
+  (*atom)->ptr_left  = (str[0] == '>') ? 0 : left_size;
+  (*atom)->ptr_right = (str[0] == '>') ? left_size : 0;
+  
+  return lcount+1+rcount;
+}
 void pip_atom_log(pip_atom *atom)
 {
   char str[400];
