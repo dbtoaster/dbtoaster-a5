@@ -1,0 +1,201 @@
+\section{Introduction}
+We present \compiler, a tool to support a novel query execution model, compiling
+SQL queries into C programs, targeting the emerging hardware platform of main-memory
+databases. At the heart of our work, we question the cost of providing a highly
+flexible runtime, as found with modern databases in plan interpreters and other
+runtime components including schedulers and optimizers. Modern relational
+databases focus almost exclusively on providing flexible and extensible querying
+capabilities in dynamic environments, supporting both schema and data evolution.
+From a hardware perspective, the rapidly increasing capacities and shrinking
+latencies across a variety of memory devices presents an opportunity to rethink
+database architectures. Today's databases are also heavily concerned with
+efficiency across the main-memory and secondary storage boundary, while those
+main-memory databases that do exist are restrictions of this page-oriented access
+model.
+
+Our work is motivated by the following example applications:
+
+\begin{itemize}
+\item
+Processing order books. Give a nice example of a trading strategy that
+delegates the bulk of the work to compiled SQL queries.
+This is a nice scenario because order books do not get very large (if we
+want to process several order books, we can nicely partition the work by
+order book across several machines), change extremely rapidly, and the
+success of trading depends crucially on the speed with which the programmed
+strategies process the data.
+
+\item
+Data warehouse loading: data integration and aggregation.
+Commercial data warehouse loaders also use straight-line code for aggregation,
+but the data integration queries that are executed before aggregation are
+currently not compiled. Compiling them only yields a really substantial
+improvement if the integration and aggregation queries are compiled together.
+This may substantially reduce the time taken to load a warehouse. (Here we may
+have to scale up by using several machines.)
+\end{itemize}
+
+In these applications, queries are \textit{ossified} during the development
+cycle, with developers converging to a choice of schema, query structure and parameters.
+Once hardened, queries are deployed into production environments, and reused
+numerous times, executing non-interactively. We focus on applications that
+do not require access to large static databases, rather our applications access bounded
+size relations, where the contents of these relations change frequently through
+inserts, updates and deletes, in streaming fashion. We assume a single entity
+conveys these updates to the database, this is not a multi-user highly-concurrent
+production environment as found in OLTP applications.
+ 
+We introduce \compiler, a compiler that produces C code from hardened queries, in
+contrast to executing a query plan comprised of a set of operators. 
+While one could always naively generate a straight-line function from a query
+plan, we devise our query kernel functions by factoring in the following
+observations regarding query processing in main memory databases:
+
+\begin{enumerate}
+\item
+When we compile queries to straight-line C code, it is best to use incremental
+maintenance techniques to eagerly keep query results up to date.
+
+\item
+Index nested loop joins on main memory hash tables
+dominate all other join techniques in the compiled
+main-memory database setting.
+It is worth having hash tables whose buckets are sorted, though (e.g. for
+top-k query processing).
+
+\item
+There is something to be gained from bulk updates.
+do we not just want to support bulk updates of one kind (e.g., just inserts),
+but mixtures of inserts, updates, and deletes? Is this an optimization, and
+worth the work?
+
+\item
+There is no point in adaptivity beyond bulk updates.
+\end{enumerate}
+
+Our compiler generates code to implement an incremental query execution strategy,
+where deltas (inserts, deletes or updates) to base tables are processed with a
+\textit{query kernel function}. These kernel functions compute a new query result
+from every delta, and manipulate auxiliary data structures (conceptually
+precomputed views) to support fully incremental processing (i.e. no blocking
+operations). We choose our data structures intelligently to ensure efficient
+delta processing, via a top-down decomposition of the query into a set of
+associative data structures (maps). Our kernel functions correspond to
+tuple-at-a-time processing through a query plan, and can be highly optimized by
+modern C compilers to yield an efficient native binary for query execution.
+
+Given the inherent streaming nature of the applications we consider, the maps we
+maintain during query execution incur a different footprint compared to both
+main-memory databases and stream processing engines, since in many cases we need
+not keep around base relations, but on the other hand are maintaining precomputed
+views. We analyse the memory utilization of the data structures resulting from
+our decomposition. Additionally, we extend the functionality of our compiler
+beyond that of the compiling a single query, including features such as optimized
+execution for bulk operations based on loop optimization techniques, multi-query
+compilation that can share data structures given commonality amongst queries, and
+a limited form of query flexibility that allows users to change parameters during
+query execution through parameterized compilation.
+
+This paper is laid out as follows. Section 2 describes the role of the compiler,
+and a high-level view of \project, a new project at Cornell investigating
+database engine runtimes using SQL queries compiled with \compiler. As part of
+its scope, \project\ will investigate scaling compiled queries over a distributed
+main-memory database using a variety of parallelization and data partitioning
+techniques customized to the execution strategy adopted during compilation.
+Section 3 describes our query compilation algorithm in terms of a decomposition
+algorithm that both selects the maps we maintain during execution, and derives
+the maintenance tasks for each map. We also present a hypertree decomposition
+algorithm that generalizes our compilation algorithm to apply to arbitrary join
+graphs. Section 4 analyses the memory requirements of our maps, while Section 5
+describes the aforementioned extensions to the compiler for bulk operations and
+data structure sharing. Finally prior to discussing related work and concluding,
+Section 6 presents experimental results demonstrating the significant benefits of
+our techniques over both a standard relational database, as well as a naive
+compilation of the query plan as a straight-line function.
+
+
+\comment{
+We compile queries into C programs. Queries are incrementally maintained.
+We are smart about creating data structures for very efficiently keeping query
+results up to date. The programming interface supports update triggers as
+well as cursor-based iteration over the current query result.
+
+Tasks:
+\begin{itemize}
+\item
+Compile multiple queries into common code, share data structures.
+
+\item
+How to compile queries of which some selection conditions can be modified at
+runtime? (As in ODBC prepare statements.)
+
+\item
+Scale up using data partitioning, parallelization. This is not the focus of
+this paper.
+
+\item
+Should we say something about accessing secondary storage, or will we leave
+this out of scope? If we are not restricted to streaming scenarios, we may
+have broader applicability of our techniques.
+
+\item
+We have to analyse our main memory consumption.
+\end{itemize}
+
+
+Aim: query processing where the queries are fixed at compile time.
+In particular applications where there is no large static database of which
+only a small part needs to be processed. The approach works particularly
+well if the data arrives on a stream or changes very rapidly
+
+We assume that there is only a single user who performs updates, and that
+we do not care about concurrency control.
+This is not an OLTP scenario.
+
+Applications:
+\begin{itemize}
+\item
+Processing order books. Give a nice example of a trading strategy that
+delegates the bulk of the work to compiled SQL queries.
+This is a nice scenario because order books do not get very large (if we
+want to process several order books, we can nicely partition the work by
+order book across several machines), change extremely rapidly, and the
+success of trading depends crucially on the speed with which the programmed
+strategies process the data.
+
+\item
+Data warehouse loading: data integration and aggregation.
+Commercial data warehouse loaders also use straight-line code for aggregation,
+but the data integration queries that are executed before aggregation are currently not compiled. Compiling them only yields a really substantial improvement
+if the integration and aggregation queries are compiled together. This may substantially reduce the time taken to load a warehouse. (Here we may have to scale up by using several machines.)
+\end{itemize}
+
+Claims / theses regarding query processing in main-memory databases (to be verified by experiments):
+\begin{enumerate}
+\item
+When we compile queries to straight-line C code, it is best to use incremental
+maintenance techniques to eagerly keep query results up to date.
+
+\item
+Index nested loop joins on main memory hash tables
+dominate all other join techniques in the compiled
+main-memory database setting.
+It is worth having hash tables whose buckets are sorted, though (e.g. for
+top-k query processing).
+
+\item
+There is something to be gained from bulk updates.
+do we not just want to support bulk updates of one kind (e.g., just inserts),
+but mixtures of inserts, updates, and deletes? Is this an optimization, and
+worth the work?
+
+\item
+There is no point in adaptivity beyond bulk updates.
+\end{enumerate}
+
+
+Experiments:
+Destroy classical databases (4 orders of magnitude improvement). Demonstrate
+that incremental maintenance is a good idea for aggregates (two orders
+of magnitude improvement over compiled non-incremental code).
+}

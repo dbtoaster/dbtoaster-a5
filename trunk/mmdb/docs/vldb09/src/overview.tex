@@ -1,0 +1,22 @@
+\section{System Overview}
+
+\begin{itemize}
+  \item \compiler\ compiles SQL down to C code, and this compiler is the main
+  focus of this paper.
+  \item For scalability and availability reasons, we foresee implementing a
+  lightweight runtime consisting of the following additional components. This
+  runtime will still execute C-code for individual queries. The components
+  include:
+  \begin{enumerate}
+    \item Query loader and unloader, catalog and code shipping.
+    \item Query scheduler and optimizer for both multi-core and distributed
+    operation. Optimization mechanism examples include automated data structure
+    partitioning and load balancing, as well as dynamic data structure sharing.
+    \item Storage and recovery manager
+    \item Network and deployment manager, with a declarative deployment
+    definition language.
+    \item Concurrency control model? e.g. single point of entry, or
+    multiple w/ update propagation? Generate C-code w/ transactional memory
+    primitives?
+  \end{enumerate}
+\end{itemize}

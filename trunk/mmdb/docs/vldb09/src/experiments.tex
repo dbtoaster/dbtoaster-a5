@@ -1,0 +1,30 @@
+\section{Experimental Evaluation}
+
+Dataset:
+
+\begin{itemize}
+  \item TotalView-ITCH dataset: 3 month's worth of MSFT order book messages
+  taken from NASDAQ, (~2.2Gb dataset).
+  \item Orderbook schema: day, time in us since beginning of day, order id,
+  order type, share volume, bid/ask price
+\end{itemize}
+
+Figures:
+
+\begin{enumerate}
+  \item Takeaway experiment: end-to-end throughput comparison for a variety of
+  insert/update/delete rates. Requires replay speed parameter in data loader.
+  Comparison points include Postgres, naive compilation, simple version
+  of \compiler, \compiler\ with lazy evaluation, \compiler\ with bulk insert
+  mode at 2 or 3 different chunk sizes.
+  \item Detail experiment: analyse effect of bulk loading operations compared to
+  simple compiler, on a variety of queries, e.g. selectivities and keys.
+  \item Detail experiment: selectivity experiment, comparing \compiler\ w/ lazy
+  eval, and w/ bulk loading (separately) to next best, for a variety of
+  join selectivities and keys.
+  \item Detail experiment: space vs recomputation analysis, where we vary the
+  maps we keep between extremes of maps from simple decomposition, to full base
+  tables.
+  \item Quality of compiled code, and compiler effect? e.g. speed provided with
+  different -O flags?
+\end{enumerate}

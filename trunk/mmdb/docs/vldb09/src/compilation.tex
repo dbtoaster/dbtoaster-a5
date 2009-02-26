@@ -1,0 +1,614 @@
+\section{Query Compilation}
+
+
+\def\algsum{\mathrm{sum}}
+\def\algagg{\mathrm{agg}}
+
+
+\begin{figure*}
+\begin{eqnarray}
+\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(\{ \tuple{\vec{a}\vec{c}} \})
+&\vdash&
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times \rho_{\vec{C}}(\{ \vec{c} \})
+\label{r1}
+\\
+\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{ \vec{b} \}))
+&\vdash&
+\rho_{\vec{A}}(R)
+\label{r2}
+\\
+\rho_{A}(\{\vec{a}\}) \times \rho_{\vec{B}}(R)
+&\vdash&
+\sigma_{A=a}(\rho_{A}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))
+\label{r3}
+\\
+\algagg_{f(A,\vec{B})}(\sigma_{A=a}(R))
+&\vdash&
+\algagg_{f(a,\vec{B})}(\sigma_{A=a}(R))
+\label{r4}
+\\
+\algsum_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
+\algsum_{f(\vec{B})}(\rho_{\vec{B}}(S))
+\label{r5}
+\\
+\algsum_{a * f(\cdot)}(R)
+&\vdash&
+a * \algsum_{f(\cdot)}(R)
+\label{r6}
+\\
+\algsum_{f(\cdot) + g(\cdot)}(R)
+&\vdash&
+\algsum_{f(\cdot)}(R) + \algsum_{g(\cdot)}(R)
+\label{r7}
+\\
+\max_{a + f(\cdot)}(R)
+&\vdash&
+a + \max_{f(\cdot)}(R)
+\label{r8}
+\\
+\max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\max_{f(\vec{A})}(\rho_{\vec{A}}(R)) +
+\max_{f(\vec{B})}(\rho_{\vec{B}}(S))
+\label{r9}
+\\
+\max_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
+&\vdash&
+\left\{
+\begin{array}{lll}
+a * \min_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a < 0 \\
+0                                        & \dots & a = 0 \\
+a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a > 0
+\end{array}
+\right.
+\label{r10}
+\\
+\max_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\max\Big\{
+\max_{f(\vec{A})}(\sigma_{f(\vec{A}) \ge 0}(\rho_{\vec{A}}(R))) *
+\max_{g(\vec{B})}(\rho_{\vec{B}}(S)),
+\nonumber\\
+&& \quad\quad\;\;\,
+\max_{f(\vec{A})}(\underbrace{\sigma_{f(\vec{A}) < 0}}_{\mathrm{optional}}(\rho_{\vec{A}}(R))) *
+\max_{g(\vec{B})}(\sigma_{f(\vec{B}) \ge 0}(\rho_{\vec{B}}(S))),
+\nonumber\\
+&& \quad\quad\;\;\,
+\min_{f(\vec{A})}(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R))) *
+\min_{g(\vec{B})}(\sigma_{f(\vec{B}) < 0}(\rho_{\vec{B}}(S)))
+\Big\}
+\label{r11}
+\\
+\max_a(R)
+&\vdash&
+\left\{
+\begin{array}{lll}
+a       & \dots & \algsum_1(R) > 0 \\
+-\infty & \dots & \algsum_1(R) = 0 \\
+\end{array}
+\right.
+\label{r12}
+\end{eqnarray}
+
+In particular, if $g(\cdot) = 1$, then Rule~(5) gives
+\[
+\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
+\algsum_{1}(\rho_{\vec{B}}(S))
+=
+\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) * |S|.
+\]
+
+\caption{Rewrite rules. agg can be either sum, max, or min.
+count is sum$_1$.}
+\label{fig:rules}
+\end{figure*}
+
+
+
+In this section, an expression of the form
+\[
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))[\vec{a}]
+\]
+is a map for an aggregate-group by queryd did use the environment, however in
+that case the numbering for each line appeared on the following line (and not on
+the same as I wanted to). That's why I decided that I will just have the two
+equations without any te
+\[
+\mbox{select $\vec{A}$, agg($f$)
+from $Q$
+group by $\vec{A}$}.
+\]
+Given a group $\vec{a}$, the map returns
+the aggregate value
+$\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))$ for it.
+An aggregate $\algagg$ (either sum, max, or min) returns exactly
+one value -- the aggregate value.
+
+The main rewrite step is the following.
+We exploit the fact that for our aggregate functions $\algagg$,
+\begin{multline*}
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q \cup \Delta Q))[\vec{a}]
+= \\
+\algagg(\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))[\vec{a}],
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(\Delta Q))[\vec{a}]).
+\end{multline*}
+
+
+Consider an aggregate-group by query
+\[
+\algagg_{f(\vec{a}, \vec{B}, \vec{C}, \vec{D})}
+(\sigma_{\vec{A}=\vec{a}}(R_1 \bowtie \dots \bowtie R_k))[\vec{a}]
+\]
+where the schema of $R_1 \bowtie \dots \bowtie R_{k-1}$ is
+$\vec{A}\vec{B}\vec{C}$ and the schema of
+$R_k$ is $\vec{C}\vec{D}$.
+
+W.l.o.g., we consider the case of an insertion of tuple
+$\tuple{\vec{c},\vec{d}}$ into relation $R_k$.
+
+We rewrite
+$
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(\Delta Q))[\vec{a}]
+$, that is,
+\[
+\algagg_{f(\vec{a}, \vec{B}, \vec{C}, \vec{D})}
+(\sigma_{\vec{A}=\vec{a}}(R_1 \bowtie \dots \bowtie R_{k-1} \bowtie \{\tuple{\vec{c}\vec{d}}\}))[\vec{a}]
+\]
+to
+\begin{equation}
+\algagg_{f(\vec{a}, \vec{B}, \vec{c}, \vec{d})}
+(\sigma_{\vec{A}\vec{C}=\vec{a}\vec{c}}(R_1 \bowtie \dots \bowtie R_{k-1}))[\vec{a}\vec{c}\vec{d}].
+\label{eq:1}
+\end{equation}
+
+Figure~\ref{fig:rules} provides a set of rewrite rules, of which rules
+\ref{r1}, \ref{r2}, \ref{r3}, and \ref{r4} are sufficient to  perform this
+rewriting.
+
+Since we would like the maps that have to be maintained to be as simple as
+possible, we will try to express Equation~\ref{eq:1} in terms of 
+aggregates
+\begin{equation}
+\algagg_{f'(\vec{a}, \vec{B}, \vec{c})}
+(\sigma_{\vec{A}\vec{C}=\vec{a}\vec{c}}(R_1 \bowtie \dots \bowtie R_{k-1}))[\vec{a}\vec{c}]
+\label{eq:2}
+\end{equation}
+which do not use $\vec{d}$.
+
+In most cases
+this is possible using the rewrite rules of Figure~\ref{fig:rules}.
+Assuming that $f$ is an arithmetic expression built using addition and multiplication (and constants which may be negative), we can turn $f$ into an equivalent
+expression that is a sum of products (by exploiting distributivity).
+
+Let the aggregate be sum. In that case the rewriting of Equation~\ref{eq:1}
+so as to eliminate the constants $\vec{d}$
+is always possible using the rules \ref{r6} and \ref{r7}.
+In the case of max, the rewriting is usually possible. The simplest case
+where it is not is $f = B_1 * d + B_2$.
+
+
+\begin{proposition}
+To do: Formalize this fact.
+\end{proposition}
+
+
+Note that our rewriting has removed relation $R_k$ from the query to be
+incrementally maintained. Inductively, we can solve the incremental maintenance
+problem by just maintaining the maps constructed using this rewriting.
+
+
+\begin{example}\em
+Given schema $R(A,B)$, $S(B,C)$, $T(C,D)$.
+We incrementally maintain the aggregate query
+\[
+s := \algsum_{A*D}(R \bowtie S \bowtie T).
+\]
+\begin{itemize}
+\item
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\ &\stackrel{\ref{r1}}{=}&
+\algsum_{A*D}(\{a\} \times \sigma_{B=b}(S) \bowtie T)
+\\ &\stackrel{\ref{r3},\ref{r4}}{=}&
+\algsum_{a*D}(\sigma_{B=b}(S) \bowtie T)
+\\ &\stackrel{\ref{r6}}{=}&
+a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{s_D[b]}
+\end{eqnarray*}
+
+\item
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(R \bowtie \{\tuple{b,c}\} \bowtie T)
+\\ &\stackrel{\ref{r1}*}{=}&
+\algsum_{A*D}(\sigma_{B=b}(R) \times \sigma_{C=c}(T))
+\\ &\stackrel{\ref{r5}}{=}&
+\underbrace{\algsum_{A}(\sigma_{B=b}(R))}_{s_A[b]} *
+\underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{s_D[c]}
+\end{eqnarray*}
+
+\item
+Insert T(c,d): (analogous to insertion of R(a,b))
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(R \bowtie S \bowtie \{\tuple{c,d}\})
+\\ &=&
+\underbrace{\algsum_{A}(R \bowtie \sigma_{C=c}(S))}_{s_A[c]} * d
+\end{eqnarray*}
+\end{itemize}
+
+We incrementally maintain $s_D[b]$, $s_A[b]$, $s_D[c]$, and
+$s_A[c]$ as well.
+
+\begin{itemize}
+\item
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta s_A[b] &=& \algsum_{A}(\{\tuple{a,b}\}) = a
+\\
+\mbox{foreach $c$: }
+\Delta s_A[c] &=& \algsum_{A}(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S))
+\\ &\stackrel{\ref{r1},\ref{r3},\ref{r4},\pi}{=}&
+\algsum_{a}(\sigma_{BC=bc}(S))
+\\ &\stackrel{\ref{r6}}{=}&
+a * \underbrace{\algsum_{1}(\sigma_{BC=bc}(S))}_{s_1[b,c]}
+\end{eqnarray*}
+
+(Analogously insert T(c,d).)
+
+\item
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s_A[c] &=&
+\algsum_{A}(R \bowtie \{\tuple{b,c}\})
+\\ &\stackrel{\ref{r1}}{=}&
+\algsum_{A}(\sigma_{B=b}(R) \times \{c\})
+\\ &\stackrel{\pi}{=}&
+\algsum_{A}(\sigma_{B=b}(R))
+\;=:\; s_A[b]
+\\
+\Delta s_D[b] &=&
+\algsum_{D}(\{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{D}(\{b\} \times \sigma_{C=c}(T))
+\\ &=&
+\algsum_{D}(\sigma_{C=c}(T))
+\;=:\; s_D[c]
+\end{eqnarray*}
+\end{itemize}
+
+Finally, we want to incrementally maintain $s_1[b,c]$:
+\begin{itemize}
+\item
+Insert S(b,c):
+\[
+\Delta s_1[b,c] =
+\algsum_{1}(\{\tuple{b,c}\}) = 1
+\]
+\end{itemize}
+
+Thus the code is:
+\begin{verbatim}
+on insert into R values (a,b)
+{
+   s += a * s_D[b];
+   s_A[b] += a;
+   foreach c (in Cs[b]) do
+      s_A[c] += a * s_1[b,c];
+}
+
+on insert into S values (b,c)
+{
+   s += s_A[b] * s_D[c];
+   s_A[c] += s_A[b];
+   s_D[b] += s_D[c];
+   s_1[b,c] += 1;
+}
+
+on insert into T values (c,d)
+{
+   s += s_A[c] * d;
+   s_D[c] += d;
+   foreach b (in Bs[c]) do
+      s_D[b] += s_1[b,c] * d;
+}
+\end{verbatim}
+\punto
+\end{example}
+
+
+\begin{example}\em
+Consider the same query as above where sum is replaced by max,
+\[
+m := \max_{A*D}(R \bowtie S \bowtie T).
+\]
+
+On insert into R values $(a,b)$: $m := \max(m, m')$ where
+\begin{eqnarray*}
+m' &=&
+\max_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\
+&\stackrel{\ref{r1},\ref{r3},\ref{r4}}{=}&
+\max_{a*D}(\sigma_{B=b}(S) \bowtie T)
+\\
+&\stackrel{\ref{r10}}{=}&
+\left\{
+\begin{array}{lll}
+a * \min_{D}(\sigma_{B=b}(S) \bowtie T) & \dots & a < 0 \\
+a * \max_{D}(\sigma_{B=b}(S) \bowtie T) & \dots & a \ge 0
+\end{array}
+\right.
+\end{eqnarray*}
+
+For the incremental maintenance of $S$ and $T$, we have to maintain
+$\min_A[b] = \min_A(\sigma_{B=b}(R))$,
+$\max_A[b] = \max_A(\sigma_{B=b}(R))$,
+$\min_A[c] = \min_A(R \bowtie \sigma_{C=c}(S))$ and
+$\max_A[c] = \max_A(R \bowtie \sigma_{C=c}(S))$.
+For instance,
+$\max_A[c] := \max(\max_A[c], \max_A'[c])$
+where
+\begin{eqnarray*}
+\max_A[c] &=&
+\max(\max_A[c], \max_A(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S)))
+\\
+&\stackrel{\ref{r1},\ref{r3},\ref{r4}}{=}&
+\max(\max_A[c], \max_a(\sigma_{BC=bc}(S)))
+\\
+&\stackrel{\ref{r12}}{=}&
+\left\{
+\begin{array}{lll}
+\max(\max_A[c], a) & \dots & s_1[b,c] > 0 \\
+\max_A[c]          & \dots & s_1[b,c] = 0
+\end{array}
+\right.
+\end{eqnarray*}
+where we incrementally maintain
+$s_1[b,c] = \algsum_1(\sigma_{BC=bc}(S))$.
+
+Thus the code for maintaining the datastructures on an insert of $R(a,b)$ is
+\begin{verbatim}
+m = max(m, ((a<0) ? min_D[b] : max_D[b]));
+max_A[b] = max(max_A[b], a);
+min_A[b] = min(min_A[b], a);
+if (s_1[b,c] > 0)
+{
+   max_A[c] =  max(max_A[c], a);
+   min_A[c] =  min(min_A[c], a);
+}
+\end{verbatim}
+\punto
+\end{example}
+
+\section{Alternate Compilation Rules}
+Define a compiler $C = <Q, M, U>$, where $Q$ is a query, $M$ a set of map data
+structures of the form ${attr}->aggregate(Q')$, and $U$ a set of update rules
+for the maps, of the form $update: M -> unit$, that is these updates are
+side-effects. We consider queries of the form:
+
+\begin{center}
+\texttt{select $A_{gb}$, aggregate(arithmetic($A_{agg}$)) from $G$}
+\end{center}
+
+where $A_{agg} = \{A_i\}$ are referred to as aggregation attributes, $A_{gb}$ as
+grouping attributes, and $G=\{V,E\}$ denotes a join graph with relations
+$V=\{R_i\}$ as nodes, and join predicates $E=\{\bigwedge_{i} a_i=b_i\}$ that are
+conjunctive equality predicates.
+
+\begin{figure*}
+\begin{align}
+<f(arith(A_{agg}), G), M, U> \wedge a \in A_{agg} \wedge distributive(f)
+\vdash <f^*(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\ 
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - \{a\}), G - R)),
+\sigma_{A_i=a_i}(R) \Join_{E_R} G-R), M, U>\\
+\nonumber\\
+<f(arith_1(a, f_{i}(A_{agg}, G)), \sigma_{A=a}(R) \Join_{E_R} G), M, U>
+\nonumber\\
+\qquad \vdash <f_{i}(A_{agg}, G), M \cup \overrightarrow{B} \rightarrow
+f_{i}(A_{agg}, G), U \cup {\lambda(\Delta R(a,\overrightarrow{b})). \Delta Q =
+f(a . M_B[\overrightarrow{b}])>,
+\mbox{ where } \overrightarrow{B} = Attrs(E_R)}\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\})
+\wedge associative(f_{i}, arith_1) \nonumber\\
+\qquad \vdash <arith_1(f(A_i, \pi_{A_i}(G)),
+f(arith_2(A_{agg} - \{A_i\}, \pi_{A_{agg} - \{A_i\}}(G)))), M, U>\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge distributive(f) \nonumber \\
+\qquad \vdash <f^*(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>, \mbox{ where }
+S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - A_{i}), G - R),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G - R \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U> \nonumber\\
+\mbox{ where } S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(arith_1(a_i, f_{i}(arith_2(A_{agg}), G),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U>
+\nonumber\\
+\qquad \vdash <f(arith(f_{i}(A_i,
+R \cup \pi_R(\overrightarrow{B}) = \pi_R(\overrightarrow{b})),
+f_{i}(arith(A_{agg}), G \cup S.\overrightarrow{B} = \overrightarrow{b})), M, U>
+\end{align}
+\end{figure*}
+
+
+
+\section{Structural Query Decomposition}
+
+
+The examples of the previous section have demonstrated how the rewrite
+rules of Figure~\ref{fig:rules} can be used to decompose a complex
+aggregate into smaller parts. For example,
+we were able to decompose
+\[
+\Delta s = \algsum_{A*D}(R \bowtie S \bowtie T)
+\]
+on the insertion of $S(b,c)$ into
+\[
+\algsum_{A}(\sigma_{B=b}(R)) * \algsum_D(\sigma_{C=c}(T)).
+\]
+
+This decomposition was easy to find because the query was
+very simple. For complex queries, we need some way of understanding the
+join structure of the query to find good decomposition. The natural tool
+for this are hypertree decompositions.
+
+
+\begin{example}\em
+The schema is
+$R_1\{A,B,C\}$, $R_2\{B,D,E\}$, $R_3\{C,F,G\}$, $R_4\{F,H\}$,  $R_5\{G,I,J\}$,
+and $R_6\{I,J,K,L\}$ and
+the query is
+\[
+s := \algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie \dots \bowtie R_6))[h,k].
+\]
+This query maliciously asks for tuples to be grouped by columns $H$ and $K$,
+which are quite distant in the query's hypergraph. 
+
+Let us insert tuple $R_1(a,b,c)$.
+This is an acyclic query. This is a hypertree decomposition with $R_1$ as
+the root node:
+\comment{
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_1\{A,B,C\}$}}}
+{
+   \TR{\framebox{$R_2\{B,D,E\}$}}^B
+   \pstree{\TR{\framebox{$R_3\{C,F,G\}$}}_{C; [H,K]}}
+   {
+      \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+      \pstree{\TR{\framebox{$R_5\{G,I,J\}$}}_{G; [K]}}
+      {
+         \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+      }
+   }
+}
+\]
+}
+
+The edges are annotated with the columns that have to be passed between the nodes.
+Now
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(\{a,b,c\} \bowtie R_2 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * \algsum_{L}(\sigma_{BCHK=bchk}(R_2 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * \algsum_{L}(\sigma_{B=b}(R_2) \times \sigma_{CHK=chk}(R_3 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * 
+\algsum_1(\sigma_{B=b}(R_2))[b] \\
+&*& 
+\algsum_L(\sigma_{CHK=chk}(R_3 \bowtie R_4 \bowtie R_5 \bowtie R_6))[c,h,k].
+\end{eqnarray*}
+
+If we want to insert into $R_3$, we reroot the hypertree decomposition
+\comment{
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
+{
+   \pstree{\TR{\framebox{$R_1\{A,B,C\}$}}^C}
+   {
+      \TR{\framebox{$R_2\{B,D,E\}$}}^B
+   }
+   \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+   \pstree{\TR{\framebox{$R_5\{G,I,J\}$}}_{G; [K]}}
+   {
+      \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+   }
+}
+\]
+}
+and rewrite as follows:
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie R_2 \bowtie \{c,f,g\}
+\\
+&& \quad \bowtie R_4 \bowtie R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A*L}(\sigma_{C=c}(R_1 \bowtie R_2) \times \sigma_{FH=fh}(R_4)
+\\
+&& \quad
+\times \sigma_{GK=gk}(R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A}(\sigma_{C=c}(R_1 \bowtie R_2))[c]
+\\
+&*& \algsum_{1}(\sigma_{FH=fh}(R_4))[fh]
+\\
+&*& \algsum_L(\sigma_{GK=gk}(R_5 \bowtie R_6))[gk]
+\end{eqnarray*}
+\punto
+\end{example}
+
+
+\begin{example}\em
+If the query is acyclic, nothing really changes.
+Consider the previous query where the schema of $R_5$ is now
+$\{E,G,I,J\}$ (thus the query becomes cyclic).
+
+The following is a hypertree decomposition rooted at $R_3$:
+\comment{
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
+{
+   \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+   \pstree{\TR{\framebox{$R_1\{A,B,C\}, R_5\{E,G,I,J\}$}}_{C,G; [K]}}
+   {
+      \TR{\framebox{$R_2\{B,D,E\}$}}^{B,E}
+      \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+   }
+}
+\]
+}
+Thus $\Delta s$ for the insertion of $R_3(c,f,g)$ is
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie R_2 \bowtie \{c,f,g\}
+\\
+&& \quad \bowtie R_4 \bowtie R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{1}(\sigma_{FH=fh}(R_4))[fh]
+\\
+&*& 
+\underbrace{\algsum_{A*L}(\sigma_{CGK=cgk}(R_1 \bowtie R_2 \bowtie R_5 \bowtie R_6))[cgk]}_{s_{A*L}[cgk]}
+\end{eqnarray*}
+
+On insertion of $R_5(e,g,i,j)$,
+\begin{eqnarray*}
+\Delta s_{A*L}[cgk]
+&=&
+\algsum_{A*L}(\sigma_{CGK=cgk}(R_1 \bowtie R_2 \\
+&& \quad \bowtie \{\tuple{e,g,i,j}\} \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A*L}(\sigma_{C=c}(R_1) \bowtie \sigma_{E=e}(R_2) \\
+&& \quad \times \sigma_{IJK=ijk}(R_6))[\cdot]
+\\
+&=&
+\algsum_{A}(\sigma_{C=c}(R_1) \bowtie \sigma_{E=e}(R_2))[ce] \\
+&& \quad * \algsum_L(\sigma_{IJK=ijk}(R_6))[ijk]
+\end{eqnarray*}
+\punto
+\end{example}
