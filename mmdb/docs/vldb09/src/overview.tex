@@ -3,20 +3,38 @@
 \begin{itemize}
   \item \compiler\ compiles SQL down to C code, and this compiler is the main
   focus of this paper.
+
   \item For scalability and availability reasons, we foresee implementing a
-  lightweight runtime consisting of the following additional components. This
-  runtime will still execute C-code for individual queries. The components
-  include:
+  distributed lightweight runtime consisting of several additional
+  components. This runtime will behave much more like a JIT compiler for runtime
+  adaptivity, maintaining persistent versions of our compiler's metadata, and
+  dynamically generating and compiling C-code for individual queries.
+
+  \item We perceive the need for a plugin-oriented architecture for code
+  generation, to enable multiple code generators each targeting distinct
+  lower-level languages. For example, the choice of target language depends
+  heavily on the distributed system model -- it is difficult to dynamically
+  manage code with C or C++, even with shared libraries and dlopen/dlsym/dlclose.
+  Language support for reflection support may be desirable, so we may wish to
+  consider Java as an alternative target. Java could also help in terms of
+  avoiding managing the compiler toolchain across many machines in a
+  heterogeneous hardware and software environment.
+
+  \item Additional components include:
   \begin{enumerate}
-    \item Query loader and unloader, catalog and code shipping.
+    \item Query loader and unloader, catalog, map and code shipping. Note
+    migrating data is much easier than migrating code, and we may want to keep
+    things simple.
     \item Query scheduler and optimizer for both multi-core and distributed
     operation. Optimization mechanism examples include automated data structure
     partitioning and load balancing, as well as dynamic data structure sharing.
-    \item Storage and recovery manager
+    \item Storage and recovery manager, for both dealing with memory capacity
+    limits and k-safe checkpointing and bootstrapping from a spare node pool for
+    recovery.
     \item Network and deployment manager, with a declarative deployment
     definition language.
     \item Concurrency control model? e.g. single point of entry, or
     multiple w/ update propagation? Generate C-code w/ transactional memory
-    primitives?
+    primitives to support concurrent runs of kernel functions?
   \end{enumerate}
 \end{itemize}

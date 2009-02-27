@@ -1,30 +1,122 @@
 \section{Introduction}
 We present \compiler, a tool to support a novel query execution model, compiling
-SQL queries into C programs, targeting the emerging hardware platform of main-memory
-databases. At the heart of our work, we question the cost of providing a highly
-flexible runtime, as found with modern databases in plan interpreters and other
-runtime components including schedulers and optimizers. Modern relational
-databases focus almost exclusively on providing flexible and extensible querying
-capabilities in dynamic environments, supporting both schema and data evolution.
-From a hardware perspective, the rapidly increasing capacities and shrinking
-latencies across a variety of memory devices presents an opportunity to rethink
-database architectures. Today's databases are also heavily concerned with
-efficiency across the main-memory and secondary storage boundary, while those
-main-memory databases that do exist are restrictions of this page-oriented access
-model.
+SQL queries into C programs, targeting the emerging hardware platform of
+main-memory databases. At the heart of our work, we question the cost of
+providing a highly flexible runtime, as found with modern databases in plan
+interpreters and other runtime components including schedulers and optimizers.
+Modern relational databases focus almost exclusively on providing flexible and
+extensible querying capabilities in dynamic environments, supporting both schema
+and data evolution. From a hardware perspective, rapidly increasing main-memory
+capacities presents an opportunity to rethink database architectures. Today's
+databases are heavily concerned with efficiency across the main-memory and
+secondary storage boundary, and their design principles have spilled
+into main-memory databases architectures.
 
-Our work is motivated by the following example applications:
+Our work on \compiler\ is motivated by the following applications, which in
+our view cannot be processed efficiently with any of the data management tools
+available today.
 
-\begin{itemize}
-\item
-Processing order books. Give a nice example of a trading strategy that
-delegates the bulk of the work to compiled SQL queries.
+\noindent \textbf{Processing order books in equities trading.}
+Following a call for greater transparency~\cite{sec-orderbook:00} earlier this
+decade, many stock exchanges provide investors with complete bid and ask limit
+order books, enabling a superior view of the market microstructure for use in
+trading algorithms. The bid order book consists of prices and volumes investors
+are willing to buy equities in descending price and timestamp order, and
+correspondingly the ask order book indicates investors' selling prices. Exchanges
+execute trades by matching the top of the bid and ask order books, in addition to
+handling market orders. Investors continually add, modify or withdraw limit
+orders, thus we view order books as relations subject to high volumes of order
+inserts, updates and deletes.
+
+Investors and automated trading systems express diverse trading strategies on
+these order books, and the success of trading depends critically on the speed at
+which the programmed strategies process the data. Unlike stream processing
+scenarios \cite{abadi-vldbj:03,motwani-cidr:03}, order books do not grow
+unboundedly in practice, and cannot be expressed by windows given their arbitrary
+inserts, updates and deletes. Thus in \compiler, we process continuous queries
+over temporal snapshots of relations via delta processing.
+\comment{
+However in the order book scenario, neither time-, row- or punctuation-based
+window semantics apply, rather each insert, update or delete statement defines
+a new temporal snapshot of the order book relation. This data model is
+particularly relevant since trading strategies continuously query the full
+order book to determine an action.
+
+However, trading strategies continuously require access to the full order book
+relation, which cannot be expressed by windows given arbitrary inserts, updates
+and deletes. Furthermore, order books do not grow unboundedly in practice, the
+number of updates and deletes is proportional to the number of inserts and there
+is no need for the system to manage the scope of the relation. Thus in
+\compiler, we process continuous queries over temporal snapshots of relations
+expressed as deltas to base relations.
+
+High-level declarative languages have been applied in similar areas of finance,
+such as technical analysis, for example through stream processing engines
+\cite[abadi-vldbj:03,motwani-cidr:03]. However, trading strategies continuously
+require the full order book and order books do not grow unboundedly in practice
+-- they cannot be expressed by windows given arbitrary inserts, updates and
+deletes. Thus in \compiler, we process continuous queries over temporal snapshots
+of relations expressed as deltas to base relations.
+}
+To illustrate this, we provide a simple example query based on a Static Order
+Book Imbalance (SOBI) trading strategy. SOBI computes a volume-weighted average
+price (VWAP) over those orders whose volume makes up a fixed fraction of the
+total stock volume in each of the bid and ask order books. SOBI then compares the two
+VWAPs. For simplicity, we present the VWAP for the bids:
+
+\begin{verbatim}
+select avg(bcv.price*bcv.volume) as bid_vwap from
+    (select sum(volume) as total_volume
+        from bids) as bv,
+    (select b2.price, b2.volume,
+            sum(b1.volume) as cumsum_volume
+        from bids b1, bids b2
+        where b1.price > b2.price
+        group by b2.price, b2.volume) as bcv
+    where bcv.cumsum_volume < k * bv.total_volume)
+    as vwap_input
+\end{verbatim}
+
+\noindent Above, the contents of the bids order book is continually changing,
+and \compiler\ produces a new output on every insert, update or delete.
+
+\comment{
+Above, the total volume in the order book is continually changing, thus computing
+the VWAP over those orders comprising the top $k$\% of volume requires the full
+order book relation. This is easily expressed with SQL over standard relations.
+\compiler\ produces a new output on every insert, update or delete to the order
+book.
+}
+\comment{
+\begin{verbatim}
+select case
+    when s.vwap - b.vwap > threshold then
+        'buy', V, lastPrice - delta, 'sell', V, lastPrice + hedgeDelta
+    when b.vwap - s.vwap > threshold then
+        'sell', V, lastPrice + delta, 'buy', V, lastPrice - hedgeDelta
+from
+     (select avg(bcv.price*bcv.volume) as vwap from
+        (select sum(volume) as total from bids) as bv,
+        (select b2.price, b2.volume, sum(b1.volume) as cumsum from
+            bids b1, bids b2 where b1.price > b2.price group by b2.price, b2.volume) as bcv
+        where bcv.cumsum < k * bv.total) as b,
+    (select avg(scv.price*scv.volume) as vwap from
+        (select sum(volume) as total from asks) as sv,
+        (select s2.price, s2.volume, sum(s1.volume) as cumsum from
+        asks s1, asks s2 where s1.price < s2.price group by s2.price, s2.volume) as scv
+    where scv.cumsum < k * sv.total) as s
+\end{verbatim}
+}
+\comment{
+Give a nice example of a trading strategy that delegates the bulk of the work to compiled SQL queries.
 This is a nice scenario because order books do not get very large (if we
 want to process several order books, we can nicely partition the work by
 order book across several machines), change extremely rapidly, and the
 success of trading depends crucially on the speed with which the programmed
 strategies process the data.
+}
 
+\begin{itemize}
 \item
 Data warehouse loading: data integration and aggregation.
 Commercial data warehouse loaders also use straight-line code for aggregation,

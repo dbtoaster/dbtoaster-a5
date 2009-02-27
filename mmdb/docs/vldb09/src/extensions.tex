@@ -1,0 +1,84 @@
+\section{Compiler Analysis and Extensions}
+
+\subsection{Memory Usage Analysis}
+\begin{itemize}
+  \item Apply to generalized join graphs, and their hypertree decomposition.
+  \item Given a tree-structured join graph, analyse map construction rules and
+  discuss based on fanout of nodes in the join graph.
+  \item The analysis approach should be to generalize each rewrite rule, compute
+  the incremental space usage from each rewrite rule, and finally reason about
+  the size of the decomposition tree. The size of this decomposition tree can
+  be derived from the hypertree structure.
+  \item Consider our standard example template:\linebreak
+  $sum(a_1, \ldots , a_n) R,S,T_1,\ldots T_{n-1}$, where there is a $n-way$ join.
+  This is a simple join tree of height 2 with $n$ leaves and a single root. Our
+  decomposition tree has width $n - level$ at each level and height $n$. The
+  number of maps is thus bounded by $\sum_{i=0}^{n-1}{(i+1)*(n-i)} =
+  \sum_{i=1}^{n}{(n+1-i)*i} = (n+1)\sum_{i=1}^{n}{i} - \sum_{i=1}^{n}{i^2}$
+  \linebreak $= \frac{(n+1)n(n-1)}{2} - \frac{2n^3-3n^2+n}{6} = O(n^3)$.
+  Note this includes many duplicate maps, which we'll need to quantify to get a
+  tighter bound ($O(n^3)$ is sizeable, even if $n$ is usually small given it's
+  the number of relations). Furthermore this does not say anything about the size
+  of each map, which we'll have to reason about in terms of the domain sizes for
+  each attribute.
+  
+  \item Assume each leaf in the join tree contributes an aggregation column and
+  potentially group-by columns. Internal nodes may or may not contribute
+  aggregation columns and group by columns. Internal nodes consist of at least
+  one join predicate column.
+\end{itemize}
+
+\subsection{Bulk processing}
+
+\begin{itemize}
+  \item Improve pipelining by unrolling the main delta loop, and
+  applying independent lines of code in sequence. We refer to applying
+  $k$ independent statements in sequence as $k$-level unrolling.
+  \item We consider more structured sequences, i.e. patterns perhaps from
+  a profiling process based on frequent pattern mining on the delta workload,
+  and apply dead-code elimination based on the pattern.
+  \item We may want to exploit vectorized instructions, e.g. Altivec/SSE
+  instructions. We probably won't go into much depth on this due to limited
+  research impact.
+  \item Challenge: statically picking the right chunk size for processing, given
+  profiling information. We can't handle changes in delta rates to different base
+  relations (e.g., no adaptive unrolling/pipelining). How much does this kill the
+  argument?
+  \item What are the caching effects of bulk operations? Bulk operations should
+  improve cache hit ratios as long as the portions of the data structures used
+  fit in cache (as working sets). We may want to pick the right chunk size at the
+  limit of beneficial pipelining and caching effects, i.e. when one of these two
+  advantages starts to become a drawback.
+\end{itemize}
+
+\subsection{Lazy map maintenance}
+
+\begin{itemize}
+  \item We profile delta rates on each base relation, and compute internal
+  selectivities to determine when to defer updating a map while processing a
+  kernel function.
+  \item In terms of code generation this adds conditionals based on profiling
+  statistics around each map update, where one branch updates the map as before,
+  and the other branch stores the delta to be applied at some later point. Note
+  given the recursive nature of our decomposition, we jump out of the kernel
+  function and handle the next delta on the first branch indicating deferral.
+  \item How do we store the deferred updates? As queues associated with each
+  map?
+  \item This may cause a large number of long jumps in our code, how will this
+  affect performance, e.g. what are the effects on branch prediction, I-cache
+  performance, etc.?
+\end{itemize}
+
+\subsection{Multi-query compilation and map sharing}
+
+\subsection{Discussion: adaptivity limitations}
+
+\begin{itemize}
+  \item Compilation and adaptivity are inherently in tension, pulling engines
+  in opposite directions.
+  \item TODO: how can we show we are not going to do too badly regardless of how
+  the delta workload changes? Perhaps we can borrow ideas from robust query
+  processing, where they pick a plan based on maximizing the parameter space
+  (i.e. of those statistics profiled) covered by a single plan, as the choice of
+  plan we decompose.
+\end{itemize}
