@@ -17,42 +17,46 @@
 \rho_{\vec{A}}(R)
 \label{r2}
 \\
-\rho_{A}(\{\vec{a}\}) \times \rho_{\vec{B}}(R)
+\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R)
 &\vdash&
-\sigma_{A=a}(\rho_{A}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))
 \label{r3}
 \\
-\algagg_{f(A,\vec{B})}(\sigma_{A=a}(R))
+\algagg_{f(\vec{A},\vec{B})}(\sigma_{\vec{A}=\vec{a}}(R))
 &\vdash&
-\algagg_{f(a,\vec{B})}(\sigma_{A=a}(R))
+\algagg_{f(\vec{a},\vec{B})}(\pi_{\vec{B}}(R))
 \label{r4}
+\\
+\algagg_{f(\vec{A})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{\vec{b}\}))
+&\vdash&
+\algagg_{f(\vec{A})}(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{\vec{b}\})))
+\label{r5}
 \\
 \algsum_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
 &\vdash&
 \algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
-\algsum_{f(\vec{B})}(\rho_{\vec{B}}(S))
-\label{r5}
-\\
-\algsum_{a * f(\cdot)}(R)
-&\vdash&
-a * \algsum_{f(\cdot)}(R)
+\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S))
 \label{r6}
+\\
+\algsum_{a *
+f(\cdot)}(R) &\vdash& a * \algsum_{f(\cdot)}(R)
+\label{r7}
 \\
 \algsum_{f(\cdot) + g(\cdot)}(R)
 &\vdash&
 \algsum_{f(\cdot)}(R) + \algsum_{g(\cdot)}(R)
-\label{r7}
+\label{r8}
 \\
 \max_{a + f(\cdot)}(R)
 &\vdash&
 a + \max_{f(\cdot)}(R)
-\label{r8}
+\label{r9}
 \\
 \max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
 &\vdash&
 \max_{f(\vec{A})}(\rho_{\vec{A}}(R)) +
 \max_{f(\vec{B})}(\rho_{\vec{B}}(S))
-\label{r9}
+\label{r10}
 \\
 \max_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
 &\vdash&
@@ -63,7 +67,7 @@ a * \min_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a < 0 \\
 a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a > 0
 \end{array}
 \right.
-\label{r10}
+\label{r11}
 \\
 \max_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
 &\vdash&
@@ -79,7 +83,7 @@ a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a > 0
 \min_{f(\vec{A})}(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R))) *
 \min_{g(\vec{B})}(\sigma_{f(\vec{B}) < 0}(\rho_{\vec{B}}(S)))
 \Big\}
-\label{r11}
+\label{r12}
 \\
 \max_a(R)
 &\vdash&
@@ -89,10 +93,10 @@ a       & \dots & \algsum_1(R) > 0 \\
 -\infty & \dots & \algsum_1(R) = 0 \\
 \end{array}
 \right.
-\label{r12}
+\label{r13}
 \end{eqnarray}
 
-In particular, if $g(\cdot) = 1$, then Rule~(5) gives
+In particular, if $g(\cdot) = 1$, then Rule~(6) gives
 \[
 \algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
 \algsum_{1}(\rho_{\vec{B}}(S))
@@ -105,16 +109,74 @@ count is sum$_1$.}
 \label{fig:rules}
 \end{figure*}
 
+\comment{
+\begin{figure*}
+\begin{center}
+\begin{tabular}{c|l|l}
+Relational expression & Input maps & Output maps\\
+\hline
+$\sigma_{\vec{A}=\vec{a}}(R)$ & $(R)[\_]$ &
+$(\sigma_{\vec{A}=\vec{a}}(R))[_,\vec{a}]$\\
+$\pi_{\vec{A}}(\rho_{\vec{A}}(R))$ & $(R)[\_]$ & $(\rho_{\vec{A}}(R))[\_]$\\
+$\rho_{\vec{A}\vec{B}}(R) \Join \rho_{\vec{B}\vec{C}}(S)$ & $(R)[\vec{r}],
+(S)[\vec{s}]$ & $(\rho_{\vec{A}\vec{B}}(R) \Join
+\rho_{\vec{B}\vec{C}}(S))[\vec{r},\vec{s},\vec{b}]$\\
+$\algagg_{f(\cdot)}(R)$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[]$\\
+$\algagg_{f(\cdot)}(R)[\vec{a}]$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[\vec{a}]$
+\end{tabular}
+\end{center}
+\end{figure*}
+}
 
+\begin{figure*}
+\begin{center}
+\begin{eqnarray}
+(\rho_{\vec{A}\vec{B}}(R) \bowtie
+\rho_{\vec{A}\vec{C}}(\{\tuple{\vec{a}\vec{c}} \}))[\_]
+& \vdash &
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
+\times \rho_{\vec{C}}(\{ \vec{c} \}))[\_,\vec{a}]
+\label{mr1}
+\\
+(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(\{ \vec{b}\})))[\_,\vec{b}?]
+& \vdash &
+(\rho_{\vec{A}}(R))[\_]
+\label{mr2}
+\\
+(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))[\_]
+& \vdash &
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\})
+\times \rho_{\vec{B}}(R)))[\_,\vec{a}]
+\label{mr3}
+\\
+(Q)[\_] & \vdash & (Q')[\_] \\
+(Q)[\_] & \vdash & (Q')[\_] \\
+(\algsum_{f(\vec{A}) * g(\vec{B})}
+(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(S)))[\vec{a},\vec{b}]
+& \vdash &
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}], 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+\label{mr6}
+\\
+(\algsum_{a * f(\cdot)}(R))[a?,\vec{b}]
+& \vdash &
+(\algsum_{f(\cdot)}(R))[\vec{b}]
+\label{mr7}
+\\
+\end{eqnarray}
+\end{center}
+\caption{Map construction rules corresponding to rewrite rules. agg can be
+either sum, max or min. count is sum$_1$.}
+\label{fig:maprules}
+\end{figure*}
 
 In this section, an expression of the form
 \[
 \algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))[\vec{a}]
 \]
-is a map for an aggregate-group by queryd did use the environment, however in
-that case the numbering for each line appeared on the following line (and not on
-the same as I wanted to). That's why I decided that I will just have the two
-equations without any te
+is a map for an aggregate-group by query
 \[
 \mbox{select $\vec{A}$, agg($f$)
 from $Q$
@@ -184,7 +246,7 @@ expression that is a sum of products (by exploiting distributivity).
 
 Let the aggregate be sum. In that case the rewriting of Equation~\ref{eq:1}
 so as to eliminate the constants $\vec{d}$
-is always possible using the rules \ref{r6} and \ref{r7}.
+is always possible using the rules \ref{r7} and \ref{r8}.
 In the case of max, the rewriting is usually possible. The simplest case
 where it is not is $f = B_1 * d + B_2$.
 
@@ -212,9 +274,9 @@ Insert R(a,b):
 \Delta s &=& \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
 \\ &\stackrel{\ref{r1}}{=}&
 \algsum_{A*D}(\{a\} \times \sigma_{B=b}(S) \bowtie T)
-\\ &\stackrel{\ref{r3},\ref{r4}}{=}&
+\\ &\stackrel{\ref{r3},\ref{r4},\ref{r2}}{=}&
 \algsum_{a*D}(\sigma_{B=b}(S) \bowtie T)
-\\ &\stackrel{\ref{r6}}{=}&
+\\ &\stackrel{\ref{r7}}{=}&
 a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{s_D[b]}
 \end{eqnarray*}
 
@@ -224,7 +286,7 @@ Insert S(b,c):
 \Delta s &=& \algsum_{A*D}(R \bowtie \{\tuple{b,c}\} \bowtie T)
 \\ &\stackrel{\ref{r1}*}{=}&
 \algsum_{A*D}(\sigma_{B=b}(R) \times \sigma_{C=c}(T))
-\\ &\stackrel{\ref{r5}}{=}&
+\\ &\stackrel{\ref{r6}}{=}&
 \underbrace{\algsum_{A}(\sigma_{B=b}(R))}_{s_A[b]} *
 \underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{s_D[c]}
 \end{eqnarray*}
@@ -249,13 +311,13 @@ Insert R(a,b):
 \\
 \mbox{foreach $c$: }
 \Delta s_A[c] &=& \algsum_{A}(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S))
-\\ &\stackrel{\ref{r1},\ref{r3},\ref{r4},\pi}{=}&
+\\ &\stackrel{\ref{r1},\ref{r3},\ref{r4},\ref{r2}}{=}&
 \algsum_{a}(\sigma_{BC=bc}(S))
-\\ &\stackrel{\ref{r6}}{=}&
+\\ &\stackrel{\ref{r7}}{=}&
 a * \underbrace{\algsum_{1}(\sigma_{BC=bc}(S))}_{s_1[b,c]}
 \end{eqnarray*}
 
-(Analogously insert T(c,d).)
+(Analogously insert T(c,d) for maintaining $s_{D}[b], s_{D}[c]$.)
 
 \item
 Insert S(b,c):
@@ -264,15 +326,15 @@ Insert S(b,c):
 \algsum_{A}(R \bowtie \{\tuple{b,c}\})
 \\ &\stackrel{\ref{r1}}{=}&
 \algsum_{A}(\sigma_{B=b}(R) \times \{c\})
-\\ &\stackrel{\pi}{=}&
+\\ &\stackrel{\ref{r5},\ref{r2}}{=}&
 \algsum_{A}(\sigma_{B=b}(R))
 \;=:\; s_A[b]
 \\
 \Delta s_D[b] &=&
 \algsum_{D}(\{\tuple{b,c}\} \bowtie T)
-\\ &=&
+\\ &\stackrel{\ref{r1}}{=}&
 \algsum_{D}(\{b\} \times \sigma_{C=c}(T))
-\\ &=&
+\\ &\stackrel{\ref{r5},\ref{r2}}{=}&
 \algsum_{D}(\sigma_{C=c}(T))
 \;=:\; s_D[c]
 \end{eqnarray*}
@@ -381,71 +443,107 @@ if (s_1[b,c] > 0)
 \punto
 \end{example}
 
-\subsection{Alternate Compilation Rules}
-Define a compiler $C = <Q, M, U>$, where $Q$ is a query, $M$ a set of map data
-structures of the form ${attr}->aggregate(Q')$, and $U$ a set of update rules
-for the maps, of the form $update: M -> unit$, that is these updates are
-side-effects. We consider queries of the form:
+\newcommand{\compile}{\ensuremath{\mbox{\sc Compile}}}
+\newcommand{\generate}{\ensuremath{\mbox{\sc Generate}}}
+\newcommand{\rewrite}{\ensuremath{\mbox{\sc Rewrite}}}
+\newcommand{\substitute}{\ensuremath{\mbox{\sc Substitute}}}
+\newcommand{\match}{\ensuremath{\mbox{\sc Match}}}
 
-\begin{center}
-\texttt{select $A_{gb}$, aggregate(arithmetic($A_{agg}$)) from $G$}
-\end{center}
+\begin{algorithm}
+\caption{$\compile(Q)$}
+\label{alg:compile}
+\begin{codebox}
+\zi \Comment{Inputs: a query $Q$}
+\zi \Comment{Outputs: a toasted database $\lambda_{DB}$}
+\zi \Comment{Definitions: }
+\zi \>$\mathcal{B}$: input tables used by $Q$.
+\zi \>$(Q)[]$: initial map (yields query result).
+\end{codebox}
+\begin{algorithmic}[1]
+\STATE $Targets \leftarrow \{\tuple{(Q)[],\mathcal{B}}\}$
+\STATE $Kernels \leftarrow \{\}$
+\STATE $Maps \leftarrow \{\}$
+\WHILE{ $|T| > 0$ }
+	\STATE $\tuple{M,\mathcal{R}} \leftarrow next(T)$
+	\IF {$|R| = 1$}
+		\STATE $Kernel[R] \cup \generate(M,R)$
+	\ELSE
+		\FOR{$R \in \mathcal{R}$}
+			\STATE $\tuple{\{M'\}, \lambda_R} \leftarrow \rewrite(M,R)$
+			\STATE $Kernel[R] \leftarrow Kernel[R] \cup \lambda_R$
+			\STATE $Targets \leftarrow Targets \cup \{\tuple{M',\mathcal{R}-R}\}$
+		\ENDFOR
+	\ENDIF
+\ENDWHILE
+\STATE $\lambda_{DB} \leftarrow \lambda(\Delta).$\\
+$\qquad \mbox{\sc Declare}(Maps)\mbox{; \sc
+DispatchLoop}(\Delta, Kernel)$
+\RETURN $\lambda_{DB}$
+\end{algorithmic}
+\end{algorithm}
 
-where $A_{agg} = \{A_i\}$ are referred to as aggregation attributes, $A_{gb}$ as
-grouping attributes, and $G=\{V,E\}$ denotes a join graph with relations
-$V=\{R_i\}$ as nodes, and join predicates $E=\{\bigwedge_{i} a_i=b_i\}$ that are
-conjunctive equality predicates.
-
-\begin{figure*}
-\begin{align}
-<f(arith(A_{agg}), G), M, U> \wedge a \in A_{agg} \wedge distributive(f)
-\vdash <f^*(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>\\
-\nonumber\\
-<f(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
-\wedge distributes(f_{i}, arith_1) \nonumber \\ 
-\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - \{a\}), G - R)),
-\sigma_{A_i=a_i}(R) \Join_{E_R} G-R), M, U>\\
-\nonumber\\
-<f(arith_1(a, f_{i}(A_{agg}, G)), \sigma_{A=a}(R) \Join_{E_R} G), M, U>
-\nonumber\\
-\qquad \vdash <f_{i}(A_{agg}, G), M \cup \overrightarrow{B} \rightarrow
-f_{i}(A_{agg}, G), U \cup {\lambda(\Delta R(a,\overrightarrow{b})). \Delta Q =
-f(a . M_B[\overrightarrow{b}])>,
-\mbox{ where } \overrightarrow{B} = Attrs(E_R)}\\
-\nonumber\\
-<f(arith(A_{agg}), G), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\})
-\wedge associative(f_{i}, arith_1) \nonumber\\
-\qquad \vdash <arith_1(f(A_i, \pi_{A_i}(G)),
-f(arith_2(A_{agg} - \{A_i\}, \pi_{A_{agg} - \{A_i\}}(G)))), M, U>\\
-\nonumber\\
-<f(arith(A_{agg}), G), M, U>
-\wedge distributive(f) \nonumber \\
-\qquad \vdash <f^*(f_{i}(arith(A_{agg}),
-G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>, \mbox{ where }
-S.\overrightarrow{B} = Attrs(E_S)\\
-\nonumber\\
-<f(f_{i}(arith(A_{agg}),
-G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
-\wedge distributes(f_{i}, arith_1) \nonumber \\
-\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - A_{i}), G - R),
-\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G - R \cup S.\overrightarrow{B}
-= \overrightarrow{b}), M, U> \nonumber\\
-\mbox{ where } S.\overrightarrow{B} = Attrs(E_S)\\
-\nonumber\\
-<f(arith_1(a_i, f_{i}(arith_2(A_{agg}), G),
-\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G \cup S.\overrightarrow{B}
-= \overrightarrow{b}), M, U>
-\nonumber\\
-\qquad \vdash <f(arith(f_{i}(A_i,
-R \cup \pi_R(\overrightarrow{B}) = \pi_R(\overrightarrow{b})),
-f_{i}(arith(A_{agg}), G \cup S.\overrightarrow{B} = \overrightarrow{b})), M, U>
-\end{align}
-\end{figure*}
-
-
+\begin{algorithm}
+\caption{$\rewrite(M,R)$}
+\label{alg:rewrite}
+\begin{codebox}
+\zi \Comment{Inputs:}
+\zi \> a map $M$, and a relation to consider for updates, $R$.
+\zi \Comment{Outputs:}
+\zi \> a new set of maps $\mathcal{M'}$, and a function $\lambda_R$ s.t.
+\zi \>\> $\Delta M = \lambda_R(\Delta R,\mathcal{M'})$
+\zi \Comment{Description:}
+\zi	\> Performs bottom-up rewriting according to
+Figures~\ref{fig:rules},\ref{fig:maprules}.
+\end{codebox}
+\begin{algorithmic}[1]
+\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
+\smallskip
+\STATE $M \leftarrow \substitute(M,R,\tuple{r_i})$
+\STATE $S \leftarrow inputs(M)$
+\STATE $parents \leftarrow plan(M)$
+\STATE $maps \leftarrow \{\}$
+\STATE $rewrite \leftarrow \{\}$
+\WHILE{ $|S| > 0$ }
+	\STATE $E_{c} \leftarrow pop(S)$
+	\STATE $E \leftarrow parents[E_{c}]$
+	\STATE $\tuple{matched,E',M'} \leftarrow \match(E,maps[children(E)])$
+	\IF {$matched$}
+		\STATE $S \leftarrow (S - descendants(E)) \cup parent[E]$
+		\STATE $maps[E'] \leftarrow M'$
+		\STATE $rewrite \leftarrow rewrite \cup (E',children(E',rewrite))$
+	\ELSE
+		\STATE $rewrite \leftarrow rewrite \cup (E',children(E,rewrite))$
+	\ENDIF
+\ENDWHILE
+\STATE $root \leftarrow$ $\mbox{\sc Root}(rewrite)$
+\STATE $\mathcal{M'} \leftarrow \mbox{\sc NearestMaps}(root)$
+\STATE $\lambda_R \leftarrow \lambda(\Delta R).\mbox{\sc Apply}(root,\mathcal{M'})$
+\RETURN $\tuple{\lambda_R,\mathcal{M'}}$
+\end{algorithmic}
+%%
+%% Old version
+\comment{
+\begin{algorithmic}[1]
+\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
+\smallskip
+\STATE $M \leftarrow substitute(M,R,\tuple{r_i})$
+\STATE $S \leftarrow \{M\}$
+\STATE $parent \leftarrow \{\}$
+\WHILE{ $!fixpoint(S)$ }
+	\STATE $E \leftarrow pop(S)$
+	\STATE $\tuple{matched,E'} \leftarrow match(E)$
+	\IF {$matched \wedge parent[E]$}
+		\STATE $S \leftarrow S \cup parent[E]$
+		\STATE $parent \leftarrow parent - E$
+		\STATE $S \leftarrow S \cup children(E')$
+	\ELSE
+		\STATE $parent[E] \leftarrow children(E)$
+		\STATE $S \leftarrow S \cup children(E)$
+	\ENDIF
+\ENDWHILE
+\end{algorithmic}
+}
+\end{algorithm}
 
 \subsection{Structural Query Decomposition}
 
@@ -612,3 +710,69 @@ On insertion of $R_5(e,g,i,j)$,
 \end{eqnarray*}
 \punto
 \end{example}
+
+\comment{
+\subsection{Alternate Compilation Rules}
+Define a compiler $C = <Q, M, U>$, where $Q$ is a query, $M$ a set of map data
+structures of the form ${attr}->aggregate(Q')$, and $U$ a set of update rules
+for the maps, of the form $update: M -> unit$, that is these updates are
+side-effects. We consider queries of the form:
+
+\begin{center}
+\texttt{select $A_{gb}$, aggregate(arithmetic($A_{agg}$)) from $G$}
+\end{center}
+
+where $A_{agg} = \{A_i\}$ are referred to as aggregation attributes, $A_{gb}$ as
+grouping attributes, and $G=\{V,E\}$ denotes a join graph with relations
+$V=\{R_i\}$ as nodes, and join predicates $E=\{\bigwedge_{i} a_i=b_i\}$ that are
+conjunctive equality predicates.
+
+\begin{figure*}
+\begin{align}
+<f(arith(A_{agg}), G), M, U> \wedge a \in A_{agg} \wedge distributive(f)
+\vdash <f^*(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\ 
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - \{a\}), G - R)),
+\sigma_{A_i=a_i}(R) \Join_{E_R} G-R), M, U>\\
+\nonumber\\
+<f(arith_1(a, f_{i}(A_{agg}, G)), \sigma_{A=a}(R) \Join_{E_R} G), M, U>
+\nonumber\\
+\qquad \vdash <f_{i}(A_{agg}, G), M \cup \overrightarrow{B} \rightarrow
+f_{i}(A_{agg}, G), U \cup {\lambda(\Delta R(a,\overrightarrow{b})). \Delta Q =
+f(a . M_B[\overrightarrow{b}])>,
+\mbox{ where } \overrightarrow{B} = Attrs(E_R)}\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\})
+\wedge associative(f_{i}, arith_1) \nonumber\\
+\qquad \vdash <arith_1(f(A_i, \pi_{A_i}(G)),
+f(arith_2(A_{agg} - \{A_i\}, \pi_{A_{agg} - \{A_i\}}(G)))), M, U>\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge distributive(f) \nonumber \\
+\qquad \vdash <f^*(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>, \mbox{ where }
+S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - A_{i}), G - R),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G - R \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U> \nonumber\\
+\mbox{ where } S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(arith_1(a_i, f_{i}(arith_2(A_{agg}), G),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U>
+\nonumber\\
+\qquad \vdash <f(arith(f_{i}(A_i,
+R \cup \pi_R(\overrightarrow{B}) = \pi_R(\overrightarrow{b})),
+f_{i}(arith(A_{agg}), G \cup S.\overrightarrow{B} = \overrightarrow{b})), M, U>
+\end{align}
+\end{figure*}
+}
