@@ -305,23 +305,98 @@ $\algagg_{f(\cdot)}(R)[\vec{a}]$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[\vec{a}]$
 (Q)[\_] & \vdash & (Q')[\_] \\
 (\algsum_{f(\vec{A}) * g(\vec{B})}
 (\rho_{\vec{A}}(R) \times
-\rho_{\vec{B}}(S)))[\vec{a},\vec{b}]
+\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
 & \vdash &
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}], 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}], 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
 \label{mr6}
 \\
-(\algsum_{a * f(\cdot)}(R))[a?,\vec{b}]
+(\algsum_{a * f(\cdot)}(R))[a?,\_]
 & \vdash &
-(\algsum_{f(\cdot)}(R))[\vec{b}]
+(\algsum_{f(\cdot)}(R))[\_]
 \label{mr7}
+\\
+(\algsum_{f(\cdot) + g(\cdot)}(R))[\_]
+& \vdash &
+(\algsum_{f(\cdot)}(R))[\_],
+(\algsum_{g(\cdot)}(R))[\_]
+\label{mr8}
+\\
+(\max_{a+f(\cdot)}(R))[a?,\_] & \vdash & (\max_{f(\cdot)}(R))[\_]
+\label{mr9}
+\\
+(\max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
+& \vdash &
+(\max_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
+(\max_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
+\label{mr10}
+\\
+(\max_{a * f(\vec{B})}(\rho_{\vec{B}}(R)))[a?,\_]
+&\vdash&
+\left\{
+\begin{array}{lll}
+(\min_{f(\vec{B})}(\rho_{\vec{B}}(R)))[\_] & \dots & a < 0 \\
+(\max_{f(\vec{B})}(\rho_{\vec{B}}(R)))[\_] & \dots & a \geq 0
+\end{array}
+\right.
+\label{mr11}
 \\
 \end{eqnarray}
 \end{center}
 \caption{Map construction rules corresponding to rewrite rules. agg can be
-either sum, max or min. count is sum$_1$. (Note this is incomplete right now,
-I will finish once the rewrite rules are settled.)}
+either sum, max or min. count is sum$_1$. (Note this is incomplete,
+rather than copy pasting all the above rewrite rules, we can simply apply the
+generic rules for aggregates as show below.)}
 \label{fig:maprules}
+\end{figure*}
+
+\begin{figure*}
+\begin{eqnarray}
+(\rho_{\vec{A}\vec{B}}(R) \bowtie
+\rho_{\vec{A}\vec{C}}(\{\tuple{\vec{a}\vec{c}} \}))[\_]
+& \vdash &
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
+\times \rho_{\vec{C}}(\{ \vec{c} \}))[\_,\vec{a}]
+\label{mr1}
+\\
+(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(\{ \vec{b}\})))[\_,\vec{b}?]
+& \vdash &
+(\rho_{\vec{A}}(R))[\_]
+\label{mr2}
+\\
+(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))[\_]
+& \vdash &
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\})
+\times \rho_{\vec{B}}(R)))[\_,\vec{a}]
+\label{mr3}
+\\
+(\algagg_{f(\vec{a},\vec{B})}(R))[\vec{a}?,\_]
+\wedge \mathrm{rewrite}\left\{g(\vec{a}, \algagg_{h(\vec{B})}(R))\right\}
+& \vdash &
+(\algagg_{h(\vec{B})}(R))[\_]
+\\
+(\algagg_{f(\vec{A},\vec{B})}(
+\rho_{\vec{A}}(R) \times\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
+\wedge
+& \vdash &
+(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
+(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
+\\
+\mathrm{rewrite}\left\{
+\algagg?\left\{ f(
+\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)),
+\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)) )
+\right\}
+\right\}
+& &
+\end{eqnarray}
+\caption{Simplified map construction rules. The ${\mathrm rewrite\{R\}}$
+statement simply indicates whether a rewrite of the form $R$ can be applied to
+the expression over which map is defined. Also the term $\algagg?$ states that
+the rewrite may or may not include an outer aggregate, as this varies from
+function to function, but does not affect the mapping keys.}
 \end{figure*}
 
 \begin{figure*}
@@ -330,24 +405,55 @@ I will finish once the rewrite rules are settled.)}
 a + \algsum_{f(\cdot)}(R) \wedge
 (\algsum_{f(\cdot)}(R))[\vec{b}]
 & \rightarrow &
-\lambda(a,b).a*\algsum_{f(\cdot)}(R)[b]
+\lambda(\tuple{a,b}).a*\algsum_{f(\cdot)}(R)[\vec{b}]
 \label{cr1}
 \\
 \algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
 \algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)) \wedge
 & \rightarrow &
-\lambda(a,b).
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}] * 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+\lambda(\tuple{\vec{c},\vec{d}}).
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c}] * 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{d}]
 \label{cr2}
 \\
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}] \wedge 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c}] \wedge 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{d}]
 & & \nonumber
 \end{eqnarray}
 \end{center}
-\caption{Code generation rules.}
+\caption{Code generation rules. Note these are incomplete, I think we can write
+these in general form for simply two cases as shown below. I'm leaving these
+examples in for now as a concrete way of showing their structure.}
 \label{fig:codegenrules}
+\end{figure*}
+
+\begin{figure*}
+\begin{eqnarray}
+f^*(\vec{a}, \algagg_{g(\vec{C})}(R))
+\wedge (\algagg_{g(\vec{C})}(R))[\vec{b}]
+& \rightarrow &
+\lambda(\tuple{\vec{a},\vec{b}}).
+f^*(\vec{a}, (\algagg_{g(\vec{C})}(R))[\vec{b}])
+\\
+\algagg?\left\{ f^*(
+\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)),
+\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)) )
+\right\}
+\wedge
+& \rightarrow &
+\lambda(\tuple{\vec{c_R},\vec{c_S}}).
+f^*(
+(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
+(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
+)
+\\
+(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
+(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
+& & \nonumber
+\end{eqnarray}
+\caption{General code generation rules. Above $f^*$ is an arithmetic
+operations, such as $+,*$, and $\algagg?$ again corresponds to an optional
+aggregation, for example as needed by rewrite rules (\ref{r12}), (\ref{r17}).}
 \end{figure*}
 
 In this section, an expression of the form
