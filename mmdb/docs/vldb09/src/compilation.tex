@@ -3,6 +3,8 @@
 
 \def\algsum{\mathrm{sum}}
 \def\algagg{\mathrm{agg}}
+\def\algtop{\mathrm{top}}
+\def\algtopk{\mathrm{topk}}
 
 
 \begin{figure*}
@@ -55,7 +57,7 @@ a + \max_{f(\cdot)}(R)
 \max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
 &\vdash&
 \max_{f(\vec{A})}(\rho_{\vec{A}}(R)) +
-\max_{f(\vec{B})}(\rho_{\vec{B}}(S))
+\max_{g(\vec{B})}(\rho_{\vec{B}}(S))
 \label{r10}
 \\
 \max_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
@@ -63,8 +65,7 @@ a + \max_{f(\cdot)}(R)
 \left\{
 \begin{array}{lll}
 a * \min_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a < 0 \\
-0                                        & \dots & a = 0 \\
-a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a > 0
+a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a \geq 0
 \end{array}
 \right.
 \label{r11}
@@ -94,6 +95,72 @@ a       & \dots & \algsum_1(R) > 0 \\
 \end{array}
 \right.
 \label{r13}
+\\
+\mathop{\algtopk}_{a+f(\cdot)}(R)
+&\vdash&
+\pi_{a+f(\cdot)}(\{\tuple{a}\} \times
+\mathop{\algtopk}_{f(\cdot)}(R))
+\label{r14}
+\\
+\mathop{\algtopk}_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(S))
+&\vdash&
+\mathop{\algtopk}(\pi_{f(\vec{A}) + g(\vec{B})}(
+\mathop{\algtop}_{f(\vec{A})}(\rho_{\vec{A}}(R), \lceil \sqrt{k} \rceil)
+\times \mathop{\algtop}_{g(\vec{B})}(\rho_{\vec{B}}(S), \lceil \sqrt{k}
+\rceil)))
+\label{r15}
+\\
+\mathop{\algtopk}_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
+&\vdash&
+\left\{
+\begin{array}{lll}
+\pi_{-a*-f(\vec{B})}( \{\tuple{a}\} \times
+\mathop{\algtopk}_{-f(\vec{B})}(\rho_{\vec{B}}(R))) &
+\dots & a < 0 \\
+\pi_{a*f(\vec{B})}( \{\tuple{a}\} \times 
+\mathop{\algtopk}_{f(\vec{B})}(\rho_{\vec{B}}(R))) & \dots & a \geq 0
+\end{array}
+\right.
+\label{r16}
+\\
+\mathop{\algtopk}_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R)
+\times \rho_{\vec{B}}(S))
+&\vdash&
+\mathop{\algtopk} \Big\{
+\pi_{f(\vec{A}) * g(\vec{B})}(
+\mathop{\algtop}_{f(\vec{A})}(
+\sigma_{f(\vec{A}) > 0}(\rho_{\vec{A}}(R)), \lceil \sqrt{k} \rceil) \times
+\mathop{\algtop}_{g(\vec{B})}(\rho_{\vec{B}}(S), \lceil \sqrt{k} \rceil)),
+\nonumber\\
+& &
+\pi_{f(\vec{A}) * g(\vec{B})}(
+\mathop{\algtop}_{f(\vec{A})}
+(\rho_{\vec{A}}(R),
+\lceil \sqrt{k} \rceil) \times
+\mathop{\algtop}_{g(\vec{B})}
+(\sigma_{g(\vec{B}) > 0}(\rho_{\vec{B}}(S)),
+\lceil \sqrt{k} \rceil))
+\nonumber\\
+& &
+\pi_{-f(\vec{A}) * -g(\vec{B})}(
+\mathop{\algtop}_{-f(\vec{A})}
+(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R)),
+\lceil \sqrt{k} \rceil) \times
+\mathop{\algtop}_{-g(\vec{B})}
+(\sigma_{g(\vec{B}) < 0}(\rho_{\vec{B}}(S)),
+\lceil \sqrt{k} \rceil))
+\Big\}
+\label{r17}
+\\
+\mathop{\algtopk}_{a}(R)
+&\vdash&
+\left\{\begin{array}{lll}
+\{\tuple{a}\}^k & \dots & \algsum_{1}(R) > k\\
+\{\tuple{a}\}^{\algsum_{1}(R)} \cup \{\tuple{-\infty}\}^{k-\algsum_{1}(R)}
+& \dots & \algsum_{1}(R) < k
+\end{array}\right.
+\label{r18}
 \end{eqnarray}
 
 In particular, if $g(\cdot) = 1$, then Rule~(6) gives
@@ -107,6 +174,90 @@ In particular, if $g(\cdot) = 1$, then Rule~(6) gives
 \caption{Rewrite rules. agg can be either sum, max, or min.
 count is sum$_1$.}
 \label{fig:rules}
+\end{figure*}
+
+\begin{figure*}
+\begin{eqnarray}
+\algagg_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{A}}(S))
+& \vdash & 
+\algagg_{f(\cdot)}(\rho_{\vec{A}}(R - S))
+\label{r19}\\
+\algsum_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+& \vdash &
+\left\{\begin{array}{lll}
+\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) -
+\algsum_{f(\cdot)}(\rho_{\vec{B}}(S))
+& \dots & \rho_{\vec{B}}(S) \subseteq \rho_{\vec{A}}(R)\\
+\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) -
+\algsum_{f(\cdot)}(\rho_{\vec{A}}(R) \cap
+\rho_{\vec{B}}(S)) & \dots &
+\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) \neq \emptyset\\
+\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) & \dots
+& \rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset \end{array}\right.
+\label{r20}
+\\
+\max_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+& \vdash &
+\left\{\begin{array}{lll}
+\max_{f(\cdot)}(\rho_{\vec{A}}(R)) & \dots &
+(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset) \vee \\
+& &  (\max_{f(\cdot)}(\rho_{\vec{A}}(R)) \neq
+\max_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R))) \\
+\max_{f(\cdot)}(\rho_{\vec{A}}(R)
+- \rho_{\vec{B}}(S)) & \dots &  \max_{f(\cdot)}(\rho_{\vec{A}}(R)) =
+\max_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) \\
+\end{array}\right.
+\label{r21}
+\\
+\mathop{\algtopk}_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+& \vdash &
+\left\{\begin{array}{lll}
+\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) &
+\dots & (\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset) \vee\\
+& & (\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) \cap 
+\algtopk_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) = \emptyset)\\
+\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+& \dots &
+\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) \cap
+\algtopk_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) \neq \emptyset
+\end{array}\right.
+\label{r22}
+\end{eqnarray}
+\begin{eqnarray}
+\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(S)
+& \vdash &
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
+\times \sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))
+\label{r23}
+\\
+\max_{f(\vec{A},\vec{B},\vec{C})} \Big\{
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
+& \vdash &
+\max_{f(\vec{A},\vec{B},\vec{C})}\Big\{
+\bigcup_{\vec{a}} \max_{f(\vec{a},\vec{B},\vec{C})}
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
+\Big\}
+\label{r24}
+\\
+\mathop{\algtopk}_{f(\vec{A},\vec{B},\vec{C})} \Big\{
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
+& \vdash &
+\mathop{\algtopk}_{f(\vec{A},\vec{B},\vec{C})}\Big\{
+\bigcup_{\vec{a}} \mathop{\algtopk}_{f(\vec{a},\vec{B},\vec{C})}
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
+\Big\}
+\label{r25}
+\end{eqnarray}
+\caption{Rewrite rules for handling deletions. Note that deletion rewrites use
+both this rule set and the rewrite rules above for insertions.}
+\label{fig:deleterules}
 \end{figure*}
 
 \comment{
@@ -168,8 +319,35 @@ $\algagg_{f(\cdot)}(R)[\vec{a}]$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[\vec{a}]$
 \end{eqnarray}
 \end{center}
 \caption{Map construction rules corresponding to rewrite rules. agg can be
-either sum, max or min. count is sum$_1$.}
+either sum, max or min. count is sum$_1$. (Note this is incomplete right now,
+I will finish once the rewrite rules are settled.)}
 \label{fig:maprules}
+\end{figure*}
+
+\begin{figure*}
+\begin{center}
+\begin{eqnarray}
+a + \algsum_{f(\cdot)}(R) \wedge
+(\algsum_{f(\cdot)}(R))[\vec{b}]
+& \rightarrow &
+\lambda(a,b).a*\algsum_{f(\cdot)}(R)[b]
+\label{cr1}
+\\
+\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
+\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)) \wedge
+& \rightarrow &
+\lambda(a,b).
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}] * 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+\label{cr2}
+\\
+(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{a}] \wedge 
+(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{b}]
+& & \nonumber
+\end{eqnarray}
+\end{center}
+\caption{Code generation rules.}
+\label{fig:codegenrules}
 \end{figure*}
 
 In this section, an expression of the form
@@ -377,6 +555,41 @@ on insert into T values (c,d)
 }
 \end{verbatim}
 \punto
+
+We can also consider deletions to base relations:
+
+\begin{itemize}
+\item
+Delete R(a,b):
+\begin{eqnarray*}
+\algsum &=& \algsum_{A*D}((R-\{\tuple{a,b}\}) \bowtie S \bowtie T)\\
+&=& \algsum_{A*D}((R \bowtie S \bowtie T) -
+(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& \algsum_{A*D}(R \bowtie S \bowtie T) -\\
+& & \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& \algsum' - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+\because \Delta s &=&  - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& -a*\algsum_{D}(\sigma_{B=b}(S) \bowtie T)
+\end{eqnarray*} 
+\end{itemize}
+
+(Similarly for Delete S(b,c) and Delete T(c,d)).
+
+Just as in the case for Inserts, we must also maintain an additional data
+structures needed by each delta handler, for example $s_{A}[c], s_{A}[b]$ needed
+to dealing with deletions to relations S and C. Note that given subtraction is an
+inverse operation for addition (hence $\algsum$) and is anticommutative with the
+previous result as seen above, the maintenance we perform is
+structurally identical to the case for inserts. 
+
+\begin{itemize}
+\item
+Delete R(a,b):
+\begin{eqnarray*}
+\Delta s_{A}[b] &=& - \algsum_{A}(\{\tuple{a,b}\}) = -a\\
+\Delta s_{A}[c] &=& -a * \algsum_{1}(\sigma_{BC=bc}(S))
+\end{eqnarray*}
+\end{itemize}
 \end{example}
 
 
@@ -391,7 +604,7 @@ On insert into R values $(a,b)$: $m := \max(m, m')$ where
 m' &=&
 \max_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
 \\
-&\stackrel{\ref{r1},\ref{r3},\ref{r4}}{=}&
+&\stackrel{\ref{r1},\ref{r3},\ref{r4},\ref{r2}}{=}&
 \max_{a*D}(\sigma_{B=b}(S) \bowtie T)
 \\
 &\stackrel{\ref{r10}}{=}&
@@ -415,7 +628,7 @@ where
 \max_A[c] &=&
 \max(\max_A[c], \max_A(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S)))
 \\
-&\stackrel{\ref{r1},\ref{r3},\ref{r4}}{=}&
+&\stackrel{\ref{r1},\ref{r3},\ref{r4},\ref{r2}}{=}&
 \max(\max_A[c], \max_a(\sigma_{BC=bc}(S)))
 \\
 &\stackrel{\ref{r12}}{=}&
@@ -580,7 +793,6 @@ which are quite distant in the query's hypergraph.
 Let us insert tuple $R_1(a,b,c)$.
 This is an acyclic query. This is a hypertree decomposition with $R_1$ as
 the root node:
-\comment{
 \[
 \psset{levelsep=12mm}
 \pstree{\TR{\framebox{$R_1\{A,B,C\}$}}}
@@ -596,7 +808,7 @@ the root node:
    }
 }
 \]
-}
+
 
 The edges are annotated with the columns that have to be passed between the nodes.
 Now
@@ -618,7 +830,6 @@ a *
 \end{eqnarray*}
 
 If we want to insert into $R_3$, we reroot the hypertree decomposition
-\comment{
 \[
 \psset{levelsep=12mm}
 \pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
@@ -634,7 +845,7 @@ If we want to insert into $R_3$, we reroot the hypertree decomposition
    }
 }
 \]
-}
+
 and rewrite as follows:
 \begin{eqnarray*}
 \Delta s &=&
@@ -665,7 +876,6 @@ Consider the previous query where the schema of $R_5$ is now
 $\{E,G,I,J\}$ (thus the query becomes cyclic).
 
 The following is a hypertree decomposition rooted at $R_3$:
-\comment{
 \[
 \psset{levelsep=12mm}
 \pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
@@ -678,7 +888,7 @@ The following is a hypertree decomposition rooted at $R_3$:
    }
 }
 \]
-}
+
 Thus $\Delta s$ for the insertion of $R_3(c,f,g)$ is
 \begin{eqnarray*}
 \Delta s &=&

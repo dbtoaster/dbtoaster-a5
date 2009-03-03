@@ -39,7 +39,11 @@
   and apply dead-code elimination based on the pattern.
   \item We may want to exploit vectorized instructions, e.g. Altivec/SSE
   instructions. We probably won't go into much depth on this due to limited
-  research impact.
+  research impact. Generally the goal in this paper is not to build a
+  high-performance backend that will take C code and produce tight
+  instruction-level code. We leave room for this given our choice of using
+  the LLVM framework which will allow modular development of our compilation
+  toolchain, but will revisit low-level implementation issues in the future.
   \item Challenge: statically picking the right chunk size for processing, given
   profiling information. We can't handle changes in delta rates to different base
   relations (e.g., no adaptive unrolling/pipelining). How much does this kill the
