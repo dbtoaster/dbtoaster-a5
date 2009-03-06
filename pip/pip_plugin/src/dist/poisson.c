@@ -72,7 +72,7 @@ pip_poisson(float8 lambda, int64 *seed)
     k += 1.0;
     p *= pip_prng_float(seed);
   }
-  return k;
+  return k-1;
 }
 
 void    pip_poisson_init (pip_var *var, HeapTupleHeader params)

@@ -24,7 +24,8 @@ CREATE FUNCTION expectation(pip_eqn, record)                       RETURNS doubl
 CREATE FUNCTION expectation(pip_eqn, record, integer)              RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_max_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_max_g' LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_sum_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_sum_g' LANGUAGE C VOLATILE  STRICT;
-CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record) RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record)          RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record, integer) RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
 
 CREATE FUNCTION pip_eqn_sum(pip_eqn,pip_eqn)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ee' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_eqn_sum(pip_eqn,integer)          RETURNS pip_eqn AS '_OBJWD_','pip_eqn_sum_ei' LANGUAGE C IMMUTABLE STRICT;
@@ -101,12 +102,13 @@ CREATE FUNCTION pip_value_bundle_cmp(pip_world_presence,pip_value_bundle,double 
 CREATE FUNCTION pip_value_bundle_cmp(pip_world_presence,pip_value_bundle,pip_value_bundle) RETURNS pip_world_presence AS '_OBJWD_','pip_value_bundle_cmp_vv' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_add(pip_value_bundle,double precision)                    RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_add_vf' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_add(pip_value_bundle,pip_value_bundle)                    RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_add_vv' LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_value_bundle_add(pip_value_bundle,pip_value_bundle,pip_world_presence) RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_add_vv' LANGUAGE C IMMUTABLE;
 CREATE FUNCTION pip_value_bundle_mul(pip_value_bundle,double precision)                    RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_mul_vf' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_mul(pip_value_bundle,pip_value_bundle)                    RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_mul_vv' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_max(pip_value_bundle,pip_value_bundle)                    RETURNS pip_value_bundle   AS '_OBJWD_','pip_value_bundle_max'    LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle)                                  RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle,pip_world_presence)               RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
-
+CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle,integer,integer)                  RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
 
 --------------- VARIABLE DEFINITIONS ---------------
 CREATE TYPE pip_var (
@@ -168,7 +170,7 @@ CREATE AGGREGATE expectation_max_hist (pip_eqn, record)
   initcond = '?1000/1'
 );
 
-CREATE AGGREGATE expectation_sum (pip_eqn, record) 
+CREATE AGGREGATE expectation_sum (pip_eqn, record, integer) 
 (
   CONSTRAINTTYPE,  --HACKED_SQL_ONLY
   sfunc = expectation_sum_g_one,
@@ -206,6 +208,16 @@ CREATE AGGREGATE conf_naive (record,pip_sample_set)
   stype = pip_world_presence,
   finalfunc = pip_world_presence_count,
   initcond = '?0'
+);
+CREATE AGGREGATE sum (pip_value_bundle) 
+(
+  sfunc = pip_value_bundle_add,
+  stype = pip_value_bundle
+);
+CREATE AGGREGATE sum (pip_value_bundle,pip_world_presence) 
+(
+  sfunc = pip_value_bundle_add,
+  stype = pip_value_bundle
 );
 CREATE AGGREGATE expectation_max (pip_value_bundle) 
 (

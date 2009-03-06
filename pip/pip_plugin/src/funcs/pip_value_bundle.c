@@ -25,11 +25,15 @@ Datum   pip_value_bundle_in   (PG_FUNCTION_ARGS)
              errmsg("value bundle, can't load seed!")));
   }
   
-  pip_var_parse(str+c, &var);
-  if(!var){
-    ereport(ERROR,
-            (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
-             errmsg("value bundle, can't load variable")));
+  if(str[c] == '\0'){
+    var = NULL;
+  } else {
+    pip_var_parse(str+c, &var);
+    if(!var){
+      ereport(ERROR,
+              (errcode(ERRCODE_INVALID_TEXT_REPRESENTATION),
+               errmsg("value bundle, can't load variable")));
+    }
   }
   
   valbundle = pip_value_bundle_alloc(var, worldcount, seed);
@@ -130,10 +134,29 @@ Datum   pip_value_bundle_add_vf  (PG_FUNCTION_ARGS)
 }
 Datum   pip_value_bundle_add_vv  (PG_FUNCTION_ARGS)
 {
-  pip_value_bundle   *valbundle_l = (pip_value_bundle *)PG_GETARG_BYTEA_P(0);
-  pip_value_bundle   *valbundle_r = (pip_value_bundle *)PG_GETARG_BYTEA_P(1);
-  
-  UPDATE_FUNC((PIP_VB_VAL(valbundle_l)[i] + PIP_VB_VAL(valbundle_r)[i]), valbundle_l->worldcount);
+  pip_value_bundle   *valbundle_l = (PG_ARGISNULL(0)) ? NULL : (pip_value_bundle *)PG_GETARG_BYTEA_P(0);
+  pip_value_bundle   *valbundle_r = (PG_ARGISNULL(1)) ? NULL : (pip_value_bundle *)PG_GETARG_BYTEA_P(1);
+  //since this operation is also used for aggregation we need a WP option.
+  pip_world_presence *wp = ((PG_NARGS() > 2) && (!PG_ARGISNULL(2))) ? ((pip_world_presence *)PG_GETARG_BYTEA_P(2)) : (NULL);
+
+  if(valbundle_r){
+    if(!valbundle_l){
+      valbundle_l = pip_value_bundle_alloc(NULL, valbundle_r->worldcount, 0);
+    }
+  } else {
+    if(!valbundle_l){
+      PG_RETURN_NULL();
+    }
+  }
+
+  {
+    UPDATE_FUNC(
+      (!wp || ((wp->data[i/8] >> (7-(i%8))) & 0x01)) ? 
+        (PIP_VB_VAL(valbundle_l)[i] + PIP_VB_VAL(valbundle_r)[i]) : 
+        PIP_VB_VAL(valbundle_l)[i],
+      valbundle_l->worldcount
+    );
+  }
 }
 Datum   pip_value_bundle_mul_vf  (PG_FUNCTION_ARGS)
 {
@@ -152,11 +175,13 @@ Datum   pip_value_bundle_mul_vv  (PG_FUNCTION_ARGS)
 Datum   pip_value_bundle_expect  (PG_FUNCTION_ARGS)
 {
   pip_value_bundle   *valbundle = (pip_value_bundle *)PG_GETARG_BYTEA_P(0);
-  pip_world_presence *wp = (fcinfo->nargs > 1) ? ((pip_world_presence *)PG_GETARG_BYTEA_P(1)) : (NULL);
+  pip_world_presence *wp = (fcinfo->nargs == 2) ? ((pip_world_presence *)PG_GETARG_BYTEA_P(1)) : (NULL);
+  int                 low  = (fcinfo->nargs == 3) ? (PG_GETARG_INT32(1)) : (0);
+  int                 high = (fcinfo->nargs == 3) ? (PG_GETARG_INT32(2)) : (valbundle->worldcount);
   float8              result = 0;
   int i, cnt = 0;
 
-  for(i = 0; i < valbundle->worldcount; i++){
+  for(i = low; i < high; i++){
     if(!wp || ((wp->data[i/8] >> (7-(i%8))) & 0x01)){
       result += PIP_VB_VAL(valbundle)[i];
       cnt++;
@@ -164,7 +189,7 @@ Datum   pip_value_bundle_expect  (PG_FUNCTION_ARGS)
   }
   
   if(cnt > 0)
-    result /= valbundle->worldcount;
+    result /= high;
   
   PG_RETURN_FLOAT8(result);
 }

@@ -128,6 +128,7 @@ float8 pip_compute_expectation(pip_eqn *eqn, int clause_cnt, pip_atom **clause, 
   for(i = 0; i <  samples; i++){
     val += pip_eqn_evaluate_sample(eqn, set, i);
   }
+//  elog(NOTICE, "probability: %lf, %lf = %lf/%ld samples", (float)probability,  (val / (float8)samples) * probability, val, samples);
   return (val / (float8)samples) * probability;
 }
 

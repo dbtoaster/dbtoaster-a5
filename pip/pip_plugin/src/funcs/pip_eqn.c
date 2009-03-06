@@ -97,12 +97,13 @@ Datum   pip_expectation_sum_g_one (PG_FUNCTION_ARGS)
   float8              val = PG_GETARG_FLOAT8(0);
   pip_eqn            *eqn = (pip_eqn *)PG_GETARG_BYTEA_P(1);
   HeapTupleHeader     row = PG_GETARG_HEAPTUPLEHEADER(2);
+  int                 samples = (fcinfo->nargs > 3) ? PG_GETARG_INT32(3) : (1000);
   int                 atom_count = 0;
   pip_atom          **atoms = NULL;
   
   SPI_connect();
   atom_count = pip_extract_clause(row, &atoms);
-  val += pip_compute_expectation(eqn, atom_count, atoms, 1000);
+  val += pip_compute_expectation(eqn, atom_count, atoms, samples);
   SPI_finish();
   
   PG_RETURN_FLOAT8(val);

@@ -94,6 +94,10 @@ static bool cdf_sample_var(pip_cset *set, pip_var *var, pip_sampler_state *state
         )
       );
   }
+  
+  if(state->samples->sample_cnt > 0)
+    state->probability = (bounds[1] - bounds[0]) * (((float8)cnt) / ((float8)state->samples->sample_cnt));
+  
   state->last_var++;
   return true;
 }
