@@ -1,0 +1,13 @@
+#TeXlipse project settings
+#Sat Mar 14 15:16:31 EDT 2009
+builderNum=2
+outputDir=docs
+makeIndSty=
+bibrefDir=
+outputFormat=pdf
+tempDir=tmp
+mainTexFile=vldb09-demo.tex
+outputFile=vldb09-demo.pdf
+langSpell=en
+markDer=true
+srcDir=src

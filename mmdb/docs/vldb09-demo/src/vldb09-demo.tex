@@ -1,0 +1,159 @@
+\documentclass{vldb}
+
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{clrscode}
+%\usepackage{epsfig}
+%\usepackage{epic}
+%\usepackage{eepic}
+%\usepackage{xspace}
+\usepackage{pst-tree}
+
+%\addtolength{\textwidth}{1in}
+%\addtolength{\oddsidemargin}{-0.5in}
+%\addtolength{\evensidemargin}{-0.5in}
+%\addtolength{\textheight}{0.8in}
+%\addtolength{\topmargin}{-0.5in}
+%\leftmargini 2.9ex
+
+
+\def\punto{$\hspace*{\fill}\Box$}
+\newcommand{\nop}[1]{}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\def\lBrack{\lbrack\!\lbrack}
+\def\rBrack{\rbrack\!\rbrack}
+\newcommand{\Bracks}[1]{\lBrack#1\rBrack}
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+\newtheorem{todo}[theorem]{ToDo}
+
+\newcommand{\comment}[1]{}
+\newcommand{\compiler}{DBToaster}
+\newcommand{\project}{Steam}
+
+\title{DBToaster: A SQL Compiler for High-Performance Delta Processing in
+Main-Memory Databases}
+\author{Yanif Ahmad and Christoph Koch \\
+Department of Computer Science \\ Cornell University, Ithaca, NY \\
+\{yanif, koch\}@cs.cornell.edu}
+\date{}
+
+
+\begin{document}
+
+
+\maketitle
+
+\begin{abstract}
+After world domination comes profit.
+\end{abstract}
+
+\section{Introduction}
+Rapidly increasing main-memory capacities present an opportunity to rethink
+database system architectures. Today's databases focus on the main-memory and
+secondary storage boundary, and their design principles have spilled into
+main-memory database architectures. Moreover, most modern database systems
+emphasize flexibility by interpreting queries, flexiblity that is not
+required in most deployments and comes at a high performance penalty.
+
+We demonstrate DBToaster, a tool for compiling SQL queries into native code,
+targeting main-memory databases. DBToaster is a novel compilation framework which
+generates C++ code to incrementally and continuously answer queries using
+aggregate views. DBToaster applies rewrite rules that enable us to generate
+straight-line code exposing tuple-based execution paths to a C++ compiler. In
+turn, this produces native code that both avoids overheads in executing multiple
+operators, and takes advantage of lower level compiler optimizations. Our query
+rewriting defines how to process a single tuple using a precomputed view of the
+remainder query and data. Maintaining such views in main-memory is extremely
+cheap with the use of standard pointer-based data structures and delta processing
+techniques.
+
+Our work is motivated by applications that require the highly efficient answering
+of fixed workloads of aggregation queries, such as in data stream processing,
+online data warehouse loading, and in financial applications. As we show, our
+techniques are several orders of magnitude faster than state-of-the-art database
+and stream processing engines on such workloads. In the case of queries on limit
+order book data as required for supporting algorithmic equities trading, our
+approach is currently the only one that can support the realistic data rates on
+contemporary hardware without resorting to very substantial computing clusters.
+
+
+\section{System Overview}
+
+\subsection{Usage Model}
+\begin{itemize}
+  \item Data and query model
+  \item Result model, embedded vs delta model
+\end{itemize}
+
+\subsection{DBToaster Architecture}
+
+\section{Query Compilation}
+
+\subsection{Rewrite Rules}
+
+\subsection{Compilation Example}
+
+\section{Demonstration}
+
+\subsection{Applications and workloads}
+\begin{itemize}
+  \item The A25 hedge fund. Make live trades for wow factor :)
+  \item Linear Road / TPC-H? I don't think ppl can factor in benchmark results
+  with what they know on-the-fly so I would prefer another novel app. Also,
+  Linear Road is not a common enough benchmark.
+\end{itemize}
+
+\subsection{Query rewriting and code generation}
+
+Visualizer:
+\begin{itemize}
+  \item Input plan (textual and graphical)
+  \item Transformation step animation
+  \item Remainder queries and view maintenance
+  \item Code generation and data structures used, linking
+  back to transformed query plan
+  \item Naive code generation for later comparison
+  \item Small JIT-example to fend off adaptivity nuts.
+\end{itemize}
+
+\subsection{DBMS Live Bakeoff}
+\begin{itemize}
+  \item Comparing both latency and throughput via 'tachometers' a la
+  speedtest.net. We will redline :) 
+  \item DBToaster vs. hsqldb
+  \item DBToaster vs. naive compilation (show naive plan and code generation w/
+  above)
+  \item DBToaster vs. STREAM
+  \item DBToaster memory usage monitor
+  \item DBToaster compile time, g++ compile time, end-to-end compilation
+  overhead
+  \item Audience challenge: after I explain, find a query that we suck on (given
+  language limitations). We'll put up a query leaderboard, and give out a prize
+  for any query where the other systems beat us by an order of magnitude.
+  We'll also give out a prize for anyone who can find a query that makes us
+  look as good as possible. Setup: take a couple laptops, let anyone
+  install/tweak their own DB and write their own TPC-H/LinearRoad query while I
+  demo :)
+\end{itemize}
+
+\footnotesize{
+\bibliographystyle{abbrv}
+\bibliography{ref}
+}
+
+\end{document}
