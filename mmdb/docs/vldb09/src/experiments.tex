@@ -9,6 +9,30 @@ Dataset:
   order type, share volume, bid/ask price
 \end{itemize}
 
+Queries:
+
+\begin{verbatim}
+select * from
+  (select ax_bids.mmid, abs(
+    sum(ax_bids.volume*
+      (act_now.expected_price - ax_bids.price)) -
+    sum(ax_asks.volume*
+      (ax_asks.price - act_now.expected_price)))
+    as ax_bias
+  from
+    (select mmid, price, volume from bids
+       where mmid in axs) as ax_bids,
+    (select mmid, price, volume from asks
+       where mmid in axs) as ax_asks,
+    (select expected_price
+        from technical_indicator
+        where entrance_condition)
+    as act_now
+  where ax_bids.mmid = ax_asks.mmid
+  group by ax_bids.mmid) as sneaky_ax,
+where ax_bias > 10000
+\end{verbatim}
+
 Figures:
 
 \begin{enumerate}
