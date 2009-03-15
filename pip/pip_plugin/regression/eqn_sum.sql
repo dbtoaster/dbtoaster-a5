@@ -16,7 +16,7 @@ CREATE TEMPORARY TABLE vartable AS
 SELECT   V, var
 FROM     vartable;
 
-SELECT   V, sum(var)
+SELECT   V, sum(var), << sum(var) >>
 FROM     vartable
 GROUP BY V
 ORDER BY V;

@@ -465,7 +465,7 @@ pip_eqn *pip_eqn_append_slot_ee(enum pip_eqn_component_type node_type, pip_eqn *
     //if there's already a node of this type at the head...
     //append_slot assumes that nodes of this type are transitive.
     //consequently, we don't need to rewrite the entire tree.
-    memcpy(eqn, source, VARSIZE(source)-sizeof(source->vl_len_));
+    memcpy(eqn, source, VARSIZE(source));
     SET_VARSIZE(eqn, eqn_size);
     strpos = VARSIZE(source) - sizeof(pip_eqn);
     topnode = DEREF_CMPNT(eqn->data, 0);
