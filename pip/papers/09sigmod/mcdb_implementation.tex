@@ -1,0 +1,17 @@
+
+We compare our PostgreSQL-based implementation to a simplified version of MCDB's tuple-bundles also implemented on top of PostgreSQL.  As this is a system purely for comparison, it is implemented without using MCDB's semantic sugar.  
+
+This tuple-bundle implementation is described below.  All functions, including variable management functions are implemented in C.  We first define the variable types introduced to support it.
+
+\paragraph{Probabilistic Variable} The tuple-bundle implementation utilizes the same probabilistic variable representation as Pip.  Each variable contains the class of distribution being used as well as any parameters necessary to generate a variable from that distribution and a unique identifier.  
+
+\paragraph{Bag Inclusion} An array of booleans indicating the tuple's presence in a possible world.
+\\
+\\
+We now define the functions introduced to implement tuple-bundles.
+
+\paragraph{Create-Worlds} This function initializes the computation by creating an internal table of possible worlds.  Each possible world is an ID number and a random seed.  As in MCDB, random variables are generated as a hash of the variable's identifier and the possible world's random seed.
+
+\paragraph{Probabilistic-Select} Actually a class of functions, each takes in a row, a probabilistic column identifier, a comparator, and another column or a constant.  Each instance of the function performs the comparison on the two column values in the row.  The row's bag-presence column is modified to remove all of the sampled possible worlds that do not satisfy the comparison.  If the row did not have a bag-presence column, a fresh one is added.
+
+\paragraph{Bag-Confidence} Given bag-presence variable, this function computes the confidence of the tuple by counting the fraction of sampled possible worlds that satisfy the query.
