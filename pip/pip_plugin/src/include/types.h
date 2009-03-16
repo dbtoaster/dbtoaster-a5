@@ -41,6 +41,14 @@ typedef struct pip_atom { //represents ptr_left > ptr_right
   char data[0]; // pip_eqn_component (eqn.h) <- flattened tree
 } pip_atom;
 
+typedef struct pip_atomset {
+  char vl_len_[4]; //internal length parameter; do not touch!
+  float8 probability; //precomputed probability of the atoms being true.
+  int cachestate;
+  int count;
+  char data[0]; //set of pip_atom, use vl_len_ to figure out deltas.
+}
+
 typedef pip_presample_tree pip_sample_generator; //281 bytes
 
 typedef struct pip_sample_mapping {

@@ -19,6 +19,7 @@
 #include "pvar.h"
 #include "eqn.h"
 #include "atom.h"
+#include "atomset.h"
 #include "sample_set.h"
 #include "conf_tally.h"
 #include "value_bundle.h"
