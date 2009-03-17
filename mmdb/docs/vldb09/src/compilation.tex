@@ -768,6 +768,10 @@ if (s_1[b,c] > 0)
 \newcommand{\substitute}{\ensuremath{\mbox{\sc Substitute}}}
 \newcommand{\match}{\ensuremath{\mbox{\sc Match}}}
 
+
+\def\RETURN{\STATE}
+
+
 \begin{algorithm}
 \caption{$\compile(Q)$}
 \label{alg:compile}
@@ -1027,68 +1031,176 @@ On insertion of $R_5(e,g,i,j)$,
 \punto
 \end{example}
 
-\comment{
-\subsection{Alternate Compilation Rules}
-Define a compiler $C = <Q, M, U>$, where $Q$ is a query, $M$ a set of map data
-structures of the form ${attr}->aggregate(Q')$, and $U$ a set of update rules
-for the maps, of the form $update: M -> unit$, that is these updates are
-side-effects. We consider queries of the form:
 
-\begin{center}
-\texttt{select $A_{gb}$, aggregate(arithmetic($A_{agg}$)) from $G$}
-\end{center}
 
-where $A_{agg} = \{A_i\}$ are referred to as aggregation attributes, $A_{gb}$ as
-grouping attributes, and $G=\{V,E\}$ denotes a join graph with relations
-$V=\{R_i\}$ as nodes, and join predicates $E=\{\bigwedge_{i} a_i=b_i\}$ that are
-conjunctive equality predicates.
 
-\begin{figure*}
-\begin{align}
-<f(arith(A_{agg}), G), M, U> \wedge a \in A_{agg} \wedge distributive(f)
-\vdash <f^*(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>\\
-\nonumber\\
-<f(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
-\wedge distributes(f_{i}, arith_1) \nonumber \\ 
-\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - \{a\}), G - R)),
-\sigma_{A_i=a_i}(R) \Join_{E_R} G-R), M, U>\\
-\nonumber\\
-<f(arith_1(a, f_{i}(A_{agg}, G)), \sigma_{A=a}(R) \Join_{E_R} G), M, U>
-\nonumber\\
-\qquad \vdash <f_{i}(A_{agg}, G), M \cup \overrightarrow{B} \rightarrow
-f_{i}(A_{agg}, G), U \cup {\lambda(\Delta R(a,\overrightarrow{b})). \Delta Q =
-f(a . M_B[\overrightarrow{b}])>,
-\mbox{ where } \overrightarrow{B} = Attrs(E_R)}\\
-\nonumber\\
-<f(arith(A_{agg}), G), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\})
-\wedge associative(f_{i}, arith_1) \nonumber\\
-\qquad \vdash <arith_1(f(A_i, \pi_{A_i}(G)),
-f(arith_2(A_{agg} - \{A_i\}, \pi_{A_{agg} - \{A_i\}}(G)))), M, U>\\
-\nonumber\\
-<f(arith(A_{agg}), G), M, U>
-\wedge distributive(f) \nonumber \\
-\qquad \vdash <f^*(f_{i}(arith(A_{agg}),
-G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>, \mbox{ where }
-S.\overrightarrow{B} = Attrs(E_S)\\
-\nonumber\\
-<f(f_{i}(arith(A_{agg}),
-G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>
-\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
-\wedge distributes(f_{i}, arith_1) \nonumber \\
-\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - A_{i}), G - R),
-\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G - R \cup S.\overrightarrow{B}
-= \overrightarrow{b}), M, U> \nonumber\\
-\mbox{ where } S.\overrightarrow{B} = Attrs(E_S)\\
-\nonumber\\
-<f(arith_1(a_i, f_{i}(arith_2(A_{agg}), G),
-\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G \cup S.\overrightarrow{B}
-= \overrightarrow{b}), M, U>
-\nonumber\\
-\qquad \vdash <f(arith(f_{i}(A_i,
-R \cup \pi_R(\overrightarrow{B}) = \pi_R(\overrightarrow{b})),
-f_{i}(arith(A_{agg}), G \cup S.\overrightarrow{B} = \overrightarrow{b})), M, U>
-\end{align}
-\end{figure*}
-}
+\subsection{The VWAP Query}
+
+
+\[
+s_{new}^{BBB} =
+s^{BBB} +
+s^{BBb} +
+s^{BbB} +
+s^{Bbb} +
+s^{bBB} +
+s^{bBb} +
+s^{bbB} +
+s^{bbb}
+\]
+
+
+\begin{eqnarray*}
+s_{new}^{BBB} &=&
+s^{BBB} +
+s^{BBb} +
+s^{BbB} +
+s^{Bbb} +
+s_{new}^{bBB}
+\end{eqnarray*}
+
+
+
+
+
+
+\begin{multline*}
+s^{BBB} =
+\algsum_{P_2 * V_2}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
+\; \bowtie_{k * S_0 > S_1} \\
+\algsum_{V_1 \rightarrow S_1}(B_{P_1, V_1} \bowtie_{P_1 > P_2}
+B_{P_2, V_2})[P_2, V_2])
+\end{multline*}
+
+\begin{multline*}
+s^{bBB} =
+\algsum_{P_2 * V_2}(
+\sigma_{k * v > S_1}
+\algsum_{V_1 \rightarrow S_1}(B_{P_1, V_1} \bowtie_{P_1 > P_2}
+B_{P_2, V_2})[P_2, V_2])
+\end{multline*}
+
+\begin{multline*}
+s^{bbB} =
+\algsum_{P_2 * V_2}(
+\sigma_{k * v > S_1}
+\algsum_{v \rightarrow S_1}(\sigma_{p > P_2}
+B_{P_2, V_2})[P_2, V_2])
+\end{multline*}
+
+\begin{multline*}
+s^{BbB} =
+\algsum_{P_2 * V_2}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
+\; \bowtie_{k * S_0 > S_1} \\
+\algsum_{v \rightarrow S_1}(\sigma_{p > P_2}
+B_{P_2, V_2})[P_2, V_2])
+\end{multline*}
+
+\begin{multline*}
+s^{Bbb} =
+p * v * \algsum_{1}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
+\\
+\bowtie_{k * S_0 > S_1} \;
+\underbrace{\algsum_{v \rightarrow S_1}(\sigma_{p > p}(\{\tuple{p,v}\}))[p, v]}_{const: \{\tuple{0,p,v} \}}) \\
+=
+p * v * \algsum_{1}(\sigma_{k * S_0 > 0}(
+   \algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})))
+\end{multline*}
+
+
+\begin{multline*}
+s^{BBb} =
+p * v * \algsum_{1}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
+\; \bowtie_{k * S_0 > S_1} \\
+\algsum_{V_1 \rightarrow S_1}(\sigma_{P_1 > p} B_{P_1, V_1}
+))
+\end{multline*}
+
+
+\begin{multline*}
+s^{bBb} =
+p * v * \algsum_{1}(
+\sigma_{k * v > S_1}
+\algsum_{V_1 \rightarrow S_1}(\sigma_{P_1 > p} B_{P_1, V_1}
+))
+\end{multline*}
+
+
+\begin{multline*}
+s^{bbb} =
+p * v * \algsum_{1}(
+\sigma_{k * v > S_1}
+\algsum_{v \rightarrow S_1}(\sigma_{p > p} \{\tuple{p,v}\}))
+\\
+= \mbox{if ($k*v > 0$) then $p*v$ else $0$}
+\end{multline*}
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{verbatim}
+on insert into B values (p,v):
+snew_BBB = sBBB + sBBb[p] + sBbB[p,v] + sBbb
+         + sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v];
+
+snew_bBB[v] = sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v];
+
+snew_bbB[p, v] = sbbB[pv] + sbbb[p,v];
+
+snew_BBb[p] = sBBb[p] + sBbb + sbBb[p,v] + sbbb[p,v];
+
+snew_Bbb = sBbb + sbbb[p,v];
+
+snew_BbB[p,v] = sBbB[p,v] + sBbb + sbbB[pv] + sbbb[p,v];
+
+snew_bbb[p,v] = (k*v>0) ? (p*v) : 0;
+
+snew_bBb[p,v] = sbBb[p,v] + sbbb[p,v];
+
+
+
+
+
+
+snew_BBB = sBBB - (sBBb[p] + sBbB[p,v] + sBbb
+         + sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v]);
+
+snew_bBB[v] = sbBB[v] - (sbBb[p,v] + sbbB[pv] + sbbb[p,v]);
+
+snew_bbB[p,v] = sbbB[pv] - sbbb[p,v];
+
+snew_BBb[p] = sBBb[p] - (sBbb + sbBb[p,v] + sbbb[p,v]);
+
+snew_Bbb = sBbb - sbbb[p,v];
+
+snew_BbB[p,v] = sBbB[p,v] - (sBbb + sbbB[pv] + sbbb[p,v]);
+
+snew_bbb[p,v] = (k*v>0) ? (p*v) : 0;
+
+snew_bBb[p,v] = sbBb[p,v] + sbbb[p,v];
+
+
+s_BBB = snew_BBB;
+s_BBb = snew_BBb;
+s_BbB = snew_BbB;
+s_Bbb = snew_Bbb;
+s_bBB = snew_bBB;
+s_bBb = snew_bBb;
+s_bbB = snew_bbB;
+s_bbb = snew_bbb;
+
+
+
+\end{verbatim}
+
+
+
