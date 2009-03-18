@@ -1,4 +1,12 @@
-In order to evaluate the viability of PIP's c-tables approach to continuous variables, we have implemented an initial version of PIP as an extension to the PostgreSQL DBMS.  PIP's extended functionality is provided by a set of user-defined functions written in C.  
+In order to evaluate the viability of PIP's c-tables approach to continuous variables, we have implemented an initial version of PIP as an extension to the PostgreSQL DBMS as shown in Figure \ref{fig:blockdiag}.  PIP's extended functionality is provided by a set of user-defined functions written in C.  
+
+\begin{figure}
+\begin{center}
+\resizebox{2in}{!}{\includegraphics{graphics/blockdiag.pdf}}
+\caption{The PIP Postgres plugin}
+\label{fig:blockdiag}
+\end{center}
+\end{figure}
 
 \subsection{Query Rewriting}
 Much of this added functionality takes advantage of PostgreSQL's extensibility features, and can be used ``out-of-the-box".  For example, we define the function 

@@ -32,7 +32,7 @@ Returning to Figure \ref{fig:querytimings}, the final timing test combines a sim
 
 This query includes two distinct, independent sampling components: the expectation of revenue from a customer, and the probability that a customer will be dissatisfied.  A studious user may note this fact and hand optimize the query to compute these values independently.  However, without this optimization, a sample-first approach will generate one pair of values for each customer for each world.  As shown in the variance example, an arbitrarily large number of customer revenue values will be discarded and the query result will suffer.  In this test, customer satisfaction thresholds were set such that an average of 10\% of customers were dissatisfied.  Consequently sample-first discarded an average of 10\% of its values.  To maintain comparable accuracies, the sample-first query was evaluated with 10,000 samples while the PIP query remained at 1000 samples. 
 
-We expand on this datapoint in Figure \ref{fig:scaling_selectivity} where we time the query used in Figure \ref{fig:variance} for varying selectivities.  The sample-first tests are run with $\frac{1}{selectivity}$ times as many samples as PIP to compensate for the lower variance.  Note that selectivity is a factor that a user must be aware of when constructing a query with sample-first, while in PIP the selectivity is accounted for automatically.
+We expand on this datapoint in Figure \ref{fig:scaling_selectivity} where we time the query used in Figure \ref{fig:variance} for varying selectivities.  The sample-first tests are run with $\frac{1}{selectivity}$ times as many samples as PIP to compensate for the lower variance.  Note that selectivity is a factor that a user must be aware of when constructing a query with sample-first while PIP is able to account for selectivity automatically, even if rejection sampling is required.
 
 \begin{figure}
 \begin{center}
@@ -52,8 +52,6 @@ We expand on this datapoint in Figure \ref{fig:scaling_selectivity} where we tim
 %
 %
 %Figure \ref{fig:iterativerefinement} demonstrates one extreme case of this in a comparison between Karp-Luby estimates and Sample-First estimates.  The results shown are for repeated executions of a query similar to query 4, save with a filter that removes all but approximately 10 clients.  In queries that do not involve a large linear aggregate, the sample-first approach disqualifies a sufficient number of possible worlds that subsequent expectation computations falter.  Conversely the Karp-Luby estimator has sufficient information that it can employ a precomputed CDF lookup table to compute each row's bag probabilities.  Because of this and the fact that it generates more ``useful'' samples, its results have a much lower variance with far fewer samples required.
-
-We have shown that it is possible to apply the c-tables approach to probabilistic databases with only minimal overhead, even when it is used to represent arbitrary variable distributions.  The additional information provided by the c-table adds a degree of flexibility that allows PIP to outperform Sample-First approaches in a number of instances.
 
 \begin{figure}[t!]
 %\footnotesize
