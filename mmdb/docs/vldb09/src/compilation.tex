@@ -7,6 +7,7 @@
 \def\algtopk{\mathrm{topk}}
 
 
+
 \begin{figure*}
 \begin{eqnarray}
 \rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(\{ \tuple{\vec{a}\vec{c}} \})
@@ -31,7 +32,7 @@
 \\
 \algagg_{f(\vec{A})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{\vec{b}\}))
 &\vdash&
-\algagg_{f(\vec{A})}(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{\vec{b}\})))
+\algagg_{f(\vec{A})}(\rho_{\vec{A}}(R))
 \label{r5}
 \\
 \algsum_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
@@ -95,7 +96,65 @@ a       & \dots & \algsum_1(R) > 0 \\
 \end{array}
 \right.
 \label{r13}
+\end{eqnarray}
+
+\caption{Rewrite rules. agg can be either sum, max, or min.
+count is sum$_1$.}
+\label{fig:rules}
+\end{figure*}
+
+
+
+\begin{figure*}
+\begin{eqnarray}
+\algsum_{f(\cdot)}(R - S)
+& \vdash &
+\algsum_{f(\cdot)}(R) -
+\algsum_{f(\cdot)}(S) \quad \dots \quad S \subseteq R
+\label{r20}
 \\
+\max_{f(\cdot)}(R - S)
+& \vdash &
+\left\{\begin{array}{lll}
+\max_{f(\cdot)}(R) & \dots & (S \cap R = \emptyset) \vee \\
+& &  (\max_{f(\cdot)}(R) \neq
+\max_{f(\cdot)}(S \cap R)) \\
+\max_{f(\cdot)}(R
+- S) & \dots &  \max_{f(\cdot)}(R) = \max_{f(\cdot)}(S \cap R) \\
+\end{array}\right.
+\label{r21}
+\\
+\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(S)
+& \vdash &
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
+\times \sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))
+\label{r23}
+\\
+\max_{f(\vec{A},\vec{B},\vec{C})} \Big\{
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
+& \vdash &
+\max_{f(\vec{A},\vec{B},\vec{C})}\Big\{
+\bigcup_{\vec{a}} \max_{f(\vec{a},\vec{B},\vec{C})}
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
+\Big\}
+\label{r24}
+\end{eqnarray}
+\caption{Rewrite rules for handling deletions. Note that deletion rewrites use
+both this rule set and the rewrite rules above for insertions.}
+\label{fig:deleterules}
+\end{figure*}
+
+
+
+
+
+\nop{
+\begin{figure*}
+\begin{eqnarray}
 \mathop{\algtopk}_{a+f(\cdot)}(R)
 &\vdash&
 \pi_{a+f(\cdot)}(\{\tuple{a}\} \times
@@ -106,9 +165,8 @@ a       & \dots & \algsum_1(R) > 0 \\
 \rho_{\vec{B}}(S))
 &\vdash&
 \mathop{\algtopk}(\pi_{f(\vec{A}) + g(\vec{B})}(
-\mathop{\algtop}_{f(\vec{A})}(\rho_{\vec{A}}(R), \lceil \sqrt{k} \rceil)
-\times \mathop{\algtop}_{g(\vec{B})}(\rho_{\vec{B}}(S), \lceil \sqrt{k}
-\rceil)))
+\mathop{\algtopk}_{f(\vec{A})}(\rho_{\vec{A}}(R))
+\times \mathop{\algtopk}_{g(\vec{B})}(\rho_{\vec{B}}(S))))
 \label{r15}
 \\
 \mathop{\algtopk}_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
@@ -129,120 +187,51 @@ a       & \dots & \algsum_1(R) > 0 \\
 &\vdash&
 \mathop{\algtopk} \Big\{
 \pi_{f(\vec{A}) * g(\vec{B})}(
-\mathop{\algtop}_{f(\vec{A})}(
-\sigma_{f(\vec{A}) > 0}(\rho_{\vec{A}}(R)), \lceil \sqrt{k} \rceil) \times
-\mathop{\algtop}_{g(\vec{B})}(\rho_{\vec{B}}(S), \lceil \sqrt{k} \rceil)),
+\mathop{\algtopk}_{f(\vec{A})}(
+\sigma_{f(\vec{A}) > 0}(\rho_{\vec{A}}(R))) \times
+\mathop{\algtopk}_{g(\vec{B})}(\rho_{\vec{B}}(S))),
 \nonumber\\
 & &
 \pi_{f(\vec{A}) * g(\vec{B})}(
-\mathop{\algtop}_{f(\vec{A})}
-(\rho_{\vec{A}}(R),
-\lceil \sqrt{k} \rceil) \times
-\mathop{\algtop}_{g(\vec{B})}
-(\sigma_{g(\vec{B}) > 0}(\rho_{\vec{B}}(S)),
-\lceil \sqrt{k} \rceil))
+\mathop{\algtopk}_{f(\vec{A})}
+(\rho_{\vec{A}}(R)) \times
+\mathop{\algtopk}_{g(\vec{B})}
+(\sigma_{g(\vec{B}) > 0}(\rho_{\vec{B}}(S))))
 \nonumber\\
 & &
 \pi_{-f(\vec{A}) * -g(\vec{B})}(
-\mathop{\algtop}_{-f(\vec{A})}
-(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R)),
-\lceil \sqrt{k} \rceil) \times
-\mathop{\algtop}_{-g(\vec{B})}
-(\sigma_{g(\vec{B}) < 0}(\rho_{\vec{B}}(S)),
-\lceil \sqrt{k} \rceil))
+\mathop{\algtopk}_{-f(\vec{A})}
+(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R))) \times
+\mathop{\algtopk}_{-g(\vec{B})}
+(\sigma_{g(\vec{B}) < 0}(\rho_{\vec{B}}(S))))
 \Big\}
 \label{r17}
 \\
 \mathop{\algtopk}_{a}(R)
 &\vdash&
 \left\{\begin{array}{lll}
-\{\tuple{a}\}^k & \dots & \algsum_{1}(R) > k\\
-\{\tuple{a}\}^{\algsum_{1}(R)} \cup \{\tuple{-\infty}\}^{k-\algsum_{1}(R)}
+\{\underbrace{\tuple{a}, \dots, \tuple{a}}_{k \; \mathrm{times}}\} & \dots & \algsum_{1}(R) > k\\
+\{\underbrace{\tuple{a}, \dots, \tuple{a}}_{\algsum_{1}(R) \; \mathrm{times}}\}
+\cup \{\tuple{-\infty}\}^{k-\algsum_{1}(R)}
 & \dots & \algsum_{1}(R) < k
 \end{array}\right.
 \label{r18}
-\end{eqnarray}
-
-In particular, if $g(\cdot) = 1$, then Rule~(6) gives
-\[
-\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
-\algsum_{1}(\rho_{\vec{B}}(S))
-=
-\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) * |S|.
-\]
-
-\caption{Rewrite rules. agg can be either sum, max, or min.
-count is sum$_1$.}
-\label{fig:rules}
-\end{figure*}
-
-\begin{figure*}
-\begin{eqnarray}
-\algagg_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{A}}(S))
-& \vdash & 
-\algagg_{f(\cdot)}(\rho_{\vec{A}}(R - S))
-\label{r19}\\
-\algsum_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
-& \vdash &
-\left\{\begin{array}{lll}
-\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) -
-\algsum_{f(\cdot)}(\rho_{\vec{B}}(S))
-& \dots & \rho_{\vec{B}}(S) \subseteq \rho_{\vec{A}}(R)\\
-\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) -
-\algsum_{f(\cdot)}(\rho_{\vec{A}}(R) \cap
-\rho_{\vec{B}}(S)) & \dots &
-\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) \neq \emptyset\\
-\algsum_{f(\cdot)}(\rho_{\vec{A}}(R)) & \dots
-& \rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset \end{array}\right.
-\label{r20}
-\\
-\max_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
-& \vdash &
-\left\{\begin{array}{lll}
-\max_{f(\cdot)}(\rho_{\vec{A}}(R)) & \dots &
-(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset) \vee \\
-& &  (\max_{f(\cdot)}(\rho_{\vec{A}}(R)) \neq
-\max_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R))) \\
-\max_{f(\cdot)}(\rho_{\vec{A}}(R)
-- \rho_{\vec{B}}(S)) & \dots &  \max_{f(\cdot)}(\rho_{\vec{A}}(R)) =
-\max_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) \\
-\end{array}\right.
-\label{r21}
 \\
 \mathop{\algtopk}_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
 & \vdash &
 \left\{\begin{array}{lll}
-\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) &
-\dots & (\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R) = \emptyset) \vee\\
-& & (\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) \cap 
-\algtopk_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) = \emptyset)\\
-\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+\algtopk_{f(\cdot)}(R) &
+\dots & (S \cap R = \emptyset) \vee\\
+& & (\algtopk_{f(\cdot)}(R) \cap 
+\algtopk_{f(\cdot)}(S \cap R) = \emptyset)\\
+\algtopk_{f(\cdot)}(R - S)
 & \dots &
-\algtopk_{f(\cdot)}(\rho_{\vec{A}}(R)) \cap
-\algtopk_{f(\cdot)}(\rho_{\vec{B}}(S) \cap \rho_{\vec{A}}(R)) \neq \emptyset
+\algtopk_{f(\cdot)}(R) \cap
+\algtopk_{f(\cdot)}(S \cap R) \neq \emptyset
 \end{array}\right.
 \label{r22}
 \end{eqnarray}
 \begin{eqnarray}
-\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(S)
-& \vdash &
-\bigcup_{\vec{a}}
-\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
-\times \sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))
-\label{r23}
-\\
-\max_{f(\vec{A},\vec{B},\vec{C})} \Big\{
-\bigcup_{\vec{a}}
-\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
-\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
-& \vdash &
-\max_{f(\vec{A},\vec{B},\vec{C})}\Big\{
-\bigcup_{\vec{a}} \max_{f(\vec{a},\vec{B},\vec{C})}
-(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
-\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
-\Big\}
-\label{r24}
-\\
 \mathop{\algtopk}_{f(\vec{A},\vec{B},\vec{C})} \Big\{
 \bigcup_{\vec{a}}
 \sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
@@ -255,206 +244,15 @@ count is sum$_1$.}
 \Big\}
 \label{r25}
 \end{eqnarray}
-\caption{Rewrite rules for handling deletions. Note that deletion rewrites use
-both this rule set and the rewrite rules above for insertions.}
-\label{fig:deleterules}
+\caption{Rewrite rules for top-k.}
 \end{figure*}
+} % end nop
 
-\comment{
-\begin{figure*}
-\begin{center}
-\begin{tabular}{c|l|l}
-Relational expression & Input maps & Output maps\\
-\hline
-$\sigma_{\vec{A}=\vec{a}}(R)$ & $(R)[\_]$ &
-$(\sigma_{\vec{A}=\vec{a}}(R))[_,\vec{a}]$\\
-$\pi_{\vec{A}}(\rho_{\vec{A}}(R))$ & $(R)[\_]$ & $(\rho_{\vec{A}}(R))[\_]$\\
-$\rho_{\vec{A}\vec{B}}(R) \Join \rho_{\vec{B}\vec{C}}(S)$ & $(R)[\vec{r}],
-(S)[\vec{s}]$ & $(\rho_{\vec{A}\vec{B}}(R) \Join
-\rho_{\vec{B}\vec{C}}(S))[\vec{r},\vec{s},\vec{b}]$\\
-$\algagg_{f(\cdot)}(R)$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[]$\\
-$\algagg_{f(\cdot)}(R)[\vec{a}]$ & $R[\_]$ & $(\algagg_{f(\cdot)}(R))[\vec{a}]$
-\end{tabular}
-\end{center}
-\end{figure*}
-}
 
-\begin{figure*}
-\begin{center}
-\begin{eqnarray}
-(\rho_{\vec{A}\vec{B}}(R) \bowtie
-\rho_{\vec{A}\vec{C}}(\{\tuple{\vec{a}\vec{c}} \}))[\_]
-& \vdash &
-(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
-\times \rho_{\vec{C}}(\{ \vec{c} \}))[\_,\vec{a}]
-\label{mr1}
-\\
-(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times
-\rho_{\vec{B}}(\{ \vec{b}\})))[\_,\vec{b}?]
-& \vdash &
-(\rho_{\vec{A}}(R))[\_]
-\label{mr2}
-\\
-(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))[\_]
-& \vdash &
-(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\})
-\times \rho_{\vec{B}}(R)))[\_,\vec{a}]
-\label{mr3}
-\\
-(Q)[\_] & \vdash & (Q')[\_] \\
-(Q)[\_] & \vdash & (Q')[\_] \\
-(\algsum_{f(\vec{A}) * g(\vec{B})}
-(\rho_{\vec{A}}(R) \times
-\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
-& \vdash &
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}], 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
-\label{mr6}
-\\
-(\algsum_{a * f(\cdot)}(R))[a?,\_]
-& \vdash &
-(\algsum_{f(\cdot)}(R))[\_]
-\label{mr7}
-\\
-(\algsum_{f(\cdot) + g(\cdot)}(R))[\_]
-& \vdash &
-(\algsum_{f(\cdot)}(R))[\_],
-(\algsum_{g(\cdot)}(R))[\_]
-\label{mr8}
-\\
-(\max_{a+f(\cdot)}(R))[a?,\_] & \vdash & (\max_{f(\cdot)}(R))[\_]
-\label{mr9}
-\\
-(\max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times
-\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
-& \vdash &
-(\max_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
-(\max_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
-\label{mr10}
-\\
-(\max_{a * f(\vec{B})}(\rho_{\vec{B}}(R)))[a?,\_]
-&\vdash&
-\left\{
-\begin{array}{lll}
-(\min_{f(\vec{B})}(\rho_{\vec{B}}(R)))[\_] & \dots & a < 0 \\
-(\max_{f(\vec{B})}(\rho_{\vec{B}}(R)))[\_] & \dots & a \geq 0
-\end{array}
-\right.
-\label{mr11}
-\\
-\end{eqnarray}
-\end{center}
-\caption{Map construction rules corresponding to rewrite rules. agg can be
-either sum, max or min. count is sum$_1$. (Note this is incomplete,
-rather than copy pasting all the above rewrite rules, we can simply apply the
-generic rules for aggregates as show below.)}
-\label{fig:maprules}
-\end{figure*}
 
-\begin{figure*}
-\begin{eqnarray}
-(\rho_{\vec{A}\vec{B}}(R) \bowtie
-\rho_{\vec{A}\vec{C}}(\{\tuple{\vec{a}\vec{c}} \}))[\_]
-& \vdash &
-(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
-\times \rho_{\vec{C}}(\{ \vec{c} \}))[\_,\vec{a}]
-\label{mr1}
-\\
-(\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times
-\rho_{\vec{B}}(\{ \vec{b}\})))[\_,\vec{b}?]
-& \vdash &
-(\rho_{\vec{A}}(R))[\_]
-\label{mr2}
-\\
-(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))[\_]
-& \vdash &
-(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\})
-\times \rho_{\vec{B}}(R)))[\_,\vec{a}]
-\label{mr3}
-\\
-(\algagg_{f(\vec{a},\vec{B})}(R))[\vec{a}?,\_]
-\wedge \mathrm{rewrite}\left\{g(\vec{a}, \algagg_{h(\vec{B})}(R))\right\}
-& \vdash &
-(\algagg_{h(\vec{B})}(R))[\_]
-\\
-(\algagg_{f(\vec{A},\vec{B})}(
-\rho_{\vec{A}}(R) \times\rho_{\vec{B}}(S)))[\vec{c_R},\vec{c_S}]
-\wedge
-& \vdash &
-(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
-(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
-\\
-\mathrm{rewrite}\left\{
-\algagg?\left\{ f(
-\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)),
-\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)) )
-\right\}
-\right\}
-& &
-\end{eqnarray}
-\caption{Simplified map construction rules. The ${\mathrm rewrite\{R\}}$
-statement simply indicates whether a rewrite of the form $R$ can be applied to
-the expression over which map is defined. Also the term $\algagg?$ states that
-the rewrite may or may not include an outer aggregate, as this varies from
-function to function, but does not affect the mapping keys.}
-\end{figure*}
 
-\begin{figure*}
-\begin{center}
-\begin{eqnarray}
-a + \algsum_{f(\cdot)}(R) \wedge
-(\algsum_{f(\cdot)}(R))[\vec{b}]
-& \rightarrow &
-\lambda(\tuple{a,b}).a*\algsum_{f(\cdot)}(R)[\vec{b}]
-\label{cr1}
-\\
-\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
-\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)) \wedge
-& \rightarrow &
-\lambda(\tuple{\vec{c},\vec{d}}).
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c}] * 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{d}]
-\label{cr2}
-\\
-(\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c}] \wedge 
-(\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{d}]
-& & \nonumber
-\end{eqnarray}
-\end{center}
-\caption{Code generation rules. Note these are incomplete, I think we can write
-these in general form for simply two cases as shown below. I'm leaving these
-examples in for now as a concrete way of showing their structure.}
-\label{fig:codegenrules}
-\end{figure*}
 
-\begin{figure*}
-\begin{eqnarray}
-f^*(\vec{a}, \algagg_{g(\vec{C})}(R))
-\wedge (\algagg_{g(\vec{C})}(R))[\vec{b}]
-& \rightarrow &
-\lambda(\tuple{\vec{a},\vec{b}}).
-f^*(\vec{a}, (\algagg_{g(\vec{C})}(R))[\vec{b}])
-\\
-\algagg?\left\{ f^*(
-\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)),
-\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)) )
-\right\}
-\wedge
-& \rightarrow &
-\lambda(\tuple{\vec{c_R},\vec{c_S}}).
-f^*(
-(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
-(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
-)
-\\
-(\algagg_{g(\vec{A})}(\rho_{\vec{A}}(R)))[\vec{c_R}],
-(\algagg_{h(\vec{B})}(\rho_{\vec{B}}(S)))[\vec{c_S}]
-& & \nonumber
-\end{eqnarray}
-\caption{General code generation rules. Above $f^*$ is an arithmetic
-operations, such as $+,*$, and $\algagg?$ again corresponds to an optional
-aggregation, for example as needed by rewrite rules (\ref{r12}), (\ref{r17}).}
-\end{figure*}
+
 
 In this section, an expression of the form
 \[
@@ -674,7 +472,8 @@ Delete R(a,b):
 &=& \algsum_{A*D}(R \bowtie S \bowtie T) -\\
 & & \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
 &=& \algsum' - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
-\because \Delta s &=&  - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+%\because
+\Delta s &=&  - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
 &=& -a*\algsum_{D}(\sigma_{B=b}(S) \bowtie T)
 \end{eqnarray*} 
 \end{itemize}
@@ -1033,174 +832,184 @@ On insertion of $R_5(e,g,i,j)$,
 
 
 
-
-\subsection{The VWAP Query}
-
-
-\[
-s_{new}^{BBB} =
-s^{BBB} +
-s^{BBb} +
-s^{BbB} +
-s^{Bbb} +
-s^{bBB} +
-s^{bBb} +
-s^{bbB} +
-s^{bbb}
-\]
+\subsection{The Map Algebra}
 
 
+\def\algsumr{\mbox{sumr}}
+\def\algsumf{\mbox{sumf}}
+\def\distinct{\mbox{dnct}}
+\def\routerjoin{\bowtie\!=}
+
+
+\begin{multline*}
+\algsumr_{P_2 * V_2}(\algsumr_{V_0 \rightarrow S_0}(\rho_{P_0, V_0}(B))
+\; \bowtie_{k * S_0 > S_1} \\
+\algsumr_{V_1 \rightarrow S_1 \;\mathrm{grpby}\; P_2}(
+\rho_{P_1, V_1}(B) \; \routerjoin_{P_1 > P_2} \\
+\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))
+\end{multline*}
+%
+canonically translates to the map algebra as
+%
+\begin{multline*}
+\algsumf_{P_2 * V_2}(
+\pi_{m_0[]  \rightarrow S_0}(\{\tuple{}\})
+\; \bowtie_{k * S_0 > S_1} \\
+\pi_{P_2, m_1[P_2] \rightarrow S_1}
+(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))[]
+\end{multline*}
+%
+where the maps $m_0$ and $m_1$ are
 \begin{eqnarray*}
-s_{new}^{BBB} &=&
-s^{BBB} +
-s^{BBb} +
-s^{BbB} +
-s^{Bbb} +
-s_{new}^{bBB}
+m_0[] &:=&
+\algsumf_{V_0}(\rho_{P_0, V_0}(B))[]
+\\
+m_1[p_2] &:=&
+\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))[p_2]
 \end{eqnarray*}
 
 
-
-
-
-
+The query can be simplified using standard relational algebra equivalences
+as follows:
 \begin{multline*}
-s^{BBB} =
-\algsum_{P_2 * V_2}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
-\; \bowtie_{k * S_0 > S_1} \\
-\algsum_{V_1 \rightarrow S_1}(B_{P_1, V_1} \bowtie_{P_1 > P_2}
-B_{P_2, V_2})[P_2, V_2])
+\algsumf_{P_2 * V_2}(
+\sigma_{k * S_0 > S_1}( \\
+\pi_{m_0[]  \rightarrow S_0, P_2, m_1[P_2] \rightarrow S_1}
+(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B))))) \bowtie \rho_{P_2, V_2}(B))[]
 \end{multline*}
+and further to
+\[
+q[] = \algsumf_{P_2 * V_2}(
+\sigma_{k * S_0 > S_1}(
+\pi_{m_0[]  \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
+(\rho_{P_2, V_2}(B))))[].
+\]
 
-\begin{multline*}
-s^{bBB} =
-\algsum_{P_2 * V_2}(
-\sigma_{k * v > S_1}
-\algsum_{V_1 \rightarrow S_1}(B_{P_1, V_1} \bowtie_{P_1 > P_2}
-B_{P_2, V_2})[P_2, V_2])
-\end{multline*}
-
-\begin{multline*}
-s^{bbB} =
-\algsum_{P_2 * V_2}(
-\sigma_{k * v > S_1}
-\algsum_{v \rightarrow S_1}(\sigma_{p > P_2}
-B_{P_2, V_2})[P_2, V_2])
-\end{multline*}
-
-\begin{multline*}
-s^{BbB} =
-\algsum_{P_2 * V_2}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
-\; \bowtie_{k * S_0 > S_1} \\
-\algsum_{v \rightarrow S_1}(\sigma_{p > P_2}
-B_{P_2, V_2})[P_2, V_2])
-\end{multline*}
-
-\begin{multline*}
-s^{Bbb} =
-p * v * \algsum_{1}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
+Let us now compute the on insert trigger for the query.
+If we replace $B$ by $B \cup \{\tuple{p_2,v_2}\}$ and use the equivalences
+$\pi_{\vec{A}}(R \cup S) = \pi_{\vec{A}}(R) \cup \pi_{\vec{A}}(S)$ and
+$\algsumf_f(R \cup S)[\vec{x}] =
+\algsumf_f(R)[\vec{x}] + \algsumf_f(S)[\vec{x}]$, we obtain
+that $q[]$ should be incremented by
+\begin{eqnarray*}
+\Delta q[] &=&
+\algsumf_{p_2 * v_2}(
+\sigma_{k * S_0 > S_1}(
+\pi_{m_0[] \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
+(\rho_{P_2, V_2}(\{\tuple{p_2,v_2}))))[] \\
+&=&
+\algsumf_{p_2 * v_2}(
+\sigma_{k * m_0[] > m_1[p_2]}(
+(\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
 \\
-\bowtie_{k * S_0 > S_1} \;
-\underbrace{\algsum_{v \rightarrow S_1}(\sigma_{p > p}(\{\tuple{p,v}\}))[p, v]}_{const: \{\tuple{0,p,v} \}}) \\
-=
-p * v * \algsum_{1}(\sigma_{k * S_0 > 0}(
-   \algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})))
-\end{multline*}
+&=&
+\mbox{if $(k * m_0[] > m_1[p_2])$ then $p_2 * v_2$ else $0$}
+\quad (\mbox{on insert into B values ($p_2, v_2$)})
+\end{eqnarray*}
+where $m_0[]$ and $m_1[]$ refer to versions of the maps to which the
+insertion has already been applied.
 
-
-\begin{multline*}
-s^{BBb} =
-p * v * \algsum_{1}(\algsum_{V_0 \rightarrow S_0}(B_{P_0, V_0})
-\; \bowtie_{k * S_0 > S_1} \\
-\algsum_{V_1 \rightarrow S_1}(\sigma_{P_1 > p} B_{P_1, V_1}
-))
-\end{multline*}
-
-
-\begin{multline*}
-s^{bBb} =
-p * v * \algsum_{1}(
-\sigma_{k * v > S_1}
-\algsum_{V_1 \rightarrow S_1}(\sigma_{P_1 > p} B_{P_1, V_1}
-))
-\end{multline*}
-
-
-\begin{multline*}
-s^{bbb} =
-p * v * \algsum_{1}(
-\sigma_{k * v > S_1}
-\algsum_{v \rightarrow S_1}(\sigma_{p > p} \{\tuple{p,v}\}))
+The increments for $m_0[]$ and $m_1[P_2]$ are analogously
+\begin{eqnarray*}
+\Delta m_0[] &:=&
+\algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p_0, v_0}\}))[] = v_0
 \\
-= \mbox{if ($k*v > 0$) then $p*v$ else $0$}
-\end{multline*}
+&& (\mbox{on insert into $B$ values ($p_0, v_0$)})
+\\[1.5ex]
+\Delta m_1[p_2] &:=&
+\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}\{\tuple{p_1, v_1}\})))[p_2]
+\\
+&=& \mbox{if $(p_1 > p_2)$ then $v_1$ else $0$}
+\\
+&& (\mbox{for each $p_2$, on insert into $B$ values ($p_1, v_1$)})
+\end{eqnarray*}
 
-
-
-
-
-
-
-
-
-
-
-
-
+Thus we generate the following code:
 \begin{verbatim}
-on insert into B values (p,v):
-snew_BBB = sBBB + sBBb[p] + sBbB[p,v] + sBbb
-         + sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v];
+on insert into B values (p, v)
+{
+  m_0 += v;
 
-snew_bBB[v] = sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v];
+  if(! dom_m_1.member(p)) { dom_m_1.add(p); m_1[p] = 0; }
 
-snew_bbB[p, v] = sbbB[pv] + sbbb[p,v];
+  foreach p_2 in dom_p_2 do
+     m_1[p_2] += (p > p_2) ? v : 0;
 
-snew_BBb[p] = sBBb[p] + sBbb + sbBb[p,v] + sbbb[p,v];
-
-snew_Bbb = sBbb + sbbb[p,v];
-
-snew_BbB[p,v] = sBbB[p,v] + sBbb + sbbB[pv] + sbbb[p,v];
-
-snew_bbb[p,v] = (k*v>0) ? (p*v) : 0;
-
-snew_bBb[p,v] = sbBb[p,v] + sbbb[p,v];
-
-
-
-
-
-
-snew_BBB = sBBB - (sBBb[p] + sBbB[p,v] + sBbb
-         + sbBB[v] + sbBb[p,v] + sbbB[pv] + sbbb[p,v]);
-
-snew_bBB[v] = sbBB[v] - (sbBb[p,v] + sbbB[pv] + sbbb[p,v]);
-
-snew_bbB[p,v] = sbbB[pv] - sbbb[p,v];
-
-snew_BBb[p] = sBBb[p] - (sBbb + sbBb[p,v] + sbbb[p,v]);
-
-snew_Bbb = sBbb - sbbb[p,v];
-
-snew_BbB[p,v] = sBbB[p,v] - (sBbb + sbbB[pv] + sbbb[p,v]);
-
-snew_bbb[p,v] = (k*v>0) ? (p*v) : 0;
-
-snew_bBb[p,v] = sbBb[p,v] + sbbb[p,v];
-
-
-s_BBB = snew_BBB;
-s_BBb = snew_BBb;
-s_BbB = snew_BbB;
-s_Bbb = snew_Bbb;
-s_bBB = snew_bBB;
-s_bBb = snew_bBb;
-s_bbB = snew_bbB;
-s_bbb = snew_bbb;
-
-
-
+  q += (k * m0 > m1[p]) ? (p * v) : 0;
+}
 \end{verbatim}
 
 
+It makes sense to avoid naive looping over all values $p_2$ by maintaining
+$m_1[p_2]$ as a range data structure (to be described).
 
+
+
+
+The goal of this section is to provide an algorithm for compiling map algebra
+expressions $q[\vec{x}]$ into C code that incrementally maintains $q[\vec{x}]$.
+To be precise, we aim for the following notion of incremental maintenance.
+
+
+\begin{definition}[YMCA maintenance scheme]\em
+An incremental map maintenance algorithm has the YMCA
+(Yanif Must Certainly Approve of)
+property if on an insert or delete of a tuple, the delta on $q[\vec{a}]$, for
+any $\vec{a}$, can be expressed as a fixed sum
+$q_1[\vec{a}] + \dots + q_k[\vec{a}]$ such that each map $q_i[\cdot]$ has the YMCA
+property and $q_i \prec q$.
+\end{definition}
+
+
+Here, $\prec$ denotes the following general-to-specific ordering on map expressions.
+
+
+\begin{definition}\em
+A singleton relation is a relation with one tuple, $\{\tuple{a}\}$.
+A map $q$ is called (strictly) {\em more specific than}\/ a map $q'$,
+denoted $q \prec q'$, if $q$ can be obtained from $q'$ by replacing
+one or more relation names occurring in $q$ by fixed singleton relations.
+\end{definition}
+
+
+Obviously, a YMCA compilation scheme yields effective incremental view maintenance:
+The delta to any map can be computed by a fixed sum of simpler maps,
+the deltas of which again can be computed by fixed sums of even simpler maps,
+and this recursively until we reach maps in which all relations are constant and
+the maps can be reformulated as a simple arithmetic expression over its arguments.
+
+
+
+\begin{theorem}
+There is a YMCA compilation scheme for map algebra.
+\end{theorem}
+
+
+Proof.
+Let $q[\vec{x}]$ be of the form
+$
+\algsumf_f(Q)[\vec{x}]
+$
+where $Q$ is relational algebra parameterized by $\vec{x}$ and let $R$ be
+a relation name occurring in $Q$ (in the relational algebra expression
+rather than just in a nested map algebra expression).
+Assume that there are $r$ occurrences of $R$ in $Q$. Then
+the updated version of $q[\vec{x}]$ can be expressed by the sum of the $2^r$
+maps obtainable by, for each occurrence of $R$ in $Q$, either replacing it
+by $\{ \vec{x} \}$ or leaving it unchanged.
+
+This follows immediately from the fact that the new version of $R$ on insertion of
+tuple $\vec{x}$ is $R \cup \{ \vec{x} \}$ and, $\cup$ commutes with
+the operations of positive relational algebra and thus can be pushed to the top
+level of $Q$, and
+\[
+\algsumf_f(Q_1 \cup Q_2)[\vec{x}] =
+\algsumf_f(Q_1)[\vec{x}] + \algsumf_f(Q_2)[\vec{x}].
+\]
+By pushing the unions obtained by rewriting $R$ to $R \cup \{\vec{x}\}$ to the
+top level of $Q$ everywhere and then splitting the map into a sum of maps, we obtain
+one map expression that is precisely $q[\cdot]$ (i.e., corresponds to the old
+value of $q$)
+
+
+\punto
