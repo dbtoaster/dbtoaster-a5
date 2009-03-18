@@ -1,78 +1,16 @@
 
 
-As has already been pointed out,
-both the computation of moments and probabilities reduces to numerical
-integration, and a dominant technique for doing this is Monte Carlo simulation.
-The approximate computation of expectation
+As has already been noted, both the computation of moments and probabilities reduces to numerical integration, and a dominant technique for doing this is Monte Carlo simulation. The approximate computation of expectation
 $E[\chi_\phi \cdot (h \circ t)]$,
 \begin{equation}
 \frac{1}{n} \cdot \sum_{i=1}^n p(\vec{x}_i) \cdot \chi_\phi(\vec{x}_i) \cdot
 h(t(\vec{x}_i)),
 \end{equation}
-faces a number of difficulties.
-This section describes how these are addressed in PIP.
+faces a number of difficulties.  In particular, samples for which $\chi_{\phi}$ is zero do not contribute to an expectation.  If $\phi$ is a very selective condition, most samples do not contribute to the summation computation of the approximate expectation.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
 
-{\bf Basic sampling from $p$}.
-It may be hard to sample from $p$.
-Pip implements MCMC (in the form of the Metropolis algorithm),
-a very powerful and general technique for computing samples, essentially based
-on random walks in a Markov Chain biased by $p$. Of course, this technique
-has a considerable overhead and is avoided where possible.
-
-{\bf Independent random variables}.
-In many special cases, there are better techniques, such as
-when the random variables are mutually independent (i.e.,
-$p_{X_1 \dots X_k}(x_1, \dots, x_k) = \prod_{i=1}^k p_{x_i}(x_i)$).
-In that case, we sample independently from the various constituent
-distributions $p_{X_i}$.  It should also be noted that constraint atoms may 
-be treated as derived boolean random variables.  When the value of the constraint is
-fixed (eg, when sampling under a selective condition) these atoms introduce
-dependencies between their component random variables.
-
-{\bf Special sampling techniques}.
-Efficient direct sampling (not using MCMC) is possible for a constituent
-distribution $p_{X_i}$ if we have  an inverse CDF $P^{-1}$. This allows
-us to draw a sample from $p_{X_i}$ by drawing a sample $x$ uniformly from [0,1]
-and computing $P^{-1}(x)$.
-We can precompute and materialize (inverse) CDFs for later use using Monte
-Carlo integration itself.
-
-Special and very efficient sampling methods are also known
-for certain  well-studied distributions.
-For example, for the normal distribution, samples can be efficiently drawn
-using the Box-Muller transform (implemented in PIP), the Ziggurat algorithm, etc.
-
-{\bf Sparseness of samples for selective conditions}.
-Samples for which $\chi_{\phi}$ is zero do not contribute
-to an expectation.
-If $\phi$ is a very selective condition, most samples do not
-contribute to the summation computation of the
-approximate expectation.
-While we do not strictly employ rejection sampling here --
-samples for with $\chi_{\phi}$ is zero count towards the number or samples
-$n$ by which we average -- information can get very sparse and the approximate
-expectations have a high relative error.
-(This is closely related to the most prominent problem in online
-aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
-
-
-
-
+This section describes how these issues are addressed in PIP.
 
 %%%%%%%%%%%%
-
-
-\medskip
-
-We now study some of these aspects in more detail.
-
-%ck: actually that's not really right...
-%It may seem that if MCMC is used for integration, it does not matter much
-%whether the condition is conjunctive or a DNF because conditions are only
-%checked once a sample has been created. However, MCMC is inefficient and
-%to be avoided where possible. If random variables are independent and
-%CDFs are available, we can efficiently sample from
-
 
 \subsection{Constrained Sampling}
 \label{subsec:csampling}
@@ -86,31 +24,13 @@ atoms $(Y >  -3)$ and $(Y < 2)$.  The expectation  of the variable $Y$
 in the  context of  this row  is not $5$.   Rather the  expectation is
 taken only over values of $Y$ that fall in the range $(-3,2)$.
 
-More generally,  PIP requires  the ability to  sample values  that are
-constrained   by   boolean   formulas   of  condition   atoms.    This
-functionality is used primarily when  computing expectations.  For conjunctions of atoms,  this problem is
-equivalent to sampling  from a contiguous subset of  the sample space.
-
-\nop{
-The decision process used for this purpose is shown in Figure
-\ref{fig:sample_decision}. 
-
-
-\begin{figure}
-\begin{center}
-\resizebox{2in}{!}{\includegraphics{graphics/sampling_decision.pdf}}
-\caption{The constrained sampling decision process}
-\label{fig:sample_decision}
-\end{center}
-\end{figure}
-} % end nop
-
 The  most  straightforward approach  to  this  problem  is to  perform
 rejection sampling; sample sets  are repeatedly generated until one is
 found  that  satisfies  the   constraint  formula.   However,  as  the
 probability  of satisfying  all  of  the atoms  drops,  the number  of
 rejected  samples  grows.  Thus  the  cost  of  rejection sampling  is
 inversely proportional to the probability of satisfying all the atoms.
+Note that we do not employ strict rejection sampling here, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  However, without scaling the number of samples taken based on $E[\chi_\phi]$, information can get very sparse and the approximate expectations will have a high relative error. 
 
 If the inverse  CDF is available for a given variable,  it may be used
 to rapidly generate samples  within specified bounds.  The inverse CDF
@@ -140,8 +60,6 @@ likely that a sample will  need to be discarded.  Furthermore, because
 fewer variables are being  sampled for each subset, less computational
 effort is wasted generating invalid samples.
 
-\subsection{MCMC Sampling}
-\label{subsec:MCMC}
 A final alternative available to PIP, is the
 Metropolis  algorithm \cite{metropolis}.   Starting from  an arbitrary
 point within the sample space,  this algorithm performs a random walk.
@@ -149,11 +67,6 @@ Steps  are  sampled  from  a  multivariate  normal  distribution,  and
 rejection sampling  is used  to weight the  walk towards  regions with
 higher  probability  densities.  Samples  taken  at regular  intervals
 during the random walk may be used as samples of the distribution.
-
-Because the Metropolis  algorithm uses relative probability densities,
-it is possible to use a density function that has not been normalized.
-Thus, regions of  space that do not satisfy the  clause are assigned 0
-density; the random walk never enters these regions.
 
 The Metropolis algorithm has an  expensive startup cost, as there is a
 lengthy  `burn-in' period  while  it generates  a sufficiently  random
@@ -163,36 +76,13 @@ Consequently,   the  Metropolis  algorithm   is  ideally   suited  for
 generating large numbers of samples  when the CDF is not available and
 the probability of sampling a given value is small.
 
-It necessary to parametrize the normal distribution used to select the
-next step in the random walk.  Specifically, the standard deviation is
-highly dependent on the distribution being sampled from;  If the value selected is
-too small,  steps taken  by the  algorithm will be  too small  and the
-number  of  steps required  to  generate  independent samples  becomes
-large.   If  the value  selected  is  too  large, the  algorithm  will
-frequently attempt to leave the  constraint bounds and thus many steps
-will be rejected.
-
-PIP uses the burn-in phase to select an appropriate standard deviation
-for  each  dimension.   Prior  to  sampling, PIP  performs  a  dynamic
-standard deviation  computation.  Steps are limited  to movement along
-one axis;  thus only one  variable contributes to the  step direction.
-If  the step  is rejected,  the standard  deviation for  that  axis is
-lowered by a  constant factor.  If the step  is accepted, the standard
-deviation is raised by a  constant factor.  These factors are selected
-such  that the  standard  deviation  converges to  a  point where  the
-acceptance-rejection ratio falls in  the commonly accepted ideal range
-of  $0.1-0.4$\cite{numericalrecipes}.  The  dynamic standard  deviation computation  does not
-replace the burn-in  phase, but instead reduces the  number of burn-in
-steps required.
-
-
 
 \subsection{Computing Confidences}
 \label{subsec:cint}
 
 
 Computing the confidence of a row in the C-Table; ie, computing the 
-probability that the conjunction $\phi$ of the row's condition atoms, 
+probability that the conjunction $\phi$ of the row's condition atoms is true, 
 is equivalent to computing
 \[
 \sum_{\vec{x}} \int_{\vec{y}} p(\vec{x}, \vec{y}) \cdot \chi_\phi(\vec{x},\vec{y}) \; d\vec{y}.

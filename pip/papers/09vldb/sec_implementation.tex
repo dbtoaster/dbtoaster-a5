@@ -12,7 +12,7 @@ In order to evaluate the viability of PIP's c-tables approach to continuous vari
 Much of this added functionality takes advantage of PostgreSQL's extensibility features, and can be used ``out-of-the-box".  For example, we define the function 
 
 \textbf{CREATE\_VARIABLE($distribution$[,$params$])} \\
-which is used to create variables.  Each call allocates a new variable and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  Similarly, double angle brackets around a random variable equation ($<< Y >>$) are shorthand for the equation's in a vaccum (without external constraints).  The \@ sign may be used to specify context for the expectation.  $<< Y @ row >>$ computes the expectation of variable $Y$ under the constraints in the corresponding $row$.
+which is used to create variables.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  Similarly, double angle brackets around a random variable equation ($<< Y >>$) are shorthand for the equation's in a vaccum (without external constraints).  The \@ sign may be used to specify context for the expectation.  $<< Y @ row >>$ computes the expectation of variable $Y$ under the constraints in the corresponding $row$.
 
 %Angle brackets around a random variable are shorthand for the variable's expectation.  All instances of this are replaced by a call to pip's expectation sampling function.  
 
@@ -56,7 +56,7 @@ PIP provides several functions for analyzing the uncertainty encoded in a c-tabl
 
 conf() performs a conjunctive integration to estimate the probability of a specific row being present in the output.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
 
-aconf(), a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  Two variants of aconf() exist: a naive one-pass version, and a Karp-Luby variant that builds a transient table on which it performs two more aggregation passes.
+aconf(), a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  
 
 expected() computes the expectation of a variable by repeated sampling.  If a row may be specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
 
