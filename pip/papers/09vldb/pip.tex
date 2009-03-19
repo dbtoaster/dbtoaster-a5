@@ -56,7 +56,7 @@ Cornell University, Ithaca, NY, USA \\
 \{okennedy, koch\}@cs.cornell.edu}
 
 \date{}
-
+\toappear{}
 
 \begin{document}
 
@@ -69,9 +69,11 @@ Cornell University, Ithaca, NY, USA \\
 
 
 \begin{abstract}
-We describe PIP, a probabilistic database system that bridges powerful integration techniques with the evaluation of arbitrary queries over uncertain data.  PIP's approach encompasses and extends the efficiency of recent discrete systems such as MistiQ and MayBMS, as well as the generality of the Monte-Carlo approach taken by MCDB.  By maintaining a lossless symbolic representation of probabilistic data as it is transformed by queries, PIP is able to very efficiently compute expectations and other statistical metrics.
+Estimation via sampling out of highly selective join queries is a well known problem, most notably in online aggregation.  Without goal-directed sampling strategies, samples falling outside of the selection constraints lower estimation efficiency at best, and cause inaccurate estimates at worst.  This problem appears in general probabilistic database systems, where query processing is tightly coupled with sampling.  By committing to a set of samples before evaluating the query, the engine wastes effort on samples that will be discarded, query processing that may need to be repeated, or unnecessarily large numbers of samples.  
 
-The additional state encoded in PIP's C-Tables style representation enables a wide variety of integration techniques.  This representation vastly broadens the range of algorithms available for computing expectations, makes it possible for PIP to select between various sampling and evaluation strategies, and reduces the amount of work required.  We show that even straightforward algorithms can make use of the added information to have a profound impact on the efficiency and accuracy of the computation of expectations, particularly in the case of highly selective queries - a class of problem that MCDB has trouble with.
+We describe PIP, a probabilistic database system that uses symbolic representations of probabilistic data to defer computation of expectations, moments, and other statistical measures until the expression to be measured is fully known.  This approach is sufficiently general to admit continuous distributions, as well as discrete ones.  Moreover, deferring sampling enables a broad range of goal-oriented sampling (as well as exact) integration techniques for computing statistical measures, allows the selection of the integration strategy most appropriate to the expression being measured, and reduces the amount of work required.  
+
+We demonstrate the effectiveness of this approach by showing that even straightforward algorithms can make use of this information.  These algorithms have a profoundly positive impact on the efficiency and accuracy of expectation computations, particularly in the case of highly selective join queries.
 \end{abstract}
 
 
