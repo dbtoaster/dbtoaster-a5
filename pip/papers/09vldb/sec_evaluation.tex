@@ -38,7 +38,7 @@ However, what the first three tests do not take into account is the accuracy of 
 
 A similar example is shown in Figure \ref{subfig:variance2}.  Here, a model is constructed for how much product suppliers are likely to be able to produce in the coming year based on an Exponential distribution, and for how much product the company expects to sell in the coming year as in Q1.  From this model, the expected underproduction is computed, with a lower bound of 0; the selection criterion considers only those worlds where demand exceeds supply.  For the purposes of this test, the model was chosen to generate an average selectivity of 0.05.  Though the comparison of 2 random variables necessitates the use of rejection sampling and increases the time PIP spends generating samples, the decision to drop a sample is made immediately after generating it; PIP can continue generating samples until it has a sufficient number, while the Sample-First approach must rerun the entire query.
 
-Returning to Figure \ref{fig:querytimings}, the final timing test combines a simplified version of the prior two queries to simulate a risk management query that might be evaluated daily.  Given per-customer revenue forecasts, estimates for product manufacturing and shipping times, customer satisfaction thresholds, compute the expected revenue lost to customers dissatisfied with today's service.  For added realism, this query uses a precomputed table of part production and shipping times (which changes rarely enough that it can be updated monthly).  This query is shown in Figure \ref{fig:timingq4}.
+Returning to Figure \ref{fig:querytimings}, the final timing test combines a simplified version of the prior two queries to simulate a risk management query that might be evaluated daily.  Given per-customer revenue forecasts, estimates for product manufacturing and shipping times, customer satisfaction thresholds, compute the expected revenue lost to customers dissatisfied with today's service.  For added realism, this query uses a precomputed table of part production and shipping times (which changes rarely enough that it can be updated monthly).  %This query is shown in Figure \ref{fig:timingq4}.
 
 This query includes two distinct, independent sampling components: the expectation of revenue from a customer, and the probability that a customer will be dissatisfied.  A studious user may note this fact and hand optimize the query to compute these values independently.  However, without this optimization, a sample-first approach will generate one pair of values for each customer for each world.  As shown in the variance example, an arbitrarily large number of customer revenue values will be discarded and the query result will suffer.  In this test, customer satisfaction thresholds were set such that an average of 10\% of customers were dissatisfied.  Consequently sample-first discarded an average of 10\% of its values.  To maintain comparable accuracies, the sample-first query was evaluated with 10,000 samples while the PIP query remained at 1000 samples. 
 
@@ -63,71 +63,71 @@ We expand on this datapoint in Figure \ref{fig:scaling_selectivity} where we tim
 %
 %Figure \ref{fig:iterativerefinement} demonstrates one extreme case of this in a comparison between Karp-Luby estimates and Sample-First estimates.  The results shown are for repeated executions of a query similar to query 4, save with a filter that removes all but approximately 10 clients.  In queries that do not involve a large linear aggregate, the sample-first approach disqualifies a sufficient number of possible worlds that subsequent expectation computations falter.  Conversely the Karp-Luby estimator has sufficient information that it can employ a precomputed CDF lookup table to compute each row's bag probabilities.  Because of this and the fact that it generates more ``useful'' samples, its results have a much lower variance with far fewer samples required.
 
-\begin{figure}[t!]
-%\footnotesize
-\begin{footnotesize}
-\begin{verbatim}
-create table `shipping_params' as
-  select 
-    avg   (l_shipdate    - o_orderdate) as ship_mu,
-    avg   (l_receiptdate - l_shipdate ) as arrv_mu,
-    stddev(l_shipdate    - o_orderdate) as ship_sigma,
-    stddev(l_receiptdate - l_shipdate ) as arrv_sigma,
-    l_partkey as p_partkey
-  from orders,lineitem
-  where o_orderkey = l_orderkey
-  group by partkey;
-alter table params add constraint "p_partkey_pkey" 
-  primary key (p_partkey);
--- BEGIN TIMING QUERY --
-create temporary table q4_shipping as
-  select o_orderkey AS orderkey, o_custkey AS custkey,
-    CREATE VARIABLE(`Normal',ship_mu,ship_sigma)
-    CREATE VARIABLE(`Normal',arrv_mu,arrv_sigma)
-  from  orders,lineitem,shipping_params
-  where p_partkey = l_partkey;
-   and  o_orderdate = today()
-   and  o_orderkey  = l_orderkey;
-create temporary table q4_annoyed as
-  select custkey from q4_shipping where ship > 120
-union all
-  select custkey from q4_shipping where arrv > 90;
-create temporary table q4_order_increase as
-  select o_orderkey, o_custkey,
-     CREATE VARIABLE(`Poisson', increase) *
-       l_extended_price * (1.0 - l_discount) as rev
-  from (select newc / oldc as increase, custkey 
-    from (select o_custkey as custkey, 
-             sum(o_orderdate.year-1996.0) AS newc,
-             sum(1997.0-o_orderdate.year) AS oldc
-      where o_orderdate.year = 1997 
-        or  o_orderdate.year = 1996
-      group by custkey
-     ) as counts
-   ) as increase_per_cust,
-    orders
-  where custkey = o_custkey
- ) as var_increase_per_customer,
- (select lineitem.*,
-  from  nation,supplier, lineitem, partsupp
-  where n_name = 'japan' and n_nationkey = s_nationkey
-   and  s_suppkey = ps_suppkey
-   and  ps_partkey = l_partkey
-   and  ps_suppkey = l_suppkey
- ) as items_from_japan;
--- BEGIN TIMING SAMPLE --
-select avg(confidence),
-       expected_sum_naive(rev, q4_annoyed)
-from   q4_annoyed,
-       (select o_custkey as custkey, rev
-        from   q4_revenue_gains
-       ) as revenues
-where  revenues.custkey = q4_annoyed.custkey;
-\end{verbatim}
-\end{footnotesize}
-
-\vspace{-5mm}
-
-\caption{Timing Query 4}
-\label{fig:timingq4}
-\end{figure}
+%\begin{figure}[t!]
+%%\footnotesize
+%\begin{footnotesize}
+%\begin{verbatim}
+%create table `shipping_params' as
+%  select 
+%    avg   (l_shipdate    - o_orderdate) as ship_mu,
+%    avg   (l_receiptdate - l_shipdate ) as arrv_mu,
+%    stddev(l_shipdate    - o_orderdate) as ship_sigma,
+%    stddev(l_receiptdate - l_shipdate ) as arrv_sigma,
+%    l_partkey as p_partkey
+%  from orders,lineitem
+%  where o_orderkey = l_orderkey
+%  group by partkey;
+%alter table params add constraint "p_partkey_pkey" 
+%  primary key (p_partkey);
+%-- BEGIN TIMING QUERY --
+%create temporary table q4_shipping as
+%  select o_orderkey AS orderkey, o_custkey AS custkey,
+%    CREATE VARIABLE(`Normal',ship_mu,ship_sigma)
+%    CREATE VARIABLE(`Normal',arrv_mu,arrv_sigma)
+%  from  orders,lineitem,shipping_params
+%  where p_partkey = l_partkey;
+%   and  o_orderdate = today()
+%   and  o_orderkey  = l_orderkey;
+%create temporary table q4_annoyed as
+%  select custkey from q4_shipping where ship > 120
+%union all
+%  select custkey from q4_shipping where arrv > 90;
+%create temporary table q4_order_increase as
+%  select o_orderkey, o_custkey,
+%     CREATE VARIABLE(`Poisson', increase) *
+%       l_extended_price * (1.0 - l_discount) as rev
+%  from (select newc / oldc as increase, custkey 
+%    from (select o_custkey as custkey, 
+%             sum(o_orderdate.year-1996.0) AS newc,
+%             sum(1997.0-o_orderdate.year) AS oldc
+%      where o_orderdate.year = 1997 
+%        or  o_orderdate.year = 1996
+%      group by custkey
+%     ) as counts
+%   ) as increase_per_cust,
+%    orders
+%  where custkey = o_custkey
+% ) as var_increase_per_customer,
+% (select lineitem.*,
+%  from  nation,supplier, lineitem, partsupp
+%  where n_name = 'japan' and n_nationkey = s_nationkey
+%   and  s_suppkey = ps_suppkey
+%   and  ps_partkey = l_partkey
+%   and  ps_suppkey = l_suppkey
+% ) as items_from_japan;
+%-- BEGIN TIMING SAMPLE --
+%select avg(confidence),
+%       expected_sum_naive(rev, q4_annoyed)
+%from   q4_annoyed,
+%       (select o_custkey as custkey, rev
+%        from   q4_revenue_gains
+%       ) as revenues
+%where  revenues.custkey = q4_annoyed.custkey;
+%\end{verbatim}
+%\end{footnotesize}
+%
+%\vspace{-5mm}
+%
+%\caption{Timing Query 4}
+%\label{fig:timingq4}
+%\end{figure}

@@ -69,26 +69,9 @@ Cornell University, Ithaca, NY, USA \\
 
 
 \begin{abstract}
-We describe PIP, a probabilistic database system
-that combines the strengths of
-recent discrete systems such as MystiQ and MayBMS with the generality of
-the Monte-Carlo approach of MCDB. It supports both discrete and
-continuous probability distributions, powerful correlations definable
-by queries, expectations of aggregates and distinct-aggregates with or
-without  group-by,  and the computation of confidences.
-%
-PIP uses c-tables to delay and minimize the amount of sampling work required.
-We study Monte-Carlo sampling and integration and
-present a Karp-Luby style importance
-sampling algorithm for continuous distributions.
-This technique is essential
-in scenarios where very small probabilities have to be approximated to a small
-relative error, as is often the case for the computation of conditional
-probabilities (as ratios of probabilities).
-%
-We also provide experimental evidence for the competitiveness
-of our approach, comparing PIP with a reimplementation of the
-refined sample-first approach taken by MCDB. 
+We describe PIP, a probabilistic database system that bridges powerful integration techniques with the evaluation of arbitrary queries over uncertain data.  PIP's approach encompasses and extends the efficiency of recent discrete systems such as MistiQ and MayBMS, as well as the generality of the Monte-Carlo approach taken by MCDB.  By maintaining a lossless symbolic representation of probabilistic data as it is transformed by queries, PIP is able to very efficiently compute expectations and other statistical metrics.
+
+The additional state encoded in PIP's C-Tables style representation enables a wide variety of integration techniques.  This representation vastly broadens the range of algorithms available for computing expectations, makes it possible for PIP to select between various sampling and evaluation strategies, and reduces the amount of work required.  We show that even straightforward algorithms can make use of the added information to have a profound impact on the efficiency and accuracy of the computation of expectations, particularly in the case of highly selective queries - a class of problem that MCDB has trouble with.
 \end{abstract}
 
 

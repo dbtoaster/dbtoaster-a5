@@ -117,18 +117,18 @@ C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order})} = \bagopen ((Joe, NY, X_1), \mb
 \bagclose
 $,
 $
-C_{\sigma_{\mathrm{Duration} \le 7}(\mathrm{Shipping})} =
+C_{\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})} =
 \bagopen ((NY, X_2), X_2 \ge 7),
 ((LA, X_4)$, \\
-$X_4 \le 7) \bagclose,
+$X_4 \ge 7) \bagclose,
 $
 %
 and
 $C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
-\sigma_{\mathrm{Duration} \le 7}(\mathrm{Shipping})}$ = \\
-$\bagopen ((Joe, NY$, $X_1, NY, X_2), X_2 \le 7),
+\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})}$ = \\
+$\bagopen ((Joe, NY$, $X_1, NY, X_2), X_2 \ge 7),
 ((Joe, NY, X_1, LA, X_4)$, \\
-$X_4 \le 7) \bagclose$.
+$X_4 \ge 7) \bagclose$.
 %
 The c-table for the overall result is as shown in Example \ref{ex:intro}. 
 %
@@ -261,7 +261,7 @@ the value assigned to it in $(\vec{x}, \vec{y})$.
 
 
 \begin{example}\em
-Returning to our running example, for $C_R = \bagopen (x_1, x_2 \le 7) \bagclose$, the expected sum of prices is
+Returning to our running example, for $C_R = \bagopen (x_1, x_2 \ge 7) \bagclose$, the expected sum of prices is
 \begin{multline*}
    \sum_{(t,  \phi) \in  C_R} \cdot  
    \int_{x_1} \cdots
@@ -269,7 +269,7 @@ Returning to our running example, for $C_R = \bagopen (x_1, x_2 \le 7) \bagclose
    \cdot t(\vec{x}).\mathrm{Price} \; d \vec{y}
 = \\
    \int_{x_1} \cdots
-   \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \le 7}(\vec{x})
+   \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \ge 7}(\vec{x})
    \cdot x_1 \; d \vec{y}.
 \end{multline*}
 \punto
