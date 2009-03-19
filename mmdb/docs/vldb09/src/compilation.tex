@@ -8,6 +8,18 @@
 
 
 
+This section presents our framework for compiling aggregation queries down to
+efficient procedural code for incrementally maintaining views of these queries.
+We start with a definition of a clean
+core of the query language supported by DBToaster.
+This core is a query algebra for defining maps. These maps are closely related to
+tables definable using SQL aggregate group-by queries but at the same time are main
+memory data structures that are easy to access in applications.
+After that, we present the core query compilation technique and prove its correctness.
+In the following subsection, we refine this technique to employ join decomposition
+techniques or employ database query optimization ideas to reduce the space
+consumption of auxiliary maps and to reduce the time cost of maintaining the maps.
+
 
 
 
@@ -16,9 +28,8 @@
 
 \def\algsumr{\mbox{sumr}}
 \def\algsumf{\mbox{sumf}}
-\def\distinct{\mbox{dnct}}
+\def\distinct{\mbox{distinct}}
 \def\routerjoin{\bowtie\!=}
-
 
 
 The syntax of the map algebra can be defined as follows.
@@ -199,42 +210,66 @@ level of $Q$, and
 By pushing the unions obtained by rewriting $R$ to $R \cup \{\vec{x}\}$ to the
 top level of $Q$ everywhere and then splitting the map into a sum of maps, we obtain
 one map expression that is precisely $q[\cdot]$ (i.e., corresponds to the old
-value of $q$)
+value of $q$).
 
-
+The one additional case is relational algebra expressions of the form
+\[
+\algsumf_f(\sigma_{m[\vec{x}] + \Delta m[\vec{x}] > 0}(Q))[\cdot]
+\]
+which can be rephrased as
+\begin{multline*}
+\algsumf_f(\sigma_{m[\vec{x}] > 0}(Q))[\vec{x}]
+\\
++ \;
+\big( \mbox{if ($(m[\vec{x}] > 0) \neq (m[\vec{x}] + \Delta m[\vec{x}] > 0))$ then}
+\\
+      \mbox{$\mbox{sgn}(m[\vec{x}] + \Delta m[\vec{x}]) *
+      \algsumf_f(Q)[\vec{x}]$ else 0} \big)
+\end{multline*}
 \punto
 
 
 
+\begin{todo}
+Make a clean induction proof.
+
+Give an algorithm separately from the proof.
+\end{todo}
+
+
 
 \begin{example}\em
-Let us now compute the on insert trigger for the VWAP query.
-If we replace $B$ by $B \cup \{\tuple{p_2,v_2}\}$ and use the equivalences
-$\pi_{\vec{A}}(R \cup S) = \pi_{\vec{A}}(R) \cup \pi_{\vec{A}}(S)$ and
-$\algsumf_f(R \cup S)[\vec{x}] =
-\algsumf_f(R)[\vec{x}] + \algsumf_f(S)[\vec{x}]$, we obtain
-that $q[]$ should be incremented by
+Let us now compute the trigger
+\[
+\mbox{on insert into B values ($p, v$)}
+\]
+for the VWAP query $q[]$.
+If we replace $B$ by $B \cup \{\tuple{p, v}\}$ everywhere
+%
+%and use the equivalences
+%$\pi_{\vec{A}}(R \cup S) = \pi_{\vec{A}}(R) \cup \pi_{\vec{A}}(S)$ and
+%$\algsumf_f(R \cup S)[\vec{x}] =
+%\algsumf_f(R)[\vec{x}] + \algsumf_f(S)[\vec{x}]$,
+we obtain that $q[]$ should be incremented by
 %
 \begin{eqnarray*}
 \Delta q[] &=&
-%\algsumf_{p_2 * v_2}(\sigma_{m[p_2] + \Delta m[p_2] > 0}(
-%\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
-%
-\mbox{if ($(m[p_2] > 0) \neq (m[p_2] + \Delta m[p_2] > 0))$ then}
+\sum_{p_2}
+\big( \mbox{if ($(m[p_2] > 0) \neq (m[p_2] + \Delta m[p_2] > 0))$ then}
 \\
 && ~~~
-      \mbox{$\mbox{sgn}(m[p_2] + \Delta m[p_2]) * \algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]$ else 0}
+      \mbox{$\mbox{sgn}(m[p_2] + \Delta m[p_2]) *
+      \underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$ else 0} \big)
 \\
 %&+& \algsumf_{p_2 * v_2}(\sigma_{m[p_2] + \Delta m[p_2] > 0}(
 %\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
 %\\
-&=&
-\mbox{if $(m[p] + \Delta m[p] > 0)$ then $p * v$ else $0$}
-\\
-&& (\mbox{on insert into B values ($p, v$)}).
+&+&
+\big( \mbox{if $(m[p] + \Delta m[p] > 0)$ then $p * v$ else $0$} \big)
 \end{eqnarray*}
 
-The increments for $m[P_2]$ on insertion of tuple $\tuple{p,v}$ into $B$ is
+The increments for $m[P_2]$ and $s[P_2]$
+on insertion of tuple $\tuple{p,v}$ into $B$ are
 analogously
 \begin{eqnarray*}
 \Delta m[p_2] &:=&
@@ -244,20 +279,27 @@ k * \algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p, v}\}))[] -
 &=& k * v - (\mbox{if $(p > p_2)$ then $v$ else $0$)}
 \\
 && (\mbox{for each $p_2$})
+\\[1.5ex]
+\Delta s[p_2] &:=& \mbox{if $(p = p_2)$ then v else 0}.
 \end{eqnarray*}
 
 Thus we generate the following code:
 \begin{verbatim}
 on insert into B values (p, v)
 {
-  m_0 += v;
+  if(! dom_m.member(p)) { dom_m.add(p); m[p] = 0; }
 
-  if(! dom_m_1.member(p)) { dom_m_1.add(p); m_1[p] = 0; }
+  delta q = (m[p] > 0) ? (p * v) : 0;
 
-  foreach p_2 in dom_p_2 do
-     m_1[p_2] += (p > p_2) ? v : 0;
+  foreach p_2 in dom_m do
+  {
+     delta m[p_2] = k * v - ((p > p_2) ? v : 0);
+     delta s[p_2] = (p = p_2) ? v : 0;
+     delta q += ((m[p_2] > 0) != (m[p_2] + delta m[p_2] > 0)) ?
+        sgn(m[p_2] + delta m[p_2]) * (s[p_2] + delta s[p_2]) : 0;
+  }
 
-  q += (k * m0 > m1[p]) ? (p * v) : 0;
+  increment the maps by their deltas;
 }
 \end{verbatim}
 
