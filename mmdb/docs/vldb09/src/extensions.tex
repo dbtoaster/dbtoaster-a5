@@ -1,5 +1,65 @@
-\section{Compiler Analysis and Extensions}
+\section{\compiler\ Implementation}
+Given the map algebra shown in the previous section, we now describe
+the implementation of \compiler, including a couple of data structures it
+uses, and two extensions considering adaptive query execution based on runtime
+trends.
 
+\subsection{\compiler\ Data Structures}
+As suggested by its name, the key data structure in \compiler\ is an
+associative map, which supports accessing aggregate values computed over
+subportions of join results for a given variable binding. While this map can
+always be implemented in a straightforward manner by a hashtable, its usage is
+primarily governed by the map algebra expression directly using involving the
+bound variable (i.e. the map key). In this section we consider bound
+variable use in predicate expressions, namely in a range predicate and a window
+predicate, which are effectively one- and two-sided ranges, motivating the use
+of interval data structures. In general, the choice of data structure used as a
+map for an arbitrary map algebra expression is an open question, and the work
+here primarily considers conjunctive equality or range predicates.
+
+\textbf{Range predicates.}
+In the case of a range predicate, a bound variable $x$ is used as part of an
+aggregate query over tuples filtered by $x$. Hence increasing values of $x$
+result in a larger aggregation set, and in the case of the \texttt{sum}, and
+\texttt{max} aggregates, a map binding that can be computed from neighboring
+values to $x$. Thus the data structure is effectively a cumulative data
+structure, where each $x$ maintains the result of an aggregation function
+between query attributes limited by $x$ and the aggregate value compute for
+a neighbor $x^-$ (or $x^+$ depending on the comparison operator in the
+predicate). This is briefly illustrated in Figure [REF], and can be implemented
+by a binary tree data structure for accessing neighbor keys, as opposed to a
+hashtable. Note that the variable $x$ can be bound to values in an arbitrary
+order, requiring the ability to insert and delete bindings at any point within
+the data structure. While the binary tree suffices for our purposes here,
+deriving an optimal data structure with these characteristics is a topic for
+future work.
+
+\textbf{Window predicates.}
+In contrast to range predicates, window predicates are two-sided and apply to
+non-decreasing values of variable bindings for $x$. With such properties in the
+addition and removal of variable bindings, a doubly linked list data structure
+sorted on binding value turns out to be extremely efficient for handling the map. Note
+that lookups also have a specific property here, it is always the largest bound
+value that is accessed, hence by providing constant time lookup, insertion and
+removal at both ends, a doubly linked list is optimal.
+
+
+\subsection{Adaptive Query Executors}
+
+To this point, we have described a compiler to produce static main-memory query
+executor, which incorporates both standard rewrite rules for query optimization
+and our custom rules for compilation. The choice of optimal query plans is
+subject to the contents of the input relations being processed, leading to the
+challenges of query reoptimization and adaptive query processing. In this section
+we consider extensions to provide adaptive query execution in our generated code.
+For \compiler, this involves producing several plans and generating the
+monitoring and decision-making logic to determine which plan to evaluate based on
+statistics collected at runtime. We present this section as a discussion of the
+relevance and impact of key adaptation techniques in our context, rather than a
+focusing on detailed algorithms that reshape such techniques to apply in
+\compiler.
+
+\comment{
 \subsection{Memory Usage Analysis}
 \begin{itemize}
   \item Apply to generalized join graphs, and their hypertree decomposition.
@@ -27,9 +87,37 @@
   aggregation columns and group by columns. Internal nodes consist of at least
   one join predicate column.
 \end{itemize}
+}
 
-\subsection{Bulk processing}
+\textbf{Batch processing.} 
+Simple update or query batching is a common technique used in a variety of query
+processors to take advantage of machine-level characteristics in modern computer
+architectures, including pipelining, various levels of caches, as well as
+vectorized instructions. In addition to these benefits which apply under the hood
+of the native code generated, we consider the effects of unrolling the main delta
+loop on update batches, creating a table of batch processing functions each
+capable of supporting different length batches. While this results in a larger
+code size, SQL queries tend to be relatively small and our generated binaries are
+on the order of kilobytes or megabytes, and thus code size ifs not a concern at
+this stage. We invoke batch processing functions through a signature matching
+scheme, where a batch function's signature is simply a specific sequence of data
+manipulations (e.g. 4 inserts). For simplicity, and efficient batch detection, we
+consider simple patterns as signatures, restricting ourselves to $k$-length
+sequences of a single type of data manipulation (i.e. $k$-inserts or $k$-deletes)
+for a fixed range of $k$ values.
 
+While more complex batch and pattern detection has been applied, for example
+for prefetching as in Scalpel [XXX], we make the following observation. As we
+will see in the experimental evaluation, we produce a highly efficient executor
+as the result of our compilation, implying we require a commensurate
+improvement in the monitoring conditions that determine when to adapt running
+plans. However, these monitoring conditions are typically implemented by
+database developers directly in the engine, and are already operating with
+low overhead. This entails our design principle that only simple and extremely
+lightweight adaptations are of use in a compiled query executor due to the
+increasing cost of monitoring relative to processing.
+
+\comment{
 \begin{itemize}
   \item Improve pipelining by unrolling the main delta loop, and
   applying independent lines of code in sequence. We refer to applying
@@ -54,9 +142,31 @@
   limit of beneficial pipelining and caching effects, i.e. when one of these two
   advantages starts to become a drawback.
 \end{itemize}
+}
 
-\subsection{Lazy map maintenance}
 
+\textbf{Lazy map maintenance.}
+\compiler\ considers evaluating its tuple functions eagerly or lazily, resulting
+in a deferred approach to maintaining map structures for producing results given
+inputs to other relations. By default, \compiler\ adopts an eager evaluation
+strategy, updating map structures for all other parts of the query, given a
+single input tuple. Lazy map maintenance is advantageous in scenarios where there
+is at least one significantly lagging input, resulting in uncessary eager updates
+of the remaining map structures. Taking advantage of the opportunity to be lazy
+requires two additional pieces of generated code. The first of these is a simple
+profiler that captures update rate statistics to determine candidates for lazy
+evaluation. Based on a cost model of these statistics, the second piece of
+generated code is a conditional where on one branch, the executor enqueues the
+delta to local state associated with the map structure at the point of deferral.
+Note we can apply simplifications of those deltas in local state, which may
+cancel each other out, or may be merged into a single delta. The tuple function
+returns control to the event loop at this point, ready to process the next
+available delta.
+
+\textbf{Limitations.}
+
+
+\comment{  
 \begin{itemize}
   \item We profile delta rates on each base relation, and compute internal
   selectivities to determine when to defer updating a map while processing a
@@ -72,8 +182,14 @@
   affect performance, e.g. what are the effects on branch prediction, I-cache
   performance, etc.?
 \end{itemize}
+}
 
+\comment{
 \subsection{Multi-query compilation and map sharing}
+Given that each query is decomposed into a set of map structures, queries
+operating on similar sets of input relations are likely to be able to share
+such structures in a similar fashion to multi-query optimization. 
+}
 
 \subsection{Discussion: adaptivity limitations}
 

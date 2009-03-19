@@ -58,11 +58,11 @@ investigating concurrency control of our generated code as it processes inserts,
 updates and deletes. Given our implementation of queries as a set of
 highly-efficient straight-line functions, an event-based approach to concurrency
 control appears to be a natural fit in this context, however we still face the
-challenge of sharing data structures in across generated functions. We plan to
+challenge of sharing data structures across generated functions. We plan to
 investigate both lock-free and transactional memory techniques for these data
-structures, as well as applying program analysis techniques leveraging properties
-of the relational algebra during compilation to extract parallelism where
-possible.
+structures, as well as applying simplified program analysis techniques leveraging
+properties of the relational algebra during compilation to extract parallelism
+where possible.
 
 Returning to the issue of scalability, any cluster-based deployment of \compiler\
 will need to adapt to changing workload conditions and apply load management
@@ -83,15 +83,20 @@ With the ability to migrate compiled queries, \compiler\ can begin to address
 resource management challenges. Here we consider an optimization problem rooted
 in the tradeoff between achieving a balanced load allocation within the cluster,
 and providing high performance by localizing queries with the data they access.
-The layout challenge in \compiler's context differs from traditional
-distributed data placement problems in that we are using data structures
-rather than relations, requiring consideration of distributed data
-structures (hashtables, trees, etc.). Additionally query groupings have to be
-managed in order to exploit the sharing amongst data structures. Other key
-system components include a recovery manager responsible for checkpointing and
-managing the distribution of checkpoints to backups to provide resilience
-given our main-memory only context.
+The layout challenge in \compiler's context differs from traditional distributed
+data placement problems in that we are using data structures rather than
+relations, requiring consideration of distributed data structures (hashtables,
+trees, etc.) and novel partitioning schemes for these data structures.
+Additionally query groupings have to be managed in order to exploit the potential
+data structure sharing amongst multiple queries. Other key system components
+include a storage and recovery manager responsible for checkpointing and managing
+the handoff of checkpoints to backups to provide fault tolerance in our purely
+main-memory context, as well as providing and managing secondary storage
+primarily for the purpose of data loading and shipping to ensure maximal
+availability of main-memory for query processing purposes rather than
+distributed system maintenance.
 
+\comment{
 \begin{itemize}
   \item \compiler\ compiles SQL down to C code, and this compiler is the main
   focus of this paper.
@@ -130,3 +135,4 @@ given our main-memory only context.
     primitives to support concurrent runs of kernel functions?
   \end{enumerate}
 \end{itemize}
+}
