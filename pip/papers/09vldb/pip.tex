@@ -71,7 +71,7 @@ Cornell University, Ithaca, NY, USA \\
 \begin{abstract}
 Estimation via sampling out of highly selective join queries is a well known problem, most notably in online aggregation.  Without goal-directed sampling strategies, samples falling outside of the selection constraints lower estimation efficiency at best, and cause inaccurate estimates at worst.  This problem appears in general probabilistic database systems, where query processing is tightly coupled with sampling.  By committing to a set of samples before evaluating the query, the engine wastes effort on samples that will be discarded, query processing that may need to be repeated, or unnecessarily large numbers of samples.  
 
-We describe PIP, a probabilistic database system that uses symbolic representations of probabilistic data to defer computation of expectations, moments, and other statistical measures until the expression to be measured is fully known.  This approach is sufficiently general to admit continuous distributions, as well as discrete ones.  Moreover, deferring sampling enables a broad range of goal-oriented sampling (as well as exact) integration techniques for computing statistical measures, allows the selection of the integration strategy most appropriate to the expression being measured, and reduces the amount of work required.  
+We describe PIP, a probabilistic database system that uses symbolic representations of probabilistic data to defer computation of expectations, moments, and other statistical measures until the expression to be measured is fully known.  This approach is sufficiently general to admit both continuous and discrete distributions.  Moreover, deferring sampling enables a broad range of goal-oriented sampling (as well as exact) integration techniques for computing statistical measures, allows the selection of the integration strategy most appropriate to the expression being measured, and reduces the amount of work required.  
 
 We demonstrate the effectiveness of this approach by showing that even straightforward algorithms can make use of this information.  These algorithms have a profoundly positive impact on the efficiency and accuracy of expectation computations, particularly in the case of highly selective join queries.
 \end{abstract}
@@ -105,7 +105,9 @@ We demonstrate the effectiveness of this approach by showing that even straightf
 
 \section{Conclusion}
 
-We have shown that it is possible to apply the c-tables approach to probabilistic databases with only minimal overhead, even when it is used to represent arbitrary variable distributions.  The additional information provided by the c-table adds a degree of flexibility that allows PIP to outperform Sample-First approaches in a number of instances.
+We have shown that symbolic representations of uncertainty like C-Tables can be used to make the computation of expectations, moments, and other statistical measures in probabilistic databases more accurate and more efficient.  The availability of the expression being measured enables a broad range of sampling techniques that rely on this information and allows more effective selection of the appropriate technique for a given expression.
+
+We have shown that the use of symbolic representations can be, even with straightforward algorithms, exploited to significantly reduce query processing time, and significantly improve query accuracy for a wide range of queries.  For the remaining queries, we have shown that the overhead created by the symbolic representation has only a negligible impact on query processing time.  This, combined with PIP's extensibility, make it a powerful platform for evaluating a wide range of queries over uncertain data.
 
 \begin{small}
 \bibliographystyle{abbrv}
