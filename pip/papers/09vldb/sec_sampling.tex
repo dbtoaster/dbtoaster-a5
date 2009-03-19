@@ -1,10 +1,10 @@
 
 
-As has already been noted, both the computation of moments and probabilities reduces to numerical integration, and a dominant technique for doing this is Monte Carlo simulation. The approximate computation of expectation
-$E[\chi_\phi \cdot (h \circ t)]$,
+As has already been noted, both the computation of moments and probabilities in the general case reduces to numerical integration, and a dominant technique for doing this is Monte Carlo simulation. The approximate computation of expectation
 \begin{equation}
+E[\chi_\phi \cdot (h \circ t)] =
 \frac{1}{n} \cdot \sum_{i=1}^n p(\vec{x}_i) \cdot \chi_\phi(\vec{x}_i) \cdot
-h(t(\vec{x}_i)),
+h(t(\vec{x}_i))
 \end{equation}
 faces a number of difficulties.  In particular, samples for which $\chi_{\phi}$ is zero do not contribute to an expectation.  If $\phi$ is a very selective condition, most samples do not contribute to the summation computation of the approximate expectation.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
 

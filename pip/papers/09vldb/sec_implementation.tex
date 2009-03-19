@@ -10,15 +10,16 @@ In order to evaluate the viability of PIP's c-tables approach to continuous vari
 
 \subsection{Query Rewriting}
 Much of this added functionality takes advantage of PostgreSQL's extensibility features, and can be used ``out-of-the-box".  For example, we define the function 
-
-\textbf{CREATE\_VARIABLE($distribution$[,$params$])} \\
+\[
+\mbox{\textbf{CREATE\_VARIABLE($distribution$[,$params$])}}
+\]
 which is used to create variables.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  Similarly, double angle brackets around a random variable equation ($<< Y >>$) are shorthand for the equation's in a vaccum (without external constraints).  The \@ sign may be used to specify context for the expectation.  $<< Y @ row >>$ computes the expectation of variable $Y$ under the constraints in the corresponding $row$.
 
 %Angle brackets around a random variable are shorthand for the variable's expectation.  All instances of this are replaced by a call to pip's expectation sampling function.  
 
 To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following two effects:
 \begin{itemize}
-\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if (X>Y) resolves to a CTYPE variable, 
+\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if $(X>Y)$ resolves to a CTYPE variable, 
 \begin{verbatim}
 select *
 from   inputs
