@@ -107,25 +107,20 @@ from
     where scv.cumsum < k * sv.total) as s
 \end{verbatim}
 }
-\comment{
-Give a nice example of a trading strategy that delegates the bulk of the work to compiled SQL queries.
-This is a nice scenario because order books do not get very large (if we
-want to process several order books, we can nicely partition the work by
-order book across several machines), change extremely rapidly, and the
-success of trading depends crucially on the speed with which the programmed
-strategies process the data.
-}
+\comment{ Give a nice example of a trading strategy that delegates the bulk of
+the work to compiled SQL queries. This is a nice scenario because order books do
+not get very large (if we want to process several order books, we can nicely
+partition the work by order book across several machines), change extremely
+rapidly, and the success of trading depends crucially on the speed with which the
+programmed strategies process the data. }
 
-\begin{itemize}
-\item
-Data warehouse loading: data integration and aggregation.
-Commercial data warehouse loaders also use straight-line code for aggregation,
-but the data integration queries that are executed before aggregation are
-currently not compiled. Compiling them only yields a really substantial
-improvement if the integration and aggregation queries are compiled together.
-This may substantially reduce the time taken to load a warehouse. (Here we may
-have to scale up by using several machines.)
-\end{itemize}
+\textbf{Data warehouse loading.} Data integration and aggregation. Commercial
+data warehouse loaders also use straight-line code for aggregation, but the data
+integration queries that are executed before aggregation are currently not
+compiled. Compiling them only yields a really substantial improvement if the
+integration and aggregation queries are compiled together. This may substantially
+reduce the time taken to load a warehouse. (Here we may have to scale up by using
+several machines.)
 
 In these applications, queries are \textit{ossified} during the development
 cycle, with developers converging to a choice of schema, query structure and parameters.
@@ -189,21 +184,22 @@ a limited form of query flexibility that allows users to change parameters durin
 query execution through parameterized compilation.
 
 This paper is laid out as follows. Section 2 describes the role of the compiler,
-and a high-level view of \project, a new project at Cornell investigating
-database engine runtimes using SQL queries compiled with \compiler. As part of
-its scope, \project\ will investigate scaling compiled queries over a distributed
-main-memory database using a variety of parallelization and data partitioning
-techniques customized to the execution strategy adopted during compilation.
-Section 3 describes our query compilation algorithm in terms of a decomposition
-algorithm that both selects the maps we maintain during execution, and derives
-the maintenance tasks for each map. We also present a hypertree decomposition
-algorithm that generalizes our compilation algorithm to apply to arbitrary join
-graphs. Section 4 analyses the memory requirements of our maps, while Section 5
-describes the aforementioned extensions to the compiler for bulk operations and
-data structure sharing. Finally prior to discussing related work and concluding,
-Section 6 presents experimental results demonstrating the significant benefits of
-our techniques over both a standard relational database, as well as a naive
-compilation of the query plan as a straight-line function.
+and a high-level view of \compiler, a new project at Cornell investigating
+database engine runtimes using executors custom compiled for repeated and
+standing queries. As part of its scope, \compiler\ will investigate scaling
+compiled queries over a distributed main-memory database using a variety of
+parallelization and data partitioning techniques customized to the execution
+strategy adopted during compilation. Section 3 describes our query compilation
+algorithm in terms of a decomposition algorithm that both selects the maps we
+maintain during execution, and derives the maintenance tasks for each map. We
+also present a hypertree decomposition algorithm that generalizes our compilation
+algorithm to apply to arbitrary join graphs. Section 4 analyses the memory
+requirements of our maps, while Section 5 describes the aforementioned extensions
+to the compiler for bulk operations and data structure sharing. Finally prior to
+discussing related work and concluding, Section 6 presents experimental results
+demonstrating the significant benefits of our techniques over both a standard
+relational database, as well as a naive compilation of the query plan as a
+straight-line function.
 
 
 \comment{

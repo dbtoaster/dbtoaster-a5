@@ -45,7 +45,7 @@
 \newcommand{\compiler}{DBToaster}
 \newcommand{\project}{Steam}
 
-\title{DBToaster: Compiling main-memory database query processors\thanks{Or a better title.}}
+\title{DBToaster: Compiling main-memory database query~processors}
 
 \numberofauthors{1}
 
@@ -67,8 +67,34 @@
 
 
 \begin{abstract}
-The goal of this paper is world domination. By being the best thing since
-sliced bread.
+Rapidly increasing main-memory capacities presents an opportunity to rethink
+database system architectures. Today's databases are heavily concerned with
+efficiency across the main-memory and secondary storage boundary, and their
+design principles have spilled into main-memory database architectures. Moreover,
+most modern database systems emphasize flexibility by interpreting queries,
+flexiblity that is not required in most deployments and comes at a high
+performance penalty.
+
+We present DBToaster, a tool for compiling SQL queries into native code,
+targeting main-memory databases. We present a novel compilation framework which
+generates C++ code to incrementally and continuously maintain aggregate views at
+high update rates using delta processing techniques. DBToaster provides two key
+advantages for main-memory query processing. By generating code that performs all
+the processing required for an input tuple as a straight-line function, we expose
+query plan execution paths to a C++ compiler for optimization, and avoid
+overheads with interpreting operator after operator. Additionally maintaining
+aggregate views via standard pointer-based data structures allows us to avoid
+fully computing join results without incurring prohibitive view maintenance
+costs.
+
+Our work is motivated by applications that require the highly efficient answering
+of fixed workloads of aggregation queries, such as in data stream processing,
+online data warehouse loading, and in financial applications. As we show, our
+techniques are several orders of magnitude faster than state-of-the-art database
+and stream processing engines on such workloads. In the case of queries on limit
+order book data as required for supporting algorithmic equities trading, our
+approach is currently the only one that can support the realistic data rates on
+contemporary hardware without resorting to very substantial computing clusters.
 \end{abstract}
 
 \input{intro}
