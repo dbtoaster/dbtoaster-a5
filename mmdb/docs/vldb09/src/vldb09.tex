@@ -70,14 +70,14 @@
 We  present a novel  SQL query  compilation framework  which generates
 native  code that incrementally  and continuously  maintains aggregate
 views  in main  memory at  high  update rates  using delta  processing
-techniques. DBToaster,  our compiler, provides two  key advantages. By
-generating C  code that  performs all the  processing required  for an
-input  tuple as  a simple  straight-line function,  we expose  a fixed
-query plan execution path to  a C compiler for optimization, and avoid
+techniques. DBToaster,  our compiler,
+generates C  code that  performs all the  processing required  for an
+input  tuple as  a simple  straight-line function. Thus we turn  a
+fixed, optimized
+query plan into code that can be further optimized by a C compiler, and avoid
 overheads that traditionally arise when query processors interpret
 query plans stored in dynamic data structures.
-Moreover, our new delta processing techniques
-are designed specifically
+Our new delta processing techniques are designed specifically
 for compilation to native code and support aggressive inlining
 that leads to surprisingly small and simple
 straight-line code sequences.

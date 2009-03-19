@@ -1,40 +1,104 @@
 \section{Introduction}
-We present \compiler, a tool to support a novel query execution model, compiling
-SQL queries into C programs, targeting the emerging hardware platform of
-main-memory databases. At the heart of our work, we question the cost of
-providing a highly flexible runtime, as found with modern databases in plan
+
+
+We present \compiler, a tool for compiling
+SQL aggregate queries into efficient C code for
+continuous, incremental view maintainance.
+%
+At the heart of our work, we question the cost of
+highly flexible interactive query processors as found in today's databases,
+with their plan
 interpreters and other runtime components including schedulers and optimizers.
 Modern relational databases focus almost exclusively on providing flexible and
-extensible querying capabilities in dynamic environments, supporting both schema
-and data evolution. From a hardware perspective, rapidly increasing main-memory
-capacities presents an opportunity to rethink database architectures. Today's
-databases are heavily concerned with efficiency across the main-memory and
+extensible querying capabilities in dynamic environments, supporting both
+schema and data evolution.
+%
+However, a large fraction of the world's query workloads
+are fixed and embedded into database application programs.
+In these applications, queries are \textit{ossified} during the development
+cycle, with developers converging to a choice of schema, query structure and parameters.
+Once hardened, queries are deployed into production environments, and re\-used
+numerous times, executing non-interactively.
+
+
+From a hardware perspective, rapidly increasing main-memory
+capacities create an opportunity to rethink database architectures. Today's
+database query processors focus on efficiency across the main-memory and
 secondary storage boundary, and their design principles have spilled
-into main-memory database architectures.
+into main-memory database architectures. Apart from a number of traditional
+data management applications such as data warehousing that are becoming
+increasingly
+plausible applications of (parallel) main-memory databases, there are also a
+number of new applications that call for query processing support and are
+not well served by existing systems.
+These applications call for the rethinking of query processing in main
+memory databases.
 
-Our work on \compiler\ is motivated by the following applications, which in
-our view cannot be processed efficiently with any of the data management tools
-available today.
 
-\noindent \textbf{Processing order books in equities trading.}
+
+
+
+DBToaster is an   SQL query  compilation framework  which generates
+native  code that incrementally  and continuously  maintains aggregate
+views  in main  memory at  high  update rates  using delta  processing
+techniques. DBToaster provides two  key advantages.
+%
+By generating C  code that  performs all the  processing required  for an
+input  tuple as  a simple  straight-line function,  we expose  a fixed
+query plan execution path to  a C compiler for optimization, and avoid
+overheads that traditionally arise when query processors interpret
+query plans stored in dynamic data structures.
+%
+Moreover, our new delta processing techniques
+are designed specifically
+for compilation to native code and support aggressive inlining
+that leads to surprisingly small and simple
+straight-line code sequences.
+
+Thus, DBToaster is particularly well suited in continuous query applications
+in with a view has to be maintained through high data update rates.
+DBToaster is  motivated  by  applications  that  require  the  highly
+efficient answering of fixed workloads of aggregation queries, such as
+in  data stream  processing,  online data  warehouse  loading, and  in
+financial applications.
+Our work on \compiler\ was particularly motivated by the need for query
+processing support in algorithmic equities trading, which in
+our view cannot be efficiently served by any of the data management tools
+available today, as well as aggregate processing in data stream systems and
+data warehouse loaders.
+
+
+\medskip
+
+
+\textbf{Processing order books in equities trading.}
 Following a call for greater transparency~\cite{sec-orderbook:00} earlier this
 decade, many stock exchanges provide investors with complete bid and ask limit
 order books, enabling a superior view of the market microstructure for use in
-trading algorithms. The bid order book consists of prices and volumes investors
+trading algorithms. The bid order book consists of prices and volumes of
+orders of investors who
 are willing to buy equities in descending price and timestamp order, and
-correspondingly the ask order book indicates investors' selling prices. Exchanges
-execute trades by matching the top of the bid and ask order books, in addition to
+correspondingly the ask order book indicates investors' selling orders.
+Exchanges execute trades by matching the tops of the bid and ask order books,
+in addition to
 handling market orders. Investors continually add, modify or withdraw limit
 orders, thus we view order books as relations subject to high volumes of order
 inserts, updates and deletes.
 
 Investors and automated trading systems express diverse trading strategies on
-these order books, and the success of trading depends critically on the speed at
-which the programmed strategies process the data. Unlike stream processing
+these order books, and the success of trading depends critically on the
+speed at
+which the programmed strategies process the data.
+In fact, the availability of order book data has yielded substantial opportunities for automatic, algorithmic trading approaches, and in recent years,
+algorithmic trading systems have come to account for a majority of 
+volume traded at the major US and European stock markets.
+
+Unlike stream processing
 scenarios \cite{abadi-vldbj:03,motwani-cidr:03}, order books do not grow
-unboundedly in practice, and cannot be expressed by windows given their arbitrary
+unboundedly in practice, but cannot be expressed by windows given their arbitrary
 inserts, updates and deletes. Thus in \compiler, we process continuous queries
 over temporal snapshots of relations via delta processing.
+Providing such aggregate views allows to run sophisticated trading strategies.
 \comment{
 However in the order book scenario, neither time-, row- or punctuation-based
 window semantics apply, rather each insert, update or delete statement defines
@@ -58,27 +122,32 @@ require the full order book and order books do not grow unboundedly in practice
 deletes. Thus in \compiler, we process continuous queries over temporal snapshots
 of relations expressed as deltas to base relations.
 }
-To illustrate this, we provide a simple example query based on a Static Order
+To illustrate this, we provide a simple example query that is at the heart of
+a Static Order
 Book Imbalance (SOBI) trading strategy. SOBI computes a volume-weighted average
-price (VWAP) over those orders whose volume makes up a fixed fraction of the
+price (VWAP) over those orders whose volume makes up a fixed top fraction of the
 total stock volume in each of the bid and ask order books. SOBI then compares the two
-VWAPs. For simplicity, we present the VWAP for the bids:
+VWAPs. For simplicity, we present the VWAP for the bids only:
 
 \begin{verbatim}
-select avg(bcv.price*bcv.volume) as bid_vwap from
-    (select sum(volume) as total_volume
-        from bids) as bv,
-    (select b2.price, b2.volume,
-            sum(b1.volume) as cumsum_volume
-        from bids b1, bids b2
-        where b1.price > b2.price
-        group by b2.price, b2.volume) as bcv
-    where bcv.cumsum_volume < k * bv.total_volume)
-    as vwap_input
+select avg(b3.price*b3.volume) as bid_vwap
+from   (select sum(volume) as total_volume
+        from   bids) as bv,
+       (select b2.price,
+               sum(b1.volume) as cumsum_volume
+        from   bids b1 right outer join
+               (select distinct price from bids) b2
+               on (b1.price > b2.price)
+        group by b2.price) as bcv,
+       bids b3
+where  k * bv.total_volume > bcv.cumsum_volume
+and    bcv.price = b3.price
 \end{verbatim}
-
-\noindent Above, the contents of the bids order book is continually changing,
+%    as vwap_input
+%
+Above, the contents of the bids order book is continually changing,
 and \compiler\ produces a new output on every insert, update or delete.
+
 
 \comment{
 Above, the total volume in the order book is continually changing, thus computing
@@ -114,61 +183,50 @@ partition the work by order book across several machines), change extremely
 rapidly, and the success of trading depends crucially on the speed with which the
 programmed strategies process the data. }
 
-\textbf{Data warehouse loading.} Data integration and aggregation. Commercial
-data warehouse loaders also use straight-line code for aggregation, but the data
-integration queries that are executed before aggregation are currently not
-compiled. Compiling them only yields a really substantial improvement if the
-integration and aggregation queries are compiled together. This may substantially
-reduce the time taken to load a warehouse. (Here we may have to scale up by using
-several machines.)
 
-In these applications, queries are \textit{ossified} during the development
-cycle, with developers converging to a choice of schema, query structure and parameters.
-Once hardened, queries are deployed into production environments, and reused
-numerous times, executing non-interactively. We focus on applications that
-do not require access to large static databases, rather our applications access bounded
+
+\textbf{Stream processing with complex, nested aggregates}
+Previous work on data stream processing and incremental view maintenance
+has mostly neglected supporting the efficient processing of complex nested
+aggregates. However, such queries do have important applications. For example,
+the VWAP query above is highly challenging and, to the best of our
+knowledge, cannot be efficiently processed by any of these systems.
+
+
+\textbf{Data warehouse loading.}
+Loading large data warehouses is a computationally costly process, which
+causes most data warehouse loading to be performed offline.
+While commercial warehouse loaders use specialized efficient code for 
+aggregation, incoming data is often the result of data integration
+queries that are costly and inefficient, and with may blow up data sizes
+in such a way that loading remains inefficient.
+Compiling data integration and aggregation queries together may yield efficient
+code for loading the warehouse which may avoid the materialization of large
+intermediate results.
+
+
+\medskip
+
+
+
+\nop{
+We focus on applications that do not require access to large static
+databases, rather our applications access bounded
 size relations, where the contents of these relations change frequently through
 inserts, updates and deletes, in streaming fashion. We assume a single entity
-conveys these updates to the database, this is not a multi-user highly-concurrent
+conveys these updates to the database, this is not a multi-user
+highly-concurrent
 production environment as found in OLTP applications.
- 
-We introduce \compiler, a compiler that produces C code from hardened queries, in
-contrast to executing a query plan comprised of a set of operators. 
-While one could always naively generate a straight-line function from a query
-plan, we devise our query kernel functions by factoring in the following
-observations regarding query processing in main memory databases:
+}
 
-\begin{enumerate}
-\item
-When we compile queries to straight-line C code, it is best to use incremental
-maintenance techniques to eagerly keep query results up to date.
 
-\item
-Index nested loop joins on main memory hash tables
-dominate all other join techniques in the compiled
-main-memory database setting.
-It is worth having hash tables whose buckets are sorted, though (e.g. for
-top-k query processing).
 
-\item
-There is something to be gained from bulk updates.
-do we not just want to support bulk updates of one kind (e.g., just inserts),
-but mixtures of inserts, updates, and deletes? Is this an optimization, and
-worth the work?
 
-\item
-There is no point in adaptivity beyond bulk updates.
-\end{enumerate}
-
-Our compiler generates code to implement an incremental query execution strategy,
-where deltas (inserts, deletes or updates) to base tables are processed with a
-\textit{query kernel function}. These kernel functions compute a new query result
-from every delta, and manipulate auxiliary data structures (conceptually
-precomputed views) to support fully incremental processing (i.e. no blocking
-operations). We choose our data structures intelligently to ensure efficient
-delta processing, via a top-down decomposition of the query into a set of
-associative data structures (maps). Our kernel functions correspond to
-tuple-at-a-time processing through a query plan, and can be highly optimized by
+Our query compilation framework is based on the notion of composing maps
+definable in a {\em map algebra}\/ closely motivated by SQL.
+We compile insert, update, and delete operations into efficient code for computing
+deltas of these maps. This corresponds to a form of
+tuple-at-a-time processing in a query plan, but can be highly optimized by
 modern C compilers to yield an efficient native binary for query execution.
 
 Given the inherent streaming nature of the applications we consider, the maps we
@@ -183,6 +241,26 @@ compilation that can share data structures given commonality amongst queries, an
 a limited form of query flexibility that allows users to change parameters during
 query execution through parameterized compilation.
 
+
+As we  show, our techniques are several orders
+of  magnitude   faster  than  state-of-the-art   database  and  stream
+processing engines on such workloads.  In the case of queries on limit
+order  book  data  as  required for  supporting  algorithmic  equities
+trading, our approach currently stands alone in its ability to support
+realistic  data rates  on contemporary  hardware without  resorting to
+very substantial computing clusters.
+It appears that the memory consumption of our main-memory techniques
+is sufficiently low to support applications such as data warehouse loading.
+Moreover, in most of these applications, our delta processing techniques,
+which continuously maintain a current view of the query result, outperform
+batch processing techniques even if we only want to access the
+view once. That is, our incremental query result construction usually
+outperforms one-of query evaluation with traditional techniques.
+
+
+
+
+
 This paper is laid out as follows. Section 2 describes the role of the compiler,
 and a high-level view of \compiler, a new project at Cornell investigating
 database engine runtimes using executors custom compiled for repeated and
@@ -192,14 +270,19 @@ parallelization and data partitioning techniques customized to the execution
 strategy adopted during compilation. Section 3 describes our query compilation
 algorithm in terms of a decomposition algorithm that both selects the maps we
 maintain during execution, and derives the maintenance tasks for each map. We
-also present a hypertree decomposition algorithm that generalizes our compilation
-algorithm to apply to arbitrary join graphs. Section 4 analyses the memory
+also structural query decomposition tecniques for minimizing the memory
+consumption of the internal data structures need by our techniques.
+Section 4 analyses the memory
 requirements of our maps, while Section 5 describes the aforementioned extensions
 to the compiler for bulk operations and data structure sharing. Finally prior to
 discussing related work and concluding, Section 6 presents experimental results
 demonstrating the significant benefits of our techniques over both a standard
 relational database, as well as a naive compilation of the query plan as a
 straight-line function.
+
+
+
+
 
 
 \comment{
