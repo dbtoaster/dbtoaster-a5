@@ -8,6 +8,282 @@
 
 
 
+
+
+
+\subsection{The Map Algebra}
+
+
+\def\algsumr{\mbox{sumr}}
+\def\algsumf{\mbox{sumf}}
+\def\distinct{\mbox{dnct}}
+\def\routerjoin{\bowtie\!=}
+
+
+
+The syntax of the map algebra can be defined as follows.
+Inductively, a map algebra expression is of one of the forms $f_1 + f_2$,
+$f_1 - f_2$, $f_1 * f_2$, $f_1 / f_2$, $c$, $x$, and $\algsumf_A(Q)[\vec{x}]$,
+where $f_1$ and $f_2$ are map algebra expressions, $c$ are numerical constants,
+$x$ is a variable, $\vec{x}$ is a tuple of variables, $Q$ is a relational algebra
+expression, and $A$ is a column name of the schema of the relation defined by $Q$.
+We call the arity of the variable tuple of a map its {\em dimension}\/.
+Relational algebra expressions are built using relation names,
+selection $\sigma$, projection $\pi$, relational product $\times$, union $\cup$,
+and renaming $\rho$. (Note the absence of the relational difference operation
+at this point; we
+relax this restriction later.) Selection conditions are comparisons
+$f = 0$, $f > 0$, or $f \ge 0$.
+Projections may compute additional columns
+using map algebra expressions. 
+The variables from $\vec{x}$ may be used in
+any map algebra expression used in selections or projections of $Q$.
+
+We use a multiset semantics for relations as in SQL; none of the operations
+of relational algebra eliminate duplicates.
+Apart from that, the semantics of relational algebra expressions $Q$ is standard.
+Variables
+in $\vec{x}$ are {\em bound}\/ to constants from above; thus, the semantics of an
+aggregate map $\algsumf_f(Q)[\vec{x}]$, where $\vec{x}$ is bound to a tuple of
+constants $\vec{a}$
+(denoted $\algsumf_f(Q)[\vec{a}]$) is a single numerical value $v$ such that, if
+$Q[\vec{a}]$ is $Q$ with the variables $\vec{x}$ substituted with the constants
+$\vec{a}$ and $\algsumr_A$ is the standard sum aggregate function of SQL,
+\[
+\algsumr_A(Q[\vec{a}])[] = \{ \tuple{v} \}.
+\]
+
+
+\begin{remark}\em
+Thus, while nongrouped aggregation in SQL corresponds to our semantics of aggregate
+maps $f[]$ of dimension zero apart from syntax (the result of $f[]$ is a scalar number
+while the result of the SQL aggregate is a singleton unary relation),
+the semantics of aggregate maps $f[\vec{x}]$ of higher dimension differs from that
+of SQL group-by in that $f[\vec{x}]$ is a complete function defined anywhere
+(indeed, $\algsumr_B(\sigma_{\vec{A}=\vec{a}}(Q))$ produced $\{\tuple{0}\}$ rather
+than no tuple at all when $\sigma_{\vec{A}=\vec{a}}(Q)$ is the empty relation) while
+the SQL aggregate-group-by query
+$\sigma_{\vec{A}=\vec{a}}$(select $\vec{A}$, sum$(B)$ from $Q$ group by $\vec{A}$)
+gives no value on tuples $\vec{a}$ that do not exists in $\pi_{\vec{A}}(Q)$.
+
+Thus, for our purposes, SQL group-by aggregates do not generalized non-grouped
+SQL aggregates. We avoid this in our map algebra -- this allows for a clean
+compositional compilation framework, and to focussing on the essential challenges
+below. Still, the map algebra supports a wide range of practical queries, and we will
+generalize it later to support even more once we have laid the necessary foundations.
+\end{remark}
+
+
+\begin{example}\em
+The VWAP query from the introduction was, in algebra notation with $\distinct$
+denoting
+tuple elimination and $\routerjoin$ denoting right outer join,
+\begin{multline*}
+\algsumr_{P_2 * V_2}(\algsumr_{V_0 \rightarrow S_0}(\rho_{P_0, V_0}(B))
+\; \bowtie_{k * S_0 > S_1} \\
+\algsumr_{V_1 \rightarrow S_1 \;\mathrm{grpby}\; P_2}(
+\rho_{P_1, V_1}(B) \; \routerjoin_{P_1 > P_2} \\
+\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B)).
+\end{multline*}
+This translates via 
+\begin{multline*}
+\algsumf_{P_2 * V_2}(
+\pi_{m_0[]  \rightarrow S_0}(\{\tuple{}\})
+\; \bowtie_{k * S_0 > S_1} \\
+\pi_{P_2, m_1[P_2] \rightarrow S_1}
+(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))[]
+\end{multline*}
+%
+where the maps $m_0$ and $m_1$ are
+\begin{eqnarray*}
+m_0[] &:=&
+\algsumf_{V_0}(\rho_{P_0, V_0}(B))[]
+\\
+m_1[p_2] &:=&
+\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))[p_2]
+\end{eqnarray*}
+to our map algebra:
+\begin{multline*}
+\algsumf_{P_2 * V_2}(
+\sigma_{k * S_0 > S_1}( \\
+\pi_{m_0[]  \rightarrow S_0, P_2, m_1[P_2] \rightarrow S_1}
+(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B))))) \bowtie \rho_{P_2, V_2}(B))[]
+\end{multline*}
+The query can be simplified using standard relational algebra equivalences
+further to
+\[
+q[] = \algsumf_{P_2 * V_2}(
+\sigma_{k * S_0 > S_1}(
+\pi_{m_0[]  \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
+(\rho_{P_2, V_2}(B))))[]
+\]
+and to
+\begin{equation}
+q[] = \algsumf_{P_2 * V_2}(
+\sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))[]
+\end{equation}
+where
+\[
+m[p_2] = k * m_0[] - m_1[P_2].
+\]
+\punto
+\end{example}
+
+
+
+\subsection{Compiling Queries: Foundations}
+
+
+The goal of this section is to provide an algorithm for compiling map algebra
+expressions into efficient C code that incrementally maintains the
+maps they define.
+To be precise, we aim for the following notion of incremental maintenance.
+
+
+\begin{definition}[YMCA maintenance scheme]\em
+An incremental map maintenance algorithm has the YMCA
+(Yanif Must Certainly Approve of)
+property if on an insert or delete of a tuple, the delta on $q[\vec{a}]$, for
+any $\vec{a}$, can be expressed as a fixed sum
+$q_1[\vec{a}] + \dots + q_k[\vec{a}]$ such that each map $q_i[\cdot]$ has the YMCA
+property and $q_i \prec q$.
+\end{definition}
+
+
+Here, $\prec$ denotes the following general-to-specific ordering on map expressions.
+
+
+\begin{definition}\em
+A singleton relation is a relation with one tuple, e.g.\ $\{\vec{a}\}$.
+A map $q$ is called (strictly) {\em more specific than}\/ a map $q'$,
+denoted $q \prec q'$, if $q$ can be obtained from $q'$ by replacing
+one or more relation names occurring in $q$ by fixed singleton relations.
+\end{definition}
+
+
+Obviously, a YMCA compilation scheme yields effective incremental view maintenance:
+The delta to any map can be computed by a fixed sum of simpler maps,
+the deltas of which again can be computed by fixed sums of even simpler maps,
+and this recursively until we reach maps in which all relations are constant and
+the maps can be reformulated as a simple arithmetic expressions over their
+arguments.
+
+
+
+\begin{theorem}
+There is a YMCA compilation scheme for map algebra.
+\end{theorem}
+
+
+Proof.
+Let $q[\vec{x}]$ be of the form
+$
+\algsumf_f(Q)[\vec{x}]
+$
+where $Q$ is relational algebra parameterized by $\vec{x}$ and let $R$ be
+a relation name occurring in $Q$ (in the relational algebra expression
+rather than just in a nested map algebra expression).
+Assume that there are $r$ occurrences of $R$ in $Q$. Then
+the updated version of $q[\vec{x}]$ can be expressed by the sum of the $2^r$
+maps obtainable by, for each occurrence of $R$ in $Q$, either replacing it
+by $\{ \vec{x} \}$ or leaving it unchanged.
+
+This follows immediately from the fact that the new version of $R$ on insertion of
+tuple $\vec{x}$ is $R \cup \{ \vec{x} \}$ and, $\cup$ commutes with
+the operations of positive relational algebra and thus can be pushed to the top
+level of $Q$, and
+\[
+\algsumf_f(Q_1 \cup Q_2)[\vec{x}] =
+\algsumf_f(Q_1)[\vec{x}] + \algsumf_f(Q_2)[\vec{x}].
+\]
+By pushing the unions obtained by rewriting $R$ to $R \cup \{\vec{x}\}$ to the
+top level of $Q$ everywhere and then splitting the map into a sum of maps, we obtain
+one map expression that is precisely $q[\cdot]$ (i.e., corresponds to the old
+value of $q$)
+
+
+\punto
+
+
+
+
+\begin{example}\em
+Let us now compute the on insert trigger for the VWAP query.
+If we replace $B$ by $B \cup \{\tuple{p_2,v_2}\}$ and use the equivalences
+$\pi_{\vec{A}}(R \cup S) = \pi_{\vec{A}}(R) \cup \pi_{\vec{A}}(S)$ and
+$\algsumf_f(R \cup S)[\vec{x}] =
+\algsumf_f(R)[\vec{x}] + \algsumf_f(S)[\vec{x}]$, we obtain
+that $q[]$ should be incremented by
+%
+\begin{eqnarray*}
+\Delta q[] &=&
+%\algsumf_{p_2 * v_2}(\sigma_{m[p_2] + \Delta m[p_2] > 0}(
+%\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
+%
+\mbox{if ($(m[p_2] > 0) \neq (m[p_2] + \Delta m[p_2] > 0))$ then}
+\\
+&& ~~~
+      \mbox{$\mbox{sgn}(m[p_2] + \Delta m[p_2]) * \algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]$ else 0}
+\\
+%&+& \algsumf_{p_2 * v_2}(\sigma_{m[p_2] + \Delta m[p_2] > 0}(
+%\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
+%\\
+&=&
+\mbox{if $(m[p] + \Delta m[p] > 0)$ then $p * v$ else $0$}
+\\
+&& (\mbox{on insert into B values ($p, v$)}).
+\end{eqnarray*}
+
+The increments for $m[P_2]$ on insertion of tuple $\tuple{p,v}$ into $B$ is
+analogously
+\begin{eqnarray*}
+\Delta m[p_2] &:=&
+k * \algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p, v}\}))[] -
+\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}\{\tuple{p, v}\})))[p_2]
+\\
+&=& k * v - (\mbox{if $(p > p_2)$ then $v$ else $0$)}
+\\
+&& (\mbox{for each $p_2$})
+\end{eqnarray*}
+
+Thus we generate the following code:
+\begin{verbatim}
+on insert into B values (p, v)
+{
+  m_0 += v;
+
+  if(! dom_m_1.member(p)) { dom_m_1.add(p); m_1[p] = 0; }
+
+  foreach p_2 in dom_p_2 do
+     m_1[p_2] += (p > p_2) ? v : 0;
+
+  q += (k * m0 > m1[p]) ? (p * v) : 0;
+}
+\end{verbatim}
+
+
+It makes sense to avoid naive looping over all values $p_2$ by maintaining
+$m_1[p_2]$ as a range data structure (to be described).
+\punto
+\end{example}
+
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Old Stuff}
+
+
+
+
+
+
 \begin{figure*}
 \begin{eqnarray}
 \rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(\{ \tuple{\vec{a}\vec{c}} \})
@@ -832,184 +1108,3 @@ On insertion of $R_5(e,g,i,j)$,
 
 
 
-\subsection{The Map Algebra}
-
-
-\def\algsumr{\mbox{sumr}}
-\def\algsumf{\mbox{sumf}}
-\def\distinct{\mbox{dnct}}
-\def\routerjoin{\bowtie\!=}
-
-
-\begin{multline*}
-\algsumr_{P_2 * V_2}(\algsumr_{V_0 \rightarrow S_0}(\rho_{P_0, V_0}(B))
-\; \bowtie_{k * S_0 > S_1} \\
-\algsumr_{V_1 \rightarrow S_1 \;\mathrm{grpby}\; P_2}(
-\rho_{P_1, V_1}(B) \; \routerjoin_{P_1 > P_2} \\
-\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))
-\end{multline*}
-%
-canonically translates to the map algebra as
-%
-\begin{multline*}
-\algsumf_{P_2 * V_2}(
-\pi_{m_0[]  \rightarrow S_0}(\{\tuple{}\})
-\; \bowtie_{k * S_0 > S_1} \\
-\pi_{P_2, m_1[P_2] \rightarrow S_1}
-(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))[]
-\end{multline*}
-%
-where the maps $m_0$ and $m_1$ are
-\begin{eqnarray*}
-m_0[] &:=&
-\algsumf_{V_0}(\rho_{P_0, V_0}(B))[]
-\\
-m_1[p_2] &:=&
-\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))[p_2]
-\end{eqnarray*}
-
-
-The query can be simplified using standard relational algebra equivalences
-as follows:
-\begin{multline*}
-\algsumf_{P_2 * V_2}(
-\sigma_{k * S_0 > S_1}( \\
-\pi_{m_0[]  \rightarrow S_0, P_2, m_1[P_2] \rightarrow S_1}
-(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B))))) \bowtie \rho_{P_2, V_2}(B))[]
-\end{multline*}
-and further to
-\[
-q[] = \algsumf_{P_2 * V_2}(
-\sigma_{k * S_0 > S_1}(
-\pi_{m_0[]  \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
-(\rho_{P_2, V_2}(B))))[].
-\]
-
-Let us now compute the on insert trigger for the query.
-If we replace $B$ by $B \cup \{\tuple{p_2,v_2}\}$ and use the equivalences
-$\pi_{\vec{A}}(R \cup S) = \pi_{\vec{A}}(R) \cup \pi_{\vec{A}}(S)$ and
-$\algsumf_f(R \cup S)[\vec{x}] =
-\algsumf_f(R)[\vec{x}] + \algsumf_f(S)[\vec{x}]$, we obtain
-that $q[]$ should be incremented by
-\begin{eqnarray*}
-\Delta q[] &=&
-\algsumf_{p_2 * v_2}(
-\sigma_{k * S_0 > S_1}(
-\pi_{m_0[] \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
-(\rho_{P_2, V_2}(\{\tuple{p_2,v_2}))))[] \\
-&=&
-\algsumf_{p_2 * v_2}(
-\sigma_{k * m_0[] > m_1[p_2]}(
-(\rho_{P_2, V_2}(\{\tuple{p_2,v_2}\})))[]
-\\
-&=&
-\mbox{if $(k * m_0[] > m_1[p_2])$ then $p_2 * v_2$ else $0$}
-\quad (\mbox{on insert into B values ($p_2, v_2$)})
-\end{eqnarray*}
-where $m_0[]$ and $m_1[]$ refer to versions of the maps to which the
-insertion has already been applied.
-
-The increments for $m_0[]$ and $m_1[P_2]$ are analogously
-\begin{eqnarray*}
-\Delta m_0[] &:=&
-\algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p_0, v_0}\}))[] = v_0
-\\
-&& (\mbox{on insert into $B$ values ($p_0, v_0$)})
-\\[1.5ex]
-\Delta m_1[p_2] &:=&
-\algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}\{\tuple{p_1, v_1}\})))[p_2]
-\\
-&=& \mbox{if $(p_1 > p_2)$ then $v_1$ else $0$}
-\\
-&& (\mbox{for each $p_2$, on insert into $B$ values ($p_1, v_1$)})
-\end{eqnarray*}
-
-Thus we generate the following code:
-\begin{verbatim}
-on insert into B values (p, v)
-{
-  m_0 += v;
-
-  if(! dom_m_1.member(p)) { dom_m_1.add(p); m_1[p] = 0; }
-
-  foreach p_2 in dom_p_2 do
-     m_1[p_2] += (p > p_2) ? v : 0;
-
-  q += (k * m0 > m1[p]) ? (p * v) : 0;
-}
-\end{verbatim}
-
-
-It makes sense to avoid naive looping over all values $p_2$ by maintaining
-$m_1[p_2]$ as a range data structure (to be described).
-
-
-
-
-The goal of this section is to provide an algorithm for compiling map algebra
-expressions $q[\vec{x}]$ into C code that incrementally maintains $q[\vec{x}]$.
-To be precise, we aim for the following notion of incremental maintenance.
-
-
-\begin{definition}[YMCA maintenance scheme]\em
-An incremental map maintenance algorithm has the YMCA
-(Yanif Must Certainly Approve of)
-property if on an insert or delete of a tuple, the delta on $q[\vec{a}]$, for
-any $\vec{a}$, can be expressed as a fixed sum
-$q_1[\vec{a}] + \dots + q_k[\vec{a}]$ such that each map $q_i[\cdot]$ has the YMCA
-property and $q_i \prec q$.
-\end{definition}
-
-
-Here, $\prec$ denotes the following general-to-specific ordering on map expressions.
-
-
-\begin{definition}\em
-A singleton relation is a relation with one tuple, $\{\tuple{a}\}$.
-A map $q$ is called (strictly) {\em more specific than}\/ a map $q'$,
-denoted $q \prec q'$, if $q$ can be obtained from $q'$ by replacing
-one or more relation names occurring in $q$ by fixed singleton relations.
-\end{definition}
-
-
-Obviously, a YMCA compilation scheme yields effective incremental view maintenance:
-The delta to any map can be computed by a fixed sum of simpler maps,
-the deltas of which again can be computed by fixed sums of even simpler maps,
-and this recursively until we reach maps in which all relations are constant and
-the maps can be reformulated as a simple arithmetic expression over its arguments.
-
-
-
-\begin{theorem}
-There is a YMCA compilation scheme for map algebra.
-\end{theorem}
-
-
-Proof.
-Let $q[\vec{x}]$ be of the form
-$
-\algsumf_f(Q)[\vec{x}]
-$
-where $Q$ is relational algebra parameterized by $\vec{x}$ and let $R$ be
-a relation name occurring in $Q$ (in the relational algebra expression
-rather than just in a nested map algebra expression).
-Assume that there are $r$ occurrences of $R$ in $Q$. Then
-the updated version of $q[\vec{x}]$ can be expressed by the sum of the $2^r$
-maps obtainable by, for each occurrence of $R$ in $Q$, either replacing it
-by $\{ \vec{x} \}$ or leaving it unchanged.
-
-This follows immediately from the fact that the new version of $R$ on insertion of
-tuple $\vec{x}$ is $R \cup \{ \vec{x} \}$ and, $\cup$ commutes with
-the operations of positive relational algebra and thus can be pushed to the top
-level of $Q$, and
-\[
-\algsumf_f(Q_1 \cup Q_2)[\vec{x}] =
-\algsumf_f(Q_1)[\vec{x}] + \algsumf_f(Q_2)[\vec{x}].
-\]
-By pushing the unions obtained by rewriting $R$ to $R \cup \{\vec{x}\}$ to the
-top level of $Q$ everywhere and then splitting the map into a sum of maps, we obtain
-one map expression that is precisely $q[\cdot]$ (i.e., corresponds to the old
-value of $q$)
-
-
-\punto
