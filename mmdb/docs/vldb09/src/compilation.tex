@@ -32,54 +32,85 @@ consumption of auxiliary maps and to reduce the time cost of maintaining the map
 \def\routerjoin{\bowtie\!=}
 
 
-The syntax of the map algebra can be defined as follows.
-Inductively, a map algebra expression is of one of the forms $f_1 + f_2$,
-$f_1 - f_2$, $f_1 * f_2$, $f_1 / f_2$, $c$, $x$, and $\algsumf_A(Q)[\vec{x}]$,
-where $f_1$ and $f_2$ are map algebra expressions, $c$ are numerical constants,
-$x$ is a variable, $\vec{x}$ is a tuple of variables, $Q$ is a relational algebra
-expression, and $A$ is a column name of the schema of the relation defined by $Q$.
-We call the arity of the variable tuple of a map its {\em dimension}\/.
-Relational algebra expressions are built using relation names,
+The syntax of {\em map algebra expressions}\/ (or {\em maps} for short)
+can be defined as follows.
+Inductively, a map algebra expression is of one of the forms
+\[
+f_1 + f_2
+\quad\;\;
+f_1 - f_2
+\quad\;\;
+f_1 * f_2
+\quad\;\;
+c
+\quad\;\;
+x
+\quad\;\;
+\algsumf_f(Q)
+\]
+where $f, f_1, f_2$ are map algebra expressions, $c$ are numerical constants,
+$x$ are variables, and $Q$ are positive relational algebra
+expressions.
+
+Variables in maps are {\em free} unless they are {\em bound}.
+Given a map $f$ with free variables $\vec{x}$ (enumerated in the order in which they
+first appear in $f$), $f[\vec{a}]$, where $\vec{a}$ is a tuple of variables and constants
+of the same arity as $\vec{x}$ denotes each $x_i$ in $f$ substituted by $a_i$. The
+variables $\vec{x}$ in $f[\vec{a}]$ are then called bound.
+So, for instance, the free variables of $5 * x + y$ are $x,y$ and
+$(5 * x + y)[z, 2]$ is $5 * z + 2$ with free variable $z$.
+The number of free variables in a map is also called the map's dimension.
+Since $f[\vec{x}]$ where the free variables of $f$ are $\vec{x}$ is again $f$, we
+sometimes write $f[\vec{x}]$ to make the free variables of $f$ explicit.
+
+
+(Positive) relational algebra expressions are built using relation names,
 selection $\sigma$, projection $\pi$, relational product $\times$, union $\cup$,
-and renaming $\rho$. (Note the absence of the relational difference operation
-at this point; we
-relax this restriction later.) Selection conditions are comparisons
-$f = 0$, $f > 0$, or $f \ge 0$.
+constant singleton relations $\{\vec{a}\}$,
+and renaming $\rho$.
+(Note the absence of the relational difference operation at this point; we
+relax this restriction later.)
+W.l.o.g., we will use renaming only directly above relation names, i.e.\ in expressions
+$\rho_{\vec{a}}(R)$.
+Column names $A$ are treated like bound variables.
+Selection conditions are comparisons
+$f \;\theta\; 0$ where $\theta \in \{ =, \neq, <, \le, >, \ge \}$.
 Projections may compute additional columns
-using map algebra expressions. 
-The variables from $\vec{x}$ may be used in
-any map algebra expression used in selections or projections of $Q$.
+using map algebra expressions, i.e.\ the syntax is
+$\pi_{\vec{A}, f_1 \rightarrow B_1, \dots, f_k \rightarrow B_k}(Q)$. 
 
 We use a multiset semantics for relations as in SQL; none of the operations
 of relational algebra eliminate duplicates.
 Apart from that, the semantics of relational algebra expressions $Q$ is standard.
+
 Variables
-in $\vec{x}$ are {\em bound}\/ to constants from above; thus, the semantics of an
-aggregate map $\algsumf_f(Q)[\vec{x}]$, where $\vec{x}$ is bound to a tuple of
-constants $\vec{a}$
-(denoted $\algsumf_f(Q)[\vec{a}]$) is a single numerical value $v$ such that, if
-$Q[\vec{a}]$ is $Q$ with the variables $\vec{x}$ substituted with the constants
-$\vec{a}$ and $\algsumr_A$ is the standard sum aggregate function of SQL,
+in $\vec{x}$ are {\em bound}\/ to constants from above; thus, 
+The semantics of an
+aggregate map $\algsumf_f(Q)$ without free variables
+is a single numerical value $v$ such that
 \[
-\algsumr_A(Q[\vec{a}])[] = \{ \tuple{v} \}.
+\algsumr_A(\pi_{f \rightarrow A}(Q))[] = \{ \tuple{v} \}.
 \]
+where $\algsumr$ is the ungrouped sum aggregate of SQL.
 
 
 \begin{remark}\em
-Thus, while nongrouped aggregation in SQL corresponds to our semantics of aggregate
-maps $f[]$ of dimension zero apart from syntax (the result of $f[]$ is a scalar number
+While nongrouped aggregation in SQL corresponds to our semantics of aggregate
+maps $\algsumf_f(Q)$ of dimension zero apart from syntax (the result of $f[]$ is a scalar number
 while the result of the SQL aggregate is a singleton unary relation),
-the semantics of aggregate maps $f[\vec{x}]$ of higher dimension differs from that
-of SQL group-by in that $f[\vec{x}]$ is a complete function defined anywhere
-(indeed, $\algsumr_B(\sigma_{\vec{A}=\vec{a}}(Q))$ produced $\{\tuple{0}\}$ rather
-than no tuple at all when $\sigma_{\vec{A}=\vec{a}}(Q)$ is the empty relation) while
+the semantics of aggregate maps $f = \algsumf_f(Q)$ with
+free variables $\vec{x}$ differs from that
+of SQL group-by aggregates in that $f$ is a complete function defined everywhere
+(indeed, $\algsumr_B(\sigma_{\vec{A}=\vec{a}}(Q))$ produces $\{\tuple{0}\}$ rather
+than $\emptyset$ when $\sigma_{\vec{A}=\vec{a}}(Q)$ is the empty relation, and
+$\algsumf_B(\emptyset) = 0$) while
 the SQL aggregate-group-by query
 $\sigma_{\vec{A}=\vec{a}}$(select $\vec{A}$, sum$(B)$ from $Q$ group by $\vec{A}$)
 gives no value on tuples $\vec{a}$ that do not exists in $\pi_{\vec{A}}(Q)$.
 
-Thus, for our purposes, SQL group-by aggregates do not generalized non-grouped
+Thus, for our purposes, SQL group-by aggregates do not generalize non-grouped
 SQL aggregates. We avoid this in our map algebra -- this allows for a clean
-compositional compilation framework, and to focussing on the essential challenges
+compositional compilation framework, and for a focus on essential challenges
 below. Still, the map algebra supports a wide range of practical queries, and we will
 generalize it later to support even more once we have laid the necessary foundations.
 \end{remark}
@@ -96,14 +127,16 @@ tuple elimination and $\routerjoin$ denoting right outer join,
 \rho_{P_1, V_1}(B) \; \routerjoin_{P_1 > P_2} \\
 \distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B)).
 \end{multline*}
-This translates via 
-\begin{multline*}
+
+%Since $\distinct(\pi_{\vec{A}}(R)) \bowtie R = R$ in bag algebra,
+%
+This translates to our map algebra as
+\[
 \algsumf_{P_2 * V_2}(
 \pi_{m_0[]  \rightarrow S_0}(\{\tuple{}\})
-\; \bowtie_{k * S_0 > S_1} \\
-\pi_{P_2, m_1[P_2] \rightarrow S_1}
-(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B))[]
-\end{multline*}
+\; \bowtie_{k * S_0 > S_1}
+\pi_{P_2, m_1[P_2] \rightarrow S_1}(B))[]
+\]
 %
 where the maps $m_0$ and $m_1$ are
 \begin{eqnarray*}
@@ -113,22 +146,8 @@ m_0[] &:=&
 m_1[p_2] &:=&
 \algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))[p_2]
 \end{eqnarray*}
-to our map algebra:
-\begin{multline*}
-\algsumf_{P_2 * V_2}(
-\sigma_{k * S_0 > S_1}( \\
-\pi_{m_0[]  \rightarrow S_0, P_2, m_1[P_2] \rightarrow S_1}
-(\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B))))) \bowtie \rho_{P_2, V_2}(B))[]
-\end{multline*}
 The query can be simplified using standard relational algebra equivalences
 further to
-\[
-q[] = \algsumf_{P_2 * V_2}(
-\sigma_{k * S_0 > S_1}(
-\pi_{m_0[]  \rightarrow S_0, m_1[P_2] \rightarrow S_1, P_2, V_2}
-(\rho_{P_2, V_2}(B))))[]
-\]
-and to
 \begin{equation}
 q[] = \algsumf_{P_2 * V_2}(
 \sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))[]
@@ -148,41 +167,79 @@ m[p_2] = k * m_0[] - m_1[P_2].
 The goal of this section is to provide an algorithm for compiling map algebra
 expressions into efficient C code that incrementally maintains the
 maps they define.
-To be precise, we aim for the following notion of incremental maintenance.
-
-
-\begin{definition}[YMCA maintenance scheme]\em
-An incremental map maintenance algorithm has the YMCA
-(Yanif Must Certainly Approve of)
-property if on an insert or delete of a tuple, the delta on $q[\vec{a}]$, for
-any $\vec{a}$, can be expressed as a fixed sum
-$q_1[\vec{a}] + \dots + q_k[\vec{a}]$ such that each map $q_i[\cdot]$ has the YMCA
-property and $q_i \prec q$.
-\end{definition}
-
-
-Here, $\prec$ denotes the following general-to-specific ordering on map expressions.
+We will need the following general-to-specific ordering $\prec$ on maps.
 
 
 \begin{definition}\em
-A singleton relation is a relation with one tuple, e.g.\ $\{\vec{a}\}$.
-A map $q$ is called (strictly) {\em more specific than}\/ a map $q'$,
-denoted $q \prec q'$, if $q$ can be obtained from $q'$ by replacing
-one or more relation names occurring in $q$ by fixed singleton relations.
+A map $f$ is called (strictly) {\em more specific than}\/ a map $f'$,
+denoted $f \prec f'$, if $f$ can be obtained from $f'$ by replacing
+one or more relation names occurring in $f'$ by fixed singleton relations.
 \end{definition}
 
 
-Obviously, a YMCA compilation scheme yields effective incremental view maintenance:
-The delta to any map can be computed by a fixed sum of simpler maps,
-the deltas of which again can be computed by fixed sums of even simpler maps,
-and this recursively until we reach maps in which all relations are constant and
-the maps can be reformulated as a simple arithmetic expressions over their
-arguments.
+Note that this replacement may occur deep inside a map, not just in the topmost
+relational algebra subexpression. For example,
+\[
+\algsumf_A(\pi_{\algsumf_B(\rho_B(\tuple{b})) + 2}(S))
+\prec
+\algsumf_A(\pi_{\algsumf_B(\rho_B(R)) + 2}(S))
+\]
+
+We use the notation $Q_{R \rightarrow R \cup \{\vec{r}\}}$ to denote
+the relational algebra expression obtained from $Q$
+by recursively replacing all occurrences of relation name $R$ in $Q$
+by $R \cup \{\vec{r}\}$,
+i.e., leaves $\algsumf_f(Q')$ are also replaced by
+$\algsumf_f(Q'_{R \rightarrow R \cup \{\vec{r}\}})$.
+Analogously, let $f_{R \rightarrow R \cup \{\vec{r}\}}$ denote the map obtained by
+replacing all subexpressions $\algsum_g(Q)$ by
+$\algsum_g(Q_{R \rightarrow R \cup \{\vec{r}\}})$.
+
+Note that $\cup$ commutes with all the operations of positive relational 
+(bag) algebra. Thus, we can always push unions to the top, turning an arbitrary
+expression of positive relational algebra into a union of SPC (select-project-product)
+queries (of possibly exponential size in the query).
+We denote this operation by $\uparrow_{\cup}(Q)$.
+
+
+
+%\begin{figure*}
+\begin{algorithm}
+on insert into $R$ values $\vec{r}$ trigger:
+\begin{eqnarray*}
+\Delta_{+R(\vec{r})} c       &:=& 0 \\
+\Delta_{+R(\vec{r})} x       &:=& 0 \\
+\Delta_{+R(\vec{r})} (f + g) &:=&         f                + (\Delta_{+R(\vec{r})} g) \\
+\Delta_{+R(\vec{r})} (f - g) &:=& (\Delta_{+R(\vec{r})} f) - (\Delta_{+R(\vec{r})} g) \\ 
+\Delta_{+R(\vec{r})} (f * g) &:=& (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g) \\
+                             &+ & (\Delta_{+R(\vec{r})} f) * g                        \\
+                             &+ & (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g) \\
+\Delta_{+R(\vec{r})} \algsumf_f(Q) &:=& \algsumf_f(g_1) + \dots + \algsumf_f(g_k) \\
+&\dots& \uparrow_\cup(Q_{R \rightarrow R \cup \{\vec{r}\}}) =
+   Q \cup g_1 \cup \dots \cup q_k
+\end{eqnarray*}
+\begin{multline*}
+\Delta_{+R(\vec{r})} \algsumf_f(\pi_{\vec{A},
+   g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(Q)) \; := \\
+\Delta_{+R(\vec{r})} \algsumf_{f[\vec{A},
+   g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k]}(Q)
+\end{multline*}
+\begin{multline*}
+\Delta_{+R(\vec{r})} \algsumf_f(\sigma_{f \theta 0}(Q)) \; :=
+\end{multline*}
+\end{algorithm}
+%\caption{Foo.}
+%\end{figure*}
+
 
 
 
 \begin{theorem}
-There is a YMCA compilation scheme for map algebra.
+The delta processing scheme of the previous algorithm is correct,
+\[
+f_{R \rightarrow R \cup \{\vec{r}\}} =
+f + \Delta_{+R(\vec{r})} f.
+\]
 \end{theorem}
 
 
@@ -273,7 +330,9 @@ on insertion of tuple $\tuple{p,v}$ into $B$ are
 analogously
 \begin{eqnarray*}
 \Delta m[p_2] &:=&
-k * \algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p, v}\}))[] -
+k * \algsumf_{V_0}(\rho_{P_0, V_0}(\{\tuple{p, v}\}))[]
+\\
+&-&
 \algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}\{\tuple{p, v}\})))[p_2]
 \\
 &=& k * v - (\mbox{if $(p > p_2)$ then $v$ else $0$)}
@@ -287,7 +346,10 @@ Thus we generate the following code:
 \begin{verbatim}
 on insert into B values (p, v)
 {
-  if(! dom_m.member(p)) { dom_m.add(p); m[p] = 0; }
+  if(! dom_m.member(p))
+  {
+     dom_m.add(p); m[p] = 0;
+  }
 
   delta q = (m[p] > 0) ? (p * v) : 0;
 
@@ -295,8 +357,10 @@ on insert into B values (p, v)
   {
      delta m[p_2] = k * v - ((p > p_2) ? v : 0);
      delta s[p_2] = (p = p_2) ? v : 0;
-     delta q += ((m[p_2] > 0) != (m[p_2] + delta m[p_2] > 0)) ?
-        sgn(m[p_2] + delta m[p_2]) * (s[p_2] + delta s[p_2]) : 0;
+     delta q += ((m[p_2] > 0) !=
+                 (m[p_2] + delta m[p_2] > 0)) ?
+        sgn(m[p_2] + delta m[p_2])
+           * (s[p_2] + delta s[p_2]) : 0;
   }
 
   increment the maps by their deltas;
@@ -879,111 +943,11 @@ if (s_1[b,c] > 0)
 \punto
 \end{example}
 
-\newcommand{\compile}{\ensuremath{\mbox{\sc Compile}}}
-\newcommand{\generate}{\ensuremath{\mbox{\sc Generate}}}
-\newcommand{\rewrite}{\ensuremath{\mbox{\sc Rewrite}}}
-\newcommand{\substitute}{\ensuremath{\mbox{\sc Substitute}}}
-\newcommand{\match}{\ensuremath{\mbox{\sc Match}}}
 
 
-\def\RETURN{\STATE}
 
+\nop{
 
-\begin{algorithm}
-\caption{$\compile(Q)$}
-\label{alg:compile}
-\begin{codebox}
-\zi \Comment{Inputs: a query $Q$}
-\zi \Comment{Outputs: a toasted database $\lambda_{DB}$}
-\zi \Comment{Definitions: }
-\zi \>$\mathcal{B}$: input tables used by $Q$.
-\zi \>$(Q)[]$: initial map (yields query result).
-\end{codebox}
-\begin{algorithmic}[1]
-\STATE $Targets \leftarrow \{\tuple{(Q)[],\mathcal{B}}\}$
-\STATE $Kernels \leftarrow \{\}$
-\STATE $Maps \leftarrow \{\}$
-\WHILE{ $|T| > 0$ }
-	\STATE $\tuple{M,\mathcal{R}} \leftarrow next(T)$
-	\IF {$|R| = 1$}
-		\STATE $Kernel[R] \cup \generate(M,R)$
-	\ELSE
-		\FOR{$R \in \mathcal{R}$}
-			\STATE $\tuple{\{M'\}, \lambda_R} \leftarrow \rewrite(M,R)$
-			\STATE $Kernel[R] \leftarrow Kernel[R] \cup \lambda_R$
-			\STATE $Targets \leftarrow Targets \cup \{\tuple{M',\mathcal{R}-R}\}$
-		\ENDFOR
-	\ENDIF
-\ENDWHILE
-\STATE $\lambda_{DB} \leftarrow \lambda(\Delta).$\\
-$\qquad \mbox{\sc Declare}(Maps)\mbox{; \sc
-DispatchLoop}(\Delta, Kernel)$
-\RETURN $\lambda_{DB}$
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}
-\caption{$\rewrite(M,R)$}
-\label{alg:rewrite}
-\begin{codebox}
-\zi \Comment{Inputs:}
-\zi \> a map $M$, and a relation to consider for updates, $R$.
-\zi \Comment{Outputs:}
-\zi \> a new set of maps $\mathcal{M'}$, and a function $\lambda_R$ s.t.
-\zi \>\> $\Delta M = \lambda_R(\Delta R,\mathcal{M'})$
-\zi \Comment{Description:}
-\zi	\> Performs bottom-up rewriting according to
-Figures~\ref{fig:rules},\ref{fig:maprules}.
-\end{codebox}
-\begin{algorithmic}[1]
-\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
-\smallskip
-\STATE $M \leftarrow \substitute(M,R,\tuple{r_i})$
-\STATE $S \leftarrow inputs(M)$
-\STATE $parents \leftarrow plan(M)$
-\STATE $maps \leftarrow \{\}$
-\STATE $rewrite \leftarrow \{\}$
-\WHILE{ $|S| > 0$ }
-	\STATE $E_{c} \leftarrow pop(S)$
-	\STATE $E \leftarrow parents[E_{c}]$
-	\STATE $\tuple{matched,E',M'} \leftarrow \match(E,maps[children(E)])$
-	\IF {$matched$}
-		\STATE $S \leftarrow (S - descendants(E)) \cup parent[E]$
-		\STATE $maps[E'] \leftarrow M'$
-		\STATE $rewrite \leftarrow rewrite \cup (E',children(E',rewrite))$
-	\ELSE
-		\STATE $rewrite \leftarrow rewrite \cup (E',children(E,rewrite))$
-	\ENDIF
-\ENDWHILE
-\STATE $root \leftarrow$ $\mbox{\sc Root}(rewrite)$
-\STATE $\mathcal{M'} \leftarrow \mbox{\sc NearestMaps}(root)$
-\STATE $\lambda_R \leftarrow \lambda(\Delta R).\mbox{\sc Apply}(root,\mathcal{M'})$
-\RETURN $\tuple{\lambda_R,\mathcal{M'}}$
-\end{algorithmic}
-%%
-%% Old version
-\comment{
-\begin{algorithmic}[1]
-\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
-\smallskip
-\STATE $M \leftarrow substitute(M,R,\tuple{r_i})$
-\STATE $S \leftarrow \{M\}$
-\STATE $parent \leftarrow \{\}$
-\WHILE{ $!fixpoint(S)$ }
-	\STATE $E \leftarrow pop(S)$
-	\STATE $\tuple{matched,E'} \leftarrow match(E)$
-	\IF {$matched \wedge parent[E]$}
-		\STATE $S \leftarrow S \cup parent[E]$
-		\STATE $parent \leftarrow parent - E$
-		\STATE $S \leftarrow S \cup children(E')$
-	\ELSE
-		\STATE $parent[E] \leftarrow children(E)$
-		\STATE $S \leftarrow S \cup children(E)$
-	\ENDIF
-\ENDWHILE
-\end{algorithmic}
-}
-\end{algorithm}
 
 \subsection{Structural Query Decomposition}
 
@@ -1150,3 +1114,4 @@ On insertion of $R_5(e,g,i,j)$,
 
 
 
+} % end nop
