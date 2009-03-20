@@ -10,7 +10,7 @@ faces a number of difficulties.  In particular, samples for which $\chi_{\phi}$ 
 
 The primary challenge faced by PIP is exactly this. Particularly in highly selective queries, the general-purpose sampling routines provided for each distribution will produce samples that violate query constraints $\phi$.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
 
-For example, consider a row containing the variable $Y \sim Normal(5,10)$ and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$.
+For example, consider a row containing the variable $Y \sim Normal(\mu=5,\sigma^2=10)$ and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$.
 
 \subsection{Rejection Sampling}
 One straightforward approach to this problem is to perform rejection sampling; sample sets are repeatedly generated until a sufficient number of viable (satisfying) samples have been obtained.  Note that this is not strict rejection sampling, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  

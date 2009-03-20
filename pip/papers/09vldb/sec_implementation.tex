@@ -44,12 +44,12 @@ PIP takes advantage of this by encoding constraint atoms in a CTYPE datatype; Ov
 
 \subsection{Defining Distributions}
 PIP's primary benefit over other c-tables implementations is its ability to admit variables chosen from arbitrary continuous distributions.  These distributions are specified in terms of general distribution classes, a set of C functions that describes the distribution.  In addition to a small number of functions used to parse and encode parameter strings, each PIP distribution class defines one or more of the following functions.
-\begin{enumerate}
-\item $Generate(Parameters, Seed)$ uses a pseudorandom number generator to generate a value sampled from the distribution.  The seed value allows PIP to limit the amount of state it needs to maintain; multiple calls to Generate with the same seed value produce the same sample, so only the seed value need be stored.
-\item $PDF(Parameters, x)$ evaluates the probability density function of the distribution at the specified point.  
-\item $CDF(Parameters, x)$ evaluates the cumulative distribution function at the specified point.
-\item $InverseCDF(Parameters, Value)$ evaluates the inverse of the cumulative distribution function at the specified point.
-\end{enumerate}
+\begin{itemize}
+\item \texttt{Generate(Parameters, Seed)} uses a pseudorandom number generator to generate a value sampled from the distribution.  The seed value allows PIP to limit the amount of state it needs to maintain; multiple calls to Generate with the same seed value produce the same sample, so only the seed value need be stored.
+\item \texttt{PDF(Parameters, x)} evaluates the probability density function of the distribution at the specified point.  
+\item \texttt{CDF(Parameters, x)} evaluates the cumulative distribution function at the specified point.
+\item \texttt{InverseCDF(Parameters, Value)} evaluates the inverse of the cumulative distribution function at the specified point.
+\end{itemize}
 
 PIP requires that all distribution classes define a Generate function.  All other functions are optional, but can be used to improve PIP's performance if specified.  Consequently, the supplemental functions need only be provided when it is possible to evaluate them efficiently.  Depending on the user's needs however, it may be reasonable to provide estimates instead of exact values.  For example, the CDF of a Normal distribution is a complex integral, but may be efficiently estimated by interpolating between precomputed values.  
 
@@ -58,15 +58,17 @@ Future implementations could conceivably generalize the sampling process.  A sam
 \subsection{Sampling Functionality}
 PIP provides several functions for analyzing the uncertainty encoded in a c-table.  The two core analysis functions are conf() and expectation().
 
-conf() performs a conjunctive integration to estimate the probability of a specific row being present in the output, in effect computing the expectation $E[1]$.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
+\begin{itemize}
+\item \texttt{conf()} performs a conjunctive integration to estimate the probability of a specific row being present in the output, in effect computing the expectation $E[1]$.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
 
-aconf(), a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  
+\item \texttt{aconf()}, a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  
 
-expectation() computes the expectation of a variable by repeated sampling.  If a row is specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
+\item \texttt{expectation()} computes the expectation of a variable by repeated sampling.  If a row is specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
 
-expected\_sum(), expected\_max() are aggregate variants of expectation.  As with expectation() they can be parametrized by a row to specify constraints.
+\item \texttt{expected\_sum()}, \texttt{expected\_max()} are aggregate variants of expectation.  As with expectation() they can be parametrized by a row to specify constraints.
 
-expected\_sum\_hist(), expected\_max\_hist() are similar to the above aggregates in that they perform sampling.  However, instead of outputting the average of the results, it instead outputs an array of all the generated samples.  This array may be used to generate histograms and similar visualizations.
+\item \texttt{expected\_sum\_hist()}, \texttt{expected\_max\_hist()} are similar to the above aggregates in that they perform sampling.  However, instead of outputting the average of the results, it instead outputs an array of all the generated samples.  This array may be used to generate histograms and similar visualizations.
+\end{itemize}
 
 Aggregates pose a challenge for the query phase of the PIP evaluation process.  Though it is theoretically possible to create composite variables that represent aggregates of their inputs, in practice it is infeasible to do so.  The size of such a composite is not just unbounded, but linear in the size of the input table.  A composite aggregate variable could easily grow to an unmanageable level.  Instead, PIP limits random variable aggregation to the sampling phase.  
 
