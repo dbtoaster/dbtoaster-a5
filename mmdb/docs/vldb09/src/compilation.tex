@@ -326,7 +326,7 @@ If we replace $B$ by $B \cup \{\tuple{p, v}\}$ everywhere
 \\
 && ~~~
       \mbox{sgn}(m[p_2] + \Delta_{+B(p,v)} m[p_2]) \\
-&& ~~~~~~ * \;  \mbox{$\underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$ else 0}
+&& ~~~ * \;  \mbox{$\underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$ else 0}
 \\
 &+&
 \big( \mbox{if $(m[p] + \Delta_{+B(p,v)} m[p] > 0)$ then $p * v$ else $0$} \big)
@@ -517,7 +517,7 @@ Delete R(a,b):
 
 (Similarly for Delete S(b,c) and Delete T(c,d)).
 
-Just as in the case for Inserts, we must also maintain an additional data
+Just as in the case for Inserts, we must also maintain additional data
 structures needed by each delta handler, for example $s_{A}[c], s_{A}[b]$ needed
 to dealing with deletions to relations S and C. Note that given subtraction is an
 inverse operation for addition (hence $\algsum$) and is anticommutative with the
