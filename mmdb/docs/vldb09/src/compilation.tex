@@ -160,7 +160,7 @@ where
 \[
 m[p_2] = k * m_0[] - m_1[P_2].
 \]
-\punto
+%\punto
 \end{example}
 
 
@@ -351,7 +351,7 @@ Then
 \Delta_{+B(p,v)} s[p_2] &=& \mbox{if $(p = p_2)$ then v else 0}.
 \end{eqnarray*}
 
-Thus we generate the following code:
+Thus we generate the following code (map values are initially 0):
 \begin{verbatim}
 on insert into B values (p, v)
 {
@@ -387,7 +387,7 @@ on insert into B values (p, v)
 %
 %It makes sense to avoid naive looping over all values $p_2$ by maintaining
 %$m_1[p_2]$ as a range data structure (to be described).
-\punto
+%\punto
 \end{example}
 
 
@@ -409,11 +409,40 @@ maintenance under deletions.
 
 
 
-\subsection{Query Decompositions and Space Consumption by Maps}
+\subsection{Structural Query Decompositions and Memory Consumption}
 
 
+Clearly, the memory consumption for representing a map with $k$ free
+variables is
+$O(n^k)$, where $n$ is bounded by the database size. In fact, it can be
+seen that our compilation algorithm essentially preserves the (algebraic)
+query plan given to it; while the number of branches of the map algebra
+version of an operator tree in general increases in the compilation phase, the
+dimensionality of intermediate result relations and correspondingly our maps
+do not. This gives a strong argument for employing structural query decomposition techniques for generating query plans whose join graph is
+as tree-like as possible: For example, for the structural query decomposition framework of hypertree decompositions \cite{GLS2002}, it is know that for relational algebra query plans that have hypertree-width $k$, non-pipelined operator-at-a-time bottom-up evaluation only yields intermediate result relations that are bounded by size $O(n^k)$ \cite{GLS2002}.
+
+It is technical but not hard to see that the following holds.
 
 
+\begin{theorem}
+Let $\algsumf_A(Q)$ be a map in which the relational algebra query $Q$ has hypertree-with
+$k$ and does not contain
+a nested aggregate and 
+\end{theorem}
+
+
+This result is also true if we replace hypertree decompositions by the weaker
+query decompositions of \cite{CK1997}.
+
+Since the standard notion of acylicity in queries  \cite{Yan81, AHV95}
+corresponds to hypertree-width one, we need only linearly sized maps for acyclic
+relational algebra queries. Note also that while the notion of acylicity is best known
+for conjunctive queries, it and the our above result apply more generally
+to relational algebra.
+
+DBToaster includes an implementation of a structural query decomposition algorithm
+that computes hypertree compositions for relational algebra blocks inside
 
 
 \begin{example}\em
@@ -422,6 +451,10 @@ We incrementally maintain the aggregate query
 \[
 s := \algsum_{A*D}(R \bowtie S \bowtie T).
 \]
+
+Compared to the map compilation algorithm of Figure~\ref{fig':mainalg}, we take a
+few shortcuts for better readability (and extend the algebra by natural joins);
+nevertheless following our algorithm yields equivalent maps. 
 \begin{itemize}
 \item
 Insert R(a,b):
@@ -445,6 +478,8 @@ Insert S(b,c):
 \underbrace{\algsum_{A}(\sigma_{B=b}(R))}_{s_A[b]} *
 \underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{s_D[c]}
 \end{eqnarray*}
+%
+Note how the algebra expression here decomposes into smaller parts.
 
 \item
 Insert T(c,d): (analogous to insertion of R(a,b))
@@ -499,32 +534,29 @@ Finally, we want to incrementally maintain $s_1[b,c]$:
 \begin{itemize}
 \item
 Insert S(b,c):
-\[
+$
 \Delta s_1[b,c] =
 \algsum_{1}(\{\tuple{b,c}\}) = 1
-\]
+$
 \end{itemize}
 
 Thus the code is:
 \begin{verbatim}
-on insert into R values (a,b)
-{
+on insert into R values (a,b) {
    s += a * s_D[b];
    s_A[b] += a;
    foreach c (in Cs[b]) do
       s_A[c] += a * s_1[b,c];
 }
 
-on insert into S values (b,c)
-{
+on insert into S values (b,c) {
    s += s_A[b] * s_D[c];
    s_A[c] += s_A[b];
    s_D[b] += s_D[c];
    s_1[b,c] += 1;
 }
 
-on insert into T values (c,d)
-{
+on insert into T values (c,d) {
    s += s_A[c] * d;
    s_D[c] += d;
    foreach b (in Bs[c]) do
@@ -533,7 +565,7 @@ on insert into T values (c,d)
 \end{verbatim}
 \punto
 
-We can also consider deletions to base relations:
+We can also consider deletions from base relations:
 
 \begin{itemize}
 \item
