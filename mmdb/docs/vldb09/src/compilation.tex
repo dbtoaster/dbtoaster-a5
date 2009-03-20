@@ -209,8 +209,8 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 \begin{eqnarray*}
 \Delta_{+R(\vec{r})} c       &:=& 0 \\
 \Delta_{+R(\vec{r})} x       &:=& 0 \\
-\Delta_{+R(\vec{r})} (f + g) &:=&         f                + (\Delta_{+R(\vec{r})} g) \\
-\Delta_{+R(\vec{r})} (f * g) &:=& (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g) 
+\Delta_{+R(\vec{r})} (f + g) &:=& (\Delta_{+R(\vec{r})} f) + (\Delta_{+R(\vec{r})} g) \\
+\Delta_{+R(\vec{r})} (f * g) &:=&         f                * (\Delta_{+R(\vec{r})} g)
                               +   (\Delta_{+R(\vec{r})} f) * g                        
                               +   (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g)
 \\
@@ -242,7 +242,7 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 \\
 \Delta_{+R(\vec{r})} \algsumf_A(\sigma_{g \theta 0}(Q)) &:=&
 \mbox{if ($\Delta_{+R(\vec{r})} g \;\theta\; 0$) then
-   $\algsumf_A(Q + \Delta_{+R(\vec{r})}(Q))$} \\
+   $(\algsumf_A(Q) \cup \Delta_{+R(\vec{r})}\algsumf_A(Q)))$} \\
 && \mbox{else if ($(g + \Delta_{+R(\vec{r})} g \;\theta\; 0) \Rightarrow
 (g \;\theta\; 0)$) then $- \algsumf_A(Q)$ else 0}
 \end{eqnarray*}
@@ -257,6 +257,19 @@ on insert into $R$ values $\vec{r}$ trigger.}
 Figure~\ref{fig:mainalg} shows our compilation algorithm for maps, the core procedure of the DBToaster compiler.
 Given a map $f$, it inductively
 computes a delta-expression that does not use relational algebra.
+It is easy to verify that the right-hand sides of the rewriting are successively
+simpler by either being dominated by the left-hand sides under the general-to-specific
+ordering $\prec$ or being sums or products of
+strictly shorter expressions.
+
+Thus, the output of the rewriting algorithm given a map is a delta map that does not
+contain aggregates or relational algebra. However, the rewriting may add new free
+variables, i.e., starting from a map $f[\vec{x}]$, we may obtain an aggregate-free
+map $g[\vec{x}, \vec{y}]$. We then {\em marginalize}\/ over these as follows,
+\[
+\Delta f[\vec{x}] = \sum_{\vec{y}} g(\vec{x}, \vec{y}). 
+\]
+
 Note that the insertion delta can be used for deletions as well because a deletion of
 a tuple $\vec{r}$ from a relation $R$ can be expressed as $R - \{\vec{r}\}$ and,
 although our map algebra has been defined to exclude relation difference,
@@ -267,7 +280,7 @@ $\algsumf_A(R)$ - $\algsumf_A(S)$ if $R \subseteq S$.
 
 
 \begin{theorem}
-The delta processing scheme of the previous algorithm is correct,
+The delta processing scheme of the algorithm of Figure~\ref{fig:mainalg} is correct,
 that is,
 \begin{enumerate}
 \item
@@ -315,23 +328,20 @@ Then
 & & \mbox{else if $(g[p_2] \ge p-p_2 > 0)$ then $-v$ else 0}
 \\
 \Delta_{+B(p,v)} g[p_2] &=& p - p_2 - g[p_2]
-\end{eqnarray*}
-
-
-
-If we replace $B$ by $B \cup \{\tuple{p, v}\}$ everywhere
-\begin{eqnarray*}
+\\
 \Delta_{+B(p,v)} q[p_2] &=&
 \mbox{if ($(m[p_2] > 0) \neq (m[p_2] + \Delta m[p_2] > 0))$ then}
 \\
 && ~~~
       \mbox{sgn}(m[p_2] + \Delta_{+B(p,v)} m[p_2]) \\
-&& ~~~ * \;  \mbox{$\underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$ else 0}
+&& ~~~ * \;  \mbox{$\underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$} \\
+&& \mbox{else 0}
 \\
 &+&
-\big( \mbox{if $(m[p] + \Delta_{+B(p,v)} m[p] > 0)$ then $p * v$ else $0$} \big)
+\big( \mbox{if $(m[p] + \Delta_{+B(p,v)} m[p] > 0)$} \\
+&&~~~ \mbox{then $p * v$ else $0$} \big)
 \\
-\Delta_{+B(p,v)} s[p_2] &:=& \mbox{if $(p = p_2)$ then v else 0}.
+\Delta_{+B(p,v)} s[p_2] &=& \mbox{if $(p = p_2)$ then v else 0}.
 \end{eqnarray*}
 
 Thus we generate the following code:
@@ -367,13 +377,32 @@ on insert into B values (p, v)
   }
 }
 \end{verbatim}
-
-
-It makes sense to avoid naive looping over all values $p_2$ by maintaining
-$m_1[p_2]$ as a range data structure (to be described).
+%
+%It makes sense to avoid naive looping over all values $p_2$ by maintaining
+%$m_1[p_2]$ as a range data structure (to be described).
 \punto
 \end{example}
 
+
+Note that our delta processing scheme relatively straightforwardly generalizes
+to min and max aggregates\footnote{Indeed, the central decomposition rule
+\[
+\algsumf_f(Q_1 \cup Q_2) = \algsumf_f(Q_1) + \algsumf_f(Q_2)
+\]
+has its analog for max$_f$ (and thus min$_f(Q)$, which is $-\mbox{max}_{-f}(Q)$) in
+the equivalence
+\[
+\max_f(Q_1 \cup Q_2) = \max(\max_f(Q_1), \max_f(Q_2)).
+\]
+}
+however, differently from the sum aggregate, we have to
+maintain a representation of the base relations to support for incremental view
+maintenance under deletions. 
+
+
+
+
+\subsection{Query Decompositions and Space Consumption by Maps}
 
 
 
