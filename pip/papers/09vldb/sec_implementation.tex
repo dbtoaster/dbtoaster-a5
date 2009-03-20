@@ -13,11 +13,11 @@ Much of this added functionality takes advantage of PostgreSQL's extensibility f
 \[
 \mbox{\textbf{CREATE\_VARIABLE($distribution$[,$params$])}}
 \]
-which is used to create variables.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  Similarly, double angle brackets around a random variable equation ($<< Y >>$) are shorthand for the equation's in a vaccum (without external constraints).  The \@ sign may be used to specify context for the expectation.  $<< Y @ row >>$ computes the expectation of variable $Y$ under the constraints in the corresponding $row$.
+which is used to create variables.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  
 
 %Angle brackets around a random variable are shorthand for the variable's expectation.  All instances of this are replaced by a call to pip's expectation sampling function.  
 
-To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following two effects:
+To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following three effects:
 \begin{itemize}
 \item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if $(X>Y)$ resolves to a CTYPE variable, 
 \begin{verbatim}
@@ -32,7 +32,10 @@ from   inputs
 where  Z like '%foo'
 \end{verbatim}
 
-\item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.
+\item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.   The exception to this is in the case of aggregates.  If the select statement contains an aggregate and one or more input tables have CTYPE columns, the query causes an error unless the aggregate is labeled as being able to handle CTYPE inputs.
+
+\item UNION operations are rewritten to ensure that the number of CTYPE columns in their inputs is consistent.  If one input table has more CTYPE columns of a given type than the other, the latter is padded with NULL constraints.
+
 \end{itemize}
 
 Note that these extensions are not required to access PIP's core functionality; they exist to allow users to seamlessly use deterministic queries on probabilistic data.
@@ -53,19 +56,18 @@ PIP requires that all distribution classes define a Generate function.  All othe
 Future implementations could conceivably generalize the sampling process.  A sample may be generated using any of the four functions: The Metropolis-Hastings algorithm can sample from an arbitrary PDF, the inverse CDF evaluated on a uniform random value produces a sample, and a binary search may be used to evaluate the inverse CDF given the CDF.
 
 \subsection{Sampling Functionality}
-PIP provides several functions for analyzing the uncertainty encoded in a c-table.  The two core analysis functions are conf() and expect().
+PIP provides several functions for analyzing the uncertainty encoded in a c-table.  The two core analysis functions are conf() and expectation().
 
-conf() performs a conjunctive integration to estimate the probability of a specific row being present in the output.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
+conf() performs a conjunctive integration to estimate the probability of a specific row being present in the output, in effect computing the expectation $E[1]$.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
 
 aconf(), a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  
 
-expected() computes the expectation of a variable by repeated sampling.  If a row may be specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
+expectation() computes the expectation of a variable by repeated sampling.  If a row is specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
 
-stddev() computes the standard deviation of the expectation by repeated sampling.  As with expected() a row may be used to constrain the range of the variable.
+expected\_sum(), expected\_max() are aggregate variants of expectation.  As with expectation() they can be parametrized by a row to specify constraints.
 
-histogram() is similar to expected() in that it performs repeated sampling, or constrained sampling if appropriate.  However, instead of outputting the average of the results, it instead outputs an array of all the requested samples.
+expected\_sum\_hist(), expected\_max\_hist() are similar to the above aggregates in that they perform sampling.  However, instead of outputting the average of the results, it instead outputs an array of all the generated samples.  This array may be used to generate histograms and similar visualizations.
 
 Aggregates pose a challenge for the query phase of the PIP evaluation process.  Though it is theoretically possible to create composite variables that represent aggregates of their inputs, in practice it is infeasible to do so.  The size of such a composite is not just unbounded, but linear in the size of the input table.  A composite aggregate variable could easily grow to an unmanageable level.  Instead, PIP limits random variable aggregation to the sampling phase.  
 
-Many aggregates such as sum() and average() are linear; the expectation of the sum is the sum of the expectation.  PIP implements these by combining Postgres' existing aggregate operator with PIP's expectation operator.  PIP also implements histogram variants of both operators.  Nonlinear aggregates such as max(), min(), and stddev() are special-cased.  
 
