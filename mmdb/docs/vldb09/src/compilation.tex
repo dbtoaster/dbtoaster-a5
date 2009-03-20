@@ -116,7 +116,12 @@ generalize it later to support even more once we have laid the necessary foundat
 
 
 \begin{example}\em
-The VWAP query from the introduction was, in algebra notation with $\distinct$
+\label{ex:compiler1}
+The summation part\footnote{The average is the ratio
+of this sum to a
+counting version of this query in which $\algsumf_{P_2 * V_2}$ is replaced by
+$\algsumf_1$.}
+ of the VWAP query from the introduction was, in algebra notation with $\distinct$
 denoting
 tuple elimination and $\routerjoin$ denoting right outer join,
 \begin{multline*}
@@ -307,21 +312,21 @@ Let us now compute the trigger
 \[
 \mbox{on insert into B values ($p, v$)}
 \]
-for the VWAP query
+for the summation part of the VWAP query (from Example~\ref{ex:compiler1})
 \[
 q[] = \algsumf_{P_2 * V_2}(\sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))
 \]
 where
 \begin{eqnarray*}
 m[p_2] &=&  k * \algsumf_{V_0}(\rho_{P_0, V_0}(B))   \\
-       &-&  \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
+       &-&  \algsumf_{V_1}(\sigma_{\underbrace{P_1 - p_2}_{g[p_2]} > 0}(\rho_{P_1, V_1}(B)))
 \end{eqnarray*}
 
 Then
 \begin{eqnarray*}
 \Delta_{+B(p,v)} m[p_2] &=&
             k * \Delta_{+B(p,v)} \algsumf_{V_0}(\rho_{P_0, V_0}(B))   \\
-       &-&  \Delta_{+B(p,v)} \algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))
+       &-&  \Delta_{+B(p,v)} \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
 \\
 &=& k * v \\
 &-& \mbox{if $(\Delta_{+B(p,v)} g > 0)$ then $v$} \\
@@ -329,7 +334,7 @@ Then
 \\
 \Delta_{+B(p,v)} g[p_2] &=& p - p_2 - g[p_2]
 \\
-\Delta_{+B(p,v)} q[p_2] &=&
+\Delta_{+B(p,v)} q'[p_2] &=&
 \mbox{if ($(m[p_2] > 0) \neq (m[p_2] + \Delta m[p_2] > 0))$ then}
 \\
 && ~~~
@@ -337,9 +342,11 @@ Then
 && ~~~ * \;  \mbox{$\underbrace{\algsumf_{P_2 * V_2}(\sigma_{P_2=p_2}(\rho_{P_2,V_2}(B)))[p_2]}_{s[p_2]}$} \\
 && \mbox{else 0}
 \\
-&+&
+\Delta_{+B(p,v)} q[] &=&
 \big( \mbox{if $(m[p] + \Delta_{+B(p,v)} m[p] > 0)$} \\
 &&~~~ \mbox{then $p * v$ else $0$} \big)
+\\
+&+& \sum_{p_2} q'[p_2]
 \\
 \Delta_{+B(p,v)} s[p_2] &=& \mbox{if $(p = p_2)$ then v else 0}.
 \end{eqnarray*}
@@ -385,7 +392,7 @@ on insert into B values (p, v)
 
 
 Note that our delta processing scheme relatively straightforwardly generalizes
-to min and max aggregates\footnote{Indeed, the central decomposition rule
+to min and max aggregates.\footnote{Indeed, the central decomposition rule
 \[
 \algsumf_f(Q_1 \cup Q_2) = \algsumf_f(Q_1) + \algsumf_f(Q_2)
 \]
@@ -395,7 +402,7 @@ the equivalence
 \max_f(Q_1 \cup Q_2) = \max(\max_f(Q_1), \max_f(Q_2)).
 \]
 }
-however, differently from the sum aggregate, we have to
+However, differently from the sum aggregate, we have to
 maintain a representation of the base relations to support for incremental view
 maintenance under deletions. 
 
