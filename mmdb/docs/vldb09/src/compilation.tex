@@ -225,7 +225,11 @@ on insert into $R$ values $\vec{r}$ trigger:
    g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k]}(Q)
 \end{multline*}
 \begin{multline*}
-\Delta_{+R(\vec{r})} \algsumf_f(\sigma_{f \theta 0}(Q)) \; :=
+\Delta_{+R(\vec{r})} \algsumf_f(\sigma_{g \theta 0}(Q)) \; := \\
+\big( \mbox{if ($(g \;\theta\; 0) \neq (g + \Delta_{+R(\vec{r})} g \;\theta\; 0))$ then}
+\\
+      \mbox{$\mbox{sgn}(g + \Delta_{+R(\vec{r})} g) *
+      \algsumf_f(Q)$ else 0} \big)
 \end{multline*}
 \end{algorithm}
 %\caption{Foo.}
