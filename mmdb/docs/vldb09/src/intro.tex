@@ -1,5 +1,6 @@
 \section{Introduction}
 
+\comment{
 Rapidly increasing main-memory capacities present an opportunity to rethink
 database architectures. Today's database query processors focus on efficiency
 across the main-memory and secondary storage boundary, and their design
@@ -10,6 +11,7 @@ databases, there are also a number of new applications that call for query
 processing support and are not well served by existing systems. These
 applications call for the rethinking of query processing in main memory
 databases.
+}
 
 We present \compiler, a tool for compiling SQL aggregate queries into efficient
 C++ code for continuous, incremental view maintainance.
@@ -252,7 +254,26 @@ construction usually outperforms one-time query evaluation with traditional
 techniques.
 
 
+We summarize our contributions as follows:
 
+\begin{enumerate}
+  \item We present a novel SQL compiler that produces C++ code containing
+  straight-line functions for processing tuple inserts, deletes and updates
+  along a path through the query plan. Modern C++ compilers can aggressively
+  optimize this function allowing our query executor to eliminate significant
+  query interpretation overhead.
+  \item We present a map algebra as the foundations for producing our
+  tuple-processing functions, where map expressions can contain parameterized
+  aggregates. The map algebra can easily represent operations on in-memory
+  hashtables that are directly used to implement SQL group-by aggregations in
+  main-memory\\databases. Through our map algebra, we present a compilation
+  algorithm that applies rewrites to map algebra expressions, leaving them in a
+  form that contains no relational operations, allowing for straightforward
+  generation of procedural code.
+  \item We experimentally demonstrate that \compiler\ is able to produce
+  query executors whose performance significantly dominates existing relational
+  database and stream processing engines across a variety of applications. 
+\end{enumerate}
 
 
 This paper is laid out as follows. Section 2 describes the role of the compiler,
@@ -272,11 +293,9 @@ techniques.
 }
 Section 3 describes our map algebra that picks map to materialize, and a
 structural query decomposition technique for minimizing the memory consumption of
-these maps.
-\textcolor{red}{Section 4 analyses the memory requirements of our
-maps}, while Section 5 describes the aforementioned extensions to the compiler
+these maps. Section 4 describes the aforementioned extensions to the compiler
 for bulk operations and data structure sharing. Finally prior to discussing
-related work and concluding, Section 6 presents experimental results
+related work and concluding, Section 5 presents experimental results
 demonstrating the significant benefits of our techniques over a standard
 relational database, a streaming engine, as well as a direct compilation of the
 query plan as a straight-line function.
