@@ -43,9 +43,8 @@
 
 \newcommand{\comment}[1]{}
 \newcommand{\compiler}{DBToaster}
-\newcommand{\project}{Steam}
 
-\title{DBToaster: A SQL Compiler for High-Performance Delta Processing in
+\title{\compiler: A SQL Compiler for High-Performance Delta Processing in
 Main-Memory Databases}
 \author{Yanif Ahmad and Christoph Koch \\
 Department of Computer Science \\ Cornell University, Ithaca, NY \\
@@ -62,45 +61,85 @@ Department of Computer Science \\ Cornell University, Ithaca, NY \\
 After world domination comes profit.
 \end{abstract}
 
+
 \section{Introduction}
-Rapidly increasing main-memory capacities present an opportunity to rethink
-database system architectures. Today's databases focus on the main-memory and
-secondary storage boundary, and their design principles have spilled into
-main-memory database architectures. Moreover, most modern database systems
-emphasize flexibility by interpreting queries, flexiblity that is not
-required in most deployments and comes at a high performance penalty.
+We demonstrate \compiler, a tool for compiling SQL queries into native code,
+targeting main-memory databases. \compiler\ is a novel compilation framework
+which generates C++ code to incrementally and continuously answer queries using
+aggregate views. Our work is motivated by applications that require the highly
+efficient answering of fixed workloads of aggregation queries, such as in data
+stream processing, online data warehouse loading, and in financial applications.
+We question the cost of highly flexible interactive query processors in such
+applications, as found in today's databases with their plan interpreters and
+other runtime components. In our view, a large fraction of the world's query
+workloads are fixed and embedded into database application programs. Once
+hardened, queries are deployed into production environments, and re\-used
+numerous times, executing non-interactively.
 
-We demonstrate DBToaster, a tool for compiling SQL queries into native code,
-targeting main-memory databases. DBToaster is a novel compilation framework which
-generates C++ code to incrementally and continuously answer queries using
-aggregate views. DBToaster applies rewrite rules that enable us to generate
-straight-line code exposing tuple-based execution paths to a C++ compiler. In
-turn, this produces native code that both avoids overheads in executing multiple
-operators, and takes advantage of lower level compiler optimizations. Our query
-rewriting defines how to process a single tuple using a precomputed view of the
-remainder query and data. Maintaining such views in main-memory is extremely
-cheap with the use of standard pointer-based data structures and delta processing
-techniques.
+\compiler\ operates by applying rewrite rules on these repetitive or standing
+queries, enabling us to generate straight-line code exposing tuple-based
+execution paths to a C++ compiler. This provides two key advantages. First, the
+fixed query plan execution path can be highly optimized by a C++ compiler,
+enabling us to avoid overheads that traditionally arise when query processors
+interpret query plans stored in dynamic data structures. Moreover, our new delta
+processing techniques are designed specifically for compilation to native code
+and support aggressive inlining that leads to surprisingly small and simple
+straight-line code sequences. Our query rewriting defines how to process a single
+tuple using a precomputed view of the remainder query and data. Maintaining such
+views in main-memory is extremely cheap with the use of standard pointer-based
+data structures and delta processing techniques.
 
-Our work is motivated by applications that require the highly efficient answering
-of fixed workloads of aggregation queries, such as in data stream processing,
-online data warehouse loading, and in financial applications. As we show, our
-techniques are several orders of magnitude faster than state-of-the-art database
-and stream processing engines on such workloads. In the case of queries on limit
-order book data as required for supporting algorithmic equities trading, our
-approach is currently the only one that can support the realistic data rates on
-contemporary hardware without resorting to very substantial computing clusters.
+In this demonstration we will both present our compilation strategy which makes
+novel use of a map algebra to manipulate map data structures that are key to
+compiling tuple-processing functions, and put our compiler into practice by
+showcasing its usage in several performance-hungry applications that are served
+in limited fashion by today's data management tools, including algorithmic order
+book trading, an integrated approach to data warehouse loading and analysis, as
+well as stream processing applications.
+
+As part of this demonstration, we will show our techniques are several orders of
+magnitude faster than state-of-the-art   database  and significantly outperform
+stream processing engines on such workloads.  In the case of queries on limit
+order  book  data  as  required for  supporting  algorithmic  equities trading,
+our approach currently stands alone in its ability to support realistic  data
+rates  on contemporary hardware without  resorting to very substantial computing
+clusters. Indeed, the memory consumption of our main-memory techniques is
+sufficiently low to support applications such as data warehouse loading.
 
 
-\section{System Overview}
 
-\subsection{Usage Model}
-\begin{itemize}
-  \item Data and query model
-  \item Result model, embedded vs delta model
-\end{itemize}
+\section{DBToaster Usage}
 
-\subsection{DBToaster Architecture}
+\compiler\ is capable of compiling a wide variety of SQL queries including those
+containing selections, projections, joins, and group-by aggregates. \compiler\
+takes a query workload as input, as well as the data definition statements of any
+tables used in the queries to determine the contents of internal datastructures,
+and produces a native binary for processing the query workload over inserts,
+deletes and updates on the input tables. \compiler\ focuses on applications faced
+with handling a large input volume, but does not rely on artificial restrictions
+of these new inputs, unlike stream processing engines, which rely on semantic
+constructs such as windows or punctuations that are tightly coupled with operator
+semantics. Indeed, many stream applications, such as order book trading are
+self-managing, in that the application logic and usage patterns ensures state
+does not grow unbounded eliminating the need for windows. Otherwise, windows may
+often be expressed as predicates. \compiler\ will compile such window semantics
+just as with any other part of the query, and as we will see later, efficiently
+implement windowing based on the data structures used to process the windowing
+predicate.
+
+At its core, \compiler\ performs delta processing, that is each insert, delete or
+update of an input table is processed through the query and produces a new
+result. \compiler\ can support two types of result tuples, delta results or full
+aggregate results. Internally \compiler\ computes one of these result types
+depending on the type of aggregation function (for example full aggregation
+results for a \texttt{max}), and maintains prior results to enable outputs of
+either type. Furthermore, \compiler\ can produce both a standalone query engine
+communicating both results and inputs through a socket interface, or an embedded
+engine library that provides cursor-based access to full query results. This
+cursor-based access is backed by internal datastructures created by \compiler\
+for query processing, for example a hashtable of aggregate results keyed by
+group-by columns.
+
 
 \section{Query Compilation}
 
@@ -109,47 +148,124 @@ contemporary hardware without resorting to very substantial computing clusters.
 \subsection{Compilation Example}
 
 \section{Demonstration}
+The \compiler\ demonstration will exhibit both the map algebra and its
+transformation machinery, as well as the high performance aspect of the
+project through live comparisons with alternative database implementations.
+In this section we describe the application scenarios that act as motivating
+use cases for \compiler, as well as the visualization tools that convey the
+technical aspects of query transformations and compiled executor performance.
 
 \subsection{Applications and workloads}
-\begin{itemize}
-  \item The A25 hedge fund. Make live trades for wow factor :)
-  \item Linear Road / TPC-H? I don't think ppl can factor in benchmark results
-  with what they know on-the-fly so I would prefer another novel app. Also,
-  Linear Road is not a common enough benchmark.
-\end{itemize}
+\compiler\ is suited for applications exhibiting high volumes of insertions,
+deletions and updates, and in this demonstration, we show \compiler\ processing
+queries for an automated trading application making use of NASDAQ TotalView order
+book data~\cite{totalview-url}, TPC-H data to emulate a combined data warehouse
+loading and analysis application, and finally a toll management system as
+presented in the Linear Road benchmark for stream processing
+engines~\cite{arasu-vldb:04}. We describe the first two applications in more
+detail, referring the reader to the Linear Road paper for details on that topic.
+
+\textbf{Processing order books in equities trading.}
+Order books provide a superior view of the market microstructure for use in
+trading algorithms. The bid order book consists of prices and volumes of orders
+of investors who are willing to buy equities in descending price and timestamp
+order, and correspondingly the ask order book indicates investors' selling
+orders. Exchanges execute trades by matching the tops of the bid and ask order
+books. Investors continually add, modify or withdraw limit orders, thus we view
+order books as relations subject to high volumes of order inserts, updates and
+deletes. Unlike stream processing scenarios \cite{motwani-cidr:03}, order
+books do not grow unboundedly in practice, but cannot be expressed by windows
+given their arbitrary inserts, updates and deletes. Thus in \compiler, we process
+continuous queries over temporal snapshots of relations via delta processing.
+
+We present two queries in the automated trading application, the first is a
+volume-weighted average price (VWAP) query which computes the average
+price-volume product of a given fraction of the total volume in the bid and
+ask order book. This is used as part of the Static Order Book Imbalance (SOBI)
+query which attempts to detect trade price movements indicated based on whether
+there is a greater VWAP of bids than asks or vice versa. The second query is a
+query to detect strategies being employed by market makes through the order
+book, where market makers often submit orders to entice buyers or sellers into
+the market to aid in balancing their position.
+
+\textbf{Data warehouse loading.}
+Loading large data warehouses is a computationally costly process, which
+causes most data warehouse loading to be performed offline.
+While commercial warehouse loaders use specialized efficient code for 
+aggregation, incoming data is often the result of data integration
+queries that are costly and inefficient, and with may blow up data sizes
+in such a way that loading remains inefficient.
+Compiling data integration and aggregation queries together yields efficient
+code for loading the warehouse which may avoid the materialization of large
+intermediate results.
+
+Hence we use \compiler\ to jointly process a data integration query loading a
+warehouse from OLTP databases, and an aggregation query on the warehouse. We
+emulate the data integration step by using a data cleaning and transformation
+query to convert a TPC-H dataset into a star schema, as described in the Star
+Schema Benchmark (SSB)~\cite{poneil-ssb:07}. We then evaluate query 4.1 from SSB
+on the transformed TPC-H dataset. Note this all occurs in one single query
+compiled down with \compiler.
+
+An integral part of this demonstration is to support interaction with conference
+attendees, thus in addition to providing pre-cooked queries implementing these
+applications, we will support compilation of a subset of SQL, namely selections,
+projections, join and aggregation operations, for attendees to directly pose
+their own queries on top of the base relations in these applications.
+
+
+
 
 \subsection{Query rewriting and code generation}
 
-Visualizer:
-\begin{itemize}
-  \item Input plan (textual and graphical)
-  \item Transformation step animation
-  \item Remainder queries and view maintenance
-  \item Code generation and data structures used, linking
-  back to transformed query plan
-  \item Naive code generation for later comparison
-  \item Small JIT-example to fend off adaptivity nuts.
-\end{itemize}
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.47]{figures/gui1}
+\end{center}
+\caption{\compiler\ compilation process visualization, displaying map algebra
+transformations, generated code, and internal views that must be maintained.}
+\label{fig:compileguie}
+\end{figure}
 
-\subsection{DBMS Live Bakeoff}
-\begin{itemize}
-  \item Comparing both latency and throughput via 'tachometers' a la
-  speedtest.net. We will redline :) 
-  \item DBToaster vs. hsqldb
-  \item DBToaster vs. naive compilation (show naive plan and code generation w/
-  above)
-  \item DBToaster vs. STREAM
-  \item DBToaster memory usage monitor
-  \item DBToaster compile time, g++ compile time, end-to-end compilation
-  overhead
-  \item Audience challenge: after I explain, find a query that we suck on (given
-  language limitations). We'll put up a query leaderboard, and give out a prize
-  for any query where the other systems beat us by an order of magnitude.
-  We'll also give out a prize for anyone who can find a query that makes us
-  look as good as possible. Setup: take a couple laptops, let anyone
-  install/tweak their own DB and write their own TPC-H/LinearRoad query while I
-  demo :)
-\end{itemize}
+The first of our two visualization tools (Figure~\ref{fig:gui1} above) aids in
+conveying the compilation process to demo attendees. We will invite attendees to
+input their own queries, or use one of the canned queries from our applications,
+and first visually display a standard relational query plan. Our visualizer will
+then display the transformation process in a step-by-step fashion by applying
+rewrite rules in our map algebra, allowing us to explain the contents of the maps
+built from the query. In the next phase of the demonstration, we will briefly
+describe the code generation process given these maps, and how we can derive code
+to maintain these maps using only the bottom layer of the query as an example,
+where map maintenance proves to be simple. At this point query compilation is
+complete, and we implement a pair of simple browser windows listing both the maps
+and the tuple functions generated to allow access to arbitrary steps in the
+compilation process, to aid in discussions with attendees. Depending on the
+demonstration progress, we may additionally include an example of a
+JIT-compilation of the example query to demonstrate the potential for a limited
+degree of adaptivity during query execution.
+
+
+\subsection{\compiler\ vs. DBMS* Bakeoff}
+The theme in this part of the demonstration is to show \compiler's
+competitiveness with a variety of database tools, by performing a DBMS bakeoff.
+Our experiments\footnote{under submission.} have demonstrated \compiler\ is able
+to significantly outperform PostgreSQL and a naive approach to query compilation
+for both the automated trading application and data loading application, as well
+as the Stanford STREAM~\cite{motwani-cidr:03}} engine for Linear Road. In
+addition to these three comparison points we plan to compare to
+hsqldb~\cite{hsqldb-url}, an existing pure Java main-memory database. The second
+visualization tool displays the performance achieved by the compiled query
+executors generated in the above part of the demonstration. The metrics of
+interest here are the throughput \compiler\ achieves, its memory usage for
+maintaining its maps as part of tuple function processing, the binary size, and
+finally the compile time including both the C++ generation and the subsequent
+compilation to a native binary. To provide for a more entertaining audience
+experience, we will run an audience challenge to find queries both yielding the
+greatest performance over the other database engines in the bakeoff, as well as
+queries that illustrate the poorest performance. Attendees will be provided with
+two laptops at the demonstration booth to experiment with queries, and we will
+display a leaderboard of the running results to spur on competition.
+
 
 \footnotesize{
 \bibliographystyle{abbrv}
