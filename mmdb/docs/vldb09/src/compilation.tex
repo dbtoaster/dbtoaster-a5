@@ -161,9 +161,9 @@ q[] = \algsumf_{P_2 * V_2}(
 \sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))[]
 \end{equation}
 where
-\[
+$
 m[p_2] = k * m_0[] - m_1[P_2].
-\]
+$
 %\punto
 \end{example}
 
@@ -456,7 +456,7 @@ We incrementally maintain the aggregate query
 s := \algsum_{A*D}(R \bowtie S \bowtie T).
 \]
 
-Compared to the map compilation algorithm of Figure~\ref{fig:mainalg}, we take a
+Compared to the map compilation algorithm of Figure~\ref{fig':mainalg}, we take a
 few shortcuts for better readability (and extend the algebra by natural joins);
 nevertheless following our algorithm yields equivalent maps. 
 \begin{itemize}
@@ -547,30 +547,25 @@ $
 Thus the code is:
 \begin{verbatim}
 on insert into R values (a,b) {
-   s += a * s_D[b];
-   s_A[b] += a;
+   s += a * s_D[b];   s_A[b] += a;
    foreach c (in Cs[b]) do
       s_A[c] += a * s_1[b,c];
 }
 
 on insert into S values (b,c) {
-   s += s_A[b] * s_D[c];
-   s_A[c] += s_A[b];
-   s_D[b] += s_D[c];
-   s_1[b,c] += 1;
+   s += s_A[b] * s_D[c];   s_A[c] += s_A[b];
+   s_D[b] += s_D[c];       s_1[b,c] += 1;
 }
 
 on insert into T values (c,d) {
-   s += s_A[c] * d;
-   s_D[c] += d;
+   s += s_A[c] * d;   s_D[c] += d;
    foreach b (in Bs[c]) do
       s_D[b] += s_1[b,c] * d;
 }
 \end{verbatim}
-\punto
+%\punto
 
 We can also consider deletions from base relations:
-
 \begin{itemize}
 \item
 Delete R(a,b):
