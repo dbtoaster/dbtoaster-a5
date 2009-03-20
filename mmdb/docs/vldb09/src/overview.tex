@@ -13,42 +13,41 @@ takes a query workload as input, as well as the data definition statements of an
 tables used in the queries to determine the contents of internal datastructures,
 and produces a native binary for processing the query workload over inserts,
 deletes and updates on the input tables. \compiler\ focuses on applications faced
-with handling a large volume of such data manipulation statements, but does not
-rely on artificial restrictions of these new inputs, unlike stream processing
-engines, which rely on semantic constructs such as windows or punctuations that
-are tightly coupled with operator semantics.
-\textcolor{red}{Comment on memory requirements}
-In many cases windows may be expressed as predicates, and \compiler\ will compile
-such window semantics just as with any other part of the query, and as we will
-see later, efficiently implement windowing based on the datastructures used to
-process the windowing predicate.
+with handling a large input volume, but does not rely on artificial restrictions
+of these new inputs, unlike stream processing engines, which rely on semantic
+constructs such as windows or punctuations that are tightly coupled with operator
+semantics. Indeed, many stream applications, such as order book trading are
+self-managing, in that the application logic and usage patterns ensures state
+does not grow unbounded eliminating the need for windows. Otherwise, windows may
+often be expressed as predicates. \compiler\ will compile such window semantics
+just as with any other part of the query, and as we will see later, efficiently
+implement windowing based on the data structures used to process the windowing
+predicate.
 
-At its core, \compiler\ performs delta processing, that is each insert, delete
-or update of an input table is processed through the query and produces a new
-result (assuming it is not filtered away by predicates). As described above, we
-primarily focus on queries involving aggregations, and here, \compiler\ can
-support two types of result tuples, delta results or full aggregate results.
-Internally \compiler\ computes one of these result types depending
-on the type of aggregation function (for example full aggregation
-results for a \texttt{max}), and maintains prior results to enable outputs
-of either type. Furthermore, \compiler\ can produce both a standalone query
-engine communicating both results and inputs through a socket interface, or an
-embedded engine library that provides cursor-based access to full query results.
-This cursor-based access is backed by internal datastructures created by
-\compiler\ for query processing, for example a hashtable of aggregate results
-keyed by group-by columns.
+At its core, \compiler\ performs delta processing, that is each insert, delete or
+update of an input table is processed through the query and produces a new
+result.
+\compiler\ can support two types of result tuples, delta results or full
+aggregate results. Internally \compiler\ computes one of these result types
+depending on the type of aggregation function (for example full aggregation
+results for a \texttt{max}), and maintains prior results to enable outputs of
+either type. Furthermore, \compiler\ can produce both a standalone query engine
+communicating both results and inputs through a socket interface, or an embedded
+engine library that provides cursor-based access to full query results. This
+cursor-based access is backed by internal datastructures created by \compiler\
+for query processing, for example a hashtable of aggregate results keyed by
+group-by columns.
 
-\begin{itemize}
-  \item Formal query definition
-  \item Formal result definition
-\end{itemize}
   
 \subsection{System Architecture}
 \begin{figure}
 \begin{center}
 \includegraphics[scale=0.45]{figures/overview}
 \end{center}
-\caption{DBToaster architecture diagram.}
+\caption{\compiler\ architecture diagram. \compiler\ can be used in a standalone
+mode where it simply performs query processing, embedded mode where it can be
+linked into another application and provide query result cursors, or finally as
+a scalable distributed query processor.}
 \label{fig:overview}
 \end{figure}
 
@@ -88,21 +87,23 @@ step, we produce C++ code which can then be processed by the C++ frontend for
 LLVM.
 
 With the ability to migrate compiled queries, \compiler\ can begin to address
-resource management challenges. Here we consider an optimization problem rooted
-in the tradeoff between achieving a balanced load allocation within the cluster,
-and providing high performance by localizing queries with the data they access.
-The layout challenge in \compiler's context differs from traditional distributed
-data placement problems in that we are using data structures rather than
-relations, requiring consideration of distributed data structures (hashtables,
-trees, etc.) and novel partitioning schemes for these data structures.
-Additionally query groupings have to be managed in order to exploit the potential
-data structure sharing amongst multiple queries. Other key system components
-include a storage and recovery manager responsible for checkpointing and managing
-the handoff of checkpoints to backups to provide fault tolerance in our purely
-main-memory context, as well as providing and managing secondary storage
-primarily for the purpose of data loading and shipping to ensure maximal
-availability of main-memory for query processing purposes rather than
-distributed system maintenance.
+resource management challenges, solving a resource optimization problem based on
+the tradeoff in achieving a balanced load allocation in the cluster, and
+providing high throughput by localizing queries with the data they access. The
+layout challenge in \compiler's context differs from traditional distributed data
+placement problems in that we are using data structures rather than relations,
+requiring consideration of distributed data structures (hashtables, trees, etc.)
+and novel partitioning schemes for these data structures.
+\comment{
+Additionally query groupings have to be managed in order to exploit the
+potential data structure sharing amongst multiple queries.
+}
+Other key system components include a storage and recovery manager responsible
+for checkpointing and managing the handoff of checkpoints to backups to provide
+fault tolerance in our purely main-memory context, as well as providing and
+managing secondary storage primarily for the purpose of data loading and shipping
+to ensure maximal availability of main-memory for query processing purposes
+rather than distributed system maintenance.
 
 \comment{
 \begin{itemize}

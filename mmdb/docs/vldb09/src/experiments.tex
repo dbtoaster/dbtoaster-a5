@@ -58,7 +58,7 @@ with \compiler.
 
 \subsection{\compiler\ Performance}
 
-\begin{figure}
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/toaster_comparison}
 \end{center}
@@ -96,9 +96,8 @@ compiled query executors. As we described above, we expect this gap to widen as
 we address more complex stream queries involving processing patterns and
 aggregated historical data.
 
-\textbf{Query refresh limits.}
 
-\begin{figure}
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/vwap_query_freq_dn}
 \end{center}
@@ -108,7 +107,7 @@ plan compilation technique.}
 \label{fig:vwap_query_freq}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/ssb_query_freq_dn}
 \end{center}
@@ -118,6 +117,7 @@ plan compilation technique.}
 \label{fig:ssb_query_freq}
 \end{figure}
 
+\textbf{Query refresh limits.}
 Figure~\ref{fig:vwap_query_freq} shows the threshold for repetitively executing
 VWAP queries in both the plan-based compiled executor and PostgreSQL, before such
 execution becomes more costly than simply processing the whole workload with
@@ -144,7 +144,7 @@ views, enabling \compiler\ to attain a query repetition limit of approximately 8
 plan-compiled queries.
 
 
-\begin{figure}
+\begin{figure}[htbp]
 \begin{center}
 \includegraphics[scale=0.3]{../plots/mem_usage}
 \end{center}

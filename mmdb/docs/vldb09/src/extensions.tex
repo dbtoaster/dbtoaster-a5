@@ -106,16 +106,16 @@ consider simple patterns as signatures, restricting ourselves to $k$-length
 sequences of a single type of data manipulation (i.e. $k$-inserts or $k$-deletes)
 for a fixed range of $k$ values.
 
-While more complex batch and pattern detection has been applied, for example
-for prefetching as in Scalpel [XXX], we make the following observation. As we
-will see in the experimental evaluation, we produce a highly efficient executor
-as the result of our compilation, implying we require a commensurate
-improvement in the monitoring conditions that determine when to adapt running
-plans. However, these monitoring conditions are typically implemented by
-database developers directly in the engine, and are already operating with
-low overhead. This entails our design principle that only simple and extremely
-lightweight adaptations are of use in a compiled query executor due to the
-increasing cost of monitoring relative to processing.
+While more complex batch and pattern detection has been applied, for example for
+prefetching as in Scalpel~\cite{bowman-tods:05}, we make the following
+observation. As we will see in the experimental evaluation, we produce a highly
+efficient executor as the result of our compilation, implying we require a
+commensurate improvement in the monitoring conditions that determine when to
+adapt running plans. However, these monitoring conditions are typically
+implemented by database developers directly in the engine, and are already
+operating with low overhead. This entails our design principle that only simple
+and extremely lightweight adaptations are of use in a compiled query executor due
+to the increasing cost of monitoring relative to processing.
 
 \comment{
 \begin{itemize}
