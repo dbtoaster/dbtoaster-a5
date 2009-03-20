@@ -21,9 +21,11 @@
 \begin{center}
 \subtable[]{\resizebox{3in}{!}{\includegraphics{graphics/variance.pdf}} \label{subfig:variance1}}
 \subtable[]{\resizebox{3in}{!}{\includegraphics{graphics/variance2.pdf}}\label{subfig:variance2}}
+\vspace*{-0.1in}
 \caption{RMS error across the results of 30 trials of (a) a simple group-by query $Q_4$ with a selectivity of $0.005$, and (b) a complex selection query $Q_5$ with an average selectivity of $0.05$.}
 \label{fig:variance}
 \end{center}
+\vspace*{-0.20in}
 \end{figure*}
 
 As a comparison point for PIP's ability to manage continuous random variables, we have constructed a sample-first probabilistic extension to Postgres that emulates MCDB's tuple-bundle concept using ordinary Postgres rows.  A sampled variable is represented using an array of floats, while the tuple bundle's presence in each sampled world is represented using a densely packed array of booleans.  In lieu of an optimizer, test queries were constructed by hand so as to minimize the lifespan of either array type.

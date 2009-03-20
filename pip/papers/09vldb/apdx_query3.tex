@@ -14,7 +14,7 @@ create table `shipping_params' as
   group by partkey;
 alter table params add constraint "p_partkey_pkey" 
   primary key (p_partkey);
--- BEGIN TIMING QUERY --
+-- BEGIN QUERY --
 create temporary table q3_shipping as
   select o_orderkey AS orderkey, o_custkey AS custkey,
     CREATE_VARIABLE(`Normal',row(ship_mu,ship_sigma))
@@ -50,7 +50,7 @@ create temporary table q3_order_increase as
    and  ps_partkey = l_partkey
    and  ps_suppkey = l_suppkey
  ) as items_from_japan;
--- BEGIN TIMING SAMPLE --
+-- BEGIN SAMPLING --
 select avg(confidence),
        expected_sum(rev, q3_annoyed)
 from   q3_annoyed,
@@ -67,6 +67,7 @@ where  revenues.custkey = q3_annoyed.custkey;
 \caption{A dataflow diagram of query 3.  Dotted lines represent probabilistic data.}
 \label{fig:query3dataflow}
 \end{center}
+\vspace*{-0.25in}
 \end{figure}
 
 Query 3 is based on \cite{MCDB}'s Q1 and Q2 and represented graphically in Figure \ref{fig:query3dataflow}.  A prebuilt table of shipping and construction times is used to parametrize Normal distributions that predict time from order to shipment and time from shipment to arrival.  Note the use of the CREATE\_VARIABLE function to create these variables.  This table is compared against arbitrary customer satisfaction thresholds to generate a probabilistic table containing a customer if the customer was dissatisfied with the shipping times (we selected thresholds that left an average of 10\% of customers dissatisfied by at least one event).  Note that probabilistic variables may be used in WHERE clauses in the same way as deterministic ones.  Separately, the query computes the expected profit for each customer and joins it with the table of dissatisfied customers to estimate the amount of profit lost in the coming year.
