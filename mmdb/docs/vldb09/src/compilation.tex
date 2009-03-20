@@ -15,12 +15,14 @@ core of the query language supported by DBToaster.
 This core is a query algebra for defining maps. These maps are closely related to
 tables definable using SQL aggregate group-by queries but at the same time are main
 memory data structures that are easy to access in applications.
-After that, we present the core query compilation technique and prove its correctness.
-In the following subsection, we refine this technique to employ join decomposition
-techniques or employ database query optimization ideas to reduce the space
-consumption of auxiliary maps and to reduce the time cost of maintaining the maps.
+After that, we present the core query compilation technique.
+In the last part of this section, we discuss employing structural decomposition
+techniques for reducing the memory consumed by our maps.
 
-
+%following subsection, we refine this technique to employ join decomposition
+%techniques or employ database query optimization ideas to reduce the space
+%consumption of auxiliary maps and to reduce the time cost of maintaining
+%the maps.
 
 
 \subsection{The Map Algebra}
@@ -110,8 +112,10 @@ gives no value on tuples $\vec{a}$ that do not exists in $\pi_{\vec{A}}(Q)$.
 Thus, for our purposes, SQL group-by aggregates do not generalize non-grouped
 SQL aggregates. We avoid this in our map algebra -- this allows for a clean
 compositional compilation framework, and for a focus on essential challenges
-below. Still, the map algebra supports a wide range of practical queries, and we will
-generalize it later to support even more once we have laid the necessary foundations.
+below. Still, the map algebra supports a wide range of practical queries.
+%, and we will
+%generalize it later to support even more once we have laid the
+%necessary foundations.
 \end{remark}
 
 
@@ -252,7 +256,9 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 (g \;\theta\; 0)$) then $- \algsumf_A(Q)$ else 0}
 \end{eqnarray*}
 %\end{algorithm}
-%
+
+\vspace{-4mm}
+
 \caption{Recursive algorithm for compiling the
 on insert into $R$ values $\vec{r}$ trigger.}
 \label{fig:mainalg}
@@ -290,7 +296,7 @@ that is,
 \begin{enumerate}
 \item
 on inserting tuple $\vec{r}$ into $R$, $f$ becomes
-$f + \Delta_{+R(\vec{r})} f$, and
+$f + \Delta_{+R(\vec{r})} f$;
 
 \item
 on inserting tuple $\vec{r}$ from $R$, $f$ becomes
@@ -356,9 +362,7 @@ Thus we generate the following code (map values are initially 0):
 on insert into B values (p, v)
 {
   if(! dom_m.member(p))
-  {
-     dom_m.add(p); m[p] = 0;
-  }
+     { dom_m.add(p); m[p] = 0; }
 
   // computing deltas
   delta q = (m[p] > 0) ? (p * v) : 0;
