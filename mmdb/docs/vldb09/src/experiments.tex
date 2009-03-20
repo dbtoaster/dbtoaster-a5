@@ -13,10 +13,11 @@ that simulates a toll-charging system on a highway, and lastly an end-to-end
 warehouse loading and analysis based on generating a star schema from a TPC-H
 dataset and computing aggregations on the star schema.
 
-\begin{figure}[htbp]
+\begin{figure}[htb]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/vwap_query_freq_dn}
 \end{center}
+\vspace{-4mm}
 \caption{Query frequency limit for VWAP application, indicating the
 query execution frequency beyond which DBToaster outperforms the naive query
 plan compilation technique.}
@@ -66,10 +67,11 @@ transformed TPC-H dataset. Note this all occurs in one single query compiled dow
 with \compiler.
 
 
-\begin{figure}[htbp]
+\begin{figure}[htb]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/ssb_query_freq_dn}
 \end{center}
+\vspace{-4mm}
 \caption{Query frequency limit for warehouse loading application, indicating the
 query execution frequency beyond which DBToaster outperforms the naive query
 plan compilation technique.}
@@ -126,6 +128,7 @@ aggregated historical data.
 \hline 
 \end{tabular}
 \end{center}
+\vspace{-4mm}
 \caption{Query execution time for standing queries in PostgreSQL in the VWAP
 workload. Naive compilation execution times are shown for comparison, and are
 the same as in Figure~\ref{fig:vwap_query_freq}. \compiler\ processes the
@@ -148,8 +151,9 @@ workload in 1414.8 seconds.}
 \hline 
 \end{tabular}
 \end{center}
-\caption{Query execution time for repetitive queries in PostgreSQL in the SSB
-workload. Naive compilation execution times are shown for comparison, and are
+\vspace{-4mm}
+\caption{Query execution time for repetitive queries in PostgreSQL
+in the SSB workload. Naive compilation execution times are shown for comparison, and are
 the same as in Figure~\ref{fig:ssb_query_freq}. \compiler\ processes the
 workload in 18.72 seconds.}
 \label{tab:ssb_query_freq}
@@ -194,8 +198,9 @@ outperforms this database, even for running a single query.
 \begin{center}
 \includegraphics[scale=0.3]{../plots/mem_usage}
 \end{center}
-\caption{Memory usage of \compiler's map data structures in the i) VWAP and ii)
-SSB workloads.}
+\vspace{-4mm}
+\caption{Memory usage of \compiler's map data structures in the i)
+VWAP and ii) SSB workloads.}
 \label{fig:memusage}
 \end{figure}
 
