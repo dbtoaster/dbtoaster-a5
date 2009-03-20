@@ -1,6 +1,39 @@
 \section{Conclusions and Future Work}
 
+We have presented \compiler, a SQL compiler that comprehensively shows the
+benefits of creating compiled query executors for main-memory procesing of
+repetitive and standing queries. Our executor is based on the notion of
+processing individual tuples, by combining them with aggregated views defined
+over the remaining parts of the query. The tuple function is also responsible for
+maintaining these aggregate views, and this turns out to be extremely simple and
+cheap in the main memory context given our novel map algebra which can readily
+convert single tuple deltas into simple arithmetic expressions of parameterized
+queries. Our implementation of \compiler\ dominates state of the art database
+systems, including relational databases and stream processing on a variety of
+application scenarios, and is only rivalled in a small set of use cases by a
+compiled query executor implementing a plan in its original operator-centric
+form. In our view, this raises the possibility that such an approach should be
+the de facto processing methodology, as opposed to the plan-based approach in
+future query executors.
 
+We view the topic of query compilation and compiled executors as still in its
+infancy, and hope that \compiler\ is able to raise interest in this domain. 
+As part of ongoing and future work, we plan to investigate the efficiency of
+our generated code and understand its memory behavior. A large part of this
+includes extending to other non-relational operations in SQL, such as top-k,
+and understanding the data structures needed to process tuple functions for
+such operations. Furthermore, we would like to apply tuple function
+compilation and execution in other novel domains where the database
+community is branching out, including scientific databases for executing
+simulations, as well as for probabilistic inference on graphical models, where
+the common theme in both these domains is a graphical representation of 
+computation. Finally the question of getting the right balance of adaptivity
+and compilation, especially in light of the difficulty in managing large-scale
+datbaase systems, remains an open question. We would like to integrate our
+compilation techniques with the emerging techniques for providing self-managing
+databases to address this issue,
+
+\comment{
 \begin{itemize}
 \item
 Programming language theory paper: how to compile SQL to use user-specified
@@ -20,3 +53,4 @@ program that runs robustly and requires no administration. I.e., combine
 our query compilation work with automatic administration ideas, if any of
 this is actually needed.
 \end{itemize}
+}

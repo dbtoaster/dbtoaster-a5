@@ -163,10 +163,9 @@ cancel each other out, or may be merged into a single delta. The tuple function
 returns control to the event loop at this point, ready to process the next
 available delta.
 
-\textbf{Limitations.}
-
 
 \comment{  
+\textbf{Limitations.}
 \begin{itemize}
   \item We profile delta rates on each base relation, and compute internal
   selectivities to determine when to defer updating a map while processing a
@@ -191,6 +190,7 @@ operating on similar sets of input relations are likely to be able to share
 such structures in a similar fashion to multi-query optimization. 
 }
 
+\comment{
 \subsection{Discussion: adaptivity limitations}
 
 \begin{itemize}
@@ -202,3 +202,4 @@ such structures in a similar fashion to multi-query optimization.
   (i.e. of those statistics profiled) covered by a single plan, as the choice of
   plan we decompose.
 \end{itemize}
+}

@@ -1,49 +1,56 @@
 \section{Related Work}
 
-To the best of our knowledge, there has been limited work addressing the
-question of how to compile SQL queries to a low-level imperative language such
-as C. With this in mind, in this section we contrast our query decomposition
+To the best of our knowledge, there has been limited work addressing the question
+of how to compile SQL queries to a low-level imperative language such as C++.
+With this in mind, in this section we contrast our map algebra, query rewriting
 and execution to several more extensively investigated topics, namely view
 maintenance, main-memory databases as well as stream and event processing.
 
 \textbf{View maintenance.}
 View maintenance algorithms are in abundance in the database literature, with
 topics ranging from efficient view maintenance algorithms given base relation
-deltas~\cite{colby-sigmod:96}, which may be eager or lazily
+deltas~\cite{colby-sigmod:96}, which may be eagerly or lazily
 applied~\cite{yan-vldb:95,zhou-vldb:07}, to the question of which views to
 actually materialize and how to use such views during query
-optimization~\cite{kotidis-tods:01,zhou-icde:07}. 
-Palpanas et. al.~\cite{palpanas-vldb:02} consider an extension of view
-maintenance algorithms to handle non-distributive aggregates, using a selective
-recomputation strategy to update only those groups affected by new tuples.
-More pertinent to the main-memory database context,
-Roussopoulos~\cite{roussopoulos-tods:91} presents a pointer-based (also referred
-to as an index) approach to implement views with ViewCache, which incrementally
-maintains views using algorithms derived from relational operations.
-Griffin and Libkin~\cite{griffin-sigmod:95} study the problem of
-incremental view maintenance for relations with duplicates, using a bag algebra
-for equational reasoning about query operators and to derive update rules.
+optimization~\cite{kotidis-tods:01,zhou-icde:07}. Zhou et. al~\cite{zhou-vldb:07}
+describe a lazy view materialization technique, describing their computation of
+deltas starting from a similar point to ours, namely that where a single tuple
+has changed as part of a join tree input. However, their approach does not
+generalize to the same extent as our map algebra, particularly in the case of
+nested aggregations such as the VWAP query seen in this work. Palpanas et.
+al.~\cite{palpanas-vldb:02} consider an extension of view maintenance algorithms
+to handle non-distributive aggregates, using a selective recomputation strategy
+to update only those groups affected by new tuples. More pertinent to the
+main-memory database context, Roussopoulos~\cite{roussopoulos-tods:91} presents a
+pointer-based (also referred to as an index) approach to implement views with
+ViewCache, which incrementally maintains views using algorithms derived from
+relational operations. Griffin and Libkin~\cite{griffin-sigmod:95} study the
+problem of incremental view maintenance for relations with duplicates, using a
+bag algebra for equational reasoning about query operators and to derive update
+rules.
 
-Our map decomposition algorithm differs from the issue of view maintenance, in
-that it computes a set of maps to support incremental maintenance of a query
-result, rather than simply maintaining a single view. In essence, each map
-eagerly maintains the result of any other input subquery to the view. Our
-approach to selecting maps under a memory constraint differs from traditional
-cost models to choose views to materialize, given our top-down approach to
-decomposing queries with maps. Furthermore, given our target application of
-non-interactive queries and a static query workload, we need not maintain base
-relations, unlike standard relational query processors which do so to provide
-ad-hoc query capability at the expense of orders of magnitude performance as seen
-in our experimental section. This obviates the need for any pointer or
-index-based approach to track back to original base relation tuples, unlike
-existing main-memory database systems.
+Our map expression algebra differs from the issue of view maintenance, in that it
+computes a set of maps to support incremental maintenance of a query result,
+rather than simply maintaining a single view.
+\comment{
+Our approach to selecting maps under a memory constraint differs from
+traditional cost models to choose views to materialize, given our top-down approach to
+decomposing queries with maps.}
+Furthermore, given our target application of non-interactive queries and a static
+query workload, we need not maintain base relations, unlike standard relational
+query processors which do so to provide ad-hoc query capability at the expense of
+orders of magnitude performance as seen in our experimental section. This
+obviates the need for any pointer or index-based approach to track back to
+original base relation tuples, unlike existing main-memory database systems. Most
+critically, the notion of compiling these view maintenance algorithms is clearly
+a simple and effective technique for generating query executors for unmatched
+performance.
 
+\comment{
 \begin{itemize}
   \item Asymmetric increment techniques \cite{yang-icde:05}.
   \item Group-by optimizations \cite{yan-icde:94}.
 \end{itemize}
-
-\comment{
 \noindent \textbf{DataCubes}
 \begin{itemize}
   \item Classical literature \cite{gray-icde:96,mumick-sigmod:97}.
@@ -51,85 +58,95 @@ existing main-memory database systems.
 \end{itemize}
 }
 
-\noindent \textbf{Main memory databases.}
-Several high performance database engines are proponents of a purely main-memory
-backed database engine, and indeed this topic is gathering recent
-attention~\cite{kallman-pvldb:08,raman-icde:08} as main memories continue to
-exhibit year-on-year growth and are reaching sizes significant enough to support
-an increasing number of applications. We discuss three recent main-memory
-databases here, noting that prior work often focused on reducing the bottleneck
-effect of a variety of I/O tasks including recovery tasks such as
-checkpointing, as well as logging and locking structures
-\cite{bohannon-vldb:98,bohannon-sigmod:99}.
-
-Boncz et. al.~\cite{boncz-cidr:05} present the MonetDB/X100 database engine, a
-high-performance column-oriented database, that leverages techniques
-such as vectorized processing and loop pipelining on chunks of columns while
-evaluating operators in query plans.
-Kallman et. al.~\cite{kallman-pvldb:08} describe H-Store, a shared-nothing
-distributed main memory database to provide high throughput processing on OLTP
-workloads. H-Store achieves its performance through horizontal partitioning of
-relations and careful deployment of said partitions, as well as exploiting
-various properties of transactions in input OLTP workloads.
-Raman et. al.~\cite{raman-icde:08} describe Blink, a row-oriented main memory
-query processor that extensively uses compression on denormalized relations, and
-applies aggregates while scanning these relations as its main query processing
-functionality.
-
-TODO: contrast our work to the above -- generally we are not implementing at
-such a low-level yet, e.g. analysis of the cache behavior is a topic for future
-work.
-
 \noindent \textbf{Stream and event processing.}
-Our work draws a handful of similarities to complex event and stream processing
-engines~\cite{wu-sigmod:06,agrawal-sigmod:08,white-pods:07,motwani-cidr:03,abadi-vldbj:03}.
-SASE+~\cite{agrawal-sigmod:08} and Cayuga~\cite{white-pods:07} are complex
-event processors that focus on sequence and pattern query processing on event
-streams using NFA-based approaches to process a variety of patterns including
-Kleene closures and negation operators.
-Relational stream processing engines such as STREAM~\cite{motwani-cidr:03} and
-Aurora~\cite{abadi-vldbj:03} investigate continuous query processing
-architectures that are capable of evaluating stream-equivalent versions of
-the standard relation algebra. Other language extensions include temporal
-constructs such as windows, while from the systems perspective, several novel
-techniques were developed to address the low-latency, high-throughput
-requirements of stream applications, including scheduling, load shedding, and
-other approximate query processing techniques.
+Our work can loosely be compared to complex event and stream processing
+engines~\cite{wu-sigmod:06,agrawal-sigmod:08,white-pods:07,motwani-cidr:03,abadi-vldbj:03}
+due to the common goal of handling frequently changing data.
+SASE+~\cite{agrawal-sigmod:08} and Cayuga~\cite{white-pods:07} are complex event
+processors that focus on sequence and pattern query processing on event streams
+using NFA-based approaches to process a variety of patterns including Kleene
+closures and negation operators. Relational stream processing engines such as
+STREAM~\cite{motwani-cidr:03} and Aurora~\cite{abadi-vldbj:03} investigate
+continuous query processing architectures that are capable of evaluating
+stream-equivalent versions of the standard relation algebra. From the systems
+perspective, several novel techniques were developed to address the low-latency,
+high-throughput needs of stream applications, including scheduling, load
+shedding, and approximate query processing.
 
-TODO: contrast our work to the above -- we avoid the need for windows or
-punctuations by making adopting an insert/delete/update stream model, and
-assuming that the base relations always fit in memory (i.e. \#deletes/updates is
-proportional to \#inserts). Stream processors still evaluate an operator-centric
-query plan, hence they cannot exploit compiler optimizations on a query
-processing kernel function. They also do not deal with maintaining precomputed
-partial results as we do with our map decompositions. What can we say about
-complex event processors and the NFAs they evaluate?
+Many of these systems are simultaneously addressing the issue of efficiency and
+the semantic requirements of their target applications, naturally exploiting
+application properties to attain performance. In contrast, our approach is not to
+reinvent the wheel in terms of data and query models -- we focus on standard
+relational algebra, and an intuitive extension via snapshots and temporal logic,
+and purely take on the challenge of designing query executors to best suit a
+main-memory environment, arguing for an alternative to plan-based execution.
+
+\comment{
+ TODO:
+contrast our work to the above -- we avoid the need for windows or punctuations
+by making adopting an insert/delete/update stream model, and assuming that the
+base relations always fit in memory (i.e. \#deletes/updates is proportional to
+\#inserts). Stream processors still evaluate an operator-centric query plan,
+hence they cannot exploit compiler optimizations on a query processing kernel
+function. They also do not deal with maintaining precomputed partial results as
+we do with our map decompositions. What can we say about complex event processors
+and the NFAs they evaluate?
 
 
 \begin{itemize}
   \item STRIP: rule-based maintenance of derived data, with finance app example \cite{adelberg-sigmod:97}
 \end{itemize}
+}
+
 
 \noindent \textbf{Compiling high-level languages for embedded systems.}
-There has been a limited number of studies on compiling high-level languages
-into a low-level imperative target language, and these studies often involve
-leveraging high-level languages as a programming abstraction for embedded
-systems.
+The embedded systems community has partially studied on compiling high-level
+languages into a low-level imperative target language.
 Newton et. al.~\cite{newton-lctes:08} present WaveScript, a scripting language
-for processing windows, or segments, of a data stream, and describe a compiler
-to construct stream dataflow graphs that are capable of running on XScale
-CPUs from said scripts. WaveScript is a functional scripting language,
-including core primitives to transform streams such as an iterator abstraction
-over streams, and a merge function to combine streams. WaveScript programs are
-transformed into dataflow graphs, which may in turn be manipulated by algebraic
-rewrite rules, similar to a query optimizer.
+for processing windows, or segments, of a data stream, and describe a compiler to
+construct stream dataflow graphs that are capable of running on XScale CPUs.
+WaveScript programs are transformed into dataflow graphs, which may in turn be
+manipulated by algebraic rewrite rules, similar to a query optimizer. However,
+WaveScope does not address relational queries.
 Toman and Weddell~\cite{toman-dbtel:01} describe the DEMO system which compiles
 SQL queries into Java or C code, implementing query plans as navigational plans
 that utilize pointer access in place of scans and indexing, and supporting query
 functionality over existing data structures for an embedded program. The authors
-assume their compiler is provided with integrity constraints to describe the
-relationship between schemas and the physical data structures used by an embedded
-program, using these integrity constraints to generate navigational plans through
-the use of binding patterns and query expansion to generate conjunctive
-queries. Code generation then proceeds by using binding patterns to generate
-iterators, which can be used to produce C code in a straightforward manner.
+use integrity constraints in their compiler to describe the relationship between
+schemas and the physical data structures used by an embedded program, and in turn
+generate navigational plans and iterators, which can be used to produce C code in
+a straightforward manner. DEMO has taken a theoretical approach to describe
+their compilation, and does not consider systems issues nor have they released
+a prototype and provided an effective tool to perform compilation.
+
+
+\noindent \textbf{Main memory databases.}
+Early work on main-memory databases studied how to reduce the bottleneck effect
+of a variety of I/O tasks including recovery tasks such as checkpointing, as well
+as logging and locking structures \cite{bohannon-vldb:98,bohannon-sigmod:99}.
+There have been several recent efforts on this topic given the developments in
+main memory.
+
+Boncz et. al.~\cite{boncz-cidr:05} present the MonetDB/X100 database engine, a
+high-performance column-oriented database, that leverages techniques such as
+vectorized processing and loop pipelining on chunks of columns while evaluating
+operators in query plans. Kallman et. al.~\cite{kallman-pvldb:08} describe
+H-Store, a shared-nothing distributed main memory database to provide high
+throughput processing on OLTP workloads. H-Store achieves its performance through
+careful deployment of horizontally partitioning of relations, and localizing OLTP
+transactions to partitions. Raman et. al.~\cite{raman-icde:08} describe Blink, a
+row-oriented main memory query processor that extensively uses compression on
+denormalized relations, and applies aggregates while scanning these relations as
+its main query processing functionality.
+
+These systems span a wide variety of use cases and focus at rearchitecting at a
+lower-level than the our approach. For now we have looked at applying a semantic
+redesign to describe queries as tuple functions, and reuse much of the work from
+the compiler community to provide efficient tuple function execution. Having
+applied this first phase to building our runtime, we can now proceed to the
+systems level aspects of our tuple functions, for example investigating cache
+performance in much greater depth, and in particular understand which of the
+above techniques and optimizations can be applied in our context, as well as
+leveraging approaches from both the compiler and programming languages
+communities in providing compiled query executors.
+
