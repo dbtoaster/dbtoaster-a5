@@ -13,7 +13,7 @@ that simulates a toll-charging system on a highway, and lastly an end-to-end
 warehouse loading and analysis based on generating a star schema from a TPC-H
 dataset and computing aggregations on the star schema.
 
-\begin{figure}[htb]
+\begin{figure}[tb]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/vwap_query_freq_dn}
 \end{center}
@@ -67,7 +67,7 @@ transformed TPC-H dataset. Note this all occurs in one single query compiled dow
 with \compiler.
 
 
-\begin{figure}[htb]
+\begin{figure}[tb]
 \begin{center}
 \includegraphics[scale=0.25]{../plots/ssb_query_freq_dn}
 \end{center}
@@ -113,7 +113,7 @@ aggregated historical data.
 
 
 
-\begin{figure}
+\begin{figure}[htb]
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
@@ -136,7 +136,7 @@ workload in 1414.8 seconds.}
 \label{tab:ssb_query_freq}
 \end{figure}
 
-\begin{figure}
+\begin{figure}[htb]
 \begin{center}
 \begin{tabular}{|l|l|l|}
 \hline
@@ -194,7 +194,7 @@ the result for PostgreSQL, and again we witness that \compiler\ completely
 outperforms this database, even for running a single query. 
 
 
-\begin{figure}[htbp]
+\begin{figure}[tb]
 \begin{center}
 \includegraphics[scale=0.3]{../plots/mem_usage}
 \end{center}
