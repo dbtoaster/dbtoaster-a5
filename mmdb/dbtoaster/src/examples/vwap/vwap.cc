@@ -6733,6 +6733,9 @@ int main(int argc, char* argv[])
 		vwap_matviews(matviews_file_name, directory, query_freq, copy_freq, &f, out, log);
 	}
 
+	else if ( app_mode == "triggers" )
+		vwap_triggers(directory, query_freq, &f, out, log);
+
 	else {
 		bool single_shot = true;
 		vwap_snapshot(&f, out, log, query_freq, single_shot);
