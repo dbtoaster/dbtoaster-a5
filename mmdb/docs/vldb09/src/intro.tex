@@ -85,7 +85,8 @@ Unlike stream processing scenarios \cite{abadi-vldbj:03,motwani-cidr:03}, order
 books do not grow unboundedly in practice, but cannot be expressed by windows
 given their arbitrary inserts, updates and deletes. Thus in \compiler, we process
 continuous queries over temporal snapshots of relations via delta processing.
-Providing such aggregate views allows algos to run sophisticated trading
+Providing such aggregate views allows {\em algos}\/
+to run sophisticated trading
 strategies.
 \comment{
 However in the order book scenario, neither time-, row- or punctuation-based
@@ -192,7 +193,7 @@ Loading large data warehouses is a computationally costly process, which
 causes most data warehouse loading to be performed offline.
 While commercial warehouse loaders use specialized efficient code for 
 aggregation, incoming data is often the result of data integration
-queries that are costly and inefficient, and with may blow up data sizes
+queries that are costly and inefficient, and which may blow up data sizes
 in such a way that loading remains inefficient.
 Compiling data integration and aggregation queries together may yield efficient
 code for loading the warehouse which may avoid the materialization of large
@@ -225,7 +226,7 @@ modern C compilers to yield an efficient native binary for query execution.
 Given the inherent streaming nature of the applications we consider, the maps we
 maintain during query execution incur a different footprint compared to both
 main-memory databases and stream processing engines, since in many cases we need
-not keep around base relations, but on the other hand are maintaining precomputed
+not keep around base relations, but instead maintain precomputed
 views.
 
 \comment{
@@ -240,7 +241,7 @@ query execution through parameterized compilation.
 
 
 As we  show, our techniques are several orders of  magnitude   faster  than
-state-of-the-art   database  and significantly outperform stream processing
+the state of the art,  and significantly outperform stream processing
 engines on such workloads.  In the case of queries on limit order  book  data  as
  required for  supporting  algorithmic  equities trading, our approach currently
 stands alone in its ability to support realistic  data rates  on contemporary
@@ -257,7 +258,8 @@ techniques.
 We summarize our contributions as follows:
 
 \begin{enumerate}
-  \item We present a novel SQL compiler that produces C++ code containing
+  \item We present a novel compiler for SQL aggregate queries
+  that produces C++ code containing
   straight-line functions for processing tuple inserts, deletes and updates
   along a path through the query plan. Modern C++ compilers can aggressively
   optimize this function allowing our query executor to eliminate significant
@@ -266,7 +268,7 @@ We summarize our contributions as follows:
   tuple-processing functions, where map expressions can contain parameterized
   aggregates. The map algebra can easily represent operations on in-memory
   hashtables that are directly used to implement SQL group-by aggregations in
-  main-memory\\databases. Through our map algebra, we present a compilation
+  main-memory data\-ba\-ses. Through our map algebra, we present a compilation
   algorithm that applies rewrites to map algebra expressions, leaving them in a
   form that contains no relational operations, allowing for straightforward
   generation of procedural code.

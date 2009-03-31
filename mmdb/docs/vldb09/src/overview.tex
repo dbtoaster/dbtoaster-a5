@@ -1,7 +1,7 @@
 \section{System Overview}
 In this section, we describe the application and system model behind \compiler\
 to provide an understanding of where, and how, it may be deployed. We envision
-DBToaster being packaged side-by-side with existing relational databases to
+DBToaster being packaged side-by-side with existing relational data\-ba\-ses to
 provide a complete data management solution that is both capable of processing
 repeated or standing queries extremely efficiently through \compiler, and
 processing unseen queries through existing query engines. 
@@ -10,8 +10,8 @@ processing unseen queries through existing query engines.
 \compiler\ is capable of compiling a wide variety of SQL queries including those
 containing selections, projections, joins, and group-by aggregates. \compiler\
 takes a query workload as input, as well as the data definition statements of any
-tables used in the queries to determine the contents of internal datastructures,
-and produces a native binary for processing the query workload over inserts,
+tables used in the queries to determine the contents of internal datastructures.
+\compiler\ produces a native binary for processing the query workload over inserts,
 deletes and updates on the input tables. \compiler\ focuses on applications faced
 with handling a large input volume, but does not rely on artificial restrictions
 of these new inputs, unlike stream processing engines, which rely on semantic
@@ -75,7 +75,7 @@ where possible.
 Returning to the issue of scalability, any cluster-based deployment of \compiler\
 will need to adapt to changing workload conditions and apply load management
 techniques to efficiently use available resources and provide high performance
-query processing. Given \compiler\ executes native binaries, rather than relying
+query processing. Since \compiler\ executes native binaries, rather than relying
 on dynamic library interfaces such as \texttt{dlopen()} which suffer from binary
 incompatibilities, our architecture uses a persistent lightweight distributed
 runtime incorporating a just-in-time (JIT) compiler. By building on top of JIT
@@ -84,8 +84,8 @@ at runtime at the logical, query, layer rather than in terms of binaries. We pla
 on using the Low-Level Virtual Machine (LLVM) compilation framework as a JIT code
 generator, ultimately having \compiler\ generate LLVM's intermediate
 representation for subsequent native code generation. However, as an initial
-step, we produce C++ code which can then be processed by the C++ frontend for
-LLVM.
+step, we produce C++ code which can then be processed by a C++ frontend for
+LLVM (currently g++).
 
 With the ability to migrate compiled queries, \compiler\ can begin to address
 resource management challenges, solving a resource optimization problem based on
