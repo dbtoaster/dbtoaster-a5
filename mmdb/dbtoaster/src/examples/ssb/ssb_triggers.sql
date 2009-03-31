@@ -84,7 +84,7 @@ RETURNS TRIGGER AS $maintain_ssb_date_orders$
 		IF (TG_OP = 'INSERT') THEN
 			SELECT COUNT(*) INTO date_count FROM ssb_date WHERE datekey = NEW.orderdate;
 			IF (date_count = 0) THEN
-				INSERT INTO ssb_date VALUES(NEW.orderdate, extract(year from orderdate);
+				INSERT INTO ssb_date VALUES(NEW.orderdate, extract(year from orderdate));
 			END IF;
 
 		ELSIF (TG_OP = 'DELETE') THEN
@@ -219,6 +219,7 @@ RETURNS TRIGGER AS $maintain_ssb_totalprices_lineitem$
 					SET totalprice = totalprice -
 						(OLD.extendedprice*(100-OLD.discount)*(100+OLD.tax))/100
 					WHERE orderkey = OLD.orderkey;
+			END IF;
 		END IF;
 		RETURN NULL;
 	END;
