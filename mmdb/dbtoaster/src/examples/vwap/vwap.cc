@@ -331,6 +331,439 @@ struct file_stream : public stream
 	}
 };
 
+
+///////////////////////////////////////
+//
+// Bulk loading and dispatch helper
+
+struct vwap_query_dispatcher
+{
+	virtual void init() {}
+	virtual void query() {}
+	virtual void final() {}
+};
+
+void write_bulk_file(ofstream* bids_file, ofstream* asks_file,
+	list< tuple<int, int, double, double> >& pending_bids,
+	list< tuple<int, int, double, double> >& pending_asks)
+{
+	list< tuple<int, int, double, double> >::iterator pb_it = pending_bids.begin();
+	list< tuple<int, int, double, double> >::iterator pb_end = pending_bids.end();
+
+	for (; pb_it != pb_end; ++pb_it) {
+		(*bids_file) << get<0>(*pb_it) << "," << get<1>(*pb_it) << ","
+			<< get<2>(*pb_it) << "," << get<3>(*pb_it) << endl;
+	}
+
+	pb_it = pending_asks.begin();
+	pb_end = pending_asks.end();
+
+	for (; pb_it != pb_end; ++pb_it) {
+		(*asks_file) << get<0>(*pb_it) << "," << get<1>(*pb_it) << ","
+			<< get<2>(*pb_it) << "," << get<3>(*pb_it) << endl;
+	}
+}
+
+void vwap_bulk(string query_type, string directory,
+	long query_freq, long copy_freq,
+	stream* s, vwap_query_dispatcher* d,
+	ofstream* results, ofstream* log, bool dump = false)
+{
+	// Set up staging files for bulk insertion
+	string bids_file_name = directory+"/copy_bids";
+	string asks_file_name = directory+"/copy_asks";
+
+	ofstream* bids_file = new ofstream(bids_file_name.c_str());
+	ofstream* asks_file = new ofstream(asks_file_name.c_str());
+
+	string bids_copy_stmt =
+		"copy bids (ts, id, price, volume) from '" +
+		bids_file_name + "' with delimiter ','";
+
+	string asks_copy_stmt =
+		"copy asks (ts, id, price, volume) from '" +
+		asks_file_name + "' with delimiter ','";
+
+	cout << "Bids copy: " << bids_copy_stmt << endl;
+	cout << "Asks copy: " << asks_copy_stmt << endl;
+
+	// Exchange message data structures
+	order_book bids;
+	order_book asks;
+
+	DBT_HASH_SET<int> pending_bid_ids;
+	DBT_HASH_SET<int> pending_ask_ids;
+	typedef list< tuple<int, int, double, double> > pending_bids;
+	typedef list< tuple<int, int, double, double> > pending_asks;
+	pending_bids p_bids;
+	pending_asks p_asks;
+
+	exec sql connect to orderbook;
+
+	exec sql set autocommit to on;
+
+	exec sql begin declare section;
+	int order_id;
+	double ts, v, p, new_volume;
+
+	#ifdef BULK_COPY
+	const char* bids_copy_str = bids_copy_stmt.c_str();
+	const char* asks_copy_str = asks_copy_stmt.c_str();
+	#endif
+	exec sql end declare section;
+
+	long tuple_counter = 0;
+
+	cout << "VWAP bulk using query frequency " << query_freq << endl;
+
+	d->init();
+
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	while ( s->stream_has_inputs() )
+	{
+		stream_tuple in = s->next_input();
+
+		ts = get<0>(in);
+		order_id = get<1>(in);
+		string action = get<2>(in);
+		v = get<3>(in);
+		p = get<4>(in);
+
+		#ifdef DEBUG
+		cout << "Tuple: order " << order_id << ", " << action
+			<< " t=" << get<0>(in) << " p=" << get<4>(in)
+			<< " v=" << get<3>(in) << endl;
+		#endif
+
+		if (action == "B") {
+			// Insert bids
+			bids[order_id] = make_tuple(ts, p, v);
+
+			p_bids.push_back(make_tuple(ts, order_id, p, v));
+			pending_bid_ids.insert(order_id);
+
+		}
+
+		else if (action == "S") {
+			// Insert asks
+			asks[order_id] = make_tuple(ts, p, v);
+
+			p_asks.push_back(make_tuple(ts, order_id, p, v));
+			pending_ask_ids.insert(order_id);
+
+		}
+
+		else if (action == "E")
+		{
+			// Partial execution based from order book according to order id.
+
+			// Note, we process these updates by attempting to apply them to
+			// pending entries first, otherwise we force through to database.
+			// This reorders updates to execute before any pending (independent)
+			// insertions, and will result in different query outputs for now...
+
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() )
+			{
+				double order_ts = get<0>(found->second);
+				double order_p = get<1>(found->second);
+				double order_v = get<2>(found->second);
+				new_volume = order_v - v;
+
+				bids[order_id] = make_tuple(order_ts, order_p, new_volume);
+
+				DBT_HASH_SET<int>::iterator pending_bid_id_found =
+					pending_bid_ids.find(order_id);
+
+				if ( pending_bid_id_found != pending_bid_ids.end() )
+				{
+					tuple<int, int, double, double> old_entry =
+						make_tuple(order_ts, order_id, order_p, order_v);
+
+					tuple<int, int, double, double> new_entry =
+						make_tuple(order_ts, order_id, order_p, new_volume);
+
+					pending_bids::iterator p_bid_found =
+						find(p_bids.begin(), p_bids.end(), old_entry);
+
+					assert ( p_bid_found != p_bids.end() );
+
+					pending_bids::iterator next = p_bids.erase(p_bid_found);
+					p_bids.insert(next, new_entry);
+				}
+				else
+				{
+					exec sql update bids set volume = :new_volume where id = :order_id;
+				}
+
+			}
+			else
+			{
+				found = asks.find(order_id);
+				if ( found != asks.end() )
+				{
+					double order_ts = get<0>(found->second);
+					double order_p = get<1>(found->second);
+					double order_v = get<2>(found->second);
+					new_volume = order_v - v;
+
+					asks[order_id] = make_tuple(order_ts, order_p, new_volume);
+
+					DBT_HASH_SET<int>::iterator pending_ask_id_found =
+						pending_ask_ids.find(order_id);
+					if ( pending_ask_id_found != pending_ask_ids.end() )
+					{
+						tuple<int, int, double, double> old_entry =
+							make_tuple(order_ts, order_id, order_p, order_v);
+
+						tuple<int, int, double, double> new_entry =
+							make_tuple(order_ts, order_id, order_p, new_volume);
+
+						pending_asks::iterator p_ask_found =
+							find(p_asks.begin(), p_asks.end(), old_entry);
+
+						assert ( p_ask_found != p_asks.end() );
+
+						pending_asks::iterator next = p_asks.erase(p_ask_found);
+						p_asks.insert(next, new_entry);
+					}
+					else
+					{
+						exec sql update asks set volume = :new_volume where id = :order_id;
+					}
+				}
+				else
+					cerr << "Unmatched order execution " << order_id << endl;
+			}
+		}
+
+		else if (action == "F")
+		{
+			// Order executed in full
+
+			// Note, we process these deletions by attempting to apply them to
+			// pending entries first, otherwise we force through to database.
+			// This reorders deletions to execute before any pending (independent)
+			// insertions, and will result in different query outputs for now...
+
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() )
+			{
+				double order_ts = get<0>(found->second);
+				double order_p = get<1>(found->second);
+				double order_v = get<2>(found->second);
+
+				DBT_HASH_SET<int>::iterator pending_bid_id_found =
+					pending_bid_ids.find(order_id);
+
+				if ( pending_bid_id_found != pending_bid_ids.end() )
+				{
+					tuple<int, int, double, double> old_entry =
+						make_tuple(order_ts, order_id, order_p, order_v);
+
+					pending_bids::iterator p_bid_found =
+						find(p_bids.begin(), p_bids.end(), old_entry);
+
+					assert ( p_bid_found != p_bids.end() );
+
+					p_bids.erase(p_bid_found);
+					pending_bid_ids.erase(order_id);
+				}
+				else
+				{
+					exec sql delete from bids where id = :order_id;
+				}
+
+				bids.erase(found);
+
+				// TODO: should we remove volume from the top of the asks book?
+			}
+			else {
+				found = asks.find(order_id);
+				if ( found != asks.end() )
+				{
+					double order_ts = get<0>(found->second);
+					double order_p = get<1>(found->second);
+					double order_v = get<2>(found->second);
+
+					DBT_HASH_SET<int>::iterator pending_ask_id_found =
+						pending_ask_ids.find(order_id);
+					if ( pending_ask_id_found != pending_ask_ids.end() )
+					{
+						tuple<int, int, double, double> old_entry =
+							make_tuple(order_ts, order_id, order_p, order_v);
+
+						pending_asks::iterator p_ask_found =
+							find(p_asks.begin(), p_asks.end(), old_entry);
+
+						assert ( p_ask_found != p_asks.end() );
+
+						p_asks.erase(p_ask_found);
+						pending_ask_ids.erase(order_id);
+					}
+					else
+					{
+						exec sql delete from asks where id = :order_id;
+					}
+
+					asks.erase(found);
+
+					// TODO: should we remove volume from the top of the asks book?
+				}
+			}
+
+		}
+
+		else if (action == "D")
+		{
+			// Delete from relevant order book.
+
+			// Note, we process these deletions by attempting to apply them to
+			// pending entries first, otherwise we force through to database.
+			// This reorders deletions to execute before any pending (independent)
+			// insertions, and will result in different query outputs for now...
+
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() )
+			{
+				double order_ts = get<0>(found->second);
+				double order_p = get<1>(found->second);
+				double order_v = get<2>(found->second);
+
+				DBT_HASH_SET<int>::iterator pending_bid_id_found =
+					pending_bid_ids.find(order_id);
+
+				if ( pending_bid_id_found != pending_bid_ids.end() )
+				{
+					tuple<int, int, double, double> old_entry =
+						make_tuple(order_ts, order_id, order_p, order_v);
+
+					pending_bids::iterator p_bid_found =
+						find(p_bids.begin(), p_bids.end(), old_entry);
+
+					assert ( p_bid_found != p_bids.end() );
+
+					p_bids.erase(p_bid_found);
+					pending_bid_ids.erase(order_id);
+				}
+				else
+				{
+					exec sql delete from bids where id = :order_id;
+				}
+
+				bids.erase(found);
+			}
+
+			else
+			{
+				found = asks.find(order_id);
+				if ( found != asks.end() )
+				{
+
+					double order_ts = get<0>(found->second);
+					double order_p = get<1>(found->second);
+					double order_v = get<2>(found->second);
+
+					DBT_HASH_SET<int>::iterator pending_ask_id_found =
+						pending_ask_ids.find(order_id);
+
+					if ( pending_ask_id_found != pending_ask_ids.end() )
+					{
+						tuple<int, int, double, double> old_entry =
+							make_tuple(order_ts, order_id, order_p, order_v);
+
+						pending_asks::iterator p_ask_found =
+							find(p_asks.begin(), p_asks.end(), old_entry);
+
+						assert ( p_ask_found != p_asks.end() );
+
+						p_asks.erase(p_ask_found);
+						pending_ask_ids.erase(order_id);
+					}
+					else
+					{
+						exec sql delete from asks where id = :order_id;
+					}
+
+					asks.erase(found);
+				}
+				else
+					cerr << "Unmatched order deletion " << order_id << endl;
+			}
+		}
+
+		/*
+		else if (action == "X") {
+			// Ignore X for now.
+		}
+		else if (action == "C") {
+			// Unclear for now...
+		}
+		else if (action == "T") {
+			// Unclear for now...
+		}
+		*/
+
+		++tuple_counter;
+		if ( (tuple_counter % 10000) == 0 )
+		{
+			cout << "Processed " << tuple_counter << " tuples." << endl;
+		}
+
+		if ( (tuple_counter % copy_freq) == 0 )
+		{
+			// Write out bulk files.
+			write_bulk_file(bids_file, asks_file, p_bids, p_asks);
+			p_bids.clear(); p_asks.clear();
+			pending_bid_ids.clear(); pending_ask_ids.clear();
+
+			// Clean up update files.
+			bids_file->flush(); bids_file->close(); delete bids_file;
+			asks_file->flush(); asks_file->close(); delete asks_file;
+
+			// Copy bids and asks updates to postgres.
+			exec sql execute immediate :bids_copy_str;
+			exec sql execute immediate :asks_copy_str;
+
+			// Open up new files for the next update.
+			bids_file = new ofstream(bids_file_name.c_str(), ios::trunc);
+			asks_file = new ofstream(asks_file_name.c_str(), ios::trunc);
+		}
+
+		if ( (tuple_counter % query_freq) == 0 )
+			d->query();
+	}
+
+	// Write out bulk files.
+	write_bulk_file(bids_file, asks_file, p_bids, p_asks);
+	p_bids.clear(); p_asks.clear();
+	pending_bid_ids.clear(); pending_ask_ids.clear();
+
+	// Do final query
+	bids_file->flush(); bids_file->close(); delete bids_file;
+	asks_file->flush(); asks_file->close(); delete asks_file;
+
+	exec sql execute immediate :bids_copy_str;
+	exec sql execute immediate :asks_copy_str;
+
+	d->final();
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		query_type.c_str(), log);
+
+	exec sql set autocommit = off;
+	exec sql disconnect;
+}
+
+///////////////////////////////////////////
+//
+// ECPG
+
 tuple<bool, double> ecpg_query(ofstream* log)
 {
 	struct timeval tvs, tve;
@@ -362,26 +795,30 @@ tuple<bool, double> ecpg_query(ofstream* log)
 	return make_tuple(vwap_ind == 0, vwap);
 }
 
-void write_bulk_file(ofstream* bids_file, ofstream* asks_file,
-	list< tuple<int, int, double, double> >& pending_bids,
-	list< tuple<int, int, double, double> >& pending_asks)
+struct vwap_ecpg_dispatcher : vwap_query_dispatcher
 {
-	list< tuple<int, int, double, double> >::iterator pb_it = pending_bids.begin();
-	list< tuple<int, int, double, double> >::iterator pb_end = pending_bids.end();
+	ofstream* log;
+	ofstream* results;
 
-	for (; pb_it != pb_end; ++pb_it) {
-		(*bids_file) << get<0>(*pb_it) << "," << get<1>(*pb_it) << ","
-			<< get<2>(*pb_it) << "," << get<3>(*pb_it) << endl;
+	vwap_ecpg_dispatcher(ofstream* l, ofstream* r)
+		: log(l), results(r)
+	{}
+
+	void init() {}
+
+	void query() {
+		// Do query
+		tuple<bool, double> valid_result = ecpg_query(log);
+		if ( get<0>(valid_result) )
+			(*results) << get<1>(valid_result) << endl;
 	}
 
-	pb_it = pending_asks.begin();
-	pb_end = pending_asks.end();
-
-	for (; pb_it != pb_end; ++pb_it) {
-		(*asks_file) << get<0>(*pb_it) << "," << get<1>(*pb_it) << ","
-			<< get<2>(*pb_it) << "," << get<3>(*pb_it) << endl;
+	void final() {
+		tuple<bool, double> valid_result = ecpg_query(log);
+		if ( get<0>(valid_result) )
+			(*results) << get<1>(valid_result) << endl;
 	}
-}
+};
 
 void vwap_snapshot_ecpg(string directory, long query_freq,
 	stream* s, ofstream* results, ofstream* log, bool dump = false)
@@ -476,7 +913,8 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 			#endif
 		}
 
-		else if (action == "E") {
+		else if (action == "E")
+		{
 			// Partial execution based from order book according to order id.
 			order_book::iterator found = bids.find(order_id);
 			if ( found != bids.end() ) {
@@ -517,7 +955,8 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 
 				// TODO: should we remove volume from the top of the asks book?
 			}
-			else {
+			else
+			{
 				found = asks.find(order_id);
 				if ( found != asks.end() ) {
 					double order_ts = get<0>(found->second);
@@ -639,7 +1078,8 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 			}
 		}
 
-		else if (action == "D") {
+		else if (action == "D")
+		{
 			// Delete from relevant order book.
 			order_book::iterator found = bids.find(order_id);
 			if ( found != bids.end() )
@@ -743,6 +1183,7 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 			// Write out bulk files.
 			write_bulk_file(bids_file, asks_file, p_bids, p_asks);
 			p_bids.clear(); p_asks.clear();
+			pending_bid_ids.clear(); pending_ask_ids.clear();
 
 			// Clean up update files.
 			bids_file->flush(); bids_file->close(); delete bids_file;
@@ -770,6 +1211,7 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 	// Write out bulk files.
 	write_bulk_file(bids_file, asks_file, p_bids, p_asks);
 	p_bids.clear(); p_asks.clear();
+	pending_bid_ids.clear(); pending_ask_ids.clear();
 
 	// Do final query
 	bids_file->flush(); bids_file->close(); delete bids_file;
@@ -792,6 +1234,289 @@ void vwap_snapshot_ecpg(string directory, long query_freq,
 	exec sql disconnect;
 }
 
+
+/////////////////////////////////////////////
+//
+// Materialized views
+
+void set_up_matviews_and_triggers(string sql_file, ofstream* log)
+{
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	ifstream sqlf(sql_file.c_str());
+
+	if ( !sqlf.good() ) {
+		cerr << "Failed to open sql cmds file " << sql_file << endl;
+		return;
+	}
+
+	string cmds;
+
+	while ( sqlf.good() ) {
+		char buf[256];
+		sqlf.getline(buf, sizeof(buf));
+
+		string cmd(buf);
+		cmds += (cmds.empty()? "" : "\n") + cmd;
+	}
+
+	cout << "Executing script " << cmds << endl;
+
+	exec sql begin declare section;
+	const char* cmds_str = cmds.c_str();
+	exec sql end declare section;
+
+	exec sql execute immediate :cmds_str;
+
+	gettimeofday(&tve, NULL);
+
+	print_result(
+		tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"VWAP matview setup", log, false);
+}
+
+tuple<bool, double> matview_query(ofstream* log)
+{
+	struct timeval tvs, tve;
+
+	exec sql begin declare section;
+	double vwap;
+	int vwap_ind;
+	exec sql end declare section;
+
+	exec sql begin transaction;
+
+	gettimeofday(&tvs, NULL);
+
+	exec sql select avg(price*volume) into :vwap :vwap_ind from vwap;
+
+	exec sql commit;
+
+	gettimeofday(&tve, NULL);
+
+	print_result(
+		tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"VWAP matview iter", log);
+
+	return make_tuple(vwap_ind == 0, vwap);
+}
+
+struct vwap_matview_dispatcher : vwap_query_dispatcher
+{
+	string sql_file;
+	ofstream* log;
+	ofstream* results;
+
+	vwap_matview_dispatcher(string sf, ofstream* l, ofstream* r)
+		: sql_file(sf), log(l), results(r)
+	{}
+
+	void init() {
+		set_up_matviews_and_triggers(sql_file, log);
+	}
+
+	void query() {
+		tuple<bool, double> valid_result = matview_query(log);
+		if ( get<0>(valid_result) )
+			(*results) << get<1>(valid_result) << endl;
+	}
+
+	void final() {
+		tuple<bool, double> valid_result = matview_query(log);
+		if ( get<0>(valid_result) )
+			(*results) << get<1>(valid_result) << endl;
+	}
+};
+
+void vwap_matviews(string setup_cmds_file, string directory,
+	long query_freq, long copy_freq,
+	stream* s, ofstream* results, ofstream* log, bool dump = false)
+{
+	vwap_matview_dispatcher d(setup_cmds_file, log, results);
+
+	string query_type = "VWAP matview";
+	vwap_bulk(query_type, directory, query_freq, copy_freq, s, &d, results, log, dump);
+}
+
+void vwap_triggers(string directory, long query_freq,
+	stream* s, ofstream* results, ofstream* log, bool dump = false)
+{
+	order_book bids;
+	order_book asks;
+
+	exec sql connect to orderbook;
+
+	exec sql set autocommit to on;
+
+	exec sql begin declare section;
+	int order_id;
+	double ts, v, p, new_volume;
+	exec sql end declare section;
+
+	long tuple_counter = 0;
+
+	cout << "VWAP triggers using query frequency " << query_freq << endl;
+
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	while ( s->stream_has_inputs() )
+	{
+		stream_tuple in = s->next_input();
+
+		ts = get<0>(in);
+		order_id = get<1>(in);
+		string action = get<2>(in);
+		v = get<3>(in);
+		p = get<4>(in);
+
+		#ifdef DEBUG
+		cout << "Tuple: order " << order_id << ", " << action
+			<< " t=" << get<0>(in) << " p=" << get<4>(in)
+			<< " v=" << get<3>(in) << endl;
+		#endif
+
+		if (action == "B") {
+			// Insert bids
+			bids[order_id] = make_tuple(ts, p, v);
+
+			exec sql insert into bids values(:ts, :order_id, :p, :v);
+		}
+		else if (action == "S") {
+			// Insert asks
+			asks[order_id] = make_tuple(ts, p, v);
+
+			exec sql insert into asks values(:ts, :order_id, :p, :v);
+		}
+
+		else if (action == "E")
+		{
+			// Partial execution based from order book according to order id.
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() ) {
+				double order_ts = get<0>(found->second);
+				double order_p = get<1>(found->second);
+				double order_v = get<2>(found->second);
+				new_volume = order_v - v;
+
+				bids[order_id] = make_tuple(order_ts, order_p, new_volume);
+
+				exec sql update bids set volume = :new_volume where id = :order_id;
+
+				// TODO: should we remove volume from the top of the asks book?
+			}
+			else
+			{
+				found = asks.find(order_id);
+				if ( found != asks.end() ) {
+					double order_ts = get<0>(found->second);
+					double order_p = get<1>(found->second);
+					double order_v = get<2>(found->second);
+					new_volume = order_v - v;
+
+					asks[order_id] = make_tuple(order_ts, order_p, new_volume);
+
+					exec sql update asks set volume = :new_volume where id = :order_id;
+
+					// TODO: should we remove volume from top of the bids book?
+				}
+				else
+					cerr << "Unmatched order execution " << order_id << endl;
+			}
+		}
+
+		else if (action == "F")
+		{
+			// Order executed in full
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() )
+			{
+				exec sql delete from bids where id = :order_id;
+				bids.erase(found);
+
+				// TODO: should we remove volume from the top of the asks book?
+			}
+			else {
+				found = asks.find(order_id);
+				if ( found != asks.end() )
+				{
+					exec sql delete from asks where id = :order_id;
+					asks.erase(found);
+
+					// TODO: should we remove volume from the top of the asks book?
+				}
+			}
+		}
+
+		else if (action == "D")
+		{
+			// Delete from relevant order book.
+			order_book::iterator found = bids.find(order_id);
+			if ( found != bids.end() )
+			{
+				exec sql delete from bids where id = :order_id;
+				bids.erase(found);
+			}
+
+			else {
+				found = asks.find(order_id);
+				if ( found != asks.end() )
+				{
+					exec sql delete from asks where id = :order_id;
+					asks.erase(found);
+				}
+				else
+					cerr << "Unmatched order deletion " << order_id << endl;
+			}
+		}
+
+		/*
+		else if (action == "X") {
+			// Ignore X for now.
+		}
+		else if (action == "C") {
+			// Unclear for now...
+		}
+		else if (action == "T") {
+			// Unclear for now...
+		}
+		*/
+
+		++tuple_counter;
+		if ( (tuple_counter % 10000) == 0 )
+		{
+			cout << "Processed " << tuple_counter << " tuples." << endl;
+		}
+
+		if ( (tuple_counter % query_freq) == 0 )
+		{
+			// Do query
+			tuple<bool, double> valid_result = matview_query(log);
+			if ( get<0>(valid_result) )
+				(*results) << get<1>(valid_result) << endl;
+		}
+	}
+
+	tuple<bool, double> valid_result = matview_query(log);
+	if ( get<0>(valid_result) )
+		(*results) << get<1>(valid_result) << endl;
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"VWAP triggers", log);
+
+	exec sql set autocommit = off;
+	exec sql disconnect;
+}
+
+
+////////////////////////////////////////
+//
+// Naive compilation
 
 double naive_query(ofstream* log, sorted_order_book& sorted_bids)
 {
@@ -1045,6 +1770,10 @@ void vwap_snapshot(stream* s, ofstream* results, ofstream* log,
 		"VWAP QP", log, false);
 
 }
+
+///////////////////////////////////////////
+//
+// DBToaster
 
 void print_bcv_index(bcv_index& sv1)
 {
@@ -5963,7 +6692,7 @@ void ub_test()
 void print_usage()
 {
 	cerr << "Usage: vwap <app mode> <data dir> <query freq>"
-		<< "<in file> <out file> <result file> <stats file> [iters]" << endl;
+		<< "<in file> <out file> <result file> <stats file> [matviews file]" << endl;
 }
 
 int main(int argc, char* argv[])
@@ -5982,7 +6711,8 @@ int main(int argc, char* argv[])
 	string log_file_name(argv[5]);
 	string results_file_name(argv[6]);
 	string stats_file_name(argv[7]);
-	int iters = argc > 8? atoi(argv[8]) : 1;
+	string matviews_file_name = argc > 8? argv[8] : "";
+	long copy_freq = argc > 9? atol(argv[9]) : 1500000;
 
 	ofstream* log = new ofstream(log_file_name.c_str());
 	ofstream* out = new ofstream(results_file_name.c_str());
@@ -5994,8 +6724,15 @@ int main(int argc, char* argv[])
 
 	if ( app_mode == "toasted" )
 		vwap_stream(&f, out, log, stats);
+
 	else if ( app_mode == "ecpg" )
 		vwap_snapshot_ecpg(directory, query_freq, &f, out, log);
+
+	else if ( app_mode == "matviews" ) {
+		assert ( argc > 9 );
+		vwap_matviews(matviews_file_name, directory, query_freq, copy_freq, &f, out, log);
+	}
+
 	else {
 		bool single_shot = true;
 		vwap_snapshot(&f, out, log, query_freq, single_shot);
