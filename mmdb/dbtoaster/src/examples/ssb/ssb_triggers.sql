@@ -1,3 +1,67 @@
+begin transaction;
+
+drop table if exists lineitem;
+drop table if exists orders;
+drop table if exists part;
+drop table if exists customer;
+drop table if exists supplier;
+drop table if exists region;
+drop table if exists nation;
+
+
+create table lineitem (
+	orderkey bigint, partkey bigint, suppkey bigint,
+	linenumber integer,
+	quantity decimal, extendedprice decimal,
+	discount decimal, tax decimal,
+	returnflag char(1), linestatus char(1),
+	shipdate date, commitdate date, receiptdate date,
+	shipinstruct char(25), shipmode char(10),
+	comment varchar(44),
+	primary key (orderkey, linenumber));
+
+create table orders (
+	orderkey bigint, custkey bigint,
+	orderstatus char(1), totalprice decimal,
+	orderdate date, orderpriority char(15),
+	clerk char(15), shippriority integer,
+	comment varchar(79),
+	primary key (orderkey));
+
+create table part (
+	partkey bigint, name varchar(55),
+	mfgr char(25), brand char(10),
+	type varchar(25), size integer,
+	container char(10), retailprice decimal,
+	comment varchar(25),
+	primary key (partkey));
+
+create table customer (
+	custkey bigint, name varchar(25),
+	address varchar(40), nationkey bigint,
+	phone char(15), acctbal decimal,
+	mktsegment char(10), comment varchar(117),
+	primary key (custkey));
+
+create table supplier (
+	suppkey bigint, name char(25),
+	address varchar(40), nationkey bigint,
+	phone char(15), acctbal decimal,
+	comment varchar(101),
+	primary key (suppkey));
+
+create table region (
+	regionkey bigint, name char(25), comment varchar(125),
+	primary key (regionkey));
+
+create table nation (
+	nationkey bigint, name char(25),
+	regionkey bigint, comment varchar(152),
+	primary key (nationkey));
+
+end transaction;	
+
+BEGIN TRANSACTION;
 DROP TRIGGER IF EXISTS maintain_ssb_lineorder_orders ON orders;
 DROP TRIGGER IF EXISTS maintain_ssb_lineorder_lineitem ON lineitem;
 DROP TRIGGER IF EXISTS maintain_ssb_totalprices_lineitem ON lineitem;
@@ -12,6 +76,7 @@ DROP TABLE IF EXISTS ssb_supplier;
 DROP TABLE IF EXISTS ssb_part;
 DROP TABLE IF EXISTS ssb_totalprices;
 DROP TABLE IF EXISTS ssb_lineorder;
+DROP TABLE IF EXISTS query_result;
 
 CREATE TABLE ssb_date (datekey date, year double precision);
 
@@ -71,6 +136,13 @@ CREATE TABLE ssb_lineorder (
 	tax decimal,
 	commitdate date,
 	shipmode char(10)
+);
+
+CREATE TABLE query_result (
+	year double precision,
+	nation char(25),
+	profit decimal,
+	refcount integer
 );
 
 --
@@ -332,3 +404,92 @@ $maintain_ssb_lineorder_orders$ LANGUAGE plpgsql;
 CREATE TRIGGER maintain_ssb_lineorder_orders
 	AFTER INSERT OR DELETE ON orders
 	FOR EACH ROW EXECUTE PROCEDURE maintain_ssb_lineorder_orders();
+	
+
+-- query via lineorder
+CREATE OR REPLACE FUNCTION maintain_result_lineorder()
+RETURNS TRIGGER AS $maintain_result_lineorder$
+	DECLARE
+		year double precision;
+		nation char(25);
+		profit decimal;
+		lo_count integer;
+	BEGIN
+		IF (TG_OP = 'INSERT') THEN
+			SELECT d.year, c.nation, (NEW.revenue - NEW.supplycost)
+				INTO year, nation, profit  
+			FROM ssb_date AS d, ssb_customer AS c, ssb_supplier AS s, ssb_part AS p
+			WHERE c.custkey = NEW.custkey
+			AND s.suppkey = NEW.suppkey
+			AND p.partkey = NEW.partkey
+			AND d.datekey = NEW.orderdate
+			AND c.region = 'AMERICA'
+			AND s.region = 'AMERICA'
+			AND (p.mfgr = 'Manufacturer#1' or p.mfgr = 'Manufacturer#2');
+
+			SELECT COUNT(*) INTO lo_count
+				FROM query_result
+				WHERE query_result.year = year
+				AND query_result.nation = nation;
+				
+			IF (lo_count = 0) THEN
+				INSERT INTO query_result VALUES (year, nation, profit, 1);
+			ELSE
+				UPDATE query_result
+					SET profit = profit + (revenue - supplycost),
+						refcount = refcount + 1
+				AND query_result.year = year 
+				AND query_result.nation = nation;
+			END IF; 
+
+		ELSIF (TG_OP = 'DELETE') THEN
+			SELECT d.year, c.nation, (OLD.revenue - OLD.supplycost)
+				INTO year, nation, profit  
+			FROM ssb_date AS d, ssb_customer AS c, ssb_supplier AS s, ssb_part AS p
+			WHERE c.custkey = NEW.custkey
+			AND s.suppkey = NEW.suppkey
+			AND p.partkey = NEW.partkey
+			AND d.datekey = NEW.orderdate
+			AND c.region = 'AMERICA'
+			AND s.region = 'AMERICA'
+			AND (p.mfgr = 'Manufacturer#1' or p.mfgr = 'Manufacturer#2');
+
+			SELECT query_result.refcount INTO lo_count
+				FROM query_result
+				WHERE query_result.year = year
+				AND query_result.nation = nation;
+
+			IF (lo_count = 1) THEN
+				DELETE FROM query_result
+					WHERE query_result.year = year
+					AND query_result.nation = nation;
+
+			ELSE
+				UPDATE query_result
+					SET profit = profit - OLD.profit
+					WHERE query_result.year = year
+					AND query_result.nation = nation;
+
+			END IF;
+		END IF;
+	END;
+$maintain_result_lineorder$ LANGUAGE plpgsql;
+
+CREATE TRIGGER maintain_result_lineorder
+	AFTER INSERT OR DELETE ON ssb_lineorder
+	FOR EACH ROW EXECUTE PROCEDURE maintain_result_lineorder();
+
+END TRANSACTION;
+
+
+-- set up everything but lineitem, orders.
+copy region (regionkey, name, comment)
+	from '/home/yanif/datasets/tpch/sf1/singlefile/region.tbl.a' with delimiter '|';
+
+copy nation (nationkey, name, regionkey, comment) from
+	'/home/yanif/datasets/tpch/sf1/singlefile/nation.tbl.a' with delimiter '|';
+
+copy part from '/home/yanif/datasets/tpch/sf1/singlefile/part.tbl.a' with delimiter '|';
+copy customer from '/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a' with delimiter '|';
+copy supplier from '/home/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a' with delimiter '|';
+	

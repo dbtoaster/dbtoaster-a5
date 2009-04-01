@@ -1340,7 +1340,7 @@ void vwap_matviews(string setup_cmds_file, string directory,
 	vwap_bulk(query_type, directory, query_freq, copy_freq, s, &d, results, log, dump);
 }
 
-void vwap_triggers(string directory, long query_freq,
+void vwap_triggers(string sql_file, string directory, long query_freq,
 	stream* s, ofstream* results, ofstream* log, bool dump = false)
 {
 	order_book bids;
@@ -1355,6 +1355,8 @@ void vwap_triggers(string directory, long query_freq,
 	double ts, v, p, new_volume;
 	exec sql end declare section;
 
+	set_up_matviews_and_triggers(sql_file, log);
+
 	long tuple_counter = 0;
 
 	cout << "VWAP triggers using query frequency " << query_freq << endl;
@@ -1362,9 +1364,13 @@ void vwap_triggers(string directory, long query_freq,
 	struct timeval tvs, tve;
 
 	gettimeofday(&tvs, NULL);
+	double tup_sum = 0.0;
 
 	while ( s->stream_has_inputs() )
 	{
+		struct timeval tups, tupe;
+		gettimeofday(&tups, NULL);
+
 		stream_tuple in = s->next_input();
 
 		ts = get<0>(in);
@@ -1489,6 +1495,8 @@ void vwap_triggers(string directory, long query_freq,
 		if ( (tuple_counter % 10000) == 0 )
 		{
 			cout << "Processed " << tuple_counter << " tuples." << endl;
+			cout << "Exec time " << (tup_sum / 10000.0) << endl;
+			tup_sum = 0.0;
 		}
 
 		if ( (tuple_counter % query_freq) == 0 )
@@ -1498,6 +1506,12 @@ void vwap_triggers(string directory, long query_freq,
 			if ( get<0>(valid_result) )
 				(*results) << get<1>(valid_result) << endl;
 		}
+
+		gettimeofday(&tupe, NULL);
+		long sec = tupe.tv_sec - tups.tv_sec;
+		long usec = tupe.tv_usec - tups.tv_usec;
+        if (usec < 0) { --sec; usec+=1000000; }
+		tup_sum += (sec + (usec / 1000000.0));
 	}
 
 	tuple<bool, double> valid_result = matview_query(log);
@@ -6711,7 +6725,7 @@ int main(int argc, char* argv[])
 	string log_file_name(argv[5]);
 	string results_file_name(argv[6]);
 	string stats_file_name(argv[7]);
-	string matviews_file_name = argc > 8? argv[8] : "";
+	string script_file_name = argc > 8? argv[8] : "";
 	long copy_freq = argc > 9? atol(argv[9]) : 1500000;
 
 	ofstream* log = new ofstream(log_file_name.c_str());
@@ -6730,11 +6744,11 @@ int main(int argc, char* argv[])
 
 	else if ( app_mode == "matviews" ) {
 		assert ( argc > 9 );
-		vwap_matviews(matviews_file_name, directory, query_freq, copy_freq, &f, out, log);
+		vwap_matviews(script_file_name, directory, query_freq, copy_freq, &f, out, log);
 	}
 
 	else if ( app_mode == "triggers" )
-		vwap_triggers(directory, query_freq, &f, out, log);
+		vwap_triggers(script_file_name, directory, query_freq, &f, out, log);
 
 	else {
 		bool single_shot = true;

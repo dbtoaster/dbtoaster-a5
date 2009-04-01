@@ -1,4 +1,9 @@
 BEGIN TRANSACTION;
+DROP TABLE IF EXISTS bids;
+DROP TABLE IF EXISTS asks;
+CREATE TABLE bids (ts bigint, id bigint, price decimal, volume decimal);
+CREATE TABLE asks (ts bigint, id bigint, price decimal, volume decimal);
+
 DROP TRIGGER IF EXISTS maintain_vwap_bcv on bcv;
 DROP TRIGGER IF EXISTS maintain_bcv_b2 on b2;
 DROP TRIGGER IF EXISTS maintain_bcv_b1 on bids;
@@ -14,7 +19,6 @@ CREATE TABLE bv (total_volume decimal);
 CREATE TABLE b2 (price decimal);
 CREATE TABLE bcv (price decimal, cumsum_volume decimal);
 CREATE TABLE vwap (price decimal, volume decimal);
-
 END TRANSACTION;
 
 -- trigger to maintain total_volume in 'bv' view

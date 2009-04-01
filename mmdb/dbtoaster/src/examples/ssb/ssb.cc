@@ -90,7 +90,7 @@ inline void print_result(
         	(*log) << duration << "," << text << endl;
     	}
 
-        usleep(200000);
+        //usleep(200000);
 }
 
 //
@@ -571,6 +571,7 @@ struct multiplexer : public stream
 ///////////////////////////////////////
 //
 // Postgres
+
 typedef map<tuple<double, string>, double> ecpg_query_results;
 
 bool check_table_sizes()
@@ -1008,13 +1009,313 @@ void ssb_ecpg(ofstream* log, ofstream* results,
 
 }
 
-
 ////////////////////////////
 //
 // Query results
 
+typedef unordered_map<double, unordered_map<string, double> > mv_query_results;
+mv_query_results mvqr;
+
 typedef unordered_map<date, unordered_map<string, double> > query_results;
 query_results qr;
+
+void print_mv_query_results(mv_query_results& qr, ofstream* results)
+{
+	mv_query_results::iterator qr_it = qr.begin();
+	mv_query_results::iterator qr_end = qr.end();
+
+	for (; qr_it != qr_end; ++qr_it)
+	{
+		unordered_map<string, double>::iterator nt_it = qr_it->second.begin();
+		unordered_map<string, double>::iterator nt_end = qr_it->second.end();
+
+		for (; nt_it != nt_end; ++nt_it)
+		{
+			(*results) << qr_it->first
+				<< "," << nt_it->first << "," << nt_it->second << endl;
+		}
+	}
+}
+
+void print_query_results(query_results& qr, ofstream* results)
+{
+	query_results::iterator qr_it = qr.begin();
+	query_results::iterator qr_end = qr.end();
+
+	for (; qr_it != qr_end; ++qr_it)
+	{
+		unordered_map<string, double>::iterator nt_it = qr_it->second.begin();
+		unordered_map<string, double>::iterator nt_end = qr_it->second.end();
+
+		for (; nt_it != nt_end; ++nt_it)
+		{
+			(*results) << qr_it->first
+				<< "," << nt_it->first << "," << nt_it->second << endl;
+		}
+	}
+}
+
+/////////////////////////////////////////
+//
+// Materialized views
+
+void set_up_matviews_and_triggers(string sql_file, ofstream* log)
+{
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	ifstream sqlf(sql_file.c_str());
+
+	if ( !sqlf.good() ) {
+		cerr << "Failed to open sql cmds file " << sql_file << endl;
+		return;
+	}
+
+	string cmds;
+
+	while ( sqlf.good() ) {
+		char buf[256];
+		sqlf.getline(buf, sizeof(buf));
+
+		string cmd(buf);
+		cmds += (cmds.empty()? "" : "\n") + cmd;
+	}
+
+	cout << "Executing script " << cmds << endl;
+
+	exec sql begin declare section;
+	const char* cmds_str = cmds.c_str();
+	exec sql end declare section;
+
+	exec sql execute immediate :cmds_str;
+
+	gettimeofday(&tve, NULL);
+
+	print_result(
+		tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"SSB matview setup", log, false);
+}
+
+void matview_query(mv_query_results& mvqr, ofstream* log, string& query_type)
+{
+	exec sql begin declare section;
+	const char* cleanup_cmd_str;
+	double yr, profit;
+	VARCHAR nation[25];
+	int yr_ind, profit_ind, nation_ind;
+	exec sql end declare section;
+
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	exec sql declare ssb_mv_cursor cursor for
+		select year, nation, profit from query_result;
+
+	exec sql open ssb_mv_cursor;
+
+	do {
+		exec sql fetch next from ssb_mv_cursor into
+			:yr :yr_ind, :nation :nation_ind, :profit :profit_ind;
+
+		if ( sqlca.sqlcode == ECPG_NOT_FOUND )
+			break;
+
+		if ( yr_ind == 0 && nation_ind == 0 && profit_ind == 0 )
+			mvqr[yr][string(nation.arr)] = profit;
+	}
+	while ( yr_ind == 0 && nation_ind == 0 && profit_ind == 0 );
+
+	exec sql close ssb_mv_cursor;
+
+	exec sql commit;
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		query_type.c_str(), log, true);
+
+}
+
+void ssb_matviews(string mv_script_file,
+	string directory, string fileset, long query_freq,
+	stream* s, ofstream* log, ofstream* results, ofstream* stats)
+{
+	exec sql connect to tpch;
+
+	exec sql set autocommit to on;
+
+	string mvqt = "SSB matview iter";
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	set_up_matviews_and_triggers(mv_script_file, log);
+
+	assert ( s );
+
+	long tuple_counter = 0;
+
+	// Dummy loop to simulate refreshes.
+	while ( s->stream_has_inputs() )
+	{
+		++tuple_counter;
+
+		stream_tuple next = s->next_input();
+
+		// TODO: insert tuple...
+		// -- assume tables are already loaded for now.
+
+		if ( (tuple_counter % query_freq) == 0 ) {
+			// Run queries after update.
+			matview_query(mvqr, log, mvqt);
+			print_mv_query_results(mvqr, results);
+			mvqr.clear();
+		}
+	}
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"SSB matview", log, true);
+
+	exec sql set autocommit to off;
+
+	exec sql disconnect;
+
+}
+
+void ssb_triggers(string mv_script_file,
+	string directory, string fileset, long query_freq,
+	stream* s, ofstream* log, ofstream* results, ofstream* stats)
+{
+	exec sql connect to tpch;
+
+	exec sql set autocommit to on;
+
+	lineitem* li;
+	order* ord;
+
+	exec sql begin declare section;
+	long long int orderkey;
+	long long int partkey;
+	long long int suppkey;
+	int linenumber;
+	double quantity;
+	double extendedprice;
+	double discount;
+	double tax;
+	const char* returnflag;
+	const char* linestatus;
+	const char* shipdate;
+	const char* commitdate;
+	const char* receiptdate;
+	const char* shipinstruct;
+	const char* shipmode;
+	const char* comment;
+
+	long long int custkey;
+	const char* orderstatus;
+	double totalprice;
+	const char* orderdate;
+	const char* orderpriority;
+	const char* clerk;
+	int shippriority;
+	exec sql end declare section;
+
+	string tgqt = "SSB trigger iter";
+	struct timeval tvs, tve;
+
+	gettimeofday(&tvs, NULL);
+
+	set_up_matviews_and_triggers(mv_script_file, log);
+
+	assert ( s );
+
+	long tuple_counter = 0;
+
+	while ( s->stream_has_inputs() )
+	{
+		++tuple_counter;
+
+		stream_tuple in = s->next_input();
+
+		switch (in.type) {
+		case 0:
+			li = boost::any_cast<lineitem>(&(in.data));
+
+			orderkey = li->orderkey;
+			partkey = li->partkey;
+			suppkey = li->suppkey;
+			linenumber = li->linenumber;
+			quantity = li->quantity;
+			extendedprice = li->extendedprice;
+			discount = li->discount;
+			tax = li->tax;
+			returnflag = li->returnflag.c_str();
+			linestatus = li->linestatus.c_str();
+			shipdate = li->shipdate.c_str();
+			commitdate = li->commitdate.c_str();
+			receiptdate = li->receiptdate.c_str();
+			shipinstruct = li->shipinstruct.c_str();
+			shipmode = li->shipmode.c_str();
+			comment = li->comment.c_str();
+
+			exec sql insert into lineitem values (
+				orderkey, partkey, suppkey,
+				linenumber, quantity, extendedprice,
+				discount, tax, returnflag, linestatus, shipdate,
+				commitdate, receiptdate, shipinstruct, shipmode, comment);
+			break;
+
+		case 1:
+			ord = boost::any_cast<order>(&(in.data));
+
+			orderkey = ord->orderkey;
+			custkey = ord->custkey;
+			orderstatus = ord->orderstatus.c_str();
+			totalprice = ord->totalprice;
+			orderdate = ord->orderdate.c_str();
+			orderpriority = ord->orderpriority.c_str();
+			clerk = ord->clerk.c_str();
+			shippriority = ord->shippriority;
+			comment = ord->comment.c_str();
+
+			exec sql insert into orders values (
+				orderkey, custkey, orderstatus, totalprice,
+				orderdate, orderpriority, clerk, shippriority);
+			break;
+
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		default:
+			cerr << "Invalid tuple type " << in.type
+				<< " (typeid '" << (in.data.type().name()) << "')" << endl;
+			break;
+		}
+
+		if ( (tuple_counter % query_freq) == 0 ) {
+			// Run queries after update.
+			matview_query(mvqr, log, tgqt);
+			print_mv_query_results(mvqr, results);
+			mvqr.clear();
+		}
+	}
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"SSB triggers", log, true);
+
+	exec sql set autocommit to off;
+
+	exec sql disconnect;
+
+}
 
 ///////////////////////////////////////
 //
@@ -1236,25 +1537,6 @@ inline void delta_snapshot_region(boost::any& data)
 	#ifdef DEBUG
 	cout << "Tuple rg: " << rg.as_string() << endl;
 	#endif
-}
-
-
-void print_query_results(query_results& qr, ofstream* results)
-{
-	query_results::iterator qr_it = qr.begin();
-	query_results::iterator qr_end = qr.end();
-
-	for (; qr_it != qr_end; ++qr_it)
-	{
-		unordered_map<string, double>::iterator nt_it = qr_it->second.begin();
-		unordered_map<string, double>::iterator nt_end = qr_it->second.end();
-
-		for (; nt_it != nt_end; ++nt_it)
-		{
-			(*results) << qr_it->first
-				<< "," << nt_it->first << "," << nt_it->second << endl;
-		}
-	}
 }
 
 
@@ -2122,7 +2404,7 @@ void print_usage()
 {
 	cout << "Usage: ssb <app mode> <query frequency> "
 		<< "<log file> <results file> <stats file> "
-		<< "<tpc-h data directory> [tpc-h file set]" << endl;
+		<< "<tpc-h data directory> [tpc-h file set] [mv script file]" << endl;
 }
 
 int main(int argc, char* argv[])
@@ -2139,6 +2421,8 @@ int main(int argc, char* argv[])
 	string stats_file(argv[5]);
 	string directory(argv[6]);
 	string fileset = argc > 7? string(argv[7]) : "";
+	string mv_script_file = (fileset.empty()?
+		(argc > 7? string(argv[7]) : "") : (argc > 8? string(argv[8]) : ""));
 
 	ofstream* log_f = new ofstream(log_file.c_str());
 	ofstream* results_f = new ofstream(results_file.c_str());
@@ -2154,6 +2438,20 @@ int main(int argc, char* argv[])
 		stream* multiplexed_stream = load_streams(directory, fileset);
 		ssb_ecpg(log_f, results_f, directory, fileset, query_freq,
 			single_shot, multiplexed_stream);
+	}
+	else if ( app_mode == "matviews" )
+	{
+		assert ( argc > 8 );
+		stream* multiplexed_stream = load_streams(directory, fileset);
+		ssb_matviews(mv_script_file, directory, fileset, query_freq,
+			multiplexed_stream, log_f, results_f, stats_f);
+	}
+	else if ( app_mode == "triggers" )
+	{
+		assert ( argc > 8 );
+		stream* multiplexed_stream = load_streams(directory, fileset);
+		ssb_triggers(mv_script_file, directory, fileset, query_freq,
+			multiplexed_stream, log_f, results_f, stats_f);
 	}
 	else
 	{
