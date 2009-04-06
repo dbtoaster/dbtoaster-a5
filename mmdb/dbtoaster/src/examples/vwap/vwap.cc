@@ -1365,6 +1365,7 @@ void vwap_triggers(string sql_file, string directory, long query_freq,
 
 	gettimeofday(&tvs, NULL);
 	double tup_sum = 0.0;
+	double tup_sum_usec = 0.0;
 
 	while ( s->stream_has_inputs() )
 	{
@@ -1492,11 +1493,31 @@ void vwap_triggers(string sql_file, string directory, long query_freq,
 		*/
 
 		++tuple_counter;
+
+		gettimeofday(&tupe, NULL);
+
+		long sec = tupe.tv_sec - tups.tv_sec;
+		long usec = tupe.tv_usec - tups.tv_usec;
+		if (usec < 0) { --sec; usec+=1000000; }
+		tup_sum += (sec + (usec / 1000000.0));
+		tup_sum_usec += usec;
+
 		if ( (tuple_counter % 10000) == 0 )
 		{
+			struct timeval tup_10k;
+			gettimeofday(&tup_10k, NULL);
+
+			long sec = tup_10k.tv_sec - tvs.tv_sec;
+			long usec = tup_10k.tv_usec - tvs.tv_usec;
+			if (usec < 0) { --sec; usec+=1000000; }
+
 			cout << "Processed " << tuple_counter << " tuples." << endl;
-			cout << "Exec time " << (tup_sum / 10000.0) << endl;
+			cout << "Exec time " << (tup_sum / 10000.0) << " "
+				<< (tup_sum_usec / 10000.0) << " "
+				<< (sec + (usec / 1000000.0)) << endl;
+
 			tup_sum = 0.0;
+			tup_sum_usec = 0.0;
 		}
 
 		if ( (tuple_counter % query_freq) == 0 )
@@ -1507,11 +1528,6 @@ void vwap_triggers(string sql_file, string directory, long query_freq,
 				(*results) << get<1>(valid_result) << endl;
 		}
 
-		gettimeofday(&tupe, NULL);
-		long sec = tupe.tv_sec - tups.tv_sec;
-		long usec = tupe.tv_usec - tups.tv_usec;
-        if (usec < 0) { --sec; usec+=1000000; }
-		tup_sum += (sec + (usec / 1000000.0));
 	}
 
 	tuple<bool, double> valid_result = matview_query(log);
