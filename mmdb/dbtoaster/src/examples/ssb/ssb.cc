@@ -1235,8 +1235,13 @@ void ssb_triggers(string mv_script_file,
 
 	long tuple_counter = 0;
 
+        double tup_sum = 0.0;
+
 	while ( s->stream_has_inputs() )
 	{
+                struct timeval tups, tupe;
+                gettimeofday(&tups, NULL);
+
 		++tuple_counter;
 
 		stream_tuple in = s->next_input();
@@ -1263,10 +1268,10 @@ void ssb_triggers(string mv_script_file,
 			comment = li->comment.c_str();
 
 			exec sql insert into lineitem values (
-				orderkey, partkey, suppkey,
-				linenumber, quantity, extendedprice,
-				discount, tax, returnflag, linestatus, shipdate,
-				commitdate, receiptdate, shipinstruct, shipmode, comment);
+				:orderkey, :partkey, :suppkey,
+				:linenumber, :quantity, :extendedprice,
+				:discount, :tax, :returnflag, :linestatus, :shipdate,
+				:commitdate, :receiptdate, :shipinstruct, :shipmode, :comment);
 			break;
 
 		case 1:
@@ -1283,8 +1288,8 @@ void ssb_triggers(string mv_script_file,
 			comment = ord->comment.c_str();
 
 			exec sql insert into orders values (
-				orderkey, custkey, orderstatus, totalprice,
-				orderdate, orderpriority, clerk, shippriority);
+				:orderkey, :custkey, :orderstatus, :totalprice,
+				:orderdate, :orderpriority, :clerk, :shippriority);
 			break;
 
 		case 2:
@@ -1296,6 +1301,18 @@ void ssb_triggers(string mv_script_file,
 			cerr << "Invalid tuple type " << in.type
 				<< " (typeid '" << (in.data.type().name()) << "')" << endl;
 			break;
+		}
+
+		gettimeofday(&tupe, NULL);
+		long sec = tupe.tv_sec - tups.tv_sec;
+		long usec = tupe.tv_usec - tups.tv_usec;
+		if ( usec < 0 ) { --sec; usec += 1000000; }
+		tup_sum += (sec + (usec / 1000000.0));
+
+		if ( (tuple_counter % 50000) == 0 ) {
+				cout << "Processed " << tuple_counter << " tuples." << endl;
+				cout << "Exec time " << (tup_sum / 50000.0) << endl;
+				tup_sum = 0.0;
 		}
 
 		if ( (tuple_counter % query_freq) == 0 ) {

@@ -156,7 +156,7 @@ RETURNS TRIGGER AS $maintain_ssb_date_orders$
 		IF (TG_OP = 'INSERT') THEN
 			SELECT COUNT(*) INTO date_count FROM ssb_date WHERE datekey = NEW.orderdate;
 			IF (date_count = 0) THEN
-				INSERT INTO ssb_date VALUES(NEW.orderdate, extract(year from orderdate));
+				INSERT INTO ssb_date VALUES(NEW.orderdate, extract(year from NEW.orderdate));
 			END IF;
 
 		ELSIF (TG_OP = 'DELETE') THEN
@@ -271,7 +271,7 @@ RETURNS TRIGGER AS $maintain_ssb_totalprices_lineitem$
 		line_count integer;
 	BEGIN
 		IF (TG_OP = 'INSERT') THEN
-			SELECT COUNT(*) INTO line_count FROM lineitem WHERE orderkey = NEW.orderkey;
+			SELECT COUNT(*) INTO line_count FROM lineitem WHERE lineitem.orderkey = NEW.orderkey;
 			IF (line_count = 1) THEN
 				INSERT INTO ssb_totalprices VALUES (NEW.orderkey,
 					(NEW.extendedprice*(100-NEW.discount)*(100+NEW.tax))/100);
@@ -279,18 +279,18 @@ RETURNS TRIGGER AS $maintain_ssb_totalprices_lineitem$
 				UPDATE ssb_totalprices
 					SET totalprice = totalprice +
 						(NEW.extendedprice*(100-NEW.discount)*(100+NEW.tax))/100
-					WHERE orderkey = NEW.orderkey; 
+					WHERE ssb_totalprices.orderkey = NEW.orderkey; 
 			END IF;
 
 		ELSIF (TG_OP = 'DELETE') THEN
-			SELECT COUNT(*) INTO line_count FROM lineitem WHERE orderkey = NEW.orderkey;
+			SELECT COUNT(*) INTO line_count FROM lineitem WHERE lineitem.orderkey = OLD.orderkey;
 			IF (line_count = 0) THEN
-				DELETE FROM ssb_totalprices WHERE orderkey = OLD.orderkey;
+				DELETE FROM ssb_totalprices WHERE ssb_totalprices.orderkey = OLD.orderkey;
 			ELSE
 				UPDATE ssb_totalprices
 					SET totalprice = totalprice -
 						(OLD.extendedprice*(100-OLD.discount)*(100+OLD.tax))/100
-					WHERE orderkey = OLD.orderkey;
+					WHERE ssb_totalprices.orderkey = OLD.orderkey;
 			END IF;
 		END IF;
 		RETURN NULL;
@@ -322,7 +322,7 @@ RETURNS TRIGGER AS $maintain_ssb_lineorder_lineitem$
 				WHERE orders.orderkey = NEW.orderkey;
 
 			SELECT totalprice into ordtotalprice FROM ssb_totalprices
-				WHERE orderkey = NEW.orderkey;
+				WHERE ssb_totalprices.orderkey = NEW.orderkey;
 
 			INSERT INTO ssb_lineorder VALUES (
 				NEW.orderkey, NEW.linenumber,
@@ -335,7 +335,7 @@ RETURNS TRIGGER AS $maintain_ssb_lineorder_lineitem$
 
 		ELSIF (TG_OP = 'DELETE') THEN
 			DELETE FROM ssb_lineorder
-				WHERE orderkey = OLD.orderkey AND linenumber = OLD.linenumber;
+				WHERE ssb_lineorder.orderkey = OLD.orderkey AND linenumber = OLD.linenumber;
 
 		END IF;
 		RETURN NULL;
@@ -380,10 +380,10 @@ RETURNS TRIGGER AS $maintain_ssb_lineorder_orders$
 					revenue, supplycost,
 					tax, commitdate, shipmode
 				FROM lineitem
-				WHERE orderkey = NEW.orderkey;
+				WHERE lineitem.orderkey = NEW.orderkey;
 
 			SELECT ssb_totalprices.totalprice INTO ordtotalprice
-			FROM ssb_totalprices WHERE orderkey = NEW.orderkey;
+			FROM ssb_totalprices WHERE ssb_totalprices.orderkey = NEW.orderkey;
 
 			INSERT INTO ssb_lineorder VALUES (
 				NEW.orderkey, linenumber,
@@ -394,7 +394,7 @@ RETURNS TRIGGER AS $maintain_ssb_lineorder_orders$
 				tax, commitdate, shipmode);
 
 		ELSIF (TG_OP = 'DELETE') THEN
-			DELETE FROM ssb_lineorder WHERE orderkey = OLD.orderkey;
+			DELETE FROM ssb_lineorder WHERE ssb_lineorder.orderkey = OLD.orderkey;
 
 		END IF;
 		RETURN NULL;
@@ -410,14 +410,14 @@ CREATE TRIGGER maintain_ssb_lineorder_orders
 CREATE OR REPLACE FUNCTION maintain_result_lineorder()
 RETURNS TRIGGER AS $maintain_result_lineorder$
 	DECLARE
-		year double precision;
-		nation char(25);
-		profit decimal;
-		lo_count integer;
+		qr_year double precision;
+		qr_nation char(25);
+		qr_profit decimal;
+		qr_lo_count integer;
 	BEGIN
 		IF (TG_OP = 'INSERT') THEN
 			SELECT d.year, c.nation, (NEW.revenue - NEW.supplycost)
-				INTO year, nation, profit  
+				INTO qr_year, qr_nation, qr_profit  
 			FROM ssb_date AS d, ssb_customer AS c, ssb_supplier AS s, ssb_part AS p
 			WHERE c.custkey = NEW.custkey
 			AND s.suppkey = NEW.suppkey
@@ -427,51 +427,52 @@ RETURNS TRIGGER AS $maintain_result_lineorder$
 			AND s.region = 'AMERICA'
 			AND (p.mfgr = 'Manufacturer#1' or p.mfgr = 'Manufacturer#2');
 
-			SELECT COUNT(*) INTO lo_count
+			SELECT COUNT(*) INTO qr_lo_count
 				FROM query_result
-				WHERE query_result.year = year
-				AND query_result.nation = nation;
+				WHERE year = qr_year
+				AND nation = qr_nation;
 				
-			IF (lo_count = 0) THEN
-				INSERT INTO query_result VALUES (year, nation, profit, 1);
+			IF (qr_lo_count = 0) THEN
+				INSERT INTO query_result VALUES (qr_year, qr_nation, qr_profit, 1);
 			ELSE
 				UPDATE query_result
-					SET profit = profit + (revenue - supplycost),
+					SET profit = profit + (NEW.revenue - NEW.supplycost),
 						refcount = refcount + 1
-				AND query_result.year = year 
-				AND query_result.nation = nation;
+				WHERE year = qr_year 
+				AND nation = qr_nation;
 			END IF; 
 
 		ELSIF (TG_OP = 'DELETE') THEN
 			SELECT d.year, c.nation, (OLD.revenue - OLD.supplycost)
-				INTO year, nation, profit  
+				INTO qr_year, qr_nation, qr_profit  
 			FROM ssb_date AS d, ssb_customer AS c, ssb_supplier AS s, ssb_part AS p
-			WHERE c.custkey = NEW.custkey
-			AND s.suppkey = NEW.suppkey
-			AND p.partkey = NEW.partkey
-			AND d.datekey = NEW.orderdate
+			WHERE c.custkey = OLD.custkey
+			AND s.suppkey = OLD.suppkey
+			AND p.partkey = OLD.partkey
+			AND d.datekey = OLD.orderdate
 			AND c.region = 'AMERICA'
 			AND s.region = 'AMERICA'
 			AND (p.mfgr = 'Manufacturer#1' or p.mfgr = 'Manufacturer#2');
 
-			SELECT query_result.refcount INTO lo_count
+			SELECT refcount INTO qr_lo_count
 				FROM query_result
-				WHERE query_result.year = year
-				AND query_result.nation = nation;
+				WHERE year = qr_year
+				AND nation = qr_nation;
 
-			IF (lo_count = 1) THEN
+			IF (qr_lo_count = 1) THEN
 				DELETE FROM query_result
-					WHERE query_result.year = year
-					AND query_result.nation = nation;
+					WHERE year = qr_year
+					AND nation = qr_nation;
 
 			ELSE
 				UPDATE query_result
 					SET profit = profit - OLD.profit
-					WHERE query_result.year = year
-					AND query_result.nation = nation;
+					WHERE year = qr_year
+					AND nation = qr_nation;
 
 			END IF;
 		END IF;
+		RETURN NULL;
 	END;
 $maintain_result_lineorder$ LANGUAGE plpgsql;
 
@@ -482,11 +483,9 @@ CREATE TRIGGER maintain_result_lineorder
 END TRANSACTION;
 
 -- run...
-copy region (regionkey, name, comment)
-	from '/home/yanif/datasets/tpch/sf1/singlefile/region.tbl.a' with delimiter '|';
+copy region (regionkey, name, comment) from '/home/yanif/datasets/tpch/sf1/singlefile/region.tbl' with delimiter '|';
 
-copy nation (nationkey, name, regionkey, comment) from
-	'/home/yanif/datasets/tpch/sf1/singlefile/nation.tbl.a' with delimiter '|';
+copy nation (nationkey, name, regionkey, comment) from '/home/yanif/datasets/tpch/sf1/singlefile/nation.tbl' with delimiter '|';
 
 copy part from '/home/yanif/datasets/tpch/sf1/singlefile/part.tbl.a' with delimiter '|';
 copy customer from '/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a' with delimiter '|';
