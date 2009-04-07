@@ -247,7 +247,7 @@ RETURNS TRIGGER AS $maintain_ssb_part$
 	BEGIN
 		IF (TG_OP = 'INSERT') THEN
 			INSERT INTO ssb_part VALUES (
-				NEW.partkey, NEW.name, NEW.mfgr,
+				NEW.partkey, NEW.name, NEW.mfgr, NEW.brand,
 			    (NEW.brand || (cast (round(random()*25) as text))),
     			substring(NEW.name from 0 for position(' ' in NEW.name)),
     			NEW.type, NEW.size, NEW.container);
