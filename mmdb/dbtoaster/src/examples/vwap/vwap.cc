@@ -39,6 +39,8 @@ exec sql whenever not found sqlprint;
 #define OUTPUT 1
 #define BULK_COPY 1
 
+#define VWAP_K 0.25
+
 // Timestamp, order id, action, volume, price
 typedef tuple<double, int, string, double, double> stream_tuple;
 
@@ -58,6 +60,8 @@ typedef map<int, input_tuple> order_book;
 // timestamp * price -> volume
 typedef map<tuple<double, double>, double> sorted_order_book;
 
+//////////////////////////////////////////////////
+//
 // DBToaster data structures for VWAP computation
 
 // price * volume -> sum(vol), count(*) as rc from bids where bids.price > price
@@ -74,41 +78,57 @@ typedef map<double, tuple<double, double> > vwap_index;
 // -- note rc must be the same for all tuples in the group, i.e. avg(rc) = rc
 typedef DBT_HASH_MAP<double, DBT_HASH_MAP<double, tuple<int, int> > > cvol_index;
 
+// Revised DBToaster data structures
 
-struct vwap_sum
+// price * volume -> sum(vol), count(*) as rc from bids where bids.price > price
+typedef map<double, tuple<double, int> > price_bcv_index;
+
+
+double stv_bids;
+bcv_index sv1_bids;
+price_bcv_index sv1_pbids;
+vwap_index spv_bids;
+cvol_index cvc_bids;
+
+double stv_asks;
+bcv_index sv1_asks;
+price_bcv_index sv1_pasks;
+vwap_index spv_asks;
+cvol_index cvc_asks;
+
+
+///////////////////////////////////////////////////
+//
+// DBToaster data structures for monotonic version
+
+typedef map<double, double> select_sv1_index;
+
+typedef map<double, double> spv_index;
+
+select_sv1_index m_bids;
+spv_index q_bids;
+tuple<double, double> sv1_at_pmin_bids;
+tuple<double, double> spv_at_pmin_bids;
+
+select_sv1_index m_asks;
+spv_index q_asks;
+tuple<double, double> sv1_at_pmin_asks;
+tuple<double, double> spv_at_pmin_asks;
+
+struct positive_m_fn :
+	public unary_function<pair<double, double>, bool>
 {
-	double sbbB;
-	double sBBb;
-	double sBbb;
-	double sBbB;
-	double sbbb;
-	double sbBb;
+	positive_m_fn() {}
+
+	bool operator()(const pair<double, double> v) const {
+		return v.second > 0;
+	}
 };
 
-double sBBB;
-typedef DBT_HASH_MAP<double, double> ts_bBB;
-typedef DBT_HASH_MAP<double, DBT_HASH_MAP<double, vwap_sum> > pv_tsBBB;
+positive_m_fn positive_m;
 
-ts_bBB pv_sbBB;
-pv_tsBBB pv_sBBB;
 
-struct vwap_count
-{
-	double cbbB;
-	double cBBb;
-	double cBbb;
-	double cBbB;
-	double cbbb;
-	double cbBb;
-};
-
-double cBBB;
-typedef DBT_HASH_MAP<double, double> tc_bBB;
-typedef DBT_HASH_MAP<double, DBT_HASH_MAP<double, vwap_count> > pv_tcBBB;
-
-tc_bBB pv_cbBB;
-pv_tcBBB pv_cBBB;
-
+// Parsing helpers
 
 void split(string str, string delim, vector<string>& results)
 {
@@ -1555,7 +1575,7 @@ double naive_query(ofstream* log, sorted_order_book& sorted_bids)
 	gettimeofday(&vwap_iter_s, NULL);
 
 	// Query plan for computing VWAP.
-	double k = 0.25;
+	double k = VWAP_K;
 
 	// B2 iterator
 	sorted_order_book::iterator b2_it = sorted_bids.begin();
@@ -1620,7 +1640,6 @@ double naive_query(ofstream* log, sorted_order_book& sorted_bids)
 
 	return (running_sum / running_count);
 }
-
 
 void vwap_snapshot(stream* s, ofstream* results, ofstream* log,
 	long query_freq, bool single_shot, bool dump = false)
@@ -1800,6 +1819,7 @@ void vwap_snapshot(stream* s, ofstream* results, ofstream* log,
 		"VWAP QP", log, false);
 
 }
+
 
 ///////////////////////////////////////////
 //
@@ -2972,8 +2992,9 @@ void validate_indexes(bcv_index& sv1, vwap_index& spv, cvol_index& cvc)
 }
 
 
-// price * volume -> sum(vol), count(*) as rc from bids where bids.price > price
-typedef map<double, tuple<double, int> > price_bcv_index;
+/////////////////////////////
+//
+// Revised DBToaster
 
 void debug_bcv_iterator(price_bcv_index::iterator it, price_bcv_index& bcv)
 {
@@ -3709,6 +3730,156 @@ inline double update_vwap2(double price, double volume, double& stv,
 }
 
 
+/////////////////////////////////////
+//
+// DBToaster exploiting monotonicity
+
+inline double update_vwap_monotonic(double price, double volume,
+	select_sv1_index& m, spv_index& q,
+	tuple<double, double>& sv1_at_pmin,
+	tuple<double, double>& spv_at_pmin,
+	bool insert = true)
+{
+	select_sv1_index::iterator m_p_found = m.find(price);
+
+	// foreach p2 in dom_p2 ...
+	select_sv1_index::iterator p2_it = m.begin();
+	select_sv1_index::iterator p2_end = m.end();
+
+	for (; p2_it != p2_end; ++p2_it)
+	{
+		if ( insert )  {
+			m[p2_it->first] = p2_it->second +
+				(VWAP_K*volume - (price > p2_it->first ? volume : 0));
+		}
+		else {
+			m[p2_it->first] = p2_it->second -
+				(VWAP_K*volume - (price > p2_it->first ? volume : 0));
+		}
+	}
+
+	// p not in dom_p2
+	if ( insert && m_p_found == m.end() ) {
+		select_sv1_index::iterator p_ub = m.upper_bound(price);
+
+		while ( p_ub->first <= price && p_ub != m.end() )
+			++p_ub;
+
+		if ( p_ub == m.end() ) {
+			// No upper bound, price is largest seen so far.
+			m[price] = 0.0;
+		}
+		else {
+			double p_upper = p_ub->first;
+			double p_upper_sv1 = p_ub->second;
+
+			double sv1_at_p_upper = 0.0;
+
+			if ( p_ub == m.begin() )
+			{
+				sv1_at_p_upper = p_ub->second + get<1>(sv1_at_pmin);
+
+				// update sv1_at_pmin
+				sv1_at_pmin = make_tuple(price, volume);
+			}
+			else {
+				--p_ub;
+				sv1_at_p_upper = p_ub->second - (p_upper_sv1 + (VWAP_K*volume - volume));
+			}
+
+			m[price] = p_upper_sv1 + sv1_at_p_upper;
+		}
+	}
+	/*
+	 * TODO: garbage collect, but how do you deal with p_max, which always has sv1 = 0
+	 else if ( !insert && m_p_found != m.end() ) {
+		 if ( m_p_found->second == 0.0 )
+			 m.erase(price);
+	 }
+	 */
+
+	// foreach pmin in dom_p2
+	spv_index::iterator q_p_found = q.find(price);
+
+	spv_index::iterator pmin_it = q.begin();
+	spv_index::iterator pmin_end = q.end();
+
+	for (; pmin_it != pmin_end; ++pmin_it)
+	{
+		if ( insert ) {
+			q[pmin_it->first] = pmin_it->second +
+				(price >= pmin_it->first? price*volume : 0);
+		}
+		else {
+			q[pmin_it->first] = pmin_it->second -
+				(price >= pmin_it->first? price*volume : 0);
+		}
+	}
+
+	if ( insert && q_p_found == q.end() )
+	{
+		spv_index::iterator p_ub = q.upper_bound(price);
+
+		while ( p_ub->first <= price && p_ub != q.end() )
+			++p_ub;
+
+		if ( p_ub == q.end() ) {
+			// No upper bound, price is largest seen so far.
+			q[price] = 0.0;
+		}
+		else {
+			double p_upper = p_ub->first;
+			double p_upper_spv = p_ub->second;
+
+			double spv_at_p_upper = 0.0;
+
+			if ( p_ub == q.begin() )
+			{
+				spv_at_p_upper = p_ub->second + get<0>(spv_at_pmin);
+
+				// update spv_at_pmin
+				spv_at_pmin = make_tuple(price, price*volume);
+			}
+			else {
+				--p_ub;
+				spv_at_p_upper = p_ub->second - (p_upper_spv + price*volume);
+			}
+
+			q[price] = p_ub->second + spv_at_p_upper;
+		}
+	}
+	/*
+	 * TODO: garbage collect, but how do you deal with p_max, which always has spv = 0
+	 else if ( !insert && q_p_found != q.end() ) {
+		 if ( q_p_found->second == 0.0 )
+			 q.erase(price);
+	 }
+	 */
+
+	// p_min = min {p' | m[p'] > 0}
+	select_sv1_index::iterator p_min_found =
+		find_if(m.begin(), m.end(), positive_m);
+
+	double result = 0.0;
+
+	if ( p_min_found != m.end() )
+	{
+		spv_index::iterator r_found = q.find(p_min_found->first);
+		if ( r_found != q.end() )
+			result = r_found->second;
+		else {
+			cerr << "No q[p_min] found for p_min = "
+				<< p_min_found->first << endl;
+		}
+	}
+	else {
+		cerr << "No m[p] > 0 found!" << endl;
+	}
+
+	return result;
+}
+
+
 ///////////////////////
 //
 // Bulk operations
@@ -4342,7 +4513,6 @@ double bulk_update_vwap_varying(
 
 	return result;
 }
-
 
 double bulk_update_vwap_varying2(
 	list<tuple<double, double> >& price_vols,
@@ -5099,6 +5269,7 @@ double bulk_update_vwap_varying3(
 	return r;
 }
 
+
 //////////////////////////
 //
 // Fixed size bulk helpers
@@ -5685,7 +5856,6 @@ inline void delta_vwap(
 	}
 }
 
-
 double bulk_update_vwap_5(vector<tuple<double, double> >& price_vols,
 	double& stv, price_bcv_index& sv1,
 	vwap_index& spv, cvol_index& cvc, bool insert = true)
@@ -5764,178 +5934,6 @@ double bulk_update_vwap_5(vector<tuple<double, double> >& price_vols,
 	return result;
 }
 
-/*
-double new_update_vwap2(double p, double v, bool insert = true)
-{
-	vwap_sum& vs = pv_sBBB[p][v];
-	double& sbBB = pv_sbBB[v];
-	double& sBBb = vs.sBBb;
-	double& sBbB = vs.sBbB;
-	double& sBbb = vs.sBbb;
-	double& sbBb = vs.sbBb;
-	double& sbbB = vs.sbbB;
-	double& sbbb = vs.sbbb;
-
-	vwap_count& vc = pv_cBBB[p][v];
-	double& cbBB = pv_cbBB[v];
-	double& cBBb = vc.cBBb;
-	double& cBbB = vc.cBbB;
-	double& cBbb = vc.cBbb;
-	double& cbBb = vc.cbBb;
-	double& cbbB = vc.cbbB;
-	double& cbbb = vc.cbbb;
-
-	if ( insert )
-	{
-		sbbb = ((1.0*v>0) ? (p*v) : 0);
-
-		double snew_BBB = sBBB + sBBb + sBbB + sBbb + sbBB + sbBb + sbbB + sbbb;
-
-		double snew_bBB = sbBB + sbBb + sbbB + sbbb;
-		double snew_bbB = sbbB + sbbb;
-		double snew_BBb = sBBb + sBbb + sbBb + sbbb;
-		double snew_Bbb = sBbb + sbbb;
-		double snew_BbB = sBbB + sBbb + sbbB + sbbb;
-		double snew_bBb = sbBb + sbbb;
-
-		sBBB = snew_BBB;
-		sbBB = snew_bBB;
-		sbbB = snew_bbB;
-		sBBb = snew_BBb;
-		sBbb = snew_Bbb;
-		sBbB = snew_BbB;
-		//sbbb = snew_bbb;
-		sbBb = snew_bBb;
-
-#ifdef DEBUG
-		cout << "------------------------- " << endl;
-		cout << "sBBB " << sBBB << "\n"
-			<< "sbBB " << sbBB[v] << "\n"
-			<< "sbbB " << sbbB << "\n"
-			<< "sBBb " << sBBb << "\n"
-			<< "sBbb " << sBbb << "\n"
-			<< "sBbB " << sBbB << "\n"
-			<< "sbbb " << sbbb << "\n"
-			<< "sbBb " << sbBb << endl;
-#endif
-
-
-		cbbb = (1.0*v>0) ? 1 : 0;
-
-		double cnew_BBB = cBBB + cBBb + cBbB + cBbb + cbBB + cbBb + cbbB + cbbb;
-
-		double cnew_bBB = cbBB + cbBb + cbbB + cbbb;
-		double cnew_bbB = cbbB + cbbb;
-		double cnew_BBb = cBBb + cBbb + cbBb + cbbb;
-		double cnew_Bbb = cBbb + cbbb;
-		double cnew_BbB = cBbB + cBbb + cbbB + cbbb;
-		double cnew_bBb = cbBb + cbbb;
-
-		cBBB = cnew_BBB;
-		cbBB = cnew_bBB;
-		cbbB = cnew_bbB;
-		cBBb = cnew_BBb;
-		cBbb = cnew_Bbb;
-		cBbB = cnew_BbB;
-		//cbbb = cnew_bbb;
-		cbBb = cnew_bBb;
-
-#ifdef DEBUG
-		cout << "------------------------- " << endl;
-		cout << "cBBB " << cBBB << "\n"
-			<< "cbBB " << cbBB << "\n"
-			<< "cbbB " << cbbB << "\n"
-			<< "cBBb " << cBBb << "\n"
-			<< "cBbb " << cBbb << "\n"
-			<< "cBbB " << cBbB << "\n"
-			<< "cbbb " << cbbb << "\n"
-			<< "cbBb " << cbBb << endl;
-#endif
-
-	}
-	else
-	{
-		sbbb = ((1.0*v>0) ? -(p*v) : 0);
-
-		double snew_BBB = sBBB - (sBBb + sBbB + sBbb
-				 + sbBB + sbBb + sbbB + sbbb);
-
-		double snew_bBB = sbBB - (sbBb + sbbB + sbbb);
-		double snew_bbB = sbbB - sbbb;
-		double snew_BBb = sBBb - (sBbb + sbBb + sbbb);
-		double snew_Bbb = sBbb - sbbb;
-		double snew_BbB = sBbB - (sBbb + sbbB + sbbb);
-		double snew_bBb = sbBb - sbbb;
-
-		sBBB = snew_BBB;
-		sbBB = snew_bBB;
-		sbbB = snew_bbB;
-		sBBb = snew_BBb;
-		sBbb = snew_Bbb;
-		sBbB = snew_BbB;
-		//sbbb = snew_bbb;
-		sbBb = snew_bBb;
-
-#ifdef DEBUG
-		cout << "------------------------- " << endl;
-		cout << "sBBB " << sBBB << "\n"
-			<< "sbBB " << sbBB << "\n"
-			<< "sbbB " << sbbB << "\n"
-			<< "sBBb " << sBBb << "\n"
-			<< "sBbb " << sBbb << "\n"
-			<< "sBbB " << sBbB << "\n"
-			<< "sbbb " << sbbb << "\n"
-			<< "sbBb " << sbBb << endl;
-#endif
-
-		cbbb = (1.0*v>0) ? -1 : 0;
-
-		double cnew_BBB = cBBB - (cBBb + cBbB + cBbb + cbBB + cbBb + cbbB + cbbb);
-
-		double cnew_bBB = cbBB - (cbBb + cbbB + cbbb);
-		double cnew_bbB = cbbB - cbbb;
-		double cnew_BBb = cBBb - (cBbb + cbBb + cbbb);
-		double cnew_Bbb = cBbb - cbbb;
-		double cnew_BbB = cBbB - (cBbb + cbbB + cbbb);
-		double cnew_bBb = cbBb - cbbb;
-
-		cBBB = cnew_BBB;
-		cbBB = cnew_bBB;
-		cbbB = cnew_bbB;
-		cBBb = cnew_BBb;
-		cBbb = cnew_Bbb;
-		cBbB = cnew_BbB;
-		//cbbb = cnew_bbb;
-		cbBb = cnew_bBb;
-
-#ifdef DEBUG
-		cout << "------------------------- " << endl;
-		cout << "cBBB " << cBBB << "\n"
-			<< "cbBB " << cbBB << "\n"
-			<< "cbbB " << cbbB << "\n"
-			<< "cBBb " << cBBb << "\n"
-			<< "cBbb " << cBbb << "\n"
-			<< "cBbB " << cBbB << "\n"
-			<< "cbbb " << cbbb << "\n"
-			<< "cbBb " << cbBb << endl;
-#endif
-	}
-
-	return sBBB / cBBB;
-}
-*/
-
-double stv_bids;
-bcv_index sv1_bids;
-price_bcv_index sv1_pbids;
-vwap_index spv_bids;
-cvol_index cvc_bids;
-
-double stv_asks;
-bcv_index sv1_asks;
-price_bcv_index sv1_pasks;
-vwap_index spv_asks;
-cvol_index cvc_asks;
 
 #ifdef MEMORY
 static const size_t bcv_index_entry_sz = 2*sizeof(tuple<double, double>);
@@ -6117,7 +6115,6 @@ void vwap_stream(stream* s, ofstream* results, ofstream* log, ofstream* stats,
 
 		else if (action == "S")
 		{
-			/*
 			// Insert asks
 			double price = get<4>(in);
 			double volume = get<3>(in);
@@ -6125,7 +6122,6 @@ void vwap_stream(stream* s, ofstream* results, ofstream* log, ofstream* stats,
 			ask_orders[order_id] = make_tuple(price, volume);
 			result = update_vwap2(
 				price, volume, stv_asks, sv1_pasks, spv_asks, cvc_asks);
-			*/
 		}
 
 		else if (action == "E")
@@ -6392,7 +6388,6 @@ void vwap_stream(stream* s, ofstream* results, ofstream* log, ofstream* stats,
 
 	cout << "Bulk[5] executions: " << bulk5_counter << endl;
 }
-
 
 /*
 void vwap_stream2(stream* s, ofstream* results, ofstream* log, ofstream* stats,
@@ -6693,6 +6688,196 @@ void vwap_stream2(stream* s, ofstream* results, ofstream* log, ofstream* stats,
 }
 */
 
+void vwap_stream_monotonic(stream* s, ofstream* results, ofstream* log,
+	ofstream* stats, bool dump = false)
+{
+	typedef DBT_HASH_MAP<int, tuple<double, double> > order_ids;
+
+	order_ids bid_orders;
+	order_ids ask_orders;
+
+	struct timeval tvs, tve;
+
+	double result = 0.0;
+	unsigned long tuple_counter = 0;
+
+	gettimeofday(&tvs, NULL);
+
+	while ( s->stream_has_inputs() )
+	{
+		++tuple_counter;
+
+		stream_tuple in = s->next_input();
+
+		int order_id = get<1>(in);
+		string action = get<2>(in);
+
+		if (action == "B") {
+			// Insert bids
+			double price = get<4>(in);
+			double volume = get<3>(in);
+
+			tuple<double, double> pv = make_tuple(price, volume);
+			bid_orders[order_id] = pv;
+
+			result = update_vwap_monotonic(
+				price, volume, m_bids, q_bids,
+				sv1_at_pmin_bids, spv_at_pmin_bids);
+		}
+
+		else if (action == "S")
+		{
+			// Insert asks
+			double price = get<4>(in);
+			double volume = get<3>(in);
+
+			ask_orders[order_id] = make_tuple(price, volume);
+			result = update_vwap_monotonic(
+				price, volume, m_asks, q_asks,
+				sv1_at_pmin_asks, spv_at_pmin_asks);
+		}
+
+		else if (action == "E")
+		{
+			// Partial execution based from order book according to order id.
+			double delta_volume = get<3>(in);
+
+			order_ids::iterator bid_found = bid_orders.find(order_id);
+			if ( bid_found != bid_orders.end() )
+			{
+				double price =  get<0>(bid_found->second);
+				double volume =  get<1>(bid_found->second);
+				double new_volume = volume - delta_volume;
+
+				// For now, we handle updates as delete, insert
+				tuple<double, double> old_pv = make_tuple(price, volume);
+				tuple<double, double> new_pv = make_tuple(price, new_volume);
+
+				bid_orders.erase(bid_found);
+
+				result = update_vwap_monotonic(
+					price, volume, m_bids, q_bids,
+					sv1_at_pmin_bids, spv_at_pmin_bids, false);
+
+				if ( new_volume > 0 )
+				{
+					bid_orders[order_id] = new_pv;
+					result = update_vwap_monotonic(
+						price, new_volume, m_bids, q_bids,
+						sv1_at_pmin_bids, spv_at_pmin_bids);
+				}
+			}
+			else
+			{
+				order_ids::iterator ask_found = ask_orders.find(order_id);
+				if ( ask_found != ask_orders.end() )
+				{
+					double price =  get<0>(ask_found->second);
+					double volume =  get<1>(ask_found->second);
+					double new_volume = volume - delta_volume;
+
+					// For now, we handle updates as delete, insert
+					ask_orders.erase(ask_found);
+
+					result = update_vwap_monotonic(
+						price, volume, m_asks, q_asks,
+						sv1_at_pmin_asks, spv_at_pmin_asks, false);
+
+					if ( new_volume > 0 ) {
+						result = update_vwap_monotonic(
+							price, new_volume, m_asks, q_asks,
+							sv1_at_pmin_asks, spv_at_pmin_asks);
+					}
+				}
+			}
+		}
+
+		else if (action == "F")
+		{
+			// Order executed in full
+			order_ids::iterator bid_found = bid_orders.find(order_id);
+			if ( bid_found != bid_orders.end() )
+			{
+				double price =  get<0>(bid_found->second);
+				double volume =  get<1>(bid_found->second);
+
+				bid_orders.erase(bid_found);
+
+				result = update_vwap_monotonic(
+					price, volume, m_bids, q_bids,
+					sv1_at_pmin_bids, spv_at_pmin_bids, false);
+			}
+			else
+			{
+				order_ids::iterator ask_found = ask_orders.find(order_id);
+				if ( ask_found != ask_orders.end() )
+				{
+					double price =  get<0>(ask_found->second);
+					double volume =  get<1>(ask_found->second);
+					ask_orders.erase(ask_found);
+					result = update_vwap_monotonic(
+						price, volume, m_asks, q_asks,
+						sv1_at_pmin_asks, spv_at_pmin_asks, false);
+				}
+			}
+		}
+
+		else if (action == "D")
+		{
+			// Delete from relevant order book.
+			order_ids::iterator bid_found = bid_orders.find(order_id);
+			if ( bid_found != bid_orders.end() )
+			{
+				double price =  get<0>(bid_found->second);
+				double volume =  get<1>(bid_found->second);
+
+				bid_orders.erase(bid_found);
+
+				result = update_vwap_monotonic(
+					price, volume, m_bids, q_bids,
+					sv1_at_pmin_bids, spv_at_pmin_bids, false);
+			}
+			else {
+				order_ids::iterator ask_found = ask_orders.find(order_id);
+				if ( ask_found != ask_orders.end() )
+				{
+					double price =  get<0>(ask_found->second);
+					double volume =  get<1>(ask_found->second);
+
+					ask_orders.erase(ask_found);
+					result = update_vwap_monotonic(
+						price, volume, m_asks, q_asks,
+						sv1_at_pmin_asks, spv_at_pmin_asks, false);
+				}
+			}
+		}
+
+		/*
+		else if (action == "X") {
+			// Ignore X for now.
+		}
+		else if (action == "C") {
+			// Unclear for now...
+		}
+		else if (action == "T") {
+			// Unclear for now...
+		}
+		*/
+
+		#ifdef OUTPUT
+		(*results) << result << endl;
+		#endif
+	}
+
+	gettimeofday(&tve, NULL);
+
+	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
+		"VWAP toasted QP", log, false);
+
+}
+
+
+// Testing helpers
 
 void ub_test()
 {
@@ -6781,3 +6966,199 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+
+
+/*
+struct vwap_sum
+{
+	double sbbB;
+	double sBBb;
+	double sBbb;
+	double sBbB;
+	double sbbb;
+	double sbBb;
+};
+
+double sBBB;
+typedef DBT_HASH_MAP<double, double> ts_bBB;
+typedef DBT_HASH_MAP<double, DBT_HASH_MAP<double, vwap_sum> > pv_tsBBB;
+
+ts_bBB pv_sbBB;
+pv_tsBBB pv_sBBB;
+
+struct vwap_count
+{
+	double cbbB;
+	double cBBb;
+	double cBbb;
+	double cBbB;
+	double cbbb;
+	double cbBb;
+};
+
+double cBBB;
+typedef DBT_HASH_MAP<double, double> tc_bBB;
+typedef DBT_HASH_MAP<double, DBT_HASH_MAP<double, vwap_count> > pv_tcBBB;
+
+tc_bBB pv_cbBB;
+pv_tcBBB pv_cBBB;
+
+double new_update_vwap2(double p, double v, bool insert = true)
+{
+	vwap_sum& vs = pv_sBBB[p][v];
+	double& sbBB = pv_sbBB[v];
+	double& sBBb = vs.sBBb;
+	double& sBbB = vs.sBbB;
+	double& sBbb = vs.sBbb;
+	double& sbBb = vs.sbBb;
+	double& sbbB = vs.sbbB;
+	double& sbbb = vs.sbbb;
+
+	vwap_count& vc = pv_cBBB[p][v];
+	double& cbBB = pv_cbBB[v];
+	double& cBBb = vc.cBBb;
+	double& cBbB = vc.cBbB;
+	double& cBbb = vc.cBbb;
+	double& cbBb = vc.cbBb;
+	double& cbbB = vc.cbbB;
+	double& cbbb = vc.cbbb;
+
+	if ( insert )
+	{
+		sbbb = ((1.0*v>0) ? (p*v) : 0);
+
+		double snew_BBB = sBBB + sBBb + sBbB + sBbb + sbBB + sbBb + sbbB + sbbb;
+
+		double snew_bBB = sbBB + sbBb + sbbB + sbbb;
+		double snew_bbB = sbbB + sbbb;
+		double snew_BBb = sBBb + sBbb + sbBb + sbbb;
+		double snew_Bbb = sBbb + sbbb;
+		double snew_BbB = sBbB + sBbb + sbbB + sbbb;
+		double snew_bBb = sbBb + sbbb;
+
+		sBBB = snew_BBB;
+		sbBB = snew_bBB;
+		sbbB = snew_bbB;
+		sBBb = snew_BBb;
+		sBbb = snew_Bbb;
+		sBbB = snew_BbB;
+		//sbbb = snew_bbb;
+		sbBb = snew_bBb;
+
+#ifdef DEBUG
+		cout << "------------------------- " << endl;
+		cout << "sBBB " << sBBB << "\n"
+			<< "sbBB " << sbBB[v] << "\n"
+			<< "sbbB " << sbbB << "\n"
+			<< "sBBb " << sBBb << "\n"
+			<< "sBbb " << sBbb << "\n"
+			<< "sBbB " << sBbB << "\n"
+			<< "sbbb " << sbbb << "\n"
+			<< "sbBb " << sbBb << endl;
+#endif
+
+
+		cbbb = (1.0*v>0) ? 1 : 0;
+
+		double cnew_BBB = cBBB + cBBb + cBbB + cBbb + cbBB + cbBb + cbbB + cbbb;
+
+		double cnew_bBB = cbBB + cbBb + cbbB + cbbb;
+		double cnew_bbB = cbbB + cbbb;
+		double cnew_BBb = cBBb + cBbb + cbBb + cbbb;
+		double cnew_Bbb = cBbb + cbbb;
+		double cnew_BbB = cBbB + cBbb + cbbB + cbbb;
+		double cnew_bBb = cbBb + cbbb;
+
+		cBBB = cnew_BBB;
+		cbBB = cnew_bBB;
+		cbbB = cnew_bbB;
+		cBBb = cnew_BBb;
+		cBbb = cnew_Bbb;
+		cBbB = cnew_BbB;
+		//cbbb = cnew_bbb;
+		cbBb = cnew_bBb;
+
+#ifdef DEBUG
+		cout << "------------------------- " << endl;
+		cout << "cBBB " << cBBB << "\n"
+			<< "cbBB " << cbBB << "\n"
+			<< "cbbB " << cbbB << "\n"
+			<< "cBBb " << cBBb << "\n"
+			<< "cBbb " << cBbb << "\n"
+			<< "cBbB " << cBbB << "\n"
+			<< "cbbb " << cbbb << "\n"
+			<< "cbBb " << cbBb << endl;
+#endif
+
+	}
+	else
+	{
+		sbbb = ((1.0*v>0) ? -(p*v) : 0);
+
+		double snew_BBB = sBBB - (sBBb + sBbB + sBbb
+				 + sbBB + sbBb + sbbB + sbbb);
+
+		double snew_bBB = sbBB - (sbBb + sbbB + sbbb);
+		double snew_bbB = sbbB - sbbb;
+		double snew_BBb = sBBb - (sBbb + sbBb + sbbb);
+		double snew_Bbb = sBbb - sbbb;
+		double snew_BbB = sBbB - (sBbb + sbbB + sbbb);
+		double snew_bBb = sbBb - sbbb;
+
+		sBBB = snew_BBB;
+		sbBB = snew_bBB;
+		sbbB = snew_bbB;
+		sBBb = snew_BBb;
+		sBbb = snew_Bbb;
+		sBbB = snew_BbB;
+		//sbbb = snew_bbb;
+		sbBb = snew_bBb;
+
+#ifdef DEBUG
+		cout << "------------------------- " << endl;
+		cout << "sBBB " << sBBB << "\n"
+			<< "sbBB " << sbBB << "\n"
+			<< "sbbB " << sbbB << "\n"
+			<< "sBBb " << sBBb << "\n"
+			<< "sBbb " << sBbb << "\n"
+			<< "sBbB " << sBbB << "\n"
+			<< "sbbb " << sbbb << "\n"
+			<< "sbBb " << sbBb << endl;
+#endif
+
+		cbbb = (1.0*v>0) ? -1 : 0;
+
+		double cnew_BBB = cBBB - (cBBb + cBbB + cBbb + cbBB + cbBb + cbbB + cbbb);
+
+		double cnew_bBB = cbBB - (cbBb + cbbB + cbbb);
+		double cnew_bbB = cbbB - cbbb;
+		double cnew_BBb = cBBb - (cBbb + cbBb + cbbb);
+		double cnew_Bbb = cBbb - cbbb;
+		double cnew_BbB = cBbB - (cBbb + cbbB + cbbb);
+		double cnew_bBb = cbBb - cbbb;
+
+		cBBB = cnew_BBB;
+		cbBB = cnew_bBB;
+		cbbB = cnew_bbB;
+		cBBb = cnew_BBb;
+		cBbb = cnew_Bbb;
+		cBbB = cnew_BbB;
+		//cbbb = cnew_bbb;
+		cbBb = cnew_bBb;
+
+#ifdef DEBUG
+		cout << "------------------------- " << endl;
+		cout << "cBBB " << cBBB << "\n"
+			<< "cbBB " << cbBB << "\n"
+			<< "cbbB " << cbbB << "\n"
+			<< "cBBb " << cBBb << "\n"
+			<< "cBbb " << cBbb << "\n"
+			<< "cBbB " << cBbB << "\n"
+			<< "cbbb " << cbbb << "\n"
+			<< "cbBb " << cbBb << endl;
+#endif
+	}
+
+	return sBBB / cBBB;
+}
+*/
