@@ -125,45 +125,21 @@ The summation part\footnote{The average is the ratio
 of this sum to a
 counting version of this query in which $\algsumf_{P_2 * V_2}$ is replaced by
 $\algsumf_1$.}
- of the VWAP query from the introduction was, in algebra notation with $\distinct$
-denoting
-tuple elimination and $\routerjoin$ denoting right outer join,
-\begin{multline*}
-\algsumr_{P_2 * V_2}(\algsumr_{V_0 \rightarrow S_0}(\rho_{P_0, V_0}(B))
-\; \bowtie_{k * S_0 > S_1} \\
-\algsumr_{V_1 \rightarrow S_1 \;\mathrm{grpby}\; P_2}(
-\rho_{P_1, V_1}(B) \; \routerjoin_{P_1 > P_2} \\
-\distinct(\pi_{P_2}(\rho_{P_2, V_2'}(B)))) \bowtie \rho_{P_2, V_2}(B)).
-\end{multline*}
-
-%Since $\distinct(\pi_{\vec{A}}(R)) \bowtie R = R$ in bag algebra,
-%
-This translates to our map algebra as
-\[
-\algsumf_{P_2 * V_2}(
-\pi_{m_0[]  \rightarrow S_0}(\{\tuple{}\})
-\; \bowtie_{k * S_0 > S_1}
-\pi_{P_2, m_1[P_2] \rightarrow S_1}(B))[]
-\]
-%
-where the maps $m_0$ and $m_1$ are
+ of the VWAP query from the introduction is, in algebra notation,
+\begin{equation}
+q[] = \algsumf_{P_2 * V_2}(
+\sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))[]
+\end{equation}
+where
 \begin{eqnarray*}
+m[p_2] &:=& k * m_0[] - m_1[P_2]
+\\
 m_0[] &:=&
 \algsumf_{V_0}(\rho_{P_0, V_0}(B))[]
 \\
 m_1[p_2] &:=&
 \algsumf_{V_1}(\sigma_{P_1 > p_2}(\rho_{P_1, V_1}(B)))[p_2]
 \end{eqnarray*}
-The query can be simplified using standard relational algebra equivalences
-further to
-\begin{equation}
-q[] = \algsumf_{P_2 * V_2}(
-\sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))[]
-\end{equation}
-where
-$
-m[p_2] = k * m_0[] - m_1[P_2].
-$
 %\punto
 \end{example}
 
@@ -231,6 +207,13 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
    \algsumf_{\Delta_{+R(\vec{r})} f}(Q)
    + \algsumf_f(\Delta_{+R(\vec{r})} Q)
    + \algsumf_{\Delta_{+R(\vec{r})} f}(\Delta_{+R(\vec{r})} Q)
+\\
+\label{eq:a6}
+\Delta_{+R(\vec{r})} \algsumf_f(Q) &:=&
+   \algsumf_f(\Delta_{+R(\vec{r})} Q)
+\\
+\nonumber
+&\dots& \mbox{$\Delta_{+R(\vec{r})} f = 0$ (optimization of Eq.~\ref{eq:a5})}
 \\[2ex]
 \label{eq:b1}
 \Delta_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=& \pi_{\vec{r} \rightarrow \vec{A}}\{\tuple{}\}
@@ -248,11 +231,25 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 \label{eq:b5}
 \Delta_{+R(\vec{r})} (Q_1 \times Q_2) &:=&
 ((\Delta_{+R(\vec{r})} Q_1) \times Q_2) \cup
-(Q_1 \times (\Delta_{+R(\vec{r})} Q_2)) \cup
+(Q_1 \times (\Delta_{+R(\vec{r})} Q_2)) \\
+\nonumber
+&\cup&
 ((\Delta_{+R(\vec{r})} Q_1) \times (\Delta_{+R(\vec{r})} Q_2))
+\\
+\label{eq:b6}
+\Delta_{+R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
+\sigma_{f \theta 0}(\Delta_{+R(\vec{r})} Q)
+\\
+\nonumber
+&\dots& \Delta_{+R(\vec{r})} f[\vec{x}, \vec{A}] = 0 \mbox{ on all $\vec{A}$}
+\\
+\nonumber
+\Delta_{+R(\vec{r})} \pi_{\dots}(Q) &\dots& \mbox{no rule, simplify 
+surrounding aggregate instead}
 \\[2ex]
 %
 %
+\nonumber
 \mbox{Aggregate map simplifications:} &&
 \\
 \label{eq:c1}
@@ -261,11 +258,12 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 &:=&
 \algsumf_{f[\vec{A}, g_1, \dots, g_k]}(Q)
 \\
-\label{eq:c2}
-\algsumf_f(\sigma_{g \,\theta\, 0}(Q))
-&:=&
-\algsumf_{\mathrm{if} \, (g \,\theta\, 0) \, \mathrm{then} \, f \, \mathrm{else} \, 0}(Q)
-\\
+%\label{eq:c2}
+%\algsumf_f(\sigma_{g \,\theta\, 0}(Q))
+%&:=&
+%\algsumf_{\mathrm{if} \, (g \,\theta\, 0) \, \mathrm{then}
+%      \, f \, \mathrm{else} \, 0}(Q)
+%\\
 \label{eq:c3}
 \algsumf_f(Q_1 \cup Q_2) &:=& \algsumf_f(Q_1) + \algsumf_f(Q_2)
 \\[2ex]
@@ -290,6 +288,35 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 \\
 \label{eq:d6}
 \algsumf_{0}(Q) &:=& 0
+\\[2ex]
+\label{eq:e1}
+\sigma_{f[A] \theta 0}(Q) &:=& \sigma_{A \ge A_{\min}[]}(Q)
+\\
+&\dots& \mbox{$f$ is monotonically increasing in its argument and}
+\nonumber
+\\
+&& A_{\min}[] = \min \{ A' \mid f[A'] \theta 0 \} 
+\nonumber
+\\[2ex]
+\label{eq:e2}
+\sigma_{f[A] \theta 0}(Q) &:=& \sigma_{A \le A_{\max}[]}(Q)
+\\
+&\dots& \mbox{$f$ is monotonically decreasing in its argument and}
+\nonumber
+\\
+&& A_{\max}[] = \max \{ A' \mid f[A'] \theta 0 \} 
+\nonumber
+\\[2ex]
+%
+%
+\mbox{Relational algebra simplifications:} &&
+\\
+\label{eq:f1}
+\sigma_{f[\vec{A}, B_1, \dots, B_k] \,\theta\, 0}
+   (\pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(Q))
+&:=&
+\pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(
+\sigma_{f[\vec{A}, g_1, \dots, g_k] \,\theta\, 0}(Q))
 \end{eqnarray}
 
 \vspace{-4mm}
@@ -355,10 +382,12 @@ Let us now compute the trigger
 \]
 for the summation part of the VWAP query (from Example~\ref{ex:compiler1})
 \[
-q[] = \algsumf_{P_2 * V_2}(\sigma_{k * s_0[] - s_1[P_2] > 0}(\rho_{P_2, V_2}(B)))
+q[] = \algsumf_{P_2 * V_2}(\sigma_{m[P_2] > 0}(\rho_{P_2, V_2}(B)))
 \]
 where
 \begin{eqnarray*}
+m[p_2]   &=& k * s_0[] - s_1[P_2]
+\\
 s_0[]    &=& \algsumf_{V_0}(\rho_{P_0, V_0}(B))
 \\
 s_1[p_2] &=& \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
@@ -366,87 +395,81 @@ s_1[p_2] &=& \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
 
 Then
 \begin{eqnarray*}
-\Delta_{+B(p,v)} s_0[] &=&
+\Delta_{+B(p,v)} m[] &=& k * 
+(\Delta_{+B(p,v)} s_0[]) - (\Delta_{+B(p,v)} s_1[p_2]) 
+\\
+\Delta_{+B(p,v)} s_0[] &:=&
    \Delta_{+B(p,v)} \algsumf_{V_0}(\rho_{P_0, V_0}(B))
 \\
-&\stackrel{(\ref{eq:a5})}{=}& 
-   \algsumf_{\underbrace{\Delta_{+B(p,v)} V_0}_{0}}(
-      B \cup \Delta_{+B(p,v)} B)
+&\stackrel{(\ref{eq:a6})}{=}& 
+   \algsumf_{V_0}(\Delta_{+B(p,v)} \rho_{P_0, V_0}(B))
 \\
-&+& \algsumf_{V_0}(\Delta_{+B(p,v)} \rho_{P_0, V_0}(B))
+&& \quad (\Delta_{+B(p,v)} V_0 = 0)
 \\
-&=& \algsumf_{V_0}(\pi_{p \rightarrow P_0, v \rightarrow V_0}(\{\tuple{}\}))
+&\stackrel{(\ref{eq:b1})}{=}& \algsumf_{V_0}(\pi_{p \rightarrow P_0, v \rightarrow V_0}(\{\tuple{}\}))
 \\
-&=& \algsumf_v(\{\tuple{}\}) = v
+&\stackrel{(\ref{eq:c1})}{=}& \algsumf_v(\{\tuple{}\})
+\stackrel{(\ref{eq:d2})}{=}
+v
 \\
-\Delta_{+B(p,v)} s_1[p_2] &=&
+\Delta_{+B(p,v)} s_1[p_2] &:=&
    \Delta_{+B(p,v)} \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
 \\
-&=& \Delta_{+B(p,v)} \algsumf_{c[P_1,V_1,p_2]}(\rho_{P_1, V_1}(B))
+&\stackrel{(\ref{eq:a6}), (\ref{eq:b6})}{=}&
+\algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\Delta_{+B(p,v)} \rho_{P_1, V_1}(B)))
 \\
-&\stackrel{(\ref{eq:a5})}{=}&
-   \underbrace{\algsumf_{\Delta_{+B(p,v)} c[P_1,V_1,p_2]}
-      (\rho_{P_1, V_1}(B))}_{0}
+&\stackrel{(\ref{eq:b1})}{=}&
+\algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\pi_{p \rightarrow P_1, v \rightarrow V_1}(\{\tuple{}\})))
 \\
-&+& \underbrace{\algsumf_{\Delta_{+B(p,v)} c[P_1,V_1,p_2]}(\Delta_{+B(p,v)} \rho_{P_1, V_1}(B))}_{0}
+&\stackrel{(\ref{eq:f1})}{=}&
+\algsumf_{V_1}(\pi_{p \rightarrow P_1, v \rightarrow V_1}(\sigma_{p - p_2 > 0}(\{\tuple{}\})))
 \\
-&+& \algsumf_{c[P_1,V_1,p_2]}(\Delta_{+B(p,v)} \rho_{P_1, V_1}(B))
-\\
-&=&
-   \algsumf_{c[P_1,V_1,p_2]}(\pi_{p \rightarrow P_1, v \rightarrow V_1}(\{\tuple{}\}))
-\\
-&=&
-   \algsumf_{c[p,v,p_2]}(\{\tuple{}\})
+&\stackrel{(\ref{eq:c1})}{=}&
+\algsumf_{v}(\sigma_{p - p_2 > 0}(\{\tuple{}\}))
 \\
 &=& \mathrm{if}\, (p - p_2 > 0) \, \mathrm{then}\, v \, \mathrm{else} \, 0
-\\
-\mbox{where}
-\\
-c[p_1,v_1,p_2] &:=&
-   \mathrm{if}\, (p_1 - p_2 > 0) \, \mathrm{then}\, v_1 \, \mathrm{else} \, 0
-\\
-\Delta_{+B(p,v)} c &=& 0
-\\[2ex]
-q[] &=& \algsumf_{d[P_2, V_2]}(\rho_{P_2,V_2}(B))
-\\
-\mbox{where}
-\\
-d[p_2,v_2] &:=&
-   \mathrm{if}\, (p_1 - p_2 > 0) \, \mathrm{then}\, v_1 \, \mathrm{else} \, 0
-\\
-\Delta_{+B(p,v)} q[] &=&
-   \Delta_{+B(p,v)} \algsumf_{d[P_2, V_2]}
 \end{eqnarray*}
 
-Thus we generate the following code (map values are initially 0):
+The map $m[p_2]$ is monotonically increasing in $p_2$ because $s_0[]$ is
+constant and $s_1[p_2]$ is monotonically decreasing. Thus, if
+$p_{\min}[] = \min \{ p \mid m[p] > 0 \}$, then
+$q[] = q'[p_{\min}]$ with
+\[
+q[p_{\min}] = \algsumf_{P_2 - p_{\min} > 0}(\rho_{P_2,V_2}(B))
+\]
+where
+\[
+\Delta_{+B(p,v)} q'[p_{\min}] =
+   \mbox{if $(p \ge p_{\min})$ then $p * v$ else $0$}
+\]
+
+Thus we generate the following code:
 \begin{verbatim}
 on insert into B values (p, v)
 {
-  if(! dom_m.member(p))
-     { dom_m.add(p); m[p] = 0; }
-
-  // computing deltas
-  delta q = (m[p] > 0) ? (p * v) : 0;
-
-  foreach p_2 in dom_m do
+  foreach p' in dom_p do
   {
-     delta g[p_2] = p - p_2 - g[p_2];
-     delta m[p_2] = k * v - ((p > p_2) ? v : 0);
-     delta s[p_2] = (p = p_2) ? v : 0;
-     delta q += ((m[p_2] > 0) !=
-                 (m[p_2] + delta m[p_2] > 0)) ?
-        sgn(m[p_2] + delta m[p_2])
-           * (s[p_2] + delta s[p_2]) : 0;
+     m[p'] += k*v - ((p > p') ? v : 0);
+     q[p'] += (p >= p') ? (p * v) : 0;
   }
 
-  // updating the maps
-  q += delta q;
-  foreach p_2 in dom_m do
+  B += {(p,v)};
+
+  if (p not in dom_p) then
   {
-     m[p_2] += delta m[p_2];
-     s[p_2] += delta s[p_2];
-     g[p_2] += delta g[p_2];
+     m[p] = k * sum_v(B)
+          - sum_v(select_{p > p2}(
+                      rho_{p2,v2}(B)));
+     q'[p] = sum_{p2 * v2}(select_{p2 >= p}(
+                      rho_{p2,v2}(B)));
+     dom_p += {p}
   }
+
+  /* maintain index on m[.] by p2 for finding
+     this minimum efficiently */
+  pmin = min(select_{m[p2] > 0}(project_{p2}(
+               rho_{p2,v2}(B))));
+  q[] = q'[pmin];
 }
 \end{verbatim}
 %

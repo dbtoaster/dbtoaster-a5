@@ -119,18 +119,11 @@ then compares the two VWAPs. For simplicity, we present the VWAP for the bids
 only:
 
 \begin{verbatim}
-select avg(b3.price*b3.volume) as bid_vwap
-from   (select sum(volume) as total_volume
-        from   bids) as bv,
-       (select b2.price,
-               sum(b1.volume) as cumsum_volume
-        from   bids b1 right outer join
-               (select distinct price from bids) b2
-               on (b1.price > b2.price)
-        group by b2.price) as bcv,
-       bids b3
-where  k * bv.total_volume > bcv.cumsum_volume
-and    bcv.price = b3.price
+select avg(b2.price * b2.volume) as bid_vwap
+from   bids b2
+where  k * (select sum(volume) from bids)
+         > (select sum(volume) from bids b1
+            where b1.price > b2.price);
 \end{verbatim}
 %    as vwap_input
 %
