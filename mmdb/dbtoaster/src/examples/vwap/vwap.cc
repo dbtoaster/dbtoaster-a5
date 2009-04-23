@@ -3734,12 +3734,34 @@ inline double update_vwap2(double price, double volume, double& stv,
 //
 // DBToaster exploiting monotonicity
 
+void print_select_sv1_index(select_sv1_index& m)
+{
+	select_sv1_index::iterator m_it = m.begin();
+	select_sv1_index::iterator m_end = m.end();
+
+	for (; m_it != m_end; ++m_it) {
+		cout << m_it->first << ", " << m_it->second << endl;
+	}
+}
+
+void print_spv_index(spv_index& q)
+{
+	spv_index::iterator q_it = q.begin();
+	spv_index::iterator q_end = q.end();
+
+	for (; q_it != q_end; ++q_it) {
+		cout << q_it->first << ", " << q_it->second << endl;
+	}
+}
+
 inline double update_vwap_monotonic(double price, double volume,
 	select_sv1_index& m, spv_index& q,
 	tuple<double, double>& sv1_at_pmin,
 	tuple<double, double>& spv_at_pmin,
 	bool insert = true)
 {
+	bool bids = m.begin() == m_bids.begin();
+
 	select_sv1_index::iterator m_p_found = m.find(price);
 
 	// foreach p2 in dom_p2 ...
@@ -3762,12 +3784,12 @@ inline double update_vwap_monotonic(double price, double volume,
 	if ( insert && m_p_found == m.end() ) {
 		select_sv1_index::iterator p_ub = m.upper_bound(price);
 
-		while ( p_ub->first <= price && p_ub != m.end() )
+		while ( p_ub != m.end() && p_ub->first <= price )
 			++p_ub;
 
 		if ( p_ub == m.end() ) {
 			// No upper bound, price is largest seen so far.
-			m[price] = 0.0;
+			m[price] = VWAP_K * volume;
 		}
 		else {
 			double p_upper = p_ub->first;
@@ -3820,12 +3842,12 @@ inline double update_vwap_monotonic(double price, double volume,
 	{
 		spv_index::iterator p_ub = q.upper_bound(price);
 
-		while ( p_ub->first <= price && p_ub != q.end() )
+		while ( p_ub != q.end() && p_ub->first <= price )
 			++p_ub;
 
 		if ( p_ub == q.end() ) {
 			// No upper bound, price is largest seen so far.
-			q[price] = 0.0;
+			q[price] = price * volume;
 		}
 		else {
 			double p_upper = p_ub->first;
@@ -3868,12 +3890,16 @@ inline double update_vwap_monotonic(double price, double volume,
 		if ( r_found != q.end() )
 			result = r_found->second;
 		else {
-			cerr << "No q[p_min] found for p_min = "
+			cerr << (bids? "Bids " : "Asks ")
+				<< "no q[p_min] found for p_min = "
 				<< p_min_found->first << endl;
+			print_select_sv1_index(m);
 		}
 	}
 	else {
-		cerr << "No m[p] > 0 found!" << endl;
+		cerr << (bids? "Bids " : "Asks ") << "no m[p] > 0 found!" << endl;
+		cerr << "New (p,v) " << price << ", " << volume << endl;
+		print_select_sv1_index(m);
 	}
 
 	return result;
@@ -6701,16 +6727,27 @@ void vwap_stream_monotonic(stream* s, ofstream* results, ofstream* log,
 	double result = 0.0;
 	unsigned long tuple_counter = 0;
 
+	double tup_sum = 0.0;
+	double tup_sum_usec = 0.0;
+
 	gettimeofday(&tvs, NULL);
 
 	while ( s->stream_has_inputs() )
 	{
-		++tuple_counter;
+		struct timeval tups, tupe;
+		gettimeofday(&tups, NULL);
 
 		stream_tuple in = s->next_input();
 
 		int order_id = get<1>(in);
 		string action = get<2>(in);
+
+		#ifdef LOG_INPUT
+		cout << "Tuple: order " << order_id << ", " << action
+			<< " t=" << get<0>(in) << " p=" << get<4>(in)
+			<< " v=" << get<3>(in) << endl;
+		#endif
+
 
 		if (action == "B") {
 			// Insert bids
@@ -6864,6 +6901,34 @@ void vwap_stream_monotonic(stream* s, ofstream* results, ofstream* log,
 		}
 		*/
 
+		++tuple_counter;
+
+		gettimeofday(&tupe, NULL);
+
+		long sec = tupe.tv_sec - tups.tv_sec;
+		long usec = tupe.tv_usec - tups.tv_usec;
+		if (usec < 0) { --sec; usec+=1000000; }
+		tup_sum += (sec + (usec / 1000000.0));
+		tup_sum_usec += usec;
+
+		if ( (tuple_counter % 10000) == 0 )
+		{
+			struct timeval tup_10k;
+			gettimeofday(&tup_10k, NULL);
+
+			long sec = tup_10k.tv_sec - tvs.tv_sec;
+			long usec = tup_10k.tv_usec - tvs.tv_usec;
+			if (usec < 0) { --sec; usec+=1000000; }
+
+			cout << "Processed " << tuple_counter << " tuples." << endl;
+			cout << "Exec time " << (tup_sum / 10000.0) << " "
+				<< (tup_sum_usec / 10000.0) << " "
+				<< (sec + (usec / 1000000.0)) << endl;
+
+			tup_sum = 0.0;
+			tup_sum_usec = 0.0;
+		}
+
 		#ifdef OUTPUT
 		(*results) << result << endl;
 		#endif
@@ -6872,7 +6937,7 @@ void vwap_stream_monotonic(stream* s, ofstream* results, ofstream* log,
 	gettimeofday(&tve, NULL);
 
 	print_result(tve.tv_sec - tvs.tv_sec, tve.tv_usec - tvs.tv_usec,
-		"VWAP toasted QP", log, false);
+		"VWAP toasted QP (monotonic)", log, false);
 
 }
 
@@ -6938,7 +7003,7 @@ int main(int argc, char* argv[])
 	cout << "Initialized input stream..." << endl;
 
 	if ( app_mode == "toasted" )
-		vwap_stream(&f, out, log, stats);
+		vwap_stream_monotonic(&f, out, log, stats);
 
 	else if ( app_mode == "ecpg" )
 		vwap_snapshot_ecpg(directory, query_freq, &f, out, log);
