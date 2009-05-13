@@ -28,7 +28,10 @@ CREATE TEMPORARY VIEW production_stats AS
 CREATE TEMPORARY TABLE supply_tbl AS
   SELECT
     part,  
-    CREATE_VARIABLE('Exponential', row(supply_dev*0.000001)) + (supply_max) AS supply
+    pip_value_bundle_add(
+      pip_value_bundle_create(CREATE_VARIABLE('Exponential', row(supply_dev*0.000001)), 60000),
+      supply_max
+    ) AS supply
   FROM
     production_stats;
 
@@ -50,7 +53,13 @@ CREATE TEMPORARY VIEW increase_per_customer AS
 CREATE TEMPORARY TABLE demand_tbl AS
   SELECT
     part, price,
-    (CREATE_VARIABLE('Exponential', row(increase)) + 1) * quantity AS customer_demand
+    pip_value_bundle_mul(
+      pip_value_bundle_add(
+        pip_value_bundle_create(CREATE_VARIABLE('Poisson', row(increase)), 60000),
+        1
+      ),
+      quantity
+    ) AS customer_demand
   FROM
     (SELECT
       "L_PARTKEY" AS part,
@@ -69,54 +78,61 @@ CREATE TEMPORARY TABLE demand_tbl AS
       part
     ) AS average_increase;
 
+CREATE TEMPORARY TABLE sample_count(cnt integer, delta integer);
+INSERT INTO sample_count(cnt,delta) VALUES 
+  (1,0)       ,
+  (2,30)      ,
+  (5,90)      ,
+  (10,240)    ,
+  (25,540)    ,
+  (50,1390)   ,
+  (100,2790)  ,
+  (250,5790)  ,
+  (500,13290) ,
+  (1000,28290);
+
 CREATE TEMPORARY TABLE sample_instance(num integer);
 INSERT INTO sample_instance(num) VALUES 
   (00), (01), (02), (03), (04), (05), (06), (07), (08), (09),
   (10), (11), (12), (13), (14), (15), (16), (17), (18), (19),
   (20), (21), (22), (23), (24), (25), (26), (27), (28), (29);
 
---DROP TABLE IF EXISTS correct_results;
---CREATE TABLE correct_results AS
---  SELECT
---    part,
---    expectation(customer_demand-supply, inputs, 10000) AS underproduction
---  FROM
---    (SELECT
---      demand_tbl.part,
---      customer_demand,
---      supply
---    FROM
---      demand_tbl,
---      supply_tbl
---    WHERE
---      customer_demand > supply
---      AND demand_tbl.part = supply_tbl.part
---    ) AS inputs;
+CREATE TEMPORARY TABLE samplepoints AS
+  SELECT 
+    num, cnt, cnt*num+delta AS low, cnt*(num+1)+delta AS high
+  FROM 
+    sample_count, sample_instance;
 
 CREATE TEMPORARY TABLE results AS
   SELECT
-    part, num,
-    expectation(customer_demand-supply, inputs, 1000) AS underproduction
+    part,cnt,pip_world_presence_count(worldpresence) AS reliability,
+    pip_value_bundle_expect(deficit, low, high, worldpresence) AS underproduction
   FROM
     (SELECT
+      pip_value_bundle_cmp(pip_world_presence_create(60000), customer_demand, supply) AS worldpresence,
       demand_tbl.part,
-      customer_demand,
-      supply
+      pip_value_bundle_add(
+        customer_demand,
+        pip_value_bundle_mul(
+          supply,
+          -1
+        )
+      ) AS deficit
     FROM
       demand_tbl,
       supply_tbl
     WHERE
-      customer_demand > supply
-      AND demand_tbl.part = supply_tbl.part
+      demand_tbl.part = supply_tbl.part
     ) AS inputs,
-    sample_instance;
+    samplepoints;
 --  GROUP BY 
 --    demand_tbl.part;
 
-SELECT avg(sqrt(underproduction)), count(*)
+SELECT cnt, avg(sqrt(underproduction)), avg(reliability), count(*) AS reliability
 FROM   (
-          SELECT    results.part, avg((results.underproduction-correct_results.underproduction)*(results.underproduction-correct_results.underproduction)/(correct_results.underproduction*correct_results.underproduction)) as underproduction
+          SELECT    cnt, results.part, avg((results.underproduction-correct_results.underproduction)*(results.underproduction-correct_results.underproduction)/(correct_results.underproduction*correct_results.underproduction)) as underproduction, avg(reliability) AS reliability
           FROM      results, correct_results
           WHERE     results.part = correct_results.part AND results.underproduction != 'Infinity' AND correct_results.underproduction != 'Infinity'
-          GROUP BY  results.part
-       ) resultdevs;
+          GROUP BY  cnt, results.part
+       ) resultdevs
+GROUP BY cnt;

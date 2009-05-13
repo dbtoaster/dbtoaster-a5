@@ -28,6 +28,7 @@
 void _PG_init(void);
 
 /** Integration operations (sample/integration.c) **/
+float8 pip_compute_conditioned_probability(pip_atomset *constraints, int clause_cnt, pip_atom **clause, int samples);
 float8 pip_compute_independent_probability(int clause_cnt, pip_atom **clause, int samples);
 float8 pip_compute_expectation(pip_eqn *eqn, int clause_cnt, pip_atom **clause, int64 samples);
 float8 pip_compute_expectation_conditionless(pip_eqn *eqn, int64 samples);

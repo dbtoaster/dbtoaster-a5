@@ -9,6 +9,7 @@ CREATE TYPE pip_value_bundle;
 CREATE TYPE pip_world_presence;
 CREATE TYPE pip_eqn;
 CREATE TYPE pip_expectation;
+CREATE TYPE pip_atomset;
 
 --------------- pip_var FUNCTIONS ---------------
 CREATE FUNCTION pip_var_in(cstring)                        RETURNS pip_var          AS '_OBJWD_','pip_var_in'          LANGUAGE C IMMUTABLE STRICT;
@@ -17,13 +18,15 @@ CREATE FUNCTION create_variable(cstring, integer, cstring) RETURNS pip_eqn      
 CREATE FUNCTION create_variable(cstring, integer, record)  RETURNS pip_eqn          AS '_OBJWD_','pip_var_create_row'  LANGUAGE C VOLATILE  STRICT;
 
 --------------- pip_eqn FUNCTIONS ---------------
-CREATE FUNCTION pip_eqn_in(cstring)                                RETURNS pip_eqn          AS '_OBJWD_','pip_eqn_in'          LANGUAGE C IMMUTABLE STRICT;
-CREATE FUNCTION pip_eqn_out(pip_eqn)                               RETURNS cstring          AS '_OBJWD_','pip_eqn_out'         LANGUAGE C IMMUTABLE STRICT;
-
-CREATE FUNCTION expectation(pip_eqn, record)                       RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
-CREATE FUNCTION expectation(pip_eqn, record, integer)              RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
-CREATE FUNCTION expectation_max_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_max_g' LANGUAGE C VOLATILE  STRICT;
-CREATE FUNCTION expectation_sum_g(pip_sample_set, pip_eqn, record) RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_sum_g' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION pip_eqn_in(cstring)                                               RETURNS pip_eqn          AS '_OBJWD_','pip_eqn_in'          LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_eqn_out(pip_eqn)                                              RETURNS cstring          AS '_OBJWD_','pip_eqn_out'         LANGUAGE C IMMUTABLE STRICT;
+                                                                                  
+CREATE FUNCTION expectation(pip_eqn, record)                                      RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation(pip_eqn, record, integer)                             RETURNS double precision AS '_OBJWD_','pip_expectation'       LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_max_g(pip_sample_set, pip_eqn, record)                RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_max_g' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_max_g_one(pip_atomset, double precision, record)      RETURNS pip_atomset      AS '_OBJWD_','pip_expectation_max_g_one' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_max_f_one(pip_atomset)                                RETURNS double precision AS '_OBJWD_','pip_expectation_max_f_one' LANGUAGE C VOLATILE  STRICT;
+CREATE FUNCTION expectation_sum_g(pip_sample_set, pip_eqn, record)                RETURNS pip_sample_set   AS '_OBJWD_','pip_expectation_sum_g' LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record)          RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION expectation_sum_g_one(double precision, pip_eqn, record, integer) RETURNS double precision AS '_OBJWD_','pip_expectation_sum_g_one' LANGUAGE C VOLATILE  STRICT;
 
@@ -67,6 +70,10 @@ CREATE FUNCTION pip_atom_create_lt(pip_eqn,pip_eqn)          RETURNS pip_atom AS
 CREATE FUNCTION pip_atom_create_lt(pip_eqn,double precision) RETURNS pip_atom AS '_OBJWD_','pip_atom_create_lt_ef' LANGUAGE C VOLATILE  STRICT;
 CREATE FUNCTION pip_atom_create_lt(double precision,pip_eqn) RETURNS pip_atom AS '_OBJWD_','pip_atom_create_lt_fe' LANGUAGE C VOLATILE  STRICT;
 
+--------------- pip_atomset FUNCTIONS ---------------
+CREATE FUNCTION pip_atomset_in(cstring)       RETURNS pip_atomset AS '_OBJWD_','pip_atomset_in'  LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_atomset_out(pip_atomset)  RETURNS cstring     AS '_OBJWD_','pip_atomset_out' LANGUAGE C IMMUTABLE STRICT;
+
 --------------- pip_sample_set FUNCTIONS ---------------
 CREATE FUNCTION pip_sample_set_in(cstring)              RETURNS pip_sample_set          AS '_OBJWD_','pip_sample_set_in'       LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_sample_set_out(pip_sample_set)      RETURNS cstring                 AS '_OBJWD_','pip_sample_set_out'      LANGUAGE C IMMUTABLE STRICT;
@@ -109,6 +116,7 @@ CREATE FUNCTION pip_value_bundle_max(pip_value_bundle,pip_value_bundle)         
 CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle)                                  RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle,pip_world_presence)               RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
 CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle,integer,integer)                  RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
+CREATE FUNCTION pip_value_bundle_expect(pip_value_bundle,integer,integer,pip_world_presence) RETURNS double precision   AS '_OBJWD_','pip_value_bundle_expect' LANGUAGE C IMMUTABLE STRICT;
 
 --------------- VARIABLE DEFINITIONS ---------------
 CREATE TYPE pip_var (
@@ -150,6 +158,11 @@ CREATE TYPE pip_eqn (
 CREATE TYPE pip_expectation (
   INPUT = pip_expectation_in,
   OUTPUT = pip_expectation_out,
+  STORAGE = external
+);
+CREATE TYPE pip_atomset (
+  INPUT =   pip_atomset_in,
+  OUTPUT =  pip_atomset_out,
   STORAGE = external
 );
 
@@ -226,14 +239,14 @@ CREATE AGGREGATE expectation_max (pip_value_bundle)
   stype = pip_value_bundle,
   finalfunc = pip_value_bundle_expect
 );
-CREATE AGGREGATE sum(pip_eqn, record)
+CREATE AGGREGATE max(double precision, record)
 (
-  --We label this as a constraint type, since it can be applied on
-  --constrained columns... the corresponding constraints are pulled into the eqn.
   CONSTRAINTTYPE,  --HACKED_SQL_ONLY
-  sfunc = pip_eqn_compile_sum,
-  stype = pip_eqn,
-  initcond = '(0)'
+  sfunc     = expectation_max_g_one,
+  stype     = pip_atomset,
+  finalfunc = expectation_max_f_one,
+  initcond  = '?8'
+--  sortop    = >
 );
 CREATE AGGREGATE sum(pip_eqn)
 (

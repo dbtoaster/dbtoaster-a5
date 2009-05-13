@@ -17,23 +17,23 @@ Datum   pip_atomset_in (PG_FUNCTION_ARGS)
   char        *str = PG_GETARG_CSTRING(0);
   pip_atomset *atomset = NULL;
   
-  if(str[0] = '?'){
+  if(str[0] == '?'){
     int cachesize = 0;
     if(str[1] != '\0'){
       sscanf(str+1, "%d", &cachesize);
     }
-    pip_atomset_create(NULL, 0, NULL, cachesize);
+    atomset = pip_atomset_from_clause(0, NULL, cachesize);
   } else {
     elog(ERROR, "PIP atom parsing has not been implemented yet");
   }
   
-  PG_RETURN_POINTER(atom);
+  PG_RETURN_POINTER(atomset);
 }
 
 Datum   pip_atomset_out (PG_FUNCTION_ARGS)
 {
   char *dummy = "[pip atomset]";
-  char *ret = palloc0(strlen(dummy);
+  char *ret = palloc0(strlen(dummy));
   strcpy(ret, dummy);
   
   PG_RETURN_CSTRING(ret);

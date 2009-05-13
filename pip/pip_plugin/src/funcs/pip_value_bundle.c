@@ -175,9 +175,9 @@ Datum   pip_value_bundle_mul_vv  (PG_FUNCTION_ARGS)
 Datum   pip_value_bundle_expect  (PG_FUNCTION_ARGS)
 {
   pip_value_bundle   *valbundle = (pip_value_bundle *)PG_GETARG_BYTEA_P(0);
-  pip_world_presence *wp = (fcinfo->nargs == 2) ? ((pip_world_presence *)PG_GETARG_BYTEA_P(1)) : (NULL);
-  int                 low  = (fcinfo->nargs == 3) ? (PG_GETARG_INT32(1)) : (0);
-  int                 high = (fcinfo->nargs == 3) ? (PG_GETARG_INT32(2)) : (valbundle->worldcount);
+  pip_world_presence *wp = ((fcinfo->nargs == 2)||(fcinfo->nargs == 4)) ? ((pip_world_presence *)PG_GETARG_BYTEA_P(((fcinfo->nargs == 4)?3:1))) : (NULL);
+  int                 low  = (fcinfo->nargs >= 3) ? (PG_GETARG_INT32(1)) : (0);
+  int                 high = (fcinfo->nargs >= 3) ? (PG_GETARG_INT32(2)) : (valbundle->worldcount);
   float8              result = 0;
   int i, cnt = 0;
 
@@ -189,7 +189,7 @@ Datum   pip_value_bundle_expect  (PG_FUNCTION_ARGS)
   }
   
   if(cnt > 0)
-    result /= high;
+    result /= (high-low);
   
   PG_RETURN_FLOAT8(result);
 }

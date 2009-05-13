@@ -44,10 +44,10 @@ typedef struct pip_atom { //represents ptr_left > ptr_right
 typedef struct pip_atomset {
   char vl_len_[4]; //internal length parameter; do not touch!
   float8 probability; //precomputed probability of the atoms being true.
-  int cachestate;
+  int cachesize;
   int count;
   char data[0]; //set of pip_atom, use vl_len_ to figure out deltas.
-}
+} pip_atomset;
 
 typedef pip_presample_tree pip_sample_generator; //281 bytes
 

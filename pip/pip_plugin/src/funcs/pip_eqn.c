@@ -5,6 +5,7 @@
 #include "fmgr.h"
 #include "executor/executor.h"
 #include "executor/spi.h"
+#include "utils/geo_decls.h"
 
 #include "pip.h"
 #include "eqn.h"
@@ -73,6 +74,67 @@ Datum   pip_expectation_max_g (PG_FUNCTION_ARGS)
   
   PG_RETURN_POINTER(set);
 }
+
+#define MAXPECTATION(set) (*ATOMSET_CACHE(set, float))
+
+Datum   pip_expectation_max_g_one (PG_FUNCTION_ARGS)
+{
+  if(!fcinfo->context || !IsA(fcinfo->context, AggState)){
+    elog(ERROR, "%s getting called, but not as an aggregate", __FUNCTION__);
+  }
+  if(((AggState *)fcinfo->context)->agg_done){
+    PG_RETURN_POINTER(PG_GETARG_BYTEA_P(0));
+  } else {
+    pip_atomset    *state      = (pip_atomset *)PG_GETARG_BYTEA_P(0);
+    float8          aggregate  = PG_GETARG_FLOAT8(1);
+    HeapTupleHeader row        = PG_GETARG_HEAPTUPLEHEADER(2);
+    int             atom_count = 0;
+    pip_atom      **atoms      = NULL; 
+    float8          prob;
+    float8          oldexp;
+    
+//    if(state->count)
+//      elog(ERROR, "----- %d", state->count);
+    
+    if(row){
+      atom_count = pip_extract_clause(row, &atoms);
+    }
+    prob = pip_compute_conditioned_probability(state, atom_count, atoms, 1000);
+    if(isnan(state->probability)){
+      state->probability = 0;
+    }
+    state->probability += prob;
+    MAXPECTATION(state) += prob * aggregate;
+  
+    if((1.0 - state->probability) * aggregate < MAXPECTATION(state) * 0.01){
+      ((AggState *)fcinfo->context)->agg_done = true;
+    }
+    
+//    elog(NOTICE, "Maximum at %lf, expectation: %lf, curr prob: %lf (%d negative constraints), cumulative probability: %lf, delta: %lf, done: %c", 
+//      aggregate, 
+//      MAXPECTATION(state), 
+//      prob,
+//      state->count,
+//      state->probability, 
+//      (1.0 - state->probability) * aggregate, 
+//      ((AggState *)fcinfo->context)->agg_done ? 'y' : 'n'
+//    );
+    
+    prob = state->probability;
+    oldexp = MAXPECTATION(state);
+    state = pip_atomset_by_appending(state, atom_count, atoms);
+    MAXPECTATION(state) = oldexp;
+    state->probability = prob;
+    PG_RETURN_POINTER(state);
+  }
+}
+Datum   pip_expectation_max_f_one (PG_FUNCTION_ARGS)
+{
+  pip_atomset    *state      = (pip_atomset *)PG_GETARG_BYTEA_P(0);
+  
+  PG_RETURN_FLOAT8(MAXPECTATION(state));
+}
+
 Datum   pip_expectation_sum_g (PG_FUNCTION_ARGS)
 {
   pip_sample_set     *set = (pip_sample_set *)PG_GETARG_BYTEA_P(0);

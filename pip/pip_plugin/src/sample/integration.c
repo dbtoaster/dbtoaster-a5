@@ -12,6 +12,7 @@
 #include <math.h>
 #include "postgres.h"
 #include "pip.h"
+#include "atomset.h"
 
 typedef struct pip_prob_comp_info {
   int             clause_cnt;
@@ -19,9 +20,10 @@ typedef struct pip_prob_comp_info {
   pip_atom      **clause;
   float8          result;
   int64           samples;
+  pip_atomset    *constraints;
 } pip_prob_comp_info;
 
-static float8 pip_integrate_by_sampling(pip_atom **atoms, int first_atom, int num_atoms, int64 num_samples);
+static float8 pip_integrate_by_sampling(pip_atom **atoms, int first_atom, int num_atoms, int64 num_samples, pip_atomset *constraints);
 static int pip_compute_prob_group(pip_cset *variables, pip_cset_element *group, pip_prob_comp_info *info);
 static float8 pip_integrate_by_cdf(pip_atom **atoms, int first_atom, int num_atoms, pip_var *var);
 
@@ -35,10 +37,11 @@ static float8 pip_integrate_by_cdf(pip_atom **atoms, int first_atom, int num_ato
   }
 }
 
-static float8 pip_integrate_by_sampling(pip_atom **atoms, int first_atom, int num_atoms, int64 num_samples)
+static float8 pip_integrate_by_sampling(pip_atom **atoms, int first_atom, int num_atoms, int64 num_samples, pip_atomset *constraints)
 {
   int i, sample;
   int64 seed, count = 0;
+  int64 satfailcount = 0;
   for(sample = 0; sample < num_samples; sample++){
     seed = random();
     count++;
@@ -46,6 +49,12 @@ static float8 pip_integrate_by_sampling(pip_atom **atoms, int first_atom, int nu
       if(!pip_atom_evaluate_seed(atoms[i+first_atom], seed)){
         count--;
         break;
+      }
+    }
+    if(i >= num_atoms){
+      if((constraints->count > 0) && !pip_atomset_unsatisfied_seed(constraints, seed)){
+        count--; 
+        satfailcount++;
       }
     }
   }
@@ -70,19 +79,21 @@ static int pip_compute_prob_group(pip_cset *variables, pip_cset_element *group, 
     case 1:
        //One variable in the clause lets us use CDFs to integrate
       //assuming we have them.
-      if(PVAR_HAS_CDF(((pip_var *)group->item)->vid)){
-        float8 localResult;
-         localResult = pip_integrate_by_cdf(info->clause, first_atom, info->clause_sorted - first_atom, ((pip_var *)group->item));
-         //still some formulae for which it isn't possible to do this sort of integration.
-        if(!isnan(localResult)){
-          info->result *= localResult;
-          break;
+      if(!info->constraints){ //inverted constraints kinda screw with cdf sampling... lay off for now
+        if(PVAR_HAS_CDF(((pip_var *)group->item)->vid)){
+          float8 localResult;
+           localResult = pip_integrate_by_cdf(info->clause, first_atom, info->clause_sorted - first_atom, ((pip_var *)group->item));
+           //still some formulae for which it isn't possible to do this sort of integration.
+          if(!isnan(localResult)){
+            info->result *= localResult;
+            break;
+          }
         }
       }
        //if we don't, fall through to standard sampling.
     default:
        //If we've got more than one variable in the clause, we need to resort to sampling.
-      info->result *= pip_integrate_by_sampling(info->clause, first_atom, info->clause_sorted - first_atom, info->samples);
+      info->result *= pip_integrate_by_sampling(info->clause, first_atom, info->clause_sorted - first_atom, info->samples, info->constraints);
       break;
   }
   
@@ -92,27 +103,33 @@ static int pip_compute_prob_group(pip_cset *variables, pip_cset_element *group, 
   return 0;
 }
 
-float8 pip_compute_independent_probability(int clause_cnt, pip_atom **clause, int samples)
+float8 pip_compute_conditioned_probability(pip_atomset *constraints, int clause_cnt, pip_atom **clause, int samples)
 {
   pip_cset vars;
   pip_prob_comp_info info;
   
-   elog(PIP_INTEGRATE_LOGLEVEL, "Generating CSET from atoms: %d", clause_cnt);
+  elog(PIP_INTEGRATE_LOGLEVEL, "Generating CSET from atoms: %d", clause_cnt);
   pip_clause_to_cset(clause_cnt, clause, &vars);
   
-   info.clause_cnt = clause_cnt;
+  info.clause_cnt = clause_cnt;
   info.clause = clause;
   info.samples = samples;
   info.result = 1.0;
   info.clause_sorted = 0;
+  info.constraints = constraints;
   
-   elog(PIP_INTEGRATE_LOGLEVEL, "Computing group probabilities");
+  elog(PIP_INTEGRATE_LOGLEVEL, "Computing group probabilities");
   pip_cset_iterate_roots(&vars, (pip_cset_iterator *)&pip_compute_prob_group, &info);
   
-   elog(PIP_INTEGRATE_LOGLEVEL, "Cleaning up CSET (result: %lf)", info.result);
+  elog(PIP_INTEGRATE_LOGLEVEL, "Cleaning up CSET (result: %lf)", info.result);
   pip_cset_cleanup(&vars);
   
-   return info.result;
+  return info.result;
+}
+
+float8 pip_compute_independent_probability(int clause_cnt, pip_atom **clause, int samples)
+{
+  return pip_compute_conditioned_probability(NULL, clause_cnt, clause, samples);
 }
 float8 pip_compute_expectation(pip_eqn *eqn, int clause_cnt, pip_atom **clause, int64 samples)
 {

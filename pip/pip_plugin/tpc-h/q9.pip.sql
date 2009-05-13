@@ -69,54 +69,21 @@ CREATE TEMPORARY TABLE demand_tbl AS
       part
     ) AS average_increase;
 
-CREATE TEMPORARY TABLE sample_instance(num integer);
-INSERT INTO sample_instance(num) VALUES 
-  (00), (01), (02), (03), (04), (05), (06), (07), (08), (09),
-  (10), (11), (12), (13), (14), (15), (16), (17), (18), (19),
-  (20), (21), (22), (23), (24), (25), (26), (27), (28), (29);
-
---DROP TABLE IF EXISTS correct_results;
---CREATE TABLE correct_results AS
---  SELECT
---    part,
---    expectation(customer_demand-supply, inputs, 10000) AS underproduction
---  FROM
---    (SELECT
---      demand_tbl.part,
---      customer_demand,
---      supply
---    FROM
---      demand_tbl,
---      supply_tbl
---    WHERE
---      customer_demand > supply
---      AND demand_tbl.part = supply_tbl.part
---    ) AS inputs;
+CREATE TEMPORARY TABLE inputs AS
+  SELECT
+    demand_tbl.part,
+    customer_demand,
+    supply
+  FROM
+    demand_tbl,
+    supply_tbl
+  WHERE
+    customer_demand > supply
+    AND demand_tbl.part = supply_tbl.part;
 
 CREATE TEMPORARY TABLE results AS
   SELECT
-    part, num,
-    expectation(customer_demand-supply, inputs, 1000) AS underproduction
+    part,
+    expectation(customer_demand-supply, inputs) AS underproduction
   FROM
-    (SELECT
-      demand_tbl.part,
-      customer_demand,
-      supply
-    FROM
-      demand_tbl,
-      supply_tbl
-    WHERE
-      customer_demand > supply
-      AND demand_tbl.part = supply_tbl.part
-    ) AS inputs,
-    sample_instance;
---  GROUP BY 
---    demand_tbl.part;
-
-SELECT avg(sqrt(underproduction)), count(*)
-FROM   (
-          SELECT    results.part, avg((results.underproduction-correct_results.underproduction)*(results.underproduction-correct_results.underproduction)/(correct_results.underproduction*correct_results.underproduction)) as underproduction
-          FROM      results, correct_results
-          WHERE     results.part = correct_results.part AND results.underproduction != 'Infinity' AND correct_results.underproduction != 'Infinity'
-          GROUP BY  results.part
-       ) resultdevs;
+    inputs;

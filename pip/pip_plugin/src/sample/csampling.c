@@ -13,6 +13,10 @@
 #include "pip.h"
 #include "dist.h"
 
+#define PIP_DISABLE_CDF_SAMPLING 
+//5965504.109 ms
+
+
 typedef struct pip_sampler_state {
   pip_sample_set *samples;
   int curr_sample;
@@ -32,9 +36,9 @@ static int sample_lineage_group(pip_cset *set, pip_cset_element *group, pip_samp
 static int sample_one(pip_cset *set, pip_var *var, pip_sampler_state *state)
 {
   float8 val = pip_var_gen(var);
-//  //the iteration order is the same as the one used to populate the variables.
-//  pip_sample_val_set_by_id(state->samples, state->last_var, state->curr_sample, val);
-  pip_sample_val_set(state->samples, &var->vid, state->curr_sample, val);
+  //the iteration order is the same as the one used to populate the variables.
+  pip_sample_val_set_by_id(state->samples, state->last_var, state->curr_sample, val);
+//  pip_sample_val_set(state->samples, &var->vid, state->curr_sample, val);
   state->last_var++;
   return 0;
 }
@@ -42,6 +46,7 @@ static int sample_one(pip_cset *set, pip_var *var, pip_sampler_state *state)
 static void rejection_sample(pip_cset *set, pip_cset_element *group, pip_sampler_state *state)
 {
   int cnt = 0;
+  //elog(NOTICE, "Rejection Sampling: %d values, %d clauses", pip_cset_group_size(set, group), state->last_atom-state->first_atom);
   for(; state->curr_sample < state->samples->sample_cnt; state->curr_sample++){
     do {
       state->last_var = state->first_var;
@@ -60,6 +65,7 @@ static void rejection_sample(pip_cset *set, pip_cset_element *group, pip_sampler
     state->probability *= (float8)state->samples->sample_cnt / (float8)cnt;
 }
 
+#ifndef PIP_DISABLE_CDF_SAMPLING
 static bool cdf_sample_var(pip_cset *set, pip_var *var, pip_sampler_state *state){
   int cnt = 0;
   float8 bounds[2], sample;
@@ -101,6 +107,7 @@ static bool cdf_sample_var(pip_cset *set, pip_var *var, pip_sampler_state *state
   state->last_var++;
   return true;
 }
+#endif //PIP_DISABLE_CDF_SAMPLING
 
 /*********************** Internal Functions **********************/
 
@@ -122,12 +129,14 @@ static int sample_lineage_group(pip_cset *set, pip_cset_element *group, pip_samp
   pip_cset_iterate_group(set, group, (pip_cset_iterator *)&populate_sample_vars, state);
   
   //elog(NOTICE, "Figuring out group of size %d", pip_cset_group_size(set, group));
-
+  
   //this is where we figure out the best way to sample. 
   //for now, all we do is rejection sampling
   switch(pip_cset_group_size(set, group)){
     case 1:
+#ifndef PIP_DISABLE_CDF_SAMPLING
       if(cdf_sample_var(set, ((pip_var *)group->item), state)) break;
+#endif //PIP_DISABLE_CDF_SAMPLING
       //if we're unable to employ the cdf (no cdf available, or eqn too complex), fall through to rejection
     default:
       rejection_sample(set, group, state);
