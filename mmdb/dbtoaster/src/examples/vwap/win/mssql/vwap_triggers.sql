@@ -1,3 +1,6 @@
+-- Note: we only compute the bids vwap here. This code can
+-- be replicated to compute the asks vwap if desired.
+
 BEGIN TRANSACTION;
 
 -- clean up triggers on base and internal tables.
@@ -37,6 +40,11 @@ IF OBJECT_ID(N'bids', 'table') IS NOT NULL
 	DROP TABLE bids;
 
 CREATE TABLE bids (ts bigint, id bigint, price decimal, volume decimal);
+
+IF OBJECT_ID(N'asks', 'table') IS NOT NULL
+	DROP TABLE asks;
+
+CREATE TABLE asks (ts bigint, id bigint, price decimal, volume decimal);
 
 
 -- clean up and recreate internal tables
