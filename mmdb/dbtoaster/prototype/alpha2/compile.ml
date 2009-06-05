@@ -2491,11 +2491,130 @@ let generate_code handler bindings event =
 				(`Handler(handler_name_of_event event,
 					handler_fields, result_type, handler_local_code)))
 
+let make_file_streams `Relation(id, fields) =
+	let typename = 
+		let ftype = ctype_of_datastructure_fields fields in
+			if (List.length fields) = 1 then ftype else "tuple<"^ftype^">" in
+	let classname = "file_stream_"^id in
+	let error str= "cerr << "^str^" << endl;\n" in
+	let struct_f_1 = 
+		(* nasty hard coded class *)
+		"struct "^classname^"\n{\n"^
+		"\tchar delim;\n"^
+		"\tifstream *input_file;\n"^
+		"\tunsigned int num_field;\n"^
+		"\tunsigned long buffer_size;\n"^
+		"\tunsigned long line;\n"^
+		"\tunsigned int buffer_count;\n\n"^	
+		"\t"^classname^"(string file_name, char d, unsigned int c, unsigned int n)\n"^
+		"\t\t: delim(d), buffer_count(c), line(0), buffer_size(0), num_field(n)\n"^
+		"\t{\n"^
+		"\t\tchar buf[256];\n"^
+		"\t\tinput_file = new ifstream(file_name.c_str());\n"^
+		"\t\tif(!(input_file->good()))\n"^
+		"\t\t\t" ^error "\"Failed to open file \" << file_name"^
+		"\n"^
+		"\t\tinput_file->getline(buf, sizeof(buf));\n"^
+		"\t}\n\n"^
+
+		"\ttuple<bool, "^typename^" > read_tuple()\n"^
+		"\t{\n"^
+		"\t\tchar buf[256];\n"^
+		"\t\tinput_file->getline(buf, sizeof(buf));\n"^
+		"\n"^
+		"\t\tif(*buf == '\\0')\n"^
+		"\t\t\t return make_tuple(false, "^typename^"());\n"^
+		"\t\t++line;\n"^
+		"\t\t"^typename^" r;\n"^
+		"\t\tif(!parse_line(line, buf, r)) {\n"^
+		"\t\t\t"^error "\"Failed to parse record at line \" << line"^
+		"\t\t\treturn make_tuple(false, "^typename^"());\n"^
+		"\t\t}\n"^
+		"\t\treturn make_tuple(true, r);\n"^
+		"\t}\n\n"^
+
+		"\tvoid init_stream() {\n"^
+		"\t\twhile(buffer_size < buffer_count && input_file -> good())\n"^
+		"\t\t{\n"^
+		"\t\t\ttuple<bool, "^typename^" > valid_input = read_tuple();\n"^
+		"\t\t\tif(!get<0> (valid_input))\n"^
+		"\t\t\t\tbreak;\n"^
+		"\t\t\t"^id^".push_back(get<1>(valid_input));\n"^
+		"\t\t\t++buffer_size;\n"^
+		"\t\t}\n"^
+		"\t}\n\n"^
+
+		"\tbool stream_has_inputs() {\n"^
+		"\t\treturn buffer_size > 0;\n"^
+		"\t}\n\n"^
+
+		"\t"^typename^" next_input()\n"^
+		"\t{\n"^
+		"\t\t"^typename^" r = "^id^".front();\n"^
+		"\t\t"^id^".pop_front();\n"^
+		"\t\t-- buffer_size;\n"^
+		"\t\treturn r;\n"^
+		"\t}\n\n"^
+
+		"\tinline bool parse_line(int line, char *data, "^typename^"& r)\n"^
+		"\t{\n"^
+		"\t\tchar *start = data;\n"^
+		"\t\tchar *end = start;\n"^
+		"\t\t\n"^
+		"\t\tfor (int i = 0 ; i < num_field; i ++)\n"^
+		"\t\t{\n"^
+		"\t\t\twhile(*end && *end != delim) end++;\n"^
+		"\t\t\tif(start == end) {\n"^
+		"\t\t\t\t"^error "\"Invalid field \" << i << \" line \" << line "^
+		"\t\t\t\treturn false;\n"^
+		"\t\t\t}\n"^
+		"\t\t\tif(*end == '\\0' && i != num_field -1) {\n"^
+		"\t\t\t\t"^error "\"Invalid field \" << i << \" line \" << line "^
+		"\t\t\t\treturn false;\n"^
+		"\t\t\t}\n"
+	in
+	let switch_body fields n = 
+		let (m, str) = 
+			List.fold_left 
+				(fun (n,s) (_,t) ->
+					(n+1, 
+		(* TODO : need to handle string, long, float too *)
+						(if t = "int" then s^
+							"\t\t\tcase "^(string_of_int n)^":\n"^ 
+							"\t\t\t\tget<"^(string_of_int n)^">(r) = atoi(start);\n\t\t\t\tbreak;\n" else s))
+				) 
+			(0,"") fields
+		in 	"\t\t\tswitch(i) {\n"^str^
+			"\t\t\t}\n"
+	in let whole_body = 
+		struct_f_1^(switch_body fields 0)^
+		"\t\t\tstart = ++end;\n"^
+		"\t\t}\n"^
+		"\t\treturn true;\n"^
+		"\t}\n"^
+		"};\n\n"
+	in (classname, whole_body)
+
 let compile_code m_expr event output_file_name =
+	begin
 	let (handler, bindings) = compile_target m_expr event in
 	let (global_decls, handler_code) = generate_code handler bindings event in
+	let (class_bodies, class_names) =
+		List.fold_left 
+			(fun (b, l) x -> match x with
+				`Declare d -> 
+					begin
+					match d with
+						`Relation(i,f)-> let (n, b2) = make_file_streams `Relation(i,f)
+								in (b^b2, n::l)
+						| _ -> (b^"" , l)
+					end
+				| _ -> raise InvalidExpression ) ("", []) global_decls in
+
 	let out_chan = open_out output_file_name in
 		(* Preamble *)
+		output_string out_chan "#include <iostream>\n";
+		output_string out_chan "#include <fstream>\n";
 		output_string out_chan "#include <cmath>\n";
 		output_string out_chan "#include <cstdio>\n";
 		output_string out_chan "#include <cstdlib>\n";
@@ -2510,6 +2629,9 @@ let compile_code m_expr event output_file_name =
 			(fun x -> output_string out_chan
 				((indented_string_of_code_expression x)^"\n")) global_decls;
 		output_string out_chan "\n";
+
+		(* file stream *)
+		output_string out_chan class_bodies;
 		
 		(* Handlers *)
 		output_string out_chan
@@ -2529,11 +2651,26 @@ let compile_code m_expr event output_file_name =
 						"" args)
 				| _ -> raise InvalidExpression
 		in
+		let instantiate =
+			let delim = "','" in
+			let num_field = 2 in
+			let (calls, _) = 
+				List.fold_left
+					(fun (acc,n) name -> 
+						(acc^"    "^name^" f"^(string_of_int n)^"(argv["^string_of_int (n+1)^"],"^delim^
+							",15000000,"^string_of_int num_field^");\n"^
+						"    f"^(string_of_int n)^".init_stream();\n", n+1) )
+					("", 0) class_names
+			in calls
+		in
 		let dummy_main =
 			"\n"^
 			"int main(int argc, char* argv[])\n{\n"^
+			instantiate^
 			"    "^dummy_call^"("^dummy_args^");\n"^
 			"    return 0;\n"^
 			"}\n"
 		in
 			output_string out_chan dummy_main
+
+	end
