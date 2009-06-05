@@ -44,7 +44,6 @@ let vwap =
 let print_test_type tt =
 	print_endline ((String.make 50 '-')^"\n\n"^tt^" tests\n\n"^(String.make 50 '-'));;
 
-(*
 print_test_type "string_of";
 print_endline (string_of_map_expression vwap);
 
@@ -290,7 +289,6 @@ let (handler, bindings) = compile_target vwap (`Insert "B") in
 			List.iter (fun x -> print_endline (indented_string_of_code_expression x)) global_decls;
 			print_endline (indented_string_of_code_expression handler_code);;
 
-*)
+
 print_test_type "compile_code";
 compile_code vwap (`Insert "B") "vwap.cc"
-
