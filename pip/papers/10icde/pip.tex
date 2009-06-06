@@ -1,8 +1,10 @@
-\documentclass{vldb}
+\documentclass[10pt,conference,letterpaper]{IEEEtran}
 
 \usepackage{latexsym}
 \usepackage{amsmath}
 \usepackage{subfigure}
+\usepackage{graphicx}
+\usepackage{epstopdf}
 %\usepackage{epsfig}
 %\usepackage{epic}
 %\usepackage{eepic}
@@ -43,28 +45,22 @@
 %\addtolength{\topmargin}{-1in}
 
 
-\title{PIP: A Database System for Great and Small Expectations%
+\title{PIP: A Database System for Great and Small Expectations}
+
 % Efficiently Computing
-\thanks{The
-system is named after Philip Pirrip, nicknamed Pip, the protagonist of
-Charles Dickens' novel Great Expectations.}}
+%The
+%system is named after Philip Pirrip, nicknamed Pip, the protagonist of
+%Charles Dickens' novel Great Expectations.}
 
-
-%\numberofauthors{1}
-
-\author{\alignauthor Oliver Kennedy and Christoph Koch\\
-\affaddr{Department of Computer Science} \\
-\affaddr{Cornell University, Ithaca, NY, USA} \\
-\email{\{okennedy, koch\}@cs.cornell.edu}}
+\author{Oliver Kennedy and Christoph Koch\\
+Department of Computer Science \\
+Cornell University, Ithaca, NY, USA\\
+\{okennedy, koch\}@cs.cornell.edu}
 
 \date{}
-\toappear{}
+%\toappear{}
 
 \begin{document}
-
-
-\numberofauthors{2}
-
 
 \maketitle
 
@@ -110,13 +106,13 @@ We demonstrate the effectiveness of this approach by showing that even straightf
 We have shown that symbolic representations of uncertainty like C-Tables can be used to make the computation of expectations, moments, and other statistical measures in probabilistic databases more accurate and more efficient.  The availability of the expression being measured enables a broad range of sampling techniques that rely on this information and allows more effective selection of the appropriate technique for a given expression.
 
 We have shown that the use of symbolic representations can be exploited to significantly reduce query processing time and significantly improve query accuracy for a wide range of queries, even with only straightforward algorithms.  For the remaining queries, we have shown that the overhead created by the symbolic representation has only a negligible impact on query processing time.  This, combined with PIP's extensibility, make it a powerful platform for evaluating a wide range of queries over uncertain data.
-
-\section{Appendix-Query3}
-\label{sec:timingq3}
-\input{apdx_query3.tex}
+%
+%\section{Appendix-Query3}
+%\label{sec:timingq3}
+%\input{apdx_query3.tex}
 
 \begin{small}
-\bibliographystyle{abbrv}
+\bibliographystyle{IEEEtran}
 \bibliography{bibtex}
 \end{small}
 

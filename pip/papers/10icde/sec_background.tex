@@ -100,7 +100,6 @@ We continue the example from the introduction. The input c-tables are
 C_{\mathrm{Order}} = \bagopen ((Joe, NY, X_1), \mbox{true}),
 ((Bob, LA, X_3), \mbox{true}) \bagclose
 \]
-and
 \[
 C_{\mathrm{Shipping}} = \bagopen ((NY, X_2), \mbox{true}),
    ((LA, X_4), \mbox{true}) \bagclose.
@@ -113,23 +112,21 @@ The relational algebra query is
 \end{multline*}
 %
 We compute
-$
+\begin{multline*}
 C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order})} = \bagopen ((Joe, NY, X_1), \mbox{true})
 \bagclose
-$,
-$
-C_{\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})} =
-\bagopen ((NY, X_2), X_2 \ge 7),
-((LA, X_4)$, \\
-$X_4 \ge 7) \bagclose,
-$
-%
-and
-$C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
-\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})}$ = \\
-$\bagopen ((Joe, NY$, $X_1, NY, X_2), X_2 \ge 7),
-((Joe, NY, X_1, LA, X_4)$, \\
-$X_4 \ge 7) \bagclose$.
+\end{multline*}
+\begin{multline*}
+C_{\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})} =\\
+\bagopen ((NY, X_2), X_2 \ge 7), ((LA, X_4),X_4 \ge 7) \bagclose
+\end{multline*}
+\begin{multline*}
+C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
+\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})} = \\
+\bagopen ((Joe, NY, X_1, NY, X_2), X_2 \ge 7),\\
+((Joe, NY, X_1, LA, X_4), 
+X_4 \ge 7) \bagclose
+\end{multline*}
 %
 The c-table for the overall result is as shown in Example \ref{ex:intro}. 
 %

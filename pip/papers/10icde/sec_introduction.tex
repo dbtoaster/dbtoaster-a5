@@ -24,7 +24,7 @@ Accuracy is especially relevant in cases where the integral has no closed form a
 \vspace*{-0.35in}
 \end{figure}
 
-PIP represents probabilistic data values symbolically via random variables defined in terms of parametrized probability distribution classes.  PIP supports several generic classes of probability distributions (e.g., Normal, Exponential, Poisson), and may be extended with additional classes.  Variables are treated as opaque while they are manipulated by traditional relational operators.  The result is a symbolic representation of uncertainty, a c-table \cite{IL1984,GT2006, KochMayBMS2008}.  As the final stage of the query, special operators defined within PIP compute expectations and moments of the uncertain data, or sample the data to generate histograms.  
+PIP represents probabilistic data values symbolically via random variables defined in terms of parametrized probability distribution classes.  PIP supports several generic classes of probability distributions (e.g., Normal, Uniform, Exponential, Poisson), and may be extended with additional classes.  Variables are treated as opaque while they are manipulated by traditional relational operators.  The result is a symbolic representation of uncertainty, a c-table \cite{IL1984,GT2006, KochMayBMS2008}.  As the final stage of the query, special operators defined within PIP compute expectations and moments of the uncertain data, or sample the data to generate histograms.  
 
 These expectation operators are invoked with an unbiased, lossless representation of the expression to be evaluated.  Because the variables have been treated as opaque, the expectation operator can obtain information about the distribution a variable corresponds to.  Developers can (but need not) provide supplemental information (e.g., functions defining the PDF and the CDF) about distributions they extend PIP with.  The operator can exploit this additional information to accelerate the sampling process, or potentially even sidestep it entirely.  For example, if a query asks for the probability that a variable will fall within specified bounds, the expectation operator can compute it with at most two evaluations of the variable's CDF.
 
@@ -162,21 +162,25 @@ representation size, while selections are efficient in c-tables.
 
 
 \begin{itemize}
-\addtolength{\topsep}{-0.3ex}
-\addtolength{\labelsep}{-0.3ex}
-\addtolength{\itemsep}{-1ex}
-\item
-We study query evaluation using probabilistic conditional tables, for
-relational algebra, aggregates, and the computation of expectations and
-probabilities.
+\item We propose the PIP system, the first probabilistic database based on c-tables to efficiently support continuous probability distributions.
+
+\item We demonstrate how PIP acts as a generalizable framework for exploiting information about distributions beyond simple sampling functionality (e.g., inverse cdfs) and for automatically using it for speeding up query processing.  
+
+\item We propose a technique for exploiting independence that can be established by inspecting c-table conditions to speed up sampling.
 
 \item
-We present the architectural and language design decisions made in the
-PIP system, and show how the various techniques introduced combine into
-a unified whole.
+We provide experimental evidence for the competitiveness of our approach.  We compare PIP with a reimplementation of the refined sample-first approach taken by MCDB by using a common codebase for both systems based on Postgres to enable fair comparison.  We show that PIP's framework performs considerably better than MCDB over a wide range of queries, despite applying only a relatively straightforward set of statistical optimizations.  Even in the worst case, PIP remains competitive with MCDB (it essentially never does more work).
 
-\item
-We provide experimental evidence for the competitiveness of our approach, comparing PIP with a reimplementation of the refined sample-first approach taken by MCDB.  We use a common codebase for both systems based on Postgres to enable fair comparison.  We show that PIP performs considerably better than MCDB over a wide range of queries.  Even in the worst case, PIP remains competitive with MCDB (it essentially never does more work).
+%\item
+%We study query evaluation using probabilistic conditional tables, for
+%relational algebra, aggregates, and the computation of expectations and
+%probabilities.
+
+%\item
+%We present the architectural and language design decisions made in the
+%PIP system, and show how the various techniques introduced combine into
+%a unified whole.
+
 \end{itemize}
 
 The structure of this paper is as follows. Section~\ref{sec:background} presents probabilistic c-tables, and the conceptual  evaluation of queries on probabilistic c-tables. Section~\ref{sec:sampling} studies sampling and other mechanisms for computing integrals, and examines how PIP uses and enhances them.  In Section~\ref{sec:design}, we present a high level view of PIP in the abstract.   Section~\ref{sec:implementation} discusses details of the implementation of PIP and our reimplementation of MCDB.  Finally, in Section~\ref{sec:evaluation}, we present the outcomes of our experiments with PIP and our MCDB reimplementation.
