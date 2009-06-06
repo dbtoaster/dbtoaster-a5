@@ -1,0 +1,294 @@
+
+\def\bagopen{\{\!|\,}
+\def\bagclose{\,|\!\}}
+
+
+In the following, we use a multiset semantics for tables: Tables may
+contain duplicate tuples. Using $\in$ as an iterator over multisets in
+comprehension notation $\bagopen \cdot \mid \cdot \bagclose$ preserves
+duplicates. We use $\uplus$ to denote bag union, which can be thought of
+as list concatenation if the multisets are represented as unsorted lists.
+
+
+\subsection{C-tables}
+
+
+{\em Conditional tables  (c-tables)}\/ \cite{IL1984} are extensions of
+relational databases to handle  uncertainty. A c-table  over
+a set  of variables is  a relational table
+extended by a  column for holding a \textit{local  condition} for each
+tuple.   A local condition  is a  Boolean combination  (using ``and'',
+``or'', and ``not'') of  atomic conditions, which are constructed from
+variables  and constants  using  $=$, $<$,  $\leq$,  $\neq$, $>$,  and
+$\geq$.   The fields  of the  remaining data  columns may  hold domain
+values or variables.
+
+Given  a variable  assignment $\theta$  that maps  each variable  to a
+domain  value  and  a  condition $\phi$,  $\theta(\phi)$  denotes  the
+condition  obtained  from  $\phi$   by  replacing  each  variable  $X$
+occurring  in  it   by  $\theta(X)$.   Analogously,  $\theta(\vec{t})$
+denotes  the tuple  obtained  from tuple  $\vec{t}$  by replacing  all
+variables using $\theta$.
+
+The semantics  of c-tables are defined  in terms of  possible worlds as
+follows.  A  possible world is  identified with a  variable assignment
+$\theta$.  A relation $R$ in  that possible world is obtained from its
+c-table $C_R$ as
+$$R  :=  \bagopen  \theta(\vec{t})   \mid  (\vec{t},  \phi)  \in  C_R,
+   \theta(\phi) \mbox{  is true} \bagclose.$$ That is,  for each tuple
+   $(\vec{t},  \phi)$  of  the  c-table,  where $\phi$  is  the  local
+   condition   and  $\vec{t}$   is   the  remainder   of  the   tuple,
+   $\theta(\vec{t})$ exists in the world if and only if $\theta(\phi)$
+   is true.  Note  that each c-table has at  least one possible world,
+   but worlds  constructed from  distinct variable assignments  do not
+   necessarily represent different database instances.
+
+
+
+\subsection{Relational algebra on c-tables}
+
+
+Evaluating relational algebra on c-tables (and without the slightest difference, on probabilistic c-tables, since probabilities need not be touched at all) is surprisingly straightforward. The evaluation of the operators of relational
+algebra on multiset c-tables is summarized in Figure \ref{fig:ctables-relalg}.
+An explicit operator ``distinct'' is used to perform duplicate elimination.  
+
+
+\begin{figure}[t!]
+\begin{center}
+\begin{eqnarray*}
+C_{\sigma_\psi(R)} &=&
+   \bagopen (\vec{r}, \phi \land \psi[\vec{r}]) \mid (\vec{r}, \phi) \in C_R
+   \bagclose
+\\
+&\dots& \mbox{$\psi[\vec{r}]$ denotes $\psi$ with each reference to}
+\\
+&& \mbox{a column $A$ of $R$ replaced by $\vec{r}.A$.}
+\\[1ex]
+C_{\pi_{\vec{A}}(R)} &=&
+   \bagopen (\vec{r}.\vec{A}, \phi) \mid (\vec{r}, \phi) \in C_R \bagclose
+\\
+C_{R \times S} &=& \bagopen (\vec{r}, \vec{s}, \phi \land \psi) \mid
+   (\vec{r}, \phi) \in C_R, (\vec{s}, \psi) \in C_S \bagclose
+\\
+C_{R \cup S} &=& C_R \uplus C_S
+\\
+C_{\mathrm{distinct}(R)} &=&
+\bagopen (\vec{r},
+    \bigvee \{ \phi \mid (\vec{r}, \phi) \in C_R \} )
+    \mid (\vec{r}, \cdot) \in C_R \bagclose
+\\
+C_{R - S} &=& \bagopen (\vec{r}, \phi \land \psi) \mid
+   (\vec{r}, \phi) \in C_{\mathrm{distinct}(R)}, \\
+&& \quad\quad
+   \mbox{if } (\vec{r}, \pi) \in C_{\mathrm{distinct}(S)} \mbox{ then } \psi := \neg \pi \\
+&& \quad\quad
+   \mbox{else } \psi := \mbox{true} \bagclose
+\end{eqnarray*}
+
+\vspace{-3mm}
+
+\caption{Relational algebra on c-tables.}
+\label{fig:ctables-relalg}
+\end{center}
+\vspace*{-0.25in}
+\end{figure}
+
+
+\begin{example}\em
+We continue the example from the introduction. The input c-tables are
+\[
+C_{\mathrm{Order}} = \bagopen ((Joe, NY, X_1), \mbox{true}),
+((Bob, LA, X_3), \mbox{true}) \bagclose
+\]
+and
+\[
+C_{\mathrm{Shipping}} = \bagopen ((NY, X_2), \mbox{true}),
+   ((LA, X_4), \mbox{true}) \bagclose.
+\]
+The relational algebra query is
+\begin{multline*}
+\pi_{\mathrm{Price}}(\sigma_{\mathrm{ShipTo} = \mathrm{Dest}}( \\
+\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
+\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping}))).
+\end{multline*}
+%
+We compute
+$
+C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order})} = \bagopen ((Joe, NY, X_1), \mbox{true})
+\bagclose
+$,
+$
+C_{\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})} =
+\bagopen ((NY, X_2), X_2 \ge 7),
+((LA, X_4)$, \\
+$X_4 \ge 7) \bagclose,
+$
+%
+and
+$C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
+\sigma_{\mathrm{Duration} \ge 7}(\mathrm{Shipping})}$ = \\
+$\bagopen ((Joe, NY$, $X_1, NY, X_2), X_2 \ge 7),
+((Joe, NY, X_1, LA, X_4)$, \\
+$X_4 \ge 7) \bagclose$.
+%
+The c-table for the overall result is as shown in Example \ref{ex:intro}. 
+%
+\punto
+\end{example}
+
+
+Note that  a tuple can be removed  from a c-table if  its condition is
+inconsistent.   Conditions  can   become  inconsistent   by  combining
+contradictory conditions  using conjunction,  which may happen  in the
+implementations of the operators selection, product, and difference.
+
+A condition is consistent if there is a variable assignment that makes
+the condition true. For general boolean formulas, deciding consistency
+is computationally  hard. But we do  not need to decide  it during the
+evaluation of relational  algebra operations.  Rather, we exploit straightforward cases of inconsistency to clean-up c-tables and reduce their sizes.
+We rely on the later 
+Monte Carlo simulation phase to enforce the remaining inconsistencies.
+%
+\begin{enumerate}
+\addtolength{\topsep}{-0.3ex}
+\addtolength{\labelsep}{-0.3ex}
+\addtolength{\itemsep}{-1ex}
+\item The consistency of conditions not involving variable values is always immediately apparent.
+\item Conditions $X_i = c_1 \land X_i = c_2$ with constants $c_1 \neq c_2$ are always inconsistent.
+\item Equality conditions over continuous variables $Y_j = (\cdot)$, with the exception of the identity $Y_j = Y_j$, are not inconsistent but can be treated as such (the probability mass will always be zero).  Similarly, conditions $Y_j \neq (\cdot)$, with the exception of $Y_j \neq Y_j$, can be treated as true and removed.
+\item Other forms of inconsistency can also be detected where it is efficient to do so.
+\end{enumerate}
+
+With  respect to  discrete variables,  inconsistency detection  may be
+further simplified.  Rather than using abstract representations, every
+row containing  discrete variables  may be exploded  into one  row for
+every possible valuation.  Condition atoms matching each variable to its
+valuation  are used  to ensure  mutual exclusion  of each  row.  Thus,
+discrete variable columns may be  treated as constants for the purpose
+of  consistency checks.  As  shown in  \cite{AJKO2008}, deterministic
+database  query optimizers  do  a satisfactory  job  of ensuring  that
+constraints over discrete variables are filtered as soon as possible.
+
+Given  tables  in which  all  conditions  are  conjunctions of  atomic
+conditions and  the query does not employ  duplicate elimination, then
+all conditions  in the output  table are conjunctions.  Thus  it makes
+sense to particularly optimise this scenario \cite{AJKO2008}.
+In the case of positive
+relational algebra  with the duplicate elimination  operator (i.e., we
+trade  duplicate   elimination  against  difference),   we  can  still
+efficiently  maintain  the  conditions  in  DNF,  i.e.,  as  a  simple
+disjunction of conjunctions of atomic conditions.
+
+Without loss of generality, the model can be limited to conditions that
+are conjunctions of
+constraint  atoms.  Generality  is maintained by  using bag  semantics to
+encode disjunctions. This  restriction   provides   several  benefits.
+First,
+constraint  validation is  simplified;  A pairwise  comparison of  all
+atoms in the clause is  sufficient to catch the inconsistencies listed
+above.   As an additional  benefit, if  all atoms  of a  clause define
+convex and  contiguous regions in the space $\vec{x},\vec{y}$, these same
+properties are also shared by their intersection.
+%This benefits  sample generation in ways that will be discussed later.
+
+
+
+
+\subsection{Probabilistic c-tables; expectations}
+\label{sec:montecarlo}
+
+
+A \textit{probabilistic  c-table} (cf.\ \cite{GT2006, KochMayBMS2008}) is a c-table in  which each variable is
+simply considered a (discrete  or continuous) {\em random variable}\/,
+and a joint probability distribution is given for the random variable.
+As  a convention,  we will  denote  the discrete  random variables  by
+$\vec{X}$ and the continuous ones by $\vec{Y}$.  Throughout the paper,
+we  will  always  assume  without  saying that  {\em  discrete  random
+variables have a finite domain}\/.
+
+We    will   assume    a    suitable   function    $p(\vec{X}=\vec{x},
+\vec{Y}=\vec{y})$ specifying a joint distribution which is essentially
+a  PDF  on the  continuous  and a  probability  mass  function on  the
+discrete variables.  To clarify  this, $p$ is such that
+we can define the expectation of a function $q$ as
+\[
+E[q] =
+\sum_{\vec{x}} \int_{y_1} \cdots \int_{y_n}
+p(\vec{x}, \vec{y}) \cdot q(\vec{x}, \vec{y}) \; d \vec{y}
+\]
+and approximate it as
+\[
+\frac{1}{n} \cdot \sum_{i=1}^n q(\vec{x}_i, \vec{y}_i)
+\]
+given samples $(\vec{x}_1, \vec{y}_1), \dots, (\vec{x}_n, \vec{y}_n)$ from
+the distribution $p$.
+
+%ck: That's BS, moments are covered by expectations.
+%Throughout this paper, we will consider expectations and their special
+%cases (such as event probabilities), but we will not discuss higher moments.
+%Note though that the extension of our framework is conceptually simple.
+
+
+We can specify events (sets of possible worlds) via Boolean conditions
+$\phi$  that  are true  on  a  possible  world (given  by  assignment)
+$\theta$  iff the condition  obtained by  replacing each  variable $x$
+occurring  in  $\phi$  by  $\theta(x)$ is  true.   The  characteristic
+function  $\chi_\phi$  of condition  (event)  $\phi$  returns  1 on  a
+variable  assignment  if  it   makes  $\phi$  true  and  returns  zero
+otherwise.   The probability  $\Pr[\phi]$  of event  $\phi$ is  simply
+$E[\chi_\phi]$.
+
+The expected  sum of a function $h$  applied to the tuples  of a table
+$R$,
+\begin{verbatim}
+select expected_sum(h(*)) from R;
+\end{verbatim}
+can be computed as
+\[
+E \Big[ \sum_{\vec{t}  \in R}  h(\vec{t}) \Big]  =
+E \Big[ \sum_{(t, \phi) \in C_R} \chi_\phi \cdot h(t) \Big] =
+\sum_{(t, \phi) \in C_R} E \Big[ \chi_\phi \cdot (h \circ t) \Big]
+\]
+(the latter by linearity of expectation).
+%, or equivalently
+%\[
+%   \sum_{(t,  \phi) \in  C_R} \sum_{\vec{x}}  \cdot  \int_{y_1} \cdots
+%   \int_{y_n}  p(\vec{x}, \vec{y})  \cdot  \chi_\phi(\vec{x}, \vec{y})
+%   \cdot h(t[\vec{x}, \vec{y}]) \; d \vec{y}.
+%\]
+Here $t(\vec{x}, \vec{y})$ denotes
+the tuple $t$, where any variable that may occur is replaced by
+the value assigned to it in $(\vec{x}, \vec{y})$.
+
+
+\begin{example}\em
+Returning to our running example, for $C_R = \bagopen (x_1, x_2 \ge 7) \bagclose$, the expected sum of prices is
+\begin{multline*}
+   \sum_{(t,  \phi) \in  C_R} \cdot  
+   \int_{x_1} \cdots
+   \int_{x_4}  p(\vec{x})  \cdot  \chi_\phi(\vec{x})
+   \cdot t(\vec{x}).\mathrm{Price} \; d \vec{y}
+= \\
+   \int_{x_1} \cdots
+   \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \ge 7}(\vec{x})
+   \cdot x_1 \; d \vec{y}.
+\end{multline*}
+\punto
+\end{example}
+
+
+{\bf Counting and group-by}\/.
+Expected count aggregates are obviously special cases of expected sum
+aggregates where $h$ is a constant function $1$.
+We generally consider expected sum aggregates with grouping by (continuously)
+uncertain columns to be of doubtful value.
+Group-by on nonprobabilistic columns (i.e., which contain no random variables)
+poses no difficulty in the c-tables framework: the above summation simply
+proceeds within groups of tuples from $C_R$ that agree on the group columns.
+In particular, by delaying any sampling process until after the relational
+algebra part of the query has been evaluated on the c-table representation,
+we find it easy to create as many samples as we need for each group in a 
+goal-directed fashion. This is a considerable strong point of the c-tables
+approach used in PIP.
+
+
