@@ -2413,11 +2413,11 @@ let generate_code handler bindings event =
 				    gc_plan_aux cq new_iter_code decl
 		  end
 		      
-	    (*
+	    (* 
 	      | `Project (a, cq) ->
 	      let new_iter_code = (gc_project a)@iter_code in
 	      gc_plan_aux new_iter_code decl
-	    *)
+	    *) 
 		      
 	    | `Union ch ->
 		  let (ch_code, ch_decl) = 
@@ -2529,87 +2529,80 @@ let generate_code handler bindings event =
 	     (`Handler(handler_name_of_event event,
 		       handler_fields, result_type, handler_local_code)))
 
+(* parent class to handle file_stream *)
+let file_stream_body = 
+	"struct file_stream\n"^
+	"{\n"^
+	"    public:\n"^
+	"    string delim;\n"^
+	"    int num_fields;\n"^
+	"    ifstream *input_file;\n"^
+	"\n"^
+	"    file_stream(string file_name, string d, int n): num_fields(n), delim(d) {\n"^
+ 	"        input_file = new ifstream(file_name.c_str());\n"^
+	"        if(!(input_file->good()))\n"^
+	"            cerr << \"Failed to open file \" << file_name << endl;\n"^
+	"    }\n"^
+	"\n"^
+ 	"    tuple<bool, tokeniz> read_inputs(int line_num)\n"^
+	"    {\n"^
+	"        char buf[256];\n"^
+	"        char_separator<char> sep(delim.c_str());\n"^
+	"        input_file->getline(buf, sizeof(buf));\n"^
+	"        string line = buf;\n"^
+	"        tokeniz tokens(line, sep);\n"^
+	"\n"^
+	"        if(*buf == '\\0')\n"^
+	"            return make_tuple(false, tokens);\n"^
+	"\n"^
+	"        if (is_valid_num_tokens(tokens)) {\n"^
+	"            cerr<< \"Failed to parse record at line \" << line_num << endl;\n"^
+	"            return make_tuple(false, tokens);\n"^
+	"        }\n"^
+	"        return make_tuple(true, tokens);\n"^
+	"    }\n"^
+	"\n"^
+	"    inline bool is_valid_num_tokens(tokeniz tok)\n"^
+	"    {\n"^
+	"        int i = 0;\n"^
+	"        for (tokeniz::iterator beg = tok.begin(); beg!=tok.end(); ++beg, i ++)\n"^
+	"            ;\n"^
+	"        return i == num_fields;\n"^
+	"    }\n"^
+	"\n"^
+	"    void init_stream()\n"^
+	"    {\n"^
+	"        int line = 0;\n"^
+	"        while(input_file -> good())\n"^
+	"        {\n"^
+	"            tuple<bool, tokeniz> valid_input = read_inputs(line ++);\n"^
+	"            if(!get<0> (valid_input))\n"^
+	"                break;\n"^
+	"            if(!insert_tuple(get<1>(valid_input)))\n"^
+	"                cerr<< \"Failed to parse record at line \" << line << endl;\n"^
+	"        }\n"^
+	"    }\n"^
+	"\n"^
+	"    virtual bool insert_tuple(tokeniz t) =0;\n"^
+	"};\n"^
+	"\n"
+
 let make_file_streams `Relation(id, fields) =
     let typename = 
 	let ftype = ctype_of_datastructure_fields fields in
 	    if (List.length fields) = 1 then ftype else "tuple<"^ftype^">" in
-    let classname = "file_stream_"^id in
-    let error str= "cerr << "^str^" << endl;\n" in
+    let classname = "stream_"^id in
     let struct_f_1 = 
-	(* nasty hard coded class *)
-	"struct "^classname^"\n{\n"^
-	    "\tchar delim;\n"^
-	    "\tifstream *input_file;\n"^
-	    "\tunsigned int num_field;\n"^
-	    "\tunsigned long buffer_size;\n"^
-	    "\tunsigned long line;\n"^
-	    "\tunsigned int buffer_count;\n\n"^	
-	    "\t"^classname^"(string file_name, char d, unsigned int c, unsigned int n)\n"^
-	    "\t\t: delim(d), buffer_count(c), line(0), buffer_size(0), num_field(n)\n"^
-	    "\t{\n"^
-	    "\t\tchar buf[256];\n"^
-	    "\t\tinput_file = new ifstream(file_name.c_str());\n"^
-	    "\t\tif(!(input_file->good()))\n"^
-	    "\t\t\t" ^error "\"Failed to open file \" << file_name"^
-	    "\n"^
-	    "\t\tinput_file->getline(buf, sizeof(buf));\n"^
-	    "\t}\n\n"^
-
-	    "\ttuple<bool, "^typename^" > read_tuple()\n"^
-	    "\t{\n"^
-	    "\t\tchar buf[256];\n"^
-	    "\t\tinput_file->getline(buf, sizeof(buf));\n"^
-	    "\n"^
-	    "\t\tif(*buf == '\\0')\n"^
-	    "\t\t\t return make_tuple(false, "^typename^"());\n"^
-	    "\t\t++line;\n"^
-	    "\t\t"^typename^" r;\n"^
-	    "\t\tif(!parse_line(line, buf, r)) {\n"^
-	    "\t\t\t"^error "\"Failed to parse record at line \" << line"^
-	    "\t\t\treturn make_tuple(false, "^typename^"());\n"^
-	    "\t\t}\n"^
-	    "\t\treturn make_tuple(true, r);\n"^
-	    "\t}\n\n"^
-
-	    "\tvoid init_stream() {\n"^
-	    "\t\twhile(buffer_size < buffer_count && input_file -> good())\n"^
-	    "\t\t{\n"^
-	    "\t\t\ttuple<bool, "^typename^" > valid_input = read_tuple();\n"^
-	    "\t\t\tif(!get<0> (valid_input))\n"^
-	    "\t\t\t\tbreak;\n"^
-	    "\t\t\t"^id^".push_back(get<1>(valid_input));\n"^
-	    "\t\t\t++buffer_size;\n"^
-	    "\t\t}\n"^
-	    "\t}\n\n"^
-
-	    "\tbool stream_has_inputs() {\n"^
-	    "\t\treturn buffer_size > 0;\n"^
-	    "\t}\n\n"^
-
-	    "\t"^typename^" next_input()\n"^
-	    "\t{\n"^
-	    "\t\t"^typename^" r = "^id^".front();\n"^
-	    "\t\t"^id^".pop_front();\n"^
-	    "\t\t-- buffer_size;\n"^
-	    "\t\treturn r;\n"^
-	    "\t}\n\n"^
-
-	    "\tinline bool parse_line(int line, char *data, "^typename^"& r)\n"^
-	    "\t{\n"^
-	    "\t\tchar *start = data;\n"^
-	    "\t\tchar *end = start;\n"^
-	    "\t\t\n"^
-	    "\t\tfor (int i = 0 ; i < num_field; i ++)\n"^
-	    "\t\t{\n"^
-	    "\t\t\twhile(*end && *end != delim) end++;\n"^
-	    "\t\t\tif(start == end) {\n"^
-	    "\t\t\t\t"^error "\"Invalid field \" << i << \" line \" << line "^
-	    "\t\t\t\treturn false;\n"^
-	    "\t\t\t}\n"^
-	    "\t\t\tif(*end == '\\0' && i != num_field -1) {\n"^
-	    "\t\t\t\t"^error "\"Invalid field \" << i << \" line \" << line "^
-	    "\t\t\t\treturn false;\n"^
-	    "\t\t\t}\n"
+	"struct "^classname^" : public file_stream\n"^
+	"{\n"^
+	"    "^classname^"(string filename, string delim, int n)\n"^
+	"        : file_stream(filename, delim, n) { }\n"^
+	"\n"^
+	"    bool insert_tuple(tokeniz tok)\n"^
+	"    {\n"^
+	"        "^typename^" r;\n"^
+	"        int i = 0;\n"^
+	"        for (tokeniz::iterator beg = tok.begin(); beg!=tok.end(); ++beg) {\n"
     in
     let switch_body fields n = 
 	let (m, str) = 
@@ -2618,36 +2611,104 @@ let make_file_streams `Relation(id, fields) =
 		     (n+1, 
 		      (* TODO : need to handle string, long, float too *)
 		      (if t = "int" then s^
-			   "\t\t\tcase "^(string_of_int n)^":\n"^ 
-			   "\t\t\t\tget<"^(string_of_int n)^">(r) = atoi(start);\n\t\t\t\tbreak;\n" else s))
+			   "            case "^(string_of_int n)^":\n"^ 
+			   "                get<"^(string_of_int n)^">(r) = atoi((*beg).c_str());\n"^
+			   "                break;\n" else s))
 		) 
 		(0,"") fields
-	in 	"\t\t\tswitch(i) {\n"^str^
-		    "\t\t\t}\n"
-    in let whole_body = 
-	    struct_f_1^(switch_body fields 0)^
-		"\t\t\tstart = ++end;\n"^
-		"\t\t}\n"^
-		"\t\treturn true;\n"^
-		"\t}\n"^
-		"};\n\n"
-    in (classname, whole_body)
+	in 	
+	    (m, "            switch(i) {\n"^str^"            }\n")
+    in let (num_fields, s_body) = switch_body fields 0 
+    in let struct_f_2 = 
+	"\n"^
+	"            i ++;\n"^
+	"        }\n"^
+	"\n"^
+	"        "^id^".push_back(r);\n"^
+	"        return true;\n"^
+	"    }\n"^
+	"\n"^
+	"};\n"^
+	"\n"
+    in let whole_body = struct_f_1 ^ s_body ^ struct_f_2
+    in let caller = 
+	let rec arguments acc n =
+	    if n = num_fields then acc
+	    else if n = 0 then arguments (acc^"get<"^string_of_int n^"> (*front)") (n+1)
+	    else arguments (acc^", get<"^string_of_int n^"> (*front)") (n+1)
+	in
+	    function x -> 
+	        "    {\n"^
+		"        list <"^typename^" >::iterator front = "^id^".begin();\n"^
+		"        list <"^typename^" >::iterator end = "^id^".end();\n"^
+		"        for ( ; frontw != end; ++front) {\n"^
+		"            "^x^"( "^(arguments "" 0) ^");\n"^
+		"        }\n"^
+		"    }\n" 
+    in (classname, whole_body, caller)
+
+let config_handler global_decls = 
+    let c_handler_1 = 
+	"list<file_stream *> initialize(ifstream *config)\n"^
+	"{\n"^
+	"    char buf[256];\n"^
+	"    string line;\n"^
+	"    char_separator<char> sep(\" \");\n"^
+	"    int i;\n"^
+   	"    list <file_stream *> files;\n"^
+	"    file_stream * f_stream;\n"^
+	"\n"^
+	"    while(config->good()) {\n"^
+	"        string param[4];\n"^
+	"        config->getline(buf, sizeof(buf));\n"^
+	"        line = buf;\n"^
+	"        tokeniz tok(line, sep);\n"^
+	"        i = 0;\n"^
+	"\n"^
+	"        for (tokeniz::iterator beg = tok.begin() ; beg != tok.end(); ++beg, i ++) {\n"^
+	"            param[i] = *beg;\n"^
+	"        }\n"^ 
+	"\n" in
+    let c_handler_2 =
+	"\n"^
+	"        f_stream->init_stream();\n"^
+	"        files.push_back(f_stream);\n"^
+	"    }\n"^
+	"    return files;\n"^
+	"}\n\n" in
+    let if_stmts = 
+	let param = "param[1], param[2], atoi(param[3].c_str())" in
+	List.fold_left
+	    (fun acc x -> match x with
+		`Declare d ->
+		    begin
+			match d with
+			    `Relation(i,f) -> if acc = "" then 
+				"        if(param[0] == \""^i^"\")\n"^
+				"            f_stream = new stream_"^i^"("^param^");\n"
+				else 
+				"        else if(param[0] == \""^i^"\")\n"^
+				"            f_stream = new stream_"^i^"("^param^");\n"
+			| _ -> acc
+		    end
+		| _ -> raise InvalidExpression ) "" global_decls 
+    in c_handler_1 ^ if_stmts ^ c_handler_2
 
 let compile_code m_expr event output_file_name =
     begin
 	let (handler, bindings) = compile_target m_expr event in
 	let (global_decls, handler_code) = generate_code handler bindings event in
-	let (class_bodies, class_names) =
+	let (class_bodies, class_names, callers) =
 	    List.fold_left 
-		(fun (b, l) x -> match x with
+		(fun (b, l, c) x -> match x with
 			 `Declare d -> 
 			     begin
 				 match d with
-					 `Relation(i,f)-> let (n, b2) = make_file_streams `Relation(i,f)
-					 in (b^b2, n::l)
-				     | _ -> (b^"" , l)
+					 `Relation(i,f)-> let (n, b2, c2) = make_file_streams `Relation(i,f)
+					 in (b^b2, n::l, c2::c)
+				     | _ -> (b, l, c)
 			     end
-		     | _ -> raise InvalidExpression ) ("", []) global_decls in
+		     | _ -> raise InvalidExpression ) ("", [], []) global_decls in
 
 	let out_chan = open_out output_file_name in
 	    (* Preamble *)
@@ -2659,8 +2720,11 @@ let compile_code m_expr event output_file_name =
 	    output_string out_chan "#include <map>\n";
 	    output_string out_chan "#include <list>\n\n";
 	    output_string out_chan "#include <tr1/tuple>\n";
+	    output_string out_chan "#include <boost/tokenizer.hpp>\n";
 	    output_string out_chan "using namespace std;\n";
-	    output_string out_chan "using namespace tr1;\n\n";
+	    output_string out_chan "using namespace tr1;\n";
+	    output_string out_chan "using namespace boost;\n\n";
+	    output_string out_chan "typedef tokenizer <char_separator<char> > tokeniz;\n\n";
 	    
 	    (* Global declarations *)
 	    List.iter
@@ -2669,14 +2733,26 @@ let compile_code m_expr event output_file_name =
 	    output_string out_chan "\n";
 
 	    (* file stream *)
+	    output_string out_chan file_stream_body;
 	    output_string out_chan class_bodies;
+
+	    (* config handler *)
+	    output_string out_chan (config_handler global_decls);
 	    
 	    (* Handlers *)
 	    output_string out_chan
 		((indented_string_of_code_expression handler_code)^"\n");
 	    
+	    let caller = 
+		List.fold_left 
+		    (fun acc x ->
+			match handler_code with
+	 	            | `Handler(name, _, _, _) -> acc ^ (x name)
+			    | _ -> raise InvalidExpression
+		    ) "" callers
+
 	    (* Dummy main *)
-	    let (dummy_call, dummy_args) =
+(*	    let (dummy_call, dummy_args) =
 		match handler_code with
 		    | `Handler(name, args, _, _) -> (name,
 						     List.fold_left
@@ -2688,27 +2764,32 @@ let compile_code m_expr event output_file_name =
 								       | "string" -> "\"a\""))
 							 "" args)
 		    | _ -> raise InvalidExpression
+*)
 	    in
 	    let instantiate =
-		let delim = "','" in
-		let num_field = 2 in
-		let (calls, _) = 
-		    List.fold_left
-			(fun (acc,n) name -> 
-			     (acc^"    "^name^" f"^(string_of_int n)^"(argv["^string_of_int (n+1)^"],"^delim^
-				  ",15000000,"^string_of_int num_field^");\n"^
-				  "    f"^(string_of_int n)^".init_stream();\n", n+1) )
-			("", 0) class_names
-		in calls
+		let config_filename = "config" in
+	 	    "    ifstream *config;\n"^
+		    "    string fcon;\n"^
+		    "\n"^
+		    "    if(argc == 1) fcon = \""^config_filename^"\";\n"^
+		    "    else fcon = argv[1];\n"^
+		    "\n"^
+		    "    config = new ifstream(fcon.c_str());\n"^
+		    "    if(!config->good()) {\n"^
+		    "        cerr << \"Failed to read config file\" << fcon << endl;\n"^
+		    "        exit(1);\n"^
+		    "    }\n"^
+		    "\n"^
+		    "    initialize(config);\n" 
 	    in
 	    let dummy_main =
 		"\n"^
 		    "int main(int argc, char* argv[])\n{\n"^
 		    instantiate^
-		    "    "^dummy_call^"("^dummy_args^");\n"^
+		    caller^
+(*		    "    "^dummy_call^"("^dummy_args^");\n"^ *)
 		    "    return 0;\n"^
 		    "}\n"
 	    in
 		output_string out_chan dummy_main
-
     end
