@@ -1767,6 +1767,95 @@ let compile_target m_expr delta =
     in
 	(compile_aux mee, bound_exprs)
 
+let generate_all_events m_expr = 
+    let gbr = get_base_relations m_expr 
+    in
+    List.fold_left 
+        (fun acc x ->
+	    match x with 
+	        `Relation (n,f)
+		| `TupleRelation (n,f) -> 
+		(* [`Insert (n);`Delete (n)] @ acc *)
+		    print_endline ("insert "^n);
+		    (`Insert (n)):: acc
+		| _ -> acc
+	) [] gbr 
+
+let rec extract_incremental m_expr =
+    match m_expr with
+	`METerm m -> []
+	| `Sum (l, r)
+	| `Product (l, r)
+	| `Min (l, r) -> (extract_incremental l) @ (extract_incremental r)
+	| `MapAggregate (_, e, _)
+	| `Delta (_, e)
+	| `Init (_, e) -> extract_incremental e
+	| `New (e)
+	| `Incr (_, e) -> [e]
+
+let rec extract_incremental_binding binding =
+    List.concat (
+        List.fold_left
+ 	    (fun acc x -> 
+	        match x with
+		    | `BindMapExpr (v, m) -> (extract_incremental m)::acc
+		    | _ -> acc
+	    ) [] binding
+    )
+
+let set_difference l1 l2 = List.filter (fun el -> not(List.mem el l2)) l1
+
+let concat (handler, bindings) =
+    let bound_map_exprs =
+        List.map
+            (fun b -> match b with | `BindMapExpr(v,e) -> e | _ -> raise InvalidExpression)
+                (List.filter
+                    (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
+                        bindings)
+    in handler :: bound_map_exprs
+
+let print_handler_bindings (handler, bindings) = 
+    let newlist = concat (handler, bindings)
+    in
+    print_endline "handler:";
+    print_endline ("  "^string_of_map_expression (List.hd newlist));
+    print_endline "bindings:";
+    List.iter
+        (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n"))
+            (List.tl newlist)
+
+let compile_target_all m_expr = 
+    let event_list = generate_all_events m_expr in
+    let rec cta_aux e_list m_expr_list =
+	List.concat ( List.map 
+	    (fun event -> 
+		let new_events = set_difference e_list [event] in 
+		let result_list = 
+		    List.map 
+			(fun x -> compile_target x event) m_expr_list
+		in 
+		let new_expr = 
+		    List.concat 
+		        (List.map
+			    (fun (handler, binding) -> 
+				(extract_incremental handler) @ extract_incremental_binding binding 
+			    )
+			result_list)
+		in 
+		let children = 
+		    match new_events with
+		  	[] -> []
+			| _ -> cta_aux new_events new_expr
+		in (event, result_list)::children
+	    ) e_list 
+	)
+    in 
+    let result = cta_aux event_list [m_expr] in
+    List.fold_left 
+        (fun res event ->
+	    let t = List.filter(fun (e,_) -> e = event) result in
+	    (event, List.concat(List.map (fun (e,l2) -> l2) t)) :: res
+	) [] event_list
 
 (*
  *
@@ -2684,10 +2773,10 @@ let config_handler global_decls =
 		    begin
 			match d with
 			    `Relation(i,f) -> if acc = "" then 
-				"        if(param[0] == \""^i^"\")\n"^
+				acc^"        if(param[0] == \""^i^"\")\n"^
 				"            f_stream = new stream_"^i^"("^param^");\n"
 				else 
-				"        else if(param[0] == \""^i^"\")\n"^
+				acc^"        else if(param[0] == \""^i^"\")\n"^
 				"            f_stream = new stream_"^i^"("^param^");\n"
 			| _ -> acc
 		    end

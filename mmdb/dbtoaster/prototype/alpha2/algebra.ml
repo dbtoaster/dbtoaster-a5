@@ -703,7 +703,7 @@ let get_base_relations m_expr =
 	    | `Plan (`Union ch) -> List.fold_left (fun acc c -> gbr_aux (`Plan c) acc) acc ch
 
 	    | `Plan (`Cross (l,r)) | `Plan (`NaturalJoin (l,r)) ->
-		  (gbr_aux (`Plan r) (gbr_aux (`Plan r) acc))
+		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 		      
 	    | `Plan (`Join (p, l, r)) ->
 		  begin
