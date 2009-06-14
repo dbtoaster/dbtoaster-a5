@@ -90,13 +90,16 @@ the probability of sampling a given value is small.
 %integration is most effective.
 
 
+\subsection{Sampling Operators}
+After a query has been evaluated on probabilistic data, what remains is another set of probabilistic data.  To permit analysis of this data, PIP provides a set of sampling operators: functions that convert probabilistic data into deterministic metrics.  These operators take in an expression to be evaluated and the expression's context, or boolean formula of constraints associated with the expression's row and output a histogram, expectation, or higher moment for the expression under the constraints of its context.  As described in Section \ref{sec:background}, without loss of generality, it is possible to express the context as a set of conditions to be combined conjunctively.  
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+These basic sampling operators follow \textit{per-row sampling semantics}.  The metric in question is taken over only the volume of probability space defined by the expression's context.  For example, in the case of Monte-Carlo sampling, only samples satisfying all of the context's conditions are considered.  All other samples are discarded, not even counting towards the net value.  If the context is contradictory, a value of NAN will result.
+
+Note that the resulting metrics are still probabilistic data; The metric being computed is valid for the variable expression in the context of the row, but the row is still only present in the database for variable valuations satisfying the row's context.  The conf operator is used to obtain the probability of a satisfying valuation, a value known as the row's confidence.  If the conf operator is present, all conditions applying to the row are removed from the result and the resulting table is deterministic.
 
 
-
-\subsection{Per-Row Sampling}
-Given a target expression (that may contain random values) as well as a set of constraints, the sampler computes the expression's expectation by first subdividing the problem as described in Section \ref{subsec:independence}.  These groups are subsequently divided into two categories: Groups containing at least one variable contained in the target expression are marked for sampling.  The volume of the probability space defined by all constraints must be computed, but storage overheads may be avoided for those groups not directly relevant to the target expression; these groups are marked for integration.  Additionally, if such a group contains only one variable, the integral may be computed exactly using a single call to the variable's CDF if one is available.
+%%%%%%%%%%%%%%%%%%%%%%%%%
+The sampler computes the expression's expectation by first subdividing the problem to exploit independence.  These groups are subsequently divided into two categories: Groups containing at least one variable contained in the target expression are marked for sampling.  The volume of the probability space defined by all constraints must be computed, but storage overheads may be avoided for those groups not directly relevant to the target expression; these groups are marked for integration.  Additionally, if such a group contains only one variable, the integral may be computed exactly using a single call to the variable's CDF if one is available.
 
 The remaining groups are sampled to obtain values for Monte-Carlo estimation of the target expression's expectation.  By default, these samples are obtained through naive rejection sampling.  Variables are selected from the distribution $\frac{\chi(\vec{x})p(\vec{x})}{\int_{\vec{a}} \chi(\vec{a})p(\vec{a})}$ by sampling according to $p(\vec{x})$ and discarding values that do not satisfy $\phi(\vec{x})$.  Finally, the expectation value computed is re-normalized according to the frequency with which samples are discarded.
 
