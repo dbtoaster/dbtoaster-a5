@@ -1,0 +1,109 @@
+\documentclass{vldb}
+
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{clrscode}
+%\usepackage{epsfig}
+%\usepackage{epic}
+%\usepackage{eepic}
+%\usepackage{xspace}
+\usepackage{pst-tree}
+
+%\addtolength{\textwidth}{1in}
+%\addtolength{\oddsidemargin}{-0.5in}
+%\addtolength{\evensidemargin}{-0.5in}
+%\addtolength{\textheight}{0.8in}
+%\addtolength{\topmargin}{-0.5in}
+%\leftmargini 2.9ex
+
+
+\def\punto{$\hspace*{\fill}\Box$}
+\newcommand{\nop}[1]{}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\def\lBrack{\lbrack\!\lbrack}
+\def\rBrack{\rbrack\!\rbrack}
+\newcommand{\Bracks}[1]{\lBrack#1\rBrack}
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+\newtheorem{todo}[theorem]{ToDo}
+
+\newcommand{\comment}[1]{}
+\newcommand{\compiler}{DBToaster}
+\newcommand{\project}{Steam}
+
+\title{DBToaster: Compiling main-memory database query~processors}
+
+\numberofauthors{1}
+
+\author{
+\alignauthor Yanif Ahmad and Christoph Koch \\
+\affaddr{Department of Computer Science} \\
+\affaddr{Cornell University, Ithaca, NY} \\
+\email{\{yanif, koch\}@cs.cornell.edu}}
+\date{}
+
+
+\toappear{}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+We  present a novel  SQL query  compilation framework  which generates native 
+code that incrementally  and continuously  maintains aggregate views  in main 
+memory at  high  update rates  using delta  processing techniques. DBToaster, 
+our compiler, generates C++  code that  performs all the  processing required 
+for an input  tuple as  a simple  straight-line function. Thus we turn  a fixed,
+optimized query plan into code that can be further optimized by a C++ compiler,
+and avoid overheads that traditionally arise when query processors interpret
+query plans stored in dynamic data structures. Our new delta processing
+techniques are designed specifically for compilation to native code and support
+aggressive inlining that leads to surprisingly small and simple straight-line
+code sequences.
+
+Our  work  is  motivated  by  applications  that  require  the  highly
+efficient answering of fixed workloads of aggregation queries, such as
+in  data stream  processing,  online data  warehouse  loading, and  in
+financial applications. As we  show, our techniques are several orders
+of  magnitude   faster  than  state-of-the-art   database  and  stream
+processing engines on such workloads.  In the case of queries on limit
+order  book  data  as  required for  supporting  algorithmic  equities
+trading, our approach currently stands alone in its ability to support
+realistic  data rates  on contemporary  hardware without  resorting to
+very substantial computing clusters.
+\end{abstract}
+
+\input{intro}
+\input{overview}
+\input{compilation}
+\input{extensions}
+\input{experiments}
+\input{relwork}
+\input{conc}
+
+
+%\footnotesize{
+\small{
+\bibliographystyle{abbrv}
+\bibliography{ref}
+}
+
+\end{document}

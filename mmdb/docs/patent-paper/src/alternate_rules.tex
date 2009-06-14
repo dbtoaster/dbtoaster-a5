@@ -1,0 +1,801 @@
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Old Stuff}
+
+
+
+
+
+
+\begin{figure*}
+\begin{eqnarray}
+\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(\{ \tuple{\vec{a}\vec{c}} \})
+&\vdash&
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times \rho_{\vec{C}}(\{ \vec{c} \})
+\label{r1}
+\\
+\pi_{\vec{A}}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{ \vec{b} \}))
+&\vdash&
+\rho_{\vec{A}}(R)
+\label{r2}
+\\
+\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R)
+&\vdash&
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}}(\{\vec{a}\}) \times \rho_{\vec{B}}(R))
+\label{r3}
+\\
+\algagg_{f(\vec{A},\vec{B})}(\sigma_{\vec{A}=\vec{a}}(R))
+&\vdash&
+\algagg_{f(\vec{a},\vec{B})}(\pi_{\vec{B}}(R))
+\label{r4}
+\\
+\algagg_{f(\vec{A})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(\{\vec{b}\}))
+&\vdash&
+\algagg_{f(\vec{A})}(\rho_{\vec{A}}(R))
+\label{r5}
+\\
+\algsum_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\algsum_{f(\vec{A})}(\rho_{\vec{A}}(R)) *
+\algsum_{g(\vec{B})}(\rho_{\vec{B}}(S))
+\label{r6}
+\\
+\algsum_{a *
+f(\cdot)}(R) &\vdash& a * \algsum_{f(\cdot)}(R)
+\label{r7}
+\\
+\algsum_{f(\cdot) + g(\cdot)}(R)
+&\vdash&
+\algsum_{f(\cdot)}(R) + \algsum_{g(\cdot)}(R)
+\label{r8}
+\\
+\max_{a + f(\cdot)}(R)
+&\vdash&
+a + \max_{f(\cdot)}(R)
+\label{r9}
+\\
+\max_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\max_{f(\vec{A})}(\rho_{\vec{A}}(R)) +
+\max_{g(\vec{B})}(\rho_{\vec{B}}(S))
+\label{r10}
+\\
+\max_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
+&\vdash&
+\left\{
+\begin{array}{lll}
+a * \min_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a < 0 \\
+a * \max_{f(\vec{B})}(\rho_{\vec{B}}(R)) & \dots & a \geq 0
+\end{array}
+\right.
+\label{r11}
+\\
+\max_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R) \times \rho_{\vec{B}}(S))
+&\vdash&
+\max\Big\{
+\max_{f(\vec{A})}(\sigma_{f(\vec{A}) \ge 0}(\rho_{\vec{A}}(R))) *
+\max_{g(\vec{B})}(\rho_{\vec{B}}(S)),
+\nonumber\\
+&& \quad\quad\;\;\,
+\max_{f(\vec{A})}(\underbrace{\sigma_{f(\vec{A}) < 0}}_{\mathrm{optional}}(\rho_{\vec{A}}(R))) *
+\max_{g(\vec{B})}(\sigma_{f(\vec{B}) \ge 0}(\rho_{\vec{B}}(S))),
+\nonumber\\
+&& \quad\quad\;\;\,
+\min_{f(\vec{A})}(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R))) *
+\min_{g(\vec{B})}(\sigma_{f(\vec{B}) < 0}(\rho_{\vec{B}}(S)))
+\Big\}
+\label{r12}
+\\
+\max_a(R)
+&\vdash&
+\left\{
+\begin{array}{lll}
+a       & \dots & \algsum_1(R) > 0 \\
+-\infty & \dots & \algsum_1(R) = 0 \\
+\end{array}
+\right.
+\label{r13}
+\end{eqnarray}
+
+\caption{Rewrite rules. agg can be either sum, max, or min.
+count is sum$_1$.}
+\label{fig:rules}
+\end{figure*}
+
+
+
+\begin{figure*}
+\begin{eqnarray}
+\algsum_{f(\cdot)}(R - S)
+& \vdash &
+\algsum_{f(\cdot)}(R) -
+\algsum_{f(\cdot)}(S) \quad \dots \quad S \subseteq R
+\label{r20}
+\\
+\max_{f(\cdot)}(R - S)
+& \vdash &
+\left\{\begin{array}{lll}
+\max_{f(\cdot)}(R) & \dots & (S \cap R = \emptyset) \vee \\
+& &  (\max_{f(\cdot)}(R) \neq
+\max_{f(\cdot)}(S \cap R)) \\
+\max_{f(\cdot)}(R
+- S) & \dots &  \max_{f(\cdot)}(R) = \max_{f(\cdot)}(S \cap R) \\
+\end{array}\right.
+\label{r21}
+\\
+\rho_{\vec{A}\vec{B}}(R) \bowtie \rho_{\vec{A}\vec{C}}(S)
+& \vdash &
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R))
+\times \sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))
+\label{r23}
+\\
+\max_{f(\vec{A},\vec{B},\vec{C})} \Big\{
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
+& \vdash &
+\max_{f(\vec{A},\vec{B},\vec{C})}\Big\{
+\bigcup_{\vec{a}} \max_{f(\vec{a},\vec{B},\vec{C})}
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
+\Big\}
+\label{r24}
+\end{eqnarray}
+\caption{Rewrite rules for handling deletions. Note that deletion rewrites use
+both this rule set and the rewrite rules above for insertions.}
+\label{fig:deleterules}
+\end{figure*}
+
+
+
+
+
+\nop{
+\begin{figure*}
+\begin{eqnarray}
+\mathop{\algtopk}_{a+f(\cdot)}(R)
+&\vdash&
+\pi_{a+f(\cdot)}(\{\tuple{a}\} \times
+\mathop{\algtopk}_{f(\cdot)}(R))
+\label{r14}
+\\
+\mathop{\algtopk}_{f(\vec{A}) + g(\vec{B})}(\rho_{\vec{A}}(R) \times
+\rho_{\vec{B}}(S))
+&\vdash&
+\mathop{\algtopk}(\pi_{f(\vec{A}) + g(\vec{B})}(
+\mathop{\algtopk}_{f(\vec{A})}(\rho_{\vec{A}}(R))
+\times \mathop{\algtopk}_{g(\vec{B})}(\rho_{\vec{B}}(S))))
+\label{r15}
+\\
+\mathop{\algtopk}_{a * f(\vec{B})}(\rho_{\vec{B}}(R))
+&\vdash&
+\left\{
+\begin{array}{lll}
+\pi_{-a*-f(\vec{B})}( \{\tuple{a}\} \times
+\mathop{\algtopk}_{-f(\vec{B})}(\rho_{\vec{B}}(R))) &
+\dots & a < 0 \\
+\pi_{a*f(\vec{B})}( \{\tuple{a}\} \times 
+\mathop{\algtopk}_{f(\vec{B})}(\rho_{\vec{B}}(R))) & \dots & a \geq 0
+\end{array}
+\right.
+\label{r16}
+\\
+\mathop{\algtopk}_{f(\vec{A}) * g(\vec{B})}(\rho_{\vec{A}}(R)
+\times \rho_{\vec{B}}(S))
+&\vdash&
+\mathop{\algtopk} \Big\{
+\pi_{f(\vec{A}) * g(\vec{B})}(
+\mathop{\algtopk}_{f(\vec{A})}(
+\sigma_{f(\vec{A}) > 0}(\rho_{\vec{A}}(R))) \times
+\mathop{\algtopk}_{g(\vec{B})}(\rho_{\vec{B}}(S))),
+\nonumber\\
+& &
+\pi_{f(\vec{A}) * g(\vec{B})}(
+\mathop{\algtopk}_{f(\vec{A})}
+(\rho_{\vec{A}}(R)) \times
+\mathop{\algtopk}_{g(\vec{B})}
+(\sigma_{g(\vec{B}) > 0}(\rho_{\vec{B}}(S))))
+\nonumber\\
+& &
+\pi_{-f(\vec{A}) * -g(\vec{B})}(
+\mathop{\algtopk}_{-f(\vec{A})}
+(\sigma_{f(\vec{A}) < 0}(\rho_{\vec{A}}(R))) \times
+\mathop{\algtopk}_{-g(\vec{B})}
+(\sigma_{g(\vec{B}) < 0}(\rho_{\vec{B}}(S))))
+\Big\}
+\label{r17}
+\\
+\mathop{\algtopk}_{a}(R)
+&\vdash&
+\left\{\begin{array}{lll}
+\{\underbrace{\tuple{a}, \dots, \tuple{a}}_{k \; \mathrm{times}}\} & \dots & \algsum_{1}(R) > k\\
+\{\underbrace{\tuple{a}, \dots, \tuple{a}}_{\algsum_{1}(R) \; \mathrm{times}}\}
+\cup \{\tuple{-\infty}\}^{k-\algsum_{1}(R)}
+& \dots & \algsum_{1}(R) < k
+\end{array}\right.
+\label{r18}
+\\
+\mathop{\algtopk}_{f(\cdot)}(\rho_{\vec{A}}(R) - \rho_{\vec{B}}(S))
+& \vdash &
+\left\{\begin{array}{lll}
+\algtopk_{f(\cdot)}(R) &
+\dots & (S \cap R = \emptyset) \vee\\
+& & (\algtopk_{f(\cdot)}(R) \cap 
+\algtopk_{f(\cdot)}(S \cap R) = \emptyset)\\
+\algtopk_{f(\cdot)}(R - S)
+& \dots &
+\algtopk_{f(\cdot)}(R) \cap
+\algtopk_{f(\cdot)}(S \cap R) \neq \emptyset
+\end{array}\right.
+\label{r22}
+\end{eqnarray}
+\begin{eqnarray}
+\mathop{\algtopk}_{f(\vec{A},\vec{B},\vec{C})} \Big\{
+\bigcup_{\vec{a}}
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S)) \Big\}
+& \vdash &
+\mathop{\algtopk}_{f(\vec{A},\vec{B},\vec{C})}\Big\{
+\bigcup_{\vec{a}} \mathop{\algtopk}_{f(\vec{a},\vec{B},\vec{C})}
+(\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{B}}(R)) \times
+\sigma_{\vec{A}=\vec{a}}(\rho_{\vec{A}\vec{C}}(S))) 
+\Big\}
+\label{r25}
+\end{eqnarray}
+\caption{Rewrite rules for top-k.}
+\end{figure*}
+} % end nop
+
+
+
+
+
+
+
+In this section, an expression of the form
+\[
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))[\vec{a}]
+\]
+is a map for an aggregate-group by query
+\[
+\mbox{select $\vec{A}$, agg($f$)
+from $Q$
+group by $\vec{A}$}.
+\]
+Given a group $\vec{a}$, the map returns
+the aggregate value
+$\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))$ for it.
+An aggregate $\algagg$ (either sum, max, or min) returns exactly
+one value -- the aggregate value.
+
+The main rewrite step is the following.
+We exploit the fact that for our aggregate functions $\algagg$,
+\begin{multline*}
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q \cup \Delta Q))[\vec{a}]
+= \\
+\algagg(\algagg_f(\sigma_{\vec{A}=\vec{a}}(Q))[\vec{a}],
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(\Delta Q))[\vec{a}]).
+\end{multline*}
+
+
+Consider an aggregate-group by query
+\[
+\algagg_{f(\vec{a}, \vec{B}, \vec{C}, \vec{D})}
+(\sigma_{\vec{A}=\vec{a}}(R_1 \bowtie \dots \bowtie R_k))[\vec{a}]
+\]
+where the schema of $R_1 \bowtie \dots \bowtie R_{k-1}$ is
+$\vec{A}\vec{B}\vec{C}$ and the schema of
+$R_k$ is $\vec{C}\vec{D}$.
+
+W.l.o.g., we consider the case of an insertion of tuple
+$\tuple{\vec{c},\vec{d}}$ into relation $R_k$.
+
+We rewrite
+$
+\algagg_f(\sigma_{\vec{A}=\vec{a}}(\Delta Q))[\vec{a}]
+$, that is,
+\[
+\algagg_{f(\vec{a}, \vec{B}, \vec{C}, \vec{D})}
+(\sigma_{\vec{A}=\vec{a}}(R_1 \bowtie \dots \bowtie R_{k-1} \bowtie \{\tuple{\vec{c}\vec{d}}\}))[\vec{a}]
+\]
+to
+\begin{equation}
+\algagg_{f(\vec{a}, \vec{B}, \vec{c}, \vec{d})}
+(\sigma_{\vec{A}\vec{C}=\vec{a}\vec{c}}(R_1 \bowtie \dots \bowtie R_{k-1}))[\vec{a}\vec{c}\vec{d}].
+\label{eq:1}
+\end{equation}
+
+Figure~\ref{fig:rules} provides a set of rewrite rules, of which rules
+\ref{r1}, \ref{r2}, \ref{r3}, and \ref{r4} are sufficient to  perform this
+rewriting.
+
+Since we would like the maps that have to be maintained to be as simple as
+possible, we will try to express Equation~\ref{eq:1} in terms of 
+aggregates
+\begin{equation}
+\algagg_{f'(\vec{a}, \vec{B}, \vec{c})}
+(\sigma_{\vec{A}\vec{C}=\vec{a}\vec{c}}(R_1 \bowtie \dots \bowtie R_{k-1}))[\vec{a}\vec{c}]
+\label{eq:2}
+\end{equation}
+which do not use $\vec{d}$.
+
+In most cases
+this is possible using the rewrite rules of Figure~\ref{fig:rules}.
+Assuming that $f$ is an arithmetic expression built using addition and multiplication (and constants which may be negative), we can turn $f$ into an equivalent
+expression that is a sum of products (by exploiting distributivity).
+
+Let the aggregate be sum. In that case the rewriting of Equation~\ref{eq:1}
+so as to eliminate the constants $\vec{d}$
+is always possible using the rules \ref{r7} and \ref{r8}.
+In the case of max, the rewriting is usually possible. The simplest case
+where it is not is $f = B_1 * d + B_2$.
+
+
+\begin{proposition}
+To do: Formalize this fact.
+\end{proposition}
+
+
+Note that our rewriting has removed relation $R_k$ from the query to be
+incrementally maintained. Inductively, we can solve the incremental maintenance
+problem by just maintaining the maps constructed using this rewriting.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\begin{example}\em
+Consider the same query as above where sum is replaced by max,
+\[
+m := \max_{A*D}(R \bowtie S \bowtie T).
+\]
+
+On insert into R values $(a,b)$: $m := \max(m, m')$ where
+\begin{eqnarray*}
+m' &=&
+\max_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\
+&\stackrel{\ref{r1},\ref{r3},\ref{r4},\ref{r2}}{=}&
+\max_{a*D}(\sigma_{B=b}(S) \bowtie T)
+\\
+&\stackrel{\ref{r10}}{=}&
+\left\{
+\begin{array}{lll}
+a * \min_{D}(\sigma_{B=b}(S) \bowtie T) & \dots & a < 0 \\
+a * \max_{D}(\sigma_{B=b}(S) \bowtie T) & \dots & a \ge 0
+\end{array}
+\right.
+\end{eqnarray*}
+
+For the incremental maintenance of $S$ and $T$, we have to maintain
+$\min_A[b] = \min_A(\sigma_{B=b}(R))$,
+$\max_A[b] = \max_A(\sigma_{B=b}(R))$,
+$\min_A[c] = \min_A(R \bowtie \sigma_{C=c}(S))$ and
+$\max_A[c] = \max_A(R \bowtie \sigma_{C=c}(S))$.
+For instance,
+$\max_A[c] := \max(\max_A[c], \max_A'[c])$
+where
+\begin{eqnarray*}
+\max_A[c] &=&
+\max(\max_A[c], \max_A(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S)))
+\\
+&\stackrel{\ref{r1},\ref{r3},\ref{r4},\ref{r2}}{=}&
+\max(\max_A[c], \max_a(\sigma_{BC=bc}(S)))
+\\
+&\stackrel{\ref{r12}}{=}&
+\left\{
+\begin{array}{lll}
+\max(\max_A[c], a) & \dots & s_1[b,c] > 0 \\
+\max_A[c]          & \dots & s_1[b,c] = 0
+\end{array}
+\right.
+\end{eqnarray*}
+where we incrementally maintain
+$s_1[b,c] = \algsum_1(\sigma_{BC=bc}(S))$.
+
+Thus the code for maintaining the datastructures on an insert of $R(a,b)$ is
+\begin{verbatim}
+m = max(m, ((a<0) ? min_D[b] : max_D[b]));
+max_A[b] = max(max_A[b], a);
+min_A[b] = min(min_A[b], a);
+if (s_1[b,c] > 0)
+{
+   max_A[c] =  max(max_A[c], a);
+   min_A[c] =  min(min_A[c], a);
+}
+\end{verbatim}
+\punto
+\end{example}
+
+
+
+
+\nop{
+
+
+\subsection{Structural Query Decomposition}
+
+
+The examples of the previous section have demonstrated how the rewrite
+rules of Figure~\ref{fig:rules} can be used to decompose a complex
+aggregate into smaller parts. For example,
+we were able to decompose
+\[
+\Delta s = \algsum_{A*D}(R \bowtie S \bowtie T)
+\]
+on the insertion of $S(b,c)$ into
+\[
+\algsum_{A}(\sigma_{B=b}(R)) * \algsum_D(\sigma_{C=c}(T)).
+\]
+
+This decomposition was easy to find because the query was
+very simple. For complex queries, we need some way of understanding the
+join structure of the query to find good decomposition. The natural tool
+for this are hypertree decompositions.
+
+
+\begin{example}\em
+The schema is
+$R_1\{A,B,C\}$, $R_2\{B,D,E\}$, $R_3\{C,F,G\}$, $R_4\{F,H\}$,  $R_5\{G,I,J\}$,
+and $R_6\{I,J,K,L\}$ and
+the query is
+\[
+s := \algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie \dots \bowtie R_6))[h,k].
+\]
+This query maliciously asks for tuples to be grouped by columns $H$ and $K$,
+which are quite distant in the query's hypergraph. 
+
+Let us insert tuple $R_1(a,b,c)$.
+This is an acyclic query. This is a hypertree decomposition with $R_1$ as
+the root node:
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_1\{A,B,C\}$}}}
+{
+   \TR{\framebox{$R_2\{B,D,E\}$}}^B
+   \pstree{\TR{\framebox{$R_3\{C,F,G\}$}}_{C; [H,K]}}
+   {
+      \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+      \pstree{\TR{\framebox{$R_5\{G,I,J\}$}}_{G; [K]}}
+      {
+         \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+      }
+   }
+}
+\]
+
+
+The edges are annotated with the columns that have to be passed between the nodes.
+Now
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(\{a,b,c\} \bowtie R_2 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * \algsum_{L}(\sigma_{BCHK=bchk}(R_2 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * \algsum_{L}(\sigma_{B=b}(R_2) \times \sigma_{CHK=chk}(R_3 \bowtie \dots \bowtie R_6))[\cdot]
+\\
+&=&
+a * 
+\algsum_1(\sigma_{B=b}(R_2))[b] \\
+&*& 
+\algsum_L(\sigma_{CHK=chk}(R_3 \bowtie R_4 \bowtie R_5 \bowtie R_6))[c,h,k].
+\end{eqnarray*}
+
+If we want to insert into $R_3$, we reroot the hypertree decomposition
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
+{
+   \pstree{\TR{\framebox{$R_1\{A,B,C\}$}}^C}
+   {
+      \TR{\framebox{$R_2\{B,D,E\}$}}^B
+   }
+   \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+   \pstree{\TR{\framebox{$R_5\{G,I,J\}$}}_{G; [K]}}
+   {
+      \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+   }
+}
+\]
+
+and rewrite as follows:
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie R_2 \bowtie \{c,f,g\}
+\\
+&& \quad \bowtie R_4 \bowtie R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A*L}(\sigma_{C=c}(R_1 \bowtie R_2) \times \sigma_{FH=fh}(R_4)
+\\
+&& \quad
+\times \sigma_{GK=gk}(R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A}(\sigma_{C=c}(R_1 \bowtie R_2))[c]
+\\
+&*& \algsum_{1}(\sigma_{FH=fh}(R_4))[fh]
+\\
+&*& \algsum_L(\sigma_{GK=gk}(R_5 \bowtie R_6))[gk]
+\end{eqnarray*}
+\punto
+\end{example}
+
+
+\begin{example}\em
+If the query is acyclic, nothing really changes.
+Consider the previous query where the schema of $R_5$ is now
+$\{E,G,I,J\}$ (thus the query becomes cyclic).
+
+The following is a hypertree decomposition rooted at $R_3$:
+\[
+\psset{levelsep=12mm}
+\pstree{\TR{\framebox{$R_3\{C,F,G\}$}}}
+{
+   \TR{\framebox{$R_4\{F,H\}$}}^{F; [H]}
+   \pstree{\TR{\framebox{$R_1\{A,B,C\}, R_5\{E,G,I,J\}$}}_{C,G; [K]}}
+   {
+      \TR{\framebox{$R_2\{B,D,E\}$}}^{B,E}
+      \TR{\framebox{$R_6\{I,J,K,L\}$}}_{I,J; [K]}
+   }
+}
+\]
+
+Thus $\Delta s$ for the insertion of $R_3(c,f,g)$ is
+\begin{eqnarray*}
+\Delta s &=&
+\algsum_{A*L}(\sigma_{HK=hk}(R_1 \bowtie R_2 \bowtie \{c,f,g\}
+\\
+&& \quad \bowtie R_4 \bowtie R_5 \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{1}(\sigma_{FH=fh}(R_4))[fh]
+\\
+&*& 
+\underbrace{\algsum_{A*L}(\sigma_{CGK=cgk}(R_1 \bowtie R_2 \bowtie R_5 \bowtie R_6))[cgk]}_{s_{A*L}[cgk]}
+\end{eqnarray*}
+
+On insertion of $R_5(e,g,i,j)$,
+\begin{eqnarray*}
+\Delta s_{A*L}[cgk]
+&=&
+\algsum_{A*L}(\sigma_{CGK=cgk}(R_1 \bowtie R_2 \\
+&& \quad \bowtie \{\tuple{e,g,i,j}\} \bowtie R_6))[\cdot]
+\\
+&=&
+\algsum_{A*L}(\sigma_{C=c}(R_1) \bowtie \sigma_{E=e}(R_2) \\
+&& \quad \times \sigma_{IJK=ijk}(R_6))[\cdot]
+\\
+&=&
+\algsum_{A}(\sigma_{C=c}(R_1) \bowtie \sigma_{E=e}(R_2))[ce] \\
+&& \quad * \algsum_L(\sigma_{IJK=ijk}(R_6))[ijk]
+\end{eqnarray*}
+\punto
+\end{example}
+
+
+
+} % end nop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Alternate Compilation Rules}
+Define a compiler $C = <Q, M, U>$, where $Q$ is a query, $M$ a set of map data
+structures of the form ${attr}->aggregate(Q')$, and $U$ a set of update rules
+for the maps, of the form $update: M -> unit$, that is these updates are
+side-effects. We consider queries of the form:
+
+\begin{center}
+\texttt{select $A_{gb}$, aggregate(arithmetic($A_{agg}$)) from $G$}
+\end{center}
+
+where $A_{agg} = \{A_i\}$ are referred to as aggregation attributes, $A_{gb}$ as
+grouping attributes, and $G=\{V,E\}$ denotes a join graph with relations
+$V=\{R_i\}$ as nodes, and join predicates $E=\{\bigwedge_{i} a_i=b_i\}$ that are
+conjunctive equality predicates.
+
+\begin{figure*}
+\begin{align}
+<f(arith(A_{agg}), G), M, U> \wedge a \in A_{agg} \wedge distributive(f)
+\vdash <f^*(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}), G \cup A_i = a_i)), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\ 
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - \{a\}), G - R)),
+\sigma_{A_i=a_i}(R) \Join_{E_R} G-R), M, U>\\
+\nonumber\\
+<f(arith_1(a, f_{i}(A_{agg}, G)), \sigma_{A=a}(R) \Join_{E_R} G), M, U>
+\nonumber\\
+\qquad \vdash <f_{i}(A_{agg}, G), M \cup \overrightarrow{B} \rightarrow
+f_{i}(A_{agg}, G), U \cup {\lambda(\Delta R(a,\overrightarrow{b})). \Delta Q =
+f(a . M_B[\overrightarrow{b}])>,
+\mbox{ where } \overrightarrow{B} = Attrs(E_R)}\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\})
+\wedge associative(f_{i}, arith_1) \nonumber\\
+\qquad \vdash <arith_1(f(A_i, \pi_{A_i}(G)),
+f(arith_2(A_{agg} - \{A_i\}, \pi_{A_{agg} - \{A_i\}}(G)))), M, U>\\
+\nonumber\\
+<f(arith(A_{agg}), G), M, U>
+\wedge distributive(f) \nonumber \\
+\qquad \vdash <f^*(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>, \mbox{ where }
+S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(f_{i}(arith(A_{agg}),
+G \cup S.\overrightarrow{B} = \overrightarrow{b_i})), M, U>
+\wedge arith_1(A_i, arith_2(A_{agg} - \{A_i\}))
+\wedge distributes(f_{i}, arith_1) \nonumber \\
+\qquad \vdash <f(arith_1(a_i, f_{i}(arith_2(A_{agg} - A_{i}), G - R),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G - R \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U> \nonumber\\
+\mbox{ where } S.\overrightarrow{B} = Attrs(E_S)\\
+\nonumber\\
+<f(arith_1(a_i, f_{i}(arith_2(A_{agg}), G),
+\sigma_{A_i=a_i,\pi_R(B) = \pi_R(b_i)}(R) \times G \cup S.\overrightarrow{B}
+= \overrightarrow{b}), M, U>
+\nonumber\\
+\qquad \vdash <f(arith(f_{i}(A_i,
+R \cup \pi_R(\overrightarrow{B}) = \pi_R(\overrightarrow{b})),
+f_{i}(arith(A_{agg}), G \cup S.\overrightarrow{B} = \overrightarrow{b})), M, U>
+\end{align}
+\end{figure*}
+
+
+
+
+
+\newcommand{\compile}{\ensuremath{\mbox{\sc Compile}}}
+\newcommand{\generate}{\ensuremath{\mbox{\sc Generate}}}
+\newcommand{\rewrite}{\ensuremath{\mbox{\sc Rewrite}}}
+\newcommand{\substitute}{\ensuremath{\mbox{\sc Substitute}}}
+\newcommand{\match}{\ensuremath{\mbox{\sc Match}}}
+
+
+\def\RETURN{\STATE}
+
+
+\begin{algorithm}
+\caption{$\compile(Q)$}
+\label{alg:compile}
+\begin{codebox}
+\zi \Comment{Inputs: a query $Q$}
+\zi \Comment{Outputs: a toasted database $\lambda_{DB}$}
+\zi \Comment{Definitions: }
+\zi \>$\mathcal{B}$: input tables used by $Q$.
+\zi \>$(Q)[]$: initial map (yields query result).
+\end{codebox}
+\begin{algorithmic}[1]
+\STATE $Targets \leftarrow \{\tuple{(Q)[],\mathcal{B}}\}$
+\STATE $Kernels \leftarrow \{\}$
+\STATE $Maps \leftarrow \{\}$
+\WHILE{ $|T| > 0$ }
+	\STATE $\tuple{M,\mathcal{R}} \leftarrow next(T)$
+	\IF {$|R| = 1$}
+		\STATE $Kernel[R] \cup \generate(M,R)$
+	\ELSE
+		\FOR{$R \in \mathcal{R}$}
+			\STATE $\tuple{\{M'\}, \lambda_R} \leftarrow \rewrite(M,R)$
+			\STATE $Kernel[R] \leftarrow Kernel[R] \cup \lambda_R$
+			\STATE $Targets \leftarrow Targets \cup \{\tuple{M',\mathcal{R}-R}\}$
+		\ENDFOR
+	\ENDIF
+\ENDWHILE
+\STATE $\lambda_{DB} \leftarrow \lambda(\Delta).$\\
+$\qquad \mbox{\sc Declare}(Maps)\mbox{; \sc
+DispatchLoop}(\Delta, Kernel)$
+\RETURN $\lambda_{DB}$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{$\rewrite(M,R)$}
+\label{alg:rewrite}
+\begin{codebox}
+\zi \Comment{Inputs:}
+\zi \> a map $M$, and a relation to consider for updates, $R$.
+\zi \Comment{Outputs:}
+\zi \> a new set of maps $\mathcal{M'}$, and a function $\lambda_R$ s.t.
+\zi \>\> $\Delta M = \lambda_R(\Delta R,\mathcal{M'})$
+\zi \Comment{Description:}
+\zi	\> Performs bottom-up rewriting according to
+Figures~\ref{fig:rules},\ref{fig:maprules}.
+\end{codebox}
+\begin{algorithmic}[1]
+\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
+\smallskip
+\STATE $M \leftarrow \substitute(M,R,\tuple{r_i})$
+\STATE $S \leftarrow inputs(M)$
+\STATE $parents \leftarrow plan(M)$
+\STATE $maps \leftarrow \{\}$
+\STATE $rewrite \leftarrow \{\}$
+\WHILE{ $|S| > 0$ }
+	\STATE $E_{c} \leftarrow pop(S)$
+	\STATE $E \leftarrow parents[E_{c}]$
+	\STATE $\tuple{matched,E',M'} \leftarrow \match(E,maps[children(E)])$
+	\IF {$matched$}
+		\STATE $S \leftarrow (S - descendants(E)) \cup parent[E]$
+		\STATE $maps[E'] \leftarrow M'$
+		\STATE $rewrite \leftarrow rewrite \cup (E',children(E',rewrite))$
+	\ELSE
+		\STATE $rewrite \leftarrow rewrite \cup (E',children(E,rewrite))$
+	\ENDIF
+\ENDWHILE
+\STATE $root \leftarrow$ $\mbox{\sc Root}(rewrite)$
+\STATE $\mathcal{M'} \leftarrow \mbox{\sc NearestMaps}(root)$
+\STATE $\lambda_R \leftarrow \lambda(\Delta R).\mbox{\sc Apply}(root,\mathcal{M'})$
+\RETURN $\tuple{\lambda_R,\mathcal{M'}}$
+\end{algorithmic}
+%%
+%% Old version
+\comment{
+\begin{algorithmic}[1]
+\REQUIRE{A map $M$, and a relation, $R$, to update the map.}
+\smallskip
+\STATE $M \leftarrow substitute(M,R,\tuple{r_i})$
+\STATE $S \leftarrow \{M\}$
+\STATE $parent \leftarrow \{\}$
+\WHILE{ $!fixpoint(S)$ }
+	\STATE $E \leftarrow pop(S)$
+	\STATE $\tuple{matched,E'} \leftarrow match(E)$
+	\IF {$matched \wedge parent[E]$}
+		\STATE $S \leftarrow S \cup parent[E]$
+		\STATE $parent \leftarrow parent - E$
+		\STATE $S \leftarrow S \cup children(E')$
+	\ELSE
+		\STATE $parent[E] \leftarrow children(E)$
+		\STATE $S \leftarrow S \cup children(E)$
+	\ENDIF
+\ENDWHILE
+\end{algorithmic}
+}
+\end{algorithm}
+
