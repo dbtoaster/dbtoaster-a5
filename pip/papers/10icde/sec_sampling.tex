@@ -1,6 +1,6 @@
+Conceptually, query evaluation in PIP is broken up into two components: Query and Sampling.  PIP relies on Postgres to evaluate queries; As described in Section \ref{sec:background}, a query rewriting pass suffices to translate c-tables relational algebra extensions into traditional relational algebra.  Details on how query rewriting is implemented are provided in Section \ref{sec:implementation}.  
 
-
-Both the computation of moments and probabilities in the general case reduces to numerical integration, and a dominant technique for doing this is Monte Carlo simulation. The approximate computation of expectation
+As the query is being evaluated, special sampling operators in the query are used to transform random variable expressions into histograms, expectations, and other moments.  Both the computation of moments and probabilities in the general case reduces to numerical integration, and a dominant technique for doing this is Monte Carlo simulation. The approximate computation of expectation
 \begin{equation}
 E[\chi_\phi \cdot (h \circ t)] =
 \frac{1}{n} \cdot \sum_{i=1}^n p(\vec{x}_i) \cdot \chi_\phi(\vec{x}_i) \cdot
@@ -10,14 +10,19 @@ faces a number of difficulties.  In particular, samples for which $\chi_{\phi}$ 
 
 The primary challenge faced by PIP is exactly this. Particularly in highly selective queries, the general-purpose sampling routines provided for each distribution will produce samples that violate query constraints $\phi$.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
 
-For example, consider a row containing the variable $Y \sim Normal(\mu=5,\sigma^2=10)$ and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$.
+\begin{example}\em 
+Consider a row containing the variable 
+$$[Y \Rightarrow Normal(\mu=5,\sigma^2=10)]$$
+and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$, or about $0.17$.  
+\end{example}
 
-\subsection{Rejection Sampling}
+\subsection{Sampling Techniques}
+\paragraph{Rejection Sampling}
 One straightforward approach to this problem is to perform rejection sampling; sample sets are repeatedly generated until a sufficient number of viable (satisfying) samples have been obtained.  Note that this is not strict rejection sampling, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  
 
 However, without scaling the number of samples taken based on $E[\chi_\phi]$, information can get very sparse and the approximate expectations will have a high relative error.  Unfortunately, as the probability of satisfying the constraint drops, the work required to produce a viable sample increases.   Consequently, any mechanism that can improve the chances of satisfying the constraint is beneficial.
 
-\subsection{Sampling using inverse CDFs}
+\paragraph{Sampling using inverse CDFs}
 \label{subsec:icdf}
 As an alternative to sampling using the generator function, PIP can use the inverse-CDF of a distribution (if available) to translate a uniform random number in the range $[0,1]$ to a variable sampled from the distribution.  The CDF increases monotonically, so to obtain samples constrained to $[lower, upper]$, we compute $CDF^{-1}(X)$ where X is chosen uniformly  from the range $(CDF(lower), CDF(upper))$.   
 
@@ -25,7 +30,7 @@ In the event that the inverse CDF is available, but the CDF is not, this techniq
 
 If precise bounds can be derived from the constraints on a given variable, this process guarantees that each sample generated will satisfy the constraint.  Even if only weak bounds are available, the process still provides a benefit.  By reducing the size of the sampling area, the probability of selecting a viable sample is still increased.  
 
-\subsection{Exploiting independence}
+\paragraph{Exploiting independence}
 \label{subsec:independence}
 Viable samples are also encountered with higher frequency when the number of variables being constrained is smaller.  Fewer variables mean less work is lost when a sample is rejected.  Similarly, fewer constraints mean a lower overall chance of rejection.  PIP exploits this by first subdividing constraint predicates into minimal independent subsets.  Two constraint subsets are independent if their member predicates have no variables in common.  When determining subset independence, composite random variables (for instance, defined by artithmetic expressions over random variables) are treated as the set of all of their component variables.  Note that two variables may appear in the expectation function and still be considered independent; only the selection predicates are considered when determining independence.
 
@@ -43,7 +48,7 @@ Condition atoms describing discrete variables are all of the form $Var = Val$, d
 
 The simplest subset of continuous atoms is one that references only one variable.  In this case, the atoms in the set provide constant upper or lower bounds, and the integration problem may be solved by evaluating the variable's CDF at the tightest upper and lower bounds.  If the CDF is not available or if it is not possible to derive tight bounds on the CDF, PIP can still integrate via Monte Carlo sampling.  
 
-\subsection{Metropolis}
+\paragraph{Metropolis}
 A final alternative available to PIP, is the
 Metropolis  algorithm \cite{metropolis}.   Starting from  an arbitrary
 point within the sample space,  this algorithm performs a random walk.
@@ -83,6 +88,51 @@ the probability of sampling a given value is small.
 %Consequently, the majority of  samples generated by the algorithm will
 %be  put towards estimating  relatively high  values where  Monte Carlo
 %integration is most effective.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\subsection{Per-Row Sampling}
+Given a target expression (that may contain random values) as well as a set of constraints, the sampler computes the expression's expectation by first subdividing the problem as described in Section \ref{subsec:independence}.  These groups are subsequently divided into two categories: Groups containing at least one variable contained in the target expression are marked for sampling.  The volume of the probability space defined by all constraints must be computed, but storage overheads may be avoided for those groups not directly relevant to the target expression; these groups are marked for integration.  Additionally, if such a group contains only one variable, the integral may be computed exactly using a single call to the variable's CDF if one is available.
+
+The remaining groups are sampled to obtain values for Monte-Carlo estimation of the target expression's expectation.  By default, these samples are obtained through naive rejection sampling.  Variables are selected from the distribution $\frac{\chi(\vec{x})p(\vec{x})}{\int_{\vec{a}} \chi(\vec{a})p(\vec{a})}$ by sampling according to $p(\vec{x})$ and discarding values that do not satisfy $\phi(\vec{x})$.  Finally, the expectation value computed is re-normalized according to the frequency with which samples are discarded.
+
+If any of the variables have a CDF available, PIP first attempts to obtain weak bounds on the variable as described in Section \ref{subsec:icdf}.  If such bounds are available, PIP can use the variable's CDF and inverse CDF to restrict sampling to within the weak bounds.  If the weak bounds are actually tight bounds, no samples will be discarded.  However, even if some samples are rejected, the bounds reduce the drop frequency.  When computing the volume of the probability space defined by the constraints, the values are re-normalized according to the fraction of the CDF located within the bounds.
+
+A final option available to PIP is the Metropolis algorithm.  Metropolis has a high initialization cost: Prior to sampling, at least one value $\vec x$ satisfying $\theta(\vec x)$ must be found (though it need not be selected according to any specific probability distribution), and a significant number of burn-in iterations must be run and discarded.  Furthermore, every sampling step requires many Metropolis iterations to achieve sufficiently independent samples.  However, Metropolis is guaranteed to stay within the constraint bounds and no samples will be rejected.  Thus, we can estimate the work required for both Metropolis and Naive rejection sampling.
+
+$$W_{metropolis} = C_{burn\ in} + [\#\ samples] \cdot C_{steps\ per\ sample}$$
+$$W_{naive} = \frac{1}{1-P[reject]} \cdot [\#\ samples]$$
+
+By generating a small number of samples for the subgroup, PIP generates a rough estimate of $P[reject]$.  If this value is lower than $\frac{1}{\frac{C_{burn\ in}}{[\#\ samples]} + C_{steps\ per\ sample}}$, Metropolis sampling is used instead of rejection sampling.  Note that if CDFs are available for one or more component variables, PIP uses the probability of rejecting samples chosen from within the available weak bounds.
+
+The single-row sampling process is sumarized in Figure \ref{fig:roadmap}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=3in]{graphics/roadmap.pdf}
+%\begin{enumerate}
+%\item 
+%\end{enumerate}
+\caption{\textbf{The PIP Single-Row sampling process}}
+\vspace*{-0.2in}
+\label{fig:roadmap}
+\end{center}
+\vspace*{-0.15in}
+\end{figure}
+
+\subsection{Aggregate Sampling}
+The complexity introduced by aggregate operations, coupled with the frequency with which they appear at the root of a query plan, makes them an ideal point at which to perform sampling.  We begin with the simplest form of aggregate expectation, that of an aggregate that obeys linearity of expectation ($\left<f(\vec{x})\right> = f(\vec{\left<x\right>})$), such as sum().  
+
+Such aggregates are straightforward to implement: per-row expectations of $f(\vec x)\chi(\vec x)$ are computed, and aggregated (e.g., summed up).  Of note however, is the effect that the operator has on the variance of the result.  In the case of sum(), each expectation can be viewed as a Normally distributed random variable with a shared, predetermined variance.  By the law of large numbers, the sum of a set of $N$ random variables with equal variance $\sigma$ has a variance of $\frac{\sigma}{\sqrt{N}}$.  In other words, when computing the expected sum of $N$ variables, we can reduce the number of samples taken for each individual element by a factor of $\frac{1}{\sqrt{N}}$.
+
+If the operator does not obey linearity of expectation (e.g., computing the maximum), either the aggregate must be designed with expectation computation in mind, or the aggregate must be run on a set of sampled worlds in parallel.  This latter technique is a worst-case approach to the problem; it may be necessary to re-run the aggregate if an insufficient number of sample worlds are generated. Note however, that this is still more efficient than re-running the entire query.
+
+The max() aggregate can be implemented more efficiently, particularly when the target expression is a constant (ie, a value that is certain for the row in question).  Given a table table sorted over descending values of the target expression, PIP estimates the probability that the first element in the table (the highest value) is present.  The aggregate expectation is initialized as the product of this probability and the first element.  The second term is maximal only if the first term is not present; when computing the probability of the second term, we must compute the probability of all the second term's constraint atoms being fulfilled while at least one of the first atom's terms is not fulfilled.  Though the complexity of this process is exponential in the number of rows, the probability of each successive row being maximal drops exponentially.  
+
 
 
 

@@ -154,3 +154,101 @@ X_4 \ge 7) \bagclose
 \end{example}
 
 
+\subsection{Probabilistic c-tables; expectations}
+\label{sec:montecarlo}
+
+
+A \textit{probabilistic  c-table} (cf.\ \cite{GT2006, KochMayBMS2008}) is a c-table in  which each variable is
+simply considered a (discrete  or continuous) {\em random variable}\/,
+and a joint probability distribution is given for the random variable.
+As  a convention,  we will  denote  the discrete  random variables  by
+$\vec{X}$ and the continuous ones by $\vec{Y}$.  Throughout the paper,
+we  will  always  assume  without  saying that  {\em  discrete  random
+variables have a finite domain}\/.
+
+We    will   assume    a    suitable   function    $p(\vec{X}=\vec{x},
+\vec{Y}=\vec{y})$ specifying a joint distribution which is essentially
+a  PDF  on the  continuous  and a  probability  mass  function on  the
+discrete variables.  To clarify  this, $p$ is such that
+we can define the expectation of a function $q$ as
+\[
+E[q] =
+\sum_{\vec{x}} \int_{y_1} \cdots \int_{y_n}
+p(\vec{x}, \vec{y}) \cdot q(\vec{x}, \vec{y}) \; d \vec{y}
+\]
+and approximate it as
+\[
+\frac{1}{n} \cdot \sum_{i=1}^n q(\vec{x}_i, \vec{y}_i)
+\]
+given samples $(\vec{x}_1, \vec{y}_1), \dots, (\vec{x}_n, \vec{y}_n)$ from
+the distribution $p$.
+
+%ck: That's BS, moments are covered by expectations.
+%Throughout this paper, we will consider expectations and their special
+%cases (such as event probabilities), but we will not discuss higher moments.
+%Note though that the extension of our framework is conceptually simple.
+
+
+We can specify events (sets of possible worlds) via Boolean conditions
+$\phi$  that  are true  on  a  possible  world (given  by  assignment)
+$\theta$  iff the condition  obtained by  replacing each  variable $x$
+occurring  in  $\phi$  by  $\theta(x)$ is  true.   The  characteristic
+function  $\chi_\phi$  of condition  (event)  $\phi$  returns  1 on  a
+variable  assignment  if  it   makes  $\phi$  true  and  returns  zero
+otherwise.   The probability  $\Pr[\phi]$  of event  $\phi$ is  simply
+$E[\chi_\phi]$.
+
+The expected  sum of a function $h$  applied to the tuples  of a table
+$R$,
+\begin{verbatim}
+select expected_sum(h(*)) from R;
+\end{verbatim}
+can be computed as
+\[
+E \Big[ \sum_{\vec{t}  \in R}  h(\vec{t}) \Big]  =
+E \Big[ \sum_{(t, \phi) \in C_R} \chi_\phi \cdot h(t) \Big] =
+\sum_{(t, \phi) \in C_R} E \Big[ \chi_\phi \cdot (h \circ t) \Big]
+\]
+(the latter by linearity of expectation).
+%, or equivalently
+%\[
+%   \sum_{(t,  \phi) \in  C_R} \sum_{\vec{x}}  \cdot  \int_{y_1} \cdots
+%   \int_{y_n}  p(\vec{x}, \vec{y})  \cdot  \chi_\phi(\vec{x}, \vec{y})
+%   \cdot h(t[\vec{x}, \vec{y}]) \; d \vec{y}.
+%\]
+Here $t(\vec{x}, \vec{y})$ denotes
+the tuple $t$, where any variable that may occur is replaced by
+the value assigned to it in $(\vec{x}, \vec{y})$.
+
+
+\begin{example}\em
+Returning to our running example, for $C_R = \bagopen (x_1, x_2 \ge 7) \bagclose$, the expected sum of prices is
+\begin{multline*}
+   \sum_{(t,  \phi) \in  C_R} \cdot  
+   \int_{x_1} \cdots
+   \int_{x_4}  p(\vec{x})  \cdot  \chi_\phi(\vec{x})
+   \cdot t(\vec{x}).\mathrm{Price} \; d \vec{y}
+= \\
+   \int_{x_1} \cdots
+   \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \ge 7}(\vec{x})
+   \cdot x_1 \; d \vec{y}.
+\end{multline*}
+\punto
+\end{example}
+
+
+{\bf Counting and group-by}\/.
+Expected count aggregates are obviously special cases of expected sum
+aggregates where $h$ is a constant function $1$.
+We generally consider expected sum aggregates with grouping by (continuously)
+uncertain columns to be of doubtful value.
+Group-by on nonprobabilistic columns (i.e., which contain no random variables)
+poses no difficulty in the c-tables framework: the above summation simply
+proceeds within groups of tuples from $C_R$ that agree on the group columns.
+In particular, by delaying any sampling process until after the relational
+algebra part of the query has been evaluated on the c-table representation,
+we find it easy to create as many samples as we need for each group in a 
+goal-directed fashion. This is a considerable strong point of the c-tables
+approach used in PIP.
+
+

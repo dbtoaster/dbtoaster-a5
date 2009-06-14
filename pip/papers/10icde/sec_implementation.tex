@@ -74,3 +74,43 @@ PIP provides several functions for analyzing the uncertainty encoded in a c-tabl
 Aggregates pose a challenge for the query phase of the PIP evaluation process.  Though it is theoretically possible to create composite variables that represent aggregates of their inputs, in practice it is infeasible to do so.  The size of such a composite is not just unbounded, but linear in the size of the input table.  A composite aggregate variable could easily grow to an unmanageable level.  Instead, PIP limits random variable aggregation to the sampling phase.  
 
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Variable Definition}
+Before evaluating a query on random variables, the variables must first be defined.  This process takes one of two forms.  PIP uses a repair-key operator similar to that used in \cite{KochMayBMS2008} to define discrete distributions.  Conceptually, this operator identifies tuples that share key values, and ensures that only one of the two tuples is present in the database in any given sample.  
+
+Continuous variables may be created inline with the create-variable operation.  This function takes a distribution class and parameters, and outputs a new variable.  For example, the following query outputs a variable delivery time for a given order.
+
+\begin{verbatim}
+select o.order_id, o.item_id,
+       CREATE_VARIABLE (`Normal', p.mean,
+         p.std_dev) AS delivery_time
+from   orders o, params p
+where  o.item_id = p.item_id;
+\end{verbatim}
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+Selection clauses not involving random variables are handled traditionally, while those involving one or more random variables instead tag the output tuple with an equivalent condition clause.  For example, the query:
+
+\begin{verbatim}
+select *
+from   input_table
+where  fixed_col = 3 and 4 > variable_col;
+\end{verbatim}
+%
+is rewritten to a statement of the form
+%
+\begin{verbatim}
+select *, constraint(4, >, variable_col)
+from   input_table
+where  fixed_col = 3;
+\end{verbatim}
+
+Queries are also modified to ensure that these newly created constraint columns interact with projections properly.  All select statements are modified to automatically output all constraint columns in their input tables and subqueries.  The only exception to this rule is in the case of sampling selection.  Behaving similarly to aggregate selects, a sampling select projects away uncertainty by including a sampling operator such as expectation(), or conf().  Note that aggregate and sampling selects are not mutually exclusive.  Indeed, due to the complexity of losslessly representing arbitrary aggregate output conditions (An aggregate can generate $2^{N}$ distinct outputs in the number of input rows, though these can be encoded in linear space), PIP requires that aggregate selects perform sampling. 
