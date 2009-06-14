@@ -1,0 +1,670 @@
+<?xml version="1.0"?>
+
+<streambase-configuration>
+    <global>
+        <!-- The following optional element is used to load any custom 
+             functions (simple and/or aggregate) you created for this 
+             application. You can have as many <plugin> elements as you like. 
+             Each one can have a "file" attribute (pointing to a specific file 
+             that should be loaded; you may omit the file extension) or a 
+             "directory" attribute (which will be scanned for .so files on 
+             UNIX, or .dll files on Windows).  If set to "directory", then 
+             *all* of the files in the directory with the appropriate file 
+             extension will be loaded. 
+
+             When running StreamBase in daemon mode (with the "-b" flag), make 
+             sure you use fully qualified path names. -->
+        <!-- <plugin directory="${STREAMBASE_HOME}/plugin"/> -->
+
+        <!-- The following optional element is used to load any modules 
+             referenced by this application. You can have as many 
+             <module-search> elements as you like. Each one must have a 
+             "directory" attribute, which will be scanned for application files.
+
+             Within Studio, these entries are *appended* to the standard Studio module
+             search path for the container project. (see the Studio documentation for
+             details). Relative paths in this context are treated as relative to the
+             container project root.
+
+             Using relative paths is an advanced usage of the search path, and care
+             must be taken to ensure proper resolution of directories when deployed
+             outside of Studio. -->
+        <!-- <module-search directory="${STREAMBASE_HOME}/modules"/> -->
+
+        <!-- The following optional element is used to load any
+             operator/adapter resources required by this application. You can
+             have as many <operator-resource-search> elements as you like. Each
+             one must have a "directory" attribute, which will be scanned for
+             any resources referenced by operators and adapters.
+
+             Within Studio, these entries are *appended* to the standard Studio operator
+             resource search path for the container project. (see the Studio documentation
+             for details). Relative paths in this context are treated as relative to the
+             container project root.
+
+             Using relative paths is an advanced usage of the search path, and care
+             must be taken to ensure proper resolution of directories when deployed
+             outside of Studio. -->
+        <!-- <operator-resource-search directory="${STREAMBASE_HOME}/resources"/> -->
+    </global>
+
+    <server>
+        <!-- Port to listen on. StreamBase defaults to 10000. -->
+        <!-- <param name="tcp-port" value="10000"/> -->
+
+        <!-- Connection Backlog 
+             Servers with many clients may want to increase the maximum number 
+             of backlogged connections to the server.  For further details 
+             lookup the manual page for the system call "listen".
+             Default is 10 -->
+        <!-- <param name="connection-backlog" value="10"/> -->
+  
+        <!-- Maximum number of persistent connections.  Each persistent 
+             connection uses up server resources.  To protect the server from 
+             errant client connections a user can specify a maximum number of
+             persistent connections.  Any attempted client connections over
+             the limit will be disconnected.  Default value of -1 means no
+             limit -->
+        <!-- <param name="max-persistent-connections" value="-1"/> -->
+
+        <!-- Settings for disconnecting idle clients.  An idle enqueue client
+             is a client who has enqueued at least 1 tuple and has been idle for
+             idle-enqueue-client-timeout-ms.  An idle dequeue client is a client
+             who has subscribed to at least one stream (at any point) and has 
+             been idle for idle-dequeue-client-timeout-ms.  Clients that have
+             enqueued and subscribed are subject to both settings. The server 
+             checks clients every idle-client-check-interval-ms.  The actual 
+             point that a client is disconnected will be approximate modulo
+             idle-client-check-interval-ms. Values are in milliseconds.  Values
+             greater than zero turn this feature on. The default is off. -->
+        <!-- <param name="idle-enqueue-client-timeout-ms" value="-1"/> -->
+        <!-- <param name="idle-dequeue-client-timeout-ms" value="-1"/> -->
+
+        <!-- How often should the server check for idle clients.  The value
+             is in milliseconds.  The default is 60000 (60 seconds) -->
+        <!-- <param name="idle-client-check-interval-ms" value="60000"/> -->
+
+        <!-- The heart beat interval is the number of milliseconds between heart
+             beat packets sent to clients. Clients can be configured to
+             require a heart beat packet from the server at a minimum
+             interval. This is used primarily for network segmentation
+             detection. Setting client-heartbeat-interval to zero will disable
+             heart beats from the server. Clients connected to such a server
+             will not have heart beat protection, regardless of their locally
+             configured minimum heart beat interval. The default value is
+             10000. -->
+
+        <!-- <param name="client-heartbeat-interval" value="10000"/> -->
+
+        <!-- Private data directory for this sbd instance's Query Tables.
+             +TEMP+ is a magic value that says to create a temporary directory
+             which will be remove when sbd exits.  +TEMP+ is the default. -->
+        <!-- <param name="datadir" value="${STREAMBASE_INSTALL_DATADIR}/data"/> -->
+        <!-- <param name="datadir" value="+TEMP+"/> -->
+
+        <!-- If you are using disk-based query tables, your query table 
+             performance may improve if you increase the cache size internally 
+             allocated to disk query table operations. The value units are in 
+             MB of main memory and must be a power of 2.  When unspecified, 
+             the default value is 16 MB.    -->
+        <!-- <param name="disk-querytable-cache" value="16"/> -->
+
+        <!-- If you are using disk-based query tables, your query table 
+             performance may improve if you increase the page size internally
+             used for disk query table operations. This page size has nothing to do
+             with the StreamBase page size, nor the OS page size. The value units are in 
+             KB and must be a power of 2. Valid values are 0, 1, 2, 4, 8, 16, 32 and 64.
+             The default is 0 and means use an os dependent default value. -->
+        <!-- <param name="disk-querytable-pagesize" value="0"/> -->
+
+        <!-- If you are using disk-based query tables in mode 1 or 2, your query table 
+             performance may improve if you increase the size of transaction log files.
+             The value units are in MB. The default is 10MB. -->
+        <!-- <param name="disk-querytable-logsize" value="10"/> -->
+
+        <!-- If you are using disk-based query tables you can configure the 
+             mode of transaction support for those tables. The default mode is 
+             1, where transactions are enabled, but not flushed to persistent 
+             store in any predictable time. Mode 2 will transactionally commit
+             each table update to persistent store. Mode 0 means disable 
+             transactional support. -->
+        <!-- <param name="disk-querytable-transaction-mode" value="0"/> -->
+
+        <!-- If you are using disk-based query tables in transaction mode 1 or 
+             less, writes to tables are not committed to disk in any 
+             predictable timefame. Setting the query table flush interval will 
+             force disk commits at the interval specified. Also a flush 
+             interval is needed in mode 1 and 2 in order to write a checkpoint 
+             and remove unneeded log files. The default interval for mode 0 is 
+             no flushing (0) and 10000 (10 seconds) for mode 1 and 2. -->
+        <!-- <param name="disk-querytable-flush-interval-ms" value="10000"/> -->
+        
+        <!-- Each Java Operator changes state along with the server process as 
+             a whole. The server waits for each Operator to change state before 
+             it completes its state change.  The value of 
+             operator-state-change-timeout-ms is the amount of time the server 
+             will wait before timing out the Operator.  If an Operator is timed 
+             out on a state change, the server shuts the Operator down and 
+             proceeds with the state change. -->
+        <!-- <param name="operator-state-change-timeout-ms" value="10000"/> -->
+    </server>
+
+    <page-pool>
+        <!-- Size in bytes per page.  
+             Increasing the page size may increase performance
+             with large tuples as the server will be able to fit more 
+             tuples on each allocated page of memory.  More
+             tuples/page should result in fewer allocations which may 
+             increase dequeue performance -->
+        <!--param name="page-size" value="4096"/ -->
+
+        <!-- The maximum number of pages that will be retained in the dequeuing
+             client buffer pool.  The default is 1024. -->
+        <!--param name="max-pooled-pages" value="1024"/ -->
+
+        <!-- Maximum number of pages that a dequeuing client connection can 
+             allocate.  sbd will disconnect dequeuing clients that attempt 
+             to allocate more. This setting is to protect sbd from slow or 
+             hung dequeuing clients.  The value is in pages.  With the default
+             page size of 4096 bytes, the default max-client-pages value of
+             2048 will provide 8 megabytes.  To allow ALL DEQUEUING CLIENTS to 
+             allocate unlimited memory in sbd, set the value to "0".  Note that
+             the number of pages that a client allocates will change over time.
+             A client that is consuming tuples as fast as the server produces 
+             them will only use 1 or 2 pages.  The max can be reached with a 
+             slow/hung client or if there is a big spike of data being sent to 
+             the client.  -->
+        <!-- param name="max-client-pages" value="2048"/ -->
+
+    </page-pool>
+
+    <runtime>
+        <!-- Applications to load into container on startup, with optional 
+             container connections. Use multiple application tags to load
+             multiple applications. The following attributes are used:
+             file: the path to the application to load
+             container: the name of the container
+             datadir: the data directory to use for this container.  Otherwise
+                      use the default data directory.
+             enqueue:  is enqueuing to this container enabled at startup.  
+             dequeue:  is dequeuing to this container enabled at startup.
+             valid values for enqueue/dequeue are: 
+                * ENABLED - the default
+                * DISABLED - disabled, enqueue/dequeue attempts are actively 
+                             refused (exceptions are thrown)
+                * DROP_TUPLES - tuples are silently dropped
+             suspend: signifies if the container should startup in a suspended mode
+         -->
+        <!-- <application file="${STREAMBASE_HOME}/var/applications/MyApp.sbapp"
+                container="default" datadir="" enqueue="ENABLED" 
+                dequeue="ENABLED" suspend="false"> -->
+        <!-- Container connections allow connections from objects in
+             one container to other objects.  Every connection has a
+             "source" and a "destination".  A container connection can
+             be of one of two forms:
+
+             (1) A connection between a stream in one container and a
+             stream in another container (optionally in another sbd).
+
+             (2) A connection between a stream in one container and a
+             JMS destination.
+
+             "synchronicity" is an optional attribute which defines
+             the synchronous nature of the connection.  The attribute
+             is applicable only for connections of the first form
+             above.  Valid values are: ASYNCHRONOUS, SYNCHRONOUS.  The
+             default is ASYNCHRONOUS.
+
+             For further information on container connections, see the
+             Container Connections page in the Administration Guide in
+             the StreamBase documentation.
+          -->
+        <!--    <container-connection source="containerB.streamY" 
+                                      dest="containerA.streamX" 
+                                      synchronicity="ASYNCHRONOUS"/> -->
+
+        <!--
+             Enable Tracing of Tuples through an application.  Note
+             that the application must be generated with:
+              -Dstreambase.codegen.trace-tuples=true
+
+             traceStreamPattern will cause tracing to be limited to 
+                operators/streams that match the "pattern".  If not specified
+                tracing will be done on all operators/streams
+             traceFileBase will cause trace output to be sent to files using
+                "filebase" as the base file name for trace output.  1 file
+                will be created for each parallel module in the application.
+                If not specified then output will go to the sbd's console
+             traceOverwrite will cause the tracing to overwrite the file.
+                If not specifed then files will be appended to      
+        -->
+
+        <!-- <trace traceStreamPattern="pattern" traceFileBase="filebase"
+                    traceOverwrite="true"/> -->
+        <!-- </application> -->
+        <!-- The maximum size a schema is allowed to be -->
+        <!-- <param name="schema-max-size" value="1048576"/> -->
+
+        <!-- The size of string fields used to pass data between c++ plugin 
+             functions and aggregates -->
+        <param name="cpp-string-field-size" value="32768"/>
+
+        <!-- What implementation should be used for calls to now().  
+             Must be either "system" or "thread".
+             system: use Java's System.currentTimeMillis()
+             thread: use a background thread that checks the time approximately
+                     every millisecond.  This option will result in decreased 
+                     accuracy, but may be more efficient than "system" if you
+                     call now() more frequently than 1000 times per second.
+        -->
+        <param name="now-implementation" value="system"/>
+    </runtime>
+
+    <custom-functions>
+    <!-- The custom-functions section is used for two reasons:
+         registering the type signatures of custom C++ functions used
+         in the server, contained in libraries imported using
+         the <plugin> tag in the <global> section above; and assigning
+         shorter "aliases" to C++ or Java functions so they can be
+         called in the same way as built-in functions.
+
+         For example, the following registers a custom simple C++
+         function named "func1" that takes a string and int argument
+         and returns a string of size 16:
+
+        <custom-function name="func1" type="simple">
+            <args>
+                <arg type="string"/>
+                <arg type="int"/>
+            </args>
+            <return type="string" size="16"/>
+        </custom-function>
+
+	Adding an 'alias' attribute tells StreamBase to allow you to
+	use a short function name for a given function.  For example,
+	this would allow you to call the same function in StreamBase
+	expressions in the form f(myString, myInt):
+
+        <custom-function name="func1" type="simple" alias="f">
+	  ...args section as above...
+	</custom-function>
+
+	Finally, specifying the attribute 'language' to be "java" and
+	'class' to be the fully qualified class name where the named
+	public static function is found allows you to specify short
+	names for arbitrary Java functions.  You can also specify the
+	attribute 'args' to be "auto" and leave out the <args>
+	and <return-type> tags to ask StreamBase to autodetect them.
+	For example:
+
+	<custom-function language="java" class="java.lang.Math" name="log10" alias="log_base_ten" args="auto"/>
+
+        -->
+    </custom-functions>
+
+    <sbmonitor>
+        <!-- Should monitoring be enabled?  This is required in order to use
+             sbmonitor.  This is enabled by default. -->
+        <param name="enabled" value="1"/>
+
+        <!-- How frequently should monitoring stats be produced?  The default
+             is every second -->
+        <param name="period-ms" value="1000"/>
+    </sbmonitor>
+
+    <authentication>
+        <!-- Should the sbd require clients to authenticate themselves?  
+             Disabled by default -->
+        <param name="enabled" value="false"/>
+
+        <!-- Authentication parameters.  Currently the only authentication
+             type is sb-password-file. -->
+        <param name="type" value="sb-password-file"/>
+        <param name="filepath" value="${STREAMBASE_HOME}/etc/sbpasswd"/>
+    </authentication>
+
+    <high-availability>
+        <!-- Leadership status of this server. Valid values are: 
+             LEADER, NON_LEADER. Default is LEADER -->
+        <!-- param name="leadership-status" value="LEADER"/ -->
+    </high-availability>
+
+    <!-- The <java-vm> section specifies parameters for sbd to use when it
+         creates a Java Virtual Machine. -->
+    <java-vm>
+        <!-- The jvm-args param sends arguments to the JVM. This may be used
+             to set max and min memory, Java properties, or other JVM options.
+             The classpath MUST NOT be set here.  Do not specify '-server' or
+             '-client' because the server JVM is always loaded. -->
+
+        <!-- the default jvm memory settings are: -Xms128m -Xmx512m -->
+        <!-- <param name="jvm-args" value="-Xms128m -Xmx512m"/> -->
+
+        <!-- Defining system properties for the JVM can be done in the jvm-args
+             parameter above, or you can use the sysproperty parameter -->
+
+        <!-- <sysproperty name="some.property.here" value="true"/> -->
+
+        <!-- java-home: the Java home directory (must be a JDK, not a JRE).
+
+             sbd looks for the JVM in the following manner:
+
+               1) uses the config file java-home parameter (if set)
+               2) use internal JDK (if present) and 
+                      STREAMBASE_USE_INTERNAL_JDK != false
+               3) use JAVA_HOME environment variable (if set) to locate the JDK
+               4) look on the PATH environment variable list for a JDK
+               5) then make some guesses (the first guess for windows is to 
+                      look in the configuration registry for a Sun JDK 
+                      installation)
+               6) if all of the above fails sbd will fail to start 
+        
+               The first JDK found will be the one used
+               -->
+        <!-- <param name="java-home" value="${STREAMBASE_HOME}/jdk"/> -->
+
+        <!-- The <jar> tag loads a jar which either contains Java operator
+             classes or classes used by Java operators.  Multiple <jar>
+             elements are allowed.
+	     
+	     NOTE: Within Studio these lines are *ignored*; you should modify the
+	     project's build path instead and add jar libraries there.
+	     Using the Application Bundle export wizard will generate a
+	     configuration file containing the build path jar libraries
+	     as jar elements here.
+	-->
+        <!-- <jar file="operator.jar"/> -->
+
+        <!-- The <dir> element adds a directory containing .class files to the
+             classpath.  Multiple <dir> elements are allowed. -->
+        <!-- <dir path="/path/to/classes"/> -->
+
+        <!-- The <library> tag specifies paths that will be prepended to the
+             JVMs java.library.path. Multiple <library> elements are allowed. -->
+        <!-- <library path="path/to/native-lib/directory"/> -->
+    </java-vm>
+
+
+    <!--
+	The data-sources section enumerates all data sources required by the 
+    system; there are currently only two supported data-source types: jdbc and chronicle
+
+	jdbc data-source:
+         The jdbc data-source type defines a server to be used by the JDBC 
+         operator or StreamSQL.  Jars and shared libraries needed by the 
+         database driver should be put into the <java-vm> section in <jar> 
+         and <library> tags.  Note that if your jdbc uri has ampersands
+         in it, they must be replaced with &amp; or else you will get an 
+         error about "Unterminated entity reference".
+
+	chronicle data-source:
+         The chronicle data-source type defines a server to be referenced by the 
+         Chronicle Data Construct or equivalent in StreamSQL.  
+         Jars and shared libraries needed by a particular Chronicle driver follow the
+         same rules as for the jdbc data-source, described above.
+
+         Consult your Chronicle Kit documentation for any specific details regarding
+         its configuration.
+    -->
+    <data-sources>
+
+    <!--
+        <data-source name="myDB" type="jdbc">
+          <uri value="jdbc:derby://localhost:1527/myDB;user=me;password=mine"/>
+          <driver value="org.apache.derby.jdbc.ClientDriver"/>
+
+           Sets the number of rows that will be read at a time. This is a hint
+           to the JDBC driver and may be interpreted differently by each driver.
+
+           A value of 0 means use the driver's default (which is the same as not specifying
+           a jdbc-fetch-size param).
+
+           Most drivers throw a SQLException if the value is less than 0. MySQL, however,
+           will allocate and read the entire query result into memory unless the jdbc-fetch-size
+           is set to the magic value -2147483648 (Integer.MIN_VALUE). In the case where a SELECT
+           returns a large amount of data, memory will be exausted unless the jdbc-fetch-size is set
+           to the magic value. 
+
+           See:
+           http://mysql.com/doc/refman/5.0/en/connector-j-reference-implementation-notes.html
+
+          <param name="jdbc-fetch-size" value="10"/>
+ 
+           Set the timeout (in milliseconds) of background jdbc operations
+          <param name="jdbc-timeout" value="15000"/>
+
+           All other parameters go to the JDBC driver.
+           Alternative way to set username/password and other JDBC parameters
+
+          <param name="user" value="me"/>
+          <param name="password" value="mine"/>
+
+
+        </data-source>
+    -->
+    </data-sources>        
+
+    <!--
+        The operator-parameters section provides the values for variables used
+        within Java operator and embedded adapter properties. If a property 
+        contains the string '${MyName}', it would be replaced with 'MyValue'
+        if the section below were uncommented.
+    -->
+    <!--
+    <operator-parameters>
+        <operator-parameter name="MyName" value="MyValue"/>
+    </operator-parameters>
+    -->        
+
+    <!--
+	Starting in StreamBase version 6.0, the default handling for
+	runtime errors is to discard the error-producing event and
+	continue with processing. The error-handler section can be
+	used to configure the behavior. The following settings will
+	set behavior to match 5.x error handling.
+
+    <error-handler>
+      <error type="eval-error" action="shutdown"/>
+      <error type="mem-error" action="shutdown"/>
+      <error type="network-error" action="shutdown"/>
+      <error type="db-error" action="shutdown"/>
+      <error type="usage-error" action="shutdown"/>
+      <error type="plugin-error" action="shutdown"/>
+      <error type="eval-plugin-error" action="shutdown"/>
+      <error type="tuple-error" action="shutdown"/>
+    </error-handler>
+    -->
+
+    <!--
+	The security section controls security and authentication in the sbproxy and sbd. If there is a security
+	section, the sbd will only listen for connections on localhost, so connections from remote computers cannot
+	be made. If there is a security section in the sbconf, the sbproxy will only allow SSL connections from
+	clients.
+
+    <security>
+    -->
+    
+      <!--
+	  The ssl-authentication section specifies the keystore that holds the signed server certificate that will
+	  be used for SSL connections between clients and the sbproxy.
+
+      <ssl-authentication>
+	<param name="keystore" value="../signed.keystore"/>
+	<param name="keystore-password" value="secret"/>
+      </ssl-authentication>
+      -->
+
+      <!--
+	  If the require-client-authentication parameter is true, only client connections that have a 
+	  certificate signed by a known certificate authority will be allowed. This is sometimes called
+	  2-way SSL. In this case the principal will be taken from the certificate.
+
+          If require-client-authentication is false (the default value), SSL connections will be accepted from
+	  clients that do not have a signed user certificate. This is sometimes called 1-way SSL. In this case,
+	  the principal and password attributes (user= and password= attributes) must be specified in the URI
+	  unless the perform-authentication parameter is false (see below).
+
+      <client-ssl-connections>
+	<param name="require-client-authentication" value="true"/>
+      </client-ssl-connections>
+      -->
+
+      <!--
+	  If perform-authentication is false, all users will be able to perform any action. The client connections
+	  will still be SSL, but no further authentication will be performed.
+
+      <param name="perform-authentication" value="true"/>
+      -->
+
+      <!--
+	  Role sections are used to define the mapping between roles and actions. There are only
+	  4 kinds of actions: Administrate, Status, Enqueue <streamname>, and Dequeue <streamname>.
+	  A role section defines the actions that are allowed for those roles. 
+
+	  The roles are completely arbitrary. Administrators may define any number of roles and use
+	  any role names.
+
+	  When a client attempts to perform an action, such as "dequeue OutputStream1" the user is
+	  authenticated, then the authentication source (ldap servers, or a user-data section, see
+	  below) is asked for all of the roles the user has. If the user has as role which has the
+	  "dequeue default.OutputStream1" action listed, then the dequeue operation is allowed.
+
+	  Any number of role sections may be specified.
+
+      <role name="StreamBaseSuperuser">
+	<param  name="action" value="Administrate"/>
+      </role>
+      <role name="BasicUser">
+	<param name="action" value="Status"/>
+	<param name="action" value="Enqueue default.InputStream1"/>
+	<param name="action" value="Dequeue default.OutputStream1"/>
+      </role>
+      -->
+
+      <!--
+	  The ldap section has information for connecting to and searching ldap servers. If
+	  more than one <server> is defined, the requests will be sent to each ldap server,
+	  in turn in a round-robin manner.
+
+      <ldap>
+      -->
+
+	<!-- 
+	     Connect to the ldap server using a certificate to authenticate the sbproxy to the 
+	     ldap server.
+
+	<server host="ldap1.example.com" port="839">
+	  <param name="principal-root" value="ou=Users,dc=example,dc=com"/>
+	  <param name="principal-search" value="cn={0}"/>
+	  <param name="keystore" value="ldapuser.keystore"/>
+	  <param name="keystore-password" value="secret"/>
+	</server>
+	-->
+	<!-- 
+	     Connect to the ldap server using root-dn/password credentials.
+
+	<server host="ldap2.example.com" port="839">
+	  <param name="principal-root" value="ou=Users,dc=example,dc=com"/>
+	  <param name="principal-search" value="cn={0}"/>
+	  <param name="root-dn" value="cn=Manager,dc=example,dc=com"/>
+	  <param name="password" value="secret"/>
+	</server>
+	-->
+      <!--
+      </ldap>
+      -->
+
+      <!--
+	  The transform-principal section defines a search/replace regexp that will
+	  change the name of the principal. The example below will extract the CN section
+	  from the entire principal's name as it appears in a certificate.
+
+      <transform-principal>
+	<param name="searchRegexp" value="cn=([^,]*).*"/>
+	<param name="replaceRegexp" value="$1"/>
+      </transform-principal>
+      -->
+
+      <!--
+	  The user-data section defines the Principal-to-role mapping. 
+
+	  A user-data section cannot be defined if an ldap section is defined.
+
+      <user-data>
+	<user>
+	  <param name="cn" value="cn=Alice Pleasance Liddell,ou=Users,dc=example,dc=com"/>
+	  <param name="role" value="BasicUser"/>
+	  <param name="role" value="StreamBaseSuperuser"/>
+	  <param name="password" value="secret"/>
+	</user>
+	<user>
+	  <param name="cn" value="bobn@streambase.com"/>
+	  <param name="role" value="BasicUser"/>
+	  <param name="password" value="secret2"/>
+	</user>
+      </user-data>
+      
+    </security>
+    -->
+
+    <!--
+        The jms-connections-defaults section provides default
+        parameters used to configure access to the JMS provider used
+        to establish connections between streams in different
+        containers (most commonly in different sbd's).
+
+        For descriptions of the parameters, see:
+
+            ${STREAMBASE_HOME}/sample/adapter/embedded/jmsreader/skeleton.sbconf
+
+        The first three parameters specified below can be specified in
+        in the JMS URI that's specified as part of creating the
+        connection. Values specified in a JMS URI override those
+        specified here.  JMS URIs use the syntax specified in:
+
+            http://www.ietf.org/internet-drafts/draft-merrick-jms-uri-03.txt
+
+        which uses different names than are used in this file:
+
+        - jndiConnectionFactoryName (instead of "connection-factory-name")
+        - jndiInitialContextFactory (instead of "provider-context-factory")
+        - jndiURL (instead of "provider-url")
+
+        E.g.,
+
+            jms:jndi:mytopic?mytopic?jndiConnectionFactoryName=ConnectionFactory&jndiInitialContextFactory=org.apache.activemq.jndi.ActiveMQInitialContextFactory&jndiURL=tcp%3A%2F%2Flocalhost%3A61616
+
+    -->
+    <!--
+    <jms-connections-defaults>
+      <param name="connection-factory-name" value="ConnectionFactory" />
+      <param name="provider-context-factory" value="org.apache.activemq.jndi.ActiveMQInitialContextFactory" />
+      <param name="provider-url" value="tcp://localhost:61616" />
+      <param name="client-id" value="..." />
+      <param name="subscriber-name" value="..." />
+      <param name="username" value="..." />
+      <param name="password" value="..."/>
+      <param name="acknowledge-mode" value="..." />
+      <param name="create-destinations" value="..." />
+      <param name="use-topics" value="..." />
+      <param name="jndi-security-principal" value="..." />
+      <param name="jndi-security-credentials" value="..." />
+      <param name="jndi-security-authentication" value="..." />
+      <param name="jndi-security-protocol" value="..." />
+      <param name="jndi-authoritative" value="..." />
+      <param name="jndi-dns-url" value="..." />
+      <param name="jndi-referral" value="..." />
+    </jms>
+    -->
+
+
+    <!-- <security-tagging>
+      <param name="enabled" value="true"/>
+      <tag path="default.verySecret" value="66"/>
+      <tag path="default" value="1"/>
+      <rule path="default.untrustedOut" value="10"/>
+    </security-tagging>
+    -->
+
+</streambase-configuration>
+
