@@ -3,7 +3,7 @@ In order to evaluate the viability of PIP's c-tables approach to continuous vari
 \begin{figure}
 \begin{center}
 \resizebox{2in}{!}{\includegraphics{graphics/blockdiag.pdf}}
-\caption{The PIP Postgres plugin}
+\caption{The PIP Postgres plugin architecture}
 \label{fig:blockdiag}
 \end{center}
 \vspace*{-0.3in}
@@ -14,13 +14,26 @@ Much of this added functionality takes advantage of PostgreSQL's extensibility f
 \[
 \mbox{\textbf{CREATE\_VARIABLE($distribution$[,$params$])}}
 \]
-which is used to create variables.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  
+which is used to create continuous variables\footnote{For discrete distributions, PIP uses a repair-key operator similar to that used in \cite{KochMayBMS2008}}.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  
+
+%\begin{example}\em
+%Continuous variables may be created inline with the create-variable operation.  
+%
+%\begin{verbatim}
+%select o.order_id, o.item_id,
+%       CREATE_VARIABLE (`Normal', p.mean,
+%         p.std_dev) AS delivery_time
+%from   orders o, params p
+%where  o.item_id = p.item_id;
+%\end{verbatim}
+%
+%\end{example}
 
 %Angle brackets around a random variable are shorthand for the variable's expectation.  All instances of this are replaced by a call to pip's expectation sampling function.  
 
 To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following three effects:
 \begin{itemize}
-\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if $(X>Y)$ resolves to a CTYPE variable, 
+\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if either $(A>B)$ resolves to a CTYPE variable, 
 \begin{verbatim}
 select *
 from   inputs
@@ -33,15 +46,42 @@ from   inputs
 where  Z like '%foo'
 \end{verbatim}
 
-\item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.   The exception to this is in the case of aggregates.  If the select statement contains an aggregate and one or more input tables have CTYPE columns, the query causes an error unless the aggregate is labeled as being able to handle CTYPE inputs.
+\item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.   The exception to this is in the case of special probability-removing functions.  If the select statement contains one or more such functions (typically aggregates, or the conf operator), CTYPE columns are not passed through.  
+
+\item In the case of aggregates, the mechanism by which CTYPE columns may be passed through is unclear.  Thus If the select statement contains an aggregate and one or more input tables have CTYPE columns, the query causes an error unless the aggregate is labeled as a probability-removing function.
 
 \item UNION operations are rewritten to ensure that the number of CTYPE columns in their inputs is consistent.  If one input table has more CTYPE columns of a given type than the other, the latter is padded with NULL constraints.
 
 \end{itemize}
 
+\begin{figure}
+\begin{center}
+\begin{tabular}{c|ccc}
+$R_{ctable}$ & $A$ & $B$ & $\phi$ \\ \hline
+& $X*3$ & $5$ & $X > Y \wedge Y > 3$ \\
+& $Y$ & $3$ & $Y < 3 \vee X < Y$ \\
+\end{tabular}
+\begin{center}
+$\Downarrow \Downarrow \Downarrow$
+\end{center}
+\begin{tabular}{c|cccc}
+$R_{int}$ & $A$ \begin{footnotesize}(VarExp)\end{footnotesize} & $B$ \begin{footnotesize}(integer)\end{footnotesize} & $\phi_1$ \begin{footnotesize}(CTYPE)\end{footnotesize}& $\phi_2$  \begin{footnotesize}(CTYPE)\end{footnotesize} \\ \hline
+& $X*3$ & $5$ & $X > Y$ & $Y > 3$ \\
+& $Y$ & $3$ & $Y < 3$ & NULL \\
+& $Y$ & $3$ & $X < Y$ & NULL \\
+\end{tabular}
+\caption{Internal representation of C-Tables}
+\label{fig:intrep}
+\end{center}
+\vspace*{-0.3in}
+\end{figure}
+
+
+
 Note that these extensions are not required to access PIP's core functionality; they exist to allow users to seamlessly use deterministic queries on probabilistic data.
 
 PIP takes advantage of this by encoding constraint atoms in a CTYPE datatype; Overloaded $>$ and $<$ operators return a constraint atom instead of a boolean if a random variable is involved in the inequality, and the user can ignore the distinction between random variable and constant value (until the final statistical analysis).
+
 
 \subsection{Defining Distributions}
 PIP's primary benefit over other c-tables implementations is its ability to admit variables chosen from arbitrary continuous distributions.  These distributions are specified in terms of general distribution classes, a set of C functions that describes the distribution.  In addition to a small number of functions used to parse and encode parameter strings, each PIP distribution class defines one or more of the following functions.
@@ -52,9 +92,9 @@ PIP's primary benefit over other c-tables implementations is its ability to admi
 \item \texttt{InverseCDF(Parameters, Value)} evaluates the inverse of the cumulative distribution function at the specified point.
 \end{itemize}
 
-PIP requires that all distribution classes define a Generate function.  All other functions are optional, but can be used to improve PIP's performance if specified.  Consequently, the supplemental functions need only be provided when it is possible to evaluate them efficiently.  Depending on the user's needs however, it may be reasonable to provide estimates instead of exact values.  For example, the CDF of a Normal distribution is a complex integral, but may be efficiently estimated by interpolating between precomputed values.  
+PIP requires that all distribution classes define a Generate function.  All other functions are optional, but can be used to improve PIP's performance if provided; The supplemental functions need only be included when known methods exist for evaluating them efficiently.
 
-Future implementations could conceivably generalize the sampling process.  A sample may be generated using any of the four functions: The Metropolis-Hastings algorithm can sample from an arbitrary PDF, the inverse CDF evaluated on a uniform random value produces a sample, and a binary search may be used to evaluate the inverse CDF given the CDF.
+%Future implementations could conceivably generalize the sampling process.  A sample may be generated using any of the four functions: The Metropolis-Hastings algorithm can sample from an arbitrary PDF, the inverse CDF evaluated on a uniform random value produces a sample, and a binary search may be used to evaluate the inverse CDF given the CDF.
 
 \subsection{Sampling Functionality}
 PIP provides several functions for analyzing the uncertainty encoded in a c-table.  The two core analysis functions are conf() and expectation().
@@ -75,42 +115,3 @@ Aggregates pose a challenge for the query phase of the PIP evaluation process.  
 
 
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\subsection{Variable Definition}
-Before evaluating a query on random variables, the variables must first be defined.  This process takes one of two forms.  PIP uses a repair-key operator similar to that used in \cite{KochMayBMS2008} to define discrete distributions.  Conceptually, this operator identifies tuples that share key values, and ensures that only one of the two tuples is present in the database in any given sample.  
-
-Continuous variables may be created inline with the create-variable operation.  This function takes a distribution class and parameters, and outputs a new variable.  For example, the following query outputs a variable delivery time for a given order.
-
-\begin{verbatim}
-select o.order_id, o.item_id,
-       CREATE_VARIABLE (`Normal', p.mean,
-         p.std_dev) AS delivery_time
-from   orders o, params p
-where  o.item_id = p.item_id;
-\end{verbatim}
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-Selection clauses not involving random variables are handled traditionally, while those involving one or more random variables instead tag the output tuple with an equivalent condition clause.  For example, the query:
-
-\begin{verbatim}
-select *
-from   input_table
-where  fixed_col = 3 and 4 > variable_col;
-\end{verbatim}
-%
-is rewritten to a statement of the form
-%
-\begin{verbatim}
-select *, constraint(4, >, variable_col)
-from   input_table
-where  fixed_col = 3;
-\end{verbatim}
-
-Queries are also modified to ensure that these newly created constraint columns interact with projections properly.  All select statements are modified to automatically output all constraint columns in their input tables and subqueries.  The only exception to this rule is in the case of sampling selection.  Behaving similarly to aggregate selects, a sampling select projects away uncertainty by including a sampling operator such as expectation(), or conf().  Note that aggregate and sampling selects are not mutually exclusive.  Indeed, due to the complexity of losslessly representing arbitrary aggregate output conditions (An aggregate can generate $2^{N}$ distinct outputs in the number of input rows, though these can be encoded in linear space), PIP requires that aggregate selects perform sampling. 
