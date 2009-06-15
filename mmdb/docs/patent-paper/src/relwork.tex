@@ -12,12 +12,12 @@ topics ranging from efficient view maintenance algorithms given base relation
 deltas~\cite{colby-sigmod:96}, which may be eagerly or lazily
 applied~\cite{yan-vldb:95,zhou-vldb:07}, to the question of which views to
 actually materialize and how to use such views during query
-optimization~\cite{kotidis-tods:01,zhou-icde:07}. Zhou et. al~\cite{zhou-vldb:07}
+optimization~\cite{kotidis-tods:01,zhou-icde:07}. Zhou et al.~\cite{zhou-vldb:07}
 describe a lazy view materialization technique, describing their computation of
 deltas starting from a similar point to ours, namely that where a single tuple
 has changed as part of a join tree input. However, their approach does not
 generalize to the same extent as our map algebra, particularly in the case of
-nested aggregations such as the VWAP query seen in this work. Palpanas et.
+nested aggregations such as the VWAP query seen in this work. Palpanas et
 al.~\cite{palpanas-vldb:02} consider an extension of view maintenance algorithms
 to handle non-distributive aggregates, using a selective recomputation strategy
 to update only those groups affected by new tuples. More pertinent to the
@@ -120,7 +120,7 @@ and the NFAs they evaluate?
 \noindent \textbf{Compiling high-level languages for embedded systems.}
 The embedded systems community has partially studied on compiling high-level
 languages into a low-level imperative target language.
-Newton et. al.~\cite{newton-lctes:08} present WaveScript, a scripting language
+Newton et al.~\cite{newton-lctes:08} present WaveScript, a scripting language
 for processing windows, or segments, of a data stream, and describe a compiler to
 construct stream dataflow graphs that are capable of running on XScale CPUs.
 WaveScript programs are transformed into dataflow graphs, which may in turn be
@@ -143,26 +143,26 @@ Early work on main-memory databases studied how to reduce the bottleneck effect
 of a variety of I/O tasks including recovery tasks such as checkpointing, as well
 as logging and locking structures \cite{bohannon-sigmod:99}. There have been
 several recent efforts on this topic given the developments in main memory.
-Boncz et. al.~\cite{boncz-cidr:05} present the MonetDB/X100 database engine, a
+Boncz et al.~\cite{boncz-cidr:05} present the MonetDB/X100 database engine, a
 high-performance column-oriented database, that leverages techniques such as
 vectorized processing and loop pipelining on chunks of columns while evaluating
-operators in query plans. Kallman et. al.~\cite{kallman-pvldb:08} describe
+operators in query plans. Kallman et al.~\cite{kallman-pvldb:08} describe
 H-Store, a shared-nothing distributed main memory database to provide high
 throughput processing on OLTP workloads. H-Store achieves its performance through
 careful deployment of horizontally partitioning of relations, and localizing OLTP
-transactions to partitions. Raman et. al.~\cite{raman-icde:08} describe Blink, a
+transactions to partitions. Raman et al.~\cite{raman-icde:08} describe Blink, a
 row-oriented main memory query processor that extensively uses compression on
 denormalized relations, and applies aggregates while scanning these relations as
 its main query processing functionality.
 
 These systems span a wide variety of use cases and focus at rearchitecting at a
-lower-level than the our approach. For now we have looked at applying a semantic
+lower-level than our approach. For now we have looked at applying a semantic
 redesign to describe queries as tuple functions, and reuse much of the work from
 the compiler community to provide efficient tuple function execution. Having
 applied this first phase to building our runtime, we can now proceed to the
 systems level aspects of our tuple functions, for example investigating cache
-performance in much greater depth, and in particular understand which of the
+performance in much greater depth, and in particular understanding which of the
 above techniques and optimizations can be applied in our context, as well as
-leveraging approaches from both the compiler and programming languages
-communities in providing compiled query executors.
+leveraging relevant work from the compiler and programming languages
+communities.
 

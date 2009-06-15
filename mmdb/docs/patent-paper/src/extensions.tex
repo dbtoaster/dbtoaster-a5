@@ -5,9 +5,9 @@ uses, and two extensions considering adaptive query execution based on runtime
 trends.
 
 \subsection{\compiler\ Data Structures}
-As suggested by its name, the key data structure in\\\compiler\ is an
-associative map, which supports accessing aggregate values computed over
-subportions of join results for a given variable binding. While this map can
+The key data structure in\\\compiler\ is an
+associative map.
+While this map can
 always be implemented in a straightforward manner by a hashtable, its usage is
 primarily governed by the map algebra expression directly using involving the
 bound variable (i.e. the map key). In this section we consider bound
@@ -20,7 +20,7 @@ here primarily considers conjunctive equality or range predicates.
 \textbf{Range predicates.}
 In the case of a range predicate, a bound variable $x$ is used as part of an
 aggregate query over tuples filtered by $x$. Hence increasing values of $x$
-result in a larger aggregation set, and in the case of the \texttt{sum}, and
+result in a larger aggregation set, and in the case of the \texttt{sum} and
 \texttt{max} aggregates, a map binding that can be computed from neighboring
 values to $x$. Thus the data structure is effectively a cumulative data
 structure, where each $x$ maintains the result of an aggregation function between
