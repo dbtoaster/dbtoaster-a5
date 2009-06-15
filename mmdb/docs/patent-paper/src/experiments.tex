@@ -15,7 +15,7 @@ dataset and computing aggregations on the star schema.
 
 \begin{figure}[tb]
 \begin{center}
-\includegraphics[scale=0.25]{../plots/vwap_query_freq_dn}
+\includegraphics[scale=0.4]{../plots/vwap_query_freq_dn.pdf}
 \end{center}
 \vspace{-4mm}
 \caption{Query frequency limit for VWAP application, indicating the
@@ -25,16 +25,17 @@ plan compilation technique.}
 \end{figure}
 
 \subsection{Experimental Setup}
-We compare \compiler\ to three other systems, PostgreSQL v8.3.7, a commercial
-DBMS 'Y', as well as a naive plan-based variant of \compiler\ that simply
-produces C++ code directly from a query plan (instead of rewriting to a tuple
-function). We performed our experimental evaluation on two hardware setups (due
-to the fact that we ran DBMS 'Y' on Windows Server 2003 and had insufficient
-hardware resources to simultaneously mirror the experimental setup on two
-different operating systems). For Postgres, we used an experimental setup of a
+We compare \compiler\ to several other data management systems in the following
+subsections, including PostgreSQL v8.3.7, a commercial DBMS 'Y', Stanford STREAM,
+as well as a naive plan-based variant of \compiler\ that simply produces C++ code
+directly from a query plan (instead of rewriting to a tuple function). We
+performed our experimental evaluation on two hardware setups (due to the fact
+that we ran DBMS 'Y' on Windows Server 2003 and had insufficient hardware
+resources to simultaneously mirror the experimental setup on two different
+operating systems). For PostgreSQL and STREAM, we used an experimental setup of a
 Dual Intel Xeon 5335 processor (8 cores, 2.0Ghz), 16Gb RAM, running Red Hat
 Enterprise Linux 4 (Linux Kernel 2.6.18). For DBMS 'Y', our hardware was a dual
-code Intel Xeon 5150 2.66 GHz processor, with 4Gb RAM, running Windows Server
+core Intel Xeon 5150 2.66 GHz processor, with 4Gb RAM, running Windows Server
 2003. Note that \compiler\ does not yet produce query executors capable of
 exploiting multicore processing, thus our results represent query performance on
 a single core. Following the generation of C++ code, we used \texttt{g++} v4.3.2,
@@ -74,7 +75,7 @@ with \compiler.
 
 \begin{figure}[tb]
 \begin{center}
-\includegraphics[scale=0.25]{../plots/ssb_query_freq_dn}
+\includegraphics[scale=0.4]{../plots/ssb_query_freq_dn.pdf}
 \end{center}
 \vspace{-4mm}
 \caption{Query frequency limit for warehouse loading application, indicating the
@@ -120,47 +121,50 @@ aggregated historical data.
 
 \begin{figure}[htb]
 \begin{center}
-\begin{tabular}{|l|l|l|}
+\begin{tabular}{|r|c|c|c|}
 \hline
-& \multicolumn{2}{c|}{Query execution time (secs).} \\
-\# queries & Naive compilation & PostgreSQL \\
+& \multicolumn{3}{c|}{Query execution time (secs).} \\
+\# queries & \compiler & Naive compiler & PostgreSQL \\
 \hline
-10 & 236.0 & 1712.7 \\
-20 & 396.8 & 3156.4 \\
-30 & 514.4 & 4580.2 \\
-40 & 718.0 & 6070.8 \\
-50 & 850.3 & 7520.3 \\
+10 & 414.5 & 236.0 & 1712.7 \\
+20 & 414.5 & 396.8 & 3156.4 \\
+30 & 414.5 & 514.4 & 4580.2 \\
+40 & 414.5 & 718.0 & 6070.8 \\
+50 & 414.5 & 850.3 & 7520.3 \\
 \hline 
 \end{tabular}
 \end{center}
 \vspace{-4mm}
 \caption{Query execution time for standing queries in PostgreSQL in the VWAP
 workload. Naive compilation execution times are shown for comparison, and are
-the same as in Figure~\ref{fig:vwap_query_freq}. \compiler\ processes the
-workload in 1414.8 seconds.}
+the same as in Figure~\ref{fig:vwap_query_freq}.}
 \label{tab:ssb_query_freq}
 \end{figure}
 
 \begin{figure}[htb]
 \begin{center}
-\begin{tabular}{|l|l|l|}
+\begin{tabular}{|r|c|c|c|}
 \hline
-& \multicolumn{2}{c|}{Query execution time (secs).} \\
-\# queries & Naive compilation & PostgreSQL \\
+& \multicolumn{3}{c|}{Query execution time (secs).} \\
+\# queries & \compiler & Naive compiler & PostgreSQL \\
 \hline
-1 & 4.79 & 177.46 \\
-2 & 6.89 & 348.40 \\
-3 & 8.93 & 526.85 \\
-4 & 11.02 & 700.97 \\
-5 & 13.18 & 876.54 \\
+%1  & 18.72 & 4.79  & 177.46 \\
+2  & 18.72 & 6.89  & 348.40 \\
+%3  & 18.72 & 8.93  & 526.85 \\
+4  & 18.72 & 11.02 & 700.97 \\
+%5  & 18.72 & 13.18 & 876.54 \\
+6  & 18.72 & 15.26 & 1053.63 \\
+8  & 18.72 & 19.53 & 1411.34 \\
+12 & 18.72 & 28.09 & 2131.52 \\
+16 & 18.72 & 36.61 & 2856.84 \\
+20 & 18.72 & 45.65 & 3612.32 \\
 \hline 
 \end{tabular}
 \end{center}
 \vspace{-4mm}
 \caption{Query execution time for repetitive queries in PostgreSQL
 in the SSB workload. Naive compilation execution times are shown for comparison, and are
-the same as in Figure~\ref{fig:ssb_query_freq}. \compiler\ processes the
-workload in 18.72 seconds.}
+the same as in Figure~\ref{fig:ssb_query_freq}.}
 \label{tab:ssb_query_freq}
 \end{figure}
 
@@ -201,30 +205,31 @@ outperforms this database, even for running a single query.
 \textbf{Trigger-based processing}
 In addition to evaluating the VWAP and SSB queries using one-time query
 processing over snapshots of base relations, between updates, we implemented our
-queries using triggers to compute results incrementally. We briefly note that an
-alternative approach to developing trigger queries by hand would be to create a
-view corresponding to the query, and rely upon incremental view maintenance
-techniques. However there are many restrictions on the kinds of queries supported
-via incremental view maintenance, for example subqueries as found in the VWAP
-query are generally not addressed by existing view maintenance algorithms.
-Further details on restrictions for several commercial databases can be found
-in~\cite{mssql-viewrestrict,db2-viewrestrict,oracle-viewrestrict}. Our
+queries using triggers to compute results incrementally. Note that we compare
+PostgreSQL running on the same platform as DBMS 'Y' here, namely a dual core
+Intel Xeon 5150 2.66 GHz processor, with 4Gb RAM, running Windows Server 2003. We
+briefly note that an alternative approach to developing trigger queries by hand
+would be to create a view corresponding to the query, and rely upon incremental
+view maintenance techniques. However there are many restrictions on the kinds of
+queries supported via incremental view maintenance, for example subqueries as
+found in the VWAP query are generally not addressed by existing view maintenance
+algorithms. Further details on restrictions for several commercial databases can
+be found in~\cite{mssql-viewrestrict,db2-viewrestrict,oracle-viewrestrict}. Our
 trigger-based processing implementation followed the same execution scheme as our
 compiled code, by materializing intermediate results as relations rather than
 data structures, to compute query results, and maintaining these relations as
 part of the trigger queries.
 
 \begin{figure}[tb]
-\hspace{-5mm}
-\includegraphics[scale=0.45]{../plots/trigger_comparison.pdf}
+\includegraphics[scale=0.43]{../plots/trigger_comparison.pdf}
 \caption{Comparison of trigger-based processing performance in PostgreSQL and
-DBMS 'Y' relative to \compiler}
+DBMS 'Y' relative to \compiler.}
 \label{fig:triggercomp}
 \end{figure}
 
 Figure~\ref{fig:triggercomp} shows the performance of \compiler\ in comparison to
-trigger-based implementations of both the VWAP and SSB queries on Postgres and
-DBMS 'Y'. In the VWAP query, \compiler\ outperforms both Postgres and DBMS 'Y' by
+trigger-based implementations of both the VWAP and SSB queries on PostgreSQL and
+DBMS 'Y'. In the VWAP query, \compiler\ outperforms both PostgreSQL and DBMS 'Y' by
 approximately 2 orders of magnitude due its ability to aggressively compile and
 inline incremental processing of VWAP into a single function. In contrast our
 trigger-based implementation must evaluate several triggers to maintain relations
@@ -284,11 +289,10 @@ similar advantages over such interpreted evaluation.
 
 \begin{figure}[h]
 \begin{center}
-\includegraphics[scale=0.3]{../plots/mem_usage}
+\includegraphics[scale=0.44]{../plots/mem_usage.pdf}
 \end{center}
 \vspace{-4mm}
-\caption{Memory usage of \compiler's map data structures in the i)
-VWAP and ii) SSB workloads.}
+\caption{\compiler's internal map data structure memory usage.}
 \label{fig:memusage}
 \end{figure}
 
@@ -332,7 +336,7 @@ Figures:
 \begin{enumerate}
   \item Takeaway experiment: end-to-end throughput comparison for a variety of
   insert/update/delete rates. Requires replay speed parameter in data loader.
-  Comparison points include Postgres, naive compilation, simple version
+  Comparison points include PostgreSQL, naive compilation, simple version
   of \compiler, \compiler\ with lazy evaluation, \compiler\ with bulk insert
   mode at 2 or 3 different chunk sizes.
 
