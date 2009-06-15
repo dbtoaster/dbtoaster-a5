@@ -60,7 +60,7 @@ of the same arity as $\vec{x}$ denotes each $x_i$ in $f$ substituted by $a_i$. T
 variables $\vec{x}$ in $f[\vec{a}]$ are then called bound.
 So, for instance, the free variables of $5 * x + y$ are $x,y$ and
 $(5 * x + y)[z, 2]$ is $5 * z + 2$ with free variable $z$.
-The number of free variables in a map is also called the map's dimension.
+The number of free variables in a map is also called the map's arity.
 Since $f[\vec{x}]$ where the free variables of $f$ are $\vec{x}$ is again $f$, we
 sometimes write $f[\vec{x}]$ to make the free variables of $f$ explicit.
 
@@ -71,13 +71,13 @@ constant singleton relations $\{\vec{a}\}$,
 and renaming $\rho$.
 (Note the absence of the relational difference operation at this point; we
 relax this restriction later.)
-W.l.o.g., we will use renaming only directly above relation names, i.e.\ in expressions
+W.l.o.g., we will use renaming only directly above the leaves of a relational algebra parse tree, i.e., in expressions
 $\rho_{\vec{a}}(R)$.
 Column names $A$ are treated like bound variables.
 Selection conditions are comparisons
 $f \;\theta\; 0$ where $\theta \in \{ =, \neq, <, \le, >, \ge \}$.
 Projections may compute additional columns
-using map algebra expressions, i.e.\ the syntax is
+using map algebra expressions, i.e., the syntax is
 $\pi_{\vec{A}, f_1 \rightarrow B_1, \dots, f_k \rightarrow B_k}(Q)$. 
 
 We use a multiset semantics for relations as in SQL; none of the operations
@@ -97,7 +97,7 @@ where $\algsumr$ is the ungrouped sum aggregate of SQL.
 
 \begin{remark}\em
 While nongrouped aggregation in SQL corresponds to our semantics of aggregate
-maps $\algsumf_f(Q)$ of dimension zero apart from syntax (the result of $f[]$ is a scalar number
+maps $\algsumf_f(Q)$ of arity zero apart from syntax (the result of $f[]$ is a scalar number
 while the result of the SQL aggregate is a singleton unary relation),
 the semantics of aggregate maps $f = \algsumf_f(Q)$ with
 free variables $\vec{x}$ differs from that
@@ -164,7 +164,7 @@ one or more relation names occurring in $f'$ by fixed singleton relations.
 Note that this replacement may occur deep inside a map, not just in the topmost
 relational algebra subexpression. For example,
 \[
-\algsumf_A(\pi_{\algsumf_B(\rho_B(\tuple{b})) + 2}(S))
+\algsumf_A(\pi_{\algsumf_B(\rho_B(\{\tuple{b}\})) + 2}(S))
 \prec
 \algsumf_A(\pi_{\algsumf_B(\rho_B(R)) + 2}(S))
 \]
@@ -191,6 +191,8 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 
 \begin{figure*}[t!]
 \begin{eqnarray}
+\nonumber
+\mbox{Map algebra deltas:} && \\
 \label{eq:a1}
 \Delta_{+R(\vec{r})} c       &:=& 0 \\
 \label{eq:a2}
@@ -215,6 +217,7 @@ We denote this operation by $\uparrow_{\cup}(Q)$.
 \nonumber
 &\dots& \mbox{$\Delta_{+R(\vec{r})} f = 0$ (optimization of Eq.~\ref{eq:a5})}
 \\[2ex]
+\nonumber \mbox{Relational algebra deltas:} && \\
 \label{eq:b1}
 \Delta_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=& \pi_{\vec{r} \rightarrow \vec{A}}\{\tuple{}\}
 \\
@@ -289,6 +292,7 @@ surrounding aggregate instead}
 \label{eq:d6}
 \algsumf_{0}(Q) &:=& 0
 \\[2ex]
+\nonumber \mbox{Selection rewrite rules:} && \\
 \label{eq:e1}
 \sigma_{f[A] \theta 0}(Q) &:=& \sigma_{A \ge A_{\min}[]}(Q)
 \\
@@ -310,6 +314,8 @@ surrounding aggregate instead}
 %
 %
 \mbox{Relational algebra simplifications:} &&
+\mbox{(partial list)}
+\nonumber
 \\
 \label{eq:f1}
 \sigma_{f[\vec{A}, B_1, \dots, B_k] \,\theta\, 0}
@@ -317,23 +323,34 @@ surrounding aggregate instead}
 &:=&
 \pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(
 \sigma_{f[\vec{A}, g_1, \dots, g_k] \,\theta\, 0}(Q))
+\\
+\nonumber
+\{\tuple{}\} \times Q := Q &&
+\emptyset \times Q := Q
+\\
+\nonumber
+\emptyset \cup Q := Q &&
+R \times (S \times T) = (R \times S) \times T = (R \times T) \times S
 \end{eqnarray}
 
 \vspace{-4mm}
 
-\caption{Recursive algorithm for compiling the
+\caption{Rules for compiling the
 on insert into $R$ values $\vec{r}$ trigger.}
 \label{fig:mainalg}
 \end{figure*}
 
 
-Figure~\ref{fig:mainalg} shows our compilation algorithm for maps, the core procedure of the DBToaster compiler.
+Figure~\ref{fig:mainalg} shows our compilation rules for maps.
+The rule set can alternatively be viewed as a functional compilation program;
+this is the core procedure of the DBToaster compiler.
 Given a map $f$, it inductively
 computes a delta-expression that does not use relational algebra.
 It is easy to verify that the right-hand sides of the rewriting are successively
 simpler by either being dominated by the left-hand sides under the general-to-specific
 ordering $\prec$ or being sums or products of
-strictly shorter expressions.
+strictly shorter expressions, with the only exception being rules \ref{eq:e1} and
+\ref{eq:e2}.
 
 Thus, the output of the rewriting algorithm given a map is a delta map that does not
 contain aggregates or relational algebra. However, the rewriting may add new free
@@ -343,7 +360,7 @@ map $g[\vec{x}, \vec{y}]$. We then {\em marginalize}\/ over these as follows,
 \Delta f[\vec{x}] = \sum_{\vec{y}} g(\vec{x}, \vec{y}). 
 \]
 
-Note that the insertion delta can be used for deletions as well because a deletion of
+The insertion delta can be used for deletions as well because a deletion of
 a tuple $\vec{r}$ from a relation $R$ can be expressed as $R - \{\vec{r}\}$ and,
 although our map algebra has been defined to exclude relation difference,
 it can be straightforwardly extended by safe difference, i.e. difference expressions
@@ -353,8 +370,8 @@ $\algsumf_A(R)$ - $\algsumf_A(S)$ if $R \subseteq S$.
 
 
 \begin{theorem}
-The delta processing scheme of the algorithm of Figure~\ref{fig:mainalg} is correct,
-that is,
+The delta processing scheme given by the rules of Figure~\ref{fig:mainalg},
+where defined, is correct, that is,
 \begin{enumerate}
 \item
 on inserting tuple $\vec{r}$ into $R$, $f$ becomes
@@ -370,8 +387,19 @@ $f - \Delta_{+R(\vec{r})} f$.
 This theorem can be shown by induction: in fact, the algorithm itself is an inductive
 definition that can be straightforwardly implemented in a functional language such as
 ML (as done in the DBToaster project). Note that the pattern matching rules are
-deterministic, thus there is a unique derivation that is fully specified by our
+essentially deterministic (with the exception of easily recognizable optimizations of a default rule such as rule \ref{eq:a6} for rule \ref{eq:a5}),
+thus there is a unique derivation that is fully specified by our
 algorithm.
+
+The rules do not admit elimination of relational algebra in all cases;
+there is no rule for simplifying
+$\Delta_{+R(\vec{r})} \sigma_{f \theta 0}(Q)$ where $f$ is a complex map whose
+delta is different from 0. The powerful selection rewrite rules \ref{eq:e1} and \ref{eq:e2} however deal with an important case in which $f$ is such a general map, as illustrated in the following example.
+
+As a general statement, the rules of Figure~\ref{fig:mainalg} allow to
+completely eliminate relational algebra operations in the input query has
+no nested aggregate queries (i.e., in either selection conditions or
+projections).
 
 
 
@@ -444,38 +472,31 @@ where
 \]
 
 Thus we generate the following code:
-\begin{verbatim}
-on insert into B values (p, v)
-{
-  foreach p' in dom_p do
-  {
-     m[p'] += k*v - ((p > p') ? v : 0);
-     q[p'] += (p >= p') ? (p * v) : 0;
-  }
-
-  B += {(p,v)};
-
-  if (p not in dom_p) then
-  {
-     m[p] = k * sum_v(B)
-          - sum_v(select_{p > p2}(
-                      rho_{p2,v2}(B)));
-     q'[p] = sum_{p2 * v2}(select_{p2 >= p}(
-                      rho_{p2,v2}(B)));
-     dom_p += {p}
-  }
-
-  /* maintain index on m[.] by p2 for finding
-     this minimum efficiently */
-  pmin = min(select_{m[p2] > 0}(project_{p2}(
-               rho_{p2,v2}(B))));
-  q[] = q'[pmin];
-}
-\end{verbatim}
-%
-%It makes sense to avoid naive looping over all values $p_2$ by maintaining
-%$m_1[p_2]$ as a range data structure (to be described).
-%\punto
+\begin{tabbing}
+on insert into $B$ values $(p, v)$ \\
+\{ \\
+~~foreach $p'$ in $dom_p$ do \\
+~~\{ \\
+~~~~~$m[p']$ += $k*v$ - ($(p > p')$ ? $v$ : $0$); \\
+~~~~~$q[p']$ += $(p \ge p')$ ? $(p * v)$ : $0$;  \\
+~~\} \\
+\\
+~~$B$ += $\{(p,v)\}$; \\
+\\
+~~if ($p$ not in $dom_p$) then \\
+~~\{ \\
+~~~~~$m[p]$ = $k * \algsumf_v(B)$
+          - $\algsumf_v(\sigma_{p > p2}(\rho_{p2,v2}(B)))$; \\
+~~~~~$q'[p]$ = $\algsumf_{p2 * v2}(\sigma_{p2 >= p}(\rho_{p2,v2}(B)))$; \\
+~~~~~$dom_p$ += $\{p\}$; \\
+~~\} \\
+\\
+~~$p_{\min}$ = $\min(\sigma_{m[p2] > 0}(\pi_{p2}(\rho_{p2,v2}(B))))$; \\
+~~$q[]$ = $q'[p_{\min}]$; \\
+\}
+\end{tabbing}
+For efficiency, it is helpful to maintain an index on $m[.]$ by $p2$
+for finding the minimum $p_{\min}$ efficiently.
 \end{example}
 
 
@@ -497,6 +518,8 @@ maintenance under deletions.
 
 
 
+
+\nop{
 \subsection{Structural Query Decompositions and Memory Consumption}
 
 
@@ -506,7 +529,7 @@ $O(n^k)$, where $n$ is bounded by the database size. In fact, it can be
 seen that our compilation algorithm essentially preserves the (algebraic)
 query plan given to it; while the number of branches of the map algebra
 version of an operator tree in general increases in the compilation phase, the
-dimensionality of intermediate result relations and correspondingly our maps
+arity of intermediate result relations and correspondingly our maps
 do not. This gives a strong argument for employing structural query decomposition techniques for generating query plans whose join graph is
 as tree-like as possible: For example, for the structural query decomposition framework of hypertree decompositions \cite{GLS2002}, it is know that for relational algebra query plans that have hypertree-width $k$, non-pipelined operator-at-a-time bottom-up evaluation only yields intermediate result relations that are bounded by size $O(n^k)$ \cite{GLS2002}.
 
@@ -531,18 +554,17 @@ to relational algebra.
 
 DBToaster includes an implementation of a structural query decomposition algorithm
 that computes hypertree compositions for relational algebra blocks inside
+} % end nop
 
 
+
+\nop{
 \begin{example}\em
-Given schema $R(A,B)$, $S(B,C)$, $T(C,D)$.
+Given schema $R(A,B)$, $S(C,D)$, $T(E,F)$.
 We incrementally maintain the aggregate query
 \[
-s := \algsum_{A*D}(R \bowtie S \bowtie T).
+s := \algsum_{A*F}(\sigma_{B=C \land D=E}(R \times S \times T)).
 \]
-
-Compared to the map compilation algorithm of Figure~\ref{fig':mainalg}, we take a
-few shortcuts for better readability (and extend the algebra by natural joins);
-nevertheless following our algorithm yields equivalent maps. 
 \begin{itemize}
 \item
 Insert R(a,b):
@@ -684,5 +706,5 @@ Delete R(a,b):
 \end{eqnarray*}
 \end{itemize}
 \end{example}
-
+} % end nop
 
