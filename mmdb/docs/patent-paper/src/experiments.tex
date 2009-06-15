@@ -20,7 +20,8 @@ dataset and computing aggregations on the star schema.
 \vspace{-4mm}
 \caption{Query frequency limit for VWAP application, indicating the
 query execution frequency beyond which DBToaster outperforms the naive query
-plan compilation technique.}
+plan compilation technique. We omit PostgreSQL here for ease of
+plotting, please refer to Figure~\ref{tab:vwap_query_freq}.}
 \label{fig:vwap_query_freq}
 \end{figure}
 
@@ -80,7 +81,8 @@ with \compiler.
 \vspace{-4mm}
 \caption{Query frequency limit for warehouse loading application, indicating the
 query execution frequency beyond which DBToaster outperforms the naive query
-plan compilation technique.}
+plan compilation technique. We omit PostgreSQL here for ease of
+plotting, please refer to Figure~\ref{tab:ssb_query_freq}.}
 \label{fig:ssb_query_freq}
 \end{figure}
 
@@ -138,7 +140,7 @@ aggregated historical data.
 \caption{Query execution time for standing queries in PostgreSQL in the VWAP
 workload. Naive compilation execution times are shown for comparison, and are
 the same as in Figure~\ref{fig:vwap_query_freq}.}
-\label{tab:ssb_query_freq}
+\label{tab:vwap_query_freq}
 \end{figure}
 
 \begin{figure}[htb]
