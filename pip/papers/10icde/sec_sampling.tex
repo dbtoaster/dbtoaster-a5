@@ -67,6 +67,13 @@ Consequently,   the  Metropolis  algorithm   is  ideally   suited  for
 generating large numbers of samples  when the CDF is not available and
 the probability of sampling a given value is small.
 
+We can estimate the work required for both Metropolis and Naive rejection sampling.
+$$W_{metropolis} = C_{burn\ in} + [\#\ samples] \cdot C_{steps\ per\ sample}$$
+$$W_{naive} = \frac{1}{1-P[reject]} \cdot [\#\ samples]$$
+
+By generating a small number of samples for the subgroup, PIP can generate a rough estimate of $P[reject]$.  If this value is higher than $\frac{1}{\frac{C_{burn\ in}}{[\#\ samples]} + C_{steps\ per\ sample}}$, Metropolis sampling is used instead of rejection sampling.  Note that if CDFs are available for one or more component variables, PIP uses the probability of rejecting samples chosen from within the available weak bounds.
+
+
 %{\bf Integration}
 %
 %There are  cases where bounds are insufficient.   For example, concave
@@ -105,15 +112,8 @@ The remaining groups are sampled to obtain values for Monte-Carlo estimation of 
 
 If any of the variables have a CDF available, PIP first attempts to obtain weak bounds on the variable as described above.  If such bounds are available, PIP can use the variable's CDF and inverse CDF to restrict sampling to within the weak bounds.  If the weak bounds are actually tight bounds, no samples will be discarded.  However, even if some samples are rejected, the bounds still reduce the drop frequency.  As in the naive case, the frequency with which samples are accepted is tracked and used to compute the row's confidence if required.
 
-A final option available to PIP is the Metropolis algorithm.  Metropolis has a high initialization cost: Prior to sampling, at least one value $\vec x$ satisfying $\theta(\vec x)$ must be found (though it need not be selected according to any specific probability distribution), and a significant number of burn-in iterations must be run and discarded.  Furthermore, every sampling step requires many Metropolis iterations to achieve sufficiently independent samples.  However, Metropolis is guaranteed to stay within the constraint bounds and no samples will be rejected.  Thus, we can estimate the work required for both Metropolis and Naive rejection sampling.
-
-$$W_{metropolis} = C_{burn\ in} + [\#\ samples] \cdot C_{steps\ per\ sample}$$
-$$W_{naive} = \frac{1}{1-P[reject]} \cdot [\#\ samples]$$
-
-By generating a small number of samples for the subgroup, PIP generates a rough estimate of $P[reject]$.  If this value is higher than $\frac{1}{\frac{C_{burn\ in}}{[\#\ samples]} + C_{steps\ per\ sample}}$, Metropolis sampling is used instead of rejection sampling.  Note that if CDFs are available for one or more component variables, PIP uses the probability of rejecting samples chosen from within the available weak bounds.
-
 \vspace*{0.05in}
-\begin{algorithm} Checking the consistency of a condition
+\begin{algorithm} The expectation operator
 \footnotesize
 \begin{enumerate}
 \item $expectation($Expression $E,$ Condition $C,$ Bool $agg,$ Goal $\{\delta, \epsilon\})$

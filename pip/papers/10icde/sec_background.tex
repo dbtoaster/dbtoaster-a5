@@ -1,10 +1,10 @@
 
 
-The estimation of probabilities of continuous distributions frequently devolves into the computation of complex integrals.  PIP's architecture allows it to identify cases where efficient algorithms exist to obtain a solution.  For more complex problems not covered by these cases, PIP relies on Monte Carlo integration \cite{montecarlo}, a conceptually simple technique that allows for the (approximate) numerical integration of even the most general  functions. Conceptually, to compute the expectation of function $q(\vec x)$, one simply approximates the integral by taking $n$ samples $\vec{x}_1, \dots, \vec{x}_n$ for $\vec{X}$ from their distribution $p(\vec X)$  and  taking  the  average of the function evaluated on all $n$ values,
+The estimation of probabilities of continuous distributions frequently devolves into the computation of complex integrals.  PIP's architecture allows it to identify cases where efficient algorithms exist to obtain a solution.  For more complex problems not covered by these cases, PIP relies on Monte Carlo integration \cite{montecarlo}, a conceptually simple technique that allows for the (approximate) numerical integration of even the most general  functions. Conceptually, to compute the expectation of function $q(\vec x)$, one simply approximates the integral by taking $n$ samples $\vec{x}_1, \dots, \vec{x}_n$ for $\vec{X}$ from their distribution $p(\vec X)$  and  taking  the  average of the function evaluated on all $n$ values.
 %
-\begin{equation}\label{eq:mc_expectation}
-\frac{1}{n} \cdot \sum_{i=1}^n q(\vec{x}_i).
-\end{equation}
+%\begin{equation}\label{eq:mc_expectation}
+%\frac{1}{n} \cdot \sum_{i=1}^n q(\vec{x}_i).
+%\end{equation}
 
 In general, even taking a sample from a complicated PDF is difficult.  Constraints imposed by queries break traditional Monte Carlo assumptions of normalization on $p(\vec X)$ and require that the sampling technique account for them or lose precision.  A variety of techniques exist to address this problem, from straightforward rejection sampling, where constraint-violating samples are repeatedly discarded, to more heavy duty Markov-chain Monte Carlo (MCMC, cf.\ e.g., \cite{GRS1995}) style techniques such as the Metropolis-Hastings algorithm \cite{metropolis,GRS1995}. 
 
