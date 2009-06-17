@@ -86,6 +86,7 @@ PIP takes advantage of this by encoding constraint atoms in a CTYPE datatype; Ov
 \subsection{Defining Distributions}
 PIP's primary benefit over other c-tables implementations is its ability to admit variables chosen from arbitrary continuous distributions.  These distributions are specified in terms of general distribution classes, a set of C functions that describes the distribution.  In addition to a small number of functions used to parse and encode parameter strings, each PIP distribution class defines one or more of the following functions.
 \begin{itemize}
+\footnotesize
 \item \texttt{Generate(Parameters, Seed)} uses a pseudorandom number generator to generate a value sampled from the distribution.  The seed value allows PIP to limit the amount of state it needs to maintain; multiple calls to Generate with the same seed value produce the same sample, so only the seed value need be stored.
 \item \texttt{PDF(Parameters, x)} evaluates the probability density function of the distribution at the specified point.  
 \item \texttt{CDF(Parameters, x)} evaluates the cumulative distribution function at the specified point.
@@ -100,6 +101,7 @@ PIP requires that all distribution classes define a Generate function.  All othe
 PIP provides several functions for analyzing the uncertainty encoded in a c-table.  The two core analysis functions are conf() and expectation().
 
 \begin{itemize}
+\footnotesize
 \item \texttt{conf()} performs a conjunctive integration to estimate the probability of a specific row being present in the output, in effect computing the expectation $E[1]$.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
 
 \item \texttt{aconf()}, a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  

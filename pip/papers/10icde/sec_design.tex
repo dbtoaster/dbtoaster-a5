@@ -93,8 +93,10 @@ A condition is consistent if there is a variable assignment that makes the condi
 
 With  respect to discrete variables, inconsistency detection may be further simplified.  Rather than using abstract representations, every row containing discrete variables may be exploded into one row for every possible valuation.  Condition atoms matching each variable to its valuation are used to ensure mutual exclusion of each row.  Thus, discrete variable columns may be treated as constants for the purpose of consistency checks.  As shown in \cite{AJKO2008}, deterministic database query optimizers do a satisfactory job of ensuring that constraints over discrete variables are filtered as soon as possible.
 
-\vspace*{0.05in}
+%\vspace*{0.05in}
+\begin{figure}
 \begin{algorithm} Checking the consistency of a condition
+\label{alg:consistCheck}
 \footnotesize
 \begin{enumerate}
 \item $consistencyCheck($ConditionSet $C)$
@@ -117,9 +119,12 @@ With  respect to discrete variables, inconsistency detection may be further simp
 \item \hspace*{0.2in} if $a > 0$, return $[-\max_{S[Y,Z,\ldots]}(bY+cZ+\ldots)/a, \infty]$
 \item \hspace*{0.2in} if $a < 0$, return $[-\infty, -\max_{S[Y,Z,\ldots]}(bY+cZ+\ldots)/a]$
 \end{enumerate}
-\end{algorithm}%\vspace*{0.1in}
+\end{algorithm}
+{\footnotesize Strong consistency guarantees returned by this algorithm are marked in \textbf{bold}, while weak ones are marked in \textit{italics}.}
+\vspace*{-0.2in}
+\end{figure}
 
-Strong consistency guarantees returned by this algorithm are marked in bold, while weak ones are marked in italics.  Due to space constraints only $tighten_1$ is presented in this paper, but all polynomial equations may be handled using a similar, albeit more complex enumeration of coefficients\footnote{PIP limits itself to 2nd degree polynomials}.  We have decided to limit PIP to simple algebraic operators in the current implementation, thus all variable expressions are polynomial.  As this process is optional, more complex equations need not be handled by it.
+This sampling algorithm is presented in Algorithm \ref{alg:consistCheck}.  Due to space constraints only $tighten_1$ is presented in this paper, but all polynomial equations may be handled using a similar, albeit more complex enumeration of coefficients\footnote{PIP limits itself to 2nd degree polynomials}.  We have decided to limit PIP to simple algebraic operators in the current implementation, thus all variable expressions are polynomial.  As this process is optional, more complex equations need not be handled by it.
 
 \subsection{Distributions}
 As variables are defined in terms of parametrized distribution classes, PIP's infrastructure is agnostic to the implementation of the underlying distributions.  When defining a distribution, programmers need only include a mechanism for sampling from that distribution; much like \cite{MCDB}'s VG Functions.  However, PIP is not limited to simple sampling functionality.  If it is possible to efficiently compute or estimate the distribution's probability density function ($PDF$), cumulative distribution function ($CDF$), and/or inverse cumulative distribution function ($CDF^{-1}$), these may be included to improve PIP's efficiency.  
