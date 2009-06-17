@@ -93,28 +93,29 @@ A condition is consistent if there is a variable assignment that makes the condi
 
 With  respect to discrete variables, inconsistency detection may be further simplified.  Rather than using abstract representations, every row containing discrete variables may be exploded into one row for every possible valuation.  Condition atoms matching each variable to its valuation are used to ensure mutual exclusion of each row.  Thus, discrete variable columns may be treated as constants for the purpose of consistency checks.  As shown in \cite{AJKO2008}, deterministic database query optimizers do a satisfactory job of ensuring that constraints over discrete variables are filtered as soon as possible.
 
+\vspace*{0.05in}
 \begin{algorithm} Checking the consistency of a condition
 \footnotesize
 \begin{enumerate}
 \item $consistencyCheck($ConditionSet $C)$
 \item \hspace*{0.1in} foreach \textit{Discrete} condition $[X = c_1] \in C$
-\item \hspace*{0.2in} if $\exists [X = c_2] \in C$ s.t. $c_1 \neq c_2$, return \textbf{Inconsistent!}
-\item \hspace*{0.1in} foreach \textit{Continuous} variable group $K$ (See Section \ref{subsec:independence})
+\item \hspace*{0.2in} if $\exists [X = c_2] \in C$ s.t. $c_1 \neq c_2$, return \textbf{Inconsistent.}
+\item \hspace*{0.1in} foreach \textit{Continuous} variable group $K$ (See Section \ref{subsec:samplingTechs})
 \item \hspace*{0.2in} initialize map $S_0$ s.t. $S_0[X] = [-\infty,\infty]\ \forall X \in K$
 \item \hspace*{0.2in} while $S_{t} \neq S_{t-1}$ (incrementing $t>0$ each iteration)
 \item \hspace*{0.3in} let $S_{t} = S_{t-1}$
 \item \hspace*{0.3in} foreach equation $E \in K$
 \item \hspace*{0.4in} if $\exists$ no more than one $X\in E$ s.t. $S_{t-1}[x] = [-\infty,\infty]$
 \item \hspace*{0.5in} foreach $X$, $S_{t}[X] = S_{t-1} \cap tighten_N(X,E,S_{t})$\\ \hspace*{0.7in} (Where $N = $ the degree of E)
-\item \hspace*{0.5in} if $tighten_N$ has not been defined, return \textit{Consistent}.
-\item \hspace*{0.3in} if $\exists X$ s.t. $S_{t}[X] = \emptyset$, return \textbf{Inconsistent!}
-\item \hspace*{0.1in} return \textbf{Consistent.}
+\item \hspace*{0.5in} if $tighten_N$ has not been defined, skip $E$.
+\item \hspace*{0.3in} if $\exists X$ s.t. $S_{t}[X] = \emptyset$, return \textbf{Inconsistent.}
+\item \hspace*{0.1in} if no Eqns were skipped return \textbf{Consistent.} else return \textit{Consistent.}
 \end{enumerate}
 \begin{enumerate}
-\item $tighten_1($Variable $X,$ Equation $E,$ IntervalVector $S)$
+\item $tighten_1($Variable $X,$ Equation $E,$ IntervalMap $S)$
 \item \hspace*{0.1in} Express E in normal form $aX + bY + cZ + \ldots > 0$
-\item \hspace*{0.2in} if $a > 0$, return $[-max(bY+cZ+\ldots)/a, \infty]$
-\item \hspace*{0.2in} if $a < 0$, return $[-\infty, -max(bY+cZ+\ldots)/a]$
+\item \hspace*{0.2in} if $a > 0$, return $[-\max_{S[Y,Z,\ldots]}(bY+cZ+\ldots)/a, \infty]$
+\item \hspace*{0.2in} if $a < 0$, return $[-\infty, -\max_{S[Y,Z,\ldots]}(bY+cZ+\ldots)/a]$
 \end{enumerate}
 \end{algorithm}%\vspace*{0.1in}
 

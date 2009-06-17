@@ -17,6 +17,8 @@ and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the va
 \end{example}
 
 \subsection{Sampling Techniques}
+\label{subsec:samplingTechs}
+
 \paragraph{Rejection Sampling}
 One straightforward approach to this problem is to perform rejection sampling; sample sets are repeatedly generated until a sufficient number of viable (satisfying) samples have been obtained.  Note that this is not strict rejection sampling, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  
 
@@ -108,30 +110,74 @@ A final option available to PIP is the Metropolis algorithm.  Metropolis has a h
 $$W_{metropolis} = C_{burn\ in} + [\#\ samples] \cdot C_{steps\ per\ sample}$$
 $$W_{naive} = \frac{1}{1-P[reject]} \cdot [\#\ samples]$$
 
-By generating a small number of samples for the subgroup, PIP generates a rough estimate of $P[reject]$.  If this value is lower than $\frac{1}{\frac{C_{burn\ in}}{[\#\ samples]} + C_{steps\ per\ sample}}$, Metropolis sampling is used instead of rejection sampling.  Note that if CDFs are available for one or more component variables, PIP uses the probability of rejecting samples chosen from within the available weak bounds.
+By generating a small number of samples for the subgroup, PIP generates a rough estimate of $P[reject]$.  If this value is higher than $\frac{1}{\frac{C_{burn\ in}}{[\#\ samples]} + C_{steps\ per\ sample}}$, Metropolis sampling is used instead of rejection sampling.  Note that if CDFs are available for one or more component variables, PIP uses the probability of rejecting samples chosen from within the available weak bounds.
 
-The single-row sampling process is sumarized in Figure \ref{fig:roadmap}
+\vspace*{0.05in}
+\begin{algorithm} Checking the consistency of a condition
+\footnotesize
+\begin{enumerate}
+\item $expectation($Expression $E,$ Condition $C,$ Bool $agg,$ Goal $\{\delta, \epsilon\})$
+\item \hspace*{0.1in} let $\bar X$ = the set of variables in $E$
+\item \hspace*{0.1in} let $target = \sqrt{2}\cdot $erf$^{-1}(1-\epsilon)$
+\item \hspace*{0.1in} let $N = 0; Sum = 0; SumSq = 0$
+\item \hspace*{0.1in} foreach variable group $K \in C$ s.t. $\exists X \in K \wedge X \in \bar X$ 
+\item \hspace*{0.2in} let $Count[K] = 0;$ $Sampler[X] = $Natural$\ \forall X \in K$
+\item \hspace*{0.2in} $consistencyCheck(K)$ (saving the interval map $S$)
+\item \hspace*{0.2in} If inconsistent, return $($NAN$,0)$
+\item \hspace*{0.2in} foreach $X$ s.t. $S[X] \neq [-\infty, \infty] \wedge X$ has CDF/CDF$^{-1}$ functions
+\item \hspace*{0.3in} $Sampler[X] =$ CDF
+\item \hspace*{0.1in} while $\left[target \cdot \left|(\frac{Sum}{N})^2 - \frac{SumSq}{N}\right| + \frac{Sum}{N}\right] < \left[\delta \cdot Sum\right]$  \\\hspace*{0.4in} AND $N < 1/delta$
+\item \hspace*{0.2in} N = N+1
+\item \hspace*{0.2in} foreach variable group $K \in C$ s.t. $\exists X \in K \wedge X \in \bar X$
+\item \hspace*{0.3in} if $Sampler[X] =$ Metropolis for any $X \in K$
+\item \hspace*{0.4in} run metropolis over saved state for group K
+\item \hspace*{0.3in} else do...
+\item \hspace*{0.4in} Count[K] = Count[K]+1
+\item \hspace*{0.4in} if $(Count[K]-N)/Count[K] >$ Metropolis Threshold
+\item \hspace*{0.5in} if all $X$ have a PDF function
+\item \hspace*{0.6in} Sampler[X] = Metropolis $\forall X \in K$
+\item \hspace*{0.6in} scan for start point to initialize Metropolis state for $K$ 
+\item \hspace*{0.6in} if unable to find a start point return (NAN, 0)
+\item \hspace*{0.6in} continue to next K (line 13)
+\item \hspace*{0.5in} else return (NAN, 0)
+\item \hspace*{0.4in} generate one instance of all $X \in K$ using $Sampler[X]$
+\item \hspace*{0.3in} ... while samples do not satisfy $K$
+\item \hspace*{0.2in} update $Sum = Sum + E[\bar X]$, $SumSq = SumSq + E[\bar X]^2$
+\item \hspace*{0.1in} Let $Prob = \prod_K \frac{N}{Count[K]}$ $\forall K$ not sampled via Metropolis
+\item \hspace*{0.1in} if $agg =$ True
+\item \hspace*{0.2in} foreach variable group $K \in C$ \\ \hspace*{0.5in}s.t. $\not\exists X \in K \wedge [X \in \bar X \vee Sampler[X] =$ Metropolis$]$ 
+\item \hspace*{0.3in} if $|K|_{Vars} = 1$ AND $X\in K$ has a CDF function
+\item \hspace*{0.4in} use CDF to integrate $P[K]$
+\item \hspace*{0.3in} else integrate by sampling as above (w/o metropolis)
+\item \hspace*{0.3in} Update $Prob = Prob \cdot P[K]$
+\item \hspace*{0.1in} Return $(\frac{Sum}{N}, P)$ /* \textit{P is ignored if $agg =$ False} */
+\end{enumerate}
+\end{algorithm}%\vspace*{0.1in}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=3in]{graphics/roadmap.pdf}
-%\begin{enumerate}
-%\item 
-%\end{enumerate}
-\caption{\textbf{The PIP Single-Row sampling process}}
-\vspace*{-0.2in}
-\label{fig:roadmap}
-\end{center}
-\vspace*{-0.15in}
-\end{figure}
+
+
+%The single-row sampling process is sumarized in Figure \ref{fig:roadmap}
+%
+%\begin{figure}
+%\begin{center}
+%\includegraphics[width=3in]{graphics/roadmap.pdf}
+%%\begin{enumerate}
+%%\item 
+%%\end{enumerate}
+%\caption{\textbf{The PIP Single-Row sampling process}}
+%\vspace*{-0.2in}
+%\label{fig:roadmap}
+%\end{center}
+%\vspace*{-0.15in}
+%\end{figure}
 
 
 \subsection{Aggregate Sampling Operators}
 Aggregate operators (eg. sum, avg, stddev) applied to c-tables introduce a new form of complexity into the sampling process: the result of an aggregate operator applied to a c-table is difficult to represent and sample from.  Even if the values being aggregated is a constant, each row's context must be evaluated independently.  The result is $2^n$ possible outputs, each with a linear number of conditions in the number of rows.  If the values being aggregated are variable expressions, the result is an identical number of outputs, each containing data linear in the size of the table.  
 
-This added complexity, coupled with the frequency with which they appear at the root of a query plan, makes them an ideal point at which to perform sampling.  We begin with the simplest form of aggregate expectation, that of an aggregate that obeys linearity of expectation ($\left<f(\vec{x})\right> = f(\vec{\left<x\right>})$), such as sum().  
+This added complexity, coupled with the frequency with which they appear at the root of a query plan, makes them an ideal point at which to perform sampling.  As aggregates compute expectations over entire tables, the probability of a given row's presence in the table can be included are included in the aggregate's expectation.  This behavior is termed \textit{per-table sampling semantics}.
 
-Such aggregates are straightforward to implement: per-row expectations of $f(\vec x)\chi(\vec x)$ are computed, and aggregated (e.g., summed up).  Of note however, is the effect that the operator has on the variance of the result.  In the case of sum(), each expectation can be viewed as a Normally distributed random variable with a shared, predetermined variance.  By the law of large numbers, the sum of a set of $N$ random variables with equal variance $\sigma$ has a variance of $\frac{\sigma}{\sqrt{N}}$.  In other words, when computing the expected sum of $N$ variables, we can reduce the number of samples taken for each individual element by a factor of $\frac{1}{\sqrt{N}}$.
+We begin with the simplest form of aggregate expectation, that of an aggregate that obeys linearity of expectation ($\left<f(\vec{x})\right> = f(\vec{\left<x\right>})$), such as sum().  Such aggregates are straightforward to implement: per-row expectations of $f(\vec x)\chi(\vec x)$ are computed, and aggregated (e.g., summed up).  Of note however, is the effect that the operator has on the variance of the result.  In the case of sum(), each expectation can be viewed as a Normally distributed random variable with a shared, predetermined variance.  By the law of large numbers, the sum of a set of $N$ random variables with equal variance $\sigma$ has a variance of $\frac{\sigma}{\sqrt{N}}$.  In other words, when computing the expected sum of $N$ variables, we can reduce the number of samples taken for each individual element by a factor of $\frac{1}{\sqrt{N}}$.
 
 If the operator does not obey linearity of expectation (e.g., computing the maximum), either the aggregate must be designed with expectation computation in mind, or the aggregate must be run on a set of sampled worlds in parallel.  This latter technique is a worst-case approach to the problem; it may be necessary to re-run the aggregate if an insufficient number of sample worlds are generated. Note however, that this is still more efficient than re-running the entire query.
 
