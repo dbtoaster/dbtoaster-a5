@@ -2,7 +2,7 @@ In order to evaluate the viability of PIP's c-tables approach to continuous vari
 
 \begin{figure}
 \begin{center}
-\resizebox{2in}{!}{\includegraphics{graphics/blockdiag.pdf}}
+\resizebox{1.8in}{!}{\includegraphics{graphics/blockdiag.pdf}}
 \caption{The PIP Postgres plugin architecture}
 \label{fig:blockdiag}
 \end{center}
@@ -10,9 +10,9 @@ In order to evaluate the viability of PIP's c-tables approach to continuous vari
 \end{figure}
 
 \subsection{Query Rewriting}
-Much of this added functionality takes advantage of PostgreSQL's extensibility features, and can be used ``out-of-the-box".  For example, we define the function 
+Much of this added functionality takes advantage of PostgreSQL's extensibility features, and can be used ``out-of-the-box".  For example, we define the function \vspace*{-0.1in}
 \[
-\mbox{\textbf{CREATE\_VARIABLE($distribution$[,$params$])}}
+\mbox{\textbf{\footnotesize CREATE\_VARIABLE($distribution$[,$params$])}}\vspace*{-0.1in}
 \]
 which is used to create continuous variables\footnote{For discrete distributions, PIP uses a repair-key operator similar to that used in \cite{KochMayBMS2008}}.  Each call allocates a new variable, or a set of jointly distributed variables and initializes it with the specified parameters.  When defining selection targets, operator overloading is used to make random variables appear as normal variables; arbitrary equations may be constructed in this way.  
 
@@ -56,6 +56,7 @@ is rewritten to
 
 \begin{figure}
 \begin{center}
+\footnotesize
 \begin{tabular}{c|ccc}
 $R_{ctable}$ & $A$ & $B$ & $\phi$ \\ \hline
 & $X*3$ & $5$ & $X > Y \wedge Y > 3$ \\

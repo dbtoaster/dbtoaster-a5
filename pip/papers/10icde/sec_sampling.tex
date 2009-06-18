@@ -20,15 +20,15 @@ and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the va
 \label{subsec:samplingTechs}
 
 \paragraph{Rejection Sampling}
-One straightforward approach to this problem is to perform rejection sampling; sample sets are repeatedly generated until a sufficient number of viable (satisfying) samples have been obtained.  Note that this is not strict rejection sampling, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  
+One straightforward approach to this problem is to perform rejection sampling; sample sets are repeatedly generated until a sufficient number of viable (satisfying) samples have been obtained.  %Note that this is not strict rejection sampling, samples for with $\chi_{\phi}$ is zero count towards the number or samples $n$ by which we average.  
 
 However, without scaling the number of samples taken based on $E[\chi_\phi]$, information can get very sparse and the approximate expectations will have a high relative error.  Unfortunately, as the probability of satisfying the constraint drops, the work required to produce a viable sample increases.   Consequently, any mechanism that can improve the chances of satisfying the constraint is beneficial.
 
 \paragraph{Sampling using inverse CDFs}
 \label{subsec:icdf}
-As an alternative to sampling using the generator function, PIP can use the inverse-CDF of a distribution (if available) to translate a uniform random number in the range $[0,1]$ to a variable sampled from the distribution.  The CDF increases monotonically, so to obtain samples constrained to $[lower, upper]$, we compute $CDF^{-1}(X)$ where X is chosen uniformly  from the range $(CDF(lower), CDF(upper))$.   
+As an alternative to sampling using the generator function, PIP can use the inverse-CDF of a distribution (if available) to translate a uniform random number in the range $[0,1]$ to a variable sampled from the distribution.  The CDF increases monotonically, so to obtain samples constrained to $[lower, upper]$, we compute $CDF^{-1}(X)$ where X is chosen uniformly  from the range $(CDF(lower), CDF(upper))$.  In the event that the inverse CDF is unavailable, it may be emulated via binary search on the CDF.
 
-In the event that the inverse CDF is available, but the CDF is not, this technique may still be used.  Instead of sampling from the range $(CDF(lower), CDF(upper))$, we sample $x \in (L,H)$ where $L$ is initialized to $0$, and $H$ is initialized to $1$.  If $CDF^{-1}(x) \leq lower$ we set $L = x$ and try again.  Similarly, if $CDF^{-1}(x)  \geq upper$ we set $H = x$ and try again.   In this way, PIP effectively learns the values of $CDF(lower)$ and $CDF(upper)$.  
+%In the event that the inverse CDF is available, but the CDF is not, this technique may still be used.  Instead of sampling from the range $(CDF(lower), CDF(upper))$, we sample $x \in (L,H)$ where $L$ is initialized to $0$, and $H$ is initialized to $1$.  If $CDF^{-1}(x) \leq lower$ we set $L = x$ and try again.  Similarly, if $CDF^{-1}(x)  \geq upper$ we set $H = x$ and try again.   In this way, PIP effectively learns the values of $CDF(lower)$ and $CDF(upper)$.  
 
 If precise bounds can be derived from the constraints on a given variable, this process guarantees that each sample generated will satisfy the constraint.  Even if only weak bounds are available, the process still provides a benefit.  By reducing the size of the sampling area, the probability of selecting a viable sample is still increased.  
 
@@ -46,7 +46,7 @@ R & $\phi_2$ \\
 \]
 In this case, the atoms $(X > 4)$ and $([X\cdot Z] > Y)$ form one minimal independent subset, while $(A < 6)$ forms another.
 
-Condition atoms describing discrete variables are all of the form $Var = Val$, discrete variables are handled trivially.  Inconsistent values have already been removed, so the probability for the entire subgroup is the probability of the listed variable assignment.
+%Condition atoms describing discrete variables are all of the form $Var = Val$, discrete variables are handled trivially.  Inconsistent values have already been removed, so the probability for the entire subgroup is the probability of the listed variable assignment.
 
 The simplest subset of continuous atoms is one that references only one variable.  In this case, the atoms in the set provide constant upper or lower bounds, and the integration problem may be solved by evaluating the variable's CDF at the tightest upper and lower bounds.  If the CDF is not available or if it is not possible to derive tight bounds on the CDF, PIP can still integrate via Monte Carlo sampling.  
 
