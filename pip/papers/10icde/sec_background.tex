@@ -8,7 +8,7 @@ The estimation of probabilities of continuous distributions frequently devolves 
 
 In general, even taking a sample from a complicated PDF is difficult.  Constraints imposed by queries break traditional Monte Carlo assumptions of normalization on $p(\vec X)$ and require that the sampling technique account for them or lose precision.  A variety of techniques exist to address this problem, from straightforward rejection sampling, where constraint-violating samples are repeatedly discarded, to more heavy duty Markov-chain Monte Carlo (MCMC, cf.\ e.g., \cite{GRS1995}) style techniques such as the Metropolis-Hastings algorithm \cite{metropolis,GRS1995}. 
 
-Recently,  a paper on the MCDB system\cite{MCDB} has promoted an integrated sampling-based  approach to  probabilistic databases.  Conceptually,  MCDB uses a {\em sample-first}\/ approach: it   first  computes  samples  of  entire databases and then processes queries  on these samples.  This is a very general and flexible approach, largely due to its modular approach to probability distributions via black box sample generators called VG Functions.  Using Tuple-Bundles, a highly compressed representation of the sampled database instances, MCDB evaluates queries on these instances in parallel, sharing computation across instances where possible.  
+Recently,  a paper on the MCDB system\cite{MCDB} has promoted an integrated sampling-based  approach to  probabilistic databases.  Conceptually,  MCDB uses a {\em sample-first}\/ approach: it   first  computes  samples  of  entire databases and then processes queries  on these samples.  This is a very general and flexible approach, largely due to its modular approach to probability distributions via black box sample generators called VG~Functions.  Using Tuple-Bundles, a highly compressed representation of the sampled database instances, MCDB evaluates queries on these instances in parallel, sharing computation across instances where possible.  
 
 {\em  Conditional tables}\/  (c-tables, \cite{IL1984})  are relational tables in which tuples have associated conditions expressed as boolean expressions over  comparisons of random variables  and constants. C-tables are a natural way to  represent  the  {\em  deterministic skeleton}\/  of a probabilistic relational  database in  a succinct  and tabular  form.  That  is, complete information  about uncertain data is encoded using random  variables, excluding only  specifications  of the  joint  probability  distribution of  the random  variables   themselves.   This  model   allows  representation of  input databases  with  nontrivial statistical  dependencies that are normally associated with graphical models. 
 
@@ -150,7 +150,6 @@ C_{\sigma_{\mathrm{Cust}='Joe'}(\mathrm{Order}) \times
 ((Joe, NY, X_1, LA, X_4), 
 X_4 \ge 7) \bagclose
 \end{multline*}
-\punto
 \end{example}
 
 
@@ -174,10 +173,7 @@ we can define the expectation of a function $q$ as
 \[
 E[q] =
 \sum_{\vec{x}} \int_{y_1} \cdots \int_{y_n}
-p(\vec{x}, \vec{y}) \cdot q(\vec{x}, \vec{y}) \; d \vec{y}
-\]
-and approximate it as
-\[
+p(\vec{x}, \vec{y}) \cdot q(\vec{x}, \vec{y}) \; d \vec{y} \approx 
 \frac{1}{n} \cdot \sum_{i=1}^n q(\vec{x}_i, \vec{y}_i)
 \]
 given samples $(\vec{x}_1, \vec{y}_1), \dots, (\vec{x}_n, \vec{y}_n)$ from
@@ -233,7 +229,7 @@ Returning to our running example, for $C_R = \bagopen (x_1, x_2 \ge 7) \bagclose
    \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \ge 7}(\vec{x})
    \cdot x_1 \; d \vec{y}.
 \end{multline*}
-\end{example}
+\end{example}\ \\
 
 
 {\bf Counting and group-by}\/.
