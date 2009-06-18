@@ -36,19 +36,17 @@ We assume a suitable specification of the joint distribution $p$ of the random
 variables $X_1,\dots,X_4$ occurring in this database.
 
 Now consider the query
-\begin{verbatim}
-select expected_sum(O.Price)
-from   Order O, Shipping S
-where  O.ShipTo = S.Dest
-and    O.Cust = 'Joe'
-and    S.Duration >= 7;
-\end{verbatim}
+{\small\begin{verbatim}
+  select expected_sum(O.Price)
+  from   Order O, Shipping S
+  where  O.ShipTo = S.Dest
+  and    O.Cust = 'Joe'
+  and    S.Duration >= 7;
+\end{verbatim}}
 asking for the expected loss due to late deliveries to customers named Joe,
 where the product is free if not delivered within seven days.
 %
-This can be approximated by drawing a number of samples from $p$
-and using formula~\ref{eq:mc_expectation}
-to approximate $E[q]$,
+This can be approximated by monte carlo sampling from $p$,
 where $q$ represents the result of the sum aggregate query on a sample,
 here
 \[
@@ -70,12 +68,12 @@ Moreover, the profit $x_1$ is independent from the shipping time $x_2$.  Despite
 
 \subsection{Contributions}
 
-Selective queries exemplify the need for contextual information when computing expectations and moments.  This paper presents PIP, a highly extensible, general probabilistic database system built around this need for information.  PIP evaluates queries on symbolic representations of probabilistic data, computing a complete representation of the probabilistic expression to be evaluated available before an expectation or moment is taken.  To our knowledge, PIP is the first probabilistic database system supporting continuous distributions to evaluate queries in this way.
+Selective queries exemplify the need for contextual information when computing expectations and moments.  This paper presents PIP, a highly extensible, general probabilistic database system built around this need for information.  PIP evaluates queries on symbolic representations of probabilistic data, computing a complete representation of the probabilistic expression to be evaluated before an expectation or moment is taken.  To our knowledge, PIP is the first probabilistic database system supporting continuous distributions to evaluate queries in this way.
 
 {\em PIP}\/'s approach encompasses and extends the strengths of discrete systems that use c-tables such as Trio \cite{WidomTrio2008}, MystiQ \cite{dalvi07efficient}, and MayBMS \cite{AJKO2008}, as well as the generality of the sample-first approach taken by MCDB \cite{MCDB}.  It supports both discrete and continuous probability distributions, statistical dependencies definable by queries, expectations of aggregates and distinct-aggregates with or without group-by,  and the computation of confidences. The detailed technical contributions of this paper are as follows.
 
 \begin{itemize}
-\item We propose the PIP system, the first probabilistic database based on c-tables to efficiently support continuous probability distributions.
+\item We propose PIP, the first probabilistic database system based on c-tables to efficiently support continuous probability distributions.
 
 \item We show how PIP acts as a generalizable framework for exploiting information about distributions beyond simple sampling functionality (e.g., inverse cdfs) to enhance query processing speed and accuracy.  We demonstrate this framework by implementing several traditional statistical optimizations within it.
 
@@ -86,5 +84,5 @@ We provide experimental evidence for the competitiveness of our approach.  We co
 
 \end{itemize}
 
-The structure of this paper is as follows. Section~\ref{sec:background} presents probabilistic c-tables, and the conceptual  evaluation of queries on probabilistic c-tables. Section~\ref{sec:sampling} studies sampling and other mechanisms for computing integrals, and examines how PIP uses and enhances them.  In Section~\ref{sec:design}, we present a high level view of PIP in the abstract.   Section~\ref{sec:implementation} discusses details of the implementation of PIP and our reimplementation of MCDB.  Finally, in Section~\ref{sec:evaluation}, we present the outcomes of our experiments with PIP and our MCDB reimplementation.
+The structure of this paper is as follows. Section~\ref{sec:background} describes related work and the c-tables primitive. Section~\ref{sec:design} provides a high level overview of PIP's architecture.  Section~\ref{sec:sampling} studies sampling and presents several techniques used by PIP to compute expectations and moments.  PIP's implementation is described in Section~\ref{sec:implementation}.  Finally, in Section~\ref{sec:evaluation}, we present the outcomes of our experiments with PIP and our MCDB reimplementation.
 

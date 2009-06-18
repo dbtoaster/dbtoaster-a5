@@ -200,9 +200,9 @@ $E[\chi_\phi]$.
 
 The expected  sum of a function $h$  applied to the tuples  of a table
 $R$,
-\begin{verbatim}
-select expected_sum(h(*)) from R;
-\end{verbatim}
+{\small\begin{verbatim}
+  select expected_sum(h(*)) from R;
+\end{verbatim}}
 can be computed as
 \[
 E \Big[ \sum_{\vec{t}  \in R}  h(\vec{t}) \Big]  =
@@ -233,7 +233,6 @@ Returning to our running example, for $C_R = \bagopen (x_1, x_2 \ge 7) \bagclose
    \int_{x_4}  p(\vec{x})  \cdot  \chi_{X_2 \ge 7}(\vec{x})
    \cdot x_1 \; d \vec{y}.
 \end{multline*}
-\punto
 \end{example}
 
 

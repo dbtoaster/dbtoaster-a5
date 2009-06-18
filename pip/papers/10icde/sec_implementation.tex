@@ -1,4 +1,4 @@
-In order to evaluate the viability of PIP's c-tables approach to continuous variables, we have implemented an initial version of PIP as an extension to the PostgreSQL DBMS as shown in Figure \ref{fig:blockdiag}.  PIP's extended functionality is provided by a set of user-defined functions written in C.  
+In order to evaluate the viability of PIP's c-tables approach to continuous variables, we have implemented an initial version of PIP as an extension to the PostgreSQL DBMS as shown in Figure \ref{fig:blockdiag}.  %PIP's extended functionality is provided by a set of user-defined functions written in C.  
 
 \begin{figure}
 \begin{center}
@@ -34,17 +34,17 @@ which is used to create continuous variables\footnote{For discrete distributions
 To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following three effects:
 \begin{itemize}
 \item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if either $(A>B)$ resolves to a CTYPE variable, 
-\begin{verbatim}
-select *
-from   inputs
-where  X>Y and Z like '%foo'
-\end{verbatim}
+{\small\begin{verbatim}
+  select *
+  from   inputs
+  where  X>Y and Z like '%foo'
+\end{verbatim}}
 is rewritten to
-\begin{verbatim}
-select *, X>Y
-from   inputs
-where  Z like '%foo'
-\end{verbatim}
+{\small\begin{verbatim}
+  select *, X>Y
+  from   inputs
+  where  Z like '%foo'
+\end{verbatim}}
 
 \item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.   The exception to this is in the case of special probability-removing functions.  If the select statement contains one or more such functions (typically aggregates, or the conf operator), CTYPE columns are not passed through.  
 
