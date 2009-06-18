@@ -1,6 +1,6 @@
 Predictions made by statistical models, scientific applications, and data extraction from unstructured text are well known sources of uncertain data.  Measurements have error margins while predictions are typically drawn from well known distributions.  Traditional database management systems (DBMS) are ill-equipped to manage this kind of uncertainty.  For example, consider a risk-management application that uses statistical models to evaluate the long term effects of corporate decisions and policies.  This application may use a DBMS to store predictions and statistical measures (e.g., error bounds) of those predictions.  However, arbitrary queries made on the predictions do not translate naturally into queries on the corresponding statistical measures.  A user who requires error bounds on the sum of a join over several tables of predictions must first obtain a formula for computing those bounds, assuming a closed form formula even exists.
 
-Probabilistic  database  management  systems \cite{dalvi07efficient, WidomTrio2008, KochMayBMS2008, SD2007, ORION, MCDB, BayesStore} aim at providing better support for querying uncertain data.  Queries in these systems preserve the statistical properties of the data being queried, allowing users to obtain metrics about and representations of query results.  The previously mentioned risk-management application, built on top of a probabilistic database, could use the database itself to obtain error bounds on the results of arbitrary queries over its predictions.  By encoding the statistical model for its predictions in the database itself, the risk-management application could even use the probabilistic database to estimate complex functions over many correlated variables in its model.  In effect, the application could compute all of its predictions within the probabilistic database in the first place.
+Probabilistic  database  management  systems \cite{CKP2003, dalvi07efficient, WidomTrio2008, DM2006, KochMayBMS2008, SD2007, ORION, MCDB, BayesStore} aim at providing better support for querying uncertain data.  Queries in these systems preserve the statistical properties of the data being queried, allowing users to obtain metrics about and representations of query results.  The previously mentioned risk-management application, built on top of a probabilistic database, could use the database itself to obtain error bounds on the results of arbitrary queries over its predictions.  By encoding the statistical model for its predictions in the database itself, the risk-management application could even use the probabilistic database to estimate complex functions over many correlated variables in its model.  In effect, the application could compute all of its predictions within the probabilistic database in the first place.
 
 Few systems are general enough to efficiently query probabilistic data defined over both discrete and continuous distributions.  Those that are, generally rely on sampling to estimate desired values, as exact solutions can be hard to obtain.  If a query contains a selection predicate, samples violating the predicate are dropped and do not contribute to the expectation.  The more selective the predicate, the more samples are needed to maintain consistent accuracy.  For example, a query may combine a model predicting customer profits with a model for predicting dissatisfied customers, perhaps as a result of a corporate decision to use a cheaper, but slower shipping company.  If the query asks for profit loss due to dissatisfied customers, the query need only consider profit from customers under those conditions where the customer is dissatisfied (ie, the underlying model may include a correlation between ordering patterns and dependence on fast shipping).  
 
@@ -17,15 +17,14 @@ The database also stores
 distributions of shipping durations for each location.
 Here are two c-tables defining such a probabilistic database:
 \[
-\begin{tabular}{c|ccc}
+\begin{tabular}{@{~}c@{~}|@{~}c@{~}c@{~}c@{~}}
 Order & Cust & ShipTo & Price \\
 \hline
 & Joe & NY & $X_1$ \\
 & Bob & LA & $X_3$ \\
 \end{tabular}
-%\hspace{5mm}
-\]\[
-\begin{tabular}{c|cc}
+\hspace{3mm}
+\begin{tabular}{@{~}c@{~}|@{~}c@{~}c@{~}}
 Shipping & Dest & Duration \\
 \hline
 & NY & $X_2$ \\
