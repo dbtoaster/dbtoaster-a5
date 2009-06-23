@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+
+   <extension
+         id="application"
+         point="org.eclipse.core.runtime.applications">
+      <application>
+         <run
+               class="org.dbtoaster.gui.DBToasterGui">
+         </run>
+      </application>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            name="Compile Perspective"
+            class="org.dbtoaster.gui.CompilePerspective"
+            id="dbtoaster_gui.compile_perspective">
+      </perspective>
+      <perspective
+            class="org.dbtoaster.gui.PerformancePerspective"
+            id="dbtoaster_gui.performance_perspective"
+            name="Performance Perspective">
+      </perspective>
+      <perspective
+            class="org.dbtoaster.gui.CodePerfPerspective"
+            id="dbtoaster_gui.codeperf_perspective"
+            name="Code Performance Perspective">
+      </perspective>
+   </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <view
+            class="org.dbtoaster.gui.QueryEditor"
+            id="dbtoaster_gui.queryeditor"
+            name="Query Editor">
+      </view>
+      <view
+            class="org.dbtoaster.gui.CodeEditorView"
+            id="dbtoaster_gui.codeeditorview"
+            name="DBToaster View">
+      </view>
+      <view
+            class="org.dbtoaster.gui.CodeView"
+            id="dbtoaster_gui.codeview"
+            name="Code View">
+      </view>
+      <view
+            class="org.dbtoaster.gui.PerfView"
+            id="dbtoaster_gui.perfview"
+            name="Performance View">
+      </view>
+      <view
+            class="org.dbtoaster.gui.CodePerfView"
+            id="dbtoaster_gui.codeperfview"
+            name="Code Performance View">
+      </view>
+      <view
+            class="org.dbtoaster.gui.DebugView"
+            id="dbtoaster_gui.debugview"
+            name="Debug View">
+      </view>
+   </extension>
+
+</plugin>
