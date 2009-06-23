@@ -1,0 +1,1231 @@
+\documentclass{article}
+
+\usepackage{fullpage}
+
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{txfonts}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+\newtheorem{todo}[theorem]{ToDo}
+
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+
+\begin{document}
+\title{Revised DBToaster rules.}
+\date{}
+\maketitle
+
+\def\algsum{\mathrm{sum}}
+\def\algagg{\mathrm{agg}}
+\def\algtop{\mathrm{top}}
+\def\algtopk{\mathrm{topk}}
+
+\def\algnew{\mathrm{new}}
+\def\algmin{\mathrm{min}}
+\def\algmax{\mathrm{max}}
+\def\algincr{\mathrm{incr}}
+\def\algincrdiff{\mathrm{incrdiff}}
+\def\alginsert{\mathrm{insert}}
+\def\algupdate{\mathrm{update}}
+\def\algdelete{\mathrm{delete}}
+\def\algfor{\mathrm{foreach}}
+
+\def\algsumr{\mbox{sumr}}
+\def\algsumf{\mbox{sumf}}
+\def\algaggf{\mbox{aggf}}
+\def\distinct{\mbox{distinct}}
+\def\routerjoin{\bowtie\!=}
+
+\begin{figure*}
+\begin{eqnarray}
+\label{eq:a1}
+\Delta_{+R(\vec{r})} c       &:=& 0 \\
+\label{eq:a2}
+\Delta_{+R(\vec{r})} x       &:=& 0 \\
+\label{eq:a3}
+\Delta_{+R(\vec{r})} (f + g) &:=& (\Delta_{+R(\vec{r})} f) + (\Delta_{+R(\vec{r})} g) \\
+\label{eq:a4}
+\Delta_{+R(\vec{r})} (f * g) &:=&         f                * (\Delta_{+R(\vec{r})} g)
+                              +   (\Delta_{+R(\vec{r})} f) * g                        
+                              +   (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g)
+\\
+\label{eq:a5}
+\Delta_{+R(\vec{r})} \algsum_f(Q) &:=&
+   \algsum_{\Delta_{+R(\vec{r})} f}(Q)
+   + \algsum_f(\Delta_{+R(\vec{r})} Q)
+   + \algsum_{\Delta_{+R(\vec{r})} f}(\Delta_{+R(\vec{r})} Q)
+\\
+\nonumber
+&\dots& \mbox{$f = \algsum$}
+\\
+\label{eq:a6}
+\Delta_{+R(\vec{r})} \algsum_f(Q) &:=&
+   \algsum_f(\Delta_{+R(\vec{r})} Q)
+\\
+\nonumber
+&\dots& \mbox{$\Delta_{+R(\vec{r})} f = 0$ (optimization of Eq.~\ref{eq:a5})}
+%
+%
+\\[2ex]
+\label{eq:b1}
+\Delta_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=& \pi_{\vec{r} \rightarrow \vec{A}}\{\tuple{}\}
+\\
+\label{eq:b2}
+\Delta_{+R(\vec{r})} S &:=& \emptyset
+\\
+\label{eq:b3}
+\Delta_{+R(\vec{r})} \{ \vec{a} \} &:=& \emptyset
+\\
+\label{eq:b4}
+\Delta_{+R(\vec{r})} (Q_1 \cup Q_2) &:=&
+(\Delta_{+R(\vec{r})} Q_1) \cup (\Delta_{+R(\vec{r})} Q_2)
+\\
+\label{eq:b5}
+\Delta_{+R(\vec{r})} (Q_1 \times Q_2) &:=&
+((\Delta_{+R(\vec{r})} Q_1) \times Q_2) \cup
+(Q_1 \times (\Delta_{+R(\vec{r})} Q_2)) \\
+\nonumber
+&\cup&
+((\Delta_{+R(\vec{r})} Q_1) \times (\Delta_{+R(\vec{r})} Q_2))
+\\
+\label{eq:b6}
+\Delta_{+R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
+\sigma_{f \theta 0}(\Delta_{+R(\vec{r})} Q)
+\\
+\nonumber
+&\dots& \Delta_{+R(\vec{r})} f[\vec{x}, \vec{A}] = 0 \mbox{ on all $\vec{A}$}
+\\
+\nonumber
+\Delta_{+R(\vec{r})} \pi_{\dots}(Q) &\dots& \mbox{no rule, simplify 
+surrounding aggregate instead}
+\\[2ex]
+%
+%
+\end{eqnarray}
+
+\vspace{-4mm}
+
+\caption{Recursive algorithm for compiling the
+on insert into $R$ values $\vec{r}$ trigger.}
+\label{fig:mainalg}
+\end{figure*}
+
+%
+%
+\begin{figure*}
+\begin{eqnarray}
+\mbox{Increment operator definitions:} && \nonumber\\
+\label{eq:incr1}
+\algincr_{\oplus_f, S} \Delta_{\pm R(\vec{r})} f &:=& S \leftarrow
+\oplus_f(S, \Delta_{\pm R(\vec{r})} f); S
+\\
+\nonumber &\dots& \mbox{where $\oplus_f \in \{+,-,\min\}$}
+\\
+\label{eq:incr2}
+\algincr_{\oplus_Q, S} \Delta_{\pm R(\vec{r})} Q &:=& S \leftarrow
+\oplus_Q(S, \Delta_{\pm R(\vec{r})} Q); S
+\\
+\nonumber &\dots& \mbox{where $\oplus_Q \in \{\cup, -\}$}
+\\
+%
+%
+\label{eq:incr3}
+\algincrdiff_{\oplus_f, S} \Delta_{-R(\vec{r})} f &:=&
+S \leftarrow \oplus_f(S, \Delta_{-R(\vec{r})} f); \Delta_{-R(\vec{r})} f
+\\
+\nonumber &\dots& \mbox{where $\oplus_f \in \{+, -,\min\}$}
+\\
+\label{eq:incr4}
+\algincrdiff_{\oplus_Q, S} \Delta_{-R(\vec{r})} Q &:=&
+S \leftarrow \oplus_Q(S, \Delta_{-R(\vec{r})}); \Delta_{-R(\vec{r})} Q
+\\
+\nonumber &\dots& \mbox{where $\oplus_Q \in \{\cup, -\}$}
+%
+%
+\\[2ex]
+\mbox{State maintenance operator definitions:} && \nonumber
+\\
+\label{eq:sm1}
+\alginsert_{S[A]} \algnew_{+R(\vec{r})} f
+&:=&
+\mbox{if ($A \notin keys(S)$) $S$.insert($A$,  $\algnew_{+R(\vec{r})} f$)};
+S[A]
+\\
+\label{eq:sm2}
+\algupdate_{\oplus, S[A]} \Delta_{\pm R(\vec{r})} f
+&:=&
+S[A] \leftarrow \oplus(S[A], \Delta_{\pm R(\vec{r})} f);
+S[A]
+\\
+\label{eq:sm3}
+\algdelete_{S[A]}
+&:=&
+S.erase[A]
+\end{eqnarray}
+\end{figure*}
+
+%
+%
+\begin{figure*}
+\begin{eqnarray}
+\mbox{Frontier computation:} && \nonumber
+\\
+\label{eq:new1}
+\algnew_{+R(\vec{r})} c       &:=& \algincr_{c} \Delta c \\
+\label{eq:new2}
+\algnew_{+R(\vec{r})} x       &:=& \algincr_{x} \Delta x \\
+\label{eq:new3}
+\algnew_{+R(\vec{r})} (f \pm g) &:=&
+(\algnew_{+R(\vec{r})} f) \pm (\algnew_{+R(\vec{r})} g) \\
+\label{eq:new4}
+\algnew_{+R(\vec{r})} (f * g) &:=&
+(\algnew_{+R(\vec{r})} f) * (\algnew_{+R(\vec{r})} g)
+%
+%
+\nonumber
+\\[2ex]
+\label{eq:newr1}
+\algnew_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=&
+   \algincr_{\rho_{\vec{A}}(R)} \Delta_{+R(\vec{r})} \rho_{\vec{A}}(R)
+\\
+\label{eq:newr2}
+\algnew_{+R(\vec{r})} S &:=& \algincr_{S} \Delta_{+R(\vec{r})} S
+\\
+\label{eq:newr3}
+\algnew_{+R(\vec{r})} \{ \vec{a} \} &:=&
+\algincr_{\{ \vec{a} \}} \Delta_{+R(\vec{r})} \{ \vec{a} \}
+\\
+\label{eq:newr4}
+\algnew_{+R(\vec{r})} (Q_1 \cup Q_2) &:=&
+   (\algnew_{+R(\vec{r})} Q_1) \cup (\algnew_{+R(\vec{r})} Q_2)
+\\
+\label{eq:newr5}
+\algnew_{+R(\vec{r})} (Q_1 \times Q_2) &:=&
+   (\algnew_{+R(\vec{r})} Q_1) \times (\algnew_{+R(\vec{r})} Q_2)
+%
+%
+\\[2ex]
+\label{eq:newr6}
+\algnew_{+R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
+   \sigma_{(\algnew_{+R(\vec{r})} f) \theta 0}(\algnew_{+R(\vec{r})} Q)
+%
+%
+\\[2ex]
+\label{eq:newr7}
+\algnew_{+R(\vec{r})} f[g] & := &
+   (\algnew_{+R(\vec{r})} f)[\algnew_{+R(\vec{r})} g]
+%
+%
+%
+\\[2ex]
+\mbox{Frontier simplification:} && \nonumber
+\\
+\label{eq:fs1}
+\algincr_{S_f} \Delta_{\pm R(\vec{r})} f
+    \pm \algincr_{S_g} \Delta_{\pm R(\vec{r})} g &:=&
+\algincr_{S} \Delta_{\pm R(\vec{r})} (f \pm g)
+\\
+\label{eq:fs2}
+\algincr_{S_f} \Delta_{\pm R(\vec{r})} f * \algincr_{S_g} \Delta_{\pm R(\vec{r})} g &:=&
+\algincr_{S} \Delta_{\pm R(\vec{r})} (f * g)
+\\
+\label{eq:fs3}
+\algincr_{S_{Q1}} \Delta_{\pm R(\vec{r})} Q1 \cup \algincr_{S_{Q2}} \Delta_{\pm R(\vec{r})} Q2
+&:=&
+\algincr_{Q} \Delta_{\pm R(\vec{r})} (Q1 \cup Q2)
+\\
+\label{eq:fs4}
+\algincr_{S_{Q1}} \Delta_{\pm R(\vec{r})} Q1 \times \algincr_{S_{Q2}} \Delta_{\pm R(\vec{r})} Q2
+&:=&
+\algincr_{Q} \Delta_{\pm R(\vec{r})} (Q1 \times Q2)
+%\\
+%\label{eq:i5}
+%\algsum_{\algincr_{S_f} \Delta_{\pm R(\vec{r})} f}
+%    (\algincr_{S_Q} \Delta_{\pm R(\vec{r})} Q)
+%&:=&
+%    \algincr_{S_{sum}} \Delta_{\pm R(\vec{r})} \algsum_{f}(Q)
+%\\
+%\label{eq:i6}
+%\algmin_{\algincr_{S_f} \Delta_{+R(\vec{r})} f} (\algincr_{S_Q} \Delta_{+R(\vec{r})} Q)
+%&:=&
+%\algincr_{S_{min}} \Delta_{+R(\vec{r})} \algmin_{f} (Q)
+\end{eqnarray}
+\end{figure*}
+
+%
+%
+%
+\begin{figure*}
+\begin{eqnarray}
+\mbox{Aggregate computation:} && \nonumber
+\\
+\label{eq:agg1}
+\algnew_{\pm R(\vec{r})} \algaggf_f(Q) &:=&
+   \algaggf_{\algnew_{\pm R(\vec{r})} f}(\algnew_{\pm R(\vec{r})} Q)
+%
+%
+\\[2ex]
+\label{eq:agg2}
+\algnew_{\pm R(\vec{r})} \algsum_{f}(Q) &:=&
+\algincr_{\pm, S} \Delta_{\pm R(\vec{r})} \algsum_{f}(Q)
+\\
+\nonumber &\dots&
+\mbox{$f = \algsum$ or $\Delta_{+R(\vec{r})} f = 0$}
+%
+%
+\\[2ex]
+\label{eq:agg3}
+\Delta_{\pm R(\vec{r})} \algmin_f(Q) &:=& 0
+\\
+\nonumber &\dots& R \notin \mbox{relations($Q$)}
+%
+%
+\\
+\label{eq:agg4}
+\algincr_{\oplus, S} \delta_{\pm R(\vec{r})} f &:=&
+S \leftarrow \oplus(S, \delta_{\pm R(\vec{r})} f); S
+%
+%
+\\[2ex]
+\label{eq:agg5}
+\delta_{+R(\vec{r})} \algmin_f(Q) &:=&
+    \algmin_{f} (\underbrace{\algincr_{\cup, S_Q}}_{
+    \mathrm{for} \; \algnew_{-R(\vec{r})} \algmin_f(Q)}
+    \Delta_{+R(\vec{r})} Q)
+\\
+\label{eq:agg6}
+\algnew_{+R(\vec{r})} \algmin_{f}(Q) &:=&
+\algincr_{\min,S} \delta_{+R(\vec{r})} \algmin_{f}(Q)
+\\
+\nonumber
+&\dots& \Delta_{+R(\vec{r})} f = 0
+\mbox{, for Eq.~\ref{eq:agg3}-~\ref{eq:agg5}.}
+%
+%
+\\[2ex]
+\label{eq:agg7}
+\delta_{-R(\vec{r})} \algmin_{f}(Q) &:=& \algmin_{f}(\algincrdiff_{-,S_Q} \Delta_{-R(\vec{r})} Q)
+\\
+\nonumber &\dots& \mbox{where $S_Q$ is shared with $\delta_{+R(\vec{r})} \algmin_f(Q)$}
+\\
+\label{eq:agg8}
+decrmin(f, S_Q, S_m, \Delta) &=&
+\mbox{if ($\Delta$ = $S_m$ and $S_Q$.find($S_m$) = $S_Q$.end)}\\
+\nonumber && \mbox{then} \; \; \algmin_{f}(S_Q) \; \; \mbox{else} \; \; S_m
+\\
+\label{eq:agg9}
+\algnew_{-R(\vec{r})} \algmin_{f}(Q) &:=&
+\algincr_{decrmin(f, S_{\Delta \min}), S} \delta_{-R(\vec{r})} \algmin_{f}(Q)
+\\
+\nonumber &\dots& \Delta_{-R(\vec{r})} f = 0
+\mbox{, for Eq.~\ref{eq:agg7}-\ref{eq:agg8}.}
+\end{eqnarray}
+\end{figure*}
+
+
+% Aggregate simplifications
+%
+\begin{figure*}
+\begin{eqnarray}
+\nonumber
+\mbox{Aggregate map simplifications:} &&
+\\
+\label{eq:ags1}
+\algaggf_{f[\vec{A}, B_1, \dots, B_k]}
+   (\pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(Q))
+&:=&
+\algaggf_{f[\vec{A}, g_1, \dots, g_k]}(Q)
+\\
+\label{eq:ags2}
+\algaggf_f(\{\tuple{}\}) &:=& f
+%\label{eq:c2}
+%\algsumf_f(\sigma_{g \,\theta\, 0}(Q))
+%&:=&
+%\algsumf_{\mathrm{if} \, (g \,\theta\, 0) \, \mathrm{then}
+%      \, f \, \mathrm{else} \, 0}(Q)
+%\\
+%
+%
+\\[2ex]
+\mbox{Sum aggregate simplifications:} && \nonumber\\
+\label{eq:sum1}
+\algsum_f(\emptyset) &:=& 0
+\\
+\label{eq:sum2}
+\algsum_{0}(Q) &:=& 0
+\\
+\label{eq:sum3}
+\algsum_{f[\vec{x}]}(Q) &:=& f[\vec{x}] * \algsum_1(Q)
+\\
+\label{eq:sum4}
+\algsum_{f[\vec{x}]*g}(Q) &:=& f[\vec{x}] * \algsum_{g}(Q)
+\\
+\label{eq:sum5}
+\algsum_{f+g}(Q) &:=& \algsum_f(Q) + \algsum_g(Q)
+\\
+\label{eq:sum6}
+\algsum_f(Q_1 \cup Q_2) &:=& \algsum_f(Q_1) + \algsum_f(Q_2)
+\\
+\label{eq:sum7}
+\algsum_{f[\vec{A};\dots] * g[\vec{B};\dots]}(\rho_{\vec{A}}(Q_1) \times \rho_{\vec{B}}(Q_2)) \; &:=&
+\algsum_{f[\vec{A};\dots]}(\rho_{\vec{A}}(Q_1))
+    * \algsum_{f[\vec{B};\dots]}(\rho_{\vec{B}}(Q_2))
+%
+%
+\\[2ex]
+\mbox{Min aggregate simplifications:} && \nonumber\\
+\label{eq:min1}
+\algmin_{f}(\emptyset) &:=& \infty
+\\
+\label{eq:min2}
+\algmin_{f[\vec{x}]}(Q) &:=& f[\vec{x}]
+\\
+\label{eq:min3}
+\algmin_{f[\vec{x}]+g}(Q) &:=& f[\vec{x}] + \algmin_{g}(Q)
+\\
+\label{eq:min4}
+\algmin_{f[\vec{x}]*g}(Q) &:=&
+\left\{
+\begin{array}{lll}
+f[\vec{x}] * \algmin_{g}(Q) & \dots & f[\vec{x}] \geq 0 \\
+f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
+\end{array}
+\right.
+\\
+\label{eq:min5}
+\algmin_{f}(Q_1 \cup Q_2) &:=& \min(\algmin_f (Q_1), \algmin_f (Q_2))
+\\
+\label{eq:min6}
+\algmin_{f[\vec{A};\dots] + g[\vec{B};\dots]}(\rho_{\vec{A}}(Q_1) \times \rho_{\vec{B}}(Q_2)) \; &:=&
+\algmin_{f[\vec{A};\dots]}(\rho_{\vec{A}}(Q_1))
+    + \algmin_{g[\vec{B};\dots]}(\rho_{\vec{B}}(Q_2))
+\\
+\label{eq:min7}
+\algmin_{f[\vec{A};\dots] * g[\vec{B};\dots]}(\rho_{\vec{A}}(Q_1) \times \rho_{\vec{B}}(Q_2)) \; &:=&
+\min \Big\{\;
+\algmin_{f[\vec{A};\dots]} (\sigma_{f[\vec{A}] \geq 0} (\rho_{\vec{A}}(Q_1)))
+    * \algmin_{g[\vec{B};\dots]} (\rho_{\vec{B}}(Q_2)), \nonumber\\
+&& \qquad \;
+\algmin_{f[\vec{A};\dots]} (\rho_{\vec{A}} (Q_1))
+    * \algmin_{g[\vec{B};\dots]} (\sigma_{g[\vec{B}] \geq 0} (\rho_{\vec{B}}(Q_2))), \nonumber\\
+&& \qquad \;
+\algmax_{f[\vec{A};\dots]} (\sigma_{f[\vec{A}] < 0} (\rho_{\vec{A}} (Q_1)))
+    * \algmax_{g[\vec{B};\dots]} (\sigma_{g[\vec{B}] < 0} (\rho_{\vec{B}}(Q_2)))
+\Big\}
+\\
+%
+%
+%
+\\[2ex]
+\mbox{Predicate simplifications:} && \nonumber\\
+\label{eq:pred1}
+\sigma_{f[A] \theta 0}(Q) &:=& \sigma_{A \ge A_{\min}[]}(Q)
+\\
+&\dots& \mbox{$f$ is monotonically increasing in its argument and}
+\nonumber
+\\
+&& A_{\min}[] = \min \{ A' \mid f[A'] \theta 0 \} 
+\nonumber
+\\[2ex]
+\label{eq:pred2}
+\sigma_{f[A] \theta 0}(Q) &:=& \sigma_{A \le A_{\max}[]}(Q)
+\\
+&\dots& \mbox{$f$ is monotonically decreasing in its argument and}
+\nonumber
+\\
+&& A_{\max}[] = \max \{ A' \mid f[A'] \theta 0 \} 
+\nonumber
+\\
+\label{eq:pred3}
+\sigma_{f[A] \theta g[\vec{x}]}(Q) &:=& \sigma_{f[A] \theta c}(Q)[c=g[\vec{x}]]
+%
+%
+\\[2ex]
+\mbox{Relational algebra simplifications:} &&
+\nonumber\\
+\label{eq:rs1}
+\sigma_{f[\vec{A}, B_1, \dots, B_k] \,\theta\, 0}
+   (\pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(Q))
+&:=&
+\pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(
+\sigma_{f[\vec{A}, g_1, \dots, g_k] \,\theta\, 0}(Q))
+\end{eqnarray}
+\end{figure*}
+
+% Map domain maintenance
+%
+\begin{figure*}
+\begin{eqnarray}
+\mbox{Map domain maintenance rules:} && \nonumber\\
+\label{eq:md1}
+\sigma_{(\algincr_{\oplus, S_f} \Delta_{+R(\vec{r})} f)[A] \theta 0} (\algincr_{\cup, S_Q}
+\Delta_{+R(\vec{r})} Q)
+&:=&
+\sigma_{(\algupdate_{\oplus, S_{f}[A]} \Delta_{+R(\vec{r})} f) \theta 0} (S_Q)
+\\
+\nonumber && 
+\cup\; 
+\sigma_{(\alginsert_{S_{f}[A]} \algnew_{+R(\vec{r})} f) \theta 0}
+(\algincrdiff_{\cup, S_Q} \Delta_{+R(\vec{r})} Q)
+\\
+\label{eq:md2}
+\sigma_{(\algincr_{\oplus, S_f} \Delta_{-R(\vec{r})} f)[A] \theta 0}
+(\algincr_{-,S_Q} \Delta_{-R(\vec{r})}Q) &:=&
+\algdelete_{S_f[A]}(\Delta_{-R(\vec{r})} Q);
+\\
+\nonumber &&
+\sigma_{\algupdate_{\oplus, S_f[A]} \Delta_{-R(\vec{r})}f}
+(\algincr_{-,S_Q} \Delta_{-R(\vec{r})} Q)
+\\
+\label{eq:md3}
+\sigma_{(\algnew_{+R(\vec{r})} f) \theta 0} (\algincr_{\cup, S_Q}
+\Delta_{+R(\vec{r})} Q)
+&:=&
+\sigma_{(\algnew_{+R(\vec{r})} f) \theta 0} (S_Q)
+\cup
+\sigma_{(\algnew_{+R(\vec{r})} f) \theta 0}
+(\algincrdiff_{\cup, S_Q} \Delta_{+R(\vec{r})} Q)
+\\
+\label{eq:md4}
+(\algincr_{\oplus, S_f} \Delta_{+R(\vec{r})} f)[c=\algnew_{+R(\vec{r})} g]
+&:=&
+\algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \};
+\\
+\nonumber && rc = \algnew_{+R(\vec{r})} g;
+\\
+\nonumber
+&& \mbox{if ($S_f$.find($rc$) = $S_f$.end)}
+\; \{ \; \mathrm{ignore}((\alginsert_{S_{f}[rc]} \algnew_{+R(\vec{r})} f)[rc]) \; \};
+\\
+\nonumber && S_{f}[rc]
+\\
+\label{eq:in5}
+(\algincr_{\oplus_1, S_f} \Delta_{+R(\vec{r})} f)
+[c=\algincr_{\oplus_2, S_g} \Delta_{+R(\vec{r})} g]
+&:=&
+\algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus_1, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \} ;
+\\
+\nonumber && rc = \algincr_{\oplus_2, S_g} \Delta_{+R(\vec{r})} g;
+\\
+\nonumber
+&& \mbox{if ($S_f$.find($rc$) = $S_f$.end)}
+\; \{ \; \mathrm{ignore}((\alginsert_{S_{f}[rc]} \algnew_{+R(\vec{r})} f)[rc]) \; \};
+\\
+\nonumber && S_{f}[rc]
+\\
+\label{eq:md6}
+(\algincr_{\oplus, S_f}\Delta_{-R(\vec{r})} f)[c = \algnew_{-R(\vec{r})} g]
+&:=&
+rc = \algnew_{-R(\vec{r})} g;
+\\
+\nonumber &&
+\mbox{if ($(\algupdate_{\oplus, S_f[rc]} \Delta_{-R(\vec{r})} f)[rc] = f(R = \emptyset)[rc]$)}
+\; \{ \; \algdelete_{S_f[rc]} \; \};
+\\
+\nonumber &&
+\algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_f[c]}\Delta_{-R(\vec{r})} f)[c]) \; \};
+\\
+\nonumber && S_f[rc]
+\\
+\label{eq:md7}
+(\algincr_{\oplus_1, S_f} \Delta_{-R(\vec{r})} f)[c = \algincr_{\oplus_2,S_g} \Delta_{-R(\vec{r})} g]
+&:=&
+rc = \algincr_{\oplus_2, S_g} \Delta_{-R(\vec{r})} g;
+\\
+\nonumber &&
+\mbox{if ($(\algupdate_{\oplus_1, S_f[rc]} \Delta_{-R(\vec{r})} f)[rc] = f(R = \emptyset)[rc]$)}
+\; \{ \; \algdelete_{S_f[rc]} \; \};
+\\
+\nonumber &&
+\algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus_1, S_f[c]}\Delta_{-R(\vec{r})} f)[c]) \; \};
+\\
+\nonumber && S_f[rc]
+\end{eqnarray}
+\end{figure*}
+
+
+% Nested aggregate simplification
+%
+\begin{figure*}
+\begin{eqnarray}
+\mbox{Nested aggregate computation:} && \nonumber
+\\
+\label{eq:na1}
+\algsum_{(\algincr_{min, S_1} \delta_{+R(\vec{r})} \algmin_{f}(Q_1))[A]}
+(\algincr_{\cup,S_2} \Delta_{+R(\vec{r})} Q_2)
+&:=&
+\algsum_{\algupdate_{\min, S_{1}[A]} \delta_{+R(\vec{r})} \algmin_{f}(Q_1)}(S_2)
+\\
+\nonumber &&
++ \; \algsum_{\alginsert_{S_{1}[A]} \algnew_{+R(\vec{r})} \algmin_{f}(Q_1)}
+    (\algincrdiff_{\cup, S_2} \Delta_{+R(\vec{r})} Q_2)
+\\
+\label{eq:na2}
+\algsum_{\algnew_{\pm R(\vec{r})} f} (\algincr_{\cup,S} \Delta_{\pm R(\vec{r})} Q)
+&:=&
+\algsum_{\algnew_{\pm R(\vec{r})} f}(S) 
+    \pm \algsum_{\algnew_{\pm R(\vec{r})} f}
+        (\algincrdiff_{\cup, S} \Delta_{\pm R(\vec{r})} Q)
+%
+%
+\\[2ex]
+\label{eq:na3}
+\algmin_{(\algincr_{\oplus, S_1} \Phi_{+ R(\vec{r})} f)[A]}
+(\algincr_{\cup, S_2} \Delta_{+R(\vec{r})} Q_2)
+&:=&
+\min \Big\{
+\algmin_{\algupdate_{\oplus, S_1[A]} \Phi_{+R(\vec{r})} f} (S_2),
+\\
+\nonumber &&
+\qquad \; \algmin_{\alginsert_{\oplus, S_1[A]} \algnew_{+R(\vec{r})} f}
+(\algincrdiff_{\cup, S_2} \Delta_{+R(\vec{r})} Q_2)
+\Big\}
+\\
+\nonumber &\dots& \mbox{where $\Phi \in \{\Delta, \delta\}$}
+\\
+%
+%
+\label{eq:na4}
+\algmin_{\algnew_{+R(\vec{r})} f} (\algincr_{\cup, S} \Delta_{+R(\vec{r})} Q)
+&:=&
+\min \Big\{
+\algmin_{\algnew_{+R(\vec{r})} f} (S), 
+\algmin_{\algnew_{+R(\vec{r})} f} (\algincrdiff_{\cup, S} \Delta_{+R(\vec{r})} Q)
+\Big\}
+%
+%
+%
+\\[2ex]
+\label{eq:na5}
+\algaggf_{(\algincr_{\oplus, S_1} \delta_{-R(\vec{r})} \algmin_{f}(Q_1))[A]}
+(\algincr_{-,S_2} \Delta_{-R(\vec{r})} Q_2)
+&:=&
+\algdelete_{S_{1}[A]}(\Delta_{-R(\vec{r})} Q_2);
+\\
+\nonumber &&
+\algaggf_{\algupdate_{\oplus, S_{1}[A]}  \delta_{-R(\vec{r})} \algmin_{f}(Q_1)}
+(\algincr_{-,S_2} \Delta_{-R(\vec{r})} Q_2)
+\\
+\nonumber &\dots& \mbox{where $\oplus = decrmin(f, S_{\Delta \algmin})$}
+\end{eqnarray}
+\end{figure*}
+
+
+\pagebreak
+\section{Compilation examples}
+\begin{example}\em
+Let us now compute the trigger
+\[
+\mbox{on insert into B values ($p, v$)}
+\]
+for the summation part of the VWAP query (from Example~\ref{ex:compiler1})
+\[
+q[] = \algsumf_{P_2 * V_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
+\]
+where
+\begin{eqnarray*}
+m(P_2) &=&
+k*\algsumf_{V_0}(\rho_{V_0}(B)) -
+\algsumf_{V_1}(\sigma_{P_1 - P_2 > 0}(\rho_{P_1,V_1}(B)))
+\\
+\end{eqnarray*}
+
+\noindent~Note $m(P_2)$ is not defined as a map above, but as a nested map
+expression for ease of presentation.\\
+
+Then
+\begin{eqnarray*}
+q[] &:=&
+\algsumf_{P_2 * V_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:pred1})}{=}&
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > P_{min}[]} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:pred3})}{=}&
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2, V_2}(B)))[c=P_{min}[]]
+\\
+\algnew_{+B(p,v)} q[]
+&\stackrel{(\ref{eq:newr7})}{:=}&
+(\algnew_{+B(p,v)}
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2, V_2}(B))))
+[c=\algnew_{+B(p,v)} P_{min}[]]
+\\
+&\stackrel{(\ref{eq:agg2})}{=}&
+(\algincr_{q'} \Delta_{+B(p,v)} q')
+[c=\algnew_{+B(p,v)} P_{min}[]]
+\end{eqnarray*}
+
+\noindent~where
+\[q'[c]:=\algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2, V_2}(B)))\]
+and
+\[
+\Delta_{+B(p,v)} q'[c] =
+   \mbox{if $(p \ge c)$ then $p * v$ else $0$}
+\]
+
+Next,
+
+\begin{eqnarray*}
+\algnew_{+B(p,v)} P_{min}[]
+&:=&
+\algmin_{P_2}(\sigma_{m(P_2) > 0} (\rho_{P_2}(B)))
+\\ 
+&\stackrel{(\ref{eq:agg1})}{=}&
+\algmin_{P_2}(\algnew_{+B(p,v)} \sigma_{m(P_2) > 0} (\rho_{P_2}(B)))
+\\
+&\stackrel{(\ref{eq:newr6})}{=}&
+\algmin_{P_2}(\sigma_{\algnew_{+B(p,v)} m(P_2) > 0} (
+\algnew_{+B(p,v)} \rho_{P_2}(B)))
+\\
+&\stackrel{(\ref{eq:newr1})}{=}&
+\algmin_{P_2}(
+\sigma_{\algnew_{+B(p,v)} m(P_2) > 0} 
+(\algincr_{\cup, \rho_{P_2}(B)} \Delta_{+B(p,v)} \rho_{P_2}(B)))
+%
+%
+%
+\\[3ex]
+\algnew_{+B(p,v)} m(P_2)
+&:=&
+\algnew_{+B(p,v)} k* \algsumf_{V_0}(\rho_{V_0}(B))
+-
+\algnew_{+B(p,v)} \algsumf_{V_1}(\sigma_{P_1 - P_2 > 0}(\rho_{P_1,V_1}(B)))
+\\
+&\stackrel{(\ref{eq:new3})}{=}&
+\algincr_{\dots} \Delta_{+B(p,v)} k* \algsumf_{V_0}(\rho_{V_0}(B))
+-
+\algincr_{\dots} \Delta_{+B(p,v)}
+\algsumf_{V_1}(\sigma_{P_1 - P_2 > 0}(\rho_{P_1,V_1}(B)))
+\\
+&\stackrel{(\ref{eq:fs1})}{:=}&
+\underbrace{\algincr_{m(P_2)}}_{m[p_2]}
+\underbrace{\Delta_{+B(p,v)} m(P_2)}_{\Delta m[p_2]}
+\\[3ex]
+%
+%
+%
+\algnew_{+B(p,v)} P_{min}[]
+&=&
+\algmin_{P_2}
+(\sigma_{(\algincr_{+, m[p_2]} \Delta_{+B(p,v)} m)[p_2] > 0}
+(\algincr_{\cup, \rho_{P_2}(B)} \Delta_{+B(p,v)} \rho_{P_2}(B))
+\\
+&\stackrel{(\ref{eq:md1})}{=}&
+\algmin_{P_2}
+(\sigma_{(\algupdate_{+, m[p_2]} \Delta_{+B(p,v)} m)[p_2] \theta 0}(\rho_{P_2} (B))
+\nonumber \\
+&& \cup \;
+\sigma_{(\alginsert_{m[p_2]} \algnew_{+B(p,v)} m)[p_2] \theta 0}
+(\algincrdiff_{\cup, \rho_{P_2}(B)} \Delta_{+B(p,v)} \rho_{P_2}(B)))
+\end{eqnarray*}
+
+
+%
+%
+%
+%
+%
+%
+We also have,
+\begin{eqnarray*}
+\Delta_{+B(p,v)} m[p_2] &=& k * 
+(\Delta_{+B(p,v)} s_0[]) - (\Delta_{+B(p,v)} s_1[p_2]) 
+\\
+\Delta_{+B(p,v)} s_0[] &:=&
+   \Delta_{+B(p,v)} \algsumf_{V_0}(\rho_{P_0, V_0}(B))
+\\
+&\stackrel{(\ref{eq:a6})}{=}& 
+   \algsumf_{V_0}(\Delta_{+B(p,v)} \rho_{P_0, V_0}(B))
+\\
+&& \quad (\Delta_{+B(p,v)} V_0 = 0)
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algsumf_{V_0}(\pi_{p \rightarrow P_0, v \rightarrow V_0}(\{\tuple{}\}))
+\\
+&\stackrel{(\ref{eq:ags1})}{=}& \algsumf_v(\{\tuple{}\})
+\stackrel{(\ref{eq:ags2})}{=}
+v
+\\
+\Delta_{+B(p,v)} s_1[p_2] &:=&
+   \Delta_{+B(p,v)} \algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\rho_{P_1, V_1}(B)))
+\\
+&\stackrel{(\ref{eq:a6}), (\ref{eq:b6})}{=}&
+\algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\Delta_{+B(p,v)} \rho_{P_1, V_1}(B)))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algsumf_{V_1}(\sigma_{P_1 - p_2 > 0}(\pi_{p \rightarrow P_1, v \rightarrow V_1}(\{\tuple{}\})))
+\\
+&\stackrel{(\ref{eq:rs1})}{=}&
+\algsumf_{V_1}(\pi_{p \rightarrow P_1, v \rightarrow V_1}(\sigma_{p - p_2 > 0}(\{\tuple{}\})))
+\\
+&\stackrel{(\ref{eq:ags1})}{=}&
+\algsumf_{v}(\sigma_{p - p_2 > 0}(\{\tuple{}\}))
+\\
+&=& \mathrm{if}\, (p - p_2 > 0) \, \mathrm{then}\, v \, \mathrm{else} \, 0
+\end{eqnarray*}
+
+
+Thus we generate the following code:
+\begin{verbatim}
+on insert into B values (p, v)
+{
+  foreach p' in dom_p do
+  {
+     m[p'] += k*v - ((p > p') ? v : 0);
+     q[p'] += (p >= p') ? (p * v) : 0;
+  }
+
+  B += {(p,v)};
+
+  if (p not in dom_p) then
+  {
+     m[p] = k * sum_v(B)
+          - sum_v(select_{p > p2}(
+                      rho_{p2,v2}(B)));
+     q'[p] = sum_{p2 * v2}(select_{p2 >= p}(
+                      rho_{p2,v2}(B)));
+     dom_p += {p}
+  }
+
+  /* maintain index on m[.] by p2 for finding
+     this minimum efficiently */
+  pmin = min(select_{m[p2] > 0}(project_{p2}(
+               rho_{p2,v2}(B))));
+  q[] = q'[pmin];
+}
+\end{verbatim}
+%
+%It makes sense to avoid naive looping over all values $p_2$ by maintaining
+%$m_1[p_2]$ as a range data structure (to be described).
+%\punto
+\end{example}
+
+
+\begin{example}\em
+Given schema $R(A,B)$, $S(B,C)$, $T(C,D)$.
+We incrementally maintain the aggregate query
+\[
+s := \algsum_{A*D}(R \bowtie S \bowtie T).
+\]
+
+Compared to the map compilation algorithm of Figure~\ref{fig':mainalg}, we take a
+few shortcuts for better readability (and extend the algebra by natural joins);
+nevertheless following our algorithm yields equivalent maps. 
+\begin{itemize}
+\item
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\ &=&
+\algsum_{A*D}(\{a\} \times \sigma_{B=b}(S) \bowtie T)
+\\ &=&
+\algsum_{a*D}(\sigma_{B=b}(S) \bowtie T)	
+\\ &=&
+a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{s_D[b]}
+\end{eqnarray*}
+
+Derivation by current rules:
+\begin{eqnarray*}
+s &=& \algnew_{+R(a,b)} \algsum_{A*D}(R \bowtie S \bowtie T)
+\\
+&=& \algnew_{+R(a,b)}
+ \algsum_{A*D}(\sigma_{R.B=S.B \wedge S.C=T.C}(R \times S \times T))
+\\
+&\stackrel{(\ref{eq:agg2}), (\ref{eq:a5}), (\ref{eq:b6}), (\ref{eq:b5})}{=}&
+\algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{R.B=S.B \wedge S.C=T.C}((\Delta_{+R(a,b)} R) \times S \times T))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{R.B=S.B \wedge S.C=T.C}(
+\pi_{a\rightarrow A, b\rightarrow B} \{\tuple{}\} \times S \times T))
+\\
+&\stackrel{(\ref{eq:rs1})}{=}& \algincr_{+,S_{sum}} \algsum_{A*D}
+(\pi_{a \rightarrow A}\{\tuple{}\}(\sigma_{b=S.B \wedge S.C=T.C}(S \times T)))
+\\
+&\stackrel{(\ref{eq:ags1})}{=}&
+\algincr_{+,S_{sum}} \algsum_{a*D}
+(\sigma_{b=S.B \wedge S.C=T.C}(S \times T))
+\\
+&\stackrel{(\ref{eq:sum4})}{=}&
+\algincr_{+,S_{sum}} a*
+\underbrace{\algsum_{D}(\sigma_{b=S.B \wedge S.C=T.C}(S \times T))}_{s_D[b]}
+\end{eqnarray*}
+
+\item
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(R \bowtie \{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{A*D}(\sigma_{B=b}(R) \times \sigma_{C=c}(T))
+\\ &=&
+\underbrace{\algsum_{A}(\sigma_{B=b}(R))}_{s_A[b]} *
+\underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{s_D[c]}
+\end{eqnarray*}
+
+Derivation by current rules:
+\begin{eqnarray*}
+s &=&  \algnew_{+S(b,c)}
+ \algsum_{A*D}(\sigma_{R.B=S.B \wedge S.C=T.C}(R \times S \times T))
+\\
+&\stackrel{(\ref{eq:agg2}), (\ref{eq:a5}), (\ref{eq:b6}), (\ref{eq:b5})}{=}&
+\algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{R.B=S.B \wedge S.C=T.C}(R \times (\Delta_{+S(b,c)} S) \times T))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{R.B=S.B \wedge S.C=T.C}(R \times \{b,c\} \times T))
+\\
+&=& \algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{R.B=b \wedge c=T.C}(R \times \{\} \times T))
+\\
+&=& \algincr_{+,S_{sum}} \algsum_{A*D}
+(\sigma_{B=b}(R) \times \sigma_{C=c}(T))
+\\
+&\stackrel{(\ref{eq:sum7})}{=}& \algincr_{+,S_{sum}}
+\underbrace{\algsum_{A} (\sigma_{B=b}(R))}_{s_A[b]} *
+\underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{s_D[c]}
+\end{eqnarray*}
+%
+Note how the algebra expression here decomposes into smaller parts.
+
+\item
+Insert T(c,d): (analogous to insertion of R(a,b))
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(R \bowtie S \bowtie \{\tuple{c,d}\})
+\\ &=&
+\underbrace{\algsum_{A}(R \bowtie \sigma_{C=c}(S))}_{s_A[c]} * d
+\end{eqnarray*}
+
+\begin{eqnarray*}
+s = \algincr_{+,S_{sum}} d*
+\underbrace{\algsum_{A} (\sigma_{R.B=S.B \wedge S.C=c}(R \times S))}_{s_A[c]}
+\end{eqnarray*}
+\end{itemize}
+
+We incrementally maintain $s_D[b]$, $s_A[b]$, $s_D[c]$, and
+$s_A[c]$ as well.
+
+\begin{itemize}
+\item
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta s_A[b] &=& \algsum_{A}(\{\tuple{a,b}\}) = a
+\\
+\mbox{foreach $c$: }
+\Delta s_A[c] &=& \algsum_{A}(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S))
+\\ &=&
+\algsum_{a}(\sigma_{BC=bc}(S))
+\\ &=&
+a * \underbrace{\algsum_{1}(\sigma_{BC=bc}(S))}_{s_1[b,c]}
+\end{eqnarray*}
+
+Derivation with current rules:
+\begin{eqnarray*}
+\algnew_{+R(a,b)} s_A[\rho_{B}(R)] &=&
+(\algnew_{+R(a,b)} \algsum_{A}(\sigma_{R.B=x}(R)))[x=\algnew_{+R(a,b)} \rho_{B}(R)]
+\\
+&\stackrel{(\ref{eq:agg2}), (\ref{eq:a5}), (\ref{eq:b6}), (\ref{eq:b1})}{=}& 
+(\algincr_{+, s_A[x]}  \algsum_{A}
+(\sigma_{R.B=x}(\pi_{a \rightarrow R.A, b \rightarrow R.B}\{<>\})))
+[x = \algnew_{+R(a,b)} \rho_{B}(R)]
+\\
+&\stackrel{(\ref{eq:md4}), (\ref{eq:fs2}), (\ref{eq:ags1})^*, (\ref{eq:ags2})^*}{=}&
+\algfor(x \in B) \; \{ \; \mathrm{ignore}((\algupdate_{+, s_{A}[x]}
+\algsum_{A}
+(\sigma_{R.B=x}(\pi_{a \rightarrow R.A, b \rightarrow R.B}\{<>\})))[x]) \; \};
+\\
+&& rc = b;
+\\
+&& \mbox{if ($s_A$.find($rc$) = $s_A$.end)}
+\; \{ \; \mathrm{ignore}((\alginsert_{s_{A}[rc]} a)[rc]) \; \};
+\\
+&& s_{A}[rc]
+\\
+&=&
+\mbox{if ($s_A$.find(b) != $s_A$.end)} \; \{ \; \algupdate_{+,s_A[b]} a \; \}
+\\
+&& \mbox{else } \; \{ \; \alginsert_{s_A[b]} a \; \}
+\\
+&\dots& \mbox{Note the for loop is only valid when $x = b$}
+%
+%
+\\[2ex]
+\algnew_{+R(a,b)} s_A[\rho_{C}(S)] &=&
+(\algnew_{+R(a,b)} \algsum_A (R \times \sigma_{S.C=x}(S)))[x = \algnew_{+R(a,b)} \rho_{C}(S)]
+\\
+&\stackrel{(\ref{eq:md4}), (\ref{eq:agg2}), (\ref{eq:a5}), (\ref{eq:b6}), (\ref{eq:b1})}
+{\stackrel{(\ref{eq:ags1}), (\ref{eq:ags2}), (\ref{eq:sum3})}{=}}&
+\algfor(x \in C) \; \\
+&& \qquad \mathrm{ignore}((\algupdate_{+, s_{A}[x]}
+a * \algsum_{1}
+(\sigma_{S.C=x}(S)))[x]);\\
+&\dots& \mbox{Note $rc = null$, thus no return value.}
+\end{eqnarray*}
+
+(Analogously insert T(c,d) for maintaining $s_{D}[b], s_{D}[c]$.)
+
+\item
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s_A[c] &=&
+\algsum_{A}(R \bowtie \{\tuple{b,c}\})
+\\ &=&
+\algsum_{A}(\sigma_{B=b}(R) \times \{c\})
+\\ &=&
+\algsum_{A}(\sigma_{B=b}(R))
+\;=:\; s_A[b]
+\\
+\Delta s_D[b] &=&
+\algsum_{D}(\{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{D}(\{b\} \times \sigma_{C=c}(T))
+\\ &=&
+\algsum_{D}(\sigma_{C=c}(T))
+\;=:\; s_D[c]
+\end{eqnarray*}
+\end{itemize}
+
+Note the derivation with current rules is analagous to a simpler form of the derivation of $s_D[b]$ here.
+\\
+
+Finally, we want to incrementally maintain $s_1[b,c]$:
+\begin{itemize}
+\item
+Insert S(b,c):
+$
+\Delta s_1[b,c] =
+\algsum_{1}(\{\tuple{b,c}\}) = 1
+$
+\end{itemize}
+
+Thus the code is:
+\begin{verbatim}
+on insert into R values (a,b) {
+   s += a * s_D[b];   s_A[b] += a;
+   foreach c (in Cs[b]) do
+      s_A[c] += a * s_1[b,c];
+}
+
+on insert into S values (b,c) {
+   s += s_A[b] * s_D[c];   s_A[c] += s_A[b];
+   s_D[b] += s_D[c];       s_1[b,c] += 1;
+}
+
+on insert into T values (c,d) {
+   s += s_A[c] * d;   s_D[c] += d;
+   foreach b (in Bs[c]) do
+      s_D[b] += s_1[b,c] * d;
+}
+\end{verbatim}
+%\punto
+
+We can also consider deletions from base relations:
+\begin{itemize}
+\item
+Delete R(a,b):
+\begin{eqnarray*}
+\algsum &=& \algsum_{A*D}((R-\{\tuple{a,b}\}) \bowtie S \bowtie T)\\
+&=& \algsum_{A*D}((R \bowtie S \bowtie T) -
+(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& \algsum_{A*D}(R \bowtie S \bowtie T) -\\
+& & \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& \algsum' - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+%\because
+\Delta s &=&  - \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T))\\
+&=& -a*\algsum_{D}(\sigma_{B=b}(S) \bowtie T)
+\end{eqnarray*} 
+\end{itemize}
+
+(Similarly for Delete S(b,c) and Delete T(c,d)).
+
+Just as in the case for Inserts, we must also maintain additional data
+structures needed by each delta handler, for example $s_{A}[c], s_{A}[b]$ needed
+to dealing with deletions to relations S and C. Note that given subtraction is an
+inverse operation for addition (hence $\algsum$) and is anticommutative with the
+previous result as seen above, the maintenance we perform is
+structurally identical to the case for inserts. 
+
+\begin{itemize}
+\item
+Delete R(a,b):
+\begin{eqnarray*}
+\Delta s_{A}[b] &=& - \algsum_{A}(\{\tuple{a,b}\}) = -a\\
+\Delta s_{A}[c] &=& -a * \algsum_{1}(\sigma_{BC=bc}(S))
+\end{eqnarray*}
+\end{itemize}
+\end{example}
+\def\algmon{\mathrm{mon}}
+
+
+\section{Monotonicity analysis}
+\begin{figure}
+\begin{eqnarray*}
+\uparrow +/* \uparrow &=& \uparrow
+\\
+\uparrow +/* 0 &=& \uparrow
+\\
+0 +/* 0 &=& 0
+\\
+0 +/* \perp &=& \perp
+\\
+\uparrow +/* \perp &=& \perp
+\\
+\perp +/* \perp &=& \perp
+%
+%
+%
+\\[3ex]
+\algsumf_{\uparrow}(\vec{0}) &=& \uparrow
+\\
+\algsumf_{0}(\Uparrow) &=& \uparrow
+\\
+\algsumf_{\uparrow}(\Uparrow) &=& \uparrow
+\\
+\algsumf_{0}(\vec{0}) &=& 0
+\\
+\algsumf_{\perp}(\vec{0}) &=& \perp
+\\
+\algsumf_{0}(\Perp) &=& \perp
+\\
+\algsumf_{\perp}(\Uparrow) &=& \perp
+\\
+\algsumf_{\uparrow}(\Perp) &=& \perp
+\\
+\algsumf_{\perp}(\Perp) &=& \perp
+%
+%
+\\[3ex]
+\Uparrow \cup \Uparrow &=& \Uparrow
+\\
+\Uparrow \cup \vec{0} &=& \Uparrow^{\ast}
+\\
+\vec{0} \cup \vec{0} &=& \vec{0}
+\\
+\Uparrow \cup \Perp &=& \Perp
+\\
+\vec{0} \cup \Perp &=& \Perp
+\\
+\Perp \cup \Perp &=& \Perp
+\\
+\Uparrow \times \Uparrow &=& \Uparrow
+\\
+\Uparrow \times \vec{0} &=& \Uparrow
+\\
+\vec{0} \times \vec{0} &=& \vec{0}
+\\
+\Uparrow \times \Perp &=& \Perp
+\\
+\vec{0} \times \Perp &=& \Perp
+\\
+\Perp \times \Perp &=& \Perp
+%
+%
+\\[2ex]
+\sigma_{\uparrow}(\Uparrow) &=& \Uparrow
+\\
+\sigma_{\uparrow}(0) &=& \Uparrow
+\\
+\sigma_{0}(\Uparrow) &=& \vec{0}^{\ast}
+\\
+\sigma_{0}(\vec{0}) &=& \vec{0}
+\\
+\sigma_{\perp}(\Uparrow) &=& \Perp
+\\
+\sigma_{\uparrow}(\Perp) &=& \Perp
+\\
+\sigma_{\perp}(\vec{0}) &=& \Perp
+\\
+\sigma_{0}(\Perp) &=& \Perp
+%
+%
+\\[3ex]
+& & \mbox{$\ast$: semantics differs for $\vec{\uparrow}$ vs $\Uparrow$}
+\end{eqnarray*}
+\caption{Basic monotonicity rules.}
+\end{figure}
+
+\begin{figure}
+\begin{eqnarray*}
+\algmon_{\uparrow A} c &=& 0
+\\
+\algmon_{\uparrow A} x &=& 0
+\\
+\algmon_{\uparrow A} A &=& \uparrow
+\\
+\algmon_{\uparrow A} (f + g) &=&
+(\algmon_{\uparrow A} f) + (\algmon_{\uparrow A} g)
+\\
+\algmon_{\uparrow A} (f * g) &=&
+(\algmon_{\uparrow A} f) * (\algmon_{\uparrow A} g)
+\\
+\algmon_{\uparrow A} \algsumf_{f}(Q) &=&
+\algsumf_{\algmon_{\uparrow A} f}(\algmon_{\uparrow A} Q)
+%
+%
+%
+\\[2ex]
+\algmon_{\uparrow A} \rho_{A}(R) &=& \uparrow
+\\
+\algmon_{\uparrow A} S &=& 0
+\\
+\algmon_{\uparrow A} \{ \vec{b} \} &=& 0
+\\
+\algmon_{\uparrow A} (Q_1 \cup Q_2) &=&
+(\algmon_{\uparrow A} Q_1) \cup (\algmon_{\uparrow A} Q_2)
+\\
+\algmon_{\uparrow A} (Q_1 \times Q_2) &=&
+(\algmon_{\uparrow A} Q_1) \times (\algmon_{\uparrow A} Q_2)
+%
+%
+\\[2ex]
+\algmon_{\uparrow A} \sigma_{f} (Q) &=&
+\sigma_{\algmon_{\uparrow A} f} (\algmon_{\uparrow A} Q)
+\\
+\algmon_{\uparrow A} f[g] &=&
+(\algmon_{\uparrow A, \uparrow g} f)[\algmon_{\uparrow A} g]
+\\
+\algmon_{\uparrow A, \uparrow g} f &=& 
+(\algmon_{\uparrow A} f) * (\algmon_{\uparrow g} f)
+%
+%
+%
+\\[3ex]
+(\uparrow)[\uparrow] &=& \uparrow ?
+\\
+(\uparrow)[0] &=& \uparrow
+\\
+(0)[\uparrow] &=& 0^{\dagger} ?
+\\
+(0)[0] &=& 0^{\dagger}
+\\
+(\perp)[\uparrow] &=& \perp
+\\
+(\perp)[0] &=& \perp
+\\
+(0)[\perp] &=& 0^{\dagger}
+\\
+(\uparrow)[\perp] &=& \perp
+\\
+(\perp)[\perp] &=& \perp
+%
+%
+\\[3ex]
+& & \mbox{$\dagger$: independent map expression?}
+\end{eqnarray*}
+\caption{Database monotonicity analysis rules.}
+\end{figure}
+
+\end{document}
