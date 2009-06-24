@@ -1821,7 +1821,7 @@ let print_handler_bindings (handler, bindings) =
     print_endline ("  "^string_of_map_expression (List.hd newlist));
     print_endline "bindings:";
     List.iter
-        (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n"))
+        (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n\n\n"))
             (List.tl newlist)
 
 let compile_target_all m_expr = 
@@ -2184,9 +2184,44 @@ let gc_assign_state_map code decl map_key map_decl =
     in
 	(assign_code, assign_decl)
 
+let is_bound expr binding =
+    let rec ib_aux ex v =
+	match ex with 
+	    `MapAggregate (_, _, p) -> ib_aux_plan p v
+	    | _ -> (false, "")
+    and ib_aux_plan plan v =
+	match plan with
+	    `Select (be, p) -> ib_aux_boolean be v
+	    | _ -> (false, "")
+    and ib_aux_boolean be v =
+	match be with
+	    `BTerm bt -> ib_aux_bt bt v
+	    | `Not b -> ib_aux_boolean b v
+	    | `And (b1, b2) | `Or (b1, b2) ->
+		let (ltf, lv) = (ib_aux_boolean b1 v) in
+		let (rtf, rv) = (ib_aux_boolean b2 v) in
+		    if ltf = true then (ltf, lv)
+		    else if rtf = true then (rtf, rv)
+		    else (false, "") (*TODO both are true *)
+    and ib_aux_bt bt v = 
+	match bt with
+	    `MEQ (_) | `MLT (_) | `True | `False -> (false, "")
+	    | `LT (e1, e2) | `LE (e1, e2) | `GT(e1, e2) 
+	    | `GE (e1, e2) | `EQ (e1, e2) | `NE(e1, e2) -> begin
+		match e2 with 
+		    `ETerm (`Variable (x)) -> if x = v then (true, v) else (false, "")
+	 	    | _ -> (false, "")
+	        end
+    in 
+    let l = List.map (fun x -> match x with `BindMapExpr(v,_) -> (ib_aux expr v) 
+					    | _ -> raise InvalidExpression) binding
+    in let l2 = List.filter ( fun (t, _) -> t ) l
+    in if List.length l2= 0 then (false, "")
+	else List.hd l2 (* TODO multiple bindings *)
+
 let generate_code handler bindings event =
     (* map_expression -> declaration list ->  code_expression * declaration list *)
-    let rec gc_aux e decl : code_expression * (declaration list) =
+    let rec gc_aux e decl bind_info  : code_expression * (declaration list) =
 	match e with
 	    | `METerm(x) ->
 		  begin
@@ -2201,8 +2236,8 @@ let generate_code handler bindings event =
 		  end
 
 	    | `Sum(l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl in
-		  let (r_code, r_decl) = gc_aux r l_decl in
+		  let (l_code, l_decl) = gc_aux l decl bind_info in
+		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
 		      begin
 			  match (l_code, r_code) with
 			      | (`Eval x, `Eval y) ->  (`Eval(`Sum(x, y)), r_decl)
@@ -2226,8 +2261,8 @@ let generate_code handler bindings event =
 		      end
 
 	    | `Product(l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl in
-		  let (r_code, r_decl) = gc_aux r l_decl in
+		  let (l_code, l_decl) = gc_aux l decl bind_info in
+		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
 		      begin
 			  match (l_code, r_code) with
 			      | (`Eval x, `Eval y) ->  (`Eval(`Product(x, y)), r_decl)
@@ -2251,8 +2286,8 @@ let generate_code handler bindings event =
 		      end
 
 	    | `Min (l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl in
-		  let (r_code, r_decl) = gc_aux r l_decl in
+		  let (l_code, l_decl) = gc_aux l decl bind_info in
+		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
 		      begin
 			  match (l_code, r_code) with
 			      | (`Eval x, `Eval y) ->  (`Eval(`Min(x, y)), r_decl)
@@ -2278,15 +2313,15 @@ let generate_code handler bindings event =
 	    | `MapAggregate(`Sum, f, q) ->
 		  (* TODO: variable type? *)
 		  let run_sum_var = gen_var_sym() in
-		  let (f_code, f_decl) = gc_aux f decl in
+		  let (f_code, f_decl) = gc_aux f decl bind_info in
 		      begin
 			  match f_code with
 			      | `Eval (x) ->
 				    let (agg_block, agg_decl) =
-					gc_plan_aux q
+					gc_plan_aux q  
 					    (`Assign(run_sum_var,
 						     `Sum (`CTerm(`Variable(run_sum_var)), x)))
-					    f_decl
+					    f_decl bind_info 
 				    in
 					(`Block(
 					     [`Declare(`Variable(run_sum_var, "int"));
@@ -2298,7 +2333,7 @@ let generate_code handler bindings event =
 
 	    | `MapAggregate(`Min, f, q) ->
 		  let run_min_var = gen_var_sym() in
-		  let (f_code, f_decl) = gc_aux f decl in
+		  let (f_code, f_decl) = gc_aux f decl bind_info in
 		      begin
 			  match f_code with
 			      | `Eval (x) ->
@@ -2306,7 +2341,7 @@ let generate_code handler bindings event =
 					gc_plan_aux q
 					    (`Assign(run_min_var,
 						     `Min (`CTerm(`Variable(run_min_var)), x)))
-					    f_decl
+					    f_decl bind_info 
 				    in
 					(`Block(
 					     [`Declare(`Variable(run_min_var, "int"));
@@ -2318,7 +2353,74 @@ let generate_code handler bindings event =
 
 	    | `Incr (sid, e) ->
 		  (* TODO: incr var types *)
-		  let (e_code, e_decl) = gc_aux e decl in
+		  let (e_code, e_decl) = gc_aux e decl bind_info in
+		  let (e_is_bound, rc) = 
+			match bind_info with (true, _, bb) -> is_bound e bb
+			| _-> ( false, "")
+		  in
+		  if e_is_bound = true then
+ 		     let mid = gen_map_sym sid in
+		     let map_key = (mid, [rc]) in
+		     let temp = gen_var_sym() in
+		     let c = gen_var_sym() in
+		     let map_decl = `Map(mid, [(c, "int")], "int") in 
+			 let last_code = get_block_last e_code in
+			 let last_var = match last_code with `Eval(x) -> x | _-> raise InvalidExpression in
+		         match event with 
+			     `Insert _ ->
+				 let insert_st = 
+			     	 `Block ( [ 
+					`Declare (`Variable(temp, "int"));
+					`Assign (temp, `CTerm (`Variable (rc)));
+
+					`ForEach ( map_decl, 
+						`Block ([ 
+							`Assign (rc, `CTerm (`Variable (c)));
+							append_to_block (remove_block_last e_code) 
+							(`AssignMap (map_key, `Sum(`CTerm(`MapAccess(map_key)), last_var)));
+						])
+					);
+					(* something weired happens when simplify_code is called *)
+					(*`Assign (rc, `CTerm (`Variable (temp)));*)
+				 	`IfNoElse ( `BCTerm ( 
+							`EQ ( 
+								`CTerm ( 
+									`MapContains(map_key)
+								), 
+					                        `CTerm (
+									`MapIterator(`End(mid))
+								)
+							)
+						  ) , 
+						        append_to_block (remove_block_last e_code)
+						        (`AssignMap ( map_key, last_var ))
+						  );
+					`Eval(`CTerm(`MapAccess(map_key)))
+				 ])
+				 in (insert_st, map_decl::e_decl)
+				(* TODO: garbage collection, min *)	
+			     | `Delete _ -> 
+				 let delete_st = 
+				 `Block ([
+					`Declare (`Variable(temp, "int"));
+					`Assign (temp, `CTerm (`Variable (rc)));
+					append_to_block (remove_block_last e_code)
+					(`AssignMap (map_key, `Sum(`CTerm (`MapAccess(map_key)),
+						`Product (`CTerm (`Int (-1)), last_var))));
+					(* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
+	 				`ForEach (map_decl,
+						`Block ([
+							`Assign (rc, `CTerm (`Variable (c)));
+							append_to_block (remove_block_last e_code)
+							(`AssignMap (map_key, `Sum(`CTerm(`MapAccess(map_key)), 
+									`Product(`CTerm (`Int (-1)), last_var))));
+						])
+					);
+					`Eval(`CTerm(`MapAccess(map_key)))
+				])
+				in (delete_st, map_decl::e_decl)
+
+		  else 
 		  let e_uba = get_unbound_attributes_from_map_expression e true in
 		      begin match e_uba with
 			  | [] ->
@@ -2351,7 +2453,7 @@ let generate_code handler bindings event =
 		      end
 
 	    | `Init (sid, e) ->				
-		  let (e_code, e_decl) = gc_aux e decl in
+		  let (e_code, e_decl) = gc_aux e decl bind_info in
 		  let e_uba = get_unbound_attributes_from_map_expression e true in
 		      begin match e_uba with
 			  | [] ->
@@ -2388,7 +2490,7 @@ let generate_code handler bindings event =
 		  raise InvalidExpression
 
     (* plan -> code_expression list -> code_expression * declaration list *)
-    and gc_plan_aux q iter_code decl : code_expression * (declaration list) =
+    and gc_plan_aux q iter_code decl bind_info : code_expression * (declaration list) =
 	match q with
 	    | `Relation (n,f) ->
 		  let new_decl =
@@ -2439,7 +2541,7 @@ let generate_code handler bindings event =
 			  | `BTerm(`MEQ(m_expr))
 			  | `BTerm(`MLT(m_expr)) ->
 				(* TODO: pred var types *)
-				let (pred_var_code, new_decl) = gc_aux m_expr decl in
+				let (pred_var_code, new_decl) = gc_aux m_expr decl bind_info in
 				let (pred_cterm, assign_var_code, pred_decl) =
 				    begin match pred_var_code with
 					| `Block xl ->
@@ -2493,13 +2595,13 @@ let generate_code handler bindings event =
 					      `Block(
 						  [assign_var_code; `IfNoElse(pred_test_code, iter_code)])
 				in
-				    gc_plan_aux cq new_iter_code pred_decl
+				    gc_plan_aux cq new_iter_code pred_decl bind_info 
 
 			  | _ ->
 				let new_iter_code =
 				    `IfNoElse(create_code_predicate pred, iter_code)
 				in
-				    gc_plan_aux cq new_iter_code decl
+				    gc_plan_aux cq new_iter_code decl bind_info 
 		  end
 		      
 	    (* 
@@ -2510,13 +2612,13 @@ let generate_code handler bindings event =
 		      
 	    | `Union ch ->
 		  let (ch_code, ch_decl) = 
-		      List.split (List.map (fun c -> gc_plan_aux c iter_code decl) ch)
+		      List.split (List.map (fun c -> gc_plan_aux c iter_code decl bind_info ) ch)
 		  in
 		      (`Block(ch_code), List.flatten ch_decl)
 			  
 	    | `Cross(l,r) ->
-		  let (inner_code, inner_decl) = gc_plan_aux r iter_code decl in
-		      gc_plan_aux l inner_code inner_decl
+		  let (inner_code, inner_decl) = gc_plan_aux r iter_code decl bind_info in
+		      gc_plan_aux l inner_code inner_decl bind_info 
 
 	    (*
 	      | `NaturalJoin (l,r) ->
@@ -2557,13 +2659,12 @@ let generate_code handler bindings event =
 	    (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
 	    bindings
     in
-
     let binding_handlers_and_decls =
 	List.map
 	    (fun b ->
 		 match b with
 		     | `BindMapExpr (v,e) ->
-			   let (bh,d) = gc_aux e [] in
+			   let (bh,d) = gc_aux e [] (false, [], []) in
 			       begin
 				   match bh with
 				       | `Eval x -> (`Assign(v, x), (`Variable(v, "int"))::d)
@@ -2590,28 +2691,30 @@ let generate_code handler bindings event =
 		      (List.map (fun x -> `Declare(x)) d)@[bh])
 		 binding_handlers_and_decls)
     in
-    let (handler_main, handler_decl) = gc_aux handler [] in
+    let (handler_main, handler_decl) = gc_aux handler [] (true, binding_code, bindings) in
     let declarations = List.map (fun x -> `Declare(x)) handler_decl in
     let (result_code, result_type) = 
 	match get_last_code_expr handler_main with
 	    | `Eval x -> (`Return x, ctype_of_arith_code_expression x)
 	    | _ -> raise InvalidExpression
     in
-    let new_handler_main =
+    let new_handler_main = remove_block_last handler_main in
+(*    let new_handler_main =
 	List.fold_left
 	    (fun acc c ->
 		 match c with
 		     | `Variable _ -> acc
 		     | `Relation(id,f) -> acc 
 		     | `Map(mid, kf, rt) -> `ForEach (`Map(mid, kf, rt), acc)) 
-	    (remove_block_last handler_main) handler_decl
-    in
+	    (remove_block_last handler_main) handler_decl 
+    in *)
     let (global_decls, handler_local_code) =
 	List.partition
 	    (fun x -> match x with
 		 | `Declare(`Map _) | `Declare(`Relation _) -> true
 		 | _ -> false)
-	    (declarations@[new_handler_main]@binding_code@[result_code])
+(*	    (declarations@[new_handler_main]@binding_code@[result_code]) *)
+	    (declarations@binding_code@[new_handler_main]@[result_code])
     in
 	(global_decls, 
 	 simplify_code
@@ -2730,7 +2833,7 @@ let make_file_streams `Relation(id, fields) =
 	        "    {\n"^
 		"        list <"^typename^" >::iterator front = "^id^".begin();\n"^
 		"        list <"^typename^" >::iterator end = "^id^".end();\n"^
-		"        for ( ; frontw != end; ++front) {\n"^
+		"        for ( ; front != end; ++front) {\n"^
 		"            "^x^"( "^(arguments "" 0) ^");\n"^
 		"        }\n"^
 		"    }\n" 
