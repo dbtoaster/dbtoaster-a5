@@ -5,6 +5,7 @@
 \usepackage{algorithmic}
 \usepackage{algorithm}
 \usepackage{clrscode}
+\usepackage{graphics}
 %\usepackage{epsfig}
 %\usepackage{epic}
 %\usepackage{eepic}
@@ -132,7 +133,7 @@ by today's data management tools, including algorithmic order book trading
 as stream processing applications. Our compiled query processors are several
 orders of magnitude faster than state-of-the-art databases and significantly
 outperform stream processing engines on such workloads. In the case of queries on
-orderbook data for algos, our approach stands alone in its ability to support
+order book data for algos, our approach stands alone in its ability to support
 realistic  data rates  without resorting to very substantial computing clusters.
 Indeed, the memory consumption of our main-memory techniques is sufficiently low
 to support applications such as data warehouse loading.
@@ -209,9 +210,16 @@ count-based windows), or assume ordered deletion semantics (punctuations or
 heartbeats). In \compiler, each tuple has an arbitrary lifetime, thus our
 standing queries processes a database spanning an arbitrary valid time using
 temporal database terminology. Indeed, many stream applications, such as
-orderbook trading and moving object applications are self-managing, in that the
+order book trading and moving object applications are self-managing, in that the
 application logic and delta patterns ensures state does not grow unbounded in
 practice.
+
+\begin{figure}[tb]
+\includegraphics[scale=0.5]{figures/dbt-datamodel.pdf}
+\label{fig:datamodel}
+\caption{\compiler\ data model, in contrast to traditional DBMS and stream
+processors.}
+\end{figure}
 
 \noindent\textbf{System Model.}
 At its core, \compiler\ consists of a parser, an algebraic compiler and
@@ -223,7 +231,7 @@ see how these data structures are defined in the description of our algorithm
 below. The \compiler\ runtime may be used as a standalone query processor
 accepting input over a network interface, or as an embeddable query processor
 that can be directly compiled into the same address space as application logic.
-\compiler also exposes a read-only interface to its internal data structures to
+\compiler\ also exposes a read-only interface to its internal data structures to
 support ad-hoc client-side queries. \compiler\ also includes a debugger and
 profiler for tracing delta processing functions and their maintenance of
 internal data structures.
@@ -500,126 +508,122 @@ on insert into S values (b,c)
 
 
 
-\section{Demonstration}
+\section{Demonstration Setup}
 The \compiler\ demonstration exhibits the map algebra, the compilation workflow,
-and the performance advantages of compiled query processors through live
-comparisons with alternative database implementations. In this section we
-describe the application scenarios that act as motivating use cases for
-\compiler, as well as the visualization tools that convey the technical aspects
-of query transformations and compiled executor performance.
+and the performance advantages of compiled query processors over alternative
+database architectures. In this section we describe the application scenarios
+that act as motivating use cases for \compiler, as well as the visualization
+tools that convey the technical aspects of query transformations and compiled
+executor performance.
+Since \compiler\ is suited for applications exhibiting high volumes update
+streams, in this demonstration, we show \compiler\ processing queries for an
+automated trading application making use of NASDAQ TotalView order book
+data~\cite{totalview-url}, and emulating a combined data warehouse loading and
+analysis application for TPC-H data. 
 
-\subsection{Applications and workloads}
-\compiler\ is suited for applications exhibiting high volumes of insertions,
-deletions and updates, and in this demonstration, we show \compiler\ processing
-queries for an automated trading application making use of NASDAQ TotalView order
-book data~\cite{totalview-url}, TPC-H data to emulate a combined data warehouse
-loading and analysis application, and finally a toll management system as
-presented in the Linear Road benchmark for stream processing
-engines~\cite{arasu-vldb:04}. We describe the first two applications in more
-detail, referring the reader to the Linear Road paper for details on that topic.
-
-\textbf{Processing order books in equities trading.}
+\smallskip
+\noindent\textbf{Processing order books in equities trading.}
 Order books provide a superior view of the market microstructure for use in
-trading algorithms. The bid order book consists of prices and volumes of orders
-of investors who are willing to buy equities in descending price and timestamp
-order, and correspondingly the ask order book indicates investors' selling
-orders. Exchanges execute trades by matching the tops of the bid and ask order
-books. Investors continually add, modify or withdraw limit orders, thus we view
-order books as relations subject to high volumes of order inserts, updates and
-deletes. Unlike stream processing scenarios \cite{motwani-cidr:03}, order
-books do not grow unboundedly in practice, but cannot be expressed by windows
-given their arbitrary inserts, updates and deletes. Thus in \compiler, we process
-continuous queries over temporal snapshots of relations via delta processing.
-
-We present two queries in the automated trading application, the first is a
+trading algorithms. The bid order book consists of prices and volumes at which
+investors are willing to buy equities, and correspondingly the ask order book
+indicates investors' selling orders.
+\comment{
+Exchanges execute trades by matching the tops of the bid and ask order
+books.
+}
+Investors continually add, modify or withdraw limit orders, thus we regard order
+books as relations subject to high volumes of order deltas. Note order books do
+not grow unboundedly in practice, but cannot be expressed by windows given
+arbitrary input deltas.
+We present a few queries in the automated trading application, first a
 volume-weighted average price (VWAP) query which computes the average
-price-volume product of a given fraction of the total volume in the bid and
-ask order book. This is used as part of the Static Order Book Imbalance (SOBI)
-query which attempts to detect trade price movements indicated based on whether
-there is a greater VWAP of bids than asks or vice versa. The second query is a
-query to detect strategies being employed by market makes through the order
-book, where market makers often submit orders to entice buyers or sellers into
-the market to aid in balancing their position.
+price-volume product of orders making up a given fraction of volume in the bid
+and ask order books. This is used in the static order book imbalance (SOBI)
+query, which detects trade price movements based on whether there is greater
+activity in the bids or asks order book. The final query detects
+strategies being employed by market makers through the order book, where market
+makers often submit orders to entice buyers or sellers into the market to aid in
+balancing their position.
 
-\textbf{Data warehouse loading.}
-Loading large data warehouses is a computationally costly process, which
-causes most data warehouse loading to be performed offline.
-While commercial warehouse loaders use specialized efficient code for 
-aggregation, incoming data is often the result of data integration
-queries that are costly and inefficient, and with may blow up data sizes
-in such a way that loading remains inefficient.
-Compiling data integration and aggregation queries together yields efficient
-code for loading the warehouse which may avoid the materialization of large
-intermediate results.
+\smallskip
+\noindent\textbf{Data warehouse loading.}
+Loading large data warehouses is a computation-intensive process, hence most data
+warehouse loading is performed offline. While commercial warehouse loaders use
+highly tuned code for aggregation, incoming data is often the result of costly,
+inefficient data integration queries, which often blow up data sizes to cause
+inefficient loading. Compiling data integration and aggregation queries together
+yields efficient code for loading the warehouse and may avoid the
+materialization of large intermediate results.
+We use \compiler\ to jointly process loading a warehouse from an OLTP database,
+and an aggregation query on the warehouse. We emulate the data integration step
+by using a data cleaning query to convert a TPC-H dataset into a star schema from
+the Star Schema Benchmark (SSB)~\cite{poneil-ssb:07}. We then evaluate query 4.1
+from SSB on the transformed TPC-H dataset.
 
-Hence we use \compiler\ to jointly process a data integration query loading a
-warehouse from OLTP databases, and an aggregation query on the warehouse. We
-emulate the data integration step by using a data cleaning and transformation
-query to convert a TPC-H dataset into a star schema, as described in the Star
-Schema Benchmark (SSB)~\cite{poneil-ssb:07}. We then evaluate query 4.1 from SSB
-on the transformed TPC-H dataset. Note this all occurs in one single query
-compiled down with \compiler.
-
-An integral part of this demonstration is to support interaction with conference
-attendees, thus in addition to providing pre-cooked queries implementing these
-applications, we will support compilation of a subset of SQL, namely selections,
-projections, join and aggregation operations, for attendees to directly pose
-their own queries on top of the base relations in these applications.
-
+\smallskip
+\noindent\textbf{Interactive demonstration.}
+An integral part of this demo is to support interaction with conference
+attendees, thus in addition to providing canned queries implementing these
+applications, we allow attendees to directly pose their own queries on
+the TotalView and TPC-H datasets.
 
 
 
 \subsection{Query compilation and code generation}
 
-\begin{figure}
+\begin{figure}[tb]
 \begin{center}
-\includegraphics[scale=0.47]{figures/gui1}
+\includegraphics[scale=0.088]{figures/dbt-gui}
 \end{center}
 \caption{\compiler\ compilation process visualization, displaying map algebra
 transformations, generated code, and internal views that must be maintained.}
 \label{fig:compilegui}
 \end{figure}
 
-The first of our two visualization tools (Figure~\ref{fig:compilegui} above) aids
-in conveying the compilation process to demo attendees. We will invite attendees
-to input their own queries, or use one of the canned queries from our
-applications, and first visually display a standard relational query plan. Our
-visualizer will then display the transformation process in a step-by-step fashion
-by applying rewrite rules in our map algebra, allowing us to explain the contents
-of the maps built from the query. In the next phase of the demonstration, we will
-briefly describe the code generation process given these maps, and how we can
-derive code to maintain these maps using only the bottom layer of the query as an
-example, where map maintenance proves to be simple. At this point query
-compilation is complete, and we implement a pair of simple browser windows
-listing both the maps and the tuple functions generated to allow access to
-arbitrary steps in the compilation process, to aid in discussions with attendees.
-\comment{
-Depending on the
+The first of our two visualization tools (Figure~\ref{fig:compilegui} above)
+conveys the compilation process to demo attendees. This tool first visually
+displays a standard relational query plan, before illustrating the copmiler
+worklow in a step-by-step fashion, including map algebra simplifications and the
+maps instantiated during compilation. We place particular emphasis on the
+recursive nature of our compilation, demonstrating compilation of deltas on the
+queries corresponding to our map data structures. At this point query compilation
+is complete, and we utilize a pair of browser windows listing both the maps and
+the event handling functions generated to allow access to arbitrary steps in the
+compilation process, to aid in discussions with attendees. We also use a
+debugging tool to provide step-by-step tracing of map maintenance when
+processing a delta.
+\comment{ Depending on the
 demonstration progress, we may additionally include an example of a
 JIT-compilation of the example query to demonstrate the potential for a limited
 degree of adaptivity during query execution.
 }
 
+\begin{figure}[tb]
+\begin{center}
+\includegraphics[scale=0.088]{figures/dbt-gui2}
+\end{center}
+\caption{\compiler\ debugger supporting stepping and tracing query processing and
+map maintenance, and performance visualizer for comparing against alternative
+databases in the DBMS bakeoff.}
+\label{fig:debugperfgui}
+\end{figure}
+
 \subsection{\compiler\ vs. DBMS* Bakeoff}
-The theme in this part of the demonstration is to show \compiler's
-competitiveness with a variety of database tools, by performing a DBMS bakeoff.
-Our experiments\footnote{under submission.} have demonstrated \compiler\ is able
-to significantly outperform PostgreSQL and a naive approach to query compilation
-for both the automated trading application and data loading application, as well
-as the Stanford STREAM~\cite{motwani-cidr:03} engine for Linear Road. In
-addition to these three comparison points we plan to compare to
-HSQLDB~\cite{hsqldb-url}, an existing pure Java main-memory database. The second
-visualization tool displays the performance achieved by the compiled query
-executors generated in the above part of the demonstration. The metrics of
-interest here are the throughput \compiler\ achieves, its memory usage for
-maintaining its maps as part of tuple function processing, the binary size, and
-finally the compile time including both the C++ generation and the subsequent
-compilation to a native binary. To provide for a more entertaining audience
-experience, we will run an audience challenge to find queries both yielding the
-greatest performance over the other database engines in the bakeoff, as well as
-queries that illustrate the poorest performance. Attendees will be provided with
-two laptops at the demonstration booth to experiment with queries, and we will
-display a leaderboard of the running results to spur on competition.
+This demo also presents \compiler's competitiveness with a variety of database
+tools, by performing a DBMS bakeoff. Our comparison points are PostgreSQL, a pure
+Java main-memory DBMS (HSQLDB~\cite{hsqldb-url}), a commercial DBMS 'X', the
+Stanford STREAM engine~\cite{motwani-cidr:03}, and a commerical stream processor
+'Y'. We have a visualization tool to show the performance achieved by the each
+database system including tuple throughput, memory usage and cache performance.
+We also present detailed profiling of \compiler's compiled code breaking down its
+overheads for each map, the binary size, and finally the compile time including
+both the C++ generation and the subsequent compilation to a native binary. To
+provide an entertaining audience experience, we run an audience challenge to find
+queries both yielding the greatest performance over the other database engines in
+the bakeoff, as well as queries that illustrate the poorest performance.
+Attendees will be provided with two laptops at the demonstration booth to
+experiment with queries, and encourage participation by displaying a leaderboard
+of the running results.
 
 
 %\footnotesize{
