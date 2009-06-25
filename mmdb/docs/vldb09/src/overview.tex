@@ -17,14 +17,14 @@ with handling a large input volume, but does not rely on artificial restrictions
 of these new inputs, unlike stream processing engines, which rely on semantic
 constructs such as windows or punctuations that are tightly coupled with operator
 semantics. Indeed, many stream applications, such as order book trading are
-self-managing, in that the application logic and usage patterns ensures state
+self-managing in the sense that the application logic and usage patterns ensures state
 does not grow unbounded eliminating the need for windows. Otherwise, windows may
 often be expressed as predicates. \compiler\ will compile such window semantics
 just as with any other part of the query, and as we will see later, efficiently
 implement windowing based on the data structures used to process the windowing
 predicate.
 
-At its core, \compiler\ performs delta processing, that is each insert, delete or
+At its core, \compiler\ performs delta processing, that is, each insert, delete or
 update of an input table is processed through the query and produces a new
 result.
 \compiler\ can support two types of result tuples, delta results or full
@@ -45,9 +45,10 @@ group-by columns.
 \includegraphics[scale=0.45]{figures/overview}
 \end{center}
 \vspace{-4mm}
-\caption{\compiler\ architecture diagram. \compiler\ can be used in a standalone
-mode where it simply performs query processing, embedded mode where it can be
-linked into another application and provide query result cursors, or finally as
+\caption{\compiler\ architecture diagram.
+\compiler\ can be used in a standalone
+mode where it simply performs query processing, in an embedded mode where it can be
+linked into another application and provide query result cursors, or as
 a scalable distributed query processor.}
 \label{fig:overview}
 \end{figure}

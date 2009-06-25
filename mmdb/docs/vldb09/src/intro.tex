@@ -1,53 +1,165 @@
 \section{Introduction}
 
-\comment{
-Rapidly increasing main-memory capacities present an opportunity to rethink
-database architectures. Today's database query processors focus on efficiency
-across the main-memory and secondary storage boundary, and their design
-principles have spilled into main-memory database architectures. Apart from a
-number of traditional data management applications such as data warehousing that
-are becoming increasingly plausible applications of (parallel) main-memory
-databases, there are also a number of new applications that call for query
-processing support and are not well served by existing systems. These
-applications call for the rethinking of query processing in main memory
-databases.
-}
 
-We present \compiler, a tool for compiling SQL aggregate queries into efficient
-C++ code for continuous, incremental view maintainance.
-%
-At the heart of our work, we question the cost of highly flexible interactive
-query processors as found in today's databases, with their plan interpreters and
-other runtime components including schedulers and optimizers. Modern relational
-databases focus almost exclusively on providing flexible and extensible querying
-capabilities in dynamic environments, supporting both schema and data evolution.
-%
-However, a large fraction of the world's query workloads are fixed and embedded
+
+
+
+Modern relational databases  focus almost exclusively
+on providing flexible and  extensible querying capabilities in dynamic
+environments, supporting  both schema and data  evolution.
+As a consequence, today's database management systems are centered around
+highly  flexible interactive query processors, with their
+plan  interpreters and other  runtime components  including schedulers
+and optimizers.   However, a
+large fraction of  the world's query workloads are  fixed and embedded
 into database application programs. In these applications, queries are
-\textit{ossified} during the development cycle, with developers converging to a
-choice of schema, query structure and parameters. Once hardened, queries are
-deployed into production environments, and re\-used numerous times, executing
-non-interactively.
+\textit{ossified}  during  the   development  cycle,  with  developers
+converging to a choice of schema, query structure and parameters. Once
+hardened,  queries  are  deployed  into production  environments,  and
+re\-used numerous times, executing non-interactively.
 
 
 
-
-\compiler\ is an SQL query  compilation framework  which generates native code
+In this paper, we present \compiler,
+a novel approach to compiling SQL aggregate queries into
+efficient C++ code for  continuous, incremental view maintainance.  
+\compiler\ is an SQL query compilation framework which generates native code
 that incrementally  and continuously maintains aggregate views in main memory
-at high update rates using delta processing techniques. \compiler\ provides
-two key advantages.
-%
+at high update rates using aggressive delta processing techniques.
+
+Queries are {\em recursively}\/ compiled into incremental view maintenance
+code; that is, while increments to queries are traditionally again expressed and evaluated as que\-ries, we recursively compute increments to these increments, and so on. This usually allows us to completely eliminate all queries.
+It is, however, not an just an exercise in thorough compilation, but usually
+yields code that is substantially simpler than the code needed for query processing in previous incremental view maintenance approaches.
+
+\compiler\ provides three key advantages.
+\begin{itemize}
+\item
 By generating C++  code that  performs all the  processing required  for an
-input  tuple as  a simple  straight-line function,  we expose  a fixed
-query plan execution path to  a C++ compiler for optimization, and avoid
+input  tuple from a fixed query plan execution path, we avoid
 overheads that traditionally arise when query processors interpret
 query plans stored in dynamic data structures.
-%
-Moreover, our new delta processing techniques are designed specifically for
-compilation to native code and support aggressive inlining that leads to
-surprisingly small and simple straight-line code sequences.
 
-Thus, \compiler\ is particularly well suited in continuous query applications
+\item
+By recursive compilation, asymptotically faster code can be obtained because
+the computation of increments may decompose into code that avoids database
+scans or joins.
+%
+In addition, certain redundancies in query definitions are exposed
+and very easily eliminated that have traditionally been considered too difficult to detect and eliminate by query optimization techniques.
+
+\item
+Our new delta processing techniques are designed specifically for
+compilation to native code and support aggressive inlining and other optimizations performed by modern compilers which lead to
+surprisingly small and simple straight-line code sequences.
+\end{itemize}
+
+
+
+Our query compilation framework is based on the notion of composing maps
+definable in a {\em map algebra}\/ closely motivated by SQL.
+We compile insert, update, and delete operations into efficient code for computing
+deltas of these maps. This corresponds to a form of
+tuple-at-a-time processing in a query plan, but can be highly optimized by
+modern C++ compilers to yield an efficient native binary for query execution.
+Given the inherent streaming nature of the applications we consider, the maps we
+maintain during query execution incur a different footprint compared to both
+main-memory databases and stream processing engines, since in many cases we need
+not keep around base relations, but instead maintain precomputed
+views.
+
+
+
+\begin{example}\em
+Consider a relational database with two relations or schema $R(A,B)$ and
+$S(C,D)$, and the aggregation query
+\begin{verbatim}
+select sum(R.A * S.D) from R, S where R.B = S.C;
+\end{verbatim}
+This query is admittedly a little artificial but will serve us to demonstrate
+some of the main ideas of our approach. More interesting examples will be
+compiled later.
+
+In our approach, we compile such a query recursively
+into insert and delete event triggers.
+It is easy to verify that, assuming that variable $q$ stores the query result
+for the current database, we can update $q$ to the correct query result on the
+insertion of tuple $(a,b)$ into $R$ by incrementing it by $a * q_D[b]$,
+where $q_D[b]$ is the result of the SQL query
+\begin{verbatim}
+select sum(D) from S where C = b;
+\end{verbatim}
+Similarly, we can maintain $q$ under insertion of tuple $(c,d)$
+into $S$ by adding $q_A[c] * d$ to $q$, where $q_A[c]$ is the result of
+query
+\begin{verbatim}
+select sum(A) from R where B = c;
+\end{verbatim}
+Now, rather than stopping here (which would be in line with more traditional
+incremental view maintenance mechanisms), we recursively compute, and maintain,
+the increments to the increment queries $q_A[.]$ and $q_D[.]$.
+Here, on insertion of tuple $(a,b)$ into $R$, $q_A[b]$ is incremented by $a$
+and on insertion of tuple $(c,d)$ into $S$, $q_D[c]$ is incremented by $d$.
+In this case, the recursive computation of increments allows to eliminate
+all SQL code and leads to extremely efficient straight-line code:
+\begin{verbatim}
+on initialization do
+   q := 0;
+
+on insert into R values (a,b) do
+{
+   q += a * q_D[b];
+
+   if q_A[b] is undefined then q_A[b] := 0;
+   q_A[b] += a;
+}
+
+on insert into S values (c,d) do
+{
+   q += q_A[c] * d;
+
+   if q_D[c] is undefined then q_D[c] := 0;
+   q_D[c] += d;
+}
+
+on delete of (a,b) from R do
+{
+   q -= a * q_D[b];
+   q_A[b] -= a;
+}
+
+on delete of (c,d) from S do
+{
+   q -= q_A[c] * d;
+   q_D[c] -= d;
+}
+\end{verbatim}
+Here, $q_A[.]$ and $q_D[.]$ are auxiliary associative array data structures.
+It is not hard to verify that this code for incrementally maintaining $q$ is
+correct.
+
+Note that this code follows the standard default semantics of SQL queries of
+not performing duplicate elimination. Moreover, it is assumed that
+only tuples are deleted that were inserted first (which can be checked,
+if needed, by efficient code and data structures that are independent from
+the aggregate computation performed here).
+
+It is worth noting that this code is straight-line and all update
+triggers can be executed in constant time. Traditional incremental view
+maintenance mechanisms would usually attempt to evaluate the auxiliary queries
+$q_A[.]$ and $q_D[.]$ to compute an increment to $q$,
+which in general is more costly.
+We precompute these auxiliary queries, and make this efficient by performing
+incremental view maintenance for $q_A[.]$ and $q_D[.]$ at the same time as
+we perform incremental maintenance of $q$.
+\end{example}
+
+
+
+\subsection{Applications}
+
+
+\compiler\ is particularly well suited in continuous query applications
 where a view has to be maintained through high data update rates. \compiler\ is
 motivated  by  applications  that  require  the  highly efficient answering of
 fixed workloads of aggregation queries, such as in  data stream  processing,
@@ -114,7 +226,7 @@ of relations expressed as deltas to base relations.
 To illustrate this, we provide a simple example query used in the popular Static
 Order Book Imbalance (SOBI) trading strategy. SOBI computes a volume-weighted
 average price (VWAP) over those orders whose volume makes up a fixed upper
-fraction of the total stock volume in each of the bid and ask order books. SOBI
+{\tt k}-fraction of the total stock volume in each of the bid and ask order books. SOBI
 then compares the two VWAPs. For simplicity, we present the VWAP for the bids
 only:
 
@@ -193,6 +305,22 @@ code for loading the warehouse which may avoid the materialization of large
 intermediate results.
 
 
+\textbf{Complex event processing, real-time business
+intelligence and data stream analytics.}
+The need to keep pace with the growing volume of logistic and operational data
+has encouraged businesses to adopt high throughput oriented data processing
+systems. While stream and complex event processing engines have endeavoured to
+fill this need, they fundamentally require significant retooling of existing
+in-house application logic to fit under the hood of data stream management
+systems. By generating an in-memory query processor, our compilation framework is
+capable of exposing data management functionality to client applications,
+enabling clients to seamlessly embed query processing techniques into existing
+infrastructure including messaging systems and highly specialized analytical
+processing. Furthermore compilation presents significant opportunities for
+improving the efficiency and throughput of such applications by supporting a
+deeper analysis of both client and data processing functionality, that can
+subsequently be leveraged to optimize the whole application.
+
 \medskip
 
 
@@ -209,18 +337,8 @@ production environment as found in OLTP applications.
 
 
 
+\subsection{Contributions}
 
-Our query compilation framework is based on the notion of composing maps
-definable in a {\em map algebra}\/ closely motivated by SQL.
-We compile insert, update, and delete operations into efficient code for computing
-deltas of these maps. This corresponds to a form of
-tuple-at-a-time processing in a query plan, but can be highly optimized by
-modern C compilers to yield an efficient native binary for query execution.
-Given the inherent streaming nature of the applications we consider, the maps we
-maintain during query execution incur a different footprint compared to both
-main-memory databases and stream processing engines, since in many cases we need
-not keep around base relations, but instead maintain precomputed
-views.
 
 \comment{
 We analyse the memory utilization of the data structures resulting from
