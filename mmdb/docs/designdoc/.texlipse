@@ -1,13 +1,13 @@
 #TeXlipse project settings
-#Wed Jun 24 01:01:59 EDT 2009
+#Thu Jun 25 18:25:49 EDT 2009
 builderNum=2
 outputDir=doc/
 makeIndSty=
 bibrefDir=
 outputFormat=pdf
 tempDir=tmp
-mainTexFile=userguide.tex
-outputFile=userguide.pdf
+mainTexFile=designdoc.tex
+outputFile=designdoc.pdf
 langSpell=en
 markDer=true
 srcDir=src/
