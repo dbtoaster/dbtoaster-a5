@@ -1,0 +1,223 @@
+
+\section{Query Compilation}
+
+\def\algsum{\mathrm{sum}}
+\def\algagg{\mathrm{agg}}
+\def\algtop{\mathrm{top}}
+\def\algtopk{\mathrm{topk}}
+
+\def\algsumr{\mbox{sumr}}
+\def\algsumf{\mbox{sumf}}
+\def\distinct{\mbox{distinct}}
+\def\routerjoin{\bowtie\!=}
+
+Query compilation in \compiler\ is founded on an algebra for manipulating a map
+data structure. Our map algebra is related to SQL queries through the use of a
+map to represent a group-by aggregate. A map algebra expression, or map for
+short, is defined as one of the following forms:
+\[
+f_1 + f_2
+\quad\;\;
+f_1 * f_2
+\quad\;\;
+c
+\quad\;\;
+x
+\quad\;\;
+\algsumf_f(Q)
+\]
+where $f, f_1, f_2$ are map algebra expressions, $c$ are numerical constants,
+$x$ are variables, and $Q$ are positive relational algebra
+expressions.
+
+Variables in maps are {\em free} unless they are {\em bound}. Given a map $f$
+with free variables $\vec{x}$ (enumerated in the order in which they first appear
+in $f$), $f[\vec{a}]$, where $\vec{a}$ is a tuple of variables and constants of
+the same arity as $\vec{x}$ denotes each $x_i$ in $f$ substituted by $a_i$. The
+variables $\vec{x}$ in $f[\vec{a}]$ are then called bound. So, for instance, the
+free variables of $5 * x + y$ are $x,y$ and $(5 * x + y)[z, 2]$ is $5 * z + 2$
+with free variable $z$. The number of free variables in a map is also called the
+map's dimension.
+
+(Positive) relational algebra expressions are built using relation names,
+selection $\sigma$, projection $\pi$, relational product $\times$, union $\cup$,
+constant singleton relations $\{\vec{a}\}$,
+and renaming $\rho$.
+Column names $A$ are treated like bound variables.
+Selection conditions are comparisons
+$f \;\theta\; 0$ where $\theta \in \{ =, \neq, <, \le, >, \ge \}$.
+Projections may compute additional columns
+using map algebra expressions, i.e.\ the syntax is
+$\pi_{\vec{A}, f_1 \rightarrow B_1, \dots, f_k \rightarrow B_k}(Q)$. 
+
+We use a multiset semantics for relations as in SQL; none of the operations
+of relational algebra eliminate duplicates.
+Otherwise, the semantics of relational algebra expressions $Q$ is standard.
+Variables in $\vec{x}$ are {\em bound}\/ to constants from above; thus, 
+the semantics of an aggregate map $\algsumf_f(Q)$ without free variables
+is a single numerical value $v$ such that
+\[
+\algsumr_A(\pi_{f \rightarrow A}(Q))[] = \{ \tuple{v} \}.
+\]
+where $\algsumr$ is the ungrouped sum aggregate of SQL.
+
+\subsection{Map compilation}
+The goal of this section is to provide an algorithm for compiling map algebra
+expressions into efficient C code that incrementally maintains the
+maps they define.
+We will need the following general-to-specific ordering $\prec$ on maps.
+
+
+\begin{definition}\em
+A map $f$ is called (strictly) {\em more specific than}\/ a map $f'$,
+denoted $f \prec f'$, if $f$ can be obtained from $f'$ by replacing
+one or more relation names occurring in $f'$ by fixed singleton relations.
+\end{definition}
+
+
+Note that this replacement may occur deep inside a map, not just in the topmost
+relational algebra subexpression. For example,
+\[
+\algsumf_A(\pi_{\algsumf_B(\rho_B(\tuple{b})) + 2}(S))
+\prec
+\algsumf_A(\pi_{\algsumf_B(\rho_B(R)) + 2}(S))
+\]
+
+
+\begin{figure*}[t!]
+%\begin{algorithm}
+\begin{eqnarray*}
+\Delta_{+R(\vec{r})} c       &:=& 0 \\
+\Delta_{+R(\vec{r})} x       &:=& 0 \\
+\Delta_{+R(\vec{r})} (f + g) &:=&  (\Delta_{+R(\vec{r})} f) + (\Delta_{+R(\vec{r})} g) \\
+\Delta_{+R(\vec{r})} (f * g) &:=& f * (\Delta_{+R(\vec{r})} g) 
+                              +   (\Delta_{+R(\vec{r})} f) * g                        
+                              +   (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g)
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(\{ \vec{a} \}) &:=& 0
+\\
+\Delta_{+R(\vec{r})} \algsumf_{A_i}(\rho_{\vec{A}}(R)) &:=& r_i
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(S) &:=& 0
+\\
+\Delta_{+R(\vec{r})}  \algsumf_A(Q_1 \cup Q_2) &:=&
+\Delta_{+R(\vec{r})} (\algsumf_A(Q_1) + \algsumf_A(Q_2))
+\\
+\Delta_{+R(\vec{r})} \algsumf_{f[\vec{A};\dots] * g[\vec{B};\dots]}(\rho_{\vec{A}}(Q_1) \times \rho_{\vec{B}}(Q_2)) \; &:=&
+\Delta_{+R(\vec{r})} \big( \algsumf_{f[\vec{A};\dots]}(\rho_{\vec{A}}(Q_1))
+    * \algsumf_{f[\vec{B};\dots]}(\rho_{\vec{B}}(Q_2)) \big)
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(\pi_{f + g \rightarrow A}(Q)) &:=&
+\Delta_{+R(\vec{r})} \big( \algsumf_A(\pi_{f \rightarrow A}(Q))
+   + \algsumf_A(\pi_{g \rightarrow A}(Q)) \big)
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(\pi_{f[\vec{x}] \rightarrow A}(Q)) &:=&
+   (f + \Delta_{+R(\vec{r})} f)
+   * \Delta_{+R(\vec{r})} \algsumf_1(Q)
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(\pi_{f \rightarrow A}(Q)) &:=&
+   \algsumf_A(\pi_{\Delta_{+R(\vec{r})} f \rightarrow A}(Q)) \\
+   &+& \algsumf_A(\pi_{f \rightarrow A}(\Delta_{+R(\vec{r})} Q)) \\
+   &+& \algsumf_A(\pi_{\Delta_{+R(\vec{r})} f \rightarrow A}(\Delta_{+R(\vec{r})} Q))
+\\
+\Delta_{+R(\vec{r})} \algsumf_A(\sigma_{g \theta 0}(Q)) &:=&
+\mbox{if ($\Delta_{+R(\vec{r})} g \;\theta\; 0$) then
+   $\algsumf_A(Q + \Delta_{+R(\vec{r})}(Q))$} \\
+&& \mbox{else if ($(g + \Delta_{+R(\vec{r})} g \;\theta\; 0) \Rightarrow
+(g \;\theta\; 0)$) then $- \algsumf_A(Q)$ else 0}
+\end{eqnarray*}
+%\end{algorithm}
+%
+\caption{Recursive algorithm for compiling the
+on insert into $R$ values $\vec{r}$ trigger.}
+\label{fig:mainalg}
+\end{figure*}
+
+
+Figure~\ref{fig:mainalg} shows our compilation algorithm for maps, the core
+procedure of the DBToaster compiler. Given a map $f$, it inductively computes a
+delta-expression that does not use relational algebra.
+
+It is easy to verify that the right-hand sides of the rewriting are successively
+simpler by either being dominated by the left-hand sides under the general-to-specific
+ordering $\prec$ or being sums or products of
+strictly shorter expressions.
+
+Thus, the output of the rewriting algorithm given a map is a delta map that does not
+contain aggregates or relational algebra. However, the rewriting may add new free
+variables, i.e., starting from a map $f[\vec{x}]$, we may obtain an aggregate-free
+map $g[\vec{x}, \vec{y}]$. We then {\em marginalize}\/ over these as follows,
+\[
+\Delta f[\vec{x}] = \sum_{\vec{y}} g(\vec{x}, \vec{y}). 
+\]
+
+Rather than explaining the rules in full detail here, we simply note that these
+rules can be thought of as being similar to pattern matching, where the right
+hand side map can be used to replace any matching left hand side. Furthermore,
+note that the chain of derivations directly represent the code we must generate
+and execute in our tuple-processing functions.
+
+\subsection{Compilation Example}
+We briefly provide an example application of our map rewrites on the following
+aggregate query:
+
+\[
+s := \algsum_{A*D}(R \bowtie S \bowtie T).
+\]
+
+For illustration we simply consider the insertion of a new tuple into
+solely the relation R. Also, since this example is only meant to be a brief
+illustration due to space restrictions, we omit the case for deletions.
+
+\begin{itemize}
+\item
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\ &=&
+\algsum_{A*D}(\{a\} \times \sigma_{B=b}(S) \bowtie T)
+\\ &=&
+\algsum_{a*D}(\sigma_{B=b}(S) \bowtie T)
+\\ &=&
+a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{s_D[b]}
+\end{eqnarray*}
+
+\end{itemize}
+
+ 
+Next, we incrementally maintain $s_D[b]$, which in this case is maintained by
+insertions into S.
+
+\begin{itemize}
+\item
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s_D[b] &=&
+\algsum_{D}(\{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{D}(\{b\} \times \sigma_{C=c}(T))
+\\ &=&
+\algsum_{D}(\sigma_{C=c}(T))
+\;=:\; s_D[c]
+\end{eqnarray*}
+\end{itemize}
+
+Thus the code is:
+\begin{verbatim}
+on insert into R values (a,b)
+{
+   s += a * s_D[b];
+
+   // Updates from R to other maps...
+}
+
+on insert into S values (b,c)
+{
+   s += s_A[b] * s_D[c];
+   s_D[b] += s_D[c];
+   // Updates from S to other maps...
+}
+
+// code for T ...
+\end{verbatim}
+

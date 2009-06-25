@@ -1,0 +1,106 @@
+\section{Introduction}
+Static query workloads are commonly posed on relational data management systems,
+in the form of view declaration queries, repetitive (parameterized) queries from
+client-side application logic, and continuous queries for stream processing.
+However, in today's data management systems, these queries are answered using the
+same machinery as for flexible, interactive query processing, namely query plan
+interpreters and other runtime components. While many database systems include a
+compiler that produces and optimizes query plans, we argue that this model of
+compilation does not push the envelope far enough. We propose \compiler, a novel
+approach for compiling SQL aggregate queries into extremely efficient C++ code
+for continuous standing query evaluation.
+
+\compiler\ is a SQL query compilation framework for main memory databases that
+produces C++ code to incrementally maintain aggregate views at high update rates
+using aggressive delta processing techniques. Our work is motivated by
+applications that require highly efficient answering of fixed aggregate query
+workloads, such as in data stream processing, online data warehouse loading, and
+in financial applications. We focus on main-memory databases due to the
+prevalence of standing queries in stream processors, where compilation has
+only recently been considered.
+
+\compiler\ works by {\em recursively}\/ compiling queries into incremental view
+maintenance code; that is, while data increments for queries are traditionally
+expressed and evaluated again as queries, we recursively compute increments to
+these increments, and so forth. Recursive compilation provides three key
+advantages. First, our C++ code processes query plan execution paths, eliminating
+overheads in interpreting query plans stored in dynamic data structures. Next, we
+generate asymptotically simpler code at each recurrence, since computing
+increments allows us to avoid certain database scans or joins. Finally, we tailor
+code generation to produce native code, enabling modern C++ compilers to apply
+aggressive inlining and other optimizations, resulting in compact straight-line
+code sequences.
+
+\comment{
+This often allows us to completely eliminate
+all queries, where each compilation step yields code that is substantially
+simpler than the query processing techniques in previous incremental view
+maintenance approaches.
+}
+
+We showcase \compiler\ in a few applications that are served in limited fashion
+by today's data management tools, including algorithmic order book trading
+(algos), an integrated approach to data warehouse loading and analysis, as well
+as stream processing applications. Our compiled query processors are several
+orders of magnitude faster than state-of-the-art databases and significantly
+outperform stream processing engines on such workloads. In the case of queries on
+order book data for algos, our approach stands alone in its ability to support
+realistic  data rates  without resorting to very substantial computing clusters.
+Indeed, the memory consumption of our main-memory techniques is sufficiently low
+to support applications such as data warehouse loading.
+
+\comment{
+We demonstrate \compiler, a tool for compiling SQL queries into native code,
+targeting main-memory databases. \compiler\ is a novel compilation framework
+which generates C++ code to incrementally and continuously answer queries using
+aggregate views. Our work is motivated by applications that require the highly
+efficient answering of fixed workloads of aggregation queries, such as in data
+stream processing, online data warehouse loading, and in financial applications.
+We question the cost of highly flexible interactive query processors in such
+applications, as found in today's databases with their plan interpreters and
+other runtime components. In our view, a large fraction of the world's query
+workloads are fixed and embedded into database application programs. Once
+hardened, queries are deployed into production environments, and re\-used
+numerous times, executing non-interactively.
+}
+
+\comment{
+\compiler\ is capable of compiling relational algebra with group-by aggregates by
+applying rewrite rules on these repetitive or standing queries. Our rewrites
+enable us to generate straight-line code exposing tuple-based execution paths to
+a C++ compiler. This provides two key advantages. First, the fixed query plan
+execution path can be highly optimized by a C++ compiler, enabling us to avoid
+overheads that traditionally arise when query processors interpret query plans
+stored in dynamic data structures. Moreover, our new delta processing techniques
+are designed specifically for compilation to native code and support aggressive
+inlining that leads to surprisingly small and simple straight-line code
+sequences. Our compilation strategy relies on the use of a novel map algebra to
+manipulate associative map data structures that are effectively main-memory
+representations of group-by aggregates. We define rewrite rules that apply on
+maps, enabling them to be manipulated side-by-side with relational operators
+such as selections, projections and join.
+}
+
+\comment{
+Our query rewriting defines how to process a single tuple using a precomputed
+view of the remainder query and data, representing and manipulating the query via
+a map algebra. The map algebra corresponds to a main-memory version of group-by
+aggregates. Maintaining such views in main-memory is extremely cheap with the
+use of standard pointer-based data structures and delta processing techniques.
+}
+
+\comment{
+In this demonstration we will put our compiler into practice by showcasing its
+usage in several performance-hungry applications that are served in limited
+fashion by today's data management tools, including algorithmic order book
+trading, an integrated approach to data warehouse loading and analysis, as well
+as stream processing applications.
+As part of this demonstration, we will show our techniques are several orders of
+magnitude faster than state-of-the-art   database  and significantly outperform
+stream processing engines on such workloads.  In the case of queries on limit
+order  book  data  as  required for  supporting  algorithmic  equities trading,
+our approach currently stands alone in its ability to support realistic  data
+rates  on contemporary hardware without  resorting to very substantial computing
+clusters. Indeed, the memory consumption of our main-memory techniques is
+sufficiently low to support applications such as data warehouse loading.
+}
