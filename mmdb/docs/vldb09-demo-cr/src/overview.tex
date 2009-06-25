@@ -18,11 +18,22 @@ order book trading and moving object applications are self-managing, in that the
 application logic and delta patterns ensures state does not grow unbounded in
 practice.
 
+\comment{
 \begin{figure}[tb]
 \includegraphics[scale=0.5]{figures/dbt-datamodel.pdf}
 \label{fig:datamodel}
 \caption{\compiler\ data model, in contrast to traditional DBMS and stream
 processors.}
+\end{figure}
+}
+
+\begin{figure}[tb]
+\includegraphics[scale=0.42]{figures/dbt-arch.pdf}
+\label{fig:dbtarch}
+\caption{\compiler\ architecture, illustrating standalone and embedded modes of
+query processing. In standalone mode, \compiler\ produces a lightweight
+runtime, while in embedded mode, \compiler\ can alternatively produce a binary
+library that can be used directly in client applications.}
 \end{figure}
 
 \noindent\textbf{System Model.}

@@ -1,5 +1,5 @@
 @string{sigmod = "ACM SIGMOD International Conference on Management of Data"}
-@string{sigmod_short = {SIGMOD}}
+@string{sigmod_short = {ACM SIGMOD}}
 
 @string{vldb = "International Conference on Very Large Data Bases"}
 @string{vldb_short = {VLDB}}
@@ -26,14 +26,14 @@
 @string{sigmod99 = "Proc. of the 1999 " # sigmod}
 @string{sigmod06 = "Proc. of the 2006 " # sigmod}
 @string{sigmod07 = "Proc. of the 2007 " # sigmod}
-@string{sigmod08 = "Proc. of the 2008 " # sigmod}
+@string{sigmod08 = "Proc. of the 2008 " # sigmod_short}
 
 @string{vldb95   = "Proc. of the 21st " # vldb # " (VLDB'95)"}
 @string{vldb98   = "Proc. of the 24th " # vldb # " (VLDB'98)"}
 @string{vldb02   = "Proc. of the 28th " # vldb # " (VLDB'02)"}
 @string{vldb07   = "Proc. of the 33rd " # vldb # " (VLDB'07)"}
 
-@string{cidr03   = "Proc. of the First Biennial " # cidr # " (CIDR'03)"}
+@string{cidr03   = "Proc. of the First Biennial " # cidr_short}
 @string{cidr05   = "Proc. of the Second Biennial " # cidr # " (CIDR'05)"}
 @string{pods07   = "Proc. of the 26th " # pods # " (PODS'07)"}
 
@@ -423,4 +423,23 @@
 
 @misc {hsqldb-url,
   title     = {{HSQLDB} {http://www.hsqldb.org}}
+}
+
+@misc {sb-patent,
+    title     = {Stream processor with compiled programs, {U.S. Patent Application}, {app. \#11/644,189, pub. \#US 2008/0134158 A1}},
+    author    = {Jon Salz and Richard Tibbetts},
+    date      = {Dec 22, 2006}
+}
+
+@inproceedings{gedik-sigmod:08,
+  author    = {Bugra Gedik and
+               Henrique Andrade and
+               Kun-Lung Wu and
+               Philip Yu and
+               Myungcheol Doo},
+  title     = {{SPADE}: the {System S} declarative stream processing engine},
+  booktitle = sigmod08,
+  year      = {2008},
+  pages     = {1123--1134},
+  location  = {Vancouver, Canada},
 }

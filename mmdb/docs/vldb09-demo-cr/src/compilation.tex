@@ -11,6 +11,215 @@
 \def\distinct{\mbox{distinct}}
 \def\routerjoin{\bowtie\!=}
 
+We now present our \compiler's compilation algorithm through an example
+illustrating how queries are turned into efficient procedural code. Our
+compilation framework applies to the core relational algebra and group-by
+aggregates, and uses a custom query algebra to define map data structures. These
+maps are closely related to views definable by SQL aggregate group-by queries but
+at the same time are main memory data structures that are easy to access in
+applications. Note due to space limitations we only present the small fraction
+of our map algebra transformations used to derive code for our example query.
+
+\noindent\textbf{Compilation example.} Consider the query below on three
+relations and schemas $R(A,B), S(B,C), T(C,D)$:
+
+\begin{verbatim}
+select sum(a*d) from R, S, T
+\end{verbatim}
+
+Next, given the data and query model above, relations $R, S, T$ are
+manipulated via update streams which consist of the standard requests
+of inserting, updating and deleting tuples. For ease of presentation, we can
+consider updates as pairs of delete and insert requests. We start with handling
+an insert to the relation $R$, with a tuple $\{\tuple{a,b}\}$. Assuming
+the variable $q$ maintains the query result, we can show:
+
+\smallskip
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta q &=& \algsum_{A*D}(\{\tuple{a,b}\} \bowtie S \bowtie T)
+\\ &=&
+\algsum_{A*D}(\{a\} \times \sigma_{B=b}(S) \bowtie T)
+\\ &=&
+\algsum_{a*D}(\sigma_{B=b}(S) \bowtie T)
+\\ &=&
+a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{q_D[b]}
+\end{eqnarray*}
+
+Above $q_D[b]$ is an example of a map that we use to compute the change in query
+result $q$, a map with key-value pair entries of keys $b$, and values defined as
+the result of the query: $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$. While we do
+not go into the full details of the derivation validity, we can see it is a
+simplifcation of the original query by considering the relation $R$ as a
+singleton relation $\{\tuple{a,b}\}$. We can symmetrically derive for inserting
+into relation $T$ as: $\Delta q = d * q_A[c]$, resulting in a map
+$q_A[c] = \algsum_{A}(R \bowtie \sigma_{C=c}(S))$. The insertion to $S$ is:
+
+\smallskip
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta s &=& \algsum_{A*D}(R \bowtie \{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{A*D}(\sigma_{B=b}(R) \times \sigma_{C=c}(T))
+\\ &=&
+\underbrace{\algsum_{A}(\sigma_{B=b}(R))}_{q_A[b]} *
+\underbrace{\algsum_{D}(\sigma_{C=c}(T))}_{q_D[c]}
+\end{eqnarray*}
+
+
+
+\begin{figure*}[tb]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|}
+\hline
+Recursion level & Event & Query $q$ & Code for $\Delta q$ & Maps & Map
+definition\\
+\hline
+1 & $+R$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $a*q_D[b]$ & $q_D[b]$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
+\\
+\hline
+1 & $+S$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $q_A[b] * q_D[c]$ & $q_A[b]$ & $\algsum_{A}(\sigma_{B=b}(R))$
+\\
+& & & & $q_D[c]$ & $\algsum_{D}(\sigma_{C=c}(T))$
+\\
+\hline
+1 & $+T$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $d*q_A[c]$ & $q_A[c]$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+\\
+\hline
+2 & $+R$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+& $\mbox{foreach($c$): } a * q_1[b,c]$ & $q_1[b,c]$ &
+$\algsum_{1}(\sigma_{BC=bc}(S))$
+\\
+2 & $+R$ & $\algsum_{A}(\sigma_{B=b}(R))$
+& $a$ & & \\
+\hline
+2 & $+S$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+& $q_A[b]$ & & 
+\\
+2 & $+S$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
+& $q_D[c] $ & & 
+\\
+\hline
+2 & $+T$ & $\algsum_{D}(\sigma_{B=b}(S)\bowtie T)$
+& $\mbox{foreach($b$): }d * q_1[b,c]$ & $q_1[b,c]$ &
+$\algsum_{1}(\sigma_{BC=bc}(S))$
+\\
+2 & $+T$ & $\algsum_{D}(\sigma_{B=b}(T))$
+& $d$ & & \\
+\hline
+3 & $+S$ & $\algsum_{1}(\sigma_{BC=bc}(S))$
+& $1$ & & \\
+\hline
+\end{tabular}
+\end{center}
+\label{tab:derivation}
+\caption{\compiler's recursive compilation of the query:
+\texttt{select sum(a*d) from R, S, T}, showing the query being compiled, the
+procedural code required to incrementally compute the query result, maps
+required by the code, and the query defining the map.}
+\end{figure*}
+
+
+Note the elimination of any join in the above query since we are able to exploit
+distributivity properties of summation and multiplication, and the cross product
+operator. At this point we have presented one level of compilation, for an
+insertion into each base relation $R, S, T$, resulting in incremental query
+result computation code, a set of maps which we have to maintain, and queries
+defining the map contents. At this point, we recursively compile the map
+definition queries, considering each of the three types of insertion (to
+$R,S,T$), and subsequently aggressively inline any code generated into a handler
+for each type of insertion. For example, consider the maps $q_A[c], q_A[b]$
+above, whose entries are dependent on the relation $R$. We recursively compile
+incremental maintenance of this map for insertions to $R$ as:
+
+\smallskip
+Insert R(a,b):
+\begin{eqnarray*}
+\Delta q_A[b] &=& \algsum_{A}(\{\tuple{a,b}\}) = a
+\\
+\mbox{foreach $c$: }
+\Delta q_A[c] &=& \algsum_{A}(\{\tuple{a,b}\} \bowtie \sigma_{C=c}(S))
+\\ &=&
+\algsum_{a}(\sigma_{BC=bc}(S))
+\\ &=&
+a * \underbrace{\algsum_{1}(\sigma_{BC=bc}(S))}_{q_1[b,c]}
+\end{eqnarray*}
+
+Above, we use $\algsum_{1}$ to refer to a count aggregate, that is 
+$\algsum_{1}(\sigma_{BC=bc}(S))$ is a count of $\tuple{b,c}$ tuples in S.
+Note the \textit{foreach} statement when computing $\Delta q_A[c]$. This arises
+since a single tuple $\tuple{a,b}$ in $R$ affects all map entries with keys
+$c^*$ where the relation $S$ contains tuples $\tuple{b,c^*}$. Again our
+compilation is symmetric for the relations $R$ and $T$ due to the nature of the
+join graph in this query. Thus the maintenance code for maps $q_D[b], q_D[c]$
+is:
+
+\smallskip
+Insert T(c,d):
+\begin{eqnarray*}
+\Delta q_D[c] &=& d\\
+\Delta q_D[b] &=& \mbox{foreach(c): } d * q_1[b,c]
+\end{eqnarray*}
+
+\noindent For an insertion to $S$, we must maintain maps $q_A[c], q_D[b]$:
+
+\smallskip
+Insert S(b,c):
+\begin{eqnarray*}
+\Delta q_A[c] &=&
+\algsum_{A}(R \bowtie \{\tuple{b,c}\})
+\\ &=&
+\algsum_{A}(\sigma_{B=b}(R) \times \{c\})
+\\ &=&
+\algsum_{A}(\sigma_{B=b}(R))
+\;=:\; q_A[b]
+\\
+\Delta q_D[b] &=&
+\algsum_{D}(\{\tuple{b,c}\} \bowtie T)
+\\ &=&
+\algsum_{D}(\{b\} \times \sigma_{C=c}(T))
+\\ &=&
+\algsum_{D}(\sigma_{C=c}(T))
+\;=:\; q_D[c]
+\end{eqnarray*}
+
+\noindent Note that we are already maintaining maps $q_A[b], q_D[c]$ above, that
+is there are opportunities for sharing maps across event handler functions.
+Finally, we can maintain $q_1[b,c]$ following insertions to $S$ simply as:
+$\Delta q_1[b,c] = 1$.
+For thoroughness, we show the resulting handler functions from this example,
+following the inlining of each code fragment generated at each recursive step
+below.
+
+\begin{verbatim}
+on insert into R values (a,b) {
+   s += a * s_D[b];   s_A[b] += a;
+   foreach c (in Cs[b]) do
+      s_A[c] += a * s_1[b,c];
+}
+
+on insert into S values (b,c) {
+   s += s_A[b] * s_D[c];   s_A[c] += s_A[b];
+   s_D[b] += s_D[c];       s_1[b,c] += 1;
+}
+
+on insert into T values (c,d) {
+   s += s_A[c] * d;   s_D[c] += d;
+   foreach b (in Bs[c]) do
+      s_D[b] += s_1[b,c] * d;
+}
+\end{verbatim}
+
+Additionally Table.~\ref{tab:derivation} compactly describes this compilation
+example, including the case of deletion events which turn out to be trivial in
+this case due to the fact sum aggregates have a well defined inverse in the
+subtraction operator.
+
+
+\comment{
 Query compilation in \compiler\ is founded on an algebra for manipulating a map
 data structure. Our map algebra is related to SQL queries through the use of a
 map to represent a group-by aggregate. A map algebra expression, or map for
@@ -220,4 +429,4 @@ on insert into S values (b,c)
 
 // code for T ...
 \end{verbatim}
-
+}
