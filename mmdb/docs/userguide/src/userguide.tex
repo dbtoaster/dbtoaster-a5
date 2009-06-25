@@ -5,7 +5,7 @@
 
 \newcommand{\compiler}{DBToaster}
 \begin{document}
-\title{\compiler\ User Guide}
+\title{\compiler\ Design Document}
 \author{Yanif Ahmad, Christoph Koch}
 \date{\today}
 \maketitle
@@ -13,7 +13,7 @@
 \section{Automated Trading Platform Example}
 
 \begin{figure}[h]
-\includegraphics[scale=0.7]{../figures/finapp.jpg}
+\includegraphics[scale=0.8]{../figures/finapp.pdf}
 \label{fig:finapp}
 \end{figure}
 
@@ -21,16 +21,15 @@ Key interfaces:
 \begin{enumerate}
 \item algo$\iff$exchange interface: insert, update, delete order
 \begin{verbatim}
-	void add_order(bool bid_or_ask, int t, int id, double price, double vol);
-	void update_order(bool bid_or_ask, int t, int id, double price, double vol);
-	void delete_order(bool bid_or_ask, int id);
+	order_id add_order(bool bid_or_ask, double price, double vol);
+	void update_order(bool bid_or_ask, order_id id, double vol);
+	void delete_order(bool bid_or_ask, order_id id);
 \end{verbatim}
 
 \item algo development$\iff$compiler interface: add/remove algo
 \begin{verbatim}
-	void add_query(string query_id, string query_id,
-               string callback_fn = ``void handler(int agg_val) \{\}'');
-	void remove_query(string query_id);
+	void add_query(string id, string query, endpoint query_callback);
+	void remove_query(string id);
 \end{verbatim}
  
 \item DBToaster$\iff$algo interface: query result callback
@@ -48,5 +47,5 @@ For discussion:
   \end{itemize}
 \end{itemize}
 
-\section{\compiler\ Build Process}
+%\section{\compiler\ Build Process}
 \end{document}
