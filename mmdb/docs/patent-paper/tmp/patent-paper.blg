@@ -1,0 +1,56 @@
+This is BibTeX, Version 0.99c (Web2C 7.5.7)
+The top-level auxiliary file: patent-paper.aux
+The style file: abbrv.bst
+Database file #1: ref.bib
+Warning--string name "january" is undefined
+--line 431 of file ref.bib
+Warning--string name "vldb04" is undefined
+--line 445 of file ref.bib
+Warning--to sort, need author or key in totalview-url
+Warning--to sort, need author or key in mssql-viewrestrict
+Warning--to sort, need author or key in db2-viewrestrict
+Warning--to sort, need author or key in oracle-viewrestrict
+Warning--to sort, need author or key in streambase
+Warning--empty booktitle in arasu-vldb:04
+You've used 29 entries,
+            2118 wiz_defined-function locations,
+            673 strings with 10200 characters,
+and the built_in function-call counts, 11813 in all, are:
+= -- 1083
+> -- 610
+< -- 16
++ -- 246
+- -- 214
+* -- 780
+:= -- 1760
+add.period$ -- 74
+call.type$ -- 29
+change.case$ -- 194
+chr.to.int$ -- 0
+cite$ -- 35
+duplicate$ -- 478
+empty$ -- 961
+format.name$ -- 214
+if$ -- 2624
+int.to.chr$ -- 0
+int.to.str$ -- 29
+missing$ -- 21
+newline$ -- 135
+num.names$ -- 48
+pop$ -- 280
+preamble$ -- 1
+purify$ -- 165
+quote$ -- 0
+skip$ -- 432
+stack$ -- 0
+substring$ -- 665
+swap$ -- 187
+text.length$ -- 16
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 116
+warning$ -- 6
+while$ -- 85
+width$ -- 31
+write$ -- 278
+(There were 8 warnings)

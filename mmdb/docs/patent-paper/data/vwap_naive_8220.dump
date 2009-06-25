@@ -1,0 +1,337 @@
+Invalid field 0 line 1499455
+Failed to parse record at line 1499455
+Initialized input stream...
+0.026241 s for 'VWAP QP iter'
+Processed 10000 tuples.
+0.047662 s for 'VWAP QP iter'
+Processed 20000 tuples.
+0.067143 s for 'VWAP QP iter'
+Processed 30000 tuples.
+0.098176 s for 'VWAP QP iter'
+Processed 40000 tuples.
+0.133763 s for 'VWAP QP iter'
+0.176040 s for 'VWAP QP iter'
+Processed 50000 tuples.
+0.220849 s for 'VWAP QP iter'
+Processed 60000 tuples.
+0.273940 s for 'VWAP QP iter'
+Processed 70000 tuples.
+0.327632 s for 'VWAP QP iter'
+Processed 80000 tuples.
+0.386801 s for 'VWAP QP iter'
+Processed 90000 tuples.
+0.441882 s for 'VWAP QP iter'
+0.550681 s for 'VWAP QP iter'
+Processed 100000 tuples.
+0.640700 s for 'VWAP QP iter'
+Processed 110000 tuples.
+0.752271 s for 'VWAP QP iter'
+Processed 120000 tuples.
+0.840799 s for 'VWAP QP iter'
+Processed 130000 tuples.
+0.950839 s for 'VWAP QP iter'
+1.046328 s for 'VWAP QP iter'
+Processed 140000 tuples.
+1.112161 s for 'VWAP QP iter'
+Processed 150000 tuples.
+1.151650 s for 'VWAP QP iter'
+Processed 160000 tuples.
+1.254108 s for 'VWAP QP iter'
+Processed 170000 tuples.
+1.369505 s for 'VWAP QP iter'
+Processed 180000 tuples.
+1.424288 s for 'VWAP QP iter'
+1.489245 s for 'VWAP QP iter'
+Processed 190000 tuples.
+1.550521 s for 'VWAP QP iter'
+Processed 200000 tuples.
+1.623420 s for 'VWAP QP iter'
+Processed 210000 tuples.
+1.661212 s for 'VWAP QP iter'
+Processed 220000 tuples.
+1.744410 s for 'VWAP QP iter'
+Processed 230000 tuples.
+1.835501 s for 'VWAP QP iter'
+1.905164 s for 'VWAP QP iter'
+Processed 240000 tuples.
+2.030718 s for 'VWAP QP iter'
+Processed 250000 tuples.
+2.093676 s for 'VWAP QP iter'
+Processed 260000 tuples.
+2.224419 s for 'VWAP QP iter'
+Processed 270000 tuples.
+2.374058 s for 'VWAP QP iter'
+2.484441 s for 'VWAP QP iter'
+Processed 280000 tuples.
+2.594259 s for 'VWAP QP iter'
+Processed 290000 tuples.
+2.773258 s for 'VWAP QP iter'
+Processed 300000 tuples.
+2.885473 s for 'VWAP QP iter'
+Processed 310000 tuples.
+2.980014 s for 'VWAP QP iter'
+Processed 320000 tuples.
+3.039079 s for 'VWAP QP iter'
+3.226458 s for 'VWAP QP iter'
+Processed 330000 tuples.
+3.217249 s for 'VWAP QP iter'
+Processed 340000 tuples.
+3.301303 s for 'VWAP QP iter'
+Processed 350000 tuples.
+3.466048 s for 'VWAP QP iter'
+Processed 360000 tuples.
+3.536221 s for 'VWAP QP iter'
+3.680813 s for 'VWAP QP iter'
+Processed 370000 tuples.
+3.812822 s for 'VWAP QP iter'
+Processed 380000 tuples.
+3.795089 s for 'VWAP QP iter'
+Processed 390000 tuples.
+3.979715 s for 'VWAP QP iter'
+Processed 400000 tuples.
+4.081955 s for 'VWAP QP iter'
+Processed 410000 tuples.
+4.190704 s for 'VWAP QP iter'
+4.345415 s for 'VWAP QP iter'
+Processed 420000 tuples.
+4.547186 s for 'VWAP QP iter'
+Processed 430000 tuples.
+4.566507 s for 'VWAP QP iter'
+Processed 440000 tuples.
+4.836044 s for 'VWAP QP iter'
+Processed 450000 tuples.
+4.935057 s for 'VWAP QP iter'
+Processed 460000 tuples.
+5.136165 s for 'VWAP QP iter'
+5.223288 s for 'VWAP QP iter'
+Processed 470000 tuples.
+5.433164 s for 'VWAP QP iter'
+Processed 480000 tuples.
+5.576041 s for 'VWAP QP iter'
+Processed 490000 tuples.
+5.637664 s for 'VWAP QP iter'
+Processed 500000 tuples.
+5.752434 s for 'VWAP QP iter'
+6.010911 s for 'VWAP QP iter'
+Processed 510000 tuples.
+6.141322 s for 'VWAP QP iter'
+Processed 520000 tuples.
+6.311651 s for 'VWAP QP iter'
+Processed 530000 tuples.
+6.428097 s for 'VWAP QP iter'
+Processed 540000 tuples.
+6.595350 s for 'VWAP QP iter'
+Processed 550000 tuples.
+6.615360 s for 'VWAP QP iter'
+6.858814 s for 'VWAP QP iter'
+Processed 560000 tuples.
+7.062587 s for 'VWAP QP iter'
+Processed 570000 tuples.
+7.364740 s for 'VWAP QP iter'
+Processed 580000 tuples.
+7.648510 s for 'VWAP QP iter'
+Processed 590000 tuples.
+7.767843 s for 'VWAP QP iter'
+Processed 600000 tuples.
+7.844446 s for 'VWAP QP iter'
+8.117160 s for 'VWAP QP iter'
+Processed 610000 tuples.
+8.165763 s for 'VWAP QP iter'
+Processed 620000 tuples.
+8.468868 s for 'VWAP QP iter'
+Processed 630000 tuples.
+8.711623 s for 'VWAP QP iter'
+Processed 640000 tuples.
+8.783514 s for 'VWAP QP iter'
+8.911383 s for 'VWAP QP iter'
+Processed 650000 tuples.
+9.166682 s for 'VWAP QP iter'
+Processed 660000 tuples.
+9.524907 s for 'VWAP QP iter'
+Processed 670000 tuples.
+10.061356 s for 'VWAP QP iter'
+Processed 680000 tuples.
+9.968906 s for 'VWAP QP iter'
+Processed 690000 tuples.
+10.524849 s for 'VWAP QP iter'
+10.713016 s for 'VWAP QP iter'
+Processed 700000 tuples.
+11.039459 s for 'VWAP QP iter'
+Processed 710000 tuples.
+11.346732 s for 'VWAP QP iter'
+Processed 720000 tuples.
+11.527216 s for 'VWAP QP iter'
+Processed 730000 tuples.
+12.051984 s for 'VWAP QP iter'
+12.414260 s for 'VWAP QP iter'
+Processed 740000 tuples.
+12.601067 s for 'VWAP QP iter'
+Processed 750000 tuples.
+12.908780 s for 'VWAP QP iter'
+Processed 760000 tuples.
+12.800881 s for 'VWAP QP iter'
+Processed 770000 tuples.
+13.270784 s for 'VWAP QP iter'
+Processed 780000 tuples.
+13.431886 s for 'VWAP QP iter'
+13.523646 s for 'VWAP QP iter'
+Processed 790000 tuples.
+13.811077 s for 'VWAP QP iter'
+Processed 800000 tuples.
+14.200412 s for 'VWAP QP iter'
+Processed 810000 tuples.
+14.496825 s for 'VWAP QP iter'
+Processed 820000 tuples.
+14.693969 s for 'VWAP QP iter'
+Processed 830000 tuples.
+15.184864 s for 'VWAP QP iter'
+15.386591 s for 'VWAP QP iter'
+Processed 840000 tuples.
+15.522654 s for 'VWAP QP iter'
+Processed 850000 tuples.
+15.949022 s for 'VWAP QP iter'
+Processed 860000 tuples.
+16.095205 s for 'VWAP QP iter'
+Processed 870000 tuples.
+16.334743 s for 'VWAP QP iter'
+16.986357 s for 'VWAP QP iter'
+Processed 880000 tuples.
+17.072517 s for 'VWAP QP iter'
+Processed 890000 tuples.
+17.044504 s for 'VWAP QP iter'
+Processed 900000 tuples.
+17.345216 s for 'VWAP QP iter'
+Processed 910000 tuples.
+17.748073 s for 'VWAP QP iter'
+Processed 920000 tuples.
+18.306615 s for 'VWAP QP iter'
+18.502007 s for 'VWAP QP iter'
+Processed 930000 tuples.
+18.712530 s for 'VWAP QP iter'
+Processed 940000 tuples.
+18.822967 s for 'VWAP QP iter'
+Processed 950000 tuples.
+18.943155 s for 'VWAP QP iter'
+Processed 960000 tuples.
+19.326550 s for 'VWAP QP iter'
+19.771651 s for 'VWAP QP iter'
+Processed 970000 tuples.
+20.168502 s for 'VWAP QP iter'
+Processed 980000 tuples.
+20.364700 s for 'VWAP QP iter'
+Processed 990000 tuples.
+20.611347 s for 'VWAP QP iter'
+Processed 1000000 tuples.
+21.255793 s for 'VWAP QP iter'
+Processed 1010000 tuples.
+21.172794 s for 'VWAP QP iter'
+21.486360 s for 'VWAP QP iter'
+Processed 1020000 tuples.
+21.467828 s for 'VWAP QP iter'
+Processed 1030000 tuples.
+22.197236 s for 'VWAP QP iter'
+Processed 1040000 tuples.
+22.212325 s for 'VWAP QP iter'
+Processed 1050000 tuples.
+22.459827 s for 'VWAP QP iter'
+Processed 1060000 tuples.
+22.891676 s for 'VWAP QP iter'
+23.103609 s for 'VWAP QP iter'
+Processed 1070000 tuples.
+23.664545 s for 'VWAP QP iter'
+Processed 1080000 tuples.
+23.867435 s for 'VWAP QP iter'
+Processed 1090000 tuples.
+24.141729 s for 'VWAP QP iter'
+Processed 1100000 tuples.
+24.712366 s for 'VWAP QP iter'
+25.227990 s for 'VWAP QP iter'
+Processed 1110000 tuples.
+25.406580 s for 'VWAP QP iter'
+Processed 1120000 tuples.
+26.387935 s for 'VWAP QP iter'
+Processed 1130000 tuples.
+27.256585 s for 'VWAP QP iter'
+Processed 1140000 tuples.
+27.747564 s for 'VWAP QP iter'
+Processed 1150000 tuples.
+28.235233 s for 'VWAP QP iter'
+28.682137 s for 'VWAP QP iter'
+Processed 1160000 tuples.
+29.063703 s for 'VWAP QP iter'
+Processed 1170000 tuples.
+29.874450 s for 'VWAP QP iter'
+Processed 1180000 tuples.
+30.109958 s for 'VWAP QP iter'
+Processed 1190000 tuples.
+30.148388 s for 'VWAP QP iter'
+Processed 1200000 tuples.
+30.765005 s for 'VWAP QP iter'
+31.265048 s for 'VWAP QP iter'
+Processed 1210000 tuples.
+31.853941 s for 'VWAP QP iter'
+Processed 1220000 tuples.
+32.540482 s for 'VWAP QP iter'
+Processed 1230000 tuples.
+32.601023 s for 'VWAP QP iter'
+Processed 1240000 tuples.
+33.143865 s for 'VWAP QP iter'
+33.582861 s for 'VWAP QP iter'
+Processed 1250000 tuples.
+34.294161 s for 'VWAP QP iter'
+Processed 1260000 tuples.
+33.992190 s for 'VWAP QP iter'
+Processed 1270000 tuples.
+35.225139 s for 'VWAP QP iter'
+Processed 1280000 tuples.
+35.100560 s for 'VWAP QP iter'
+Processed 1290000 tuples.
+35.608033 s for 'VWAP QP iter'
+36.024324 s for 'VWAP QP iter'
+Processed 1300000 tuples.
+37.283951 s for 'VWAP QP iter'
+Processed 1310000 tuples.
+37.983606 s for 'VWAP QP iter'
+Processed 1320000 tuples.
+38.081924 s for 'VWAP QP iter'
+Processed 1330000 tuples.
+38.521643 s for 'VWAP QP iter'
+39.372353 s for 'VWAP QP iter'
+Processed 1340000 tuples.
+40.283075 s for 'VWAP QP iter'
+Processed 1350000 tuples.
+40.910660 s for 'VWAP QP iter'
+Processed 1360000 tuples.
+41.544034 s for 'VWAP QP iter'
+Processed 1370000 tuples.
+42.997646 s for 'VWAP QP iter'
+Processed 1380000 tuples.
+43.314904 s for 'VWAP QP iter'
+43.780278 s for 'VWAP QP iter'
+Processed 1390000 tuples.
+45.468684 s for 'VWAP QP iter'
+Processed 1400000 tuples.
+46.073648 s for 'VWAP QP iter'
+Processed 1410000 tuples.
+46.742601 s for 'VWAP QP iter'
+Processed 1420000 tuples.
+46.876273 s for 'VWAP QP iter'
+Processed 1430000 tuples.
+47.769059 s for 'VWAP QP iter'
+49.241087 s for 'VWAP QP iter'
+Processed 1440000 tuples.
+50.636768 s for 'VWAP QP iter'
+Processed 1450000 tuples.
+51.297138 s for 'VWAP QP iter'
+Processed 1460000 tuples.
+52.307679 s for 'VWAP QP iter'
+Processed 1470000 tuples.
+53.336873 s for 'VWAP QP iter'
+54.963267 s for 'VWAP QP iter'
+Processed 1480000 tuples.
+51.584322 s for 'VWAP QP iter'
+Processed 1490000 tuples.
+50.303007 s for 'VWAP QP iter'
+Final book size 27072
+43.213854 s for 'VWAP QP iter'
+3082.527403 s for 'VWAP QP'

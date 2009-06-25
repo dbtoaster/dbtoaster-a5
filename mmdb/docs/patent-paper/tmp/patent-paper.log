@@ -1,0 +1,547 @@
+This is pdfTeXk, Version 3.1415926-1.40.9 (Web2C 7.5.7) (format=pdflatex 2008.12.28)  25 JUN 2009 01:08
+entering extended mode
+ Source specials enabled.
+ %&-line parsing enabled.
+**patent-paper.tex
+(./patent-paper.tex
+LaTeX2e <2005/12/01>
+Babel <v3.8l> and hyphenation patterns for english, usenglishmax, dumylang, noh
+yphenation, german-x-2008-06-18, ngerman-x-2008-06-18, ancientgreek, ibycus, ar
+abic, basque, bulgarian, catalan, pinyin, coptic, croatian, czech, danish, dutc
+h, esperanto, estonian, farsi, finnish, french, galician, german, ngerman, mono
+greek, greek, hungarian, icelandic, indonesian, interlingua, irish, italian, la
+tin, lithuanian, mongolian, mongolian2a, bokmal, nynorsk, polish, portuguese, r
+omanian, russian, sanskrit, serbian, slovak, slovenian, spanish, swedish, turki
+sh, ukenglish, ukrainian, uppersorbian, welsh, loaded.
+(./vldb.cls (/usr/local/texlive/2008/texmf-dist/tex/latex/graphics/epsfig.sty
+Package: epsfig 1999/02/16 v1.7a (e)psfig emulation (SPQR)
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 1999/02/16 v1.0f Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 1999/03/16 v1.13 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2006/02/20 v1.0o Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/local/texlive/2008/texmf/tex/latex/config/graphics.cfg
+File: graphics.cfg 2007/01/18 v1.5 graphics configuration of teTeX/TeXLive
+)
+Package graphics Info: Driver file: pdftex.def on input line 90.
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/pdftex-def/pdftex.def
+File: pdftex.def 2008/09/08 v0.04l Graphics/color for pdfTeX
+\Gread@gobject=\count79
+))
+\Gin@req@height=\dimen102
+\Gin@req@width=\dimen103
+)
+\epsfxsize=\dimen104
+\epsfysize=\dimen105
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/amssymb.sty
+Package: amssymb 2002/01/22 v2.2d
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+Package: amsfonts 2001/10/25 v2.2f
+\@emptytoks=\toks15
+\symAMSa=\mathgroup4
+\symAMSb=\mathgroup5
+LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
+(Font)                  U/euf/m/n --> U/euf/b/n on input line 132.
+))
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsmath/amsmath.sty
+Package: amsmath 2000/07/18 v2.13 AMS math features
+\@mathmargin=\skip41
+
+For additional information on amsmath, use the `?' option.
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsmath/amstext.sty
+Package: amstext 2000/06/29 v2.01
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsmath/amsgen.sty
+File: amsgen.sty 1999/11/30 v2.0
+\@emptytoks=\toks16
+\ex@=\dimen106
+))
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsmath/amsbsy.sty
+Package: amsbsy 1999/11/29 v1.2d
+\pmbraise@=\dimen107
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsmath/amsopn.sty
+Package: amsopn 1999/12/14 v2.01 operator names
+)
+\inf@bad=\count80
+LaTeX Info: Redefining \frac on input line 211.
+\uproot@=\count81
+\leftroot@=\count82
+LaTeX Info: Redefining \overline on input line 307.
+\classnum@=\count83
+\DOTSCASE@=\count84
+LaTeX Info: Redefining \ldots on input line 379.
+LaTeX Info: Redefining \dots on input line 382.
+LaTeX Info: Redefining \cdots on input line 467.
+\Mathstrutbox@=\box26
+\strutbox@=\box27
+\big@size=\dimen108
+LaTeX Font Info:    Redeclaring font encoding OML on input line 567.
+LaTeX Font Info:    Redeclaring font encoding OMS on input line 568.
+\macc@depth=\count85
+\c@MaxMatrixCols=\count86
+\dotsspace@=\muskip10
+\c@parentequation=\count87
+\dspbrk@lvl=\count88
+\tag@help=\toks17
+\row@=\count89
+\column@=\count90
+\maxfields@=\count91
+\andhelp@=\toks18
+\eqnshift@=\dimen109
+\alignsep@=\dimen110
+\tagshift@=\dimen111
+\tagwidth@=\dimen112
+\totwidth@=\dimen113
+\lineht@=\dimen114
+\@envbody=\toks19
+\multlinegap=\skip42
+\multlinetaggap=\skip43
+\mathdisplay@stack=\toks20
+LaTeX Info: Redefining \[ on input line 2666.
+LaTeX Info: Redefining \] on input line 2667.
+)
+Document Class 'sig-alternate' <26th. July '05>. Modified by G.K.M. Tobin/Gerry
+ Murray
+Based in part upon document Style `acmconf' <22 May 89>. Hacked 4/91 by
+shivers@cs.cmu.edu, 4/93 by theobald@cs.mcgill.ca
+Excerpts were taken from (Journal Style) 'esub2acm.cls'.
+****** Bugs/comments/suggestions/technicalities to Gerry Murray -- murray@hq.ac
+m.org ******
+Questions on the style, SIGS policies, etc. to Adrienne Griscti griscti@acm.org
+
+\footheight=\dimen115
+\@maxsep=\dimen116
+\@dblmaxsep=\dimen117
+\aucount=\count92
+\originalaucount=\count93
+\auwidth=\dimen118
+\auskip=\dimen119
+\auskipcount=\count94
+\auskip=\dimen120
+\allauboxes=\dimen121
+\addauthors=\toks21
+\addauflag=\count95
+\subtitletext=\toks22
+\savesection=\count96
+\sectioncntr=\count97
+\c@figure=\count98
+\c@table=\count99
+\titleboxnotes=\toks23
+\titleboxnoteflag=\count100
+
+LaTeX Warning: You have requested document class `vldb',
+               but the document class provides `sig-alternate'.
+
+Document Class: sig-alternate 2005/26/07 - V1.8 - based on acmproc.cls V1.3 <No
+v. 30 '99>
+(/usr/local/texlive/2008/texmf-dist/tex/latex/base/latexsym.sty
+Package: latexsym 1998/08/17 v2.2e Standard LaTeX package (lasy symbols)
+\symlasy=\mathgroup6
+LaTeX Font Info:    Overwriting symbol font `lasy' in version `bold'
+(Font)                  U/lasy/m/n --> U/lasy/b/n on input line 47.
+)
+\@acmtitlebox=\box28
+\titlenotecount=\count101
+\tntoks=\toks24
+\tntokstwo=\toks25
+\tntoksthree=\toks26
+\tntoksfour=\toks27
+\tntoksfive=\toks28
+\catcount=\count102
+\copyrightnotice=\toks29
+\conf=\toks30
+\confinfo=\toks31
+\c@part=\count103
+\c@section=\count104
+\c@subsection=\count105
+\c@subsubsection=\count106
+\c@paragraph=\count107
+
+Using 'Abbrev' bibliography style
+\bibindent=\dimen122
+\colcntr=\count108
+\savebox=\box29
+\copyrtyr=\toks32
+\acmcopyr=\toks33
+\boilerplate=\toks34
+\copyrightetc=\toks35
+) (/usr/local/texlive/2008/texmf-dist/tex/latex/algorithms/algorithmic.sty
+Package: algorithmic 2006/06/02
+
+Document Style `algorithmic' - environment
+(/usr/local/texlive/2008/texmf-dist/tex/latex/base/ifthen.sty
+Package: ifthen 2001/05/26 v1.1c Standard LaTeX ifthen package (DPC)
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2005/08/06 v4.2 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count109
+\calc@Bcount=\count110
+\calc@Adimen=\dimen123
+\calc@Bdimen=\dimen124
+\calc@Askip=\skip44
+\calc@Bskip=\skip45
+LaTeX Info: Redefining \setlength on input line 75.
+LaTeX Info: Redefining \addtolength on input line 76.
+\calc@Ccount=\count111
+\calc@Cskip=\skip46
+)
+\c@ALC@line=\count112
+\c@ALC@rem=\count113
+\c@ALC@depth=\count114
+\ALC@tlm=\skip47
+\algorithmicindent=\skip48
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/algorithms/algorithm.sty
+Package: algorithm 
+
+Document Style `algorithm' - floating environment
+(/usr/local/texlive/2008/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count115
+\float@exts=\toks36
+\float@box=\box30
+\@float@everytoks=\toks37
+\@floatcapt=\box31
+)
+\@float@every@algorithm=\toks38
+\c@algorithm=\count116
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/clrscode/clrscode.sty
+Package: clrscode 2007/03/29 v1.7 format pseudocode
+\c@codelinenumber=\count117
+\c@indent=\count118
+\digitwidth=\skip49
+\savecode=\box32
+\codeboxwidth=\skip50
+\c@thisindent=\count119
+)
+(/usr/local/texlive/2008/texmf-dist/tex/latex/pst-tree/pst-tree.sty
+(/usr/local/texlive/2008/texmf-dist/tex/latex/pstricks/pstricks.sty
+Package: pstricks 2008/11/26 v0.40 LaTeX wrapper for `PSTricks' (RN,HV)
+
+(/usr/local/texlive/2008/texmf-dist/tex/generic/pstricks/pstricks.tex
+`PSTricks' v1.27  <2009/01/25> (tvz)
+\pst@dima=\dimen125
+\pst@dimb=\dimen126
+\pst@dimc=\dimen127
+\pst@dimd=\dimen128
+\pst@dimg=\dimen129
+\pst@dimh=\dimen130
+\pst@hbox=\box33
+\pst@boxg=\box34
+\pst@cnta=\count120
+\pst@cntb=\count121
+\pst@cntc=\count122
+\pst@cntd=\count123
+\pst@cntg=\count124
+\pst@cnth=\count125
+\pst@toks=\toks39
+(/usr/local/texlive/2008/texmf-dist/tex/generic/pstricks/pstricks.con)
+\psunit=\dimen131
+\psxunit=\dimen132
+\psyunit=\dimen133
+\pslinewidth=\dimen134
+\pst@customdefs=\toks40
+\pslinearc=\dimen135
+\everypsbox=\toks41
+\psframesep=\dimen136
+\pslabelsep=\dimen137
+\pst@shift=\dimen138
+\theoverlaybox=\box35
+)
+File: pstricks.tex 2009/01/25 v1.27 `PSTricks' (tvz,hv)
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2007/01/21 v2.11 LaTeX color extensions (UK)
+
+(/usr/local/texlive/2008/texmf/tex/latex/config/color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package xcolor Info: Driver file: pdftex.def on input line 225.
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1337.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1341.
+Package xcolor Info: Model `RGB' extended on input line 1353.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1355.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1356.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1357.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1358.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1359.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1360.
+))
+Package: pst-tree 2009/01/25 package wrapper for pst-tree.tex
+
+(/usr/local/texlive/2008/texmf-dist/tex/generic/pst-tree/pst-tree.tex
+(/usr/local/texlive/2008/texmf-dist/tex/generic/pstricks/pst-node.tex
+ v1.01, 2008/11/26
+\psrow=\count126
+\pscol=\count127
+\psmatrixcnt=\count128
+\psrowsep=\skip51
+\pscolsep=\skip52
+)
+(/usr/local/texlive/2008/texmf-dist/tex/generic/xkeyval/pst-xkey.tex
+File: pst-xkey.tex 2005/11/25 v1.6 PSTricks specialization of xkeyval (HA)
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/xkeyval/xkeyval.sty
+Package: xkeyval 2008/08/13 v2.6a package option processing (HA)
+
+(/usr/local/texlive/2008/texmf-dist/tex/generic/xkeyval/xkeyval.tex
+\XKV@toks=\toks42
+\XKV@tempa@toks=\toks43
+\XKV@depth=\count129
+File: xkeyval.tex 2008/08/13 v2.6a key=value parser (HA)
+)))
+ v1.10, 2008/12/12
+\pstree@rootbox=\box36
+\pstree@box=\box37
+\psnodecnt=\count130
+\pstreelevel=\count131
+\pstreecnt=\count132
+\pstree@cnt=\count133
+\pstree@stop=\count134
+)
+File: pst-tree.tex 2008/12/12 1.10 `pst-tree' (tvz,hv)
+)
+\c@theorem=\count135
+\c@metatheorem=\count136
+ (./patent-paper.aux)
+\openout1 = `patent-paper.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 63.
+LaTeX Font Info:    ... okay on input line 63.
+
+(/usr/local/texlive/2008/texmf-dist/tex/context/base/supp-pdf.tex
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count137
+\scratchdimen=\dimen139
+\scratchbox=\box38
+\nofMPsegments=\count138
+\nofMParguments=\count139
+\everyMPshowfont=\toks44
+\MPscratchCnt=\count140
+\MPscratchDim=\dimen140
+\MPnumerator=\count141
+\everyMPtoPDFconversion=\toks45
+)
+LaTeX Font Info:    Try loading font information for U+msa on input line 66.
+ (/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2002/01/19 v2.2g AMS font definitions
+)
+LaTeX Font Info:    Try loading font information for U+msb on input line 66.
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2002/01/19 v2.2g AMS font definitions
+)
+LaTeX Font Info:    Try loading font information for U+lasy on input line 66.
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/base/ulasy.fd
+File: ulasy.fd 1998/08/17 v2.2e LaTeX symbol font definitions
+)
+LaTeX Font Info:    Try loading font information for OMS+cmr on input line 66.
+
+(/usr/local/texlive/2008/texmf-dist/tex/latex/base/omscmr.fd
+File: omscmr.fd 1999/05/25 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    Font shape `OMS/cmr/m/n' in size <9> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 66.
+ (./intro.tex
+Overfull \hbox (5.1061pt too wide) in paragraph at lines 52--55
+[][]\OT1/cmr/m/n/9 Our new delta pro-cess-ing tech-niques are de-signed specif-
+
+ []
+
+[1
+Non-PDF special ignored!
+Non-PDF special ignored!
+Non-PDF special ignored!
+Non-PDF special ignored!{/usr/local/texlive/2008/texmf-var/fonts/map/pdftex/upd
+map/pdftex.map}
+
+
+] [2]
+Overfull \hbox (1.82765pt too wide) in paragraph at lines 372--378
+\OT1/cmr/m/n/9 low-ing our query ex-ecu-tor to elim-i-nate sig-nif-i-cant query
+
+ []
+
+
+Overfull \hbox (4.23566pt too wide) in paragraph at lines 378--386
+\OT1/cmr/m/n/9 ment SQL group-by ag-gre-ga-tions in main-memory data-
+ []
+
+) (./overview.tex [3] <figures/overview.pdf, id=22, 502.87875pt x 419.5675pt>
+File: figures/overview.pdf Graphic file (type pdf)
+
+<use figures/overview.pdf>
+Underfull \hbox (badness 10000) in paragraph at lines 51--51
+[][]\OT1/cmr/bx/n/9 Figure 1: DBToaster ar-chi-tec-ture di-a-gram.
+ []
+
+
+Underfull \hbox (badness 1137) in paragraph at lines 51--51
+\OT1/cmr/bx/n/9 DBToaster can be used in a stan-dalone mode
+ []
+
+
+Underfull \vbox (badness 1184) has occurred while \output is active []
+
+)
+(./compilation.tex [4 <./figures/overview.pdf>]
+Overfull \hbox (10.02776pt too wide) detected at line 170
+[][]\OT1/cmr/m/n/9 (\OML/cmm/m/it/9 ^^Y[]\OT1/cmr/m/n/9 (\OML/cmm/m/it/9 S\OT1/
+cmr/m/n/9 )) \OMS/cmsy/m/n/9 ^^^ [][]\OT1/cmr/m/n/9 (\OML/cmm/m/it/9 ^^Y[]\OT1/
+cmr/m/n/9 (\OML/cmm/m/it/9 S\OT1/cmr/m/n/9 ))
+ []
+
+
+Underfull \vbox (badness 4543) has occurred while \output is active []
+
+ [5]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [6]
+Overfull \hbox (15.23103pt too wide) in alignment at lines 434--468
+ [][][] []
+ []
+
+) (./experiments.tex
+Overfull \hbox (6.62395pt too wide) in paragraph at lines 4--14
+\OT1/cmr/m/n/9 men-tally eval-u-ate the query ex-ecu-tors pro-duced by DBToaste
+r
+ []
+
+<../plots/toaster_comparison.pdf, id=211, 614.36018pt x 405.02975pt>
+File: ../plots/toaster_comparison.pdf Graphic file (type pdf)
+
+<use ../plots/toaster_comparison.pdf>
+Overfull \hbox (5.73972pt too wide) in paragraph at lines 18--19
+ [][] 
+ []
+
+
+Underfull \hbox (badness 1173) in paragraph at lines 22--22
+\OT1/cmr/bx/n/9 DBToaster and plan com-pi-la-tion, Post-gres and
+ []
+
+[7 <../plots/toaster_comparison.pdf>]
+<../plots/vwap_query_freq_dn.pdf, id=229, 581.15686pt x 486.09764pt>
+File: ../plots/vwap_query_freq_dn.pdf Graphic file (type pdf)
+
+<use ../plots/vwap_query_freq_dn.pdf>
+<../plots/ssb_query_freq_dn.pdf, id=230, 569.94112pt x 480.17543pt>
+File: ../plots/ssb_query_freq_dn.pdf Graphic file (type pdf)
+
+<use ../plots/ssb_query_freq_dn.pdf> [8 <../plots/vwap_query_freq_dn.pdf> <../p
+lots/ssb_query_freq_dn.pdf>]
+Underfull \hbox (badness 1052) in paragraph at lines 184--184
+[][]\OT1/cmr/bx/n/9 Figure 7: Query ex-e-cu-tion time for repet-i-tive
+ []
+
+<../plots/trigger_comparison.pdf, id=254, 570.75177pt x 376.19054pt>
+File: ../plots/trigger_comparison.pdf Graphic file (type pdf)
+
+<use ../plots/trigger_comparison.pdf>
+Overfull \hbox (5.41847pt too wide) in paragraph at lines 241--243
+[][][] 
+ []
+
+
+Overfull \hbox (1.92056pt too wide) in paragraph at lines 247--266
+\OT1/cmr/m/n/9 re-la-tions cor-re-spond-ing to DBToaster's data struc-tures, co
+m-
+ []
+
+
+Overfull \hbox (1.51842pt too wide) in paragraph at lines 247--266
+\OT1/cmr/m/n/9 greater than 3.5 or-ders of mag-ni-tude over Post-greSQL. While
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [9]
+<../plots/mem_usage.pdf, id=258, 577.87311pt x 428.36526pt>
+File: ../plots/mem_usage.pdf Graphic file (type pdf)
+
+<use ../plots/mem_usage.pdf>
+Overfull \hbox (14.26495pt too wide) in paragraph at lines 309--310
+ [][] 
+ []
+
+) (./relwork.tex [10 <../plots/trigger_comparison.pdf> <../plots/mem_usage.pdf>
+]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+Overfull \hbox (2.80042pt too wide) in paragraph at lines 141--157
+\OT1/cmr/m/n/9 ory database to pro-vide high through-put pro-cess-ing on OLTP
+ []
+
+) (./conc.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [11])
+(./patent-paper.bbl
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [12])
+[13
+
+] (./patent-paper.aux) ) 
+Here is how much of TeX's memory you used:
+ 4732 strings out of 493876
+ 57257 string characters out of 1150567
+ 160353 words of memory out of 3000000
+ 7904 multiletter control sequences out of 10000+50000
+ 24166 words of font info for 58 fonts, out of 3000000 for 5000
+ 714 hyphenation exceptions out of 8191
+ 39i,12n,39p,454b,335s stack positions out of 5000i,500n,10000p,200000b,50000s
+{/usr/local/texlive/2008/texmf-dist/fonts/enc/dvips/bas
+e/8r.enc}</usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmbx9.pfb><
+/usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmcsc10.pfb></usr/loc
+al/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi5.pfb></usr/local/texlive
+/2008/texmf-dist/fonts/type1/bluesky/cm/cmmi6.pfb></usr/local/texlive/2008/texm
+f-dist/fonts/type1/bluesky/cm/cmmi9.pfb></usr/local/texlive/2008/texmf-dist/fon
+ts/type1/bluesky/cm/cmr5.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bl
+uesky/cm/cmr6.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cm
+r8.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmr9.pfb></us
+r/local/texlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy6.pfb></usr/local/te
+xlive/2008/texmf-dist/fonts/type1/bluesky/cm/cmsy9.pfb></usr/local/texlive/2008
+/texmf-dist/fonts/type1/bluesky/cm/cmti8.pfb></usr/local/texlive/2008/texmf-dis
+t/fonts/type1/bluesky/cm/cmti9.pfb></usr/local/texlive/2008/texmf-dist/fonts/ty
+pe1/bluesky/cm/cmtt9.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/public
+/cmex/fmex9.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/urw/helvetic/uh
+vb8a.pfb></usr/local/texlive/2008/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pf
+b></usr/local/texlive/2008/texmf-dist/fonts/type1/urw/times/utmb8a.pfb>
+Output written on patent-paper.pdf (13 pages, 1334872 bytes).
+PDF statistics:
+ 351 PDF objects out of 1000 (max. 8388607)
+ 0 named destinations out of 1000 (max. 131072)
+ 31 words of extra memory for PDF output out of 10000 (max. 10000000)
+

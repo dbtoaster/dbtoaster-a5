@@ -40,19 +40,45 @@ group-by columns.
 
   
 \subsection{System Architecture}
+
 \begin{figure}[t]
 \begin{center}
 \includegraphics[scale=0.45]{figures/overview}
 \end{center}
 \vspace{-4mm}
-\caption{\compiler\ architecture diagram.
-\compiler\ can be used in a standalone
-mode where it simply performs query processing, in an embedded mode where it can be
-linked into another application and provide query result cursors, or as
-a scalable distributed query processor.}
+\caption{\compiler\ architecture diagram. \compiler\ can be used in a standalone
+mode where it simply performs query processing, in an embedded mode where it can
+be linked into another application and provide query result cursors.}
 \label{fig:overview}
 \end{figure}
 
+The \compiler\ architecture consists of a parser, an algebraic compiler and
+code generator. Our compilation workflow produces a delta-processing function
+for each type of delta (insert, update or delete) on any base relation used in
+the query. In addition, compilation defines in-memory aggregate views that are
+maintained during runtime to support our delta-processing functions. We present
+how these data structures are defined in our algorithm description below.
+
+Since \compiler\ executes native binaries, rather than relying on dynamic library
+interfaces such as \texttt{dlopen()} which suffer from binary incompatibilities,
+our architecture uses a persistent lightweight distributed runtime incorporating
+a just-in-time (JIT) compiler. By building on top of JIT compilation, our
+architecture can adapt queries at runtime at a logical layer rather than in terms
+of binaries. Our prototype can directly generate C++ code which can then be
+processed by a C++ frontend for LLVM (currently g++). We also use the Low-Level
+Virtual Machine (LLVM) compilation framework as a JIT code generator, having
+\compiler\ generate LLVM's intermediate representation for subsequent native code
+generation.
+
+The \compiler\ runtime may be used as a standalone query processor
+accepting input over a network interface, or as an embeddable query processor
+that can be directly compiled into the same address space as application logic.
+\compiler\ also exposes a read-only interface to its internal data structures to
+support ad-hoc client-side queries. \compiler\ also includes a debugger and
+profiler for tracing delta processing functions and their maintenance of
+internal data structures.
+
+\comment{
 While the main focus of this paper is on the compilation phase in \compiler, we
 briefly describe the architecture of the system hosting our compiled
 query executor, outlining our plans for addressing overarching systems issues
@@ -96,16 +122,13 @@ layout challenge in \compiler's context differs from traditional distributed dat
 placement problems in that we are using data structures rather than relations,
 requiring consideration of distributed data structures (hashtables, trees, etc.)
 and novel partitioning schemes for these data structures.
-\comment{
-Additionally query groupings have to be managed in order to exploit the
-potential data structure sharing amongst multiple queries.
-}
 Other key system components include a storage and recovery manager responsible
 for checkpointing and managing the handoff of checkpoints to backups to provide
 fault tolerance in our purely main-memory context, as well as providing and
 managing secondary storage primarily for the purpose of data loading and shipping
 to ensure maximal availability of main-memory for query processing purposes
 rather than distributed system maintenance.
+}
 
 \comment{
 \begin{itemize}
