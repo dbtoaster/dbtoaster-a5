@@ -14,7 +14,7 @@ for continuous standing query evaluation.
 produces C++ code to incrementally maintain aggregate views at high update rates
 using aggressive delta processing techniques. Our work is motivated by
 applications that require highly efficient answering of fixed aggregate query
-workloads, such as in data stream processing, online data warehouse loading, and
+workloads, as in data stream processing, online data warehouse loading, and
 in financial applications. We focus on main-memory databases due to the
 prevalence of standing queries in stream processors, where compilation has
 only recently been considered~\cite{gedik-sigmod:08,sb-patent}.
@@ -40,14 +40,14 @@ maintenance approaches.
 
 We showcase \compiler\ in a few applications that are served in limited fashion
 by today's data management tools, including algorithmic order book trading
-(algos), an integrated approach to data warehouse loading and analysis, as well
-as stream processing applications. Our compiled query processors are several
-orders of magnitude faster than state-of-the-art databases and significantly
-outperform stream processing engines on such workloads. In the case of queries on
-order book data for algos, our approach stands alone in its ability to support
-realistic  data rates  without resorting to very substantial computing clusters.
-Indeed, the memory consumption of our main-memory techniques is sufficiently low
-to support applications such as data warehouse loading.
+(algos), and an integrated approach to data warehouse loading and analysis. Our
+compiled query processors are several orders of magnitude faster than
+state-of-the-art databases and significantly outperform stream processing engines
+on such workloads. In the case of queries on order book data for algos, our
+approach stands alone in its ability to support realistic  data rates  without
+resorting to very substantial computing clusters. Indeed, the memory consumption
+of our main-memory techniques is sufficiently low to support applications such as
+data warehouse loading.
 
 \comment{
 We demonstrate \compiler, a tool for compiling SQL queries into native code,

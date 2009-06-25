@@ -1,7 +1,7 @@
 \section{DBToaster Overview}
 
 \noindent\textbf{Data and Query Model.}
-\compiler\ focuses on applications issuing standing queries on a database, which
+\compiler\ focuses on applications issuing standing queries on a database which
 subsequently process continuously changing, large volumes of input tuples.
 \compiler\ is capable of compiling a wide variety of SQL queries including the
 core relational algebra, standard aggregates (\texttt{sum}, \texttt{avg},
@@ -12,7 +12,7 @@ updates and deletes. In contrast, data stream processors assume a well-defined
 separation between tuples' insert and delete operations on the stream (value- or
 count-based windows), or assume ordered deletion semantics (punctuations or
 heartbeats). In \compiler, each tuple has an arbitrary lifetime, thus our
-standing queries processes a database spanning an arbitrary valid time using
+standing queries process a database spanning an arbitrary valid time using
 temporal database terminology. Indeed, many stream applications, such as
 order book trading and moving object applications, are self-managing, in that the
 application logic and delta patterns ensure that state does not grow unboundedly in
@@ -31,28 +31,31 @@ processors.}
 \includegraphics[scale=0.42]{figures/dbt-arch.pdf}
 \label{fig:dbtarch}
 
-\vspace{-4mm}
+\vspace{-6mm}
 
 \caption{\compiler\ architecture, illustrating standalone and embedded modes of
 query processing. In standalone mode, \compiler\ produces a lightweight
 runtime, while in embedded mode, \compiler\ can alternatively produce a binary
 library that can be used directly in client applications.}
+
+\vspace{-4mm}
+
 \end{figure}
 
 \noindent\textbf{System Model.}
-At its core, \compiler\ consists of a parser, an algebraic compiler and
-code generator. Our compilation workflow produces a delta-processing function
-for each type of delta (insert, update or delete) on any base relation used in
-the query. In addition, compilation defines in-memory aggregate views that are
-maintained during runtime to support our delta-processing functions. We will
-see how these data structures are defined in the description of our algorithm
-below. The \compiler\ runtime may be used as a standalone query processor
-accepting input over a network interface, or as an embeddable query processor
+At its core, \compiler\ consists of a parser, an algebraic compiler and a code
+generator. Our compilation workflow produces a delta-processing function for each
+type of delta (insert, update or delete) on any base relation used in the query.
+In addition, compilation defines in-memory aggregate views that are maintained
+during runtime to support our delta-processing functions. We will see how these
+data structures are defined in the description of our algorithm below. The
+\compiler\ runtime may be used as a standalone query processor accepting input
+over a network interface or archived stream, or as an embeddable query processor
 that can be directly compiled into the same address space as application logic.
 \compiler\ also exposes a read-only interface to its internal data structures to
-support ad-hoc client-side queries. \compiler\ includes a debugger and
-profiler for tracing delta processing functions and their maintenance of
-internal data structures.
+support ad-hoc client-side queries. \compiler\ includes a debugger and profiler
+for tracing delta processing functions and their maintenance of internal data
+structures.
 
 \comment{
 \section{DBToaster Usage}

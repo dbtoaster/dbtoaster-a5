@@ -11,24 +11,27 @@
 \def\distinct{\mbox{distinct}}
 \def\routerjoin{\bowtie\!=}
 
-We now present \compiler's compilation algorithm through an example
-illustrating how queries are turned into efficient procedural code. Our
-compilation framework applies to the core relational algebra and group-by
-aggregates, and uses a custom query algebra to define map data structures. These
-maps are closely related to views definable by SQL aggregate group-by queries but
-at the same time are main memory data structures that are easy to access in
-applications. Due to space limitations we only present the small fraction
-of our map algebra transformations used to derive code for our example query.
+We now present \compiler's compilation algorithm through an example illustrating
+how queries are turned into efficient procedural code. Our compilation framework
+applies to the core relational algebra and group-by aggregates, and uses a custom
+query algebra to define map data structures. These maps are closely related to
+views definable by SQL aggregate group-by queries but at the same time are main
+memory data structures that are easy to access in applications. Due to space
+limitations, we present a small fraction of our map algebra simplifications as
+needed for our example query. Our full map algebra is approximately 70
+simplification rules.
 
 \noindent\textbf{Compilation example.} Consider the query below on three
 relations and schemas $R(A,B), S(B,C), T(C,D)$:
 
+\vspace{-1mm}
 \begin{verbatim}
-select sum(A*D) from R, S, T
-where R.B=S.B and S.C=T.C
+  select sum(A*D) from R, S, T
+      where R.B=S.B and S.C=T.C
 \end{verbatim}
+\vspace{-1mm}
 
-Next, given the data and query model above, relations $R, S, T$ are
+Given the data and query model above, we assume relations $R, S, T$ are
 manipulated via update streams which consist of the standard requests
 of inserting, updating and deleting tuples. For ease of presentation, we can
 consider updates as pairs of delete and insert requests. We start with handling
@@ -48,13 +51,13 @@ a * \underbrace{\algsum_{D}(\sigma_{B=b}(S) \bowtie T)}_{q_D[b]}
 \end{eqnarray*}
 
 Above $q_D[b]$ is an example of a map that we use to compute the change in query
-result $q$, a map with key-value pair entries of keys $b$, and values defined as
+result $q$, a map with key-value entries of keys $b$, and values defined as
 the result of the query: $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$. While we do
 not go into the full details of the derivation validity, we can see it is a
 simplification of the original query by considering the relation $R$ as a
 singleton relation $\{\tuple{a,b}\}$. We can symmetrically derive for inserting
 into relation $T$ as: $\Delta q = d * q_A[c]$, resulting in a map
-$q_A[c] = \algsum_{A}(R \bowtie \sigma_{C=c}(S))$. The insertion to $S$ is:
+$q_A[c] = \algsum_{A}(R \bowtie \sigma_{C=c}(S))$. An insert on $S$ is:
 
 \smallskip
 Insert S(b,c):
@@ -73,54 +76,61 @@ Insert S(b,c):
 \begin{center}
 \begin{tabular}{|l|l|l|l|l|l|}
 \hline
-Recursion level & Event & Query $q$ & Code for $\Delta q$ & Maps & Map
-definition\\
+Recursion level & Event & Query, $Q$, to compile & Code for $\Delta Q$
+& Maps used in code & Map definition\\
 \hline
-1 & $+R$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
-& $a*q_D[b]$ & $q_D[b]$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
+1 & $\pm R$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $\pm a*q_D[b]$ & $q_D[b]$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
 \\
 \hline
-1 & $+S$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
-& $q_A[b] * q_D[c]$ & $q_A[b]$ & $\algsum_{A}(\sigma_{B=b}(R))$
+1 & $\pm S$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $\pm q_A[b] * q_D[c]$ & $q_A[b]$ & $\algsum_{A}(\sigma_{B=b}(R))$
 \\
 & & & & $q_D[c]$ & $\algsum_{D}(\sigma_{C=c}(T))$
 \\
 \hline
-1 & $+T$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
-& $d*q_A[c]$ & $q_A[c]$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+1 & $\pm T$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+& $\pm d*q_A[c]$ & $q_A[c]$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
 \\
 \hline
-2 & $+R$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
-& $\mbox{foreach($c$): } a * q_1[b,c]$ & $q_1[b,c]$ &
+2 & $\pm R$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+& $\mbox{foreach($c$): } \pm a * q_1[b,c]$ & $q_1[b,c]$ &
 $\algsum_{1}(\sigma_{BC=bc}(S))$
 \\
-2 & $+R$ & $\algsum_{A}(\sigma_{B=b}(R))$
-& $a$ & & \\
+2 & $\pm R$ & $\algsum_{A}(\sigma_{B=b}(R))$
+& $\pm a$ & (no new maps) & \\
 \hline
-2 & $+S$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
-& $q_A[b]$ & & 
+2 & $\pm S$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+& $\pm q_A[b]$ & (no new maps) & 
 \\
-2 & $+S$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
-& $q_D[c] $ & & 
+2 & $\pm S$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
+& $\pm q_D[c] $ & (no new maps) & 
 \\
 \hline
-2 & $+T$ & $\algsum_{D}(\sigma_{B=b}(S)\bowtie T)$
-& $\mbox{foreach($b$): }d * q_1[b,c]$ & $q_1[b,c]$ &
+2 & $\pm T$ & $\algsum_{D}(\sigma_{B=b}(S)\bowtie T)$
+& $\mbox{foreach($b$): }\pm d * q_1[b,c]$ & $q_1[b,c]$ &
 $\algsum_{1}(\sigma_{BC=bc}(S))$
 \\
-2 & $+T$ & $\algsum_{D}(\sigma_{B=b}(T))$
-& $d$ & & \\
+2 & $\pm T$ & $\algsum_{D}(\sigma_{B=b}(T))$
+& $\pm d$ & (no new maps) & \\
 \hline
-3 & $+S$ & $\algsum_{1}(\sigma_{BC=bc}(S))$
-& $1$ & & \\
+3 & $\pm S$ & $\algsum_{1}(\sigma_{BC=bc}(S))$
+& $\pm 1$ & (no new maps) & \\
 \hline
 \end{tabular}
 \end{center}
+
+\vspace{-2mm}
+
+\caption{\compiler's recursive compilation of the
+'\texttt{select sum(a*d) from R, S, T}' query, showing the query being compiled,
+the procedural code required to incrementally compute the query result, maps
+required by the code, and the query defining the map. Above, the event $\pm R$
+indicates both an insert and delete on $R$, and we present the code
+in one piece, although \compiler\ would produce different event handlers.}
 \label{tab:derivation}
-\caption{\compiler's recursive compilation of the query:
-\texttt{select sum(a*d) from R, S, T}, showing the query being compiled, the
-procedural code required to incrementally compute the query result, maps
-required by the code, and the query defining the map.}
+
+\vspace{-2mm}
 \end{figure*}
 
 
@@ -131,7 +141,7 @@ insertion into each base relation $R, S, T$, resulting in incremental query
 result computation code, a set of maps which we have to maintain, and queries
 defining the map contents. At this point, we recursively compile the map
 definition queries, considering each of the three types of insertion (to
-$R,S,T$), and subsequently aggressively inline any code generated into a handler
+$R,S,T$). We subsequently aggressively inline any code generated into a handler
 for each type of insertion. For example, consider the maps $q_A[c], q_A[b]$
 above, whose entries are dependent on the relation $R$. We recursively compile
 incremental maintenance of this map for insertions to $R$ as:
@@ -155,8 +165,8 @@ Note the \textit{foreach} statement when computing $\Delta q_A[c]$. This arises
 since a single tuple $\tuple{a,b}$ in $R$ affects all map entries with keys
 $c^*$ where the relation $S$ contains tuples $\tuple{b,c^*}$. Again our
 compilation is symmetric for the relations $R$ and $T$ due to the nature of the
-join graph in this query. Thus the maintenance code for maps $q_D[b], q_D[c]$
-is:
+join graph in this query. Thus the maintenance code for maps $q_D[b]$, and 
+$q_D[c]$ is:
 
 \smallskip
 Insert T(c,d):
@@ -188,36 +198,40 @@ Insert S(b,c):
 \end{eqnarray*}
 
 \noindent Note that we are already maintaining maps $q_A[b], q_D[c]$ above, that
-is there are opportunities for sharing maps across event handler functions.
-Finally, we can maintain $q_1[b,c]$ following insertions to $S$ simply as:
-$\Delta q_1[b,c] = 1$.
-For thoroughness, we show the resulting handler functions from this example,
-following the inlining of each code fragment generated at each recursive step
-below.
+is, we can exploit map sharing opportunities across event handler functions.
+Finally, we maintain $q_1[b,c]$ for insertions to $S$ simply as:
+$\Delta q_1[b,c] = 1$. We show the resulting handler functions from this example,
+including the inlining of code fragments generated at each recursive step.
 
+\vspace{-1mm}
 \begin{verbatim}
-on insert into R values (a,b) {
-   s += a * s_D[b];   s_A[b] += a;
-   foreach c (in Cs[b]) do
-      s_A[c] += a * s_1[b,c];
+// Declarations
+result q;
+map q_A_b, q_A_c, q_D_b, q_D_c, q_1_bc;
+
+// Event handlers
+void on_insert_into_R (attribute a, attribute b) {
+   q += a * q_D_b[b];   q_A_b[b] += a;
+   foreach (c in q_A_c.keys()) do
+      q_A_c[c] += a * q_1_bc[b][c];
 }
 
-on insert into S values (b,c) {
-   s += s_A[b] * s_D[c];   s_A[c] += s_A[b];
-   s_D[b] += s_D[c];       s_1[b,c] += 1;
+void on_insert_into_S (attribute b, attribute c) {
+   q += q_A_b[b] * q_D_c[c];   q_A_c[c] += q_A_b[b];
+   q_D_b[b] += q_D_c[c];       q_1_bc[b][c] += 1;
 }
-
-on insert into T values (c,d) {
-   s += s_A[c] * d;   s_D[c] += d;
-   foreach b (in Bs[c]) do
-      s_D[b] += s_1[b,c] * d;
+void on_insert_into_T (attribute c, attribute d) {
+   q += q_A_c[c] * d;   q_D_c[c] += d;
+   foreach (b in q_D_b[b].keys()) do
+      q_D_b[b] += q_1_bc[b][c] * d;
 }
 \end{verbatim}
+\vspace{-1mm}
 
 Additionally Table~\ref{tab:derivation} compactly describes this compilation
 example, including the case of deletion events which turn out to be strictly analogous in
-this case due to the fact that sum aggregates have a well defined inverse in the
-subtraction operator.
+this case due to the fact that sum aggregates have a well defined inverse as
+subtraction.
 
 
 \comment{

@@ -66,11 +66,11 @@ that require efficient main-memory processing of standing queries
 (\textit{views}) fed by high-volume data streams, \textit{recursively} compiling
 view maintenance (VM) que\-ries into simple C++ functions for evaluating database
 updates (\textit{deltas}).
-While today's VM algorithms consider single deltas on view queries to produce
-maintenance queries, we recursively consider deltas of maintenance queries and
-compile to thoroughly transform queries into code. Recursive compilation
-successively elides certain scans and joins, and eliminates significant query
-plan interpreter overheads.
+While today's VM algorithms consider the impact of single deltas on view queries
+to produce maintenance queries, we recursively consider deltas of maintenance
+queries and compile to thoroughly transform queries into code. Recursive
+compilation successively elides certain scans and joins, and eliminates
+significant query plan interpreter overheads.
 \comment{
 Our compilation process models and implements group-by aggregates as
 an associative map data structure, and obtains procedures to update these maps by
@@ -80,10 +80,11 @@ C++ code.
 
 In this demonstration, we walk through our compilation algorithm, and show the
 significant performance advantages of our compiled executors over other query
-processors. We are able to demonstrate orders of magnitude improvements in
+processors. We are able to demonstrate 1-3 orders of magnitude improvements in
 processing times for a financial application and a data warehouse loading
-application over PostgreSQL, HSQLDB, a commercial DBMS, System 'A', the Stanford
-STREAM engine, and a commercial stream processing engine 'B'.
+application, both implemented across a wide range of database systems, including
+PostgreSQL, HSQLDB, a commercial DBMS 'A', the Stanford STREAM engine, and a
+commercial stream processor 'B'.
 \end{abstract}
 
 
