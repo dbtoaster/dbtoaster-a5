@@ -14,8 +14,8 @@ count-based windows), or assume ordered deletion semantics (punctuations or
 heartbeats). In \compiler, each tuple has an arbitrary lifetime, thus our
 standing queries processes a database spanning an arbitrary valid time using
 temporal database terminology. Indeed, many stream applications, such as
-order book trading and moving object applications are self-managing, in that the
-application logic and delta patterns ensures state does not grow unbounded in
+order book trading and moving object applications, are self-managing, in that the
+application logic and delta patterns ensure that state does not grow unboundedly in
 practice.
 
 \comment{
@@ -30,6 +30,9 @@ processors.}
 \begin{figure}[tb]
 \includegraphics[scale=0.42]{figures/dbt-arch.pdf}
 \label{fig:dbtarch}
+
+\vspace{-4mm}
+
 \caption{\compiler\ architecture, illustrating standalone and embedded modes of
 query processing. In standalone mode, \compiler\ produces a lightweight
 runtime, while in embedded mode, \compiler\ can alternatively produce a binary
@@ -47,7 +50,7 @@ below. The \compiler\ runtime may be used as a standalone query processor
 accepting input over a network interface, or as an embeddable query processor
 that can be directly compiled into the same address space as application logic.
 \compiler\ also exposes a read-only interface to its internal data structures to
-support ad-hoc client-side queries. \compiler\ also includes a debugger and
+support ad-hoc client-side queries. \compiler\ includes a debugger and
 profiler for tracing delta processing functions and their maintenance of
 internal data structures.
 

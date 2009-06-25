@@ -6,7 +6,7 @@ database architectures. In this section we describe the application scenarios
 that act as motivating use cases for \compiler, as well as the visualization
 tools that convey the technical aspects of query transformations and compiled
 executor performance.
-Since \compiler\ is suited for applications exhibiting high volumes update
+Since \compiler\ is suited for applications exhibiting high volume update
 streams, in this demonstration, we show \compiler\ processing queries for an
 automated trading application making use of NASDAQ TotalView order book
 data~\cite{totalview-url}, and emulating a combined data warehouse loading and
@@ -66,6 +66,9 @@ the TotalView and TPC-H datasets.
 \begin{center}
 \includegraphics[scale=0.088]{figures/dbt-gui}
 \end{center}
+
+\vspace{-4mm}
+
 \caption{\compiler\ compilation process visualization, displaying map algebra
 transformations, generated code, and internal views that must be maintained.}
 \label{fig:compilegui}
@@ -73,8 +76,8 @@ transformations, generated code, and internal views that must be maintained.}
 
 The first of our two visualization tools (Figure~\ref{fig:compilegui} above)
 conveys the compilation process to demo attendees. This tool first visually
-displays a standard relational query plan, before illustrating the copmiler
-worklow in a step-by-step fashion, including map algebra simplifications and the
+displays a standard relational query plan, before illustrating the compiler
+workflow in a step-by-step fashion, including map algebra simplifications and the
 maps instantiated during compilation. We place particular emphasis on the
 recursive nature of our compilation, demonstrating compilation of deltas on the
 queries corresponding to our map data structures. At this point query compilation
@@ -93,6 +96,9 @@ degree of adaptivity during query execution.
 \begin{center}
 \includegraphics[scale=0.088]{figures/dbt-gui2}
 \end{center}
+
+\vspace{-4mm}
+
 \caption{\compiler\ debugger supporting stepping and tracing query processing and
 map maintenance, and performance visualizer for comparing against alternative
 databases in the DBMS bakeoff.}

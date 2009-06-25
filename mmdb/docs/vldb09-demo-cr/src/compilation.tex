@@ -11,20 +11,21 @@
 \def\distinct{\mbox{distinct}}
 \def\routerjoin{\bowtie\!=}
 
-We now present our \compiler's compilation algorithm through an example
+We now present \compiler's compilation algorithm through an example
 illustrating how queries are turned into efficient procedural code. Our
 compilation framework applies to the core relational algebra and group-by
 aggregates, and uses a custom query algebra to define map data structures. These
 maps are closely related to views definable by SQL aggregate group-by queries but
 at the same time are main memory data structures that are easy to access in
-applications. Note due to space limitations we only present the small fraction
+applications. Due to space limitations we only present the small fraction
 of our map algebra transformations used to derive code for our example query.
 
 \noindent\textbf{Compilation example.} Consider the query below on three
 relations and schemas $R(A,B), S(B,C), T(C,D)$:
 
 \begin{verbatim}
-select sum(a*d) from R, S, T
+select sum(A*D) from R, S, T
+where R.B=S.B and S.C=T.C
 \end{verbatim}
 
 Next, given the data and query model above, relations $R, S, T$ are
@@ -50,7 +51,7 @@ Above $q_D[b]$ is an example of a map that we use to compute the change in query
 result $q$, a map with key-value pair entries of keys $b$, and values defined as
 the result of the query: $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$. While we do
 not go into the full details of the derivation validity, we can see it is a
-simplifcation of the original query by considering the relation $R$ as a
+simplification of the original query by considering the relation $R$ as a
 singleton relation $\{\tuple{a,b}\}$. We can symmetrically derive for inserting
 into relation $T$ as: $\Delta q = d * q_A[c]$, resulting in a map
 $q_A[c] = \algsum_{A}(R \bowtie \sigma_{C=c}(S))$. The insertion to $S$ is:
@@ -213,9 +214,9 @@ on insert into T values (c,d) {
 }
 \end{verbatim}
 
-Additionally Table.~\ref{tab:derivation} compactly describes this compilation
-example, including the case of deletion events which turn out to be trivial in
-this case due to the fact sum aggregates have a well defined inverse in the
+Additionally Table~\ref{tab:derivation} compactly describes this compilation
+example, including the case of deletion events which turn out to be strictly analogous in
+this case due to the fact that sum aggregates have a well defined inverse in the
 subtraction operator.
 
 
