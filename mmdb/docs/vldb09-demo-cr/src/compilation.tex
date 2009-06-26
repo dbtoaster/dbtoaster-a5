@@ -79,42 +79,42 @@ Insert S(b,c):
 Recursion level & Event & Query, $Q$, to compile & Code for $\Delta Q$
 & Maps used in code & Map definition\\
 \hline
-1 & $\pm R$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+1 & $\pm R(a,b)$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
 & $\pm a*q_D[b]$ & $q_D[b]$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
 \\
 \hline
-1 & $\pm S$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+1 & $\pm S(b,c)$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
 & $\pm q_A[b] * q_D[c]$ & $q_A[b]$ & $\algsum_{A}(\sigma_{B=b}(R))$
 \\
 & & & & $q_D[c]$ & $\algsum_{D}(\sigma_{C=c}(T))$
 \\
 \hline
-1 & $\pm T$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
+1 & $\pm T(c,d)$ & $\algsum_{A*D}(R \bowtie S \bowtie T)$
 & $\pm d*q_A[c]$ & $q_A[c]$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
 \\
 \hline
-2 & $\pm R$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+2 & $\pm R(a,b)$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
 & $\mbox{foreach($c$): } \pm a * q_1[b,c]$ & $q_1[b,c]$ &
 $\algsum_{1}(\sigma_{BC=bc}(S))$
 \\
-2 & $\pm R$ & $\algsum_{A}(\sigma_{B=b}(R))$
+2 & $\pm R(a,b)$ & $\algsum_{A}(\sigma_{B=b}(R))$
 & $\pm a$ & (no new maps) & \\
 \hline
-2 & $\pm S$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
+2 & $\pm S(b,c)$ & $\algsum_{A}(R \bowtie \sigma_{C=c}(S))$
 & $\pm q_A[b]$ & (no new maps) & 
 \\
-2 & $\pm S$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
+2 & $\pm S(b,c)$ & $\algsum_{D}(\sigma_{B=b}(S) \bowtie T)$
 & $\pm q_D[c] $ & (no new maps) & 
 \\
 \hline
-2 & $\pm T$ & $\algsum_{D}(\sigma_{B=b}(S)\bowtie T)$
+2 & $\pm T(c,d)$ & $\algsum_{D}(\sigma_{B=b}(S)\bowtie T)$
 & $\mbox{foreach($b$): }\pm d * q_1[b,c]$ & $q_1[b,c]$ &
 $\algsum_{1}(\sigma_{BC=bc}(S))$
 \\
-2 & $\pm T$ & $\algsum_{D}(\sigma_{B=b}(T))$
+2 & $\pm T(c,d)$ & $\algsum_{D}(\sigma_{B=b}(T))$
 & $\pm d$ & (no new maps) & \\
 \hline
-3 & $\pm S$ & $\algsum_{1}(\sigma_{BC=bc}(S))$
+3 & $\pm S(b,c)$ & $\algsum_{1}(\sigma_{BC=bc}(S))$
 & $\pm 1$ & (no new maps) & \\
 \hline
 \end{tabular}
@@ -205,22 +205,22 @@ including the inlining of code fragments generated at each recursive step.
 
 \vspace{-1mm}
 \begin{verbatim}
-// Declarations
-result q;
-map q_A_b, q_A_c, q_D_b, q_D_c, q_1_bc;
+// Declarations; initializations (to 0) are omitted
+double q; // result
+double q_A_b[], q_A_c[], q_D_b[], q_D_c[], q_1_bc[][];
 
 // Event handlers
-void on_insert_into_R (attribute a, attribute b) {
+void on_insert_into_R (double a, double b) {
    q += a * q_D_b[b];   q_A_b[b] += a;
    foreach (c in q_A_c.keys()) do
       q_A_c[c] += a * q_1_bc[b][c];
 }
 
-void on_insert_into_S (attribute b, attribute c) {
+void on_insert_into_S (double b, double c) {
    q += q_A_b[b] * q_D_c[c];   q_A_c[c] += q_A_b[b];
    q_D_b[b] += q_D_c[c];       q_1_bc[b][c] += 1;
 }
-void on_insert_into_T (attribute c, attribute d) {
+void on_insert_into_T (double c, double d) {
    q += q_A_c[c] * d;   q_D_c[c] += d;
    foreach (b in q_D_b[b].keys()) do
       q_D_b[b] += q_1_bc[b][c] * d;
