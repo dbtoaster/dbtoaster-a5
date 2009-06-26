@@ -122,10 +122,10 @@ $\algsum_{1}(\sigma_{BC=bc}(S))$
 
 \vspace{-2mm}
 
-\caption{\compiler's recursive compilation of the
-'\texttt{select sum(a*d) from R, S, T}' query, showing the query being compiled,
+\caption{Recursive compilation of the
+'\texttt{select sum(a*d) from R, S, T where R.B=S.B and S.C=T.C}' query, showing the query being compiled,
 the procedural code required to incrementally compute the query result, maps
-required by the code, and the query defining the map. Above, the event $\pm R$
+required, and the queries defining the maps. Above, the event $\pm R$
 indicates both an insert and delete on $R$, and we present the code
 in one piece, although \compiler\ would produce different event handlers.}
 \label{tab:derivation}
@@ -139,7 +139,7 @@ distributivity properties of summation and multiplication, and the cross product
 operator. At this point we have presented one level of compilation, for an
 insertion into each base relation $R, S, T$, resulting in incremental query
 result computation code, a set of maps which we have to maintain, and queries
-defining the map contents. At this point, we recursively compile the map
+defining the map contents. Following this, we recursively compile the map
 definition queries, considering each of the three types of insertion (to
 $R,S,T$). We subsequently aggressively inline any code generated into a handler
 for each type of insertion. For example, consider the maps $q_A[c], q_A[b]$
