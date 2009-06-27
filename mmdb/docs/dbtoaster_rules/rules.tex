@@ -5,6 +5,7 @@
 \usepackage{latexsym}
 \usepackage{amsmath}
 \usepackage{txfonts}
+\usepackage{verbatim}
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{metatheorem}{Metatheorem}[section]
@@ -51,64 +52,64 @@
 \begin{figure*}
 \begin{eqnarray}
 \label{eq:a1}
-\Delta_{+R(\vec{r})} c       &:=& 0 \\
+\Delta_{\pm R(\vec{r})} c       &:=& 0 \\
 \label{eq:a2}
-\Delta_{+R(\vec{r})} x       &:=& 0 \\
+\Delta_{\pm R(\vec{r})} x       &:=& 0 \\
 \label{eq:a3}
-\Delta_{+R(\vec{r})} (f + g) &:=& (\Delta_{+R(\vec{r})} f) + (\Delta_{+R(\vec{r})} g) \\
+\Delta_{\pm R(\vec{r})} (f + g) &:=& (\Delta_{\pm R(\vec{r})} f) + (\Delta_{\pm R(\vec{r})} g) \\
 \label{eq:a4}
-\Delta_{+R(\vec{r})} (f * g) &:=&         f                * (\Delta_{+R(\vec{r})} g)
-                              +   (\Delta_{+R(\vec{r})} f) * g                        
-                              +   (\Delta_{+R(\vec{r})} f) * (\Delta_{+R(\vec{r})} g)
+\Delta_{\pm R(\vec{r})} (f * g) &:=&         f                * (\Delta_{\pm R(\vec{r})} g)
+                              +   (\Delta_{\pm R(\vec{r})} f) * g                        
+                              +   (\Delta_{\pm R(\vec{r})} f) * (\Delta_{\pm R(\vec{r})} g)
 \\
 \label{eq:a5}
-\Delta_{+R(\vec{r})} \algsum_f(Q) &:=&
-   \algsum_{\Delta_{+R(\vec{r})} f}(Q)
-   + \algsum_f(\Delta_{+R(\vec{r})} Q)
-   + \algsum_{\Delta_{+R(\vec{r})} f}(\Delta_{+R(\vec{r})} Q)
+\Delta_{\pm R(\vec{r})} \algsum_f(Q) &:=&
+   \algsum_{\Delta_{\pm R(\vec{r})} f}(Q)
+   + \algsum_f(\Delta_{\pm R(\vec{r})} Q)
+   + \algsum_{\Delta_{\pm R(\vec{r})} f}(\Delta_{\pm R(\vec{r})} Q)
 \\
 \nonumber
 &\dots& \mbox{$f = \algsum$}
 \\
 \label{eq:a6}
-\Delta_{+R(\vec{r})} \algsum_f(Q) &:=&
-   \algsum_f(\Delta_{+R(\vec{r})} Q)
+\Delta_{\pm R(\vec{r})} \algsum_f(Q) &:=&
+   \algsum_f(\Delta_{\pm R(\vec{r})} Q)
 \\
 \nonumber
-&\dots& \mbox{$\Delta_{+R(\vec{r})} f = 0$ (optimization of Eq.~\ref{eq:a5})}
+&\dots& \mbox{$\Delta_{\pm R(\vec{r})} f = 0$ (optimization of Eq.~\ref{eq:a5})}
 %
 %
 \\[2ex]
 \label{eq:b1}
-\Delta_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=& \pi_{\vec{r} \rightarrow \vec{A}}\{\tuple{}\}
+\Delta_{\pm R(\vec{r})} \rho_{\vec{A}}(R) &:=& \pi_{\vec{r} \rightarrow \vec{A}}\{\tuple{}\}
 \\
 \label{eq:b2}
-\Delta_{+R(\vec{r})} S &:=& \emptyset
+\Delta_{\pm R(\vec{r})} S &:=& \emptyset
 \\
 \label{eq:b3}
-\Delta_{+R(\vec{r})} \{ \vec{a} \} &:=& \emptyset
+\Delta_{\pm R(\vec{r})} \{ \vec{a} \} &:=& \emptyset 
 \\
 \label{eq:b4}
-\Delta_{+R(\vec{r})} (Q_1 \cup Q_2) &:=&
-(\Delta_{+R(\vec{r})} Q_1) \cup (\Delta_{+R(\vec{r})} Q_2)
+\Delta_{\pm R(\vec{r})} (Q_1 \cup Q_2) &:=&
+(\Delta_{\pm R(\vec{r})} Q_1) \cup (\Delta_{\pm R(\vec{r})} Q_2)
 \\
 \label{eq:b5}
-\Delta_{+R(\vec{r})} (Q_1 \times Q_2) &:=&
-((\Delta_{+R(\vec{r})} Q_1) \times Q_2) \cup
-(Q_1 \times (\Delta_{+R(\vec{r})} Q_2)) \\
+\Delta_{\pm R(\vec{r})} (Q_1 \times Q_2) &:=&
+((\Delta_{\pm R(\vec{r})} Q_1) \times Q_2) \cup
+(Q_1 \times (\Delta_{\pm R(\vec{r})} Q_2)) \\
 \nonumber
 &\cup&
-((\Delta_{+R(\vec{r})} Q_1) \times (\Delta_{+R(\vec{r})} Q_2))
+((\Delta_{\pm R(\vec{r})} Q_1) \times (\Delta_{\pm R(\vec{r})} Q_2))
 \\
 \label{eq:b6}
-\Delta_{+R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
-\sigma_{f \theta 0}(\Delta_{+R(\vec{r})} Q)
+\Delta_{\pm R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
+\sigma_{f \theta 0}(\Delta_{\pm R(\vec{r})} Q)
 \\
 \nonumber
-&\dots& \Delta_{+R(\vec{r})} f[\vec{x}, \vec{A}] = 0 \mbox{ on all $\vec{A}$}
+&\dots& \Delta_{\pm R(\vec{r})} f[\vec{x}, \vec{A}] = 0 \mbox{ on all $\vec{A}$}, \theta \in \{=,<\}
 \\
 \nonumber
-\Delta_{+R(\vec{r})} \pi_{\dots}(Q) &\dots& \mbox{no rule, simplify 
+\Delta_{\pm R(\vec{r})} \pi_{\dots}(Q) &\dots& \mbox{no rule, simplify 
 surrounding aggregate instead}
 \\[2ex]
 %
@@ -142,14 +143,14 @@ on insert into $R$ values $\vec{r}$ trigger.}
 %
 %
 \label{eq:incr3}
-\algincrdiff_{\oplus_f, S} \Delta_{-R(\vec{r})} f &:=&
-S \leftarrow \oplus_f(S, \Delta_{-R(\vec{r})} f); \Delta_{-R(\vec{r})} f
+\algincrdiff_{\oplus_f, S} \Delta_{\pm R(\vec{r})} f &:=&
+S \leftarrow \oplus_f(S, \Delta_{\pm R(\vec{r})} f); \Delta_{\pm R(\vec{r})} f
 \\
 \nonumber &\dots& \mbox{where $\oplus_f \in \{+, -,\min\}$}
 \\
 \label{eq:incr4}
-\algincrdiff_{\oplus_Q, S} \Delta_{-R(\vec{r})} Q &:=&
-S \leftarrow \oplus_Q(S, \Delta_{-R(\vec{r})}); \Delta_{-R(\vec{r})} Q
+\algincrdiff_{\oplus_Q, S} \Delta_{\pm R(\vec{r})} Q &:=&
+S \leftarrow \oplus_Q(S, \Delta_{\pm R(\vec{r})}); \Delta_{\pm R(\vec{r})} Q
 \\
 \nonumber &\dots& \mbox{where $\oplus_Q \in \{\cup, -\}$}
 %
@@ -182,50 +183,51 @@ S.erase[A]
 \begin{eqnarray}
 \mbox{Frontier computation:} && \nonumber
 \\
+\nonumber\algnew_{\pm R(\vec{r})} f &:=& \mbox{new value of \emph{f} when insert/delete } \vec{r} \mbox{ to R}\\
 \label{eq:new1}
-\algnew_{+R(\vec{r})} c       &:=& \algincr_{c} \Delta c \\
+\algnew_{\pm R(\vec{r})} c       &:=& \algincr_{c} \Delta_{\pm R(\vec{r})} c \\
 \label{eq:new2}
-\algnew_{+R(\vec{r})} x       &:=& \algincr_{x} \Delta x \\
+\algnew_{\pm R(\vec{r})} x       &:=& \algincr_{x} \Delta_{\pm R(\vec{r})} x \\
 \label{eq:new3}
-\algnew_{+R(\vec{r})} (f \pm g) &:=&
-(\algnew_{+R(\vec{r})} f) \pm (\algnew_{+R(\vec{r})} g) \\
+\algnew_{\pm R(\vec{r})} (f \pm g) &:=&
+(\algnew_{\pm R(\vec{r})} f) \pm (\algnew_{\pm R(\vec{r})} g) \\
 \label{eq:new4}
-\algnew_{+R(\vec{r})} (f * g) &:=&
-(\algnew_{+R(\vec{r})} f) * (\algnew_{+R(\vec{r})} g)
+\algnew_{\pm R(\vec{r})} (f * g) &:=&
+(\algnew_{\pm R(\vec{r})} f) * (\algnew_{\pm R(\vec{r})} g)
 %
 %
 \nonumber
 \\[2ex]
 \label{eq:newr1}
-\algnew_{+R(\vec{r})} \rho_{\vec{A}}(R) &:=&
-   \algincr_{\rho_{\vec{A}}(R)} \Delta_{+R(\vec{r})} \rho_{\vec{A}}(R)
+\algnew_{\pm R(\vec{r})} \rho_{\vec{A}}(R) &:=&
+   \algincr_{\rho_{\vec{A}}(R)} \Delta_{\pm R(\vec{r})} \rho_{\vec{A}}(R)
 \\
 \label{eq:newr2}
-\algnew_{+R(\vec{r})} S &:=& \algincr_{S} \Delta_{+R(\vec{r})} S
+\algnew_{\pm R(\vec{r})} S &:=& \algincr_{S} \Delta_{\pm R(\vec{r})} S
 \\
 \label{eq:newr3}
-\algnew_{+R(\vec{r})} \{ \vec{a} \} &:=&
-\algincr_{\{ \vec{a} \}} \Delta_{+R(\vec{r})} \{ \vec{a} \}
+\algnew_{\pm R(\vec{r})} \{ \vec{a} \} &:=&
+\algincr_{\{ \vec{a} \}} \Delta_{\pm R(\vec{r})} \{ \vec{a} \}
 \\
 \label{eq:newr4}
-\algnew_{+R(\vec{r})} (Q_1 \cup Q_2) &:=&
-   (\algnew_{+R(\vec{r})} Q_1) \cup (\algnew_{+R(\vec{r})} Q_2)
+\algnew_{\pm R(\vec{r})} (Q_1 \cup Q_2) &:=&
+   (\algnew_{\pm R(\vec{r})} Q_1) \cup (\algnew_{\pm R(\vec{r})} Q_2)
 \\
 \label{eq:newr5}
-\algnew_{+R(\vec{r})} (Q_1 \times Q_2) &:=&
-   (\algnew_{+R(\vec{r})} Q_1) \times (\algnew_{+R(\vec{r})} Q_2)
+\algnew_{\pm R(\vec{r})} (Q_1 \times Q_2) &:=&
+   (\algnew_{\pm R(\vec{r})} Q_1) \times (\algnew_{\pm R(\vec{r})} Q_2)
 %
 %
 \\[2ex]
 \label{eq:newr6}
-\algnew_{+R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
-   \sigma_{(\algnew_{+R(\vec{r})} f) \theta 0}(\algnew_{+R(\vec{r})} Q)
+\algnew_{\pm R(\vec{r})} \sigma_{f \theta 0}(Q) &:=&
+   \sigma_{(\algnew_{\pm R(\vec{r})} f) \theta 0}(\algnew_{\pm R(\vec{r})} Q)
 %
 %
 \\[2ex]
 \label{eq:newr7}
-\algnew_{+R(\vec{r})} f[g] & := &
-   (\algnew_{+R(\vec{r})} f)[\algnew_{+R(\vec{r})} g]
+\algnew_{\pm R(\vec{r})} f[g] & := &
+   (\algnew_{\pm R(\vec{r})} f)[\algnew_{\pm R(\vec{r})} g]
 %
 %
 %
@@ -302,7 +304,7 @@ S \leftarrow \oplus(S, \delta_{\pm R(\vec{r})} f); S
 \label{eq:agg5}
 \delta_{+R(\vec{r})} \algmin_f(Q) &:=&
     \algmin_{f} (\underbrace{\algincr_{\cup, S_Q}}_{
-    \mathrm{for} \; \algnew_{-R(\vec{r})} \algmin_f(Q)}
+    \mathrm{for} \; \algnew_{-R(\vec{r})} \algmin_f(Q), \mbox{ $S_Q$ is share with $\delta_{-R(\vec{r})} \algmin_f(Q)$}}
     \Delta_{+R(\vec{r})} Q)
 \\
 \label{eq:agg6}
@@ -327,7 +329,7 @@ decrmin(f, S_Q, S_m, \Delta) &=&
 \\
 \label{eq:agg9}
 \algnew_{-R(\vec{r})} \algmin_{f}(Q) &:=&
-\algincr_{decrmin(f, S_{\Delta \min}), S} \delta_{-R(\vec{r})} \algmin_{f}(Q)
+\algincr_{decrmin(f, S_Q, S, \Delta), S} \delta_{-R(\vec{r})} \algmin_{f}(Q)
 \\
 \nonumber &\dots& \Delta_{-R(\vec{r})} f = 0
 \mbox{, for Eq.~\ref{eq:agg7}-\ref{eq:agg8}.}
@@ -501,7 +503,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \label{eq:md4}
 (\algincr_{\oplus, S_f} \Delta_{+R(\vec{r})} f)[c=\algnew_{+R(\vec{r})} g]
 &:=&
-\algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \};
+\algfor(\mbox{$c$ in $S_f$}) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \};
 \\
 \nonumber && rc = \algnew_{+R(\vec{r})} g;
 \\
@@ -511,7 +513,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \\
 \nonumber && S_{f}[rc]
 \\
-\label{eq:in5}
+\label{eq:md5}
 (\algincr_{\oplus_1, S_f} \Delta_{+R(\vec{r})} f)
 [c=\algincr_{\oplus_2, S_g} \Delta_{+R(\vec{r})} g]
 &:=&
@@ -551,7 +553,8 @@ rc = \algincr_{\oplus_2, S_g} \Delta_{-R(\vec{r})} g;
 \nonumber &&
 \algfor(c) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus_1, S_f[c]}\Delta_{-R(\vec{r})} f)[c]) \; \};
 \\
-\nonumber && S_f[rc]
+\nonumber && S_f[rc] \\
+\nonumber &\dots& \mbox{ignore(f): evaluate f with no return value for Eq.~\ref{eq:md4}-\ref{eq:md7}}
 \end{eqnarray}
 \end{figure*}
 
@@ -622,6 +625,14 @@ rc = \algincr_{\oplus_2, S_g} \Delta_{-R(\vec{r})} g;
 \end{eqnarray}
 \end{figure*}
 
+
+
+\begin{comment}
+
+
+
+% code_expression
+\end{comment}
 
 \pagebreak
 \section{Compilation examples}
@@ -1228,4 +1239,170 @@ Delete R(a,b):
 \caption{Database monotonicity analysis rules.}
 \end{figure}
 
+\pagebreak
+\section{Type Specification}
+\begin{tabular}[ht] {rcl}
+identifier & = & \emph{string}\\
+\\
+column\_name &=& \`{}Qualified ( identifier, identifier )\\
+&$\lvert$ & \`{}Unqualified ( identifier ) \\
+\\
+attribute\_identifier &=& column\_name\\
+variable\_identifier &=& identifier\\
+function\_identifier &=& identifier\\
+type\_identifier &=& identifier\\
+field\_identifier &=& identifier\\
+relation\_identifier &=& identifier\\
+state\_identifier &=& identifier\\
+\\
+field &=& ( field\_identifier, type\_identifier ) \\
+\\
+delta &=& \`{} Insert (relation\_identifier) \\
+& $\lvert$ &  \`{} Delete (relation\_identifier) \\
+\\
+eterm &=& \`{}Int ( \emph{int} )\\
+&$\lvert$ & \`{}Float ( \emph{float} )\\
+&$\lvert$ & \`{}String ( \emph{string} )\\
+&$\lvert$ & \`{}Long ( \emph{int64} )\\
+&$\lvert$ & \`{}Attribute ( attribute\_identifier )\\
+&$\lvert$ & \`{}Variable ( variable\_identifier )\\
+\\
+expression & =& \`{}ETerm ( eterm )\\
+&$\lvert$ & \`{}UnaryMinus ( expression )\\
+&$\lvert$ & \`{}Sum ( expression, expression )\\
+&$\lvert$ & \`{}Product ( expression, expression )\\
+&$\lvert$ & \`{}Minus ( expression, expression )\\
+&$\lvert$ & \`{}Divide ( expression, expression ) \\
+&$\lvert$ & \`{}Function ( function\_identifier, [expression] )\\
+\\
+meterm &=& \`{}Int ( \emph{int} )\\
+&$\lvert$ & \`{}Float ( \emph{float} )\\
+&$\lvert$ & \`{}String ( \emph{string} )\\
+&$\lvert$ & \`{}Long ( \emph{int64} )\\
+&$\lvert$ & \`{}Attribute ( attribute\_identifier )\\
+&$\lvert$ & \`{}Variable ( variable\_identifier )\\
+\\
+aggregate\_function &=& \`{} Sum\\
+&$\lvert$ & \`{}Min \\
+\\
+oplus &=& \`{}Plus \\
+&$\lvert$ & \`{}Minus \\
+&$\lvert$ & \`{}Min\\
+&$\lvert$ & \`{}Decrmin\\
+\\
+poplus &=& \`{}Union\\
+&$\lvert$ & \`{}Diff\\
+\\
+\end{tabular}
+\pagebreak
+
+\begin{tabular}[ht] {rcl}
+map\_expression &=& \`{}METerm ( meterm ) \\
+&$\lvert$ & \`{}Sum ( map\_expression , map\_expression )\\
+&$\lvert$ & \`{}Minus ( map\_expression,  map\_expression )\\
+&$\lvert$ & \`{}Product ( map\_expression, map\_expression )\\
+&$\lvert$ & \`{}Min ( map\_expression, map\_expression )\\
+&$\lvert$ & \`{}MapAggregate ( aggregate\_function, map\_expression, plan )\\
+&$\lvert$ & \`{}Delta ( delta,  map\_expression )\\
+&$\lvert$ & \`{}New ( delta, map\_expression )\\
+&$\lvert$ & \`{}Incr ( state\_identifier, delta, oplus, map\_expression )\\
+&$\lvert$ & \`{}Incrdiff ( state\_identifier, delta, oplus, map\_expression )\\
+&$\lvert$ & \`{}Init ( state\_identifier, delta, oplus, map\_expression )\\
+&$\lvert$ & \`{}Insert ( state\_identifier, meterm, map\_expression )\\
+&$\lvert$ & \`{}Update ( state\_identifier, delta, oplus, meterm, map\_expression )\\
+&$\lvert$ & \`{}Delete ( state\_identifier, meterm )\\
+&$\lvert$ & \`{}Branch ( bterm, map\_expression, map\_expression ) \\
+\\
+bterm &=& \`{} True \\
+&$\lvert$ & \`{}False \\
+&$\lvert$ & \`{}LT ( expression,  expression )\\
+&$\lvert$ & \`{}LE ( expression, expression )\\
+&$\lvert$ & \`{}GT ( expression, expression )\\
+&$\lvert$ & \`{}GE ( expression, expression )\\
+&$\lvert$ & \`{}EQ ( expression, expression )\\
+&$\lvert$ & \`{}NE ( expression, expression )\\
+&$\lvert$ & \`{}MEQ ( map\_expression )\\
+&$\lvert$ & \`{}MLT ( map\_expression )\\
+\\
+boolean\_expression &=& \`{} BTerm ( bterm )\\
+&$\lvert$ & \`{}Not ( boolean\_expression )\\
+&$\lvert$ & \`{}And ( boolean\_expression,  boolean\_expression )\\
+&$\lvert$ & \`{}Or ( boolean\_expression,  boolean\_expression )\\
+\\
+plan &=& \`{}Relation ( relation\_identifier, [field] )\\
+&$\lvert$ & \`{}TupleRelation ( relation\_identifier, [field] )\\
+&$\lvert$ & \`{}Rename ( [(attribute\_identifier, attribute\_identifier)], plan ) \\
+&$\lvert$ & \`{}Select ( boolean\_expression, plan )\\
+&$\lvert$ & \`{}Project ( [(attribute\_identifier, expression)], plan )\\
+&$\lvert$ & \`{}Union ( [plan] )\\
+&$\lvert$ & \`{}Cross ( plan , plan )\\
+&$\lvert$ & \`{}NaturalJoin ( plan,  plan )\\
+&$\lvert$ & \`{}Join ( boolean\_expression,  plan,  plan )\\
+&$\lvert$ & \`{}EmptySet \\
+&$\lvert$ & \`{}DeltaPlan ( delta, plan )\\
+&$\lvert$ & \`{}NewPlan ( delta, plan )\\
+&$\lvert$ & \`{}IncrPlan ( state\_identifier, delta, poplus, plan ) \\
+\\
+binding &=& \`{}BindExpr ( variable\_identifier,  expression )\\
+&$\lvert$ & \`{}BindBoolExpr ( variable\_identifier,  boolean\_expression )\\
+&$\lvert$ & \`{}BindMapExpr ( variable\_identifier, map\_expression ) \\
+\\
+\end{tabular}
+\pagebreak
+
+\begin{tabular}[ht] {rcl}
+map\_identifier &=& identifier\\
+code\_variable &=& variable\_identifier\\
+\\
+datastructure &=& \`{}Map ( map\_identifier, [field], type\_identifier )\\
+&$\lvert$ & \`{}List ( relation\_identifier, [field] )\\
+\\
+map\_key &=& map\_identifier, [code\_variable] \\
+map\_iterator &=& \`{}Begin (map\_identifier)\\
+&$\lvert$ & \`{}End (map\_identifier)\\
+\\
+declaration &=& \`{}Variable ( code\_variable, type\_identifier )\\
+&$\lvert$ & \`{}Relation ( relation\_identifier, [field] )\\ 
+&$\lvert$ & \`{}Map ( map\_identifier, [field], type\_identifier )\\
+\\
+code\_terminal &=& \`{}Int ( \emph{int} )\\
+&$\lvert$ & \`{}Float ( \emph{float} )\\
+&$\lvert$ & \`{}String ( \emph{string} )\\
+&$\lvert$ & \`{}Long ( \emph{int64} )\\
+&$\lvert$ & \`{}Variable ( code\_variable )\\
+&$\lvert$ & \`{}MapAccess ( map\_key )\\
+&$\lvert$ & \`{}MapContains ( map\_key )\\
+&$\lvert$ & \`{}MapIterator ( map\_iterator )\\
+\\
+arith\_code\_expression &=& \`{}CTerm ( code\_terminal )\\
+&$\lvert$ & \`{}Sum ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}Minus ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}Product ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}Min ( arith\_code\_expression, arith\_code\_expression ) \\
+\\
+bool\_code\_term &=& \`{}True \\
+&$\lvert$ & \`{}False \\
+&$\lvert$ & \`{}LT ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}LE ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}GT ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}GE ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}EQ ( arith\_code\_expression, arith\_code\_expression )\\
+&$\lvert$ & \`{}NE ( arith\_code\_expression, arith\_code\_expression )\\
+\\
+bool\_code\_expression &=& \`{}BCTerm ( bool\_code\_term )\\
+&$\lvert$ & \`{}Not ( bool\_code\_expression )\\
+&$\lvert$ & \`{}And ( bool\_code\_expression, bool\_code\_expression )\\
+&$\lvert$ & \`{}Or ( bool\_code\_expression, bool\_code\_expression )\\
+\\
+code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
+&$\lvert$ & \`{}ForEach ( datastructure, code\_expression )\\
+&$\lvert$ & \`{}Declare ( declaration )\\
+&$\lvert$ & \`{}Assign ( code\_variable, arith\_code\_expression )\\
+&$\lvert$ & \`{}AssignMap ( map\_key, arith\_code\_expression )\\
+&$\lvert$ & \`{}EraseMap ( map\_key, code\_terminal )\\
+&$\lvert$ & \`{}Eval ( arith\_code\_expression )\\
+&$\lvert$ & \`{}Block ( [code\_expression] )\\
+&$\lvert$ & \`{}Return ( arith\_code\_expression )\\
+&$\lvert$ & \`{}Handler ( function\_identifier, [field], type\_identifier, [code\_expression] )\\
+\end{tabular}
 \end{document}
