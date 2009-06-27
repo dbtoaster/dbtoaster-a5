@@ -22,9 +22,7 @@ type state_identifier = identifier
 
 type field = field_identifier * type_identifier 
 
-type delta = [
-| `Insert of relation_identifier * field list
-| `Delete of relation_identifier * field list]
+type delta = [ `Insert of relation_identifier | `Delete of relation_identifier ]
 
 type eterm = [
 | `Int of int
@@ -82,15 +80,16 @@ and boolean_expression = [
 | `Or of boolean_expression * boolean_expression ]
 
 and plan = [
-| `TrueRelation (* aka nullary singleton *)
-| `FalseRelation (* aka emptyset *)
 | `Relation of relation_identifier * field list
+| `TupleRelation of relation_identifier * field list
+| `Rename of (attribute_identifier * attribute_identifier) list * plan
 | `Select of boolean_expression * plan
 | `Project of (attribute_identifier * expression) list * plan
 | `Union of plan list
 | `Cross of plan * plan
 | `NaturalJoin of plan * plan 
 | `Join of boolean_expression * plan * plan
+| `EmptySet
 | `DeltaPlan of delta * plan
 | `NewPlan of plan
 | `IncrPlan of plan ]
@@ -251,8 +250,8 @@ let string_of_schema schema =
 
 let string_of_delta d =
     match d with
-	| `Insert (r, f) -> r^","^(string_of_schema f)
-	| `Delete (r, f) -> r^","^(string_of_schema f)
+	| `Insert r -> r
+	| `Delete r -> r
 
 let string_of_expr_terminal eterm =
     match eterm with 
@@ -293,7 +292,7 @@ let string_of_projections projections =
     List.fold_left
 	(fun acc (id, expr) ->
 	     (if (String.length acc) = 0 then "" else (acc^","))^
-		 (string_of_attribute_identifier id)^"<-"^(string_of_expression expr))
+		 (string_of_attribute_identifier id)^"="^(string_of_expression expr))
 	"" projections
 
 let rec string_of_bool_expression b_expr =
@@ -353,7 +352,17 @@ and string_of_map_expression m_expr =
 
 and string_of_plan p =
     match p with
+	| `TupleRelation (name, schema) -> "TupleRelation ["^name^"]"^(string_of_schema schema)
 	| `Relation (name, schema) -> "Relation ["^name^"]"^(string_of_schema schema)
+	      
+	| `Rename (mappings, child) ->
+	      "rename {"^
+		  (List.fold_left
+		       (fun acc (i,o) ->
+			    (if String.length acc = 0 then "" else (acc^","))^
+				(string_of_attribute_identifier o)^"="^(string_of_attribute_identifier i))
+		       "" mappings)^
+		  "}("^(string_of_plan child)^")"
 
 	| `Select (pred, child) ->
 	      "select {"^(string_of_bool_expression pred)^"}("^(string_of_plan child)^")"
@@ -378,9 +387,7 @@ and string_of_plan p =
 	      "join{"^(string_of_bool_expression pred)^"}("^
 		  (string_of_plan l)^","^(string_of_plan r)^")"
 
-	| `TrueRelation -> "TrueRelation"
-
-	| `FalseRelation -> "FalseRelation"
+	| `EmptySet -> "EmptySet"
 	      
 	| `DeltaPlan (binding, ch) ->
 	      "Delta{"^(string_of_delta binding)^"}("^(string_of_plan ch)^")"
@@ -405,8 +412,8 @@ let rec indented_string_of_bool_expression b_expr level =
 			  | `GE (l,r) -> dispatch_expr l r ">="
 			  | `EQ (l,r) -> dispatch_expr l r "="
 			  | `NE (l,r) -> dispatch_expr l r "!="
-			  | `MEQ m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " = 0")
-			  | `MLT m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " < 0")
+			  | `MEQ m_expr -> (indented_string_of_map_expression m_expr (level+1))^(indent " = 0")
+			  | `MLT m_expr -> (indented_string_of_map_expression m_expr (level+1))^(indent " < 0")
 				(* | `BoolVariable sym -> "BVar("^sym^")" *)
 			  | `True -> "true"
 			  | `False -> "false"
@@ -478,13 +485,23 @@ and indented_string_of_plan p level =
     let indent s = (String.make (4*level) '-')^"> "^s^"\n" in
     let indent_binary l op r = l^(indent op)^r in
     match p with
+	| `TupleRelation (name, schema) -> (indent ("TupleRelation ["^name^"]"^(string_of_schema schema)))
 	| `Relation (name, schema) -> (indent ("Relation ["^name^"]"^(string_of_schema schema)))
 	      
+	| `Rename (mappings, child) ->
+	      (indent
+		   ("rename {"^
+			(List.fold_left
+			     (fun acc (i,o) ->
+				  (if String.length acc = 0 then "" else (acc^","))^
+				      (string_of_attribute_identifier o)^"="^(string_of_attribute_identifier i))
+			     "" mappings)^
+			"}("^(indented_string_of_plan child (level+1))^")"))
+
 	| `Select (pred, child) ->
-	      (indent ("select {"^
-		  (indented_string_of_bool_expression pred (level+1))^"}("))^
-		  (indented_string_of_plan child (level+1))^
-                                  (indent ")")
+	      (indent "select {")^
+		  (indented_string_of_bool_expression pred (level+1))^"}("^
+		  (indented_string_of_plan child (level+1))^")"
 
 	| `Project (projs, child) ->
 	      (indent ("project {"^(string_of_projections projs)^"}("))^
@@ -523,9 +540,7 @@ and indented_string_of_plan p level =
 		       (indented_string_of_plan r (level+1)))^
 		  (indent ")")
 
-	| `TrueRelation -> (indent "TrueRelation")
-
-	| `FalseRelation -> (indent "FalseRelation")
+	| `EmptySet -> (indent "EmptySet")
 	      
 	| `DeltaPlan (binding, ch) ->
 	      (indent ("Delta{"^(string_of_delta binding)^"}("))^
@@ -591,12 +606,18 @@ let parent m_expr ch_e_or_p =
 			  let fp = parent_aux match_f e_or_p in
 			      if fp = None then parent_aux match_q e_or_p else fp
 				  
-	    | `Plan (`Relation (n, f)) -> None 
+	    | `Plan (`TupleRelation (n,f)) | `Plan (`Relation (n, f)) -> None 
+
+	    | `Plan (`Rename (m, q)) ->
+		  let match_q = `Plan q in
+		      if match_q = ch_e_or_p then Some e_or_p
+		      else parent_aux match_q e_or_p
 
 	    | `Plan (`Select (p, cq)) ->
 		  begin
 		      let match_cq = `Plan cq in
 			  match p with
+				  (* TODO: think about case for complex map expression predicate *)
 			      | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
 				    let match_p = `MapExpression m_expr in
 					if (match_p = ch_e_or_p) || (match_cq = ch_e_or_p) then Some e_or_p
@@ -605,7 +626,6 @@ let parent m_expr ch_e_or_p =
 						if pp = None then parent_aux match_cq e_or_p else pp
 
 			      | _ ->
-				  print_endline ("Matching "^(string_of_plan cq));
 				    if match_cq = ch_e_or_p then Some e_or_p
 				    else
 					parent_aux match_cq e_or_p
@@ -662,8 +682,8 @@ let parent m_expr ch_e_or_p =
 		      if match_p = ch_e_or_p then Some e_or_p
 		      else parent_aux match_p e_or_p
 
-	    | `Plan (`TrueRelation) -> None
-	    | `Plan (`FalseRelation) -> None
+	    (* No unique identifier for empty set so any empty set can match with another *) 
+	    | `Plan (`EmptySet) -> raise (PlanException "No valid parent for empty set")
 
 	    | _ -> raise InvalidExpression
     in
@@ -692,7 +712,8 @@ let children e_or_p =
 		      
 	    | `MapExpression (`MapAggregate(fn,f,q)) -> [`MapExpression(f); `Plan(q)]
 
-	    | `Plan(`Relation(n,f)) -> []
+	    | `Plan(`TupleRelation (n,f)) | `Plan(`Relation(n,f)) -> []
+	    | `Plan(`Rename (m, cq)) -> [`Plan(cq)]
 	    | `Plan(`Select (p, cq)) ->
 		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@([`Plan(cq)])
 	    | `Plan(`Project (a,cq)) -> [`Plan(cq)]
@@ -704,8 +725,7 @@ let children e_or_p =
 		      [`Plan(l); `Plan(r)]
 	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e)) | `Plan (`IncrPlan(e)) ->
 		  [`MapExpression(e)]
-	    | `Plan (`TrueRelation) -> []
-	    | `Plan (`FalseRelation) -> []
+	    | `Plan (`EmptySet) -> []
 	    | _ -> raise InvalidExpression
 
 (* accessor_element -> accessor_element list *)
@@ -767,6 +787,8 @@ let splice m_expr orig rewrite =
 	    begin
 		match q with
 		    | `Relation (n,f) as x -> x
+		    | `TupleRelation (n,f) as x -> x
+		    | `Rename (m, cq) -> `Rename(m, splice_plan_aux cq)
 		    | `Select (p,cq) ->
 			  begin
 			      match p with
@@ -801,8 +823,7 @@ let splice m_expr orig rewrite =
 		    | `NewPlan (e) -> `NewPlan(splice_plan_aux e)
 		    | `IncrPlan (e) -> `IncrPlan (splice_plan_aux e)
 
-		    | `TrueRelation -> `TrueRelation
-		    | `FalseRelation -> `FalseRelation
+		    | `EmptySet -> `EmptySet
 		    | _ -> raise InvalidExpression
 	    end
     in
@@ -830,9 +851,8 @@ let get_base_relations m_expr =
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbr_aux (`Plan q) (gbr_aux (`MapExpression f) acc))
 
-	    | `Plan (`Relation (n,f) as x) -> x::acc
-
-	    | `Plan (`TrueRelation) | `Plan (`FalseRelation) -> acc
+	    | `Plan (`Relation (n,f) as x) | `Plan (`TupleRelation (n,f) as x) -> x::acc
+	    | `Plan (`Rename (m, cq)) -> gbr_aux (`Plan cq) acc
 		  
 	    | `Plan (`Select (p,cq)) ->
 		  begin
@@ -863,6 +883,7 @@ let get_base_relations m_expr =
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (p)) ->
 		  (gbr_aux (`Plan p) acc)
 
+	    | `Plan (`EmptySet) -> acc
 	    | _ -> raise InvalidExpression
     in
 	gbr_aux (`MapExpression m_expr) []
@@ -886,10 +907,9 @@ let get_bound_relations m_expr =
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbor_aux (`Plan q) (gbor_aux (`MapExpression f) acc))
 
-	    | `Plan (`Relation (_,_)) -> acc
+	    | `Plan (`Relation (_,_)) | `Plan (`TupleRelation (_,_)) -> acc
 
-	    | `Plan (`Project(projs, `TrueRelation) as q) -> q::acc
-
+	    | `Plan (`Rename (m, cq)) -> gbor_aux (`Plan cq) acc		
 	    | `Plan (`Select (p,cq)) ->
 		  begin
 		      match p with
@@ -898,6 +918,9 @@ let get_bound_relations m_expr =
 
 			  | _ -> (gbor_aux (`Plan cq) acc)
 		  end
+
+	    | `Plan (`Project (a, `TupleRelation (n,f)) as q) -> acc@[q]
+	    | `Plan (`Project (a, `Rename(mp, `TupleRelation (n,f))) as q) -> acc@[q]
 
 	    | `Plan (`Project (a, cq)) -> (gbor_aux (`Plan cq) acc)
 
@@ -919,8 +942,7 @@ let get_bound_relations m_expr =
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (p)) ->
 		  (gbor_aux (`Plan p) acc)
 
-	    | `Plan (`TrueRelation) -> acc
-	    | `Plan (`FalseRelation) -> acc
+	    | `Plan (`EmptySet) -> acc
 	    | _ -> raise InvalidExpression
     in
 	gbor_aux (`MapExpression m_expr) []  
@@ -1158,7 +1180,7 @@ and compute_monotonicity attr attr_m m_expr =
 
 and compute_plan_monotonicity attr attr_m q =
     match q with
-	| `Relation (name, fields) ->
+	| `Relation (name, fields) | `TupleRelation (name, fields) ->
 	      let attr_rel =
 		  match attr with
 		      | `Qualified (n,f) -> n = name &&
@@ -1169,6 +1191,8 @@ and compute_plan_monotonicity attr attr_m q =
 		      (match attr_m with
 			   | Inc -> IncSet | Dec -> DecSet | Same -> SameSet | Undef -> UndefSet)
 		  else SameSet
+
+	| `Rename (m, cq) -> compute_plan_monotonicity attr attr_m cq
 
 	| `Select (b_expr, cq) ->
 	      let bem = compute_bool_expr_monotonicity attr attr_m b_expr in
@@ -1202,7 +1226,7 @@ and compute_plan_monotonicity attr attr_m q =
 	      let rm = compute_plan_monotonicity attr attr_m r in
 		  join_monotonicity bem lm rm 
 
-	| `TrueRelation | `FalseRelation  | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) ->
+	| `EmptySet | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) ->
 	      raise MonotonicityException
 
 
@@ -1372,8 +1396,8 @@ let field_declarations_of_datastructure ds iterator tab =
 
 let handler_name_of_event ev =
     match ev with
-	| `Insert (n, _) -> "on_insert_"^n
-	| `Delete (n, _) -> "on_delete_"^n
+	| `Insert n -> "on_insert_"^n
+	| `Delete n -> "on_delete_"^n
 
 (* 
  * Code generation main
@@ -1691,8 +1715,8 @@ let treeml_of_meterm meterm =
 let treeml_of_event evt =
     "<attribute name=\"event\" value=\""^
 	(match evt with
-	     | `Insert (r,_) -> "insert,"^r
-	     | `Delete (r,_) -> "delete,"^r)^"\"/>"
+	     | `Insert r -> "insert,"^r
+	     | `Delete r -> "delete,"^r)^"\"/>"
 
 let rec treeml_of_expression expr indent_fn = 
     let binary_expr typ l r =
@@ -1828,6 +1852,14 @@ and treeml_of_plan p indent_fn =
 		(indent_fn ("<attribute name=\"field\" value=\""^id^","^typ^"\"/>")))
 		 f)@["</leaf>"]
     in
+    let treeml_of_bindings b =
+	List.map
+	    (fun (iid, oid) ->
+		 "<attribute name=\"binding\" value=\""^
+		     (string_of_attribute_identifier iid)^","^
+		     (string_of_attribute_identifier oid)^"\"/>")
+	    b
+    in
     let treeml_of_projections projs =
 	List.map
 	    (fun (oid, expr) ->
@@ -1838,6 +1870,12 @@ and treeml_of_plan p indent_fn =
     in
     match p with
 	| `Relation (r,f) -> treeml_of_relation "relation" r f
+	| `TupleRelation (r,f) -> treeml_of_relation "tuplerelation" r f
+	| `Rename (bindings, c) ->
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"rename\"/>")]@
+		  (List.map indent_fn (treeml_of_bindings bindings))@
+		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
 
 	| `Select (pred, c) ->
 	      ["<branch>";
@@ -1877,9 +1915,7 @@ and treeml_of_plan p indent_fn =
 		  (List.map indent_fn (treeml_of_plan l indent_fn))@
 		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
 
-	| `TrueRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"truerelation\">");"</leaf>"]
-
-	| `FalseRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"falserelation\">");"</leaf>"]
+	| `EmptySet -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"emptyset\">");"</leaf>"]
 
 	| `DeltaPlan (e, c) ->
 	      ["<branch>";

@@ -11,14 +11,22 @@ exception RewriteException of string
 
 let get_bound_relation =
     function
-	| `Insert (r, _) -> r
-	| `Delete (r, _) -> r
+	| `Insert r -> r
+	| `Delete r -> r
 
 (* TODO: handle duplicate attributes, from multiple uses of a relation *)
 let rec get_bound_attributes q =
     match q with
-	| `Relation (n,f) ->
+	| `Relation (n,f) | `TupleRelation (n,f) ->
 	      List.map (fun (id,typ) -> `Qualified(n,id)) f
+	| `Rename (mappings, cq) ->
+	      let cqb = get_bound_attributes cq in
+		  List.map
+		      (fun x -> 
+			   let r = (List.filter (fun (i,o) -> x = i) mappings) in
+			       match r with
+				   | [] -> x | [(i,o)] -> o | _ -> raise DuplicateException)
+		      cqb
 
 	| `Select(pred, cq) -> get_bound_attributes cq
 	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
@@ -31,9 +39,8 @@ let rec get_bound_attributes q =
 		  (List.map
 		       (fun x -> match x with | `Qualified _ -> x | `Unqualified y -> `Qualified("right", y))
 		       (get_bound_attributes r))
-
-	| `TrueRelation -> []		  
-	| `FalseRelation -> []
+		  
+	| `EmptySet -> []
 	| `DeltaPlan (_, cq) | `NewPlan(cq) | `IncrPlan(cq) -> (get_bound_attributes cq)
 
 
@@ -44,14 +51,28 @@ let compare_attributes a1 a2 =
 	| (`Unqualified f1, `Qualified (n2, f2)) -> f1 = f2
 	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
 
-(* event -> (attribute_id * expression) list *)
-let create_bindings event name fields =
-  match event with
-  | `Insert(_, vars) | `Delete(_, vars) ->
-      List.map2
-	(fun (vid, vtyp) (fid, ftyp) -> (`Unqualified fid, `ETerm(`Variable(vid))) )
-	vars fields 
+(* field list -> (attribute_id * expression) list *)
+let create_bindings name fields =
+    List.map
+	(fun (id, typ) -> (`Qualified (name, id), `ETerm(`Variable(id))) )
+	fields
 
+let create_renamed_bindings name fields mappings =
+    List.map
+	(fun (id, typ) ->
+	     let aid = `Qualified (name, id) in
+	     let matched_mappings =
+		 List.filter (fun (i,o) -> compare_attributes i aid) mappings
+	     in
+		 match matched_mappings with
+		     | [] -> (aid, `ETerm(`Variable(id)))
+		     | [(i,o)] ->
+			   let o_id =
+			       match o with | `Qualified (_,x) -> x | `Unqualified x -> x
+			   in
+			       (o, `ETerm(`Variable(o_id)))
+		     | _ -> raise DuplicateException)
+	fields
 
 (* replaces attributes in map_expression with project's bound variables
  * Note: this function uses the following scoping rule:
@@ -164,7 +185,8 @@ and ab_pred_aux pred pa =
 
 and ab_plan_aux q pa =
     match q with
-	| `Relation (_,_) -> q
+	| `Relation (_,_) | `TupleRelation (_,_) -> q
+	| `Rename (mappings, cq) -> `Rename(mappings, ab_plan_aux cq pa)
 	| `Select(pred, cq) ->
 	      let new_pa = remove_proj_attrs pa (get_bound_attributes cq) in
 		  `Select(ab_pred_aux pred new_pa, ab_plan_aux cq pa)
@@ -182,8 +204,7 @@ and ab_plan_aux q pa =
 	      in
 		  `Join(ab_pred_aux p new_pa, ab_plan_aux l pa, ab_plan_aux r pa) 
 
-	| `TrueRelation -> `TrueRelation
-	| `FalseRelation -> `FalseRelation
+	| `EmptySet -> `EmptySet
 	| `DeltaPlan (b,e) -> `DeltaPlan (b, ab_plan_aux e pa)
 	| `NewPlan(e) -> `NewPlan (ab_plan_aux e pa)
 	| `IncrPlan(e) -> `NewPlan (ab_plan_aux e pa)
@@ -310,7 +331,13 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 
 and get_unbound_attributes_from_plan q include_vars =
     match q with
-	| `Relation _ | `TrueRelation | `FalseRelation -> []
+	| `Relation _ | `TupleRelation _ | `EmptySet -> []
+
+	| `Rename (mappings, cq) ->
+	      let cq_ba = get_bound_attributes cq in
+	      let (in_attrs, _) = List.split mappings in
+		  (resolve_unbound_attributes in_attrs cq_ba)@
+		      (get_unbound_attributes_from_plan cq include_vars)
 
 	| `Select(pred, cq) ->
 	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
@@ -412,32 +439,43 @@ let is_independent m_expr q =
  *)
 let rec push_delta_plan mep =
     match mep with
-	| `DeltaPlan(ev, `Relation(name, fields)) ->
-	      if name = (get_bound_relation ev) then
-		`Project(create_bindings ev name fields, `TrueRelation)
+	| `DeltaPlan(b, `Rename(mappings, (`Relation(name, fields)))) ->
+	      if name = (get_bound_relation b) then
+		  `Project(create_renamed_bindings name fields mappings,
+			   `Rename(mappings, `TupleRelation(name, fields)))
 	      else
-		`FalseRelation
+		  `EmptySet
+		      
+	| `DeltaPlan(b, `Relation(name, fields)) ->
+	      if name = (get_bound_relation b) then
+		  `Project(create_bindings name fields, `TupleRelation(name, fields))
+	      else
+		  `EmptySet
 
-	| `DeltaPlan(ev, `Select(pred, c)) ->
-	      `Select(pred, push_delta_plan(`DeltaPlan(ev, c)))
+	| `DeltaPlan(b, `TupleRelation(_,_)) -> `EmptySet
+
+	| `DeltaPlan(b, `Rename(_, ch)) -> push_delta_plan (`DeltaPlan (b, ch)) 
+
+	| `DeltaPlan(b, `Select(pred, c)) ->
+	      `Select(pred, push_delta_plan(`DeltaPlan(b, c)))
 
 	(* Note: simplify surrounding map expression *)
-	|  `DeltaPlan(ev, `Project(projs, c)) -> `Project(projs, c)
+	|	`DeltaPlan(b, `Project(projs, c)) -> `Project(projs, c)
 
-	| `DeltaPlan(ev, `Union(c)) ->
+	| `DeltaPlan(b, `Union(c)) ->
 	      `Union
 		  (List.map
-		       (fun ch -> push_delta_plan(`DeltaPlan(ev,ch))) c)
+		       (fun ch -> push_delta_plan(`DeltaPlan(b,ch))) c)
 
-	| `DeltaPlan(ev, `Cross(l, r)) ->
-	      let delta_l = push_delta_plan(`DeltaPlan(ev,l)) in
-	      let delta_r = push_delta_plan(`DeltaPlan(ev,r)) in
+	| `DeltaPlan(b, `Cross(l, r)) ->
+	      let delta_l = push_delta_plan(`DeltaPlan(b,l)) in
+	      let delta_r = push_delta_plan(`DeltaPlan(b,r)) in
 		  `Union(
 		      [`Cross(delta_l, r); `Cross(l, delta_r); `Cross(delta_l, delta_r)])
 
 	(* TODO:
-	   | `DeltaPlan(ev, `NaturalJoin(l,r)) -> ()
-	   | `DeltaPlan(ev, `Join(p,l,r)) -> ()
+	   | `DeltaPlan(b, `NaturalJoin(l,r)) -> ()
+	   | `DeltaPlan(b, `Join(p,l,r)) -> ()
 	*)
 
 	| _ ->
@@ -446,20 +484,20 @@ let rec push_delta_plan mep =
 
 let rec push_delta m_expr =
     match m_expr with
-	| `Delta (ev, `METerm _) -> `METerm (`Int 0)
+	| `Delta (b, `METerm _) -> `METerm (`Int 0)
 
-	| `Delta (ev, `Sum (l, r)) ->
-	      `Sum(push_delta(`Delta(ev,l)), push_delta(`Delta(ev,r)))
+	| `Delta (b, `Sum (l, r)) ->
+	      `Sum(push_delta(`Delta(b,l)), push_delta(`Delta(b,r)))
 		  
-	| `Delta (ev, `Product (l, r)) ->
-	      `Sum(`Product(l, push_delta(`Delta(ev,r))),
-		   `Sum(`Product(push_delta(`Delta(ev,l)), r),
-			`Product(push_delta(`Delta(ev,l)),
-				 push_delta(`Delta(ev,r)))))
+	| `Delta (b, `Product (l, r)) ->
+	      `Sum(`Product(l, push_delta(`Delta(b,r))),
+		   `Sum(`Product(push_delta(`Delta(b,l)), r),
+			`Product(push_delta(`Delta(b,l)),
+				 push_delta(`Delta(b,r)))))
 
-	| `Delta (ev, `MapAggregate (fn, f, q)) ->
-	      let delta_f = push_delta(`Delta(ev,f)) in
-	      let delta_plan = push_delta_plan(`DeltaPlan(ev,q))in
+	| `Delta (b, `MapAggregate (fn, f, q)) ->
+	      let delta_f = push_delta(`Delta(b,f)) in
+	      let delta_plan = push_delta_plan(`DeltaPlan(b,q))in
 		  `Sum(`MapAggregate(fn, delta_f, q),
 		       `Sum(`MapAggregate(fn, f, delta_plan),
 			    `MapAggregate(fn, delta_f, delta_plan)))
@@ -468,99 +506,102 @@ let rec push_delta m_expr =
 
 
 (* rcs: recompute mode *)
-let rec apply_delta_rules m_expr event rcs =
+let rec apply_delta_rules m_expr binding rcs =
     let adr_new x = 
 	match x with 
 	    | `New (`METerm y) -> `METerm y
 		  
 	    | `New (`Sum (l, r)) ->
-		  `Sum(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  `Sum(apply_delta_rules l binding (Some New),
+		       apply_delta_rules r binding (Some New))
 		      
 	    | `New (`Product (l, r)) ->
-		  `Product(apply_delta_rules l event (Some New),
-			   apply_delta_rules r event (Some New))
+		  `Product(apply_delta_rules l binding (Some New),
+			   apply_delta_rules r binding (Some New))
 		      
 	    | `New (`Min (l,r)) ->
-		  `Min(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  `Min(apply_delta_rules l binding (Some New),
+		       apply_delta_rules r binding (Some New))
 
 	    | `New (`MapAggregate (fn, f, q)) ->
 		  `MapAggregate(fn,
-				apply_delta_rules f event (Some New),
-				apply_delta_plan_rules q event (Some New))
+				apply_delta_rules f binding (Some New),
+				apply_delta_plan_rules q binding (Some New))
 		      
 	    | _ -> raise (RewriteException "Invalid recomputation expression.")
     in
 	match m_expr with
-	    | `Incr(sid, m_expr) -> `Incr(sid, push_delta (`Delta (event, m_expr)))
+	    | `Incr(sid, m_expr) -> `Incr(sid, push_delta (`Delta (binding, m_expr)))
 	    | `Init(sid, m_expr) -> `Init(sid, adr_new (`New m_expr))
 	    | `New(_) as e -> adr_new e
 	    | _ -> 
 		  begin
 		      match rcs with
 			  | Some New -> adr_new (`New m_expr)
-			  | Some Incr -> push_delta (`Delta (event, m_expr))
+			  | Some Incr -> push_delta (`Delta (binding, m_expr))
 			  | None -> raise (RewriteException "Invalid recomputation state.")
 		  end
 
 
-and apply_delta_plan_rules q event rcs =
+and apply_delta_plan_rules q binding rcs =
     let adpr_new x = 
 	match x with
-	    | `NewPlan(`Relation r) -> `Relation r
+	    | `NewPlan(`TupleRelation r) | `NewPlan(`Relation r) -> `Relation r
 		  
+	    | `NewPlan(`Rename (m, cq)) ->
+		  `Rename(m, apply_delta_plan_rules cq binding (Some New))
+
 	    | `NewPlan(`Select (p, cq)) ->
 		  begin
 		      match p with
 			  | `BTerm(`MEQ(m_expr)) ->
-				`Select(`BTerm(`MEQ(apply_delta_rules m_expr event (Some New))),
-					apply_delta_plan_rules cq event (Some New))
+				`Select(`BTerm(`MEQ(apply_delta_rules m_expr binding (Some New))),
+					apply_delta_plan_rules cq binding (Some New))
 				    
 			  | `BTerm(`MLT(m_expr)) ->
-				`Select(`BTerm(`MLT(apply_delta_rules m_expr event (Some New))),
-					apply_delta_plan_rules cq event (Some New))
+				`Select(`BTerm(`MLT(apply_delta_rules m_expr binding (Some New))),
+					apply_delta_plan_rules cq binding (Some New))
 				    
 			  (* TODO: handle conjunctive/disjunctive map expression comparisons *)
-			  | _ -> `Select(p, apply_delta_plan_rules cq event (Some New))
+			  | _ -> `Select(p, apply_delta_plan_rules cq binding (Some New))
 		  end
 		      
 	    | `NewPlan(`Project (attrs, cq)) ->
-		  `Project(attrs, apply_delta_plan_rules cq event (Some New))
+		  `Project(attrs, apply_delta_plan_rules cq binding (Some New))
 		      
 	    | `NewPlan(`Union children) ->
-		  `Union (List.map (fun c -> apply_delta_plan_rules c event (Some New)) children)
+		  `Union (List.map (fun c -> apply_delta_plan_rules c binding (Some New)) children)
 		      
 	    | `NewPlan(`Cross (l,r)) ->
-		  `Cross(apply_delta_plan_rules l event (Some New),
-			 apply_delta_plan_rules r event (Some New))
+		  `Cross(apply_delta_plan_rules l binding (Some New),
+			 apply_delta_plan_rules r binding (Some New))
 		      
 	    | `NewPlan(`NaturalJoin (l,r)) ->
-		  `NaturalJoin (apply_delta_plan_rules l event (Some New),
-				apply_delta_plan_rules r event (Some New))
+		  `NaturalJoin (apply_delta_plan_rules l binding (Some New),
+				apply_delta_plan_rules r binding (Some New))
 		      
 	    | `NewPlan(`Join (p,l,r)) ->
 		  begin
 		      match p with
 			  | `BTerm(`MEQ(m_expr)) ->
-				`Join(`BTerm(`MEQ(apply_delta_rules m_expr event (Some New))),
-				      apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				`Join(`BTerm(`MEQ(apply_delta_rules m_expr binding (Some New))),
+				      apply_delta_plan_rules l binding (Some New),
+				      apply_delta_plan_rules r binding (Some New))
 				    
 			  | `BTerm(`MLT(m_expr)) ->
-				`Join(`BTerm(`MLT(apply_delta_rules m_expr event (Some New))),
-				      apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				`Join(`BTerm(`MLT(apply_delta_rules m_expr binding (Some New))),
+				      apply_delta_plan_rules l binding (Some New),
+				      apply_delta_plan_rules r binding (Some New))
 				    
 			  | _ ->
-				`Join(p, apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				`Join(p, apply_delta_plan_rules l binding (Some New),
+				      apply_delta_plan_rules r binding (Some New))
 		  end
 		      
 	    | _ -> raise (RewriteException "Invalid recomputation plan.")
     in
 	match q with
-	    | `IncrPlan(qq) -> push_delta_plan (`DeltaPlan (event, qq))
+	    | `IncrPlan(qq) -> push_delta_plan (`DeltaPlan (binding, qq))
 	    | `NewPlan(_) as p -> adpr_new p
 	    | _ ->
 		  begin
@@ -821,14 +862,13 @@ and simplify_map_expr_constants m_expr =
 	  end
 	*)
 
-	| `MapAggregate(aggfn,f,q) ->
+	| `MapAggregate(fn,f,q) ->
 	      begin
 		  let sf = simplify_map_expr_constants f in
 		  let sq = simplify_plan_constants q in
 		      match (is_zero(sf), sq) with
-		      |  (_, `TrueRelation) -> f
-		      | (true, _)  | (_, `FalseRelation) -> `METerm(`Int 0)
-		      | _ -> `MapAggregate(aggfn, sf, sq)
+			  | (true, _)  | (_, `EmptySet) -> `METerm(`Int 0)
+			  | _ -> `MapAggregate(fn, sf, sq)
 	      end
 
 	| `Delta (b,e) -> `Delta(b, simplify_map_expr_constants e)
@@ -839,83 +879,74 @@ and simplify_map_expr_constants m_expr =
 
 and simplify_plan_constants q =
     match q with
-	| `Relation (n,f) as r -> r
+	| `Relation (n,f) | `TupleRelation (n,f) -> q
+	| `Rename(mappings, cq) ->
+	      let cqq = simplify_plan_constants cq in
+		  if cqq  = `EmptySet then `EmptySet else `Rename(mappings, cqq)
 		      
 	| `Select(pred, cq) ->
 	      let sp = simplify_predicate_constants pred in
 	      let cqq = simplify_plan_constants cq in
 		  begin
 		      match (sp, cqq) with
-		      | (_, `FalseRelation) | (`BTerm(`False), _) -> `FalseRelation
-		      | (`BTerm(`True), _) -> cqq
-		      | (_,_) -> `Select(sp, cqq)
+			  | (_, `EmptySet) | (`BTerm(`False), _) -> `EmptySet
+			  | (`BTerm(`True), _) -> cqq
+			  | (_,_) -> `Select(sp, cqq)
 		  end
 
 	| `Project(attrs, cq) ->
 	      let cqq = simplify_plan_constants cq in
-	      if cqq = `FalseRelation then cqq else `Project(attrs, cqq)
+		  if cqq = `EmptySet then cqq else `Project(attrs, cqq)
 
 	| `Union ch ->
-	      (* Unions are typechecked outside this simplification. *)
 	      let chq = List.map simplify_plan_constants ch in
-	      if (List.exists (fun c -> c = `TrueRelation) chq) then `TrueRelation
-	      else if (List.for_all (fun c -> c = `FalseRelation) chq) then `FalseRelation
-	      else
-		begin
-		  let non_empty_chq = List.filter (fun x -> x <> `FalseRelation) chq in
-		  match non_empty_chq with
-		  | [x] -> x
-		  | _ -> `Union non_empty_chq
-		end
+		  if (List.for_all (fun c -> c = `EmptySet) chq) then `EmptySet
+		  else
+		      begin
+			  let non_empty_chq = List.filter (fun x -> x <> `EmptySet) chq in
+			      match non_empty_chq with
+				  | [x] -> x
+				  | _ -> `Union non_empty_chq
+		      end
 		      
 	| `Cross (l,r) ->
 	      let lq = simplify_plan_constants l in
 	      let rq = simplify_plan_constants r in
-	      begin
-		match (lq, rq) with
-		| (`TrueRelation, x) | (x, `TrueRelation) -> x
-		| (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
-		| _ -> `Cross (lq, rq)
-	      end
+		  if (lq = `EmptySet) || (rq = `EmptySet) then `EmptySet
+		  else `Cross (lq, rq)
 		      
 	| `NaturalJoin (l,r) ->
 	      let lq = simplify_plan_constants l in
 	      let rq = simplify_plan_constants r in
-	      begin
-		match (lq, rq) with
-		| (`TrueRelation, x) | (x, `TrueRelation) -> x
-		| (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
-		| _ ->  `NaturalJoin (lq, rq)
-	      end
+		  if (lq = `EmptySet) || (rq = `EmptySet) then `EmptySet
+		  else `NaturalJoin (lq, rq)
 
 	| `Join (p, l, r) ->
 	      let sp = simplify_predicate_constants p in
 	      let lq = simplify_plan_constants l in
 	      let rq = simplify_plan_constants r in
-	      begin
-		match (sp, lq, rq) with
-		| (_, `TrueRelation, x) | (_, x, `TrueRelation) -> `Select(sp, x)
-		| (_, `FalseRelation, _) | (_, _, `FalseRelation)
-		| (`BTerm(`False), _, _) -> `FalseRelation
-		| (`BTerm(`True), _, _) -> `Cross(lq, rq)
-		| _ -> `Join(sp, lq, rq)
-	      end
+		  begin
+		      match (sp, lq, rq) with
+			  | (_, `EmptySet, _) | (_, _, `EmptySet)
+			  | (`BTerm(`False), _, _) -> `EmptySet
 
-	| `TrueRelation -> `TrueRelation
+			  | (`BTerm(`True), _, _) -> `Cross(lq, rq)
+			  | _ -> `Join(sp, lq, rq)
+		  end
 
-	| `FalseRelation -> `FalseRelation
+	| `EmptySet -> `EmptySet
 	      
 	| `DeltaPlan(b, cq) ->
 	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `DeltaPlan(b, cqq)
+		  if cq = `EmptySet then `EmptySet else `DeltaPlan(b, cqq)
 
 	| `NewPlan (cq) ->
 	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `NewPlan(cqq)
+		  if cq = `EmptySet then `EmptySet else `NewPlan(cqq)
 
 	| `IncrPlan (cq) ->
 	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `IncrPlan(cqq)
+		  if cq = `EmptySet then `EmptySet else `NewPlan(cqq)
 
 
 
@@ -928,7 +959,7 @@ and simplify_plan_constants q =
 (* bottom up map expression rewriting *)
 (* map expression -> accessor_element list -> map_expression *)
 let rec simplify m_expr rewrites =
-    print_endline ("Expr "^(indented_string_of_map_expression m_expr 0));
+    print_endline ("Expr "^(string_of_map_expression m_expr));
     print_endline
 	("Pending rewrites("^(string_of_int (List.length rewrites))^"):\n    "^
 	     (List.fold_left
@@ -954,15 +985,15 @@ let rec simplify m_expr rewrites =
 				    print_endline (String.make 50 '-');
 
 				    match np with
-				    | `Plan(`Select (pred, `Project(projs, q))) ->
-					let new_np =
-					  `Plan(`Project(projs,
-							 `Select(add_predicate_bindings pred projs, q)))
-					in
-					let new_m_expr = splice m_expr np new_np in
-					let new_rewrites = new_np::t in
-					print_endline ("NR len: "^(string_of_int (List.length new_rewrites)));
-					simplify new_m_expr new_rewrites
+					| `Plan(`Select (pred, `Project(projs, q))) ->
+					      let new_np =
+						  `Plan(`Project(projs,
+								 `Select(add_predicate_bindings pred projs, q)))
+					      in
+					      let new_m_expr = splice m_expr np new_np in
+					      let new_rewrites = new_np::t in
+						  print_endline ("NR len: "^(string_of_int (List.length new_rewrites)));
+						  simplify new_m_expr new_rewrites
 
 					| `Plan(`Select (pred, `Union ch)) ->
 					      let new_np =
@@ -972,7 +1003,7 @@ let rec simplify m_expr rewrites =
 					      let new_rewrites = (List.map (fun c -> `Plan c) ch)@t in
 						  simplify new_m_expr new_rewrites
 
-					(* Assume attribute names in left and right branches are unique *)
+					(* TODO: handle duplicate attribute names in left and right branches *)
 					| `Plan(`Cross(x,`Project(a,q)))
 					| `Plan(`Cross(`Project(a,q),x)) ->
 					      let new_np = `Plan(`Project(a, `Cross(x,q))) in
@@ -981,21 +1012,21 @@ let rec simplify m_expr rewrites =
 						  simplify new_m_expr new_rewrites
 
 					| `MapExpression(
-					      `MapAggregate(fn, f, `Project(projs, `TrueRelation))) ->
+					      `MapAggregate(fn, f, `Project(projs, `TupleRelation(_,_)))) ->
 					      let new_np = `MapExpression(add_map_expression_bindings f projs) in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = new_np::t in
 						  simplify new_m_expr new_rewrites
 
 					| `MapExpression(`MapAggregate (fn, f, `Project(projs, q))) ->
-					    let new_np = `MapExpression(
-					      `MapAggregate (fn,
-							     add_map_expression_bindings f projs, q))
-					    in
-					    let new_m_expr = splice m_expr np new_np in
-					    let new_rewrites = (`Plan(q))::t in
-					        simplify new_m_expr new_rewrites
-					      
+					      let new_np = `MapExpression(
+						  `MapAggregate (fn,
+								 add_map_expression_bindings f projs, q))
+					      in
+					      let new_m_expr = splice m_expr np new_np in
+					      let new_rewrites = (`Plan(q))::t in
+						  simplify new_m_expr new_rewrites
+						      
 					| `MapExpression(`MapAggregate (`Sum, f, `Union(c))) ->
 					      let new_np = `MapExpression(
 						  List.fold_left
@@ -1017,7 +1048,7 @@ let rec simplify m_expr rewrites =
 						  simplify new_m_expr new_rewrites
 
 					(* Note: bindings are added to 'f' while processing any parent projection *)
-					| `MapExpression(`MapAggregate (fn, f, `TrueRelation)) ->
+					| `MapExpression(`MapAggregate (fn, f, `TupleRelation(_,_))) ->
 					      let new_np = `MapExpression f in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = t@[(`MapExpression f)] in
@@ -1286,6 +1317,10 @@ and extract_map_expr_bindings m_expr : map_expression * (binding list) =
 and extract_plan_bindings q : plan * (binding list) =
     match q with
 	| `Relation (name, fields) -> (q, [])
+	| `TupleRelation (name, fields) -> (q, [])
+	| `Rename (mappings, cq) ->
+	      let (cqq, cqb) = extract_plan_bindings cq in
+		  (`Rename(mappings, cqq), cqb)
 
 	| `Select (pred, cq) ->
 	      let (prede, predb) = extract_bool_expr_bindings pred in
@@ -1362,7 +1397,7 @@ and extract_plan_bindings q : plan * (binding list) =
 	      let (rq, rb) = extract_plan_bindings r in
 		  (`Join (prede, lq, rq), predb@lb@rb)
 
-	| `TrueRelation | `FalseRelation | `DeltaPlan (_,_) -> (q, []) 
+	| `EmptySet | `DeltaPlan (_,_) -> (q, []) 
 
 	| `NewPlan(cq) | `IncrPlan(cq) -> 
 	      let (cqq, cqb) = extract_plan_bindings cq in (q, cqb)
@@ -1453,6 +1488,8 @@ let rec apply_recompute_rules m_expr : map_expression =
 and apply_recompute_plan_rules q : plan =
     match q with
 	| `Relation _ -> `IncrPlan q
+	| `TupleRelation _ -> `IncrPlan q
+	| `Rename (mappings, cq) -> `IncrPlan q
 	| `Select (pred, cq) ->
 	      begin
 		  match pred with 
@@ -1590,7 +1627,7 @@ and apply_recompute_plan_rules q : plan =
 				end
 	      end
 
-	| `TrueRelation | `FalseRelation | `DeltaPlan _ | `NewPlan _ | `IncrPlan _ ->
+	| `EmptySet | `DeltaPlan _ | `NewPlan _ | `IncrPlan _ ->
 	      raise (RewriteException "Invalid plan for apply_recompute_plan_rules.")
 
 
@@ -1658,7 +1695,7 @@ let rec compute_new_map_expression (m_expr : map_expression) rcs =
 and compute_new_plan (q : plan) rcs =
     let cnp_new (x : plan) =
 	match x with
-	    | `Relation (n,f) -> x
+	    | `Relation (n,f) | `TupleRelation (n,f) -> x
 	    | `Select (pred, cq) ->
 		  let new_pred =
 		      match pred with
@@ -1732,9 +1769,7 @@ let compile_target m_expr delta =
 	in
 	print_endline ("bh_code: "^(string_of_map_expression bh_code));
 	(*print_endline ("bh_code 2:\n"^(indented_string_of_map_expression bh_code 0));*)
-	(*print_endline ("delta code: \n"^
-	   (indented_string_of_map_expression
-	   (apply_delta_rules bh_code delta (Some New)) 0));*)
+	(*print_endline ("delta code: \n"^(indented_string_of_map_expression (apply_delta_rules bh_code delta (Some New)) 0));*)
 	print_endline ("dh_code: "^(indented_string_of_map_expression dh_code 0));
 	print_endline ("# br: "^(string_of_int (List.length (get_bound_relations dh_code))));
 	let br = List.map (fun x -> `Plan x) (get_bound_relations dh_code) in
@@ -1757,11 +1792,12 @@ let generate_all_events m_expr =
     List.fold_left 
         (fun acc x ->
 	    match x with 
-	    | `Relation (n,f) ->
+	        `Relation (n,f)
+		| `TupleRelation (n,f) -> 
 		(* [`Insert (n);`Delete (n)] @ acc *)
-		print_endline ("insert "^n);
-		(`Insert (n,f)):: acc
-	    | _ -> acc
+		    print_endline ("insert "^n);
+		    (`Insert (n)):: acc
+		| _ -> acc
 	) [] gbr 
 
 let rec extract_incremental m_expr =
@@ -2350,7 +2386,7 @@ let generate_code handler bindings event =
 			 let last_code = get_block_last e_code in
 			 let last_var = match last_code with `Eval(x) -> x | _-> raise InvalidExpression in
 		         match event with 
-			 | `Insert (_,_) ->
+			     `Insert _ ->
 				 let insert_st = 
 			     	 `Block ( [ 
 					`Declare (`Variable(temp, "int"));
@@ -2404,16 +2440,7 @@ let generate_code handler bindings event =
 				in (delete_st, map_decl::e_decl)
 
 		  else 
-		  let e_uba =
-		    match event with
-		    | `Insert(_,vars) | `Delete(_,vars) ->
-			List.filter
-			  (fun uaid -> not
-			      (List.exists
-				 (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
-				 vars))
-			  (get_unbound_attributes_from_map_expression e true)
-		  in
+		  let e_uba = get_unbound_attributes_from_map_expression e true in
 		      begin match e_uba with
 			  | [] ->
 				let incr_var = gen_var_sym() in
@@ -2491,7 +2518,41 @@ let generate_code handler bindings event =
 		  in
 		      (`ForEach(`List(n,f), iter_code), new_decl)
 
-	    | `TrueRelation -> (iter_code, decl)
+	    | `Rename(mappings, `Relation (n,f)) ->
+		  let new_fields =
+		      List.map
+			  (fun (id, typ) ->
+			       try
+				   let o_aid = List.assoc (`Qualified (n, id)) mappings in
+				       (field_of_attribute_identifier o_aid, typ) 
+			       with Not_found -> (id, typ))
+			  f
+		  in
+		  let new_decl =
+		      (* Note: check for declaration with original fields *)
+		      if List.mem (`Relation (n,f)) decl then decl
+		      else decl@[`Relation(n,f)]
+		  in
+		      (`ForEach(`List(n,new_fields), iter_code), new_decl)
+
+	    | `TupleRelation (n,f) ->
+		  let bound_code =
+		      (List.map (fun (id, typ) -> `Declare(`Variable(id,typ))) f)@[iter_code]
+		  in
+		      (`Block(bound_code), decl)
+
+	    | `Rename (mappings, `TupleRelation(n,f)) ->
+		  let bound_code =
+		      List.flatten
+			  (List.map
+			       (fun (id, typ) ->
+				    let o_aid = List.assoc (`Qualified (n, id)) mappings in
+				    let n = field_of_attribute_identifier o_aid in
+					[`Declare(`Variable(n, typ)); `Assign(n, `CTerm(`Variable(id)))])
+			       f)@
+			  [iter_code]
+		  in
+		      (`Block(bound_code), decl)
 
 	    | `Select (pred, cq) ->
 		  begin
@@ -2598,16 +2659,17 @@ let generate_code handler bindings event =
     in
 	
     let handler_fields = 
-      match event with
-      | `Insert (_, fields) | `Delete (_, fields) ->
-	  print_endline (
-	  "Handler("^
-	  (List.fold_left
-	     (fun acc (id, typ) ->
-	       (if (String.length acc = 0) then "" else acc^",")^id) "" fields)^
-	  "):\n"^
-	  (indented_string_of_map_expression handler 0));
-	  fields
+	match event with | `Insert n | `Delete n ->
+	    let matched_rels =
+		List.filter
+		    (fun x ->
+			 match x with
+			     | `Relation (name,f) -> name = n
+			     | `TupleRelation (name,f) -> name = n)
+		    (get_base_relations handler)
+	    in
+		match (List.hd matched_rels) with
+		    | `Relation (x,y) | `TupleRelation (x,y) -> y
     in
 
     (* TODO: declared variable types *)

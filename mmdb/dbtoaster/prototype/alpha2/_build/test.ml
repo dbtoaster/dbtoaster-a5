@@ -4,29 +4,40 @@ open Compile
 
 let tv = 
 	`MapAggregate(`Sum,
-		      `METerm(`Attribute(`Qualified("B", "V3"))),
-		      `Relation("B",[("P3", "int"); ("V3", "int")]))
+		`METerm(`Attribute(`Qualified("B3", "V3"))),
+		`Rename(
+			[(`Qualified("B", "P"), `Qualified("B3", "P3"));
+			 (`Qualified("B", "V"), `Qualified("B3", "V3"))],
+			`Relation("B",[("P", "int"); ("V", "int")])))
 
 let sv1_pred =
-  `BTerm(`GT(
-	 `ETerm(`Attribute(`Qualified("B", "P1"))),
-	 `ETerm(`Attribute(`Qualified("B", "P2")))))
+	`BTerm(`GT(
+			`ETerm(`Attribute(`Qualified("B1", "P1"))),
+			`ETerm(`Attribute(`Qualified("B2", "P2")))))
 
 let select_sv1 =
-  `Select(sv1_pred, `Relation("B",[("P1", "int"); ("V1", "int")]))
+	`Select(sv1_pred,
+		`Rename(
+			[(`Qualified("B", "P"), `Qualified("B1", "P1"));
+			 (`Qualified("B", "V"), `Qualified("B1", "V1"))],
+			`Relation("B",[("P", "int"); ("V", "int")])))
 
 let k_sv0 = `Product(`METerm(`Float(0.25)), tv)
 let sv1 = `MapAggregate(`Sum,
-	`METerm(`Attribute(`Qualified("B","V1"))), select_sv1)
+	`METerm(`Attribute(`Qualified("B1","V1"))), select_sv1)
 
 let m_p2 = `Sum(k_sv0, sv1)
 
 let vwap =
-  `MapAggregate(`Sum,
-		`Product(`METerm(`Attribute(`Qualified("B", "P2"))),
-			 `METerm(`Attribute(`Qualified("B", "V2")))),
-		`Select(`BTerm(`MLT(m_p2)),
-			`Relation("B", [("P2", "int"); ("V2","int")])))
+	`MapAggregate(`Sum,
+		`Product(`METerm(`Attribute(`Qualified("B2", "P2"))),
+			`METerm(`Attribute(`Qualified("B2", "V2")))),
+		`Select(
+			`BTerm(`MLT(m_p2)),
+			`Rename(
+				[(`Qualified("B", "P"), `Qualified("B2", "P2"));
+			 	 (`Qualified("B", "V"), `Qualified("B2", "V2"))],
+				`Relation("B", [("P", "int"); ("V","int")]))))
 ;;
 
 (* string_of tests *)
@@ -188,7 +199,7 @@ let vwap_uba = get_unbound_attributes_from_map_expression vwap false in
 
 
 print_test_type "push_delta";
-let delta_m_p2 = push_delta (`Delta (`Insert("B", [("p", "int"); ("v", "int")]), m_p2)) in
+let delta_m_p2 = push_delta (`Delta (`Insert("B"), m_p2)) in
 	print_endline "Delta(m_p2):\n";
 	print_endline ((string_of_map_expression delta_m_p2)^"\n"); 
 
@@ -236,7 +247,7 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 		print_test_type "apply_delta_rules";
 		let delta_code_exprs =
 			List.map
-				(fun ce -> apply_delta_rules ce (`Insert ("B", [("p", "int"); ("v", "int")])) (Some New))
+				(fun ce -> apply_delta_rules ce (`Insert "B") (Some New))
 				new_code_exprs
 		in
 		print_endline "apply_delta_rules(vwap):";
@@ -260,7 +271,7 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 
 print_test_type "compile_target";
 
-let (handler, bindings) = compile_target vwap (`Insert ("B", [("p", "int"); ("v", "int")])) in
+let (handler, bindings) = compile_target vwap (`Insert "B") in
 	let bound_map_exprs =
 		List.map
 			(fun b -> match b with | `BindMapExpr(v,e) -> e | _ -> raise InvalidExpression)
@@ -269,18 +280,18 @@ let (handler, bindings) = compile_target vwap (`Insert ("B", [("p", "int"); ("v"
 				bindings)
 	in
 		List.iter
-			(fun h -> print_endline ((indented_string_of_map_expression h 0)^"\n"))
+			(fun h -> print_endline ((string_of_map_expression h)^"\n"))
 			(handler::bound_map_exprs);
 			
 		print_test_type "generate_code";
-		let (global_decls, handler_code) = generate_code handler bindings (`Insert ("B", [("p", "int"); ("v", "int")])) in
+		let (global_decls, handler_code) = generate_code handler bindings (`Insert "B") in
 			print_endline "generate_code(vwap):";
 			List.iter (fun x -> print_endline (indented_string_of_code_expression x)) global_decls;
 			print_endline (indented_string_of_code_expression handler_code);;
 
 
 print_test_type "compile_code";
-compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
+compile_code vwap (`Insert "B") "vwap.cc";;
 
 print_test_type "treeml_of_map_expression";
 let treeml_out_chan = open_out "vwap.tml" in

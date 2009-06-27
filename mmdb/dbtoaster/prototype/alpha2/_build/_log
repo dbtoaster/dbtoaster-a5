@@ -1,0 +1,16 @@
+### Starting build.
+# Target: test2.ml.depends, tags: { extension:ml, file:test2.ml, ocaml, ocamldep, quiet }
+/Users/yanif/software/ocaml/bin/ocamldep.opt -modules test2.ml > test2.ml.depends # cached
+# Target: algebra.ml.depends, tags: { extension:ml, file:algebra.ml, ocaml, ocamldep, quiet }
+/Users/yanif/software/ocaml/bin/ocamldep.opt -modules algebra.ml > algebra.ml.depends # cached
+# Target: algebra.cmo, tags: { byte, compile, extension:ml, file:algebra.ml, implem, ocaml, quiet }
+/Users/yanif/software/ocaml/bin/ocamlc.opt -c -dtypes -g -o algebra.cmo algebra.ml # cached
+# Target: compile.ml.depends, tags: { extension:ml, file:compile.ml, ocaml, ocamldep, quiet }
+/Users/yanif/software/ocaml/bin/ocamldep.opt -modules compile.ml > compile.ml.depends
+# Target: compile.cmo, tags: { byte, compile, extension:ml, file:compile.ml, implem, ocaml, quiet }
+/Users/yanif/software/ocaml/bin/ocamlc.opt -c -dtypes -g -o compile.cmo compile.ml
+# Target: test2.cmo, tags: { byte, compile, extension:ml, file:test2.ml, implem, ocaml, quiet }
+/Users/yanif/software/ocaml/bin/ocamlc.opt -c -dtypes -g -o test2.cmo test2.ml # cached
+# Target: test2.byte, tags: { byte, dont_link_with, extension:byte, file:test2.byte, link, ocaml, program, quiet }
+/Users/yanif/software/ocaml/bin/ocamlc.opt -g algebra.cmo compile.cmo test2.cmo -o test2.byte
+# Compilation successful.

@@ -1,0 +1,125 @@
+<tree>
+    <declarations>
+        <attributeDecl name="event" type="String"/>
+        <attributeDecl name="eterm-type" type="String"/>
+        <attributeDecl name="eterm-val" type="String"/>
+        <attributeDecl name="meterm-type" type="String"/>
+        <attributeDecl name="meterm-val" type="String"/>
+        <attributeDecl name="bterm" type="String"/>
+        <attributeDecl name="functionid" type="String"/>
+        <attributeDecl name="expr" type="String"/>
+        <attributeDecl name="boolexpr" type="String"/>
+        <attributeDecl name="aggregate" type="String"/>
+        <attributeDecl name="stateid" type="String"/>
+        <attributeDecl name="mapexpr" type="String"/>
+        <attributeDecl name="rid" type="String"/>
+        <attributeDecl name="field" type="String"/>
+        <attributeDecl name="binding" type="String"/>
+        <attributeDecl name="projection" type="String"/>
+        <attributeDecl name="plan" type="String"/>
+        <attributeDecl name="op" type="String"/>
+    </declarations>
+    <branch>
+        <attribute name="op" value="sum"/>
+        <attribute name="aggregate" value="sum"/>
+        <branch>
+            <attribute name="op" value="m*"/>
+            <leaf>
+                <attribute name="op" value="meterm"/>
+                <attribute name="meterm-type" value="attr"/>
+                <attribute name="meterm-val" value="B2.P2"/>
+            </leaf>
+            <leaf>
+                <attribute name="op" value="meterm"/>
+                <attribute name="meterm-type" value="attr"/>
+                <attribute name="meterm-val" value="B2.V2"/>
+            </leaf>
+        </branch>
+        <branch>
+            <attribute name="op" value="select"/>
+            <branch>
+                <attribute name="op" value="bterm"/>
+                <attribute name="op" value="m&lt;"/>
+                <branch>
+                    <attribute name="op" value="m+"/>
+                    <branch>
+                        <attribute name="op" value="m*"/>
+                        <leaf>
+                            <attribute name="op" value="meterm"/>
+                            <attribute name="meterm-type" value="float"/>
+                            <attribute name="meterm-val" value="0.25"/>
+                        </leaf>
+                        <branch>
+                            <attribute name="op" value="sum"/>
+                            <attribute name="aggregate" value="sum"/>
+                            <leaf>
+                                <attribute name="op" value="meterm"/>
+                                <attribute name="meterm-type" value="attr"/>
+                                <attribute name="meterm-val" value="B3.V3"/>
+                            </leaf>
+                            <branch>
+                                <attribute name="op" value="rename"/>
+                                <attribute name="binding" value="B.P,B3.P3"/>
+                                <attribute name="binding" value="B.V,B3.V3"/>
+                                <leaf>
+                                    <attribute name="op" value="relation"/>
+                                    <attribute name="rid" value="B"/>
+                                    <attribute name="field" value="P,int"/>
+                                    <attribute name="field" value="V,int"/>
+                                </leaf>
+                            </branch>
+                        </branch>
+                    </branch>
+                    <branch>
+                        <attribute name="op" value="sum"/>
+                        <attribute name="aggregate" value="sum"/>
+                        <leaf>
+                            <attribute name="op" value="meterm"/>
+                            <attribute name="meterm-type" value="attr"/>
+                            <attribute name="meterm-val" value="B1.V1"/>
+                        </leaf>
+                        <branch>
+                            <attribute name="op" value="select"/>
+                            <branch>
+                                <attribute name="op" value="bterm"/>
+                                <attribute name="op" value="&gt;"/>
+                                <leaf>
+                                    <attribute name="op" value="eterm"/>
+                                    <attribute name="eterm-type" value="attr"/>
+                                    <attribute name="eterm-val" value="B1.P1"/>
+                                </leaf>
+                                <leaf>
+                                    <attribute name="op" value="eterm"/>
+                                    <attribute name="eterm-type" value="attr"/>
+                                    <attribute name="eterm-val" value="B2.P2"/>
+                                </leaf>
+                            </branch>
+                            <branch>
+                                <attribute name="op" value="rename"/>
+                                <attribute name="binding" value="B.P,B1.P1"/>
+                                <attribute name="binding" value="B.V,B1.V1"/>
+                                <leaf>
+                                    <attribute name="op" value="relation"/>
+                                    <attribute name="rid" value="B"/>
+                                    <attribute name="field" value="P,int"/>
+                                    <attribute name="field" value="V,int"/>
+                                </leaf>
+                            </branch>
+                        </branch>
+                    </branch>
+                </branch>
+            </branch>
+            <branch>
+                <attribute name="op" value="rename"/>
+                <attribute name="binding" value="B.P,B2.P2"/>
+                <attribute name="binding" value="B.V,B2.V2"/>
+                <leaf>
+                    <attribute name="op" value="relation"/>
+                    <attribute name="rid" value="B"/>
+                    <attribute name="field" value="P,int"/>
+                    <attribute name="field" value="V,int"/>
+                </leaf>
+            </branch>
+        </branch>
+    </branch>
+</tree>
