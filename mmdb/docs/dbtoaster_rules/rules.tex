@@ -193,7 +193,7 @@ S.erase[A]
 (\algnew_{\pm R(\vec{r})} f) \pm (\algnew_{\pm R(\vec{r})} g) \\
 \label{eq:new4}
 \algnew_{\pm R(\vec{r})} (f * g) &:=&
-(\algnew_{\pm R(\vec{r})} f) * (\algnew_{\pm R(\vec{r})} g)
+(\algnew_{\pm R(\vec{r})} f) * (\algnew_{\pm R(\vec{r})} g)\\
 %
 %
 \nonumber
@@ -1404,5 +1404,46 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 &$\lvert$ & \`{}Block ( [code\_expression] )\\
 &$\lvert$ & \`{}Return ( arith\_code\_expression )\\
 &$\lvert$ & \`{}Handler ( function\_identifier, [field], type\_identifier, [code\_expression] )\\
+\end{tabular}
+\pagebreak
+
+\begin{tabular} {|c|c|c|}
+\hline rule \# & status & location  \\
+\hline 1$\sim$5 & complete & push\_delta \\
+\hline 6 & missing & \\
+\hline 7$\sim$13 & complete & push\_delta\_plan\\
+\hline 14 & incomplete & generate\_code/gc\_aux, matching for Sum only\\
+\hline 15$\sim$17 & missing & \\
+\hline 18$\sim$19 & incomplete & translated to code\_expression directly at gc\_aux\\
+\hline 20 & missing & \\
+\hline 21$\sim$23 & complete & apply\_delta\_rules\\
+\hline 24$\sim$29 & complete & apply\_delta\_plan\_rules\\
+\hline 30 & missing & actually handled when extracting bindings\\
+\hline 31$\sim$32 & complete & apply\_recompute\_rules\\
+\hline 33$\sim$34 & complete & apply\_recompute\_plan\_rules\\
+\hline 35 & copmlete & apply\_delta\_rules\\
+\hline 36 & missing & \\
+\hline 37$\sim$43 & missing & \\
+\hline 44$\sim$45 & complete & simplify \\
+\hline 46$\sim$47 & complete & simplify\_map\_expr\_constants \\
+\hline 48 & complete & simplify \\
+\hline 49 & missing & \\
+\hline 50$\sim$52 & complete & simplify \\
+\hline 53 & missing & \\
+\hline 54 & complete & simplify \\
+\hline 55$\sim$56 & missing & \\
+\hline 57 & complete & simplify \\
+\hline 58$\sim$59 & missing & \\
+\hline 61 & complete & extract\_plan\_bindings\\
+\hline 62 & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
+\hline 63 & missing &\\
+\hline 64 & complete & simplify \\
+\hline 65 & complete & compute\_new\_plan\\
+\hline 66$\sim$67 & missing & \\
+\hline 68$\sim$69 & complete & generate\_code\\
+\hline 70$\sim$71 & incomplete & generate\_code, \\
+\hline 72$\sim$76 & missing & \\
+\hline
+
 \end{tabular}
 \end{document}
