@@ -1446,4 +1446,222 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline
 
 \end{tabular}
+
+\pagebreak
+\section{Functions signatures}
+\begin {verbatim}
+get_bound_attributes q
+@param: q: plan
+@return: `Qualified ( string, string ) list
+ get bound attributes from plan q
+
+compare_attributes a1 a2
+@param: a1: column_name, 
+              a2: column_name
+@return: boolean
+ compare attribute a1 and a2. 
+ 
+create_bindings name fields
+@param: name: string,
+               fields: (string, string) list
+@return: (attribute_identifier, expression) list
+ for each field(id, type), generate a list of (attribute id of name, `Variable (id))
+
+create_renamed_bindings name fields mappings
+@param: name: string 
+              fields: (string, string) list, 
+              mappings: (attribute_identifier, attribute_identifier) list
+@return: (attribute_identifier, expression) list  
+ for each field(id, type), generate a list of (attribute_identifier, `Variable())
+ substituting fields to new mappings
+
+add_map_expression_bindings m_expr proj_attrs
+@param: m_expr: map_expression, 
+               proj_attrs: (attribute_identifier, expression) list
+@return: map_expression
+ aggregate map simplification that used for rule 44, 45. 
+ substituting attributes of m_expr with proj_attrs. 
+
+add_predicate_bindings pred proj_attrs
+@param: pred: boolean_expression, 
+              proj_attrs: (attribute_identifier, expression) list
+@return: boolean_expression
+ relational algebra simplification that used for rule 64. 
+ substituting attributes of pred with proj_attrs. 
+
+get_expr_definition var bindings
+@param: var: eterm, 
+              bindings: binding
+@return: expression
+ find a binding with variable name var in the binding list and return the first expression
+
+remove_expr_binding var bindings
+@param: var: eterm, 
+              bindings: binding
+@return: boolean
+ remove binding with name var from bindings list
+
+resolve_unbound_attributes attrs bindings
+@param: attrs: attribute_identifier list, 
+              bindings: attribute_identifier list
+@return: attribute_identifier list
+ remove common elements of attrs and bindings from attrs
+
+get_unbound_attributes_from_expression expr include_vars
+@param: expr: expression, 
+              include_vars: boolean
+@return: attribute_identifier list
+ get unbound attributes from expr.
+
+get_unbound_attributes_from_predicate b_expr include_vars
+@param: b_expr: boolean_expression, 
+              include_vars: boolean
+@return: attribute_identifier list
+
+get_unbound_attributes_from_map_expression m_expr include_vars
+@param: m_expr: map_expression, 
+              include_vars: boolean
+@return: attribute_identifier list
+
+get_unbound_attributes_from_plan q include_vars
+@param: q: plan, 
+              include_vars: boolean
+@return: attribute_identifier list
+
+is_constant_expr expr
+@param: expr: expression
+@return: bool
+ returns whether the expression is constant
+
+is_bound_expr expr bindings
+@param: expr: expression, 
+              bindings: bindings list
+@return: bool
+returns whether the expression is bound
+
+is_independent m_expr q
+@param: m_expr: map_expression, 
+              q: plan
+@return: bool
+ returns whether a map aggregate expression is independent from its query
+
+push_delta_plan mep
+@param: mep: plan
+@return: plan
+ rule 7~13
+
+push_delta m_expr
+@param: m_expr: map_expression
+@return: map_expression
+ rule 1~5
+
+apply_delta_rules m_expr binding rcs
+@param: m_expr: map_expression, 
+              binding: delta, 
+              rcs: recompute_state
+@return: map_expression
+ rule 21~23, 35
+
+apply_delta_plan_ruls q binding rcs
+@param: q: plan, 
+              binding: delta, 
+              rcs: recompute_state
+@return: plan
+ rule 24~29
+
+simplify_expr_constants e
+@param: e: expression
+@return: expression
+
+simplify_predicate_constants b_expr
+@param: b_expr: boolean_expression
+@return: boolean_expression
+
+simplify_map_expr_constants m_expr
+@param: m_expr: map_expression
+@return: map_expression
+
+simplify_plan_constants q
+@param: q: plan
+@return: plan
+
+simplify m_expr rewrites
+@param: m_expr: map_expression, 
+              rewrites: accessor_element list
+@return: map_expression
+ rule 44~45, 48, 50~52, 54, 57, 64
+
+bind_expr_pair x y
+@param: x: (expression, (binding list)), 
+              y: (expression, (binding list))
+@return: (bool, expression, (binding list), expression, (binding list))
+
+extract_expr_bindings expr
+@param: expr:expression
+@return: (expression, binding list)
+
+extract_bool_expr_bindings b_expr
+@param: b_expr: boolean_expression
+@return: (boolean_expression, binding list)
+
+extract_map_expr_bindings m_expr
+@param: m_expr: map_expression
+@return: (map_expression, binding list)
+
+extract_plan_bindings q
+@param: q:plan
+@return: (plan, binding list)
+
+compute_initial_value m_expr
+@param: m_expr: map_expression
+@return: map_expression
+
+apply_recompute_rules m_expr
+@param: m_expr: map_expression
+@return: ma_expression
+
+apply_recompute_plan_rules q
+@param: q: plan
+@return: plan
+
+compute_new_map_expression m_expr rcs
+@param: m_expr: map_expression, 
+              rcs: recompute_state
+@return map_expression
+
+compute_new_plan q rcs
+@param: q: plan, 
+              rcs: recompute_state
+@return plan
+
+compile_target m_expr event
+@param: m_expr: map_expression, 
+              event: delta
+@return: (map_expression, binding list)
+ compile m_expr on the event and return compiled map_expression and a list of bindings
+ from the map_expression
+
+compile_target_all m_expr
+@param: m_expr: map_expression, 
+@return: (delta, map_expression list) list
+ recursively compile m_expr on all possible events(insert or delete) and return list of event 
+ and list of compiled expressions.
+
+compile_code m_expr event output_file_name
+@param: m_expr: map_expression, 
+              event: delta, 
+              output_file_name: string
+@return: ()
+ compile m_expr on the event event and generate c code to output_file_name and return ().
+
+generate_code handler bindings event
+@param: handler: map_expression, 
+              bindings: binding list, 
+              event: delta
+@return: (declaration list, code_expression)
+ translate map_expression and bindings on the event into C code_expression 
+ and return declaration list and generated code_expressions
+
+\end{verbatim}	
+
 \end{document}
