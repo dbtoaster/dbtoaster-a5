@@ -1,6 +1,7 @@
 exception InvalidExpression
 exception PlanException of string
 
+(** test of ocamldoc kkk *)
 type identifier = string
 
 type column_name = [
@@ -56,6 +57,7 @@ type aggregate_function = [ `Sum | `Min ]
 type map_expression = [
 | `METerm of meterm
 | `Sum of map_expression * map_expression
+| `Minus of map_expression * map_expression
 | `Product of map_expression * map_expression
 | `Min of map_expression * map_expression
 | `MapAggregate of aggregate_function * map_expression * plan
@@ -331,6 +333,9 @@ and string_of_map_expression m_expr =
 	| `Sum (l,r) ->
 	      (string_of_map_expression l)^" + "^(string_of_map_expression r)
 
+	| `Minus (l,r) ->
+	      (string_of_map_expression l)^" - "^(string_of_map_expression r)
+
 	| `Product (l, r) -> 
 	      (string_of_map_expression l)^" * "^(string_of_map_expression r)
 		  
@@ -433,6 +438,12 @@ and indented_string_of_map_expression m_expr level =
 	      (indent_binary
 		   (indented_string_of_map_expression l (level+1))
 		   " + "
+		   (indented_string_of_map_expression r (level+1)))
+
+	| `Minus (l,r) ->
+	      (indent_binary
+		   (indented_string_of_map_expression l (level+1))
+		   " - "
 		   (indented_string_of_map_expression r (level+1)))
 
 	| `Product (l, r) -> 
@@ -572,6 +583,7 @@ let parent m_expr ch_e_or_p =
 			  parent_aux match_e prev_e_or_p
 
 	    | `MapExpression(`Sum (l, r))
+	    | `MapExpression(`Minus (l, r))
 	    | `MapExpression(`Product (l, r))
 	    | `MapExpression(`Min (l,r)) ->
 		  let match_l = `MapExpression l in
@@ -687,6 +699,7 @@ let children e_or_p =
 	    | `MapExpression (`Init(_,e)) -> [`MapExpression(e)]
 		  
 	    | `MapExpression (`Sum(l,r)) | `MapExpression (`Product(l,r))
+	    | `MapExpression (`Minus(l,r)) 
 	    | `MapExpression (`Min(l,r)) ->
 		  [`MapExpression(l); `MapExpression(r)]
 		      
@@ -740,6 +753,9 @@ let splice m_expr orig rewrite =
 
 		    | `Sum(l,r) ->
 			  `Sum(splice_map_expr_aux l, splice_map_expr_aux r)
+
+		    | `Minus(l,r) ->
+			  `Minus(splice_map_expr_aux l, splice_map_expr_aux r)
 
 		    | `Product(l,r) ->
 			  `Product(splice_map_expr_aux l, splice_map_expr_aux r)
@@ -823,6 +839,7 @@ let get_base_relations m_expr =
 	    | `MapExpression (`Init(_,e)) -> (gbr_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
+	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
 	    | `MapExpression (`Min(l,r)) ->
 		  (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
@@ -879,6 +896,7 @@ let get_bound_relations m_expr =
 	    | `MapExpression (`Init(_,e)) -> (gbor_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
+	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
 	    | `MapExpression (`Min(l,r)) ->
 		  (gbor_aux (`MapExpression r) (gbor_aux (`MapExpression l) acc))
@@ -1144,7 +1162,7 @@ and compute_monotonicity attr attr_m m_expr =
 
 	| `METerm (_) -> Same
 
-	| `Sum(l,r) | `Product(l,r) | `Min(l,r) ->
+	| `Sum(l,r) | `Minus(l,r) | `Product(l,r) | `Min(l,r) ->
 	      let lm = compute_monotonicity attr attr_m l in
 	      let rm = compute_monotonicity attr attr_m r in
 		  bin_op_monotonicity lm rm
@@ -1259,6 +1277,7 @@ type code_terminal = [
 type arith_code_expression = [
 | `CTerm of code_terminal
 | `Sum of arith_code_expression * arith_code_expression
+| `Minus of arith_code_expression * arith_code_expression
 | `Product of arith_code_expression * arith_code_expression
 | `Min of arith_code_expression * arith_code_expression	]
 
@@ -1397,6 +1416,10 @@ let rec string_of_arith_code_expression ac_expr =
 	| `CTerm e -> string_of_code_expr_terminal e
 	| `Sum (l,r) ->
 	      (string_of_arith_code_expression l)^" + "^
+		  (string_of_arith_code_expression r)
+
+	| `Minus (l,r) ->
+	      (string_of_arith_code_expression l)^" - "^
 		  (string_of_arith_code_expression r)
 
 	| `Product(l,r) ->
@@ -1630,6 +1653,7 @@ let merge_blocks l_block r_block merge_fn =
 		  print_endline ("merger: "^(string_of_code_expression last_r));
 		  raise InvalidExpression
 
+(**/**)
 let rec get_last_code_expr c_expr = 
     match c_expr with
 	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
@@ -1785,6 +1809,7 @@ and treeml_of_map_expression m_expr indent_fn =
 		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
 
 	| `Sum(l,r) -> binary_node "m+" l r
+	| `Minus(l,r) -> binary_node "m-" l r
 	| `Product(l,r) -> binary_node "m*" l r
 	| `Min(l,r) -> binary_node "min" l r
 	| `MapAggregate(agg, f, q) ->

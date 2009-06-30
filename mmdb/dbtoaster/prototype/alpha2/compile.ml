@@ -139,6 +139,7 @@ let rec ab_map_expr_aux m_expr pa =
 	| `Init(sid, e) -> `Init (sid, ab_map_expr_aux e pa)
 
 	| `Sum (l,r) -> `Sum(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
+	| `Minus (l,r) -> `Minus(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Product (l,r) -> `Product(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Min (l,r) -> `Min(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 
@@ -295,7 +296,7 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 
 	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
 	      
-	| `Sum (l,r) | `Product (l,r) | `Min(l,r) ->
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) ->
 	      (get_unbound_attributes_from_map_expression l include_vars)@
 		  (get_unbound_attributes_from_map_expression r include_vars)
 
@@ -451,6 +452,9 @@ let rec push_delta m_expr =
 	| `Delta (ev, `Sum (l, r)) ->
 	      `Sum(push_delta(`Delta(ev,l)), push_delta(`Delta(ev,r)))
 		  
+	| `Delta (ev, `Minus (l, r)) ->
+	      `Minus(push_delta(`Delta(ev,l)), push_delta(`Delta(ev,r)))
+		  
 	| `Delta (ev, `Product (l, r)) ->
 	      `Sum(`Product(l, push_delta(`Delta(ev,r))),
 		   `Sum(`Product(push_delta(`Delta(ev,l)), r),
@@ -475,6 +479,10 @@ let rec apply_delta_rules m_expr event rcs =
 		  
 	    | `New (`Sum (l, r)) ->
 		  `Sum(apply_delta_rules l event (Some New),
+		       apply_delta_rules r event (Some New))
+		      
+	    | `New (`Minus (l, r)) ->
+		  `Minus(apply_delta_rules l event (Some New),
 		       apply_delta_rules r event (Some New))
 		      
 	    | `New (`Product (l, r)) ->
@@ -792,6 +800,17 @@ and simplify_map_expr_constants m_expr =
 			  | (true, false) -> sr
 			  | (false, true) -> sl
 			  | (false, false) -> `Sum(sl, sr)
+	      end
+		  
+	| `Minus (l, r) ->
+	      begin
+		  let sl = simplify_map_expr_constants l in
+		  let sr = simplify_map_expr_constants r in
+		      match (is_zero(sl), is_zero(sr)) with
+			  | (true, true) -> `METerm(`Int 0)
+			  | (true, false) -> `Minus(`METerm(`Int 0), sr)
+			  | (false, true) -> sl
+			  | (false, false) -> `Minus(sl, sr)
 	      end
 		  
 	| `Product (l, r) ->
@@ -1253,6 +1272,11 @@ and extract_map_expr_bindings m_expr : map_expression * (binding list) =
 	      let (re, rb) = extract_map_expr_bindings r in
 		  (`Sum(le, re), lb@rb)
 
+	| `Minus(l,r) ->
+	      let (le, lb) = extract_map_expr_bindings l in
+	      let (re, rb) = extract_map_expr_bindings r in
+		  (`Minus(le, re), lb@rb)
+
 	| `Product(l,r) ->
 	      let (le, lb) = extract_map_expr_bindings l in
 	      let (re, rb) = extract_map_expr_bindings r in
@@ -1381,6 +1405,9 @@ let rec compute_initial_value m_expr =
 	| `Sum(l,r) ->
 	      `Sum(compute_initial_value l, compute_initial_value r)
 		  
+	| `Minus(l,r) ->
+	      `Minus(compute_initial_value l, compute_initial_value r)
+		  
 	| `Product(l,r) ->
 	      `Product(compute_initial_value l, compute_initial_value r)
 
@@ -1403,6 +1430,18 @@ let rec apply_recompute_rules m_expr : map_expression =
 			  | (`New x, `New y) -> `New(`Sum(x, y))
 			  | (`Incr x, `New y) -> `New(`Sum(new_l, y))
 			  | (`New x, `Incr y) -> `New(`Sum(x, new_r))
+			  | _ -> raise InvalidExpression
+		  end
+
+	| `Minus (l,r) ->
+	      let new_l = apply_recompute_rules l in
+	      let new_r = apply_recompute_rules r in
+		  begin
+		      match (new_l, new_r) with
+			  | (`Incr (sx,x), `Incr (sy,y)) -> `Incr(sx,`Minus(x, y))
+			  | (`New x, `New y) -> `New(`Minus(x, y))
+			  | (`Incr x, `New y) -> `New(`Minus(new_l, y))
+			  | (`New x, `Incr y) -> `New(`Minus(x, new_r))
 			  | _ -> raise InvalidExpression
 		  end
 
@@ -1603,6 +1642,10 @@ let rec compute_new_map_expression (m_expr : map_expression) rcs =
 		  `Sum(compute_new_map_expression l (Some New),
 		       compute_new_map_expression r (Some New))
 		      
+	    | `Minus(l,r) ->
+		  `Minus(compute_new_map_expression l (Some New),
+		       compute_new_map_expression r (Some New))
+		      
 	    | `Product(l,r) ->
 		  `Product(compute_new_map_expression l (Some New),
 			   compute_new_map_expression r (Some New))
@@ -1622,6 +1665,11 @@ let rec compute_new_map_expression (m_expr : map_expression) rcs =
 	    | `Sum(l,r) ->
 		  `Sum(
 		      `Sum(compute_initial_value l, compute_initial_value r),
+		      `Incr(state_sym, x))
+
+	    | `Minus(l,r) ->
+		  `Sum(
+		      `Minus(compute_initial_value l, compute_initial_value r),
 		      `Incr(state_sym, x))
 
 	    | `Product(l,r) ->
@@ -1768,6 +1816,7 @@ let rec extract_incremental m_expr =
     match m_expr with
 	`METerm m -> []
 	| `Sum (l, r)
+	| `Minus (l, r)
 	| `Product (l, r)
 	| `Min (l, r) -> (extract_incremental l) @ (extract_incremental r)
 	| `MapAggregate (_, e, _)
@@ -1938,6 +1987,7 @@ let rec substitute_arith_code_vars assignments ac_expr =
 	    | `CTerm(_) -> ac_expr
 
 	    | `Sum (l,r) -> `Sum(sa l, sa r) 
+	    | `Minus (l,r) -> `Minus(sa l, sa r) 
 	    | `Product (l,r) -> `Product(sa l, sa r) 
 	    | `Min (l,r) -> `Min(sa l, sa r)
 
@@ -2240,6 +2290,31 @@ let generate_code handler bindings event =
 			      | _ ->
 				    print_endline ("suml: "^(string_of_code_expression l_code));
 				    print_endline ("sumr: "^(string_of_code_expression r_code));
+				    raise InvalidExpression
+		      end
+
+	    | `Minus(l,r) ->
+		  let (l_code, l_decl) = gc_aux l decl bind_info in
+		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
+		      begin
+			  match (l_code, r_code) with
+			      | (`Eval x, `Eval y) ->  (`Eval(`Minus(x, y)), r_decl)
+				    
+			      | (`Block x, `Eval y) | (`Eval y, `Block x) ->
+				    let new_block =
+					merge_with_block (`Block x) (fun a -> `Eval(`Minus(a,y)))
+				    in
+					(new_block, r_decl)
+
+			      | (`Block x, `Block y) ->
+				    let new_block =
+					merge_blocks l_code r_code (fun a b -> `Eval(`Minus(a,b)))
+				    in
+					(new_block, r_decl)
+					    
+			      | _ ->
+				    print_endline ("minusl: "^(string_of_code_expression l_code));
+				    print_endline ("minusr: "^(string_of_code_expression r_code));
 				    raise InvalidExpression
 		      end
 
