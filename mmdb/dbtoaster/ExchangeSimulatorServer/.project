@@ -14,11 +14,4 @@
 	<natures>
 		<nature>org.eclipse.jdt.core.javanature</nature>
 	</natures>
-	<linkedResources>
-		<link>
-			<name>vwap_and_client/exchange_proxy7.cpp</name>
-			<type>1</type>
-			<location>/Users/antonmorozov/Desktop/tmp/exchange_proxy7.cpp</location>
-		</link>
-	</linkedResources>
 </projectDescription>
