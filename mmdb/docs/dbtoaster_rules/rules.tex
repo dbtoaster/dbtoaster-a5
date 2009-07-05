@@ -111,7 +111,7 @@
 \nonumber
 \Delta_{\pm R(\vec{r})} \pi_{\dots}(Q) &\dots& \mbox{no rule, simplify 
 surrounding aggregate instead}
-\\[2ex]
+\\[2ex] \nonumber
 %
 %
 \end{eqnarray}
@@ -196,8 +196,7 @@ S.erase[A]
 (\algnew_{\pm R(\vec{r})} f) * (\algnew_{\pm R(\vec{r})} g)\\
 %
 %
-\nonumber
-\\[2ex]
+\nonumber\\[2ex]
 \label{eq:newr1}
 \algnew_{\pm R(\vec{r})} \rho_{\vec{A}}(R) &:=&
    \algincr_{\rho_{\vec{A}}(R)} \Delta_{\pm R(\vec{r})} \rho_{\vec{A}}(R)
@@ -1257,8 +1256,8 @@ state\_identifier &=& identifier\\
 \\
 field &=& ( field\_identifier, type\_identifier ) \\
 \\
-delta &=& \`{} Insert (relation\_identifier) \\
-& $\lvert$ &  \`{} Delete (relation\_identifier) \\
+delta &=& \`{} Insert (relation\_identifier, [field]) \\
+& $\lvert$ &  \`{} Delete (relation\_identifier, [field]) \\
 \\
 eterm &=& \`{}Int ( \emph{int} )\\
 &$\lvert$ & \`{}Float ( \emph{float} )\\
@@ -1284,6 +1283,7 @@ meterm &=& \`{}Int ( \emph{int} )\\
 \\
 aggregate\_function &=& \`{} Sum\\
 &$\lvert$ & \`{}Min \\
+&$\lvert$ & \`{}Max \\
 \\
 oplus &=& \`{}Plus \\
 &$\lvert$ & \`{}Minus \\
@@ -1305,13 +1305,14 @@ map\_expression &=& \`{}METerm ( meterm ) \\
 &$\lvert$ & \`{}MapAggregate ( aggregate\_function, map\_expression, plan )\\
 &$\lvert$ & \`{}Delta ( delta,  map\_expression )\\
 &$\lvert$ & \`{}New ( delta, map\_expression )\\
-&$\lvert$ & \`{}Incr ( state\_identifier, delta, oplus, map\_expression )\\
-&$\lvert$ & \`{}Incrdiff ( state\_identifier, delta, oplus, map\_expression )\\
-&$\lvert$ & \`{}Init ( state\_identifier, delta, oplus, map\_expression )\\
+&$\lvert$ & \`{}Incr ( state\_identifier, oplus, map\_expression )\\
+&$\lvert$ & \`{}Incrdiff ( state\_identifier, oplus, map\_expression )\\
+&$\lvert$ & \`{}Init ( state\_identifier, oplus, map\_expression )\\
 &$\lvert$ & \`{}Insert ( state\_identifier, meterm, map\_expression )\\
-&$\lvert$ & \`{}Update ( state\_identifier, delta, oplus, meterm, map\_expression )\\
+&$\lvert$ & \`{}Update ( state\_identifier, oplus, meterm, map\_expression )\\
 &$\lvert$ & \`{}Delete ( state\_identifier, meterm )\\
 &$\lvert$ & \`{}Branch ( bterm, map\_expression, map\_expression ) \\
+&$\lvert$ & \`{}Sequence (map\_expression, map\_expression ) \\
 \\
 bterm &=& \`{} True \\
 &$\lvert$ & \`{}False \\
@@ -1329,8 +1330,9 @@ boolean\_expression &=& \`{} BTerm ( bterm )\\
 &$\lvert$ & \`{}And ( boolean\_expression,  boolean\_expression )\\
 &$\lvert$ & \`{}Or ( boolean\_expression,  boolean\_expression )\\
 \\
-plan &=& \`{}Relation ( relation\_identifier, [field] )\\
-&$\lvert$ & \`{}TupleRelation ( relation\_identifier, [field] )\\
+plan &=& \`{}TrueRelation\\
+&$\lvert$ & \`{}FalseRelation\\
+&$\lvert$ & \`{}Relation ( relation\_identifier, [field] )\\
 &$\lvert$ & \`{}Rename ( [(attribute\_identifier, attribute\_identifier)], plan ) \\
 &$\lvert$ & \`{}Select ( boolean\_expression, plan )\\
 &$\lvert$ & \`{}Project ( [(attribute\_identifier, expression)], plan )\\
@@ -1338,10 +1340,9 @@ plan &=& \`{}Relation ( relation\_identifier, [field] )\\
 &$\lvert$ & \`{}Cross ( plan , plan )\\
 &$\lvert$ & \`{}NaturalJoin ( plan,  plan )\\
 &$\lvert$ & \`{}Join ( boolean\_expression,  plan,  plan )\\
-&$\lvert$ & \`{}EmptySet \\
 &$\lvert$ & \`{}DeltaPlan ( delta, plan )\\
 &$\lvert$ & \`{}NewPlan ( delta, plan )\\
-&$\lvert$ & \`{}IncrPlan ( state\_identifier, delta, poplus, plan ) \\
+&$\lvert$ & \`{}IncrPlan ( state\_identifier, poplus, plan ) \\
 \\
 binding &=& \`{}BindExpr ( variable\_identifier,  expression )\\
 &$\lvert$ & \`{}BindBoolExpr ( variable\_identifier,  boolean\_expression )\\
@@ -1395,6 +1396,7 @@ bool\_code\_expression &=& \`{}BCTerm ( bool\_code\_term )\\
 &$\lvert$ & \`{}Or ( bool\_code\_expression, bool\_code\_expression )\\
 \\
 code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
+&$\lvert$ & \`{}IfElse ( bool\_code\_expression, code\_expression, code\_expression )\\
 &$\lvert$ & \`{}ForEach ( datastructure, code\_expression )\\
 &$\lvert$ & \`{}Declare ( declaration )\\
 &$\lvert$ & \`{}Assign ( code\_variable, arith\_code\_expression )\\
@@ -1436,7 +1438,7 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline 58$\sim$59 & missing & \\
 \hline 61 & complete & extract\_plan\_bindings\\
 \hline 62 & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
-\hline 63 & missing &\\
+\hline 63 & missing & \\
 \hline 64 & complete & simplify \\
 \hline 65 & complete & compute\_new\_plan\\
 \hline 66$\sim$67 & missing & \\
@@ -1446,222 +1448,223 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline
 
 \end{tabular}
+\pagebreak
+
+\begin{eqnarray*}
+q[] &:=&
+\algsumf_{P_2 * V_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:pred1})}{=}&
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > P_{min}[]} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:pred3})}{=}&
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2, V_2}(B)))[c=P_{min}[]]
+\\
+\algnew_{+B(p,v)} q[]
+&\stackrel{(\ref{eq:newr7})}{:=}&
+(\algnew_{+B(p,v)}
+\algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2, V_2}(B))))
+[c=\algnew_{+B(p,v)} P_{min}[]]
+\\
+&\stackrel{(\ref{eq:agg2})}{=}&
+(\algincr_{q'} \Delta_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))))
+[c=\algnew_{+B(p,v)} P_{min}[]]
+\\
+&\stackrel{(\ref{eq:md4})}{=}&\algfor(\mbox{$c$}) \; \{ \\
+&&\quad \mathrm{ignore}((\algupdate_{+, q'[c]} \Delta_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))))[c]) \; \};
+\\
+&& rc = \algnew_{+B(p,v)} P_{min}[];
+\\
+&& \mbox{if ($q'$.find($rc$) = $q'$.end)}
+\; \{\\
+&&\quad \mathrm{ignore}((\alginsert_{q'[rc]} \algnew_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))))[rc]) \; \};
+\\
+&& q'[rc]
+\\
+\end{eqnarray*}
+%update...
+\begin{eqnarray*}
+\algupdate_{+, q'[c]} \Delta_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B)))
+&\stackrel{(\ref{eq:a6})}{=}&
+\algupdate_{+, q'[c]} \algsumf_{P_2 * V_2}(\Delta_{+B(p,v)} \sigma_{P_2 > c} (\rho_{P_2, V_2} (B)))
+\\
+&\stackrel{(\ref{eq:b6})}{=}&
+\algupdate_{+, q'[c]} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\Delta_{+B(p,v)} \rho_{P_2, V_2} (B)))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algupdate_{+, q'[c]} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\pi_{p\rightarrow P_2, v\rightarrow V_2}\{\tuple{}\}))
+\\
+&\stackrel{(\ref{eq:rs1})}{=}&
+\algupdate_{+, q'[c]} \algsumf_{P_2 * V_2}(\pi_{p\rightarrow P_2, v\rightarrow V_2} (\sigma_{p > c} \{\tuple{}\}))
+\\
+&\stackrel{(\ref{eq:ags1})}{=}&
+\algupdate_{+, q'[c]} \algsumf_{p * v} (\sigma_{p > c} \{\tuple{}\})
+\\
+&\stackrel{(\ref{eq:sm2})}{=}&
+q'[c] \leftarrow q'[c] + \algsumf_{p * v} (\sigma_{p > c} \{\tuple{}\});\; q'[c]
+\\
+\end{eqnarray*}
+%new P_min...
+\begin{eqnarray*}
+\algnew_{+B(p,v)} P_{min}[] &:=&
+\algnew_{+B(p,v)} \algmin_{P_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:agg6})}{=}&
+\algincr_{\min, P_{min}[]} \delta_{+B(p,v)} \algmin_{P_2}(\sigma_{m(P_2) >0} (\rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:agg5})}{=}&
+\algincr_{\min, P_{min}[]} \algmin_{P2} (\algincr_{\cup, S_Q} \Delta_{+B(p,v)} \sigma_{m(P_2) >0} (\rho_{P_2, V_2}(B)))\;)
+\\
+&\stackrel{(\ref{eq:b6})}{=}&
+\algincr_{\min, P_{min}[]} \algmin_{P2} (\algincr_{\cup, S_Q} \sigma_{m(P_2) >0} (\Delta_{+B(p,v)} \rho_{P_2, V_2}(B)))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\algincr_{\min, P_{min}[]} \algmin_{P2} (\algincr_{\cup, S_Q} \sigma_{m(P_2) >0} (\pi_{p \rightarrow P_2, v \rightarrow V_2} \{\tuple{}\}))
+\\
+&\stackrel{(\ref{eq:rs1})}{=}&
+\algincr_{\min, P_{min}[]} \algmin_{P2} (\algincr_{\cup, S_Q} \pi_{p \rightarrow P_2, v \rightarrow V_2} (\sigma_{m(p) >0} \{\tuple{}\}))
+\\
+&\stackrel{(\ref{eq:incr2})}{=}&
+\algincr_{\min, P_{min}[]} \algmin_{P2} ( (S_Q \leftarrow S_Q \cup \pi_{p \rightarrow P_2, v \rightarrow V_2} (\sigma_{m(p) >0} \{\tuple{}\});\;S_Q))
+\\
+&\stackrel{(\ref{eq:agg4})}{=}&
+P_{min}[] \leftarrow \algmin(P_{min}[], \algmin_{P2} ( (S_Q \leftarrow S_Q \cup \pi_{p \rightarrow P_2, v \rightarrow V_2} (\sigma_{m(p) >0} \{\tuple{}\});\;S_Q))\;);\;P_{min}[]
+\\
+\end{eqnarray*}
+%insert
+\begin{eqnarray*}
+\alginsert_{q'[rc]} \algnew_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))
+&\stackrel{(\ref{eq:agg2})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \Delta_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B)))
+\\
+&\stackrel{(\ref{eq:a6})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \algsumf_{P_2 * V_2}(\Delta_{+B(p,v)} \sigma_{P_2 > c} (\rho_{P_2 , V_2}(B)))
+\\
+&\stackrel{(\ref{eq:b6})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\Delta_{+B(p,v)} \rho_{P_2 , V_2}(B)))
+\\
+&\stackrel{(\ref{eq:b1})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\pi_{p \rightarrow P_2, v \rightarrow V_2} \{\tuple{}\} ))
+\\
+&\stackrel{(\ref{eq:rs1})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \algsumf_{P_2 * V_2}(\pi_{p \rightarrow P_2, v \rightarrow V_2} (\sigma_{p > c} \{\tuple{}\} ))
+\\
+&\stackrel{(\ref{eq:ags1})}{=}&
+\alginsert_{q'[rc]} \algincr_{+, S} \algsumf_{p * v}(\sigma_{p > c} \{\tuple{}\} )
+\\
+&\stackrel{(\ref{eq:incr1})}{=}&
+\alginsert_{q'[rc]} (S \leftarrow S + \algsumf_{p * v}(\sigma_{p > c} \{\tuple{}\} );\;S)
+\\
+&\stackrel{(\ref{eq:sm1})}{=}&
+\mbox{if ($rc \notin keys(q')$)} \\
+&&\quad
+\mbox{$q'$.insert($rc$, $(S \leftarrow S + \algsumf_{p * v}(\sigma_{p > c} \{\tuple{}\} );\;S))$}
+\\&&q'[rc] 
+\\
+%here i am
+\end{eqnarray*}
+Finally,
+%final...
+\begin{eqnarray*}
+\algnew_{+B(p,v)} q[]
+&=&\algfor(\mbox{$c$}) \; \{ \\
+&&\quad \mathrm{ignore}((\algupdate_{+, q'[c]} \Delta_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))))[c]) \; \};
+\\
+&& rc = \algnew_{+B(p,v)} P_{min}[];
+\\
+&& \mbox{if ($q'$.find($rc$) = $q'$.end)}
+\; \{\\
+&&\quad \mathrm{ignore}((\alginsert_{q'[rc]} \algnew_{+B(p,v)} \algsumf_{P_2 * V_2}(\sigma_{P_2 > c} (\rho_{P_2 , V_2}(B))))[rc]) \; \};
+\\
+&& q'[rc]
+\\
+&=&\algfor(\mbox{$c$}) \; \{ \\
+&&\quad \mathrm{ignore}((q'[c] \leftarrow q'[c] + \algsumf_{p * v} (\sigma_{p > c} \{\tuple{}\});\; q'[c])) \; \};
+\\
+&& rc = ( P_{min}[] \leftarrow \algmin(P_{min}[], \algmin_{P2} (S_Q \leftarrow S_Q \cup \pi_{p \rightarrow P_2, v \rightarrow V_2} (\sigma_{m(p) >0} (\{\tuple{}\});S_Q);\;P_{min}[])
+\\
+&& \mbox{if ($q'$.find($rc$) = $q'$.end)}
+\; \{\\
+&&\quad \mathrm{ignore}((\mbox{if ($rc \notin keys(q')$)}  
+\mbox{ $q'$.insert($rc$, ($S \leftarrow S + \algsumf_{p * v}(\sigma_{p > c} (\{\tuple{}\} ));\;S)\;);$}\;q'[rc])) \; \};
+\\
+&& q'[rc]
+\\
+\end{eqnarray*}
 
 \pagebreak
-\section{Functions signatures}
-\begin {verbatim}
-get_bound_attributes q
-@param: q: plan
-@return: `Qualified ( string, string ) list
- get bound attributes from plan q
-
-compare_attributes a1 a2
-@param: a1: column_name, 
-              a2: column_name
-@return: boolean
- compare attribute a1 and a2. 
- 
-create_bindings name fields
-@param: name: string,
-               fields: (string, string) list
-@return: (attribute_identifier, expression) list
- for each field(id, type), generate a list of (attribute id of name, `Variable (id))
-
-create_renamed_bindings name fields mappings
-@param: name: string 
-              fields: (string, string) list, 
-              mappings: (attribute_identifier, attribute_identifier) list
-@return: (attribute_identifier, expression) list  
- for each field(id, type), generate a list of (attribute_identifier, `Variable())
- substituting fields to new mappings
-
-add_map_expression_bindings m_expr proj_attrs
-@param: m_expr: map_expression, 
-               proj_attrs: (attribute_identifier, expression) list
-@return: map_expression
- aggregate map simplification that used for rule 44, 45. 
- substituting attributes of m_expr with proj_attrs. 
-
-add_predicate_bindings pred proj_attrs
-@param: pred: boolean_expression, 
-              proj_attrs: (attribute_identifier, expression) list
-@return: boolean_expression
- relational algebra simplification that used for rule 64. 
- substituting attributes of pred with proj_attrs. 
-
-get_expr_definition var bindings
-@param: var: eterm, 
-              bindings: binding
-@return: expression
- find a binding with variable name var in the binding list and return the first expression
-
-remove_expr_binding var bindings
-@param: var: eterm, 
-              bindings: binding
-@return: boolean
- remove binding with name var from bindings list
-
-resolve_unbound_attributes attrs bindings
-@param: attrs: attribute_identifier list, 
-              bindings: attribute_identifier list
-@return: attribute_identifier list
- remove common elements of attrs and bindings from attrs
-
-get_unbound_attributes_from_expression expr include_vars
-@param: expr: expression, 
-              include_vars: boolean
-@return: attribute_identifier list
- get unbound attributes from expr.
-
-get_unbound_attributes_from_predicate b_expr include_vars
-@param: b_expr: boolean_expression, 
-              include_vars: boolean
-@return: attribute_identifier list
-
-get_unbound_attributes_from_map_expression m_expr include_vars
-@param: m_expr: map_expression, 
-              include_vars: boolean
-@return: attribute_identifier list
-
-get_unbound_attributes_from_plan q include_vars
-@param: q: plan, 
-              include_vars: boolean
-@return: attribute_identifier list
-
-is_constant_expr expr
-@param: expr: expression
-@return: bool
- returns whether the expression is constant
-
-is_bound_expr expr bindings
-@param: expr: expression, 
-              bindings: bindings list
-@return: bool
-returns whether the expression is bound
-
-is_independent m_expr q
-@param: m_expr: map_expression, 
-              q: plan
-@return: bool
- returns whether a map aggregate expression is independent from its query
-
-push_delta_plan mep
-@param: mep: plan
-@return: plan
- rule 7~13
-
-push_delta m_expr
-@param: m_expr: map_expression
-@return: map_expression
- rule 1~5
-
-apply_delta_rules m_expr binding rcs
-@param: m_expr: map_expression, 
-              binding: delta, 
-              rcs: recompute_state
-@return: map_expression
- rule 21~23, 35
-
-apply_delta_plan_ruls q binding rcs
-@param: q: plan, 
-              binding: delta, 
-              rcs: recompute_state
-@return: plan
- rule 24~29
-
-simplify_expr_constants e
-@param: e: expression
-@return: expression
-
-simplify_predicate_constants b_expr
-@param: b_expr: boolean_expression
-@return: boolean_expression
-
-simplify_map_expr_constants m_expr
-@param: m_expr: map_expression
-@return: map_expression
-
-simplify_plan_constants q
-@param: q: plan
-@return: plan
-
-simplify m_expr rewrites
-@param: m_expr: map_expression, 
-              rewrites: accessor_element list
-@return: map_expression
- rule 44~45, 48, 50~52, 54, 57, 64
-
-bind_expr_pair x y
-@param: x: (expression, (binding list)), 
-              y: (expression, (binding list))
-@return: (bool, expression, (binding list), expression, (binding list))
-
-extract_expr_bindings expr
-@param: expr:expression
-@return: (expression, binding list)
-
-extract_bool_expr_bindings b_expr
-@param: b_expr: boolean_expression
-@return: (boolean_expression, binding list)
-
-extract_map_expr_bindings m_expr
-@param: m_expr: map_expression
-@return: (map_expression, binding list)
-
-extract_plan_bindings q
-@param: q:plan
-@return: (plan, binding list)
-
-compute_initial_value m_expr
-@param: m_expr: map_expression
-@return: map_expression
-
-apply_recompute_rules m_expr
-@param: m_expr: map_expression
-@return: ma_expression
-
-apply_recompute_plan_rules q
-@param: q: plan
-@return: plan
-
-compute_new_map_expression m_expr rcs
-@param: m_expr: map_expression, 
-              rcs: recompute_state
-@return map_expression
-
-compute_new_plan q rcs
-@param: q: plan, 
-              rcs: recompute_state
-@return plan
-
-compile_target m_expr event
-@param: m_expr: map_expression, 
-              event: delta
-@return: (map_expression, binding list)
- compile m_expr on the event and return compiled map_expression and a list of bindings
- from the map_expression
-
-compile_target_all m_expr
-@param: m_expr: map_expression, 
-@return: (delta, map_expression list) list
- recursively compile m_expr on all possible events(insert or delete) and return list of event 
- and list of compiled expressions.
-
-compile_code m_expr event output_file_name
-@param: m_expr: map_expression, 
-              event: delta, 
-              output_file_name: string
-@return: ()
- compile m_expr on the event event and generate c code to output_file_name and return ().
-
-generate_code handler bindings event
-@param: handler: map_expression, 
-              bindings: binding list, 
-              event: delta
-@return: (declaration list, code_expression)
- translate map_expression and bindings on the event into C code_expression 
- and return declaration list and generated code_expressions
-
-\end{verbatim}	
-
+Linearroad example.
+\begin{eqnarray*}
+q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedge\;\\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; \\ID11 = ID \;\wedge\; LANE11 = LANE \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\;\\ LANE22 = LANE2 \;\wedge\; TIME22 = TIME2 + 110}} \left(\begin{array}{cc}A \times \rho_{ID2, LANE2, TIME2}(A) \times\\ \rho_{ID11, LANE11, TIME11}(A) \times \rho_{ID22, LANE22, TIME22}(A)\end{array}\right)
+\\
+\algnew_{+A(id, lane, time)}q &:=&
+\algnew_{+A(id, lane, time)} \algmin_{ID} (\sigma_{\dots} \left(\begin{array}{cc}A \times \rho_{ID2, LANE2, TIME2}(A) \times\\ \rho_{ID11, LANE11, TIME11}(A) \times \rho_{ID22, LANE22, TIME22}(A)\end{array}\right)
+\\
+&\stackrel{(\ref{eq:agg6})}{=}&
+\algincr_{min, S} \delta_{+A(id, lane, time)} \algmin_{ID} (\sigma_{\dots} \left(\begin{array}{cc}A \times \rho_{ID2, LANE2, TIME2}(A) \times\\ \rho_{ID11, LANE11, TIME11}(A) \times \rho_{ID22, LANE22, TIME22}(A)\end{array}\right)
+\\
+&\stackrel{(\ref{eq:agg5})}{=}&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \Delta_{+A(id, lane, time)} (\sigma_{\dots} (A \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))))
+\\
+&\stackrel{(\ref{eq:b6})}{=}&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \sigma_{\dots} (\Delta_{+A(id, lane, time)} (A \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))))
+\\
+&\stackrel{(\ref{eq:b5})}{=}&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \sigma_{\dots} (
+(\Delta_{+A(id, lane, time)} A \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \Delta_{+A(id, lane, time)}\rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \rho_{2}(A) \times \Delta_{+A(id, lane, time)} \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \rho_{2}(A) \times \rho_{11}(A) \times \Delta_{+A(id, lane, time)}\rho_{22}(A))
+))
+\\
+%
+&\stackrel{(\ref{eq:b1})}{=}&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \sigma_{\dots} (
+(\pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad 
+( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})
+))
+\\
+%
+&=&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \sigma_{\dots}
+(\pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad 
+\sigma_{\dots}( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})
+))
+\\
+%
+&\stackrel{(\ref{eq:rs1})}{=}&
+\algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} 
+\\&&\quad
+(\pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME} 
+(\sigma_{\substack{ID2 <> id \;\wedge\; LANE2 = lane \;\wedge\;\\ TIME2 >= time \;\wedge\; TIME2 <= time + 30 \;\wedge\; \\ID11 = id \;\wedge\; LANE11 = lane \;\wedge\; \\TIME11 time + 120 \;\wedge\; ID22 = ID2 \;\wedge\;\\ LANE22 = LANE2 \;\wedge\; TIME22 = TIME2 + 110}} 
+(\{\tuple{}\}\times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A)))\cup
+\\&&\quad 
+(\pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}
+(\sigma_{\substack{id <> ID \;\wedge\; lane = LANE \;\wedge\;\\ time >= TIME \;\wedge\; time <= TIME + 30 \;\wedge\; \\ID11 = ID \;\wedge\; LANE11 = LANE \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = id \;\wedge\;\\ LANE22 = lane \;\wedge\; TIME22 = time + 110}}
+( A \times \{\tuple{}\} \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+(\pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}
+(\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedge\;\\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; \\id = ID \;\wedge\; lane = LANE \;\wedge\; \\time = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\;\\ LANE22 = LANE2 \;\wedge\; TIME22 = TIME2 + 110}}
+( A \times \rho_{2}(A) \times \{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+(\pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}
+(\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedge\;\\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; \\ID11 = ID \;\wedge\; LANE11 = LANE \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; id = ID2 \;\wedge\;\\ lane = LANE2 \;\wedge\; time = TIME2 + 110}}
+( A \times \rho_{2}(A) \times \rho_{11}(A) \times \{\tuple{}\})
+)
+)
+\\
+\end{eqnarray*}
 \end{document}
