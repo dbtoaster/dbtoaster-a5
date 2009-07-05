@@ -1411,45 +1411,165 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 
 \begin{tabular} {|c|c|c|}
 \hline rule \# & status & location  \\
-\hline 1$\sim$5 & complete & push\_delta \\
-\hline 6 & missing & \\
-\hline 7$\sim$13 & complete & push\_delta\_plan\\
-\hline 14 & incomplete & generate\_code/gc\_aux, matching for Sum only\\
-\hline 15$\sim$17 & missing & \\
-\hline 18$\sim$19 & incomplete & translated to code\_expression directly at gc\_aux\\
-\hline 20 & missing & \\
-\hline 21$\sim$23 & complete & apply\_delta\_rules\\
-\hline 24$\sim$29 & complete & apply\_delta\_plan\_rules\\
-\hline 30 & complete & compile\_target\\
-\hline 31$\sim$32 & complete & apply\_recompute\_rules\\
-\hline 33$\sim$34 & complete & apply\_recompute\_plan\_rules\\
-\hline 35 & copmlete & apply\_delta\_rules\\
-\hline 36 & missing & \\
-\hline 37$\sim$43 & missing & \\
-\hline 44$\sim$45 & complete & simplify \\
-\hline 46$\sim$47 & complete & simplify\_map\_expr\_constants \\
-\hline 48 & complete & simplify \\
-\hline 49 & missing & \\
-\hline 50$\sim$52 & complete & simplify \\
-\hline 53 & missing & \\
-\hline 54 & complete & simplify \\
-\hline 55$\sim$56 & missing & \\
-\hline 57 & complete & simplify \\
-\hline 58$\sim$59 & missing & \\
-\hline 61 & complete & extract\_plan\_bindings\\
-\hline 62 & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
-\hline 63 & missing & \\
-\hline 64 & complete & simplify \\
-\hline 65 & complete & compute\_new\_plan\\
-\hline 66$\sim$67 & missing & \\
-\hline 68$\sim$69 & complete & generate\_code\\
-\hline 70$\sim$71 & incomplete & generate\_code, \\
-\hline 72$\sim$76 & missing & \\
+\hline \ref{eq:a1}$\sim$\ref{eq:a5} & complete & push\_delta \\
+\hline \ref{eq:a6} & missing & \\
+\hline \ref{eq:b1}$\sim$\ref{eq:b6} & complete & push\_delta\_plan\\
+\hline \ref{eq:incr1} & incomplete & generate\_code/gc\_aux, matching for Sum only\\
+\hline \ref{eq:incr2}$\sim$\ref{eq:incr4} & missing & \\
+\hline \ref{eq:sm1}$\sim$\ref{eq:sm2} & incomplete & translated to code\_expression directly at gc\_aux\\
+\hline \ref{eq:sm3} & missing & \\
+\hline \ref{eq:new1}$\sim$\ref{eq:new4} & complete & apply\_delta\_rules\\
+\hline \ref{eq:newr1}$\sim$\ref{eq:newr6} & complete & apply\_delta\_plan\_rules\\
+\hline \ref{eq:newr7} & complete & compile\_target\\
+\hline \ref{eq:fs1}$\sim$\ref{eq:fs2} & complete & apply\_recompute\_rules\\
+\hline \ref{eq:fs3}$\sim$\ref{eq:fs4} & complete & apply\_recompute\_plan\_rules\\
+\hline \ref{eq:agg1} & copmlete & apply\_delta\_rules\\
+\hline \ref{eq:agg2}$\sim$\ref{eq:agg9} & missing & \\
+\hline \ref{eq:ags1}$\sim$\ref{eq:ags2} & complete & simplify \\
+\hline \ref{eq:sum1}$\sim$\ref{eq:sum2} & complete & simplify\_map\_expr\_constants \\
+\hline \ref{eq:sum3} & complete & simplify \\
+\hline \ref{eq:sum4} & missing & \\
+\hline \ref{eq:sum5}$\sim$\ref{eq:sum7} & complete & simplify \\
+\hline \ref{eq:min1} & missing & \\
+\hline \ref{eq:min2}& complete & simplify \\
+\hline \ref{eq:min3}$\sim$\ref{eq:min4} & missing & \\
+\hline \ref{eq:min5} & complete & simplify \\
+\hline \ref{eq:min6}$\sim$\ref{eq:min7} & missing & \\
+\hline \ref{eq:pred1} & complete & extract\_plan\_bindings\\
+\hline \ref{eq:pred2} & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
+\hline \ref{eq:pred3} & missing & \\
+\hline \ref{eq:rs1} & complete & simplify \\
+\hline \ref{eq:md1} & complete & compute\_new\_plan\\
+\hline \ref{eq:md2}$\sim$\ref{eq:md3} & missing & \\
+\hline \ref{eq:md4}$\sim$\ref{eq:md5} & complete & generate\_code\\
+\hline \ref{eq:md6}$\sim$\ref{eq:md7} & incomplete & generate\_code, \\
+\hline \ref{eq:na1}$\sim$\ref{eq:na5} & missing & \\
 \hline
 
 \end{tabular}
 \pagebreak
 
+\section{Functions signatures}
+\begin{enumerate}
+  \item \emph{compile\_code m\_expr file\_name} : top level function to compile m\_expr with all possible events(insert/delete) and generate "$<$filename$>$.cc" file. This will call compile\_target\_all to apply all rules to m\_expr and call generate\_code to translate applied m\_expr to IR. Then lastly call translate to print out output to "$<$filename$>$.cc" using IR.
+(val compile\_code :  map\_expression $\rightarrow$ string $\rightarrow$ unit )
+    \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] map\_expression to compile 
+          \item[file\_name] output file name 
+        \end{description}
+      \item[Returns] : ()
+    \end{description}
+    
+  \item \emph{compile\_target\_all m\_expr} : First, this will call generate\_all\_events to find out all events related to m\_expr. Then recursively call compile\_target to compile m\_expr with individual event(insert, delete). This will return list of compiled m\_expr with bindings list, and list of state id and type.\\
+(val compile\_target\_all : map\_expression $\rightarrow$ (delta * map\_expression * binding list) list * (string * string) list )
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] map\_expression to compile 
+        \end{description}
+      \item[Returns] : [ (delta, map\_expression, [binding list])], [(string, string)]
+    \end{description}
+    
+  \item \emph{generate\_code [(delta, m\_expr, binding)] [(sid, stype)]} : translate map expression into IR\\
+  (val generate\_code : (delta * map\_expression * binding list) list $\rightarrow$ (string * string) list $\rightarrow$ code\_expression list * code\_expression)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[delta] event
+          \item[m\_expr] map expression
+          \item[binding] list of bindings
+          \item[sid] state id
+          \item[stype] type of state
+        \end{description}
+      \item[Returns] : ([code\_expression], [code\_expression]) list of declarations and handler codes
+    \end{description}
+    
+  \item \emph{translate global\_decls handler file\_name} : print out generated C code to $<$file\_name.cc$>$\\
+  (val translate : code\_expression list $\rightarrow$ code\_expression list $\rightarrow$ string $\rightarrow$ () \;)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[global\_decls] : global declarations generated during compilation. usually maps and lists
+          \item[handler] : code expression of generated handlers
+          \item[file\_name] : file to write 
+        \end{description}
+      \item[Returns] : ()
+    \end{description}
+    
+  \item \emph{compile\_target m\_expr event states} : compile m\_expr on single ``event''.  Extract bindings first using rule \ref{eq:pred1}-\ref{eq:pred2}. Then apply ``new'' to m\_expr and 
+ apply delta rules. Then simplify the result. 	\\
+  (val compile\_target : map\_expression $\rightarrow$ delta $\rightarrow$ %check later
+  (string * m\_expr) list $\rightarrow$ map\_expression * binding list * (string * map\_expression) list
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] map\_expression to compile
+          \item[event] Insert/delete
+          \item[states] list of (string, m\_expr). currently existing maps 
+        \end{description}
+      \item[Returns] : (map\_expression, [binding], [(string, map\_expression)] compiled map\_expression with bindings and maps
+    \end{description}
+    
+  \item \emph{extract\_map\_expr\_bindings m\_expr} : extracts bindings from m\_expr using rule \ref{eq:pred1}-\ref{eq:pred2} and returns extracted m\_expr and list of bindings\\
+  (val extract\_map\_expr\_bindings : map\_expression $\rightarrow$ map\_expression * (binding list)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] : map expression to extract bindings 
+        \end{description}
+      \item[Returns] : map\_expression * (binding list)
+    \end{description}
+    
+  \item \emph{apply\_recompute\_rules m\_expr event} : apply ``new'' to m\_expr with event(insert/delete)\\
+  (val apply\_recompute\_rules : map\_expression $\rightarrow$ delta $\rightarrow$ map\_expression)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] : map expression to apply ``new''
+          \item[event] : event. either insert or delete
+        \end{description}
+      \item[Returns] : map\_expression  
+    \end{description}
+
+  \item \emph{apply\_delta\_rules m\_expr rcs} : apply delta rules to m\_expr\\
+  (val apply\_delta\_rules : test option $\rightarrow$ map\_expression $\rightarrow$ map\_expression)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] : map expressino to apply delta rules
+          \item[rcs] : test option 
+        \end{description}
+      \item[Returns] : map\_expression
+    \end{description}
+
+  \item \emph{simplify m\_expr rewrites} : bottom up map expression rewriting\\
+  (val simplify : map\_expression $\rightarrow$ accessor\_element list $\rightarrow$ map\_expression)
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[m\_expr] map expression to simplify 
+          \item[rewrites] list of rewrites 
+        \end{description}
+      \item[Returns] : map\_expression
+    \end{description}
+
+  \item \emph{function signature} : 
+      \begin{description}
+      \item[Parameters] :
+        \begin{description}
+          \item[param] 
+        \end{description}
+      \item[Returns] : 
+    \end{description}
+
+\end{enumerate}
+
+
+
+\pagebreak
+\section{Vwap, Loadrunner}
 \begin{eqnarray*}
 q[] &:=&
 \algsumf_{P_2 * V_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
