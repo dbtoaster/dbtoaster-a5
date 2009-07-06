@@ -183,7 +183,7 @@ S.erase[A]
 \begin{eqnarray}
 \mbox{Frontier computation:} && \nonumber
 \\
-\nonumber\algnew_{\pm R(\vec{r})} f &:=& \mbox{new value of \emph{f} when insert/delete } \vec{r} \mbox{ to R}\\
+\nonumber\algnew_{\pm R(\vec{r})} f &:=& \mbox{new value of \emph{f} after insertion/deletion of } \vec{r} \\
 \label{eq:new1}
 \algnew_{\pm R(\vec{r})} c       &:=& \algincr_{c} \Delta_{\pm R(\vec{r})} c \\
 \label{eq:new2}
@@ -502,7 +502,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \label{eq:md4}
 (\algincr_{\oplus, S_f} \Delta_{+R(\vec{r})} f)[c=\algnew_{+R(\vec{r})} g]
 &:=&
-\algfor(\mbox{$c$ in $S_f$}) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \};
+\algfor(\mbox{$c$}) \; \{ \; \mathrm{ignore}((\algupdate_{\oplus, S_{f}[c]} \Delta_{+R(\vec{r})} f)[c]) \; \};
 \\
 \nonumber && rc = \algnew_{+R(\vec{r})} g;
 \\
@@ -1418,12 +1418,15 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline \ref{eq:incr2}$\sim$\ref{eq:incr4} & missing & \\
 \hline \ref{eq:sm1}$\sim$\ref{eq:sm2} & incomplete & translated to code\_expression directly at gc\_aux\\
 \hline \ref{eq:sm3} & missing & \\
-\hline \ref{eq:new1}$\sim$\ref{eq:new4} & complete & apply\_delta\_rules\\
-\hline \ref{eq:newr1}$\sim$\ref{eq:newr6} & complete & apply\_delta\_plan\_rules\\
+\hline \ref{eq:new1}$\sim$\ref{eq:new2} & complete & apply\_recompute\_rules\\
+\hline \ref{eq:new3}$\sim$\ref{eq:new4} & complete & apply\_delta\_rules, apply\_recompute\_rules\\
+\hline \ref{eq:newr1}$\sim$\ref{eq:newr3} & complete & apply\_recompute\_plan\_rules\\
+\hline \ref{eq:newr4}$\sim$\ref{eq:newr6} & complete & apply\_delta\_plan\_rules, apply\_recompute\_plan\_rules\\
 \hline \ref{eq:newr7} & complete & compile\_target\\
 \hline \ref{eq:fs1}$\sim$\ref{eq:fs2} & complete & apply\_recompute\_rules\\
 \hline \ref{eq:fs3}$\sim$\ref{eq:fs4} & complete & apply\_recompute\_plan\_rules\\
-\hline \ref{eq:agg1} & copmlete & apply\_delta\_rules\\
+\hline \ref{eq:agg1} & complete & apply\_delta\_rules, apply\_recompute\_rules\\
+\hline \ref{eq:agg2} & complete & \\
 \hline \ref{eq:agg2}$\sim$\ref{eq:agg9} & missing & \\
 \hline \ref{eq:ags1}$\sim$\ref{eq:ags2} & complete & simplify \\
 \hline \ref{eq:sum1}$\sim$\ref{eq:sum2} & complete & simplify\_map\_expr\_constants \\
