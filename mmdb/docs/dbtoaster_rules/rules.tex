@@ -425,7 +425,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \algmax_{f[\vec{A};\dots]} (\sigma_{f[\vec{A}] < 0} (\rho_{\vec{A}} (Q_1)))
     * \algmax_{g[\vec{B};\dots]} (\sigma_{g[\vec{B}] < 0} (\rho_{\vec{B}}(Q_2)))
 \Big\}
-\\
+\\ \nonumber
 %
 %
 %
@@ -1281,14 +1281,15 @@ meterm &=& \`{}Int ( \emph{int} )\\
 &$\lvert$ & \`{}Attribute ( attribute\_identifier )\\
 &$\lvert$ & \`{}Variable ( variable\_identifier )\\
 \\
-aggregate\_function &=& \`{} Sum\\
+aggregate\_function &=& \`{}Sum\\
 &$\lvert$ & \`{}Min \\
 &$\lvert$ & \`{}Max \\
 \\
 oplus &=& \`{}Plus \\
 &$\lvert$ & \`{}Minus \\
 &$\lvert$ & \`{}Min\\
-&$\lvert$ & \`{}Decrmin\\
+&$\lvert$ & \`{}Max\\
+&$\lvert$ & \`{}Decrmin (map\_expression)\\
 \\
 poplus &=& \`{}Union\\
 &$\lvert$ & \`{}Diff\\
@@ -1302,6 +1303,7 @@ map\_expression &=& \`{}METerm ( meterm ) \\
 &$\lvert$ & \`{}Minus ( map\_expression,  map\_expression )\\
 &$\lvert$ & \`{}Product ( map\_expression, map\_expression )\\
 &$\lvert$ & \`{}Min ( map\_expression, map\_expression )\\
+&$\lvert$ & \`{}Max ( map\_expression, map\_expression )\\
 &$\lvert$ & \`{}MapAggregate ( aggregate\_function, map\_expression, plan )\\
 &$\lvert$ & \`{}Delta ( delta,  map\_expression )\\
 &$\lvert$ & \`{}New ( delta, map\_expression )\\
@@ -1311,10 +1313,9 @@ map\_expression &=& \`{}METerm ( meterm ) \\
 &$\lvert$ & \`{}Insert ( state\_identifier, meterm, map\_expression )\\
 &$\lvert$ & \`{}Update ( state\_identifier, oplus, meterm, map\_expression )\\
 &$\lvert$ & \`{}Delete ( state\_identifier, meterm )\\
-&$\lvert$ & \`{}Branch ( bterm, map\_expression, map\_expression ) \\
-&$\lvert$ & \`{}Sequence (map\_expression, map\_expression ) \\
+&$\lvert$ & \`{}IfThenElse ( bterm, map\_expression, map\_expression ) \\
 \\
-bterm &=& \`{} True \\
+bterm &=& \`{}True \\
 &$\lvert$ & \`{}False \\
 &$\lvert$ & \`{}LT ( expression,  expression )\\
 &$\lvert$ & \`{}LE ( expression, expression )\\
@@ -1325,7 +1326,7 @@ bterm &=& \`{} True \\
 &$\lvert$ & \`{}MEQ ( map\_expression )\\
 &$\lvert$ & \`{}MLT ( map\_expression )\\
 \\
-boolean\_expression &=& \`{} BTerm ( bterm )\\
+boolean\_expression &=& \`{}BTerm ( bterm )\\
 &$\lvert$ & \`{}Not ( boolean\_expression )\\
 &$\lvert$ & \`{}And ( boolean\_expression,  boolean\_expression )\\
 &$\lvert$ & \`{}Or ( boolean\_expression,  boolean\_expression )\\
@@ -1333,7 +1334,7 @@ boolean\_expression &=& \`{} BTerm ( bterm )\\
 plan &=& \`{}TrueRelation\\
 &$\lvert$ & \`{}FalseRelation\\
 &$\lvert$ & \`{}Relation ( relation\_identifier, [field] )\\
-&$\lvert$ & \`{}Rename ( [(attribute\_identifier, attribute\_identifier)], plan ) \\
+%&$\lvert$ & \`{}Rename ( [(attribute\_identifier, attribute\_identifier)], plan ) \\
 &$\lvert$ & \`{}Select ( boolean\_expression, plan )\\
 &$\lvert$ & \`{}Project ( [(attribute\_identifier, expression)], plan )\\
 &$\lvert$ & \`{}Union ( [plan] )\\
@@ -1343,6 +1344,7 @@ plan &=& \`{}TrueRelation\\
 &$\lvert$ & \`{}DeltaPlan ( delta, plan )\\
 &$\lvert$ & \`{}NewPlan ( delta, plan )\\
 &$\lvert$ & \`{}IncrPlan ( state\_identifier, poplus, plan ) \\
+&$\lvert$ & \`{}IncrDiffPlan ( state\_identifier, poplus, plan ) \\
 \\
 binding &=& \`{}BindExpr ( variable\_identifier,  expression )\\
 &$\lvert$ & \`{}BindBoolExpr ( variable\_identifier,  boolean\_expression )\\
@@ -1380,6 +1382,7 @@ arith\_code\_expression &=& \`{}CTerm ( code\_terminal )\\
 &$\lvert$ & \`{}Minus ( arith\_code\_expression, arith\_code\_expression )\\
 &$\lvert$ & \`{}Product ( arith\_code\_expression, arith\_code\_expression )\\
 &$\lvert$ & \`{}Min ( arith\_code\_expression, arith\_code\_expression ) \\
+&$\lvert$ & \`{}Max ( arith\_code\_expression, arith\_code\_expression ) \\
 \\
 bool\_code\_term &=& \`{}True \\
 &$\lvert$ & \`{}False \\
@@ -1412,12 +1415,13 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \begin{tabular} {|c|c|c|}
 \hline rule \# & status & location  \\
 \hline \ref{eq:a1}$\sim$\ref{eq:a5} & complete & push\_delta \\
-\hline \ref{eq:a6} & missing & \\
+\hline \ref{eq:a6} & complete & checked implicitly in various locations of code, \\
+&&need to explicitly check the condition to apply rule \ref{eq:a5}$\sim$ \ref{eq:a6}\\%
 \hline \ref{eq:b1}$\sim$\ref{eq:b6} & complete & push\_delta\_plan\\
 \hline \ref{eq:incr1} & incomplete & generate\_code/gc\_aux, matching for Sum only\\
-\hline \ref{eq:incr2}$\sim$\ref{eq:incr4} & missing & \\
+\hline \ref{eq:incr2}$\sim$\ref{eq:incr4} & missing & (generate\_code)\\
 \hline \ref{eq:sm1}$\sim$\ref{eq:sm2} & incomplete & translated to code\_expression directly at gc\_aux\\
-\hline \ref{eq:sm3} & missing & \\
+\hline \ref{eq:sm3} & missing & (after adding `Delete, straight forward)\\
 \hline \ref{eq:new1}$\sim$\ref{eq:new2} & complete & apply\_recompute\_rules\\
 \hline \ref{eq:new3}$\sim$\ref{eq:new4} & complete & apply\_delta\_rules, apply\_recompute\_rules\\
 \hline \ref{eq:newr1}$\sim$\ref{eq:newr3} & complete & apply\_recompute\_plan\_rules\\
@@ -1426,27 +1430,28 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline \ref{eq:fs1}$\sim$\ref{eq:fs2} & complete & apply\_recompute\_rules\\
 \hline \ref{eq:fs3}$\sim$\ref{eq:fs4} & complete & apply\_recompute\_plan\_rules\\
 \hline \ref{eq:agg1} & complete & apply\_delta\_rules, apply\_recompute\_rules\\
-\hline \ref{eq:agg2} & complete & \\
+\hline \ref{eq:agg2} & complete & apply\_recompute\_rules\\
 \hline \ref{eq:agg2}$\sim$\ref{eq:agg9} & missing & \\
 \hline \ref{eq:ags1}$\sim$\ref{eq:ags2} & complete & simplify \\
 \hline \ref{eq:sum1}$\sim$\ref{eq:sum2} & complete & simplify\_map\_expr\_constants \\
 \hline \ref{eq:sum3} & complete & simplify \\
-\hline \ref{eq:sum4} & missing & \\
+\hline \ref{eq:sum4} & missing & (simplify, similar to rule \ref{eq:sum4}) \\
 \hline \ref{eq:sum5}$\sim$\ref{eq:sum7} & complete & simplify \\
-\hline \ref{eq:min1} & missing & \\
+\hline \ref{eq:min1} & missing & (check later)\\
 \hline \ref{eq:min2}& complete & simplify \\
-\hline \ref{eq:min3}$\sim$\ref{eq:min4} & missing & \\
+\hline \ref{eq:min3}$\sim$\ref{eq:min4} & missing & (simplify, similar to rule \ref{eq:sum4}, needs to add `Max)\\
 \hline \ref{eq:min5} & complete & simplify \\
-\hline \ref{eq:min6}$\sim$\ref{eq:min7} & missing & \\
+\hline \ref{eq:min6} & missing & (simplify, similar to rule \ref{eq:sum4}) \\
+\hline \ref{eq:min7} & missing & (simplify, might need state identifier to hold value of min f and min g) \\
 \hline \ref{eq:pred1} & complete & extract\_plan\_bindings\\
 \hline \ref{eq:pred2} & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
-\hline \ref{eq:pred3} & missing & \\
+\hline \ref{eq:pred3} & missing & (extract\_plan\_bindings)\\
 \hline \ref{eq:rs1} & complete & simplify \\
 \hline \ref{eq:md1} & complete & compute\_new\_plan\\
-\hline \ref{eq:md2}$\sim$\ref{eq:md3} & missing & \\
+\hline \ref{eq:md2}$\sim$\ref{eq:md3} & missing & (need `Delete, `IncrDiffPlan. similar to rule \ref{eq:md1})\\
 \hline \ref{eq:md4}$\sim$\ref{eq:md5} & complete & generate\_code\\
-\hline \ref{eq:md6}$\sim$\ref{eq:md7} & incomplete & generate\_code, \\
-\hline \ref{eq:na1}$\sim$\ref{eq:na5} & missing & \\
+\hline \ref{eq:md6}$\sim$\ref{eq:md7} & incomplete & generate\_code, if statement is missing \\
+\hline \ref{eq:na1}$\sim$\ref{eq:na5} & missing & (not now) \\
 \hline
 
 \end{tabular}
@@ -1572,7 +1577,7 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 
 
 \pagebreak
-\section{Vwap, Loadrunner}
+\section{Vwap, Linearroad}
 \begin{eqnarray*}
 q[] &:=&
 \algsumf_{P_2 * V_2}(\sigma_{m(P_2) > 0} (\rho_{P_2, V_2}(B)))
