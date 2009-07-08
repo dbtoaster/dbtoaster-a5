@@ -52,19 +52,29 @@ type meterm = [
 | `Variable of variable_identifier
 | `Attribute of attribute_identifier ]
 
-type aggregate_function = [ `Sum | `Min ]
+type aggregate_function = [ `Sum | `Min | `Max ]
 
-type map_expression = [
+type oplus = [`Plus | `Minus | `Min | `Max | `Decrmin of map_expression ]
+
+and  poplus = [`Union | `Diff ]
+
+and  map_expression = [
 | `METerm of meterm
 | `Sum of map_expression * map_expression
 | `Minus of map_expression * map_expression
 | `Product of map_expression * map_expression
 | `Min of map_expression * map_expression
+| `Max of map_expression * map_expression
 | `MapAggregate of aggregate_function * map_expression * plan
 | `Delta of delta * map_expression
 | `New of map_expression
-| `Incr of state_identifier * map_expression
-| `Init of state_identifier * map_expression ]
+| `Incr of state_identifier * oplus * map_expression
+| `IncrDiff of state_identifier * oplus * map_expression
+| `Init of state_identifier * map_expression 
+| `Insert of state_identifier * meterm * map_expression
+| `Update of state_identifier * oplus * meterm * map_expression
+| `Delete of state_identifier * meterm
+| `IfThenElse of bterm * map_expression * map_expression ]
 
 and bterm = [ `True | `False 
 		      (* | `BoolVariable of variable_identifier *) 
@@ -95,7 +105,8 @@ and plan = [
 | `Join of boolean_expression * plan * plan
 | `DeltaPlan of delta * plan
 | `NewPlan of plan
-| `IncrPlan of plan ]
+| `IncrPlan of state_identifier * poplus * plan 
+| `IncrDiffPlan of state_identifier * poplus * plan ]
 
 type binding = [
 | `BindExpr of variable_identifier * expression
@@ -326,6 +337,19 @@ let rec string_of_bool_expression b_expr =
 		  ("("^(string_of_bool_expression l)^") or ("^
 		       (string_of_bool_expression r)^")")
 
+and string_of_oplus op =
+    match op with
+	| `Plus -> "+"
+	| `Minus -> "-"
+	| `Min -> "min"
+	| `Max -> "max"
+	| `Decrmin m -> "decrmin("^(string_of_map_expression m)^")"
+
+and string_of_poplus op =
+    match op with
+	| `Union -> "U"
+	| `Diff -> "-"
+
 and string_of_map_expression m_expr =
     match m_expr with
 	| `METerm t -> string_of_map_expr_terminal t
@@ -341,21 +365,33 @@ and string_of_map_expression m_expr =
 		  
 	| `Min  (l, r) ->
 	      "min("^(string_of_map_expression l)^", "^(string_of_map_expression r)^")"
+	| `Max  (l, r) ->
+	      "max("^(string_of_map_expression l)^", "^(string_of_map_expression r)^")"
 
 	| `MapAggregate (fn, f, q) ->
-	      (match fn with | `Sum -> "sum" | `Min -> "min")^
+	      (match fn with | `Sum -> "sum" | `Min -> "min" | `Max -> "max")^
 		  "{"^(string_of_map_expression f)^"}["^(string_of_plan q)^"]"
 
 	| `Delta (binding, dm_expr) ->
 	      "Delta{"^(string_of_delta binding)^"}("^
 		  (string_of_map_expression dm_expr)^")"
 
-	| `New (e) -> "New{"^(string_of_map_expression e)^"}"
+	| `New (e) -> "New("^(string_of_map_expression e)^"}"
 
-	| `Incr (sid, e) -> "Incr["^(sid)^"]{"^(string_of_map_expression e)^"}"
+	| `Incr (sid, op, e) -> "Incr["^(string_of_oplus op)^","^(sid)^"]{"^(string_of_map_expression e)^"}"
+
+	| `IncrDiff (sid, op, e) -> "IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"^(string_of_map_expression e)^"}"
 
 	| `Init (sid, e) -> "Init["^(sid)^"]{"^(string_of_map_expression e)^"}"
 
+	| `Insert (sid, m, e) -> "Insert{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}("^(string_of_map_expression e)^")"
+
+	| `Update (sid, op, m, e) -> "Update{"^(string_of_oplus op)^","^(sid)^"["^(string_of_map_expr_terminal m)^"]}("^(string_of_map_expression e)^")"
+
+	| `Delete (sid, m) -> "Delete{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}"
+
+	| `IfThenElse (b, m1, m2) -> "If("^(string_of_bool_expression (`BTerm b))^" ) then "^(string_of_map_expression m1)^" else "^(string_of_map_expression m2)
+	
 and string_of_plan p =
     match p with
 	| `Relation (name, schema) -> "Relation ["^name^"]"^(string_of_schema schema)
@@ -390,9 +426,12 @@ and string_of_plan p =
 	| `DeltaPlan (binding, ch) ->
 	      "Delta{"^(string_of_delta binding)^"}("^(string_of_plan ch)^")"
 
-	| `NewPlan ch -> "NewP{"^(string_of_plan ch)^"}"
+	| `NewPlan (ch) -> 
+	      "New("^(string_of_plan ch)^")"
 
-	| `IncrPlan ch -> "IncrP{"^(string_of_plan ch)^"}"
+	| `IncrPlan (sid, po, ch) -> "IncrP["^(string_of_poplus po)^","^(sid)^"]{"^(string_of_plan ch)^"}"
+
+	| `IncrDiffPlan (sid, po, ch) -> "IncrDiffP["^(string_of_poplus po)^","^(sid)^"]{"^(string_of_plan ch)^"}"
 
 
 let rec indented_string_of_bool_expression b_expr level =
@@ -461,8 +500,17 @@ and indented_string_of_map_expression m_expr level =
 		       (level+1))^
 		  (indent ")")
 
+	| `Max  (l, r) ->
+	      (indent "max(")^
+		  (indent_binary_prefix
+		       (indented_string_of_map_expression l (level+2))
+		       ", "
+		       (indented_string_of_map_expression r (level+2))
+		       (level+1))^
+		  (indent ")")
+
 	| `MapAggregate (fn, f, q) ->
-	      (indent ((match fn with | `Sum -> "sum" | `Min -> "min")^"{"))^
+	      (indent ((match fn with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" )^"{"))^
 		  (indented_string_of_map_expression f (level+1))^
 		  (indent "}[")^
 		  (indented_string_of_plan q (level+1))^
@@ -473,10 +521,18 @@ and indented_string_of_map_expression m_expr level =
 		   (indented_string_of_map_expression dm_expr (level+1))^
 	       	   (indent ")")
 
-	| `New (e) -> (indent "New{")^(indented_string_of_map_expression e (level+1))^(indent "}")
+	| `New (e) -> 
+	      (indent "New{")^
+		   (indented_string_of_map_expression e (level+1))^
+		   (indent "}")
 
-	| `Incr (sid, e) ->
-	      (indent ("Incr["^(sid)^"]{"))^
+	| `Incr (sid, op, e) ->
+	      (indent ("Incr["^(string_of_oplus op)^","^(sid)^"]{"))^
+		  (indented_string_of_map_expression e (level+1))^
+		  (indent "}")
+
+	| `IncrDiff (sid, op, e) ->
+	      (indent ("IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
@@ -484,6 +540,28 @@ and indented_string_of_map_expression m_expr level =
 	      (indent ("Init["^(sid)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
+
+	| `Insert (sid, m, e) ->
+	      (indent ("Insert{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}("))^
+		  (indented_string_of_map_expression e (level+1))^
+		  (indent ")")
+
+	| `Update (sid, op, m, e) ->
+	      (indent ("Update{"^(string_of_oplus op)^","^(sid)^"["^(string_of_map_expr_terminal m)^"]}("))^
+		  (indented_string_of_map_expression e (level+1))^
+		  (indent ")")
+
+	| `Delete (sid, m) ->
+	      (indent ("Delete{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}"))
+
+	| `IfThenElse (b, m1, m2) ->
+	      (indent ("If ("))^
+		  (indented_string_of_bool_expression (`BTerm b) (level+1))^
+		  (indent (")"))^
+		  (indent ("then"))^
+		  (indented_string_of_map_expression m1 (level+1))^
+		  (indent ("else"))^
+		  (indented_string_of_map_expression m2 (level+1))
 
 and indented_string_of_plan p level =
     let indent s = (String.make (4*level) '-')^"> "^s^"\n" in
@@ -543,9 +621,20 @@ and indented_string_of_plan p level =
 		  (indented_string_of_plan ch (level+1))^
 		  (indent ")")
 
-	| `NewPlan ch -> (indent "NewP{")^(indented_string_of_plan ch (level+1))^(indent "}")
+	| `NewPlan (ch) ->
+	      (indent ("NewPlan("))^
+		  (indented_string_of_plan ch (level+1))^
+		  (indent ")")
 
-	| `IncrPlan ch -> (indent "IncrP{")^(indented_string_of_plan ch (level+1))^(indent "}")
+	| `IncrPlan (sid, po, ch) ->
+	      (indent ("IncrPlan["^(string_of_poplus po)^","^(sid)^"]{"))^
+		  (indented_string_of_plan ch (level+1))^
+		  (indent "}")
+
+	| `IncrDiffPlan (sid, po, ch) ->
+	      (indent ("IncrDiffPlan["^(string_of_poplus po)^","^(sid)^"]{"))^
+		  (indented_string_of_plan ch (level+1))^
+		  (indent "}")
 
 
 
@@ -571,11 +660,15 @@ let string_of_accessor_element_opt ae_opt =
 let parent m_expr ch_e_or_p =
     let rec parent_aux e_or_p prev_e_or_p =
 	match e_or_p with
-	    | `MapExpression (`METerm _) -> None
+	    | `MapExpression (`METerm _) 
+	    | `MapExpression (`Delete _) -> None
 
 	    | `MapExpression (`Delta (_, e))
 	    | `MapExpression (`New (e))
-	    | `MapExpression (`Incr (_, e))
+	    | `MapExpression (`Incr (_, _, e))
+	    | `MapExpression (`IncrDiff (_, _, e))
+	    | `MapExpression (`Insert (_, _, e))
+	    | `MapExpression (`Update (_, _, _, e))
 	    | `MapExpression (`Init (_, e)) ->
 		  let match_e = `MapExpression e in
 		      if (ch_e_or_p = match_e) then Some prev_e_or_p
@@ -585,7 +678,9 @@ let parent m_expr ch_e_or_p =
 	    | `MapExpression(`Sum (l, r))
 	    | `MapExpression(`Minus (l, r))
 	    | `MapExpression(`Product (l, r))
-	    | `MapExpression(`Min (l,r)) ->
+	    | `MapExpression(`Max (l, r))
+	    | `MapExpression(`Min (l,r)) 
+	    | `MapExpression(`IfThenElse(_, l, r)) ->
 		  let match_l = `MapExpression l in
 		  let match_r = `MapExpression r in
 		      if (match_l = ch_e_or_p) || (match_r = ch_e_or_p) then
@@ -669,7 +764,7 @@ let parent m_expr ch_e_or_p =
 					    if lp = None then parent_aux match_r e_or_p else lp
 		  end
 		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p)) | `Plan (`IncrPlan(p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p)) | `Plan (`IncrPlan(_, _, p)) | `Plan (`IncrDiffPlan(_, _, p)) ->
 		  let match_p = `Plan p in
 		      if match_p = ch_e_or_p then Some e_or_p
 		      else parent_aux match_p e_or_p
@@ -692,14 +787,18 @@ let children e_or_p =
 	    | _ -> []
     in
 	match e_or_p with 
-	    | `MapExression (`METerm _) -> []
+	    | `MapExression (`METerm _) | `MapExpression (`Delete _) -> []
 	    | `MapExpression (`Delta (_,e))
 	    | `MapExpression (`New(e))
-	    | `MapExpression (`Incr(_,e))
+	    | `MapExpression (`Incr(_,_, e))
+	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Insert(_,_, e))
+	    | `MapExpression (`Update(_,_, _, e))
 	    | `MapExpression (`Init(_,e)) -> [`MapExpression(e)]
 		  
 	    | `MapExpression (`Sum(l,r)) | `MapExpression (`Product(l,r))
-	    | `MapExpression (`Minus(l,r)) 
+	    | `MapExpression (`Minus(l,r)) | `MapExpression (`Max(l,r)) 
+	    | `MapExpression (`IfThenElse(_, l, r))
 	    | `MapExpression (`Min(l,r)) ->
 		  [`MapExpression(l); `MapExpression(r)]
 		      
@@ -715,7 +814,7 @@ let children e_or_p =
 	    | `Plan(`Join(p,l,r)) ->
 		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@
 		      [`Plan(l); `Plan(r)]
-	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e)) | `Plan (`IncrPlan(e)) ->
+	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e)) | `Plan (`IncrPlan(_, _, e)) | `Plan (`IncrDiffPlan (_, _, e)) ->
 		  [`MapExpression(e)]
 	    | `Plan (`TrueRelation) -> []
 	    | `Plan (`FalseRelation) -> []
@@ -763,13 +862,21 @@ let splice m_expr orig rewrite =
 		    | `Min(l,r) ->
 			  `Min(splice_map_expr_aux l, splice_map_expr_aux r)
 			      
+		    | `Max(l,r) ->
+			  `Max(splice_map_expr_aux l, splice_map_expr_aux r)
+			      
 		    | `MapAggregate(fn,f,q) ->
 			  `MapAggregate(fn, splice_map_expr_aux f, splice_plan_aux q)
 			      
 		    | `Delta(b,e) -> `Delta(b, splice_map_expr_aux e)
 		    | `New(e) -> `New(splice_map_expr_aux e) 
-		    | `Incr(sid,e) -> `Incr(sid, splice_map_expr_aux e)
+		    | `Incr(sid,op, e) -> `Incr(sid, op, splice_map_expr_aux e)
+		    | `IncrDiff(sid,op, e) -> `IncrDiff(sid, op, splice_map_expr_aux e)
 		    | `Init(sid,e) -> `Init(sid, splice_map_expr_aux e)
+		    | `Insert(sid, m, e) -> `Insert(sid, m, splice_map_expr_aux e)
+		    | `Update(sid, op, m, e) -> `Update(sid, op, m, splice_map_expr_aux e)
+		    | `Delete(_) as x -> x
+		    | `IfThenElse(b, l, r) -> `IfThenElse(b, splice_map_expr_aux l, splice_map_expr_aux r)
 	    end
     and splice_plan_aux q =
 	if (`Plan q) = orig then
@@ -815,7 +922,8 @@ let splice m_expr orig rewrite =
 			      
 		    | `DeltaPlan (b, e) -> `DeltaPlan (b, splice_plan_aux e)
 		    | `NewPlan (e) -> `NewPlan(splice_plan_aux e)
-		    | `IncrPlan (e) -> `IncrPlan (splice_plan_aux e)
+		    | `IncrPlan (sid, p, e) -> `IncrPlan (sid, p, splice_plan_aux e)
+		    | `IncrDiffPlan (sid, p, e) -> `IncrDiffPlan (sid, p, splice_plan_aux e)
 
 		    | `TrueRelation -> `TrueRelation
 		    | `FalseRelation -> `FalseRelation
@@ -831,16 +939,21 @@ let splice m_expr orig rewrite =
 let get_base_relations m_expr =
     let rec gbr_aux ae acc =
 	match ae with
-	    | `MapExpression (`METerm _) -> acc
+	    | `MapExpression (`METerm _) | `MapExpression (`Delete _) -> acc
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Incr(_,e))
-	    | `MapExpression (`Init(_,e)) -> (gbr_aux (`MapExpression e) acc)
+	    | `MapExpression (`Incr(_,_, e))
+	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Insert(_,_, e))
+	    | `MapExpression (`Update(_,_,_, e))
+	    | `MapExpression (`Init(_, e)) -> (gbr_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
+	    | `MapExpression (`Max(l,r))
+	    | `MapExpression (`IfThenElse(_, l,r))
 	    | `MapExpression (`Min(l,r)) ->
 		  (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
 
@@ -877,7 +990,7 @@ let get_base_relations m_expr =
 				(gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 		  end
 		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan (_, _,p)) ->
 		  (gbr_aux (`Plan p) acc)
 
 	    | _ -> raise InvalidExpression
@@ -888,16 +1001,21 @@ let get_base_relations m_expr =
 let get_bound_relations m_expr =
     let rec gbor_aux ae acc =
 	match ae with
-	    | `MapExpression (`METerm _) -> acc
+	    | `MapExpression (`METerm _) | `MapExpression (`Delete _) -> acc
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Incr(_,e))
+	    | `MapExpression (`Incr(_,_, e))
+	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Insert(_,_, e))
+	    | `MapExpression (`Update(_,_,_, e))
 	    | `MapExpression (`Init(_,e)) -> (gbor_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
+	    | `MapExpression (`Max(l,r))
+	    | `MapExpression (`IfThenElse(_, l,r))
 	    | `MapExpression (`Min(l,r)) ->
 		  (gbor_aux (`MapExpression r) (gbor_aux (`MapExpression l) acc))
 
@@ -934,7 +1052,7 @@ let get_bound_relations m_expr =
 				(gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
 		  end
 		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan(_,_, p)) ->
 		  (gbor_aux (`Plan p) acc)
 
 	    | `Plan (`TrueRelation) -> acc
@@ -1162,7 +1280,7 @@ and compute_monotonicity attr attr_m m_expr =
 
 	| `METerm (_) -> Same
 
-	| `Sum(l,r) | `Minus(l,r) | `Product(l,r) | `Min(l,r) ->
+	| `Sum(l,r) | `Minus(l,r) | `Product(l,r) | `Min(l,r) | `Max(l,r) | `IfThenElse(_, l, r) ->
 	      let lm = compute_monotonicity attr attr_m l in
 	      let rm = compute_monotonicity attr attr_m r in
 		  bin_op_monotonicity lm rm
@@ -1172,7 +1290,7 @@ and compute_monotonicity attr attr_m m_expr =
 	      let qm = compute_plan_monotonicity attr attr_m q in
 		  agg_monotonicity fm qm
 		      
-	| `Delta _ | `New _ | `Incr _ | `Init _ -> raise MonotonicityException
+	| `Delta _ | `New _ | `Incr _ | `Init _ | `IncrDiff _ | `Insert _ | `Update _ | `Delete _ -> raise MonotonicityException
 
 and compute_plan_monotonicity attr attr_m q =
     match q with
@@ -1220,7 +1338,7 @@ and compute_plan_monotonicity attr attr_m q =
 	      let rm = compute_plan_monotonicity attr attr_m r in
 		  join_monotonicity bem lm rm 
 
-	| `TrueRelation | `FalseRelation  | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) ->
+	| `TrueRelation | `FalseRelation  | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) | `IncrDiffPlan(_) ->
 	      raise MonotonicityException
 
 
@@ -1279,7 +1397,8 @@ type arith_code_expression = [
 | `Sum of arith_code_expression * arith_code_expression
 | `Minus of arith_code_expression * arith_code_expression
 | `Product of arith_code_expression * arith_code_expression
-| `Min of arith_code_expression * arith_code_expression	]
+| `Min of arith_code_expression * arith_code_expression	
+| `Max of arith_code_expression * arith_code_expression	]
 
 and bool_code_term = [ `True | `False 
 | `LT of arith_code_expression * arith_code_expression
@@ -1297,10 +1416,12 @@ type bool_code_expression = [
 
 type code_expression = [
 | `IfNoElse of bool_code_expression * code_expression
+| `IfElse of bool_code_expression * code_expression * code_expression
 | `ForEach of datastructure * code_expression
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
 | `AssignMap of map_key * arith_code_expression 
+| `EraseMap of map_key * code_terminal 
 | `Eval of arith_code_expression 
 | `Block of code_expression list
 | `Return of arith_code_expression
@@ -1430,6 +1551,10 @@ let rec string_of_arith_code_expression ac_expr =
 	      "min("^(string_of_arith_code_expression l)^", "^
 		  (string_of_arith_code_expression r)^")"
 
+	| `Max(l,r) ->
+	      "max("^(string_of_arith_code_expression l)^", "^
+		  (string_of_arith_code_expression r)^")"
+
 let rec string_of_bool_code_expression bc_expr =
     let dispatch_expr l r op =
 	(string_of_arith_code_expression l)^op^(string_of_arith_code_expression r)
@@ -1468,6 +1593,12 @@ let rec string_of_code_expression c_expr =
 		  "if("^(string_of_bool_code_expression p)^"){"^
 		      (string_of_code_expression c)^"}"
 
+	    | `IfElse(p,l,r) ->
+		  "if("^(string_of_bool_code_expression p)^"){"^
+		      (string_of_code_expression l)^"}"^
+		  "else {"^
+		      (string_of_code_expression r)^"}"
+
 	    | `ForEach(m,c) ->
 		  let (begin_it, end_it, begin_decl, end_decl) =
 		      iterator_declarations_of_datastructure m
@@ -1504,6 +1635,9 @@ let rec string_of_code_expression c_expr =
 	    | `AssignMap(mk, vc) ->
 		  (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 
+	    | `EraseMap(mk, c) ->
+		  (string_of_map_key mk)^".erase("^(string_of_code_expr_terminal c)^");"
+
 	    | `Eval(ac) -> string_of_arith_code_expression ac
 
 	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
@@ -1535,6 +1669,14 @@ let indented_string_of_code_expression c_expr =
 		| `IfNoElse(p,c) ->
 		      "if("^(string_of_bool_code_expression p)^"){\n"^
 			  (sce_aux c (level+1))^"\n"^
+			  tab^"}\n"
+			  
+		| `IfElse(p,l,r) ->
+		      "if("^(string_of_bool_code_expression p)^"){\n"^
+			  (sce_aux l (level+1))^"\n"^
+			  tab^"}\n"^
+		      "else {\n"^
+			  (sce_aux r (level+1))^"\n"^
 			  tab^"}\n"
 			  
 		| `ForEach(m,c) ->
@@ -1577,6 +1719,9 @@ let indented_string_of_code_expression c_expr =
 		| `AssignMap(mk, vc) ->
 		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 			  
+	        | `EraseMap(mk, c) ->
+		      (string_of_map_key mk)^".erase("^(string_of_code_expr_terminal c)^");"
+
 		| `Eval(ac) -> string_of_arith_code_expression ac
 		      
 		| `Block (c_expr_l) ->
@@ -1657,8 +1802,9 @@ let merge_blocks l_block r_block merge_fn =
 let rec get_last_code_expr c_expr = 
     match c_expr with
 	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
+	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r
 	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
-	| `Declare _ | `Assign _  | `AssignMap _  | `Eval _ | `Return _ -> c_expr 
+	| `Declare _ | `Assign _  | `AssignMap _  | `EraseMap _ | `Eval _ | `Return _ -> c_expr 
 	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 
@@ -1746,6 +1892,9 @@ let rec treeml_of_expression expr indent_fn =
 		   (List.map (fun ae -> treeml_of_expression ae indent_fn) args)))@
 	      [ "</branch>" ]
 
+let treeml_of_state_id s =
+	"<attribute name=\"stateid\" value=\""^s^"\"/>"
+
 let rec treeml_of_bterm bterm indent_fn =
     let map_expr op e =
 	["<attribute name=\"op\" value=\""^op^"\"/>"]@
@@ -1791,10 +1940,11 @@ and treeml_of_bool_expression b_expr indent_fn =
 and treeml_of_map_expression m_expr indent_fn = 
     let treeml_of_aggregate_function agg =
 	"<attribute name=\"aggregate\" value=\""^
-	    (match agg with | `Sum -> "sum" | `Min -> "min")^"\"/>"
+	    (match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" )^"\"/>"
     in
-    let treeml_of_state_id s =
-	"<attribute name=\"stateid\" value=\""^s^"\"/>"
+    let treeml_of_oplus o = 
+	"<attribute name=\"oplus\" value=\""^
+	    (match o with | `Plus -> "m+" | `Minus -> "m-" | `Min -> "min" | `Max -> "max" | `Decrmin (_) -> "decrmin" )^"\"/>" (*TODO: check decrmin later *)
     in
     let binary_node typ l r =
 	["<branch>";
@@ -1808,12 +1958,19 @@ and treeml_of_map_expression m_expr indent_fn =
 		  (indent_fn "<attribute name=\"op\" value=\"meterm\"/>")]@
 		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
 
+	| `Delete (sid, x) ->
+	      ["<leaf>";
+		  (indent_fn "<attribute name=\"op\" value=\"delete\"/>");
+		  (indent_fn (treeml_of_state_id sid))]@
+		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
+
 	| `Sum(l,r) -> binary_node "m+" l r
 	| `Minus(l,r) -> binary_node "m-" l r
 	| `Product(l,r) -> binary_node "m*" l r
 	| `Min(l,r) -> binary_node "min" l r
+	| `Max(l,r) -> binary_node "max" l r
 	| `MapAggregate(agg, f, q) ->
-	      let agg_fn = match agg with | `Sum -> "sum" | `Min -> "min" in
+	      let agg_fn = match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" in
 	      ["<branch>";
 		  (indent_fn ("<attribute name=\"op\" value=\""^agg_fn^"\"/>"));
 		  (indent_fn (treeml_of_aggregate_function agg))]@
@@ -1832,10 +1989,18 @@ and treeml_of_map_expression m_expr indent_fn =
 		  (indent_fn "<attribute name=\"op\" value=\"new\"/>")]@
 		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
 
-	| `Incr (s, f) ->
+	| `Incr (s, o, f) ->
 	      ["<branch>";
 		  (indent_fn "<attribute name=\"op\" value=\"incr\"/>");
-		  (indent_fn (treeml_of_state_id s))]@
+		  (indent_fn (treeml_of_state_id s));
+		  (indent_fn (treeml_of_oplus o))]@
+		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+
+	| `IncrDiff (s, o, f) ->
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"incrdiff\"/>");
+		  (indent_fn (treeml_of_state_id s));
+		  (indent_fn (treeml_of_oplus o))]@
 		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
 
 	| `Init (s, f) ->
@@ -1843,6 +2008,28 @@ and treeml_of_map_expression m_expr indent_fn =
 		  (indent_fn "<attribute name=\"op\" value=\"init\"/>");
 		  (indent_fn (treeml_of_state_id s))]@
 		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+
+	| `Insert (s, m, f) ->
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
+		  (indent_fn (treeml_of_state_id s))]@
+		  (List.map indent_fn (treeml_of_meterm m))@
+		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+
+	| `Update (s, o, m, f) ->
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
+		  (indent_fn (treeml_of_state_id s));
+		  (indent_fn (treeml_of_oplus o))]@
+		  (List.map indent_fn (treeml_of_meterm m))@
+		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+
+	| `IfThenElse(b,l,r) -> 
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"ifthenelse\"/>")]@
+		  (List.map indent_fn (treeml_of_bterm b indent_fn))@
+	          (List.map indent_fn (treeml_of_map_expression l indent_fn))@
+	          (List.map indent_fn (treeml_of_map_expression r indent_fn))@["</branch>"]
 
 and treeml_of_plan p indent_fn = 
     let treeml_of_relation rtyp r f =
@@ -1852,6 +2039,10 @@ and treeml_of_plan p indent_fn =
 	    (List.map (fun (id,typ) ->
 		(indent_fn ("<attribute name=\"field\" value=\""^id^","^typ^"\"/>")))
 		 f)@["</leaf>"]
+    in
+    let treeml_of_poplus o = 
+	"<attribute name=\"poplus\" value=\""^
+	    (match o with | `Union -> "mU" | `Diff -> "m-" )^"\"/>"
     in
     let treeml_of_projections projs =
 	List.map
@@ -1912,14 +2103,23 @@ and treeml_of_plan p indent_fn =
 		  (indent_fn (treeml_of_event e))]@
 		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
 	      
-	| `NewPlan c ->
+	| `NewPlan (c) ->
 	      ["<branch>";
 		  (indent_fn "<attribute name=\"op\" value=\"newplan\"/>")]@
 		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
 
-	| `IncrPlan c ->
+	| `IncrPlan (sid, p, c) ->
 	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrplan\"/>")]@
+		  (indent_fn "<attribute name=\"op\" value=\"incrplan\"/>");
+		  (indent_fn (treeml_of_state_id sid));
+		  (indent_fn (treeml_of_poplus p))]@
+		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
+
+	| `IncrDiffPlan (sid, p, c) ->
+	      ["<branch>";
+		  (indent_fn "<attribute name=\"op\" value=\"incrdiffplan\"/>");
+		  (indent_fn (treeml_of_state_id sid));
+		  (indent_fn (treeml_of_poplus p))]@
 		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
 
 let treeml_string_of_map_expression m_expr =

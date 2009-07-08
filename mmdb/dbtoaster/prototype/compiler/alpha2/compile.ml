@@ -34,7 +34,7 @@ let rec get_bound_attributes q =
 
 	| `TrueRelation -> []		  
 	| `FalseRelation -> []
-	| `DeltaPlan (_, cq) | `NewPlan(cq) | `IncrPlan(cq) -> (get_bound_attributes cq)
+	| `DeltaPlan (_, cq) | `NewPlan(cq) | `IncrPlan(_,_, cq) | `IncrDiffPlan(_,_, cq) -> (get_bound_attributes cq)
 
 
 let compare_attributes a1 a2 =
@@ -135,13 +135,35 @@ let rec ab_map_expr_aux m_expr pa =
 
 	| `Delta (b,e) ->  `Delta (b, ab_map_expr_aux e pa)
 	| `New(e) -> `New (ab_map_expr_aux e pa)
-	| `Incr(sid, e) -> `Incr (sid, ab_map_expr_aux e pa)
+	| `Incr(sid, o, e) -> `Incr (sid, o, ab_map_expr_aux e pa)
+	| `IncrDiff(sid, o, e) -> `IncrDiff (sid, o, ab_map_expr_aux e pa)
 	| `Init(sid, e) -> `Init (sid, ab_map_expr_aux e pa)
+	| `Insert(sid, m, e) -> `Insert (sid, 
+	      (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+		  | _ -> raise InvalidExpression
+	      ), ab_map_expr_aux e pa)
+	| `Update(sid, o, m, e) -> `Update (sid, o, 
+	      (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+		  | _ -> raise InvalidExpression
+	      ), ab_map_expr_aux e pa)
+	| `Delete(sid, m) -> `Delete(sid, 
+	      (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+		  | _ -> raise InvalidExpression
+	      ))
 
 	| `Sum (l,r) -> `Sum(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Minus (l,r) -> `Minus(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Product (l,r) -> `Product(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Min (l,r) -> `Min(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
+	| `Max (l,r) -> `Max(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
+	| `IfThenElse (b,l,r) -> `IfThenElse(
+	      (match ab_pred_aux (`BTerm (b)) pa with
+ 		  `BTerm(x) -> x
+		  | _ -> raise InvalidExpression )
+	      , ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 
 	| `MapAggregate (fn,f,q) ->
 	      let new_pa = remove_proj_attrs pa (get_bound_attributes q)
@@ -187,7 +209,8 @@ and ab_plan_aux q pa =
 	| `FalseRelation -> `FalseRelation
 	| `DeltaPlan (b,e) -> `DeltaPlan (b, ab_plan_aux e pa)
 	| `NewPlan(e) -> `NewPlan (ab_plan_aux e pa)
-	| `IncrPlan(e) -> `NewPlan (ab_plan_aux e pa)
+	| `IncrPlan(sid, p, e) -> `IncrPlan (sid, p, ab_plan_aux e pa)
+	| `IncrDiffPlan(sid, p, e) -> `IncrDiffPlan (sid, p, ab_plan_aux e pa)
 
 let add_map_expression_bindings m_expr proj_attrs =
     ab_map_expr_aux m_expr proj_attrs 
@@ -296,7 +319,7 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 
 	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
 	      
-	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) ->
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
 	      (get_unbound_attributes_from_map_expression l include_vars)@
 		  (get_unbound_attributes_from_map_expression r include_vars)
 
@@ -306,8 +329,20 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 		  (resolve_unbound_attributes f_uba q_ba)@
 		      (get_unbound_attributes_from_plan q include_vars)
 
-	| `New(e) | `Incr(_, e) | `Init(_,e) ->
+	| `New(e) | `Incr(_,_,e) | `IncrDiff(_,_,e) | `Init(_,e) ->
 	      get_unbound_attributes_from_map_expression e include_vars
+
+	| `Insert(_,m,e) | `Update(_,_,m,e) ->
+	      (get_unbound_attributes_from_map_expression (`METerm (m)) include_vars)@
+	          (get_unbound_attributes_from_map_expression e include_vars)
+
+	| `Delete(_,m) ->
+	      get_unbound_attributes_from_map_expression (`METerm (m)) include_vars
+
+	| `IfThenElse(b,l,r) ->
+	      (get_unbound_attributes_from_predicate (`BTerm (b)) include_vars)@ 
+	          (get_unbound_attributes_from_map_expression l include_vars)@
+		  (get_unbound_attributes_from_map_expression r include_vars)
 
 and get_unbound_attributes_from_plan q include_vars =
     match q with
@@ -350,7 +385,7 @@ and get_unbound_attributes_from_plan q include_vars =
 		      (get_unbound_attributes_from_plan l include_vars)@
 		      (get_unbound_attributes_from_plan r include_vars)
 
-	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(e) ->
+	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e) | `IncrDiffPlan(_,_,e) ->
 	      get_unbound_attributes_from_plan e include_vars
 
 let get_unbound_map_attributes_from_plan f q include_vars =
@@ -461,12 +496,25 @@ let rec push_delta m_expr =
 			`Product(push_delta(`Delta(ev,l)),
 				 push_delta(`Delta(ev,r)))))
 
-	| `Delta (ev, `MapAggregate (fn, f, q)) ->
+	| `Delta (ev, `MapAggregate (`Sum, f, q)) ->
 	      let delta_f = push_delta(`Delta(ev,f)) in
-	      let delta_plan = push_delta_plan(`DeltaPlan(ev,q))in
-		  `Sum(`MapAggregate(fn, delta_f, q),
-		       `Sum(`MapAggregate(fn, f, delta_plan),
-			    `MapAggregate(fn, delta_f, delta_plan)))
+	      let delta_plan = push_delta_plan(`DeltaPlan(ev,q)) in
+	   	  `Sum(`MapAggregate(`Sum, delta_f, q),
+	          	`Sum(`MapAggregate(`Sum, f, delta_plan),
+			     `MapAggregate(`Sum, delta_f, delta_plan)))
+	| `Delta (ev, `MapAggregate (`Min, f, q)) ->
+	      let br = get_base_relations m_expr in
+	      let rel = get_bound_relation ev in
+	      let l = List.filter (
+			fun x -> match x with `Relation (n,_) -> n = rel | _ -> raise InvalidExpression ) br in
+	      if List.length l = 0 then `METerm (`Int 0)
+	      else 
+	          let delta_plan = push_delta_plan(`DeltaPlan(ev,q)) in
+		  begin 
+		    match ev with 
+			| `Insert _ -> `MapAggregate(`Min, f, `IncrPlan (gen_state_sym(), `Union, delta_plan))
+		   	| `Delete _ -> `MapAggregate(`Min, f, `IncrDiffPlan (gen_state_sym(), `Diff, delta_plan)) (* check later *)
+		  end
 
 	| _ -> m_expr
 
@@ -493,6 +541,10 @@ let rec apply_delta_rules m_expr event rcs =
 		  `Min(apply_delta_rules l event (Some New),
 		       apply_delta_rules r event (Some New))
 
+	    | `New (`Max (l,r)) ->
+		  `Max(apply_delta_rules l event (Some New),
+		       apply_delta_rules r event (Some New))
+
 	    | `New (`MapAggregate (fn, f, q)) ->
 		  `MapAggregate(fn,
 				apply_delta_rules f event (Some New),
@@ -501,13 +553,13 @@ let rec apply_delta_rules m_expr event rcs =
 	    | _ -> raise (RewriteException "Invalid recomputation expression.")
     in
 	match m_expr with
-	    | `Incr(sid, m_expr) -> `Incr(sid, push_delta (`Delta (event, m_expr)))
-	    | `Init(sid, m_expr) -> `Init(sid, adr_new (`New m_expr))
+	    | `Incr(sid, op, m_expr) -> `Incr(sid, op, push_delta (`Delta (event, m_expr)))
+	    | `Init(sid, m_expr) -> `Init(sid, adr_new (`New (m_expr)))
 	    | `New(_) as e -> adr_new e
 	    | _ -> 
 		  begin
 		      match rcs with
-			  | Some New -> adr_new (`New m_expr)
+			  | Some New -> adr_new (`New (m_expr))
 			  | Some Incr -> push_delta (`Delta (event, m_expr))
 			  | None -> raise (RewriteException "Invalid recomputation state.")
 		  end
@@ -568,12 +620,12 @@ and apply_delta_plan_rules q event rcs =
 	    | _ -> raise (RewriteException "Invalid recomputation plan.")
     in
 	match q with
-	    | `IncrPlan(qq) -> push_delta_plan (`DeltaPlan (event, qq))
+	    | `IncrPlan(sid, op, qq) -> `IncrPlan(sid, op, push_delta_plan (`DeltaPlan (event, qq)))
 	    | `NewPlan(_) as p -> adpr_new p
 	    | _ ->
 		  begin
 		      match rcs with
-			  | Some New -> adpr_new (`NewPlan q)
+			  | Some New -> adpr_new (`NewPlan (q))
 			  | Some Incr -> push_delta_plan q
 			  | _ -> raise (RewriteException "Invalid recomputation state.")
 		  end
@@ -831,6 +883,11 @@ and simplify_map_expr_constants m_expr =
 	      let sr = simplify_map_expr_constants r in
 		  `Min(sl, sr)
 		      
+	| `Max (l, r) ->
+	      let sl = simplify_map_expr_constants l in
+	      let sr = simplify_map_expr_constants r in
+		  `Max(sl, sr)
+		      
 	(* TODO: static evaluation *)
 	(*
 	  begin
@@ -852,8 +909,20 @@ and simplify_map_expr_constants m_expr =
 
 	| `Delta (b,e) -> `Delta(b, simplify_map_expr_constants e)
 	| `New(e) -> `New(simplify_map_expr_constants e)
-	| `Incr(sid, e) -> `Incr(sid, simplify_map_expr_constants e)
+	| `Incr(sid, o, e) -> `Incr(sid, o, simplify_map_expr_constants e)
+	| `IncrDiff(sid, o, e) -> `IncrDiff(sid, o, simplify_map_expr_constants e)
 	| `Init (sid, e) -> `Init(sid, simplify_map_expr_constants e)
+	| `Insert(sid, m, e) -> `Insert(sid, m, simplify_map_expr_constants e)
+	| `Update(sid, o, m, e) -> `Update(sid, o, m, simplify_map_expr_constants e)
+	| `Delete(sid, m) -> m_expr
+	| `IfThenElse (b, l, r) ->
+	      let sb = match simplify_predicate_constants (`BTerm b) with
+		          | `BTerm(x) -> x
+			  | _ -> raise InvalidExpression
+	      in
+	      let sl = simplify_map_expr_constants l in
+	      let sr = simplify_map_expr_constants r in
+		  `IfThenElse(sb, sl, sr)
 	      
 
 and simplify_plan_constants q =
@@ -932,9 +1001,13 @@ and simplify_plan_constants q =
 	      let cqq = simplify_plan_constants cq in
 	      if cq = `FalseRelation then `FalseRelation else `NewPlan(cqq)
 
-	| `IncrPlan (cq) ->
+	| `IncrPlan (sid, op, cq) ->
 	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `IncrPlan(cqq)
+	      if cq = `FalseRelation then `FalseRelation else `IncrPlan(sid,op,cqq)
+
+	| `IncrDiffPlan (sid, op, cq) ->
+	      let cqq = simplify_plan_constants cq in
+	      if cq = `FalseRelation then `FalseRelation else `IncrDiffPlan(sid,op,cqq)
 
 
 
@@ -1074,6 +1147,7 @@ let rec simplify m_expr rewrites =
 							      | `Sum -> `MapExpression(
 								    `Product(f, `MapAggregate(fn, `METerm (`Int 1), q)))
 							      | `Min -> `MapExpression(f)
+							      | `Max -> raise InvalidExpression (* TODO *)
 						      in
 						      let new_m_expr = splice m_expr np new_np in
 						      let new_rewrites = t@[new_np] in
@@ -1287,6 +1361,11 @@ and extract_map_expr_bindings m_expr : map_expression * (binding list) =
 	      let (re, rb) = extract_map_expr_bindings r in
 		  (`Min(le, re), lb@rb)
 
+	| `Max (l,r) ->
+	      let (le, lb) = extract_map_expr_bindings l in
+	      let (re, rb) = extract_map_expr_bindings r in
+		  (`Max(le, re), lb@rb)
+
 	| `MapAggregate(fn, f,q) ->
 	      let (fe, fb) = extract_map_expr_bindings f in
 	      let (qq, qb) = extract_plan_bindings q in
@@ -1300,6 +1379,7 @@ and extract_map_expr_bindings m_expr : map_expression * (binding list) =
 					     `MapAggregate(fn, `METerm(`Int(1)), qq)),
 					 (fb@qb@[`BindMapExpr(new_var, fe)]))
 				  | `Min -> (f, fb)
+				  | `Max -> raise InvalidExpression
 			  end
 		  else (`MapAggregate(fn, fe, qq), fb@qb)
 		      
@@ -1388,9 +1468,8 @@ and extract_plan_bindings q : plan * (binding list) =
 
 	| `TrueRelation | `FalseRelation | `DeltaPlan (_,_) -> (q, []) 
 
-	| `NewPlan(cq) | `IncrPlan(cq) -> 
+	| `NewPlan(cq) | `IncrPlan(_,_,cq) | `IncrDiffPlan(_,_,cq) -> 
 	      let (cqq, cqb) = extract_plan_bindings cq in (q, cqb)
-
 
 (*
  *
@@ -1414,19 +1493,24 @@ let rec compute_initial_value m_expr =
 	| `Min(l,r) ->
 	      `Min(compute_initial_value l, compute_initial_value r)
 
+	| `Max(l,r) ->
+	      `Max(compute_initial_value l, compute_initial_value r)
+
 	| `MapAggregate(fn, f, q) -> `METerm (`Int 0)
 	      
 	| _ -> raise (RewriteException "Invalid intial value expression.") 
 
-let rec apply_recompute_rules m_expr : map_expression =
+let rec apply_recompute_rules m_expr delta : map_expression =
     match m_expr with
-	| `METerm _ -> `Incr(gen_state_sym(), m_expr)
+	| `METerm _ -> `Incr(gen_state_sym(), (match delta with `Insert _ -> `Plus | `Delete _ -> `Minus), m_expr)
 	| `Sum (l,r) ->
-	      let new_l = apply_recompute_rules l in
-	      let new_r = apply_recompute_rules r in
+	      let new_l = apply_recompute_rules l delta in
+	      let new_r = apply_recompute_rules r delta in
 		  begin
 		      match (new_l, new_r) with
-			  | (`Incr (sx,x), `Incr (sy,y)) -> `Incr(sx,`Sum(x, y))
+			  | (`Incr (sx,ox,x), `Incr (sy,oy,y)) -> 
+				if ox = oy then `Incr(sx, ox, `Sum(x, y))
+			   	else `New(`Sum (new_l, new_r))
 			  | (`New x, `New y) -> `New(`Sum(x, y))
 			  | (`Incr x, `New y) -> `New(`Sum(new_l, y))
 			  | (`New x, `Incr y) -> `New(`Sum(x, new_r))
@@ -1434,11 +1518,13 @@ let rec apply_recompute_rules m_expr : map_expression =
 		  end
 
 	| `Minus (l,r) ->
-	      let new_l = apply_recompute_rules l in
-	      let new_r = apply_recompute_rules r in
+	      let new_l = apply_recompute_rules l delta in
+	      let new_r = apply_recompute_rules r delta in
 		  begin
 		      match (new_l, new_r) with
-			  | (`Incr (sx,x), `Incr (sy,y)) -> `Incr(sx,`Minus(x, y))
+			  | (`Incr (sx,ox,x), `Incr (sy,oy,y)) -> 
+				if ox = oy then `Incr(sx, ox, `Minus(x, y))
+			   	else `New(`Minus (new_l, new_r))
 			  | (`New x, `New y) -> `New(`Minus(x, y))
 			  | (`Incr x, `New y) -> `New(`Minus(new_l, y))
 			  | (`New x, `Incr y) -> `New(`Minus(x, new_r))
@@ -1446,11 +1532,13 @@ let rec apply_recompute_rules m_expr : map_expression =
 		  end
 
 	| `Product (l,r) ->
-	      let new_l = apply_recompute_rules l in
-	      let new_r = apply_recompute_rules r in
+	      let new_l = apply_recompute_rules l delta in
+	      let new_r = apply_recompute_rules r delta in
 		  begin
 		      match (new_l, new_r) with
-			  | (`Incr (sx,x), `Incr (sy,y)) -> `Incr(sx, `Product(x, y))
+			  | (`Incr (sx,ox,x), `Incr (sy,oy,y)) -> 
+				if ox = oy then `Incr(sx, ox, `Product(x, y))
+			   	else `New(`Product (new_l, new_r))
 			  | (`New x, `New y) -> `New(`Product(x, y))
 			  | (`Incr x, `New y) -> `New(`Product(new_l, y))
 			  | (`New x, `Incr y) -> `New(`Product(x, new_r))
@@ -1458,8 +1546,8 @@ let rec apply_recompute_rules m_expr : map_expression =
 		  end
 
 	| `Min (l,r) ->
-	      let new_l = apply_recompute_rules l in
-	      let new_r = apply_recompute_rules r in
+	      let new_l = apply_recompute_rules l delta in
+	      let new_r = apply_recompute_rules r delta in
 		  begin
 		      match (new_l, new_r) with
 			  | (`Incr x, `Incr y) -> `Min(new_l, new_r)
@@ -1469,36 +1557,54 @@ let rec apply_recompute_rules m_expr : map_expression =
 			  | _ -> raise InvalidExpression
 		  end
 
-	| `MapAggregate (fn, f, q) ->
-	      let new_f = apply_recompute_rules f in
-	      let new_q = apply_recompute_plan_rules q in
+	| `Max (l,r) ->
+	      let new_l = apply_recompute_rules l delta in
+	      let new_r = apply_recompute_rules r delta in
 		  begin
-		      print_endline ("CP2:"^(match fn with | `Sum -> "sum" | `Min -> "min"));
+		      match (new_l, new_r) with
+			  | (`Incr x, `Incr y) -> `Max(new_l, new_r)
+			  | (`New x, `New y) -> `New(`Max(x, y))
+			  | (`Incr x, `New y) -> `New(`Max(new_l, y))
+			  | (`New x, `Incr y) -> `New(`Max(x, new_r))
+			  | _ -> raise InvalidExpression
+		  end
+
+	| `MapAggregate (fn, f, q) ->
+	      let new_f = apply_recompute_rules f delta in
+	      let new_q = apply_recompute_plan_rules q delta in
+		  begin
+		      print_endline ("CP2:"^(match fn with | `Sum -> "sum" | `Min -> "min" | `Max -> "max"));
 		      print_endline ("CP2a: "^(string_of_map_expression new_f));
 		      print_endline ("CP2b: "^(string_of_plan new_q));
 		      match (fn, new_f, new_q) with
-			  | (`Sum, `Incr (sx,x), `IncrPlan y) -> `Incr (sx, `MapAggregate(fn, x, y))
-			  | (`Min, `Incr x, `IncrPlan y) -> `New (`MapAggregate(fn, new_f, new_q))
+			  | (`Sum, `Incr (sx,o,x), `IncrPlan (_,_,y)) -> `Incr (sx, o, `MapAggregate(fn, x, y)) (* TODO : check this out *)
+			  (*| (`Min, `Incr x, `IncrPlan y) -> `New (`MapAggregate(fn, new_f, new_q)) *)
+			  | (`Min, `Incr (sx,o,x), `IncrPlan (_,_,y)) -> 
+				begin
+				match delta with 
+				    | `Insert _ -> `Incr (sx, `Min, `MapAggregate(fn, x, y))
+				    | `Delete _ -> `Incr (sx, `Decrmin (x), `MapAggregate(fn, x, y))
+				end
 			  | (_, `New x, `NewPlan y) -> `New (`MapAggregate(fn, x, y))
 			  | (_, `Incr x, `NewPlan y) -> `New (`MapAggregate(fn, new_f, y))
 			  | (_, `New x, `IncrPlan y) -> `New (`MapAggregate(fn, x, new_q))
 			  | _ -> raise InvalidExpression
 		  end
 
-	| `Delta _  | `New _ | `Incr _ | `Init _->
+	| `Delta _  | `New _ | `Incr _ | `IncrDiff _ | `Init _ | `Insert _ | `Update _ | `Delete _ | `IfThenElse _ ->
 	      raise (RewriteException 
 			 "Invalid map expression argument for apply_recompute_rules.")
 
-and apply_recompute_plan_rules q : plan =
+and apply_recompute_plan_rules q delta : plan =
     match q with
-	| `Relation _ -> `IncrPlan q
+	| `Relation _ -> `IncrPlan (gen_state_sym(), (match delta with `Insert _ -> `Union | `Delete _ -> `Diff), q)
 	| `Select (pred, cq) ->
 	      begin
 		  match pred with 
 		      | `BTerm(`MEQ(m_expr))
 		      | `BTerm(`MLT(m_expr)) ->
-			    let mer = apply_recompute_rules m_expr in
-			    let cqr = apply_recompute_plan_rules cq in
+			    let mer = apply_recompute_rules m_expr delta in
+			    let cqr = apply_recompute_plan_rules cq delta in
 			    let mer_new =
 				match mer with
 				    | `Incr x ->
@@ -1527,17 +1633,17 @@ and apply_recompute_plan_rules q : plan =
 
 		      | _ ->
 			    print_endline ("CP1: "^(string_of_plan q));
-			    let cqr = apply_recompute_plan_rules cq in
+			    let cqr = apply_recompute_plan_rules cq delta in
 				begin
 				    match cqr with
 					| `NewPlan cqq -> `NewPlan(`Select (pred, cqq))
-					| `IncrPlan cqq -> `IncrPlan(`Select (pred, cqq))
+					| `IncrPlan (sid, op, cqq) -> `IncrPlan(sid, op, `Select (pred, cqq))
 					| _ -> raise InvalidExpression
 				end
 	      end
 
 	| `Project (attrs, cq) ->
-	      let cqr = apply_recompute_plan_rules cq in
+	      let cqr = apply_recompute_plan_rules cq delta in
 		  begin
 		      match cqr with
 			  | `NewPlan x -> `NewPlan (`Project(attrs, x)) 
@@ -1546,16 +1652,33 @@ and apply_recompute_plan_rules q : plan =
 		  end
 
 	| `Union children ->
-	      let rc = List.map apply_recompute_plan_rules children in
+	      let rc = List.map (fun x -> (apply_recompute_plan_rules x delta)) children in
 	      let all_incr = List.for_all
 		  (fun x -> match x with | `IncrPlan _ -> true | _ -> false) rc
 	      in
 		  begin
 		      if all_incr then
-			  `IncrPlan(`Union
+		  	  let t = List.hd rc in
+		  	  let (sid, op) = match t with `IncrPlan(sid,o,_) -> (sid, o) | _ -> raise InvalidExpression in 
+	      		  let all_oplus = 
+		  	      List.for_all
+		      		  (fun x -> match x with | `IncrPlan(_,o,_) -> o = op | _ -> false) rc
+			  in 
+			  begin 
+			      if all_oplus then 
+			          `IncrPlan(sid, op, `Union
 					(List.map
 					     (fun x -> match x with
-						  | `IncrPlan c -> c | _ -> raise InvalidExpression) rc))
+						  | `IncrPlan (_,_,c) -> c | _ -> raise InvalidExpression) rc))
+			      else 
+			  	  `NewPlan(`Union
+				        (List.map
+					    (fun x -> match x with
+						 | `NewPlan c -> c
+						 | `IncrPlan c -> x
+						 | _ -> raise InvalidExpression) rc))
+				
+			  end
 		      else
 			  `NewPlan(`Union
 				       (List.map
@@ -1566,11 +1689,13 @@ and apply_recompute_plan_rules q : plan =
 		  end
 
 	| `Cross (l, r) ->
-	      let lr = apply_recompute_plan_rules l in
-	      let rr = apply_recompute_plan_rules r in
+	      let lr = apply_recompute_plan_rules l delta in
+	      let rr = apply_recompute_plan_rules r delta in
 		  begin
 		      match (lr, rr) with
-			  | (`IncrPlan x, `IncrPlan y) -> `IncrPlan(`Cross (x,y))
+			  | (`IncrPlan (sx,ox,x), `IncrPlan (_,oy,y)) -> 
+				if ox = oy then `IncrPlan(sx, ox, `Cross (x,y))
+				else `NewPlan(`Cross(lr, rr))
 			  | (`NewPlan x, `NewPlan y) -> `NewPlan(`Cross(x,y))
 			  | (`IncrPlan x, `NewPlan y) -> `NewPlan(`Cross(lr, y))
 			  | (`NewPlan x, `IncrPlan y) -> `NewPlan(`Cross(x, rr)) 
@@ -1578,11 +1703,13 @@ and apply_recompute_plan_rules q : plan =
 		  end
 
 	| `NaturalJoin (l, r) ->
-	      let lr = apply_recompute_plan_rules l in
-	      let rr = apply_recompute_plan_rules r in
+	      let lr = apply_recompute_plan_rules l delta in
+	      let rr = apply_recompute_plan_rules r delta in
 		  begin
 		      match (lr, rr) with
-			  | (`IncrPlan x, `IncrPlan y) -> `IncrPlan(`NaturalJoin (x,y))
+			  | (`IncrPlan (sx,ox,x), `IncrPlan (_,oy,y)) ->
+				if ox = oy then `IncrPlan(sx, ox, `NaturalJoin (x,y))
+				else `NewPlan(`NaturalJoin(lr, rr))
 			  | (`NewPlan x, `NewPlan y) -> `NewPlan(`NaturalJoin (x,y))
 			  | (`IncrPlan x, `NewPlan y) -> `NewPlan(`NaturalJoin(lr, y))
 			  | (`NewPlan x, `IncrPlan y) -> `NewPlan(`NaturalJoin(x, rr)) 
@@ -1595,18 +1722,18 @@ and apply_recompute_plan_rules q : plan =
 		  match pred with
 		      | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
 			    let mer =
-				match apply_recompute_rules m_expr with
-				    | `New(x) -> x | `Incr(x) -> `Incr(x)
+				match apply_recompute_rules m_expr delta with
+				    | `New(x) -> x | `Incr(x) as y-> y
 				    | _ -> raise InvalidExpression
 			    in
 			    let lr =
-				match apply_recompute_plan_rules l with
-				    | `NewPlan(x) -> x | `IncrPlan(x) -> `IncrPlan(x)
+				match apply_recompute_plan_rules l delta with
+				    | `NewPlan(x) -> x | `IncrPlan(x) as y-> y
 				    | _ -> raise InvalidExpression
 			    in
 			    let rr =
-				match apply_recompute_plan_rules r with
-				    | `NewPlan(x) -> x | `IncrPlan(x) -> `IncrPlan(x)
+				match apply_recompute_plan_rules r delta with
+				    | `NewPlan(x) -> x | `IncrPlan(x) as y-> y
 				    | _ -> raise InvalidExpression
 			    in
 				begin
@@ -1617,11 +1744,13 @@ and apply_recompute_plan_rules q : plan =
 				end
 
 		      | _ ->
-			    let lr = apply_recompute_plan_rules l in
-			    let rr = apply_recompute_plan_rules r in
+			    let lr = apply_recompute_plan_rules l delta in
+			    let rr = apply_recompute_plan_rules r delta in
 				begin
 				    match (lr, rr) with
-					| (`IncrPlan x, `IncrPlan y) -> `IncrPlan(`Join(pred, x, y))
+					| (`IncrPlan (sx,ox,x), `IncrPlan (_,oy,y)) ->
+						if ox = oy then `IncrPlan(sx, ox, `Join (pred, x,y))
+						else `NewPlan(`Join(pred, lr, rr))
 					| (`NewPlan x, `NewPlan y) -> `NewPlan(`Join(pred, x, y))
 					| (`IncrPlan x, `NewPlan y) -> `NewPlan(`Join(pred, lr, y))
 					| (`NewPlan x, `IncrPlan y) -> `NewPlan(`Join(pred, x, rr)) 
@@ -1629,7 +1758,7 @@ and apply_recompute_plan_rules q : plan =
 				end
 	      end
 
-	| `TrueRelation | `FalseRelation | `DeltaPlan _ | `NewPlan _ | `IncrPlan _ ->
+	| `TrueRelation | `FalseRelation | `DeltaPlan _ | `NewPlan _ | `IncrPlan _ | `IncrDiffPlan _->
 	      raise (RewriteException "Invalid plan for apply_recompute_plan_rules.")
 
 
@@ -1659,42 +1788,43 @@ let rec compute_new_map_expression (m_expr : map_expression) rcs =
 				compute_new_plan q (Some New))
 	    | _ -> raise InvalidExpression
     in
-    let cnmp_incr (x : map_expression) state_sym =
+    let cnmp_incr (x : map_expression) state_sym op =
 	match x with
 	    | `METerm e -> compute_initial_value x
 	    | `Sum(l,r) ->
 		  `Sum(
 		      `Sum(compute_initial_value l, compute_initial_value r),
-		      `Incr(state_sym, x))
+		      `Incr(state_sym, op, x))
 
 	    | `Minus(l,r) ->
 		  `Sum(
 		      `Minus(compute_initial_value l, compute_initial_value r),
-		      `Incr(state_sym, x))
+		      `Incr(state_sym, op, x))
 
 	    | `Product(l,r) ->
 		  let il = compute_initial_value l in
 		  let ir = compute_initial_value r in
 		      begin
 			  match (il, ir) with
-			      | (`METerm (`Int 0), `METerm (`Int 0)) -> `Incr(state_sym, x)
-			      | (`METerm (`Int 0), a) -> `Incr(state_sym, x)
-			      | (a, `METerm (`Int 0)) -> `Incr(state_sym, x)
-			      | (a, b) -> `Product(`Product(a, b), `Incr(state_sym, x)) 
+			      | (`METerm (`Int 0), `METerm (`Int 0)) -> `Incr(state_sym, op, x)
+			      | (`METerm (`Int 0), a) -> `Incr(state_sym, op, x)
+			      | (a, `METerm (`Int 0)) -> `Incr(state_sym, op, x)
+			      | (a, b) -> `Product(`Product(a, b), `Incr(state_sym, op, x)) 
 		      end
 			  
 	    | `Min (l,r) -> `Min(l,r)
 		  
 	    | `MapAggregate (`Sum, f, q) ->
-		  `Sum(compute_initial_value x, `Incr(state_sym, x))
+		  `Sum(compute_initial_value x, `Incr(state_sym, op, x))
 		      
-	    | `MapAggregate (`Min, f, q) -> raise InvalidExpression
+	    | `MapAggregate (`Min, f, q) -> `Incr(state_sym, op, x)
+		  
 
 	    | _ -> raise InvalidExpression
     in
 	match m_expr with
 	    | `New(e) -> `New(cnmp_new e)
-	    | `Incr(sid, e) -> cnmp_incr e sid
+	    | `Incr(sid, o, e) -> cnmp_incr e sid o
 	    | _ -> 
 		  begin
 		      match rcs with
@@ -1720,13 +1850,13 @@ and compute_new_plan (q : plan) rcs =
 		  in
 		  let new_cq = compute_new_plan cq (Some New) in
 		      begin
-			  match (pred, new_cq) with
-			      | (`BTerm(`MEQ(`Incr(sid, m_incr))), `IncrPlan(cqq)) ->
+			  match (pred, new_cq) with (*TODO check later *)
+			      | (`BTerm(`MEQ(`Incr(sid, op, m_incr))), `IncrPlan(sid2, op2, cqq)) ->
 				    `Union
 					[`Select(`BTerm(`MEQ(`Init(sid, m_incr))), new_cq);
 					 `Select(new_pred, cqq)]
 					
-			      | (`BTerm(`MLT(`Incr(sid, m_incr))), `IncrPlan(cqq)) ->
+			      | (`BTerm(`MLT(`Incr(sid, op, m_incr))), `IncrPlan(sid2, op2, cqq)) ->
 				    `Union
 					[`Select(`BTerm(`MLT(`Init(sid, m_incr))), new_cq);
 					 `Select(new_pred, cqq)]
@@ -1760,7 +1890,7 @@ and compute_new_plan (q : plan) rcs =
     in
 	match q with
 	    | `NewPlan(cq) -> cnp_new cq
-	    | `IncrPlan(cq) -> `IncrPlan(cq)
+	    | `IncrPlan(sid, op, cq) -> `IncrPlan(sid, op, cq)
 	    | _ ->
 		  begin
 		      match rcs with
@@ -1772,7 +1902,7 @@ and compute_new_plan (q : plan) rcs =
 let compile_target m_expr delta =
     let compile_aux e = 
 	let bh_code =
-	    compute_new_map_expression (apply_recompute_rules e) (Some New)
+	    compute_new_map_expression (apply_recompute_rules e delta) (Some New)
 	in
 	let dh_code =
 	    simplify_map_expr_constants
@@ -1814,16 +1944,22 @@ let generate_all_events m_expr =
 
 let rec extract_incremental m_expr =
     match m_expr with
-	`METerm m -> []
+	| `Delete _ 
+	| `METerm _ -> []
 	| `Sum (l, r)
 	| `Minus (l, r)
 	| `Product (l, r)
-	| `Min (l, r) -> (extract_incremental l) @ (extract_incremental r)
+	| `Max (l, r) 
+	| `Min (l, r) 
+	| `IfThenElse (_, l, r) -> (extract_incremental l) @ (extract_incremental r)
 	| `MapAggregate (_, e, _)
 	| `Delta (_, e)
+	| `Insert (_,_,e)
+	| `Update (_,_,_,e)
 	| `Init (_, e) -> extract_incremental e
 	| `New (e)
-	| `Incr (_, e) -> [e]
+	| `Incr (_, _, e) -> [e]
+	| `IncrDiff (_, _, e) -> [e]
 
 let rec extract_incremental_binding binding =
     List.concat (
@@ -1990,6 +2126,7 @@ let rec substitute_arith_code_vars assignments ac_expr =
 	    | `Minus (l,r) -> `Minus(sa l, sa r) 
 	    | `Product (l,r) -> `Product(sa l, sa r) 
 	    | `Min (l,r) -> `Min(sa l, sa r)
+	    | `Max (l,r) -> `Max(sa l, sa r)
 
 
 
@@ -2043,6 +2180,12 @@ let rec substitute_code_vars assignments c_expr =
 	    | `AssignMap((mid, kf), c) ->
 		  `AssignMap((mid, substitute_cv_list kf), sa c)
 
+	    | `EraseMap((mid, kf), c) ->
+		  `EraseMap((mid, substitute_cv_list kf), 
+			begin
+			    match sa (`CTerm c) with `CTerm x -> x | _ -> raise InvalidExpression
+			end)
+
 	    | `Declare d ->
 		  begin
 		      match d with
@@ -2061,6 +2204,7 @@ let rec substitute_code_vars assignments c_expr =
 		  end
 
 	    | `IfNoElse(p, c) -> `IfNoElse(sb p, sc c)
+	    | `IfElse(p, l, r) -> `IfElse(sb p, sc l, sc r)
 	    | `ForEach(ds, c) -> `ForEach(ds, sc c)
 	    | `Eval x -> `Eval (sa x)
 	    | `Block cl -> `Block(List.map sc cl)
@@ -2083,6 +2227,7 @@ let rec simplify_code c_expr =
     *)
     match c_expr with
 	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
+	| `IfElse (p,l,r) -> `IfElse(p, simplify_code l, simplify_code r)
 	| `ForEach(ds, c) -> `ForEach(ds, simplify_code c)
 	| `Handler(n, args, rt, c) ->
 	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
@@ -2409,8 +2554,15 @@ let generate_code handler bindings event =
 			      | _ -> raise InvalidExpression
 		      end
 
-	    | `Incr (sid, e) ->
+	    | `Incr (sid, op, e) ->
 		  (* TODO: incr var types *)
+(*		  begin
+		  (* if aggregate is Min then handle it first *) 
+		  match e with `MapAggregate (`Min, f, q) ->
+			let (e_code, e_decl) = gc_aux_min f q decl bind_info in
+			raise InvalidExpression
+		  | _ -> 
+*)
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
 		  let (e_is_bound, rc) = 
 			match bind_info with (true, _, bb) -> is_bound e bb
@@ -2518,6 +2670,7 @@ let generate_code handler bindings event =
 				in
 				    gc_assign_state_map e_code e_decl map_key incr_map
 		      end
+(*		  end *)
 
 	    | `Init (sid, e) ->				
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
@@ -2652,7 +2805,31 @@ let generate_code handler bindings event =
 	    | `Cross(l,r) ->
 		  let (inner_code, inner_decl) = gc_plan_aux r iter_code decl bind_info in
 		      gc_plan_aux l inner_code inner_decl bind_info 
+	
+	    (* to handle rule 39, 41 *)
+	    | `IncrPlan(sid, op, q) ->
+		  let e_uba = 
+		    match event with
+		    | `Insert(_, vars) | `Delete(_, vars) ->
+			List.filter 
+			  (fun uaid -> not
+			      (List.exists
+				  (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
+				  vars))
+			  (get_unbound_attributes_from_plan q true)
+		  in
+		  let (q_code, q_decl) =
+			gc_plan_aux q iter_code decl bind_info
+		  in 
+		  let incrp_mid = gen_map_sym (gen_state_sym()) in
+		  let incrp_map = `Map(incrp_mid, 
+					List.map
+					    (fun x -> (field_of_attribute_identifier x, "int")) e_uba,
+					"int") in
+		  print_endline (string_of_code_expression (`Declare incrp_map));
+		  raise InvalidExpression
 
+		  
 	    (*
 	      | `NaturalJoin (l,r) ->
 	      ** TODO: create natural join predicate **
@@ -2670,6 +2847,24 @@ let generate_code handler bindings event =
 	    | _ ->
 		  print_endline ("gc_aux_plan: "^(string_of_plan q));
 		  raise InvalidExpression
+(*    and gc_aux_min f q decl bind_info : code_expression * (declaration list) =
+  	let run_min_var = gen_var_sym() in
+	let (f_code, f_decl) = gc_aux f decl bind_info in
+	    begin
+		match f_code with
+		    | `Eval (x) ->
+			let (agg_block, agg_decl) =
+			    gc_plan_aux (`IncrPlan (q))
+				(`Assign(run_min_var,
+					`Min (`CTerm(`Variable(run_min_var)), x)))	
+				f_decl bind_info
+			in
+			    (`Block(
+				[`Declare(`Variable(run_min_var, "int"));
+				 agg_block;
+				 `Eval(`CTerm(`Variable(run_min_var)))]), agg_decl)
+		    | _ -> raise InvalidExpression
+	    end *)
     in
 	
     let handler_fields = 

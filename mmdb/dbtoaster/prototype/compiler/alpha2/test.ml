@@ -27,6 +27,9 @@ let vwap =
 			 `METerm(`Attribute(`Qualified("B", "V2")))),
 		`Select(`BTerm(`MLT(m_p2)),
 			`Relation("B", [("P2", "int"); ("V2","int")])))
+
+let delta = 
+  `Insert ("B", [("p", "int"); ("v", "int")])
 ;;
 
 (* string_of tests *)
@@ -218,7 +221,8 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 				(fun acc b -> match b with | `BindMapExpr (v,d) -> d::acc | _ -> acc)
 				[] vwap_bindings
 		in 
-			List.map apply_recompute_rules (vwap_e::bound_map_exprs)
+			List.map 
+				(fun x -> apply_recompute_rules x delta) (vwap_e::bound_map_exprs)
 	in
 		print_endline "apply_recompute_rules(vwap):";
 		List.iter
