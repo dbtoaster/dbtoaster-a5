@@ -17,85 +17,42 @@ public class ExchangeThread extends Thread{
 	private DataInputStream in;
 	private boolean isToaster;
 	private Date timer;
+	private boolean DEBUG;
 
-	public ExchangeThread(Socket socket,SynchronizedBooks book) {
+	public ExchangeThread(Socket socket,SynchronizedBooks book, boolean d) {
 		super("ExchangeThread");
 		orders_book=book;
 		this.socket = socket;
 		timer= new Date();
+		DEBUG=d;
 		System.out.println("Server: Clinet Connects, opening thread to handle.");
 	}
 
-	public void run() {   
+	public void run() {  
+		//Assumption that if the time stamp is there and not equal to 0 
+		//then the message comes from the data file
 
 		try {
 
 			out = new DataOutputStream(socket.getOutputStream());
 			in = new DataInputStream(socket.getInputStream());
 
-			System.out.println("Server: Opened socket: "+socket.toString());
-
-			/*
-//    	    out.writeChars("hello");
-    	    out.writeBytes("1234567890");
-    	    System.out.println("printing out Byte");
-			 */
-
-			//   	    socket.close();
-			//   	    System.out.println("closed connection blah");
-			//   	    return;
+			if (DEBUG){
+				System.out.println("Server: Opened socket: "+socket.toString());
+			}
 
 			try{
-				/*
-   	    	byte[] test = new byte[128];
-    	    	int read = in.read(test);
-    	    	System.out.println("Read bytes: " + read);
-    	    	for ( int i = 0; i < read; ++i)
-    	    		System.out.println(test[i]);
-				 */
-				//Check to distinguish between a toaster and proxy
-				//if reads 1 then it is a toaster.
-				//   	    	Integer clientType = Integer.reverse(in.readInt());
+
 				Integer clientType = Integer.reverseBytes(in.readInt());
-				System.out.println("Client type: " + clientType);
+				if (DEBUG){
+					System.out.println("Client type: " + clientType);
+				}
 				setExchangeType(!clientType.equals(0));
 
 			}catch(IOException e){
 				System.out.println("Server: Client failed to send its type correctly: "+e.getMessage());
 				e.printStackTrace();
 			}
-			/*   	    socket.close();
-    	    System.out.println("closed connection blah");
-    	    return;
-/*
-    	    Object sentByClient;
-
-    	    while ((sentByClient = in.readObject()) != null)
-    	    {
-    	    	if (sentByClient.getClass().equals(String.class))
-    	    	{
-    	    		String s;
-    	    		synchronized (orders_book)
-    	    		{
-    	    			s = (String) sentByClient;
-    	    			s = s.toLowerCase();
-    	    		}
-    	    		synchronized(this.clientList)
-    	    		{
-    	    			for (ExchangeThread item : clientList)
-    	    			{
-  //  	    				item.sendMessageBack(s);
-						}
-    	    		}
-    	    	}
-    	    	else
-    	    	{
-    	    		System.err.println("Invalid object type received by server\n");
-    	    		System.exit(1);
-    	    	}
-    	    }
-			 */    	    
-
 
 			if (!isToaster){
 
@@ -103,40 +60,51 @@ public class ExchangeThread extends Thread{
 
 				while ((nextTuple = getInputTuple(in)) != null) {
 
-					//   	    	while (in.available()>0){
-					//   	    		nextTuple = getInputTuple(in);
-					//   	    	System.out.println("looking at the returned tuple "+nextTuple.time);
-
 					int order_id = nextTuple.order_id;
 					String action= nextTuple.action;
+					long time=nextTuple.time;
+					
+					LinkedList<Stream_tuple> messages;
 
 					if (action.equals("B")){
 						// Insert bids
+						
+						//retrieve price and volume;
 						double price = nextTuple.price;
-						double volume = nextTuple.volume;
+						double volume = nextTuple.volume;						
 
-						//					System.out.println("in B "+order_id+" "+action+" "+price+" "+volume);
-						Order_tuple pv = new Order_tuple(0,price, volume);
-
+						Order_tuple pv = new Order_tuple(0,price, volume, 0);
+						
+						if (time!=0){
+							pv.time=time;
+							pv.id=order_id;
+						}
 						synchronized (orders_book){
-
-							pv.time=timer.getTime();
-							nextTuple.time=pv.time;
-							nextTuple.order_id=(orders_book.add_Bid_order(pv)).intValue();
+							
+							orders_book.setOrderId(order_id);
+							messages=orders_book.add_Bid_order(pv);
 
 						}
-
 						synchronized(this.clientList)
 						{
 
+							nextTuple=messages.getFirst();
+							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
+							messages.removeFirst();
 
-							for (ExchangeThread item : clientList)
-							{
-								if (item.getExchangeType())
-									item.sendMessageBack(nextTuple);
-
-							}
+							do{
+								nextTuple=messages.getFirst();
+								nextTuple.time=timer.getTime();
+								messages.removeFirst();
+								
+								for (ExchangeThread item : clientList)
+								{
+									if (item.getExchangeType())
+										item.sendMessageBack(nextTuple);
+	
+								}
+							}while (!messages.isEmpty());
 
 						}
 
@@ -149,39 +117,51 @@ public class ExchangeThread extends Thread{
 						double volume = nextTuple.volume;
 
 
-						Order_tuple pv = new Order_tuple(0, price, volume);
-
+						Order_tuple pv = new Order_tuple(0, price, volume, 0);
+						
+						if (time!=0){
+							pv.time=time;
+							pv.id=order_id;
+						}
+						
 						synchronized (orders_book){
-							pv.time=timer.getTime();
-							nextTuple.time=pv.time;
-							nextTuple.order_id=(orders_book.add_Ask_order(pv)).intValue();
+							
+							orders_book.setOrderId(order_id);
+							messages=orders_book.add_Ask_order(pv);
 						}
 						synchronized(this.clientList)
 						{
+							nextTuple=messages.getFirst();
+							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
-							for (ExchangeThread item : clientList)
-							{
-								if (item.getExchangeType())
-									item.sendMessageBack(nextTuple);
+							messages.removeFirst();
 
-							}
+							do{
+								nextTuple=messages.getFirst();
+								nextTuple.time=timer.getTime();
+								messages.removeFirst();
+								
+								for (ExchangeThread item : clientList)
+								{
+									if (item.getExchangeType())
+										item.sendMessageBack(nextTuple);
+	
+								}
+							}while (!messages.isEmpty());
 						}
 					}
 					else if (action.equals("E")){
-
-						double delta = nextTuple.volume;
-
-						Order_tuple pv = new Order_tuple(0, -1, delta);
-
-						//price should we update it?
+						
+						//need to deal with accounting and pass the message to clients
+						
 
 						synchronized(orders_book){
-							pv.time=timer.getTime();
-							nextTuple.time=pv.time;
-							orders_book.update_order(new Integer(order_id), pv);
+							
+							orders_book.update_order(order_id, nextTuple.volume);
 						}
 						synchronized(this.clientList)
 						{
+							nextTuple.time=timer.getTime();
 							for (ExchangeThread item : clientList)
 							{
 								if (item.getExchangeType())
@@ -193,6 +173,7 @@ public class ExchangeThread extends Thread{
 					else if (action.equals("F"))
 					{
 						synchronized(orders_book){
+							nextTuple.time=timer.getTime();
 							orders_book.remove(new Integer(order_id));
 						}
 						synchronized(this.clientList)
@@ -206,7 +187,9 @@ public class ExchangeThread extends Thread{
 						}
 					}
 					else if (action.equals("D")){
+						
 						synchronized(orders_book){
+							nextTuple.time=timer.getTime();
 							orders_book.remove(new Integer(order_id));
 						}
 						synchronized(this.clientList)
@@ -224,11 +207,13 @@ public class ExchangeThread extends Thread{
 
 				}
 
-				System.out.println("Closing connection!!!!");
+				//System.out.println("Closing connection!!!!");
 				//   	    	out.close();
 				//   	    	in.close();
 				//   	    	socket.close();
 			}else{
+				//NEED a better way to deal with this 
+				//TODO: toaster thread needs to hang around without doing anything with an open connection to the other world
 				while (true)
 					sleep(2);
 			}
@@ -259,47 +244,28 @@ public class ExchangeThread extends Thread{
 		Stream_tuple t=new Stream_tuple();
 
 		String [] input_tuple;
-		System.out.println("ServerThread: reading an input tuple.");
+		if (DEBUG){
+			System.out.println("ServerThread: reading an input tuple.");
+		}
 		byte[] tuple_in_bytes = new byte[512];
 		byte current_byte;
 
 		try{
 
 			int i=0;
-			//			System.out.println("about to read: "+tuple_in_bytes);
-			//			if (in.available()>0){
-
-			//			int num_bytes = in.read(tuple_in_bytes);
-			System.out.println("is available");
+			if (DEBUG){
+				System.out.println("is available");
+			}
 			while((current_byte=in.readByte())!='\n'){
-				//					System.out.println(current_byte);
 				tuple_in_bytes[i]=current_byte;
 				i++;
 			}
 
-
-			//			String str=new String(tuple_in_bytes);
-			System.out.println("done reading: "+tuple_in_bytes);
+			if (DEBUG){
+				System.out.println("done reading: "+tuple_in_bytes);
+			}
 			input_tuple=((new String(tuple_in_bytes)).split(" "));
-			//			}else{
-			//				return null;
-			//			}
-			/*			
-//	    	int num_bytes = in.read(tuple_in_bytes);
-	    	if (in.read(tuple_in_bytes)>0){
-//		    	System.out.println("Read bytes: " + num_bytes);
-	//	    	tuple=new String(test);
-		    	input_tuple=((new String(tuple_in_bytes)).split(" "));
-	    	}else{
-	    		return null;
-	    	}
-			 */
-			//	    	System.out.println("input length "+input_tuple.length);
-			//	    	System.out.println("Read bytes: " + read);
-			//	    	for ( int i = 0; i < input_tuple.length; i++)
-			//	    		System.out.println(input_tuple[i]);
 
-			//	    	System.out.println(input_tuple[0]);
 
 		}catch(IOException e){
 			System.out.println("read bytes ... "+e.getMessage());
@@ -313,28 +279,35 @@ public class ExchangeThread extends Thread{
 		t.action=input_tuple[2];
 		t.volume=(Double.valueOf(input_tuple[3])).doubleValue();
 		t.price=(Double.valueOf(input_tuple[4])).doubleValue();
-
-		//		System.out.println("tuple time "+t.time);
-		//		return null;
-
-		System.out.println("ServerThread: got from client: "+t);
+		
+		if (DEBUG){
+			System.out.println("ServerThread: got from client: "+t);
+		}
 		return t;
 	}
 
 	public void sendMessageBack(Stream_tuple t) throws IOException {
 		//Sends output in the following order:
 		//Timestamp, order id, action, volume, price
-		System.out.println("ServerThread: sending to client "+t.toString());
+		if (DEBUG){
+			System.out.println("ServerThread: sending to client "+t.toString());
+		}	
 		try{
 			String msg = t.toString() + "\n";
-			System.out.println("Sending " + msg);
 			byte[] b = msg.getBytes();
-			System.out.println("Msg length: " + b.length);
+			
+			if (DEBUG){
+				System.out.println("Sending " + msg);
+				System.out.println("Msg length: " + b.length);
+			}
+			
 			out.write(b, 0, b.length);
 		}catch(IOException e){
 			System.out.println("exception "+e.getMessage());
 		}
-		System.out.println("ServerThread: finished sending.");
+		if (DEBUG){
+			System.out.println("ServerThread: finished sending.");
+		}
 	}
 
 	public void setClientList(List<ExchangeThread> clientList) {

@@ -5,10 +5,13 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.util.*;
 
+
 public class ExchangeServer {
 
 
 	public static void main(String[] args) throws IOException{
+		
+		boolean DEBUG=true;
 		
 		ServerSocket serverSocket = null;
         boolean listening = true;
@@ -32,18 +35,19 @@ public class ExchangeServer {
             System.err.println("Could not listen on port: 4445.");
             System.exit(-1);
         }
-        System.out.println("Server: Opened a socket");
-        
-        SynchronizedBooks book=new SynchronizedBooks();
+        if (DEBUG){
+        	System.out.println("Server: Opened a socket");
+        }
+        SynchronizedBooks book=new SynchronizedBooks(DEBUG);
 
-        DataThread data_stream= new DataThread(input_file, port, socket);
+        DataThread data_stream= new DataThread(input_file, port, socket, DEBUG);
         
 
         
         while (listening){
 
 
-        	ExchangeThread client = new ExchangeThread(serverSocket.accept(), book);
+        	ExchangeThread client = new ExchangeThread(serverSocket.accept(), book, DEBUG);
         	
         	synchronized(clientList)
         	{
@@ -52,10 +56,11 @@ public class ExchangeServer {
         	client.setClientList(clientList);
         	client.start();
 
-        	if (!isConnected && clientList.size()>1){// && client!=null){
+        	if (!isConnected && clientList.size()>1){
         		isConnected=true;
- //       		DataThread data_stream= new DataThread(input_file, port, socket);
-        		System.out.println("Stating Datathread");
+        		if (DEBUG){
+        			System.out.println("Stating Datathread");
+        		}
         		data_stream.start();
         		
         	}

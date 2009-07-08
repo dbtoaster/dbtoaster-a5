@@ -46,12 +46,15 @@ using namespace tr1;
 
 #define VWAP_K 0.25
 
+#define DEBUG 1
+
 // Timestamp, order id, action, volume, price
 typedef tuple<double, int, string, double, double> stream_tuple;
 
 // Input stream
 typedef list<stream_tuple> stream_buffer;
 
+// storage of bid/ask orders 
 typedef DBT_HASH_MAP<int, tuple<double, double> > order_ids;
 
 
@@ -138,7 +141,7 @@ public:
 	double price;
 
 
-
+	//empty exchange message will look like a buy order at time 10000 of 0 volume at 0 price
 	exchange_message():
 	timestamp(10000), order_id(0), action('B'), volume(0), price (0)
 		{};
@@ -147,14 +150,15 @@ public:
 		{}
 };
 
+//printing the message
 ostream & operator<<( ostream & left, const exchange_message & message){
 
 	left<<message.timestamp<<" "<<message.order_id<<" "<<message.action<<" "<<message.volume<<" "<<message.price;
 	return left;
 }
-
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////
+//has to be here after the definition of the class
+//queue for storing exchange messages as they are coming in to the 
 typedef std::deque<exchange_message> exchange_message_queue;
 
 inline double update_vwap_monotonic(double price, double volume,
@@ -312,8 +316,7 @@ void vwap_stream_monotonic(exchange_message new_tuple,
 	
 	
 
-	
-	//check if we really need all of these vars
+//  check if we really need all of these vars
 //	struct timeval tvs, tve;
 	
 	double result = 0.0;
@@ -475,6 +478,9 @@ void vwap_stream_monotonic(exchange_message new_tuple,
 }
 
 
+//////////////////////////////////////////////////////////////////////////
+//   Connection to the server and handling all communication
+
 class proxy_client{
 
 public:
@@ -499,12 +505,15 @@ public:
 
 		gettimeofday(&tvs, NULL);
 	}
+	//writing the message to server
 	void write(const exchange_message& msg){
 		io_service_.post(boost::bind(&proxy_client::do_write, this, msg));
 	}
+	//reading message from a server
 	void read(const exchange_message& msg){
 		io_service_.post(boost::bind(&proxy_client::do_read, this, msg));
 	}
+	//close connection
 	void close()
 	{
 		io_service_.post(boost::bind(&proxy_client::do_close, this));
@@ -517,31 +526,25 @@ private:
 	{
 		if (!error)
 		{
-			cout << "entering handle_connect 1" << endl;
-			/*
-			unsigned int size_input=boost::asio::read(socket_,
-				boost::asio::buffer(message, 5));
-
-
-			unsigned size_input = 0;
-			boost::asio::async_read(socket_,
-				boost::asio::buffer(message, 512),
-				boost::asio::transfer_at_least(5),
-				boost::bind(&proxy_client::handle_yanif_read, this,
-				boost::asio::placeholders::error));
-			*/
-
-			//cout << "after the output. 23875081347598  input size is ___"<<size_input << endl;
+			#ifdef DEBUG
+				cout << "Establishing connnection to the server with handle_connect #1" << endl;
+			#endif
 
 			if(isToaster){
-				cout<<"sending message that this is toaster 3"<<endl;
+				//connecting to server as a toaster by sending 1
+				#ifdef DEBUG
+					cout<<"Sending connection type (this is toaster) #3"<<endl;
+				#endif
 				int x=1;
 				boost::asio::async_write(socket_,
 					boost::asio::buffer((void*) &x, sizeof(int)),
 					boost::bind(&proxy_client::handle_toaster_read, this,
 					boost::asio::placeholders::error));
 			}else{
-				cout<<"sending message that this is proxy 2"<<endl;
+				//connecting to a server as a proxy by sending 2
+				#ifdef DEBUG
+					cout<<"Sending connection type (this is proxy) #2"<<endl;
+				#endif
 				int x=0;
 				exchange_message msg;
 				msg.price=10;
@@ -552,11 +555,16 @@ private:
 					boost::bind(&proxy_client::handle_proxy_write, this,
 					boost::asio::placeholders::error));
 			}
-			cout<<"finished handle connect 4"<<endl;
+			#ifdef DEBUG
+				cout<<"Finished connection to server, exiting handle_connect #4"<<endl;
+			#endif 
 		}
 		else if (endpoint_iterator != tcp::resolver::iterator())
 		{
-			cout << "Reconnecting." << endl;
+			//in case the connection is not established try to reconnect with different protocol
+			#ifdef DEBUG
+				cout << "Reconnecting to server, handle_connect" << endl;
+			#endif
 			socket_.close();
 			tcp::endpoint endpoint = *endpoint_iterator;
 			socket_.async_connect(endpoint,
@@ -567,82 +575,40 @@ private:
 
 
 	void do_write(exchange_message msg)
-	{
-//		cout<<"Function do_write called by a client shouldn be here (not implemented). 5"<<endl;
-		
-		
-		//TODO: the question is how to deal with the return
-		
-		cout<<"Entering do write 5"<<endl;
+	{	
+		//writes a message to a server 	
+		#ifdef DEBUG
+			cout<<"Entering do write 5"<<endl;
+		#endif
 		write_msgs_.push_back(msg);
 		handle_proxy_write(boost::system::errc::make_error_code(boost::system::errc::success));
 		
-	/*
-		bool write_in_progress = !write_msgs_.empty();
-		write_msgs_.push_back(msg);
-		out_msg.push_back(msg);
-
-		if (!write_in_progress)
-		{
-
-
-			char order=write_msgs_.front().action;
-//			char order='B';
-			std::stringstream ss (std::stringstream::in | std::stringstream::out);
-
-			ss<<write_msgs_.front();
-
-			write_msgs_.pop_front();
-			std::string message=ss.str();
-
-			if (order=='B' || order=='S'){
-				counter=5;
-				boost::asio::async_write(socket_,
-					boost::asio::buffer(message.data() , message.size()),
-					boost::bind(&proxy_client::handle_read, this,
-					boost::asio::placeholders::error));
-			}	else{
-				boost::asio::async_write(socket_,
-					boost::asio::buffer(message.data() ,message.size()),
-					boost::bind(&proxy_client::handle_write, this,
-					boost::asio::placeholders::error));
-			}
-		}
-	*/
 	}
 	void do_read(exchange_message msg){
+		//reading message from a server
 		handle_toaster_read(boost::system::errc::make_error_code(boost::system::errc::success));
 	}
 
 	void do_close()
 	{
+		//closing connection to a server
 		socket_.close();
 	}
 
 	void handle_proxy_read(const boost::system::error_code& error)
 	{
-		cout<<"entering handle_proxy_read 11"<<endl;
+		//reads from server a bit at a time until sees end of message symbol.
+		#ifdef DEBUG
+			cout<<"Reading one message at a time in handle_proxy_read #11"<<endl;
+		#endif
 		if (!error)
 		{
+			//reading a input from a server until see '\n'
 			boost::asio::async_read_until(socket_,
 				proxy_read_response, "\n",
 				boost::bind(&proxy_client::do_proxy_read, this,
 				boost::asio::placeholders::error));
 
-//			if (counter>0){
-//				counter--;
-//				cout<<"No error in handle read "<<counter<<endl;
-				/*
-//				for (int i=0; i<512; i++)
-//					cout<<message[i];
-//				cout<<endl;
-//				read_stream<<message;
-*/
-
-
-//			}else{
-				//TODO: convert read_stream to send format and send it away 
-//			}
 		}
 		else
 		{
@@ -652,7 +618,12 @@ private:
 
 	void do_proxy_read(const boost::system::error_code& error)
 	{
-		cout<<"entering do_proxy_read 12"<<endl;
+		//this function converts buffer filled in the handle_proxy_read into 
+		//exchange message
+		#ifdef DEBUG
+			cout<<"Converting string buffer into a tuple values in do_proxy_read #12"<<endl;
+		#endif
+		
 		std::istream ist(&proxy_read_response);
 		string s;
 		ist >> s;
@@ -670,30 +641,27 @@ private:
 		ist >> s;
 		msg.price=atof(s.c_str());
 		
-//		ist>>msg.timestamp;
-		
-//		cout<<temp<<endl;
-//		ist >> s;
-//		cout<<s<<endl;
-		
-/*		sscanf(s.c_str(), "%ld %d %c %lf %lf",
-			&(msg.timestamp), &(msg.order_id), &(msg.action),
-			&(msg.volume), &(msg.price));
-*/
-		cout << "Received: " << msg << endl;
+		#ifdef DEBUG
+			cout << "Message received: " << msg << endl;
+		#endif
+		//TODO: once the message recived notify the reciver of the message for its ID.
 
-		//handle_proxy_read(boost::system::errc::make_error_code(boost::system::errc::success));
+		//send next message in the queue to the server to be processed.
 		handle_proxy_write(boost::system::errc::make_error_code(boost::system::errc::success));
-		//TODO: this should go to handle_proxy_write
+
 	}
 
 	void handle_toaster_read(const boost::system::error_code& error)
 	{
-		cout<<"entered handle_toaster_read 13"<<endl;
+		//this function reads messages from input stream and sends them for processing
+		#ifdef DEBUG
+			cout<<"Reading a message from a buffer in handle_toaster_read #13"<<endl;
+		#endif
 		if (!error)
 		{
-
-			cout<<"No error in handle_toaster_read 14 "<<endl;
+			#ifdef DEBUG
+				cout<<"No errors in handle_toaster_read starting a read into a buffer #14 "<<endl;
+			#endif
 			boost::asio::streambuf response;
 			boost::asio::async_read_until(socket_,
 				toaster_read_response,
@@ -708,11 +676,21 @@ private:
 
 	void do_toaster_read(const boost::system::error_code& error)
 	{
-		cout<<"entering do_toaster_read 15"<<endl;
-		cout<<"number of chars available 16  -- "<<toaster_read_response.size()<<endl;
+		#ifdef DEBUG
+			cout<<"Converting buffer into a exchange message int do_toaster_read #15"<<endl;
+			cout<<"The number of chars in a buffer is (#16)  -- "<<toaster_read_response.size()<<endl;
+		#endif
+		
 		std::istream ist(&toaster_read_response);
 		string s;
 		ist >> s;
+		
+		#ifdef DEBUG
+			if (toaster_read_response.size()==1){
+				cout<<"one char message begins("<<s<<")"<<endl;
+			}
+		#endif
+		
 		char * char_ptr;
 
 		exchange_message msg;
@@ -728,24 +706,26 @@ private:
 		msg.price=atof(s.c_str());
 		
 	
-
-		cout << "Received: " << msg << endl;
-		
-		cout<<"Calling vwap"<<endl;
+		#ifdef DEBUG
+			cout << "Message received (toaster): " << msg << endl;
+			cout<<"Calling vwap to handle the data"<<endl;
+		#endif
 		vwap_stream_monotonic(msg, bid_orders, ask_orders);
-		
-		//TODO: deal with just recived message.
 
+		//reading the next message from a server
 		handle_toaster_read(boost::system::errc::make_error_code(boost::system::errc::success));
 	}
 
 	void handle_proxy_write(const boost::system::error_code& error)
 	{
-		cout<<"entered handle_proxy_write 6"<<endl;
+		//sends a message to the server if it is a buy/sell order sends for a read from the server.
+		#ifdef DEBUG
+			cout<<"Sending a message to a server in handle_proxy_write #6"<<endl;
+		#endif
 		if (!error)
 		{
-			cout<<"no_errors in handle_proxy_write 7"<<endl;
 
+			//check for messages in the queue
 			bool no_write_needed = write_msgs_.empty();
 
 			if (!no_write_needed)
@@ -759,18 +739,26 @@ private:
 				write_msgs_.pop_front();
 				std::string message=ss.str();
 				message=message+'\n';
+				
+				//if it is a sell or buy order dealing with the return from the server 
 				if (order=='B' || order=='S'){
 //					counter=5;
-					cout<<"Doing a buy/sell order in handle_proxy_write 8"<<endl;
-					cout<<message<<endl;
+					#ifdef DEBUG
+						cout<<"Doing a buy/sell order in handle_proxy_write #8"<<endl;
+						cout<<"Sending this message: "<<message<<endl;
+					#endif
 					boost::asio::async_write(socket_,
 						boost::asio::buffer(message.data() , message.size()),
 						boost::bind(&proxy_client::handle_proxy_read, this,
 						boost::asio::placeholders::error));
-					cout<<"Message sent 8.5"<<endl;
+					#ifdef DEBUG
+						cout<<"Message sent for buy/sell order #8.5"<<endl;
+					#endif
 				}
 				else{
-					cout<<"Doing a other orders in handle_proxy_write 9"<<endl;
+					#ifdef DEBUG
+						cout<<"Doing a not buy/sell order in handle_proxy_write #9"<<endl;
+					#endif
 					boost::asio::async_write(socket_,
 						boost::asio::buffer(message.data() ,message.size()),
 						boost::bind(&proxy_client::handle_proxy_write, this,
@@ -778,14 +766,6 @@ private:
 				}
 			} else{
 
-			/*
-			//TODO: stall on a message or sleep until get a message
-				boost::asio::async_write(socket_,
-					boost::asio::buffer(message , strlen(message)),
-					boost::bind(&proxy_client::handle_proxy_read, this,
-					boost::asio::placeholders::error));
-			*/
-
 			}
 
 		}
@@ -793,66 +773,12 @@ private:
 		{
 			do_close();
 		}
-		cout<<"exiting handle proxi write 10"<<endl;
+		#ifdef DEBUG
+			cout<<"exiting handle_proxi_write #10"<<endl;
+		#endif
 	}
 
-		/*
-	void handle_write_stream(const boost::system::error_code& error){
-		if (!error){
-
-			string message;
-			if (ss>>message){
-				boost::asio::async_write(socket_,
-					boost::asio::buffer(message.data() , message.size()),
-					boost::bind(&proxy_client::handle_read, this,
-					boost::asio::placeholders::error));
-			}
-
-		}else{
-			do_close();
-		}
-	}
-
-	void handle_write(const boost::system::error_code& error)
-	{
-		cout<< "inside handle_write "<<message<<endl;
-		if (!error)
-		{
-
-		}
-		else
-		{
-			do_close();
-		}
-	}
-	void handle_write2(const boost::system::error_code& error, unsigned int i)
-	{
-		cout<< "inside handle_write2 "<<i<<endl;
-		if (!error)
-		{
-
-		}
-		else
-		{
-			do_close();
-		}
-	}
-
-	void handle_yanif_read(const boost::system::error_code& error)
-	{
-		cout<< "inside handle_yanif_read "<<endl;
-		if (!error)
-		{
-			cout<< "no error handle_yanif_read "<<endl;
-		}
-		else
-		{
-			do_close();
-		}
-		cout<< "done handle_yanif_read "<<endl;
-	}
-	*/
-	
+	//helper function to convert time from string into a long long int
 	long long string_conversion(string s){
 		long long value=0;
 		
@@ -905,6 +831,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
+//creating a toaster client for listening on the input from the server
 		boost::asio::io_service io_service;
 
 		tcp::resolver resolver(io_service);
@@ -917,6 +844,7 @@ int main(int argc, char* argv[])
 		boost::thread toast_thread(boost::bind(&boost::asio::io_service::run, &io_service));
 		
 
+//creating a proxy client for sending bids and reciving bid IDs
 		boost::asio::io_service io_proxy_service;
 
 		tcp::resolver proxy_resolver(io_proxy_service);
