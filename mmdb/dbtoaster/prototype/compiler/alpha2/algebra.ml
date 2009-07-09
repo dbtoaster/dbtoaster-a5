@@ -115,6 +115,8 @@ type binding = [
 
 type recompute_state = New | Incr
 
+type all_oplus = [`Oplus of oplus | `POplus of poplus]
+
 (* symbol generation *)
 let id_counter = ref 0
 
@@ -1421,7 +1423,7 @@ type code_expression = [
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
 | `AssignMap of map_key * arith_code_expression 
-| `EraseMap of map_key * code_terminal 
+| `EraseMap of map_key * arith_code_expression 
 | `Eval of arith_code_expression 
 | `Block of code_expression list
 | `Return of arith_code_expression
@@ -1636,7 +1638,7 @@ let rec string_of_code_expression c_expr =
 		  (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 
 	    | `EraseMap(mk, c) ->
-		  (string_of_map_key mk)^".erase("^(string_of_code_expr_terminal c)^");"
+		  (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
 
 	    | `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -1720,7 +1722,7 @@ let indented_string_of_code_expression c_expr =
 		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 			  
 	        | `EraseMap(mk, c) ->
-		      (string_of_map_key mk)^".erase("^(string_of_code_expr_terminal c)^");"
+		      (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
 
 		| `Eval(ac) -> string_of_arith_code_expression ac
 		      

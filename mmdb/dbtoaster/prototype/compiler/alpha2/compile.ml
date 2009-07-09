@@ -2181,10 +2181,7 @@ let rec substitute_code_vars assignments c_expr =
 		  `AssignMap((mid, substitute_cv_list kf), sa c)
 
 	    | `EraseMap((mid, kf), c) ->
-		  `EraseMap((mid, substitute_cv_list kf), 
-			begin
-			    match sa (`CTerm c) with `CTerm x -> x | _ -> raise InvalidExpression
-			end)
+		  `EraseMap((mid, substitute_cv_list kf), sa c)
 
 	    | `Declare d ->
 		  begin
@@ -2298,14 +2295,21 @@ let rec simplify_code c_expr =
 	      *)
 
 
-let gc_assign_state_var code decl var =
+let gc_assign_state_var code decl var oplus diff=
+    let oper op = function x -> match op with 
+			`Plus -> `Sum (`CTerm(`Variable(var)), x) 
+			| `Minus -> `Minus(`CTerm(`Variable(var)), x)
+			| `Min -> `Min (`CTerm(`Variable(var)), x)
+			| `Max -> `Max (`CTerm(`Variable(var)), x)
+			| `Decrmin _ -> raise InvalidExpression
+    in
     begin match code with
 	| `Eval x ->
 	      let new_code =
 		  `Block([
-			     `Assign(var,
-				     `Sum(`CTerm(`Variable(var)), x));
-			     `Eval (`CTerm(`Variable(var)))])
+			     `Assign(var, oper oplus x);
+			         (if diff = false then `Eval (`CTerm (`Variable(var))) else code) 
+			     ]) 
 	      in
 		  (new_code, (`Variable(var, "int"))::decl)
 
@@ -2317,9 +2321,8 @@ let gc_assign_state_var code decl var =
 				let new_code =
 				    append_to_block
 					(replace_block_last code
-					     (`Assign(var,
-						      `Sum(`CTerm(`Variable(var)), y))))
-					(`Eval(`CTerm(`Variable(var))))
+					     (`Assign(var, oper oplus y)))
+			                         (if diff = false then `Eval (`CTerm (`Variable(var))) else last_x) 
 				in
 				    (new_code, (`Variable(var, "int"))::decl)
 
@@ -2329,16 +2332,26 @@ let gc_assign_state_var code decl var =
 	| _ -> raise InvalidExpression
     end
 
-let gc_assign_state_map code decl map_key map_decl =
+let gc_assign_state_map code decl map_key map_decl oplus diff=
     let map_access_code = `CTerm(`MapAccess(map_key)) in
     let new_decl = if List.mem map_decl decl then decl else map_decl::decl in
+    let oper op = function x -> match op with 
+			| `Oplus ( `Plus) -> `AssignMap(map_key, `Sum (map_access_code, x))
+			| `Oplus ( `Minus) -> `AssignMap(map_key, `Minus(map_access_code, x))
+			| `Oplus ( `Min) -> `AssignMap(map_key, `Min (map_access_code, x))
+			| `Oplus ( `Max) -> `AssignMap(map_key, `Max (map_access_code, x))
+			| `Oplus ( `Decrmin _) -> raise InvalidExpression
+			| `POplus (`Union ) -> `AssignMap(map_key, x)
+			| `POplus (`Diff) -> `EraseMap(map_key, x)
+    in		
     let (assign_code, assign_decl) = 
 	match code with
 	    | `Eval x ->
 		  let new_code =
 		      `Block([
-				 `AssignMap(map_key, `Sum(map_access_code, x));
-				 `Eval(map_access_code)])
+				 (oper oplus x);
+			             (if diff = false then `Eval(map_access_code) else code) 
+				 ])
 		  in
 		      (new_code, new_decl)
 			  
@@ -2350,8 +2363,8 @@ let gc_assign_state_map code decl map_key map_decl =
 				    let new_code =
 					append_to_block
 					    (replace_block_last code
-						 (`AssignMap(map_key, `Sum(map_access_code, y))))
-					    (`Eval(map_access_code))
+						 (oper oplus y))
+			            		     (if diff = false then `Eval(map_access_code) else last_x) 
 				    in
 					(new_code, new_decl)
 					    
@@ -2554,15 +2567,7 @@ let generate_code handler bindings event =
 			      | _ -> raise InvalidExpression
 		      end
 
-	    | `Incr (sid, op, e) ->
-		  (* TODO: incr var types *)
-(*		  begin
-		  (* if aggregate is Min then handle it first *) 
-		  match e with `MapAggregate (`Min, f, q) ->
-			let (e_code, e_decl) = gc_aux_min f q decl bind_info in
-			raise InvalidExpression
-		  | _ -> 
-*)
+	    | `Incr (sid, op, e) | `IncrDiff(sid, op, e)->
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
 		  let (e_is_bound, rc) = 
 			match bind_info with (true, _, bb) -> is_bound e bb
@@ -2644,7 +2649,7 @@ let generate_code handler bindings event =
 		      begin match e_uba with
 			  | [] ->
 				let incr_var = gen_var_sym() in
-				    gc_assign_state_var e_code e_decl incr_var
+				    gc_assign_state_var e_code e_decl incr_var op (match e with `Incr _ -> false | _ -> true )
 
 			  | _ ->
 				let incr_mid = gen_map_sym sid in
@@ -2668,9 +2673,8 @@ let generate_code handler bindings event =
 				    let mf = List.map field_of_attribute_identifier e_uba in
 					(incr_mid, mf)
 				in
-				    gc_assign_state_map e_code e_decl map_key incr_map
+				    gc_assign_state_map e_code e_decl map_key incr_map (`Oplus op) (match e with `Incr _ -> false | _ -> true )
 		      end
-(*		  end *)
 
 	    | `Init (sid, e) ->				
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
@@ -2678,7 +2682,7 @@ let generate_code handler bindings event =
 		      begin match e_uba with
 			  | [] ->
 				let incr_var = gen_var_sym() in
-				    gc_assign_state_var e_code e_decl incr_var
+				    gc_assign_state_var e_code e_decl incr_var `Plus false 
 
 			  | _ ->
 				let incr_mid = gen_map_sym sid in
@@ -2702,7 +2706,7 @@ let generate_code handler bindings event =
 				    let mf = List.map field_of_attribute_identifier e_uba in
 					(incr_mid, mf)
 				in
-				    gc_assign_state_map e_code e_decl map_key incr_map
+				    gc_assign_state_map e_code e_decl map_key incr_map (`Oplus (`Plus)) false (* TODO check later *)
 		      end
 
 	    | _ -> 
@@ -2807,7 +2811,7 @@ let generate_code handler bindings event =
 		      gc_plan_aux l inner_code inner_decl bind_info 
 	
 	    (* to handle rule 39, 41 *)
-	    | `IncrPlan(sid, op, q) ->
+	    | `IncrPlan(sid, op, nq) | `IncrDiffPlan(sid, op, nq)->
 		  let e_uba = 
 		    match event with
 		    | `Insert(_, vars) | `Delete(_, vars) ->
@@ -2816,19 +2820,22 @@ let generate_code handler bindings event =
 			      (List.exists
 				  (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
 				  vars))
-			  (get_unbound_attributes_from_plan q true)
+			  (get_unbound_attributes_from_plan nq true)
 		  in
 		  let (q_code, q_decl) =
-			gc_plan_aux q iter_code decl bind_info
+			gc_plan_aux nq iter_code decl bind_info
 		  in 
-		  let incrp_mid = gen_map_sym (gen_state_sym()) in
+		  let incrp_mid = gen_map_sym (sid) in
 		  let incrp_map = `Map(incrp_mid, 
 					List.map
 					    (fun x -> (field_of_attribute_identifier x, "int")) e_uba,
 					"int") in
 		  print_endline (string_of_code_expression (`Declare incrp_map));
-		  raise InvalidExpression
-
+		  let map_key = 
+		      let mf = List.map field_of_attribute_identifier e_uba in
+			  (incrp_mid, mf)
+		  in
+		    gc_assign_state_map q_code q_decl map_key incrp_map (`POplus op) (match q with `IncrPlan _ -> false | _ -> true )
 		  
 	    (*
 	      | `NaturalJoin (l,r) ->
