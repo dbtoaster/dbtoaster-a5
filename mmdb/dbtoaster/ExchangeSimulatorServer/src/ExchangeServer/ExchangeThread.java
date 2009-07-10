@@ -293,7 +293,8 @@ public class ExchangeThread extends Thread{
 			System.out.println("ServerThread: sending to client "+t.toString());
 		}	
 		try{
-			String msg = t.toString() + "\n";
+			char tail=10;
+			String msg = t.toString() + tail;
 			byte[] b = msg.getBytes();
 			
 			if (DEBUG){
