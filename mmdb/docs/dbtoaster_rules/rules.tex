@@ -451,6 +451,15 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \\
 \label{eq:pred3}
 \sigma_{f[A] \theta g[\vec{x}]}(Q) &:=& \sigma_{f[A] \theta c}(Q)[c=g[\vec{x}]]
+\\
+\label{eq:pred4}
+\sigma_{g_1=B} (Q) &:=& \pi_{g_1\rightarrow B}(bind_{g_1\rightarrow B}(Q))
+\\
+\label{eq:pred5}
+\sigma_{g_1=B \wedge f[\vec{A}, g_1 \dots g_k] \theta 0}(Q) &:=&
+\sigma_{f[\vec{A}, g_1 \dots g_k] \theta 0}(\pi_{g_1 \rightarrow B}(bind_{g_1 \rightarrow B}(Q)))
+\\
+\nonumber &\dots& \mbox{$bind_{g_1 \rightarrow B}(Q)$ replaces occurrences of column $B$ in $Q$ with $g_1$}
 %
 %
 \\[2ex]
@@ -462,6 +471,13 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 &:=&
 \pi_{\vec{A}, g_1 \rightarrow B_1, \dots, g_k \rightarrow B_k}(
 \sigma_{f[\vec{A}, g_1, \dots, g_k] \,\theta\, 0}(Q))
+\\
+\label{eq:rs2}
+\sigma_{(f_1 \theta_1 f_2)[\vec{A}] \wedge (g_1 \theta_2 g_2)[\vec{B}]}
+(\rho_{\vec{A}}(Q_1) \times \rho_{\vec{B}}(Q_2))
+&:=&
+\sigma_{(f_1 \theta_1 f_2)[\vec{A}]}(\rho_{\vec{A}}(Q_1)) \times
+\sigma_{(g_1 \theta_2 g_2)[\vec{B}]}(\rho_{\vec{B}}(Q_2))
 \end{eqnarray}
 \end{figure*}
 
