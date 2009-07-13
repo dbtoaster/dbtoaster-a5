@@ -1,5 +1,7 @@
 exception InvalidExpression
 exception PlanException of string
+exception DuplicateException
+exception RewriteException of string
 
 (** test of ocamldoc kkk *)
 type identifier = string
@@ -77,7 +79,7 @@ and  map_expression = [
 | `IfThenElse of bterm * map_expression * map_expression ]
 
 and bterm = [ `True | `False 
-		      (* | `BoolVariable of variable_identifier *) 
+(* | `BoolVariable of variable_identifier *) 
 | `LT of expression * expression
 | `LE of expression * expression
 | `GT of expression * expression
@@ -101,8 +103,10 @@ and plan = [
 | `Project of (attribute_identifier * expression) list * plan
 | `Union of plan list
 | `Cross of plan * plan
+(*
 | `NaturalJoin of plan * plan 
 | `Join of boolean_expression * plan * plan
+*)
 | `DeltaPlan of delta * plan
 | `NewPlan of plan
 | `IncrPlan of state_identifier * poplus * plan 
@@ -152,33 +156,6 @@ let gen_map_sym sid =
 	    new_sym
 
 (* Plan transformation helpers *)
-let rec map_expr fn expr =
-    match expr with 
-	| `UnaryMinus e ->
-	      let e2 = map_expr fn e in (fn (`UnaryMinus e2))
-
-	| `Sum (l,r) ->
-	      let e2 = (map_expr fn l, map_expr fn r) in
-		  (fn (`Sum e2))
-
-	| `Product (l,r) ->
-	      let e2 = (map_expr fn l, map_expr fn r) in
-		  (fn (`Product e2))
-
-	| `Minus (l,r) -> 
-	      let e2 = (map_expr fn l, map_expr fn r) in
-		  (fn (`Minus e2))
-
-	| `Divide (l,r) -> 
-	      let e2 = (map_expr fn l, map_expr fn r) in
-		  (fn (`Divide e2))
-
-	| `Function (id, args) ->
-	      let args2 = List.map (fun e -> map_expr fn e) args in
-		  (fn (`Function (id, args2)))
-
-	| (`ETerm e) as t -> (fn t)
-
 let rec fold_map_expr fn acc expr =
     match expr with 
 	| `UnaryMinus e ->
@@ -216,23 +193,6 @@ let rec fold_map_expr fn acc expr =
 	| (`ETerm e) as t -> (fn acc t)
 
 
-let rec map_bool_expr fn (bool_expr : boolean_expression) =
-    match bool_expr with
-	| `Not e ->
-	      let e2 = map_bool_expr fn e in (fn (`Not e2))
-
-	| `And (l,r) ->
-	      let l2 = map_bool_expr fn l in 
-	      let r2 = map_bool_expr fn r in
-		  (fn (`And (l2,r2)))
-
-	| `Or (l,r) ->
-	      let l2 = map_bool_expr fn l in 
-	      let r2 = map_bool_expr fn r in
-		  (fn (`Or (l2,r2)))
-
-	| (`BTerm b) as t -> (fn t)  
-
 let rec fold_map_bool_expr fn acc bool_expr =
     match bool_expr with
 	| `Not e ->
@@ -251,11 +211,121 @@ let rec fold_map_bool_expr fn acc bool_expr =
 
 	| (`BTerm b) as t -> (fn acc t)
 
+let map_expr fn expr =
+    let rec map_aux e = 
+        match expr with 
+	    | (`ETerm e) as t -> fn t
+	    | `UnaryMinus e -> fn (`UnaryMinus (map_aux e))
+	    | `Sum (l,r) -> fn (`Sum (map_aux l, map_aux r))
+	    | `Product (l,r) -> fn (`Product (map_aux l, map_aux r))
+	    | `Minus (l,r) -> fn (`Minus (map_aux l, map_aux r))
+	    | `Divide (l,r) -> fn (`Divide (map_aux l, map_aux r))
+	    | `Function (id, args) -> fn (`Function (id, List.map map_aux args))
+    in
+        map_aux expr
+                  
+let rec map_bool_expr e_fn b_fn me_fn mp_fn bool_expr =
+    let map_aux = map_bool_expr e_fn b_fn me_fn mp_fn in
+        match bool_expr with
+	    | `BTerm b -> b_fn (`BTerm(
+                  begin
+                      match b with
+                          | `True | `False -> b
+                          | `LT (l,r) -> `LT (map_expr e_fn l, map_expr e_fn r)
+                          | `LE (l,r) -> `LE (map_expr e_fn l, map_expr e_fn r)
+                          | `GT (l,r) -> `GT (map_expr e_fn l, map_expr e_fn r)
+                          | `GE (l,r) -> `GE (map_expr e_fn l, map_expr e_fn r)
+                          | `EQ (l,r) -> `EQ (map_expr e_fn l, map_expr e_fn r)
+                          | `NE (l,r) -> `NE (map_expr e_fn l, map_expr e_fn r)
+                          | `MEQ m_expr -> `MEQ (map_map_expr e_fn b_fn me_fn mp_fn m_expr)
+                          | `MLT m_expr -> `MLT (map_map_expr e_fn b_fn me_fn mp_fn m_expr)
+                  end))
+	    | `And (l,r) -> b_fn (`And (map_aux l, map_aux r))
+	    | `Or (l,r) -> b_fn (`Or (map_aux l, map_aux r))
+	    | `Not e -> b_fn (`Not (map_aux e))
+
+and map_map_expr e_fn b_fn me_fn mp_fn (m_expr : map_expression) =
+    let map_aux = map_map_expr e_fn b_fn me_fn mp_fn in
+        match m_expr with
+            | `METerm x -> me_fn m_expr
+            | `Sum (l,r) -> me_fn (`Sum(map_aux l, map_aux r))
+            | `Minus (l,r) -> me_fn (`Minus(map_aux l, map_aux r))
+            | `Product (l,r) -> me_fn (`Product(map_aux l, map_aux r))
+            | `Min (l,r) -> me_fn (`Min(map_aux l, map_aux r))
+            | `Max (l,r) -> me_fn (`Max(map_aux l, map_aux r))
+            | `MapAggregate (fn, f, q) ->
+                  me_fn (`MapAggregate(fn, map_aux f, map_plan e_fn b_fn me_fn mp_fn q))
+            | `IfThenElse (bt, l, r) ->
+                  let r_bt = map_bool_expr e_fn b_fn me_fn mp_fn (`BTerm bt) in
+                      begin
+                          match r_bt with
+                              | `BTerm(x) -> me_fn (`IfThenElse(x, map_aux l, map_aux r))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Delta (b, e) -> me_fn (`Delta(b, map_aux e))
+            | `New (e) -> me_fn (`New(map_aux e))
+            | `Incr (sid, op, e) -> me_fn (`Incr(sid, op, map_aux e))
+            | `IncrDiff (sid, op, e) -> me_fn (`IncrDiff(sid, op, map_aux e))
+            | `Init (sid, e) -> me_fn (`Init(sid, map_aux e))
+            | `Insert (sid, t, e) ->
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn (`Insert(sid, x, map_aux e))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Update (sid, op, t, e) ->
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn(`Update (sid, op, x, map_aux e))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Delete (sid, t) -> 
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn(`Delete (sid, x))
+                              | _ -> raise InvalidExpression
+                      end
+
+and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
+    let map_aux = map_plan e_fn b_fn me_fn mp_fn in
+        match plan with
+            | `TrueRelation | `FalseRelation
+            | `Relation (_,_) -> mp_fn plan
+            | `Select (p,ch) -> mp_fn (`Select(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux ch))
+            | `Project (projs, ch) ->
+                  mp_fn (
+                      `Project(List.map (fun (a,e) -> (a, map_expr e_fn e)) projs,
+                      map_aux ch))
+            | `Union ch -> mp_fn (`Union (List.map map_aux ch))
+            | `Cross (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
+            (*
+            | `NaturalJoin (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
+            | `Join (p, l, r) -> mp_fn (`Join(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux l, map_aux r))
+            *)
+            | `DeltaPlan (b, p) -> mp_fn (`DeltaPlan(b, map_aux p))
+            | `NewPlan (p) -> mp_fn (`NewPlan (map_aux p))
+            | `IncrPlan (sid, pop, p) -> mp_fn (`IncrPlan (sid, pop, map_aux p))
+            | `IncrDiffPlan (sid, pop, p) -> mp_fn (`IncrDiffPlan (sid, pop, map_aux p))
+
+
 (* Pretty printing *)	
 let string_of_attribute_identifier id =
     match id with 
 	| `Qualified(r,a) -> r^"."^a
 	| `Unqualified a -> a
+
+let string_of_attribute_identifier_list idl=
+    List.fold_left
+        (fun acc aid ->
+            (if (String.length acc) = 0 then "" else (acc^", "))^
+                (string_of_attribute_identifier aid))
+        "" idl
 
 let string_of_schema schema =
     "{"^
@@ -263,6 +333,12 @@ let string_of_schema schema =
 	     (fun acc (id, ty) ->
 		  (if (String.length acc) = 0 then "" else (acc^","))^
 		      id^":"^ty) "" schema) ^"}"
+
+let string_of_schema_fields schema =
+    List.fold_left
+	(fun acc (id, ty) ->
+	    (if (String.length acc) = 0 then "" else (acc^", "))^id)
+        "" schema
 
 let string_of_delta d =
     match d with
@@ -414,12 +490,14 @@ and string_of_plan p =
 	| `Cross (l, r) ->
 	      "cross("^(string_of_plan l)^","^(string_of_plan r)^")"
 
+        (*
 	| `NaturalJoin (l, r) ->
 	      "natjoin("^(string_of_plan l)^","^(string_of_plan r)^")"
 		  
 	| `Join (pred, l, r) ->
 	      "join{"^(string_of_bool_expression pred)^"}("^
 		  (string_of_plan l)^","^(string_of_plan r)^")"
+        *)
 
 	| `TrueRelation -> "TrueRelation"
 
@@ -469,8 +547,7 @@ and indented_string_of_map_expression m_expr level =
     let indent s = (String.make (4*level) '-')^"> "^s^"\n" in
     let indent_level s l = (String.make (4*l) '-')^"> "^s^"\n" in
     let indent_binary l op r = l^(indent op)^r in
-    let indent_binary_prefix l op r lv =
-	(indent_level l lv)^(indent_level op lv)^(indent_level r lv)
+    let indent_binary_prefix l op r lv = l^(indent_level op lv)^r
     in
     match m_expr with
 	| `METerm t -> (indent (string_of_map_expr_terminal t))
@@ -597,6 +674,7 @@ and indented_string_of_plan p level =
 		       (indented_string_of_plan r (level+1)))^
 		  (indent ")")
 
+        (*
 	| `NaturalJoin (l, r) ->
 	      (indent "natjoin(")^
 		  (indent_binary
@@ -613,6 +691,7 @@ and indented_string_of_plan p level =
 		       ","
 		       (indented_string_of_plan r (level+1)))^
 		  (indent ")")
+        *)
 
 	| `TrueRelation -> (indent "TrueRelation")
 
@@ -735,7 +814,16 @@ let parent m_expr ch_e_or_p =
 			       | Some r as x -> x)
 		      None ch
 
-	    | `Plan (`Cross (l,r)) | `Plan (`NaturalJoin (l,r)) ->
+	    | `Plan (`Cross (l,r)) ->
+		  let match_l = `Plan l in
+		  let match_r = `Plan r in
+		      if (match_l = ch_e_or_p) || (match_r = ch_e_or_p) then Some e_or_p
+		      else
+			  let lp = parent_aux match_l e_or_p in
+			      if lp = None then parent_aux match_r e_or_p else lp
+
+            (*
+            | `Plan (`NaturalJoin (l,r)) ->
 		  let match_l = `Plan l in
 		  let match_r = `Plan r in
 		      if (match_l = ch_e_or_p) || (match_r = ch_e_or_p) then Some e_or_p
@@ -765,6 +853,7 @@ let parent m_expr ch_e_or_p =
 					let lp = parent_aux match_l e_or_p in
 					    if lp = None then parent_aux match_r e_or_p else lp
 		  end
+            *)
 		      
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p)) | `Plan (`IncrPlan(_, _, p)) | `Plan (`IncrDiffPlan(_, _, p)) ->
 		  let match_p = `Plan p in
@@ -811,11 +900,13 @@ let children e_or_p =
 		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@([`Plan(cq)])
 	    | `Plan(`Project (a,cq)) -> [`Plan(cq)]
 	    | `Plan(`Union ch) -> List.map (fun x -> `Plan(x)) ch
-	    | `Plan(`Cross(l,r)) | `Plan(`NaturalJoin(l,r)) ->
-		  [`Plan(l); `Plan(r)]
+	    | `Plan(`Cross(l,r)) -> [`Plan(l); `Plan(r)]
+            (*
+            | `Plan(`NaturalJoin(l,r)) -> [`Plan(l); `Plan(r)]
 	    | `Plan(`Join(p,l,r)) ->
 		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@
 		      [`Plan(l); `Plan(r)]
+            *)
 	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e)) | `Plan (`IncrPlan(_, _, e)) | `Plan (`IncrDiffPlan (_, _, e)) ->
 		  [`MapExpression(e)]
 	    | `Plan (`TrueRelation) -> []
@@ -907,6 +998,7 @@ let splice m_expr orig rewrite =
 		    | `Project (a, cq) -> `Project(a, splice_plan_aux cq)
 		    | `Union ch -> `Union (List.map (fun c -> splice_plan_aux c) ch)
 		    | `Cross (l,r) -> `Cross (splice_plan_aux l, splice_plan_aux r)
+                    (*
 		    | `NaturalJoin (l,r) -> `NaturalJoin (splice_plan_aux l, splice_plan_aux r)
 		    | `Join (p, l, r) ->
 			  begin
@@ -921,6 +1013,7 @@ let splice m_expr orig rewrite =
 
 				  | _ -> `Join(p, splice_plan_aux l, splice_plan_aux r)
 			  end
+                    *)
 			      
 		    | `DeltaPlan (b, e) -> `DeltaPlan (b, splice_plan_aux e)
 		    | `NewPlan (e) -> `NewPlan(splice_plan_aux e)
@@ -979,7 +1072,11 @@ let get_base_relations m_expr =
 
 	    | `Plan (`Union ch) -> List.fold_left (fun acc c -> gbr_aux (`Plan c) acc) acc ch
 
-	    | `Plan (`Cross (l,r)) | `Plan (`NaturalJoin (l,r)) ->
+	    | `Plan (`Cross (l,r)) ->
+		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
+
+            (*
+            | `Plan (`NaturalJoin (l,r)) ->
 		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 		      
 	    | `Plan (`Join (p, l, r)) ->
@@ -991,6 +1088,7 @@ let get_base_relations m_expr =
 			  | _ ->
 				(gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 		  end
+            *)
 		      
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan (_, _,p)) ->
 		  (gbr_aux (`Plan p) acc)
@@ -1041,7 +1139,11 @@ let get_bound_relations m_expr =
 
 	    | `Plan (`Union ch) -> List.fold_left (fun acc c -> gbor_aux (`Plan c) acc) acc ch
 
-	    | `Plan (`Cross (l,r)) | `Plan (`NaturalJoin (l,r)) ->
+	    | `Plan (`Cross (l,r)) ->
+		  (gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
+
+            (*
+            | `Plan (`NaturalJoin (l,r)) ->
 		  (gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
 		      
 	    | `Plan (`Join (p, l, r)) ->
@@ -1053,6 +1155,7 @@ let get_bound_relations m_expr =
 			  | _ ->
 				(gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
 		  end
+            *)
 		      
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan(_,_, p)) ->
 		  (gbor_aux (`Plan p) acc)
@@ -1329,6 +1432,7 @@ and compute_plan_monotonicity attr attr_m q =
 		  (compute_plan_monotonicity attr attr_m l)
 		  (compute_plan_monotonicity attr attr_m r)
 
+        (*
 	| `NaturalJoin (l,r) ->
 	      cross_monotonicity
 		  (compute_plan_monotonicity attr attr_m l)
@@ -1339,6 +1443,7 @@ and compute_plan_monotonicity attr attr_m q =
 	      let lm = compute_plan_monotonicity attr attr_m l in
 	      let rm = compute_plan_monotonicity attr attr_m r in
 		  join_monotonicity bem lm rm 
+        *)
 
 	| `TrueRelation | `FalseRelation  | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) | `IncrDiffPlan(_) ->
 	      raise MonotonicityException
@@ -1468,14 +1573,14 @@ let ctype_of_datastructure =
 		  let ftype = ctype_of_datastructure_fields f in
 		      if (List.length f) = 1 then ftype else "tuple<"^ftype^">" 
 	      in
-		  "map<"^key_type^","^(ctype_of_type_identifier r)^" >"
+		  "map<"^key_type^","^(ctype_of_type_identifier r)^">"
 		      
 	| `List (n,f) ->
-	      let el_type = 
+	      let (el_type, nested_type) = 
 		  let ftype = ctype_of_datastructure_fields f in
-		      if (List.length f) = 1 then ftype else "tuple<"^ftype^">" 
+		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
 	      in
-		  "list<"^el_type^" >"
+		  "list<"^el_type^(if nested_type then " >" else ">")
 
 (* TODO *)
 let ctype_of_arith_code_expression ac_expr = "int"
@@ -1592,14 +1697,14 @@ let rec string_of_code_expression c_expr =
     in
 	match c_expr with
 	    | `IfNoElse(p,c) ->
-		  "if("^(string_of_bool_code_expression p)^"){"^
-		      (string_of_code_expression c)^"}"
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression c)^" }"
 
 	    | `IfElse(p,l,r) ->
-		  "if("^(string_of_bool_code_expression p)^"){"^
-		      (string_of_code_expression l)^"}"^
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression l)^" }"^
 		  "else {"^
-		      (string_of_code_expression r)^"}"
+		      (string_of_code_expression r)^" }"
 
 	    | `ForEach(m,c) ->
 		  let (begin_it, end_it, begin_decl, end_decl) =
@@ -1611,13 +1716,6 @@ let rec string_of_code_expression c_expr =
 			  (field_declarations_of_datastructure m begin_it "")^"\n"^
 			  (string_of_code_expression c)^
 			  "}"
-
-	    (*
-	      "foreach("^
-	      (string_of_datastructure_fields m)^" in "^
-	      (string_of_datastructure m)^"){"^
-	      (string_of_code_expression c)^"}"
-	    *)
 
 	    | `Declare x ->
 		  begin
@@ -1669,12 +1767,12 @@ let indented_string_of_code_expression c_expr =
 	let out =
 	    match e with
 		| `IfNoElse(p,c) ->
-		      "if("^(string_of_bool_code_expression p)^"){\n"^
+		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
 			  (sce_aux c (level+1))^"\n"^
 			  tab^"}\n"
 			  
 		| `IfElse(p,l,r) ->
-		      "if("^(string_of_bool_code_expression p)^"){\n"^
+		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
 			  (sce_aux l (level+1))^"\n"^
 			  tab^"}\n"^
 		      "else {\n"^
@@ -1693,16 +1791,7 @@ let indented_string_of_code_expression c_expr =
 			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
 			      (sce_aux c (level+1))^"\n"^
 			      tab^"}"
-
-		(*
-		  "foreach("^
-		  (string_of_datastructure_fields mid)^" in "^
-		  (string_of_datastructure mid)^")\n"^
-		  (String.make (4*level) ' ')^"{\n"^
-		  (sce_aux c (level+1))^"\n"^
-		  (String.make (4*level) ' ')^"}"
-		*)
-			      
+		      
 		| `Declare x ->
 		      begin
 			  match x with 
@@ -1750,7 +1839,6 @@ let indented_string_of_code_expression c_expr =
 	sce_aux c_expr 0
 
 (* Code helpers *)
-
 let get_block_last c_expr =
     match c_expr with
 	| `Block cl -> List.nth cl ((List.length cl)-1)
@@ -1778,27 +1866,127 @@ let append_blocks l_block r_block =
 	| (`Block lcl, `Block rcl) -> `Block(lcl@rcl)
 	| _ -> raise InvalidExpression
 
-let merge_with_block block merge_fn =
-    let last_ce = get_block_last block in
-	match last_ce with
-	    | `Eval x -> replace_block_last block (merge_fn x)
-	    | _ ->
-		  print_endline ("mergewb: "^(string_of_code_expression last_ce));
-		  raise InvalidExpression
+let rec get_return_val c_expr =
+    match c_expr with
+        | `Eval _ -> c_expr
+        | `Assign(v, _) -> `Eval(`CTerm(`Variable(v)))
+        | `AssignMap(mk,_) -> `Eval(`CTerm(`MapAccess(mk)))
+        | `IfNoElse(_, c) -> get_return_val c
+        | `Block(y) -> get_return_val (get_block_last c_expr)
+        | _ ->
+              print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
+              raise InvalidExpression
 
-let merge_blocks l_block r_block merge_fn =
-    let last_l = get_block_last l_block in
-    let last_r = get_block_last r_block in
-	match (last_l, last_r) with
-	    | (`Eval a, `Eval b) ->
-		  let merged_block =
-		      append_blocks (remove_block_last l_block) (remove_block_last r_block)
-		  in
-		      append_to_block merged_block (merge_fn a b)
-	    | _ ->
-		  print_endline ("mergel: "^(string_of_code_expression last_l));
-		  print_endline ("merger: "^(string_of_code_expression last_r));
-		  raise InvalidExpression
+let remove_return_val c_expr =
+    let rec remove_aux c =
+        match c with
+        | `Assign _ -> Some(c)
+        | `AssignMap _ -> Some(c)
+        | `Eval _ -> None
+        | `IfNoElse (p, cc) ->
+              begin
+                  match remove_aux cc with
+                      | None -> None
+                      | Some x -> Some(`IfNoElse(p,x))
+              end
+        | `Block x ->
+              let last = get_block_last c in
+              let block_without_last = remove_block_last c in
+                  begin
+                      match remove_aux last with
+                          | None -> Some(block_without_last)
+                          | Some y -> Some(append_to_block block_without_last y)
+                  end
+        | _ ->
+              print_endline ("remove_return_val: "^(indented_string_of_code_expression c));
+              raise InvalidExpression                
+    in
+        match (remove_aux c_expr) with
+            | None -> raise (RewriteException "Attempted to remove top level expression")
+            | Some x -> x
+
+let rec replace_return_val c_expr new_rv =
+    match c_expr with
+        | `Assign _ -> `Block([c_expr; new_rv])
+        | `AssignMap _ -> `Block([c_expr; new_rv])
+        | `Eval _ -> new_rv
+        | `IfNoElse (p, c) -> `IfNoElse(p, replace_return_val c new_rv)
+        | `Block x ->
+              let last = get_block_last c_expr in
+              let new_last = replace_return_val last new_rv in
+                  `Block(List.rev (new_last::(List.tl (List.rev x))))
+        | _ ->
+              print_endline ("replace_return_val: "^(indented_string_of_code_expression c_expr));
+              raise InvalidExpression
+
+(* indicates whether the given code is a return value, and whether it is replaceable *)
+let rec is_local_return_val code rv =
+    match code with
+        | `Assign (v, _) -> (rv = `Eval(`CTerm(`Variable(v))), false)
+        | `AssignMap (mk, _) -> (rv = `Eval(`CTerm(`MapAccess(mk))), false)
+        | `Eval _ -> (code = rv, false)
+        | `Block cl -> 
+              let block_last = get_block_last code in
+              let (local, _) = is_local_return_val (get_block_last code) rv in
+                  (local, match block_last with | `Eval _ -> true | _ -> false)
+        | _ -> (false, false)
+
+(* code_expression -> declaration list ->
+     code_expression * arith_code_expression * declaration list
+ * Transform:
+ * local && replaceable => remove last statement
+ * local => do nothing
+ * non-local => force return val assigment to variable, to ensure scoping *)
+let prepare_block_for_merge block decl =
+    match block with
+        | `Block cl ->
+              let rv = get_return_val block in
+              let arith_rv = match rv with | `Eval x -> x | _ -> raise InvalidExpression in
+              let (local, repl) = is_local_return_val block rv in
+                  if local then
+                      ((if repl then (remove_block_last block) else block), arith_rv, decl)
+                  else
+                      let var = gen_var_sym() in
+                          (replace_return_val block (`Assign(var, arith_rv)),
+                          `CTerm(`Variable(var)), (`Variable(var, "int"))::decl)
+        | _ -> 
+              print_endline ("prepare_block_for_merge: invalid arg\n"^
+                  (indented_string_of_code_expression block));
+              raise InvalidExpression
+
+(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
+     code_expression * declaration list
+ * Replace, and merge the return val of a block with the expression
+ * generated by a merging function
+*)
+let merge_with_block block merge_fn decl =
+    match block with
+        | `Block cl ->
+              let (b, new_av, new_decl) = prepare_block_for_merge block decl in
+                  (append_to_block b (merge_fn new_av), new_decl)
+
+        | _ ->
+              print_endline ("merge_with_block: invalid block\n"^
+                  (indented_string_of_code_expression block));
+              raise InvalidExpression
+
+(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
+     code_expression * declaration list
+ * Merges the bodies of two blocks, replacing their return vals with the expression
+ * generated by a merging function
+*)
+let merge_blocks l_block r_block merge_fn decl =
+    match (l_block, r_block) with
+        | (`Block lcl, `Block rcl) ->
+              let (lb, new_lav, new_ldecl) = prepare_block_for_merge l_block decl in
+              let (rb, new_rav, new_rdecl) = prepare_block_for_merge r_block new_ldecl in
+                  (append_to_block (append_blocks lb rb) (merge_fn new_lav new_rav), new_rdecl)
+
+        | _ ->
+              print_endline ("merge_blocks: invalid args\n"^
+                  "left:\n"^(indented_string_of_code_expression l_block)^"\n"^
+                  "right:\n"^(indented_string_of_code_expression r_block));
+              raise InvalidExpression
 
 (**/**)
 let rec get_last_code_expr c_expr = 
@@ -1813,347 +2001,181 @@ let rec get_last_code_expr c_expr =
 
 
 (*
- *
- * GUI Helpers
- *
+ * Binding helpers
+ * Note: DBToaster compilation assumes unique column names
  *)
 
-let treeml_of_eterm eterm =
-    let typ_attr t = 
-	"<attribute name=\"eterm-type\" value=\""^t^"\"/>"
-    in
-    let typ_val v =
-	"<attribute name=\"eterm-val\" value=\""^v^"\"/>"
-    in
-    match eterm with
-	| `Int i -> [ (typ_attr "int"); (typ_val (string_of_int i)) ]
+let get_bound_relation =
+    function
+	| `Insert (r, _) -> r
+	| `Delete (r, _) -> r
 
-	| `Float f -> [ (typ_attr "float"); (typ_val (string_of_float f)) ]
+let rec get_bound_attributes q =
+    match q with
+	| `Relation (n,f) ->
+	      List.map (fun (id,typ) -> `Qualified(n,id)) f
 
-	| `String s -> [ (typ_attr "string"); (typ_val s) ]
+	| `Select(pred, cq) -> get_bound_attributes cq
+	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
 
-	| `Long l -> [ (typ_attr "long"); (typ_val (Int64.to_string l)) ]
+	| `Union ch -> get_bound_attributes (List.hd ch)
+	| `Cross (l,r) ->
+              (get_bound_attributes l)@(get_bound_attributes r)
+        (*
+        | `NaturalJoin (l,r) | `Join (_,l,r) ->
+              (get_bound_attributes l)@(get_bound_attributes r)
+        *)
 
-	| `Attribute id ->
-	      [ (typ_attr "attr"); (typ_val (string_of_attribute_identifier id)) ]
+	| `TrueRelation -> []		  
+	| `FalseRelation -> []
+	| `DeltaPlan (_, cq) | `NewPlan(cq)
+        | `IncrPlan(_,_, cq) | `IncrDiffPlan(_,_, cq) -> (get_bound_attributes cq)
 
-	| `Variable v -> [ (typ_attr "var"); (typ_val v) ]
+(* Note: performs qualified comparison if possible *)
+(* TODO: think if we ever want to force unqualified comparison *)
+let compare_attributes a1 a2 =
+    match (a1, a2) with
+	| (`Qualified (n1, f1), `Qualified (n2, f2)) -> n1 = n2 && f1 = f2
+	| (`Qualified (n1, f1), `Unqualified f2) -> f1 = f2
+	| (`Unqualified f1, `Qualified (n2, f2)) -> f1 = f2
+	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
 
-let treeml_of_meterm meterm =
-    let typ_attr t = 
-	"<attribute name=\"meterm-type\" value=\""^t^"\"/>"
-    in
-    let typ_val v =
-	"<attribute name=\"meterm-val\" value=\""^v^"\"/>"
-    in
-    match meterm with
-	| `Int i -> [ (typ_attr "int"); (typ_val (string_of_int i)) ]
 
-	| `Float f -> [ (typ_attr "float"); (typ_val (string_of_float f)) ]
+let resolve_unbound_attributes attrs bindings =
+    List.filter
+	(fun x ->
+            let matches = List.filter (compare_attributes x) bindings in
+                (List.length matches) = 0)
+	attrs
 
-	| `String s -> [ (typ_attr "string"); (typ_val s) ]
-
-	| `Long l -> [ (typ_attr "long"); (typ_val (Int64.to_string l)) ]
-
-	| `Attribute id ->
-	      [ (typ_attr "attr"); (typ_val (string_of_attribute_identifier id)) ]
-
-	| `Variable v -> [ (typ_attr "var"); (typ_val v) ]
-
-let treeml_of_event evt =
-    "<attribute name=\"event\" value=\""^
-	(match evt with
-	     | `Insert (r,_) -> "insert,"^r
-	     | `Delete (r,_) -> "delete,"^r)^"\"/>"
-
-let rec treeml_of_expression expr indent_fn = 
-    let binary_expr typ l r =
-	[ "<branch>"; (indent_fn ("<attribute name=\"op\" value=\""^typ^"\"/>"))]@
-	(List.map indent_fn (treeml_of_expression l indent_fn))@
-	(List.map indent_fn (treeml_of_expression r indent_fn))@
-        [ "</branch>" ]
-    in
+let rec get_unbound_attributes_from_expression expr include_vars =
     match expr with
-	| `ETerm et ->
-	      [ "<leaf>"; (indent_fn "<attribute name=\"op\" value=\"eterm\"/>")]@
-              (List.map indent_fn (treeml_of_eterm et))@["</leaf>"]
+	| `ETerm (`Attribute x) -> [x]
+	| `ETerm (`Int _) | `ETerm (`Float _)
+	| `ETerm (`String _) | `ETerm (`Long _) -> []
+	| `ETerm (`Variable x) -> if include_vars then [`Unqualified x]  else []
 
 	| `UnaryMinus e ->
-	      [ "<branch>"; (indent_fn "<attribute name=\"op\" value=\"-\"/>")]@
-	      (List.map indent_fn (treeml_of_expression e indent_fn))@["</branch>"]
+	      get_unbound_attributes_from_expression e include_vars
+		  
+	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
+	      (get_unbound_attributes_from_expression l include_vars)@
+		  (get_unbound_attributes_from_expression r include_vars)
 
-	| `Sum(l,r) -> binary_expr "+" l r
-	| `Product(l,r) -> binary_expr "*" l r
-	| `Minus(l,r) -> binary_expr "-" l r
-	| `Divide(l,r) -> binary_expr "/" l r
-	| `Function(id, args) ->
-	      ["<branch>"; 
-	       (indent_fn "<attribute name=\"op\" value=\"function\"/>");
-	       (indent_fn ("<attribute name=\"functionid\" value=\""^id^"\"/>"));]@
-	       (List.map indent_fn (List.flatten
-		   (List.map (fun ae -> treeml_of_expression ae indent_fn) args)))@
-	      [ "</branch>" ]
+	| `Function(fid, args) ->
+	      List.flatten
+		  (List.map
+		      (fun a ->
+			  get_unbound_attributes_from_expression a include_vars)
+		      args)
 
-let treeml_of_state_id s =
-	"<attribute name=\"stateid\" value=\""^s^"\"/>"
-
-let rec treeml_of_bterm bterm indent_fn =
-    let map_expr op e =
-	["<attribute name=\"op\" value=\""^op^"\"/>"]@
-        (treeml_of_map_expression e indent_fn)
-    in
-    let binary_expr op l r =
-	["<attribute name=\"op\" value=\""^op^"\"/>"]@
-        (treeml_of_expression l indent_fn)@
-	(treeml_of_expression r indent_fn)
-    in
-    match bterm with
-	| `LT (l,r) -> binary_expr "&lt;" l r
-	| `LE (l,r) -> binary_expr "&lt;=" l r
-	| `GT (l,r) -> binary_expr "&gt;" l r
-	| `GE  (l,r) -> binary_expr "&gt;=" l r
-	| `EQ  (l,r) -> binary_expr "=" l r
-	| `NE  (l,r) -> binary_expr "!=" l r
-	| `MEQ e -> map_expr "m=" e
-	| `MLT e -> map_expr "m&lt;" e
-
-and treeml_of_bool_expression b_expr indent_fn =
+let rec get_unbound_attributes_from_predicate b_expr include_vars =
     match b_expr with
-	| `BTerm bt ->
-	      ["<branch>"; (indent_fn "<attribute name=\"op\" value=\"bterm\"/>")]@
-		  (List.map indent_fn (treeml_of_bterm bt indent_fn))@["</branch>"]
+	| `BTerm(`True) | `BTerm(`False) -> []
 
-	| `Not be ->
-	      ["<branch>"; (indent_fn "<attribute name=\"op\" value=\"not\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression be indent_fn))@["</branch>"]
+	| `BTerm(`LT(l,r)) | `BTerm(`LE(l,r)) | `BTerm(`GT(l,r))
+	| `BTerm(`GE(l,r)) | `BTerm(`EQ(l,r)) | `BTerm(`NE(l,r)) ->
+	      (get_unbound_attributes_from_expression l include_vars)@
+		  (get_unbound_attributes_from_expression r include_vars)
 
-	| `And (l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"and\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression l indent_fn))@
-		  (List.map indent_fn (treeml_of_bool_expression r indent_fn))@["</branch>"]
+	| `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
+	      (get_unbound_attributes_from_map_expression m_expr include_vars)
 
-	| `Or (l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"or\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression l indent_fn))@
-		  (List.map indent_fn (treeml_of_bool_expression r indent_fn))@["</branch>"]
+	| `And(l,r) | `Or(l,r) ->
+	      (get_unbound_attributes_from_predicate l include_vars)@
+		  (get_unbound_attributes_from_predicate r include_vars)
 
-and treeml_of_map_expression m_expr indent_fn = 
-    let treeml_of_aggregate_function agg =
-	"<attribute name=\"aggregate\" value=\""^
-	    (match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" )^"\"/>"
-    in
-    let treeml_of_oplus o = 
-	"<attribute name=\"oplus\" value=\""^
-	    (match o with | `Plus -> "m+" | `Minus -> "m-" | `Min -> "min" | `Max -> "max" | `Decrmin (_) -> "decrmin" )^"\"/>" (*TODO: check decrmin later *)
-    in
-    let binary_node typ l r =
-	["<branch>";
-	    (indent_fn ("<attribute name=\"op\" value=\""^typ^"\"/>"))]@
-	    (List.map indent_fn (treeml_of_map_expression l indent_fn))@
-	    (List.map indent_fn (treeml_of_map_expression r indent_fn))@["</branch>"]
-    in
+	| `Not(e) -> (get_unbound_attributes_from_predicate e include_vars)
+
+and get_unbound_attributes_from_map_expression m_expr include_vars =
     match m_expr with
-	| `METerm x ->
-	      ["<leaf>";
-		  (indent_fn "<attribute name=\"op\" value=\"meterm\"/>")]@
-		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
+	| `METerm (`Attribute x) -> [x]
+	| `METerm (`Int _) | `METerm (`Float _) | `METerm (`String _)
+	| `METerm (`Long _) -> []
+	| `METerm (`Variable x) -> if include_vars then [`Unqualified x] else []
 
-	| `Delete (sid, x) ->
-	      ["<leaf>";
-		  (indent_fn "<attribute name=\"op\" value=\"delete\"/>");
-		  (indent_fn (treeml_of_state_id sid))]@
-		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
+	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
+	      
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
+	      (get_unbound_attributes_from_map_expression l include_vars)@
+		  (get_unbound_attributes_from_map_expression r include_vars)
 
-	| `Sum(l,r) -> binary_node "m+" l r
-	| `Minus(l,r) -> binary_node "m-" l r
-	| `Product(l,r) -> binary_node "m*" l r
-	| `Min(l,r) -> binary_node "min" l r
-	| `Max(l,r) -> binary_node "max" l r
-	| `MapAggregate(agg, f, q) ->
-	      let agg_fn = match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" in
-	      ["<branch>";
-		  (indent_fn ("<attribute name=\"op\" value=\""^agg_fn^"\"/>"));
-		  (indent_fn (treeml_of_aggregate_function agg))]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@
-		  (List.map indent_fn (treeml_of_plan q indent_fn))@
-		  ["</branch>"]
+	| `MapAggregate (fn,f,q) ->
+	      let f_uba = get_unbound_attributes_from_map_expression f include_vars in
+	      let q_ba = get_bound_attributes q in
+		  (resolve_unbound_attributes f_uba q_ba)@
+		      (get_unbound_attributes_from_plan q include_vars)
 
-	| `Delta (e, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"delta\"/>");
-		  (indent_fn (treeml_of_event e))]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+	| `New(e) | `Incr(_,_,e) | `IncrDiff(_,_,e) | `Init(_,e) ->
+	      get_unbound_attributes_from_map_expression e include_vars
 
-	| `New f ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"new\"/>")]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+	| `Insert(_,m,e) | `Update(_,_,m,e) ->
+	      (get_unbound_attributes_from_map_expression (`METerm (m)) include_vars)@
+	          (get_unbound_attributes_from_map_expression e include_vars)
 
-	| `Incr (s, o, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incr\"/>");
-		  (indent_fn (treeml_of_state_id s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+	| `Delete(_,m) ->
+	      get_unbound_attributes_from_map_expression (`METerm (m)) include_vars
 
-	| `IncrDiff (s, o, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrdiff\"/>");
-		  (indent_fn (treeml_of_state_id s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+	| `IfThenElse(b,l,r) ->
+	      (get_unbound_attributes_from_predicate (`BTerm (b)) include_vars)@ 
+	          (get_unbound_attributes_from_map_expression l include_vars)@
+		  (get_unbound_attributes_from_map_expression r include_vars)
 
-	| `Init (s, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"init\"/>");
-		  (indent_fn (treeml_of_state_id s))]@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+and get_unbound_attributes_from_plan q include_vars =
+    match q with
+	| `Relation _ | `TrueRelation | `FalseRelation -> []
 
-	| `Insert (s, m, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
-		  (indent_fn (treeml_of_state_id s))]@
-		  (List.map indent_fn (treeml_of_meterm m))@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
+	| `Select(pred, cq) ->
+	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
+	      let cq_ba = get_bound_attributes cq in
+		  (resolve_unbound_attributes pred_uba cq_ba)@
+		      (get_unbound_attributes_from_plan cq include_vars)
 
-	| `Update (s, o, m, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
-		  (indent_fn (treeml_of_state_id s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (treeml_of_meterm m))@
-		  (List.map indent_fn (treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `IfThenElse(b,l,r) -> 
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"ifthenelse\"/>")]@
-		  (List.map indent_fn (treeml_of_bterm b indent_fn))@
-	          (List.map indent_fn (treeml_of_map_expression l indent_fn))@
-	          (List.map indent_fn (treeml_of_map_expression r indent_fn))@["</branch>"]
-
-and treeml_of_plan p indent_fn = 
-    let treeml_of_relation rtyp r f =
-	["<leaf>";
-	    (indent_fn ("<attribute name=\"op\" value=\""^rtyp^"\"/>"));
-	    (indent_fn ("<attribute name=\"rid\" value=\""^r^"\"/>"))]@
-	    (List.map (fun (id,typ) ->
-		(indent_fn ("<attribute name=\"field\" value=\""^id^","^typ^"\"/>")))
-		 f)@["</leaf>"]
-    in
-    let treeml_of_poplus o = 
-	"<attribute name=\"poplus\" value=\""^
-	    (match o with | `Union -> "mU" | `Diff -> "m-" )^"\"/>"
-    in
-    let treeml_of_projections projs =
-	List.map
-	    (fun (oid, expr) ->
-		 "<attribute name=\"projection\" value=\""^
-		     (string_of_attribute_identifier oid)^","^
-		     (string_of_expression expr)^"\"/>")
-	    projs
-    in
-    match p with
-	| `Relation (r,f) -> treeml_of_relation "relation" r f
-
-	| `Select (pred, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"select\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression pred indent_fn))@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `Project (projs, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"project\"/>")]@
-		  (List.map indent_fn (treeml_of_projections projs))@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
+	| `Project(attrs, cq) ->
+	      let attrs_uba = 
+		  List.flatten
+		      (List.map
+			  (fun (a,e) -> get_unbound_attributes_from_expression e include_vars)
+			  attrs)
+	      in
+	      let cq_ba = get_bound_attributes cq in
+		  (resolve_unbound_attributes attrs_uba cq_ba)@
+		      (get_unbound_attributes_from_plan cq include_vars)
 
 	| `Union ch ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"union\"/>")]@
-		  (List.map indent_fn (List.flatten
-		      (List.map (fun c -> treeml_of_plan c indent_fn) ch)))@
-		  ["</branch>"]
+	      List.flatten
+		  (List.map
+		      (fun c -> get_unbound_attributes_from_plan c include_vars) ch)
 
-	| `Cross(l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"cross\"/>")]@
-		  (List.map indent_fn (treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
+	| `Cross (l, r) ->
+	      (get_unbound_attributes_from_plan l include_vars)@
+		  (get_unbound_attributes_from_plan r include_vars)
 
-	| `NaturalJoin(l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"naturaljoin\"/>")]@
-		  (List.map indent_fn (treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
+        (*
+	| `NaturalJoin (l, r) ->
+	      (get_unbound_attributes_from_plan l include_vars)@
+		  (get_unbound_attributes_from_plan r include_vars)
 
-	| `Join (pred, l, r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"join\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression pred indent_fn))@
-		  (List.map indent_fn (treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
+	| `Join (p, l, r) ->
+	      let pred_uba = get_unbound_attributes_from_predicate p include_vars in
+	      let c_ba = (get_bound_attributes l)@(get_bound_attributes r) in
+		  (resolve_unbound_attributes pred_uba c_ba)@
+		      (get_unbound_attributes_from_plan l include_vars)@
+		      (get_unbound_attributes_from_plan r include_vars)
+        *)
 
-	| `TrueRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"truerelation\">");"</leaf>"]
+	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e) | `IncrDiffPlan(_,_,e) ->
+	      get_unbound_attributes_from_plan e include_vars
 
-	| `FalseRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"falserelation\">");"</leaf>"]
-
-	| `DeltaPlan (e, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"delta\"/>");
-		  (indent_fn (treeml_of_event e))]@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
-	      
-	| `NewPlan (c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"newplan\"/>")]@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `IncrPlan (sid, p, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrplan\"/>");
-		  (indent_fn (treeml_of_state_id sid));
-		  (indent_fn (treeml_of_poplus p))]@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `IncrDiffPlan (sid, p, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrdiffplan\"/>");
-		  (indent_fn (treeml_of_state_id sid));
-		  (indent_fn (treeml_of_poplus p))]@
-		  (List.map indent_fn (treeml_of_plan c indent_fn))@["</branch>"]
-
-let treeml_string_of_map_expression m_expr =
-    let indent s = "    "^s in
-    let delim l = String.concat "\n" l in
-    let header = [ "<tree>" ] in
-    let footer = [ "</tree>" ] in
-    let declarations =
-	List.map indent
-	    (["<declarations>"]@
-		 (List.map indent
-		      [ "<attributeDecl name=\"event\" type=\"String\"/>";
-			"<attributeDecl name=\"eterm-type\" type=\"String\"/>";
-			"<attributeDecl name=\"eterm-val\" type=\"String\"/>";
-			"<attributeDecl name=\"meterm-type\" type=\"String\"/>";
-			"<attributeDecl name=\"meterm-val\" type=\"String\"/>";
-			"<attributeDecl name=\"bterm\" type=\"String\"/>";
-			"<attributeDecl name=\"functionid\" type=\"String\"/>";
-			"<attributeDecl name=\"expr\" type=\"String\"/>";
-			"<attributeDecl name=\"boolexpr\" type=\"String\"/>";
-			"<attributeDecl name=\"aggregate\" type=\"String\"/>";
-			"<attributeDecl name=\"stateid\" type=\"String\"/>";
-			"<attributeDecl name=\"mapexpr\" type=\"String\"/>";
-			"<attributeDecl name=\"rid\" type=\"String\"/>";
-			"<attributeDecl name=\"field\" type=\"String\"/>";
-			"<attributeDecl name=\"binding\" type=\"String\"/>";
-			"<attributeDecl name=\"projection\" type=\"String\"/>";
-			"<attributeDecl name=\"plan\" type=\"String\"/>";
-			"<attributeDecl name=\"op\" type=\"String\"/>";])@
-		 [ "</declarations>" ])
+let get_unbound_map_attributes_from_plan f q include_vars =
+    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
+    let q_ba = get_bound_attributes q in
+    let unresolved_fa = resolve_unbound_attributes f_uba q_ba in
+    let unresolved_qa = get_unbound_attributes_from_plan q include_vars
     in
-	(delim
-	     (header@declarations@
-		  (List.map indent (treeml_of_map_expression m_expr indent))@
-		  footer))
+        print_endline "get_unbound_map_attributes_from_plan:";
+        print_endline ("\tf_uba: "^(string_of_attribute_identifier_list f_uba));
+        print_endline ("\tq_ba: "^(string_of_attribute_identifier_list q_ba));
+        print_endline ("\tu_fa: "^(string_of_attribute_identifier_list unresolved_fa));
+        print_endline ("\tu_qa: "^(string_of_attribute_identifier_list unresolved_qa));
+        unresolved_fa@unresolved_qa

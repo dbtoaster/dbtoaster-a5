@@ -1,7 +1,5 @@
 open Algebra
-
-exception DuplicateException
-exception RewriteException of string
+open Codegen
 
 (* TODO:
  * -- apply_delta_plan_rules: handle conjunctive/disjunctive map expression
@@ -9,48 +7,14 @@ exception RewriteException of string
  * -- more robust attribute naming, qualification, attribute comparison, aliasing  
  *)
 
-let get_bound_relation =
-    function
-	| `Insert (r, _) -> r
-	| `Delete (r, _) -> r
-
-(* TODO: handle duplicate attributes, from multiple uses of a relation *)
-let rec get_bound_attributes q =
-    match q with
-	| `Relation (n,f) ->
-	      List.map (fun (id,typ) -> `Qualified(n,id)) f
-
-	| `Select(pred, cq) -> get_bound_attributes cq
-	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
-
-	| `Union ch -> get_bound_attributes (List.hd ch)
-	| `Cross (l,r) | `NaturalJoin (l,r) | `Join (_,l,r) ->
-	      (List.map
-		   (fun x -> match x with | `Qualified _ -> x | `Unqualified y -> `Qualified("left", y))
-		   (get_bound_attributes l))@
-		  (List.map
-		       (fun x -> match x with | `Qualified _ -> x | `Unqualified y -> `Qualified("right", y))
-		       (get_bound_attributes r))
-
-	| `TrueRelation -> []		  
-	| `FalseRelation -> []
-	| `DeltaPlan (_, cq) | `NewPlan(cq) | `IncrPlan(_,_, cq) | `IncrDiffPlan(_,_, cq) -> (get_bound_attributes cq)
-
-
-let compare_attributes a1 a2 =
-    match (a1, a2) with
-	| (`Qualified (n1, f1), `Qualified (n2, f2)) -> n1 = n2 && f1 = f2
-	| (`Qualified (n1, f1), `Unqualified f2) -> f1 = f2
-	| (`Unqualified f1, `Qualified (n2, f2)) -> f1 = f2
-	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
 
 (* event -> (attribute_id * expression) list *)
 let create_bindings event name fields =
-  match event with
-  | `Insert(_, vars) | `Delete(_, vars) ->
-      List.map2
-	(fun (vid, vtyp) (fid, ftyp) -> (`Unqualified fid, `ETerm(`Variable(vid))) )
-	vars fields 
+    match event with
+        | `Insert(_, vars) | `Delete(_, vars) ->
+              List.map2
+	          (fun (vid, vtyp) (fid, ftyp) -> (`Unqualified fid, `ETerm(`Variable(vid))) )
+	          vars fields 
 
 
 (* replaces attributes in map_expression with project's bound variables
@@ -61,7 +25,7 @@ let create_bindings event name fields =
 let remove_proj_attrs pa new_attrs =
     List.filter
 	(fun (aid, bvar) ->
-	     List.length (List.filter (compare_attributes aid) new_attrs) = 0)
+	    List.length (List.filter (compare_attributes aid) new_attrs) = 0)
 	pa 
 
 let rec ab_expr_aux expr (pa : (attribute_identifier * expression) list) =
@@ -70,12 +34,12 @@ let rec ab_expr_aux expr (pa : (attribute_identifier * expression) list) =
 	      let matched_attrs = 
 		  List.filter
 		      (fun (aid, bvar) ->
-			   let r = compare_attributes x aid in
-			       print_endline ("Comparing "^
-						  (string_of_attribute_identifier aid)^" "^
-						  (string_of_attribute_identifier x)^": "^
-						  (string_of_bool r));
-			       r)
+			  let r = compare_attributes x aid in
+			      print_endline ("Comparing "^
+				  (string_of_attribute_identifier aid)^" "^
+				  (string_of_attribute_identifier x)^": "^
+				  (string_of_bool r));
+			      r)
 		      pa
 	      in
 		  begin
@@ -87,7 +51,7 @@ let rec ab_expr_aux expr (pa : (attribute_identifier * expression) list) =
 				begin
 				    List.iter
 					(fun (aid, bvar) ->
-					     print_endline (string_of_attribute_identifier aid))
+					    print_endline (string_of_attribute_identifier aid))
 					matched_attrs;
 				    raise DuplicateException
 				end
@@ -107,12 +71,12 @@ let rec ab_map_expr_aux m_expr pa =
 	      let matched_attrs = 
 		  List.filter
 		      (fun (aid, bvar) ->
-			   let r = compare_attributes x aid in
-			       print_endline ("Comparing "^
-						  (string_of_attribute_identifier aid)^" "^
-						  (string_of_attribute_identifier x)^": "^
-						  (string_of_bool r));
-			       r)
+			  let r = compare_attributes x aid in
+			      print_endline ("Comparing "^
+				  (string_of_attribute_identifier aid)^" "^
+				  (string_of_attribute_identifier x)^": "^
+				  (string_of_bool r));
+			      r)
 		      pa
 	      in
 		  begin
@@ -124,7 +88,7 @@ let rec ab_map_expr_aux m_expr pa =
 				begin
 				    List.iter
 					(fun (aid, bvar) ->
-					     print_endline (string_of_attribute_identifier aid))
+					    print_endline (string_of_attribute_identifier aid))
 					matched_attrs;
 				    raise DuplicateException
 				end
@@ -138,21 +102,6 @@ let rec ab_map_expr_aux m_expr pa =
 	| `Incr(sid, o, e) -> `Incr (sid, o, ab_map_expr_aux e pa)
 	| `IncrDiff(sid, o, e) -> `IncrDiff (sid, o, ab_map_expr_aux e pa)
 	| `Init(sid, e) -> `Init (sid, ab_map_expr_aux e pa)
-	| `Insert(sid, m, e) -> `Insert (sid, 
-	      (match ab_map_expr_aux (`METerm m) pa with
-		  `METerm(x) -> x
-		  | _ -> raise InvalidExpression
-	      ), ab_map_expr_aux e pa)
-	| `Update(sid, o, m, e) -> `Update (sid, o, 
-	      (match ab_map_expr_aux (`METerm m) pa with
-		  `METerm(x) -> x
-		  | _ -> raise InvalidExpression
-	      ), ab_map_expr_aux e pa)
-	| `Delete(sid, m) -> `Delete(sid, 
-	      (match ab_map_expr_aux (`METerm m) pa with
-		  `METerm(x) -> x
-		  | _ -> raise InvalidExpression
-	      ))
 
 	| `Sum (l,r) -> `Sum(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `Minus (l,r) -> `Minus(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
@@ -161,14 +110,32 @@ let rec ab_map_expr_aux m_expr pa =
 	| `Max (l,r) -> `Max(ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 	| `IfThenElse (b,l,r) -> `IfThenElse(
 	      (match ab_pred_aux (`BTerm (b)) pa with
- 		  `BTerm(x) -> x
+ 		      `BTerm(x) -> x
 		  | _ -> raise InvalidExpression )
-	      , ab_map_expr_aux l pa, ab_map_expr_aux r pa)
+	          , ab_map_expr_aux l pa, ab_map_expr_aux r pa)
 
 	| `MapAggregate (fn,f,q) ->
 	      let new_pa = remove_proj_attrs pa (get_bound_attributes q)
 	      in
 		  `MapAggregate(fn, ab_map_expr_aux f new_pa, ab_plan_aux q pa)
+
+        (* TODO: maps may be multidimensional, but as seen below, we should bind lookups *)
+	| `Insert(sid, m, e) -> `Insert (sid, 
+	  (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+	      | _ -> raise InvalidExpression
+	  ), ab_map_expr_aux e pa)
+	| `Update(sid, o, m, e) -> `Update (sid, o, 
+	  (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+	      | _ -> raise InvalidExpression
+	  ), ab_map_expr_aux e pa)
+	| `Delete(sid, m) -> `Delete(sid, 
+	  (match ab_map_expr_aux (`METerm m) pa with
+		  `METerm(x) -> x
+	      | _ -> raise InvalidExpression
+	  ))
+
 
 and ab_pred_aux pred pa =
     match pred with
@@ -195,6 +162,7 @@ and ab_plan_aux q pa =
 	| `Project (attrs, cq) -> ab_plan_aux cq pa
 	| `Union ch -> `Union (List.map (fun c -> ab_plan_aux c pa) ch)
 	| `Cross (l,r) -> `Cross (ab_plan_aux l pa, ab_plan_aux r pa)
+        (*
 	| `NaturalJoin (l,r) ->
 	      `NaturalJoin (ab_plan_aux l pa, ab_plan_aux r pa)
 	| `Join (p, l, r) ->
@@ -204,7 +172,7 @@ and ab_plan_aux q pa =
 		      (get_bound_attributes r)
 	      in
 		  `Join(ab_pred_aux p new_pa, ab_plan_aux l pa, ab_plan_aux r pa) 
-
+        *)
 	| `TrueRelation -> `TrueRelation
 	| `FalseRelation -> `FalseRelation
 	| `DeltaPlan (b,e) -> `DeltaPlan (b, ab_plan_aux e pa)
@@ -214,6 +182,9 @@ and ab_plan_aux q pa =
 
 let add_map_expression_bindings m_expr proj_attrs =
     ab_map_expr_aux m_expr proj_attrs 
+
+let add_plan_bindings plan proj_attrs =
+    ab_plan_aux plan proj_attrs
 
 let add_predicate_bindings pred proj_attrs =
     ab_pred_aux pred proj_attrs
@@ -226,9 +197,9 @@ let get_expr_definition var bindings =
 	      let matches =
 		  List.filter
 		      (fun x -> match x with
-			   | `BindExpr (n,d) -> n = sym
-			   | `BindBoolExpr (_,_) -> false
-			   | `BindMapExpr (_,_) -> false)
+			  | `BindExpr (n,d) -> n = sym
+			  | `BindBoolExpr (_,_) -> false
+			  | `BindMapExpr (_,_) -> false)
 		      bindings
 	      in
 		  begin
@@ -246,153 +217,13 @@ let remove_expr_binding var bindings =
 	| `Variable(sym) ->
 	      List.filter
 		  (fun x -> match x with
-		       | `BindExpr (n,d) -> n <> sym
-		       | `BindBoolExpr (_,_) -> true
-		       | `BindMapExpr (_,_) -> true)
+		      | `BindExpr (n,d) -> n <> sym
+		      | `BindBoolExpr (_,_) -> true
+		      | `BindMapExpr (_,_) -> true)
 		  bindings
 	| _ -> raise Not_found
 
 
-let resolve_unbound_attributes attrs bindings =
-    List.filter
-	(fun x ->
-	     let fq_match = List.filter (fun y -> x = y) bindings in 
-		 match x with
-		     | `Qualified (r,n) -> (List.length fq_match) = 0  
-		     | `Unqualified n ->
-			   let uq_match = List.filter (compare_attributes x) bindings in
-			   let left_match =
-			       List.filter (fun y -> (`Qualified("left", n)) = y) bindings in
-			   let right_match =
-			       List.filter (fun y -> (`Qualified("right", n)) = y) bindings in
-			       match ((List.length left_match), (List.length right_match)) with
-				   | (0, 0) -> (List.length fq_match) = 0 && (List.length uq_match) = 0
-				   | (x, y) when x > 0 && y > 0 -> raise InvalidExpression
-				   | (_, _) -> false)
-	attrs
-
-let rec get_unbound_attributes_from_expression expr include_vars =
-    match expr with
-	| `ETerm (`Attribute x) -> [x]
-	| `ETerm (`Int _) | `ETerm (`Float _)
-	| `ETerm (`String _) | `ETerm (`Long _) -> []
-	| `ETerm (`Variable x) -> if include_vars then [`Unqualified x]  else []
-
-	| `UnaryMinus e ->
-	      get_unbound_attributes_from_expression e include_vars
-		  
-	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
-	      (get_unbound_attributes_from_expression l include_vars)@
-		  (get_unbound_attributes_from_expression r include_vars)
-
-	| `Function(fid, args) ->
-	      List.flatten
-		  (List.map
-		       (fun a ->
-			    get_unbound_attributes_from_expression a include_vars)
-		       args)
-
-let rec get_unbound_attributes_from_predicate b_expr include_vars =
-    match b_expr with
-	| `BTerm(`True) | `BTerm(`False) -> []
-
-	| `BTerm(`LT(l,r)) | `BTerm(`LE(l,r)) | `BTerm(`GT(l,r))
-	| `BTerm(`GE(l,r)) | `BTerm(`EQ(l,r)) | `BTerm(`NE(l,r)) ->
-	      (get_unbound_attributes_from_expression l include_vars)@
-		  (get_unbound_attributes_from_expression r include_vars)
-
-	| `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-	      (get_unbound_attributes_from_map_expression m_expr include_vars)
-
-	| `And(l,r) | `Or(l,r) ->
-	      (get_unbound_attributes_from_predicate l include_vars)@
-		  (get_unbound_attributes_from_predicate r include_vars)
-
-	| `Not(e) -> (get_unbound_attributes_from_predicate e include_vars)
-
-and get_unbound_attributes_from_map_expression m_expr include_vars =
-    match m_expr with
-	| `METerm (`Attribute x) -> [x]
-	| `METerm (`Int _) | `METerm (`Float _) | `METerm (`String _)
-	| `METerm (`Long _) -> []
-	| `METerm (`Variable x) -> if include_vars then [`Unqualified x] else []
-
-	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
-	      
-	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
-	      (get_unbound_attributes_from_map_expression l include_vars)@
-		  (get_unbound_attributes_from_map_expression r include_vars)
-
-	| `MapAggregate (fn,f,q) ->
-	      let f_uba = get_unbound_attributes_from_map_expression f include_vars in
-	      let q_ba = get_bound_attributes q in
-		  (resolve_unbound_attributes f_uba q_ba)@
-		      (get_unbound_attributes_from_plan q include_vars)
-
-	| `New(e) | `Incr(_,_,e) | `IncrDiff(_,_,e) | `Init(_,e) ->
-	      get_unbound_attributes_from_map_expression e include_vars
-
-	| `Insert(_,m,e) | `Update(_,_,m,e) ->
-	      (get_unbound_attributes_from_map_expression (`METerm (m)) include_vars)@
-	          (get_unbound_attributes_from_map_expression e include_vars)
-
-	| `Delete(_,m) ->
-	      get_unbound_attributes_from_map_expression (`METerm (m)) include_vars
-
-	| `IfThenElse(b,l,r) ->
-	      (get_unbound_attributes_from_predicate (`BTerm (b)) include_vars)@ 
-	          (get_unbound_attributes_from_map_expression l include_vars)@
-		  (get_unbound_attributes_from_map_expression r include_vars)
-
-and get_unbound_attributes_from_plan q include_vars =
-    match q with
-	| `Relation _ | `TrueRelation | `FalseRelation -> []
-
-	| `Select(pred, cq) ->
-	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
-	      let cq_ba = get_bound_attributes cq in
-		  (resolve_unbound_attributes pred_uba cq_ba)@
-		      (get_unbound_attributes_from_plan cq include_vars)
-
-	| `Project(attrs, cq) ->
-	      let attrs_uba = 
-		  List.flatten
-		      (List.map
-			   (fun (a,e) -> get_unbound_attributes_from_expression e include_vars)
-			   attrs)
-	      in
-	      let cq_ba = get_bound_attributes cq in
-		  (resolve_unbound_attributes attrs_uba cq_ba)@
-		      (get_unbound_attributes_from_plan cq include_vars)
-
-	| `Union ch ->
-	      List.flatten
-		  (List.map
-		       (fun c -> get_unbound_attributes_from_plan c include_vars) ch)
-
-	| `Cross (l, r) ->
-	      (get_unbound_attributes_from_plan l include_vars)@
-		  (get_unbound_attributes_from_plan r include_vars)
-
-	| `NaturalJoin (l, r) ->
-	      (get_unbound_attributes_from_plan l include_vars)@
-		  (get_unbound_attributes_from_plan r include_vars)
-
-	| `Join (p, l, r) ->
-	      let pred_uba = get_unbound_attributes_from_predicate p include_vars in
-	      let c_ba = (get_bound_attributes l)@(get_bound_attributes r) in
-		  (resolve_unbound_attributes pred_uba c_ba)@
-		      (get_unbound_attributes_from_plan l include_vars)@
-		      (get_unbound_attributes_from_plan r include_vars)
-
-	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e) | `IncrDiffPlan(_,_,e) ->
-	      get_unbound_attributes_from_plan e include_vars
-
-let get_unbound_map_attributes_from_plan f q include_vars =
-    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
-    let q_ba = get_bound_attributes q in
-	(resolve_unbound_attributes f_uba q_ba)@
-	    (get_unbound_attributes_from_plan q include_vars)
 
 
 (* expression -> bool 
@@ -438,7 +269,7 @@ let is_independent m_expr q =
     let me_a = get_unbound_attributes_from_map_expression m_expr false in
     let me_al = List.length me_a in
     let unresolved_l = List.length (resolve_unbound_attributes me_a q_ba) in
-	me_al > 0 && (me_al = unresolved_l)   
+	(me_al = 0) || (me_al > 0 && (me_al = unresolved_l))
 
 
 (*
@@ -450,9 +281,9 @@ let rec push_delta_plan mep =
     match mep with
 	| `DeltaPlan(ev, `Relation(name, fields)) ->
 	      if name = (get_bound_relation ev) then
-		`Project(create_bindings ev name fields, `TrueRelation)
+		  `Project(create_bindings ev name fields, `TrueRelation)
 	      else
-		`FalseRelation
+		  `FalseRelation
 
 	| `DeltaPlan(ev, `Select(pred, c)) ->
 	      `Select(pred, push_delta_plan(`DeltaPlan(ev, c)))
@@ -463,7 +294,7 @@ let rec push_delta_plan mep =
 	| `DeltaPlan(ev, `Union(c)) ->
 	      `Union
 		  (List.map
-		       (fun ch -> push_delta_plan(`DeltaPlan(ev,ch))) c)
+		      (fun ch -> push_delta_plan(`DeltaPlan(ev,ch))) c)
 
 	| `DeltaPlan(ev, `Cross(l, r)) ->
 	      let delta_l = push_delta_plan(`DeltaPlan(ev,l)) in
@@ -492,29 +323,38 @@ let rec push_delta m_expr =
 		  
 	| `Delta (ev, `Product (l, r)) ->
 	      `Sum(`Product(l, push_delta(`Delta(ev,r))),
-		   `Sum(`Product(push_delta(`Delta(ev,l)), r),
-			`Product(push_delta(`Delta(ev,l)),
-				 push_delta(`Delta(ev,r)))))
+	      `Sum(`Product(push_delta(`Delta(ev,l)), r),
+	      `Product(push_delta(`Delta(ev,l)),
+	      push_delta(`Delta(ev,r)))))
 
 	| `Delta (ev, `MapAggregate (`Sum, f, q)) ->
 	      let delta_f = push_delta(`Delta(ev,f)) in
 	      let delta_plan = push_delta_plan(`DeltaPlan(ev,q)) in
 	   	  `Sum(`MapAggregate(`Sum, delta_f, q),
-	          	`Sum(`MapAggregate(`Sum, f, delta_plan),
-			     `MapAggregate(`Sum, delta_f, delta_plan)))
+	          `Sum(`MapAggregate(`Sum, f, delta_plan),
+		  `MapAggregate(`Sum, delta_f, delta_plan)))
+
 	| `Delta (ev, `MapAggregate (`Min, f, q)) ->
 	      let br = get_base_relations m_expr in
 	      let rel = get_bound_relation ev in
-	      let l = List.filter (
-			fun x -> match x with `Relation (n,_) -> n = rel | _ -> raise InvalidExpression ) br in
-	      if List.length l = 0 then `METerm (`Int 0)
-	      else 
-	          let delta_plan = push_delta_plan(`DeltaPlan(ev,q)) in
-		  begin 
-		    match ev with 
-			| `Insert _ -> `MapAggregate(`Min, f, `IncrPlan (gen_state_sym(), `Union, delta_plan))
-		   	| `Delete _ -> `MapAggregate(`Min, f, `IncrDiffPlan (gen_state_sym(), `Diff, delta_plan)) (* check later *)
-		  end
+	      let l =
+                  List.filter
+                      (fun x -> match x with
+                          | `Relation (n,_) -> n = rel
+                          | _ -> raise InvalidExpression )
+                      br
+              in
+	          if List.length l = 0 then `METerm (`Int 0)
+	          else 
+	              let delta_plan = push_delta_plan(`DeltaPlan(ev,q)) in
+		          begin 
+		              match ev with 
+			          | `Insert _ ->
+                                        `MapAggregate(`Min, f, `IncrPlan (gen_state_sym(), `Union, delta_plan))
+		   	          | `Delete _ ->
+                                        (* check later *)
+                                        `MapAggregate(`Min, f, `IncrDiffPlan (gen_state_sym(), `Diff, delta_plan))
+		          end
 
 	| _ -> m_expr
 
@@ -527,28 +367,28 @@ let rec apply_delta_rules m_expr event rcs =
 		  
 	    | `New (`Sum (l, r)) ->
 		  `Sum(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  apply_delta_rules r event (Some New))
 		      
 	    | `New (`Minus (l, r)) ->
 		  `Minus(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  apply_delta_rules r event (Some New))
 		      
 	    | `New (`Product (l, r)) ->
 		  `Product(apply_delta_rules l event (Some New),
-			   apply_delta_rules r event (Some New))
+		  apply_delta_rules r event (Some New))
 		      
 	    | `New (`Min (l,r)) ->
 		  `Min(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  apply_delta_rules r event (Some New))
 
 	    | `New (`Max (l,r)) ->
 		  `Max(apply_delta_rules l event (Some New),
-		       apply_delta_rules r event (Some New))
+		  apply_delta_rules r event (Some New))
 
 	    | `New (`MapAggregate (fn, f, q)) ->
 		  `MapAggregate(fn,
-				apply_delta_rules f event (Some New),
-				apply_delta_plan_rules q event (Some New))
+		  apply_delta_rules f event (Some New),
+		  apply_delta_plan_rules q event (Some New))
 		      
 	    | _ -> raise (RewriteException "Invalid recomputation expression.")
     in
@@ -575,11 +415,11 @@ and apply_delta_plan_rules q event rcs =
 		      match p with
 			  | `BTerm(`MEQ(m_expr)) ->
 				`Select(`BTerm(`MEQ(apply_delta_rules m_expr event (Some New))),
-					apply_delta_plan_rules cq event (Some New))
+				apply_delta_plan_rules cq event (Some New))
 				    
 			  | `BTerm(`MLT(m_expr)) ->
 				`Select(`BTerm(`MLT(apply_delta_rules m_expr event (Some New))),
-					apply_delta_plan_rules cq event (Some New))
+				apply_delta_plan_rules cq event (Some New))
 				    
 			  (* TODO: handle conjunctive/disjunctive map expression comparisons *)
 			  | _ -> `Select(p, apply_delta_plan_rules cq event (Some New))
@@ -593,29 +433,31 @@ and apply_delta_plan_rules q event rcs =
 		      
 	    | `NewPlan(`Cross (l,r)) ->
 		  `Cross(apply_delta_plan_rules l event (Some New),
-			 apply_delta_plan_rules r event (Some New))
+		  apply_delta_plan_rules r event (Some New))
 		      
+            (*
 	    | `NewPlan(`NaturalJoin (l,r)) ->
 		  `NaturalJoin (apply_delta_plan_rules l event (Some New),
-				apply_delta_plan_rules r event (Some New))
+		  apply_delta_plan_rules r event (Some New))
 		      
 	    | `NewPlan(`Join (p,l,r)) ->
 		  begin
 		      match p with
 			  | `BTerm(`MEQ(m_expr)) ->
 				`Join(`BTerm(`MEQ(apply_delta_rules m_expr event (Some New))),
-				      apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				apply_delta_plan_rules l event (Some New),
+				apply_delta_plan_rules r event (Some New))
 				    
 			  | `BTerm(`MLT(m_expr)) ->
 				`Join(`BTerm(`MLT(apply_delta_rules m_expr event (Some New))),
-				      apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				apply_delta_plan_rules l event (Some New),
+				apply_delta_plan_rules r event (Some New))
 				    
 			  | _ ->
 				`Join(p, apply_delta_plan_rules l event (Some New),
-				      apply_delta_plan_rules r event (Some New))
+				apply_delta_plan_rules r event (Some New))
 		  end
+            *)
 		      
 	    | _ -> raise (RewriteException "Invalid recomputation plan.")
     in
@@ -664,8 +506,8 @@ let simplify_comparison l r f vareq varneq =
 	      Some(bool_constant(f (compare x y) 0))
 
 	| (`ETerm(`Variable x), `ETerm(`Variable y)) ->
-	      if vareq then Some(bool_constant(x = y))
-	      else if varneq then Some(bool_constant (x <> y))
+	      if vareq then (if (x = y) then Some(`True) else None)
+	      else if varneq then (if (x = y) then Some(`False) else None)
 	      else None
 
 	| _ -> None
@@ -799,7 +641,7 @@ let rec simplify_predicate_constants b_expr =
 
 			  | `METerm(`Long y) ->
 				`BTerm(bool_constant
-					   ((get_comparison_function b_expr) (Int64.compare y Int64.zero) 0))
+				    ((get_comparison_function b_expr) (Int64.compare y Int64.zero) 0))
 				    
 			  | _ ->
 				begin
@@ -882,12 +724,7 @@ and simplify_map_expr_constants m_expr =
 	      let sl = simplify_map_expr_constants l in
 	      let sr = simplify_map_expr_constants r in
 		  `Min(sl, sr)
-		      
-	| `Max (l, r) ->
-	      let sl = simplify_map_expr_constants l in
-	      let sr = simplify_map_expr_constants r in
-		  `Max(sl, sr)
-		      
+
 	(* TODO: static evaluation *)
 	(*
 	  begin
@@ -896,118 +733,125 @@ and simplify_map_expr_constants m_expr =
 	  | _ -> `Min(sl, sr)
 	  end
 	*)
-
+		      
+	| `Max (l, r) ->
+	      let sl = simplify_map_expr_constants l in
+	      let sr = simplify_map_expr_constants r in
+		  `Max(sl, sr)
+		      
 	| `MapAggregate(aggfn,f,q) ->
 	      begin
 		  let sf = simplify_map_expr_constants f in
 		  let sq = simplify_plan_constants q in
 		      match (is_zero(sf), sq) with
-		      |  (_, `TrueRelation) -> f
-		      | (true, _)  | (_, `FalseRelation) -> `METerm(`Int 0)
-		      | _ -> `MapAggregate(aggfn, sf, sq)
+		          |  (_, `TrueRelation) -> f
+		          | (true, _)  | (_, `FalseRelation) -> `METerm(`Int 0)
+		          | _ -> `MapAggregate(aggfn, sf, sq)
 	      end
 
 	| `Delta (b,e) -> `Delta(b, simplify_map_expr_constants e)
 	| `New(e) -> `New(simplify_map_expr_constants e)
 	| `Incr(sid, o, e) -> `Incr(sid, o, simplify_map_expr_constants e)
-	| `IncrDiff(sid, o, e) -> `IncrDiff(sid, o, simplify_map_expr_constants e)
-	| `Init (sid, e) -> `Init(sid, simplify_map_expr_constants e)
-	| `Insert(sid, m, e) -> `Insert(sid, m, simplify_map_expr_constants e)
-	| `Update(sid, o, m, e) -> `Update(sid, o, m, simplify_map_expr_constants e)
-	| `Delete(sid, m) -> m_expr
-	| `IfThenElse (b, l, r) ->
-	      let sb = match simplify_predicate_constants (`BTerm b) with
-		          | `BTerm(x) -> x
-			  | _ -> raise InvalidExpression
-	      in
-	      let sl = simplify_map_expr_constants l in
-	      let sr = simplify_map_expr_constants r in
-		  `IfThenElse(sb, sl, sr)
-	      
+        | `IncrDiff(sid, o, e) -> `IncrDiff(sid, o, simplify_map_expr_constants e)
+        | `Init (sid, e) -> `Init(sid, simplify_map_expr_constants e)
+        | `Insert(sid, m, e) -> `Insert(sid, m, simplify_map_expr_constants e)
+        | `Update(sid, o, m, e) -> `Update(sid, o, m, simplify_map_expr_constants e)
+        | `Delete(sid, m) -> m_expr
+        | `IfThenElse (b, l, r) ->
+              let sb = match simplify_predicate_constants (`BTerm b) with
+                  | `BTerm(x) -> x
+                  | _ -> raise InvalidExpression
+              in
+              let sl = simplify_map_expr_constants l in
+              let sr = simplify_map_expr_constants r in
+                  `IfThenElse(sb, sl, sr)
+                      
 
 and simplify_plan_constants q =
     match q with
-	| `Relation (n,f) as r -> r
-		      
-	| `Select(pred, cq) ->
-	      let sp = simplify_predicate_constants pred in
-	      let cqq = simplify_plan_constants cq in
-		  begin
-		      match (sp, cqq) with
-		      | (_, `FalseRelation) | (`BTerm(`False), _) -> `FalseRelation
-		      | (`BTerm(`True), _) -> cqq
-		      | (_,_) -> `Select(sp, cqq)
-		  end
+        | `Relation (n,f) as r -> r
+              
+        | `Select(pred, cq) ->
+              let sp = simplify_predicate_constants pred in
+              let cqq = simplify_plan_constants cq in
+                  begin
+                      match (sp, cqq) with
+                          | (_, `FalseRelation) | (`BTerm(`False), _) -> `FalseRelation
+                          | (`BTerm(`True), _) -> cqq
+                          | (_,_) -> `Select(sp, cqq)
+                  end
 
-	| `Project(attrs, cq) ->
-	      let cqq = simplify_plan_constants cq in
-	      if cqq = `FalseRelation then cqq else `Project(attrs, cqq)
+        | `Project(attrs, cq) ->
+              let cqq = simplify_plan_constants cq in
+                  if cqq = `FalseRelation then cqq else `Project(attrs, cqq)
 
-	| `Union ch ->
-	      (* Unions are typechecked outside this simplification. *)
-	      let chq = List.map simplify_plan_constants ch in
-	      if (List.exists (fun c -> c = `TrueRelation) chq) then `TrueRelation
-	      else if (List.for_all (fun c -> c = `FalseRelation) chq) then `FalseRelation
-	      else
-		begin
-		  let non_empty_chq = List.filter (fun x -> x <> `FalseRelation) chq in
-		  match non_empty_chq with
-		  | [x] -> x
-		  | _ -> `Union non_empty_chq
-		end
-		      
-	| `Cross (l,r) ->
-	      let lq = simplify_plan_constants l in
-	      let rq = simplify_plan_constants r in
-	      begin
-		match (lq, rq) with
-		| (`TrueRelation, x) | (x, `TrueRelation) -> x
-		| (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
-		| _ -> `Cross (lq, rq)
-	      end
-		      
-	| `NaturalJoin (l,r) ->
-	      let lq = simplify_plan_constants l in
-	      let rq = simplify_plan_constants r in
-	      begin
-		match (lq, rq) with
-		| (`TrueRelation, x) | (x, `TrueRelation) -> x
-		| (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
-		| _ ->  `NaturalJoin (lq, rq)
-	      end
+        | `Union ch ->
+              (* Unions are typechecked outside this simplification. *)
+              let chq = List.map simplify_plan_constants ch in
+                  if (List.exists (fun c -> c = `TrueRelation) chq) then `TrueRelation
+                  else if (List.for_all (fun c -> c = `FalseRelation) chq) then `FalseRelation
+                  else
+                      begin
+                          let non_empty_chq = List.filter (fun x -> x <> `FalseRelation) chq in
+                              match non_empty_chq with
+                                  | [x] -> x
+                                  | _ -> `Union non_empty_chq
+                      end
+                          
+        | `Cross (l,r) ->
+              let lq = simplify_plan_constants l in
+              let rq = simplify_plan_constants r in
+                  begin
+                      match (lq, rq) with
+                          | (`TrueRelation, x) | (x, `TrueRelation) -> x
+                          | (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
+                          | _ -> `Cross (lq, rq)
+                  end
+                      
+        (*
+        | `NaturalJoin (l,r) ->
+              let lq = simplify_plan_constants l in
+              let rq = simplify_plan_constants r in
+                  begin
+                      match (lq, rq) with
+                          | (`TrueRelation, x) | (x, `TrueRelation) -> x
+                          | (`FalseRelation, _) | (_, `FalseRelation) -> `FalseRelation
+                          | _ ->  `NaturalJoin (lq, rq)
+                  end
 
-	| `Join (p, l, r) ->
-	      let sp = simplify_predicate_constants p in
-	      let lq = simplify_plan_constants l in
-	      let rq = simplify_plan_constants r in
-	      begin
-		match (sp, lq, rq) with
-		| (_, `TrueRelation, x) | (_, x, `TrueRelation) -> `Select(sp, x)
-		| (_, `FalseRelation, _) | (_, _, `FalseRelation)
-		| (`BTerm(`False), _, _) -> `FalseRelation
-		| (`BTerm(`True), _, _) -> `Cross(lq, rq)
-		| _ -> `Join(sp, lq, rq)
-	      end
+        | `Join (p, l, r) ->
+              let sp = simplify_predicate_constants p in
+              let lq = simplify_plan_constants l in
+              let rq = simplify_plan_constants r in
+                  begin
+                      match (sp, lq, rq) with
+                          | (_, `TrueRelation, x) | (_, x, `TrueRelation) -> `Select(sp, x)
+                          | (_, `FalseRelation, _) | (_, _, `FalseRelation)
+                          | (`BTerm(`False), _, _) -> `FalseRelation
+                          | (`BTerm(`True), _, _) -> `Cross(lq, rq)
+                          | _ -> `Join(sp, lq, rq)
+                  end
+        *)
 
-	| `TrueRelation -> `TrueRelation
+        | `TrueRelation -> `TrueRelation
 
-	| `FalseRelation -> `FalseRelation
-	      
-	| `DeltaPlan(b, cq) ->
-	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `DeltaPlan(b, cqq)
+        | `FalseRelation -> `FalseRelation
+              
+        | `DeltaPlan(b, cq) ->
+              let cqq = simplify_plan_constants cq in
+                  if cq = `FalseRelation then `FalseRelation else `DeltaPlan(b, cqq)
 
-	| `NewPlan (cq) ->
-	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `NewPlan(cqq)
+        | `NewPlan (cq) ->
+              let cqq = simplify_plan_constants cq in
+                  if cq = `FalseRelation then `FalseRelation else `NewPlan(cqq)
 
-	| `IncrPlan (sid, op, cq) ->
-	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `IncrPlan(sid,op,cqq)
+        | `IncrPlan (sid, op, cq) ->
+              let cqq = simplify_plan_constants cq in
+                  if cq = `FalseRelation then `FalseRelation else `IncrPlan(sid,op,cqq)
 
-	| `IncrDiffPlan (sid, op, cq) ->
-	      let cqq = simplify_plan_constants cq in
-	      if cq = `FalseRelation then `FalseRelation else `IncrDiffPlan(sid,op,cqq)
+        | `IncrDiffPlan (sid, op, cq) ->
+              let cqq = simplify_plan_constants cq in
+                  if cq = `FalseRelation then `FalseRelation else `IncrDiffPlan(sid,op,cqq)
 
 
 
@@ -1017,78 +861,256 @@ and simplify_plan_constants q =
  *
  *)
 
+let distribute_conjunctive_predicate pred l r =
+    let lba = get_bound_attributes l in
+    let rba = get_bound_attributes r in
+    let merge l r = match (l, r) with
+        | (Some x, Some y) -> Some(`And(x,y))
+        | (None, _) -> r | (_, None) -> l
+    in
+    let rec dcp_aux p =
+        match p with 
+            | `BTerm _ ->
+                  let p_uba = get_unbound_attributes_from_predicate p false in
+                  let num_uba = List.length p_uba in
+                  let p_resolve_l = resolve_unbound_attributes p_uba lba in
+                  let p_resolve_r = resolve_unbound_attributes p_uba rba in
+                      begin
+                          match (List.length p_resolve_l, List.length p_resolve_r) with
+                              | (x, 0) when x = num_uba -> `Split(None, Some p)
+                              | (0, x) when x = num_uba -> `Split(Some p, None)
+                              | _ -> `NoSplit
+                      end
+            | `And (lp,rp) ->
+                  let ld = dcp_aux lp in
+                  let rd = dcp_aux rp in
+                      begin
+                          match (ld, rd) with
+                              | (`NoSplit, _) | (_, `NoSplit) -> `NoSplit
+                              | (`Split(ldl, ldr),`Split(rdl, rdr)) -> `Split(merge ldl rdl, merge ldr rdr)
+                      end
+
+            | _ -> `NoSplit
+    in
+        match (dcp_aux pred) with
+            | `NoSplit -> (None, None)
+            | `Split(x, y) -> (x, y)
+
+(* TODO: think about unification for disjunctive predicates*)
+let unify_predicate pred q =
+    let qba = get_bound_attributes q in
+    let rec unify_binop l r op_fn =
+        let (lp, lu) = unify_aux l in
+        let (rp, ru) = unify_aux r in
+        let new_p = match (lp, rp) with
+            | (None, _) -> rp | (_, None) -> lp
+            | (Some x, Some y) -> Some(op_fn x y)
+        in
+            (new_p, lu@ru)
+    and unify_aux p =
+        match p with
+            | `BTerm(`EQ(`ETerm(`Variable(x)), `ETerm(`Attribute(aid))))
+            | `BTerm(`EQ(`ETerm(`Attribute(aid)), `ETerm(`Variable(x)))) ->
+                  begin
+                      match (resolve_unbound_attributes [aid] qba) with
+                          | [] -> (Some p, [])
+                          | [y] -> (None, [(aid, `ETerm(`Variable(x)))])
+                          | _ -> raise (RewriteException "Unification failed.")
+                  end
+            | `BTerm _ -> (Some p, [])
+
+            | `And(l,r) -> unify_binop l r (fun x y -> `And(x,y))
+            | `Or(l,r) -> unify_binop l r (fun x y -> `Or(x,y))
+            | `Not(b) -> unify_aux b
+    in
+        match (unify_aux pred) with
+            | (None, u) -> 
+                  (* All attributes are unbound, replace them as variables
+                     for the predicate, for use in domain iteration, but use the
+                     unified values elsewhere
+                  let new_bindings =
+                      List.map
+                          (fun (aid, expr) ->
+                              match aid with
+                                  | `Qualified(_,f) | `Unqualified(f) ->
+                                        (aid, `ETerm(`Variable(f))))
+                          u
+                  in
+                  *)
+                      (pred, u)
+
+            | (Some(p), u) -> (p, u)
+
 (* bottom up map expression rewriting *)
 (* map expression -> accessor_element list -> map_expression *)
 let rec simplify m_expr rewrites =
-    print_endline ("Expr "^(indented_string_of_map_expression m_expr 0));
-    print_endline
-	("Pending rewrites("^(string_of_int (List.length rewrites))^"):\n    "^
-	     (List.fold_left
-		  (fun acc ae ->
-		       (if (String.length acc) = 0 then "" else acc^"\n    ")^
-			   (string_of_accessor_element ae)) 
-		  "" rewrites));
-    print_endline (String.make 50 '-');
+    (* Debugging helpers *)
+    let print_call () =
+        print_endline (String.make 50 '>');
+        print_endline ("Expr:\n"^(indented_string_of_map_expression m_expr 0));
+        print_endline
+            ("Pending rewrites("^(string_of_int (List.length rewrites))^"):\n    "^
+                (List.fold_left
+                    (fun acc ae ->
+                        (if (String.length acc) = 0 then "" else acc^"\n    ")^
+                            (string_of_accessor_element ae)) 
+                    "" rewrites));
+        print_endline (String.make 50 '>')
+    in
+    let print_rewrite_step n t =
+	print_endline ("Remainder rewrites: "^(string_of_int (List.length t)));
+	print_endline ("Rewrite node: "^(string_of_accessor_element n))
+    in
+    let print_parent np =
+	print_endline ("Found parent "^(string_of_accessor_element np));
+	print_endline (String.make 50 '-');
+    in
+    let print_rule_description ruleid =
+        let desc =
+            match ruleid with
+                | `PullProjectSelectTuple -> "pull tuple binding above selection"
+                | `PullProjectSelect -> "pull project above selection"
+                | `PullUnionSelect -> "pull union above selection"
+                | `PullProjectCross -> "pull project above cross"
+                | `PushSelectCross -> "push select below cross, w/ distribute, unify"
+                | `PushSelect -> "push select down, w/ unify"
+                | `BindAggTuple -> "binding aggregate args from tuple"
+                | `BindAggQuery -> "binding aggregate args from query"
+                | `DistributeSumAggUnion -> "distributing sum aggregate over union"
+                | `DistributeMinAggUnion -> "distributing min aggregate over union"
+                | `TupleAgg -> "simplifying tuple aggregate"
+                | `DistributeProdAggCross -> "distributing product agg over cross"
+                | `DistributeSumAgg -> "distributing sum agg over query"
+                | `DistributeProdAgg -> "distributing product agg over query"
+                | `DistributeIndepAgg -> "distributing independent agg"
+                | `NoRule -> "ascending, no valid rule"
+        in
+            print_endline ("Applying rule: "^desc)
+    in
+    (* Code body *)
+    print_call();
     match rewrites with
-	| [] -> m_expr
+        | [] -> m_expr
 	| (`MapExpression n)::t when n = m_expr -> m_expr
 	| n::t ->
-	      begin
-		  print_endline ("t len: "^(string_of_int (List.length t)));
-		  print_endline ("Parent arg "^(string_of_accessor_element n));
+              begin
+                  print_rewrite_step n t;
 
 		  let x = parent m_expr n in
 		      match x with
 			  | None -> simplify m_expr t
 			  | Some np ->
 				begin
-				    print_endline ("Found parent "^(string_of_accessor_element np));
-				    print_endline (String.make 50 '-');
+                                    print_parent np;
 
 				    match np with
-				    | `Plan(`Select (pred, `Project(projs, q))) ->
-					let new_np =
-					  `Plan(`Project(projs,
-							 `Select(add_predicate_bindings pred projs, q)))
-					in
-					let new_m_expr = splice m_expr np new_np in
-					let new_rewrites = new_np::t in
-					print_endline ("NR len: "^(string_of_int (List.length new_rewrites)));
-					simplify new_m_expr new_rewrites
+				        | `Plan(`Select (pred, `Project(projs, `TrueRelation))) ->
+                                              print_rule_description `PullProjectSelectTuple;
+					      let new_np = `Plan(
+                                                  `Project(projs,
+                                                  `Select(add_predicate_bindings pred projs, `TrueRelation)))
+					      in
+					      let new_m_expr = splice m_expr np new_np in
+					      let new_rewrites = t@[new_np] in
+					          simplify new_m_expr new_rewrites
+
+				        | `Plan(`Select (pred, `Project(projs, q))) ->
+                                              print_rule_description `PullProjectSelect;
+					      let new_np = `Plan(
+                                                  `Project(projs,
+                                                  `Select(add_predicate_bindings pred projs, q)))
+					      in
+					      let new_m_expr = splice m_expr np new_np in
+					      let new_rewrites = `Plan(q)::t in
+					          simplify new_m_expr new_rewrites
 
 					| `Plan(`Select (pred, `Union ch)) ->
+                                              print_rule_description `PullUnionSelect;
 					      let new_np =
-						  `Plan(`Union (List.map (fun c -> `Select(pred, c)) ch))
+						  `Plan(`Union
+                                                      (List.map (fun c -> `Select(pred, c)) ch))
 					      in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = (List.map (fun c -> `Plan c) ch)@t in
 						  simplify new_m_expr new_rewrites
 
-					(* Assume attribute names in left and right branches are unique *)
 					| `Plan(`Cross(x,`Project(a,q)))
 					| `Plan(`Cross(`Project(a,q),x)) ->
+                                              print_rule_description `PullProjectCross;
 					      let new_np = `Plan(`Project(a, `Cross(x,q))) in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = new_np::t in
 						  simplify new_m_expr new_rewrites
 
+                                        | `Plan(`Select(pred, (`Cross(l,r) as q))) ->
+                                              print_rule_description `PushSelectCross;
+                                              let (new_pred, unifications) = unify_predicate pred q in
+                                              let dpred = distribute_conjunctive_predicate new_pred l r in
+                                              let (new_dpred_np, dpred_rw) =
+                                                  match dpred with
+                                                      | (Some lpred, Some rpred) ->
+                                                            (Some(`Cross(`Select(lpred, l), `Select(rpred,r))), [(`Plan l); (`Plan r)])
+                                                      | (Some lpred, None) -> (Some(`Cross(`Select(lpred, l), r)), [(`Plan l)])
+                                                      | (None, Some rpred) -> (Some(`Cross(l, `Select(rpred, r))), [(`Plan r)])
+                                                      | (None, None) -> (None, [])
+                                              in
+                                              let (new_unified_np, rw_before) = 
+                                                  match (new_dpred_np, unifications) with
+                                                      | (None, []) -> (new_dpred_np, [])
+                                                      | (Some x, []) -> (new_dpred_np, dpred_rw)
+                                                      | (None, y) ->
+                                                            let new_q = `Project(y, add_plan_bindings q y) in
+                                                                (Some(`Select (new_pred, new_q)), [(`Plan new_q)])
+                                                      | (Some x, y) -> (Some(`Project(y, add_plan_bindings x y)), dpred_rw)
+                                              in
+                                                  begin
+                                                      match new_unified_np with
+                                                          | None -> simplify m_expr (t@[np])
+                                                          | Some new_np ->
+                                                                let new_m_expr = splice m_expr np (`Plan new_np) in
+                                                                let new_rewrites = rw_before@t in
+                                                                    simplify new_m_expr new_rewrites
+                                                  end
+
+                                        | `Plan(`Select (pred, q)) ->
+                                              print_rule_description `PushSelect;
+                                              let (new_pred, unifications) = unify_predicate pred q in
+                                                  begin
+                                                      match unifications with
+                                                          | [] -> simplify m_expr (t@[np])
+                                                          | _ ->
+                                                                (* Push unbound attr unifications down into query *)
+                                                                let new_q = `Project(
+                                                                    unifications, add_plan_bindings q unifications)
+                                                                in
+                                                                let new_np = `Plan(`Select (new_pred, new_q)) in
+                                                                let new_m_expr = splice m_expr np new_np in
+                                                                let new_rewrites = `Plan(new_q)::t in
+                                                                    simplify new_m_expr new_rewrites
+                                                  end
+
 					| `MapExpression(
 					      `MapAggregate(fn, f, `Project(projs, `TrueRelation))) ->
-					      let new_np = `MapExpression(add_map_expression_bindings f projs) in
+                                              print_rule_description `BindAggTuple;
+					      let new_np = 
+                                                  `MapExpression(add_map_expression_bindings f projs)
+                                              in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = new_np::t in
 						  simplify new_m_expr new_rewrites
 
 					| `MapExpression(`MapAggregate (fn, f, `Project(projs, q))) ->
-					    let new_np = `MapExpression(
-					      `MapAggregate (fn,
-							     add_map_expression_bindings f projs, q))
-					    in
-					    let new_m_expr = splice m_expr np new_np in
-					    let new_rewrites = (`Plan(q))::t in
-					        simplify new_m_expr new_rewrites
-					      
+                                              print_rule_description `BindAggQuery;
+					      let new_np = `MapExpression(
+					          `MapAggregate (fn,
+						  add_map_expression_bindings f projs, q))
+					      in
+					      let new_m_expr = splice m_expr np new_np in
+					      let new_rewrites = (`Plan(q))::t in
+					          simplify new_m_expr new_rewrites
+					              
 					| `MapExpression(`MapAggregate (`Sum, f, `Union(c))) ->
+                                              print_rule_description `DistributeSumAggUnion;
 					      let new_np = `MapExpression(
 						  List.fold_left
 						      (fun acc ch -> `Sum(`MapAggregate(`Sum, f, ch), acc))
@@ -1099,6 +1121,7 @@ let rec simplify m_expr rewrites =
 						  simplify new_m_expr new_rewrites 
 
 					| `MapExpression(`MapAggregate (`Min, f, `Union(c))) ->
+                                              print_rule_description `DistributeMinAggUnion;
 					      let new_np = `MapExpression(
 						  List.fold_left
 						      (fun acc ch -> `Min(`MapAggregate(`Min, f, ch), acc))
@@ -1110,53 +1133,158 @@ let rec simplify m_expr rewrites =
 
 					(* Note: bindings are added to 'f' while processing any parent projection *)
 					| `MapExpression(`MapAggregate (fn, f, `TrueRelation)) ->
+                                              print_rule_description `TupleAgg;
 					      let new_np = `MapExpression f in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = t@[(`MapExpression f)] in
 						  simplify new_m_expr new_rewrites
 
-					| `MapExpression(`MapAggregate (`Sum, `Sum(l,r), q)) ->
-					      let new_np =
-						  `MapExpression(`Sum(
-								     `MapAggregate(`Sum, l, q), `MapAggregate(`Sum, r, q))) in
-					      let new_m_expr = splice m_expr np new_np in
-					      let new_rewrites = t@[new_np] in
-						  simplify new_m_expr new_rewrites 
-						      
 					| `MapExpression(`MapAggregate (fn, `Product(l,r), `Cross(ql, qr))) ->
-					      let unbound_l = get_unbound_map_attributes_from_plan l ql false in
-					      let unbound_r = get_unbound_map_attributes_from_plan r qr false in
+                                              print_rule_description `DistributeProdAggCross;
+                                              let distribute dl dr dql dqr =
+                                                  let new_np = `MapExpression(
+						      `Product(`MapAggregate(fn, dl, dql), `MapAggregate(fn, dr, dqr)))
+						  in
+						  let new_m_expr = splice m_expr np new_np in
+						  let new_rewrites = t@[new_np] in
+						      simplify new_m_expr new_rewrites
+                                              in
+					      let unbound_lql = get_unbound_map_attributes_from_plan l ql false in
+					      let unbound_rqr = get_unbound_map_attributes_from_plan r qr false in
+					      let unbound_lqr = get_unbound_map_attributes_from_plan l qr false in
+					      let unbound_rql = get_unbound_map_attributes_from_plan r ql false in
+                                                  print_endline ("Matching agg_{a*b}(cross): "^
+                                                      (string_of_int (List.length unbound_lql))^", "^
+                                                      (string_of_int (List.length unbound_rqr))^", "^
+                                                      (string_of_int (List.length unbound_lqr))^", "^
+                                                      (string_of_int (List.length unbound_rql)));
+                                                  print_endline ("Unbound lql: "^(string_of_attribute_identifier_list unbound_lql));
+                                                  print_endline ("Unbound rqr: "^(string_of_attribute_identifier_list unbound_rqr));
+                                                  print_endline ("Unbound lqr: "^(string_of_attribute_identifier_list unbound_lqr));
+                                                  print_endline ("Unbound rql: "^(string_of_attribute_identifier_list unbound_rql));
 						  begin
-						      match (unbound_l, unbound_r) with
-							  | ([], []) -> 
-								let new_np = `MapExpression(
-								    `Product(`MapAggregate(fn, l, ql), `MapAggregate(fn, r, qr)))
-								in
-								let new_m_expr = splice m_expr np new_np in
-								let new_rewrites = t@[new_np] in
-								    simplify new_m_expr new_rewrites
-									
+						      match (unbound_lql, unbound_rqr, unbound_lqr, unbound_rql) with
+							  | ([], [], _, _) -> distribute l r ql qr
+                                                          | (_, _, [], []) -> distribute l r qr ql
 							  | _ -> simplify m_expr (t@[np])
 						  end
-						      
+
+                                        | `MapExpression(`MapAggregate (fn, (`Sum(fl, fr) as f), q)) ->
+                                              print_rule_description `DistributeSumAgg;
+                                              let extract_f old_f new_f =
+                                                  match fn with
+                                                      | `Sum -> let e = `MapAggregate(fn, new_f, q) in (`Product(old_f, e), [e])
+                                                      | `Min | `Max -> (old_f, [])
+                                              in
+                                              let fl_indep = is_independent fl q in
+                                              let fr_indep = is_independent fr q in
+                                                  begin
+                                                      let new_np_and_rewrite = 
+                                                          match (fl_indep, fr_indep) with
+                                                              | (true, true) ->
+                                                                    let (e,erw) = extract_f f (`METerm (`Int 1)) in Some(e, erw)
+                                                              | (true, false) ->
+                                                                    let (e,erw) = extract_f fl (`METerm (`Int 1)) in
+                                                                    let e2 = `MapAggregate(fn, fr, q) in
+                                                                        Some(`Sum(e, e2), erw@[e2])
+                                                              | (false, true) ->
+                                                                    let (e,erw) = extract_f fr (`METerm (`Int 1)) in
+                                                                    let e2 = `MapAggregate(fn, fl, q) in
+                                                                        Some(`Sum(e2, e), [e2]@erw)
+                                                              | _ ->
+                                                                    begin
+                                                                        match fn with
+                                                                            | `Sum ->
+                                                                                  let e = `MapAggregate(`Sum, fl, q) in
+                                                                                  let e2 = `MapAggregate(`Sum, fr, q) in
+                                                                                      Some(`Sum(e,e2), [e; e2])
+                                                                            | _ -> None
+                                                                    end
+                                                      in
+                                                          match new_np_and_rewrite with
+                                                              | Some(x, new_rw) -> 
+                                                                    let new_np = `MapExpression(x) in
+						                    let new_m_expr = splice m_expr np new_np in
+						                    let new_rewrites = t@(List.map (fun x -> `MapExpression(x)) new_rw) in
+							                simplify new_m_expr new_rewrites
+                                                              | None -> simplify m_expr (t@[np])
+                                                  end
+
+                                        | `MapExpression(`MapAggregate(fn, (`Product(fl, fr) as f), q)) ->
+                                              print_rule_description `DistributeProdAgg;
+                                              let extract_sum_prod_f e_expr r_expr l_expr =
+                                                  let e = `MapAggregate(`Sum, r_expr, q) in
+                                                      Some((if l_expr then `Product(e_expr, e) else `Product(e, e_expr)), [e])
+                                              in
+                                              let extract_minmax_prod_f e_expr r_expr l_expr =
+                                                  let et = `MapAggregate(fn, r_expr, q) in
+                                                  let ee =
+                                                      let rev_fn = match fn with
+                                                          | `Min -> `Max | `Max -> `Min | _ -> raise InvalidExpression
+                                                      in
+                                                          `MapAggregate(rev_fn, r_expr, q)
+                                                  in 
+                                                  (* TODO: change this to `MGE *)
+                                                  let r = `IfThenElse(`MLT(e_expr),
+                                                      (if l_expr then `Product(e_expr, et) else `Product(et, e_expr)),
+                                                      (if l_expr then `Product(e_expr, ee) else `Product(ee, e_expr)))
+                                                  in
+                                                      Some(r, [et; ee])
+                                              in
+                                              let fl_indep = is_independent fl q in
+                                              let fr_indep = is_independent fr q in
+                                                  begin
+                                                      print_endline ("Matched agg_{a*b}("^
+                                                          (string_of_bool fl_indep)^","^(string_of_bool fr_indep)^
+                                                          "): "^(string_of_accessor_element np));
+
+                                                      let new_np_and_rewrite =
+                                                          match (fn, fl_indep, fr_indep) with
+                                                              | (`Sum, true, true) ->
+                                                                    let e = `Product(f, `MapAggregate(`Sum, `METerm(`Int 1), q)) in
+                                                                        Some(e, [e])
+                                                              | (_, true, true) -> Some(f, [f])
+                                                              | (`Sum, true, false) -> extract_sum_prod_f fl fr true
+                                                              | (`Sum, false, true) -> extract_sum_prod_f fr fl false
+                                                              | (_, true, false) -> extract_minmax_prod_f fl fr true
+                                                              | (_, false, true) -> extract_minmax_prod_f fr fl false
+                                                              | _ -> None
+                                                      in
+                                                          match new_np_and_rewrite with
+                                                              | Some(x, new_rw) ->
+                                                                    let new_np = `MapExpression(x) in
+						                    let new_m_expr = splice m_expr np new_np in
+						                    let new_rewrites =
+                                                                        t@(List.map (fun x -> `MapExpression(x)) new_rw)
+                                                                    in
+							                simplify new_m_expr new_rewrites
+                                                              | None -> simplify m_expr (t@[np])
+                                                  end
+
+                                        (* Independence rule for map_expressions other than `Sum, `Product *)
 					| `MapExpression(`MapAggregate (fn, f, q)) ->
-					      begin
-						  if is_independent f q then
+					      if is_independent f q then
+                                                  begin
+                                                      print_rule_description `DistributeIndepAgg;
 						      let new_np =
 							  match fn with
 							      | `Sum -> `MapExpression(
 								    `Product(f, `MapAggregate(fn, `METerm (`Int 1), q)))
-							      | `Min -> `MapExpression(f)
-							      | `Max -> raise InvalidExpression (* TODO *)
+							      | `Min | `Max -> `MapExpression(f)
 						      in
 						      let new_m_expr = splice m_expr np new_np in
 						      let new_rewrites = t@[new_np] in
 							  simplify new_m_expr new_rewrites
-						  else
+                                                  end
+                                              else
+                                                  begin
+                                                      print_rule_description `NoRule;
 						      simplify m_expr (t@[np])
-					      end
+					          end
 
-					| _ -> simplify m_expr (t@[np])
+					| _ ->
+                                              print_rule_description `NoRule;
+                                              simplify m_expr (t@[np])
 				end 
 	      end
 
@@ -1185,13 +1313,13 @@ let bind_expr_pair (le, lb) (re, rb) :
 		      (get_expr_definition lv lb, get_expr_definition rv rb)
 		  in
 		      (true, l_def, (remove_expr_binding lv lb),
-		       r_def, (remove_expr_binding rv rb))
+		      r_def, (remove_expr_binding rv rb))
 			  
 	    | (true, false, true, false) ->
 		  let (l_sym, r_sym) = (gen_var_sym(), gen_var_sym()) in
 		      (true,
-		       `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
-		       `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
+		      `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
+		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
 			  
 	    | (true, true, true, false) ->
 		  let lv = match le with
@@ -1200,7 +1328,7 @@ let bind_expr_pair (le, lb) (re, rb) :
 		  let l_def = get_expr_definition lv lb in
 		  let r_sym = gen_var_sym() in
 		      (true, l_def, (remove_expr_binding lv lb),
-		       `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
+		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
 			  
 	    | (true, false, true, true) ->
 		  let rv = match re with
@@ -1209,7 +1337,7 @@ let bind_expr_pair (le, lb) (re, rb) :
 		  let l_sym = gen_var_sym() in
 		  let r_def = get_expr_definition rv rb in
 		      (true, `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
-		       r_def, (remove_expr_binding rv rb))
+		      r_def, (remove_expr_binding rv rb))
 			  
 	    | (true, false, _, _) ->
 		  let l_sym = gen_var_sym() in
@@ -1236,22 +1364,22 @@ let rec extract_expr_bindings expr : expression * (binding list) =
 			  | (true, `Sum (_,_)) ->
 				let new_var = gen_var_sym() in
 				    (`ETerm(`Variable(new_var)),
-				     nlb@nrb@[`BindExpr(new_var, `Sum (nl, nr))])
+				    nlb@nrb@[`BindExpr(new_var, `Sum (nl, nr))])
 
 			  | (true, `Product (_,_)) ->
 				let new_var = gen_var_sym() in
 				    (`ETerm(`Variable(new_var)),
-				     nlb@nrb@[`BindExpr(new_var, `Product (nl, nr))])
+				    nlb@nrb@[`BindExpr(new_var, `Product (nl, nr))])
 
 			  | (true, `Minus (_,_)) -> 
 				let new_var = gen_var_sym() in
 				    (`ETerm(`Variable(new_var)),
-				     nlb@nrb@[`BindExpr(new_var, `Minus (nl, nr))])
+				    nlb@nrb@[`BindExpr(new_var, `Minus (nl, nr))])
 
 			  | (true, `Divide (_,_)) -> 
 				let new_var = gen_var_sym() in
 				    (`ETerm(`Variable(new_var)),
-				     nlb@nrb@[`BindExpr(new_var, `Divide (nl, nr))])
+				    nlb@nrb@[`BindExpr(new_var, `Divide (nl, nr))])
 
 			  | (false, `Sum _) -> (`Sum (nl, nr), nlb@nrb)
 			  | (false, `Product _) -> (`Product (nl, nr), nlb@nrb)
@@ -1369,19 +1497,22 @@ and extract_map_expr_bindings m_expr : map_expression * (binding list) =
 	| `MapAggregate(fn, f,q) ->
 	      let (fe, fb) = extract_map_expr_bindings f in
 	      let (qq, qb) = extract_plan_bindings q in
+                  (*
 		  if (is_independent fe qq) then
 		      let new_var = gen_var_sym() in
 			  begin
 			      match fn with
 				  | `Sum ->
 					(`Product(
-					     `METerm(`Variable(new_var)),
-					     `MapAggregate(fn, `METerm(`Int(1)), qq)),
-					 (fb@qb@[`BindMapExpr(new_var, fe)]))
+					    `METerm(`Variable(new_var)),
+					    `MapAggregate(fn, `METerm(`Int(1)), qq)),
+					(fb@qb@[`BindMapExpr(new_var, fe)]))
 				  | `Min -> (f, fb)
-				  | `Max -> raise InvalidExpression
+				  | `Max -> (f, fb)
 			  end
-		  else (`MapAggregate(fn, fe, qq), fb@qb)
+		  else
+                  *)
+                  (`MapAggregate(fn, fe, qq), fb@qb)
 		      
 	| _ ->
 	      raise (RewriteException "Invalid map expression for extract_map_expr_bindings")
@@ -1400,7 +1531,7 @@ and extract_plan_bindings q : plan * (binding list) =
 		      let predem = is_monotonic prede uba in
 
 			  print_endline ("Checking monotonicity for "^
-					     (string_of_attribute_identifier uba)^":" ^(string_of_bool predem));
+			      (string_of_attribute_identifier uba)^":" ^(string_of_bool predem));
 
 			  let (new_q, new_b) =
 			      begin
@@ -1408,20 +1539,20 @@ and extract_plan_bindings q : plan * (binding list) =
 				      | (true, `BTerm(`MEQ(_))) ->
 					    let new_var = gen_var_sym() in
 						(`Select(
-						     `BTerm(`EQ(`ETerm(`Attribute(uba)),
-								`ETerm(`Variable(new_var)))), cqq),
-						 predb@cqb@[`BindMapExpr(new_var,
-									 `MapAggregate(`Min,
-										       `METerm(`Attribute(uba)), `Select(prede, cqq)))])
+						    `BTerm(`EQ(`ETerm(`Attribute(uba)),
+						    `ETerm(`Variable(new_var)))), cqq),
+						predb@cqb@[`BindMapExpr(new_var,
+						`MapAggregate(`Min,
+						`METerm(`Attribute(uba)), `Select(prede, cqq)))])
 
 				      | (true, `BTerm(`MLT(_))) ->
 					    let new_var = gen_var_sym() in
 						(`Select(
-						     `BTerm(`LT(`ETerm(`Attribute(uba)),
-								`ETerm(`Variable(new_var)))), cqq),
-						 predb@cqb@[`BindMapExpr(new_var,
-									 `MapAggregate(`Min,
-										       `METerm(`Attribute(uba)), `Select(prede, cqq)))])
+						    `BTerm(`LT(`ETerm(`Attribute(uba)),
+						    `ETerm(`Variable(new_var)))), cqq),
+						predb@cqb@[`BindMapExpr(new_var,
+						`MapAggregate(`Min,
+						`METerm(`Attribute(uba)), `Select(prede, cqq)))])
 
 				      | (_, _) -> (`Select(prede, cqq), predb@cqb)
 			      end
@@ -1435,9 +1566,9 @@ and extract_plan_bindings q : plan * (binding list) =
 	      let (attrse, attrsb) =
 		  List.split
 		      (List.map
-			   (fun (a,e) ->
-				let (ee, eb) = extract_expr_bindings e in ((a,ee), eb))
-			   attrs)
+			  (fun (a,e) ->
+			      let (ee, eb) = extract_expr_bindings e in ((a,ee), eb))
+			  attrs)
 	      in
 	      let (cqq, cqb) = extract_plan_bindings cq in
 		  (`Project (attrse, cqq), (List.flatten attrsb)@cqb)
@@ -1453,6 +1584,7 @@ and extract_plan_bindings q : plan * (binding list) =
 	      let (rq, rb) = extract_plan_bindings r in
 		  (`Cross (lq, rq), lb@rb)
 
+        (*
 	| `NaturalJoin (l, r) -> 
 	      let (lq, lb) = extract_plan_bindings l in
 	      let (rq, rb) = extract_plan_bindings r in
@@ -1465,6 +1597,7 @@ and extract_plan_bindings q : plan * (binding list) =
 	      let (lq, lb) = extract_plan_bindings l in
 	      let (rq, rb) = extract_plan_bindings r in
 		  (`Join (prede, lq, rq), predb@lb@rb)
+        *)
 
 	| `TrueRelation | `FalseRelation | `DeltaPlan (_,_) -> (q, []) 
 
@@ -1573,17 +1706,20 @@ let rec apply_recompute_rules m_expr delta : map_expression =
 	      let new_f = apply_recompute_rules f delta in
 	      let new_q = apply_recompute_plan_rules q delta in
 		  begin
+                      (*
 		      print_endline ("CP2:"^(match fn with | `Sum -> "sum" | `Min -> "min" | `Max -> "max"));
 		      print_endline ("CP2a: "^(string_of_map_expression new_f));
 		      print_endline ("CP2b: "^(string_of_plan new_q));
+                      *)
 		      match (fn, new_f, new_q) with
-			  | (`Sum, `Incr (sx,o,x), `IncrPlan (_,_,y)) -> `Incr (sx, o, `MapAggregate(fn, x, y)) (* TODO : check this out *)
+                          (* TODO : check this out *)
+			  | (`Sum, `Incr (sx,o,x), `IncrPlan (_,_,y)) -> `Incr (sx, o, `MapAggregate(fn, x, y))
 			  (*| (`Min, `Incr x, `IncrPlan y) -> `New (`MapAggregate(fn, new_f, new_q)) *)
 			  | (`Min, `Incr (sx,o,x), `IncrPlan (_,_,y)) -> 
 				begin
-				match delta with 
-				    | `Insert _ -> `Incr (sx, `Min, `MapAggregate(fn, x, y))
-				    | `Delete _ -> `Incr (sx, `Decrmin (x), `MapAggregate(fn, x, y))
+				    match delta with 
+				        | `Insert _ -> `Incr (sx, `Min, `MapAggregate(fn, x, y))
+				        | `Delete _ -> `Incr (sx, `Decrmin (x), `MapAggregate(fn, x, y))
 				end
 			  | (_, `New x, `NewPlan y) -> `New (`MapAggregate(fn, x, y))
 			  | (_, `Incr x, `NewPlan y) -> `New (`MapAggregate(fn, new_f, y))
@@ -1593,7 +1729,7 @@ let rec apply_recompute_rules m_expr delta : map_expression =
 
 	| `Delta _  | `New _ | `Incr _ | `IncrDiff _ | `Init _ | `Insert _ | `Update _ | `Delete _ | `IfThenElse _ ->
 	      raise (RewriteException 
-			 "Invalid map expression argument for apply_recompute_rules.")
+		  "Invalid map expression argument for apply_recompute_rules.")
 
 and apply_recompute_plan_rules q delta : plan =
     match q with
@@ -1632,7 +1768,7 @@ and apply_recompute_plan_rules q delta : plan =
 				`NewPlan(`Select(mer_new, cqr_new))
 
 		      | _ ->
-			    print_endline ("CP1: "^(string_of_plan q));
+                            (* print_endline ("CP1: "^(string_of_plan q)); *)
 			    let cqr = apply_recompute_plan_rules cq delta in
 				begin
 				    match cqr with
@@ -1664,28 +1800,28 @@ and apply_recompute_plan_rules q delta : plan =
 		  	      List.for_all
 		      		  (fun x -> match x with | `IncrPlan(_,o,_) -> o = op | _ -> false) rc
 			  in 
-			  begin 
-			      if all_oplus then 
-			          `IncrPlan(sid, op, `Union
-					(List.map
-					     (fun x -> match x with
+			      begin 
+			          if all_oplus then 
+			              `IncrPlan(sid, op, `Union
+					  (List.map
+					      (fun x -> match x with
 						  | `IncrPlan (_,_,c) -> c | _ -> raise InvalidExpression) rc))
-			      else 
-			  	  `NewPlan(`Union
-				        (List.map
-					    (fun x -> match x with
-						 | `NewPlan c -> c
-						 | `IncrPlan c -> x
-						 | _ -> raise InvalidExpression) rc))
-				
-			  end
+			          else 
+			  	      `NewPlan(`Union
+				          (List.map
+					      (fun x -> match x with
+						  | `NewPlan c -> c
+						  | `IncrPlan c -> x
+						  | _ -> raise InvalidExpression) rc))
+				          
+			      end
 		      else
 			  `NewPlan(`Union
-				       (List.map
-					    (fun x -> match x with
-						 | `NewPlan c -> c
-						 | `IncrPlan c -> x
-						 | _ -> raise InvalidExpression) rc))
+			      (List.map
+				  (fun x -> match x with
+				      | `NewPlan c -> c
+				      | `IncrPlan c -> x
+				      | _ -> raise InvalidExpression) rc))
 		  end
 
 	| `Cross (l, r) ->
@@ -1702,6 +1838,7 @@ and apply_recompute_plan_rules q delta : plan =
 			  | _ -> raise InvalidExpression
 		  end
 
+        (*
 	| `NaturalJoin (l, r) ->
 	      let lr = apply_recompute_plan_rules l delta in
 	      let rr = apply_recompute_plan_rules r delta in
@@ -1749,17 +1886,21 @@ and apply_recompute_plan_rules q delta : plan =
 				begin
 				    match (lr, rr) with
 					| (`IncrPlan (sx,ox,x), `IncrPlan (_,oy,y)) ->
-						if ox = oy then `IncrPlan(sx, ox, `Join (pred, x,y))
-						else `NewPlan(`Join(pred, lr, rr))
+					      if ox = oy then `IncrPlan(sx, ox, `Join (pred, x,y))
+					      else `NewPlan(`Join(pred, lr, rr))
 					| (`NewPlan x, `NewPlan y) -> `NewPlan(`Join(pred, x, y))
 					| (`IncrPlan x, `NewPlan y) -> `NewPlan(`Join(pred, lr, y))
 					| (`NewPlan x, `IncrPlan y) -> `NewPlan(`Join(pred, x, rr)) 
 					| (_,_) -> raise InvalidExpression
 				end
 	      end
+        *)
 
 	| `TrueRelation | `FalseRelation | `DeltaPlan _ | `NewPlan _ | `IncrPlan _ | `IncrDiffPlan _->
-	      raise (RewriteException "Invalid plan for apply_recompute_plan_rules.")
+              begin
+                  print_endline (indented_string_of_plan q 0);
+	          raise (RewriteException "Invalid plan for apply_recompute_plan_rules.")
+              end
 
 
 let rec compute_new_map_expression (m_expr : map_expression) rcs =
@@ -1769,23 +1910,23 @@ let rec compute_new_map_expression (m_expr : map_expression) rcs =
 		  
 	    | `Sum(l,r) ->
 		  `Sum(compute_new_map_expression l (Some New),
-		       compute_new_map_expression r (Some New))
+		  compute_new_map_expression r (Some New))
 		      
 	    | `Minus(l,r) ->
 		  `Minus(compute_new_map_expression l (Some New),
-		       compute_new_map_expression r (Some New))
+		  compute_new_map_expression r (Some New))
 		      
 	    | `Product(l,r) ->
 		  `Product(compute_new_map_expression l (Some New),
-			   compute_new_map_expression r (Some New))
+		  compute_new_map_expression r (Some New))
 		      
 	    | `Min(l,r) ->
 		  `Min(compute_new_map_expression l (Some New),
-		       compute_new_map_expression r (Some New))
+		  compute_new_map_expression r (Some New))
 		      
 	    | `MapAggregate(fn,f,q) ->
 		  `MapAggregate(fn, compute_new_map_expression f (Some New),
-				compute_new_plan q (Some New))
+		  compute_new_plan q (Some New))
 	    | _ -> raise InvalidExpression
     in
     let cnmp_incr (x : map_expression) state_sym op =
@@ -1850,16 +1991,17 @@ and compute_new_plan (q : plan) rcs =
 		  in
 		  let new_cq = compute_new_plan cq (Some New) in
 		      begin
-			  match (pred, new_cq) with (*TODO check later *)
+			  match (pred, new_cq) with
+                              (*TODO check later *)
 			      | (`BTerm(`MEQ(`Incr(sid, op, m_incr))), `IncrPlan(sid2, op2, cqq)) ->
 				    `Union
 					[`Select(`BTerm(`MEQ(`Init(sid, m_incr))), new_cq);
-					 `Select(new_pred, cqq)]
+					`Select(new_pred, cqq)]
 					
 			      | (`BTerm(`MLT(`Incr(sid, op, m_incr))), `IncrPlan(sid2, op2, cqq)) ->
 				    `Union
 					[`Select(`BTerm(`MLT(`Init(sid, m_incr))), new_cq);
-					 `Select(new_pred, cqq)]
+					`Select(new_pred, cqq)]
 					
 			      | _ ->  `Select(new_pred, new_cq)
 		      end
@@ -1868,6 +2010,8 @@ and compute_new_plan (q : plan) rcs =
 	    | `Union ch -> `Union (List.map (fun c -> compute_new_plan c (Some New)) ch)
 	    | `Cross (l,r) ->
 		  `Cross(compute_new_plan l (Some New), compute_new_plan r (Some New))
+
+            (*
 	    | `NaturalJoin (l,r) ->
 		  `NaturalJoin(compute_new_plan l (Some New), compute_new_plan r (Some New))
 	    | `Join (pred,l,r) ->
@@ -1876,16 +2020,18 @@ and compute_new_plan (q : plan) rcs =
 			      (* TODO: recompute branches via unions as in select above *)
 			  | `BTerm(`MEQ(m_expr)) ->
 				`Join(`BTerm(`MEQ(compute_new_map_expression m_expr (Some New))),
-				      compute_new_plan l (Some New), compute_new_plan r (Some New))
+				compute_new_plan l (Some New), compute_new_plan r (Some New))
 
 			  | `BTerm(`MLT(m_expr)) ->
 				`Join(`BTerm(`MLT(compute_new_map_expression m_expr (Some New))),
-				      compute_new_plan l (Some New), compute_new_plan r (Some New))
+				compute_new_plan l (Some New), compute_new_plan r (Some New))
 				    
 			  | _ ->
 				`Join(pred,
-				      compute_new_plan l (Some New), compute_new_plan r (Some New))
+				compute_new_plan l (Some New), compute_new_plan r (Some New))
 		  end
+            *)
+
 	    | _ -> raise InvalidExpression
     in
 	match q with
@@ -1899,77 +2045,122 @@ and compute_new_plan (q : plan) rcs =
 				raise (RewriteException "Invalid nested recomputed expression.")
 		  end
 		      
-let compile_target m_expr delta =
-    let compile_aux e = 
-	let bh_code =
-	    compute_new_map_expression (apply_recompute_rules e delta) (Some New)
-	in
-	let dh_code =
-	    simplify_map_expr_constants
-		(apply_delta_rules bh_code delta (Some New))
-	in
-	print_endline ("bh_code: "^(string_of_map_expression bh_code));
-	(*print_endline ("bh_code 2:\n"^(indented_string_of_map_expression bh_code 0));*)
-	(*print_endline ("delta code: \n"^
-	   (indented_string_of_map_expression
-	   (apply_delta_rules bh_code delta (Some New)) 0));*)
-	print_endline ("dh_code: "^(indented_string_of_map_expression dh_code 0));
-	print_endline ("# br: "^(string_of_int (List.length (get_bound_relations dh_code))));
-	let br = List.map (fun x -> `Plan x) (get_bound_relations dh_code) in
-	    simplify dh_code br
+let compile_target m_expr event =
+    (* Debugging helpers *)
+    let print_incr_and_delta_pass expr frontier_expr delta_expr =
+        print_endline ("input: "^(string_of_map_expression expr));
+	print_endline ("frontier_expr: "^(string_of_map_expression frontier_expr));
+	print_endline ("delta_expr:\n"^(indented_string_of_map_expression delta_expr 0));
+	print_endline ("# br: "^(string_of_int (List.length (get_bound_relations delta_expr))))
     in
-    let (mee, meb) = extract_map_expr_bindings m_expr in
-    let bound_exprs =
+    let print_simplify_pass compiled_expr simplified_expr =
+        print_endline ("cc_expr: "^(string_of_map_expression compiled_expr));
+        print_endline ("sc_expr: "^(string_of_map_expression simplified_expr));
+        print_endline (String.make 50 '>')
+    in
+    (* Code body *)
+    let compile_aux e = 
+	let frontier_expr =
+	    compute_new_map_expression (apply_recompute_rules e event) (Some New)
+	in
+	let delta_expr =
+	    simplify_map_expr_constants
+		(apply_delta_rules frontier_expr event (Some New))
+	in
+            print_incr_and_delta_pass e frontier_expr delta_expr;
+	    let br = List.map (fun x -> `Plan x) (get_bound_relations delta_expr) in
+            let compiled_expr = simplify delta_expr br in
+	    let sc_expr = simplify_map_expr_constants compiled_expr in
+                print_simplify_pass compiled_expr sc_expr;
+                sc_expr
+    in
+    let (dependent_expr, binding_exprs) = extract_map_expr_bindings m_expr in
+    let compiled_binding_exprs =
 	List.map
 	    (fun b ->
-		 match b with
-		     | `BindMapExpr(v,e) -> `BindMapExpr(v, compile_aux e)
-		     | _ -> b)
-	    meb
+	        match b with
+	            | `BindMapExpr(v,e) ->
+                          print_endline ("Compiling binding: "^v);
+                          `BindMapExpr(v, compile_aux e)
+	            | _ -> b)
+	    binding_exprs
     in
-	(compile_aux mee, bound_exprs)
+	(compile_aux dependent_expr, compiled_binding_exprs)
+
+
+
+(*
+ *
+ * Recursive compilation
+ *
+ *)
 
 let generate_all_events m_expr = 
     let gbr = get_base_relations m_expr 
     in
-    List.fold_left 
-        (fun acc x ->
-	    match x with 
-	    | `Relation (n,f) ->
-		(* [`Insert (n);`Delete (n)] @ acc *)
-		print_endline ("insert "^n);
-		(`Insert (n,f)):: acc
-	    | _ -> acc
-	) [] gbr 
+        List.fold_left 
+            (fun acc x ->
+	        match x with 
+	            | `Relation (n,f) ->
+		          (* [`Insert (n);`Delete (n)] @ acc *)
+		          print_endline ("insert "^n);
+		          (`Insert (n,f)):: acc
+	            | _ -> acc
+	    ) [] gbr 
 
-let rec extract_incremental m_expr =
-    match m_expr with
-	| `Delete _ 
-	| `METerm _ -> []
-	| `Sum (l, r)
-	| `Minus (l, r)
-	| `Product (l, r)
-	| `Max (l, r) 
-	| `Min (l, r) 
-	| `IfThenElse (_, l, r) -> (extract_incremental l) @ (extract_incremental r)
-	| `MapAggregate (_, e, _)
-	| `Delta (_, e)
-	| `Insert (_,_,e)
-	| `Update (_,_,_,e)
-	| `Init (_, e) -> extract_incremental e
-	| `New (e)
-	| `Incr (_, _, e) -> [e]
-	| `IncrDiff (_, _, e) -> [e]
+let rec extract_incremental_query m_expr =
+    let rec eiq_find_plan incr_m_expr =
+        match incr_m_expr with
+            | `METerm _ | `Insert _ | `Delete _ | `Update _ -> []
+	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r)
+	    | `Max (l, r) | `Min (l, r) 
+	    | `IfThenElse (_, l, r) ->
+                  (eiq_find_plan l) @ (eiq_find_plan r)
+            | `MapAggregate _ -> [incr_m_expr]
+            | `Incr _ | `IncrDiff _ | `New _ | `Init _ | `Delta _ -> raise InvalidExpression
+    in
+    let r_list =  
+        match m_expr with
+            | `Incr(sid,_,e) | `IncrDiff(sid,_,e) ->
+                  (* TODO: create map accessor *)
+                  eiq_find_plan e
+	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r)
+	    | `Max (l, r) | `Min (l, r) 
+	    | `IfThenElse (_, l, r) ->
+                  (extract_incremental_query l) @ (extract_incremental_query r)
+            | `MapAggregate(_,f,q) -> extract_incremental_query f
+            | `New (e) -> extract_incremental_query e
+	    | `METerm _
+            | `Init _ 
+            | `Insert _ | `Delete _ | `Update _ -> []
+            | `Delta _ -> raise InvalidExpression
+    in
+        List.map 
+            (fun r ->
+                let r_uba = get_unbound_attributes_from_map_expression r true in
+                let r_with_uba =
+                    map_map_expr
+                        (fun e -> match e with
+                            | `ETerm (`Variable(v)) ->
+                                  if List.mem (`Unqualified v) r_uba
+                                  then `ETerm(`Attribute(`Unqualified(v))) else e
+                            | _ -> e)
+                        (fun b -> b) (fun m -> m) (fun p -> p) r
+                in
+                    print_endline ("r with uba: "^(string_of_map_expression r_with_uba));
+                    r_with_uba)
+            r_list
+            
 
-let rec extract_incremental_binding binding =
+let extract_incremental_query_from_bindings bindings =
     List.concat (
         List.fold_left
  	    (fun acc x -> 
 	        match x with
-		    | `BindMapExpr (v, m) -> (extract_incremental m)::acc
-		    | _ -> acc
-	    ) [] binding
-    )
+		    | `BindMapExpr (v, m) -> (extract_incremental_query m)::acc
+		    | _ -> acc)
+            [] bindings)
+
 
 let set_difference l1 l2 = List.filter (fun el -> not(List.mem el l2)) l1
 
@@ -1977,1148 +2168,89 @@ let concat (handler, bindings) =
     let bound_map_exprs =
         List.map
             (fun b -> match b with | `BindMapExpr(v,e) -> e | _ -> raise InvalidExpression)
-                (List.filter
-                    (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
-                        bindings)
+            (List.filter
+                (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
+                bindings)
     in handler :: bound_map_exprs
 
 let print_handler_bindings (handler, bindings) = 
     let newlist = concat (handler, bindings)
     in
-    print_endline "handler:";
-    print_endline ("  "^string_of_map_expression (List.hd newlist));
-    print_endline "bindings:";
-    List.iter
-        (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n\n\n"))
+        print_endline "handler:";
+        print_endline ("  "^string_of_map_expression (List.hd newlist));
+        print_endline "bindings:";
+        List.iter
+            (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n\n\n"))
             (List.tl newlist)
 
 let compile_target_all m_expr = 
+    (* Debugging helpers *)
+    let print_event_path evt evt_path =
+        print_endline (String.make 50 '-');
+        print_endline ("Compiling for event path:"^
+            (List.fold_left
+                (fun acc e ->
+                    (if (String.length acc) = 0 then "" else acc^", ")^
+                        (string_of_delta e))
+                "" (evt::evt_path)))
+    in
+    let print_input m_expr_list = 
+        print_endline "cta_aux input:";
+        print_endline
+            (List.fold_left
+                (fun acc e ->
+                    (if (String.length acc) = 0 then "input: " else acc^"\ninput: ")^
+                        (string_of_map_expression e))
+                "" m_expr_list)
+    in
+    let print_new_map_expressions event event_path compiled_exprs map_exprs =
+        print_endline (String.make 50 '-');
+        print_endline ("New maps: ("^
+            (string_of_int (List.length compiled_exprs))^" compiled results, "^
+            (string_of_int (List.length map_exprs))^" map expressions)");
+        print_event_path event event_path;
+        List.iter (fun x -> print_endline ("map: "^(string_of_map_expression x))) map_exprs
+    in
+    (* Code body *)
     let event_list = generate_all_events m_expr in
-    let rec cta_aux e_list m_expr_list =
-	List.concat ( List.map 
+    let rec cta_aux e_list m_expr_list e_path =
+        print_input m_expr_list;
+	List.concat ( List.map
 	    (fun event -> 
 		let new_events = set_difference e_list [event] in 
 		let result_list = 
 		    List.map 
-			(fun x -> compile_target x event) m_expr_list
+			(fun x -> 
+                            print_event_path event e_path;
+                            compile_target x event) m_expr_list
 		in 
-		let new_expr = 
+		let map_exprs = 
 		    List.concat 
 		        (List.map
 			    (fun (handler, binding) -> 
-				(extract_incremental handler) @ extract_incremental_binding binding 
-			    )
-			result_list)
-		in 
+				(extract_incremental_query handler) @
+                                    (extract_incremental_query_from_bindings binding))
+			    result_list)
+		in
+                print_new_map_expressions event e_path result_list map_exprs;
 		let children = 
 		    match new_events with
-		  	[] -> []
-			| _ -> cta_aux new_events new_expr
-		in (event, result_list)::children
-	    ) e_list 
-	)
-    in 
-    let result = cta_aux event_list [m_expr] in
-    List.fold_left 
-        (fun res event ->
-	    let t = List.filter(fun (e,_) -> e = event) result in
-	    (event, List.concat(List.map (fun (e,l2) -> l2) t)) :: res
-	) [] event_list
-
-(*
- *
- * Code generation
- *
- *)
-
-(* TODO:*)
-(* -- natural_join_predicate *)
-
-let rec create_code_expression expr =
-    match expr with
-	| `ETerm (x) ->
-	      begin
-		  `CTerm(
-		      match x with
-			  | `Int y -> `Int y
-			  | `Float y -> `Float y
-			  | `String y -> `String y
-			  | `Long y -> `Long y
-			  | `Variable y -> `Variable y
-			  | `Attribute y ->
-				begin
-				    match y with |`Qualified(_,f) | `Unqualified f -> `Variable(f)
-				end) 
-	      end
-	| `UnaryMinus (e) -> raise InvalidExpression
-	| `Sum (l,r) ->
-	      `Sum(create_code_expression l, create_code_expression r)
-		  
-	| `Product (l,r)  ->
-	      `Product(create_code_expression l, create_code_expression r)
-		  
-	| `Minus (l,r) -> raise InvalidExpression
-	| `Divide (l,r) -> raise InvalidExpression
-	| `Function (fid, args) -> raise InvalidExpression
-
-let rec create_code_predicate b_expr =
-    match b_expr with
-	| `BTerm(x) ->
-	      begin
-		  `BCTerm(
-		      match x with
-			  | `MEQ(_) -> `EQ(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MLT(_) -> `LT(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-
-			  (*
-			    | `MEQ(_)
-			    | `MLT(_) -> raise InvalidExpression
-			  *)
-				
-			  | `LT(l,r) -> `LT(create_code_expression l, create_code_expression r)
-			  | `LE(l,r) -> `LE(create_code_expression l, create_code_expression r)
-			  | `GT(l,r) -> `GT(create_code_expression l, create_code_expression r)
-			  | `GE(l,r) -> `GE(create_code_expression l, create_code_expression r)
-			  | `EQ(l,r) -> `EQ(create_code_expression l, create_code_expression r)
-			  | `NE(l,r) -> `NE(create_code_expression l, create_code_expression r)
-			  | `True -> `True
-			  | `False -> `False)
-	      end
-	| `And(l,r) -> `And(create_code_predicate l, create_code_predicate r)
-	| `Or(l,r) -> `Or(create_code_predicate l, create_code_predicate r)
-	| `Not(e) -> `Not(create_code_predicate e)
-
-let rec substitute_arith_code_vars assignments ac_expr =
-    let sa = substitute_arith_code_vars assignments in
-    let get_var_matches v = 
-	List.filter
-	    (fun a -> match a with
-		 | `Assign(y,_) -> v = y
-		 | _ -> raise InvalidExpression)
-	    assignments
+		  	| [] -> []
+			| _ -> cta_aux new_events map_exprs (event::e_path)
+		in (event, result_list)::children)
+            e_list)
     in
-    let substitute_cv_list vl = 
-	List.map
-	    (fun v ->
-		 let v_matches = get_var_matches v in
-		     begin match v_matches with
-			 | [] -> v
-			 | [`Assign(_,`CTerm(`Variable(z)))] -> z
-			 | _ -> raise DuplicateException
-		     end)
-	    vl
+    let group_by_event compiled_exprs event_list =
+        List.fold_left 
+            (fun res event ->
+	        let t = List.filter(fun (e,_) -> e = event) compiled_exprs in
+	            (event, List.concat(List.map (fun (e,l2) -> l2) t)) :: res)
+            [] event_list
     in
-	match ac_expr with
-	    | `CTerm(`Variable(x)) ->
-		  let x_matches = get_var_matches x in
-		      begin match x_matches with
-			  | [] -> ac_expr
-			  | [`Assign(_,z)] -> z
-			  | _ -> raise DuplicateException
-		      end
-
-	    | `CTerm(`MapAccess(mid,kf)) -> `CTerm(`MapAccess(mid, substitute_cv_list kf))
-	    | `CTerm(`MapContains(mid, kf)) -> `CTerm(`MapContains(mid, substitute_cv_list kf))
-
-	    | `CTerm(_) -> ac_expr
-
-	    | `Sum (l,r) -> `Sum(sa l, sa r) 
-	    | `Minus (l,r) -> `Minus(sa l, sa r) 
-	    | `Product (l,r) -> `Product(sa l, sa r) 
-	    | `Min (l,r) -> `Min(sa l, sa r)
-	    | `Max (l,r) -> `Max(sa l, sa r)
+    let result = cta_aux event_list [m_expr] [] in
+        group_by_event result event_list
 
 
-
-let rec substitute_bool_code_vars assignments bc_expr =
-    let sa = substitute_arith_code_vars assignments in
-    let sb = substitute_bool_code_vars assignments in
-	match bc_expr with
-	    | `BCTerm (x) -> `BCTerm(
-		  begin match x with
-		      | `True -> `True | `False -> `False
-		      | `LT (l,r) -> `LT(sa l, sa r)
-		      | `LE (l,r) -> `LE(sa l, sa r)
-		      | `GT (l,r) -> `GT(sa l, sa r)
-		      | `GE (l,r) -> `GE(sa l, sa r)
-		      | `EQ (l,r) -> `EQ(sa l, sa r)
-		      | `NE (l,r) -> `NE(sa l, sa r)
-		  end)
-
-	    | `Not (e) -> `Not(sb e)
-	    | `And (l,r) -> `And(sb l, sb r)
-	    | `Or (l,r) -> `Or (sb l, sb r)
-
-let rec substitute_code_vars assignments c_expr =
-    let sa = substitute_arith_code_vars assignments in
-    let sb = substitute_bool_code_vars assignments in
-    let sc = substitute_code_vars assignments in
-    let get_var_matches v = 
-	List.filter
-	    (fun a -> match a with
-		 | `Assign(y,_) -> v = y
-		 | _ -> raise InvalidExpression)
-	    assignments
-    in
-    let substitute_cv_list vl = 
-	List.map
-	    (fun v ->
-		 let v_matches = get_var_matches v in
-		     begin match v_matches with
-			 | [] -> v
-			 | [`Assign(_,`CTerm(`Variable(z)))] -> z
-			 | _ -> raise DuplicateException
-		     end)
-	    vl
-    in
-	match c_expr with
-	    | `Assign(x, c) ->
-		  if not(List.mem c_expr assignments) then
-		      `Assign(x, sa c)
-		  else c_expr
-		      
-	    | `AssignMap((mid, kf), c) ->
-		  `AssignMap((mid, substitute_cv_list kf), sa c)
-
-	    | `EraseMap((mid, kf), c) ->
-		  `EraseMap((mid, substitute_cv_list kf), sa c)
-
-	    | `Declare d ->
-		  begin
-		      match d with
-			  | `Variable (n,f) ->
-				let n_is_asgn =
-				    List.exists
-					(fun a -> match a with
-					     | `Assign(x,_) -> x = n
-					     | _ -> raise InvalidExpression)
-					assignments
-				in
-				    if n_is_asgn then raise InvalidExpression
-				    else `Declare(d)
-
-			  | _ -> `Declare(d)
-		  end
-
-	    | `IfNoElse(p, c) -> `IfNoElse(sb p, sc c)
-	    | `IfElse(p, l, r) -> `IfElse(sb p, sc l, sc r)
-	    | `ForEach(ds, c) -> `ForEach(ds, sc c)
-	    | `Eval x -> `Eval (sa x)
-	    | `Block cl -> `Block(List.map sc cl)
-	    | `Return x -> `Return (sa x)
-	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
-
-let rec merge_block_code cl acc =
-    match cl with
-	| [] -> acc
-	| (`Block a)::((`Block b)::t) -> merge_block_code ((`Block(a@b))::t) acc
-	| h::t -> merge_block_code t (acc@[h])
-
-let rec simplify_code c_expr =
-    (*
-      print_endline "Simplify code:";
-      print_endline (indented_string_of_code_expression c_expr);
-      print_endline (String.make 50 '-');
-
-      let r =
-    *)
-    match c_expr with
-	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
-	| `IfElse (p,l,r) -> `IfElse(p, simplify_code l, simplify_code r)
-	| `ForEach(ds, c) -> `ForEach(ds, simplify_code c)
-	| `Handler(n, args, rt, c) ->
-	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
-
-	(* flatten singleton blocks *)
-	| `Block ([`Block(x)]) -> `Block (List.map simplify_code x)
-	| `Block ([x]) -> simplify_code x
-
-	| `Block(x) ->
-	      (* reorder locally scoped vars to beginning of block *)
-	      let (decls, code) =
-		  List.partition
-		      (fun y -> match y with
-			   | `Declare(z) -> true | _ -> false) x
-	      in
-	      let simplified_non_decls = List.map simplify_code code in
-		  
-	      (* substitute redundant vars *)
-	      let (new_decls, substituted_code) =
-		  let var_assignments =
-		      List.filter
-			  (fun c ->
-			       match c with
-				   | `Assign(_, `CTerm(`Variable(_))) -> true
-				   | _ -> false)
-			  simplified_non_decls
-		  in
-		  let var_declarations =
-		      List.filter
-			  (fun d -> match d with
-			       | `Declare(`Variable(v1,_)) ->
-				     List.exists
-					 (fun a -> 
-					      match a with
-						  | `Assign(v2, _) -> v2 = v1
-						  | _ -> raise InvalidExpression)
-					 var_assignments
-			       | _ -> false) decls
-		  in
-		  let filtered_decls =
-		      List.filter
-			  (fun c -> not (List.mem c var_declarations)) decls
-		  in
-		  let filtered_code =
-		      List.filter
-			  (fun c -> not (List.mem c var_assignments))
-			  (List.map
-			       (substitute_code_vars var_assignments)
-			       simplified_non_decls)
-		  in
-		      (filtered_decls, filtered_code)
-	      in
-	      let reordered_code = new_decls@substituted_code in
-	      let merged_code = merge_block_code reordered_code [] in
-		  begin match merged_code with
-		      | [] -> raise InvalidExpression
-		      | [x] -> x
-		      | h::t -> `Block(merged_code)
-		  end
-
-	| _ -> c_expr
-	      (*
-		in
-		print_endline "Result:";
-		print_endline (indented_string_of_code_expression r);
-		print_endline (String.make 50 '-');
-		r
-	      *)
-
-
-let gc_assign_state_var code decl var oplus diff=
-    let oper op = function x -> match op with 
-			`Plus -> `Sum (`CTerm(`Variable(var)), x) 
-			| `Minus -> `Minus(`CTerm(`Variable(var)), x)
-			| `Min -> `Min (`CTerm(`Variable(var)), x)
-			| `Max -> `Max (`CTerm(`Variable(var)), x)
-			| `Decrmin _ -> raise InvalidExpression
-    in
-    begin match code with
-	| `Eval x ->
-	      let new_code =
-		  `Block([
-			     `Assign(var, oper oplus x);
-			         (if diff = false then `Eval (`CTerm (`Variable(var))) else code) 
-			     ]) 
-	      in
-		  (new_code, (`Variable(var, "int"))::decl)
-
-	| `Block xl ->
-	      let last_x = get_block_last code in
-		  begin
-		      match last_x with
-			  | `Eval y -> 
-				let new_code =
-				    append_to_block
-					(replace_block_last code
-					     (`Assign(var, oper oplus y)))
-			                         (if diff = false then `Eval (`CTerm (`Variable(var))) else last_x) 
-				in
-				    (new_code, (`Variable(var, "int"))::decl)
-
-			  | _ -> raise InvalidExpression
-		  end
-
-	| _ -> raise InvalidExpression
-    end
-
-let gc_assign_state_map code decl map_key map_decl oplus diff=
-    let map_access_code = `CTerm(`MapAccess(map_key)) in
-    let new_decl = if List.mem map_decl decl then decl else map_decl::decl in
-    let oper op = function x -> match op with 
-			| `Oplus ( `Plus) -> `AssignMap(map_key, `Sum (map_access_code, x))
-			| `Oplus ( `Minus) -> `AssignMap(map_key, `Minus(map_access_code, x))
-			| `Oplus ( `Min) -> `AssignMap(map_key, `Min (map_access_code, x))
-			| `Oplus ( `Max) -> `AssignMap(map_key, `Max (map_access_code, x))
-			| `Oplus ( `Decrmin _) -> raise InvalidExpression
-			| `POplus (`Union ) -> `AssignMap(map_key, x)
-			| `POplus (`Diff) -> `EraseMap(map_key, x)
-    in		
-    let (assign_code, assign_decl) = 
-	match code with
-	    | `Eval x ->
-		  let new_code =
-		      `Block([
-				 (oper oplus x);
-			             (if diff = false then `Eval(map_access_code) else code) 
-				 ])
-		  in
-		      (new_code, new_decl)
-			  
-	    | `Block xl ->
-		  let last_x = get_block_last code in
-		      begin
-			  match last_x with
-			      | `Eval y -> 
-				    let new_code =
-					append_to_block
-					    (replace_block_last code
-						 (oper oplus y))
-			            		     (if diff = false then `Eval(map_access_code) else last_x) 
-				    in
-					(new_code, new_decl)
-					    
-			      | _ -> raise InvalidExpression
-		      end
-			  
-	    | _ -> raise InvalidExpression
-    in
-	(assign_code, assign_decl)
-
-let is_bound expr binding =
-    let rec ib_aux ex v =
-	match ex with 
-	    `MapAggregate (_, _, p) -> ib_aux_plan p v
-	    | _ -> (false, "")
-    and ib_aux_plan plan v =
-	match plan with
-	    `Select (be, p) -> ib_aux_boolean be v
-	    | _ -> (false, "")
-    and ib_aux_boolean be v =
-	match be with
-	    `BTerm bt -> ib_aux_bt bt v
-	    | `Not b -> ib_aux_boolean b v
-	    | `And (b1, b2) | `Or (b1, b2) ->
-		let (ltf, lv) = (ib_aux_boolean b1 v) in
-		let (rtf, rv) = (ib_aux_boolean b2 v) in
-		    if ltf = true then (ltf, lv)
-		    else if rtf = true then (rtf, rv)
-		    else (false, "") (*TODO both are true *)
-    and ib_aux_bt bt v = 
-	match bt with
-	    `MEQ (_) | `MLT (_) | `True | `False -> (false, "")
-	    | `LT (e1, e2) | `LE (e1, e2) | `GT(e1, e2) 
-	    | `GE (e1, e2) | `EQ (e1, e2) | `NE(e1, e2) -> begin
-		match e2 with 
-		    `ETerm (`Variable (x)) -> if x = v then (true, v) else (false, "")
-	 	    | _ -> (false, "")
-	        end
-    in 
-    let l = List.map (fun x -> match x with `BindMapExpr(v,_) -> (ib_aux expr v) 
-					    | _ -> raise InvalidExpression) binding
-    in let l2 = List.filter ( fun (t, _) -> t ) l
-    in if List.length l2= 0 then (false, "")
-	else List.hd l2 (* TODO multiple bindings *)
-
-let generate_code handler bindings event =
-    (* map_expression -> declaration list ->  code_expression * declaration list *)
-    let rec gc_aux e decl bind_info  : code_expression * (declaration list) =
-	match e with
-	    | `METerm(x) ->
-		  begin
-		      (`Eval(`CTerm(
-				 match x with 
-				     | `Attribute y -> `Variable(field_of_attribute_identifier y) 
-				     | `Int y -> `Int y
-				     | `Float y -> `Float y 
-				     | `Long y -> `Long y
-				     | `String y -> `String y
-				     | `Variable y -> `Variable y)), decl)
-		  end
-
-	    | `Sum(l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl bind_info in
-		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
-		      begin
-			  match (l_code, r_code) with
-			      | (`Eval x, `Eval y) ->  (`Eval(`Sum(x, y)), r_decl)
-				    
-			      | (`Block x, `Eval y) | (`Eval y, `Block x) ->
-				    let new_block =
-					merge_with_block (`Block x) (fun a -> `Eval(`Sum(a,y)))
-				    in
-					(new_block, r_decl)
-
-			      | (`Block x, `Block y) ->
-				    let new_block =
-					merge_blocks l_code r_code (fun a b -> `Eval(`Sum(a,b)))
-				    in
-					(new_block, r_decl)
-					    
-			      | _ ->
-				    print_endline ("suml: "^(string_of_code_expression l_code));
-				    print_endline ("sumr: "^(string_of_code_expression r_code));
-				    raise InvalidExpression
-		      end
-
-	    | `Minus(l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl bind_info in
-		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
-		      begin
-			  match (l_code, r_code) with
-			      | (`Eval x, `Eval y) ->  (`Eval(`Minus(x, y)), r_decl)
-				    
-			      | (`Block x, `Eval y) | (`Eval y, `Block x) ->
-				    let new_block =
-					merge_with_block (`Block x) (fun a -> `Eval(`Minus(a,y)))
-				    in
-					(new_block, r_decl)
-
-			      | (`Block x, `Block y) ->
-				    let new_block =
-					merge_blocks l_code r_code (fun a b -> `Eval(`Minus(a,b)))
-				    in
-					(new_block, r_decl)
-					    
-			      | _ ->
-				    print_endline ("minusl: "^(string_of_code_expression l_code));
-				    print_endline ("minusr: "^(string_of_code_expression r_code));
-				    raise InvalidExpression
-		      end
-
-	    | `Product(l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl bind_info in
-		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
-		      begin
-			  match (l_code, r_code) with
-			      | (`Eval x, `Eval y) ->  (`Eval(`Product(x, y)), r_decl)
-
-			      | (`Block x, `Eval y) | (`Eval y, `Block x) ->
-				    let new_block =
-					merge_with_block (`Block x) (fun a -> `Eval(`Product(a,y)))
-				    in
-					(new_block, r_decl)
-
-			      | (`Block x, `Block y) ->
-				    let new_block =
-					merge_blocks l_code r_code (fun a b -> `Eval(`Product(a,b)))
-				    in
-					(new_block, r_decl)
-					    
-			      | _ -> 
-				    print_endline ("prodl: "^(string_of_code_expression l_code));
-				    print_endline ("prodr: "^(string_of_code_expression r_code));
-				    raise InvalidExpression
-		      end
-
-	    | `Min (l,r) ->
-		  let (l_code, l_decl) = gc_aux l decl bind_info in
-		  let (r_code, r_decl) = gc_aux r l_decl bind_info in
-		      begin
-			  match (l_code, r_code) with
-			      | (`Eval x, `Eval y) ->  (`Eval(`Min(x, y)), r_decl)
-
-			      | (`Block x, `Eval y) | (`Eval y, `Block x) ->
-				    let new_block =
-					merge_with_block (`Block x) (fun a -> `Eval(`Min(a,y)))
-				    in
-					(new_block, r_decl)
-
-			      | (`Block x, `Block y) ->
-				    let new_block =
-					merge_blocks l_code r_code (fun a b -> `Eval(`Min(a,b)))
-				    in
-					(new_block, r_decl)
-					    
-			      | _ ->
-				    print_endline ("minl:"^(string_of_code_expression l_code));
-				    print_endline ("minr:"^(string_of_code_expression r_code));
-				    raise InvalidExpression
-		      end
-
-	    | `MapAggregate(`Sum, f, q) ->
-		  (* TODO: variable type? *)
-		  let run_sum_var = gen_var_sym() in
-		  let (f_code, f_decl) = gc_aux f decl bind_info in
-		      begin
-			  match f_code with
-			      | `Eval (x) ->
-				    let (agg_block, agg_decl) =
-					gc_plan_aux q  
-					    (`Assign(run_sum_var,
-						     `Sum (`CTerm(`Variable(run_sum_var)), x)))
-					    f_decl bind_info 
-				    in
-					(`Block(
-					     [`Declare(`Variable(run_sum_var, "int"));
-					      agg_block;
-					      `Eval(`CTerm(`Variable(run_sum_var)))]), agg_decl)
-
-			      | _ -> raise InvalidExpression
-		      end
-
-	    | `MapAggregate(`Min, f, q) ->
-		  let run_min_var = gen_var_sym() in
-		  let (f_code, f_decl) = gc_aux f decl bind_info in
-		      begin
-			  match f_code with
-			      | `Eval (x) ->
-				    let (agg_block, agg_decl) =
-					gc_plan_aux q
-					    (`Assign(run_min_var,
-						     `Min (`CTerm(`Variable(run_min_var)), x)))
-					    f_decl bind_info 
-				    in
-					(`Block(
-					     [`Declare(`Variable(run_min_var, "int"));
-					      agg_block;
-					      `Eval(`CTerm(`Variable(run_min_var)))]), agg_decl)
-
-			      | _ -> raise InvalidExpression
-		      end
-
-	    | `Incr (sid, op, e) | `IncrDiff(sid, op, e)->
-		  let (e_code, e_decl) = gc_aux e decl bind_info in
-		  let (e_is_bound, rc) = 
-			match bind_info with (true, _, bb) -> is_bound e bb
-			| _-> ( false, "")
-		  in
-		  if e_is_bound = true then
- 		     let mid = gen_map_sym sid in
-		     let map_key = (mid, [rc]) in
-		     let temp = gen_var_sym() in
-		     let c = gen_var_sym() in
-		     let map_decl = `Map(mid, [(c, "int")], "int") in 
-			 let last_code = get_block_last e_code in
-			 let last_var = match last_code with `Eval(x) -> x | _-> raise InvalidExpression in
-		         match event with 
-			 | `Insert (_,_) ->
-				 let insert_st = 
-			     	 `Block ( [ 
-					`Declare (`Variable(temp, "int"));
-					`Assign (temp, `CTerm (`Variable (rc)));
-
-					`ForEach ( map_decl, 
-						`Block ([ 
-							`Assign (rc, `CTerm (`Variable (c)));
-							append_to_block (remove_block_last e_code) 
-							(`AssignMap (map_key, `Sum(`CTerm(`MapAccess(map_key)), last_var)));
-						])
-					);
-					(* something weired happens when simplify_code is called *)
-					(*`Assign (rc, `CTerm (`Variable (temp)));*)
-				 	`IfNoElse ( `BCTerm ( 
-							`EQ ( 
-								`CTerm ( 
-									`MapContains(map_key)
-								), 
-					                        `CTerm (
-									`MapIterator(`End(mid))
-								)
-							)
-						  ) , 
-						        append_to_block (remove_block_last e_code)
-						        (`AssignMap ( map_key, last_var ))
-						  );
-					`Eval(`CTerm(`MapAccess(map_key)))
-				 ])
-				 in (insert_st, map_decl::e_decl)
-				(* TODO: garbage collection, min *)	
-			     | `Delete _ -> 
-				 let delete_st = 
-				 `Block ([
-					`Declare (`Variable(temp, "int"));
-					`Assign (temp, `CTerm (`Variable (rc)));
-					append_to_block (remove_block_last e_code)
-					(`AssignMap (map_key, `Sum(`CTerm (`MapAccess(map_key)),
-						`Product (`CTerm (`Int (-1)), last_var))));
-					(* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
-	 				`ForEach (map_decl,
-						`Block ([
-							`Assign (rc, `CTerm (`Variable (c)));
-							append_to_block (remove_block_last e_code)
-							(`AssignMap (map_key, `Sum(`CTerm(`MapAccess(map_key)), 
-									`Product(`CTerm (`Int (-1)), last_var))));
-						])
-					);
-					`Eval(`CTerm(`MapAccess(map_key)))
-				])
-				in (delete_st, map_decl::e_decl)
-
-		  else 
-		  let e_uba =
-		    match event with
-		    | `Insert(_,vars) | `Delete(_,vars) ->
-			List.filter
-			  (fun uaid -> not
-			      (List.exists
-				 (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
-				 vars))
-			  (get_unbound_attributes_from_map_expression e true)
-		  in
-		      begin match e_uba with
-			  | [] ->
-				let incr_var = gen_var_sym() in
-				    gc_assign_state_var e_code e_decl incr_var op (match e with `Incr _ -> false | _ -> true )
-
-			  | _ ->
-				let incr_mid = gen_map_sym sid in
-				let incr_map =
-				    let matching_maps =
-					List.filter
-					    (fun x -> match x with
-						 | `Map(mid, _,_) -> mid = incr_mid
-						 | _ -> false) e_decl
-				    in
-					match matching_maps with
-					    | [] ->
-						  `Map(incr_mid,
-						       List.map
-							   (fun x -> (field_of_attribute_identifier x,"int")) e_uba,
-						       "int")
-					    | [m] -> m
-					    | _ -> raise (RewriteException "Multiple matching maps.")
-				in
-				let map_key =
-				    let mf = List.map field_of_attribute_identifier e_uba in
-					(incr_mid, mf)
-				in
-				    gc_assign_state_map e_code e_decl map_key incr_map (`Oplus op) (match e with `Incr _ -> false | _ -> true )
-		      end
-
-	    | `Init (sid, e) ->				
-		  let (e_code, e_decl) = gc_aux e decl bind_info in
-		  let e_uba = get_unbound_attributes_from_map_expression e true in
-		      begin match e_uba with
-			  | [] ->
-				let incr_var = gen_var_sym() in
-				    gc_assign_state_var e_code e_decl incr_var `Plus false 
-
-			  | _ ->
-				let incr_mid = gen_map_sym sid in
-				let incr_map =
-				    let matching_maps =
-					List.filter
-					    (fun x -> match x with
-						 | `Map(mid, _,_) -> mid = incr_mid
-						 | _ -> false) e_decl
-				    in
-					match matching_maps with
-					    | [] ->
-						  `Map(incr_mid,
-						       List.map
-							   (fun x -> (field_of_attribute_identifier x,"int")) e_uba,
-						       "int")
-					    | [m] -> m
-					    | _ -> raise (RewriteException "Multiple matching maps.")
-				in
-				let map_key =
-				    let mf = List.map field_of_attribute_identifier e_uba in
-					(incr_mid, mf)
-				in
-				    gc_assign_state_map e_code e_decl map_key incr_map (`Oplus (`Plus)) false (* TODO check later *)
-		      end
-
-	    | _ -> 
-		  print_endline("gc_aux: "^(string_of_map_expression e));
-		  raise InvalidExpression
-
-    (* plan -> code_expression list -> code_expression * declaration list *)
-    and gc_plan_aux q iter_code decl bind_info : code_expression * (declaration list) =
-	match q with
-	    | `Relation (n,f) ->
-		  let new_decl =
-		      if List.mem (`Relation (n,f)) decl then decl
-		      else decl@[`Relation(n,f)]
-		  in
-		      (`ForEach(`List(n,f), iter_code), new_decl)
-
-	    | `TrueRelation -> (iter_code, decl)
-
-	    | `Select (pred, cq) ->
-		  begin
-		      match pred with 
-			  | `BTerm(`MEQ(m_expr))
-			  | `BTerm(`MLT(m_expr)) ->
-				(* TODO: pred var types *)
-				let (pred_var_code, new_decl) = gc_aux m_expr decl bind_info in
-				let (pred_cterm, assign_var_code, pred_decl) =
-				    begin match pred_var_code with
-					| `Block xl ->
-					      let last_code = get_block_last pred_var_code in
-						  begin match last_code with
-						      | `Eval(`CTerm(`Variable(x))) ->
-							    (`Variable(x), (remove_block_last pred_var_code), new_decl)
-						      | `Eval(`CTerm(`MapAccess(mf))) ->
-							    (`MapAccess(mf), (remove_block_last pred_var_code), new_decl)
-						      | `Eval (x) ->
-							    let pv = gen_var_sym() in 
-								(`Variable(pv), 
-								 (append_to_block
-								      (remove_block_last pred_var_code)
-								      (`Assign(pv, x))),
-								 ((`Variable(pv, "int"))::new_decl))
-						      | _ -> raise InvalidExpression
-						  end
-					| `Eval(`CTerm(`Variable(x))) ->
-					      (`Variable(x), (remove_block_last pred_var_code), new_decl)
-					| `Eval(`CTerm(`MapAccess(mf))) ->
-					      (`MapAccess(mf), (remove_block_last pred_var_code), new_decl)
-					| `Eval x ->
-					      let pv = gen_var_sym() in
-						  (`Variable(pv), `Assign(pv, x),
-						   ((`Variable(pv, "int"))::new_decl))
-					| _ -> raise InvalidExpression
-				    end
-				in
-				let pred_test_code =
-				    begin
-					match pred with
-					    | `BTerm(`MEQ(m_expr)) ->
-						  `BCTerm(`EQ(`CTerm(pred_cterm), `CTerm(`Int 0)))
-					    | `BTerm(`MLT(m_expr)) ->
-						  `BCTerm(`LT(`CTerm(pred_cterm), `CTerm(`Int 0)))
-					    | _ -> raise InvalidExpression
-				    end
-				in
-				let new_iter_code =
-				    match (m_expr, pred_cterm) with
-					| (`Init x, `MapAccess(mf)) ->
-					      let (mid, _) = mf in
-					      let map_contains_code = `CTerm(`MapContains(mf)) in
-						  `IfNoElse(
-						      `BCTerm(`EQ(map_contains_code, `CTerm(`MapIterator(`End(mid))))),
-						      `Block(
-							  [assign_var_code;
-							   `IfNoElse(pred_test_code, iter_code)]))
-					| (`Init _, `Variable(_)) | (`Incr _, _) | _ ->
-					      `Block(
-						  [assign_var_code; `IfNoElse(pred_test_code, iter_code)])
-				in
-				    gc_plan_aux cq new_iter_code pred_decl bind_info 
-
-			  | _ ->
-				let new_iter_code =
-				    `IfNoElse(create_code_predicate pred, iter_code)
-				in
-				    gc_plan_aux cq new_iter_code decl bind_info 
-		  end
-		      
-	    (* 
-	      | `Project (a, cq) ->
-	      let new_iter_code = (gc_project a)@iter_code in
-	      gc_plan_aux new_iter_code decl
-	    *) 
-		      
-	    | `Union ch ->
-		  let (ch_code, ch_decl) = 
-		      List.split (List.map (fun c -> gc_plan_aux c iter_code decl bind_info ) ch)
-		  in
-		      (`Block(ch_code), List.flatten ch_decl)
-			  
-	    | `Cross(l,r) ->
-		  let (inner_code, inner_decl) = gc_plan_aux r iter_code decl bind_info in
-		      gc_plan_aux l inner_code inner_decl bind_info 
-	
-	    (* to handle rule 39, 41 *)
-	    | `IncrPlan(sid, op, nq) | `IncrDiffPlan(sid, op, nq)->
-		  let e_uba = 
-		    match event with
-		    | `Insert(_, vars) | `Delete(_, vars) ->
-			List.filter 
-			  (fun uaid -> not
-			      (List.exists
-				  (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
-				  vars))
-			  (get_unbound_attributes_from_plan nq true)
-		  in
-		  let (q_code, q_decl) =
-			gc_plan_aux nq iter_code decl bind_info
-		  in 
-		  let incrp_mid = gen_map_sym (sid) in
-		  let incrp_map = `Map(incrp_mid, 
-					List.map
-					    (fun x -> (field_of_attribute_identifier x, "int")) e_uba,
-					"int") in
-		  print_endline (string_of_code_expression (`Declare incrp_map));
-		  let map_key = 
-		      let mf = List.map field_of_attribute_identifier e_uba in
-			  (incrp_mid, mf)
-		  in
-		    gc_assign_state_map q_code q_decl map_key incrp_map (`POplus op) (match q with `IncrPlan _ -> false | _ -> true )
-		  
-	    (*
-	      | `NaturalJoin (l,r) ->
-	      ** TODO: create natural join predicate **
-	      let nj_pred = natural_join_predicate l r in
-	      let nj_iter_code = [`IfNoElse(nj_pred, iter_code)] in
-	      let (inner_code, inner_decl) = gc_plan_aux r nj_iter_code decl in
-	      gc_plan_aux l inner_code inner_decl
-
-	      | `Join(p,l,r) ->
-	      ** TODO: what if p is a map_expr? **
-	      let (inner_code, inner_decl) = gc_plan_aux l [`IfNoElse(p, iter_code)] in
-	      gc_plan_aux r inner_code inner_decl
-	    *)
-
-	    | _ ->
-		  print_endline ("gc_aux_plan: "^(string_of_plan q));
-		  raise InvalidExpression
-(*    and gc_aux_min f q decl bind_info : code_expression * (declaration list) =
-  	let run_min_var = gen_var_sym() in
-	let (f_code, f_decl) = gc_aux f decl bind_info in
-	    begin
-		match f_code with
-		    | `Eval (x) ->
-			let (agg_block, agg_decl) =
-			    gc_plan_aux (`IncrPlan (q))
-				(`Assign(run_min_var,
-					`Min (`CTerm(`Variable(run_min_var)), x)))	
-				f_decl bind_info
-			in
-			    (`Block(
-				[`Declare(`Variable(run_min_var, "int"));
-				 agg_block;
-				 `Eval(`CTerm(`Variable(run_min_var)))]), agg_decl)
-		    | _ -> raise InvalidExpression
-	    end *)
-    in
-	
-    let handler_fields = 
-      match event with
-      | `Insert (_, fields) | `Delete (_, fields) ->
-	  print_endline (
-	  "Handler("^
-	  (List.fold_left
-	     (fun acc (id, typ) ->
-	       (if (String.length acc = 0) then "" else acc^",")^id) "" fields)^
-	  "):\n"^
-	  (indented_string_of_map_expression handler 0));
-	  fields
-    in
-
-    (* TODO: declared variable types *)
-    let bound_map_exprs =
-	List.filter
-	    (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
-	    bindings
-    in
-    let binding_handlers_and_decls =
-	List.map
-	    (fun b ->
-		 match b with
-		     | `BindMapExpr (v,e) ->
-			   let (bh,d) = gc_aux e [] (false, [], []) in
-			       begin
-				   match bh with
-				       | `Eval x -> (`Assign(v, x), (`Variable(v, "int"))::d)
-				       | `Block xl ->
-					     begin
-						 match (get_block_last bh) with
-						     | `Eval y ->
-							   ((append_to_block
-								 (remove_block_last bh)
-								 (`Assign(v, y))),
-							    (`Variable(v, "int"))::d)
-						     | _ -> raise InvalidExpression
-					     end
-				       | _ -> raise InvalidExpression
-			       end
-		     | _ -> raise InvalidExpression)
-	    bound_map_exprs
-    in
-	
-    let binding_code =
-	List.flatten
-	    (List.map
-		 (fun (bh,d) ->
-		      (List.map (fun x -> `Declare(x)) d)@[bh])
-		 binding_handlers_and_decls)
-    in
-    let (handler_main, handler_decl) = gc_aux handler [] (true, binding_code, bindings) in
-    let declarations = List.map (fun x -> `Declare(x)) handler_decl in
-    let (result_code, result_type) = 
-	match get_last_code_expr handler_main with
-	    | `Eval x -> (`Return x, ctype_of_arith_code_expression x)
-	    | _ -> raise InvalidExpression
-    in
-    let new_handler_main = remove_block_last handler_main in
-(*    let new_handler_main =
-	List.fold_left
-	    (fun acc c ->
-		 match c with
-		     | `Variable _ -> acc
-		     | `Relation(id,f) -> acc 
-		     | `Map(mid, kf, rt) -> `ForEach (`Map(mid, kf, rt), acc)) 
-	    (remove_block_last handler_main) handler_decl 
-    in *)
-    let (global_decls, handler_local_code) =
-	List.partition
-	    (fun x -> match x with
-		 | `Declare(`Map _) | `Declare(`Relation _) -> true
-		 | _ -> false)
-(*	    (declarations@[new_handler_main]@binding_code@[result_code]) *)
-	    (declarations@binding_code@[new_handler_main]@[result_code])
-    in
-	(global_decls, 
-	 simplify_code
-	     (`Handler(handler_name_of_event event,
-		       handler_fields, result_type, handler_local_code)))
-
-(* parent class to handle file_stream *)
-let file_stream_body = 
-	"struct file_stream\n"^
-	"{\n"^
-	"    public:\n"^
-	"    string delim;\n"^
-	"    int num_fields;\n"^
-	"    ifstream *input_file;\n"^
-	"\n"^
-	"    file_stream(string file_name, string d, int n): num_fields(n), delim(d) {\n"^
- 	"        input_file = new ifstream(file_name.c_str());\n"^
-	"        if(!(input_file->good()))\n"^
-	"            cerr << \"Failed to open file \" << file_name << endl;\n"^
-	"    }\n"^
-	"\n"^
- 	"    tuple<bool, tokeniz> read_inputs(int line_num)\n"^
-	"    {\n"^
-	"        char buf[256];\n"^
-	"        char_separator<char> sep(delim.c_str());\n"^
-	"        input_file->getline(buf, sizeof(buf));\n"^
-	"        string line = buf;\n"^
-	"        tokeniz tokens(line, sep);\n"^
-	"\n"^
-	"        if(*buf == '\\0')\n"^
-	"            return make_tuple(false, tokens);\n"^
-	"\n"^
-	"        if (is_valid_num_tokens(tokens)) {\n"^
-	"            cerr<< \"Failed to parse record at line \" << line_num << endl;\n"^
-	"            return make_tuple(false, tokens);\n"^
-	"        }\n"^
-	"        return make_tuple(true, tokens);\n"^
-	"    }\n"^
-	"\n"^
-	"    inline bool is_valid_num_tokens(tokeniz tok)\n"^
-	"    {\n"^
-	"        int i = 0;\n"^
-	"        for (tokeniz::iterator beg = tok.begin(); beg!=tok.end(); ++beg, i ++)\n"^
-	"            ;\n"^
-	"        return i == num_fields;\n"^
-	"    }\n"^
-	"\n"^
-	"    void init_stream()\n"^
-	"    {\n"^
-	"        int line = 0;\n"^
-	"        while(input_file -> good())\n"^
-	"        {\n"^
-	"            tuple<bool, tokeniz> valid_input = read_inputs(line ++);\n"^
-	"            if(!get<0> (valid_input))\n"^
-	"                break;\n"^
-	"            if(!insert_tuple(get<1>(valid_input)))\n"^
-	"                cerr<< \"Failed to parse record at line \" << line << endl;\n"^
-	"        }\n"^
-	"    }\n"^
-	"\n"^
-	"    virtual bool insert_tuple(tokeniz t) =0;\n"^
-	"};\n"^
-	"\n"
-
-let make_file_streams `Relation(id, fields) =
-    let typename = 
-	let ftype = ctype_of_datastructure_fields fields in
-	    if (List.length fields) = 1 then ftype else "tuple<"^ftype^">" in
-    let classname = "stream_"^id in
-    let struct_f_1 = 
-	"struct "^classname^" : public file_stream\n"^
-	"{\n"^
-	"    "^classname^"(string filename, string delim, int n)\n"^
-	"        : file_stream(filename, delim, n) { }\n"^
-	"\n"^
-	"    bool insert_tuple(tokeniz tok)\n"^
-	"    {\n"^
-	"        "^typename^" r;\n"^
-	"        int i = 0;\n"^
-	"        for (tokeniz::iterator beg = tok.begin(); beg!=tok.end(); ++beg) {\n"
-    in
-    let switch_body fields n = 
-	let (m, str) = 
-	    List.fold_left 
-		(fun (n,s) (_,t) ->
-		     (n+1, 
-		      (* TODO : need to handle string, long, float too *)
-		      (if t = "int" then s^
-			   "            case "^(string_of_int n)^":\n"^ 
-			   "                get<"^(string_of_int n)^">(r) = atoi((*beg).c_str());\n"^
-			   "                break;\n" else s))
-		) 
-		(0,"") fields
-	in 	
-	    (m, "            switch(i) {\n"^str^"            }\n")
-    in let (num_fields, s_body) = switch_body fields 0 
-    in let struct_f_2 = 
-	"\n"^
-	"            i ++;\n"^
-	"        }\n"^
-	"\n"^
-	"        "^id^".push_back(r);\n"^
-	"        return true;\n"^
-	"    }\n"^
-	"\n"^
-	"};\n"^
-	"\n"
-    in let whole_body = struct_f_1 ^ s_body ^ struct_f_2
-    in let caller = 
-	let rec arguments acc n =
-	    if n = num_fields then acc
-	    else if n = 0 then arguments (acc^"get<"^string_of_int n^"> (*front)") (n+1)
-	    else arguments (acc^", get<"^string_of_int n^"> (*front)") (n+1)
-	in
-	    function x -> 
-	        "    {\n"^
-		"        list <"^typename^" >::iterator front = "^id^".begin();\n"^
-		"        list <"^typename^" >::iterator end = "^id^".end();\n"^
-		"        for ( ; front != end; ++front) {\n"^
-		"            "^x^"( "^(arguments "" 0) ^");\n"^
-		"        }\n"^
-		"    }\n" 
-    in (classname, whole_body, caller)
-
-let config_handler global_decls = 
-    let c_handler_1 = 
-	"list<file_stream *> initialize(ifstream *config)\n"^
-	"{\n"^
-	"    char buf[256];\n"^
-	"    string line;\n"^
-	"    char_separator<char> sep(\" \");\n"^
-	"    int i;\n"^
-   	"    list <file_stream *> files;\n"^
-	"    file_stream * f_stream;\n"^
-	"\n"^
-	"    while(config->good()) {\n"^
-	"        string param[4];\n"^
-	"        config->getline(buf, sizeof(buf));\n"^
-	"        line = buf;\n"^
-	"        tokeniz tok(line, sep);\n"^
-	"        i = 0;\n"^
-	"\n"^
-	"        for (tokeniz::iterator beg = tok.begin() ; beg != tok.end(); ++beg, i ++) {\n"^
-	"            param[i] = *beg;\n"^
-	"        }\n"^ 
-	"\n" in
-    let c_handler_2 =
-	"\n"^
-	"        f_stream->init_stream();\n"^
-	"        files.push_back(f_stream);\n"^
-	"    }\n"^
-	"    return files;\n"^
-	"}\n\n" in
-    let if_stmts = 
-	let param = "param[1], param[2], atoi(param[3].c_str())" in
-	List.fold_left
-	    (fun acc x -> match x with
-		`Declare d ->
-		    begin
-			match d with
-			    `Relation(i,f) -> if acc = "" then 
-				acc^"        if(param[0] == \""^i^"\")\n"^
-				"            f_stream = new stream_"^i^"("^param^");\n"
-				else 
-				acc^"        else if(param[0] == \""^i^"\")\n"^
-				"            f_stream = new stream_"^i^"("^param^");\n"
-			| _ -> acc
-		    end
-		| _ -> raise InvalidExpression ) "" global_decls 
-    in c_handler_1 ^ if_stmts ^ c_handler_2
 
 let compile_code m_expr event output_file_name =
     begin
@@ -3127,14 +2259,14 @@ let compile_code m_expr event output_file_name =
 	let (class_bodies, class_names, callers) =
 	    List.fold_left 
 		(fun (b, l, c) x -> match x with
-			 `Declare d -> 
-			     begin
-				 match d with
-					 `Relation(i,f)-> let (n, b2, c2) = make_file_streams `Relation(i,f)
-					 in (b^b2, n::l, c2::c)
-				     | _ -> (b, l, c)
-			     end
-		     | _ -> raise InvalidExpression ) ("", [], []) global_decls in
+			`Declare d -> 
+			    begin
+				match d with
+					`Relation(i,f)-> let (n, b2, c2) = make_file_streams `Relation(i,f)
+					in (b^b2, n::l, c2::c)
+				    | _ -> (b, l, c)
+			    end
+		    | _ -> raise InvalidExpression ) ("", [], []) global_decls in
 
 	let out_chan = open_out output_file_name in
 	    (* Preamble *)
@@ -3155,7 +2287,7 @@ let compile_code m_expr event output_file_name =
 	    (* Global declarations *)
 	    List.iter
 		(fun x -> output_string out_chan
-		     ((indented_string_of_code_expression x)^"\n")) global_decls;
+		    ((indented_string_of_code_expression x)^"\n")) global_decls;
 	    output_string out_chan "\n";
 
 	    (* file stream *)
@@ -3178,42 +2310,42 @@ let compile_code m_expr event output_file_name =
 		    ) "" callers
 
 	    (* Dummy main *)
-(*	    let (dummy_call, dummy_args) =
-		match handler_code with
+            (*	    let (dummy_call, dummy_args) =
+		    match handler_code with
 		    | `Handler(name, args, _, _) -> (name,
-						     List.fold_left
-							 (fun acc (id, typ) ->
-							      (if (String.length acc) = 0 then "" else acc^", ")^
-								  (match typ with 
-								       | "int" | "long" -> "0"
-								       | "float" | "double" -> "0.0"
-								       | "string" -> "\"a\""))
-							 "" args)
+		    List.fold_left
+		    (fun acc (id, typ) ->
+		    (if (String.length acc) = 0 then "" else acc^", ")^
+		    (match typ with 
+		    | "int" | "long" -> "0"
+		    | "float" | "double" -> "0.0"
+		    | "string" -> "\"a\""))
+		    "" args)
 		    | _ -> raise InvalidExpression
-*)
+            *)
 	    in
 	    let instantiate =
 		let config_filename = "config" in
 	 	    "    ifstream *config;\n"^
-		    "    string fcon;\n"^
-		    "\n"^
-		    "    if(argc == 1) fcon = \""^config_filename^"\";\n"^
-		    "    else fcon = argv[1];\n"^
-		    "\n"^
-		    "    config = new ifstream(fcon.c_str());\n"^
-		    "    if(!config->good()) {\n"^
-		    "        cerr << \"Failed to read config file\" << fcon << endl;\n"^
-		    "        exit(1);\n"^
-		    "    }\n"^
-		    "\n"^
-		    "    initialize(config);\n" 
+		        "    string fcon;\n"^
+		        "\n"^
+		        "    if(argc == 1) fcon = \""^config_filename^"\";\n"^
+		        "    else fcon = argv[1];\n"^
+		        "\n"^
+		        "    config = new ifstream(fcon.c_str());\n"^
+		        "    if(!config->good()) {\n"^
+		        "        cerr << \"Failed to read config file\" << fcon << endl;\n"^
+		        "        exit(1);\n"^
+		        "    }\n"^
+		        "\n"^
+		        "    initialize(config);\n" 
 	    in
 	    let dummy_main =
 		"\n"^
 		    "int main(int argc, char* argv[])\n{\n"^
 		    instantiate^
 		    caller^
-(*		    "    "^dummy_call^"("^dummy_args^");\n"^ *)
+                    (*		    "    "^dummy_call^"("^dummy_args^");\n"^ *)
 		    "    return 0;\n"^
 		    "}\n"
 	    in
