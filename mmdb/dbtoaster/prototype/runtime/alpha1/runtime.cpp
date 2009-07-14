@@ -24,8 +24,8 @@
 #include "llvm/System/DynamicLibrary.h"
 #include "llvm/ModuleProvider.h"
 
-#define LLVM_GPP "/Users/yanif/software/llvm/llvm-gcc/bin/llvm-g++"
-#define LLVM_GPP_FLAGS " -emit-llvm -c -I/Users/yanif/software/boost/include/boost-1_39"
+#define LLVM_GPP "/home/anton/software/llvm-gcc/bin/g++"
+#define LLVM_GPP_FLAGS " -emit-llvm -c -I/home/anton/software/boost/include/boost-1_39"
 
 #define MAIN_SYMBOL "main"
 #define REPOSITORY "."
@@ -72,6 +72,7 @@ QueryManifest loadQueryManifest(string manifestFile)
   QueryManifest r;
 
   ifstream mf(manifestFile.c_str());
+  int linenum = 0;
   while ( mf.good() ) {
     char buf[256];
     mf.getline(buf, sizeof(buf));
@@ -85,12 +86,19 @@ QueryManifest loadQueryManifest(string manifestFile)
     else if ( line.substr(0, 8) == "library," ) {
       r.libraries.push_back(line.substr(8, l-8));
     }
+    else if ( mf.eof() ) break;
     else {
-      cout << "Invalid manifest entry: " << line << endl;
+      cout << "Invalid manifest entry at line "
+          << linenum << ": " << line << endl;
       r.handlers.clear();
       r.libraries.clear();
+      mf.close();
       return r;
     }
+
+    cout << "Read line: " << line << endl;
+
+    ++linenum;
   }
 
   mf.close();
@@ -520,6 +528,22 @@ struct Compiler {
     cout << "Found " << libPaths.size() << " library paths." << endl;
     for (; path_it != path_end; ++path_it)
       cout << "Lib path " << path_it->toString() << endl;
+
+    // Hack loading libstdc++ first.
+    string stdcLoadError;
+    sys::Path stdcPath = l.FindLib("stdc++.so");
+    bool stdcLoadFailed = sys::DynamicLibrary::
+	LoadLibraryPermanently(stdcPath.toString().c_str(), &stdcLoadError);
+
+    if ( stdcLoadFailed  ) {
+      cout << "Failed to link in stdc++ " << " error: " << stdcLoadError << endl;
+      delete r;
+      delete queryMB;
+      return NULL;
+    }
+    else {
+      cout << "Linked in stdc++, path: " << stdcPath.toString() << endl;
+    }
 
     list<string>::const_iterator lib_it = libraries.begin();
     list<string>::const_iterator lib_end = libraries.end();
