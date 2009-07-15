@@ -1540,7 +1540,7 @@ let ctype_of_datastructure =
 		  let ftype = ctype_of_datastructure_fields f in
 		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
 	      in
-              let ds_type = match ds with | `Set _ -> "unordered_set" | `Multiset _ -> "unordered_multiset" in
+              let ds_type = match ds with | `Set _ -> "set" | `Multiset _ -> "multiset" in
 		  ds_type^"<"^el_type^(if nested_type then " >" else ">")
 
 let ctype_of_code_var_list =

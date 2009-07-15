@@ -713,7 +713,8 @@ let generate_code handler bindings event =
                       in
                           match existing_decl with
                               | [] -> let y = `Relation(n,f) in (y, decl@[y])
-                              | [x] -> (x, decl)
+                              (* Note: local renaming of fields *)
+                              | [`Relation(n2,f2)] -> (`Relation(n2,f), decl)
                               | _ -> raise DuplicateException
 		  in
 		      (`ForEach(datastructure_of_declaration r_decl, iter_code), new_decl)
@@ -1078,7 +1079,7 @@ let make_file_streams `Relation(id, fields) =
 	        "            i ++;\n"^
 	        "        }\n"^
 	        "\n"^
-	        "        "^id^".push_back(r);\n"^
+	        "        "^id^".insert(r);\n"^
 	        "        return true;\n"^
 	        "    }\n"^
 	        "\n"^

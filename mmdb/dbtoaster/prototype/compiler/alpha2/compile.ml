@@ -2371,9 +2371,11 @@ let compile_code m_expr event output_file_name =
 	    output_string out_chan "#include <cstdio>\n";
 	    output_string out_chan "#include <cstdlib>\n";
 	    output_string out_chan "#include <map>\n";
-	    output_string out_chan "#include <list>\n\n";
+	    output_string out_chan "#include <list>\n";
+	    output_string out_chan "#include <set>\n\n";
 	    output_string out_chan "#include <tr1/tuple>\n";
-	    output_string out_chan "#include <boost/tokenizer.hpp>\n";
+	    output_string out_chan "#include <tr1/unordered_set>\n\n";
+	    output_string out_chan "#include <boost/tokenizer.hpp>\n\n";
 	    output_string out_chan "using namespace std;\n";
 	    output_string out_chan "using namespace tr1;\n";
 	    output_string out_chan "using namespace boost;\n\n";
