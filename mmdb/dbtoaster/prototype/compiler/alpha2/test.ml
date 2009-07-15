@@ -319,6 +319,8 @@ in
 print_test_type "compile_code";
 compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
 
+(*
 print_test_type "treeml_of_map_expression";
 let treeml_out_chan = open_out "vwap.tml" in
     output_string treeml_out_chan (treeml_string_of_map_expression vwap);;
+*)

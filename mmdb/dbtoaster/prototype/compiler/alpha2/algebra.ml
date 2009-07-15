@@ -1422,6 +1422,7 @@ type map_identifier = identifier
  *)
 type datastructure = [
 | `Map of map_identifier * (field list) * type_identifier 
+| `Set of relation_identifier * (field list)
 | `Multiset of relation_identifier * (field list) ]
 
 type code_variable = variable_identifier
@@ -1435,7 +1436,8 @@ type relation_variable = relation_identifier * (field list)
 type declaration = [
 | `Variable of code_variable * type_identifier
 | `Relation of relation_identifier * (field list) 
-| `Map of map_identifier * (field list) * type_identifier ]
+| `Map of map_identifier * (field list) * type_identifier
+| `Domain of relation_identifier * (field list) ]
 
 type code_terminal = [
 | `Int of int
@@ -1474,8 +1476,8 @@ type code_expression = [
 | `Assign of code_variable * arith_code_expression
 | `AssignMap of map_key * arith_code_expression 
 | `EraseMap of map_key * arith_code_expression
-| `InsertDomain of relation_variable * (code_variable list)
-| `DeleteDomain of relation_variable * (code_variable list)
+| `InsertTuple of datastructure * (code_variable list)
+| `DeleteTuple of datastructure * (code_variable list)
 | `Eval of arith_code_expression 
 | `IfNoElse of bool_code_expression * code_expression
 | `IfElse of bool_code_expression * code_expression * code_expression
@@ -1484,28 +1486,32 @@ type code_expression = [
 | `Return of arith_code_expression
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list ]
 
-let string_of_datastructure =
-    function | `Map (n,f,_) | `Multiset (n,f) -> n
 
-let string_of_datastructure_fields =
-    function
-	| `Map (n,f,_) | `Multiset (n,f) ->
-	      List.fold_left
-		  (fun acc (id, typ) ->
-		       (if (String.length acc) = 0 then "" else acc^", ")^
-			   typ^" "^id)
-		  "" f
+(* Basic code type helpers *)
+let is_block c_expr =
+    match c_expr with | `Block _ -> true | _ -> false
 
-let string_of_code_var_list vl =
-    List.fold_left
-	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
-	"" vl
+let identifier_of_datastructure =
+    function | `Map (n,_,_) | `Set (n,_) | `Multiset (n,_) -> n
 
-let string_of_map_key (mid, keys) = mid^"["^(string_of_code_var_list keys)^"]"
+let datastructure_of_declaration decl =
+    match decl with
+        | `Variable (n,ty) -> raise (CodegenException ("Invalid datastructure: "^n))
+        | `Relation(n,f) -> `Multiset(n,f)
+        | `Map (id, f, rt) -> `Map(id, f, rt)
+        | `Domain(n,f) -> `Set(n,f)
+
+let identifier_of_declaration decl =
+    match decl with
+        | `Variable (v, ty) -> v
+        | `Relation(n, f) -> n
+        | `Map (n, f, rt) -> n
+        | `Domain(n, f) -> n
 
 (*
  * C-code generation helpers
  *)
+
 
 let ctype_of_type_identifier t = t
 
@@ -1527,13 +1533,27 @@ let ctype_of_datastructure =
                           | _ -> "tuple<"^ftype^">" 
 	      in
 		  "map<"^key_type^","^(ctype_of_type_identifier r)^">"
-		      
-	| `Multiset (n,f) ->
+
+        | (`Set(n, f) as ds) 
+	| (`Multiset (n,f) as ds) ->
 	      let (el_type, nested_type) = 
 		  let ftype = ctype_of_datastructure_fields f in
 		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
 	      in
-		  "list<"^el_type^(if nested_type then " >" else ">")
+              let ds_type = match ds with | `Set _ -> "unordered_set" | `Multiset _ -> "unordered_multiset" in
+		  ds_type^"<"^el_type^(if nested_type then " >" else ">")
+
+let ctype_of_code_var_list =
+    function
+        | [] -> raise (CodegenException "Invalid code var list")
+        | [x] -> x
+        | x -> 
+              let svl =
+                  List.fold_left
+	              (fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
+	              "" x
+              in
+                  "make_tuple("^svl^")"
 
 (* TODO *)
 let ctype_of_arith_code_expression ac_expr = "int"
@@ -1542,7 +1562,7 @@ let iterator_ref = ref 0
 
 let point_iterator_declaration_of_datastructure ds =
     match ds with
-	| `Map(id, f, _) | `Multiset (id, f) ->
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
 	      let point_it = id^"_it"^it_id in
@@ -1550,7 +1570,7 @@ let point_iterator_declaration_of_datastructure ds =
             
 let range_iterator_declarations_of_datastructure ds =
     match ds with
-	| `Map(id, f, _) | `Multiset (id, f) ->
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
 	      let begin_it = id^"_it"^it_id in
@@ -1560,10 +1580,10 @@ let range_iterator_declarations_of_datastructure ds =
 let field_declarations_of_datastructure ds iterator tab =
     let deref = match ds with
 	| `Map _ -> iterator^"->first"
-	| `Multiset _ -> "*"^iterator
+        | `Set _ | `Multiset _ -> "*"^iterator
     in 
 	match ds with
-	    | `Map(id, f, _) | `Multiset (id, f) ->
+	    | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 		  if (List.length f) = 1 then
 		      let (id, typ) = List.hd f in
 			  tab^typ^" "^id^" = "^deref^";\n"
@@ -1586,6 +1606,25 @@ let handler_name_of_event ev =
 (* 
  * Code generation main
  *)
+
+let string_of_datastructure =
+    function | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
+
+let string_of_datastructure_fields =
+    function
+	| `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
+	      List.fold_left
+		  (fun acc (id, typ) ->
+		       (if (String.length acc) = 0 then "" else acc^", ")^
+			   typ^" "^id)
+		  "" f
+
+let string_of_code_var_list vl =
+    List.fold_left
+	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
+	"" vl
+
+let string_of_map_key (mid, keys) = mid^"["^(string_of_code_var_list keys)^"]"
 
 let string_of_code_expr_terminal cterm =
     match cterm with 
@@ -1658,16 +1697,13 @@ let rec string_of_code_expression c_expr =
     in
 	match c_expr with
 	    | `Declare x ->
-		  begin
-		      match x with 
-			  | `Variable(n, typ) -> typ^" "^n^";"
-			  | `Map(mid, key_fields, val_type) ->
-				let ctype = ctype_of_datastructure (`Map(mid, key_fields, val_type)) in
-				    ctype^" "^mid^";"
-			  | `Relation(id, fields) ->
-				let ctype = ctype_of_datastructure (`Multiset(id, fields)) in
-				    ctype^" "^id^";"
-		  end
+                  begin
+                      match x with
+		          | `Variable(n, typ) -> typ^" "^n^";"
+                          | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
+                                    ctype^" "^(identifier_of_declaration y)^";"
+                  end
 
 	    | `Assign(v,ac) ->
 		  v^" = "^(string_of_arith_code_expression ac)^";"
@@ -1678,15 +1714,15 @@ let rec string_of_code_expression c_expr =
 	    | `EraseMap(mk, c) ->
 		  (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
 
-            | `InsertDomain ((rel,_), cv_list) ->
-                  rel^".insert("^(string_of_code_var_list cv_list)^")";
+            | `InsertTuple (ds, cv_list) ->
+                  (identifier_of_datastructure ds)^
+                      ".insert("^(ctype_of_code_var_list cv_list)^");";
 
-            | `DeleteDomain ((rel, fields), cv_list) -> 
-                  let (find_it, find_decl) =
-                      point_iterator_declaration_of_datastructure (`Multiset (rel, fields))
-                  in
-                      find_decl^" = "^rel^".find("^(string_of_code_var_list cv_list)^");"^
-                      rel^".delete("^find_it^")";
+            | `DeleteTuple (ds, cv_list) -> 
+                  let id = identifier_of_datastructure ds in
+                  let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                      find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");"^
+                      id^".delete("^find_it^");";
 
 	    | `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -1740,13 +1776,10 @@ let indented_string_of_code_expression c_expr =
 		| `Declare x ->
 		      begin
 			  match x with 
-			      | `Variable(n, typ) -> typ^" "^n^";"
-			      | `Map(mid, key_fields, val_type) ->
-				    let ctype = ctype_of_datastructure (`Map(mid, key_fields, val_type)) in
-					ctype^" "^mid^";"
-			      | `Relation(id, fields) ->
-				    let ctype = ctype_of_datastructure (`Multiset(id, fields)) in
-					ctype^" "^id^";"
+		              | `Variable(n, typ) -> typ^" "^n^";"
+                              | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                    let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
+                                        ctype^" "^(identifier_of_declaration y)^";"
 		      end
 			  
 		| `Assign(v,ac) ->
@@ -1758,16 +1791,15 @@ let indented_string_of_code_expression c_expr =
 	        | `EraseMap(mk, c) ->
 		      (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
 
-                | `InsertDomain ((rel,_), cv_list) ->
-                      rel^".insert("^(string_of_code_var_list cv_list)^")";
+                | `InsertTuple (ds, cv_list) ->
+                      (identifier_of_datastructure ds)^
+                          ".insert("^(ctype_of_code_var_list cv_list)^");";
 
-                | `DeleteDomain ((rel, fields), cv_list) -> 
-                      let (find_it, find_decl) =
-                          point_iterator_declaration_of_datastructure (`Multiset (rel, fields))
-                      in
-                          find_decl^" = "^rel^".find("^(string_of_code_var_list cv_list)^");\n"^
-                              tab^rel^".delete("^find_it^")";
-
+                | `DeleteTuple (ds, cv_list) -> 
+                      let id = identifier_of_datastructure ds in
+                      let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                          find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
+                              tab^id^".delete("^find_it^");";
 
 		| `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -1981,7 +2013,7 @@ let rec get_last_code_expr c_expr =
     match c_expr with
 	| `Declare _ | `Assign _ 
         | `AssignMap _  | `EraseMap _
-        | `InsertDomain _ | `DeleteDomain _
+        | `InsertTuple _ | `DeleteTuple _
         | `Eval _ | `Return _ -> c_expr 
 	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
 	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r

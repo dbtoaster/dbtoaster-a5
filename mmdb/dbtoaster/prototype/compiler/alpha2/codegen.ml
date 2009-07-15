@@ -145,7 +145,13 @@ let rec substitute_code_vars assignments c_expr =
 					    | _ -> raise InvalidExpression)
 					assignments
 				in
-				    if n_is_asgn then raise InvalidExpression
+				    if n_is_asgn then
+                                        begin
+                                            print_endline ("Attempted to substitute assigned variable "^n);
+                                            print_endline (indented_string_of_code_expression c_expr);
+                                            raise (CodegenException
+                                                ("Attempted to substitute assigned variable "^n))
+                                        end
 				    else `Declare(d)
 
 			  | _ -> `Declare(d)
@@ -162,8 +168,8 @@ let rec substitute_code_vars assignments c_expr =
 	    | `EraseMap((mid, kf), c) ->
 		  `EraseMap((mid, substitute_cv_list kf), sa c)
 
-            | `InsertDomain(relvar, cvl) -> `InsertDomain(relvar, substitute_cv_list cvl)
-            | `DeleteDomain(relvar, cvl) -> `DeleteDomain(relvar, substitute_cv_list cvl)
+            | `InsertTuple(ds, cvl) -> `InsertTuple(ds, substitute_cv_list cvl)
+            | `DeleteTuple(ds, cvl) -> `DeleteTuple(ds, substitute_cv_list cvl)
 
 	    | `IfNoElse(p, c) -> `IfNoElse(sb p, sc c)
 	    | `IfElse(p, l, r) -> `IfElse(sb p, sc l, sc r)
@@ -180,42 +186,55 @@ let rec merge_block_code cl acc =
 	| h::t -> merge_block_code t (acc@[h])
 
 let rec simplify_code c_expr =
-    (*
+
       print_endline "Simplify code:";
       print_endline (indented_string_of_code_expression c_expr);
       print_endline (String.make 50 '-');
 
       let r =
-    *)
+
     match c_expr with
 	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
 	| `IfElse (p,l,r) -> `IfElse(p, simplify_code l, simplify_code r)
 	| `ForEach(ds, c) -> `ForEach(ds, simplify_code c)
 
-	(* flatten singleton blocks *)
+	(* flatten blocks *)
+        | `Block ([x; `Block(y)]) when not(is_block x) ->
+              simplify_code (`Block([x]@y))
 	| `Block ([`Block(x)]) -> `Block (List.map simplify_code x)
 	| `Block ([x]) -> simplify_code x
 
 	| `Block(x) ->
-	      (* reorder locally scoped vars to beginning of block *)
+	      (* reorder locally scoped vars to beginning of block
+               *  Note: assumes unique variables 
+               *)
 	      let (decls, code) =
 		  List.partition
 		      (fun y -> match y with
 			  | `Declare(z) -> true | _ -> false) x
 	      in
 	      let simplified_non_decls = List.map simplify_code code in
-		  
+              let collapsed_non_decls =
+                  List.fold_left
+                      (fun acc ce -> match ce with
+                          | `Block((h::t) as y) ->
+                                begin match h with | `Declare _ -> acc@[ce] | _ -> acc@y end
+                          | _ -> acc@[ce])
+                      [] simplified_non_decls
+              in
+	      let non_decls = collapsed_non_decls in
+
 	      (* substitute redundant vars *)
 	      let (new_decls, substituted_code) =
-		  let var_assignments =
+		  let assigned_by_vars =
 		      List.filter
 			  (fun c ->
 			      match c with
 				  | `Assign(_, `CTerm(`Variable(_))) -> true
 				  | _ -> false)
-			  simplified_non_decls
+			  non_decls
 		  in
-		  let var_declarations =
+		  let decls_assigned_by_vars =
 		      List.filter
 			  (fun d -> match d with
 			      | `Declare(`Variable(v1,_)) ->
@@ -224,41 +243,46 @@ let rec simplify_code c_expr =
 					    match a with
 						| `Assign(v2, _) -> v2 = v1
 						| _ -> raise InvalidExpression)
-					var_assignments
+					assigned_by_vars
 			      | _ -> false) decls
 		  in
 		  let filtered_decls =
-		      List.filter
-			  (fun c -> not (List.mem c var_declarations)) decls
+		      List.filter (fun c -> not (List.mem c decls_assigned_by_vars)) decls
 		  in
 		  let filtered_code =
+                      (* substitute LHS vars assigned by RHS vars in code, and
+                         remove assignments to corresponding LHS vars *)
 		      List.filter
-			  (fun c -> not (List.mem c var_assignments))
+			  (fun c -> not (List.mem c assigned_by_vars))
 			  (List.map
-			      (substitute_code_vars var_assignments)
-			      simplified_non_decls)
+			      (substitute_code_vars assigned_by_vars)
+			      non_decls)
 		  in
 		      (filtered_decls, filtered_code)
 	      in
 	      let reordered_code = new_decls@substituted_code in
 	      let merged_code = merge_block_code reordered_code [] in
-		  begin match merged_code with
+                  begin match merged_code with
 		      | [] -> raise InvalidExpression
-		      | [x] -> x
-		      | h::t -> `Block(merged_code)
+		      | [x] -> simplify_code x
+		      | h::t ->
+                            if merged_code = x then
+                                `Block(merged_code)
+                            else
+                                simplify_code (`Block(merged_code))
 		  end
 
 	| `Handler(n, args, rt, c) ->
 	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
 
 	| _ -> c_expr
-    (*
+
       in
       print_endline "Result:";
       print_endline (indented_string_of_code_expression r);
       print_endline (String.make 50 '-');
       r
-    *)
+
 
 
 let gc_assign_state_var code decl var =
@@ -352,11 +376,11 @@ let gc_incr_state_map code decl map_key map_decl oplus diff =
 (* TODO: handle deletions.
  * Note: only deletions on selects, nested aggregates need IncrPlan *)
 (*
-let gc_incr_state_dom code decl dom_var dom_decl oplus diff =
+let gc_incr_state_dom code decl dom_ds dom_decl oplus diff =
     let new_decl = if List.mem dom_decl decl then decl else dom_decl::decl in
     let oper op = function x -> match op with
-        | `Union -> `InsertDomain(dom_var, x)
-        | `Diff -> `DeleteDomain(dom_var, x)
+        | `Union -> `InsertTuple(dom_ds, x)
+        | `Diff -> `DeleteTuple(dom_ds, x)
     in
     let rv = get_return_val code in
         match rv with
@@ -375,6 +399,36 @@ let gc_incr_state_dom code decl dom_var dom_decl oplus diff =
                   print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
                   raise (RewriteException "get_incr_state_map: invalid return val")
 *)
+
+let gc_insert_event m_expr decl event =
+    let br = get_base_relations m_expr in
+    let event_vars = match event with 
+        | `Insert(_, f) | `Delete(_, f) -> List.map (fun (id, ty) -> id) f
+    in
+    let event_rel = get_bound_relation event in
+    let event_rel_decl =
+        (* Check event relation is in the recomputed expression,
+           and is already declared *)
+        let check_base_relations =
+            List.exists
+                (fun y -> match y with
+                    | `Relation(n,_) when n = event_rel -> true
+                    | _ -> false) br
+        in
+            if check_base_relations then
+                List.filter
+                    (fun y -> match y with
+                        | `Relation(n,_) when n = event_rel -> true
+                        | _ -> false) decl
+            else []
+    in
+        match event_rel_decl with
+            | [] -> None
+            | er_decl::t ->
+                  let insert_code =
+                      `InsertTuple(datastructure_of_declaration er_decl, event_vars)
+                  in
+                      Some(insert_code)
 
 
 (* returns whether any bindings are used by m_expr and the bound variables *)
@@ -604,6 +658,9 @@ let generate_code handler bindings event =
 
 	    | (`Init (sid, e) as oe) ->
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
+
+                  (* Note: no need to filter handler args, since e should be a recomputation,
+                   * i.e. a map_expression where deltas have not been applied *)
 		  let e_uba = get_unbound_attributes_from_map_expression e true in
 		      begin match e_uba with
 			  | [] ->
@@ -646,36 +703,41 @@ let generate_code handler bindings event =
     and gc_plan_aux q iter_code decl bind_info : code_expression * (declaration list) =
 	match q with
 	    | `Relation (n,f) ->
-		  let new_decl =
+		  let (r_decl, new_decl) =
                       (* Use name based matching, since columns are unique *)
-		      if List.exists
-                          (fun d -> match d with
-                              | `Relation (n2,f2) -> n = n2 | _ -> false)
-                          decl
-                      then decl else decl@[`Relation(n,f)]
+                      let existing_decl =
+                          List.filter
+                              (fun d -> match d with
+                                  | `Relation (n2,f2) -> n = n2 | _ -> false)
+                              decl
+                      in
+                          match existing_decl with
+                              | [] -> let y = `Relation(n,f) in (y, decl@[y])
+                              | [x] -> (x, decl)
+                              | _ -> raise DuplicateException
 		  in
-		      (`ForEach(`Multiset(n,f), iter_code), new_decl)
+		      (`ForEach(datastructure_of_declaration r_decl, iter_code), new_decl)
 
             | `Domain (sid, attrs) ->
-                  let (domain_ds, new_decl) =
+                  let (domain_decl, new_decl) =
                       let dom_fields =
                           List.map (fun x -> (field_of_attribute_identifier x, "int")) attrs
                       in
-                      let existing_ds =
+                      let existing_decl =
                           List.filter
                               (fun ds -> match ds with
-                                  | `Relation (_, f) -> f = dom_fields | _ -> false)
+                                  | `Domain (_, f) -> f = dom_fields | _ -> false)
                               decl
                       in
-                          match existing_ds with
+                          match existing_decl with
                               | [] ->
 		                    let dom_id = gen_dom_sym (sid) in
-                                    let new_ds = `Multiset(dom_id, dom_fields) in
-                                        (new_ds, (`Relation(dom_id, dom_fields))::decl)
-                              | [`Relation(n,f)] -> (`Multiset(n,f), decl)
+                                    let dom_decl = `Domain(dom_id, dom_fields) in 
+                                        (dom_decl, decl@[dom_decl])
+                              | [x] -> (x, decl)
                               | _ -> raise DuplicateException
                   in
-                      (`ForEach(domain_ds, iter_code), new_decl)
+                      (`ForEach(datastructure_of_declaration domain_decl, iter_code), new_decl)
 
             | `TrueRelation -> (iter_code, decl)
 
@@ -710,7 +772,14 @@ let generate_code handler bindings event =
                                     in
                                         match pred_var_rv with
                                             | `Eval(`CTerm(`Variable(x))) ->
-						  (`Variable(x), code_wo_rv, new_decl)
+						  (* (`Variable(x), code_wo_rv, new_decl) *)
+                                                  let error = "Found independent nested map expression"^
+                                                      "(should have been lifted.)"
+                                                  in
+                                                      print_endline ("gc_plan_aux: "^error^":\n"^
+                                                          (indented_string_of_code_expression pred_var_code));
+                                                      raise (CodegenException error);
+
 
                                             | `Eval(`CTerm(`MapAccess(mf))) ->
                                                   (`MapAccess(mf), code_wo_rv, new_decl)
@@ -739,19 +808,42 @@ let generate_code handler bindings event =
 					    | _ -> raise InvalidExpression
 				    end
 				in
+
 				let new_iter_code =
 				    match (m_expr, pred_cterm) with
-					| (`Init x, `MapAccess(mf)) ->
+                                         (* Note: only inserts have `Init expressions.
+                                            Generate insert into base relations before recomputing as necessary *)
+                                        | (`Init (_,e), `MapAccess(mf)) ->
 					      let (mid, _) = mf in
 					      let map_contains_code = `CTerm(`MapContains(mf)) in
+                                              let insert_code = gc_insert_event e pred_decl event in
+                                              let init_code =
 						  `IfNoElse(
 						      `BCTerm(`EQ(map_contains_code, `CTerm(`MapIterator(`End(mid))))),
                                                       match assign_var_code with
                                                           | None -> `IfNoElse(pred_test_code, iter_code)
                                                           | Some av -> 
 						                `Block([av; `IfNoElse(pred_test_code, iter_code)]))
+                                              in
+                                                  begin
+                                                      match insert_code with
+                                                          | None -> init_code
+                                                          | Some(ic) -> `Block([ic; init_code])
+                                                  end
 
-					| (`Init _, `Variable(_))
+                                        | (`Init (_,e), `Variable _) ->
+                                              let insert_code = gc_insert_event e pred_decl event in
+                                                  begin
+                                                      match (insert_code, assign_var_code) with
+                                                          | (None, None) -> `IfNoElse(pred_test_code, iter_code)
+                                                          | (Some ins, None) ->
+                                                                `Block([ins; `IfNoElse(pred_test_code, iter_code)])
+                                                          | (None, Some av) ->
+                                                                `Block([av; `IfNoElse(pred_test_code, iter_code)])
+                                                          | (Some ins, Some av) -> 
+                                                                `Block([ins; av; `IfNoElse(pred_test_code, iter_code)])
+                                                  end
+
                                         | (`Incr _, _) | _ ->
                                               match assign_var_code with
                                                   | None -> `IfNoElse(pred_test_code, iter_code)
@@ -787,17 +879,18 @@ let generate_code handler bindings event =
                   (* let diff = match q with `IncrPlan _ -> false | _ -> true in *)
 		  let dom_id = gen_dom_sym (sid) in
                   let dom_fields = List.map (fun x -> (field_of_attribute_identifier x, "int")) d in
-                  let dom_var = (dom_id, dom_fields) in
-		  let dom_relation = `Relation(dom_id, dom_fields) in
-                  let new_iter_code =
+		  let dom_decl = `Domain(dom_id, dom_fields) in
+                  let dom_ds = datastructure_of_declaration dom_decl in
+                  let (new_iter_code, new_decl) =
                       let incr_code = match op with
-                          | `Union -> `InsertDomain(dom_var, List.map field_of_attribute_identifier d)
-                          | `Diff -> `DeleteDomain(dom_var, List.map field_of_attribute_identifier d)
+                          | `Union -> `InsertTuple(dom_ds, List.map field_of_attribute_identifier d)
+                          | `Diff -> `DeleteTuple(dom_ds, List.map field_of_attribute_identifier d)
                       in
-                          `Block([incr_code; iter_code]) 
+                          (`Block([incr_code; iter_code]),
+                           if List.mem dom_decl decl then decl else dom_decl::decl)
                   in
-		  let (q_code, q_decl) = gc_plan_aux nq new_iter_code decl bind_info in 
-                      print_incrp_debug q_code dom_relation;
+		  let (q_code, q_decl) = gc_plan_aux nq new_iter_code new_decl bind_info in 
+                      print_incrp_debug q_code dom_decl;
                       (*
                         print_endline ("Referencing "^dom_id^" for "^(string_of_plan q));
 		        gc_incr_state_dom q_code q_decl dom_var dom_relation op diff
@@ -881,7 +974,7 @@ let generate_code handler bindings event =
     let (global_decls, handler_code) =
 	List.partition
 	    (fun x -> match x with
-		| `Declare(`Map _) | `Declare(`Relation _) -> true
+		| `Declare(`Map _) | `Declare(`Relation _) | `Declare(`Domain _) -> true
 		| _ -> false)
 	    (declaration_code@binding_bodies@[handler_body_with_rv])
     in
