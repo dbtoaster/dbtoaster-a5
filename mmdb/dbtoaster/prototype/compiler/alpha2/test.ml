@@ -180,16 +180,42 @@ let bound_sv1_pred = add_predicate_bindings sv1_pred proj_attrs2 in
 
 
 
-    print_test_type "get_unbound_attributes";
-    let m_p2_uba = get_unbound_attributes_from_map_expression m_p2 false in
-	print_endline "get_unbound_attributes(m_p2):\n";
-	List.iter (fun uba -> print_endline (string_of_attribute_identifier uba)) m_p2_uba;;
+print_test_type "get_unbound_attributes";
+let m_p2_uba = get_unbound_attributes_from_map_expression m_p2 false in
+    print_endline "get_unbound_attributes(m_p2):\n";
+    List.iter (fun uba -> print_endline (string_of_attribute_identifier uba)) m_p2_uba;;
 
 let vwap_uba = get_unbound_attributes_from_map_expression vwap false in
     print_endline "get_unbound_attributes(vwap):\n";
     List.iter (fun uba -> print_endline (string_of_attribute_identifier uba)) vwap_uba;;
 
 
+print_test_type "get_attributes_used_in_map_expression";
+(* test expr:
+   sum_{
+       min_{BB1*AB1}
+           (select_{AB1>0}(project_{AB1=A1,AB2=A2}(rho_{A1,A2}(A))))}
+       (select_{BB1<0}(project_{BB1=B1}(rho_{B1}(B))))
+   result: BB1,AB1,A1,B1
+*)
+let test_expr =
+    `MapAggregate(`Sum,
+        `MapAggregate(`Min,
+            `Product(`METerm(`Attribute(`Unqualified("BB1"))),
+                `METerm(`Attribute(`Unqualified("AB1")))),
+            `Select(`BTerm(`GT(`ETerm(`Attribute(`Unqualified("AB1"))), `ETerm(`Int 0))),
+                `Project(
+                    [(`Unqualified("AB1"), `ETerm(`Attribute(`Unqualified("A1"))));
+                     (`Unqualified("AB2"), `ETerm(`Attribute(`Unqualified("A2"))))],
+                    `Relation("A", [("A1", "int"); ("A2","int")])))),
+        `Select(`BTerm(`LT(`ETerm(`Attribute(`Unqualified("BB1"))), `ETerm(`Int 0))),
+            `Project(
+                [(`Unqualified("BB1"), `ETerm(`Attribute(`Unqualified("B1"))))],
+                `Relation("B", [("B1", "int"); ("B2","int")]))))
+in
+let attrs_used = get_attributes_used_in_map_expression test_expr in
+    print_endline "get_attributes_used_in_map_expression(test_expr):\n";
+    List.iter (fun a -> print_endline (string_of_attribute_identifier a)) attrs_used;;
 
 
 print_test_type "push_delta";
@@ -231,9 +257,9 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 	    (fun ce -> print_endline ((string_of_map_expression ce)^"\n"))
 	    code_exprs;
 	
-	print_test_type "compute_new_map_expression(vwap):";
+	print_test_type "initialize_map_expression(vwap):";
 	let new_code_exprs =
-	    List.map (fun c -> compute_new_map_expression c (Some New)) code_exprs
+	    List.map (fun c -> initialize_map_expression c (Some New)) code_exprs
 	in
 	    List.iter
 		(fun ce -> print_endline ((string_of_map_expression ce)^"\n"))

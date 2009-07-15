@@ -1,19 +1,15 @@
 exception InvalidExpression
-exception PlanException of string
 exception DuplicateException
+exception PlanException of string
 exception RewriteException of string
+exception ValidationException of string
+exception CodegenException of string
 
-(** test of ocamldoc kkk *)
 type identifier = string
 
 type column_name = [
-    `Qualified of identifier * identifier
+| `Qualified of identifier * identifier
 | `Unqualified of identifier ]
-
-let field_of_attribute_identifier id =
-    match id with 
-	| `Qualified(r,a) -> a
-	| `Unqualified a -> a
 
 type attribute_identifier = column_name
 type variable_identifier = identifier
@@ -24,6 +20,7 @@ type relation_identifier = identifier
 type state_identifier = identifier
 
 type field = field_identifier * type_identifier 
+type domain = attribute_identifier list
 
 type delta = [
 | `Insert of relation_identifier * field list
@@ -56,7 +53,7 @@ type meterm = [
 
 type aggregate_function = [ `Sum | `Min | `Max ]
 
-type oplus = [`Plus | `Minus | `Min | `Max | `Decrmin of map_expression ]
+type oplus = [`Plus | `Minus | `Min | `Max | `Decrmin of map_expression * state_identifier ]
 
 and  poplus = [`Union | `Diff ]
 
@@ -70,9 +67,9 @@ and  map_expression = [
 | `MapAggregate of aggregate_function * map_expression * plan
 | `Delta of delta * map_expression
 | `New of map_expression
-| `Incr of state_identifier * oplus * map_expression
-| `IncrDiff of state_identifier * oplus * map_expression
-| `Init of state_identifier * map_expression 
+| `Init of state_identifier * map_expression
+| `Incr of state_identifier * oplus * map_expression * map_expression
+| `IncrDiff of state_identifier * oplus * map_expression * map_expression
 | `Insert of state_identifier * meterm * map_expression
 | `Update of state_identifier * oplus * meterm * map_expression
 | `Delete of state_identifier * meterm
@@ -99,18 +96,15 @@ and plan = [
 | `TrueRelation (* aka nullary singleton *)
 | `FalseRelation (* aka emptyset *)
 | `Relation of relation_identifier * field list
+| `Domain of state_identifier * domain
 | `Select of boolean_expression * plan
 | `Project of (attribute_identifier * expression) list * plan
 | `Union of plan list
 | `Cross of plan * plan
-(*
-| `NaturalJoin of plan * plan 
-| `Join of boolean_expression * plan * plan
-*)
 | `DeltaPlan of delta * plan
 | `NewPlan of plan
-| `IncrPlan of state_identifier * poplus * plan 
-| `IncrDiffPlan of state_identifier * poplus * plan ]
+| `IncrPlan of state_identifier * poplus * plan * domain
+| `IncrDiffPlan of state_identifier * poplus * plan * domain ]
 
 type binding = [
 | `BindExpr of variable_identifier * expression
@@ -118,8 +112,6 @@ type binding = [
 | `BindMapExpr of variable_identifier * map_expression ]
 
 type recompute_state = New | Incr
-
-type all_oplus = [`Oplus of oplus | `POplus of poplus]
 
 (* symbol generation *)
 let id_counter = ref 0
@@ -143,8 +135,29 @@ let gen_state_sym() =
 	incr state_counter;
 	"state"^(string_of_int new_sym)
 
+type state_symbols = (string, string) Hashtbl.t
+let indexed_syms : (string, int ref * state_symbols) Hashtbl.t = Hashtbl.create 10
+
+let gen_indexed_sym category sid =
+    let (cat_counter, cat_syms) =
+        if not (Hashtbl.mem indexed_syms category) then
+            Hashtbl.replace indexed_syms category (ref 0, Hashtbl.create 10);
+        Hashtbl.find indexed_syms category
+    in
+        if Hashtbl.mem cat_syms sid then
+            Hashtbl.find cat_syms sid
+        else
+            let new_sym = category^(string_of_int !cat_counter) in
+                incr cat_counter;
+                Hashtbl.add cat_syms sid new_sym;
+                new_sym
+
+let gen_map_sym = gen_indexed_sym "map"
+let gen_dom_sym = gen_indexed_sym "dom"
+
+(*
 let map_counter = ref 0
-let map_syms : (string, string) Hashtbl.t= Hashtbl.create 10
+let map_syms : (string, string) Hashtbl.t = Hashtbl.create 10
 
 let gen_map_sym sid =
     if Hashtbl.mem map_syms sid then
@@ -154,6 +167,16 @@ let gen_map_sym sid =
 	    incr map_counter;
 	    Hashtbl.add map_syms sid new_sym;
 	    new_sym
+*)
+
+(* Basic helpers *)
+let field_of_attribute_identifier id =
+    match id with
+	| `Qualified(r,a) -> a
+	| `Unqualified a -> a
+
+let attribute_identifiers_of_field_list relation_id field_l =
+    List.map (fun (id, ty) -> `Qualified(relation_id, id)) field_l
 
 (* Plan transformation helpers *)
 let rec fold_map_expr fn acc expr =
@@ -265,9 +288,10 @@ and map_map_expr e_fn b_fn me_fn mp_fn (m_expr : map_expression) =
 
             | `Delta (b, e) -> me_fn (`Delta(b, map_aux e))
             | `New (e) -> me_fn (`New(map_aux e))
-            | `Incr (sid, op, e) -> me_fn (`Incr(sid, op, map_aux e))
-            | `IncrDiff (sid, op, e) -> me_fn (`IncrDiff(sid, op, map_aux e))
-            | `Init (sid, e) -> me_fn (`Init(sid, map_aux e))
+            | `Init (sid, e) -> me_fn (`Init (sid, map_aux e))
+            | `Incr (sid, op, re, e) -> me_fn (`Incr(sid, op, re, map_aux e))
+            | `IncrDiff (sid, op, re, e) -> me_fn (`IncrDiff(sid, op, re, map_aux e))
+            
             | `Insert (sid, t, e) ->
                   let r_mt = map_aux (`METerm t) in
                       begin
@@ -296,7 +320,7 @@ and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
     let map_aux = map_plan e_fn b_fn me_fn mp_fn in
         match plan with
             | `TrueRelation | `FalseRelation
-            | `Relation (_,_) -> mp_fn plan
+            | `Relation (_,_) | `Domain _ -> mp_fn plan
             | `Select (p,ch) -> mp_fn (`Select(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux ch))
             | `Project (projs, ch) ->
                   mp_fn (
@@ -304,14 +328,10 @@ and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
                       map_aux ch))
             | `Union ch -> mp_fn (`Union (List.map map_aux ch))
             | `Cross (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
-            (*
-            | `NaturalJoin (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
-            | `Join (p, l, r) -> mp_fn (`Join(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux l, map_aux r))
-            *)
             | `DeltaPlan (b, p) -> mp_fn (`DeltaPlan(b, map_aux p))
             | `NewPlan (p) -> mp_fn (`NewPlan (map_aux p))
-            | `IncrPlan (sid, pop, p) -> mp_fn (`IncrPlan (sid, pop, map_aux p))
-            | `IncrDiffPlan (sid, pop, p) -> mp_fn (`IncrDiffPlan (sid, pop, map_aux p))
+            | `IncrPlan (sid, pop, p, d) -> mp_fn (`IncrPlan (sid, pop, map_aux p, d))
+            | `IncrDiffPlan (sid, pop, p, d) -> mp_fn (`IncrDiffPlan (sid, pop, map_aux p, d))
 
 
 (* Pretty printing *)	
@@ -421,7 +441,7 @@ and string_of_oplus op =
 	| `Minus -> "-"
 	| `Min -> "min"
 	| `Max -> "max"
-	| `Decrmin m -> "decrmin("^(string_of_map_expression m)^")"
+	| `Decrmin (m, sid) -> "decrmin("^(string_of_map_expression m)^", "^sid^")"
 
 and string_of_poplus op =
     match op with
@@ -456,23 +476,41 @@ and string_of_map_expression m_expr =
 
 	| `New (e) -> "New("^(string_of_map_expression e)^"}"
 
-	| `Incr (sid, op, e) -> "Incr["^(string_of_oplus op)^","^(sid)^"]{"^(string_of_map_expression e)^"}"
-
-	| `IncrDiff (sid, op, e) -> "IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"^(string_of_map_expression e)^"}"
-
 	| `Init (sid, e) -> "Init["^(sid)^"]{"^(string_of_map_expression e)^"}"
 
-	| `Insert (sid, m, e) -> "Insert{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}("^(string_of_map_expression e)^")"
+	| `Incr (sid, op, re, e) ->
+              "Incr["^(string_of_oplus op)^","^(sid)^"]{"^
+                  (string_of_map_expression e)^"}"
 
-	| `Update (sid, op, m, e) -> "Update{"^(string_of_oplus op)^","^(sid)^"["^(string_of_map_expr_terminal m)^"]}("^(string_of_map_expression e)^")"
+	| `IncrDiff (sid, op, re, e) ->
+              "IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"^
+                  (string_of_map_expression e)^"}"
+
+	| `Insert (sid, m, e) ->
+              "Insert{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}("^
+                  (string_of_map_expression e)^")"
+
+	| `Update (sid, op, m, e) ->
+              "Update{"^(string_of_oplus op)^","^(sid)^
+                  "["^(string_of_map_expr_terminal m)^"]}("^
+                  (string_of_map_expression e)^")"
 
 	| `Delete (sid, m) -> "Delete{"^(sid)^"["^(string_of_map_expr_terminal m)^"]}"
 
-	| `IfThenElse (b, m1, m2) -> "If("^(string_of_bool_expression (`BTerm b))^" ) then "^(string_of_map_expression m1)^" else "^(string_of_map_expression m2)
+	| `IfThenElse (b, m1, m2) ->
+              "If("^(string_of_bool_expression (`BTerm b))^
+                  " ) then "^(string_of_map_expression m1)^
+                  " else "^(string_of_map_expression m2)
 	
 and string_of_plan p =
     match p with
+	| `TrueRelation -> "TrueRelation"
+
+	| `FalseRelation -> "FalseRelation"
+
 	| `Relation (name, schema) -> "Relation ["^name^"]"^(string_of_schema schema)
+
+        | `Domain (sid, attrs) -> "Domain ["^sid^"]("^(string_of_attribute_identifier_list attrs)^")"
 
 	| `Select (pred, child) ->
 	      "select {"^(string_of_bool_expression pred)^"}("^(string_of_plan child)^")"
@@ -490,28 +528,19 @@ and string_of_plan p =
 	| `Cross (l, r) ->
 	      "cross("^(string_of_plan l)^","^(string_of_plan r)^")"
 
-        (*
-	| `NaturalJoin (l, r) ->
-	      "natjoin("^(string_of_plan l)^","^(string_of_plan r)^")"
-		  
-	| `Join (pred, l, r) ->
-	      "join{"^(string_of_bool_expression pred)^"}("^
-		  (string_of_plan l)^","^(string_of_plan r)^")"
-        *)
-
-	| `TrueRelation -> "TrueRelation"
-
-	| `FalseRelation -> "FalseRelation"
-	      
 	| `DeltaPlan (binding, ch) ->
 	      "Delta{"^(string_of_delta binding)^"}("^(string_of_plan ch)^")"
 
 	| `NewPlan (ch) -> 
 	      "New("^(string_of_plan ch)^")"
 
-	| `IncrPlan (sid, po, ch) -> "IncrP["^(string_of_poplus po)^","^(sid)^"]{"^(string_of_plan ch)^"}"
+	| `IncrPlan (sid, po, ch, d) ->
+              "IncrP["^(string_of_poplus po)^","^(sid)^","^
+                  (string_of_attribute_identifier_list d)^"]{"^(string_of_plan ch)^"}"
 
-	| `IncrDiffPlan (sid, po, ch) -> "IncrDiffP["^(string_of_poplus po)^","^(sid)^"]{"^(string_of_plan ch)^"}"
+	| `IncrDiffPlan (sid, po, ch, d) ->
+              "IncrDiffP["^(string_of_poplus po)^","^(sid)^","^
+                  (string_of_attribute_identifier_list d)^"]{"^(string_of_plan ch)^"}"
 
 
 let rec indented_string_of_bool_expression b_expr level =
@@ -605,18 +634,18 @@ and indented_string_of_map_expression m_expr level =
 		   (indented_string_of_map_expression e (level+1))^
 		   (indent "}")
 
-	| `Incr (sid, op, e) ->
+	| `Init (sid, e) ->
+	      (indent ("Init["^(sid)^"]{"))^
+		  (indented_string_of_map_expression e (level+1))^
+		  (indent "}")
+
+	| `Incr (sid, op, re, e) ->
 	      (indent ("Incr["^(string_of_oplus op)^","^(sid)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
-	| `IncrDiff (sid, op, e) ->
+	| `IncrDiff (sid, op, re, e) ->
 	      (indent ("IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"))^
-		  (indented_string_of_map_expression e (level+1))^
-		  (indent "}")
-
-	| `Init (sid, e) ->
-	      (indent ("Init["^(sid)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
@@ -646,8 +675,16 @@ and indented_string_of_plan p level =
     let indent s = (String.make (4*level) '-')^"> "^s^"\n" in
     let indent_binary l op r = l^(indent op)^r in
     match p with
-	| `Relation (name, schema) -> (indent ("Relation ["^name^"]"^(string_of_schema schema)))
-	      
+	| `TrueRelation -> (indent "TrueRelation")
+
+	| `FalseRelation -> (indent "FalseRelation")
+
+	| `Relation (name, schema) ->
+              (indent ("Relation ["^name^"]"^(string_of_schema schema)))
+
+	| `Domain (sid, attrs) ->
+              (indent ("Domain ["^sid^"]("^(string_of_attribute_identifier_list attrs)^")"))
+
 	| `Select (pred, child) ->
 	      (indent ("select {"^
 		  (indented_string_of_bool_expression pred (level+1))^"}("))^
@@ -674,29 +711,6 @@ and indented_string_of_plan p level =
 		       (indented_string_of_plan r (level+1)))^
 		  (indent ")")
 
-        (*
-	| `NaturalJoin (l, r) ->
-	      (indent "natjoin(")^
-		  (indent_binary
-		       (indented_string_of_plan l (level+1))
-		       ","
-		       (indented_string_of_plan r (level+1)))^
-		  (indent ")")
-		  
-	| `Join (pred, l, r) ->
-	      (indent "join{")^
-		  (indented_string_of_bool_expression pred (level+1))^"}("^
-		  (indent_binary
-		       (indented_string_of_plan l (level+1))
-		       ","
-		       (indented_string_of_plan r (level+1)))^
-		  (indent ")")
-        *)
-
-	| `TrueRelation -> (indent "TrueRelation")
-
-	| `FalseRelation -> (indent "FalseRelation")
-	      
 	| `DeltaPlan (binding, ch) ->
 	      (indent ("Delta{"^(string_of_delta binding)^"}("))^
 		  (indented_string_of_plan ch (level+1))^
@@ -707,13 +721,15 @@ and indented_string_of_plan p level =
 		  (indented_string_of_plan ch (level+1))^
 		  (indent ")")
 
-	| `IncrPlan (sid, po, ch) ->
-	      (indent ("IncrPlan["^(string_of_poplus po)^","^(sid)^"]{"))^
+	| `IncrPlan (sid, po, ch, d) ->
+	      (indent ("IncrPlan["^(string_of_poplus po)^","^(sid)^","^
+                  (string_of_attribute_identifier_list d)^"]{"))^
 		  (indented_string_of_plan ch (level+1))^
 		  (indent "}")
 
-	| `IncrDiffPlan (sid, po, ch) ->
-	      (indent ("IncrDiffPlan["^(string_of_poplus po)^","^(sid)^"]{"))^
+	| `IncrDiffPlan (sid, po, ch, d) ->
+	      (indent ("IncrDiffPlan["^(string_of_poplus po)^","^(sid)^","^
+                  (string_of_attribute_identifier_list d)^"]{"))^
 		  (indented_string_of_plan ch (level+1))^
 		  (indent "}")
 
@@ -746,11 +762,11 @@ let parent m_expr ch_e_or_p =
 
 	    | `MapExpression (`Delta (_, e))
 	    | `MapExpression (`New (e))
-	    | `MapExpression (`Incr (_, _, e))
-	    | `MapExpression (`IncrDiff (_, _, e))
+	    | `MapExpression (`Init (_, e)) 
+	    | `MapExpression (`Incr (_, _, _, e))
+	    | `MapExpression (`IncrDiff (_, _, _, e))
 	    | `MapExpression (`Insert (_, _, e))
-	    | `MapExpression (`Update (_, _, _, e))
-	    | `MapExpression (`Init (_, e)) ->
+	    | `MapExpression (`Update (_, _, _, e)) ->
 		  let match_e = `MapExpression e in
 		      if (ch_e_or_p = match_e) then Some prev_e_or_p
 		      else
@@ -778,8 +794,11 @@ let parent m_expr ch_e_or_p =
 		      else
 			  let fp = parent_aux match_f e_or_p in
 			      if fp = None then parent_aux match_q e_or_p else fp
-				  
-	    | `Plan (`Relation (n, f)) -> None 
+
+	    | `Plan (`TrueRelation) -> None
+	    | `Plan (`FalseRelation) -> None
+	    | `Plan (`Relation _) -> None 
+	    | `Plan (`Domain _) -> None
 
 	    | `Plan (`Select (p, cq)) ->
 		  begin
@@ -821,47 +840,12 @@ let parent m_expr ch_e_or_p =
 		      else
 			  let lp = parent_aux match_l e_or_p in
 			      if lp = None then parent_aux match_r e_or_p else lp
-
-            (*
-            | `Plan (`NaturalJoin (l,r)) ->
-		  let match_l = `Plan l in
-		  let match_r = `Plan r in
-		      if (match_l = ch_e_or_p) || (match_r = ch_e_or_p) then Some e_or_p
-		      else
-			  let lp = parent_aux match_l e_or_p in
-			      if lp = None then parent_aux match_r e_or_p else lp
-
-	    | `Plan (`Join (p, l, r)) ->
-		  begin
-		      let match_l = `Plan l in
-		      let match_r = `Plan r in
-			  match p with
-				  (* TODO: think about case for complex map expression predicate *)
-			      | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-				    let match_p = `MapExpression m_expr in
-					if (match_p = ch_e_or_p) || (match_l = ch_e_or_p) || (match_r = ch_e_or_p)
-					then Some e_or_p
-					else
-					    let pp = parent_aux match_p e_or_p in
-						if pp = None then
-						    let lp = parent_aux match_l e_or_p in
-							if lp = None then parent_aux match_r e_or_p else lp
-						else pp
-			      | _ ->
-				    if (match_l = ch_e_or_p) || (match_r = ch_e_or_p) then Some e_or_p
-				    else
-					let lp = parent_aux match_l e_or_p in
-					    if lp = None then parent_aux match_r e_or_p else lp
-		  end
-            *)
 		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p)) | `Plan (`IncrPlan(_, _, p)) | `Plan (`IncrDiffPlan(_, _, p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p))
+            | `Plan (`IncrPlan(_, _, p,_)) | `Plan (`IncrDiffPlan(_, _, p,_)) ->
 		  let match_p = `Plan p in
 		      if match_p = ch_e_or_p then Some e_or_p
 		      else parent_aux match_p e_or_p
-
-	    | `Plan (`TrueRelation) -> None
-	    | `Plan (`FalseRelation) -> None
 
 	    | _ -> raise InvalidExpression
     in
@@ -881,12 +865,12 @@ let children e_or_p =
 	    | `MapExression (`METerm _) | `MapExpression (`Delete _) -> []
 	    | `MapExpression (`Delta (_,e))
 	    | `MapExpression (`New(e))
-	    | `MapExpression (`Incr(_,_, e))
-	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Init(_,e))
+	    | `MapExpression (`Incr(_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
-	    | `MapExpression (`Update(_,_, _, e))
-	    | `MapExpression (`Init(_,e)) -> [`MapExpression(e)]
-		  
+	    | `MapExpression (`Update(_,_, _, e)) -> [`MapExpression(e)]
+
 	    | `MapExpression (`Sum(l,r)) | `MapExpression (`Product(l,r))
 	    | `MapExpression (`Minus(l,r)) | `MapExpression (`Max(l,r)) 
 	    | `MapExpression (`IfThenElse(_, l, r))
@@ -895,22 +879,18 @@ let children e_or_p =
 		      
 	    | `MapExpression (`MapAggregate(fn,f,q)) -> [`MapExpression(f); `Plan(q)]
 
-	    | `Plan(`Relation(n,f)) -> []
-	    | `Plan(`Select (p, cq)) ->
-		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@([`Plan(cq)])
-	    | `Plan(`Project (a,cq)) -> [`Plan(cq)]
-	    | `Plan(`Union ch) -> List.map (fun x -> `Plan(x)) ch
-	    | `Plan(`Cross(l,r)) -> [`Plan(l); `Plan(r)]
-            (*
-            | `Plan(`NaturalJoin(l,r)) -> [`Plan(l); `Plan(r)]
-	    | `Plan(`Join(p,l,r)) ->
-		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@
-		      [`Plan(l); `Plan(r)]
-            *)
-	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e)) | `Plan (`IncrPlan(_, _, e)) | `Plan (`IncrDiffPlan (_, _, e)) ->
-		  [`MapExpression(e)]
 	    | `Plan (`TrueRelation) -> []
 	    | `Plan (`FalseRelation) -> []
+	    | `Plan (`Relation _) -> []
+            | `Plan (`Domain _) -> []
+	    | `Plan (`Select (p, cq)) ->
+		  (List.map (fun x -> `MapExpression(x)) (get_map_expressions p))@([`Plan(cq)])
+	    | `Plan (`Project (a,cq)) -> [`Plan(cq)]
+	    | `Plan (`Union ch) -> List.map (fun x -> `Plan(x)) ch
+	    | `Plan (`Cross(l,r)) -> [`Plan(l); `Plan(r)]
+	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e))
+            | `Plan (`IncrPlan(_,_,e,_)) | `Plan (`IncrDiffPlan (_,_,e,_)) ->
+		  [`MapExpression(e)]
 	    | _ -> raise InvalidExpression
 
 (* accessor_element -> accessor_element list *)
@@ -963,9 +943,10 @@ let splice m_expr orig rewrite =
 			      
 		    | `Delta(b,e) -> `Delta(b, splice_map_expr_aux e)
 		    | `New(e) -> `New(splice_map_expr_aux e) 
-		    | `Incr(sid,op, e) -> `Incr(sid, op, splice_map_expr_aux e)
-		    | `IncrDiff(sid,op, e) -> `IncrDiff(sid, op, splice_map_expr_aux e)
 		    | `Init(sid,e) -> `Init(sid, splice_map_expr_aux e)
+		    | `Incr(sid,op,re,e) -> `Incr(sid, op, re, splice_map_expr_aux e)
+		    | `IncrDiff(sid,op,re,e) -> `IncrDiff(sid, op, re, splice_map_expr_aux e)
+
 		    | `Insert(sid, m, e) -> `Insert(sid, m, splice_map_expr_aux e)
 		    | `Update(sid, op, m, e) -> `Update(sid, op, m, splice_map_expr_aux e)
 		    | `Delete(_) as x -> x
@@ -982,7 +963,10 @@ let splice m_expr orig rewrite =
 	else
 	    begin
 		match q with
-		    | `Relation (n,f) as x -> x
+		    | `TrueRelation -> `TrueRelation
+		    | `FalseRelation -> `FalseRelation
+		    | `Relation _ as x -> x
+                    | `Domain _ as x -> x
 		    | `Select (p,cq) ->
 			  begin
 			      match p with
@@ -998,30 +982,11 @@ let splice m_expr orig rewrite =
 		    | `Project (a, cq) -> `Project(a, splice_plan_aux cq)
 		    | `Union ch -> `Union (List.map (fun c -> splice_plan_aux c) ch)
 		    | `Cross (l,r) -> `Cross (splice_plan_aux l, splice_plan_aux r)
-                    (*
-		    | `NaturalJoin (l,r) -> `NaturalJoin (splice_plan_aux l, splice_plan_aux r)
-		    | `Join (p, l, r) ->
-			  begin
-			      match p with 
-				  | `BTerm(`MEQ(m_expr)) ->
-					`Join(`BTerm(`MEQ(splice_map_expr_aux m_expr)),
-					      splice_plan_aux l, splice_plan_aux r)
-
-				  | `BTerm(`MLT(m_expr)) ->
-					`Join(`BTerm(`MLT(splice_map_expr_aux m_expr)),
-					      splice_plan_aux l, splice_plan_aux r)
-
-				  | _ -> `Join(p, splice_plan_aux l, splice_plan_aux r)
-			  end
-                    *)
 			      
 		    | `DeltaPlan (b, e) -> `DeltaPlan (b, splice_plan_aux e)
 		    | `NewPlan (e) -> `NewPlan(splice_plan_aux e)
-		    | `IncrPlan (sid, p, e) -> `IncrPlan (sid, p, splice_plan_aux e)
-		    | `IncrDiffPlan (sid, p, e) -> `IncrDiffPlan (sid, p, splice_plan_aux e)
-
-		    | `TrueRelation -> `TrueRelation
-		    | `FalseRelation -> `FalseRelation
+		    | `IncrPlan (sid, p, e, d) -> `IncrPlan (sid, p, splice_plan_aux e, d)
+		    | `IncrDiffPlan (sid, p, e, d) -> `IncrDiffPlan (sid, p, splice_plan_aux e, d)
 		    | _ -> raise InvalidExpression
 	    end
     in
@@ -1038,11 +1003,11 @@ let get_base_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Incr(_,_, e))
-	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Init(_, e))
+	    | `MapExpression (`Incr(_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
-	    | `MapExpression (`Update(_,_,_, e))
-	    | `MapExpression (`Init(_, e)) -> (gbr_aux (`MapExpression e) acc)
+	    | `MapExpression (`Update(_,_,_, e)) -> (gbr_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
@@ -1055,9 +1020,11 @@ let get_base_relations m_expr =
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbr_aux (`Plan q) (gbr_aux (`MapExpression f) acc))
 
-	    | `Plan (`Relation (n,f) as x) -> x::acc
-
 	    | `Plan (`TrueRelation) | `Plan (`FalseRelation) -> acc
+
+	    | `Plan (`Relation _ as x) -> x::acc
+
+            | `Plan (`Domain _) -> acc
 		  
 	    | `Plan (`Select (p,cq)) ->
 		  begin
@@ -1075,22 +1042,8 @@ let get_base_relations m_expr =
 	    | `Plan (`Cross (l,r)) ->
 		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 
-            (*
-            | `Plan (`NaturalJoin (l,r)) ->
-		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
-		      
-	    | `Plan (`Join (p, l, r)) ->
-		  begin
-		      match p with 
-			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-				(gbr_aux (`Plan r) (gbr_aux (`Plan l) (gbr_aux (`MapExpression m_expr) acc)))
-
-			  | _ ->
-				(gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
-		  end
-            *)
-		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan (_, _,p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p))
+            | `Plan (`IncrPlan (_,_, p,_)) | `Plan (`IncrDiffPlan (_, _,p,_)) ->
 		  (gbr_aux (`Plan p) acc)
 
 	    | _ -> raise InvalidExpression
@@ -1105,11 +1058,11 @@ let get_bound_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Incr(_,_, e))
-	    | `MapExpression (`IncrDiff(_,_, e))
+	    | `MapExpression (`Init(_,e))
+	    | `MapExpression (`Incr(_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
-	    | `MapExpression (`Update(_,_,_, e))
-	    | `MapExpression (`Init(_,e)) -> (gbor_aux (`MapExpression e) acc)
+	    | `MapExpression (`Update(_,_,_, e)) -> (gbor_aux (`MapExpression e) acc)
 
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
@@ -1122,7 +1075,9 @@ let get_bound_relations m_expr =
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbor_aux (`Plan q) (gbor_aux (`MapExpression f) acc))
 
-	    | `Plan (`Relation (_,_)) -> acc
+	    | `Plan (`Relation _) -> acc
+
+            | `Plan (`Domain _) -> acc
 
 	    | `Plan (`Project(projs, `TrueRelation) as q) -> q::acc
 
@@ -1142,22 +1097,8 @@ let get_bound_relations m_expr =
 	    | `Plan (`Cross (l,r)) ->
 		  (gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
 
-            (*
-            | `Plan (`NaturalJoin (l,r)) ->
-		  (gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
-		      
-	    | `Plan (`Join (p, l, r)) ->
-		  begin
-		      match p with 
-			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-				(gbor_aux (`Plan r) (gbor_aux (`Plan l) (gbor_aux (`MapExpression m_expr) acc)))
-
-			  | _ ->
-				(gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
-		  end
-            *)
-		      
-	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p)) | `Plan (`IncrPlan (_,_, p)) | `Plan (`IncrDiffPlan(_,_, p)) ->
+	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p))
+            | `Plan (`IncrPlan (_,_,p,_)) | `Plan (`IncrDiffPlan(_,_,p,_)) ->
 		  (gbor_aux (`Plan p) acc)
 
 	    | `Plan (`TrueRelation) -> acc
@@ -1395,7 +1336,9 @@ and compute_monotonicity attr attr_m m_expr =
 	      let qm = compute_plan_monotonicity attr attr_m q in
 		  agg_monotonicity fm qm
 		      
-	| `Delta _ | `New _ | `Incr _ | `Init _ | `IncrDiff _ | `Insert _ | `Update _ | `Delete _ -> raise MonotonicityException
+	| `Delta _ | `New _ | `Init _
+        | `Incr _ | `IncrDiff _
+        | `Insert _ | `Update _ | `Delete _ -> raise MonotonicityException
 
 and compute_plan_monotonicity attr attr_m q =
     match q with
@@ -1432,21 +1375,11 @@ and compute_plan_monotonicity attr attr_m q =
 		  (compute_plan_monotonicity attr attr_m l)
 		  (compute_plan_monotonicity attr attr_m r)
 
-        (*
-	| `NaturalJoin (l,r) ->
-	      cross_monotonicity
-		  (compute_plan_monotonicity attr attr_m l)
-		  (compute_plan_monotonicity attr attr_m r)
-
-	| `Join (b_expr, l, r) ->
-	      let bem = compute_bool_expr_monotonicity attr attr_m b_expr in
-	      let lm = compute_plan_monotonicity attr attr_m l in
-	      let rm = compute_plan_monotonicity attr attr_m r in
-		  join_monotonicity bem lm rm 
-        *)
-
-	| `TrueRelation | `FalseRelation  | `DeltaPlan(_) | `NewPlan(_) | `IncrPlan(_) | `IncrDiffPlan(_) ->
-	      raise MonotonicityException
+        (* Singleton relations, domains, incr terms should not exist yet,
+           * i.e. this should be done before compilation *)
+	| `TrueRelation | `FalseRelation | `Domain _
+        | `DeltaPlan(_) | `NewPlan(_)
+        | `IncrPlan(_) | `IncrDiffPlan(_) -> raise MonotonicityException
 
 
 let rec is_monotonic b_expr attr =
@@ -1473,16 +1406,31 @@ let rec is_monotonic b_expr attr =
  *)
 
 type map_identifier = identifier
-	
+
+(* Datastructure notes:
+ * underlying map must support: begin(), end()
+ *     iterator = begin(), iterator = end()
+ *     operator[](val)
+ *     insert(val)
+ *     erase(val)
+ * underlying multiset must support:
+ *     iterator = begin(), iterator = end()
+ *     iterator = find(val)
+ *     insert(val)
+ *     delete(iterator)
+ * other operations: operator*(iterator), get<idx>(val)
+ *)
 type datastructure = [
 | `Map of map_identifier * (field list) * type_identifier 
-| `List of relation_identifier * (field list) ]
+| `Multiset of relation_identifier * (field list) ]
 
 type code_variable = variable_identifier
 
 type map_key = map_identifier * (code_variable list)
 
 type map_iterator = [ `Begin of map_identifier | `End of map_identifier ]
+
+type relation_variable = relation_identifier * (field list)
 
 type declaration = [
 | `Variable of code_variable * type_identifier
@@ -1522,24 +1470,26 @@ type bool_code_expression = [
 | `Or of bool_code_expression * bool_code_expression ]
 
 type code_expression = [
-| `IfNoElse of bool_code_expression * code_expression
-| `IfElse of bool_code_expression * code_expression * code_expression
-| `ForEach of datastructure * code_expression
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
 | `AssignMap of map_key * arith_code_expression 
-| `EraseMap of map_key * arith_code_expression 
+| `EraseMap of map_key * arith_code_expression
+| `InsertDomain of relation_variable * (code_variable list)
+| `DeleteDomain of relation_variable * (code_variable list)
 | `Eval of arith_code_expression 
+| `IfNoElse of bool_code_expression * code_expression
+| `IfElse of bool_code_expression * code_expression * code_expression
+| `ForEach of datastructure * code_expression
 | `Block of code_expression list
 | `Return of arith_code_expression
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list ]
 
 let string_of_datastructure =
-    function | `Map (n,f,_) | `List (n,f) -> n
+    function | `Map (n,f,_) | `Multiset (n,f) -> n
 
 let string_of_datastructure_fields =
     function
-	| `Map (n,f,_) | `List (n,f) ->
+	| `Map (n,f,_) | `Multiset (n,f) ->
 	      List.fold_left
 		  (fun acc (id, typ) ->
 		       (if (String.length acc) = 0 then "" else acc^", ")^
@@ -1571,11 +1521,14 @@ let ctype_of_datastructure =
 	| `Map (n,f,r) ->
 	      let key_type = 
 		  let ftype = ctype_of_datastructure_fields f in
-		      if (List.length f) = 1 then ftype else "tuple<"^ftype^">" 
+                      match f with
+                          | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                          | [x] -> ftype
+                          | _ -> "tuple<"^ftype^">" 
 	      in
 		  "map<"^key_type^","^(ctype_of_type_identifier r)^">"
 		      
-	| `List (n,f) ->
+	| `Multiset (n,f) ->
 	      let (el_type, nested_type) = 
 		  let ftype = ctype_of_datastructure_fields f in
 		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
@@ -1587,9 +1540,17 @@ let ctype_of_arith_code_expression ac_expr = "int"
 
 let iterator_ref = ref 0
 
-let iterator_declarations_of_datastructure ds =
+let point_iterator_declaration_of_datastructure ds =
     match ds with
-	| `Map(id, f, _) | `List (id, f) ->
+	| `Map(id, f, _) | `Multiset (id, f) ->
+	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
+	      let point_it = id^"_it"^it_id in
+		  (point_it, it_typ^" "^point_it)
+            
+let range_iterator_declarations_of_datastructure ds =
+    match ds with
+	| `Map(id, f, _) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
 	      let begin_it = id^"_it"^it_id in
@@ -1599,10 +1560,10 @@ let iterator_declarations_of_datastructure ds =
 let field_declarations_of_datastructure ds iterator tab =
     let deref = match ds with
 	| `Map _ -> iterator^"->first"
-	| `List _ -> "*"^iterator
+	| `Multiset _ -> "*"^iterator
     in 
 	match ds with
-	    | `Map(id, f, _) | `List (id, f) ->
+	    | `Map(id, f, _) | `Multiset (id, f) ->
 		  if (List.length f) = 1 then
 		      let (id, typ) = List.hd f in
 			  tab^typ^" "^id^" = "^deref^";\n"
@@ -1696,27 +1657,6 @@ let rec string_of_code_expression c_expr =
 	    "" c_expr_l
     in
 	match c_expr with
-	    | `IfNoElse(p,c) ->
-		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
-		      (string_of_code_expression c)^" }"
-
-	    | `IfElse(p,l,r) ->
-		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
-		      (string_of_code_expression l)^" }"^
-		  "else {"^
-		      (string_of_code_expression r)^" }"
-
-	    | `ForEach(m,c) ->
-		  let (begin_it, end_it, begin_decl, end_decl) =
-		      iterator_declarations_of_datastructure m
-		  in
-		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
-			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-			  "for(; "^begin_it^" != "^end_it^"; ++"^begin_it^"){"^
-			  (field_declarations_of_datastructure m begin_it "")^"\n"^
-			  (string_of_code_expression c)^
-			  "}"
-
 	    | `Declare x ->
 		  begin
 		      match x with 
@@ -1725,7 +1665,7 @@ let rec string_of_code_expression c_expr =
 				let ctype = ctype_of_datastructure (`Map(mid, key_fields, val_type)) in
 				    ctype^" "^mid^";"
 			  | `Relation(id, fields) ->
-				let ctype = ctype_of_datastructure (`List(id, fields)) in
+				let ctype = ctype_of_datastructure (`Multiset(id, fields)) in
 				    ctype^" "^id^";"
 		  end
 
@@ -1738,7 +1678,38 @@ let rec string_of_code_expression c_expr =
 	    | `EraseMap(mk, c) ->
 		  (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
 
+            | `InsertDomain ((rel,_), cv_list) ->
+                  rel^".insert("^(string_of_code_var_list cv_list)^")";
+
+            | `DeleteDomain ((rel, fields), cv_list) -> 
+                  let (find_it, find_decl) =
+                      point_iterator_declaration_of_datastructure (`Multiset (rel, fields))
+                  in
+                      find_decl^" = "^rel^".find("^(string_of_code_var_list cv_list)^");"^
+                      rel^".delete("^find_it^")";
+
 	    | `Eval(ac) -> string_of_arith_code_expression ac
+
+	    | `IfNoElse(p,c) ->
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression c)^" }"
+
+	    | `IfElse(p,l,r) ->
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression l)^" }"^
+		  "else {"^
+		      (string_of_code_expression r)^" }"
+
+	    | `ForEach(m,c) ->
+		  let (begin_it, end_it, begin_decl, end_decl) =
+		      range_iterator_declarations_of_datastructure m
+		  in
+		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+			  "for(; "^begin_it^" != "^end_it^"; ++"^begin_it^"){"^
+			  (field_declarations_of_datastructure m begin_it "")^"\n"^
+			  (string_of_code_expression c)^
+			  "}"
 
 	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
 
@@ -1766,6 +1737,40 @@ let indented_string_of_code_expression c_expr =
 	in
 	let out =
 	    match e with
+		| `Declare x ->
+		      begin
+			  match x with 
+			      | `Variable(n, typ) -> typ^" "^n^";"
+			      | `Map(mid, key_fields, val_type) ->
+				    let ctype = ctype_of_datastructure (`Map(mid, key_fields, val_type)) in
+					ctype^" "^mid^";"
+			      | `Relation(id, fields) ->
+				    let ctype = ctype_of_datastructure (`Multiset(id, fields)) in
+					ctype^" "^id^";"
+		      end
+			  
+		| `Assign(v,ac) ->
+		      v^" = "^(string_of_arith_code_expression ac)^";"
+
+		| `AssignMap(mk, vc) ->
+		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
+			  
+	        | `EraseMap(mk, c) ->
+		      (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
+
+                | `InsertDomain ((rel,_), cv_list) ->
+                      rel^".insert("^(string_of_code_var_list cv_list)^")";
+
+                | `DeleteDomain ((rel, fields), cv_list) -> 
+                      let (find_it, find_decl) =
+                          point_iterator_declaration_of_datastructure (`Multiset (rel, fields))
+                      in
+                          find_decl^" = "^rel^".find("^(string_of_code_var_list cv_list)^");\n"^
+                              tab^rel^".delete("^find_it^")";
+
+
+		| `Eval(ac) -> string_of_arith_code_expression ac
+
 		| `IfNoElse(p,c) ->
 		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
 			  (sce_aux c (level+1))^"\n"^
@@ -1781,7 +1786,7 @@ let indented_string_of_code_expression c_expr =
 			  
 		| `ForEach(m,c) ->
 		      let (begin_it, end_it, begin_decl, end_decl) =
-			  iterator_declarations_of_datastructure m
+			  range_iterator_declarations_of_datastructure m
 		      in
 			  "\n"^tab^
 			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
@@ -1791,30 +1796,7 @@ let indented_string_of_code_expression c_expr =
 			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
 			      (sce_aux c (level+1))^"\n"^
 			      tab^"}"
-		      
-		| `Declare x ->
-		      begin
-			  match x with 
-			      | `Variable(n, typ) -> typ^" "^n^";"
-			      | `Map(mid, key_fields, val_type) ->
-				    let ctype = ctype_of_datastructure (`Map(mid, key_fields, val_type)) in
-					ctype^" "^mid^";"
-			      | `Relation(id, fields) ->
-				    let ctype = ctype_of_datastructure (`List(id, fields)) in
-					ctype^" "^id^";"
-		      end
-			  
-		| `Assign(v,ac) ->
-		      v^" = "^(string_of_arith_code_expression ac)^";"
 
-		| `AssignMap(mk, vc) ->
-		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
-			  
-	        | `EraseMap(mk, c) ->
-		      (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
-
-		| `Eval(ac) -> string_of_arith_code_expression ac
-		      
 		| `Block (c_expr_l) ->
 		      "{\n"^(string_of_code_block c_expr_l)^"\n"^
 			  tab^"}\n"
@@ -1866,6 +1848,9 @@ let append_blocks l_block r_block =
 	| (`Block lcl, `Block rcl) -> `Block(lcl@rcl)
 	| _ -> raise InvalidExpression
 
+(* `EraseMap should not occur as return val
+ * TODO: think about `DeleteDomain, since this may occur on IncrPlan(_,`Minus,_,_)
+ *)
 let rec get_return_val c_expr =
     match c_expr with
         | `Eval _ -> c_expr
@@ -1877,12 +1862,13 @@ let rec get_return_val c_expr =
               print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
 
+(* TODO: see above note on `DeleteDomain *)
 let remove_return_val c_expr =
     let rec remove_aux c =
         match c with
+        | `Eval _ -> None
         | `Assign _ -> Some(c)
         | `AssignMap _ -> Some(c)
-        | `Eval _ -> None
         | `IfNoElse (p, cc) ->
               begin
                   match remove_aux cc with
@@ -1905,11 +1891,12 @@ let remove_return_val c_expr =
             | None -> raise (RewriteException "Attempted to remove top level expression")
             | Some x -> x
 
+(* TODO: see above note on `DeleteDomain *)
 let rec replace_return_val c_expr new_rv =
     match c_expr with
-        | `Assign _ -> `Block([c_expr; new_rv])
-        | `AssignMap _ -> `Block([c_expr; new_rv])
         | `Eval _ -> new_rv
+        | `Assign _ | `AssignMap _ ->
+              `Block([c_expr; new_rv])
         | `IfNoElse (p, c) -> `IfNoElse(p, replace_return_val c new_rv)
         | `Block x ->
               let last = get_block_last c_expr in
@@ -1920,11 +1907,12 @@ let rec replace_return_val c_expr new_rv =
               raise InvalidExpression
 
 (* indicates whether the given code is a return value, and whether it is replaceable *)
+(* TODO: see above note on `DeleteDomain *)
 let rec is_local_return_val code rv =
     match code with
+        | `Eval _ -> (code = rv, false)
         | `Assign (v, _) -> (rv = `Eval(`CTerm(`Variable(v))), false)
         | `AssignMap (mk, _) -> (rv = `Eval(`CTerm(`MapAccess(mk))), false)
-        | `Eval _ -> (code = rv, false)
         | `Block cl -> 
               let block_last = get_block_last code in
               let (local, _) = is_local_return_val (get_block_last code) rv in
@@ -1991,10 +1979,13 @@ let merge_blocks l_block r_block merge_fn decl =
 (**/**)
 let rec get_last_code_expr c_expr = 
     match c_expr with
+	| `Declare _ | `Assign _ 
+        | `AssignMap _  | `EraseMap _
+        | `InsertDomain _ | `DeleteDomain _
+        | `Eval _ | `Return _ -> c_expr 
 	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
 	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r
 	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
-	| `Declare _ | `Assign _  | `AssignMap _  | `EraseMap _ | `Eval _ | `Return _ -> c_expr 
 	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 
@@ -2012,8 +2003,11 @@ let get_bound_relation =
 
 let rec get_bound_attributes q =
     match q with
-	| `Relation (n,f) ->
-	      List.map (fun (id,typ) -> `Qualified(n,id)) f
+	| `TrueRelation -> []		  
+	| `FalseRelation -> []
+
+	| `Relation (n,f) -> List.map (fun (id,typ) -> `Qualified(n,id)) f
+        | `Domain (_, attrs) -> attrs
 
 	| `Select(pred, cq) -> get_bound_attributes cq
 	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
@@ -2021,15 +2015,10 @@ let rec get_bound_attributes q =
 	| `Union ch -> get_bound_attributes (List.hd ch)
 	| `Cross (l,r) ->
               (get_bound_attributes l)@(get_bound_attributes r)
-        (*
-        | `NaturalJoin (l,r) | `Join (_,l,r) ->
-              (get_bound_attributes l)@(get_bound_attributes r)
-        *)
 
-	| `TrueRelation -> []		  
-	| `FalseRelation -> []
 	| `DeltaPlan (_, cq) | `NewPlan(cq)
-        | `IncrPlan(_,_, cq) | `IncrDiffPlan(_,_, cq) -> (get_bound_attributes cq)
+        | `IncrPlan(_,_,cq,_) | `IncrDiffPlan(_,_,cq,_) -> (get_bound_attributes cq)
+
 
 (* Note: performs qualified comparison if possible *)
 (* TODO: think if we ever want to force unqualified comparison *)
@@ -2106,7 +2095,8 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 		  (resolve_unbound_attributes f_uba q_ba)@
 		      (get_unbound_attributes_from_plan q include_vars)
 
-	| `New(e) | `Incr(_,_,e) | `IncrDiff(_,_,e) | `Init(_,e) ->
+	| `New(e) | `Init(_,e)
+        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
 	      get_unbound_attributes_from_map_expression e include_vars
 
 	| `Insert(_,m,e) | `Update(_,_,m,e) ->
@@ -2123,7 +2113,7 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 
 and get_unbound_attributes_from_plan q include_vars =
     match q with
-	| `Relation _ | `TrueRelation | `FalseRelation -> []
+	| `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> []
 
 	| `Select(pred, cq) ->
 	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
@@ -2151,20 +2141,7 @@ and get_unbound_attributes_from_plan q include_vars =
 	      (get_unbound_attributes_from_plan l include_vars)@
 		  (get_unbound_attributes_from_plan r include_vars)
 
-        (*
-	| `NaturalJoin (l, r) ->
-	      (get_unbound_attributes_from_plan l include_vars)@
-		  (get_unbound_attributes_from_plan r include_vars)
-
-	| `Join (p, l, r) ->
-	      let pred_uba = get_unbound_attributes_from_predicate p include_vars in
-	      let c_ba = (get_bound_attributes l)@(get_bound_attributes r) in
-		  (resolve_unbound_attributes pred_uba c_ba)@
-		      (get_unbound_attributes_from_plan l include_vars)@
-		      (get_unbound_attributes_from_plan r include_vars)
-        *)
-
-	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e) | `IncrDiffPlan(_,_,e) ->
+	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e,_) | `IncrDiffPlan(_,_,e,_) ->
 	      get_unbound_attributes_from_plan e include_vars
 
 let get_unbound_map_attributes_from_plan f q include_vars =
@@ -2179,3 +2156,216 @@ let get_unbound_map_attributes_from_plan f q include_vars =
         print_endline ("\tu_fa: "^(string_of_attribute_identifier_list unresolved_fa));
         print_endline ("\tu_qa: "^(string_of_attribute_identifier_list unresolved_qa));
         unresolved_fa@unresolved_qa
+
+(* Returns the first schema encountered top-down in a plan, i.e. the nearest
+   renaming or base relation *)
+let rec get_flat_schema plan =
+    match plan with 
+        | `TrueRelation | `FalseRelation -> []
+        | `Relation (n,f) -> attribute_identifiers_of_field_list n f
+        | `Domain (_, attrs) -> attrs
+        | `Select (pred, cq) -> get_flat_schema cq
+        | `Project (projs, cq) -> List.map (fun (aid, _) -> aid) projs
+        | `Union ch -> List.flatten (List.map get_flat_schema ch)
+        | `Cross (l, r) -> (get_flat_schema l)@(get_flat_schema r)
+        | `DeltaPlan (_, cq) | `NewPlan cq -> get_flat_schema cq
+        | `IncrPlan (_, _, _,d) | `IncrDiffPlan (_, _, _,d) -> d
+
+(* Returns all attributes used in the map expression, except unbound attributes.
+ * Note this includes intermediate attributes such as those from projections. *)
+let rec get_attributes_used_in_map_expression m_expr =
+    let get_query_attributes attrs query_attrs =
+        List.filter (fun a -> List.exists (compare_attributes a) query_attrs) attrs
+    in
+    match m_expr with
+	| `METerm _ -> []
+
+	| `Delta (b,e) -> get_attributes_used_in_map_expression e
+	      
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
+	      (get_attributes_used_in_map_expression l)@
+		  (get_attributes_used_in_map_expression r)
+
+	| `MapAggregate (fn,f,q) ->
+              let f_uba = get_unbound_attributes_from_map_expression f false in
+	      let q_ba = get_bound_attributes q in
+              let f_used =
+                  (get_attributes_used_in_map_expression f)@
+                      (get_query_attributes f_uba q_ba)
+              in
+                  get_attributes_used_in_plan q f_used
+
+	| `New(e) | `Init (_,e)
+        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
+	      get_attributes_used_in_map_expression e
+
+	| `Insert(_,m,e) | `Update(_,_,m,e) ->
+	      (get_attributes_used_in_map_expression (`METerm (m)))@
+	          (get_attributes_used_in_map_expression e)
+
+	| `Delete(_,m) ->
+	      get_attributes_used_in_map_expression (`METerm (m))
+
+	| `IfThenElse(b,l,r) ->
+              (get_attributes_used_in_map_expression l)@
+		  (get_attributes_used_in_map_expression r)
+
+and get_attributes_used_in_plan plan attrs_used_above =
+    let intersect_attributes attrs existing_attrs =
+        List.filter (fun a -> List.exists (compare_attributes a) existing_attrs) attrs
+    in
+    let disjoint_attributes attrs existing_attrs =
+        List.filter (fun a -> not(List.exists (compare_attributes a) existing_attrs)) attrs
+    in
+    match plan with
+        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> attrs_used_above
+
+	| `Select(pred, cq) ->
+	      let pred_uba = get_unbound_attributes_from_predicate pred false in
+	      let cq_ba = get_bound_attributes cq in
+              let pred_used =
+                  (match pred with
+                      | `BTerm(`MEQ(me)) | `BTerm(`MLT(me)) ->
+                            (get_attributes_used_in_map_expression me)
+                      | _ -> [])
+                  @(intersect_attributes pred_uba cq_ba)
+              in
+              let used_above_cq =
+                  attrs_used_above@(disjoint_attributes pred_used attrs_used_above)
+              in
+                  get_attributes_used_in_plan cq used_above_cq
+
+	| `Project(attrs, cq) ->
+              (* Assumes attrs_used_above is a subset of attrs *)
+              let attrs_used =
+                  intersect_attributes
+                      (List.map (fun (a,_) -> a) attrs) attrs_used_above
+              in
+	      let attrs_uba = 
+		  List.flatten
+		      (List.map
+			  (fun a -> let e = List.assoc a attrs in
+                              get_unbound_attributes_from_expression e false)
+			  attrs_used)
+	      in
+	      let cq_ba = get_bound_attributes cq in
+              let projs_used = intersect_attributes attrs_uba cq_ba in
+                  get_attributes_used_in_plan cq (attrs_used_above@projs_used)
+
+	| `Union ch ->
+              (* helper function to get index of element in list *)
+              let idx el l =
+                  let (f, pos) = 
+                      List.fold_left
+                          (fun (found, cnt) el2 ->
+                              if found || (el = el2) then (true, cnt) else (false, cnt+1) )
+                          (false, 0) l
+                  in
+                      if f then pos else -1
+              in
+              let ch_schema = List.map get_flat_schema ch in
+              let all_idx_used =
+                  List.fold_left2
+                      (fun acc c c_schema ->
+                          (* get schema attributes used above *)
+                          let c_used = intersect_attributes c_schema attrs_used_above in
+
+                          (* get attribute position in the schema *)
+                          let new_idx =
+                              List.filter
+                                  (fun i -> not (List.mem i acc))
+                                  (List.map
+                                      (fun attr ->
+                                          let attr_pos = idx attr c_schema in
+                                              if attr_pos = -1 then raise InvalidExpression
+                                              else attr_pos)
+                                      c_used)
+                          in
+                              acc@new_idx)
+                      [] ch ch_schema
+              in
+              (* get all attributes across each children corresponding to positions used *)
+              let ch_attrs_used =
+                  List.map
+                      (fun c_schema -> List.map (List.nth c_schema) all_idx_used)
+                      ch_schema
+              in
+              (* recur over each child *)
+                  List.fold_left2
+                      (fun acc c c_attrs_used ->
+                          let new_c_attrs_used = get_attributes_used_in_plan c c_attrs_used in
+                          let dedup_attrs_used = disjoint_attributes new_c_attrs_used acc in
+                              acc@dedup_attrs_used)
+                      attrs_used_above ch ch_attrs_used
+
+	| `Cross (l, r) ->
+              let l_ba = get_bound_attributes l in
+              let r_ba = get_bound_attributes r in
+                  (get_attributes_used_in_plan l
+                      (intersect_attributes attrs_used_above l_ba))@
+                  (get_attributes_used_in_plan r
+                      (intersect_attributes attrs_used_above r_ba))
+
+	| `DeltaPlan(_,e) | `NewPlan(e) ->
+              get_attributes_used_in_plan e attrs_used_above
+
+        | `IncrPlan(_,_,e,d) | `IncrDiffPlan(_,_,e,d) ->
+              (* check each domain attribute is used *)
+              let attrs_used = intersect_attributes d attrs_used_above in
+                  if ( (List.length attrs_used) != (List.length d) ) then
+                      begin
+                          print_endline ("Attrs used above: "^
+                              (string_of_attribute_identifier_list attrs_used_above));
+                          print_endline ("Subplan:\n"^(indented_string_of_plan plan 0));
+                          print_endline ("Domain: "^(string_of_attribute_identifier_list d));
+                          raise (ValidationException "Non-minimal domain found.");
+                      end;
+                  get_attributes_used_in_plan e attrs_used_above
+
+
+let rec find_cmp_aggregate m_expr =
+    match m_expr with
+        | `METerm _ -> false
+        | `Sum (l,r) | `Minus (l,r) | `Product (l,r)
+        | `Min (l,r) | `Max (l,r) ->
+              (find_cmp_aggregate l) || (find_cmp_aggregate r)
+
+        | `MapAggregate (`Sum, f, q) ->
+              (find_cmp_aggregate f) || (find_cmp_aggregate_plan q)
+
+        | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
+
+        | `Delta (_, e) | `New e | `Init(_,e)
+        | `Incr (_,_,_,e) | `IncrDiff (_,_,_,e)
+        | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
+        | `Delete _ -> false
+        | `IfThenElse(`MEQ(p), l, r)
+        | `IfThenElse(`MLT(p), l, r) -> 
+              List.exists (fun x -> x) (List.map find_cmp_aggregate [p;l;r])
+        | `IfThenElse(_, l, r) ->  (find_cmp_aggregate l) || (find_cmp_aggregate r)
+
+and find_cmp_aggregate_plan q =
+    match q with
+        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> false
+        | `Select(pred, cq) -> 
+              (match pred with
+                  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
+                        find_cmp_aggregate m_expr
+                  | _ -> false)
+              || (find_cmp_aggregate_plan cq)
+
+        | `Project (_, cq) -> find_cmp_aggregate_plan cq
+        | `Union ch -> List.exists find_cmp_aggregate_plan ch
+        | `Cross (l,r) ->
+              (find_cmp_aggregate_plan l) || (find_cmp_aggregate_plan r)
+        | `DeltaPlan (_, cq) | `NewPlan cq
+        | `IncrPlan (_,_,cq,_) | `IncrDiffPlan (_,_,cq,_) -> find_cmp_aggregate_plan cq
+
+
+(*
+ *
+ * Frontend helpers
+ *
+ *)
+
+(* create unique column attributes *)

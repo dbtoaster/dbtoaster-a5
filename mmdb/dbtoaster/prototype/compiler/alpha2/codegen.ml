@@ -134,17 +134,6 @@ let rec substitute_code_vars assignments c_expr =
 	    vl
     in
 	match c_expr with
-	    | `Assign(x, c) ->
-		  if not(List.mem c_expr assignments) then
-		      `Assign(x, sa c)
-		  else c_expr
-		      
-	    | `AssignMap((mid, kf), c) ->
-		  `AssignMap((mid, substitute_cv_list kf), sa c)
-
-	    | `EraseMap((mid, kf), c) ->
-		  `EraseMap((mid, substitute_cv_list kf), sa c)
-
 	    | `Declare d ->
 		  begin
 		      match d with
@@ -161,6 +150,20 @@ let rec substitute_code_vars assignments c_expr =
 
 			  | _ -> `Declare(d)
 		  end
+
+	    | `Assign(x, c) ->
+		  if not(List.mem c_expr assignments) then
+		      `Assign(x, sa c)
+		  else c_expr
+		      
+	    | `AssignMap((mid, kf), c) ->
+		  `AssignMap((mid, substitute_cv_list kf), sa c)
+
+	    | `EraseMap((mid, kf), c) ->
+		  `EraseMap((mid, substitute_cv_list kf), sa c)
+
+            | `InsertDomain(relvar, cvl) -> `InsertDomain(relvar, substitute_cv_list cvl)
+            | `DeleteDomain(relvar, cvl) -> `DeleteDomain(relvar, substitute_cv_list cvl)
 
 	    | `IfNoElse(p, c) -> `IfNoElse(sb p, sc c)
 	    | `IfElse(p, l, r) -> `IfElse(sb p, sc l, sc r)
@@ -188,8 +191,6 @@ let rec simplify_code c_expr =
 	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
 	| `IfElse (p,l,r) -> `IfElse(p, simplify_code l, simplify_code r)
 	| `ForEach(ds, c) -> `ForEach(ds, simplify_code c)
-	| `Handler(n, args, rt, c) ->
-	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
 
 	(* flatten singleton blocks *)
 	| `Block ([`Block(x)]) -> `Block (List.map simplify_code x)
@@ -247,14 +248,17 @@ let rec simplify_code c_expr =
 		      | h::t -> `Block(merged_code)
 		  end
 
+	| `Handler(n, args, rt, c) ->
+	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
+
 	| _ -> c_expr
-	      (*
-		in
-		print_endline "Result:";
-		print_endline (indented_string_of_code_expression r);
-		print_endline (String.make 50 '-');
-		r
-	      *)
+    (*
+      in
+      print_endline "Result:";
+      print_endline (indented_string_of_code_expression r);
+      print_endline (String.make 50 '-');
+      r
+    *)
 
 
 let gc_assign_state_var code decl var =
@@ -322,13 +326,11 @@ let gc_incr_state_map code decl map_key map_decl oplus diff =
     let map_access_code = `CTerm(`MapAccess(map_key)) in
     let new_decl = if List.mem map_decl decl then decl else map_decl::decl in
     let oper op = function x -> match op with 
-	| `Oplus ( `Plus) -> `AssignMap(map_key, `Sum (map_access_code, x))
-	| `Oplus ( `Minus) -> `AssignMap(map_key, `Minus(map_access_code, x))
-	| `Oplus ( `Min) -> `AssignMap(map_key, `Min (map_access_code, x))
-	| `Oplus ( `Max) -> `AssignMap(map_key, `Max (map_access_code, x))
-	| `Oplus ( `Decrmin _) -> raise InvalidExpression
-	| `POplus (`Union ) -> `AssignMap(map_key, x)
-	| `POplus (`Diff) -> `EraseMap(map_key, x)
+	| `Plus -> `AssignMap(map_key, `Sum (map_access_code, x))
+	| `Minus -> `AssignMap(map_key, `Minus(map_access_code, x))
+	| `Min -> `AssignMap(map_key, `Min (map_access_code, x))
+	| `Max -> `AssignMap(map_key, `Max (map_access_code, x))
+	| `Decrmin _ -> raise InvalidExpression
     in		
     let rv = get_return_val code in
         match rv with
@@ -346,6 +348,33 @@ let gc_incr_state_map code decl map_key map_decl oplus diff =
             | _ ->
                   print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
                   raise (RewriteException "get_incr_state_map: invalid return val")
+
+(* TODO: handle deletions.
+ * Note: only deletions on selects, nested aggregates need IncrPlan *)
+(*
+let gc_incr_state_dom code decl dom_var dom_decl oplus diff =
+    let new_decl = if List.mem dom_decl decl then decl else dom_decl::decl in
+    let oper op = function x -> match op with
+        | `Union -> `InsertDomain(dom_var, x)
+        | `Diff -> `DeleteDomain(dom_var, x)
+    in
+    let rv = get_return_val code in
+        match rv with
+            | `Eval x ->
+                  let new_code =
+                      match (rv = code, diff) with
+                          | (true, true) ->  `Block([oper oplus x; rv])
+                          | (false, true) -> `Block([replace_return_val code (oper oplus x); rv])
+
+                          | (_, false) ->
+                                print_endline ("gc_incr_state_dom: IncrPlan unsupported.");
+                                raise InvalidExpression
+                  in
+                      (new_code, new_decl)
+            | _ ->
+                  print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
+                  raise (RewriteException "get_incr_state_map: invalid return val")
+*)
 
 
 (* returns whether any bindings are used by m_expr and the bound variables *)
@@ -462,7 +491,7 @@ let generate_code handler bindings event =
 			      | _ -> raise InvalidExpression
 		      end
 
-	    | (`Incr (sid, op, e) as oe) | (`IncrDiff(sid, op, e) as oe) ->
+	    | (`Incr (sid, op, re, e) as oe) | (`IncrDiff(sid, op, re, e) as oe) ->
                   let diff = match oe with `Incr _ -> false | _ -> true in
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
 		  let (e_is_bound, rc_l) = 
@@ -493,11 +522,12 @@ let generate_code handler bindings event =
                                             let substituted_code = 
                                                 substitute_code_vars ([`Assign(rc, `CTerm(`Variable(c)))]) e_code
                                             in
-                                                gc_incr_state_map substituted_code e_decl update_map_key map_decl (`Oplus op) diff
+                                                gc_incr_state_map substituted_code e_decl update_map_key map_decl op diff
                                         in
                                         let (insert_code, new_decl) =
-                                            (* TODO: use recomputation code rather than delta code *)
-                                            gc_assign_state_map e_code update_decl map_key map_decl
+                                            (* use recomputation code rather than delta code *)
+                                            let (re_code, re_decl) = gc_aux re update_decl (false, []) in
+                                                gc_assign_state_map re_code re_decl map_key map_decl
                                         in
 				        let update_and_init_binding_code = 
 			     	            `Block ([ 
@@ -513,10 +543,10 @@ let generate_code handler bindings event =
 				  (* TODO: garbage collection, min *)	
 			          | `Delete _ -> 
                                         let (delete_code, delete_decl) =
-                                            gc_incr_state_map e_code decl map_key map_decl (`Oplus op) diff
+                                            gc_incr_state_map e_code decl map_key map_decl op diff
                                         in
                                         let (update_code, new_decl) =
-                                            gc_incr_state_map e_code delete_decl update_map_key map_decl (`Oplus op) diff
+                                            gc_incr_state_map e_code delete_decl update_map_key map_decl op diff
                                         in
 				        let delete_and_update_binding_code = 
 				            `Block ([
@@ -569,7 +599,7 @@ let generate_code handler bindings event =
 				        in
                                             print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
                                                 (string_of_map_expression oe));
-				            gc_incr_state_map e_code e_decl map_key incr_map (`Oplus op) diff
+				            gc_incr_state_map e_code e_decl map_key incr_map op diff
 		              end
 
 	    | (`Init (sid, e) as oe) ->
@@ -624,7 +654,28 @@ let generate_code handler bindings event =
                           decl
                       then decl else decl@[`Relation(n,f)]
 		  in
-		      (`ForEach(`List(n,f), iter_code), new_decl)
+		      (`ForEach(`Multiset(n,f), iter_code), new_decl)
+
+            | `Domain (sid, attrs) ->
+                  let (domain_ds, new_decl) =
+                      let dom_fields =
+                          List.map (fun x -> (field_of_attribute_identifier x, "int")) attrs
+                      in
+                      let existing_ds =
+                          List.filter
+                              (fun ds -> match ds with
+                                  | `Relation (_, f) -> f = dom_fields | _ -> false)
+                              decl
+                      in
+                          match existing_ds with
+                              | [] ->
+		                    let dom_id = gen_dom_sym (sid) in
+                                    let new_ds = `Multiset(dom_id, dom_fields) in
+                                        (new_ds, (`Relation(dom_id, dom_fields))::decl)
+                              | [`Relation(n,f)] -> (`Multiset(n,f), decl)
+                              | _ -> raise DuplicateException
+                  in
+                      (`ForEach(domain_ds, iter_code), new_decl)
 
             | `TrueRelation -> (iter_code, decl)
 
@@ -700,7 +751,8 @@ let generate_code handler bindings event =
                                                           | Some av -> 
 						                `Block([av; `IfNoElse(pred_test_code, iter_code)]))
 
-					| (`Init _, `Variable(_)) | (`Incr _, _) | _ ->
+					| (`Init _, `Variable(_))
+                                        | (`Incr _, _) | _ ->
                                               match assign_var_code with
                                                   | None -> `IfNoElse(pred_test_code, iter_code)
                                                   | Some av -> `Block([av; `IfNoElse(pred_test_code, iter_code)])
@@ -725,54 +777,33 @@ let generate_code handler bindings event =
 		      gc_plan_aux l inner_code inner_decl bind_info 
 	                  
 	    (* to handle rule 39, 41 *)
-	    | `IncrPlan(sid, op, nq) | `IncrDiffPlan(sid, op, nq) ->
-                  let print_incrp_debug q_code incrp_map =
-		      print_endline ("rule 39,41: incrp_map "^(string_of_code_expression (`Declare incrp_map)));
+	    | `IncrPlan(sid, op, nq, d) | `IncrDiffPlan(sid, op, nq, d) ->
+                  let print_incrp_debug q_code incrp_dom =
+		      print_endline ("rule 39,41: incrp_dom "^(string_of_code_expression (`Declare incrp_dom)));
                       print_endline ("rule 39,41: iter_code "^(string_of_plan nq));
                       print_endline ("rule 39,41: q_code "^(indented_string_of_code_expression q_code));
 
                   in
-                  let diff = match q with `IncrPlan _ -> false | _ -> true in
-		  let e_uba = 
-		      match event with
-		          | `Insert(_, vars) | `Delete(_, vars) ->
-			        List.filter 
-			            (fun uaid -> not
-			                (List.exists
-				            (fun (id,_) -> (field_of_attribute_identifier uaid) = id)
-				            vars))
-			            (get_unbound_attributes_from_plan nq true)
-		  in
-		  let (q_code, q_decl) =
-		      gc_plan_aux nq iter_code decl bind_info
-		  in 
-		  let incrp_mid = gen_map_sym (sid) in
-                  let incrp_fields =
-		      List.map
-		          (fun x -> (field_of_attribute_identifier x, "int")) e_uba
+                  (* let diff = match q with `IncrPlan _ -> false | _ -> true in *)
+		  let dom_id = gen_dom_sym (sid) in
+                  let dom_fields = List.map (fun x -> (field_of_attribute_identifier x, "int")) d in
+                  let dom_var = (dom_id, dom_fields) in
+		  let dom_relation = `Relation(dom_id, dom_fields) in
+                  let new_iter_code =
+                      let incr_code = match op with
+                          | `Union -> `InsertDomain(dom_var, List.map field_of_attribute_identifier d)
+                          | `Diff -> `DeleteDomain(dom_var, List.map field_of_attribute_identifier d)
+                      in
+                          `Block([incr_code; iter_code]) 
                   in
-		  let incrp_map = `Map(incrp_mid, incrp_fields, "int") in
-		  let map_key = (incrp_mid, let (x,_) = List.split incrp_fields in x) in
-                      print_incrp_debug q_code incrp_map;
-                      print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
-                          (string_of_plan q));
-		      gc_incr_state_map q_code q_decl map_key incrp_map (`POplus op) diff
+		  let (q_code, q_decl) = gc_plan_aux nq new_iter_code decl bind_info in 
+                      print_incrp_debug q_code dom_relation;
+                      (*
+                        print_endline ("Referencing "^dom_id^" for "^(string_of_plan q));
+		        gc_incr_state_dom q_code q_decl dom_var dom_relation op diff
+                      *)
+                      (q_code, q_decl)
                               
-		              
-	    (*
-	      | `NaturalJoin (l,r) ->
-	      ** TODO: create natural join predicate **
-	      let nj_pred = natural_join_predicate l r in
-	      let nj_iter_code = [`IfNoElse(nj_pred, iter_code)] in
-	      let (inner_code, inner_decl) = gc_plan_aux r nj_iter_code decl in
-	      gc_plan_aux l inner_code inner_decl
-
-	      | `Join(p,l,r) ->
-	      ** TODO: what if p is a map_expr? **
-	      let (inner_code, inner_decl) = gc_plan_aux l [`IfNoElse(p, iter_code)] in
-	      gc_plan_aux r inner_code inner_decl
-	    *)
-
 	    | _ ->
 		  print_endline ("gc_aux_plan: "^(string_of_plan q));
 		  raise InvalidExpression
