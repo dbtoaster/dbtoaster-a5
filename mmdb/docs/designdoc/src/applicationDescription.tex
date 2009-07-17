@@ -37,7 +37,7 @@ The particular application we have chosen to demonstrate the capabilities and pe
 
 \section{DBToaster Runtime}
 
-DBToaster Runtime consists of three major components: Compiler, Query Processing and Data Sources Processing. Each of these components interacts with each other as well as has external interactions. The complete representation of DBToaster Runtime can be found if figure \ref{DBToasterPic}. Compiler and Query Processing have a server connection to retrieve relevant data. Data Source Processing creates user specified clients to receive the data from various data sources. Compiler receives requests from the client to instantiate a Data Source Reader to receive data for some queries. The created Reader Client is passed to the Data Source Processor.
+DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components interacts with each other as well as has external interactions. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. Compiler and Query Processor have a server connection to handle user requests. Data Source Processor creates user specified clients to receive the data from various data sources. Compiler receives requests from the client to instantiate a Data Source Reader for receiving data or a SQL query to process data. The created Data Reader is passed to the Data Source Processor and a Query is passed to Query Processor to run on the data. 
 
 \begin{figure}
   \includegraphics[width=4.50in]{DBToasterRuntime.pdf}
@@ -45,11 +45,13 @@ DBToaster Runtime consists of three major components: Compiler, Query Processing
   \label{DBToasterPic}
 \end{figure}
 
+
+
 \subsection{Compiler}
 
-Compiler consists of several components. Its structure can be seen in figure \ref{CompilerPicture}. Two components responsible or compilation are SQL query pre-compiler and C++ code compiler. 
+Compiler consists of several components. Its structure can be seen in figure \ref{CompilerPicture}. Two components responsible for compilation are SQL query pre-compiler and C++ code compiler. 
 
-Compiler is a starting point for all user interactions with the DBToaster Runtime. Once Runtime is up and running the user initiates the contact by specifying that it needs to execute a query on some specific set of data sources. The query, types and parameters of data sources are sent to User Input Handler. It collects the information in a structured format and passes it to the Compiler Admin. Compiler Admin converts a SQL query to C++ code and C++ code to binary format. The query is then passed to the Query Processing Admin to be added to the list of active queries. If the user asks to add a Data Source Reader. The Reader of a specified type is created and passed to the Data Source Admin to be added to the list of active Readers. The Data Adapter is compiled into a binary format and sent to Data Sources Admin to be added to Data Adaptors. 
+Compiler is a starting point for all user interactions with the DBToaster Runtime. Once Runtime is up and running the user initiates the contact by specifying that they need to execute a query on some specific set of data sources. The query, types and parameters of data sources are sent to User Input Handler. The Input Handler collects the information in a structured format and passes it to the Compiler Admin. Compiler Admin converts a SQL query to C++ code and C++ code to binary format. The query is then passed to the Query Admin to be added to the list of active queries. If the user asks to add a Data Source Reader. The Reader of a specified type is created and passed to the Data Sources Admin to be added to the list of active Readers. The Data Adapter is compiled into a binary format and sent to Data Sources Admin to be added to Data Adaptors. 
 
 \begin{figure}
   \includegraphics[width=4.50in]{compiler.pdf}
@@ -58,14 +60,14 @@ Compiler is a starting point for all user interactions with the DBToaster Runtim
 \end{figure}
 
 \subsubsection{User Input Handler}
-The server is implemented as a part of User Input Handler. When a client connects to the Input Handler Server it sends a type of request and attributes of the request to the server:
+User Input Handler implements a server to respond to client requests. When a client connects to the Input Handler Server it sends a type of request and attributes of the request to the server:
 \\
 \\
 \begin{tabular}{|l|l|}
   \hline
-  Type & Information needed \\ \hline
+  Type & Request Attributes \\ \hline
   Query & Query Source file, list of Data Readers \\ \hline
-  Reader & Connection Type, Adapter Source file, list of queries \\ \hline
+  Reader & Connection Type, Adapter Source file \\ \hline
 \end{tabular}
 \\
 \\*
@@ -76,27 +78,26 @@ Add query request needs the following data from the user:
 \begin{itemize}
 	\item {\tt AddRequest(type="add query",\\
 		 Source="SQL Source File",\\
-	     DataReaders="list of Data Readers for Query");}
+	     DataReaders="list of Data Reader's IDs for Query");}
 \end{itemize}
 
-\noindent Add source request is as follows:
+\noindent Add data reader request is as follows:
 
 \begin{itemize}
 	\item {\tt AddRequest(type="add reader", \\
 	     AdaptorSource="C++ Adaptor Source file",\\
-	     QueryList="list of Queries for information"\\
-	     source="IPaddress and port or input file");}
+	     source="IPaddress and port or data input file");}
 \end{itemize}
 
 This information is then forwarded to the Compiler Admin in a form of a struct:
 
 \begin{itemize}
-	\item {\tt Struct InputRequest( type, fileName,\\
-	       list<int> informationHandle \\
-		   list<string> extraInformation)}
+	\item {\tt Struct InputRequest( int type, string fileName,\\
+	       list<int> informationSources \\
+		   list<string> sourceParameters)}
 \end{itemize}
 
-
+User Input Handler is implemented as a class with a server hidden inside. For now Input Handler also contains Compiler Admin. Compiler Admin can be abstracted to run in a separate thread. 
 
 \subsubsection{Compiler Admin}
 
@@ -105,6 +106,21 @@ Once user request is received, Compiler Admin takes over. Depending on the type 
 On add SQL query request Admin passes the SQL query source file to SQL Compiler. SQL compiler returns a pointer to an containing equivalent to a query C++ file. This file is then passed to the C++ compiler by the Admin. C++ compiler returns a function handle to the compiled binary of the query. The query handle is then passed to the Query Admin to be added to the catalog together with the list of Readers for the query.
 
 On add Reader request Admin passes Data Adaptor file to C++ compiler which in turn returns a function handle to the Data Adaptor. Then Admin creates a Reader and opens a connection for a reader (either a socket or a file). The handle to a Reader together with the handle for a Data Adaptor and a list of queries for this reader is passed to the Data Sources Admin. 
+
+\noindent Compiler Admin class looks as follows:
+\begin{verbatim}
+class CompilerAdmin
+{
+    void RunAdmin(InputRequest);
+	
+    SQLCompiler;
+    CCompiler;
+    QueryAdmin *;
+    DataSourcesAdmin*;
+}
+\end{verbatim}
+
+Method {\tt RunAdmin(InputRequest)} takes a user request to add a query or a data source. Compiler Admin contains a SQL Compiler and C++ compiler. It also contains pointers to Query Admin and Data Sources Admin to pass compiled handlers to them.
 
 \subsubsection{SQL Compiler}
 
@@ -124,7 +140,7 @@ C++ compiler takes file containing C++ code. C++ compiler creates a binary code 
 
 \subsection{Data Source Processing}
 
-Data Source Processing is done in series of steps. Once Data Sources Admin receives a function handles from Compiler Admin. The Reader handle is inserted into Collection of Data Readers. Each reader gets the data stream from outside. The handle for the Reader is for a function {\tt getNext()}.
+Data Source Processing is done in series of steps. Once Data Sources Admin receives a function handles from Compiler Admin. The Reader handle is inserted into Collection of Data Readers. Each Reader is responsible for a data stream from outside. The handle for the Reader is for a function {\tt getNext()}.
 
 The Data Readers Thread Pool is a collection of threads where each thread picks a Data Reader and executes a read at a time from one of them. Once read is done the results of the read are forwarded to a Data Structure Dispatch. The Dispatch uses the appropriate Data Adapter to handle the data into a structured format, then the structured data is forwarded to Query Processor, in particular to the Query Tuple Queue. The more pictorial description can be found in figure \ref{DataSourcePic}.
 
@@ -146,11 +162,49 @@ Data Sources Admin receives two function handles one to a data Reader and anothe
 
 \noindent The {\tt rawDataTuple} is a pair {\tt <size, bit-string>}.
 
-The Reader extracts the informations from either a file or a socket. Reader's communication with the outside world is in a standard format. On a request it reads a header from the input stream with the size of the message and then reads the message of the given size. The size and message is then forwarded to further. \emph{TODO: expand this into a section with the full description of Readers input formats}.
+The Reader extracts the informations from either a file or a socket. Reader's communication with the outside world is in a standard format. On a read request, Reader first reads a header containing the information about the message followed by the message itself. For now we assume that a header is an integer containing the number of byte to be read. Once the read is completed the size and message are forwarded to Data Structures Dispatch.
+
+\emph{TODO: expand this into a section with the full description of Readers input formats}.
+
+\noindent Data Sources Admin class contains the following:
+\begin{verbatim}
+class DataSourcesAdmin
+{
+    addDataSource(readerID, sourceReader, dataAdaptor);
+
+    dataReadersQueue*;
+    dataAdaptorsMap*;
+}
+\end{verbatim}
+
 
 \subsubsection{Data Readers Thread Pool}
 
 Data Readers Thread Pool is a collection of identical threads. Each thread is responsible for getting a reader from the queue of Data Readers, executing a \emph{readNext()} message, collecting the message {\tt rawDataTuple} and sending it to Data Structures Dispatch together with the ID of a Reader.
+
+The class of the Data Readers Thread Pool looks as follows:
+\begin{verbatim}
+class DataReadersPool
+{
+    list<thread>  runningThreads;
+    dataReadersQueue;
+    dataStructuresDispatch;
+}
+\end{verbatim}
+
+\noindent The class of Data Readers Thread Pool contains a Data Readers Queue:
+
+\begin{verbatim}
+class DataReadersQueue
+{
+	functionHandler getNextReader();
+	void            putNextReader(functionHandle);
+	
+    queue<functionHandles>
+}
+\end{verbatim}
+
+\noindent and a Data Structures Dispatch.
 
 \subsubsection{Data Structures Dispatch}
 
@@ -162,9 +216,31 @@ Data Structures Dispatch receives an ID identifying each Data Reader and a messa
 
 Based on the ID of a reader Dispatch Calls for on an appropriate Data Adaptor to convert the incoming {\tt rawDataTuple} message into a structure needed by the query. The structured tuple is then sent to an appropriate set of queues in the Data Queue for Processing. The {\tt structuredTuple} is a pair {\tt <size, bit-sequence>} such that the bit sequence can be interpreted by the query. 
 
-\subsection{Query Processing}
+\begin{verbatim}
+class DataStructuresDispatch
+{
+	getNextMessage();
+	
+    dataAdaptorsMap;
+    queryTupleQueue*;
+}
+\end{verbatim}
 
-Query Processing is done mostly in Query Executor with a set of Query Threads each thread picks a query-datum pair from a pool of available pairs and processes it. As data comes in after been processed it is sent to the appropriate query. As soon as the query receives a datum it becomes available for execution. The structure for query processing can be found in figure \ref{QueryProcessingPic}.
+\noindent Data Adaptors map is a separate class just like Data Readers Queue
+
+\begin{verbatim}
+class DataSTructuresDispatch
+{
+    functionHandler getAdaptor(id);
+    void            addAdaptor(id, functionHandle);
+	
+}
+\end{verbatim}
+\noindent They are needed to be separated into classes to deal with concurrency.
+
+\subsection{Query Processor}
+
+Query Processor is done mostly in Query Executor with a set of Query Threads each thread picks a query-datum pair from a pool of available pairs and processes it. As data comes in after been processed it is sent to the appropriate query. As soon as query receives a datum it becomes available for execution. The structure of query processor can be found in figure \ref{QueryProcessingPic}.
 
 \begin{figure}
   \includegraphics[width=5.00in]{QueryProcessing.pdf}
@@ -174,17 +250,81 @@ Query Processing is done mostly in Query Executor with a set of Query Threads ea
 
 \subsubsection{Query Admin}
 
-Query Admin receives a function handle to query. It also receives a list of the readers IDs for that query. Once the handle is received Admin locks Query Catalog and inserts the query there, then Query Results Queue is locked and updated to have an output queues for just inserted query. Finally Admin locks Query Tuple Queue and inserts and additional queue for data associated with the query. 
+Query Admin receives a function handle to a query. It also receives a list of the readers IDs for that query. Once the handle is received Admin locks Query Catalog and inserts the query there, then Query Results Queue is locked and updated to have an output queues for just inserted query. Finally Admin locks Query Tuple Queue and inserts and additional queue for data associated with the query. 
 
 Query Catalog is a map containing query ID and a handler for that query. 
 
-\subsubsection{Query Tuple Queue}
+Query Admin class looks as follows
+\begin{verbatim}
+class QueryAdmin
+{
+    addQuery(queryID, functionHandle, list<int> ReadersID);
 
-This is a collection of queues. Each queue in the collection corresponds to the query that can run data items in the queue. When Query Tuple Queue receives a new item, from Data Structures Dispatch, together with the ID of the data Reader the {\tt structuredTuple} in inserted into appropriate queues of the queries which need this data.  If the query queue is empty when the data item is inserted the query handle is extracted from the catalog and inserted in the scheduling queue. Scheduling Queue contains handles of the queue with the data items which are ready for them. If the query is running the item is inserted into queue.
+	queryCatalog;
+	networkCatalog;
+	QueryTupleQueue*;
+	
+}
+\end{verbatim}
 
-\subsubsection{Query Processing Thread Pool}
+\subsubsection{Query Executor}
 
-Query Processing Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum on top of the appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
+Query Executor consists of two inter dependent components: Query Tuple Queue and Query Processor Thread Pool. Query Tuple Queue contains the data needed by each of the threads in the pool. 
+
+\paragraph{Query Tuple Queue}
+
+This is a collection of queues. Each queue in the collection corresponds to the query that can run data items in the queue. When Query Tuple Queue receives a new item, from Data Structures Dispatch, together with the ID of the data Reader the {\tt structuredTuple} in inserted into appropriate queues of the queries, which need this data.  If the query queue is empty when the data item is inserted the query handle is extracted from the catalog and inserted in the scheduling queue. Scheduling Queue contains handles of the queue with the data items which are ready for them. If the query is running the item is inserted into queue.
+
+Query Tuple Queue class has the following structure:
+
+\begin{verbatim}
+class QueryTupleQueue
+{
+    void              addDatum(readerID, structuredTuple);
+    structuredTuple   getDatum(queryID)
+    void              addQuery(queryID, list<int> readersID);
+
+	MemoryManager;
+	SchedulingQueue*;
+	map<structuredTupleQueues> readyData;
+	
+}
+\end{verbatim}
+
+\paragraph{Query Processor Thread Pool}
+
+Query Processor Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum on top of the appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
+
+The Query Processor Thread Pool class contains the following:
+
+\begin{verbatim}
+class QueryProcessorTreads
+{
+    
+    SchedulingQueue
+    list<thread> executionThreads;
+    QueryResultQueue*;
+	
+}
+\end{verbatim}
+
+\noindent With SchedulingQueue as follows:
+
+\begin{verbatim}
+class SchedulingQueue
+{
+    
+    funcitonHandle nextQuery();
+    void           addQuery(queryID);
+    bool           isActive(queryID);
+
+    queryCatalog*;
+    queue<functionHandle>
+    map<queryID> activeQueries;
+	
+}
+\end{verbatim}
+
 
 \subsubsection{Query Results Queue}
 
@@ -194,13 +334,33 @@ Query Results Queue implements a server, where each client upon connection indic
 	\item {\tt userDataStructuresDispatch(userID, Query ID list);}
 \end{itemize}
 
-\noindent The server creates a map of query IDs and query result queues for each client. When a query produces an output, it is sent to the Results Queues. In the Result Queues the query results are dispatched to the appropriate queues.
+\noindent The server creates a map of query IDs and query results for each client. When a query produces an output, it is sent to the Query Result Queues. In the Result Queues the query results are dispatched to the appropriate queues.
 
 \begin{itemize}
-	\item {\tt queryDataStructuresDispatch(queryID, structuredTuple);}
+	\item {\tt queryDataStructuresDispatch(queryID, queryMap);}
 \end{itemize}
 
 \noindent When a client needs a new piece of information it sends a request to the server with the ID of a query it is interested in and the number of tuples it needs. Server returns the results of the query indicated by the ID and the tuples it produced. 
+
+Query Result Queues implements two ways for the users to access data. One is when a user asks for a complete query result and another is when a client asks for an curser to query results.
+
+Query Result Queue class is:
+
+\begin{verbatim}
+class SchedulingQueue
+{
+    
+	map<queryID, queryResult>
+	
+	getFullQueryResult(clientID, queryID);
+	
+	startCurserResult(clientID, queryID);
+	
+}
+\end{verbatim}
+
+
+
 
 \section{Data Generation}
 
