@@ -5,6 +5,8 @@ exception RewriteException of string
 exception ValidationException of string
 exception CodegenException of string
 
+let dbt_hash x = Hashtbl.hash_param 50 100 x
+
 type identifier = string
 
 type column_name = [
@@ -106,10 +108,12 @@ and plan = [
 | `IncrPlan of state_identifier * poplus * plan * domain
 | `IncrDiffPlan of state_identifier * poplus * plan * domain ]
 
+type unifications = attribute_identifier * expression list
+
 type binding = [
 | `BindExpr of variable_identifier * expression
 | `BindBoolExpr of variable_identifier * boolean_expression
-| `BindMapExpr of variable_identifier * map_expression ]
+| `BindMapExpr of variable_identifier * map_expression * unifications ]
 
 type recompute_state = New | Incr
 
@@ -1624,7 +1628,7 @@ let string_of_code_var_list vl =
 	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
 	"" vl
 
-let string_of_map_key (mid, keys) = mid^"["^(string_of_code_var_list keys)^"]"
+let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
 
 let string_of_code_expr_terminal cterm =
     match cterm with 
@@ -1634,8 +1638,7 @@ let string_of_code_expr_terminal cterm =
 	| `String s -> "'"^s^"'"
 	| `Variable v -> v
 	| `MapAccess mk -> string_of_map_key mk
-	| `MapContains (mid, keys) ->
-	      mid^".find("^(string_of_code_var_list keys)^")"
+	| `MapContains (mid, keys) -> mid^".find("^(ctype_of_code_var_list keys)^")"
 	| `MapIterator (`Begin(mid)) -> mid^".begin()"
 	| `MapIterator (`End(mid)) -> mid^".end()"
 

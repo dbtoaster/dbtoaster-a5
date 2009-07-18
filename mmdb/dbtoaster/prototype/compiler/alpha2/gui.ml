@@ -264,21 +264,6 @@ and treeml_of_plan p indent_fn =
 		  (List.map indent_fn (treeml_of_plan l indent_fn))@
 		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
 
-        (*
-	| `NaturalJoin(l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"naturaljoin\"/>")]@
-		  (List.map indent_fn (treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
-
-	| `Join (pred, l, r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"join\"/>")]@
-		  (List.map indent_fn (treeml_of_bool_expression pred indent_fn))@
-		  (List.map indent_fn (treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (treeml_of_plan r indent_fn))@["</branch>"]
-        *)
-
 	| `TrueRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"truerelation\">");"</leaf>"]
 
 	| `FalseRelation -> ["<leaf>"; (indent_fn "<attribute name=\"op\" value=\"falserelation\">");"</leaf>"]
