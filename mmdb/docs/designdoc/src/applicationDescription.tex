@@ -269,11 +269,11 @@ class QueryAdmin
 
 \subsubsection{Query Executor}
 
-Query Executor consists of two inter dependent components: Query Tuple Queue and Query Processor Thread Pool. Query Tuple Queue contains the data needed by each of the threads in the pool. 
+Query Executor consists of two inter dependent components: Query Tuple Queue and Scheduler. Query Tuple Queue contains the data needed to execute each query. Scheduler contains a set of threads which run one query at a time on some data.  
 
 \paragraph{Query Tuple Queue}
 
-This is a collection of queues. Each queue in the collection corresponds to the query that can run data items in the queue. When Query Tuple Queue receives a new item, from Data Structures Dispatch, together with the ID of the data Reader the {\tt structuredTuple} in inserted into appropriate queues of the queries, which need this data.  If the query queue is empty when the data item is inserted the query handle is extracted from the catalog and inserted in the scheduling queue. Scheduling Queue contains handles of the queue with the data items which are ready for them. If the query is running the item is inserted into queue.
+Query Tuple Queue is a class, which provides seamless access to the data. It contains a number of queues, such that a subset of queues corresponds to the query that can run on data items from those queues. When Query Tuple Queue receives a new item from Data Dispatch, together with an ID of the data Reader (in a format {\tt structuredTuple}), the new datum is inserted into appropriate queues. If the datum insert causes a query to be available then query handle is extracted from the catalog and inserted into Runable Query Queue. unable Query Queue contains handles to the queries which has data items available to them. If the query is already runable then the item is just inserted into queue.
 
 Query Tuple Queue class has the following structure:
 
@@ -283,13 +283,34 @@ class QueryTupleQueue
     void              addDatum(readerID, structuredTuple);
     structuredTuple   getDatum(queryID)
     void              addQuery(queryID, list<int> readersID);
+    void              removeQuery(queryID);
 
 	MemoryManager;
 	SchedulingQueue*;
-	map<structuredTupleQueues> readyData;
+	map<sourceID, listTupleQueue>  sourceAccess;
+	mpa<queryID, listTupleQueue>   queryAccess;
 	
 }
 \end{verbatim}
+
+\noindent Function {\tt addDatum(readerID, structuredTuple)} is called by the Data Dispatch to add a new data item. Function {\tt getDatum(queryID)} is required to extract data items available for the query to be executed. Functions {\tt addQuery(queryID, list<int> readersID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new query.
+
+To enable this functionality we need to consider security and efficiency. 
+
+\subparagraph{Security:} By security we mean that no data tuple can be lost or received out of order by the query. This can be enabled by a simple procedure of locking each queue when data is inserted or removed from each queue.
+
+\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source is needed by several queries. If we adopt a simple model where each query has its own set of queue from each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Another model is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of the queues. By requiring the following specification:
+
+\begin{verbatim}
+class TupleQueue
+{
+	TupleQue*         join(queryID);
+	void              addDatum(structuredTuple);
+	structuredTuple   getDatum(queryID);
+	bool              isEmpty(queryID);
+}
+
+ 
 
 \paragraph{Query Processor Thread Pool}
 
