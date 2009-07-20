@@ -27,7 +27,7 @@ The the flow of information between the three components is as follows. Once sta
 The particular application we have chosen to demonstrate the capabilities and performance of our system is a NASDAQ trading simulation. In this simulation there is a set of servers; each server arranges stock exchanges between different trading parties. The results of those exchanges as well as information about interest in stock sells and purchases is transmitted to all parties interested in such information. Based on these information different trading algorithms decide to buy and sell stocks. The arrangement of all the components in the Trading system can be seen in figure \ref{TheBigPicture}. 
 
 \begin{figure}
-  \includegraphics[width=4.50in]{finapp.pdf}
+  \includegraphics[width=4.50in]{../figures/finapp.pdf}
   \caption{Application Overview.}
   \label{TheBigPicture}
 \end{figure}
@@ -40,7 +40,7 @@ The particular application we have chosen to demonstrate the capabilities and pe
 DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components interacts with each other as well as has external interactions. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. Compiler and Query Processor have a server connection to handle user requests. Data Source Processor creates user specified clients to receive the data from various data sources. Compiler receives requests from the client to instantiate a Data Source Reader for receiving data or a SQL query to process data. The created Data Reader is passed to the Data Source Processor and a Query is passed to Query Processor to run on the data. 
 
 \begin{figure}
-  \includegraphics[width=4.50in]{DBToasterRuntime.pdf}
+  \includegraphics[width=4.50in]{../figures/DBToasterRuntime.pdf}
   \caption{DBToaster Structure.}
   \label{DBToasterPic}
 \end{figure}
@@ -54,7 +54,7 @@ Compiler consists of several components. Its structure can be seen in figure \re
 Compiler is a starting point for all user interactions with the DBToaster Runtime. Once Runtime is up and running the user initiates the contact by specifying that they need to execute a query on some specific set of data sources. The query, types and parameters of data sources are sent to User Input Handler. The Input Handler collects the information in a structured format and passes it to the Compiler Admin. Compiler Admin converts a SQL query to C++ code and C++ code to binary format. The query is then passed to the Query Admin to be added to the list of active queries. If the user asks to add a Data Source Reader. The Reader of a specified type is created and passed to the Data Sources Admin to be added to the list of active Readers. The Data Adapter is compiled into a binary format and sent to Data Sources Admin to be added to Data Adaptors. 
 
 \begin{figure}
-  \includegraphics[width=4.50in]{compiler.pdf}
+  \includegraphics[width=4.50in]{../figures/compiler.pdf}
   \caption{Compiler Structure.}
   \label{CompilerPicture}
 \end{figure}
@@ -147,7 +147,7 @@ The Data Readers Thread Pool is a collection of threads where each thread picks 
 % processing consists of the list of list of stream points. Each point is given by the user and signifies a way for a DBToaster to connect with the input stream of some process which dispatches data to the DBToaster. Each Stream Point is written by the user and user can fully specify how the data should be received and processed. Stream point is responsible for sending data to the Data Dispatch unite in a pre-specified format. The structure for data source processing can be found in figure 
 
 \begin{figure}
-  \includegraphics[width=5.00in]{DataSources.pdf}
+  \includegraphics[width=5.00in]{../figures/DataSources.pdf}
   \caption{Data Sources Management.}
   \label{DataSourcePic}
 \end{figure}
@@ -243,7 +243,7 @@ class DataSTructuresDispatch
 Query Processor is done mostly in Query Executor with a set of Query Threads each thread picks a query-datum pair from a pool of available pairs and processes it. As data comes in after been processed it is sent to the appropriate query. As soon as query receives a datum it becomes available for execution. The structure of query processor can be found in figure \ref{QueryProcessingPic}.
 
 \begin{figure}
-  \includegraphics[width=5.00in]{QueryProcessing.pdf}
+  \includegraphics[width=5.00in]{../figures/QueryProcessing.pdf}
   \caption{Query Processing Management.}
   \label{QueryProcessingPic}
 \end{figure}
@@ -280,51 +280,60 @@ Query Tuple Queue class has the following structure:
 \begin{verbatim}
 class QueryTupleQueue
 {
-    void              addDatum(readerID, structuredTuple);
-    structuredTuple   getDatum(queryID)
-    void              addQuery(queryID, list<int> readersID);
+    void              addDatum(sourceID, structuredTuple);
+    structuredTuple   getDatum(queryID);
+    void              addQuery(queryID, list<int> sourceIDs);
     void              removeQuery(queryID);
+    void              hasNext(queryID);
 
-	MemoryManager;
-	SchedulingQueue*;
-	map<sourceID, listTupleQueue>  sourceAccess;
-	mpa<queryID, listTupleQueue>   queryAccess;
+	MemoryManager                      Jim;
+	RunableQueryQueue*                 schedulingQueue;
+	map<sourceID, list<TupleQuery*> >  sourceAccess;
+	map<queryID, list<TupleQuery*> >   queryAccess;
+	map<sourceID, list<queryID> >      availableQueries;
 	
 }
 \end{verbatim}
 
-\noindent Function {\tt addDatum(readerID, structuredTuple)} is called by the Data Dispatch to add a new data item. Function {\tt getDatum(queryID)} is required to extract data items available for the query to be executed. Functions {\tt addQuery(queryID, list<int> readersID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new query.
+\noindent Function {\tt addDatum(sourceID, structuredTuple)} is called by the Data Dispatch to add a new data item. Function {\tt getDatum(queryID)} is required to extract data items available for the query to be executed. Functions {\tt addQuery(queryID, list<int> readersID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new query. 
 
-To enable this functionality we need to consider security and efficiency. 
+To enable this functionality we need to consider concurrency and efficiency. 
 
-\subparagraph{Security:} By security we mean that no data tuple can be lost or received out of order by the query. This can be enabled by a simple procedure of locking each queue when data is inserted or removed from each queue.
+\subparagraph{Concurrency:} Here we mean that no data tuple can be lost or received out of order by the query. This can be enabled by a simple procedure of locking each queue when data is inserted or removed from each queue.
 
-\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source is needed by several queries. If we adopt a simple model where each query has its own set of queue from each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Another model is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of the queues. By requiring the following specification:
+\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source is needed by several queries. If we adopt a simple model (case A) where each query has its own set of queues from each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of the queues. By requiring the following specification:
 
 \begin{verbatim}
 class TupleQueue
 {
-	TupleQue*         join(queryID);
+	TupleQueue*       join(queryID);
+	void              removeQuery(queryID);
+	
 	void              addDatum(structuredTuple);
 	structuredTuple   getDatum(queryID);
 	bool              isEmpty(queryID);
+	
+	map<queryID, pointerToPositionInQueue>     nextDatum;
+	queue                                      datum;
 }
+\end{verbatim}
 
- 
+When a new query is inserted by Query Admin into QueryTupleQueue with {\tt addQuery(queryID, list<int> sourceIDs)}. Internally we go through the list of sources and creating pointers to TupleQueue for {\tt map<queryID, list<TupleQuery*> >   queryAccess}. If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new TupleQueue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new datum comes in, by the call of {\tt addDatum(sourceID, structuredTuple)} in QueryTupleQueue. It looks up a list of queues for the source and calls {\tt addDatum(structuredTuple)} on each of them. (in case B the list will only have one TupleQueue).
 
-\paragraph{Query Processor Thread Pool}
+\paragraph{Scheduler}
 
 Query Processor Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum on top of the appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
 
 The Query Processor Thread Pool class contains the following:
 
 \begin{verbatim}
-class QueryProcessorTreads
+class Scheduler
 {
-    
-    SchedulingQueue
-    list<thread> executionThreads;
-    QueryResultQueue*;
+    void   Run();
+
+    RunableQueryQueue   availableQueries;
+    list<thread>        executionThreads;
+    QueryResultQueue*   readyData;
 	
 }
 \end{verbatim}
@@ -332,16 +341,15 @@ class QueryProcessorTreads
 \noindent With SchedulingQueue as follows:
 
 \begin{verbatim}
-class SchedulingQueue
+class RunableQueryQueue
 {
     
     funcitonHandle nextQuery();
     void           addQuery(queryID);
     bool           isActive(queryID);
 
-    queryCatalog*;
-    queue<functionHandle>
-    map<queryID> activeQueries;
+    queryCatalog*                 catalog;
+    queue<functionHandle>         readyQueries;
 	
 }
 \end{verbatim}
