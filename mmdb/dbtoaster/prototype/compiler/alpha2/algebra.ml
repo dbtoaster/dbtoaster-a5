@@ -2397,10 +2397,25 @@ and find_cmp_aggregate_plan q =
         | `IncrPlan (_,_,cq,_) | `IncrDiffPlan (_,_,cq,_) -> find_cmp_aggregate_plan cq
 
 
-(*
- *
- * Frontend helpers
- *
- *)
-
-(* create unique column attributes *)
+(* returns whether any bindings are used by m_expr and the bound variables *)
+let is_binding_used m_expr bindings =
+    (* returns vars as `Unqualified(var_name) *)
+    let m_ubav = get_unbound_attributes_from_map_expression m_expr true in
+    let bindings_used =
+        List.filter
+            (fun x -> match x with
+                | `BindMapExpr(var_id, _, _) ->
+                      List.mem (`Unqualified(var_id)) m_ubav
+                | _ -> false)
+            bindings
+    in
+    let binding_used_rv =
+        List.map
+            (fun x -> match x with
+                | `BindMapExpr(v, bc, _) -> v
+                | _ -> raise InvalidExpression)
+            bindings_used
+    in
+        match binding_used_rv with
+            | [] -> (false, [])
+            | x -> (true, x)

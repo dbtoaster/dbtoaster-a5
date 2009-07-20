@@ -973,18 +973,6 @@ let rec simplify m_expr rewrites unifications =
 					      let new_m_expr = splice m_expr np new_np in
 					          simplify new_m_expr new_rewrites new_unifications
 
-(*
-				        | `Plan(`Select (pred, `Project(projs, q))) ->
-                                              print_rule_description `PullProjectSelect;
-					      let new_np = `Plan(
-                                                  `Project(projs,
-                                                  `Select(add_predicate_bindings pred projs, q)))
-					      in
-					      let new_m_expr = splice m_expr np new_np in
-					      let new_rewrites = `Plan(q)::t in
-					          simplify new_m_expr new_rewrites unifications
-*)
-
 					| `Plan(`Select (pred, `Union ch)) ->
                                               print_rule_description `PullUnionSelect;
 					      let new_np =
@@ -2205,15 +2193,14 @@ let compile_target m_expr event =
  *)
 
 let generate_all_events m_expr = 
-    let gbr = get_base_relations m_expr 
-    in
+    let gbr = get_base_relations m_expr in
         List.fold_left 
             (fun acc x ->
 	        match x with 
 	            | `Relation (n,f) ->
 		          (* [`Insert (n);`Delete (n)] @ acc *)
-		          print_endline ("insert "^n);
-		          (`Insert (n,f)):: acc
+                          let new_evt = `Insert(n,f) in
+                              if List.mem new_evt acc then acc else new_evt::acc
 	            | _ -> acc)
             [] gbr 
 
@@ -2228,8 +2215,8 @@ let attributes_of_variables me =
                 | _ -> e)
             (fun b -> b) (fun m -> m) (fun p -> p) me
     in
-        print_endline ("me: "^(string_of_map_expression me));
-        print_endline ("me with uba: "^(string_of_map_expression me_with_uba));
+        print_endline ("attrs_of_vars me: "^(string_of_map_expression me));
+        print_endline ("attrs_of_vars me with uba: "^(string_of_map_expression me_with_uba));
         me_with_uba
 
 (* Returns:
@@ -2241,7 +2228,7 @@ let attributes_of_variables me =
 (* map_expression ->
      map_expression * map_expression list * (int * variable_identifier) list
 *)
-let extract_incremental_query m_expr =
+let extract_incremental_query m_expr event_path =
     (* orig me -> incr me
          -> spliced me * incr rel me list * var list *)
     let rec eiq_find_plan orig_m_expr incr_m_expr =
@@ -2257,12 +2244,28 @@ let extract_incremental_query m_expr =
 	    | `IfThenElse (_, l, r) -> recur_binary l r
 
             | `MapAggregate _ ->
-                  let map_var = gen_var_sym() in
-                  let new_m_expr =
-                      splice orig_m_expr (`MapExpression incr_m_expr)
-                          (`MapExpression (`METerm(`Variable map_var)))
+                  let br = get_base_relations incr_m_expr in
+                  let remaining_deltas =
+                      List.filter
+                          (fun x -> match x with
+                              | `Relation(n,_) ->
+                                    not(List.exists
+                                        (fun evt ->
+                                            match evt with
+                                                | `Insert(n2, _) | `Delete(n2, _) -> n2 = n)
+                                        event_path)
+                              | _ -> raise InvalidExpression)
+                          br
                   in
-                      (new_m_expr, [incr_m_expr], [map_var])
+                      if (List.length remaining_deltas = 0) then
+                          (orig_m_expr, [], [])
+                      else
+                          let map_var = gen_var_sym() in
+                          let new_m_expr =
+                              splice orig_m_expr (`MapExpression incr_m_expr)
+                                  (`MapExpression (`METerm(`Variable map_var)))
+                          in
+                              (new_m_expr, [incr_m_expr], [map_var])
 
             | `Delta _ | `New _ | `Init _
             | `Incr _ | `IncrDiff _ -> raise InvalidExpression
@@ -2309,13 +2312,16 @@ let extract_incremental_query m_expr =
  * var group parent = (var list * int)
  * binding list -> int -> binding list * map expr list * map vars list *
  *      var group parent list * term parents list *)
-let extract_incremental_query_from_bindings bindings parent_id =
+let extract_incremental_query_from_bindings bindings parent_id event_path =
     List.fold_left
  	(fun (nme_acc, cip_acc, mv_acc, vgp_acc, tp_acc) x -> 
 	    match x with
 		| `BindMapExpr (v, m, u) ->
+                      let (nme, cip_l, mv_l) = extract_incremental_query m event_path in
+
                       print_endline ("Extracting binding incr from:"^(string_of_map_expression m));
-                      let (nme, cip_l, mv_l) = extract_incremental_query m in
+                      print_endline ("New binding incr from:"^(string_of_map_expression nme));
+
                       let (vgp_l, tp_l) =
                           if List.length mv_l > 0 then
                               let (_, vgp) = List.split mv_l in
@@ -2353,20 +2359,20 @@ let print_handler_bindings (handler, bindings) =
 (* map expr -> map expr list * (int * var) list * ((var list) * int) list
  *      * (event * (handler * binding list)) list
  * map expr to compile -> global maps created * map vars * vars parents * event handlers *)
-let compile_target_all m_expr =
+let compile_target_all m_expr event_list =
 
     (* Debugging helpers *)
-    let print_event_path evt evt_path =
+    let print_event_path evt_path =
         print_endline (String.make 50 '-');
         print_endline ("Compiling for event path:"^
             (List.fold_left
                 (fun acc e ->
                     (if (String.length acc) = 0 then "" else acc^", ")^
                         (string_of_delta e))
-                "" (evt_path@[evt])))
+                "" evt_path))
     in
-    let print_input me_list existing_maps = 
-        print_endline "cta_aux input:";
+    let print_input e_list me_list existing_maps = 
+        print_endline ("cta_aux events:"^(String.concat "," (List.map string_of_delta e_list)));
         print_endline
             (List.fold_left
                 (fun acc e ->
@@ -2380,18 +2386,18 @@ let compile_target_all m_expr =
                         (string_of_map_expression e))
                 "" existing_maps)
     in
-    let print_new_map_expressions event event_path hbs me_list  =
+    let print_new_map_expressions event_path hbs me_list  =
         print_endline (String.make 50 '-');
         print_endline ("New maps: ("^
             (string_of_int (List.length hbs))^" compiled results, "^
             (string_of_int (List.length me_list))^" map expressions)");
-        print_event_path event event_path;
+        print_event_path event_path;
         List.iter
             (fun e -> print_endline ("map: "^(string_of_map_expression e)))
             me_list
     in
-        (* Code body *)
-    let event_list = generate_all_events m_expr in
+
+    (* Code body *)
 
     (* Signature:
      * map var = (int * var)
@@ -2407,10 +2413,11 @@ let compile_target_all m_expr =
      * -> running map vars -> running vars parents -> running terminal map parents
      * -> maps created * map vars * vars parents * handlers by level, event *)
     let rec cta_aux e_list me_list e_path maps map_vars vars_parents term_parents =
-        print_input me_list maps;
+        print_input e_list me_list maps;
         List.fold_left
 	    (fun (maps_acc, mv_acc, vp_acc, termp_acc, eh_acc) event -> 
                 let event_rel = get_bound_relation event in
+                let current_event_path = e_path@[event] in
 		let new_events = set_difference e_list [event] in 
                 let me_event_used_list =
                     let event_updates_some_base_relation br =
@@ -2427,7 +2434,7 @@ let compile_target_all m_expr =
 		let hb_list = 
 		    List.map
                         (fun me -> 
-                            print_event_path event e_path;
+                            print_event_path current_event_path;
                             (compile_target me event, dbt_hash me))
                         me_event_used_list
 		in
@@ -2446,11 +2453,13 @@ let compile_target_all m_expr =
                          *      map vars list * vars parents list * terms parents list) list *)
                         List.map
 			    (fun (((handler, unifications), binding), parent_id) -> 
-                                print_endline ("Extracting handler incr from:"^
-                                    (string_of_map_expression handler));
                                 
                                 (* handler, me_l, me_var_l *)
-                                let (new_h, h_rme_l, h_var_l) = extract_incremental_query handler in
+                                let (new_h, h_rme_l, h_var_l) = extract_incremental_query handler current_event_path in
+
+                                    print_endline ("Extracting handler incr from:"^
+                                        (string_of_map_expression handler));
+                                    print_endline ("New handler incr: "^(string_of_map_expression new_h));
 
                                 let (h_vgp_l, h_tp_l) = 
                                     if List.length h_var_l > 0 then
@@ -2461,7 +2470,7 @@ let compile_target_all m_expr =
 
                                 (* binding_l, me_l, me_var_l, vg_par_l *)
                                 let (new_b, b_rme_l, b_var_l, b_vgp_l, b_tp_l) =
-                                    extract_incremental_query_from_bindings binding parent_id
+                                    extract_incremental_query_from_bindings binding parent_id current_event_path
                                 in
                                     (* ((new handler, new binding) * recursive map expr list *
                                      *      map vars list * vars parent list * terms parent list ) *)
@@ -2494,7 +2503,7 @@ let compile_target_all m_expr =
 		        nearest_incr_me
                 in
 
-                    print_new_map_expressions event e_path new_hb_list next_incr_me;
+                    print_new_map_expressions current_event_path new_hb_list next_incr_me;
 		    let (child_maps, child_vars, child_vp, child_tp, children) = 
 		        match new_events with
 		  	    | [] ->
@@ -2502,7 +2511,7 @@ let compile_target_all m_expr =
                                       vp_acc@var_group_parents, termp_acc@next_term_parents, [])
 			    | _ ->
                                   cta_aux new_events next_incr_me
-                                      (e_path@[event]) (maps_acc@next_incr_me)
+                                      current_event_path (maps_acc@next_incr_me)
                                       (mv_acc@next_map_vars) (vp_acc@var_group_parents)
                                       (termp_acc@next_term_parents)
 		    in
@@ -2526,6 +2535,37 @@ let compile_target_all m_expr =
         (r_maps, r_map_vars, r_var_parents, r_term_parents,
             group_by_event result event_list)
 
+
+(* map expression -> map expression * delta list *)
+let preprocess m_expr =
+    let events = generate_all_events m_expr in
+    let base_relation_ht = Hashtbl.create 10 in
+    let rename_fields f counter =
+        let counter_str = string_of_int counter in
+            List.map (fun (id,ty) -> (id^counter_str, ty)) f
+    in
+    let rename_base_relation q = 
+        match q with 
+            | `Relation (n,f) ->
+                  if Hashtbl.mem base_relation_ht n then
+                      let new_counter = (Hashtbl.find base_relation_ht n) + 1 in
+                          Hashtbl.replace base_relation_ht n new_counter;
+                          `Relation (n, rename_fields f new_counter)
+                          
+                  else
+                      begin
+                          Hashtbl.add base_relation_ht n 0;
+                          `Relation (n, rename_fields f 0)
+                      end
+            | _ -> q
+    in
+    let id x = x in
+    let m_expr_with_unique_br =
+        map_map_expr id id id rename_base_relation m_expr
+    in
+    let fully_renamed_m_expr = m_expr_with_unique_br
+    in
+        (events, fully_renamed_m_expr)
 
 
 let compile_code m_expr event output_file_name =
@@ -2618,8 +2658,20 @@ let compile_code m_expr event output_file_name =
     end
 
 
-let compile_code_rec m_expr out_file_name  =
-    let (maps, map_vars, vars_parents, term_parents, handlers_by_event) = compile_target_all m_expr in
+let compile_code_rec m_expr out_file_name event_list =
+    (*
+    let (event_list, m_expr_with_unique_columns) = preprocess m_expr in
+
+    print_endline ("Preprocessed events: "^
+        (String.concat "," (List.map string_of_delta event_list)));
+
+    print_endline ("Preprocessed map expr:\n"^
+        (indented_string_of_map_expression m_expr_with_unique_columns 0));
+    *)
+
+    let (maps, map_vars, vars_parents, term_parents, handlers_by_event) =
+        compile_target_all m_expr event_list
+    in
     let (recursive_map_decls, map_accessors, vp_accessors, tp_accessors) =
         generate_map_declarations maps map_vars vars_parents term_parents
     in
@@ -2692,3 +2744,6 @@ let compile_code_rec m_expr out_file_name  =
             handlers;
 
         close_out out_chan
+
+
+

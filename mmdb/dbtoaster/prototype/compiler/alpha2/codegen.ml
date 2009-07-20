@@ -429,7 +429,7 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 	| [] ->
 	      let state_var = state_id in
               let r_decl = `Variable(state_var, "int") in
-                  print_endline ("Declaring "^state_var^" for "^
+                  print_endline ("Declaring var state "^state_var^" for "^
                       (string_of_map_expression m_expr));
 		  (r_decl, decl@[r_decl])
 
@@ -451,7 +451,7 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 			  | [m] -> (m, true)
 			  | _ -> raise (RewriteException "Multiple matching maps.")
 	      in
-                  print_endline ("Declaring "^state_mid^" for "^
+                  print_endline ("Declaring map state "^state_mid^" for "^
                       (string_of_map_expression m_expr));
                   if existing then (state_map, decl) else (state_map, decl@[state_map])
 
@@ -472,35 +472,13 @@ let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars =
               raise InvalidExpression
 
 
-(* returns whether any bindings are used by m_expr and the bound variables *)
-let is_binding_used m_expr bindings =
-    (* returns vars as `Unqualified(var_name) *)
-    let m_ubav = get_unbound_attributes_from_map_expression m_expr true in
-    let bindings_used =
-        List.filter
-            (fun x -> match x with
-                | `BindMapExpr(var_id, _, _) ->
-                      List.mem (`Unqualified(var_id)) m_ubav
-                | _ -> false)
-            bindings
-    in
-    let binding_used_rv =
-        List.map
-            (fun x -> match x with
-                | `BindMapExpr(v, bc, _) -> v
-                | _ -> raise InvalidExpression)
-            bindings_used
-    in
-        match binding_used_rv with
-            | [] -> (false, [])
-            | x -> (true, x)
-
 (* map_expression -> binding list -> delta -> boolean
    -> (var id * code terminal) list -> (var id list * code terminal) list
    -> code_expression * declaration list *)
 let generate_code handler bindings event body_only
         map_var_accessors varp_accessors termp_accessors recursion_decls
     =
+    print_endline ("Generating code for: "^(string_of_map_expression handler));
 
     let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff =
         let (mid, mf) = mk in
@@ -894,7 +872,7 @@ let generate_code handler bindings event body_only
                                             | `Eval(x) ->
 						  let pv = gen_var_sym() in 
                                                   let av_code = replace_return_val pred_var_code (`Assign(pv,x)) in
-                                                      print_endline ("Declaring var "^pv^" in "^(string_of_plan q));
+                                                      print_endline ("Declaring pred var "^pv^" in "^(string_of_plan q));
                                                       print_endline ("pv_code:\n"^
                                                           (indented_string_of_code_expression pred_var_code));
                                                       print_endline ("x_code: "^(string_of_arith_code_expression x));
@@ -1037,6 +1015,9 @@ let generate_code handler bindings event body_only
     in
 
     (* TODO: declared variable types *)
+    print_endline (String.make 50 '-');
+    print_endline "Generating binding bodies.";
+
     let (binding_bodies, binding_decls) =
         List.fold_left
             (fun (code_acc, decl_acc) b ->
@@ -1062,8 +1043,12 @@ let generate_code handler bindings event body_only
                                         raise InvalidExpression)
             ([], []) bindings
     in
+    
+    print_endline (String.make 50 '-');
+    print_endline "Generating handler bodies.";
 
     let (handler_body, handler_decl) = gc_aux handler binding_decls (true, bindings) in
+
 
     (* Note: binding declarations are included in declaration_code *)
     let declaration_code = List.map (fun x -> `Declare(x)) handler_decl in
@@ -1202,7 +1187,7 @@ let generate_map_declarations maps map_vars vars_parents term_parents =
                             else
                                 begin
                                     let new_decl_var = gen_var_sym() in
-                                        print_endline ("Using var: "^new_decl_var^
+                                        print_endline ("Using newly declared var: "^new_decl_var^
                                             " for hash: "^(string_of_int phv));
                                         (new_decl_var,
                                             hv_decl_acc@[(phv, `Variable(new_decl_var, "int"))])
@@ -1233,18 +1218,26 @@ let generate_map_declarations maps map_vars vars_parents term_parents =
                             | _ -> raise (CodegenException "Invalid cterm"))
             ([], []) vars_parents
     in
-    let tp_cterms =
-        List.fold_left (fun tp_acc (te, (par, unif)) ->
+    let (tp_decls, tp_cterms) =
+        List.fold_left (fun (tp_decl_acc, tp_acc) (te, (par, unif)) ->
             if not(List.mem_assoc par map_decls_and_cterms) then
                 if not(List.mem_assoc par vp_hvs_and_decls) then
                     begin
+                        (* Generate new variable for query result *)
+                        let new_decl_var = gen_var_sym () in
+                            print_endline ("Using newly declared query var: "^new_decl_var^
+                                " for hash: "^(string_of_int par));
+                            (tp_decl_acc@([`Variable(new_decl_var, "int")]),
+                                (tp_acc@[(te, `Variable(new_decl_var))]))
+                        (*
                         print_endline ("Could not find declaration for "^(string_of_int par));
                         raise (CodegenException ("Could not find declaration for "^(string_of_int par)))
+                        *)
                     end
                 else
                     let var_decl = List.assoc par vp_hvs_and_decls in
                     let var_cterm = match var_decl with | `Variable(n,_) -> `Variable(n) in
-                        tp_acc@[(te, var_cterm)]
+                        (tp_decl_acc, tp_acc@[(te, var_cterm)])
             else
                 let (_,ct) = List.assoc par map_decls_and_cterms in
                     match ct with
@@ -1264,11 +1257,12 @@ let generate_map_declarations maps map_vars vars_parents term_parents =
                                   print_endline ("Using map key: "^
                                       (string_of_code_expr_terminal new_ct)^
                                       " for hash: "^(string_of_int par));
-                                  tp_acc@[(te, new_ct)]
+                                  (tp_decl_acc, tp_acc@[(te, new_ct)])
                         | _ -> raise (CodegenException "Invalid cterm"))
-            [] term_parents
+            ([], []) term_parents
     in
     let all_decls =
+        tp_decls@
         (List.map (fun (_, d) -> d) vp_hvs_and_decls)@
         (List.map (fun (_,(d,_)) -> d) map_decls_and_cterms) in
         (all_decls, var_cterms, vp_cterms, tp_cterms)

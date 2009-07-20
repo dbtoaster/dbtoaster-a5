@@ -6,8 +6,8 @@ open Gui
 
 let tv = 
     `MapAggregate(`Sum,
-    `METerm(`Attribute(`Qualified("B", "V3"))),
-    `Relation("B",[("P3", "int"); ("V3", "int")]))
+      `METerm(`Attribute(`Qualified("B", "V0"))),
+        `Relation("B",[("P0", "int"); ("V0", "int")]))
 
 let sv1_pred =
     `BTerm(`GT(
@@ -25,10 +25,10 @@ let m_p2 = `Sum(k_sv0, sv1)
 
 let vwap =
     `MapAggregate(`Sum,
-    `Product(`METerm(`Attribute(`Qualified("B", "P2"))),
-    `METerm(`Attribute(`Qualified("B", "V2")))),
-    `Select(`BTerm(`MLT(m_p2)),
-    `Relation("B", [("P2", "int"); ("V2","int")])))
+      `Product(`METerm(`Attribute(`Qualified("B", "P2"))),
+      `METerm(`Attribute(`Qualified("B", "V2")))),
+        `Select(`BTerm(`MLT(m_p2)),
+          `Relation("B", [("P2", "int"); ("V2","int")])))
 
 let delta = 
     `Insert ("B", [("p", "int"); ("v", "int")])
@@ -320,14 +320,15 @@ in
 	List.iter (fun x -> print_endline (indented_string_of_code_expression x)) global_decls;
 	print_endline (indented_string_of_code_expression handler_code);;
 
-print_test_type "compile_code";
-compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
 *)
 
+print_test_type "compile_code";
+compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
+
+(*
 print_test_type "compile_code_rec";
 compile_code_rec vwap "vwap.cc";;
 
-(*
 print_test_type "treeml_of_map_expression";
 let treeml_out_chan = open_out "vwap.tml" in
     output_string treeml_out_chan (treeml_string_of_map_expression vwap);;
