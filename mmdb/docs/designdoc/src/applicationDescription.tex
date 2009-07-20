@@ -112,6 +112,10 @@ On add Reader request Admin passes Data Adaptor file to C++ compiler which in tu
 class CompilerAdmin
 {
     void RunAdmin(InputRequest);
+
+private:
+    cCodeFileName  CompileSQL(string SQL_file_name);
+    functionHandle CompileC++(string C++_file_name);
 	
     SQLCompiler;
     CCompiler;
@@ -157,7 +161,7 @@ The Data Readers Thread Pool is a collection of threads where each thread picks 
 Data Sources Admin receives two function handles one to a data Reader and another one for a Data Adaptor from a Compiler. First Admin locks Data Adaptors and inserts a new Data Adaptor. Then Admin locks Data Readers Queue  and a handle is inserted. Each Data Readers handle implements a method \emph{readNext()} for reading data from some data source (typically a socket or a file).
 
 \begin{itemize}
-	\item {\tt rawDataTuple getNext();}
+	\item {\tt rawDataTuple getNext(); // user defined function - provided}
 \end{itemize}
 
 \noindent The {\tt rawDataTuple} is a pair {\tt <size, bit-string>}.
@@ -172,8 +176,8 @@ class DataSourcesAdmin
 {
     addDataSource(readerID, sourceReader, dataAdaptor);
 
-    dataReadersQueue*;
-    dataAdaptorsMap*;
+    DataReadersQueue*;
+    DataDispatch*;
 }
 \end{verbatim}
 
@@ -186,9 +190,11 @@ The class of the Data Readers Thread Pool looks as follows:
 \begin{verbatim}
 class DataReadersPool
 {
-    list<thread>  runningThreads;
-    dataReadersQueue;
-    dataStructuresDispatch;
+	void Run();
+	
+    list<thread>            runningThreads;
+    DataReadersQueue        sources;
+    DataDispatch            outputBuffer;
 }
 \end{verbatim}
 
@@ -197,42 +203,48 @@ class DataReadersPool
 \begin{verbatim}
 class DataReadersQueue
 {
-	functionHandler getNextReader();
+	functionHandle  getNextReader();
 	void            putNextReader(functionHandle);
 	
-    queue<functionHandles>
+    queue<functionHandle>  sources;
 }
 \end{verbatim}
 
-\noindent and a Data Structures Dispatch.
+\noindent and a Data Dispatch.
 
-\subsubsection{Data Structures Dispatch}
+\subsubsection{Data Dispatch}
 
-Data Structures Dispatch receives an ID identifying each Data Reader and a message read by the reader. 
+Data Dispatch receives an ID identifying each Data Source and a message read by the reader. 
 
 \begin{itemize}
-	\item {\tt structuredTuple DataStructuresDispatch(readerID, rawDataTuple);}
+	\item {\tt dispatchNext(readerID, rawDataTuple);}
 \end{itemize}
 
 Based on the ID of a reader Dispatch Calls for on an appropriate Data Adaptor to convert the incoming {\tt rawDataTuple} message into a structure needed by the query. The structured tuple is then sent to an appropriate set of queues in the Data Queue for Processing. The {\tt structuredTuple} is a pair {\tt <size, bit-sequence>} such that the bit sequence can be interpreted by the query. 
 
 \begin{verbatim}
-class DataStructuresDispatch
+class DataDispatch
 {
-	getNextMessage();
 	
-    dataAdaptorsMap;
-    queryTupleQueue*;
+	void dispatchNext(readerID, rawDataTuple);
+
+private:
+    void sendData();
+	
+    DataAdaptors;
+    InputBuffer*;
 }
 \end{verbatim}
 
 \noindent Data Adaptors map is a separate class just like Data Readers Queue
 
 \begin{verbatim}
-class DataSTructuresDispatch
+class DataAdaptors
 {
-    functionHandler getAdaptor(id);
-    void            addAdaptor(id, functionHandle);
+    functionHandle  getAdaptor(sourceID);
+    void            addAdaptor(sourceID, functionHandle);
+
+    map<sourceID, functionHandle>;
 	
 }
 \end{verbatim}
@@ -269,16 +281,16 @@ class QueryAdmin
 
 \subsubsection{Query Executor}
 
-Query Executor consists of two inter dependent components: Query Tuple Queue and Scheduler. Query Tuple Queue contains the data needed to execute each query. Scheduler contains a set of threads which run one query at a time on some data.  
+Query Executor consists of two inter dependent components: Input Buffer and Scheduler. Input Buffer contains the data needed to execute each query. Scheduler contains a set of threads which run one query at a time on data in Input Buffer.  
 
-\paragraph{Query Tuple Queue}
+\paragraph{Input Buffer}
 
-Query Tuple Queue is a class, which provides seamless access to the data. It contains a number of queues, such that a subset of queues corresponds to the query that can run on data items from those queues. When Query Tuple Queue receives a new item from Data Dispatch, together with an ID of the data Reader (in a format {\tt structuredTuple}), the new datum is inserted into appropriate queues. If the datum insert causes a query to be available then query handle is extracted from the catalog and inserted into Runable Query Queue. unable Query Queue contains handles to the queries which has data items available to them. If the query is already runable then the item is just inserted into queue.
+Input Buffer is a class, which provides seamless access to the data. It contains a number of queues, such that a a query that can run on data items from those queues. When Input Buffer receives a new item from Data Dispatch, together with an ID of the data Source (in a format {\tt structuredTuple}), the new datum is inserted into appropriate queues. If the datum insert causes a query to be available then Scheduler is called to add this query for processing. If the query is already runable then the item is just inserted into queue.
 
-Query Tuple Queue class has the following structure:
+Input Buffer class has the following structure:
 
 \begin{verbatim}
-class QueryTupleQueue
+class InputBuffer
 {
     void              addDatum(sourceID, structuredTuple);
     structuredTuple   getDatum(queryID);
@@ -287,9 +299,9 @@ class QueryTupleQueue
     void              hasNext(queryID);
 
 	MemoryManager                      Jim;
-	RunableQueryQueue*                 schedulingQueue;
-	map<sourceID, list<TupleQuery*> >  sourceAccess;
-	map<queryID, list<TupleQuery*> >   queryAccess;
+	Scheduler*                         schedulingQueue;
+	map<sourceID, list<TupleQueue*> >  sourceAccess;
+	map<queryID, list<TupleQueue*> >   queryAccess;
 	map<sourceID, list<queryID> >      availableQueries;
 	
 }
@@ -301,11 +313,28 @@ To enable this functionality we need to consider concurrency and efficiency.
 
 \subparagraph{Concurrency:} Here we mean that no data tuple can be lost or received out of order by the query. This can be enabled by a simple procedure of locking each queue when data is inserted or removed from each queue.
 
-\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source is needed by several queries. If we adopt a simple model (case A) where each query has its own set of queues from each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of the queues. By requiring the following specification:
+\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source needs to be accessed by several queries. If we adopt a simple model (case A) where each query has its own set of queues for each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Also the concurrency mechanisms are simple and very efficient. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of queue. By requiring the following specification:
 
+\noindent Case A:
 \begin{verbatim}
-class TupleQueue
+class QueryTupleQueue
 {
+    QueryTupleQueue(MemoryManager*);
+	
+	void              addDatum(structuredTuple);
+	structuredTuple   getDatum();
+	bool              isEmpty();
+
+	queue<StructuredTuple>   datum;
+}
+\end{verbatim}
+
+\noindent Case B:
+\begin{verbatim}
+class SharedTupleQueue
+{
+    SharedTupleQueue(queryID, MemoryManager*);
+
 	TupleQueue*       join(queryID);
 	void              removeQuery(queryID);
 	
@@ -314,15 +343,23 @@ class TupleQueue
 	bool              isEmpty(queryID);
 	
 	map<queryID, pointerToPositionInQueue>     nextDatum;
-	queue                                      datum;
+	queue<DataNode>                            datum;
 }
 \end{verbatim}
 
-When a new query is inserted by Query Admin into QueryTupleQueue with {\tt addQuery(queryID, list<int> sourceIDs)}. Internally we go through the list of sources and creating pointers to TupleQueue for {\tt map<queryID, list<TupleQuery*> >   queryAccess}. If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new TupleQueue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new datum comes in, by the call of {\tt addDatum(sourceID, structuredTuple)} in QueryTupleQueue. It looks up a list of queues for the source and calls {\tt addDatum(structuredTuple)} on each of them. (in case B the list will only have one TupleQueue).
+\begin{verbatim}
+struct DataNode
+{
+    int              beenAccessed;
+    StructuredTuple*  datum;
+}
+\end{verbatim}
+
+When a new query is inserted by Query Admin into Input Buffer with {\tt addQuery(queryID, list<int> sourceIDs)}. Internally we go through the list of sources and creating pointers to Tuple Queue for {\tt map<queryID, list<TupleQuery*> >   queryAccess}. If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new Tuple Queue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new datum comes in, by the call of {\tt addDatum(sourceID, structuredTuple)} in InputBuffer. It looks up a list of queues for the source and calls {\tt addDatum(structuredTuple)} on each of them. (in case B the list will only have one TupleQueue).
 
 \paragraph{Scheduler}
 
-Query Processor Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum on top of the appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
+Query Processor Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum from appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
 
 The Query Processor Thread Pool class contains the following:
 
@@ -330,10 +367,11 @@ The Query Processor Thread Pool class contains the following:
 class Scheduler
 {
     void   Run();
+    void   addRunableQuery(queryID);
 
     RunableQueryQueue   availableQueries;
     list<thread>        executionThreads;
-    QueryResultQueue*   readyData;
+    InputBuffer *       readyData;
 	
 }
 \end{verbatim}
@@ -344,12 +382,12 @@ class Scheduler
 class RunableQueryQueue
 {
     
-    funcitonHandle nextQuery();
+    queryID        nextQuery();
     void           addQuery(queryID);
     bool           isActive(queryID);
 
-    queryCatalog*                 catalog;
-    queue<functionHandle>         readyQueries;
+    queryCatalog*          catalog;
+    queue<queryID>         readyQueries;
 	
 }
 \end{verbatim}
@@ -371,7 +409,7 @@ Query Results Queue implements a server, where each client upon connection indic
 
 \noindent When a client needs a new piece of information it sends a request to the server with the ID of a query it is interested in and the number of tuples it needs. Server returns the results of the query indicated by the ID and the tuples it produced. 
 
-Query Result Queues implements two ways for the users to access data. One is when a user asks for a complete query result and another is when a client asks for an curser to query results.
+Query Result Queues implements two ways for the users to access data. One is when a user asks for a complete query result and another is when a client asks for an cursor to query results.
 
 Query Result Queue class is:
 
@@ -383,7 +421,7 @@ class SchedulingQueue
 	
 	getFullQueryResult(clientID, queryID);
 	
-	startCurserResult(clientID, queryID);
+	startCursorResult(clientID, queryID);
 	
 }
 \end{verbatim}
