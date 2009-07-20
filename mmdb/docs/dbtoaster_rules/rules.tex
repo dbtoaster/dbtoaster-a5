@@ -159,9 +159,16 @@ S \leftarrow \oplus_Q(S, \Delta_{\pm R(\vec{r})}); \Delta_{\pm R(\vec{r})} Q
 \mbox{State maintenance operator definitions:} && \nonumber
 \\
 \label{eq:sm1}
-\alginsert_{S[A]} \algnew_{+R(\vec{r})} f
+\alginsert_{+R(\vec{r}), S[A]} f
 &:=&
+\mbox{$R$.insert($\vec{r}$)};
+\\
+\nonumber
+&&
 \mbox{if ($A \notin keys(S)$) $S$.insert($A$,  $\algnew_{+R(\vec{r})} f$)};
+\\
+\nonumber
+&&
 S[A]
 \\
 \label{eq:sm2}
@@ -301,9 +308,10 @@ S \leftarrow \oplus(S, \delta_{\pm R(\vec{r})} f); S
 %
 \\[2ex]
 \label{eq:agg5}
-\delta_{+R(\vec{r})} \algmin_f(Q) &:=&
-    \algmin_{f} (\underbrace{\algincr_{\cup, S_Q}}_{
-    \mathrm{for} \; \algnew_{-R(\vec{r})} \algmin_f(Q), \mbox{ $S_Q$ is share with $\delta_{-R(\vec{r})} \algmin_f(Q)$}}
+\delta_{+R(\vec{r})} \algmin_f(Q) &:=& \algmin_{f} (
+    \underbrace{\algincrdiff_{\cup, S_Q}}_{
+        \mathrm{for} \; \algnew_{-R(\vec{r})} \algmin_f(Q),
+        \mbox{ $S_Q$ is shared with $\delta_{-R(\vec{r})} \algmin_f(Q)$}}
     \Delta_{+R(\vec{r})} Q)
 \\
 \label{eq:agg6}
@@ -453,11 +461,13 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \sigma_{f[A] \theta g[\vec{x}]}(Q) &:=& \sigma_{f[A] \theta c}(Q)[c=g[\vec{x}]]
 \\
 \label{eq:pred4}
-\sigma_{g_1=B} (Q) &:=& \pi_{g_1\rightarrow B}(bind_{g_1\rightarrow B}(Q))
+\sigma_{g_1=B} (\rho_{\vec{A}}(Q)) &:=&
+\pi_{g_1\rightarrow B}(bind_{g_1\rightarrow B}(\rho_{\vec{A}}(Q)))
 \\
 \label{eq:pred5}
-\sigma_{g_1=B \wedge f[\vec{A}, g_1 \dots g_k] \theta 0}(Q) &:=&
-\sigma_{f[\vec{A}, g_1 \dots g_k] \theta 0}(\pi_{g_1 \rightarrow B}(bind_{g_1 \rightarrow B}(Q)))
+\sigma_{g_1=B \wedge f[\vec{A}, g_1 \dots g_k] \theta 0}(\rho_{\vec{A}}(Q)) &:=&
+\sigma_{f[\vec{A}, g_1 \dots g_k] \theta 0}(\pi_{g_1 \rightarrow B}(
+bind_{g_1 \rightarrow B}(\rho_{\vec{A}}(Q))))
 \\
 \nonumber &\dots& \mbox{$bind_{g_1 \rightarrow B}(Q)$ replaces occurrences of column $B$ in $Q$ with $g_1$}
 %
@@ -494,7 +504,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \\
 \nonumber && 
 \cup\; 
-\sigma_{(\alginsert_{S_{f}[A]} \algnew_{+R(\vec{r})} f) \theta 0}
+\sigma_{(\alginsert_{+R(\vec{r}), S_{f}[A]} f) \theta 0}
 (\algincrdiff_{\cup, S_Q} \Delta_{+R(\vec{r})} Q)
 \\
 \label{eq:md2}
@@ -523,10 +533,8 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \nonumber && rc = \algnew_{+R(\vec{r})} g;
 \\
 \nonumber
-&& \mbox{if ($S_f$.find($rc$) = $S_f$.end)}
-\; \{ \; \mathrm{ignore}((\alginsert_{S_{f}[rc]} \algnew_{+R(\vec{r})} f)[rc]) \; \};
-\\
-\nonumber && S_{f}[rc]
+&&
+(\alginsert_{+R(\vec{r}), S_{f}[rc]} f)[rc]
 \\
 \label{eq:md5}
 (\algincr_{\oplus_1, S_f} \Delta_{+R(\vec{r})} f)
@@ -537,10 +545,7 @@ f[\vec{x}] * \algmax_{g}(Q) & \dots & f[\vec{x}] < 0
 \nonumber && rc = \algincr_{\oplus_2, S_g} \Delta_{+R(\vec{r})} g;
 \\
 \nonumber
-&& \mbox{if ($S_f$.find($rc$) = $S_f$.end)}
-\; \{ \; \mathrm{ignore}((\alginsert_{S_{f}[rc]} \algnew_{+R(\vec{r})} f)[rc]) \; \};
-\\
-\nonumber && S_{f}[rc]
+&& (\alginsert_{+R(\vec{r}), S_{f}[rc]} f)[rc]
 \\
 \label{eq:md6}
 (\algincr_{\oplus, S_f}\Delta_{-R(\vec{r})} f)[c = \algnew_{-R(\vec{r})} g]
@@ -587,7 +592,7 @@ rc = \algincr_{\oplus_2, S_g} \Delta_{-R(\vec{r})} g;
 \algsum_{\algupdate_{\min, S_{1}[A]} \delta_{+R(\vec{r})} \algmin_{f}(Q_1)}(S_2)
 \\
 \nonumber &&
-+ \; \algsum_{\alginsert_{S_{1}[A]} \algnew_{+R(\vec{r})} \algmin_{f}(Q_1)}
++ \; \algsum_{\alginsert_{+R(\vec{r}), S_{1}[A]} \algmin_{f}(Q_1)}
     (\algincrdiff_{\cup, S_2} \Delta_{+R(\vec{r})} Q_2)
 \\
 \label{eq:na2}
@@ -607,7 +612,7 @@ rc = \algincr_{\oplus_2, S_g} \Delta_{-R(\vec{r})} g;
 \algmin_{\algupdate_{\oplus, S_1[A]} \Phi_{+R(\vec{r})} f} (S_2),
 \\
 \nonumber &&
-\qquad \; \algmin_{\alginsert_{\oplus, S_1[A]} \algnew_{+R(\vec{r})} f}
+\qquad \; \algmin_{\alginsert_{+R(\vec{r}), S_1[A]} f}
 (\algincrdiff_{\cup, S_2} \Delta_{+R(\vec{r})} Q_2)
 \Big\}
 \\
@@ -753,7 +758,7 @@ Next,
 (\sigma_{(\algupdate_{+, m[p_2]} \Delta_{+B(p,v)} m)[p_2] \theta 0}(\rho_{P_2} (B))
 \nonumber \\
 && \cup \;
-\sigma_{(\alginsert_{m[p_2]} \algnew_{+B(p,v)} m)[p_2] \theta 0}
+\sigma_{(\alginsert_{+B(p,v), m[p_2]} m)[p_2] \theta 0}
 (\algincrdiff_{\cup, \rho_{P_2}(B)} \Delta_{+B(p,v)} \rho_{P_2}(B)))
 \end{eqnarray*}
 
@@ -975,13 +980,10 @@ Derivation with current rules:
 \\
 && rc = b;
 \\
-&& \mbox{if ($s_A$.find($rc$) = $s_A$.end)}
-\; \{ \; \mathrm{ignore}((\alginsert_{s_{A}[rc]} a)[rc]) \; \};
-\\
-&& s_{A}[rc]
+&& (\alginsert_{s_{A}[rc]} a)[rc]
 \\
 &=&
-\mbox{if ($s_A$.find(b) != $s_A$.end)} \; \{ \; \algupdate_{+,s_A[b]} a \; \}
+\mbox{if ($s_A$.find($b$) != $s_A$.end)} \; \{ \; \algupdate_{+,s_A[b]} a \; \}
 \\
 && \mbox{else } \; \{ \; \alginsert_{s_A[b]} a \; \}
 \\
@@ -1447,27 +1449,31 @@ code\_expression &=& \`{}IfNoElse ( bool\_code\_expression, code\_expression )\\
 \hline \ref{eq:fs3}$\sim$\ref{eq:fs4} & complete & apply\_recompute\_plan\_rules\\
 \hline \ref{eq:agg1} & complete & apply\_delta\_rules, apply\_recompute\_rules\\
 \hline \ref{eq:agg2} & complete & apply\_recompute\_rules\\
-\hline \ref{eq:agg2}$\sim$\ref{eq:agg9} & missing & \\
+\hline \ref{eq:agg3}$\sim$\ref{eq:agg9} & complete & apply\_recompute\_rules (needs testing for delete) \\
 \hline \ref{eq:ags1}$\sim$\ref{eq:ags2} & complete & simplify \\
 \hline \ref{eq:sum1}$\sim$\ref{eq:sum2} & complete & simplify\_map\_expr\_constants \\
 \hline \ref{eq:sum3} & complete & simplify \\
-\hline \ref{eq:sum4} & missing & (simplify, similar to rule \ref{eq:sum4}) \\
+\hline \ref{eq:sum4} & complete & simplify \\
 \hline \ref{eq:sum5}$\sim$\ref{eq:sum7} & complete & simplify \\
-\hline \ref{eq:min1} & missing & (check later)\\
-\hline \ref{eq:min2}& complete & simplify \\
-\hline \ref{eq:min3}$\sim$\ref{eq:min4} & missing & (simplify, similar to rule \ref{eq:sum4}, needs to add `Max)\\
-\hline \ref{eq:min5} & complete & simplify \\
-\hline \ref{eq:min6} & missing & (simplify, similar to rule \ref{eq:sum4}) \\
-\hline \ref{eq:min7} & missing & (simplify, might need state identifier to hold value of min f and min g) \\
-\hline \ref{eq:pred1} & complete & extract\_plan\_bindings\\
-\hline \ref{eq:pred2} & incomplete & extract\_plan\_bindings doesn't consider dec/inc of f\\
-\hline \ref{eq:pred3} & missing & (extract\_plan\_bindings)\\
+\hline \ref{eq:min1} & missing & (possibly implement in compute\_initial\_values, implement for max)\\
+\hline \ref{eq:min2} & complete & simplify \\
+\hline \ref{eq:min3} & complete & simplify \\
+\hline \ref{eq:min4} & partial & simplify, implement for max, and with all map bool expressions\\
+\hline \ref{eq:min5} & partial & simplify, implement for max \\
+\hline \ref{eq:min6} & missing & (simplify, similar to rule \ref{eq:sum4}, implement for min/max) \\
+\hline \ref{eq:min7} & missing & (simplify, implement for min/max) \\
+\hline \ref{eq:pred1} & complete & extract\_plan\_bindings (extend for multivariate monotonicity)\\
+\hline \ref{eq:pred2} & incomplete & add support for `MGE, and extend is\_monotonic, extract\_plan\_bindings\\
+\hline \ref{eq:pred3} & complete & extract\_expr\_bindings, extract\_map\_expr\_bindings\\
+\hline \ref{eq:pred4} & complete & simplify \\
+\hline \ref{eq:pred5} & complete & simplify \\
 \hline \ref{eq:rs1} & complete & simplify \\
-\hline \ref{eq:md1} & complete & compute\_new\_plan\\
-\hline \ref{eq:md2}$\sim$\ref{eq:md3} & missing & (need `Delete, `IncrDiffPlan. similar to rule \ref{eq:md1})\\
+\hline \ref{eq:rs2} & complete & simplify \\
+\hline \ref{eq:md1} & partial & maintain\_plan\_domains, extend to use `Insert, `Update\\
+\hline \ref{eq:md2}$\sim$\ref{eq:md3} & partial & maintain\_plan\_domains, needs testing, and extend to use `Delete\\
 \hline \ref{eq:md4}$\sim$\ref{eq:md5} & complete & generate\_code\\
 \hline \ref{eq:md6}$\sim$\ref{eq:md7} & incomplete & generate\_code, if statement is missing \\
-\hline \ref{eq:na1}$\sim$\ref{eq:na5} & missing & (not now) \\
+\hline \ref{eq:na1}$\sim$\ref{eq:na5} & missing & (not now, maintain\_plan\_domains) \\
 \hline
 
 \end{tabular}
