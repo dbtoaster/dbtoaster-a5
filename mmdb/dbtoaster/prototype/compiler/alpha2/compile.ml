@@ -7,6 +7,12 @@ open Codegen
  *)
 
 
+(*
+ *
+ * Binding helpers
+ *
+ *)
+
 (* event -> (attribute_id * expression) list *)
 let create_bindings event name fields =
     match event with
@@ -146,7 +152,11 @@ and ab_pred_aux pred pa =
 	| `BTerm(`EQ(l,r)) -> `BTerm(`EQ(ab_expr_aux l pa, ab_expr_aux r pa))
 	| `BTerm(`NE(l,r)) -> `BTerm(`NE(ab_expr_aux l pa, ab_expr_aux r pa))
 	| `BTerm(`MEQ(m_expr)) -> `BTerm(`MEQ(ab_map_expr_aux m_expr pa))
+	| `BTerm(`MNEQ(m_expr)) -> `BTerm(`MNEQ(ab_map_expr_aux m_expr pa))
 	| `BTerm(`MLT(m_expr)) -> `BTerm(`MLT(ab_map_expr_aux m_expr pa))
+	| `BTerm(`MLE(m_expr)) -> `BTerm(`MLE(ab_map_expr_aux m_expr pa))
+	| `BTerm(`MGT(m_expr)) -> `BTerm(`MGT(ab_map_expr_aux m_expr pa))
+	| `BTerm(`MGE(m_expr)) -> `BTerm(`MGE(ab_map_expr_aux m_expr pa))
 	| `And (l,r) -> `And(ab_pred_aux l pa, ab_pred_aux r pa)
 	| `Or (l,r) -> `Or(ab_pred_aux l pa, ab_pred_aux r pa)
 	| `Not (e) -> `Not(ab_pred_aux e pa)
@@ -257,6 +267,281 @@ let is_independent m_expr q =
     let unresolved_l = List.length (resolve_unbound_attributes me_a q_ba) in
 	(me_al = 0) || (me_al > 0 && (me_al = unresolved_l))
 
+(*
+ *
+ * Constant lifting and variable binding.
+ *
+ *)
+
+(* pull up constant bindings *)
+let bind_expr_pair (le, lb) (re, rb) =
+    let (lc, leb) = (is_constant_expr le, (is_bound_expr le lb)) in
+    let (rc, reb) = (is_constant_expr re, (is_bound_expr re rb)) in
+	match (lc, leb, rc, reb) with
+	    | (true, true, true, true) ->
+		  let lv = match le with
+		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
+		  in
+		  let rv = match re with
+		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
+		  in
+		  let (l_def, r_def) =
+		      (get_expr_definition lv lb, get_expr_definition rv rb)
+		  in
+		      (true, l_def, (remove_expr_binding lv lb),
+		      r_def, (remove_expr_binding rv rb))
+			  
+	    | (true, false, true, false) ->
+		  let (l_sym, r_sym) = (gen_var_sym(), gen_var_sym()) in
+		      (true,
+		      `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
+		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
+			  
+	    | (true, true, true, false) ->
+		  let lv = match le with
+		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
+		  in
+		  let l_def = get_expr_definition lv lb in
+		  let r_sym = gen_var_sym() in
+		      (true, l_def, (remove_expr_binding lv lb),
+		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
+			  
+	    | (true, false, true, true) ->
+		  let rv = match re with
+		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
+		  in
+		  let l_sym = gen_var_sym() in
+		  let r_def = get_expr_definition rv rb in
+		      (true, `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
+		      r_def, (remove_expr_binding rv rb))
+			  
+	    | (true, false, _, _) ->
+		  let l_sym = gen_var_sym() in
+		      (false, `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)], re, rb)
+			  
+	    | (_, _, true, false) ->
+		  let r_sym = gen_var_sym() in
+		      (false, le, lb, `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
+			  
+	    | _ -> (false, le, lb, re, rb)
+
+(* expression -> expression * bindings list *)
+let rec extract_expr_bindings expr =
+    match expr with
+	| `ETerm (t) -> (expr, [])
+	| `UnaryMinus (e) -> extract_expr_bindings e
+	| `Sum (l, r) | `Product (l, r) | `Minus (l, r) | `Divide (l, r) ->
+	      let (le, lb) = extract_expr_bindings l in
+	      let (re, rb) = extract_expr_bindings r in
+	      let (bound, nl, nlb, nr, nrb) = bind_expr_pair (le, lb) (re, rb)
+ 	      in
+		  begin
+		      match (bound, expr) with
+			  | (true, `Sum (_,_)) ->
+				let new_var = gen_var_sym() in
+				    (`ETerm(`Variable(new_var)),
+				    nlb@nrb@[`BindExpr(new_var, `Sum (nl, nr))])
+
+			  | (true, `Product (_,_)) ->
+				let new_var = gen_var_sym() in
+				    (`ETerm(`Variable(new_var)),
+				    nlb@nrb@[`BindExpr(new_var, `Product (nl, nr))])
+
+			  | (true, `Minus (_,_)) -> 
+				let new_var = gen_var_sym() in
+				    (`ETerm(`Variable(new_var)),
+				    nlb@nrb@[`BindExpr(new_var, `Minus (nl, nr))])
+
+			  | (true, `Divide (_,_)) -> 
+				let new_var = gen_var_sym() in
+				    (`ETerm(`Variable(new_var)),
+				    nlb@nrb@[`BindExpr(new_var, `Divide (nl, nr))])
+
+			  | (false, `Sum _) -> (`Sum (nl, nr), nlb@nrb)
+			  | (false, `Product _) -> (`Product (nl, nr), nlb@nrb)
+			  | (false, `Minus _) -> (`Minus (nl, nr), nlb@nrb)
+			  | (false, `Divide _) -> (`Divide (nl, nr), nlb@nrb)
+
+			  | _ -> raise InvalidExpression
+		  end
+
+	| `Function (fid, args) ->
+	      let (argse, argsb) = List.split (List.map extract_expr_bindings args) in
+		  (`Function (fid, argse), List.flatten argsb) 
+
+(* bool_expression -> bool_expression * bindings list *)
+let rec extract_bool_expr_bindings b_expr =
+    let ee_bt le re lb rb =
+        let b = lb@rb in
+        let e =
+            match b_expr with
+	        | `BTerm(`LT(_,_)) -> `LT(le, re)
+	        | `BTerm(`LE(_,_)) -> `LE(le, re)
+	        | `BTerm(`GT(_,_)) -> `GT(le, re)
+	        | `BTerm(`GE(_,_)) -> `GE(le, re)
+	        | `BTerm(`EQ(_,_)) -> `EQ(le, re)
+	        | `BTerm(`NE(_,_)) -> `NE(le, re)
+                | _ -> raise InvalidExpression
+        in
+            (`BTerm(e), b)
+    in
+    let ene_bt mee meb =
+        let e =
+            match b_expr with
+		| `BTerm(`MEQ _) -> `MEQ(mee)
+		| `BTerm(`MNEQ _) -> `MNEQ(mee)
+		| `BTerm(`MLT _) -> `MLT(mee)
+		| `BTerm(`MLE _) -> `MLE(mee)
+		| `BTerm(`MGT _) -> `MGT(mee)
+		| `BTerm(`MGE _) -> `MGE(mee)
+		| _ -> raise InvalidExpression
+        in
+            (`BTerm(e), meb)
+    in
+    match b_expr with
+	| `BTerm(`True) | `BTerm(`False) -> (b_expr, [])
+
+	| `BTerm(`LT (l, r)) | `BTerm(`LE (l, r))
+	| `BTerm(`GT (l, r)) | `BTerm(`GE (l, r))
+	| `BTerm(`EQ (l, r)) | `BTerm(`NE (l, r)) ->
+	      let (le, lb) = extract_expr_bindings l in
+	      let (re, rb) = extract_expr_bindings r in
+                  ee_bt le re lb rb
+
+	| `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+	| `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+	| `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+              -> 
+	      let (mee, meb) = extract_map_expr_bindings m_expr in
+                  ene_bt mee meb
+		      
+	| `And (l,r) | `Or (l,r) ->
+	      let (le, lb) = extract_bool_expr_bindings l in
+	      let (re, rb) = extract_bool_expr_bindings r in
+		  begin match b_expr with
+		      | `And _ ->  (`And (le, re), lb@rb)
+		      | `Or _ -> (`Or (le, re), lb@rb)
+		      | _ -> raise InvalidExpression
+		  end
+
+	| `Not (be) -> let (bee, beb) = extract_bool_expr_bindings be in (`Not(bee), beb)
+
+
+(* map_expression -> map_expression * (bindings list) *)
+and extract_map_expr_bindings m_expr =
+    let extract_binary l r fn =
+	let (le, lb) = extract_map_expr_bindings l in
+	let (re, rb) = extract_map_expr_bindings r in
+            (fn le re, lb@rb)
+    in
+    match m_expr with
+	| `METerm x -> (m_expr, [])
+
+	| `Sum(l,r) -> extract_binary l r (fun x y -> `Sum(x,y))
+	| `Minus(l,r) -> extract_binary l r (fun x y -> `Minus(x,y))
+	| `Product(l,r) -> extract_binary l r (fun x y -> `Product(x,y))
+	| `Min (l,r) -> extract_binary l r (fun x y -> `Min(x,y))
+	| `Max (l,r) -> extract_binary l r (fun x y -> `Max(x,y))
+
+	| `MapAggregate(fn, f,q) ->
+	      let (fe, fb) = extract_map_expr_bindings f in
+	      let (qq, qb) = extract_plan_bindings q in
+                  (`MapAggregate(fn, fe, qq), fb@qb)
+
+	(*| `Delta(_,_) -> (m_expr, [])*)
+	| _ ->
+              print_endline ("Invalid map expression for extract_map_expr_bindings:\n"^
+                  (indented_string_of_map_expression m_expr 0));
+	      raise (RewriteException "Invalid map expression for extract_map_expr_bindings")
+
+(* plan -> plan * bindings list *)
+and extract_plan_bindings q =
+    let extract_nested_map_expression mbterm mon uba cqq predb cqb =
+        let new_var = gen_var_sym() in
+        let new_cmp_pair = (`ETerm(`Attribute(uba)), `ETerm(`Variable(new_var))) in
+        let result (nbt, agg_fn) =
+            (`Select(nbt, cqq),
+            predb@cqb@[
+                `BindMapExpr(new_var,
+                    `MapAggregate(agg_fn, `METerm(`Attribute(uba)), `Select(mbterm, cqq)), [])])
+        in
+            match (mon, mbterm) with
+                | (Inc, `BTerm(`MEQ _)) | (Inc, `BTerm(`MNEQ _))
+                | (Dec, `BTerm(`MEQ _)) | (Dec, `BTerm(`MNEQ _)) ->
+                      raise (RewriteException "Unable to handle nested equality/inequality map expressions.")
+
+                | (Inc, `BTerm(`MLT _)) | (Inc, `BTerm(`MLE _)) ->
+                      result (`BTerm(`LE(new_cmp_pair)), `Max)
+                | (Inc, `BTerm(`MGT _)) | (Inc, `BTerm(`MGE _)) ->
+                      result (`BTerm(`GE(new_cmp_pair)), `Min)
+
+                | (Dec, `BTerm(`MLT _)) | (Dec, `BTerm(`MLE _)) ->
+                      result (`BTerm(`GE(new_cmp_pair)), `Min)
+                | (Dec, `BTerm(`MGT _)) | (Dec, `BTerm(`MGE _)) ->
+                      result (`BTerm(`LE(new_cmp_pair)), `Max)
+
+                | (_, _) -> (`Select(mbterm, cqq), predb@cqb)
+    in
+    match q with
+	| `Relation _ -> (q, [])
+
+	| `Select (pred, cq) ->
+	      let (prede, predb) = extract_bool_expr_bindings pred in
+	      let (cqq, cqb) = extract_plan_bindings cq in
+	      let unbound_attrs = (get_unbound_attributes_from_predicate prede false) in
+		  if (List.length unbound_attrs) = 1 then
+		      let uba = List.hd unbound_attrs in
+		      let predem = get_monotonicity prede uba in
+
+			  print_endline ("Checking monotonicity for "^
+			      (string_of_attribute_identifier uba)^":" ^
+                              (string_of_bool (predem = Inc || predem = Dec)));
+
+                          let (new_q, new_b) =
+                              match prede with
+                                  | `BTerm(`MEQ _) | `BTerm(`MNEQ _)
+                                  | `BTerm(`MLT _) | `BTerm(`MLE _)
+                                  | `BTerm(`MGT _) | `BTerm(`MGE _) ->
+                                        extract_nested_map_expression prede predem uba cqq predb cqb
+                                  | _ -> (`Select(prede, cqq), predb@cqb)
+                          in
+			      (new_q, new_b)
+		  else
+		      (* TODO: handle multivariate monotonicity *)
+		      (`Select(prede, cqq), predb@cqb)
+
+	| `Project (attrs, cq) ->
+	      let (attrse, attrsb) =
+		  List.split
+		      (List.map
+			  (fun (a,e) ->
+			      let (ee, eb) = extract_expr_bindings e in ((a,ee), eb))
+			  attrs)
+	      in
+	      let (cqq, cqb) = extract_plan_bindings cq in
+		  (`Project (attrse, cqq), (List.flatten attrsb)@cqb)
+
+	| `Union children ->
+	      let (new_ch, ch_b) =
+		  List.split (List.map extract_plan_bindings children)
+	      in
+		  (`Union new_ch, List.flatten ch_b)
+
+	| `Cross (l, r) ->
+	      let (lq, lb) = extract_plan_bindings l in
+	      let (rq, rb) = extract_plan_bindings r in
+		  (`Cross (lq, rq), lb@rb)
+
+        (* Binding extraction should occur before incrementality analysis,
+           compilation and domain management*)
+        | `TrueRelation | `FalseRelation
+        | `Domain _
+	| `DeltaPlan _ | `NewPlan _
+        | `IncrPlan _ | `IncrDiffPlan _ ->
+              print_endline ("extract_plan_binding: applied to\n"^
+                  (indented_string_of_plan q 0));
+              raise InvalidExpression
+
 
 (*
  * 
@@ -286,7 +571,9 @@ let rec push_delta m_expr : map_expression =
 	              `Sum(`MapAggregate(`Sum, f, delta_plan),
 		          `MapAggregate(`Sum, delta_f, delta_plan)))
 
-	| `Delta (ev, `MapAggregate (`Min, f, `IncrPlan(sq, _, q, d))) ->
+	| `Delta (ev, `MapAggregate (`Min as fn, f, `IncrPlan(sq, pop, q, d)))
+	| `Delta (ev, `MapAggregate (`Max as fn, f, `IncrPlan(sq, pop, q, d)))
+            ->
 	      let br = get_base_relations m_expr in
 	      let rel = get_bound_relation ev in
 	      let l =
@@ -300,11 +587,16 @@ let rec push_delta m_expr : map_expression =
 	          else
                       let delta_plan = push_delta_plan(`DeltaPlan(ev, q)) in
                           begin
-                              match ev with
-                                  | `Insert _ ->
-                                        `MapAggregate(`Min, f, `IncrDiffPlan (sq, `Union, delta_plan, d)) 
-                                  | `Delete _ ->
-                                        `MapAggregate(`Min, f, `IncrDiffPlan (sq, `Diff, delta_plan, d))
+                              (* Validate delta/op combination in addition to rewrite to IncrDiffPlan *)
+                              match (ev, pop) with
+                                  | (`Insert _, `Union) ->
+                                        `MapAggregate(fn, f, `IncrDiffPlan (sq, `Union, delta_plan, d)) 
+                                  | (`Delete _, `Diff) ->
+                                        `MapAggregate(fn, f, `IncrDiffPlan (sq, `Diff, delta_plan, d))
+                                  | (_,_) ->
+                                        print_endline ("Invalid delta/op combination: "^
+                                            (string_of_delta ev)^", "^(string_of_poplus pop));
+                                        raise (RewriteException "Invalid delta/op combination.");
                           end
 	| _ -> m_expr
 
@@ -347,28 +639,18 @@ let rec apply_delta_rules m_expr event rcs =
             (indented_string_of_map_expression e 0))
     in
     let adr_new x = 
+        let adr_binary l r fn =
+            fn (apply_delta_rules l event (Some New))
+                (apply_delta_rules r event (Some New))
+        in
 	match x with 
 	    | `New (`METerm y) -> `METerm y
 		  
-	    | `New (`Sum (l, r)) ->
-		  `Sum(apply_delta_rules l event (Some New),
-		  apply_delta_rules r event (Some New))
-		      
-	    | `New (`Minus (l, r)) ->
-		  `Minus(apply_delta_rules l event (Some New),
-		  apply_delta_rules r event (Some New))
-		      
-	    | `New (`Product (l, r)) ->
-		  `Product(apply_delta_rules l event (Some New),
-		  apply_delta_rules r event (Some New))
-		      
-	    | `New (`Min (l,r)) ->
-		  `Min(apply_delta_rules l event (Some New),
-		  apply_delta_rules r event (Some New))
-
-	    | `New (`Max (l,r)) ->
-		  `Max(apply_delta_rules l event (Some New),
-		  apply_delta_rules r event (Some New))
+	    | `New (`Sum (l, r)) -> adr_binary l r (fun x y -> `Sum(x,y))
+	    | `New (`Minus (l, r)) -> adr_binary l r (fun x y -> `Minus(x,y))
+	    | `New (`Product (l, r)) -> adr_binary l r (fun x y -> `Product(x,y))
+	    | `New (`Min (l,r)) -> adr_binary l r (fun x y -> `Min(x,y))
+	    | `New (`Max (l,r)) -> adr_binary l r (fun x y -> `Max(x,y))
 
 	    | `New (`MapAggregate (fn, f, q)) ->
 		  `MapAggregate(fn,
@@ -401,21 +683,30 @@ and apply_delta_plan_rules q event rcs =
             "invalid recomputation plan:\n"^(indented_string_of_plan p 0))
     in
     let adpr_new x = 
+        let adpr_mbterm mbterm cq =
+            let adr_me me = apply_delta_rules me event (Some New) in
+            let new_mbterm = 
+                match mbterm with
+                    | `BTerm(`MEQ(m_expr)) -> `MEQ(adr_me m_expr)
+                    | `BTerm(`MNEQ(m_expr)) -> `MNEQ(adr_me m_expr)
+                    | `BTerm(`MLT(m_expr)) -> `MLT(adr_me m_expr)
+                    | `BTerm(`MLE(m_expr)) -> `MLE(adr_me m_expr)
+                    | `BTerm(`MGT(m_expr)) -> `MGT(adr_me m_expr)
+                    | `BTerm(`MGE(m_expr)) -> `MGE(adr_me m_expr)
+                    | _ -> raise InvalidExpression
+            in
+                `Select(`BTerm(new_mbterm), apply_delta_plan_rules cq event (Some New))
+        in
 	match x with
 	    | `NewPlan(`Relation r) -> `Relation r
 		  
 	    | `NewPlan(`Select (p, cq)) ->
 		  begin
 		      match p with
-			  | `BTerm(`MEQ(m_expr)) ->
-				`Select(`BTerm(`MEQ(apply_delta_rules m_expr event (Some New))),
-				apply_delta_plan_rules cq event (Some New))
-				    
-			  | `BTerm(`MLT(m_expr)) ->
-				`Select(`BTerm(`MLT(apply_delta_rules m_expr event (Some New))),
-				apply_delta_plan_rules cq event (Some New))
-				    
-			  (* TODO: handle conjunctive/disjunctive map expression comparisons *)
+			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                -> adpr_mbterm p cq
 			  | _ -> `Select(p, apply_delta_plan_rules cq event (Some New))
 		  end
 		      
@@ -497,7 +788,11 @@ let get_comparison_function b_term =
 	| `BTerm(`EQ(_,_)) -> (=)
 	| `BTerm(`NE(_,_)) -> (<>)
 	| `BTerm(`MEQ(_)) -> (=)
+	| `BTerm(`MNEQ(_)) -> (<>)
 	| `BTerm(`MLT(_)) -> (<)
+	| `BTerm(`MLE(_)) -> (<=)
+	| `BTerm(`MGT(_)) -> (>)
+	| `BTerm(`MGE(_)) -> (>=)
 	| _ -> raise InvalidExpression
 
 let rec simplify_expr_constants e =
@@ -604,11 +899,13 @@ let rec simplify_predicate_constants b_expr =
 			      | _ -> raise InvalidExpression
 		      end
 
-	| `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
+	| `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+	| `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+	| `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr)) ->
 	      let sm = simplify_map_expr_constants m_expr in
 		  begin
 		      match sm with
-			      (* TODO: does it make sense to compare strings to 0? *)
+			  (* TODO: does it make sense to compare strings to 0? *)
 			  | `METerm(`Int y) ->
 				`BTerm(bool_constant ((get_comparison_function b_expr) y 0))
 				    
@@ -623,7 +920,11 @@ let rec simplify_predicate_constants b_expr =
 				begin
 				    match b_expr with
 					| `BTerm(`MEQ(_)) -> `BTerm(`MEQ(sm))
+					| `BTerm(`MNEQ(_)) -> `BTerm(`MNEQ(sm))
 					| `BTerm(`MLT(_)) -> `BTerm(`MLT(sm))
+					| `BTerm(`MLE(_)) -> `BTerm(`MLE(sm))
+					| `BTerm(`MGT(_)) -> `BTerm(`MGT(sm))
+					| `BTerm(`MGE(_)) -> `BTerm(`MGE(sm))
 					| _ -> raise InvalidExpression
 				end
 		  end
@@ -701,6 +1002,11 @@ and simplify_map_expr_constants m_expr =
 	      let sr = simplify_map_expr_constants r in
 		  `Min(sl, sr)
 
+        | `Max (l, r) ->
+	      let sl = simplify_map_expr_constants l in
+	      let sr = simplify_map_expr_constants r in
+		  `Max(sl, sr)
+
 	(* TODO: static evaluation *)
 	(*
 	  begin
@@ -709,12 +1015,7 @@ and simplify_map_expr_constants m_expr =
 	  | _ -> `Min(sl, sr)
 	  end
 	*)
-		      
-	| `Max (l, r) ->
-	      let sl = simplify_map_expr_constants l in
-	      let sr = simplify_map_expr_constants r in
-		  `Max(sl, sr)
-		      
+
 	| `MapAggregate(aggfn,f,q) ->
 	      begin
 		  let sf = simplify_map_expr_constants f in
@@ -1086,13 +1387,18 @@ let rec simplify m_expr rewrites unifications =
 					      let new_rewrites = t@(List.map (fun x -> `Plan x) c) in
 						  simplify new_m_expr new_rewrites unifications
 
-					| `MapExpression(`MapAggregate (`Min, f, `Union(c))) ->
+					| `MapExpression(`MapAggregate (`Min as fn, f, `Union(c)))
+					| `MapExpression(`MapAggregate (`Max as fn, f, `Union(c)))
+                                            ->
                                               print_rule_description `DistributeMinAggUnion;
 					      let new_np = `MapExpression(
 						  List.fold_left
 						      (fun acc ch ->
-                                                          `Min(acc, `MapAggregate(`Min, f, ch)))
-						      (`MapAggregate (`Min, f, (List.hd c))) (List.tl c))
+                                                          match fn with
+                                                              | `Min -> `Min(acc, `MapAggregate(fn, f, ch))
+                                                              | `Max -> `Max(acc, `MapAggregate(fn, f, ch)))
+						      (`MapAggregate (fn, f, (List.hd c)))
+                                                      (List.tl c))
 					      in
 					      let new_m_expr = splice m_expr np new_np in
 					      let new_rewrites = t@(List.map (fun x -> `Plan x) c) in
@@ -1106,11 +1412,12 @@ let rec simplify m_expr rewrites unifications =
 					      let new_rewrites = t@[(`MapExpression f)] in
 						  simplify new_m_expr new_rewrites unifications
 
-					| `MapExpression(`MapAggregate (fn, `Product(l,r), `Cross(ql, qr))) ->
+                                        (* rule 52 *)
+					| `MapExpression(`MapAggregate (`Sum, `Product(l,r), `Cross(ql, qr))) ->
                                               print_rule_description `DistributeProdAggCross;
                                               let distribute dl dr dql dqr =
                                                   let new_np = `MapExpression(
-						      `Product(`MapAggregate(fn, dl, dql), `MapAggregate(fn, dr, dqr)))
+						      `Product(`MapAggregate(`Sum, dl, dql), `MapAggregate(`Sum, dr, dqr)))
 						  in
 						  let new_m_expr = splice m_expr np new_np in
 						  let new_rewrites = t@[new_np] in
@@ -1136,6 +1443,7 @@ let rec simplify m_expr rewrites unifications =
 							  | _ -> simplify m_expr (t@[np]) unifications
 						  end
 
+                                        (* rule 48a, 50, 54a, 55 *)
                                         | `MapExpression(`MapAggregate (fn, (`Sum(fl, fr) as f), q)) ->
                                               print_rule_description `DistributeSumAgg;
                                               let extract_f old_f new_f =
@@ -1177,6 +1485,7 @@ let rec simplify m_expr rewrites unifications =
                                                               | None -> simplify m_expr (t@[np]) unifications
                                                   end
 
+                                        (* rule 48b, 49, 54b, 56 *)
                                         | `MapExpression(`MapAggregate(fn, (`Product(fl, fr) as f), q)) ->
                                               print_rule_description `DistributeProdAgg;
                                               let extract_sum_prod_f e_expr r_expr l_expr =
@@ -1229,6 +1538,7 @@ let rec simplify m_expr rewrites unifications =
                                                   end
 
                                         (* Independence rule for map_expressions other than `Sum, `Product *)
+                                        (* rule 48c, 54c *)
 					| `MapExpression(`MapAggregate (fn, f, q)) ->
 					      if is_independent f q then
                                                   begin
@@ -1254,300 +1564,6 @@ let rec simplify m_expr rewrites unifications =
                                               simplify m_expr (t@[np]) unifications
 				end 
 	      end
-
-
-(*
- *
- * Constant lifting and variable binding.
- *
- *)
-
-(* pull up constant bindings *)
-let bind_expr_pair (le, lb) (re, rb) =
-    let (lc, leb) = (is_constant_expr le, (is_bound_expr le lb)) in
-    let (rc, reb) = (is_constant_expr re, (is_bound_expr re rb)) in
-	match (lc, leb, rc, reb) with
-	    | (true, true, true, true) ->
-		  let lv = match le with
-		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
-		  in
-		  let rv = match re with
-		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
-		  in
-		  let (l_def, r_def) =
-		      (get_expr_definition lv lb, get_expr_definition rv rb)
-		  in
-		      (true, l_def, (remove_expr_binding lv lb),
-		      r_def, (remove_expr_binding rv rb))
-			  
-	    | (true, false, true, false) ->
-		  let (l_sym, r_sym) = (gen_var_sym(), gen_var_sym()) in
-		      (true,
-		      `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
-		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
-			  
-	    | (true, true, true, false) ->
-		  let lv = match le with
-		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
-		  in
-		  let l_def = get_expr_definition lv lb in
-		  let r_sym = gen_var_sym() in
-		      (true, l_def, (remove_expr_binding lv lb),
-		      `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
-			  
-	    | (true, false, true, true) ->
-		  let rv = match re with
-		      | `ETerm(`Variable x) -> `Variable x | _ -> raise InvalidExpression
-		  in
-		  let l_sym = gen_var_sym() in
-		  let r_def = get_expr_definition rv rb in
-		      (true, `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)],
-		      r_def, (remove_expr_binding rv rb))
-			  
-	    | (true, false, _, _) ->
-		  let l_sym = gen_var_sym() in
-		      (false, `ETerm(`Variable(l_sym)), lb@[`BindExpr(l_sym, le)], re, rb)
-			  
-	    | (_, _, true, false) ->
-		  let r_sym = gen_var_sym() in
-		      (false, le, lb, `ETerm(`Variable(r_sym)), rb@[`BindExpr(r_sym, re)])
-			  
-	    | _ -> (false, le, lb, re, rb)
-
-(* expression -> expression * bindings list *)
-let rec extract_expr_bindings expr =
-    match expr with
-	| `ETerm (t) -> (expr, [])
-	| `UnaryMinus (e) -> extract_expr_bindings e
-	| `Sum (l, r) | `Product (l, r) | `Minus (l, r) | `Divide (l, r) ->
-	      let (le, lb) = extract_expr_bindings l in
-	      let (re, rb) = extract_expr_bindings r in
-	      let (bound, nl, nlb, nr, nrb) = bind_expr_pair (le, lb) (re, rb)
- 	      in
-		  begin
-		      match (bound, expr) with
-			  | (true, `Sum (_,_)) ->
-				let new_var = gen_var_sym() in
-				    (`ETerm(`Variable(new_var)),
-				    nlb@nrb@[`BindExpr(new_var, `Sum (nl, nr))])
-
-			  | (true, `Product (_,_)) ->
-				let new_var = gen_var_sym() in
-				    (`ETerm(`Variable(new_var)),
-				    nlb@nrb@[`BindExpr(new_var, `Product (nl, nr))])
-
-			  | (true, `Minus (_,_)) -> 
-				let new_var = gen_var_sym() in
-				    (`ETerm(`Variable(new_var)),
-				    nlb@nrb@[`BindExpr(new_var, `Minus (nl, nr))])
-
-			  | (true, `Divide (_,_)) -> 
-				let new_var = gen_var_sym() in
-				    (`ETerm(`Variable(new_var)),
-				    nlb@nrb@[`BindExpr(new_var, `Divide (nl, nr))])
-
-			  | (false, `Sum _) -> (`Sum (nl, nr), nlb@nrb)
-			  | (false, `Product _) -> (`Product (nl, nr), nlb@nrb)
-			  | (false, `Minus _) -> (`Minus (nl, nr), nlb@nrb)
-			  | (false, `Divide _) -> (`Divide (nl, nr), nlb@nrb)
-
-			  | _ -> raise InvalidExpression
-		  end
-
-	| `Function (fid, args) ->
-	      let (argse, argsb) = List.split (List.map extract_expr_bindings args) in
-		  (`Function (fid, argse), List.flatten argsb) 
-
-(* bool_expression -> bool_expression * bindings list *)
-let rec extract_bool_expr_bindings b_expr =
-    match b_expr with
-	    (* | `BoolVariable _ -> (b_expr, []) *)
-	| `BTerm(`True) | `BTerm(`False) -> (b_expr, [])
-
-	| `BTerm(`LT (l, r)) | `BTerm(`LE (l, r))
-	| `BTerm(`GT (l, r)) | `BTerm(`GE (l, r))
-	| `BTerm(`EQ (l, r)) | `BTerm(`NE (l, r)) ->
-	      let (le, lb) = extract_expr_bindings l in
-	      let (re, rb) = extract_expr_bindings r in
-		  (*
-		    let (bind, nl, nlb, nr, nrb) = bind_expr_pair (le, lb) (re, rb) in
-		    begin
-		    if bind then
-		    (let new_var = gen_var_sym() in
-		    match b_expr with
-		    | `LT _ ->
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `LT(nl, nr))])
-		    | `LE _ -> (`LE(le, re), lb@rb)
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `LE(nl, nr))])
-		    | `GT _ -> (`GT(le, re), lb@rb)
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `GT(nl, nr))])
-		    | `GE _ -> (`GE(le, re), lb@rb)
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `GE(nl, nr))])
-		    | `EQ _ -> (`EQ(le, re), lb@rb)
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `EQ(nl, nr))])
-		    | `NE _ -> (`NE(le, re), lb@rb)
-		    (`BoolVariable(new_var), lb@rb@[`Bind(new_var, `NE(nl, nr))]))
-		    else
-		    (match b_expr with 
-		    | `LT _ -> (`LT(le, re), lb@rb)
-		    | `LE _ -> (`LE(le, re), lb@rb)
-		    | `GT _ -> (`GT(le, re), lb@rb)
-		    | `GE _ -> (`GE(le, re), lb@rb)
-		    | `EQ _ -> (`EQ(le, re), lb@rb)
-		    | `NE _ -> (`NE(le, re), lb@rb))
-		    end
-		  *)
-		  begin
-		      match b_expr with 
-			  | `BTerm(`LT(_,_)) -> (`BTerm(`LT(le, re)), lb@rb)
-			  | `BTerm(`LE(_,_)) -> (`BTerm(`LE(le, re)), lb@rb)
-			  | `BTerm(`GT(_,_)) -> (`BTerm(`GT(le, re)), lb@rb)
-			  | `BTerm(`GE(_,_)) -> (`BTerm(`GE(le, re)), lb@rb)
-			  | `BTerm(`EQ(_,_)) -> (`BTerm(`EQ(le, re)), lb@rb)
-			  | `BTerm(`NE(_,_)) -> (`BTerm(`NE(le, re)), lb@rb)
-			  | _ -> raise InvalidExpression
-		  end
-
-	| `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) -> 
-	      let (mee, meb) = extract_map_expr_bindings m_expr in
-		  begin
-		      match b_expr with
-			  | `BTerm(`MEQ(_)) -> (`BTerm(`MEQ(mee)), meb)
-			  | `BTerm(`MLT(_)) -> (`BTerm(`MLT(mee)), meb)
-			  | _ -> raise InvalidExpression
-		  end
-		      
-	| `And (l,r) | `Or (l,r) ->
-	      let (le, lb) = extract_bool_expr_bindings l in
-	      let (re, rb) = extract_bool_expr_bindings r in
-		  begin match b_expr with
-		      | `And _ ->  (`And (le, re), lb@rb)
-		      | `Or _ -> (`Or (le, re), lb@rb)
-		      | _ -> raise InvalidExpression
-		  end
-
-	| `Not (be) -> let (bee, beb) = extract_bool_expr_bindings be in (`Not(bee), beb)
-
-
-(* map_expression -> map_expression * (bindings list) *)
-and extract_map_expr_bindings m_expr =
-    match m_expr with
-	| `METerm x -> (m_expr, [])
-
-	| `Sum(l,r) ->
-	      let (le, lb) = extract_map_expr_bindings l in
-	      let (re, rb) = extract_map_expr_bindings r in
-		  (`Sum(le, re), lb@rb)
-
-	| `Minus(l,r) ->
-	      let (le, lb) = extract_map_expr_bindings l in
-	      let (re, rb) = extract_map_expr_bindings r in
-		  (`Minus(le, re), lb@rb)
-
-	| `Product(l,r) ->
-	      let (le, lb) = extract_map_expr_bindings l in
-	      let (re, rb) = extract_map_expr_bindings r in
-		  (`Product(le, re), lb@rb)
-
-	| `Min (l,r) ->
-	      let (le, lb) = extract_map_expr_bindings l in
-	      let (re, rb) = extract_map_expr_bindings r in
-		  (`Min(le, re), lb@rb)
-
-	| `Max (l,r) ->
-	      let (le, lb) = extract_map_expr_bindings l in
-	      let (re, rb) = extract_map_expr_bindings r in
-		  (`Max(le, re), lb@rb)
-
-	| `MapAggregate(fn, f,q) ->
-	      let (fe, fb) = extract_map_expr_bindings f in
-	      let (qq, qb) = extract_plan_bindings q in
-                  (`MapAggregate(fn, fe, qq), fb@qb)
-
-	(*| `Delta(_,_) -> (m_expr, [])*)
-	| _ ->
-              print_endline ("Invalid map expression for extract_map_expr_bindings:\n"^
-                  (indented_string_of_map_expression m_expr 0));
-	      raise (RewriteException "Invalid map expression for extract_map_expr_bindings")
-
-(* plan -> plan * bindings list *)
-and extract_plan_bindings q =
-    match q with
-	| `Relation _ -> (q, [])
-
-	| `Select (pred, cq) ->
-	      let (prede, predb) = extract_bool_expr_bindings pred in
-	      let (cqq, cqb) = extract_plan_bindings cq in
-	      let unbound_attrs = (get_unbound_attributes_from_predicate prede false) in
-		  if (List.length unbound_attrs) = 1 then
-		      let uba = List.hd unbound_attrs in
-		      let predem = is_monotonic prede uba in
-
-			  print_endline ("Checking monotonicity for "^
-			      (string_of_attribute_identifier uba)^":" ^(string_of_bool predem));
-
-			  let (new_q, new_b) =
-			      begin
-				  match (predem, prede) with
-				      | (true, `BTerm(`MEQ(_))) ->
-					    let new_var = gen_var_sym() in
-						(`Select(
-						    `BTerm(`EQ(`ETerm(`Attribute(uba)),
-						    `ETerm(`Variable(new_var)))), cqq),
-						predb@cqb@[
-                                                    `BindMapExpr(new_var,
-						        `MapAggregate(`Min,
-						            `METerm(`Attribute(uba)), `Select(prede, cqq)), [])])
-
-				      | (true, `BTerm(`MLT(_))) ->
-					    let new_var = gen_var_sym() in
-						(`Select(
-						    `BTerm(`LT(`ETerm(`Attribute(uba)),
-						    `ETerm(`Variable(new_var)))), cqq),
-						predb@cqb@[
-                                                    `BindMapExpr(new_var,
-						        `MapAggregate(`Min,
-						            `METerm(`Attribute(uba)), `Select(prede, cqq)), [])])
-
-				      | (_, _) -> (`Select(prede, cqq), predb@cqb)
-			      end
-			  in
-			      (new_q, new_b)
-		  else
-		      (* TODO: handle multivariate monotonicity *)
-		      (`Select(prede, cqq), predb@cqb)
-
-	| `Project (attrs, cq) ->
-	      let (attrse, attrsb) =
-		  List.split
-		      (List.map
-			  (fun (a,e) ->
-			      let (ee, eb) = extract_expr_bindings e in ((a,ee), eb))
-			  attrs)
-	      in
-	      let (cqq, cqb) = extract_plan_bindings cq in
-		  (`Project (attrse, cqq), (List.flatten attrsb)@cqb)
-
-	| `Union children ->
-	      let (new_ch, ch_b) =
-		  List.split (List.map extract_plan_bindings children)
-	      in
-		  (`Union new_ch, List.flatten ch_b)
-
-	| `Cross (l, r) ->
-	      let (lq, lb) = extract_plan_bindings l in
-	      let (rq, rb) = extract_plan_bindings r in
-		  (`Cross (lq, rq), lb@rb)
-
-        (* Binding extraction should occur before incrementality analysis,
-           compilation and domain management*)
-        | `TrueRelation | `FalseRelation
-        | `Domain _
-	| `DeltaPlan _ | `NewPlan _
-        | `IncrPlan _ | `IncrDiffPlan _ ->
-              print_endline ("extract_plan_binding: applied to\n"^
-                  (indented_string_of_plan q 0));
-              raise InvalidExpression
 
 
 (*
@@ -1621,17 +1637,25 @@ let rec apply_recompute_rules m_expr delta =
                                 else
                                     `Incr (sx, o, m_expr, `MapAggregate(fn, x, y))
 
-			  | (`Min, `Incr (sx,_,_,x), `IncrPlan (sy,oy,y,dy)) -> 
-                                let min_q = `IncrDiffPlan(sy,oy,y,dy) in
+			  | (`Min, `Incr (sx,_,_,x), `IncrPlan (sy,oy,y,dy))
+			  | (`Max, `Incr (sx,_,_,x), `IncrPlan (sy,oy,y,dy))
+                              -> 
+                                let fn_q = `IncrDiffPlan(sy,oy,y,dy) in
                                 let test_delta_f =
                                     simplify_map_expr_constants (push_delta (`Delta (delta, x)))
                                 in
                                     if test_delta_f = (`METerm (`Int 0)) then
                                         let oplus = match delta with
-                                            | `Insert _ -> `Min
-                                            | `Delete _ -> `Decrmin(x, sy)
+                                            | `Insert _ ->
+                                                  (match fn with
+                                                      | `Min -> `Min | `Max -> `Max
+                                                      | _ -> raise InvalidExpression)
+                                            | `Delete _ ->
+                                                  (match fn with
+                                                      | `Min -> `Decrmin(x, sy) | `Max -> `Decrmax(x, sy)
+                                                      | _ -> raise InvalidExpression)
                                         in
-                                            `Incr(sx, oplus, m_expr, `MapAggregate(fn, x, min_q))
+                                            `Incr(sx, oplus, m_expr, `MapAggregate(fn, x, fn_q))
                                     else
                                         (* TODO: handle nested aggregates *)
                                         `New (`MapAggregate(fn, new_f, new_q))
@@ -1675,29 +1699,27 @@ and apply_recompute_plan_rules q delta q_attrs_used =
               `IncrPlan (gen_state_sym(), incr_op, q, get_domain q)
 
 	| `Select (pred, cq) ->
+              let subs_mbterm mbterm me =
+                  match mbterm with
+		      | `BTerm(`MEQ(_)) -> `BTerm(`MEQ(me))
+		      | `BTerm(`MNEQ(_)) -> `BTerm(`MNEQ(me))
+		      | `BTerm(`MLT(_)) -> `BTerm(`MLT(me))
+		      | `BTerm(`MLE(_)) -> `BTerm(`MLE(me))
+		      | `BTerm(`MGT(_)) -> `BTerm(`MGT(me))
+		      | `BTerm(`MGE(_)) -> `BTerm(`MGE(me))
+                      | _ -> raise InvalidExpression
+              in
 	      begin
 		  match pred with 
-		      | `BTerm(`MEQ(m_expr))
-		      | `BTerm(`MLT(m_expr)) ->
+		      | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+		      | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+		      | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr)) ->
 			    let mer = apply_recompute_rules m_expr delta in
 			    let cqr = apply_recompute_plan_rules cq delta q_attrs_used in
 			    let mer_new =
 				match mer with
-				    | `Incr x ->
-					  begin
-					      match pred with
-						  | `BTerm(`MEQ(_)) -> `BTerm(`MEQ(mer))
-						  | `BTerm(`MLT(_)) -> `BTerm(`MLT(mer))
-						  | _ -> raise InvalidExpression
-					  end
-
-				    | `New x ->
-					  begin
-					      match pred with
-						  | `BTerm(`MEQ(_)) -> `BTerm(`MEQ(x))
-						  | `BTerm(`MLT(_)) -> `BTerm(`MLT(x))
-						  | _ -> raise InvalidExpression
-					  end
+				    | `Incr x -> subs_mbterm pred mer
+				    | `New x -> subs_mbterm pred x
 				    | _ -> raise InvalidExpression
 			    in
 			    let cqr_new =
@@ -1796,23 +1818,17 @@ and apply_recompute_plan_rules q delta q_attrs_used =
  *)
 
 let rec compute_initial_value m_expr =
+    let binary l r fn =
+        fn (compute_initial_value l) (compute_initial_value r)
+    in
     match m_expr with
 	| `METerm x -> `METerm x
 	      
-	| `Sum(l,r) ->
-	      `Sum(compute_initial_value l, compute_initial_value r)
-		  
-	| `Minus(l,r) ->
-	      `Minus(compute_initial_value l, compute_initial_value r)
-		  
-	| `Product(l,r) ->
-	      `Product(compute_initial_value l, compute_initial_value r)
-
-	| `Min(l,r) ->
-	      `Min(compute_initial_value l, compute_initial_value r)
-
-	| `Max(l,r) ->
-	      `Max(compute_initial_value l, compute_initial_value r)
+	| `Sum(l,r) -> binary l r (fun x y -> `Sum(x,y))
+	| `Minus(l,r) -> binary l r (fun x y -> `Minus(x,y))
+	| `Product(l,r) -> binary l r (fun x y -> `Product(x,y))
+	| `Min(l,r) -> binary l r (fun x y -> `Min(x,y))
+        | `Max(l,r) -> binary l r (fun x y -> `Max(x,y))
 
 	| `MapAggregate (fn, f, q) ->
               begin
@@ -1826,25 +1842,19 @@ let rec compute_initial_value m_expr =
 
 let rec initialize_map_expression m_expr rcs =
     let intialize_new x =
+        let binary l r fn =
+            fn (initialize_map_expression l (Some New))
+		(initialize_map_expression r (Some New))
+        in
 	match x with
 	    | `METerm y -> `METerm y 
 		  
-	    | `Sum(l,r) ->
-		  `Sum(initialize_map_expression l (Some New),
-		      initialize_map_expression r (Some New))
-		      
-	    | `Minus(l,r) ->
-		  `Minus(initialize_map_expression l (Some New),
-		      initialize_map_expression r (Some New))
-		      
-	    | `Product(l,r) ->
-		  `Product(initialize_map_expression l (Some New),
-		      initialize_map_expression r (Some New))
-		      
-	    | `Min(l,r) ->
-		  `Min(initialize_map_expression l (Some New),
-		      initialize_map_expression r (Some New))
-		      
+	    | `Sum(l,r) -> binary l r (fun x y -> `Sum(x,y))
+	    | `Minus(l,r) -> binary l r (fun x y -> `Minus(x,y))
+	    | `Product(l,r) -> binary l r (fun x y -> `Product(x,y))
+	    | `Min(l,r) -> binary l r (fun x y -> `Min(x,y))
+            | `Max(l,r) -> binary l r (fun x y -> `Max(x,y))
+
 	    | `MapAggregate(fn,f,q) ->
 		  `MapAggregate(fn, initialize_map_expression f (Some New),
 		      initialize_plan q (Some New))
@@ -1874,14 +1884,16 @@ let rec initialize_map_expression m_expr rcs =
 			      | (a, `METerm (`Int 0)) -> `Incr(state_sym, op, recompute, x)
 			      | (a, b) -> `Product(`Product(a, b), `Incr(state_sym, op, recompute, x)) 
 		      end
-			  
+
+            (* TODO: think about this *)
 	    | `Min (l,r) -> `Min(l,r)
+            | `Max (l,r) -> `Max(l,r)
 		  
 	    | `MapAggregate (`Sum, f, q) ->
 		  `Sum(compute_initial_value x, `Incr(state_sym, op, recompute, x))
-		      
-	    | `MapAggregate (`Min, f, q) -> `Incr(state_sym, op, recompute, x)
 
+            (* TODO: think about this *)
+	    | `MapAggregate (`Min, f, q) -> `Incr(state_sym, op, recompute, x)
 	    | `MapAggregate (`Max, f, q) -> `Incr(state_sym, op, recompute, x)
 
 	    | _ -> raise InvalidExpression
@@ -1900,41 +1912,33 @@ let rec initialize_map_expression m_expr rcs =
 
 and initialize_plan q rcs =
     let initialize_new x =
+        let init_nme mbterm me =
+            let init = initialize_map_expression me (Some New) in
+            let r =
+                match mbterm with
+                    | `BTerm(`MEQ _) -> `MEQ(init)
+                    | `BTerm(`MNEQ _) -> `MNEQ(init)
+                    | `BTerm(`MLT _) -> `MLT(init)
+                    | `BTerm(`MLE _) -> `MLE(init)
+                    | `BTerm(`MGT _) -> `MGT(init)
+                    | `BTerm(`MGE _) -> `MGE(init)
+                    | _ -> raise InvalidExpression
+            in
+                `BTerm(r)
+        in
 	match x with
 	    | `Relation (n,f) -> x
 	    | `Select (pred, cq) ->
 		  let new_pred =
 		      match pred with
-			  | `BTerm(`MEQ(m_expr)) ->
-				`BTerm(`MEQ(initialize_map_expression m_expr (Some New)))
-				    
-			  | `BTerm(`MLT(m_expr)) ->
-				`BTerm(`MLT(initialize_map_expression m_expr (Some New)))
-				    
+			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                -> init_nme pred m_expr
 			  | _ -> pred
 		  in
 		  let new_cq = initialize_plan cq (Some New) in
-		      begin
-			  match (pred, new_cq) with
-                              (*TODO check later *)
-			      | (`BTerm(`MEQ(`Incr(sid, op, re, m_incr))), `IncrPlan(sid2, op2, cqq, d)) ->
-                                    (*
-				    `Union
-					[`Select(`BTerm(`MEQ(`Init(sid, m_incr))), new_cq);
-					`Select(new_pred, cqq)]
-                                    *)
-                                    `Select(new_pred, new_cq)
-					
-			      | (`BTerm(`MLT(`Incr(sid, op, re, m_incr))), `IncrPlan(sid2, op2, cqq, d)) ->
-                                    (*
-				    `Union
-					[`Select(`BTerm(`MLT(`Init(sid, m_incr))), new_cq);
-					`Select(new_pred, cqq)]
-                                    *)
-                                    `Select(new_pred, new_cq)
-					
-			      | _ ->  `Select(new_pred, new_cq)
-		      end
+                      `Select(new_pred, new_cq)
 			  
 	    | `Project (a, cq) -> `Project(a, initialize_plan cq (Some New))
 	    | `Union ch -> `Union (List.map (fun c -> initialize_plan c (Some New)) ch)
@@ -1963,12 +1967,23 @@ and initialize_plan q rcs =
 let validate_insert_incr expr_op plan_op =
     match (expr_op, plan_op) with
         | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union) -> true
-        | (`Minus, `Diff) | (`Decrmin _, `Diff) -> false
+        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
         | _ -> raise (ValidationException "Invalid op pair.")
 
 let rec maintain_map_expression_domains m_expr =
     let recur e = maintain_map_expression_domains e in
     let maintain_binary l r fn = fn (recur l) (recur r) in
+    let maintain_nme mbterm ce =
+        let rce = recur ce in
+            match mbterm with
+                | `MEQ _ -> `MEQ(rce)
+                | `MNEQ _ -> `MNEQ(rce)
+                | `MLT _ -> `MLT(rce)
+                | `MLE _ -> `MLE(rce)
+                | `MGT _ -> `MGT(rce)
+                | `MGE _ -> `MGE(rce)
+                | _ -> raise InvalidExpression
+    in
         match m_expr with
             | `METerm _ -> m_expr
             | `Sum (l,r) -> maintain_binary l r (fun x y -> `Sum(x,y))
@@ -1983,14 +1998,15 @@ let rec maintain_map_expression_domains m_expr =
 
             | `IfThenElse (cond, l, r) ->
                   begin
-                      match cond with
-                          | `MEQ(ce) ->
-                                `IfThenElse(`MEQ(recur ce), recur l, recur r)
-
-                          | `MLT(ce) ->
-                                `IfThenElse(`MLT(recur ce), recur l, recur r)
-
-                          | _ -> `IfThenElse(cond, recur l, recur r)
+                      let new_cond = 
+                          match cond with
+                              | `MEQ(ce) | `MNEQ(ce)
+                              | `MLT(ce) | `MLE(ce)
+                              | `MGT(ce) | `MGE(ce)
+                                    -> maintain_nme cond ce
+                              | _ -> cond
+                      in
+                          `IfThenElse(new_cond, recur l, recur r)
                   end
 
             | `Delta _ | `New _ -> raise InvalidExpression
@@ -2025,30 +2041,43 @@ and maintain_plan_domains plan =
             | `Min(l,r) | `Max(l,r) -> (is_incremental l) || (is_incremental r)
             | _ -> false
     in
-    (*
-    let rec map_incremental m_expr maintain_fn recur_fn =
-        let mi_binary l r fn =
-            fn (map_incremental l maintain_fn recur_fn) (map_incremental r maintain_fn recur_fn)
-        in
-            match m_expr with
-                | `Incr _ | `IncrDiff _ -> maintain_fn m_expr plan
-                | `Sum(l,r) -> mi_binary l r (fun x y -> `Sum(x,y))
-                | `Minus(l,r) -> mi_binary l r (fun x y -> `Minus(x,y))
-                | `Product(l,r) -> mi_binary l r (fun x y -> `Product(x,y))
-                | `Min(l,r) -> mi_binary l r (fun x y -> `Min(x,y))
-                | `Max(l,r) -> mi_binary l r (fun x y -> `Max(x,y))
-                | _ -> recur_fn m_expr
-    in
-    *)
     (* Body *)
     match plan with
         | `TrueRelation | `FalseRelation | `Relation _ -> plan
 
         | `Select (pred, cq) ->
+              let nme_pred mbterm p =
+                  let r = 
+                      match mbterm with
+                          | `BTerm(`MEQ _) -> `MEQ(p)
+                          | `BTerm(`MNEQ _) -> `MNEQ(p)
+                          | `BTerm(`MLT _) -> `MLT(p) 
+                          | `BTerm(`MLE _) -> `MLE(p) 
+                          | `BTerm(`MGT _) -> `MGT(p) 
+                          | `BTerm(`MGE _) -> `MGE(p) 
+                          | _ -> raise InvalidExpression
+                  in
+                      `BTerm(r)
+              in
+              let nme_pred_pair mbterm u_me id_me =
+                  let (l,r) =
+                      match mbterm with
+                          | `BTerm(`MEQ _) -> (`MEQ(u_me), `MEQ(id_me))
+                          | `BTerm(`MNEQ _) -> (`MNEQ(u_me), `MNEQ(id_me))
+                          | `BTerm(`MLT _) -> (`MLT(u_me), `MLT(id_me))
+                          | `BTerm(`MLE _) -> (`MLE(u_me), `MLE(id_me))
+                          | `BTerm(`MGT _) -> (`MGT(u_me), `MGT(id_me))
+                          | `BTerm(`MGE _) -> (`MGE(u_me), `MGE(id_me))
+                          | _ -> raise InvalidExpression
+                  in
+                      (`BTerm(l), `BTerm(r))
+              in
               begin
                   match (pred, cq) with
 
-                      | (`BTerm(`MEQ(x)), y) | (`BTerm(`MLT(x)), y)
+                      | (`BTerm(`MEQ(x)), y) | (`BTerm(`MNEQ(x)), y)
+                      | (`BTerm(`MLT(x)), y) | (`BTerm(`MLE(x)), y)
+                      | (`BTerm(`MGT(x)), y) | (`BTerm(`MGE(x)), y)
                             when (is_immediately_incremental x) && (is_incremental_plan y)
                                 ->
                             let insert_event =
@@ -2064,10 +2093,8 @@ and maintain_plan_domains plan =
                                 | `IncrDiff _
                                 | _ -> raise InvalidExpression
                             in
-                            let (update_pred, ins_or_del_pred) = match pred with 
-                                | `BTerm(`MEQ _) -> (`BTerm(`MEQ update_me), `BTerm(`MEQ ins_or_del_me))
-                                | `BTerm(`MLT _) -> (`BTerm(`MLT update_me), `BTerm(`MLT ins_or_del_me))
-                                | _ -> raise InvalidExpression
+                            let (update_pred, ins_or_del_pred) =
+                                nme_pred_pair pred update_me ins_or_del_me 
                             in
                             let (update_cq, ins_or_del_cq) = match y with
                                 | `IncrPlan (sid, op, cqq, d) ->
@@ -2088,7 +2115,9 @@ and maintain_plan_domains plan =
 
                       (* TODO: what if m_expr contains a mixture of `New and `Incr aggregates?
                        * This will currently throw an exception in maintain_map_expression_domains *)
-                      | (`BTerm(`MEQ(x)), y) | (`BTerm(`MLT(x)), y)
+                      | (`BTerm(`MEQ(x)), y) | (`BTerm(`MNEQ(x)), y)
+                      | (`BTerm(`MLT(x)), y) | (`BTerm(`MLE(x)), y)
+                      | (`BTerm(`MGT(x)), y) | (`BTerm(`MGE(x)), y)
                             when (is_incremental x) && (is_incremental_plan y)
                                 ->
                             begin
@@ -2098,13 +2127,12 @@ and maintain_plan_domains plan =
                             end
 
 
-                      | (`BTerm(`MEQ(m_expr)), _) | (`BTerm(`MLT(m_expr)), _) ->
+                      | (`BTerm(`MEQ(m_expr)), _) | (`BTerm(`MNEQ(m_expr)), _)
+                      | (`BTerm(`MLT(m_expr)), _) | (`BTerm(`MLE(m_expr)), _)
+                      | (`BTerm(`MGT(m_expr)), _) | (`BTerm(`MGE(m_expr)), _)
+                            ->
                             let new_me = maintain_map_expression_domains m_expr in
-                            let new_pred = match pred with
-                                | `BTerm(`MEQ _) -> `BTerm(`MEQ new_me)
-                                | `BTerm(`MLT _) -> `BTerm(`MLT new_me)
-                                | _ -> raise InvalidExpression
-                            in
+                            let new_pred = nme_pred pred new_me in
                                 `Select(new_pred, recur cq)
 
 
@@ -2240,7 +2268,7 @@ let extract_incremental_query m_expr event_path =
         match incr_m_expr with
             | `METerm _ | `Insert _ | `Delete _ | `Update _ -> (orig_m_expr, [], [])
 	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r)
-	    | `Max (l, r) | `Min (l, r) 
+	    | `Min (l, r) | `Max (l, r) 
 	    | `IfThenElse (_, l, r) -> recur_binary l r
 
             | `MapAggregate _ ->
@@ -2278,7 +2306,7 @@ let extract_incremental_query m_expr event_path =
                   eiq_find_plan orig_expr e
 
 	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r)
-	    | `Max (l, r) | `Min (l, r) 
+	    | `Min (l, r) | `Max (l, r)
 	    | `IfThenElse (_, l, r) ->
                   let (l_rw, l_cip, l_v) = eiq_aux orig_expr l in
                   let (r_rw, r_cip, r_v) = eiq_aux l_rw r in

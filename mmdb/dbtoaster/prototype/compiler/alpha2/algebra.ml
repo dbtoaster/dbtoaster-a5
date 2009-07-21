@@ -55,7 +55,9 @@ type meterm = [
 
 type aggregate_function = [ `Sum | `Min | `Max ]
 
-type oplus = [`Plus | `Minus | `Min | `Max | `Decrmin of map_expression * state_identifier ]
+type oplus = [`Plus | `Minus | `Min | `Max
+| `Decrmin of map_expression * state_identifier
+| `Decrmax of map_expression * state_identifier ]
 
 and  poplus = [`Union | `Diff ]
 
@@ -78,7 +80,6 @@ and  map_expression = [
 | `IfThenElse of bterm * map_expression * map_expression ]
 
 and bterm = [ `True | `False 
-(* | `BoolVariable of variable_identifier *) 
 | `LT of expression * expression
 | `LE of expression * expression
 | `GT of expression * expression
@@ -86,7 +87,11 @@ and bterm = [ `True | `False
 | `EQ of expression * expression
 | `NE of expression * expression
 | `MEQ of map_expression
-| `MLT of map_expression ]
+| `MLT of map_expression
+| `MLE of map_expression 
+| `MGT of map_expression 
+| `MGE of map_expression 
+| `MNEQ of map_expression ]
 
 and boolean_expression = [
 | `BTerm of bterm
@@ -158,20 +163,6 @@ let gen_indexed_sym category sid =
 
 let gen_map_sym = gen_indexed_sym "map"
 let gen_dom_sym = gen_indexed_sym "dom"
-
-(*
-let map_counter = ref 0
-let map_syms : (string, string) Hashtbl.t = Hashtbl.create 10
-
-let gen_map_sym sid =
-    if Hashtbl.mem map_syms sid then
-	Hashtbl.find map_syms sid
-    else
-	let new_sym = "map"^(string_of_int !map_counter) in
-	    incr map_counter;
-	    Hashtbl.add map_syms sid new_sym;
-	    new_sym
-*)
 
 (* Basic helpers *)
 let field_of_attribute_identifier id =
@@ -253,19 +244,25 @@ let map_expr fn expr =
                   
 let rec map_bool_expr e_fn b_fn me_fn mp_fn bool_expr =
     let map_aux = map_bool_expr e_fn b_fn me_fn mp_fn in
+    let map_e expr = map_expr e_fn expr in
+    let map_me_aux m_expr = map_map_expr e_fn b_fn me_fn mp_fn m_expr in
         match bool_expr with
 	    | `BTerm b -> b_fn (`BTerm(
                   begin
                       match b with
                           | `True | `False -> b
-                          | `LT (l,r) -> `LT (map_expr e_fn l, map_expr e_fn r)
-                          | `LE (l,r) -> `LE (map_expr e_fn l, map_expr e_fn r)
-                          | `GT (l,r) -> `GT (map_expr e_fn l, map_expr e_fn r)
-                          | `GE (l,r) -> `GE (map_expr e_fn l, map_expr e_fn r)
-                          | `EQ (l,r) -> `EQ (map_expr e_fn l, map_expr e_fn r)
-                          | `NE (l,r) -> `NE (map_expr e_fn l, map_expr e_fn r)
-                          | `MEQ m_expr -> `MEQ (map_map_expr e_fn b_fn me_fn mp_fn m_expr)
-                          | `MLT m_expr -> `MLT (map_map_expr e_fn b_fn me_fn mp_fn m_expr)
+                          | `LT (l,r) -> `LT (map_e l, map_e r)
+                          | `LE (l,r) -> `LE (map_e l, map_e r)
+                          | `GT (l,r) -> `GT (map_e l, map_e r)
+                          | `GE (l,r) -> `GE (map_e l, map_e r)
+                          | `EQ (l,r) -> `EQ (map_e l, map_e r)
+                          | `NE (l,r) -> `NE (map_e l, map_e r)
+                          | `MEQ m_expr -> `MEQ (map_me_aux m_expr)
+                          | `MNEQ m_expr -> `MNEQ (map_me_aux m_expr)
+                          | `MLT m_expr -> `MLT (map_me_aux m_expr)
+                          | `MLE m_expr -> `MLE (map_me_aux m_expr)
+                          | `MGT m_expr -> `MGT (map_me_aux m_expr)
+                          | `MGE m_expr -> `MGE (map_me_aux m_expr)
                   end))
 	    | `And (l,r) -> b_fn (`And (map_aux l, map_aux r))
 	    | `Or (l,r) -> b_fn (`Or (map_aux l, map_aux r))
@@ -426,8 +423,11 @@ let rec string_of_bool_expression b_expr =
 			  | `EQ (l,r) -> dispatch_expr l r "="
 			  | `NE (l,r) -> dispatch_expr l r "!="
 			  | `MEQ m_expr -> (string_of_map_expression m_expr)^" = 0"
+			  | `MNEQ m_expr -> (string_of_map_expression m_expr)^" <> 0" 
 			  | `MLT m_expr -> (string_of_map_expression m_expr)^" < 0" 
-				(* | `BoolVariable sym -> "BVar("^sym^")" *)
+			  | `MLE m_expr -> (string_of_map_expression m_expr)^" <= 0"
+			  | `MGT m_expr -> (string_of_map_expression m_expr)^" > 0" 
+			  | `MGE m_expr -> (string_of_map_expression m_expr)^" => 0"
 			  | `True -> "true"
 			  | `False -> "false"
 		  end
@@ -446,6 +446,7 @@ and string_of_oplus op =
 	| `Min -> "min"
 	| `Max -> "max"
 	| `Decrmin (m, sid) -> "decrmin("^(string_of_map_expression m)^", "^sid^")"
+	| `Decrmax (m, sid) -> "decrmax("^(string_of_map_expression m)^", "^sid^")"
 
 and string_of_poplus op =
     match op with
@@ -467,6 +468,7 @@ and string_of_map_expression m_expr =
 		  
 	| `Min  (l, r) ->
 	      "min("^(string_of_map_expression l)^", "^(string_of_map_expression r)^")"
+
 	| `Max  (l, r) ->
 	      "max("^(string_of_map_expression l)^", "^(string_of_map_expression r)^")"
 
@@ -563,8 +565,11 @@ let rec indented_string_of_bool_expression b_expr level =
 			  | `EQ (l,r) -> dispatch_expr l r "="
 			  | `NE (l,r) -> dispatch_expr l r "!="
 			  | `MEQ m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " = 0")
+			  | `MNEQ m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " <> 0")
 			  | `MLT m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " < 0")
-				(* | `BoolVariable sym -> "BVar("^sym^")" *)
+			  | `MLE m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " <= 0")
+			  | `MGT m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " > 0")
+			  | `MGE m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " >= 0")
 			  | `True -> "true"
 			  | `False -> "false"
 		  end
@@ -779,8 +784,8 @@ let parent m_expr ch_e_or_p =
 	    | `MapExpression(`Sum (l, r))
 	    | `MapExpression(`Minus (l, r))
 	    | `MapExpression(`Product (l, r))
+	    | `MapExpression(`Min (l,r))
 	    | `MapExpression(`Max (l, r))
-	    | `MapExpression(`Min (l,r)) 
 	    | `MapExpression(`IfThenElse(_, l, r)) ->
 		  let match_l = `MapExpression l in
 		  let match_r = `MapExpression r in
@@ -808,7 +813,9 @@ let parent m_expr ch_e_or_p =
 		  begin
 		      let match_cq = `Plan cq in
 			  match p with
-			      | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
+			      | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+                              | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+                              | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr)) ->
 				    let match_p = `MapExpression m_expr in
 					if (match_p = ch_e_or_p) || (match_cq = ch_e_or_p) then Some e_or_p
 					else
@@ -862,7 +869,9 @@ let parent m_expr ch_e_or_p =
 let children e_or_p =
     let get_map_expressions b_expr =
 	match b_expr with
-	    | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) -> [m_expr]
+	    | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr)) -> [m_expr]
+	    | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr)) -> [m_expr]
+	    | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr)) -> [m_expr]
 	    | _ -> []
     in
 	match e_or_p with 
@@ -876,9 +885,9 @@ let children e_or_p =
 	    | `MapExpression (`Update(_,_, _, e)) -> [`MapExpression(e)]
 
 	    | `MapExpression (`Sum(l,r)) | `MapExpression (`Product(l,r))
-	    | `MapExpression (`Minus(l,r)) | `MapExpression (`Max(l,r)) 
+	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`IfThenElse(_, l, r))
-	    | `MapExpression (`Min(l,r)) ->
+	    | `MapExpression (`Min(l,r)) | `MapExpression (`Max(l,r)) ->
 		  [`MapExpression(l); `MapExpression(r)]
 		      
 	    | `MapExpression (`MapAggregate(fn,f,q)) -> [`MapExpression(f); `Plan(q)]
@@ -957,6 +966,19 @@ let splice m_expr orig rewrite =
 		    | `IfThenElse(b, l, r) -> `IfThenElse(b, splice_map_expr_aux l, splice_map_expr_aux r)
 	    end
     and splice_plan_aux q =
+        let splice_nested_m_expr mbterm cq = 
+            let spliced_bterm =
+                match mbterm with
+		    | `BTerm(`MEQ(m_expr)) -> `BTerm(`MEQ(splice_map_expr_aux m_expr))
+		    | `BTerm(`MNEQ(m_expr)) -> `BTerm(`MNEQ(splice_map_expr_aux m_expr))
+		    | `BTerm(`MLT(m_expr)) -> `BTerm(`MLT(splice_map_expr_aux m_expr))
+		    | `BTerm(`MLE(m_expr)) -> `BTerm(`MLE(splice_map_expr_aux m_expr))
+		    | `BTerm(`MGT(m_expr)) -> `BTerm(`MGT(splice_map_expr_aux m_expr))
+		    | `BTerm(`MGE(m_expr)) -> `BTerm(`MGE(splice_map_expr_aux m_expr))
+                    | _ -> raise InvalidExpression
+            in
+		`Select(spliced_bterm, splice_plan_aux cq)
+        in
 	if (`Plan q) = orig then
 	    begin
 		match rewrite with
@@ -974,12 +996,10 @@ let splice m_expr orig rewrite =
 		    | `Select (p,cq) ->
 			  begin
 			      match p with
-				  | `BTerm(`MEQ(m_expr)) ->
-					`Select(`BTerm(`MEQ(splice_map_expr_aux m_expr)), splice_plan_aux cq)
-
-				  | `BTerm(`MLT(m_expr)) ->
-					`Select(`BTerm(`MLT(splice_map_expr_aux m_expr)), splice_plan_aux cq)
-
+				  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+				  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+				  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                      -> splice_nested_m_expr p cq
 				  | _ -> `Select(p, splice_plan_aux cq)
 			  end
 			      
@@ -996,8 +1016,6 @@ let splice m_expr orig rewrite =
     in
 	splice_map_expr_aux m_expr
 
-(* map_expression -> accessor_element -> accessor_element -> map_expression *)
-(* let replace m_expr orig rewrite = xxx *)
 
 (* map_expression -> plan list *)
 let get_base_relations m_expr =
@@ -1016,10 +1034,10 @@ let get_base_relations m_expr =
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
-	    | `MapExpression (`Max(l,r))
 	    | `MapExpression (`IfThenElse(_, l,r))
-	    | `MapExpression (`Min(l,r)) ->
-		  (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
+	    | `MapExpression (`Min(l,r))
+	    | `MapExpression (`Max(l,r))
+                -> (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
 
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbr_aux (`Plan q) (gbr_aux (`MapExpression f) acc))
@@ -1033,7 +1051,10 @@ let get_base_relations m_expr =
 	    | `Plan (`Select (p,cq)) ->
 		  begin
 		      match p with
-			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
+			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                ->
 				(gbr_aux (`Plan cq) (gbr_aux (`MapExpression m_expr) acc))
 
 			  | _ -> (gbr_aux (`Plan cq) acc)
@@ -1055,6 +1076,11 @@ let get_base_relations m_expr =
 	gbr_aux (`MapExpression m_expr) []
 
 
+(*
+ * Binding helpers
+ * Note: DBToaster compilation assumes unique column names
+ *)
+
 let get_bound_relations m_expr =
     let rec gbor_aux ae acc =
 	match ae with
@@ -1071,10 +1097,10 @@ let get_bound_relations m_expr =
 	    | `MapExpression (`Sum(l,r))
 	    | `MapExpression (`Minus(l,r))
 	    | `MapExpression (`Product(l,r))
-	    | `MapExpression (`Max(l,r))
 	    | `MapExpression (`IfThenElse(_, l,r))
-	    | `MapExpression (`Min(l,r)) ->
-		  (gbor_aux (`MapExpression r) (gbor_aux (`MapExpression l) acc))
+	    | `MapExpression (`Min(l,r))
+	    | `MapExpression (`Max(l,r))
+                -> (gbor_aux (`MapExpression r) (gbor_aux (`MapExpression l) acc))
 
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
 		  (gbor_aux (`Plan q) (gbor_aux (`MapExpression f) acc))
@@ -1088,8 +1114,10 @@ let get_bound_relations m_expr =
 	    | `Plan (`Select (p,cq)) ->
 		  begin
 		      match p with
-			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-				(gbor_aux (`Plan cq) (gbor_aux (`MapExpression m_expr) acc))
+			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                -> (gbor_aux (`Plan cq) (gbor_aux (`MapExpression m_expr) acc))
 
 			  | _ -> (gbor_aux (`Plan cq) acc)
 		  end
@@ -1110,6 +1138,406 @@ let get_bound_relations m_expr =
 	    | _ -> raise InvalidExpression
     in
 	gbor_aux (`MapExpression m_expr) []  
+
+
+let get_bound_relation =
+    function
+	| `Insert (r, _) -> r
+	| `Delete (r, _) -> r
+
+let rec get_bound_attributes q =
+    match q with
+	| `TrueRelation -> []		  
+	| `FalseRelation -> []
+
+	| `Relation (n,f) -> List.map (fun (id,typ) -> `Qualified(n,id)) f
+        | `Domain (_, attrs) -> attrs
+
+	| `Select(pred, cq) -> get_bound_attributes cq
+	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
+
+	| `Union ch -> get_bound_attributes (List.hd ch)
+	| `Cross (l,r) ->
+              (get_bound_attributes l)@(get_bound_attributes r)
+
+	| `DeltaPlan (_, cq) | `NewPlan(cq)
+        | `IncrPlan(_,_,cq,_) | `IncrDiffPlan(_,_,cq,_) -> (get_bound_attributes cq)
+
+
+(* Note: performs qualified comparison if possible *)
+(* TODO: think if we ever want to force unqualified comparison *)
+let compare_attributes a1 a2 =
+    match (a1, a2) with
+	| (`Qualified (n1, f1), `Qualified (n2, f2)) -> n1 = n2 && f1 = f2
+	| (`Qualified (n1, f1), `Unqualified f2) -> f1 = f2
+	| (`Unqualified f1, `Qualified (n2, f2)) -> f1 = f2
+	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
+
+
+let resolve_unbound_attributes attrs bindings =
+    List.filter
+	(fun x ->
+            let matches = List.filter (compare_attributes x) bindings in
+                (List.length matches) = 0)
+	attrs
+
+let rec get_unbound_attributes_from_expression expr include_vars =
+    match expr with
+	| `ETerm (`Attribute x) -> [x]
+	| `ETerm (`Int _) | `ETerm (`Float _)
+	| `ETerm (`String _) | `ETerm (`Long _) -> []
+	| `ETerm (`Variable x) -> if include_vars then [`Unqualified x]  else []
+
+	| `UnaryMinus e ->
+	      get_unbound_attributes_from_expression e include_vars
+		  
+	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
+	      (get_unbound_attributes_from_expression l include_vars)@
+		  (get_unbound_attributes_from_expression r include_vars)
+
+	| `Function(fid, args) ->
+	      List.flatten
+		  (List.map
+		      (fun a ->
+			  get_unbound_attributes_from_expression a include_vars)
+		      args)
+
+let rec get_unbound_attributes_from_predicate b_expr include_vars =
+    match b_expr with
+	| `BTerm(`True) | `BTerm(`False) -> []
+
+	| `BTerm(`LT(l,r)) | `BTerm(`LE(l,r)) | `BTerm(`GT(l,r))
+	| `BTerm(`GE(l,r)) | `BTerm(`EQ(l,r)) | `BTerm(`NE(l,r)) ->
+	      (get_unbound_attributes_from_expression l include_vars)@
+		  (get_unbound_attributes_from_expression r include_vars)
+
+	| `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+	| `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+	| `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+              -> (get_unbound_attributes_from_map_expression m_expr include_vars)
+
+	| `And(l,r) | `Or(l,r) ->
+	      (get_unbound_attributes_from_predicate l include_vars)@
+		  (get_unbound_attributes_from_predicate r include_vars)
+
+	| `Not(e) -> (get_unbound_attributes_from_predicate e include_vars)
+
+and get_unbound_attributes_from_map_expression m_expr include_vars =
+    match m_expr with
+	| `METerm (`Attribute x) -> [x]
+	| `METerm (`Int _) | `METerm (`Float _) | `METerm (`String _)
+	| `METerm (`Long _) -> []
+	| `METerm (`Variable x) -> if include_vars then [`Unqualified x] else []
+
+	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
+	      
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
+	      (get_unbound_attributes_from_map_expression l include_vars)@
+		  (get_unbound_attributes_from_map_expression r include_vars)
+
+	| `MapAggregate (fn,f,q) ->
+	      let f_uba = get_unbound_attributes_from_map_expression f include_vars in
+	      let q_ba = get_bound_attributes q in
+		  (resolve_unbound_attributes f_uba q_ba)@
+		      (get_unbound_attributes_from_plan q include_vars)
+
+	| `New(e) | `Init(_,e)
+        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
+	      get_unbound_attributes_from_map_expression e include_vars
+
+	| `Insert(_,m,e) | `Update(_,_,m,e) ->
+	      (get_unbound_attributes_from_map_expression (`METerm (m)) include_vars)@
+	          (get_unbound_attributes_from_map_expression e include_vars)
+
+	| `Delete(_,m) ->
+	      get_unbound_attributes_from_map_expression (`METerm (m)) include_vars
+
+	| `IfThenElse(b,l,r) ->
+	      (get_unbound_attributes_from_predicate (`BTerm (b)) include_vars)@ 
+	          (get_unbound_attributes_from_map_expression l include_vars)@
+		  (get_unbound_attributes_from_map_expression r include_vars)
+
+and get_unbound_attributes_from_plan q include_vars =
+    match q with
+	| `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> []
+
+	| `Select(pred, cq) ->
+	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
+	      let cq_ba = get_bound_attributes cq in
+		  (resolve_unbound_attributes pred_uba cq_ba)@
+		      (get_unbound_attributes_from_plan cq include_vars)
+
+	| `Project(attrs, cq) ->
+	      let attrs_uba = 
+		  List.flatten
+		      (List.map
+			  (fun (a,e) -> get_unbound_attributes_from_expression e include_vars)
+			  attrs)
+	      in
+	      let cq_ba = get_bound_attributes cq in
+		  (resolve_unbound_attributes attrs_uba cq_ba)@
+		      (get_unbound_attributes_from_plan cq include_vars)
+
+	| `Union ch ->
+	      List.flatten
+		  (List.map
+		      (fun c -> get_unbound_attributes_from_plan c include_vars) ch)
+
+	| `Cross (l, r) ->
+	      (get_unbound_attributes_from_plan l include_vars)@
+		  (get_unbound_attributes_from_plan r include_vars)
+
+	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e,_) | `IncrDiffPlan(_,_,e,_) ->
+	      get_unbound_attributes_from_plan e include_vars
+
+let get_unbound_map_attributes_from_plan f q include_vars =
+    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
+    let q_ba = get_bound_attributes q in
+    let unresolved_fa = resolve_unbound_attributes f_uba q_ba in
+    let unresolved_qa = get_unbound_attributes_from_plan q include_vars
+    in
+        print_endline "get_unbound_map_attributes_from_plan:";
+        print_endline ("\tf_uba: "^(string_of_attribute_identifier_list f_uba));
+        print_endline ("\tq_ba: "^(string_of_attribute_identifier_list q_ba));
+        print_endline ("\tu_fa: "^(string_of_attribute_identifier_list unresolved_fa));
+        print_endline ("\tu_qa: "^(string_of_attribute_identifier_list unresolved_qa));
+        unresolved_fa@unresolved_qa
+
+(* Returns the first schema encountered top-down in a plan, i.e. the nearest
+   renaming or base relation *)
+let rec get_flat_schema plan =
+    match plan with 
+        | `TrueRelation | `FalseRelation -> []
+        | `Relation (n,f) -> attribute_identifiers_of_field_list n f
+        | `Domain (_, attrs) -> attrs
+        | `Select (pred, cq) -> get_flat_schema cq
+        | `Project (projs, cq) -> List.map (fun (aid, _) -> aid) projs
+        | `Union ch -> List.flatten (List.map get_flat_schema ch)
+        | `Cross (l, r) -> (get_flat_schema l)@(get_flat_schema r)
+        | `DeltaPlan (_, cq) | `NewPlan cq -> get_flat_schema cq
+        | `IncrPlan (_, _, _,d) | `IncrDiffPlan (_, _, _,d) -> d
+
+(* Returns all attributes used in the map expression, except unbound attributes.
+ * Note this includes intermediate attributes such as those from projections. *)
+let rec get_attributes_used_in_map_expression m_expr =
+    let get_query_attributes attrs query_attrs =
+        List.filter (fun a -> List.exists (compare_attributes a) query_attrs) attrs
+    in
+    match m_expr with
+	| `METerm _ -> []
+
+	| `Delta (b,e) -> get_attributes_used_in_map_expression e
+	      
+	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
+	      (get_attributes_used_in_map_expression l)@
+		  (get_attributes_used_in_map_expression r)
+
+	| `MapAggregate (fn,f,q) ->
+              let f_uba = get_unbound_attributes_from_map_expression f false in
+	      let q_ba = get_bound_attributes q in
+              let f_used =
+                  (get_attributes_used_in_map_expression f)@
+                      (get_query_attributes f_uba q_ba)
+              in
+                  get_attributes_used_in_plan q f_used
+
+	| `New(e) | `Init (_,e)
+        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
+	      get_attributes_used_in_map_expression e
+
+	| `Insert(_,m,e) | `Update(_,_,m,e) ->
+	      (get_attributes_used_in_map_expression (`METerm (m)))@
+	          (get_attributes_used_in_map_expression e)
+
+	| `Delete(_,m) ->
+	      get_attributes_used_in_map_expression (`METerm (m))
+
+	| `IfThenElse(b,l,r) ->
+              (get_attributes_used_in_map_expression l)@
+		  (get_attributes_used_in_map_expression r)
+
+and get_attributes_used_in_plan plan attrs_used_above =
+    let intersect_attributes attrs existing_attrs =
+        List.filter (fun a -> List.exists (compare_attributes a) existing_attrs) attrs
+    in
+    let disjoint_attributes attrs existing_attrs =
+        List.filter (fun a -> not(List.exists (compare_attributes a) existing_attrs)) attrs
+    in
+    match plan with
+        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> attrs_used_above
+
+	| `Select(pred, cq) ->
+	      let pred_uba = get_unbound_attributes_from_predicate pred false in
+	      let cq_ba = get_bound_attributes cq in
+              let pred_used =
+                  (match pred with
+                      | `BTerm(`MEQ(me)) | `BTerm(`MNEQ(me)) 
+                      | `BTerm(`MLT(me)) | `BTerm(`MLE(me)) 
+                      | `BTerm(`MGT(me)) | `BTerm(`MGE(me)) 
+                            -> (get_attributes_used_in_map_expression me)
+                      | _ -> [])
+                  @(intersect_attributes pred_uba cq_ba)
+              in
+              let used_above_cq =
+                  attrs_used_above@(disjoint_attributes pred_used attrs_used_above)
+              in
+                  get_attributes_used_in_plan cq used_above_cq
+
+	| `Project(attrs, cq) ->
+              (* Assumes attrs_used_above is a subset of attrs *)
+              let attrs_used =
+                  intersect_attributes
+                      (List.map (fun (a,_) -> a) attrs) attrs_used_above
+              in
+	      let attrs_uba = 
+		  List.flatten
+		      (List.map
+			  (fun a -> let e = List.assoc a attrs in
+                              get_unbound_attributes_from_expression e false)
+			  attrs_used)
+	      in
+	      let cq_ba = get_bound_attributes cq in
+              let projs_used = intersect_attributes attrs_uba cq_ba in
+                  get_attributes_used_in_plan cq (attrs_used_above@projs_used)
+
+	| `Union ch ->
+              (* helper function to get index of element in list *)
+              let idx el l =
+                  let (f, pos) = 
+                      List.fold_left
+                          (fun (found, cnt) el2 ->
+                              if found || (el = el2) then (true, cnt) else (false, cnt+1) )
+                          (false, 0) l
+                  in
+                      if f then pos else -1
+              in
+              let ch_schema = List.map get_flat_schema ch in
+              let all_idx_used =
+                  List.fold_left2
+                      (fun acc c c_schema ->
+                          (* get schema attributes used above *)
+                          let c_used = intersect_attributes c_schema attrs_used_above in
+
+                          (* get attribute position in the schema *)
+                          let new_idx =
+                              List.filter
+                                  (fun i -> not (List.mem i acc))
+                                  (List.map
+                                      (fun attr ->
+                                          let attr_pos = idx attr c_schema in
+                                              if attr_pos = -1 then raise InvalidExpression
+                                              else attr_pos)
+                                      c_used)
+                          in
+                              acc@new_idx)
+                      [] ch ch_schema
+              in
+              (* get all attributes across each children corresponding to positions used *)
+              let ch_attrs_used =
+                  List.map
+                      (fun c_schema -> List.map (List.nth c_schema) all_idx_used)
+                      ch_schema
+              in
+              (* recur over each child *)
+                  List.fold_left2
+                      (fun acc c c_attrs_used ->
+                          let new_c_attrs_used = get_attributes_used_in_plan c c_attrs_used in
+                          let dedup_attrs_used = disjoint_attributes new_c_attrs_used acc in
+                              acc@dedup_attrs_used)
+                      attrs_used_above ch ch_attrs_used
+
+	| `Cross (l, r) ->
+              let l_ba = get_bound_attributes l in
+              let r_ba = get_bound_attributes r in
+                  (get_attributes_used_in_plan l
+                      (intersect_attributes attrs_used_above l_ba))@
+                  (get_attributes_used_in_plan r
+                      (intersect_attributes attrs_used_above r_ba))
+
+	| `DeltaPlan(_,e) | `NewPlan(e) ->
+              get_attributes_used_in_plan e attrs_used_above
+
+        | `IncrPlan(_,_,e,d) | `IncrDiffPlan(_,_,e,d) ->
+              (* check each domain attribute is used *)
+              let attrs_used = intersect_attributes d attrs_used_above in
+                  if ( (List.length attrs_used) != (List.length d) ) then
+                      begin
+                          print_endline ("Attrs used above: "^
+                              (string_of_attribute_identifier_list attrs_used_above));
+                          print_endline ("Subplan:\n"^(indented_string_of_plan plan 0));
+                          print_endline ("Domain: "^(string_of_attribute_identifier_list d));
+                          raise (ValidationException "Non-minimal domain found.");
+                      end;
+                  get_attributes_used_in_plan e attrs_used_above
+
+
+let rec find_cmp_aggregate m_expr =
+    match m_expr with
+        | `METerm _ -> false
+        | `Sum (l,r) | `Minus (l,r) | `Product (l,r)
+        | `Min (l,r) | `Max (l,r) ->
+              (find_cmp_aggregate l) || (find_cmp_aggregate r)
+
+        | `MapAggregate (`Sum, f, q) ->
+              (find_cmp_aggregate f) || (find_cmp_aggregate_plan q)
+
+        | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
+
+        | `Delta (_, e) | `New e | `Init(_,e)
+        | `Incr (_,_,_,e) | `IncrDiff (_,_,_,e)
+        | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
+        | `Delete _ -> false
+        | `IfThenElse(`MEQ(p), l, r) | `IfThenElse(`MNEQ(p), l, r) 
+        | `IfThenElse(`MLT(p), l, r) | `IfThenElse(`MLE(p), l, r) 
+        | `IfThenElse(`MGT(p), l, r) | `IfThenElse(`MGE(p), l, r) 
+            -> List.exists (fun x -> x) (List.map find_cmp_aggregate [p;l;r])
+
+        | `IfThenElse(_, l, r) ->  (find_cmp_aggregate l) || (find_cmp_aggregate r)
+
+and find_cmp_aggregate_plan q =
+    match q with
+        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> false
+        | `Select(pred, cq) -> 
+              (match pred with
+                  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+                  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+                  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                        -> find_cmp_aggregate m_expr
+                  | _ -> false)
+              || (find_cmp_aggregate_plan cq)
+
+        | `Project (_, cq) -> find_cmp_aggregate_plan cq
+        | `Union ch -> List.exists find_cmp_aggregate_plan ch
+        | `Cross (l,r) ->
+              (find_cmp_aggregate_plan l) || (find_cmp_aggregate_plan r)
+        | `DeltaPlan (_, cq) | `NewPlan cq
+        | `IncrPlan (_,_,cq,_) | `IncrDiffPlan (_,_,cq,_) -> find_cmp_aggregate_plan cq
+
+
+(* returns whether any bindings are used by m_expr and the bound variables *)
+let is_binding_used m_expr bindings =
+    (* returns vars as `Unqualified(var_name) *)
+    let m_ubav = get_unbound_attributes_from_map_expression m_expr true in
+    let bindings_used =
+        List.filter
+            (fun x -> match x with
+                | `BindMapExpr(var_id, _, _) ->
+                      List.mem (`Unqualified(var_id)) m_ubav
+                | _ -> false)
+            bindings
+    in
+    let binding_used_rv =
+        List.map
+            (fun x -> match x with
+                | `BindMapExpr(v, bc, _) -> v
+                | _ -> raise InvalidExpression)
+            bindings_used
+    in
+        match binding_used_rv with
+            | [] -> (false, [])
+            | x -> (true, x)
+
+
 
 (* Monotonicity analysis
  *
@@ -1281,8 +1709,10 @@ let rec compute_bool_expr_monotonicity attr attr_m b_expr =
 			  | _ -> Undef
 		  end
 
-	| `BTerm (`MEQ(m_expr)) | `BTerm (`MLT(m_expr)) ->
-	      compute_monotonicity attr attr_m m_expr
+	| `BTerm (`MEQ(m_expr)) | `BTerm (`MNEQ(m_expr))
+	| `BTerm (`MLT(m_expr)) | `BTerm (`MLE(m_expr))
+	| `BTerm (`MGT(m_expr)) | `BTerm (`MGE(m_expr))
+              -> compute_monotonicity attr attr_m m_expr
 
 	| `And (l,r) ->
 	      let lm = compute_bool_expr_monotonicity attr attr_m l in
@@ -1391,7 +1821,10 @@ let rec is_monotonic b_expr attr =
 	| `BTerm x ->
 	      begin
 		  match x with
-		      | `MEQ(m_expr) | `MLT(m_expr) ->
+		      | `MEQ(m_expr) | `MNEQ(m_expr)
+		      | `MLT(m_expr) | `MLE(m_expr) 
+		      | `MGT(m_expr) | `MGE(m_expr)
+                            ->
 			    let me_mon = compute_monotonicity attr Inc m_expr in
 				(me_mon = Inc) || (me_mon = Dec)
 				    
@@ -1404,6 +1837,18 @@ let rec is_monotonic b_expr attr =
 	      let be_mon = compute_bool_expr_monotonicity attr Inc b_expr in
 		  (be_mon = Inc) || (be_mon = Dec)
 
+let rec get_monotonicity b_expr attr =
+    match b_expr with
+	| `BTerm x ->
+	      begin
+		  match x with
+		      | `MEQ(m_expr) | `MNEQ(m_expr)
+		      | `MLT(m_expr) | `MLE(m_expr) 
+		      | `MGT(m_expr) | `MGE(m_expr)
+                            -> compute_monotonicity attr Inc m_expr
+		      | _ -> compute_bool_expr_monotonicity attr Inc b_expr
+	      end
+	| _ -> compute_bool_expr_monotonicity attr Inc b_expr
 
 (*
  * Code generation
@@ -2026,396 +2471,3 @@ let rec get_last_code_expr c_expr =
 
 
 
-(*
- * Binding helpers
- * Note: DBToaster compilation assumes unique column names
- *)
-
-let get_bound_relation =
-    function
-	| `Insert (r, _) -> r
-	| `Delete (r, _) -> r
-
-let rec get_bound_attributes q =
-    match q with
-	| `TrueRelation -> []		  
-	| `FalseRelation -> []
-
-	| `Relation (n,f) -> List.map (fun (id,typ) -> `Qualified(n,id)) f
-        | `Domain (_, attrs) -> attrs
-
-	| `Select(pred, cq) -> get_bound_attributes cq
-	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
-
-	| `Union ch -> get_bound_attributes (List.hd ch)
-	| `Cross (l,r) ->
-              (get_bound_attributes l)@(get_bound_attributes r)
-
-	| `DeltaPlan (_, cq) | `NewPlan(cq)
-        | `IncrPlan(_,_,cq,_) | `IncrDiffPlan(_,_,cq,_) -> (get_bound_attributes cq)
-
-
-(* Note: performs qualified comparison if possible *)
-(* TODO: think if we ever want to force unqualified comparison *)
-let compare_attributes a1 a2 =
-    match (a1, a2) with
-	| (`Qualified (n1, f1), `Qualified (n2, f2)) -> n1 = n2 && f1 = f2
-	| (`Qualified (n1, f1), `Unqualified f2) -> f1 = f2
-	| (`Unqualified f1, `Qualified (n2, f2)) -> f1 = f2
-	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
-
-
-let resolve_unbound_attributes attrs bindings =
-    List.filter
-	(fun x ->
-            let matches = List.filter (compare_attributes x) bindings in
-                (List.length matches) = 0)
-	attrs
-
-let rec get_unbound_attributes_from_expression expr include_vars =
-    match expr with
-	| `ETerm (`Attribute x) -> [x]
-	| `ETerm (`Int _) | `ETerm (`Float _)
-	| `ETerm (`String _) | `ETerm (`Long _) -> []
-	| `ETerm (`Variable x) -> if include_vars then [`Unqualified x]  else []
-
-	| `UnaryMinus e ->
-	      get_unbound_attributes_from_expression e include_vars
-		  
-	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
-	      (get_unbound_attributes_from_expression l include_vars)@
-		  (get_unbound_attributes_from_expression r include_vars)
-
-	| `Function(fid, args) ->
-	      List.flatten
-		  (List.map
-		      (fun a ->
-			  get_unbound_attributes_from_expression a include_vars)
-		      args)
-
-let rec get_unbound_attributes_from_predicate b_expr include_vars =
-    match b_expr with
-	| `BTerm(`True) | `BTerm(`False) -> []
-
-	| `BTerm(`LT(l,r)) | `BTerm(`LE(l,r)) | `BTerm(`GT(l,r))
-	| `BTerm(`GE(l,r)) | `BTerm(`EQ(l,r)) | `BTerm(`NE(l,r)) ->
-	      (get_unbound_attributes_from_expression l include_vars)@
-		  (get_unbound_attributes_from_expression r include_vars)
-
-	| `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-	      (get_unbound_attributes_from_map_expression m_expr include_vars)
-
-	| `And(l,r) | `Or(l,r) ->
-	      (get_unbound_attributes_from_predicate l include_vars)@
-		  (get_unbound_attributes_from_predicate r include_vars)
-
-	| `Not(e) -> (get_unbound_attributes_from_predicate e include_vars)
-
-and get_unbound_attributes_from_map_expression m_expr include_vars =
-    match m_expr with
-	| `METerm (`Attribute x) -> [x]
-	| `METerm (`Int _) | `METerm (`Float _) | `METerm (`String _)
-	| `METerm (`Long _) -> []
-	| `METerm (`Variable x) -> if include_vars then [`Unqualified x] else []
-
-	| `Delta (b,e) -> get_unbound_attributes_from_map_expression e include_vars
-	      
-	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
-	      (get_unbound_attributes_from_map_expression l include_vars)@
-		  (get_unbound_attributes_from_map_expression r include_vars)
-
-	| `MapAggregate (fn,f,q) ->
-	      let f_uba = get_unbound_attributes_from_map_expression f include_vars in
-	      let q_ba = get_bound_attributes q in
-		  (resolve_unbound_attributes f_uba q_ba)@
-		      (get_unbound_attributes_from_plan q include_vars)
-
-	| `New(e) | `Init(_,e)
-        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
-	      get_unbound_attributes_from_map_expression e include_vars
-
-	| `Insert(_,m,e) | `Update(_,_,m,e) ->
-	      (get_unbound_attributes_from_map_expression (`METerm (m)) include_vars)@
-	          (get_unbound_attributes_from_map_expression e include_vars)
-
-	| `Delete(_,m) ->
-	      get_unbound_attributes_from_map_expression (`METerm (m)) include_vars
-
-	| `IfThenElse(b,l,r) ->
-	      (get_unbound_attributes_from_predicate (`BTerm (b)) include_vars)@ 
-	          (get_unbound_attributes_from_map_expression l include_vars)@
-		  (get_unbound_attributes_from_map_expression r include_vars)
-
-and get_unbound_attributes_from_plan q include_vars =
-    match q with
-	| `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> []
-
-	| `Select(pred, cq) ->
-	      let pred_uba = get_unbound_attributes_from_predicate pred include_vars in
-	      let cq_ba = get_bound_attributes cq in
-		  (resolve_unbound_attributes pred_uba cq_ba)@
-		      (get_unbound_attributes_from_plan cq include_vars)
-
-	| `Project(attrs, cq) ->
-	      let attrs_uba = 
-		  List.flatten
-		      (List.map
-			  (fun (a,e) -> get_unbound_attributes_from_expression e include_vars)
-			  attrs)
-	      in
-	      let cq_ba = get_bound_attributes cq in
-		  (resolve_unbound_attributes attrs_uba cq_ba)@
-		      (get_unbound_attributes_from_plan cq include_vars)
-
-	| `Union ch ->
-	      List.flatten
-		  (List.map
-		      (fun c -> get_unbound_attributes_from_plan c include_vars) ch)
-
-	| `Cross (l, r) ->
-	      (get_unbound_attributes_from_plan l include_vars)@
-		  (get_unbound_attributes_from_plan r include_vars)
-
-	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e,_) | `IncrDiffPlan(_,_,e,_) ->
-	      get_unbound_attributes_from_plan e include_vars
-
-let get_unbound_map_attributes_from_plan f q include_vars =
-    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
-    let q_ba = get_bound_attributes q in
-    let unresolved_fa = resolve_unbound_attributes f_uba q_ba in
-    let unresolved_qa = get_unbound_attributes_from_plan q include_vars
-    in
-        print_endline "get_unbound_map_attributes_from_plan:";
-        print_endline ("\tf_uba: "^(string_of_attribute_identifier_list f_uba));
-        print_endline ("\tq_ba: "^(string_of_attribute_identifier_list q_ba));
-        print_endline ("\tu_fa: "^(string_of_attribute_identifier_list unresolved_fa));
-        print_endline ("\tu_qa: "^(string_of_attribute_identifier_list unresolved_qa));
-        unresolved_fa@unresolved_qa
-
-(* Returns the first schema encountered top-down in a plan, i.e. the nearest
-   renaming or base relation *)
-let rec get_flat_schema plan =
-    match plan with 
-        | `TrueRelation | `FalseRelation -> []
-        | `Relation (n,f) -> attribute_identifiers_of_field_list n f
-        | `Domain (_, attrs) -> attrs
-        | `Select (pred, cq) -> get_flat_schema cq
-        | `Project (projs, cq) -> List.map (fun (aid, _) -> aid) projs
-        | `Union ch -> List.flatten (List.map get_flat_schema ch)
-        | `Cross (l, r) -> (get_flat_schema l)@(get_flat_schema r)
-        | `DeltaPlan (_, cq) | `NewPlan cq -> get_flat_schema cq
-        | `IncrPlan (_, _, _,d) | `IncrDiffPlan (_, _, _,d) -> d
-
-(* Returns all attributes used in the map expression, except unbound attributes.
- * Note this includes intermediate attributes such as those from projections. *)
-let rec get_attributes_used_in_map_expression m_expr =
-    let get_query_attributes attrs query_attrs =
-        List.filter (fun a -> List.exists (compare_attributes a) query_attrs) attrs
-    in
-    match m_expr with
-	| `METerm _ -> []
-
-	| `Delta (b,e) -> get_attributes_used_in_map_expression e
-	      
-	| `Sum (l,r) | `Minus (l,r) | `Product (l,r) | `Min(l,r) | `Max(l,r) ->
-	      (get_attributes_used_in_map_expression l)@
-		  (get_attributes_used_in_map_expression r)
-
-	| `MapAggregate (fn,f,q) ->
-              let f_uba = get_unbound_attributes_from_map_expression f false in
-	      let q_ba = get_bound_attributes q in
-              let f_used =
-                  (get_attributes_used_in_map_expression f)@
-                      (get_query_attributes f_uba q_ba)
-              in
-                  get_attributes_used_in_plan q f_used
-
-	| `New(e) | `Init (_,e)
-        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
-	      get_attributes_used_in_map_expression e
-
-	| `Insert(_,m,e) | `Update(_,_,m,e) ->
-	      (get_attributes_used_in_map_expression (`METerm (m)))@
-	          (get_attributes_used_in_map_expression e)
-
-	| `Delete(_,m) ->
-	      get_attributes_used_in_map_expression (`METerm (m))
-
-	| `IfThenElse(b,l,r) ->
-              (get_attributes_used_in_map_expression l)@
-		  (get_attributes_used_in_map_expression r)
-
-and get_attributes_used_in_plan plan attrs_used_above =
-    let intersect_attributes attrs existing_attrs =
-        List.filter (fun a -> List.exists (compare_attributes a) existing_attrs) attrs
-    in
-    let disjoint_attributes attrs existing_attrs =
-        List.filter (fun a -> not(List.exists (compare_attributes a) existing_attrs)) attrs
-    in
-    match plan with
-        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> attrs_used_above
-
-	| `Select(pred, cq) ->
-	      let pred_uba = get_unbound_attributes_from_predicate pred false in
-	      let cq_ba = get_bound_attributes cq in
-              let pred_used =
-                  (match pred with
-                      | `BTerm(`MEQ(me)) | `BTerm(`MLT(me)) ->
-                            (get_attributes_used_in_map_expression me)
-                      | _ -> [])
-                  @(intersect_attributes pred_uba cq_ba)
-              in
-              let used_above_cq =
-                  attrs_used_above@(disjoint_attributes pred_used attrs_used_above)
-              in
-                  get_attributes_used_in_plan cq used_above_cq
-
-	| `Project(attrs, cq) ->
-              (* Assumes attrs_used_above is a subset of attrs *)
-              let attrs_used =
-                  intersect_attributes
-                      (List.map (fun (a,_) -> a) attrs) attrs_used_above
-              in
-	      let attrs_uba = 
-		  List.flatten
-		      (List.map
-			  (fun a -> let e = List.assoc a attrs in
-                              get_unbound_attributes_from_expression e false)
-			  attrs_used)
-	      in
-	      let cq_ba = get_bound_attributes cq in
-              let projs_used = intersect_attributes attrs_uba cq_ba in
-                  get_attributes_used_in_plan cq (attrs_used_above@projs_used)
-
-	| `Union ch ->
-              (* helper function to get index of element in list *)
-              let idx el l =
-                  let (f, pos) = 
-                      List.fold_left
-                          (fun (found, cnt) el2 ->
-                              if found || (el = el2) then (true, cnt) else (false, cnt+1) )
-                          (false, 0) l
-                  in
-                      if f then pos else -1
-              in
-              let ch_schema = List.map get_flat_schema ch in
-              let all_idx_used =
-                  List.fold_left2
-                      (fun acc c c_schema ->
-                          (* get schema attributes used above *)
-                          let c_used = intersect_attributes c_schema attrs_used_above in
-
-                          (* get attribute position in the schema *)
-                          let new_idx =
-                              List.filter
-                                  (fun i -> not (List.mem i acc))
-                                  (List.map
-                                      (fun attr ->
-                                          let attr_pos = idx attr c_schema in
-                                              if attr_pos = -1 then raise InvalidExpression
-                                              else attr_pos)
-                                      c_used)
-                          in
-                              acc@new_idx)
-                      [] ch ch_schema
-              in
-              (* get all attributes across each children corresponding to positions used *)
-              let ch_attrs_used =
-                  List.map
-                      (fun c_schema -> List.map (List.nth c_schema) all_idx_used)
-                      ch_schema
-              in
-              (* recur over each child *)
-                  List.fold_left2
-                      (fun acc c c_attrs_used ->
-                          let new_c_attrs_used = get_attributes_used_in_plan c c_attrs_used in
-                          let dedup_attrs_used = disjoint_attributes new_c_attrs_used acc in
-                              acc@dedup_attrs_used)
-                      attrs_used_above ch ch_attrs_used
-
-	| `Cross (l, r) ->
-              let l_ba = get_bound_attributes l in
-              let r_ba = get_bound_attributes r in
-                  (get_attributes_used_in_plan l
-                      (intersect_attributes attrs_used_above l_ba))@
-                  (get_attributes_used_in_plan r
-                      (intersect_attributes attrs_used_above r_ba))
-
-	| `DeltaPlan(_,e) | `NewPlan(e) ->
-              get_attributes_used_in_plan e attrs_used_above
-
-        | `IncrPlan(_,_,e,d) | `IncrDiffPlan(_,_,e,d) ->
-              (* check each domain attribute is used *)
-              let attrs_used = intersect_attributes d attrs_used_above in
-                  if ( (List.length attrs_used) != (List.length d) ) then
-                      begin
-                          print_endline ("Attrs used above: "^
-                              (string_of_attribute_identifier_list attrs_used_above));
-                          print_endline ("Subplan:\n"^(indented_string_of_plan plan 0));
-                          print_endline ("Domain: "^(string_of_attribute_identifier_list d));
-                          raise (ValidationException "Non-minimal domain found.");
-                      end;
-                  get_attributes_used_in_plan e attrs_used_above
-
-
-let rec find_cmp_aggregate m_expr =
-    match m_expr with
-        | `METerm _ -> false
-        | `Sum (l,r) | `Minus (l,r) | `Product (l,r)
-        | `Min (l,r) | `Max (l,r) ->
-              (find_cmp_aggregate l) || (find_cmp_aggregate r)
-
-        | `MapAggregate (`Sum, f, q) ->
-              (find_cmp_aggregate f) || (find_cmp_aggregate_plan q)
-
-        | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
-
-        | `Delta (_, e) | `New e | `Init(_,e)
-        | `Incr (_,_,_,e) | `IncrDiff (_,_,_,e)
-        | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
-        | `Delete _ -> false
-        | `IfThenElse(`MEQ(p), l, r)
-        | `IfThenElse(`MLT(p), l, r) -> 
-              List.exists (fun x -> x) (List.map find_cmp_aggregate [p;l;r])
-        | `IfThenElse(_, l, r) ->  (find_cmp_aggregate l) || (find_cmp_aggregate r)
-
-and find_cmp_aggregate_plan q =
-    match q with
-        | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> false
-        | `Select(pred, cq) -> 
-              (match pred with
-                  | `BTerm(`MEQ(m_expr)) | `BTerm(`MLT(m_expr)) ->
-                        find_cmp_aggregate m_expr
-                  | _ -> false)
-              || (find_cmp_aggregate_plan cq)
-
-        | `Project (_, cq) -> find_cmp_aggregate_plan cq
-        | `Union ch -> List.exists find_cmp_aggregate_plan ch
-        | `Cross (l,r) ->
-              (find_cmp_aggregate_plan l) || (find_cmp_aggregate_plan r)
-        | `DeltaPlan (_, cq) | `NewPlan cq
-        | `IncrPlan (_,_,cq,_) | `IncrDiffPlan (_,_,cq,_) -> find_cmp_aggregate_plan cq
-
-
-(* returns whether any bindings are used by m_expr and the bound variables *)
-let is_binding_used m_expr bindings =
-    (* returns vars as `Unqualified(var_name) *)
-    let m_ubav = get_unbound_attributes_from_map_expression m_expr true in
-    let bindings_used =
-        List.filter
-            (fun x -> match x with
-                | `BindMapExpr(var_id, _, _) ->
-                      List.mem (`Unqualified(var_id)) m_ubav
-                | _ -> false)
-            bindings
-    in
-    let binding_used_rv =
-        List.map
-            (fun x -> match x with
-                | `BindMapExpr(v, bc, _) -> v
-                | _ -> raise InvalidExpression)
-            bindings_used
-    in
-        match binding_used_rv with
-            | [] -> (false, [])
-            | x -> (true, x)

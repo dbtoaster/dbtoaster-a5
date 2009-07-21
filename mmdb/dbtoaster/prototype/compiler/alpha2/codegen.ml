@@ -30,13 +30,12 @@ let rec create_code_predicate b_expr =
 		  `BCTerm(
 		      match x with
 			  | `MEQ(_) -> `EQ(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
+			  | `MNEQ(_) -> `NE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
 			  | `MLT(_) -> `LT(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
+			  | `MLE(_) -> `LE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
+			  | `MGT(_) -> `GT(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
+			  | `MGE(_) -> `GE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
 
-			  (*
-			    | `MEQ(_)
-			    | `MLT(_) -> raise InvalidExpression
-			  *)
-				
 			  | `LT(l,r) -> `LT(create_code_expression l, create_code_expression r)
 			  | `LE(l,r) -> `LE(create_code_expression l, create_code_expression r)
 			  | `GT(l,r) -> `GT(create_code_expression l, create_code_expression r)
@@ -306,7 +305,8 @@ let gc_incr_state_var code var oplus diff =
 	| `Minus -> `Minus(`CTerm(`Variable(var)), x)
 	| `Min -> `Min (`CTerm(`Variable(var)), x)
 	| `Max -> `Max (`CTerm(`Variable(var)), x)
-	| `Decrmin _ -> raise InvalidExpression
+	| `Decrmin _ | `Decrmax _
+              -> raise InvalidExpression
     in
     let rv = get_return_val code in
         match rv with
@@ -348,7 +348,8 @@ let gc_incr_state_map code map_key oplus diff =
 	| `Minus -> `AssignMap(map_key, `Minus(map_access_code, x))
 	| `Min -> `AssignMap(map_key, `Min (map_access_code, x))
 	| `Max -> `AssignMap(map_key, `Max (map_access_code, x))
-	| `Decrmin _ -> raise InvalidExpression
+	| `Decrmin _ | `Decrmax _ ->
+              raise InvalidExpression
     in		
     let rv = get_return_val code in
         match rv with
@@ -589,22 +590,28 @@ let generate_code handler bindings event body_only
 			      | _ -> raise InvalidExpression
 		      end
 
-	    | `MapAggregate(`Min, f, q) ->
-		  let run_min_var = gen_var_sym() in
+	    | `MapAggregate(`Min as fn, f, q)
+            | `MapAggregate(`Max as fn, f, q)
+                ->
+		  let running_var = gen_var_sym() in
 		  let (f_code, f_decl) = gc_aux f decl bind_info in
+                  let incr_code x =
+                      match fn with
+                          | `Min -> `Min (`CTerm(`Variable(running_var)), x)
+                          | `Max -> `Max (`CTerm(`Variable(running_var)), x)
+                  in
 		      begin
 			  match f_code with
 			      | `Eval (x) ->
 				    let (agg_block, agg_decl) =
 					gc_plan_aux q
-					    (`Assign(run_min_var,
-					    `Min (`CTerm(`Variable(run_min_var)), x)))
+					    (`Assign(running_var, incr_code x))
 					    f_decl bind_info 
 				    in
 					(`Block(
-					    [`Declare(`Variable(run_min_var, "int"));
+					    [`Declare(`Variable(running_var, "int"));
 					    agg_block;
-					    `Eval(`CTerm(`Variable(run_min_var)))]), agg_decl)
+					    `Eval(`CTerm(`Variable(running_var)))]), agg_decl)
 
 			      | _ -> raise InvalidExpression
 		      end
@@ -845,8 +852,10 @@ let generate_code handler bindings event body_only
 	    | `Select (pred, cq) ->
 		  begin
 		      match pred with 
-			  | `BTerm(`MEQ(m_expr))
-			  | `BTerm(`MLT(m_expr)) ->
+			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+                                ->
 				(* TODO: pred var types *)
 				let (pred_var_code, new_decl) = gc_aux m_expr decl bind_info in
 				let (pred_cterm, assign_var_code, pred_decl) =
@@ -884,14 +893,18 @@ let generate_code handler bindings event body_only
                                                   raise InvalidExpression
 				in
 				let pred_test_code =
-				    begin
+                                    let pz_pair = (`CTerm(pred_cterm), `CTerm(`Int 0)) in
+                                    let np =
 					match pred with
-					    | `BTerm(`MEQ(m_expr)) ->
-						  `BCTerm(`EQ(`CTerm(pred_cterm), `CTerm(`Int 0)))
-					    | `BTerm(`MLT(m_expr)) ->
-						  `BCTerm(`LT(`CTerm(pred_cterm), `CTerm(`Int 0)))
+					    | `BTerm(`MEQ _) -> `EQ(pz_pair)
+					    | `BTerm(`MNEQ _) -> `NE(pz_pair)
+					    | `BTerm(`MLT _) -> `LT(pz_pair)
+					    | `BTerm(`MLE _) -> `LE(pz_pair)
+					    | `BTerm(`MGT _) -> `GT(pz_pair)
+					    | `BTerm(`MGE _) -> `GE(pz_pair)
 					    | _ -> raise InvalidExpression
-				    end
+                                    in
+                                        `BCTerm(np)
 				in
 
 				let new_iter_code =
@@ -985,24 +998,6 @@ let generate_code handler bindings event body_only
 	    | _ ->
 		  print_endline ("gc_plan_aux: "^(string_of_plan q));
 		  raise InvalidExpression
-                      (*    and gc_aux_min f q decl bind_info : code_expression * (declaration list) =
-  	                    let run_min_var = gen_var_sym() in
-	                    let (f_code, f_decl) = gc_aux f decl bind_info in
-	                    begin
-		            match f_code with
-		            | `Eval (x) ->
-			    let (agg_block, agg_decl) =
-			    gc_plan_aux (`IncrPlan (q))
-			    (`Assign(run_min_var,
-			    `Min (`CTerm(`Variable(run_min_var)), x)))	
-			    f_decl bind_info
-			    in
-			    (`Block(
-			    [`Declare(`Variable(run_min_var, "int"));
-			    agg_block;
-			    `Eval(`CTerm(`Variable(run_min_var)))]), agg_decl)
-		            | _ -> raise InvalidExpression
-	                    end *)
     in
 	
     let handler_fields = 
