@@ -26,24 +26,27 @@ let rec create_code_expression expr =
 let rec create_code_predicate b_expr =
     match b_expr with
 	| `BTerm(x) ->
+              let dummy_pair = (`CTerm(`Variable("dummy")), `CTerm(`Int 0)) in
+              let binary l r fn = fn (create_code_expression l) (create_code_expression r) in
 	      begin
 		  `BCTerm(
 		      match x with
-			  | `MEQ(_) -> `EQ(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MNEQ(_) -> `NE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MLT(_) -> `LT(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MLE(_) -> `LE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MGT(_) -> `GT(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-			  | `MGE(_) -> `GE(`CTerm(`Variable("dummy")), `CTerm(`Int 0))
-
-			  | `LT(l,r) -> `LT(create_code_expression l, create_code_expression r)
-			  | `LE(l,r) -> `LE(create_code_expression l, create_code_expression r)
-			  | `GT(l,r) -> `GT(create_code_expression l, create_code_expression r)
-			  | `GE(l,r) -> `GE(create_code_expression l, create_code_expression r)
-			  | `EQ(l,r) -> `EQ(create_code_expression l, create_code_expression r)
-			  | `NE(l,r) -> `NE(create_code_expression l, create_code_expression r)
 			  | `True -> `True
-			  | `False -> `False)
+			  | `False -> `False
+
+			  | `EQ(l,r) -> binary l r (fun x y -> `EQ(x,y))
+			  | `NE(l,r) -> binary l r (fun x y -> `NE(x,y))
+			  | `LT(l,r) -> binary l r (fun x y -> `LT(x,y))
+			  | `LE(l,r) -> binary l r (fun x y -> `LE(x,y))
+			  | `GT(l,r) -> binary l r (fun x y -> `GT(x,y))
+			  | `GE(l,r) -> binary l r (fun x y -> `GE(x,y))
+
+			  | `MEQ(_) -> `EQ(dummy_pair)
+			  | `MNEQ(_) -> `NE(dummy_pair)
+			  | `MLT(_) -> `LT(dummy_pair)
+			  | `MLE(_) -> `LE(dummy_pair)
+			  | `MGT(_) -> `GT(dummy_pair)
+			  | `MGE(_) -> `GE(dummy_pair))
 	      end
 	| `And(l,r) -> `And(create_code_predicate l, create_code_predicate r)
 	| `Or(l,r) -> `Or(create_code_predicate l, create_code_predicate r)
@@ -186,11 +189,13 @@ let rec merge_block_code cl acc =
 
 let rec simplify_code c_expr =
 
-      print_endline "Simplify code:";
-      print_endline (indented_string_of_code_expression c_expr);
-      print_endline (String.make 50 '-');
+(*
+    print_endline "Simplify code:";
+    print_endline (indented_string_of_code_expression c_expr);
+    print_endline (String.make 50 '-');
 
-      let r =
+    let r =
+*)
 
     match c_expr with
 	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
@@ -276,12 +281,13 @@ let rec simplify_code c_expr =
 
 	| _ -> c_expr
 
+(*
       in
       print_endline "Result:";
       print_endline (indented_string_of_code_expression r);
       print_endline (String.make 50 '-');
       r
-
+*)
 
 
 let gc_assign_state_var code var =
@@ -302,7 +308,7 @@ let gc_assign_state_var code var =
 let gc_incr_state_var code var oplus diff =
     let oper op = function x -> match op with 
 	| `Plus -> `Sum (`CTerm(`Variable(var)), x) 
-	| `Minus -> `Minus(`CTerm(`Variable(var)), x)
+	| `Minus -> `Minus (`CTerm(`Variable(var)), x)
 	| `Min -> `Min (`CTerm(`Variable(var)), x)
 	| `Max -> `Max (`CTerm(`Variable(var)), x)
 	| `Decrmin _ | `Decrmax _
@@ -368,33 +374,8 @@ let gc_incr_state_map code map_key oplus diff =
                   print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
                   raise (RewriteException "get_incr_state_map: invalid return val")
 
-(* TODO: handle deletions.
- * Note: only deletions on selects, nested aggregates need IncrPlan *)
-(*
-let gc_incr_state_dom code decl dom_ds dom_decl oplus diff =
-    let new_decl = if List.mem dom_decl decl then decl else dom_decl::decl in
-    let oper op = function x -> match op with
-        | `Union -> `InsertTuple(dom_ds, x)
-        | `Diff -> `DeleteTuple(dom_ds, x)
-    in
-    let rv = get_return_val code in
-        match rv with
-            | `Eval x ->
-                  let new_code =
-                      match (rv = code, diff) with
-                          | (true, true) ->  `Block([oper oplus x; rv])
-                          | (false, true) -> `Block([replace_return_val code (oper oplus x); rv])
 
-                          | (_, false) ->
-                                print_endline ("gc_incr_state_dom: IncrPlan unsupported.");
-                                raise InvalidExpression
-                  in
-                      (new_code, new_decl)
-            | _ ->
-                  print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
-                  raise (RewriteException "get_incr_state_map: invalid return val")
-*)
-
+(* Helper for dealing with `Init *)
 let gc_insert_event m_expr decl event =
     let br = get_base_relations m_expr in
     let event_vars = match event with 
@@ -417,13 +398,17 @@ let gc_insert_event m_expr decl event =
                         | _ -> false) decl
             else []
     in
-        match event_rel_decl with
-            | [] -> None
-            | er_decl::t ->
+        match (event, event_rel_decl) with
+            | (`Insert _, []) -> None
+            | (`Insert _, er_decl::t) ->
                   let insert_code =
                       `InsertTuple(datastructure_of_declaration er_decl, event_vars)
                   in
                       Some(insert_code)
+            | (`Delete _, _) ->
+                  print_endline ("gc_insert_event: called on "^(string_of_delta event)^
+                      " with map expr:\n"^(indented_string_of_map_expression m_expr 0));
+                  raise (CodegenException ("gc_insert_event: called on "^(string_of_delta event)))
 
 let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id =
     match unbound_attrs_vars with
@@ -460,7 +445,7 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars =
     let global_decfn = gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars in
     match m_expr with
-	| `Incr (sid,_,_,_) | `IncrDiff(sid,_,_,_) | `Init(sid, _) ->
+	| `Incr (sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) | `Init(sid,_,_) ->
               begin
                   match unbound_attrs_vars with
                       | [] -> global_decfn  (gen_var_sym())
@@ -473,46 +458,144 @@ let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars =
               raise InvalidExpression
 
 
+(* TODO: support sliced access for partially bound keys in M-D maps
+ * -- requires extension to `ForEach to support partial iteration *)
+let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls =
+    let (mid, mf) = mk in
+    let mf_len = List.length mf in
+    let bound_f = List.filter (fun f -> List.mem f e_vars) mf in
+    let incr_code = gc_incr_state_map e_code mk op diff in
+        begin
+            print_endline ("mf: "^(string_of_code_var_list mf)^
+                " uba: "^(string_of_code_var_list e_uba_fields));
+            print_endline ("Accessing "^(string_of_map_key mk)^
+                " in expression "^(string_of_map_expression e));
+            print_endline ("bound_f: "^(string_of_code_var_list bound_f));
+            print_endline ("e_vars: "^(string_of_code_var_list e_vars));
+            print_endline ("test: "^(string_of_int (List.length bound_f))^" "^(string_of_int mf_len));
+            print_endline ("incr_code: "^(indented_string_of_code_expression incr_code));
+            if (List.length bound_f) = mf_len then
+                incr_code
+            else
+                begin
+                    let decl_matches = List.filter
+                        (fun d -> (identifier_of_declaration d) = mid)
+                        recursion_decls
+                    in
+                    let ds = match decl_matches with
+                        | [x] -> datastructure_of_declaration x
+                        | [] ->
+                              print_endline ("Could not find declaration for "^mid);
+                              raise InvalidExpression
+                        | _ -> raise DuplicateException
+                    in
+                        `ForEach(ds, incr_code)
+                end
+        end
+
+
+let gc_state_accessor_code par_decl bindings
+        e e_code e_decl e_vars e_uba_fields op diff recursion_decls
+=
+    match par_decl with
+        | `Variable(v,_) ->
+                  if (List.mem v e_uba_fields) then
+                      begin
+                          print_endline ("Could not find declaration for "^v);
+                          raise InvalidExpression
+                      end
+                  else
+                      (gc_incr_state_var e_code v op diff, e_decl)
+
+        | `Map(n,f,_) ->
+              (* Building map accessors from bindings *)
+              let mk =
+                  let access_fields =
+                      List.map (fun (id, _) ->
+                          let bound_f =
+                              List.filter (fun (a,_) ->
+                                  (field_of_attribute_identifier a) = id) bindings
+                          in
+                              match bound_f with
+                                  | [] -> id
+                                  | [(a, e_opt)] ->
+                                        begin
+                                            match e_opt with
+                                                | Some(`ETerm(`Variable(b))) -> b
+                                                | Some(e) ->
+                                                      print_endline ("Invalid map access field: "^(string_of_expression e));
+                                                      raise (CodegenException
+                                                          "Map access fields must be variables!")
+                                                | None -> id
+                                        end
+                                  | _ -> raise DuplicateException)
+                          f
+                  in
+                      (n, access_fields)
+              in
+                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
+
+let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff =
+    let (state_decl, new_decl) =
+        gc_declare_handler_state_for_map_expression incr_e e_decl e_uba
+    in
+	begin match e_uba with
+	    | [] ->
+                  let state_var = match state_decl with
+                      | `Variable(id, _) -> id | _ -> raise InvalidExpression
+                  in
+                      (gc_incr_state_var e_code state_var op diff, new_decl)
+
+	    | _ ->
+		  let map_key =
+                      let mid = match state_decl with
+                          | `Map(id,_,_) -> id | _ -> raise InvalidExpression
+                      in
+		      let mf = List.map field_of_attribute_identifier e_uba in
+			  (mid, mf)
+		  in
+                      print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
+                          (string_of_map_expression incr_e));
+		      (gc_incr_state_map e_code map_key op diff, new_decl)
+	end
+
+let gc_declare_and_assign_state init_e e_code e_decl e_uba =
+    let print_debug orig_expr code map_key =
+        print_endline "Assigning state map for init";
+        print_endline ("expr: "^(string_of_map_expression orig_expr));
+        print_endline ("code: "^(indented_string_of_code_expression code));
+        print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
+            (string_of_map_expression orig_expr))
+    in
+
+    let (state_decl, new_decl) =
+        gc_declare_handler_state_for_map_expression init_e e_decl e_uba
+    in
+	begin match e_uba with
+	    | [] -> 
+                  let state_var = match state_decl with
+                      | `Variable(id, _) -> id | _ -> raise InvalidExpression
+                  in
+                      (gc_assign_state_var e_code state_var, new_decl)
+
+	    | _ ->
+		  let map_key =
+                      let mid = match state_decl with
+                          | `Map(id,_,_) -> id | _ -> raise InvalidExpression
+                      in
+		      let mf = List.map field_of_attribute_identifier e_uba in
+			  (mid, mf)
+                  in
+                      print_debug init_e e_code map_key;
+		      (gc_assign_state_map e_code map_key, new_decl)
+	end
+
+
 (* map_expression -> binding list -> delta -> boolean
    -> (var id * code terminal) list -> (var id list * code terminal) list
    -> code_expression * declaration list *)
-let generate_code handler bindings event body_only
-        map_var_accessors varp_accessors termp_accessors recursion_decls
-    =
+let generate_code handler bindings event body_only map_var_accessors state_p_decls recursion_decls =
     print_endline ("Generating code for: "^(string_of_map_expression handler));
-
-    let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff =
-        let (mid, mf) = mk in
-        let mf_len = List.length mf in
-        let bound_f = List.filter (fun f -> List.mem f e_vars) mf in
-        let incr_code = gc_incr_state_map e_code mk op diff in
-            begin
-                print_endline ("mf: "^(string_of_code_var_list mf)^
-                    " uba: "^(string_of_code_var_list e_uba_fields));
-                print_endline ("Accessing "^(string_of_map_key mk)^
-                    " in expression "^(string_of_map_expression e));
-                print_endline ("bound_f: "^(string_of_code_var_list bound_f));
-                print_endline ("e_vars: "^(string_of_code_var_list e_vars));
-                print_endline ("test: "^(string_of_int (List.length bound_f))^" "^(string_of_int mf_len));
-                if (List.length bound_f) = mf_len then
-                    incr_code
-                else
-                    begin
-                        let decl_matches = List.filter
-                            (fun d -> (identifier_of_declaration d) = mid)
-                            recursion_decls
-                        in
-                        let ds = match decl_matches with
-                            | [x] -> datastructure_of_declaration x
-                            | [] ->
-                                  print_endline ("Could not find declaration for "^mid);
-                                  raise InvalidExpression
-                            | _ -> raise DuplicateException
-                        in
-                            `ForEach(ds, incr_code)
-                    end
-            end
-    in
 
     (* map_expression -> declaration list -> bool * binding list
          -> code_expression * declaration list *)
@@ -569,34 +652,13 @@ let generate_code handler bindings event body_only
             | `Max (l,r) ->
                   gc_binary_expr l r decl bind_info (fun a b -> `Eval(`Max(a,b)))
 
-	    | `MapAggregate(`Sum, f, q) ->
+	    | `MapAggregate(fn, f, q) ->
 		  (* TODO: variable type? *)
-		  let run_sum_var = gen_var_sym() in
-		  let (f_code, f_decl) = gc_aux f decl bind_info in
-		      begin
-			  match f_code with
-			      | `Eval (x) ->
-				    let (agg_block, agg_decl) =
-					gc_plan_aux q  
-					    (`Assign(run_sum_var,
-					    `Sum (`CTerm(`Variable(run_sum_var)), x)))
-					    f_decl bind_info 
-				    in
-					(`Block(
-					    [`Declare(`Variable(run_sum_var, "int"));
-					    agg_block;
-					    `Eval(`CTerm(`Variable(run_sum_var)))]), agg_decl)
-
-			      | _ -> raise InvalidExpression
-		      end
-
-	    | `MapAggregate(`Min as fn, f, q)
-            | `MapAggregate(`Max as fn, f, q)
-                ->
 		  let running_var = gen_var_sym() in
 		  let (f_code, f_decl) = gc_aux f decl bind_info in
                   let incr_code x =
                       match fn with
+                          | `Sum -> `Sum (`CTerm(`Variable(running_var)), x)
                           | `Min -> `Min (`CTerm(`Variable(running_var)), x)
                           | `Max -> `Max (`CTerm(`Variable(running_var)), x)
                   in
@@ -604,7 +666,7 @@ let generate_code handler bindings event body_only
 			  match f_code with
 			      | `Eval (x) ->
 				    let (agg_block, agg_decl) =
-					gc_plan_aux q
+					gc_plan_aux q  
 					    (`Assign(running_var, incr_code x))
 					    f_decl bind_info 
 				    in
@@ -616,7 +678,7 @@ let generate_code handler bindings event body_only
 			      | _ -> raise InvalidExpression
 		      end
 
-	    | (`Incr (sid, op, re, e) as oe) | (`IncrDiff(sid, op, re, e) as oe) ->
+	    | (`Incr (sid, op, re, bd, e) as oe) | (`IncrDiff(sid, op, re, bd, e) as oe) ->
                   let diff = match oe with `Incr _ -> false | _ -> true in
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
 		  let (e_is_bound, rc_l) = 
@@ -624,8 +686,8 @@ let generate_code handler bindings event body_only
                           | (true, bb) -> is_binding_used e bb
 			  | _ -> (false, [])
 		  in
-                      print_endline ("is_bound "^(string_of_map_expression oe)^" "^
-                          (string_of_bool e_is_bound));
+                      print_endline ("is_bound "^
+                          (string_of_map_expression oe)^" "^(string_of_bool e_is_bound));
 
                       (* test for rule 67-70 *)
 		      if e_is_bound then
@@ -683,108 +745,49 @@ let generate_code handler bindings event body_only
                                             (delete_and_update_binding_code, new_decl)
 
 		      else
-                          let (e_vars, _) = List.split(match event with | `Insert(_,vars) | `Delete(_,vars) -> vars) in
+                          let (e_vars, _) = List.split(match event with
+                              | `Insert(_,vars) | `Delete(_,vars) -> vars)
+                          in
 		          let e_uba = List.filter
 			      (fun uaid -> not(List.mem (field_of_attribute_identifier uaid) e_vars))
 			      (get_unbound_attributes_from_map_expression e true)
 		          in
                           let e_uba_fields = List.map field_of_attribute_identifier e_uba in
-                          if List.mem_assoc oe termp_accessors then
-                              begin
-                                  let par_ct = List.assoc oe termp_accessors in
-                                      match par_ct with
-                                          | `Variable(v) ->
-                                                if (List.mem v e_uba_fields) then
-                                                    begin
-                                                        print_endline ("Could not find declaration for "^v);
-                                                        raise InvalidExpression
-                                                    end
-                                                else (gc_incr_state_var e_code v op diff, e_decl)
 
-                                          | `MapAccess((mid, mf) as mk) ->
-                                                (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff, e_decl)
-                              end
+                          (*
+                          if List.mem_assoc oe termp_accessors then
+                              gc_termp_accessor_code oe termp_accessors
+                                  e e_code e_decl e_vars e_uba_fields op diff recursion_decls
                           else
                               begin
-                                  let (par_access_found, par_access_opt) =
-                                      let sorted_uba =
-                                          List.sort compare
-                                              (List.map field_of_attribute_identifier e_uba)
-                                      in
-                                          if (List.mem_assoc sorted_uba varp_accessors) then
-                                              (true, Some(List.assoc sorted_uba varp_accessors))
-                                          else
-                                              (false, None)
+                                  let sorted_uba =
+                                      List.sort compare
+                                          (List.map field_of_attribute_identifier e_uba)
                                   in
-                                      if par_access_found then
-                                          match par_access_opt with
-                                              | None -> raise InvalidExpression
-                                              | Some(`Variable(v)) ->
-                                                    if (List.mem v e_uba_fields) then
-                                                        begin
-                                                            print_endline ("Could not find declaration for "^v);
-                                                            raise InvalidExpression
-                                                        end
-                                                    else
-                                                        (gc_incr_state_var e_code v op diff, e_decl)
-
-                                              | Some(`MapAccess((mid, mf) as mk)) ->
-                                                    print_endline ("Var group: "^(string_of_code_var_list e_uba_fields));
-                                                    (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff, e_decl)
+                                      if (List.mem_assoc sorted_uba varp_accessors) then
+                                          gc_varp_accessor_code sorted_uba varp_accessors
+                                              e e_code e_decl e_vars e_uba_fields op diff recursion_decls
                                       else
-                                          let (state_decl, new_decl) =
-                                              gc_declare_handler_state_for_map_expression oe e_decl e_uba
-                                          in
-		                              begin match e_uba with
-			                          | [] ->
-                                                        let state_var = match state_decl with
-                                                            | `Variable(id, _) -> id | _ -> raise InvalidExpression
-                                                        in
-                                                            (gc_incr_state_var e_code state_var op diff, new_decl)
-
-			                          | _ ->
-				                        let map_key =
-                                                            let mid = match state_decl with
-                                                                | `Map(id,_,_) -> id | _ -> raise InvalidExpression
-                                                            in
-				                            let mf = List.map field_of_attribute_identifier e_uba in
-					                        (mid, mf)
-				                        in
-                                                            print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
-                                                                (string_of_map_expression oe));
-				                            (gc_incr_state_map e_code map_key op diff, new_decl)
-		                              end
+                                          gc_declare_and_incr_state oe e_code e_decl e_uba op diff
                               end
+                          *)
 
-	    | (`Init (sid, e) as oe) ->
+                              if List.mem_assoc sid state_p_decls then
+                                  let par_decl = List.assoc sid state_p_decls in
+                                      gc_state_accessor_code par_decl bd
+                                          e e_code e_decl e_vars e_uba_fields op diff recursion_decls
+                              else
+                                  gc_declare_and_incr_state oe e_code e_decl e_uba op diff
+
+            (* TODO: generate map key from bindings *)
+	    | (`Init (sid, bd, e) as oe) ->
+
 		  let (e_code, e_decl) = gc_aux e decl bind_info in
 
                   (* Note: no need to filter handler args, since e should be a recomputation,
                    * i.e. a map_expression where deltas have not been applied *)
 		  let e_uba = get_unbound_attributes_from_map_expression e true in
-                  let (state_decl, new_decl) = gc_declare_handler_state_for_map_expression oe e_decl e_uba in
-		      begin match e_uba with
-			  | [] -> 
-                                let state_var = match state_decl with
-                                    | `Variable(id, _) -> id | _ -> raise InvalidExpression
-                                in
-                                    (gc_assign_state_var e_code state_var, new_decl)
-
-			  | _ ->
-				let map_key =
-                                    let mid = match state_decl with
-                                        | `Map(id,_,_) -> id | _ -> raise InvalidExpression
-                                    in
-				    let mf = List.map field_of_attribute_identifier e_uba in
-					(mid, mf)
-                                in
-                                    print_endline "Assigning state map for init";
-                                    print_endline ("expr: "^(string_of_map_expression oe));
-                                    print_endline ("code: "^(indented_string_of_code_expression e_code));
-                                    print_endline ("Referencing "^(string_of_map_key map_key)^" for "^
-                                        (string_of_map_expression oe));
-				    (gc_assign_state_map e_code map_key, new_decl)
-		      end
+                      gc_declare_and_assign_state oe e_code e_decl e_uba
 
 	    | _ -> 
 		  print_endline("gc_aux: "^(string_of_map_expression e));
@@ -911,7 +914,7 @@ let generate_code handler bindings event body_only
 				    match (m_expr, pred_cterm) with
                                          (* Note: only inserts have `Init expressions.
                                             Generate insert into base relations before recomputing as necessary *)
-                                        | (`Init (_,e), `MapAccess(mf)) ->
+                                        | (`Init (_,_,e), `MapAccess(mf)) ->
 					      let (mid, _) = mf in
 					      let map_contains_code = `CTerm(`MapContains(mf)) in
                                               let insert_code = gc_insert_event e pred_decl event in
@@ -929,7 +932,7 @@ let generate_code handler bindings event body_only
                                                           | Some(ic) -> `Block([ic; init_code])
                                                   end
 
-                                        | (`Init (_,e), `Variable _) ->
+                                        | (`Init (_,_,e), `Variable _) ->
                                               let insert_code = gc_insert_event e pred_decl event in
                                                   begin
                                                       match (insert_code, assign_var_code) with
@@ -967,22 +970,23 @@ let generate_code handler bindings event body_only
 		      gc_plan_aux l inner_code inner_decl bind_info 
 	                  
 	    (* to handle rule 39, 41 *)
-	    | `IncrPlan(sid, op, nq, d) | `IncrDiffPlan(sid, op, nq, d) ->
+            (* TODO: handle unbound attributes in bindings bd *)
+	    | `IncrPlan(sid, op, d, bd, nq) | `IncrDiffPlan(sid, op, d, bd, nq) ->
                   let print_incrp_debug q_code incrp_dom =
 		      print_endline ("rule 39,41: incrp_dom "^(string_of_code_expression (`Declare incrp_dom)));
                       print_endline ("rule 39,41: iter_code "^(string_of_plan nq));
                       print_endline ("rule 39,41: q_code "^(indented_string_of_code_expression q_code));
 
                   in
-                  (* let diff = match q with `IncrPlan _ -> false | _ -> true in *)
 		  let dom_id = gen_dom_sym (sid) in
-                  let dom_fields = List.map (fun x -> (field_of_attribute_identifier x, "int")) d in
+                  let dom_field_names = List.map field_of_attribute_identifier d in
+                  let dom_fields = List.map (fun x -> (x, "int")) dom_field_names in
 		  let dom_decl = `Domain(dom_id, dom_fields) in
                   let dom_ds = datastructure_of_declaration dom_decl in
                   let (new_iter_code, new_decl) =
                       let incr_code = match op with
-                          | `Union -> `InsertTuple(dom_ds, List.map field_of_attribute_identifier d)
-                          | `Diff -> `DeleteTuple(dom_ds, List.map field_of_attribute_identifier d)
+                          | `Union -> `InsertTuple(dom_ds, dom_field_names)
+                          | `Diff -> `DeleteTuple(dom_ds, dom_field_names)
                       in
                           (`Block([incr_code; iter_code]),
                            if List.mem dom_decl decl then decl else dom_decl::decl)
@@ -994,7 +998,7 @@ let generate_code handler bindings event body_only
 		        gc_incr_state_dom q_code q_decl dom_var dom_relation op diff
                       *)
                       (q_code, q_decl)
-                              
+
 	    | _ ->
 		  print_endline ("gc_plan_aux: "^(string_of_plan q));
 		  raise InvalidExpression
@@ -1021,12 +1025,7 @@ let generate_code handler bindings event body_only
                           (code_acc@[`Assign(v, create_code_expression expr)],
                           decl_acc@[`Variable(v, "int")])
 
-                    | `BindBoolExpr (v, b_expr) -> 
-                          (* TODO *)
-                          print_endline "Boolean expression bindings currently unsupported.";
-                          raise InvalidExpression
-
-                    | `BindMapExpr (v, m_expr, _) ->
+                    | `BindMapExpr (v, m_expr) ->
                           let (binding_code,d) = gc_aux m_expr decl_acc (false, []) in
                           let rv = get_return_val binding_code in
                               match rv with 
@@ -1083,9 +1082,11 @@ let generate_code handler bindings event body_only
             end
 
 
-(* map expression list -> (int * variable identifier) list ->
-   (declaration list) *  (var * code terminal) list * (var list * code terminal) list*)
-let generate_map_declarations maps map_vars vars_parents term_parents =
+
+(* map expression list ->
+   (int * variable identifier) list -> (state_identifier * int) list ->
+   (declaration list) *  (state_identifier * declaration) list *)
+let generate_map_declarations maps map_vars state_parents =
 
     List.iter (fun me ->
         print_endline ("gmd: "^
@@ -1097,15 +1098,9 @@ let generate_map_declarations maps map_vars vars_parents term_parents =
         print_endline ("gmd var: "^var^" hash: "^(string_of_int hv)))
         map_vars;
 
-    List.iter (fun (vg, (par, unif)) ->
-        print_endline ("gmd vg: "^(string_of_code_var_list vg)^
-            " par: "^(string_of_int par)))
-        vars_parents;
-
-    List.iter (fun (te, (par, unif)) ->
-        print_endline ("gmd tp: "^(string_of_map_expression te)^
-            " par: "^(string_of_int par)))
-        term_parents;
+    List.iter (fun (sid, par) ->
+        print_endline ("gmd sid: "^sid^" hash: "^(string_of_int par)))
+        state_parents;
 
     print_endline ("# maps: "^(string_of_int (List.length maps))^
         ", #vars: "^(string_of_int (List.length map_vars)));
@@ -1161,106 +1156,36 @@ let generate_map_declarations maps map_vars vars_parents term_parents =
                         accessor_acc@new_accessors))
             ([], []) maps_and_hvs
     in
-    (* (int * declaration) list * code terminal list *)
-    let (vp_hvs_and_decls, vp_cterms) =
-        List.fold_left
-            (fun (hv_decl_acc, vpk_acc) (vg, (phv, unif)) ->
-                if not(List.mem_assoc phv map_decls_and_cterms) then
-                    begin
-                        print_endline ("Failed to find map key for: "^(string_of_int phv));
-                        let (decl_var, new_hv_decl_acc) =
-                            if (List.mem_assoc phv hv_decl_acc) then
-                                begin
-                                    let phv_decl = List.assoc phv hv_decl_acc in
-                                    let phv_var = match phv_decl with
-                                        | `Variable(v,_) -> v | _ -> raise InvalidExpression
-                                    in
-                                        print_endline ("Using var: "^phv_var^
-                                            " for hash: "^(string_of_int phv));
-                                    (phv_var, hv_decl_acc)
-                                end
-                            else
-                                begin
-                                    let new_decl_var = gen_var_sym() in
-                                        print_endline ("Using newly declared var: "^new_decl_var^
-                                            " for hash: "^(string_of_int phv));
-                                        (new_decl_var,
-                                            hv_decl_acc@[(phv, `Variable(new_decl_var, "int"))])
-                                end
-                        in
-                            (new_hv_decl_acc, vpk_acc@[(vg, `Variable(decl_var))])
-                    end
-                else 
-                    let (_,ct) = List.assoc phv map_decls_and_cterms in
-                        match ct with
-                            | `MapAccess((mid, mf)) ->
-                                  let new_mf = List.map
-                                      (fun f ->
-                                          let f_matches = List.filter
-                                              (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
-                                          in
-                                              match f_matches with
-                                                  | [] -> f
-                                                  | [(_, `ETerm(`Variable(v)))] -> v
-                                                  | _ -> raise DuplicateException)
-                                      mf
-                                  in
-                                  let new_ct = `MapAccess((mid, new_mf)) in
-                                      print_endline ("Using map key: "^
-                                          (string_of_code_expr_terminal new_ct)^
-                                          " for hash: "^(string_of_int phv));
-                                      (hv_decl_acc, vpk_acc@[(vg, new_ct)])
-                            | _ -> raise (CodegenException "Invalid cterm"))
-            ([], []) vars_parents
-    in
-    let (tp_decls, tp_cterms) =
-        List.fold_left (fun (tp_decl_acc, tp_acc) (te, (par, unif)) ->
-            if not(List.mem_assoc par map_decls_and_cterms) then
-                if not(List.mem_assoc par vp_hvs_and_decls) then
-                    begin
-                        (* Generate new variable for query result *)
-                        let new_decl_var = gen_var_sym () in
-                            print_endline ("Using newly declared query var: "^new_decl_var^
-                                " for hash: "^(string_of_int par));
-                            (tp_decl_acc@([`Variable(new_decl_var, "int")]),
-                                (tp_acc@[(te, `Variable(new_decl_var))]))
-                        (*
-                        print_endline ("Could not find declaration for "^(string_of_int par));
-                        raise (CodegenException ("Could not find declaration for "^(string_of_int par)))
-                        *)
-                    end
-                else
-                    let var_decl = List.assoc par vp_hvs_and_decls in
-                    let var_cterm = match var_decl with | `Variable(n,_) -> `Variable(n) in
-                        (tp_decl_acc, tp_acc@[(te, var_cterm)])
-            else
-                let (_,ct) = List.assoc par map_decls_and_cterms in
-                    match ct with
-                        | `MapAccess((mid, mf)) ->
-                              let new_mf = List.map
-                                  (fun f ->
-                                      let f_matches = List.filter
-                                          (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
-                                      in
-                                          match f_matches with
-                                              | [] -> f
-                                              | [(_, `ETerm(`Variable(v)))] -> v
-                                              | _ -> raise DuplicateException)
-                                  mf
-                              in
-                              let new_ct = `MapAccess((mid, new_mf)) in
-                                  print_endline ("Using map key: "^
-                                      (string_of_code_expr_terminal new_ct)^
-                                      " for hash: "^(string_of_int par));
-                                  (tp_decl_acc, tp_acc@[(te, new_ct)])
-                        | _ -> raise (CodegenException "Invalid cterm"))
-            ([], []) term_parents
+    let (new_stp_decls, stp_decls) = List.fold_left
+        (fun (decl_acc, stp_acc) (sid, par) ->
+            let is_map = List.mem_assoc par map_decls_and_cterms in
+            let is_decl = if is_map then false else (List.mem_assoc par decl_acc) in
+                match (is_map, is_decl) with
+                    | (true, false) | (false, true) -> 
+                          let decl =
+                              if is_map then
+                                  let (r, _) = List.assoc par map_decls_and_cterms in r
+                              else
+                                  List.assoc par decl_acc
+                          in
+                              (decl_acc, stp_acc@[(sid, decl)])
+
+                    | (false, false) ->
+                          let new_decl_var = gen_var_sym() in
+                          let new_decl = `Variable(new_decl_var, "int") in
+                              print_endline ("Using newly declared var: "^new_decl_var^
+                                  " for hash: "^(string_of_int par));
+                              (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
+
+                    | _ -> raise (CodegenException "Invalid parent: multiple declarations found."))
+
+        ([],[]) state_parents
     in
     let all_decls =
-        tp_decls@
-        (List.map (fun (_, d) -> d) vp_hvs_and_decls)@
-        (List.map (fun (_,(d,_)) -> d) map_decls_and_cterms) in
-        (all_decls, var_cterms, vp_cterms, tp_cterms)
+        (List.map (fun (_, d) -> d) new_stp_decls)@
+        (List.map (fun (_,(d,_)) -> d) map_decls_and_cterms)
+    in
+        (all_decls, var_cterms, stp_decls)
 
 
 (*
@@ -1450,3 +1375,277 @@ let config_handler global_decls =
 		            end
 		    | _ -> raise InvalidExpression ) "" global_decls 
     in c_handler_1 ^ if_stmts ^ c_handler_2
+
+
+
+(***************************
+ * Stale code
+ ***************************)
+
+(* TODO: handle deletions.
+ * Note: only deletions on selects, nested aggregates need IncrPlan *)
+(*
+let gc_incr_state_dom code decl dom_ds dom_decl oplus diff =
+    let new_decl = if List.mem dom_decl decl then decl else dom_decl::decl in
+    let oper op = function x -> match op with
+        | `Union -> `InsertTuple(dom_ds, x)
+        | `Diff -> `DeleteTuple(dom_ds, x)
+    in
+    let rv = get_return_val code in
+        match rv with
+            | `Eval x ->
+                  let new_code =
+                      match (rv = code, diff) with
+                          | (true, true) ->  `Block([oper oplus x; rv])
+                          | (false, true) -> `Block([replace_return_val code (oper oplus x); rv])
+
+                          | (_, false) ->
+                                print_endline ("gc_incr_state_dom: IncrPlan unsupported.");
+                                raise InvalidExpression
+                  in
+                      (new_code, new_decl)
+            | _ ->
+                  print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
+                  raise (RewriteException "get_incr_state_map: invalid return val")
+*)
+
+(*
+let gc_termp_accessor_code incr_e termp_accessors e e_code e_decl e_vars e_uba_fields op diff recursion_decls =
+    let par_ct = List.assoc incr_e termp_accessors in
+        match par_ct with
+            | `Variable(v) ->
+                  if (List.mem v e_uba_fields) then
+                      begin
+                          print_endline ("Could not find declaration for "^v);
+                          raise InvalidExpression
+                      end
+                  else (gc_incr_state_var e_code v op diff, e_decl)
+
+            | `MapAccess((mid, mf) as mk) ->
+                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
+
+let gc_varp_accessor_code sorted_uba varp_accessors e e_code e_decl e_vars e_uba_fields op diff recursion_decls =
+    let par_access = List.assoc sorted_uba varp_accessors in
+        match par_access with
+            | `Variable(v) ->
+                  if (List.mem v e_uba_fields) then
+                      begin
+                          print_endline ("Could not find declaration for "^v);
+                          raise InvalidExpression
+                      end
+                  else
+                      (gc_incr_state_var e_code v op diff, e_decl)
+
+            | `MapAccess((mid, mf) as mk) ->
+                  print_endline ("Var group: "^(string_of_code_var_list e_uba_fields));
+                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
+*)
+
+(* TODO: update sig *)
+(* map expression list -> (int * variable identifier) list ->
+   (declaration list) *  (var * code terminal) list * (var list * code terminal) list*)
+(*
+let generate_map_declarations maps map_vars state_parents vars_parents term_parents =
+
+    List.iter (fun me ->
+        print_endline ("gmd: "^
+            " hash:"^(string_of_int (dbt_hash me))^
+            " map: "^(string_of_map_expression me)))
+        maps;
+
+    List.iter (fun (hv, var) ->
+        print_endline ("gmd var: "^var^" hash: "^(string_of_int hv)))
+        map_vars;
+
+    List.iter (fun (sid, par) ->
+        print_endline ("gmd sid: "^sid^" hash: "^(string_of_int par)))
+        state_parents;
+
+    List.iter (fun (vg, (par, unif)) ->
+        print_endline ("gmd vg: "^(string_of_code_var_list vg)^
+            " par: "^(string_of_int par)))
+        vars_parents;
+
+    List.iter (fun (te, (par, unif)) ->
+        print_endline ("gmd tp: "^(string_of_map_expression te)^
+            " par: "^(string_of_int par)))
+        term_parents;
+
+    print_endline ("# maps: "^(string_of_int (List.length maps))^
+        ", #vars: "^(string_of_int (List.length map_vars)));
+
+    let get_map_id m_expr me_uba_and_vars =
+        let string_of_attrs attrs =
+            List.fold_left (fun acc f -> acc^f)
+                "" (List.map field_of_attribute_identifier attrs)
+        in
+        let (agg_prefix, agg_attrs) = match m_expr with
+            | `MapAggregate(fn, f, q) ->
+                  let f_uba = get_unbound_attributes_from_map_expression f false in
+                      (begin match fn with | `Sum -> "s" | `Min -> "mn" | `Max -> "mx" end,
+                      f_uba)
+            | _ -> raise InvalidExpression
+        in
+            agg_prefix^"_"^
+                (let r = string_of_attrs agg_attrs in
+                    if (String.length r) = 0 then "1" else r)^"_"^
+                (string_of_attrs me_uba_and_vars)
+    in
+    let maps_and_hvs = List.combine maps (List.map dbt_hash maps) in
+    let (map_decls_and_cterms, var_cterms) =
+        List.fold_left
+            (fun (decl_acc, accessor_acc) (me, me_hv) ->
+                let me_uba_w_vars = get_unbound_attributes_from_map_expression me true in
+                let me_id = get_map_id me me_uba_w_vars in
+                let (new_decl, _) =
+                    gc_declare_state_for_map_expression me [] me_uba_w_vars me_id
+                in
+                ** Handle mulitple uses of this map **
+                let vars_using_map =
+                    let vum = List.map (fun (_,v) -> v)
+                        (List.filter (fun (hv, _) -> hv = me_hv) map_vars)
+                    in
+                        print_endline ("Vars using map "^(string_of_int me_hv)^": "^
+                            (List.fold_left (fun acc var ->
+                                (if (String.length acc) = 0 then "" else acc^", ")^var) "" vum));
+                        vum
+                in
+
+                ** Associate map key with each var using map **
+                let decl_map_key =
+                    match new_decl with
+                        | `Map(id,f,_) -> (id, let (r,_) = List.split f in r)
+                        | _ -> raise (CodegenException ("Invalid map declaration:"^
+                              (identifier_of_declaration new_decl)))
+                in
+                let new_accessors = List.map
+                    (fun v -> (v, `MapAccess(decl_map_key))) vars_using_map
+                in
+                    (decl_acc@[(me_hv, (new_decl, `MapAccess(decl_map_key)))],
+                        accessor_acc@new_accessors))
+            ([], []) maps_and_hvs
+    in
+    ** (int * declaration) list * code terminal list **
+    let (vp_hvs_and_decls, vp_cterms) =
+        List.fold_left
+            (fun (hv_decl_acc, vpk_acc) (vg, (phv, unif)) ->
+                if not(List.mem_assoc phv map_decls_and_cterms) then
+                    begin
+                        print_endline ("Failed to find map key for: "^(string_of_int phv));
+                        let (decl_var, new_hv_decl_acc) =
+                            if (List.mem_assoc phv hv_decl_acc) then
+                                begin
+                                    let phv_decl = List.assoc phv hv_decl_acc in
+                                    let phv_var = match phv_decl with
+                                        | `Variable(v,_) -> v | _ -> raise InvalidExpression
+                                    in
+                                        print_endline ("Using var: "^phv_var^
+                                            " for hash: "^(string_of_int phv));
+                                    (phv_var, hv_decl_acc)
+                                end
+                            else
+                                begin
+                                    let new_decl_var = gen_var_sym() in
+                                        print_endline ("Using newly declared var: "^new_decl_var^
+                                            " for hash: "^(string_of_int phv));
+                                        (new_decl_var,
+                                            hv_decl_acc@[(phv, `Variable(new_decl_var, "int"))])
+                                end
+                        in
+                            (new_hv_decl_acc, vpk_acc@[(vg, `Variable(decl_var))])
+                    end
+                else 
+                    let (_,ct) = List.assoc phv map_decls_and_cterms in
+                        match ct with
+                            | `MapAccess((mid, mf)) ->
+                                  let new_mf = List.map
+                                      (fun f ->
+                                          let f_matches = List.filter
+                                              (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
+                                          in
+                                              match f_matches with
+                                                  | [] -> f
+                                                  | [(_, `ETerm(`Variable(v)))] -> v
+                                                  | _ -> raise DuplicateException)
+                                      mf
+                                  in
+                                  let new_ct = `MapAccess((mid, new_mf)) in
+                                      print_endline ("Using map key: "^
+                                          (string_of_code_expr_terminal new_ct)^
+                                          " for hash: "^(string_of_int phv));
+                                      (hv_decl_acc, vpk_acc@[(vg, new_ct)])
+                            | _ -> raise (CodegenException "Invalid cterm"))
+            ([], []) vars_parents
+    in
+    let (tp_decls, tp_cterms) =
+        List.fold_left (fun (tp_decl_acc, tp_acc) (te, (par, unif)) ->
+            if not(List.mem_assoc par map_decls_and_cterms) then
+                if not(List.mem_assoc par vp_hvs_and_decls) then
+                    begin
+                        ** Generate new variable for query result **
+                        let new_decl_var = gen_var_sym () in
+                            print_endline ("Using newly declared query var: "^new_decl_var^
+                                " for hash: "^(string_of_int par));
+                            (tp_decl_acc@([`Variable(new_decl_var, "int")]),
+                                (tp_acc@[(te, `Variable(new_decl_var))]))
+                    end
+                else
+                    let var_decl = List.assoc par vp_hvs_and_decls in
+                    let var_cterm = match var_decl with | `Variable(n,_) -> `Variable(n) in
+                        (tp_decl_acc, tp_acc@[(te, var_cterm)])
+            else
+                let (_,ct) = List.assoc par map_decls_and_cterms in
+                    match ct with
+                        | `MapAccess((mid, mf)) ->
+                              let new_mf = List.map
+                                  (fun f ->
+                                      let f_matches = List.filter
+                                          (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
+                                      in
+                                          match f_matches with
+                                              | [] -> f
+                                              | [(_, `ETerm(`Variable(v)))] -> v
+                                              | _ -> raise DuplicateException)
+                                  mf
+                              in
+                              let new_ct = `MapAccess((mid, new_mf)) in
+                                  print_endline ("Using map key: "^
+                                      (string_of_code_expr_terminal new_ct)^
+                                      " for hash: "^(string_of_int par));
+                                  (tp_decl_acc, tp_acc@[(te, new_ct)])
+                        | _ -> raise (CodegenException "Invalid cterm"))
+            ([], []) term_parents
+    in
+    let (new_stp_decls, stp_decls) = List.fold_left
+        (fun (decl_acc, stp_acc) (sid, par) ->
+            let is_map = List.mem_assoc par map_decls_and_cterms in
+            let is_decl = if is_map then false else (List.mem_assoc par decl_acc) in
+                match (is_map, is_decl) with
+                    | (true, false) | (false, true) -> 
+                          let decl =
+                              if is_map then
+                                  let (r, _) = List.assoc par map_decls_and_cterms in r
+                              else
+                                  List.assoc par decl_acc
+                          in
+                              (decl_acc, stp_acc@[(sid, decl)])
+
+                    | (false, false) ->
+                          let new_decl_var = gen_var_sym() in
+                          let new_decl = `Variable(new_decl_var, "int") in
+                              print_endline ("Using newly declared var: "^new_decl_var^
+                                  " for hash: "^(string_of_int par));
+                              (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
+
+                    | _ -> raise (CodegenException "Invalid parent: multiple declarations found."))
+
+        ([],[]) state_parents
+    in
+    let all_decls =
+        tp_decls@
+        (List.map (fun (_, d) -> d) vp_hvs_and_decls)@
+        (List.map (fun (_, d) -> d) new_stp_decls)@
+        (List.map (fun (_,(d,_)) -> d) map_decls_and_cterms)
+    in
+        (all_decls, var_cterms, stp_decls, vp_cterms, tp_cterms)
+*)

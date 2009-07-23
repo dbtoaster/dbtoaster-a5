@@ -238,21 +238,20 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 	    print_endline (
 		match x with
 		    | `BindExpr(sym, expr) -> sym^"{"^(string_of_expression expr)^"}"
-		    | `BindBoolExpr(sym, b_expr) -> sym^"{"^(string_of_bool_expression b_expr)^"}"
-		    | `BindMapExpr(sym, m_expr,_) -> sym^"{"^(string_of_map_expression m_expr)^"}"))
+		    | `BindMapExpr(sym, m_expr) -> sym^"{"^(string_of_map_expression m_expr)^"}"))
 	vwap_bindings;
 
-    print_test_type "apply_recompute_rules";
+    print_test_type "analyse_map_expr_incrementality";
     let code_exprs =
 	let bound_map_exprs =
 	    List.fold_left
-		(fun acc b -> match b with | `BindMapExpr (v,d,_) -> d::acc | _ -> acc)
+		(fun acc b -> match b with | `BindMapExpr (v,d) -> d::acc | _ -> acc)
 		[] vwap_bindings
 	in 
 	    List.map 
-		(fun x -> apply_recompute_rules x delta) (vwap_e::bound_map_exprs)
+		(fun x -> analyse_map_expr_incrementality x delta) (vwap_e::bound_map_exprs)
     in
-	print_endline "apply_recompute_rules(vwap):";
+	print_endline "analyse_map_expr_incrementality(vwap):";
 	List.iter
 	    (fun ce -> print_endline ((string_of_map_expression ce)^"\n"))
 	    code_exprs;
@@ -283,25 +282,24 @@ let (vwap_e, vwap_bindings) = extract_map_expr_bindings vwap in
 			    (fun h -> 
 				let br = List.map (fun x -> `Plan x) (get_bound_relations h) in
 				    print_test_type "simplify";
-				    simplify h br [])
+				    simplify h br)
 			    handlers
 		    in
 			List.iter
-			    (fun (h,u) -> print_endline ((string_of_map_expression h)^"\n"))
+			    (fun h -> print_endline ((string_of_map_expression h)^"\n"))
 			    simplified_handlers;;
 
 
-(*
 print_test_type "compile_target";
 
-let ((handler, unifications), bindings) =
+let (handler, bindings) =
     compile_target vwap (`Insert ("B", [("p", "int"); ("v", "int")]))
 in
 let bound_map_exprs =
     List.map
-	(fun b -> match b with | `BindMapExpr(v,e,_) -> e | _ -> raise InvalidExpression)
+	(fun b -> match b with | `BindMapExpr(v,e) -> e | _ -> raise InvalidExpression)
 	(List.filter
-	    (fun b -> match b with | `BindMapExpr(v,e,_) -> true | _ -> false)
+	    (fun b -> match b with | `BindMapExpr(v,e) -> true | _ -> false)
 	    bindings)
 in
     print_endline (String.make 50 '-');
@@ -314,21 +312,17 @@ in
     let (global_decls, handler_code) =
         generate_code handler bindings
             (`Insert ("B", [("p", "int"); ("v", "int")]))
-            false [] [] [] []
+            false [] [] []
     in
 	print_endline "generate_code(vwap):";
 	List.iter (fun x -> print_endline (indented_string_of_code_expression x)) global_decls;
 	print_endline (indented_string_of_code_expression handler_code);;
 
-*)
 
-print_test_type "compile_code";
-compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
-
-(*
 print_test_type "compile_code_rec";
 compile_code_rec vwap "vwap.cc";;
 
+(*
 print_test_type "treeml_of_map_expression";
 let treeml_out_chan = open_out "vwap.tml" in
     output_string treeml_out_chan (treeml_string_of_map_expression vwap);;

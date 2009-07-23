@@ -61,6 +61,8 @@ type oplus = [`Plus | `Minus | `Min | `Max
 
 and  poplus = [`Union | `Diff ]
 
+and  bindings = (attribute_identifier * (expression option)) list
+
 and  map_expression = [
 | `METerm of meterm
 | `Sum of map_expression * map_expression
@@ -71,9 +73,9 @@ and  map_expression = [
 | `MapAggregate of aggregate_function * map_expression * plan
 | `Delta of delta * map_expression
 | `New of map_expression
-| `Init of state_identifier * map_expression
-| `Incr of state_identifier * oplus * map_expression * map_expression
-| `IncrDiff of state_identifier * oplus * map_expression * map_expression
+| `Init of state_identifier * bindings * map_expression
+| `Incr of state_identifier * oplus * map_expression * bindings * map_expression
+| `IncrDiff of state_identifier * oplus * map_expression * bindings * map_expression
 | `Insert of state_identifier * meterm * map_expression
 | `Update of state_identifier * oplus * meterm * map_expression
 | `Delete of state_identifier * meterm
@@ -110,15 +112,14 @@ and plan = [
 | `Cross of plan * plan
 | `DeltaPlan of delta * plan
 | `NewPlan of plan
-| `IncrPlan of state_identifier * poplus * plan * domain
-| `IncrDiffPlan of state_identifier * poplus * plan * domain ]
+| `IncrPlan of state_identifier * poplus * domain * bindings * plan
+| `IncrDiffPlan of state_identifier * poplus * domain * bindings * plan ]
 
 type unifications = attribute_identifier * expression list
 
 type binding = [
 | `BindExpr of variable_identifier * expression
-| `BindBoolExpr of variable_identifier * boolean_expression
-| `BindMapExpr of variable_identifier * map_expression * unifications ]
+| `BindMapExpr of variable_identifier * map_expression ]
 
 type recompute_state = New | Incr
 
@@ -172,6 +173,9 @@ let field_of_attribute_identifier id =
 
 let attribute_identifiers_of_field_list relation_id field_l =
     List.map (fun (id, ty) -> `Qualified(relation_id, id)) field_l
+
+let attributes_of_bindings bindings =
+    List.map (fun (aid, e_opt) -> aid) bindings
 
 (* Plan transformation helpers *)
 let rec fold_map_expr fn acc expr =
@@ -289,9 +293,9 @@ and map_map_expr e_fn b_fn me_fn mp_fn (m_expr : map_expression) =
 
             | `Delta (b, e) -> me_fn (`Delta(b, map_aux e))
             | `New (e) -> me_fn (`New(map_aux e))
-            | `Init (sid, e) -> me_fn (`Init (sid, map_aux e))
-            | `Incr (sid, op, re, e) -> me_fn (`Incr(sid, op, re, map_aux e))
-            | `IncrDiff (sid, op, re, e) -> me_fn (`IncrDiff(sid, op, re, map_aux e))
+            | `Init (sid, bd, e) -> me_fn (`Init (sid, bd, map_aux e))
+            | `Incr (sid, op, re, bd, e) -> me_fn (`Incr(sid, op, re, bd, map_aux e))
+            | `IncrDiff (sid, op, re, bd, e) -> me_fn (`IncrDiff(sid, op, re, bd, map_aux e))
             
             | `Insert (sid, t, e) ->
                   let r_mt = map_aux (`METerm t) in
@@ -331,8 +335,8 @@ and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
             | `Cross (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
             | `DeltaPlan (b, p) -> mp_fn (`DeltaPlan(b, map_aux p))
             | `NewPlan (p) -> mp_fn (`NewPlan (map_aux p))
-            | `IncrPlan (sid, pop, p, d) -> mp_fn (`IncrPlan (sid, pop, map_aux p, d))
-            | `IncrDiffPlan (sid, pop, p, d) -> mp_fn (`IncrDiffPlan (sid, pop, map_aux p, d))
+            | `IncrPlan (sid, pop, d, bd, p) -> mp_fn (`IncrPlan (sid, pop, d, bd, map_aux p))
+            | `IncrDiffPlan (sid, pop, d, bd, p) -> mp_fn (`IncrDiffPlan (sid, pop, d, bd, map_aux p))
 
 
 (* Pretty printing *)	
@@ -408,6 +412,15 @@ let string_of_projections projections =
 		 (string_of_attribute_identifier id)^"<-"^(string_of_expression expr))
 	"" projections
 
+let string_of_bindings bindings = 
+    List.fold_left
+        (fun acc (id, e_opt) ->
+            (if (String.length acc) = 0 then "" else (acc^","))^
+                (string_of_attribute_identifier id)^
+                (match e_opt with
+                    | None -> "" | Some(x) -> ("<-"^(string_of_expression x))))
+        "" bindings
+
 let rec string_of_bool_expression b_expr =
     let dispatch_expr l r op =
 	(string_of_expression l)^op^(string_of_expression r)
@@ -482,14 +495,16 @@ and string_of_map_expression m_expr =
 
 	| `New (e) -> "New("^(string_of_map_expression e)^"}"
 
-	| `Init (sid, e) -> "Init["^(sid)^"]{"^(string_of_map_expression e)^"}"
+	| `Init (sid,bd,e) ->
+              "Init["^(sid)^","^(string_of_bindings bd)^
+                  "]{"^(string_of_map_expression e)^"}"
 
-	| `Incr (sid, op, re, e) ->
-              "Incr["^(string_of_oplus op)^","^(sid)^"]{"^
+	| `Incr (sid, op, re, bd, e) ->
+              "Incr["^(string_of_oplus op)^","^(sid)^","^(string_of_bindings bd)^"]{"^
                   (string_of_map_expression e)^"}"
 
-	| `IncrDiff (sid, op, re, e) ->
-              "IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"^
+	| `IncrDiff (sid, op, re, bd, e) ->
+              "IncrDiff["^(string_of_oplus op)^","^(sid)^","^(string_of_bindings bd)^"]{"^
                   (string_of_map_expression e)^"}"
 
 	| `Insert (sid, m, e) ->
@@ -540,13 +555,15 @@ and string_of_plan p =
 	| `NewPlan (ch) -> 
 	      "New("^(string_of_plan ch)^")"
 
-	| `IncrPlan (sid, po, ch, d) ->
-              "IncrP["^(string_of_poplus po)^","^(sid)^","^
-                  (string_of_attribute_identifier_list d)^"]{"^(string_of_plan ch)^"}"
+	| `IncrPlan (sid, po, d, bd, ch) ->
+              "IncrP["^(string_of_poplus po)^","^(sid)^",b<"^
+                  (string_of_bindings bd)^">,d<"^(string_of_attribute_identifier_list d)^">"^
+                  "]{"^(string_of_plan ch)^"}"
 
-	| `IncrDiffPlan (sid, po, ch, d) ->
-              "IncrDiffP["^(string_of_poplus po)^","^(sid)^","^
-                  (string_of_attribute_identifier_list d)^"]{"^(string_of_plan ch)^"}"
+	| `IncrDiffPlan (sid, po, d, bd, ch) ->
+              "IncrDiffP["^(string_of_poplus po)^","^(sid)^",b<"^
+                  (string_of_bindings bd)^">,d<"^(string_of_attribute_identifier_list d)^">"^
+                  "]{"^(string_of_plan ch)^"}"
 
 
 let rec indented_string_of_bool_expression b_expr level =
@@ -558,6 +575,8 @@ let rec indented_string_of_bool_expression b_expr level =
 	    | `BTerm b ->
 		  begin
 		      match b with
+			  | `True -> "true"
+			  | `False -> "false"
 			  | `LT (l,r) -> dispatch_expr l r "<"
 			  | `LE (l,r) -> dispatch_expr l r "<="
 			  | `GT (l,r) -> dispatch_expr l r ">"
@@ -570,8 +589,6 @@ let rec indented_string_of_bool_expression b_expr level =
 			  | `MLE m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " <= 0")
 			  | `MGT m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " > 0")
 			  | `MGE m_expr -> "\n"^(indented_string_of_map_expression m_expr (level+1))^(indent " >= 0")
-			  | `True -> "true"
-			  | `False -> "false"
 		  end
 	    | `Not (e) -> ("not("^(indented_string_of_bool_expression e (level+1))^")")
 	    | `And (l,r) -> 
@@ -643,18 +660,18 @@ and indented_string_of_map_expression m_expr level =
 		   (indented_string_of_map_expression e (level+1))^
 		   (indent "}")
 
-	| `Init (sid, e) ->
-	      (indent ("Init["^(sid)^"]{"))^
+	| `Init (sid, bd, e) ->
+	      (indent ("Init["^(sid)^","^(string_of_bindings bd)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
-	| `Incr (sid, op, re, e) ->
-	      (indent ("Incr["^(string_of_oplus op)^","^(sid)^"]{"))^
+	| `Incr (sid, op, re, bd, e) ->
+	      (indent ("Incr["^(string_of_oplus op)^","^(sid)^","^(string_of_bindings bd)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
-	| `IncrDiff (sid, op, re, e) ->
-	      (indent ("IncrDiff["^(string_of_oplus op)^","^(sid)^"]{"))^
+	| `IncrDiff (sid, op, re, bd, e) ->
+	      (indent ("IncrDiff["^(string_of_oplus op)^","^(sid)^","^(string_of_bindings bd)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
@@ -730,15 +747,15 @@ and indented_string_of_plan p level =
 		  (indented_string_of_plan ch (level+1))^
 		  (indent ")")
 
-	| `IncrPlan (sid, po, ch, d) ->
+	| `IncrPlan (sid, po, d, bd, ch) ->
 	      (indent ("IncrPlan["^(string_of_poplus po)^","^(sid)^","^
-                  (string_of_attribute_identifier_list d)^"]{"))^
+                  (string_of_bindings bd)^">,d<"^(string_of_attribute_identifier_list d)^">]{"))^
 		  (indented_string_of_plan ch (level+1))^
 		  (indent "}")
 
-	| `IncrDiffPlan (sid, po, ch, d) ->
-	      (indent ("IncrDiffPlan["^(string_of_poplus po)^","^(sid)^","^
-                  (string_of_attribute_identifier_list d)^"]{"))^
+	| `IncrDiffPlan (sid, po, d, bd, ch) ->
+	      (indent ("IncrDiffPlan["^(string_of_poplus po)^","^(sid)^",b<"^
+                  (string_of_bindings bd)^">,d<"^(string_of_attribute_identifier_list d)^">]{"))^
 		  (indented_string_of_plan ch (level+1))^
 		  (indent "}")
 
@@ -771,15 +788,15 @@ let parent m_expr ch_e_or_p =
 
 	    | `MapExpression (`Delta (_, e))
 	    | `MapExpression (`New (e))
-	    | `MapExpression (`Init (_, e)) 
-	    | `MapExpression (`Incr (_, _, _, e))
-	    | `MapExpression (`IncrDiff (_, _, _, e))
+	    | `MapExpression (`Init (_,_,e)) 
+	    | `MapExpression (`Incr (_, _, _, _, e))
+	    | `MapExpression (`IncrDiff (_, _, _, _, e))
 	    | `MapExpression (`Insert (_, _, e))
 	    | `MapExpression (`Update (_, _, _, e)) ->
 		  let match_e = `MapExpression e in
-		      if (ch_e_or_p = match_e) then Some prev_e_or_p
+		      if (ch_e_or_p = match_e) then Some e_or_p
 		      else
-			  parent_aux match_e prev_e_or_p
+			  parent_aux match_e e_or_p
 
 	    | `MapExpression(`Sum (l, r))
 	    | `MapExpression(`Minus (l, r))
@@ -853,7 +870,7 @@ let parent m_expr ch_e_or_p =
 			      if lp = None then parent_aux match_r e_or_p else lp
 		      
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan(p))
-            | `Plan (`IncrPlan(_, _, p,_)) | `Plan (`IncrDiffPlan(_, _, p,_)) ->
+            | `Plan (`IncrPlan(_, _, _, _, p)) | `Plan (`IncrDiffPlan(_, _, _, _, p)) ->
 		  let match_p = `Plan p in
 		      if match_p = ch_e_or_p then Some e_or_p
 		      else parent_aux match_p e_or_p
@@ -878,9 +895,9 @@ let children e_or_p =
 	    | `MapExression (`METerm _) | `MapExpression (`Delete _) -> []
 	    | `MapExpression (`Delta (_,e))
 	    | `MapExpression (`New(e))
-	    | `MapExpression (`Init(_,e))
-	    | `MapExpression (`Incr(_,_,_,e))
-	    | `MapExpression (`IncrDiff(_,_,_,e))
+	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`Incr(_,_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
 	    | `MapExpression (`Update(_,_, _, e)) -> [`MapExpression(e)]
 
@@ -902,7 +919,7 @@ let children e_or_p =
 	    | `Plan (`Union ch) -> List.map (fun x -> `Plan(x)) ch
 	    | `Plan (`Cross(l,r)) -> [`Plan(l); `Plan(r)]
 	    | `Plan (`DeltaPlan (_,e)) | `Plan (`NewPlan(e))
-            | `Plan (`IncrPlan(_,_,e,_)) | `Plan (`IncrDiffPlan (_,_,e,_)) ->
+            | `Plan (`IncrPlan(_,_,_,_,e)) | `Plan (`IncrDiffPlan (_,_,_,_,e)) ->
 		  [`MapExpression(e)]
 	    | _ -> raise InvalidExpression
 
@@ -956,9 +973,9 @@ let splice m_expr orig rewrite =
 			      
 		    | `Delta(b,e) -> `Delta(b, splice_map_expr_aux e)
 		    | `New(e) -> `New(splice_map_expr_aux e) 
-		    | `Init(sid,e) -> `Init(sid, splice_map_expr_aux e)
-		    | `Incr(sid,op,re,e) -> `Incr(sid, op, re, splice_map_expr_aux e)
-		    | `IncrDiff(sid,op,re,e) -> `IncrDiff(sid, op, re, splice_map_expr_aux e)
+		    | `Init(sid,bd,e) -> `Init(sid, bd, splice_map_expr_aux e)
+		    | `Incr(sid,op,re,bd,e) -> `Incr(sid, op, re, bd, splice_map_expr_aux e)
+		    | `IncrDiff(sid,op,re,bd,e) -> `IncrDiff(sid, op, re, bd, splice_map_expr_aux e)
 
 		    | `Insert(sid, m, e) -> `Insert(sid, m, splice_map_expr_aux e)
 		    | `Update(sid, op, m, e) -> `Update(sid, op, m, splice_map_expr_aux e)
@@ -1009,8 +1026,8 @@ let splice m_expr orig rewrite =
 			      
 		    | `DeltaPlan (b, e) -> `DeltaPlan (b, splice_plan_aux e)
 		    | `NewPlan (e) -> `NewPlan(splice_plan_aux e)
-		    | `IncrPlan (sid, p, e, d) -> `IncrPlan (sid, p, splice_plan_aux e, d)
-		    | `IncrDiffPlan (sid, p, e, d) -> `IncrDiffPlan (sid, p, splice_plan_aux e, d)
+		    | `IncrPlan (sid, p, d, bd, e) -> `IncrPlan (sid, p, d, bd, splice_plan_aux e)
+		    | `IncrDiffPlan (sid, p, d, bd, e) -> `IncrDiffPlan (sid, p, d, bd, splice_plan_aux e)
 		    | _ -> raise InvalidExpression
 	    end
     in
@@ -1025,9 +1042,9 @@ let get_base_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Init(_, e))
-	    | `MapExpression (`Incr(_,_,_,e))
-	    | `MapExpression (`IncrDiff(_,_,_,e))
+	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`Incr(_,_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
 	    | `MapExpression (`Update(_,_,_, e)) -> (gbr_aux (`MapExpression e) acc)
 
@@ -1068,7 +1085,7 @@ let get_base_relations m_expr =
 		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p))
-            | `Plan (`IncrPlan (_,_, p,_)) | `Plan (`IncrDiffPlan (_, _,p,_)) ->
+            | `Plan (`IncrPlan (_,_,_,_,p)) | `Plan (`IncrDiffPlan (_,_,_,_,p)) ->
 		  (gbr_aux (`Plan p) acc)
 
 	    | _ -> raise InvalidExpression
@@ -1088,9 +1105,9 @@ let get_bound_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Init(_,e))
-	    | `MapExpression (`Incr(_,_,_,e))
-	    | `MapExpression (`IncrDiff(_,_,_,e))
+	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`Incr(_,_,_,_,e))
+	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
 	    | `MapExpression (`Update(_,_,_, e)) -> (gbor_aux (`MapExpression e) acc)
 
@@ -1130,7 +1147,7 @@ let get_bound_relations m_expr =
 		  (gbor_aux (`Plan r) (gbor_aux (`Plan l) acc))
 
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p))
-            | `Plan (`IncrPlan (_,_,p,_)) | `Plan (`IncrDiffPlan(_,_,p,_)) ->
+            | `Plan (`IncrPlan (_,_,_,_,p)) | `Plan (`IncrDiffPlan(_,_,_,_,p)) ->
 		  (gbor_aux (`Plan p) acc)
 
 	    | `Plan (`TrueRelation) -> acc
@@ -1156,12 +1173,13 @@ let rec get_bound_attributes q =
 	| `Select(pred, cq) -> get_bound_attributes cq
 	| `Project(attrs, cq) -> List.map (fun (a,e) -> a) attrs
 
+        (* Assumes the same attributes across all inputs to the union *)
 	| `Union ch -> get_bound_attributes (List.hd ch)
 	| `Cross (l,r) ->
               (get_bound_attributes l)@(get_bound_attributes r)
 
 	| `DeltaPlan (_, cq) | `NewPlan(cq)
-        | `IncrPlan(_,_,cq,_) | `IncrDiffPlan(_,_,cq,_) -> (get_bound_attributes cq)
+        | `IncrPlan(_,_,_,_,cq) | `IncrDiffPlan(_,_,_,_,cq) -> (get_bound_attributes cq)
 
 
 (* Note: performs qualified comparison if possible *)
@@ -1174,10 +1192,10 @@ let compare_attributes a1 a2 =
 	| (`Unqualified f1, `Unqualified f2) -> f1 = f2
 
 
-let resolve_unbound_attributes attrs bindings =
+let resolve_unbound_attributes attrs bound_attrs =
     List.filter
 	(fun x ->
-            let matches = List.filter (compare_attributes x) bindings in
+            let matches = List.filter (compare_attributes x) bound_attrs in
                 (List.length matches) = 0)
 	attrs
 
@@ -1241,8 +1259,11 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 		  (resolve_unbound_attributes f_uba q_ba)@
 		      (get_unbound_attributes_from_plan q include_vars)
 
-	| `New(e) | `Init(_,e)
-        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
+	| `New(e) | `Init(_,_,e)
+
+        (* TODO: we can return from bindings if they are filled in, i.e. we don't
+         * always need to go into the child map expression *)
+        | `Incr(_,_,_,_,e) | `IncrDiff(_,_,_,_,e) ->
 	      get_unbound_attributes_from_map_expression e include_vars
 
 	| `Insert(_,m,e) | `Update(_,_,m,e) ->
@@ -1287,20 +1308,26 @@ and get_unbound_attributes_from_plan q include_vars =
 	      (get_unbound_attributes_from_plan l include_vars)@
 		  (get_unbound_attributes_from_plan r include_vars)
 
-	| `DeltaPlan(_,e) | `NewPlan(e) | `IncrPlan(_,_,e,_) | `IncrDiffPlan(_,_,e,_) ->
+	| `DeltaPlan(_,e) | `NewPlan(e)
+
+        (* TODO: we can answer from the bindings if they are filled in *)
+        | `IncrPlan(_,_,_,_,e) | `IncrDiffPlan(_,_,_,_,e) ->
 	      get_unbound_attributes_from_plan e include_vars
 
+
 let get_unbound_map_attributes_from_plan f q include_vars =
-    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
-    let q_ba = get_bound_attributes q in
-    let unresolved_fa = resolve_unbound_attributes f_uba q_ba in
-    let unresolved_qa = get_unbound_attributes_from_plan q include_vars
-    in
+    let print_debug f_uba q_ba unresolved_fa unresolved_qa =
         print_endline "get_unbound_map_attributes_from_plan:";
         print_endline ("\tf_uba: "^(string_of_attribute_identifier_list f_uba));
         print_endline ("\tq_ba: "^(string_of_attribute_identifier_list q_ba));
         print_endline ("\tu_fa: "^(string_of_attribute_identifier_list unresolved_fa));
         print_endline ("\tu_qa: "^(string_of_attribute_identifier_list unresolved_qa));
+    in
+    let f_uba = get_unbound_attributes_from_map_expression f include_vars in
+    let q_ba = get_bound_attributes q in
+    let unresolved_fa = resolve_unbound_attributes f_uba q_ba in
+    let unresolved_qa = get_unbound_attributes_from_plan q include_vars in
+        print_debug f_uba q_ba unresolved_fa unresolved_qa;
         unresolved_fa@unresolved_qa
 
 (* Returns the first schema encountered top-down in a plan, i.e. the nearest
@@ -1315,7 +1342,8 @@ let rec get_flat_schema plan =
         | `Union ch -> List.flatten (List.map get_flat_schema ch)
         | `Cross (l, r) -> (get_flat_schema l)@(get_flat_schema r)
         | `DeltaPlan (_, cq) | `NewPlan cq -> get_flat_schema cq
-        | `IncrPlan (_, _, _,d) | `IncrDiffPlan (_, _, _,d) -> d
+        | `IncrPlan (_, _, d, _, cq) | `IncrDiffPlan (_, _, d, _, cq) ->
+              if List.length d = 0 then get_flat_schema cq else d
 
 (* Returns all attributes used in the map expression, except unbound attributes.
  * Note this includes intermediate attributes such as those from projections. *)
@@ -1341,8 +1369,8 @@ let rec get_attributes_used_in_map_expression m_expr =
               in
                   get_attributes_used_in_plan q f_used
 
-	| `New(e) | `Init (_,e)
-        | `Incr(_,_,_,e) | `IncrDiff(_,_,_,e) ->
+	| `New(e) | `Init (_,_,e)
+        | `Incr(_,_,_,_,e) | `IncrDiff(_,_,_,_,e) ->
 	      get_attributes_used_in_map_expression e
 
 	| `Insert(_,m,e) | `Update(_,_,m,e) ->
@@ -1454,10 +1482,10 @@ and get_attributes_used_in_plan plan attrs_used_above =
                   (get_attributes_used_in_plan r
                       (intersect_attributes attrs_used_above r_ba))
 
-	| `DeltaPlan(_,e) | `NewPlan(e) ->
-              get_attributes_used_in_plan e attrs_used_above
+	| `DeltaPlan(_,q) | `NewPlan(q) ->
+              get_attributes_used_in_plan q attrs_used_above
 
-        | `IncrPlan(_,_,e,d) | `IncrDiffPlan(_,_,e,d) ->
+        | `IncrPlan(_,_,d,_,q) | `IncrDiffPlan(_,_,d,_,q) ->
               (* check each domain attribute is used *)
               let attrs_used = intersect_attributes d attrs_used_above in
                   if ( (List.length attrs_used) != (List.length d) ) then
@@ -1468,7 +1496,7 @@ and get_attributes_used_in_plan plan attrs_used_above =
                           print_endline ("Domain: "^(string_of_attribute_identifier_list d));
                           raise (ValidationException "Non-minimal domain found.");
                       end;
-                  get_attributes_used_in_plan e attrs_used_above
+                  get_attributes_used_in_plan q attrs_used_above
 
 
 let rec find_cmp_aggregate m_expr =
@@ -1483,8 +1511,8 @@ let rec find_cmp_aggregate m_expr =
 
         | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
 
-        | `Delta (_, e) | `New e | `Init(_,e)
-        | `Incr (_,_,_,e) | `IncrDiff (_,_,_,e)
+        | `Delta (_, e) | `New e | `Init(_,_,e)
+        | `Incr (_,_,_,_,e) | `IncrDiff (_,_,_,_,e)
         | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
         | `Delete _ -> false
         | `IfThenElse(`MEQ(p), l, r) | `IfThenElse(`MNEQ(p), l, r) 
@@ -1511,7 +1539,17 @@ and find_cmp_aggregate_plan q =
         | `Cross (l,r) ->
               (find_cmp_aggregate_plan l) || (find_cmp_aggregate_plan r)
         | `DeltaPlan (_, cq) | `NewPlan cq
-        | `IncrPlan (_,_,cq,_) | `IncrDiffPlan (_,_,cq,_) -> find_cmp_aggregate_plan cq
+        | `IncrPlan (_,_,_,_,cq) | `IncrDiffPlan (_,_,_,_,cq) -> find_cmp_aggregate_plan cq
+
+
+(* map_expression -> plan -> bool
+ * returns whether a map aggregate expression is independent from its query *)
+let is_independent m_expr q =
+    let q_ba = get_bound_attributes q in
+    let me_a = get_unbound_attributes_from_map_expression m_expr false in
+    let me_al = List.length me_a in
+    let unresolved_l = List.length (resolve_unbound_attributes me_a q_ba) in
+	(me_al = 0) || (me_al > 0 && (me_al = unresolved_l))
 
 
 (* returns whether any bindings are used by m_expr and the bound variables *)
@@ -1521,7 +1559,7 @@ let is_binding_used m_expr bindings =
     let bindings_used =
         List.filter
             (fun x -> match x with
-                | `BindMapExpr(var_id, _, _) ->
+                | `BindMapExpr(var_id, _) ->
                       List.mem (`Unqualified(var_id)) m_ubav
                 | _ -> false)
             bindings
@@ -1529,7 +1567,7 @@ let is_binding_used m_expr bindings =
     let binding_used_rv =
         List.map
             (fun x -> match x with
-                | `BindMapExpr(v, bc, _) -> v
+                | `BindMapExpr(v, bc) -> v
                 | _ -> raise InvalidExpression)
             bindings_used
     in
@@ -1537,6 +1575,247 @@ let is_binding_used m_expr bindings =
             | [] -> (false, [])
             | x -> (true, x)
 
+(*
+ * Extracted binding helpers
+ *)
+
+(* var_id -> extracted bindings -> expression *)
+let get_expr_definition var ext_bindings =
+    match var with
+	| `Variable(sym) ->
+	      let matches =
+		  List.filter
+		      (fun x -> match x with
+			  | `BindExpr (n,d) -> n = sym
+			  | `BindMapExpr _ -> false)
+		      ext_bindings
+	      in
+		  begin
+		      match matches with
+			  | [] -> raise Not_found
+			  | [`BindExpr(n,d)] -> d
+			  | (`BindExpr(n,d))::t -> d (* raise exception for duplicate bindings? *)
+			  | _ -> raise Not_found 
+		  end
+	| _ -> raise Not_found
+
+(* Note removes duplicate bindings *)
+let remove_expr_binding var ext_bindings =
+    match var with
+	| `Variable(sym) ->
+	      List.filter
+		  (fun x -> match x with
+		      | `BindExpr (n,d) -> n <> sym
+		      | `BindMapExpr _ -> true)
+		  ext_bindings
+	| _ -> raise Not_found
+
+
+(* expression -> bool 
+ * returns whether the expression is constant,
+ * i.e. uses only constants and variables, not attributes *)
+let rec is_constant_expr expr =
+    match expr with
+	| `ETerm (`Attribute _) -> false
+	| `ETerm (`Int _) | `ETerm (`Float _)
+	| `ETerm (`String _) | `ETerm (`Long _) | `ETerm (`Variable _) -> true
+	| `UnaryMinus e -> is_constant_expr e
+	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
+	      is_constant_expr(l) && is_constant_expr(r)
+
+	(* TODO: && is_deterministic(fid) *)
+	| `Function(fid, args) -> List.for_all is_constant_expr args
+
+let rec is_static_constant_expr expr =
+    match expr with
+	| `ETerm (`Attribute _) | `ETerm (`Variable _) -> false
+	| `ETerm (`Int _) | `ETerm (`Float _)
+	| `ETerm (`String _) | `ETerm (`Long _) -> true
+	| `UnaryMinus e -> is_static_constant_expr e
+	| `Sum(l,r) | `Product(l,r) | `Minus(l,r) | `Divide(l,r) ->
+	      is_static_constant_expr(l) && is_static_constant_expr(r)
+
+	(* TODO: && is_deterministic(fid) *)
+	| `Function(fid, args) -> List.for_all is_static_constant_expr args
+
+(* expression -> extracted bindings -> bool *)
+let is_bound_expr expr ext_bindings =
+    try
+	match expr with
+	    | `ETerm(`Variable v) ->
+		  let _ = get_expr_definition (`Variable v) ext_bindings in true
+	    | _ -> false
+    with Not_found -> false
+
+
+(*
+ * Preprocessing helpers
+ *) 
+let rename_attributes m_expr =
+    let base_relation_ht = Hashtbl.create 10 in
+    let rename_fields f counter =
+        let counter_str = string_of_int counter in
+            List.map (fun (id,ty) -> (id^counter_str, ty)) f
+    in
+    let rec rename_expression e replacements =
+        let rename_binary l r fn =
+            let (nl, rl) = rename_expression l replacements in
+            let (nr, rr) = rename_expression r replacements in
+                (fn nl nr, rl@rr)
+        in
+            match e with
+                | `ETerm(`Attribute(x)) ->
+                      let f = field_of_attribute_identifier x in
+                          if List.mem_assoc f replacements then
+                              (`ETerm(`Attribute(
+                                  `Unqualified(List.assoc f replacements))),
+                              replacements)
+                          else (e, replacements)
+
+                | `ETerm(_) -> (e, replacements)
+                | `UnaryMinus e -> let (ne, nr) = rename_expression e replacements in
+                      (`UnaryMinus(ne), nr)
+
+                | `Sum (l,r) -> rename_binary l r (fun x y -> `Sum(x,y))
+                | `Product (l,r) -> rename_binary l r (fun x y -> `Product(x,y))
+                | `Minus (l,r) -> rename_binary l r (fun x y -> `Minus(x,y))
+                | `Divide (l,r) -> rename_binary l r (fun x y -> `Divide(x,y))
+                | `Function (fid, args) ->
+                      let (new_args, ar) = List.split(
+                          List.map (fun a -> rename_expression a replacements) args)
+                      in
+                          (`Function(fid, new_args), List.flatten ar)
+                              
+    and rename_predicate b replacements =
+        let rename_binary l r fn =
+            let (nl, rl) = rename_predicate l replacements in
+            let (nr, rr) = rename_predicate r replacements in
+                (fn nl nr, rl@rr)
+        in
+        let rbt_bin l r fn =
+            let (nl, rl) = rename_expression l replacements in
+            let (nr, rr) = rename_expression r replacements in
+                (`BTerm(fn nl nr), rl@rr)
+        in
+        let rbt_me m_expr fn =
+            let (nme, r) = rename_map_expression m_expr replacements in
+                (`BTerm(fn nme), r)
+        in
+            match b with
+                | `BTerm(x) ->
+                      begin
+                          match x with
+                              | `True | `False -> (b, replacements)
+                              | `LT (l,r) -> rbt_bin l r (fun x y -> `LT(x,y))
+                              | `LE (l,r) -> rbt_bin l r (fun x y -> `LE(x,y))
+                              | `GT (l,r) -> rbt_bin l r (fun x y -> `GT(x,y))
+                              | `GE (l,r) -> rbt_bin l r (fun x y -> `GE(x,y))
+                              | `EQ (l,r) -> rbt_bin l r (fun x y -> `EQ(x,y))
+                              | `NE (l,r) -> rbt_bin l r (fun x y -> `NE(x,y))
+                              | `MEQ m_expr -> rbt_me m_expr (fun e -> `MEQ(e))
+                              | `MNEQ m_expr -> rbt_me m_expr (fun e -> `MNEQ(e))
+                              | `MLT m_expr -> rbt_me m_expr (fun e -> `MLT(e))
+                              | `MLE m_expr -> rbt_me m_expr (fun e -> `MLE(e))
+                              | `MGT m_expr -> rbt_me m_expr (fun e -> `MGT(e))
+                              | `MGE m_expr -> rbt_me m_expr (fun e -> `MGE(e))
+                      end
+                | `Not cb -> let (n,r) = rename_predicate cb replacements in (`Not(n), r)
+                | `And (l,r) -> rename_binary l r (fun x y -> `And(x,y))
+                | `Or (l,r) -> rename_binary l r (fun x y -> `Or(x,y))
+
+                      
+    and rename_map_expression e replacements =
+        let rename_binary l r fn =
+            let (new_l, rep_l) = rename_map_expression l replacements in
+            let (new_r, rep_r) = rename_map_expression r replacements in
+                (fn new_l new_r, rep_l@rep_r)
+        in
+            match e with
+                | `METerm(`Attribute(x)) ->
+                      let f = field_of_attribute_identifier x in
+                          if List.mem_assoc f replacements then
+                              (`METerm(`Attribute(
+                                  `Unqualified(List.assoc f replacements))),
+                              replacements)
+                          else (e, replacements)
+
+                | `METerm _ -> (e, replacements)
+                | `Sum (l,r) -> rename_binary l r (fun x y -> `Sum(x,y))
+                | `Minus (l,r) -> rename_binary l r (fun x y -> `Minus(x,y))
+                | `Product (l,r) -> rename_binary l r (fun x y -> `Product(x,y))
+                | `Min (l,r) -> rename_binary l r (fun x y -> `Min(x,y))
+                | `Max (l,r) -> rename_binary l r (fun x y -> `Max(x,y))
+                | `MapAggregate (fn, f, q) ->
+                      let (new_q, q_replaced) = rename_plan q replacements in
+                      let (new_f, f_replaced) = rename_map_expression f q_replaced in
+                          (`MapAggregate(fn, new_f, new_q), [])
+
+                | `IfThenElse _
+                | `Delta _ | `New _ | `Init _
+                | `Incr _ | `IncrDiff _ 
+                | `Insert _ | `Update _ | `Delete _ -> raise InvalidExpression
+
+    and rename_plan p replacements =
+        let override_replacements old_fields new_fields =
+            let local_replacements = List.combine
+                (let (fnames,_) = List.split old_fields in fnames)
+                (let (nfnames,_) = List.split new_fields in nfnames)
+            in
+            let filtered_replacements =
+                List.filter
+                    (fun (f,_) -> not(List.mem_assoc f local_replacements))
+                    replacements
+            in
+                filtered_replacements@local_replacements
+        in
+            match p with
+                | `TrueRelation | `FalseRelation -> (p, replacements)
+                | `Relation (n,f) ->
+                      if Hashtbl.mem base_relation_ht n then
+                          let new_counter = (Hashtbl.find base_relation_ht n) + 1 in
+                              Hashtbl.replace base_relation_ht n new_counter;
+                              let new_f = rename_fields f new_counter in
+                              let new_replacements = override_replacements f new_f in
+                                  (`Relation (n, new_f), new_replacements)
+                      else
+                          begin
+                              Hashtbl.add base_relation_ht n 0;
+                              let new_f = rename_fields f 0 in
+                              let new_replacements = override_replacements f new_f in
+                                  (`Relation (n, new_f), new_replacements)
+                          end
+
+                | `Select (pred, cq) ->
+                      let (new_cq, cq_replaced) = rename_plan cq replacements in
+                      let (new_pred, _) = rename_predicate pred cq_replaced in
+                          (`Select(new_pred, new_cq), cq_replaced)
+
+                | `Project (projs, cq) ->
+                      let (new_cq, cq_replaced) = rename_plan cq replacements in
+                      let new_projs =
+                          List.map (fun (a, e) ->
+                              let (ne, _) = rename_expression e cq_replaced in (a,ne))
+                              projs
+                      in
+                          (`Project(new_projs, new_cq), cq_replaced)
+
+                | `Union ch ->
+                      let (new_ch, replaced) = List.split
+                          (List.map (fun c -> rename_plan c replacements) ch)
+                      in
+                          (`Union ch, List.flatten replaced)
+
+                | `Cross (l,r) ->
+                      let (new_l, rep_l) = rename_plan l replacements in
+                      let (new_r, rep_r) = rename_plan r replacements in
+                          (`Cross(new_l,new_r), rep_l@rep_r)
+
+                | `Domain _
+                | `DeltaPlan _ | `NewPlan _
+                | `IncrPlan _ | `IncrDiffPlan _
+                      -> raise InvalidExpression
+    in
+        rename_map_expression m_expr []
 
 
 (* Monotonicity analysis
@@ -1869,6 +2148,7 @@ type map_identifier = identifier
  *     delete(iterator)
  * other operations: operator*(iterator), get<idx>(val)
  *)
+
 type datastructure = [
 | `Map of map_identifier * (field list) * type_identifier 
 | `Set of relation_identifier * (field list)
@@ -2329,7 +2609,7 @@ let append_blocks l_block r_block =
 	| _ -> raise InvalidExpression
 
 (* `EraseMap should not occur as return val
- * TODO: think about `DeleteDomain, since this may occur on IncrPlan(_,`Minus,_,_)
+ * TODO: think about `DeleteTuple, since this may occur on IncrPlan(_,`Minus,_,_)
  *)
 let rec get_return_val c_expr =
     match c_expr with
@@ -2342,7 +2622,7 @@ let rec get_return_val c_expr =
               print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
 
-(* TODO: see above note on `DeleteDomain *)
+(* TODO: see above note on `DeleteTuple *)
 let remove_return_val c_expr =
     let rec remove_aux c =
         match c with
@@ -2371,7 +2651,7 @@ let remove_return_val c_expr =
             | None -> raise (RewriteException "Attempted to remove top level expression")
             | Some x -> x
 
-(* TODO: see above note on `DeleteDomain *)
+(* TODO: see above note on `DeleteTuple *)
 let rec replace_return_val c_expr new_rv =
     match c_expr with
         | `Eval _ -> new_rv
@@ -2387,7 +2667,7 @@ let rec replace_return_val c_expr new_rv =
               raise InvalidExpression
 
 (* indicates whether the given code is a return value, and whether it is replaceable *)
-(* TODO: see above note on `DeleteDomain *)
+(* TODO: see above note on `DeleteTuple *)
 let rec is_local_return_val code rv =
     match code with
         | `Eval _ -> (code = rv, false)
@@ -2456,7 +2736,7 @@ let merge_blocks l_block r_block merge_fn decl =
                   "right:\n"^(indented_string_of_code_expression r_block));
               raise InvalidExpression
 
-(**/**)
+
 let rec get_last_code_expr c_expr = 
     match c_expr with
 	| `Declare _ | `Assign _ 
@@ -2470,4 +2750,15 @@ let rec get_last_code_expr c_expr =
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 
 
+let validate_incr_ops expr_op plan_op =
+    match (expr_op, plan_op) with
+        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union)
+        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff)
+              -> ()
+        | _ -> raise (ValidationException "Invalid op pair.")
 
+let is_insert_incr expr_op plan_op =
+    match (expr_op, plan_op) with
+        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union) -> true
+        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
+        | _ -> raise (ValidationException "Invalid op pair.")
