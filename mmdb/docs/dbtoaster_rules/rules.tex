@@ -42,10 +42,11 @@
 \def\algupdate{\mathrm{update}}
 \def\algdelete{\mathrm{delete}}
 \def\algfor{\mathrm{foreach}}
-
+\def\algavg{\mathrm{avg}}
 \def\algsumr{\mbox{sumr}}
 \def\algsumf{\mbox{sumf}}
 \def\algaggf{\mbox{aggf}}
+\def\algcount{\mbox{count}}
 \def\distinct{\mbox{distinct}}
 \def\routerjoin{\bowtie\!=}
 
@@ -1743,6 +1744,9 @@ Finally,
 \end{eqnarray*}
 
 \pagebreak
+\include {linearroad}
+%
+\begin{comment}
 Linearroad example.
 \begin{eqnarray*}
 q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedge\;\\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; \\ID11 = ID \;\wedge\; LANE11 = LANE \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\;\\ LANE22 = LANE2 \;\wedge\; TIME22 = TIME2 + 110}} \left(\begin{array}{cc}A \times \rho_{ID2, LANE2, TIME2}(A) \times\\ \rho_{ID11, LANE11, TIME11}(A) \times \rho_{ID22, LANE22, TIME22}(A)\end{array}\right)
@@ -1761,13 +1765,28 @@ q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedg
 \\
 &\stackrel{(\ref{eq:b5})}{=}&
 \algincr_{min, S} \algmin_{ID} (\algincr_{\cup, S_Q} \sigma_{\dots} (
-(\Delta_{+A(id, lane, time)} A \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+(\Delta_{} A \times \rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+( A \times \Delta_{}\rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
 \\&&\quad
-( A \times \Delta_{+A(id, lane, time)}\rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+( A \times \rho_{2}(A) \times \Delta_{} \rho_{11}(A) \times \rho_{22}(A))\cup
+( A \times \rho_{2}(A) \times \rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
 \\&&\quad
-( A \times \rho_{2}(A) \times \Delta_{+A(id, lane, time)} \rho_{11}(A) \times \rho_{22}(A))\cup
+(\Delta_{} A \times \Delta_{}\rho_{2}(A) \times \rho_{11}(A) \times \rho_{22}(A))\cup
+( \Delta_{}A \times \rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \rho_{22}(A))\cup
 \\&&\quad
-( A \times \rho_{2}(A) \times \rho_{11}(A) \times \Delta_{+A(id, lane, time)}\rho_{22}(A))
+(\Delta_{} A \times \rho_{2}(A) \times \rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+( A \times \Delta_{}\rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \Delta_{}\rho_{2}(A) \times \rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+( A \times \rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+\\&&\quad
+( \Delta_{}A \times \Delta_{}\rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \rho_{22}(A))\cup
+( \Delta_{}A \times \Delta_{}\rho_{2}(A) \times \rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+\\&&\quad
+( \Delta_{}A \times \rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+( A \times \Delta_{}\rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \Delta_{}\rho_{22}(A))\cup
+\\&&\quad
+( \Delta_{}A \times \Delta_{}\rho_{2}(A) \times \Delta_{}\rho_{11}(A) \times \Delta_{}\rho_{22}(A))
 ))
 \\
 %
@@ -1779,7 +1798,31 @@ q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedg
 \\&&\quad
 ( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
 \\&&\quad
-( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})
+( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+%
+(\pi_{id \rightarrow ID lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+( \pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+(\pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+%
+( \pi_{id , lane , time }\{\tuple{}\} \times \pi_{id, lane, time }\{\tuple{}\} \times \pi_{id, lane, time }\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+( \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \rho_{11}(A) \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+( \pi_{id, lane, time}\{\tuple{}\} \times \rho_{2}(A) \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+( A \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+( \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})
 ))
 \\
 %
@@ -1791,8 +1834,35 @@ q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedg
 \\&&\quad
 \sigma_{\dots}( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
 \\&&\quad
-\sigma_{\dots}( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})
-))
+\sigma_{\dots}( A \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+\end{eqnarray*}
+\pagebreak
+\begin{eqnarray*}
+&&\quad
+\sigma_{\dots}(\pi_{id \rightarrow ID lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}( \pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}(\pi_{id \rightarrow ID, lane \rightarrow LANE, time \rightarrow TIME}\{\tuple{}\} \times \rho_{2}(A) \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+\sigma_{\dots}( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}( A \times \pi_{id \rightarrow ID2, lane \rightarrow LANE2, time \rightarrow TIME2}\{\tuple{}\} \times \rho_{11}(A) \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+\sigma_{\dots}( A \times \rho_{2}(A) \times \pi_{id \rightarrow ID11, lane \rightarrow LANE11, time \rightarrow TIME11}\{\tuple{}\} \times \pi_{id \rightarrow ID22, lane \rightarrow LANE22, time \rightarrow TIME22}\{\tuple{}\})\cup
+\\&&\quad
+%
+\sigma_{\dots}( \pi_{id , lane , time }\{\tuple{}\} \times \pi_{id, lane, time }\{\tuple{}\} \times \pi_{id, lane, time }\{\tuple{}\} \times \rho_{22}(A))\cup
+\\&&\quad
+\sigma_{\dots}( \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \rho_{11}(A) \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+\sigma_{\dots}( \pi_{id, lane, time}\{\tuple{}\} \times \rho_{2}(A) \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+\sigma_{\dots}( A \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})\cup
+\\&&\quad
+\sigma_{\dots}( \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\} \times \pi_{id, lane, time}\{\tuple{}\})
+)
 \\
 %
 &\stackrel{(\ref{eq:rs1})}{=}&
@@ -1817,4 +1887,5 @@ q &:=& \algmin_{ID} (\sigma_{\substack{ID2 <> ID \;\wedge\; LANE2 = LANE \;\wedg
 )
 \\
 \end{eqnarray*}
+\end{comment}
 \end{document}

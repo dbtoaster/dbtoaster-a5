@@ -1,0 +1,570 @@
+\begin{comment}
+\documentclass{article}
+
+\usepackage{fullpage}
+
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{txfonts}
+\usepackage{verbatim}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+\newtheorem{todo}[theorem]{ToDo}
+
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+
+\begin{document}
+
+\def\algsum{\mathrm{sum}}
+\def\algagg{\mathrm{agg}}
+\def\algtop{\mathrm{top}}
+\def\algtopk{\mathrm{topk}}
+
+\def\algnew{\mathrm{new}}
+\def\algmin{\mathrm{min}}
+\def\algmax{\mathrm{max}}
+\def\algincr{\mathrm{incr}}
+\def\algincrdiff{\mathrm{incrdiff}}
+\def\alginsert{\mathrm{insert}}
+\def\algupdate{\mathrm{update}}
+\def\algdelete{\mathrm{delete}}
+\def\algfor{\mathrm{foreach}}
+\def\algavg{\mathrm{avg}}
+\def\algsumr{\mbox{sumr}}
+\def\algsumf{\mbox{sumf}}
+\def\algaggf{\mbox{aggf}}
+\def\algcount{\mbox{count}}
+\def\distinct{\mbox{distinct}}
+\def\routerjoin{\bowtie\!=}
+\end{comment}
+I = Input (Type, Time, Carid, Speed, Xway, Lane, Dir, Seg, Pos, Qid, M\_init, M\_end, Dow, Tod, Day)
+Accident ( Carid1, Carid2, firstMinute, lastMinute, dir, seg, pos )
+\begin{eqnarray*}
+%Accident
+Accident.id1[d, s, p] &=& \algmin_{ID} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )\\
+%
+Accident.id2[d, s, p] &=& \algmax_{ID2} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )\\
+%
+Accident.firstMinute[d, s, p] &=& (\algmin_{TIME} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )+90)/60+1\\
+%
+Accident.lastMinute[d, s, p] &=& (\algmax_{TIME} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )+120)/60+1
+\end{eqnarray*}
+%
+Statistics (dir, seg, minute, numvehicles, lav, toll, accident, accidentSeg)
+\begin{eqnarray*}
+%Statistics
+Statistics.numVehicles[m, s, d] &=& \algcount_{ID} (\sigma_{ DIR = d \wedge SEG = s \wedge TIME/60 + 2 = m \wedge TYPE = 0 }(Input) ))\\
+\end{eqnarray*}
+Distinct count aggregate function
+\begin{eqnarray*}
+\Delta_{+R(\vec{r})} \algcount_{f} (Q) &=& \algsum_{1} \algincrdiff_{\cup'(i), S_{Q}} \distinct_{f} (\Delta_{+R(\vec{r})} (Q))\\
+\algincrdiff_{\cup'(i), S_{Q}} \distinct_{f} \Delta Q &=& temp = \emptyset ; \\
+&& \mbox { foreach ( $i$ ) \{ } \\
+&& \quad \mbox{ if ($S_Q$.find($i$)) then $S_Q[i] ++$; }\\
+&& \quad \mbox{ else \{ $S_Q$.insert($i$, $1$)}; temp \leftarrow temp \cup \{i\};\} \\
+&& \}; temp\\
+\Delta_{-R(\vec{r})} \algcount_{f} (Q) &=& \algsum_{1} \algincrdiff_{-'(i), S_{Q}} \distinct_{f} (\Delta_{-R(\vec{r})} (Q))\\
+\algincrdiff_{-'(i), S_{Q}} \distinct_{f} \Delta (Q) &=& temp = \emptyset ; \\
+&& \mbox { foreach ($i$) \{ } \\
+&& \quad \mbox{ if ($S_Q[i] = 1$) then \{$S_Q$.delete($i$); } temp \leftarrow temp \cup \{i\}; \} \\
+&& \quad \mbox{ else $S_Q[i]--$; } \\
+&& \}; temp \\
+\end{eqnarray*}
+\begin{eqnarray*}
+Statistics.toll[m, s, d] &=& 
+\algmax_{ 2*(Stats.numVehicles[m,s,d] - 50)^2} ( \\&& \sigma_{\substack{(\algsum_{1} (\sigma_{\substack { DIR = d \wedge fristMinute +1 <= m \wedge lastMinute + 1 >= m \wedge
+\\ ((DIR = 0 \wedge SEG >= s \wedge Seg <= s +4) \vee \\(DIR <> 0 \wedge SEG <= s \wedge Seg >= s -4))}} (Accident))) = 0) \wedge (Lav < 40 \wedge numVehicles > 50)}} (Accident))\\
+Statistics.accident[m, s, d] &=& 
+\algsum_{1} \sigma_{\substack{DIR = d \;\wedge\; firstMinute +1 <= m\; \wedge\; lastMinute +1 >= m \;\wedge\\ ((DIR = 0 \;\wedge\; SEG  >= s \;\wedge\; SEG <= s +4 ) \vee (DIR <> 0 \;\wedge\; SEG <= s \;\wedge\; SEG >= s-4))}} (Accident)\\
+%&\dots & \mbox { if } (\pi_{SEG} (\sigma_{\substack{SEG = s \;\wedge\; firstMinute +1 <= m\; \wedge\; lastMinute +1 >= m \;\wedge\\ ((DIR = 0 \;\wedge\; SEG  >= s \;\wedge\; SEG <= s +4 ) \vee (DIR <> 0 \;\wedge\; SEG <= s \;\wedge\; SEG >= s-4))}} (Accident) \ne \emptyset )\\
+%&=& 0 \quad \mbox{Otherwise}\\
+Statistics.accidentSeg[m, s, d] &=& \algmin_{SEG} (\sigma_{\substack{DIR = d \;\wedge\; firstMinute +1 <= m\; \wedge\; lastMinute +1 >= m \;\wedge\\ ((DIR = 0 \;\wedge\; SEG  >= s \;\wedge\; SEG <= s +4 ) \vee (DIR <> 0 \;\wedge\; SEG <= s \;\wedge\; SEG >= s-4))}} (Accident) \\
+%&& \mbox {if } Statistics.accident = 1 \\
+%&=& 0 \quad \mbox { Otherwise}
+\end{eqnarray*}
+%
+Calculating Lav 
+\begin{eqnarray*}
+preprelav.speed[v, m, s, d] &=&
+\algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = v \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I))\\
+%
+prelav.speed[m,s,d] &=& \algavg_{preprelav.speed[I.ID,m,s,d]} (\sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I))\\
+&=&
+\algavg_{\algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = I.ID \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I2))}(\sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I)) \\
+%
+Statistics.lav[m, s, d] &=& \algavg_{prelav.speed[TIME/60+1,s,d]} (\sigma_{TIME/60+1 <= m-1 \wedge TIME/60+1 >= m-5} (I))\\
+\end{eqnarray*}
+tollAccAlerts ( time, id, dir, seg, lav, toll, accidentSeg )
+\begin{eqnarray*}
+tollAccAlerts.time[v,s,d] &=& \algmin_{TIME} ( \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (Input))\\
+tollAccAlerts.lav[t,s,d] &=& Statistics.lav[t/60+1,s,d]\\
+tollAccAlerts.toll[t,s,d] &=& Statistics.toll [t/60+1,s,d]\\
+tollAccAlerts.accidentSeg[t,s,d] &=& Statistics.accidentSeg[t/60+1,s,d]\\
+\end{eqnarray*}
+TAA = tollAccAlerts
+\begin{eqnarray*}
+AccountBalanceNow.toll[t,v,q] &=&
+\algsum_{TAA.toll} (\sigma_{I.ID = v \wedge I.TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} 
+(\sigma_{type = 2} (I) \times TAA))\times TAA))\\
+DailyExpenditureAnswer.bal[v,q,n] &=& 
+\algsum_{cH.toll} ( \sigma_{\substack{cH.ID = v \wedge cH.DAY = n \wedge I.QID = q \wedge I.DAY = cH.DAY \wedge\\ I.DAY = cH.DAY \wedge I.ID = cH.ID \wedge I.XWAY = cH.XWAY}} ( \sigma_{type = 3} (I) \times cH))
+\end{eqnarray*}
+\pagebreak
+\begin{eqnarray*}
+\algnew_{+I} Accident.id1[d, s, p] &=& \algnew_{+I} \algmin_{ID} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )\\
+%
+&=& \algincr_{min} \delta_{+I} \algmin_{ID} (
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )\\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} \Delta_{+I}
+(\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22)) ) )\\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \\ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\;\\ POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\; \\ LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120}} \\
+&& (\Delta_{+I} (\sigma_{SPEED = 0 \wedge TYPE = 0} (I) \times (\sigma_{SPEED2 = 0 \wedge TYPE2 = 0} (I2)) \times (\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} (I11)) \\
+&&\times (\sigma_{SPEED22 = 0 \wedge TYPE22 = 0} (I22))))\\
+%
+\end{eqnarray*}
+\begin{eqnarray*}
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{ \dots} \\ &&(
+(\Delta\sigma_{\dots}(I) \times \sigma_{\dots}(I2) \times  \sigma_{\dots}(I11) \times  \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup \\
+&&(\Delta\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\Delta\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\Delta\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup \\
+&&(\Delta\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\Delta\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22)) \cup 
+(\Delta\sigma_{\dots}(I) \times \Delta  \sigma_{\dots}(I2) \times \Delta  \sigma_{\dots}(I11) \times \Delta  \sigma_{\dots}(I22))) \\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{ \dots} \\ &&(
+(\sigma_{\dots}(\Delta I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(\Delta I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}(\Delta I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}(\Delta I22)) \cup \\
+&&(\sigma_{\dots}(\Delta I) \times  \sigma_{\dots}(\Delta I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(\Delta I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}(\Delta I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(\Delta I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}(\Delta  I22)) \cup 
+(\sigma_{\dots}(I) \times  \sigma_{\dots}(\Delta I2) \times  \sigma_{\dots}(\Delta I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times  \sigma_{\dots}(\Delta I2) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}(\Delta I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}(\Delta I11) \times  \sigma_{\dots}(\Delta I22)) \cup \\
+&&(\sigma_{\dots}(\Delta I) \times  \sigma_{\dots}(\Delta I2) \times  \sigma_{\dots}(\Delta I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(\Delta I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}(\Delta I11) \times  \sigma_{\dots}(\Delta I22)) \cup \\
+&&(\sigma_{\dots}(I) \times  \sigma_{\dots}(\Delta I2) \times  \sigma_{\dots}(\Delta I11) \times  \sigma_{\dots}(\Delta I22)) \cup 
+(\sigma_{\dots}(\Delta I) \times   \sigma_{\dots}(\Delta I2) \times  \sigma_{\dots}(\Delta I11) \times  \sigma_{\dots}(\Delta I22))) \\
+\end{eqnarray*}
+%
+\begin{eqnarray*}
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{ \dots} \\ &&(
+(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \}) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup \\
+&&(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I11) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I2) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup 
+(\sigma_{\dots}(I) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I22)) \cup \\
+&&(\sigma_{\dots}(I) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I11) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup 
+(\sigma_{\dots}(I) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup \\
+&&(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I22)) \cup 
+(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \}) \times  \sigma_{\dots}(I11) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup \\
+&&(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}(I2) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup 
+(\sigma_{\dots}(I) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} )) \cup \\
+&&(\sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times   \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ) \times  \sigma_{\dots}( \pi_{\vec{i}} \{\tuple{} \} ))) \\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{ \dots \wedge SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge SPEED11 = 0 \wedge TYPE11 = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0  } \\ &&(
+(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times I11 \times I22) \cup 
+(I \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times I22) \cup \\
+&&(I \times  I2 \times  ( \pi_{\vec{i11}} \{\tuple{} \}) \times I22) \cup 
+(I \times I2 \times I11 \times  ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&(( \pi_{\vec{i}} \{\tuple{} \} ) \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times I22) \cup 
+(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup \\
+&&(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+(I \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times  ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup \\
+&&(I \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+(I \times I2 \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup 
+(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times (\pi_{\vec{i22}} \{\tuple{}\}) \cup \\
+&&(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times  ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+(I \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} ))) \\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} \\
+&& (\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times I11 \times I22) \cup 
+\sigma_{ \dots}(I \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times I22) \cup \\
+&&\sigma_{ \dots}(I \times  I2 \times  ( \pi_{\vec{i11}} \{\tuple{} \}) \times I22) \cup 
+\sigma_{ \dots}(I \times I2 \times I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times I22) \cup 
+\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup \\
+&&\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+\sigma_{ \dots}(I \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times  ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup \\
+&&\sigma_{ \dots}(I \times  ( \pi_{\vec{i2}} \{\tuple{} \} ) \times I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+\sigma_{ \dots}(I \times I2 \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times I22) \cup 
+\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \}  \times  I11 \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times I2 \times  ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup 
+\sigma_{ \dots}(I \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} )) \cup \\
+&&\sigma_{ \dots}(( \pi_{\vec{i}} \{\tuple{} \} ) \times ( \pi_{\vec{i2}} \{\tuple{} \} ) \times ( \pi_{\vec{i11}} \{\tuple{} \} ) \times ( \pi_{\vec{i22}} \{\tuple{} \} ))) \\
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} \\
+&& \pi_{\vec{i}} \;\sigma_{ \dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup \\
+&& \pi_{\vec{i2}} \;\sigma_{ \dots}(I \times \{\tuple{} \} \times I11 \times I22) \cup \\
+&& \pi_{\vec{i11}} \;\sigma_{ \dots}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ) \cup \\
+&& \pi_{\vec{i, i2}}\sigma_{ \dots}( \{\tuple{} \} \times  \{\tuple{} \} \times I11 \times I22) \cup \\
+&& \pi_{\vec{i, i11}}\sigma_{ \dots}( \{\tuple{} \} \times I2 \times \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i, i22}}\sigma_{ \dots}(\{\tuple{} \} \times I2 \times I11 \times \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i2, i11}}\sigma_{ \dots}(I \times  \{\tuple{} \} \times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i2, i22}}\sigma_{ \dots}(I \times \{\tuple{} \}  \times I11 \times \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i11, i22}}\sigma_{ \dots}(I \times I2 \times \{\tuple{} \} \times  \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i, i2, i11}}\sigma_{ \dots}( \{\tuple{} \} \times \{\tuple{} \}\times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i, i2, i22}}\sigma_{ \dots}(\{\tuple{} \} \times \{\tuple{} \} \times I11 \times \{\tuple{}\} \cup \\
+&& \pi_{\vec{i, i11, i22}}\sigma_{ \dots}( \{\tuple{} \} \times I2 \times \{\tuple{} \} \times \{\tuple{} \} ) \cup \\
+&& \pi_{\vec{i, i11, i22}}\sigma_{ \dots}(I \times \{\tuple{} \} \times \{\tuple{} \} \times  \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i, i2, i11, i22}}\sigma_{ \dots}( \{\tuple{} \} \times \{\tuple{} \} \times \{\tuple{} \} \times \{\tuple{} \} )) \\
+\end{eqnarray*}
+\begin{eqnarray*}
+%
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} \\
+&& \pi_{\vec{i}} \;\sigma_{ \substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; ID2 <> id \;\wedge\; POS2 = pos \;\wedge\; LANE2 = lane \;\wedge\; DIR2 = dir \;\wedge\; \\ TIME2 >= time \;\wedge\; TIME2 <= time + 30 \;\wedge\; ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11= dir \;\wedge\; \\TIME11 = time + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = pos \;\wedge\;  LANE22 = lane \;\wedge\; DIR22 = dir \;\wedge\; TIME22 = TIME2 + 120 \wedge \\ speed = 0 \wedge type = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup \\
+&& \pi_{\vec{i2}} \;\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; id <> ID \;\wedge\; pos = POS \;\wedge\; lane = LANE \;\wedge\; dir = DIR \;\wedge\; \\ time >= TIME \;\wedge\; time <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = id \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = time + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge speed = 0 \wedge type = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}(I \times \{\tuple{} \} \times I11 \times I22) \cup \\
+&& \pi_{\vec{i11}} \;\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; id = ID \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; \\time = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  speed = 0 \wedge type = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i22}} \;\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; id = ID2 \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \;\wedge\; time = TIME2 + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge speed = 0 \wedge type =0 }}(I \times I2 \times I11 \times \{\tuple{} \} ) \cup \\
+%
+&& \pi_{\vec{i, i2}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\;\underline{ id <> id }\;\wedge\; pos = pos \;\wedge\; lane = lane \;\wedge\; dir = dir \;\wedge\; \\ time >= time \;\wedge\; time <= time + 30 \;\wedge\; ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11= dir \;\wedge\; \\TIME11 = time + 120 \;\wedge\; ID22 = id \;\wedge\; POS22 = pos \;\wedge\;  LANE22 = lane \;\wedge\; DIR22 = dir \;\wedge\; TIME22 = time + 120 \wedge \\speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}( \{\tuple{} \} \times  \{\tuple{} \} \times I11 \times I22) \cup \\
+&& \pi_{\vec{i, i11}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; ID2 <> id \;\wedge\; POS2 = pos \;\wedge\; LANE2 = lane \;\wedge\; DIR2 = dir \;\wedge\; \\ TIME2 >= time \;\wedge\; TIME2 <= time + 30 \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir= dir \;\wedge\; \\\underline{ time = time + 120} \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = pos \;\wedge\;  LANE22 = lane \;\wedge\; DIR22 = dir \;\wedge\; TIME22 = TIME2 + 120 \wedge \\speed = 0 \wedge type = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  speed = 0 \wedge type = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}( \{\tuple{} \} \times I2 \times \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i, i22}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; \underline{ ID2 <> id } \;\wedge\; POS2 = pos \;\wedge\; LANE2 = lane \;\wedge\; DIR2 = dir \;\wedge\; \\ TIME2 >= time \;\wedge\; TIME2 <= time + 30 \;\wedge\; ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11= dir \;\wedge\; \\TIME11 = time + 120 \;\wedge\; \underline{id = ID2} \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir = dir \;\wedge\; time = TIME2 + 120 \wedge \\speed = 0 \wedge type = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge speed = 0 \wedge type =0 }}(\{\tuple{} \} \times I2 \times I11 \times \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i2, i11}}\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \underline{ id <> ID } \;\wedge\; pos = POS \;\wedge\; lane = LANE \;\wedge\; dir = DIR \;\wedge\; \\ time >= TIME \;\wedge\; time <= TIME + 30 \;\wedge\; \underline{id = ID} \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; \\time = TIME + 120 \;\wedge\; ID22 = id \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = time + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge speed = 0 \wedge type = 0 \wedge  speed = 0 \wedge type = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}(I \times  \{\tuple{} \} \times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i2, i22}}\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\;  id <> ID \;\wedge\; pos = POS \;\wedge\; lane = LANE \;\wedge\; dir = DIR \;\wedge\; \\ time >= TIME \;\wedge\; time <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; id = id \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \;\wedge\; \underline {time = time + 120} \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge speed = 0 \wedge type = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge speed = 0 \wedge type =0 }}(I \times \{\tuple{} \}  \times I11 \times \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i11, i22}}\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; \underline{ ID2 <> ID} \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; \underline{id = ID} \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; \\time = TIME + 120 \;\wedge\; \underline{id = ID2} \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \;\wedge\; time = TIME2 + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type =0 }}(I \times I2 \times \{\tuple{} \} \times  \{\tuple{} \}) \cup \\
+%
+&& \pi_{\vec{i, i2, i11}}\sigma_{\substack{DIR = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; \underline {id <> id} \;\wedge\; pos = pos \;\wedge\; lane = lane \;\wedge\; dir = dir \;\wedge\; \\ time >= time \;\wedge\; time <= time + 30 \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir=dir \;\wedge\; \\\underline {time = time + 120} \;\wedge\; ID22 = id \;\wedge\; POS22 = pos \;\wedge\;  LANE22 = lane \;\wedge\; DIR22 = dir \;\wedge\; TIME22 = time + 120 \wedge \\speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type = 0 \wedge  speed = 0 \wedge type = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }}( \{\tuple{} \} \times \{\tuple{} \}\times  \{\tuple{} \} \times I22) \cup \\
+&& \pi_{\vec{i, i2, i22}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; \underline {id <> id} \;\wedge\; pos = pos \;\wedge\; lane = lane \;\wedge\; dir = dir \;\wedge\; \\ time >= time \;\wedge\; time <= time + 30 \;\wedge\; ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11=dir \;\wedge\; \\TIME11 = time + 120 \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir = dir \;\wedge\; \underline {time = time + 120} \wedge \\speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge speed = 0 \wedge type =0 }}(\{\tuple{} \} \times \{\tuple{} \} \times I11 \times \{\tuple{}\} \cup \\
+&& \pi_{\vec{i, i11, i22}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; ID2 <> id \;\wedge\; POS2 = pos \;\wedge\; LANE2 = lane \;\wedge\; DIR2 = dir \;\wedge\; \\ TIME2 >= time \;\wedge\; TIME2 <= time + 30 \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir =dir \;\wedge\; \\\underline {time = time + 120} \;\wedge\; id = ID2 \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir = dir \;\wedge\; time = TIME2 + 120 \wedge \\speed = 0 \wedge type = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type =0 }}( \{\tuple{} \} \times I2 \times \{\tuple{} \} \times \{\tuple{} \} ) \cup \\
+&& \pi_{\vec{i2, i11, i22}}\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; id <> ID \;\wedge\; pos = POS \;\wedge\; lane = LANE \;\wedge\; dir = DIR \;\wedge\; \\ time >= TIME \;\wedge\; time <= TIME + 30 \;\wedge\; id = ID \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; \\time = TIME + 120 \;\wedge\; id = id \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \;\wedge\; \underline { time = time + 120} \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge speed = 0 \wedge type = 0 \wedge  speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type =0 }}(I \times \{\tuple{} \} \times \{\tuple{} \} \times  \{\tuple{} \}) \cup \\
+&& \pi_{\vec{i, i2, i11, i22}}\sigma_{\substack{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; \underline {id <> id} \;\wedge\; pos= pos \;\wedge\; lane = lane \;\wedge\; dir = dir \;\wedge\; \\ time >= time \;\wedge\; time <= time + 30 \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir=dir \;\wedge\; \\\underline {time = time + 120} \;\wedge\; id = id \;\wedge\; pos = pos \;\wedge\;  lane = lane \;\wedge\; dir = dir \;\wedge\; \underline {time = time + 120} \wedge \\speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type = 0 \wedge  speed = 0 \wedge type = 0 \wedge speed = 0 \wedge type =0 }}( \{\tuple{} \} \times \{\tuple{} \} \times \{\tuple{} \} \times \{\tuple{} \} )) \\
+&=& \algincr_{min} \algmin_{ID} (\algincrdiff_{\cup} \\
+&& \pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup 
+\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22) \cup 
+\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup 
+\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ) )\\
+\end{eqnarray*}
+%\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; \\ TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; \\TIME11 = TIME + 120 \;\wedge\; ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE2 \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120 \wedge \\SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge SPEED22 = 0 \wedge TYPE22 =0 }
+\pagebreak
+\begin{eqnarray*}
+&=& \algincr_{min} \algmin_{ID} ( \algincrdiff_{\cup} (\pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22)) \cup 
+\qquad\algincrdiff_{\cup} (\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22)) \cup 
+\\&&\qquad\algincrdiff_{\cup} (\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22)) \cup 
+\qquad\algincrdiff_{\cup} (\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} )))\\
+&=& \algincr_{min} \algmin (\algmin_{ID} (\algincrdiff_{\cup} (\pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22))) ,
+\\&&\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ))))\\
+&=& \algincr_{min} \algmin (\algmin_{id} (\algincrdiff_{\cup} (\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22))) ,
+\\&&\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ))))
+\end{eqnarray*}
+%Let's separate incrdiff
+\begin{eqnarray*} 
+\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) &=& 
+ \sigma_{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; ID22 = ID2 \;\wedge\; TIME22 = TIME2 + 120 \;\wedge\; speed = 0 \;\wedge\; type = 0 }( \\
+&&\qquad \underbrace{\sigma_{\substack {ID2 <> id \;\wedge\; POS2 = pos \;\wedge\; LANE2 = lane \; \wedge\; DIR2 = dir \;\wedge \; \\TIME2 >= time \;\wedge\; TIME2 <= time + 30 \wedge SPEED2 = 0 \wedge TYPE2 = 0 }}I2 }_{s_{I2}[id, pos, lane, dir, time] = \sigma_{ID<>id \wedge TIME>=time \wedge TIME <= time +30} s_I[pos, lane, dir]}\times \\
+&&\qquad \underbrace{\sigma_{\substack {ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11= dir \;\wedge\; \\ TIME11 = time + 120 \wedge  SPEED11 = 0 \wedge TYPE11 = 0 \wedge POS22 = pos \;\wedge\; \\ LANE22 = lane \;\wedge\; DIR22 = dir \wedge SPEED22 = 0 \wedge TYPE22 =0}} (I11 \times I22) )}_{s1_{I11,I22}[id, pos, lane, dir, time]}\\ 
+%
+&=&  \sigma_{dir = d \;\wedge\; seg = s \;\wedge\; pos = p \;\wedge\; ID22 = ID2 \;\wedge\; TIME22 = TIME2 + 120 \;\wedge\; speed = 0 \;\wedge\; type = 0 }( s_{I2}[id, pos, lane, dir, time]\times \\
+&&\qquad \underbrace{\sigma_{\substack {ID11 = id \;\wedge\; POS11 = pos \;\wedge\;  LANE11 = lane \;\wedge\; DIR11= dir \;\wedge\; \\ TIME11 = time + 120 \wedge  SPEED11 = 0 \wedge TYPE11 = 0}} I11}_{s_{I11}[id, pos, lane, dir, time] = \sigma_{ID = id \wedge TIME = time+120} s_I[pos, lane, dir]} \times 
+\underbrace {\sigma_{\substack{ POS22 = pos \;\wedge\; LANE22 = lane \;\wedge\; DIR22 = dir \\ \wedge SPEED22 = 0 \wedge TYPE22 =0}} I22}_{s_{I}[pos, lane, dir]} )\\ 
+%%
+\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22) &=&
+\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \\\;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; TIME11 = TIME + 120 \;\wedge\; \\POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; speed = 0 \wedge type = 0 }}(\\
+&& \underbrace{\sigma_{\substack{id <> ID \;\wedge\; pos = POS \;\wedge\; lane = LANE \;\wedge\; dir = DIR \;\wedge\; \\time >= TIME \;\wedge\; time <= TIME + 30 \wedge SPEED = 0 \wedge TYPE = 0 }} I}_{s_1[id, pos, lane, dir, time] = \sigma_{id <> ID \wedge time >= TIME \wedge time <= TIME+30} s_{I}[pos, lane, dir]} \times 
+\underbrace{\sigma_{\substack{SPEED11 = 0 \wedge TYPE11 = 0 \wedge ID22 = id \;\wedge\; \\TIME22 = time + 120 \wedge SPEED22 = 0 \wedge TYPE22 =0 }} I11 \times I22}_{s2_{I11,I22}[id, time]})\\
+&=&
+\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \\\;\wedge\;  LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; TIME11 = TIME + 120 \;\wedge\; \\POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; speed = 0 \wedge type = 0 }}(s_1[id, pos, lane, dir, time] \times \\
+&&
+\underbrace{\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} I11}_{s0_{I}} \times \underbrace{\sigma_{ ID22 = id \;\wedge\; TIME22 = time + 120 \wedge SPEED22 = 0 \wedge TYPE22 =0 } I22}_{s2_{I22}[id, time]})\\
+%%
+\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22) &=&
+\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; TIME2 >= TIME \;\wedge\;\\ TIME2 <= TIME + 30 \;\wedge\;  ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120 \wedge  speed = 0 \wedge type = 0  }}(\\
+&& \underbrace{\sigma_{\substack{id = ID \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; time = TIME + 120\\ \wedge SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0 }} (I \times  I2)}_{s_{I, I2}[id, pos, lane, dir, time]} \times  
+\sigma_{SPEED22 = 0 \wedge TYPE22 =0} I22) \\
+&=& 
+\sigma_{\substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; DIR2 = DIR \;\wedge\; TIME2 >= TIME \;\wedge\;\\ TIME2 <= TIME + 30 \;\wedge\;  ID22 = ID2 \;\wedge\; POS22 = POS \;\wedge\;  LANE22 = LANE \;\wedge\; DIR22 = DIR \;\wedge\; TIME22 = TIME2 + 120 \wedge  speed = 0 \wedge type = 0  }}(\\
+&& \underbrace{\sigma_{\substack{id = ID \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir=DIR \;\wedge\; \\time = TIME + 120 \wedge SPEED = 0 \wedge TYPE = 0}} I}_{s2_{I}[id, pos, lane, dir, time] = \sigma_{id = ID \wedge time = TIME +120} s_{I}[pos, lane, dir]} \times 
+\underbrace{\sigma_{ SPEED2 = 0 \wedge TYPE2 = 0 } I2}_{s0_{I}} \times  
+\underbrace{\sigma_{SPEED22 = 0 \wedge TYPE22 =0} I22}_{s0_{I}}) \\
+%%
+\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} )&=&
+\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; \\DIR2 = DIR \;\wedge\; TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\; \\ LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; TIME11 = TIME + 120 \wedge speed = 0 \wedge type =0 }}(\\
+&&\underbrace{\sigma_{\substack{ id = ID2 \;\wedge\; pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \;\wedge\; time = TIME2 + 120 \\\wedge SPEED = 0 \wedge TYPE = 0 \wedge SPEED2 = 0 \wedge TYPE2 = 0}} (I \times I2)}_{s2_{I, I2}[id, pos, lane, dir, time]} \times 
+\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} I11)\\
+&=&
+\sigma_{ \substack{DIR = d \;\wedge\; SEG = s \;\wedge\; POS = p \;\wedge\; ID2 <> ID \;\wedge\; POS2 = POS \;\wedge\; LANE2 = LANE \;\wedge\; \\DIR2 = DIR \;\wedge\; TIME2 >= TIME \;\wedge\; TIME2 <= TIME + 30 \;\wedge\; ID11 = ID \;\wedge\; POS11 = POS \;\wedge\; \\ LANE11 = LANE \;\wedge\; DIR11=DIR \;\wedge\; TIME11 = TIME + 120 \wedge speed = 0 \wedge type =0 }}(\\
+&&\underbrace{\sigma_{\substack{  pos = POS \;\wedge\;  lane = LANE \;\wedge\; dir = DIR \\\wedge SPEED = 0 \wedge TYPE = 0 }} I }_{s_{I}[pos, lane, dir]}\times 
+\underbrace{\sigma_{\substack{id = ID2\;\wedge\;time = TIME2 + 120\\ \wedge SPEED2 = 0 \wedge TYPE2 = 0}} I2}_{s2_{I2}[id, time]} \times 
+\underbrace{\sigma_{SPEED11 = 0 \wedge TYPE11 = 0} I11}_{s0_{I}})
+%
+\end{eqnarray*}
+\pagebreak
+
+\begin{eqnarray*}
+&&\algincr_{min} \algmin (\algmin_{id} (\algincrdiff_{\cup} (\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22))) ,
+\\&&\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22))) , 
+\qquad\algmin_{ID}(\algincrdiff_{\cup} (\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ))))\\
+&=& 
+\algincr_{min} \algmin (\\
+&& \qquad \algmin_{id} (\algincrdiff_{\cup} (\sigma_{\dots} (s_{I2}[id, pos, lane, dir, time] \times s_{I11}[id, pos, lane, dir, time] \times s_{I}[pos, lane, dir]),\\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (s_{I1}[id, pos, lane, dir, time] \times s0_{I} \times s2_{I22} [id, time] ), \\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (s2_{I} [id, pos, lane, dir, time] \times s0_{I} \times s0_{I}),\\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (s_{I} [pos, lane, dir] \times s2_{I2}[id, time] \times s0_{I}))\\
+&& \mbox{Need to correctly match Attribute names from each map for selection} \\
+\\
+&& \mbox{ Optimization ? : Reducing memory uses} \\
+&=& 
+\algincr_{min} \algmin (\\
+&& \qquad \algmin_{id} (\algincrdiff_{\cup} (\sigma_{\dots} (\sigma_{\substack{ID<>id \wedge TIME >=time\\ \wedge TIME <=time +30}} s_{I}[pos, lane, dir] \times \sigma_{\substack{ID=id \wedge\\ TIME=time +120}} s_{I}[pos, lane, dir] \times s_{I}[pos, lane, dir]),\\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (\sigma_{\substack{id<>ID \wedge time >=TIME \\ \wedge time <= TIME +30}} s_{I}[pos, lane, dir] \times s0_{I} \times s2_{I22} [id, time] ), \\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (\sigma_{\substack{id = ID \wedge time = TIME +120}} s_{I} [ pos, lane, dir] \times s0_{I} \times s0_{I}),\\
+&& \qquad \algmin_{ID} (\algincrdiff_{\cup} (\sigma_{\dots} (s_{I} [pos, lane, dir] \times s2_{I2}[id, time] \times s0_{I}))\\
+\end{eqnarray*}
+
+Similar computations for $Accident.id2[d,s,p], Accident.firstMinute[d,s,p]$ and $Accident.lastMinute[d,s,p]$
+\begin{comment}
+\begin{eqnarray*}
+\algnew_{+I} Accident.id2[d, s, p] &=& \algincr_{max} \algmax_{ID2} (\algincrdiff_{\cup} 
+\pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup 
+\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22) \cup \\
+&&\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup 
+\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ) )\\
+%
+\algnew_{+I}Accident.firstMinute[d, s, p] &=&  (\algincr_{min} \algmin_{TIME} (\algincrdiff_{\cup} 
+\pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup 
+\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22) \cup \\
+&&\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup 
+\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ) ) +90 )/60 +1\\
+%
+\algnew_{+I}Accident.lastMinute[d, s, p] &=& (\algincr_{max} \algmax_{TIME} (\algincrdiff_{\cup} 
+\pi_{\vec{i}} \;\sigma_{\dots}(  \{\tuple{} \} \times I2 \times I11 \times I22) \cup 
+\pi_{\vec{i2}} \;\sigma_{\dots}(I \times \{\tuple{} \} \times I11 \times I22) \cup \\
+&&\pi_{\vec{i11}} \;\sigma_{\dots}(I \times  I2 \times  \{\tuple{} \} \times I22) \cup 
+\pi_{\vec{i22}} \;\sigma_{ \dots}(I \times I2 \times I11 \times \{\tuple{} \} ) ) +120 )/60 +1\\
+\end{eqnarray*}
+\end{comment}
+\pagebreak
+
+%derivation of new prelav
+\begin{eqnarray*}
+\algnew_{+I} prelav.speed[m,s,d] &=& \algnew_{+I} \algavg_{preprelav.speed[I.V,m,s,d]} (\sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I))\\
+%&&\quad\quad[v = \pi_{ID}(\sigma_{TIME /60 + 1 = m \wedge SEG = s \wedge DIR = d}(I))]\\
+&=& 
+\algincr \; \Delta_{+I} \algavg_{preprelav.speed[I.V,m,s,d]} (\sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I))\\
+%&&\quad\quad [\algnew_{+I} \pi_{ID}(\sigma_{TIME /60 + 1 = m \wedge SEG = s \wedge DIR = d}(Input))]\\
+&=& 
+\algincr (\algavg_{\Delta_{+I} preprelav.speed[I.V,m,s,d]} (\sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I)) \\
+&&+ \algavg_{preprelav.speed[I.V, m,s,d]} (\Delta_{+I} \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I)) \\
+&&+ \algavg_{\Delta_{+I} preprelav.speed[I.V,m,s,d]} (\Delta_{+I} \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I)))\\
+%
+\end{eqnarray*}
+\begin{eqnarray*}
+\Delta_{+I} preprelav.speed[I.V,m,s,d] 
+&=& \Delta_{+I} \algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = I.V \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I2))\\
+&=& \algavg_{SPEED} (\Delta_{+I} \sigma_ {TYPE=0 \wedge ID = I.V \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I2))\\
+&=& \algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = I.V \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (\Delta_{+I} I2))\\
+&=& \algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = I.V \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (\pi_{\vec{i}} \{\tuple{}\}))\\
+&=& \algavg_{SPEED} (\pi_{\vec{i}} (\sigma_ {type=0 \wedge id = I.V \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\} ))\\
+&=& \algavg_{speed} (\sigma_ {type=0 \wedge id = I.V \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\})
+\end{eqnarray*}
+%
+\begin{eqnarray*}
+\Delta_{+I} \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I)
+&=& \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (\Delta_{+I})\\
+&=& \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (\pi_{\vec{i}} \{\tuple{}\})\\
+&=& \pi_{\vec{i}} (\sigma_ {type=0 \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\})
+\end{eqnarray*}
+%
+\begin{eqnarray*}
+\algnew_{+I} prelav.speed[m,s,d] 
+&=& \algincr ( \algavg_{\algavg_{speed}(\sigma_ {type=0 \wedge id = I.V \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}} ( \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I) ) \\
+&& + \algavg_{\algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = I.V \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I2))} (\pi_{\vec{i}} (\sigma_ {type=0 \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}) )\\
+&& + \algavg_{\algavg_{speed}(\sigma_ {type=0 \wedge id = I.V \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}} (\pi_{\vec{i}} (\sigma_ {type=0 \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}) )\\
+%
+&=& \algincr ( \algavg_{\algavg_{speed}(\sigma_ {type=0 \wedge id = I.V \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}} ( \sigma_ {TYPE=0 \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I) ) \\
+&& + \algavg_{\algavg_{SPEED} (\sigma_ {TYPE=0 \wedge ID = id \wedge TIME/60 +1 = m \wedge SEG = s \wedge DIR = d } (I2))}  (\sigma_ {type=0 \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\})\\
+&& + \algavg_{\algavg_{speed}(\sigma_ {type=0 \wedge id = id \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}} (\sigma_ {type=0 \wedge time/60 +1 = m \wedge seg = s \wedge dir = d } \{\tuple{}\}) 
+\end{eqnarray*}
+%Statistics.lav
+\begin{eqnarray*}
+\algnew_{+I} Statistics.lav[m,s,d] 
+&=& \algnew_{+I} \algavg_{prelav.speed[TIME/60+1,s,d]} (\sigma_{TIME/60+1 <= m-1 \wedge TIME/60+1 >= m-5} (I))\\
+&=& \algavg_{\algnew_{+I} prelav.speed[TIME/60+1,s,d]} (\algnew_{+I} \sigma_{TIME/60+1 <= m-1 \wedge TIME/60+1 >= m-5} (I))\\
+&=& \algavg_{\algnew_{+I} prelav.speed[M,s,d]} (\sigma_{TIME/60+1<=m-1 \wedge TIME/60+1 >= m-5} (\algnew_{+I} I)) \\
+&=& \algavg_{\algnew_{+I} prelav.speed[M,s,d]} (\sigma_{TIME/60+1<=m-1 \wedge TIME/60+1 >= m-5} (\algincr_{\cup} \Delta_{+I}I))\\
+&=& \algavg_{\algnew_{+I} prelav.speed[M,s,d]} (\sigma_{TIME/60+1<=m-1 \wedge TIME/60+1 >= m-5} (\algincr_{\cup} \pi_{\vec{i}} \{\tuple{}\}))
+\end{eqnarray*}
+%Statistics.numVehicles
+\begin{eqnarray*}
+\algnew_{+I} Statistics.numVehicles[m, s, d] &=& \algcount_{ID} (\sigma_{ DIR = d \wedge SEG = s \wedge TIME/60 + 2 = m \wedge TYPE = 0 }(Input) )\\
+&=& \algincr_{+} \Delta_{+I} \algcount_{ID} (\sigma_{\dots} (Input))\\
+&=& \algincr_{+} \algsum_{1} \algincrdiff_{\cup'(i), S_Q} \pi_{i \rightarrow ID} (\Delta_{+I} \sigma_{\dots} (Input))\\
+&=& \algincr_{+} \algsum_{1} \algincrdiff_{\cup'(i), S_Q} \pi_{i \rightarrow ID} (\sigma_{\dots} (\Delta_{+I} Input))\\
+&=& \algincr_{+} \algsum_{1} \algincrdiff_{\cup'(i), S_Q} \pi_{i \rightarrow ID} (\sigma_{\dots} (\pi_{\vec{i}} \{\tuple{}\}))\\
+&=& \algincr_{+} \algsum_{1} \algincrdiff_{\cup'(i), S_Q} \pi_{i \rightarrow ID} (\pi_{\vec{i}} (\sigma_{\dots} \{\tuple{}\}))\\
+&=& \algincr_{+} \algsum_{1} \algincrdiff_{\cup'(i), S_Q} \pi_{i \rightarrow id} (\pi_{\vec{i}} (\sigma_{\dots} \{\tuple{}\}))
+\end{eqnarray*}
+\pagebreak
+
+%Statistics.toll
+\begin{eqnarray*}
+\algnew_{+I} Statistics.toll[m,s,d] &=& \algnew_{+I} \algmax_{\dots} (\sigma_{\dots} (Accident))\\
+&=& \algmax_{\algnew_{+I} 2*(Stats.numVehicles[m,s,d] - 50)^2} (\algnew_{+I} \sigma_{\dots} (Accident))\\
+&=& \algmax_{2*(\algnew_{+I} Stats.numVehicles[m,s,d] -50)^2} (\sigma_{ \algnew_{+I} \dots } (\algnew_{+I} Accident))\\
+&=& \algmax_{2*(\algnew_{+I} Stats.numVehicles[m,s,d] -50)^2} (\sigma_{Lav<40\wedge numVehicles>50} (\sigma_{ \algnew_{+I} \algsum_{1} \dots = 0 } \\&&\quad(\algincr_{\cup} \Delta_{+I} Accident)))\\
+&=& \algmax_{\dots} (\sigma_{\dots} (\sigma_{\algincr_{+} \Delta_{+I} \algsum_{1} (\sigma_{\dots} (Accident)) = 0} (\algincr_{\cup} \Delta_{+I} Accident))\\
+&=& \algmax_{\dots} (\sigma_{\dots} (\sigma_{\algupdate_{+} \Delta_{+I} \algsum_{1}\dots = 0} (S_{Accident}) \cup \\ &&\quad \sigma_{\alginsert \;\algnew_{+I} \algsum_{1} \dots = 0}(\algincrdiff_{\cup} \Delta_{+I} Accident)))
+\end{eqnarray*}
+%Statistics.accident
+\begin{eqnarray*}
+\algnew_{+I} Statistics.accident[m, s, d] &=& 
+\algnew_{+I} \algsum_{1} \sigma_{\substack{DIR = d \;\wedge\; firstMinute +1 <= m\; \wedge\; lastMinute +1 >= m \;\wedge\\ ((DIR = 0 \;\wedge\; SEG  >= s \;\wedge\; SEG <= s +4 ) \vee (DIR <> 0 \;\wedge\; SEG <= s \;\wedge\; SEG >= s-4))}} (Accident)\\
+&=& \algincr_{+} \Delta_{+I} \algsum_{1} \sigma_{\dots} (Accident)\\
+&=& \algincr_{+} \algsum_{1} (\Delta_{+I} \sigma_{\dots} (Accident))\\
+&=& \algincr_{+} \algsum_{1} (\sigma_{\dots} (\Delta_{+I} (Accident))
+\end{eqnarray*}
+%Statisticcs.accidentSeg
+\begin{eqnarray*}
+\algnew_{+I} Statistics.accidentSeg[m, s, d] &=& \algnew_{+I} \algmin_{SEG} (\sigma_{\substack{DIR = d \;\wedge\; firstMinute +1 <= m\; \wedge\; lastMinute +1 >= m \;\wedge\\ ((DIR = 0 \;\wedge\; SEG  >= s \;\wedge\; SEG <= s +4 ) \vee (DIR <> 0 \;\wedge\; SEG <= s \;\wedge\; SEG >= s-4))}} (Accident) \\
+&=& \algincr_{min} \delta_{+I} \algmin_{SEG} (\sigma_{\dots} (Accident)) \\
+&=& \algincr_{min} \algmin_{SEG} (\algincrdiff_{\cup} \Delta_{+I} \sigma_{\dots} (Accident))\\
+&=& \algincr_{min} \algmin_{SEG} (\algincrdiff_{\cup} \sigma_{\dots} (\Delta_{+I} Accident))
+\end{eqnarray*}
+%derivation of tollAccAlerts.time
+\begin{eqnarray*}
+\algnew_{+I} tollAccAlerts.time[v,s,d] 
+&=& \algnew_{+I} \algmin_{TIME} ( \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (Input))\\
+&=& \algincr_{min} \delta_{+I} \algmin_{TIME} ( \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (Input))\\
+&=& \algincr_{min} \algmin_{TIME} ( \algincrdiff_{\cup} \Delta_{+I} \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (Input) )\\
+&=& \algincr_{min} \algmin_{TIME} ( \algincrdiff_{\cup} \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (\Delta_{+I} Input) )\\
+&=& \algincr_{min} \algmin_{TIME} ( \algincrdiff_{\cup} \sigma_{TYPE =0 \;\wedge\; LANE <> 4 \;\wedge\; ID = v \;\wedge\; DIR = d \;\wedge\; SEG = s} (\pi_{\vec{i}} \{\tuple{}\})\\
+&=& \algincr_{min} \algmin_{TIME} ( \algincrdiff_{\cup} \pi_{\vec{i}} (\sigma_{type =0 \;\wedge\; lane <> 4 \;\wedge\; id = v \;\wedge\; dir = d \;\wedge\; seg = s} \{\tuple{}\})\\\\
+\algnew_{+I} tollAccAlerts.lav[t,s,d] &=& \algnew_{+I} Statistics.lav[t/60+1, s, d]\\
+\algnew_{+I} tollAccAlerts.toll[t,s,d] &=& \algnew_{+I} Statistics.toll[t/60+1, s, d]\\
+\algnew_{+I} tollAccAlerts.accidentSeg[t,s,d] &=& \algnew_{+I} Statistics.accidentSeg[t/60+1, s, d]
+\end{eqnarray*}
+\\\\
+%derivation of AccountBalanceNow.toll
+\begin{eqnarray*}
+\algnew_{+I} AccountBalanceNow.toll[t,v,q] &=&
+\algnew_{+I} \algsum_{TAA.toll} (\sigma_{I.ID = v \wedge I.	TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} 
+(\sigma_{type = 2} (I) \times TAA))\times TAA))\\
+&=& \algsum_{\algnew_{+I} TAA.toll} (\algnew_{+I}(\sigma_{I.ID = v \wedge I.	TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} 
+(\sigma_{type = 2} (I) \times TAA))\times TAA)))\\
+&=& \algsum_{\algnew_{+I} TAA.toll} (\sigma_{I.ID = v \wedge I.TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\algnew_{+I}((\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} (\sigma_{type = 2} (I) \times TAA))\times TAA)))\\
+&=& \algsum_{\algnew_{+I} TAA.toll} (\sigma_{I.ID = v \wedge I.TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\algnew_{+I} \sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} (\sigma_{type = 2} (I) \times TAA))\times (\algnew_{+I}TAA))))\\
+&=& \algsum_{\algnew_{+I} TAA.toll} (\sigma_{I.ID = v \wedge I.TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} ((\algnew_{+I} \sigma_{type = 2} (I)) \times (\algnew_{+I} TAA)))\times (\algnew_{+I}TAA))))\\
+&=& \algsum_{\algnew_{+I} TAA.toll} (\sigma_{I.ID = v \wedge I.TIME = t \wedge I.ID = TAA.ID \wedge I.TIME < TAA.TIME \wedge q = I.QID} ( \\
+&&(\sigma_{I.ID = TAA.ID \wedge I.TIME = TAA.TIME} (( \sigma_{type = 2} (\algnew_{+I}I)) \times (\algnew_{+I} TAA)))\times (\algnew_{+I}TAA))))\\\end{eqnarray*}
+%derivation of DailyExpenditureAnswer.bal
+\begin{eqnarray*}
+\algnew_{+I} DailyExpenditureAnswer.bal[q,v,n] &=& 
+\algnew_{+I} \algsum_{cH.toll} ( \sigma_{\substack{cH.ID = v \wedge cH.DAY = day \wedge I.QID = q \wedge I.DAY = cH.DAY \wedge\\ I.DAY = cH.DAY \wedge I.ID = cH.ID \wedge I.XWAY = cH.XWAY}} ( \sigma_{type = 3} (I) \times cH)) \\
+&=& \algsum_{\algnew_{+I} cH.toll} (\algnew_{+I} \sigma_{\dots} (\sigma_{type = 3} (I) \times cH))\\
+&=& \algsum_{\algnew_{+I} cH.toll} (\sigma_{\dots} (\algnew_{+I} (\sigma_{type = 3} (I) \times cH )))\\
+&=& \algsum_{\algnew_{+I} cH.toll} (\sigma_{\dots} ((\algnew_{+I} (\sigma_{type = 3} (I)) \times (\algnew_{+I} cH)))\\
+&=& \algsum_{\algnew_{+I} cH.toll} (\sigma_{\dots} ((\sigma_{type = 3} (\algnew_{+I} I)) \times (\algnew_{+I} cH)))
+\end{eqnarray*}
+\pagebreak
+\begin{verbatim}
+on insert into I values (type, time, carid, speed, xway, lane, dir, seg, pos, 
+                                qid, m_init, m_end, dow, tod, day) {
+  /* type = 0 */
+  s_I[pos, lane, dir].insert (I);
+  if (type = 0 and speed = 0)
+    s0_I.insert (I);
+  s2_I2[id,time].insert(I);
+  s2_I22[id,time].insert(I);
+
+  foreach (d, s, p) {
+    new +I Accident_id1[d, s, p];
+    new +I Accident_id2[d, s, p];
+    new +I Accident_firstMinute [d, s, p];
+    new +I Accident_lastMinute [d, s, p];
+  }
+  
+  foreach ( m, s, d) {
+    new +I prelav_speed[m, s, d];
+    new +I stats_lav[m, s, d];
+    new +I numVehicles [m, s, d];
+  }
+  
+  foreach (m, s, d) {
+    new +I stats_toll[m,s,d];
+    new +I stats_accident[m,s,d];
+    new +I stats_accidentSeg[m,s,d];
+  }
+  
+  foreach (v, s, d) {
+    new +I tollAccAlerts_time[v,s,d];
+  }
+  
+  foreach (t, s, d) {
+    new +I tollAccAlerts_lav[t,s,d];
+    new +I tollAccAlerts_toll[t,s,d];
+    new +I tollAccAlerts_accidentSeg[t,s,d];
+  }
+  
+  /* type = 2 */
+  foreach (t, v, q) {
+    new +I AccountBalanceNow_toll(t,v,q);
+  }
+  
+  /* type = 3 */
+  foreach (q, v, n) {
+    new +I DailyExpenditureAnswer_bal[q,v,n];
+  }
+}
+\end{verbatim}
+\begin{comment}
+\end{document}
+\end{comment}
