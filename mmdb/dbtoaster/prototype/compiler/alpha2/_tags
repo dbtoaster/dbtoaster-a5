@@ -1,0 +1,8 @@
+<gui.ml>:use_xml-light
+<gui.byte>: use_xml-light,use_str
+
+<examples/sum_ad.ml>:use_xml-light
+<examples/sum_ad.byte>: use_xml-light,use_str
+
+<tests/test_tml.ml>:use_xml-light
+<tests/test_tml.byte>: use_xml-light,use_str

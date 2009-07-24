@@ -28,6 +28,8 @@ type delta = [
 | `Insert of relation_identifier * field list
 | `Delete of relation_identifier * field list]
 
+type aggregate_function = [ `Sum | `Min | `Max ]
+
 type eterm = [
 | `Int of int
 | `Float of float
@@ -53,17 +55,15 @@ type meterm = [
 | `Variable of variable_identifier
 | `Attribute of attribute_identifier ]
 
-type aggregate_function = [ `Sum | `Min | `Max ]
+type bindings = (attribute_identifier * (expression option)) list
+
+type poplus = [`Union | `Diff ]
 
 type oplus = [`Plus | `Minus | `Min | `Max
 | `Decrmin of map_expression * state_identifier
 | `Decrmax of map_expression * state_identifier ]
 
-and  poplus = [`Union | `Diff ]
-
-and  bindings = (attribute_identifier * (expression option)) list
-
-and  map_expression = [
+and map_expression = [
 | `METerm of meterm
 | `Sum of map_expression * map_expression
 | `Minus of map_expression * map_expression
