@@ -281,24 +281,42 @@ class QueryAdmin
 
 \subsubsection{Query Executor}
 
-Query Executor consists of two inter dependent components: Input Buffer and Scheduler. Input Buffer contains the data needed to execute each query. Scheduler contains a set of threads which run one query at a time on data in Input Buffer.  
+Query Executor consists of two inter dependent components: Input Buffer and Scheduler. Input Buffer stores data needed for query execution. Scheduler contains a set of threads which run one query at a time on data from Input Buffer. InputBufferInterface and SchedulerInterface are two classes which provide interface for InputBuffer andScheduler. 
 
 \paragraph{Input Buffer}
 
-Input Buffer is a class, which provides seamless access to the data. It contains a number of queues, such that a a query that can run on data items from those queues. When Input Buffer receives a new item from Data Dispatch, together with an ID of the data Source (in a format {\tt structuredTuple}), the new datum is inserted into appropriate queues. If the datum insert causes a query to be available then Scheduler is called to add this query for processing. If the query is already runable then the item is just inserted into queue.
+Input Buffer is a class, which provides seamless access to the data and storage. It contains a queue per data source, each query when registered can get the data from those queues. When Input Buffer receives a new tuple from Data Dispatch, together with an ID of the data Source (in a format {\tt structuredTuple}), the new tuple is inserted into appropriate queue. If the tuple insert causes a query to be available a Scheduler is notified to add such a query for processing. If the query is already runable then the tuple is just inserted into the queue.
+
+\noindent InputBufferInterface has the following structure:
+
+\begin{verbatim}
+class InputBufferInterface
+{
+    void                  addTuple(int sourceID, void * structuredTuple);
+    void *                getTuples(int queryID);
+    void                  addQuery(int queryID, int sourceID);
+    void                  removeQuery(int queryID);
+    void                  hasNext(int queryID);
+    void                  removeTuples(int queryID);
+	
+}
+\end{verbatim}
 
 Input Buffer class has the following structure:
 
 \begin{verbatim}
 class InputBuffer
 {
-    void              addDatum(sourceID, structuredTuple);
-    structuredTuple   getDatum(queryID);
-    void              addQuery(queryID, list<int> sourceIDs);
-    void              removeQuery(queryID);
-    void              hasNext(queryID);
+	InputBuffer(MemoryManager* Jim);
+    void             addTuple(int sourceID, void * structuredTuple);
+    void *           getTuples(int queryID);
+    void             addQuery(int queryID, int sourceID);
+    void             removeQuery(int queryID);
+    void             hasNext(int queryID);
+    void             removeTuples(int queryID);
+    void             addScheduler(SchedulerInterface* sch);
 
-	MemoryManager                      Jim;
+	MemoryManager*                     Jim;
 	Scheduler*                         schedulingQueue;
 	map<sourceID, list<TupleQueue*> >  sourceAccess;
 	map<queryID, list<TupleQueue*> >   queryAccess;
@@ -307,13 +325,15 @@ class InputBuffer
 }
 \end{verbatim}
 
-\noindent Function {\tt addDatum(sourceID, structuredTuple)} is called by the Data Dispatch to add a new data item. Function {\tt getDatum(queryID)} is required to extract data items available for the query to be executed. Functions {\tt addQuery(queryID, list<int> readersID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new query. 
+\noindent Here we refer to {\tt queryID} as to an ID of a query coupled with data source. This ID is created in Query Catalog. The purpose is to make a direct link between a query and source and hide the details of dealing with several sources for each query inside the Scheduler.
+
+Interface function {\tt addTuple(sourceID, structuredTuple)} is called by the Data Dispatch to add a new data item. Functions {\tt getTuple(queryID), hasNext(queryID)} and{\tt removeTuples(queryID)} are required to extract tuples available for the query to be executed as well as for cleaning up queues. Functions {\tt addQuery(int queryID, int sourceID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new queries. 
 
 To enable this functionality we need to consider concurrency and efficiency. 
 
-\subparagraph{Concurrency:} Here we mean that no data tuple can be lost or received out of order by the query. This can be enabled by a simple procedure of locking each queue when data is inserted or removed from each queue.
+\subparagraph{Concurrency:} Each queue can be accessed by several queries and only one data source. Locking needs to be enabled to prevent overlapping on insertion and deletion. Reading data should be available to all queries simultaneously. SharedTupleQueue provides this controls internally for each queue. Since there is no race between different queues there is no need to create concurrency between them.
 
-\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from a data source needs to be accessed by several queries. If we adopt a simple model (case A) where each query has its own set of queues for each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Also the concurrency mechanisms are simple and very efficient. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as making sure that the items not required by any query are removed. To support both approaches we can hide all this details into the implementation of queue. By requiring the following specification:
+\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from one data source needs to be accessed by several queries. If we adopt a simple model (case A) where each query has its own set of queues for each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Also the concurrency mechanisms are simple and very efficient. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as removal of used tuples. The benefit of this method is simpler storage method and memory management. Both approaches can be supported. We can hide all this details into the implementation of queue and Input Buffer. By requiring the following specification:
 
 \noindent Case A:
 \begin{verbatim}
@@ -321,11 +341,11 @@ class QueryTupleQueue
 {
     QueryTupleQueue(MemoryManager*);
 	
-	void              addDatum(structuredTuple);
-	structuredTuple   getDatum();
+	void              addTuple(structuredTuple);
+	void *            getTuples();
 	bool              isEmpty();
 
-	queue<StructuredTuple>   datum;
+	queue<StructuredTuple>   tuples;
 }
 \end{verbatim}
 
@@ -338,45 +358,94 @@ class SharedTupleQueue
 	TupleQueue*       join(queryID);
 	void              removeQuery(queryID);
 	
-	void              addDatum(structuredTuple);
-	structuredTuple   getDatum(queryID);
+	void              addTuple(structuredTuple);
+	structuredTuple   getTuples(queryID);
 	bool              isEmpty(queryID);
+	void              removeTuples(queryID);
 	
-	map<queryID, pointerToPositionInQueue>     nextDatum;
-	queue<DataNode>                            datum;
+	map<queryID, pointerToPositionInQueue>     nextTuple;
+	queue<SharedTuple>                         datum;
+	MemoryManager*                             memMan;
 }
 \end{verbatim}
 
 \begin{verbatim}
-struct DataNode
+struct SharedTuple
 {
     int              beenAccessed;
     StructuredTuple*  datum;
 }
 \end{verbatim}
 
-When a new query is inserted by Query Admin into Input Buffer with {\tt addQuery(queryID, list<int> sourceIDs)}. Internally we go through the list of sources and creating pointers to Tuple Queue for {\tt map<queryID, list<TupleQuery*> >   queryAccess}. If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new Tuple Queue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new datum comes in, by the call of {\tt addDatum(sourceID, structuredTuple)} in InputBuffer. It looks up a list of queues for the source and calls {\tt addDatum(structuredTuple)} on each of them. (in case B the list will only have one TupleQueue).
+We decided to adopt Case B due to the savings of memory and copying of data tuples.
+
+When a new query is inserted into Query Admin, it calls on Input Buffer with {\tt addQuery(queryID, int sourceID)} for each data source (remember that queryID is an ID indicating query source connection and can be mapped to a real query in Query Catalog). If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new Tuple Queue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new tuple comes in, by the call of {\tt addTuple(sourceID, structuredTuple)} in InputBuffer.
+
+\subparagraph Memory Manager: to increase efficiency we want to allocate storage for the tuples in pages. Memory Manager provides an interface to receive and address of a new page and gets an old freed up page back. The writing to the page as well as management of allocation within a page will happen inside Shared Tuple Queue. 
+
+\begin{verbatim}
+class MemoryManager
+{
+    void * getPage();
+	void   returnPage();
+}
+\end{verbatim}
+
+\noindent To ease the management of page memory class Pages Manager is created. It keeps track of all relevant information needed to allocate space for new tuples.
+
+\begin{verbatim}
+class PagesManager
+{
+    PagesManager(MemoryManager*);
+    void * getSpace(int* size);
+    void   free(void* position, int* size);
+    
+}
+\end{verbatim}
 
 \paragraph{Scheduler}
 
-Query Processor Thread Pool is a set of identical threads. Each thread is responsible for picking up and query handle from Scheduling Queue. Then thread runs a query on the datum from appropriate query queue in Query Tuple Queue. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
+Scheduler's job to execute a query on an appropriate data tuples. This goal is achieved by having a set of identical threads execute jobs. Each thread is responsible for picking up a query from Runable Query Queue. Then thread runs a query on the data tuple from Input Buffer. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
 
-The Query Processor Thread Pool class contains the following:
+The execution flow within each thread is as follows:
+
+\begin{verbatim}
+get a queryID from RunableQueryQueue;
+get data a set of data tuples from Input Buffer;
+get a handle to a query function from QueryCatalog;
+
+run Query on a set of tuples;
+
+release data in InputBuffer;
+
+if more data for query 
+	put query onto RunableQueryQueue;
+
+put results to QueryResultsQueue;
+Repeat...
+
+\end{verbatim}
+
+Scheduler class contains the following:
 
 \begin{verbatim}
 class Scheduler
 {
-    void   Run();
-    void   addRunableQuery(queryID);
+	Scheduler(QueryCatalog*);
+    void       Run();
+    void       addRunableQuery(querySourceID);
 
     RunableQueryQueue   availableQueries;
     list<thread>        executionThreads;
     InputBuffer *       readyData;
+	QueryCatalog*       queryHandles;
 	
 }
 \end{verbatim}
 
-\noindent With SchedulingQueue as follows:
+Function {\tt addRunableQuery(querySourceID)} is used by Input Buffer to check if the current query is available for running and if it is not add it to ready for a set of Runable Queries.
+
+\noindent With RunableQueryQueue as follows:
 
 \begin{verbatim}
 class RunableQueryQueue
@@ -384,10 +453,10 @@ class RunableQueryQueue
     
     queryID        nextQuery();
     void           addQuery(queryID);
+    void           removeQuery(queryID);
     bool           isActive(queryID);
 
-    queryCatalog*          catalog;
-    queue<queryID>         readyQueries;
+    queue<queryID>    readyQueries;
 	
 }
 \end{verbatim}
