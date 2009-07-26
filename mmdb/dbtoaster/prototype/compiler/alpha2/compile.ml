@@ -2662,10 +2662,13 @@ let compile_target_all m_expr event_list =
 (* TODO: typechecker *)
 
 
+(* Sig: map expression -> code_expression list * code_expression list
+ * Semantics: input query -> declarations * handlers
+ *)
+(* Assumes input map expression has been typechecked *)
+let compile_code_rec m_expr =
 
-let compile_code_rec m_expr out_file_name =
     (* map expression -> map expression * delta list *)
-    (* Assumes input map expression has been typechecked *)
     let preprocess m_expr =
         let events = generate_all_events m_expr in
         let (new_m_expr, _) = rename_attributes m_expr in
@@ -2686,7 +2689,6 @@ let compile_code_rec m_expr out_file_name =
     let (recursive_map_decls, map_accessors, stp_decls) =
         generate_map_declarations maps map_vars state_parents
     in
-    let out_chan = open_out out_file_name in
 
     let (global_decls, handlers) =
 	List.fold_left
@@ -2732,13 +2734,14 @@ let compile_code_rec m_expr out_file_name =
 
             ([], []) handlers_by_event
     in
-        generate_preamble out_chan;
+    let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
+        (rm_decls@global_decls, handlers)
 
-        (* output global maps used for recursive compilation *)
-	List.iter
-	    (fun x -> output_string out_chan
-		((indented_string_of_code_expression x)^"\n"))
-            (List.map (fun d -> `Declare d) recursive_map_decls);
+
+let compile_query m_expr out_file_name =
+    let (global_decls, handlers) = compile_code_rec m_expr in
+    let out_chan = open_out out_file_name in
+        generate_includes out_chan;
 
         (* output declarations *) 
 	List.iter
@@ -2754,6 +2757,3 @@ let compile_code_rec m_expr out_file_name =
             handlers;
 
         close_out out_chan
-
-
-

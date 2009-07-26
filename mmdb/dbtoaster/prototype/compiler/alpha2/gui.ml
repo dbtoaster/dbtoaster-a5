@@ -449,9 +449,9 @@ let rec treeml_of_expression expr indent_fn =
     in
     match expr with
 	| `ETerm et ->
-              make_leaf
+              make_branch
                   ([make_expr "eterm"]@
-                  (List.map indent_fn (treeml_of_eterm et)))
+                  (make_leaf (List.map indent_fn (treeml_of_eterm et))))
 
 	| `UnaryMinus e -> make_branch ([make_expr "uminus"]@(tml_expr e))
 	| `Sum(l,r) -> binary_expr "sum" l r
@@ -880,19 +880,23 @@ let get_bool_expression_node_type tml = get_value tml "boolexpression"
 let get_map_expression_node_type tml = get_value tml "mapexpression"
 let get_plan_node_type tml = get_value tml "plan"
 
-let get_eterm tml_l =
-    if (List.length tml_l) != 2 then
-        raise (InvalidTreeML ("node: "^(String.concat ", " (List.map to_string tml_l))))
-    else
-        let et_type = get_eterm_node_type (List.hd tml_l) in
-            match et_type with
-                | "int" -> `Int(int_of_string (get_value (List.nth tml_l 1) "eterm-val"))
-                | "float" -> `Float(float_of_string (get_value (List.nth tml_l 1) "eterm-val"))
-                | "long" -> `Long(Int64.of_string (get_value (List.nth tml_l 1) "eterm-val"))
-                | "string" -> `String(get_value (List.nth tml_l 1) "eterm-val")
-                | "attr" -> `Attribute(get_attribute_identifier (List.nth tml_l 1))
-                | "var" -> `Variable(get_variable_identifier (List.nth tml_l 1))
-                | _ -> raise (InvalidTreeML ("node: "^(String.concat ", " (List.map to_string tml_l))))
+let get_eterm tml =
+    match children tml with
+        | [] -> raise (InvalidTreeML ("node: "^(to_string tml)))
+        | tml_l ->
+              begin
+                  if (List.length tml_l) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                  else
+                      let et_type = get_eterm_node_type (List.hd tml_l) in
+                          match et_type with
+                              | "int" -> `Int(int_of_string (get_value (List.nth tml_l 1) "eterm-val"))
+                              | "float" -> `Float(float_of_string (get_value (List.nth tml_l 1) "eterm-val"))
+                              | "long" -> `Long(Int64.of_string (get_value (List.nth tml_l 1) "eterm-val"))
+                              | "string" -> `String(get_value (List.nth tml_l 1) "eterm-val")
+                              | "attr" -> `Attribute(get_attribute_identifier (List.nth tml_l 1))
+                              | "var" -> `Variable(get_variable_identifier (List.nth tml_l 1))
+                              | _ -> raise (InvalidTreeML ("node: "^(String.concat ", " (List.map to_string tml_l))))
+              end
 
 let get_meterm tml =
     match children tml with
@@ -927,8 +931,8 @@ let rec get_expression tml =
                       begin
                           match node_type with
                               | "eterm" ->
-                                    if (List.length t) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
-                                    else `ETerm(get_eterm t)
+                                    if (List.length t) != 1 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                                    else `ETerm(get_eterm (List.hd t))
 
                               | "uminus" ->
                                     if (List.length t) != 1 then raise (InvalidTreeML ("node: "^(to_string tml)))

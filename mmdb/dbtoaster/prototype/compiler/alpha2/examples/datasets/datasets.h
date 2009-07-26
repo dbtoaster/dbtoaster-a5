@@ -34,6 +34,7 @@ namespace DBToaster
     struct stream
     {
         typedef list<tuple> stream_buffer;
+        virtual void init_stream() = 0;
         virtual bool stream_has_inputs() = 0;
         virtual tuple next_input() = 0;
 	virtual unsigned int get_buffer_size() = 0;

@@ -1192,21 +1192,68 @@ let generate_map_declarations maps map_vars state_parents =
  * Code generation constants
  *)
 
-let generate_preamble out_chan =
-    output_string out_chan "#include <iostream>\n";
-    output_string out_chan "#include <fstream>\n";
+let generate_includes out_chan =
     output_string out_chan "#include <cmath>\n";
     output_string out_chan "#include <cstdio>\n";
-    output_string out_chan "#include <cstdlib>\n";
+    output_string out_chan "#include <cstdlib>\n\n";
+    output_string out_chan "#include <iostream>\n";
     output_string out_chan "#include <map>\n";
     output_string out_chan "#include <list>\n";
     output_string out_chan "#include <set>\n\n";
     output_string out_chan "#include <tr1/tuple>\n";
     output_string out_chan "#include <tr1/unordered_set>\n\n";
-    output_string out_chan "#include <boost/tokenizer.hpp>\n\n";
-
     output_string out_chan "using namespace std;\n";
-    output_string out_chan "using namespace tr1;\n";
+    output_string out_chan "using namespace tr1;\n"
+
+(*
+ * Standalone engine generation
+ *)
+
+(* TODO: define and use source metadata to generate init function
+ * source metadata: (dataset info * handler) list
+ * dataset info: stream struct name, tuple struct name, tuple struct fields * handler args
+*)
+let generate_streamengine_init out_chan streams_and_handlers =
+    (* add streams to multiplexer
+       -- instantiate input streams.
+       -- initialize (i.e. buffer data for) input streams
+       -- generate stream id, register with multiplexer via
+          add_stream(stream id, input stream)
+    *)
+    (*
+    let (init_decls, init_stream_bodies) =
+        List.fold_left
+            (fun (decls_acc, init_body_acc) (stream_info, handler) ->
+                let (stream_struct, tuple_struct, field_args_bindings) = stream_info in
+                let (stream_name, stream_id) = generate_new_stream() in
+                let declare_stream = stream_struct^"<"^tuple_struct_name^"> "^stream_name^";" in
+                let init_stream = stream_name^".init_stream();" in
+                let register_stream = "multiplexer.add("^stream_name^","^stream_id^")" in
+                    (decls_acc@[declare_stream], init_body_acc@[init_stream; register_stream]))
+            ([], []) streams_and_handlers
+    in
+    *)
+    (* add handlers to dispatcher
+       -- create function object with operator()(boost::any data)
+       -- cast from boost::any to expected struct, and invoke handler with struct fields.
+       -- TODO: where do we get struct names, field names, etc? These are
+          dataset specific, and ideally should come from data loading code.
+       -- register handler with dispatcher for a given stream, via
+          add_handler(stream id, dml type, function object)
+     *)
+    print_endline "Not yet implemented!"
+
+(* Generate Makefile to compile <init file>.cpp, streamengine.cpp as objects,
+   and link them together in the output *)
+let generate_streamengine_makefile init_cpp_filename =
+    print_endline "Not yet implemented!"
+
+(*
+ * File I/O generation
+ *)
+let generate_fileio_includes out_chan =
+    output_string out_chan "#include <fstream>\n";
+    output_string out_chan "#include <boost/tokenizer.hpp>\n\n";
     output_string out_chan "using namespace boost;\n\n";
     output_string out_chan "typedef tokenizer <char_separator<char> > tokeniz;\n\n"
 

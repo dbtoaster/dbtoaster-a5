@@ -83,3 +83,10 @@ let new_vwap = (List.hd (parse_treeml vwap_str)) in
             print_endline (indented_string_of_map_expression new_vwap 0);
             print_test_type "Failed!"
         end;;
+
+
+let tml_f = open_in "test.tml" in
+let tml_str = Std.input_all tml_f in
+let new_m_expr = (List.hd (parse_treeml tml_str)) in
+    print_endline "test.tml:";
+    print_endline (indented_string_of_map_expression new_m_expr 0);;

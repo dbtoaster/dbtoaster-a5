@@ -12,6 +12,7 @@ dispatch
     begin function
         | After_rules ->
               ocaml_lib ~extern:true ~dir:(ocamlfind_query "xml-light") "xml-light";
+              ocaml_lib ~extern:true ~dir:(ocamlfind_query "extlib") "extlib";
 
         | _ -> ()
     end
