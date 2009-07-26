@@ -47,6 +47,7 @@ public class DBToasterGui implements IApplication {
 		final IWorkbench workbench = PlatformUI.getWorkbench();
 		if (workbench == null)
 			return;
+		/*
 		final Display display = workbench.getDisplay();
 		display.syncExec(new Runnable() {
 			public void run() {
@@ -54,5 +55,6 @@ public class DBToasterGui implements IApplication {
 					workbench.close();
 			}
 		});
+		*/
 	}
 }

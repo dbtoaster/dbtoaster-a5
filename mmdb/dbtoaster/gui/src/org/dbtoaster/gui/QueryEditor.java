@@ -5,7 +5,11 @@ import java.awt.Container;
 import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Panel;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Iterator;
@@ -13,29 +17,7 @@ import java.util.List;
 
 import javax.swing.JRootPane;
 
-import org.eclipse.datatools.modelbase.sql.query.GroupingSpecification;
-import org.eclipse.datatools.modelbase.sql.query.OrderBySpecification;
-import org.eclipse.datatools.modelbase.sql.query.PredicateBasic;
-import org.eclipse.datatools.modelbase.sql.query.PredicateBetween;
-import org.eclipse.datatools.modelbase.sql.query.PredicateComparisonOperator;
-import org.eclipse.datatools.modelbase.sql.query.PredicateExists;
-import org.eclipse.datatools.modelbase.sql.query.PredicateIn;
-import org.eclipse.datatools.modelbase.sql.query.PredicateInValueList;
-import org.eclipse.datatools.modelbase.sql.query.PredicateInValueRowSelect;
-import org.eclipse.datatools.modelbase.sql.query.PredicateInValueSelect;
-import org.eclipse.datatools.modelbase.sql.query.PredicateIsNull;
-import org.eclipse.datatools.modelbase.sql.query.PredicateLike;
-import org.eclipse.datatools.modelbase.sql.query.PredicateQuantified;
-import org.eclipse.datatools.modelbase.sql.query.PredicateQuantifiedRowSelect;
-import org.eclipse.datatools.modelbase.sql.query.PredicateQuantifiedType;
-import org.eclipse.datatools.modelbase.sql.query.PredicateQuantifiedValueSelect;
-import org.eclipse.datatools.modelbase.sql.query.QuerySearchCondition;
-import org.eclipse.datatools.modelbase.sql.query.QuerySelect;
-import org.eclipse.datatools.modelbase.sql.query.QuerySelectStatement;
-import org.eclipse.datatools.modelbase.sql.query.QueryStatement;
-import org.eclipse.datatools.modelbase.sql.query.SearchConditionCombined;
-import org.eclipse.datatools.modelbase.sql.query.SearchConditionCombinedOperator;
-import org.eclipse.datatools.modelbase.sql.query.TableReference;
+import org.eclipse.datatools.modelbase.sql.query.*;
 import org.eclipse.datatools.modelbase.sql.query.helper.StatementHelper;
 import org.eclipse.datatools.modelbase.sql.query.util.SQLQuerySourceWriter;
 import org.eclipse.datatools.modelbase.sql.schema.SQLObject;
@@ -73,11 +55,11 @@ public class QueryEditor extends ViewPart
 	public static final String ID = "dbtoaster_gui.queryeditor";
 	
 	private final String DEFAULT_QUERY =
-		"select avg(b2.price * b2.volume)" +
+		"select sum(b2.price2 * b2.volume2)" +
 		"\n\tfrom bids b2" +
 		"\n\twhere k*(select sum(volume) from bids) > " +
-		"\n\t\t(select sum(volume) from bids b1" +
-		"\n\t\t\twhere b1.price > b2.price);";
+		"\n\t\t(select sum(volume1) from bids b1" +
+		"\n\t\t\twhere b1.price1 > b2.price2);";
 
 	private final String DEFAULT_TML =
 		"<tree>"+
@@ -143,7 +125,10 @@ public class QueryEditor extends ViewPart
 		"</branch>" +
 		"</tree>";
 	
-	class QueryTextVis extends Composite {
+	class QueryTextVis extends Composite
+	{
+		DatasetManager datasetMgr;
+		DBToasterTMLWriter tmlWriter;
 
 		private Text queryText;
 		private TreeVisPanel queryPanel;
@@ -151,8 +136,14 @@ public class QueryEditor extends ViewPart
 	    private static final String incrFrontierNodes = "tree.incr";
 	    private static final String derivationNodes = "tree.derivation";
 
-		public QueryTextVis(Composite parent, int style) {
+		public QueryTextVis(Composite parent, int style)
+		{
 			super(parent, style);
+			
+			datasetMgr = DatasetManager.initDemoDatasetManager();
+			tmlWriter = new DBToasterTMLWriter(datasetMgr);
+
+			// GUI setup
 			setLayout(new GridLayout());
 			
 			Composite visComposite =
@@ -217,8 +208,7 @@ public class QueryEditor extends ViewPart
 		
 		public String toastQuery() {
 			
-			String returnStatus = "DBToaster failed to compile!";
-
+			String returnStatus = "Compiling query...";
             try {
                 SQLQueryParserManager parserManager =
                 	SQLQueryParserManagerProvider.getInstance().
@@ -232,14 +222,30 @@ public class QueryEditor extends ViewPart
                 String parsedSQL = userQuery.getSQL();
                 System.out.println("Toasting:" + parsedSQL);
 
-                switch(StatementHelper.getStatementType(userQuery)) {
+                switch(StatementHelper.getStatementType(userQuery))
+                {
 	                case StatementHelper.STATEMENT_TYPE_FULLSELECT:
 	                	returnStatus = "Found FULLSELECT query.";
 	                	break;
 	
 	                case StatementHelper.STATEMENT_TYPE_SELECT:
-	                	System.out.println("TreeML: " +
-                			createSelectTreeML((QuerySelectStatement) userQuery));
+	                	QuerySelectStatement select = 
+	                		(QuerySelectStatement) userQuery;
+
+	                	String queryTML =
+	                		tmlWriter.createSelectStatementTreeML(select);
+	                	
+	                	System.out.println("TreeML: " + queryTML);
+
+						try {
+		                	Writer out = new BufferedWriter(new FileWriter("test.tml"));
+							out.write(queryTML);
+		                	out.close();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+
 	                	returnStatus = "Found SELECT query.";
 	                	break;
 	                
@@ -248,7 +254,9 @@ public class QueryEditor extends ViewPart
 	                	returnStatus = "Invalid query for compilation.";
                 }
    
-            } catch (SQLParserException spe) {
+                returnStatus = "Successfully compiled query.";
+            }
+            catch (SQLParserException spe) {
                 // handle the syntax error
                 System.out.println(spe.getMessage());
                 
@@ -263,249 +271,21 @@ public class QueryEditor extends ViewPart
                     int errorLine = errorInfo.getLineNumberStart();
                     int errorColumn = errorInfo.getColumnNumberStart();
                 }
-            } catch (SQLParserInternalException spie) {
+            }
+            catch (SQLParserInternalException spie) {
                 // handle the exception
                 System.out.println(spie.getMessage());
+            }
+            catch (DBToasterTMLWriter.CreateTMLException dbte) {
+            	System.out.println("Query toasting failed!");
+            	dbte.printStackTrace();
+            	returnStatus = dbte.getMessage();
             }
             
             return returnStatus;
 		}
 	
-		public String createSelectTreeML(QuerySelectStatement selectStmt) {
-			String header = "<tree>";
-			String footer = "</tree>";
-			String decls = "<declarations>" +
-				"<attributeDecl name=\"op\" type=\"String\"/>" +
-				"<attributeDecl name=\"param\" type=\"String\"/>" +
-				"</declarations>";
 
-			// TODO: handle INTO clause -- possible failing?
-			QuerySelect select = (QuerySelect) selectStmt.getQueryExpr().getQuery();
-			String body = createSelectListTreeML(select.getSelectClause()) +
-				createFromClauseTreeML(select.getFromClause()) +
-				createWhereClauseTreeML(select.getWhereClause()) +
-				createGroupByTreeML(select.getGroupByClause()) +
-				createHavingClauseTreeML(select.getHavingClause()) +
-				createOrderClauseTreeML(selectStmt.getOrderByClause());
-
-			String r = header + decls + body + footer;
-			return r;
-		}
-
-		private String createOrderClauseTreeML(EList orderByClause) {
-			for (Iterator it = orderByClause.iterator(); it.hasNext();)
-            {
-                OrderBySpecification orderBySpec = (OrderBySpecification) it.next();
-                if (StatementHelper.isOrderBySpecificationValid(orderBySpec)) {
-                }
-            }
-			return null;
-		}
-
-		private String createHavingClauseTreeML(QuerySearchCondition havingClause) {
-			// TODO Auto-generated method stub
-			return null;
-		}
-
-		private String createGroupByTreeML(EList groupByClause) {
-			for (Iterator groupIt = groupByClause.iterator(); groupIt.hasNext();)
-            {
-                GroupingSpecification groupSpec = (GroupingSpecification) groupIt.next();
-            }
-			return null;
-		}
-
-	    String getInterfaceName(Class sqlObjectClass)
-	    {
-	        if (sqlObjectClass == null) { return null; }
-
-	        StringBuffer className = null;
-	        String interfaceName = null;
-	        
-	        className =
-	        	new StringBuffer(sqlObjectClass.getName());
-	        
-	        // get the interface type of the given SQLQueryObject
-	        if (sqlObjectClass.getPackage().getName().endsWith("impl"))
-	        {
-	            int implStart = className.lastIndexOf(".impl.") + 1;
-	            int implEnd = implStart + 5;
-	            className.delete(implStart, implEnd);
-	        }
-	        // we are only working with interfaces
-	        if (sqlObjectClass.getName().endsWith("Impl"))
-	        {
-	            className.delete(className.length() - 4, className.length());
-	        }
-
-	        interfaceName = className.toString();
-	        return interfaceName;
-	    }
-	    
-		private Class getDispatchClass(SQLObject sqlObject) {
-	        if (sqlObject == null) { return null; }
-
-	        String interfaceName = null;
-
-	        Class sqlObjectClass = sqlObject.getClass();
-	        Class sqlObjectInterfaceClass = sqlObjectClass;
-
-	        if (sqlObjectClass.getName().endsWith("Impl"))
-	        {
-	            // if we have an impl we need to find its interface as all
-	            // appendSQL methods have the interface as argument
-	            // Class.forName doesn't help us in the eclipse runtime as
-	            // the class loader of the SQLQuery model has no access to its
-	            // extending plugins (no runtime dependency)
-	            interfaceName = getInterfaceName(sqlObject.getClass());
-	            Class[] sqlObjectInterfaces = sqlObjectClass.getInterfaces();
-	            
-	            for (int i = 0; i < sqlObjectInterfaces.length; i++)
-	            {
-	                Class interfaceClass = sqlObjectClass.getInterfaces()[i];
-	                if (interfaceClass.getName().equals(interfaceName))
-	                {
-	                    sqlObjectInterfaceClass = interfaceClass;
-	                    break;
-	                }
-	            }
-	        }
-	        
-	        return sqlObjectInterfaceClass;
-		}
-
-		private String createWhereClauseTreeML(QuerySearchCondition whereClause) {
-			if ( whereClause instanceof SearchConditionCombined ) {
-				searchConditionCombinedTML(
-					(SearchConditionCombined) whereClause);
-			}
-			else {
-
-				try {
-			        
-					Method predicateMethod =
-						this.getClass().getDeclaredMethod(
-							"predicateTML", getDispatchClass(whereClause));
-					predicateMethod.invoke(this, whereClause);
-					
-				} catch (NoSuchMethodException e) {
-					e.printStackTrace();
-				} catch (IllegalAccessException e) {
-					e.printStackTrace();
-				} catch (InvocationTargetException e) {
-					e.printStackTrace();
-				}
-			}
-			
-			return null;
-		}
-
-		// Predicates
-		private String predicateTML(PredicateBasic p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateBetween p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateExists p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateIn p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateInValueList p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateInValueRowSelect p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateInValueSelect p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateIsNull p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateLike p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateQuantified p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateQuantifiedRowSelect p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateQuantifiedType p) {
-			return null;
-		}
-		
-		private String predicateTML(PredicateQuantifiedValueSelect p) {
-			return null;
-		}
-		
-
-		// From clause
-		
-		private String createFromClauseTreeML(EList fromClause) {
-			for (Iterator fromIt = fromClause.iterator(); fromIt.hasNext();)
-            {
-                TableReference tableRef = (TableReference) fromIt.next();
-
-            }
-			return null;
-		}
-		
-		private String createSelectListTreeML(EList selectList) {
-			return null;
-		}
-		
-		// Expressions
-		private String predicateComparisonOpTreeML(PredicateComparisonOperator op) {
-			if ( op == PredicateComparisonOperator.EQUAL_LITERAL ) {
-				
-			}
-			else if ( op == PredicateComparisonOperator.NOT_EQUAL_LITERAL ) {
-				
-			}
-			else if ( op == PredicateComparisonOperator.GREATER_THAN_LITERAL ) {
-				
-			}
-			else if ( op == PredicateComparisonOperator.GREATER_THAN_OR_EQUAL_LITERAL ) {
-				
-			}
-			else if ( op == PredicateComparisonOperator.LESS_THAN_LITERAL) {
-				
-			}
-			else if ( op == PredicateComparisonOperator.LESS_THAN_OR_EQUAL_LITERAL ) {
-				
-			}
-			return null;
-		}
-		
-		private String searchConditionCombinedTML(SearchConditionCombined pred) {
-			return null;
-		}
-		
-		private String searchConditionCombinedOperatorTreeML(SearchConditionCombinedOperator op) {
-			if ( op == SearchConditionCombinedOperator.AND_LITERAL ) {
-				
-			}
-			else if ( op == SearchConditionCombinedOperator.OR_LITERAL ) {
-				
-			}
-			return null;
-		}
-		
 	};
 	
 	private QueryTextVis query;

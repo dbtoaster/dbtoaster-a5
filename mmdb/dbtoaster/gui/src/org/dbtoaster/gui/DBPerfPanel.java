@@ -73,6 +73,7 @@ public class DBPerfPanel extends Composite {
         }
       
         public void actionPerformed(ActionEvent actionevent) {
+        	/*
         	getDisplay().asyncExec(new Runnable() {
     			public void run() {
     				if ( !getDisplay().isDisposed() ) {
@@ -87,6 +88,7 @@ public class DBPerfPanel extends Composite {
     				}
     			}
         	});
+        	*/
         }
     }
    
