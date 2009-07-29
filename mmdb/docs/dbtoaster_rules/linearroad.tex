@@ -544,52 +544,151 @@ on insert into I values (type, time, carid, speed, xway, lane, dir, seg, pos,
   
   update s1_I11I22[id, pos, lane, dir, time];
   update s2_I11I22[id, pos, lane, dir, time];
+ 
+  foreach (d in dom_dir, s in dom_seg, p in dom_pos) {
+	
+    list <tuple <...>> t;
 
-  foreach (d, s, p) {
-    new +I Accident_id1[d, s, p];
-    new +I Accident_id2[d, s, p];
-    new +I Accident_firstMinute [d, s, p];
-    new +I Accident_lastMinute [d, s, p];
+    /* computing incrdiffplan part of Accident */
+    foreach (d', s', p') {
+      t = sigma_{...} ((s1_I22[..., time-120] X s1_I11[...,time] X s1_I22[..., time]) U
+    						(s1_I22[..., time-150] X s1_I22[..., time-30] X s1_I11[...]) U
+						(s1_I11[..., time-240] X s1_I22[..., time-240] X s1_I22[..., time-120]) U
+						(s1_I22[..., time-270] X s1_I11[..., time-240] X s1_I22[..., time-150]));
+
+      s_accident[d', s', p'].insert(t);
+    }
+    
+    if (s_accident.find(d,s,p) = s_accident.end) {
+      t = sigma_{...} ((s1_I22[..., time-120] X s1_I11[...,time] X s1_I22[..., time]) U
+    						(s1_I22[..., time-150] X s1_I22[..., time-30] X s1_I11[...]) U
+						(s1_I11[..., time-240] X s1_I22[..., time-240] X s1_I22[..., time-120]) U
+						(s1_I22[..., time-270] X s1_I11[..., time-240] X s1_I22[..., time-150]));
+
+      s_accident[d,s,p] = t
+    }
+    
+    Accident_id1[d,s,p] = min(Accident_id1[d,s,p], min_{ID} (t));
+    Accident_id2[d,s,p] = max(Accident_id2[d,s,p], max_{ID} (t));
+    Accident_firstMinute[d,s,p] = min(Accident_firstMinute[d,s,p], min_{TIME} (t);
+    Accident_lastMinute[d,s,p] = max(Accident_lastMinute[d,s,p], max_{TIME} (t);
+  }
+  
+  if(Accident_id1.find(dir, seg, pos) = Accident_id1.end) {
+    /* repeating incrdiffplan part of Accident */
+    ...
+    
+    Accident_id1[dir, seg, pos] = min_{ID} (t);
+  }
+
+  if(Accident_id1.find(dir, seg, pos) = Accident_id1.end) {
+    /* repeating incrdiffplan part of Accident */
+    ...
+    
+    Accident_id2[dir, seg, pos] = max_{ID} (t);
+  }
+
+  if(Accident_id1.find(dir, seg, pos) = Accident_id1.end) {
+    /* repeating incrdiffplan part of Accident */
+    ...
+    
+    Accident_firstMinute[dir, seg, pos] = min_{TIME} (t);
+  }
+
+  if(Accident_id1.find(dir, seg, pos) = Accident_id1.end) {
+    /* repeating incrdiffplan part of Accident */
+    ...
+    
+    Accident_lastMinute[dir, seg, pos] = min_{TIME} (t);
   }
   
   foreach ( m, s, d) {
     /* prelav_speed and numVehicles depend on Input */
-    new +I prelav_speed[m, s, d];   
-    new +I numVehicles [m, s, d];
+    prelav_speed[m,s,d] = avg(prelav_speed(m,s,d), (avg_(...) + avg(...) + avg(...)));
+    
+    /* incrdiff part of numVehicles */
+    list <tuple<ID>> tmp;
+    foreach( i in sigma_{...} (I)) {
+      if (s_numV_q.find(i)) 
+        s_numV_q[i]++;
+      else {
+        s_numV_q.insert(i,1);
+        tmp.insert(i);
+    }
+    
+    numVehicles[m,s,d] += sum_{1} (tmp);
     
     /* accident and accidentSeg depend on Accident */
-    new +I stats_accident[m,s,d];
-    new +I stats_accidentSeg[m,s,d];
+    stats_accident[m,s,d] += sum_{1} (sigma_{...} (Delta Accident));
+    
+    /* incrdiff part of stats_accidentSeg */
+    foreach(s, d) {
+      s_accidentSeg_q.insert(sigma_{...}(Delta accident));
+    }
+    if ( s_accidentSeg_q.find(s,d) = s_accidentSeg_q.end) {
+      s_accidentSeg_q(s,d) = sigma_{...} (Delta accident);
+    }
+    
+    stats_accidentSeg[m,s,d] = min(stats_accidentSeg[m,s,d], min_{SEG} (s_accidentSeg_q(s,d));
+  }
+  
+  if (prelav_speed.find(time/60+1, seg, dir) = prelav_speed.end) {
+    prelav_speed[time/60+1, seg, dir] = avg_(...) + avg(...) + avg(...);
   }
 
-  /* stats_lav depends on prelav_speed */
-  foreach (m,s,d) 
-    new +I stats_lav[m, s, d];
+  if (numVehicles.find(time/60+1, seg, dir) = numVehicles.end) {
+    /* incrdiff part of numVehicles */
+    ...
+    
+    numVehicles[time/60+1, seg, dir] = sum_{1} (t2);
+  }
+  if (stats_accident(time/60+1, seg, dir) = stats_accident.end) {
+    stats_accident(time/60+1, seg, dir) = sum_{1} (sigma_{...} (Delta Accident));
+  }
+  if (stats_accidentSeg(time/60+1, seg, dir) = stats_accidentSeg.end) {
+    /* incrdiff part of stats_accidentSeg */
+    ...
+     
+    stats_accidentSeg[time/60+1, seg, dir] = min_{SEG} (s_accidentSeg_q(s,d));
+  }
+
+  /* stats_lav depends on prelav_speed check this later */
+  stats_lav[time/60+1, seg, dir] = avg_{prelav_speed[T, seg, dir]} (sigma_{...} (new I))
 
   /* stats_toll depends on stats_lav and numVehicles */
-  foreach (m, s, d) 
-    new +I stats_toll[m,s,d];
+  stats_toll[time/60+1, seg, dir] = max_{...} (...);
 
-  /* taa_time depends on new Input only */  
-  new +I tollAccAlerts_time[v,s,d];
-  
-  /* tollAccAlerts depend on statistics */
-  foreach (t, s, d) {
-    new +I tollAccAlerts_lav[t,s,d];
-    new +I tollAccAlerts_toll[t,s,d];
-    new +I tollAccAlerts_accidentSeg[t,s,d];
+  foreach(v, s, d) {
+    /* incrdiff part of tollAccAlerts_time */
+    foreach(v', s', d') {
+      tollAccAlerts_time_q[v',s',d'].insert(sigma_{...} ());
+    }
+    if (tollAccAlerts_time_q[id, seg, dir] = tollAccAlerts_time.end) {
+      tollAccAlerts_time_q[id, seg, dir].insert(sigma_{...} ());
+    }
+    
+    tollAccAlerts_time[v,s,d] = min(tollAccAlerts_time[v,s,d], min_{TIME} (sigma_{...} ());
   }
+  
+  if(tollAccAlerts_time.find(id, seg, dir) = tollAccAlerts_time.end) {
+    /* incrdiff part of tollAccAlerts_time */
+    ...
+    
+    tollAccAlerts_time[id,seg,dir] = min_{TIME} (sigma_{...} ());
+  }
+  
+  tollAccAlerts_lav[time, seg, dir] = stats_lav[time/60+1, seg, dir];
+  tollAccAlerts_toll[time, seg, dir] = stats_toll[time/60+1, seg, dir];
+  tollAccAlerts_accidentSeg[time, seg, dir] = stats_accidentSeg[time/60+1, seg, dir];
   
   /* type = 2 */
   /* AccountBalanceNow depends on tollAccAlerts */
-  foreach (t, v, q) 
-    new +I AccountBalanceNow_toll(t,v,q);
+  AccountBalanceNow_toll[time, id, qid] = sum_{TOLL} ( ...);
   
   /* type = 3 */
-  foreach (q, v, n) 
-    new +I DailyExpenditureAnswer_bal[q,v,n];
+  DailyExpenditureAnswer_bal[qid, id, Day(time)] = sum_{TOLL} (...) ;
 }
 \end{verbatim}
-\begin{comment}
+%\begin{comment}
 \end{document}
-\end{comment}
+%\end{comment}
