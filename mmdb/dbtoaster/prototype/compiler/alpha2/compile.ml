@@ -2240,7 +2240,7 @@ and maintain_plan_domains plan =
 
 (*
  *
- * Query compilation top-level
+ * Query compilation
  *
  *)		      
 let compile_target m_expr event =
@@ -2663,7 +2663,7 @@ let compile_target_all m_expr event_list =
 
 
 (* Sig: map expression -> code_expression list * code_expression list
- * Semantics: input query -> declarations * handlers
+ * Semantics: input query -> declarations * (handler * event) list
  *)
 (* Assumes input map expression has been typechecked *)
 let compile_code_rec m_expr =
@@ -2690,7 +2690,7 @@ let compile_code_rec m_expr =
         generate_map_declarations maps map_vars state_parents
     in
 
-    let (global_decls, handlers) =
+    let (global_decls, handler_and_events) =
 	List.fold_left
 	    (fun (gd_acc, handler_acc) (event, hb_l) ->
                 if (List.length hb_l) > 0 then
@@ -2717,7 +2717,16 @@ let compile_code_rec m_expr =
                         let (handler_body_with_rv, handler_ret_type) =
 	                    match get_return_val top_level_handler with
 	                        | `Eval x ->
-                                      (merged_handlers@[`Return x], ctype_of_arith_code_expression x)
+                                      print_endline ("Handler "^handler_id^" return val: "^(string_of_code_expression (`Eval x)));
+                                      let new_handlers =
+                                          let new_head =
+                                              match (remove_return_val top_level_handler) with
+                                                  | `Block c -> c
+                                                  | x -> [x]
+                                          in
+                                              new_head@(List.tl merged_handlers)@[`Return x]
+                                      in
+                                          (new_handlers, ctype_of_arith_code_expression x)
 	                        | _ ->
                                       print_endline ("Invalid return val in top level handler:\n"^
                                           (indented_string_of_code_expression top_level_handler));
@@ -2727,7 +2736,7 @@ let compile_code_rec m_expr =
                         let handler_code =
                             `Handler(handler_id, handler_args, handler_ret_type, handler_body_with_rv)
                         in
-                            (gd_acc@merged_decls, handler_acc@[handler_code])
+                            (gd_acc@merged_decls, handler_acc@[(handler_code, event)])
                     end
                 else
                     (gd_acc, handler_acc))
@@ -2735,11 +2744,11 @@ let compile_code_rec m_expr =
             ([], []) handlers_by_event
     in
     let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
-        (rm_decls@global_decls, handlers)
+        (rm_decls@global_decls, handler_and_events)
 
 
 let compile_query m_expr out_file_name =
-    let (global_decls, handlers) = compile_code_rec m_expr in
+    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
     let out_chan = open_out out_file_name in
         generate_includes out_chan;
 
@@ -2751,9 +2760,147 @@ let compile_query m_expr out_file_name =
         
         (* output handlers *)
         List.iter
-            (fun h ->
+            (fun (h, e) ->
 	        output_string out_chan
 		    ((indented_string_of_code_expression h)^"\n\n"))
-            handlers;
+            handlers_and_events;
 
         close_out out_chan
+
+
+(*
+ * Engine compilation
+ *)
+
+let compile_standalone_engine m_expr relation_sources out_file_name =
+    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
+    let out_chan = open_out out_file_name in
+        generate_includes out_chan;
+        generate_stream_engine_includes out_chan;
+
+        (* output declarations *) 
+	List.iter
+	    (fun x -> output_string out_chan
+		((indented_string_of_code_expression x)^"\n")) global_decls;
+	output_string out_chan "\n";
+        
+        (* output handlers *)
+        List.iter
+            (fun (h, e) ->
+	        output_string out_chan
+		    ((indented_string_of_code_expression h)^"\n\n"))
+            handlers_and_events;
+
+        (* standalone engine *)
+
+        (* init *)
+        generate_stream_engine_init out_chan
+            (List.map
+                (fun (h,e) ->
+                    let event_rel = get_bound_relation e in 
+                        if List.mem_assoc event_rel relation_sources then
+                            let (source_type, source_args, tuple_type,
+                                    adaptor_type, adaptor_bindings,
+                                    thrift_tuple_namespace, stream_name)
+                            =
+                                List.assoc event_rel relation_sources
+                            in
+                                ((source_type, source_args, tuple_type,
+                                  adaptor_type, adaptor_bindings, thrift_tuple_namespace),
+                                stream_name, h, e)
+                        else
+                            raise (CodegenException
+                                ("Could not find relation source for "^event_rel)))
+                handlers_and_events);
+
+        (* main *)
+        generate_stream_engine_main out_chan;
+
+        close_out out_chan
+
+
+let compile_standalone_debugger m_expr relation_sources out_file_name =
+    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
+    let code_out_chan = open_out out_file_name in
+    let thrift_file_name = (Filename.chop_extension out_file_name)^".thrift"in
+    let thrift_out_chan =  open_out thrift_file_name in
+
+        generate_includes code_out_chan;
+        generate_stream_engine_includes code_out_chan;
+        generate_stream_debugger_includes code_out_chan;
+
+        (* output declarations *) 
+	List.iter
+	    (fun x -> output_string code_out_chan
+		((indented_string_of_code_expression x)^"\n")) global_decls;
+	output_string code_out_chan "\n";
+        
+        (* output handlers *)
+        List.iter
+            (fun (h, e) ->
+	        output_string code_out_chan
+		    ((indented_string_of_code_expression h)^"\n\n"))
+            handlers_and_events;
+
+        (* standalone debugger *)
+
+        (* init *)
+        let streams_handlers_and_events =
+            List.map
+                (fun (h,e) ->
+                    let event_rel = get_bound_relation e in 
+                        if List.mem_assoc event_rel relation_sources then
+                            let (source_type, source_args, tuple_type,
+                                    adaptor_type, adaptor_bindings,
+                                    thrift_tuple_namespace, stream_name) =
+                                List.assoc event_rel relation_sources
+                            in
+                                ((source_type, source_args, tuple_type,
+                                    adaptor_type, adaptor_bindings, thrift_tuple_namespace),
+                                stream_name, h, e)
+                        else
+                            raise (CodegenException
+                                ("Could not find relation source for "^event_rel)))
+                handlers_and_events
+        in
+        let stream_debugger_class =
+            generate_stream_debugger_class thrift_out_chan code_out_chan
+                global_decls streams_handlers_and_events
+        in
+            generate_stream_debugger_main code_out_chan stream_debugger_class;
+            close_out thrift_out_chan;
+            close_out code_out_chan
+
+
+(*
+ *
+ * TODO: Compiler main
+ *)
+module CompileTask =
+struct
+    type mode = Handlers | Engine | Debugger
+
+    (* Required parameters w/ defaults *)
+    let source_output_file = ref "a.cc"
+    let binary_output_file = ref "a.out"
+    let compile_mode = ref Engine
+    let requires_thrift () = (!compile_mode) = Debugger
+
+    (* Optional parameters *)
+    let cxx_flags = ref ""
+    let cxx_linker_flags = ref ""
+
+    let thrift_languages = ref "-gen-cpp -gen-java"
+    let thrift_flags = ref ""
+end
+
+(* TODO: use ocamlbuild to do invocation of external tools *)
+let main () =
+    (* Parse options *)
+    (* Invoke compiler on TML file according to mode *)
+    (* Invoke thrift if necessary *)
+    (* Invoke gcc *)
+    print_endline "main() not yet implemented!"
+;;
+
+main()

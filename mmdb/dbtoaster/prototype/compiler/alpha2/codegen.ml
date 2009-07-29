@@ -1193,60 +1193,702 @@ let generate_map_declarations maps map_vars state_parents =
  *)
 
 let generate_includes out_chan =
-    output_string out_chan "#include <cmath>\n";
-    output_string out_chan "#include <cstdio>\n";
-    output_string out_chan "#include <cstdlib>\n\n";
-    output_string out_chan "#include <iostream>\n";
-    output_string out_chan "#include <map>\n";
-    output_string out_chan "#include <list>\n";
-    output_string out_chan "#include <set>\n\n";
-    output_string out_chan "#include <tr1/tuple>\n";
-    output_string out_chan "#include <tr1/unordered_set>\n\n";
-    output_string out_chan "using namespace std;\n";
-    output_string out_chan "using namespace tr1;\n"
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let includes =
+        ["// DBToaster includes.";
+        "#include <cmath>";
+        "#include <cstdio>";
+        "#include <cstdlib>\n";
+        "#include <iostream>";
+        "#include <map>";
+        "#include <list>";
+        "#include <set>\n";
+        "#include <tr1/tuple>";
+        "#include <tr1/unordered_set>\n";
+        "using namespace std;";
+        "using namespace tr1;"]
+    in
+        output_string out_chan (list_code includes)
+
+
+(************************************
+ * Standalone engine+debugger generation
+ ************************************)
+
+(* unit -> stream name * stream id *)
+let stream_counter = ref 0
+let generate_stream_id stream_name = 
+    let r = !stream_counter in
+        incr stream_counter;
+        ("stream"^stream_name^"Id", (string_of_int r))
+
+let fun_obj_id_counter = ref 0
+let generate_function_object_id handler_name =
+    let r = !fun_obj_id_counter in
+        incr fun_obj_id_counter;
+        "fo_"^handler_name^"_"^(string_of_int r)
+
+let generate_stream_engine_includes out_chan =
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let includes =
+        ["\n\n// Stream engine includes.";
+        "#include \"streamengine.h\"";
+        "#include \"datasets/adaptors.h\"";
+        "#include \"boost/bind.hpp\"\n\n";]
+    in
+        output_string out_chan (list_code includes)
+    
+
+(* Generates init() and main() methods for standalone stream engine for compiled queries.
+ * source metadata: (stream type * tuple type * stream name * handler * event) list
+ * source metadata -> unit
+*)
+let generate_stream_engine_init out_chan streams_handlers_and_events =
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let get_handler_metadata handler adaptor_type adaptor_bindings =
+        match handler with
+            | `Handler(fid, args, ret_type, _) ->
+                  let input_metadata =
+                      let ifa =
+                          (fun input_instance ->
+                              List.fold_left
+                                  (fun acc (id, ty) ->
+                                      if (List.mem_assoc id adaptor_bindings) then
+                                          let in_field = List.assoc id adaptor_bindings in
+                                              (if (String.length acc) = 0 then "" else acc^",")^
+                                                  (input_instance^"."^in_field)
+                                      else raise (CodegenException
+                                          ("Could not find input arg binding for "^id)))
+                                  "" args)
+                      in
+                          (adaptor_type^"::Result", ifa)
+                  in
+                      (fid, input_metadata, ctype_of_type_identifier ret_type)
+
+            | _ -> raise (CodegenException
+                  ("Invalid handler: "^(string_of_code_expression handler)))
+    in
+    let stream_ids = Hashtbl.create 10 in
+    let (init_decls, init_body) =
+        List.fold_left
+            (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
+
+                (* Type assumptions: 
+                   -- adaptor constructor: adaptor()
+                *)
+                let (source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
+
+                (* add streams to multiplexer
+                   -- instantiate input stream sources.
+                   -- instantiate adaptors.
+                   -- initialize (i.e. buffer data for) input streams
+                   -- generate stream id, register with multiplexer via
+                   add_stream(stream id, input stream)
+                *)
+
+                (* declare_stream: <stream type> <stream inst>; static int <stream id name> = <stream id val>;
+                 * register_stream: sources.addStream< <tuple_type> >(&<stream inst>, <stream id name>);
+                 * stream_id: <stream id name>
+                 *)
+
+                let (declare_stream, register_stream, stream_id) =
+                    let new_decl = source_type^" "^stream_name^"("^source_args^");\n" in
+                        if List.mem new_decl decls_acc then
+                            ([], [], Hashtbl.find stream_ids stream_name)
+                        else
+                            let (id_name, id) = generate_stream_id stream_name in
+                            let adaptor_name = stream_name^"_adaptor" in
+                            let new_adaptor =
+                                "shared_ptr<"^adaptor_type^"> "^
+                                    adaptor_name^"(new "^adaptor_type^"());"
+                            in
+                            let new_id = ("static int "^id_name^" = "^id^";\n") in
+                            let stream_pointer = "&"^stream_name in
+                            let adaptor_deref = "*"^adaptor_name in
+                            let reg =
+                                "sources.addStream<"^tuple_type^">("^stream_pointer^", "^adaptor_deref^", "^id_name^");"
+                            in
+                                Hashtbl.add stream_ids stream_name id_name;
+                                ([ new_decl; new_adaptor; new_id ], [reg], id_name)
+                in
+
+                let (handler_name, handler_input_metadata, handler_ret_type) =
+                    get_handler_metadata handler adaptor_type adaptor_bindings
+                in
+                let (handler_input_type_name, handler_input_args) =
+                    handler_input_metadata
+                in
+                let handler_dml_type = match event with
+                    | `Insert _ -> "DBToaster::StandaloneEngine::insertTuple"
+                    | `Delete _ -> "DBToaster::StandaloneEngine::deleteTuple"
+                in
+
+                (* add handlers to dispatcher
+                   -- create function object with operator()(boost::any data)
+                   -- cast from boost::any to expected struct, and invoke handler with struct fields.
+                   -- register handler with dispatcher for a given stream, via
+                   add_handler(stream id, dml type, function object)
+                *)
+
+                (* TODO: allocation model for inputs? *)
+                (* declare_handler_fun_obj:
+                   struct <fun obj type name>
+                   { <handler ret type> operator() { cast; invoke; } }
+                 * fun_obj_type: <fun obj type name> *)
+                let (declare_handler_fun_obj, fun_obj_type) = 
+                    let input_instance = "input" in
+                    let fo_type = handler_name^"_fun_obj" in
+                        ([("struct "^fo_type^" { ");
+                          (indent (handler_ret_type^" operator()(boost::any data) { "));
+                          (indent (indent
+                              (handler_input_type_name^" "^input_instance^" = ")));
+                          (indent (indent (indent ("boost::any_cast<"^handler_input_type_name^">(data); "))));
+                          (indent (indent
+                              (handler_name^"("^
+                                  (handler_input_args input_instance)^");")));
+                          (indent "}"); "};\n"],
+                        fo_type)
+                in
+
+                (* declare_handler_fun_obj_inst: <fo_type> <fo instance name>; *)
+                let (declare_handler_fun_obj_inst, handler_fun_obj_inst) =
+                    let h_inst = generate_function_object_id handler_name in
+                    let decl_code = [ handler_name^"_fun_obj "^h_inst^";\n" ] in
+                        (decl_code, h_inst)
+                in
+                (* register_handler:
+                   router.addHandler(<stream id name>, handler dml type, <fo instance name>) *)
+                let register_handler =
+                    "router.addHandler("^stream_id^","^handler_dml_type^","^handler_fun_obj_inst^");"
+                in
+                    (decls_acc@declare_stream@
+                        declare_handler_fun_obj@declare_handler_fun_obj_inst,
+                    init_body_acc@register_stream@[register_handler]))
+            ([], []) streams_handlers_and_events
+    in
+    (* void init(multiplexer, sources) { register stream, handler;} *)
+    let init_defn =
+        let init_code =
+            ["\n\nvoid init(DBToaster::StandaloneEngine::Multiplexer& sources,";
+             (indent "DBToaster::StandaloneEngine::Dispatcher& router)"); "{";]@
+                (List.map indent init_body)@[ "}\n\n"; ]
+        in
+            list_code init_code
+    in
+        output_string out_chan (list_code init_decls);
+        output_string out_chan init_defn
+
+
+let generate_stream_engine_main out_chan =
+    (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let block l = ["{"]@(List.map indent l)@["}"] in
+    let main_defn =
+        let main_code =
+            ["int main(int argc, char** argv)"; "{"]@
+                (block
+                    (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
+                    "DBToaster::StandaloneEngine::Dispatcher router;";
+                    "init(sources, router);";
+                    "while ( sources.streamHasInputs() ) {";
+                    (indent "DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();");
+                    (indent "router.dispatch(t);");
+                    "}"]))
+        in
+            list_code main_code
+    in
+        output_string out_chan main_defn
+
+(* Standalone stepper/debugger *)
 
 (*
- * Standalone engine generation
+ * Thrift helpers
  *)
 
-(* TODO: define and use source metadata to generate init function
- * source metadata: (dataset info * handler) list
- * dataset info: stream struct name, tuple struct name, tuple struct fields * handler args
-*)
-let generate_streamengine_init out_chan streams_and_handlers =
-    (* add streams to multiplexer
-       -- instantiate input streams.
-       -- initialize (i.e. buffer data for) input streams
-       -- generate stream id, register with multiplexer via
-          add_stream(stream id, input stream)
-    *)
-    (*
-    let (init_decls, init_stream_bodies) =
-        List.fold_left
-            (fun (decls_acc, init_body_acc) (stream_info, handler) ->
-                let (stream_struct, tuple_struct, field_args_bindings) = stream_info in
-                let (stream_name, stream_id) = generate_new_stream() in
-                let declare_stream = stream_struct^"<"^tuple_struct_name^"> "^stream_name^";" in
-                let init_stream = stream_name^".init_stream();" in
-                let register_stream = "multiplexer.add("^stream_name^","^stream_id^")" in
-                    (decls_acc@[declare_stream], init_body_acc@[init_stream; register_stream]))
-            ([], []) streams_and_handlers
-    in
-    *)
-    (* add handlers to dispatcher
-       -- create function object with operator()(boost::any data)
-       -- cast from boost::any to expected struct, and invoke handler with struct fields.
-       -- TODO: where do we get struct names, field names, etc? These are
-          dataset specific, and ideally should come from data loading code.
-       -- register handler with dispatcher for a given stream, via
-          add_handler(stream id, dml type, function object)
-     *)
-    print_endline "Not yet implemented!"
+(* Note these two functions are asymmetric *)
+let thrift_type_of_base_type t =
+    match t with
+        | "int" -> "i32"
+        | "float" -> "double"
+        | "long" -> "i64"
+        | "string" -> "string"
+        | _ -> raise (CodegenException ("Unsupported base type "^t))
 
-(* Generate Makefile to compile <init file>.cpp, streamengine.cpp as objects,
-   and link them together in the output *)
-let generate_streamengine_makefile init_cpp_filename =
-    print_endline "Not yet implemented!"
+(* TODO: extend to support map, list, set *)
+let ctype_of_thrift_type t =
+    match t with
+        | "i32" -> "int32_t"
+        | "double" -> "double"
+        | "i64" -> "long long"
+        | "string" -> "string"
+        | "bool" -> "bool"
+        | "byte" | "i16" | "binary"
+        | _ ->
+              raise (CodegenException ("Unsupported Thrift type: "^t))
+
+let thrift_type_of_datastructure d =
+    match d with
+        | `Variable(n,typ) -> thrift_type_of_base_type typ
+	| `Map (n,f,r) ->
+	      let key_type = 
+                  match f with
+                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                      | [(x,y)] -> thrift_type_of_base_type y
+                      | _ -> n^"_key"
+	      in
+		  "map<"^key_type^","^(thrift_type_of_base_type (ctype_of_type_identifier r))^">"
+
+        | (`Set(n, f) as ds) 
+	| (`Multiset (n,f) as ds) ->
+	      let el_type = 
+		  if (List.length f) = 1
+                  then thrift_type_of_base_type (let (_,ty) = List.hd f in ty)
+                  else n^"_elem"
+	      in
+              let ds_type =
+                  match ds with | `Set _ -> "set" | `Multiset _ -> "list"
+              in
+		  ds_type^"<"^el_type^">"
+
+
+let ctype_of_thrift_datastructure d =
+    match d with
+        | `Variable(n,typ) -> thrift_type_of_base_type typ
+	| `Map (n,f,r) ->
+	      let key_type = 
+                  match f with
+                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                      | [(x,y)] -> ctype_of_thrift_type (thrift_type_of_base_type y)
+                      | _ -> n^"_key"
+	      in
+              let rt_thrift_type =
+                  thrift_type_of_base_type (ctype_of_type_identifier r)
+              in
+		  "map<"^key_type^","^(ctype_of_thrift_type rt_thrift_type)^">"
+
+        | (`Set(n, f) as ds) 
+	| (`Multiset (n,f) as ds) ->
+	      let el_type = 
+		  if (List.length f) = 1
+                  then ctype_of_thrift_type (thrift_type_of_base_type (let (_,ty) = List.hd f in ty))
+                  else n^"_elem"
+	      in
+              let ds_type =
+                  match ds with | `Set _ -> "set" | `Multiset _ -> "vector"
+              in
+		  ds_type^"<"^el_type^">"
+
+let thrift_element_type_of_datastructure d =
+    match d with
+        | `Variable(n,typ) ->
+              raise (CodegenException
+                  ("Invalid datastructure for elements: "^n))
+
+	| `Map (n,f,r) ->
+	      let key_type = 
+                  match f with
+                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                      | [(x,y)] -> thrift_type_of_base_type y
+                      | _ -> n^"_key"
+	      in
+		  "pair<"^key_type^","^(ctype_of_type_identifier r)^">"
+
+        | `Set(n, f)
+	| `Multiset (n,f) ->
+	      let el_type = 
+		  if (List.length f) = 1
+                  then thrift_type_of_base_type (let (_,ty) = List.hd f in ty)
+                  else n^"_elem"
+	      in
+                  el_type
+
+
+let thrift_inner_declarations_of_datastructure d =
+    let indent s = ("    "^s) in
+    let field_declarations f =
+        let (_, r) =
+            List.fold_left (fun (counter, acc) (id,ty) ->
+                let field_decl =
+                    ((string_of_int counter)^": "^
+                        (thrift_type_of_base_type (ctype_of_type_identifier ty))^
+                        " "^id^",")
+                in
+                    (counter+1, acc@[field_decl]))
+                (1, []) f
+        in
+            r
+    in
+        match d with
+            | `Variable(n,typ) -> raise (CodegenException
+                  ("Datastructure has no inner declarations: "^n))
+
+	    | (`Map (n,f,_) as ds)
+            | (`Set(n, f) as ds)
+	    | (`Multiset (n,f) as ds) ->
+                  if (List.length f) = 1 then
+                      ("", [])
+                  else
+	              let field_decls = field_declarations f in
+                      let decl_name = match ds with
+                          | `Map _ -> n^"_key" | `Set _ | `Multiset _ -> n^"_elem"
+                      in
+                      let struct_decl =
+                          ["struct "^decl_name^" {"]@(List.map indent field_decls)@["}\n"]
+                      in
+		          (decl_name, struct_decl)
+
+
+let copy_element_for_thrift d dest src =
+    let copy_tuple f dest src = 
+        List.fold_left (fun (counter,acc) (id, ty) ->
+            (counter+1, acc@[dest^"."^id^" = get<"^(string_of_int counter)^">("^src^");"]))
+            (0, []) f
+    in
+        match d with
+            | `Variable(n,typ) -> raise (CodegenException "Invalid element copy.")
+	    | `Map (n,f,r) ->
+                  (* Copy from pair< tuple<>, <ret type> > -> pair< struct, <ret type> > *)
+                  let (key_dest_decl, key_dest) = ([n^"_key key;"], "key") in
+                  let (_, copy_tuple_defn) = copy_tuple f key_dest (src^".first") in
+                  let ret_src = src^".second" in
+                      key_dest_decl@
+                      copy_tuple_defn@
+                      [dest^" = make_pair("^key_dest^","^ret_src^");"]
+
+            | `Set(n, f)
+	    | `Multiset (n,f) ->
+                  (* Copy from tuple<> -> struct *)
+                  let (_,r) = copy_tuple f dest src in r
+
+
+let thrift_inserter_of_datastructure d =
+    let indent s = ("    "^s) in
+        match d with
+	    | `Map (n,f,_)
+            | `Set(n, f)
+	    | `Multiset (n,f) ->
+                  let inserter_body =
+                      if (List.length f) = 1 then
+                          [(indent "dest.insert(dest.begin(), src);")]
+                      else
+                          let elem_type = thrift_element_type_of_datastructure d in
+                          let copy_fields dest_var src_var =
+                              copy_element_for_thrift d dest_var src_var
+                          in
+                              (List.map indent
+                                  ([elem_type^" r;"]@
+                                      (copy_fields "r" "src")@
+                                      ["dest.insert(dest.begin(), r);"]))
+                  in
+                  let inserter_name = "insert_thrift_"^n in
+                  let inserter_defn =
+                      let ttype = ctype_of_thrift_datastructure d in
+                      let elem_ctype = element_ctype_of_datastructure d in
+                          [("inline void "^inserter_name^"("^
+                              ttype^"& dest, "^elem_ctype^"& src)"); "{" ]@
+                              inserter_body@
+                              ["}\n"]
+                  in
+                      (inserter_defn, inserter_name)
+
+
+(* Assumes each tuple type has a matching thrift definition named:
+   Thrift<tuple type>, e.g. ThriftVwapTuple *)
+(* TODO: define and use structs as complex map keys rather than tuples,
+   or convert tuples to structs here in Thrift *)
+
+let generate_stream_debugger_includes out_chan =
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let includes =
+        ["// Thrift includes";
+        "#include \"Debugger.h\"";
+        "#include <protocol/TBinaryProtocol.h>";
+        "#include <server/TSimpleServer.h>";
+        "#include <transport/TServerSocket.h>";
+        "#include <transport/TBufferTransports.h>\n";
+        "using namespace apache::thrift;";
+        "using namespace apache::thrift::protocol;";
+        "using namespace apache::thrift::transport;";
+        "using namespace apache::thrift::server;\n";
+        "using boost::shared_ptr;\n\n"]
+    in
+        output_string out_chan (list_code includes)
+
+
+let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls streams_handlers_and_events =
+    (* Generate Thrift service
+       -- void step(tuple)
+       -- void stepn(int n)
+       -- state/map accessors
+    *)
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let block l = ["{"]@(List.map indent l)@["}"] in
+    let strip_namespace type_name =
+        let ns_and_type = Str.split (Str.regexp "::") type_name in
+            List.nth ns_and_type (List.length ns_and_type - 1)
+    in
+    let streams = List.fold_left
+        (fun acc (stream_type_info, stream_name, handler, event) ->
+            if (List.mem_assoc stream_name acc) then acc
+            else acc@[(stream_name, stream_type_info)])
+        [] streams_handlers_and_events
+    in
+    let (tuple_decls, steps_decls, stepns_decls) =
+        List.fold_left
+            (fun (td_acc, step_acc, stepn_acc)
+                (stream_name,
+                    (source_type, _, tuple_type,
+                    adaptor_type, adaptor_bindings,
+                    thrift_tuple_namespace))
+                ->
+                let (thrift_tuple_decl, thrift_tuple_type) =
+                    let normalized_tuple_type = (strip_namespace tuple_type) in
+                    let new_type = "Thrift"^normalized_tuple_type in
+                        if (List.mem_assoc new_type td_acc) then
+                            ([], new_type)
+                        else
+                            let tt_prefix =
+                                if (String.length thrift_tuple_namespace) > 0
+                                then (thrift_tuple_namespace^".") else ""
+                            in
+                            let new_decl = list_code
+                                ([ "struct "^new_type^" {"]@
+                                    (List.map indent
+                                        (["1: DmlType type,";
+                                        "2: DBToasterStreamId id,";
+                                        "3: "^tt_prefix^normalized_tuple_type^" data"]))@
+                                    [ "}\n"])
+                            in
+                                ([(new_type, new_decl)], new_type)
+                in
+                let step_stream = "void step_"^(stream_name)^"(1:"^thrift_tuple_type^" input)," in
+                let stepn_stream = "void stepn_"^(stream_name)^"(1:i32 n)," in
+                    (td_acc@thrift_tuple_decl, step_acc@[step_stream], stepn_acc@[stepn_stream]))
+        ([], [], []) streams
+    in
+    let (key_decls, accessors_decls) =
+        List.fold_left (fun (key_acc, accessor_acc) d ->
+            let (key_decl, accessor_decl) =
+                match d with
+                    | `Declare x ->
+                          begin
+                              match x with
+		                  | `Variable(n, typ) -> 
+                                        let ttype = thrift_type_of_base_type typ in
+                                            ([], ttype^" get_"^n^"(),")
+
+                                  | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                        let ds = datastructure_of_declaration y in
+                                        let n = identifier_of_datastructure ds in
+                                        let ttype = thrift_type_of_datastructure ds in
+                                        let (inner_decl_name, inner_decl) =
+                                            thrift_inner_declarations_of_datastructure ds
+                                        in
+                                        let acs_decl = ttype^" get_"^n^"()," in
+                                            if (List.length inner_decl) > 0 then
+                                                ([(inner_decl_name, list_code inner_decl)], acs_decl)
+                                            else
+                                                ([], acs_decl)
+                          end
+                    | _ -> raise (CodegenException
+                          ("Invalid declaration: "^(indented_string_of_code_expression d)))
+            in
+                (key_acc@key_decl, accessor_acc@[accessor_decl]))
+            ([],[]) global_decls
+    in
+    let service_namespace = "DBToaster.Debugger" in
+    let cpp_service_namespace = "DBToaster::Debugger" in
+    let service_decl =
+        ["include \"datasets.thrift\"\n";
+        ("namespace cpp "^service_namespace);
+        ("namespace java "^(service_namespace)^"\n");
+        "typedef i32 DBToasterStreamId";
+        "enum DmlType { insertTuple = 0, deleteTuple = 1 }\n"]@
+        (let (_,r) = List.split tuple_decls in r)@
+        (let (_,r) = List.split key_decls in r)@
+        ["service Debugger {"]@
+        (List.map indent steps_decls)@
+        (List.map indent stepns_decls)@
+        (List.map indent accessors_decls)@
+        ["}"]
+    in
+
+    (* Generate Thrift service implementation
+       -- instantiate + initialize multiplexer, dispatcher
+       -- void step(tuple) { dispatch(tuple); }
+       -- void stepn(int n) { for i=0:n-1 { dispatch(multiplexer->nextInput()); } }
+       -- state/map accessors
+       -- Copy Thrift service main from skeleton
+    *)
+    let class_name = "DebuggerHandler" in
+    let (steps_defns, stepns_defns) = 
+        List.fold_left
+            (fun (step_acc, stepn_acc)
+                (stream_name,
+                    (source_type, _, tuple_type,
+                    adaptor_type, adaptor_bindings, _))
+                ->
+                let normalized_tuple_type = (strip_namespace tuple_type) in
+                let thrift_tuple_type = "Thrift"^normalized_tuple_type in
+                 (* Create a DBToasterTuple from argument, and invoke dispatch *)
+                let step_stream_body = 
+                    ["void step_"^stream_name^"(const "^thrift_tuple_type^"& input)"]@
+                        (block
+                            (["DBToaster::StandaloneEngine::DBToasterTuple dbtInput;";
+                            "dbtInput.id = input.id;";
+                            "dbtInput.type = static_cast<DBToaster::StandaloneEngine::DmlType>(input.type);";
+                            "dbtInput.data = boost::any(input.data);";
+                            "router.dispatch(dbtInput);" ]))
+                in
+                (* Read n tuples from the stream *)
+                let stepn_stream_body =
+                    ["void stepn_"^stream_name^"(const int32_t n)"]@
+                        (block
+                            (["for (int32_t i = 0; i < n; ++i)"]@
+                                (block 
+                                    (["if ( !sources.streamHasInputs() ) break;";
+                                    "DBToaster::StandaloneEngine::DBToasterTuple t "^
+                                        "= sources.nextInput();";
+                                    "router.dispatch(t);"]))))
+                in
+                    (step_acc@step_stream_body, stepn_acc@stepn_stream_body))
+            ([], []) streams
+    in
+    let accessor_defns =
+        List.fold_left (fun acc d ->
+            let new_defn =
+                match d with
+                    | `Declare x ->
+                          begin
+                              match x with
+		                  | `Variable(n, typ) -> 
+                                        (* Return declared variable *)
+                                        let ttype = thrift_type_of_base_type typ in
+                                        let dtype = ctype_of_thrift_type ttype in
+                                            [dtype^" get_"^n^"()"; "{" ]@
+                                                (List.map indent
+                                                    ([dtype^" r = static_cast<"^dtype^">("^n^");";
+                                                    "return r;"]))@
+                                                [ "}\n" ]
+
+                                  | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                        let ds = datastructure_of_declaration y in
+                                        let n = identifier_of_datastructure ds in
+                                        let ttype = ctype_of_thrift_datastructure ds in
+                                        let (inserter_defn, inserter_name) = thrift_inserter_of_datastructure ds in
+                                        let inserter_mem_fn =
+                                            "boost::bind(&"^class_name^"::"^inserter_name^", this, _return, _1)"
+                                        in
+                                        let (begin_it, end_it, begin_decl, end_decl) =
+		                            range_iterator_declarations_of_datastructure ds
+                                        in
+                                            (* Copy datastructure into _return *)
+                                            inserter_defn@
+                                            ["void get_"^n^"("^ttype^"& _return)"; "{"]@
+                                                (List.map indent
+                                                    ([(begin_decl^" = "^(identifier_of_datastructure ds)^".begin();");
+                                                    (end_decl^" = "^(identifier_of_datastructure ds)^".end();");
+                                                    "for_each("^begin_it^", "^end_it^",";
+                                                    (indent inserter_mem_fn)^");"]))@
+                                                ["}\n"]
+                          end
+                    | _ -> raise (CodegenException
+                          ("Invalid declaration: "^(indented_string_of_code_expression d)))
+            in
+                acc@new_defn)
+            [] global_decls
+    in
+    let impl_code =
+        let internals =
+            (* Local datastructures and constructor *)
+            List.map indent
+                (["DBToaster::StandaloneEngine::Multiplexer& sources;";
+                "DBToaster::StandaloneEngine::Dispatcher& router;\n"])
+        in
+        let constructor =
+            List.map indent
+                (["public:";
+                class_name^"(";
+                (indent (indent "DBToaster::StandaloneEngine::Multiplexer& s,"));
+                (indent (indent "DBToaster::StandaloneEngine::Dispatcher& r)"));
+                (indent (": sources(s), router(r)"));
+                "{}\n"])
+        in
+        ["using namespace "^cpp_service_namespace^";\n";
+        ("class "^class_name^" : virtual public DebuggerIf"); "{"]@
+            internals@
+            constructor@
+            (List.map indent
+                (steps_defns@["\n"]@
+                stepns_defns@["\n"]@
+                accessor_defns))@
+            ["};\n\n"]
+    in
+        output_string decl_out_chan (list_code service_decl);
+        generate_stream_engine_init impl_out_chan streams_handlers_and_events;
+        output_string impl_out_chan (list_code impl_code);
+        class_name
+
+
+let generate_stream_debugger_main impl_out_chan stream_debugger_class =
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let block l = ["{"]@(List.map indent l)@["}"] in
+    let main_defn =
+        ["int main(int argc, char **argv) "]@
+            (block 
+                (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
+                "DBToaster::StandaloneEngine::Dispatcher router;";
+                "init(sources, router);\n";
+                "int port = (70457>>3);";
+                "shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"(sources, router));";
+                "shared_ptr<TProcessor> processor(new DebuggerProcessor(handler));";
+                "shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
+                "shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
+                "shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
+                "TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);";
+                "server.serve();";
+                "return 0;";]))
+    in
+        output_string impl_out_chan (list_code main_defn)
 
 (*
  * File I/O generation

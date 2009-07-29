@@ -2241,7 +2241,6 @@ let identifier_of_declaration decl =
  * C-code generation helpers
  *)
 
-
 let ctype_of_type_identifier t = t
 
 let ctype_of_datastructure_fields f =
@@ -2272,6 +2271,29 @@ let ctype_of_datastructure =
               let ds_type = match ds with | `Set _ -> "set" | `Multiset _ -> "multiset" in
 		  ds_type^"<"^el_type^(if nested_type then " >" else ">")
 
+
+let element_ctype_of_datastructure d =
+    match d with
+        | `Variable(n,typ) ->
+              raise (CodegenException
+                  ("Invalid datastructure for elements: "^n))
+
+	| `Map (n,f,r) ->
+	      let key_type = 
+		  let ftype = ctype_of_datastructure_fields f in
+                      match f with
+                          | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                          | [x] -> ("const "^ftype)
+                          | _ -> ("const tuple<"^ftype^">")
+	      in
+		  "pair<"^key_type^","^(ctype_of_type_identifier r)^">"
+
+        | `Set(n, f)
+	| `Multiset (n,f) ->
+	      let ftype = ctype_of_datastructure_fields f in
+		  if (List.length f) = 1 then ("const "^ftype) else ("const tuple<"^ftype^">")
+
+
 let ctype_of_code_var_list =
     function
         | [] -> raise (CodegenException "Invalid code var list")
@@ -2288,6 +2310,11 @@ let ctype_of_code_var_list =
 let ctype_of_arith_code_expression ac_expr = "int"
 
 let iterator_ref = ref 0
+
+let iterator_type_of_datastructure ds =
+    match ds with
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      (ctype_of_datastructure ds)^"::iterator"
 
 let point_iterator_declaration_of_datastructure ds =
     match ds with
@@ -2336,24 +2363,27 @@ let handler_name_of_event ev =
  * Code generation main
  *)
 
+let string_of_code_var_list vl =
+    List.fold_left
+	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
+	"" vl
+
+let string_of_field_list fl =
+    List.fold_left
+	(fun acc (id, typ) ->
+	    (if (String.length acc) = 0 then "" else acc^", ")^
+		typ^" "^id)
+	"" fl
+
+let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
+
 let string_of_datastructure =
     function | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
 
 let string_of_datastructure_fields =
     function
 	| `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
-	      List.fold_left
-		  (fun acc (id, typ) ->
-		       (if (String.length acc) = 0 then "" else acc^", ")^
-			   typ^" "^id)
-		  "" f
-
-let string_of_code_var_list vl =
-    List.fold_left
-	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
-	"" vl
-
-let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
+              string_of_field_list f
 
 let string_of_code_expr_terminal cterm =
     match cterm with 
@@ -2450,7 +2480,7 @@ let rec string_of_code_expression c_expr =
                   let id = identifier_of_datastructure ds in
                   let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
                       find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");"^
-                      id^".delete("^find_it^");";
+                      id^".erase("^find_it^");";
 
 	    | `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -2527,7 +2557,7 @@ let indented_string_of_code_expression c_expr =
                       let id = identifier_of_datastructure ds in
                       let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
                           find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
-                              tab^id^".delete("^find_it^");";
+                              tab^id^".erase("^find_it^");";
 
 		| `Eval(ac) -> string_of_arith_code_expression ac
 

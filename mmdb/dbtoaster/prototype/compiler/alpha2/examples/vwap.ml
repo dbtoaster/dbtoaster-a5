@@ -3,19 +3,24 @@ open Codegen
 open Compile
 open Gui
 
+let relb =
+(*    `Relation("B",[("time", "int"); ("id", "int"); ("price", "int"); ("volume", "int")]) *)
+    `Relation("B",[("P", "int"); ("V", "int")])
+
+let relb1 =
+(*    `Relation("B",[("time1", "int"); ("id1", "int"); ("price1", "int"); ("volume1", "int")]) *)
+    `Relation("B",[("P1", "int"); ("V1", "int")])
 
 let tv = 
     `MapAggregate(`Sum,
-    `METerm(`Attribute(`Qualified("B", "V"))),
-    `Relation("B",[("P", "int"); ("V", "int")]))
+    `METerm(`Attribute(`Qualified("B", "V"))), relb)
 
 let sv1_pred =
     `BTerm(`GT(
 	`ETerm(`Attribute(`Qualified("B", "P1"))),
 	`ETerm(`Attribute(`Qualified("B", "P")))))
 
-let select_sv1 =
-    `Select(sv1_pred, `Relation("B",[("P1", "int"); ("V1", "int")]))
+let select_sv1 = `Select(sv1_pred, relb1)
 
 let k_sv0 = `Product(`METerm(`Float(0.25)), tv)
 let sv1 = `MapAggregate(`Sum,
@@ -27,8 +32,7 @@ let vwap =
     `MapAggregate(`Sum,
         `Product(`METerm(`Attribute(`Qualified("B", "P"))),
             `METerm(`Attribute(`Qualified("B", "V")))),
-        `Select(`BTerm(`MLT(m_p2)),
-            `Relation("B", [("P", "int"); ("V","int")])))
+        `Select(`BTerm(`MLT(m_p2)), relb))
 ;;
 
 
@@ -71,5 +75,19 @@ print_test_type "compile_code";
 compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
 *)
 
-print_test_type "compile_code_rec";
-compile_code_rec vwap "vwap.cc";;
+print_test_type "compile_standalone_debugger";
+(* relation_sources: 
+   source type, source constructor args, tuple type,
+   adaptor type, adaptor bindings, thrift tuple namespace, stream name
+*)
+let relation_sources =
+    [("B",
+        ("DBToaster::DemoDatasets::VwapFileStream",
+        "\"20081201.csv\",1000",
+        "DBToaster::DemoDatasets::VwapTuple",
+        "DBToaster::DemoDatasets::VwapTupleAdaptor",
+        [("T", "t"); ("ID", "id"); ("P", "price"); ("V", "volume")],
+        "datasets",
+        "VwapBids"))]
+in
+    compile_standalone_debugger vwap relation_sources "vwap.cc";;

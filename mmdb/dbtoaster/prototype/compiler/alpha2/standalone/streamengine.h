@@ -10,146 +10,190 @@
 
 #include <boost/any.hpp>
 #include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include "datasets/datasets.h"
 
 namespace DBToaster
 {
-    using namespace std;
-    using namespace tr1;
-    using namespace boost;
-
-    enum dmltype { insertTuple, deleteTuple };
-
-    typedef struct
+    namespace StandaloneEngine
     {
-        dmltype type;
-        int id;
-        boost::any data;
-    } dbtoaster_tuple;
+        using namespace std;
+        using namespace tr1;
+        using namespace boost;
 
-    struct multiplexer
-    {
-        typedef stream<boost::any> input_stream;
-        vector<input_stream*> inputs;
-        map<input_stream*, int> input_ids;
-        int stream_step;
-        int num_streams;
+        using namespace DBToaster::DemoDatasets;
 
-        tuple<int, int> running_stream;
+        enum DmlType { insertTuple, deleteTuple };
 
-        multiplexer(int seed, int stepsize) : stream_step(stepsize) {}
+        typedef int DBToasterStreamId;
 
-        // Note: not thread-safe
-        void add_stream(input_stream* s, int id)
+        typedef struct
         {
-            inputs.push_back(s);
-            input_ids[s] = id;
-            num_streams = inputs.size();
-        }
+            DmlType type;
+            DBToasterStreamId id;
+            boost::any data;
+        } DBToasterTuple;
 
-        void remove_stream(input_stream* s)
+        template<typename tuple>
+        struct DBToasterStream : public Stream<boost::any>
         {
-            vector<input_stream*>::iterator s_found = find(inputs.begin(), inputs.end(), s);
-            if ( s_found != inputs.end() ) {
-                input_ids.erase(*s_found);
-                inputs.erase(s_found);
-            }
+            Stream<tuple>* stream;
+            DBToasterStream(Stream<tuple>* s) : stream(s) {}
+            inline void initStream() { stream->initStream(); }
+            inline bool streamHasInputs() { return stream->streamHasInputs(); }
+            inline boost::any nextInput() { return boost::any(stream->nextInput()); }
+            inline unsigned int getBufferSize() { return stream->getBufferSize(); }
+            bool operator==(const Stream<tuple>*& other) const { return stream == other; }
+        };
 
-            num_streams = inputs.size();
-        }
-
-        bool stream_has_inputs()
+        struct Multiplexer : public Stream<DBToasterTuple>
         {
-            return !(inputs.empty());
-        }
+            typedef boost::function<void(DBToasterTuple&, boost::any&)> TupleAdaptor;
+            typedef Stream<boost::any> AnyStream;
+            vector< shared_ptr<AnyStream> > inputs;
+            vector<TupleAdaptor> inputAdaptors;
+            map< shared_ptr<AnyStream>, DBToasterStreamId> inputIds;
+            int streamStep;
+            int numStreams;
 
-        dbtoaster_tuple next_input()
-        {
-            assert ( stream_has_inputs() );
+            tuple<int, int> runningStream;
 
-            int current_stream = get<0>(running_stream);
-            int remaining_count = get<1>(running_stream);
+            Multiplexer(int seed, int stepsize) : streamStep(stepsize) {}
 
-            while ( remaining_count == 0 ) {
-                current_stream = (int) (num_streams * (rand() / (RAND_MAX + 1.0)));
-                remaining_count = (int) (stream_step * (rand() / (RAND_MAX + 1.0)));
-            }
-
-            input_stream* s = inputs[current_stream];
-            dbtoaster_tuple r;
-            r.type = insertTuple;
-            r.id = input_ids[s];
-            r.data = s->next_input();
-
-            if ( !s->stream_has_inputs() )
+            template<typename tuple>
+            void addStream(Stream<tuple>* s, TupleAdaptor a, DBToasterStreamId id)
             {
-                cout << "Done with stream " << current_stream << endl;
-                inputs.erase(inputs.begin()+current_stream);
-                --num_streams;
-
-                remaining_count = 0;
+                shared_ptr< DBToasterStream<tuple> > dbts(new DBToasterStream<tuple>(s));
+                inputs.push_back(dbts);
+                inputAdaptors.push_back(a);
+                inputIds[dbts] = id;
+                numStreams = inputs.size();
             }
-            else
-                --remaining_count;
 
-            running_stream = make_tuple(current_stream, remaining_count);
-            return r;
-        }
+            template<typename tuple>
+            void removeStream(Stream<tuple>* s)
+            {
+                vector< shared_ptr<AnyStream> >::iterator sIt = inputs.begin();
+                vector< shared_ptr<AnyStream> >::iterator sEnd = inputs.end();
+                for (unsigned int i = 0; sIt != sEnd; ++sIt, ++i) {
+                    shared_ptr< DBToasterStream<tuple> > os =
+                        dynamic_pointer_cast< DBToasterStream<tuple>, AnyStream >(*sIt);
 
-        unsigned int get_buffer_size()
+                    if ( os && (*os) == s ) {
+                        inputIds.erase(*sIt);
+                        inputAdaptors.erase(i);
+                        inputs.erase(sIt);
+                        break;
+                    }
+                }
+
+                numStreams = inputs.size();
+            }
+
+            void initStream()
+            {
+                vector< shared_ptr<AnyStream> >::const_iterator sIt = inputs.begin();
+                vector< shared_ptr<AnyStream> >::const_iterator sEnd = inputs.end();
+
+                for (; sIt != sEnd; ++sIt) (*sIt)->initStream();
+            }
+
+            bool streamHasInputs()
+            {
+                return !(inputs.empty());
+            }
+
+            DBToasterTuple nextInput()
+            {
+                assert ( streamHasInputs() );
+
+                int currentStream = get<0>(runningStream);
+                int remainingCount = get<1>(runningStream);
+
+                while ( remainingCount == 0 ) {
+                    currentStream = (int) (numStreams * (rand() / (RAND_MAX + 1.0)));
+                    remainingCount = (int) (streamStep * (rand() / (RAND_MAX + 1.0)));
+                }
+
+                shared_ptr<AnyStream> s = inputs[currentStream];
+                TupleAdaptor adaptor = inputAdaptors[currentStream];
+
+                DBToasterTuple rTuple;
+                boost::any nextTuple = s->nextInput();
+                adaptor(rTuple, nextTuple);
+                rTuple.id = inputIds[s];
+
+                if ( !s->streamHasInputs() )
+                {
+                    cout << "Done with stream " << currentStream << endl;
+                    inputs.erase(inputs.begin()+currentStream);
+                    --numStreams;
+
+                    remainingCount = 0;
+                }
+                else
+                    --remainingCount;
+
+                runningStream = make_tuple(currentStream, remainingCount);
+                return rTuple;
+            }
+
+            unsigned int getBufferSize()
+            {
+                vector< shared_ptr<AnyStream> >::iterator insIt = inputs.begin();
+                vector< shared_ptr<AnyStream> >::iterator insEnd = inputs.end();
+
+                unsigned int r = 0;
+                for (; insIt != insEnd; ++insIt)
+                    r += (*insIt)->getBufferSize();
+
+                return r;
+            }
+        };
+
+        struct Dispatcher
         {
-            vector<input_stream*>::iterator ins_it = inputs.begin();
-            vector<input_stream*>::iterator ins_end = inputs.end();
+            typedef boost::function<void (boost::any)> Handler;
+            typedef tuple<DBToasterStreamId, DmlType> Key;
+            typedef map<Key, Handler> HandlerMap;
+            HandlerMap handlers;
 
-            unsigned int r = 0;
-            for (; ins_it != ins_end; ++ins_it)
-                r += (*ins_it)->get_buffer_size();
+            Dispatcher() {}
 
-            return r;
-        }
+            void addHandler(DBToasterStreamId streamId, DmlType type, Handler h)
+            {
+                Key k = make_tuple(streamId, type);
+                if ( handlers.find(k) == handlers.end() )
+                    handlers[k] = h;
+                else {
+                    cout << "Found existing " << (type == insertTuple? "insert" : "delete")
+                         << " handler for stream id " << streamId << endl;
+                }
+            }
+
+            void removeHandler(DBToasterStreamId streamId, DmlType type)
+            {
+                Key k = make_tuple(streamId, type);
+                HandlerMap::iterator hIt = handlers.find(k);
+                if ( hIt != handlers.end() )
+                    handlers.erase(hIt);
+                else {
+                    cout << "Could not find " << (type == insertTuple? "insert" : "delete")
+                         << " handler for stream id " << streamId << endl;
+                }
+            }
+
+            void dispatch(DBToasterTuple& tuple)
+            {
+                Key k = make_tuple(tuple.id, tuple.type);
+                HandlerMap::iterator hIt = handlers.find(k);
+                if ( hIt != handlers.end() ) {
+                    (hIt->second)(tuple.data);
+                }
+            }
+        };
     };
-
-    typedef struct 
-    {
-        typedef boost::function<void (boost::any)> handler;
-        typedef tuple<int, int> key;
-        typedef map<key, handler> handler_map;
-        handler_map handlers;
-
-        void add_handler(int streamid, dmltype type, handler h)
-        {
-            key k = make_tuple(streamid, type);
-            if ( handlers.find(k) == handlers.end() )
-                handlers[k] = h;
-            else {
-                cout << "Found existing " << (type == insertTuple? "insert" : "delete")
-                     << " handler for stream id " << streamid << endl;
-            }
-        }
-
-        void remove_handler(int streamid, dmltype type)
-        {
-            key k = make_tuple(streamid, type);
-            handler_map::iterator h_it = handlers.find(k);
-            if ( h_it != handlers.end() )
-                handlers.erase(h_it);
-            else {
-                cout << "Could not find " << (type == insertTuple? "insert" : "delete")
-                     << " handler for stream id " << streamid << endl;
-            }
-        }
-
-        void dispatch(dbtoaster_tuple& tuple)
-        {
-            key k = make_tuple(tuple.id, tuple.type);
-            handler_map::iterator h_it = handlers.find(k);
-            if ( h_it != handlers.end() ) {
-                (h_it->second)(tuple.data);
-            }
-        }
-
-    } dispatcher;
 };
 
 #endif
