@@ -7,7 +7,7 @@ let date = "D", [ ("DATEKEY", "string"); ("YEAR", "int")]
 let part = "P", [ ("PARTKEY1", "long"); ("NAME1", "string"); ("MFGR", "string"); ("CATEGORY", "string"); ("BRAND1", "string"); ("COLOR", "string"); ("TYPE", "string"); ("SIZE", "int"); ("CONTAINER", "string")]
 let supplier = "S", [("SUPPKEY1", "long"); ("NAME2", "string"); ("ADDRESS1", "string"); ("CITY1", "string"); ("NATION1", "string"); ("REGION1", "string"); ("PHONE1", "string");]
 let customer = "C", [("CUSTKEY1", "long"); ("NAME3", "string"); ("ADDRESS2", "string"); ("CITY2", "string"); ("NATION2", "string"); ("REGION2", "string"); ("PHONE2", "string"); ("MKTSEGMENT", "string")]
-let lineorder = "LO", [("ORDERKEY", "long"); ("LINENUMBER", "int"); ("CUSTKEY2", "lont"); ("PARTKEY2", "long"); ("SUPPKEY2", "long"); ("ORDERDATE", "string"); ("SHIPPRIORITY", "int"); ("QUANTITY", "int"); ("EXTENDEDPRICE", "int"); ("ORDTOTALPRICE", "int"); ("DISCOUNT", "int"); ("REVENUE", "int"); ("SUPPLYCOST", "int"); ("TAX", "int"); ("COMMITDATE", "string"); ("SHIPMODE", "string")]
+let lineorder = "LO", [("ORDERKEY", "long"); ("LINENUMBER", "int"); ("CUSTKEY2", "long"); ("PARTKEY2", "long"); ("SUPPKEY2", "long"); ("ORDERDATE", "string"); ("SHIPPRIORITY", "int"); ("QUANTITY", "int"); ("EXTENDEDPRICE", "int"); ("ORDTOTALPRICE", "int"); ("DISCOUNT", "int"); ("REVENUE", "int"); ("SUPPLYCOST", "int"); ("TAX", "int"); ("COMMITDATE", "string"); ("SHIPMODE", "string")]
 
 let rel_d = `Relation(date)
 let rel_p = `Relation(part)
