@@ -10,3 +10,6 @@
 <tests/test_tml.ml>:use_xml-light,use_extlib
 <tests/test_tml.byte>: use_xml-light,use_extlib,use_str
 
+<dbtoaster.ml>: use_xml-light,use_extlib
+<dbtoaster.byte>: use_xml-light,use_extlib,use_str,use_unix
+

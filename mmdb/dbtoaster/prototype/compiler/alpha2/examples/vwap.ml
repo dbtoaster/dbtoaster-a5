@@ -90,4 +90,4 @@ let relation_sources =
         "datasets",
         "VwapBids"))]
 in
-    compile_standalone_debugger vwap relation_sources "vwap.cc";;
+    compile_standalone_debugger vwap relation_sources "vwap.cc" (Some "vwaptrace.catalog");;

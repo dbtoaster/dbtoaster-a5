@@ -1,5 +1,6 @@
 open Algebra
 open Codegen
+open Gui
 
 (* TODO:
  * -- apply_delta_plan_rules: handle conjunctive/disjunctive map expression
@@ -2243,13 +2244,17 @@ and maintain_plan_domains plan =
  * Query compilation
  *
  *)		      
-let compile_target m_expr event =
+let compile_target m_expr delta =
     (* Debugging helpers *)
     let print_incr_and_delta_pass expr frontier_expr delta_expr =
         print_endline ("input: "^(string_of_map_expression expr));
 	print_endline ("frontier_expr: "^(string_of_map_expression frontier_expr));
 	print_endline ("delta_expr:\n"^(indented_string_of_map_expression delta_expr 0));
 	print_endline ("# br: "^(string_of_int (List.length (get_bound_relations delta_expr))))
+    in
+    let print_domain_pass domain_expr =
+        print_endline ("Domain maintaining expr:\n"^
+            (indented_string_of_map_expression domain_expr 0))
     in
     let print_simplify_pass compiled_expr simplified_expr =
         print_endline ("cc_expr: "^(string_of_map_expression compiled_expr));
@@ -2258,31 +2263,32 @@ let compile_target m_expr event =
     in
     (* Code body *)
     let compile_aux e = 
-	let frontier_expr =
-            initialize_map_expression
-                (analyse_map_expr_incrementality e event) (Some New)
-	in
-	let delta_expr =
-	    simplify_map_expr_constants
-		(apply_delta_rules frontier_expr event (Some New))
-	in
+	let frontier_expr = analyse_map_expr_incrementality e delta in
+        let frontier_w_init_expr =
+            initialize_map_expression frontier_expr (Some New)
+        in
+        let delta_expr = apply_delta_rules frontier_w_init_expr delta (Some New) in
+	let simplified_delta_expr = simplify_map_expr_constants delta_expr in
 
-        print_incr_and_delta_pass e frontier_expr delta_expr;
+        print_incr_and_delta_pass e frontier_w_init_expr simplified_delta_expr;
 
-        let dm_expr =
-            match delta_expr with
-                | `Incr _ | `IncrDiff _ -> delta_expr
-                | _ -> maintain_map_expression_domains delta_expr
+        let domain_expr =
+            match simplified_delta_expr with
+                | `Incr _ | `IncrDiff _ -> simplified_delta_expr
+                | _ -> maintain_map_expression_domains simplified_delta_expr
         in
 
-        print_endline ("Domain maintaining expr:\n"^
-            (indented_string_of_map_expression dm_expr 0));
+        print_domain_pass domain_expr;
 
-	let br = List.map (fun x -> `Plan x) (get_bound_relations dm_expr) in
-        let compiled_expr = simplify dm_expr br in
-	let sc_expr = simplify_map_expr_constants compiled_expr in
-            print_simplify_pass compiled_expr sc_expr;
-            sc_expr
+	let br = List.map (fun x -> `Plan x) (get_bound_relations domain_expr) in
+        let simplified_domain_expr = simplify domain_expr br in
+	let sc_expr = simplify_map_expr_constants simplified_domain_expr in
+        let compilation_stages =
+            [frontier_expr; frontier_w_init_expr; delta_expr; simplified_delta_expr;
+            domain_expr; simplified_domain_expr; sc_expr]
+        in
+            print_simplify_pass simplified_domain_expr sc_expr;
+            (sc_expr, compilation_stages)
     in
 
     let (dependent_expr, binding_exprs) = extract_map_expr_bindings m_expr in
@@ -2290,17 +2296,22 @@ let compile_target m_expr event =
     print_endline ("Expression after extraction:\n"^
         (indented_string_of_map_expression dependent_expr 0));
 
-    let compiled_binding_exprs =
-	List.map
-	    (fun b ->
-	        match b with
-	            | `BindMapExpr(v,e) ->
-                          print_endline ("Compiling binding: "^v);
-                          `BindMapExpr(v, compile_aux e)
-	            | _ -> b)
-	    binding_exprs
+    (* binding list * (var * map_expression list) list *)
+    let (compiled_binding_exprs, binding_stages) =
+        List.split
+	    (List.map
+	        (fun b ->
+	            match b with
+	                | `BindMapExpr(v,e) ->
+                              print_endline ("Compiling binding: "^v);
+                              let (binding_r, binding_cs) = compile_aux e in
+                                  (`BindMapExpr(v, binding_r), (v, binding_cs))
+	                | _ -> (b, ("", [])))
+	        binding_exprs)
     in
-	(compile_aux dependent_expr, compiled_binding_exprs)
+    let (compiled_dep_expr, dep_stages) = compile_aux dependent_expr in
+	((compiled_dep_expr, compiled_binding_exprs),
+        (dep_stages, (List.filter (fun (_,x) -> not(x = [])) binding_stages)))
 
 
 (*
@@ -2452,29 +2463,8 @@ let extract_incremental_query_from_bindings bindings parent_id event_path =
         ([], [], []) bindings
 
 
-let set_difference l1 l2 = List.filter (fun el -> not(List.mem el l2)) l1
-
-let concat (handler, bindings) =
-    let bound_map_exprs =
-        List.map
-            (fun b -> match b with
-                | `BindMapExpr(_,e) -> e | _ -> raise InvalidExpression)
-            (List.filter
-                (fun b -> match b with | `BindMapExpr _ -> true | _ -> false)
-                bindings)
-    in handler :: bound_map_exprs
-
-let print_handler_bindings (handler, bindings) = 
-    let newlist = concat (handler, bindings)
-    in
-        print_endline "handler:";
-        print_endline ("  "^string_of_map_expression (List.hd newlist));
-        print_endline "bindings:";
-        List.iter
-            (fun h -> print_endline ("  "^(string_of_map_expression h)^"\n\n\n"))
-            (List.tl newlist)
-
 (* map expr -> map expr list * (int * var) list * (state_id * int) list
+ *      * (event list * (handler stages * (var * binding stages) list) list) list
  *      * (event * (handler * binding list)) list
  * map expr to compile -> global maps created * map vars * state parents * event handlers *)
 let compile_target_all m_expr event_list =
@@ -2533,13 +2523,17 @@ let compile_target_all m_expr event_list =
      * -> running map vars -> running state parents
      * -> maps created * map vars * state parents * handlers by level, event *)
 
-    let rec cta_aux e_list me_list e_path maps map_vars state_parents =
+    let rec cta_aux e_list me_list e_path maps map_vars state_parents ep_stages =
         print_input e_list me_list maps;
         List.fold_left
-	    (fun (maps_acc, mv_acc, stp_acc, eh_acc) event -> 
+	    (fun (maps_acc, mv_acc, stp_acc, eps_acc, eh_acc) event -> 
                 let event_rel = get_bound_relation event in
                 let current_event_path = e_path@[event] in
-		let new_events = set_difference e_list [event] in 
+		let new_events =
+                    List.filter
+                        (fun e -> not((get_bound_relation event) = event_rel))
+                        e_list
+                in 
                 let me_event_used_list =
                     let event_updates_some_base_relation br =
                         List.exists (fun r -> match r with
@@ -2551,13 +2545,16 @@ let compile_target_all m_expr event_list =
                                     event_updates_some_base_relation br)
                             me_list
                 in
-                (* (handler * binding) *)
-		let hb_list = 
-		    List.map
-                        (fun me -> 
+
+                (* ((handler * binding) * parent id) list *
+                 *      (handler stages * binding stages list) list) *)
+		let (hbid_l, stages_l) = 
+		    List.fold_left
+                        (fun (hb_acc, stages_acc) me -> 
                             print_event_path current_event_path;
-                            (compile_target me event, dbt_hash me))
-                        me_event_used_list
+                            let (me_compiled, me_stages) = compile_target me event in
+                                (hb_acc@[(me_compiled, dbt_hash me)], stages_acc@[me_stages]))
+                        ([], []) me_event_used_list
 		in
 
                 (* map vars list = (int * var) list
@@ -2566,50 +2563,40 @@ let compile_target_all m_expr event_list =
                  * ((new map expr, new binding) list, recursive map expr list,
                  *      * map vars list, state parent list) *)
 
-                let (new_hb_list, nearest_incr_me, next_map_vars, next_state_parents)
-                =
-                    let nhb_rmel_varl_spl_l = 
-                        (* ((new handler, new binding) * recursive map expr list *
-                         *      map vars list * state parent list) list *)
-                        List.map
-			    (fun ((handler, binding), parent_id) -> 
-                                
-                                (* handler, me_l, me_var_l *)
-                                let (new_h, h_rme_l, h_var_l) =
-                                    extract_incremental_query handler current_event_path
-                                in
+                let (new_hb_list, nearest_incr_me, next_map_vars, next_state_parents) =
+                    List.fold_left
+			(fun (nhb_acc, rme_acc, mv_acc, sp_acc) ((handler, binding), parent_id) ->
+                            (* handler, me_l, me_var_l *)
+                            let (new_h, h_rme_l, h_var_l) =
+                                extract_incremental_query handler current_event_path
+                            in
 
-                                print_endline ("Extracting handler incr from:"^
-                                    (string_of_map_expression handler));
+                            print_endline ("Extracting handler incr from:"^
+                                (string_of_map_expression handler));
 
-                                print_endline ("New handler incr: "^(string_of_map_expression new_h));
+                            print_endline ("New handler incr: "^(string_of_map_expression new_h));
 
-                                (* Note no state parents for bindings, since bindings and
-                                 * handlers run in sequence, and thus bindings cannot update parent *)
-                                let sp_h_l = 
-                                    match new_h with
-                                        | `Incr(sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) ->
-                                              [(sid, parent_id)]
-                                        | _ -> []
-                                in
+                            (* Note no state parents for bindings, since bindings and
+                             * handlers run in sequence, and thus bindings cannot update parent *)
+                            let sp_h_l = 
+                                match new_h with
+                                    | `Incr(sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) ->
+                                          [(sid, parent_id)]
+                                    | _ -> []
+                            in
 
-                                (* binding_l, me_l, me_var_l *)
-                                let (new_b, b_rme_l, b_var_l) =
-                                    extract_incremental_query_from_bindings
-                                        binding parent_id current_event_path
-                                in
+                            (* binding_l, me_l, me_var_l *)
+                            let (new_b, b_rme_l, b_var_l) =
+                                extract_incremental_query_from_bindings
+                                    binding parent_id current_event_path
+                            in
+                                (* Flatten locally across handler and bindings *)
+                                (* ((new map expr, new binding) list, recursive map expr list,
+                                 *      * map vars list, state parent list) *)
+                                (nhb_acc@[(new_h, new_b)], rme_acc@(h_rme_l@b_rme_l),
+                                mv_acc@(h_var_l@b_var_l), sp_acc@(sp_h_l)))
 
-                                    (* ((new handler, new binding) * recursive map expr list *
-                                     *      map vars list * state parents list) *)
-				    ((new_h, new_b), h_rme_l@b_rme_l, h_var_l@b_var_l, sp_h_l))
-			    hb_list
-                    in
-                        (* Flatten locally across handler and bindings *)
-                        List.fold_left
-                            (fun (nhb_acc, rme_acc, mv_acc, sp_acc) (nhb, rme_l, mv_l, sp_l) ->
-                                (nhb_acc@[nhb], rme_acc@rme_l, mv_acc@mv_l, sp_acc@sp_l))
-                            ([], [], [], [])
-                            nhb_rmel_varl_spl_l
+			([], [], [], []) hbid_l
                 in
                 (* TODO: rethink if we need maps accumulated to include vars
                  * for map name generation *)
@@ -2628,20 +2615,22 @@ let compile_target_all m_expr event_list =
                 in
 
                     print_new_map_expressions current_event_path new_hb_list next_incr_me;
-		    let (child_maps, child_vars, child_stp, children) = 
+		    let (child_maps, child_vars, child_stp,  child_eps, children) = 
 		        match new_events with
 		  	    | [] ->
                                   (maps_acc@next_incr_me,
-                                      mv_acc@next_map_vars, stp_acc@next_state_parents, [])
+                                  mv_acc@next_map_vars, stp_acc@next_state_parents,
+                                  (eps_acc@[(current_event_path, stages_l)]), [])
 			    | _ ->
                                   cta_aux new_events next_incr_me
                                       current_event_path (maps_acc@next_incr_me)
                                       (mv_acc@next_map_vars) (stp_acc@next_state_parents)
+                                      (eps_acc@[(current_event_path, stages_l)])
 		    in
-                        (child_maps, child_vars, child_stp,
-                            eh_acc@((List.length e_path, event, new_hb_list)::children)))
+                        (child_maps, child_vars, child_stp, child_eps,
+                        eh_acc@((List.length e_path, event, new_hb_list)::children)))
 
-            (maps, map_vars, state_parents, []) e_list
+            (maps, map_vars, state_parents, ep_stages, []) e_list
     in
     let group_by_event compiled_exprs event_list =
         List.fold_left 
@@ -2653,17 +2642,18 @@ let compile_target_all m_expr event_list =
 	            res@[(event, List.flatten (List.map (fun (_,_,exprs) -> exprs) sorted_by_level))])
             [] event_list
     in
-    let (r_maps, r_map_vars, r_st_parents, result) =
-        cta_aux event_list [m_expr] [] [] [] []
+    let (r_maps, r_map_vars, r_st_parents, r_ep_stages, result) =
+        cta_aux event_list [m_expr] [] [] [] [] []
     in
-        (r_maps, r_map_vars, r_st_parents, group_by_event result event_list)
+        (r_maps, r_map_vars, r_st_parents, r_ep_stages, group_by_event result event_list)
 
 
 (* TODO: typechecker *)
 
 
-(* Sig: map expression -> code_expression list * code_expression list
- * Semantics: input query -> declarations * (handler * event) list
+(* Sig: map expression -> (code_expression list * code_expression list) * compile trace
+ * compile trace : (event path * (handler stages * (var * binding stages) list) list) list
+ * Semantics: input query -> (declarations * (handler * event) list) * compile trace
  *)
 (* Assumes input map expression has been typechecked *)
 let compile_code_rec m_expr =
@@ -2683,9 +2673,12 @@ let compile_code_rec m_expr =
     print_endline ("Preprocessed map expr:\n"^
         (indented_string_of_map_expression pp_expr 0));
 
-    let (maps, map_vars, state_parents, handlers_by_event) =
+    (* Recursive compilation *)
+    let (maps, map_vars, state_parents, event_path_stages, handlers_by_event) =
         compile_target_all pp_expr event_list
     in
+
+    (* Code generation: maps, handlers *)
     let (recursive_map_decls, map_accessors, stp_decls) =
         generate_map_declarations maps map_vars state_parents
     in
@@ -2717,7 +2710,6 @@ let compile_code_rec m_expr =
                         let (handler_body_with_rv, handler_ret_type) =
 	                    match get_return_val top_level_handler with
 	                        | `Eval x ->
-                                      print_endline ("Handler "^handler_id^" return val: "^(string_of_code_expression (`Eval x)));
                                       let new_handlers =
                                           let new_head =
                                               match (remove_return_val top_level_handler) with
@@ -2744,11 +2736,14 @@ let compile_code_rec m_expr =
             ([], []) handlers_by_event
     in
     let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
-        (rm_decls@global_decls, handler_and_events)
+        ((rm_decls@global_decls, handler_and_events), event_path_stages)
 
 
+(*
+ * Object file compilation, i.e. handlers only.
+ *)
 let compile_query m_expr out_file_name =
-    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
+    let ((global_decls, handlers_and_events), _) = compile_code_rec m_expr in
     let out_chan = open_out out_file_name in
         generate_includes out_chan;
 
@@ -2769,11 +2764,11 @@ let compile_query m_expr out_file_name =
 
 
 (*
- * Engine compilation
+ * Engine compilation: handlers, stream multiplexer, dispatcher, main
  *)
 
-let compile_standalone_engine m_expr relation_sources out_file_name =
-    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
+let compile_standalone_engine m_expr relation_sources out_file_name trace_file_name_opt =
+    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr in
     let out_chan = open_out out_file_name in
         generate_includes out_chan;
         generate_stream_engine_includes out_chan;
@@ -2816,11 +2811,42 @@ let compile_standalone_engine m_expr relation_sources out_file_name =
         (* main *)
         generate_stream_engine_main out_chan;
 
-        close_out out_chan
+        close_out out_chan;
+
+        (* Output compilation trace if desired *)
+        match trace_file_name_opt with
+            | None -> ()
+            | Some fn ->
+                  begin
+                      let catalog_fn =
+                          if Filename.check_suffix fn "catalog" then fn
+                          else ((Filename.chop_extension fn)^".catalog")
+                      in
+                      let trace_catalog_out = open_out catalog_fn in
+                          (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
+                          List.iter
+                              (fun (ep, stages_l) ->
+                                  let event_path_name = String.concat "/"
+                                      (List.map (fun e -> match e with
+                                          | `Insert(r,_) -> "i"^r
+                                          | `Delete(r,_) -> "d"^r) ep)
+                                  in
+
+                                  (* write out compilation trace for each map expression for this event path *)
+                                  let trace_fn = write_compilation_trace ep stages_l in
+
+                                      (* track trace file in catalog *)
+                                      output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
+                              compile_trace;
+                          close_out trace_catalog_out
+                  end
 
 
-let compile_standalone_debugger m_expr relation_sources out_file_name =
-    let (global_decls, handlers_and_events) = compile_code_rec m_expr in
+(*
+ * Debugger compilation: handlers, stream multiplexer, dispatcher, Thrift service
+ *)
+let compile_standalone_debugger m_expr relation_sources out_file_name trace_file_name_opt =
+    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr in
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = (Filename.chop_extension out_file_name)^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
@@ -2829,22 +2855,22 @@ let compile_standalone_debugger m_expr relation_sources out_file_name =
         generate_stream_engine_includes code_out_chan;
         generate_stream_debugger_includes code_out_chan;
 
-        (* output declarations *) 
+        (* Output declarations *) 
 	List.iter
 	    (fun x -> output_string code_out_chan
 		((indented_string_of_code_expression x)^"\n")) global_decls;
 	output_string code_out_chan "\n";
         
-        (* output handlers *)
+        (* Output handlers *)
         List.iter
             (fun (h, e) ->
 	        output_string code_out_chan
 		    ((indented_string_of_code_expression h)^"\n\n"))
             handlers_and_events;
 
-        (* standalone debugger *)
+        (* Standalone debugger *)
 
-        (* init *)
+        (* Stream engine init: multiplexer, dispatcher *)
         let streams_handlers_and_events =
             List.map
                 (fun (h,e) ->
@@ -2860,47 +2886,43 @@ let compile_standalone_debugger m_expr relation_sources out_file_name =
                                 stream_name, h, e)
                         else
                             raise (CodegenException
-                                ("Could not find relation source for "^event_rel)))
+                                ("Could not find relation source for "^event_rel^"\b")))
                 handlers_and_events
         in
+
+        (* Stream debugger and main *)
         let stream_debugger_class =
             generate_stream_debugger_class thrift_out_chan code_out_chan
                 global_decls streams_handlers_and_events
         in
             generate_stream_debugger_main code_out_chan stream_debugger_class;
             close_out thrift_out_chan;
-            close_out code_out_chan
+            close_out code_out_chan;
 
+        (* Output compilation trace if desired *)
+        match trace_file_name_opt with
+            | None -> ()
+            | Some fn ->
+                  begin
+                      let catalog_fn =
+                          if Filename.check_suffix fn "catalog" then fn
+                          else ((Filename.chop_extension fn)^".catalog")
+                      in
+                      let trace_catalog_out = open_out catalog_fn in
+                          (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
+                          List.iter
+                              (fun (ep, stages_l) ->
+                                  let event_path_name = String.concat "/"
+                                      (List.map (fun e -> match e with
+                                          | `Insert(r,_) -> "insert"^r
+                                          | `Delete(r,_) -> "delete"^r) ep)
+                                  in
 
-(*
- *
- * TODO: Compiler main
- *)
-module CompileTask =
-struct
-    type mode = Handlers | Engine | Debugger
+                                  (* write out compilation trace for each map expression for this event path *)
+                                  let trace_fn = write_compilation_trace ep stages_l in
 
-    (* Required parameters w/ defaults *)
-    let source_output_file = ref "a.cc"
-    let binary_output_file = ref "a.out"
-    let compile_mode = ref Engine
-    let requires_thrift () = (!compile_mode) = Debugger
-
-    (* Optional parameters *)
-    let cxx_flags = ref ""
-    let cxx_linker_flags = ref ""
-
-    let thrift_languages = ref "-gen-cpp -gen-java"
-    let thrift_flags = ref ""
-end
-
-(* TODO: use ocamlbuild to do invocation of external tools *)
-let main () =
-    (* Parse options *)
-    (* Invoke compiler on TML file according to mode *)
-    (* Invoke thrift if necessary *)
-    (* Invoke gcc *)
-    print_endline "main() not yet implemented!"
-;;
-
-main()
+                                      (* track trace file in catalog *)
+                                      output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
+                              compile_trace;
+                          close_out trace_catalog_out
+                  end

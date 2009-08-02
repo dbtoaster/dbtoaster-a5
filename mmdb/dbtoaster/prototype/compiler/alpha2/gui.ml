@@ -23,9 +23,16 @@ let base_declarations = [
     "<attributeDecl name=\"meterm-val\"           type=\"String\"/>";
 ]
 
-let make_leaf subtree = ["<leaf>"]@subtree@["</leaf>"]
-let make_branch subtree = ["<branch>"]@subtree@["</branch>"]
-let make_tree subtree indent_fn = ["<tree>"]@(List.map indent_fn subtree)@["</tree>"]
+let indent s = "    "^s
+let make_label s = match s with | "" -> s | _ -> (" label=\""^s^"\"")
+
+let make_leaf ?(label = "") subtree =
+        ["<leaf"^(make_label label)^">"]@(List.map indent subtree)@["</leaf>"]
+
+let make_branch ?(label = "") subtree =
+    ["<branch"^(make_label label)^">"]@(List.map indent subtree)@["</branch>"]
+
+let make_tree subtree = ["<tree>"]@(List.map indent subtree)@["</tree>"]
 
 let treeml_of_attribute_identifier aid =
     "<attribute name=\"attribute_identifier\" value=\""^
@@ -418,8 +425,7 @@ let viz_treeml_string_of_map_expression m_expr =
             (make_tree
                 (declarations@
 		    (List.map indent
-                        (viz_treeml_of_map_expression m_expr indent)))
-                indent))
+                        (viz_treeml_of_map_expression m_expr indent)))))
 
 
 
@@ -437,13 +443,9 @@ let viz_treeml_string_of_map_expression m_expr =
   expression := <leaf><attr name="expression" value="None"/></leaf>
 *)
 
-let rec treeml_of_expression expr indent_fn = 
-    let make_expr typ = 
-        indent_fn ("<attribute name=\"expression\" value=\""^typ^"\"/>")
-    in
-    let tml_expr e =
-        (List.map indent_fn (treeml_of_expression e indent_fn))
-    in
+let rec treeml_of_expression expr = 
+    let make_expr typ = "<attribute name=\"expression\" value=\""^typ^"\"/>" in
+    let tml_expr e = treeml_of_expression e in
     let binary_expr typ l r =
         make_branch ([make_expr typ]@(tml_expr l)@(tml_expr r))
     in
@@ -451,7 +453,7 @@ let rec treeml_of_expression expr indent_fn =
 	| `ETerm et ->
               make_branch
                   ([make_expr "eterm"]@
-                  (make_leaf (List.map indent_fn (treeml_of_eterm et))))
+                  (make_leaf (treeml_of_eterm et)))
 
 	| `UnaryMinus e -> make_branch ([make_expr "uminus"]@(tml_expr e))
 	| `Sum(l,r) -> binary_expr "sum" l r
@@ -462,24 +464,26 @@ let rec treeml_of_expression expr indent_fn =
 	| `Function(id, args) ->
               make_branch
                   ([make_expr "function";
-                  (indent_fn (treeml_of_function_identifier id))]@
+                  (treeml_of_function_identifier id)]@
                   (List.flatten (List.map tml_expr args)))
 
 (* expression option -> (string -> string) -> string list *)
-let treeml_of_expression_option e_opt indent_fn =
+let treeml_of_expression_option e_opt =
     match e_opt with
-        | None -> make_leaf ([ indent_fn ("<attribute name=\"expression\" value=\"none\"/>") ])
-        | Some e -> treeml_of_expression e indent_fn
+        | None -> make_leaf (["<attribute name=\"expression\" value=\"none\"/>"])
+        | Some e -> treeml_of_expression e
 
 (* (attribute_identifier * expression option) list -> (string -> string) -> string list *)
-let treeml_of_bindings bindings indent_fn =
-    make_branch (List.map indent_fn
-        (List.flatten
-            (List.map
-                (fun (a,e_opt) ->
-                    [treeml_of_attribute_identifier a]@
-                        (treeml_of_expression_option e_opt indent_fn))
-                bindings)))
+let treeml_of_bindings bindings =
+    match bindings with
+        | [] -> make_leaf ~label:"emptybindings" []
+        | _ ->
+              make_branch (List.flatten
+                  (List.map
+                      (fun (a,e_opt) ->
+                          [treeml_of_attribute_identifier a]@
+                          (treeml_of_expression_option e_opt))
+                      bindings))
 
 
 (*
@@ -491,17 +495,17 @@ let treeml_of_bindings bindings indent_fn =
   bterm := <branch><attr name="bterm" value=bterm_mexpr_node/>map_expression</branch>
 *)
 
-let rec treeml_of_bterm bterm indent_fn =
-    let make_bterm typ = 
-        (indent_fn ("<attribute name=\"bterm\" value=\""^typ^"\"/>"))
-    in
-    let tml_expr e = List.map indent_fn (treeml_of_expression e indent_fn) in
-    let tml_map_expr e = List.map indent_fn (treeml_of_map_expression e indent_fn) in
+let rec treeml_of_bterm bterm =
+    let make_bterm typ = "<attribute name=\"bterm\" value=\""^typ^"\"/>" in
+    let tml_expr e = treeml_of_expression e in
+    let tml_map_expr e = treeml_of_map_expression e in
     let map_expr op e = make_branch ([make_bterm op]@(tml_map_expr e)) in
     let binary_expr op l r =
         make_branch ([make_bterm op]@(tml_expr l)@(tml_expr r))
     in
     match bterm with
+        | `True -> make_leaf [make_bterm "true"]
+        | `False -> make_leaf [make_bterm "false"]
 	| `LT (l,r) -> binary_expr "lt" l r
 	| `LE (l,r) -> binary_expr "le" l r
 	| `GT (l,r) -> binary_expr "gt" l r
@@ -523,18 +527,15 @@ let rec treeml_of_bterm bterm indent_fn =
   bool_expr := <branch><attr name="boolexpression" value=bool_expr_node>(bool_expr)+</branch>
 *)
 
-and treeml_of_bool_expression b_expr indent_fn =
-    let make_bexpr typ =
-        (indent_fn "<attribute name=\"boolexpression\" value=\""^typ^"\"/>")
-    in
-    let tml_bexpr be =
-        List.map indent_fn (treeml_of_bool_expression be indent_fn)
+and treeml_of_bool_expression b_expr =
+    let make_bexpr typ = "<attribute name=\"boolexpression\" value=\""^typ^"\"/>" in
+    let tml_bexpr be = treeml_of_bool_expression be
     in
     match b_expr with
 	| `BTerm bt ->
               make_branch
                   ([make_bexpr "bterm"]@
-                  (List.map indent_fn (treeml_of_bterm bt indent_fn)))
+                  (treeml_of_bterm bt))
 
 	| `Not be -> make_branch ([make_bexpr "not"]@(tml_bexpr be))
 	| `And (l,r) -> make_branch ([make_bexpr "and"]@(tml_bexpr l)@(tml_bexpr r))
@@ -569,20 +570,17 @@ and treeml_of_bool_expression b_expr indent_fn =
 
 *)
 
-and treeml_of_map_expression m_expr indent_fn =
-    let make_mexpr typ =
-        (indent_fn ("<attribute name=\"mapexpression\" value=\""^typ^"\"/>"))
+and treeml_of_map_expression m_expr =
+    let make_mexpr typ = "<attribute name=\"mapexpression\" value=\""^typ^"\"/>" in
+    let tml_map m_expr = treeml_of_map_expression m_expr
     in
-    let tml_map m_expr =
-        List.map indent_fn (treeml_of_map_expression m_expr indent_fn)
-    in
-    let tml_plan plan = List.map indent_fn (treeml_of_plan plan indent_fn) in
+    let tml_plan plan = treeml_of_plan plan in
     let binary_node typ l r = make_branch ([make_mexpr typ]@(tml_map l)@(tml_map r)) in
     match m_expr with
 	| `METerm x ->
               make_branch
                   ([make_mexpr "meterm"]@
-                      (make_leaf (List.map indent_fn (treeml_of_meterm x))))
+                  (make_leaf (treeml_of_meterm x)))
 
 	| `Sum(l,r) -> binary_node "sum" l r
 	| `Minus(l,r) -> binary_node "minus" l r
@@ -593,13 +591,13 @@ and treeml_of_map_expression m_expr indent_fn =
 	| `MapAggregate(agg, f, q) ->
               make_branch
                   ([make_mexpr "mapaggregate";
-	          (indent_fn (treeml_of_aggregate_function agg))]@
+	          (treeml_of_aggregate_function agg)]@
                   (tml_map f)@(tml_plan q))
 
 	| `Delta (e, f) ->
               make_branch
                   ([make_mexpr "delta"]@
-                      (List.map indent_fn (make_branch (treeml_of_delta e)))@
+                      (make_branch (treeml_of_delta e))@
                       (tml_map f))
 
 	| `New f -> make_branch ([make_mexpr "new"]@(tml_map f))
@@ -607,53 +605,53 @@ and treeml_of_map_expression m_expr indent_fn =
 	| `Incr (s, o, re, bd, f) ->
               make_branch
                   ([make_mexpr "incr";
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
+		  (treeml_of_state_identifier s);
+		  (treeml_of_oplus o)]@
                   (tml_map re)@
-                  (List.map indent_fn (treeml_of_bindings bd indent_fn))@
+                  (treeml_of_bindings bd)@
                   (tml_map f))
 
 	| `IncrDiff (s, o, re, bd, f) ->
               make_branch
                   ([make_mexpr "incrdiff";
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
+		  (treeml_of_state_identifier s);
+		  (treeml_of_oplus o)]@
                   (tml_map re)@
-                  (List.map indent_fn (treeml_of_bindings bd indent_fn))@
+                  (treeml_of_bindings bd)@
                   (tml_map f))
 
 	| `Init (s, bd, f) ->
               make_branch
                   ([make_mexpr "init";
-		  (indent_fn (treeml_of_state_identifier s))]@
-                  (List.map indent_fn (treeml_of_bindings bd indent_fn))@
+		  (treeml_of_state_identifier s)]@
+                  (treeml_of_bindings bd)@
 		  (tml_map f))
 
 	| `Insert (s, m, f) ->
               make_branch
                   ([make_mexpr "insert";
-		  (indent_fn (treeml_of_state_identifier s))]@
-                  (make_leaf (List.map indent_fn (treeml_of_meterm m)))@
+		  (treeml_of_state_identifier s)]@
+                  (make_leaf (treeml_of_meterm m))@
 		  (tml_map f))
 
 	| `Update (s, o, m, f) ->
               make_branch
                   ([make_mexpr "update";
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (make_leaf (List.map indent_fn (treeml_of_meterm m)))@
+		  (treeml_of_state_identifier s);
+		  (treeml_of_oplus o)]@
+		  (make_leaf (treeml_of_meterm m))@
 		  (tml_map f))
 
 	| `Delete (sid, x) ->
               make_branch
                   ([make_mexpr "delete";
-		  (indent_fn (treeml_of_state_identifier sid))]@
-		  (make_leaf (List.map indent_fn (treeml_of_meterm x))))
+		  (treeml_of_state_identifier sid)]@
+		  (make_leaf (treeml_of_meterm x)))
 
 	| `IfThenElse(b,l,r) -> 
               make_branch
                   ([make_mexpr "ifthenelse"]@
-		  (List.map indent_fn (treeml_of_bterm b indent_fn))@
+		  (treeml_of_bterm b)@
 	          (tml_map l)@(tml_map r))
 
 (*
@@ -662,24 +660,17 @@ and treeml_of_map_expression m_expr indent_fn =
   projections := (attribute_identifier,expression)+
 *)
 
-and treeml_of_plan p indent_fn = 
-    let make_plan typ =
-        [indent_fn ("<attribute name=\"plan\" value=\""^typ^"\"/>")]
-    in
-    let tml_expr expr =
-        List.map indent_fn (treeml_of_expression expr indent_fn)
-    in
-    let tml_pred pred =
-        List.map indent_fn (treeml_of_bool_expression pred indent_fn)
-    in
-    let tml_plan p = List.map indent_fn (treeml_of_plan p indent_fn) in
+and treeml_of_plan p = 
+    let make_plan typ = ["<attribute name=\"plan\" value=\""^typ^"\"/>"] in
+    let tml_expr expr = treeml_of_expression expr in
+    let tml_pred pred = treeml_of_bool_expression pred in
+    let tml_plan p = treeml_of_plan p in
 
     let treeml_of_projections projections =
-        List.map indent_fn
         (List.flatten
             (List.map
                 (fun (a,e) ->
-                    [(indent_fn (treeml_of_attribute_identifier a))]@
+                    [treeml_of_attribute_identifier a]@
                     (tml_expr e))
                 projections))
     in
@@ -692,10 +683,16 @@ and treeml_of_plan p indent_fn =
 	| `Relation (r,f) -> 
               let subtree = 
 	          (make_plan "relation")@
-                  [indent_fn (treeml_of_relation_identifier r)]@
-                  (List.map indent_fn (treeml_of_field_list f))
+                  [treeml_of_relation_identifier r]@
+                  (treeml_of_field_list f)
               in
                   make_leaf subtree
+
+        | `Domain (sid, d) ->
+              make_branch
+                  ((make_plan "domain")@
+                  [treeml_of_state_identifier sid]@
+                  (treeml_of_domain d))
 
 	| `Select (pred, c) ->
               let subtree = (make_plan "select")@(tml_pred pred)@(tml_plan c) in
@@ -717,7 +714,7 @@ and treeml_of_plan p indent_fn =
 
 	| `DeltaPlan (e, c) ->
               make_branch ((make_plan "delta")@
-                  (make_branch (List.map indent_fn (treeml_of_delta e)))@
+                  (make_branch (treeml_of_delta e))@
                   (tml_plan c))
 	      
 	| `NewPlan (c) ->
@@ -726,46 +723,40 @@ and treeml_of_plan p indent_fn =
 	| `IncrPlan (sid, p, d, bd, c) ->
               make_branch
                   ((make_plan "incrplan")@
-		      [(indent_fn (treeml_of_state_identifier sid));
-		      (indent_fn (treeml_of_poplus p))]@
-                      (List.map indent_fn (treeml_of_domain d))@
-                      (List.map indent_fn (treeml_of_bindings bd indent_fn))@
+		      [(treeml_of_state_identifier sid);
+		      (treeml_of_poplus p)]@
+                      (treeml_of_domain d)@
+                      (treeml_of_bindings bd)@
                       (tml_plan c))
 
 	| `IncrDiffPlan (sid, p, d, bd, c) ->
               make_branch
                   ((make_plan "incrdiffplan")@
-		      [(indent_fn (treeml_of_state_identifier sid));
-		      (indent_fn (treeml_of_poplus p))]@
-                      (List.map indent_fn (treeml_of_domain d))@
-                      (List.map indent_fn (treeml_of_bindings bd indent_fn))@
+		      [(treeml_of_state_identifier sid);
+		      (treeml_of_poplus p)]@
+                      (treeml_of_domain d)@
+                      (treeml_of_bindings bd)@
                       (tml_plan c))
 
 (*
  * Top level I/O function
  *)
 let io_declarations = base_declarations@[
-    "<attributeDecl name=\"expression\"     type=\"String\"/>";
-    "<attributeDecl name=\"bterm\"          type=\"String\"/>";
-    "<attributeDecl name=\"boolexpression\" type=\"String\"/>";
-    "<attributeDecl name=\"mapexpression\"  type=\"String\"/>";
-    "<attributeDecl name=\"plan\"           type=\"String\"/>";
+    "<attributeDecl name=\"expression\"           type=\"String\"/>";
+    "<attributeDecl name=\"bterm\"                type=\"String\"/>";
+    "<attributeDecl name=\"boolexpression\"       type=\"String\"/>";
+    "<attributeDecl name=\"mapexpression\"        type=\"String\"/>";
+    "<attributeDecl name=\"plan\"                 type=\"String\"/>";
 ]
 
 let treeml_string_of_map_expression m_expr =
-    let indent s = "    "^s in
     let delim l = String.concat "\n" l in
     let declarations =
-	List.map indent
-	    (["<declarations>"]@
-            (List.map indent io_declarations)@
-            [ "</declarations>" ])
+	(["<declarations>"]@
+        (List.map indent io_declarations)@
+        [ "</declarations>" ])
     in
-	(delim
-            (make_tree
-                (declarations@
-		    (List.map indent (treeml_of_map_expression m_expr indent)))
-                indent))
+	(delim (make_tree (declarations@(treeml_of_map_expression m_expr))))
 
 
 (*********************
@@ -992,7 +983,7 @@ let get_projections tml =
 
 let get_bindings tml =
     match children tml with
-        | [] -> raise (InvalidTreeML ("node: "^(to_string tml)))
+        | [] -> []
         | tml_l ->
               let (attrs_tml, e_opts_tml) =
                   let (_, labelled_tml) =
@@ -1029,6 +1020,8 @@ let rec get_bterm tml =
               let node_type = get_bterm_node_type h in
                   begin
                       match node_type with
+                          | "true" -> `True
+                          | "false" -> `False
                           | "eq" ->   get_binary t (fun x y -> `EQ(x,y))
                           | "neq" ->  get_binary t (fun x y -> `NE(x,y))
                           | "lt" ->   get_binary t (fun x y -> `LT(x,y))
@@ -1208,6 +1201,13 @@ and get_plan tml =
                                         let f = get_field_list (List.tl t) in
                                             `Relation(n,f)
 
+                              | "domain" ->
+                                    if (List.length t) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                                    else
+                                        let sid = get_state_identifier (List.hd t) in
+                                        let d = get_domain (List.nth t 1) in
+                                            `Domain(sid, d)
+
                               | "select" ->
                                     if (List.length t) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
                                     else
@@ -1267,3 +1267,69 @@ let parse_treeml treeml_str =
             raise (InvalidTreeML ("node: "^(to_string treeml)))
     in
         List.map get_map_expression start_nodes
+
+
+(*
+ * Compilation traces
+ *)
+(* delta list -> (handler stages * (string * binding stages) list) list) -> string *)
+let write_compilation_trace event_path stages_per_map_expr =
+    let event_path_name = String.concat "_" (List.map get_bound_relation event_path) in
+    let delim l = String.concat "\n" l in
+    let make_stage stage_name l =
+        (make_branch
+            ([("<attribute name=\"stage-name\" value=\""^stage_name^"\"/>");
+            ("<attribute name=\"stage-path\" value=\""^event_path_name^"\"/>")]@l))
+    in
+    let make_handler_stages stages_l =
+        (make_branch
+            (["<attribute name=\"stage-type\" value=\"handler\"/>"]@stages_l))
+    in
+    let make_bindings_stages var_and_stages_l =
+        (List.flatten
+            (List.map
+                (fun (var,stages_l) ->
+                    make_branch
+                        (["<attribute name=\"stage-type\" value=\"binding,"^var^"\"/>"]@stages_l))
+                var_and_stages_l))
+    in
+    let stage_names =
+        ["frontier"; "init"; "pre_delta"; "delta"; "domain"; "pre_result"; "result"]
+    in
+    let trace_fn = ((String.concat "_"
+        (List.map (fun e -> match e with
+            | `Insert(r,_) -> "i"^r | `Delete(r,_) -> "d"^r) event_path))^
+        ".trace")
+    in
+    let trace_out = open_out trace_fn in
+    let trace_tml =
+        make_branch
+            (List.flatten (List.map
+                (fun (hs, bsl) ->
+                    let string_of_stage stage_name stage =
+                        make_stage stage_name (treeml_of_map_expression stage)
+                    in
+                    let hs_tml = make_handler_stages
+                        (List.flatten (List.map2 string_of_stage stage_names hs))
+                    in
+                    let bsl_tml =
+                        make_bindings_stages
+                            (List.map (fun (var,bs) ->
+                                (var, (List.flatten (List.map2 string_of_stage stage_names bs)))) bsl)
+                    in
+                        hs_tml@bsl_tml)
+                stages_per_map_expr))
+    in
+    let declarations =
+	(["<declarations>"]@
+        (List.map indent
+            (io_declarations@
+                ["<attributeDecl name=\"stage-type\"           type=\"String\"/>";
+                 "<attributeDecl name=\"stage-name\"           type=\"String\"/>";
+                 "<attributeDecl name=\"stage-path\"           type=\"String\"/>"]))@
+        [ "</declarations>" ])
+    in
+
+        output_string trace_out (delim (make_tree (declarations@trace_tml)));
+        close_out trace_out;
+        trace_fn
