@@ -1,35 +1,21 @@
 package org.dbtoaster.gui;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
 import java.awt.Frame;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.Panel;
-import java.awt.event.ActionEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.geom.Point2D;
 import java.io.ByteArrayInputStream;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 
-import javax.management.Query;
-import javax.swing.AbstractAction;
-import javax.swing.BorderFactory;
-import javax.swing.JPanel;
 import javax.swing.JRootPane;
 import javax.swing.JSplitPane;
-import javax.swing.KeyStroke;
-import javax.swing.SwingConstants;
-import javax.swing.border.Border;
-import javax.swing.event.MouseInputAdapter;
 
+import org.dbtoaster.model.CompilationTrace;
+import org.dbtoaster.model.DBToasterWorkspace;
+import org.dbtoaster.model.Query;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.core.resources.IFile;
@@ -39,286 +25,325 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.IWorkspace;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.ide.IDE;
+import org.eclipse.ui.IPerspectiveDescriptor;
+import org.eclipse.ui.IPerspectiveListener;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.PartInitException;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.swt.awt.SWT_AWT;
-import org.eclipse.swt.internal.image.GIFFileFormat;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 
 import org.eclipse.swt.SWT;
 
 import prefuse.Constants;
-import prefuse.Display;
-import prefuse.Visualization;
-import prefuse.action.Action;
-import prefuse.action.ActionList;
-import prefuse.action.ItemAction;
-import prefuse.action.RepaintAction;
-import prefuse.action.animate.ColorAnimator;
-import prefuse.action.animate.LocationAnimator;
-import prefuse.action.animate.QualityControlAnimator;
-import prefuse.action.animate.VisibilityAnimator;
-import prefuse.action.assignment.ColorAction;
-import prefuse.action.assignment.FontAction;
-import prefuse.action.filter.FisheyeTreeFilter;
-import prefuse.action.layout.CollapsedSubtreeLayout;
-import prefuse.action.layout.graph.NodeLinkTreeLayout;
-import prefuse.activity.SlowInSlowOutPacer;
-import prefuse.controls.DragControl;
-import prefuse.controls.FocusControl;
-import prefuse.controls.PanControl;
-import prefuse.controls.WheelZoomControl;
-import prefuse.controls.ZoomControl;
-import prefuse.controls.ZoomToFitControl;
+
 import prefuse.data.Node;
 import prefuse.data.Tree;
 import prefuse.data.io.TreeMLReader;
-import prefuse.data.tuple.TupleSet;
-import prefuse.render.AbstractShapeRenderer;
-import prefuse.render.DefaultRendererFactory;
-import prefuse.render.EdgeRenderer;
-import prefuse.render.LabelRenderer;
-import prefuse.util.ColorLib;
-import prefuse.util.FontLib;
-import prefuse.util.ui.JFastLabel;
-import prefuse.visual.VisualItem;
-import prefuse.visual.expression.InGroupPredicate;
-import prefuse.visual.sort.TreeDepthItemSorter;
 
+public class CodeEditorView extends ViewPart
+{
 
-public class CodeEditorView extends ViewPart {
+    public static final String ID = "dbtoaster_gui.codeeditorview";
 
-	public static final String ID = "dbtoaster_gui.codeeditorview";
-	
-	private TreeVisPanel exprPanel;
-	private JPanel workflowPanel;
-	private TreeVisPanel mapPanel;
-	private TreeVisPanel handlerPanel;
+    private TreeVisPanel exprPanel;
+    private TreeVisPanel mapPanel;
+    private TreeVisPanel handlerPanel;
 
-	public void createPartControl(Composite parent) {
-	
-		IWorkspace ws = ResourcesPlugin.getWorkspace();
-		IProjectDescription projDesc = ws.newProjectDescription("DBToasterCode");
-		projDesc.setLocation(new Path("/Users/yanif/tmp/dbtcode"));
-		//projDesc.setComment("DBToaster compiled code");
-		IProject p = ws.getRoot().getProject("DBToasterCode");
-		
-		try {
-			if ( !p.exists() )
-				p.create(projDesc, null);
-			p.open(null);
-			
-			IFile file = p.getFile(new Path("vwap.cc"));
-			if ( !file.exists() )
-				file.create(new ByteArrayInputStream(new byte[0]), IResource.NONE, null);
-			
-			IDE.openEditor(getViewSite().getPage(), file, true);
+    TracePanel tracePanel;
 
-		} catch (PartInitException e) {
-			e.printStackTrace();
-		} catch (CoreException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
+    // Trace panel redrawing (should really change data model to use an
+    // observable map)
+    String perspectiveId;
+    int ttHash;
 
-		Composite top = new Composite(parent, SWT.EMBEDDED);
-		GridLayout layout = new GridLayout();
-		layout.marginWidth = 0;
-		layout.marginHeight = 0;
-		top.setLayout(layout);
-		top.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-		
-		// Initialize default trees.
+    class TracePanel
+    {
+        static final String EVENTPATH = "path";
+        static final String STAGETYPE = "type";
+        static final String STAGENAME = "name";
+
+        org.eclipse.swt.widgets.Tree traceTree;
+        DBToasterWorkspace dbtWorkspace;
+
+        public TracePanel(Composite parent)
+        {
+            dbtWorkspace = DBToasterWorkspace.getWorkspace();
+
+            traceTree = new org.eclipse.swt.widgets.Tree(parent, SWT.SINGLE
+                    | SWT.BORDER);
+            GridData traceTreeLD = new GridData(SWT.FILL, SWT.FILL, true, true);
+            traceTree.setLayoutData(traceTreeLD);
+            traceTree.addSelectionListener(new SelectionListener()
+            {
+                public void widgetSelected(SelectionEvent e)
+                {
+                    TreeItem[] selected = traceTree.getSelection();
+                    if (selected.length > 0)
+                    {
+                        TreeItem s = selected[0];
+                        String sn = (String) s.getData(STAGENAME);
+
+                        if (sn != null)
+                        {
+                            TreeItem p = s.getParentItem();
+                            TreeItem gp = p.getParentItem();
+                            TreeItem ggp = gp.getParentItem();
+
+                            String tn = (String) p.getData(STAGETYPE);
+                            LinkedList<String> path = (LinkedList<String>) gp
+                                    .getData(EVENTPATH);
+                            String qn = (String) ggp.getText();
+
+                            CompilationTrace traces = dbtWorkspace
+                                    .getCompilationTrace(qn);
+
+                            Tree stageTree = traces.getCompilationStage(path,
+                                    tn, sn);
+
+                            exprPanel.setData(stageTree, "mapexpression");
+                        }
+                    }
+                }
+
+                public void widgetDefaultSelected(SelectionEvent e)
+                {
+                }
+            });
+
+            redraw();
+        }
+
+        private void redraw()
+        {
+            traceTree.clearAll(true);
+
+            System.out.println("DBToaster code viewer adding "
+                    + dbtWorkspace.getCompiledQueries().size()
+                    + " compiled queries.");
+
+            for (Query q : dbtWorkspace.getCompiledQueries())
+            {
+                CompilationTrace traces = q.getTrace();
+                if (traces == null)
+                {
+                    System.err.println("Found null trace in compiled query "
+                            + q.getQueryName());
+                    break;
+                }
+
+                TreeItem qItem = new TreeItem(traceTree, SWT.NONE);
+                qItem.setText(q.getQueryName());
+
+                Set<LinkedList<String>> eventPaths = traces.getEventPaths();
+                for (LinkedList<String> ep : eventPaths)
+                {
+                    TreeItem epItem = new TreeItem(qItem, SWT.NONE);
+                    String epName = "";
+                    for (String e : ep)
+                        epName += (epName.isEmpty() ? "" : ",") + e;
+                    epItem.setText(epName);
+                    epItem.setData("path", ep);
+
+                    LinkedHashMap<String, LinkedList<String>> epStages = traces
+                            .getEventPathStages(ep);
+
+                    for (Map.Entry<String, LinkedList<String>> stageEntry : epStages
+                            .entrySet())
+                    {
+                        String tn = stageEntry.getKey();
+                        TreeItem typeItem = new TreeItem(epItem, SWT.NONE);
+                        typeItem.setText(tn);
+                        typeItem.setData("type", tn);
+
+                        for (String sn : stageEntry.getValue())
+                        {
+                            TreeItem stageItem = new TreeItem(typeItem,
+                                    SWT.NONE);
+                            stageItem.setData("name", sn);
+                            stageItem.setText(sn);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void createPartControl(Composite parent)
+    {
+
+        IWorkspace ws = ResourcesPlugin.getWorkspace();
+        IProjectDescription projDesc = ws
+                .newProjectDescription("DBToaster Code");
+        projDesc.setLocation(new Path("/Users/yanif/tmp/dbtcode"));
+        projDesc.setComment("DBToaster compiled code");
+        IProject p = ws.getRoot().getProject("DBToaster Code");
+
+        try
+        {
+            if (!p.exists()) p.create(projDesc, null);
+            p.open(null);
+
+            IFile file = p.getFile(new Path("vwap.cc"));
+            if (!file.exists())
+                file.create(new ByteArrayInputStream(new byte[0]),
+                        IResource.NONE, null);
+
+            IDE.openEditor(getViewSite().getPage(), file, true);
+
+        } catch (PartInitException e)
+        {
+            e.printStackTrace();
+        } catch (CoreException e1)
+        {
+            e1.printStackTrace();
+        }
+
+        Composite top = new Composite(parent, SWT.NONE);
+        GridLayout topLayout = new GridLayout();
+        topLayout.marginWidth = 0;
+        topLayout.marginHeight = 0;
+        topLayout.numColumns = 2;
+        top.setLayout(topLayout);
+
+        Composite traceComp = new Composite(top, SWT.NONE);
+        traceComp.setLayout(new GridLayout());
+        GridData traceLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+        traceLD.widthHint = 300;
+        traceLD.heightHint = 400;
+        traceComp.setLayoutData(traceLD);
+
+        Composite compileComp = new Composite(top, SWT.EMBEDDED);
+        GridData compileLD = new GridData(SWT.FILL, SWT.FILL, true, true);
+        compileLD.verticalSpan = 2;
+        compileComp.setLayoutData(compileLD);
+
+        Composite hdComp = new Composite(top, SWT.EMBEDDED);
+        GridData hdLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+        hdLD.widthHint = 300;
+        hdComp.setLayoutData(hdLD);
+
+        // Initialize traces tree widget.
+        tracePanel = new TracePanel(traceComp);
+
+        // Initialize default trees.
         Tree exprTree = null;
-        try {
-            exprTree = (Tree)new TreeMLReader().readGraph("/Users/yanif/tmp/dbtcode/vwap.tml");
-        } catch ( Exception e ) {
+        try
+        {
+            exprTree = (Tree) new TreeMLReader()
+                    .readGraph("/Users/yanif/tmp/dbtcode/vwap.tml");
+        } catch (Exception e)
+        {
             e.printStackTrace();
             System.exit(1);
         }
-        
-		Tree mapTree = new Tree();
-		mapTree.getNodeTable().addColumn("name", String.class);
-		Node root = mapTree.addRoot();
-		root.set("name", "q[pmin]");
-		
-		Node mp2 = mapTree.addChild(root);
-		mp2.set("name", "m[p2]");
-		
-		Node sv0 = mapTree.addChild(mp2);
-		sv0.set("name", "sv0");
-		
-		Node sv1 = mapTree.addChild(mp2);
-		sv1.set("name", "sv1[p]");
 
-		Tree handlerTree = new Tree();
-		handlerTree.getNodeTable().addColumn("name", String.class);
-		Node droot = handlerTree.addRoot();
-		droot.set("name", "result");
-		
-		Node ib = handlerTree.addChild(droot);
-		ib.set("name", "insert(bids)");
-		
-		Node db = handlerTree.addChild(droot);
-		db.set("name", "delete(bids)");
-		
-		exprPanel = new TreeVisPanel(exprTree, "op", "Map expression", Constants.ORIENT_TOP_BOTTOM);
-		workflowPanel = buildWorkflowTree();
-		mapPanel = new TreeVisPanel(mapTree, "name", "Data structures", Constants.ORIENT_LEFT_RIGHT);
-		handlerPanel = new TreeVisPanel(handlerTree, "name", "Handler functions", Constants.ORIENT_LEFT_RIGHT);
-		
-		Frame codeFrame = SWT_AWT.new_Frame(top);
-		codeFrame.setLayout(new BorderLayout());
-        Panel codePanel = new Panel();
-        codeFrame.add(codePanel, BorderLayout.CENTER);
-        
-        JRootPane codeRootPane = new JRootPane();
-        codePanel.setLayout(new BorderLayout());
- 		codePanel.add(codeRootPane, BorderLayout.CENTER);
-		
- 		JSplitPane split1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        Tree mapTree = new Tree();
+        mapTree.getNodeTable().addColumn("name", String.class);
+        Node root = mapTree.addRoot();
+        root.set("name", "q[pmin]");
+
+        Node mp2 = mapTree.addChild(root);
+        mp2.set("name", "m[p2]");
+
+        Node sv0 = mapTree.addChild(mp2);
+        sv0.set("name", "sv0");
+
+        Node sv1 = mapTree.addChild(mp2);
+        sv1.set("name", "sv1[p]");
+
+        Tree handlerTree = new Tree();
+        handlerTree.getNodeTable().addColumn("name", String.class);
+        Node droot = handlerTree.addRoot();
+        droot.set("name", "result");
+
+        Node ib = handlerTree.addChild(droot);
+        ib.set("name", "insert(bids)");
+
+        Node db = handlerTree.addChild(droot);
+        db.set("name", "delete(bids)");
+
+        exprPanel = new TreeVisPanel(exprTree, "op", "Map expression",
+                Constants.ORIENT_TOP_BOTTOM);
+        mapPanel = new TreeVisPanel(mapTree, "name", "Data structures",
+                Constants.ORIENT_LEFT_RIGHT);
+        handlerPanel = new TreeVisPanel(handlerTree, "name",
+                "Handler functions", Constants.ORIENT_LEFT_RIGHT);
+
+        // Map and handler panel
+        Frame hdFrame = SWT_AWT.new_Frame(hdComp);
+        hdFrame.setLayout(new BorderLayout());
+        Panel hdPanel = new Panel();
+        hdFrame.add(hdPanel, BorderLayout.CENTER);
+
+        JRootPane hdRootPane = new JRootPane();
+        hdPanel.setLayout(new BorderLayout());
+        hdPanel.add(hdRootPane, BorderLayout.CENTER);
+
+        JSplitPane split1 = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
         split1.setLeftComponent(mapPanel);
         split1.setRightComponent(handlerPanel);
         split1.setOneTouchExpandable(false);
         split1.setContinuousLayout(false);
         split1.setDividerSize(2);
         split1.setResizeWeight(0.5);
- 		
-        JSplitPane split2 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        split2.setLeftComponent(exprPanel);
-        split2.setRightComponent(workflowPanel);
-        split2.setOneTouchExpandable(false);
-        split2.setContinuousLayout(false);
-        split2.setDividerSize(2);
-        split2.setResizeWeight(0.75);
-        split2.setDividerLocation(0.75);
-        
-        JSplitPane split3 = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        split3.setLeftComponent(split2);
-        split3.setRightComponent(split1);
-        split3.setOneTouchExpandable(false);
-        split3.setContinuousLayout(false);
-        split3.setDividerSize(1);
-        split3.setResizeWeight(0.6);
-        
-        Container codeContentPane = codeRootPane.getContentPane();
-        codeContentPane.setLayout(new BorderLayout());
-        codeContentPane.add(split3, BorderLayout.CENTER);
 
-        codeFrame.pack();
-        codeFrame.setVisible(true);
- 	}
-	
-	// Workflow panel helpers.
-	
-	// stage name -> data group.
-	static class WorkflowStages {
-		static LinkedHashMap<String, String> workflowStages;
-		public static LinkedHashMap<String, String> get() {
-			if ( workflowStages == null ) {
-				workflowStages = new LinkedHashMap<String, String>();
-				workflowStages.put("SQL Query", null);
-				workflowStages.put("Parse", null);
-				workflowStages.put("Extract bindings", "extract");
-				workflowStages.put("Find delta frontier", "incr");
-				workflowStages.put("Recur over inputs", null);
-				workflowStages.put("   Simplify deltas", "deltas");
-				workflowStages.put("   Simplify aggregates", "aggs");
-				workflowStages.put("   Code generation", "generate");
-				workflowStages.put("C++ code", null);
-			}
-			return workflowStages;
-		}
-	};
-	
-	JFastLabel buildWorkflowLabel(String group, String text,
-		Border b, int fontSize)
-	{
-        JFastLabel label;
-    	if ( group == null )
-    		label = new JFastLabel(text);
-    	else {
-    		WorkflowLabel r = new WorkflowLabel(group, text);
-            r.addMouseListener(
-        		new WorkflowStageMouseListener(r, exprPanel));
-            label = (JFastLabel) r;
-    	}
+        Container hdContentPane = hdRootPane.getContentPane();
+        hdContentPane.setLayout(new BorderLayout());
+        hdContentPane.add(split1, BorderLayout.CENTER);
 
-        label.setPreferredSize(new Dimension(135, 20));
-        label.setHorizontalAlignment(SwingConstants.EAST);
-        label.setVerticalAlignment(SwingConstants.TOP);
-        label.setBorder(b);
-        label.setFont(FontLib.getFont("Tahoma", Font.PLAIN, fontSize));
-        label.setBackground(Color.WHITE);
-        label.setForeground(Color.BLACK);
-        
-        return label;
+        hdFrame.pack();
+        hdFrame.setVisible(true);
+
+        // Compiled map expressions
+        Frame compileFrame = SWT_AWT.new_Frame(compileComp);
+        compileFrame.setLayout(new BorderLayout());
+        Panel compilePanel = new Panel();
+        compileFrame.add(compilePanel, BorderLayout.CENTER);
+
+        JRootPane compileRootPane = new JRootPane();
+        compilePanel.setLayout(new BorderLayout());
+        compilePanel.add(compileRootPane, BorderLayout.CENTER);
+
+        Container compileContentPane = compileRootPane.getContentPane();
+        compileContentPane.setLayout(new BorderLayout());
+        compileContentPane.add(exprPanel, BorderLayout.CENTER);
+
+        compileFrame.pack();
+        compileFrame.setVisible(true);
+
+        perspectiveId = getViewSite().getPage().getPerspective().getId();
+
+        getViewSite().getWorkbenchWindow().addPerspectiveListener(
+                new IPerspectiveListener()
+                {
+                    public void perspectiveChanged(IWorkbenchPage page,
+                            IPerspectiveDescriptor perspective, String changeId)
+                    {
+                    }
+
+                    public void perspectiveActivated(IWorkbenchPage page,
+                            IPerspectiveDescriptor perspective)
+                    {
+                        // TODO: check if this works after compiling new
+                        // queries.
+                        if (perspective.getId().equals(perspectiveId)
+                                && tracePanel.traceTree.hashCode() != ttHash)
+                        {
+                            System.out.println("Redrawing tracePanel");
+                            tracePanel.redraw();
+                            ttHash = tracePanel.traceTree.hashCode();
+                        }
+                    }
+                });
     }
-	
-	JFastLabel buildWorkflowStage(String group, String stage) {
-		return
-			buildWorkflowLabel(group, stage,
-				BorderFactory.createEmptyBorder(1,0,0,0), 14);
-	}
 
-	JPanel buildWorkflowTree() {
-		
-		JPanel r = new JPanel();
-		FlowLayout l = new FlowLayout();
-		l.setHgap(0);
-		l.setVgap(0);
-		r.setLayout(l);
-		r.setBackground(Color.WHITE);
-		r.setForeground(Color.BLACK);
-
-		r.add(buildWorkflowLabel(null, "Workflow",
-			BorderFactory.createMatteBorder(0, 0, 3, 0, Color.DARK_GRAY), 16));
-
-		// Add stages.
-		for (Map.Entry<String, String> stage :
-				WorkflowStages.get().entrySet())
-		{
-			r.add(buildWorkflowStage(stage.getValue(), stage.getKey()));
-		}
-        
-        return r;
-	}
-	
-	public void setFocus() {}
-	
-	// Helper classes
-	class WorkflowLabel extends JFastLabel {
-		private static final long serialVersionUID = -7295730416631024647L;
-
-		String group;
-		public WorkflowLabel(String group, String text) {
-			super(text);
-			this.group = group;
-		}
-	}
-	
-	class WorkflowStageMouseListener extends MouseInputAdapter {
-		WorkflowLabel label;
-		TreeVisPanel mapExprPanel;
-		
-		public WorkflowStageMouseListener(WorkflowLabel l, TreeVisPanel tp) {
-			label = l;
-			mapExprPanel = tp;
-		}
-		
-		public void mouseClicked(MouseEvent e) {
-			System.out.println("Clicked: " + label.getText());
-		}
-		
-		public void mouseEntered(MouseEvent e) {
-			label.setBackground(Color.LIGHT_GRAY);
-		}
-		
-		public void mouseExited(MouseEvent e) {
-			label.setBackground(Color.WHITE);
-		}
-	}
+    public void setFocus()
+    {
+    }
 }

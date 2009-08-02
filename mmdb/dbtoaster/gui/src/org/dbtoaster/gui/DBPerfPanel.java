@@ -37,211 +37,177 @@ import org.swtchart.Chart;
 import org.swtchart.ILineSeries;
 import org.swtchart.ISeries.SeriesType;
 
-public class DBPerfPanel extends Composite {
+public class DBPerfPanel extends Composite
+{
 
-	private static final long serialVersionUID = 4339624058150476495L;
+    private static final long serialVersionUID = 4339624058150476495L;
 
-	/*
-	class RandomFeed extends Thread {
+    /*
+     * class RandomFeed extends Thread {
+     * 
+     * TimeSeries s; double y = ((Math.random() - 0.5) * 200);
+     * 
+     * RandomFeed(TimeSeries s) { this.s = s; }
+     * 
+     * public void run() { double yFeed = Math.pow((Math.random() - 0.5) * 2.5,
+     * 3.0); y += yFeed; s.add(new Millisecond(), y); } };
+     */
 
-		TimeSeries s;
-		double y = ((Math.random() - 0.5) * 200);
+    class DataGenerator extends Timer implements ActionListener
+    {
 
-		RandomFeed(TimeSeries s) {
-		        this.s = s;
-		}
+        TimeSeries s;
+        XYPlot plot;
+        double y = Math.random() * 100;
 
-		public void run() {
-	        double yFeed = Math.pow((Math.random() - 0.5) * 2.5, 3.0);
-	        y += yFeed;
-	        s.add(new Millisecond(), y);
-		}
-	};
-	*/
-
-    class DataGenerator extends Timer implements ActionListener {
-
-		TimeSeries s;
-		XYPlot plot;
-		double y = Math.random() * 100;
-
-    	DataGenerator(TimeSeries s, XYPlot plot, int i) {
-    		super(i, null);
-	        this.s = s;
-	        this.plot = plot;
-    		addActionListener(this);
+        DataGenerator(TimeSeries s, XYPlot plot, int i)
+        {
+            super(i, null);
+            this.s = s;
+            this.plot = plot;
+            addActionListener(this);
         }
-      
-        public void actionPerformed(ActionEvent actionevent) {
-        	/*
-        	getDisplay().asyncExec(new Runnable() {
-    			public void run() {
-    				if ( !getDisplay().isDisposed() ) {
-	    				double yFeed = Math.pow((Math.random() - 0.5) * 2.5, 3.0);
-	    				y += yFeed;
-	    				Millisecond x = new Millisecond();
-	    				s.add(x, y);
-	    				
-	    				ValueAxis xAxis = plot.getDomainAxis();
-	    				xAxis.setRange(xAxis.getUpperBound() - 10000,
-    						Math.max(x.getEnd().getTime(), xAxis.getUpperBound()));
-    				}
-    			}
-        	});
-        	*/
+
+        public void actionPerformed(ActionEvent actionevent)
+        {
+            /*
+             * getDisplay().asyncExec(new Runnable() { public void run() { if (
+             * !getDisplay().isDisposed() ) { double yFeed =
+             * Math.pow((Math.random() - 0.5) * 2.5, 3.0); y += yFeed;
+             * Millisecond x = new Millisecond(); s.add(x, y);
+             * 
+             * ValueAxis xAxis = plot.getDomainAxis();
+             * xAxis.setRange(xAxis.getUpperBound() - 10000,
+             * Math.max(x.getEnd().getTime(), xAxis.getUpperBound())); } } });
+             */
         }
     }
-   
-	class StatPanel extends ChartComposite {
 
-		TimeSeriesCollection statsData;
-		TimeSeries statsSeries;
-		JFreeChart chart;
-		XYPlot plot;
-				
-		public StatPanel(String name, Composite comp, int style, Paint p) {
-			super(comp, style);
-			statsData = new TimeSeriesCollection();
-			statsSeries = new TimeSeries(name);
-			//statsSeries.setMaximumItemAge(10000);
-			statsData.addSeries(statsSeries);
-			chart = ChartFactory.createTimeSeriesChart(
-				null, null, null, statsData, false, false, false);
-			
-			plot = (XYPlot) chart.getPlot();
-	        plot.setBackgroundPaint(Color.LIGHT_GRAY);
-	        plot.setDomainGridlinePaint(Color.WHITE);
-	        plot.setRangeGridlinePaint(Color.WHITE);
-	        plot.setDomainCrosshairVisible(true);
-	        plot.setRangeCrosshairVisible(true);
-	        
-	        XYItemRenderer r = plot.getRenderer();
-	        if (r instanceof XYLineAndShapeRenderer) {
-	            XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) r;
-	            renderer.setBaseShapesVisible(true);
-	            renderer.setBaseShapesFilled(true);
-	            renderer.setBaseFillPaint(p);
-	            renderer.setBaseOutlinePaint(p);
-	            renderer.setSeriesPaint(0, p);
-	            renderer.setUseFillPaint(true);
-	            renderer.setUseOutlinePaint(true);
-	        }
-	        
-	        DateAxis axis = (DateAxis) plot.getDomainAxis();
-	        axis.setDateFormatOverride(new SimpleDateFormat("H:m:s.S"));
+    class StatPanel extends ChartComposite
+    {
 
-			setChart(chart);
+        TimeSeriesCollection statsData;
+        TimeSeries statsSeries;
+        JFreeChart chart;
+        XYPlot plot;
 
-			DataGenerator feed = new DataGenerator(statsSeries, plot, 100);
-			feed.start();
-		}
-	};
+        public StatPanel(String name, Composite comp, int style, Paint p)
+        {
+            super(comp, style);
+            statsData = new TimeSeriesCollection();
+            statsSeries = new TimeSeries(name);
+            // statsSeries.setMaximumItemAge(10000);
+            statsData.addSeries(statsSeries);
+            chart = ChartFactory.createTimeSeriesChart(null, null, null,
+                    statsData, false, false, false);
 
-	/*
-	class XYSeries {
-		LinkedList<Double> xseries;
-		LinkedList<Double> yseries;
-		
-		public XYSeries() {
-			xseries = new LinkedList<Double>();
-			yseries = new LinkedList<Double>();
-		}
-		
-		public void add(double x, double y) {
-			if ( xseries.getLast() > x ) {
-				int idx = xseries.indexOf(x);
-				xseries.add(idx, x);
-				yseries.add(idx, y);
-			}
-			else {
-				xseries.add(x); yseries.add(y);
-			}
-		}
+            plot = (XYPlot) chart.getPlot();
+            plot.setBackgroundPaint(Color.LIGHT_GRAY);
+            plot.setDomainGridlinePaint(Color.WHITE);
+            plot.setRangeGridlinePaint(Color.WHITE);
+            plot.setDomainCrosshairVisible(true);
+            plot.setRangeCrosshairVisible(true);
 
-		public double getXRange() {
-			return xseries.getLast() - xseries.getFirst();
-		}
-		
-		public double[] getXSeries() { return xseries.toArray(); }
-	}
+            XYItemRenderer r = plot.getRenderer();
+            if (r instanceof XYLineAndShapeRenderer)
+            {
+                XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) r;
+                renderer.setBaseShapesVisible(true);
+                renderer.setBaseShapesFilled(true);
+                renderer.setBaseFillPaint(p);
+                renderer.setBaseOutlinePaint(p);
+                renderer.setSeriesPaint(0, p);
+                renderer.setUseFillPaint(true);
+                renderer.setUseOutlinePaint(true);
+            }
 
-	class RandomFeed extends TimerTask {
+            DateAxis axis = (DateAxis) plot.getDomainAxis();
+            axis.setDateFormatOverride(new SimpleDateFormat("H:m:s.S"));
 
-		double x = 0.0;
-		double y = ((Math.random() - 0.5) * 200);
+            setChart(chart);
 
-		XYSeries s;
-		
-		RandomFeed(XYSeries s) {
-		        this.s = s;
-		}
+            DataGenerator feed = new DataGenerator(statsSeries, plot, 100);
+            feed.start();
+        }
+    };
 
-		public void run() {
-			double xFeed = Math.random() * 10.0;
-	        double yFeed = Math.pow((Math.random() - 0.5) * 2.5, 3.0);
-	        x += xFeed;
-	        y += yFeed;
-	        s.add(x, y);
-		}
-	};
+    /*
+     * class XYSeries { LinkedList<Double> xseries; LinkedList<Double> yseries;
+     * 
+     * public XYSeries() { xseries = new LinkedList<Double>(); yseries = new
+     * LinkedList<Double>(); }
+     * 
+     * public void add(double x, double y) { if ( xseries.getLast() > x ) { int
+     * idx = xseries.indexOf(x); xseries.add(idx, x); yseries.add(idx, y); }
+     * else { xseries.add(x); yseries.add(y); } }
+     * 
+     * public double getXRange() { return xseries.getLast() -
+     * xseries.getFirst(); }
+     * 
+     * public double[] getXSeries() { return xseries.toArray(); } }
+     * 
+     * class RandomFeed extends TimerTask {
+     * 
+     * double x = 0.0; double y = ((Math.random() - 0.5) * 200);
+     * 
+     * XYSeries s;
+     * 
+     * RandomFeed(XYSeries s) { this.s = s; }
+     * 
+     * public void run() { double xFeed = Math.random() * 10.0; double yFeed =
+     * Math.pow((Math.random() - 0.5) * 2.5, 3.0); x += xFeed; y += yFeed;
+     * s.add(x, y); } };
+     * 
+     * class StatPanel extends Chart {
+     * 
+     * private final double[] ySeries = { 0.0, 0.38, 0.71, 0.92, 1.0, 0.92,
+     * 0.71, 0.38, 0.0, -0.38, -0.71, -0.92, -1.0, -0.92, -0.71, -0.38 };
+     * 
+     * Timer t;
+     * 
+     * public StatPanel(Composite parent, int style) { super(parent, style);
+     * 
+     * // create line series ILineSeries lineSeries = (ILineSeries)
+     * getSeriesSet().createSeries(SeriesType.LINE, "line series");
+     * 
+     * lineSeries.setYSeries(ySeries);
+     * 
+     * // adjust the axis range getAxisSet().adjustRange();
+     * 
+     * t = new Timer("Feed timer"); t.schedule(new RandomFeed(statsSeries),
+     * 100L, 800L); } };
+     */
 
-	class StatPanel extends Chart {
+    StatPanel cpuPanel;
+    StatPanel memPanel;
 
-		private final double[] ySeries = {
-			0.0, 0.38, 0.71, 0.92, 1.0, 0.92,
-			0.71, 0.38, 0.0, -0.38, -0.71, -0.92,
-			-1.0, -0.92, -0.71, -0.38 };
+    Slider cpuSlider;
+    Slider memSlider;
 
-		Timer t;
+    public DBPerfPanel(Composite parent, int style)
+    {
+        super(parent, style);
+        setLayout(new GridLayout(4, false));
 
-		public StatPanel(Composite parent, int style) {
-			super(parent, style);
+        // cpuPanel = new StatPanel(this, SWT.NO_TRIM);
+        // memPanel = new StatPanel(this, SWT.NO_TRIM);
 
-			// create line series
-			ILineSeries lineSeries = (ILineSeries)
-				getSeriesSet().createSeries(SeriesType.LINE, "line series");
-			
-			lineSeries.setYSeries(ySeries);
+        cpuSlider = new Slider(this, SWT.VERTICAL);
+        GridData csData = new GridData(SWT.FILL, SWT.FILL, false, true);
+        cpuSlider.setLayoutData(csData);
 
-			// adjust the axis range
-			getAxisSet().adjustRange();	
+        cpuPanel = new StatPanel("cpu", this, SWT.NO_TRIM, Color.RED);
+        GridData cpData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        // cpData.widthHint = 400;
+        cpuPanel.setLayoutData(cpData);
 
-			t = new Timer("Feed timer");
-	        t.schedule(new RandomFeed(statsSeries), 100L, 800L);
-		}
-	};
-	*/
+        memSlider = new Slider(this, SWT.VERTICAL);
+        GridData msData = new GridData(SWT.FILL, SWT.FILL, false, true);
+        memSlider.setLayoutData(msData);
 
-
-	StatPanel cpuPanel;
-	StatPanel memPanel;
-	
-	Slider cpuSlider;
-	Slider memSlider;
-	
-	public DBPerfPanel(Composite parent, int style) {
-		super(parent, style);
-		setLayout(new GridLayout(4, false));
-		
-		//cpuPanel = new StatPanel(this, SWT.NO_TRIM);
-		//memPanel = new StatPanel(this, SWT.NO_TRIM);
-		
-		cpuSlider = new Slider(this, SWT.VERTICAL);
-		GridData csData = new GridData(SWT.FILL, SWT.FILL, false, true);
-		cpuSlider.setLayoutData(csData);
-		
-		cpuPanel = new StatPanel("cpu", this, SWT.NO_TRIM, Color.RED);
-		GridData cpData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		//cpData.widthHint = 400;
-		cpuPanel.setLayoutData(cpData);
-		
-		memSlider = new Slider(this, SWT.VERTICAL);
-		GridData msData = new GridData(SWT.FILL, SWT.FILL, false, true);
-		memSlider.setLayoutData(msData);
-
-		memPanel = new StatPanel("mem", this, SWT.NO_TRIM, Color.GREEN);
-		GridData mpData = new GridData(SWT.FILL, SWT.FILL, true, true);
-		//mpData.widthHint = 400;
-		memPanel.setLayoutData(mpData);
+        memPanel = new StatPanel("mem", this, SWT.NO_TRIM, Color.GREEN);
+        GridData mpData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        // mpData.widthHint = 400;
+        memPanel.setLayoutData(mpData);
     }
 }

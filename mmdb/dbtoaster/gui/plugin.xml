@@ -14,19 +14,24 @@
    <extension
          point="org.eclipse.ui.perspectives">
       <perspective
-            name="Compile Perspective"
-            class="org.dbtoaster.gui.CompilePerspective"
-            id="dbtoaster_gui.compile_perspective">
+            name="Query Editor"
+            class="org.dbtoaster.gui.EditorPerspective"
+            id="dbtoaster_gui.editor_perspective">
       </perspective>
       <perspective
             class="org.dbtoaster.gui.PerformancePerspective"
             id="dbtoaster_gui.performance_perspective"
-            name="Performance Perspective">
+            name="Performance">
       </perspective>
       <perspective
             class="org.dbtoaster.gui.CodePerfPerspective"
             id="dbtoaster_gui.codeperf_perspective"
-            name="Code Performance Perspective">
+            name="Code Performance">
+      </perspective>
+      <perspective
+            class="org.dbtoaster.gui.CompilationViewerPerspective"
+            id="dbtoaster_gui.compilation_viewer_perspective"
+            name="Compilation Viewer">
       </perspective>
    </extension>
    <extension
