@@ -15,9 +15,9 @@ let rel_s = `Relation(supplier)
 let rel_c = `Relation(customer)
 let rel_l = `Relation(lineorder)
 
-let predicate = 
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("y")))),
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("C", "NATION2"))), `ETerm (`Variable("n")))),
+let predicate1 = 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("d_y")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("C", "NATION2"))), `ETerm (`Variable("c_n")))),
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "CUSTKEY2"))), `ETerm (`Attribute(`Qualified("C", "CUSTKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "SUPPKEY2"))), `ETerm (`Attribute(`Qualified("S", "SUPPKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "PARTKEY2"))), `ETerm (`Attribute(`Qualified("P", "PARTKEY1"))))), 
@@ -28,18 +28,52 @@ let predicate =
 			     `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "MFGR"))), `ETerm (`String("MFGR#2")))))
 		))))))))
 
+let predicate2 = 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("d_y")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "NATION1"))), `ETerm (`Variable("s_n")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "CATEGORY"))), `ETerm (`Variable("p_c")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "CUSTKEY2"))), `ETerm (`Attribute(`Qualified("C", "CUSTKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "SUPPKEY2"))), `ETerm (`Attribute(`Qualified("S", "SUPPKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "PARTKEY2"))), `ETerm (`Attribute(`Qualified("P", "PARTKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "ORDERDATE"))), `ETerm (`Attribute(`Qualified("D", "DATEKEY"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("C", "REGION2"))), `ETerm (`String("AMERICA")))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "REGION1"))), `ETerm (`String("AMERICA")))), 
+		`And ( 
+		       `Or ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Int(1997)))), 
+			     `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Int(1998))))),
+		       `Or ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "MFGR"))), `ETerm (`String("MFGR#1")))), 
+			     `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "MFGR"))), `ETerm (`String("MFGR#2")))))
+		))))))))))
+
+let predicate3 = 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("d_y")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "CITY1"))), `ETerm (`Variable("s_c")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "BRAND1"))), `ETerm (`Variable("p_b")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "CUSTKEY2"))), `ETerm (`Attribute(`Qualified("C", "CUSTKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "SUPPKEY2"))), `ETerm (`Attribute(`Qualified("S", "SUPPKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "PARTKEY2"))), `ETerm (`Attribute(`Qualified("P", "PARTKEY1"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "ORDERDATE"))), `ETerm (`Attribute(`Qualified("D", "DATEKEY"))))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("C", "REGION2"))), `ETerm (`String("AMERICA")))), 
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "NATION1"))), `ETerm (`String("UNITED STATES")))), 
+		`And ( 
+		       `Or ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Int(1997)))), 
+			     `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Int(1998))))),
+			     `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "MFGR"))), `ETerm (`String("MFGR#14"))))
+		))))))))))
+
 let sum = `Minus(`METerm(`Attribute(`Qualified("LO", "REVENUE"))), `METerm(`Attribute(`Qualified("LO", "SUPPLYCOST"))))
 
 let relations = `Cross( rel_d, `Cross( rel_c, `Cross( rel_s, `Cross(rel_p, rel_l))))
 
-let q4_1 = `MapAggregate(`Sum, sum, `Select(predicate, relations));;
+let q4_1 = `MapAggregate(`Sum, sum, `Select(predicate1, relations))
+let q4_2 = `MapAggregate(`Sum, sum, `Select(predicate2, relations))
+let q4_3 = `MapAggregate(`Sum, sum, `Select(predicate3, relations));;
+
+let _ = 
+	print_endline (string_of_map_expression q4_1);
+	print_endline (string_of_map_expression q4_2);
+	print_endline (string_of_map_expression q4_3);
+	()
 
 
-
-(*let (new_m,_) = rename_attributes q4_1 in
-(*    print_endline (string_of_map_expression q4_1); ()*)
-    print_endline (string_of_map_expression new_m); ()
-
-(*Icompile_target q4_1 event*) *)
-
-compile_query q4_1 "ssb.cc"
+(*compile_query q4_1 "ssb.cc"*)

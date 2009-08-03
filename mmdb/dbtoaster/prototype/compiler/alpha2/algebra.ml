@@ -394,10 +394,10 @@ let rec string_of_expression expr =
     match expr with
 	| `ETerm e -> string_of_expr_terminal e
 	| `UnaryMinus e -> "-"^(string_of_expression e)
-	| `Sum (l,r) -> (string_of_expression l)^" + "^(string_of_expression r)
-	| `Product(l,r) -> (string_of_expression l)^" * "^(string_of_expression r) 
-	| `Minus (l,r) -> (string_of_expression l)^" - "^(string_of_expression r)
-	| `Divide (l,r) -> (string_of_expression l)^" / "^(string_of_expression r)
+	| `Sum (l,r) -> "("^(string_of_expression l)^" + "^(string_of_expression r)^")"
+	| `Product(l,r) -> "("^(string_of_expression l)^" * "^(string_of_expression r)^")"
+	| `Minus (l,r) -> "("^(string_of_expression l)^" - "^(string_of_expression r)^")"
+	| `Divide (l,r) -> "("^(string_of_expression l)^" / "^(string_of_expression r)^")"
 	| `Function (id, args) -> id^"("^
 	      (List.fold_left
 		   (fun acc e ->
@@ -471,13 +471,13 @@ and string_of_map_expression m_expr =
 	| `METerm t -> string_of_map_expr_terminal t
 
 	| `Sum (l,r) ->
-	      (string_of_map_expression l)^" + "^(string_of_map_expression r)
+	      "("^(string_of_map_expression l)^" + "^(string_of_map_expression r)^")"
 
 	| `Minus (l,r) ->
-	      (string_of_map_expression l)^" - "^(string_of_map_expression r)
+	      "("^(string_of_map_expression l)^" - "^(string_of_map_expression r)^")"
 
 	| `Product (l, r) -> 
-	      (string_of_map_expression l)^" * "^(string_of_map_expression r)
+	      "("^(string_of_map_expression l)^" * "^(string_of_map_expression r)^")"
 		  
 	| `Min  (l, r) ->
 	      "min("^(string_of_map_expression l)^", "^(string_of_map_expression r)^")"
@@ -1567,7 +1567,7 @@ let is_binding_used m_expr bindings =
     let binding_used_rv =
         List.map
             (fun x -> match x with
-                | `BindMapExpr(v, bc) -> v
+                | `BindMapExpr(v, bc) -> (v, bc)
                 | _ -> raise InvalidExpression)
             bindings_used
     in
@@ -2192,7 +2192,7 @@ and bool_code_term = [ `True | `False
 | `GT of arith_code_expression * arith_code_expression
 | `GE of arith_code_expression * arith_code_expression
 | `EQ of arith_code_expression * arith_code_expression
-| `NE of arith_code_expression * arith_code_expression ]
+| `NE of arith_code_expression * arith_code_expression ] 
 
 type bool_code_expression = [
 | `BCTerm of bool_code_term
@@ -2359,6 +2359,7 @@ let handler_name_of_event ev =
 	| `Insert (n, _) -> "on_insert_"^n
 	| `Delete (n, _) -> "on_delete_"^n
 
+
 (* 
  * Code generation main
  *)
@@ -2390,7 +2391,7 @@ let string_of_code_expr_terminal cterm =
 	| `Int i -> string_of_int i
 	| `Float f -> string_of_float f
 	| `Long l -> Int64.to_string l
-	| `String s -> "'"^s^"'"
+	| `String s -> "\""^s^"\""
 	| `Variable v -> v
 	| `MapAccess mk -> string_of_map_key mk
 	| `MapContains (mid, keys) -> mid^".find("^(ctype_of_code_var_list keys)^")"
@@ -2401,16 +2402,16 @@ let rec string_of_arith_code_expression ac_expr =
     match ac_expr with
 	| `CTerm e -> string_of_code_expr_terminal e
 	| `Sum (l,r) ->
-	      (string_of_arith_code_expression l)^" + "^
-		  (string_of_arith_code_expression r)
+	      "("^(string_of_arith_code_expression l)^" + "^
+		  (string_of_arith_code_expression r)^")"
 
 	| `Minus (l,r) ->
-	      (string_of_arith_code_expression l)^" - "^
-		  (string_of_arith_code_expression r)
+	      "("^(string_of_arith_code_expression l)^" - "^
+		  (string_of_arith_code_expression r)^")"
 
 	| `Product(l,r) ->
-	      (string_of_arith_code_expression l)^" * "^
-		  (string_of_arith_code_expression r)
+	      "("^(string_of_arith_code_expression l)^" * "^
+		  (string_of_arith_code_expression r)^")"
 
 	| `Min(l,r) ->
 	      "min("^(string_of_arith_code_expression l)^", "^
@@ -2422,7 +2423,7 @@ let rec string_of_arith_code_expression ac_expr =
 
 let rec string_of_bool_code_expression bc_expr =
     let dispatch_expr l r op =
-	(string_of_arith_code_expression l)^op^(string_of_arith_code_expression r)
+	(string_of_arith_code_expression l)^op^(string_of_arith_code_expression r) 
     in
 	match bc_expr with
 	    | `BCTerm b ->
@@ -2610,6 +2611,223 @@ let indented_string_of_code_expression c_expr =
     in
 	sce_aux c_expr 0
 
+(* type computation rules *)
+exception InvalidTypeOperation
+
+type r_type = [ `Int | `Long | `Float | `String ]
+
+let string_of_type t = 
+    match t with 
+	| `Int -> "int"
+	| `Long -> "long"
+	| `Float -> "float"
+	| `String -> "string"
+
+(* basic type inferrence rules. It doesn't have to be strict type checker because we're generating C++ file.  *)
+let type_op_rule l r =
+    match (l, r) with
+	| (`Int, `Int) -> `Int
+	| (`Int, `Long) | (`Long, `Int) | (`Long, `Long) -> `Long
+	| (`Int, `Float) | (`Float, `Int) | (`Long, `Float) | (`Float, `Long) | (`Float, `Float) -> `Float
+	| (_, _) -> 
+	    (print_endline ("Type operation between "^(string_of_type l)^" and "^(string_of_type r));
+	    raise InvalidTypeOperation)
+
+let string_to_type s =
+    match s with
+	| "int" -> `Int
+	| "long" -> `Long
+	| "float" -> `Float
+	| "string" -> `String
+	| _ -> raise InvalidTypeOperation
+
+let type_to_string t = 
+    match t with
+	| `Int -> "int"
+	| `Long -> "long"
+	| `Float -> "float"
+	| `String -> "string"
+
+(* merges list of attributes of relations and events and looks for type of variable name *)
+let search_rels_event rname vname base_rels events unqual=
+    let t_list = 
+        List.map ( fun (f, t) -> t) 
+	    (List.filter
+		( fun (f, t) -> f = vname
+		) ((List.fold_left 
+	            ( fun acc x ->
+		        match x with
+		            | `Relation (n, l) -> if unqual then List.append acc l
+						  else ( if n = rname then
+							List.append acc l
+							else acc )
+			    | _ -> raise InvalidExpression)
+	            [] base_rels)@
+    		    (List.fold_left
+		        (fun acc x ->
+			    match x with 
+			        | `Insert (n, l) | `Delete (n, l) ->
+				    if unqual then List.append acc l
+				    else (if n = rname then List.append acc l 
+					else acc ))
+		        [] events))
+	    )
+    in if (List.length t_list) = 0 then raise InvalidExpression
+    else string_to_type (List.hd t_list)
+
+(* try to find type from declaration list first *)
+let search_decls_rels_event rname vname base_rels events decls =
+    (* search through decl list *)
+    let d_list = List.filter (
+        fun x -> match x with
+	    | `Variable (v, _) | `Map (v, _, _) -> vname = v
+	    | _ -> false)
+	decls
+    in if List.length d_list != 0 then
+	match List.hd d_list with
+	    | `Variable ( _, t) | `Map ( _, _, t) -> string_to_type t
+	    | _ -> raise InvalidExpression
+    (* search through map list *)
+    else search_rels_event rname vname base_rels events true
+
+let type_inf_expr expr base_rels events decls =
+    let rec tie_aux_expr expr= 
+    	match expr with
+            | `ETerm e -> tie_aux_eterm e 
+ 	    | `Sum (l, r) | `Product (l, r) | `Minus (l, r) -> 
+    	        type_op_rule (tie_aux_expr l) (tie_aux_expr r)
+	    | `Function _ | `UnaryMinus _ | `Divide _ -> raise InvalidExpression
+    and tie_aux_eterm eterm =
+        match eterm with
+    	    | `Int _ -> `Int
+	    | `Float _ -> `Float
+	    | `String _ -> `String
+	    | `Long _ -> `Long
+	    | `Variable var ->
+	        search_decls_rels_event "" var base_rels events decls
+	    | `Attribute (`Qualified (r, a)) ->
+	        search_rels_event r a base_rels events false
+	    | `Attribute (`Unqualified (a)) ->
+	        search_rels_event "" a base_rels events true
+    in
+    let ret_type =  tie_aux_expr expr    
+    in 
+    print_endline ("result of type inferencing of "^string_of_expression expr^" : "^(string_of_type ret_type));
+    type_to_string ret_type
+
+let type_inf_mexpr m_expr base_rels events decls =
+    let rec tiaux_mterm mterm : r_type= 
+        match mterm with
+	    | `Int _ -> `Int
+	    | `Float _ -> `Float
+	    | `String _ -> `String
+	    | `Long _ -> `Long
+	    | `Variable var -> 
+		search_decls_rels_event "" var base_rels events decls 
+	    | `Attribute ( `Qualified (r, a)) -> 
+		search_rels_event r a base_rels events false
+	    | `Attribute ( `Unqualified (a)) ->
+		search_rels_event "" a base_rels events true
+    and tiaux_m_expr m_expr =
+	match m_expr with
+	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r) | `Min ( l, r) | `Max ( l, r) 
+		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
+	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
+	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
+	    | `Init (_, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
+	    | `Insert (_, _, m) | `Update( _, _, _, m) 
+	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
+	    | `IfThenElse(_, m1, m2) -> 
+		let l = tiaux_m_expr m1 in
+		let r = tiaux_m_expr m2 in
+		if l = r then l
+		else raise InvalidTypeOperation
+
+    in
+    let ret_type =  tiaux_m_expr m_expr
+    in 
+    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));
+    type_to_string ret_type
+
+(* retrieve map expression from map list using hash value and id *)
+let get_m_expr_with_mapid id maps map_vars =
+    let maps_and_hvs = List.combine maps (List.map dbt_hash maps) in
+    let hvs = List.map (fun (hv, _ ) -> hv)
+	(List.filter ( fun (hv, var) -> var = id) map_vars) in
+    if List.length hvs != 0 then
+	let me = List.map ( fun (m,_) -> m)
+	    (List.filter (fun (_, hv) -> hv = List.hd hvs) maps_and_hvs)
+	in [List.hd (me)]
+    else []
+
+let type_inf_mexpr_map m_expr base_rels events maps map_vars =
+    let rec tiaux_mterm mterm : r_type= 
+        match mterm with
+	    | `Int _ -> `Int
+	    | `Float _ -> `Float
+	    | `String _ -> `String
+	    | `Long _ -> `Long
+	    | `Variable v -> 
+		let new_mexpr = get_m_expr_with_mapid v maps map_vars in
+		if List.length new_mexpr != 0 then
+		    tiaux_m_expr (List.hd new_mexpr) 
+		else 
+		    search_rels_event "" v base_rels events true
+	    | `Attribute ( `Qualified (r, a)) -> 
+		    search_rels_event r a base_rels events false
+	    | `Attribute ( `Unqualified (a)) ->
+		    search_rels_event "" a base_rels events true
+    and tiaux_m_expr m_expr =
+	match m_expr with
+	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r) | `Min ( l, r) | `Max ( l, r) 
+		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
+	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
+	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
+	    | `Init (_, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
+	    | `Insert (_, _, m) | `Update( _, _, _, m) 
+	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
+	    | `IfThenElse(_, m1, m2) -> 
+		let l = tiaux_m_expr m1 in
+		let r = tiaux_m_expr m2 in
+		if l = r then l
+		else raise InvalidTypeOperation
+    in
+    let ret_type =  tiaux_m_expr m_expr
+    in 
+    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));
+    type_to_string ret_type
+
+let type_inf_arith_expr a_expr decls =
+    let rec tiae_aux_expr a_expr = 
+  	match a_expr with
+	    | `Sum ( l, r) | `Minus (l, r) | `Product (l, r) | `Min (l, r) | `Max (l, r) ->
+		type_op_rule (tiae_aux_expr l) (tiae_aux_expr r)
+	    | `CTerm c ->
+		tiae_aux_cterm c
+    and tiae_aux_cterm cterm = 
+	match cterm with
+	    | `Int _ -> `Int
+	    | `Float _ -> `Float
+	    | `String _ -> `String
+	    | `Long _ -> `Long
+	    | `Variable id   
+	    | `MapAccess (id, _) | `MapContains (id, _) 
+	    | `MapIterator (`Begin id) | `MapIterator (`End id) -> 
+		let t_list = List.map 
+		    (fun x -> match x with
+			| `Declare(`Variable (_, t)) | `Declare(`Map (_, _, t)) -> string_to_type t 
+			| _ -> raise InvalidExpression)
+			( List.filter 
+		            (fun x -> match x with 
+			        | `Declare(`Variable (n, _)) | `Declare(`Map (n, _, _)) -> n = id
+			        | _ -> false (* check later *))
+		            decls )
+		in List.hd t_list
+    in 
+	type_to_string (tiae_aux_expr a_expr)
+		
+		
+
 (* Code helpers *)
 let get_block_last c_expr =
     match c_expr with
@@ -2725,8 +2943,9 @@ let prepare_block_for_merge block decl =
                       ((if repl then (remove_block_last block) else block), arith_rv, decl)
                   else
                       let var = gen_var_sym() in
+		      let decls = List.map (fun x -> `Declare x) decl in
                           (replace_return_val block (`Assign(var, arith_rv)),
-                          `CTerm(`Variable(var)), (`Variable(var, "int"))::decl)
+                          `CTerm(`Variable(var)), (`Variable(var, type_inf_arith_expr arith_rv decls))::decl)
         | _ -> 
               print_endline ("prepare_block_for_merge: invalid arg\n"^
                   (indented_string_of_code_expression block));
@@ -2792,3 +3011,5 @@ let is_insert_incr expr_op plan_op =
         | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union) -> true
         | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
         | _ -> raise (ValidationException "Invalid op pair.")
+
+(* type checker *)

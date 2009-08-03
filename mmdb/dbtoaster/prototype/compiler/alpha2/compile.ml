@@ -2580,8 +2580,8 @@ let compile_target_all m_expr event_list =
                              * handlers run in sequence, and thus bindings cannot update parent *)
                             let sp_h_l = 
                                 match new_h with
-                                    | `Incr(sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) ->
-                                          [(sid, parent_id)]
+                                    | `Incr(sid,_,_,_,m) | `IncrDiff(sid,_,_,_,m) ->
+                                          [(sid, parent_id, m)]
                                     | _ -> []
                             in
 
@@ -2678,9 +2678,11 @@ let compile_code_rec m_expr =
         compile_target_all pp_expr event_list
     in
 
+    let base_rels = get_base_relations pp_expr in
+
     (* Code generation: maps, handlers *)
     let (recursive_map_decls, map_accessors, stp_decls) =
-        generate_map_declarations maps map_vars state_parents
+        generate_map_declarations maps map_vars state_parents base_rels event_list
     in
 
     let (global_decls, handler_and_events) =
@@ -2693,7 +2695,7 @@ let compile_code_rec m_expr =
                                 (fun (gdc_acc, hc_acc) (h,b) ->
                                     let (gdc, hc) =
                                         generate_code h b event true
-                                            map_accessors stp_decls recursive_map_decls
+                                            map_accessors stp_decls recursive_map_decls base_rels
                                     in
                                         (gdc_acc@[gdc], hc_acc@[hc]))
                                 ([], []) hb_l
@@ -2718,7 +2720,8 @@ let compile_code_rec m_expr =
                                           in
                                               new_head@(List.tl merged_handlers)@[`Return x]
                                       in
-                                          (new_handlers, ctype_of_arith_code_expression x)
+					  let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
+                                          (new_handlers, type_inf_arith_expr x (rm_decls@gd_acc@merged_decls@merged_handlers))
 	                        | _ ->
                                       print_endline ("Invalid return val in top level handler:\n"^
                                           (indented_string_of_code_expression top_level_handler));

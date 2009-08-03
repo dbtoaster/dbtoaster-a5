@@ -23,18 +23,19 @@ let rec create_code_expression expr =
 	| `Divide (l,r) -> raise InvalidExpression
 	| `Function (fid, args) -> raise InvalidExpression
 
-let rec create_code_predicate b_expr =
+let rec create_code_predicate b_expr base_rels events decl =
     match b_expr with
 	| `BTerm(x) ->
               let dummy_pair = (`CTerm(`Variable("dummy")), `CTerm(`Int 0)) in
-              let binary l r fn = fn (create_code_expression l) (create_code_expression r) in
+              let binary l r fn = fn (create_code_expression l) (create_code_expression r)
+	      in
 	      begin
 		  `BCTerm(
 		      match x with
 			  | `True -> `True
 			  | `False -> `False
 
-			  | `EQ(l,r) -> binary l r (fun x y -> `EQ(x,y))
+			  | `EQ(l,r) -> binary l r (fun x y -> `EQ(x,y)) 
 			  | `NE(l,r) -> binary l r (fun x y -> `NE(x,y))
 			  | `LT(l,r) -> binary l r (fun x y -> `LT(x,y))
 			  | `LE(l,r) -> binary l r (fun x y -> `LE(x,y))
@@ -48,9 +49,9 @@ let rec create_code_predicate b_expr =
 			  | `MGT(_) -> `GT(dummy_pair)
 			  | `MGE(_) -> `GE(dummy_pair))
 	      end
-	| `And(l,r) -> `And(create_code_predicate l, create_code_predicate r)
-	| `Or(l,r) -> `Or(create_code_predicate l, create_code_predicate r)
-	| `Not(e) -> `Not(create_code_predicate e)
+	| `And(l,r) -> `And(create_code_predicate l base_rels events decl, create_code_predicate r base_rels events decl)
+	| `Or(l,r) -> `Or(create_code_predicate l base_rels events decl, create_code_predicate r base_rels events decl)
+	| `Not(e) -> `Not(create_code_predicate e base_rels events decl)
 
 let rec substitute_arith_code_vars assignments ac_expr =
     let sa = substitute_arith_code_vars assignments in
@@ -410,11 +411,14 @@ let gc_insert_event m_expr decl event =
                       " with map expr:\n"^(indented_string_of_map_expression m_expr 0));
                   raise (CodegenException ("gc_insert_event: called on "^(string_of_delta event)))
 
-let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id =
+let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id base_rels events =
+    print_endline (string_of_map_expression m_expr);
+    let new_type = type_inf_mexpr m_expr base_rels events decl in
+
     match unbound_attrs_vars with
 	| [] ->
 	      let state_var = state_id in
-              let r_decl = `Variable(state_var, "int") in
+              let r_decl = `Variable(state_var, new_type) in
                   print_endline ("Declaring var state "^state_var^" for "^
                       (string_of_map_expression m_expr));
 		  (r_decl, decl@[r_decl])
@@ -431,9 +435,9 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 		      match existing_maps with
 			  | [] ->
                                 let fields = List.map
-                                    (fun x -> (field_of_attribute_identifier x,"int")) e_uba
+                                    (fun x -> (field_of_attribute_identifier x, type_inf_mexpr (`METerm (`Attribute(x))) base_rels events decl )) e_uba
                                 in
-				    (`Map(state_mid, fields, "int"), false)
+				    (`Map(state_mid, fields, new_type), false)
 			  | [m] -> (m, true)
 			  | _ -> raise (RewriteException "Multiple matching maps.")
 	      in
@@ -442,8 +446,8 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
                   if existing then (state_map, decl) else (state_map, decl@[state_map])
 
 
-let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars =
-    let global_decfn = gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars in
+let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars base_rels events =
+    let global_decfn = fun x -> gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars x base_rels events in
     match m_expr with
 	| `Incr (sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) | `Init(sid,_,_) ->
               begin
@@ -535,9 +539,9 @@ let gc_state_accessor_code par_decl bindings
               in
                   (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
 
-let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff =
+let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff base_rels events =
     let (state_decl, new_decl) =
-        gc_declare_handler_state_for_map_expression incr_e e_decl e_uba
+        gc_declare_handler_state_for_map_expression incr_e e_decl e_uba base_rels events 
     in
 	begin match e_uba with
 	    | [] ->
@@ -559,7 +563,7 @@ let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff =
 		      (gc_incr_state_map e_code map_key op diff, new_decl)
 	end
 
-let gc_declare_and_assign_state init_e e_code e_decl e_uba =
+let gc_declare_and_assign_state init_e e_code e_decl e_uba base_rels events=
     let print_debug orig_expr code map_key =
         print_endline "Assigning state map for init";
         print_endline ("expr: "^(string_of_map_expression orig_expr));
@@ -569,7 +573,7 @@ let gc_declare_and_assign_state init_e e_code e_decl e_uba =
     in
 
     let (state_decl, new_decl) =
-        gc_declare_handler_state_for_map_expression init_e e_decl e_uba
+        gc_declare_handler_state_for_map_expression init_e e_decl e_uba base_rels events
     in
 	begin match e_uba with
 	    | [] -> 
@@ -594,7 +598,7 @@ let gc_declare_and_assign_state init_e e_code e_decl e_uba =
 (* map_expression -> binding list -> delta -> boolean
    -> (var id * code terminal) list -> (var id list * code terminal) list
    -> code_expression * declaration list *)
-let generate_code handler bindings event body_only map_var_accessors state_p_decls recursion_decls =
+let generate_code handler bindings event body_only map_var_accessors state_p_decls recursion_decls base_rels=
     print_endline ("Generating code for: "^(string_of_map_expression handler));
 
     (* map_expression -> declaration list -> bool * binding list
@@ -656,6 +660,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 		  (* TODO: variable type? *)
 		  let running_var = gen_var_sym() in
 		  let (f_code, f_decl) = gc_aux f decl bind_info in
+		  let new_type = type_inf_mexpr f base_rels [event] decl in
+		  print_endline ("!!map aggregate in gc_aux "^string_of_map_expression f ^" "^new_type);
                   let incr_code x =
                       match fn with
                           | `Sum -> `Sum (`CTerm(`Variable(running_var)), x)
@@ -671,7 +677,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 					    f_decl bind_info 
 				    in
 					(`Block(
-					    [`Declare(`Variable(running_var, "int"));
+					    [`Declare(`Variable(running_var, new_type));
 					    agg_block;
 					    `Eval(`CTerm(`Variable(running_var)))]), agg_decl)
 
@@ -694,10 +700,12 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                           (* TODO: support multiple bindings for rules 67-70 *)
                           (* Note bound variables should already be declared and assigned.
                            * This currently happens in compile_target *)
-                          let rc = List.hd rc_l in
+                          let (rc, rc_m) = List.hd rc_l in
+			  let rc_type = type_inf_mexpr rc_m base_rels [event] decl in
  		          let mid = gen_map_sym sid in
+		  	  let mid_type = type_inf_mexpr e base_rels [event] decl in	
 		          let c = gen_var_sym() in
-		          let map_decl = `Map(mid, [(c, "int")], "int") in 
+		          let map_decl = `Map(mid, [(c, rc_type)], mid_type) in 
 		          let map_key = (mid, [rc]) in
                           let update_map_key = (mid, [c]) in
                           let new_decl =
@@ -777,7 +785,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                       gc_state_accessor_code par_decl bd
                                           e e_code e_decl e_vars e_uba_fields op diff recursion_decls
                               else
-                                  gc_declare_and_incr_state oe e_code e_decl e_uba op diff
+                                  gc_declare_and_incr_state oe e_code e_decl e_uba op diff base_rels [event]
 
             (* TODO: generate map key from bindings *)
 	    | (`Init (sid, bd, e) as oe) ->
@@ -787,7 +795,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                   (* Note: no need to filter handler args, since e should be a recomputation,
                    * i.e. a map_expression where deltas have not been applied *)
 		  let e_uba = get_unbound_attributes_from_map_expression e true in
-                      gc_declare_and_assign_state oe e_code e_decl e_uba
+                      gc_declare_and_assign_state oe e_code e_decl e_uba base_rels [event]
 
 	    | _ -> 
 		  print_endline("gc_aux: "^(string_of_map_expression e));
@@ -816,7 +824,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
             | `Domain (sid, attrs) ->
                   let (domain_decl, new_decl) =
                       let dom_fields =
-                          List.map (fun x -> (field_of_attribute_identifier x, "int")) attrs
+                          List.map (fun x -> (field_of_attribute_identifier x, type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl )) attrs
                       in
                       let existing_decl =
                           List.filter
@@ -841,7 +849,9 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                       List.concat (List.map
                           (fun (aid,expr) ->
                               let new_var = field_of_attribute_identifier aid in
-                                  [`Declare(`Variable(new_var, "int"));
+			      let new_type = type_inf_mexpr (`METerm (`Attribute(aid))) base_rels [event] decl in
+
+                                  [`Declare(`Variable(new_var, new_type));
                                   `Assign(new_var, create_code_expression expr)])
                           a)
                   in
@@ -861,6 +871,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                 ->
 				(* TODO: pred var types *)
 				let (pred_var_code, new_decl) = gc_aux m_expr decl bind_info in
+				let pred_var_type = type_inf_mexpr m_expr base_rels [event] decl in
 				let (pred_cterm, assign_var_code, pred_decl) =
                                     let pred_var_rv = get_return_val pred_var_code in
                                     let code_wo_rv =
@@ -888,7 +899,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                                       print_endline ("pv_code:\n"^
                                                           (indented_string_of_code_expression pred_var_code));
                                                       print_endline ("x_code: "^(string_of_arith_code_expression x));
-						      (`Variable(pv), Some(av_code), (`Variable(pv, "int"))::new_decl)
+						      (`Variable(pv), Some(av_code), (`Variable(pv, pred_var_type))::new_decl)
 
                                             | _ ->
                                                   print_endline ("Invalid return val:\n"^
@@ -954,7 +965,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 
 			  | _ ->
 				let new_iter_code =
-                                    `IfNoElse(create_code_predicate pred, iter_code)
+                                    `IfNoElse(create_code_predicate pred base_rels [event] decl, iter_code)
 				in
 				    gc_plan_aux cq new_iter_code decl bind_info 
 		  end
@@ -980,7 +991,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                   in
 		  let dom_id = gen_dom_sym (sid) in
                   let dom_field_names = List.map field_of_attribute_identifier d in
-                  let dom_fields = List.map (fun x -> (x, "int")) dom_field_names in
+                  let dom_fields = List.map (fun x -> (field_of_attribute_identifier x, 
+					type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl )) d in
 		  let dom_decl = `Domain(dom_id, dom_fields) in
                   let dom_ds = datastructure_of_declaration dom_decl in
                   let (new_iter_code, new_decl) =
@@ -1023,15 +1035,16 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                 match b with
                     | `BindExpr (v, expr) ->
                           (code_acc@[`Assign(v, create_code_expression expr)],
-                          decl_acc@[`Variable(v, "int")])
+                          decl_acc@[`Variable(v, type_inf_expr expr base_rels [event] decl_acc)])
 
                     | `BindMapExpr (v, m_expr) ->
                           let (binding_code,d) = gc_aux m_expr decl_acc (false, []) in
+			  let binding_type = type_inf_mexpr m_expr base_rels [event] decl_acc in
                           let rv = get_return_val binding_code in
                               match rv with 
                                   | `Eval x ->
                                         (code_acc@[(replace_return_val binding_code (`Assign(v, x)))],
-                                        d@[`Variable(v, "int")])
+                                        d@[`Variable(v, binding_type)])
                                   | _ ->
                                         print_endline ("Invalid return val: "^(string_of_code_expression rv));
                                         raise InvalidExpression)
@@ -1065,7 +1078,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 	            match get_return_val handler_body with
 	                | `Eval x ->
                               (replace_return_val handler_body (`Return x),
-                              ctype_of_arith_code_expression x)
+                              type_inf_arith_expr x (declaration_code@binding_bodies@[handler_body]))
 	                | _ ->
                               print_endline ("Invalid return val:\n"^
                                   (indented_string_of_code_expression handler_body));
@@ -1085,8 +1098,9 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 
 (* map expression list ->
    (int * variable identifier) list -> (state_identifier * int) list ->
+   -> plan list
    (declaration list) *  (state_identifier * declaration) list *)
-let generate_map_declarations maps map_vars state_parents =
+let generate_map_declarations maps map_vars state_parents base_rels events=
 
     List.iter (fun me ->
         print_endline ("gmd: "^
@@ -1098,7 +1112,7 @@ let generate_map_declarations maps map_vars state_parents =
         print_endline ("gmd var: "^var^" hash: "^(string_of_int hv)))
         map_vars;
 
-    List.iter (fun (sid, par) ->
+    List.iter (fun (sid, par, _) ->
         print_endline ("gmd sid: "^sid^" hash: "^(string_of_int par)))
         state_parents;
 
@@ -1129,7 +1143,7 @@ let generate_map_declarations maps map_vars state_parents =
                 let me_uba_w_vars = get_unbound_attributes_from_map_expression me true in
                 let me_id = get_map_id me me_uba_w_vars in
                 let (new_decl, _) =
-                    gc_declare_state_for_map_expression me [] me_uba_w_vars me_id
+                    gc_declare_state_for_map_expression me [] me_uba_w_vars me_id base_rels events
                 in
                     (* Handle mulitple uses of this map *)
                 let vars_using_map =
@@ -1157,7 +1171,7 @@ let generate_map_declarations maps map_vars state_parents =
             ([], []) maps_and_hvs
     in
     let (new_stp_decls, stp_decls) = List.fold_left
-        (fun (decl_acc, stp_acc) (sid, par) ->
+        (fun (decl_acc, stp_acc) (sid, par, m) ->
             let is_map = List.mem_assoc par map_decls_and_cterms in
             let is_decl = if is_map then false else (List.mem_assoc par decl_acc) in
                 match (is_map, is_decl) with
@@ -1172,7 +1186,8 @@ let generate_map_declarations maps map_vars state_parents =
 
                     | (false, false) ->
                           let new_decl_var = gen_var_sym() in
-                          let new_decl = `Variable(new_decl_var, "int") in
+			  let new_type = type_inf_mexpr_map m base_rels events  maps map_vars in
+                          let new_decl = `Variable(new_decl_var, new_type) in
                               print_endline ("Using newly declared var: "^new_decl_var^
                                   " for hash: "^(string_of_int par));
                               (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
@@ -1211,7 +1226,7 @@ let generate_includes out_chan =
         "#include <tr1/tuple>";
         "#include <tr1/unordered_set>\n";
         "using namespace std;";
-        "using namespace tr1;"]
+        "using namespace tr1;\n\n"]
     in
         output_string out_chan (list_code includes)
 
