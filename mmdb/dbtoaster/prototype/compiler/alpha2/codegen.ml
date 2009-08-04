@@ -485,9 +485,10 @@ let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decl
                 incr_code
             else
                 begin
-                    let decl_matches = List.filter
-                        (fun d -> (identifier_of_declaration d) = mid)
-                        recursion_decls
+                    let decl_matches =
+                        List.filter
+                            (fun d -> (identifier_of_declaration d) = mid)
+                            (List.map (function | `Declare d -> d) recursion_decls)
                     in
                     let ds = match decl_matches with
                         | [x] -> datastructure_of_declaration x

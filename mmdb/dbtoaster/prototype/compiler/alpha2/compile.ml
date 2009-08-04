@@ -2679,9 +2679,11 @@ let compile_code_rec m_expr =
     let base_rels = get_base_relations pp_expr in
 
     (* Code generation: maps, handlers *)
-    let (recursive_map_decls, map_accessors, stp_decls) =
+    let (recursive_map_decl_bodies, map_accessors, stp_decls) =
         generate_map_declarations maps map_vars state_parents base_rels event_list
     in
+
+    let recursive_map_decls = List.map (fun d -> `Declare d) recursive_map_decl_bodies in
 
     let (global_decls, handler_and_events) =
 	List.fold_left
@@ -2706,24 +2708,47 @@ let compile_code_rec m_expr =
                             match event with
                                 | `Insert (_, fields) | `Delete (_, fields) -> fields
                         in
+                        (* Top level handler, i.e. handler at level 0, produces the query result *)
                         let top_level_handler = List.hd merged_handlers in
                         let (handler_body_with_rv, handler_ret_type) =
-	                    match get_return_val top_level_handler with
-	                        | `Eval x ->
-                                      let new_handlers =
-                                          let new_head =
-                                              match (remove_return_val top_level_handler) with
-                                                  | `Block c -> c
-                                                  | x -> [x]
+                            let rv = get_return_val top_level_handler in
+                            let (local, repl) = is_local_return_val top_level_handler rv in
+	                        match rv with
+	                            | `Eval x ->
+                                          let rv_type = type_inf_arith_expr x
+                                              (recursive_map_decls@gd_acc@merged_decls@merged_handlers)
                                           in
-                                              new_head@(List.tl merged_handlers)@[`Return x]
-                                      in
-					  let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
-                                          (new_handlers, type_inf_arith_expr x (rm_decls@gd_acc@merged_decls@merged_handlers))
-	                        | _ ->
-                                      print_endline ("Invalid return val in top level handler:\n"^
-                                          (indented_string_of_code_expression top_level_handler));
-                                      raise InvalidExpression
+                                          let new_handlers =
+                                              let (new_head, new_tail) =
+                                                  if local && repl then
+                                                      let new_tl_handler = remove_return_val top_level_handler in
+                                                          match new_tl_handler with
+                                                              | `Block c -> (c, [`Return x])
+                                                              | y ->
+                                                                    let msg =
+                                                                        ("Invalid replaceable return val "^
+                                                                            (indented_string_of_code_expression y))
+                                                                    in
+                                                                        print_endline msg;
+                                                                        raise (CodegenException msg)
+                                                  else
+                                                      let var = "queryResult" in
+                                                      let new_tl_handler =
+                                                          replace_return_val top_level_handler (`Assign(var, x))
+                                                      in
+                                                          ([`Declare(`Variable(var, rv_type)); new_tl_handler],
+                                                          [`Return (`CTerm(`Variable(var)))])
+                                              in
+                                                  new_head@(List.tl merged_handlers)@new_tail
+                                          in
+                                              (new_handlers, rv_type)
+	                            | _ ->
+                                          let msg =
+                                              ("Invalid return val in top level handler:\n"^
+                                                  (indented_string_of_code_expression top_level_handler))
+                                          in
+                                              print_endline msg;
+                                              raise (CodegenException msg)
                         in
 
                         let handler_code =
@@ -2736,8 +2761,7 @@ let compile_code_rec m_expr =
 
             ([], []) handlers_by_event
     in
-    let rm_decls = List.map (fun d -> `Declare d) recursive_map_decls in
-        ((rm_decls@global_decls, handler_and_events), event_path_stages)
+        ((recursive_map_decls@global_decls, handler_and_events), event_path_stages)
 
 
 (*
