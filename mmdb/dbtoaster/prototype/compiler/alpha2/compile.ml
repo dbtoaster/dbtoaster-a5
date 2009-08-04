@@ -2530,9 +2530,7 @@ let compile_target_all m_expr event_list =
                 let event_rel = get_bound_relation event in
                 let current_event_path = e_path@[event] in
 		let new_events =
-                    List.filter
-                        (fun e -> not((get_bound_relation event) = event_rel))
-                        e_list
+                    List.filter (fun e -> not((get_bound_relation e) = event_rel)) e_list
                 in 
                 let me_event_used_list =
                     let event_updates_some_base_relation br =
@@ -2697,7 +2695,7 @@ let compile_code_rec m_expr =
                                         generate_code h b event true
                                             map_accessors stp_decls recursive_map_decls base_rels
                                     in
-                                        (gdc_acc@[gdc], hc_acc@[hc]))
+                                        (gdc_acc@[gdc], hc_acc@[`Profile(generate_profile_id event, hc)]))
                                 ([], []) hb_l
                         in
 
@@ -2822,8 +2820,8 @@ let compile_standalone_engine m_expr relation_sources out_file_name trace_file_n
             | Some fn ->
                   begin
                       let catalog_fn =
-                          if Filename.check_suffix fn "catalog" then fn
-                          else ((Filename.chop_extension fn)^".catalog")
+                          if Filename.check_suffix fn "tc" then fn
+                          else ((Filename.chop_extension fn)^".tc")
                       in
                       let trace_catalog_out = open_out catalog_fn in
                           (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
@@ -2836,8 +2834,9 @@ let compile_standalone_engine m_expr relation_sources out_file_name trace_file_n
                                   in
 
                                   (* write out compilation trace for each map expression for this event path *)
-                                  let trace_fn = write_compilation_trace ep stages_l in
-
+                                  let trace_fn = write_compilation_trace
+                                      (Filename.dirname catalog_fn) ep stages_l
+                                  in
                                       (* track trace file in catalog *)
                                       output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
                               compile_trace;
@@ -2908,8 +2907,8 @@ let compile_standalone_debugger m_expr relation_sources out_file_name trace_file
             | Some fn ->
                   begin
                       let catalog_fn =
-                          if Filename.check_suffix fn "catalog" then fn
-                          else ((Filename.chop_extension fn)^".catalog")
+                          if Filename.check_suffix fn "tc" then fn
+                          else ((Filename.chop_extension fn)^".tc")
                       in
                       let trace_catalog_out = open_out catalog_fn in
                           (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
@@ -2922,8 +2921,9 @@ let compile_standalone_debugger m_expr relation_sources out_file_name trace_file
                                   in
 
                                   (* write out compilation trace for each map expression for this event path *)
-                                  let trace_fn = write_compilation_trace ep stages_l in
-
+                                  let trace_fn = write_compilation_trace
+                                      (Filename.dirname catalog_fn) ep stages_l
+                                  in
                                       (* track trace file in catalog *)
                                       output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
                               compile_trace;

@@ -4,9 +4,11 @@ open Codegen
 open Compile
 open Gui
 open Arg
+open Unix
 
 exception ConfigException of string
 exception ThriftException of string
+exception BuildException of string
 
 (* Source config file DTD:
  * <!ELEMENT sources ( relation* )>
@@ -38,7 +40,14 @@ let get_source_info relation ch =
                   let source_args =
                       let positioned_args =
                           List.sort (fun (p,v) (p2,v2) -> compare p p2)
-                              (List.map (fun a -> (attrib a "pos", attrib a "val")) arg_nodes)
+                              (List.map (fun a ->
+                                  let val_data =
+                                      let v = (attrib a "val") in
+                                          match Xml.parse_string v with
+                                              | PCData b -> b
+                                              | _ -> raise (ConfigException ("Failed to parse arg val "^v))
+                                  in
+                                      (attrib a "pos", val_data)) arg_nodes)
                       in
                           List.fold_left
                               (fun acc (_,v) ->
@@ -106,9 +115,12 @@ let get_source_configuration tree =
         List.map get_relation_source start_nodes
         
 let parse_data_sources_config fn =
-    let config_xml = parse_file fn in
-    let relation_sources = get_source_configuration config_xml in
-        relation_sources
+    try
+        let config_xml = parse_file fn in
+        let relation_sources = get_source_configuration config_xml in
+            relation_sources
+    with
+        | Error e -> raise (ConfigException (Xml.error e))
 
 (*
  * Compiler main
@@ -198,7 +210,10 @@ open CompileOptions
  *  if not ocamlbuild *)
 
 let get_object_file source_file =
-    Filename.basename ((Filename.chop_extension source_file)^".o")
+    (Filename.chop_extension source_file)^".o"
+
+let get_binary_file source_file =
+    (Filename.chop_extension source_file)^".dbte"
 
 let get_thrift_service_sources service_name = service_name^".cpp"
 
@@ -265,23 +280,33 @@ let build_thrift_cmd thrift_file_name =
         (cmd, !thrift_output_dir)
 
 let build_cpp_compile_cmd source_file =
-    "g++ -c "^(!cxx_flags)^" "^source_file
+    "g++ -o "^(get_object_file source_file)^
+        " -c "^(!cxx_flags)^" "^source_file
 
-let build_cpp_linker_cmd object_files =
-    "g++ -o "^
+let build_cpp_linker_cmd output_file object_files =
+    "g++ -o "^output_file^" "^
         (List.fold_left
             (fun acc o ->
                 (if (String.length acc) = 0 then "" else acc^" ")^o)
-            "" object_files)^
+            "" object_files)^" "^
         (!cxx_linker_flags)^" "^(!cxx_linker_libs)
 
+
+let check_status cmd =
+    match Unix.system cmd with
+        | Unix.WEXITED id when id = 0 -> ()
+        | _ ->
+              print_endline ("Failed to run command "^cmd);
+              raise (BuildException ("Failed to run command "^cmd))
+
 let build_query_object query_source =
-    Unix.system (build_cpp_compile_cmd query_source)
+    check_status (build_cpp_compile_cmd query_source)
     
 let build_standalone_engine query_source =
     let object_files = [get_object_file query_source] in
+    let binary_file = get_binary_file query_source in
         build_query_object query_source;
-        Unix.system (build_cpp_linker_cmd object_files)
+        check_status (build_cpp_linker_cmd binary_file object_files)
 
 let build_debugger query_source =
     let thrift_file = (Filename.chop_extension query_source)^".thrift" in
@@ -292,17 +317,18 @@ let build_debugger query_source =
             [query_source]
     in
     let object_files = List.map get_object_file source_files in
+    let binary_file = get_binary_file query_source in
     let compile_cmds = List.map build_cpp_compile_cmd source_files in
-    let linker_cmd = build_cpp_linker_cmd object_files in
+    let linker_cmd = build_cpp_linker_cmd binary_file object_files in
 
         (* Invoke thrift *)
-        Unix.system thrift_cmd;
+        check_status thrift_cmd;
 
         (* Invoke g++ -c *)
-        List.iter (fun c -> ignore(Unix.system c)) compile_cmds;
+        List.iter check_status compile_cmds;
 
         (* Invoke g++ -o *)
-        Unix.system linker_cmd
+        check_status linker_cmd
         
 
 let main () =
@@ -319,14 +345,21 @@ let main () =
                   exit 1
               end
         | [fn] ->
-              let m_expr_l = parse_treeml fn in
-                  if (List.length m_expr_l) > 1 then
-                      begin
-                          print_endline "Unable to compile multiple queries.";
-                          exit 1
-                      end
-                  else
-                      List.hd m_expr_l
+              begin
+                  try
+                      let m_expr_l = parse_treeml_file fn in
+                          if (List.length m_expr_l) > 1 then
+                              begin
+                                  print_endline "Unable to compile multiple queries.";
+                                  exit 1
+                              end
+                          else
+                              List.hd m_expr_l
+                  with InvalidTreeML x ->
+                      print_endline ("Parsing TreeML failed: "^x);
+                      exit 1
+              end
+
         | _ ->
               begin
                   print_endline "Unable to compile multiple queries.";
@@ -334,7 +367,12 @@ let main () =
               end
     in
     let trace_out_file_opt = Some((Filename.chop_extension !source_output_file)^".tc") in
-    let relation_sources = parse_data_sources_config !data_sources_config_file in
+    let relation_sources =
+        try parse_data_sources_config !data_sources_config_file
+        with ConfigException s ->
+            print_endline ("Failed reading data sources config "^s);
+            exit 1
+    in
         begin
             match !compile_mode with
                 | Handlers ->
@@ -342,7 +380,7 @@ let main () =
                           compile_query m_expr !source_output_file;
                           build_query_object !source_output_file
                       end
-                      
+                          
                 | Engine ->
                       begin
                           compile_standalone_engine m_expr relation_sources

@@ -1256,24 +1256,31 @@ and get_plan tml =
 
             | _ -> raise (InvalidTreeML ("node: "^(to_string tml)))
 
-let parse_treeml treeml_str =
-    let treeml = parse_string treeml_str in
-    let start_nodes =
-        if (tag treeml) = "tree" then
-            List.filter
-                (fun x -> let t = tag x in (t = "branch") || (t = "leaf"))
-                (children treeml)
-        else
-            raise (InvalidTreeML ("node: "^(to_string treeml)))
-    in
-        List.map get_map_expression start_nodes
+let parse_treeml_of_xml treeml =
+    try
+        let start_nodes =
+            if (tag treeml) = "tree" then
+                List.filter
+                    (fun x -> let t = tag x in (t = "branch") || (t = "leaf"))
+                    (children treeml)
+            else
+                raise (InvalidTreeML ("node: "^(to_string treeml)))
+        in
+            List.map get_map_expression start_nodes
+    with Not_element x ->
+        raise (InvalidTreeML("Failed parsing at: "^(to_string_fmt x)))
 
+let parse_treeml treeml_str =
+    parse_treeml_of_xml (parse_string treeml_str)
+
+let parse_treeml_file treeml_fn =
+    parse_treeml_of_xml (parse_file treeml_fn)
 
 (*
  * Compilation traces
  *)
 (* delta list -> (handler stages * (string * binding stages) list) list) -> string *)
-let write_compilation_trace event_path stages_per_map_expr =
+let write_compilation_trace trace_dir event_path stages_per_map_expr =
     let event_path_name = String.concat "_" (List.map get_bound_relation event_path) in
     let delim l = String.concat "\n" l in
     let make_stage stage_name l =
@@ -1301,7 +1308,7 @@ let write_compilation_trace event_path stages_per_map_expr =
             | `Insert(r,_) -> "i"^r | `Delete(r,_) -> "d"^r) event_path))^
         ".trace")
     in
-    let trace_out = open_out trace_fn in
+    let trace_out = open_out (Filename.concat trace_dir trace_fn) in
     let trace_tml =
         make_branch
             (List.flatten (List.map

@@ -181,6 +181,7 @@ let rec substitute_code_vars assignments c_expr =
 	    | `Block cl -> `Block(List.map sc cl)
 	    | `Return x -> `Return (sa x)
 	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
+            | `Profile(p,c) -> `Profile(p, sc c)
 
 let rec merge_block_code cl acc =
     match cl with
@@ -279,6 +280,8 @@ let rec simplify_code c_expr =
 
 	| `Handler(n, args, rt, c) ->
 	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
+
+        | `Profile(p,c) -> `Profile(p, simplify_code c)
 
 	| _ -> c_expr
 
@@ -657,7 +660,6 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                   gc_binary_expr l r decl bind_info (fun a b -> `Eval(`Max(a,b)))
 
 	    | `MapAggregate(fn, f, q) ->
-		  (* TODO: variable type? *)
 		  let running_var = gen_var_sym() in
 		  let (f_code, f_decl) = gc_aux f decl bind_info in
 		  let new_type = type_inf_mexpr f base_rels [event] decl in
@@ -728,13 +730,14 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                                 (gc_assign_state_map re_code map_key, re_decl)
                                         in
 				        let update_and_init_binding_code = 
-			     	            `Block ([ 
+			     	            `Profile(generate_profile_id event, 
+                                            `Block ([
 					        `ForEach (map_decl, update_code);
 				 	        `IfNoElse (
                                                     `BCTerm (
-                                                        `EQ(`CTerm(`MapContains(map_key)), `CTerm(`MapIterator(`End(mid))))), 
+                                                        `EQ(`CTerm(`MapContains(map_key)), `CTerm(`MapIterator(`End(mid))))),
                                                     insert_code);
-					        `Eval(`CTerm(`MapAccess(map_key))) ])
+					        `Eval(`CTerm(`MapAccess(map_key)))]))
 				        in
                                             (update_and_init_binding_code, insert_decl)
 
@@ -743,12 +746,12 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                         let delete_code = gc_incr_state_map e_code map_key op diff in
                                         let update_code = gc_incr_state_map e_code update_map_key op diff in
 				        let delete_and_update_binding_code = 
+                                            `Profile(generate_profile_id event,
 				            `Block ([
                                                 delete_code;
 					        (* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
 	 				        `ForEach (map_decl, update_code);
-					        `Eval(`CTerm(`MapAccess(map_key)))
-				            ])
+					        `Eval(`CTerm(`MapAccess(map_key)))]))
 				        in
                                             (delete_and_update_binding_code, new_decl)
 
@@ -961,7 +964,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                                   | None -> `IfNoElse(pred_test_code, iter_code)
                                                   | Some av -> `Block([av; `IfNoElse(pred_test_code, iter_code)])
 				in
-				    gc_plan_aux cq new_iter_code pred_decl bind_info 
+                                let profiled_new_iter_code = `Profile(generate_profile_id event, new_iter_code) in
+				    gc_plan_aux cq profiled_new_iter_code pred_decl bind_info 
 
 			  | _ ->
 				let new_iter_code =
@@ -1258,6 +1262,7 @@ let generate_stream_engine_includes out_chan =
     let includes =
         ["\n\n// Stream engine includes.";
         "#include \"streamengine.h\"";
+        "#include \"profiler.h\"";
         "#include \"datasets/adaptors.h\"";
         "#include \"boost/bind.hpp\"\n\n";]
     in
@@ -1330,7 +1335,7 @@ let generate_stream_engine_init out_chan streams_handlers_and_events =
                             let (id_name, id) = generate_stream_id stream_name in
                             let adaptor_name = stream_name^"_adaptor" in
                             let new_adaptor =
-                                "shared_ptr<"^adaptor_type^"> "^
+                                "boost::shared_ptr<"^adaptor_type^"> "^
                                     adaptor_name^"(new "^adaptor_type^"());"
                             in
                             let new_id = ("static int "^id_name^" = "^id^";\n") in
@@ -1422,7 +1427,7 @@ let generate_stream_engine_main out_chan =
     let block l = ["{"]@(List.map indent l)@["}"] in
     let main_defn =
         let main_code =
-            ["int main(int argc, char** argv)"; "{"]@
+            ["int main(int argc, char** argv)"]@
                 (block
                     (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
                     "DBToaster::StandaloneEngine::Dispatcher router;";

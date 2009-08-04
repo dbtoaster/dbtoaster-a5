@@ -36,18 +36,18 @@ let print_test_type tt =
 print_test_type "string_of";
 print_endline (string_of_map_expression sum_ad);
 
-(*
 print_test_type "compile_code_rec";
-compile_code_rec sum_ad "sum_ad.cc";;
-*)
+compile_query sum_ad "sum_ad.cc";;
 
 (*
 print_test_type "treeml_of_map_expression";
 print_endline (treeml_string_of_map_expression sum_ad);;
 *)
 
+(*
 print_test_type "parse_treeml";
 let sum_ad_str = treeml_string_of_map_expression sum_ad in
 print_endline sum_ad_str;
 let new_sum_ad = (List.hd (parse_treeml sum_ad_str)) in
     print_endline (indented_string_of_map_expression new_sum_ad 0);
+*)
