@@ -23,7 +23,7 @@ public class ExchangeServer {
         
         String input_file=new String(args[0]);
         boolean isConnected=false;
-        int socket=4453;
+        int socket=5501;
         String port="localhost";
         
         //clientList stores all the client toasters/proxies alike.
@@ -69,6 +69,8 @@ public class ExchangeServer {
         }
 
         serverSocket.close();
+        
+        System.out.println("number of matchings is "+book.getNumMatchings());
 
 	}
 }

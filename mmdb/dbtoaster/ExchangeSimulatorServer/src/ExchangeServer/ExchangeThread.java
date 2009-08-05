@@ -91,7 +91,7 @@ public class ExchangeThread extends Thread{
 							nextTuple=messages.getFirst();
 							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
-							messages.removeFirst();
+//							messages.removeFirst();
 
 							do{
 								nextTuple=messages.getFirst();
@@ -134,7 +134,7 @@ public class ExchangeThread extends Thread{
 							nextTuple=messages.getFirst();
 							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
-							messages.removeFirst();
+//							messages.removeFirst();
 
 							do{
 								nextTuple=messages.getFirst();
@@ -307,6 +307,12 @@ public class ExchangeThread extends Thread{
 			System.out.println("exception "+e.getMessage());
 		}
 		if (DEBUG){
+			System.out.println("number of matchings is "+orders_book.getNumMatchings());
+			System.out.println("number of bought stocks "+orders_book.getNumBought());
+			System.out.println("number of sold stocks "+orders_book.getNumSold());
+			System.out.println("volume of B "+orders_book.getTotalB());
+			System.out.println("volume of S "+orders_book.getTotalS());
+			
 			System.out.println("ServerThread: finished sending.");
 		}
 	}
