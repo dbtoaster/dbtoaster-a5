@@ -35,6 +35,28 @@ public class Compiler
     private final static String DEFAULT_COMPILER_PATH =
         "/Users/yanif/workspace/dbtoaster_compiler/";
 
+    // C++ profiler interface
+    final static String PROFILER_THRIFT_MODULE =
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/profiler.thrift";
+
+    final static String PROFILER_THRIFT_MODULE_BASE =
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/protocol";
+
+    // C++ demo datasets interface
+    final static String DATASET_THRIFT_MODULE =
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/datasets.thrift";
+
+    final static String DATASET_THRIFT_MODULE_BASE =
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/protocol";
+
+    // Java profiler client
+    final static String PROFILER_JAR_FILE=
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/profiler.jar";
+    
+    // Java demo datasets classes
+    final static String DATASET_JAR_FILE=
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/datasets.jar";
+
     String dbToasterPath;
     ProcessBuilder dbToasterProcess;
     Process currentToaster;
@@ -74,24 +96,38 @@ public class Compiler
             File testPath = new File(path, DEFAULT_COMPILER_BINARY);
             if ( testPath.exists() && testPath.isFile() && testPath.canExecute() )
             {
-                r = path;
+                r = testPath.getAbsolutePath();
                 break;
             }
         }
         
         return r;
     }
+    
+    ////////////////////////////////////////
+    //
+    // DBToaster library configuration
+    // -- TODO: push this down into DBToaster itself.
+    // -- need to find nice tool to do library configuration, ideally something
+    //    with a caml interface and something simpler than autoconf/automake
 
     private String getSiblingDir(String dir, String siblingBase)
     {
         String r = null;
         File dirPath = new File(dir);
-        File dirParent = dirPath.getParentFile();
+        File dirParent = (dirPath == null? null : dirPath.getParentFile());
         if ( dirParent != null ) {
             File siblingDirPath = new File(dirParent, siblingBase);
             if ( siblingDirPath.exists() && siblingDirPath.isDirectory() )
                 r = siblingDirPath.getAbsolutePath();
+            else {
+                // Recur upwards.
+                r = getSiblingDir(dirParent.getAbsolutePath(), siblingBase);
+            }
         }
+        
+        System.out.println("getSiblingDir(" + dir + "," + siblingBase + "): "
+                + dirPath + ", " + dirParent + ", " + r);
             
         return r;
     }
@@ -100,6 +136,10 @@ public class Compiler
     {
         File testDirPath = new File(dir);
         File testFilePath = new File(dir, testFile);
+        
+        System.out.println("checkInclude: " +
+                testDirPath.toString() + ", " + testFilePath.toString());
+        
         return ( testDirPath.exists() && testDirPath.isDirectory() &&
             testFilePath.exists() && testFilePath.isFile() );
     }
@@ -110,18 +150,39 @@ public class Compiler
         if ( additionalPaths != null) fileTestPaths.addAll(additionalPaths);
 
         String pathEnvVar = System.getenv("PATH");
+        
+        System.out.println("Found $PATH: " + pathEnvVar);
+        
         String[] testPaths = pathEnvVar.split(":");
         fileTestPaths.addAll(Arrays.asList(testPaths));
         
         String r = null;
         for (String p : fileTestPaths)
         {
-            if ( checkInclude(getSiblingDir(p, "include"), testFile) ) {
-                r = p; break;
+            String dirToCheck = p;
+            if ( checkInclude(dirToCheck, testFile) ) {
+                r = dirToCheck; break;
+            }
+
+            dirToCheck = getSiblingDir(p, "include"); 
+            if ( dirToCheck != null && checkInclude(dirToCheck, testFile) ) {
+                r = dirToCheck; break;
             }
         }
         
         return r;
+    }
+
+    private void addOption(LinkedHashMap<String, LinkedList<String>> options,
+            String optKey, String optVal)
+    {
+        if ( options.containsKey(optKey) )
+            options.get(optKey).add(optVal);
+        else {
+            LinkedList<String> newVals = new LinkedList<String>();
+            newVals.add(optVal);
+            options.put(optKey, newVals);
+        }  
     }
 
     // Boost configuration.
@@ -134,17 +195,33 @@ public class Compiler
             ap.add(new File(homeDir, p).getAbsolutePath());
         }
 
-        return checkSystemIncludePaths(ap, "boost/boost.hpp");
+        return checkSystemIncludePaths(ap, "boost/smart_ptr.hpp");
     }
-    
-    private void buildBoostOptions(LinkedHashMap<String, String> options)
+
+    // TODO: check for individual boost library features
+    private void buildBoostOptions(LinkedHashMap<String, LinkedList<String>> options)
     {
+        System.out.println("Building boost options...");
+
         String boostIncPath = findBoostPath();
-        if ( boostIncPath != null ) {
-            String boostLibPath = getSiblingDir(boostIncPath, "lib");
-            options.put("-cI", boostIncPath);
-            options.put("-cL", boostLibPath);
-            // TODO: add boost libraries.
+        String boostLibPath = null;
+        
+        System.out.println("Found boost path: " + boostIncPath);
+
+        if ( boostIncPath != null )
+            boostLibPath = getSiblingDir(boostIncPath, "lib");
+        
+        if ( !(boostIncPath == null || boostLibPath == null) )
+        {
+            // Flags for query sources.
+            addOption(options, "-cI", boostIncPath);
+            addOption(options, "-cL", boostLibPath);
+
+            // TODO: add individual boost libraries.
+            addOption(options, "-cl", "boost_thread-xgcc40-mt");
+
+            // Flags for thrift sources.
+            addOption(options, "-tCI", boostIncPath);
         }
         else {
             System.out.println(
@@ -158,20 +235,34 @@ public class Compiler
         LinkedList<String> ap = new LinkedList<String>();
         File homeDir = new File(System.getenv("HOME"));
         if ( homeDir.exists() ) {
-            String p = "software/thrift/include/";
+            String p = "software/thrift/include/thrift";
             ap.add(new File(homeDir, p).getAbsolutePath());
         }
 
-        return checkSystemIncludePaths(ap, "thrift/Thrift.h");
+        return checkSystemIncludePaths(ap, "Thrift.h");
     }
     
-    private void buildThriftOptions(LinkedHashMap<String, String> options)
+    private void buildThriftOptions(LinkedHashMap<String, LinkedList<String>> options)
     {
+        System.out.println("Building Thrift options.");
+
         String thriftIncPath = findThriftPath();
-        if ( thriftIncPath != null ) {
-            String thriftLibPath = getSiblingDir(thriftIncPath, "lib");
-            options.put("-cI", thriftIncPath);
-            options.put("-cL", thriftLibPath);
+        String thriftLibPath = null;
+        
+        System.out.println("Found thrift path: " + thriftIncPath);
+
+        if ( thriftIncPath != null )
+            thriftLibPath = getSiblingDir(thriftIncPath, "lib");
+
+        if  ( !(thriftIncPath == null || thriftLibPath == null) )
+        {
+            // Flags for query sources.
+            addOption(options, "-cI", thriftIncPath);
+            addOption(options, "-cL", thriftLibPath);
+            addOption(options, "-cl", "thrift");
+            
+            // Flags for Thrift sources
+            addOption(options, "-tCI", thriftIncPath);
         }
         else {
             System.out.println(
@@ -198,17 +289,57 @@ public class Compiler
     }
 
     // Compile only
-    public String toastQuery(String tmlFile, String outputFile,
+    public String toastQuery(String tmlFile, String sourceConfigFile, String outputFile,
             CompileMode compileMode, String compilationDir, String compilerLogFile)
     {
+        System.out.println("Toasting query from TML: " + tmlFile);
+
         String returnStatus = null;
 
         // Invoke compiler on TML through ProcessBuilder
-        LinkedHashMap<String, String> options = new LinkedHashMap<String, String>();
-        options.put("-o", outputFile);
-        options.put("-m", getCompileMode(compileMode));
+        LinkedHashMap<String, LinkedList<String>> options =
+            new LinkedHashMap<String, LinkedList<String>>();
+        addOption(options, "-thrift" , "/Users/yanif/software/thrift/bin/thrift");
+        addOption(options, "-o", outputFile);
+        addOption(options, "-m", getCompileMode(compileMode));
+        addOption(options, "-d", sourceConfigFile);
+        
+        // TODO: move these to a config/build file.
+        addOption(options, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/profiler");
+        addOption(options, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/standalone");
+        addOption(options, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/examples");
+
         buildBoostOptions(options);
         buildThriftOptions(options);
+
+        // Additional thrift options
+        addOption(options, "-tI",
+            "I,/Users/yanif/workspace/dbtoaster_compiler/examples/datasets");
+        addOption(options, "-tI",
+            "I,/Users/yanif/workspace/dbtoaster_compiler/profiler");
+
+        switch (compileMode) {
+        case ENGINE:
+            addOption(options, "-tm",
+                    PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
+            break;
+        case DEBUGGER:
+            addOption(options, "-tm",
+                    PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
+            addOption(options, "-tm",
+                    DATASET_THRIFT_MODULE+","+DATASET_THRIFT_MODULE_BASE);
+
+            addOption(options, "-tcp", "/Users/yanif/software/thrift/java/libthrift.jar");
+            addOption(options, "-tcp", "/Users/yanif/workspace/dbtoaster-gui/lib/log4j-1.2.15.jar");
+            addOption(options, "-tcp", PROFILER_JAR_FILE);
+            addOption(options, "-tcp", DATASET_JAR_FILE);
+            break;
+        default:
+            break;
+        }
+        
+        System.out.println("Finished building DBToaster options...");
+
         returnStatus = runDBToaster(
             compilationDir, options, tmlFile, compilerLogFile);
 
@@ -217,8 +348,8 @@ public class Compiler
 
     // Parse and compile.
     // Note: tmlFile, outputFile are absolute paths on the local filesystem.
-    public String toastQuery(String sqlQuery, String tmlFile,
-            String sourceConfigFile, String outputFile,
+    public String toastQuery(String sqlQuery,
+            String tmlFile, String sourceConfigFile, String outputFile,
             CompileMode compileMode, String compilationDir, String compilerLogFile)
     {
         String returnStatus = null;
@@ -286,14 +417,15 @@ public class Compiler
             returnStatus = "Parser error at (line,col): ";
             String errorLocations = "";
 
-            List syntacticErrors = spe.getErrorInfoList();
-            Iterator itr = syntacticErrors.iterator();
+            List<?> syntacticErrors = spe.getErrorInfoList();
+            Iterator<?> itr = syntacticErrors.iterator();
             while (itr.hasNext())
             {
                 SQLParseErrorInfo errorInfo = (SQLParseErrorInfo) itr.next();
                 // Example usage of the SQLParseErrorInfo object
                 // the error message
-                String errorMessage = errorInfo.getParserErrorMessage();
+                //String errorMessage = errorInfo.getParserErrorMessage();
+                
                 // the line numbers of error
                 int errorLine = errorInfo.getLineNumberStart();
                 int errorColumn = errorInfo.getColumnNumberStart();
@@ -318,19 +450,26 @@ public class Compiler
         }
 
         if (returnStatus != null) return returnStatus;
-        return toastQuery(tmlFile, outputFile,
+        return toastQuery(tmlFile, sourceConfigFile, outputFile,
                 compileMode, compilationDir, compilerLogFile);
     }
 
     public String runDBToaster(String dir,
-            LinkedHashMap<String, String> options, String tmlFile,
+            LinkedHashMap<String, LinkedList<String>> options, String tmlFile,
             String compilerLogFile)
     {
+        System.out.println("Running DBToaster...");
+
         String r = null;
         LinkedList<String> args = new LinkedList<String>();
         args.add(dbToasterPath);
-        for (Map.Entry<String, String> e : options.entrySet())
-            args.add(e.getKey()+" "+e.getValue());
+        for (Map.Entry<String, LinkedList<String>> e : options.entrySet())
+        {
+            for (String a : e.getValue()) {
+                args.add(e.getKey());
+                args.add(a);
+            }
+        }
         args.add(tmlFile);
 
         dbToasterProcess.directory(new File(dir));
@@ -339,7 +478,7 @@ public class Compiler
         String fa = "";
         for (String a : args) fa += (fa.isEmpty()? "" : " ") + a;
 
-        // TODO: more robust loggingn of compilation attempts.
+        // TODO: more robust logging of compilation attempts.
         System.out.println("Running (wd: " +
             dbToasterProcess.directory().getAbsolutePath() + "), args: " + fa);
         
@@ -355,8 +494,11 @@ public class Compiler
             while ( (line = logReader.readLine()) != null )
                 logWriter.write(line + "\n");
 
+            logWriter.close();
+            logReader.close();
+
             int rs = currentToaster.waitFor();
-            if ( rs != 0 ) r = "DBToaster returned non-zero exit status.";
+            if ( rs != 0 ) r = ("DBToaster returned non-zero exit status." + rs);
         } catch (IOException e)
         {
             e.printStackTrace();

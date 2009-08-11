@@ -11,18 +11,28 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.jfree.data.time.TimeSeries;
 
 public class Query
 {
     private String queryName;
     private IFolder queryFolder;
+    // Parse phase files
     private IFile sqlCode;
     private IFile sqlTML;
     private IFile sourceConfigFile;
+    
+    // Compilation results (code, analysis)
     private IFile cCode;
     private CompilationTrace cTrace;
+    private IFile profileLocations;
+    private DependencyGraph dependencyGraph;
+    private IFile pseudocode;
+    
+    // Binaries
     private Executor engine;
     private Debugger debugger;
+
     private Statistics performance;
 
     public Query(String name, IFolder qFolder, IFile sqlFile)
@@ -35,6 +45,7 @@ public class Query
         cCode = null;
         cTrace = null;
         engine = null;
+        profileLocations = null;
         debugger = null;
         performance = null;
     }
@@ -72,6 +83,18 @@ public class Query
 
                     IPath qfCodePath = fullCodeFilePath
                             .makeRelativeTo(queryFolder.getFullPath());
+                    
+                    IPath qfProfLocPath = fnFullBasePath.addFileExtension(
+                            DBToasterWorkspace.PROFILELOC_FILE_EXT).
+                            makeRelativeTo(queryFolder.getFullPath());
+                    
+                    IPath qfDepGraphPath = fnFullBasePath.addFileExtension(
+                            DBToasterWorkspace.DEPGRAPH_FILE_EXT).
+                            makeRelativeTo(queryFolder.getFullPath());
+
+                    IPath qfPseudocodePath = fnFullBasePath.addFileExtension(
+                            DBToasterWorkspace.PSEUDOCODE_FILE_EXT).
+                            makeRelativeTo(queryFolder.getFullPath());
 
                     if (queryFolder.exists(qfCodePath))
                     {
@@ -79,10 +102,20 @@ public class Query
                                 + qfCodePath.toString());
                         System.out.println("Loading trace: "
                                 + traceCatalog.getLocation().toOSString());
+                        System.out.println("Loading profile locs: "
+                                + qfProfLocPath.toString());
 
                         cCode = queryFolder.getFile(qfCodePath);
-                        cTrace = new CompilationTrace(traceCatalog
-                                .getLocation().toOSString());
+                        
+                        cTrace = new CompilationTrace(
+                            traceCatalog.getLocation().toOSString());
+                        
+                        profileLocations = queryFolder.getFile(qfProfLocPath);
+
+                        dependencyGraph = new DependencyGraph(queryFolder.
+                            getFile(qfDepGraphPath).getLocation().toOSString());
+                        
+                        pseudocode = queryFolder.getFile(qfPseudocodePath);
                     }
 
                     IPath fullBinFilePath = fnFullBasePath
@@ -93,11 +126,13 @@ public class Query
 
                     if (queryFolder.exists(qfBinPath))
                     {
-                        System.out.println("Loading engine binary: "
-                                + qfBinPath.makeAbsolute().toOSString());
+                        IPath enginePath =
+                            queryFolder.getFile(qfBinPath).getLocation();
 
-                        engine = new Executor(qfBinPath.makeAbsolute()
-                                .toOSString());
+                        System.out.println("Loading engine binary: "
+                                + enginePath.toOSString());
+
+                        engine = new Executor(enginePath.toOSString());
                     }
 
                     IPath fullDebugFilePath = fnFullBasePath
@@ -108,11 +143,25 @@ public class Query
 
                     if (queryFolder.exists(qfDebugPath))
                     {
-                        System.out.println("Loading debugger binary: "
-                                + qfDebugPath.makeAbsolute().toOSString());
+                        IPath debuggerPath =
+                            queryFolder.getFile(qfDebugPath).getLocation();
 
-                        debugger = new Debugger(qfDebugPath.makeAbsolute()
-                                .toOSString());
+                        System.out.println("Loading debugger binary: "
+                                + debuggerPath.toOSString());
+
+                        IFile debuggerJarFile = queryFolder.getFile(
+                                DBToasterWorkspace.DEBUGGER_CLIENT_JAR);
+
+                        IPath debuggerClientBase = queryFolder.getLocation().
+                            append(DBToasterWorkspace.DEBUGGER_CLIENT_DIR);
+
+                        // Load Java client for debugging and profiling
+                        String clientBase = (debuggerJarFile.exists()?
+                            debuggerJarFile.getLocation().toOSString() :
+                            debuggerClientBase.toOSString());
+
+                        debugger = new Debugger(queryName,
+                            debuggerPath.toOSString(), clientBase);
                     }
                 }
             }
@@ -155,6 +204,8 @@ public class Query
 
     public IFolder getQueryFolder() { return queryFolder; }
 
+    // Parse result accessors
+
     public void setTML(IFile tml)
     {
         if (queryFolder.getFile(tml.getName()).exists()) sqlTML = tml;
@@ -169,6 +220,8 @@ public class Query
     
     public IFile getSourceConfig() { return sourceConfigFile; }
 
+    // Query code accessors
+
     public void setCode(IFile codeFile)
     {
         if (queryFolder.getFile(codeFile.getName()).exists()) cCode = codeFile;
@@ -176,39 +229,91 @@ public class Query
 
     public IFile getCode() { return cCode; }
 
+    // Analysis file accessors
+
     public void setTrace(IFile catalogFile)
     {
-        String cpath = catalogFile.getLocation().toString();
+        String cpath = catalogFile.getLocation().toOSString();
         System.out.println("Reading trace from catalog " + cpath);
         cTrace = new CompilationTrace(cpath);
     }
 
     public CompilationTrace getTrace() { return cTrace; }
 
-    public void runQuery()
+    public void setProfileLocationsFile(IFile profLocFile)
     {
-        if (!isRunnable())
+        if ( queryFolder.getFile(profLocFile.getName()).exists() )
+            profileLocations = profLocFile;
+    }
+    
+    public IFile getProfileLocationsFile() { return profileLocations; }
+    
+    public void setDependencyGraph(IFile depGraph)
+    {
+        String gpath = depGraph.getLocation().toOSString();
+        System.out.println("Reading dependency graph from " + gpath);
+        dependencyGraph = new DependencyGraph(gpath);
+    }
+    
+    public DependencyGraph getDependencyGraph() { return dependencyGraph; }
+    
+    public void setPseudocode(IFile pseudoCodeFile)
+    {
+        if ( queryFolder.getFile(pseudoCodeFile.getName()).exists() )
+            pseudocode = pseudoCodeFile;
+    }
+    
+    public IFile getPseudocode() { return pseudocode; }
+
+    // Binary file accessors
+
+    public Executor getExecutor() { return engine; }
+
+    public void setExecutor(String engineBinary) {
+        IFile binaryFile = queryFolder.getFile(engineBinary);
+        if ( binaryFile.exists() ) {
+            engine = new Executor(binaryFile.getLocation().toOSString());
+        }
+        else {
+            String msg = "Could not find engine binary in query folder: " +
+                binaryFile.getLocation().toOSString();
+            System.err.println(msg);
+        }
+    }
+
+    public void runQuery(int profilerServicePort, TimeSeries profilerSamples)
+    {
+        if (!hasBinary())
         {
             System.err.println("No executable found for " + queryName);
             return;
         }
 
-        if (engine == null)
-        {
-            runDebugger();
-            // TODO: invoke run() on debugger.
-        }
+        String profileLocationsFile = profileLocations.getLocation().toOSString();
+        String execLogFile = queryFolder.getFile("run.log").getLocation().toOSString();
+        engine.run(profileLocationsFile, execLogFile, profilerServicePort, profilerSamples);
     }
 
-    public void runDebugger()
+    public Debugger getDebugger() { return debugger; }
+
+    public void setDebugger(String debuggerBinary, String debuggerClientBase)
     {
-        if (!hasDebugger())
+        IFile binaryFile = queryFolder.getFile(debuggerBinary);
+        if ( binaryFile.exists() )
         {
-            System.err.println("No debugger found for " + queryName);
-            return;
+            System.out.println("Creating new debugger from " +
+                    binaryFile.getLocation().toOSString());
+
+            debugger = new Debugger(queryName,
+                binaryFile.getLocation().toOSString(), debuggerClientBase);
+        }
+        else {
+            String msg = "Could not find debugger binary in query folder: " +
+                binaryFile.getLocation().toOSString();
+            System.err.println(msg);
         }
     }
-
+    
     public boolean isValidQuery() { return !(sqlCode == null || sqlTML == null); }
     public boolean isParsed() { return !(sqlTML == null || sourceConfigFile == null); }
     public boolean isCompiled() { return !(cCode == null || cTrace == null); }

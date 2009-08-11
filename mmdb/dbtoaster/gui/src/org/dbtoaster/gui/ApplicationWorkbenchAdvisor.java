@@ -1,7 +1,5 @@
 package org.dbtoaster.gui;
 
-import org.eclipse.ui.IWorkbenchWindow;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.WorkbenchException;
 import org.eclipse.ui.application.IWorkbenchConfigurer;
 import org.eclipse.ui.application.IWorkbenchWindowConfigurer;
@@ -29,8 +27,7 @@ public class ApplicationWorkbenchAdvisor extends WorkbenchAdvisor
         try
         {
             IWorkbenchConfigurer wc = getWorkbenchConfigurer();
-            getWorkbenchConfigurer().getWorkbench().openWorkbenchWindow(
-                    PerformancePerspective.ID, null);
+            wc.getWorkbench().openWorkbenchWindow(PerformancePerspective.ID, null);
         } catch (WorkbenchException e)
         {
             e.printStackTrace();

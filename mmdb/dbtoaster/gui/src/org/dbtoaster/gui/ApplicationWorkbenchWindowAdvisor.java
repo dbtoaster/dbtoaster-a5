@@ -29,6 +29,6 @@ public class ApplicationWorkbenchWindowAdvisor extends WorkbenchWindowAdvisor
         configurer.setShowPerspectiveBar(true);
         configurer.setShowCoolBar(false);
         configurer.setShowStatusLine(false);
-        configurer.setTitle("DBToaster");
+        configurer.setTitle("DBToaster v0.1");
     }
 }

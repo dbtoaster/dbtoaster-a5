@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 // Class to hold dataset configuration for demo.
 // TODO: represent internals with Eclipse Datatools SQL model.
 // TODO: set up gui element to support definition.
+
 public class DatasetManager
 {
 
@@ -23,18 +24,20 @@ public class DatasetManager
             public String tupleType;
             public String adaptorType;
             public LinkedHashMap<String, String> bindings;
+            public String thriftNamespace;
             public String instancePrefix;
             public AtomicInteger instanceCounter;
             
             public Relation(LinkedHashMap<String, String> f,
                     String st, String sca, String tt, String at,
-                    LinkedHashMap<String, String> bd, String ip)
+                    LinkedHashMap<String, String> bd, String tns, String ip)
             {
                 fields = f;
                 sourceType = st;
                 tupleType = tt;
                 adaptorType = at;
                 bindings = bd;
+                thriftNamespace = tns;
                 instancePrefix = ip;
                 instanceCounter = new AtomicInteger();
 
@@ -66,12 +69,12 @@ public class DatasetManager
                 LinkedHashMap<String, String> fieldsAndTypes,
                 String sourceType, String sourceArgs, String tupleType,
                 String adaptorType, LinkedHashMap<String, String> bindings,
-                String instancePrefix)
+                String thriftNamespace, String instancePrefix)
         {
             if ( !relations.containsKey(name) ) {
                 Relation r = new Relation(fieldsAndTypes,
                     sourceType, sourceArgs, tupleType,
-                    adaptorType, bindings, instancePrefix);
+                    adaptorType, bindings, thriftNamespace, instancePrefix);
                 relations.put(name, r);
             }
         }
@@ -137,6 +140,14 @@ public class DatasetManager
             LinkedHashMap<String, String> r = null;
             if (relations.containsKey(relation))
                 r = relations.get(relation).bindings;
+            return r;
+        }
+        
+        public String getThriftNamespace(String relation)
+        {
+            String r = null;
+            if ( relations.containsKey(relation) )
+                r = relations.get(relation).thriftNamespace;
             return r;
         }
     }
@@ -258,6 +269,7 @@ public class DatasetManager
             "\"20081201.csv\",10000",
             "DBToaster::DemoDatasets::VwapTuple",
             "DBToaster::DemoDatasets::VwapTupleAdaptor", adaptorBindings,
+            "datasets",
             "VwapBids");
         
         orderbook.addRelation("asks", bookFieldsAndTypes,
@@ -265,6 +277,7 @@ public class DatasetManager
             "\"20081201.csv\",10000",
             "DBToaster::DemoDatasets::VwapTuple",
             "DBToaster::DemoDatasets::VwapTupleAdaptor", adaptorBindings,
+            "datasets",
             "VwapAsks");
 
         aDM.addDataset("orderbook", orderbook);

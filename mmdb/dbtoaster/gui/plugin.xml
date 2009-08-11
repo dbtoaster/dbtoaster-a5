@@ -5,7 +5,8 @@
    <extension
          id="application"
          point="org.eclipse.core.runtime.applications">
-      <application>
+      <application
+            icon="icons/dbtoaster-64.gif">
          <run
                class="org.dbtoaster.gui.DBToasterGui">
          </run>
@@ -21,17 +22,17 @@
       <perspective
             class="org.dbtoaster.gui.PerformancePerspective"
             id="dbtoaster_gui.performance_perspective"
-            name="Performance">
+            name="DBMS Performance">
       </perspective>
       <perspective
             class="org.dbtoaster.gui.CodePerfPerspective"
             id="dbtoaster_gui.codeperf_perspective"
-            name="Code Performance">
+            name="DBToaster Performance">
       </perspective>
       <perspective
             class="org.dbtoaster.gui.CompilationViewerPerspective"
             id="dbtoaster_gui.compilation_viewer_perspective"
-            name="Compilation Viewer">
+            name="Code Analysis">
       </perspective>
    </extension>
    <extension
@@ -66,6 +67,42 @@
             id="dbtoaster_gui.debugview"
             name="Debug View">
       </view>
+   </extension>
+   <extension
+         id="product"
+         point="org.eclipse.core.runtime.products">
+      <product
+            application="dbtoaster_gui.application"
+            name="DBToaster">
+         <property
+               name="appName"
+               value="DBToaster">
+         </property>
+         <property
+               name="windowImages"
+               value="icons/dbtoaster-16.gif,icons/dbtoaster-32.gif,icons/dbtoaster-64.gif,icons/dbtoaster-128.gif">
+         </property>
+         <property
+               name="startupForegroundColor"
+               value="000000">
+         </property>
+         <property
+               name="startupMessageRect"
+               value="7,252,445,20">
+         </property>
+         <property
+               name="startupProgressRect"
+               value="5,275,445,15">
+         </property>
+         <property
+               name="preferenceCustomization"
+               value="plugin_customization.ini">
+         </property>
+         <property
+               name="aboutImage"
+               value="splash.gif">
+         </property>
+      </product>
    </extension>
 
 </plugin>

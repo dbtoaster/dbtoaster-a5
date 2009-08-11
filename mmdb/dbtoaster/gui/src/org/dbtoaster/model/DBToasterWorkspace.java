@@ -17,6 +17,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.jfree.data.time.TimeSeries;
 
 public class DBToasterWorkspace
 {
@@ -48,9 +49,21 @@ public class DBToasterWorkspace
     public final static String SOURCE_CONFIG_FILE_NAME = "query.sources";
 
     public final static String CODE_FILE_EXT = "cc";
+    
+    // Analysis files
     public final static String TRACE_FILE_EXT = "tc";
+    public final static String PROFILELOC_FILE_EXT = "prl";
+    public final static String DEPGRAPH_FILE_EXT = "deps";
+    public final static String PSEUDOCODE_FILE_EXT = "pseudo";
+    
+    // Binary files
     public final static String ENGINE_FILE_EXT = "dbte";
     public final static String DEBUGGER_FILE_EXT = "dbtd";
+    
+    public final static String THRIFT_OUTPUT_DIR = "thrift";
+    
+    public final static String DEBUGGER_CLIENT_DIR = THRIFT_OUTPUT_DIR+"/gen-java";
+    public final static String DEBUGGER_CLIENT_JAR = "debugger.jar";
 
     private DBToasterWorkspace()
     {
@@ -180,6 +193,28 @@ public class DBToasterWorkspace
         return r;
     }
 
+    public LinkedList<Query> getExecutableQueries()
+    {
+        LinkedList<Query> r = new LinkedList<Query>();
+        for (Map.Entry<String, Query> e : wsQueries.entrySet())
+        {
+            Query q = e.getValue();
+            if (q.hasBinary()) r.add(q);
+        }
+
+        return r;
+    }
+
+    public LinkedList<Query> getDebuggingQueries()
+    {
+        LinkedList<Query> r = new LinkedList<Query>();
+        for (Map.Entry<String, Query> e : wsQueries.entrySet()) {
+            Query q = e.getValue();
+            if ( q.hasDebugger() ) r.add(q);
+        }
+        return r;
+    }
+    
     public CompilationTrace getCompilationTrace(String queryName)
     {
         if (!wsQueries.containsKey(queryName))
@@ -191,6 +226,17 @@ public class DBToasterWorkspace
 
         Query q = wsQueries.get(queryName);
         return q.getTrace();
+    }
+
+    public LinkedList<Query> getQueriesWithPseudocode()
+    {
+        LinkedList<Query> r = new LinkedList<Query>();
+        for (Map.Entry<String, Query> e : wsQueries.entrySet())
+        {
+            if ( e.getValue().getPseudocode() != null)
+                r.add(e.getValue());
+        }
+        return r;
     }
 
     public String generateQueryName()
@@ -321,6 +367,8 @@ public class DBToasterWorkspace
                 queryFolder.refreshLocal(IResource.DEPTH_INFINITE, null);
 
                 // Get files as relative to query folder.
+                
+                // Parsing phase
                 IFile tmlFile = queryFolder.getFile(TML_FILE_NAME);
                 IFile scFile = queryFolder.getFile(SOURCE_CONFIG_FILE_NAME);
                 q.setTML(tmlFile);
@@ -333,26 +381,101 @@ public class DBToasterWorkspace
                     return error;
                 }
 
-                IFile compiledCode = queryFolder.getFile(outputFile);
-                IPath tcPath = new Path(outputFile).removeFileExtension()
-                        .addFileExtension(TRACE_FILE_EXT);
-                IFile catalogFile = q.getQueryFolder().getFile(tcPath);
+                // DBToaster compilation phase.
+                IPath compiledCodePath = absOutputPath.makeRelativeTo(qfLoc);
+                IFile compiledCode = queryFolder.getFile(compiledCodePath);
+                
+                IPath queryBasePath = compiledCodePath.removeFileExtension();
+                
+                IPath tcPath = queryBasePath.addFileExtension(TRACE_FILE_EXT);
+                IFile catalogFile = queryFolder.getFile(tcPath);
 
-                if (!(compiledCode.exists() && catalogFile.exists()))
+                IPath plPath = queryBasePath.addFileExtension(PROFILELOC_FILE_EXT);
+                IFile profLocFile = queryFolder.getFile(plPath);
+
+                IPath depGraphPath = queryBasePath.addFileExtension(DEPGRAPH_FILE_EXT);
+                IFile depGraphFile = queryFolder.getFile(depGraphPath);
+
+                IPath pseudoCodePath = queryBasePath.addFileExtension(PSEUDOCODE_FILE_EXT);
+                IFile pseudoCodeFile = queryFolder.getFile(pseudoCodePath);
+
+                LinkedHashMap<String, IFile> compilationResults =
+                    new LinkedHashMap<String, IFile>();
+
+                compilationResults.put("query code", compiledCode);
+                compilationResults.put("compile trace", catalogFile);
+                compilationResults.put("profile locations", profLocFile);
+                compilationResults.put("dependency graph", depGraphFile);
+                compilationResults.put("pseudocode", pseudoCodeFile);
+
+                for (Map.Entry<String, IFile> e : compilationResults.entrySet())
                 {
-                    String error =
-                        "Compilation failed to product output and trace for " +
-                            compiledCode.getLocation().toString() + ", " +
-                            catalogFile.getLocation().toString();
-                    return error;
+                    if ( !e.getValue().exists() ) {
+                        String error = "Compilation failed to produce " +
+                            e.getKey() + " for query " + q.getQueryName();
+                        return error;
+                    }
                 }
 
                 q.setCode(compiledCode);
                 q.setTrace(catalogFile);
-                return "Successfully compiled query!";
+                q.setProfileLocationsFile(profLocFile);
+                q.setDependencyGraph(depGraphFile);
+                q.setPseudocode(pseudoCodeFile);
 
-            } catch (CoreException e)
-            {
+                // C++ compilation phase (performed by DBToaster)
+                IPath enginePath = queryBasePath.addFileExtension(ENGINE_FILE_EXT);
+                IFile engineBinFile = queryFolder.getFile(enginePath);
+
+                IPath debuggerPath = queryBasePath.addFileExtension(DEBUGGER_FILE_EXT);
+                IFile debuggerBinFile = queryFolder.getFile(debuggerPath);
+
+                IPath debuggerClientBase =
+                    queryFolder.getLocation().append(DEBUGGER_CLIENT_DIR);
+                
+                IFile debuggerJarFile = queryFolder.getFile(DEBUGGER_CLIENT_JAR);
+
+                switch(compilerMode)
+                {
+                case HANDLERS:
+                    // No further files to load.
+                    break;
+                
+                case DEBUGGER:
+                    // Set up query debugger
+                    if ( debuggerBinFile.exists() )
+                    {
+                        // Load Java client for debugging and profiling
+                        String clientBase = (debuggerJarFile.exists()?
+                            debuggerJarFile.getLocation().toOSString() :
+                            debuggerClientBase.toOSString());
+
+                        q.setDebugger(debuggerPath.toOSString(), clientBase);
+                    }
+                    else {
+                        status = "Could not find debugger binary " +
+                            debuggerBinFile.getLocation().toOSString();
+                    }
+                    break;
+
+                case ENGINE:
+                default:
+                    // Set up query executor
+                    if ( engineBinFile.exists() )
+                        q.setExecutor(enginePath.toOSString());
+                    else {
+                        status = "Could not find engine binary " +
+                            engineBinFile.getLocation().toOSString();
+                    }
+                    break;    
+                }
+                
+                if ( status == null )
+                    status = "Successfully compiled query!";
+
+            }
+            catch (CoreException e) {
+                status = "Compilation failed: " + e.getCause().getMessage();
                 e.printStackTrace();
             }
         }
@@ -370,7 +493,8 @@ public class DBToasterWorkspace
         return compileQuery(q, q.getQuery(), outputFile, compilerMode);
     }
 
-    public void runQuery(String queryName)
+    public void runQuery(String queryName, int profilerPort,
+            TimeSeries profilerSamples)
     {
         if (!wsQueries.containsKey(queryName))
         {
@@ -380,19 +504,19 @@ public class DBToasterWorkspace
         }
 
         Query q = wsQueries.get(queryName);
-        q.runQuery();
+        q.runQuery(profilerPort, profilerSamples);
     }
 
-    public void debugQuery(String queryName)
+    public Debugger getDebugger(String queryName)
     {
         if (!wsQueries.containsKey(queryName))
         {
             System.err.println("Invalid query name " + queryName
                     + " (could not find query in working set).");
-            return;
+            return null;
         }
 
         Query q = wsQueries.get(queryName);
-        q.runDebugger();
+        return q.getDebugger();
     }
 }

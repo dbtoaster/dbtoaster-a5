@@ -25,7 +25,11 @@ Bundle-ClassPath: .,
  lib/jfreechart-1.0.13.jar,
  lib/swtgraphics2d.jar,
  lib/prefuse.jar,
- lib/prefuse.src.jar
+ lib/prefuse.src.jar,
+ lib/commons-lang-2.4.jar,
+ lib/libthrift.jar,
+ lib/profiler.jar,
+ lib/datasets.jar
 Import-Package: org.eclipse.core.filesystem,
  org.eclipse.ui.ide,
  org.eclipse.ui.part

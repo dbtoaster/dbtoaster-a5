@@ -4,18 +4,16 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.event.ActionEvent;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 
-import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
-import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 
 import prefuse.Constants;
@@ -35,6 +33,7 @@ import prefuse.action.filter.FisheyeTreeFilter;
 import prefuse.action.layout.CollapsedSubtreeLayout;
 import prefuse.action.layout.graph.NodeLinkTreeLayout;
 import prefuse.activity.SlowInSlowOutPacer;
+import prefuse.controls.Control;
 import prefuse.controls.DragControl;
 import prefuse.controls.FocusControl;
 import prefuse.controls.PanControl;
@@ -70,6 +69,12 @@ public class TreeVisPanel extends JPanel
     private static final String treeNodes = "tree.nodes";
     private static final String treeEdges = "tree.edges";
 
+    public static final Integer DEFAULT_LEVELS = 6;
+    public static final Double DEFAULT_SPACING = 1.0;
+    public static final Double DEFAULT_DSPACE = 50.0; // the spacing between depth levels
+    public static final Double DEFAULT_BSPACE = 5.0;  // the spacing between sibling nodes
+    public static final Double DEFAULT_TSPACE = 25.0; // the spacing between subtrees
+    
     Visualization treeVis;
     Display treeDisplay;
     Tree t;
@@ -78,6 +83,11 @@ public class TreeVisPanel extends JPanel
     private EdgeRenderer edgeRenderer;
 
     private int tOrientation = Constants.ORIENT_TOP_BOTTOM;
+    private int filterThreshold;
+    private double spaceFactor = 1;
+    private double bspace = 5;   
+    private double tspace = 25;  
+    private double dspace = 50;  
 
     class GroupColors
     {
@@ -113,6 +123,8 @@ public class TreeVisPanel extends JPanel
 
     GroupColors groupColors;
 
+    private LinkedList<Control> controls;
+    
     public TreeVisPanel(String title)
     {
         this(new Tree(), "name", title, Constants.ORIENT_TOP_BOTTOM);
@@ -125,13 +137,35 @@ public class TreeVisPanel extends JPanel
 
     public TreeVisPanel(Tree t, String labelField, String title, int orientation)
     {
+        this(t, labelField, title, orientation, DEFAULT_LEVELS, DEFAULT_SPACING);        
+    }
+
+    public TreeVisPanel(Tree t, String labelField, String title,
+            int orientation, int filterThreshold, double spaceFactor)
+    {
+        this(t, labelField, title, orientation, filterThreshold,
+                spaceFactor, DEFAULT_DSPACE, DEFAULT_BSPACE, DEFAULT_TSPACE);
+    }
+
+    public TreeVisPanel(Tree t, String labelField, String title,
+            int orientation, int filterThreshold, double spaceFactor,
+            double dspace, double bspace, double tspace)
+    {
         setLayout(new BorderLayout());
         treeVis = new Visualization();
+        treeDisplay = new Display(treeVis);
+
         groupColors = new GroupColors();
+        controls = new LinkedList<Control>();
 
         this.t = t;
         treeVis.add(tree, t);
         tOrientation = orientation;
+        this.filterThreshold = filterThreshold;
+        this.spaceFactor = spaceFactor;
+        this.dspace = dspace;
+        this.bspace = bspace;
+        this.tspace = tspace;
 
         nodeRenderer = new LabelRenderer(labelField);
         nodeRenderer.setRenderType(AbstractShapeRenderer.RENDER_TYPE_FILL);
@@ -148,59 +182,8 @@ public class TreeVisPanel extends JPanel
         rf.add(new InGroupPredicate(treeEdges), edgeRenderer);
         treeVis.setRendererFactory(rf);
 
-        // colors
-        ItemAction nodeColor = new NodeColorAction(treeNodes, groupColors);
-        ItemAction edgeColor = new ColorAction(treeEdges,
-                VisualItem.STROKECOLOR, ColorLib.rgb(200, 200, 200));
-        ItemAction textColor = new ColorAction(treeNodes, VisualItem.TEXTCOLOR,
-                ColorLib.rgb(0, 0, 0));
-        treeVis.putAction("textColor", textColor);
+        resetActions();
 
-        // quick repaint
-        ActionList repaint = new ActionList();
-        repaint.add(nodeColor);
-        repaint.add(new RepaintAction());
-        treeVis.putAction("repaint", repaint);
-
-        // create the tree layout action
-        NodeLinkTreeLayout treeLayout = new NodeLinkTreeLayout(tree,
-                tOrientation, 50, 40, 8);
-        treeLayout.setLayoutAnchor(new Point2D.Double(25, 50));
-        treeVis.putAction("treeLayout", treeLayout);
-
-        CollapsedSubtreeLayout subLayout = new CollapsedSubtreeLayout(tree,
-                tOrientation);
-        treeVis.putAction("subLayout", subLayout);
-
-        treeLayout.setOrientation(tOrientation);
-        subLayout.setOrientation(tOrientation);
-
-        AutoPanAction autoPan = new AutoPanAction();
-
-        // create the filtering and layout
-        ActionList filter = new ActionList();
-        filter.add(new FisheyeTreeFilter(tree, 10));
-        filter.add(new FontAction(treeNodes, FontLib.getFont("Tahoma", 16)));
-        filter.add(treeLayout);
-        filter.add(subLayout);
-        filter.add(textColor);
-        filter.add(nodeColor);
-        filter.add(edgeColor);
-        treeVis.putAction("filter", filter);
-
-        // animated transition
-        ActionList animate = new ActionList(1000);
-        animate.setPacingFunction(new SlowInSlowOutPacer());
-        animate.add(autoPan);
-        animate.add(new QualityControlAnimator());
-        animate.add(new VisibilityAnimator(tree));
-        animate.add(new LocationAnimator(treeNodes));
-        animate.add(new ColorAnimator(treeNodes));
-        animate.add(new RepaintAction());
-        treeVis.putAction("animate", animate);
-        treeVis.alwaysRunAfter("filter", "animate");
-
-        treeDisplay = new Display(treeVis);
         treeDisplay.setForeground(Color.BLACK);
         treeDisplay.setBackground(Color.WHITE);
 
@@ -210,7 +193,6 @@ public class TreeVisPanel extends JPanel
         treeDisplay.addControlListener(new WheelZoomControl());
         treeDisplay.addControlListener(new PanControl());
         treeDisplay.addControlListener(new DragControl());
-        treeDisplay.addControlListener(new FocusControl(1, "filter"));
 
         /*
          * display.registerKeyboardAction( new OrientAction(treeVis,
@@ -227,9 +209,6 @@ public class TreeVisPanel extends JPanel
          * KeyStroke.getKeyStroke("ctrl 4"), WHEN_FOCUSED);
          */
 
-        setOrientation(tOrientation);
-        treeVis.run("filter");
-
         if (title != null)
         {
             final JFastLabel titleLabel = new JFastLabel(title);
@@ -244,6 +223,85 @@ public class TreeVisPanel extends JPanel
             add(titleLabel, BorderLayout.NORTH);
         }
         add(treeDisplay, BorderLayout.CENTER);
+    }
+    
+    private void resetActions()
+    {
+        // Clean up
+        treeVis.removeAction("animate");
+        treeVis.removeAction("filter");
+        treeVis.removeAction("subLayout");
+        treeVis.removeAction("treeLayout");
+        treeVis.removeAction("textColor");
+
+        for (Control c : controls)
+            treeDisplay.removeControlListener(c);
+        controls.clear();
+
+        if ( t != null && t.getNodeCount() > 0 )
+        {
+            // colors
+            ItemAction nodeColor = new NodeColorAction(treeNodes, groupColors);
+            ItemAction edgeColor = new ColorAction(treeEdges,
+                    VisualItem.STROKECOLOR, ColorLib.rgb(200, 200, 200));
+            ItemAction textColor = new ColorAction(
+                    treeNodes, VisualItem.TEXTCOLOR, ColorLib.rgb(0, 0, 0));
+            treeVis.putAction("textColor", textColor);
+
+            // quick repaint
+            ActionList repaint = new ActionList();
+            repaint.add(nodeColor);
+            repaint.add(edgeColor);
+            repaint.add(new RepaintAction());
+            treeVis.putAction("repaint", repaint);
+
+            // create the tree layout action
+            NodeLinkTreeLayout treeLayout = new NodeLinkTreeLayout(
+                    tree, tOrientation, spaceFactor*dspace,
+                    spaceFactor*bspace, spaceFactor*tspace);
+            treeLayout.setLayoutAnchor(new Point2D.Double(25, 50));
+            treeVis.putAction("treeLayout", treeLayout);
+
+            CollapsedSubtreeLayout subLayout = new CollapsedSubtreeLayout(tree,
+                    tOrientation);
+            treeVis.putAction("subLayout", subLayout);
+
+            treeLayout.setOrientation(tOrientation);
+            subLayout.setOrientation(tOrientation);
+
+            AutoPanAction autoPan = new AutoPanAction();
+
+            // create the filtering and layout
+            ActionList filter = new ActionList();
+            filter.add(new FisheyeTreeFilter(tree, filterThreshold));
+            filter.add(new FontAction(treeNodes, FontLib.getFont("Tahoma", 16)));
+            filter.add(treeLayout);
+            filter.add(subLayout);
+            filter.add(textColor);
+            filter.add(nodeColor);
+            filter.add(edgeColor);
+            treeVis.putAction("filter", filter);
+
+            // animated transition
+            ActionList animate = new ActionList(1000);
+            animate.setPacingFunction(new SlowInSlowOutPacer());
+            animate.add(autoPan);
+            animate.add(new QualityControlAnimator());
+            animate.add(new VisibilityAnimator(tree));
+            animate.add(new LocationAnimator(treeNodes));
+            animate.add(new ColorAnimator(treeNodes));
+            animate.add(new RepaintAction());
+            treeVis.putAction("animate", animate);
+            treeVis.alwaysRunAfter("filter", "animate");
+            
+            controls.add(new FocusControl(1, "filter"));
+            for (Control c : controls)
+                treeDisplay.addControlListener(c);
+
+            setOrientation(tOrientation);
+
+            treeVis.run("filter");
+        }
     }
 
     public void setOrientation(int orientation)
@@ -292,12 +350,12 @@ public class TreeVisPanel extends JPanel
 
     public void setDataFromTreeML(String treeData, String label)
     {
-        try
-        {
-            t = (Tree) new TreeMLReader().readGraph(new ByteArrayInputStream(
-                    treeData.getBytes()));
-        } catch (Exception e)
-        {
+        try {
+            t = (Tree) new TreeMLReader().readGraph(
+                new ByteArrayInputStream(treeData.getBytes()));
+
+        } catch (Exception e) {
+            System.err.println("Failed to read TreeML from string data.");
             e.printStackTrace();
         }
 
@@ -315,11 +373,11 @@ public class TreeVisPanel extends JPanel
         treeVis.removeGroup(tree);
         treeVis.addTree(tree, t);
 
-        DefaultRendererFactory drf = (DefaultRendererFactory) treeVis
-                .getRendererFactory();
+        DefaultRendererFactory drf =
+            (DefaultRendererFactory) treeVis.getRendererFactory();
         ((LabelRenderer) drf.getDefaultRenderer()).setTextField(label);
 
-        treeVis.run("filter");
+        resetActions();
     }
 
     public void selectNodes(String group, String key, String pred, int color)
@@ -437,24 +495,29 @@ public class TreeVisPanel extends JPanel
 
         public int getColor(VisualItem item)
         {
-            for (Map.Entry<String, GroupColors.KeyAndColor> gc : groupColors.colorings
-                    .entrySet())
+            for (Map.Entry<String, GroupColors.KeyAndColor> gc :
+                    groupColors.colorings.entrySet())
             {
                 TupleSet g = m_vis.getGroup(gc.getKey());
-                for (Iterator it = g.tuples(); it.hasNext();)
+                for (Iterator<?> it = g.tuples(); it.hasNext();)
                 {
                     String key = gc.getValue().key;
                     Tuple t = (Tuple) it.next();
-                    if (t.get(key).equals(item.get(key))) { return gc
-                            .getValue().color; }
+                    
+                    if (t.get(key).equals(item.get(key))) {
+                        return gc.getValue().color;
+                    }
                 }
             }
 
-            if (m_vis.isInGroup(item, Visualization.SEARCH_ITEMS)) return ColorLib
-                    .rgb(255, 190, 190);
-            else if (m_vis.isInGroup(item, Visualization.FOCUS_ITEMS)) return ColorLib
-                    .rgb(198, 229, 229);
+            if (m_vis.isInGroup(item, Visualization.SEARCH_ITEMS))
+                return ColorLib.rgb(255, 190, 190);
+            
+            else if (m_vis.isInGroup(item, Visualization.FOCUS_ITEMS))
+                return ColorLib.rgb(198, 229, 229);
+            
             else if (item.getDOI() > -1) return ColorLib.rgb(164, 193, 193);
+            
             else return ColorLib.rgba(255, 255, 255, 0);
         }
     }

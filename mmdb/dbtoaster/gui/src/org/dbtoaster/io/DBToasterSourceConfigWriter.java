@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.dbtoaster.model.DatasetManager;
 import org.dbtoaster.model.DatasetManager.Dataset;
 
@@ -24,6 +25,7 @@ public class DBToasterSourceConfigWriter
         return r;
     }
 
+    // TODO: check XML quoting of values used during string construction
     public String getSourceConfiguration(
             LinkedHashMap<String, String> lastRelationsUsed)
     {
@@ -50,7 +52,7 @@ public class DBToasterSourceConfigWriter
             LinkedList<String> defaultArgs = ds.getDefaultConstructorArgs(relName);
             for (int i = 0; i < defaultArgs.size(); ++i) {
                 String arg = "<arg pos=\"" + Integer.toString(i) +
-                    "\" val=\"" + defaultArgs.get(i) + "\"/>";
+                    "\" val=\"" + StringEscapeUtils.escapeXml(defaultArgs.get(i)) + "\"/>";
                 argLines.add(arg);
             }
 
@@ -73,6 +75,8 @@ public class DBToasterSourceConfigWriter
             configLines.add("<adaptor type=\"" + ds.getAdaptorType(relName) + "\">");
             configLines.addAll(indent(bindingLines));
             configLines.add("</adaptor>");
+            
+            configLines.add("<thrift namespace=\"" + ds.getThriftNamespace(relName) + "\"/>");
             configLines.add("</relation>");
 
             uniqueRelations.add(uniqueName);

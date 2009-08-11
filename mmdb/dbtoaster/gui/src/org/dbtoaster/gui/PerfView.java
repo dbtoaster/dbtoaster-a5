@@ -1,50 +1,125 @@
 package org.dbtoaster.gui;
 
-import java.awt.BorderLayout;
-import java.awt.Button;
-import java.awt.Container;
-import java.awt.Frame;
-import java.awt.Panel;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.util.Vector;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.Map;
 
-import javax.swing.JPanel;
-import javax.swing.JRootPane;
-
+import org.dbtoaster.model.DBToasterWorkspace;
+import org.dbtoaster.model.Query;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.awt.SWT_AWT;
-import org.eclipse.swt.events.ControlEvent;
-import org.eclipse.swt.events.ControlListener;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.ui.IPerspectiveDescriptor;
+import org.eclipse.ui.IPerspectiveListener;
+import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.part.ViewPart;
-
-import prefuse.controls.ControlAdapter;
 
 public class PerfView extends ViewPart
 {
-
     public static final String ID = "dbtoaster_gui.perfview";
 
-    private Vector<DBPerfPanel> databasePanels;
+    DBToasterWorkspace dbtWorkspace;
+
+    String perspectiveId;
+    int exQueriesHash;
+
+    class ExecuteQueryPanel
+    {
+        Tree eqTree;
+        DBToasterWorkspace dbtWorkspace;
+        
+        Query currentRunningQuery;
+
+        public ExecuteQueryPanel(Composite parent, DBToasterWorkspace dbtw)
+        {
+            dbtWorkspace = dbtw;
+
+            Composite eqComp = new Composite(parent, SWT.BORDER);
+            eqComp.setLayout(new GridLayout());
+            GridData eqcLD = new GridData(SWT.FILL, SWT.FILL, false, true);
+            eqcLD.widthHint = 150;
+            eqComp.setLayoutData(eqcLD);
+            
+            Label eqLabel = new Label(eqComp, SWT.NONE);
+            eqLabel.setText("Queries:");
+            GridData eqlbLD = new GridData(SWT.FILL, SWT.FILL, true, false);
+            eqLabel.setLayoutData(eqlbLD);
+
+            eqTree = new Tree(eqComp, SWT.SINGLE | SWT.NONE);
+            GridData eqtLD = new GridData(SWT.FILL, SWT.FILL, true, true);
+            eqtLD.widthHint = 150;
+            eqTree.setLayoutData(eqtLD);
+            
+            redraw();
+        }
+        
+        void addDatabases(LinkedHashMap<String, DBPerfPanel> dbPanels)
+        {
+            // Add check boxes per database.
+            for (Map.Entry<String, DBPerfPanel> e : dbPanels.entrySet())
+            {
+                Button chooseDB = new Button(eqTree.getParent(), SWT.CHECK);
+                chooseDB.setText(e.getKey());
+                chooseDB.setSelection(false);
+                GridData chooseData = new GridData(SWT.FILL, SWT.FILL, false, false);
+                chooseDB.setLayoutData(chooseData);
+            }
+            
+            // Add run button.
+            Button runButton = new Button(eqTree.getParent(), SWT.PUSH);
+            runButton.setText("Run query");
+            GridData runLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+            runLD.minimumWidth = 50;
+            runButton.setLayoutData(runLD);
+
+            // TODO: add run listener
+
+        }
+        
+        private void redraw()
+        {
+            eqTree.removeAll();
+
+            LinkedList<Query> execQueries = dbtWorkspace.getExecutableQueries();
+            exQueriesHash = execQueries.hashCode();
+            System.out.println("Found " + execQueries.size() + " engine binaries.");
+
+            for (Query q : dbtWorkspace.getExecutableQueries())
+            {
+                TreeItem qItem = new TreeItem(eqTree, SWT.NONE);
+                qItem.setText(q.getQueryName());
+            }
+        }
+    }
+    
+    private ExecuteQueryPanel eqPanel;
+    private LinkedHashMap<String,DBPerfPanel> databasePanels;
     private Text perfStatus;
 
     public void createPartControl(Composite parent)
     {
+        dbtWorkspace = DBToasterWorkspace.getWorkspace();
+
         Composite top = new Composite(parent, SWT.NONE);
-        GridLayout layout = new GridLayout();
+        GridLayout layout = new GridLayout(2,false);
         layout.marginWidth = 0;
         layout.marginHeight = 0;
         top.setLayout(layout);
 
+        // Query executor panel.
+        eqPanel = new ExecuteQueryPanel(top, dbtWorkspace);
+
+        // Graph panel
         int numDatabases = 5;
-        databasePanels = new Vector<DBPerfPanel>();
+        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+        databasePanels = new LinkedHashMap<String, DBPerfPanel>();
 
         Composite dbcomp = new Composite(top, SWT.EMBEDDED);
         dbcomp.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
@@ -62,30 +137,12 @@ public class PerfView extends ViewPart
 
         for (int i = 0; i < numDatabases; ++i)
         {
-            /*
-             * Composite framecomp = new Composite(dbcomp, SWT.EMBEDDED);
-             * GridData frameData = new GridData(SWT.FILL, SWT.FILL, true,
-             * true); frameData.widthHint = 700; frameData.heightHint = 150;
-             * frameData.horizontalSpan = 2; framecomp.setLayoutData(frameData);
-             * 
-             * Frame dbframe = SWT_AWT.new_Frame(framecomp);
-             * dbframe.setLayout(new BorderLayout()); Panel dbPanel = new
-             * Panel(); dbframe.add(dbPanel, BorderLayout.CENTER); JRootPane
-             * dbroot = new JRootPane(); dbPanel.setLayout(new BorderLayout());
-             * dbPanel.add(dbroot, BorderLayout.CENTER);
-             * 
-             * databasePanels.add(new DBSwingPerfPanel());
-             * dbroot.setContentPane(databasePanels.lastElement());
-             * 
-             * dbframe.pack(); dbframe.setVisible(true);
-             */
-
-            databasePanels.add(new DBPerfPanel(dbcomp, SWT.NO_TRIM));
+            databasePanels.put(dbNames[i], new DBPerfPanel(dbcomp, SWT.NO_TRIM));
             GridData frameData = new GridData(SWT.FILL, SWT.FILL, true, true);
             frameData.widthHint = 700;
             frameData.heightHint = 150;
             frameData.horizontalSpan = 2;
-            databasePanels.lastElement().setLayoutData(frameData);
+            databasePanels.get(dbNames[i]).setLayoutData(frameData);
 
             if (!rightLabelAdded)
             {
@@ -113,6 +170,7 @@ public class PerfView extends ViewPart
 
         perfStatus = new Text(top, SWT.BORDER | SWT.WRAP);
         GridData psData = new GridData(SWT.FILL, SWT.FILL, true, false);
+        psData.horizontalSpan = 2;
         psData.heightHint = perfStatus.getLineHeight();
         perfStatus.setLayoutData(psData);
 
@@ -123,6 +181,34 @@ public class PerfView extends ViewPart
                 .getSystemColor(SWT.COLOR_TITLE_INACTIVE_FOREGROUND));
 
         perfStatus.setText("No databases running.");
+        
+        eqPanel.addDatabases(databasePanels);
+        
+        perspectiveId = getViewSite().getPage().getPerspective().getId();
+
+        getViewSite().getWorkbenchWindow().addPerspectiveListener(
+            new IPerspectiveListener()
+            {
+                public void perspectiveChanged(IWorkbenchPage page,
+                        IPerspectiveDescriptor perspective, String changeId)
+                {}
+
+                public void perspectiveActivated(IWorkbenchPage page,
+                        IPerspectiveDescriptor perspective)
+                {
+                    int queriesHash = dbtWorkspace.getExecutableQueries().hashCode();
+
+                    System.out.println("EX hash comp: " + queriesHash + ", " + exQueriesHash);
+
+                    if (perspective.getId().equals(perspectiveId)
+                            && exQueriesHash != queriesHash)
+                    {
+                        System.out.println("Redrawing eqPanel");
+                        eqPanel.redraw();
+                    }
+                }
+            });
+
     }
 
     public void setFocus()

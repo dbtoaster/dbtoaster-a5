@@ -199,13 +199,13 @@ public class QueryEditor extends ViewPart
             if (q.hasBinary())
             {
                 TreeItem binItem = new TreeItem(qItem, SWT.NONE);
-                binItem.setText("Engine: ");
+                binItem.setText("Engine: " + q.getExecutor().getBinaryPath());
             }
 
             if (q.hasDebugger())
             {
                 TreeItem debugItem = new TreeItem(qItem, SWT.NONE);
-                debugItem.setText("Debugger: ");
+                debugItem.setText("Debugger: " + q.getDebugger().getBinaryPath());
             }
 
             if (q.hasStatistics())
@@ -381,7 +381,7 @@ public class QueryEditor extends ViewPart
             String codeFile = queryName + "."
                     + DBToasterWorkspace.CODE_FILE_EXT;
             String compilationStatus = dbtWorkspace.compileQuery(queryName,
-                    codeFile, CompileMode.ENGINE);
+                    codeFile, CompileMode.DEBUGGER);
 
             System.out.println("Toasted query: " + queryName);
 

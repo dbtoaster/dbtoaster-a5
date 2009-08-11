@@ -45,7 +45,7 @@ public class CodePerfView extends ViewPart
         CategoryPlot plot = handlerChart.getCategoryPlot();
         plot.setDataset(chartData);
         LegendItemCollection litems = new LegendItemCollection();
-        for (Iterator it = chartData.getRowKeys().iterator(); it.hasNext();)
+        for (Iterator<?> it = chartData.getRowKeys().iterator(); it.hasNext();)
         {
             litems.add(new LegendItem((String) it.next()));
         }
@@ -72,8 +72,6 @@ public class CodePerfView extends ViewPart
         return r;
     }
 
-    public void setFocus()
-    {
-    }
+    public void setFocus() {}
 
 }

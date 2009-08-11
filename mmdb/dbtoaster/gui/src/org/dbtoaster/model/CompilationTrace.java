@@ -1,6 +1,7 @@
 package org.dbtoaster.model;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -86,8 +87,18 @@ public class CompilationTrace
         BufferedReader catalogFile;
         String currentTraceFile = "";
         try
-        {
-            catalogFile = new BufferedReader(new FileReader(catalogFileName));
+        { 
+            File catalogFilePath = new File(catalogFileName);
+            catalogFile = new BufferedReader(new FileReader(catalogFilePath));
+            
+            // Get the catalog directory
+            String catalogDir = null;
+            File catalogDirPath = catalogFilePath.getParentFile();
+            if ( catalogDirPath != null && catalogDirPath.exists() &&
+                    catalogDirPath.isDirectory())
+            {
+                catalogDir = catalogDirPath.getAbsolutePath();
+            }
 
             while (catalogFile.ready())
             {
@@ -120,7 +131,9 @@ public class CompilationTrace
                 System.out.println("Adding event path " + eventPathName);
 
                 currentTraceFile = lineFields[1];
-                Tree t = (Tree) (new TreeMLReader().readGraph(currentTraceFile));
+                File traceFilePath = new File(catalogDir, currentTraceFile);
+                Tree t = (Tree) (new TreeMLReader().readGraph(
+                        traceFilePath.getAbsolutePath()));
 
                 System.out.println("Read trace file " + currentTraceFile);
 

@@ -647,10 +647,10 @@ public class DBToasterTMLWriter
 
             // Check if function is one DBToaster can handle.
             Function fn = f.getFunction();
-            if (!(f.isColumnFunction() && aggregateFunctions.contains(f
-                    .getName().toLowerCase())))
+            String fnName = f == null ? null : f.getName().toLowerCase();
+            if (!(f.isColumnFunction() && aggregateFunctions.contains(fnName)))
             {
-                String msg = fn == null ? f.toString() : fn.getName();
+                String msg = fnName == null ? f.toString() : fnName;
                 throw new DBToasterUnhandledException("Unsupported function: "
                         + msg);
             }
@@ -1046,6 +1046,7 @@ public class DBToasterTMLWriter
         if (qve instanceof ValueExpressionColumn)
         {
             ValueExpressionColumn column = (ValueExpressionColumn) qve;
+            String columnName = column.getName().toLowerCase();
 
             System.out.println("Column: " + column);
             System.out.println("Column table: " + column.getTableInDatabase());
@@ -1071,7 +1072,7 @@ public class DBToasterTMLWriter
                     (relFields = datasetMgr.getRelationFields(relName)) != null )
             {
                 if ( !(relFields.containsKey(column.getName()) ||
-                        relFields.containsKey(column.getName().toLowerCase())) )
+                        relFields.containsKey(columnName)) )
                 {
                     String msg = "Unable to find attribute " +
                         column.getName() + " in relation " + relName;
@@ -1083,12 +1084,11 @@ public class DBToasterTMLWriter
             }
             
             // Get unique column name.
-            String columnName = column.getName();
             if ( !(column.getTableExpr() == null ||
                     column.getTableExpr().getTableCorrelation() == null) )
             {
                 TableCorrelation corr = column.getTableExpr().getTableCorrelation();
-                String relAlias = corr.getName();
+                String relAlias = corr.getName().toLowerCase();
                 if ( columnSuffixesForAliases.containsKey(relAlias) )
                     columnName += columnSuffixesForAliases.get(relAlias);
             }
@@ -1149,11 +1149,12 @@ public class DBToasterTMLWriter
             System.out.println("Function: " + f);
 
             // Check if function is one DBToaster can handle.
-            if (!(mapExpression && f.isColumnFunction() && aggregateFunctions
-                    .contains(f.getName().toLowerCase())))
+            String fnName = f.getName().toLowerCase();
+            if (!(mapExpression && f.isColumnFunction() &&
+                    aggregateFunctions.contains(fnName)))
             {
                 Function fn = f.getFunction();
-                String msg = fn == null ? f.toString() : fn.getName();
+                String msg = fn == null ? f.toString() : fn.getName().toLowerCase();
                 throw new CreateTMLException("Unsupported function: " + msg);
             }
 
@@ -1453,12 +1454,14 @@ public class DBToasterTMLWriter
 
         LinkedHashMap<String, String> idsAndTypes = null;
 
+        String tableName = table.getName().toLowerCase();
         Table dbTable = table.getDatabaseTable();
+        String dbTableName = dbTable.getName().toLowerCase();
 
         // Temporary tables have no fields
-        System.out.println("Name arr: " + table.getName().split("\\.").length);
+        System.out.println("Name arr: " + tableName.split("\\.").length);
 
-        String[] dsRelName = table.getName().split("\\.");
+        String[] dsRelName = tableName.split("\\.");
         String datasetName = "";
         String relName = "";
 
@@ -1497,24 +1500,25 @@ public class DBToasterTMLWriter
             if ( table.getTableCorrelation() != null )
             {
                 TableCorrelation corr = table.getTableCorrelation();
-                if ( relationCounters.containsKey(table.getName()) ) {
-                    Integer current = relationCounters.get(table.getName());
-                    relationCounters.put(table.getName(), current+1);
+                String corrName = corr.getName().toLowerCase();
+                if ( relationCounters.containsKey(tableName) ) {
+                    Integer current = relationCounters.get(tableName);
+                    relationCounters.put(tableName, current+1);
                     fieldSuffix = Integer.toString(current+1);
-                    columnSuffixesForAliases.put(corr.getName(), fieldSuffix);
+                    columnSuffixesForAliases.put(corrName, fieldSuffix);
                 }
                 else {
                     // Track first visit.
-                    relationCounters.put(table.getName(), 0);
+                    relationCounters.put(tableName, 0);
                 }
             }
             else {
-                if ( relationCounters.containsKey(table.getName()) ) {
-                    String msg = "Ambiguous use of relation " + table.getName();
+                if ( relationCounters.containsKey(tableName) ) {
+                    String msg = "Ambiguous use of relation " + tableName;
                     throw new CreateTMLException(msg); 
                 }
                 
-                relationCounters.put(table.getName(), 0);
+                relationCounters.put(tableName, 0);
             }
 
             if (datasetName == null || datasetName.isEmpty())
