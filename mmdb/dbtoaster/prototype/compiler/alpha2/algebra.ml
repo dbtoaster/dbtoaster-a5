@@ -146,17 +146,6 @@ let gen_var_sym() =
 	"var"^(string_of_int new_sym)
 
 
-(* State identifiers *)
-type state_symbols = (accessor_element, string) Hashtbl.t
-let state_syms : state_symbols = Hashtbl.create 10
-
-let gen_state_sym accessor_elem =
-    if Hashtbl.mem state_syms accessor_elem then
-        Hashtbl.find state_syms accessor_elem
-    else
-        let new_symbol = "state"^(string_of_int (Hashtbl.length state_syms)) in
-            Hashtbl.add state_syms accessor_elem new_symbol;
-            new_symbol
 
 
 (* Datastructures *)
@@ -3120,3 +3109,40 @@ let is_insert_incr expr_op plan_op =
         | _ -> raise (ValidationException "Invalid op pair.")
 
 (* type checker *)
+
+
+
+
+
+
+
+
+(* State identifiers *)
+(* TODO: move back!!! Temporarily moved here while debugging *)
+module AccessorHashtype =
+struct
+    type t = accessor_element
+    let equal = Pervasives.(=)
+    let hash = dbt_hash
+end
+
+module AccessorHashtbl = Hashtbl.Make(AccessorHashtype)
+
+type state_symbols = string AccessorHashtbl.t
+let state_syms : state_symbols = AccessorHashtbl.create 10
+
+let gen_state_sym accessor_elem =
+    if AccessorHashtbl.mem state_syms accessor_elem then
+        begin
+            let r = AccessorHashtbl.find state_syms accessor_elem in
+                print_endline ("Found state sym: "^(string_of_accessor_element accessor_elem));
+                r
+        end
+    else
+        begin
+            let new_symbol = "state"^(string_of_int (AccessorHashtbl.length state_syms)) in
+                print_endline ("New state sym: "^(new_symbol)^" "^
+                    (string_of_accessor_element accessor_elem));
+                AccessorHashtbl.add state_syms accessor_elem new_symbol;
+                new_symbol
+        end
