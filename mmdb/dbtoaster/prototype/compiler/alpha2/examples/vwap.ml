@@ -75,7 +75,6 @@ print_test_type "compile_code";
 compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
 *)
 
-print_test_type "compile_standalone_debugger";
 (* relation_sources: 
    source type, source constructor args, tuple type,
    adaptor type, adaptor bindings, thrift tuple namespace, stream name
@@ -90,4 +89,10 @@ let relation_sources =
         "datasets",
         "VwapBids"))]
 in
+(*
+    print_test_type "compile_standalone_engine";
+    compile_standalone_engine vwap relation_sources "vwap.cc" (Some "vwaptrace.catalog");;
+*)
+
+    print_test_type "compile_standalone_debugger";
     compile_standalone_debugger vwap relation_sources "vwap.cc" (Some "vwaptrace.catalog");;

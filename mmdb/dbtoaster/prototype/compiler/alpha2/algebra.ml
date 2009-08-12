@@ -115,6 +115,8 @@ and plan = [
 | `IncrPlan of state_identifier * poplus * domain * bindings * plan
 | `IncrDiffPlan of state_identifier * poplus * domain * bindings * plan ]
 
+type accessor_element = [ `MapExpression of map_expression | `Plan of plan ]
+
 type unifications = attribute_identifier * expression list
 
 type binding = [
@@ -123,7 +125,11 @@ type binding = [
 
 type recompute_state = New | Incr
 
-(* symbol generation *)
+(*
+ * symbol generation
+ *)
+
+(* Relations *)
 let id_counter = ref 0
 
 let gen_rel_id () =
@@ -131,6 +137,7 @@ let gen_rel_id () =
 	incr id_counter;
 	"rel"^(string_of_int new_sym)
 
+(* Variables *)
 let var_counter = ref 0
 
 let gen_var_sym() =
@@ -138,15 +145,23 @@ let gen_var_sym() =
 	incr var_counter;
 	"var"^(string_of_int new_sym)
 
-let state_counter = ref 0
 
-let gen_state_sym() =
-    let new_sym = !state_counter in
-	incr state_counter;
-	"state"^(string_of_int new_sym)
+(* State identifiers *)
+type state_symbols = (accessor_element, string) Hashtbl.t
+let state_syms : state_symbols = Hashtbl.create 10
 
-type state_symbols = (string, string) Hashtbl.t
-let indexed_syms : (string, int ref * state_symbols) Hashtbl.t = Hashtbl.create 10
+let gen_state_sym accessor_elem =
+    if Hashtbl.mem state_syms accessor_elem then
+        Hashtbl.find state_syms accessor_elem
+    else
+        let new_symbol = "state"^(string_of_int (Hashtbl.length state_syms)) in
+            Hashtbl.add state_syms accessor_elem new_symbol;
+            new_symbol
+
+
+(* Datastructures *)
+type datastructure_symbols = (string, string) Hashtbl.t
+let indexed_syms : (string, int ref * datastructure_symbols) Hashtbl.t = Hashtbl.create 10
 
 let gen_indexed_sym category sid =
     let (cat_counter, cat_syms) =
@@ -765,8 +780,6 @@ and indented_string_of_plan p level =
  * Accessors
  *
  *)
-
-type accessor_element = [ `MapExpression of map_expression | `Plan of plan ]
 
 let string_of_accessor_element ae =
     match ae with
@@ -2167,7 +2180,8 @@ type declaration = [
 | `Variable of code_variable * type_identifier
 | `Relation of relation_identifier * (field list) 
 | `Map of map_identifier * (field list) * type_identifier
-| `Domain of relation_identifier * (field list) ]
+| `Domain of relation_identifier * (field list)
+| `ProfileLocation of profile_identifier ]
 
 type code_terminal = [
 | `Int of int
@@ -2215,7 +2229,7 @@ type code_expression = [
 | `Block of code_expression list
 | `Return of arith_code_expression
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list
-| `Profile of profile_identifier * code_expression ]
+| `Profile of string * profile_identifier * code_expression ]
 
 
 (* Basic code type helpers *)
@@ -2227,7 +2241,10 @@ let identifier_of_datastructure =
 
 let datastructure_of_declaration decl =
     match decl with
-        | `Variable (n,ty) -> raise (CodegenException ("Invalid datastructure: "^n))
+        | `Variable (n,_)
+        | `ProfileLocation n ->
+              raise (CodegenException ("Invalid datastructure: "^n))
+
         | `Relation(n,f) -> `Multiset(n,f)
         | `Map (id, f, rt) -> `Map(id, f, rt)
         | `Domain(n,f) -> `Set(n,f)
@@ -2238,6 +2255,7 @@ let identifier_of_declaration decl =
         | `Relation(n, f) -> n
         | `Map (n, f, rt) -> n
         | `Domain(n, f) -> n
+        | `ProfileLocation p -> p
 
 (*
  * C-code generation helpers
@@ -2276,7 +2294,8 @@ let ctype_of_datastructure =
 
 let element_ctype_of_datastructure d =
     match d with
-        | `Variable(n,typ) ->
+        | `Variable(n,_)
+        | `ProfileLocation n ->
               raise (CodegenException
                   ("Invalid datastructure for elements: "^n))
 
@@ -2366,137 +2385,6 @@ let handler_name_of_event ev =
  * Profiling helpers
  *)
 
-(*
-module Profile =
-struct
-    let type_header =
-        "#if defined (__APPLE__) && defined(__MACH__) && !defined(__powerpc__) && !defined( __ppc__ ) && !defined( __ppc64__ )\n"^
-            "typedef uint64_t profile_units\n"^
-        "#elif defined (unix) || defined(__unix) || defined(__unix__)\n"^
-            "typedef timespec profile_units\n"^
-        "#endif\n"^
-        "typedef timespec sample_units\n"
-
-    let get_timestamp_type () = "profile_units"
-
-    let get_sample_type() = "sample_units"
-
-    let get_raw_buffer_type() = "boost::circular_buffer<"^get_sample_type^">"
-
-    let get_profile_buffer_type() = "pair<"^(get_timestamp_type())^", shared_ptr<"^(get_raw_buffer_type())^"> >"
-
-    let get_profile_id_type() = "int32_t"
-
-    let get_profile_type () = "map<"^(get_profile_id_type())^", profile_buffer>"
-
-    let method_header = 
-        "#if defined (__APPLE__) && defined(__MACH__) && !defined(__powerpc__) && !defined( __ppc__ ) && !defined( __ppc64__ )\n"^
-            "inline profile_units now() { return mach_absolute_time(); }\n"^
-            "inline profile_units diff(profile_units end, profile_units start) {\n"^
-            "    profile_units span = end - start;\n"^
-            "    static mach_timebase_info_data_t tbi;\n"^
-            "    if ( tbi.denom == 0 ) { (void) mach_timebase_info(&tbi);\n}\n"^
-            "    return (span * tbi.numer / tbi.denom);\n"^
-            "}\n"^
-            "inline sample_units create_sample(profile_units span) {\n"^
-            "    temp.tv_sec = span * 1e-9;\n"^
-            "    temp.tv_nsec = span - (temp.tv_sec * 1e9);\n"^
-            "    return temp;\n"^
-            "}"^
-            "inline boolean is_valid(profile_units& t) { return t != 0; }\n"^
-            "inline void init(profile_units& t) { t = 0; }\n"^
-            "inline void assign(profile_units& t, profile_units& t1) { t = t1; }\n"^
-        "#elif defined (unix) || defined(__unix) || defined(__unix__)\n"^
-            "inline profile_units now() { profile_units t; clock_gettime(CLOCK_REALTIME, &t); return t; }\n"^
-            "inline profile_units diff(profile_units end, profile_units start) {\n"^
-	    "    profile_units temp;\n"
-	    "    if ((end.tv_nsec-start.tv_nsec)<0) {\n"^
-            "        temp.tv_sec = end.tv_sec-start.tv_sec-1;\n"^
-            "        temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;\n"^
-            "    } else {\n"^
-            "        temp.tv_sec = end.tv_sec-start.tv_sec;\n"
-            "        temp.tv_nsec = end.tv_nsec-start.tv_nsec;\n"
-            "    }\n"
-            "    return temp;\n"
-            "}\n"^
-            "inline sample_units create_sample(profile_units x) { return x; }\n"^
-            "inline boolean is_valid(profile_units& t) {\n"^
-            "    return !((t.tv_sec == 0) && (t.tv_nsec == 0));"^
-            "}\n"^
-            "inline void init(profile_units& t) {\n"^
-            "    t.tv_sec = 0;"^
-            "    t.tv_nsec = 0;"^
-            "}\n"^
-            "inline void assign(profile_units& t, profile_units& t1) {\n"^
-            "    t.tv_sec = t1.tv_sec;"^
-            "    t.tv_nsec = t1.tv_nsec;"^
-            "}\n"^
-        "#endif\n"
-
-    let profile_header =
-        "typedef "^(get_profile_buffer_type())^" profile_buffer;"^
-        "typedef "^(get_profile_type())^" profile;"
-
-    let get_sampling_freq () = xxx
-
-    let get_timestamp () = "now()"
-
-    let get_diff_now_timestamp ts_expr = "diff("^(get_timestamp())^", "^ts_expr^")"
-
-    let get_sample ts_expr = "create_sample("^ts_expr^")"
-
-    let check_valid prof_var = "is_valid("^prof_var^")"
-
-    let get_timestamp_variable prof_id = prof_id^"_var"
-        
-    let declare_timestamp_variable prof_var = (get_timestamp_type()^" "^prof_var^";")
-
-    let initialize_timestamp_variable prof_var = ("init("^prof_var^");")
-
-    let assign_timestamp_variable prof_var ts_expr = ("assign("^prof_var^", "^ts_expr^");")
-
-    let existing_profile_id 
-    let create_profile_buffer () =
-        let temp_ts_var = "temp_ts" in
-        let temp_raw_buf_var = "temp_buf" in
-        let create_decl =
-            (declare_timestamp_variable temp_ts_var)^
-            (initialize_timestamp_variable temp_ts_var)^
-            (declare_raw_buffer_type temp_raw_buf_var)^
-            (initialize_raw_buffer_type temp_raw_buf_var)
-        in
-        let create_body = "make_pair("^temp_ts_var^", "^temp_raw_buf_var^")" in
-            (create_decl, create_body)
-
-    let assign_profile_buffer prof_ds_id prof_id buffer_expr =
-        prof_ds_id"["^prof_id^"] = "^buffer_expr;
-
-    let get_profile_buffer prof_ds_id prof_id = prof_ds_id^"["^prof_id^"].second"
-
-    let get_buffer_timestamp profile_buffer = profile_buffer^".first"
-
-    let declare_buffer_variable buffer_var prof_ds_id prof_id =
-        let (cb_decl, cb_body) = create_profile_buffer() in
-        (get_profile_buffer_type())^" "^buffer_var";\n"^
-            "if ( !("^(existing_profile_id prof_ds_id prof_id)^") ) {\n"^
-            "    "^cb_decl^"\n"^
-            "    "^(assign_profile_buffer prof_ds_id prof_id cb_body)^"\n"^
-            "}\n"^
-            buffer_var^ "= "^(get_profile_buffer prof_ds_id prof_id)^";"
-
-    let add_profile_sample prof_ds_id prof_id ts_expr =
-        prof_ds_id^"["^prof_id^"].second->push_back("^get_sample(ts_expr)^")"
-        
-    let get_sampling_condition prof_id prof_var =
-        let buffer_ts =
-            (get_buffer_timestamp
-                (get_profile_buffer prof_ds_id prof_id))
-        in
-            (get_diff_now_timestamp(buffer_ts)^" > "^ (get_sampling_freq()),
-            check_valid(prof_var))
-end
-*)
-
 let event_counters = Hashtbl.create 10
 
 let generate_profile_id (event : delta) =
@@ -2514,6 +2402,20 @@ let generate_profile_id (event : delta) =
     in
         (event_name^"_prof_"^(string_of_int new_count))
 
+let generate_handler_profile_id handler_name = handler_name^"_prof_id"
+
+
+let code_locations = Hashtbl.create 10
+
+let generate_profile_location loc_id = 
+    if Hashtbl.mem code_locations loc_id then
+        Hashtbl.find code_locations loc_id
+    else
+        begin
+            Hashtbl.add code_locations loc_id
+                (Hashtbl.length code_locations);
+            Hashtbl.find code_locations loc_id
+        end
 
 (* 
  * Code generation main
@@ -2540,6 +2442,15 @@ let string_of_datastructure_fields =
     function
 	| `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
               string_of_field_list f
+
+let string_of_declaration =
+    function 
+	| `Declare(`Variable(n, typ)) -> n^" : "^typ
+        | `Declare(`Relation (id,f)) -> id^" : rel("^(string_of_field_list f)^")"
+        | `Declare(`Map (id,f,d)) -> id^" : map["^(string_of_field_list f)^"]"
+        | `Declare(`Domain (id,f)) -> id^" : dom("^(string_of_field_list f)^")"
+        | `Declare(`ProfileLocation p) -> p^" : profile"
+        | _ -> raise InvalidExpression
 
 let string_of_code_expr_terminal cterm =
     match cterm with 
@@ -2617,6 +2528,9 @@ let rec string_of_code_expression c_expr =
                           | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                 let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
                                     ctype^" "^(identifier_of_declaration y)^";"
+                          | `ProfileLocation p ->
+                                let counter_val = generate_profile_location p in
+                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
                   end
 
 	    | `Assign(v,ac) ->
@@ -2672,33 +2586,22 @@ let rec string_of_code_expression c_expr =
 			       (if (String.length acc) = 0 then "" else acc^",")^(typ^" "^id))
 			  "" args
 		  in
-		      rt^" "^name^"("^h_fields^") {\n"^(string_of_code_block c_expr_l)^"\n}"
-
-                  (*
-                  | `Profile (prof_id, c_expr) ->
-                  let prof_var = Profile.get_timestamp_variable prof_id in
-                  let (sampling_condition, valid_sample) = Profile.get_sampling_condition prof_id in
-                  let start_instrumentation =
-                      (Profile.declare_timestamp_variable prof_var)^
-                      (Profile.initialize_timestamp_variable prof_var)^
-                      "if ( "^sampling_condition^" ) { "^
-                          (Profile.assign_timestamp_variable prof_var (Profile.get_timestamp()))^
-                          "}\n"
+                  let (rv, handler_without_rv) =
+                      let rev_handler = List.rev c_expr_l in
+                          (List.hd rev_handler, List.rev (List.tl rev_handler))
                   in
-                  let end_instrumentation =
-                      let buffer_var = "buffer" in
-                          "if ( "^valid_sample^" ) { "^
-                              (Profile.declare_buffer_variable buffer_var
-                                  (Profile.get_profile_buffer prof_ds_id prof_id))^
-                              (Profile.add_profile_sample prof_ds_id prof_id
-                                  (Profile.get_diff_now_timestamp(prof_var))^"; }\n"
-                  in
-                      start_instrumentation^(string_of_code_expression c_expr)^end_instrumentation
-                  *)
+                  let handler_profile_id = generate_handler_profile_id name in
+		      rt^" "^name^"("^h_fields^") {\n"^
+                          "START_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
+                          (string_of_code_block handler_without_rv)^"\n"^
+                          "END_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
+                          (string_of_code_expression rv)^
+                          "\n}"
 
-            | `Profile (prof_id, c_expr) ->
-                  ("START_PROFILE("^prof_id^")\n")^
-                      (string_of_code_expression c_expr)^("END_PROFILE("^prof_id^")\n")
+            | `Profile (statsType, prof_id, c_expr) ->
+                  ("START_PROFILE(\""^statsType^"\", "^prof_id^")\n")^
+                      (string_of_code_expression c_expr)^
+                      ("END_PROFILE(\""^statsType^"\", "^prof_id^")\n")
 
 
 let indented_string_of_code_expression c_expr =
@@ -2721,6 +2624,10 @@ let indented_string_of_code_expression c_expr =
                               | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                     let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
                                         ctype^" "^(identifier_of_declaration y)^";"
+                              | `ProfileLocation p ->
+                                let counter_val = generate_profile_location p in
+                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
+
 		      end
 			  
 		| `Assign(v,ac) ->
@@ -2789,10 +2696,10 @@ let indented_string_of_code_expression c_expr =
 			      (string_of_code_block c_expr_l)^
 			      tab^"\n}"
 
-                | `Profile (prof_id, c_expr) ->
-                      ("START_PROFILE("^prof_id^")")^"\n"^
+                | `Profile (statsType, prof_id, c_expr) ->
+                      ("START_PROFILE(\""^statsType^"\", "^prof_id^")")^"\n"^
                           (sce_aux c_expr level)^"\n"^
-                          tab^("END_PROFILE("^prof_id^")\n")
+                          tab^("END_PROFILE(\""^statsType^"\", "^prof_id^")\n")
 
 	in
 	    tab^out 
@@ -3054,7 +2961,7 @@ let rec get_return_val c_expr =
         | `AssignMap(mk,_) -> `Eval(`CTerm(`MapAccess(mk)))
         | `IfNoElse(_, c) -> get_return_val c
         | `Block(y) -> get_return_val (get_block_last c_expr)
-        | `Profile(_,c) -> get_return_val c
+        | `Profile(_,_,c) -> get_return_val c
         | _ ->
               print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
@@ -3082,11 +2989,11 @@ let remove_return_val c_expr =
                           | Some y -> Some(append_to_block block_without_last y)
                   end
 
-        | `Profile(prof_id,c) ->
+        | `Profile(st, prof_id,c) ->
               begin
                   match remove_aux c with
                       | None -> None
-                      | Some x -> Some(`Profile(prof_id,x))
+                      | Some x -> Some(`Profile(st, prof_id,x))
               end
 
         | _ ->
@@ -3108,7 +3015,7 @@ let rec replace_return_val c_expr new_rv =
               let last = get_block_last c_expr in
               let new_last = replace_return_val last new_rv in
                   `Block(List.rev (new_last::(List.tl (List.rev x))))
-        | `Profile(p,c) -> `Profile(p, replace_return_val c new_rv)
+        | `Profile(st,p,c) -> `Profile(st, p, replace_return_val c new_rv)
         | _ ->
               print_endline ("replace_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
@@ -3196,7 +3103,7 @@ let rec get_last_code_expr c_expr =
 	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
 	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
-        | `Profile(_,c) -> get_last_code_expr c
+        | `Profile(_,_,c) -> get_last_code_expr c
 
 
 let validate_incr_ops expr_op plan_op =

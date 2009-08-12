@@ -1,3 +1,6 @@
+namespace cpp DBToaster.DemoDatasets.Protocol
+namespace java DBToaster.DemoDatasets.Protocol
+
 //
 // Orderbook data
 struct VwapTuple

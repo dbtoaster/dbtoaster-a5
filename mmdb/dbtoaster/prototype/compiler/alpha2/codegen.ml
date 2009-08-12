@@ -181,7 +181,7 @@ let rec substitute_code_vars assignments c_expr =
 	    | `Block cl -> `Block(List.map sc cl)
 	    | `Return x -> `Return (sa x)
 	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
-            | `Profile(p,c) -> `Profile(p, sc c)
+            | `Profile(st, p,c) -> `Profile(st, p, sc c)
 
 let rec merge_block_code cl acc =
     match cl with
@@ -281,7 +281,7 @@ let rec simplify_code c_expr =
 	| `Handler(n, args, rt, c) ->
 	      `Handler(n, args, rt, merge_block_code (List.map simplify_code c) [])
 
-        | `Profile(p,c) -> `Profile(p, simplify_code c)
+        | `Profile(st,p,c) -> `Profile(st, p, simplify_code c)
 
 	| _ -> c_expr
 
@@ -438,7 +438,8 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 		      match existing_maps with
 			  | [] ->
                                 let fields = List.map
-                                    (fun x -> (field_of_attribute_identifier x, type_inf_mexpr (`METerm (`Attribute(x))) base_rels events decl )) e_uba
+                                    (fun x -> (field_of_attribute_identifier x,
+                                    type_inf_mexpr (`METerm (`Attribute(x))) base_rels events decl )) e_uba
                                 in
 				    (`Map(state_mid, fields, new_type), false)
 			  | [m] -> (m, true)
@@ -450,7 +451,11 @@ let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id 
 
 
 let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars base_rels events =
-    let global_decfn = fun x -> gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars x base_rels events in
+    let global_decfn =
+        fun x ->
+            gc_declare_state_for_map_expression
+                m_expr decl unbound_attrs_vars x base_rels events
+    in
     match m_expr with
 	| `Incr (sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) | `Init(sid,_,_) ->
               begin
@@ -730,31 +735,36 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                             let (re_code, re_decl) = gc_aux re new_decl (false, []) in
                                                 (gc_assign_state_map re_code map_key, re_decl)
                                         in
-				        let update_and_init_binding_code = 
-			     	            `Profile(generate_profile_id event, 
-                                            `Block ([
-					        `ForEach (map_decl, update_code);
-				 	        `IfNoElse (
-                                                    `BCTerm (
-                                                        `EQ(`CTerm(`MapContains(map_key)), `CTerm(`MapIterator(`End(mid))))),
-                                                    insert_code);
-					        `Eval(`CTerm(`MapAccess(map_key)))]))
+				        let (update_and_init_binding_code, insert_wprof_decl) = 
+                                            let prof_loc = generate_profile_id event in
+			     	                (`Profile("cpu", prof_loc, 
+                                                `Block ([
+					            `ForEach (map_decl, update_code);
+				 	            `IfNoElse (
+                                                        `BCTerm (
+                                                            `EQ(`CTerm(`MapContains(map_key)),
+                                                            `CTerm(`MapIterator(`End(mid))))),
+                                                        insert_code);
+					            `Eval(`CTerm(`MapAccess(map_key)))])),
+                                                (`ProfileLocation prof_loc)::insert_decl)
 				        in
-                                            (update_and_init_binding_code, insert_decl)
+                                            (update_and_init_binding_code, insert_wprof_decl)
 
 				  (* TODO: garbage collection, min *)	
 			          | `Delete _ -> 
                                         let delete_code = gc_incr_state_map e_code map_key op diff in
                                         let update_code = gc_incr_state_map e_code update_map_key op diff in
-				        let delete_and_update_binding_code = 
-                                            `Profile(generate_profile_id event,
-				            `Block ([
-                                                delete_code;
-					        (* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
-	 				        `ForEach (map_decl, update_code);
-					        `Eval(`CTerm(`MapAccess(map_key)))]))
+				        let (delete_and_update_binding_code, delete_wprof_decl) = 
+                                            let prof_loc = generate_profile_id event in
+                                                (`Profile("cpu", prof_loc,
+				                `Block ([
+                                                    delete_code;
+					            (* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
+	 				            `ForEach (map_decl, update_code);
+					            `Eval(`CTerm(`MapAccess(map_key)))])),
+                                                (`ProfileLocation prof_loc)::new_decl)
 				        in
-                                            (delete_and_update_binding_code, new_decl)
+                                            (delete_and_update_binding_code, delete_wprof_decl)
 
 		      else
                           let (e_vars, _) = List.split(match event with
@@ -828,7 +838,11 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
             | `Domain (sid, attrs) ->
                   let (domain_decl, new_decl) =
                       let dom_fields =
-                          List.map (fun x -> (field_of_attribute_identifier x, type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl )) attrs
+                          List.map
+                              (fun x ->
+                                  (field_of_attribute_identifier x,
+                                  type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl))
+                              attrs
                       in
                       let existing_decl =
                           List.filter
@@ -853,8 +867,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                       List.concat (List.map
                           (fun (aid,expr) ->
                               let new_var = field_of_attribute_identifier aid in
-			      let new_type = type_inf_mexpr (`METerm (`Attribute(aid))) base_rels [event] decl in
-
+			      let new_type = type_inf_mexpr (`METerm (`Attribute(aid))) base_rels [event] decl
+                              in
                                   [`Declare(`Variable(new_var, new_type));
                                   `Assign(new_var, create_code_expression expr)])
                           a)
@@ -965,8 +979,12 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                                   | None -> `IfNoElse(pred_test_code, iter_code)
                                                   | Some av -> `Block([av; `IfNoElse(pred_test_code, iter_code)])
 				in
-                                let profiled_new_iter_code = `Profile(generate_profile_id event, new_iter_code) in
-				    gc_plan_aux cq profiled_new_iter_code pred_decl bind_info 
+                                let (profiled_new_iter_code, pred_wprof_decl) =
+                                    let prof_loc = generate_profile_id event in
+                                        (`Profile("cpu", prof_loc, new_iter_code),
+                                        (`ProfileLocation prof_loc)::pred_decl)
+                                in
+				    gc_plan_aux cq profiled_new_iter_code pred_wprof_decl bind_info 
 
 			  | _ ->
 				let new_iter_code =
@@ -996,8 +1014,12 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                   in
 		  let dom_id = gen_dom_sym (sid) in
                   let dom_field_names = List.map field_of_attribute_identifier d in
-                  let dom_fields = List.map (fun x -> (field_of_attribute_identifier x, 
-					type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl )) d in
+                  let dom_fields =
+                      List.map
+                          (fun x ->
+                              (field_of_attribute_identifier x, 
+		              type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl)) d
+                  in
 		  let dom_decl = `Domain(dom_id, dom_fields) in
                   let dom_ds = datastructure_of_declaration dom_decl in
                   let (new_iter_code, new_decl) =
@@ -1067,7 +1089,9 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
     let separate_global_declarations code =
 	List.partition
 	    (fun x -> match x with
-		| `Declare(`Map _) | `Declare(`Relation _) | `Declare(`Domain _) -> true
+		| `Declare(`Map _) | `Declare(`Relation _)
+                | `Declare(`Domain _) | `Declare(`ProfileLocation _)
+                      -> true
 		| _ -> false)
             code
     in
@@ -1103,9 +1127,9 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 
 (* map expression list ->
    (int * variable identifier) list -> (state_identifier * int) list ->
-   -> plan list
-   (declaration list) *  (state_identifier * declaration) list *)
-let generate_map_declarations maps map_vars state_parents base_rels events=
+   plan list -> delta list ->
+   (declaration list) * (variable_identifier * code_term) list * (state_identifier * declaration) list *)
+let generate_map_declarations maps map_vars state_parents base_rels events =
 
     List.iter (fun me ->
         print_endline ("gmd: "^
@@ -1150,7 +1174,7 @@ let generate_map_declarations maps map_vars state_parents base_rels events=
                 let (new_decl, _) =
                     gc_declare_state_for_map_expression me [] me_uba_w_vars me_id base_rels events
                 in
-                    (* Handle mulitple uses of this map *)
+                (* Handle mulitple uses of this map *)
                 let vars_using_map =
                     let vum = List.map (fun (_,v) -> v)
                         (List.filter (fun (hv, _) -> hv = me_hv) map_vars)
@@ -1191,7 +1215,7 @@ let generate_map_declarations maps map_vars state_parents base_rels events=
 
                     | (false, false) ->
                           let new_decl_var = gen_var_sym() in
-			  let new_type = type_inf_mexpr_map m base_rels events  maps map_vars in
+			  let new_type = type_inf_mexpr_map m base_rels events maps map_vars in
                           let new_decl = `Variable(new_decl_var, new_type) in
                               print_endline ("Using newly declared var: "^new_decl_var^
                                   " for hash: "^(string_of_int par));
@@ -1240,12 +1264,18 @@ let generate_includes out_chan =
  * Standalone engine+debugger generation
  ************************************)
 
+(* TODO: move id generation to algebra.ml *)
+
 (* unit -> stream name * stream id *)
-let stream_counter = ref 0
-let generate_stream_id stream_name = 
-    let r = !stream_counter in
-        incr stream_counter;
-        ("stream"^stream_name^"Id", (string_of_int r))
+let stream_ids = Hashtbl.create 10
+let get_stream_id_name stream_name = "stream"^stream_name^"Id"
+
+let generate_stream_id stream_name =
+    let (id_name, id) =
+        (get_stream_id_name stream_name, Hashtbl.length stream_ids)
+    in
+        Hashtbl.add stream_ids id_name id;
+        (id_name, id)
 
 let fun_obj_id_counter = ref 0
 let generate_function_object_id handler_name =
@@ -1265,7 +1295,8 @@ let generate_stream_engine_includes out_chan =
         "#include \"streamengine.h\"";
         "#include \"profiler.h\"";
         "#include \"datasets/adaptors.h\"";
-        "#include \"boost/bind.hpp\"\n\n";]
+        "#include \"boost/bind.hpp\"\n\n";
+        "using namespace DBToaster::Profiler;\n"; ]
     in
         output_string out_chan (list_code includes)
     
@@ -1305,7 +1336,6 @@ let generate_stream_engine_init out_chan streams_handlers_and_events =
             | _ -> raise (CodegenException
                   ("Invalid handler: "^(string_of_code_expression handler)))
     in
-    let stream_ids = Hashtbl.create 10 in
     let (init_decls, init_body) =
         List.fold_left
             (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
@@ -1331,7 +1361,7 @@ let generate_stream_engine_init out_chan streams_handlers_and_events =
                 let (declare_stream, register_stream, stream_id) =
                     let new_decl = source_type^" "^stream_name^"("^source_args^");\n" in
                         if List.mem new_decl decls_acc then
-                            ([], [], Hashtbl.find stream_ids stream_name)
+                            ([], [], get_stream_id_name stream_name)
                         else
                             let (id_name, id) = generate_stream_id stream_name in
                             let adaptor_name = stream_name^"_adaptor" in
@@ -1339,13 +1369,12 @@ let generate_stream_engine_init out_chan streams_handlers_and_events =
                                 "boost::shared_ptr<"^adaptor_type^"> "^
                                     adaptor_name^"(new "^adaptor_type^"());"
                             in
-                            let new_id = ("static int "^id_name^" = "^id^";\n") in
+                            let new_id = ("static int "^id_name^" = "^(string_of_int id)^";\n") in
                             let stream_pointer = "&"^stream_name in
                             let adaptor_deref = "*"^adaptor_name in
                             let reg =
                                 "sources.addStream<"^tuple_type^">("^stream_pointer^", "^adaptor_deref^", "^id_name^");"
                             in
-                                Hashtbl.add stream_ids stream_name id_name;
                                 ([ new_decl; new_adaptor; new_id ], [reg], id_name)
                 in
 
@@ -1416,6 +1445,7 @@ let generate_stream_engine_init out_chan streams_handlers_and_events =
         output_string out_chan init_defn
 
 
+(* TODO: generate standalone profiler running an event loop in its own thread *)
 let generate_stream_engine_main out_chan =
     (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
     let indent s = ("    "^s) in
@@ -1432,6 +1462,7 @@ let generate_stream_engine_main out_chan =
                 (block
                     (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
                     "DBToaster::StandaloneEngine::Dispatcher router;";
+                    "PROFILER_ENGINE_IMPLEMENTATION;\n";
                     "init(sources, router);";
                     "while ( sources.streamHasInputs() ) {";
                     (indent "DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();");
@@ -1663,12 +1694,21 @@ let generate_stream_debugger_includes out_chan =
         output_string out_chan (list_code includes)
 
 
-let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls streams_handlers_and_events =
-    (* Generate Thrift service
+let generate_stream_debugger_class
+        decl_out_chan impl_out_chan
+        query_id global_decls streams_handlers_and_events
+    =
+
+    (* Generate stream engine preamble: stream definitions and dispatcher function objects,
+     * multiplexer, dispatcher 
+     * Note: this initializes stream dispatching identifiers which are need for the
+     * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
+    generate_stream_engine_init impl_out_chan streams_handlers_and_events;
+
+    (* Generate Thrift protocol spec file
        -- void step(tuple)
        -- void stepn(int n)
-       -- state/map accessors
-    *)
+       -- state/map accessors *)
     let indent s = ("    "^s) in
     let list_code l =
         List.fold_left
@@ -1686,6 +1726,12 @@ let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls stre
             if (List.mem_assoc stream_name acc) then acc
             else acc@[(stream_name, stream_type_info)])
         [] streams_handlers_and_events
+    in
+    let stream_id_decls = 
+        Hashtbl.fold
+            (fun stream_id_name stream_id acc ->
+                acc@["const i32 "^stream_id_name^" = "^(string_of_int stream_id)])
+            stream_ids []
     in
     let (tuple_decls, steps_decls, stepns_decls) =
         List.fold_left
@@ -1743,24 +1789,35 @@ let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls stre
                                                 ([(inner_decl_name, list_code inner_decl)], acs_decl)
                                             else
                                                 ([], acs_decl)
+
+                                  | `ProfileLocation _ -> ([], "")
                           end
                     | _ -> raise (CodegenException
                           ("Invalid declaration: "^(indented_string_of_code_expression d)))
             in
-                (key_acc@key_decl, accessor_acc@[accessor_decl]))
+                if key_decl = [] && accessor_decl = "" then
+                    (key_acc, accessor_acc)
+                else
+                    (key_acc@key_decl, accessor_acc@[accessor_decl]))
             ([],[]) global_decls
     in
-    let service_namespace = "DBToaster.Debugger" in
-    let cpp_service_namespace = "DBToaster::Debugger" in
+    let service_namespace =
+        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
+    in
+    let cpp_service_namespace =
+        "DBToaster::Debugger"^(if query_id = "" then "" else ("::"^query_id))
+    in
     let service_decl =
         ["include \"datasets.thrift\"\n";
+        "include \"profiler.thrift\"\n";
         ("namespace cpp "^service_namespace);
         ("namespace java "^(service_namespace)^"\n");
         "typedef i32 DBToasterStreamId";
         "enum DmlType { insertTuple = 0, deleteTuple = 1 }\n"]@
+        stream_id_decls@
         (let (_,r) = List.split tuple_decls in r)@
         (let (_,r) = List.split key_decls in r)@
-        ["service Debugger {"]@
+        ["service Debugger extends profiler.Profiler {"]@
         (List.map indent steps_decls)@
         (List.map indent stepns_decls)@
         (List.map indent accessors_decls)@
@@ -1845,6 +1902,7 @@ let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls stre
                                                     "for_each("^begin_it^", "^end_it^",";
                                                     (indent inserter_mem_fn)^");"]))@
                                                 ["}\n"]
+                                  | `ProfileLocation _ -> []
                           end
                     | _ -> raise (CodegenException
                           ("Invalid declaration: "^(indented_string_of_code_expression d)))
@@ -1866,7 +1924,7 @@ let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls stre
                 (indent (indent "DBToaster::StandaloneEngine::Multiplexer& s,"));
                 (indent (indent "DBToaster::StandaloneEngine::Dispatcher& r)"));
                 (indent (": sources(s), router(r)"));
-                "{}\n"])
+                "{"; (indent "PROFILER_INITIALIZATION"); "}\n"])
         in
         ["using namespace "^cpp_service_namespace^";\n";
         ("class "^class_name^" : virtual public DebuggerIf"); "{"]@
@@ -1875,11 +1933,11 @@ let generate_stream_debugger_class decl_out_chan impl_out_chan global_decls stre
             (List.map indent
                 (steps_defns@["\n"]@
                 stepns_defns@["\n"]@
-                accessor_defns))@
+                accessor_defns@
+                ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))@
             ["};\n\n"]
     in
         output_string decl_out_chan (list_code service_decl);
-        generate_stream_engine_init impl_out_chan streams_handlers_and_events;
         output_string impl_out_chan (list_code impl_code);
         class_name
 
@@ -1910,6 +1968,7 @@ let generate_stream_debugger_main impl_out_chan stream_debugger_class =
                 "return 0;";]))
     in
         output_string impl_out_chan (list_code main_defn)
+
 
 (*
  * File I/O generation

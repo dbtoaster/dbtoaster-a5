@@ -1279,6 +1279,7 @@ let parse_treeml_file treeml_fn =
 (*
  * Compilation traces
  *)
+
 (* delta list -> (handler stages * (string * binding stages) list) list) -> string *)
 let write_compilation_trace trace_dir event_path stages_per_map_expr =
     let event_path_name = String.concat "_" (List.map get_bound_relation event_path) in
@@ -1340,3 +1341,122 @@ let write_compilation_trace trace_dir event_path stages_per_map_expr =
         output_string trace_out (delim (make_tree (declarations@trace_tml)));
         close_out trace_out;
         trace_fn
+
+
+(*
+ * Dependency graph
+ *)
+
+let write_dependency_graph graph_file id (nodes,edges) =
+    let indent s = "    "^s in
+    let rec indent_n n s = match n with 0 -> s | _ -> indent_n (n-1) (indent s) in
+    let delim l = String.concat "\n" l in
+    let make_graph g_id g_nodes g_edges =
+        let schema = [
+            "<key id=\"name\" for=\"node\" attr.name=\"name\" attr.type=\"string\"/>" ]
+        in
+            ["<graphml>";
+            indent ("<graph id=\""^g_id^"\" edgedefault=\"directed\">");]@
+            (List.map indent schema)@
+            (List.map (indent_n 2) g_nodes)@
+            (List.map (indent_n 2) g_edges)@
+            [(indent "</graph>");
+            "</graphml>"]
+    in
+    let make_nodes nodes =
+        List.flatten
+            (List.map (fun n ->
+                ["<node id=\""^n^"\">";
+                "<data key=\"name\">"^n^"</data>";
+                "</node>"])
+            nodes)
+    in
+    let make_edges edges =
+        List.map
+            (fun (s,t) -> "<edge source=\""^s^"\" target=\""^t^"\"/>")
+            edges
+    in
+    let graph_out = open_out graph_file in
+        output_string graph_out
+            (delim (make_graph id (make_nodes nodes) (make_edges edges)));
+        close_out graph_out
+
+
+(*
+ * Code profiling visualization
+ *)
+
+let xml_escape x =
+    let escape_chars = [
+        ("&", "&amp;"); ("\"", "&quot;"); ("'", "&apos;");
+        ("<", "&lt;"); (">", "&gt;") ]
+    in
+        List.fold_left
+            (fun acc (s,t) -> Str.global_replace (Str.regexp s) t acc)
+            x escape_chars
+
+let rec treeml_pseudocode_of_code_expression c_expr = 
+    let make_statement stmt =
+        "<attribute name=\"statement\" value=\""^(xml_escape stmt)^"\"/>"
+    in
+    let make_code_leaf c_expr =
+        make_leaf [make_statement (string_of_code_expression c_expr)]
+    in
+        match c_expr with
+            | `Declare d -> []
+
+            | `Assign _ | `AssignMap _ | `EraseMap _
+            | `InsertTuple _ | `DeleteTuple _
+            | `Eval _
+                -> make_code_leaf c_expr
+
+            | `IfNoElse (p, c) ->
+                  make_branch
+                      ([make_statement ("if ( "^(xml_escape (string_of_bool_code_expression p))^" )")]@
+                          (treeml_pseudocode_of_code_expression c))
+
+            | `IfElse (p, l, r) ->
+                  make_branch
+                      ([make_statement ("if ( "^(xml_escape (string_of_bool_code_expression p))^" )")]@
+                          (treeml_pseudocode_of_code_expression l)@
+                          (treeml_pseudocode_of_code_expression r))
+
+            | `ForEach (ds, c) ->
+                  make_branch
+                      ([make_statement
+                          (xml_escape
+                              ("foreach ( "^(string_of_datastructure_fields ds)^" in "^
+                              (string_of_datastructure ds)^" )"))]@
+                          (treeml_pseudocode_of_code_expression c))
+
+            | `Block cl -> List.flatten (List.map treeml_pseudocode_of_code_expression cl)
+
+            | `Return a -> make_code_leaf c_expr
+
+            | `Handler (id, args, rt, cl) -> 
+                  make_branch
+                      ([make_statement (xml_escape (rt^" "^id^"("^(string_of_field_list args)^")"))]@
+                          (List.flatten (List.map treeml_pseudocode_of_code_expression cl)))
+
+            | `Profile (stat_type, loc, c) ->
+                  make_branch
+                      ([make_statement (xml_escape ("profile "^stat_type^", "^loc))]@
+                          (treeml_pseudocode_of_code_expression c))
+
+
+let write_pseudocode file_name c_expr_l =
+    let delim l = String.concat "\n" l in
+    let pseudocode_declarations = [ "<attributeDecl name=\"statement\" type=\"String\"/>"; ] in
+    let pseudo_tree =
+        let tree_body = 
+            List.flatten (List.map
+                (fun ce -> make_branch (treeml_pseudocode_of_code_expression ce))
+                c_expr_l)
+        in
+        let root_node = "<attribute name=\"statement\" value=\""^(xml_escape "<root>")^"\"/>" in
+            make_tree (pseudocode_declarations@(make_branch ([root_node]@tree_body)))
+    in
+    let pseudo_out = open_out file_name in
+        output_string pseudo_out (delim pseudo_tree);
+        close_out pseudo_out
+    

@@ -1,6 +1,7 @@
 open Algebra
-open Codegen
 open Gui
+open Codegen
+open Analysis
 
 (* TODO:
  * -- apply_delta_plan_rules: handle conjunctive/disjunctive map expression
@@ -993,7 +994,7 @@ let rec analyse_map_expr_incrementality m_expr delta =
                           | `Attribute(a) -> [(a, None)]
                           | _ -> []
                   in
-                      `Incr(gen_state_sym(), oplus, m_expr, new_bd, m_expr)
+                      `Incr(gen_state_sym (`MapExpression m_expr), oplus, m_expr, new_bd, m_expr)
               end
 
 	| `Sum (l,r) -> analyse_binary l r (fun x y -> `Sum(x, y))
@@ -1113,7 +1114,7 @@ and analyse_plan_incrementality q delta q_attrs_used =
     match q with
 	| `Relation _ ->
               let incr_op = match delta with `Insert _ -> `Union | `Delete _ -> `Diff in
-                  `IncrPlan (gen_state_sym(), incr_op, get_domain q, [], q)
+                  `IncrPlan (gen_state_sym (`Plan q), incr_op, get_domain q, [], q)
 
 	| `Select (pred, cq) ->
               let subs_mbterm mbterm me =
@@ -2463,10 +2464,13 @@ let extract_incremental_query_from_bindings bindings parent_id event_path =
         ([], [], []) bindings
 
 
-(* map expr -> map expr list * (int * var) list * (state_id * int) list
+(* map expr -> delta list ->
+ *      map expr list * (int * var) list * (state_id * int) list
  *      * (event list * (handler stages * (var * binding stages) list) list) list
  *      * (event * (handler * binding list)) list
- * map expr to compile -> global maps created * map vars * state parents * event handlers *)
+ * map expr to compile -> delta list ->
+ *      global maps created * map vars * state parents
+ *      * compile trace * event handlers *)
 let compile_target_all m_expr event_list =
 
     (* Debugging helpers *)
@@ -2697,7 +2701,21 @@ let compile_code_rec m_expr =
                                         generate_code h b event true
                                             map_accessors stp_decls recursive_map_decls base_rels
                                     in
-                                        (gdc_acc@[gdc], hc_acc@[`Profile(generate_profile_id event, hc)]))
+                                    let prof_loc = generate_profile_id event in
+                                    (*
+                                    let unique_decls =
+                                        let unique_gdc = 
+                                            List.fold_left
+                                                (fun acc d  -> if List.mem d acc then acc else acc@[d])
+                                                [] gdc
+                                        in
+                                        List.filter
+                                            (fun d -> List.for_all (fun d_l -> not(List.mem d d_l)) gdc_acc)
+                                            ((`Declare(`ProfileLocation prof_loc))::gdc)
+                                    in
+                                    *)
+                                        (gdc_acc@[(`Declare(`ProfileLocation prof_loc))::gdc],
+                                        hc_acc@[`Profile("cpu", prof_loc, hc)]))
                                 ([], []) hb_l
                         in
 
@@ -2751,17 +2769,42 @@ let compile_code_rec m_expr =
                                               raise (CodegenException msg)
                         in
 
+                        let handler_profile_loc_decl =
+                            `ProfileLocation (generate_handler_profile_id handler_id)
+                        in
                         let handler_code =
                             `Handler(handler_id, handler_args, handler_ret_type, handler_body_with_rv)
                         in
-                            (gd_acc@merged_decls, handler_acc@[(handler_code, event)])
+                        let unique_merged_decls =
+                            List.filter
+                                (function
+                                    | `Declare(d) ->
+                                          let compare_decl_id =
+                                              function
+                                                  | `Declare(d2) -> 
+                                                        (identifier_of_declaration d) = (identifier_of_declaration d2)
+                                                  | _ -> raise (CodegenException("Invalid declaration: "))
+                                          in
+                                              not(List.exists compare_decl_id gd_acc)
+                                    | _ -> raise (CodegenException("Invalid declaration: ")))
+                                merged_decls
+                        in
+                            (gd_acc@[`Declare(handler_profile_loc_decl)]@unique_merged_decls,
+                            handler_acc@[(handler_code, event)])
                     end
                 else
                     (gd_acc, handler_acc))
 
             ([], []) handlers_by_event
     in
-        ((recursive_map_decls@global_decls, handler_and_events), event_path_stages)
+
+    (* Organize declarations *)
+    let all_decls = recursive_map_decls@global_decls in
+    let (prof_loc_decls, other_decls) = List.partition
+        (fun x -> match x with
+            | `Declare(`ProfileLocation _) -> true | _ -> false) all_decls
+    in
+        ((prof_loc_decls@other_decls, handler_and_events), event_path_stages)
 
 
 (*
@@ -2791,6 +2834,66 @@ let compile_query m_expr out_file_name =
 (*
  * Engine compilation: handlers, stream multiplexer, dispatcher, main
  *)
+
+let write_trace_and_catalog file_name compile_trace =
+    let catalog_fn =
+        if Filename.check_suffix file_name "tc" then file_name
+        else ((Filename.chop_extension file_name)^".tc")
+    in
+    let trace_catalog_out = open_out catalog_fn in
+        (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
+        List.iter
+            (fun (ep, stages_l) ->
+                let event_path_name = String.concat "/"
+                    (List.map (fun e -> match e with
+                        | `Insert(r,_) -> "insert"^r
+                        | `Delete(r,_) -> "delete"^r) ep)
+                in
+
+                (* write out compilation trace for each map expression for this event path *)
+                let trace_fn = write_compilation_trace
+                    (Filename.dirname catalog_fn) ep stages_l
+                in
+                    (* track trace file in catalog *)
+                    output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
+            compile_trace;
+        close_out trace_catalog_out
+
+let write_profile_locations file_name =
+    let profile_loc_out = open_out file_name in
+        Hashtbl.iter
+            (fun str_id loc_id ->
+                output_string profile_loc_out ((string_of_int loc_id)^","^str_id))
+            code_locations;
+        close_out profile_loc_out
+
+let write_analysis_files handlers_and_events trace_file_name compile_trace =
+    let analysis_base_fn = Filename.chop_extension trace_file_name in
+    let query_id = Filename.basename analysis_base_fn in
+
+        (* Output compilation trace if desired *)
+        write_trace_and_catalog trace_file_name compile_trace;
+    
+        (* Output profile locations *)
+        let prof_fn = analysis_base_fn^".prl" in
+            write_profile_locations prof_fn;
+
+            (* Output map+variable dependencies *)
+            let graph_fn = analysis_base_fn^".deps" in
+            let dep_graph =
+                List.fold_left
+                    (fun (node_acc, edge_acc) (h,e) ->
+                        let (nodes,edges) = build_dependency_graph (get_dependencies h) in
+                            (node_acc@nodes, edge_acc@edges))
+                    ([], []) handlers_and_events
+            in
+                write_dependency_graph graph_fn query_id dep_graph;
+
+                (* Output pseudocode *)
+                let pseudo_fn = analysis_base_fn^".pseudo" in
+                let (handler_l, _) = List.split handlers_and_events in
+                    write_pseudocode pseudo_fn handler_l
+
 
 let compile_standalone_engine m_expr relation_sources out_file_name trace_file_name_opt =
     let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr in
@@ -2838,43 +2941,21 @@ let compile_standalone_engine m_expr relation_sources out_file_name trace_file_n
 
         close_out out_chan;
 
-        (* Output compilation trace if desired *)
+        (* Output additional information from compilation *)
         match trace_file_name_opt with
             | None -> ()
-            | Some fn ->
-                  begin
-                      let catalog_fn =
-                          if Filename.check_suffix fn "tc" then fn
-                          else ((Filename.chop_extension fn)^".tc")
-                      in
-                      let trace_catalog_out = open_out catalog_fn in
-                          (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
-                          List.iter
-                              (fun (ep, stages_l) ->
-                                  let event_path_name = String.concat "/"
-                                      (List.map (fun e -> match e with
-                                          | `Insert(r,_) -> "i"^r
-                                          | `Delete(r,_) -> "d"^r) ep)
-                                  in
-
-                                  (* write out compilation trace for each map expression for this event path *)
-                                  let trace_fn = write_compilation_trace
-                                      (Filename.dirname catalog_fn) ep stages_l
-                                  in
-                                      (* track trace file in catalog *)
-                                      output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
-                              compile_trace;
-                          close_out trace_catalog_out
-                  end
+            | Some fn -> write_analysis_files handlers_and_events fn compile_trace
 
 
 (*
  * Debugger compilation: handlers, stream multiplexer, dispatcher, Thrift service
  *)
 let compile_standalone_debugger m_expr relation_sources out_file_name trace_file_name_opt =
+    let query_base_path = Filename.chop_extension out_file_name in
+    let query_id = Filename.basename query_base_path in
     let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr in
     let code_out_chan = open_out out_file_name in
-    let thrift_file_name = (Filename.chop_extension out_file_name)^".thrift"in
+    let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
 
         generate_includes code_out_chan;
@@ -2919,37 +3000,13 @@ let compile_standalone_debugger m_expr relation_sources out_file_name trace_file
         (* Stream debugger and main *)
         let stream_debugger_class =
             generate_stream_debugger_class thrift_out_chan code_out_chan
-                global_decls streams_handlers_and_events
+                query_id global_decls streams_handlers_and_events
         in
             generate_stream_debugger_main code_out_chan stream_debugger_class;
             close_out thrift_out_chan;
             close_out code_out_chan;
 
-        (* Output compilation trace if desired *)
-        match trace_file_name_opt with
-            | None -> ()
-            | Some fn ->
-                  begin
-                      let catalog_fn =
-                          if Filename.check_suffix fn "tc" then fn
-                          else ((Filename.chop_extension fn)^".tc")
-                      in
-                      let trace_catalog_out = open_out catalog_fn in
-                          (* compile_trace: (event path * (handler stages * binding stages list) list) list *)
-                          List.iter
-                              (fun (ep, stages_l) ->
-                                  let event_path_name = String.concat "/"
-                                      (List.map (fun e -> match e with
-                                          | `Insert(r,_) -> "insert"^r
-                                          | `Delete(r,_) -> "delete"^r) ep)
-                                  in
-
-                                  (* write out compilation trace for each map expression for this event path *)
-                                  let trace_fn = write_compilation_trace
-                                      (Filename.dirname catalog_fn) ep stages_l
-                                  in
-                                      (* track trace file in catalog *)
-                                      output_string trace_catalog_out (event_path_name^","^trace_fn^"\n"))
-                              compile_trace;
-                          close_out trace_catalog_out
-                  end
+            (* Output additional information from compilation *)
+            match trace_file_name_opt with
+                | None -> ()
+                | Some fn -> write_analysis_files handlers_and_events fn compile_trace

@@ -137,8 +137,8 @@ struct
     let tml_sources = ref []
     let add_tml_source filename = tml_sources := (!tml_sources)@[filename]
 
-    let source_output_file = ref "query.cc"
-    let binary_output_file = ref "query.dbte"
+    let source_output_file = ref ("query.cc")
+    let binary_output_file = ref ("query.dbte")
     let compile_mode = ref Engine
     let data_sources_config_file = ref "datasources.xml"
 
@@ -148,11 +148,14 @@ struct
             | Engine -> ".dbte"
             | Debugger -> ".dbtd"
 
+    let dbtoaster_build_dir = ref "_dbtbuild"
+
     let set_source_output s =
         source_output_file := (Filename.chop_extension s)^".cc"
 
     let set_binary_output s =
-        binary_output_file := (Filename.chop_extension s)^(get_extension !compile_mode)
+        binary_output_file :=
+            (Filename.chop_extension s)^(get_extension !compile_mode)
 
     let set_compile_mode m_str = 
         let m = match m_str with
@@ -175,20 +178,52 @@ struct
     let cxx_linker_flags = ref ""
     let cxx_linker_libs = ref ""
 
+    let thrift_binary = ref "thrift"
     let thrift_output_dir = ref "thrift"
     let thrift_languages = ref "-gen cpp -gen java"
     let thrift_flags = ref ""
 
-    let append_ref r s =
-        r := (if (String.length !r) = 0 then "" else (!r^" "))^s
+    let thrift_cxx_flags = ref ""
+    let thrift_java_classpath = ref ""
+
+    let thrift_modules = ref []
+
+    let append_ref_delim r s delim =
+        r := (if (String.length !r) = 0 then "" else (!r^delim))^s
+
+    let append_ref r s = append_ref_delim r s " "
 
     let append_cxx_flags s = append_ref cxx_flags ("-I"^s)
     let append_cxx_linker_flags s = append_ref cxx_linker_flags ("-L"^s)
     let append_cxx_linker_libs s = append_ref cxx_linker_libs ("-l"^s)
 
+    let set_thrift_binary s = thrift_binary := s
     let set_thrift_language s = thrift_languages := ("-gen "^s)
     let append_thrift_languages s = append_ref thrift_languages ("-gen "^s)
-    let append_thrift_flags s = append_ref thrift_flags s
+
+    let append_thrift_flags s =
+        let flag_and_val = Str.split (Str.regexp ",") s in
+            if (List.length flag_and_val) = 2 then
+                append_ref thrift_flags
+                    (" -"^(List.hd flag_and_val)^" "^(List.hd (List.tl flag_and_val)))
+            else
+                print_endline ("Invalid Thrift flag argument: "^s^" ... skipping.")
+
+    let append_thrift_cxx_flags s = append_ref thrift_cxx_flags ("-I"^s)
+    let append_thrift_java_classpath s = append_ref_delim thrift_java_classpath s ":"
+
+    let append_thrift_module s =
+        let mod_name_and_path = Str.split (Str.regexp ",") s in
+            if (List.length mod_name_and_path = 2) then
+                begin
+                    let thrift_module_base = List.hd (List.tl mod_name_and_path) in
+                        thrift_modules := (!thrift_modules@
+                            [(List.hd mod_name_and_path, thrift_module_base)]);
+                        append_thrift_cxx_flags
+                            (Filename.concat thrift_module_base "gen-cpp")
+                end
+            else
+                print_endline ("Invalid module argument: "^s^" ... skipping.")
 
     let dbtoaster_arg_spec = [
         ("-o", String (set_source_output), "output file prefix");
@@ -197,9 +232,13 @@ struct
         ("-cI", String (append_cxx_flags), "C++ include flags");
         ("-cL", String (append_cxx_linker_flags), "C++ linker flags");
         ("-cl", String (append_cxx_linker_libs), "C++ linker libraries");
+        ("-thrift", String (set_thrift_binary), "Set Thrift binary");
         ("-t", String (set_thrift_language), "Set Thrift output language");
         ("-tl", String (append_thrift_languages), "Add Thrift output language");
         ("-tI", String (append_thrift_flags), "Thrift include flags");
+        ("-tm", String (append_thrift_module), "Add Thrift module.");
+        ("-tCI", String (append_thrift_cxx_flags), "Add include path for compiling Thrift C++ sources");
+        ("-tcp", String (append_thrift_java_classpath), "Add classpath for compiling Thrift java sources");
     ]
 end;;
 
@@ -209,16 +248,72 @@ open CompileOptions
 (* Very basic command construction, should replace with at least a Makefile,
  *  if not ocamlbuild *)
 
+let get_output_file f =
+    let r =
+    if Filename.is_relative f && (Filename.dirname f) = "." then
+        Filename.concat (!dbtoaster_build_dir) f
+    else if Sys.file_exists (Filename.dirname f) &&
+        Sys.is_directory (Filename.dirname f)
+    then f
+    else raise (BuildException ("Invalid output file: "^f))
+    in
+        print_endline ("Using output file "^r^" from "^f^" dir "^(Filename.dirname f));
+        r
+
+let get_binary_output_file f =
+    if (Filename.dirname f) = "" then f
+    else if Sys.file_exists (Filename.dirname f) &&
+        Sys.is_directory (Filename.dirname f)
+    then f
+    else raise (BuildException ("Invalid output file: "^f))
+
 let get_object_file source_file =
     (Filename.chop_extension source_file)^".o"
 
 let get_binary_file source_file =
     (Filename.chop_extension source_file)^".dbte"
 
+let get_debugger_binary_file source_file =
+    (Filename.chop_extension source_file)^".dbtd"
+
+let get_debugger_java_client_file () = "debugger.jar"
+
 let get_thrift_service_sources service_name = service_name^".cpp"
 
+(* Gets the java namespace specified in the Thrift module *)
+let get_java_namespace thrift_module =
+    let module_lines = Std.input_list (open_in thrift_module) in
+    let java_namespace_lines =
+        List.filter
+            (fun x -> Str.string_match (Str.regexp "^namespace\\ *java") x 0)
+            module_lines
+    in
+        match (List.length java_namespace_lines) with
+            | 0 -> ""
+            | 1 ->
+                  begin
+                      let namespace_str = List.hd java_namespace_lines in
+                      let matched =
+                          Str.string_match
+                              (Str.regexp "namespace\\ *java\\ *\\([^\\ ]*\\)")
+                              namespace_str 0
+                      in
+                          if matched then (Str.matched_group 1 namespace_str)
+                          else
+                              raise (ThriftException
+                                  ("Invalid java namespace '"^namespace_str^"'"))
+                  end
+
+            | x -> raise (ThriftException
+                  ("Found "^(string_of_int x)^" java namespaces in "^thrift_module))
+
+(* Gets the java namespace specified in the Thrift module as a directory *)
+let get_java_namespace_dir thrift_module =
+    Str.global_replace
+        (Str.regexp "\\.") "/" (get_java_namespace thrift_module)
+
 (* Returns sources files produced for thrift modules, recurring over dependents. *)
-let rec get_thrift_sources thrift_module =
+let rec get_thrift_sources thrift_module known_dependents =
     let module_name = Filename.chop_extension (Filename.basename thrift_module) in
     let module_lines = Std.input_list (open_in thrift_module) in
     let includes =
@@ -240,7 +335,10 @@ let rec get_thrift_sources thrift_module =
                             end)
                 include_lines
         in
-            List.filter (fun x -> not (x = "")) included_files
+            (* Skip known dependents *)
+            List.filter
+                (fun x -> not (x = "") && not(List.mem x known_dependents))
+                included_files
     in
     let services = 
         let service_lines =
@@ -252,7 +350,7 @@ let rec get_thrift_sources thrift_module =
             List.map
                 (fun x ->
                     let matched =
-                        Str.string_match (Str.regexp "service\\ *\\([^{\\ ]*\\)\\ *{") x 0
+                        Str.string_match (Str.regexp "service\\ *\\([^{\\ ]*\\)\\ .*{") x 0
                     in
                         try
                             if matched then Str.matched_group 1 x else ""
@@ -266,69 +364,198 @@ let rec get_thrift_sources thrift_module =
             List.map get_thrift_service_sources
                 (List.filter (fun x -> not (x = "")) service_decls)
     in
-        (List.flatten (List.map get_thrift_sources includes))@
-            [module_name^"_constants.cpp"; module_name^"_types.cpp"]@
+        (List.flatten (List.map (fun i -> get_thrift_sources i known_dependents) includes))@
+            [module_name^"_constants.cpp"; module_name^"_types.cpp"; module_name^"_operators.cpp"]@
             services
 
+let get_thrift_objects thrift_module known_dependents =
+    let thrift_sources = get_thrift_sources thrift_module known_dependents in
+        List.map (fun x -> (Filename.chop_extension x)^".o") thrift_sources
 
-(* TODO: check and create thrift output dir as necessary *)
+(* absolute module source path * module base path -> sources list * objects list
+ * Gets sources that need to be compiled, and existing objects for Thrift modules *)
+let get_thrift_module_sources_and_objects thrift_modules =
+    (* Build Thrift compile commands for any Thrift module sources *)
+    let thrift_object_file_names =
+        List.flatten
+            (List.map (fun (module_name, module_base) ->
+                let interface_base = Filename.concat module_base "gen-cpp" in
+                    List.map 
+                        (Filename.concat interface_base)
+                        (get_thrift_objects module_name []))
+                thrift_modules)
+    in
+    let (thrift_objects_from_source, thrift_module_object_files) =
+        List.partition (fun x -> not (Sys.file_exists x)) thrift_object_file_names
+    in
+    let thrift_module_source_files =
+        List.filter 
+            (fun (_,x) -> Sys.file_exists x)
+            (List.map 
+                (fun o -> (Filename.basename o, (Filename.chop_extension o)^".cpp"))
+                thrift_objects_from_source)
+    in
+        (thrift_module_source_files, thrift_module_object_files)
+
+(* Builds Thrift compilation command, checking and create output dir as necessary *)
 let build_thrift_cmd thrift_file_name =
     let cmd =
-        "thrift -o "^(!thrift_output_dir)^" "^(!thrift_flags)^" "^
+        (!thrift_binary)^" -o "^(!thrift_output_dir)^" "^(!thrift_flags)^" "^
             (!thrift_languages)^" "^thrift_file_name
     in
+    let out_exists = Sys.file_exists !thrift_output_dir in
+        begin
+            if out_exists && not(Sys.is_directory !thrift_output_dir)
+            then
+                (print_endline ("Invalid output directory: "^(!thrift_output_dir));
+                exit 1)
+            else if not out_exists then
+                (print_endline ("Creating Thrift output directory: "^(!thrift_output_dir));
+                Unix.mkdir !thrift_output_dir 0o755)
+        end;
         (cmd, !thrift_output_dir)
 
-let build_cpp_compile_cmd source_file =
-    "g++ -o "^(get_object_file source_file)^
-        " -c "^(!cxx_flags)^" "^source_file
+let build_thrift_cpp_compile_cmd_with_output source_file output_file =
+    let output = get_output_file output_file in
+        ("g++ -o "^output^" -c "^(!thrift_cxx_flags)^" "^source_file, output)
+
+let build_thrift_cpp_compile_cmd source_file =
+    build_thrift_cpp_compile_cmd_with_output source_file (get_object_file source_file)
+
+let build_query_cpp_compile_cmd_with_output source_file output_file =
+    let output = get_output_file output_file in
+        ("g++ -o "^output^" -c "^(!cxx_flags)^" "^(!thrift_cxx_flags)^" "^source_file, output)
+
+let build_query_cpp_compile_cmd source_file =
+    build_query_cpp_compile_cmd_with_output source_file (get_object_file source_file)
 
 let build_cpp_linker_cmd output_file object_files =
-    "g++ -o "^output_file^" "^
+    "g++ -o "^(get_binary_output_file output_file)^" "^
         (List.fold_left
             (fun acc o ->
                 (if (String.length acc) = 0 then "" else acc^" ")^o)
             "" object_files)^" "^
         (!cxx_linker_flags)^" "^(!cxx_linker_libs)
 
+let build_thrift_java_compile_cmd package_dir =
+    "javac -cp "^(!thrift_java_classpath)^" "^package_dir^"/*.java"
+
+let build_thrift_java_jar_cmd output_file package_base =
+    "jar cf "^output_file^" -C "^package_base^" ."
 
 let check_status cmd =
+    print_endline ("Running command: "^cmd);
     match Unix.system cmd with
         | Unix.WEXITED id when id = 0 -> ()
         | _ ->
               print_endline ("Failed to run command "^cmd);
               raise (BuildException ("Failed to run command "^cmd))
 
+(* TODO: should we move the object file to the top level project dir? *)
 let build_query_object query_source =
-    check_status (build_cpp_compile_cmd query_source)
+    let (cmd,out) = build_query_cpp_compile_cmd query_source in
+        check_status cmd;
+        out
     
-let build_standalone_engine query_source =
-    let object_files = [get_object_file query_source] in
-    let binary_file = get_binary_file query_source in
-        build_query_object query_source;
-        check_status (build_cpp_linker_cmd binary_file object_files)
+let build_standalone_engine query_source thrift_modules =
+    (* Build Thrift compile commands for any Thrift module sources *)
+    let (thrift_module_source_files, thrift_module_object_files) =
+        get_thrift_module_sources_and_objects thrift_modules
+    in
+    let thrift_compile_cmds_and_outputs =
+        List.map
+            (fun (target,src) ->
+                build_thrift_cpp_compile_cmd_with_output src target)
+            thrift_module_source_files
+    in
+    let (thrift_compile_cmds, thrift_objects_built) =
+        List.split thrift_compile_cmds_and_outputs
+    in
 
-let build_debugger query_source =
+    (* Track all object files, including objects from Thrift libraries *)
+    let thrift_object_files = (thrift_objects_built)@thrift_module_object_files in
+    let binary_file = get_binary_file query_source in
+        (* Compile Thrift code *)
+        List.iter check_status thrift_compile_cmds;
+
+        (* Compile query code *)
+        let query_object = build_query_object query_source in
+
+        (* Link *)
+        let link_cmd = 
+            build_cpp_linker_cmd binary_file (thrift_object_files@[query_object])
+        in
+            check_status link_cmd
+
+let build_debugger query_source thrift_modules =
+    let known_thrift_modules =
+        List.map (fun (x,_) -> Filename.basename x) thrift_modules in
+    let (thrift_module_source_files, thrift_module_object_files) =
+        get_thrift_module_sources_and_objects thrift_modules
+    in
+
+    (* Process debugger's Thrift file *)
     let thrift_file = (Filename.chop_extension query_source)^".thrift" in
     let (thrift_cmd, thrift_output_dir) = build_thrift_cmd thrift_file in
-    let prepend_thrift_dir s = Filename.concat thrift_output_dir s in
-    let source_files = 
-        (List.map prepend_thrift_dir (get_thrift_sources thrift_file))@
-            [query_source]
-    in
-    let object_files = List.map get_object_file source_files in
-    let binary_file = get_binary_file query_source in
-    let compile_cmds = List.map build_cpp_compile_cmd source_files in
-    let linker_cmd = build_cpp_linker_cmd binary_file object_files in
 
-        (* Invoke thrift *)
-        check_status thrift_cmd;
+    (* Invoke thrift before building compile cmds for thrift sources *)
+    check_status thrift_cmd;
+
+    let thrift_source_dir = Filename.concat thrift_output_dir "gen-cpp" in
+
+    (* Build Java client jar file *)
+    let thrift_java_package_base_dir = Filename.concat thrift_output_dir "gen-java" in
+    let thrift_java_package_dir = get_java_namespace_dir thrift_file in
+    let thrift_java_source_dir =
+        Filename.concat thrift_java_package_base_dir thrift_java_package_dir
+    in
+    let thrift_java_compile_cmd =
+        build_thrift_java_compile_cmd thrift_java_source_dir
+    in
+    let thrift_jar_cmd =
+        build_thrift_java_jar_cmd (get_debugger_java_client_file())
+            thrift_java_package_base_dir
+    in
+        check_status thrift_java_compile_cmd;
+        check_status thrift_jar_cmd;
+
+    let prepend_thrift_dir s = Filename.concat thrift_source_dir s in
+    let thrift_source_files =
+        List.filter Sys.file_exists
+            (List.map prepend_thrift_dir
+                (get_thrift_sources thrift_file known_thrift_modules))
+    in
+    (* Track all Thrift compilations, and objects for linking *)
+    let thrift_compile_cmds_and_outputs =
+        (List.map
+            (fun (target, src) -> build_thrift_cpp_compile_cmd_with_output src target)
+            thrift_module_source_files)@
+        (List.map
+            (fun x ->
+                let target = Filename.basename (get_object_file x) in
+                    build_thrift_cpp_compile_cmd_with_output x target)
+            thrift_source_files)
+    in
+    let (thrift_compile_cmds, thrift_object_files) =
+        List.split thrift_compile_cmds_and_outputs
+    in
+
+    (* Add local Thrift generated source to includes *)
+    append_cxx_flags thrift_source_dir;
+
+    let thrift_object_files = thrift_module_object_files@thrift_object_files in
+    let binary_file = get_debugger_binary_file query_source in
 
         (* Invoke g++ -c *)
-        List.iter check_status compile_cmds;
+        List.iter check_status thrift_compile_cmds;
+
+        let query_object = build_query_object query_source in
 
         (* Invoke g++ -o *)
-        check_status linker_cmd
+        let link_cmd =
+            build_cpp_linker_cmd binary_file (thrift_object_files@[query_object])
+        in
+            check_status link_cmd
         
 
 let main () =
@@ -378,21 +605,31 @@ let main () =
                 | Handlers ->
                       begin
                           compile_query m_expr !source_output_file;
-                          build_query_object !source_output_file
+                          ignore(build_query_object !source_output_file)
                       end
                           
                 | Engine ->
                       begin
+                          if not(Sys.file_exists !dbtoaster_build_dir) then
+                              begin
+                                  print_endline ("Creating build directory "^(!dbtoaster_build_dir));
+                                  Unix.mkdir !dbtoaster_build_dir 0o755;
+                              end;
                           compile_standalone_engine m_expr relation_sources
                               !source_output_file trace_out_file_opt;
-                          build_standalone_engine !source_output_file
+                          build_standalone_engine !source_output_file !thrift_modules
                       end
                           
                 | Debugger ->
                       begin
+                          if not(Sys.file_exists !dbtoaster_build_dir) then
+                              begin
+                                  print_endline ("Creating build directory "^(!dbtoaster_build_dir));
+                                  Unix.mkdir !dbtoaster_build_dir 0o755;
+                              end;
                           compile_standalone_debugger m_expr relation_sources
                               !source_output_file trace_out_file_opt;
-                          build_debugger !source_output_file
+                          build_debugger !source_output_file !thrift_modules
                       end
         end
 ;;
