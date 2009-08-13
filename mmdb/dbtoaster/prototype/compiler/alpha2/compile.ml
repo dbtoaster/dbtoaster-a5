@@ -964,7 +964,10 @@ let rec analyse_map_expr_incrementality m_expr delta =
 		match (new_l, new_r) with
 		    | (`Incr (sx,ox,rex,bdx,x), `Incr (sy,oy,rey,bdy,y)) -> 
 			  if ox = oy then
-                              `Incr(sx, ox, fn rex rey, merge_bindings bdx bdy, fn x y)
+                              let new_me = fn x y in
+                                  `Incr(merge_state_sym (`MapExpression x) (`MapExpression y) 
+                                          (`MapExpression new_me) sx,
+                                      ox, fn rex rey, merge_bindings bdx bdy, new_me)
 			  else `New(fn new_l new_r)
 
 		    | (`New x, `New y) -> `New(fn x y)
@@ -1046,7 +1049,10 @@ let rec analyse_map_expr_incrementality m_expr delta =
                                     `New (`MapAggregate(fn, new_f, new_q))
                                 else
                                     let new_bd = merge_query_bindings bdx bdy y in
-                                        `Incr (sx, ox, m_expr, new_bd, `MapAggregate(fn, x, y))
+                                    let new_me = `MapAggregate(fn, x, y) in
+                                        `Incr (merge_state_sym (`MapExpression x) (`Plan y) 
+                                                (`MapExpression new_me) sx,
+                                            ox, m_expr, new_bd, new_me)
 
 			  | (`Min, `Incr (sx,ox,rx,bdx,x), `IncrPlan (sy,oy,dy,bdy,y))
 			  | (`Max, `Incr (sx,ox,rx,bdx,x), `IncrPlan (sy,oy,dy,bdy,y))
@@ -1069,7 +1075,10 @@ let rec analyse_map_expr_incrementality m_expr delta =
                                                       | `Min -> `Decrmin(x, sy) | `Max -> `Decrmax(x, sy)
                                                       | _ -> raise InvalidExpression)
                                         in
-                                            `Incr(sx, oplus, m_expr, new_bdx, `MapAggregate(fn, x, fn_q))
+                                        let new_me = `MapAggregate(fn, x, fn_q) in
+                                            `Incr(merge_state_sym (`MapExpression x) (`Plan y) 
+                                                    (`MapExpression new_me) sx, 
+                                                oplus, m_expr, new_bdx, new_me)
                                     else
                                         `New (`MapAggregate(fn, new_f, new_q))
 
@@ -1162,7 +1171,10 @@ and analyse_plan_incrementality q delta q_attrs_used =
                                               let new_bd = merge_bindings
                                                   (List.map (fun x -> (x, None)) pred_uba) bd
                                               in
-                                                  `IncrPlan(sid, op, get_domain cqq, new_bd, `Select (pred, cqq))
+                                              let new_p = `Select (pred, cqq) 
+                                              in
+                                                  `IncrPlan(update_state_sym (`Plan cqq) (`Plan new_p) sid, 
+                                                      op, get_domain cqq, new_bd, new_p)
 					| _ -> raise InvalidExpression
 				end
 	      end
@@ -1210,7 +1222,13 @@ and analyse_plan_incrementality q delta q_attrs_used =
 		      if all_incr then
                           let (bds, cqs) = List.split (lift_child_incrplans rc) in
                           let new_bd = List.fold_left merge_bindings [] bds in
-			      `IncrPlan(sid, op, get_domain q, new_bd, `Union cqs)
+                          let new_p = `Union cqs in
+                              List.iter 
+                                  (fun x -> match x with 
+                                      |`IncrPlan(_,_,_,_,p) -> remove_state_sym (`Plan p)
+                                      | _ -> raise InvalidExpression)
+                              rc;
+			      `IncrPlan(gen_state_sym (`Plan new_p), op, get_domain q, new_bd, new_p)
 		      else 
 			  `NewPlan(`Union (lift_child_newplans rc))
 		  end
@@ -1220,10 +1238,12 @@ and analyse_plan_incrementality q delta q_attrs_used =
 	      let rr = analyse_plan_incrementality r delta q_attrs_used in
 		  begin
 		      match (lr, rr) with
-			  | (`IncrPlan (sx,ox,dx,bdx,x), `IncrPlan (_,oy,dy,bdy,y)) -> 
+			  | (`IncrPlan (sx,ox,dx,bdx,x), `IncrPlan (sy,oy,dy,bdy,y)) -> 
                                 begin
 				    if ox = oy then
-                                        `IncrPlan(sx, ox, get_domain q, merge_bindings bdx bdy, `Cross (x,y))
+                                        let new_p = `Cross(x,y) in
+                                            `IncrPlan(merge_state_sym (`Plan x) (`Plan y) (`Plan new_p) sx, 
+                                                ox, get_domain q, merge_bindings bdx bdy, new_p)
 				    else
                                         `NewPlan(`Cross(lr, rr))
                                 end
@@ -2353,7 +2373,7 @@ let attributes_of_variables me =
     in
         print_endline ("attrs_of_vars me: "^(string_of_map_expression me));
         print_endline ("attrs_of_vars me with uba: "^
-            (string_of_map_expression me_with_uba));
+            (string_of_map_expression me_with_uba)); 
         me_with_uba
 
 (* Returns:
@@ -2582,8 +2602,8 @@ let compile_target_all m_expr event_list =
                              * handlers run in sequence, and thus bindings cannot update parent *)
                             let sp_h_l = 
                                 match new_h with
-                                    | `Incr(sid,_,_,_,m) | `IncrDiff(sid,_,_,_,m) ->
-                                          [(sid, parent_id, m)]
+                                    | `Incr(sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) ->
+                                          [(sid, parent_id, handler)]
                                     | _ -> []
                             in
 
@@ -2644,8 +2664,17 @@ let compile_target_all m_expr event_list =
 	            res@[(event, List.flatten (List.map (fun (_,_,exprs) -> exprs) sorted_by_level))])
             [] event_list
     in
+    let (maps, map_vars) = 
+        List.fold_left 
+            (fun (map_acc,mv_acc) x -> 
+                if List.length (get_unbound_attributes_from_map_expression x true) != 0 then 
+                    let map_var = gen_var_sym() in 
+                        (x::map_acc, (dbt_hash x, map_var)::mv_acc)
+                else (map_acc, mv_acc))
+            ([],[]) [m_expr]
+    in 
     let (r_maps, r_map_vars, r_st_parents, r_ep_stages, result) =
-        cta_aux event_list [m_expr] [] [] [] [] []
+        cta_aux event_list [m_expr] [] maps map_vars [] [] 
     in
         (r_maps, r_map_vars, r_st_parents, r_ep_stages, group_by_event result event_list)
 
@@ -2733,15 +2762,34 @@ let compile_code_rec m_expr =
                             let (local, repl) = is_local_return_val top_level_handler rv in
 	                        match rv with
 	                            | `Eval x ->
-                                          let rv_type = type_inf_arith_expr x
-                                              (recursive_map_decls@gd_acc@merged_decls@merged_handlers)
+                                          let uba = get_unbound_attributes_from_map_expression m_expr true in
+                                          let me_type = type_inf_arith_expr x
+                                              (recursive_map_decls@gd_acc@merged_decls@merged_handlers) in 
+                                          let is_ret_map = List.length uba != 0 in
+                                          let rv_type = 
+                                              if is_ret_map then 
+                                                  let fields = List.map
+                                                      (fun y -> (field_of_attribute_identifier y, type_inf_mexpr
+                                                          (`METerm (`Attribute(y))) base_rels [event] []))
+                                                      uba 
+                                                  in
+                                                      ctype_of_datastructure (`Map("", fields, me_type))
+                                              else me_type
+                                                      
                                           in
                                           let new_handlers =
                                               let (new_head, new_tail) =
                                                   if local && repl then
                                                       let new_tl_handler = remove_return_val top_level_handler in
+                                                      let newrv = 
+                                                          if is_ret_map then 
+                                                              match x with
+                                                                  | `CTerm (`MapAccess(id, _)) -> `CTerm(`Variable(id))
+                                                                  | _ -> x
+                                                          else x
+                                                      in
                                                           match new_tl_handler with
-                                                              | `Block c -> (c, [`Return x])
+                                                              | `Block c -> (c, [`Return newrv])
                                                               | y ->
                                                                     let msg =
                                                                         ("Invalid replaceable return val "^

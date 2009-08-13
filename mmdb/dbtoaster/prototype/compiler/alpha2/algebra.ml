@@ -5,7 +5,7 @@ exception RewriteException of string
 exception ValidationException of string
 exception CodegenException of string
 
-let dbt_hash x = Hashtbl.hash_param 50 100 x
+let dbt_hash x = Hashtbl.hash_param 200 250 x
 
 type identifier = string
 
@@ -1063,7 +1063,7 @@ let get_base_relations m_expr =
 
 	    | `Plan (`TrueRelation) | `Plan (`FalseRelation) -> acc
 
-	    | `Plan (`Relation _ as x) -> x::acc
+	    | `Plan (`Relation _ as x) -> acc@[x]
 
             | `Plan (`Domain _) -> acc
 		  
@@ -2698,6 +2698,7 @@ let indented_string_of_code_expression c_expr =
 (* type computation rules *)
 exception InvalidTypeOperation
 
+(*type r_type = [ `Int | `Long | `Float | `String | `Unknown]*)
 type r_type = [ `Int | `Long | `Float | `String ]
 
 let string_of_type t = 
@@ -2706,6 +2707,7 @@ let string_of_type t =
 	| `Long -> "long"
 	| `Float -> "float"
 	| `String -> "string"
+(*        | `Unknown -> "unknown"*)
 
 (* basic type inferrence rules. It doesn't have to be strict type checker because we're generating C++ file.  *)
 let type_op_rule l r =
@@ -2723,6 +2725,7 @@ let string_to_type s =
 	| "long" -> `Long
 	| "float" -> `Float
 	| "string" -> `String
+(*        | "unknown" -> `Unknown*)
 	| _ -> raise InvalidTypeOperation
 
 let type_to_string t = 
@@ -2731,6 +2734,7 @@ let type_to_string t =
 	| `Long -> "long"
 	| `Float -> "float"
 	| `String -> "string"
+(*        | `Unknown -> "unknown" *)
 
 (* merges list of attributes of relations and events and looks for type of variable name *)
 let search_rels_event rname vname base_rels events unqual=
@@ -2745,7 +2749,9 @@ let search_rels_event rname vname base_rels events unqual=
 						  else ( if n = rname then
 							List.append acc l
 							else acc )
-			    | _ -> raise InvalidExpression)
+			    | _ -> 
+                                print_endline "wrong expression";
+                                raise InvalidExpression)
 	            [] base_rels)@
     		    (List.fold_left
 		        (fun acc x ->
@@ -2756,7 +2762,7 @@ let search_rels_event rname vname base_rels events unqual=
 					else acc ))
 		        [] events))
 	    )
-    in if (List.length t_list) = 0 then raise InvalidExpression
+    in if (List.length t_list) = 0 then `String
     else string_to_type (List.hd t_list)
 
 (* try to find type from declaration list first *)
@@ -2780,7 +2786,9 @@ let type_inf_expr expr base_rels events decls =
             | `ETerm e -> tie_aux_eterm e 
  	    | `Sum (l, r) | `Product (l, r) | `Minus (l, r) -> 
     	        type_op_rule (tie_aux_expr l) (tie_aux_expr r)
-	    | `Function _ | `UnaryMinus _ | `Divide _ -> raise InvalidExpression
+	    | `Function _ | `UnaryMinus _ | `Divide _ -> 
+                print_endline "type_inf_expr wrong expression";
+                raise InvalidExpression
     and tie_aux_eterm eterm =
         match eterm with
     	    | `Int _ -> `Int
@@ -2796,7 +2804,7 @@ let type_inf_expr expr base_rels events decls =
     in
     let ret_type =  tie_aux_expr expr    
     in 
-    print_endline ("result of type inferencing of "^string_of_expression expr^" : "^(string_of_type ret_type));
+(*    print_endline ("result of type inferencing of "^string_of_expression expr^" : "^(string_of_type ret_type));*)
     type_to_string ret_type
 
 let type_inf_mexpr m_expr base_rels events decls =
@@ -2830,7 +2838,7 @@ let type_inf_mexpr m_expr base_rels events decls =
     in
     let ret_type =  tiaux_m_expr m_expr
     in 
-    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));
+(*    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));*)
     type_to_string ret_type
 
 (* retrieve map expression from map list using hash value and id *)
@@ -2845,7 +2853,7 @@ let get_m_expr_with_mapid id maps map_vars =
     else []
 
 let type_inf_mexpr_map m_expr base_rels events maps map_vars =
-    let rec tiaux_mterm mterm : r_type= 
+    let rec tiaux_mterm mterm = 
         match mterm with
 	    | `Int _ -> `Int
 	    | `Float _ -> `Float
@@ -2854,7 +2862,7 @@ let type_inf_mexpr_map m_expr base_rels events maps map_vars =
 	    | `Variable v -> 
 		let new_mexpr = get_m_expr_with_mapid v maps map_vars in
 		if List.length new_mexpr != 0 then
-		    tiaux_m_expr (List.hd new_mexpr) 
+		    tiaux_m_expr (List.hd new_mexpr)
 		else 
 		    search_rels_event "" v base_rels events true
 	    | `Attribute ( `Qualified (r, a)) -> 
@@ -2878,7 +2886,7 @@ let type_inf_mexpr_map m_expr base_rels events maps map_vars =
     in
     let ret_type =  tiaux_m_expr m_expr
     in 
-    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));
+(*    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type)); *)
     type_to_string ret_type
 
 let type_inf_arith_expr a_expr decls =
@@ -2900,7 +2908,7 @@ let type_inf_arith_expr a_expr decls =
 		let t_list = List.map 
 		    (fun x -> match x with
 			| `Declare(`Variable (_, t)) | `Declare(`Map (_, _, t)) -> string_to_type t 
-			| _ -> raise InvalidExpression)
+			| _ -> print_endline "type_inf_arith_expr wrong"; raise InvalidExpression)
 			( List.filter 
 		            (fun x -> match x with 
 			        | `Declare(`Variable (n, _)) | `Declare(`Map (n, _, _)) -> n = id
@@ -2951,6 +2959,7 @@ let rec get_return_val c_expr =
         | `IfNoElse(_, c) -> get_return_val c
         | `Block(y) -> get_return_val (get_block_last c_expr)
         | `Profile(_,_,c) -> get_return_val c
+        | `ForEach(_,c) -> get_return_val c 
         | _ ->
               print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
@@ -2984,7 +2993,6 @@ let remove_return_val c_expr =
                       | None -> None
                       | Some x -> Some(`Profile(st, prof_id,x))
               end
-
         | _ ->
               print_endline ("remove_return_val: "^(indented_string_of_code_expression c));
               raise InvalidExpression                
@@ -3005,6 +3013,20 @@ let rec replace_return_val c_expr new_rv =
               let new_last = replace_return_val last new_rv in
                   `Block(List.rev (new_last::(List.tl (List.rev x))))
         | `Profile(st,p,c) -> `Profile(st, p, replace_return_val c new_rv)
+        (* Top level case *)
+        | `ForEach(i,c) -> 
+              let last = get_return_val c_expr in 
+              let new_id = 
+                  match new_rv with
+                      | `Assign(v, _) -> v
+                      | _ -> raise InvalidExpression
+              in
+              begin
+                  match last with 
+                      | `Eval (`CTerm  (`MapAccess(id, _))) -> 
+                            `Block [c_expr; `Assign(new_id, `CTerm (`Variable id))]
+                      | _ -> `Block [c_expr; new_rv] 
+              end
         | _ ->
               print_endline ("replace_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
@@ -3020,6 +3042,7 @@ let rec is_local_return_val code rv =
               let block_last = get_block_last code in
               let (local, _) = is_local_return_val (get_block_last code) rv in
                   (local, match block_last with | `Eval _ -> true | _ -> false)
+        | `ForEach (_, c) -> is_local_return_val c rv
         | _ -> (false, false)
 
 (* code_expression -> declaration list ->
@@ -3130,6 +3153,7 @@ module AccessorHashtbl = Hashtbl.Make(AccessorHashtype)
 
 type state_symbols = string AccessorHashtbl.t
 let state_syms : state_symbols = AccessorHashtbl.create 10
+let sid_counter = ref 0
 
 let gen_state_sym accessor_elem =
     if AccessorHashtbl.mem state_syms accessor_elem then
@@ -3140,9 +3164,36 @@ let gen_state_sym accessor_elem =
         end
     else
         begin
-            let new_symbol = "state"^(string_of_int (AccessorHashtbl.length state_syms)) in
+            let new_id = !sid_counter in
+            let new_symbol = 
+                incr sid_counter;
+                "state"^(string_of_int new_id) in
+
                 print_endline ("New state sym: "^(new_symbol)^" "^
                     (string_of_accessor_element accessor_elem));
                 AccessorHashtbl.add state_syms accessor_elem new_symbol;
                 new_symbol
         end
+
+let remove_state_sym accessor_elem = 
+    AccessorHashtbl.remove state_syms accessor_elem
+
+let update_state_sym accessor_elem new_accessor_elem state_sym = 
+    remove_state_sym accessor_elem;  
+    if AccessorHashtbl.mem state_syms new_accessor_elem then
+        begin
+            let r = AccessorHashtbl.find state_syms new_accessor_elem in
+                print_endline ("Found state sym: "^(string_of_accessor_element new_accessor_elem));
+                r
+        end
+    else
+        begin
+            AccessorHashtbl.add state_syms new_accessor_elem state_sym;
+            state_sym
+        end
+
+(* merging two state ids. remove binding of accessor_elem1 and accessor_elem2 
+ * then update binding of new_accessor_elem1 with sym *)
+let merge_state_sym accessor_elem1 accessor_elem2 new_accessor_elem sym = 
+    remove_state_sym accessor_elem2;
+    update_state_sym accessor_elem1 new_accessor_elem sym

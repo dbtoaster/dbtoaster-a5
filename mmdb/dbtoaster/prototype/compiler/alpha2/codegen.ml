@@ -469,10 +469,15 @@ let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars b
                   (indented_string_of_map_expression m_expr 0));
               raise InvalidExpression
 
+let rec gc_ifstmt_map ba = 
+    match ba with
+        | [(b,a)] -> `BCTerm (`EQ(`CTerm(`Variable(b)), `CTerm (`Variable(a))))
+        | (b,a)::tl -> `And (`BCTerm (`EQ(`CTerm (`Variable(b)), `CTerm (`Variable(a)))), gc_ifstmt_map tl)
+        | _ -> raise InvalidExpression 
 
 (* TODO: support sliced access for partially bound keys in M-D maps
  * -- requires extension to `ForEach to support partial iteration *)
-let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls =
+let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls ba=
     let (mid, mf) = mk in
     let mf_len = List.length mf in
     let bound_f = List.filter (fun f -> List.mem f e_vars) mf in
@@ -502,7 +507,16 @@ let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decl
                               raise InvalidExpression
                         | _ -> raise DuplicateException
                     in
-                        `ForEach(ds, incr_code)
+                    let conditions = 
+                        List.filter
+                            (fun (b,_) -> List.mem b bound_f) ba;
+                    in 
+                        if List.length conditions = 0 then 
+                            `ForEach(ds, incr_code)
+                        else 
+                            let ifst = gc_ifstmt_map conditions 
+                            in
+                                `ForEach(ds, `IfNoElse(ifst, incr_code))
                 end
         end
 
@@ -522,31 +536,32 @@ let gc_state_accessor_code par_decl bindings
 
         | `Map(n,f,_) ->
               (* Building map accessors from bindings *)
-              let mk =
-                  let access_fields =
-                      List.map (fun (id, _) ->
+              let (mk,ba) =
+                  let (access_fields, new_bindings) =
+                      List.fold_left (fun (acc, bacc ) (id, _) ->
+(*                      List.map (fun (id, _) ->*)
                           let bound_f =
                               List.filter (fun (a,_) ->
                                   (field_of_attribute_identifier a) = id) bindings
                           in
                               match bound_f with
-                                  | [] -> id
+                                  | [] -> (id::acc, bacc)
                                   | [(a, e_opt)] ->
                                         begin
                                             match e_opt with
-                                                | Some(`ETerm(`Variable(b))) -> b
+                                                | Some(`ETerm(`Variable(b))) -> (b::acc, (b,id)::bacc)
                                                 | Some(e) ->
                                                       print_endline ("Invalid map access field: "^(string_of_expression e));
                                                       raise (CodegenException
                                                           "Map access fields must be variables!")
-                                                | None -> id
+                                                | None -> (id::acc, bacc)
                                         end
                                   | _ -> raise DuplicateException)
-                          f
+                          ([], []) f
                   in
-                      (n, access_fields)
+                      ((n, List.rev access_fields), new_bindings)
               in
-                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
+                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls ba, e_decl)
 
 let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff base_rels events =
     let (state_decl, new_decl) =
@@ -1083,6 +1098,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 
     let (handler_body, handler_decl) = gc_aux handler binding_decls (true, bindings) in
 
+    print_endline (String.make 50 '-');
 
     (* Note: binding declarations are included in declaration_code *)
     let declaration_code = List.map (fun x -> `Declare(x)) handler_decl in
