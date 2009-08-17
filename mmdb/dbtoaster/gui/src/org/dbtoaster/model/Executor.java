@@ -6,8 +6,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -19,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -304,7 +307,24 @@ public class Executor
 
     
     // TODO: data loading for alternative DBMS
-
+    private File inFile;
+    private BufferedReader br;
+    
+    int initFile(String filename)
+    {
+    	inFile = new File (filename);
+    	
+    	try {
+    		br = new BufferedReader (new InputStreamReader (new FileInputStream(inFile)));
+    	} catch (FileNotFoundException ex) {
+    		System.err.println("File " + filename + " not found");
+    		return -1;
+    	}
+    	
+    	return 0;
+    }
+    
+ 
     void runJDBCQuery(String dbUrl, String sqlQuery,
             ConcurrentLinkedQueue<Long> profilerSamples)
     {
@@ -326,6 +346,12 @@ public class Executor
             e.printStackTrace();
         }
     }
+    
+    private String post_username = "postgres";
+    private String post_path = "/Library/PostgreSQL/8.4/";
+    private String post_server = "localhost";
+    private String post_port = "5432";
+    private String post_dbname = "postgres";
 
     void initPostgreSQL()
     {
@@ -337,14 +363,112 @@ public class Executor
             e.printStackTrace();
         }
     }
+    
+    void startupPostgreSQL()
+    {
+    	try {
+    		Runtime rt = Runtime.getRuntime();
+    		String str[] = {"sudo", "-u", "postgres" /*userid*/, 
+    				post_path + "bin/pg_ctl", "start", "-w", "-D", post_path + "data"};
+    		Process pr = rt.exec(str);
+    		
+    		int exitVal = pr.waitFor();
+    		if (exitVal != 0) {
+    			System.err.println("Could not start up postgres");
+    		}
+    	} catch (Exception e) {
+    		System.err.println(e.toString());
+    		e.printStackTrace();
+    	}
+    }
+    
+    void shutdownPostgreSQL()
+    {
+    	try {
+    		Runtime rt = Runtime.getRuntime();
+    		String str[] = {"sudo", "-u", "postgres", post_path + "bin/pg_ctl",
+    				"stop", "-D", post_path + "data", "-m", "fast"};
+    		Process pr = rt.exec(str);
+    		
+    		int exitVal = pr.waitFor();
+    		if (exitVal != 0) {
+    			System.err.println("Could not shut down postgres");	
+    		}
+    	} catch (Exception e) {
+    		System.err.println(e.toString());
+    		e.printStackTrace();
+    	}
+    }
+
+    int postgreLoad(int num)
+    {
+    	Vector<String> buf = new Vector<String> (num);
+    	int line = 0;
+    	String tmp = "";
+    	
+    	try {
+    		for (int i =0;i < num;i ++) {
+    			tmp = br.readLine();
+    			
+    			if(tmp == null) 
+    				break;
+    			buf.add(tmp);
+        		line ++;
+    		}
+    	} catch (IOException e) {
+    		System.err.println("IO exception");
+    		e.printStackTrace();
+    	}
+    	
+    	if (line != 0) {
+    		try {
+    			Runtime rt = Runtime.getRuntime();
+    			String str[] = {"psql", "-h", post_server, "-p", post_port, "-U", post_username, 
+    					"-c", "copy test form stdin with csv", post_dbname};
+    			Process pr = rt.exec(str);
+    			
+    			BufferedWriter output = new BufferedWriter(new OutputStreamWriter(pr.getOutputStream()));
+    			
+    			for (int i =0; i < line; i ++) {
+    				output.write(buf.get(i));
+    			}
+    			output.write("\\.\n");
+    			output.flush();
+    			
+    			int exitVal = pr.waitFor();
+    			if(exitVal != 0) {
+    				System.err.println("Error - loading postgres");
+    				return -1;
+    			}
+    		} catch (Exception e) {
+    			System.out.println(e.toString());
+    			e.printStackTrace();
+    		}
+    			
+    	}
+    	return line;
+    }
 
     void runPostgreSQL(String sqlOrTriggerQuery, boolean triggerScript,
             ConcurrentLinkedQueue<Long> profilerSamples)
     {
+    	startupPostgreSQL();
+    	
+    	initFile("5.csv"); /* database filename */
+    	
+    	int howmany = 50;
+    	int total = 0;
+    	int thres_total = 5000;
+    	while (postgreLoad(howmany) == howmany && (total += howmany) <= thres_total) {
+    		/* sleep ? */
+    	}
+    	
         if ( triggerScript )
             runPGTriggers(sqlOrTriggerQuery);
         else
             runPGQuery(sqlOrTriggerQuery, profilerSamples);
+        
+        shutdownPostgreSQL();
     }
     
     void runPGQuery(String sqlQuery, ConcurrentLinkedQueue<Long> profilerSamples)
@@ -357,9 +481,43 @@ public class Executor
         
     }
     
+    private String hsql_libpath = "/Users/mavkisuh/homework/hsqldb/lib/";
+    private String hsql_dbname = "db0/db0";
+    private String hsql_username = "sa";
+    private String hsql_server = "localhost";    
+    
+    void startupHsqlDB()
+    {
+    	try {
+    		String str[] = {"java", "org.hsqldb.Server", "-address", hsql_server,
+    				"-database.0", "file:" + hsql_dbname, "-dbname.0"};
+    		Runtime rt = Runtime.getRuntime();
+    		rt.exec(str);
+    		
+    	} catch (Exception e) {
+    		System.out.println(e.toString());
+    		e.printStackTrace();
+    	}
+    }
+    
+    void shutdownHsqlDB() 
+    {
+    	try {
+    		String str[] = { "java", "-jar", hsql_libpath + "hsqldb.jar",
+    				"--sql", "shutdown;", hsql_server + "-" + hsql_username};
+    		Runtime rt = Runtime.getRuntime();
+    		rt.exec(str);
+    	} catch (Exception e) {
+    		System.out.println(e.toString());
+    		e.printStackTrace();
+    	}
+    }
+    
     void runHsqlDB(String sqlQuery, ConcurrentLinkedQueue<Long> profilerSamples)
     {
+    	startupHsqlDB();
         runJDBCQuery(HSQLDB_URL, sqlQuery, profilerSamples);
+        shutdownHsqlDB();
     }
     
     void runOracle() {}
