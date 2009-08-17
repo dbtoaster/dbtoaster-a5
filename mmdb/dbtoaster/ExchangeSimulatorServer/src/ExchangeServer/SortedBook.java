@@ -62,5 +62,4 @@ public class SortedBook {
 	public boolean isEmpty(){
 		return sorted_tuples.isEmpty() && hash_tuples.isEmpty();
 	}
-
 }

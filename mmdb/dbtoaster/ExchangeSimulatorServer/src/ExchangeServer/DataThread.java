@@ -78,9 +78,11 @@ public class DataThread extends Thread{
 				t.time=(Integer.valueOf(input_tuple[0])).longValue();
 				t.order_id=(Integer.valueOf(input_tuple[1])).intValue();
 				t.action=input_tuple[2];
-				t.volume=(Double.valueOf(input_tuple[3])).doubleValue();
-				t.price=((Double.valueOf(input_tuple[4])).doubleValue())/10000;
+				t.volume=(Integer.valueOf(input_tuple[3])).intValue();
+				t.price=((Integer.valueOf(input_tuple[4])).intValue());
 				//price is divided by 10K to convert into currency 
+				
+				t.company_id=-1;
 				
 				if (DEBUG){
 					System.out.println("DataThread: sending to server "+t.toString());
@@ -113,7 +115,6 @@ public class DataThread extends Thread{
 				
 			}
 
-		
 		} catch (IOException e) {
 			System.err.println("Error occured reading the file");
 			e.printStackTrace();

@@ -18,13 +18,15 @@ public class ExchangeThread extends Thread{
 	private boolean isToaster;
 	private Date timer;
 	private boolean DEBUG;
+	private HashMap<Integer, Integer> orderIDtoCompID;
 
-	public ExchangeThread(Socket socket,SynchronizedBooks book, boolean d) {
+	public ExchangeThread(Socket socket,SynchronizedBooks book, boolean d, HashMap<Integer, Integer> oIDtocID) {
 		super("ExchangeThread");
 		orders_book=book;
 		this.socket = socket;
 		timer= new Date();
 		DEBUG=d;
+		orderIDtoCompID=oIDtocID;
 		System.out.println("Server: Clinet Connects, opening thread to handle.");
 	}
 
@@ -36,6 +38,7 @@ public class ExchangeThread extends Thread{
 
 			out = new DataOutputStream(socket.getOutputStream());
 			in = new DataInputStream(socket.getInputStream());
+			Random generator = new Random();
 
 			if (DEBUG){
 				System.out.println("Server: Opened socket: "+socket.toString());
@@ -59,10 +62,37 @@ public class ExchangeThread extends Thread{
 				Stream_tuple nextTuple;
 
 				while ((nextTuple = getInputTuple(in)) != null) {
+					
+					//Assuming that the order ID of a new tuple is 0
+					// for any client but a data thread
 
 					int order_id = nextTuple.order_id;
 					String action= nextTuple.action;
 					long time=nextTuple.time;
+					int company_id=-1;
+					boolean live=true;
+					
+					if (nextTuple.company_id < 1)
+					{
+						live=false;
+						synchronized (orderIDtoCompID)
+						{
+							if (order_id > 0)
+							{
+								//check if there is a company ID for this order ...
+								Integer comp;
+								if ((comp=orderIDtoCompID.get(new Integer(order_id))) != null)
+								{
+									company_id=comp.intValue();
+								}
+							}
+						}
+					}
+					else
+					{
+						live=true;
+						company_id=nextTuple.company_id;
+					}
 					
 					LinkedList<Stream_tuple> messages;
 
@@ -70,18 +100,29 @@ public class ExchangeThread extends Thread{
 						// Insert bids
 						
 						//retrieve price and volume;
-						double price = nextTuple.price;
-						double volume = nextTuple.volume;						
-
-						Order_tuple pv = new Order_tuple(0,price, volume, 0);
+						int price = nextTuple.price;
+						int volume = nextTuple.volume;	
 						
-						if (time!=0){
+						if (company_id < 0)
+						{
+							//if brokerage ID is unknown create new one
+							company_id=generator.nextInt(8) + 1;
+							synchronized (orderIDtoCompID)
+							{
+								orderIDtoCompID.put(new Integer(order_id), new Integer(company_id));
+							}
+						}
+
+						Order_tuple pv = new Order_tuple(0,price, volume, company_id, 0, live);
+						
+//						if (time!=0){
 							pv.time=time;
 							pv.id=order_id;
-						}
+							pv.c_id=company_id;
+//						}
 						synchronized (orders_book){
 							
-							orders_book.setOrderId(order_id);
+//							orders_book.setOrderId(order_id);
 							messages=orders_book.add_Bid_order(pv);
 
 						}
@@ -89,13 +130,13 @@ public class ExchangeThread extends Thread{
 						{
 
 							nextTuple=messages.getFirst();
-							nextTuple.time=timer.getTime();
+//							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
 //							messages.removeFirst();
 
 							do{
 								nextTuple=messages.getFirst();
-								nextTuple.time=timer.getTime();
+//								nextTuple.time=timer.getTime();
 								messages.removeFirst();
 								
 								for (ExchangeThread item : clientList)
@@ -113,32 +154,41 @@ public class ExchangeThread extends Thread{
 					{
 						//insert ask
 
-						double price = nextTuple.price;
-						double volume = nextTuple.volume;
-
-
-						Order_tuple pv = new Order_tuple(0, price, volume, 0);
+						int price = nextTuple.price;
+						int volume = nextTuple.volume;
 						
-						if (time!=0){
+						if (company_id < 0)
+						{
+							company_id=generator.nextInt(8) + 1;
+							synchronized (orderIDtoCompID)
+							{
+								orderIDtoCompID.put(new Integer(order_id), new Integer(company_id));
+							}
+						}
+
+						Order_tuple pv = new Order_tuple(0, price, volume, company_id, 0, live);
+						
+//						if (time!=0){
 							pv.time=time;
 							pv.id=order_id;
-						}
+							pv.c_id=company_id;
+//						}
 						
 						synchronized (orders_book){
 							
-							orders_book.setOrderId(order_id);
+//							orders_book.setOrderId(order_id);
 							messages=orders_book.add_Ask_order(pv);
 						}
 						synchronized(this.clientList)
 						{
 							nextTuple=messages.getFirst();
-							nextTuple.time=timer.getTime();
+//							nextTuple.time=timer.getTime();
 							sendMessageBack(nextTuple);
 //							messages.removeFirst();
 
 							do{
 								nextTuple=messages.getFirst();
-								nextTuple.time=timer.getTime();
+//								nextTuple.time=timer.getTime();
 								messages.removeFirst();
 								
 								for (ExchangeThread item : clientList)
@@ -154,14 +204,25 @@ public class ExchangeThread extends Thread{
 						
 						//need to deal with accounting and pass the message to clients
 						
-
+						if (company_id > 0)
+						{
+							synchronized (orderIDtoCompID)
+							{
+								Integer temp_c_id;
+								if ((temp_c_id = orderIDtoCompID.get(new Integer(order_id))) != null)
+								{
+									nextTuple.company_id=temp_c_id.intValue();
+								}
+							}
+						}
+						
 						synchronized(orders_book){
 							
-							orders_book.update_order(order_id, nextTuple.volume);
+							orders_book.update_order(nextTuple, nextTuple.volume, live);
 						}
 						synchronized(this.clientList)
 						{
-							nextTuple.time=timer.getTime();
+//							nextTuple.time=timer.getTime();
 							for (ExchangeThread item : clientList)
 							{
 								if (item.getExchangeType())
@@ -172,8 +233,21 @@ public class ExchangeThread extends Thread{
 					}
 					else if (action.equals("F"))
 					{
+						if (company_id > 0)
+						{
+							synchronized (orderIDtoCompID)
+							{
+								Integer temp_c_id;
+								if ((temp_c_id = orderIDtoCompID.get(new Integer(order_id))) != null)
+								{
+									nextTuple.company_id=temp_c_id.intValue();
+									orderIDtoCompID.remove(new Integer(order_id));
+								}
+							}
+						}
+						
 						synchronized(orders_book){
-							nextTuple.time=timer.getTime();
+//							nextTuple.time=timer.getTime();
 							orders_book.remove(new Integer(order_id));
 						}
 						synchronized(this.clientList)
@@ -188,8 +262,21 @@ public class ExchangeThread extends Thread{
 					}
 					else if (action.equals("D")){
 						
+						if (company_id > 0)
+						{
+							synchronized (orderIDtoCompID)
+							{
+								Integer temp_c_id;
+								if ((temp_c_id = orderIDtoCompID.get(new Integer(order_id))) != null)
+								{
+									nextTuple.company_id=temp_c_id.intValue();
+									orderIDtoCompID.remove(new Integer(order_id));
+								}
+							}
+						}
+						
 						synchronized(orders_book){
-							nextTuple.time=timer.getTime();
+//							nextTuple.time=timer.getTime();
 							orders_book.remove(new Integer(order_id));
 						}
 						synchronized(this.clientList)
@@ -273,12 +360,18 @@ public class ExchangeThread extends Thread{
 		}
 
 
-
+//		System.out.println(input_tuple[0]+"_"+input_tuple[1]+"_"+input_tuple[2]+"_"+input_tuple[3]+"_"+input_tuple[4]+"_"+input_tuple[5]);
 		t.time=(Integer.valueOf(input_tuple[0])).longValue();
 		t.order_id=(Integer.valueOf(input_tuple[1])).intValue();
-		t.action=input_tuple[2];
-		t.volume=(Double.valueOf(input_tuple[3])).doubleValue();
-		t.price=(Double.valueOf(input_tuple[4])).doubleValue();
+		t.company_id=(Integer.valueOf(input_tuple[2])).intValue();
+		t.action=input_tuple[3];
+		t.volume=(Integer.valueOf(input_tuple[4])).intValue();
+		
+//		System.out.println(t.volume);
+		t.price=Double.valueOf(input_tuple[5]).intValue();//(Integer.valueOf(input_tuple[5])).intValue();
+//		String ts1=new String(input_tuple[5]);
+//		Integer temp1=Integer.valueOf("10000                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   ");//.valueOf(ts1);
+//		t.price= temp1.intValue();// (Integer.valueOf(input_tuple[5])).intValue();
 		
 		if (DEBUG){
 			System.out.println("ServerThread: got from client: "+t);

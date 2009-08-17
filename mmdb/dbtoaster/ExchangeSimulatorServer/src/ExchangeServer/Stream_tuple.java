@@ -5,8 +5,10 @@ public class Stream_tuple{
 	public long time;
 	public int order_id;
 	public String action;
-	public double volume;
-	public double price;
+	public int volume;
+	public int price;
+	public int company_id;
+	public boolean live;
 	
 	Stream_tuple(){
 		action=new String("");
@@ -14,9 +16,11 @@ public class Stream_tuple{
 		order_id=0;
 		volume=0;
 		price=0;
+		company_id=0;
+		live=false;
 	}
 	public String toString(){
-		return time+" "+order_id+" "+action+" "+volume+" "+price;
+		return time+" "+order_id+" "+company_id+" "+action+" "+volume+" "+price;
 	}
 		
 }

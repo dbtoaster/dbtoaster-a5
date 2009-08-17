@@ -25,6 +25,7 @@ public class ExchangeServer {
         boolean isConnected=false;
         int socket=5501;
         String port="localhost";
+        boolean doSkip=true;
         
         //clientList stores all the client toasters/proxies alike.
         List<ExchangeThread> clientList =new LinkedList<ExchangeThread>();
@@ -38,8 +39,9 @@ public class ExchangeServer {
         if (DEBUG){
         	System.out.println("Server: Opened a socket");
         }
-        SynchronizedBooks book=new SynchronizedBooks(DEBUG);
-
+        
+        HashMap<Integer, Integer> sharedOrderIdsToCompanyId=new HashMap<Integer, Integer>();
+        SynchronizedBooks book=new SynchronizedBooks(DEBUG, doSkip);
         DataThread data_stream= new DataThread(input_file, port, socket, DEBUG);
         
 
@@ -47,7 +49,8 @@ public class ExchangeServer {
         while (listening){
 
 
-        	ExchangeThread client = new ExchangeThread(serverSocket.accept(), book, DEBUG);
+        	ExchangeThread client = new ExchangeThread(serverSocket.accept(), 
+        			book, DEBUG, sharedOrderIdsToCompanyId);
         	
         	synchronized(clientList)
         	{
