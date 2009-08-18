@@ -46,9 +46,11 @@ let compile_code_rec m_expr_l =
 
     let base_rels = get_base_relations (List.hd pp_expr_l) in
 
+    let type_list = generate_type_list pp_expr_l base_rels events in
+
     (* Code generation: maps, handlers *)
     let (recursive_map_decl_bodies, map_accessors, stp_decls) =
-        generate_map_declarations maps map_vars state_parents base_rels events
+        generate_map_declarations maps map_vars state_parents type_list
     in
 
     let recursive_map_decls = List.map (fun d -> `Declare d) recursive_map_decl_bodies in
@@ -76,7 +78,7 @@ let compile_code_rec m_expr_l =
                                 (fun (gdc_acc, hc_acc, bd_acc, bdc_acc, reuse_acc) (h,b) ->
                                     let (gdc, bdc, rdc, hc) =
                                         generate_code h b event true bdc_acc
-                                            map_accessors stp_decls recursive_map_decls base_rels
+                                            map_accessors stp_decls recursive_map_decls type_list
                                     in
                                     let unique_gdc =
                                         List.filter (fun d ->
