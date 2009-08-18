@@ -564,7 +564,7 @@ let main () =
     parse dbtoaster_arg_spec add_tml_source dbtoaster_usage;
 
     (* Invoke compiler on TML file according to mode *)
-    let m_expr = match !tml_sources with
+    let m_expr_l = match !tml_sources with
         | [] ->
               begin
                   print_endline "No queries specified for compilation!";
@@ -574,14 +574,7 @@ let main () =
         | [fn] ->
               begin
                   try
-                      let m_expr_l = parse_treeml_file fn in
-                          if (List.length m_expr_l) > 1 then
-                              begin
-                                  print_endline "Unable to compile multiple queries.";
-                                  exit 1
-                              end
-                          else
-                              List.hd m_expr_l
+                      parse_treeml_file fn
                   with InvalidTreeML x ->
                       print_endline ("Parsing TreeML failed: "^x);
                       exit 1
@@ -589,7 +582,7 @@ let main () =
 
         | _ ->
               begin
-                  print_endline "Unable to compile multiple queries.";
+                  print_endline "Unable to compile multiple disjoint queries.";
                   exit 1
               end
     in
@@ -604,7 +597,7 @@ let main () =
             match !compile_mode with
                 | Handlers ->
                       begin
-                          compile_query m_expr !source_output_file;
+                          compile_query m_expr_l !source_output_file;
                           ignore(build_query_object !source_output_file)
                       end
                           
@@ -615,7 +608,7 @@ let main () =
                                   print_endline ("Creating build directory "^(!dbtoaster_build_dir));
                                   Unix.mkdir !dbtoaster_build_dir 0o755;
                               end;
-                          compile_standalone_engine m_expr relation_sources
+                          compile_standalone_engine m_expr_l relation_sources
                               !source_output_file trace_out_file_opt;
                           build_standalone_engine !source_output_file !thrift_modules
                       end
@@ -627,7 +620,7 @@ let main () =
                                   print_endline ("Creating build directory "^(!dbtoaster_build_dir));
                                   Unix.mkdir !dbtoaster_build_dir 0o755;
                               end;
-                          compile_standalone_debugger m_expr relation_sources
+                          compile_standalone_debugger m_expr_l relation_sources
                               !source_output_file trace_out_file_opt;
                           build_debugger !source_output_file !thrift_modules
                       end

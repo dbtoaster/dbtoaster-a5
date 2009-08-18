@@ -63,10 +63,13 @@ let rec get_dependencies c_expr =
               let ch_used = get_arith_dependencies a in
                   unique (List.map (fun u -> (`Variable v,u)) ch_used)
 
-        | `AssignMap (mk, a)
-        | `EraseMap (mk, a) ->
+        | `AssignMap (mk, a) ->
               let ch_used = get_arith_dependencies a in
                   unique (List.map (fun u -> (`MapAccess mk,u)) ch_used)
+
+        | `EraseMap (mid,f) ->
+              (`Map mid, `MapAccess(mid,f))::
+                  (List.map (fun v -> (`MapAccess (mid,f), `Variable v)) f)
 
         | `InsertTuple (ds, cvl)
         | `DeleteTuple (ds, cvl) ->
@@ -107,7 +110,9 @@ let rec get_dependencies c_expr =
               in
                   ch_deps@new_deps
 
-        | `ForEach (ds,c) ->
+        | `ForEach (ds,c)
+        | `ForEachResume (ds,c)
+            ->
               begin
                   let ch_deps = get_dependencies c in
                   let ds_deps =
@@ -121,17 +126,21 @@ let rec get_dependencies c_expr =
                       unique(ds_deps@ch_deps)
               end
 
+        | `Resume _ -> []
+
         | `Block cl -> unique(List.flatten (List.map get_dependencies cl))
 
         | `Return _ -> []
+
+        | `ReturnMap _ -> []
 
         | `Handler (_,_,_,cl) -> unique(List.flatten (List.map get_dependencies cl))
 
         | `Profile (_,_,c) -> get_dependencies c
 
 
-let build_dependency_graph dependencies =
-    let add_node n nodes = if List.mem n nodes then nodes else nodes@[n] in
+let build_dependency_graph dependencies nodes edges =
+    let add_node n nodes = if List.mem n nodes then nodes else (print_endline ("Adding dep node "^n); nodes@[n]) in
     let add_parent_node d nodes =
         match d with
             | `Variable v -> add_node v nodes
@@ -150,7 +159,11 @@ let build_dependency_graph dependencies =
     let get_node d nodes =
         let check n =
             if List.mem n nodes then n
-            else raise (AnalysisException ("No node found: "^n))
+            else
+                begin
+                    List.iter (fun x -> print_endline ("nodes: "^x)) nodes;
+                    raise (AnalysisException ("No node found: "^n))
+                end
         in
         match d with
             | `Variable v -> check v
@@ -176,4 +189,4 @@ let build_dependency_graph dependencies =
                         | _ -> add_edge (gn t) (gn s) edge_acc
                 in
                     (new_node_acc, new_edge_acc))
-            ([], []) dependencies
+            (nodes, edges) dependencies

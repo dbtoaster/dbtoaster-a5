@@ -15,6 +15,7 @@ let base_declarations = [
     "<attributeDecl name=\"state_identifier\"     type=\"String\"/>";
     "<attributeDecl name=\"delta\"                type=\"String\"/>";
     "<attributeDecl name=\"aggregate\"            type=\"String\"/>";
+    "<attributeDecl name=\"initop\"               type=\"String\"/>";
     "<attributeDecl name=\"oplus\"                type=\"String\"/>";
     "<attributeDecl name=\"poplus\"               type=\"String\"/>";
     "<attributeDecl name=\"eterm-type\"           type=\"String\"/>";
@@ -84,13 +85,13 @@ let treeml_of_aggregate_function agg =
     "<attribute name=\"aggregate\" value=\""^
 	(match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" )^"\"/>"
 
-(* TODO: what about the map expr and state id parts of Decrmin and Decrmax? *)
-let treeml_of_oplus o = 
-    "<attribute name=\"oplus\" value=\""^
-	(match o with | `Plus -> "plus" | `Minus -> "minus"
-            | `Min -> "min" | `Max -> "max"
-            | `Decrmin _ -> "decrmin"
-            | `Decrmax _ -> "decrmax")^"\"/>"
+let treeml_of_initop o = 
+    let make_op op_str =
+        "<attribute name=\"initop\" value=\""^op_str^"\"/>"
+    in
+        match o with
+            | `Init d -> make_branch ([make_op "init"]@(treeml_of_domain d))
+            | `Final d -> make_branch ([make_op "final"]@(treeml_of_domain d))
 
 let treeml_of_poplus o = 
     "<attribute name=\"poplus\" value=\""^
@@ -157,279 +158,6 @@ let treeml_of_meterm meterm =
 
 
 (*
- * Viz TreeML format
- *
- *)
-
-let rec viz_treeml_of_expression expr indent_fn = 
-    let binary_expr typ l r =
-	[ "<branch>"; (indent_fn ("<attribute name=\"op\" value=\""^typ^"\"/>"))]@
-	(List.map indent_fn (viz_treeml_of_expression l indent_fn))@
-	(List.map indent_fn (viz_treeml_of_expression r indent_fn))@
-        [ "</branch>" ]
-    in
-    match expr with
-	| `ETerm et ->
-	      [ "<leaf>"; (indent_fn "<attribute name=\"op\" value=\"eterm\"/>")]@
-              (List.map indent_fn (treeml_of_eterm et))@["</leaf>"]
-
-	| `UnaryMinus e ->
-	      [ "<branch>"; (indent_fn "<attribute name=\"op\" value=\"-\"/>")]@
-	      (List.map indent_fn (viz_treeml_of_expression e indent_fn))@["</branch>"]
-
-	| `Sum(l,r) -> binary_expr "+" l r
-	| `Product(l,r) -> binary_expr "*" l r
-	| `Minus(l,r) -> binary_expr "-" l r
-	| `Divide(l,r) -> binary_expr "/" l r
-	| `Function(id, args) ->
-	      ["<branch>"; 
-	       (indent_fn "<attribute name=\"op\" value=\"function\"/>");
-	       (indent_fn ("<attribute name=\"functionid\" value=\""^id^"\"/>"));]@
-	       (List.map indent_fn (List.flatten
-		   (List.map (fun ae -> viz_treeml_of_expression ae indent_fn) args)))@
-	      [ "</branch>" ]
-
-let rec viz_treeml_of_bterm bterm indent_fn =
-    let map_expr op e =
-	["<attribute name=\"op\" value=\""^op^"\"/>"]@
-        (viz_treeml_of_map_expression e indent_fn)
-    in
-    let binary_expr op l r =
-	["<attribute name=\"op\" value=\""^op^"\"/>"]@
-        (viz_treeml_of_expression l indent_fn)@
-	(viz_treeml_of_expression r indent_fn)
-    in
-    match bterm with
-	| `LT (l,r) -> binary_expr "&lt;" l r
-	| `LE (l,r) -> binary_expr "&lt;=" l r
-	| `GT (l,r) -> binary_expr "&gt;" l r
-	| `GE  (l,r) -> binary_expr "&gt;=" l r
-	| `EQ  (l,r) -> binary_expr "=" l r
-	| `NE  (l,r) -> binary_expr "!=" l r
-	| `MEQ e -> map_expr "meq" e
-	| `MNEQ e -> map_expr "mneq" e
-	| `MLT e -> map_expr "m&lt;" e
-	| `MLE e -> map_expr "m&lt;=" e
-	| `MGT e -> map_expr "m&gt;" e
-	| `MGE e -> map_expr "m&gt;=" e
-
-and viz_treeml_of_bool_expression b_expr indent_fn =
-    match b_expr with
-	| `BTerm bt ->
-	      ["<branch>"; (indent_fn "<attribute name=\"op\" value=\"bterm\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bterm bt indent_fn))@["</branch>"]
-
-	| `Not be ->
-	      ["<branch>"; (indent_fn "<attribute name=\"op\" value=\"not\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bool_expression be indent_fn))@["</branch>"]
-
-	| `And (l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"and\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bool_expression l indent_fn))@
-		  (List.map indent_fn (viz_treeml_of_bool_expression r indent_fn))@["</branch>"]
-
-	| `Or (l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"or\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bool_expression l indent_fn))@
-		  (List.map indent_fn (viz_treeml_of_bool_expression r indent_fn))@["</branch>"]
-
-and viz_treeml_of_map_expression m_expr indent_fn = 
-    let binary_node typ l r =
-	["<branch>";
-	    (indent_fn ("<attribute name=\"op\" value=\""^typ^"\"/>"))]@
-	    (List.map indent_fn (viz_treeml_of_map_expression l indent_fn))@
-	    (List.map indent_fn (viz_treeml_of_map_expression r indent_fn))@["</branch>"]
-    in
-    match m_expr with
-	| `METerm x ->
-	      ["<leaf>";
-		  (indent_fn "<attribute name=\"op\" value=\"meterm\"/>")]@
-		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
-
-	| `Sum(l,r) -> binary_node "m+" l r
-	| `Minus(l,r) -> binary_node "m-" l r
-	| `Product(l,r) -> binary_node "m*" l r
-	| `Min(l,r) -> binary_node "min" l r
-	| `Max(l,r) -> binary_node "max" l r
-	| `MapAggregate(agg, f, q) ->
-	      let agg_fn = match agg with | `Sum -> "sum" | `Min -> "min" | `Max -> "max" in
-	      ["<branch>";
-		  (indent_fn ("<attribute name=\"op\" value=\""^agg_fn^"\"/>"));
-		  (indent_fn (treeml_of_aggregate_function agg))]@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@
-		  (List.map indent_fn (viz_treeml_of_plan q indent_fn))@
-		  ["</branch>"]
-
-	| `Delta (e, f) ->
-	      ["<branch>";
-	      (indent_fn "<attribute name=\"op\" value=\"delta\"/>")]@
-              (List.map indent_fn (treeml_of_delta e))@
-              (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `New f ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"new\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `Incr (s, o, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incr\"/>");
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `IncrDiff (s, o, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrdiff\"/>");
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `Init (s, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"init\"/>");
-		  (indent_fn (treeml_of_state_identifier s))]@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `Insert (s, m, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
-		  (indent_fn (treeml_of_state_identifier s))]@
-		  (List.map indent_fn (treeml_of_meterm m))@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `Update (s, o, m, f) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"insert\"/>");
-		  (indent_fn (treeml_of_state_identifier s));
-		  (indent_fn (treeml_of_oplus o))]@
-		  (List.map indent_fn (treeml_of_meterm m))@
-		  (List.map indent_fn (viz_treeml_of_map_expression f indent_fn))@["</branch>"]
-
-	| `Delete (sid, x) ->
-	      ["<leaf>";
-		  (indent_fn "<attribute name=\"op\" value=\"delete\"/>");
-		  (indent_fn (treeml_of_state_identifier sid))]@
-		  (List.map indent_fn (treeml_of_meterm x))@["</leaf>"]
-
-	| `IfThenElse(b,l,r) -> 
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"ifthenelse\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bterm b indent_fn))@
-	          (List.map indent_fn (viz_treeml_of_map_expression l indent_fn))@
-	          (List.map indent_fn (viz_treeml_of_map_expression r indent_fn))@["</branch>"]
-
-
-and viz_treeml_of_plan p indent_fn = 
-    let viz_treeml_of_relation rtyp r f =
-	["<leaf>";
-	    (indent_fn ("<attribute name=\"op\" value=\""^rtyp^"\"/>"));
-	    (indent_fn ("<attribute name=\"rid\" value=\""^r^"\"/>"))]@
-	    (List.map (fun (id,typ) ->
-		(indent_fn ("<attribute name=\"field\" value=\""^id^","^typ^"\"/>")))
-		 f)@["</leaf>"]
-    in
-    let viz_treeml_of_projections projs =
-	List.map
-	    (fun (oid, expr) ->
-		 "<attribute name=\"projection\" value=\""^
-		     (string_of_attribute_identifier oid)^","^
-		     (string_of_expression expr)^"\"/>")
-	    projs
-    in
-    match p with
-	| `TrueRelation ->
-              ["<leaf>";
-              (indent_fn "<attribute name=\"op\" value=\"truerelation\">");
-              "</leaf>"]
-
-	| `FalseRelation ->
-              ["<leaf>";
-              (indent_fn "<attribute name=\"op\" value=\"falserelation\">");
-              "</leaf>"]
-
-	| `Relation (r,f) -> viz_treeml_of_relation "relation" r f
-
-	| `Select (pred, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"select\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_bool_expression pred indent_fn))@
-		  (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `Project (projs, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"project\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_projections projs))@
-		  (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `Union ch ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"union\"/>")]@
-		  (List.map indent_fn (List.flatten
-		      (List.map (fun c -> viz_treeml_of_plan c indent_fn) ch)))@
-		  ["</branch>"]
-
-	| `Cross(l,r) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"cross\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_plan l indent_fn))@
-		  (List.map indent_fn (viz_treeml_of_plan r indent_fn))@["</branch>"]
-
-	| `DeltaPlan (e, c) ->
-	      ["<branch>";
-	      (indent_fn "<attribute name=\"op\" value=\"delta\"/>");]@
-              (List.map indent_fn (treeml_of_delta e))@
-              (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-	      
-	| `NewPlan (c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"newplan\"/>")]@
-		  (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `IncrPlan (sid, p, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrplan\"/>");
-		  (indent_fn (treeml_of_state_identifier sid));
-		  (indent_fn (treeml_of_poplus p))]@
-		  (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-
-	| `IncrDiffPlan (sid, p, c) ->
-	      ["<branch>";
-		  (indent_fn "<attribute name=\"op\" value=\"incrdiffplan\"/>");
-		  (indent_fn (treeml_of_state_identifier sid));
-		  (indent_fn (treeml_of_poplus p))]@
-		  (List.map indent_fn (viz_treeml_of_plan c indent_fn))@["</branch>"]
-
-
-(*
- * Top level viz I/O function
- *)
-let viz_declarations = base_declarations@[
-    "<attributeDecl name=\"rid\" type=\"String\"/>";
-    "<attributeDecl name=\"field\" type=\"String\"/>";
-    "<attributeDecl name=\"projection\" type=\"String\"/>";
-    "<attributeDecl name=\"op\" type=\"String\"/>";
-]
-
-let viz_treeml_string_of_map_expression m_expr =
-    let indent s = "    "^s in
-    let delim l = String.concat "\n" l in
-    let declarations =
-	(["<declarations>"]@
-        (List.map indent viz_declarations)@
-        [ "</declarations>" ])
-    in
-	(delim
-            (make_tree
-                (declarations@
-		    (List.map indent
-                        (viz_treeml_of_map_expression m_expr indent)))))
-
-
-
-(*
  * I/O TreeML format
  *
  *)
@@ -486,6 +214,24 @@ let treeml_of_bindings bindings =
                       bindings))
 
 
+let rec treeml_of_oplus o = 
+    let make_attr v = 
+        "<attribute name=\"oplus\" value=\""^v^"\"/>"
+    in
+	match o with
+            | `Plus -> make_leaf [make_attr "plus"] | `Minus -> make_leaf [make_attr "minus"]
+
+            | `Min -> make_leaf [make_attr "min"] | `Max -> make_leaf [make_attr "max"]
+
+            | `Decrmin (me, sid) ->
+                  [make_attr "decrmin"]@(treeml_of_map_expression me)@
+                      [treeml_of_state_identifier sid]
+
+            | `Decrmax (me, sid) ->
+                  [make_attr "decrmax"]@(treeml_of_map_expression me)@
+                      [treeml_of_state_identifier sid]
+
+
 (*
   bterm -> (string -> string) -> string list
 
@@ -495,7 +241,7 @@ let treeml_of_bindings bindings =
   bterm := <branch><attr name="bterm" value=bterm_mexpr_node/>map_expression</branch>
 *)
 
-let rec treeml_of_bterm bterm =
+and treeml_of_bterm bterm =
     let make_bterm typ = "<attribute name=\"bterm\" value=\""^typ^"\"/>" in
     let tml_expr e = treeml_of_expression e in
     let tml_map_expr e = treeml_of_map_expression e in
@@ -560,7 +306,7 @@ and treeml_of_bool_expression b_expr =
   map_expr := <branch><attr name="mapexpression" value=incr_map_expr_node/>
                   state_identifier,oplus,map_expr,bindings,map_expr
               </branch>
-  map_expr := <branch><attr name="mapexpression" value="init"/>state_identifier,bindings,map_expr</branch>
+  map_expr := <branch><attr name="mapexpression" value="maintainmap"/>state_identifier,initop,bindings,map_expr</branch>
 
   map_expr := <branch><attr name="mapexpression" value="insert"/>state_identifier,meterm,map_expr</branch>
   map_expr := <branch><attr name="mapexpression" value="update"/>state_identifier,oplus,meterm,map_expr</branch>
@@ -605,8 +351,8 @@ and treeml_of_map_expression m_expr =
 	| `Incr (s, o, re, bd, f) ->
               make_branch
                   ([make_mexpr "incr";
-		  (treeml_of_state_identifier s);
-		  (treeml_of_oplus o)]@
+		  (treeml_of_state_identifier s)]@
+		  (treeml_of_oplus o)@
                   (tml_map re)@
                   (treeml_of_bindings bd)@
                   (tml_map f))
@@ -614,16 +360,17 @@ and treeml_of_map_expression m_expr =
 	| `IncrDiff (s, o, re, bd, f) ->
               make_branch
                   ([make_mexpr "incrdiff";
-		  (treeml_of_state_identifier s);
-		  (treeml_of_oplus o)]@
+		  (treeml_of_state_identifier s)]@
+		  (treeml_of_oplus o)@
                   (tml_map re)@
                   (treeml_of_bindings bd)@
                   (tml_map f))
 
-	| `Init (s, bd, f) ->
+	| `MaintainMap (s, iop, bd, f) ->
               make_branch
-                  ([make_mexpr "init";
+                  ([make_mexpr "maintainmap";
 		  (treeml_of_state_identifier s)]@
+                  (treeml_of_initop iop)@
                   (treeml_of_bindings bd)@
 		  (tml_map f))
 
@@ -637,8 +384,8 @@ and treeml_of_map_expression m_expr =
 	| `Update (s, o, m, f) ->
               make_branch
                   ([make_mexpr "update";
-		  (treeml_of_state_identifier s);
-		  (treeml_of_oplus o)]@
+		  (treeml_of_state_identifier s)]@
+		  (treeml_of_oplus o)@
 		  (make_leaf (treeml_of_meterm m))@
 		  (tml_map f))
 
@@ -738,9 +485,6 @@ and treeml_of_plan p =
                       (treeml_of_bindings bd)@
                       (tml_plan c))
 
-(*
- * Top level I/O function
- *)
 let io_declarations = base_declarations@[
     "<attributeDecl name=\"expression\"           type=\"String\"/>";
     "<attributeDecl name=\"bterm\"                type=\"String\"/>";
@@ -748,6 +492,10 @@ let io_declarations = base_declarations@[
     "<attributeDecl name=\"mapexpression\"        type=\"String\"/>";
     "<attributeDecl name=\"plan\"                 type=\"String\"/>";
 ]
+
+(*
+ * map_expression -> tml string
+ *)
 
 let treeml_string_of_map_expression m_expr =
     let delim l = String.concat "\n" l in
@@ -757,6 +505,7 @@ let treeml_string_of_map_expression m_expr =
         [ "</declarations>" ])
     in
 	(delim (make_tree (declarations@(treeml_of_map_expression m_expr))))
+
 
 
 (*********************
@@ -843,17 +592,19 @@ let get_aggregate_function tml =
             | "max" -> `Max
             | _ -> raise (InvalidTreeML ("node: "^(to_string tml)))
 
-(* TODO: decrmin, decrmax inner map expressions *)
-let get_oplus tml =
-    let oplus_str = get_value tml "oplus" in
-        match oplus_str with
-            | "plus" -> `Plus
-            | "minus" -> `Minus
-            | "min" -> `Min
-            | "max" -> `Max
-            | "decrmin" -> `Decrmin (`METerm (`Int(0)), "dummy_state")
-            | "decrmax" -> `Decrmax (`METerm (`Int(0)), "dummy_state")
-            | _ -> raise (InvalidTreeML ("node: "^(to_string tml)))
+let get_initop tml =
+    match children tml with
+        | [] -> raise (InvalidTreeML ("node: "^(to_string tml)))
+        | tml_l ->
+              begin
+                  if (List.length tml_l) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                  else
+                      let iop_type = get_value (List.hd tml_l) "initop" in
+                          match iop_type with
+                              | "init" -> let domain = get_domain (List.hd (List.tl tml_l)) in `Init domain
+                              | "final" -> let domain = get_domain (List.hd (List.tl tml_l)) in `Final domain
+                              | _ -> raise (InvalidTreeML ("node: "^(to_string tml)))
+              end
 
 let get_poplus tml =
     let poplus_str = get_value tml "poplus" in
@@ -1002,7 +753,36 @@ let get_bindings tml =
                               (aid, e_opt))
                       attrs_tml e_opts_tml
 
-let rec get_bterm tml =
+
+let rec get_oplus tml =
+    match children tml with
+        | [] -> raise (InvalidTreeML ("node: "^(to_string tml)))
+        | tml_l ->
+              begin
+                  let oplus_str = get_value (List.hd tml_l) "oplus" in
+                      match oplus_str with
+                          | "plus" -> `Plus
+                          | "minus" -> `Minus
+                          | "min" -> `Min
+                          | "max" -> `Max
+                          | "decrmin" ->
+                                if (List.length tml_l) != 3 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                                else
+                                    let me = get_map_expression (List.hd (List.tl tml_l)) in
+                                    let sid = get_state_identifier (List.nth tml_l 2) in
+                                        `Decrmin (me, sid)
+
+                          | "decrmax" ->
+                                if (List.length tml_l) != 3 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                                else
+                                    let me = get_map_expression (List.hd (List.tl tml_l)) in
+                                    let sid = get_state_identifier (List.nth tml_l 2) in
+                                        `Decrmax (me, sid)
+
+                          | _ -> raise (InvalidTreeML ("node: "^(to_string tml)))
+              end
+
+and get_bterm tml =
     let get_binary tml_l fn =
         if (List.length tml_l) != 2 then raise (InvalidTreeML ("node: "^(to_string tml)))
         else
@@ -1130,14 +910,15 @@ and get_map_expression tml =
                                                     `IncrDiff(sid, op, re, bd, e)
                                         end
 
-                              | "init" ->
-                                    if (List.length t) != 3 then raise (InvalidTreeML ("node: "^(to_string tml)))
+                              | "maintainmap" ->
+                                    if (List.length t) != 4 then raise (InvalidTreeML ("node: "^(to_string tml)))
                                     else
                                         begin
                                             let sid = get_state_identifier (List.hd t) in
-                                            let bd = get_bindings (List.nth t 1) in
-                                            let e = get_map_expression (List.nth t 2) in
-                                                `Init(sid, bd, e)
+                                            let iop = get_initop (List.nth t 1) in
+                                            let bd = get_bindings (List.nth t 2) in
+                                            let e = get_map_expression (List.nth t 3) in
+                                                `MaintainMap(sid, iop, bd, e)
                                         end
 
                               | "insert" ->
@@ -1276,9 +1057,57 @@ let parse_treeml treeml_str =
 let parse_treeml_file treeml_fn =
     parse_treeml_of_xml (parse_file treeml_fn)
 
-(*
+
+(***************************************
+ * Map expression TreeML visualization
+ ***************************************)
+
+let rec map_xml_tree fn xml =
+    match xml with
+        | Element (tagname, attrs, children) ->
+              fn (Element (tagname, attrs, List.map (map_xml_tree fn) children))
+
+        | PCData data -> xml
+
+let viz_treeml_of_treeml_str tml_str =
+    let m_expr_tml = parse_string tml_str in
+        map_xml_tree
+            (function
+                | Element (tagname, attrs, children) ->
+                      let viz_attrs =
+                          List.map
+                              (fun (n,v) ->
+                                  match v with
+                                      | "expression" | "bterm"
+                                      | "boolexpression" | "mapexpression" | "plan"
+                                      | "attribute_identifier" | "variable_identifier"
+                                      | "function_identifier" | "type_identifier"
+                                      | "field_identifier" | "relation_identifier" | "state_identifier"
+                                      | "delta"
+                                      | "aggregate"
+                                      | "initop" | "oplus" | "poplus"
+                                      | "eterm-type" | "eterm-val"
+                                      | "meterm-type" | "meterm-val"
+                                          -> (n, "op")
+                                      | _ -> (n,v))
+                              attrs
+                      in
+                          Element(tagname, viz_attrs, children)
+                | (PCData _) as node -> node)
+            m_expr_tml
+
+let viz_treeml_string_of_map_expression m_expr =
+    let m_expr_tml_str = treeml_string_of_map_expression m_expr in
+        viz_treeml_of_treeml_str m_expr_tml_str
+
+let write_viz_map_expression out_chan treeml_str =
+    let viz_tml = viz_treeml_of_treeml_str treeml_str in
+        output_string out_chan (to_string_fmt viz_tml)
+
+
+(*******************************
  * Compilation traces
- *)
+ *******************************)
 
 (* delta list -> (handler stages * (string * binding stages) list) list) -> string *)
 let write_compilation_trace trace_dir event_path stages_per_map_expr =
@@ -1331,14 +1160,14 @@ let write_compilation_trace trace_dir event_path stages_per_map_expr =
     let declarations =
 	(["<declarations>"]@
         (List.map indent
-            (io_declarations@
-                ["<attributeDecl name=\"stage-type\"           type=\"String\"/>";
-                 "<attributeDecl name=\"stage-name\"           type=\"String\"/>";
-                 "<attributeDecl name=\"stage-path\"           type=\"String\"/>"]))@
+            (["<attributeDecl name=\"stage-type\"         type=\"String\"/>";
+            "<attributeDecl name=\"stage-name\"           type=\"String\"/>";
+            "<attributeDecl name=\"stage-path\"           type=\"String\"/>";
+            "<attributeDecl name=\"op\"                   type=\"String\"/>"]))@
         [ "</declarations>" ])
     in
-
-        output_string trace_out (delim (make_tree (declarations@trace_tml)));
+        write_viz_map_expression trace_out
+            (delim (make_tree (declarations@trace_tml)));
         close_out trace_out;
         trace_fn
 
@@ -1421,7 +1250,9 @@ let rec treeml_pseudocode_of_code_expression c_expr =
                           (treeml_pseudocode_of_code_expression l)@
                           (treeml_pseudocode_of_code_expression r))
 
-            | `ForEach (ds, c) ->
+            | `ForEach (ds, c)
+            | `ForEachResume (ds, c)
+                ->
                   make_branch
                       ([make_statement
                           (xml_escape
@@ -1429,9 +1260,13 @@ let rec treeml_pseudocode_of_code_expression c_expr =
                               (string_of_datastructure ds)^" )"))]@
                           (treeml_pseudocode_of_code_expression c))
 
+            | `Resume _ -> make_leaf [make_statement "resume"]
+
             | `Block cl -> List.flatten (List.map treeml_pseudocode_of_code_expression cl)
 
-            | `Return a -> make_code_leaf c_expr
+            | `Return _ -> make_code_leaf c_expr
+
+            | `ReturnMap _ -> make_code_leaf c_expr
 
             | `Handler (id, args, rt, cl) -> 
                   make_branch
@@ -1450,10 +1285,10 @@ let write_pseudocode file_name c_expr_l =
     let pseudo_tree =
         let tree_body = 
             List.flatten (List.map
-                (fun ce -> make_branch (treeml_pseudocode_of_code_expression ce))
+                (fun ce -> treeml_pseudocode_of_code_expression ce)
                 c_expr_l)
         in
-        let root_node = "<attribute name=\"statement\" value=\""^(xml_escape "<root>")^"\"/>" in
+        let root_node = "<attribute name=\"statement\" value=\""^(xml_escape "<global>")^"\"/>" in
             make_tree (pseudocode_declarations@(make_branch ([root_node]@tree_body)))
     in
     let pseudo_out = open_out file_name in

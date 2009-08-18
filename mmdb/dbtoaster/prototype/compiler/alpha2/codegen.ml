@@ -1,4 +1,5 @@
 open Algebra
+open Compilepass
 
 let rec create_code_expression expr =
     match expr with
@@ -84,6 +85,7 @@ let rec substitute_arith_code_vars assignments ac_expr =
 
 	    | `CTerm(`MapAccess(mid,kf)) -> `CTerm(`MapAccess(mid, substitute_cv_list kf))
 	    | `CTerm(`MapContains(mid, kf)) -> `CTerm(`MapContains(mid, substitute_cv_list kf))
+	    | `CTerm(`DomainContains(did, kf)) -> `CTerm(`DomainContains(did, substitute_cv_list kf))
 
 	    | `CTerm(_) -> ac_expr
 
@@ -168,8 +170,8 @@ let rec substitute_code_vars assignments c_expr =
 	    | `AssignMap((mid, kf), c) ->
 		  `AssignMap((mid, substitute_cv_list kf), sa c)
 
-	    | `EraseMap((mid, kf), c) ->
-		  `EraseMap((mid, substitute_cv_list kf), sa c)
+	    | `EraseMap (mid, kf) ->
+		  `EraseMap (mid, substitute_cv_list kf)
 
             | `InsertTuple(ds, cvl) -> `InsertTuple(ds, substitute_cv_list cvl)
             | `DeleteTuple(ds, cvl) -> `DeleteTuple(ds, substitute_cv_list cvl)
@@ -177,9 +179,12 @@ let rec substitute_code_vars assignments c_expr =
 	    | `IfNoElse(p, c) -> `IfNoElse(sb p, sc c)
 	    | `IfElse(p, l, r) -> `IfElse(sb p, sc l, sc r)
 	    | `ForEach(ds, c) -> `ForEach(ds, sc c)
+	    | `ForEachResume(ds, c) -> `ForEachResume(ds, sc c)
+	    | `Resume(s) -> `Resume(s)
 	    | `Eval x -> `Eval (sa x)
 	    | `Block cl -> `Block(List.map sc cl)
-	    | `Return x -> `Return (sa x)
+	    | `Return (ac) -> `Return (sa ac)
+            | `ReturnMap mid -> `ReturnMap mid
 	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
             | `Profile(st, p,c) -> `Profile(st, p, sc c)
 
@@ -203,6 +208,7 @@ let rec simplify_code c_expr =
 	| `IfNoElse (p,c) -> `IfNoElse(p, simplify_code c)
 	| `IfElse (p,l,r) -> `IfElse(p, simplify_code l, simplify_code r)
 	| `ForEach(ds, c) -> `ForEach(ds, simplify_code c)
+	| `ForEachResume(ds, c) -> `ForEachResume(ds, simplify_code c)
 
 	(* flatten blocks *)
         | `Block ([x; `Block(y)]) when not(is_block x) ->
@@ -315,8 +321,9 @@ let gc_incr_state_var code var oplus diff =
 	| `Minus -> `Minus (`CTerm(`Variable(var)), x)
 	| `Min -> `Min (`CTerm(`Variable(var)), x)
 	| `Max -> `Max (`CTerm(`Variable(var)), x)
-	| `Decrmin _ | `Decrmax _
-              -> raise InvalidExpression
+
+        (* Decrmin/max handled separately *)
+        | `Decrmin _ | `Decrmax _ -> raise InvalidExpression
     in
     let rv = get_return_val code in
         match rv with
@@ -332,8 +339,10 @@ let gc_incr_state_var code var oplus diff =
                   in
 		      new_code
             | _ ->
-                  print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
-                  raise (RewriteException "get_incr_state_var: invalid return val")
+                  print_endline ("Invalid return val: "^
+                      (indented_string_of_code_expression rv));
+                  raise (RewriteException
+                      ("get_incr_state_var: invalid return val"))
 
 
 let gc_assign_state_map code map_key =
@@ -351,6 +360,7 @@ let gc_assign_state_map code map_key =
                   raise (RewriteException "get_assign_state_map: invalid return val")
 
 
+
 let gc_incr_state_map code map_key oplus diff =
     let map_access_code = `CTerm(`MapAccess(map_key)) in
     let oper op = function x -> match op with 
@@ -358,8 +368,9 @@ let gc_incr_state_map code map_key oplus diff =
 	| `Minus -> `AssignMap(map_key, `Minus(map_access_code, x))
 	| `Min -> `AssignMap(map_key, `Min (map_access_code, x))
 	| `Max -> `AssignMap(map_key, `Max (map_access_code, x))
-	| `Decrmin _ | `Decrmax _ ->
-              raise InvalidExpression
+
+        (* Decrmin/max handled separately *)
+	| `Decrmin _ | `Decrmax _ -> raise InvalidExpression
     in		
     let rv = get_return_val code in
         match rv with
@@ -379,8 +390,87 @@ let gc_incr_state_map code map_key oplus diff =
                   raise (RewriteException "get_incr_state_map: invalid return val")
 
 
-(* Helper for dealing with `Init *)
-let gc_insert_event m_expr decl event =
+(*
+ * Decrmin/max
+ *)
+let gc_decr_cmp_agg_check_datastructure dsq_decl dsq_key =
+    let ds = datastructure_of_declaration dsq_decl in
+    match dsq_decl with
+        | `Domain (did,f) ->
+              (ds, `CTerm(`DomainContains(dsq_key)), `CTerm(`DomainIterator(`End(did))))
+        | _ ->
+              let msg = "Invalid decr agg domain: "^(string_of_declaration (`Declare (dsq_decl))) in
+                  print_endline msg;
+                  raise (CodegenException ("gc_decr_cmp_agg_check_datastructure: "^msg))
+
+let gc_decr_cmp_agg_foreach_body ds recomp_rv recomp_code =
+    let tmpvar = gen_var_sym() in
+    let foreach_body = 
+        if recomp_code = `Eval(recomp_rv) then
+            `Assign(tmpvar, recomp_rv)
+        else
+            replace_return_val recomp_code (`Assign(tmpvar, recomp_rv))
+    in
+        (tmpvar, `ForEach(ds, foreach_body))
+
+let gc_decr_cmp_agg_validate_rv decr_code recomp_code =
+    let decr_rv = get_return_val decr_code in
+    let recomp_rv = get_return_val recomp_code in
+        begin match (decr_rv, recomp_rv) with
+            | (`Eval x, `Eval y) -> (x, y)
+            | _ ->
+                  let msg = "Invalid return val:\ndecr\n"^
+                      (indented_string_of_code_expression decr_code)^"\nrecomp\n"^
+                      (indented_string_of_code_expression decr_code)
+
+                  in
+                      print_endline msg;
+                      raise (RewriteException ("gc_decr_validate_rv: "^msg))
+        end
+
+
+let gc_decr_cmp_agg_state_var decr_code recomp_code dsq_decl dsq_key var var_type =
+    let gc_aux decr_rv recomp_rv =
+        let (ds, dsq_contains, dsq_end) = gc_decr_cmp_agg_check_datastructure dsq_decl dsq_key in
+        let (tmpvar, decr_foreach) = gc_decr_cmp_agg_foreach_body ds recomp_rv recomp_code in
+        let decr_code =
+            `IfNoElse(`And(
+                `BCTerm(`EQ(`CTerm(`Variable(var)), decr_rv)),
+                `BCTerm(`EQ(dsq_contains, dsq_end))), 
+            `Block(
+                [`Declare(`Variable(tmpvar, var_type));
+                decr_foreach;
+                `Assign(var, (`CTerm(`Variable(tmpvar))));]))
+                
+        in 
+            `Block([decr_code; `Eval(`CTerm(`Variable(var)))])
+    in
+    let (decr_rv, recomp_rv) = gc_decr_cmp_agg_validate_rv decr_code recomp_code in
+        gc_aux decr_rv recomp_rv
+
+
+let gc_decr_cmp_agg_state_map decr_code recomp_code dsq_decl dsq_key map_key map_ret_type =
+    let gc_aux decr_rv recomp_rv =
+        let (ds, dsq_contains, dsq_end) = gc_decr_cmp_agg_check_datastructure dsq_decl dsq_key in
+        let (tmpvar, decr_foreach) = gc_decr_cmp_agg_foreach_body ds recomp_rv recomp_code in
+        let decr_code =
+            `IfNoElse(`And(
+                `BCTerm(`EQ(`CTerm(`MapAccess(map_key)), decr_rv)),
+                `BCTerm(`EQ(dsq_contains, dsq_end))), 
+            `Block(
+                [`Declare(`Variable(tmpvar, map_ret_type));
+                decr_foreach;
+                `AssignMap(map_key, (`CTerm(`Variable(tmpvar))));]))
+                
+        in 
+            `Block([decr_code; `Eval(`CTerm(`MapAccess(map_key)))])
+    in
+    let (decr_rv, recomp_rv) = gc_decr_cmp_agg_validate_rv decr_code recomp_code in
+        gc_aux decr_rv recomp_rv
+
+
+(* Helper for dealing with `MaintainMap *)
+let gc_insdel_event m_expr decl event =
     let br = get_base_relations m_expr in
     let event_vars = match event with 
         | `Insert(_, f) | `Delete(_, f) -> List.map (fun (id, ty) -> id) f
@@ -409,10 +499,18 @@ let gc_insert_event m_expr decl event =
                       `InsertTuple(datastructure_of_declaration er_decl, event_vars)
                   in
                       Some(insert_code)
-            | (`Delete _, _) ->
+
+            | (`Delete _, []) -> None
+            | (`Delete _, er_decl::t) ->
+                  let delete_code =
+                      `DeleteTuple(datastructure_of_declaration er_decl, event_vars)
+                  in
+                      Some(delete_code)
+                  (*
                   print_endline ("gc_insert_event: called on "^(string_of_delta event)^
                       " with map expr:\n"^(indented_string_of_map_expression m_expr 0));
                   raise (CodegenException ("gc_insert_event: called on "^(string_of_delta event)))
+                  *)
 
 let gc_declare_state_for_map_expression m_expr decl unbound_attrs_vars state_id base_rels events =
     print_endline (string_of_map_expression m_expr);
@@ -457,7 +555,7 @@ let gc_declare_handler_state_for_map_expression m_expr decl unbound_attrs_vars b
                 m_expr decl unbound_attrs_vars x base_rels events
     in
     match m_expr with
-	| `Incr (sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) | `Init(sid,_,_) ->
+	| `Incr (sid,_,_,_,_) | `IncrDiff(sid,_,_,_,_) | `MaintainMap(sid,_,_,_) ->
               begin
                   match unbound_attrs_vars with
                       | [] -> global_decfn  (gen_var_sym())
@@ -521,7 +619,7 @@ let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decl
         end
 
 
-let gc_state_accessor_code par_decl bindings
+let gc_recursive_state_accessor_code par_decl bindings
         e e_code e_decl e_vars e_uba_fields op diff recursion_decls
 =
     match par_decl with
@@ -539,7 +637,6 @@ let gc_state_accessor_code par_decl bindings
               let (mk,ba) =
                   let (access_fields, new_bindings) =
                       List.fold_left (fun (acc, bacc ) (id, _) ->
-(*                      List.map (fun (id, _) ->*)
                           let bound_f =
                               List.filter (fun (a,_) ->
                                   (field_of_attribute_identifier a) = id) bindings
@@ -587,7 +684,7 @@ let gc_declare_and_incr_state incr_e e_code e_decl e_uba op diff base_rels event
 		      (gc_incr_state_map e_code map_key op diff, new_decl)
 	end
 
-let gc_declare_and_assign_state init_e e_code e_decl e_uba base_rels events=
+let gc_declare_and_assign_state init_e e_code e_decl e_uba base_rels events =
     let print_debug orig_expr code map_key =
         print_endline "Assigning state map for init";
         print_endline ("expr: "^(string_of_map_expression orig_expr));
@@ -614,15 +711,112 @@ let gc_declare_and_assign_state init_e e_code e_decl e_uba base_rels events=
 		      let mf = List.map field_of_attribute_identifier e_uba in
 			  (mid, mf)
                   in
-                      print_debug init_e e_code map_key;
-		      (gc_assign_state_map e_code map_key, new_decl)
+                      begin
+                          print_debug init_e e_code map_key;
+                          (gc_assign_state_map e_code map_key, new_decl)
+                      end
 	end
 
 
+let gc_declare_domain sid domain decl base_rels events =
+    let print_debug dom_decl = 
+        print_endline ("Declaring domain for "^sid^", "^
+            (string_of_declaration (`Declare(dom_decl))));
+        List.iter
+            (function
+                | `Domain(id,f) as x ->
+                      print_endline ("existing dom decl: "^(string_of_declaration (`Declare(x))))
+                | _ -> raise InvalidExpression)
+            (List.filter (function | `Domain _ -> true | _ -> false) decl)
+    in
+    let dom_id = gen_dom_sym (sid) in
+    let dom_field_names = List.map field_of_attribute_identifier domain in
+    let dom_fields =
+        List.map
+            (fun x ->
+                (field_of_attribute_identifier x, 
+		type_inf_mexpr (`METerm (`Attribute(x))) base_rels events decl)) domain
+    in
+    let dom_decl = `Domain(dom_id, dom_fields) in
+    let dom_ds = datastructure_of_declaration dom_decl in
+        print_debug dom_decl;
+        (dom_decl, dom_ds, dom_field_names)
+
+
+(* TODO: no need for return val -- remove. *)
+let gc_finalise_binding_map m_expr binding_map_id
+        binding_map_key finalise_map_key binding_var finalise_var
+=
+    let m_init =
+        let br = get_base_relations m_expr in
+            simplify_map_expr_constants
+                (List.fold_left
+                    (fun expr_acc r -> splice expr_acc (`Plan r) (`Plan `FalseRelation))
+                    m_expr br)
+    in
+    let (compare_init, init_code) =
+        match m_init with
+            | `METerm ((`Int _) as k)
+            | `METerm ((`Float _) as k)
+            | `METerm ((`String _) as k)
+            | `METerm ((`Long _) as k)
+                -> (`BCTerm(`EQ(`CTerm(`MapAccess(finalise_map_key)), `CTerm(k))), `CTerm(k))
+
+            | _ -> raise (CodegenException
+                  ("Found non-constant initial value for "^
+                      (string_of_map_expression m_expr)))
+    in
+    let finalise_pred =
+        `And(`BCTerm(
+            `EQ(`CTerm(`Variable(finalise_var)), `CTerm(`Variable(binding_var)))),
+        compare_init)
+    in
+    let finalise_code =      
+        `IfNoElse(finalise_pred,
+            `Block[`EraseMap(finalise_map_key); `Resume(None)])
+    in
+    let retval_code =
+        let then_code = `Eval(init_code) in
+        let else_code = `Eval(`CTerm(`MapAccess(binding_map_key))) in
+        `IfElse(
+            `BCTerm(`EQ(`CTerm(`MapContains(binding_map_key)),
+                `CTerm(`MapIterator(`End(binding_map_id))))),
+            then_code, else_code)
+    in
+        (finalise_code, retval_code)
+
+
+let gc_finalise_state m_expr sid decl e_uba base_rels events =
+    match e_uba with
+        | [] -> raise (CodegenException "gc_finalize_state: invoked on variable.")
+        | _  ->
+              (* Declare map as necessary, since this may be the first encounter
+               * of sid in this handler *) 
+              let state_mid = gen_map_sym sid in
+              let (new_map, new_decl) = 
+                  gc_declare_state_for_map_expression
+                      m_expr decl e_uba state_mid base_rels events
+              in
+	      let map_key =
+                  let mid = match new_map with
+                      | `Map(id,_,_) -> id | _ -> raise InvalidExpression
+                  in
+		  let mf = List.map field_of_attribute_identifier e_uba in
+		      (mid, mf)
+              in
+                  (* Erase from map *)
+                  (`EraseMap(map_key), new_decl)
+
+
+
 (* map_expression -> binding list -> delta -> boolean
+   -> declaration list
    -> (var id * code terminal) list -> (var id list * code terminal) list
-   -> code_expression * declaration list *)
-let generate_code handler bindings event body_only map_var_accessors state_p_decls recursion_decls base_rels=
+   -> declaration list -> plan list ->
+   -> declaration list * code_expression  *)
+let generate_code handler bindings event body_only event_handler_decls
+        map_var_accessors state_p_decls recursion_decls base_rels
+=
     print_endline ("Generating code for: "^(string_of_map_expression handler));
 
     (* map_expression -> declaration list -> bool * binding list
@@ -692,6 +886,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                           | `Max -> `Max (`CTerm(`Variable(running_var)), x)
                   in
 		      begin
+                          (* TODO: handle nested aggregates that will not produce a single
+                           * arith value from compiling f *)
 			  match f_code with
 			      | `Eval (x) ->
 				    let (agg_block, agg_decl) =
@@ -727,10 +923,29 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 			  let rc_type = type_inf_mexpr rc_m base_rels [event] decl in
  		          let mid = gen_map_sym sid in
 		  	  let mid_type = type_inf_mexpr e base_rels [event] decl in	
+                          let bd_fields = List.map
+                              (fun (a, e_opt) ->
+                                  let f = field_of_attribute_identifier a in
+                                  let ftyp = match e_opt with
+                                      | Some(e) -> type_inf_expr e base_rels [event] decl
+                                      | None -> raise (CodegenException ("Unconstrained binding "^f))
+                                  in
+                                      (f, ftyp)) bd
+                          in
+                          let bd_vars = List.map
+                              (fun (a, e_opt) ->
+                                  let f = field_of_attribute_identifier a in
+                                      match e_opt with
+                                          | Some(`ETerm(`Variable(v))) -> v
+                                          | None | _ ->
+                                                raise (CodegenException ("Unconstrained binding "^f)))
+                              bd
+                          in
 		          let c = gen_var_sym() in
-		          let map_decl = `Map(mid, [(c, rc_type)], mid_type) in 
-		          let map_key = (mid, [rc]) in
-                          let update_map_key = (mid, [c]) in
+                          let map_fields = [(c, rc_type)]@bd_fields in
+		          let map_decl = `Map(mid, map_fields, mid_type) in
+		          let map_key = (mid, [rc]@bd_vars) in
+                          let update_map_key = (mid, [c]@bd_vars) in
                           let new_decl =
                               if List.mem map_decl e_decl then e_decl else e_decl@[map_decl]
                           in
@@ -748,7 +963,23 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                         let (insert_code, insert_decl) =
                                             (* use recomputation code rather than delta code *)
                                             let (re_code, re_decl) = gc_aux re new_decl (false, []) in
-                                                (gc_assign_state_map re_code map_key, re_decl)
+                                            let substituted_code = 
+                                                substitute_code_vars
+                                                    (List.fold_left
+                                                        (fun sub_acc (a, e_opt) ->
+                                                            match e_opt with
+                                                                | None -> sub_acc
+                                                                | Some (`ETerm(`Variable(v))) ->
+                                                                      let new_sub = 
+                                                                          let f = field_of_attribute_identifier a in
+                                                                              `Assign(f, `CTerm(`Variable(v)))
+                                                                      in
+                                                                          sub_acc@[new_sub]
+                                                                | _ -> sub_acc)
+                                                        [] bd)
+                                                    re_code
+                                            in
+                                                (gc_assign_state_map substituted_code map_key, re_decl)
                                         in
 				        let (update_and_init_binding_code, insert_wprof_decl) = 
                                             let prof_loc = generate_profile_id event in
@@ -765,23 +996,56 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 				        in
                                             (update_and_init_binding_code, insert_wprof_decl)
 
-				  (* TODO: garbage collection, min *)	
 			          | `Delete _ -> 
-                                        let delete_code = gc_incr_state_map e_code map_key op diff in
-                                        let update_code = gc_incr_state_map e_code update_map_key op diff in
-				        let (delete_and_update_binding_code, delete_wprof_decl) = 
-                                            let prof_loc = generate_profile_id event in
-                                                (`Profile("cpu", prof_loc,
-				                `Block ([
-                                                    delete_code;
-					            (* TODO: if S_f[rc] = f(R=0)[rc]) delete S_f[rc] *)
-	 				            `ForEach (map_decl, update_code);
-					            `Eval(`CTerm(`MapAccess(map_key)))])),
-                                                (`ProfileLocation prof_loc)::new_decl)
-				        in
-                                            (delete_and_update_binding_code, delete_wprof_decl)
+                                        begin
+                                            match op with
+                                                | `Decrmin (me,sid)
+                                                | `Decrmax (me,sid)
+                                                        ->
+                                                      (* TODO: generate recomp code and data structure metadata *)
+                                                      (*
+                                                      let (recomp_code, recomp_decl) = gc_aux me e_decl (false, []) in
+                                                      let dsq_id = gen_dom_sym sid in
+                                                      let dsq_decl =
+                                                          let existing_decl =
+                                                              List.filter
+                                                                  (fun ds -> match ds with
+                                                                      | `Domain(did,_) -> did = dsq_id | _ -> false)
+                                                                  recomp_decl
+                                                          in
+                                                              match existing_decl with
+                                                                  | [] -> raise (CodegenException
+                                                                        ("No declaration found for agg decr state "^dsq_id))
+                                                                  | [x] -> x
+                                                                  | _ -> raise DuplicateException
+                                                      in
+                                                      let dsq_key = in
+                                                          gc_decr_cmp_agg_state_map
+                                                              e_code recomp_code dsq_decl dsq_key update_map_key mid_type
+                                                      *)
+                                                      raise InvalidExpression
+
+                                                | otherop ->
+                                                      let update_code = gc_incr_state_map e_code update_map_key otherop diff in
+                                                      let (finalise_code, retval_code) =
+                                                          gc_finalise_binding_map re mid map_key update_map_key rc c
+                                                      in
+                                                      let update_and_finalise_code = `Block([update_code; finalise_code]) in
+                                                          
+				                      let (delete_and_update_binding_code, delete_wprof_decl) = 
+                                                          let prof_loc = generate_profile_id event in
+                                                              (`Profile("cpu", prof_loc,
+				                              `Block ([
+	 				                          `ForEachResume (map_decl, update_and_finalise_code);
+                                                                  `Eval(`CTerm(`MapAccess(map_key)))])),
+                                                              (`ProfileLocation prof_loc)::new_decl)
+				                      in
+                                                          (delete_and_update_binding_code, delete_wprof_decl)
+
+                                        end
 
 		      else
+                          (* Non-binding state update *)
                           let (e_vars, _) = List.split(match event with
                               | `Insert(_,vars) | `Delete(_,vars) -> vars)
                           in
@@ -791,40 +1055,31 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 		          in
                           let e_uba_fields = List.map field_of_attribute_identifier e_uba in
 
-                          (*
-                          if List.mem_assoc oe termp_accessors then
-                              gc_termp_accessor_code oe termp_accessors
-                                  e e_code e_decl e_vars e_uba_fields op diff recursion_decls
-                          else
-                              begin
-                                  let sorted_uba =
-                                      List.sort compare
-                                          (List.map field_of_attribute_identifier e_uba)
-                                  in
-                                      if (List.mem_assoc sorted_uba varp_accessors) then
-                                          gc_varp_accessor_code sorted_uba varp_accessors
-                                              e e_code e_decl e_vars e_uba_fields op diff recursion_decls
-                                      else
-                                          gc_declare_and_incr_state oe e_code e_decl e_uba op diff
+                              begin match op with
+                                  | `Decrmin (me,sid) | `Decrmax(me,sid) -> raise InvalidExpression
+                                  | otherop ->
+                                        (* Recursive state update *)
+                                        if List.mem_assoc sid state_p_decls then
+                                            let par_decl = List.assoc sid state_p_decls in
+                                                gc_recursive_state_accessor_code par_decl bd
+                                                    e e_code e_decl e_vars e_uba_fields otherop diff recursion_decls
+
+                                        (* Local state update *)
+                                        else
+                                            gc_declare_and_incr_state
+                                                oe e_code e_decl e_uba otherop diff base_rels [event]
                               end
-                          *)
 
-                              if List.mem_assoc sid state_p_decls then
-                                  let par_decl = List.assoc sid state_p_decls in
-                                      gc_state_accessor_code par_decl bd
-                                          e e_code e_decl e_vars e_uba_fields op diff recursion_decls
-                              else
-                                  gc_declare_and_incr_state oe e_code e_decl e_uba op diff base_rels [event]
-
-            (* TODO: generate map key from bindings *)
-	    | (`Init (sid, bd, e) as oe) ->
-
-		  let (e_code, e_decl) = gc_aux e decl bind_info in
-
-                  (* Note: no need to filter handler args, since e should be a recomputation,
-                   * i.e. a map_expression where deltas have not been applied *)
-		  let e_uba = get_unbound_attributes_from_map_expression e true in
-                      gc_declare_and_assign_state oe e_code e_decl e_uba base_rels [event]
+	    | (`MaintainMap (sid, iop, bd, e) as oe) ->
+                  begin
+                      (* Note: no need to filter handler args, since e should be a recomputation,
+                       * i.e. a map_expression where deltas have not been applied *)
+		      let e_uba = get_unbound_attributes_from_map_expression e true in
+		      let (e_code, e_decl) = gc_aux e decl bind_info in
+                          match iop with
+                              | `Init d -> gc_declare_and_assign_state oe e_code e_decl e_uba base_rels [event]
+                              | `Final d -> gc_finalise_state e sid e_decl e_uba base_rels [event]
+                  end
 
 	    | _ -> 
 		  print_endline("gc_aux: "^(string_of_map_expression e));
@@ -852,6 +1107,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 
             | `Domain (sid, attrs) ->
                   let (domain_decl, new_decl) =
+		      let dom_id = gen_dom_sym (sid) in
                       let dom_fields =
                           List.map
                               (fun x ->
@@ -859,19 +1115,8 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                                   type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl))
                               attrs
                       in
-                      let existing_decl =
-                          List.filter
-                              (fun ds -> match ds with
-                                  | `Domain (_, f) -> f = dom_fields | _ -> false)
-                              decl
-                      in
-                          match existing_decl with
-                              | [] ->
-		                    let dom_id = gen_dom_sym (sid) in
-                                    let dom_decl = `Domain(dom_id, dom_fields) in 
-                                        (dom_decl, decl@[dom_decl])
-                              | [x] -> (x, decl)
-                              | _ -> raise DuplicateException
+                      let dom_decl =  `Domain(dom_id, dom_fields) in
+                          (dom_decl, if List.mem dom_decl decl then decl else (decl@[dom_decl]))
                   in
                       (`ForEach(datastructure_of_declaration domain_decl, iter_code), new_decl)
 
@@ -902,105 +1147,198 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
 			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
                                 ->
-				(* TODO: pred var types *)
+                                let print_debug_return_expr pred_var pred_var_code rv_expr =
+                                    print_endline ("Declaring pred var "^pred_var^" in "^(string_of_plan q));
+                                    print_endline ("pv_code:\n"^
+                                        (indented_string_of_code_expression pred_var_code));
+                                    print_endline ("rv_code: "^(string_of_arith_code_expression rv_expr));
+                                in
+
 				let (pred_var_code, new_decl) = gc_aux m_expr decl bind_info in
 				let pred_var_type = type_inf_mexpr m_expr base_rels [event] decl in
-				let (pred_cterm, assign_var_code, pred_decl) =
-                                    let pred_var_rv = get_return_val pred_var_code in
-                                    let code_wo_rv =
-                                        if pred_var_code = pred_var_rv then None
-                                        else Some(remove_return_val pred_var_code)
-                                    in
-                                        match pred_var_rv with
-                                            | `Eval(`CTerm(`Variable(x))) ->
-						  (* (`Variable(x), code_wo_rv, new_decl) *)
-                                                  let error = "Found independent nested map expression"^
-                                                      "(should have been lifted.)"
+
+                                let compute_insert_pred_code () =
+
+                                    (* Compute `Init pred code *)
+				    let (pred_cterm, assign_var_code, pred_decl) = 
+                                        let pred_var_rv = get_return_val pred_var_code in
+                                        let code_wo_rv =
+                                            if pred_var_code = pred_var_rv then None
+                                            else Some(remove_return_val pred_var_code)
+                                        in
+                                            match pred_var_rv with
+                                                | `Eval(`CTerm(`Variable(x))) ->
+						      (* (`Variable(x), code_wo_rv, new_decl) *)
+                                                      let error = "Found independent nested map expression"^
+                                                          "(should have been lifted.)"
+                                                      in
+                                                          print_endline ("gc_plan_aux: "^error^":\n"^
+                                                              (indented_string_of_code_expression pred_var_code));
+                                                          raise (CodegenException error);
+
+
+                                                | `Eval(`CTerm(`MapAccess(mf))) ->
+                                                      (`MapAccess(mf), code_wo_rv, new_decl)
+
+                                                | `Eval(x) ->
+						      let pv = gen_var_sym() in 
+                                                      let av_code = replace_return_val pred_var_code (`Assign(pv,x)) in
+                                                          print_debug_return_expr pv pred_var_code x;
+						          (`Variable(pv), Some(av_code), (`Variable(pv, pred_var_type))::new_decl)
+
+                                                | _ ->
+                                                      print_endline ("Invalid return val:\n"^
+                                                          (indented_string_of_code_expression pred_var_code));
+                                                      raise InvalidExpression
+				    in
+				    let pred_test_code =
+                                        let pz_pair = (`CTerm(pred_cterm), `CTerm(`Int 0)) in
+                                        let np =
+					    match pred with
+					        | `BTerm(`MEQ _) -> `EQ(pz_pair) | `BTerm(`MNEQ _) -> `NE(pz_pair)
+					        | `BTerm(`MLT _) -> `LT(pz_pair) | `BTerm(`MLE _) -> `LE(pz_pair)
+					        | `BTerm(`MGT _) -> `GT(pz_pair) | `BTerm(`MGE _) -> `GE(pz_pair)
+					        | _ -> raise InvalidExpression
+                                        in
+                                            `BCTerm(np)
+				    in
+                                        (pred_cterm, assign_var_code, pred_decl, pred_test_code)
+                                in
+                                (* Note: inserts/deletes have `MaintainMap expressions.
+                                 * -- Generate insert/delete into base relations before recomputing as necessary
+                                 * -- Note this does not generalize for arbitrarily deep nested map expressions yet
+                                 *    if we want to share base relations across all recomputations *)
+
+                                (* Code generated and where:
+                                 * -- local: insert or del into base relation for recomputation
+                                 *    `MaintainMap `Init: insdel code,
+                                 *         maintain test code for `Init { pred code for `Init { upper iter code } }
+                                 *    `MaintainMap `Final: insdel code,
+                                 *         maintain test code for `Final { pred code for `Final }
+                                 * -- map_expr recursion: 
+                                 *     ++ `MaintainMap `Init: check map decl, recompute code, insert into map
+                                 *     ++ `MaintainMap `Final: map decl, erase from map
+                                 *     ++ `Incr: map decl (for `Init), check map decl (for `Final),
+                                 *               incr code, pred code { upper iter code }
+                                 *     ++ Non-incr??
+                                 * -- plan recursion:
+                                 *     ++ `IncrPlan/IncrDiffPlan: domain decl, domain insert/del
+                                 *)
+
+				let (new_iter_code, new_iter_decl) =
+                                    match m_expr with
+                                        | `MaintainMap (sid, `Init d, bd, e) ->
+                                              begin
+                                                  let (pred_cterm,assign_var_code,pred_decl,pred_test_code) =
+                                                      compute_insert_pred_code()
                                                   in
-                                                      print_endline ("gc_plan_aux: "^error^":\n"^
-                                                          (indented_string_of_code_expression pred_var_code));
-                                                      raise (CodegenException error);
+                                                  let insdel_code = gc_insdel_event e pred_decl event in
+                                                  let nc =
+                                                      match pred_cterm with
+                                                          | `MapAccess(mf) ->
+					                        let (mid, _) = mf in
+					                        let map_contains_code = `CTerm(`MapContains(mf)) in
+                                                                let init_code =
+						                    `IfNoElse(
+						                        `BCTerm(`EQ(map_contains_code, `CTerm(`MapIterator(`End(mid))))),
+                                                                        let pc = `IfNoElse(pred_test_code, iter_code) in
+                                                                            match assign_var_code with
+                                                                                | None ->  pc
+                                                                                | Some av -> `Block([av;pc]))
+                                                                in
+                                                                    begin match insdel_code with
+                                                                        | None -> init_code
+                                                                        | Some(ic) -> `Block([ic; init_code])
+                                                                    end
 
+                                                          | `Variable _ ->
+                                                                let pc = `IfNoElse(pred_test_code, iter_code) in
+                                                                    begin match (insdel_code, assign_var_code) with
+                                                                        | (None, None) -> pc
+                                                                        | (None, Some av) -> `Block([av; pc])
+                                                                        | (Some ins, None) -> `Block([ins; pc])
+                                                                        | (Some ins, Some av) -> `Block([ins; av; pc])
+                                                                    end
+                                                  in
+                                                      (nc, pred_decl)
 
-                                            | `Eval(`CTerm(`MapAccess(mf))) ->
-                                                  (`MapAccess(mf), code_wo_rv, new_decl)
+                                              end
 
-                                            | `Eval(x) ->
-						  let pv = gen_var_sym() in 
-                                                  let av_code = replace_return_val pred_var_code (`Assign(pv,x)) in
-                                                      print_endline ("Declaring pred var "^pv^" in "^(string_of_plan q));
-                                                      print_endline ("pv_code:\n"^
-                                                          (indented_string_of_code_expression pred_var_code));
-                                                      print_endline ("x_code: "^(string_of_arith_code_expression x));
-						      (`Variable(pv), Some(av_code), (`Variable(pv, pred_var_type))::new_decl)
+                                        | `MaintainMap (sid, `Final d, bd, e) ->
+                                              begin
+                                                  let (pred_cterm,assign_var_code,pred_decl,_) =
+                                                      compute_insert_pred_code()
+                                                  in
+                                                  let insdel_code = gc_insdel_event e pred_decl event in
+                                                  let (nc, nc_decl) =
+                                                      match pred_cterm with
+                                                          | `MapAccess(mf) ->
+                                                                let (final_code, final_decl) =
+                                                                    let d_sid =
+                                                                        match cq with
+                                                                            | `IncrPlan(dsid, _, _, _, _)
+                                                                            | `IncrDiffPlan(dsid, _, _, _, _) -> dsid
+                                                                            | _ -> raise (CodegenException
+                                                                                  ("Invalid finalisation plan: "^(string_of_plan cq)))
+                                                                    in
 
-                                            | _ ->
-                                                  print_endline ("Invalid return val:\n"^
-                                                      (indented_string_of_code_expression pred_var_code));
-                                                  raise InvalidExpression
-				in
-				let pred_test_code =
-                                    let pz_pair = (`CTerm(pred_cterm), `CTerm(`Int 0)) in
-                                    let np =
-					match pred with
-					    | `BTerm(`MEQ _) -> `EQ(pz_pair)
-					    | `BTerm(`MNEQ _) -> `NE(pz_pair)
-					    | `BTerm(`MLT _) -> `LT(pz_pair)
-					    | `BTerm(`MLE _) -> `LE(pz_pair)
-					    | `BTerm(`MGT _) -> `GT(pz_pair)
-					    | `BTerm(`MGE _) -> `GE(pz_pair)
-					    | _ -> raise InvalidExpression
-                                    in
-                                        `BCTerm(np)
-				in
+                                                                    (* Erase test: if A not in dom *)
+                                                                    let (dom_decl, dom_ds, dom_field_names) =
+                                                                        gc_declare_domain d_sid d pred_decl base_rels [event] in
 
-				let new_iter_code =
-				    match (m_expr, pred_cterm) with
-                                         (* Note: only inserts have `Init expressions.
-                                            Generate insert into base relations before recomputing as necessary *)
-                                        | (`Init (_,_,e), `MapAccess(mf)) ->
-					      let (mid, _) = mf in
-					      let map_contains_code = `CTerm(`MapContains(mf)) in
-                                              let insert_code = gc_insert_event e pred_decl event in
-                                              let init_code =
-						  `IfNoElse(
-						      `BCTerm(`EQ(map_contains_code, `CTerm(`MapIterator(`End(mid))))),
-                                                      match assign_var_code with
-                                                          | None -> `IfNoElse(pred_test_code, iter_code)
-                                                          | Some av -> 
-						                `Block([av; `IfNoElse(pred_test_code, iter_code)]))
+                                                                    (* Erase code: pred_var_code *)
+                                                                    let dom_id = identifier_of_declaration dom_decl in
+                                                                    let dom_contains_code =
+                                                                        `CTerm(`DomainContains(dom_id, dom_field_names))
+                                                                    in
+                                                                    let new_decl =
+                                                                        if List.mem dom_decl pred_decl then decl else dom_decl::pred_decl
+                                                                    in
+                                                                        (`IfNoElse(
+                                                                            `BCTerm(`EQ(dom_contains_code,
+                                                                                `CTerm(`DomainIterator(`End(dom_id))))),
+                                                                            pred_var_code),
+                                                                        new_decl)
+                                                                in 
+                                                                    begin match insdel_code with
+                                                                        | None -> (final_code, final_decl)
+                                                                        | Some(ic) -> (`Block([ic; final_code]), final_decl)
+                                                                    end
+
+                                                          | `Variable _ ->
+                                                                begin match insdel_code with
+                                                                    | None -> (pred_var_code, pred_decl)
+                                                                    | Some ins -> (`Block([ins; pred_var_code]), pred_decl)
+                                                                end
+                                                  in
+                                                      (nc, nc_decl)
+
+                                              end
+
+                                        | `Incr _ ->
+                                              let (_,assign_var_code,pred_decl,pred_test_code) = compute_insert_pred_code() in
+                                              let nc =
+                                                  match assign_var_code with
+                                                      | None -> `IfNoElse(pred_test_code, iter_code)
+                                                      | Some av -> `Block([av; `IfNoElse(pred_test_code, iter_code)])
                                               in
-                                                  begin
-                                                      match insert_code with
-                                                          | None -> init_code
-                                                          | Some(ic) -> `Block([ic; init_code])
-                                                  end
+                                                  (nc, pred_decl)
 
-                                        | (`Init (_,_,e), `Variable _) ->
-                                              let insert_code = gc_insert_event e pred_decl event in
-                                                  begin
-                                                      match (insert_code, assign_var_code) with
-                                                          | (None, None) -> `IfNoElse(pred_test_code, iter_code)
-                                                          | (Some ins, None) ->
-                                                                `Block([ins; `IfNoElse(pred_test_code, iter_code)])
-                                                          | (None, Some av) ->
-                                                                `Block([av; `IfNoElse(pred_test_code, iter_code)])
-                                                          | (Some ins, Some av) -> 
-                                                                `Block([ins; av; `IfNoElse(pred_test_code, iter_code)])
-                                                  end
+                                        (* We should not have `IncrDiff on the LHS *)
+                                        | `IncrDiff _ -> raise (CodegenException
+                                              ("Invalid nested select map expression: "^(string_of_map_expression m_expr)))
 
-                                        | (`Incr _, _) | _ ->
-                                              match assign_var_code with
-                                                  | None -> `IfNoElse(pred_test_code, iter_code)
-                                                  | Some av -> `Block([av; `IfNoElse(pred_test_code, iter_code)])
-				in
+                                        | _ -> raise (CodegenException
+                                              ("Invalid nested select: "^(string_of_map_expression m_expr)))
+                                in
+
                                 let (profiled_new_iter_code, pred_wprof_decl) =
                                     let prof_loc = generate_profile_id event in
                                         (`Profile("cpu", prof_loc, new_iter_code),
-                                        (`ProfileLocation prof_loc)::pred_decl)
+                                        (`ProfileLocation prof_loc)::new_iter_decl)
                                 in
 				    gc_plan_aux cq profiled_new_iter_code pred_wprof_decl bind_info 
-
+ 
 			  | _ ->
 				let new_iter_code =
                                     `IfNoElse(create_code_predicate pred base_rels [event] decl, iter_code)
@@ -1021,22 +1359,21 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 	    (* to handle rule 39, 41 *)
             (* TODO: handle unbound attributes in bindings bd *)
 	    | `IncrPlan(sid, op, d, bd, nq) | `IncrDiffPlan(sid, op, d, bd, nq) ->
-                  let print_incrp_debug q_code incrp_dom =
+                  let print_incrp_debug q_code incrp_dom decl =
 		      print_endline ("rule 39,41: incrp_dom "^(string_of_code_expression (`Declare incrp_dom)));
                       print_endline ("rule 39,41: iter_code "^(string_of_plan nq));
                       print_endline ("rule 39,41: q_code "^(indented_string_of_code_expression q_code));
+                      List.iter
+                          (function
+                              | `Domain (id,f) ->
+                                    print_endline ("rule 39,41: decls "^
+                                        (string_of_declaration (`Declare(`Domain(id,f)))))
+                              | _ -> raise InvalidExpression)
+                          (List.filter (function | `Domain _ -> true | _ -> false) decl)
 
                   in
-		  let dom_id = gen_dom_sym (sid) in
-                  let dom_field_names = List.map field_of_attribute_identifier d in
-                  let dom_fields =
-                      List.map
-                          (fun x ->
-                              (field_of_attribute_identifier x, 
-		              type_inf_mexpr (`METerm (`Attribute(x))) base_rels [event] decl)) d
-                  in
-		  let dom_decl = `Domain(dom_id, dom_fields) in
-                  let dom_ds = datastructure_of_declaration dom_decl in
+                  let (dom_decl, dom_ds, dom_field_names) =
+                      gc_declare_domain sid d decl base_rels [event] in
                   let (new_iter_code, new_decl) =
                       let incr_code = match op with
                           | `Union -> `InsertTuple(dom_ds, dom_field_names)
@@ -1046,7 +1383,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                            if List.mem dom_decl decl then decl else dom_decl::decl)
                   in
 		  let (q_code, q_decl) = gc_plan_aux nq new_iter_code new_decl bind_info in 
-                      print_incrp_debug q_code dom_decl;
+                      print_incrp_debug q_code dom_decl q_decl;
                       (*
                         print_endline ("Referencing "^dom_id^" for "^(string_of_plan q));
 		        gc_incr_state_dom q_code q_decl dom_var dom_relation op diff
@@ -1067,41 +1404,70 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 	          fields
     in
 
-    (* TODO: declared variable types *)
     print_endline (String.make 50 '-');
     print_endline "Generating binding bodies.";
 
-    let (binding_bodies, binding_decls) =
+    let (binding_bodies, binding_decls, event_decls_used) =
+        let match_binding b = function
+            | `Declare(d) -> (identifier_of_declaration d) = b
+            | _ -> raise InvalidExpression
+        in
         List.fold_left
-            (fun (code_acc, decl_acc) b ->
+            (fun (code_acc, decl_acc, used_acc) b ->
                 match b with
                     | `BindExpr (v, expr) ->
-                          (code_acc@[`Assign(v, create_code_expression expr)],
-                          decl_acc@[`Variable(v, type_inf_expr expr base_rels [event] decl_acc)])
+                          begin
+                              if not (List.exists (match_binding v) event_handler_decls) then
+                                  (code_acc@[`Assign(v, create_code_expression expr)],
+                                  decl_acc@[`Variable(v, type_inf_expr expr base_rels [event] decl_acc)],
+                                  used_acc)
+                              else
+                                  (code_acc, decl_acc, used_acc@[List.find (match_binding v) event_handler_decls])
+                          end
 
                     | `BindMapExpr (v, m_expr) ->
-                          let (binding_code,d) = gc_aux m_expr decl_acc (false, []) in
-			  let binding_type = type_inf_mexpr m_expr base_rels [event] decl_acc in
-                          let rv = get_return_val binding_code in
-                              match rv with 
-                                  | `Eval x ->
-                                        (code_acc@[(replace_return_val binding_code (`Assign(v, x)))],
-                                        d@[`Variable(v, binding_type)])
-                                  | _ ->
-                                        print_endline ("Invalid return val: "^(string_of_code_expression rv));
-                                        raise InvalidExpression)
-            ([], []) bindings
+                          begin
+                              if not (List.exists (match_binding v) event_handler_decls) then
+                                  let (binding_code,d) = gc_aux m_expr decl_acc (false, []) in
+			          let binding_type = type_inf_mexpr m_expr base_rels [event] decl_acc in
+                                  let rv = get_return_val binding_code in
+                                      match rv with 
+                                          | `Eval x ->
+                                                (code_acc@[(replace_return_val binding_code (`Assign(v, x)))],
+                                                d@[`Variable(v, binding_type)],
+                                                used_acc)
+                                          | _ ->
+                                                print_endline ("Invalid return val: "^(string_of_code_expression rv));
+                                                raise InvalidExpression
+                              else
+                                  (code_acc, decl_acc, used_acc@[List.find (match_binding v) event_handler_decls])
+                          end)
+            ([], [], []) bindings
     in
     
     print_endline (String.make 50 '-');
     print_endline "Generating handler bodies.";
 
-    let (handler_body, handler_decl) = gc_aux handler binding_decls (true, bindings) in
+    let reused_binding_decls =
+        List.map
+            (function | `Declare(d) -> d | _ -> raise InvalidExpression)
+            event_decls_used
+    in
+
+    let (handler_body, handler_decl) =
+        gc_aux handler (binding_decls@reused_binding_decls) (true, bindings)
+    in
 
     print_endline (String.make 50 '-');
 
-    (* Note: binding declarations are included in declaration_code *)
-    let declaration_code = List.map (fun x -> `Declare(x)) handler_decl in
+    (* Note: binding declarations are included in declaration_code
+     * Filter out reused declarations, since these have already been declared
+     * in some other part of the event handler. *)
+    let declaration_code =
+        List.map
+            (fun x -> `Declare(x))
+            (List.filter (fun x -> not(List.mem x reused_binding_decls)) handler_decl)
+    in
     let separate_global_declarations code =
 	List.partition
 	    (fun x -> match x with
@@ -1116,14 +1482,19 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
                     separate_global_declarations
 	                (declaration_code@binding_bodies@[handler_body])
                 in
-	            (global_decls, simplify_code (`Block(handler_code)))
+	            (global_decls,
+                    List.map (fun d -> `Declare d) binding_decls, event_decls_used,
+                    simplify_code (`Block(handler_code)))
         else
             begin
                 let (handler_body_with_rv, result_type) = 
 	            match get_return_val handler_body with
 	                | `Eval x ->
-                              (replace_return_val handler_body (`Return x),
-                              type_inf_arith_expr x (declaration_code@binding_bodies@[handler_body]))
+                              let ret_type = type_inf_arith_expr
+                                  x (declaration_code@binding_bodies@[handler_body])
+                              in
+                                  (replace_return_val handler_body (`Return x), ret_type)
+
 	                | _ ->
                               print_endline ("Invalid return val:\n"^
                                   (indented_string_of_code_expression handler_body));
@@ -1134,6 +1505,7 @@ let generate_code handler bindings event body_only map_var_accessors state_p_dec
 	                (declaration_code@binding_bodies@[handler_body_with_rv])
                 in
 	            (global_decls,
+                    List.map (fun d -> `Declare(d)) binding_decls, event_decls_used,
 	            simplify_code
 	                (`Handler(handler_name_of_event event,
 	                handler_fields, result_type, handler_code)))

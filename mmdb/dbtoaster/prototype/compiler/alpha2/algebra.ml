@@ -57,6 +57,8 @@ type meterm = [
 
 type bindings = (attribute_identifier * (expression option)) list
 
+type initop = [`Init of domain | `Final of domain ]
+
 type poplus = [`Union | `Diff ]
 
 type oplus = [`Plus | `Minus | `Min | `Max
@@ -73,7 +75,7 @@ and map_expression = [
 | `MapAggregate of aggregate_function * map_expression * plan
 | `Delta of delta * map_expression
 | `New of map_expression
-| `Init of state_identifier * bindings * map_expression
+| `MaintainMap of state_identifier * initop * bindings * map_expression
 | `Incr of state_identifier * oplus * map_expression * bindings * map_expression
 | `IncrDiff of state_identifier * oplus * map_expression * bindings * map_expression
 | `Insert of state_identifier * meterm * map_expression
@@ -125,223 +127,6 @@ type binding = [
 
 type recompute_state = New | Incr
 
-(*
- * symbol generation
- *)
-
-(* Relations *)
-let id_counter = ref 0
-
-let gen_rel_id () =
-    let new_sym = !id_counter in
-	incr id_counter;
-	"rel"^(string_of_int new_sym)
-
-(* Variables *)
-let var_counter = ref 0
-
-let gen_var_sym() =
-    let new_sym = !var_counter in
-	incr var_counter;
-	"var"^(string_of_int new_sym)
-
-
-
-
-(* Datastructures *)
-type datastructure_symbols = (string, string) Hashtbl.t
-let indexed_syms : (string, int ref * datastructure_symbols) Hashtbl.t = Hashtbl.create 10
-
-let gen_indexed_sym category sid =
-    let (cat_counter, cat_syms) =
-        if not (Hashtbl.mem indexed_syms category) then
-            Hashtbl.replace indexed_syms category (ref 0, Hashtbl.create 10);
-        Hashtbl.find indexed_syms category
-    in
-        if Hashtbl.mem cat_syms sid then
-            Hashtbl.find cat_syms sid
-        else
-            let new_sym = category^(string_of_int !cat_counter) in
-                incr cat_counter;
-                Hashtbl.add cat_syms sid new_sym;
-                new_sym
-
-let gen_map_sym = gen_indexed_sym "map"
-let gen_dom_sym = gen_indexed_sym "dom"
-
-(* Basic helpers *)
-let field_of_attribute_identifier id =
-    match id with
-	| `Qualified(r,a) -> a
-	| `Unqualified a -> a
-
-let attribute_identifiers_of_field_list relation_id field_l =
-    List.map (fun (id, ty) -> `Qualified(relation_id, id)) field_l
-
-let attributes_of_bindings bindings =
-    List.map (fun (aid, e_opt) -> aid) bindings
-
-(* Plan transformation helpers *)
-let rec fold_map_expr fn acc expr =
-    match expr with 
-	| `UnaryMinus e ->
-	      let (acc2, e2) = fold_map_expr fn acc e in (fn acc2 (`UnaryMinus e2))
-
-	| `Sum (l,r) ->
-	      let (acc2, l2) = fold_map_expr fn acc l in
-	      let (acc3, r2) = fold_map_expr fn acc2 r in
-		  (fn acc3 (`Sum (l2, r2)))
-
-	| `Product (l,r) ->
-	      let (acc2, l2) = fold_map_expr fn acc l in
-	      let (acc3, r2) = fold_map_expr fn acc2 r in
-		  (fn acc3 (`Product (l2, r2)))
-
-	| `Minus (l,r) -> 
-	      let (acc2, l2) = fold_map_expr fn acc l in
-	      let (acc3, r2) = fold_map_expr fn acc2 r in
-		  (fn acc3 (`Minus (l2, r2)))
-
-	| `Divide (l,r) -> 
-	      let (acc2, l2) = fold_map_expr fn acc l in
-	      let (acc3, r2) = fold_map_expr fn acc2 r in
-		  (fn acc3 (`Divide (l2, r2)))
-
-	| `Function (id, args) ->
-	      let (acc2, args2) =
-		  List.fold_left
-		      (fun (acc, eacc) e ->
-			   let (acc2, e2) = fold_map_expr fn acc e in (acc2, eacc@[e2]))
-		      (acc, []) args
-	      in
-		  (fn acc2 (`Function (id, args2)))
-
-	| (`ETerm e) as t -> (fn acc t)
-
-
-let rec fold_map_bool_expr fn acc bool_expr =
-    match bool_expr with
-	| `Not e ->
-	      let (acc2, e2) = fold_map_bool_expr fn acc e in
-		  (fn acc2 (`Not e2))
-
-	| `And (l,r) ->
-	      let (acc2,l2) = fold_map_bool_expr fn acc l in
-	      let (acc3,r2) = fold_map_bool_expr fn acc2 r in
-		  (fn acc3 (`And (l2,r2)))
-		      
-	| `Or (l,r) ->
-	      let (acc2,l2) = fold_map_bool_expr fn acc l in
-	      let (acc3,r2) = fold_map_bool_expr fn acc2 r in
-		  (fn acc3 (`Or (l2,r2)))
-
-	| (`BTerm b) as t -> (fn acc t)
-
-let map_expr fn expr =
-    let rec map_aux e = 
-        match expr with 
-	    | (`ETerm e) as t -> fn t
-	    | `UnaryMinus e -> fn (`UnaryMinus (map_aux e))
-	    | `Sum (l,r) -> fn (`Sum (map_aux l, map_aux r))
-	    | `Product (l,r) -> fn (`Product (map_aux l, map_aux r))
-	    | `Minus (l,r) -> fn (`Minus (map_aux l, map_aux r))
-	    | `Divide (l,r) -> fn (`Divide (map_aux l, map_aux r))
-	    | `Function (id, args) -> fn (`Function (id, List.map map_aux args))
-    in
-        map_aux expr
-                  
-let rec map_bool_expr e_fn b_fn me_fn mp_fn bool_expr =
-    let map_aux = map_bool_expr e_fn b_fn me_fn mp_fn in
-    let map_e expr = map_expr e_fn expr in
-    let map_me_aux m_expr = map_map_expr e_fn b_fn me_fn mp_fn m_expr in
-        match bool_expr with
-	    | `BTerm b -> b_fn (`BTerm(
-                  begin
-                      match b with
-                          | `True | `False -> b
-                          | `LT (l,r) -> `LT (map_e l, map_e r)
-                          | `LE (l,r) -> `LE (map_e l, map_e r)
-                          | `GT (l,r) -> `GT (map_e l, map_e r)
-                          | `GE (l,r) -> `GE (map_e l, map_e r)
-                          | `EQ (l,r) -> `EQ (map_e l, map_e r)
-                          | `NE (l,r) -> `NE (map_e l, map_e r)
-                          | `MEQ m_expr -> `MEQ (map_me_aux m_expr)
-                          | `MNEQ m_expr -> `MNEQ (map_me_aux m_expr)
-                          | `MLT m_expr -> `MLT (map_me_aux m_expr)
-                          | `MLE m_expr -> `MLE (map_me_aux m_expr)
-                          | `MGT m_expr -> `MGT (map_me_aux m_expr)
-                          | `MGE m_expr -> `MGE (map_me_aux m_expr)
-                  end))
-	    | `And (l,r) -> b_fn (`And (map_aux l, map_aux r))
-	    | `Or (l,r) -> b_fn (`Or (map_aux l, map_aux r))
-	    | `Not e -> b_fn (`Not (map_aux e))
-
-and map_map_expr e_fn b_fn me_fn mp_fn (m_expr : map_expression) =
-    let map_aux = map_map_expr e_fn b_fn me_fn mp_fn in
-        match m_expr with
-            | `METerm x -> me_fn m_expr
-            | `Sum (l,r) -> me_fn (`Sum(map_aux l, map_aux r))
-            | `Minus (l,r) -> me_fn (`Minus(map_aux l, map_aux r))
-            | `Product (l,r) -> me_fn (`Product(map_aux l, map_aux r))
-            | `Min (l,r) -> me_fn (`Min(map_aux l, map_aux r))
-            | `Max (l,r) -> me_fn (`Max(map_aux l, map_aux r))
-            | `MapAggregate (fn, f, q) ->
-                  me_fn (`MapAggregate(fn, map_aux f, map_plan e_fn b_fn me_fn mp_fn q))
-            | `IfThenElse (bt, l, r) ->
-                  let r_bt = map_bool_expr e_fn b_fn me_fn mp_fn (`BTerm bt) in
-                      begin
-                          match r_bt with
-                              | `BTerm(x) -> me_fn (`IfThenElse(x, map_aux l, map_aux r))
-                              | _ -> raise InvalidExpression
-                      end
-
-            | `Delta (b, e) -> me_fn (`Delta(b, map_aux e))
-            | `New (e) -> me_fn (`New(map_aux e))
-            | `Init (sid, bd, e) -> me_fn (`Init (sid, bd, map_aux e))
-            | `Incr (sid, op, re, bd, e) -> me_fn (`Incr(sid, op, re, bd, map_aux e))
-            | `IncrDiff (sid, op, re, bd, e) -> me_fn (`IncrDiff(sid, op, re, bd, map_aux e))
-            
-            | `Insert (sid, t, e) ->
-                  let r_mt = map_aux (`METerm t) in
-                      begin
-                          match r_mt with
-                              | `METerm(x) -> me_fn (`Insert(sid, x, map_aux e))
-                              | _ -> raise InvalidExpression
-                      end
-
-            | `Update (sid, op, t, e) ->
-                  let r_mt = map_aux (`METerm t) in
-                      begin
-                          match r_mt with
-                              | `METerm(x) -> me_fn(`Update (sid, op, x, map_aux e))
-                              | _ -> raise InvalidExpression
-                      end
-
-            | `Delete (sid, t) -> 
-                  let r_mt = map_aux (`METerm t) in
-                      begin
-                          match r_mt with
-                              | `METerm(x) -> me_fn(`Delete (sid, x))
-                              | _ -> raise InvalidExpression
-                      end
-
-and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
-    let map_aux = map_plan e_fn b_fn me_fn mp_fn in
-        match plan with
-            | `TrueRelation | `FalseRelation
-            | `Relation (_,_) | `Domain _ -> mp_fn plan
-            | `Select (p,ch) -> mp_fn (`Select(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux ch))
-            | `Project (projs, ch) ->
-                  mp_fn (
-                      `Project(List.map (fun (a,e) -> (a, map_expr e_fn e)) projs,
-                      map_aux ch))
-            | `Union ch -> mp_fn (`Union (List.map map_aux ch))
-            | `Cross (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
-            | `DeltaPlan (b, p) -> mp_fn (`DeltaPlan(b, map_aux p))
-            | `NewPlan (p) -> mp_fn (`NewPlan (map_aux p))
-            | `IncrPlan (sid, pop, d, bd, p) -> mp_fn (`IncrPlan (sid, pop, d, bd, map_aux p))
-            | `IncrDiffPlan (sid, pop, d, bd, p) -> mp_fn (`IncrDiffPlan (sid, pop, d, bd, map_aux p))
-
 
 (* Pretty printing *)	
 let string_of_attribute_identifier id =
@@ -349,7 +134,7 @@ let string_of_attribute_identifier id =
 	| `Qualified(r,a) -> r^"."^a
 	| `Unqualified a -> a
 
-let string_of_attribute_identifier_list idl=
+let string_of_attribute_identifier_list idl =
     List.fold_left
         (fun acc aid ->
             (if (String.length acc) = 0 then "" else (acc^", "))^
@@ -373,6 +158,11 @@ let string_of_delta d =
     match d with
 	| `Insert (r, f) -> r^","^(string_of_schema f)
 	| `Delete (r, f) -> r^","^(string_of_schema f)
+
+let string_of_initop iop =
+    match iop with
+        | `Init d -> "+("^(string_of_attribute_identifier_list d)^")"
+        | `Final d -> "-("^(string_of_attribute_identifier_list d)^")"
 
 let string_of_expr_terminal eterm =
     match eterm with 
@@ -499,9 +289,9 @@ and string_of_map_expression m_expr =
 
 	| `New (e) -> "New("^(string_of_map_expression e)^"}"
 
-	| `Init (sid,bd,e) ->
-              "Init["^(sid)^","^(string_of_bindings bd)^
-                  "]{"^(string_of_map_expression e)^"}"
+	| `MaintainMap (sid,iop,bd,e) ->
+              "MaintainMap["^(sid)^","^(string_of_initop iop)^","^
+                  (string_of_bindings bd)^"]{"^(string_of_map_expression e)^"}"
 
 	| `Incr (sid, op, re, bd, e) ->
               "Incr["^(string_of_oplus op)^","^(sid)^","^(string_of_bindings bd)^"]{"^
@@ -664,8 +454,10 @@ and indented_string_of_map_expression m_expr level =
 		   (indented_string_of_map_expression e (level+1))^
 		   (indent "}")
 
-	| `Init (sid, bd, e) ->
-	      (indent ("Init["^(sid)^","^(string_of_bindings bd)^"]{"))^
+	| `MaintainMap (sid, iop, bd, e) ->
+	      (indent ("MaintainMap["^(sid)^","^
+                  (string_of_initop iop)^","^
+                  (string_of_bindings bd)^"]{"))^
 		  (indented_string_of_map_expression e (level+1))^
 		  (indent "}")
 
@@ -764,6 +556,353 @@ and indented_string_of_plan p level =
 		  (indent "}")
 
 
+(*
+ * symbol generation
+ *)
+
+(* Relations *)
+let id_counter = ref 0
+
+let gen_rel_id () =
+    let new_sym = !id_counter in
+	incr id_counter;
+	"rel"^(string_of_int new_sym)
+
+(* Variables *)
+let var_counter = ref 0
+
+let gen_var_sym() =
+    let new_sym = !var_counter in
+	incr var_counter;
+	"var"^(string_of_int new_sym)
+
+
+
+
+(* Datastructures *)
+
+(* Categorical symbol generation *)
+type datastructure_symbols = (string, string) Hashtbl.t
+let indexed_syms : (string, int ref * datastructure_symbols) Hashtbl.t = Hashtbl.create 10
+
+let gen_indexed_sym category sid =
+    let (cat_counter, cat_syms) =
+        if not (Hashtbl.mem indexed_syms category) then
+            Hashtbl.replace indexed_syms category (ref 0, Hashtbl.create 10);
+        Hashtbl.find indexed_syms category
+    in
+        if Hashtbl.mem cat_syms sid then
+            Hashtbl.find cat_syms sid
+        else
+            let new_sym = category^(string_of_int !cat_counter) in
+                incr cat_counter;
+                Hashtbl.add cat_syms sid new_sym;
+                new_sym
+
+let gen_map_sym = gen_indexed_sym "map"
+let gen_dom_sym = gen_indexed_sym "dom"
+
+(*
+ * Symbol generation based on structural equivalence
+ *)
+
+(* Binding symbol generation *)
+type binding_signature = [
+    | `Expression of expression
+    | `MapExpression of map_expression ]
+
+let string_of_binding_signature bind_sig =
+    match bind_sig with
+        | `Expression e -> string_of_expression e
+        | `MapExpression e -> string_of_map_expression e
+
+module BindingSigHashtype =
+struct
+    type t = binding_signature
+    let equal = Pervasives.(=)
+    let hash = dbt_hash
+end
+
+module BindingSigHashtbl = Hashtbl.Make(BindingSigHashtype)
+
+type binding_symbols = string BindingSigHashtbl.t
+let binding_syms : binding_symbols = BindingSigHashtbl.create 10
+let binding_counter = ref 0
+
+let gen_binding_sym bind_sig =
+    if BindingSigHashtbl.mem binding_syms bind_sig then
+        begin
+            let r = BindingSigHashtbl.find binding_syms bind_sig in
+                print_endline ("Found binding sym: "^(string_of_binding_signature bind_sig));
+                r
+        end
+    else
+        begin
+            let new_id = !binding_counter in
+            let new_symbol = 
+                incr binding_counter;
+                "bind"^(string_of_int new_id) in
+
+                print_endline ("New binding sym: "^(new_symbol)^" "^
+                    (string_of_binding_signature bind_sig));
+
+                BindingSigHashtbl.iter
+                    (fun k v -> print_endline ("binding sym: "^(string_of_binding_signature k)^"->"^v))
+                    binding_syms;
+
+                BindingSigHashtbl.add binding_syms bind_sig new_symbol;
+                new_symbol
+        end
+
+
+
+(* State identifiers *)
+type state_signature = [
+    | `MapExpression of map_expression * bindings
+    | `Plan of plan * domain ]
+
+let string_of_state_signature state_sig =
+    match state_sig with
+        | `MapExpression (e,b) -> (string_of_map_expression e)^"::"^(string_of_bindings b)
+        | `Plan (p,d) -> (string_of_plan p)^"::"^(string_of_attribute_identifier_list d)
+
+module StateSigHashtype =
+struct
+    type t = state_signature
+    let equal = Pervasives.(=)
+    let hash = dbt_hash
+end
+
+module StateSigHashtbl = Hashtbl.Make(StateSigHashtype)
+
+type state_symbols = string StateSigHashtbl.t
+let state_syms : state_symbols = StateSigHashtbl.create 10
+let sid_counter = ref 0
+
+let gen_state_sym state_sig =
+    if StateSigHashtbl.mem state_syms state_sig then
+        begin
+            let r = StateSigHashtbl.find state_syms state_sig in
+                print_endline ("Found state sym: "^(string_of_state_signature state_sig));
+                r
+        end
+    else
+        begin
+            let new_id = !sid_counter in
+            let new_symbol = 
+                incr sid_counter;
+                "state"^(string_of_int new_id) in
+
+                print_endline ("New state sym: "^(new_symbol)^" "^
+                    (string_of_state_signature state_sig));
+
+                StateSigHashtbl.iter
+                    (fun k v -> print_endline ("existing sym: "^(string_of_state_signature k)^"->"^v))
+                    state_syms;
+
+                StateSigHashtbl.add state_syms state_sig new_symbol;
+                new_symbol
+        end
+
+let remove_state_sym state_sig = 
+    StateSigHashtbl.remove state_syms state_sig
+
+let update_state_sym state_sig new_state_sig state_sym = 
+    remove_state_sym state_sig;  
+    if StateSigHashtbl.mem state_syms new_state_sig then
+        begin
+            let r = StateSigHashtbl.find state_syms new_state_sig in
+                print_endline ("Found state sym: "^(string_of_state_signature new_state_sig));
+                r
+        end
+    else
+        begin
+            StateSigHashtbl.add state_syms new_state_sig state_sym;
+            state_sym
+        end
+
+(* merging two state ids. remove binding of state_sig1 and state_sig2 
+ * then update binding of new_state_sig1 with sym *)
+let merge_state_sym state_sig1 state_sig2 new_state_sig sym = 
+    remove_state_sym state_sig2;
+    update_state_sym state_sig1 new_state_sig sym
+
+
+
+(* Basic helpers *)
+let field_of_attribute_identifier id =
+    match id with
+	| `Qualified(r,a) -> a
+	| `Unqualified a -> a
+
+let attribute_identifiers_of_field_list relation_id field_l =
+    List.map (fun (id, ty) -> `Qualified(relation_id, id)) field_l
+
+let attributes_of_bindings bindings =
+    List.map (fun (aid, e_opt) -> aid) bindings
+
+(* Plan transformation helpers *)
+let rec fold_map_expr fn acc expr =
+    match expr with 
+	| `UnaryMinus e ->
+	      let (acc2, e2) = fold_map_expr fn acc e in (fn acc2 (`UnaryMinus e2))
+
+	| `Sum (l,r) ->
+	      let (acc2, l2) = fold_map_expr fn acc l in
+	      let (acc3, r2) = fold_map_expr fn acc2 r in
+		  (fn acc3 (`Sum (l2, r2)))
+
+	| `Product (l,r) ->
+	      let (acc2, l2) = fold_map_expr fn acc l in
+	      let (acc3, r2) = fold_map_expr fn acc2 r in
+		  (fn acc3 (`Product (l2, r2)))
+
+	| `Minus (l,r) -> 
+	      let (acc2, l2) = fold_map_expr fn acc l in
+	      let (acc3, r2) = fold_map_expr fn acc2 r in
+		  (fn acc3 (`Minus (l2, r2)))
+
+	| `Divide (l,r) -> 
+	      let (acc2, l2) = fold_map_expr fn acc l in
+	      let (acc3, r2) = fold_map_expr fn acc2 r in
+		  (fn acc3 (`Divide (l2, r2)))
+
+	| `Function (id, args) ->
+	      let (acc2, args2) =
+		  List.fold_left
+		      (fun (acc, eacc) e ->
+			   let (acc2, e2) = fold_map_expr fn acc e in (acc2, eacc@[e2]))
+		      (acc, []) args
+	      in
+		  (fn acc2 (`Function (id, args2)))
+
+	| (`ETerm e) as t -> (fn acc t)
+
+
+let rec fold_map_bool_expr fn acc bool_expr =
+    match bool_expr with
+	| `Not e ->
+	      let (acc2, e2) = fold_map_bool_expr fn acc e in
+		  (fn acc2 (`Not e2))
+
+	| `And (l,r) ->
+	      let (acc2,l2) = fold_map_bool_expr fn acc l in
+	      let (acc3,r2) = fold_map_bool_expr fn acc2 r in
+		  (fn acc3 (`And (l2,r2)))
+		      
+	| `Or (l,r) ->
+	      let (acc2,l2) = fold_map_bool_expr fn acc l in
+	      let (acc3,r2) = fold_map_bool_expr fn acc2 r in
+		  (fn acc3 (`Or (l2,r2)))
+
+	| (`BTerm b) as t -> (fn acc t)
+
+let map_expr fn expr =
+    let rec map_aux e = 
+        match expr with 
+	    | (`ETerm e) as t -> fn t
+	    | `UnaryMinus e -> fn (`UnaryMinus (map_aux e))
+	    | `Sum (l,r) -> fn (`Sum (map_aux l, map_aux r))
+	    | `Product (l,r) -> fn (`Product (map_aux l, map_aux r))
+	    | `Minus (l,r) -> fn (`Minus (map_aux l, map_aux r))
+	    | `Divide (l,r) -> fn (`Divide (map_aux l, map_aux r))
+	    | `Function (id, args) -> fn (`Function (id, List.map map_aux args))
+    in
+        map_aux expr
+                  
+let rec map_bool_expr e_fn b_fn me_fn mp_fn bool_expr =
+    let map_aux = map_bool_expr e_fn b_fn me_fn mp_fn in
+    let map_e expr = map_expr e_fn expr in
+    let map_me_aux m_expr = map_map_expr e_fn b_fn me_fn mp_fn m_expr in
+        match bool_expr with
+	    | `BTerm b -> b_fn (`BTerm(
+                  begin
+                      match b with
+                          | `True | `False -> b
+                          | `LT (l,r) -> `LT (map_e l, map_e r)
+                          | `LE (l,r) -> `LE (map_e l, map_e r)
+                          | `GT (l,r) -> `GT (map_e l, map_e r)
+                          | `GE (l,r) -> `GE (map_e l, map_e r)
+                          | `EQ (l,r) -> `EQ (map_e l, map_e r)
+                          | `NE (l,r) -> `NE (map_e l, map_e r)
+                          | `MEQ m_expr -> `MEQ (map_me_aux m_expr)
+                          | `MNEQ m_expr -> `MNEQ (map_me_aux m_expr)
+                          | `MLT m_expr -> `MLT (map_me_aux m_expr)
+                          | `MLE m_expr -> `MLE (map_me_aux m_expr)
+                          | `MGT m_expr -> `MGT (map_me_aux m_expr)
+                          | `MGE m_expr -> `MGE (map_me_aux m_expr)
+                  end))
+	    | `And (l,r) -> b_fn (`And (map_aux l, map_aux r))
+	    | `Or (l,r) -> b_fn (`Or (map_aux l, map_aux r))
+	    | `Not e -> b_fn (`Not (map_aux e))
+
+and map_map_expr e_fn b_fn me_fn mp_fn (m_expr : map_expression) =
+    let map_aux = map_map_expr e_fn b_fn me_fn mp_fn in
+        match m_expr with
+            | `METerm x -> me_fn m_expr
+            | `Sum (l,r) -> me_fn (`Sum(map_aux l, map_aux r))
+            | `Minus (l,r) -> me_fn (`Minus(map_aux l, map_aux r))
+            | `Product (l,r) -> me_fn (`Product(map_aux l, map_aux r))
+            | `Min (l,r) -> me_fn (`Min(map_aux l, map_aux r))
+            | `Max (l,r) -> me_fn (`Max(map_aux l, map_aux r))
+            | `MapAggregate (fn, f, q) ->
+                  me_fn (`MapAggregate(fn, map_aux f, map_plan e_fn b_fn me_fn mp_fn q))
+            | `IfThenElse (bt, l, r) ->
+                  let r_bt = map_bool_expr e_fn b_fn me_fn mp_fn (`BTerm bt) in
+                      begin
+                          match r_bt with
+                              | `BTerm(x) -> me_fn (`IfThenElse(x, map_aux l, map_aux r))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Delta (b, e) -> me_fn (`Delta(b, map_aux e))
+            | `New (e) -> me_fn (`New(map_aux e))
+            | `MaintainMap (sid, iop, bd, e) -> me_fn (`MaintainMap (sid, iop, bd, map_aux e))
+            | `Incr (sid, op, re, bd, e) -> me_fn (`Incr(sid, op, re, bd, map_aux e))
+            | `IncrDiff (sid, op, re, bd, e) -> me_fn (`IncrDiff(sid, op, re, bd, map_aux e))
+            
+            | `Insert (sid, t, e) ->
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn (`Insert(sid, x, map_aux e))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Update (sid, op, t, e) ->
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn(`Update (sid, op, x, map_aux e))
+                              | _ -> raise InvalidExpression
+                      end
+
+            | `Delete (sid, t) -> 
+                  let r_mt = map_aux (`METerm t) in
+                      begin
+                          match r_mt with
+                              | `METerm(x) -> me_fn(`Delete (sid, x))
+                              | _ -> raise InvalidExpression
+                      end
+
+and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
+    let map_aux = map_plan e_fn b_fn me_fn mp_fn in
+        match plan with
+            | `TrueRelation | `FalseRelation
+            | `Relation (_,_) | `Domain _ -> mp_fn plan
+            | `Select (p,ch) -> mp_fn (`Select(map_bool_expr e_fn b_fn me_fn mp_fn p, map_aux ch))
+            | `Project (projs, ch) ->
+                  mp_fn (
+                      `Project(List.map (fun (a,e) -> (a, map_expr e_fn e)) projs,
+                      map_aux ch))
+            | `Union ch -> mp_fn (`Union (List.map map_aux ch))
+            | `Cross (l,r) -> mp_fn (`Cross (map_aux l, map_aux r))
+            | `DeltaPlan (b, p) -> mp_fn (`DeltaPlan(b, map_aux p))
+            | `NewPlan (p) -> mp_fn (`NewPlan (map_aux p))
+            | `IncrPlan (sid, pop, d, bd, p) -> mp_fn (`IncrPlan (sid, pop, d, bd, map_aux p))
+            | `IncrDiffPlan (sid, pop, d, bd, p) -> mp_fn (`IncrDiffPlan (sid, pop, d, bd, map_aux p))
+
+
 
 (*
  * Accessors
@@ -790,7 +929,7 @@ let parent m_expr ch_e_or_p =
 
 	    | `MapExpression (`Delta (_, e))
 	    | `MapExpression (`New (e))
-	    | `MapExpression (`Init (_,_,e)) 
+	    | `MapExpression (`MaintainMap (_,_,_,e)) 
 	    | `MapExpression (`Incr (_, _, _, _, e))
 	    | `MapExpression (`IncrDiff (_, _, _, _, e))
 	    | `MapExpression (`Insert (_, _, e))
@@ -897,7 +1036,7 @@ let children e_or_p =
 	    | `MapExression (`METerm _) | `MapExpression (`Delete _) -> []
 	    | `MapExpression (`Delta (_,e))
 	    | `MapExpression (`New(e))
-	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`MaintainMap(_,_,_,e))
 	    | `MapExpression (`Incr(_,_,_,_,e))
 	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
@@ -975,7 +1114,7 @@ let splice m_expr orig rewrite =
 			      
 		    | `Delta(b,e) -> `Delta(b, splice_map_expr_aux e)
 		    | `New(e) -> `New(splice_map_expr_aux e) 
-		    | `Init(sid,bd,e) -> `Init(sid, bd, splice_map_expr_aux e)
+		    | `MaintainMap(sid,iop,bd,e) -> `MaintainMap(sid, iop, bd, splice_map_expr_aux e)
 		    | `Incr(sid,op,re,bd,e) -> `Incr(sid, op, re, bd, splice_map_expr_aux e)
 		    | `IncrDiff(sid,op,re,bd,e) -> `IncrDiff(sid, op, re, bd, splice_map_expr_aux e)
 
@@ -1044,7 +1183,7 @@ let get_base_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`MaintainMap(_,_,_,e))
 	    | `MapExpression (`Incr(_,_,_,_,e))
 	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
@@ -1059,7 +1198,7 @@ let get_base_relations m_expr =
                 -> (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
 
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
-		  (gbr_aux (`Plan q) (gbr_aux (`MapExpression f) acc))
+		  (gbr_aux (`MapExpression f) (gbr_aux (`Plan q) acc))
 
 	    | `Plan (`TrueRelation) | `Plan (`FalseRelation) -> acc
 
@@ -1074,7 +1213,7 @@ let get_base_relations m_expr =
 			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
 			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
                                 ->
-				(gbr_aux (`Plan cq) (gbr_aux (`MapExpression m_expr) acc))
+				(gbr_aux (`MapExpression m_expr) (gbr_aux (`Plan cq) acc))
 
 			  | _ -> (gbr_aux (`Plan cq) acc)
 		  end
@@ -1107,7 +1246,7 @@ let get_bound_relations m_expr =
 		  
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
-	    | `MapExpression (`Init(_,_,e))
+	    | `MapExpression (`MaintainMap(_,_,_,e))
 	    | `MapExpression (`Incr(_,_,_,_,e))
 	    | `MapExpression (`IncrDiff(_,_,_,_,e))
 	    | `MapExpression (`Insert(_,_, e))
@@ -1261,7 +1400,7 @@ and get_unbound_attributes_from_map_expression m_expr include_vars =
 		  (resolve_unbound_attributes f_uba q_ba)@
 		      (get_unbound_attributes_from_plan q include_vars)
 
-	| `New(e) | `Init(_,_,e)
+	| `New(e) | `MaintainMap(_,_,_,e)
 
         (* TODO: we can return from bindings if they are filled in, i.e. we don't
          * always need to go into the child map expression *)
@@ -1371,7 +1510,7 @@ let rec get_attributes_used_in_map_expression m_expr =
               in
                   get_attributes_used_in_plan q f_used
 
-	| `New(e) | `Init (_,_,e)
+	| `New(e) | `MaintainMap (_,_,_,e)
         | `Incr(_,_,_,_,e) | `IncrDiff(_,_,_,_,e) ->
 	      get_attributes_used_in_map_expression e
 
@@ -1513,7 +1652,7 @@ let rec find_cmp_aggregate m_expr =
 
         | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
 
-        | `Delta (_, e) | `New e | `Init(_,_,e)
+        | `Delta (_, e) | `New e | `MaintainMap(_,_,_,e)
         | `Incr (_,_,_,_,e) | `IncrDiff (_,_,_,_,e)
         | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
         | `Delete _ -> false
@@ -1753,7 +1892,7 @@ let rename_attributes m_expr =
                           (`MapAggregate(fn, new_f, new_q), [])
 
                 | `IfThenElse _
-                | `Delta _ | `New _ | `Init _
+                | `Delta _ | `New _ | `MaintainMap _
                 | `Incr _ | `IncrDiff _ 
                 | `Insert _ | `Update _ | `Delete _ -> raise InvalidExpression
 
@@ -1845,12 +1984,17 @@ let string_of_plan_monotonicity mp =
     match mp with
 	| IncSet -> "IncS" | DecSet -> "DecS" | SameSet -> "SameS" | UndefSet -> "UndefS"
 
-let bin_op_monotonicity lm rm =
-    match (lm, rm) with
+let bin_op_monotonicity lm rm flipr =
+    let actual_rm =
+        if flipr then
+            match rm with | Inc -> Dec | Dec -> Inc | x -> x
+        else rm
+    in
+    match (lm, actual_rm) with
 	| (Inc, Inc) | (Inc, Same) | (Same, Inc) -> Inc
 	| (Dec, Dec) | (Dec, Same) | (Same, Dec) -> Dec
 	| (Same, Same) -> Same
-	| (Inc, Dec) | (Dec, Inc)	| (_, Undef) | (Undef, _) -> Undef 
+	| (Inc, Dec) | (Dec, Inc) | (_, Undef) | (Undef, _) -> Undef 
 
 let agg_monotonicity fm qm =
     match (fm, qm) with
@@ -2041,17 +2185,22 @@ and compute_monotonicity attr attr_m m_expr =
 
 	| `METerm (_) -> Same
 
-	| `Sum(l,r) | `Minus(l,r) | `Product(l,r) | `Min(l,r) | `Max(l,r) | `IfThenElse(_, l, r) ->
+	| `Sum(l,r) | `Product(l,r) | `Min(l,r) | `Max(l,r) | `IfThenElse(_, l, r) ->
 	      let lm = compute_monotonicity attr attr_m l in
 	      let rm = compute_monotonicity attr attr_m r in
-		  bin_op_monotonicity lm rm
+		  bin_op_monotonicity lm rm false
+
+        | `Minus(l,r) ->
+	      let lm = compute_monotonicity attr attr_m l in
+	      let rm = compute_monotonicity attr attr_m r in
+		  bin_op_monotonicity lm rm true
 
 	| `MapAggregate(fn,f,q) ->
 	      let fm = compute_monotonicity attr attr_m f in
 	      let qm = compute_plan_monotonicity attr attr_m q in
 		  agg_monotonicity fm qm
 		      
-	| `Delta _ | `New _ | `Init _
+	| `Delta _ | `New _ | `MaintainMap _
         | `Incr _ | `IncrDiff _
         | `Insert _ | `Update _ | `Delete _ -> raise MonotonicityException
 
@@ -2163,7 +2312,9 @@ type map_key = map_identifier * (code_variable list)
 
 type map_iterator = [ `Begin of map_identifier | `End of map_identifier ]
 
-type relation_variable = relation_identifier * (field list)
+type domain_key = relation_identifier * (code_variable list)
+
+type domain_iterator = [ `Begin of relation_identifier | `End of relation_identifier ]
 
 type declaration = [
 | `Variable of code_variable * type_identifier
@@ -2180,7 +2331,9 @@ type code_terminal = [
 | `Variable of code_variable
 | `MapAccess of map_key
 | `MapContains of map_key
-| `MapIterator of map_iterator ]
+| `MapIterator of map_iterator
+| `DomainContains of domain_key
+| `DomainIterator of domain_iterator ]
 
 type arith_code_expression = [
 | `CTerm of code_terminal
@@ -2208,15 +2361,18 @@ type code_expression = [
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
 | `AssignMap of map_key * arith_code_expression 
-| `EraseMap of map_key * arith_code_expression
+| `EraseMap of map_key
 | `InsertTuple of datastructure * (code_variable list)
 | `DeleteTuple of datastructure * (code_variable list)
 | `Eval of arith_code_expression 
 | `IfNoElse of bool_code_expression * code_expression
 | `IfElse of bool_code_expression * code_expression * code_expression
 | `ForEach of datastructure * code_expression
+| `ForEachResume of datastructure * code_expression
+| `Resume of string list option
 | `Block of code_expression list
 | `Return of arith_code_expression
+| `ReturnMap of map_identifier
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list
 | `Profile of string * profile_identifier * code_expression ]
 
@@ -2236,7 +2392,7 @@ let datastructure_of_declaration decl =
 
         | `Relation(n,f) -> `Multiset(n,f)
         | `Map (id, f, rt) -> `Map(id, f, rt)
-        | `Domain(n,f) -> `Set(n,f)
+        | `Domain(n,f) -> `Map(n,f,"int")
 
 let identifier_of_declaration decl =
     match decl with
@@ -2321,6 +2477,8 @@ let ctype_of_arith_code_expression ac_expr = "int"
 
 let iterator_ref = ref 0
 
+let advance_iterator it = "++"^it
+
 let iterator_type_of_datastructure ds =
     match ds with
 	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
@@ -2363,6 +2521,21 @@ let field_declarations_of_datastructure ds iterator tab =
 			      (0, "") f
 		      in
 			  r
+
+let resume_declarations_of_datastructure ds =
+    match ds with
+        | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
+              let resume_it = "resume_"^id^"_it"^it_id in
+              let resume_it_decl = it_typ^" "^resume_it in
+
+	      let val_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let val_typ = (ctype_of_datastructure ds)^"::key_type" in
+              let resume_val = "resume_"^id^"_val"^val_id in
+              let resume_val_decl = val_typ^" "^resume_val in
+                  Some((resume_it_decl, resume_it), (resume_val_decl, resume_val))
+
 
 let handler_name_of_event ev =
     match ev with
@@ -2424,6 +2597,8 @@ let string_of_field_list fl =
 
 let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
 
+let string_of_domain_key (did, keys) = did^"["^(ctype_of_code_var_list keys)^"]"
+
 let string_of_datastructure =
     function | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
 
@@ -2452,6 +2627,9 @@ let string_of_code_expr_terminal cterm =
 	| `MapContains (mid, keys) -> mid^".find("^(ctype_of_code_var_list keys)^")"
 	| `MapIterator (`Begin(mid)) -> mid^".begin()"
 	| `MapIterator (`End(mid)) -> mid^".end()"
+        | `DomainContains (did, keys) -> did^".find("^(ctype_of_code_var_list keys)^")"
+	| `DomainIterator (`Begin(did)) -> did^".begin()"
+	| `DomainIterator (`End(did)) -> did^".end()"
 
 let rec string_of_arith_code_expression ac_expr =
     match ac_expr with
@@ -2501,6 +2679,92 @@ let rec string_of_bool_code_expression bc_expr =
 		  ("("^(string_of_bool_code_expression l)^") or ("^
 		       (string_of_bool_code_expression r)^")")
 
+
+let rec remove_resume_code_expression c_expr =
+    let remove c = remove_resume_code_expression c in
+    match c_expr with
+        | `Declare _ 
+        | `Assign _ | `AssignMap _ | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _ 
+                -> Some(c_expr)
+
+        | `IfNoElse (cond, tc) ->
+              let ntc = remove tc in
+                  begin
+                      match ntc with
+                          | Some c -> Some(`IfNoElse(cond, c)) | _ ->  None
+                  end
+
+        | `IfElse (cond, tc, ec) ->
+              let ntc = remove tc in
+              let nec = remove ec in
+                  begin match (ntc, nec) with
+                      | (None, None) -> None
+                      | (None, Some x) -> Some(`IfNoElse(`Not(cond), x))
+                      | (Some x,None) -> Some(`IfNoElse(cond, x))
+                      | (Some x, Some y) -> Some(`IfElse(cond, x, y))
+                  end
+
+        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
+              raise (CodegenException
+                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
+
+        | `Resume code_opt -> None
+
+        | `Block cl ->
+              let ncl =
+                  List.fold_left
+                      (fun acc c -> match c with | None -> acc | Some(ce) -> acc@[ce])
+                      [] (List.map remove cl)
+              in
+                  Some(`Block(ncl))
+
+        | `Return _ -> Some(c_expr)
+
+        | `ReturnMap _ -> Some(c_expr)
+
+        | `Handler (hid,_,_,_) ->  raise (CodegenException
+              ("Cannot resume within handler: "^hid))
+
+        | `Profile (stat_type, loc, c) ->
+              let nc = remove c in
+                  match nc with
+                      | None -> None 
+                      | Some x -> Some(`Profile(stat_type, loc, x))
+
+let rec bind_resume_code_expression c_expr resume_code =
+    let bind c = bind_resume_code_expression c resume_code in
+    match c_expr with
+        | `Declare _ 
+        | `Assign _ | `AssignMap _ | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _ 
+                -> c_expr
+
+        | `IfNoElse (cond, tc) -> `IfNoElse(cond, bind tc)
+        | `IfElse (cond, tc, ec) -> `IfElse(cond, bind tc, bind ec)
+
+        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
+              raise (CodegenException
+                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
+
+        | `Resume code_opt ->
+              if code_opt = None then `Resume(Some(resume_code))
+              else raise (CodegenException ("Found existing resume code"))
+
+        | `Block cl -> `Block(List.map bind cl)
+
+        | `Return _ -> c_expr
+
+        | `ReturnMap _ -> c_expr
+
+        | `Handler (hid,_,_,_) -> raise (CodegenException
+              ("Cannot resume within handler: "^hid))
+
+        | `Profile (stat_type, loc, c) -> `Profile(stat_type, loc, bind c)
+
+
 let rec string_of_code_expression c_expr =
     let string_of_code_block c_expr_l =
 	List.fold_left
@@ -2528,18 +2792,40 @@ let rec string_of_code_expression c_expr =
 	    | `AssignMap(mk, vc) ->
 		  (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 
-	    | `EraseMap(mk, c) ->
-		  (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
+	    | `EraseMap (mid,mf) ->
+		  mid^".erase("^(ctype_of_code_var_list mf)^");"
 
             | `InsertTuple (ds, cv_list) ->
-                  (identifier_of_datastructure ds)^
-                      ".insert("^(ctype_of_code_var_list cv_list)^");";
+                  begin match ds with
+                      | `Map _ ->
+                            let dsid = identifier_of_datastructure ds in
+                            let dskey = (ctype_of_code_var_list cv_list) in
+                            let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
+                                "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
+                                "else { ++"^dsid^"["^dskey^"]; }"
+
+                      | `Set _ | `Multiset _ ->
+                            (identifier_of_datastructure ds)^
+                                ".insert("^(ctype_of_code_var_list cv_list)^");";
+
+                  end
 
             | `DeleteTuple (ds, cv_list) -> 
-                  let id = identifier_of_datastructure ds in
-                  let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
-                      find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");"^
-                      id^".erase("^find_it^");";
+                  begin match ds with
+                      | `Map _ ->
+                            let dsid = identifier_of_datastructure ds in
+                            let dskey = (ctype_of_code_var_list cv_list) in
+                                "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
+                                    "--"^dsid^"["^dskey^"];\n"^
+                                    "if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
+                                "}"
+
+                      | `Set _ | `Multiset _ ->
+                            let id = identifier_of_datastructure ds in
+                            let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                                find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
+                                    id^".erase("^find_it^");"
+                  end
 
 	    | `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -2559,14 +2845,78 @@ let rec string_of_code_expression c_expr =
 		  in
 		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
 			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-			  "for(; "^begin_it^" != "^end_it^"; ++"^begin_it^"){"^
+			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
 			  (field_declarations_of_datastructure m begin_it "")^"\n"^
 			  (string_of_code_expression c)^
 			  "}"
 
+	    | `ForEachResume(m,c) ->
+                  let deref it = match m with
+                      | `Map _ -> it^"->first"
+                      | `Set _ | `Multiset _ -> "*("^it^")"
+                  in
+		  let (begin_it, end_it, begin_decl, end_decl) =
+		      range_iterator_declarations_of_datastructure m
+		  in
+                  let resume_opt = resume_declarations_of_datastructure m in
+                  let (resume_decl, resume_incr_code, resume_bind_code) = 
+                      match resume_opt with
+                          | None -> ("", "", [])
+                          | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
+                                let rdecl =
+                                    resume_it_decl^" = "^begin_it^";\n"^
+                                    "if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
+                                    resume_val_decl^";\n"^
+                                    "if ( "^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
+                                in
+                                let rcode =
+                                    (advance_iterator resume_it)^";\n"^
+                                    "bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
+                                    "if ( !resume_end ) {\n"^
+                                        resume_val^" = "^(deref resume_it)^";\n"^
+                                    "}\n\n"
+                                in
+                                let rbindcode =
+                                    let id = identifier_of_datastructure m in
+                                        [ ("if ( !resume_end ) {");
+                                        ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
+                                        "}";
+                                        ("else { "^resume_it^" = "^end_it^"; }");
+                                        "continue;"]
+                                in
+                                    (rdecl, rcode, rbindcode)
+                  in
+                  let code_w_resume_bound =
+                      if resume_bind_code = [] then
+                          (match remove_resume_code_expression c with
+                              | None -> raise (CodegenException "Removing resume deleted all code")
+                              | Some x -> x)
+                      else (bind_resume_code_expression c resume_bind_code)
+                  in
+		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+                          resume_decl^
+			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
+			  (field_declarations_of_datastructure m begin_it "")^"\n"^
+                          resume_incr_code^
+			  (string_of_code_expression code_w_resume_bound)^
+			  "}"
+
+            | `Resume resume_code_opt ->
+                  begin match resume_code_opt with
+                      | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
+                      | Some c ->
+                            List.fold_left
+                                (fun acc l ->
+                                    if (String.length acc) = 0 then l else (acc^"\n"^l))
+                                "" c
+                  end
+
 	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
 
 	    | `Return (ac) -> "return "^(string_of_arith_code_expression ac)^";"
+
+            | `ReturnMap (mid) -> "return "^mid^";"
 
 	    | `Handler (name, args, rt, c_expr_l) ->
 		  let h_fields =
@@ -2625,18 +2975,40 @@ let indented_string_of_code_expression c_expr =
 		| `AssignMap(mk, vc) ->
 		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
 			  
-	        | `EraseMap(mk, c) ->
-		      (string_of_map_key mk)^".erase("^(string_of_arith_code_expression c)^");"
+	        | `EraseMap (mid,mf) ->
+		      mid^".erase("^(ctype_of_code_var_list mf)^");"
 
                 | `InsertTuple (ds, cv_list) ->
-                      (identifier_of_datastructure ds)^
-                          ".insert("^(ctype_of_code_var_list cv_list)^");";
+                      begin match ds with
+                          | `Map _ ->
+                                let dsid = identifier_of_datastructure ds in
+                                let dskey = (ctype_of_code_var_list cv_list) in
+                                let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
+                                    "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
+                                    tab^"else { ++"^dsid^"["^dskey^"]; }"
+
+                          | `Set _ | `Multiset _ ->
+                                (identifier_of_datastructure ds)^
+                                    ".insert("^(ctype_of_code_var_list cv_list)^");";
+
+                      end
 
                 | `DeleteTuple (ds, cv_list) -> 
-                      let id = identifier_of_datastructure ds in
-                      let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
-                          find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
-                              tab^id^".erase("^find_it^");";
+                      begin match ds with
+                          | `Map _ ->
+                                let dsid = identifier_of_datastructure ds in
+                                let dskey = (ctype_of_code_var_list cv_list) in
+                                    "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
+                                    ch_tab^"--"^dsid^"["^dskey^"];\n"^
+                                    ch_tab^"if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
+                                    tab^"}"
+
+                          | `Set _ | `Multiset _ ->
+                                let id = identifier_of_datastructure ds in
+                                let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                                    find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
+                                    tab^id^".erase("^find_it^");"
+                      end
 
 		| `Eval(ac) -> string_of_arith_code_expression ac
 
@@ -2660,17 +3032,84 @@ let indented_string_of_code_expression c_expr =
 			  "\n"^tab^
 			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
 			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-			      tab^"for(; "^begin_it^" != "^end_it^"; ++"^begin_it^")\n"^
+			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
 			      tab^"{\n"^
 			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
 			      (sce_aux c (level+1))^"\n"^
 			      tab^"}"
+
+	        | `ForEachResume(m,c) ->
+                      let deref it = match m with
+                          | `Map _ -> it^"->first"
+                          | `Set _ | `Multiset _ -> "*("^it^")"
+                      in
+		      let (begin_it, end_it, begin_decl, end_decl) =
+		          range_iterator_declarations_of_datastructure m
+		      in
+                      let resume_opt = resume_declarations_of_datastructure m in
+                      let (resume_decl, resume_incr_code, resume_bind_code) = 
+                          match resume_opt with
+                              | None -> ("", "", [])
+                              | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
+                                    let rdecl =
+                                        tab^resume_it_decl^" = "^begin_it^";\n"^
+                                        tab^"if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
+                                        tab^resume_val_decl^";\n"^
+                                        tab^"if ("^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
+                                    in
+                                    let rcode =
+                                        ch_tab^(advance_iterator resume_it)^";\n"^
+                                        ch_tab^"bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
+                                        ch_tab^"if ( !resume_end ) {\n"^
+                                        ch_tab^"   "^resume_val^" = "^(deref resume_it)^";\n"^
+                                        ch_tab^"}\n\n"
+                                    in
+                                    let rbindcode =
+                                        let id = identifier_of_datastructure m in
+                                            [ ("if ( !resume_end ) {");
+                                            ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
+                                            "}";
+                                            ("else { "^resume_it^" = "^end_it^"; }");
+                                            "continue;"]
+                                    in
+                                        (rdecl, rcode, rbindcode)
+                      in
+                      let code_w_resume_bound =
+                      if resume_bind_code = [] then
+                          (match remove_resume_code_expression c with
+                              | None -> raise (CodegenException "Removing resume deleted all code")
+                              | Some x -> x)
+                          else (bind_resume_code_expression c resume_bind_code)
+                      in
+			  "\n"^tab^
+			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+                              resume_decl^
+			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
+			      tab^"{\n"^
+			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
+                              resume_incr_code^
+			      (sce_aux code_w_resume_bound (level+1))^"\n"^
+			      tab^"}"
+
+
+                | `Resume resume_code_opt ->
+                      begin match resume_code_opt with
+                          | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
+                          | Some c ->
+                                List.fold_left
+                                    (fun acc l ->
+                                        if (String.length acc) = 0 then l else (acc^"\n"^tab^l))
+                                    "" c
+                      end
 
 		| `Block (c_expr_l) ->
 		      "{\n"^(string_of_code_block c_expr_l)^"\n"^
 			  tab^"}\n"
 
 		| `Return (ac) -> "return "^(string_of_arith_code_expression ac)^";"
+
+                | `ReturnMap (mid) -> "return "^mid^";"
 		      
 		| `Handler (name, args, rt, c_expr_l) ->
 		      let h_fields =
@@ -2826,7 +3265,7 @@ let type_inf_mexpr m_expr base_rels events decls =
 		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
 	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
 	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
-	    | `Init (_, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
+	    | `MaintainMap (_, _, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
 	    | `Insert (_, _, m) | `Update( _, _, _, m) 
 	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
 	    | `IfThenElse(_, m1, m2) -> 
@@ -2875,7 +3314,7 @@ let type_inf_mexpr_map m_expr base_rels events maps map_vars =
 		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
 	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
 	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
-	    | `Init (_, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
+	    | `MaintainMap (_, _, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
 	    | `Insert (_, _, m) | `Update( _, _, _, m) 
 	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
 	    | `IfThenElse(_, m1, m2) -> 
@@ -2915,6 +3354,8 @@ let type_inf_arith_expr a_expr decls =
 			        | _ -> false (* check later *))
 		            decls )
 		in List.hd t_list
+            | `DomainContains (did, keys) -> raise InvalidExpression
+            | `DomainIterator (`Begin id) | `DomainIterator (`End id) -> raise InvalidExpression
     in 
 	type_to_string (tiae_aux_expr a_expr)
 		
@@ -2923,7 +3364,12 @@ let type_inf_arith_expr a_expr decls =
 (* Code helpers *)
 let get_block_last c_expr =
     match c_expr with
-	| `Block cl -> List.nth cl ((List.length cl)-1)
+	| `Block cl ->
+              let cl_len = List.length cl in
+                  begin match List.nth cl (cl_len-1) with
+                      | `Resume _ -> List.nth cl (cl_len-2)
+                      | x -> x
+                  end
 	| _ -> raise InvalidExpression
 
 let remove_block_last c_expr =
@@ -2948,18 +3394,21 @@ let append_blocks l_block r_block =
 	| (`Block lcl, `Block rcl) -> `Block(lcl@rcl)
 	| _ -> raise InvalidExpression
 
-(* `EraseMap should not occur as return val
- * TODO: think about `DeleteTuple, since this may occur on IncrPlan(_,`Minus,_,_)
+(* TODO: think about `DeleteTuple, since this may occur on IncrPlan(_,`Minus,_,_)
  *)
 let rec get_return_val c_expr =
     match c_expr with
         | `Eval _ -> c_expr
         | `Assign(v, _) -> `Eval(`CTerm(`Variable(v)))
         | `AssignMap(mk,_) -> `Eval(`CTerm(`MapAccess(mk)))
+        | `EraseMap((mid,mf) as mk) ->
+              print_endline ("Found erase map as return val with keys "^(string_of_code_var_list mf));
+              `Eval(`CTerm(`MapAccess(mk)))
         | `IfNoElse(_, c) -> get_return_val c
+        | `ForEach(_,c) -> get_return_val c 
+        | `ForEachResume(_,c) -> get_return_val c 
         | `Block(y) -> get_return_val (get_block_last c_expr)
         | `Profile(_,_,c) -> get_return_val c
-        | `ForEach(_,c) -> get_return_val c 
         | _ ->
               print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
               raise InvalidExpression
@@ -2971,11 +3420,18 @@ let remove_return_val c_expr =
         | `Eval _ -> None
         | `Assign _ -> Some(c)
         | `AssignMap _ -> Some(c)
+        | `EraseMap _ -> Some(c)
         | `IfNoElse (p, cc) ->
-              begin
-                  match remove_aux cc with
-                      | None -> None
-                      | Some x -> Some(`IfNoElse(p,x))
+              begin match remove_aux cc with
+                  | None -> None
+                  | Some x -> Some(`IfNoElse(p,x))
+              end
+
+        | `ForEach(ds,c)
+        | `ForEachResume(ds,c) ->
+              begin match remove_aux c with
+                  | None -> None
+                  | Some x -> Some(`ForEach(ds,x))
               end
 
         | `Block x ->
@@ -3014,7 +3470,9 @@ let rec replace_return_val c_expr new_rv =
                   `Block(List.rev (new_last::(List.tl (List.rev x))))
         | `Profile(st,p,c) -> `Profile(st, p, replace_return_val c new_rv)
         (* Top level case *)
-        | `ForEach(i,c) -> 
+        | `ForEach(i,c) 
+        | `ForEachResume(i,c)
+            -> 
               let last = get_return_val c_expr in 
               let new_id = 
                   match new_rv with
@@ -3042,7 +3500,7 @@ let rec is_local_return_val code rv =
               let block_last = get_block_last code in
               let (local, _) = is_local_return_val (get_block_last code) rv in
                   (local, match block_last with | `Eval _ -> true | _ -> false)
-        | `ForEach (_, c) -> is_local_return_val c rv
+        | `ForEach (_, c) | `ForEachResume(_, c) -> is_local_return_val c rv
         | _ -> (false, false)
 
 (* code_expression -> declaration list ->
@@ -3109,11 +3567,14 @@ let rec get_last_code_expr c_expr =
 	| `Declare _ | `Assign _ 
         | `AssignMap _  | `EraseMap _
         | `InsertTuple _ | `DeleteTuple _
-        | `Eval _ | `Return _ -> c_expr 
+        | `Eval _ -> c_expr 
 	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
 	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r
 	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
+	| `ForEachResume (ds, c_expr) -> get_last_code_expr c_expr
+        | `Resume _ -> raise InvalidExpression
 	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
+        | `Return _ | `ReturnMap _ -> c_expr
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
         | `Profile(_,_,c) -> get_last_code_expr c
 
@@ -3131,69 +3592,71 @@ let is_insert_incr expr_op plan_op =
         | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
         | _ -> raise (ValidationException "Invalid op pair.")
 
-(* type checker *)
 
+(* shared code helpers *)
+let rec filter_declarations c_expr decl_l =
+    match c_expr with
+	| `Declare _ ->
+              if List.mem c_expr decl_l then None else Some(c_expr)
 
+        | `Assign _ | `AssignMap _  | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _
+            -> Some(c_expr)
 
+	| `IfNoElse (cond, tc) ->
+              let r = filter_declarations tc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(ntc) -> Some(`IfNoElse(cond, ntc))
+                  end
 
+	| `IfElse (cond, tc, ec) ->
+              let rt = filter_declarations tc decl_l in
+              let re = filter_declarations ec decl_l in
+                  begin match (rt, re) with
+                      | (None, None) -> None
+                      | (Some(ntc), None) -> Some(`IfNoElse(cond, ntc))
+                      | (None, Some(nec)) -> Some(`IfNoElse(`Not(cond), nec))
+                      | (Some(ntc), Some(nec)) -> Some(`IfElse(cond, ntc, nec))
+                  end
 
+	| `ForEach (ds, fc) ->
+              let r = filter_declarations fc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nfc) -> Some(`ForEach(ds,nfc))
+                  end
 
+	| `ForEachResume (ds, fc) ->
+              let r = filter_declarations fc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nfc) -> Some(`ForEachResume(ds,nfc))
+                  end
 
+        | `Resume _ -> Some(c_expr)
 
-(* State identifiers *)
-(* TODO: move back!!! Temporarily moved here while debugging *)
-module AccessorHashtype =
-struct
-    type t = accessor_element
-    let equal = Pervasives.(=)
-    let hash = dbt_hash
-end
+	| `Block cl ->
+              let ncl =
+                  List.fold_left
+                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
+                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
+              in
+                  Some(`Block(ncl))
 
-module AccessorHashtbl = Hashtbl.Make(AccessorHashtype)
+        | `Return _ | `ReturnMap _ -> Some(c_expr)
+	| `Handler (id, args, rt, cl) ->
+              let ncl =
+                  List.fold_left
+                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
+                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
+              in
+                  Some(`Handler(id, args, rt, ncl))
 
-type state_symbols = string AccessorHashtbl.t
-let state_syms : state_symbols = AccessorHashtbl.create 10
-let sid_counter = ref 0
-
-let gen_state_sym accessor_elem =
-    if AccessorHashtbl.mem state_syms accessor_elem then
-        begin
-            let r = AccessorHashtbl.find state_syms accessor_elem in
-                print_endline ("Found state sym: "^(string_of_accessor_element accessor_elem));
-                r
-        end
-    else
-        begin
-            let new_id = !sid_counter in
-            let new_symbol = 
-                incr sid_counter;
-                "state"^(string_of_int new_id) in
-
-                print_endline ("New state sym: "^(new_symbol)^" "^
-                    (string_of_accessor_element accessor_elem));
-                AccessorHashtbl.add state_syms accessor_elem new_symbol;
-                new_symbol
-        end
-
-let remove_state_sym accessor_elem = 
-    AccessorHashtbl.remove state_syms accessor_elem
-
-let update_state_sym accessor_elem new_accessor_elem state_sym = 
-    remove_state_sym accessor_elem;  
-    if AccessorHashtbl.mem state_syms new_accessor_elem then
-        begin
-            let r = AccessorHashtbl.find state_syms new_accessor_elem in
-                print_endline ("Found state sym: "^(string_of_accessor_element new_accessor_elem));
-                r
-        end
-    else
-        begin
-            AccessorHashtbl.add state_syms new_accessor_elem state_sym;
-            state_sym
-        end
-
-(* merging two state ids. remove binding of accessor_elem1 and accessor_elem2 
- * then update binding of new_accessor_elem1 with sym *)
-let merge_state_sym accessor_elem1 accessor_elem2 new_accessor_elem sym = 
-    remove_state_sym accessor_elem2;
-    update_state_sym accessor_elem1 new_accessor_elem sym
+        | `Profile(st,loc,c) ->
+              let r = filter_declarations c decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nc) -> Some(`Profile(st,loc,nc))
+                  end
