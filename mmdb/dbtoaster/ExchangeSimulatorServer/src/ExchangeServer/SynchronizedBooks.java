@@ -55,7 +55,7 @@ public class SynchronizedBooks {
 			order_id++;
 			t.id=order_id;
 			
-			currentTime++;
+//			currentTime++;
 			t.time=currentTime;
 		}
 		else
@@ -102,7 +102,7 @@ public class SynchronizedBooks {
 			order_id++;
 			t.id=order_id;
 			
-			currentTime++;
+//			currentTime++;
 			t.time=currentTime;
 		}
 		else
