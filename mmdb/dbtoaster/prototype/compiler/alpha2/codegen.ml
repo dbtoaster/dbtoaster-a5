@@ -185,6 +185,12 @@ let rec substitute_code_vars assignments c_expr =
 	    | `Block cl -> `Block(List.map sc cl)
 	    | `Return (ac) -> `Return (sa ac)
             | `ReturnMap mid -> `ReturnMap mid
+            | `ReturnMultiple rv_l ->
+                  `ReturnMultiple
+                      (List.map
+                          (function | `Arith a -> `Arith(sa a) | `Map mid -> `Map mid)
+                          rv_l)
+
 	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
             | `Profile(st, p,c) -> `Profile(st, p, sc c)
 
@@ -1516,7 +1522,7 @@ let generate_code handler bindings event body_only event_handler_decls
 (* map expression list ->
    (int * variable identifier) list -> (state_identifier * int) list ->
    (declaration list) * (variable_identifier * code_term) list * (state_identifier * declaration) list *)
-let generate_map_declarations maps map_vars state_parents type_list=
+let generate_map_declarations maps map_vars state_parents type_list =
 
     List.iter (fun me ->
         print_endline ("gmd: "^
@@ -1601,12 +1607,35 @@ let generate_map_declarations maps map_vars state_parents type_list=
                               (decl_acc, stp_acc@[(sid, decl)])
 
                     | (false, false) ->
-                          let new_decl_var = gen_var_sym() in
-			  let new_type = type_inf_mexpr_map m type_list maps map_vars in
-                          let new_decl = `Variable(new_decl_var, new_type) in
-                              print_endline ("Using newly declared var: "^new_decl_var^
-                                  " for hash: "^(string_of_int par));
-                              (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
+                          begin match m with
+                              | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) when (List.length bd > 0) ->
+                                    let new_map_id = gen_map_sym sid in
+			            let new_type = type_inf_mexpr_map m type_list maps map_vars in
+                                    let new_fields =
+                                        List.map
+                                            (fun (a, e_opt) ->
+                                                let f = field_of_attribute_identifier a in
+                                                    (f, 
+                                                    match e_opt with
+                                                        | None ->
+                                                              type_inf_mexpr_map
+                                                                  (`METerm (`Attribute(a))) type_list maps map_vars
+                                                        | Some (e) ->  type_inf_expr e type_list []))
+                                            bd
+                                    in
+                                    let new_decl = `Map(new_map_id, new_fields, new_type) in
+                                        print_endline ("Using newly declared map: "^new_map_id^
+                                            " for state id: "^sid^" hash: "^(string_of_int par)^" type: "^new_type);
+                                        (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
+
+                              | _ ->
+                                    let new_decl_var = gen_var_sym() in
+			            let new_type = type_inf_mexpr_map m type_list maps map_vars in
+                                    let new_decl = `Variable(new_decl_var, new_type) in
+                                        print_endline ("Using newly declared var: "^new_decl_var^
+                                            " for state id: "^sid^" hash: "^(string_of_int par)^" type: "^new_type);
+                                        (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
+                          end
 
                     | _ -> raise (CodegenException "Invalid parent: multiple declarations found."))
 

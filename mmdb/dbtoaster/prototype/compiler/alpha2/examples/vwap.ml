@@ -95,4 +95,4 @@ in
 *)
 
     print_test_type "compile_standalone_debugger";
-    compile_standalone_debugger vwap relation_sources "vwap.cc" (Some "vwaptrace.catalog");;
+    compile_standalone_debugger [vwap] relation_sources "vwap.cc" (Some "vwaptrace.catalog");;

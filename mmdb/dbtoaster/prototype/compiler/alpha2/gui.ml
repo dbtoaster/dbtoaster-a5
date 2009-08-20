@@ -1268,6 +1268,8 @@ let rec treeml_pseudocode_of_code_expression c_expr =
 
             | `ReturnMap _ -> make_code_leaf c_expr
 
+            | `ReturnMultiple _ -> make_code_leaf c_expr
+
             | `Handler (id, args, rt, cl) -> 
                   make_branch
                       ([make_statement (xml_escape (rt^" "^id^"("^(string_of_field_list args)^")"))]@

@@ -134,6 +134,8 @@ let rec get_dependencies c_expr =
 
         | `ReturnMap _ -> []
 
+        | `ReturnMultiple _ -> []
+
         | `Handler (_,_,_,cl) -> unique(List.flatten (List.map get_dependencies cl))
 
         | `Profile (_,_,c) -> get_dependencies c
