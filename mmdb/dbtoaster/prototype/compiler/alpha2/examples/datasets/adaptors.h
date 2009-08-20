@@ -51,6 +51,7 @@ namespace DBToaster {
         typedef struct {
             int t;
             int id;
+            int broker_id;
             int price;
             int volume;
         } OrderbookHandlerInput;

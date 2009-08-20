@@ -3,11 +3,11 @@
 // DBToaster compiler generates init()
 // -- adds streams to multiplexer
 // -- registers stream handlers
-extern void init(DBToaster::StandaloneEngine::Multiplexer& sources, DBToaster::StandaloneEngine::Dispatcher& router);
+extern void init(DBToaster::StandaloneEngine::FileMultiplexer& sources, DBToaster::StandaloneEngine::Dispatcher& router);
 
 int main(int argc, char** argv)
 {
-    DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);
+    DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);
     DBToaster::StandaloneEngine::Dispatcher router;
     init(sources, router);
 

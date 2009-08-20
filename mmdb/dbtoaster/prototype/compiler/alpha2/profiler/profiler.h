@@ -6,11 +6,11 @@
 #include <list>
 #include <utility>
 
-#include "boost/any.hpp"
-#include "boost/circular_buffer.hpp"
-#include "boost/function.hpp"
-#include "boost/shared_ptr.hpp"
-#include "boost/thread.hpp"
+#include <boost/any.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/function.hpp>
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
 
 #include <protocol/TBinaryProtocol.h>
 #include <server/TSimpleServer.h>
@@ -26,6 +26,8 @@ namespace DBToaster
     {
         using namespace std;
         using namespace boost;
+
+        using boost::shared_ptr;
 
         using namespace apache::thrift;
         using namespace apache::thrift::protocol;
@@ -509,7 +511,7 @@ namespace DBToaster
         };
 
         #define PROFILER_ENGINE_IMPLEMENTATION \
-            shared_ptr<Protocol::ProfilerService> profileService(new Protocol::ProfilerService());
+            boost::shared_ptr<Protocol::ProfilerService> profileService(new Protocol::ProfilerService());
     };
 };
 

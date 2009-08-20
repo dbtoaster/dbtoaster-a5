@@ -18,9 +18,7 @@
 #include <boost/function.hpp>
 
 // User code headers
-#include "orderbook.h"
-#include "tpch.h"
-#include "linearroad.h"
+#include "datasets.h"
 
 namespace DBToaster
 {

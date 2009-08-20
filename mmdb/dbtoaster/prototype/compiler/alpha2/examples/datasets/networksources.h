@@ -119,7 +119,7 @@ namespace DBToaster
                 OrderbookTuple * r = new OrderbookTuple();
                 parseLine(line, r);
                 cout << "handleRead size: " << readResponse.size() << endl;
-                cout<<r->t<<" "<<r->id<<" "<<r->c_id<<" "<<r->action<<" "<<r->price<<" "<<r->volume<<endl;
+                cout<<r->t<<" "<<r->id<<" "<<r->broker_id<<" "<<r->action<<" "<<r->price<<" "<<r->volume<<endl;
                 
                 data.push_back(r);
                 handler();
@@ -135,7 +135,7 @@ namespace DBToaster
 
                 ist>>r->id;
                 
-                ist>>r->c_id;
+                ist>>r->broker_id;
 
                 ist>>r->action;
 

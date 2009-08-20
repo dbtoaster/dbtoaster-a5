@@ -81,13 +81,13 @@ compile_code vwap (`Insert ("B", [("p", "int"); ("v", "int")])) "vwap.cc";;
 *)
 let relation_sources =
     [("B",
-        ("DBToaster::DemoDatasets::VwapFileStream",
+        ("DBToaster::DemoDatasets::OrderbookFileStream",
         "\"20081201.csv\",1000",
-        "DBToaster::DemoDatasets::VwapTuple",
-        "DBToaster::DemoDatasets::VwapTupleAdaptor",
-        [("T", "t"); ("ID", "id"); ("P", "price"); ("V", "volume")],
+        "DBToaster::DemoDatasets::OrderbookTuple",
+        "DBToaster::DemoDatasets::OrderbookTupleAdaptor",
+        [("T", "t"); ("ID", "id"); ("BRID", "broker_id"); ("P", "price"); ("V", "volume")],
         "datasets",
-        "VwapBids"))]
+        "BidsOrderbook"))]
 in
 (*
     print_test_type "compile_standalone_engine";

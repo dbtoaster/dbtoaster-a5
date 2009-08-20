@@ -1699,6 +1699,280 @@ let generate_function_object_id handler_name =
         incr fun_obj_id_counter;
         "fo_"^handler_name^"_"^(string_of_int r)
 
+
+let get_handler_metadata handler adaptor_type adaptor_bindings =
+    match handler with
+        | `Handler(fid, args, ret_type, _) ->
+              let input_metadata =
+                  let ifa =
+                      (fun input_instance ->
+                          List.fold_left
+                              (fun acc (id, ty) ->
+                                  if (List.mem_assoc id adaptor_bindings) then
+                                      let in_field = List.assoc id adaptor_bindings in
+                                          (if (String.length acc) = 0 then "" else acc^",")^
+                                              (input_instance^"."^in_field)
+                                  else raise (CodegenException
+                                      ("Could not find input arg binding for "^id)))
+                              "" args)
+                  in
+                      (adaptor_type^"::Result", ifa)
+              in
+                  (fid, input_metadata, ctype_of_type_identifier ret_type)
+
+        | _ -> raise (CodegenException
+              ("Invalid handler: "^(string_of_code_expression handler)))
+
+
+let validate_stream_types streams_handlers_and_events check_type =
+    let valid =
+        List.fold_left
+            (fun valid_acc (stream_type_info, stream_name, handler, event) ->
+                let (stream_type, _,_,_,_,_, _) = stream_type_info in
+                    valid_acc && (stream_type = check_type))
+            true streams_handlers_and_events
+    in
+        if not valid then
+            raise (CodegenException
+                ("Invalid stream types, streams must all be from files or sockets"))
+        else ()
+
+
+(* Returns declarations and code to add to init() method
+ *
+ * Type assumptions: 
+ *  -- adaptor constructor: adaptor()
+ *
+ * Add streams to multiplexer
+ * -- instantiate input stream sources.
+ * -- instantiate adaptors.
+ * -- initialize (i.e. buffer data for) input streams
+ * -- generate stream id, register with multiplexer via add_stream(stream id, input stream)
+ *
+ * add handlers to dispatcher
+ *     -- create function object with operator()(boost::any data)
+ *     -- cast from boost::any to expected struct, and invoke handler with struct fields.
+ *     -- register handler with dispatcher for a given stream, via
+ *          add_handler(stream id, dml type, function object)
+ *)
+(* TODO: allocation model for inputs? *)
+let generate_stream_engine_file_decl_and_init stream_type_info stream_name handler event existing_decls =
+    let indent s = ("    "^s) in
+
+    let (_, source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
+
+    (* declare_stream: <stream type> <stream inst>; static int <stream id name> = <stream id val>;
+     * register_stream: sources.addStream< <tuple_type> >(&<stream inst>, <stream id name>);
+     * stream_id: <stream id name>
+     *)
+    let (declare_stream, register_stream, stream_id) =
+        let new_decl = source_type^" "^stream_name^"("^source_args^");\n" in
+            if List.mem new_decl existing_decls then
+                ([], [], get_stream_id_name stream_name)
+            else
+                let (id_name, id) = generate_stream_id stream_name in
+                let adaptor_name = stream_name^"_adaptor" in
+                let new_adaptor =
+                    "boost::shared_ptr<"^adaptor_type^"> "^
+                        adaptor_name^"(new "^adaptor_type^"());"
+                in
+                let new_id = ("static int "^id_name^" = "^(string_of_int id)^";\n") in
+                let stream_pointer = "&"^stream_name in
+                let adaptor_deref = "*"^adaptor_name in
+                let reg =
+                    "sources.addStream<"^tuple_type^">("^stream_pointer^", "^adaptor_deref^", "^id_name^");"
+                in
+                    ([ new_decl; new_adaptor; new_id ], [reg], id_name)
+    in
+
+    let (handler_name, handler_input_metadata, handler_ret_type) =
+        get_handler_metadata handler adaptor_type adaptor_bindings
+    in
+    let (handler_input_type_name, handler_input_args) =
+        handler_input_metadata
+    in
+    let handler_dml_type = match event with
+        | `Insert _ -> "DBToaster::StandaloneEngine::insertTuple"
+        | `Delete _ -> "DBToaster::StandaloneEngine::deleteTuple"
+    in
+
+    (* declare_handler_fun_obj:
+       struct <fun obj type name>
+       { <handler ret type> operator() { cast; invoke; } }
+       * fun_obj_type: <fun obj type name> *)
+    let (declare_handler_fun_obj, fun_obj_type) = 
+        let input_instance = "input" in
+        let fo_type = handler_name^"_fun_obj" in
+            ([("struct "^fo_type^" { ");
+            (indent (handler_ret_type^" operator()(boost::any data) { "));
+            (indent (indent
+                (handler_input_type_name^" "^input_instance^" = ")));
+            (indent (indent (indent ("boost::any_cast<"^handler_input_type_name^">(data); "))));
+            (indent (indent
+                (handler_name^"("^
+                    (handler_input_args input_instance)^");")));
+            (indent "}"); "};\n"],
+            fo_type)
+    in
+
+    (* declare_handler_fun_obj_inst: <fo_type> <fo instance name>; *)
+    let (declare_handler_fun_obj_inst, handler_fun_obj_inst) =
+        let h_inst = generate_function_object_id handler_name in
+        let decl_code = [ handler_name^"_fun_obj "^h_inst^";\n" ] in
+            (decl_code, h_inst)
+    in
+
+    (* register_handler:
+           router.addHandler(<stream id name>, handler dml type, <fo instance name>) *)
+    let register_handler =
+        "router.addHandler("^stream_id^","^handler_dml_type^","^handler_fun_obj_inst^");"
+    in
+
+    let decl_code =
+        declare_stream@declare_handler_fun_obj@declare_handler_fun_obj_inst
+    in
+
+    let init_code = register_stream@[register_handler] in
+
+        (decl_code, init_code)
+
+
+(* Generates init() and main() methods for standalone stream engine for compiled queries.
+ * source metadata: (stream type * tuple type * stream name * handler * event) list
+ * source metadata -> unit
+*)
+let generate_file_stream_engine_init out_chan streams_handlers_and_events =
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+
+    validate_stream_types streams_handlers_and_events File;
+
+    let (init_decls, init_body) =
+        List.fold_left
+            (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
+                let (decl_code, init_code) =
+                    generate_stream_engine_file_decl_and_init
+                        stream_type_info stream_name handler event decls_acc
+                in
+                    (decls_acc@decl_code, init_body_acc@init_code))
+            ([], []) streams_handlers_and_events
+    in
+    (* void init(multiplexer, sources) { register stream, handler;} *)
+    let init_defn =
+        let init_code =
+            ["\n\nvoid init(DBToaster::StandaloneEngine::FileMultiplexer& sources,";
+             (indent "DBToaster::StandaloneEngine::FileStreamDispatcher& router)"); "{";]@
+                (List.map indent init_body)@[ "}\n\n"; ]
+        in
+            list_code init_code
+    in
+        output_string out_chan (list_code init_decls);
+        output_string out_chan init_defn
+
+
+(*
+ * Declarations:
+ * -- stream dispatcher class
+ * -- stream dispatcher instance 
+ * -- network data sources 
+ *
+ * Init code:
+ * -- register stream with multiplexer
+ *)
+(*
+let generate_stream_engine_socket_decl_and_init stream_type_info stream_name handler event io_service_name =
+    let (_, source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
+
+    let decl_code =
+        let (stream_dispatcher_type_name, stream_dispatcher_class_decl) =
+            (* declare adaptor *)
+            (* declare insert/delete function pointers *)
+            (* constructor, setting function pointers *)
+            (* operator(), applying adaptor, checking DML type, applying any_cast and dispatching *)
+            let sd_type_name = "dispatch_"^stream_name^"_tuple" in
+            let sd_class =
+                let adaptor_name = "adaptor" in
+                    ["struct "^sd_type_name; "{";
+                    adaptor_type^" "^adaptor_name^";";
+                    
+                "}"]
+            in
+                (sd_type_name, sd_class)
+        in
+        let (stream_dispatcher_name, stream_dispatcher_instance_decl) = 
+            let sd_name = stream_name^"_dispatcher" in
+                [stream_dispatcher_type_name^" "^stream_dispatcher_name^";"]
+        in
+        let stream_source_decl =
+            [source_type^" "^stream_name^"("^io_service_name^","^stream_dispatcher_name^")"]
+        in
+            stream_dispatcher_class_decl@
+                stream_dispatcher_instance_decl@stream_source_decl
+    in
+
+    let init_code =
+        let stream_pointer = "&"^stream_name in
+            "sources.addStream(static_cast<"^
+                "DBToaster::StandaloneEngine::SocketStream*>("^stream_pointer^"))"
+    in
+        (decl_code, init_code)
+
+*)
+
+(*
+let generate_socket_stream_engine_init out_chan streams_handlers_and_events =
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+
+    validate_stream_types streams_handlers_and_events Socket;
+
+    * declarations:
+     * -- io_service
+     * -- stream dispatcher class
+     * -- stream dispatcher instance 
+     * -- network data sources *
+
+    let (io_service_name, io_service_decl) =
+        ("io_service", "boost::asio::io_service io_service;")
+    in
+
+    let (init_decls, init_body) =
+        List.fold_left
+            (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
+                let (stream_type,_,_,_,_,_,_) = stream_type_info in
+                let (decl_code, init_code) =
+                    generate_stream_engine_socket_decl_and_init
+                        stream_type_info stream_name handler event decls_acc
+                in
+                    (decls_acc@decl_code, init_body_acc@init_code))
+            ([], []) streams_handlers_and_events
+    in
+
+    (* void init(multiplexer) { register stream;} *)
+    let init_defn =
+        let init_code =
+            ["\n\nvoid init(DBToaster::StandaloneEngine::SocketMultiplexer& sources)"; "{";]@
+                (List.map indent init_body)@[ "}\n\n"; ]
+        in
+            list_code init_code
+    in
+        output_string out_chan (list_code ([ioservice_decl]@init_decls));
+        output_string out_chan init_defn
+*)
+
+(*
+ * Top-level standalone engine code generation functions
+ *)
 let generate_stream_engine_includes out_chan =
     let list_code l =
         List.fold_left
@@ -1715,155 +1989,10 @@ let generate_stream_engine_includes out_chan =
         "using namespace DBToaster::Profiler;\n"; ]
     in
         output_string out_chan (list_code includes)
-    
-
-(* Generates init() and main() methods for standalone stream engine for compiled queries.
- * source metadata: (stream type * tuple type * stream name * handler * event) list
- * source metadata -> unit
-*)
-let generate_stream_engine_init out_chan streams_handlers_and_events =
-    let indent s = ("    "^s) in
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-    let get_handler_metadata handler adaptor_type adaptor_bindings =
-        match handler with
-            | `Handler(fid, args, ret_type, _) ->
-                  let input_metadata =
-                      let ifa =
-                          (fun input_instance ->
-                              List.fold_left
-                                  (fun acc (id, ty) ->
-                                      if (List.mem_assoc id adaptor_bindings) then
-                                          let in_field = List.assoc id adaptor_bindings in
-                                              (if (String.length acc) = 0 then "" else acc^",")^
-                                                  (input_instance^"."^in_field)
-                                      else raise (CodegenException
-                                          ("Could not find input arg binding for "^id)))
-                                  "" args)
-                      in
-                          (adaptor_type^"::Result", ifa)
-                  in
-                      (fid, input_metadata, ctype_of_type_identifier ret_type)
-
-            | _ -> raise (CodegenException
-                  ("Invalid handler: "^(string_of_code_expression handler)))
-    in
-    let (init_decls, init_body) =
-        List.fold_left
-            (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
-
-                (* Type assumptions: 
-                   -- adaptor constructor: adaptor()
-                *)
-                let (source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
-
-                (* add streams to multiplexer
-                   -- instantiate input stream sources.
-                   -- instantiate adaptors.
-                   -- initialize (i.e. buffer data for) input streams
-                   -- generate stream id, register with multiplexer via
-                   add_stream(stream id, input stream)
-                *)
-
-                (* declare_stream: <stream type> <stream inst>; static int <stream id name> = <stream id val>;
-                 * register_stream: sources.addStream< <tuple_type> >(&<stream inst>, <stream id name>);
-                 * stream_id: <stream id name>
-                 *)
-
-                let (declare_stream, register_stream, stream_id) =
-                    let new_decl = source_type^" "^stream_name^"("^source_args^");\n" in
-                        if List.mem new_decl decls_acc then
-                            ([], [], get_stream_id_name stream_name)
-                        else
-                            let (id_name, id) = generate_stream_id stream_name in
-                            let adaptor_name = stream_name^"_adaptor" in
-                            let new_adaptor =
-                                "boost::shared_ptr<"^adaptor_type^"> "^
-                                    adaptor_name^"(new "^adaptor_type^"());"
-                            in
-                            let new_id = ("static int "^id_name^" = "^(string_of_int id)^";\n") in
-                            let stream_pointer = "&"^stream_name in
-                            let adaptor_deref = "*"^adaptor_name in
-                            let reg =
-                                "sources.addStream<"^tuple_type^">("^stream_pointer^", "^adaptor_deref^", "^id_name^");"
-                            in
-                                ([ new_decl; new_adaptor; new_id ], [reg], id_name)
-                in
-
-                let (handler_name, handler_input_metadata, handler_ret_type) =
-                    get_handler_metadata handler adaptor_type adaptor_bindings
-                in
-                let (handler_input_type_name, handler_input_args) =
-                    handler_input_metadata
-                in
-                let handler_dml_type = match event with
-                    | `Insert _ -> "DBToaster::StandaloneEngine::insertTuple"
-                    | `Delete _ -> "DBToaster::StandaloneEngine::deleteTuple"
-                in
-
-                (* add handlers to dispatcher
-                   -- create function object with operator()(boost::any data)
-                   -- cast from boost::any to expected struct, and invoke handler with struct fields.
-                   -- register handler with dispatcher for a given stream, via
-                   add_handler(stream id, dml type, function object)
-                *)
-
-                (* TODO: allocation model for inputs? *)
-                (* declare_handler_fun_obj:
-                   struct <fun obj type name>
-                   { <handler ret type> operator() { cast; invoke; } }
-                 * fun_obj_type: <fun obj type name> *)
-                let (declare_handler_fun_obj, fun_obj_type) = 
-                    let input_instance = "input" in
-                    let fo_type = handler_name^"_fun_obj" in
-                        ([("struct "^fo_type^" { ");
-                          (indent (handler_ret_type^" operator()(boost::any data) { "));
-                          (indent (indent
-                              (handler_input_type_name^" "^input_instance^" = ")));
-                          (indent (indent (indent ("boost::any_cast<"^handler_input_type_name^">(data); "))));
-                          (indent (indent
-                              (handler_name^"("^
-                                  (handler_input_args input_instance)^");")));
-                          (indent "}"); "};\n"],
-                        fo_type)
-                in
-
-                (* declare_handler_fun_obj_inst: <fo_type> <fo instance name>; *)
-                let (declare_handler_fun_obj_inst, handler_fun_obj_inst) =
-                    let h_inst = generate_function_object_id handler_name in
-                    let decl_code = [ handler_name^"_fun_obj "^h_inst^";\n" ] in
-                        (decl_code, h_inst)
-                in
-                (* register_handler:
-                   router.addHandler(<stream id name>, handler dml type, <fo instance name>) *)
-                let register_handler =
-                    "router.addHandler("^stream_id^","^handler_dml_type^","^handler_fun_obj_inst^");"
-                in
-                    (decls_acc@declare_stream@
-                        declare_handler_fun_obj@declare_handler_fun_obj_inst,
-                    init_body_acc@register_stream@[register_handler]))
-            ([], []) streams_handlers_and_events
-    in
-    (* void init(multiplexer, sources) { register stream, handler;} *)
-    let init_defn =
-        let init_code =
-            ["\n\nvoid init(DBToaster::StandaloneEngine::Multiplexer& sources,";
-             (indent "DBToaster::StandaloneEngine::Dispatcher& router)"); "{";]@
-                (List.map indent init_body)@[ "}\n\n"; ]
-        in
-            list_code init_code
-    in
-        output_string out_chan (list_code init_decls);
-        output_string out_chan init_defn
-
 
 (* TODO: generate standalone profiler running an event loop in its own thread *)
-let generate_stream_engine_main out_chan =
-    (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
+(* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
+let generate_file_stream_engine_main out_chan =
     let indent s = ("    "^s) in
     let list_code l =
         List.fold_left
@@ -1876,8 +2005,8 @@ let generate_stream_engine_main out_chan =
         let main_code =
             ["int main(int argc, char** argv)"]@
                 (block
-                    (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
-                    "DBToaster::StandaloneEngine::Dispatcher router;";
+                    (["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
+                    "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
                     "PROFILER_ENGINE_IMPLEMENTATION;\n";
                     "init(sources, router);";
                     "while ( sources.streamHasInputs() ) {";
@@ -1888,6 +2017,36 @@ let generate_stream_engine_main out_chan =
             list_code main_code
     in
         output_string out_chan main_defn
+
+(* declare multiplexer; main() { start read loop; run io_service in a thread }  *)
+
+(*
+let generate_socket_stream_engine_main out_chan =
+    let indent s = ("    "^s) in
+    let list_code l =
+        List.fold_left
+            (fun acc c ->
+                (if (String.length acc) = 0 then "" else acc^"\n")^c)
+            "" l
+    in
+    let block l = ["{"]@(List.map indent l)@["}"] in
+    let main_defn =
+        let main_code =
+            * TODO: don't join this thread if there is no Thrift service running *
+            ["DBToaster::StandaloneEngine::SocketMultiplexer sources;";
+            "void runReadLoop()\n{"^(indent "sources.read(boost::bind(&runReadLoop));\n")^"}\n\n";
+            "int main(int argc, char** argv)"]@
+                (block
+                    (["init(sources);";
+                    "runReadLoop();";
+                    ("boost::thread t(boost::bind(\n"^
+                        (indent "&boost::asio::io_service::run, &io_service));"));
+                    "t.join();"]))
+        in
+            list_code main_code
+    in
+        output_string out_chan main_defn
+*)
 
 (* Standalone stepper/debugger *)
 
@@ -2083,7 +2242,7 @@ let thrift_inserter_of_datastructure d =
 
 
 (* Assumes each tuple type has a matching thrift definition named:
-   Thrift<tuple type>, e.g. ThriftVwapTuple *)
+   Thrift<tuple type>, e.g. ThriftOrderbookTuple *)
 (* TODO: define and use structs as complex map keys rather than tuples,
    or convert tuples to structs here in Thrift *)
 
@@ -2119,7 +2278,7 @@ let generate_stream_debugger_class
      * multiplexer, dispatcher 
      * Note: this initializes stream dispatching identifiers which are need for the
      * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
-    generate_stream_engine_init impl_out_chan streams_handlers_and_events;
+    generate_file_stream_engine_init impl_out_chan streams_handlers_and_events;
 
     (* Generate Thrift protocol spec file
        -- void step(tuple)
@@ -2153,7 +2312,7 @@ let generate_stream_debugger_class
         List.fold_left
             (fun (td_acc, step_acc, stepn_acc)
                 (stream_name,
-                    (source_type, _, tuple_type,
+                    (_, source_type, _, tuple_type,
                     adaptor_type, adaptor_bindings,
                     thrift_tuple_namespace))
                 ->
@@ -2252,7 +2411,7 @@ let generate_stream_debugger_class
         List.fold_left
             (fun (step_acc, stepn_acc)
                 (stream_name,
-                    (source_type, _, tuple_type,
+                    (_, source_type, _, tuple_type,
                     adaptor_type, adaptor_bindings, _))
                 ->
                 let normalized_tuple_type = (strip_namespace tuple_type) in
@@ -2330,15 +2489,15 @@ let generate_stream_debugger_class
         let internals =
             (* Local datastructures and constructor *)
             List.map indent
-                (["DBToaster::StandaloneEngine::Multiplexer& sources;";
-                "DBToaster::StandaloneEngine::Dispatcher& router;\n"])
+                (["DBToaster::StandaloneEngine::FileMultiplexer& sources;";
+                "DBToaster::StandaloneEngine::FileStreamDispatcher& router;\n"])
         in
         let constructor =
             List.map indent
                 (["public:";
                 class_name^"(";
-                (indent (indent "DBToaster::StandaloneEngine::Multiplexer& s,"));
-                (indent (indent "DBToaster::StandaloneEngine::Dispatcher& r)"));
+                (indent (indent "DBToaster::StandaloneEngine::FileMultiplexer& s,"));
+                (indent (indent "DBToaster::StandaloneEngine::FileStreamDispatcher& r)"));
                 (indent (": sources(s), router(r)"));
                 "{"; (indent "PROFILER_INITIALIZATION"); "}\n"])
         in
@@ -2370,8 +2529,8 @@ let generate_stream_debugger_main impl_out_chan stream_debugger_class =
     let main_defn =
         ["int main(int argc, char **argv) "]@
             (block 
-                (["DBToaster::StandaloneEngine::Multiplexer sources(12345, 20);";
-                "DBToaster::StandaloneEngine::Dispatcher router;";
+                (["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
+                "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
                 "init(sources, router);\n";
                 "int port = (70457>>3);";
                 "shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"(sources, router));";
@@ -2561,276 +2720,3 @@ let config_handler global_decls =
 		    | _ -> raise InvalidExpression ) "" global_decls 
     in c_handler_1 ^ if_stmts ^ c_handler_2
 
-
-
-(***************************
- * Stale code
- ***************************)
-
-(* TODO: handle deletions.
- * Note: only deletions on selects, nested aggregates need IncrPlan *)
-(*
-let gc_incr_state_dom code decl dom_ds dom_decl oplus diff =
-    let new_decl = if List.mem dom_decl decl then decl else dom_decl::decl in
-    let oper op = function x -> match op with
-        | `Union -> `InsertTuple(dom_ds, x)
-        | `Diff -> `DeleteTuple(dom_ds, x)
-    in
-    let rv = get_return_val code in
-        match rv with
-            | `Eval x ->
-                  let new_code =
-                      match (rv = code, diff) with
-                          | (true, true) ->  `Block([oper oplus x; rv])
-                          | (false, true) -> `Block([replace_return_val code (oper oplus x); rv])
-
-                          | (_, false) ->
-                                print_endline ("gc_incr_state_dom: IncrPlan unsupported.");
-                                raise InvalidExpression
-                  in
-                      (new_code, new_decl)
-            | _ ->
-                  print_endline ("Invalid return val: "^(indented_string_of_code_expression rv));
-                  raise (RewriteException "get_incr_state_map: invalid return val")
-*)
-
-(*
-let gc_termp_accessor_code incr_e termp_accessors e e_code e_decl e_vars e_uba_fields op diff recursion_decls =
-    let par_ct = List.assoc incr_e termp_accessors in
-        match par_ct with
-            | `Variable(v) ->
-                  if (List.mem v e_uba_fields) then
-                      begin
-                          print_endline ("Could not find declaration for "^v);
-                          raise InvalidExpression
-                      end
-                  else (gc_incr_state_var e_code v op diff, e_decl)
-
-            | `MapAccess((mid, mf) as mk) ->
-                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
-
-let gc_varp_accessor_code sorted_uba varp_accessors e e_code e_decl e_vars e_uba_fields op diff recursion_decls =
-    let par_access = List.assoc sorted_uba varp_accessors in
-        match par_access with
-            | `Variable(v) ->
-                  if (List.mem v e_uba_fields) then
-                      begin
-                          print_endline ("Could not find declaration for "^v);
-                          raise InvalidExpression
-                      end
-                  else
-                      (gc_incr_state_var e_code v op diff, e_decl)
-
-            | `MapAccess((mid, mf) as mk) ->
-                  print_endline ("Var group: "^(string_of_code_var_list e_uba_fields));
-                  (gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decls, e_decl)
-*)
-
-(* TODO: update sig *)
-(* map expression list -> (int * variable identifier) list ->
-   (declaration list) *  (var * code terminal) list * (var list * code terminal) list*)
-(*
-let generate_map_declarations maps map_vars state_parents vars_parents term_parents =
-
-    List.iter (fun me ->
-        print_endline ("gmd: "^
-            " hash:"^(string_of_int (dbt_hash me))^
-            " map: "^(string_of_map_expression me)))
-        maps;
-
-    List.iter (fun (hv, var) ->
-        print_endline ("gmd var: "^var^" hash: "^(string_of_int hv)))
-        map_vars;
-
-    List.iter (fun (sid, par) ->
-        print_endline ("gmd sid: "^sid^" hash: "^(string_of_int par)))
-        state_parents;
-
-    List.iter (fun (vg, (par, unif)) ->
-        print_endline ("gmd vg: "^(string_of_code_var_list vg)^
-            " par: "^(string_of_int par)))
-        vars_parents;
-
-    List.iter (fun (te, (par, unif)) ->
-        print_endline ("gmd tp: "^(string_of_map_expression te)^
-            " par: "^(string_of_int par)))
-        term_parents;
-
-    print_endline ("# maps: "^(string_of_int (List.length maps))^
-        ", #vars: "^(string_of_int (List.length map_vars)));
-
-    let get_map_id m_expr me_uba_and_vars =
-        let string_of_attrs attrs =
-            List.fold_left (fun acc f -> acc^f)
-                "" (List.map field_of_attribute_identifier attrs)
-        in
-        let (agg_prefix, agg_attrs) = match m_expr with
-            | `MapAggregate(fn, f, q) ->
-                  let f_uba = get_unbound_attributes_from_map_expression f false in
-                      (begin match fn with | `Sum -> "s" | `Min -> "mn" | `Max -> "mx" end,
-                      f_uba)
-            | _ -> raise InvalidExpression
-        in
-            agg_prefix^"_"^
-                (let r = string_of_attrs agg_attrs in
-                    if (String.length r) = 0 then "1" else r)^"_"^
-                (string_of_attrs me_uba_and_vars)
-    in
-    let maps_and_hvs = List.combine maps (List.map dbt_hash maps) in
-    let (map_decls_and_cterms, var_cterms) =
-        List.fold_left
-            (fun (decl_acc, accessor_acc) (me, me_hv) ->
-                let me_uba_w_vars = get_unbound_attributes_from_map_expression me true in
-                let me_id = get_map_id me me_uba_w_vars in
-                let (new_decl, _) =
-                    gc_declare_state_for_map_expression me [] me_uba_w_vars me_id
-                in
-                ** Handle mulitple uses of this map **
-                let vars_using_map =
-                    let vum = List.map (fun (_,v) -> v)
-                        (List.filter (fun (hv, _) -> hv = me_hv) map_vars)
-                    in
-                        print_endline ("Vars using map "^(string_of_int me_hv)^": "^
-                            (List.fold_left (fun acc var ->
-                                (if (String.length acc) = 0 then "" else acc^", ")^var) "" vum));
-                        vum
-                in
-
-                ** Associate map key with each var using map **
-                let decl_map_key =
-                    match new_decl with
-                        | `Map(id,f,_) -> (id, let (r,_) = List.split f in r)
-                        | _ -> raise (CodegenException ("Invalid map declaration:"^
-                              (identifier_of_declaration new_decl)))
-                in
-                let new_accessors = List.map
-                    (fun v -> (v, `MapAccess(decl_map_key))) vars_using_map
-                in
-                    (decl_acc@[(me_hv, (new_decl, `MapAccess(decl_map_key)))],
-                        accessor_acc@new_accessors))
-            ([], []) maps_and_hvs
-    in
-    ** (int * declaration) list * code terminal list **
-    let (vp_hvs_and_decls, vp_cterms) =
-        List.fold_left
-            (fun (hv_decl_acc, vpk_acc) (vg, (phv, unif)) ->
-                if not(List.mem_assoc phv map_decls_and_cterms) then
-                    begin
-                        print_endline ("Failed to find map key for: "^(string_of_int phv));
-                        let (decl_var, new_hv_decl_acc) =
-                            if (List.mem_assoc phv hv_decl_acc) then
-                                begin
-                                    let phv_decl = List.assoc phv hv_decl_acc in
-                                    let phv_var = match phv_decl with
-                                        | `Variable(v,_) -> v | _ -> raise InvalidExpression
-                                    in
-                                        print_endline ("Using var: "^phv_var^
-                                            " for hash: "^(string_of_int phv));
-                                    (phv_var, hv_decl_acc)
-                                end
-                            else
-                                begin
-                                    let new_decl_var = gen_var_sym() in
-                                        print_endline ("Using newly declared var: "^new_decl_var^
-                                            " for hash: "^(string_of_int phv));
-                                        (new_decl_var,
-                                            hv_decl_acc@[(phv, `Variable(new_decl_var, "int"))])
-                                end
-                        in
-                            (new_hv_decl_acc, vpk_acc@[(vg, `Variable(decl_var))])
-                    end
-                else 
-                    let (_,ct) = List.assoc phv map_decls_and_cterms in
-                        match ct with
-                            | `MapAccess((mid, mf)) ->
-                                  let new_mf = List.map
-                                      (fun f ->
-                                          let f_matches = List.filter
-                                              (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
-                                          in
-                                              match f_matches with
-                                                  | [] -> f
-                                                  | [(_, `ETerm(`Variable(v)))] -> v
-                                                  | _ -> raise DuplicateException)
-                                      mf
-                                  in
-                                  let new_ct = `MapAccess((mid, new_mf)) in
-                                      print_endline ("Using map key: "^
-                                          (string_of_code_expr_terminal new_ct)^
-                                          " for hash: "^(string_of_int phv));
-                                      (hv_decl_acc, vpk_acc@[(vg, new_ct)])
-                            | _ -> raise (CodegenException "Invalid cterm"))
-            ([], []) vars_parents
-    in
-    let (tp_decls, tp_cterms) =
-        List.fold_left (fun (tp_decl_acc, tp_acc) (te, (par, unif)) ->
-            if not(List.mem_assoc par map_decls_and_cterms) then
-                if not(List.mem_assoc par vp_hvs_and_decls) then
-                    begin
-                        ** Generate new variable for query result **
-                        let new_decl_var = gen_var_sym () in
-                            print_endline ("Using newly declared query var: "^new_decl_var^
-                                " for hash: "^(string_of_int par));
-                            (tp_decl_acc@([`Variable(new_decl_var, "int")]),
-                                (tp_acc@[(te, `Variable(new_decl_var))]))
-                    end
-                else
-                    let var_decl = List.assoc par vp_hvs_and_decls in
-                    let var_cterm = match var_decl with | `Variable(n,_) -> `Variable(n) in
-                        (tp_decl_acc, tp_acc@[(te, var_cterm)])
-            else
-                let (_,ct) = List.assoc par map_decls_and_cterms in
-                    match ct with
-                        | `MapAccess((mid, mf)) ->
-                              let new_mf = List.map
-                                  (fun f ->
-                                      let f_matches = List.filter
-                                          (fun (aid, e) -> f = (field_of_attribute_identifier aid)) unif
-                                      in
-                                          match f_matches with
-                                              | [] -> f
-                                              | [(_, `ETerm(`Variable(v)))] -> v
-                                              | _ -> raise DuplicateException)
-                                  mf
-                              in
-                              let new_ct = `MapAccess((mid, new_mf)) in
-                                  print_endline ("Using map key: "^
-                                      (string_of_code_expr_terminal new_ct)^
-                                      " for hash: "^(string_of_int par));
-                                  (tp_decl_acc, tp_acc@[(te, new_ct)])
-                        | _ -> raise (CodegenException "Invalid cterm"))
-            ([], []) term_parents
-    in
-    let (new_stp_decls, stp_decls) = List.fold_left
-        (fun (decl_acc, stp_acc) (sid, par) ->
-            let is_map = List.mem_assoc par map_decls_and_cterms in
-            let is_decl = if is_map then false else (List.mem_assoc par decl_acc) in
-                match (is_map, is_decl) with
-                    | (true, false) | (false, true) -> 
-                          let decl =
-                              if is_map then
-                                  let (r, _) = List.assoc par map_decls_and_cterms in r
-                              else
-                                  List.assoc par decl_acc
-                          in
-                              (decl_acc, stp_acc@[(sid, decl)])
-
-                    | (false, false) ->
-                          let new_decl_var = gen_var_sym() in
-                          let new_decl = `Variable(new_decl_var, "int") in
-                              print_endline ("Using newly declared var: "^new_decl_var^
-                                  " for hash: "^(string_of_int par));
-                              (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
-
-                    | _ -> raise (CodegenException "Invalid parent: multiple declarations found."))
-
-        ([],[]) state_parents
-    in
-    let all_decls =
-        tp_decls@
-        (List.map (fun (_, d) -> d) vp_hvs_and_decls)@
-        (List.map (fun (_, d) -> d) new_stp_decls)@
-        (List.map (fun (_,(d,_)) -> d) map_decls_and_cterms)
-    in
-        (all_decls, var_cterms, stp_decls, vp_cterms, tp_cterms)
-*)
