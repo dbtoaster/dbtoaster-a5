@@ -78,4 +78,4 @@ let _ =
 	()
 *)
 
-compile_query q4_1 "ssb.cc"
+compile_query [q4_1] "ssb.cc"

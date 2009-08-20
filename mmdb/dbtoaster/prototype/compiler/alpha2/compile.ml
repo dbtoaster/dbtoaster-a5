@@ -40,7 +40,7 @@ let compile_code_rec m_expr_l =
         pp_expr_l;
 
     (* Recursive compilation *)
-    let (maps, map_vars, state_parents, event_path_stages, handlers_by_event) =
+    let (maps, map_vars, state_parents, event_path_stages, handlers_by_level_and_event) =
         compile_target_all pp_expr_l events
     in
 
@@ -73,9 +73,9 @@ let compile_code_rec m_expr_l =
 	    (fun (gd_acc, handler_acc) (event, hb_l) ->
                 if (List.length hb_l) > 0 then
                     begin
-                        let (gdc_l, hc_l, bd_l, _, reused_bdc_l) =
+                        let (gdc_l, level_hc_l, bd_l, _, reused_bdc_l) =
                             List.fold_left
-                                (fun (gdc_acc, hc_acc, bd_acc, bdc_acc, reuse_acc) (h,b) ->
+                                (fun (gdc_acc, hc_acc, bd_acc, bdc_acc, reuse_acc) (level,h,b) ->
                                     let (gdc, bdc, rdc, hc) =
                                         generate_code h b event true bdc_acc
                                             map_accessors stp_decls recursive_map_decls type_list
@@ -86,14 +86,14 @@ let compile_code_rec m_expr_l =
                                     in
                                     let (new_gdc, new_hc) =
                                         match hc with
-                                            | `Profile _ -> (gdc_acc@[unique_gdc], hc_acc@[hc])
+                                            | `Profile _ -> (gdc_acc@[unique_gdc], hc_acc@[(level, hc)])
                                             | _ ->
                                                   let prof_loc = generate_profile_id event in
                                                       (gdc_acc@[(`Declare(`ProfileLocation prof_loc))::unique_gdc],
-                                                      hc_acc@[`Profile("cpu", prof_loc, hc)])
+                                                      hc_acc@[(level, `Profile("cpu", prof_loc, hc))])
                                     in
                                     let new_bd = match h with
-                                        | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) -> bd_acc@[bd]
+                                        | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) -> bd_acc@[(hc,bd)]
                                         | _ -> bd_acc
                                     in
                                     let new_reuse = List.filter (fun x -> not(List.mem x reuse_acc)) rdc in
@@ -103,10 +103,23 @@ let compile_code_rec m_expr_l =
                         in
 
                         let merged_decls = List.flatten gdc_l in
-                        let merged_handlers =
-                            List.fold_left
-                                (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
-                                [] (List.map (fun c -> filter_declarations c reused_bdc_l) hc_l)
+                        let (merged_handlers, rebound_bd_l) =
+                            let decl_filtered =
+                                List.map (fun (level, c) ->
+                                    (level, c, filter_declarations c reused_bdc_l))
+                                    level_hc_l
+                            in
+                                List.fold_left
+                                    (fun (hc_acc, bd_acc) (level, orig, opt) ->
+                                        match opt with
+                                            | None -> (hc_acc, List.remove_assoc orig bd_acc)
+                                            | Some(c) ->
+                                                  let has_bd = List.mem_assoc orig bd_acc in
+                                                      if has_bd then
+                                                          let bd = List.assoc orig bd_acc in
+                                                              (hc_acc@[(level, c)], (List.remove_assoc orig bd_acc)@[(c,bd)])
+                                                      else (hc_acc@[(level, c)], bd_acc))
+                                    ([], bd_l) decl_filtered
                         in
                         let unique_merged_decls =
                             List.filter (check_unique_declaration gd_acc) merged_decls
@@ -120,61 +133,178 @@ let compile_code_rec m_expr_l =
                                 | `Insert (_, fields) | `Delete (_, fields) -> fields
                         in
 
-                        (* Top level handler, i.e. handler at level 0, produces the query result *)
-                        let top_level_handler = List.hd merged_handlers in
-                        let top_level_bindings = List.hd bd_l in
+                        let get_global_used rv =
+                            let find_global is_map id =
+                                try
+                                    Some (List.find
+                                        (function
+                                            | `Declare(`Map(mid,_,_)) -> is_map && mid = id
+                                            | `Declare(`Variable(vid,_)) -> not(is_map) && vid = id
+                                            | `Declare(_) -> false
+                                            | _ -> raise (CodegenException ("Invalid declaration")))
+                                        (recursive_map_decls@gd_acc@unique_merged_decls@reused_bdc_l))
+                                with Not_found -> None
+                            in
+                                match rv with
+                                    | `CTerm(`Variable(id)) -> find_global false id
+                                    | `CTerm(`MapAccess (id, _)) -> find_global true id
+                                    | _ -> None
+                        in
 
+                        let get_rv_type rv is_return_map global_used_opt =
+                            let rv_type =
+                                type_inf_arith_expr
+                                    rv (recursive_map_decls@gd_acc@unique_merged_decls@reused_bdc_l)
+                            in 
+                                if is_return_map then 
+                                    let fields =
+                                        begin match global_used_opt with
+                                            | Some(`Declare(`Map(mid, f, rt))) -> f
+                                            | Some(_) | None ->
+                                                  let msg =
+                                                      ("Invalid map return val: "^(string_of_arith_code_expression rv)^"\n")
+                                                  in
+                                                      print_endline msg;
+                                                      raise (CodegenException msg)
+                                        end
+                                    in
+                                        ctype_of_datastructure (`Map("", fields, rv_type))
+                                else rv_type
+                        in
+
+                        (* Top level handler, i.e. handler at level 0, produces the query result *)
+                        let (new_handlers, handler_returns) =
+                            List.fold_left
+                                (fun (hc_acc, ret_acc) (lv, hc) ->
+                                    if lv = 0 then
+                                        let rv = get_return_val hc in
+                                        let (local, repl) = is_local_return_val hc rv in
+                                            match rv with
+                                                | `Eval x ->
+                                                      let global_used = get_global_used x in
+                                                      let is_ret_map =
+                                                          if List.mem_assoc hc rebound_bd_l then
+                                                              List.length (List.assoc hc rebound_bd_l) != 0
+                                                          else false
+                                                      in
+                                                      let rv_type = get_rv_type x is_ret_map global_used in
+
+                                                      let var = "queryResult"^(gen_var_sym()) in
+                                                      let new_ret =
+                                                          if is_ret_map then
+                                                              match global_used with
+                                                                  | Some(`Declare(`Map(id,_,_))) -> [(`ReturnMap id, rv_type)]
+                                                                  | Some(_) | None ->
+                                                                        let msg = ("Invalid map return val "^
+                                                                            (string_of_arith_code_expression x))
+                                                                        in
+                                                                            print_endline msg;
+                                                                            raise (CodegenException msg)
+
+                                                          else if local && repl then [(`Return x, rv_type)]
+
+                                                          else
+                                                              begin match global_used with
+                                                                  | Some(`Declare(`Variable(_))) -> [(`Return x, rv_type)]
+
+                                                                  | Some(_) | None
+                                                                        -> [(`Return (`CTerm(`Variable(var))), rv_type)]
+                                                              end
+                                                      in
+
+                                                      let new_handler =
+                                                          if local && repl then
+                                                              let new_hc = remove_return_val hc in
+                                                                  match new_hc with
+                                                                      | `Block c -> c
+                                                                      | y ->
+                                                                            let msg =
+                                                                                ("Invalid replaceable return val "^
+                                                                                    (indented_string_of_code_expression y))
+                                                                            in
+                                                                                print_endline msg;
+                                                                                raise (CodegenException msg)
+
+                                                          else if is_ret_map then [remove_return_val hc]
+
+                                                          else
+                                                              begin match global_used with
+                                                                  | Some(`Declare(`Variable(_))) -> [hc]
+                                                                        
+                                                                  | Some(_) | None ->
+                                                                        let new_hc = replace_return_val hc (`Assign(var, x)) in
+                                                                            [`Declare(`Variable(var, rv_type)); new_hc]
+                                                              end
+                                                      in
+                                                          (hc_acc@new_handler, ret_acc@new_ret)
+                                                | _ ->
+                                                      let msg =
+                                                          ("Invalid return val in top level handler:\n"^
+                                                              (indented_string_of_code_expression hc))
+                                                      in
+                                                          print_endline msg;
+                                                          raise (CodegenException msg)
+
+                                    else (hc_acc@[hc], ret_acc))
+                                ([], []) merged_handlers
+                        in
+
+                        let (handler_body_with_rv, handler_ret_type) =
+                            let (ret_code, new_ret_type) =
+                                match handler_returns with
+                                    | [] -> raise (CodegenException "No return values found!")
+                                    | [(x,y)] -> (x,y)
+                                    | _ ->
+                                          let (rv_l, rt_l) =
+                                              List.split (List.map
+                                                  (fun (c,t) -> match c with
+                                                      | `Return x -> (`Arith x, t)
+                                                      | `ReturnMap mid -> (`Map mid, t))
+                                                  handler_returns)
+                                          in
+                                          let rt = "tuple< "^
+                                              (List.fold_left
+                                                  (fun acc t -> (if (String.length acc) = 0 then "" else (acc^","))^t)
+                                                  "" rt_l)^" >"
+                                          in
+                                              (`ReturnMultiple(rv_l), rt)
+                            in
+                                (reused_bdc_l@new_handlers@[ret_code], new_ret_type)
+                        in
+
+                        (*
                         let (handler_body_with_rv, handler_ret_type) =
                             let rv = get_return_val top_level_handler in
                             let (local, repl) = is_local_return_val top_level_handler rv in
 	                        match rv with
 	                            | `Eval x ->
-                                          let me_type =
-                                              type_inf_arith_expr
-                                                  x (recursive_map_decls@gd_acc@unique_merged_decls@reused_bdc_l)
-                                          in 
+                                          let global_used = get_global_used x in
                                           let is_ret_map = List.length top_level_bindings != 0 in
-                                          let rv_type = 
-                                              if is_ret_map then 
-                                                  let fields =
-                                                      match x with
-                                                          | `CTerm (`MapAccess(id, _)) -> 
-                                                                let existing_decl =
-                                                                    List.filter
-                                                                        (function
-                                                                            | `Declare(`Map(mid,_,_)) -> mid = id
-                                                                            | `Declare(_) -> false
-                                                                            | _ -> raise (CodegenException ("Invalid declaration")))
-                                                                        (recursive_map_decls@gd_acc@unique_merged_decls@reused_bdc_l)
-                                                                in
-                                                                    begin match existing_decl with
-                                                                        | [] -> raise (CodegenException ("Could not find map "^id))
-                                                                        | [`Declare(`Map(mid, f, rt))] -> f
-                                                                        | _ -> raise DuplicateException
-                                                                    end
-                                                          | _ -> []
-                                                  in
-                                                      ctype_of_datastructure (`Map("", fields, me_type))
-                                              else me_type
-                                                      
-                                          in
+                                          let rv_type = get_rv_type x is_ret_map global_used in
+
                                           let new_handlers =
-                                              let var = "queryResult" in
+                                              let var = "queryResult"^(gen_var_sym()) in
                                               let new_tail =
                                                   if is_ret_map then
-                                                      match x with
-                                                          | `CTerm (`MapAccess(id, _)) -> [`ReturnMap id]
-                                                          | y ->
-                                                                let msg =
-                                                                    ("Invalid map return val "^
-                                                                        (string_of_arith_code_expression y))
+                                                      match global_used with
+                                                          | Some(`Declare(`Map(id,_,_))) -> [`ReturnMap id]
+                                                          | Some(_) | None ->
+                                                                let msg = ("Invalid map return val "^
+                                                                    (string_of_arith_code_expression x))
                                                                 in
                                                                     print_endline msg;
                                                                     raise (CodegenException msg)
 
                                                   else if local && repl then [`Return x]
-                                                      
-                                                  else [`Return (`CTerm(`Variable(var)))]
+
+                                                  else
+                                                      begin match global_used with
+                                                          | Some(`Declare(`Variable(_))) -> [`Return x]
+
+                                                          | Some(_) | None
+                                                              -> [`Return (`CTerm(`Variable(var)))]
+
+                                                      end
                                               in
                                               let new_head =
                                                   if local && repl then
@@ -193,10 +323,15 @@ let compile_code_rec m_expr_l =
                                                       [remove_return_val top_level_handler]
 
                                                   else
-                                                      let new_tl_handler =
-                                                          replace_return_val top_level_handler (`Assign(var, x))
-                                                      in
-                                                          [`Declare(`Variable(var, rv_type)); new_tl_handler]
+                                                      begin match global_used with
+                                                          | Some(`Declare(`Variable(_))) -> [top_level_handler]
+
+                                                          | Some(_) | None ->
+                                                                let new_tl_handler =
+                                                                    replace_return_val top_level_handler (`Assign(var, x))
+                                                                in
+                                                                    [`Declare(`Variable(var, rv_type)); new_tl_handler]
+                                                      end
                                               in
                                                   new_head@(List.tl merged_handlers)@new_tail
                                           in
@@ -209,6 +344,7 @@ let compile_code_rec m_expr_l =
                                               print_endline msg;
                                               raise (CodegenException msg)
                         in
+                        *)
 
                         let handler_profile_loc_decl =
                             `ProfileLocation (generate_handler_profile_id handler_id)
@@ -222,7 +358,7 @@ let compile_code_rec m_expr_l =
                 else
                     (gd_acc, handler_acc))
 
-            ([], []) handlers_by_event
+            ([], []) handlers_by_level_and_event
     in
 
     (* Organize declarations *)

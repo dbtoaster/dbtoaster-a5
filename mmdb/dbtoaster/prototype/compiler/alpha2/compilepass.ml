@@ -2660,19 +2660,15 @@ let compile_target_all m_expr_l event_list =
                 let sorted_by_level =
                     List.sort (fun (lv1, _, _) (lv2, _, _) -> compare lv1 lv2) event_exprs
                 in
-	            res@[(event, List.flatten (List.map (fun (_,_,exprs) -> exprs) sorted_by_level))])
+	            res@[(event,
+                    List.flatten (List.map
+                        (fun (level,event,exprs) ->
+                            List.map (fun (h,b) -> (level,h,b)) exprs)
+                        sorted_by_level))])
+
             [] event_list
     in
-    let (maps, map_vars) = 
-        List.fold_left 
-            (fun (map_acc,mv_acc) x -> 
-                if List.length (get_unbound_attributes_from_map_expression x true) != 0 then 
-                    let map_var = gen_var_sym() in 
-                        (x::map_acc, (dbt_hash x, map_var)::mv_acc)
-                else (map_acc, mv_acc))
-            ([],[]) m_expr_l
-    in 
     let (r_maps, r_map_vars, r_st_parents, r_ep_stages, result) =
-        cta_aux event_list m_expr_l [] maps map_vars [] [] 
+        cta_aux event_list m_expr_l [] [] [] [] [] 
     in
         (r_maps, r_map_vars, r_st_parents, r_ep_stages, group_by_event result event_list)

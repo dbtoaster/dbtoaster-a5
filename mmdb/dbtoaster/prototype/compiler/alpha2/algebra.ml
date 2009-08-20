@@ -2357,6 +2357,8 @@ type bool_code_expression = [
 | `And of bool_code_expression * bool_code_expression
 | `Or of bool_code_expression * bool_code_expression ]
 
+type return_val = [ `Arith of arith_code_expression | `Map of map_identifier ]
+
 type code_expression = [
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
@@ -2373,6 +2375,7 @@ type code_expression = [
 | `Block of code_expression list
 | `Return of arith_code_expression
 | `ReturnMap of map_identifier
+| `ReturnMultiple of return_val list
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list
 | `Profile of string * profile_identifier * code_expression ]
 
@@ -2421,7 +2424,7 @@ let ctype_of_datastructure =
 	      let key_type = 
 		  let ftype = ctype_of_datastructure_fields f in
                       match f with
-                          | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                          | [] -> raise (CodegenException ("Invalid datastructure type, no fields found: "^n))
                           | [x] -> ftype
                           | _ -> "tuple<"^ftype^">" 
 	      in
@@ -2724,6 +2727,8 @@ let rec remove_resume_code_expression c_expr =
 
         | `ReturnMap _ -> Some(c_expr)
 
+        | `ReturnMultiple _ -> Some(c_expr)
+
         | `Handler (hid,_,_,_) ->  raise (CodegenException
               ("Cannot resume within handler: "^hid))
 
@@ -2758,6 +2763,8 @@ let rec bind_resume_code_expression c_expr resume_code =
         | `Return _ -> c_expr
 
         | `ReturnMap _ -> c_expr
+
+        | `ReturnMultiple _ -> c_expr
 
         | `Handler (hid,_,_,_) -> raise (CodegenException
               ("Cannot resume within handler: "^hid))
@@ -2918,6 +2925,16 @@ let rec string_of_code_expression c_expr =
 
             | `ReturnMap (mid) -> "return "^mid^";"
 
+            | `ReturnMultiple (rv_l) ->
+                  "return make_tuple("^
+                      (List.fold_left
+                          (fun acc rv ->
+                              (if (String.length acc) = 0 then "" else acc^",")^
+                                  (match rv with
+                                      | `Arith a -> string_of_arith_code_expression a
+                                      | `Map mid -> mid))
+                          "" rv_l)^");"
+
 	    | `Handler (name, args, rt, c_expr_l) ->
 		  let h_fields =
 		      List.fold_left
@@ -2938,9 +2955,9 @@ let rec string_of_code_expression c_expr =
                           "\n}"
 
             | `Profile (statsType, prof_id, c_expr) ->
-                  ("START_PROFILE(\""^statsType^"\", "^prof_id^")\n")^
+                  ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")\n")^
                       (string_of_code_expression c_expr)^
-                      ("END_PROFILE(\""^statsType^"\", "^prof_id^")\n")
+                      ("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
 
 
 let indented_string_of_code_expression c_expr =
@@ -3110,6 +3127,17 @@ let indented_string_of_code_expression c_expr =
 		| `Return (ac) -> "return "^(string_of_arith_code_expression ac)^";"
 
                 | `ReturnMap (mid) -> "return "^mid^";"
+
+                | `ReturnMultiple rv_l ->
+                      "return make_tuple("^
+                          (List.fold_left
+                              (fun acc rv ->
+                                  (if (String.length acc) = 0 then "" else acc^",")^
+                                      (match rv with
+                                          | `Arith a -> string_of_arith_code_expression a
+                                          | `Map mid -> mid))
+                              "" rv_l)^");"
+
 		      
 		| `Handler (name, args, rt, c_expr_l) ->
 		      let h_fields =
@@ -3125,9 +3153,9 @@ let indented_string_of_code_expression c_expr =
 			      tab^"\n}"
 
                 | `Profile (statsType, prof_id, c_expr) ->
-                      ("START_PROFILE(\""^statsType^"\", "^prof_id^")")^"\n"^
+                      ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")")^"\n"^
                           (sce_aux c_expr level)^"\n"^
-                          tab^("END_PROFILE(\""^statsType^"\", "^prof_id^")\n")
+                          tab^("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
 
 	in
 	    tab^out 
@@ -3708,7 +3736,7 @@ let rec get_last_code_expr c_expr =
 	| `ForEachResume (ds, c_expr) -> get_last_code_expr c_expr
         | `Resume _ -> raise InvalidExpression
 	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
-        | `Return _ | `ReturnMap _ -> c_expr
+        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> c_expr
 	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
         | `Profile(_,_,c) -> get_last_code_expr c
 
@@ -3779,7 +3807,8 @@ let rec filter_declarations c_expr decl_l =
               in
                   Some(`Block(ncl))
 
-        | `Return _ | `ReturnMap _ -> Some(c_expr)
+        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> Some(c_expr)
+
 	| `Handler (id, args, rt, cl) ->
               let ncl =
                   List.fold_left
