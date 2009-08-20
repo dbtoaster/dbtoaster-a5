@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.dbtoaster.model.DBToasterWorkspace;
 import org.dbtoaster.model.Query;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -32,7 +34,7 @@ public class PerfView extends ViewPart
 
     class ExecuteQueryPanel
     {
-        Tree eqTree;
+        final Tree eqTree;
         DBToasterWorkspace dbtWorkspace;
         
         Query currentRunningQuery;
@@ -60,27 +62,79 @@ public class PerfView extends ViewPart
             redraw();
         }
         
-        void addDatabases(LinkedHashMap<String, DBPerfPanel> dbPanels)
+        final private int getIndexOfDB(String name, String[] dbNames) 
         {
+        	int i = 0;
+        	for (String s:dbNames) {
+        		if(s.equals(name))
+        			break;
+        		i++;
+        	}
+        	return i;
+        }
+        
+        final private Query getQuery(String name)
+        {
+            LinkedList<Query> execQueries = dbtWorkspace.getExecutableQueries();
+            for(Query q: execQueries) {
+            	if(q.getQueryName() .equals(name) ){
+            		return q;
+            	}
+            }
+            return null;
+        }
+        
+        void addDatabases(final LinkedHashMap<String, DBPerfPanel> dbPanels, final int numdatabases, final String[] dbNames)
+        {
+        	final Integer[] databases = new Integer[numdatabases];
             // Add check boxes per database.
             for (Map.Entry<String, DBPerfPanel> e : dbPanels.entrySet())
             {
-                Button chooseDB = new Button(eqTree.getParent(), SWT.CHECK);
+                final Button chooseDB = new Button(eqTree.getParent(), SWT.CHECK);
                 chooseDB.setText(e.getKey());
                 chooseDB.setSelection(false);
                 GridData chooseData = new GridData(SWT.FILL, SWT.FILL, false, false);
                 chooseDB.setLayoutData(chooseData);
+                
+                chooseDB.addSelectionListener(new SelectionAdapter() {
+                	public void widgetSelected(SelectionEvent e) {
+                		if(chooseDB.getSelection() == true) {
+                			databases[getIndexOfDB(chooseDB.getText(), dbNames)] = 1;
+                		}
+                		else {
+                			databases[getIndexOfDB(chooseDB.getText(), dbNames)] = 0;
+                		}
+                	}
+                });
             }
             
             // Add run button.
-            Button runButton = new Button(eqTree.getParent(), SWT.PUSH);
+            final Button runButton = new Button(eqTree.getParent(), SWT.PUSH);
             runButton.setText("Run query");
             GridData runLD = new GridData(SWT.FILL, SWT.FILL, false, false);
             runLD.minimumWidth = 50;
             runButton.setLayoutData(runLD);
 
             // TODO: add run listener
-
+            SelectionAdapter runListener = new SelectionAdapter() {
+            	public void widgetSelected(SelectionEvent e) {
+            		System.out.println("Let's toast!!");
+            		if (eqTree.getSelectionCount()== 1) {
+            			Query q=null;
+            			for (TreeItem i: eqTree.getSelection()) {
+                //			System.out.println("Query "+i.getText());
+                			q = getQuery(i.getText());
+                		}
+            	//		for (int i= 0 ; i < numdatabases; i ++) {
+                //			if(databases[i] == 1) {
+                //				System.out.println(dbNames[i] + " is selected");
+                //			}
+            	//		}
+            			q.getExecutor().runComparison(q, dbPanels, databases, dbNames);
+            		}
+            	}
+            };
+            runButton.addSelectionListener(runListener);
         }
         
         private void redraw()
@@ -182,7 +236,7 @@ public class PerfView extends ViewPart
 
         perfStatus.setText("No databases running.");
         
-        eqPanel.addDatabases(databasePanels);
+        eqPanel.addDatabases(databasePanels, numDatabases, dbNames);
         
         perspectiveId = getViewSite().getPage().getPerspective().getId();
 

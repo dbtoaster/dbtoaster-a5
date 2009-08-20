@@ -381,7 +381,7 @@ public class QueryEditor extends ViewPart
             String codeFile = queryName + "."
                     + DBToasterWorkspace.CODE_FILE_EXT;
             String compilationStatus = dbtWorkspace.compileQuery(queryName,
-                    codeFile, CompileMode.DEBUGGER);
+                    codeFile, CompileMode.ENGINE);
 
             System.out.println("Toasted query: " + queryName);
 
@@ -398,6 +398,10 @@ public class QueryEditor extends ViewPart
     private QueryTextAndVis queryTv;
     private Text statusText;
     private Button toastBtn;
+    
+    public QueryTextAndVis getQTAV() {
+    	return queryTv;
+    }
 
     public void createPartControl(Composite parent)
     {

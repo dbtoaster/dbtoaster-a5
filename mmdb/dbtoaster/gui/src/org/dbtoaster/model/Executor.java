@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
+import org.dbtoaster.gui.DBPerfPanel;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 
@@ -247,6 +249,7 @@ public class Executor
 
         if ( queryProcess != null ) {
             LinkedList<String> args = new LinkedList<String>();
+            args.add(binaryPath);
             args.add(Integer.toString(profilerServicePort));
             queryProcess.command(args);
 
@@ -271,13 +274,15 @@ public class Executor
         // Connect debugger client.
         if ( currentQuery != null )
         {
+            
             // Periodically retrieve statistics while binary is still running.
             TSocket s = new TSocket(currentHost, currentPort);
             TProtocol protocol = profilerProtocolFactory.getProtocol(s);
+            
             profiler = new DBToasterProfiler(codeLocationsFile, protocol, profilerSamples);
             currentProfilerThread = new Thread(profiler);
             currentProfilerThread.start();
-
+            
             try {
                 BufferedReader logReader = new BufferedReader(
                         new InputStreamReader(currentQuery.getInputStream()));
@@ -289,7 +294,7 @@ public class Executor
     
                 logWriter.close();
                 logReader.close();
-                
+                    
                 int rs = currentQuery.waitFor();
                 if ( rs != 0 ) status = "Query returned non-zero exit status";
             } catch (IOException e) {
@@ -300,6 +305,7 @@ public class Executor
                 e.printStackTrace();
             }
         }
+        System.out.println("EEEE: ");
         
         currentQuery = null;
         return status;
@@ -524,7 +530,21 @@ public class Executor
     
     void runSPE() {}
     
-    void runComparison() {
+    public void runComparison( Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
+    		Integer[] numdatabases, final String[] dbNames) {
+    	for (int i = 0 ; i < numdatabases.length; i ++) {
+    		if(numdatabases[i] == 1) {
+    			DBPerfPanel panel = dbPanels.get(dbNames[i]);
+    			TimeSeries ts = panel.getCpuTimeSeries();
+//    	        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+    			System.out.println("Profiling "+q.getQueryName() + " with "+ dbNames[i]);
+    			if(dbNames[i].equals("DBToaster")) {
+    				System.out.println("Starting");
+    				q.runQuery(5530, ts);
+    				System.out.println("Return??");
+    			}
+    		}
+    	}
         
     }
 }

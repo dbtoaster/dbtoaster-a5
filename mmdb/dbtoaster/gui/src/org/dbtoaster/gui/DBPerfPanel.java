@@ -137,4 +137,9 @@ public class DBPerfPanel extends Composite
         // mpData.widthHint = 400;
         memPanel.setLayoutData(mpData);
     }
+    
+    public TimeSeries getCpuTimeSeries() {
+    	return cpuPanel.statsSeries;
+    }
+    
 }
