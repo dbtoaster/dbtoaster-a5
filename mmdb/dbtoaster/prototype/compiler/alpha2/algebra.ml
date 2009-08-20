@@ -2379,6 +2379,8 @@ type code_expression = [
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list
 | `Profile of string * profile_identifier * code_expression ]
 
+type stream_source_type = File | Socket
+
 
 (* Basic code type helpers *)
 let is_block c_expr =

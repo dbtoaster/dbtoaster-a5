@@ -4,8 +4,6 @@ open Codegen
 open Analysis
 open Gui
 
-
-
 (* TODO: typechecker *)
 
 
@@ -458,6 +456,31 @@ let write_analysis_files handlers_and_events trace_file_name compile_trace =
                     write_pseudocode pseudo_fn handler_l
 
 
+let create_stream_type_info event relation_sources =
+    let event_rel = get_bound_relation event in
+        if List.mem_assoc event_rel relation_sources then
+            let (stream_type_string,
+                    source_type, source_args, tuple_type,
+                    adaptor_type, adaptor_bindings,
+                    thrift_tuple_namespace, stream_name)
+              =
+                (List.assoc event_rel relation_sources)
+            in
+            let stream_type =
+                match stream_type_string with
+                    | "file" -> File
+                    | "socket" -> Socket
+                    | _ -> raise (CodegenException
+                          ("Invalid stream type string: "^stream_type_string))
+            in
+                (stream_name,
+                (stream_type, source_type, source_args, tuple_type,
+                adaptor_type, adaptor_bindings, thrift_tuple_namespace))
+        else
+            raise (CodegenException
+                ("Could not find relation source for "^event_rel))
+
+
 let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file_name_opt =
     let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr_l in
     let out_chan = open_out out_file_name in
@@ -480,27 +503,17 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
         (* standalone engine *)
 
         (* init *)
-        generate_stream_engine_init out_chan
+        generate_socket_stream_engine_init out_chan
             (List.map
                 (fun (h,e) ->
-                    let event_rel = get_bound_relation e in 
-                        if List.mem_assoc event_rel relation_sources then
-                            let (source_type, source_args, tuple_type,
-                                    adaptor_type, adaptor_bindings,
-                                    thrift_tuple_namespace, stream_name)
-                            =
-                                List.assoc event_rel relation_sources
-                            in
-                                ((source_type, source_args, tuple_type,
-                                  adaptor_type, adaptor_bindings, thrift_tuple_namespace),
-                                stream_name, h, e)
-                        else
-                            raise (CodegenException
-                                ("Could not find relation source for "^event_rel)))
+                    let (stream_name, stream_type_info) =
+                        create_stream_type_info e relation_sources
+                    in
+                        (stream_type_info, stream_name, h, e))
                 handlers_and_events);
 
         (* main *)
-        generate_stream_engine_main out_chan;
+        generate_socket_stream_engine_main out_chan;
 
         close_out out_chan;
 
@@ -544,28 +557,19 @@ let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_fi
         let streams_handlers_and_events =
             List.map
                 (fun (h,e) ->
-                    let event_rel = get_bound_relation e in 
-                        if List.mem_assoc event_rel relation_sources then
-                            let (source_type, source_args, tuple_type,
-                                    adaptor_type, adaptor_bindings,
-                                    thrift_tuple_namespace, stream_name) =
-                                List.assoc event_rel relation_sources
-                            in
-                                ((source_type, source_args, tuple_type,
-                                    adaptor_type, adaptor_bindings, thrift_tuple_namespace),
-                                stream_name, h, e)
-                        else
-                            raise (CodegenException
-                                ("Could not find relation source for "^event_rel^"\b")))
+                    let (stream_name, stream_type_info) =
+                        create_stream_type_info e relation_sources
+                    in
+                        (stream_type_info, stream_name, h, e))
                 handlers_and_events
         in
 
         (* Stream debugger and main *)
         let stream_debugger_class =
-            generate_stream_debugger_class thrift_out_chan code_out_chan
+            generate_file_stream_debugger_class thrift_out_chan code_out_chan
                 query_id global_decls streams_handlers_and_events
         in
-            generate_stream_debugger_main code_out_chan stream_debugger_class;
+            generate_file_stream_debugger_main code_out_chan stream_debugger_class;
             close_out thrift_out_chan;
             close_out code_out_chan;
 

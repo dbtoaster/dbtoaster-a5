@@ -12,7 +12,8 @@ exception BuildException of string
 
 (* Source config file DTD:
  * <!ELEMENT sources ( relation* )>
- * <!ELEMENT relation ( source | tuple | adaptor | thrift )* >
+ * <!ELEMENT relation ( stream | source | tuple | adaptor | thrift )* >
+ * <!ELEMENT stream type CDATA #REQUIRED >
  * <!ELEMENT source ( arg* ) >
  * <!ATTLIST source
  *     type CDATA #REQUIRED
@@ -29,6 +30,14 @@ exception BuildException of string
  *     tuplename CDATA #REQUIRED >
  * <!ATTLIST thrift namespace CDATA #REQUIRED >
  *)
+let get_stream_type relation ch =
+    let stream_nodes = List.filter (fun c -> (tag c) = "stream") ch in
+        match stream_nodes with
+            | [] -> raise (ConfigException ("Missing source type for relation "^relation))
+            | [x] -> attrib x "type"
+            | _ -> raise (ConfigException
+                  ("Multiple stream types specified for relation "^relation))
+
 let get_source_info relation ch =
     let source_nodes = List.filter (fun c -> (tag c) = "source") ch in
         match source_nodes with
@@ -94,13 +103,14 @@ let get_relation_source node =
         | "relation" ->
               let rel_name = attrib node "name" in
               let ch = Xml.children node in
+              let stream_type = get_stream_type rel_name ch in
               let (source_type, source_instance_name, source_constructor_args) =
                   get_source_info rel_name ch in
               let tuple_type = get_tuple_type rel_name ch in
               let (adaptor_type, adaptor_bindings) = get_adaptor_info rel_name ch in
               let thrift_ns = get_thrift_tuple_namespace rel_name ch in
                   (rel_name,
-                  (source_type, source_constructor_args, tuple_type,
+                  (stream_type, source_type, source_constructor_args, tuple_type,
                   adaptor_type, adaptor_bindings, thrift_ns, source_instance_name))
 
         | _ -> raise (ConfigException ("Invalid relation node "^(tag node)))
