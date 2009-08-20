@@ -53,20 +53,20 @@ namespace DBToaster {
             int id;
             int price;
             int volume;
-        } VwapHandlerInput;
+        } OrderbookHandlerInput;
 
-        struct VwapTupleAdaptor : public Adaptor<VwapHandlerInput>
+        struct OrderbookTupleAdaptor : public Adaptor<OrderbookHandlerInput>
         {
             typedef map<int, tuple<double, double> > order_ids;
 
             order_ids bid_orders;
             order_ids ask_orders;
 
-            VwapTupleAdaptor() {}
+            OrderbookTupleAdaptor() {}
 
             void operator()(DBToasterTuple& a, boost::any& b)
             {
-                VwapTuple* v = any_cast<VwapTuple>(&b);
+                OrderbookTuple* v = any_cast<OrderbookTuple>(&b);
 
                 if ( v->action == "B" ) {
                     bid_orders[v->id] = make_tuple(v->price, v->volume);
@@ -138,7 +138,7 @@ namespace DBToaster {
                 */
  
                 // TODO: casting from doubles to ints
-                VwapHandlerInput r;
+                OrderbookHandlerInput r;
                 r.t = v->t;
                 r.id = v->id;
                 r.price = v->price;
@@ -147,9 +147,9 @@ namespace DBToaster {
             }
         };
 
-        struct SsbTupleAdaptor
+        struct TpchTupleAdaptor
         {
-            SsbTupleAdaptor() {}
+            TpchTupleAdaptor() {}
             void operator()(DBToasterTuple& a, boost::any& b)
             {}
         };

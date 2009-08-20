@@ -18,6 +18,7 @@
 #include <boost/function.hpp>
 
 // User code headers
+#include "orderbook.h"
 #include "tpch.h"
 #include "linearroad.h"
 
@@ -33,9 +34,9 @@ namespace DBToaster
         // Basic stream interface
 
         template<typename tuple>
-        struct Stream
+        struct FileStream
         {
-            typedef list<tuple> StreamBuffer;
+            typedef list<tuple> FileStreamBuffer;
             virtual void initStream() = 0;
             virtual bool streamHasInputs() = 0;
             virtual tuple nextInput() = 0;
@@ -44,27 +45,18 @@ namespace DBToaster
 
         //////////////////////////////
         //
-        // VWAP data
+        // Orderbook files
 
-        // Timestamp, order id, action, volume, price
-        struct VwapTuple {
-            double t;
-            int id;
-            string action;
-            double volume;
-            double price;
-        };
-
-        struct VwapFileStream : public Stream<VwapTuple>
+        struct OrderbookFileStream : public FileStream<OrderbookTuple>
         {
             ifstream* inputFile;
-            StreamBuffer buffer;
+            FileStreamBuffer buffer;
             unsigned int bufferCount;
             unsigned long line;
             unsigned long threshold;
             unsigned long bufferSize;
 
-            VwapFileStream(string fileName, unsigned int c)
+            OrderbookFileStream(string fileName, unsigned int c)
                 : bufferCount(c), line(0), bufferSize(0)
             {
                 inputFile = new ifstream(fileName.c_str());
@@ -75,7 +67,7 @@ namespace DBToaster
                     static_cast<long>(ceil(static_cast<double>(c) / 10));
             }
 
-            inline bool parseLine(int line, char* data, VwapTuple& r)
+            inline bool parseLine(int line, char* data, OrderbookTuple& r)
             {
                 char* start = data;
                 char* end = start;
@@ -138,16 +130,16 @@ namespace DBToaster
                 return true;
             }
 
-            tuple<bool, VwapTuple> read_tuple()
+            tuple<bool, OrderbookTuple> read_tuple()
             {
                 char buf[256];
                 inputFile->getline(buf, sizeof(buf));
                 ++line;
 
-                VwapTuple r;
+                OrderbookTuple r;
                 if ( !parseLine(line, buf, r) ) {
                     cerr << "Failed to parse record at line " << line << endl;
-                    return make_tuple(false, VwapTuple());
+                    return make_tuple(false, OrderbookTuple());
                 }
 
                 return make_tuple(true, r);
@@ -157,7 +149,7 @@ namespace DBToaster
             {
                 while ( bufferSize < bufferCount && inputFile->good() )
                 {
-                    tuple<bool, VwapTuple> validInput = read_tuple();
+                    tuple<bool, OrderbookTuple> validInput = read_tuple();
                     if ( !get<0>(validInput) )
                         break;
 
@@ -172,12 +164,12 @@ namespace DBToaster
                 return bufferSize > 0;
             }
 
-            VwapTuple nextInput()
+            OrderbookTuple nextInput()
             {
                 if ( bufferSize < threshold && inputFile->good() )
                     bufferStream();
 
-                VwapTuple r = buffer.front();
+                OrderbookTuple r = buffer.front();
                 buffer.pop_front();
                 --bufferSize;
                 return r;
@@ -189,7 +181,7 @@ namespace DBToaster
 
         //////////////////////////////
         //
-        // SSB data
+        // TPCH files
 
         //
         //
@@ -439,17 +431,16 @@ namespace DBToaster
         }
 
 
-        template<typename T>
-            struct SsbFileStream : public Stream<T>
+        template<typename T> struct TpchFileStream : public FileStream<T>
         {
             typedef boost::function<void (int, int, T&, char*)> parseFieldFn;
-            typedef list<T> StreamBuffer;
+            typedef list<T> FileStreamBuffer;
 
             parseFieldFn fieldParser;
 
             string fileName;
             ifstream* inputFile;
-            StreamBuffer buffer;
+            FileStreamBuffer buffer;
             unsigned long line;
 
             static const char delimiter = '|';
@@ -462,7 +453,7 @@ namespace DBToaster
             unsigned int lineSize;
             bool finishedReading;
 
-            SsbFileStream(string fn, parseFieldFn parse_fn,
+            TpchFileStream(string fn, parseFieldFn parse_fn,
                       unsigned int fields, unsigned int c, unsigned int ls)
             : fieldParser(parse_fn), fileName(fn),
                 line(0), fieldCount(fields), bufferCount(c),
@@ -480,7 +471,7 @@ namespace DBToaster
                         static_cast<long>(ceil(static_cast<double>(c) / 10));
                 }
 
-            ~SsbFileStream() {
+            ~TpchFileStream() {
                 inputFile->close();
                 delete inputFile;
             }
@@ -559,25 +550,23 @@ namespace DBToaster
         //
         // File I/O typedefs
 
-        typedef SsbFileStream<lineitem>  LineitemStream;
-        typedef SsbFileStream<order>     OrderStream;
-        typedef SsbFileStream<part>      PartStream;
-        typedef SsbFileStream<customer>  CustomerStream;
-        typedef SsbFileStream<supplier>  SupplierStream;
-        typedef SsbFileStream<nation>    NationStream;
-        typedef SsbFileStream<region>    RegionStream;
+        typedef TpchFileStream<lineitem>  LineitemStream;
+        typedef TpchFileStream<order>     OrderStream;
+        typedef TpchFileStream<part>      PartStream;
+        typedef TpchFileStream<customer>  CustomerStream;
+        typedef TpchFileStream<supplier>  SupplierStream;
+        typedef TpchFileStream<nation>    NationStream;
+        typedef TpchFileStream<region>    RegionStream;
 
 
         //////////////////////////////
         //
-        // LinearRoad data
+        // LinearRoad data files
 
-        typedef LRData LinearRoadTuple;
-
-        struct LinearRoadFileStream : public Stream<LinearRoadTuple>
+        struct LinearRoadFileStream : public FileStream<LinearRoadTuple>
         {
             ifstream* inputFile;
-            StreamBuffer buffer;
+            FileStreamBuffer buffer;
             unsigned int bufferCount;
             unsigned long line;
             unsigned long threshold;

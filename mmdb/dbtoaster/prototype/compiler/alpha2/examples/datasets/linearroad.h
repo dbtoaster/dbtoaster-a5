@@ -11,7 +11,8 @@ namespace DBToaster
     {
         using namespace std;
 
-        struct LRData {
+        struct LRData
+        {
             int rectype;
             int t;
             int vid;
@@ -32,37 +33,39 @@ namespace DBToaster
 
             LRData(vector<int>& fields)
             {
-		assert ( fields.size() == 15 );
-		rectype = fields[0];
-		t = fields[1];
-		vid = fields[2];
-		speed = fields[3];
-		xway = fields[4];
-		lane = fields[5];
-		dir = fields[6];
-		seg = fields[7];
-		pos = fields[8];
-		qid = fields[9];
-		sinit = fields[10];
-		send = fields[11];
-		dow = fields[12];
-		tod = fields[13];
-		day = fields[14];
+                assert(fields.size() == 15);
+                rectype = fields[0];
+                t = fields[1];
+                vid = fields[2];
+                speed = fields[3];
+                xway = fields[4];
+                lane = fields[5];
+                dir = fields[6];
+                seg = fields[7];
+                pos = fields[8];
+                qid = fields[9];
+                sinit = fields[10];
+                send = fields[11];
+                dow = fields[12];
+                tod = fields[13];
+                day = fields[14];
             }
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << rectype << ", " << t << ", " << vid << ", "
-                     << speed << ", " << xway << ", " << lane << ", "
-                     << dir << ", " << seg << ", " << pos << ", "
-                     << qid << ", " << sinit << ", " << send << ", "
-                     << dow << ", " << tod << ", " << day;
+                r_ss << rectype << ", " << t << ", " << vid << ", " << speed << ", "
+                        << xway << ", " << lane << ", " << dir << ", " << seg << ", "
+                        << pos << ", " << qid << ", " << sinit << ", " << send << ", "
+                        << dow << ", " << tod << ", " << day;
                 return r_ss.str();
             }
         };
 
+        typedef LRData LinearRoadTuple;
 
-        struct AccInSeg {
+        struct AccInSeg
+        {
             int xway;
             int seg;
             int dir;
@@ -70,42 +73,44 @@ namespace DBToaster
             int numvehicles;
             //double emit;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << m << ", " << xway << ", " << seg << ", "
-                     << dir << ", " << numvehicles;
+                r_ss << m << ", " << xway << ", " << seg << ", " << dir << ", "
+                        << numvehicles;
 
-		return r_ss.str();
+                return r_ss.str();
             }
 
         };
 
-
-        struct Lav {
+        struct Lav
+        {
             int m;
             int xway;
             int seg;
             int dir;
             double lav;
             /*
-              double emit;
-              double lav_emit;
-              double lav_preagg;
-              double lav_preinsert;
-              double lav_postinsert;
-            */
+             double emit;
+             double lav_emit;
+             double lav_preagg;
+             double lav_preinsert;
+             double lav_postinsert;
+             */
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << m << ", " << xway << ", " << seg << ", "
-                     << dir << ", " << lav;
+                r_ss << m << ", " << xway << ", " << seg << ", " << dir << ", " << lav;
 
-		return r_ss.str();
+                return r_ss.str();
             }
 
         };
 
-        struct VehicleCount {
+        struct VehicleCount
+        {
             int m;
             int xway;
             int seg;
@@ -113,16 +118,18 @@ namespace DBToaster
             int numvehicles;
             //double emit;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << m << ", " << xway << ", " << seg
-                     << ", " << dir << ", " << numvehicles;
+                r_ss << m << ", " << xway << ", " << seg << ", " << dir << ", "
+                        << numvehicles;
                 return r_ss.str();
             }
 
         };
 
-        struct TollCalculations {
+        struct TollCalculations
+        {
             int m;
             int xway;
             int seg;
@@ -130,24 +137,23 @@ namespace DBToaster
             int toll;
             double lav;
             /*
-              double toll_tl;
-              double toll_tr;
-              double accident_t;
-            */
+             double toll_tl;
+             double toll_tr;
+             double accident_t;
+             */
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << m << ", " << xway << ", " << seg << ", "
-                     << dir << ", " << toll << ", " << lav;
+                r_ss << m << ", " << xway << ", " << seg << ", " << dir << ", " << toll
+                        << ", " << lav;
                 return r_ss.str();
             }
 
         };
 
-
-
-
-        struct NotificationsWithMins {
+        struct NotificationsWithMins
+        {
             int t;
             int m;
             int vid;
@@ -157,17 +163,18 @@ namespace DBToaster
             double l;
             int lane;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << t << ", " << m << ", " << vid << ", " << xway << ", "
-                     << seg << ", " << dir << ", " << l << ", " << lane;
+                r_ss << t << ", " << m << ", " << vid << ", " << xway << ", " << seg
+                        << ", " << dir << ", " << l << ", " << lane;
                 return r_ss.str();
             }
 
         };
 
-
-        struct TollNotifications {
+        struct TollNotifications
+        {
             int type;
             int vid;
             int t;
@@ -175,34 +182,35 @@ namespace DBToaster
             double lav;
             int toll;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << type << ", " << vid << ", " << t << ", " << emit
-                     << ", " << lav << ", " << toll;
+                r_ss << type << ", " << vid << ", " << t << ", " << emit << ", " << lav
+                        << ", " << toll;
                 return r_ss.str();
             }
 
         };
 
-
-        struct AccidentNotifications {
+        struct AccidentNotifications
+        {
             int type;
             int t;
             double emit;
             int vid;
             int seg;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << type << ", " << t << ", " << emit << ", "
-                     << vid << ", " << seg;
+                r_ss << type << ", " << t << ", " << emit << ", " << vid << ", " << seg;
                 return r_ss.str();
             }
 
         };
 
-
-        struct AccountBalanceResult {
+        struct AccountBalanceResult
+        {
             int type;
             int t;
             double emit;
@@ -211,26 +219,29 @@ namespace DBToaster
             int qid;
             int balance;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << type << ", " << t << ", " << emit << ", "
-                     << resulttime << ", " << qid << ", " << balance;
+                r_ss << type << ", " << t << ", " << emit << ", " << resulttime << ", "
+                        << qid << ", " << balance;
                 return r_ss.str();
             }
 
         };
 
-        struct DailyExpenditureResult {
+        struct DailyExpenditureResult
+        {
             int type;
             int t;
             double emit;
             int qid;
             int expenditure;
 
-            string as_string() {
+            string as_string()
+            {
                 ostringstream r_ss;
-                r_ss << type << ", " << t << ", " << emit << ", "
-                     << qid << ", " << expenditure;
+                r_ss << type << ", " << t << ", " << emit << ", " << qid << ", "
+                        << expenditure;
                 return r_ss.str();
             }
 

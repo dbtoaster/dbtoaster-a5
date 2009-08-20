@@ -3,7 +3,7 @@ namespace java DBToaster.DemoDatasets.Protocol
 
 //
 // Orderbook data
-struct VwapTuple
+struct OrderbookTuple
 {
     1: i32 t,
     2: i32 id,
@@ -13,9 +13,9 @@ struct VwapTuple
 
 
 //
-// SSB data
+// TPCH data
 
-// SSB typedefs
+// TPCH typedefs
 typedef i64 identifier
 typedef string date
 
@@ -97,7 +97,7 @@ struct Region {
 }
 
 
-struct SsbTuple
+struct TpchTuple
 {
     1: i32 type,
     2: optional Lineitem li,

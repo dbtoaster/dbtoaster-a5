@@ -15,7 +15,8 @@ namespace DBToaster
         typedef long long int identifier;
         typedef string date;
 
-        struct lineitem {
+        struct lineitem
+        {
             identifier orderkey;
             identifier partkey;
             identifier suppkey;
@@ -35,18 +36,19 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << orderkey << ", " << partkey << ", " << suppkey << ", "
-                  << linenumber << ", " << quantity << ", "
-                  << extendedprice << ", " << discount << ", " << tax << ", "
-                  << returnflag << ", " << linestatus << ", " << shipdate << ", "
-                  << commitdate << ", " << receiptdate << ", " << shipinstruct << ", "
-                  << shipmode << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << orderkey << ", " << partkey << ", " << suppkey << ", "
+                        << linenumber << ", " << quantity << ", " << extendedprice
+                        << ", " << discount << ", " << tax << ", " << returnflag
+                        << ", " << linestatus << ", " << shipdate << ", " << commitdate
+                        << ", " << receiptdate << ", " << shipinstruct << ", "
+                        << shipmode << ", " << comment;
+                return r.str();
             }
         };
 
-        struct order {
+        struct order
+        {
             identifier orderkey;
             identifier custkey;
             string orderstatus;
@@ -59,16 +61,16 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << orderkey << ", " << custkey << ", " << orderstatus << ", "
-                  << totalprice << ", " << orderdate << ", "
-                  << orderpriority << ", " << clerk << ", "
-                  << shippriority << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << orderkey << ", " << custkey << ", " << orderstatus << ", "
+                        << totalprice << ", " << orderdate << ", " << orderpriority
+                        << ", " << clerk << ", " << shippriority << ", " << comment;
+                return r.str();
             }
         };
 
-        struct part {
+        struct part
+        {
             identifier partkey;
             string name;
             string mfgr;
@@ -81,15 +83,16 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << partkey << ", " << name << ", " << mfgr << ", "
-                  << brand << ", " << type << ", " << size << ", "
-                  << container << ", " << retailprice << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << partkey << ", " << name << ", " << mfgr << ", " << brand << ", "
+                        << type << ", " << size << ", " << container << ", "
+                        << retailprice << ", " << comment;
+                return r.str();
             }
         };
 
-        struct customer {
+        struct customer
+        {
             identifier custkey;
             string name;
             string address;
@@ -101,15 +104,16 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << custkey << ", " << name << ", " << address << ", "
-                  << nationkey << ", " << phone << ", " << acctbal << ", "
-                  << mktsegment << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << custkey << ", " << name << ", " << address << ", " << nationkey
+                        << ", " << phone << ", " << acctbal << ", " << mktsegment
+                        << ", " << comment;
+                return r.str();
             }
         };
 
-        struct supplier {
+        struct supplier
+        {
             identifier suppkey;
             string name;
             string address;
@@ -120,15 +124,15 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << suppkey << ", " << name << ", " << address << ", "
-                  << nationkey << ", " << phone << ", "
-                  << acctbal << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << suppkey << ", " << name << ", " << address << ", " << nationkey
+                        << ", " << phone << ", " << acctbal << ", " << comment;
+                return r.str();
             }
         };
 
-        struct nation {
+        struct nation
+        {
             identifier nationkey;
             string name;
             identifier regionkey;
@@ -136,23 +140,23 @@ namespace DBToaster
 
             string as_string()
             {
-		ostringstream r;
-		r << nationkey << ", " << name << ", "
-                  << regionkey << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << nationkey << ", " << name << ", " << regionkey << ", " << comment;
+                return r.str();
             }
         };
 
-        struct region {
+        struct region
+        {
             identifier regionkey;
             string name;
             string comment;
 
             string as_string()
             {
-		ostringstream r;
-		r << regionkey << ", " << name << ", " << comment;
-		return r.str();
+                ostringstream r;
+                r << regionkey << ", " << name << ", " << comment;
+                return r.str();
             }
         };
     };
