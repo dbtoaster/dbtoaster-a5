@@ -58,8 +58,9 @@ namespace DBToaster
             int numStreams;
 
             tuple<int, int> runningStream;
+	    int init_runningStream;
 
-            Multiplexer(int seed, int stepsize) : streamStep(stepsize) {}
+            Multiplexer(int seed, int stepsize) : streamStep(stepsize), init_runningStream(0) {}
 
             template<typename tuple>
             void addStream(Stream<tuple>* s, TupleAdaptor a, DBToasterStreamId id)
@@ -108,13 +109,19 @@ namespace DBToaster
             {
                 assert ( streamHasInputs() );
 
+                if(init_runningStream == 0) {
+	 	    runningStream = make_tuple( (int) (numStreams * (rand() / (RAND_MAX+1.0))), 
+				    (int) (streamStep * (rand() / (RAND_MAX+1.0))));
+                    init_runningStream = 1;
+                }
+
                 int currentStream = get<0>(runningStream);
                 int remainingCount = get<1>(runningStream);
 
-                while ( remainingCount == 0 ) {
+                while (remainingCount == 0) {
                     currentStream = (int) (numStreams * (rand() / (RAND_MAX + 1.0)));
                     remainingCount = (int) (streamStep * (rand() / (RAND_MAX + 1.0)));
-                }
+                } 
 
                 shared_ptr<AnyStream> s = inputs[currentStream];
                 TupleAdaptor adaptor = inputAdaptors[currentStream];
