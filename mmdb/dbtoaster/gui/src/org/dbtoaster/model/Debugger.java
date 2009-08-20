@@ -11,6 +11,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.HashMap;
@@ -251,6 +253,58 @@ public class Debugger
             return r;
         }
 
+        // Datastructure metadata
+        public Class<?> getDatastructureClassType(String dsName)
+        {
+            Class<?> r = null;
+            String key = getPrefix + dsName;
+            if ( getMethods.containsKey(key) ) {
+                Method m = getMethods.get(key);
+                r = m.getReturnType();
+            }
+            return r;
+        }
+        
+        public Class<?> getDatastructureKeyClassType(String dsName)
+        {
+            Class<?> r = null;
+            String key = getPrefix + dsName;
+            if ( getMethods.containsKey(key) ) {
+                Method m = getMethods.get(key);
+                
+                Type genRT = m.getGenericReturnType();
+                if ( genRT instanceof ParameterizedType )
+                {
+                    ParameterizedType paramRT = (ParameterizedType) genRT;
+                    Type[] paramRTArgs = paramRT.getActualTypeArguments();
+                    
+                    if ( paramRTArgs.length == 0 )
+                        System.err.println("Could not find actual parameterized types!");
+                    
+                    else if ( !(paramRTArgs[0] instanceof java.lang.Class<?>) )
+                    {
+                        System.err.println(
+                            "Unable to handle nested parameterized return types.");
+                    }
+                    else
+                    {
+                        Class<?> argClass = null;
+                        if ( paramRTArgs[0] instanceof java.lang.Class<?> )
+                            argClass = (Class<?>) paramRTArgs[0];
+                        else {
+                        }
+                        
+                        r = argClass;
+                    }
+                }
+                else
+                    r = m.getReturnType();
+                
+                System.out.println(dsName + " key type: " + r);
+            }
+            return r;
+        }
+
         // Debugger invocation.
         public void step(String relationName, Object tuple)
         {
@@ -462,6 +516,23 @@ public class Debugger
     {
         int r = -1;
         if ( debugger != null ) r = debugger.getStreamId(relationName);
+        return r;
+    }
+
+    // Datastructure retrieval metadata
+    public Class<?> getDatastructureClassType(String dsName)
+    {
+        Class<?> r = null;
+        if ( debugger !=  null)
+            r = debugger.getDatastructureClassType(dsName);
+        return r;
+    }
+
+    public Class<?> getDatastructureKeyClassType(String dsName)
+    {
+        Class<?> r = null;
+        if ( debugger !=  null)
+            r = debugger.getDatastructureKeyClassType(dsName);
         return r;
     }
     

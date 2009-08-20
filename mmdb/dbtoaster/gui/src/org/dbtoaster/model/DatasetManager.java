@@ -18,6 +18,7 @@ public class DatasetManager
     {
         class Relation
         {
+            public String streamType;
             public LinkedHashMap<String, String> fields;
             public String sourceType;
             public LinkedList<String> defaultSourceConstructorArgs; 
@@ -28,10 +29,11 @@ public class DatasetManager
             public String instancePrefix;
             public AtomicInteger instanceCounter;
             
-            public Relation(LinkedHashMap<String, String> f,
+            public Relation(String srt, LinkedHashMap<String, String> f,
                     String st, String sca, String tt, String at,
                     LinkedHashMap<String, String> bd, String tns, String ip)
             {
+                streamType = srt;
                 fields = f;
                 sourceType = st;
                 tupleType = tt;
@@ -65,14 +67,14 @@ public class DatasetManager
             relations = new HashMap<String, Relation>();
         }
         
-        void addRelation(String name,
+        void addRelation(String streamType, String name,
                 LinkedHashMap<String, String> fieldsAndTypes,
                 String sourceType, String sourceArgs, String tupleType,
                 String adaptorType, LinkedHashMap<String, String> bindings,
                 String thriftNamespace, String instancePrefix)
         {
             if ( !relations.containsKey(name) ) {
-                Relation r = new Relation(fieldsAndTypes,
+                Relation r = new Relation(streamType, fieldsAndTypes,
                     sourceType, sourceArgs, tupleType,
                     adaptorType, bindings, thriftNamespace, instancePrefix);
                 relations.put(name, r);
@@ -86,6 +88,13 @@ public class DatasetManager
 
         public boolean hasRelation(String name) {
             return relations.containsKey(name);
+        }
+        
+        public String getStreamType(String name)
+        {
+            String r = null;
+            if (relations.containsKey(name)) r = relations.get(name).streamType;
+            return r;
         }
 
         public LinkedHashMap<String, String> getRelationFields(String name)
@@ -253,6 +262,7 @@ public class DatasetManager
 
         bookFieldsAndTypes.put("t", "int");
         bookFieldsAndTypes.put("id", "int");
+        bookFieldsAndTypes.put("broker_id", "int");
         bookFieldsAndTypes.put("p", "int");
         bookFieldsAndTypes.put("v", "int");
         
@@ -261,24 +271,27 @@ public class DatasetManager
         
         adaptorBindings.put("t", "t");
         adaptorBindings.put("id", "id");
+        adaptorBindings.put("broker_id", "broker_id");
         adaptorBindings.put("p", "price");
         adaptorBindings.put("v", "volume");
         
-        orderbook.addRelation("bids", bookFieldsAndTypes,
-            "DBToaster::DemoDatasets::VwapFileStream",
+        orderbook.addRelation(
+            "file", "bids", bookFieldsAndTypes,
+            "DBToaster::DemoDatasets::OrderbookFileStream",
             "\"20081201.csv\",10000",
-            "DBToaster::DemoDatasets::VwapTuple",
-            "DBToaster::DemoDatasets::VwapTupleAdaptor", adaptorBindings,
+            "DBToaster::DemoDatasets::OrderbookTuple",
+            "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
             "datasets",
-            "VwapBids");
+            "BidsOrderbook");
         
-        orderbook.addRelation("asks", bookFieldsAndTypes,
-            "DBToaster::DemoDatasets::VwapFileStream",
+        orderbook.addRelation(
+            "file", "asks", bookFieldsAndTypes,
+            "DBToaster::DemoDatasets::OrderbookFileStream",
             "\"20081201.csv\",10000",
-            "DBToaster::DemoDatasets::VwapTuple",
-            "DBToaster::DemoDatasets::VwapTupleAdaptor", adaptorBindings,
+            "DBToaster::DemoDatasets::OrderbookTuple",
+            "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
             "datasets",
-            "VwapAsks");
+            "AsksOrderbook");
 
         aDM.addDataset("orderbook", orderbook);
 

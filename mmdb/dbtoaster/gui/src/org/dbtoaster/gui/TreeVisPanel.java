@@ -16,6 +16,8 @@ import javax.swing.BorderFactory;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
+import org.apache.commons.lang.StringEscapeUtils;
+
 import prefuse.Constants;
 import prefuse.Display;
 import prefuse.Visualization;
@@ -40,6 +42,8 @@ import prefuse.controls.PanControl;
 import prefuse.controls.WheelZoomControl;
 import prefuse.controls.ZoomControl;
 import prefuse.controls.ZoomToFitControl;
+import prefuse.data.Node;
+import prefuse.data.Schema;
 import prefuse.data.Table;
 import prefuse.data.Tree;
 import prefuse.data.Tuple;
@@ -365,6 +369,30 @@ public class TreeVisPanel extends JPanel
     public void setData(Tree nt, String label)
     {
         t = nt;
+        
+        // Unescape XML since TreeMLReader does not do this.
+        Schema tSchema = t.getNodeTable().getSchema();
+        LinkedList<Integer> stringFields = new LinkedList<Integer>();
+        for (int i = 0; i < tSchema.getColumnCount(); ++i)
+        {
+            if ( tSchema.getColumnType(i).equals(String.class) )
+                stringFields.add(i);
+        }
+
+        if ( stringFields.size() > 0 )
+        {
+            for (Iterator<?> it = t.nodes(); it.hasNext();)
+            {
+                Node n = (Node) it.next();
+    
+                for (Integer i : stringFields)
+                {
+                    String f = (String) n.get(i);
+                    n.set(i, StringEscapeUtils.unescapeXml(f));
+                }
+            }
+        }
+
         resetVisualization(label);
     }
 
@@ -388,18 +416,20 @@ public class TreeVisPanel extends JPanel
         }
         else
         {
-            Predicate selectPredicate = (Predicate) ExpressionParser
-                    .parse(pred);
+            Predicate selectPredicate = (Predicate) ExpressionParser.parse(pred);
 
-            Table selectedNodes = t.getNodeTable()
-                    .select(selectPredicate, null);
+            System.out.println("Selecting nodes from: " + t.getNodeTable());
+            System.out.println("Select predicate: " + selectPredicate);
 
+            Table selectedNodes = t.getNodeTable().select(selectPredicate, null);
+
+            System.out.println("Selected: " + selectedNodes);
             System.out.println("Selected " + selectedNodes.getTupleCount()
                     + " in group " + group);
 
             treeVis.addFocusGroup(group, selectedNodes);
-
             groupColors.put(group, key, color);
+            treeVis.run("filter");
         }
     }
 

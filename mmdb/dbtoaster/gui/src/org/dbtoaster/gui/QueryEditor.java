@@ -14,12 +14,14 @@ import javax.swing.JRootPane;
 import org.dbtoaster.model.DBToasterWorkspace;
 import org.dbtoaster.model.DatasetManager;
 import org.dbtoaster.model.Query;
-import org.dbtoaster.model.Compiler.CompileMode;
+import org.dbtoaster.model.Compiler;
 import org.dbtoaster.model.DatasetManager.Dataset;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.events.VerifyEvent;
+import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.layout.GridData;
@@ -294,15 +296,13 @@ public class QueryEditor extends ViewPart
             qtvLayout.marginHeight = 0;
             setLayout(qtvLayout);
 
-            Composite visComposite = new Composite(this, SWT.EMBEDDED
-                    | SWT.NO_BACKGROUND);
+            Composite visComposite = new Composite(
+                    this, SWT.EMBEDDED | SWT.NO_BACKGROUND);
 
             try
             {
                 System.setProperty("sun.awt.noerasebackground", "true");
-            } catch (NoSuchMethodError e)
-            {
-            }
+            } catch (NoSuchMethodError e)  {}
 
             Frame visFrame = SWT_AWT.new_Frame(visComposite);
             Panel visPanel = new Panel(new BorderLayout())
@@ -372,16 +372,24 @@ public class QueryEditor extends ViewPart
 
         public String toastQuery()
         {
-            System.out.println(getClass().getName() + ".toastQuery(): dbtWs "
-                    + (dbtWorkspace == null ? "null" : "valid"));
+            String queryName;
 
-            String queryName = dbtWorkspace.createQuery(queryText.getText());
+            if ( currentQueryName == null )
+                queryName = dbtWorkspace.createQuery(queryText.getText());
+            else
+                queryName = dbtWorkspace.createQuery(currentQueryName, queryText.getText());
+
+            System.out.println("Compiling query '" + queryName +
+                "', engine: "+
+                ((compileMode & Compiler.ENGINE) == Compiler.ENGINE)
+                + ", debugger: " +
+                ((compileMode & Compiler.DEBUGGER) == Compiler.DEBUGGER));
+
             currentQuery = dbtWorkspace.getQuery(queryName);
 
-            String codeFile = queryName + "."
-                    + DBToasterWorkspace.CODE_FILE_EXT;
-            String compilationStatus = dbtWorkspace.compileQuery(queryName,
-                    codeFile, CompileMode.ENGINE);
+            String codeFile = queryName + "." + DBToasterWorkspace.CODE_FILE_EXT;
+            String compilationStatus = dbtWorkspace.compileQuery(
+                    queryName, codeFile, compileMode);
 
             System.out.println("Toasted query: " + queryName);
 
@@ -397,8 +405,14 @@ public class QueryEditor extends ViewPart
     private QueryHistoryPanel historyPnl;
     private QueryTextAndVis queryTv;
     private Text statusText;
+    private Text queryNameText;
+    private Button checkEngineBtn;
+    private Button checkDebuggerBtn;
     private Button toastBtn;
-    
+
+    private String currentQueryName;
+    private int compileMode;
+
     public QueryTextAndVis getQTAV() {
     	return queryTv;
     }
@@ -424,6 +438,9 @@ public class QueryEditor extends ViewPart
          * } catch (PartInitException e) { e.printStackTrace(); } catch
          * (CoreException e1) { e1.printStackTrace(); }
          */
+        
+        currentQueryName = null;
+        compileMode = 0;
 
         Composite top = new Composite(parent, SWT.NONE);
         GridLayout layout = new GridLayout(2, false);
@@ -470,7 +487,59 @@ public class QueryEditor extends ViewPart
         statusText.setLayoutData(gridData);
         statusText.setText("Welcome to DBToaster v0.1.");
 
-        toastBtn = new Button(btBarComp, SWT.PUSH);
+        Composite compileComp = new Composite(btBarComp, SWT.NONE);
+        compileComp.setLayout(new GridLayout(3, false));
+        compileComp.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
+        
+        queryNameText = new Text(compileComp, SWT.SINGLE | SWT.BORDER);
+        queryNameText.setText("Enter query name");
+        GridData qnLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+        qnLD.minimumWidth = 100;
+        queryNameText.setLayoutData(qnLD);
+        queryNameText.addSelectionListener(new SelectionListener()
+        {
+            public void widgetSelected(SelectionEvent e) {}
+
+            public void widgetDefaultSelected(SelectionEvent e)
+            {
+                currentQueryName = queryNameText.getText();
+            }
+        });
+        
+        Composite compileModeComp = new Composite(compileComp, SWT.NONE);
+        compileModeComp.setLayout(new GridLayout(2, false));
+        compileModeComp.setLayoutData(new GridData(SWT.FILL, SWT.FILL, false, false));
+        
+        checkEngineBtn = new Button(compileModeComp, SWT.CHECK);
+        checkEngineBtn.setText("Engine");
+        checkEngineBtn.addSelectionListener(new SelectionListener()
+        {
+            public void widgetSelected(SelectionEvent e)
+            {
+                compileMode = (checkEngineBtn.getSelection()?
+                    (compileMode | Compiler.ENGINE) :
+                        (compileMode & (~Compiler.ENGINE)));
+            }
+            
+            public void widgetDefaultSelected(SelectionEvent e) {}
+        });
+        
+        checkDebuggerBtn = new Button(compileModeComp, SWT.CHECK);
+        checkDebuggerBtn.setText("Debugger");
+        checkDebuggerBtn.addSelectionListener(new SelectionListener()
+        {
+            public void widgetSelected(SelectionEvent e)
+            {
+                compileMode = (checkDebuggerBtn.getSelection()?
+                    (compileMode | Compiler.DEBUGGER) :
+                        (compileMode & (~Compiler.DEBUGGER)));
+            }
+            
+            public void widgetDefaultSelected(SelectionEvent e) {}
+        });
+
+        
+        toastBtn = new Button(compileComp, SWT.PUSH);
         toastBtn.setBackground(toastBtn.getDisplay().getSystemColor(
                 SWT.COLOR_DARK_RED));
         toastBtn.setForeground(toastBtn.getDisplay().getSystemColor(
@@ -486,7 +555,6 @@ public class QueryEditor extends ViewPart
         {
             public void widgetSelected(SelectionEvent e)
             {
-                System.out.println("Toast button listener");
                 statusText.setText(queryTv.toastQuery());
             }
 
@@ -496,8 +564,6 @@ public class QueryEditor extends ViewPart
         });
     }
 
-    public void setFocus()
-    {
-    }
+    public void setFocus() {}
 
 }

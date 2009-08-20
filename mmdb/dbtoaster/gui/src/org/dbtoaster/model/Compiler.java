@@ -29,33 +29,34 @@ import org.eclipse.datatools.sqltools.parsers.sql.query.SQLQueryParserManagerPro
 
 public class Compiler
 {
-    public enum CompileMode { HANDLERS, ENGINE, DEBUGGER };
+    public final static int ENGINE = 0x000F;
+    public final static int DEBUGGER = 0x00F0;
 
     private final static String DEFAULT_COMPILER_BINARY = "dbtoaster.byte";
     private final static String DEFAULT_COMPILER_PATH =
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2";
+        "/Users/yanif/workspace/dbtoaster_compiler/";
 
     // C++ profiler interface
     final static String PROFILER_THRIFT_MODULE =
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/profiler/profiler.thrift";
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/profiler.thrift";
 
     final static String PROFILER_THRIFT_MODULE_BASE =
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/profiler/protocol";
-    
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/protocol";
+
     // C++ demo datasets interface
     final static String DATASET_THRIFT_MODULE =
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/examples/datasets/datasets.thrift";
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/datasets.thrift";
 
     final static String DATASET_THRIFT_MODULE_BASE =
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/examples/datasets/protocol";
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/protocol";
 
     // Java profiler client
     final static String PROFILER_JAR_FILE=
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/profiler/profiler.jar";
+        "/Users/yanif/workspace/dbtoaster_compiler/profiler/profiler.jar";
     
     // Java demo datasets classes
     final static String DATASET_JAR_FILE=
-        "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/examples/datasets/datasets.jar";
+        "/Users/yanif/workspace/dbtoaster_compiler/examples/datasets/datasets.jar";
 
     String dbToasterPath;
     ProcessBuilder dbToasterProcess;
@@ -189,11 +190,11 @@ public class Compiler
     private String findBoostPath()
     {
         LinkedList<String> ap = new LinkedList<String>();
-        //File homeDir = new File(System.getenv("HOME"));
-        //if ( homeDir.exists() ) {
-            String p = "/opt/local/include/boost-1_35/";
-            ap.add(new File(p).getAbsolutePath());
-        //}
+        File homeDir = new File(System.getenv("HOME"));
+        if ( homeDir.exists() ) {
+            String p = "software/boost/include/boost-1_39/";
+            ap.add(new File(homeDir, p).getAbsolutePath());
+        }
 
         return checkSystemIncludePaths(ap, "boost/smart_ptr.hpp");
     }
@@ -218,7 +219,8 @@ public class Compiler
             addOption(options, "-cL", boostLibPath);
 
             // TODO: add individual boost libraries.
-            addOption(options, "-cl", "boost_thread-mt");
+            addOption(options, "-cl", "boost_thread-xgcc40-mt");
+            addOption(options, "-cl", "boost_system-xgcc40-mt");
 
             // Flags for thrift sources.
             addOption(options, "-tCI", boostIncPath);
@@ -233,11 +235,11 @@ public class Compiler
     private String findThriftPath()
     {
         LinkedList<String> ap = new LinkedList<String>();
-        //File homeDir = new File(System.getenv("HOME"));
-        //if ( homeDir.exists() ) {
-            String p = "/usr/local/include/thrift";
-            ap.add(new File(p).getAbsolutePath());
-        //}
+        File homeDir = new File(System.getenv("HOME"));
+        if ( homeDir.exists() ) {
+            String p = "software/thrift/include/thrift";
+            ap.add(new File(homeDir, p).getAbsolutePath());
+        }
 
         return checkSystemIncludePaths(ap, "Thrift.h");
     }
@@ -269,79 +271,70 @@ public class Compiler
                 "Failed to find Thrift, attempting to compile anyway.");
         }
     }
-    
-    private String getCompileMode(CompileMode m)
-    {
-        String r = null;
-        switch(m) {
-        case HANDLERS:
-            r = "handlers";
-            break;
-        case DEBUGGER:
-            r = "debugger";
-            break;
-        case ENGINE:
-        default:
-            r = "engine";
-            break;
-        }
-        return r;
-    }
 
     // Compile only
     public String toastQuery(String tmlFile, String sourceConfigFile, String outputFile,
-            CompileMode compileMode, String compilationDir, String compilerLogFile)
+            int compileMode, String compilationDir, String compilerLogFile)
     {
         System.out.println("Toasting query from TML: " + tmlFile);
 
         String returnStatus = null;
 
         // Invoke compiler on TML through ProcessBuilder
-        LinkedHashMap<String, LinkedList<String>> options =
+        LinkedHashMap<String, LinkedList<String>> commonOptions =
             new LinkedHashMap<String, LinkedList<String>>();
-        addOption(options, "-thrift" , "/usr/local/bin/thrift");
-        addOption(options, "-o", outputFile);
-        addOption(options, "-m", getCompileMode(compileMode));
-        addOption(options, "-d", sourceConfigFile);
+        addOption(commonOptions, "-thrift" , "/Users/yanif/software/thrift/bin/thrift");
+        addOption(commonOptions, "-o", outputFile);
+        addOption(commonOptions, "-d", sourceConfigFile);
         
         // TODO: move these to a config/build file.
-        addOption(options, "-cI", "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/profiler");
-        addOption(options, "-cI", "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/standalone");
-        addOption(options, "-cI", "/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/examples");
+        addOption(commonOptions, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/profiler");
+        addOption(commonOptions, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/standalone");
+        addOption(commonOptions, "-cI", "/Users/yanif/workspace/dbtoaster_compiler/examples");
 
-        buildBoostOptions(options);
-        buildThriftOptions(options);
+        buildBoostOptions(commonOptions);
+        buildThriftOptions(commonOptions);
 
         // Additional thrift options
-        addOption(options, "-tI",
-            "I,/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/examples/datasets");
-        addOption(options, "-tI",
-            "I,/Users/mavkisuh/homework/DBToaster/original/compiler/alpha2/profiler");
+        addOption(commonOptions, "-tI",
+            "I,/Users/yanif/workspace/dbtoaster_compiler/examples/datasets");
+        addOption(commonOptions, "-tI",
+            "I,/Users/yanif/workspace/dbtoaster_compiler/profiler");
 
-        switch (compileMode) {
-        case ENGINE:
-            addOption(options, "-tm",
+        LinkedHashMap<String, LinkedList<String>> engineOptions =
+            new LinkedHashMap<String, LinkedList<String>>();
+        
+        LinkedHashMap<String, LinkedList<String>> debuggerOptions =
+            new LinkedHashMap<String, LinkedList<String>>();
+
+        if ( (compileMode & ENGINE) == ENGINE ) {
+            engineOptions.putAll(commonOptions);
+            addOption(engineOptions, "-m", "engine");            
+            addOption(engineOptions, "-tm",
                     PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
-            break;
-        case DEBUGGER:
-            addOption(options, "-tm",
-                    PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
-            addOption(options, "-tm",
-                    DATASET_THRIFT_MODULE+","+DATASET_THRIFT_MODULE_BASE);
             
-            addOption(options, "-tcp", "/usr/local/lib/libthrift.jar");
-            addOption(options, "-tcp", "/Users/mavkisuh/Documents/workspace/dbtoaster-gui/lib/log4j-1.2.15.jar");
-            addOption(options, "-tcp", PROFILER_JAR_FILE);
-            addOption(options, "-tcp", DATASET_JAR_FILE);
-            break;
-        default:
-            break;
+            returnStatus = runDBToaster(
+                    compilationDir, engineOptions, tmlFile, compilerLogFile);
+            
+            if ( returnStatus != null ) return returnStatus;
         }
         
-        System.out.println("Finished building DBToaster options...");
+        if ( (compileMode & DEBUGGER) == DEBUGGER ) {
+            debuggerOptions.putAll(commonOptions);
+            addOption(debuggerOptions, "-m", "debugger");
+            addOption(debuggerOptions, "-tm",
+                    PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
+            addOption(debuggerOptions, "-tm",
+                    DATASET_THRIFT_MODULE+","+DATASET_THRIFT_MODULE_BASE);
 
-        returnStatus = runDBToaster(
-            compilationDir, options, tmlFile, compilerLogFile);
+            addOption(debuggerOptions, "-tcp", "/Users/yanif/software/thrift/java/libthrift.jar");
+            addOption(debuggerOptions, "-tcp", "/Users/yanif/workspace/dbtoaster-gui/lib/log4j-1.2.15.jar");
+            addOption(debuggerOptions, "-tcp", PROFILER_JAR_FILE);
+            addOption(debuggerOptions, "-tcp", DATASET_JAR_FILE);
+
+            returnStatus = runDBToaster(
+                    compilationDir, debuggerOptions, tmlFile, compilerLogFile);
+        }
 
         return returnStatus;
     }
@@ -350,7 +343,7 @@ public class Compiler
     // Note: tmlFile, outputFile are absolute paths on the local filesystem.
     public String toastQuery(String sqlQuery,
             String tmlFile, String sourceConfigFile, String outputFile,
-            CompileMode compileMode, String compilationDir, String compilerLogFile)
+            int compileMode, String compilationDir, String compilerLogFile)
     {
         String returnStatus = null;
 

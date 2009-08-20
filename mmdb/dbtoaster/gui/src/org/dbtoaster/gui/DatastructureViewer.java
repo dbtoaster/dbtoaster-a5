@@ -1,9 +1,17 @@
 package org.dbtoaster.gui;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
+
+import org.eclipse.jface.viewers.ILabelProvider;
+import org.eclipse.jface.viewers.ILabelProviderListener;
+import org.eclipse.jface.viewers.ITreeContentProvider;
+import org.eclipse.jface.viewers.Viewer;
+import org.eclipse.swt.graphics.Image;
 
 public class DatastructureViewer
 {
@@ -33,7 +41,7 @@ public class DatastructureViewer
             throws TreeException, DuplicateException;
     }
 
-    enum DatastructureType { LIST, MAP, SET };
+    enum DatastructureType { VARIABLE, LIST, MAP, SET };
 
     class DatastructureTypeException extends Exception
     {
@@ -182,11 +190,12 @@ public class DatastructureViewer
         }
     }
 
-    class DataStructureNode implements ViewerNode
+    class DatastructureNode implements ViewerNode
     {
         String dsName;
         DatastructureType dsType;
         Class<?> dsClassType;
+        Class<?> dsKeyClassType;
 
         TreeNode dsRoot;
 
@@ -207,14 +216,18 @@ public class DatastructureViewer
         }
 
         // Label provider methods.
-        public String getTextLP() { return dsName; }
+        public String getTextLP() {
+            return dsName + (dsRoot == null? "" : " " + dsRoot.getTextLP());
+        }
 
         // Tree methods.
-        public DataStructureNode(String name, DatastructureType type, Class<?> cl)
+        public DatastructureNode(String name, DatastructureType type,
+                Class<?> dsClass, Class<?> keyClass)
         {
             dsName = name;
             dsType = type;
-            dsClassType = cl;
+            dsClassType = dsClass;
+            dsKeyClassType = keyClass;
 
             Interval<?> initBucket = null;
             LinkedList<Field> dimensions = new LinkedList<Field>();
@@ -222,15 +235,53 @@ public class DatastructureViewer
                 new LinkedList<BucketStrategy<?>>();
             
             try
-            { 
-                for (Field f : cl.getFields())
+            {
+                boolean boxed = isBoxedPrimitive(dsKeyClassType);
+                boolean string = dsKeyClassType.equals(String.class);
+                if ( dsKeyClassType.isPrimitive() || boxed || string )
                 {
-                    dimensions.add(f);
-                    dimensionBuckets.add(getBucketStrategy(f.getType()));
-                    
-                    if ( initBucket == null ) {
-                        Object defaultFieldVal = f.getType().newInstance();
+                    Class<?> c = (boxed || string?
+                        dsKeyClassType : getClassOfPrimitive(dsKeyClassType));
+                    dimensionBuckets.add(getBucketStrategy(c));
+                    if ( string )
+                        initBucket = dimensionBuckets.getLast().getBucket(c.newInstance());
+                    else {
+                        Constructor<?> strConstructor = c.getConstructor(String.class);
+                        Object defaultFieldVal = strConstructor.newInstance("0");
                         initBucket = dimensionBuckets.getLast().getBucket(defaultFieldVal);
+                    }
+                }
+                else
+                {
+                    for (Field f : dsKeyClassType.getFields())
+                    {
+                        if ( !Modifier.isStatic(f.getModifiers()) )
+                        {
+                            System.out.println("Adding dimension " +
+                                f.getName() + " " + f.getType().getName());
+    
+                            Class<?> fType = f.getType().isPrimitive()?
+                                getClassOfPrimitive(f.getType()) : f.getType();
+    
+                            dimensions.add(f);
+                            dimensionBuckets.add(getBucketStrategy(fType));
+                            
+                            boolean fString = fType.equals(String.class);
+    
+                            if ( initBucket == null )
+                            {
+                                Object defaultFieldVal;
+                                if ( fString ) defaultFieldVal = fType.newInstance();
+    
+                                else {
+                                    Constructor<?> strConstructor =
+                                        fType.getConstructor(String.class);
+                                    defaultFieldVal = strConstructor.newInstance("0");
+                                }
+                                    
+                                initBucket = dimensionBuckets.getLast().getBucket(defaultFieldVal);
+                            }
+                        }
                     }
                 }
 
@@ -241,8 +292,63 @@ public class DatastructureViewer
                 System.out.println("Failed to create root for " + name);
                 e.printStackTrace();
             }
+            
+            if ( dsRoot != null )
+                System.out.println("Successfully created datastructure viewer for " + dsName);
         }
         
+        private boolean isBoxedPrimitive(Class<?> cl)
+        {
+            return (
+                cl.getName().equals(Void.class.getName()) ||
+                cl.getName().equals(Boolean.class.getName()) ||
+                cl.getName().equals(Byte.class.getName()) ||
+                cl.getName().equals(Character.class.getName()) ||
+                cl.getName().equals(Short.class.getName()) ||
+                cl.getName().equals(Integer.class.getName()) ||
+                cl.getName().equals(Float.class.getName()) ||
+                cl.getName().equals(Long.class.getName()) ||
+                cl.getName().equals(Double.class.getName())
+            );
+        }
+        
+        private Class<?> getClassOfPrimitive(Class<?> primitiveType)
+        {
+            Class<?> r = null;
+
+            if ( primitiveType.equals(Void.TYPE) ) {
+                r = Void.class;
+            }
+            else if ( primitiveType.equals(Boolean.TYPE) ) {
+                r = Boolean.class;
+            }
+            else if ( primitiveType.equals(Byte.TYPE) ) {
+                r = Byte.class;
+            }
+            else if ( primitiveType.equals(Character.TYPE) ) {
+                r = Character.class;
+            }
+            else if ( primitiveType.equals(Short.TYPE) ) {
+                r = Short.class;
+            }
+            else if ( primitiveType.equals(Integer.TYPE) ) {
+                r = Integer.class;
+            }
+            else if ( primitiveType.equals(Float.TYPE) ) {
+                r = Float.class;
+            }
+            else if ( primitiveType.equals(Long.TYPE) ) {
+                r = Long.class;
+            }
+            else if ( primitiveType.equals(Double.TYPE) ) {
+                r = Double.class;
+            }
+            else
+                System.err.println("Invalid primitive type " + primitiveType.getName());
+            
+            return r;
+        }
+
         BucketStrategy<?> getBucketStrategy(Class<?> fieldType)
             throws DatastructureTypeException
         {
@@ -257,17 +363,29 @@ public class DatastructureViewer
                 System.err.println(msg);
                 throw new DatastructureTypeException(msg);
             }
-            else if ( fieldType.equals(Integer.TYPE) ) {
+            else if ( fieldType.equals(Integer.TYPE)
+                        || fieldType.equals(Integer.class) )
+            {
                 r = new FixedIntegerBucket(DEFAULT_NUMERIC_BUCKET_WIDTH);
             }
-            else if ( fieldType.equals(Long.TYPE) ) {
+            else if ( fieldType.equals(Long.TYPE)
+                    || fieldType.equals(Long.class) )
+            {
                 r = new FixedLongBucket((long) DEFAULT_NUMERIC_BUCKET_WIDTH);
             }
-            else if ( fieldType.equals(Float.TYPE) ) {
+            else if ( fieldType.equals(Float.TYPE)
+                    || fieldType.equals(Float.class) )
+            {
                 r = new FixedFloatBucket((float) DEFAULT_NUMERIC_BUCKET_WIDTH);
             }
-            else if ( fieldType.equals(Double.TYPE) ) {
+            else if ( fieldType.equals(Double.TYPE)
+                    || fieldType.equals(Double.class) )
+            {
                 r = new FixedDoubleBucket((double) DEFAULT_NUMERIC_BUCKET_WIDTH);
+            }
+            else if ( fieldType.equals(String.class) )
+            {
+                r = new FixedStringBucket(DEFAULT_STRING_BUCKET_PREFIX_LENGTH);
             }
             else
                 System.err.println("Invalid primitive type " + fieldType.getName());
@@ -374,7 +492,11 @@ public class DatastructureViewer
         public String getTextLP()
         {
             String r = "";
-            for (Interval<?> i : parentValues) r += i.toString();
+            if ( parentValues != null ) {
+                for (Interval<?> i : parentValues) r += i.toString();
+            }
+            if ( bucket != null ) r += bucket.toString();
+            r += " (" + getLeafCount() + " items)";
             return r;
         }
 
@@ -409,7 +531,8 @@ public class DatastructureViewer
             addKeyValue(key, value);
         }
 
-        void init(boolean duplicates, ViewerNode par, LinkedList<Interval<?>> parValues,
+        void init(boolean duplicates,
+                ViewerNode par, LinkedList<Interval<?>> parValues,
                 Interval<?> bucket, LinkedList<Field> stDimensions,
                 LinkedList<BucketStrategy<?>> strategies)
             throws TreeException
@@ -421,7 +544,8 @@ public class DatastructureViewer
 
             children = new TreeMap<Object, ViewerNode>();
             
-            if ( stDimensions.size() != strategies.size() ) {
+            if ( stDimensions.size() > 0 && (stDimensions.size() != strategies.size()) )
+            {
                 String msg = "Inconsistent dimensions/bucketing: " +
                     stDimensions.size() + ", " + strategies.size();
                 throw new TreeException(msg);
@@ -447,8 +571,16 @@ public class DatastructureViewer
                 bucketStrategy = strategies.getFirst();
             }
             else {
-                String msg = "Found zero dimension tree node.";
-                throw new TreeException(msg);
+                String msg = "Found no dimensions, assuming object as key.";
+                System.out.println(msg);
+
+                childDimension = null;
+                childDimensionType = this.bucket.getLower().getClass();
+                
+                subTreeDimensions = null;
+                subTreeBucketing = null;
+
+                bucketStrategy = strategies.getFirst();
             }
         }
         
@@ -485,15 +617,22 @@ public class DatastructureViewer
             throws TreeException, DuplicateException
         {
             Object childDimVal;
-            try {
-                childDimVal = childDimension.get(tuple);
-            } catch (Exception e) {
-                String msg = "Failed to get child field " +
-                    childDimension.getName() + " from " +
-                    tuple.getClass().getName();
-
-                e.printStackTrace();
-                throw new TreeException(msg);
+            
+            if ( childDimension != null )
+            {
+                try {
+                    childDimVal = childDimension.get(tuple);
+                } catch (Exception e) {
+                    String msg = "Failed to get child field " +
+                        childDimension.getName() + " from " +
+                        tuple.getClass().getName();
+    
+                    e.printStackTrace();
+                    throw new TreeException(msg);
+                }
+            }
+            else {
+                childDimVal = tuple;
             }
 
             enforceContainment(childDimVal);
@@ -534,15 +673,21 @@ public class DatastructureViewer
             throws TreeException, DuplicateException
         {
             Object childDimVal;
-            try {
-                childDimVal = childDimension.get(key);
-            } catch (Exception e) {
-                String msg = "Failed to get child field " +
-                    childDimension.getName() + " from " +
-                    key.getClass().getName();
-
-                e.printStackTrace();
-                throw new TreeException(msg);
+            if ( childDimension != null )
+            {
+                try {
+                    childDimVal = childDimension.get(key);
+                } catch (Exception e) {
+                    String msg = "Failed to get child field " +
+                        childDimension.getName() + " from " +
+                        key.getClass().getName();
+    
+                    e.printStackTrace();
+                    throw new TreeException(msg);
+                }
+            }
+            else {
+                childDimVal = key;
             }
 
             enforceContainment(childDimVal);
@@ -654,5 +799,61 @@ public class DatastructureViewer
             
             ++count;
         }
+    }
+
+    class DatastructureContentProvider implements ITreeContentProvider
+    {
+
+        public Object[] getChildren(Object parentElement)
+        {
+            return ((ViewerNode) parentElement).getChildrenCP();
+        }
+
+        public Object getParent(Object element)
+        {
+            return ((ViewerNode) element).getParentCP();
+        }
+
+        public boolean hasChildren(Object element)
+        {
+            return ((ViewerNode) element).hasChildrenCP();
+        }
+
+        // Return the root ranges of all data structures.
+        public Object[] getElements(Object inputElement)
+        {
+            return ((LinkedList<DatastructureNode>) inputElement).toArray();
+        }
+
+        public void dispose() { }
+
+        public void inputChanged(Viewer viewer, Object oldInput, Object newInput)
+        {}
+
+    }
+
+    class DatastructureLabelProvider implements ILabelProvider
+    {
+
+        public Image getImage(Object element)
+        {
+            return null;
+        }
+
+        public String getText(Object element)
+        {
+            return ((ViewerNode) element).getTextLP();
+        }
+
+        public boolean isLabelProperty(Object element, String property)
+        {
+            return false;
+        }
+
+        public void addListener(ILabelProviderListener listener) {}
+
+        public void removeListener(ILabelProviderListener listener) {}
+        
+        public void dispose() {}
     }
 }

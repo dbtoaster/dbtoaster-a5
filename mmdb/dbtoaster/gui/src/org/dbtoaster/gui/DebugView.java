@@ -4,21 +4,26 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.lang.reflect.TypeVariable;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.StringTokenizer;
 
+import org.dbtoaster.gui.DatastructureViewer.DatastructureNode;
+import org.dbtoaster.gui.DatastructureViewer.DatastructureType;
 import org.dbtoaster.model.DBToasterWorkspace;
 import org.dbtoaster.model.Debugger;
 import org.dbtoaster.model.Query;
 import org.eclipse.jface.viewers.CellEditor;
 import org.eclipse.jface.viewers.ICellModifier;
-import org.eclipse.jface.viewers.ILabelProvider;
 import org.eclipse.jface.viewers.ILabelProviderListener;
 import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
-import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.TableViewer;
 import org.eclipse.jface.viewers.TextCellEditor;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -52,6 +57,8 @@ public class DebugView extends ViewPart
     int dqQueriesHash;
 
     TableViewer stepInputViewer;
+    TreeViewer dataStructViewer;
+
     DebugQueryPanel dqPanel;
     
     Query currentQuery;
@@ -59,7 +66,7 @@ public class DebugView extends ViewPart
 
     final static String[] properties = { "Relation", "Values" };
     LinkedList<StepInput> stepInputs;
-    LinkedList<DataStructureRange> dataStructures;
+    LinkedList<DatastructureNode> dataStructures;
 
     class DebugQueryPanel
     {
@@ -104,6 +111,81 @@ public class DebugView extends ViewPart
             }
         }
         
+        LinkedList<StepInput> getStepInputs()
+        {
+            LinkedList<StepInput> r = new LinkedList<StepInput>();
+            LinkedList<String> inputs = currentDebugger.getInputRelationNames();
+            
+            for (String rel : inputs)
+            {
+                Class<?> debugClass = currentDebugger.getStepDebugTupleType(rel);
+                Class<?> dataClass = currentDebugger.getStepDataTupleType(rel);
+                int streamId = currentDebugger.getStreamId(rel);
+
+                if ( !(debugClass == null || dataClass == null
+                        || streamId < 0) )
+                {
+                    StepInput n = new StepInput(rel, debugClass, dataClass, streamId);
+                    stepInputs.add(n);
+                }
+                else {
+                    String msg = "Failed to get step metadata for " +
+                        rel + " " + debugClass + " " + dataClass + " " + streamId;
+                    System.err.println(msg);
+                }
+            }
+
+            return r;
+        }
+
+        LinkedList<DatastructureNode> getDatastructures()
+        {
+            LinkedList<DatastructureNode> r = new LinkedList<DatastructureNode>();
+            LinkedList<String> dsNames = currentDebugger.getDBToasterMapNames();
+            
+            System.out.println("DQ Panel found " + dsNames.size() + " datastructures.");
+
+            DatastructureViewer dsv = new DatastructureViewer();
+            for (String ds : dsNames)
+            {
+                DatastructureType dsType = DatastructureType.VARIABLE;
+
+                Class<?> dsClass = currentDebugger.getDatastructureClassType(ds);
+                Class<?> dsKeyClass = currentDebugger.getDatastructureKeyClassType(ds);
+
+                if ( dsClass.isInterface() ) {
+                    if ( dsClass.getName() == Map.class.getName() )
+                        dsType = DatastructureType.MAP;
+                    
+                    else if ( dsClass.getName() == List.class.getName() )
+                        dsType = DatastructureType.LIST;
+
+                    else if ( dsClass.getName() == Set.class.getName() )
+                        dsType = DatastructureType.SET;
+                    
+                    else {
+                        String msg = "Unhandled collections interface: " +
+                            dsClass.getName();
+                        
+                        System.err.println(msg);
+                    }
+                }
+
+                System.out.println("Found datastructure " + ds + " " +
+                        dsClass.getName() + " " + dsType + " " + dsKeyClass);
+
+                // TODO: support variables.
+                if ( dsType != DatastructureType.VARIABLE )
+                {
+                    DatastructureNode dsNode =
+                        dsv.new DatastructureNode(ds, dsType, dsClass, dsKeyClass);
+                    r.add(dsNode);
+                }
+            }
+
+            return r;
+        }
+
         class DQSelectionListener implements SelectionListener
         {
             public void widgetSelected(SelectionEvent e)
@@ -124,43 +206,22 @@ public class DebugView extends ViewPart
                         // Load all step method inputs.
                         if ( currentDebugger != null )
                         {
-                            int numStepInputs = 0;
+                            System.out.println("Reloading step inputs.");
                             stepInputs.clear();
-                            
-                            LinkedList<String> inputs =
-                                currentDebugger.getInputRelationNames();
-                            
-                            for (String rel : inputs)
-                            {
-                                Class<?> debugClass =
-                                    currentDebugger.getStepDebugTupleType(rel);
-
-                                Class<?> dataClass =
-                                    currentDebugger.getStepDataTupleType(rel);
-
-                                int streamId = currentDebugger.getStreamId(rel);
-
-                                if ( !(debugClass == null || dataClass == null
-                                        || streamId < 0) )
-                                {
-                                    StepInput n = new StepInput(
-                                        rel, debugClass, dataClass, streamId);
-    
-                                    stepInputs.add(n);
-                                    ++numStepInputs;
-                                }
-                                else {
-                                    String msg = "Failed to get step metadata for " +
-                                        rel + " " + debugClass + " " + dataClass + " " + streamId;
-                                    System.out.println(msg);
-                                }
-                            }
+                            stepInputs.addAll(getStepInputs());
                             
                             // Refresh the step input viewer
-                            System.out.println("Refreshing input viewer with "
-                                    + numStepInputs + " step inputs");
+                            System.out.println("Refreshing input viewer");
                             stepInputViewer.refresh();
+
+                            System.out.println("Reloading datastructures.");
+                            dataStructures.clear();
+                            dataStructures.addAll(getDatastructures());
                             
+                            // Refresh the datastructure viewer
+                            System.out.println("Refreshing datastructure viewer");
+                            dataStructViewer.refresh();
+
                             clear = false;
                         }
                     }
@@ -266,11 +327,19 @@ public class DebugView extends ViewPart
         decData.heightHint = 40;
         debugEventComp.setLayoutData(decData);
 
+        /*
         // Break button
         Button breakButton = new Button(debugEventComp, SWT.TOGGLE);
         GridData bbData = new GridData(SWT.CENTER, SWT.CENTER, false, false);
         breakButton.setText("x Break");
         breakButton.setLayoutData(bbData);
+         */
+        
+        // Trace label
+        Label traceLabel = new Label(debugEventComp, SWT.NONE);
+        GridData trlblLD = new GridData(SWT.CENTER, SWT.CENTER, true, false);
+        traceLabel.setText("Trace: ");
+        traceLabel.setLayoutData(trlblLD);
 
         // Step button
         Button stepButton = new Button(debugEventComp, SWT.PUSH);
@@ -285,12 +354,12 @@ public class DebugView extends ViewPart
         stepToButton.setLayoutData(stbData);
 
         // Data structure vis
-        TreeViewer dataStructViewer = new TreeViewer(top, SWT.NONE);
-        dataStructViewer.setContentProvider(new DataStructureContentProvider());
-        dataStructViewer.setLabelProvider(new DataStructureLabelProvider());
+        dataStructViewer = new TreeViewer(top, SWT.NONE);
+        DatastructureViewer dsv = new DatastructureViewer();
+        dataStructViewer.setContentProvider(dsv.new DatastructureContentProvider());
+        dataStructViewer.setLabelProvider(dsv.new DatastructureLabelProvider());
 
-        dataStructures = new LinkedList<DataStructureRange>();
-        buildVwapDataStructures();
+        dataStructures = new LinkedList<DatastructureNode>();
         dataStructViewer.setInput(dataStructures);
 
         Tree dsvTree = dataStructViewer.getTree();
@@ -326,6 +395,7 @@ public class DebugView extends ViewPart
 
     public void setFocus() {}
 
+    /*
     void buildVwapDataStructures()
     {
         try
@@ -371,6 +441,7 @@ public class DebugView extends ViewPart
         }
 
     }
+    */
 
     // Helper classes
     
@@ -713,6 +784,7 @@ public class DebugView extends ViewPart
 
     // Map visualization.
     
+    /*
     class DataStructureRangeException extends Exception
     {
         private static final long serialVersionUID = -8676531280324140041L;
@@ -1015,4 +1087,6 @@ public class DebugView extends ViewPart
         }
 
     }
+
+    */
 }

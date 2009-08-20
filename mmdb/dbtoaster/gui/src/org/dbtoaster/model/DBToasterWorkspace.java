@@ -6,7 +6,6 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.dbtoaster.model.Compiler.CompileMode;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
@@ -250,7 +249,8 @@ public class DBToasterWorkspace
     public String getUniqueQueryName(String queryName)
     {
         String r = null;
-        if (dbToasterProject.exists(new Path(queryName))) r = generateQueryName();
+        if ( dbToasterProject.exists(new Path(queryName)) )
+            r = generateQueryName();
         else r = queryName;
         return r;
     }
@@ -330,7 +330,7 @@ public class DBToasterWorkspace
     }
 
     public String compileQuery(Query q, String querySQL, String outputFile,
-            CompileMode compilerMode)
+            int compileMode)
     {
         IFolder queryFolder = q.getQueryFolder();
         IPath qfLoc = queryFolder.getLocation();
@@ -357,7 +357,7 @@ public class DBToasterWorkspace
         
         String status = dbToaster.toastQuery(querySQL, absTmlPath.toOSString(),
                 absSConfigPath.toOSString(), absOutputPath.toOSString(),
-                compilerMode, compilerWorkingDir, compilerLogFile);
+                compileMode, compilerWorkingDir, compilerLogFile);
 
         if (status == null)
         {
@@ -435,14 +435,19 @@ public class DBToasterWorkspace
                 
                 IFile debuggerJarFile = queryFolder.getFile(DEBUGGER_CLIENT_JAR);
 
-                switch(compilerMode)
+                if ( (compileMode & Compiler.ENGINE) == Compiler.ENGINE )
                 {
-                case HANDLERS:
-                    // No further files to load.
-                    break;
+                    // Set up query executor
+                    if ( engineBinFile.exists() )
+                        q.setExecutor(enginePath.toOSString());
+                    else {
+                        status = "Could not find engine binary " +
+                            engineBinFile.getLocation().toOSString();
+                    }
+                }
                 
-                case DEBUGGER:
-                    // Set up query debugger
+                if ( (compileMode & Compiler.DEBUGGER) == Compiler.DEBUGGER )
+                {
                     if ( debuggerBinFile.exists() )
                     {
                         // Load Java client for debugging and profiling
@@ -456,18 +461,6 @@ public class DBToasterWorkspace
                         status = "Could not find debugger binary " +
                             debuggerBinFile.getLocation().toOSString();
                     }
-                    break;
-
-                case ENGINE:
-                default:
-                    // Set up query executor
-                    if ( engineBinFile.exists() )
-                        q.setExecutor(enginePath.toOSString());
-                    else {
-                        status = "Could not find engine binary " +
-                            engineBinFile.getLocation().toOSString();
-                    }
-                    break;    
                 }
                 
                 if ( status == null )
@@ -484,10 +477,12 @@ public class DBToasterWorkspace
     }
 
     public String compileQuery(String queryName, String outputFile,
-            CompileMode compilerMode)
+            int compilerMode)
     {
-        if (!wsQueries.containsKey(queryName)) { return ("Invalid query name "
-                + queryName + " (could not find query in working set)."); }
+        if (!wsQueries.containsKey(queryName)) {
+            return ("Invalid query name "
+                + queryName + " (could not find query in working set).");
+        }
 
         Query q = wsQueries.get(queryName);
         return compileQuery(q, q.getQuery(), outputFile, compilerMode);

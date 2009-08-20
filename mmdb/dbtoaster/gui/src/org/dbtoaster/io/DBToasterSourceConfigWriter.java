@@ -45,6 +45,8 @@ public class DBToasterSourceConfigWriter
             // TODO: more graceful error handling, e.g. throw an exception.
             if ( !ds.hasRelation(relName) ) return null;
                 
+            String streamType = ds.getStreamType(relName);
+
             String sourceType = ds.getSourceType(relName);
             String sourceInstance = ds.getSourceInstance(relName);
 
@@ -65,6 +67,7 @@ public class DBToasterSourceConfigWriter
             }
             
             configLines.add("<relation name=\"" + relName + "\">");
+            configLines.add("<stream type=\"" + streamType + "\"/>");
             configLines.add("<source type=\"" + sourceType +
                 "\" instance =\"" + sourceInstance + "\">");
             configLines.addAll(indent(argLines));

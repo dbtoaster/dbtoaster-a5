@@ -14,6 +14,7 @@ import org.dbtoaster.model.DatasetManager.Dataset;
 import org.eclipse.datatools.modelbase.sql.datatypes.DataType;
 import org.eclipse.datatools.modelbase.sql.datatypes.PredefinedDataType;
 import org.eclipse.datatools.modelbase.sql.datatypes.PrimitiveType;
+import org.eclipse.datatools.modelbase.sql.query.GroupingExpression;
 import org.eclipse.datatools.modelbase.sql.query.GroupingSpecification;
 import org.eclipse.datatools.modelbase.sql.query.OrderBySpecification;
 import org.eclipse.datatools.modelbase.sql.query.Predicate;
@@ -77,41 +78,54 @@ import org.eclipse.emf.common.util.EList;
 public class DBToasterTMLWriter
 {
     static final String declarations = "<declarations>\n"
-            + "<attributeDecl name=\"attribute_identifier\" type=\"String\"/>\n"
-            + "<attributeDecl name=\"variable_identifier\"  type=\"String\"/>\n"
-            + "<attributeDecl name=\"function_identifier\"  type=\"String\"/>\n"
-            + "<attributeDecl name=\"type_identifier\"      type=\"String\"/>\n"
-            + "<attributeDecl name=\"field_identifier\"     type=\"String\"/>\n"
-            + "<attributeDecl name=\"relation_identifier\"  type=\"String\"/>\n"
-            + "<attributeDecl name=\"state_identifier\"     type=\"String\"/>\n"
-            + "<attributeDecl name=\"delta\"                type=\"String\"/>\n"
-            + "<attributeDecl name=\"aggregate\"            type=\"String\"/>\n"
-            + "<attributeDecl name=\"oplus\"                type=\"String\"/>\n"
-            + "<attributeDecl name=\"poplus\"               type=\"String\"/>\n"
-            + "<attributeDecl name=\"eterm-type\"           type=\"String\"/>\n"
-            + "<attributeDecl name=\"eterm-val\"            type=\"String\"/>\n"
-            + "<attributeDecl name=\"meterm-type\"          type=\"String\"/>\n"
-            + "<attributeDecl name=\"meterm-val\"           type=\"String\"/>\n"
-            + "<attributeDecl name=\"expression\"           type=\"String\"/>\n"
-            + "<attributeDecl name=\"bterm\"                type=\"String\"/>\n"
-            + "<attributeDecl name=\"boolexpression\"       type=\"String\"/>\n"
-            + "<attributeDecl name=\"mapexpression\"        type=\"String\"/>\n"
-            + "<attributeDecl name=\"plan\"                 type=\"String\"/>\n"
-            + "</declarations>\n";
+        + "<attributeDecl name=\"attribute_identifier\" type=\"String\"/>\n"
+        + "<attributeDecl name=\"variable_identifier\"  type=\"String\"/>\n"
+        + "<attributeDecl name=\"function_identifier\"  type=\"String\"/>\n"
+        + "<attributeDecl name=\"type_identifier\"      type=\"String\"/>\n"
+        + "<attributeDecl name=\"field_identifier\"     type=\"String\"/>\n"
+        + "<attributeDecl name=\"relation_identifier\"  type=\"String\"/>\n"
+        + "<attributeDecl name=\"state_identifier\"     type=\"String\"/>\n"
+        + "<attributeDecl name=\"delta\"                type=\"String\"/>\n"
+        + "<attributeDecl name=\"aggregate\"            type=\"String\"/>\n"
+        + "<attributeDecl name=\"oplus\"                type=\"String\"/>\n"
+        + "<attributeDecl name=\"poplus\"               type=\"String\"/>\n"
+        + "<attributeDecl name=\"eterm-type\"           type=\"String\"/>\n"
+        + "<attributeDecl name=\"eterm-val\"            type=\"String\"/>\n"
+        + "<attributeDecl name=\"meterm-type\"          type=\"String\"/>\n"
+        + "<attributeDecl name=\"meterm-val\"           type=\"String\"/>\n"
+        + "<attributeDecl name=\"expression\"           type=\"String\"/>\n"
+        + "<attributeDecl name=\"bterm\"                type=\"String\"/>\n"
+        + "<attributeDecl name=\"boolexpression\"       type=\"String\"/>\n"
+        + "<attributeDecl name=\"mapexpression\"        type=\"String\"/>\n"
+        + "<attributeDecl name=\"plan\"                 type=\"String\"/>\n"
+        + "</declarations>\n";
 
     public class CreateTMLException extends Exception
     {
         private static final long serialVersionUID = -7691008887549313523L;
 
-        CreateTMLException() {}
-        CreateTMLException(String message) { super(message); }
+        CreateTMLException()
+        {
+        }
+
+        CreateTMLException(String message)
+        {
+            super(message);
+        }
     }
 
     public class DBToasterUnhandledException extends Exception
     {
         private static final long serialVersionUID = -7673484728787571132L;
-        public DBToasterUnhandledException() {}
-        public DBToasterUnhandledException(String msg) { super(msg); }
+
+        public DBToasterUnhandledException()
+        {
+        }
+
+        public DBToasterUnhandledException(String msg)
+        {
+            super(msg);
+        }
     };
 
     // Datasets defining base relations for use in queries.
@@ -119,6 +133,7 @@ public class DBToasterTMLWriter
     LinkedHashMap<String, Integer> relationCounters;
     LinkedHashMap<String, String> columnSuffixesForAliases;
     LinkedHashMap<String, String> lastRelationsUsed;
+    LinkedHashMap<String, Integer> groupByRelationSuffixes;
 
     HashSet<String> aggregateFunctions;
 
@@ -131,7 +146,7 @@ public class DBToasterTMLWriter
     public DBToasterTMLWriter(DatasetManager mgr)
     {
         datasetMgr = mgr;
-        
+
         relationCounters = new LinkedHashMap<String, Integer>();
         columnSuffixesForAliases = new LinkedHashMap<String, String>();
         lastRelationsUsed = new LinkedHashMap<String, String>();
@@ -156,21 +171,19 @@ public class DBToasterTMLWriter
 
         // Define keywords
         // Note this is a partial list for user input alone.
-        String[] exprNodes =
-            { "eterm", "uminus", "sum", "minus", "product", "divide" };
+        String[] exprNodes = { "eterm", "uminus", "sum", "minus", "product",
+            "divide" };
 
-        String[] btermNodes =
-            { "eq", "ne", "lt", "le", "gt", "ge",
-                "meq", "mneq", "mlt", "mle", "mgt", "mge" };
+        String[] btermNodes = { "eq", "ne", "lt", "le", "gt", "ge", "meq",
+            "mneq", "mlt", "mle", "mgt", "mge" };
 
         String[] boolExprNodes = { "bterm", "not", "and", "or" };
 
-        String[] mapExprNodes =
-            { "meterm", "sum", "minus", "product",
-                "min", "max", "mapaggregate" };
+        String[] mapExprNodes = { "meterm", "sum", "minus", "product", "min",
+            "max", "mapaggregate" };
 
-        String[] planNodes =
-            { "relation", "select", "project", "union", "cross" };
+        String[] planNodes = { "relation", "select", "project", "union",
+            "cross" };
 
         for (String s : exprNodes)
             exprNodeTypes.add(s);
@@ -190,9 +203,9 @@ public class DBToasterTMLWriter
         columnSuffixesForAliases.clear();
         lastRelationsUsed.clear();
     }
-    
+
     private String getDBToasterType(PrimitiveType pType)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         String r = "";
         int vType = pType.getValue();
@@ -202,8 +215,8 @@ public class DBToasterTMLWriter
             r = "int";
         }
         else if (vType == PrimitiveType.FLOAT
-                || vType == PrimitiveType.DOUBLE_PRECISION
-                || vType == PrimitiveType.DECIMAL )
+            || vType == PrimitiveType.DOUBLE_PRECISION
+            || vType == PrimitiveType.DECIMAL)
         {
             r = "float";
         }
@@ -212,14 +225,14 @@ public class DBToasterTMLWriter
             r = "long";
         }
         else if (vType == PrimitiveType.CHARACTER
-                || vType == PrimitiveType.CHARACTER_VARYING)
+            || vType == PrimitiveType.CHARACTER_VARYING)
         {
             r = "string";
         }
         else
         {
             throw new CreateTMLException("Unsupported type: "
-                    + PrimitiveType.get(vType).getName());
+                + PrimitiveType.get(vType).getName());
         }
 
         return r;
@@ -232,22 +245,30 @@ public class DBToasterTMLWriter
 
     ///////////////////////////////
     //
+    // Basic AST helpers.
+    private boolean isColumn(QueryValueExpression qve)
+    {
+        return (qve instanceof ValueExpressionColumn);
+    }
+
+    ///////////////////////////////
+    //
     // getSelectQueries overloads
     // -- returns flattened list of any selection queries in
     // any SQL statement (i.e. traverses to leaves to include subselects)
 
     // TODO: traverse group-bys and having clauses.
     private LinkedList<QuerySelect> getSelectQueries(QuerySelect select)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<QuerySelect> r = new LinkedList<QuerySelect>();
         r.add(select);
 
         // Look in from clauses
-        EList fromList = select.getFromClause();
+        EList<?> fromList = select.getFromClause();
         if (fromList != null && !fromList.isEmpty())
         {
-            Iterator fromIt = fromList.iterator();
+            Iterator<?> fromIt = fromList.iterator();
             for (; fromIt.hasNext();)
             {
                 TableReference tr = (TableReference) fromIt.next();
@@ -259,7 +280,8 @@ public class DBToasterTMLWriter
         if (select.isSetHavingClause())
         {
             QuerySearchCondition wc = select.getWhereClause();
-            if (wc != null) r.addAll(getSelectQueries(wc));
+            if (wc != null)
+                r.addAll(getSelectQueries(wc));
         }
 
         // TODO: group-bys, having clauses.
@@ -267,9 +289,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<QuerySelect> getSelectQueries(TableReference tr)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<QuerySelect> r = new LinkedList<QuerySelect>();
 
@@ -277,7 +298,7 @@ public class DBToasterTMLWriter
         {
             TableJoined join = (TableJoined) tr;
 
-            //TableJoinedOperator joinOp = join.getJoinOperator();
+            // TableJoinedOperator joinOp = join.getJoinOperator();
             QuerySearchCondition joinCond = join.getJoinCondition();
             TableReference leftRef = join.getTableRefLeft();
             TableReference rightRef = join.getTableRefRight();
@@ -325,7 +346,7 @@ public class DBToasterTMLWriter
         else
         {
             String msg = "Unhandled TableReference type: "
-                    + tr.getClass().getName();
+                + tr.getClass().getName();
 
             throw new DBToasterUnhandledException(msg);
         }
@@ -336,7 +357,7 @@ public class DBToasterTMLWriter
     // TODO: traverse order-bys in SelectStatements
 
     private LinkedList<QuerySelect> getSelectQueries(QueryValueExpression qve)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<QuerySelect> r = new LinkedList<QuerySelect>();
 
@@ -357,7 +378,7 @@ public class DBToasterTMLWriter
             // TODO: order-bys
 
             QuerySelect select = (QuerySelect) scalarSelect.getQueryExpr()
-                    .getQuery();
+                .getQuery();
 
             // Continue traversing to get all selects in subqueries.
             // Assume getSelectQueries(QuerySelect) adds the argument.
@@ -381,61 +402,61 @@ public class DBToasterTMLWriter
         else if (qve instanceof ValueExpressionNullValue)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: null values in getSelectQueries.");
+                "Unsupported: null values in getSelectQueries.");
         }
 
         else if (qve instanceof ValueExpressionRow)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: rows in getSelectQueries.");
+                "Unsupported: rows in getSelectQueries.");
         }
 
         // Case clauses
         else if (qve instanceof ValueExpressionCaseSearch)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
         else if (qve instanceof ValueExpressionCaseSimple)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
         else if (qve instanceof ValueExpressionCase)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
 
         // Cast clauses
         else if (qve instanceof ValueExpressionCast)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: casts in getSelectQueries.");
+                "Unsupported: casts in getSelectQueries.");
         }
 
         else if (qve instanceof ValueExpressionVariable)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionVariable.");
+                "Unsupported: ValueExpressionVariable.");
         }
 
         // Unclear what these are
         else if (qve instanceof ValueExpressionDefaultValue)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionDefaultValue.");
+                "Unsupported: ValueExpressionDefaultValue.");
         }
 
         else if (qve instanceof ValueExpressionNested)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionNested.");
+                "Unsupported: ValueExpressionNested.");
         }
         else
         {
             String msg = "Unhandled QueryValueExpression type: "
-                    + qve.getClass().getName();
+                + qve.getClass().getName();
 
             throw new DBToasterUnhandledException(msg);
         }
@@ -443,9 +464,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<QuerySelect> getSelectQueries(QuerySearchCondition qsc)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         System.out.println("getSelectQueries QSC: " + qsc.toString());
 
@@ -466,8 +486,8 @@ public class DBToasterTMLWriter
             {
 
                 Method getSelectQueriesMethod = this.getClass()
-                        .getDeclaredMethod("getSelectQueries",
-                                getDispatchClass(qsc));
+                    .getDeclaredMethod("getSelectQueries",
+                        getDispatchClass(qsc));
                 r = (LinkedList<QuerySelect>)
                     getSelectQueriesMethod.invoke(this, qsc);
 
@@ -486,7 +506,7 @@ public class DBToasterTMLWriter
         else
         {
             String msg = "Unhandled QuerySearchCondition type: "
-                    + qsc.getClass().getName();
+                + qsc.getClass().getName();
 
             throw new DBToasterUnhandledException(msg);
         }
@@ -494,9 +514,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<QuerySelect> getSelectQueries(SearchConditionCombined scc)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<QuerySelect> r = new LinkedList<QuerySelect>();
         r.addAll(getSelectQueries(scc.getLeftCondition()));
@@ -504,16 +523,14 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<QuerySelect> getSelectQueries(SearchConditionNested scn)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         return getSelectQueries(scn.getNestedCondition());
     }
 
-
     private LinkedList<QuerySelect> getSelectQueries(PredicateBasic p)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<QuerySelect> r = new LinkedList<QuerySelect>();
 
@@ -533,66 +550,55 @@ public class DBToasterTMLWriter
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateExists p)
     {
         return null;
     }
-
 
     private LinkedList<String> getSelectQueries(PredicateIn p)
     {
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateInValueList p)
     {
         return null;
     }
-
 
     private LinkedList<String> getSelectQueries(PredicateInValueRowSelect p)
     {
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateInValueSelect p)
     {
         return null;
     }
-
 
     private LinkedList<String> getSelectQueries(PredicateIsNull p)
     {
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateLike p)
     {
         return null;
     }
-
 
     private LinkedList<String> getSelectQueries(PredicateQuantified p)
     {
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateQuantifiedRowSelect p)
     {
         return null;
     }
 
-
     private LinkedList<String> getSelectQueries(PredicateQuantifiedType p)
     {
         return null;
     }
-
 
     private LinkedList<String> getSelectQueries(PredicateQuantifiedValueSelect p)
     {
@@ -608,25 +614,28 @@ public class DBToasterTMLWriter
     // check select-lists and do not need to traverse into subqueries.
 
     private LinkedList<Function> getAggregates(LinkedList<QuerySelect> selects)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<Function> r = new LinkedList<Function>();
 
         for (QuerySelect qs : selects)
         {
-            Iterator selColIt = qs.getSelectClause().iterator();
+            Iterator<?> selColIt = qs.getSelectClause().iterator();
             for (; selColIt.hasNext();)
             {
                 QueryResultSpecification qsr = (QueryResultSpecification) selColIt
-                        .next();
+                    .next();
 
                 // Cannot support TABLE.*, this has no aggregates.
-                if (qsr instanceof ResultTableAllColumns) { throw new DBToasterUnhandledException(
-                        "SELECT Table.* queries unsupported"); }
+                if (qsr instanceof ResultTableAllColumns)
+                {
+                    throw new DBToasterUnhandledException(
+                        "SELECT Table.* queries unsupported");
+                }
 
                 ResultColumn col = (ResultColumn) qsr;
                 QueryValueExpression colValExpr = (QueryValueExpression) col
-                        .getValueExpr();
+                    .getValueExpr();
 
                 r.addAll(getAggregateFunctions(colValExpr));
             }
@@ -635,9 +644,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     LinkedList<Function> getAggregateFunctions(QueryValueExpression qve)
-            throws DBToasterUnhandledException
+        throws DBToasterUnhandledException
     {
         LinkedList<Function> r = new LinkedList<Function>();
 
@@ -652,7 +660,7 @@ public class DBToasterTMLWriter
             {
                 String msg = fnName == null ? f.toString() : fnName;
                 throw new DBToasterUnhandledException("Unsupported function: "
-                        + msg);
+                    + msg);
             }
             else
             {
@@ -686,61 +694,61 @@ public class DBToasterTMLWriter
         else if (qve instanceof ValueExpressionNullValue)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: null values in getSelectQueries.");
+                "Unsupported: null values in getSelectQueries.");
         }
 
         else if (qve instanceof ValueExpressionRow)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: rows in getSelectQueries.");
+                "Unsupported: rows in getSelectQueries.");
         }
 
         // Case clauses
         else if (qve instanceof ValueExpressionCaseSearch)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
         else if (qve instanceof ValueExpressionCaseSimple)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
         else if (qve instanceof ValueExpressionCase)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: case statements.");
+                "Unsupported: case statements.");
         }
 
         // Cast clauses
         else if (qve instanceof ValueExpressionCast)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: casts in getSelectQueries.");
+                "Unsupported: casts in getSelectQueries.");
         }
 
         else if (qve instanceof ValueExpressionVariable)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionVariable.");
+                "Unsupported: ValueExpressionVariable.");
         }
 
         // Unclear what these are
         else if (qve instanceof ValueExpressionDefaultValue)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionDefaultValue.");
+                "Unsupported: ValueExpressionDefaultValue.");
         }
 
         else if (qve instanceof ValueExpressionNested)
         {
             throw new DBToasterUnhandledException(
-                    "Unsupported: ValueExpressionNested.");
+                "Unsupported: ValueExpressionNested.");
         }
         else
         {
             String msg = "Unhandled QueryValueExpression type: "
-                    + qve.getClass().getName();
+                + qve.getClass().getName();
 
             throw new DBToasterUnhandledException(msg);
         }
@@ -754,7 +762,6 @@ public class DBToasterTMLWriter
 
     // Basic DBToaster TreeML constructors
 
-
     private LinkedList<String> indent(LinkedList<String> sl)
     {
         LinkedList<String> r = new LinkedList<String>();
@@ -762,7 +769,6 @@ public class DBToasterTMLWriter
             r.add("    " + s);
         return r;
     }
-
 
     private LinkedList<String> makeBranch(LinkedList<String> subTree)
     {
@@ -772,7 +778,6 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<String> makeLeaf(LinkedList<String> subTree)
     {
         LinkedList<String> r = indent(subTree);
@@ -781,12 +786,10 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private String createIdentifier(String name, String value)
     {
         return "<attribute name=\"" + name + "\" value=\"" + value + "\"/>";
     }
-
 
     private String createAttributeIdentifier(String relation, String field)
     {
@@ -794,40 +797,34 @@ public class DBToasterTMLWriter
         return createIdentifier("attribute_identifier", attrIdVal);
     }
 
-
     private String createAttributeIdentifier(String field)
     {
         String attrIdVal = "unqualified," + field;
         return createIdentifier("attribute_identifier", attrIdVal);
     }
 
-
     private String createVariableIdentifier(String var)
     {
         return createIdentifier("variable_identifier", var);
     }
-
 
     private String createFieldIdentifier(String field)
     {
         return createIdentifier("field_identifier", field);
     }
 
-
     private String createTypeIdentifier(String type)
     {
         return createIdentifier("type_identifier", type);
     }
-
 
     private String createRelationIdentifier(String relation)
     {
         return createIdentifier("relation_identifier", relation);
     }
 
-
     private LinkedList<String> createFieldList(
-            LinkedHashMap<String, String> idsAndTypes)
+        LinkedHashMap<String, String> idsAndTypes)
     {
         LinkedList<String> r = new LinkedList<String>();
         for (Map.Entry<String, String> e : idsAndTypes.entrySet())
@@ -838,58 +835,57 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private String createAggregateFunction(String function)
     {
         return "<attribute name=\"aggregate\" value=\"" + function + "\"/>";
     }
-
 
     private String createOplus(String function)
     {
         return "<attribute name=\"oplus\" value=\"" + function + "\"/>";
     }
 
-
     private String createPoplus(String function)
     {
         return "<attribute name=\"poplus\" value=\"" + function + "\"/>";
     }
 
-
     private LinkedList<String> createETerm(String type, String val)
     {
         LinkedList<String> r = new LinkedList<String>();
         r.add("<attribute name=\"eterm-type\" value=\"" + type + "\"/>");
-        if (type == "attr") r.add(createAttributeIdentifier(val));
-        else if (type == "var") r.add(createVariableIdentifier(val));
-        else r.add("<attribute name=\"eterm-val\" value=\"" + val + "\"/>");
+        if (type == "attr")
+            r.add(createAttributeIdentifier(val));
+        else if (type == "var")
+            r.add(createVariableIdentifier(val));
+        else
+            r.add("<attribute name=\"eterm-val\" value=\"" + val + "\"/>");
 
         return makeLeaf(r);
     }
-
 
     private LinkedList<String> createMETerm(String type, String val)
     {
         LinkedList<String> r = new LinkedList<String>();
         r.add("<attribute name=\"meterm-type\" value=\"" + type + "\"/>");
-        if (type == "attr") r.add(createAttributeIdentifier(val));
-        else if (type == "var") r.add(createVariableIdentifier(val));
-        else r.add("<attribute name=\"meterm-val\" value=\"" + val + "\"/>");
+        if (type == "attr")
+            r.add(createAttributeIdentifier(val));
+        else if (type == "var")
+            r.add(createVariableIdentifier(val));
+        else
+            r.add("<attribute name=\"meterm-val\" value=\"" + val + "\"/>");
 
         return makeLeaf(r);
     }
 
-
     private String createExpressionNode(String nodeType)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         if (!exprNodeTypes.contains(nodeType))
             throw new CreateTMLException("Invalid expression node: " + nodeType);
 
         return "<attribute name=\"expression\" value=\"" + nodeType + "\"/>";
     }
-
 
     private String createBTermNode(String nodeType) throws CreateTMLException
     {
@@ -899,29 +895,26 @@ public class DBToasterTMLWriter
         return "<attribute name=\"bterm\" value=\"" + nodeType + "\"/>";
     }
 
-
     private String createBoolExprNode(String nodeType)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         if (!boolExprNodeTypes.contains(nodeType))
             throw new CreateTMLException("Invalid boolexpression node: "
-                    + nodeType);
+                + nodeType);
 
         return "<attribute name=\"boolexpression\" value=\"" + nodeType
-                + "\"/>";
+            + "\"/>";
     }
 
-
     private String createMapExpressionNode(String nodeType)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         if (!mapExprNodeTypes.contains(nodeType))
             throw new CreateTMLException("Invalid mapexpression node: "
-                    + nodeType);
+                + nodeType);
 
         return "<attribute name=\"mapexpression\" value=\"" + nodeType + "\"/>";
     }
-
 
     private String createPlanNode(String nodeType) throws CreateTMLException
     {
@@ -931,9 +924,8 @@ public class DBToasterTMLWriter
         return "<attribute name=\"plan\" value=\"" + nodeType + "\"/>";
     }
 
-
     public String createSelectStatementTreeML(QuerySelectStatement selectStmt)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         // Reset parsing
         reset();
@@ -942,7 +934,8 @@ public class DBToasterTMLWriter
 
         QuerySelect select = (QuerySelect) selectStmt.getQueryExpr().getQuery();
 
-        if (!selectStmt.getOrderByClause().isEmpty()) {
+        if (!selectStmt.getOrderByClause().isEmpty())
+        {
             throw new CreateTMLException("ORDER BY unsupported.");
         }
 
@@ -957,43 +950,52 @@ public class DBToasterTMLWriter
         return header + declarations + r + footer;
     }
 
-
     public LinkedList<String> createSelectTreeML(QuerySelect select)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         System.out.println("Select: " + select);
 
         // Issue warnings
         // -- for now INTO clauses simply yield warnings.
-        if (!select.getIntoClause().isEmpty()) { throw new CreateTMLException(
-                "SELECT INTO unsupported."); }
-
-        // TODO: how do we handle group-bys?
-        if (!select.getGroupByClause().isEmpty()) { throw new CreateTMLException(
-                "GROUP BY unsupported."); }
+        if (!select.getIntoClause().isEmpty())
+        {
+            throw new CreateTMLException("SELECT INTO unsupported.");
+        }
 
         // TODO: handle having clauses, i.e. predicates on aggregates
         // -- this could be done with nested aggregates
-        if (select.getHavingClause() != null && select.isSetHavingClause()) { throw new CreateTMLException(
-                "HAVING unsupported."); }
+        if (select.getHavingClause() != null && select.isSetHavingClause())
+        {
+            throw new CreateTMLException("HAVING unsupported.");
+        }
 
         // Generate TML.
         // -- generate for relational stuff first, e.g. from clause
         // and where clause, before generating for select-list
         LinkedList<String> fromTML = createFromClauseTreeML(select
-                .getFromClause());
+            .getFromClause());
 
         System.out.println("Generating whereTML: " + select.isSetWhereClause()
-                + " (null: " + (select.getWhereClause() == null) + ")");
+            + " (null: " + (select.getWhereClause() == null) + ")");
 
-        LinkedList<String> whereTML = ((select.getWhereClause() != null && select
-                .isSetWhereClause()) ? createWhereClauseTreeML(select
-                .getWhereClause(), fromTML) : fromTML);
+        LinkedList<String> whereTML = ((select.getWhereClause() != null
+            && select.isSetWhereClause()) ?
+                createWhereClauseTreeML(select.getWhereClause(), fromTML) : fromTML);
+
+        System.out.println("Generating groupByTML.");
+        LinkedList<String> groupByFields = null;
+        LinkedList<String> groupByTML = null;
+        if (!select.getGroupByClause().isEmpty()) {
+            groupByFields = getGroupByFields(select.getGroupByClause());
+            groupByTML = createGroupByTreeML(select.getGroupByClause(), whereTML);
+        }
+        else
+            groupByTML = whereTML;
 
         System.out.println("Generating selectListTML.");
 
-        LinkedList<String> aggregateTML = createSelectListTreeML(select
-                .getSelectClause(), whereTML);
+        LinkedList<String> aggregateTML = createSelectListTreeML(
+            select.getSelectClause(), groupByTML, groupByFields);
 
         LinkedList<String> r = aggregateTML;
         return r;
@@ -1003,45 +1005,137 @@ public class DBToasterTMLWriter
     // DBToaster currently only supports aggregate queries.
     // Make sure we have an aggregation function.
 
-    private LinkedList<String> createSelectListTreeML(EList selectList,
-            LinkedList<String> relationalTML) throws CreateTMLException
+    private LinkedList<String> createSelectListTreeML(EList<?> selectList,
+            LinkedList<String> relationalTML, LinkedList<String> groupByFields)
+        throws CreateTMLException
     {
         System.out.println("Select list size: " + selectList.size());
 
         LinkedList<String> r = new LinkedList<String>();
 
-        for (Iterator selIt = selectList.iterator(); selIt.hasNext();)
+        for (Iterator<?> selIt = selectList.iterator(); selIt.hasNext();)
         {
-            QueryResultSpecification nextResult = (QueryResultSpecification) selIt
-                    .next();
+            QueryResultSpecification nextResult =
+                (QueryResultSpecification) selIt.next();
 
             // Cannot support TABLE.*, this has no aggregates.
-            if (nextResult instanceof ResultTableAllColumns) { throw new CreateTMLException(
-                    "SELECT Table.* queries unsupported"); }
+            if (nextResult instanceof ResultTableAllColumns)
+            {
+                throw new CreateTMLException(
+                    "SELECT Table.* queries unsupported");
+            }
 
             System.out.println("QSR: " + nextResult);
 
             ResultColumn col = (ResultColumn) nextResult;
-            QueryValueExpression colValExpr = (QueryValueExpression) col
-                    .getValueExpr();
+            QueryValueExpression colValExpr =
+                (QueryValueExpression) col.getValueExpr();
 
-            // TODO: how do we handle multiple columns, e.g. group-by columns?
+            // Check if column is a group-by column, and skip.
+            if ( isColumn(colValExpr) )
+            {
+                LinkedList<String> relAndColName = getGroupByColumnName(colValExpr);
+                
+                if ( relAndColName == null || relAndColName.size() != 2 ) {
+                    String msg = "Invalid group-by column: " + colValExpr;
+                    throw new CreateTMLException(msg);
+                }
+                
+                String colName = relAndColName.get(1);
+                if ( groupByFields.contains(colName) )
+                    continue;
+                else
+                {
+                    String msg = "Non-group by column found: " + colName;
+                    throw new CreateTMLException(msg);
+                }
+            }
+
             // Start off as a map expression
-            r.addAll(createQueryValueExpressionTreeML(colValExpr,
-                    relationalTML, true));
+            r.addAll(createQueryValueExpressionTreeML(
+                colValExpr, relationalTML, true));
         }
 
         return r;
     }
 
+    private LinkedList<String> getGroupByColumnName(QueryValueExpression qve)
+        throws CreateTMLException
+    {
+        String relName = null;
+        String columnName = null;
+
+        System.out.println("Found group-by QVE: " + qve);
+
+        if (qve instanceof ValueExpressionColumn)
+        {
+            ValueExpressionColumn column = (ValueExpressionColumn) qve;
+            columnName = column.getName().toLowerCase();
+
+            // Check column exists in base relation
+            if (column.getTableInDatabase() != null)
+                relName = column.getTableInDatabase().getName().toLowerCase();
+            else if (column.getTableExpr() != null)
+                relName = column.getTableExpr().getName().toLowerCase();
+            else
+            {
+                String msg = "Unable to find binding relation for column "
+                    + column;
+                throw new CreateTMLException(msg);
+            }
+
+            String dsName = datasetMgr.getRelationDataset(relName);
+            LinkedHashMap<String, String> relFields = null;
+            if (dsName != null
+                && (relFields = datasetMgr.getRelationFields(relName)) != null)
+            {
+                if (!(relFields.containsKey(column.getName()) || relFields
+                    .containsKey(columnName)))
+                {
+                    String msg = "Unable to find attribute " + column.getName()
+                        + " in relation " + relName;
+                    throw new CreateTMLException(msg);
+                }
+            }
+            else
+            {
+                throw new CreateTMLException("Unable to find binding relation "
+                    + relName);
+            }
+            
+            // Get aliased column name.
+            if (!(column.getTableExpr() == null ||
+                    column.getTableExpr().getTableCorrelation() == null))
+            {
+                TableCorrelation corr = column.getTableExpr()
+                    .getTableCorrelation();
+                String relAlias = corr.getName().toLowerCase();
+                if (columnSuffixesForAliases.containsKey(relAlias))
+                    columnName += columnSuffixesForAliases.get(relAlias);
+            }
+        }
+        else {
+            String msg = "Unsupported group-by expression: " + qve;
+            throw new CreateTMLException(msg);
+        }
+        
+        LinkedList<String> r = null;
+        if ( !(relName == null || columnName == null) ) {
+            r = new LinkedList<String>();
+            r.add(relName);
+            r.add(columnName);
+        }
+        return r;
+    }
 
     private LinkedList<String> createQueryValueExpressionTreeML(
             QueryValueExpression qve, LinkedList<String> relationalTML,
-            boolean mapExpression) throws CreateTMLException
+            boolean mapExpression)
+        throws CreateTMLException
     {
         LinkedList<String> r = new LinkedList<String>();
 
-        System.out.println("Found: " + qve);
+        System.out.println("Found QVE: " + qve);
 
         if (qve instanceof ValueExpressionColumn)
         {
@@ -1051,45 +1145,53 @@ public class DBToasterTMLWriter
             System.out.println("Column: " + column);
             System.out.println("Column table: " + column.getTableInDatabase());
             System.out.println("Column table expr: " + column.getTableExpr());
-            System.out.println("Column table expr cols: " + column.getTableExpr().getColumnList().size());
-            System.out.println("Column table expr val cols: " + column.getTableExpr().getValueExprColumns().size());
-            System.out.println("Column corr: " + column.getTableExpr().getTableCorrelation());
+            System.out.println("Column table expr cols: "
+                + column.getTableExpr().getColumnList().size());
+            System.out.println("Column table expr val cols: "
+                + column.getTableExpr().getValueExprColumns().size());
+            System.out.println("Column corr: "
+                + column.getTableExpr().getTableCorrelation());
 
             // Check column exists in base relation
             String relName = "";
-            if ( column.getTableInDatabase() != null )
+            if (column.getTableInDatabase() != null)
                 relName = column.getTableInDatabase().getName().toLowerCase();
-            else if ( column.getTableExpr() != null )
+            else if (column.getTableExpr() != null)
                 relName = column.getTableExpr().getName().toLowerCase();
-            else {
-                String msg = "Unable to find binding relation for column " + column;
+            else
+            {
+                String msg = "Unable to find binding relation for column "
+                    + column;
                 throw new CreateTMLException(msg);
             }
-            
+
             String dsName = datasetMgr.getRelationDataset(relName);
             LinkedHashMap<String, String> relFields = null;
-            if ( dsName != null &&
-                    (relFields = datasetMgr.getRelationFields(relName)) != null )
+            if (dsName != null
+                && (relFields = datasetMgr.getRelationFields(relName)) != null)
             {
-                if ( !(relFields.containsKey(column.getName()) ||
-                        relFields.containsKey(columnName)) )
+                if (!(relFields.containsKey(column.getName()) || relFields
+                    .containsKey(columnName)))
                 {
-                    String msg = "Unable to find attribute " +
-                        column.getName() + " in relation " + relName;
+                    String msg = "Unable to find attribute " + column.getName()
+                        + " in relation " + relName;
                     throw new CreateTMLException(msg);
                 }
             }
-            else {
-                throw new CreateTMLException("Unable to find binding relation "+relName);
-            }
-            
-            // Get unique column name.
-            if ( !(column.getTableExpr() == null ||
-                    column.getTableExpr().getTableCorrelation() == null) )
+            else
             {
-                TableCorrelation corr = column.getTableExpr().getTableCorrelation();
+                throw new CreateTMLException("Unable to find binding relation "
+                    + relName);
+            }
+
+            // Get unique column name.
+            if (!(column.getTableExpr() == null ||
+                    column.getTableExpr().getTableCorrelation() == null))
+            {
+                TableCorrelation corr = column.getTableExpr()
+                    .getTableCorrelation();
                 String relAlias = corr.getName().toLowerCase();
-                if ( columnSuffixesForAliases.containsKey(relAlias) )
+                if (columnSuffixesForAliases.containsKey(relAlias))
                     columnName += columnSuffixesForAliases.get(relAlias);
             }
 
@@ -1138,7 +1240,7 @@ public class DBToasterTMLWriter
             else
             {
                 throw new CreateTMLException("Unsupported constant type: "
-                        + valType.getClass().getName());
+                    + valType.getClass().getName());
             }
         }
 
@@ -1150,11 +1252,12 @@ public class DBToasterTMLWriter
 
             // Check if function is one DBToaster can handle.
             String fnName = f.getName().toLowerCase();
-            if (!(mapExpression && f.isColumnFunction() &&
-                    aggregateFunctions.contains(fnName)))
+            if (!(mapExpression && f.isColumnFunction() && aggregateFunctions
+                .contains(fnName)))
             {
                 Function fn = f.getFunction();
-                String msg = fn == null ? f.toString() : fn.getName().toLowerCase();
+                String msg = fn == null ? f.toString() : fn.getName()
+                    .toLowerCase();
                 throw new CreateTMLException("Unsupported function: " + msg);
             }
 
@@ -1168,15 +1271,15 @@ public class DBToasterTMLWriter
             System.out.println("VE combined: " + combined);
 
             // Handle left, right exprs
-            LinkedList<String> left = createQueryValueExpressionTreeML(combined
-                    .getLeftValueExpr(), relationalTML, mapExpression);
+            LinkedList<String> left = createQueryValueExpressionTreeML(
+                combined.getLeftValueExpr(), relationalTML, mapExpression);
 
             LinkedList<String> right = createQueryValueExpressionTreeML(
-                    combined.getRightValueExpr(), relationalTML, mapExpression);
+                combined.getRightValueExpr(), relationalTML, mapExpression);
 
             // Expression or MapExpression op(l,r)
             r = createCombinedOperatorTreeML(combined.getCombinedOperator(),
-                    left, right, mapExpression);
+                left, right, mapExpression);
         }
 
         // Subqueries
@@ -1185,15 +1288,15 @@ public class DBToasterTMLWriter
             ValueExpressionScalarSelect scalarSelect = (ValueExpressionScalarSelect) qve;
 
             System.out.println("Scalar select: " + scalarSelect);
-            r = createSelectTreeML((QuerySelect) scalarSelect.getQueryExpr()
-                    .getQuery());
+            r = createSelectTreeML(
+                (QuerySelect) scalarSelect.getQueryExpr().getQuery());
         }
 
         // TODO ...
         else if (qve instanceof ValueExpressionNullValue)
         {
             throw new CreateTMLException(
-                    "Unsupported: null values in select list.");
+                "Unsupported: null values in select list.");
         }
 
         else if (qve instanceof ValueExpressionRow)
@@ -1224,14 +1327,14 @@ public class DBToasterTMLWriter
         else if (qve instanceof ValueExpressionVariable)
         {
             throw new CreateTMLException(
-                    "Unsupported: ValueExpressionVariable.");
+                "Unsupported: ValueExpressionVariable.");
         }
 
         // Unclear what these are
         else if (qve instanceof ValueExpressionDefaultValue)
         {
             throw new CreateTMLException(
-                    "Unsupported: ValueExpressionDefaultValue.");
+                "Unsupported: ValueExpressionDefaultValue.");
         }
 
         else if (qve instanceof ValueExpressionNested)
@@ -1241,7 +1344,7 @@ public class DBToasterTMLWriter
         else
         {
             String msg = "Unhandled QueryValueExpression type: "
-                    + qve.getClass().getName();
+                + qve.getClass().getName();
 
             throw new CreateTMLException(msg);
         }
@@ -1249,11 +1352,10 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<String> createCombinedOperatorTreeML(
-            ValueExpressionCombinedOperator op, LinkedList<String> left,
-            LinkedList<String> right, boolean mapExpression)
-            throws CreateTMLException
+        ValueExpressionCombinedOperator op, LinkedList<String> left,
+        LinkedList<String> right, boolean mapExpression)
+        throws CreateTMLException
     {
         System.out.println("Op: " + op);
 
@@ -1264,9 +1366,12 @@ public class DBToasterTMLWriter
         if (mapExpression)
         {
             String dbtOpName = null;
-            if (opVal == ValueExpressionCombinedOperator.ADD) dbtOpName = "sum";
-            else if (opVal == ValueExpressionCombinedOperator.SUBTRACT) dbtOpName = "minus";
-            else if (opVal == ValueExpressionCombinedOperator.MULTIPLY) dbtOpName = "product";
+            if (opVal == ValueExpressionCombinedOperator.ADD)
+                dbtOpName = "sum";
+            else if (opVal == ValueExpressionCombinedOperator.SUBTRACT)
+                dbtOpName = "minus";
+            else if (opVal == ValueExpressionCombinedOperator.MULTIPLY)
+                dbtOpName = "product";
             else
             {
                 String msg = "Unsupported map expr op: " + op.getName();
@@ -1278,10 +1383,14 @@ public class DBToasterTMLWriter
         else
         {
             String dbtOpName = null;
-            if (opVal == ValueExpressionCombinedOperator.ADD) dbtOpName = "sum";
-            else if (opVal == ValueExpressionCombinedOperator.SUBTRACT) dbtOpName = "minus";
-            else if (opVal == ValueExpressionCombinedOperator.MULTIPLY) dbtOpName = "product";
-            else if (opVal == ValueExpressionCombinedOperator.DIVIDE) dbtOpName = "divide";
+            if (opVal == ValueExpressionCombinedOperator.ADD)
+                dbtOpName = "sum";
+            else if (opVal == ValueExpressionCombinedOperator.SUBTRACT)
+                dbtOpName = "minus";
+            else if (opVal == ValueExpressionCombinedOperator.MULTIPLY)
+                dbtOpName = "product";
+            else if (opVal == ValueExpressionCombinedOperator.DIVIDE)
+                dbtOpName = "divide";
             else
             {
                 String msg = "Unsupported map expr op: " + op.getName();
@@ -1298,11 +1407,10 @@ public class DBToasterTMLWriter
     }
 
     // Assume this is only called when handling a map expression
-    // TODO: where do we get relationalTML for `MapAggregate.f
 
     private LinkedList<String> createMapAggregateTreeML(
-            ValueExpressionFunction func, LinkedList<String> relationalTML)
-            throws CreateTMLException
+        ValueExpressionFunction func, LinkedList<String> relationalTML)
+        throws CreateTMLException
     {
         // `MapAggregate function, params, ?query?
         // -- query should include parsing from clause, and where clause first,
@@ -1313,12 +1421,12 @@ public class DBToasterTMLWriter
         if (func.getParameterList().size() != 1)
         {
             String msg = "Unsupported: aggregates with "
-                    + func.getParameterList().size() + " parameters.";
+                + func.getParameterList().size() + " parameters.";
             throw new CreateTMLException(msg);
         }
 
         QueryValueExpression f = (QueryValueExpression) func.getParameterList()
-                .get(0);
+            .get(0);
 
         LinkedList<String> r = new LinkedList<String>();
         r.add(createMapExpressionNode("mapaggregate"));
@@ -1331,19 +1439,20 @@ public class DBToasterTMLWriter
 
     // From clause: joins, base relations
 
-    private LinkedList<String> createFromClauseTreeML(EList fromClause)
-            throws CreateTMLException
+    private LinkedList<String> createFromClauseTreeML(EList<?> fromClause)
+        throws CreateTMLException
     {
         LinkedList<String> acc = null;
-        for (Iterator fromIt = fromClause.iterator(); fromIt.hasNext();)
+        for (Iterator<?> fromIt = fromClause.iterator(); fromIt.hasNext();)
         {
             TableReference tableRef = (TableReference) fromIt.next();
 
-            if (acc == null) acc = createTableReferenceTML(tableRef);
+            if (acc == null)
+                acc = createTableReferenceTML(tableRef);
             else
             {
                 acc = createCrossProductTreeML(acc,
-                        createTableReferenceTML(tableRef));
+                    createTableReferenceTML(tableRef));
             }
         }
 
@@ -1352,9 +1461,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<String> createTableReferenceTML(TableReference tableRef)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         System.out.println("TableRef: " + tableRef);
 
@@ -1378,7 +1486,7 @@ public class DBToasterTMLWriter
 
             // `Select(pred, `Cross(left, right))
             LinkedList<String> crossTML = createCrossProductTreeML(leftTML,
-                    rightTML);
+                rightTML);
             r = createWhereClauseTreeML(joinCond, crossTML);
         }
 
@@ -1424,7 +1532,7 @@ public class DBToasterTMLWriter
         else
         {
             String msg = "Unhandled TableReference type: "
-                    + tableRef.getClass().getName();
+                + tableRef.getClass().getName();
 
             throw new CreateTMLException(msg);
         }
@@ -1432,10 +1540,9 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<String> createCrossProductTreeML(
-            LinkedList<String> leftTML, LinkedList<String> rightTML)
-            throws CreateTMLException
+        LinkedList<String> leftTML, LinkedList<String> rightTML)
+        throws CreateTMLException
     {
         LinkedList<String> r = new LinkedList<String>();
         r.addFirst(createPlanNode("cross"));
@@ -1444,9 +1551,8 @@ public class DBToasterTMLWriter
         return makeBranch(r);
     }
 
-
     private LinkedList<String> createBaseRelationTreeML(TableInDatabase table)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         LinkedList<String> r = new LinkedList<String>();
 
@@ -1466,9 +1572,11 @@ public class DBToasterTMLWriter
         String relName = "";
 
         if (dsRelName.length == 0)
-            throw new CreateTMLException("Invalid table name: " + table.getName());
+            throw new CreateTMLException("Invalid table name: "
+                + table.getName());
 
-        else if (dsRelName.length != 2) relName = dsRelName[0].toLowerCase();
+        else if (dsRelName.length != 2)
+            relName = dsRelName[0].toLowerCase();
 
         else
         {
@@ -1477,19 +1585,22 @@ public class DBToasterTMLWriter
         }
 
         System.out.println("hasDSRel: "
-                + datasetMgr.hasDatasetRelation(datasetName, relName));
+            + datasetMgr.hasDatasetRelation(datasetName, relName));
 
         if (datasetMgr.hasDatasetRelation(datasetName, relName))
         {
             System.out.println("DB table: " + dbTable.toString());
             System.out.println("DB table cols: " + dbTable.getColumns().size());
-            
+
             System.out.println("Table corr: " + table.getTableCorrelation());
             System.out.println("Table cols: " + table.getColumnList().size());
-            System.out.println("Table der cols: " + table.getDerivedColumnList().size());
-            System.out.println("Table val cols: " + table.getValueExprColumns().size());
-            
-            for (Iterator it = table.getValueExprColumns().iterator(); it.hasNext();)
+            System.out.println("Table der cols: "
+                + table.getDerivedColumnList().size());
+            System.out.println("Table val cols: "
+                + table.getValueExprColumns().size());
+
+            for (Iterator<?> it = table.getValueExprColumns().iterator(); it
+                .hasNext();)
             {
                 ValueExpressionColumn c = (ValueExpressionColumn) it.next();
                 System.out.println("Val col: " + c);
@@ -1497,27 +1608,31 @@ public class DBToasterTMLWriter
 
             // Handle aliased tables.
             String fieldSuffix = "";
-            if ( table.getTableCorrelation() != null )
+            if (table.getTableCorrelation() != null)
             {
                 TableCorrelation corr = table.getTableCorrelation();
                 String corrName = corr.getName().toLowerCase();
-                if ( relationCounters.containsKey(tableName) ) {
+                if (relationCounters.containsKey(tableName))
+                {
                     Integer current = relationCounters.get(tableName);
-                    relationCounters.put(tableName, current+1);
-                    fieldSuffix = Integer.toString(current+1);
+                    relationCounters.put(tableName, current + 1);
+                    fieldSuffix = Integer.toString(current + 1);
                     columnSuffixesForAliases.put(corrName, fieldSuffix);
                 }
-                else {
+                else
+                {
                     // Track first visit.
                     relationCounters.put(tableName, 0);
                 }
             }
-            else {
-                if ( relationCounters.containsKey(tableName) ) {
+            else
+            {
+                if (relationCounters.containsKey(tableName))
+                {
                     String msg = "Ambiguous use of relation " + tableName;
-                    throw new CreateTMLException(msg); 
+                    throw new CreateTMLException(msg);
                 }
-                
+
                 relationCounters.put(tableName, 0);
             }
 
@@ -1532,22 +1647,25 @@ public class DBToasterTMLWriter
                 Dataset ds = datasetMgr.getDataset(datasetName);
                 idsAndTypes = ds.getRelationFields(relName);
             }
-            
+
             // Add any suffixes for aliases
-            if ( !fieldSuffix.isEmpty() ) {
-                LinkedHashMap<String, String> aliasedIdsAndTypes =
-                    new LinkedHashMap<String, String>();
-    
+            if (!fieldSuffix.isEmpty())
+            {
+                LinkedHashMap<String, String> aliasedIdsAndTypes = new LinkedHashMap<String, String>();
+
                 for (Map.Entry<String, String> e : idsAndTypes.entrySet())
-                    aliasedIdsAndTypes.put(e.getKey()+fieldSuffix, e.getValue());
-    
+                    aliasedIdsAndTypes.put(e.getKey() + fieldSuffix, e
+                        .getValue());
+
                 idsAndTypes = aliasedIdsAndTypes;
             }
 
             lastRelationsUsed.put(datasetName, relName);
         }
-        else {
-            String msg = "Failed to find relation " + relName + " in any dataset.";
+        else
+        {
+            String msg = "Failed to find relation " + relName
+                + " in any dataset.";
             throw new CreateTMLException(msg);
         }
 
@@ -1558,22 +1676,105 @@ public class DBToasterTMLWriter
         return r;
     }
 
-    // TODO: group by
-
-    private String createGroupByTreeML(EList groupByClause)
+    private LinkedList<String> getGroupByFields(EList<?> groupByClause)
+        throws CreateTMLException
     {
-        for (Iterator groupIt = groupByClause.iterator(); groupIt.hasNext();)
+        LinkedList<String> r = new LinkedList<String>();
+
+        for (Iterator<?> groupIt = groupByClause.iterator(); groupIt.hasNext();)
         {
-            GroupingSpecification groupSpec = (GroupingSpecification) groupIt
-                    .next();
+            GroupingExpression groupExpr = (GroupingExpression) groupIt.next();
+            
+            LinkedList<String> groupColRelAndName =
+                getGroupByColumnName(groupExpr.getValueExpr());
+            
+            if ( groupColRelAndName == null || groupColRelAndName.size() != 2 )
+            {
+                String msg = "Invalid group-by column: " + groupExpr.getValueExpr();
+                throw new CreateTMLException(msg);
+            }
+
+            r.add(groupColRelAndName.get(1));
         }
-        return null;
+        
+        return r;
+    }
+    
+    private LinkedList<String> createGroupByTreeML(
+            EList<?> groupByClause, LinkedList<String> relationalTML)
+        throws CreateTMLException
+    {
+        LinkedList<String> groupByPred = null;
+
+        for (Iterator<?> groupIt = groupByClause.iterator(); groupIt.hasNext();)
+        {
+            GroupingExpression groupExpr = (GroupingExpression) groupIt.next();
+            System.out.println("Group expr val: " + groupExpr.getValueExpr());
+            
+            LinkedList<String> groupColRelAndName =
+                getGroupByColumnName(groupExpr.getValueExpr());
+            
+            if ( groupColRelAndName == null || groupColRelAndName.size() != 2 )
+            {
+                String msg = "Invalid group-by column: " + groupExpr.getValueExpr();
+                throw new CreateTMLException(msg);
+            }
+
+            // Get unique column name.
+            String relName = groupColRelAndName.get(0);
+            String columnName = groupColRelAndName.get(1);
+
+            Integer groupBySuffix = 0;
+            if ( relationCounters.containsKey(relName) )
+                groupBySuffix = relationCounters.get(relName);
+
+            relationCounters.put(relName, groupBySuffix + 1);
+            
+            String groupByColumnName = columnName + groupBySuffix;
+
+            LinkedList<String> colTerm = new LinkedList<String>();
+            colTerm.add(createExpressionNode("eterm"));
+            colTerm.addAll(createETerm("attr", columnName));
+            colTerm = makeBranch(colTerm);
+
+            LinkedList<String> gbcolTerm = new LinkedList<String>();
+            gbcolTerm.add(createExpressionNode("eterm"));
+            gbcolTerm.addAll(createETerm("attr", groupByColumnName));
+            gbcolTerm = makeBranch(gbcolTerm);
+
+            LinkedList<String> bterm = new LinkedList<String>();
+            bterm.add(createBTermNode("eq"));
+            bterm.addAll(colTerm);
+            bterm.addAll(gbcolTerm);
+            bterm = makeBranch(bterm);
+            bterm.addFirst(createBoolExprNode("bterm"));
+
+            if ( groupByPred == null ) {
+                groupByPred = new LinkedList<String>();
+                groupByPred.addAll(bterm);
+            }
+            else
+            {
+                LinkedList<String> conjunct = new LinkedList<String>();
+                conjunct.add(createBoolExprNode("and"));
+                conjunct.addAll(makeBranch(groupByPred));
+                conjunct.addAll(makeBranch(bterm));
+                groupByPred = conjunct;
+            }
+        }
+        
+        LinkedList<String> r = new LinkedList<String>();
+        r.add(createPlanNode("select"));
+        r.addAll(makeBranch(groupByPred));
+        r.addAll(relationalTML);
+        r = makeBranch(r);
+        return r;
     }
 
     // TODO: having
 
     private String createHavingClauseTreeML(QuerySearchCondition havingClause)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("HAVING unsupported.");
     }
@@ -1594,10 +1795,9 @@ public class DBToasterTMLWriter
 
     // Where clauses, and predicates
 
-
     private LinkedList<String> createWhereClauseTreeML(
-            QuerySearchCondition whereClause, LinkedList<String> fromTML)
-            throws CreateTMLException
+        QuerySearchCondition whereClause, LinkedList<String> fromTML)
+        throws CreateTMLException
     {
         System.out.println("Where: " + whereClause);
         LinkedList<String> r = new LinkedList<String>();
@@ -1611,10 +1811,8 @@ public class DBToasterTMLWriter
         return makeBranch(r);
     }
 
-
     private LinkedList<String> createQuerySearchConditionTreeML(
-            QuerySearchCondition sc)
-        throws CreateTMLException
+        QuerySearchCondition sc) throws CreateTMLException
     {
         System.out.println("QSC: " + sc.toString());
         LinkedList<String> r = null;
@@ -1634,7 +1832,7 @@ public class DBToasterTMLWriter
             {
 
                 Method predicateMethod = this.getClass().getDeclaredMethod(
-                        "predicateTML", getDispatchClass(sc));
+                    "predicateTML", getDispatchClass(sc));
                 r = (LinkedList<String>) predicateMethod.invoke(this, sc);
 
             } catch (NoSuchMethodException e)
@@ -1655,16 +1853,15 @@ public class DBToasterTMLWriter
         else
         {
             String msg = "Unhandled QuerySearchCondition type: "
-                    + sc.getClass().getName();
+                + sc.getClass().getName();
 
             throw new CreateTMLException(msg);
         }
         return r;
     }
 
-
     private String predicateComparisonOpTreeML(PredicateComparisonOperator op,
-            boolean mapExpression)
+        boolean mapExpression)
     {
         System.out.println("Pred op: " + op);
 
@@ -1701,10 +1898,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-    // TODO: think about relationalTML in subcalls
-
     private LinkedList<String> predicateTML(PredicateBasic p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         System.out.println("Basic pred: " + p);
 
@@ -1717,8 +1912,8 @@ public class DBToasterTMLWriter
         if (p.getLeftValueExpr() == null || p.getRightValueExpr() == null)
         {
             String msg = "Invalid predicate: (left: "
-                    + (p.getLeftValueExpr() == null) + ") (right: "
-                    + (p.getRightValueExpr() == null) + ") " + p;
+                + (p.getLeftValueExpr() == null) + ") (right: "
+                + (p.getRightValueExpr() == null) + ") " + p;
 
             throw new CreateTMLException(msg);
         }
@@ -1733,18 +1928,19 @@ public class DBToasterTMLWriter
             mapExpression = !nestedAggs.isEmpty();
 
             System.out.println("Found " + nestedAggs.size()
-                    + " nested aggregates.");
+                + " nested aggregates.");
+
         } catch (DBToasterUnhandledException dbte)
         {
             dbte.printStackTrace();
             throw new CreateTMLException(dbte.getMessage());
         }
 
-        leftTML = createQueryValueExpressionTreeML(p.getLeftValueExpr(), null,
-                mapExpression);
+        leftTML = createQueryValueExpressionTreeML(
+            p.getLeftValueExpr(), null, mapExpression);
 
-        rightTML = createQueryValueExpressionTreeML(p.getRightValueExpr(),
-                null, mapExpression);
+        rightTML = createQueryValueExpressionTreeML(
+            p.getRightValueExpr(), null, mapExpression);
 
         if (mapExpression)
         {
@@ -1754,8 +1950,8 @@ public class DBToasterTMLWriter
             tmp.addAll(leftTML);
             tmp.addAll(rightTML);
             tmp = makeBranch(tmp);
-            tmp.addFirst(createBTermNode(predicateComparisonOpTreeML(p
-                    .getComparisonOperator(), mapExpression)));
+            tmp.addFirst(createBTermNode(predicateComparisonOpTreeML(
+                p.getComparisonOperator(), mapExpression)));
 
             r.add(createBoolExprNode("bterm"));
             r.addAll(makeBranch(tmp));
@@ -1765,7 +1961,7 @@ public class DBToasterTMLWriter
             LinkedList<String> tmp = new LinkedList<String>();
 
             tmp.add(createBTermNode(predicateComparisonOpTreeML(p
-                    .getComparisonOperator(), mapExpression)));
+                .getComparisonOperator(), mapExpression)));
 
             tmp.addAll(leftTML);
             tmp.addAll(rightTML);
@@ -1777,15 +1973,14 @@ public class DBToasterTMLWriter
         return makeBranch(r);
     }
 
-
     private LinkedList<String> createSearchConditionCombinedTreeML(
-            SearchConditionCombined pred) throws CreateTMLException
+        SearchConditionCombined pred) throws CreateTMLException
     {
         System.out.println("SC: " + pred);
 
         LinkedList<String> r = new LinkedList<String>();
         r.add(createSearchConditionCombinedOperatorTreeML(pred
-                .getCombinedOperator()));
+            .getCombinedOperator()));
 
         LinkedList<String> leftTML = null;
         LinkedList<String> rightTML = null;
@@ -1798,13 +1993,13 @@ public class DBToasterTMLWriter
         if (pred.getRightCondition() != null)
         {
             rightTML = createQuerySearchConditionTreeML(pred
-                    .getRightCondition());
+                .getRightCondition());
         }
 
         if (leftTML == null || rightTML == null)
         {
             String msg = "Invalid bool expr: (left: " + (leftTML == null)
-                    + ") (right: " + (rightTML == null) + ") " + pred;
+                + ") (right: " + (rightTML == null) + ") " + pred;
 
             throw new CreateTMLException(msg);
         }
@@ -1815,9 +2010,8 @@ public class DBToasterTMLWriter
         return makeBranch(r);
     }
 
-
     private String createSearchConditionCombinedOperatorTreeML(
-            SearchConditionCombinedOperator op)
+        SearchConditionCombinedOperator op)
     {
         System.out.println("SC op: " + op);
 
@@ -1834,9 +2028,8 @@ public class DBToasterTMLWriter
         return r;
     }
 
-
     private LinkedList<String> createSearchConditionNestedTreeML(
-            SearchConditionNested pred) throws CreateTMLException
+        SearchConditionNested pred) throws CreateTMLException
     {
         System.out.println("SC nested: " + pred);
         return createQuerySearchConditionTreeML(pred.getNestedCondition());
@@ -1845,95 +2038,87 @@ public class DBToasterTMLWriter
     // TODO:
 
     private LinkedList<String> predicateTML(PredicateBetween p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateBetween");
     }
 
-
     private LinkedList<String> predicateTML(PredicateExists p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateExists.");
     }
 
-
     private LinkedList<String> predicateTML(PredicateIn p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateIn");
     }
 
-
     private LinkedList<String> predicateTML(PredicateInValueList p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateInValue");
     }
 
-
     private LinkedList<String> predicateTML(PredicateInValueRowSelect p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateInValueRowSelect");
     }
 
-
     private LinkedList<String> predicateTML(PredicateInValueSelect p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateInValueSelect");
     }
 
-
     private LinkedList<String> predicateTML(PredicateIsNull p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateIsNull");
     }
 
-
     private LinkedList<String> predicateTML(PredicateLike p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateLike");
     }
 
-
     private LinkedList<String> predicateTML(PredicateQuantified p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateQuantified");
     }
 
-
     private LinkedList<String> predicateTML(PredicateQuantifiedRowSelect p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException(
-                "Unsupported: PredicateQuantifiedRowSelect");
+            "Unsupported: PredicateQuantifiedRowSelect");
     }
 
-
     private LinkedList<String> predicateTML(PredicateQuantifiedType p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException("Unsupported: PredicateQuantifiedType");
     }
 
-
     private LinkedList<String> predicateTML(PredicateQuantifiedValueSelect p)
-            throws CreateTMLException
+        throws CreateTMLException
     {
         throw new CreateTMLException(
-                "Unsupported: PredicateQuantifiedValueSelect");
+            "Unsupported: PredicateQuantifiedValueSelect");
     }
 
     // Predicate overloads dispatch helpers
 
-    String getInterfaceName(Class sqlObjectClass)
+    String getInterfaceName(Class<?> sqlObjectClass)
     {
-        if (sqlObjectClass == null) { return null; }
+        if (sqlObjectClass == null)
+        {
+            return null;
+        }
 
         StringBuffer className = null;
         String interfaceName = null;
@@ -1957,15 +2142,17 @@ public class DBToasterTMLWriter
         return interfaceName;
     }
 
-
-    private Class getDispatchClass(SQLObject sqlObject)
+    private Class<?> getDispatchClass(SQLObject sqlObject)
     {
-        if (sqlObject == null) { return null; }
+        if (sqlObject == null)
+        {
+            return null;
+        }
 
         String interfaceName = null;
 
-        Class sqlObjectClass = sqlObject.getClass();
-        Class sqlObjectInterfaceClass = sqlObjectClass;
+        Class<?> sqlObjectClass = sqlObject.getClass();
+        Class<?> sqlObjectInterfaceClass = sqlObjectClass;
 
         if (sqlObjectClass.getName().endsWith("Impl"))
         {
@@ -1975,11 +2162,11 @@ public class DBToasterTMLWriter
             // the class loader of the SQLQuery model has no access to its
             // extending plugins (no runtime dependency)
             interfaceName = getInterfaceName(sqlObject.getClass());
-            Class[] sqlObjectInterfaces = sqlObjectClass.getInterfaces();
+            Class<?>[] sqlObjectInterfaces = sqlObjectClass.getInterfaces();
 
             for (int i = 0; i < sqlObjectInterfaces.length; i++)
             {
-                Class interfaceClass = sqlObjectClass.getInterfaces()[i];
+                Class<?> interfaceClass = sqlObjectClass.getInterfaces()[i];
                 if (interfaceClass.getName().equals(interfaceName))
                 {
                     sqlObjectInterfaceClass = interfaceClass;

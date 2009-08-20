@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Frame;
 import java.awt.Panel;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -64,11 +65,24 @@ public class CodeEditorView extends ViewPart
 
         org.eclipse.swt.widgets.Tree traceTree;
         DBToasterWorkspace dbtWorkspace;
+        
+        HashMap<String, String> stageNames;
 
         public TracePanel(Composite parent, DBToasterWorkspace dbtw)
         {
             dbtWorkspace = dbtw;
 
+            // Set stage names for display.
+            stageNames = new HashMap<String, String>();
+            stageNames.put("frontier", "Incremental frontier");
+            stageNames.put("init", "Initial values");
+            stageNames.put("pre_delta", "Simplify initial values");
+            stageNames.put("op", "Delta pushdown");
+            stageNames.put("domain", "Map maintenance");
+            stageNames.put("pre_result", "Apply rewrites");
+            stageNames.put("result", "Simplify constants");
+            
+            
             traceTree = new org.eclipse.swt.widgets.Tree(
                     parent, SWT.SINGLE | SWT.BORDER);
             GridData traceTreeLD = new GridData(SWT.FILL, SWT.FILL, true, true);
@@ -102,7 +116,7 @@ public class CodeEditorView extends ViewPart
                                 traces.getCompilationStage(path, tn, sn);
 
                             if ( stageTree != null )
-                                exprPanel.setData(stageTree, "mapexpression");
+                                exprPanel.setData(stageTree, "op");
                             
                             DependencyGraph dependencies = currentQuery.getDependencyGraph();
                             Graph depGraph = dependencies.getDependencyGraph();
@@ -170,7 +184,12 @@ public class CodeEditorView extends ViewPart
                             TreeItem stageItem = new TreeItem(typeItem,
                                     SWT.NONE);
                             stageItem.setData("name", sn);
-                            stageItem.setText(sn);
+                            
+                            String siName = sn;
+                            if ( stageNames.containsKey(sn) )
+                                siName = stageNames.get(sn);
+                            
+                            stageItem.setText(siName);
                         }
                     }
                 }
@@ -240,7 +259,7 @@ public class CodeEditorView extends ViewPart
         tracePanel = new TracePanel(traceComp, dbtWorkspace);
 
         // Initialize default trees.
-        exprPanel = new TreeVisPanel(new Tree(), "mapexpression",
+        exprPanel = new TreeVisPanel(new Tree(), "op",
                 "Map expression", Constants.ORIENT_TOP_BOTTOM);
         mapPanel = new GraphVisPanel(new Graph(), "name", "Data dependencies");
 

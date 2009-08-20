@@ -29,6 +29,7 @@ import prefuse.Constants;
 import prefuse.data.Tree;
 import prefuse.data.io.DataIOException;
 import prefuse.data.io.TreeMLReader;
+import prefuse.util.ColorLib;
 
 public class CodeView extends ViewPart
 {
@@ -47,6 +48,8 @@ public class CodeView extends ViewPart
     {
         DBToasterWorkspace dbtWorkspace;
         org.eclipse.swt.widgets.Tree psTree;
+        
+        private final static String profileNodes = "tree.profilepoints";
 
         public PseudocodePanel(Composite parent, DBToasterWorkspace dbtw)
         {
@@ -88,6 +91,15 @@ public class CodeView extends ViewPart
                                     readGraph(psFile.getLocation().toFile());
                                 
                                 codeTreePanel.setData(newCode, "statement");
+                                
+                                // TODO: note prefuse has a bug in that it does
+                                // not catch if strings are less than the desired length
+                                // and does not catch the underlying IndexOutOfBoundsException
+                                // thrown from String.substring
+                                codeTreePanel.selectNodes(
+                                    profileNodes, "statement",
+                                    "substring(statement,0,6) = 'profil'",
+                                    ColorLib.rgb(255, 128, 90));
 
                             } catch (DataIOException e1) {
                                 String msg = "Failed to read TreeML for " +

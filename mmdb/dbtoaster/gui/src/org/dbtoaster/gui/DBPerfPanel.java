@@ -16,9 +16,11 @@ import org.eclipse.swt.widgets.Slider;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
@@ -47,16 +49,24 @@ public class DBPerfPanel extends Composite
 
         public void actionPerformed(ActionEvent actionevent)
         {
-            /*
-             * getDisplay().asyncExec(new Runnable() { public void run() { if (
-             * !getDisplay().isDisposed() ) { double yFeed =
-             * Math.pow((Math.random() - 0.5) * 2.5, 3.0); y += yFeed;
-             * Millisecond x = new Millisecond(); s.add(x, y);
-             * 
-             * ValueAxis xAxis = plot.getDomainAxis();
-             * xAxis.setRange(xAxis.getUpperBound() - 10000,
-             * Math.max(x.getEnd().getTime(), xAxis.getUpperBound())); } } });
-             */
+
+            getDisplay().asyncExec(new Runnable()
+            {
+                public void run()
+                {
+                    if (!getDisplay().isDisposed())
+                    {
+                        double yFeed = Math.pow((Math.random() - 0.5) * 2.5, 3.0);
+                        y += yFeed;
+                        Millisecond x = new Millisecond();
+                        s.add(x, y);
+
+                        ValueAxis xAxis = plot.getDomainAxis();
+                        xAxis.setRange(xAxis.getUpperBound() - 10000, Math.max(
+                            x.getEnd().getTime(), xAxis.getUpperBound()));
+                    }
+                }
+            });
         }
     }
 
