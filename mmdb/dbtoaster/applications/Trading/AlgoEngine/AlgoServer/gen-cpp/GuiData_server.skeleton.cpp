@@ -22,14 +22,24 @@ class GuiDataHandler : virtual public GuiDataIf {
     // Your initialization goes here
   }
 
-  MyInt getAsksDiff() {
+  double getAsksDiff() {
     // Your implementation goes here
     printf("getAsksDiff\n");
   }
 
-  MyInt getBidsDiff() {
+  double getBidsDiff() {
     // Your implementation goes here
     printf("getBidsDiff\n");
+  }
+
+  double getAsksTime() {
+    // Your implementation goes here
+    printf("getAsksTime\n");
+  }
+
+  double getBidsTime() {
+    // Your implementation goes here
+    printf("getBidsTime\n");
   }
 
   double getPrice() {
@@ -47,12 +57,12 @@ class GuiDataHandler : virtual public GuiDataIf {
     printf("getVariance\n");
   }
 
-  MyInt getAmountStocks() {
+  int32_t getAmountStocks() {
     // Your implementation goes here
     printf("getAmountStocks\n");
   }
 
-  MyInt getMoney() {
+  int32_t getMoney() {
     // Your implementation goes here
     printf("getMoney\n");
   }

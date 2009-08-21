@@ -14,24 +14,34 @@ namespace DBToaster { namespace GuiData {
 class GuiDataIf {
  public:
   virtual ~GuiDataIf() {}
-  virtual MyInt getAsksDiff() = 0;
-  virtual MyInt getBidsDiff() = 0;
+  virtual double getAsksDiff() = 0;
+  virtual double getBidsDiff() = 0;
+  virtual double getAsksTime() = 0;
+  virtual double getBidsTime() = 0;
   virtual double getPrice() = 0;
   virtual double getMeanPrice() = 0;
   virtual double getVariance() = 0;
-  virtual MyInt getAmountStocks() = 0;
-  virtual MyInt getMoney() = 0;
+  virtual int32_t getAmountStocks() = 0;
+  virtual int32_t getMoney() = 0;
 };
 
 class GuiDataNull : virtual public GuiDataIf {
  public:
   virtual ~GuiDataNull() {}
-  MyInt getAsksDiff() {
-    MyInt _return = 0;
+  double getAsksDiff() {
+    double _return = (double)0;
     return _return;
   }
-  MyInt getBidsDiff() {
-    MyInt _return = 0;
+  double getBidsDiff() {
+    double _return = (double)0;
+    return _return;
+  }
+  double getAsksTime() {
+    double _return = (double)0;
+    return _return;
+  }
+  double getBidsTime() {
+    double _return = (double)0;
     return _return;
   }
   double getPrice() {
@@ -46,12 +56,12 @@ class GuiDataNull : virtual public GuiDataIf {
     double _return = (double)0;
     return _return;
   }
-  MyInt getAmountStocks() {
-    MyInt _return = 0;
+  int32_t getAmountStocks() {
+    int32_t _return = 0;
     return _return;
   }
-  MyInt getMoney() {
-    MyInt _return = 0;
+  int32_t getMoney() {
+    int32_t _return = 0;
     return _return;
   }
 };
@@ -99,7 +109,7 @@ class GuiData_getAsksDiff_result {
 
   virtual ~GuiData_getAsksDiff_result() throw() {}
 
-  MyInt success;
+  double success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -129,7 +139,7 @@ class GuiData_getAsksDiff_presult {
 
   virtual ~GuiData_getAsksDiff_presult() throw() {}
 
-  MyInt* success;
+  double* success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -183,7 +193,7 @@ class GuiData_getBidsDiff_result {
 
   virtual ~GuiData_getBidsDiff_result() throw() {}
 
-  MyInt success;
+  double success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -213,7 +223,175 @@ class GuiData_getBidsDiff_presult {
 
   virtual ~GuiData_getBidsDiff_presult() throw() {}
 
-  MyInt* success;
+  double* success;
+
+  struct __isset {
+    __isset() : success(false) {}
+    bool success;
+  } __isset;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+class GuiData_getAsksTime_args {
+ public:
+
+  GuiData_getAsksTime_args() {
+  }
+
+  virtual ~GuiData_getAsksTime_args() throw() {}
+
+
+  bool operator == (const GuiData_getAsksTime_args & /* rhs */) const
+  {
+    return true;
+  }
+  bool operator != (const GuiData_getAsksTime_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GuiData_getAsksTime_args & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getAsksTime_pargs {
+ public:
+
+
+  virtual ~GuiData_getAsksTime_pargs() throw() {}
+
+
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getAsksTime_result {
+ public:
+
+  GuiData_getAsksTime_result() : success(0) {
+  }
+
+  virtual ~GuiData_getAsksTime_result() throw() {}
+
+  double success;
+
+  struct __isset {
+    __isset() : success(false) {}
+    bool success;
+  } __isset;
+
+  bool operator == (const GuiData_getAsksTime_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const GuiData_getAsksTime_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GuiData_getAsksTime_result & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getAsksTime_presult {
+ public:
+
+
+  virtual ~GuiData_getAsksTime_presult() throw() {}
+
+  double* success;
+
+  struct __isset {
+    __isset() : success(false) {}
+    bool success;
+  } __isset;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+
+};
+
+class GuiData_getBidsTime_args {
+ public:
+
+  GuiData_getBidsTime_args() {
+  }
+
+  virtual ~GuiData_getBidsTime_args() throw() {}
+
+
+  bool operator == (const GuiData_getBidsTime_args & /* rhs */) const
+  {
+    return true;
+  }
+  bool operator != (const GuiData_getBidsTime_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GuiData_getBidsTime_args & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getBidsTime_pargs {
+ public:
+
+
+  virtual ~GuiData_getBidsTime_pargs() throw() {}
+
+
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getBidsTime_result {
+ public:
+
+  GuiData_getBidsTime_result() : success(0) {
+  }
+
+  virtual ~GuiData_getBidsTime_result() throw() {}
+
+  double success;
+
+  struct __isset {
+    __isset() : success(false) {}
+    bool success;
+  } __isset;
+
+  bool operator == (const GuiData_getBidsTime_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const GuiData_getBidsTime_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const GuiData_getBidsTime_result & ) const;
+
+  uint32_t read(apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+class GuiData_getBidsTime_presult {
+ public:
+
+
+  virtual ~GuiData_getBidsTime_presult() throw() {}
+
+  double* success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -519,7 +697,7 @@ class GuiData_getAmountStocks_result {
 
   virtual ~GuiData_getAmountStocks_result() throw() {}
 
-  MyInt success;
+  int32_t success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -549,7 +727,7 @@ class GuiData_getAmountStocks_presult {
 
   virtual ~GuiData_getAmountStocks_presult() throw() {}
 
-  MyInt* success;
+  int32_t* success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -603,7 +781,7 @@ class GuiData_getMoney_result {
 
   virtual ~GuiData_getMoney_result() throw() {}
 
-  MyInt success;
+  int32_t success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -633,7 +811,7 @@ class GuiData_getMoney_presult {
 
   virtual ~GuiData_getMoney_presult() throw() {}
 
-  MyInt* success;
+  int32_t* success;
 
   struct __isset {
     __isset() : success(false) {}
@@ -664,12 +842,18 @@ class GuiDataClient : virtual public GuiDataIf {
   boost::shared_ptr<apache::thrift::protocol::TProtocol> getOutputProtocol() {
     return poprot_;
   }
-  MyInt getAsksDiff();
+  double getAsksDiff();
   void send_getAsksDiff();
-  MyInt recv_getAsksDiff();
-  MyInt getBidsDiff();
+  double recv_getAsksDiff();
+  double getBidsDiff();
   void send_getBidsDiff();
-  MyInt recv_getBidsDiff();
+  double recv_getBidsDiff();
+  double getAsksTime();
+  void send_getAsksTime();
+  double recv_getAsksTime();
+  double getBidsTime();
+  void send_getBidsTime();
+  double recv_getBidsTime();
   double getPrice();
   void send_getPrice();
   double recv_getPrice();
@@ -679,12 +863,12 @@ class GuiDataClient : virtual public GuiDataIf {
   double getVariance();
   void send_getVariance();
   double recv_getVariance();
-  MyInt getAmountStocks();
+  int32_t getAmountStocks();
   void send_getAmountStocks();
-  MyInt recv_getAmountStocks();
-  MyInt getMoney();
+  int32_t recv_getAmountStocks();
+  int32_t getMoney();
   void send_getMoney();
-  MyInt recv_getMoney();
+  int32_t recv_getMoney();
  protected:
   boost::shared_ptr<apache::thrift::protocol::TProtocol> piprot_;
   boost::shared_ptr<apache::thrift::protocol::TProtocol> poprot_;
@@ -700,6 +884,8 @@ class GuiDataProcessor : virtual public apache::thrift::TProcessor {
   std::map<std::string, void (GuiDataProcessor::*)(int32_t, apache::thrift::protocol::TProtocol*, apache::thrift::protocol::TProtocol*)> processMap_;
   void process_getAsksDiff(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_getBidsDiff(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
+  void process_getAsksTime(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
+  void process_getBidsTime(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_getPrice(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_getMeanPrice(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
   void process_getVariance(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot);
@@ -710,6 +896,8 @@ class GuiDataProcessor : virtual public apache::thrift::TProcessor {
     iface_(iface) {
     processMap_["getAsksDiff"] = &GuiDataProcessor::process_getAsksDiff;
     processMap_["getBidsDiff"] = &GuiDataProcessor::process_getBidsDiff;
+    processMap_["getAsksTime"] = &GuiDataProcessor::process_getAsksTime;
+    processMap_["getBidsTime"] = &GuiDataProcessor::process_getBidsTime;
     processMap_["getPrice"] = &GuiDataProcessor::process_getPrice;
     processMap_["getMeanPrice"] = &GuiDataProcessor::process_getMeanPrice;
     processMap_["getVariance"] = &GuiDataProcessor::process_getVariance;
@@ -733,7 +921,7 @@ class GuiDataMultiface : virtual public GuiDataIf {
     ifaces_.push_back(iface);
   }
  public:
-  MyInt getAsksDiff() {
+  double getAsksDiff() {
     uint32_t sz = ifaces_.size();
     for (uint32_t i = 0; i < sz; ++i) {
       if (i == sz - 1) {
@@ -744,13 +932,35 @@ class GuiDataMultiface : virtual public GuiDataIf {
     }
   }
 
-  MyInt getBidsDiff() {
+  double getBidsDiff() {
     uint32_t sz = ifaces_.size();
     for (uint32_t i = 0; i < sz; ++i) {
       if (i == sz - 1) {
         return ifaces_[i]->getBidsDiff();
       } else {
         ifaces_[i]->getBidsDiff();
+      }
+    }
+  }
+
+  double getAsksTime() {
+    uint32_t sz = ifaces_.size();
+    for (uint32_t i = 0; i < sz; ++i) {
+      if (i == sz - 1) {
+        return ifaces_[i]->getAsksTime();
+      } else {
+        ifaces_[i]->getAsksTime();
+      }
+    }
+  }
+
+  double getBidsTime() {
+    uint32_t sz = ifaces_.size();
+    for (uint32_t i = 0; i < sz; ++i) {
+      if (i == sz - 1) {
+        return ifaces_[i]->getBidsTime();
+      } else {
+        ifaces_[i]->getBidsTime();
       }
     }
   }
@@ -788,7 +998,7 @@ class GuiDataMultiface : virtual public GuiDataIf {
     }
   }
 
-  MyInt getAmountStocks() {
+  int32_t getAmountStocks() {
     uint32_t sz = ifaces_.size();
     for (uint32_t i = 0; i < sz; ++i) {
       if (i == sz - 1) {
@@ -799,7 +1009,7 @@ class GuiDataMultiface : virtual public GuiDataIf {
     }
   }
 
-  MyInt getMoney() {
+  int32_t getMoney() {
     uint32_t sz = ifaces_.size();
     for (uint32_t i = 0; i < sz; ++i) {
       if (i == sz - 1) {

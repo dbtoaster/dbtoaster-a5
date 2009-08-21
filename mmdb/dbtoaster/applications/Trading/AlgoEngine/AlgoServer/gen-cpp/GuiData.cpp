@@ -76,8 +76,8 @@ uint32_t GuiData_getAsksDiff_result::read(apache::thrift::protocol::TProtocol* i
     switch (fid)
     {
       case 0:
-        if (ftype == apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->success);
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble(this->success);
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -102,8 +102,8 @@ uint32_t GuiData_getAsksDiff_result::write(apache::thrift::protocol::TProtocol* 
   xfer += oprot->writeStructBegin("GuiData_getAsksDiff_result");
 
   if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_I32, 0);
-    xfer += oprot->writeI32(this->success);
+    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_DOUBLE, 0);
+    xfer += oprot->writeDouble(this->success);
     xfer += oprot->writeFieldEnd();
   }
   xfer += oprot->writeFieldStop();
@@ -132,8 +132,8 @@ uint32_t GuiData_getAsksDiff_presult::read(apache::thrift::protocol::TProtocol* 
     switch (fid)
     {
       case 0:
-        if (ftype == apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32((*(this->success)));
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble((*(this->success)));
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -220,8 +220,8 @@ uint32_t GuiData_getBidsDiff_result::read(apache::thrift::protocol::TProtocol* i
     switch (fid)
     {
       case 0:
-        if (ftype == apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32(this->success);
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble(this->success);
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -246,8 +246,8 @@ uint32_t GuiData_getBidsDiff_result::write(apache::thrift::protocol::TProtocol* 
   xfer += oprot->writeStructBegin("GuiData_getBidsDiff_result");
 
   if (this->__isset.success) {
-    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_I32, 0);
-    xfer += oprot->writeI32(this->success);
+    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_DOUBLE, 0);
+    xfer += oprot->writeDouble(this->success);
     xfer += oprot->writeFieldEnd();
   }
   xfer += oprot->writeFieldStop();
@@ -276,8 +276,296 @@ uint32_t GuiData_getBidsDiff_presult::read(apache::thrift::protocol::TProtocol* 
     switch (fid)
     {
       case 0:
-        if (ftype == apache::thrift::protocol::T_I32) {
-          xfer += iprot->readI32((*(this->success)));
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble((*(this->success)));
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_args::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_args::write(apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  xfer += oprot->writeStructBegin("GuiData_getAsksTime_args");
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  xfer += oprot->writeStructBegin("GuiData_getAsksTime_pargs");
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_result::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble(this->success);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_result::write(apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("GuiData_getAsksTime_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_DOUBLE, 0);
+    xfer += oprot->writeDouble(this->success);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getAsksTime_presult::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble((*(this->success)));
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_args::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_args::write(apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  xfer += oprot->writeStructBegin("GuiData_getBidsTime_args");
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_pargs::write(apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  xfer += oprot->writeStructBegin("GuiData_getBidsTime_pargs");
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_result::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble(this->success);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_result::write(apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("GuiData_getBidsTime_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", apache::thrift::protocol::T_DOUBLE, 0);
+    xfer += oprot->writeDouble(this->success);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+uint32_t GuiData_getBidsTime_presult::read(apache::thrift::protocol::TProtocol* iprot) {
+
+  uint32_t xfer = 0;
+  std::string fname;
+  apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == apache::thrift::protocol::T_DOUBLE) {
+          xfer += iprot->readDouble((*(this->success)));
           this->__isset.success = true;
         } else {
           xfer += iprot->skip(ftype);
@@ -1015,7 +1303,7 @@ uint32_t GuiData_getMoney_presult::read(apache::thrift::protocol::TProtocol* ipr
   return xfer;
 }
 
-MyInt GuiDataClient::getAsksDiff()
+double GuiDataClient::getAsksDiff()
 {
   send_getAsksDiff();
   return recv_getAsksDiff();
@@ -1034,7 +1322,7 @@ void GuiDataClient::send_getAsksDiff()
   oprot_->getTransport()->writeEnd();
 }
 
-MyInt GuiDataClient::recv_getAsksDiff()
+double GuiDataClient::recv_getAsksDiff()
 {
 
   int32_t rseqid = 0;
@@ -1061,7 +1349,7 @@ MyInt GuiDataClient::recv_getAsksDiff()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-  MyInt _return;
+  double _return;
   GuiData_getAsksDiff_presult result;
   result.success = &_return;
   result.read(iprot_);
@@ -1074,7 +1362,7 @@ MyInt GuiDataClient::recv_getAsksDiff()
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getAsksDiff failed: unknown result");
 }
 
-MyInt GuiDataClient::getBidsDiff()
+double GuiDataClient::getBidsDiff()
 {
   send_getBidsDiff();
   return recv_getBidsDiff();
@@ -1093,7 +1381,7 @@ void GuiDataClient::send_getBidsDiff()
   oprot_->getTransport()->writeEnd();
 }
 
-MyInt GuiDataClient::recv_getBidsDiff()
+double GuiDataClient::recv_getBidsDiff()
 {
 
   int32_t rseqid = 0;
@@ -1120,7 +1408,7 @@ MyInt GuiDataClient::recv_getBidsDiff()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-  MyInt _return;
+  double _return;
   GuiData_getBidsDiff_presult result;
   result.success = &_return;
   result.read(iprot_);
@@ -1131,6 +1419,124 @@ MyInt GuiDataClient::recv_getBidsDiff()
     return _return;
   }
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getBidsDiff failed: unknown result");
+}
+
+double GuiDataClient::getAsksTime()
+{
+  send_getAsksTime();
+  return recv_getAsksTime();
+}
+
+void GuiDataClient::send_getAsksTime()
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("getAsksTime", apache::thrift::protocol::T_CALL, cseqid);
+
+  GuiData_getAsksTime_pargs args;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->flush();
+  oprot_->getTransport()->writeEnd();
+}
+
+double GuiDataClient::recv_getAsksTime()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
+    apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
+  }
+  if (fname.compare("getAsksTime") != 0) {
+    iprot_->skip(apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
+  }
+  double _return;
+  GuiData_getAsksTime_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getAsksTime failed: unknown result");
+}
+
+double GuiDataClient::getBidsTime()
+{
+  send_getBidsTime();
+  return recv_getBidsTime();
+}
+
+void GuiDataClient::send_getBidsTime()
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("getBidsTime", apache::thrift::protocol::T_CALL, cseqid);
+
+  GuiData_getBidsTime_pargs args;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->flush();
+  oprot_->getTransport()->writeEnd();
+}
+
+double GuiDataClient::recv_getBidsTime()
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == apache::thrift::protocol::T_EXCEPTION) {
+    apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::INVALID_MESSAGE_TYPE);
+  }
+  if (fname.compare("getBidsTime") != 0) {
+    iprot_->skip(apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
+  }
+  double _return;
+  GuiData_getBidsTime_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    return _return;
+  }
+  throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getBidsTime failed: unknown result");
 }
 
 double GuiDataClient::getPrice()
@@ -1310,7 +1716,7 @@ double GuiDataClient::recv_getVariance()
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getVariance failed: unknown result");
 }
 
-MyInt GuiDataClient::getAmountStocks()
+int32_t GuiDataClient::getAmountStocks()
 {
   send_getAmountStocks();
   return recv_getAmountStocks();
@@ -1329,7 +1735,7 @@ void GuiDataClient::send_getAmountStocks()
   oprot_->getTransport()->writeEnd();
 }
 
-MyInt GuiDataClient::recv_getAmountStocks()
+int32_t GuiDataClient::recv_getAmountStocks()
 {
 
   int32_t rseqid = 0;
@@ -1356,7 +1762,7 @@ MyInt GuiDataClient::recv_getAmountStocks()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-  MyInt _return;
+  int32_t _return;
   GuiData_getAmountStocks_presult result;
   result.success = &_return;
   result.read(iprot_);
@@ -1369,7 +1775,7 @@ MyInt GuiDataClient::recv_getAmountStocks()
   throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::MISSING_RESULT, "getAmountStocks failed: unknown result");
 }
 
-MyInt GuiDataClient::getMoney()
+int32_t GuiDataClient::getMoney()
 {
   send_getMoney();
   return recv_getMoney();
@@ -1388,7 +1794,7 @@ void GuiDataClient::send_getMoney()
   oprot_->getTransport()->writeEnd();
 }
 
-MyInt GuiDataClient::recv_getMoney()
+int32_t GuiDataClient::recv_getMoney()
 {
 
   int32_t rseqid = 0;
@@ -1415,7 +1821,7 @@ MyInt GuiDataClient::recv_getMoney()
     iprot_->getTransport()->readEnd();
     throw apache::thrift::TApplicationException(apache::thrift::TApplicationException::WRONG_METHOD_NAME);
   }
-  MyInt _return;
+  int32_t _return;
   GuiData_getMoney_presult result;
   result.success = &_return;
   result.read(iprot_);
@@ -1523,6 +1929,62 @@ void GuiDataProcessor::process_getBidsDiff(int32_t seqid, apache::thrift::protoc
   }
 
   oprot->writeMessageBegin("getBidsDiff", apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  oprot->getTransport()->flush();
+  oprot->getTransport()->writeEnd();
+}
+
+void GuiDataProcessor::process_getAsksTime(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
+{
+  GuiData_getAsksTime_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  iprot->getTransport()->readEnd();
+
+  GuiData_getAsksTime_result result;
+  try {
+    result.success = iface_->getAsksTime();
+    result.__isset.success = true;
+  } catch (const std::exception& e) {
+    apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("getAsksTime", apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->flush();
+    oprot->getTransport()->writeEnd();
+    return;
+  }
+
+  oprot->writeMessageBegin("getAsksTime", apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  oprot->getTransport()->flush();
+  oprot->getTransport()->writeEnd();
+}
+
+void GuiDataProcessor::process_getBidsTime(int32_t seqid, apache::thrift::protocol::TProtocol* iprot, apache::thrift::protocol::TProtocol* oprot)
+{
+  GuiData_getBidsTime_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  iprot->getTransport()->readEnd();
+
+  GuiData_getBidsTime_result result;
+  try {
+    result.success = iface_->getBidsTime();
+    result.__isset.success = true;
+  } catch (const std::exception& e) {
+    apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("getBidsTime", apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->flush();
+    oprot->getTransport()->writeEnd();
+    return;
+  }
+
+  oprot->writeMessageBegin("getBidsTime", apache::thrift::protocol::T_REPLY, seqid);
   result.write(oprot);
   oprot->writeMessageEnd();
   oprot->getTransport()->flush();

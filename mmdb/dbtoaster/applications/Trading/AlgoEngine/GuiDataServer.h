@@ -25,29 +25,41 @@ using boost::shared_ptr;
 using namespace DBToaster::DemoAlgEngine;
 using namespace DBToaster::GuiData;
 
-class GuiDataHandler : virtual public GuiDataIf 
-{
+class GuiDataHandler : virtual public GuiDataIf {
 public:
+    
     GuiDataHandler(DataCollection * d, OrderManager * m) :
-    data(d),
-    manager(m)
+     data(d),
+     manager(m)
     {
 
     }
 
-    MyInt getAsksDiff() 
+    double getAsksDiff() 
     {    
-        MyInt v=static_cast<int32_t>(data->getAsksDiff());
+        double v=data->getAsksDiff();
         return v;  
     }
 
-    MyInt getBidsDiff() 
+    double getBidsDiff() 
     {   
-        MyInt v=(MyInt)data->getBidsDiff();
+        double v=data->getBidsDiff();
         return v;
     }
 
-    double getPrice()
+    double getAsksTime() 
+    {
+        double v=data->getAsksTime();
+        return v;
+    }
+
+    double getBidsTime() 
+    {
+        double v=data->getBidsTime();
+        return v;
+    }
+
+    double getPrice() 
     {
         double p=data->getCurrentPrice();
         return p;
@@ -65,15 +77,15 @@ public:
         return v;
     }
 
-    MyInt getAmountStocks() 
+    int32_t getAmountStocks()
     {
-        MyInt m=(MyInt)manager->getCurrentMoney();
+        int32_t m=(int32_t)manager->getCurrentMoney();
         return m;
     }
 
-    MyInt getMoney() 
+    int32_t getMoney() 
     {
-        MyInt s=(MyInt)manager->getCurrentShares();
+        int32_t s=(int32_t)manager->getCurrentShares();
         return s;
     }
 

@@ -19,13 +19,17 @@ import org.apache.thrift.*;
 import org.apache.thrift.meta_data.*;
 import org.apache.thrift.protocol.*;
 
-public class GuiData {
+public class AlgoDataExtractor {
 
   public interface Iface {
 
-    public int getAsksDiff() throws TException;
+    public double getAsksDiff() throws TException;
 
-    public int getBidsDiff() throws TException;
+    public double getBidsDiff() throws TException;
+
+    public double getAsksTime() throws TException;
+
+    public double getBidsTime() throws TException;
 
     public double getPrice() throws TException;
 
@@ -66,7 +70,7 @@ public class GuiData {
       return this.oprot_;
     }
 
-    public int getAsksDiff() throws TException
+    public double getAsksDiff() throws TException
     {
       send_getAsksDiff();
       return recv_getAsksDiff();
@@ -81,7 +85,7 @@ public class GuiData {
       oprot_.getTransport().flush();
     }
 
-    public int recv_getAsksDiff() throws TException
+    public double recv_getAsksDiff() throws TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -98,7 +102,7 @@ public class GuiData {
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getAsksDiff failed: unknown result");
     }
 
-    public int getBidsDiff() throws TException
+    public double getBidsDiff() throws TException
     {
       send_getBidsDiff();
       return recv_getBidsDiff();
@@ -113,7 +117,7 @@ public class GuiData {
       oprot_.getTransport().flush();
     }
 
-    public int recv_getBidsDiff() throws TException
+    public double recv_getBidsDiff() throws TException
     {
       TMessage msg = iprot_.readMessageBegin();
       if (msg.type == TMessageType.EXCEPTION) {
@@ -128,6 +132,70 @@ public class GuiData {
         return result.success;
       }
       throw new TApplicationException(TApplicationException.MISSING_RESULT, "getBidsDiff failed: unknown result");
+    }
+
+    public double getAsksTime() throws TException
+    {
+      send_getAsksTime();
+      return recv_getAsksTime();
+    }
+
+    public void send_getAsksTime() throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getAsksTime", TMessageType.CALL, seqid_));
+      getAsksTime_args args = new getAsksTime_args();
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public double recv_getAsksTime() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getAsksTime_result result = new getAsksTime_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getAsksTime failed: unknown result");
+    }
+
+    public double getBidsTime() throws TException
+    {
+      send_getBidsTime();
+      return recv_getBidsTime();
+    }
+
+    public void send_getBidsTime() throws TException
+    {
+      oprot_.writeMessageBegin(new TMessage("getBidsTime", TMessageType.CALL, seqid_));
+      getBidsTime_args args = new getBidsTime_args();
+      args.write(oprot_);
+      oprot_.writeMessageEnd();
+      oprot_.getTransport().flush();
+    }
+
+    public double recv_getBidsTime() throws TException
+    {
+      TMessage msg = iprot_.readMessageBegin();
+      if (msg.type == TMessageType.EXCEPTION) {
+        TApplicationException x = TApplicationException.read(iprot_);
+        iprot_.readMessageEnd();
+        throw x;
+      }
+      getBidsTime_result result = new getBidsTime_result();
+      result.read(iprot_);
+      iprot_.readMessageEnd();
+      if (result.isSetSuccess()) {
+        return result.success;
+      }
+      throw new TApplicationException(TApplicationException.MISSING_RESULT, "getBidsTime failed: unknown result");
     }
 
     public double getPrice() throws TException
@@ -298,6 +366,8 @@ public class GuiData {
       iface_ = iface;
       processMap_.put("getAsksDiff", new getAsksDiff());
       processMap_.put("getBidsDiff", new getBidsDiff());
+      processMap_.put("getAsksTime", new getAsksTime());
+      processMap_.put("getBidsTime", new getBidsTime());
       processMap_.put("getPrice", new getPrice());
       processMap_.put("getMeanPrice", new getMeanPrice());
       processMap_.put("getVariance", new getVariance());
@@ -357,6 +427,40 @@ public class GuiData {
         result.success = iface_.getBidsDiff();
         result.setSuccessIsSet(true);
         oprot.writeMessageBegin(new TMessage("getBidsDiff", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getAsksTime implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getAsksTime_args args = new getAsksTime_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getAsksTime_result result = new getAsksTime_result();
+        result.success = iface_.getAsksTime();
+        result.setSuccessIsSet(true);
+        oprot.writeMessageBegin(new TMessage("getAsksTime", TMessageType.REPLY, seqid));
+        result.write(oprot);
+        oprot.writeMessageEnd();
+        oprot.getTransport().flush();
+      }
+
+    }
+
+    private class getBidsTime implements ProcessFunction {
+      public void process(int seqid, TProtocol iprot, TProtocol oprot) throws TException
+      {
+        getBidsTime_args args = new getBidsTime_args();
+        args.read(iprot);
+        iprot.readMessageEnd();
+        getBidsTime_result result = new getBidsTime_result();
+        result.success = iface_.getBidsTime();
+        result.setSuccessIsSet(true);
+        oprot.writeMessageBegin(new TMessage("getBidsTime", TMessageType.REPLY, seqid));
         result.write(oprot);
         oprot.writeMessageEnd();
         oprot.getTransport().flush();
@@ -579,9 +683,9 @@ public class GuiData {
 
   public static class getAsksDiff_result implements TBase, java.io.Serializable, Cloneable, Comparable<getAsksDiff_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getAsksDiff_result");
-    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.DOUBLE, (short)0);
 
-    public int success;
+    public double success;
     public static final int SUCCESS = 0;
 
     // isset id assignments
@@ -590,7 +694,7 @@ public class GuiData {
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.I32)));
+          new FieldValueMetaData(TType.DOUBLE)));
     }});
 
     static {
@@ -601,7 +705,7 @@ public class GuiData {
     }
 
     public getAsksDiff_result(
-      int success)
+      double success)
     {
       this();
       this.success = success;
@@ -622,11 +726,11 @@ public class GuiData {
       return new getAsksDiff_result(this);
     }
 
-    public int getSuccess() {
+    public double getSuccess() {
       return this.success;
     }
 
-    public getAsksDiff_result setSuccess(int success) {
+    public getAsksDiff_result setSuccess(double success) {
       this.success = success;
       setSuccessIsSet(true);
       return this;
@@ -651,7 +755,7 @@ public class GuiData {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((Integer)value);
+          setSuccess((Double)value);
         }
         break;
 
@@ -663,7 +767,7 @@ public class GuiData {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return new Double(getSuccess());
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -741,8 +845,8 @@ public class GuiData {
         switch (field.id)
         {
           case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
+            if (field.type == TType.DOUBLE) {
+              this.success = iprot.readDouble();
               setSuccessIsSet(true);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
@@ -766,7 +870,7 @@ public class GuiData {
 
       if (this.isSetSuccess()) {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        oprot.writeI32(this.success);
+        oprot.writeDouble(this.success);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -920,9 +1024,9 @@ public class GuiData {
 
   public static class getBidsDiff_result implements TBase, java.io.Serializable, Cloneable, Comparable<getBidsDiff_result>   {
     private static final TStruct STRUCT_DESC = new TStruct("getBidsDiff_result");
-    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.I32, (short)0);
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.DOUBLE, (short)0);
 
-    public int success;
+    public double success;
     public static final int SUCCESS = 0;
 
     // isset id assignments
@@ -931,7 +1035,7 @@ public class GuiData {
 
     public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
       put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
-          new FieldValueMetaData(TType.I32)));
+          new FieldValueMetaData(TType.DOUBLE)));
     }});
 
     static {
@@ -942,7 +1046,7 @@ public class GuiData {
     }
 
     public getBidsDiff_result(
-      int success)
+      double success)
     {
       this();
       this.success = success;
@@ -963,11 +1067,11 @@ public class GuiData {
       return new getBidsDiff_result(this);
     }
 
-    public int getSuccess() {
+    public double getSuccess() {
       return this.success;
     }
 
-    public getBidsDiff_result setSuccess(int success) {
+    public getBidsDiff_result setSuccess(double success) {
       this.success = success;
       setSuccessIsSet(true);
       return this;
@@ -992,7 +1096,7 @@ public class GuiData {
         if (value == null) {
           unsetSuccess();
         } else {
-          setSuccess((Integer)value);
+          setSuccess((Double)value);
         }
         break;
 
@@ -1004,7 +1108,7 @@ public class GuiData {
     public Object getFieldValue(int fieldID) {
       switch (fieldID) {
       case SUCCESS:
-        return new Integer(getSuccess());
+        return new Double(getSuccess());
 
       default:
         throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
@@ -1082,8 +1186,8 @@ public class GuiData {
         switch (field.id)
         {
           case SUCCESS:
-            if (field.type == TType.I32) {
-              this.success = iprot.readI32();
+            if (field.type == TType.DOUBLE) {
+              this.success = iprot.readDouble();
               setSuccessIsSet(true);
             } else { 
               TProtocolUtil.skip(iprot, field.type);
@@ -1107,7 +1211,7 @@ public class GuiData {
 
       if (this.isSetSuccess()) {
         oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
-        oprot.writeI32(this.success);
+        oprot.writeDouble(this.success);
         oprot.writeFieldEnd();
       }
       oprot.writeFieldStop();
@@ -1117,6 +1221,688 @@ public class GuiData {
     @Override
     public String toString() {
       StringBuilder sb = new StringBuilder("getBidsDiff_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class getAsksTime_args implements TBase, java.io.Serializable, Cloneable, Comparable<getAsksTime_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getAsksTime_args");
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getAsksTime_args.class, metaDataMap);
+    }
+
+    public getAsksTime_args() {
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getAsksTime_args(getAsksTime_args other) {
+    }
+
+    @Override
+    public getAsksTime_args clone() {
+      return new getAsksTime_args(this);
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getAsksTime_args)
+        return this.equals((getAsksTime_args)that);
+      return false;
+    }
+
+    public boolean equals(getAsksTime_args that) {
+      if (that == null)
+        return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(getAsksTime_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getAsksTime_args typedOther = (getAsksTime_args)other;
+
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getAsksTime_args(");
+      boolean first = true;
+
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class getAsksTime_result implements TBase, java.io.Serializable, Cloneable, Comparable<getAsksTime_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getAsksTime_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.DOUBLE, (short)0);
+
+    public double success;
+    public static final int SUCCESS = 0;
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.DOUBLE)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getAsksTime_result.class, metaDataMap);
+    }
+
+    public getAsksTime_result() {
+    }
+
+    public getAsksTime_result(
+      double success)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getAsksTime_result(getAsksTime_result other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      this.success = other.success;
+    }
+
+    @Override
+    public getAsksTime_result clone() {
+      return new getAsksTime_result(this);
+    }
+
+    public double getSuccess() {
+      return this.success;
+    }
+
+    public getAsksTime_result setSuccess(double success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Double)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Double(getSuccess());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return isSetSuccess();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getAsksTime_result)
+        return this.equals((getAsksTime_result)that);
+      return false;
+    }
+
+    public boolean equals(getAsksTime_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(getAsksTime_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getAsksTime_result typedOther = (getAsksTime_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case SUCCESS:
+            if (field.type == TType.DOUBLE) {
+              this.success = iprot.readDouble();
+              setSuccessIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        oprot.writeDouble(this.success);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getAsksTime_result(");
+      boolean first = true;
+
+      sb.append("success:");
+      sb.append(this.success);
+      first = false;
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class getBidsTime_args implements TBase, java.io.Serializable, Cloneable, Comparable<getBidsTime_args>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getBidsTime_args");
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getBidsTime_args.class, metaDataMap);
+    }
+
+    public getBidsTime_args() {
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getBidsTime_args(getBidsTime_args other) {
+    }
+
+    @Override
+    public getBidsTime_args clone() {
+      return new getBidsTime_args(this);
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getBidsTime_args)
+        return this.equals((getBidsTime_args)that);
+      return false;
+    }
+
+    public boolean equals(getBidsTime_args that) {
+      if (that == null)
+        return false;
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(getBidsTime_args other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getBidsTime_args typedOther = (getBidsTime_args)other;
+
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      validate();
+
+      oprot.writeStructBegin(STRUCT_DESC);
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getBidsTime_args(");
+      boolean first = true;
+
+      sb.append(")");
+      return sb.toString();
+    }
+
+    public void validate() throws TException {
+      // check for required fields
+      // check that fields of type enum have valid values
+    }
+
+  }
+
+  public static class getBidsTime_result implements TBase, java.io.Serializable, Cloneable, Comparable<getBidsTime_result>   {
+    private static final TStruct STRUCT_DESC = new TStruct("getBidsTime_result");
+    private static final TField SUCCESS_FIELD_DESC = new TField("success", TType.DOUBLE, (short)0);
+
+    public double success;
+    public static final int SUCCESS = 0;
+
+    // isset id assignments
+    private static final int __SUCCESS_ISSET_ID = 0;
+    private BitSet __isset_bit_vector = new BitSet(1);
+
+    public static final Map<Integer, FieldMetaData> metaDataMap = Collections.unmodifiableMap(new HashMap<Integer, FieldMetaData>() {{
+      put(SUCCESS, new FieldMetaData("success", TFieldRequirementType.DEFAULT, 
+          new FieldValueMetaData(TType.DOUBLE)));
+    }});
+
+    static {
+      FieldMetaData.addStructMetaDataMap(getBidsTime_result.class, metaDataMap);
+    }
+
+    public getBidsTime_result() {
+    }
+
+    public getBidsTime_result(
+      double success)
+    {
+      this();
+      this.success = success;
+      setSuccessIsSet(true);
+    }
+
+    /**
+     * Performs a deep copy on <i>other</i>.
+     */
+    public getBidsTime_result(getBidsTime_result other) {
+      __isset_bit_vector.clear();
+      __isset_bit_vector.or(other.__isset_bit_vector);
+      this.success = other.success;
+    }
+
+    @Override
+    public getBidsTime_result clone() {
+      return new getBidsTime_result(this);
+    }
+
+    public double getSuccess() {
+      return this.success;
+    }
+
+    public getBidsTime_result setSuccess(double success) {
+      this.success = success;
+      setSuccessIsSet(true);
+      return this;
+    }
+
+    public void unsetSuccess() {
+      __isset_bit_vector.clear(__SUCCESS_ISSET_ID);
+    }
+
+    // Returns true if field success is set (has been asigned a value) and false otherwise
+    public boolean isSetSuccess() {
+      return __isset_bit_vector.get(__SUCCESS_ISSET_ID);
+    }
+
+    public void setSuccessIsSet(boolean value) {
+      __isset_bit_vector.set(__SUCCESS_ISSET_ID, value);
+    }
+
+    public void setFieldValue(int fieldID, Object value) {
+      switch (fieldID) {
+      case SUCCESS:
+        if (value == null) {
+          unsetSuccess();
+        } else {
+          setSuccess((Double)value);
+        }
+        break;
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    public Object getFieldValue(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return new Double(getSuccess());
+
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    // Returns true if field corresponding to fieldID is set (has been asigned a value) and false otherwise
+    public boolean isSet(int fieldID) {
+      switch (fieldID) {
+      case SUCCESS:
+        return isSetSuccess();
+      default:
+        throw new IllegalArgumentException("Field " + fieldID + " doesn't exist!");
+      }
+    }
+
+    @Override
+    public boolean equals(Object that) {
+      if (that == null)
+        return false;
+      if (that instanceof getBidsTime_result)
+        return this.equals((getBidsTime_result)that);
+      return false;
+    }
+
+    public boolean equals(getBidsTime_result that) {
+      if (that == null)
+        return false;
+
+      boolean this_present_success = true;
+      boolean that_present_success = true;
+      if (this_present_success || that_present_success) {
+        if (!(this_present_success && that_present_success))
+          return false;
+        if (this.success != that.success)
+          return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return 0;
+    }
+
+    public int compareTo(getBidsTime_result other) {
+      if (!getClass().equals(other.getClass())) {
+        return getClass().getName().compareTo(other.getClass().getName());
+      }
+
+      int lastComparison = 0;
+      getBidsTime_result typedOther = (getBidsTime_result)other;
+
+      lastComparison = Boolean.valueOf(isSetSuccess()).compareTo(isSetSuccess());
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      lastComparison = TBaseHelper.compareTo(success, typedOther.success);
+      if (lastComparison != 0) {
+        return lastComparison;
+      }
+      return 0;
+    }
+
+    public void read(TProtocol iprot) throws TException {
+      TField field;
+      iprot.readStructBegin();
+      while (true)
+      {
+        field = iprot.readFieldBegin();
+        if (field.type == TType.STOP) { 
+          break;
+        }
+        switch (field.id)
+        {
+          case SUCCESS:
+            if (field.type == TType.DOUBLE) {
+              this.success = iprot.readDouble();
+              setSuccessIsSet(true);
+            } else { 
+              TProtocolUtil.skip(iprot, field.type);
+            }
+            break;
+          default:
+            TProtocolUtil.skip(iprot, field.type);
+            break;
+        }
+        iprot.readFieldEnd();
+      }
+      iprot.readStructEnd();
+
+
+      // check for required fields of primitive type, which can't be checked in the validate method
+      validate();
+    }
+
+    public void write(TProtocol oprot) throws TException {
+      oprot.writeStructBegin(STRUCT_DESC);
+
+      if (this.isSetSuccess()) {
+        oprot.writeFieldBegin(SUCCESS_FIELD_DESC);
+        oprot.writeDouble(this.success);
+        oprot.writeFieldEnd();
+      }
+      oprot.writeFieldStop();
+      oprot.writeStructEnd();
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder sb = new StringBuilder("getBidsTime_result(");
       boolean first = true;
 
       sb.append("success:");
