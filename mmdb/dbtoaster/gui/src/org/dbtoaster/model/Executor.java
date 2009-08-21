@@ -1,5 +1,7 @@
 package org.dbtoaster.model;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -26,6 +28,8 @@ import java.util.Vector;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+import javax.swing.Timer;
+
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
@@ -33,8 +37,10 @@ import org.apache.thrift.transport.TTransport;
 import org.dbtoaster.gui.DBPerfPanel;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
+import org.jfree.chart.JFreeChart;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
 
 import DBToaster.Profiler.Protocol.ProfileLocation;
@@ -51,24 +57,26 @@ public class Executor
     ProcessBuilder queryProcess;
     Process currentQuery;
 
-    public class DBToasterProfiler implements Runnable
+    public class DBToasterProfiler extends Timer implements ActionListener
     {        
         Client client;
         TTransport transport;
         boolean terminated;
         
         TimeSeries samples;
+        ChartComposite chart;
         HashMap<Integer, String> codeLocations;
         LinkedList<Integer> handlerLocations;
 
         Millisecond currentMs;
         double currentSample;
 
-        static final long profilerPeriod = 1000;
+        static final int profilerPeriod = 1000;
 
         public DBToasterProfiler(String codeLocationsFile, TProtocol protocol,
-                TimeSeries profilerSamples)
+                TimeSeries profilerSamples, ChartComposite profilerChart)
         {
+            super(profilerPeriod, null);
             reset();
             try {
                 transport = protocol.getTransport();
@@ -76,10 +84,17 @@ public class Executor
     
                 client = new Client(protocol);
                 samples = profilerSamples;
+                chart = profilerChart;
                 
+                // Clear previous run.
+                chart.getDisplay().asyncExec(new Runnable()
+                    { public void run() { samples.clear(); } });
+
                 codeLocations = new HashMap<Integer, String>();
                 handlerLocations = new LinkedList<Integer>();
                 readCodeLocations(codeLocationsFile);
+                addActionListener(this);
+
             } catch (Exception e) {
                 
             }
@@ -166,8 +181,8 @@ public class Executor
                         List<SampleUnits> newSamples =
                             codeProfile.getProfile().get(loc);
 
-                        System.out.println("Found " + newSamples.size() +
-                            " samples for loc: " + loc.statName + ", " + loc.codeLocation);
+                        //System.out.println("Found " + newSamples.size() +
+                        //    " samples for loc: " + loc.statName + ", " + loc.codeLocation);
 
                         for (SampleUnits s : newSamples)
                         {
@@ -184,26 +199,30 @@ public class Executor
                             locAvgExecTime += ((s.getExecTime().getTv_sec() * 1e9)
                                 + s.getExecTime().getTv_nsec());
                             ++sampleCount;
-                            System.out.println(locAvgExecTime + " " + sampleCount);
+                            //System.out.println(locAvgExecTime + " " + sampleCount);
                         }
 
                         sumExecTime += (locAvgExecTime / sampleCount);
                     }
                     else {
-                        String msg = "Could not find cpu profile for location: "
-                            + codeLocations.get(l) + " " + l;
-                        System.err.println(msg);
+                        //String msg = "Could not find cpu profile for location: "
+                        //    + codeLocations.get(l) + " " + l;
+                        //System.err.println(msg);
                     }
                 }
 
                 currentMs = new Millisecond(currentCal.getTime());
-                currentSample = sumExecTime;
+                currentSample = sumExecTime * 1e-6;
 
-                Display.getDefault().asyncExec(new Runnable()
+                chart.getDisplay().asyncExec(new Runnable()
                 {
                     public void run()
                     {
+                        //System.out.println("Adding sample...");
                         samples.add(currentMs, currentSample);
+                        
+                        //System.out.println("Redrawing chart!");
+                        //chart.forceRedraw();
                     }
                 });
 
@@ -213,26 +232,44 @@ public class Executor
             }
         }
 
-        public void run()
-        {
-            while ( !terminated && transport.isOpen() ) {
-                // TODO: hand off data to visualizer.
-                runOnce();
-                try {
-                    Thread.sleep(profilerPeriod);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        
-            transport.close();
-        }
-    
         public void terminate() { terminated = true; }
+
+        public void actionPerformed(ActionEvent e)
+        {
+            runOnce();
+        }
     };
 
+    class ExecutionLogger extends Thread implements Runnable
+    {
+        String logFile;
+        boolean terminated;
+
+        public ExecutionLogger(String f) { logFile = f; terminated = false; }
+
+        public void run()
+        {
+            try {
+                BufferedReader logReader = new BufferedReader(
+                        new InputStreamReader(currentQuery.getInputStream()));
+                    
+                Writer logWriter = new BufferedWriter(new FileWriter(logFile));
+                String line = "";
+                while ( ((line = logReader.readLine()) != null) && !terminated )
+                    logWriter.write(line + "\n");
+    
+                logWriter.close();
+                logReader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        public void terminate() { terminated = true; }
+    }
+
     DBToasterProfiler profiler;
-    Thread currentProfilerThread;
+    ExecutionLogger currentLogger;
 
     // Profiler client
     TBinaryProtocol.Factory profilerProtocolFactory;
@@ -270,7 +307,8 @@ public class Executor
     public String getBinaryPath() { return binaryPath; } 
     
     String run(String codeLocationsFile, String execLogFile,
-            int profilerServicePort, TimeSeries profilerSamples)
+        int profilerServicePort, TimeSeries profilerSamples,
+        ChartComposite profilerChart)
     {
         // Run query binary.
         String status = null;
@@ -302,54 +340,56 @@ public class Executor
         // Connect debugger client.
         if ( currentQuery != null )
         {
-            
             // Periodically retrieve statistics while binary is still running.
-            TSocket s = new TSocket(currentHost, currentPort);
-            System.out.println("Opening socket....");
-            try { s.open();
-            if ( !s.isOpen() ) { System.out.println("Failed to connect!!"); }
-            } catch (Exception e) { e.printStackTrace(); }
-            
-            System.out.println("Getting protocol....");
-            
-            TProtocol protocol = profilerProtocolFactory.getProtocol(s);
-            
-            profiler = new DBToasterProfiler(codeLocationsFile, protocol, profilerSamples);
-            currentProfilerThread = new Thread(profiler);
-            currentProfilerThread.start();
-            
-            try {
-                BufferedReader logReader = new BufferedReader(
-                        new InputStreamReader(currentQuery.getInputStream()));
-                    
-                Writer logWriter = new BufferedWriter(new FileWriter(execLogFile));
-                String line = "";
-                while ( (line = logReader.readLine()) != null )
-                    logWriter.write(line + "\n");
-    
-                logWriter.close();
-                logReader.close();
-                    
-                //int rs = currentQuery.waitFor();
-                //if ( rs != 0 ) status = "Query returned non-zero exit status";
-            } catch (IOException e) {
-                status = "IOException while running query.";
+            try { 
+                
+                Thread.sleep(200);
+                TSocket s = new TSocket(currentHost, currentPort);
+                
+                System.out.println("Opening socket....");
+                
+                s.open();
+                if ( !s.isOpen() ) {
+                    System.out.println("Failed to connect!!");
+                }
+                
+                System.out.println("Getting protocol....");
+                
+                TProtocol protocol = profilerProtocolFactory.getProtocol(s);
+                
+                profiler = new DBToasterProfiler(
+                    codeLocationsFile, protocol, profilerSamples, profilerChart);
+                profiler.start();
+
+                currentLogger = new ExecutionLogger(execLogFile);
+                currentLogger.start();
+
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-            /*
-            catch (InterruptedException e) {
-                status = "Query interrputed while running...";
-                e.printStackTrace();
-            }
-            */
         }
-        System.out.println("EEEE: ");
         
-        currentQuery = null;
         return status;
     }
 
-    
+    public DBToasterProfiler getProfiler() { return profiler; }
+
+    void stop()
+    {
+        if ( profiler != null && profiler.isRunning() )
+            profiler.stop();
+
+        if ( currentLogger != null )
+            currentLogger.terminate();
+
+        if ( currentQuery != null )
+            currentQuery.destroy();
+
+        currentLogger = null;
+        profiler = null;
+        currentQuery = null;
+    }
+
     // TODO: data loading for alternative DBMS
     private File inFile;
     private BufferedReader br;
@@ -367,8 +407,7 @@ public class Executor
     	
     	return 0;
     }
-    
- 
+     
     void runJDBCQuery(String dbUrl, String sqlQuery,
             TimeSeries profilerSamples)
     {
@@ -569,16 +608,20 @@ public class Executor
     void runSPE() {}
     
     public void runComparison( final Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
-    		Integer[] numdatabases, final String[] dbNames) {
-    	for (int i = 0 ; i < numdatabases.length; i ++) {
-    		if(numdatabases[i] == 1) {
+    		Integer[] numdatabases, final String[] dbNames)
+    {
+    	for (int i = 0 ; i < numdatabases.length; i ++)
+    	{
+    		if(numdatabases[i] == 1)
+    		{
     			DBPerfPanel panel = dbPanels.get(dbNames[i]);
+    			ChartComposite chart = panel.getCpuChart();
     			final TimeSeries ts = panel.getCpuTimeSeries();
-//    	        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+    			//String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
     			System.out.println("Profiling "+q.getQueryName() + " with "+ dbNames[i]);
     			if(dbNames[i].equals("DBToaster")) {
     				System.out.println("Starting");
-    				q.runQuery(20000, ts);
+    				q.runQuery(20000, ts, chart);
     			}
     			else if(dbNames[i].equals("Postgres")) {
     			    Thread th = new Thread (new Runnable() {

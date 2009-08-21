@@ -11,7 +11,9 @@ import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.jfree.chart.JFreeChart;
 import org.jfree.data.time.TimeSeries;
+import org.jfree.experimental.chart.swt.ChartComposite;
 
 public class Query
 {
@@ -281,7 +283,7 @@ public class Query
         }
     }
 
-    public void runQuery(int profilerServicePort, TimeSeries profilerSamples)
+    public void runQuery(int profilerServicePort, TimeSeries profilerSamples, ChartComposite profilerChart)
     {
         if (!hasBinary())
         {
@@ -291,7 +293,17 @@ public class Query
 
         String profileLocationsFile = profileLocations.getLocation().toOSString();
         String execLogFile = queryFolder.getFile("run.log").getLocation().toOSString();
-        engine.run(profileLocationsFile, execLogFile, profilerServicePort, profilerSamples);
+        engine.run(profileLocationsFile, execLogFile, profilerServicePort, profilerSamples, profilerChart);
+    }
+    
+    public void stopQuery()
+    {
+        if (!hasBinary())
+        {
+            System.err.println("No executable found for " + queryName);
+            return;
+        }
+        engine.stop();
     }
 
     public Debugger getDebugger() { return debugger; }

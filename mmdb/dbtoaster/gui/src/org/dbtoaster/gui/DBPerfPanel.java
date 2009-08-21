@@ -30,6 +30,7 @@ public class DBPerfPanel extends Composite
 
     private static final long serialVersionUID = 4339624058150476495L;
 
+    /*
     class DataGenerator extends Timer implements ActionListener
     {
 
@@ -50,7 +51,7 @@ public class DBPerfPanel extends Composite
         public void actionPerformed(ActionEvent actionevent)
         {
 
-            /*
+            **
             getDisplay().asyncExec(new Runnable()
             {
                 public void run()
@@ -68,9 +69,10 @@ public class DBPerfPanel extends Composite
                     }
                 }
             });
-            */
+            **
         }
     }
+    */
 
     class StatPanel extends ChartComposite
     {
@@ -115,8 +117,8 @@ public class DBPerfPanel extends Composite
 
             setChart(chart);
 
-            DataGenerator feed = new DataGenerator(statsSeries, plot, 100);
-            feed.start();
+            //DataGenerator feed = new DataGenerator(statsSeries, plot, 100);
+            //feed.start();
         }
     };
 
@@ -154,4 +156,7 @@ public class DBPerfPanel extends Composite
     	return cpuPanel.statsSeries;
     }
     
+    public ChartComposite getCpuChart() {
+        return cpuPanel;
+    }
 }

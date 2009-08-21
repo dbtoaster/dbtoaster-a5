@@ -32,6 +32,10 @@ public class PerfView extends ViewPart
     String perspectiveId;
     int exQueriesHash;
 
+    private ExecuteQueryPanel eqPanel;
+    private LinkedHashMap<String,DBPerfPanel> databasePanels;
+    private Text perfStatus;
+
     class ExecuteQueryPanel
     {
         final Tree eqTree;
@@ -84,7 +88,8 @@ public class PerfView extends ViewPart
             return null;
         }
         
-        void addDatabases(final LinkedHashMap<String, DBPerfPanel> dbPanels, final int numdatabases, final String[] dbNames)
+        void addDatabases(final LinkedHashMap<String, DBPerfPanel> dbPanels,
+            final int numdatabases, final String[] dbNames)
         {
         	final Integer[] databases = new Integer[numdatabases];
             // Add check boxes per database.
@@ -115,26 +120,54 @@ public class PerfView extends ViewPart
             runLD.minimumWidth = 50;
             runButton.setLayoutData(runLD);
 
-            // TODO: add run listener
             SelectionAdapter runListener = new SelectionAdapter() {
-            	public void widgetSelected(SelectionEvent e) {
-            		System.out.println("Let's toast!!");
-            		if (eqTree.getSelectionCount()== 1) {
-            			Query q=null;
+            	public void widgetSelected(SelectionEvent e)
+            	{
+            		if (eqTree.getSelectionCount() == 1)
+            		{
             			for (TreeItem i: eqTree.getSelection()) {
-                //			System.out.println("Query "+i.getText());
-                			q = getQuery(i.getText());
+                			currentRunningQuery = getQuery(i.getText());
                 		}
+            			
             	//		for (int i= 0 ; i < numdatabases; i ++) {
                 //			if(databases[i] == 1) {
                 //				System.out.println(dbNames[i] + " is selected");
                 //			}
             	//		}
-            			q.getExecutor().runComparison(q, dbPanels, databases, dbNames);
+            			
+            			if ( currentRunningQuery != null ) {
+                            perfStatus.setText("Running " +
+                                currentRunningQuery.getQueryName());
+
+                            currentRunningQuery.getExecutor().
+            			        runComparison(currentRunningQuery, dbPanels, databases, dbNames);
+            			    
+            			}
             		}
             	}
             };
             runButton.addSelectionListener(runListener);
+            
+            // Add stop button.
+            final Button stopButton = new Button(eqTree.getParent(), SWT.PUSH);
+            stopButton.setText("Stop query");
+            GridData stopLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+            stopLD.minimumWidth = 50;
+            stopButton.setLayoutData(runLD);
+            
+            SelectionAdapter stopListener = new SelectionAdapter()
+            {
+                public void widgetSelected(SelectionEvent e)
+                {
+                    if ( currentRunningQuery != null ) {
+                        currentRunningQuery.stopQuery();
+                        perfStatus.setText("Stopped " +
+                            currentRunningQuery.getQueryName());
+                    }
+                }
+            };
+            stopButton.addSelectionListener(stopListener);
+
         }
         
         private void redraw()
@@ -153,10 +186,6 @@ public class PerfView extends ViewPart
         }
     }
     
-    private ExecuteQueryPanel eqPanel;
-    private LinkedHashMap<String,DBPerfPanel> databasePanels;
-    private Text perfStatus;
-
     public void createPartControl(Composite parent)
     {
         dbtWorkspace = DBToasterWorkspace.getWorkspace();

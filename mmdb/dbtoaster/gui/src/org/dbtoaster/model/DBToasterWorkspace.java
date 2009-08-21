@@ -16,7 +16,9 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
+import org.jfree.chart.JFreeChart;
 import org.jfree.data.time.TimeSeries;
+import org.jfree.experimental.chart.swt.ChartComposite;
 
 public class DBToasterWorkspace
 {
@@ -489,7 +491,7 @@ public class DBToasterWorkspace
     }
 
     public void runQuery(String queryName, int profilerPort,
-            TimeSeries profilerSamples)
+            TimeSeries profilerSamples, ChartComposite profilerChart)
     {
         if (!wsQueries.containsKey(queryName))
         {
@@ -499,7 +501,20 @@ public class DBToasterWorkspace
         }
 
         Query q = wsQueries.get(queryName);
-        q.runQuery(profilerPort, profilerSamples);
+        q.runQuery(profilerPort, profilerSamples, profilerChart);
+    }
+
+    public void stopQuery(String queryName)
+    {
+        if (!wsQueries.containsKey(queryName))
+        {
+            System.err.println("Invalid query name " + queryName
+                    + " (could not find query in working set).");
+            return;
+        }
+    
+        Query q = wsQueries.get(queryName);
+        q.stopQuery();
     }
 
     public Debugger getDebugger(String queryName)
