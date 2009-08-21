@@ -254,9 +254,6 @@ public class DatasetManager
     {
         DatasetManager aDM = getDatasetManager();
 
-        // Orderbook dataset.
-        Dataset orderbook = aDM.new Dataset();
-        
         LinkedHashMap<String, String> bookFieldsAndTypes =
             new LinkedHashMap<String, String>();
 
@@ -275,7 +272,10 @@ public class DatasetManager
         adaptorBindings.put("p", "price");
         adaptorBindings.put("v", "volume");
         
-        orderbook.addRelation(
+        // Historical algo execution
+        Dataset historicalOrderbook = aDM.new Dataset();
+
+        historicalOrderbook.addRelation(
             "file", "bids", bookFieldsAndTypes,
             "DBToaster::DemoDatasets::OrderbookFileStream",
             "\"20081201.csv\",10000",
@@ -284,7 +284,7 @@ public class DatasetManager
             "datasets",
             "BidsOrderbook");
         
-        orderbook.addRelation(
+        historicalOrderbook.addRelation(
             "file", "asks", bookFieldsAndTypes,
             "DBToaster::DemoDatasets::OrderbookFileStream",
             "\"20081201.csv\",10000",
@@ -293,7 +293,31 @@ public class DatasetManager
             "datasets",
             "AsksOrderbook");
 
-        aDM.addDataset("orderbook", orderbook);
+        aDM.addDataset("orderbook", historicalOrderbook);
+
+        // Live algo execution
+        Dataset liveOrderbook = aDM.new Dataset();
+
+        liveOrderbook.addRelation(
+            "socket", "bids", bookFieldsAndTypes,
+            "DBToaster::DemoDatasets::OrderbookSocketStream",
+            "\"20081201.csv\",10000",
+            "DBToaster::DemoDatasets::OrderbookTuple",
+            "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
+            "datasets",
+            "BidsOrderbook");
+        
+        liveOrderbook.addRelation(
+            "socket", "asks", bookFieldsAndTypes,
+            "DBToaster::DemoDatasets::OrderbookSocketStream",
+            "\"20081201.csv\",10000",
+            "DBToaster::DemoDatasets::OrderbookTuple",
+            "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
+            "datasets",
+            "AsksOrderbook");
+        
+        //aDM.addDataset("lo", liveOrderbook);
+
 
         // TODO: SSB dataset
 

@@ -312,7 +312,16 @@ public class Compiler
             addOption(engineOptions, "-m", "engine");            
             addOption(engineOptions, "-tm",
                     PROFILER_THRIFT_MODULE+","+PROFILER_THRIFT_MODULE_BASE);
-            
+            addOption(engineOptions, "-tm",
+                DATASET_THRIFT_MODULE+","+DATASET_THRIFT_MODULE_BASE);
+
+            addOption(engineOptions, "-tcp", "/Users/yanif/software/thrift/java/libthrift.jar");
+            addOption(engineOptions, "-tcp", "/Users/yanif/workspace/dbtoaster-gui/lib/log4j-1.2.15.jar");
+            addOption(engineOptions, "-tcp", "/Users/yanif/workspace/dbtoaster-gui/lib/slf4j-api-1.5.8.jar");
+            addOption(engineOptions, "-tcp", "/Users/yanif/workspace/dbtoaster-gui/lib/slf4j-simple-1.5.8.jar");
+            addOption(engineOptions, "-tcp", PROFILER_JAR_FILE);
+            addOption(engineOptions, "-tcp", DATASET_JAR_FILE);
+
             returnStatus = runDBToaster(
                     compilationDir, engineOptions, tmlFile, compilerLogFile);
             

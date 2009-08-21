@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -30,8 +31,11 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.dbtoaster.gui.DBPerfPanel;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.ui.PlatformUI;
 import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.TimeSeries;
+import org.jfree.experimental.chart.swt.ChartComposite;
 
 import DBToaster.Profiler.Protocol.ProfileLocation;
 import DBToaster.Profiler.Protocol.SampleType;
@@ -56,6 +60,9 @@ public class Executor
         TimeSeries samples;
         HashMap<Integer, String> codeLocations;
         LinkedList<Integer> handlerLocations;
+
+        Millisecond currentMs;
+        double currentSample;
 
         static final long profilerPeriod = 1000;
 
@@ -121,8 +128,11 @@ public class Executor
                 
                 locReader.close();
                 
-                for (Map.Entry<String, Integer> e : runningHandlerMax.entrySet())
-                    handlerLocations.add(e.getValue());
+                for (Map.Entry<String, Integer> e : runningHandlerMax.entrySet()) {
+                    int maxLoc = e.getValue();
+                    for (int i = 0; i < maxLoc; ++i)
+                        handlerLocations.add(i);
+                }
 
             } catch (FileNotFoundException e) {
                 System.err.println(
@@ -143,7 +153,7 @@ public class Executor
                 currentCal.setTimeInMillis(codeProfile.t.tv_sec * 1000);
                 currentCal.roll(Calendar.MILLISECOND,
                     (int) (codeProfile.t.tv_nsec / 1000000));
-                
+              
                 // Compute total avg exec time over all handlers per sample period.
                 double sumExecTime = 0.0;
                 for (Integer l : handlerLocations)
@@ -156,8 +166,16 @@ public class Executor
                         List<SampleUnits> newSamples =
                             codeProfile.getProfile().get(loc);
 
+                        System.out.println("Found " + newSamples.size() +
+                            " samples for loc: " + loc.statName + ", " + loc.codeLocation);
+
                         for (SampleUnits s : newSamples)
                         {
+                            if ( s.getExecTime() == null ) {
+                                System.out.println("loc: " +
+                                    loc.statName + ", " + loc.codeLocation + " null");
+                            }
+                            
                             if ( !(s.getSampleType() == SampleType.EXEC_TIME) ) {
                                 System.err.println("Found invalid cpu sample type!");
                                 break;
@@ -166,18 +184,28 @@ public class Executor
                             locAvgExecTime += ((s.getExecTime().getTv_sec() * 1e9)
                                 + s.getExecTime().getTv_nsec());
                             ++sampleCount;
+                            System.out.println(locAvgExecTime + " " + sampleCount);
                         }
-                        
+
                         sumExecTime += (locAvgExecTime / sampleCount);
                     }
                     else {
                         String msg = "Could not find cpu profile for location: "
-                            + codeLocations.get(l);
+                            + codeLocations.get(l) + " " + l;
                         System.err.println(msg);
                     }
                 }
 
-                samples.add(new Millisecond(currentCal.getTime()), sumExecTime);
+                currentMs = new Millisecond(currentCal.getTime());
+                currentSample = sumExecTime;
+
+                Display.getDefault().asyncExec(new Runnable()
+                {
+                    public void run()
+                    {
+                        samples.add(currentMs, currentSample);
+                    }
+                });
 
             } catch (Exception e) {
                 System.out.println("getStatisticsProfile failed!");
@@ -277,6 +305,13 @@ public class Executor
             
             // Periodically retrieve statistics while binary is still running.
             TSocket s = new TSocket(currentHost, currentPort);
+            System.out.println("Opening socket....");
+            try { s.open();
+            if ( !s.isOpen() ) { System.out.println("Failed to connect!!"); }
+            } catch (Exception e) { e.printStackTrace(); }
+            
+            System.out.println("Getting protocol....");
+            
             TProtocol protocol = profilerProtocolFactory.getProtocol(s);
             
             profiler = new DBToasterProfiler(codeLocationsFile, protocol, profilerSamples);
@@ -295,15 +330,18 @@ public class Executor
                 logWriter.close();
                 logReader.close();
                     
-                int rs = currentQuery.waitFor();
-                if ( rs != 0 ) status = "Query returned non-zero exit status";
+                //int rs = currentQuery.waitFor();
+                //if ( rs != 0 ) status = "Query returned non-zero exit status";
             } catch (IOException e) {
                 status = "IOException while running query.";
                 e.printStackTrace();
-            } catch (InterruptedException e) {
+            }
+            /*
+            catch (InterruptedException e) {
                 status = "Query interrputed while running...";
                 e.printStackTrace();
             }
+            */
         }
         System.out.println("EEEE: ");
         
@@ -332,7 +370,7 @@ public class Executor
     
  
     void runJDBCQuery(String dbUrl, String sqlQuery,
-            ConcurrentLinkedQueue<Long> profilerSamples)
+            TimeSeries profilerSamples)
     {
         try {
             Connection conn = DriverManager.getConnection(dbUrl);
@@ -347,7 +385,7 @@ public class Executor
             
             long endTime = System.currentTimeMillis();
             long span = endTime - startTime;
-            profilerSamples.add(span);
+            //profilerSamples.add(new Millisecond(span));
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -456,7 +494,7 @@ public class Executor
     }
 
     void runPostgreSQL(String sqlOrTriggerQuery, boolean triggerScript,
-            ConcurrentLinkedQueue<Long> profilerSamples)
+            TimeSeries profilerSamples)
     {
     	startupPostgreSQL();
     	
@@ -477,7 +515,7 @@ public class Executor
         shutdownPostgreSQL();
     }
     
-    void runPGQuery(String sqlQuery, ConcurrentLinkedQueue<Long> profilerSamples)
+    void runPGQuery(String sqlQuery, TimeSeries profilerSamples)
     {
         runJDBCQuery(POSTGRES_URL, sqlQuery, profilerSamples);
     }
@@ -487,7 +525,7 @@ public class Executor
         
     }
     
-    private String hsql_libpath = "/Users/mavkisuh/homework/hsqldb/lib/";
+    private String hsql_libpath = "/Users/yanif/software/hsqldb/lib/";
     private String hsql_dbname = "db0/db0";
     private String hsql_username = "sa";
     private String hsql_server = "localhost";    
@@ -519,7 +557,7 @@ public class Executor
     	}
     }
     
-    void runHsqlDB(String sqlQuery, ConcurrentLinkedQueue<Long> profilerSamples)
+    void runHsqlDB(String sqlQuery, TimeSeries profilerSamples)
     {
     	startupHsqlDB();
         runJDBCQuery(HSQLDB_URL, sqlQuery, profilerSamples);
@@ -530,18 +568,25 @@ public class Executor
     
     void runSPE() {}
     
-    public void runComparison( Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
+    public void runComparison( final Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
     		Integer[] numdatabases, final String[] dbNames) {
     	for (int i = 0 ; i < numdatabases.length; i ++) {
     		if(numdatabases[i] == 1) {
     			DBPerfPanel panel = dbPanels.get(dbNames[i]);
-    			TimeSeries ts = panel.getCpuTimeSeries();
+    			final TimeSeries ts = panel.getCpuTimeSeries();
 //    	        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
     			System.out.println("Profiling "+q.getQueryName() + " with "+ dbNames[i]);
     			if(dbNames[i].equals("DBToaster")) {
     				System.out.println("Starting");
-    				q.runQuery(5530, ts);
-    				System.out.println("Return??");
+    				q.runQuery(20000, ts);
+    			}
+    			else if(dbNames[i].equals("Postgres")) {
+    			    Thread th = new Thread (new Runnable() {
+    			        public void run() {
+    			            runPostgreSQL(q.getQuery(), false, ts);
+    			        }
+    			    });
+    			    th.start();
     			}
     		}
     	}

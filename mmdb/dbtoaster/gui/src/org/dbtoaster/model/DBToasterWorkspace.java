@@ -27,7 +27,7 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-    final static String defaultLocation = "/Users/mavkisuh/gui/dbtoaster";
+    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
 
     IProject dbToasterProject;
 
