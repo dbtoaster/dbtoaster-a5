@@ -16,6 +16,7 @@ public class CodePerfPerspective implements IPerspectiveFactory
         layout.setFixed(true);
 
         layout.addPerspectiveShortcut(PerformancePerspective.ID);
+        layout.addPerspectiveShortcut(AlgoStatsPerspective.ID);
         layout.addView(CodeView.ID, IPageLayout.LEFT, 0.5f, editorArea);
 
         IFolderLayout bottomFolder = layout.createFolder("BottomFolder",

@@ -15,6 +15,7 @@ public class PerformancePerspective implements IPerspectiveFactory
         layout.setFixed(true);
 
         layout.addPerspectiveShortcut(CodePerfPerspective.ID);
+        layout.addPerspectiveShortcut(AlgoStatsPerspective.ID);
         layout.addView(PerfView.ID, IPageLayout.BOTTOM, 0.5f, editorArea);
     }
 
