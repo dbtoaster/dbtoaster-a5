@@ -1938,39 +1938,6 @@ let validate_stream_types streams_handlers_and_events check_type =
 
 
 (*
- * Code generation common to both engine and debugger.
- * -- Standalone components (multiplexers, dispatchers, init/main function common code).
- * -- Thrift accessors for query results and internal maps.
- *)
-let generate_stream_engine_includes out_chan =
-    let list_code l = String.concat "\n" l in
-    let includes =
-        ["\n\n// Stream engine includes.";
-        "#include \"streamengine.h\"";
-        "#include \"profiler.h\"";
-        "#include \"datasets/adaptors.h\"";
-        "#include \"boost/bind.hpp\"\n\n";
-        "using namespace DBToaster::Profiler;\n"; ]
-    in
-        output_string out_chan (list_code includes)
-
-
-let generate_socket_stream_engine_common io_service_name =
-    let indent s = "    "^s in
-    let common_decl =
-        ["DBToaster::StandaloneEngine::SocketMultiplexer sources;";
-        "void runReadLoop()\n{\n"^(indent "sources.read(boost::bind(&runReadLoop));\n")^"}\n\n";]
-    in
-    let common_main =
-        ["init(sources);";
-        "runReadLoop();";
-        "boost::thread t(boost::bind(\n";
-        (indent "&boost::asio::io_service::run, &"^io_service_name^"));")]
-    in
-        (common_decl, common_main)
-
-
-(*
  * Thrift common code
  *)
 let generate_thrift_includes out_chan =
@@ -1995,7 +1962,7 @@ let generate_dbtoaster_thrift_module
         service_name service_inheritance global_decls service_decls
   =
     let list_code l = String.concat "\n" l in
-    let includes = List.map (fun i -> "includes \""^i^"\"\n") module_includes in
+    let includes = List.map (fun i -> "include \""^i^"\"\n") module_includes in
     let namespaces =
         List.map (fun l -> "namespace "^l^" "^module_namespace) module_languages
     in
@@ -2015,6 +1982,47 @@ let generate_dbtoaster_thrift_module
         service
     in
         output_string out_chan (list_code thrift_module)
+
+let generate_dbtoaster_thrift_module_implementation
+        out_chan module_namespace class_name class_interface
+        constructor_args constructor_member_init constructor_init
+        internals interface_impls
+  =
+    let indent s = "    "^s in
+    let rec indent_n n s = match n with 0 -> s | _ -> indent_n (n-1) (indent s) in
+    let list_code l = String.concat "\n" l in
+    let cpp_module_namespace =
+        Str.global_replace (Str.regexp "\\.") "::" module_namespace
+    in
+    let constructor =
+        let (constructor_name_and_parens, constructor_arg_lines) = 
+            if List.length constructor_args = 0 then
+                (class_name^"()", [])
+            else
+                (class_name^"(", (List.map (indent_n 2) constructor_args)@[")"])
+        in
+        let mem_init =
+            if List.length constructor_member_init = 0 then []
+            else 
+                [(indent (": "^(String.concat "," constructor_member_init)))]
+        in
+            List.map indent
+                (["public:";
+                constructor_name_and_parens]@
+                constructor_arg_lines@mem_init@
+                ["{"]@
+                (List.map indent constructor_init)@
+                ["}"])
+    in
+    let module_impl =
+        ["using namespace "^cpp_module_namespace^";\n";
+        ("class "^class_name^" : virtual public "^class_interface); "{"]@
+            internals@
+            constructor@
+            (List.map indent interface_impls)@
+            ["};\n\n"]
+    in
+        output_string out_chan (list_code module_impl)
 
 let generate_thrift_accessor_declarations global_decls =
     let list_code l = String.concat "\n" l in
@@ -2104,6 +2112,89 @@ let generate_thrift_accessor_implementations global_decls service_class_name =
             [] global_decls
     in
         accessor_defns
+
+(*
+ * Code generation common to both engine and debugger.
+ * -- Standalone components (multiplexers, dispatchers, init/main function common code).
+ * -- Thrift accessors for query results and internal maps.
+ *)
+let generate_stream_engine_includes out_chan =
+    let list_code l = String.concat "\n" l in
+    let includes =
+        ["\n\n// Stream engine includes.";
+        "#include \"streamengine.h\"";
+        "#include \"profiler.h\"";
+        "#include \"datasets/adaptors.h\"";
+        "#include \"boost/bind.hpp\"\n\n";
+        "using namespace DBToaster::Profiler;\n"; ]
+    in
+        output_string out_chan (list_code includes)
+
+let generate_socket_stream_engine_common io_service_name =
+    let indent s = "    "^s in
+    let common_decl =
+        ["DBToaster::StandaloneEngine::SocketMultiplexer sources;";
+        "void runReadLoop()\n{\n"^(indent "sources.read(boost::bind(&runReadLoop));\n")^"}\n\n";]
+    in
+    let common_main =
+        ["init(sources);";
+        "runReadLoop();";
+        "boost::thread t(boost::bind(";
+        (indent "&boost::asio::io_service::run, &"^io_service_name^"));")]
+    in
+        (common_decl, common_main)
+
+(*
+ * Query result viewer
+ *)
+let generate_stream_engine_viewer_includes out_chan =
+    let list_code l = String.concat "\n" l in
+    let includes =
+        ["\n\n// Viewer includes.";
+        "#include \"AccessMethod.h\"\n\n";]
+    in
+        generate_thrift_includes out_chan;
+        output_string out_chan (list_code includes)
+
+let generate_stream_engine_viewer thrift_out_chan code_out_chan query_id global_decls =
+    let indent s = "    "^s in
+    let service_namespace =
+        "DBToaster.Viewer"^(if query_id = "" then "" else ("."^query_id))
+    in
+    let thrift_service_name = "AccessMethod" in
+    let thrift_service_class = thrift_service_name^"Handler" in
+    let thrift_service_interface = thrift_service_name^"If" in
+
+    let (key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
+    let accessor_impls = generate_thrift_accessor_implementations global_decls thrift_service_class in
+
+    let thrift_includes =  ["profiler.thrift"] in
+    let thrift_service_inheritance = ["profiler.Profiler"] in
+    let thrift_languages = [ "cpp"; "java" ] in
+    let thrift_global_decls = (let (_,r) = List.split key_decls in r) in
+    let access_method_decls = List.map indent accessors_decls in
+
+    let service_constructor_args = [] in
+    let service_constructor_member_init = [] in
+    let service_constructor_init = [ "PROFILER_INITIALIZATION" ] in
+
+    let service_internals = [] in
+
+    (* Method bodies *)
+    let service_interface_impls =
+        (List.map indent
+            (accessor_impls@["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
+    in
+        generate_dbtoaster_thrift_module thrift_out_chan
+            thrift_includes service_namespace thrift_languages
+            thrift_service_name thrift_service_inheritance
+            thrift_global_decls access_method_decls;
+
+        generate_dbtoaster_thrift_module_implementation code_out_chan
+            service_namespace thrift_service_class thrift_service_interface
+            service_constructor_args service_constructor_member_init service_constructor_init
+            service_internals service_interface_impls
+
 
 (* Returns declarations and code to add to init() method
  *
@@ -2472,31 +2563,11 @@ let generate_socket_stream_engine_init out_chan streams_handlers_and_events =
 
 (* TODO: generate standalone profiler running an event loop in its own thread *)
 (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
-let generate_file_stream_engine_main out_chan global_decls =
+let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan global_decls =
     let indent s = ("    "^s) in
     let list_code l = String.concat "\n" l in
     let block l = ["{"]@(List.map indent l)@["}"] in
-(*
-    let service_class = "AccessMethodHandler" in
-    let (key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
-    let accessor_impls = generate_thrift_accessor_implementations global_decls service_class in
 
-    let thrift_includes =  ["profiler.thrift"] in
-    let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_service_name = "AccessMethod" in
-    let thrift_global_decls =
-        stream_id_decls@
-        (let (_,r) = List.split tuple_decls in r)@
-        (let (_,r) = List.split key_decls in r)@
-    in
-    let debugger_decls = 
-        List.map indent (steps_decls@stepns_decls@accessors_decls)
-    in
-        generate_dbtoaster_thrift_module decl_out_chan
-            thrift_includes service_namespace thrift_languages
-            thrift_service_name ["profiler.Profiler"]
-            thrift_global_decls thrift_service_decls;
-*)
     let main_defn =
         let main_code =
             ["int main(int argc, char** argv)"]@
@@ -2512,14 +2583,19 @@ let generate_file_stream_engine_main out_chan global_decls =
         in
             list_code main_code
     in
-        output_string out_chan main_defn
+
+        generate_stream_engine_viewer
+            thrift_out_chan code_out_chan query_id global_decls;
+
+        output_string code_out_chan main_defn
 
 
 (* declare multiplexer; main() { start read loop; run io_service in a thread }  *)
-let generate_socket_stream_engine_main out_chan =
+let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan global_decls =
     let indent s = ("    "^s) in
     let list_code l = String.concat "\n" l in
     let block l = ["{"]@(List.map indent l)@["}"] in
+
     let main_defn =
 
         (* TODO: get io_service_name as an argument *)
@@ -2536,7 +2612,11 @@ let generate_socket_stream_engine_main out_chan =
         in
             list_code main_code
     in
-        output_string out_chan main_defn
+
+        generate_stream_engine_viewer
+            thrift_out_chan code_out_chan query_id global_decls;
+
+        output_string code_out_chan main_defn
 
 
 (*
@@ -2572,46 +2652,22 @@ let generate_debugger_thrift_server_main stream_debugger_class =
     "server.serve();" ]
 
 
-let generate_file_stream_debugger_class
-        decl_out_chan impl_out_chan
-        query_id global_decls streams_handlers_and_events
-    =
-    (* Helpers *)
-    let indent s = ("    "^s) in
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-    let block l = ["{"]@(List.map indent l)@["}"] in
+(*
+ * Debugger handler generation
+ *)
+
+(* Generate Thrift protocol spec file
+   -- void step(tuple)
+   -- void stepn(int n)
+   -- state/map accessors
+*)
+let generate_file_stream_debugger_thrift_declarations streams =
     let strip_namespace type_name =
         let ns_and_type = Str.split (Str.regexp "::") type_name in
             List.nth ns_and_type (List.length ns_and_type - 1)
     in
-
-    (* Generate stream engine preamble: stream definitions and dispatcher function objects,
-     * multiplexer, dispatcher 
-     * Note: this initializes stream dispatching identifiers which are need for the
-     * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
-    generate_file_stream_engine_init impl_out_chan streams_handlers_and_events;
-
-    (* Generate Thrift protocol spec file
-       -- void step(tuple)
-       -- void stepn(int n)
-       -- state/map accessors *)
-    let streams = List.fold_left
-        (fun acc (stream_type_info, stream_name, handler, event) ->
-            if (List.mem_assoc stream_name acc) then acc
-            else acc@[(stream_name, stream_type_info)])
-        [] streams_handlers_and_events
-    in
-    let stream_id_decls = 
-        Hashtbl.fold
-            (fun stream_id_name stream_id acc ->
-                acc@["const i32 "^stream_id_name^" = "^(string_of_int stream_id)])
-            stream_ids []
-    in
+    let indent s = "    "^s in
+    let list_code l = String.concat "\n" l in
     let (tuple_decls, steps_decls, stepns_decls) =
         List.fold_left
             (fun (td_acc, step_acc, stepn_acc)
@@ -2645,22 +2701,22 @@ let generate_file_stream_debugger_class
                     (td_acc@thrift_tuple_decl, step_acc@[step_stream], stepn_acc@[stepn_stream]))
         ([], [], []) streams
     in
-    let (key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
-    let service_namespace =
-        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
-    in
-    let cpp_service_namespace =
-        "DBToaster::Debugger"^(if query_id = "" then "" else ("::"^query_id))
-    in
+        (tuple_decls, steps_decls, stepns_decls)
 
-    (* Generate Thrift service implementation
-       -- instantiate + initialize multiplexer, dispatcher
-       -- void step(tuple) { dispatch(tuple); }
-       -- void stepn(int n) { for i=0:n-1 { dispatch(multiplexer->nextInput()); } }
-       -- state/map accessors
-       -- Copy Thrift service main from skeleton
-    *)
-    let class_name = "DebuggerHandler" in
+(* Generate Thrift debugger service implementation
+   -- instantiate + initialize multiplexer, dispatcher
+   -- void step(tuple) { dispatch(tuple); }
+   -- void stepn(int n) { for i=0:n-1 { dispatch(multiplexer->nextInput()); } }
+   -- state/map accessors
+   -- Copy Thrift service main from skeleton
+*)
+let generate_file_stream_debugger_thrift_implementations streams =
+    let strip_namespace type_name =
+        let ns_and_type = Str.split (Str.regexp "::") type_name in
+            List.nth ns_and_type (List.length ns_and_type - 1)
+    in
+    let indent s = "    "^s in
+    let block l = ["{"]@(List.map indent l)@["}"] in
     let (steps_defns, stepns_defns) = 
         List.fold_left
             (fun (step_acc, stepn_acc)
@@ -2694,38 +2750,64 @@ let generate_file_stream_debugger_class
                     (step_acc@step_stream_body, stepn_acc@stepn_stream_body))
             ([], []) streams
     in
-    let accessor_defns = generate_thrift_accessor_implementations global_decls class_name in
-    let impl_code =
-        let internals =
-            (* Local datastructures and constructor *)
-            List.map indent
-                (["DBToaster::StandaloneEngine::FileMultiplexer& sources;";
-                "DBToaster::StandaloneEngine::FileStreamDispatcher& router;\n"])
-        in
-        let constructor =
-            List.map indent
-                (["public:";
-                class_name^"(";
-                (indent (indent "DBToaster::StandaloneEngine::FileMultiplexer& s,"));
-                (indent (indent "DBToaster::StandaloneEngine::FileStreamDispatcher& r)"));
-                (indent (": sources(s), router(r)"));
-                "{"; (indent "PROFILER_INITIALIZATION"); "}\n"])
-        in
-        ["using namespace "^cpp_service_namespace^";\n";
-        ("class "^class_name^" : virtual public DebuggerIf"); "{"]@
-            internals@
-            constructor@
-            (List.map indent
-                (steps_defns@["\n"]@
-                stepns_defns@["\n"]@
-                accessor_defns@
-                ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))@
-            ["};\n\n"]
+        (steps_defns, stepns_defns)
+
+
+let generate_file_stream_debugger_class
+        decl_out_chan impl_out_chan
+        query_id global_decls streams_handlers_and_events
+    =
+    (* Helpers *)
+    let indent s = ("    "^s) in
+
+    (* Generate stream engine preamble: stream definitions and dispatcher function objects,
+     * multiplexer, dispatcher 
+     * Note: this initializes stream dispatching identifiers which are need for the
+     * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
+    generate_file_stream_engine_init impl_out_chan streams_handlers_and_events;
+
+    let streams = List.fold_left
+        (fun acc (stream_type_info, stream_name, handler, event) ->
+            if (List.mem_assoc stream_name acc) then acc
+            else acc@[(stream_name, stream_type_info)])
+        [] streams_handlers_and_events
     in
+
+    let stream_id_decls = 
+        Hashtbl.fold
+            (fun stream_id_name stream_id acc ->
+                acc@["const i32 "^stream_id_name^" = "^(string_of_int stream_id)])
+            stream_ids []
+    in
+
+    (* Thrift debugger declarations for file sources *)
+    let (tuple_decls, steps_decls, stepns_decls) =
+        generate_file_stream_debugger_thrift_declarations streams
+    in
+
+    let (key_decls, accessors_decls) =
+        generate_thrift_accessor_declarations global_decls
+    in
+
+    let service_namespace =
+        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
+    in
+
+    (* Thrift debugger implementation for file sources *)
+    let class_name = "DebuggerHandler" in
+    let (steps_defns, stepns_defns) =
+        generate_file_stream_debugger_thrift_implementations streams
+    in
+    let accessor_defns =
+        generate_thrift_accessor_implementations global_decls class_name
+    in
+
+    let thrift_service_name = "Debugger" in
+    let thrift_service_handler_name = class_name in
+    let thrift_service_handler_interface = "DebuggerIf" in
 
     let thrift_includes =  ["datasets.thrift"; "profiler.thrift"] in
     let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_service_name = "Debugger" in
     let thrift_global_decls =
         stream_id_decls@
         (let (_,r) = List.split tuple_decls in r)@
@@ -2734,12 +2816,40 @@ let generate_file_stream_debugger_class
     let debugger_decls = 
         List.map indent (steps_decls@stepns_decls@accessors_decls)
     in
+
+    (* Local datastructures and constructor *)
+    let debugger_constructor_args =
+        ["DBToaster::StandaloneEngine::FileMultiplexer& s,";
+        "DBToaster::StandaloneEngine::FileStreamDispatcher& r)"]
+    in
+    let debugger_constructor_member_init = ["sources(s)"; "router(r)"] in
+    let debugger_constructor_init = [ "PROFILER_INITIALIZATION" ] in
+
+    let debugger_internals =
+        List.map indent
+            (["DBToaster::StandaloneEngine::FileMultiplexer& sources;";
+            "DBToaster::StandaloneEngine::FileStreamDispatcher& router;\n"])
+    in
+
+    (* Method bodies *)
+    let debugger_interface_impls =
+        (List.map indent
+            (steps_defns@["\n"]@
+            stepns_defns@["\n"]@
+            accessor_defns@
+            ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
+    in
+
         generate_dbtoaster_thrift_module decl_out_chan
             thrift_includes service_namespace thrift_languages
             thrift_service_name ["profiler.Profiler"]
             thrift_global_decls debugger_decls;
 
-        output_string impl_out_chan (list_code impl_code);
+        generate_dbtoaster_thrift_module_implementation impl_out_chan
+            service_namespace thrift_service_handler_name thrift_service_handler_interface
+            debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
+            debugger_internals debugger_interface_impls;
+
         class_name
 
 
@@ -2767,15 +2877,147 @@ let generate_file_stream_debugger_main impl_out_chan stream_debugger_class =
 (*
  * Network debugger 
  *)
+
+let generate_socket_stream_debugger_thrift_declarations streams =
+    let strip_namespace type_name =
+        let ns_and_type = Str.split (Str.regexp "::") type_name in
+            List.nth ns_and_type (List.length ns_and_type - 1)
+    in
+    let (steps_decls, stepns_decls) =
+        List.fold_left
+            (fun (step_acc, stepn_acc)
+                (stream_name, (_, _, _, tuple_type, _, _, _))
+                ->
+                let normalized_tuple_type = (strip_namespace tuple_type) in
+                let step_stream = "void step_"^(stream_name)^"(1:"^normalized_tuple_type^" input)," in
+                let stepn_stream = "void stepn_"^(stream_name)^"(1:i32 n)," in
+                    (step_acc@[step_stream], stepn_acc@[stepn_stream]))
+        ([], []) streams
+    in
+        (steps_decls, stepns_decls)
+
+
+let generate_socket_stream_debugger_thrift_implementations class_name streams =
+    let strip_namespace type_name =
+        let ns_and_type = Str.split (Str.regexp "::") type_name in
+            List.nth ns_and_type (List.length ns_and_type - 1)
+    in
+    let indent s = "    "^s in
+    let block l = ["{"]@(List.map indent l)@["}"] in
+    let (steps_defns, stepns_defns) = 
+        List.fold_left
+            (fun (step_acc, stepn_acc)
+                (stream_name,
+                    (_, source_type, _, tuple_type,
+                    adaptor_type, adaptor_bindings, _))
+                ->
+                (* HACK for now.
+                 * TODO: pass in stream dispatchers as an argument *)
+                let stream_dispatcher = stream_name^"_dispatcher" in
+
+                let normalized_tuple_type = (strip_namespace tuple_type) in
+                let step_stream_body = 
+                    (* Create a DBToasterTuple from argument, and invoke dispatch *)
+                    ["void step_"^stream_name^"(const "^normalized_tuple_type^"& input)"]@
+                        (block
+                            ([stream_dispatcher^"(boost::any(input.data));"]))
+                in
+                let stepn_stream_body =
+                    (* Read n tuples from the stream *)
+                    ["void stepn_"^stream_name^"(const int32_t n)"]@
+                        (block (
+                            ["sources.setNumberReads(n);";
+                             "sources.read(boost::bind(&"^class_name^"::recursive_stepn, this));"]))
+                in
+                    (step_acc@step_stream_body, stepn_acc@stepn_stream_body))
+            ([], []) streams
+    in
+        (steps_defns, stepns_defns)
+
+
 let generate_socket_stream_debugger_class
         decl_out_chan impl_out_chan
         query_id global_decls streams_handlers_and_events
     =
+    let indent s = "    "^s in
+
     (* Generate stream engine preamble: stream definitions and dispatcher function objects,
      * multiplexer, dispatcher 
      * Note: this initializes stream dispatching identifiers which are need for the
      * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
-    generate_socket_stream_engine_init impl_out_chan streams_handlers_and_events
+    generate_socket_stream_engine_init impl_out_chan streams_handlers_and_events;
+
+    let streams = List.fold_left
+        (fun acc (stream_type_info, stream_name, handler, event) ->
+            if (List.mem_assoc stream_name acc) then acc
+            else acc@[(stream_name, stream_type_info)])
+        [] streams_handlers_and_events
+    in
+
+    (* Thrift debugger declarations for network sources *)
+    let (steps_decls, stepns_decls) =
+        generate_socket_stream_debugger_thrift_declarations streams
+    in
+
+    let (key_decls, accessors_decls) =
+        generate_thrift_accessor_declarations global_decls
+    in
+
+    let service_namespace =
+        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
+    in
+
+    (* Thrift debugger implementation for network sources *)
+    let class_name = "DebuggerHandler" in
+    let (steps_defns, stepns_defns) =
+        generate_socket_stream_debugger_thrift_implementations class_name streams
+    in
+    let accessor_defns =
+        generate_thrift_accessor_implementations global_decls class_name
+    in
+    let thrift_service_name = "Debugger" in
+    let thrift_service_handler_name = class_name in
+    let thrift_service_handler_interface = "DebuggerIf" in
+
+    let thrift_includes =  ["datasets.thrift"; "profiler.thrift"] in
+    let thrift_languages = [ "cpp"; "java" ] in
+    let thrift_global_decls = (let (_,r) = List.split key_decls in r) in
+    let debugger_decls = 
+        List.map indent (steps_decls@stepns_decls@accessors_decls)
+    in
+
+    (* Local datastructures and constructor *)
+    let debugger_constructor_args =
+        ["DBToaster::StandaloneEngine::SocketMultiplexer& s,"]
+    in
+    let debugger_constructor_member_init = ["sources(s)"] in
+    let debugger_constructor_init = [ "PROFILER_INITIALIZATION" ] in
+
+    let debugger_internals =
+        List.map indent
+            (["DBToaster::StandaloneEngine::SocketMultiplexer& sources;\n";])
+    in
+
+    (* Method bodies *)
+    let debugger_interface_impls =
+        (List.map indent
+            (steps_defns@["\n"]@
+            stepns_defns@["\n"]@
+            accessor_defns@
+            ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
+    in
+
+        generate_dbtoaster_thrift_module decl_out_chan
+            thrift_includes service_namespace thrift_languages
+            thrift_service_name ["profiler.Profiler"]
+            thrift_global_decls debugger_decls;
+
+        generate_dbtoaster_thrift_module_implementation impl_out_chan
+            service_namespace thrift_service_handler_name thrift_service_handler_interface
+            debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
+            debugger_internals debugger_interface_impls;
+
+        class_name
 
 
 let generate_socket_stream_debugger_main impl_out_chan stream_debugger_class =

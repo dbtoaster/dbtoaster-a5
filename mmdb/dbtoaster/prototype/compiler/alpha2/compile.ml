@@ -482,28 +482,45 @@ let create_stream_type_info event relation_sources =
 
 
 let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file_name_opt =
+    let query_base_path = Filename.chop_extension out_file_name in
+    let query_id = Filename.basename query_base_path in
     let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr_l in
-    let out_chan = open_out out_file_name in
-        generate_includes out_chan;
-        generate_stream_engine_includes out_chan;
+    let code_out_chan = open_out out_file_name in
+    let thrift_file_name = query_base_path^".thrift"in
+    let thrift_out_chan =  open_out thrift_file_name in
+
+        generate_includes code_out_chan;
+        generate_stream_engine_includes code_out_chan;
+        generate_stream_engine_viewer_includes code_out_chan;
 
         (* output declarations *) 
 	List.iter
-	    (fun x -> output_string out_chan
+	    (fun x -> output_string code_out_chan
 		((indented_string_of_code_expression x)^"\n")) global_decls;
-	output_string out_chan "\n";
+	output_string code_out_chan "\n";
         
         (* output handlers *)
         List.iter
             (fun (h, e) ->
-	        output_string out_chan
+	        output_string code_out_chan
 		    ((indented_string_of_code_expression h)^"\n\n"))
             handlers_and_events;
 
         (* standalone engine *)
+        let (_, (stream_type, _, _, _, _, _, _, _)) = List.hd relation_sources in
+        let (gen_init_fn, gen_main_fn) =
+            match stream_type with
+                | "file" -> 
+                      (generate_file_stream_engine_init, generate_file_stream_engine_main)
+
+                | "socket" -> 
+                      (generate_socket_stream_engine_init, generate_socket_stream_engine_main)
+
+                | _ -> raise (CodegenException ("Invalid stream source type: "^stream_type))
+        in
 
         (* init *)
-        generate_socket_stream_engine_init out_chan
+        gen_init_fn code_out_chan
             (List.map
                 (fun (h,e) ->
                     let (stream_name, stream_type_info) =
@@ -513,9 +530,10 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
                 handlers_and_events);
 
         (* main *)
-        generate_socket_stream_engine_main out_chan;
+        gen_main_fn query_id thrift_out_chan code_out_chan global_decls;
 
-        close_out out_chan;
+        close_out thrift_out_chan;
+        close_out code_out_chan;
 
         (* Output additional information from compilation *)
         match trace_file_name_opt with
@@ -552,6 +570,17 @@ let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_fi
             handlers_and_events;
 
         (* Standalone debugger *)
+        let (_, (stream_type, _, _, _, _, _, _, _)) = List.hd relation_sources in
+        let (gen_class_fn, gen_main_fn) =
+            match stream_type with
+                | "file" -> 
+                      (generate_file_stream_debugger_class, generate_file_stream_debugger_main)
+
+                | "socket" -> 
+                      (generate_socket_stream_debugger_class, generate_socket_stream_debugger_main)
+
+                | _ -> raise (CodegenException ("Invalid stream source type: "^stream_type))
+        in
 
         (* Stream engine init: multiplexer, dispatcher *)
         let streams_handlers_and_events =
@@ -566,10 +595,10 @@ let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_fi
 
         (* Stream debugger and main *)
         let stream_debugger_class =
-            generate_file_stream_debugger_class thrift_out_chan code_out_chan
+            gen_class_fn thrift_out_chan code_out_chan
                 query_id global_decls streams_handlers_and_events
         in
-            generate_file_stream_debugger_main code_out_chan stream_debugger_class;
+            gen_main_fn code_out_chan stream_debugger_class;
             close_out thrift_out_chan;
             close_out code_out_chan;
 

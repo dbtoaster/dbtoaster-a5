@@ -288,6 +288,8 @@ let get_debugger_binary_file source_file =
 
 let get_debugger_java_client_file () = "debugger.jar"
 
+let get_viewer_java_client_file () = "viewer.jar"
+
 let get_thrift_service_sources service_name = service_name^".cpp"
 
 (* Gets the java namespace specified in the Thrift module *)
@@ -468,34 +470,78 @@ let build_query_object query_source =
         out
     
 let build_standalone_engine query_source thrift_modules =
+    let known_thrift_modules =
+        List.map (fun (x,_) -> Filename.basename x) thrift_modules in
+
     (* Build Thrift compile commands for any Thrift module sources *)
     let (thrift_module_source_files, thrift_module_object_files) =
         get_thrift_module_sources_and_objects thrift_modules
     in
-    let thrift_compile_cmds_and_outputs =
-        List.map
-            (fun (target,src) ->
-                build_thrift_cpp_compile_cmd_with_output src target)
-            thrift_module_source_files
+
+    (* Process viewer's Thrift file *)
+    let thrift_file = (Filename.chop_extension query_source)^".thrift" in
+    let (thrift_cmd, thrift_output_dir) = build_thrift_cmd thrift_file in
+
+    (* Invoke thrift before building compile cmds for thrift sources *)
+    check_status thrift_cmd;
+
+    let thrift_source_dir = Filename.concat thrift_output_dir "gen-cpp" in
+
+    (* Build Java client jar file *)
+    let thrift_java_package_base_dir = Filename.concat thrift_output_dir "gen-java" in
+    let thrift_java_package_dir = get_java_namespace_dir thrift_file in
+    let thrift_java_source_dir =
+        Filename.concat thrift_java_package_base_dir thrift_java_package_dir
     in
-    let (thrift_compile_cmds, thrift_objects_built) =
+    let thrift_java_compile_cmd =
+        build_thrift_java_compile_cmd thrift_java_source_dir
+    in
+    let thrift_jar_cmd =
+        build_thrift_java_jar_cmd (get_viewer_java_client_file())
+            thrift_java_package_base_dir
+    in
+        check_status thrift_java_compile_cmd;
+        check_status thrift_jar_cmd;
+
+    let prepend_thrift_dir s = Filename.concat thrift_source_dir s in
+    let thrift_source_files =
+        List.filter Sys.file_exists
+            (List.map prepend_thrift_dir
+                (get_thrift_sources thrift_file known_thrift_modules))
+    in
+
+    (* Track all Thrift compilations, and objects for linking *)
+    let thrift_compile_cmds_and_outputs =
+        (List.map
+            (fun (target, src) -> build_thrift_cpp_compile_cmd_with_output src target)
+            thrift_module_source_files)@
+        (List.map
+            (fun x ->
+                let target = Filename.basename (get_object_file x) in
+                    build_thrift_cpp_compile_cmd_with_output x target)
+            thrift_source_files)
+    in
+    let (thrift_compile_cmds, thrift_object_files) =
         List.split thrift_compile_cmds_and_outputs
     in
 
-    (* Track all object files, including objects from Thrift libraries *)
-    let thrift_object_files = (thrift_objects_built)@thrift_module_object_files in
+    (* Add local Thrift generated source to includes *)
+    append_cxx_flags thrift_source_dir;
+
+    let thrift_object_files = thrift_module_object_files@thrift_object_files in
     let binary_file = get_binary_file query_source in
-        (* Compile Thrift code *)
+
+        (* Invoke g++ -c *)
         List.iter check_status thrift_compile_cmds;
 
-        (* Compile query code *)
         let query_object = build_query_object query_source in
 
-        (* Link *)
-        let link_cmd = 
+        (* Invoke g++ -o *)
+        let link_cmd =
             build_cpp_linker_cmd binary_file (thrift_object_files@[query_object])
         in
             check_status link_cmd
+
 
 let build_debugger query_source thrift_modules =
     let known_thrift_modules =
