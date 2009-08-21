@@ -70,13 +70,15 @@ public class AlgoDataView extends ViewPart
     // TODO: Move constants to appropriate places
 	private String currentHost="127.0.0.1";
 	private int currentPort=5502;
-	private String ServerPath="ExchangeServer/ExchangeServer";
-	private String ServerFile="/home/anton/software/ExchangeSimulatorServer/src/20081201.csv";
+	
+	private String [] serverCommands = {"java", "ExchangeServer.ExchangeServer", "20081201.csv"};
 	private String ServerDir ="/home/anton/software/ExchangeSimulatorServer/src";
-	private String javaPath="/usr/bin/java";
 	
 	private String ToasterDir = "/home/anton/software/vwapConnection";
+	private String toasterCommand = "/home/anton/software/vwapConnection/test";
+	
 	private String AlgoEngineDir = "/home/anton/software/TradingClient";
+	private String algoEngineCommand = "/home/anton/software/TradingClient/test";
 	
     private LinkedHashMap<String,AlgoGraphsPanel> databasePanels;
     private TBinaryProtocol.Factory debuggerProtocolFactory;
@@ -107,26 +109,19 @@ public class AlgoDataView extends ViewPart
 
             dbtWorkspace = DBToasterWorkspace.getWorkspace();
                       
-
             queryText = new Text(this, style);
             queryText.setLayoutData(new GridData(GridData.FILL, GridData.FILL,
                     true, true));
             
-            queryText.setText("Hello World2!\n ew line\n ew \nline\n too \n see what \n happens");
+            queryText.setText("Welcome to Trading Toaster v0.01");
         }
         
         public void RunExchangeServer()
         {
-        	String [] my_args={"java", "ExchangeServer.ExchangeServer", "20081201.csv"};
-        	exchangeServer = new ProcessBuilder(my_args);
+        	exchangeServer = new ProcessBuilder(serverCommands);
             
-            LinkedList<String> serverArgs = new LinkedList<String>();
-            serverArgs.add(ServerPath);
-            serverArgs.add(ServerFile);
-            
- //           exchangeServer.command(serverArgs);
             File execDir=new File(ServerDir);
- //           System.out.println(execDir.getAbsolutePath()+" "+execDir.exists()+";");
+
             exchangeServer.directory(execDir);
             
             exchangeServer.redirectErrorStream(true);
@@ -141,8 +136,7 @@ public class AlgoDataView extends ViewPart
 				System.out.println("Couldn't start an ExchangeServer!");
 				test="Couldn't Start Exchange Server";
 			}
-			 
-            
+			          
             queryText.setText(test);
         }  
         
@@ -153,8 +147,8 @@ public class AlgoDataView extends ViewPart
         
         public void RunToasterRuntime()
         {
-        	String [] my_args={"test", "test"};
-        	toasterRuntime = new ProcessBuilder("/home/anton/software/vwapConnection/test");
+
+        	toasterRuntime = new ProcessBuilder(toasterCommand);
             
             File execDir=new File(ToasterDir);
 
@@ -183,8 +177,7 @@ public class AlgoDataView extends ViewPart
         
         public void RunAlgoEngine()
         {
-        	String [] my_args={"test"};
-        	algoEngine = new ProcessBuilder("/home/anton/software/TradingClient/test");
+        	algoEngine = new ProcessBuilder(algoEngineCommand);
             
             File execDir=new File(AlgoEngineDir);
 
