@@ -2643,7 +2643,7 @@ let generate_socket_stream_engine_init out_chan streams_handlers_and_events =
  *)
 
 let generate_thrift_server_main viewer_class viewer_constructor_args =
-    [ "int port = (70457>>3);";
+    [ "int port = 20000;";
     "boost::shared_ptr<"^viewer_class^"> handler(new "^viewer_class^"("^viewer_constructor_args^"));";
     "boost::shared_ptr<TProcessor> processor(new AccessMethodProcessor(handler));";
     "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
@@ -2672,8 +2672,7 @@ let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan glob
             run_body@["}"]@
             ["int main(int argc, char** argv)"]@
                 (block
-                    (["PROFILER_ENGINE_IMPLEMENTATION;\n";
-                    "init(sources, router);";
+                    (["init(sources, router);";
                     "boost::thread t(boost::bind(&runMultiplexer));"]@
                     (generate_thrift_server_main "AccessMethodHandler" "")))
         in
@@ -2739,7 +2738,7 @@ let generate_stream_debugger_includes out_chan =
 
 
 let generate_debugger_thrift_server_main stream_debugger_class stream_debugger_constructor_args =
-    [ "int port = (70457>>3);";
+    [ "int port = 20000;";
     "boost::shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"("^stream_debugger_constructor_args^"));";
     "boost::shared_ptr<TProcessor> processor(new DebuggerProcessor(handler));";
     "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";

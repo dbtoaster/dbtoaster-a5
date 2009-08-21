@@ -378,7 +378,7 @@ let write_profile_locations file_name =
     let profile_loc_out = open_out file_name in
         Hashtbl.iter
             (fun str_id loc_id ->
-                output_string profile_loc_out ((string_of_int loc_id)^","^str_id))
+                output_string profile_loc_out ((string_of_int loc_id)^","^str_id^"\n"))
             code_locations;
         close_out profile_loc_out
 

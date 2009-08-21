@@ -40,6 +40,9 @@ namespace DBToaster
         // Polymorphic sample type, and type creation.
         typedef boost::any SampleUnits;
 
+        // Circular buffer size
+        int32_t bufferSize = 20;
+
         // Includes here since sample units need to be defined first.
         #if defined (__APPLE__) && defined(__MACH__) && !defined(__powerpc__) && !defined( __ppc__ ) && !defined( __ppc64__ )
         #include "profiler_osx.h"
@@ -65,6 +68,10 @@ namespace DBToaster
             r.sampleType = Protocol::EXEC_TIME;
             r.execTime.tv_sec = tSample.tv_sec;
             r.execTime.tv_nsec = tSample.tv_nsec;
+            r.execTime.__isset.tv_sec = true;
+            r.execTime.__isset.tv_nsec = true;
+            r.__isset.sampleType = true;
+            r.__isset.execTime = true;
             return r;
         }
 
@@ -83,6 +90,12 @@ namespace DBToaster
                 r.statName = statName;
                 r.codeLocation = locationId;
                 return r;
+            }
+
+            string as_string() const {
+                ostringstream oss;
+                oss << statName << ", " << locationId;
+                return oss.str();
             }
         };
 
@@ -129,6 +142,12 @@ namespace DBToaster
                 CodeLocation locationId;
                 
                 LocationSampleKey(StatisticName s, CodeLocation l) : statName(s), locationId(l) {}
+
+                string as_string() const {
+                    ostringstream oss;
+                    oss << statName << ", " << locationId;
+                    return oss.str();
+                }
             };
 
             inline bool operator<(const LocationSampleKey& l, const LocationSampleKey& r)
@@ -220,20 +239,28 @@ namespace DBToaster
             {
                 shared_ptr<ProfileBuffer> buffer = statsProfile[locationKey];
                 if ( !buffer ) {
-                    buffer = shared_ptr<ProfileBuffer>(new ProfileBuffer());
+                    buffer = shared_ptr<ProfileBuffer>(new ProfileBuffer(bufferSize));
                     buffer->push_back(sample);
                     statsProfile[locationKey] = buffer;
                 }
                 else {
                     buffer->push_back(sample);
                 }
+
+                //cout << "Buffer " << locationKey.as_string()
+                //    << " adding sample, "
+                //    << " size " << buffer->size() << endl;
             }
 
             // Synchronizes sample buffers to the same slot in the circular buffer.
             virtual Timestamp synchronizeSamples()
             {
+                //cout << "Getting ceiling timestamp" << endl;
+
                 list<ProfileLocationKey> deletedLocations;
                 Timestamp syncPoint = ceil(lastSamplePoint, sampleFreq);
+
+                //cout << "Syncing over statsProfile, size: " << statsProfile.size() << endl;
 
                 typename StatisticsProfile::iterator statIt = statsProfile.begin();
                 typename StatisticsProfile::iterator statEnd = statsProfile.end();
@@ -241,6 +268,8 @@ namespace DBToaster
                 {
                     const ProfileLocationKey& locationKey = statIt->first;
                     shared_ptr<ProfileBuffer> buffer = statIt->second;
+
+                    //cout << "Finding timestamp for key." << endl;
 
                     SampleStrategyKey sampleKey = keyConverter(locationKey);
                     typename ProfileTimestamps::iterator timestampIt = statsTimestamps.find(sampleKey);
@@ -250,9 +279,18 @@ namespace DBToaster
                         exit(1);
                     }
 
+                    //cout << "Computing buffer distance, on buffer for loc: "
+                    //    << locationKey.as_string()
+                    //    << " , size " << buffer->size() << endl;
+
                     Timestamp bufferPoint = timestampIt->second;
                     Timestamp dist = diff(syncPoint, bufferPoint);
                     ProfileBuffer::size_type steps = divide(dist, sampleFreq);
+
+                    //cout << "Running circular buffer for dist: " << dist
+                    //    << " syncPoint: " << syncPoint
+                    //    << " bufferPoint: " << bufferPoint
+                    //    << ", steps: " << steps << endl;
 
                     if ( steps >= buffer->size() ) {
                         buffer->clear();
@@ -264,10 +302,14 @@ namespace DBToaster
                     }
                 }
 
+                //cout << "Deleting for " << deletedLocations.size() << " locations" << endl;
+
                 list<ProfileLocationKey>::iterator delIt = deletedLocations.begin();
                 list<ProfileLocationKey>::iterator delEnd = deletedLocations.end();
                 for (; delIt != delEnd; ++delIt)
                     statsProfile.erase(*delIt);
+
+                //cout << "Returning syncpoint" << endl;
 
                 return syncPoint;
             }
@@ -291,15 +333,24 @@ namespace DBToaster
                     ProfileBuffer::const_iterator bufIt = buffer->begin();
                     ProfileBuffer::const_iterator bufEnd = buffer->end();
 
+                    //cout << "Copying buffer of size " << buffer->size() << endl;
+
                     for (; bufIt != bufEnd; ++bufIt)
                         destBuffer.push_back(createProtocolSample(*bufIt));
+
+                    //cout << "Dest buffer size " << destBuffer.size() << endl;
                 }
             }
 
             virtual void copyStatisticsProfile(Protocol::StatisticsProfile& dest)
             {
+                //cout << "Synchronizing samples" << endl;
                 Timestamp syncPoint = synchronizeSamples();
                 copyTimestampProtocol(syncPoint, dest.t);
+
+                //cout << "Copied sync time" << endl;
+                //cout << "Copying statsProfile with #locations: "
+                //    << statsProfile.size() << endl;
 
                 StatisticsProfile::const_iterator statIt = statsProfile.begin();
                 StatisticsProfile::const_iterator statEnd = statsProfile.end();
@@ -308,9 +359,20 @@ namespace DBToaster
                     Protocol::ProfileLocation destLocKey =
                         statIt->first.createProtocolProfileLocation();
 
+                    //cout << "Copying buffer for location "
+                    //    << destLocKey.statName << ", "
+                    //    << destLocKey.codeLocation << endl;
+
                     Protocol::ProfileBuffer& destBuffer = dest.profile[destLocKey];
                     copyProfileBuffer(statIt, destBuffer);
+
+                    //cout << "Result buffer size for location "
+                    //    << destLocKey.statName << ", "
+                    //    << destLocKey.codeLocation << ": "
+                    //    << destBuffer.size() << endl;
                 }
+
+                //cout << "Done copying stats profile" << endl;
             }
 
         public:
@@ -385,8 +447,11 @@ namespace DBToaster
             LocationSampler::LocationSampleKey sampleKey(statsType, codeLoc); \
             Timestamp codeLoc##Last = \
                 queryProfile.getLastUpdate(sampleKey); \
-            if ( !(sampleFrequency < diff(now(), codeLoc##Last)) ) { \
-                    codeLoc##Var = now(); \
+            if ( sampleFreq < diff(now(), codeLoc##Last) ) { \
+                codeLoc##Var = now(); \
+                //cout << "Profiling loc: " << sampleKey.as_string() \
+                //    << " with now: " << codeLoc##Var \
+                //    << " last "<< codeLoc##Last << endl; \
             }
 
         #define END_PROFILE(statsType,codeLoc)     \
@@ -399,6 +464,9 @@ namespace DBToaster
                 queryProfile.addProfileSample(locKey, sample); \
                 LocationSampler::LocationSampleKey sampleKey(statsType, codeLoc); \
                 queryProfile.setLastUpdate(sampleKey, end); \
+                //cout << "Setting loc: " << sampleKey.as_string() \
+                //    << " last update: " << end \
+                //    << " sample: " << to_string(sample) << endl; \
             }
 
         /*
@@ -407,7 +475,7 @@ namespace DBToaster
             bool handlerId##Sample = false; \
             HandlerSampler::HandlerSampleKey sampleKey(statsType, handlerId); \
             Timestamp handlerId##Last = queryProfile.getLastUpdate(sampleKey); \
-            if ( !(sampleFrequency < diff(now(), handlerId##Last) ) { \
+            if ( !(sampleFreq < diff(now(), handlerId##Last) ) { \
                 handlerId##Sample = true; \
             }
 
@@ -447,10 +515,11 @@ namespace DBToaster
         LockedLocationProfiler queryProfile(locationSampleKeyConverter);
 
         // TODO: initialize sample frequency
-        Timestamp sampleFrequency;
+        //Timestamp sampleFreq;
 
         void initializeProfiler()
         {
+            sampleFreq = 500000000LL;
             SampleFunctions timestampHelpers;
             timestampHelpers.sampleConstructor = &createTimestampSample;
             timestampHelpers.protocolConstructor = &createExecTimeProtocolSample;
@@ -461,7 +530,6 @@ namespace DBToaster
 
         // Macros for profiler+profiler service setup from main Thrift service.
 
-        // TODO: define constructors/copiers based on actual Thrift types.
         // TODO: auto generate location handlers.
         // TODO: other profiling types, e.g. memory usage.
         #define PROFILER_INITIALIZATION initializeProfiler();
@@ -469,6 +537,7 @@ namespace DBToaster
         #define PROFILER_SERVICE_METHOD_IMPLEMENTATION \
         void getStatisticsProfile(Protocol::StatisticsProfile& dest) \
         { \
+            //cout << "Inside stats profiling." << endl; \
             LOCK_HANDLER_PROFILE \
             queryProfile.copyStatisticsProfile(dest); \
             UNLOCK_HANDLER_PROFILE \

@@ -7,7 +7,7 @@
 typedef uint64_t Timestamp;
 
 Timestamp sampleFreq;
-void setSampleFrequency () { sampleFreq = 0; }
+//void setSampleFrequency (Timestamp s) { sampleFreq = s; }
 
 inline Timestamp now() { return mach_absolute_time(); }
 
@@ -21,7 +21,8 @@ inline Timestamp diff(Timestamp end, Timestamp start)
 
 inline Timestamp ceil(Timestamp x, Timestamp base)
 {
-    return (x + (base-1)) / base;
+    cout << "x: " << x << " base: " << base << endl;
+    return base * ((x + (base-1)) / base);
 }
 
 inline size_t divide(Timestamp x, Timestamp y)
@@ -36,6 +37,13 @@ inline SampleUnits createTimestampSample(const boost::any& span)
     temp.tv_sec = spanSample * 1e-9;
     temp.tv_nsec = spanSample - (temp.tv_sec * 1e9);
     return boost::any(temp);
+}
+
+inline string to_string(SampleUnits& sample) {
+    ostringstream oss;
+    timespec& s = boost::any_cast<timespec&>(sample);
+    oss << s.tv_sec << "." << s.tv_nsec;
+    return oss.str();
 }
 
 inline bool isValid(Timestamp& t) { return t != 0; }
