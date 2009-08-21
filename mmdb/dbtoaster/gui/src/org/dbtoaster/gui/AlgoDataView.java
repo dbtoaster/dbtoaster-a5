@@ -45,7 +45,7 @@ import org.eclipse.ui.part.ViewPart;
 
 
 import org.dbtoaster.model.AlgoDataExtractor;
-import org.dbtoaster.model.Compiler.CompileMode;
+//import org.dbtoaster.model.Compiler.CompileMode;
 
 import org.apache.thrift.TException;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -108,11 +108,13 @@ public class AlgoDataView extends ViewPart
             super(parent, style);
 
             dbtWorkspace = DBToasterWorkspace.getWorkspace();
+          //  GridLayout dbcLayout = new GridLayout(1, false);
+           // algoGraphs.setLayout(dbcLayout);
+           // this.getLayout()
                       
             queryText = new Text(this, style);
             queryText.setLayoutData(new GridData(GridData.FILL, GridData.FILL,
                     true, true));
-            
             queryText.setText("Welcome to Trading Toaster v0.01");
         }
         
