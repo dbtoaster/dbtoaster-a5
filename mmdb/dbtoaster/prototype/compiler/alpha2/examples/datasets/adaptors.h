@@ -56,12 +56,14 @@ namespace DBToaster {
             int volume;
         } OrderbookHandlerInput;
 
+        typedef map<int, tuple<double, int, double, double> > order_ids;
+        //typedef map<int, tuple<double, double> > order_ids;
+
+        order_ids bid_orders;
+        order_ids ask_orders;
+
         struct OrderbookTupleAdaptor : public Adaptor<OrderbookHandlerInput>
         {
-            typedef map<int, tuple<double, double> > order_ids;
-
-            order_ids bid_orders;
-            order_ids ask_orders;
 
             OrderbookTupleAdaptor() {}
 
@@ -70,12 +72,17 @@ namespace DBToaster {
                 OrderbookTuple* v = any_cast<OrderbookTuple>(&b);
 
                 if ( v->action == "B" ) {
-                    bid_orders[v->id] = make_tuple(v->price, v->volume);
+  		    v->broker_id = ((int) rand()) % 9 + 1;
+                    bid_orders[v->id] = make_tuple(v->t, v->broker_id, v->price, v->volume);
+//                    bid_orders[v->id] = make_tuple(v->price, v->volume);
+
                     a.type = DBToaster::StandaloneEngine::insertTuple;
                 }
 
                 else if ( v->action == "S" ) {
-                    ask_orders[v->id] = make_tuple(v->price, v->volume);
+  		    v->broker_id = ((int) rand()) % 9 + 1;
+                    //ask_orders[v->id] = make_tuple(v->price, v->volume);
+                    ask_orders[v->id] = make_tuple(v->t, v->broker_id, v->price, v->volume);
                     a.type = DBToaster::StandaloneEngine::insertTuple;
                 }
 
@@ -88,8 +95,10 @@ namespace DBToaster {
                     order_ids::iterator bid_found = bid_orders.find(v->id);
                     if ( bid_found != bid_orders.end() )
                     {
-                        v->price = get<0>(bid_found->second);
-                        v->volume = get<1>(bid_found->second);
+			v->t = get<0>(bid_found->second);
+			v->broker_id = get<1>(bid_found->second);
+                        v->price = get<2>(bid_found->second);
+                        v->volume = get<3>(bid_found->second);
                         bid_orders.erase(bid_found);
                     }
                     else
@@ -97,8 +106,10 @@ namespace DBToaster {
                         order_ids::iterator ask_found = ask_orders.find(v->id);
                         if ( ask_found != ask_orders.end() )
                         {
-                            v->price = get<0>(ask_found->second);
-                            v->volume = get<1>(ask_found->second);
+			    v->t = get<0>(ask_found->second);
+			    v->broker_id = get<1>(ask_found->second);
+                            v->price = get<2>(ask_found->second);
+                            v->volume = get<3>(ask_found->second);
                             ask_orders.erase(ask_found);
                         }
                         // TODO: handle invalid tuples that are neither bids nor sell...
@@ -109,11 +120,13 @@ namespace DBToaster {
 
                 else if ( v->action == "D" )
                 {
-                    order_ids::iterator bid_found = bid_orders.find(v->id);
+                    order_ids::iterator bid_found = bid_orders.find((int)(v->id));
                     if ( bid_found != bid_orders.end() )
                     {
-                        v->price = get<0>(bid_found->second);
-                        v->volume = get<1>(bid_found->second);
+			v->t = get<0>(bid_found->second);
+			v->broker_id = get<1>(bid_found->second);
+                        v->price = get<2>(bid_found->second);
+                        v->volume = get<3>(bid_found->second);
                         bid_orders.erase(bid_found);
                     }
                     else
@@ -121,8 +134,10 @@ namespace DBToaster {
                         order_ids::iterator ask_found = ask_orders.find(v->id);
                         if ( ask_found != ask_orders.end() )
                         {
-                            v->price = get<0>(ask_found->second);
-                            v->volume = get<1>(ask_found->second);
+			    v->t = get<0>(ask_found->second);
+			    v->broker_id = get<1>(ask_found->second);
+                            v->price = get<2>(ask_found->second);
+                            v->volume = get<3>(ask_found->second);
                             ask_orders.erase(ask_found);
                         }
                         // TODO: handle invalid tuples that are neither bids nor sell...
@@ -140,11 +155,15 @@ namespace DBToaster {
  
                 // TODO: casting from doubles to ints
                 OrderbookHandlerInput r;
+
                 r.t = v->t;
                 r.id = v->id;
+		r.broker_id = v->broker_id;
                 r.price = v->price;
                 r.volume = v->volume;
                 a.data = r;
+
+//		cout << v->action << " " << v->t << " " << v->id << " " << v->broker_id << " " << v->price << " " << v->volume <<endl;
             }
         };
 
