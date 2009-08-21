@@ -247,11 +247,11 @@ let compile_code_rec m_expr_l =
                                 ([], []) merged_handlers
                         in
 
-                        let (handler_body_with_rv, handler_ret_type) =
-                            let (ret_code, new_ret_type) =
+                        let (handler_body_with_rv, handler_ret_type, handler_rv_decl) =
+                            let (ret_code, new_ret_type, new_rv_decl) =
                                 match handler_returns with
                                     | [] -> raise (CodegenException "No return values found!")
-                                    | [(x,y)] -> (x,y)
+                                    | [(x,y)] -> (x,y,[])
                                     | _ ->
                                           let (rv_l, rt_l) =
                                               List.split (List.map
@@ -260,89 +260,43 @@ let compile_code_rec m_expr_l =
                                                       | `ReturnMap mid -> (`Map mid, t))
                                                   handler_returns)
                                           in
-                                          let rt = "tuple< "^
-                                              (List.fold_left
-                                                  (fun acc t -> (if (String.length acc) = 0 then "" else (acc^","))^t)
-                                                  "" rt_l)^" >"
+                                          let rt = "tuple< "^(String.concat "," rt_l)^" >" in
+                                          let (rt_var_opt, rt_decl) =
+                                              let tuple_fields = 
+                                                  let field_counter = ref 0 in
+                                                      List.map2
+                                                          (fun rv rt -> match rv with
+                                                              | `Arith a ->
+                                                                    begin match a with
+                                                                        | `CTerm(`Variable(v)) -> ((v, rt), rv)
+                                                                        | `CTerm(`MapAccess(mid,_)) -> ((mid, rt), rv)
+                                                                        | _ -> 
+                                                                              incr field_counter;
+                                                                              (("f"^(string_of_int (!field_counter)), rt), rv)
+                                                                    end
+                                                              | `Map mid -> ((mid, rt), rv))
+                                                          rv_l rt_l
+                                              in
+                                              let existing_decl =
+                                                  List.filter
+                                                      (function
+                                                          | `Declare(`Tuple(_,f)) -> f = tuple_fields
+                                                          | `Declare(_) -> false
+                                                          | _ -> raise InvalidExpression)
+                                                      gd_acc
+                                              in
+                                                  match existing_decl with
+                                                      | [] ->
+                                                            let tuple_var = gen_var_sym() in
+                                                                (Some(tuple_var), [`Declare(`Tuple(tuple_var, tuple_fields))])
+
+                                                      | [x] -> (None, [])
+                                                      | _ -> raise DuplicateException
                                           in
-                                              (`ReturnMultiple(rv_l), rt)
+                                              (`ReturnMultiple(rv_l, rt_var_opt), rt, rt_decl)
                             in
-                                (reused_bdc_l@new_handlers@[ret_code], new_ret_type)
+                                (reused_bdc_l@new_handlers@[ret_code], new_ret_type, new_rv_decl)
                         in
-
-                        (*
-                        let (handler_body_with_rv, handler_ret_type) =
-                            let rv = get_return_val top_level_handler in
-                            let (local, repl) = is_local_return_val top_level_handler rv in
-	                        match rv with
-	                            | `Eval x ->
-                                          let global_used = get_global_used x in
-                                          let is_ret_map = List.length top_level_bindings != 0 in
-                                          let rv_type = get_rv_type x is_ret_map global_used in
-
-                                          let new_handlers =
-                                              let var = "queryResult"^(gen_var_sym()) in
-                                              let new_tail =
-                                                  if is_ret_map then
-                                                      match global_used with
-                                                          | Some(`Declare(`Map(id,_,_))) -> [`ReturnMap id]
-                                                          | Some(_) | None ->
-                                                                let msg = ("Invalid map return val "^
-                                                                    (string_of_arith_code_expression x))
-                                                                in
-                                                                    print_endline msg;
-                                                                    raise (CodegenException msg)
-
-                                                  else if local && repl then [`Return x]
-
-                                                  else
-                                                      begin match global_used with
-                                                          | Some(`Declare(`Variable(_))) -> [`Return x]
-
-                                                          | Some(_) | None
-                                                              -> [`Return (`CTerm(`Variable(var)))]
-
-                                                      end
-                                              in
-                                              let new_head =
-                                                  if local && repl then
-                                                      let new_tl_handler = remove_return_val top_level_handler in
-                                                          match new_tl_handler with
-                                                              | `Block c -> c
-                                                              | y ->
-                                                                    let msg =
-                                                                        ("Invalid replaceable return val "^
-                                                                            (indented_string_of_code_expression y))
-                                                                    in
-                                                                        print_endline msg;
-                                                                        raise (CodegenException msg)
-
-                                                  else if is_ret_map then
-                                                      [remove_return_val top_level_handler]
-
-                                                  else
-                                                      begin match global_used with
-                                                          | Some(`Declare(`Variable(_))) -> [top_level_handler]
-
-                                                          | Some(_) | None ->
-                                                                let new_tl_handler =
-                                                                    replace_return_val top_level_handler (`Assign(var, x))
-                                                                in
-                                                                    [`Declare(`Variable(var, rv_type)); new_tl_handler]
-                                                      end
-                                              in
-                                                  new_head@(List.tl merged_handlers)@new_tail
-                                          in
-                                              (reused_bdc_l@new_handlers, rv_type)
-	                            | _ ->
-                                          let msg =
-                                              ("Invalid return val in top level handler:\n"^
-                                                  (indented_string_of_code_expression top_level_handler))
-                                          in
-                                              print_endline msg;
-                                              raise (CodegenException msg)
-                        in
-                        *)
 
                         let handler_profile_loc_decl =
                             `ProfileLocation (generate_handler_profile_id handler_id)
@@ -350,7 +304,7 @@ let compile_code_rec m_expr_l =
                         let handler_code =
                             `Handler(handler_id, handler_args, handler_ret_type, handler_body_with_rv)
                         in
-                            (gd_acc@[`Declare(handler_profile_loc_decl)]@unique_merged_decls,
+                            (gd_acc@[`Declare(handler_profile_loc_decl)]@unique_merged_decls@handler_rv_decl,
                             handler_acc@[(handler_code, event)])
                     end
                 else

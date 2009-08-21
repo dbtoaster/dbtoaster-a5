@@ -365,7 +365,10 @@ let rec get_thrift_sources thrift_module known_dependents =
                         Str.string_match (Str.regexp "service\\ *\\([^{\\ ]*\\)\\ .*{") x 0
                     in
                         try
-                            if matched then Str.matched_group 1 x else ""
+                            if matched then
+                                let s = Str.matched_group 1 x in
+                                    print_endline ("Found service "^s); s
+                            else ""
                         with Not_found ->
                             begin
                                 print_endline ("No service name found for "^x);

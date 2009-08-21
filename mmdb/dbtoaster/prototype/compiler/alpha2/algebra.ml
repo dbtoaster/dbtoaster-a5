@@ -2302,6 +2302,7 @@ type profile_identifier = identifier
  *)
 
 type datastructure = [
+| `Tuple of variable_identifier * field list 
 | `Map of map_identifier * (field list) * type_identifier 
 | `Set of relation_identifier * (field list)
 | `Multiset of relation_identifier * (field list) ]
@@ -2315,13 +2316,6 @@ type map_iterator = [ `Begin of map_identifier | `End of map_identifier ]
 type domain_key = relation_identifier * (code_variable list)
 
 type domain_iterator = [ `Begin of relation_identifier | `End of relation_identifier ]
-
-type declaration = [
-| `Variable of code_variable * type_identifier
-| `Relation of relation_identifier * (field list) 
-| `Map of map_identifier * (field list) * type_identifier
-| `Domain of relation_identifier * (field list)
-| `ProfileLocation of profile_identifier ]
 
 type code_terminal = [
 | `Int of int
@@ -2359,10 +2353,18 @@ type bool_code_expression = [
 
 type return_val = [ `Arith of arith_code_expression | `Map of map_identifier ]
 
+type declaration = [
+| `Variable of code_variable * type_identifier
+| `Tuple of code_variable * (field * return_val) list
+| `Relation of relation_identifier * (field list) 
+| `Map of map_identifier * (field list) * type_identifier
+| `Domain of relation_identifier * (field list)
+| `ProfileLocation of profile_identifier ]
+
 type code_expression = [
 | `Declare of declaration
 | `Assign of code_variable * arith_code_expression
-| `AssignMap of map_key * arith_code_expression 
+| `AssignMap of map_key * arith_code_expression
 | `EraseMap of map_key
 | `InsertTuple of datastructure * (code_variable list)
 | `DeleteTuple of datastructure * (code_variable list)
@@ -2375,7 +2377,7 @@ type code_expression = [
 | `Block of code_expression list
 | `Return of arith_code_expression
 | `ReturnMap of map_identifier
-| `ReturnMultiple of return_val list
+| `ReturnMultiple of return_val list * code_variable option
 | `Handler of function_identifier * (field list) * type_identifier * code_expression list
 | `Profile of string * profile_identifier * code_expression ]
 
@@ -2387,7 +2389,7 @@ let is_block c_expr =
     match c_expr with | `Block _ -> true | _ -> false
 
 let identifier_of_datastructure =
-    function | `Map (n,_,_) | `Set (n,_) | `Multiset (n,_) -> n
+    function | `Tuple(n,_) | `Map (n,_,_) | `Set (n,_) | `Multiset (n,_) -> n
 
 let datastructure_of_declaration decl =
     match decl with
@@ -2395,6 +2397,7 @@ let datastructure_of_declaration decl =
         | `ProfileLocation n ->
               raise (CodegenException ("Invalid datastructure: "^n))
 
+        | `Tuple (n,f) -> `Tuple (n, (fst (List.split f)))
         | `Relation(n,f) -> `Multiset(n,f)
         | `Map (id, f, rt) -> `Map(id, f, rt)
         | `Domain(n,f) -> `Map(n,f,"int")
@@ -2402,6 +2405,7 @@ let datastructure_of_declaration decl =
 let identifier_of_declaration decl =
     match decl with
         | `Variable (v, ty) -> v
+        | `Tuple (v,_) -> v
         | `Relation(n, f) -> n
         | `Map (n, f, rt) -> n
         | `Domain(n, f) -> n
@@ -2422,6 +2426,7 @@ let ctype_of_datastructure_fields f =
 
 let ctype_of_datastructure =
     function 
+        | `Tuple (n,f) -> "tuple<"^(String.concat "," (List.map snd f))^">"
 	| `Map (n,f,r) ->
 	      let key_type = 
 		  let ftype = ctype_of_datastructure_fields f in
@@ -2445,8 +2450,9 @@ let ctype_of_datastructure =
 let element_ctype_of_datastructure d =
     match d with
         | `Variable(n,_)
-        | `ProfileLocation n ->
-              raise (CodegenException
+        | `ProfileLocation n
+        | `Tuple(n,_)
+            -> raise (CodegenException
                   ("Invalid datastructure for elements: "^n))
 
 	| `Map (n,f,r) ->
@@ -2486,11 +2492,13 @@ let advance_iterator it = "++"^it
 
 let iterator_type_of_datastructure ds =
     match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
 	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      (ctype_of_datastructure ds)^"::iterator"
 
 let point_iterator_declaration_of_datastructure ds =
     match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
 	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
@@ -2499,6 +2507,7 @@ let point_iterator_declaration_of_datastructure ds =
             
 let range_iterator_declarations_of_datastructure ds =
     match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
 	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
@@ -2508,10 +2517,12 @@ let range_iterator_declarations_of_datastructure ds =
 
 let field_declarations_of_datastructure ds iterator tab =
     let deref = match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
 	| `Map _ -> iterator^"->first"
         | `Set _ | `Multiset _ -> "*"^iterator
     in 
 	match ds with
+            | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
 	    | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 		  if (List.length f) = 1 then
 		      let (id, typ) = List.hd f in
@@ -2529,6 +2540,7 @@ let field_declarations_of_datastructure ds iterator tab =
 
 let resume_declarations_of_datastructure ds =
     match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
         | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
 	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
 	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
@@ -2605,16 +2617,17 @@ let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
 let string_of_domain_key (did, keys) = did^"["^(ctype_of_code_var_list keys)^"]"
 
 let string_of_datastructure =
-    function | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
+    function | `Tuple(n,f) | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
 
 let string_of_datastructure_fields =
     function
-	| `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
+	| `Tuple (n,f) | `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
               string_of_field_list f
 
 let string_of_declaration =
     function 
 	| `Declare(`Variable(n, typ)) -> n^" : "^typ
+	| `Declare(`Tuple(n, f_rv_l)) -> n^" : <"^(String.concat "," (snd (List.split (fst (List.split f_rv_l)))))^">"
         | `Declare(`Relation (id,f)) -> id^" : rel("^(string_of_field_list f)^")"
         | `Declare(`Map (id,f,d)) -> id^" : map["^(string_of_field_list f)^"]"
         | `Declare(`Domain (id,f)) -> id^" : dom("^(string_of_field_list f)^")"
@@ -2787,7 +2800,7 @@ let rec string_of_code_expression c_expr =
                   begin
                       match x with
 		          | `Variable(n, typ) -> typ^" "^n^";"
-                          | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                          | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                 let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
                                     ctype^" "^(identifier_of_declaration y)^";"
                           | `ProfileLocation p ->
@@ -2806,6 +2819,7 @@ let rec string_of_code_expression c_expr =
 
             | `InsertTuple (ds, cv_list) ->
                   begin match ds with
+                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
                       | `Map _ ->
                             let dsid = identifier_of_datastructure ds in
                             let dskey = (ctype_of_code_var_list cv_list) in
@@ -2821,6 +2835,7 @@ let rec string_of_code_expression c_expr =
 
             | `DeleteTuple (ds, cv_list) -> 
                   begin match ds with
+                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
                       | `Map _ ->
                             let dsid = identifier_of_datastructure ds in
                             let dskey = (ctype_of_code_var_list cv_list) in
@@ -2861,6 +2876,7 @@ let rec string_of_code_expression c_expr =
 
 	    | `ForEachResume(m,c) ->
                   let deref it = match m with
+                      | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
                       | `Map _ -> it^"->first"
                       | `Set _ | `Multiset _ -> "*("^it^")"
                   in
@@ -2927,15 +2943,19 @@ let rec string_of_code_expression c_expr =
 
             | `ReturnMap (mid) -> "return "^mid^";"
 
-            | `ReturnMultiple (rv_l) ->
-                  "return make_tuple("^
-                      (List.fold_left
-                          (fun acc rv ->
-                              (if (String.length acc) = 0 then "" else acc^",")^
-                                  (match rv with
-                                      | `Arith a -> string_of_arith_code_expression a
-                                      | `Map mid -> mid))
-                          "" rv_l)^");"
+            | `ReturnMultiple (rv_l, cv_opt) ->
+                  let string_of_rv rv = 
+                      match rv with
+                          | `Arith a -> string_of_arith_code_expression a
+                          | `Map mid -> mid
+                  in
+                  let rv = "make_tuple("^
+                      (String.concat "," (List.map string_of_rv rv_l))^");"
+                  in
+                      begin match cv_opt with
+                          | None -> "return "^rv
+                          | Some cv -> (cv^" = "^rv^"; return "^cv^";")
+                  end
 
 	    | `Handler (name, args, rt, c_expr_l) ->
 		  let h_fields =
@@ -2979,7 +2999,7 @@ let indented_string_of_code_expression c_expr =
 		      begin
 			  match x with 
 		              | `Variable(n, typ) -> typ^" "^n^";"
-                              | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                              | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                     let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
                                         ctype^" "^(identifier_of_declaration y)^";"
                               | `ProfileLocation p ->
@@ -2999,6 +3019,7 @@ let indented_string_of_code_expression c_expr =
 
                 | `InsertTuple (ds, cv_list) ->
                       begin match ds with
+                          | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
                           | `Map _ ->
                                 let dsid = identifier_of_datastructure ds in
                                 let dskey = (ctype_of_code_var_list cv_list) in
@@ -3014,6 +3035,7 @@ let indented_string_of_code_expression c_expr =
 
                 | `DeleteTuple (ds, cv_list) -> 
                       begin match ds with
+                          | `Tuple _ -> raise (CodegenException "Cannot delete from tuple.")
                           | `Map _ ->
                                 let dsid = identifier_of_datastructure ds in
                                 let dskey = (ctype_of_code_var_list cv_list) in
@@ -3059,6 +3081,7 @@ let indented_string_of_code_expression c_expr =
 
 	        | `ForEachResume(m,c) ->
                       let deref it = match m with
+                          | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
                           | `Map _ -> it^"->first"
                           | `Set _ | `Multiset _ -> "*("^it^")"
                       in
@@ -3130,16 +3153,19 @@ let indented_string_of_code_expression c_expr =
 
                 | `ReturnMap (mid) -> "return "^mid^";"
 
-                | `ReturnMultiple rv_l ->
-                      "return make_tuple("^
-                          (List.fold_left
-                              (fun acc rv ->
-                                  (if (String.length acc) = 0 then "" else acc^",")^
-                                      (match rv with
-                                          | `Arith a -> string_of_arith_code_expression a
-                                          | `Map mid -> mid))
-                              "" rv_l)^");"
-
+                | `ReturnMultiple (rv_l, cv_opt) ->
+                      let string_of_rv rv = 
+                          match rv with
+                              | `Arith a -> string_of_arith_code_expression a
+                              | `Map mid -> mid
+                      in
+                      let rv = "make_tuple("^
+                          (String.concat "," (List.map string_of_rv rv_l))^");"
+                      in
+                          begin match cv_opt with
+                              | None -> "return "^rv
+                              | Some cv -> cv^" = "^rv^";\n"^tab^"return "^cv^";"
+                          end
 		      
 		| `Handler (name, args, rt, c_expr_l) ->
 		      let h_fields =

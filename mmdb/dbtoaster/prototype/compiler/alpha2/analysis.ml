@@ -75,6 +75,7 @@ let rec get_dependencies c_expr =
         | `DeleteTuple (ds, cvl) ->
               begin
                   match ds with
+                      | `Tuple _ -> raise (AnalysisException "Cannot insert/delete into tuple.")
                       | `Map (mid,_,_) ->
                             unique(List.map (fun v -> (`Map mid, `Variable v)) cvl)
 
@@ -117,6 +118,7 @@ let rec get_dependencies c_expr =
                   let ch_deps = get_dependencies c in
                   let ds_deps =
                       match ds with
+                          | `Tuple _ -> raise (AnalysisException "Cannot iterate over tuple.")
                           | `Map (id,f,_) ->
                                 List.map (fun (fid,_) -> (`Variable fid, `Map id)) f 
 
@@ -134,7 +136,19 @@ let rec get_dependencies c_expr =
 
         | `ReturnMap _ -> []
 
-        | `ReturnMultiple _ -> []
+        | `ReturnMultiple (rv_l, cv_opt) ->
+              begin match cv_opt with
+                  | Some(cv) ->
+                        List.flatten (List.map
+                            (function
+                                | `Arith a ->
+                                      let ch_used = get_arith_dependencies a in
+                                          unique (List.map (fun u -> (`Variable cv,u)) ch_used)
+                                | `Map mid -> [(`Variable cv, `Map mid)])
+                            rv_l)
+
+                  |  None -> []
+              end
 
         | `Handler (_,_,_,cl) -> unique(List.flatten (List.map get_dependencies cl))
 

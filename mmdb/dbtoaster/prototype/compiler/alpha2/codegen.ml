@@ -185,11 +185,12 @@ let rec substitute_code_vars assignments c_expr =
 	    | `Block cl -> `Block(List.map sc cl)
 	    | `Return (ac) -> `Return (sa ac)
             | `ReturnMap mid -> `ReturnMap mid
-            | `ReturnMultiple rv_l ->
+            | `ReturnMultiple (rv_l, cv_opt) ->
                   `ReturnMultiple
-                      (List.map
+                      ((List.map
                           (function | `Arith a -> `Arith(sa a) | `Map mid -> `Map mid)
-                          rv_l)
+                          rv_l),
+                      cv_opt)
 
 	    | `Handler(n, args, rt, cl) -> `Handler(n, args, rt, List.map sc cl)
             | `Profile(st, p,c) -> `Profile(st, p, sc c)
@@ -602,10 +603,16 @@ let gc_foreach_map e e_code e_decl e_vars e_uba_fields mk op diff recursion_decl
                     let decl_matches =
                         List.filter
                             (fun d -> (identifier_of_declaration d) = mid)
-                            (List.map (function | `Declare d -> d) recursion_decls)
+                            (List.map (function
+                                | `Declare (`Tuple _) -> raise InvalidExpression
+                                | `Declare d -> d) recursion_decls)
                     in
                     let ds = match decl_matches with
-                        | [x] -> datastructure_of_declaration x
+                        | [x] ->
+                              begin match x with
+                                  | `Tuple _ -> raise InvalidExpression
+                                  | y -> datastructure_of_declaration y
+                              end
                         | [] ->
                               print_endline ("Could not find declaration for "^mid);
                               raise InvalidExpression
@@ -955,6 +962,27 @@ let generate_code handler bindings event body_only event_handler_decls
                           let new_decl =
                               if List.mem map_decl e_decl then e_decl else e_decl@[map_decl]
                           in
+                          let return_val_code decls =
+                              let rv = `Eval(`CTerm(`MapAccess(map_key))) in
+                              if List.mem_assoc sid state_p_decls then
+                                  let (e_vars, _) = List.split(match event with
+                                      | `Insert(_,vars) | `Delete(_,vars) -> vars)
+                                  in
+		                  let e_uba = List.filter
+			              (fun uaid -> not(List.mem (field_of_attribute_identifier uaid) e_vars))
+			              (get_unbound_attributes_from_map_expression e true)
+		                  in
+                                  let e_uba_fields = List.map field_of_attribute_identifier e_uba in
+
+                                  let par_decl = List.assoc sid state_p_decls in
+                                  let (new_rv,_) = 
+                                      gc_recursive_state_accessor_code
+                                          par_decl bd e rv decls e_vars e_uba_fields op diff recursion_decls
+                                  in
+                                      new_rv
+                              else
+                                  rv
+                          in
 		              match event with 
 			          | `Insert (_,_) ->
                                         print_endline ("new map: "^mid^" rc: "^rc^" c: "^c);
@@ -997,7 +1025,7 @@ let generate_code handler bindings event body_only event_handler_decls
                                                             `EQ(`CTerm(`MapContains(map_key)),
                                                             `CTerm(`MapIterator(`End(mid))))),
                                                         insert_code);
-					            `Eval(`CTerm(`MapAccess(map_key)))])),
+                                                    return_val_code insert_decl])),
                                                 (`ProfileLocation prof_loc)::insert_decl)
 				        in
                                             (update_and_init_binding_code, insert_wprof_decl)
@@ -1043,7 +1071,7 @@ let generate_code handler bindings event body_only event_handler_decls
                                                               (`Profile("cpu", prof_loc,
 				                              `Block ([
 	 				                          `ForEachResume (map_decl, update_and_finalise_code);
-                                                                  `Eval(`CTerm(`MapAccess(map_key)))])),
+                                                                  return_val_code new_decl])),
                                                               (`ProfileLocation prof_loc)::new_decl)
 				                      in
                                                           (delete_and_update_binding_code, delete_wprof_decl)
@@ -1477,6 +1505,7 @@ let generate_code handler bindings event body_only event_handler_decls
     let separate_global_declarations code =
 	List.partition
 	    (fun x -> match x with
+                | `Declare(`Tuple _)
 		| `Declare(`Map _) | `Declare(`Relation _)
                 | `Declare(`Domain _) | `Declare(`ProfileLocation _)
                       -> true
@@ -1704,6 +1733,9 @@ let ctype_of_thrift_type t =
 let thrift_type_of_datastructure d =
     match d with
         | `Variable(n,typ) -> thrift_type_of_base_type typ
+
+        | `Tuple (n,f) -> n^"_tuple"
+
 	| `Map (n,f,r) ->
 	      let key_type = 
                   match f with
@@ -1729,6 +1761,9 @@ let thrift_type_of_datastructure d =
 let ctype_of_thrift_datastructure d =
     match d with
         | `Variable(n,typ) -> thrift_type_of_base_type typ
+
+        | `Tuple(n,f) -> n^"_tuple"
+
 	| `Map (n,f,r) ->
 	      let key_type = 
                   match f with
@@ -1755,9 +1790,10 @@ let ctype_of_thrift_datastructure d =
 
 let thrift_element_type_of_datastructure d =
     match d with
-        | `Variable(n,typ) ->
-              raise (CodegenException
-                  ("Invalid datastructure for elements: "^n))
+        | `Variable(n,_) 
+        | `Tuple (n,_)
+            -> raise (CodegenException
+                ("Invalid datastructure for elements: "^n))
 
 	| `Map (n,f,r) ->
 	      let key_type = 
@@ -1794,8 +1830,10 @@ let thrift_inner_declarations_of_datastructure d =
             r
     in
         match d with
-            | `Variable(n,typ) -> raise (CodegenException
-                  ("Datastructure has no inner declarations: "^n))
+            | `Variable(n,_)
+            | `Tuple(n,_)
+                -> raise (CodegenException
+                    ("Datastructure has no inner declarations: "^n))
 
 	    | (`Map (n,f,_) as ds)
             | (`Set(n, f) as ds)
@@ -1820,7 +1858,10 @@ let copy_element_for_thrift d dest src =
             (0, []) f
     in
         match d with
-            | `Variable(n,typ) -> raise (CodegenException "Invalid element copy.")
+            | `Variable(n,_)
+            | `Tuple(n,_)
+                -> raise (CodegenException "Invalid element copy.")
+
 	    | `Map (n,f,r) ->
                   (* Copy from pair< tuple<>, <ret type> > -> pair< struct, <ret type> > *)
                   let (key_dest_decl, key_dest) = ([n^"_key key;"], "key") in
@@ -1839,6 +1880,7 @@ let copy_element_for_thrift d dest src =
 let thrift_inserter_of_datastructure d =
     let indent s = ("    "^s) in
         match d with
+            | `Tuple (n,_) -> raise (CodegenException ("Cannot insert into tuple "^n))
 	    | `Map (n,f,_)
             | `Set(n, f)
 	    | `Multiset (n,f) ->
@@ -1952,6 +1994,7 @@ let generate_thrift_includes out_chan =
         "using namespace apache::thrift::protocol;";
         "using namespace apache::thrift::transport;";
         "using namespace apache::thrift::server;\n";
+        "using namespace boost;";
         "using boost::shared_ptr;\n\n"]
     in
         output_string out_chan (list_code includes)
@@ -1969,8 +2012,7 @@ let generate_dbtoaster_thrift_module
     let service =
         ["service "^service_name^
             (if List.length service_inheritance = 0 then ""
-            else " extends "^(String.concat "," service_inheritance));
-        "{"]@
+            else " extends "^(String.concat "," service_inheritance))^"{"]@
         service_decls@["}"]
     in
     let thrift_module =
@@ -2026,16 +2068,41 @@ let generate_dbtoaster_thrift_module_implementation
 
 let generate_thrift_accessor_declarations global_decls =
     let list_code l = String.concat "\n" l in
-    let (key_decls, accessors_decls) =
-        List.fold_left (fun (key_acc, accessor_acc) d ->
-            let (key_decl, accessor_decl) =
+    let (struct_decls, key_decls, accessors_decls) =
+        List.fold_left (fun (struct_acc, key_acc, accessor_acc) d ->
+            let (struct_decls, key_decl, accessor_decl) =
                 match d with
                     | `Declare x ->
                           begin
                               match x with
 		                  | `Variable(n, typ) -> 
                                         let ttype = thrift_type_of_base_type typ in
-                                            ([], ttype^" get_"^n^"(),")
+                                            ([], [], ttype^" get_"^n^"(),")
+
+                                  | (`Tuple (n,f) as y) ->
+                                        let ds = datastructure_of_declaration y in
+                                        let n = identifier_of_datastructure ds in
+                                        let ttype = thrift_type_of_datastructure ds in
+                                        let acs_decl = ttype^" get_"^n^"()" in
+
+                                        let field_declarations f =
+                                            let (_, r) =
+                                                List.fold_left (fun (counter, acc) ((id,ty),_) ->
+                                                    let field_decl =
+                                                        ((string_of_int counter)^": "^
+                                                            (thrift_type_of_base_type
+                                                                (ctype_of_type_identifier ty))^" "^id^",")
+                                                    in
+                                                        (counter+1, acc@[field_decl]))
+                                                    (1, []) f
+                                            in
+                                                r
+                                        in
+
+                                        let struct_decl = 
+                                            ["struct "^ttype^" {"]@(field_declarations f)@["}"]
+                                        in
+                                            (struct_decl, [], acs_decl)
 
                                   | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                         let ds = datastructure_of_declaration y in
@@ -2046,22 +2113,22 @@ let generate_thrift_accessor_declarations global_decls =
                                         in
                                         let acs_decl = ttype^" get_"^n^"()," in
                                             if (List.length inner_decl) > 0 then
-                                                ([(inner_decl_name, list_code inner_decl)], acs_decl)
+                                                ([], [(inner_decl_name, list_code inner_decl)], acs_decl)
                                             else
-                                                ([], acs_decl)
+                                                ([], [], acs_decl)
 
-                                  | `ProfileLocation _ -> ([], "")
+                                  | `ProfileLocation _ -> ([], [], "")
                           end
                     | _ -> raise (CodegenException
                           ("Invalid declaration: "^(indented_string_of_code_expression d)))
             in
                 if key_decl = [] && accessor_decl = "" then
-                    (key_acc, accessor_acc)
+                    (struct_acc, key_acc, accessor_acc)
                 else
-                    (key_acc@key_decl, accessor_acc@[accessor_decl]))
-            ([],[]) global_decls
+                    (struct_acc@struct_decls, key_acc@key_decl, accessor_acc@[accessor_decl]))
+            ([], [], []) global_decls
     in
-        (key_decls, accessors_decls)
+        (struct_decls, key_decls, accessors_decls)
 
 let generate_thrift_accessor_implementations global_decls service_class_name =
     let indent s = "    "^s in
@@ -2081,6 +2148,19 @@ let generate_thrift_accessor_implementations global_decls service_class_name =
                                                     ([dtype^" r = static_cast<"^dtype^">("^n^");";
                                                     "return r;"]))@
                                                 [ "}\n" ]
+
+                                  | (`Tuple (_,f)) as y ->
+                                        let ds = datastructure_of_declaration y in
+                                        let n = identifier_of_datastructure ds in
+                                        let ttype = ctype_of_thrift_datastructure ds in
+                                            ["void get_"^n^"("^ttype^"& _return)"; "{"]@
+                                            (List.map (fun ((id,ty),rv) ->
+                                                let rv_str = match rv with
+                                                    | `Arith a -> string_of_arith_code_expression a
+                                                    | `Map mid -> mid
+                                                in
+                                                    indent ("_return."^id^" = "^rv_str^";")) f)@
+                                            ["}\n"]
 
                                   | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                         let ds = datastructure_of_declaration y in
@@ -2125,7 +2205,8 @@ let generate_stream_engine_includes out_chan =
         "#include \"streamengine.h\"";
         "#include \"profiler.h\"";
         "#include \"datasets/adaptors.h\"";
-        "#include \"boost/bind.hpp\"\n\n";
+        "#include <boost/bind.hpp>";
+        "#include <boost/shared_ptr.hpp>\n\n";
         "using namespace DBToaster::Profiler;\n"; ]
     in
         output_string out_chan (list_code includes)
@@ -2165,13 +2246,13 @@ let generate_stream_engine_viewer thrift_out_chan code_out_chan query_id global_
     let thrift_service_class = thrift_service_name^"Handler" in
     let thrift_service_interface = thrift_service_name^"If" in
 
-    let (key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
+    let (struct_decls, key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
     let accessor_impls = generate_thrift_accessor_implementations global_decls thrift_service_class in
 
     let thrift_includes =  ["profiler.thrift"] in
     let thrift_service_inheritance = ["profiler.Profiler"] in
     let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_global_decls = (let (_,r) = List.split key_decls in r) in
+    let thrift_global_decls = struct_decls@(snd (List.split key_decls)) in
     let access_method_decls = List.map indent accessors_decls in
 
     let service_constructor_args = [] in
@@ -2561,6 +2642,16 @@ let generate_socket_stream_engine_init out_chan streams_handlers_and_events =
  * Top-level standalone engine code generation functions
  *)
 
+let generate_thrift_server_main viewer_class viewer_constructor_args =
+    [ "int port = (70457>>3);";
+    "boost::shared_ptr<"^viewer_class^"> handler(new "^viewer_class^"("^viewer_constructor_args^"));";
+    "boost::shared_ptr<TProcessor> processor(new AccessMethodProcessor(handler));";
+    "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
+    "boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
+    "boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
+    "TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);";
+    "server.serve();" ]
+
 (* TODO: generate standalone profiler running an event loop in its own thread *)
 (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
 let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan global_decls =
@@ -2569,17 +2660,22 @@ let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan glob
     let block l = ["{"]@(List.map indent l)@["}"] in
 
     let main_defn =
+        let run_body =
+            ["while ( sources.streamHasInputs() ) {";
+            (indent "DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();");
+            (indent "router.dispatch(t);"); "}"]
+        in
         let main_code =
+            ["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
+            "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
+            "void runMultiplexer()"; "{"]@
+            run_body@["}"]@
             ["int main(int argc, char** argv)"]@
                 (block
-                    (["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
-                    "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
-                    "PROFILER_ENGINE_IMPLEMENTATION;\n";
+                    (["PROFILER_ENGINE_IMPLEMENTATION;\n";
                     "init(sources, router);";
-                    "while ( sources.streamHasInputs() ) {";
-                    (indent "DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();");
-                    (indent "router.dispatch(t);");
-                    "}"]))
+                    "boost::thread t(boost::bind(&runMultiplexer));"]@
+                    (generate_thrift_server_main "AccessMethodHandler" "")))
         in
             list_code main_code
     in
@@ -2608,7 +2704,8 @@ let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan gl
         let main_code =
             common_decl@
             ["int main(int argc, char** argv)"]@
-            (block (common_main@["t.join();"]))
+            (block (common_main@
+                (generate_thrift_server_main "AccessMethodHandler" "")))
         in
             list_code main_code
     in
@@ -2641,13 +2738,13 @@ let generate_stream_debugger_includes out_chan =
         output_string out_chan (list_code includes)
 
 
-let generate_debugger_thrift_server_main stream_debugger_class =
+let generate_debugger_thrift_server_main stream_debugger_class stream_debugger_constructor_args =
     [ "int port = (70457>>3);";
-    "shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"(sources, router));";
-    "shared_ptr<TProcessor> processor(new DebuggerProcessor(handler));";
-    "shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
-    "shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
-    "shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
+    "boost::shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"("^stream_debugger_constructor_args^"));";
+    "boost::shared_ptr<TProcessor> processor(new DebuggerProcessor(handler));";
+    "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
+    "boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
+    "boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
     "TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);";
     "server.serve();" ]
 
@@ -2785,7 +2882,7 @@ let generate_file_stream_debugger_class
         generate_file_stream_debugger_thrift_declarations streams
     in
 
-    let (key_decls, accessors_decls) =
+    let (struct_decls, key_decls, accessors_decls) =
         generate_thrift_accessor_declarations global_decls
     in
 
@@ -2810,8 +2907,9 @@ let generate_file_stream_debugger_class
     let thrift_languages = [ "cpp"; "java" ] in
     let thrift_global_decls =
         stream_id_decls@
-        (let (_,r) = List.split tuple_decls in r)@
-        (let (_,r) = List.split key_decls in r)
+        (snd (List.split tuple_decls))@
+        struct_decls@
+        (snd (List.split key_decls))
     in
     let debugger_decls = 
         List.map indent (steps_decls@stepns_decls@accessors_decls)
@@ -2868,7 +2966,7 @@ let generate_file_stream_debugger_main impl_out_chan stream_debugger_class =
                 (["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
                 "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
                 "init(sources, router);\n"]@
-                (generate_debugger_thrift_server_main stream_debugger_class)@
+                (generate_debugger_thrift_server_main stream_debugger_class "sources, router")@
                 ["return 0;";]))
     in
         output_string impl_out_chan (list_code main_defn)
@@ -2886,9 +2984,13 @@ let generate_socket_stream_debugger_thrift_declarations streams =
     let (steps_decls, stepns_decls) =
         List.fold_left
             (fun (step_acc, stepn_acc)
-                (stream_name, (_, _, _, tuple_type, _, _, _))
+                (stream_name, (_, _, _, tuple_type, _, _, thrift_tuple_namespace))
                 ->
-                let normalized_tuple_type = (strip_namespace tuple_type) in
+                let normalized_tuple_type =
+                    (if String.length thrift_tuple_namespace = 0 then ""
+                    else (thrift_tuple_namespace^"."))^
+                        (strip_namespace tuple_type)
+                in
                 let step_stream = "void step_"^(stream_name)^"(1:"^normalized_tuple_type^" input)," in
                 let stepn_stream = "void stepn_"^(stream_name)^"(1:i32 n)," in
                     (step_acc@[step_stream], stepn_acc@[stepn_stream]))
@@ -2918,9 +3020,9 @@ let generate_socket_stream_debugger_thrift_implementations class_name streams =
                 let normalized_tuple_type = (strip_namespace tuple_type) in
                 let step_stream_body = 
                     (* Create a DBToasterTuple from argument, and invoke dispatch *)
-                    ["void step_"^stream_name^"(const "^normalized_tuple_type^"& input)"]@
+                    ["void step_"^stream_name^"(const DBToaster::DemoDatasets::Protocol::"^normalized_tuple_type^"& input)"]@
                         (block
-                            ([stream_dispatcher^"(boost::any(input.data));"]))
+                            (["boost::any anyInput(input);"; stream_dispatcher^"(anyInput);"]))
                 in
                 let stepn_stream_body =
                     (* Read n tuples from the stream *)
@@ -2959,7 +3061,7 @@ let generate_socket_stream_debugger_class
         generate_socket_stream_debugger_thrift_declarations streams
     in
 
-    let (key_decls, accessors_decls) =
+    let (struct_decls, key_decls, accessors_decls) =
         generate_thrift_accessor_declarations global_decls
     in
 
@@ -2981,14 +3083,14 @@ let generate_socket_stream_debugger_class
 
     let thrift_includes =  ["datasets.thrift"; "profiler.thrift"] in
     let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_global_decls = (let (_,r) = List.split key_decls in r) in
+    let thrift_global_decls = struct_decls@(snd (List.split key_decls)) in
     let debugger_decls = 
         List.map indent (steps_decls@stepns_decls@accessors_decls)
     in
 
     (* Local datastructures and constructor *)
     let debugger_constructor_args =
-        ["DBToaster::StandaloneEngine::SocketMultiplexer& s,"]
+        ["DBToaster::StandaloneEngine::SocketMultiplexer& s"]
     in
     let debugger_constructor_member_init = ["sources(s)"] in
     let debugger_constructor_init = [ "PROFILER_INITIALIZATION" ] in
@@ -2999,11 +3101,13 @@ let generate_socket_stream_debugger_class
     in
 
     (* Method bodies *)
+    let recursive_stepn_method = ["\nvoid recursive_stepn() {}\n"] in
     let debugger_interface_impls =
         (List.map indent
             (steps_defns@["\n"]@
             stepns_defns@["\n"]@
             accessor_defns@
+            recursive_stepn_method@
             ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
     in
 
@@ -3038,7 +3142,7 @@ let generate_socket_stream_debugger_main impl_out_chan stream_debugger_class =
         ["int main(int argc, char **argv) "]@
             (block 
                 (common_main@
-                (generate_debugger_thrift_server_main stream_debugger_class)@
+                (generate_debugger_thrift_server_main stream_debugger_class "sources")@
                 ["return 0;";]))
     in
         output_string impl_out_chan (list_code main_defn)
