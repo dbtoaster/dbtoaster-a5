@@ -331,8 +331,8 @@ public class DBToasterWorkspace
         wsQueries.remove(queryName);
     }
 
-    public String compileQuery(Query q, String querySQL, String outputFile,
-            int compileMode)
+    public String compileQuery(
+        Query q, String querySQL, String outputFile, int compileMode)
     {
         IFolder queryFolder = q.getQueryFolder();
         IPath qfLoc = queryFolder.getLocation();

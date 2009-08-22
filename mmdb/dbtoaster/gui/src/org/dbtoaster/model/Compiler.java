@@ -358,57 +358,73 @@ public class Compiler
 
         try
         {
-            // Parse SQL
-            SQLQueryParserManager parserManager = SQLQueryParserManagerProvider
-                    .getInstance().getParserManager(null, null);
+            String allQueries = "";
+            String allSourceConfigs = "";
 
-            SQLQueryParseResult parseResult = parserManager
-                    .parseQuery(sqlQuery);
+            int i = 0;
+            String[] queries = sqlQuery.split(";");
+            for (String q : queries)
+            {
+                tmlWriter.reset();
 
-            QueryStatement userQuery = parseResult.getQueryStatement();
-
-            // Write out TML.
-            String parsedSQL = userQuery.getSQL();
-            System.out.println("Creating map expression for: " + parsedSQL);
-
-            switch (StatementHelper.getStatementType(userQuery)) {
-            case StatementHelper.STATEMENT_TYPE_FULLSELECT:
-                returnStatus = "Unsuported: FULLSELECT query.";
-                break;
-
-            case StatementHelper.STATEMENT_TYPE_SELECT:
-                QuerySelectStatement select = (QuerySelectStatement) userQuery;
-
-                System.out.println("Creating TML...");
-                String queryTml = tmlWriter.createSelectStatementTreeML(select);
-
-                System.out.println("Creating source config...");
-                String sourceConfig = sourceConfigWriter.getSourceConfiguration(
-                    tmlWriter.getRelationsUsedFromParsing());
-
-                try
-                {
-                    System.out.println("Writing TML to " + tmlFile);
-                    Writer tmlOut = new BufferedWriter(new FileWriter(tmlFile));
-                    tmlOut.write(queryTml);
-                    tmlOut.close();
-
-                    System.out.println("Writing source config to " + sourceConfigFile);
-                    Writer scOut = new BufferedWriter(new FileWriter(sourceConfigFile));
-                    scOut.write(sourceConfig);
-                    scOut.close();
-
-                } catch (IOException e)
-                {
-                    returnStatus = "Compilation failed: " +
-                        "IOException in writing TML/source config.";
-                    e.printStackTrace();
+                // Parse SQL
+                SQLQueryParserManager parserManager =
+                    SQLQueryParserManagerProvider.getInstance().
+                        getParserManager(null, null);
+    
+                SQLQueryParseResult parseResult = parserManager.parseQuery(q);
+                
+                QueryStatement userQuery = parseResult.getQueryStatement();
+    
+                // Write out TML.
+                String parsedSQL = userQuery.getSQL();
+                System.out.println("Creating map expression for: " + parsedSQL);
+    
+                switch (StatementHelper.getStatementType(userQuery)) {
+                case StatementHelper.STATEMENT_TYPE_FULLSELECT:
+                    returnStatus = "Unsuported: FULLSELECT query.";
+                    break;
+    
+                case StatementHelper.STATEMENT_TYPE_SELECT:
+                    QuerySelectStatement select = (QuerySelectStatement) userQuery;
+    
+                    System.out.println("Creating TML...");
+                    String queryTml = tmlWriter.createSelectStatementTreeML(select);
+    
+                    System.out.println("Creating source config...");
+                    String sourceConfig = sourceConfigWriter.getSourceConfiguration(
+                        tmlWriter.getRelationsUsedFromParsing());
+                    
+                    allQueries += queryTml;
+                    allSourceConfigs += sourceConfig; 
+                    break;
+    
+                default:
+                    returnStatus = "Invalid query.";
+                    break;
                 }
-                break;
+            }
+    
+            try
+            {
+                System.out.println("Writing TML to " + tmlFile);
+                Writer tmlOut = new BufferedWriter(new FileWriter(tmlFile));
+                String tmlContents = tmlWriter.createTreeML(allQueries);
+                tmlOut.write(tmlContents);
+                tmlOut.close();
 
-            default:
-                returnStatus = "Invalid query.";
-                break;
+                System.out.println("Writing source config to " + sourceConfigFile);
+                Writer scOut = new BufferedWriter(new FileWriter(sourceConfigFile));
+                String sourceConfigContents =
+                    sourceConfigWriter.createConfiguration(allSourceConfigs);
+                scOut.write(sourceConfigContents);
+                scOut.close();
+
+            } catch (IOException e)
+            {
+                returnStatus = "Compilation failed: " +
+                    "IOException in writing TML/source config.";
+                e.printStackTrace();
             }
 
         } catch (SQLParserException spe)

@@ -2,6 +2,8 @@ package org.dbtoaster.gui;
 
 import java.util.Iterator;
 
+import org.dbtoaster.model.DBToasterWorkspace;
+import org.dbtoaster.model.Query;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -22,10 +24,16 @@ public class CodePerfView extends ViewPart
 
     public static final String ID = "dbtoaster_gui.codeperfview";
 
+    DBToasterWorkspace dbtWorkspace;
     ChartComposite chartComp;
 
     public void createPartControl(Composite parent)
     {
+        dbtWorkspace = DBToasterWorkspace.getWorkspace();
+        //Query q = dbtWorkspace.getExecutedQuery();
+        //CategoryDataset cd = buildStatisticsCategories(
+        //    q.getExecutor().getStatisticsProfile());
+
         Composite top = new Composite(parent, SWT.NONE);
         GridLayout layout = new GridLayout();
         layout.marginWidth = 0;

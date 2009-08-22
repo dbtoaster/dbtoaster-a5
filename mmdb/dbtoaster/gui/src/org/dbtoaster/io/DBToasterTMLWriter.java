@@ -197,7 +197,7 @@ public class DBToasterTMLWriter
             planNodeTypes.add(s);
     }
 
-    private void reset()
+    public void reset()
     {
         relationCounters.clear();
         columnSuffixesForAliases.clear();
@@ -924,6 +924,14 @@ public class DBToasterTMLWriter
         return "<attribute name=\"plan\" value=\"" + nodeType + "\"/>";
     }
 
+    public String createTreeML(String mapExpressions)
+    {
+        String header = "<tree>\n";
+        String footer = "</tree>";
+
+        return header + declarations + mapExpressions + footer;
+    }
+
     public String createSelectStatementTreeML(QuerySelectStatement selectStmt)
         throws CreateTMLException
     {
@@ -935,19 +943,11 @@ public class DBToasterTMLWriter
         QuerySelect select = (QuerySelect) selectStmt.getQueryExpr().getQuery();
 
         if (!selectStmt.getOrderByClause().isEmpty())
-        {
             throw new CreateTMLException("ORDER BY unsupported.");
-        }
 
         LinkedList<String> selectTML = createSelectTreeML(select);
-        String r = "";
-        for (String s : selectTML)
-            r += (s + "\n");
-
-        String header = "<tree>\n";
-        String footer = "</tree>";
-
-        return header + declarations + r + footer;
+        String r = ""; for (String s : selectTML) r += (s + "\n");
+        return r;
     }
 
     public LinkedList<String> createSelectTreeML(QuerySelect select)
@@ -958,16 +958,12 @@ public class DBToasterTMLWriter
         // Issue warnings
         // -- for now INTO clauses simply yield warnings.
         if (!select.getIntoClause().isEmpty())
-        {
             throw new CreateTMLException("SELECT INTO unsupported.");
-        }
 
         // TODO: handle having clauses, i.e. predicates on aggregates
         // -- this could be done with nested aggregates
         if (select.getHavingClause() != null && select.isSetHavingClause())
-        {
             throw new CreateTMLException("HAVING unsupported.");
-        }
 
         // Generate TML.
         // -- generate for relational stuff first, e.g. from clause

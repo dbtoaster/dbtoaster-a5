@@ -44,10 +44,23 @@ public class QueryEditor extends ViewPart
     public static final String ID = "dbtoaster_gui.queryeditor";
 
     private final String DEFAULT_QUERY = "select sum(bids.p * bids.v)"
+        + "\n\tfrom bids"
+        + "\n\twhere 0.25*(select sum(b2.v) from bids b2) > "
+        + "\n\t\t(select sum(b1.v) from bids b1"
+        + "\n\t\t\twhere b1.p > bids.p)";
+
+    /*
+    private final String DEFAULT_QUERY = "select sum(bids.p * bids.v)"
             + "\n\tfrom bids"
             + "\n\twhere 0.25*(select sum(b2.v) from bids b2) > "
             + "\n\t\t(select sum(b1.v) from bids b1"
-            + "\n\t\t\twhere b1.p > bids.p);";
+            + "\n\t\t\twhere b1.p > bids.p);\n\n" +
+            "select sum(asks.p * asks.v)"
+            + "\n\tfrom asks"
+            + "\n\twhere 0.25*(select sum(a2.v) from asks a2) > "
+            + "\n\t\t(select sum(a1.v) from asks a1"
+            + "\n\t\t\twhere a1.p > asks.p)";
+    */
 
     private final String DEFAULT_TML = "<tree>" + "<declarations>"
             + "<attributeDecl name=\"id\" type=\"String\"/>"
@@ -376,8 +389,10 @@ public class QueryEditor extends ViewPart
 
             if ( currentQueryName == null )
                 queryName = dbtWorkspace.createQuery(queryText.getText());
-            else
-                queryName = dbtWorkspace.createQuery(currentQueryName, queryText.getText());
+            else {
+                queryName = dbtWorkspace.createQuery(
+                    currentQueryName, queryText.getText());
+            }
 
             System.out.println("Compiling query '" + queryName +
                 "', engine: "+
@@ -388,8 +403,8 @@ public class QueryEditor extends ViewPart
             currentQuery = dbtWorkspace.getQuery(queryName);
 
             String codeFile = queryName + "." + DBToasterWorkspace.CODE_FILE_EXT;
-            String compilationStatus = dbtWorkspace.compileQuery(
-                    queryName, codeFile, compileMode);
+            String compilationStatus =
+                dbtWorkspace.compileQuery(queryName, codeFile, compileMode);
 
             System.out.println("Toasted query: " + queryName);
 

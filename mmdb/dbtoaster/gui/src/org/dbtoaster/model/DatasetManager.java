@@ -319,8 +319,245 @@ public class DatasetManager
         //aDM.addDataset("lo", liveOrderbook);
 
 
-        // TODO: SSB dataset
+        // SSB dataset
+        LinkedHashMap<String, String> liFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+        
+        liFieldsAndTypes.put("orderkey", "int");
+        liFieldsAndTypes.put("partkey", "int");
+        liFieldsAndTypes.put("suppkey", "int");
+        liFieldsAndTypes.put("linenumber", "int");
+        liFieldsAndTypes.put("quantity", "double");
+        liFieldsAndTypes.put("extendedprice", "double");
+        liFieldsAndTypes.put("discount", "double");
+        liFieldsAndTypes.put("tax", "double");
+        liFieldsAndTypes.put("returnflag", "string");
+        liFieldsAndTypes.put("linestatus", "string");
+        liFieldsAndTypes.put("shipdate", "string");
+        liFieldsAndTypes.put("commitdate", "string");
+        liFieldsAndTypes.put("receiptdate", "string");
+        liFieldsAndTypes.put("shipinstruct", "string");
+        liFieldsAndTypes.put("shipmode", "string");
+        liFieldsAndTypes.put("comment", "string");
+        
+        LinkedHashMap<String, String> ordFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+        
+        ordFieldsAndTypes.put("orderkey", "int");
+        ordFieldsAndTypes.put("custkey", "int");
+        ordFieldsAndTypes.put("orderstatus", "string");
+        ordFieldsAndTypes.put("totalprice", "double");
+        ordFieldsAndTypes.put("orderdate", "string");
+        ordFieldsAndTypes.put("orderpriority", "string");
+        ordFieldsAndTypes.put("clerk", "string");
+        ordFieldsAndTypes.put("shippriority", "int");
+        ordFieldsAndTypes.put("comment", "string");
+        
+        LinkedHashMap<String, String> ptFieldsAndTypes =
+            new LinkedHashMap<String, String>();
 
+        ptFieldsAndTypes.put("partkey", "int");
+        ptFieldsAndTypes.put("name", "string");
+        ptFieldsAndTypes.put("mfgr", "string");
+        ptFieldsAndTypes.put("brand", "string");
+        ptFieldsAndTypes.put("type", "string");
+        ptFieldsAndTypes.put("size", "int");
+        ptFieldsAndTypes.put("container", "string");
+        ptFieldsAndTypes.put("retailprice", "double");
+        ptFieldsAndTypes.put("comment", "string");
+        
+        LinkedHashMap<String, String> csFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+        
+        csFieldsAndTypes.put("custkey", "int");
+        csFieldsAndTypes.put("name", "string");
+        csFieldsAndTypes.put("address", "string");
+        csFieldsAndTypes.put("nationkey", "int");
+        csFieldsAndTypes.put("phone", "string");
+        csFieldsAndTypes.put("acctbal", "double");
+        csFieldsAndTypes.put("mktsegment", "string");
+        csFieldsAndTypes.put("comment", "string");
+
+        LinkedHashMap<String, String> spFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+        
+        spFieldsAndTypes.put("suppkey", "int");
+        spFieldsAndTypes.put("name", "string");
+        spFieldsAndTypes.put("address", "string");
+        spFieldsAndTypes.put("nationkey", "int");
+        spFieldsAndTypes.put("phone", "string");
+        spFieldsAndTypes.put("acctbal", "double");
+        spFieldsAndTypes.put("comment", "string");
+        
+        LinkedHashMap<String, String> ntFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+        
+        ntFieldsAndTypes.put("nationkey", "int");
+        ntFieldsAndTypes.put("name", "string");
+        ntFieldsAndTypes.put("regionkey", "int");
+        ntFieldsAndTypes.put("comment", "string");
+
+        LinkedHashMap<String, String> rgFieldsAndTypes =
+            new LinkedHashMap<String, String>();
+
+        rgFieldsAndTypes.put("regionkey", "int");
+        rgFieldsAndTypes.put("name", "string");
+        rgFieldsAndTypes.put("comment", "string");
+        
+        
+        LinkedHashMap<String, String> liAdaptorBindings =
+            new LinkedHashMap<String, String>();
+
+        liAdaptorBindings.put("orderkey", "orderkey");
+        liAdaptorBindings.put("partkey", "partkey");
+        liAdaptorBindings.put("suppkey", "suppkey");
+        liAdaptorBindings.put("linenumber", "linenumber");
+        liAdaptorBindings.put("quantity", "quantity");
+        liAdaptorBindings.put("extendedprice", "extendedprice");
+        liAdaptorBindings.put("discount", "discount");
+        liAdaptorBindings.put("tax", "tax");
+        liAdaptorBindings.put("returnflag", "returnflag");
+        liAdaptorBindings.put("linestatus", "linestatus");
+        liAdaptorBindings.put("shipdate", "shipdate");
+        liAdaptorBindings.put("commitdate", "commitdate");
+        liAdaptorBindings.put("commitdate", "commitdate");
+        liAdaptorBindings.put("shipinstruct", "shipinstruct");
+        liAdaptorBindings.put("shipmode", "shipmode");
+        liAdaptorBindings.put("comment", "comment");
+        
+        LinkedHashMap<String, String> ordAdaptorBindings =
+            new LinkedHashMap<String, String>();
+        
+        ordAdaptorBindings.put("orderkey", "orderkey");
+        ordAdaptorBindings.put("custkey", "custkey");
+        ordAdaptorBindings.put("orderstatus", "orderstatus");
+        ordAdaptorBindings.put("totalprice", "totalprice");
+        ordAdaptorBindings.put("orderdate", "orderdate");
+        ordAdaptorBindings.put("orderpriority", "orderpriority");
+        ordAdaptorBindings.put("clerk", "clerk");
+        ordAdaptorBindings.put("shippriority", "shippriority");
+        ordAdaptorBindings.put("comment", "comment");
+
+        LinkedHashMap<String, String> ptAdaptorBindings =
+            new LinkedHashMap<String, String>();
+        
+        ptAdaptorBindings.put("partkey", "partkey");
+        ptAdaptorBindings.put("name", "name");
+        ptAdaptorBindings.put("mfgr", "mfgr");
+        ptAdaptorBindings.put("brand", "brand");
+        ptAdaptorBindings.put("type", "type");
+        ptAdaptorBindings.put("size", "size");
+        ptAdaptorBindings.put("container", "container");
+        ptAdaptorBindings.put("retailprice", "retailprice");
+        ptAdaptorBindings.put("comment", "comment");
+        
+        LinkedHashMap<String, String> csAdaptorBindings =
+            new LinkedHashMap<String, String>();
+        
+        csAdaptorBindings.put("custkey", "custkey");
+        csAdaptorBindings.put("name", "name");
+        csAdaptorBindings.put("address", "address");
+        csAdaptorBindings.put("nationkey", "nationkey");
+        csAdaptorBindings.put("phone", "phone");
+        csAdaptorBindings.put("acctbal", "acctbal");
+        csAdaptorBindings.put("mktsegment", "mktsegment");
+        csAdaptorBindings.put("comment", "comment");
+        
+        LinkedHashMap<String, String> spAdaptorBindings =
+            new LinkedHashMap<String, String>();
+        
+        spAdaptorBindings.put("suppkey", "suppkey");
+        spAdaptorBindings.put("name", "name");
+        spAdaptorBindings.put("address", "address");
+        spAdaptorBindings.put("nationkey", "nationkey");
+        spAdaptorBindings.put("phone", "phone");
+        spAdaptorBindings.put("acctbal", "acctbal");
+        spAdaptorBindings.put("comment", "comment");
+        
+        LinkedHashMap<String, String> ntAdaptorBindings =
+            new LinkedHashMap<String, String>();
+        
+        ntAdaptorBindings.put("nationkey", "nationkey");
+        ntAdaptorBindings.put("name", "name");
+        ntAdaptorBindings.put("regionkey", "regionkey");
+        ntAdaptorBindings.put("comment", "comment");
+
+        LinkedHashMap<String, String> rgAdaptorBindings =
+            new LinkedHashMap<String, String>();
+
+        rgAdaptorBindings.put("regionkey", "regionkey");
+        rgAdaptorBindings.put("name", "name");
+        rgAdaptorBindings.put("comment", "comment");
+
+        
+        // Historical algo execution
+        Dataset tpchDataset = aDM.new Dataset();
+
+        tpchDataset.addRelation(
+            "file", "lineitem", liFieldsAndTypes,
+            "DBToaster::DemoDatasets::LineitemStream",
+            "\"lineitem.tbl.a\",10000",
+            "DBToaster::DemoDatasets::lineitem",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", liAdaptorBindings,
+            "datasets",
+            "Lineitem");
+        
+        tpchDataset.addRelation(
+            "file", "order", ordFieldsAndTypes,
+            "DBToaster::DemoDatasets::OrderStream",
+            "\"orders.tbl.a\",10000",
+            "DBToaster::DemoDatasets::order",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", ordAdaptorBindings,
+            "datasets",
+            "Order");
+        
+        tpchDataset.addRelation(
+            "file", "part", ptFieldsAndTypes,
+            "DBToaster::DemoDatasets::PartStream",
+            "\"part.tbl.a\",10000",
+            "DBToaster::DemoDatasets::part",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", ptAdaptorBindings,
+            "datasets",
+            "Part");
+        
+        tpchDataset.addRelation(
+            "file", "customer", csFieldsAndTypes,
+            "DBToaster::DemoDatasets::CustomerStream",
+            "\"customer.tbl.a\",10000",
+            "DBToaster::DemoDatasets::customer",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", csAdaptorBindings,
+            "datasets",
+            "Customer");
+        
+        tpchDataset.addRelation(
+            "file", "supplier", spFieldsAndTypes,
+            "DBToaster::DemoDatasets::SupplierStream",
+            "\"partsupp.tbl.a\",10000",
+            "DBToaster::DemoDatasets::supplier",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", spAdaptorBindings,
+            "datasets",
+            "Supplier");
+        
+        tpchDataset.addRelation(
+            "file", "nation", ntFieldsAndTypes,
+            "DBToaster::DemoDatasets::NationStream",
+            "\"nation.tbl.a\",10000",
+            "DBToaster::DemoDatasets::nation",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", ntAdaptorBindings,
+            "datasets",
+            "Nation");
+        
+        tpchDataset.addRelation(
+            "file", "region", rgFieldsAndTypes,
+            "DBToaster::DemoDatasets::RegionStream",
+            "\"region.tbl.a\",10000",
+            "DBToaster::DemoDatasets::region",
+            "DBToaster::DemoDatasets::TpchTupleAdaptor", rgAdaptorBindings,
+            "datasets",
+            "Region");
+
+        aDM.addDataset("tpch", tpchDataset);
+        
         // TODO: LinearRoad dataset
 
         return aDM;

@@ -24,6 +24,11 @@ public class DBToasterSourceConfigWriter
         for (String s: sl) r.add("    " + s);
         return r;
     }
+    
+    public String createConfiguration(String sourceConfigs)
+    {
+        return "<sources>\n" + sourceConfigs + "</sources>";
+    }
 
     // TODO: check XML quoting of values used during string construction
     public String getSourceConfiguration(
@@ -37,6 +42,8 @@ public class DBToasterSourceConfigWriter
             String datasetName = e.getKey();
             String relName = e.getValue();
             String uniqueName = datasetName + "." + relName; 
+
+            System.out.println("Creating source config for " + uniqueName);
 
             if ( uniqueRelations.contains(uniqueName) ) continue;
 
@@ -84,10 +91,13 @@ public class DBToasterSourceConfigWriter
 
             uniqueRelations.add(uniqueName);
         }
+        
+        System.out.println("Done with source configs");
+
 
         String scBody = "";
         for (String s : indent(configLines)) scBody += (s+"\n");
 
-        return "<sources>\n" + scBody + "</sources>";
+        return scBody;
     }
 }
