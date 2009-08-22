@@ -49,10 +49,8 @@ import DBToaster.Profiler.Protocol.SampleType;
 import DBToaster.Profiler.Protocol.SampleUnits;
 import DBToaster.Profiler.Protocol.StatisticsProfile;
 import DBToaster.Profiler.Protocol.Profiler.Client;
-import java.net.Socket; 
-import java.net.UnknownHostException;
 import java.lang.Thread;
-import org.eclipse.swt.widgets.Display;
+import java.sql.*;
 
 public class Executor
 {
@@ -283,12 +281,14 @@ public class Executor
 
     // Alternative databases
     private final static String POSTGRES_JDBC_DRIVER = "org.postgresql.Driver";
-    private final static String POSTGRES_URL = "";
+    private final static String POSTGRES_URL = "jdbc:postgresql://localhost:5432/postgres";
 
     private final static String HSQLDB_JDBC_DRIVER = "org.hsql.jdbcDriver";
     private final static String HSQLDB_URL = "";
 
-    public Executor() {}
+    public Executor() {
+    	initPostgreSQL();
+    }
 
     public Executor(String engineBinary)
     {
@@ -303,6 +303,7 @@ public class Executor
             currentQuery = null;
             profilerProtocolFactory = new TBinaryProtocol.Factory();
             profiler = null;
+            initPostgreSQL();
         }
         else {
             System.err.println("Could not find engine binary " + engineBinary);
@@ -415,19 +416,17 @@ public class Executor
     	return 0;
     }
      
-    void runJDBCQuery(String dbUrl, String sqlQuery,
+    void runJDBCQuery(String dbUrl, String user, String passwd, String sqlQuery,
             TimeSeries profilerSamples)
     {
         try {
-            Connection conn = DriverManager.getConnection(dbUrl);
+        	Connection conn = DriverManager.getConnection(dbUrl, user, passwd);
             Statement st = conn.createStatement();
-            
             // TODO: loop adding chunks of data and repetitively issuing query
             // for ad-hoc queries
             long startTime = System.currentTimeMillis();
-            
             ResultSet rs = st.executeQuery(sqlQuery);
-            rs.last();
+       //	     rs.last();
             
             long endTime = System.currentTimeMillis();
             long span = endTime - startTime;
@@ -442,10 +441,12 @@ public class Executor
     private String post_server = "localhost";
     private String post_port = "5432";
     private String post_dbname = "postgres";
+    private String post_passwd = "password";
 
     void initPostgreSQL()
     {
         // Set up JDBC driver. 
+    	System.out.println("initPostgreSQL");
         try {
             Class.forName(POSTGRES_JDBC_DRIVER);
         } catch (ClassNotFoundException e) {
@@ -532,26 +533,18 @@ public class Executor
     			
     			for (int i =0; i < line; i ++) {
     				output.write(buf.get(i)+"\n");
-    				System.out.println(buf.get(i));	
     			}
     			output.write("\\.\n");
     			output.flush();
-    			System.out.println("!!");
     			int exitVal = pr.waitFor();
-    			System.out.println("@@");     
     			if(exitVal != 0) {
     				System.err.println("Error - loading postgres");
     				return -1;
     			}
     		} catch (Exception e) {
-    			System.out.println(e.toString());
+    			System.err.println(e.toString());
     			e.printStackTrace();
     		}
-    		
-    //		for (String t: buf) {
-    //			System.out.println("Data "+t);
-    //		}
-    		System.out.println(line +" tuples are loaded");
     	}
     	return line;
     }
@@ -575,31 +568,31 @@ public class Executor
     	int total = 0;
     	int thres_total = 5000;
     	while (postgreLoad(howmany) == howmany && (total += howmany) <= thres_total) {
-    		System.out.println("REading?");
+    		System.out.println("loading " + howmany + " chunks");
     		try {
-    		Thread.sleep(1000);
-    		Display.getDefault().asyncExec(new Runnable() {
-				public void run() {
-					profilerSamples.add(new Millisecond(currentCal.getTime()), 1);
-				}
+	    		Thread.sleep(1000);
+	    		Display.getDefault().asyncExec(new Runnable() {
+					public void run() {
+						profilerSamples.add(new Millisecond(currentCal.getTime()), 1);
+					}
 			});
     		} catch (Exception e) {
     			e.printStackTrace();
     		}
-    		/* sleep ? */
+    		
+    		if ( triggerScript )
+                runPGTriggers(sqlOrTriggerQuery);
+            else
+                runPGQuery(sqlOrTriggerQuery, profilerSamples);
+    		
     	}
-    	System.out.println("loading done");
-//        if ( triggerScript )
-//            runPGTriggers(sqlOrTriggerQuery);
-//        else
-//            runPGQuery(sqlOrTriggerQuery, profilerSamples);
-        
+    	
         shutdownPostgreSQL();
     }
     
     void runPGQuery(String sqlQuery, TimeSeries profilerSamples)
     {
-        runJDBCQuery(POSTGRES_URL, sqlQuery, profilerSamples);
+        runJDBCQuery(POSTGRES_URL, post_username, post_passwd, sqlQuery, profilerSamples);
     }
     
     void runPGTriggers(String triggerScript)
@@ -642,7 +635,7 @@ public class Executor
     void runHsqlDB(String sqlQuery, TimeSeries profilerSamples)
     {
     	startupHsqlDB();
-        runJDBCQuery(HSQLDB_URL, sqlQuery, profilerSamples);
+  //      runJDBCQuery(HSQLDB_URL, sqlQuery, profilerSamples);
         shutdownHsqlDB();
     }
     
@@ -671,7 +664,7 @@ public class Executor
     				Thread th = new Thread (new Runnable() {
     					public void run() {
     						System.out.println("Running Postgres");
-    						runPostgreSQL(q.getQuery(), true, ts);
+    						runPostgreSQL(q.getQuery(), false, ts);
     					/*	final Random r = new Random();
     						while(true) {
     							try {Thread.sleep(1000);} catch (Exception e) {}
