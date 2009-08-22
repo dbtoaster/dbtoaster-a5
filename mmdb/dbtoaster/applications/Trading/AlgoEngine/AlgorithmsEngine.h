@@ -92,6 +92,7 @@ namespace DBToaster
                 data.readSOBIType();
                 data.readTimedSobiType();
                 data.getMarketPlays();
+                data.setCurrentPrice(manager.getCurrentStockPrice());
 //                data.readBrokeType();
             }
             

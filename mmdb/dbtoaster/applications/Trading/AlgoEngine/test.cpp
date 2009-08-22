@@ -67,7 +67,7 @@ int main()
 
 //    my_client.read(boost::bind(&outputMessage, _1));
 
-    AlgorithmsEngine man(io_service,io_service_reader, 0, 2500000);
+    AlgorithmsEngine man(io_service, io_service_reader, 0, 2500000);
     
     boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service_reader));
      
@@ -95,7 +95,7 @@ int main()
 
     TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
     
-//    boost::thread t2(boost::bind(&apache::thrift::server::TSimpleServer::serve, &server));
+    boost::thread t2(boost::bind(&apache::thrift::server::TSimpleServer::serve, &server));
 //    server.serve();
     
     io_service.run();
@@ -103,7 +103,7 @@ int main()
 //    boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service));
 
     t.join();
-//    t2.join();
+    t2.join();
 
 
     return 0;

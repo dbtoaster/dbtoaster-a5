@@ -22,9 +22,12 @@ using namespace tr1;
 #include <boost/function.hpp>
 #include <boost/bind.hpp>
 
-#include "Debugger.h"
+
 #include <transport/TSocket.h>
 #include <protocol/TBinaryProtocol.h>
+
+#include "/home/anton/tmp/dbtoaster/query19/thrift/gen-cpp/AccessMethod.h"
+#include "/home/anton/tmp/dbtoaster/query20/thrift/gen-cpp/AccessMethod.h"
 
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
@@ -32,13 +35,16 @@ using namespace apache::thrift::transport;
 //using namespace apache::thrift::server;
 
 using boost::shared_ptr;
-using namespace DBToaster::Debugger;
+//using namespace DBToaster::Debugger;
+using namespace DBToaster::Viewer::query19;
+using namespace DBToaster::Viewer::query20;
 
 #include "AlgoTypeDefs.h"
 
 
 #define host "127.0.0.1"
-#define port 5500
+#define bid_port 5500
+#define ask_port 5510
 
 namespace DBToaster
 {
@@ -49,16 +55,32 @@ namespace DBToaster
         public:
             
             ToasterConnection():
-             toasterSocket(new TSocket(host, port)),
-             socketProtocol(new TBinaryProtocol(toasterSocket)),
-             toasterClient(new DebuggerClient(socketProtocol))
+             bid_toasterSocket(new TSocket(host, bid_port)),
+             bid_socketProtocol(new TBinaryProtocol(bid_toasterSocket)),
+             bid_toasterClient(new AccessMethodClient(bid_socketProtocol)),
+             ask_toasterSocket(new TSocket(host, ask_port)),
+             ask_socketProtocol(new TBinaryProtocol(ask_toasterSocket)),
+             ask_toasterClient(new AccessMethodClient(ask_socketProtocol))
             {
-                toasterSocket->open();
+                bid_toasterSocket->open();
+                ask_toasterSocket->open();
             }
             
-            int getSummary()
+            int getBidsPV()
             {
-                return toasterClient->get_var2();
+                return bid_toasterClient->get_var0();
+            }
+            int getBidsV()
+            {
+                return bid_toasterClient->get_var1();
+            }
+            int getAsksPV()
+            {
+                return ask_toasterClient->get_var0();
+            }
+            int getAsksV()
+            {
+                return ask_toasterClient->get_var1();
             }
             
             list<PVpair> getAskList()
@@ -87,9 +109,13 @@ namespace DBToaster
             
         private:
             
-            boost::shared_ptr<TSocket>           toasterSocket;
-            boost::shared_ptr<TBinaryProtocol>   socketProtocol;
-            boost::shared_ptr<DebuggerClient>    toasterClient;
+            boost::shared_ptr<TSocket>           bid_toasterSocket;
+            boost::shared_ptr<TBinaryProtocol>   bid_socketProtocol;
+            boost::shared_ptr<query19::AccessMethodClient>    bid_toasterClient;
+            
+            boost::shared_ptr<TSocket>           ask_toasterSocket;
+            boost::shared_ptr<TBinaryProtocol>   ask_socketProtocol;
+            boost::shared_ptr<query20::AccessMethodClient>    ask_toasterClient;
             
         };
     }
