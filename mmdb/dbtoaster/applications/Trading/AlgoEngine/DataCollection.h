@@ -40,41 +40,51 @@ namespace DBToaster
             {
                 boost::mutex::scoped_lock lock(mutex);
                 
-               get<0>(currentSOBI)=toaster.getSummary();
-               get<1>(currentSOBI)=toaster.getSummary();
-               get<2>(currentSOBI)=(double)toaster.getSummary();
-               get<3>(currentSOBI)=toaster.getSummary();
-               get<4>(currentSOBI)=toaster.getSummary();
+               get<0>(currentSOBI)=toaster.getBidsPV();
+               get<1>(currentSOBI)=toaster.getBidsV();
+               get<2>(currentSOBI)=0;
+               get<3>(currentSOBI)=toaster.getAsksPV();
+               get<4>(currentSOBI)=toaster.getAsksV();
                
-               setSOBIStats();
+               //inactive untill getting a 5 tuple
+//               setCurrentPrice(get<2>(currentSOBI));
+
+                setSOBIStats();
             }
             
             void readTimedSobiType()
             {
                 boost::mutex::scoped_lock lock(mutex);
                 
-                get<0>(currentTimedSOBI)=toaster.getSummary();
-                get<1>(currentTimedSOBI)=toaster.getSummary();
-                get<2>(currentTimedSOBI)=toaster.getSummary();
-                get<3>(currentTimedSOBI)=(double)toaster.getSummary();
-                get<4>(currentTimedSOBI)=toaster.getSummary();
-                get<5>(currentTimedSOBI)=toaster.getSummary();
-                get<6>(currentTimedSOBI)=toaster.getSummary();  
+                get<0>(currentTimedSOBI)=0;
+                get<1>(currentTimedSOBI)=toaster.getBidsPV();
+                get<2>(currentTimedSOBI)=toaster.getBidsV();
+                get<3>(currentTimedSOBI)=0;
+                get<4>(currentTimedSOBI)=0;
+                get<5>(currentTimedSOBI)=toaster.getAsksPV();
+                get<6>(currentTimedSOBI)=toaster.getAsksV();  
                 
-                currentPrice=get<3>(currentTimedSOBI);          
+                //setCurrentPrice(get<3>(currentTimedSOBI));
+                         
             }
             
             void getMarketPlays()
             {
                 boost::mutex::scoped_lock lock(mutex);
                 
-                askPlays=toaster.getAskList();
-                bidPlays=toaster.getBidList();
+//                askPlays=toaster.getAskList();
+//                bidPlays=toaster.getBidList();
             }
             
             void readBrokeType()
             {
                 
+            }
+            
+            void setCurrentPrice(double p)
+            {
+                currentPrice=p;
+                updatePriceStats();
             }
             
             SOBItuple & getSOBITuple()
@@ -141,12 +151,17 @@ namespace DBToaster
             
             void setSOBIStats()
             {   
-                currentPrice=get<2>(currentSOBI);
                 
                 if ( get<1>(currentSOBI) != 0 || get<4>(currentSOBI) != 0 ) {
                     bids_diff= currentPrice - get<0>(currentSOBI)/get<1>(currentSOBI);
                     asks_diff=get<3>(currentSOBI)/get<4>(currentSOBI) - currentPrice;
                 }
+                
+            }
+            
+            void updatePriceStats()
+            {
+                boost::mutex::scoped_lock lock(mutex_price);
                 
                 numberSamples++;
                 double delta = currentPrice - meanPrice;
@@ -155,7 +170,6 @@ namespace DBToaster
                 
                 sampleVariance = M2 / numberSamples;
                 populationVariance = M2 / (numberSamples - 1);
-                
             }
             
             void setSOBITimedStats()
@@ -165,6 +179,7 @@ namespace DBToaster
             }
             
              boost::mutex mutex;
+             boost::mutex mutex_price;
             
             ToasterConnection toaster;
             
