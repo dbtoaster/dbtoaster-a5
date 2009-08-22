@@ -1,4 +1,3 @@
-
 #ifndef DEMO_DATACLIENT_H
 #define DEMO_DATACLIENT_H
 
@@ -32,7 +31,6 @@ namespace DBToaster
         using namespace std;
         using namespace tr1;
         using namespace boost;
-        using namespace DBToaster::DemoDatasets;
         
         struct SocketStream
         {

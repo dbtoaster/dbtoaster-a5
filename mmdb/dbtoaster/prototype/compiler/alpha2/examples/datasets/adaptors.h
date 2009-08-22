@@ -5,8 +5,8 @@
 #include "datasets.h"
 #include "streamengine.h"
 
-namespace DBToaster {
-
+namespace DBToaster
+{
     namespace Adaptors
     {
         using namespace DBToaster::StandaloneEngine;
@@ -25,7 +25,7 @@ namespace DBToaster {
             InsertTupleAdaptor(){}
             void operator()(DBToasterTuple& a, boost::any& b)
             {
-                a.type = DBToaster::StandaloneEngine::insertTuple;
+                a.type = insertTuple;
                 a.data = b;
             }
         };
@@ -36,7 +36,7 @@ namespace DBToaster {
             DeleteTupleAdaptor() {}
             void operator()(DBToasterTuple& a, boost::any& b)
             {
-                a.type = DBToaster::StandaloneEngine::deleteTuple;
+                a.type = deleteTuple;
                 a.data = b;
             }
         };
@@ -72,23 +72,23 @@ namespace DBToaster {
                 OrderbookTuple* v = any_cast<OrderbookTuple>(&b);
 
                 if ( v->action == "B" ) {
-  		    v->broker_id = ((int) rand()) % 9 + 1;
+                    v->broker_id = ((int) rand()) % 9 + 1;
                     bid_orders[v->id] = make_tuple(v->t, v->broker_id, v->price, v->volume);
 //                    bid_orders[v->id] = make_tuple(v->price, v->volume);
 
-                    a.type = DBToaster::StandaloneEngine::insertTuple;
+                    a.type = insertTuple;
                 }
 
                 else if ( v->action == "S" ) {
   		    v->broker_id = ((int) rand()) % 9 + 1;
                     //ask_orders[v->id] = make_tuple(v->price, v->volume);
                     ask_orders[v->id] = make_tuple(v->t, v->broker_id, v->price, v->volume);
-                    a.type = DBToaster::StandaloneEngine::insertTuple;
+                    a.type = insertTuple;
                 }
 
                 else if ( v->action == "E" )
                     // This is an update, how do generate an additional insert?
-                    a.type = DBToaster::StandaloneEngine::deleteTuple;
+                    a.type = deleteTuple;
 
                 else if ( v->action == "F" )
                 {
@@ -115,7 +115,7 @@ namespace DBToaster {
                         // TODO: handle invalid tuples that are neither bids nor sell...
                     }
 
-                    a.type = DBToaster::StandaloneEngine::deleteTuple;
+                    a.type = deleteTuple;
                 }
 
                 else if ( v->action == "D" )
@@ -143,7 +143,7 @@ namespace DBToaster {
                         // TODO: handle invalid tuples that are neither bids nor sell...
                     }
 
-                    a.type = DBToaster::StandaloneEngine::deleteTuple;
+                    a.type = deleteTuple;
                 }
 
                 /*
@@ -158,7 +158,7 @@ namespace DBToaster {
 
                 r.t = v->t;
                 r.id = v->id;
-		r.broker_id = v->broker_id;
+                r.broker_id = v->broker_id;
                 r.price = v->price;
                 r.volume = v->volume;
                 a.data = r;
@@ -171,14 +171,20 @@ namespace DBToaster {
         {
             TpchTupleAdaptor() {}
             void operator()(DBToasterTuple& a, boost::any& b)
-            {}
+            {
+                a.type = insertTuple;
+                a.data = b;
+            }
         };
 
         struct LinearRoadTupleAdaptor
         {
             LinearRoadTupleAdaptor() {}
             void operator()(DBToasterTuple& a, boost::any& b)
-            {}
+            {
+                a.type = insertTuple;
+                a.data = b;
+            }
         };
     };
 };

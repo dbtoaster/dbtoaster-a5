@@ -358,7 +358,7 @@ namespace DBToaster
             boost::mutex mutex;
             boost::condition_variable conditionVar;
         };
-    };
-};
+    }
+}
 
 #endif

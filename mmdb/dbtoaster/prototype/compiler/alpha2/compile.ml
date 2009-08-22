@@ -6,27 +6,50 @@ open Gui
 
 (* TODO: typechecker *)
 
-
+(* map expression list -> delta list * map expression list *)
+let preprocess m_expr_l =
+(*
+    let events_and_m_exprs =
+        let events_l = List.map generate_all_events m_expr_l in
+            List.fold_left2
+                (fun acc ev_l me -> 
+                    if List.mem ev_l acc then
+                        [(ev_l, ((List.assoc ev_l acc)@[me]))]@(List.remove_assoc ev_l acc)
+                    else
+                        (acc@[(ev_l, [me])]))
+                [] events_l m_expr_l
+    in
+    let event_groups = fst (List.split events_and_m_exprs) in
+    let disjoint_groups =
+        List.for_all
+            (fun g ->
+                List.for_all
+                    (fun g2 -> List.length (intersect g g2) = 0)
+                    (List.filter (fun g2 -> not(g=g2)) event_groups))
+            event_groups
+    in
+        if disjoint_groups then
+            List.map
+                (fun (ev, me_l) -> (ev, List.map rename_attributes me_l))
+                events_and_m_exprs
+        else
+            raise (PlanException ("Map expressions depend on different events."))
+*)
+    let events = 
+        let events_l = List.map generate_all_events m_expr_l in
+            if (List.for_all (fun e -> e = (List.hd events_l)) (List.tl events_l)) then
+                List.hd events_l
+            else raise (PlanException ("Map expressions depend on different events."))
+    in
+    let (new_m_expr_l, _) = List.split (List.map rename_attributes m_expr_l) in
+        (events, new_m_expr_l)
+            
 (* Sig: map expression -> (code_expression list * code_expression list) * compile trace
  * compile trace : (event path * (handler stages * (var * binding stages) list) list) list
  * Semantics: input query -> (declarations * (handler * event) list) * compile trace
  *)
 (* Assumes input map expression has been typechecked *)
-let compile_code_rec m_expr_l =
-
-    (* map expression list -> delta list * map expression list *)
-    let preprocess m_expr_l =
-        let events = 
-            let events_l = List.map generate_all_events m_expr_l in
-                if (List.for_all (fun e -> e = (List.hd events_l)) (List.tl events_l)) then
-                    List.hd events_l
-                else raise (PlanException ("Map expressions depend on different events."))
-        in
-        let (new_m_expr_l, _) = List.split (List.map rename_attributes m_expr_l) in
-            (events, new_m_expr_l)
-    in
-
-    let (events, pp_expr_l) = preprocess m_expr_l in
+let compile_code_rec events pp_expr_l =
 
     print_endline ("Preprocessed events: "^
         (String.concat "," (List.map string_of_delta events)));
@@ -322,11 +345,15 @@ let compile_code_rec m_expr_l =
         ((prof_loc_decls@other_decls, handler_and_events), event_path_stages)
 
 
+let compile_code_rec_l m_expr_l =
+    let (events, new_m_exprs) = preprocess m_expr_l in
+        compile_code_rec events new_m_exprs
+
 (*
  * Object file compilation, i.e. handlers only.
  *)
 let compile_query m_expr_l out_file_name =
-    let ((global_decls, handlers_and_events), _) = compile_code_rec m_expr_l in
+    let ((global_decls, handlers_and_events), _) = compile_code_rec_l m_expr_l in
     let out_chan = open_out out_file_name in
         generate_includes out_chan;
 
@@ -438,7 +465,7 @@ let create_stream_type_info event relation_sources =
 let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file_name_opt =
     let query_base_path = Filename.chop_extension out_file_name in
     let query_id = Filename.basename query_base_path in
-    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr_l in
+    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec_l m_expr_l in
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
@@ -501,7 +528,7 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
 let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_file_name_opt =
     let query_base_path = Filename.chop_extension out_file_name in
     let query_id = Filename.basename query_base_path in
-    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec m_expr_l in
+    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec_l m_expr_l in
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in

@@ -630,20 +630,15 @@ let main () =
                   usage dbtoaster_arg_spec dbtoaster_usage;
                   exit 1
               end
-        | [fn] ->
+        | fn ->
               begin
                   try
-                      parse_treeml_file fn
+                      List.flatten (List.map parse_treeml_file fn)
                   with InvalidTreeML x ->
                       print_endline ("Parsing TreeML failed: "^x);
                       exit 1
               end
 
-        | _ ->
-              begin
-                  print_endline "Unable to compile multiple disjoint queries.";
-                  exit 1
-              end
     in
     let trace_out_file_opt = Some((Filename.chop_extension !source_output_file)^".tc") in
     let relation_sources =

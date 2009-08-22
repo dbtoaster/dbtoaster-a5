@@ -449,10 +449,11 @@ namespace DBToaster
                 queryProfile.getLastUpdate(sampleKey); \
             if ( sampleFreq < diff(now(), codeLoc##Last) ) { \
                 codeLoc##Var = now(); \
-                //cout << "Profiling loc: " << sampleKey.as_string() \
-                //    << " with now: " << codeLoc##Var \
-                //    << " last "<< codeLoc##Last << endl; \
             }
+
+            //cout << "Profiling loc: " << sampleKey.as_string() \
+                << " with now: " << codeLoc##Var \
+                << " last "<< codeLoc##Last << endl; \
 
         #define END_PROFILE(statsType,codeLoc)     \
             if ( isValid(codeLoc##Var) ) { \
@@ -464,10 +465,11 @@ namespace DBToaster
                 queryProfile.addProfileSample(locKey, sample); \
                 LocationSampler::LocationSampleKey sampleKey(statsType, codeLoc); \
                 queryProfile.setLastUpdate(sampleKey, end); \
-                //cout << "Setting loc: " << sampleKey.as_string() \
-                //    << " last update: " << end \
-                //    << " sample: " << to_string(sample) << endl; \
             }
+
+            //cout << "Setting loc: " << sampleKey.as_string() \
+                << " last update: " << end \
+                << " sample: " << to_string(sample) << endl; \
 
         /*
         // Handler level sampling.
@@ -537,7 +539,7 @@ namespace DBToaster
         #define PROFILER_SERVICE_METHOD_IMPLEMENTATION \
         void getStatisticsProfile(Protocol::StatisticsProfile& dest) \
         { \
-            //cout << "Inside stats profiling." << endl; \
+            cout << "Inside stats profiling." << endl; \
             LOCK_HANDLER_PROFILE \
             queryProfile.copyStatisticsProfile(dest); \
             UNLOCK_HANDLER_PROFILE \
