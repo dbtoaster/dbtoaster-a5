@@ -1,6 +1,7 @@
 
 package org.dbtoaster.gui;
 
+import java.io.FileInputStream;
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.Frame;
@@ -74,8 +75,13 @@ public class AlgoDataView extends ViewPart
 	private String [] serverCommands = {"java", "ExchangeServer.ExchangeServer", "20081201.csv"};
 	private String ServerDir ="/home/anton/software/ExchangeSimulatorServer/src";
 	
-	private String ToasterDir = "/home/anton/software/vwapConnection";
-	private String toasterCommand = "/home/anton/software/vwapConnection/test";
+//	private String ToasterDir = "/home/anton/software/vwapConnection";
+//	private String toasterCommand = "/home/anton/software/vwapConnection/test";
+	
+	private String ToasterDirBid = "/temp/dbtoaster/query19";
+	private String toasterCommandBid = "/temp/dbtoaster/query19/query19.dbte";
+	private String ToasterDirAsk = "/temp/dbtoaster/query20";
+	private String toasterCommandAsk = "/temp/dbtoaster/query20/query20.dbte";
 	
 	private String AlgoEngineDir = "/home/anton/software/TradingClient";
 	private String algoEngineCommand = "/home/anton/software/TradingClient/test";
@@ -83,17 +89,29 @@ public class AlgoDataView extends ViewPart
     private LinkedHashMap<String,AlgoGraphsPanel> databasePanels;
     private TBinaryProtocol.Factory debuggerProtocolFactory;
     
+    void initParams()
+    {
+    	File paramFile = new File("config.txt");
+    	try{
+    		FileInputStream name = new FileInputStream(paramFile);
+    	}catch (IOException e){
+    		System.out.println(e);
+    	}
+    }
+    
     
     class RunServer extends Composite
     {
         DBToasterWorkspace dbtWorkspace;
         
         ProcessBuilder exchangeServer;
-        ProcessBuilder toasterRuntime;
+        ProcessBuilder toasterRuntimeAsk;
+        ProcessBuilder toasterRuntimeBid;
         ProcessBuilder algoEngine;
         
         Process currentServer = null;
-        Process currentToaster = null;
+        Process currentToasterAsk = null;
+        Process currentToasterBid = null;
         Process currentAlgos = null;
         
         AlgoGraphsPanel graph1;
@@ -150,18 +168,23 @@ public class AlgoDataView extends ViewPart
         public void RunToasterRuntime()
         {
 
-        	toasterRuntime = new ProcessBuilder(toasterCommand);
+        	toasterRuntimeAsk = new ProcessBuilder(toasterCommandAsk);
+        	toasterRuntimeBid = new ProcessBuilder(toasterCommandBid);
             
-            File execDir=new File(ToasterDir);
-
-            toasterRuntime.directory(execDir);
+            File execDirBid=new File(ToasterDirBid);
+            toasterRuntimeBid.directory(execDirBid);
             
-            toasterRuntime.redirectErrorStream(true);
+            File execDirAsk=new File(ToasterDirAsk);
+            toasterRuntimeAsk.directory(execDirAsk);
+            
+            toasterRuntimeBid.redirectErrorStream(true);
+            toasterRuntimeBid.redirectErrorStream(true);
             
             String test;
             
             try {
-            	currentToaster = toasterRuntime.start();
+            	currentToasterAsk = toasterRuntimeAsk.start();
+            	currentToasterBid = toasterRuntimeBid.start();
 				test="Started Toaster!";
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -174,7 +197,8 @@ public class AlgoDataView extends ViewPart
         
         public void StopToasterRuntime()
         {
-        	currentToaster.destroy();
+        	currentToasterAsk.destroy();
+        	currentToasterBid.destroy();
         }
         
         public void RunAlgoEngine()
@@ -215,6 +239,14 @@ public class AlgoDataView extends ViewPart
             frameData.horizontalSpan = 2;
             graph1.setLayoutData(frameData);
             
+            Label g1Label = new Label(graph1, SWT.BORDER);
+            g1Label.setText("PBids-PAsks");
+            GridData g1Position = new GridData(SWT.FILL, SWT.CENTER, false,
+                    true);
+            g1Position.horizontalSpan = 1;
+            g1Position.verticalSpan = 1;
+            g1Label.setLayoutData(g1Position);
+            
             graph2= new AlgoGraphsPanel(parent, dataClient, 2, SWT.NO_TRIM);
      //       GridData frameData = new GridData(SWT.FILL, SWT.FILL, true, true);
             frameData.widthHint = 700;
@@ -222,12 +254,30 @@ public class AlgoDataView extends ViewPart
             frameData.horizontalSpan = 2;
             graph2.setLayoutData(frameData);
             
+            Label g2Label = new Label(graph2, SWT.BORDER);
+            g2Label.setText("Stk. Price");
+            GridData g2Position = new GridData(SWT.FILL, SWT.CENTER, false,
+                    true);
+            g2Position.horizontalSpan = 1;
+            g2Position.verticalSpan = 1;
+            g2Label.setLayoutData(g2Position);
+            
             graph3= new AlgoGraphsPanel(parent, dataClient, 3, SWT.NO_TRIM);
      //       GridData frameData = new GridData(SWT.FILL, SWT.FILL, true, true);
             frameData.widthHint = 700;
             frameData.heightHint = 150;
             frameData.horizontalSpan = 2;
             graph3.setLayoutData(frameData);
+            
+            Label g3Label = new Label(graph3, SWT.BORDER);
+            g3Label.setText("L.Money and Stk.Val");
+            GridData g3Position = new GridData(SWT.FILL, SWT.CENTER, false,
+                    true);
+            g3Position.horizontalSpan = 1;
+            g3Position.verticalSpan = 1;
+            g3Label.setLayoutData(g3Position);
+            
+            
         }
         
         public void RemovePanels(Composite parent)
@@ -323,7 +373,8 @@ public class AlgoDataView extends ViewPart
 							e2.printStackTrace();
 						}
 	                    btBarComp.RunToasterRuntime();	
-	                    System.out.println(btBarComp.currentToaster);
+	                    System.out.println(btBarComp.currentToasterAsk);
+	                    System.out.println(btBarComp.currentToasterBid);
 	                    try {
 							Thread.sleep(200);
 						} catch (InterruptedException e2) {
