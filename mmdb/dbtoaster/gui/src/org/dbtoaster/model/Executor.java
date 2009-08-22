@@ -39,6 +39,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.time.Millisecond;
+import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
@@ -48,6 +49,10 @@ import DBToaster.Profiler.Protocol.SampleType;
 import DBToaster.Profiler.Protocol.SampleUnits;
 import DBToaster.Profiler.Protocol.StatisticsProfile;
 import DBToaster.Profiler.Protocol.Profiler.Client;
+import java.net.Socket; 
+import java.net.UnknownHostException;
+import java.lang.Thread;
+import org.eclipse.swt.widgets.Display;
 
 public class Executor
 {
@@ -280,7 +285,7 @@ public class Executor
     private final static String POSTGRES_JDBC_DRIVER = "org.postgresql.Driver";
     private final static String POSTGRES_URL = "";
 
-    private final static String HSQLDB_JDBC_DRIVER = "";
+    private final static String HSQLDB_JDBC_DRIVER = "org.hsql.jdbcDriver";
     private final static String HSQLDB_URL = "";
 
     public Executor() {}
@@ -315,6 +320,7 @@ public class Executor
 
         if ( queryProcess != null ) {
             LinkedList<String> args = new LinkedList<String>();
+            System.out.println("Running " + binaryPath);
             args.add(binaryPath);
             args.add(Integer.toString(profilerServicePort));
             queryProcess.command(args);
@@ -324,8 +330,8 @@ public class Executor
                 currentPort = profilerServicePort;
                 currentHost = "127.0.0.1";
                 currentQuery = queryProcess.start();
-            } catch (IOException e)
-            {
+           
+            } catch (IOException e) {
                 String fa = "";
                 for (String a : args) fa += (fa.isEmpty()? "" : " ") + a;
                 
@@ -341,6 +347,7 @@ public class Executor
         if ( currentQuery != null )
         {
             // Periodically retrieve statistics while binary is still running.
+
             try { 
                 
                 Thread.sleep(200);
@@ -424,7 +431,7 @@ public class Executor
             
             long endTime = System.currentTimeMillis();
             long span = endTime - startTime;
-            //profilerSamples.add(new Millisecond(span));
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -447,33 +454,42 @@ public class Executor
         }
     }
     
-    void startupPostgreSQL()
+    int startupPostgreSQL()
     {
+    	int exitVal = 0;
     	try {
     		Runtime rt = Runtime.getRuntime();
-    		String str[] = {"sudo", "-u", "postgres" /*userid*/, 
+    		String str[] = {//"sudo", "-u", "postgres" /*userid*/, 
     				post_path + "bin/pg_ctl", "start", "-w", "-D", post_path + "data"};
+    	
     		Process pr = rt.exec(str);
-    		
-    		int exitVal = pr.waitFor();
+                		
+    		exitVal = pr.waitFor();
     		if (exitVal != 0) {
-    			System.err.println("Could not start up postgres");
+    			System.err.println("Could not start up postgres " + exitVal);
     		}
+    		else {
+    			System.out.println("Server is up");
+    		}
+    		
     	} catch (Exception e) {
     		System.err.println(e.toString());
     		e.printStackTrace();
     	}
+    	return exitVal;
     }
     
-    void shutdownPostgreSQL()
+    int shutdownPostgreSQL()
     {
+    	int exitVal = 0;
     	try {
     		Runtime rt = Runtime.getRuntime();
-    		String str[] = {"sudo", "-u", "postgres", post_path + "bin/pg_ctl",
+    		String str[] = { //"sudo", "-u", "postgres", 
+    				post_path + "bin/pg_ctl",
     				"stop", "-D", post_path + "data", "-m", "fast"};
     		Process pr = rt.exec(str);
     		
-    		int exitVal = pr.waitFor();
+    		exitVal = pr.waitFor();
     		if (exitVal != 0) {
     			System.err.println("Could not shut down postgres");	
     		}
@@ -481,6 +497,7 @@ public class Executor
     		System.err.println(e.toString());
     		e.printStackTrace();
     	}
+    	return exitVal;
     }
 
     int postgreLoad(int num)
@@ -506,19 +523,22 @@ public class Executor
     	if (line != 0) {
     		try {
     			Runtime rt = Runtime.getRuntime();
-    			String str[] = {"psql", "-h", post_server, "-p", post_port, "-U", post_username, 
-    					"-c", "copy test form stdin with csv", post_dbname};
+    			String str[] = {"/Library/PostgreSQL/8.4/bin/psql", "-h", post_server, "-p", post_port, "-U", post_username, 
+    					"-c", "copy test from stdin with csv", post_dbname};
+    			
     			Process pr = rt.exec(str);
     			
     			BufferedWriter output = new BufferedWriter(new OutputStreamWriter(pr.getOutputStream()));
     			
     			for (int i =0; i < line; i ++) {
-    				output.write(buf.get(i));
+    				output.write(buf.get(i)+"\n");
+    				System.out.println(buf.get(i));	
     			}
     			output.write("\\.\n");
     			output.flush();
-    			
+    			System.out.println("!!");
     			int exitVal = pr.waitFor();
+    			System.out.println("@@");     
     			if(exitVal != 0) {
     				System.err.println("Error - loading postgres");
     				return -1;
@@ -527,29 +547,52 @@ public class Executor
     			System.out.println(e.toString());
     			e.printStackTrace();
     		}
-    			
+    		
+    //		for (String t: buf) {
+    //			System.out.println("Data "+t);
+    //		}
+    		System.out.println(line +" tuples are loaded");
     	}
     	return line;
     }
 
     void runPostgreSQL(String sqlOrTriggerQuery, boolean triggerScript,
-            TimeSeries profilerSamples)
+            final TimeSeries profilerSamples)
     {
-    	startupPostgreSQL();
+    	final Calendar currentCal = Calendar.getInstance();
     	
-    	initFile("5.csv"); /* database filename */
+    	System.out.println("File init");
+    	if(initFile("/Users/mavkisuh/homework/DBToaster/dbtoaster/experiments/vwap/data/20081201.csv") != 0) {
+    		return;
+    	}
+    	
+    	System.out.println("start up postgre");
+    	if(startupPostgreSQL() != 0) {
+    		return;
+    	}
     	
     	int howmany = 50;
     	int total = 0;
     	int thres_total = 5000;
     	while (postgreLoad(howmany) == howmany && (total += howmany) <= thres_total) {
+    		System.out.println("REading?");
+    		try {
+    		Thread.sleep(1000);
+    		Display.getDefault().asyncExec(new Runnable() {
+				public void run() {
+					profilerSamples.add(new Millisecond(currentCal.getTime()), 1);
+				}
+			});
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    		}
     		/* sleep ? */
     	}
-    	
-        if ( triggerScript )
-            runPGTriggers(sqlOrTriggerQuery);
-        else
-            runPGQuery(sqlOrTriggerQuery, profilerSamples);
+    	System.out.println("loading done");
+//        if ( triggerScript )
+//            runPGTriggers(sqlOrTriggerQuery);
+//        else
+//            runPGQuery(sqlOrTriggerQuery, profilerSamples);
         
         shutdownPostgreSQL();
     }
@@ -619,17 +662,31 @@ public class Executor
     			final TimeSeries ts = panel.getCpuTimeSeries();
     			//String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
     			System.out.println("Profiling "+q.getQueryName() + " with "+ dbNames[i]);
+    			
     			if(dbNames[i].equals("DBToaster")) {
     				System.out.println("Starting");
     				q.runQuery(20000, ts, chart);
     			}
     			else if(dbNames[i].equals("Postgres")) {
-    			    Thread th = new Thread (new Runnable() {
-    			        public void run() {
-    			            runPostgreSQL(q.getQuery(), false, ts);
-    			        }
-    			    });
-    			    th.start();
+    				Thread th = new Thread (new Runnable() {
+    					public void run() {
+    						System.out.println("Running Postgres");
+    						runPostgreSQL(q.getQuery(), true, ts);
+    					/*	final Random r = new Random();
+    						while(true) {
+    							try {Thread.sleep(1000);} catch (Exception e) {}
+    							Display.getDefault().asyncExec(new Runnable() {
+    								public void run() {
+    									ts.add(new Minute(r.nextInt(), 12, 8, 8, 2009), 10+r.nextInt());
+    								}
+    							});
+    						} */
+    					}
+    				});
+    				th.start();
+    			}
+    			else if(dbNames[i].equals("HSQLDB")) {
+    				
     			}
     		}
     	}
