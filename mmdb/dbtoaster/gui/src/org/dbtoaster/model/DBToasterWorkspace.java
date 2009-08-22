@@ -4,7 +4,14 @@ import java.io.ByteArrayInputStream;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -29,8 +36,12 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
-
+    final static String defaultLocation = "/Users/mavkisuh/gui/dbtoaster";
+    final static String defaultPathCon = 
+    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
+    
+    final Map<String, String> path_map;
+ 
     IProject dbToasterProject;
 
     // Datasets and working queries.
@@ -92,15 +103,76 @@ public class DBToasterWorkspace
             e.printStackTrace();
             System.exit(1);
         }
-
+        path_map = loadPath(null);
+        
         datasets = DatasetManager.initDemoDatasetManager();
         wsQueries = new LinkedHashMap<String, Query>();
 
-        dbToaster = new Compiler(datasets);
+        dbToaster = new Compiler(datasets, this);
 
         loadWorkspace();
+        
+        
+    }
+    
+    private Map<String, String> loadPath(String filename)
+    {
+    	if (filename == null)
+    		filename = defaultPathCon;
+    	
+    	HashMap<String, String> paths = new HashMap<String, String>();
+    	try {
+    		File pf = new File(filename);
+    		FileInputStream fin = new FileInputStream(pf);
+        	BufferedReader input = new BufferedReader(new InputStreamReader(fin));
+    	
+        	String line = "";
+        	
+        	while ((line = input.readLine())!= null) {
+        		String delim = "[=]";
+        		String[] tokens = line.split(delim);
+        		String key="", data="";
+        		
+        		if (tokens.length != 2) {
+        			System.err.println("Wrong Format");
+        			continue;
+        		}
+        		
+        		int j = 0;
+        		for (String s : tokens) {
+        			String tmp = ""; 
+        			for (int i = 0 ; i < s.length(); i ++) {
+        				if(s.charAt(i) != ' ')
+        					tmp += s.charAt(i);
+        			}
+        			if ( j == 0)
+        				key = tmp;
+        			else data = tmp;
+        			j++;
+        		}
+        		paths.put(key, data);
+        		
+        	}
+    	} catch (Exception e){
+    		e.printStackTrace();
+    	}
+    	
+    	for(Map.Entry<String, String> e: paths.entrySet()) {
+    		System.out.println(e.getKey() + "  " + e.getValue());
+    	}
+    	
+    	return paths;
     }
 
+    public String getPath(String key)
+    {
+    	String r = path_map.get(key);
+    	if (r == null)
+    		return "";
+    	
+    	return r;
+    }
+    
     private void loadWorkspace()
     {
         try
