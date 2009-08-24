@@ -33,6 +33,8 @@ public class DatastructureViewer
 
         public int getChildCount();
         public int getLeafCount();
+        
+        boolean contains(Object dimVal);
 
         public void addTuple(Object tuple)
             throws TreeException, DuplicateException;
@@ -91,6 +93,13 @@ public class DatastructureViewer
             T p = (T) point;
             return (lower.compareTo(p) <= 0) && (0 <= upper.compareTo(p));
         }
+        
+        public void cover(Object point)
+        {
+            T p = (T) point;
+            if ( lower.compareTo(p) > 0 ) lower = p;
+            else if ( upper.compareTo(p) < 0 ) upper = p;
+        }
 
         public String toString() {
             return "[" + lower.toString() + "," + upper.toString() + "]";
@@ -113,8 +122,8 @@ public class DatastructureViewer
             throws IntervalException
         {
             Interval<Integer> r = null;
-            Integer lower = ((Integer) key) / span;
-            Integer upper = lower + 1;
+            Integer lower = (((Integer) key) / span)*span;
+            Integer upper = lower + span;
             r = new Interval<Integer>(lower, upper);
             return r;
         }
@@ -131,8 +140,8 @@ public class DatastructureViewer
             throws IntervalException
         {
             Interval<Long> r = null;
-            Long lower = ((Long) key) / span;
-            Long upper = lower + 1;
+            Long lower = (((Long) key) / span)*span;
+            Long upper = lower + span;
             r = new Interval<Long>(lower, upper);
             return r;
         }
@@ -149,8 +158,8 @@ public class DatastructureViewer
             throws IntervalException
         {
             Interval<Float> r = null;
-            Float lower = ((Float) key) / span;
-            Float upper = lower + 1;
+            Float lower = Math.round((Float) key / span) * span;
+            Float upper = lower + span;
             r = new Interval<Float>(lower, upper);
             return r;
         }
@@ -167,8 +176,8 @@ public class DatastructureViewer
             throws IntervalException
         {
             Interval<Double> r = null;
-            Double lower = ((Double) key) / span;
-            Double upper = lower + 1;
+            Double lower = Math.floor(((Double) key) / span) * span;
+            Double upper = lower + span;
             r = new Interval<Double>(lower, upper);
             return r;
         }
@@ -399,6 +408,8 @@ public class DatastructureViewer
         
         public int getLeafCount() { return dsRoot.getLeafCount(); }
         
+        public boolean contains(Object dimVal) { return dsRoot.contains(dimVal); }
+
         public void addTuple(Object tuple)
             throws TreeException, DuplicateException
         {
@@ -507,40 +518,92 @@ public class DatastructureViewer
             LinkedList<Field> stDimensions, LinkedList<BucketStrategy<?>> bs)
             throws TreeException, DuplicateException
         {
-            init(duplicates, null, null, bucket, stDimensions, bs);
+            initRoot(duplicates, bucket, stDimensions, bs);
         }
 
         // Incremental constructors
         public TreeNode(boolean duplicates, ViewerNode par,
-                LinkedList<Interval<?>> parValues, Interval<?> bucket,
+                LinkedList<Interval<?>> parValues,
                 LinkedList<Field> stDimensions,
                 LinkedList<BucketStrategy<?>> bs, Object tuple)
             throws TreeException, DuplicateException
         {
-            init(duplicates, par, parValues, bucket, stDimensions, bs);
+            init(duplicates, par, parValues, tuple, stDimensions, bs);
             addTuple(tuple);
         }
 
         public TreeNode(boolean duplicates, ViewerNode par,
-                LinkedList<Interval<?>> parValues, Interval<?> bucket,
+                LinkedList<Interval<?>> parValues,
                 LinkedList<Field> stDimensions,
-                LinkedList<BucketStrategy<?>> bs, Object key, Object value)
+                LinkedList<BucketStrategy<?>> bs,
+                Object key, Object value)
             throws TreeException, DuplicateException
         {
-            init(duplicates, par, parValues, bucket, stDimensions, bs);
+            init(duplicates, par, parValues, key, stDimensions, bs);
             addKeyValue(key, value);
         }
 
+        void initRoot(boolean duplicates, Interval<?> bucket,
+                LinkedList<Field> stDimensions,
+                LinkedList<BucketStrategy<?>> strategies)
+            throws TreeException
+        {
+            allowDuplicates = duplicates;
+            parent = null;
+            parentValues = null;
+            this.bucket = bucket;
+    
+            children = new TreeMap<Object, ViewerNode>();
+            
+            if ( stDimensions.size() > 0 && (stDimensions.size() != strategies.size()) )
+            {
+                String msg = "Inconsistent dimensions/bucketing: " +
+                    stDimensions.size() + ", " + strategies.size();
+                throw new TreeException(msg);
+            }
+    
+            if ( stDimensions.size() > 1 ) {
+                subTreeDimensions = new LinkedList<Field>();
+            
+                subTreeDimensions.addAll(stDimensions);
+                childDimension = subTreeDimensions.pop();
+                childDimensionType = childDimension.getType();
+                
+                subTreeBucketing = new LinkedList<BucketStrategy<?>>();
+                subTreeBucketing.addAll(strategies);
+                bucketStrategy = subTreeBucketing.pop();
+            }
+            else if ( stDimensions.size() == 1 ) {
+                subTreeDimensions = null;
+                childDimension = stDimensions.getFirst();
+                childDimensionType = childDimension.getType();
+                
+                subTreeBucketing = null;
+                bucketStrategy = strategies.getFirst();
+            }
+            else {
+                String msg = "Found no dimensions, assuming object as key.";
+                System.out.println(msg);
+    
+                childDimension = null;
+                childDimensionType = this.bucket.getLower().getClass();
+                
+                subTreeDimensions = null;
+                subTreeBucketing = null;
+    
+                bucketStrategy = strategies.getFirst();
+            }
+        }
+            
         void init(boolean duplicates,
                 ViewerNode par, LinkedList<Interval<?>> parValues,
-                Interval<?> bucket, LinkedList<Field> stDimensions,
+                Object value, LinkedList<Field> stDimensions,
                 LinkedList<BucketStrategy<?>> strategies)
             throws TreeException
         {
             allowDuplicates = duplicates;
             parent = par;
             parentValues = parValues;
-            this.bucket = bucket;
 
             children = new TreeMap<Object, ViewerNode>();
             
@@ -582,15 +645,43 @@ public class DatastructureViewer
 
                 bucketStrategy = strategies.getFirst();
             }
-        }
-        
-        void enforceContainment(Object childKey) throws TreeException
-        {
-            if ( !bucket.contains(childKey) ) {
-                String msg = "Child lies outside node, bucket: " +
-                    bucket.toString() + " val: " + childKey.toString();
+            
+            try {
+                bucket = bucketStrategy.getBucket(getBucketDimension(value));
+            } catch (IntervalException e) {
+                String msg = "Interval: " + e.getMessage();
+                e.printStackTrace();
                 throw new TreeException(msg);
             }
+        }
+        
+        public boolean contains(Object dimVal)
+        {
+            return bucket.contains(dimVal);
+        }
+
+        Object getBucketDimension(Object value) throws TreeException
+        {
+            Object childDimVal;
+            
+            if ( childDimension != null )
+            {
+                try {
+                    childDimVal = childDimension.get(value);
+                } catch (Exception e) {
+                    String msg = "Failed to get child field " +
+                        childDimension.getName() + " from " +
+                        value.getClass().getName();
+    
+                    e.printStackTrace();
+                    throw new TreeException(msg);
+                }
+            }
+            else {
+                childDimVal = value;
+            }
+
+           return childDimVal;
         }
 
         LinkedList<Interval<?>> getNodeBucket()
@@ -616,108 +707,109 @@ public class DatastructureViewer
         public void addTuple(Object tuple)
             throws TreeException, DuplicateException
         {
-            Object childDimVal;
+            Object dimVal = getBucketDimension(tuple);
             
-            if ( childDimension != null )
+            System.out.println("Handling dim val: " + dimVal + " at: " + bucket + " children: " + children.size());
+
+            if ( parent == null && !contains(dimVal) ) {
+                System.out.println("Covering " + dimVal);
+                bucket.cover(dimVal);
+            }
+
+            Object childDimVal = children.ceilingKey(dimVal);
+            ViewerNode childNode = null;
+            
+            if ( subTreeDimensions == null )
+            {
+                childNode = children.get(dimVal);
+                if ( childNode == null ) {
+                    System.out.println("Adding leaf child " + dimVal + " for " + bucket.toString());
+                    children.put(dimVal, new MapElementNode(allowDuplicates, tuple));
+                }
+                else {
+                    System.out.println("Adding to existing leaf child " + dimVal + " for " + bucket.toString());
+                    childNode.addTuple(tuple);
+                }
+            }
+            else if ( childDimVal == null  || !bucket.contains(dimVal) )
             {
                 try {
-                    childDimVal = childDimension.get(tuple);
-                } catch (Exception e) {
-                    String msg = "Failed to get child field " +
-                        childDimension.getName() + " from " +
-                        tuple.getClass().getName();
-    
+                    System.out.println("Adding new subtree " + childNode + " "
+                        + (childNode != null ? childNode.contains(dimVal) : ""));
+                    
+                    Interval<?> newChildBucket =
+                        bucketStrategy.getBucket(dimVal);
+                    
+                    TreeNode newSubTree = new TreeNode(
+                        allowDuplicates, this, getNodeBucket(),
+                        subTreeDimensions, subTreeBucketing, tuple);
+
+                    System.out.println("Adding new child at " + newChildBucket.getUpper() + " to " + bucket.toString());
+                    children.put(newChildBucket.getUpper(), newSubTree);
+
+                } catch (IntervalException e) {
                     e.printStackTrace();
-                    throw new TreeException(msg);
                 }
             }
             else {
-                childDimVal = tuple;
-            }
-
-            enforceContainment(childDimVal);
-
-            Object childKey = children.ceilingKey(childDimVal);
-            if ( childKey == null )
-            {
-                // Add new subtree
-                if ( subTreeDimensions == null ) {
-                    children.put(childKey,
-                        new MapElementNode(allowDuplicates, tuple));
-                }
-                
-                else
-                {
-                    try {
-                        Interval<?> newChildBucket =
-                            bucketStrategy.getBucket(childKey);
-                        
-                        TreeNode newSubTree = new TreeNode(
-                            allowDuplicates, this, getNodeBucket(), newChildBucket,
-                            subTreeDimensions, subTreeBucketing, tuple);
-
-                        children.put(newChildBucket.getUpper(), newSubTree);
-
-                    } catch (IntervalException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            else {
-                ViewerNode childNode = children.get(childKey);
+                System.out.println("Adding to existing child " + childDimVal + " for " + bucket.toString());
+                childNode = children.get(childDimVal);
                 childNode.addTuple(tuple);
             }
+            
+            
+            System.out.println("Done with dim val: " + dimVal + " at: " + bucket + " children: " + children.size());
+
         }
 
         public void addKeyValue(Object key, Object value)
             throws TreeException, DuplicateException
         {
-            Object childDimVal;
-            if ( childDimension != null )
+            Object dimVal = getBucketDimension(key);
+
+            if ( parent == null && !contains(dimVal) ) {
+                System.out.println("Covering " + dimVal);
+                bucket.cover(dimVal);
+            }
+            
+            Object childDimVal = children.ceilingKey(dimVal);
+            ViewerNode childNode = null;
+
+            if ( subTreeDimensions == null )
+            {
+                childNode = children.get(dimVal);
+                if ( childNode == null ) {
+                    System.out.println("Adding leaf child " + dimVal);
+                    children.put(dimVal, new MapElementNode(key, value));
+                }
+                else {
+                    System.out.println("Adding to existing leaf child " + dimVal);
+                    childNode.addKeyValue(key, value);
+                }
+            }
+            else if ( childDimVal == null || !bucket.contains(dimVal) )
             {
                 try {
-                    childDimVal = childDimension.get(key);
-                } catch (Exception e) {
-                    String msg = "Failed to get child field " +
-                        childDimension.getName() + " from " +
-                        key.getClass().getName();
-    
+                    Interval<?> newChildBucket =
+                        bucketStrategy.getBucket(dimVal);
+
+                    TreeNode newSubTree = new TreeNode(
+                        allowDuplicates, this, getNodeBucket(),
+                        subTreeDimensions, subTreeBucketing, key, value);
+
+                    System.out.println("Adding subtree child " + newChildBucket.getUpper());
+                    children.put(newChildBucket.getUpper(), newSubTree);
+                } catch (IntervalException e) {
                     e.printStackTrace();
-                    throw new TreeException(msg);
                 }
             }
             else {
-                childDimVal = key;
-            }
-
-            enforceContainment(childDimVal);
-
-            Object childKey = children.ceilingKey(childDimVal);
-            if ( childKey == null )
-            {
-                // Add new subtree
-                if ( subTreeDimensions == null )
-                    children.put(childKey, new MapElementNode(key, value));
-
-                else {
-                    try {
-                        Interval<?> newChildBucket = bucketStrategy.getBucket(childKey);
-    
-                        TreeNode newSubTree = new TreeNode(
-                            allowDuplicates, this, getNodeBucket(), newChildBucket,
-                            subTreeDimensions, subTreeBucketing, key, value);
-    
-                        children.put(newChildBucket.getUpper(), newSubTree);
-                    } catch (IntervalException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            else {
-                ViewerNode childNode = children.get(childKey);
+                childNode = children.get(childDimVal);
                 childNode.addKeyValue(key, value);
             }
         }
+        
+        public String toString() { return bucket.toString() + ", " + children.size(); }
         
     }
     
@@ -775,6 +867,11 @@ public class DatastructureViewer
         
         public int getLeafCount() { return count; }
 
+        public boolean contains(Object dimVal)
+        {
+            return dimVal.equals(value);
+        }
+
         public void addKeyValue(Object key, Object value)
             throws DuplicateException
         {
@@ -799,6 +896,8 @@ public class DatastructureViewer
             
             ++count;
         }
+
+
     }
 
     class DatastructureContentProvider implements ITreeContentProvider

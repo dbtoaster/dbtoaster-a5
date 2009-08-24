@@ -59,12 +59,60 @@ public class DatasetManager
             }
         };
 
+        public class DatasetLocations
+        {
+            HashMap<String, String> relationFiles;
+            
+            String defaultFileDirectory;
+            HashMap<String, String> defaultFileNames;
+            
+            public DatasetLocations()
+            {
+                relationFiles = new HashMap<String, String>();
+                defaultFileNames = new HashMap<String, String>();
+            }
+            
+            public void setDefaultLocations(String fileDir,
+                HashMap<String, String> relationLocations)
+            {
+                defaultFileDirectory = fileDir;
+                defaultFileNames = relationLocations;
+            }
+            
+            public void addRelation(String relName, String fileName)
+            {
+                if ( !defaultFileNames.containsKey(relName) ) {
+                    defaultFileDirectory = "";
+                    defaultFileNames.put(relName, fileName);
+                }
+                
+                relationFiles.put(relName, fileName);
+            }
+
+            public String getLocation(String relName)
+            {
+                String r = null;
+                if ( relationFiles.containsKey(relName) )
+                    r = relationFiles.get(relName);
+                else if ( defaultFileNames.containsKey(relName) ) {
+                    r = (defaultFileDirectory.isEmpty()?
+                        "" : defaultFileDirectory + "/") +
+                        defaultFileNames.get(relName);
+                }
+                
+                return r;
+            }
+        }
+
         // relation name => field name * type
         HashMap<String, Relation> relations;
 
+        DatasetLocations locations;
+        
         public Dataset()
         {
             relations = new HashMap<String, Relation>();
+            locations = new DatasetLocations();
         }
         
         void addRelation(String streamType, String name,
@@ -159,8 +207,9 @@ public class DatasetManager
                 r = relations.get(relation).thriftNamespace;
             return r;
         }
-    }
 
+    }
+    
     private LinkedHashMap<String, Dataset> datasets;
     private static DatasetManager singleton = null;
 
@@ -231,6 +280,17 @@ public class DatasetManager
         
         return r;
     }
+    
+    public String getRelationLocation(String name, String relName)
+    {
+        String r = null;
+        Dataset ds = getDataset(name);
+        if ( ds != null ) {
+            r = ds.locations.getLocation(relName);
+        }
+        
+        return r;
+    }
 
     // Find first instance of relation.
     public LinkedHashMap<String, String> getRelationFields(String relName)
@@ -293,7 +353,18 @@ public class DatasetManager
             "datasets",
             "AsksOrderbook");
 
-        aDM.addDataset("orderbook", historicalOrderbook);
+        // TODO: split historical files into separate files for bids/asks.
+        HashMap<String, String> historicalOrderbookLocations =
+            new HashMap<String, String>();
+        historicalOrderbookLocations.put("bids", "20081201.csv");
+        historicalOrderbookLocations.put("asks", "20081201.csv");
+        
+        // TODO: create a new directory of clean files in ~/datasets.
+        String historicalDatasetPath = "/Users/yanif/workspace/dbtoaster_compiler/";
+        historicalOrderbook.locations.setDefaultLocations(
+            historicalDatasetPath, historicalOrderbookLocations);
+
+        //aDM.addDataset("orderbook", historicalOrderbook);
 
         // Live algo execution
         Dataset liveOrderbook = aDM.new Dataset();
@@ -316,8 +387,9 @@ public class DatasetManager
             "datasets",
             "AsksOrderbook");
         
-        //aDM.addDataset("lo", liveOrderbook);
+        aDM.addDataset("lo", liveOrderbook);
 
+        // Note: no locations for live orderbook dataset.
 
         // SSB dataset
         LinkedHashMap<String, String> liFieldsAndTypes =
@@ -498,7 +570,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::LineitemStream",
             "\"lineitem.tbl.a\",10000",
             "DBToaster::DemoDatasets::lineitem",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", liAdaptorBindings,
+            "DBToaster::DemoDatasets::LineitemTupleAdaptor", liAdaptorBindings,
             "datasets",
             "Lineitem");
         
@@ -507,7 +579,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::OrderStream",
             "\"orders.tbl.a\",10000",
             "DBToaster::DemoDatasets::order",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", ordAdaptorBindings,
+            "DBToaster::DemoDatasets::OrderTupleAdaptor", ordAdaptorBindings,
             "datasets",
             "Order");
         
@@ -516,7 +588,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::PartStream",
             "\"part.tbl.a\",10000",
             "DBToaster::DemoDatasets::part",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", ptAdaptorBindings,
+            "DBToaster::DemoDatasets::PartTupleAdaptor", ptAdaptorBindings,
             "datasets",
             "Part");
         
@@ -525,7 +597,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::CustomerStream",
             "\"customer.tbl.a\",10000",
             "DBToaster::DemoDatasets::customer",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", csAdaptorBindings,
+            "DBToaster::DemoDatasets::CustomerTupleAdaptor", csAdaptorBindings,
             "datasets",
             "Customer");
         
@@ -534,7 +606,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::SupplierStream",
             "\"partsupp.tbl.a\",10000",
             "DBToaster::DemoDatasets::supplier",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", spAdaptorBindings,
+            "DBToaster::DemoDatasets::SupplierTupleAdaptor", spAdaptorBindings,
             "datasets",
             "Supplier");
         
@@ -543,7 +615,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::NationStream",
             "\"nation.tbl.a\",10000",
             "DBToaster::DemoDatasets::nation",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", ntAdaptorBindings,
+            "DBToaster::DemoDatasets::NationTupleAdaptor", ntAdaptorBindings,
             "datasets",
             "Nation");
         
@@ -552,9 +624,22 @@ public class DatasetManager
             "DBToaster::DemoDatasets::RegionStream",
             "\"region.tbl.a\",10000",
             "DBToaster::DemoDatasets::region",
-            "DBToaster::DemoDatasets::TpchTupleAdaptor", rgAdaptorBindings,
+            "DBToaster::DemoDatasets::RegionTupleAdaptor", rgAdaptorBindings,
             "datasets",
             "Region");
+
+        HashMap<String, String> tpchLocations = new HashMap<String, String>();
+        tpchLocations.put("Lineitem", "lineitem.tbl.a");
+        tpchLocations.put("Order", "orders.tbl.a");
+        tpchLocations.put("Part", "part.tbl.a");
+        tpchLocations.put("Customer", "customer.tbl.a");
+        tpchLocations.put("Supplier", "supplier.tbl.a");
+        tpchLocations.put("Nation", "nation.tbl");
+        tpchLocations.put("Region", "region.tbl");
+        
+        // TODO: create a new directory of clean files in ~/datasets.
+        String tpchDatasetPath = "/Users/yanif/datasets/tpch/sf1/singlefile";
+        tpchDataset.locations.setDefaultLocations(tpchDatasetPath, tpchLocations);
 
         aDM.addDataset("tpch", tpchDataset);
         
@@ -562,4 +647,5 @@ public class DatasetManager
 
         return aDM;
     }
+
 }

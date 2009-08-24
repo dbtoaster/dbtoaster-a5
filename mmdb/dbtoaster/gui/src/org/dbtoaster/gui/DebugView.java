@@ -7,10 +7,13 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.StringTokenizer;
 
@@ -180,6 +183,9 @@ public class DebugView extends ViewPart
                     DatastructureNode dsNode =
                         dsv.new DatastructureNode(ds, dsType, dsClass, dsKeyClass);
                     r.add(dsNode);
+                    
+                    Object dbtDatastructure = currentDebugger.get(ds);
+                    loadDatastructure(ds, dbtDatastructure, dsType, dsNode);
                 }
             }
 
@@ -360,6 +366,10 @@ public class DebugView extends ViewPart
         dataStructViewer.setLabelProvider(dsv.new DatastructureLabelProvider());
 
         dataStructures = new LinkedList<DatastructureNode>();
+
+        // Load some dummy data to test visualization.
+        testDatastructureViewer();
+
         dataStructViewer.setInput(dataStructures);
 
         Tree dsvTree = dataStructViewer.getTree();
@@ -395,54 +405,145 @@ public class DebugView extends ViewPart
 
     public void setFocus() {}
 
-    /*
-    void buildVwapDataStructures()
+    void loadDatastructure(String dsName, Object dbtDatastructure,
+        DatastructureType dsType, DatastructureNode viewerRoot)
     {
-        try
-        {
-            DataStructureRange qpminRoot = new DataStructureRange("q[pmin]");
-            DataStructureRange qc1 = qpminRoot.addChildRange(160000, 180000);
-            DataStructureRange qc2 = qpminRoot.addChildRange(180000, 200000);
-            DataStructureRange qc3 = qpminRoot.addChildRange(200000, 220000);
-
-            DataStructureRange qc11 = qc1.addChildRange(160000, 170000);
-            DataStructureRange qc12 = qc1.addChildRange(170000, 180000);
-            qc11.addChildValue(163420);
-            qc12.addChildValue(177800);
-            qc2.addChildValue(185100);
-            qc3.addChildValue(205700);
-
-            DataStructureRange mp2Root = new DataStructureRange("m[p2]");
-            DataStructureRange mc1 = mp2Root.addChildRange(160000, 190000);
-            DataStructureRange mc2 = mp2Root.addChildRange(190000, 220000);
-            mc1.addChildValue(163420);
-            mc1.addChildValue(177800);
-            mc1.addChildValue(185100);
-            mc2.addChildValue(205700);
-
-            DataStructureRange sv0 = new DataStructureRange("sv0", 0);
-
-            DataStructureRange sv1Root = new DataStructureRange("sv1[p2]");
-            DataStructureRange vc1 = sv1Root.addChildRange(160000, 180000);
-            DataStructureRange vc2 = sv1Root.addChildRange(180000, 220000);
-            vc1.addChildValue(163420);
-            vc1.addChildValue(177800);
-            vc2.addChildValue(185100);
-            vc2.addChildValue(205700);
-
-            dataStructures.add(qpminRoot);
-            dataStructures.add(mp2Root);
-            dataStructures.add(sv1Root);
-            dataStructures.add(sv0);
-
-        } catch (DataStructureRangeException e)
-        {
-            e.printStackTrace();
+        // Load actual datastructures
+        if ( dsType == DatastructureType.MAP ) {
+            try {
+                Map<?,?> dbtMap = (Map<?,?>) dbtDatastructure;
+                for (Map.Entry<?, ?> e : dbtMap.entrySet()) {
+                    viewerRoot.addKeyValueToDatastructure(e.getKey(), e.getValue());
+                }
+            } catch (Exception e) {
+                System.err.println("Failed to load datastructure " + dsName);
+                e.printStackTrace();
+            }
         }
-
+        else if ( dsType == DatastructureType.LIST  )
+        {
+            try {
+                List<?> dbtRelation = (List<?>) dbtDatastructure;
+                for (Object tuple : dbtRelation)
+                    viewerRoot.addTupleToDatastructure(tuple);
+            } catch (Exception e) {
+                System.err.println("Failed to load datastructure " + dsName);
+                e.printStackTrace();
+            }
+        }
+        else if ( dsType == DatastructureType.SET )
+        {
+            try {
+                Set<?> dbtDomain = (Set<?>) dbtDatastructure;
+                for (Object tuple : dbtDomain)
+                    viewerRoot.addTupleToDatastructure(tuple);
+            } catch (Exception e) {
+                System.err.println("Failed to load datastructure " + dsName);
+                e.printStackTrace();
+            }
+        }
     }
-    */
 
+    class TestTuple
+    {
+        public Integer x;
+        public Integer y;
+        public Integer z;
+    };
+
+    void testMapViewer()
+    {
+        Random rng = new Random();
+        HashMap<Integer, Integer> testMap = new HashMap<Integer, Integer>();
+        
+        int numEntries = 1000;
+        for (int i = 0; i < numEntries; ++i) {
+            testMap.put(rng.nextInt(100000), rng.nextInt(100000000));
+        }
+        
+        DatastructureViewer dsv = new DatastructureViewer();
+        String ds = "testMap";
+        Class<?> dsClass = Map.class;
+        Class<?> dsKeyClass = Integer.class;
+        DatastructureType dsType = DatastructureType.MAP;
+        DatastructureNode dsNode =
+            dsv.new DatastructureNode(ds, dsType, dsClass, dsKeyClass);
+        dataStructures.add(dsNode);
+
+        loadDatastructure(ds, testMap, dsType, dsNode);
+    }
+    
+    void testListViewer()
+    {
+        Random rng = new Random();
+        List<TestTuple> testList = new LinkedList<TestTuple>();
+        
+        int numEntries = 1000;
+        for (int i = 0; i < numEntries; ++i) {
+            TestTuple t = new TestTuple();
+            t.x = rng.nextInt(100000);
+            t.y = rng.nextInt(100000);
+            t.z = rng.nextInt(100000);
+            testList.add(t);
+            System.out.println("Testing list with tuple: " + t.x + " " + t.y + " " + t.z);
+        }
+        
+        DatastructureViewer dsv = new DatastructureViewer();
+        String ds = "testList";
+        Class<?> dsClass = List.class;
+        Class<?> dsKeyClass = TestTuple.class;
+        DatastructureType dsType = DatastructureType.LIST;
+        DatastructureNode dsNode =
+            dsv.new DatastructureNode(ds, dsType, dsClass, dsKeyClass);
+        dataStructures.add(dsNode);
+
+        loadDatastructure(ds, testList, dsType, dsNode);
+    }
+    
+    void testSetViewer()
+    {
+        Random rng = new Random();
+        Set<TestTuple> testSet = new HashSet<TestTuple>();
+        
+        int numEntries = 1000;
+        for (int i = 0; i < numEntries; ++i) {
+            TestTuple t = new TestTuple();
+            t.x = rng.nextInt(100000);
+            t.y = rng.nextInt(100000);
+            t.z = rng.nextInt(100000);
+            testSet.add(t);
+            System.out.println("Testing set with tuple: " + t.x + " " + t.y + " " + t.z);
+        }
+        
+        DatastructureViewer dsv = new DatastructureViewer();
+        String ds = "testSet";
+        Class<?> dsClass = Set.class;
+        Class<?> dsKeyClass = TestTuple.class;
+        DatastructureType dsType = DatastructureType.SET;
+        DatastructureNode dsNode =
+            dsv.new DatastructureNode(ds, dsType, dsClass, dsKeyClass);
+        dataStructures.add(dsNode);
+
+        loadDatastructure(ds, testSet, dsType, dsNode);
+    }
+
+    void testDatastructureViewer()
+    {
+        // Test loading
+        
+        System.out.println("Testing map loading.");
+        testMapViewer();
+
+        System.out.println("Testing list loading.");
+        testListViewer();
+        
+        System.out.println("Testing set loading.");
+        testSetViewer();
+        
+        // TODO: test datastructure retrieval via debugger, using Thrift.
+        
+    }
+    
     // Helper classes
     
     // Step tuple input.
@@ -783,6 +884,54 @@ public class DebugView extends ViewPart
     }
 
     // Map visualization.
+    
+    /*
+    void buildVwapDataStructures()
+    {
+        try
+        {
+            DataStructureRange qpminRoot = new DataStructureRange("q[pmin]");
+            DataStructureRange qc1 = qpminRoot.addChildRange(160000, 180000);
+            DataStructureRange qc2 = qpminRoot.addChildRange(180000, 200000);
+            DataStructureRange qc3 = qpminRoot.addChildRange(200000, 220000);
+
+            DataStructureRange qc11 = qc1.addChildRange(160000, 170000);
+            DataStructureRange qc12 = qc1.addChildRange(170000, 180000);
+            qc11.addChildValue(163420);
+            qc12.addChildValue(177800);
+            qc2.addChildValue(185100);
+            qc3.addChildValue(205700);
+
+            DataStructureRange mp2Root = new DataStructureRange("m[p2]");
+            DataStructureRange mc1 = mp2Root.addChildRange(160000, 190000);
+            DataStructureRange mc2 = mp2Root.addChildRange(190000, 220000);
+            mc1.addChildValue(163420);
+            mc1.addChildValue(177800);
+            mc1.addChildValue(185100);
+            mc2.addChildValue(205700);
+
+            DataStructureRange sv0 = new DataStructureRange("sv0", 0);
+
+            DataStructureRange sv1Root = new DataStructureRange("sv1[p2]");
+            DataStructureRange vc1 = sv1Root.addChildRange(160000, 180000);
+            DataStructureRange vc2 = sv1Root.addChildRange(180000, 220000);
+            vc1.addChildValue(163420);
+            vc1.addChildValue(177800);
+            vc2.addChildValue(185100);
+            vc2.addChildValue(205700);
+
+            dataStructures.add(qpminRoot);
+            dataStructures.add(mp2Root);
+            dataStructures.add(sv1Root);
+            dataStructures.add(sv0);
+
+        } catch (DataStructureRangeException e)
+        {
+            e.printStackTrace();
+        }
+
+    }
+    */
     
     /*
     class DataStructureRangeException extends Exception

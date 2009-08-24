@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -19,6 +21,9 @@ public class Query
 {
     private String queryName;
     private IFolder queryFolder;
+    
+    LinkedList<LinkedHashMap<String, String>> queryRelations;
+
     // Parse phase files
     private IFile sqlCode;
     private IFile sqlTML;
@@ -50,6 +55,7 @@ public class Query
         profileLocations = null;
         debugger = null;
         performance = null;
+        queryRelations = null;
     }
 
     public void load()
@@ -134,7 +140,8 @@ public class Query
                         System.out.println("Loading engine binary: "
                                 + enginePath.toOSString());
 
-                        engine = new Executor(enginePath.toOSString());
+                        engine = new Executor(enginePath.toOSString(),
+                            DBToasterWorkspace.getWorkspace().getDatasetManager());
                     }
 
                     IPath fullDebugFilePath = fnFullBasePath
@@ -206,6 +213,17 @@ public class Query
 
     public IFolder getQueryFolder() { return queryFolder; }
 
+    public LinkedList<LinkedHashMap<String,String>> getQueryRelations()
+    {
+        return queryRelations;
+    }
+
+    public void setQueryRelations(
+        LinkedList<LinkedHashMap<String, String>> queryRelations)
+    {
+        this.queryRelations = queryRelations;
+    }
+
     // Parse result accessors
 
     public void setTML(IFile tml)
@@ -271,10 +289,10 @@ public class Query
 
     public Executor getExecutor() { return engine; }
 
-    public void setExecutor(String engineBinary) {
+    public void setExecutor(String engineBinary, DatasetManager ds) {
         IFile binaryFile = queryFolder.getFile(engineBinary);
         if ( binaryFile.exists() ) {
-            engine = new Executor(binaryFile.getLocation().toOSString());
+            engine = new Executor(binaryFile.getLocation().toOSString(), ds);
         }
         else {
             String msg = "Could not find engine binary in query folder: " +

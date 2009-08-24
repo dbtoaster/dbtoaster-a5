@@ -1,4 +1,4 @@
-package org.dbtoaster.model;
+ package org.dbtoaster.model;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -26,8 +26,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.Set;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.Random;
 
+import javax.management.relation.Relation;
 import javax.swing.Timer;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -35,6 +36,7 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TSocket;
 import org.apache.thrift.transport.TTransport;
 import org.dbtoaster.gui.DBPerfPanel;
+import org.dbtoaster.model.DatasetManager.Dataset;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.PlatformUI;
 import org.jfree.chart.JFreeChart;
@@ -54,6 +56,11 @@ import java.sql.*;
 
 public class Executor
 {
+    public final static String[] dbNames =
+        { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+
+    DatasetManager datasets;
+
     String binaryPath;
     HashMap<String, String> binaryEnv;
 
@@ -282,16 +289,27 @@ public class Executor
     // Alternative databases
     private final static String POSTGRES_JDBC_DRIVER = "org.postgresql.Driver";
     private final static String POSTGRES_URL = "jdbc:postgresql://localhost:5432/postgres";
+    
+    private final static String POSTGRES_SETUP_SCRIPT =
+        "/Users/yanif/workspace/dbtoaster-gui/scripts/setup-postgresql.sql";
 
     private final static String HSQLDB_JDBC_DRIVER = "org.hsql.jdbcDriver";
     private final static String HSQLDB_URL = "";
 
+    private final static String HSQLDB_SETUP_SCRIPT =
+        "/Users/yanif/workspace/dbtoaster-gui/scripts/setup-hsqldb.sql";
+
+    // JDBC connection caching
+    HashMap<String, Connection> dbJDBCConnections;
+
     public Executor() {
-    	initPostgreSQL();
+    	for (String dbName : dbNames) initDatabase(dbName);
     }
 
-    public Executor(String engineBinary)
+    public Executor(String engineBinary, DatasetManager datasets)
     {
+        this.datasets = datasets;
+
         File binaryFile = new File(engineBinary);
         if ( binaryFile.exists() && binaryFile.isFile() && binaryFile.canExecute() )
         {
@@ -303,7 +321,7 @@ public class Executor
             currentQuery = null;
             profilerProtocolFactory = new TBinaryProtocol.Factory();
             profiler = null;
-            initPostgreSQL();
+            for (String dbName : dbNames) initDatabase(dbName);
         }
         else {
             System.err.println("Could not find engine binary " + engineBinary);
@@ -398,46 +416,587 @@ public class Executor
         currentQuery = null;
     }
 
-    // TODO: data loading for alternative DBMS
-    private File inFile;
-    private BufferedReader br;
-    
-    int initFile(String filename)
+    // Process helpers
+    int logAndWaitForProcess(Process p)
     {
-    	inFile = new File (filename);
-    	
-    	try {
-    		br = new BufferedReader (new InputStreamReader (new FileInputStream(inFile)));
-    	} catch (FileNotFoundException ex) {
-    		System.err.println("File " + filename + " not found");
-    		return -1;
-    	}
-    	
-    	return 0;
+        int exitVal = -1;
+        try {
+            BufferedReader logReader = new BufferedReader(
+                new InputStreamReader(p.getErrorStream()));
+            
+            String line = "";
+            while ( ((line = logReader.readLine()) != null)  )
+                System.out.println(line + "\n");
+        
+            exitVal = p.waitFor();
+            if (exitVal != 0) {
+                System.err.println("Command exited with " + exitVal);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return exitVal;
     }
-     
-    void runJDBCQuery(String dbUrl, String user, String passwd, String sqlQuery,
-            TimeSeries profilerSamples)
+
+    // Dataset -> database schema translation
+    String getDatabaseRelation(String datasetName, String relationName)
+    {
+        return datasetName + "_" + relationName;
+    }
+
+    String getDatabaseType(String dbToasterType)
+    {
+        String r = null;
+        if ( dbToasterType.equals("int") )
+            r = "integer";
+        else if ( dbToasterType.equals("long") )
+            r = "bigint";
+        else if ( dbToasterType.equals("float") )
+            r = "real";
+        else if ( dbToasterType.equals("double") )
+            r = "double precision";
+        else if ( dbToasterType.equals("string") )
+            r = "varchar";
+        else {
+            System.err.println("Invalid DBToaster type: " + dbToasterType);
+        }
+        
+        return r;
+    }
+
+    // File multiplexing and random I/O
+    class FileMultiplexer
+    {
+        Vector<BufferedReader> fileReaders;
+        HashMap<BufferedReader, String> fileNames;
+        HashMap<BufferedReader, String> relationNames;
+        Random filePicker;
+        
+        FileMultiplexer() {
+            filePicker = new Random();
+            fileReaders = new Vector<BufferedReader>();
+            fileNames = new HashMap<BufferedReader, String>();
+            relationNames = new HashMap<BufferedReader, String>();
+        }
+        
+        FileMultiplexer(LinkedHashMap<String, String> datasetRelations)
+        {
+            filePicker = new Random();
+            for (Map.Entry<String, String> e : datasetRelations.entrySet())
+            {
+                String ds = e.getKey();
+                String rel = e.getValue();
+                String loc = datasets.getRelationLocation(ds, rel);
+                if ( loc == null ) {
+                    System.err.println(
+                        "Unknown file source for dataset " + ds + " relation " + rel);
+                }
+                else {
+                    String msg = "Adding " + getDatabaseRelation(ds, rel) + " from " + loc;
+                    System.out.println(msg);
+                    add(loc, ds, rel);
+                }
+            }
+        }
+        
+        void add(String fileName, String dataset, String relation)
+        {
+            File f = new File(fileName);
+            try {
+                BufferedReader r = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(f)));
+                fileReaders.add(r);
+                fileNames.put(r, fileName);
+                relationNames.put(r, getDatabaseRelation(dataset, relation));
+            } catch (FileNotFoundException e) {
+                
+            }
+        }
+        
+        long loadDatabase(String dbName, long count)
+        {
+            long r = 0;
+
+            int nextFile = filePicker.nextInt(fileReaders.size());
+            BufferedReader br = fileReaders.get(nextFile);
+            Connection conn = null;
+            if ( dbJDBCConnections.containsKey(dbName) )
+                conn = dbJDBCConnections.get(dbName);
+            else {
+                String msg = "Could not find cached connection for " + dbName;
+                System.err.println(msg);
+                return r;
+            }
+                
+
+            if ( dbName.equals(dbNames[1]) ) {
+                r = loadPostgreSQL(br, relationNames.get(br), count);
+            }
+            else if ( dbName.equals(dbNames[2]) ) {
+                r = loadHsqlDB(conn, br, relationNames.get(br), count);
+            }
+            else if ( dbName.equals(dbNames[3]) ) {
+                System.err.println("DBMS1 not yet implemented.");
+            }
+            else if ( dbName.equals(dbNames[4]) ) {
+                System.err.println("SPE1 not yet implemented.");
+            }
+            
+            if ( r != count ) {
+                System.out.println("Done with file " + fileNames.get(nextFile));
+                fileReaders.remove(nextFile);
+                fileNames.remove(nextFile);
+                try {
+                    br.close();
+                } catch (IOException e) { e.printStackTrace(); }
+            }
+            return r;
+        }
+        
+        boolean hasData() { return !fileReaders.isEmpty(); }
+        
+    };
+
+    LinkedList<String> bufferLines(BufferedReader br, long num)
+    {
+        LinkedList<String> buf = new LinkedList<String>();
+        String tmp = "";
+        
+        try {
+            for (int i =0;i < num;i ++) {
+                tmp = br.readLine();
+                
+                if(tmp == null) break;
+                buf.add(tmp);
+            }
+        } catch (IOException e) {
+            System.err.println("IO exception");
+            e.printStackTrace();
+        }
+        
+        return buf;
+    }
+
+    // Snapshot query execution primitive.
+    void runJDBCQuery(String dbName, String sqlQuery,
+        final TimeSeries profilerSamples)
     {
         try {
-        	Connection conn = DriverManager.getConnection(dbUrl, user, passwd);
-            Statement st = conn.createStatement();
-            // TODO: loop adding chunks of data and repetitively issuing query
-            // for ad-hoc queries
-            long startTime = System.currentTimeMillis();
-            ResultSet rs = st.executeQuery(sqlQuery);
-       //	     rs.last();
-            
-            long endTime = System.currentTimeMillis();
-            long span = endTime - startTime;
+            final Calendar currentCal = Calendar.getInstance();
 
+        	//Connection conn = DriverManager.getConnection(dbUrl, user, passwd);
+            Connection conn = null;
+            if ( dbJDBCConnections.containsKey(dbName) )
+            {
+                conn = dbJDBCConnections.get(dbName);
+                Statement st = conn.createStatement();
+    
+                long startTime = System.currentTimeMillis();
+                ResultSet rs = st.executeQuery(sqlQuery);
+                rs.last();
+                
+                long endTime = System.currentTimeMillis();
+                final long span = endTime - startTime;
+    
+                Display.getDefault().asyncExec(new Runnable() {
+                    public void run() {
+                        profilerSamples.add(new Millisecond(currentCal.getTime()), span);
+                    }
+                });
+            }
+            else {
+                System.err.println("Could not find cached connection for " + dbName);
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+    boolean runJDBCStatement(String dbName, String statement)
+    {
+        boolean success = true;
+        Connection conn = null;
+        if ( dbJDBCConnections.containsKey(dbName) ) {
+            try {
+                conn = dbJDBCConnections.get(dbName);
+                Statement stmt = conn.createStatement();
+                if ( stmt.execute(statement) ) {
+                    System.err.println("WARNING: statement returned a result set.");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                success = false;
+            }
+        }
+        else success = false;
+
+        return success;
+    }
     
+    void initDatabase(String dbName)
+    {
+        dbJDBCConnections = new HashMap<String, Connection>();
+
+        if ( dbName.equals(dbNames[1]) ) {
+            initPostgreSQL();
+        }
+        else if ( dbName.equals(dbNames[2]) ) {
+            initHsqlDB();
+        }
+        else if ( dbName.equals(dbNames[3]) ) {
+            System.err.println("DBMS1 not yet implemented.");
+        }
+        else if ( dbName.equals(dbNames[4]) ) {
+            System.err.println("SPE1 not yet implemented.");
+        }
+    }
+    
+    void createDatabaseDataset(Connection conn, String dbName, String dsName, Dataset ds)
+    {
+        for (String relName : ds.getRelationNames())
+        {
+            LinkedHashMap<String, String> fields = ds.getRelationFields(relName);
+            String dbRelName = getDatabaseRelation(dsName, relName);
+            
+            if ( dbName.equals(dbNames[1]) )
+                createPostgreSQLTable(conn, dbRelName, fields);
+
+            else if ( dbName.equals(dbNames[2]) )
+                createHsqldbTable(conn, dbRelName, fields);
+            
+            else if ( dbName.equals(dbNames[3]) )
+                System.err.println("DBMS1 unsupported.");
+            
+            else if ( dbName.equals(dbNames[4]) )
+                System.err.println("SPE1` unsupported.");
+        }
+    }
+    
+    void createPostgreSQLTable(Connection conn, String relation,
+        LinkedHashMap<String, String> fields)
+    {
+        String dropTableStatement = "DROP TABLE IF EXISTS " + relation;
+        
+        String fieldStr = "";
+        
+        // TODO: dbtoaster -> database type conversion for other databases
+        for (Map.Entry<String, String> e : fields.entrySet()) {
+            fieldStr += (fieldStr.isEmpty()? "" : ", ") +
+                e.getKey() + " " + getDatabaseType(e.getValue());
+        }
+
+        String createTableStatement = "CREATE TABLE " + relation +
+            "(" + fieldStr + ")";
+
+        String currentStmtText = dropTableStatement;
+        try {
+            Statement stmt = conn.createStatement();
+            stmt.execute(dropTableStatement);
+            
+            currentStmtText = createTableStatement;
+            stmt.execute(createTableStatement);
+        }
+        catch (SQLException e) {
+            System.err.println("Failed to create relation " + relation + " in Postgres.");
+            System.err.println("Statement: '"+ currentStmtText + "' failed.");
+            e.printStackTrace();
+        }
+    }
+
+    void createHsqldbTable(Connection conn, String relation,
+        LinkedHashMap<String, String> fields)
+    {
+        String dropTableStatement = "DROP TABLE " + relation;
+        
+        String fieldStr = "";
+        
+        // TODO: dbtoaster -> database type conversion for other databases
+        for (Map.Entry<String, String> e : fields.entrySet())
+            fieldStr += e.getKey() + " " + getDatabaseType(e.getValue());
+
+        String createTableStatement = "CREATE TABLE " + relation +
+            "(" + fieldStr + ")";
+
+        String currentStmtText = dropTableStatement;
+        try {
+            Statement stmt = conn.createStatement();
+            stmt.execute(dropTableStatement);
+            
+            currentStmtText = createTableStatement;
+            stmt.execute(createTableStatement);
+        }
+        catch (SQLException e) {
+            System.err.println("Failed to create relation " + relation + " in HsqlDB.");
+            System.err.println("Statement : '" + currentStmtText + "' failed.");
+            e.printStackTrace();
+        }
+        
+    }
+
+    boolean validateTable(String dbName, String relationName)
+    {
+        boolean r = false;
+        
+        Connection dbConn = null;
+        if ( dbJDBCConnections.containsKey(dbName) )
+            dbConn = dbJDBCConnections.get(dbName);
+        else
+            return r;
+
+        if ( dbName.equals(dbNames[1]) ) {
+            r = validatePostgreSQLTable(dbConn, relationName);
+        }
+        else if ( dbName.equals(dbNames[2]) ) {
+            r = validateHsqldbTable(dbConn, relationName);
+        }
+        else if ( dbName.equals(dbNames[3]) ) {
+            System.err.println("DBMS1 not yet implemented.");
+        }
+        else if ( dbName.equals(dbNames[4]) ) {
+            System.err.println("SPE1 not yet implemented.");
+        }
+        
+        return r;
+    }
+
+    boolean validatePostgreSQLTable(Connection dbConn, String relationName)
+    {
+        boolean valid = false;
+        String checkQuery =
+            "select * from pg_table where tablename = '" + relationName + "'";
+        
+        try {
+            Statement checkStmt = dbConn.createStatement();
+            ResultSet rs = checkStmt.executeQuery(checkQuery);
+            valid = rs.last();
+        } catch (SQLException e) { e.printStackTrace(); }
+        
+        return valid;
+    }
+
+    boolean validateHsqldbTable(Connection dbConn, String relationName)
+    {
+        boolean valid = false;
+        String checkQuery =
+            "select * from SYSTEM_TABLES where TABLE_NAME = '" + relationName + "'";
+        
+        try {
+            Statement checkStmt = dbConn.createStatement();
+            ResultSet rs = checkStmt.executeQuery(checkQuery);
+            valid = rs.last();
+        } catch (SQLException e) { e.printStackTrace(); }
+        
+        return valid;
+    }
+
+    void validateDatabase(String dbName)
+    {
+        if ( datasets != null )
+        {
+            Connection conn = null;
+            if ( dbJDBCConnections.containsKey(dbName) )
+                conn = dbJDBCConnections.get(dbName);
+            else {
+                String msg = "Could not find cached connection for validating " + dbName;
+                System.err.println(msg);
+                return;
+            }
+
+            for (String dsName : datasets.getDatasetNames())
+            {
+                Dataset ds = datasets.getDataset(dsName);
+                boolean datasetValid = true;
+                for (String relName : ds.getRelationNames())
+                {
+                    String dbRel = getDatabaseRelation(dsName, relName); 
+                    datasetValid = datasetValid && validateTable(dbName, dbRel);
+                    if ( !datasetValid ) {
+                        System.out.println("Invalid dataset rel " +
+                            dsName + " " + relName + " " + dbRel);
+                        break;
+                    }
+                }
+                
+                System.out.println("Database " + dbName + " dataset: " +
+                    dsName + " " + (datasetValid? "valid" : "invalid"));
+
+                if ( !datasetValid ) {
+                    System.out.print(
+                        "Creating dataset " + dsName + " in " + dbName + " ... ");
+                    createDatabaseDataset(conn, dbName, dsName, ds);
+                    System.out.print("done.");
+                }
+            }
+        }
+        else {
+            System.err.println("Missing datasets to validate against " + dbName);
+        }
+    }
+
+    boolean startupDatabase(String dbName)
+    {
+        boolean r = false;
+        if ( dbName.equals(dbNames[1]) ) {
+            r = startupPostgreSQL();
+        }
+        else if ( dbName.equals(dbNames[2]) ) {
+            r = startupHsqlDB();
+        }
+        else if ( dbName.equals(dbNames[3]) ) {
+            System.err.println("DBMS1 not yet implemented.");
+        }
+        else if ( dbName.equals(dbNames[4]) ) {
+            System.err.println("SPE1 not yet implemented.");
+        }
+       
+        System.out.print("Validating database " + dbName + " ... ");
+        validateDatabase(dbName);
+        System.out.println("done.");
+        
+        return r;
+    }
+    
+    boolean setupDatabaseTriggers(String dbName, String query)
+    {
+        boolean r = false;
+        if ( dbName.equals(dbNames[1]) ) {
+            r = setupPostgreSQLTriggers(query);
+        }
+        else if ( dbName.equals(dbNames[2]) ) {
+            r = setupHsqldbTriggers(query);
+        }
+        else if ( dbName.equals(dbNames[3]) ) {
+            System.err.println("DBMS1 not yet implemented.");
+        }
+        else if ( dbName.equals(dbNames[4]) ) {
+            System.err.println("SPE1 not yet implemented.");
+        }
+        
+        return r;
+    }
+    
+    void runDatabase(String dbName, String query, TimeSeries profilerSamples)
+    {
+        if ( dbJDBCConnections.containsKey(dbName) )
+            runJDBCQuery(dbName, query, profilerSamples);
+        else {
+            System.err.println("Cannot query " + dbName + ", no connection found.");
+        }
+    }
+    
+    void shutdownDatabase(String dbName)
+    {
+        if ( dbName.equals(dbNames[1]) ) {
+            shutdownPostgreSQL();
+        }
+        else if ( dbName.equals(dbNames[2]) ) {
+            shutdownHsqlDB();
+        }
+        else if ( dbName.equals(dbNames[3]) ) {
+            System.err.println("DBMS1 not yet implemented.");
+        }
+        else if ( dbName.equals(dbNames[4]) ) {
+            System.err.println("SPE1 not yet implemented.");
+        }
+    }
+
+    String runSnapshotQueries(String databaseName, String queryText,
+        LinkedList<LinkedHashMap<String, String>> queryRelations,
+        boolean triggerQuery, final TimeSeries profilerSamples, long tupleLimit)
+    {
+        String status = null;
+
+        System.out.println("Running iterated snapshot query for " +
+            databaseName + " query: '" + queryText + "'");
+        
+        for (LinkedHashMap<String, String> qr : queryRelations) {
+            for (Map.Entry<String, String> r : qr.entrySet())
+                System.out.println(
+                    "Dataset relation: " + r.getKey() + " " + r.getValue());
+        }
+        
+        System.out.print("Creating multiplexer... ");
+
+        FileMultiplexer sources = new FileMultiplexer(queryRelations.getFirst());
+
+        System.out.println("done.");
+
+        System.out.print("Starting database " + databaseName + " ... ");
+
+        if ( !startupDatabase(databaseName) ) {
+            System.out.println("Failed to start database " + databaseName);
+            status = "Failed to start " + databaseName;
+            return status;
+        }
+
+        System.out.print("done.");
+        
+        long triggerStart = System.currentTimeMillis();
+        if ( triggerQuery ) {
+            
+            System.out.print("Setting up triggers ... ");
+
+            if ( !setupDatabaseTriggers(databaseName, queryText) ) {
+                status = "Failed to load triggers on " + databaseName;
+                System.out.println(status);
+                return status;
+            }
+            
+            System.out.print("done.");
+        }
+
+        long chunkSize = 50;
+        long total = 0;
+        long limit = tupleLimit > 0? tupleLimit : Long.MAX_VALUE;
+        
+        System.out.println("Starting chunk loop, limit: " + limit +
+            ", chunk size " + chunkSize);
+        
+        while ( sources.hasData() && total < limit )
+        {
+            
+            System.out.print("Loading database, total before " + total + " ... ");
+            sources.loadDatabase(databaseName, chunkSize);
+            total += chunkSize;
+            
+            System.out.println(" done, new total: " + total);
+
+            if ( !triggerQuery ) {
+                System.out.print("Running database " + databaseName + " on chunk ... ");
+                runDatabase(databaseName, queryText, profilerSamples);
+                System.out.println(" done.");
+            }
+            else {
+                long triggerEnd = System.currentTimeMillis();
+                final long span = triggerEnd - triggerStart;
+                
+                System.out.println("Time triggers, span: " + span);
+                
+                final Calendar currentCal = Calendar.getInstance();
+                Display.getDefault().asyncExec(new Runnable() {
+                    public void run() {
+                        profilerSamples.add(new Millisecond(currentCal.getTime()), span);
+                    }
+                });
+
+                triggerStart = triggerEnd;
+            }
+            
+            System.out.println("Next loop test: " + sources.hasData() +
+                ", total " + total + " limit " + limit +
+                " continue: " + (total < limit));
+        }
+
+        System.out.print("Shutting down database " + databaseName + " ... ");
+        shutdownDatabase(databaseName);
+        System.out.println(" done.");
+        
+        return null;
+    }
+
     private String post_username = "postgres";
-    private String post_path = "/Library/PostgreSQL/8.4/";
+    private String post_path = "/Users/yanif/software/postgres/";
     private String post_server = "localhost";
     private String post_port = "5432";
     private String post_dbname = "postgres";
@@ -455,32 +1014,47 @@ public class Executor
         }
     }
     
-    int startupPostgreSQL()
+    boolean startupPostgreSQL()
     {
     	int exitVal = 0;
     	try {
     		Runtime rt = Runtime.getRuntime();
     		String str[] = {//"sudo", "-u", "postgres" /*userid*/, 
-    				post_path + "bin/pg_ctl", "start", "-w", "-D", post_path + "data"};
+				post_path + "bin/pg_ctl", "start", "-w",
+				    "-D", post_path + "data", "-l", "postgres.log"};
     	
     		Process pr = rt.exec(str);
-                		
-    		exitVal = pr.waitFor();
-    		if (exitVal != 0) {
-    			System.err.println("Could not start up postgres " + exitVal);
-    		}
-    		else {
-    			System.out.println("Server is up");
-    		}
+    		exitVal = logAndWaitForProcess(pr);
     		
+    		if ( exitVal != 0 ) {
+    		    System.err.println("Could not start postgres.");
+    		}
+    		else
+    		{
+    	        // Cache a connection
+    	        try {
+    	            String dbUrl = POSTGRES_URL;
+    	            String user = post_username;
+    	            String passwd = post_passwd;
+    	            
+    	            System.out.print("Caching connection for " +
+    	                dbNames[1] + " url: " + dbUrl + " user: " + user +
+    	                " pass: " + passwd + " ... ");
+
+    	            Connection conn = DriverManager.getConnection(dbUrl, user, passwd);
+    	            dbJDBCConnections.put(dbNames[1], conn);
+    	            
+    	            System.out.println(" done.");
+    	        } catch (SQLException e) { e.printStackTrace(); }
+    		}
     	} catch (Exception e) {
     		System.err.println(e.toString());
     		e.printStackTrace();
     	}
-    	return exitVal;
+    	return exitVal == 0;
     }
     
-    int shutdownPostgreSQL()
+    boolean shutdownPostgreSQL()
     {
     	int exitVal = 0;
     	try {
@@ -490,7 +1064,8 @@ public class Executor
     				"stop", "-D", post_path + "data", "-m", "fast"};
     		Process pr = rt.exec(str);
     		
-    		exitVal = pr.waitFor();
+    		exitVal = logAndWaitForProcess(pr);
+
     		if (exitVal != 0) {
     			System.err.println("Could not shut down postgres");	
     		}
@@ -498,44 +1073,39 @@ public class Executor
     		System.err.println(e.toString());
     		e.printStackTrace();
     	}
-    	return exitVal;
+
+    	return (exitVal == 0);
     }
 
-    int postgreLoad(int num)
+    long loadPostgreSQL(BufferedReader br, String relation, long num)
     {
-    	Vector<String> buf = new Vector<String> (num);
-    	int line = 0;
-    	String tmp = "";
-    	
-    	try {
-    		for (int i =0;i < num;i ++) {
-    			tmp = br.readLine();
-    			
-    			if(tmp == null) 
-    				break;
-    			buf.add(tmp);
-        		line ++;
-    		}
-    	} catch (IOException e) {
-    		System.err.println("IO exception");
-    		e.printStackTrace();
-    	}
+        LinkedList<String> buf = bufferLines(br, num);
+    	long line = buf.size();
     	
     	if (line != 0) {
     		try {
     			Runtime rt = Runtime.getRuntime();
-    			String str[] = {"/Library/PostgreSQL/8.4/bin/psql", "-h", post_server, "-p", post_port, "-U", post_username, 
-    					"-c", "copy test from stdin with csv", post_dbname};
+    			String str[] = {
+    			    "/Users/yanif/software/postgres/bin/psql",
+    			    "-h", post_server, "-p", post_port, "-U", post_username, 
+    					"-c", "copy " + relation + " from stdin with csv", post_dbname};
     			
+    			System.out.print("Execing " + dbNames[1] + " copy ... ");
     			Process pr = rt.exec(str);
+    			System.out.println("done.");
     			
-    			BufferedWriter output = new BufferedWriter(new OutputStreamWriter(pr.getOutputStream()));
+    			System.out.print("Writing lines to stdin ... ");
+    			BufferedWriter output =
+    			    new BufferedWriter(new OutputStreamWriter(pr.getOutputStream()));
     			
-    			for (int i =0; i < line; i ++) {
-    				output.write(buf.get(i)+"\n");
+    			for (String s : buf) {
+    				output.write(s+"\n");
     			}
     			output.write("\\.\n");
     			output.flush();
+    			
+                System.out.println("done.");
+    			
     			int exitVal = pr.waitFor();
     			if(exitVal != 0) {
     				System.err.println("Error - loading postgres");
@@ -549,140 +1119,181 @@ public class Executor
     	return line;
     }
 
-    void runPostgreSQL(String sqlOrTriggerQuery, boolean triggerScript,
-            final TimeSeries profilerSamples)
+    boolean setupPostgreSQLTriggers(String triggerQuery)
     {
-    	final Calendar currentCal = Calendar.getInstance();
-    	
-    	System.out.println("File init");
-    	if(initFile("/Users/mavkisuh/homework/DBToaster/dbtoaster/experiments/vwap/data/20081201.csv") != 0) {
-    		return;
-    	}
-    	
-    	System.out.println("start up postgre");
-    	if(startupPostgreSQL() != 0) {
-    		return;
-    	}
-    	
-    	int howmany = 50;
-    	int total = 0;
-    	int thres_total = 5000;
-    	while (postgreLoad(howmany) == howmany && (total += howmany) <= thres_total) {
-    		System.out.println("loading " + howmany + " chunks");
-    		try {
-	    		Thread.sleep(1000);
-	    		Display.getDefault().asyncExec(new Runnable() {
-					public void run() {
-						profilerSamples.add(new Millisecond(currentCal.getTime()), 1);
-					}
-			});
-    		} catch (Exception e) {
-    			e.printStackTrace();
-    		}
-    		
-    		if ( triggerScript )
-                runPGTriggers(sqlOrTriggerQuery);
-            else
-                runPGQuery(sqlOrTriggerQuery, profilerSamples);
-    		
-    	}
-    	
-        shutdownPostgreSQL();
+        return runJDBCStatement(dbNames[1], triggerQuery);
     }
-    
-    void runPGQuery(String sqlQuery, TimeSeries profilerSamples)
-    {
-        runJDBCQuery(POSTGRES_URL, post_username, post_passwd, sqlQuery, profilerSamples);
-    }
-    
-    void runPGTriggers(String triggerScript)
-    {
-        
-    }
-    
+
     private String hsql_libpath = "/Users/yanif/software/hsqldb/lib/";
     private String hsql_dbname = "db0/db0";
     private String hsql_username = "sa";
     private String hsql_server = "localhost";    
     
-    void startupHsqlDB()
+    void initHsqlDB()
     {
+        // Set up JDBC driver. 
+        System.out.println("initHsqlDB");
+        try {
+            Class.forName(HSQLDB_JDBC_DRIVER);
+        } catch (ClassNotFoundException e) {
+            System.err.println("Could not find HSQLDB JDBC driver!");
+            e.printStackTrace();
+        }
+    }
+    
+    boolean startupHsqlDB()
+    {
+        int exitVal = -1;
     	try {
     		String str[] = {"java", "org.hsqldb.Server", "-address", hsql_server,
     				"-database.0", "file:" + hsql_dbname, "-dbname.0"};
     		Runtime rt = Runtime.getRuntime();
-    		rt.exec(str);
-    		
+    		Process pr = rt.exec(str);
+    		exitVal = logAndWaitForProcess(pr);
+    		if ( exitVal == 0 )
+    		{
+    	        // Cache a connection
+    	        try {
+    	            String dbUrl = HSQLDB_URL;
+    	            String user = hsql_username;
+    	            String passwd = "";
+    	            
+                    System.out.print("Caching connection for " +
+                        dbNames[2] + " url: " + dbUrl + " user: " + user +
+                        " pass: " + passwd + " ... ");
+
+    	            Connection conn = DriverManager.getConnection(dbUrl, user, passwd);
+    	            dbJDBCConnections.put(dbNames[2], conn);
+    	            
+                    System.out.println(" done.");
+    	        } catch (SQLException e) { e.printStackTrace(); }
+    		}
+    		else {
+    		    System.err.println("Failed to start HsqlDB.");
+    		}
     	} catch (Exception e) {
     		System.out.println(e.toString());
     		e.printStackTrace();
     	}
+    	
+    	return (exitVal == 0);
     }
     
-    void shutdownHsqlDB() 
+    boolean shutdownHsqlDB() 
     {
+        int exitVal = -1;
     	try {
-    		String str[] = { "java", "-jar", hsql_libpath + "hsqldb.jar",
+    		String str[] = {
+    		    "java", "-jar", hsql_libpath + "hsqldb.jar",
     				"--sql", "shutdown;", hsql_server + "-" + hsql_username};
     		Runtime rt = Runtime.getRuntime();
-    		rt.exec(str);
+    		Process pr = rt.exec(str);
+    		
+    		exitVal = logAndWaitForProcess(pr);
+    		if ( exitVal != 0 ) {
+    		    System.err.println("Could not shut down HSQLDB.");
+    		}
     	} catch (Exception e) {
     		System.out.println(e.toString());
     		e.printStackTrace();
     	}
+    	
+    	return (exitVal == 0);
     }
     
-    void runHsqlDB(String sqlQuery, TimeSeries profilerSamples)
+    long loadHsqlDB(Connection conn, BufferedReader br, String relationName, long num)
     {
-    	startupHsqlDB();
-  //      runJDBCQuery(HSQLDB_URL, sqlQuery, profilerSamples);
-        shutdownHsqlDB();
+        System.out.print("Buffering lines ...");
+        LinkedList<String> buf = bufferLines(br, num);
+        System.out.println("done, found " + buf.size() + " lines.");
+        
+        long line = buf.size();
+        if ( line != 0 ) {
+            long counter = 0;
+            try {
+                Statement stmt = conn.createStatement();
+                for (String valStr : buf)
+                {
+                    String insertStmt =
+                        "insert into " + relationName + " values(" + valStr + ")";
+                    stmt.executeUpdate(insertStmt);
+                    ++counter;
+                }
+            } catch (Exception e) {
+                String msg = "Failed insert on line " + counter;
+                System.err.println(msg);
+                e.printStackTrace();
+            }
+        }
+        
+        return line;
     }
     
-    void runOracle() {}
+    boolean setupHsqldbTriggers(String triggerQuery)
+    {
+        return runJDBCStatement(dbNames[2], triggerQuery);
+    }
+
+    /*
+    private String oracle_libpath = "";
+    private String oracle_dbname = "";
+    private String oracle_username = "";
+    private String oracle_server = "";
+
+    void initOracle() {}
     
+    boolean startupOracle() {}
+    
+    boolean shutdownOracle() {}
+    
+    long loadOracle(Connection conn, BufferReader br, String relationName, long num)
+    {
+        
+    }
+    
+    boolean setupOracleTriggers(String triggerQuery)
+    {
+        
+    }
+    */
+
     void runSPE() {}
     
-    public void runComparison( final Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
-    		Integer[] numdatabases, final String[] dbNames)
+    public void runComparison(
+        final Query q, LinkedHashMap<String, DBPerfPanel> dbPanels, 
+		Integer[] numdatabases, String[] dbNames)
     {
     	for (int i = 0 ; i < numdatabases.length; i ++)
     	{
+    	    final String dbName = dbNames[i];
+
     		if(numdatabases[i] == 1)
     		{
     			DBPerfPanel panel = dbPanels.get(dbNames[i]);
     			ChartComposite chart = panel.getCpuChart();
     			final TimeSeries ts = panel.getCpuTimeSeries();
-    			//String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+
     			System.out.println("Profiling "+q.getQueryName() + " with "+ dbNames[i]);
     			
     			if(dbNames[i].equals("DBToaster")) {
     				System.out.println("Starting");
     				q.runQuery(20000, ts, chart);
     			}
-    			else if(dbNames[i].equals("Postgres")) {
+    			else if( dbNames[i].equals("Postgres") ||
+    			            dbNames[i].equals("HSQLDB") )
+    			{
     				Thread th = new Thread (new Runnable() {
     					public void run() {
-    						System.out.println("Running Postgres");
-    						runPostgreSQL(q.getQuery(), false, ts);
-    					/*	final Random r = new Random();
-    						while(true) {
-    							try {Thread.sleep(1000);} catch (Exception e) {}
-    							Display.getDefault().asyncExec(new Runnable() {
-    								public void run() {
-    									ts.add(new Minute(r.nextInt(), 12, 8, 8, 2009), 10+r.nextInt());
-    								}
-    							});
-    						} */
+    						System.out.println("Running " + dbName);
+    						runSnapshotQueries(
+    						    dbName, q.getQuery(), q.getQueryRelations(), false, ts, 0);
     					}
     				});
     				th.start();
-    			}
-    			else if(dbNames[i].equals("HSQLDB")) {
-    				
     			}
     		}
     	}
         
     }
+
 }

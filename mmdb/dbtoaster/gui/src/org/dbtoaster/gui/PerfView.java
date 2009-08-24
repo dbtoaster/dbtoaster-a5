@@ -92,7 +92,7 @@ public class PerfView extends ViewPart
             final int numdatabases, final String[] dbNames)
         {
         	final Integer[] databases = new Integer[numdatabases];
-        	for (Integer i : databases) {
+        	for (int i = 0; i < numdatabases; ++i) {
         		databases[i] = 0;
         	}
             // Add check boxes per database.

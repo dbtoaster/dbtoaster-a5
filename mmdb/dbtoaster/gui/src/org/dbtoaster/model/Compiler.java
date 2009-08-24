@@ -332,7 +332,8 @@ public class Compiler
     // Note: tmlFile, outputFile are absolute paths on the local filesystem.
     public String toastQuery(String sqlQuery,
             String tmlFile, String sourceConfigFile, String outputFile,
-            int compileMode, String compilationDir, String compilerLogFile)
+            int compileMode, String compilationDir, String compilerLogFile,
+            LinkedList<LinkedHashMap<String, String>> queryRelations)
     {
         String returnStatus = null;
 
@@ -341,7 +342,6 @@ public class Compiler
             String allQueries = "";
             String allSourceConfigs = "";
 
-            int i = 0;
             String[] queries = sqlQuery.split(";");
             for (String q : queries)
             {
@@ -374,6 +374,8 @@ public class Compiler
                     System.out.println("Creating source config...");
                     String sourceConfig = sourceConfigWriter.getSourceConfiguration(
                         tmlWriter.getRelationsUsedFromParsing());
+                    
+                    queryRelations.add(tmlWriter.getRelationsUsedFromParsing());
                     
                     allQueries += queryTml;
                     allSourceConfigs += sourceConfig; 

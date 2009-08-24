@@ -36,9 +36,9 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-    final static String defaultLocation = "/Users/mavkisuh/gui/dbtoaster";
+    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
     final static String defaultPathCon = 
-    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
+    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
     
     final Map<String, String> path_map;
  
@@ -429,12 +429,18 @@ public class DBToasterWorkspace
         String compilerLogFile =
             queryFolder.getLocation().append("compile.log").toOSString();
         
+        LinkedList<LinkedHashMap<String, String>> queryRelations =
+            new LinkedList<LinkedHashMap<String,String>>();
+
         String status = dbToaster.toastQuery(querySQL, absTmlPath.toOSString(),
                 absSConfigPath.toOSString(), absOutputPath.toOSString(),
-                compileMode, compilerWorkingDir, compilerLogFile);
+                compileMode, compilerWorkingDir, compilerLogFile,
+                queryRelations);
 
         if (status == null)
         {
+            q.setQueryRelations(queryRelations);
+
             try
             {
                 // Sync presence of new files in workspace.
@@ -513,7 +519,7 @@ public class DBToasterWorkspace
                 {
                     // Set up query executor
                     if ( engineBinFile.exists() )
-                        q.setExecutor(enginePath.toOSString());
+                        q.setExecutor(enginePath.toOSString(), datasets);
                     else {
                         status = "Could not find engine binary " +
                             engineBinFile.getLocation().toOSString();
