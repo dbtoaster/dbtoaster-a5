@@ -1794,9 +1794,16 @@ let is_bound_expr expr ext_bindings =
  *) 
 let rename_attributes m_expr =
     let base_relation_ht = Hashtbl.create 10 in
-    let rename_fields f counter =
-        let counter_str = string_of_int counter in
-            List.map (fun (id,ty) -> (id^counter_str, ty)) f
+    let attributes_ht = Hashtbl.create 100 in
+    let rename_fields f=
+        List.map ( fun (id, ty) -> 
+            if Hashtbl.mem attributes_ht id then
+                let new_counter = (Hashtbl.find attributes_ht id) + 1 in
+                    Hashtbl.replace attributes_ht id new_counter;
+                    (id^(string_of_int new_counter), ty)
+            else 
+                (Hashtbl.add attributes_ht id 0;
+                (id^(string_of_int 0), ty))) f 
     in
     let rec rename_expression e replacements =
         let rename_binary l r fn =
@@ -1807,11 +1814,28 @@ let rename_attributes m_expr =
             match e with
                 | `ETerm(`Attribute(x)) ->
                       let f = field_of_attribute_identifier x in
+                      begin
+                          match x with  
+                              | `Qualified(rname, _) -> 
+                                    if List.mem_assoc (rname,f) replacements then
+                                        (`ETerm(`Attribute(
+                                            `Unqualified(List.assoc (rname,f) replacements))),
+                                        replacements)
+                                    else (e, replacements)
+                              | _ -> 
+                                    let l = List.filter 
+                                        ( fun ((rname, f1), f2) -> f1 = f) replacements in
+                                    if List.length l != 0 then
+                                        let (rname, f1), f2 = List.hd l in
+                                            (`ETerm(`Attribute( `Unqualified(f2))), replacements)
+                                    else (e, replacements)
+                      end
+                      (*let f = field_of_attribute_identifier x in
                           if List.mem_assoc f replacements then
                               (`ETerm(`Attribute(
                                   `Unqualified(List.assoc f replacements))),
                               replacements)
-                          else (e, replacements)
+                          else (e, replacements)*)
 
                 | `ETerm(_) -> (e, replacements)
                 | `UnaryMinus e -> let (ne, nr) = rename_expression e replacements in
@@ -1874,12 +1898,22 @@ let rename_attributes m_expr =
             match e with
                 | `METerm(`Attribute(x)) ->
                       let f = field_of_attribute_identifier x in
-                          if List.mem_assoc f replacements then
-                              (`METerm(`Attribute(
-                                  `Unqualified(List.assoc f replacements))),
-                              replacements)
-                          else (e, replacements)
-
+                      begin
+                          match x with  
+                              | `Qualified(rname, _) -> 
+                                    if List.mem_assoc (rname,f) replacements then
+                                        (`METerm(`Attribute(
+                                            `Unqualified(List.assoc (rname,f) replacements))),
+                                        replacements)
+                                    else (e, replacements)
+                              | _ ->
+                                    let l = List.filter 
+                                        ( fun ((rname, f1), f2) -> f1 = f) replacements in
+                                    if List.length l != 0 then
+                                        let (rname, f1), f2 = List.hd l in
+                                            (`METerm(`Attribute( `Unqualified(f2))), replacements)
+                                    else (e, replacements)
+                      end
                 | `METerm _ -> (e, replacements)
                 | `Sum (l,r) -> rename_binary l r (fun x y -> `Sum(x,y))
                 | `Minus (l,r) -> rename_binary l r (fun x y -> `Minus(x,y))
@@ -1897,10 +1931,13 @@ let rename_attributes m_expr =
                 | `Insert _ | `Update _ | `Delete _ -> raise InvalidExpression
 
     and rename_plan p replacements =
-        let override_replacements old_fields new_fields =
-            let local_replacements = List.combine
-                (let (fnames,_) = List.split old_fields in fnames)
-                (let (nfnames,_) = List.split new_fields in nfnames)
+        let override_replacements rname old_fields new_fields =
+            let local_replacements = 
+                List.combine
+                    (List.map 
+                        (fun x -> (rname, x))
+                            (let (fnames,_) = List.split old_fields in fnames))
+                    (let (nfnames,_) = List.split new_fields in nfnames)
             in
             let filtered_replacements =
                 List.filter
@@ -1915,14 +1952,14 @@ let rename_attributes m_expr =
                       if Hashtbl.mem base_relation_ht n then
                           let new_counter = (Hashtbl.find base_relation_ht n) + 1 in
                               Hashtbl.replace base_relation_ht n new_counter;
-                              let new_f = rename_fields f new_counter in
-                              let new_replacements = override_replacements f new_f in
+                              let new_f = rename_fields f in
+                              let new_replacements = override_replacements n f new_f in
                                   (`Relation (n, new_f), new_replacements)
                       else
                           begin
                               Hashtbl.add base_relation_ht n 0;
-                              let new_f = rename_fields f 0 in
-                              let new_replacements = override_replacements f new_f in
+                              let new_f = rename_fields f in
+                              let new_replacements = override_replacements n f new_f in
                                   (`Relation (n, new_f), new_replacements)
                           end
 
@@ -3193,13 +3230,14 @@ let indented_string_of_code_expression c_expr =
 (* type computation rules *)
 exception InvalidTypeOperation
 
-type r_type = [ `Int | `Long | `Float | `String | `Unknown]
+type r_type = [ `Int | `Long | `Float | `Double | `String | `Unknown]
 
 let string_of_type t = 
     match t with 
 	| `Int -> "int"
 	| `Long -> "long"
 	| `Float -> "float"
+	| `Double -> "double"
 	| `String -> "string"
         | `Unknown -> "unknown"
 
@@ -3214,6 +3252,9 @@ let type_op_rule l r =
 	| (`Int, `Long) | (`Long, `Int) | (`Long, `Long) -> `Long
 	| (`Int, `Float) | (`Float, `Int) | (`Long, `Float) 
         | (`Float, `Long) | (`Float, `Float) -> `Float
+        | (`Int, `Double) | (`Double, `Int) | (`Long, `Double)
+        | (`Double, `Long) | (`Float, `Double) | (`Double, `Float)
+        | (`Double, `Double) -> `Double
         | (`String, `String) -> `String
 	| (_, _) -> 
 	    (print_endline ("Type operation between "^(string_of_type l)^" and "^(string_of_type r));
@@ -3227,15 +3268,18 @@ let string_to_type s =
 	| "int" -> `Int
 	| "long" -> `Long
 	| "float" -> `Float
+        | "double" -> `Double
 	| "string" -> `String
         | "unknown" -> `Unknown
-	| _ -> raise InvalidTypeOperation
+	| _ -> print_endline ("Invalid type "^s);
+              raise InvalidTypeOperation
 
 let type_to_string t = 
     match t with
 	| `Int -> "int"
 	| `Long -> "long"
 	| `Float -> "float"
+	| `Double -> "double"
 	| `String -> "string"
         | `Unknown -> "unknown" 
 
@@ -3397,7 +3441,9 @@ let generate_type_list m_expr_l base_rels events =
 let search_type_list vname type_list =
     if List.mem_assoc vname type_list then
         string_to_type (List.assoc vname type_list)
-    else raise InvalidTypeOperation
+    else 
+        (print_endline (vname^" is not on type_list");
+        raise InvalidTypeOperation)
 
 (* try to find type from declaration list first *)
 let search_decls_type_list vname type_list decls =
@@ -3466,7 +3512,7 @@ let type_inf_mexpr m_expr type_list decls =
 		let l = tiaux_m_expr m1 in
 		let r = tiaux_m_expr m2 in
 		if l = r then l
-		else raise InvalidTypeOperation
+		else (print_endline "typeop ifthenelse"; raise InvalidTypeOperation)
     in
     let ret_type =  tiaux_m_expr m_expr
     in 

@@ -168,7 +168,8 @@ let build_dependency_graph dependencies nodes edges =
     let add_child_node d nodes =
         match d with
             | `Variable v -> add_node v nodes
-            | `MapAccess (mid, f) -> nodes
+            | `MapAccess (mid, f) -> add_node (string_of_map_key(mid, f)) 
+                  (List.fold_left (fun acc x -> add_node x nodes) nodes f )    (* suspicious*)
             | `Map id -> add_node id nodes
             | `Domain id -> add_node id nodes
     in

@@ -1714,6 +1714,7 @@ let thrift_type_of_base_type t =
     match t with
         | "int" -> "i32"
         | "float" -> "double"
+        | "double" -> "double"
         | "long" -> "i64"
         | "string" -> "string"
         | _ -> raise (CodegenException ("Unsupported base type "^t))
