@@ -167,25 +167,14 @@ namespace DBToaster
             }
         };
 
-        struct TpchTupleAdaptor
-        {
-            TpchTupleAdaptor() {}
-            void operator()(DBToasterTuple& a, boost::any& b)
-            {
-                a.type = insertTuple;
-                a.data = b;
-            }
-        };
-
-        struct LinearRoadTupleAdaptor
-        {
-            LinearRoadTupleAdaptor() {}
-            void operator()(DBToasterTuple& a, boost::any& b)
-            {
-                a.type = insertTuple;
-                a.data = b;
-            }
-        };
+        typedef InsertTupleAdaptor<lineitem> LineitemTupleAdaptor;
+        typedef InsertTupleAdaptor<order> OrderTupleAdaptor;
+        typedef InsertTupleAdaptor<part> PartTupleAdaptor;
+        typedef InsertTupleAdaptor<customer> CustomerTupleAdaptor;
+        typedef InsertTupleAdaptor<supplier> SupplierTupleAdaptor;
+        typedef InsertTupleAdaptor<nation> NationTupleAdaptor;
+        typedef InsertTupleAdaptor<region> RegionTupleAdaptor;
+        typedef InsertTupleAdaptor<LinearRoadTuple> LinearRoadTupleAdaptor;
     };
 };
     
