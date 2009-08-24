@@ -1,5 +1,6 @@
 package org.dbtoaster.gui;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -100,9 +101,12 @@ public class PerfView extends ViewPart
             final int numdatabases, final String[] dbNames)
         {
         	final Integer[] databases = new Integer[numdatabases];
-        	for (int i = 0; i < numdatabases; ++i) {
+        	for (int i = 1; i < numdatabases; ++i) {
         		databases[i] = 0;
         	}
+        	databases[0] = 1;
+        	final ArrayList<Button> selectableDBInterfaces = new ArrayList<Button>();
+        	
             // Add check boxes per database.
             for (Map.Entry<String, DBPerfPanel> e : dbPanels.entrySet())
             {
@@ -110,6 +114,12 @@ public class PerfView extends ViewPart
                 final Control perfPanel = e.getValue();
                 chooseDB.setText(e.getKey());
                 chooseDB.setSelection(false);
+                if(e.getKey().equals("DBToaster")){ 
+                	chooseDB.setEnabled(false);
+                	chooseDB.setSelection(true);
+                } else {
+                	selectableDBInterfaces.add(chooseDB);
+                }
                 GridData chooseData = new GridData(SWT.FILL, SWT.FILL, false, false);
                 chooseDB.setLayoutData(chooseData);
                 
@@ -146,6 +156,13 @@ public class PerfView extends ViewPart
             SelectionAdapter runListener = new SelectionAdapter() {
             	public void widgetSelected(SelectionEvent e)
             	{
+            		if (eqTree.getSelectionCount() != 1){
+            			if(eqTree.getItemCount() > 0){
+            				eqTree.select(eqTree.getItem(eqTree.getItemCount()-1));
+            			} else {
+            				perfStatus.setText("Unable to run performance test: No compiled queries available for use");
+            			}
+            		}
             		if (eqTree.getSelectionCount() == 1)
             		{
             			for (TreeItem i: eqTree.getSelection()) {
@@ -167,6 +184,9 @@ public class PerfView extends ViewPart
 
                             runButton.setEnabled(false);
                             stopButton.setEnabled(true);
+                            for(Button b : selectableDBInterfaces){
+                            	b.setEnabled(false);
+                            }
             			}
             		}
             	}
@@ -183,6 +203,9 @@ public class PerfView extends ViewPart
                             currentRunningQuery.getQueryName());
                         stopButton.setEnabled(false);
                         runButton.setEnabled(true);
+                        for(Button b : selectableDBInterfaces){
+                        	b.setEnabled(true);
+                        }
                     }
                 }
             };
@@ -230,7 +253,7 @@ public class PerfView extends ViewPart
         dbcomp.setLayout(dbcLayout);
 
         Label yCpuLabel = new Label(dbcomp, SWT.VERTICAL);
-        yCpuLabel.setText("ms/Tuple");
+        yCpuLabel.setText("m\ns\n\n/\n\nt\nu\np\nl\ne");
         GridData yCpuData = new GridData(SWT.FILL, SWT.CENTER, false, true);
         yCpuData.horizontalSpan = 1;
         yCpuData.verticalSpan = numDatabases;
