@@ -1,0 +1,2 @@
+select sum(lineitem.quantity) from order, lineitem 
+where lineitem.orderkey = order.orderkey
