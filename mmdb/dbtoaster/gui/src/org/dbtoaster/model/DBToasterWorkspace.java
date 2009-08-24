@@ -79,6 +79,8 @@ public class DBToasterWorkspace
 
     private DBToasterWorkspace()
     {
+        System.err.println("Invoking workspace constructor.");
+        
         queryCounter = new AtomicLong();
 
         rcpWorkspace = ResourcesPlugin.getWorkspace();
@@ -111,8 +113,6 @@ public class DBToasterWorkspace
         dbToaster = new Compiler(datasets, this);
 
         loadWorkspace();
-        
-        
     }
     
     private Map<String, String> loadPath(String filename)
@@ -177,8 +177,13 @@ public class DBToasterWorkspace
     {
         try
         {
+            System.err.println("Project members size " + dbToasterProject.members().length);
+
             for (IResource r : dbToasterProject.members())
             {
+
+                System.err.println("Testing project member " + r.getName());
+
                 if (r.getType() == IResource.FOLDER)
                 {
                     // Load query from this path.
@@ -186,11 +191,13 @@ public class DBToasterWorkspace
                     String queryName = folder.getName();
                     IPath sqlFilePath = new Path(QUERY_FILE_NAME);
 
+                    System.err.println("Loading queries from project path " + queryName);
+
                     if (folder.exists(sqlFilePath))
                     {
                         IFile sqlFile = folder.getFile(sqlFilePath);
                         Query q = new Query(queryName, folder, sqlFile);
-                        q.load();
+                        q.load(datasets);
                         wsQueries.put(queryName, q);
 
                         if (queryName.startsWith(QUERY_NAME_PREFIX))

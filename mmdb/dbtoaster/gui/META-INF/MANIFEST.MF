@@ -9,13 +9,12 @@ Require-Bundle: org.eclipse.ui,
  org.eclipse.core.resources;bundle-version="3.5.0",
  org.eclipse.jface.text,
  org.eclipse.ui.editors,
- org.dworks.bbcdt.core;bundle-version="1.0.0",
- org.dworks.bbcdt.ui;bundle-version="1.0.0",
- org.eclipse.datatools.sqltools.parsers.sql.query;bundle-version="1.0.1",
- org.swtchart;bundle-version="0.5.0"
+ org.eclipse.datatools.sqltools.parsers.sql.query;bundle-version="1.0.1"
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-1.6
 Bundle-ClassPath: .,
+ lib/prefuse.jar,
+ lib/prefuse.src.jar,
  lib/ant.jar,
  lib/lucene-1.4.3.jar,
  lib/plot.jar,
@@ -24,12 +23,15 @@ Bundle-ClassPath: .,
  lib/jfreechart-1.0.13-swt.jar,
  lib/jfreechart-1.0.13.jar,
  lib/swtgraphics2d.jar,
- lib/prefuse.jar,
- lib/prefuse.src.jar,
  lib/commons-lang-2.4.jar,
  lib/libthrift.jar,
  lib/profiler.jar,
- lib/datasets.jar
+ lib/datasets.jar,
+ lib/log4j-1.2.15.jar,
+ lib/slf4j-api-1.5.8.jar,
+ lib/slf4j-simple-1.5.8.jar,
+ lib/postgresql-8.4-701.jdbc3.jar,
+ lib/hsqldb.jar
 Import-Package: org.eclipse.core.filesystem,
  org.eclipse.ui.ide,
  org.eclipse.ui.part

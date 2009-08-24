@@ -364,7 +364,7 @@ public class DatasetManager
         historicalOrderbook.locations.setDefaultLocations(
             historicalDatasetPath, historicalOrderbookLocations);
 
-        //aDM.addDataset("orderbook", historicalOrderbook);
+        aDM.addDataset("orderbook", historicalOrderbook);
 
         // Live algo execution
         Dataset liveOrderbook = aDM.new Dataset();
@@ -387,7 +387,7 @@ public class DatasetManager
             "datasets",
             "AsksOrderbook");
         
-        aDM.addDataset("lo", liveOrderbook);
+        //aDM.addDataset("lo", liveOrderbook);
 
         // Note: no locations for live orderbook dataset.
 

@@ -293,7 +293,7 @@ public class Executor
     private final static String POSTGRES_SETUP_SCRIPT =
         "/Users/yanif/workspace/dbtoaster-gui/scripts/setup-postgresql.sql";
 
-    private final static String HSQLDB_JDBC_DRIVER = "org.hsql.jdbcDriver";
+    private final static String HSQLDB_JDBC_DRIVER = "org.hsqldb.jdbcDriver";
     private final static String HSQLDB_URL = "";
 
     private final static String HSQLDB_SETUP_SCRIPT =

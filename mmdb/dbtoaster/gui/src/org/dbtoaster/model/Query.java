@@ -58,7 +58,7 @@ public class Query
         queryRelations = null;
     }
 
-    public void load()
+    public void load(DatasetManager datasets)
     {
         // Load TML file.
         Path tmlPath = new Path(DBToasterWorkspace.TML_FILE_NAME);
@@ -140,8 +140,7 @@ public class Query
                         System.out.println("Loading engine binary: "
                                 + enginePath.toOSString());
 
-                        engine = new Executor(enginePath.toOSString(),
-                            DBToasterWorkspace.getWorkspace().getDatasetManager());
+                        engine = new Executor(enginePath.toOSString(), datasets);
                     }
 
                     IPath fullDebugFilePath = fnFullBasePath
