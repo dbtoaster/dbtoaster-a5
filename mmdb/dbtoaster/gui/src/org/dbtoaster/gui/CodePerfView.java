@@ -59,6 +59,9 @@ public class CodePerfView extends ViewPart
         }
 
         plot.setFixedLegendItems(litems);
+        
+        dbtWorkspace.setCategoryPlot(plot);
+        
     }
 
     CategoryDataset buildVwapHandlerDataset()

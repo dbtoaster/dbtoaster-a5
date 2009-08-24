@@ -375,6 +375,11 @@ public class QueryEditor extends ViewPart
         {
             queryText.setText(text);
         }
+        
+        public String getText()
+        {
+        	return queryText.getText();
+        }
 
         public String saveQuery()
         {

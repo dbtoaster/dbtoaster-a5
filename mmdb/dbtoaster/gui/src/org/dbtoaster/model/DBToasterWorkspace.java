@@ -5,6 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Vector;
 import java.util.concurrent.atomic.AtomicLong;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -12,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 
+import org.dbtoaster.io.DBToasterTMLWriter.lastRelationArgs;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -24,6 +26,7 @@ import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.experimental.chart.swt.ChartComposite;
 
@@ -36,11 +39,14 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-//    final static String defaultLocation = "c:/cygwin/home/koch/toasterwork/";
-    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
+//    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
+    final static String defaultLocation = "/Users/mavkisuh/gui/dbtoaster";
+//    final static String defaultPathCon = 
+//    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
     final static String defaultPathCon = 
+    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
 //    	"c:/cygwin/home/koch/drafts/cornell_db_maybms/mmdb/dbtoaster/gui/path_config.txt";
-    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
+//    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
     
     final Map<String, String> path_map;
  
@@ -438,8 +444,8 @@ public class DBToasterWorkspace
         String compilerLogFile =
             queryFolder.getLocation().append("compile.log").toOSString();
         
-        LinkedList<LinkedHashMap<String, String>> queryRelations =
-            new LinkedList<LinkedHashMap<String,String>>();
+        LinkedList<Vector<lastRelationArgs>> queryRelations =
+            new LinkedList<Vector<lastRelationArgs>>();
 
         String status = dbToaster.toastQuery(querySQL, absTmlPath.toOSString(),
                 absSConfigPath.toOSString(), absOutputPath.toOSString(),
@@ -615,5 +621,14 @@ public class DBToasterWorkspace
 
         Query q = wsQueries.get(queryName);
         return q.getDebugger();
+    }
+    
+    private CategoryPlot cplot = null;
+    public void setCategoryPlot(CategoryPlot p) {
+    	cplot = p;
+    }
+    
+    public CategoryPlot getCategoryPlot() {
+    	return cplot;
     }
 }

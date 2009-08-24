@@ -6,6 +6,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.Vector;
+
+import org.dbtoaster.io.DBToasterTMLWriter.lastRelationArgs;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -22,7 +25,7 @@ public class Query
     private String queryName;
     private IFolder queryFolder;
     
-    LinkedList<LinkedHashMap<String, String>> queryRelations;
+    LinkedList<Vector<lastRelationArgs>> queryRelations;
 
     // Parse phase files
     private IFile sqlCode;
@@ -41,7 +44,7 @@ public class Query
     private Debugger debugger;
 
     private Statistics performance;
-
+    
     public Query(String name, IFolder qFolder, IFile sqlFile)
     {
         queryName = name;
@@ -212,13 +215,13 @@ public class Query
 
     public IFolder getQueryFolder() { return queryFolder; }
 
-    public LinkedList<LinkedHashMap<String,String>> getQueryRelations()
+    public LinkedList<Vector<lastRelationArgs>> getQueryRelations()
     {
         return queryRelations;
     }
 
     public void setQueryRelations(
-        LinkedList<LinkedHashMap<String, String>> queryRelations)
+        LinkedList<Vector<lastRelationArgs>> queryRelations)
     {
         this.queryRelations = queryRelations;
     }

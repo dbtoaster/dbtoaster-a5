@@ -44,13 +44,18 @@ import org.jfree.data.time.Millisecond;
 import org.jfree.data.time.Second;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.category.CategoryDataset;
+import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.experimental.chart.swt.ChartComposite;
+import org.jfree.chart.plot.CategoryPlot;
+
 
 import DBToaster.Profiler.Protocol.ProfileLocation;
 import DBToaster.Profiler.Protocol.SampleType;
 import DBToaster.Profiler.Protocol.SampleUnits;
 import DBToaster.Profiler.Protocol.StatisticsProfile;
 import DBToaster.Profiler.Protocol.Profiler.Client;
+import org.dbtoaster.io.DBToasterTMLWriter.lastRelationArgs;
 import java.lang.Thread;
 import java.sql.*;
 
@@ -77,7 +82,13 @@ public class Executor
         ChartComposite chart;
         HashMap<Integer, String> codeLocations;
         LinkedList<Integer> handlerLocations;
-
+        CategoryPlot cplot;
+        
+        /* for chart profiler */
+        Vector <HashMap<Integer, Integer> > c_table;
+        HashMap<Integer, Integer> c_final;
+        int c_total;
+        
         Millisecond currentMs;
         double currentSample;
 
@@ -95,6 +106,10 @@ public class Executor
                 client = new Client(protocol);
                 samples = profilerSamples;
                 chart = profilerChart;
+                cplot = DBToasterWorkspace.getWorkspace().getCategoryPlot();
+                
+                c_table = new Vector<HashMap<Integer, Integer> > ();
+                c_total = 0;
                 
                 // Clear previous run.
                 chart.getDisplay().asyncExec(new Runnable()
@@ -235,13 +250,62 @@ public class Executor
                         //chart.forceRedraw();
                     }
                 });
+                
+                if (c_table.size() >= 10) {
+                	/* remove oldest element */
+                	HashMap<Integer, Integer> tmp = c_table.get(9);
+                	int t_total  = 0;
+                	for (Map.Entry<Integer, Integer> nt : tmp.entrySet()) {
+                		c_final.put(nt.getKey(), c_final.get(nt.getKey()) - nt.getValue());
+                		t_total ++;
+                	}
+                	c_total -= t_total;
+                	c_table.remove(9);
+                	//c_final.put(key, value);
+                }
+
+                HashMap<Integer, Integer> nc_table = new HashMap<Integer, Integer> ();
+              
+                for (Map.Entry<Integer, String> e : codeLocations.entrySet()) {
+                	ProfileLocation loc = new ProfileLocation ("cpu", e.getKey());
+                	
+                	if ( codeProfile.getProfile().containsKey(loc) ) {
+                		nc_table.put(e.getKey(), nc_table.get(e.getKey())+1);
+                		c_total ++;
+                	}
+                	
+                	c_table.add(0, nc_table);
+                }
+                
+                CategoryDataset cd = generateCategoryDataset();
+                
+                cplot.setDataset(cd);
 
             } catch (Exception e) {
                 System.out.println("getStatisticsProfile failed!");
                 e.printStackTrace();
             }
         }
-
+        
+        private CategoryDataset generateCategoryDataset()
+        {
+        	DefaultCategoryDataset r = new DefaultCategoryDataset();
+        	
+        	for (Map.Entry<Integer, Integer> e : c_final.entrySet()) {
+        		String s = codeLocations.get(e.getKey());
+        		if(s.contains("insert")) {
+        			r.addValue( (double) e.getValue()/ c_total, s, "insert");
+        		}
+        		else {
+        			r.addValue( (double) e.getValue()/ c_total, s, "delete");
+        		}
+        	}
+        	
+        	return r;
+        	
+        }
+        
+        
         public void terminate() { terminated = true; }
 
         public void actionPerformed(ActionEvent e)
@@ -480,13 +544,13 @@ public class Executor
             relationNames = new HashMap<BufferedReader, String>();
         }
         
-        FileMultiplexer(LinkedHashMap<String, String> datasetRelations)
+        FileMultiplexer(Vector<lastRelationArgs> datasetRelations)
         {
             filePicker = new Random();
-            for (Map.Entry<String, String> e : datasetRelations.entrySet())
+            for (lastRelationArgs e : datasetRelations)
             {
-                String ds = e.getKey();
-                String rel = e.getValue();
+                String ds = e.getDatasets();
+                String rel = e.getRelName();
                 String loc = datasets.getRelationLocation(ds, rel);
                 if ( loc == null ) {
                     System.err.println(
@@ -902,7 +966,7 @@ public class Executor
     }
 
     String runSnapshotQueries(String databaseName, String queryText,
-        LinkedList<LinkedHashMap<String, String>> queryRelations,
+        LinkedList<Vector<lastRelationArgs>> queryRelations,
         boolean triggerQuery, final TimeSeries profilerSamples, long tupleLimit)
     {
         String status = null;
@@ -910,10 +974,10 @@ public class Executor
         System.out.println("Running iterated snapshot query for " +
             databaseName + " query: '" + queryText + "'");
         
-        for (LinkedHashMap<String, String> qr : queryRelations) {
-            for (Map.Entry<String, String> r : qr.entrySet())
+        for (Vector<lastRelationArgs> qr : queryRelations) {
+            for (lastRelationArgs r : qr)
                 System.out.println(
-                    "Dataset relation: " + r.getKey() + " " + r.getValue());
+                    "Dataset relation: " + r.getDatasets() + " " + r.getRelName());
         }
         
         System.out.print("Creating multiplexer... ");

@@ -13,9 +13,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import org.dbtoaster.io.DBToasterSourceConfigWriter;
 import org.dbtoaster.io.DBToasterTMLWriter;
+import org.dbtoaster.io.DBToasterTMLWriter.lastRelationArgs;
 
 import org.eclipse.datatools.modelbase.sql.query.QuerySelectStatement;
 import org.eclipse.datatools.modelbase.sql.query.QueryStatement;
@@ -333,7 +335,7 @@ public class Compiler
     public String toastQuery(String sqlQuery,
             String tmlFile, String sourceConfigFile, String outputFile,
             int compileMode, String compilationDir, String compilerLogFile,
-            LinkedList<LinkedHashMap<String, String>> queryRelations)
+            LinkedList<Vector<lastRelationArgs>> queryRelations)
     {
         String returnStatus = null;
 

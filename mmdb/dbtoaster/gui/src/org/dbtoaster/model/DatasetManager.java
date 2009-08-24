@@ -338,7 +338,7 @@ public class DatasetManager
         historicalOrderbook.addRelation(
             "file", "bids", bookFieldsAndTypes,
             "DBToaster::DemoDatasets::OrderbookFileStream",
-            "\"20081201.csv\",10000",
+            "\"/Users/mavkisuh/homework/DBToaster/dbtoaster/experiments/vwap/data/20081201.csv\",10000",
             "DBToaster::DemoDatasets::OrderbookTuple",
             "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
             "datasets",
@@ -347,7 +347,7 @@ public class DatasetManager
         historicalOrderbook.addRelation(
             "file", "asks", bookFieldsAndTypes,
             "DBToaster::DemoDatasets::OrderbookFileStream",
-            "\"20081201.csv\",10000",
+            "\"/Users/mavkisuh/homework/DBToaster/dbtoaster/experiments/vwap/data/20081201.csv\",10000",
             "DBToaster::DemoDatasets::OrderbookTuple",
             "DBToaster::DemoDatasets::OrderbookTupleAdaptor", adaptorBindings,
             "datasets",
@@ -492,7 +492,7 @@ public class DatasetManager
         liAdaptorBindings.put("linestatus", "linestatus");
         liAdaptorBindings.put("shipdate", "shipdate");
         liAdaptorBindings.put("commitdate", "commitdate");
-        liAdaptorBindings.put("commitdate", "commitdate");
+        liAdaptorBindings.put("receiptdate", "receiptdate");
         liAdaptorBindings.put("shipinstruct", "shipinstruct");
         liAdaptorBindings.put("shipmode", "shipmode");
         liAdaptorBindings.put("comment", "comment");
@@ -568,7 +568,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "lineitem", liFieldsAndTypes,
             "DBToaster::DemoDatasets::LineitemStream",
-            "\"lineitem.tbl.a\",10000",
+            "\"lineitem.tbl.a\",DBToaster::DemoDatasets::parseLineitemField, 16, 10000, 512",
             "DBToaster::DemoDatasets::lineitem",
             "DBToaster::DemoDatasets::LineitemTupleAdaptor", liAdaptorBindings,
             "datasets",
@@ -577,7 +577,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "order", ordFieldsAndTypes,
             "DBToaster::DemoDatasets::OrderStream",
-            "\"orders.tbl.a\",10000",
+            "\"orders.tbl.a\",DBToaster::DemoDatasets::parseOrderField, 9, 10000, 512",
             "DBToaster::DemoDatasets::order",
             "DBToaster::DemoDatasets::OrderTupleAdaptor", ordAdaptorBindings,
             "datasets",
@@ -586,7 +586,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "part", ptFieldsAndTypes,
             "DBToaster::DemoDatasets::PartStream",
-            "\"part.tbl.a\",10000",
+            "\"part.tbl.a\", DBToaster::DemoDatasets::parsePartField, 9, 10000, 512",
             "DBToaster::DemoDatasets::part",
             "DBToaster::DemoDatasets::PartTupleAdaptor", ptAdaptorBindings,
             "datasets",
@@ -595,7 +595,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "customer", csFieldsAndTypes,
             "DBToaster::DemoDatasets::CustomerStream",
-            "\"customer.tbl.a\",10000",
+            "\"customer.tbl.a\",DBToaster::DemoDatasets::parseCustomerField, 8, 10000, 512",
             "DBToaster::DemoDatasets::customer",
             "DBToaster::DemoDatasets::CustomerTupleAdaptor", csAdaptorBindings,
             "datasets",
@@ -604,7 +604,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "supplier", spFieldsAndTypes,
             "DBToaster::DemoDatasets::SupplierStream",
-            "\"partsupp.tbl.a\",10000",
+            "\"partsupp.tbl.a\",DBToaster::DemoDatasets::parseSupplierField, 7, 10000, 512",
             "DBToaster::DemoDatasets::supplier",
             "DBToaster::DemoDatasets::SupplierTupleAdaptor", spAdaptorBindings,
             "datasets",
@@ -613,7 +613,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "nation", ntFieldsAndTypes,
             "DBToaster::DemoDatasets::NationStream",
-            "\"nation.tbl.a\",10000",
+            "\"nation.tbl.a\",DBToaster::DemoDatasets::parseNationField, 4, 10000, 512",
             "DBToaster::DemoDatasets::nation",
             "DBToaster::DemoDatasets::NationTupleAdaptor", ntAdaptorBindings,
             "datasets",
@@ -622,7 +622,7 @@ public class DatasetManager
         tpchDataset.addRelation(
             "file", "region", rgFieldsAndTypes,
             "DBToaster::DemoDatasets::RegionStream",
-            "\"region.tbl.a\",10000",
+            "\"region.tbl.a\", DBToaster::DemoDatasets::parseRegionField, 3, 10000, 512",
             "DBToaster::DemoDatasets::region",
             "DBToaster::DemoDatasets::RegionTupleAdaptor", rgAdaptorBindings,
             "datasets",

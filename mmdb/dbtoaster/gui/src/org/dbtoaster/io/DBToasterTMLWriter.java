@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 
 import org.dbtoaster.model.DatasetManager;
 import org.dbtoaster.model.DatasetManager.Dataset;
@@ -114,6 +115,25 @@ public class DBToasterTMLWriter
         }
     }
 
+    public class lastRelationArgs
+    {
+    	String datasets;
+    	String relName;
+    	
+    	public lastRelationArgs(String d, String r) {
+    		datasets = d;
+    		relName = r;
+    	}
+    	
+    	public String getDatasets() {
+    		return datasets;
+    	}
+    	
+    	public String getRelName() {
+    		return relName;
+    	}
+    }
+    
     public class DBToasterUnhandledException extends Exception
     {
         private static final long serialVersionUID = -7673484728787571132L;
@@ -132,7 +152,7 @@ public class DBToasterTMLWriter
     DatasetManager datasetMgr;
     LinkedHashMap<String, Integer> relationCounters;
     LinkedHashMap<String, String> columnSuffixesForAliases;
-    LinkedHashMap<String, String> lastRelationsUsed;
+    Vector<lastRelationArgs> lastRelationsUsed;
     LinkedHashMap<String, Integer> groupByRelationSuffixes;
 
     HashSet<String> aggregateFunctions;
@@ -149,7 +169,7 @@ public class DBToasterTMLWriter
 
         relationCounters = new LinkedHashMap<String, Integer>();
         columnSuffixesForAliases = new LinkedHashMap<String, String>();
-        lastRelationsUsed = new LinkedHashMap<String, String>();
+        lastRelationsUsed = new Vector<lastRelationArgs>();
         init();
     }
 
@@ -238,7 +258,7 @@ public class DBToasterTMLWriter
         return r;
     }
 
-    public LinkedHashMap<String, String> getRelationsUsedFromParsing()
+    public Vector<lastRelationArgs> getRelationsUsedFromParsing()
     {
         return lastRelationsUsed;
     }
@@ -850,12 +870,16 @@ public class DBToasterTMLWriter
         return "<attribute name=\"poplus\" value=\"" + function + "\"/>";
     }
 
-    private LinkedList<String> createETerm(String type, String val)
+    private LinkedList<String> createETerm(String type, String val, String rel)
     {
         LinkedList<String> r = new LinkedList<String>();
         r.add("<attribute name=\"eterm-type\" value=\"" + type + "\"/>");
-        if (type == "attr")
-            r.add(createAttributeIdentifier(val));
+        if (type == "attr") {
+        	if (rel.equals(""))
+        		r.add(createAttributeIdentifier(val));
+        	else
+        		r.add(createAttributeIdentifier(rel, val));
+        }
         else if (type == "var")
             r.add(createVariableIdentifier(val));
         else
@@ -864,12 +888,17 @@ public class DBToasterTMLWriter
         return makeLeaf(r);
     }
 
-    private LinkedList<String> createMETerm(String type, String val)
+    private LinkedList<String> createMETerm(String type, String val, String rel)
     {
         LinkedList<String> r = new LinkedList<String>();
         r.add("<attribute name=\"meterm-type\" value=\"" + type + "\"/>");
-        if (type == "attr")
-            r.add(createAttributeIdentifier(val));
+        if (type == "attr") {
+        	if (rel.equals(""))
+        		r.add(createAttributeIdentifier(val));
+        	else
+        		r.add(createAttributeIdentifier(rel, val));
+            
+        }
         else if (type == "var")
             r.add(createVariableIdentifier(val));
         else
@@ -1190,17 +1219,17 @@ public class DBToasterTMLWriter
                 if (columnSuffixesForAliases.containsKey(relAlias))
                     columnName += columnSuffixesForAliases.get(relAlias);
             }
-
+            
             // `ETerm or `METerm `Attribute
             if (mapExpression)
             {
                 r.add(createMapExpressionNode("meterm"));
-                r.addAll(createMETerm("attr", columnName));
+                r.addAll(createMETerm("attr", columnName, relName));
             }
             else
             {
                 r.add(createExpressionNode("eterm"));
-                r.addAll(createETerm("attr", columnName));
+                r.addAll(createETerm("attr", columnName, relName));
             }
 
             r = makeBranch(r);
@@ -1223,12 +1252,12 @@ public class DBToasterTMLWriter
                 if (mapExpression)
                 {
                     r.add(createMapExpressionNode("meterm"));
-                    r.addAll(createMETerm(dbtType, simple.getValue()));
+                    r.addAll(createMETerm(dbtType, simple.getValue(), ""));
                 }
                 else
                 {
                     r.add(createExpressionNode("eterm"));
-                    r.addAll(createETerm(dbtType, simple.getValue()));
+                    r.addAll(createETerm(dbtType, simple.getValue(), ""));
                 }
 
                 r = makeBranch(r);
@@ -1656,7 +1685,7 @@ public class DBToasterTMLWriter
                 idsAndTypes = aliasedIdsAndTypes;
             }
 
-            lastRelationsUsed.put(datasetName, relName);
+            lastRelationsUsed.add(new lastRelationArgs(datasetName, relName));
         }
         else
         {
@@ -1730,12 +1759,12 @@ public class DBToasterTMLWriter
 
             LinkedList<String> colTerm = new LinkedList<String>();
             colTerm.add(createExpressionNode("eterm"));
-            colTerm.addAll(createETerm("attr", columnName));
+            colTerm.addAll(createETerm("attr", columnName,""));
             colTerm = makeBranch(colTerm);
 
             LinkedList<String> gbcolTerm = new LinkedList<String>();
             gbcolTerm.add(createExpressionNode("eterm"));
-            gbcolTerm.addAll(createETerm("attr", groupByColumnName));
+            gbcolTerm.addAll(createETerm("attr", groupByColumnName,""));
             gbcolTerm = makeBranch(gbcolTerm);
 
             LinkedList<String> bterm = new LinkedList<String>();
@@ -2007,17 +2036,17 @@ public class DBToasterTMLWriter
     }
 
     private String createSearchConditionCombinedOperatorTreeML(
-        SearchConditionCombinedOperator op)
+        SearchConditionCombinedOperator op) throws 	CreateTMLException
     {
         System.out.println("SC op: " + op);
 
         String r = "";
         switch (op.getValue()) {
         case (SearchConditionCombinedOperator.AND):
-            r = "and";
+        	r = createBoolExprNode("and");
             break;
         case (SearchConditionCombinedOperator.OR):
-            r = "or";
+            r = createBoolExprNode("or");
             break;
         }
 

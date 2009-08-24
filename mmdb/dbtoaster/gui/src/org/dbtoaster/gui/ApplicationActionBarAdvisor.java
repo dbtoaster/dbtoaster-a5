@@ -14,10 +14,14 @@ import org.eclipse.ui.application.IActionBarConfigurer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Shell;
+
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.Writer;
 
 /**
  * An action bar advisor is responsible for creating, adding, and disposing of
@@ -62,6 +66,35 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
     	}
     };
     
+    Action saveAction = new Action ("Save")
+    { 
+    	public void run() {
+    		FileDialog dialog = new FileDialog(new Shell(), SWT.SAVE);
+    		final String file= dialog.open();
+    		if(file!= null) {
+    			try {
+    				IWorkbenchPage pages[] = win.getPages();
+    				for (IWorkbenchPage p: pages) {
+    					IViewPart view;
+    					if((view = p.findView("dbtoaster_gui.queryeditor")) != null) {
+    						QueryEditor qe = (QueryEditor) view;
+    						String content = qe.getQTAV().getText();
+    						System.out.println("Saving " + file + " as " + content);
+    						Writer fw = new BufferedWriter(new FileWriter(file));
+    			            fw.write(content);
+    			            fw.close();
+    					}
+    				}
+    				
+    			} catch (Exception e) {
+    				e.printStackTrace();
+    			}
+    		}
+    	}
+    	public void dispose() {
+    		
+    	}
+    };    
     public ApplicationActionBarAdvisor(IActionBarConfigurer configurer)
     {
         super(configurer);
@@ -87,6 +120,7 @@ public class ApplicationActionBarAdvisor extends ActionBarAdvisor
                 //IWorkbenchActionConstants.M_FILE);
     			"temp");
     	fileMenu.add(openAction);
+    	fileMenu.add(saveAction);
         fileMenu.add(exitAction);
         menuBar.add(fileMenu);        
     }

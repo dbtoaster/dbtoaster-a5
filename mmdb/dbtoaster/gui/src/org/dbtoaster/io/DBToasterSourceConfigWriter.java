@@ -4,10 +4,12 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Vector;
 
 import org.apache.commons.lang.StringEscapeUtils;
 import org.dbtoaster.model.DatasetManager;
 import org.dbtoaster.model.DatasetManager.Dataset;
+import org.dbtoaster.io.DBToasterTMLWriter.lastRelationArgs;
 
 public class DBToasterSourceConfigWriter
 {
@@ -32,15 +34,15 @@ public class DBToasterSourceConfigWriter
 
     // TODO: check XML quoting of values used during string construction
     public String getSourceConfiguration(
-            LinkedHashMap<String, String> lastRelationsUsed)
+            Vector<lastRelationArgs> lastRelationsUsed)
     {
         HashSet<String> uniqueRelations = new HashSet<String>();
         LinkedList<String> configLines = new LinkedList<String>();
 
-        for (Map.Entry<String, String> e : lastRelationsUsed.entrySet())
+        for (lastRelationArgs e : lastRelationsUsed)
         {
-            String datasetName = e.getKey();
-            String relName = e.getValue();
+            String datasetName = e.getDatasets();
+            String relName = e.getRelName();
             String uniqueName = datasetName + "." + relName; 
 
             System.out.println("Creating source config for " + uniqueName);
