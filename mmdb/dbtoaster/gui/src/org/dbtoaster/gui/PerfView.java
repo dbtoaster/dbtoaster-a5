@@ -6,6 +6,10 @@ import java.util.Map;
 
 import org.dbtoaster.model.DBToasterWorkspace;
 import org.dbtoaster.model.Query;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabFolder2Adapter;
+import org.eclipse.swt.custom.CTabFolderEvent;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.events.SelectionAdapter;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.SWT;
@@ -13,11 +17,15 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeItem;
+import org.eclipse.swt.widgets.ExpandBar;
+import org.eclipse.swt.widgets.ExpandItem;
+import org.eclipse.swt.widgets.Widget;
 import org.eclipse.ui.IPerspectiveDescriptor;
 import org.eclipse.ui.IPerspectiveListener;
 import org.eclipse.ui.IWorkbenchPage;
@@ -99,6 +107,7 @@ public class PerfView extends ViewPart
             for (Map.Entry<String, DBPerfPanel> e : dbPanels.entrySet())
             {
                 final Button chooseDB = new Button(eqTree.getParent(), SWT.CHECK);
+                final Control perfPanel = e.getValue();
                 chooseDB.setText(e.getKey());
                 chooseDB.setSelection(false);
                 GridData chooseData = new GridData(SWT.FILL, SWT.FILL, false, false);
@@ -108,9 +117,11 @@ public class PerfView extends ViewPart
                 	public void widgetSelected(SelectionEvent e) {
                 		if(chooseDB.getSelection() == true) {
                 			databases[getIndexOfDB(chooseDB.getText(), dbNames)] = 1;
+                			perfPanel.setEnabled(true);
                 		}
                 		else {
                 			databases[getIndexOfDB(chooseDB.getText(), dbNames)] = 0;
+                			perfPanel.setEnabled(false);
                 		}
                 	}
                 });
@@ -122,6 +133,15 @@ public class PerfView extends ViewPart
             GridData runLD = new GridData(SWT.FILL, SWT.FILL, false, false);
             runLD.minimumWidth = 50;
             runButton.setLayoutData(runLD);
+
+            // Add stop button.
+            final Button stopButton = new Button(eqTree.getParent(), SWT.PUSH);
+            stopButton.setText("Stop query");
+            GridData stopLD = new GridData(SWT.FILL, SWT.FILL, false, false);
+            stopLD.minimumWidth = 50;
+            stopButton.setLayoutData(runLD);
+            stopButton.setEnabled(false);
+            
 
             SelectionAdapter runListener = new SelectionAdapter() {
             	public void widgetSelected(SelectionEvent e)
@@ -144,19 +164,14 @@ public class PerfView extends ViewPart
 
                             currentRunningQuery.getExecutor().
             			        runComparison(currentRunningQuery, dbPanels, databases, dbNames);
-            			    
+
+                            runButton.setEnabled(false);
+                            stopButton.setEnabled(true);
             			}
             		}
             	}
             };
             runButton.addSelectionListener(runListener);
-            
-            // Add stop button.
-            final Button stopButton = new Button(eqTree.getParent(), SWT.PUSH);
-            stopButton.setText("Stop query");
-            GridData stopLD = new GridData(SWT.FILL, SWT.FILL, false, false);
-            stopLD.minimumWidth = 50;
-            stopButton.setLayoutData(runLD);
             
             SelectionAdapter stopListener = new SelectionAdapter()
             {
@@ -166,6 +181,8 @@ public class PerfView extends ViewPart
                         currentRunningQuery.stopQuery();
                         perfStatus.setText("Stopped " +
                             currentRunningQuery.getQueryName());
+                        stopButton.setEnabled(false);
+                        runButton.setEnabled(true);
                     }
                 }
             };
@@ -193,7 +210,7 @@ public class PerfView extends ViewPart
     {
         dbtWorkspace = DBToasterWorkspace.getWorkspace();
 
-        Composite top = new Composite(parent, SWT.NONE);
+        final Composite top = new Composite(parent, SWT.NONE);
         GridLayout layout = new GridLayout(2,false);
         layout.marginWidth = 0;
         layout.marginHeight = 0;
@@ -203,56 +220,57 @@ public class PerfView extends ViewPart
         eqPanel = new ExecuteQueryPanel(top, dbtWorkspace);
 
         // Graph panel
-        int numDatabases = 5;
-        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB", "DBMS1", "SPE1" };
+        String[] dbNames = { "DBToaster", "Postgres", "HSQLDB" };//, "DBMS1", "SPE1" };
+        int numDatabases = dbNames.length;
         databasePanels = new LinkedHashMap<String, DBPerfPanel>();
 
-        Composite dbcomp = new Composite(top, SWT.EMBEDDED);
+        final Composite dbcomp = new Composite(top, SWT.EMBEDDED);
         dbcomp.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
-        GridLayout dbcLayout = new GridLayout(4, false);
+        GridLayout dbcLayout = new GridLayout(2, false);
         dbcomp.setLayout(dbcLayout);
 
-        Label yCpuLabel = new Label(dbcomp, SWT.BORDER);
-        yCpuLabel.setText("CPU");
+        Label yCpuLabel = new Label(dbcomp, SWT.VERTICAL);
+        yCpuLabel.setText("ms/Tuple");
         GridData yCpuData = new GridData(SWT.FILL, SWT.CENTER, false, true);
         yCpuData.horizontalSpan = 1;
-        yCpuData.verticalSpan = 6;
+        yCpuData.verticalSpan = numDatabases;
         yCpuLabel.setLayoutData(yCpuData);
-
-        boolean rightLabelAdded = false;
-
-        for (int i = 0; i < numDatabases; ++i)
+        
+         for (int i = 0; i < numDatabases; ++i)
         {
-            databasePanels.put(dbNames[i], new DBPerfPanel(dbcomp, SWT.NO_TRIM));
+        	final CTabFolder folder = new CTabFolder(dbcomp, SWT.BORDER);
+        	GridData folderData = new GridData(SWT.FILL, SWT.TOP, true, true);
+        	folderData.heightHint = 200;
+        	folder.setLayoutData(folderData);
+        	folder.setSimple(true);
+        	folder.setUnselectedImageVisible(false);
+        	folder.setUnselectedCloseVisible(false);
+        	folder.setMinimizeVisible(false);
+
+        	final CTabItem item = new CTabItem(folder, SWT.CLOSE);
+        	item.setShowClose(false);
+        	item.setText(dbNames[i] + " Performance");
+
+        	DBPerfPanel perfPanel = new DBPerfPanel(folder, SWT.NO_TRIM);
+        	databasePanels.put(dbNames[i], perfPanel);
             GridData frameData = new GridData(SWT.FILL, SWT.FILL, true, true);
             frameData.widthHint = 700;
             frameData.heightHint = 150;
-            frameData.horizontalSpan = 2;
-            databasePanels.get(dbNames[i]).setLayoutData(frameData);
-
-            if (!rightLabelAdded)
-            {
-                Label yMemLabel = new Label(dbcomp, SWT.BORDER);
-                yMemLabel.setText("Mem");
-                GridData yMemData = new GridData(SWT.FILL, SWT.CENTER, false,
-                        true);
-                yMemData.horizontalSpan = 1;
-                yMemData.verticalSpan = 6;
-                yMemLabel.setLayoutData(yMemData);
-
-                rightLabelAdded = true;
-            }
+            frameData.horizontalSpan = 1;
+            perfPanel.setLayoutData(frameData);
+        	item.setControl(perfPanel);
+        	
+        	folder.setSelection(0);
+        	folder.showSelection();
+        	dbcomp.pack();
+        	 
         }
 
         Label timeLabel1 = new Label(dbcomp, SWT.BORDER);
         timeLabel1.setText("Time");
         GridData t1Data = new GridData(SWT.CENTER, SWT.FILL, true, false);
+        t1Data.horizontalSpan=2;
         timeLabel1.setLayoutData(t1Data);
-
-        Label timeLabel2 = new Label(dbcomp, SWT.BORDER);
-        timeLabel2.setText("Time");
-        GridData t2Data = new GridData(SWT.CENTER, SWT.FILL, true, false);
-        timeLabel2.setLayoutData(t2Data);
 
         perfStatus = new Text(top, SWT.BORDER | SWT.WRAP);
         GridData psData = new GridData(SWT.FILL, SWT.FILL, true, false);
@@ -296,7 +314,7 @@ public class PerfView extends ViewPart
             });
 
     }
-
+    
     public void setFocus()
     {
 

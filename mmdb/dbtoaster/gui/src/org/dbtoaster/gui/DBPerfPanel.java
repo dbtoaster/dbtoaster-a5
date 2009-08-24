@@ -123,33 +123,33 @@ public class DBPerfPanel extends Composite
     };
 
     StatPanel cpuPanel;
-    StatPanel memPanel;
+//    StatPanel memPanel;
 
-    Slider cpuSlider;
-    Slider memSlider;
+//    Slider cpuSlider;
+//    Slider memSlider;
 
     public DBPerfPanel(Composite parent, int style)
     {
         super(parent, style);
-        setLayout(new GridLayout(4, false));
+        setLayout(new GridLayout(2, false));
 
-        cpuSlider = new Slider(this, SWT.VERTICAL);
-        GridData csData = new GridData(SWT.FILL, SWT.FILL, false, true);
-        cpuSlider.setLayoutData(csData);
+//        cpuSlider = new Slider(this, SWT.VERTICAL);
+//        GridData csData = new GridData(SWT.FILL, SWT.FILL, false, true);
+//        cpuSlider.setLayoutData(csData);
 
         cpuPanel = new StatPanel("cpu", this, SWT.NO_TRIM, Color.RED);
         GridData cpData = new GridData(SWT.FILL, SWT.FILL, true, true);
         // cpData.widthHint = 400;
         cpuPanel.setLayoutData(cpData);
 
-        memSlider = new Slider(this, SWT.VERTICAL);
-        GridData msData = new GridData(SWT.FILL, SWT.FILL, false, true);
-        memSlider.setLayoutData(msData);
+//        memSlider = new Slider(this, SWT.VERTICAL);
+//        GridData msData = new GridData(SWT.FILL, SWT.FILL, false, true);
+//        memSlider.setLayoutData(msData);
 
-        memPanel = new StatPanel("mem", this, SWT.NO_TRIM, Color.GREEN);
-        GridData mpData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        // mpData.widthHint = 400;
-        memPanel.setLayoutData(mpData);
+//        memPanel = new StatPanel("mem", this, SWT.NO_TRIM, Color.GREEN);
+//        GridData mpData = new GridData(SWT.FILL, SWT.FILL, true, true);
+//        // mpData.widthHint = 400;
+//        memPanel.setLayoutData(mpData);
     }
     
     public TimeSeries getCpuTimeSeries() {
