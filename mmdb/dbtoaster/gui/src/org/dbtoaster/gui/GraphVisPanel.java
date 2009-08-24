@@ -197,7 +197,7 @@ public class GraphVisPanel extends JPanel
             // colors
             ItemAction nodeColor = new NodeColorAction(graphNodes, groupColors);
             ItemAction edgeColor = new ColorAction(graphEdges,
-                    VisualItem.STROKECOLOR, ColorLib.rgb(200, 200, 200));
+                    VisualItem.STROKECOLOR, ColorLib.rgb(50, 50, 50));
             ItemAction textColor = new ColorAction(graphNodes,
                     VisualItem.TEXTCOLOR, ColorLib.rgb(0, 0, 0));
             graphVis.putAction("textColor", textColor);

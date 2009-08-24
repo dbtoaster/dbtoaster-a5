@@ -247,7 +247,7 @@ public class TreeVisPanel extends JPanel
             // colors
             ItemAction nodeColor = new NodeColorAction(treeNodes, groupColors);
             ItemAction edgeColor = new ColorAction(treeEdges,
-                    VisualItem.STROKECOLOR, ColorLib.rgb(200, 200, 200));
+                    VisualItem.STROKECOLOR, ColorLib.rgb(50, 50, 50));
             ItemAction textColor = new ColorAction(
                     treeNodes, VisualItem.TEXTCOLOR, ColorLib.rgb(0, 0, 0));
             treeVis.putAction("textColor", textColor);
