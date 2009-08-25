@@ -39,14 +39,16 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-//    final static String defaultLocation = "/Users/yanif/tmp/dbtoaster";
-    final static String defaultLocation = "/Users/mavkisuh/gui/dbtoaster";
-//    final static String defaultPathCon = 
-//    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
+    final static String defaultLocation =
+//    	"/Users/yanif/tmp/dbtoaster";
+//    	"/Users/mavkisuh/gui/dbtoaster";
+//		"/Users/xthemage/Documents/DBToaster";
+    	"c:/cygwin/home/koch/toasterwork";
     final static String defaultPathCon = 
-    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
-//    	"c:/cygwin/home/koch/drafts/cornell_db_maybms/mmdb/dbtoaster/gui/path_config.txt";
 //    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
+//    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
+//		"/Users/xthemage/Documents/MayBMS/mmdb/dbtoaster/gui/path_config.txt";
+    	"c:/cygwin/home/koch/drafts/cornell_db_maybms/mmdb/dbtoaster/gui/path_config.txt";
     
     final Map<String, String> path_map;
  
