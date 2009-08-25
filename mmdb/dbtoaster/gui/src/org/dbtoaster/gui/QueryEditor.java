@@ -20,6 +20,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
 import org.eclipse.swt.custom.CTabFolder;
 import org.eclipse.swt.custom.CTabItem;
+import org.eclipse.swt.events.ModifyEvent;
+import org.eclipse.swt.events.ModifyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
@@ -579,11 +581,9 @@ public class QueryEditor extends ViewPart
         GridData qnLD = new GridData(SWT.FILL, SWT.FILL, false, false);
         qnLD.minimumWidth = 100;
         queryNameText.setLayoutData(qnLD);
-        queryNameText.addSelectionListener(new SelectionListener()
+        queryNameText.addModifyListener(new ModifyListener()
         {
-            public void widgetSelected(SelectionEvent e) {}
-
-            public void widgetDefaultSelected(SelectionEvent e)
+            public void modifyText(ModifyEvent e)
             {
                 currentQueryName = queryNameText.getText();
             }
