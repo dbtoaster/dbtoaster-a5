@@ -1802,8 +1802,8 @@ let rename_attributes m_expr =
                     Hashtbl.replace attributes_ht id new_counter;
                     (id^(string_of_int new_counter), ty)
             else 
-                (Hashtbl.add attributes_ht id 0;
-                (id^(string_of_int 0), ty))) f 
+                (Hashtbl.add attributes_ht id 1;
+                (id^(string_of_int 1), ty))) f 
     in
     let rec rename_expression e replacements =
         let rename_binary l r fn =
