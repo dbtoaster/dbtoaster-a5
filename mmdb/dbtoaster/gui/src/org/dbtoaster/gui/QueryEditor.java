@@ -136,14 +136,15 @@ public class QueryEditor extends ViewPart
 
             GridData dpLayoutData = new GridData(GridData.FILL, GridData.FILL,
                     true, true);
-            dpLayoutData.widthHint = 250;
+            dpLayoutData.widthHint = 150;
+            dpLayoutData.minimumHeight = 100;
             dpComp.setLayoutData(dpLayoutData);
 
             datasetLbl = new Label(dpComp, SWT.NONE);
             datasetLbl.setText("Dataset browser:");
 
             datasetsTree = new org.eclipse.swt.widgets.Tree(dpComp, SWT.SINGLE
-                    | SWT.BORDER);
+                    | SWT.BORDER | SWT.H_SCROLL);
 
             GridData treeLayoutData = new GridData(GridData.FILL,
                     GridData.FILL, true, true);
@@ -189,13 +190,13 @@ public class QueryEditor extends ViewPart
             Label qhLabel = new Label(parent, SWT.NONE);
             qhLabel.setText("Input history:");
             GridData qhLabelLD = new GridData(SWT.FILL, SWT.FILL, false, false);
-            qhLabelLD.widthHint = 250;
+            qhLabelLD.widthHint = 150;
             qhLabel.setLayoutData(qhLabelLD);
 
             qhTree = new org.eclipse.swt.widgets.Tree(parent, SWT.SINGLE
-                    | SWT.BORDER);
+                    | SWT.BORDER | SWT.H_SCROLL);
             GridData qhTreeLD = new GridData(SWT.FILL, SWT.FILL, false, true);
-            qhTreeLD.widthHint = 250;
+            qhTreeLD.widthHint = 150;
             qhTree.setLayoutData(qhTreeLD);
 
             redraw();
@@ -521,7 +522,7 @@ public class QueryEditor extends ViewPart
     		public void handleEvent (Event e) {
     			Rectangle sashRect = sash.getBounds ();
     			Rectangle shellRect = dataView.getClientArea ();
-    			if (e.x != sashRect.x)  {
+    			if ((e.x != sashRect.x) && (e.x >= 200))  {
     				sashLayoutData.left = new FormAttachment (0, e.x);
     				dataView.layout ();
     			}
