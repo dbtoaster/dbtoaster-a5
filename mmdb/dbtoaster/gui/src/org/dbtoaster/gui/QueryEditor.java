@@ -18,17 +18,27 @@ import org.dbtoaster.model.Compiler;
 import org.dbtoaster.model.DatasetManager.Dataset;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.awt.SWT_AWT;
+import org.eclipse.swt.custom.CTabFolder;
+import org.eclipse.swt.custom.CTabItem;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.events.VerifyEvent;
 import org.eclipse.swt.events.VerifyListener;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.layout.FormAttachment;
+import org.eclipse.swt.layout.FormData;
+import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Sash;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.part.ViewPart;
@@ -123,7 +133,7 @@ public class QueryEditor extends ViewPart
             dpComp.setLayout(layout);
 
             GridData dpLayoutData = new GridData(GridData.FILL, GridData.FILL,
-                    false, true);
+                    true, true);
             dpLayoutData.widthHint = 250;
             dpComp.setLayoutData(dpLayoutData);
 
@@ -264,12 +274,31 @@ public class QueryEditor extends ViewPart
 
         private static final String incrFrontierNodes = "tree.incr";
 
+        private final CTabFolder tabber;
+        
         // private static final String derivationNodes = "tree.derivation";
 
         public QueryTextAndVis(Composite parent, int style,
                 QueryHistoryPanel qhPanel)
         {
-            super(parent, style);
+            super(parent, SWT.NONE);
+            setLayout(new GridLayout(1, true));
+            tabber = new CTabFolder(this, style);
+        	tabber.setSimple(true);
+            tabber.setUnselectedImageVisible(false);
+            tabber.setUnselectedCloseVisible(false);
+            tabber.setMinimizeVisible(false);
+            tabber.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+
+        	final CTabItem editorItem = new CTabItem(tabber, SWT.NONE);
+        	editorItem.setShowClose(false);
+        	editorItem.setText("Query Editor");
+        	tabber.setSelection(editorItem);
+        	tabber.showSelection();
+        	
+        	final CTabItem viewerItem = new CTabItem(tabber, SWT.NONE);
+        	viewerItem.setShowClose(false);
+        	viewerItem.setText("Query Visualizer");
 
             dbtWorkspace = DBToasterWorkspace.getWorkspace();
             history = qhPanel;
@@ -310,8 +339,9 @@ public class QueryEditor extends ViewPart
             setLayout(qtvLayout);
 
             Composite visComposite = new Composite(
-                    this, SWT.EMBEDDED | SWT.NO_BACKGROUND);
-
+                    tabber, SWT.EMBEDDED | SWT.NO_BACKGROUND);
+            viewerItem.setControl(visComposite);
+            
             try
             {
                 System.setProperty("sun.awt.noerasebackground", "true");
@@ -360,9 +390,10 @@ public class QueryEditor extends ViewPart
             visComposite.setLayoutData(new GridData(GridData.FILL,
                     GridData.FILL, true, true));
 
-            queryText = new Text(this, style);
+            queryText = new Text(tabber, style);
             queryText.setLayoutData(new GridData(GridData.FILL, GridData.FILL,
                     true, true));
+            editorItem.setControl(queryText);
 
             queryText.setText(DEFAULT_QUERY);
             FontData fd = new FontData(queryText.getFont().getFontData()[0]
@@ -461,34 +492,66 @@ public class QueryEditor extends ViewPart
         
         currentQueryName = null;
         compileMode = 0;
-
-        Composite top = new Composite(parent, SWT.NONE);
-        GridLayout layout = new GridLayout(2, false);
-        layout.marginWidth = 0;
-        layout.marginHeight = 0;
+        
+        Composite top = new Composite(parent, SWT.FILL);
+        GridLayout layout = new GridLayout(1, true);
+        layout.marginWidth=2;
+        layout.marginHeight=2;
         top.setLayout(layout);
+        
+        final Composite dataView = new Composite(top, SWT.EMBEDDED);
+        final FormLayout formLayout = new FormLayout();
+        dataView.setLayout(formLayout);
+        dataView.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+        
+        FormData formLayoutData;
 
-        Composite dswqComp = new Composite(top, SWT.NONE);
+        final Sash sash = new Sash(dataView, SWT.VERTICAL);
+        Composite dswqComp = new Composite(dataView, SWT.NONE);
+        
+        final FormData sashLayoutData = new FormData();
+        sashLayoutData.bottom = new FormAttachment(100,0);
+        sashLayoutData.top = new FormAttachment(0,0);
+        sashLayoutData.left = new FormAttachment(0,200);
+        sash.setLayoutData(sashLayoutData);
+        
+        sash.addListener (SWT.Selection, new Listener () {
+    		public void handleEvent (Event e) {
+    			Rectangle sashRect = sash.getBounds ();
+    			Rectangle shellRect = dataView.getClientArea ();
+    			if (e.x != sashRect.x)  {
+    				sashLayoutData.left = new FormAttachment (0, e.x);
+    				dataView.layout ();
+    			}
+    		}
+    	});
+
         GridLayout dswqLayout = new GridLayout();
-        dswqLayout.marginWidth = 0;
-        dswqLayout.marginHeight = 0;
+        dswqLayout.marginWidth = 2;
+        dswqLayout.marginHeight = 2;
         dswqComp.setLayout(dswqLayout);
-
-        GridData dswqLD = new GridData(SWT.FILL, SWT.FILL, false, true);
-        dswqLD.widthHint = 300;
-        dswqComp.setLayoutData(dswqLD);
 
         datasetPnl = new DatasetPanel(dswqComp);
         historyPnl = new QueryHistoryPanel(dswqComp);
-
-        queryTv = new QueryTextAndVis(top, SWT.BORDER | SWT.MULTI | SWT.WRAP,
+        
+    	final QueryTextAndVis queryTv = new QueryTextAndVis(dataView, SWT.BORDER,
                 historyPnl);
-        GridData queryLayoutData = new GridData(GridData.FILL, GridData.FILL,
-                true, true);
-        queryLayoutData.horizontalSpan = 1;
-        queryTv.setLayoutData(queryLayoutData);
 
-        Composite btBarComp = new Composite(top, SWT.NONE);
+        formLayoutData = new FormData();
+        formLayoutData.bottom = new FormAttachment(100,0);
+        formLayoutData.top = new FormAttachment(0,0);
+        formLayoutData.left = new FormAttachment(0,0);
+        formLayoutData.right = new FormAttachment(sash,0);
+        dswqComp.setLayoutData(formLayoutData);
+
+    	formLayoutData = new FormData();
+        formLayoutData.bottom = new FormAttachment(100,0);
+        formLayoutData.top = new FormAttachment(0,0);
+        formLayoutData.left = new FormAttachment(sash,0);
+        formLayoutData.right = new FormAttachment(100,0);
+        queryTv.setLayoutData(formLayoutData);
+    	
+        Composite btBarComp = new Composite(top, SWT.BOTTOM);
         GridLayout btBarLayout = new GridLayout(2, false);
         btBarLayout.marginWidth = 0;
         btBarLayout.marginHeight = 0;
@@ -532,6 +595,8 @@ public class QueryEditor extends ViewPart
         
         checkEngineBtn = new Button(compileModeComp, SWT.CHECK);
         checkEngineBtn.setText("Engine");
+		checkEngineBtn.setSelection(true);
+		compileMode |= Compiler.ENGINE;
         checkEngineBtn.addSelectionListener(new SelectionListener()
         {
             public void widgetSelected(SelectionEvent e)
@@ -575,7 +640,15 @@ public class QueryEditor extends ViewPart
         {
             public void widgetSelected(SelectionEvent e)
             {
-                statusText.setText(queryTv.toastQuery());
+            	if(compileMode == 0){
+            		statusText.setText("Yanif sez u=id10t.  Neither 'Engine' or 'Debugger' is checked.  Let me fix that for you.");
+            		checkEngineBtn.setSelection(true);
+            		compileMode |= Compiler.ENGINE;
+            	} else {
+            		toastBtn.setEnabled(false);
+                	statusText.setText(queryTv.toastQuery());
+            		toastBtn.setEnabled(true);
+            	}
             }
 
             public void widgetDefaultSelected(SelectionEvent e)
