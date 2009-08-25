@@ -39,16 +39,17 @@ public class DBToasterWorkspace
     IWorkspace rcpWorkspace;
 
     final static String projectDescription = "DBToaster Queries";
-    final static String defaultLocation =
-//    	"/Users/yanif/tmp/dbtoaster";
-//    	"/Users/mavkisuh/gui/dbtoaster";
-//		"/Users/xthemage/Documents/DBToaster";
-    	"c:/cygwin/home/koch/toasterwork";
-    final static String defaultPathCon = 
-//    	"/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
-//    	"/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
-//		"/Users/xthemage/Documents/MayBMS/mmdb/dbtoaster/gui/path_config.txt";
-    	"c:/cygwin/home/koch/drafts/cornell_db_maybms/mmdb/dbtoaster/gui/path_config.txt";
+    static String defaultPathCon = "c:/cygwin/home/koch/drafts/cornell_db_maybms/mmdb/dbtoaster/gui/path_config.txt";
+    
+    static {
+    	if(System.getenv("USER").equals("yanif")){
+    		defaultPathCon = "/Users/yanif/workspace/dbtoaster-gui/path_config.txt";
+    	} else if(System.getenv("USER").equals("mavkisuh")){
+    		defaultPathCon = "/Users/mavkisuh/Documents/workspace/dbtoaster-gui/path_config.txt";
+    	} else if(System.getenv("USER").equals("xthemage")){
+    		defaultPathCon = "/Users/xthemage/Documents/MayBMS/mmdb/dbtoaster/gui/path_config.txt";
+    	}
+    }
     
     final Map<String, String> path_map;
  
@@ -95,9 +96,11 @@ public class DBToasterWorkspace
 
         rcpWorkspace = ResourcesPlugin.getWorkspace();
 
+        path_map = loadPath(null);
+        
         IProjectDescription projectDesc = rcpWorkspace
                 .newProjectDescription(projectDescription);
-        projectDesc.setLocation(new Path(defaultLocation));
+        projectDesc.setLocation(new Path(path_map.get("defaultLocation")));
         projectDesc.setComment("DBToaster working files");
 
         dbToasterProject = rcpWorkspace.getRoot()
@@ -115,7 +118,6 @@ public class DBToasterWorkspace
             e.printStackTrace();
             System.exit(1);
         }
-        path_map = loadPath(null);
         
         datasets = DatasetManager.initDemoDatasetManager();
         wsQueries = new LinkedHashMap<String, Query>();
@@ -170,6 +172,7 @@ public class DBToasterWorkspace
     	for(Map.Entry<String, String> e: paths.entrySet()) {
     		System.out.println(e.getKey() + "  " + e.getValue());
     	}
+    	
     	
     	return paths;
     }
