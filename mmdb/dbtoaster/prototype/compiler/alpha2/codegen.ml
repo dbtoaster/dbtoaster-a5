@@ -1840,7 +1840,7 @@ let thrift_inner_declarations_of_datastructure d =
             | (`Set(n, f) as ds)
 	    | (`Multiset (n,f) as ds) ->
                   if (List.length f) = 1 then
-                      ("", [])
+                      ("", [], "")
                   else
 	              let field_decls = field_declarations f in
                       let decl_name = match ds with
@@ -1849,7 +1849,22 @@ let thrift_inner_declarations_of_datastructure d =
                       let struct_decl =
                           ["struct "^decl_name^" {"]@(List.map indent field_decls)@["}\n"]
                       in
-		          (decl_name, struct_decl)
+                      let less_oper = 
+                          let rec be fields = 
+                              (match fields with
+                                  | [(x, y)] -> ( x ^ " < r."^x)
+                                  | (hd,y)::tl -> "(("^hd^" < r."^hd^") || ("^hd^" == r."^hd^" && \n"^
+                                        "                "^(be tl)^"))"
+                                  | _ -> raise InvalidExpression)
+                          in
+                          "    bool "^decl_name^"::operator<(const "^decl_name^"& r) const\n"^
+                          "    {\n"^
+                          "        return"^(be f)^";\n"^
+                          "    }\n"
+                      in
+(*                          List.iter (fun x -> print_endline x) struct_decl;
+                          print_endline lessoperator; *)
+		          (decl_name, struct_decl, less_oper) 
 
 
 let copy_element_for_thrift d dest src =
@@ -2069,16 +2084,16 @@ let generate_dbtoaster_thrift_module_implementation
 
 let generate_thrift_accessor_declarations global_decls =
     let list_code l = String.concat "\n" l in
-    let (struct_decls, key_decls, accessors_decls) =
-        List.fold_left (fun (struct_acc, key_acc, accessor_acc) d ->
-            let (struct_decls, key_decl, accessor_decl) =
+    let (struct_decls, key_decls, accessors_decls, less_opers) =
+        List.fold_left (fun (struct_acc, key_acc, accessor_acc, less_acc ) d ->
+            let (struct_decls, key_decl, accessor_decl, less_opers ) =
                 match d with
                     | `Declare x ->
                           begin
                               match x with
 		                  | `Variable(n, typ) -> 
                                         let ttype = thrift_type_of_base_type typ in
-                                            ([], [], ttype^" get_"^n^"(),")
+                                            ([], [], ttype^" get_"^n^"(),", [])
 
                                   | (`Tuple (n,f) as y) ->
                                         let ds = datastructure_of_declaration y in
@@ -2103,33 +2118,33 @@ let generate_thrift_accessor_declarations global_decls =
                                         let struct_decl = 
                                             ["struct "^ttype^" {"]@(field_declarations f)@["}"]
                                         in
-                                            (struct_decl, [], acs_decl)
+                                            (struct_decl, [], acs_decl, [])
 
                                   | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
                                         let ds = datastructure_of_declaration y in
                                         let n = identifier_of_datastructure ds in
                                         let ttype = thrift_type_of_datastructure ds in
-                                        let (inner_decl_name, inner_decl) =
+                                        let (inner_decl_name, inner_decl, less_oper) =
                                             thrift_inner_declarations_of_datastructure ds
                                         in
                                         let acs_decl = ttype^" get_"^n^"()," in
                                             if (List.length inner_decl) > 0 then
-                                                ([], [(inner_decl_name, list_code inner_decl)], acs_decl)
+                                                ([], [(inner_decl_name, list_code inner_decl)], acs_decl, [less_oper])
                                             else
-                                                ([], [], acs_decl)
+                                                ([], [], acs_decl, [])
 
-                                  | `ProfileLocation _ -> ([], [], "")
+                                  | `ProfileLocation _ -> ([], [], "", [])
                           end
                     | _ -> raise (CodegenException
                           ("Invalid declaration: "^(indented_string_of_code_expression d)))
             in
                 if key_decl = [] && accessor_decl = "" then
-                    (struct_acc, key_acc, accessor_acc)
+                    (struct_acc, key_acc, accessor_acc, less_acc)
                 else
-                    (struct_acc@struct_decls, key_acc@key_decl, accessor_acc@[accessor_decl]))
-            ([], [], []) global_decls
+                    (struct_acc@struct_decls, key_acc@key_decl, accessor_acc@[accessor_decl], less_acc@less_opers))
+            ([], [], [], []) global_decls
     in
-        (struct_decls, key_decls, accessors_decls)
+        (struct_decls, key_decls, accessors_decls, less_opers )
 
 let generate_thrift_accessor_implementations global_decls service_class_name =
     let indent s = "    "^s in
@@ -2226,6 +2241,22 @@ let generate_socket_stream_engine_common io_service_name =
     in
         (common_decl, common_main)
 
+let generate_dbtoaster_thrift_less_operators out_chan less_opers query_id eng_debug = 
+    let includes = 
+        "#include \""^query_id^"_types.h\"\n\n" 
+    in
+    let namespace = 
+        "namespace DBToaster { namespace "^eng_debug^" { namespace "^query_id^" {\n"
+    in
+    let tail = "}; }; };" in 
+    let functions = 
+        List.fold_left (fun acc x -> acc^"\n"^x ) "" less_opers
+    in 
+    let result = includes^namespace^functions^tail
+    in
+        print_endline result;
+        output_string out_chan result
+
 (*
  * Query result viewer
  *)
@@ -2238,7 +2269,7 @@ let generate_stream_engine_viewer_includes out_chan =
         generate_thrift_includes out_chan;
         output_string out_chan (list_code includes)
 
-let generate_stream_engine_viewer thrift_out_chan code_out_chan query_id global_decls =
+let generate_stream_engine_viewer thrift_out_chan code_out_chan less_out_chan query_id global_decls =
     let indent s = "    "^s in
     let service_namespace =
         "DBToaster.Viewer"^(if query_id = "" then "" else ("."^query_id))
@@ -2247,7 +2278,7 @@ let generate_stream_engine_viewer thrift_out_chan code_out_chan query_id global_
     let thrift_service_class = thrift_service_name^"Handler" in
     let thrift_service_interface = thrift_service_name^"If" in
 
-    let (struct_decls, key_decls, accessors_decls) = generate_thrift_accessor_declarations global_decls in
+    let (struct_decls, key_decls, accessors_decls, less_opers) = generate_thrift_accessor_declarations global_decls in
     let accessor_impls = generate_thrift_accessor_implementations global_decls thrift_service_class in
 
     let thrift_includes =  ["profiler.thrift"] in
@@ -2275,8 +2306,10 @@ let generate_stream_engine_viewer thrift_out_chan code_out_chan query_id global_
         generate_dbtoaster_thrift_module_implementation code_out_chan
             service_namespace thrift_service_class thrift_service_interface
             service_constructor_args service_constructor_member_init service_constructor_init
-            service_internals service_interface_impls
+            service_internals service_interface_impls;
 
+        generate_dbtoaster_thrift_less_operators less_out_chan 
+            less_opers query_id "Viewer" 
 
 (* Returns declarations and code to add to init() method
  *
@@ -2655,7 +2688,7 @@ let generate_thrift_server_main viewer_class viewer_constructor_args =
 
 (* TODO: generate standalone profiler running an event loop in its own thread *)
 (* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
-let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan global_decls =
+let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan less_out_chan global_decls =
     let indent s = ("    "^s) in
     let list_code l = String.concat "\n" l in
     let block l = ["{"]@(List.map indent l)@["}"] in
@@ -2681,13 +2714,13 @@ let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan glob
     in
 
         generate_stream_engine_viewer
-            thrift_out_chan code_out_chan query_id global_decls;
+            thrift_out_chan code_out_chan less_out_chan query_id global_decls;
 
         output_string code_out_chan main_defn
 
 
 (* declare multiplexer; main() { start read loop; run io_service in a thread }  *)
-let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan global_decls =
+let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan less_out_chan global_decls =
     let indent s = ("    "^s) in
     let list_code l = String.concat "\n" l in
     let block l = ["{"]@(List.map indent l)@["}"] in
@@ -2711,7 +2744,7 @@ let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan gl
     in
 
         generate_stream_engine_viewer
-            thrift_out_chan code_out_chan query_id global_decls;
+            thrift_out_chan code_out_chan less_out_chan query_id global_decls;
 
         output_string code_out_chan main_defn
 
@@ -2851,7 +2884,7 @@ let generate_file_stream_debugger_thrift_implementations streams =
 
 
 let generate_file_stream_debugger_class
-        decl_out_chan impl_out_chan
+        decl_out_chan impl_out_chan less_out_chan
         query_id global_decls streams_handlers_and_events
     =
     (* Helpers *)
@@ -2882,7 +2915,7 @@ let generate_file_stream_debugger_class
         generate_file_stream_debugger_thrift_declarations streams
     in
 
-    let (struct_decls, key_decls, accessors_decls) =
+    let (struct_decls, key_decls, accessors_decls, less_opers) =
         generate_thrift_accessor_declarations global_decls
     in
 
@@ -2947,6 +2980,9 @@ let generate_file_stream_debugger_class
             service_namespace thrift_service_handler_name thrift_service_handler_interface
             debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
             debugger_internals debugger_interface_impls;
+
+        generate_dbtoaster_thrift_less_operators less_out_chan
+            less_opers query_id "Debugger";
 
         class_name
 
@@ -3038,7 +3074,7 @@ let generate_socket_stream_debugger_thrift_implementations class_name streams =
 
 
 let generate_socket_stream_debugger_class
-        decl_out_chan impl_out_chan
+        decl_out_chan impl_out_chan less_out_chan
         query_id global_decls streams_handlers_and_events
     =
     let indent s = "    "^s in
@@ -3061,7 +3097,7 @@ let generate_socket_stream_debugger_class
         generate_socket_stream_debugger_thrift_declarations streams
     in
 
-    let (struct_decls, key_decls, accessors_decls) =
+    let (struct_decls, key_decls, accessors_decls, less_opers) =
         generate_thrift_accessor_declarations global_decls
     in
 
@@ -3120,6 +3156,9 @@ let generate_socket_stream_debugger_class
             service_namespace thrift_service_handler_name thrift_service_handler_interface
             debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
             debugger_internals debugger_interface_impls;
+ 
+        generate_dbtoaster_thrift_less_operators less_out_chan
+            less_opers query_id "Debugger";
 
         class_name
 

@@ -487,6 +487,10 @@ let build_standalone_engine query_source thrift_modules =
 
     (* Invoke thrift before building compile cmds for thrift sources *)
     check_status thrift_cmd;
+    
+    (* cp operator.cpp file under /thrift/gen-cpp *) 
+    check_status ("cp "^(Filename.chop_extension query_source)^"_operators.cpp"
+        ^" "^(Filename.concat thrift_output_dir "gen-cpp")^"/");
 
     let thrift_source_dir = Filename.concat thrift_output_dir "gen-cpp" in
 

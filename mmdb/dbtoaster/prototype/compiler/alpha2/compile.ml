@@ -469,6 +469,8 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
+    let less_file_name = query_base_path^"_operators.cpp" in
+    let less_out_chan = open_out less_file_name in
 
         generate_includes code_out_chan;
         generate_stream_engine_includes code_out_chan;
@@ -511,10 +513,11 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
                 handlers_and_events);
 
         (* main *)
-        gen_main_fn query_id thrift_out_chan code_out_chan global_decls;
+        gen_main_fn query_id thrift_out_chan code_out_chan less_out_chan global_decls;
 
         close_out thrift_out_chan;
         close_out code_out_chan;
+        close_out less_out_chan;
 
         (* Output additional information from compilation *)
         match trace_file_name_opt with
@@ -532,6 +535,8 @@ let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_fi
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
+    let less_file_name = query_base_path^"_operators.cpp" in
+    let less_out_chan = open_out less_file_name in
 
         generate_includes code_out_chan;
         generate_stream_engine_includes code_out_chan;
@@ -576,12 +581,13 @@ let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_fi
 
         (* Stream debugger and main *)
         let stream_debugger_class =
-            gen_class_fn thrift_out_chan code_out_chan
+            gen_class_fn thrift_out_chan code_out_chan less_out_chan
                 query_id global_decls streams_handlers_and_events
         in
             gen_main_fn code_out_chan stream_debugger_class;
             close_out thrift_out_chan;
             close_out code_out_chan;
+            close_out less_out_chan;
 
             (* Output additional information from compilation *)
             match trace_file_name_opt with
