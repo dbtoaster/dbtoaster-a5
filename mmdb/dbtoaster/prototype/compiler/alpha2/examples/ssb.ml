@@ -30,9 +30,9 @@ let predicate1 =
 ))
 
 let predicate2 = 
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("d_y")))),
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "NATION1"))), `ETerm (`Variable("s_n")))),
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "CATEGORY"))), `ETerm (`Variable("p_c")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Attribute(`Unqualified("d_y"))))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "NATION1"))), `ETerm (`Attribute(`Unqualified("s_n"))))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "CATEGORY"))), `ETerm (`Attribute(`Unqualified("p_c"))))),
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "CUSTKEY2"))), `ETerm (`Attribute(`Qualified("C", "CUSTKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "SUPPKEY2"))), `ETerm (`Attribute(`Qualified("S", "SUPPKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "PARTKEY2"))), `ETerm (`Attribute(`Qualified("P", "PARTKEY1"))))), 
@@ -47,9 +47,9 @@ let predicate2 =
 		))))))))))
 
 let predicate3 = 
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Variable("d_y")))),
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "CITY1"))), `ETerm (`Variable("s_c")))),
-		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "BRAND1"))), `ETerm (`Variable("p_b")))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("D", "YEAR"))), `ETerm (`Attribute(`Unqualified("d_y"))))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("S", "CITY1"))), `ETerm (`Attribute(`Unqualified("s_c"))))),
+		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("P", "BRAND1"))), `ETerm (`Attribute(`Unqualified("p_b"))))),
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "CUSTKEY2"))), `ETerm (`Attribute(`Qualified("C", "CUSTKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "SUPPKEY2"))), `ETerm (`Attribute(`Qualified("S", "SUPPKEY1"))))), 
 		`And ( `BTerm (`EQ(`ETerm (`Attribute(`Qualified("LO", "PARTKEY2"))), `ETerm (`Attribute(`Qualified("P", "PARTKEY1"))))), 
