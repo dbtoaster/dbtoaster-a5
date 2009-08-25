@@ -390,7 +390,7 @@ public class QueryEditor extends ViewPart
             visComposite.setLayoutData(new GridData(GridData.FILL,
                     GridData.FILL, true, true));
 
-            queryText = new Text(tabber, style);
+            queryText = new Text(tabber, style | SWT.MULTI);
             queryText.setLayoutData(new GridData(GridData.FILL, GridData.FILL,
                     true, true));
             editorItem.setControl(queryText);
