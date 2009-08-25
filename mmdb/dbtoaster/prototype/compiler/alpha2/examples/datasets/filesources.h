@@ -316,7 +316,7 @@ namespace DBToaster
                 r.comment = string(data);
                 break;
             default:
-                cerr << "Invalid order field id " << field
+                cerr << "Invalid part field id " << field
                      << " at line " << line << endl;
                 break;
             }
@@ -350,7 +350,7 @@ namespace DBToaster
                 r.comment = string(data);
                 break;
             default:
-                cerr << "Invalid order field id " << field
+                cerr << "Invalid customer field id " << field
                      << " at line " << line << endl;
                 break;
             }
@@ -381,7 +381,32 @@ namespace DBToaster
                 r.comment = string(data);
                 break;
             default:
-                cerr << "Invalid order field id " << field
+                cerr << "Invalid supplier field id " << field
+                     << " at line " << line << endl;
+                break;
+            }
+        }
+
+        inline void parsePartSuppField(int field, unsigned long line, partsupp& r, char* data)
+        {
+            switch(field) {
+            case 0:
+                r.partkey = atoll(data);
+                break;
+            case 1:
+                r.suppkey = atoll(data);
+                break;
+            case 2:
+                r.availqty = atoi(data);
+                break;
+            case 3:
+                r.supplycost = atof(data);
+                break;
+            case 4:
+                r.comment = string(data);
+                break;
+            default:
+                cerr << "Invalid partsupp field id " << field
                      << " at line " << line << endl;
                 break;
             }
@@ -403,7 +428,7 @@ namespace DBToaster
                 r.comment = string(data);
                 break;
             default:
-                cerr << "Invalid order field id " << field
+                cerr << "Invalid nation field id " << field
                      << " at line " << line << endl;
                 break;
             }
@@ -422,7 +447,7 @@ namespace DBToaster
                 r.comment = string(data);
                 break;
             default:
-                cerr << "Invalid order field id " << field
+                cerr << "Invalid region field id " << field
                      << " at line " << line << endl;
                 break;
             }
@@ -553,6 +578,7 @@ namespace DBToaster
         typedef TpchFileStream<part>      PartStream;
         typedef TpchFileStream<customer>  CustomerStream;
         typedef TpchFileStream<supplier>  SupplierStream;
+        typedef TpchFileStream<partsupp>  PartSuppStream;
         typedef TpchFileStream<nation>    NationStream;
         typedef TpchFileStream<region>    RegionStream;
 

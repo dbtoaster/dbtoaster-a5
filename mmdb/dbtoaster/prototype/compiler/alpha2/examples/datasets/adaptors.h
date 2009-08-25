@@ -172,6 +172,7 @@ namespace DBToaster
         typedef InsertTupleAdaptor<part> PartTupleAdaptor;
         typedef InsertTupleAdaptor<customer> CustomerTupleAdaptor;
         typedef InsertTupleAdaptor<supplier> SupplierTupleAdaptor;
+        typedef InsertTupleAdaptor<partsupp> PartSuppTupleAdaptor;
         typedef InsertTupleAdaptor<nation> NationTupleAdaptor;
         typedef InsertTupleAdaptor<region> RegionTupleAdaptor;
         typedef InsertTupleAdaptor<LinearRoadTuple> LinearRoadTupleAdaptor;

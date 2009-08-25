@@ -131,6 +131,23 @@ namespace DBToaster
             }
         };
 
+        struct partsupp
+        {
+            identifier partkey;
+            identifier suppkey;
+            int availqty;
+            double supplycost;
+            string comment;
+
+            string as_string()
+            {
+                ostringstream r;
+                r << partkey << ", " << suppkey << ", " << availqty << ", "
+                    << supplycost << ", " << comment;
+                return r.str();
+            }
+        };
+
         struct nation
         {
             identifier nationkey;
