@@ -105,20 +105,25 @@ let compile_code_rec events pp_expr_l =
                                         List.filter (fun d ->
                                             List.for_all (fun dl -> check_unique_declaration dl d) gdc_acc) gdc
                                     in
-                                    let (new_gdc, new_hc) =
+                                    let (new_gdc_acc, new_hc) =
                                         match hc with
-                                            | `Profile _ -> (gdc_acc@[unique_gdc], hc_acc@[(level, hc)])
+                                            | `Profile _ -> (gdc_acc@[unique_gdc], hc)
                                             | _ ->
                                                   let prof_loc = generate_profile_id event in
-                                                      (gdc_acc@[(`Declare(`ProfileLocation prof_loc))::unique_gdc],
-                                                      hc_acc@[(level, `Profile("cpu", prof_loc, hc))])
+                                                      ((gdc_acc@[(`Declare(`ProfileLocation prof_loc))::unique_gdc]),
+                                                      `Profile("cpu", prof_loc, hc))
                                     in
                                     let new_bd = match h with
-                                        | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) -> bd_acc@[(hc,bd)]
+                                        | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) ->
+                                              print_endline
+                                                  ("Tracking bindings for "^(indented_string_of_code_expression new_hc)^": ");
+                                              print_endline (string_of_bindings bd);
+                                              bd_acc@[(new_hc,bd)]
                                         | _ -> bd_acc
                                     in
+
                                     let new_reuse = List.filter (fun x -> not(List.mem x reuse_acc)) rdc in
-                                        (new_gdc, new_hc, new_bd, bdc_acc@bdc, reuse_acc@new_reuse))
+                                        (new_gdc_acc, hc_acc@[(level, new_hc)], new_bd, bdc_acc@bdc, reuse_acc@new_reuse))
 
                                 ([], [], [], [], []) hb_l
                         in
@@ -147,6 +152,9 @@ let compile_code_rec events pp_expr_l =
                         in
 
                         List.iter (fun d -> print_endline ("umd: "^(string_of_declaration d))) unique_merged_decls;
+                        List.iter (fun (c, bd) -> print_endline
+                            ("rebound: "^(string_of_code_expression c)^": "^(string_of_bindings bd)))
+                            rebound_bd_l;
 
                         let handler_id = handler_name_of_event event in
                         let handler_args = 
@@ -204,6 +212,12 @@ let compile_code_rec events pp_expr_l =
                                                 | `Eval x ->
                                                       let global_used = get_global_used x in
                                                       let is_ret_map =
+                                                          print_endline ("Lookup: "^(string_of_code_expression hc));
+                                                          List.iter
+                                                              (fun (hc,bd) ->
+                                                                  print_endline ("Assoc: "^(string_of_code_expression hc)^
+                                                                      " binding: "^(string_of_bindings bd)))
+                                                              rebound_bd_l;
                                                           if List.mem_assoc hc rebound_bd_l then
                                                               List.length (List.assoc hc rebound_bd_l) != 0
                                                           else false

@@ -432,6 +432,9 @@ and extract_plan_bindings q =
                 | (_, _) -> (`Select(mbterm, cqq), predb@cqb)
     in
     match q with
+        | `TrueRelation -> (`TrueRelation, [])
+        | `FalseRelation -> (`FalseRelation, [])
+
 	| `Relation _ -> (q, [])
 
 	| `Select (pred, cq) ->
@@ -483,7 +486,6 @@ and extract_plan_bindings q =
 
         (* Binding extraction should occur before incrementality analysis,
            compilation and domain management*)
-        | `TrueRelation | `FalseRelation
         | `Domain _
 	| `DeltaPlan _ | `NewPlan _
         | `IncrPlan _ | `IncrDiffPlan _ ->
@@ -909,6 +911,10 @@ let rec push_delta m_expr : map_expression =
 
 and push_delta_plan mep =
     match mep with
+        | `DeltaPlan(_,`TrueRelation)
+        | `DeltaPlan(_,`FalseRelation) ->
+              `FalseRelation
+
 	| `DeltaPlan(ev, `Relation(name, fields)) ->
 	      if name = (get_bound_relation ev) then
 		  `Project(create_bindings ev name fields, `TrueRelation)
@@ -1114,6 +1120,10 @@ and analyse_plan_incrementality q delta q_attrs_used =
     in
     *)
     match q with
+	| `TrueRelation  | `FalseRelation ->
+              let incr_op = match delta with `Insert _ -> `Union | `Delete _ -> `Diff in
+                  `IncrPlan(gen_state_sym (`Plan (q, [])), incr_op, [], [], q)
+
 	| `Relation _ ->
               let incr_op = match delta with `Insert _ -> `Union | `Delete _ -> `Diff in
               let new_dom = get_domain q in
@@ -1253,7 +1263,6 @@ and analyse_plan_incrementality q delta q_attrs_used =
 			  | _ -> raise InvalidExpression
 		  end
 
-	| `TrueRelation | `FalseRelation
         | `Domain _
         | `DeltaPlan _ | `NewPlan _
         | `IncrPlan _ | `IncrDiffPlan _->

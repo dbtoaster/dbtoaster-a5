@@ -1584,8 +1584,9 @@ let generate_map_declarations maps map_vars state_parents type_list =
         in
             agg_prefix^"_"^
                 (let r = string_of_attrs agg_attrs in
-                    if (String.length r) = 0 then "1" else r)^"_"^
-                (string_of_attrs me_uba_and_vars)
+                    if (String.length r) = 0 then "1" else r)^
+                (if List.length me_uba_and_vars = 0 then ""
+                else ("_"^(string_of_attrs me_uba_and_vars)))
     in
     let maps_and_hvs = List.combine maps (List.map dbt_hash maps) in
     let (map_decls_and_cterms, var_cterms) =
@@ -1606,11 +1607,27 @@ let generate_map_declarations maps map_vars state_parents type_list =
                                 (if (String.length acc) = 0 then "" else acc^", ")^var) "" vum));
                         vum
                 in
+                let (actual_new_decl, new_cterm, new_accessors) =
+                    match new_decl with
+                        | `Map(id,f,_) ->
+                              let new_cterm = `MapAccess(id, let (r,_) = List.split f in r) in
+                                  (new_decl, new_cterm,
+                                  List.map (fun v -> (v, new_cterm)) vars_using_map)
 
-                (* Associate map key with each var using map *)
+                        | `Variable(n,typ) ->
+                              let new_var_sym = gen_var_sym() in 
+                              let new_var_decl = `Variable(new_var_sym, typ) in
+                              let new_cterm = `Variable(new_var_sym) in
+                                  (new_var_decl, new_cterm,
+                                  List.map (fun v -> (v, new_cterm)) vars_using_map)
+                in
+                    (decl_acc@[(me_hv, (actual_new_decl, new_cterm))], accessor_acc@new_accessors))
+
+                (* Associate map key with each var using map
                 let decl_map_key =
                     match new_decl with
                         | `Map(id,f,_) -> (id, let (r,_) = List.split f in r)
+                        | `Variable(n,typ) ->
                         | _ -> raise (CodegenException ("Invalid map declaration:"^
                               (identifier_of_declaration new_decl)))
                 in
@@ -1619,6 +1636,7 @@ let generate_map_declarations maps map_vars state_parents type_list =
                 in
                     (decl_acc@[(me_hv, (new_decl, `MapAccess(decl_map_key)))],
                         accessor_acc@new_accessors))
+                *)
             ([], []) maps_and_hvs
     in
     let (new_stp_decls, stp_decls) = List.fold_left
@@ -1654,7 +1672,9 @@ let generate_map_declarations maps map_vars state_parents type_list =
                                     in
                                     let new_decl = `Map(new_map_id, new_fields, new_type) in
                                         print_endline ("Using newly declared map: "^new_map_id^
-                                            " for state id: "^sid^" hash: "^(string_of_int par)^" type: "^new_type);
+                                            " for state id: "^sid^" hash: "^(string_of_int par)^
+                                            " fields: "^(string_of_schema_fields new_fields)^
+                                            " type: "^new_type);
                                         (decl_acc@[(par, new_decl)], stp_acc@[(sid, new_decl)])
 
                               | _ ->
@@ -2377,7 +2397,9 @@ let generate_stream_engine_file_decl_and_init stream_type_info stream_name handl
         let input_instance = "input" in
         let fo_type = handler_name^"_fun_obj" in
             ([("struct "^fo_type^" { ");
-            (indent (handler_ret_type^" operator()(boost::any data) { "));
+            (* DEMO HACK *)
+            (*(indent (handler_ret_type^" operator()(boost::any data) { ")); *)
+            (indent ("void operator()(boost::any data) { "));
             (indent (indent
                 (handler_input_type_name^" "^input_instance^" = ")));
             (indent (indent (indent ("boost::any_cast<"^handler_input_type_name^">(data); "))));

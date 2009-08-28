@@ -2976,11 +2976,16 @@ let rec string_of_code_expression c_expr =
 
 	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
 
-	    | `Return (ac) -> "return "^(string_of_arith_code_expression ac)^";"
+	    | `Return (ac) ->
+                  (*"return "^(string_of_arith_code_expression ac)^";"*)
+                  ""
 
-            | `ReturnMap (mid) -> "return "^mid^";"
+            | `ReturnMap (mid) ->
+                  (*"return "^mid^";"*)
+                  ""
 
             | `ReturnMultiple (rv_l, cv_opt) ->
+                  (*
                   let string_of_rv rv = 
                       match rv with
                           | `Arith a -> string_of_arith_code_expression a
@@ -2993,6 +2998,8 @@ let rec string_of_code_expression c_expr =
                           | None -> "return "^rv
                           | Some cv -> (cv^" = "^rv^"; return "^cv^";")
                   end
+                  *)
+                  ""
 
 	    | `Handler (name, args, rt, c_expr_l) ->
 		  let h_fields =
@@ -3006,7 +3013,9 @@ let rec string_of_code_expression c_expr =
                           (List.hd rev_handler, List.rev (List.tl rev_handler))
                   in
                   let handler_profile_id = generate_handler_profile_id name in
-		      rt^" "^name^"("^h_fields^") {\n"^
+                      (* DEMO HACK *)
+		      (*rt^" "^name^"("^h_fields^") {\n"^*)
+		      "void "^name^"("^h_fields^") {\n"^
                           "START_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
                           (string_of_code_block handler_without_rv)^"\n"^
                           "END_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
@@ -3186,11 +3195,16 @@ let indented_string_of_code_expression c_expr =
 		      "{\n"^(string_of_code_block c_expr_l)^"\n"^
 			  tab^"}\n"
 
-		| `Return (ac) -> "return "^(string_of_arith_code_expression ac)^";"
+		| `Return (ac) ->
+                      (*"return "^(string_of_arith_code_expression ac)^";"*)
+                      ""
 
-                | `ReturnMap (mid) -> "return "^mid^";"
+                | `ReturnMap (mid) ->
+                      (*"return "^mid^";"*)
+                      ""
 
                 | `ReturnMultiple (rv_l, cv_opt) ->
+                      (*
                       let string_of_rv rv = 
                           match rv with
                               | `Arith a -> string_of_arith_code_expression a
@@ -3203,6 +3217,8 @@ let indented_string_of_code_expression c_expr =
                               | None -> "return "^rv
                               | Some cv -> cv^" = "^rv^";\n"^tab^"return "^cv^";"
                           end
+                      *)
+                      ""
 		      
 		| `Handler (name, args, rt, c_expr_l) ->
 		      let h_fields =
@@ -3213,7 +3229,9 @@ let indented_string_of_code_expression c_expr =
 		      in
 			  (* TODO: handler return type should be same as last code expr*)
 			  (* Hacked for now... *)
-			  rt^" "^name^"("^h_fields^") {\n"^
+                          (* DEMO HACK *)
+		          (*rt^" "^name^"("^h_fields^") {\n"^*)
+		          "void "^name^"("^h_fields^") {\n"^
 			      (string_of_code_block c_expr_l)^
 			      tab^"\n}"
 
