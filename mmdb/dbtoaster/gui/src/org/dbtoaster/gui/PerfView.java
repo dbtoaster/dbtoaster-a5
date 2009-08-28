@@ -101,10 +101,10 @@ public class PerfView extends ViewPart
             final int numdatabases, final String[] dbNames)
         {
         	final Integer[] databases = new Integer[numdatabases];
-        	for (int i = 1; i < numdatabases; ++i) {
+        	for (int i = 0; i < numdatabases; ++i) {
         		databases[i] = 0;
         	}
-        	databases[0] = 1;
+        	//databases[0] = 1;
         	final ArrayList<Button> selectableDBInterfaces = new ArrayList<Button>();
         	
             // Add check boxes per database.
@@ -114,12 +114,12 @@ public class PerfView extends ViewPart
                 final Control perfPanel = e.getValue();
                 chooseDB.setText(e.getKey());
                 chooseDB.setSelection(false);
-                if(e.getKey().equals("DBToaster")){ 
-                	chooseDB.setEnabled(false);
-                	chooseDB.setSelection(true);
-                } else {
-                	selectableDBInterfaces.add(chooseDB);
-                }
+                //if(e.getKey().equals("DBToaster")){ 
+                //	chooseDB.setEnabled(false);
+                //	chooseDB.setSelection(true);
+                //} else {
+            	selectableDBInterfaces.add(chooseDB);
+                //}
                 GridData chooseData = new GridData(SWT.FILL, SWT.FILL, false, false);
                 chooseDB.setLayoutData(chooseData);
                 
@@ -133,6 +133,12 @@ public class PerfView extends ViewPart
                 			databases[getIndexOfDB(chooseDB.getText(), dbNames)] = 0;
                 			perfPanel.setEnabled(false);
                 		}
+                		
+                        for (int i= 0 ; i < numdatabases; i ++) {
+                            if(databases[i] == 1) {
+                                System.out.println(dbNames[i] + " is selected");
+                            }
+                        }
                 	}
                 });
             }
@@ -156,6 +162,12 @@ public class PerfView extends ViewPart
             SelectionAdapter runListener = new SelectionAdapter() {
             	public void widgetSelected(SelectionEvent e)
             	{
+                    for (int i= 0 ; i < numdatabases; i ++) {
+                        if(databases[i] == 1) {
+                            System.out.println(dbNames[i] + " is selected");
+                        }
+                    }
+
             		if (eqTree.getSelectionCount() != 1){
             			if(eqTree.getItemCount() > 0){
             				eqTree.select(eqTree.getItem(eqTree.getItemCount()-1));
@@ -169,11 +181,11 @@ public class PerfView extends ViewPart
                 			currentRunningQuery = getQuery(i.getText());
                 		}
             			
-            	//		for (int i= 0 ; i < numdatabases; i ++) {
-                //			if(databases[i] == 1) {
-                //				System.out.println(dbNames[i] + " is selected");
-                //			}
-            	//		}
+            			for (int i= 0 ; i < numdatabases; i ++) {
+                			if(databases[i] == 1) {
+                				System.out.println(dbNames[i] + " is selected");
+                			}
+            			}
             			
             			if ( currentRunningQuery != null ) {
                             perfStatus.setText("Running " +
@@ -198,7 +210,7 @@ public class PerfView extends ViewPart
                 public void widgetSelected(SelectionEvent e)
                 {
                     if ( currentRunningQuery != null ) {
-                        currentRunningQuery.stopQuery();
+                        currentRunningQuery.getExecutor().stopComparison();
                         perfStatus.setText("Stopped " +
                             currentRunningQuery.getQueryName());
                         stopButton.setEnabled(false);

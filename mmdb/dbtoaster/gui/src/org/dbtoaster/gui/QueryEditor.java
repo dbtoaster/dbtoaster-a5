@@ -537,8 +537,8 @@ public class QueryEditor extends ViewPart
         datasetPnl = new DatasetPanel(dswqComp);
         historyPnl = new QueryHistoryPanel(dswqComp);
         
-    	final QueryTextAndVis queryTv = new QueryTextAndVis(dataView, SWT.BORDER,
-                historyPnl);
+    	final QueryTextAndVis queryTv = new QueryTextAndVis(dataView,
+    	    SWT.BORDER, historyPnl);
 
         formLayoutData = new FormData();
         formLayoutData.bottom = new FormAttachment(100,0);

@@ -97,7 +97,7 @@ public class DBToasterWorkspace
         rcpWorkspace = ResourcesPlugin.getWorkspace();
 
         path_map = loadPath(null);
-        
+
         IProjectDescription projectDesc = rcpWorkspace
                 .newProjectDescription(projectDescription);
         projectDesc.setLocation(new Path(path_map.get("defaultLocation")));
@@ -119,7 +119,7 @@ public class DBToasterWorkspace
             System.exit(1);
         }
         
-        datasets = DatasetManager.initDemoDatasetManager();
+        datasets = DatasetManager.initDemoDatasetManager(this);
         wsQueries = new LinkedHashMap<String, Query>();
 
         dbToaster = new Compiler(datasets, this);
@@ -172,7 +172,6 @@ public class DBToasterWorkspace
     	for(Map.Entry<String, String> e: paths.entrySet()) {
     		System.out.println(e.getKey() + "  " + e.getValue());
     	}
-    	
     	
     	return paths;
     }

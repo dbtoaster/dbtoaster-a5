@@ -41,7 +41,7 @@ public class DBToasterSourceConfigWriter
 
         for (lastRelationArgs e : lastRelationsUsed)
         {
-            String datasetName = e.getDatasets();
+            String datasetName = e.getDataset();
             String relName = e.getRelName();
             String uniqueName = datasetName + "." + relName; 
 

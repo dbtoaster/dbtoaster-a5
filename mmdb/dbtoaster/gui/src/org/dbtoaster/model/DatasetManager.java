@@ -68,22 +68,31 @@ public class DatasetManager
             String defaultHandlerFileDirectory;
             HashMap<String, String> defaultFileNames;
             
+            HashMap<String, Character> inputDelimiters;
+
             public DatasetLocations()
             {
                 relationFiles = new HashMap<String, String>();
                 handlerInputFiles = new HashMap<String, String>();
                 defaultFileNames = new HashMap<String, String>();
+                inputDelimiters = new HashMap<String, Character>();
             }
             
             public void setDefaultLocations(String fileDir,
-                String handlerFileDir, HashMap<String, String> relationLocations)
+                String handlerFileDir, HashMap<String, String> relationLocations,
+                Character defaultDelimiter)
             {
                 defaultFileDirectory = fileDir;
                 defaultHandlerFileDirectory = handlerFileDir;
                 defaultFileNames = relationLocations;
+                
+                for (Map.Entry<String, String> e : defaultFileNames.entrySet())
+                {
+                    inputDelimiters.put(e.getKey(), defaultDelimiter);
+                }
             }
             
-            public void addRelation(String relName, String fileName)
+            public void addRelation(String relName, String fileName, Character delimiter)
             {
                 if ( !defaultFileNames.containsKey(relName) ) {
                     defaultFileDirectory = "";
@@ -91,6 +100,7 @@ public class DatasetManager
                 }
                 
                 relationFiles.put(relName, fileName);
+                inputDelimiters.put(relName, delimiter);
             }
             
             public void addHandlerInput(String relName, String fileName)
@@ -123,6 +133,14 @@ public class DatasetManager
                         defaultFileNames.get(relName);
                 }
                 
+                return r;
+            }
+        
+            public Character getSourceDelimiter(String relName)
+            {
+                Character r = null;
+                if ( inputDelimiters.containsKey(relName) )
+                    r = inputDelimiters.get(relName);
                 return r;
             }
         }
@@ -326,6 +344,17 @@ public class DatasetManager
         return r;
     }
 
+    public Character getSourceDelimiters(String name, String relName)
+    {
+        Character r = null;
+        Dataset ds = getDataset(name);
+        if ( ds != null ) {
+            r = ds.locations.getSourceDelimiter(relName);
+        }
+        
+        return r;
+    }
+    
     // Find first instance of relation.
     public LinkedHashMap<String, String> getRelationFields(String relName)
     {
@@ -410,9 +439,11 @@ public class DatasetManager
         historicalOrderbookLocations.put("bids", "20081201.csv");
         historicalOrderbookLocations.put("asks", "20081201.csv");
         
+        Character orderbookDelim = ',';
+        
         historicalOrderbook.locations.setDefaultLocations(
             historicalDatasetPath, historicalHandlerDatasetPath,
-            historicalOrderbookLocations);
+            historicalOrderbookLocations, orderbookDelim);
 
         aDM.addDataset("orderbook", historicalOrderbook);
 
@@ -642,7 +673,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::lineitem",
             "DBToaster::DemoDatasets::LineitemTupleAdaptor", liAdaptorBindings,
             "datasets",
-            "Lineitem");
+            "lineitem");
         
         tpchDataset.addRelation(
             "file", "orders", ordFieldsAndTypes,
@@ -652,7 +683,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::order",
             "DBToaster::DemoDatasets::OrderTupleAdaptor", ordAdaptorBindings,
             "datasets",
-            "Order");
+            "order");
         
         tpchDataset.addRelation(
             "file", "part", ptFieldsAndTypes,
@@ -662,7 +693,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::part",
             "DBToaster::DemoDatasets::PartTupleAdaptor", ptAdaptorBindings,
             "datasets",
-            "Part");
+            "part");
         
         tpchDataset.addRelation(
             "file", "customer", csFieldsAndTypes,
@@ -672,7 +703,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::customer",
             "DBToaster::DemoDatasets::CustomerTupleAdaptor", csAdaptorBindings,
             "datasets",
-            "Customer");
+            "customer");
         
         tpchDataset.addRelation(
             "file", "supplier", spFieldsAndTypes,
@@ -682,17 +713,17 @@ public class DatasetManager
             "DBToaster::DemoDatasets::supplier",
             "DBToaster::DemoDatasets::SupplierTupleAdaptor", spAdaptorBindings,
             "datasets",
-            "Supplier");
+            "supplier");
         
         tpchDataset.addRelation(
             "file", "partsupp", psFieldsAndTypes,
             "DBToaster::DemoDatasets::PartSuppStream",
                 "\"" + (tpchDatasetPath.isEmpty()? "" : (tpchDatasetPath + "/")) +
-                "/partsupp.tbl.a\",DBToaster::DemoDatasets::parsePartSuppField, 7, 10000, 512",
+                "/partsupp.tbl.a\",DBToaster::DemoDatasets::parsePartSuppField, 5, 10000, 512",
             "DBToaster::DemoDatasets::partsupp",
             "DBToaster::DemoDatasets::PartSuppTupleAdaptor", psAdaptorBindings,
             "datasets",
-            "Partsupp");
+            "partsupp");
         
         tpchDataset.addRelation(
             "file", "nation", ntFieldsAndTypes,
@@ -702,7 +733,7 @@ public class DatasetManager
             "DBToaster::DemoDatasets::nation",
             "DBToaster::DemoDatasets::NationTupleAdaptor", ntAdaptorBindings,
             "datasets",
-            "Nation");
+            "nation");
         
         tpchDataset.addRelation(
             "file", "region", rgFieldsAndTypes,
@@ -712,19 +743,22 @@ public class DatasetManager
             "DBToaster::DemoDatasets::region",
             "DBToaster::DemoDatasets::RegionTupleAdaptor", rgAdaptorBindings,
             "datasets",
-            "Region");
+            "region");
 
         HashMap<String, String> tpchLocations = new HashMap<String, String>();
-        tpchLocations.put("Lineitem", "lineitem.tbl.a");
-        tpchLocations.put("Order", "orders.tbl.a");
-        tpchLocations.put("Part", "part.tbl.a");
-        tpchLocations.put("Customer", "customer.tbl.a");
-        tpchLocations.put("Supplier", "supplier.tbl.a");
-        tpchLocations.put("Nation", "nation.tbl");
-        tpchLocations.put("Region", "region.tbl");
+        tpchLocations.put("lineitem", "lineitem.tbl.a");
+        tpchLocations.put("order", "orders.tbl.a");
+        tpchLocations.put("part", "part.tbl.a");
+        tpchLocations.put("customer", "customer.tbl.a");
+        tpchLocations.put("supplier", "supplier.tbl.a");
+        tpchLocations.put("nation", "nation.tbl");
+        tpchLocations.put("region", "region.tbl");
+        tpchLocations.put("partsupp", "partsupp.tbl.a");
         
+        Character tpchDelimiter = '|';
         tpchDataset.locations.setDefaultLocations(
-            tpchDatasetPath, tpchHandlerDatasetPath, tpchLocations);
+            tpchDatasetPath, tpchHandlerDatasetPath, tpchLocations,
+            tpchDelimiter);
 
         aDM.addDataset("tpch", tpchDataset);
         

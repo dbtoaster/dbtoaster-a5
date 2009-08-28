@@ -125,7 +125,7 @@ public class DBToasterTMLWriter
     		relName = r;
     	}
     	
-    	public String getDatasets() {
+    	public String getDataset() {
     		return datasets;
     	}
     	
