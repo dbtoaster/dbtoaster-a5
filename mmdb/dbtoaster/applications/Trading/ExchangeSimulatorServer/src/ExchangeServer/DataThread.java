@@ -35,7 +35,7 @@ public class DataThread extends Thread{
     	    
             file= new File(in_file);
             reader = new BufferedReader(new FileReader(file));
-
+            
             StringBuffer contents = new StringBuffer();
             
         } catch (UnknownHostException e) {
@@ -68,12 +68,16 @@ public class DataThread extends Thread{
 		    out.write(clientType);
 		    out.write(clientType);
 		    out.write(clientType);
+		    
+//		    System.out.println(reader.readLine());
 			
 			while ((text=reader.readLine())!=null)
 			{
 				Stream_tuple t=new Stream_tuple();
 				String [] input_tuple;
 				input_tuple=text.split(",");
+				
+				System.out.println(text);
 				
 				t.time=(Integer.valueOf(input_tuple[0])).longValue();
 				t.order_id=(Integer.valueOf(input_tuple[1])).intValue();

@@ -85,6 +85,21 @@ public class ExchangeThread extends Thread{
 								{
 									company_id=comp.intValue();
 								}
+								else
+								{
+									if (nextTuple.action.equals("S") || nextTuple.action.equals("B"))
+									{
+										
+									}
+									else
+									{
+										
+										System.out.println("NOT found "+nextTuple);
+//										System.exit(-1);
+										
+									}
+									
+								}
 							}
 						}
 					}
@@ -223,12 +238,12 @@ public class ExchangeThread extends Thread{
 						synchronized(this.clientList)
 						{
 //							nextTuple.time=timer.getTime();
-							for (ExchangeThread item : clientList)
+/*							for (ExchangeThread item : clientList)
 							{
 								if (item.getExchangeType())
 									item.sendMessageBack(nextTuple);
 
-							}
+							}*/
 						}
 					}
 					else if (action.equals("F"))
@@ -240,15 +255,18 @@ public class ExchangeThread extends Thread{
 								Integer temp_c_id;
 								if ((temp_c_id = orderIDtoCompID.get(new Integer(order_id))) != null)
 								{
+									System.out.println(nextTuple);
 									nextTuple.company_id=temp_c_id.intValue();
 									orderIDtoCompID.remove(new Integer(order_id));
+									
 								}
 							}
 						}
 						
+						
 						synchronized(orders_book){
 //							nextTuple.time=timer.getTime();
-							orders_book.remove(new Integer(order_id));
+							orders_book.remove(nextTuple);
 						}
 						synchronized(this.clientList)
 						{
@@ -269,15 +287,22 @@ public class ExchangeThread extends Thread{
 								Integer temp_c_id;
 								if ((temp_c_id = orderIDtoCompID.get(new Integer(order_id))) != null)
 								{
+									System.out.println("got Temp ID "+ temp_c_id+" "+ temp_c_id.intValue());
 									nextTuple.company_id=temp_c_id.intValue();
 									orderIDtoCompID.remove(new Integer(order_id));
+									
+								}
+								else
+								{
+									System.out.println("order id not found");
+									System.exit(-1);
 								}
 							}
 						}
 						
 						synchronized(orders_book){
 //							nextTuple.time=timer.getTime();
-							orders_book.remove(new Integer(order_id));
+							orders_book.remove(nextTuple);
 						}
 						synchronized(this.clientList)
 						{

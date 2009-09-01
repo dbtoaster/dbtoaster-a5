@@ -1,6 +1,9 @@
 package ExchangeServer;
 
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 public class SynchronizedBooks {
@@ -23,6 +26,11 @@ public class SynchronizedBooks {
 	long totalB;
 	long totalS;
 	
+	FileWriter OUTFile;
+	BufferedWriter fileOut;
+
+
+	
 	boolean doSkips;
 	
 	public int setOrderId(int id){
@@ -30,6 +38,7 @@ public class SynchronizedBooks {
 	}
 	
 	public SynchronizedBooks(boolean d, boolean skips){
+		
 		order_id=0;
 		currentTime=0;
 		numberOfMatchings=0;
@@ -46,9 +55,23 @@ public class SynchronizedBooks {
 		
 		old_ids=new HashMap<Integer, Integer>();
 		
+		try {
+			OUTFile = new FileWriter("cleanedData.csv");
+	        fileOut = new BufferedWriter(OUTFile);
+	    } catch (IOException e) {
+	    }
+		
 	}
 
 	public LinkedList<Stream_tuple> add_Ask_order(Order_tuple t){
+		
+		try {
+			fileOut.write(t.time+","+t.id+",S,"+t.volume+","+t.price+"\n");
+			fileOut.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		if (t.id == 0)
 		{
@@ -96,6 +119,14 @@ public class SynchronizedBooks {
 	}
 
 	public LinkedList<Stream_tuple> add_Bid_order(Order_tuple t){
+		
+		try {
+			fileOut.write(t.time+","+t.id+",B,"+t.volume+","+t.price+"\n");
+			fileOut.flush();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
 		if (t.id == 0)
 		{
@@ -208,22 +239,51 @@ public class SynchronizedBooks {
 		return false;
 	}
 	
-	public boolean remove(Integer id){
+	public boolean remove(Stream_tuple tuple){
+		
+		int returnID=tuple.order_id;
+		
+		Integer id=new Integer(tuple.order_id);
+		
+		Integer old_id;
+		if ((old_id = old_ids.get(id)) != null)
+		{
+			id=old_id;
+			tuple.order_id=id.intValue();
+		}
+		else
+		{
+			return false;
+		}
+		
+		boolean returnVal=false;
 		
 		if (ask_orders.containsKey(id)){
 			ask_orders.remove(id);
-			return true;
+			returnVal=true;
 		}else if (bid_orders.containsKey(id)){
 			bid_orders.remove(id);
-			return true;
-		}if (live_ask_orders.containsKey(id)){
+			returnVal= true;
+		}
+		if (live_ask_orders.containsKey(id)){
 			live_ask_orders.remove(id);
-			return true;
+			returnVal= true;
 		}else if (live_bid_orders.containsKey(id)){
 			live_bid_orders.remove(id);
-			return true;
-		}		
-		return false;
+			returnVal= true;
+		}	
+		
+		if (returnVal)
+		{
+			try {
+				fileOut.write(tuple.time+","+returnID+","+tuple.action+","+tuple.volume+","+tuple.price+"\n");
+				fileOut.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return returnVal;
 	}
 		
 	private LinkedList<Stream_tuple> match_ask(Order_tuple t, LinkedList<Stream_tuple> message){
@@ -266,8 +326,21 @@ public class SynchronizedBooks {
 			best_bid=bid_orders.last();
 		}
 		
+		System.out.println("matching "+t);
+		System.out.println("with bid "+best_bid);
+		
 		if (t.price>best_bid.price){
-			ask_orders.put(new Integer(t.id), t);
+			
+			if (doLive)
+			{
+				live_ask_orders.put(new Integer(t.id), t);
+			}
+			else
+			{
+				ask_orders.put(new Integer(t.id), t);
+			}
+			
+			return message;
 /*			
 			msg=new Stream_tuple();
 			msg.time=t.time;
@@ -288,7 +361,7 @@ public class SynchronizedBooks {
 			msg=new Stream_tuple();
 			msg.time=best_bid.time;
 			msg.order_id=best_bid.id;
-			msg.action="E";
+			msg.action="U";
 			msg.price=best_bid.price;
 			msg.volume=t.volume;
 			msg.company_id=best_bid.c_id;
@@ -304,8 +377,18 @@ public class SynchronizedBooks {
 			message.addLast(msg);
 			message.addLast(msg2);
 			
-			bid_orders.pop_back();
-			bid_orders.put(new Integer(best_bid.id), best_bid);
+			if (doLive)
+			{
+				live_bid_orders.pop_back();
+				live_bid_orders.put(new Integer(best_bid.id), best_bid);
+			}
+			else
+			{
+				bid_orders.pop_back();
+				bid_orders.put(new Integer(best_bid.id), best_bid);
+			}
+			
+			return message;
 			
 		}else if (t.volume==best_bid.volume){
 			//TODO: exec t in full change best bid, exec best bid in full 
@@ -333,7 +416,16 @@ public class SynchronizedBooks {
 			msg2.company_id=t.c_id;
 			message.addLast(msg2);
 			
-			bid_orders.pop_back();
+			if (doLive)
+			{
+				live_bid_orders.pop_back();
+			}
+			else
+			{
+				bid_orders.pop_back();
+			}
+			
+			return message;
 			
 		}else {
 			//TODO: change best_bid, exec_best bid in full, change t, call match_ask
@@ -352,6 +444,15 @@ public class SynchronizedBooks {
 			
 			numberOfSold+=best_bid.volume;
 			numberOfBrought+=(best_bid.volume)*best_bid.price;
+			
+			msg=new Stream_tuple();
+			msg.time=t.time;
+			msg.order_id=t.id;
+			msg.action="U";
+			msg.price=best_bid.price;
+			msg.volume=best_bid.volume;
+			msg.company_id=t.c_id;
+			message.addLast(msg);
 										
 			msg=new Stream_tuple();
 			msg.time=best_bid.time;
@@ -362,22 +463,20 @@ public class SynchronizedBooks {
 			msg.company_id=best_bid.c_id;
 			message.addLast(msg);
 			
-			msg=new Stream_tuple();
-			msg.time=t.time;
-			msg.order_id=t.id;
-			msg.action="E";
-			msg.price=best_bid.price;
-			msg.volume=best_bid.volume;
-			msg.company_id=t.c_id;
-			message.addLast(msg);
-			
-			bid_orders.pop_back();
+			if (doLive)
+			{
+				live_bid_orders.pop_back();
+			}
+			else
+			{
+				bid_orders.pop_back();
+			}
 			
 			return match_ask(t, message);
 		}
 		
 		
-		return message;
+//		return message;
 	}
 	private LinkedList<Stream_tuple> match_bid(Order_tuple t, LinkedList<Stream_tuple> message){
 		//got a new buy request want to check if there is a matching sell request 
@@ -414,12 +513,15 @@ public class SynchronizedBooks {
 		
 		if (doLive)
 		{
-			best_ask=live_ask_orders.last();
+			best_ask=live_ask_orders.first();
 		}
 		else
 		{
-			best_ask=ask_orders.last();
+			best_ask=ask_orders.first();
 		}
+		
+		System.out.println("matching "+t);
+		System.out.println("with ask "+best_ask);
 		
 		
 		if (t.price<best_ask.price){
@@ -433,7 +535,14 @@ public class SynchronizedBooks {
 			msg.volume=t.volume;
 			message.addLast(msg);
 */			
-			bid_orders.put(new Integer(t.id), t);
+			if (doLive)
+			{
+				live_bid_orders.put(new Integer(t.id), t);
+			}
+			else
+			{
+				bid_orders.put(new Integer(t.id), t);
+			}
 			
 		}else if (t.volume<best_ask.volume){
 			//TODO: add bit executed in full message to the ask message, change the best_ask volume			
@@ -445,7 +554,7 @@ public class SynchronizedBooks {
 			msg=new Stream_tuple();
 			msg.time=best_ask.time;
 			msg.order_id=best_ask.id;
-			msg.action="E";
+			msg.action="U";
 			msg.price=best_ask.price;
 			msg.volume=t.volume;
 			msg.company_id=best_ask.c_id;
@@ -464,8 +573,16 @@ public class SynchronizedBooks {
 			//changing the volume of the tuple
 			best_ask.volume=best_ask.volume-t.volume;
 			
-			ask_orders.pop_front();
-			ask_orders.put(new Integer(best_ask.id), best_ask);
+			if (doLive)
+			{
+				live_ask_orders.pop_front();
+				live_ask_orders.put(new Integer(best_ask.id), best_ask);
+			}
+			else
+			{
+				ask_orders.pop_front();
+				ask_orders.put(new Integer(best_ask.id), best_ask);
+			}
 			
 			
 		}else if (t.volume==best_ask.volume){
@@ -494,7 +611,15 @@ public class SynchronizedBooks {
 			msg.company_id=t.c_id;
 			message.addLast(msg);
 			
-			ask_orders.pop_front();
+			if (doLive)
+			{
+				live_ask_orders.pop_front();
+			}
+			else
+			{
+				ask_orders.pop_front();
+			}
+			
 			
 			//TODO: need the code to handle consistency by adding this staff back as a new order or something.
 			//changing the volume of the tuple
@@ -515,6 +640,15 @@ public class SynchronizedBooks {
 			
 			numberOfSold+=best_ask.volume;
 			numberOfBrought+=(best_ask.volume)*best_ask.price;
+			
+			msg=new Stream_tuple();
+			msg.time=t.time;
+			msg.order_id=t.id;
+			msg.action="U";
+			msg.price=best_ask.price;
+			msg.volume=best_ask.volume;
+			msg.company_id=t.c_id;
+			message.addLast(msg);
 										
 			msg=new Stream_tuple();
 			msg.time=best_ask.time;
@@ -525,16 +659,14 @@ public class SynchronizedBooks {
 			msg.company_id=best_ask.c_id;
 			message.addLast(msg);
 			
-			msg=new Stream_tuple();
-			msg.time=t.time;
-			msg.order_id=t.id;
-			msg.action="E";
-			msg.price=best_ask.price;
-			msg.volume=best_ask.volume;
-			msg.company_id=t.c_id;
-			message.addLast(msg);
-			
-			ask_orders.pop_front();
+			if (doLive)
+			{
+				live_ask_orders.pop_front();
+			}
+			else
+			{
+				ask_orders.pop_front();
+			}
 			
 			return match_bid(t, message);
 						

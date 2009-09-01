@@ -7,14 +7,14 @@ import java.util.*;
 
 
 public class ExchangeServer {
-
-
-	public static void main(String[] args) throws IOException{
+	
+		public static void main(String[] args) throws IOException{
 		
 		boolean DEBUG=true;
 		
 		ServerSocket serverSocket = null;
         boolean listening = true;
+
         
         if (args.length<1){
         	System.out.println("Usage: ExchangeServer data_file.cvs");
@@ -59,7 +59,7 @@ public class ExchangeServer {
         	client.setClientList(clientList);
         	client.start();
 
-        	if (!isConnected && clientList.size()>1){
+        	if (!isConnected && clientList.size()>3){
         		isConnected=true;
         		if (DEBUG){
         			System.out.println("Stating Datathread");
