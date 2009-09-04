@@ -1,4 +1,5 @@
 open Algebra
+open Types
 
 (* TODO:
  * -- apply_delta_plan_rules: handle conjunctive/disjunctive map expression

@@ -1,5 +1,8 @@
 open Algebra
+open Codegen
 open Xml
+
+exception ConfigException of string
 
 (*********************
  * TreeML writing
@@ -1056,6 +1059,133 @@ let parse_treeml treeml_str =
 
 let parse_treeml_file treeml_fn =
     parse_treeml_of_xml (parse_file treeml_fn)
+
+
+(*******************************
+ * Source config file
+ ******************************)
+
+(* Source config file DTD:
+ * <!ELEMENT sources ( relation* )>
+ * <!ELEMENT relation ( stream | source | tuple | adaptor | thrift )* >
+ * <!ELEMENT stream type CDATA #REQUIRED >
+ * <!ELEMENT source ( arg* ) >
+ * <!ATTLIST source
+ *     type CDATA #REQUIRED
+ *     instance CDATA #REQUIRED >
+ * <!ATTLIST arg
+ *     pos CDATA #REQUIRED
+ *     val CDATA #REQUIRED >
+ * <!ATTLIST tuple
+ *     type CDATA #REQUIRED >
+ * <!ELEMENT adaptor ( binding* ) >
+ * <!ATTLIST adaptor type CDATA #REQUIRED >
+ * <!ATTLIST binding
+ *     queryname CDATA #REQUIRED
+ *     tuplename CDATA #REQUIRED >
+ * <!ATTLIST thrift namespace CDATA #REQUIRED >
+ *)
+let get_stream_type relation ch =
+    let stream_nodes = List.filter (fun c -> (tag c) = "stream") ch in
+        match stream_nodes with
+            | [] -> raise (ConfigException ("Missing source type for relation "^relation))
+            | [x] -> attrib x "type"
+            | _ -> raise (ConfigException
+                  ("Multiple stream types specified for relation "^relation))
+
+let get_source_info relation ch =
+    let source_nodes = List.filter (fun c -> (tag c) = "source") ch in
+        match source_nodes with
+            | [] -> raise (ConfigException ("Missing source type for relation "^relation))
+            | [x] ->
+                  let source_type = attrib x "type" in
+                  let source_instance_name = attrib x "instance" in
+                  let arg_nodes = List.filter (fun c -> (tag c) = "arg") (Xml.children x) in
+                  let source_args =
+                      let positioned_args =
+                          List.sort (fun (p,v) (p2,v2) -> compare p p2)
+                              (List.map (fun a ->
+                                  let val_data =
+                                      let v = (attrib a "val") in
+                                          match Xml.parse_string v with
+                                              | PCData b -> b
+                                              | _ -> raise (ConfigException ("Failed to parse arg val "^v))
+                                  in
+                                      (attrib a "pos", val_data)) arg_nodes)
+                      in
+                          List.fold_left
+                              (fun acc (_,v) ->
+                                  (if (String.length acc) = 0 then "" else acc^",")^v)
+                              "" positioned_args
+                  in
+                      (source_type, source_instance_name, source_args)
+
+            | _ -> raise (ConfigException
+                  ("Multiple source types specified for relation "^relation))
+
+let get_tuple_type relation ch =
+    let tuple_nodes = List.filter (fun c -> (tag c) = "tuple") ch in
+        match tuple_nodes with
+            | [] -> raise (ConfigException ("Missing tuple type for relation "^relation))
+            | [x] -> attrib x "type"
+            | _ -> raise (ConfigException
+                  ("Multiple tuple types specified for relation "^relation))
+
+let get_adaptor_info relation ch =
+    let adaptor_nodes = List.filter (fun c -> (tag c) = "adaptor") ch in
+        match adaptor_nodes with
+            | [] -> raise (ConfigException ("Missing adaptor type for relation "^relation))
+            | [x] ->
+                  let adaptor_type = attrib x "type" in
+                  let binding_nodes = List.filter (fun c -> (tag c) = "binding") (Xml.children x) in
+                  let adaptor_bindings =
+                      List.map (fun x -> (attrib x "queryname", attrib x "tuplename")) binding_nodes
+                  in
+                      (adaptor_type, adaptor_bindings)
+            | _ -> raise (ConfigException
+                  ("Multiple adaptor types specified for relation "^relation))
+
+let get_thrift_tuple_namespace relation ch =
+    let ns_nodes = List.filter (fun c -> (tag c) = "thrift") ch in
+        match ns_nodes with
+            | [] -> ""
+            | [x] -> attrib x "namespace"
+            | _ -> raise (ConfigException
+                  ("Multiple Thrift namespaces specified for relation "^relation))
+
+let get_relation_source node =
+    match (tag node) with
+        | "relation" ->
+              let rel_name = attrib node "name" in
+              let ch = Xml.children node in
+              let stream_type = get_stream_type rel_name ch in
+              let (source_type, source_instance_name, source_constructor_args) =
+                  get_source_info rel_name ch in
+              let tuple_type = get_tuple_type rel_name ch in
+              let (adaptor_type, adaptor_bindings) = get_adaptor_info rel_name ch in
+              let thrift_ns = get_thrift_tuple_namespace rel_name ch in
+                  (rel_name,
+                  (stream_type, source_type, source_constructor_args, tuple_type,
+                  adaptor_type, adaptor_bindings, thrift_ns, source_instance_name))
+
+        | _ -> raise (ConfigException ("Invalid relation node "^(tag node)))
+
+let get_source_configuration tree =
+    let start_nodes =
+        if (tag tree)  = "sources" then
+            List.filter (fun x -> (tag x) = "relation") (Xml.children tree)
+        else
+            raise (ConfigException ("Invalid data source config file root: "^(tag tree)))
+    in
+        List.map get_relation_source start_nodes
+        
+let parse_data_sources_config fn =
+    try
+        let config_xml = parse_file fn in
+        let relation_sources = get_source_configuration config_xml in
+            relation_sources
+    with
+        | Error e -> raise (ConfigException (Xml.error e))
 
 
 (***************************************

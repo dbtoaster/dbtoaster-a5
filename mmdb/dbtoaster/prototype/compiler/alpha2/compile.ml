@@ -1,40 +1,67 @@
 open Algebra
+open Types
 open Compilepass
 open Codegen
+
+open Thriftgen
+open Runtime
+open Debugger
+
 open Analysis
 open Gui
 
 (* TODO: typechecker *)
 
 (* map expression list -> delta list * map expression list *)
-let preprocess m_expr_l =
-(*
+let preprocess_files file_exprs_l =
+    let m_expr_l = List.flatten file_exprs_l in
     let events_and_m_exprs =
         let events_l = List.map generate_all_events m_expr_l in
             List.fold_left2
                 (fun acc ev_l me -> 
-                    if List.mem ev_l acc then
-                        [(ev_l, ((List.assoc ev_l acc)@[me]))]@(List.remove_assoc ev_l acc)
+                    if List.mem_assoc ev_l acc then
+                        let existing_me = List.assoc ev_l acc in
+                            [(ev_l, (existing_me@[me]))]@(List.remove_assoc ev_l acc)
                     else
                         (acc@[(ev_l, [me])]))
                 [] events_l m_expr_l
     in
     let event_groups = fst (List.split events_and_m_exprs) in
-    let disjoint_groups =
-        List.for_all
-            (fun g ->
-                List.for_all
-                    (fun g2 -> List.length (intersect g g2) = 0)
-                    (List.filter (fun g2 -> not(g=g2)) event_groups))
-            event_groups
-    in
-        if disjoint_groups then
+    let overlapping_groups =
+        let intersect a b = List.flatten (List.map (fun x -> List.filter (fun y -> x = y) b) a) in
             List.map
-                (fun (ev, me_l) -> (ev, List.map rename_attributes me_l))
+                (fun g ->
+                    let overlaps =
+                        List.filter
+                            (fun g2 -> List.length (intersect g g2) <> 0)
+                            (List.filter (fun g2 -> not(g=g2)) event_groups)
+                    in
+                        (g, overlaps))
+                event_groups
+    in
+    let disjoint_event_groups =
+        List.for_all (fun (_,overlaps) -> List.length overlaps = 0) overlapping_groups
+    in
+        if disjoint_event_groups then
+            List.map
+                (fun (ev, me_l) -> (ev, fst (List.split (List.map rename_attributes me_l))))
                 events_and_m_exprs
         else
-            raise (PlanException ("Map expressions depend on different events."))
-*)
+            let string_of_delta = function | `Insert(n,_) -> "+"^n | `Delete(n,_) -> "-"^n in
+            let string_of_event_group g = String.concat "," (List.map string_of_delta g) in
+                print_endline "Overlaps:";
+                List.iter
+                    (fun (g,overlaps) ->
+                        let g_str = string_of_event_group g in
+                        let overlap_str =
+                            String.concat ", "
+                                (List.map (fun g2 -> "{"^(string_of_event_group g2)^"}") overlaps)
+                        in
+                            print_endline (g_str^": "^overlap_str))
+                    overlapping_groups;
+                raise (PlanException ("Map expressions depend on different events."))
+
+let preprocess_query m_expr_l =
     let events = 
         let events_l = List.map generate_all_events m_expr_l in
             if (List.for_all (fun e -> e = (List.hd events_l)) (List.tl events_l)) then
@@ -43,6 +70,7 @@ let preprocess m_expr_l =
     in
     let (new_m_expr_l, _) = List.split (List.map rename_attributes m_expr_l) in
         (events, new_m_expr_l)
+
             
 (* Sig: map expression -> (code_expression list * code_expression list) * compile trace
  * compile trace : (event path * (handler stages * (var * binding stages) list) list) list
@@ -116,7 +144,8 @@ let compile_code_rec events pp_expr_l =
                                     let new_bd = match h with
                                         | `Incr(_,_,_,bd,_) | `IncrDiff(_,_,_,bd,_) ->
                                               print_endline
-                                                  ("Tracking bindings for "^(indented_string_of_code_expression new_hc)^": ");
+                                                  ("Tracking bindings for "^
+                                                      (indented_string_of_code_expression new_hc)^": ");
                                               print_endline (string_of_bindings bd);
                                               bd_acc@[(new_hc,bd)]
                                         | _ -> bd_acc
@@ -143,7 +172,8 @@ let compile_code_rec events pp_expr_l =
                                                   let has_bd = List.mem_assoc orig bd_acc in
                                                       if has_bd then
                                                           let bd = List.assoc orig bd_acc in
-                                                              (hc_acc@[(level, c)], (List.remove_assoc orig bd_acc)@[(c,bd)])
+                                                              (hc_acc@[(level, c)],
+                                                              (List.remove_assoc orig bd_acc)@[(c,bd)])
                                                       else (hc_acc@[(level, c)], bd_acc))
                                     ([], bd_l) decl_filtered
                         in
@@ -191,7 +221,8 @@ let compile_code_rec events pp_expr_l =
                                             | Some(`Declare(`Map(mid, f, rt))) -> f
                                             | Some(_) | None ->
                                                   let msg =
-                                                      ("Invalid map return val: "^(string_of_arith_code_expression rv)^"\n")
+                                                      ("Invalid map return val: "^
+                                                          (string_of_arith_code_expression rv)^"\n")
                                                   in
                                                       print_endline msg;
                                                       raise (CodegenException msg)
@@ -228,7 +259,9 @@ let compile_code_rec events pp_expr_l =
                                                       let new_ret =
                                                           if is_ret_map then
                                                               match global_used with
-                                                                  | Some(`Declare(`Map(id,_,_))) -> [(`ReturnMap id, rv_type)]
+                                                                  | Some(`Declare(`Map(id,_,_))) ->
+                                                                        [(`ReturnMap id, rv_type)]
+
                                                                   | Some(_) | None ->
                                                                         let msg = ("Invalid map return val "^
                                                                             (string_of_arith_code_expression x))
@@ -359,15 +392,24 @@ let compile_code_rec events pp_expr_l =
         ((prof_loc_decls@other_decls, handler_and_events), event_path_stages)
 
 
-let compile_code_rec_l m_expr_l =
-    let (events, new_m_exprs) = preprocess m_expr_l in
-        compile_code_rec events new_m_exprs
+(* TODO: partitioning scheme for map expressions from multiple files *)
+let compile_files file_exprs_l =
+    (*
+      let (events, new_m_exprs) = preprocess_query file_exprs_l in
+          compile_code_rec events new_m_exprs
+    *)
+    let events_and_m_exprs = preprocess_files file_exprs_l in
+        List.fold_left
+            (fun ((gd_acc, h_acc), trace_acc) (events, m_expr_l) ->
+                let ((gd,h), trace) = compile_code_rec events m_expr_l in
+                    ((gd_acc@gd, h_acc@h), trace_acc@trace))
+            (([],[]), []) events_and_m_exprs
 
 (*
  * Object file compilation, i.e. handlers only.
  *)
-let compile_query m_expr_l out_file_name =
-    let ((global_decls, handlers_and_events), _) = compile_code_rec_l m_expr_l in
+let compile_query file_exprs_l out_file_name =
+    let ((global_decls, handlers_and_events), _) = compile_files file_exprs_l in
     let out_chan = open_out out_file_name in
         generate_includes out_chan;
 
@@ -386,10 +428,6 @@ let compile_query m_expr_l out_file_name =
 
         close_out out_chan
 
-
-(*
- * Engine compilation: handlers, stream multiplexer, dispatcher, main
- *)
 
 let write_trace_and_catalog file_name compile_trace =
     let catalog_fn =
@@ -475,11 +513,84 @@ let create_stream_type_info event relation_sources =
             raise (CodegenException
                 ("Could not find relation source for "^event_rel))
 
+(*
+ * Testing engine compilation: handlers, stream multiplexer, dispatcher, main
+ *)
 
-let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file_name_opt =
+let compile_testing_engine file_exprs_l relation_sources out_file_name trace_file_name_opt =
     let query_base_path = Filename.chop_extension out_file_name in
     let query_id = Filename.basename query_base_path in
-    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec_l m_expr_l in
+    let ((global_decls, handlers_and_events), compile_trace) = compile_files file_exprs_l in
+    let code_out_chan = open_out out_file_name in
+
+        generate_includes code_out_chan;
+        generate_stream_engine_includes code_out_chan;
+
+        (* output declarations *) 
+	List.iter
+	    (fun x -> output_string code_out_chan
+		((indented_string_of_code_expression x)^"\n")) global_decls;
+	output_string code_out_chan "\n";
+
+        (* output handlers *)
+        List.iter
+            (fun (h, e) ->
+	        output_string code_out_chan
+		    ((indented_string_of_code_expression h)^"\n\n"))
+            handlers_and_events;
+
+        (match relation_sources with
+            | [] ->
+                  begin
+                      print_endline "No sources found ... generating no op main.";
+                      generate_noop_main code_out_chan
+                  end
+
+            | h::t ->
+                  begin
+                      let (_, (stream_type, _, _, _, _, _, _, _)) = h in
+                      let (gen_init_fn, gen_main_fn) =
+                          match stream_type with
+                              | "file" -> 
+                                    (generate_file_stream_engine_init, generate_file_stream_testing_main)
+
+                              | "socket" -> 
+                                    (generate_socket_stream_engine_init, generate_socket_stream_testing_main)
+
+                              | _ -> raise (CodegenException ("Invalid stream source type: "^stream_type))
+                      in
+
+                          (* init *)
+                          gen_init_fn code_out_chan
+                              (List.map
+                                  (fun (h,e) ->
+                                      let (stream_name, stream_type_info) =
+                                          create_stream_type_info e relation_sources
+                                      in
+                                          (stream_type_info, stream_name, h, e))
+                                  handlers_and_events);
+
+                          (* main *)
+                          gen_main_fn query_id code_out_chan global_decls;
+
+                          (* Output additional information from compilation *)
+                          match trace_file_name_opt with
+                              | None -> ()
+                              | Some fn -> write_analysis_files handlers_and_events fn compile_trace
+                  end);
+
+        close_out code_out_chan
+                  
+
+
+(*
+ * Engine compilation: handlers, stream multiplexer, dispatcher, thrift viewer, main
+ *)
+
+let compile_standalone_engine file_exprs_l relation_sources out_file_name trace_file_name_opt =
+    let query_base_path = Filename.chop_extension out_file_name in
+    let query_id = Filename.basename query_base_path in
+    let ((global_decls, handlers_and_events), compile_trace) = compile_files file_exprs_l in
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in
@@ -542,10 +653,10 @@ let compile_standalone_engine m_expr_l relation_sources out_file_name trace_file
 (*
  * Debugger compilation: handlers, stream multiplexer, dispatcher, Thrift service
  *)
-let compile_standalone_debugger m_expr_l relation_sources out_file_name trace_file_name_opt =
+let compile_standalone_debugger file_exprs_l relation_sources out_file_name trace_file_name_opt =
     let query_base_path = Filename.chop_extension out_file_name in
     let query_id = Filename.basename query_base_path in
-    let ((global_decls, handlers_and_events), compile_trace) = compile_code_rec_l m_expr_l in
+    let ((global_decls, handlers_and_events), compile_trace) = compile_files file_exprs_l in
     let code_out_chan = open_out out_file_name in
     let thrift_file_name = query_base_path^".thrift"in
     let thrift_out_chan =  open_out thrift_file_name in

@@ -127,6 +127,18 @@ type binding = [
 
 type recompute_state = New | Incr
 
+type stream_type = string
+type source_type = string
+type source_args = string
+type tuple_type = string
+type adaptor_type = string
+type adaptor_bindings = (string * string) list
+type source_instance = string
+type source_info =
+        string *
+            (stream_type * source_type * source_args * tuple_type *
+                adaptor_type * adaptor_bindings * string * source_instance)
+
 
 (* Pretty printing *)	
 let string_of_attribute_identifier id =
@@ -556,9 +568,12 @@ and indented_string_of_plan p level =
 		  (indent "}")
 
 
-(*
- * symbol generation
- *)
+(*******************************
+ *
+ * Symbol generation
+ *
+ * For: relations, variables, bindings and datastructures (state ids, maps, domain)
+ *******************************)
 
 (* Relations *)
 let id_counter = ref 0
@@ -575,8 +590,6 @@ let gen_var_sym() =
     let new_sym = !var_counter in
 	incr var_counter;
 	"var"^(string_of_int new_sym)
-
-
 
 
 (* Datastructures *)
@@ -741,7 +754,11 @@ let attribute_identifiers_of_field_list relation_id field_l =
 let attributes_of_bindings bindings =
     List.map (fun (aid, e_opt) -> aid) bindings
 
-(* Plan transformation helpers *)
+
+(*
+ * Map algebra manipulation
+ *)
+
 let rec fold_map_expr fn acc expr =
     match expr with 
 	| `UnaryMinus e ->
@@ -904,10 +921,9 @@ and map_plan e_fn b_fn me_fn mp_fn (plan : plan) =
 
 
 
-(*
- * Accessors
- *
- *)
+(*******************************
+ * Map algebra accessors
+ *******************************)
 
 let string_of_accessor_element ae =
     match ae with
@@ -1175,12 +1191,11 @@ let splice m_expr orig rewrite =
 	splice_map_expr_aux m_expr
 
 
-(* map_expression -> plan list *)
-let get_base_relations m_expr =
-    let rec gbr_aux ae acc =
-	match ae with
+let rec get_base_relations_accessor_element ae acc =
+    let gbr_aux = get_base_relations_accessor_element in
+        match ae with
 	    | `MapExpression (`METerm _) | `MapExpression (`Delete _) -> acc
-		  
+	          
 	    | `MapExpression (`Delta(_,e))
 	    | `MapExpression (`New(e)) 
 	    | `MapExpression (`MaintainMap(_,_,_,e))
@@ -1198,46 +1213,51 @@ let get_base_relations m_expr =
                 -> (gbr_aux (`MapExpression r) (gbr_aux (`MapExpression l) acc))
 
 	    | `MapExpression (`MapAggregate(fn,f,q)) ->
-		  (gbr_aux (`MapExpression f) (gbr_aux (`Plan q) acc))
+	          (gbr_aux (`MapExpression f) (gbr_aux (`Plan q) acc))
 
 	    | `Plan (`TrueRelation) | `Plan (`FalseRelation) -> acc
 
 	    | `Plan (`Relation _ as x) -> acc@[x]
 
             | `Plan (`Domain _) -> acc
-		  
+	          
 	    | `Plan (`Select (p,cq)) ->
-		  begin
+	          begin
 		      match p with
-			  | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
-			  | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
-			  | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
+		          | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
+		          | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
+		          | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
                                 ->
-				(gbr_aux (`MapExpression m_expr) (gbr_aux (`Plan cq) acc))
+			        (gbr_aux (`MapExpression m_expr) (gbr_aux (`Plan cq) acc))
 
-			  | _ -> (gbr_aux (`Plan cq) acc)
-		  end
+		          | _ -> (gbr_aux (`Plan cq) acc)
+	          end
 		      
 	    | `Plan (`Project (a, cq)) -> (gbr_aux (`Plan cq) acc)
 
 	    | `Plan (`Union ch) -> List.fold_left (fun acc c -> gbr_aux (`Plan c) acc) acc ch
 
 	    | `Plan (`Cross (l,r)) ->
-		  (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
+	          (gbr_aux (`Plan r) (gbr_aux (`Plan l) acc))
 
 	    | `Plan (`DeltaPlan (_, p)) | `Plan (`NewPlan (p))
             | `Plan (`IncrPlan (_,_,_,_,p)) | `Plan (`IncrDiffPlan (_,_,_,_,p)) ->
-		  (gbr_aux (`Plan p) acc)
+	          (gbr_aux (`Plan p) acc)
 
 	    | _ -> raise InvalidExpression
-    in
-	gbr_aux (`MapExpression m_expr) []
+
+(* map_expression -> plan list *)
+let get_base_relations m_expr =
+    get_base_relations_accessor_element (`MapExpression m_expr) []
+
+let get_base_relations_plan plan =
+    get_base_relations_accessor_element (`Plan plan) []
 
 
-(*
+(*******************************
  * Binding helpers
  * Note: DBToaster compilation assumes unique column names
- *)
+ *******************************)
 
 let get_bound_relations m_expr =
     let rec gbor_aux ae acc =
@@ -1339,6 +1359,11 @@ let resolve_unbound_attributes attrs bound_attrs =
             let matches = List.filter (compare_attributes x) bound_attrs in
                 (List.length matches) = 0)
 	attrs
+
+
+(*******************************
+ * Scope helpers
+ *******************************)
 
 let rec get_unbound_attributes_from_expression expr include_vars =
     match expr with
@@ -1640,30 +1665,39 @@ and get_attributes_used_in_plan plan attrs_used_above =
                   get_attributes_used_in_plan q attrs_used_above
 
 
-let rec find_cmp_aggregate m_expr =
+(*******************************
+ * Nesting helpers
+ *******************************)
+
+let rec find_aggregate_type m_expr agg_types =
+    let recur me = find_aggregate_type me agg_types in
+    let recur_plan p = find_aggregate_type_plan p agg_types in
     match m_expr with
         | `METerm _ -> false
         | `Sum (l,r) | `Minus (l,r) | `Product (l,r)
         | `Min (l,r) | `Max (l,r) ->
-              (find_cmp_aggregate l) || (find_cmp_aggregate r)
+              (recur l) || (recur r)
 
-        | `MapAggregate (`Sum, f, q) ->
-              (find_cmp_aggregate f) || (find_cmp_aggregate_plan q)
-
-        | `MapAggregate (`Min, f, q) | `MapAggregate(`Max, f, q) -> true
+        | `MapAggregate (agg_fn, f, q) ->
+              let found = List.mem agg_fn agg_types in
+                  if not found then
+                      (recur f) || (recur_plan q)
+                  else found
 
         | `Delta (_, e) | `New e | `MaintainMap(_,_,_,e)
         | `Incr (_,_,_,_,e) | `IncrDiff (_,_,_,_,e)
-        | `Insert (_,_,e) | `Update (_,_,_,e) -> find_cmp_aggregate e
+        | `Insert (_,_,e) | `Update (_,_,_,e) -> recur e
         | `Delete _ -> false
         | `IfThenElse(`MEQ(p), l, r) | `IfThenElse(`MNEQ(p), l, r) 
         | `IfThenElse(`MLT(p), l, r) | `IfThenElse(`MLE(p), l, r) 
         | `IfThenElse(`MGT(p), l, r) | `IfThenElse(`MGE(p), l, r) 
-            -> List.exists (fun x -> x) (List.map find_cmp_aggregate [p;l;r])
+            -> List.exists (fun x -> x) (List.map recur [p;l;r])
 
-        | `IfThenElse(_, l, r) ->  (find_cmp_aggregate l) || (find_cmp_aggregate r)
+        | `IfThenElse(_, l, r) ->  (recur l) || (recur r)
 
-and find_cmp_aggregate_plan q =
+and find_aggregate_type_plan q agg_types =
+    let recur me = find_aggregate_type me agg_types in
+    let recur_plan p = find_aggregate_type_plan p agg_types in
     match q with
         | `TrueRelation | `FalseRelation | `Relation _ | `Domain _ -> false
         | `Select(pred, cq) -> 
@@ -1671,16 +1705,24 @@ and find_cmp_aggregate_plan q =
                   | `BTerm(`MEQ(m_expr)) | `BTerm(`MNEQ(m_expr))
                   | `BTerm(`MLT(m_expr)) | `BTerm(`MLE(m_expr))
                   | `BTerm(`MGT(m_expr)) | `BTerm(`MGE(m_expr))
-                        -> find_cmp_aggregate m_expr
+                        -> recur m_expr
                   | _ -> false)
-              || (find_cmp_aggregate_plan cq)
+              || (recur_plan cq)
 
-        | `Project (_, cq) -> find_cmp_aggregate_plan cq
-        | `Union ch -> List.exists find_cmp_aggregate_plan ch
-        | `Cross (l,r) ->
-              (find_cmp_aggregate_plan l) || (find_cmp_aggregate_plan r)
+        | `Project (_, cq) -> recur_plan cq
+        | `Union ch -> List.exists recur_plan ch
+        | `Cross (l,r) -> (recur_plan l) || (recur_plan r)
         | `DeltaPlan (_, cq) | `NewPlan cq
-        | `IncrPlan (_,_,_,_,cq) | `IncrDiffPlan (_,_,_,_,cq) -> find_cmp_aggregate_plan cq
+        | `IncrPlan (_,_,_,_,cq) | `IncrDiffPlan (_,_,_,_,cq) -> recur_plan cq
+
+let find_cmp_aggregate m_expr =
+    find_aggregate_type m_expr [`Min; `Max]
+
+let find_cmp_aggregate_plan q =
+    find_aggregate_type_plan q [`Min; `Max]
+
+let find_aggregate m_expr =
+    find_aggregate_type m_expr [`Sum; `Min; `Max]
 
 
 (* map_expression -> plan -> bool
@@ -1788,14 +1830,28 @@ let is_bound_expr expr ext_bindings =
 	    | _ -> false
     with Not_found -> false
 
+let validate_incr_ops expr_op plan_op =
+    match (expr_op, plan_op) with
+        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union)
+        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff)
+              -> ()
+        | _ -> raise (ValidationException "Invalid op pair.")
 
-(*
+let is_insert_incr expr_op plan_op =
+    match (expr_op, plan_op) with
+        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union) -> true
+        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
+        | _ -> raise (ValidationException "Invalid op pair.")
+
+
+(*******************************
  * Preprocessing helpers
- *) 
+ *******************************) 
+
 let rename_attributes m_expr =
     let base_relation_ht = Hashtbl.create 10 in
     let attributes_ht = Hashtbl.create 100 in
-    let rename_fields f=
+    let rename_fields f =
         List.map ( fun (id, ty) -> 
             if Hashtbl.mem attributes_ht id then
                 let new_counter = (Hashtbl.find attributes_ht id) + 1 in
@@ -1817,18 +1873,35 @@ let rename_attributes m_expr =
                       begin
                           match x with  
                               | `Qualified(rname, _) -> 
+                                    print_string ("Checking "^rname^"/"^f^" ...");
                                     if List.mem_assoc (rname,f) replacements then
-                                        (`ETerm(`Attribute(
-                                            `Unqualified(List.assoc (rname,f) replacements))),
-                                        replacements)
-                                    else (e, replacements)
-                              | _ -> 
-                                    let l = List.filter 
-                                        ( fun ((rname, f1), f2) -> f1 = f) replacements in
+                                        begin
+                                            print_endline " matched.";
+                                            (`ETerm(`Attribute(
+                                                `Unqualified(List.assoc (rname,f) replacements))),
+                                            replacements)
+                                        end
+                                    else
+                                        begin
+                                            print_endline " failed.";
+                                            (e, replacements)
+                                        end
+                              | `Unqualified(y) ->
+                                    print_endline ("Checking "^y^" ...");
+                                    let l =
+                                        List.filter (fun ((rname, f1), f2) -> f1 = f) replacements
+                                    in
                                     if List.length l != 0 then
-                                        let (rname, f1), f2 = List.hd l in
-                                            (`ETerm(`Attribute( `Unqualified(f2))), replacements)
-                                    else (e, replacements)
+                                        begin
+                                            print_endline " matched.";
+                                            let f2 = snd (List.hd l) in
+                                                (`ETerm(`Attribute(`Unqualified(f2))), replacements)
+                                        end
+                                    else
+                                        begin
+                                            print_endline " failed.";
+                                            (e, replacements)
+                                        end
                       end
                       (*let f = field_of_attribute_identifier x in
                           if List.mem_assoc f replacements then
@@ -1901,18 +1974,35 @@ let rename_attributes m_expr =
                       begin
                           match x with  
                               | `Qualified(rname, _) -> 
+                                    print_string ("Checking "^rname^"/"^f^" ...");
                                     if List.mem_assoc (rname,f) replacements then
-                                        (`METerm(`Attribute(
-                                            `Unqualified(List.assoc (rname,f) replacements))),
-                                        replacements)
-                                    else (e, replacements)
-                              | _ ->
+                                        begin
+                                            print_endline " matched.";
+                                            (`METerm(`Attribute(
+                                                `Unqualified(List.assoc (rname,f) replacements))),
+                                            replacements)
+                                        end
+                                    else
+                                        begin
+                                            print_endline " failed.";
+                                            (e, replacements)
+                                        end
+                              | `Unqualified y ->
+                                    print_string ("Checking "^y^" ...");
                                     let l = List.filter 
-                                        ( fun ((rname, f1), f2) -> f1 = f) replacements in
-                                    if List.length l != 0 then
-                                        let (rname, f1), f2 = List.hd l in
-                                            (`METerm(`Attribute( `Unqualified(f2))), replacements)
-                                    else (e, replacements)
+                                        (fun ((rname, f1), f2) -> f1 = f) replacements
+                                    in
+                                        if List.length l != 0 then
+                                            begin
+                                                print_endline " matched.";
+                                                let (rname, f1), f2 = List.hd l in
+                                                    (`METerm(`Attribute(`Unqualified(f2))), replacements)
+                                            end
+                                        else
+                                            begin
+                                                print_endline " failed.";
+                                                (e, replacements)
+                                            end
                       end
                 | `METerm _ -> (e, replacements)
                 | `Sum (l,r) -> rename_binary l r (fun x y -> `Sum(x,y))
@@ -1996,7 +2086,8 @@ let rename_attributes m_expr =
         rename_map_expression m_expr []
 
 
-(* Monotonicity analysis
+(*******************************
+ * Monotonicity analysis
  *
  * TODO: detecting insert/update/delete monotonicity
  *
@@ -2004,7 +2095,7 @@ let rename_attributes m_expr =
  * -- assume expression f[A]
  * -- compute Delta f | Delta A
  * -- TODO: multivariate monotonicity analysis
- *)
+ *******************************)
 
 exception MonotonicityException
 
@@ -2317,1601 +2408,3 @@ let rec get_monotonicity b_expr attr =
 	      end
 	| _ -> compute_bool_expr_monotonicity attr Inc b_expr
 
-(*
- * Code generation
- *)
-
-type map_identifier = identifier
-type profile_identifier = identifier
-
-(* Datastructure notes:
- * underlying map must support: begin(), end()
- *     iterator = begin(), iterator = end()
- *     operator[](val)
- *     insert(val)
- *     erase(val)
- * underlying multiset must support:
- *     iterator = begin(), iterator = end()
- *     iterator = find(val)
- *     insert(val)
- *     delete(iterator)
- * other operations: operator*(iterator), get<idx>(val)
- *)
-
-type datastructure = [
-| `Tuple of variable_identifier * field list 
-| `Map of map_identifier * (field list) * type_identifier 
-| `Set of relation_identifier * (field list)
-| `Multiset of relation_identifier * (field list) ]
-
-type code_variable = variable_identifier
-
-type map_key = map_identifier * (code_variable list)
-
-type map_iterator = [ `Begin of map_identifier | `End of map_identifier ]
-
-type domain_key = relation_identifier * (code_variable list)
-
-type domain_iterator = [ `Begin of relation_identifier | `End of relation_identifier ]
-
-type code_terminal = [
-| `Int of int
-| `Float of float
-| `String of string
-| `Long of int64
-| `Variable of code_variable
-| `MapAccess of map_key
-| `MapContains of map_key
-| `MapIterator of map_iterator
-| `DomainContains of domain_key
-| `DomainIterator of domain_iterator ]
-
-type arith_code_expression = [
-| `CTerm of code_terminal
-| `Sum of arith_code_expression * arith_code_expression
-| `Minus of arith_code_expression * arith_code_expression
-| `Product of arith_code_expression * arith_code_expression
-| `Min of arith_code_expression * arith_code_expression	
-| `Max of arith_code_expression * arith_code_expression	]
-
-and bool_code_term = [ `True | `False 
-| `LT of arith_code_expression * arith_code_expression
-| `LE of arith_code_expression * arith_code_expression
-| `GT of arith_code_expression * arith_code_expression
-| `GE of arith_code_expression * arith_code_expression
-| `EQ of arith_code_expression * arith_code_expression
-| `NE of arith_code_expression * arith_code_expression ] 
-
-type bool_code_expression = [
-| `BCTerm of bool_code_term
-| `Not of bool_code_expression
-| `And of bool_code_expression * bool_code_expression
-| `Or of bool_code_expression * bool_code_expression ]
-
-type return_val = [ `Arith of arith_code_expression | `Map of map_identifier ]
-
-type declaration = [
-| `Variable of code_variable * type_identifier
-| `Tuple of code_variable * (field * return_val) list
-| `Relation of relation_identifier * (field list) 
-| `Map of map_identifier * (field list) * type_identifier
-| `Domain of relation_identifier * (field list)
-| `ProfileLocation of profile_identifier ]
-
-type code_expression = [
-| `Declare of declaration
-| `Assign of code_variable * arith_code_expression
-| `AssignMap of map_key * arith_code_expression
-| `EraseMap of map_key
-| `InsertTuple of datastructure * (code_variable list)
-| `DeleteTuple of datastructure * (code_variable list)
-| `Eval of arith_code_expression 
-| `IfNoElse of bool_code_expression * code_expression
-| `IfElse of bool_code_expression * code_expression * code_expression
-| `ForEach of datastructure * code_expression
-| `ForEachResume of datastructure * code_expression
-| `Resume of string list option
-| `Block of code_expression list
-| `Return of arith_code_expression
-| `ReturnMap of map_identifier
-| `ReturnMultiple of return_val list * code_variable option
-| `Handler of function_identifier * (field list) * type_identifier * code_expression list
-| `Profile of string * profile_identifier * code_expression ]
-
-type stream_source_type = File | Socket
-
-
-(* Basic code type helpers *)
-let is_block c_expr =
-    match c_expr with | `Block _ -> true | _ -> false
-
-let identifier_of_datastructure =
-    function | `Tuple(n,_) | `Map (n,_,_) | `Set (n,_) | `Multiset (n,_) -> n
-
-let datastructure_of_declaration decl =
-    match decl with
-        | `Variable (n,_)
-        | `ProfileLocation n ->
-              raise (CodegenException ("Invalid datastructure: "^n))
-
-        | `Tuple (n,f) -> `Tuple (n, (fst (List.split f)))
-        | `Relation(n,f) -> `Multiset(n,f)
-        | `Map (id, f, rt) -> `Map(id, f, rt)
-        | `Domain(n,f) -> `Map(n,f,"int")
-
-let identifier_of_declaration decl =
-    match decl with
-        | `Variable (v, ty) -> v
-        | `Tuple (v,_) -> v
-        | `Relation(n, f) -> n
-        | `Map (n, f, rt) -> n
-        | `Domain(n, f) -> n
-        | `ProfileLocation p -> p
-
-(*
- * C-code generation helpers
- *)
-
-let ctype_of_type_identifier t = t
-
-let ctype_of_datastructure_fields f =
-    List.fold_left
-	(fun acc (_,t) ->
-	     (if (String.length acc) = 0 then "" else acc^",")^
-		 (ctype_of_type_identifier t))
-	"" f
-
-let ctype_of_datastructure =
-    function 
-        | `Tuple (n,f) -> "tuple<"^(String.concat "," (List.map snd f))^">"
-	| `Map (n,f,r) ->
-	      let key_type = 
-		  let ftype = ctype_of_datastructure_fields f in
-                      match f with
-                          | [] -> raise (CodegenException ("Invalid datastructure type, no fields found: "^n))
-                          | [x] -> ftype
-                          | _ -> "tuple<"^ftype^">" 
-	      in
-		  "map<"^key_type^","^(ctype_of_type_identifier r)^">"
-
-        | (`Set(n, f) as ds) 
-	| (`Multiset (n,f) as ds) ->
-	      let (el_type, nested_type) = 
-		  let ftype = ctype_of_datastructure_fields f in
-		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
-	      in
-              let ds_type = match ds with | `Set _ -> "set" | `Multiset _ -> "multiset" in
-		  ds_type^"<"^el_type^(if nested_type then " >" else ">")
-
-
-let element_ctype_of_datastructure d =
-    match d with
-        | `Variable(n,_)
-        | `ProfileLocation n
-        | `Tuple(n,_)
-            -> raise (CodegenException
-                  ("Invalid datastructure for elements: "^n))
-
-	| `Map (n,f,r) ->
-	      let key_type = 
-		  let ftype = ctype_of_datastructure_fields f in
-                      match f with
-                          | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
-                          | [x] -> ("const "^ftype)
-                          | _ -> ("const tuple<"^ftype^">")
-	      in
-		  "pair<"^key_type^","^(ctype_of_type_identifier r)^">"
-
-        | `Set(n, f)
-	| `Multiset (n,f) ->
-	      let ftype = ctype_of_datastructure_fields f in
-		  if (List.length f) = 1 then ("const "^ftype) else ("const tuple<"^ftype^">")
-
-
-let ctype_of_code_var_list =
-    function
-        | [] -> raise (CodegenException "Invalid code var list")
-        | [x] -> x
-        | x -> 
-              let svl =
-                  List.fold_left
-	              (fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
-	              "" x
-              in
-                  "make_tuple("^svl^")"
-
-(* TODO *)
-let ctype_of_arith_code_expression ac_expr = "int"
-
-let iterator_ref = ref 0
-
-let advance_iterator it = "++"^it
-
-let iterator_type_of_datastructure ds =
-    match ds with
-        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
-	      (ctype_of_datastructure ds)^"::iterator"
-
-let point_iterator_declaration_of_datastructure ds =
-    match ds with
-        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
-	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
-	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
-	      let point_it = id^"_it"^it_id in
-		  (point_it, it_typ^" "^point_it)
-            
-let range_iterator_declarations_of_datastructure ds =
-    match ds with
-        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
-	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
-	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
-	      let begin_it = id^"_it"^it_id in
-	      let end_it = id^"_end"^it_id in
-		  (begin_it, end_it, it_typ^" "^begin_it, it_typ^" "^end_it)
-
-let field_declarations_of_datastructure ds iterator tab =
-    let deref = match ds with
-        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-	| `Map _ -> iterator^"->first"
-        | `Set _ | `Multiset _ -> "*"^iterator
-    in 
-	match ds with
-            | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-	    | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
-		  if (List.length f) = 1 then
-		      let (id, typ) = List.hd f in
-			  tab^typ^" "^id^" = "^deref^";\n"
-		  else 
-		      let (_, r) =
-			  List.fold_left
-			      (fun (cnt, acc) (id, typ) ->
-				   (cnt+1,
-				    acc^tab^
-					(typ^" "^id^" = get<"^(string_of_int cnt)^">("^deref^");\n")))
-			      (0, "") f
-		      in
-			  r
-
-let resume_declarations_of_datastructure ds =
-    match ds with
-        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-        | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
-	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
-	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
-              let resume_it = "resume_"^id^"_it"^it_id in
-              let resume_it_decl = it_typ^" "^resume_it in
-
-	      let val_id = incr iterator_ref; (string_of_int !iterator_ref) in
-	      let val_typ = (ctype_of_datastructure ds)^"::key_type" in
-              let resume_val = "resume_"^id^"_val"^val_id in
-              let resume_val_decl = val_typ^" "^resume_val in
-                  Some((resume_it_decl, resume_it), (resume_val_decl, resume_val))
-
-
-let handler_name_of_event ev =
-    match ev with
-	| `Insert (n, _) -> "on_insert_"^n
-	| `Delete (n, _) -> "on_delete_"^n
-
-
-(*
- * Profiling helpers
- *)
-
-let event_counters = Hashtbl.create 10
-
-let generate_profile_id (event : delta) =
-    let new_count = 
-        if Hashtbl.mem event_counters event then
-            let c = Hashtbl.find event_counters event in
-                Hashtbl.replace event_counters event (c+1);
-                c+1
-        else
-            begin Hashtbl.add event_counters event 0; 0 end
-    in
-    let event_name = match event with
-        | `Insert(r,_) -> "insert_"^r
-        | `Delete(r,_) -> "delete_"^r
-    in
-        (event_name^"_prof_"^(string_of_int new_count))
-
-let generate_handler_profile_id handler_name = handler_name^"_prof_id"
-
-
-let code_locations = Hashtbl.create 10
-
-let generate_profile_location loc_id = 
-    if Hashtbl.mem code_locations loc_id then
-        Hashtbl.find code_locations loc_id
-    else
-        begin
-            Hashtbl.add code_locations loc_id
-                (Hashtbl.length code_locations);
-            Hashtbl.find code_locations loc_id
-        end
-
-(* 
- * Code generation main
- *)
-
-let string_of_code_var_list vl =
-    List.fold_left
-	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
-	"" vl
-
-let string_of_field_list fl =
-    List.fold_left
-	(fun acc (id, typ) ->
-	    (if (String.length acc) = 0 then "" else acc^", ")^
-		typ^" "^id)
-	"" fl
-
-let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
-
-let string_of_domain_key (did, keys) = did^"["^(ctype_of_code_var_list keys)^"]"
-
-let string_of_datastructure =
-    function | `Tuple(n,f) | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
-
-let string_of_datastructure_fields =
-    function
-	| `Tuple (n,f) | `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
-              string_of_field_list f
-
-let string_of_declaration =
-    function 
-	| `Declare(`Variable(n, typ)) -> n^" : "^typ
-	| `Declare(`Tuple(n, f_rv_l)) -> n^" : <"^(String.concat "," (snd (List.split (fst (List.split f_rv_l)))))^">"
-        | `Declare(`Relation (id,f)) -> id^" : rel("^(string_of_field_list f)^")"
-        | `Declare(`Map (id,f,d)) -> id^" : map["^(string_of_field_list f)^"]"
-        | `Declare(`Domain (id,f)) -> id^" : dom("^(string_of_field_list f)^")"
-        | `Declare(`ProfileLocation p) -> p^" : profile"
-        | _ -> raise InvalidExpression
-
-let string_of_code_expr_terminal cterm =
-    match cterm with 
-	| `Int i -> string_of_int i
-	| `Float f -> string_of_float f
-	| `Long l -> Int64.to_string l
-	| `String s -> "\""^s^"\""
-	| `Variable v -> v
-	| `MapAccess mk -> string_of_map_key mk
-	| `MapContains (mid, keys) -> mid^".find("^(ctype_of_code_var_list keys)^")"
-	| `MapIterator (`Begin(mid)) -> mid^".begin()"
-	| `MapIterator (`End(mid)) -> mid^".end()"
-        | `DomainContains (did, keys) -> did^".find("^(ctype_of_code_var_list keys)^")"
-	| `DomainIterator (`Begin(did)) -> did^".begin()"
-	| `DomainIterator (`End(did)) -> did^".end()"
-
-let rec string_of_arith_code_expression ac_expr =
-    match ac_expr with
-	| `CTerm e -> string_of_code_expr_terminal e
-	| `Sum (l,r) ->
-	      "("^(string_of_arith_code_expression l)^" + "^
-		  (string_of_arith_code_expression r)^")"
-
-	| `Minus (l,r) ->
-	      "("^(string_of_arith_code_expression l)^" - "^
-		  (string_of_arith_code_expression r)^")"
-
-	| `Product(l,r) ->
-	      "("^(string_of_arith_code_expression l)^" * "^
-		  (string_of_arith_code_expression r)^")"
-
-	| `Min(l,r) ->
-	      "min("^(string_of_arith_code_expression l)^", "^
-		  (string_of_arith_code_expression r)^")"
-
-	| `Max(l,r) ->
-	      "max("^(string_of_arith_code_expression l)^", "^
-		  (string_of_arith_code_expression r)^")"
-
-let rec string_of_bool_code_expression bc_expr =
-    let dispatch_expr l r op =
-	(string_of_arith_code_expression l)^op^(string_of_arith_code_expression r) 
-    in
-	match bc_expr with
-	    | `BCTerm b ->
-		  begin
-		      match b with
-			  | `LT (l,r) -> dispatch_expr l r "<"
-			  | `LE (l,r) -> dispatch_expr l r "<="
-			  | `GT (l,r) -> dispatch_expr l r ">"
-			  | `GE (l,r) -> dispatch_expr l r ">="
-			  | `EQ (l,r) -> dispatch_expr l r "=="
-			  | `NE (l,r) -> dispatch_expr l r "!="
-			  | `True -> "true"
-			  | `False -> "false"
-		  end
-	    | `Not e -> "not("^(string_of_bool_code_expression e)^")"
-	    | `And (l,r) ->
-		  ("("^(string_of_bool_code_expression l)^") and ("^
-		       (string_of_bool_code_expression r)^")")
-	    | `Or (l,r) ->
-		  ("("^(string_of_bool_code_expression l)^") or ("^
-		       (string_of_bool_code_expression r)^")")
-
-
-let rec remove_resume_code_expression c_expr =
-    let remove c = remove_resume_code_expression c in
-    match c_expr with
-        | `Declare _ 
-        | `Assign _ | `AssignMap _ | `EraseMap _
-        | `InsertTuple _ | `DeleteTuple _
-        | `Eval _ 
-                -> Some(c_expr)
-
-        | `IfNoElse (cond, tc) ->
-              let ntc = remove tc in
-                  begin
-                      match ntc with
-                          | Some c -> Some(`IfNoElse(cond, c)) | _ ->  None
-                  end
-
-        | `IfElse (cond, tc, ec) ->
-              let ntc = remove tc in
-              let nec = remove ec in
-                  begin match (ntc, nec) with
-                      | (None, None) -> None
-                      | (None, Some x) -> Some(`IfNoElse(`Not(cond), x))
-                      | (Some x,None) -> Some(`IfNoElse(cond, x))
-                      | (Some x, Some y) -> Some(`IfElse(cond, x, y))
-                  end
-
-        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
-              raise (CodegenException
-                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
-
-        | `Resume code_opt -> None
-
-        | `Block cl ->
-              let ncl =
-                  List.fold_left
-                      (fun acc c -> match c with | None -> acc | Some(ce) -> acc@[ce])
-                      [] (List.map remove cl)
-              in
-                  Some(`Block(ncl))
-
-        | `Return _ -> Some(c_expr)
-
-        | `ReturnMap _ -> Some(c_expr)
-
-        | `ReturnMultiple _ -> Some(c_expr)
-
-        | `Handler (hid,_,_,_) ->  raise (CodegenException
-              ("Cannot resume within handler: "^hid))
-
-        | `Profile (stat_type, loc, c) ->
-              let nc = remove c in
-                  match nc with
-                      | None -> None 
-                      | Some x -> Some(`Profile(stat_type, loc, x))
-
-let rec bind_resume_code_expression c_expr resume_code =
-    let bind c = bind_resume_code_expression c resume_code in
-    match c_expr with
-        | `Declare _ 
-        | `Assign _ | `AssignMap _ | `EraseMap _
-        | `InsertTuple _ | `DeleteTuple _
-        | `Eval _ 
-                -> c_expr
-
-        | `IfNoElse (cond, tc) -> `IfNoElse(cond, bind tc)
-        | `IfElse (cond, tc, ec) -> `IfElse(cond, bind tc, bind ec)
-
-        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
-              raise (CodegenException
-                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
-
-        | `Resume code_opt ->
-              if code_opt = None then `Resume(Some(resume_code))
-              else raise (CodegenException ("Found existing resume code"))
-
-        | `Block cl -> `Block(List.map bind cl)
-
-        | `Return _ -> c_expr
-
-        | `ReturnMap _ -> c_expr
-
-        | `ReturnMultiple _ -> c_expr
-
-        | `Handler (hid,_,_,_) -> raise (CodegenException
-              ("Cannot resume within handler: "^hid))
-
-        | `Profile (stat_type, loc, c) -> `Profile(stat_type, loc, bind c)
-
-
-let rec string_of_code_expression c_expr =
-    let string_of_code_block c_expr_l =
-	List.fold_left
-	    (fun acc c_expr ->
-		 (if (String.length acc) = 0 then "" else acc^"\n")^
-		     (string_of_code_expression c_expr))
-	    "" c_expr_l
-    in
-	match c_expr with
-	    | `Declare x ->
-                  begin
-                      match x with
-		          | `Variable(n, typ) -> typ^" "^n^";"
-                          | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
-                                let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
-                                    ctype^" "^(identifier_of_declaration y)^";"
-                          | `ProfileLocation p ->
-                                let counter_val = generate_profile_location p in
-                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
-                  end
-
-	    | `Assign(v,ac) ->
-		  v^" = "^(string_of_arith_code_expression ac)^";"
-
-	    | `AssignMap(mk, vc) ->
-		  (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
-
-	    | `EraseMap (mid,mf) ->
-		  mid^".erase("^(ctype_of_code_var_list mf)^");"
-
-            | `InsertTuple (ds, cv_list) ->
-                  begin match ds with
-                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
-                      | `Map _ ->
-                            let dsid = identifier_of_datastructure ds in
-                            let dskey = (ctype_of_code_var_list cv_list) in
-                            let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
-                                "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
-                                "else { ++"^dsid^"["^dskey^"]; }"
-
-                      | `Set _ | `Multiset _ ->
-                            (identifier_of_datastructure ds)^
-                                ".insert("^(ctype_of_code_var_list cv_list)^");";
-
-                  end
-
-            | `DeleteTuple (ds, cv_list) -> 
-                  begin match ds with
-                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
-                      | `Map _ ->
-                            let dsid = identifier_of_datastructure ds in
-                            let dskey = (ctype_of_code_var_list cv_list) in
-                                "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
-                                    "--"^dsid^"["^dskey^"];\n"^
-                                    "if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
-                                "}"
-
-                      | `Set _ | `Multiset _ ->
-                            let id = identifier_of_datastructure ds in
-                            let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
-                                find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
-                                    id^".erase("^find_it^");"
-                  end
-
-	    | `Eval(ac) -> string_of_arith_code_expression ac
-
-	    | `IfNoElse(p,c) ->
-		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
-		      (string_of_code_expression c)^" }"
-
-	    | `IfElse(p,l,r) ->
-		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
-		      (string_of_code_expression l)^" }"^
-		  "else {"^
-		      (string_of_code_expression r)^" }"
-
-	    | `ForEach(m,c) ->
-		  let (begin_it, end_it, begin_decl, end_decl) =
-		      range_iterator_declarations_of_datastructure m
-		  in
-		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
-			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
-			  (field_declarations_of_datastructure m begin_it "")^"\n"^
-			  (string_of_code_expression c)^
-			  "}"
-
-	    | `ForEachResume(m,c) ->
-                  let deref it = match m with
-                      | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-                      | `Map _ -> it^"->first"
-                      | `Set _ | `Multiset _ -> "*("^it^")"
-                  in
-		  let (begin_it, end_it, begin_decl, end_decl) =
-		      range_iterator_declarations_of_datastructure m
-		  in
-                  let resume_opt = resume_declarations_of_datastructure m in
-                  let (resume_decl, resume_incr_code, resume_bind_code) = 
-                      match resume_opt with
-                          | None -> ("", "", [])
-                          | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
-                                let rdecl =
-                                    resume_it_decl^" = "^begin_it^";\n"^
-                                    "if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
-                                    resume_val_decl^";\n"^
-                                    "if ( "^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
-                                in
-                                let rcode =
-                                    (advance_iterator resume_it)^";\n"^
-                                    "bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
-                                    "if ( !resume_end ) {\n"^
-                                        resume_val^" = "^(deref resume_it)^";\n"^
-                                    "}\n\n"
-                                in
-                                let rbindcode =
-                                    let id = identifier_of_datastructure m in
-                                        [ ("if ( !resume_end ) {");
-                                        ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
-                                        "}";
-                                        ("else { "^resume_it^" = "^end_it^"; }");
-                                        "continue;"]
-                                in
-                                    (rdecl, rcode, rbindcode)
-                  in
-                  let code_w_resume_bound =
-                      if resume_bind_code = [] then
-                          (match remove_resume_code_expression c with
-                              | None -> raise (CodegenException "Removing resume deleted all code")
-                              | Some x -> x)
-                      else (bind_resume_code_expression c resume_bind_code)
-                  in
-		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
-			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-                          resume_decl^
-			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
-			  (field_declarations_of_datastructure m begin_it "")^"\n"^
-                          resume_incr_code^
-			  (string_of_code_expression code_w_resume_bound)^
-			  "}"
-
-            | `Resume resume_code_opt ->
-                  begin match resume_code_opt with
-                      | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
-                      | Some c ->
-                            List.fold_left
-                                (fun acc l ->
-                                    if (String.length acc) = 0 then l else (acc^"\n"^l))
-                                "" c
-                  end
-
-	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
-
-	    | `Return (ac) ->
-                  (*"return "^(string_of_arith_code_expression ac)^";"*)
-                  ""
-
-            | `ReturnMap (mid) ->
-                  (*"return "^mid^";"*)
-                  ""
-
-            | `ReturnMultiple (rv_l, cv_opt) ->
-                  (*
-                  let string_of_rv rv = 
-                      match rv with
-                          | `Arith a -> string_of_arith_code_expression a
-                          | `Map mid -> mid
-                  in
-                  let rv = "make_tuple("^
-                      (String.concat "," (List.map string_of_rv rv_l))^");"
-                  in
-                      begin match cv_opt with
-                          | None -> "return "^rv
-                          | Some cv -> (cv^" = "^rv^"; return "^cv^";")
-                  end
-                  *)
-                  ""
-
-	    | `Handler (name, args, rt, c_expr_l) ->
-		  let h_fields =
-		      List.fold_left
-			  (fun acc (id, typ) ->
-			       (if (String.length acc) = 0 then "" else acc^",")^(typ^" "^id))
-			  "" args
-		  in
-                  let (rv, handler_without_rv) =
-                      let rev_handler = List.rev c_expr_l in
-                          (List.hd rev_handler, List.rev (List.tl rev_handler))
-                  in
-                  let handler_profile_id = generate_handler_profile_id name in
-                      (* DEMO HACK *)
-		      (*rt^" "^name^"("^h_fields^") {\n"^*)
-		      "void "^name^"("^h_fields^") {\n"^
-                          "START_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
-                          (string_of_code_block handler_without_rv)^"\n"^
-                          "END_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
-                          (string_of_code_expression rv)^
-                          "\n}"
-
-            | `Profile (statsType, prof_id, c_expr) ->
-                  ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")\n")^
-                      (string_of_code_expression c_expr)^
-                      ("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
-
-
-let indented_string_of_code_expression c_expr =
-    let rec sce_aux e level =
-	let tab = String.make (4*level) ' ' in
-	let ch_tab = String.make (4*(level+1)) ' ' in
-	let string_of_code_block c_expr_l =
-	    List.fold_left
-		(fun acc c ->
-		     (if (String.length acc) = 0 then "" else acc^"\n")^
-			 (sce_aux c (level+1)))
-		"" c_expr_l
-	in
-	let out =
-	    match e with
-		| `Declare x ->
-		      begin
-			  match x with 
-		              | `Variable(n, typ) -> typ^" "^n^";"
-                              | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
-                                    let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
-                                        ctype^" "^(identifier_of_declaration y)^";"
-                              | `ProfileLocation p ->
-                                let counter_val = generate_profile_location p in
-                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
-
-		      end
-			  
-		| `Assign(v,ac) ->
-		      v^" = "^(string_of_arith_code_expression ac)^";"
-
-		| `AssignMap(mk, vc) ->
-		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
-			  
-	        | `EraseMap (mid,mf) ->
-		      mid^".erase("^(ctype_of_code_var_list mf)^");"
-
-                | `InsertTuple (ds, cv_list) ->
-                      begin match ds with
-                          | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
-                          | `Map _ ->
-                                let dsid = identifier_of_datastructure ds in
-                                let dskey = (ctype_of_code_var_list cv_list) in
-                                let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
-                                    "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
-                                    tab^"else { ++"^dsid^"["^dskey^"]; }"
-
-                          | `Set _ | `Multiset _ ->
-                                (identifier_of_datastructure ds)^
-                                    ".insert("^(ctype_of_code_var_list cv_list)^");";
-
-                      end
-
-                | `DeleteTuple (ds, cv_list) -> 
-                      begin match ds with
-                          | `Tuple _ -> raise (CodegenException "Cannot delete from tuple.")
-                          | `Map _ ->
-                                let dsid = identifier_of_datastructure ds in
-                                let dskey = (ctype_of_code_var_list cv_list) in
-                                    "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
-                                    ch_tab^"--"^dsid^"["^dskey^"];\n"^
-                                    ch_tab^"if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
-                                    tab^"}"
-
-                          | `Set _ | `Multiset _ ->
-                                let id = identifier_of_datastructure ds in
-                                let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
-                                    find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
-                                    tab^id^".erase("^find_it^");"
-                      end
-
-		| `Eval(ac) -> string_of_arith_code_expression ac
-
-		| `IfNoElse(p,c) ->
-		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
-			  (sce_aux c (level+1))^"\n"^
-			  tab^"}\n"
-			  
-		| `IfElse(p,l,r) ->
-		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
-			  (sce_aux l (level+1))^"\n"^
-			  tab^"}\n"^
-		      tab^"else {\n"^
-			  (sce_aux r (level+1))^"\n"^
-			  tab^"}\n"
-			  
-		| `ForEach(m,c) ->
-		      let (begin_it, end_it, begin_decl, end_decl) =
-			  range_iterator_declarations_of_datastructure m
-		      in
-			  "\n"^tab^
-			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
-			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
-			      tab^"{\n"^
-			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
-			      (sce_aux c (level+1))^"\n"^
-			      tab^"}"
-
-	        | `ForEachResume(m,c) ->
-                      let deref it = match m with
-                          | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
-                          | `Map _ -> it^"->first"
-                          | `Set _ | `Multiset _ -> "*("^it^")"
-                      in
-		      let (begin_it, end_it, begin_decl, end_decl) =
-		          range_iterator_declarations_of_datastructure m
-		      in
-                      let resume_opt = resume_declarations_of_datastructure m in
-                      let (resume_decl, resume_incr_code, resume_bind_code) = 
-                          match resume_opt with
-                              | None -> ("", "", [])
-                              | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
-                                    let rdecl =
-                                        tab^resume_it_decl^" = "^begin_it^";\n"^
-                                        tab^"if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
-                                        tab^resume_val_decl^";\n"^
-                                        tab^"if ("^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
-                                    in
-                                    let rcode =
-                                        ch_tab^(advance_iterator resume_it)^";\n"^
-                                        ch_tab^"bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
-                                        ch_tab^"if ( !resume_end ) {\n"^
-                                        ch_tab^"   "^resume_val^" = "^(deref resume_it)^";\n"^
-                                        ch_tab^"}\n\n"
-                                    in
-                                    let rbindcode =
-                                        let id = identifier_of_datastructure m in
-                                            [ ("if ( !resume_end ) {");
-                                            ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
-                                            "}";
-                                            ("else { "^resume_it^" = "^end_it^"; }");
-                                            "continue;"]
-                                    in
-                                        (rdecl, rcode, rbindcode)
-                      in
-                      let code_w_resume_bound =
-                      if resume_bind_code = [] then
-                          (match remove_resume_code_expression c with
-                              | None -> raise (CodegenException "Removing resume deleted all code")
-                              | Some x -> x)
-                          else (bind_resume_code_expression c resume_bind_code)
-                      in
-			  "\n"^tab^
-			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
-			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
-                              resume_decl^
-			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
-			      tab^"{\n"^
-			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
-                              resume_incr_code^
-			      (sce_aux code_w_resume_bound (level+1))^"\n"^
-			      tab^"}"
-
-
-                | `Resume resume_code_opt ->
-                      begin match resume_code_opt with
-                          | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
-                          | Some c ->
-                                List.fold_left
-                                    (fun acc l ->
-                                        if (String.length acc) = 0 then l else (acc^"\n"^tab^l))
-                                    "" c
-                      end
-
-		| `Block (c_expr_l) ->
-		      "{\n"^(string_of_code_block c_expr_l)^"\n"^
-			  tab^"}\n"
-
-		| `Return (ac) ->
-                      (*"return "^(string_of_arith_code_expression ac)^";"*)
-                      ""
-
-                | `ReturnMap (mid) ->
-                      (*"return "^mid^";"*)
-                      ""
-
-                | `ReturnMultiple (rv_l, cv_opt) ->
-                      (*
-                      let string_of_rv rv = 
-                          match rv with
-                              | `Arith a -> string_of_arith_code_expression a
-                              | `Map mid -> mid
-                      in
-                      let rv = "make_tuple("^
-                          (String.concat "," (List.map string_of_rv rv_l))^");"
-                      in
-                          begin match cv_opt with
-                              | None -> "return "^rv
-                              | Some cv -> cv^" = "^rv^";\n"^tab^"return "^cv^";"
-                          end
-                      *)
-                      ""
-		      
-		| `Handler (name, args, rt, c_expr_l) ->
-		      let h_fields =
-			  List.fold_left
-			      (fun acc (id, typ) ->
-				   (if (String.length acc) = 0 then "" else acc^",")^(typ^" "^id))
-			      "" args
-		      in
-			  (* TODO: handler return type should be same as last code expr*)
-			  (* Hacked for now... *)
-                          (* DEMO HACK *)
-		          (*rt^" "^name^"("^h_fields^") {\n"^*)
-		          "void "^name^"("^h_fields^") {\n"^
-			      (string_of_code_block c_expr_l)^
-			      tab^"\n}"
-
-                | `Profile (statsType, prof_id, c_expr) ->
-                      ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")")^"\n"^
-                          (sce_aux c_expr level)^"\n"^
-                          tab^("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
-
-	in
-	    tab^out 
-    in
-	sce_aux c_expr 0
-
-(* type computation rules *)
-exception InvalidTypeOperation
-
-type r_type = [ `Int | `Long | `Float | `Double | `String | `Unknown]
-
-let string_of_type t = 
-    match t with 
-	| `Int -> "int"
-	| `Long -> "long"
-	| `Float -> "float"
-	| `Double -> "double"
-	| `String -> "string"
-        | `Unknown -> "unknown"
-
-(* basic type inferrence rules. It doesn't have to be strict type checker 
- * because we're generating C++ file.  *)
-let type_op_rule l r =
-    match (l, r) with
-        | (`Unknown, `Unknown) -> `Unknown
-        | (`Unknown, _) -> r
-        | (_, `Unknown) -> l
-	| (`Int, `Int) -> `Int
-	| (`Int, `Long) | (`Long, `Int) | (`Long, `Long) -> `Long
-	| (`Int, `Float) | (`Float, `Int) | (`Long, `Float) 
-        | (`Float, `Long) | (`Float, `Float) -> `Float
-        | (`Int, `Double) | (`Double, `Int) | (`Long, `Double)
-        | (`Double, `Long) | (`Float, `Double) | (`Double, `Float)
-        | (`Double, `Double) -> `Double
-        | (`String, `String) -> `String
-	| (_, _) -> 
-	    (print_endline ("Type operation between "^(string_of_type l)^" and "^(string_of_type r));
-	    raise InvalidTypeOperation)
-
-let triple_type_op_rule p l r =
-    type_op_rule p (type_op_rule l r)
-
-let string_to_type s =
-    match s with
-	| "int" -> `Int
-	| "long" -> `Long
-	| "float" -> `Float
-        | "double" -> `Double
-	| "string" -> `String
-        | "unknown" -> `Unknown
-	| _ -> print_endline ("Invalid type "^s);
-              raise InvalidTypeOperation
-
-let type_to_string t = 
-    match t with
-	| `Int -> "int"
-	| `Long -> "long"
-	| `Float -> "float"
-	| `Double -> "double"
-	| `String -> "string"
-        | `Unknown -> "unknown" 
-
-(* generates type list from m_expr *)
-let generate_type_list m_expr_l base_rels events = 
-    let all_fields = 
-        (List.fold_left 
-            ( fun acc x ->   
-                match x with
-                    | `Relation (n, l) -> acc@l
-                    | _ -> raise InvalidExpression)
-            [] base_rels)@
-        (List.fold_left
-            ( fun acc x ->
-                match x with 
-                    | `Insert (n, l) -> acc@l
-                    | _ -> acc)
-            [] events)
-    in
-    let update fields ptype n = 
-        if List.mem_assoc n fields then 
-            let ntype = type_op_rule ptype (string_to_type (List.assoc n fields)) in
-                (ntype, fields)
-        else 
-            match ptype with
-                | `Unknown -> (`Unknown, fields)
-                | _ -> (ptype, (n, type_to_string ptype)::fields)
-    in
-    let rec gtl_aux_me m_expr ptype fields = 
-        match m_expr with
-            | `METerm (`Int _) -> (type_op_rule ptype `Int, fields)
-            | `METerm (`Float _) -> (type_op_rule ptype `Float, fields)
-            | `METerm (`String _) -> (type_op_rule ptype `String, fields)
-            | `METerm (`Long _) -> (type_op_rule ptype `Long, fields)
-            | `METerm (`Variable n)
-            | `METerm (`Attribute(`Qualified (_, n)))
-            | `METerm (`Attribute(`Unqualified (n))) ->
-                  update fields ptype n 
-            | `Sum (l, r) | `Minus (l, r) | `Product (l, r) 
-            | `Min (l, r) | `Max (l, r) ->
-                  let (ltype, lfields) = gtl_aux_me l ptype fields in
-                      begin
-                          match ltype with 
-                              | `Unknown ->
-                                    let (rtype, rfields) = gtl_aux_me r ptype fields in
-                                    let (ntype, nfields) = gtl_aux_me l rtype rfields in
-                                        (triple_type_op_rule ptype ntype rtype, nfields)
-                              | _ -> 
-                                    let (ntype, nfields) = gtl_aux_me r ltype lfields in
-                                        (triple_type_op_rule ptype ltype ntype, nfields)                    
-                      end
-            | `MapAggregate (_, m, p) -> 
-                  let (mtype, mfields) = gtl_aux_me m ptype fields in
-                      begin
-                          match mtype with
-                              | `Unknown ->
-                                    let pfields = gtl_aux_p p fields in
-                                        gtl_aux_me m ptype pfields
-                              | _ -> (mtype, gtl_aux_p p mfields )
-                      end
-            | _ ->
-                  print_endline ("gtl_aux_m_expr");
-                  raise InvalidExpression
-    and gtl_aux_p plan fields =
-        match plan with
-            | `Select (bp, p) -> gtl_aux_p p (gtl_aux_b bp fields)
-            | `Project (_, p) -> gtl_aux_p p fields
-            | `Union (pl) -> 
-                  List.fold_left 
-                      (fun f x -> gtl_aux_p x f) fields pl
-            | `Cross (l, r) ->
-                  gtl_aux_p r (gtl_aux_p l fields) 
-	    | `Relation _ -> fields
-            | _ -> 
-                  print_endline ("gtl_aux_p "^string_of_plan plan);
-                  raise InvalidExpression
-    and gtl_aux_b bp fields = 
-        match bp with
-            | `And (l, r) | `Or (l, r) ->
-                  gtl_aux_b l (gtl_aux_b r fields)
-            | `Not b -> gtl_aux_b b fields
-            | `BTerm (bt) -> gtl_aux_bterm bt fields
-    and gtl_aux_bterm bt fields = 
-        match bt with
-            | `True | `False -> fields
-            | `LT(l, r) | `LE(l, r) | `GT(l, r) | `GE(l, r) 
-            | `EQ(l, r) | `NE(l, r) ->
-                  let (ltype, lfields) = gtl_aux_e l `Unknown fields in
-                      begin
-                      match ltype with
-                          | `Unknown -> 
-                                let (rtype, rfields) = gtl_aux_e r `Unknown fields in
-                                let (_, ret_fields) = gtl_aux_e l rtype rfields in
-                                    ret_fields 
-                          | _ -> 
-                                let (_, ret_fields) = gtl_aux_e r ltype lfields in
-                                    ret_fields
-                      end
-            | `MEQ(m) | `MLT(m) | `MLE(m) | `MGT(m)
-            | `MGE(m) | `MNEQ(m) ->
-                  let (_, ret_fields) = gtl_aux_me m `Unknown fields in
-                      ret_fields 
-    and gtl_aux_e e ptype fields = 
-        match e with
-            | `ETerm (`Int _) -> (type_op_rule ptype `Int, fields)
-            | `ETerm (`Float _) -> (type_op_rule ptype `Float, fields)
-            | `ETerm (`String _) -> (type_op_rule ptype `String, fields)
-            | `ETerm (`Long _) -> (type_op_rule ptype `Long, fields)
-            | `ETerm (`Variable n) 
-            | `ETerm (`Attribute(`Qualified(_, n))) 
-            | `ETerm (`Attribute(`Unqualified (n))) -> 
-                  update fields ptype n
-            | `UnaryMinus(ue) -> gtl_aux_e ue ptype fields
-            | `Sum (l, r) | `Product (l, r) 
-            | `Minus (l, r) | `Divide (l, r) ->
-                 let (ltype, lfields) = gtl_aux_e l ptype fields in
-                     begin
-                         match ltype with
-                             | `Unknown ->
-                                   let (rtype, rfields) = gtl_aux_e r ptype fields in
-                                   let (ntype, nfields) = gtl_aux_e l rtype rfields in
-                                       (triple_type_op_rule ptype rtype ntype, nfields)
-                             | _ ->
-                                   let (ntype, nfields) = gtl_aux_e r ltype lfields in
-                                       (triple_type_op_rule ptype ltype ntype, nfields)
-                     end
-            | _ -> 
-                  print_endline "gtl_aux_e";
-                  raise InvalidExpression
-    in 
-    let new_fields = 
-        List.fold_left 
-            ( fun fl me -> 
-                let (_, nf) = gtl_aux_me me `Unknown fl in
-                let i_uba = List.map field_of_attribute_identifier 
-                    (get_unbound_attributes_from_map_expression me true)
-                in 
-                let testlist = List.filter (fun x -> List.mem_assoc x nf) i_uba
-                in
-                    if List.length i_uba != List.length testlist then
-                        (print_endline ("generates type_list: unresolved type");
-                        raise InvalidTypeOperation);
-                    nf)
-            all_fields m_expr_l
-    in            
-(*    let (new_type, new_fields) = gtl_aux_me m_expr `Unknown all_fields 
-    in  
-    let testlist = List.filter (fun x -> List.mem_assoc x new_fields) i_uba
-    in 
-        if List.length i_uba != List.length testlist then
-            (print_endline ("TYPEINF: something wrong");
-            raise InvalidTypeOperation)
-        else
-            print_endline ("Result type is "^type_to_string new_type); *)
-        List.iter (fun (f, t) -> print_endline (f^":"^t)) new_fields;
-        new_fields
- 
-(* looks for vname in type_list which must be there *)
-let search_type_list vname type_list =
-    if List.mem_assoc vname type_list then
-        string_to_type (List.assoc vname type_list)
-    else 
-        (print_endline (vname^" is not on type_list");
-        raise InvalidTypeOperation)
-
-(* try to find type from declaration list first *)
-let search_decls_type_list vname type_list decls =
-    (* search through decl list *)
-    let d_list = List.filter (
-        fun x -> match x with
-	    | `Variable (v, _) | `Map (v, _, _) -> vname = v
-	    | _ -> false)
-	decls
-    in if List.length d_list != 0 then
-	match List.hd d_list with
-	    | `Variable ( _, t) | `Map ( _, _, t) -> string_to_type t
-	    | _ -> raise InvalidExpression
-    (* search through map list *)
-    else search_type_list vname type_list 
-
-let type_inf_expr expr type_list decls =
-    let rec tie_aux_expr expr= 
-    	match expr with
-            | `ETerm e -> tie_aux_eterm e 
- 	    | `Sum (l, r) | `Product (l, r) | `Minus (l, r) -> 
-    	        type_op_rule (tie_aux_expr l) (tie_aux_expr r)
-	    | `Function _ | `UnaryMinus _ | `Divide _ -> 
-                print_endline "type_inf_expr wrong expression";
-                raise InvalidExpression
-    and tie_aux_eterm eterm =
-        match eterm with
-    	    | `Int _ -> `Int
-	    | `Float _ -> `Float
-	    | `String _ -> `String
-	    | `Long _ -> `Long
-	    | `Variable var ->
-	        search_decls_type_list var type_list decls
-	    | `Attribute (`Qualified (_, a)) 
-	    | `Attribute (`Unqualified (a)) ->
-	        search_type_list a type_list
-    in
-    let ret_type =  tie_aux_expr expr    
-    in 
-(*    print_endline ("result of type inferencing of "^string_of_expression expr^" : "^(string_of_type ret_type));*)
-    type_to_string ret_type
-
-let type_inf_mexpr m_expr type_list decls =
-    let rec tiaux_mterm mterm : r_type= 
-        match mterm with
-	    | `Int _ -> `Int
-	    | `Float _ -> `Float
-	    | `String _ -> `String
-	    | `Long _ -> `Long
-	    | `Variable var -> 
-		search_decls_type_list var type_list decls 
-	    | `Attribute ( `Qualified (r, a)) -> 
-		search_type_list a type_list 
-	    | `Attribute ( `Unqualified (a)) ->
-		search_type_list a type_list
-    and tiaux_m_expr m_expr =
-	match m_expr with
-	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r) | `Min ( l, r) | `Max ( l, r) 
-		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
-	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
-	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
-	    | `MaintainMap (_, _, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
-	    | `Insert (_, _, m) | `Update( _, _, _, m) 
-	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
-	    | `IfThenElse(_, m1, m2) -> 
-		let l = tiaux_m_expr m1 in
-		let r = tiaux_m_expr m2 in
-		if l = r then l
-		else (print_endline "typeop ifthenelse"; raise InvalidTypeOperation)
-    in
-    let ret_type =  tiaux_m_expr m_expr
-    in 
-(*    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type));*)
-    type_to_string ret_type
-
-(* retrieve map expression from map list using hash value and id *)
-let get_m_expr_with_mapid id maps map_vars =
-    let maps_and_hvs = List.combine maps (List.map dbt_hash maps) in
-    let hvs = List.map (fun (hv, _ ) -> hv)
-	(List.filter ( fun (hv, var) -> var = id) map_vars) in
-    if List.length hvs != 0 then
-	let me = List.map ( fun (m,_) -> m)
-	    (List.filter (fun (_, hv) -> hv = List.hd hvs) maps_and_hvs)
-	in [List.hd (me)]
-    else []
-
-let type_inf_mexpr_map m_expr type_list maps map_vars =
-    let rec tiaux_mterm mterm = 
-        match mterm with
-	    | `Int _ -> `Int
-	    | `Float _ -> `Float
-	    | `String _ -> `String
-	    | `Long _ -> `Long
-	    | `Variable v -> 
-		let new_mexpr = get_m_expr_with_mapid v maps map_vars in
-		if List.length new_mexpr != 0 then
-		    tiaux_m_expr (List.hd new_mexpr)
-		else 
-		    search_type_list v type_list
-	    | `Attribute ( `Qualified (_, a)) 
-	    | `Attribute ( `Unqualified (a)) ->
-		    search_type_list a type_list
-    and tiaux_m_expr m_expr =
-	match m_expr with
-	    | `Sum (l, r) | `Minus (l, r) | `Product (l, r) | `Min ( l, r) | `Max ( l, r) 
-		-> type_op_rule (tiaux_m_expr l) (tiaux_m_expr r)
-	    | `METerm m | `Delete(_, m) -> tiaux_mterm m 
-	    | `Delta _ | `New _ -> raise InvalidExpression (* these will not be remaining *)
-	    | `MaintainMap (_, _, _, m) | `Incr ( _, _, _, _, m) | `IncrDiff (_, _, _, _, m)
-	    | `Insert (_, _, m) | `Update( _, _, _, m) 
-	    | `MapAggregate (_, m, _) -> tiaux_m_expr m
-	    | `IfThenElse(_, m1, m2) -> 
-		let l = tiaux_m_expr m1 in
-		let r = tiaux_m_expr m2 in
-		if l = r then l
-		else raise InvalidTypeOperation
-    in
-    let ret_type =  tiaux_m_expr m_expr
-    in 
-(*    print_endline ("result of type inferencing of "^string_of_map_expression m_expr^" : "^(string_of_type ret_type)); *)
-    type_to_string ret_type
-
-let type_inf_arith_expr a_expr decls =
-    let rec tiae_aux_expr a_expr = 
-  	match a_expr with
-	    | `Sum ( l, r) | `Minus (l, r) | `Product (l, r) | `Min (l, r) | `Max (l, r) ->
-		type_op_rule (tiae_aux_expr l) (tiae_aux_expr r)
-	    | `CTerm c ->
-		tiae_aux_cterm c
-    and tiae_aux_cterm cterm = 
-	match cterm with
-	    | `Int _ -> `Int
-	    | `Float _ -> `Float
-	    | `String _ -> `String
-	    | `Long _ -> `Long
-	    | `Variable id   
-	    | `MapAccess (id, _) | `MapContains (id, _) 
-	    | `MapIterator (`Begin id) | `MapIterator (`End id) -> 
-		let t_list = List.map 
-		    (fun x -> match x with
-			| `Declare(`Variable (_, t)) | `Declare(`Map (_, _, t)) -> string_to_type t 
-			| _ -> print_endline "type_inf_arith_expr wrong"; raise InvalidExpression)
-			( List.filter 
-		            (fun x -> match x with 
-			        | `Declare(`Variable (n, _)) | `Declare(`Map (n, _, _)) -> n = id
-			        | _ -> false (* check later *))
-		            decls )
-		in List.hd t_list
-            | `DomainContains (did, keys) -> raise InvalidExpression
-            | `DomainIterator (`Begin id) | `DomainIterator (`End id) -> raise InvalidExpression
-    in 
-	type_to_string (tiae_aux_expr a_expr)
-
-(* Code helpers *)
-let get_block_last c_expr =
-    match c_expr with
-	| `Block cl ->
-              let cl_len = List.length cl in
-                  begin match List.nth cl (cl_len-1) with
-                      | `Resume _ -> List.nth cl (cl_len-2)
-                      | x -> x
-                  end
-	| _ -> raise InvalidExpression
-
-let remove_block_last c_expr =
-    match c_expr with
-	| `Block cl -> `Block (List.rev (List.tl (List.rev cl)))
-	| _ -> raise InvalidExpression
-
-(* TODO: inefficient!*)
-let replace_block_last c_expr append_expr =
-    match c_expr with
-	| `Block cl -> `Block(
-	      (List.rev (List.tl(List.rev cl)))@[ append_expr ])
-	| _ -> raise InvalidExpression
-
-let append_to_block c_expr append_expr =
-    match c_expr with
-	| `Block cl -> `Block (cl@[append_expr])
-	| _ -> raise InvalidExpression
-
-let append_blocks l_block r_block =
-    match (l_block, r_block) with
-	| (`Block lcl, `Block rcl) -> `Block(lcl@rcl)
-	| _ -> raise InvalidExpression
-
-(* TODO: think about `DeleteTuple, since this may occur on IncrPlan(_,`Minus,_,_)
- *)
-let rec get_return_val c_expr =
-    match c_expr with
-        | `Eval _ -> c_expr
-        | `Assign(v, _) -> `Eval(`CTerm(`Variable(v)))
-        | `AssignMap(mk,_) -> `Eval(`CTerm(`MapAccess(mk)))
-        | `EraseMap((mid,mf) as mk) ->
-              print_endline ("Found erase map as return val with keys "^(string_of_code_var_list mf));
-              `Eval(`CTerm(`MapAccess(mk)))
-        | `IfNoElse(_, c) -> get_return_val c
-        | `ForEach(_,c) -> get_return_val c 
-        | `ForEachResume(_,c) -> get_return_val c 
-        | `Block(y) -> get_return_val (get_block_last c_expr)
-        | `Profile(_,_,c) -> get_return_val c
-        | _ ->
-              print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
-              raise InvalidExpression
-
-(* TODO: see above note on `DeleteTuple *)
-let remove_return_val c_expr =
-    let rec remove_aux c =
-        match c with
-        | `Eval _ -> None
-        | `Assign _ -> Some(c)
-        | `AssignMap _ -> Some(c)
-        | `EraseMap _ -> Some(c)
-        | `IfNoElse (p, cc) ->
-              begin match remove_aux cc with
-                  | None -> None
-                  | Some x -> Some(`IfNoElse(p,x))
-              end
-
-        | `ForEach(ds,c)
-        | `ForEachResume(ds,c) ->
-              begin match remove_aux c with
-                  | None -> None
-                  | Some x -> Some(`ForEach(ds,x))
-              end
-
-        | `Block x ->
-              let last = get_block_last c in
-              let block_without_last = remove_block_last c in
-                  begin
-                      match remove_aux last with
-                          | None -> Some(block_without_last)
-                          | Some y -> Some(append_to_block block_without_last y)
-                  end
-
-        | `Profile(st, prof_id,c) ->
-              begin
-                  match remove_aux c with
-                      | None -> None
-                      | Some x -> Some(`Profile(st, prof_id,x))
-              end
-        | _ ->
-              print_endline ("remove_return_val: "^(indented_string_of_code_expression c));
-              raise InvalidExpression                
-    in
-        match (remove_aux c_expr) with
-            | None -> raise (RewriteException "Attempted to remove top level expression")
-            | Some x -> x
-
-(* TODO: see above note on `DeleteTuple *)
-let rec replace_return_val c_expr new_rv =
-    match c_expr with
-        | `Eval _ -> new_rv
-        | `Assign _ | `AssignMap _ ->
-              `Block([c_expr; new_rv])
-        | `IfNoElse (p, c) -> `IfNoElse(p, replace_return_val c new_rv)
-        | `Block x ->
-              let last = get_block_last c_expr in
-              let new_last = replace_return_val last new_rv in
-                  `Block(List.rev (new_last::(List.tl (List.rev x))))
-        | `Profile(st,p,c) -> `Profile(st, p, replace_return_val c new_rv)
-        (* Top level case *)
-        | `ForEach(i,c) 
-        | `ForEachResume(i,c)
-            -> 
-              let last = get_return_val c_expr in 
-              let new_id = 
-                  match new_rv with
-                      | `Assign(v, _) -> v
-                      | _ -> raise InvalidExpression
-              in
-              begin
-                  match last with 
-                      | `Eval (`CTerm  (`MapAccess(id, _))) -> 
-                            `Block [c_expr; `Assign(new_id, `CTerm (`Variable id))]
-                      | _ -> `Block [c_expr; new_rv] 
-              end
-        | _ ->
-              print_endline ("replace_return_val: "^(indented_string_of_code_expression c_expr));
-              raise InvalidExpression
-
-(* indicates whether the given code is a return value, and whether it is replaceable *)
-(* TODO: see above note on `DeleteTuple *)
-let rec is_local_return_val code rv =
-    match code with
-        | `Eval _ -> (code = rv, false)
-        | `Assign (v, _) -> (rv = `Eval(`CTerm(`Variable(v))), false)
-        | `AssignMap (mk, _) -> (rv = `Eval(`CTerm(`MapAccess(mk))), false)
-        | `Block cl -> 
-              let block_last = get_block_last code in
-              let (local, _) = is_local_return_val (get_block_last code) rv in
-                  (local, match block_last with | `Eval _ -> true | _ -> false)
-        | `ForEach (_, c) | `ForEachResume(_, c) -> is_local_return_val c rv
-        | _ -> (false, false)
-
-(* code_expression -> declaration list ->
-     code_expression * arith_code_expression * declaration list
- * Transform:
- * local && replaceable => remove last statement
- * local => do nothing
- * non-local => force return val assigment to variable, to ensure scoping *)
-let prepare_block_for_merge block decl =
-    match block with
-        | `Block cl ->
-              let rv = get_return_val block in
-              let arith_rv = match rv with | `Eval x -> x | _ -> raise InvalidExpression in
-              let (local, repl) = is_local_return_val block rv in
-                  if local then
-                      ((if repl then (remove_block_last block) else block), arith_rv, decl)
-                  else
-                      let var = gen_var_sym() in
-		      let decls = List.map (fun x -> `Declare x) decl in
-                          (replace_return_val block (`Assign(var, arith_rv)),
-                          `CTerm(`Variable(var)), (`Variable(var, type_inf_arith_expr arith_rv decls))::decl)
-        | _ -> 
-              print_endline ("prepare_block_for_merge: invalid arg\n"^
-                  (indented_string_of_code_expression block));
-              raise InvalidExpression
-
-(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
-     code_expression * declaration list
- * Replace, and merge the return val of a block with the expression
- * generated by a merging function
-*)
-let merge_with_block block merge_fn decl =
-    match block with
-        | `Block cl ->
-              let (b, new_av, new_decl) = prepare_block_for_merge block decl in
-                  (append_to_block b (merge_fn new_av), new_decl)
-
-        | _ ->
-              print_endline ("merge_with_block: invalid block\n"^
-                  (indented_string_of_code_expression block));
-              raise InvalidExpression
-
-(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
-     code_expression * declaration list
- * Merges the bodies of two blocks, replacing their return vals with the expression
- * generated by a merging function
-*)
-let merge_blocks l_block r_block merge_fn decl =
-    match (l_block, r_block) with
-        | (`Block lcl, `Block rcl) ->
-              let (lb, new_lav, new_ldecl) = prepare_block_for_merge l_block decl in
-              let (rb, new_rav, new_rdecl) = prepare_block_for_merge r_block new_ldecl in
-                  (append_to_block (append_blocks lb rb) (merge_fn new_lav new_rav), new_rdecl)
-
-        | _ ->
-              print_endline ("merge_blocks: invalid args\n"^
-                  "left:\n"^(indented_string_of_code_expression l_block)^"\n"^
-                  "right:\n"^(indented_string_of_code_expression r_block));
-              raise InvalidExpression
-
-
-let rec get_last_code_expr c_expr = 
-    match c_expr with
-	| `Declare _ | `Assign _ 
-        | `AssignMap _  | `EraseMap _
-        | `InsertTuple _ | `DeleteTuple _
-        | `Eval _ -> c_expr 
-	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
-	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r
-	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
-	| `ForEachResume (ds, c_expr) -> get_last_code_expr c_expr
-        | `Resume _ -> raise InvalidExpression
-	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
-        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> c_expr
-	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
-        | `Profile(_,_,c) -> get_last_code_expr c
-
-
-let validate_incr_ops expr_op plan_op =
-    match (expr_op, plan_op) with
-        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union)
-        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff)
-              -> ()
-        | _ -> raise (ValidationException "Invalid op pair.")
-
-let is_insert_incr expr_op plan_op =
-    match (expr_op, plan_op) with
-        | (`Plus, `Union) | (`Min, `Union) | (`Max, `Union) -> true
-        | (`Minus, `Diff) | (`Decrmin _, `Diff) | (`Decrmax _, `Diff) -> false
-        | _ -> raise (ValidationException "Invalid op pair.")
-
-
-(* shared code helpers *)
-let rec filter_declarations c_expr decl_l =
-    match c_expr with
-	| `Declare _ ->
-              if List.mem c_expr decl_l then None else Some(c_expr)
-
-        | `Assign _ | `AssignMap _  | `EraseMap _
-        | `InsertTuple _ | `DeleteTuple _
-        | `Eval _
-            -> Some(c_expr)
-
-	| `IfNoElse (cond, tc) ->
-              let r = filter_declarations tc decl_l in
-                  begin match r with
-                      | None -> None
-                      | Some(ntc) -> Some(`IfNoElse(cond, ntc))
-                  end
-
-	| `IfElse (cond, tc, ec) ->
-              let rt = filter_declarations tc decl_l in
-              let re = filter_declarations ec decl_l in
-                  begin match (rt, re) with
-                      | (None, None) -> None
-                      | (Some(ntc), None) -> Some(`IfNoElse(cond, ntc))
-                      | (None, Some(nec)) -> Some(`IfNoElse(`Not(cond), nec))
-                      | (Some(ntc), Some(nec)) -> Some(`IfElse(cond, ntc, nec))
-                  end
-
-	| `ForEach (ds, fc) ->
-              let r = filter_declarations fc decl_l in
-                  begin match r with
-                      | None -> None
-                      | Some(nfc) -> Some(`ForEach(ds,nfc))
-                  end
-
-	| `ForEachResume (ds, fc) ->
-              let r = filter_declarations fc decl_l in
-                  begin match r with
-                      | None -> None
-                      | Some(nfc) -> Some(`ForEachResume(ds,nfc))
-                  end
-
-        | `Resume _ -> Some(c_expr)
-
-	| `Block cl ->
-              let ncl =
-                  List.fold_left
-                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
-                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
-              in
-                  Some(`Block(ncl))
-
-        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> Some(c_expr)
-
-	| `Handler (id, args, rt, cl) ->
-              let ncl =
-                  List.fold_left
-                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
-                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
-              in
-                  Some(`Handler(id, args, rt, ncl))
-
-        | `Profile(st,loc,c) ->
-              let r = filter_declarations c decl_l in
-                  begin match r with
-                      | None -> None
-                      | Some(nc) -> Some(`Profile(st,loc,nc))
-                  end

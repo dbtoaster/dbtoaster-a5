@@ -1,4 +1,5 @@
 open Algebra
+open Codegen
 
 exception AnalysisException of string
 

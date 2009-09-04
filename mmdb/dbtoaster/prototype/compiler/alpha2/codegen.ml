@@ -1,6 +1,115 @@
 open Algebra
+open Types
 open Compilepass
 
+(*******************************
+ *
+ * Code generation
+ *
+ *******************************)
+
+type map_identifier = identifier
+type profile_identifier = identifier
+
+(* Datastructure notes:
+ * underlying map must support: begin(), end()
+ *     iterator = begin(), iterator = end()
+ *     operator[](val)
+ *     insert(val)
+ *     erase(val)
+ * underlying multiset must support:
+ *     iterator = begin(), iterator = end()
+ *     iterator = find(val)
+ *     insert(val)
+ *     delete(iterator)
+ * other operations: operator*(iterator), get<idx>(val)
+ *)
+
+type datastructure = [
+| `Tuple of variable_identifier * field list 
+| `Map of map_identifier * (field list) * type_identifier 
+| `Set of relation_identifier * (field list)
+| `Multiset of relation_identifier * (field list) ]
+
+type code_variable = variable_identifier
+
+type map_key = map_identifier * (code_variable list)
+
+type map_iterator = [ `Begin of map_identifier | `End of map_identifier ]
+
+type domain_key = relation_identifier * (code_variable list)
+
+type domain_iterator = [ `Begin of relation_identifier | `End of relation_identifier ]
+
+type code_terminal = [
+| `Int of int
+| `Float of float
+| `String of string
+| `Long of int64
+| `Variable of code_variable
+| `MapAccess of map_key
+| `MapContains of map_key
+| `MapIterator of map_iterator
+| `DomainContains of domain_key
+| `DomainIterator of domain_iterator ]
+
+type arith_code_expression = [
+| `CTerm of code_terminal
+| `Sum of arith_code_expression * arith_code_expression
+| `Minus of arith_code_expression * arith_code_expression
+| `Product of arith_code_expression * arith_code_expression
+| `Min of arith_code_expression * arith_code_expression	
+| `Max of arith_code_expression * arith_code_expression	]
+
+and bool_code_term = [ `True | `False 
+| `LT of arith_code_expression * arith_code_expression
+| `LE of arith_code_expression * arith_code_expression
+| `GT of arith_code_expression * arith_code_expression
+| `GE of arith_code_expression * arith_code_expression
+| `EQ of arith_code_expression * arith_code_expression
+| `NE of arith_code_expression * arith_code_expression ] 
+
+type bool_code_expression = [
+| `BCTerm of bool_code_term
+| `Not of bool_code_expression
+| `And of bool_code_expression * bool_code_expression
+| `Or of bool_code_expression * bool_code_expression ]
+
+type return_val = [ `Arith of arith_code_expression | `Map of map_identifier ]
+
+type declaration = [
+| `Variable of code_variable * type_identifier
+| `Tuple of code_variable * (field * return_val) list
+| `Relation of relation_identifier * (field list) 
+| `Map of map_identifier * (field list) * type_identifier
+| `Domain of relation_identifier * (field list)
+| `ProfileLocation of profile_identifier ]
+
+type code_expression = [
+| `Declare of declaration
+| `Assign of code_variable * arith_code_expression
+| `AssignMap of map_key * arith_code_expression
+| `EraseMap of map_key
+| `InsertTuple of datastructure * (code_variable list)
+| `DeleteTuple of datastructure * (code_variable list)
+| `Eval of arith_code_expression 
+| `IfNoElse of bool_code_expression * code_expression
+| `IfElse of bool_code_expression * code_expression * code_expression
+| `ForEach of datastructure * code_expression
+| `ForEachResume of datastructure * code_expression
+| `Resume of string list option
+| `Block of code_expression list
+| `Return of arith_code_expression
+| `ReturnMap of map_identifier
+| `ReturnMultiple of return_val list * code_variable option
+| `Handler of function_identifier * (field list) * type_identifier * code_expression list
+| `Profile of string * profile_identifier * code_expression ]
+
+type stream_source_type = File | Socket
+
+(*
+ * Non-nested code expression construction
+ *)
 let rec create_code_expression expr =
     match expr with
 	| `ETerm (x) ->
@@ -28,8 +137,7 @@ let rec create_code_predicate b_expr =
     match b_expr with
 	| `BTerm(x) ->
               let dummy_pair = (`CTerm(`Variable("dummy")), `CTerm(`Int 0)) in
-              let binary l r fn = fn (create_code_expression l) (create_code_expression r)
-	      in
+              let binary l r fn = fn (create_code_expression l) (create_code_expression r) in
 	      begin
 		  `BCTerm(
 		      match x with
@@ -54,6 +162,1121 @@ let rec create_code_predicate b_expr =
 	| `Or(l,r) -> `Or(create_code_predicate l, create_code_predicate r)
 	| `Not(e) -> `Not(create_code_predicate e)
 
+
+(* Basic code type helpers *)
+let is_block c_expr =
+    match c_expr with | `Block _ -> true | _ -> false
+
+let identifier_of_datastructure =
+    function | `Tuple(n,_) | `Map (n,_,_) | `Set (n,_) | `Multiset (n,_) -> n
+
+let datastructure_of_declaration decl =
+    match decl with
+        | `Variable (n,_)
+        | `ProfileLocation n ->
+              raise (CodegenException ("Invalid datastructure: "^n))
+
+        | `Tuple (n,f) -> `Tuple (n, (fst (List.split f)))
+        | `Relation(n,f) -> `Multiset(n,f)
+        | `Map (id, f, rt) -> `Map(id, f, rt)
+        | `Domain(n,f) -> `Map(n,f,"int")
+
+let identifier_of_declaration decl =
+    match decl with
+        | `Variable (v, ty) -> v
+        | `Tuple (v,_) -> v
+        | `Relation(n, f) -> n
+        | `Map (n, f, rt) -> n
+        | `Domain(n, f) -> n
+        | `ProfileLocation p -> p
+
+(*
+ * C-code generation helpers
+ *)
+
+let ctype_of_type_identifier t = t
+
+let ctype_of_datastructure_fields f =
+    List.fold_left
+	(fun acc (_,t) ->
+	     (if (String.length acc) = 0 then "" else acc^",")^
+		 (ctype_of_type_identifier t))
+	"" f
+
+let ctype_of_datastructure =
+    function 
+        | `Tuple (n,f) -> "tuple<"^(String.concat "," (List.map snd f))^">"
+	| `Map (n,f,r) ->
+	      let key_type = 
+		  let ftype = ctype_of_datastructure_fields f in
+                      match f with
+                          | [] -> raise (CodegenException ("Invalid datastructure type, no fields found: "^n))
+                          | [x] -> ftype
+                          | _ -> "tuple<"^ftype^">" 
+	      in
+		  "map<"^key_type^","^(ctype_of_type_identifier r)^">"
+
+        | (`Set(n, f) as ds) 
+	| (`Multiset (n,f) as ds) ->
+	      let (el_type, nested_type) = 
+		  let ftype = ctype_of_datastructure_fields f in
+		      if (List.length f) = 1 then (ftype, false) else ("tuple<"^ftype^">", true)
+	      in
+              let ds_type = match ds with | `Set _ -> "set" | `Multiset _ -> "multiset" in
+		  ds_type^"<"^el_type^(if nested_type then " >" else ">")
+
+
+let element_ctype_of_datastructure d =
+    match d with
+        | `Variable(n,_)
+        | `ProfileLocation n
+        | `Tuple(n,_)
+            -> raise (CodegenException
+                  ("Invalid datastructure for elements: "^n))
+
+	| `Map (n,f,r) ->
+	      let key_type = 
+		  let ftype = ctype_of_datastructure_fields f in
+                      match f with
+                          | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
+                          | [x] -> ("const "^ftype)
+                          | _ -> ("const tuple<"^ftype^">")
+	      in
+		  "pair<"^key_type^","^(ctype_of_type_identifier r)^">"
+
+        | `Set(n, f)
+	| `Multiset (n,f) ->
+	      let ftype = ctype_of_datastructure_fields f in
+		  if (List.length f) = 1 then ("const "^ftype) else ("const tuple<"^ftype^">")
+
+
+let ctype_of_code_var_list =
+    function
+        | [] -> raise (CodegenException "Invalid code var list")
+        | [x] -> x
+        | x -> 
+              let svl =
+                  List.fold_left
+	              (fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
+	              "" x
+              in
+                  "make_tuple("^svl^")"
+
+(* TODO *)
+let ctype_of_arith_code_expression ac_expr = "int"
+
+let iterator_ref = ref 0
+
+let advance_iterator it = "++"^it
+
+let iterator_type_of_datastructure ds =
+    match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      (ctype_of_datastructure ds)^"::iterator"
+
+let point_iterator_declaration_of_datastructure ds =
+    match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
+	      let point_it = id^"_it"^it_id in
+		  (point_it, it_typ^" "^point_it)
+            
+let range_iterator_declarations_of_datastructure ds =
+    match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+	| `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
+	      let begin_it = id^"_it"^it_id in
+	      let end_it = id^"_end"^it_id in
+		  (begin_it, end_it, it_typ^" "^begin_it, it_typ^" "^end_it)
+
+let field_declarations_of_datastructure ds iterator tab =
+    let deref = match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+	| `Map _ -> iterator^"->first"
+        | `Set _ | `Multiset _ -> "*"^iterator
+    in 
+	match ds with
+            | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+	    | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+		  if (List.length f) = 1 then
+		      let (id, typ) = List.hd f in
+			  tab^typ^" "^id^" = "^deref^";\n"
+		  else 
+		      let (_, r) =
+			  List.fold_left
+			      (fun (cnt, acc) (id, typ) ->
+				   (cnt+1,
+				    acc^tab^
+					(typ^" "^id^" = get<"^(string_of_int cnt)^">("^deref^");\n")))
+			      (0, "") f
+		      in
+			  r
+
+let resume_declarations_of_datastructure ds =
+    match ds with
+        | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+        | `Map(id, f, _) | `Set(id, f) | `Multiset (id, f) ->
+	      let it_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let it_typ = (ctype_of_datastructure ds)^"::iterator" in
+              let resume_it = "resume_"^id^"_it"^it_id in
+              let resume_it_decl = it_typ^" "^resume_it in
+
+	      let val_id = incr iterator_ref; (string_of_int !iterator_ref) in
+	      let val_typ = (ctype_of_datastructure ds)^"::key_type" in
+              let resume_val = "resume_"^id^"_val"^val_id in
+              let resume_val_decl = val_typ^" "^resume_val in
+                  Some((resume_it_decl, resume_it), (resume_val_decl, resume_val))
+
+
+let handler_name_of_event ev =
+    match ev with
+	| `Insert (n, _) -> "on_insert_"^n
+	| `Delete (n, _) -> "on_delete_"^n
+
+
+(*
+ * Profiling helpers
+ *)
+
+let event_counters = Hashtbl.create 10
+
+let generate_profile_id (event : delta) =
+    let new_count = 
+        if Hashtbl.mem event_counters event then
+            let c = Hashtbl.find event_counters event in
+                Hashtbl.replace event_counters event (c+1);
+                c+1
+        else
+            begin Hashtbl.add event_counters event 0; 0 end
+    in
+    let event_name = match event with
+        | `Insert(r,_) -> "insert_"^r
+        | `Delete(r,_) -> "delete_"^r
+    in
+        (event_name^"_prof_"^(string_of_int new_count))
+
+let generate_handler_profile_id handler_name = handler_name^"_prof_id"
+
+
+let code_locations = Hashtbl.create 10
+
+let generate_profile_location loc_id = 
+    if Hashtbl.mem code_locations loc_id then
+        Hashtbl.find code_locations loc_id
+    else
+        begin
+            Hashtbl.add code_locations loc_id
+                (Hashtbl.length code_locations);
+            Hashtbl.find code_locations loc_id
+        end
+
+(* 
+ * Code expression stringification
+ *)
+
+let string_of_code_var_list vl =
+    List.fold_left
+	(fun acc v -> (if (String.length acc) = 0 then "" else acc^", ")^v)
+	"" vl
+
+let string_of_field_list fl =
+    List.fold_left
+	(fun acc (id, typ) ->
+	    (if (String.length acc) = 0 then "" else acc^", ")^
+		typ^" "^id)
+	"" fl
+
+let string_of_map_key (mid, keys) = mid^"["^(ctype_of_code_var_list keys)^"]"
+
+let string_of_domain_key (did, keys) = did^"["^(ctype_of_code_var_list keys)^"]"
+
+let string_of_datastructure =
+    function | `Tuple(n,f) | `Map (n,f,_) | `Set (n,f) -> n | `Multiset (n,f) -> n
+
+let string_of_datastructure_fields =
+    function
+	| `Tuple (n,f) | `Map (n,f,_) | `Set(n,f) | `Multiset (n,f) ->
+              string_of_field_list f
+
+let string_of_declaration =
+    function 
+	| `Declare(`Variable(n, typ)) -> n^" : "^typ
+	| `Declare(`Tuple(n, f_rv_l)) -> n^" : <"^(String.concat "," (snd (List.split (fst (List.split f_rv_l)))))^">"
+        | `Declare(`Relation (id,f)) -> id^" : rel("^(string_of_field_list f)^")"
+        | `Declare(`Map (id,f,d)) -> id^" : map["^(string_of_field_list f)^"]"
+        | `Declare(`Domain (id,f)) -> id^" : dom("^(string_of_field_list f)^")"
+        | `Declare(`ProfileLocation p) -> p^" : profile"
+        | _ -> raise InvalidExpression
+
+let string_of_code_expr_terminal cterm =
+    match cterm with 
+	| `Int i -> string_of_int i
+	| `Float f -> string_of_float f
+	| `Long l -> Int64.to_string l
+	| `String s -> "\""^s^"\""
+	| `Variable v -> v
+	| `MapAccess mk -> string_of_map_key mk
+	| `MapContains (mid, keys) -> mid^".find("^(ctype_of_code_var_list keys)^")"
+	| `MapIterator (`Begin(mid)) -> mid^".begin()"
+	| `MapIterator (`End(mid)) -> mid^".end()"
+        | `DomainContains (did, keys) -> did^".find("^(ctype_of_code_var_list keys)^")"
+	| `DomainIterator (`Begin(did)) -> did^".begin()"
+	| `DomainIterator (`End(did)) -> did^".end()"
+
+let rec string_of_arith_code_expression ac_expr =
+    match ac_expr with
+	| `CTerm e -> string_of_code_expr_terminal e
+	| `Sum (l,r) ->
+	      "("^(string_of_arith_code_expression l)^" + "^
+		  (string_of_arith_code_expression r)^")"
+
+	| `Minus (l,r) ->
+	      "("^(string_of_arith_code_expression l)^" - "^
+		  (string_of_arith_code_expression r)^")"
+
+	| `Product(l,r) ->
+	      "("^(string_of_arith_code_expression l)^" * "^
+		  (string_of_arith_code_expression r)^")"
+
+	| `Min(l,r) ->
+	      "min("^(string_of_arith_code_expression l)^", "^
+		  (string_of_arith_code_expression r)^")"
+
+	| `Max(l,r) ->
+	      "max("^(string_of_arith_code_expression l)^", "^
+		  (string_of_arith_code_expression r)^")"
+
+let rec string_of_bool_code_expression bc_expr =
+    let dispatch_expr l r op =
+	(string_of_arith_code_expression l)^op^(string_of_arith_code_expression r) 
+    in
+	match bc_expr with
+	    | `BCTerm b ->
+		  begin
+		      match b with
+			  | `LT (l,r) -> dispatch_expr l r "<"
+			  | `LE (l,r) -> dispatch_expr l r "<="
+			  | `GT (l,r) -> dispatch_expr l r ">"
+			  | `GE (l,r) -> dispatch_expr l r ">="
+			  | `EQ (l,r) -> dispatch_expr l r "=="
+			  | `NE (l,r) -> dispatch_expr l r "!="
+			  | `True -> "true"
+			  | `False -> "false"
+		  end
+	    | `Not e -> "not("^(string_of_bool_code_expression e)^")"
+	    | `And (l,r) ->
+		  ("("^(string_of_bool_code_expression l)^") and ("^
+		       (string_of_bool_code_expression r)^")")
+	    | `Or (l,r) ->
+		  ("("^(string_of_bool_code_expression l)^") or ("^
+		       (string_of_bool_code_expression r)^")")
+
+
+let rec remove_resume_code_expression c_expr =
+    let remove c = remove_resume_code_expression c in
+    match c_expr with
+        | `Declare _ 
+        | `Assign _ | `AssignMap _ | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _ 
+                -> Some(c_expr)
+
+        | `IfNoElse (cond, tc) ->
+              let ntc = remove tc in
+                  begin
+                      match ntc with
+                          | Some c -> Some(`IfNoElse(cond, c)) | _ ->  None
+                  end
+
+        | `IfElse (cond, tc, ec) ->
+              let ntc = remove tc in
+              let nec = remove ec in
+                  begin match (ntc, nec) with
+                      | (None, None) -> None
+                      | (None, Some x) -> Some(`IfNoElse(`Not(cond), x))
+                      | (Some x,None) -> Some(`IfNoElse(cond, x))
+                      | (Some x, Some y) -> Some(`IfElse(cond, x, y))
+                  end
+
+        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
+              raise (CodegenException
+                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
+
+        | `Resume code_opt -> None
+
+        | `Block cl ->
+              let ncl =
+                  List.fold_left
+                      (fun acc c -> match c with | None -> acc | Some(ce) -> acc@[ce])
+                      [] (List.map remove cl)
+              in
+                  Some(`Block(ncl))
+
+        | `Return _ -> Some(c_expr)
+
+        | `ReturnMap _ -> Some(c_expr)
+
+        | `ReturnMultiple _ -> Some(c_expr)
+
+        | `Handler (hid,_,_,_) ->  raise (CodegenException
+              ("Cannot resume within handler: "^hid))
+
+        | `Profile (stat_type, loc, c) ->
+              let nc = remove c in
+                  match nc with
+                      | None -> None 
+                      | Some x -> Some(`Profile(stat_type, loc, x))
+
+let rec bind_resume_code_expression c_expr resume_code =
+    let bind c = bind_resume_code_expression c resume_code in
+    match c_expr with
+        | `Declare _ 
+        | `Assign _ | `AssignMap _ | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _ 
+                -> c_expr
+
+        | `IfNoElse (cond, tc) -> `IfNoElse(cond, bind tc)
+        | `IfElse (cond, tc, ec) -> `IfElse(cond, bind tc, bind ec)
+
+        | `ForEach (ds,_) | `ForEachResume (ds,_) ->
+              raise (CodegenException
+                  ("Cannot resume within nested loop: "^(string_of_datastructure ds)))
+
+        | `Resume code_opt ->
+              if code_opt = None then `Resume(Some(resume_code))
+              else raise (CodegenException ("Found existing resume code"))
+
+        | `Block cl -> `Block(List.map bind cl)
+
+        | `Return _ -> c_expr
+
+        | `ReturnMap _ -> c_expr
+
+        | `ReturnMultiple _ -> c_expr
+
+        | `Handler (hid,_,_,_) -> raise (CodegenException
+              ("Cannot resume within handler: "^hid))
+
+        | `Profile (stat_type, loc, c) -> `Profile(stat_type, loc, bind c)
+
+
+let rec string_of_code_expression c_expr =
+    let string_of_code_block c_expr_l =
+	List.fold_left
+	    (fun acc c_expr ->
+		 (if (String.length acc) = 0 then "" else acc^"\n")^
+		     (string_of_code_expression c_expr))
+	    "" c_expr_l
+    in
+	match c_expr with
+	    | `Declare x ->
+                  begin
+                      match x with
+		          | `Variable(n, typ) -> typ^" "^n^";"
+                          | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
+                                    ctype^" "^(identifier_of_declaration y)^";"
+                          | `ProfileLocation p ->
+                                let counter_val = generate_profile_location p in
+                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
+                  end
+
+	    | `Assign(v,ac) ->
+		  v^" = "^(string_of_arith_code_expression ac)^";"
+
+	    | `AssignMap(mk, vc) ->
+		  (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
+
+	    | `EraseMap (mid,mf) ->
+		  mid^".erase("^(ctype_of_code_var_list mf)^");"
+
+            | `InsertTuple (ds, cv_list) ->
+                  begin match ds with
+                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
+                      | `Map _ ->
+                            let dsid = identifier_of_datastructure ds in
+                            let dskey = (ctype_of_code_var_list cv_list) in
+                            let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
+                                "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
+                                "else { ++"^dsid^"["^dskey^"]; }"
+
+                      | `Set _ | `Multiset _ ->
+                            (identifier_of_datastructure ds)^
+                                ".insert("^(ctype_of_code_var_list cv_list)^");";
+
+                  end
+
+            | `DeleteTuple (ds, cv_list) -> 
+                  begin match ds with
+                      | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
+                      | `Map _ ->
+                            let dsid = identifier_of_datastructure ds in
+                            let dskey = (ctype_of_code_var_list cv_list) in
+                                "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
+                                    "--"^dsid^"["^dskey^"];\n"^
+                                    "if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
+                                "}"
+
+                      | `Set _ | `Multiset _ ->
+                            let id = identifier_of_datastructure ds in
+                            let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                                find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
+                                    id^".erase("^find_it^");"
+                  end
+
+	    | `Eval(ac) -> string_of_arith_code_expression ac
+
+	    | `IfNoElse(p,c) ->
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression c)^" }"
+
+	    | `IfElse(p,l,r) ->
+		  "if ( "^(string_of_bool_code_expression p)^" ) {"^
+		      (string_of_code_expression l)^" }"^
+		  "else {"^
+		      (string_of_code_expression r)^" }"
+
+	    | `ForEach(m,c) ->
+		  let (begin_it, end_it, begin_decl, end_decl) =
+		      range_iterator_declarations_of_datastructure m
+		  in
+		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
+			  (field_declarations_of_datastructure m begin_it "")^"\n"^
+			  (string_of_code_expression c)^
+			  "}"
+
+	    | `ForEachResume(m,c) ->
+                  let deref it = match m with
+                      | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+                      | `Map _ -> it^"->first"
+                      | `Set _ | `Multiset _ -> "*("^it^")"
+                  in
+		  let (begin_it, end_it, begin_decl, end_decl) =
+		      range_iterator_declarations_of_datastructure m
+		  in
+                  let resume_opt = resume_declarations_of_datastructure m in
+                  let (resume_decl, resume_incr_code, resume_bind_code) = 
+                      match resume_opt with
+                          | None -> ("", "", [])
+                          | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
+                                let rdecl =
+                                    resume_it_decl^" = "^begin_it^";\n"^
+                                    "if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
+                                    resume_val_decl^";\n"^
+                                    "if ( "^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
+                                in
+                                let rcode =
+                                    (advance_iterator resume_it)^";\n"^
+                                    "bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
+                                    "if ( !resume_end ) {\n"^
+                                        resume_val^" = "^(deref resume_it)^";\n"^
+                                    "}\n\n"
+                                in
+                                let rbindcode =
+                                    let id = identifier_of_datastructure m in
+                                        [ ("if ( !resume_end ) {");
+                                        ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
+                                        "}";
+                                        ("else { "^resume_it^" = "^end_it^"; }");
+                                        "continue;"]
+                                in
+                                    (rdecl, rcode, rbindcode)
+                  in
+                  let code_w_resume_bound =
+                      if resume_bind_code = [] then
+                          (match remove_resume_code_expression c with
+                              | None -> raise (CodegenException "Removing resume deleted all code")
+                              | Some x -> x)
+                      else (bind_resume_code_expression c resume_bind_code)
+                  in
+		      "\n"^begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			  end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+                          resume_decl^
+			  "for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^"){"^
+			  (field_declarations_of_datastructure m begin_it "")^"\n"^
+                          resume_incr_code^
+			  (string_of_code_expression code_w_resume_bound)^
+			  "}"
+
+            | `Resume resume_code_opt ->
+                  begin match resume_code_opt with
+                      | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
+                      | Some c ->
+                            List.fold_left
+                                (fun acc l ->
+                                    if (String.length acc) = 0 then l else (acc^"\n"^l))
+                                "" c
+                  end
+
+	    | `Block (c_expr_l) -> "{"^(string_of_code_block c_expr_l)^"}"
+
+            (* DEMO HACK: no need to return values from handler. *)
+	    | `Return (ac) ->
+                  (*"return "^(string_of_arith_code_expression ac)^";"*)
+                  ""
+
+            | `ReturnMap (mid) ->
+                  (*"return "^mid^";"*)
+                  ""
+
+            | `ReturnMultiple (rv_l, cv_opt) ->
+                  (*
+                  let string_of_rv rv = 
+                      match rv with
+                          | `Arith a -> string_of_arith_code_expression a
+                          | `Map mid -> mid
+                  in
+                  let rv = "make_tuple("^
+                      (String.concat "," (List.map string_of_rv rv_l))^");"
+                  in
+                      begin match cv_opt with
+                          | None -> "return "^rv
+                          | Some cv -> (cv^" = "^rv^"; return "^cv^";")
+                  end
+                  *)
+                  ""
+
+	    | `Handler (name, args, rt, c_expr_l) ->
+		  let h_fields =
+		      List.fold_left
+			  (fun acc (id, typ) ->
+			       (if (String.length acc) = 0 then "" else acc^",")^(typ^" "^id))
+			  "" args
+		  in
+                  let (rv, handler_without_rv) =
+                      let rev_handler = List.rev c_expr_l in
+                          (List.hd rev_handler, List.rev (List.tl rev_handler))
+                  in
+                  let handler_profile_id = generate_handler_profile_id name in
+		      "void "^name^"("^h_fields^") {\n"^
+                          "START_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
+                          (string_of_code_block handler_without_rv)^"\n"^
+                          "END_HANDLER_SAMPLE(\"cpu\", "^(handler_profile_id)^");\n"^
+                          (string_of_code_expression rv)^
+                          "\n}"
+
+            | `Profile (statsType, prof_id, c_expr) ->
+                  ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")\n")^
+                      (string_of_code_expression c_expr)^
+                      ("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
+
+
+let indented_string_of_code_expression c_expr =
+    let rec sce_aux e level =
+	let tab = String.make (4*level) ' ' in
+	let ch_tab = String.make (4*(level+1)) ' ' in
+	let string_of_code_block c_expr_l =
+	    List.fold_left
+		(fun acc c ->
+		     (if (String.length acc) = 0 then "" else acc^"\n")^
+			 (sce_aux c (level+1)))
+		"" c_expr_l
+	in
+	let out =
+	    match e with
+		| `Declare x ->
+		      begin
+			  match x with 
+		              | `Variable(n, typ) -> typ^" "^n^";"
+                              | (`Tuple _ as y) | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
+                                    let ctype = ctype_of_datastructure (datastructure_of_declaration y) in
+                                        ctype^" "^(identifier_of_declaration y)^";"
+                              | `ProfileLocation p ->
+                                let counter_val = generate_profile_location p in
+                                    "const int32_t "^p^" = "^(string_of_int counter_val)^";"
+
+		      end
+			  
+		| `Assign(v,ac) ->
+		      v^" = "^(string_of_arith_code_expression ac)^";"
+
+		| `AssignMap(mk, vc) ->
+		      (string_of_map_key mk)^" = "^(string_of_arith_code_expression vc)^";"
+			  
+	        | `EraseMap (mid,mf) ->
+		      mid^".erase("^(ctype_of_code_var_list mf)^");"
+
+                | `InsertTuple (ds, cv_list) ->
+                      begin match ds with
+                          | `Tuple _ -> raise (CodegenException "Cannot insert into tuple.")
+                          | `Map _ ->
+                                let dsid = identifier_of_datastructure ds in
+                                let dskey = (ctype_of_code_var_list cv_list) in
+                                let exists_pred = dsid^".find("^dskey^") == "^dsid^".end()" in
+                                    "if ( "^exists_pred^" ) { "^dsid^"["^dskey^"] = 1; }\n"^
+                                    tab^"else { ++"^dsid^"["^dskey^"]; }"
+
+                          | `Set _ | `Multiset _ ->
+                                (identifier_of_datastructure ds)^
+                                    ".insert("^(ctype_of_code_var_list cv_list)^");";
+
+                      end
+
+                | `DeleteTuple (ds, cv_list) -> 
+                      begin match ds with
+                          | `Tuple _ -> raise (CodegenException "Cannot delete from tuple.")
+                          | `Map _ ->
+                                let dsid = identifier_of_datastructure ds in
+                                let dskey = (ctype_of_code_var_list cv_list) in
+                                    "if ( "^dsid^".find("^dskey^") != "^dsid^".end() ) {\n"^
+                                    ch_tab^"--"^dsid^"["^dskey^"];\n"^
+                                    ch_tab^"if ( "^dsid^"["^dskey^"] == 0 ) { "^dsid^".erase("^dskey^"); }\n"^
+                                    tab^"}"
+
+                          | `Set _ | `Multiset _ ->
+                                let id = identifier_of_datastructure ds in
+                                let (find_it, find_decl) = point_iterator_declaration_of_datastructure ds in
+                                    find_decl^" = "^id^".find("^(ctype_of_code_var_list cv_list)^");\n"^
+                                    tab^id^".erase("^find_it^");"
+                      end
+
+		| `Eval(ac) -> string_of_arith_code_expression ac
+
+		| `IfNoElse(p,c) ->
+		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
+			  (sce_aux c (level+1))^"\n"^
+			  tab^"}\n"
+			  
+		| `IfElse(p,l,r) ->
+		      "if ( "^(string_of_bool_code_expression p)^" ) {\n"^
+			  (sce_aux l (level+1))^"\n"^
+			  tab^"}\n"^
+		      tab^"else {\n"^
+			  (sce_aux r (level+1))^"\n"^
+			  tab^"}\n"
+			  
+		| `ForEach(m,c) ->
+		      let (begin_it, end_it, begin_decl, end_decl) =
+			  range_iterator_declarations_of_datastructure m
+		      in
+			  "\n"^tab^
+			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
+			      tab^"{\n"^
+			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
+			      (sce_aux c (level+1))^"\n"^
+			      tab^"}"
+
+	        | `ForEachResume(m,c) ->
+                      let deref it = match m with
+                          | `Tuple _ -> raise (CodegenException "No iterator for tuples!")
+                          | `Map _ -> it^"->first"
+                          | `Set _ | `Multiset _ -> "*("^it^")"
+                      in
+		      let (begin_it, end_it, begin_decl, end_decl) =
+		          range_iterator_declarations_of_datastructure m
+		      in
+                      let resume_opt = resume_declarations_of_datastructure m in
+                      let (resume_decl, resume_incr_code, resume_bind_code) = 
+                          match resume_opt with
+                              | None -> ("", "", [])
+                              | Some((resume_it_decl, resume_it), (resume_val_decl, resume_val)) ->
+                                    let rdecl =
+                                        tab^resume_it_decl^" = "^begin_it^";\n"^
+                                        tab^"if ( "^resume_it^" != "^end_it^" ) { "^(advance_iterator resume_it)^"; }\n"^
+                                        tab^resume_val_decl^";\n"^
+                                        tab^"if ("^resume_it^" != "^end_it^" ) { "^resume_val^" = "^(deref resume_it)^"; }\n\n"
+                                    in
+                                    let rcode =
+                                        ch_tab^(advance_iterator resume_it)^";\n"^
+                                        ch_tab^"bool resume_end = ( "^resume_it^" == "^end_it^" );\n"^
+                                        ch_tab^"if ( !resume_end ) {\n"^
+                                        ch_tab^"   "^resume_val^" = "^(deref resume_it)^";\n"^
+                                        ch_tab^"}\n\n"
+                                    in
+                                    let rbindcode =
+                                        let id = identifier_of_datastructure m in
+                                            [ ("if ( !resume_end ) {");
+                                            ("    "^resume_it^" = "^id^".find("^(resume_val)^");");
+                                            "}";
+                                            ("else { "^resume_it^" = "^end_it^"; }");
+                                            "continue;"]
+                                    in
+                                        (rdecl, rcode, rbindcode)
+                      in
+                      let code_w_resume_bound =
+                      if resume_bind_code = [] then
+                          (match remove_resume_code_expression c with
+                              | None -> raise (CodegenException "Removing resume deleted all code")
+                              | Some x -> x)
+                          else (bind_resume_code_expression c resume_bind_code)
+                      in
+			  "\n"^tab^
+			      begin_decl^" = "^(string_of_datastructure m)^".begin();\n"^
+			      tab^end_decl^" = "^(string_of_datastructure m)^".end();\n"^
+                              resume_decl^
+			      tab^"for(; "^begin_it^" != "^end_it^"; "^(advance_iterator begin_it)^")\n"^
+			      tab^"{\n"^
+			      (field_declarations_of_datastructure m begin_it ch_tab)^"\n"^
+                              resume_incr_code^
+			      (sce_aux code_w_resume_bound (level+1))^"\n"^
+			      tab^"}"
+
+
+                | `Resume resume_code_opt ->
+                      begin match resume_code_opt with
+                          | None -> (* raise (CodegenException ("No resume code found!")) *) "resume"
+                          | Some c ->
+                                List.fold_left
+                                    (fun acc l ->
+                                        if (String.length acc) = 0 then l else (acc^"\n"^tab^l))
+                                    "" c
+                      end
+
+		| `Block (c_expr_l) ->
+		      "{\n"^(string_of_code_block c_expr_l)^"\n"^
+			  tab^"}\n"
+
+		| `Return (ac) ->
+                      (*"return "^(string_of_arith_code_expression ac)^";"*)
+                      ""
+
+                | `ReturnMap (mid) ->
+                      (*"return "^mid^";"*)
+                      ""
+
+                | `ReturnMultiple (rv_l, cv_opt) ->
+                      (*
+                      let string_of_rv rv = 
+                          match rv with
+                              | `Arith a -> string_of_arith_code_expression a
+                              | `Map mid -> mid
+                      in
+                      let rv = "make_tuple("^
+                          (String.concat "," (List.map string_of_rv rv_l))^");"
+                      in
+                          begin match cv_opt with
+                              | None -> "return "^rv
+                              | Some cv -> cv^" = "^rv^";\n"^tab^"return "^cv^";"
+                          end
+                      *)
+                      ""
+		      
+		| `Handler (name, args, rt, c_expr_l) ->
+		      let h_fields =
+			  List.fold_left
+			      (fun acc (id, typ) ->
+				   (if (String.length acc) = 0 then "" else acc^",")^(typ^" "^id))
+			      "" args
+		      in
+			  (* TODO: handler return type should be same as last code expr*)
+			  (* Hacked for now... *)
+                          (* DEMO HACK *)
+		          (*rt^" "^name^"("^h_fields^") {\n"^*)
+		          "void "^name^"("^h_fields^") {\n"^
+			      (string_of_code_block c_expr_l)^
+			      tab^"\n}"
+
+                | `Profile (statsType, prof_id, c_expr) ->
+                      ("{ START_PROFILE(\""^statsType^"\", "^prof_id^")")^"\n"^
+                          (sce_aux c_expr level)^"\n"^
+                          tab^("END_PROFILE(\""^statsType^"\", "^prof_id^") }\n")
+
+	in
+	    tab^out 
+    in
+	sce_aux c_expr 0
+
+
+(* Code helpers *)
+let get_block_last c_expr =
+    match c_expr with
+	| `Block cl ->
+              let cl_len = List.length cl in
+                  begin match List.nth cl (cl_len-1) with
+                      | `Resume _ -> List.nth cl (cl_len-2)
+                      | x -> x
+                  end
+	| _ -> raise InvalidExpression
+
+let remove_block_last c_expr =
+    match c_expr with
+	| `Block cl -> `Block (List.rev (List.tl (List.rev cl)))
+	| _ -> raise InvalidExpression
+
+(* TODO: inefficient!*)
+let replace_block_last c_expr append_expr =
+    match c_expr with
+	| `Block cl -> `Block(
+	      (List.rev (List.tl(List.rev cl)))@[ append_expr ])
+	| _ -> raise InvalidExpression
+
+let append_to_block c_expr append_expr =
+    match c_expr with
+	| `Block cl -> `Block (cl@[append_expr])
+	| _ -> raise InvalidExpression
+
+let append_blocks l_block r_block =
+    match (l_block, r_block) with
+	| (`Block lcl, `Block rcl) -> `Block(lcl@rcl)
+	| _ -> raise InvalidExpression
+
+(* TODO: think about `DeleteTuple, since this may occur on IncrPlan(_,`Minus,_,_)
+ *)
+let rec get_return_val c_expr =
+    match c_expr with
+        | `Eval _ -> c_expr
+        | `Assign(v, _) -> `Eval(`CTerm(`Variable(v)))
+        | `AssignMap(mk,_) -> `Eval(`CTerm(`MapAccess(mk)))
+        | `EraseMap((mid,mf) as mk) ->
+              print_endline ("Found erase map as return val with keys "^(string_of_code_var_list mf));
+              `Eval(`CTerm(`MapAccess(mk)))
+        | `IfNoElse(_, c) -> get_return_val c
+        | `ForEach(_,c) -> get_return_val c 
+        | `ForEachResume(_,c) -> get_return_val c 
+        | `Block(y) -> get_return_val (get_block_last c_expr)
+        | `Profile(_,_,c) -> get_return_val c
+        | _ ->
+              print_endline ("get_return_val: "^(indented_string_of_code_expression c_expr));
+              raise InvalidExpression
+
+(* TODO: see above note on `DeleteTuple *)
+let remove_return_val c_expr =
+    let rec remove_aux c =
+        match c with
+        | `Eval _ -> None
+        | `Assign _ -> Some(c)
+        | `AssignMap _ -> Some(c)
+        | `EraseMap _ -> Some(c)
+        | `IfNoElse (p, cc) ->
+              begin match remove_aux cc with
+                  | None -> None
+                  | Some x -> Some(`IfNoElse(p,x))
+              end
+
+        | `ForEach(ds,c)
+        | `ForEachResume(ds,c) ->
+              begin match remove_aux c with
+                  | None -> None
+                  | Some x -> Some(`ForEach(ds,x))
+              end
+
+        | `Block x ->
+              let last = get_block_last c in
+              let block_without_last = remove_block_last c in
+                  begin
+                      match remove_aux last with
+                          | None -> Some(block_without_last)
+                          | Some y -> Some(append_to_block block_without_last y)
+                  end
+
+        | `Profile(st, prof_id,c) ->
+              begin
+                  match remove_aux c with
+                      | None -> None
+                      | Some x -> Some(`Profile(st, prof_id,x))
+              end
+        | _ ->
+              print_endline ("remove_return_val: "^(indented_string_of_code_expression c));
+              raise InvalidExpression                
+    in
+        match (remove_aux c_expr) with
+            | None -> raise (RewriteException "Attempted to remove top level expression")
+            | Some x -> x
+
+(* TODO: see above note on `DeleteTuple *)
+let rec replace_return_val c_expr new_rv =
+    match c_expr with
+        | `Eval _ -> new_rv
+        | `Assign _ | `AssignMap _ ->
+              `Block([c_expr; new_rv])
+        | `IfNoElse (p, c) -> `IfNoElse(p, replace_return_val c new_rv)
+        | `Block x ->
+              let last = get_block_last c_expr in
+              let new_last = replace_return_val last new_rv in
+                  `Block(List.rev (new_last::(List.tl (List.rev x))))
+        | `Profile(st,p,c) -> `Profile(st, p, replace_return_val c new_rv)
+        (* Top level case *)
+        | `ForEach(i,c) 
+        | `ForEachResume(i,c)
+            -> 
+              let last = get_return_val c_expr in 
+              let new_id = 
+                  match new_rv with
+                      | `Assign(v, _) -> v
+                      | _ -> raise InvalidExpression
+              in
+              begin
+                  match last with 
+                      | `Eval (`CTerm  (`MapAccess(id, _))) -> 
+                            `Block [c_expr; `Assign(new_id, `CTerm (`Variable id))]
+                      | _ -> `Block [c_expr; new_rv] 
+              end
+        | _ ->
+              print_endline ("replace_return_val: "^(indented_string_of_code_expression c_expr));
+              raise InvalidExpression
+
+(* indicates whether the given code is a return value, and whether it is replaceable *)
+(* TODO: see above note on `DeleteTuple *)
+let rec is_local_return_val code rv =
+    match code with
+        | `Eval _ -> (code = rv, false)
+        | `Assign (v, _) -> (rv = `Eval(`CTerm(`Variable(v))), false)
+        | `AssignMap (mk, _) -> (rv = `Eval(`CTerm(`MapAccess(mk))), false)
+        | `Block cl -> 
+              let block_last = get_block_last code in
+              let (local, _) = is_local_return_val (get_block_last code) rv in
+                  (local, match block_last with | `Eval _ -> true | _ -> false)
+        | `ForEach (_, c) | `ForEachResume(_, c) -> is_local_return_val c rv
+        | _ -> (false, false)
+
+(* code_expression -> declaration list ->
+     code_expression * arith_code_expression * declaration list
+ * Transform:
+ * local && replaceable => remove last statement
+ * local => do nothing
+ * non-local => force return val assigment to variable, to ensure scoping *)
+let prepare_block_for_merge block decl =
+    match block with
+        | `Block cl ->
+              let rv = get_return_val block in
+              let arith_rv = match rv with | `Eval x -> x | _ -> raise InvalidExpression in
+              let (local, repl) = is_local_return_val block rv in
+                  if local then
+                      ((if repl then (remove_block_last block) else block), arith_rv, decl)
+                  else
+                      let var = gen_var_sym() in
+		      let decls = List.map (fun x -> `Declare x) decl in
+                          (replace_return_val block (`Assign(var, arith_rv)),
+                          `CTerm(`Variable(var)), (`Variable(var, type_inf_arith_expr arith_rv decls))::decl)
+        | _ -> 
+              print_endline ("prepare_block_for_merge: invalid arg\n"^
+                  (indented_string_of_code_expression block));
+              raise InvalidExpression
+
+(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
+     code_expression * declaration list
+ * Replace, and merge the return val of a block with the expression
+ * generated by a merging function
+*)
+let merge_with_block block merge_fn decl =
+    match block with
+        | `Block cl ->
+              let (b, new_av, new_decl) = prepare_block_for_merge block decl in
+                  (append_to_block b (merge_fn new_av), new_decl)
+
+        | _ ->
+              print_endline ("merge_with_block: invalid block\n"^
+                  (indented_string_of_code_expression block));
+              raise InvalidExpression
+
+(* code_expression -> (arith_code_expression -> code_expression) -> declaration list ->
+     code_expression * declaration list
+ * Merges the bodies of two blocks, replacing their return vals with the expression
+ * generated by a merging function
+*)
+let merge_blocks l_block r_block merge_fn decl =
+    match (l_block, r_block) with
+        | (`Block lcl, `Block rcl) ->
+              let (lb, new_lav, new_ldecl) = prepare_block_for_merge l_block decl in
+              let (rb, new_rav, new_rdecl) = prepare_block_for_merge r_block new_ldecl in
+                  (append_to_block (append_blocks lb rb) (merge_fn new_lav new_rav), new_rdecl)
+
+        | _ ->
+              print_endline ("merge_blocks: invalid args\n"^
+                  "left:\n"^(indented_string_of_code_expression l_block)^"\n"^
+                  "right:\n"^(indented_string_of_code_expression r_block));
+              raise InvalidExpression
+
+
+let rec get_last_code_expr c_expr = 
+    match c_expr with
+	| `Declare _ | `Assign _ 
+        | `AssignMap _  | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _ -> c_expr 
+	| `IfNoElse (b_expr, c_expr) -> get_last_code_expr c_expr
+	| `IfElse (b_expr, c_expr_l, c_expr_r) -> get_last_code_expr c_expr_r
+	| `ForEach (ds, c_expr) -> get_last_code_expr c_expr
+	| `ForEachResume (ds, c_expr) -> get_last_code_expr c_expr
+        | `Resume _ -> raise InvalidExpression
+	| `Block cl -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
+        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> c_expr
+	| `Handler (_, args, _, cl) -> get_last_code_expr (List.nth cl ((List.length cl) - 1))
+        | `Profile(_,_,c) -> get_last_code_expr c
+
+
+(* shared code helpers *)
+let rec filter_declarations c_expr decl_l =
+    match c_expr with
+	| `Declare _ ->
+              if List.mem c_expr decl_l then None else Some(c_expr)
+
+        | `Assign _ | `AssignMap _  | `EraseMap _
+        | `InsertTuple _ | `DeleteTuple _
+        | `Eval _
+            -> Some(c_expr)
+
+	| `IfNoElse (cond, tc) ->
+              let r = filter_declarations tc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(ntc) -> Some(`IfNoElse(cond, ntc))
+                  end
+
+	| `IfElse (cond, tc, ec) ->
+              let rt = filter_declarations tc decl_l in
+              let re = filter_declarations ec decl_l in
+                  begin match (rt, re) with
+                      | (None, None) -> None
+                      | (Some(ntc), None) -> Some(`IfNoElse(cond, ntc))
+                      | (None, Some(nec)) -> Some(`IfNoElse(`Not(cond), nec))
+                      | (Some(ntc), Some(nec)) -> Some(`IfElse(cond, ntc, nec))
+                  end
+
+	| `ForEach (ds, fc) ->
+              let r = filter_declarations fc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nfc) -> Some(`ForEach(ds,nfc))
+                  end
+
+	| `ForEachResume (ds, fc) ->
+              let r = filter_declarations fc decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nfc) -> Some(`ForEachResume(ds,nfc))
+                  end
+
+        | `Resume _ -> Some(c_expr)
+
+	| `Block cl ->
+              let ncl =
+                  List.fold_left
+                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
+                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
+              in
+                  Some(`Block(ncl))
+
+        | `Return _ | `ReturnMap _ | `ReturnMultiple _ -> Some(c_expr)
+
+	| `Handler (id, args, rt, cl) ->
+              let ncl =
+                  List.fold_left
+                      (fun acc opt -> match opt with | None -> acc | Some(c) -> acc@[c])
+                      [] (List.map (fun c -> filter_declarations c decl_l) cl)
+              in
+                  Some(`Handler(id, args, rt, ncl))
+
+        | `Profile(st,loc,c) ->
+              let r = filter_declarations c decl_l in
+                  begin match r with
+                      | None -> None
+                      | Some(nc) -> Some(`Profile(st,loc,nc))
+                  end
+
+(*
+ * Code expression simplification
+ *)
 let rec substitute_arith_code_vars assignments ac_expr =
     let sa = substitute_arith_code_vars assignments in
     let get_var_matches v = 
@@ -306,6 +1529,10 @@ let rec simplify_code c_expr =
       r
 *)
 
+
+(*
+ * Code generation from map expressions
+ *)
 
 let gc_assign_state_var code var =
     let rv = get_return_val code in
@@ -1697,1516 +2924,8 @@ let generate_map_declarations maps map_vars state_parents type_list =
         (all_decls, var_cterms, stp_decls)
 
 
-(*
- * Code generation constants
- *)
 
-let generate_includes out_chan =
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-    let includes =
-        ["// DBToaster includes.";
-        "#include <cmath>";
-        "#include <cstdio>";
-        "#include <cstdlib>\n";
-        "#include <iostream>";
-        "#include <map>";
-        "#include <list>";
-        "#include <set>\n";
-        "#include <tr1/tuple>";
-        "#include <tr1/unordered_set>\n";
-        "using namespace std;";
-        "using namespace tr1;\n\n"]
-    in
-        output_string out_chan (list_code includes)
 
-
-(*
- * Thrift code generation helpers
- *)
-
-(* Note these two functions are asymmetric *)
-let thrift_type_of_base_type t =
-    match t with
-        | "int" -> "i32"
-        | "float" -> "double"
-        | "double" -> "double"
-        | "long" -> "i64"
-        | "string" -> "string"
-        | _ -> raise (CodegenException ("Unsupported base type "^t))
-
-(* TODO: extend to support map, list, set *)
-let ctype_of_thrift_type t =
-    match t with
-        | "i32" -> "int32_t"
-        | "double" -> "double"
-        | "i64" -> "long long"
-        | "string" -> "string"
-        | "bool" -> "bool"
-        | "byte" | "i16" | "binary"
-        | _ ->
-              raise (CodegenException ("Unsupported Thrift type: "^t))
-
-let thrift_type_of_datastructure d =
-    match d with
-        | `Variable(n,typ) -> thrift_type_of_base_type typ
-
-        | `Tuple (n,f) -> n^"_tuple"
-
-	| `Map (n,f,r) ->
-	      let key_type = 
-                  match f with
-                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
-                      | [(x,y)] -> thrift_type_of_base_type y
-                      | _ -> n^"_key"
-	      in
-		  "map<"^key_type^","^(thrift_type_of_base_type (ctype_of_type_identifier r))^">"
-
-        | (`Set(n, f) as ds) 
-	| (`Multiset (n,f) as ds) ->
-	      let el_type = 
-		  if (List.length f) = 1
-                  then thrift_type_of_base_type (let (_,ty) = List.hd f in ty)
-                  else n^"_elem"
-	      in
-              let ds_type =
-                  match ds with | `Set _ -> "set" | `Multiset _ -> "list"
-              in
-		  ds_type^"<"^el_type^">"
-
-
-let ctype_of_thrift_datastructure d =
-    match d with
-        | `Variable(n,typ) -> thrift_type_of_base_type typ
-
-        | `Tuple(n,f) -> n^"_tuple"
-
-	| `Map (n,f,r) ->
-	      let key_type = 
-                  match f with
-                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
-                      | [(x,y)] -> ctype_of_thrift_type (thrift_type_of_base_type y)
-                      | _ -> n^"_key"
-	      in
-              let rt_thrift_type =
-                  thrift_type_of_base_type (ctype_of_type_identifier r)
-              in
-		  "map<"^key_type^","^(ctype_of_thrift_type rt_thrift_type)^">"
-
-        | (`Set(n, f) as ds) 
-	| (`Multiset (n,f) as ds) ->
-	      let el_type = 
-		  if (List.length f) = 1
-                  then ctype_of_thrift_type (thrift_type_of_base_type (let (_,ty) = List.hd f in ty))
-                  else n^"_elem"
-	      in
-              let ds_type =
-                  match ds with | `Set _ -> "set" | `Multiset _ -> "vector"
-              in
-		  ds_type^"<"^el_type^">"
-
-let thrift_element_type_of_datastructure d =
-    match d with
-        | `Variable(n,_) 
-        | `Tuple (n,_)
-            -> raise (CodegenException
-                ("Invalid datastructure for elements: "^n))
-
-	| `Map (n,f,r) ->
-	      let key_type = 
-                  match f with
-                      | [] -> raise (CodegenException "Invalid datastructure type, no fields found.")
-                      | [(x,y)] -> thrift_type_of_base_type y
-                      | _ -> n^"_key"
-	      in
-		  "pair<"^key_type^","^(ctype_of_type_identifier r)^">"
-
-        | `Set(n, f)
-	| `Multiset (n,f) ->
-	      let el_type = 
-		  if (List.length f) = 1
-                  then thrift_type_of_base_type (let (_,ty) = List.hd f in ty)
-                  else n^"_elem"
-	      in
-                  el_type
-
-
-let thrift_inner_declarations_of_datastructure d =
-    let indent s = ("    "^s) in
-    let field_declarations f =
-        let (_, r) =
-            List.fold_left (fun (counter, acc) (id,ty) ->
-                let field_decl =
-                    ((string_of_int counter)^": "^
-                        (thrift_type_of_base_type (ctype_of_type_identifier ty))^
-                        " "^id^",")
-                in
-                    (counter+1, acc@[field_decl]))
-                (1, []) f
-        in
-            r
-    in
-        match d with
-            | `Variable(n,_)
-            | `Tuple(n,_)
-                -> raise (CodegenException
-                    ("Datastructure has no inner declarations: "^n))
-
-	    | (`Map (n,f,_) as ds)
-            | (`Set(n, f) as ds)
-	    | (`Multiset (n,f) as ds) ->
-                  if (List.length f) = 1 then
-                      ("", [], "")
-                  else
-	              let field_decls = field_declarations f in
-                      let decl_name = match ds with
-                          | `Map _ -> n^"_key" | `Set _ | `Multiset _ -> n^"_elem"
-                      in
-                      let struct_decl =
-                          ["struct "^decl_name^" {"]@(List.map indent field_decls)@["}\n"]
-                      in
-                      let less_oper = 
-                          let rec be fields = 
-                              (match fields with
-                                  | [(x, y)] -> ( x ^ " < r."^x)
-                                  | (hd,y)::tl -> "(("^hd^" < r."^hd^") || ("^hd^" == r."^hd^" && \n"^
-                                        "                "^(be tl)^"))"
-                                  | _ -> raise InvalidExpression)
-                          in
-                          "    bool "^decl_name^"::operator<(const "^decl_name^"& r) const\n"^
-                          "    {\n"^
-                          "        return"^(be f)^";\n"^
-                          "    }\n"
-                      in
-(*                          List.iter (fun x -> print_endline x) struct_decl;
-                          print_endline lessoperator; *)
-		          (decl_name, struct_decl, less_oper) 
-
-
-let copy_element_for_thrift d dest src =
-    let copy_tuple f dest src = 
-        List.fold_left (fun (counter,acc) (id, ty) ->
-            (counter+1, acc@[dest^"."^id^" = get<"^(string_of_int counter)^">("^src^");"]))
-            (0, []) f
-    in
-        match d with
-            | `Variable(n,_)
-            | `Tuple(n,_)
-                -> raise (CodegenException "Invalid element copy.")
-
-	    | `Map (n,f,r) ->
-                  (* Copy from pair< tuple<>, <ret type> > -> pair< struct, <ret type> > *)
-                  let (key_dest_decl, key_dest) = ([n^"_key key;"], "key") in
-                  let (_, copy_tuple_defn) = copy_tuple f key_dest (src^".first") in
-                  let ret_src = src^".second" in
-                      key_dest_decl@
-                      copy_tuple_defn@
-                      [dest^" = make_pair("^key_dest^","^ret_src^");"]
-
-            | `Set(n, f)
-	    | `Multiset (n,f) ->
-                  (* Copy from tuple<> -> struct *)
-                  let (_,r) = copy_tuple f dest src in r
-
-
-let thrift_inserter_of_datastructure d =
-    let indent s = ("    "^s) in
-        match d with
-            | `Tuple (n,_) -> raise (CodegenException ("Cannot insert into tuple "^n))
-	    | `Map (n,f,_)
-            | `Set(n, f)
-	    | `Multiset (n,f) ->
-                  let inserter_body =
-                      if (List.length f) = 1 then
-                          [(indent "dest.insert(dest.begin(), src);")]
-                      else
-                          let elem_type = thrift_element_type_of_datastructure d in
-                          let copy_fields dest_var src_var =
-                              copy_element_for_thrift d dest_var src_var
-                          in
-                              (List.map indent
-                                  ([elem_type^" r;"]@
-                                      (copy_fields "r" "src")@
-                                      ["dest.insert(dest.begin(), r);"]))
-                  in
-                  let inserter_name = "insert_thrift_"^n in
-                  let inserter_defn =
-                      let ttype = ctype_of_thrift_datastructure d in
-                      let elem_ctype = element_ctype_of_datastructure d in
-                          [("inline void "^inserter_name^"("^
-                              ttype^"& dest, "^elem_ctype^"& src)"); "{" ]@
-                              inserter_body@
-                              ["}\n"]
-                  in
-                      (inserter_defn, inserter_name)
-
-
-(************************************
- *
- * Standalone engine+debugger generation
- *
- ************************************)
-
-(* TODO: move id generation to algebra.ml *)
-
-(* unit -> stream name * stream id *)
-let stream_ids = Hashtbl.create 10
-let get_stream_id_name stream_name = "stream"^stream_name^"Id"
-
-let generate_stream_id stream_name =
-    let (id_name, id) =
-        (get_stream_id_name stream_name, Hashtbl.length stream_ids)
-    in
-        Hashtbl.add stream_ids id_name id;
-        (id_name, id)
-
-let fun_obj_id_counter = ref 0
-let generate_function_object_id handler_name =
-    let r = !fun_obj_id_counter in
-        incr fun_obj_id_counter;
-        "fo_"^handler_name^"_"^(string_of_int r)
-
-
-let get_handler_metadata handler adaptor_type adaptor_bindings =
-    match handler with
-        | `Handler(fid, args, ret_type, _) ->
-              let input_metadata =
-                  let ifa =
-                      (fun input_instance ->
-                          List.fold_left
-                              (fun acc (id, ty) ->
-                                  if (List.mem_assoc id adaptor_bindings) then
-                                      let in_field = List.assoc id adaptor_bindings in
-                                          (if (String.length acc) = 0 then "" else acc^",")^
-                                              (input_instance^"."^in_field)
-                                  else raise (CodegenException
-                                      ("Could not find input arg binding for "^id)))
-                              "" args)
-                  in
-                      (adaptor_type^"::Result", ifa)
-              in
-              let arg_signatures =
-                  List.fold_left
-                      (fun acc (id, ty) -> acc@[(ctype_of_type_identifier ty)^" "^id])
-                      [] args
-              in
-                  (fid, input_metadata, arg_signatures, ctype_of_type_identifier ret_type)
-
-        | _ -> raise (CodegenException
-              ("Invalid handler: "^(string_of_code_expression handler)))
-
-
-let validate_stream_types streams_handlers_and_events check_type =
-    let valid =
-        List.fold_left
-            (fun valid_acc (stream_type_info, stream_name, handler, event) ->
-                let (stream_type, _,_,_,_,_, _) = stream_type_info in
-                    print_endline ("stream_name: "^(match stream_type with File -> "file" | Socket -> "sock"));
-                    valid_acc && (stream_type = check_type))
-            true streams_handlers_and_events
-    in
-        if not valid then
-            raise (CodegenException
-                ("Invalid stream types, streams must all be from files or sockets"))
-        else ()
-
-
-(*
- * Thrift common code
- *)
-let generate_thrift_includes out_chan =
-    let list_code l = String.concat "\n" l in
-    let includes =
-        ["// Thrift includes";
-        "#include <protocol/TBinaryProtocol.h>";
-        "#include <server/TSimpleServer.h>";
-        "#include <transport/TServerSocket.h>";
-        "#include <transport/TBufferTransports.h>\n";
-        "using namespace apache::thrift;";
-        "using namespace apache::thrift::protocol;";
-        "using namespace apache::thrift::transport;";
-        "using namespace apache::thrift::server;\n";
-        "using namespace boost;";
-        "using boost::shared_ptr;\n\n"]
-    in
-        output_string out_chan (list_code includes)
-
-let generate_dbtoaster_thrift_module
-        out_chan
-        module_includes module_namespace module_languages
-        service_name service_inheritance global_decls service_decls
-  =
-    let list_code l = String.concat "\n" l in
-    let includes = List.map (fun i -> "include \""^i^"\"\n") module_includes in
-    let namespaces =
-        List.map (fun l -> "namespace "^l^" "^module_namespace) module_languages
-    in
-    let service =
-        ["service "^service_name^
-            (if List.length service_inheritance = 0 then ""
-            else " extends "^(String.concat "," service_inheritance))^"{"]@
-        service_decls@["}"]
-    in
-    let thrift_module =
-        includes@["\n"]@namespaces@
-        ["\n";
-        "typedef i32 DBToasterStreamId";
-        "enum DmlType { insertTuple = 0, deleteTuple = 1 }\n"]@
-        global_decls@["\n"]@
-        service
-    in
-        output_string out_chan (list_code thrift_module)
-
-let generate_dbtoaster_thrift_module_implementation
-        out_chan module_namespace class_name class_interface
-        constructor_args constructor_member_init constructor_init
-        internals interface_impls
-  =
-    let indent s = "    "^s in
-    let rec indent_n n s = match n with 0 -> s | _ -> indent_n (n-1) (indent s) in
-    let list_code l = String.concat "\n" l in
-    let cpp_module_namespace =
-        Str.global_replace (Str.regexp "\\.") "::" module_namespace
-    in
-    let constructor =
-        let (constructor_name_and_parens, constructor_arg_lines) = 
-            if List.length constructor_args = 0 then
-                (class_name^"()", [])
-            else
-                (class_name^"(", (List.map (indent_n 2) constructor_args)@[")"])
-        in
-        let mem_init =
-            if List.length constructor_member_init = 0 then []
-            else 
-                [(indent (": "^(String.concat "," constructor_member_init)))]
-        in
-            List.map indent
-                (["public:";
-                constructor_name_and_parens]@
-                constructor_arg_lines@mem_init@
-                ["{"]@
-                (List.map indent constructor_init)@
-                ["}"])
-    in
-    let module_impl =
-        ["using namespace "^cpp_module_namespace^";\n";
-        ("class "^class_name^" : virtual public "^class_interface); "{"]@
-            internals@
-            constructor@
-            (List.map indent interface_impls)@
-            ["};\n\n"]
-    in
-        output_string out_chan (list_code module_impl)
-
-let generate_thrift_accessor_declarations global_decls =
-    let list_code l = String.concat "\n" l in
-    let (struct_decls, key_decls, accessors_decls, less_opers) =
-        List.fold_left (fun (struct_acc, key_acc, accessor_acc, less_acc ) d ->
-            let (struct_decls, key_decl, accessor_decl, less_opers ) =
-                match d with
-                    | `Declare x ->
-                          begin
-                              match x with
-		                  | `Variable(n, typ) -> 
-                                        let ttype = thrift_type_of_base_type typ in
-                                            ([], [], ttype^" get_"^n^"(),", [])
-
-                                  | (`Tuple (n,f) as y) ->
-                                        let ds = datastructure_of_declaration y in
-                                        let n = identifier_of_datastructure ds in
-                                        let ttype = thrift_type_of_datastructure ds in
-                                        let acs_decl = ttype^" get_"^n^"()" in
-
-                                        let field_declarations f =
-                                            let (_, r) =
-                                                List.fold_left (fun (counter, acc) ((id,ty),_) ->
-                                                    let field_decl =
-                                                        ((string_of_int counter)^": "^
-                                                            (thrift_type_of_base_type
-                                                                (ctype_of_type_identifier ty))^" "^id^",")
-                                                    in
-                                                        (counter+1, acc@[field_decl]))
-                                                    (1, []) f
-                                            in
-                                                r
-                                        in
-
-                                        let struct_decl = 
-                                            ["struct "^ttype^" {"]@(field_declarations f)@["}"]
-                                        in
-                                            (struct_decl, [], acs_decl, [])
-
-                                  | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
-                                        let ds = datastructure_of_declaration y in
-                                        let n = identifier_of_datastructure ds in
-                                        let ttype = thrift_type_of_datastructure ds in
-                                        let (inner_decl_name, inner_decl, less_oper) =
-                                            thrift_inner_declarations_of_datastructure ds
-                                        in
-                                        let acs_decl = ttype^" get_"^n^"()," in
-                                            if (List.length inner_decl) > 0 then
-                                                ([], [(inner_decl_name, list_code inner_decl)], acs_decl, [less_oper])
-                                            else
-                                                ([], [], acs_decl, [])
-
-                                  | `ProfileLocation _ -> ([], [], "", [])
-                          end
-                    | _ -> raise (CodegenException
-                          ("Invalid declaration: "^(indented_string_of_code_expression d)))
-            in
-                if key_decl = [] && accessor_decl = "" then
-                    (struct_acc, key_acc, accessor_acc, less_acc)
-                else
-                    (struct_acc@struct_decls, key_acc@key_decl, accessor_acc@[accessor_decl], less_acc@less_opers))
-            ([], [], [], []) global_decls
-    in
-        (struct_decls, key_decls, accessors_decls, less_opers )
-
-let generate_thrift_accessor_implementations global_decls service_class_name =
-    let indent s = "    "^s in
-    let accessor_defns =
-        List.fold_left (fun acc d ->
-            let new_defn =
-                match d with
-                    | `Declare x ->
-                          begin
-                              match x with
-		                  | `Variable(n, typ) -> 
-                                        (* Return declared variable *)
-                                        let ttype = thrift_type_of_base_type typ in
-                                        let dtype = ctype_of_thrift_type ttype in
-                                            [dtype^" get_"^n^"()"; "{" ]@
-                                                (List.map indent
-                                                    ([dtype^" r = static_cast<"^dtype^">("^n^");";
-                                                    "return r;"]))@
-                                                [ "}\n" ]
-
-                                  | (`Tuple (_,f)) as y ->
-                                        let ds = datastructure_of_declaration y in
-                                        let n = identifier_of_datastructure ds in
-                                        let ttype = ctype_of_thrift_datastructure ds in
-                                            ["void get_"^n^"("^ttype^"& _return)"; "{"]@
-                                            (List.map (fun ((id,ty),rv) ->
-                                                let rv_str = match rv with
-                                                    | `Arith a -> string_of_arith_code_expression a
-                                                    | `Map mid -> mid
-                                                in
-                                                    indent ("_return."^id^" = "^rv_str^";")) f)@
-                                            ["}\n"]
-
-                                  | (`Relation _ as y) | (`Map _ as y) | (`Domain _ as y) ->
-                                        let ds = datastructure_of_declaration y in
-                                        let n = identifier_of_datastructure ds in
-                                        let ttype = ctype_of_thrift_datastructure ds in
-                                        let (inserter_defn, inserter_name) = thrift_inserter_of_datastructure ds in
-                                        let inserter_mem_fn =
-                                            "boost::bind(&"^service_class_name^"::"^inserter_name^", this, _return, _1)"
-                                        in
-                                        let (begin_it, end_it, begin_decl, end_decl) =
-		                            range_iterator_declarations_of_datastructure ds
-                                        in
-                                            (* Copy datastructure into _return *)
-                                            inserter_defn@
-                                            ["void get_"^n^"("^ttype^"& _return)"; "{"]@
-                                                (List.map indent
-                                                    ([(begin_decl^" = "^(identifier_of_datastructure ds)^".begin();");
-                                                    (end_decl^" = "^(identifier_of_datastructure ds)^".end();");
-                                                    "for_each("^begin_it^", "^end_it^",";
-                                                    (indent inserter_mem_fn)^");"]))@
-                                                ["}\n"]
-
-                                  | `ProfileLocation _ -> []
-                          end
-                    | _ -> raise (CodegenException
-                          ("Invalid declaration: "^(indented_string_of_code_expression d)))
-            in
-                acc@new_defn)
-            [] global_decls
-    in
-        accessor_defns
-
-(*
- * Code generation common to both engine and debugger.
- * -- Standalone components (multiplexers, dispatchers, init/main function common code).
- * -- Thrift accessors for query results and internal maps.
- *)
-let generate_stream_engine_includes out_chan =
-    let list_code l = String.concat "\n" l in
-    let includes =
-        ["\n\n// Stream engine includes.";
-        "#include \"streamengine.h\"";
-        "#include \"profiler.h\"";
-        "#include \"datasets/adaptors.h\"";
-        "#include <boost/bind.hpp>";
-        "#include <boost/shared_ptr.hpp>\n\n";
-        "using namespace DBToaster::Profiler;\n"; ]
-    in
-        output_string out_chan (list_code includes)
-
-let generate_socket_stream_engine_common io_service_name =
-    let indent s = "    "^s in
-    let common_decl =
-        ["DBToaster::StandaloneEngine::SocketMultiplexer sources;";
-        "void runReadLoop()\n{\n"^(indent "sources.read(boost::bind(&runReadLoop));\n")^"}\n\n";]
-    in
-    let common_main =
-        ["init(sources);";
-        "runReadLoop();";
-        "boost::thread t(boost::bind(";
-        (indent "&boost::asio::io_service::run, &"^io_service_name^"));")]
-    in
-        (common_decl, common_main)
-
-let generate_dbtoaster_thrift_less_operators out_chan less_opers query_id eng_debug = 
-    let includes = 
-        "#include \""^query_id^"_types.h\"\n\n" 
-    in
-    let namespace = 
-        "namespace DBToaster { namespace "^eng_debug^" { namespace "^query_id^" {\n"
-    in
-    let tail = "}; }; };" in 
-    let functions = 
-        List.fold_left (fun acc x -> acc^"\n"^x ) "" less_opers
-    in 
-    let result = includes^namespace^functions^tail
-    in
-        print_endline result;
-        output_string out_chan result
-
-(*
- * Query result viewer
- *)
-let generate_stream_engine_viewer_includes out_chan =
-    let list_code l = String.concat "\n" l in
-    let includes =
-        ["\n\n// Viewer includes.";
-        "#include \"AccessMethod.h\"\n\n";]
-    in
-        generate_thrift_includes out_chan;
-        output_string out_chan (list_code includes)
-
-let generate_stream_engine_viewer thrift_out_chan code_out_chan less_out_chan query_id global_decls =
-    let indent s = "    "^s in
-    let service_namespace =
-        "DBToaster.Viewer"^(if query_id = "" then "" else ("."^query_id))
-    in
-    let thrift_service_name = "AccessMethod" in
-    let thrift_service_class = thrift_service_name^"Handler" in
-    let thrift_service_interface = thrift_service_name^"If" in
-
-    let (struct_decls, key_decls, accessors_decls, less_opers) = generate_thrift_accessor_declarations global_decls in
-    let accessor_impls = generate_thrift_accessor_implementations global_decls thrift_service_class in
-
-    let thrift_includes =  ["profiler.thrift"] in
-    let thrift_service_inheritance = ["profiler.Profiler"] in
-    let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_global_decls = struct_decls@(snd (List.split key_decls)) in
-    let access_method_decls = List.map indent accessors_decls in
-
-    let service_constructor_args = [] in
-    let service_constructor_member_init = [] in
-    let service_constructor_init = [ "PROFILER_INITIALIZATION" ] in
-
-    let service_internals = [] in
-
-    (* Method bodies *)
-    let service_interface_impls =
-        (List.map indent
-            (accessor_impls@["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
-    in
-        generate_dbtoaster_thrift_module thrift_out_chan
-            thrift_includes service_namespace thrift_languages
-            thrift_service_name thrift_service_inheritance
-            thrift_global_decls access_method_decls;
-
-        generate_dbtoaster_thrift_module_implementation code_out_chan
-            service_namespace thrift_service_class thrift_service_interface
-            service_constructor_args service_constructor_member_init service_constructor_init
-            service_internals service_interface_impls;
-
-        generate_dbtoaster_thrift_less_operators less_out_chan 
-            less_opers query_id "Viewer" 
-
-(* Returns declarations and code to add to init() method
- *
- * Type assumptions: 
- *  -- adaptor constructor: adaptor()
- *
- * Add streams to multiplexer
- * -- instantiate input stream sources.
- * -- instantiate adaptors.
- * -- initialize (i.e. buffer data for) input streams
- * -- generate stream id, register with multiplexer via add_stream(stream id, input stream)
- *
- * add handlers to dispatcher
- *     -- create function object with operator()(boost::any data)
- *     -- cast from boost::any to expected struct, and invoke handler with struct fields.
- *     -- register handler with dispatcher for a given stream, via
- *          add_handler(stream id, dml type, function object)
- *)
-(* TODO: allocation model for inputs? *)
-let generate_stream_engine_file_decl_and_init stream_type_info stream_name handler event existing_decls =
-    let indent s = ("    "^s) in
-
-    let (_, source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
-
-    (* declare_stream: <stream type> <stream inst>; static int <stream id name> = <stream id val>;
-     * register_stream: sources.addStream< <tuple_type> >(&<stream inst>, <stream id name>);
-     * stream_id: <stream id name>
-     *)
-    let (declare_stream, register_stream, stream_id) =
-        let new_decl = source_type^" "^stream_name^"("^source_args^");\n" in
-            if List.mem new_decl existing_decls then
-                ([], [], get_stream_id_name stream_name)
-            else
-                let (id_name, id) = generate_stream_id stream_name in
-                let adaptor_name = stream_name^"_adaptor" in
-                let new_adaptor =
-                    "boost::shared_ptr<"^adaptor_type^"> "^
-                        adaptor_name^"(new "^adaptor_type^"());"
-                in
-                let new_id = ("static int "^id_name^" = "^(string_of_int id)^";\n") in
-                let stream_pointer = "&"^stream_name in
-                let adaptor_deref = "*"^adaptor_name in
-                let reg =
-                    "sources.addStream<"^tuple_type^">("^stream_pointer^", "^adaptor_deref^", "^id_name^");"
-                in
-                    ([ new_decl; new_adaptor; new_id ], [reg], id_name)
-    in
-
-    let (handler_name, handler_input_metadata, _, handler_ret_type) =
-        get_handler_metadata handler adaptor_type adaptor_bindings
-    in
-    let (handler_input_type_name, handler_input_args) =
-        handler_input_metadata
-    in
-    let handler_dml_type = match event with
-        | `Insert _ -> "DBToaster::StandaloneEngine::insertTuple"
-        | `Delete _ -> "DBToaster::StandaloneEngine::deleteTuple"
-    in
-
-    (* declare_handler_fun_obj:
-       struct <fun obj type name>
-       { <handler ret type> operator() { cast; invoke; } }
-       * fun_obj_type: <fun obj type name> *)
-    let (declare_handler_fun_obj, fun_obj_type) = 
-        let input_instance = "input" in
-        let fo_type = handler_name^"_fun_obj" in
-            ([("struct "^fo_type^" { ");
-            (* DEMO HACK *)
-            (*(indent (handler_ret_type^" operator()(boost::any data) { ")); *)
-            (indent ("void operator()(boost::any data) { "));
-            (indent (indent
-                (handler_input_type_name^" "^input_instance^" = ")));
-            (indent (indent (indent ("boost::any_cast<"^handler_input_type_name^">(data); "))));
-            (indent (indent
-                (handler_name^"("^
-                    (handler_input_args input_instance)^");")));
-            (indent "}"); "};\n"],
-            fo_type)
-    in
-
-    (* declare_handler_fun_obj_inst: <fo_type> <fo instance name>; *)
-    let (declare_handler_fun_obj_inst, handler_fun_obj_inst) =
-        let h_inst = generate_function_object_id handler_name in
-        let decl_code = [ handler_name^"_fun_obj "^h_inst^";\n" ] in
-            (decl_code, h_inst)
-    in
-
-    (* register_handler:
-           router.addHandler(<stream id name>, handler dml type, <fo instance name>) *)
-    let register_handler =
-        "router.addHandler("^stream_id^","^handler_dml_type^","^handler_fun_obj_inst^");"
-    in
-
-    let decl_code =
-        declare_stream@declare_handler_fun_obj@declare_handler_fun_obj_inst
-    in
-
-    let init_code = register_stream@[register_handler] in
-
-        (decl_code, init_code)
-
-
-(* Generates init() and main() methods for standalone stream engine for compiled queries.
- * source metadata: (stream type * tuple type * stream name * handler * event) list
- * source metadata -> unit
-*)
-let generate_file_stream_engine_init out_chan streams_handlers_and_events =
-    let indent s = ("    "^s) in
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-
-    validate_stream_types streams_handlers_and_events File;
-
-    let (init_decls, init_body) =
-        List.fold_left
-            (fun (decls_acc, init_body_acc) (stream_type_info, stream_name, handler, event) ->
-                let (decl_code, init_code) =
-                    generate_stream_engine_file_decl_and_init
-                        stream_type_info stream_name handler event decls_acc
-                in
-                    (decls_acc@decl_code, init_body_acc@init_code))
-            ([], []) streams_handlers_and_events
-    in
-    (* void init(multiplexer, sources) { register stream, handler;} *)
-    let init_defn =
-        let init_code =
-            ["\n\nvoid init(DBToaster::StandaloneEngine::FileMultiplexer& sources,";
-             (indent "DBToaster::StandaloneEngine::FileStreamDispatcher& router)"); "{";]@
-                (List.map indent init_body)@[ "}\n\n"; ]
-        in
-            list_code init_code
-    in
-        output_string out_chan (list_code init_decls);
-        output_string out_chan init_defn
-
-
-(*
- * Declarations:
- * -- stream dispatcher class
- * -- stream dispatcher instance 
- * -- network data sources 
- *
- * Init code:
- * -- register stream with multiplexer
- *)
-
-let validate_socket_handlers_and_events handlers_and_events =
-    if List.length handlers_and_events <> 2 then
-        let msg = "Invalid number of handlers and events for socket source,"^
-            " expected insert and delete handler/event"
-        in
-            raise (CodegenException msg)
-    else
-        begin match (List.hd handlers_and_events, List.hd (List.tl handlers_and_events)) with
-            | ((_, `Insert(r1,_)), (_, `Delete(r2, _))) when r1 = r2 -> ()
-            | ((_, `Delete(r1,_)), (_, `Insert(r2, _))) when r1 = r2 -> ()
-            | _ ->
-                  let msg =
-                      "Invalid handlers and events types for socket source"^
-                          " expected insert and delete handler/event on the same base relation"
-                  in
-                      raise (CodegenException msg)
-        end
-
-
-let generate_stream_engine_socket_decl_and_init stream_type_info stream_name handlers_and_events io_service_name =
-    let indent s = ("    "^s) in
-    let (_, source_type, source_args, tuple_type, adaptor_type, adaptor_bindings, _) = stream_type_info in
-
-    validate_socket_handlers_and_events handlers_and_events;
-
-    let handlers_metadata =
-        List.map
-            (fun (h,e) -> get_handler_metadata h adaptor_type adaptor_bindings)
-            handlers_and_events
-    in
-
-    let decl_code =
-        let (stream_dispatcher_type_name, stream_dispatcher_class_decl) =
-            let sd_type_name = "dispatch_"^stream_name^"_tuple" in
-            let sd_class =
-                let adaptor_name = "adaptor" in
-                let adaptor_input_name = "inTuple" in
-                let adaptor_output_name = "tuple" in
-                let handler_input_name = "input" in
-                let cast_adaptor_result handler_input_type_name =
-                    List.map indent 
-                        ([handler_input_type_name^" "^handler_input_name^" = ";
-                        (indent ("boost::any_cast<"^handler_input_type_name^">("^
-                            adaptor_output_name^".data);"))])
-                in
-                let sd_handler_metadata =
-                    List.map
-                        (fun hm ->
-                            let (h_name, h_input_metadata, h_arg_signatures, h_ret_type) = hm in
-                            let (h_input_type_name, h_input_args_gen) = h_input_metadata in
-                            let h_args_sig = String.concat "," h_arg_signatures in
-                            let h_fn_ptr_name_and_decl =
-                                let fn_ptr_name = h_name^"_ptr" in
-                                    (fn_ptr_name, "boost::function<"^h_ret_type^" ("^(h_args_sig)^")> "^fn_ptr_name^";")
-                            in
-                            let h_fn_name_arg_sigs_gen =
-                                (h_name, h_arg_signatures, h_input_args_gen)
-                            in
-                                ((h_fn_ptr_name_and_decl, h_fn_name_arg_sigs_gen), h_input_type_name))
-                        handlers_metadata
-                in
-                let ((handler_fn_ptr_names_and_decls, handler_fn_names_arg_sigs_gen), handler_input_type_names) =
-                    let (d,c) = List.split sd_handler_metadata in
-                    let (a,b) = List.split d in
-                        ((a,b),c)
-                in
-                let (_,handler_fn_ptr_decls) = List.split handler_fn_ptr_names_and_decls in
-                let handler_fn_ptrs_init_body =
-                    List.map2
-                        (fun (ptr_name, _) (fn_name, arg_sigs, _) ->
-                            let fn_ptr_val = "&"^fn_name in
-                            let bind_args = 
-                                let (_,bindings) =
-                                    List.fold_left
-                                        (fun (cnt,acc) arg ->
-                                            let new_acc = 
-                                                (if String.length acc = 0 then "" else (acc^","))^
-                                                    ("_"^(string_of_int cnt))
-                                            in
-                                                (cnt+1, new_acc))
-                                        (1,"") arg_sigs
-                                in
-                                    if (String.length bindings) = 0 then "" else (","^bindings)
-                            in
-                                ptr_name^" = boost::bind("^fn_ptr_val^bind_args^");")
-                        handler_fn_ptr_names_and_decls handler_fn_names_arg_sigs_gen
-                in
-                let handler_fn_ptr_invocations =
-                    List.map
-                        (fun (fn_name, _, arg_gen) -> fn_name^"("^(arg_gen handler_input_name)^");")
-                        handler_fn_names_arg_sigs_gen
-                in
-                let sd_constructor =
-                    List.map indent 
-                        ([sd_type_name^"()"; "{";]@(List.map indent handler_fn_ptrs_init_body)@["}\n"])
-                in
-                (* define function operator:
-                 * -- apply adaptor
-                 * -- check DML type
-                 * -- apply any_cast
-                 * -- dispatch *)
-                let sd_fn_operator =
-                    let body =
-                        ["DBToaster::StandaloneEngine::DBToasterTuple "^adaptor_output_name^";";
-                        (adaptor_name^"("^adaptor_output_name^", "^adaptor_input_name^");");
-                        "if ( "^adaptor_output_name^".type == DBToaster::StandaloneEngine::insertTuple )"; "{"]@
-                        (cast_adaptor_result (List.hd handler_input_type_names))@
-                        [(indent (List.hd handler_fn_ptr_invocations)); "}";
-                        "else if ( "^adaptor_output_name^".type == DBToaster::StandaloneEngine::deleteTuple )"; "{"]@
-                        (cast_adaptor_result (List.hd (List.tl handler_input_type_names)))@
-                        [(indent (List.hd (List.tl handler_fn_ptr_invocations))); "}";
-                        "else { cerr << \"Invalid DML type!\" << endl; }";]
-                    in
-                        List.map indent
-                            (["void operator()(boost::any& "^adaptor_input_name^")"; "{"]@
-                                (List.map indent body)@["}"])
-                in
-
-                (* declare:
-                 * -- adaptor
-                 * -- handler function pointers
-                 * -- constructor, setting function pointers
-                 * -- function operator *)
-                    ["struct "^sd_type_name; "{";
-                    (indent adaptor_type^" "^adaptor_name^";\n")]@
-                    (List.map indent handler_fn_ptr_decls)@["\n"]@
-                    sd_constructor@sd_fn_operator@["};\n"]
-            in
-                (sd_type_name, sd_class)
-        in
-        let (stream_dispatcher_name, stream_dispatcher_instance_decl) = 
-            let sd_name = stream_name^"_dispatcher" in
-                (sd_name, [stream_dispatcher_type_name^" "^sd_name^";"])
-        in
-        let stream_source_decl =
-            [source_type^" "^stream_name^"("^io_service_name^","^stream_dispatcher_name^");"]
-        in
-            stream_dispatcher_class_decl@
-                stream_dispatcher_instance_decl@stream_source_decl
-    in
-
-    let init_code =
-        let stream_pointer = "&"^stream_name in
-            [ "sources.addStream(static_cast<"^
-                "DBToaster::StandaloneEngine::SocketStream*>("^stream_pointer^"));" ]
-    in
-        (decl_code, init_code)
-
-
-let generate_socket_stream_engine_init out_chan streams_handlers_and_events =
-    let indent s = ("    "^s) in
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-
-    validate_stream_types streams_handlers_and_events Socket;
-
-    (* declarations:
-     * -- io_service
-     * -- stream dispatcher class
-     * -- stream dispatcher instance 
-     * -- network data sources *)
-    let (io_service_name, io_service_decl) =
-        ("io_service", "boost::asio::io_service io_service;\n")
-    in
-
-    let (init_decls, init_body) =
-        let stream_typeinfos_and_names =
-            List.map
-                (fun (stream_type_info,stream_name,_,_) -> (stream_type_info, stream_name))
-                streams_handlers_and_events
-        in
-        let unique_stn =
-            List.fold_left
-                (fun acc stn -> if List.mem stn acc then acc else acc@[stn])
-                [] stream_typeinfos_and_names
-        in
-        let handlers_and_events_per_stream =
-            List.fold_left
-                (fun he_acc (sti, sn) ->
-                    let handlers_and_events =
-                        List.map (fun (_,_,h,e) -> (h,e))
-                            (List.filter
-                                (fun (sti2,sn2,_,_) -> sti = sti2 && sn = sn2)
-                                streams_handlers_and_events)
-                    in
-                        he_acc@[((sti, sn), handlers_and_events)])
-                [] unique_stn
-        in
-        List.fold_left
-            (fun (decls_acc, init_body_acc) ((stream_type_info, stream_name), handlers_and_events) ->
-                let (decl_code, init_code) =
-                    generate_stream_engine_socket_decl_and_init
-                        stream_type_info stream_name handlers_and_events io_service_name
-                in
-                    (decls_acc@decl_code, init_body_acc@init_code))
-            ([], []) handlers_and_events_per_stream
-    in
-
-    (* void init(multiplexer) { register stream;} *)
-    let init_defn =
-        let init_code =
-            ["\n\nvoid init(DBToaster::StandaloneEngine::SocketMultiplexer& sources)"; "{";]@
-                (List.map indent init_body)@[ "}\n\n"; ]
-        in
-            list_code init_code
-    in
-        output_string out_chan (list_code ([io_service_decl]@init_decls));
-        output_string out_chan init_defn
-
-
-(*
- * Top-level standalone engine code generation functions
- *)
-
-let generate_thrift_server_main viewer_class viewer_constructor_args =
-    [ "int port = 20000;";
-    "boost::shared_ptr<"^viewer_class^"> handler(new "^viewer_class^"("^viewer_constructor_args^"));";
-    "boost::shared_ptr<TProcessor> processor(new AccessMethodProcessor(handler));";
-    "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
-    "boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
-    "boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
-    "TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);";
-    "server.serve();" ]
-
-(* TODO: generate standalone profiler running an event loop in its own thread *)
-(* main() { declare multiplexer, dispatcher; loop over multiplexer, dispatching; }  *)
-let generate_file_stream_engine_main query_id thrift_out_chan code_out_chan less_out_chan global_decls =
-    let indent s = ("    "^s) in
-    let list_code l = String.concat "\n" l in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-
-    let main_defn =
-        let run_body =
-            ["while ( sources.streamHasInputs() ) {";
-            (indent "DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();");
-            (indent "router.dispatch(t);"); "}"]
-        in
-        let main_code =
-            ["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
-            "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
-            "void runMultiplexer()"; "{"]@
-            run_body@["}"]@
-            ["int main(int argc, char** argv)"]@
-                (block
-                    (["init(sources, router);";
-                    "boost::thread t(boost::bind(&runMultiplexer));"]@
-                    (generate_thrift_server_main "AccessMethodHandler" "")))
-        in
-            list_code main_code
-    in
-
-        generate_stream_engine_viewer
-            thrift_out_chan code_out_chan less_out_chan query_id global_decls;
-
-        output_string code_out_chan main_defn
-
-
-(* declare multiplexer; main() { start read loop; run io_service in a thread }  *)
-let generate_socket_stream_engine_main query_id thrift_out_chan code_out_chan less_out_chan global_decls =
-    let indent s = ("    "^s) in
-    let list_code l = String.concat "\n" l in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-
-    let main_defn =
-
-        (* TODO: get io_service_name as an argument *)
-        let io_service_name = "io_service" in
-
-        let (common_decl, common_main) =
-            generate_socket_stream_engine_common io_service_name in
-
-        (* TODO: don't join thread t if there is Thrift service running *)
-        let main_code =
-            common_decl@
-            ["int main(int argc, char** argv)"]@
-            (block (common_main@
-                (generate_thrift_server_main "AccessMethodHandler" "")))
-        in
-            list_code main_code
-    in
-
-        generate_stream_engine_viewer
-            thrift_out_chan code_out_chan less_out_chan query_id global_decls;
-
-        output_string code_out_chan main_defn
-
-
-(*
- * Standalone stepper/debugger
- *)
-
-(*
- * Debugger code generation, common to file and network sources
- *)
-
-(* Assumes each tuple type has a matching thrift definition named:
-   Thrift<tuple type>, e.g. ThriftOrderbookTuple *)
-(* TODO: define and use structs as complex map keys rather than tuples,
-   or convert tuples to structs here in Thrift *)
-
-let generate_stream_debugger_includes out_chan =
-    let list_code l = String.concat "\n" l in
-    let includes =
-        ["#include \"Debugger.h\"";]
-    in
-        generate_thrift_includes out_chan;
-        output_string out_chan (list_code includes)
-
-
-let generate_debugger_thrift_server_main stream_debugger_class stream_debugger_constructor_args =
-    [ "int port = 20000;";
-    "boost::shared_ptr<"^stream_debugger_class^"> handler(new "^stream_debugger_class^"("^stream_debugger_constructor_args^"));";
-    "boost::shared_ptr<TProcessor> processor(new DebuggerProcessor(handler));";
-    "boost::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));";
-    "boost::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());";
-    "boost::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());";
-    "TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);";
-    "server.serve();" ]
-
-
-(*
- * Debugger handler generation
- *)
-
-(* Generate Thrift protocol spec file
-   -- void step(tuple)
-   -- void stepn(int n)
-   -- state/map accessors
-*)
-let generate_file_stream_debugger_thrift_declarations streams =
-    let strip_namespace type_name =
-        let ns_and_type = Str.split (Str.regexp "::") type_name in
-            List.nth ns_and_type (List.length ns_and_type - 1)
-    in
-    let indent s = "    "^s in
-    let list_code l = String.concat "\n" l in
-    let (tuple_decls, steps_decls, stepns_decls) =
-        List.fold_left
-            (fun (td_acc, step_acc, stepn_acc)
-                (stream_name,
-                    (_, source_type, _, tuple_type,
-                    adaptor_type, adaptor_bindings,
-                    thrift_tuple_namespace))
-                ->
-                let (thrift_tuple_decl, thrift_tuple_type) =
-                    let normalized_tuple_type = (strip_namespace tuple_type) in
-                    let new_type = "Thrift"^normalized_tuple_type in
-                        if (List.mem_assoc new_type td_acc) then
-                            ([], new_type)
-                        else
-                            let tt_prefix =
-                                if (String.length thrift_tuple_namespace) > 0
-                                then (thrift_tuple_namespace^".") else ""
-                            in
-                            let new_decl = list_code
-                                ([ "struct "^new_type^" {"]@
-                                    (List.map indent
-                                        (["1: DmlType type,";
-                                        "2: DBToasterStreamId id,";
-                                        "3: "^tt_prefix^normalized_tuple_type^" data"]))@
-                                    [ "}\n"])
-                            in
-                                ([(new_type, new_decl)], new_type)
-                in
-                let step_stream = "void step_"^(stream_name)^"(1:"^thrift_tuple_type^" input)," in
-                let stepn_stream = "void stepn_"^(stream_name)^"(1:i32 n)," in
-                    (td_acc@thrift_tuple_decl, step_acc@[step_stream], stepn_acc@[stepn_stream]))
-        ([], [], []) streams
-    in
-        (tuple_decls, steps_decls, stepns_decls)
-
-(* Generate Thrift debugger service implementation
-   -- instantiate + initialize multiplexer, dispatcher
-   -- void step(tuple) { dispatch(tuple); }
-   -- void stepn(int n) { for i=0:n-1 { dispatch(multiplexer->nextInput()); } }
-   -- state/map accessors
-   -- Copy Thrift service main from skeleton
-*)
-let generate_file_stream_debugger_thrift_implementations streams =
-    let strip_namespace type_name =
-        let ns_and_type = Str.split (Str.regexp "::") type_name in
-            List.nth ns_and_type (List.length ns_and_type - 1)
-    in
-    let indent s = "    "^s in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-    let (steps_defns, stepns_defns) = 
-        List.fold_left
-            (fun (step_acc, stepn_acc)
-                (stream_name,
-                    (_, source_type, _, tuple_type,
-                    adaptor_type, adaptor_bindings, _))
-                ->
-                let normalized_tuple_type = (strip_namespace tuple_type) in
-                let thrift_tuple_type = "Thrift"^normalized_tuple_type in
-                 (* Create a DBToasterTuple from argument, and invoke dispatch *)
-                let step_stream_body = 
-                    ["void step_"^stream_name^"(const "^thrift_tuple_type^"& input)"]@
-                        (block
-                            (["DBToaster::StandaloneEngine::DBToasterTuple dbtInput;";
-                            "dbtInput.id = input.id;";
-                            "dbtInput.type = static_cast<DBToaster::StandaloneEngine::DmlType>(input.type);";
-                            "dbtInput.data = boost::any(input.data);";
-                            "router.dispatch(dbtInput);" ]))
-                in
-                (* Read n tuples from the stream *)
-                let stepn_stream_body =
-                    ["void stepn_"^stream_name^"(const int32_t n)"]@
-                        (block
-                            (["for (int32_t i = 0; i < n; ++i)"]@
-                                (block 
-                                    (["if ( !sources.streamHasInputs() ) break;";
-                                    "DBToaster::StandaloneEngine::DBToasterTuple t "^
-                                        "= sources.nextInput();";
-                                    "router.dispatch(t);"]))))
-                in
-                    (step_acc@step_stream_body, stepn_acc@stepn_stream_body))
-            ([], []) streams
-    in
-        (steps_defns, stepns_defns)
-
-
-let generate_file_stream_debugger_class
-        decl_out_chan impl_out_chan less_out_chan
-        query_id global_decls streams_handlers_and_events
-    =
-    (* Helpers *)
-    let indent s = ("    "^s) in
-
-    (* Generate stream engine preamble: stream definitions and dispatcher function objects,
-     * multiplexer, dispatcher 
-     * Note: this initializes stream dispatching identifiers which are need for the
-     * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
-    generate_file_stream_engine_init impl_out_chan streams_handlers_and_events;
-
-    let streams = List.fold_left
-        (fun acc (stream_type_info, stream_name, handler, event) ->
-            if (List.mem_assoc stream_name acc) then acc
-            else acc@[(stream_name, stream_type_info)])
-        [] streams_handlers_and_events
-    in
-
-    let stream_id_decls = 
-        Hashtbl.fold
-            (fun stream_id_name stream_id acc ->
-                acc@["const i32 "^stream_id_name^" = "^(string_of_int stream_id)])
-            stream_ids []
-    in
-
-    (* Thrift debugger declarations for file sources *)
-    let (tuple_decls, steps_decls, stepns_decls) =
-        generate_file_stream_debugger_thrift_declarations streams
-    in
-
-    let (struct_decls, key_decls, accessors_decls, less_opers) =
-        generate_thrift_accessor_declarations global_decls
-    in
-
-    let service_namespace =
-        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
-    in
-
-    (* Thrift debugger implementation for file sources *)
-    let class_name = "DebuggerHandler" in
-    let (steps_defns, stepns_defns) =
-        generate_file_stream_debugger_thrift_implementations streams
-    in
-    let accessor_defns =
-        generate_thrift_accessor_implementations global_decls class_name
-    in
-
-    let thrift_service_name = "Debugger" in
-    let thrift_service_handler_name = class_name in
-    let thrift_service_handler_interface = "DebuggerIf" in
-
-    let thrift_includes =  ["datasets.thrift"; "profiler.thrift"] in
-    let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_global_decls =
-        stream_id_decls@
-        (snd (List.split tuple_decls))@
-        struct_decls@
-        (snd (List.split key_decls))
-    in
-    let debugger_decls = 
-        List.map indent (steps_decls@stepns_decls@accessors_decls)
-    in
-
-    (* Local datastructures and constructor *)
-    let debugger_constructor_args =
-        ["DBToaster::StandaloneEngine::FileMultiplexer& s,";
-        "DBToaster::StandaloneEngine::FileStreamDispatcher& r)"]
-    in
-    let debugger_constructor_member_init = ["sources(s)"; "router(r)"] in
-    let debugger_constructor_init = [ "PROFILER_INITIALIZATION" ] in
-
-    let debugger_internals =
-        List.map indent
-            (["DBToaster::StandaloneEngine::FileMultiplexer& sources;";
-            "DBToaster::StandaloneEngine::FileStreamDispatcher& router;\n"])
-    in
-
-    (* Method bodies *)
-    let debugger_interface_impls =
-        (List.map indent
-            (steps_defns@["\n"]@
-            stepns_defns@["\n"]@
-            accessor_defns@
-            ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
-    in
-
-        generate_dbtoaster_thrift_module decl_out_chan
-            thrift_includes service_namespace thrift_languages
-            thrift_service_name ["profiler.Profiler"]
-            thrift_global_decls debugger_decls;
-
-        generate_dbtoaster_thrift_module_implementation impl_out_chan
-            service_namespace thrift_service_handler_name thrift_service_handler_interface
-            debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
-            debugger_internals debugger_interface_impls;
-
-        generate_dbtoaster_thrift_less_operators less_out_chan
-            less_opers query_id "Debugger";
-
-        class_name
-
-
-let generate_file_stream_debugger_main impl_out_chan stream_debugger_class =
-    let indent s = "    "^s in
-    let list_code l =
-        List.fold_left
-            (fun acc c ->
-                (if (String.length acc) = 0 then "" else acc^"\n")^c)
-            "" l
-    in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-    let main_defn =
-        ["int main(int argc, char **argv) "]@
-            (block 
-                (["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
-                "DBToaster::StandaloneEngine::FileStreamDispatcher router;";
-                "init(sources, router);\n"]@
-                (generate_debugger_thrift_server_main stream_debugger_class "sources, router")@
-                ["return 0;";]))
-    in
-        output_string impl_out_chan (list_code main_defn)
-
-
-(*
- * Network debugger 
- *)
-
-let generate_socket_stream_debugger_thrift_declarations streams =
-    let strip_namespace type_name =
-        let ns_and_type = Str.split (Str.regexp "::") type_name in
-            List.nth ns_and_type (List.length ns_and_type - 1)
-    in
-    let (steps_decls, stepns_decls) =
-        List.fold_left
-            (fun (step_acc, stepn_acc)
-                (stream_name, (_, _, _, tuple_type, _, _, thrift_tuple_namespace))
-                ->
-                let normalized_tuple_type =
-                    (if String.length thrift_tuple_namespace = 0 then ""
-                    else (thrift_tuple_namespace^"."))^
-                        (strip_namespace tuple_type)
-                in
-                let step_stream = "void step_"^(stream_name)^"(1:"^normalized_tuple_type^" input)," in
-                let stepn_stream = "void stepn_"^(stream_name)^"(1:i32 n)," in
-                    (step_acc@[step_stream], stepn_acc@[stepn_stream]))
-        ([], []) streams
-    in
-        (steps_decls, stepns_decls)
-
-
-let generate_socket_stream_debugger_thrift_implementations class_name streams =
-    let strip_namespace type_name =
-        let ns_and_type = Str.split (Str.regexp "::") type_name in
-            List.nth ns_and_type (List.length ns_and_type - 1)
-    in
-    let indent s = "    "^s in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-    let (steps_defns, stepns_defns) = 
-        List.fold_left
-            (fun (step_acc, stepn_acc)
-                (stream_name,
-                    (_, source_type, _, tuple_type,
-                    adaptor_type, adaptor_bindings, _))
-                ->
-                (* HACK for now.
-                 * TODO: pass in stream dispatchers as an argument *)
-                let stream_dispatcher = stream_name^"_dispatcher" in
-
-                let normalized_tuple_type = (strip_namespace tuple_type) in
-                let step_stream_body = 
-                    (* Create a DBToasterTuple from argument, and invoke dispatch *)
-                    ["void step_"^stream_name^"(const DBToaster::DemoDatasets::Protocol::"^normalized_tuple_type^"& input)"]@
-                        (block
-                            (["boost::any anyInput(input);"; stream_dispatcher^"(anyInput);"]))
-                in
-                let stepn_stream_body =
-                    (* Read n tuples from the stream *)
-                    ["void stepn_"^stream_name^"(const int32_t n)"]@
-                        (block (
-                            ["sources.setNumberReads(n);";
-                             "sources.read(boost::bind(&"^class_name^"::recursive_stepn, this));"]))
-                in
-                    (step_acc@step_stream_body, stepn_acc@stepn_stream_body))
-            ([], []) streams
-    in
-        (steps_defns, stepns_defns)
-
-
-let generate_socket_stream_debugger_class
-        decl_out_chan impl_out_chan less_out_chan
-        query_id global_decls streams_handlers_and_events
-    =
-    let indent s = "    "^s in
-
-    (* Generate stream engine preamble: stream definitions and dispatcher function objects,
-     * multiplexer, dispatcher 
-     * Note: this initializes stream dispatching identifiers which are need for the
-     * Thrift protocol spec file, hence the invocation prior to protocol generation. *)
-    generate_socket_stream_engine_init impl_out_chan streams_handlers_and_events;
-
-    let streams = List.fold_left
-        (fun acc (stream_type_info, stream_name, handler, event) ->
-            if (List.mem_assoc stream_name acc) then acc
-            else acc@[(stream_name, stream_type_info)])
-        [] streams_handlers_and_events
-    in
-
-    (* Thrift debugger declarations for network sources *)
-    let (steps_decls, stepns_decls) =
-        generate_socket_stream_debugger_thrift_declarations streams
-    in
-
-    let (struct_decls, key_decls, accessors_decls, less_opers) =
-        generate_thrift_accessor_declarations global_decls
-    in
-
-    let service_namespace =
-        "DBToaster.Debugger"^(if query_id = "" then "" else ("."^query_id))
-    in
-
-    (* Thrift debugger implementation for network sources *)
-    let class_name = "DebuggerHandler" in
-    let (steps_defns, stepns_defns) =
-        generate_socket_stream_debugger_thrift_implementations class_name streams
-    in
-    let accessor_defns =
-        generate_thrift_accessor_implementations global_decls class_name
-    in
-    let thrift_service_name = "Debugger" in
-    let thrift_service_handler_name = class_name in
-    let thrift_service_handler_interface = "DebuggerIf" in
-
-    let thrift_includes =  ["datasets.thrift"; "profiler.thrift"] in
-    let thrift_languages = [ "cpp"; "java" ] in
-    let thrift_global_decls = struct_decls@(snd (List.split key_decls)) in
-    let debugger_decls = 
-        List.map indent (steps_decls@stepns_decls@accessors_decls)
-    in
-
-    (* Local datastructures and constructor *)
-    let debugger_constructor_args =
-        ["DBToaster::StandaloneEngine::SocketMultiplexer& s"]
-    in
-    let debugger_constructor_member_init = ["sources(s)"] in
-    let debugger_constructor_init = [ "PROFILER_INITIALIZATION" ] in
-
-    let debugger_internals =
-        List.map indent
-            (["DBToaster::StandaloneEngine::SocketMultiplexer& sources;\n";])
-    in
-
-    (* Method bodies *)
-    let recursive_stepn_method = ["\nvoid recursive_stepn() {}\n"] in
-    let debugger_interface_impls =
-        (List.map indent
-            (steps_defns@["\n"]@
-            stepns_defns@["\n"]@
-            accessor_defns@
-            recursive_stepn_method@
-            ["PROFILER_SERVICE_METHOD_IMPLEMENTATION"]))
-    in
-
-        generate_dbtoaster_thrift_module decl_out_chan
-            thrift_includes service_namespace thrift_languages
-            thrift_service_name ["profiler.Profiler"]
-            thrift_global_decls debugger_decls;
-
-        generate_dbtoaster_thrift_module_implementation impl_out_chan
-            service_namespace thrift_service_handler_name thrift_service_handler_interface
-            debugger_constructor_args debugger_constructor_member_init debugger_constructor_init
-            debugger_internals debugger_interface_impls;
- 
-        generate_dbtoaster_thrift_less_operators less_out_chan
-            less_opers query_id "Debugger";
-
-        class_name
-
-
-let generate_socket_stream_debugger_main impl_out_chan stream_debugger_class =
-    let indent s = "    "^s in
-    let list_code l = String.concat "\n" l in
-    let block l = ["{"]@(List.map indent l)@["}"] in
-
-    let main_defn =
-
-        (* TODO: get io_service_name as an argument *)
-        let io_service_name = "io_service" in
-
-        let (common_decl, common_main) =
-            generate_socket_stream_engine_common io_service_name
-        in
-
-        common_decl@
-        ["int main(int argc, char **argv) "]@
-            (block 
-                (common_main@
-                (generate_debugger_thrift_server_main stream_debugger_class "sources")@
-                ["return 0;";]))
-    in
-        output_string impl_out_chan (list_code main_defn)
 
 
 (*

@@ -1,6 +1,7 @@
 #ifndef DBTOASTER_PROFILER_H
 #define DBTOASTER_PROFILER_H
 
+#ifdef ENABLE_PROFILER
 #include <iostream>
 #include <map>
 #include <list>
@@ -585,5 +586,28 @@ namespace DBToaster
             boost::shared_ptr<Protocol::ProfilerService> profileService(new Protocol::ProfilerService());
     };
 };
+
+#else
+
+namespace DBToaster
+{
+    namespace Profiler
+    {
+        #define LOCK_HANDLER_PROFILE
+        #define UNLOCK_HANDLER_PROFILE
+
+        #define START_HANDLER_SAMPLE(statsType, handlerId)
+        #define END_HANDLER_SAMPLE(statType, handlerId)
+
+        #define START_PROFILE(statsType,codeLoc)
+        #define END_PROFILE(statsType,codeLoc)
+
+        #define PROFILER_INITIALIZATION
+        #define PROFILER_SERVICE_METHOD_IMPLEMENTATION 
+        #define PROFILER_ENGINE_IMPLEMENTATION
+    };
+};
+
+#endif
 
 #endif
