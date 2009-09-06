@@ -2,6 +2,11 @@ package ExchangeServer;
 
 import java.util.*;
 
+/**
+ * Comparator for SortedBook
+ * @author antonmorozov
+ *
+ */
 public  class ComparatorOrderTuples implements Comparator<Order_tuple>{
 	
 	public int compare ( Order_tuple o1, Order_tuple o2 )   {  

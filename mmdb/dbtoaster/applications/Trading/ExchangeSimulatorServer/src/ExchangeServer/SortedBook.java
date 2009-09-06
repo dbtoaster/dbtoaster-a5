@@ -2,6 +2,15 @@ package ExchangeServer;
 
 import java.util.*;
 
+/**
+ * Stored Order_book information
+ * for either bids or asks
+ * 
+ * Properties: Random access based on key value
+ * sorted storage of data based on data value
+ * @author antonmorozov
+ *
+ */
 public class SortedBook {
 	
 	TreeSet<Order_tuple> sorted_tuples;

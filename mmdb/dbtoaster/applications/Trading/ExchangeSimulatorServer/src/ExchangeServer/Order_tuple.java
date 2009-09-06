@@ -1,5 +1,12 @@
 package ExchangeServer;
 
+/**
+ * Order_tuple is used for storing relevant data about each 
+ * The difference between this and Stream_tuple is toString
+ * and comparability 
+ * @author antonmorozov
+ *
+ */
 public class Order_tuple implements Comparable<Order_tuple> {
 	
 	//structure for storing price volume and time of the bid
