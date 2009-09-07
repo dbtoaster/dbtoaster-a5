@@ -37,7 +37,7 @@ print_test_type "string_of";
 print_endline (string_of_map_expression sum_ad);
 
 print_test_type "compile_code_rec";
-compile_query [sum_ad] "sum_ad.cc";;
+compile_query [[sum_ad]] "sum_ad.cc";;
 
 (*
 print_test_type "treeml_of_map_expression";

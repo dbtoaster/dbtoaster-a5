@@ -323,7 +323,8 @@ struct
                                 if best_match = "" then
                                     raise (BuildException ("Failed to find library for prefix: "^prefix));
                                 print_endline best_match;
-                                best_match)
+                                (Str.global_replace (Str.regexp ("lib")) ""
+                                    (Str.global_replace (Str.regexp (Str.quote lib_suffix)) "" best_match)))
                         lib_prefixes
             else raise (BuildException ("Invalid lib directory: "^lib_dir))
 
@@ -449,7 +450,14 @@ struct
 
         (* Gets the java namespace specified in the Thrift module *)
         let get_java_namespace thrift_module =
-            let module_lines = Std.input_list (open_in thrift_module) in
+            let module_lines = 
+                let module_chan = open_in thrift_module in
+                let rec input_lines acc =
+                    try input_lines (acc@[input_line module_chan])
+                    with End_of_file -> acc
+                in
+                    input_lines []
+            in
             let java_namespace_lines =
                 List.filter
                     (fun x -> Str.string_match (Str.regexp "^namespace\\ *java") x 0)
@@ -482,7 +490,14 @@ struct
         (* Returns sources files produced for thrift modules, recurring over dependents. *)
         let rec get_thrift_sources thrift_module known_dependents =
             let module_name = Filename.chop_extension (Filename.basename thrift_module) in
-            let module_lines = Std.input_list (open_in thrift_module) in
+            let module_lines =
+                let module_chan = open_in thrift_module in
+                let rec input_lines acc =
+                    try input_lines (acc@[input_line module_chan])
+                    with End_of_file -> acc
+                in
+                    input_lines []
+            in
             let includes =
                 let include_lines = 
                     List.filter
