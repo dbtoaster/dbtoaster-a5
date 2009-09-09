@@ -1,9 +1,12 @@
 %\documentclass{acm_proc_article-sp} 
-\documentclass[11pt]{article} 
+\documentclass[14pt]{article} 
 \usepackage{amssymb,amsmath} 
+\usepackage{setspace}
 \usepackage{graphicx}
 \usepackage{float}
 \usepackage{hyperref}
+
+\doublespacing
 
 
 \floatstyle{ruled}
@@ -14,21 +17,30 @@
 
 \begin{document}
 	
-\title{DBToaster Runtime: System for Streaming Data Processing.}
-\author{}
+\title{DBToaster Runtime: A System for Streaming Data Processing. \\And\\ AlgoTrader: A Trading Algorithms Platform for Stock Exchange Simulation.}
+\author{Anton Morozov}
 \maketitle
 
 \section{Introduction}
 
-DBToaster application involves three major components. Data Sources components are a source of the incoming data. The end user applications need these data to be processed by running various queries over it. In this particular example we will be using an Exchange Simulation Server application as a data source. Next component is the Algorithms Simulation Engine. This component is the end user program of interest. It is responsible for the decision making and outside influences (i.e. what ever user needs to be done with the help of the queries over the data streams). In out example it is a Trading Runtime Platform. The last component is DBToaster Runtime. The component is responsible for collecting the data from various data sources specified by the users, running appropriate queries over the data and conveying the query results to Algorithms Simulation Engine. 
+DBToaster Runtime is a system build based on DBToaster. Runtime provides a stand alone interface for running user defined, DBToaster compiled queries over specified update streams. Capabilities and usage of the system are demonstrated on the example of AlgoTrader. AlgoTrader is a platform that simulates Stock Exchange and serves as a testbed for automatic Trading Algorithms.   
 
-The the flow of information between the three components is as follows. Once started data generation component generates data, these data comes from a variety of sources stock exchange, sensor network, remote applications etc. The data comes as a continuous stream of information, this information is presented in a well known format. In many of the cases it is possible that the end user does not have much control over the data stream but the ability to listen to the incoming data. These data is sent to DBToaster runtime. The runtime is responsible for collecting data from those data sources and running a dynamic set of user defined queries over these data. The queries are dynamically loaded, compiled and if needed removed during the execution of a runtime. The results of the queries are forwarded to Algorithms Simulation Engine (a.k.a the end user). The Engine's job is to get the data from the runtime. Based on the results of the queries Algorithm Engine performs tasks needed by the users. In our example, based on the information received Algorithm Engine buys and sell stocks on a NASDAQ exchange simulator. 
+DBToaster Runtime can be partitioned into three major components: Compiler, Data Sources Processor and Query Processor. Compiler receives a SQL query from a client, compiles it down to executable code and passes to Query Processor for execution. Data Sources Processor manages a set of update data streams and passes data to appropriate queries in Query Processor. Query Processor runs a set of queries over given data. The results of each query are made available to connected clients. 
 
-The particular application we have chosen to demonstrate the capabilities and performance of our system is a NASDAQ trading simulation. In this simulation there is a set of servers; each server arranges stock exchanges between different trading parties. The results of those exchanges as well as information about interest in stock sells and purchases is transmitted to all parties interested in such information. Based on these information different trading algorithms decide to buy and sell stocks. The arrangement of all the components in the Trading system can be seen in figure \ref{TheBigPicture}. 
+AlgoTrader platform provides an example of how an application over update stream can benefit form DBToaster Runtime. AlgoTrader is a time critical application, which uses expressive set of queries over update streams. The platform consist of two components: Stocks Exchange Simulator and Trading Algorithms Engine. Stock Exchange Simulator implements a realistic simulation of an Electronic Communication Network (ECN). Each ECN serves as a matchmaker between stock buyers and sellers. Trading Algorithms Engine is a testbed for developing automatic trading strategies. Each strategy runs a set of queries over a data stream(s) coming from Stock Exchange Simulator. Based on the query results trading strategies either buy or sell stocks.
+
+Interactions between DBToaster Runtime and AlgoTrader can be seen in figure \ref{TheBigPicture}.
+
+
+%Data Sources components are a source of the incoming data. The end user applications need these data to be processed by running various queries over it. In this particular example we will be using an Exchange Simulation Server application as a data source. Next component is the Algorithms Simulation Engine. This component is the end user program of interest. It is responsible for the decision making and outside influences (i.e. what ever user needs to be done with the help of the queries over the data streams). In out example it is a Trading Runtime Platform. The last component is DBToaster Runtime. The component is responsible for collecting the data from various data sources specified by the users, running appropriate queries over the data and conveying the query results to Algorithms Simulation Engine. 
+
+%The the flow of information between the three components is as follows. Once started data generation component generates data, these data comes from a variety of sources stock exchange, sensor network, remote applications etc. The data comes as a continuous stream of information, this information is presented in a well known format. In many of the cases it is possible that the end user does not have much control over the data stream but the ability to listen to the incoming data. These data is sent to DBToaster runtime. The runtime is responsible for collecting data from those data sources and running a dynamic set of user defined queries over these data. The queries are dynamically loaded, compiled and if needed removed during the execution of a runtime. The results of the queries are forwarded to Algorithms Simulation Engine (a.k.a the end user). The Engine's job is to get the data from the runtime. Based on the results of the queries Algorithm Engine performs tasks needed by the users. In our example, based on the information received Algorithm Engine buys and sell stocks on a NASDAQ exchange simulator. 
+
+%The particular application we have chosen to demonstrate the capabilities and performance of our system is a NASDAQ trading simulation. In this simulation there is a set of servers; each server arranges stock exchanges between different trading parties. The results of those exchanges as well as information about interest in stock sells and purchases is transmitted to all parties interested in such information. Based on these information different trading algorithms decide to buy and sell stocks. The arrangement of all the components in the Trading system can be seen in figure \ref{TheBigPicture}. 
 
 \begin{figure}
   \includegraphics[width=4.50in]{../figures/finapp.pdf}
-  \caption{Application Overview.}
+  \caption{Runtime and AlgoTrader Interactions.}
   \label{TheBigPicture}
 \end{figure}
 
@@ -37,7 +49,11 @@ The particular application we have chosen to demonstrate the capabilities and pe
 
 \section{DBToaster Runtime}
 
-DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components interacts with each other as well as has external interactions. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. Compiler and Query Processor have a server connection to handle user requests. Data Source Processor creates user specified clients to receive the data from various data sources. Compiler receives requests from the client to instantiate a Data Source Reader for receiving data or a SQL query to process data. The created Data Reader is passed to the Data Source Processor and a Query is passed to Query Processor to run on the data. 
+DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components interacts with each other. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. 
+
+Each of three components interacts with external environment. Compiler and Query Processor use a server to interact with users. Compiler receives SQL queries and data adaptors. Query Processor uses server to distribute query results to users. Data Sources Processor creates user specified clients to receive data a variety of sources. 
+
+%Compiler receives requests from the client to instantiate a Data Source Reader for receiving data or a SQL query to process data. The created Data Reader is passed to the Data Source Processor and a Query is passed to Query Processor to run on the data. 
 
 \begin{figure}
   \includegraphics[width=4.50in]{../figures/DBToasterRuntime.pdf}
@@ -142,11 +158,26 @@ C++ compiler takes file containing C++ code. C++ compiler creates a binary code 
 	\item {\tt functionHandle CompileC++(C++ file name);}
 \end{itemize}
 
-\subsection{Data Source Processing}
+\subsection{Data Source Processor}
 
-Data Source Processing is done in series of steps. Once Data Sources Admin receives a function handles from Compiler Admin. The Reader handle is inserted into Collection of Data Readers. Each Reader is responsible for a data stream from outside. The handle for the Reader is for a function {\tt getNext()}.
+\noindent Data Source Processing is done in two steps. Data Sources Admin receives two function handles from Compiler Admin a source reader and a data adaptor. 
 
-The Data Readers Thread Pool is a collection of threads where each thread picks a Data Reader and executes a read at a time from one of them. Once read is done the results of the read are forwarded to a Data Structure Dispatch. The Dispatch uses the appropriate Data Adapter to handle the data into a structured format, then the structured data is forwarded to Query Processor, in particular to the Query Tuple Queue. The more pictorial description can be found in figure \ref{DataSourcePic}.
+\begin{itemize}
+\item Source Reader handle is inserted into Collection of Data Sources. It processes outside data streams and forwards received information to data dispatcher.
+\item Data Adaptor handle is inserted into a data dispatcher. Data Adaptor transforms received data into a format needed by the query.
+\end{itemize} 
+
+Data Sources Thread Pool stores threads and a collection of Source Readers. Each thread 
+
+\begin{itemize}
+	\item Picks a Source Reader from a collection
+	\item Performs a data read 
+	\item Forwards read data tuple to Data Dispatcher
+\end{itemize}
+
+\noindent The details of Data Source Processor can be seen in figure \ref{DataSourcePic}.
+
+%where each thread picks a Data Reader and executes a read at a time from one of them. Once read is done the results of the read are forwarded to a Data Structure Dispatch. The Dispatch uses the appropriate Data Adapter to handle the data into a structured format, then the structured data is forwarded to Query Processor, in particular to the Query Tuple Queue. The more pictorial description can be found in figure \ref{DataSourcePic}.
 
 % processing consists of the list of list of stream points. Each point is given by the user and signifies a way for a DBToaster to connect with the input stream of some process which dispatches data to the DBToaster. Each Stream Point is written by the user and user can fully specify how the data should be received and processed. Stream point is responsible for sending data to the Data Dispatch unite in a pre-specified format. The structure for data source processing can be found in figure 
 
@@ -158,28 +189,44 @@ The Data Readers Thread Pool is a collection of threads where each thread picks 
 
 \subsubsection{Data Sources Admin}
 
-Data Sources Admin receives two function handles one to a data Reader and another one for a Data Adaptor from a Compiler. First Admin locks Data Adaptors and inserts a new Data Adaptor. Then Admin locks Data Readers Queue  and a handle is inserted. Each Data Readers handle implements a method \emph{readNext()} for reading data from some data source (typically a socket or a file).
+Data Sources Admin provides interface to install new Data Sources.
 
-\begin{itemize}
-	\item {\tt rawDataTuple getNext(); // user defined function - provided}
-\end{itemize}
-
-\noindent The {\tt rawDataTuple} is a pair {\tt <size, bit-string>}.
-
-The Reader extracts the informations from either a file or a socket. Reader's communication with the outside world is in a standard format. On a read request, Reader first reads a header containing the information about the message followed by the message itself. For now we assume that a header is an integer containing the number of byte to be read. Once the read is completed the size and message are forwarded to Data Structures Dispatch.
-
-\emph{TODO: expand this into a section with the full description of Readers input formats}.
-
-\noindent Data Sources Admin class contains the following:
 \begin{verbatim}
 class DataSourcesAdmin
 {
-    addDataSource(readerID, sourceReader, dataAdaptor);
+	DataSourcesAdmin(InputBufferInterface*);
+    addDataSource(sourceID, SourceReader, DataAdaptor);
 
-    DataReadersQueue*;
-    DataDispatch*;
+	DataDispatcher;
+    DataSourcesManager;
+	InputBufferInterface*;
+
 }
 \end{verbatim}
+ 
+\noindent It also creates Data Dispatcher and Data Sources Manager.
+
+These interface is needed by the compiler to install new data sources upon users request. When add Data Source is initiated
+
+\begin{itemize}
+	\item Data Adaptor is inserted into a Data Dispatcher
+	\item Data Source reader added to Data Sources Manager. It in turn adds it to a queue of available data sources to be read from.
+\end{itemize}
+
+%Data Sources Admin receives two function handles one to a data Reader and another one for a Data Adaptor from a Compiler. First Admin locks Data Adaptors and inserts a new Data Adaptor. Then Admin locks Data Readers Queue  and a handle is inserted. Each Data Readers handle implements a method \emph{readNext()} for reading data from some data source (typically a socket or a file).
+
+%\begin{itemize}
+%	\item {\tt rawDataTuple getNext(); // user defined function - provided}
+%\end{itemize}
+
+%\noindent The {\tt rawDataTuple} is a pair {\tt <size, bit-string>}.
+
+%The Reader extracts the informations from either a file or a socket. Reader's communication with the outside world is in a standard format. On a read request, Reader first reads a header containing the information about the message followed by the message itself. For now we assume that a header is an integer containing the number of byte to be read. Once the read is completed the size and message are forwarded to Data Structures Dispatch.
+
+\noindent \emph{TODO: expand this into a section with the full description of Readers input formats}.
+
+%\noindent Data Sources Admin class contains the following:
+
 
 
 \subsubsection{Data Readers Thread Pool}
@@ -498,112 +545,268 @@ class SchedulingQueue
 
 
 
-\section{Data Generation}
 
-Data can come in a variety of forms. For our particular application we have developed an Exchange Simulation Server. The server is responsible for processing and broadcast of all stock exchanges to the clients that are connected to it. Server can also is capable to augment data flow by adding data from files containing historical traces of real stock exchanges. At the moment the Exchange Server designed to simulate trade exchanges for one stock.   
+
+
+
+\section{AlgoTrader}
+
+AlgoTrader is an application that applies DBToaster Runtime to the domain of Stock Exchange and Algorithmic Trading. It consists of two parts: an automatic Stock Trading Simulator and a platform for development and execution of Automatic Stock Trading Algorithms. The purpose of AlgoTrader is to demonstrate the potential of DBToaster Runtime to process time critical, expressive queries over streaming data. To demonstrate the potential of Runtime two components are needed: a source(s) of update stream and an application(s) which runs queries over it. Exchange Server Simulator provides a source of continuous stock transactions between interested parties. AlgoEngine implements a set of trading strategies. Each strategy utilizes results of a query over the data from Exchange Server Simulator to make a decision about purchase/sell of stocks. The queries are processed and executed by DBToaster Runtime.
+  
 
 \subsection{Exchange Server Simulator}
-ExchangeServer creates server port and handles all incoming client connections. Each connected client is given it's own thread (ExchangeThread). ExchangeServer also creates a DataThread, which is responsible for reading historic trace data. The server also creates structure for datastorage which is shared by all of the clients.
+Exchange Server Simulator (ESS) is designed to reproduce the behavior of Electronic Communication Networks (ECN). ECN facilitates stock exchanges between different parties connected to the network. Each ECN provides certain data to its subscribers. For now we limit ourselves to complete knowledge about changes in stock order books. Order books for a stock contains all sell (ask) and buy (bid) request for each stock. This data is distributed to all subscribers as a constant stream of updates to order books. Current implementation of Exchange Server Simulator works with only one stock (for now). 
 
-\begin{code}
-  \begin{verbatim}
-Server_socket;
+Each Order Book consists of an Asks Book and Bids Book. Asks Book contains sell requests, Bids Book - buy requests. Each ask/bid requests is transmitted to all subscribers. If two requests are matched the results of such a match are transmitted as well. 
+
+Main difference between a real ECN and a Simulator, is simulator's ability to replay the exchanges made at some earlier date and incorporate exchanges made by trading algorithms into this stream. 
+
+We implemented ESS to support two types of clients: readers and writers. Reader clients constantly listen to a stream of messages without placing any orders. Writer clients only place orders and interact with Simulator to get the information about just placed order (like order ID). The detailed implementation of ESS is as follows.
+
+\subsubsection{Exchange Server}
+ExchangeServer creates a local host server on a given port and handles all incoming client connections. Each connected client is processed in its own thread (ExchangeThread). ExchangeServer also creates a data client (DataThread). This client is responsible for reading historical data from a file, connecting to a server and transmitting data to server. Server also creates structure for storing order book information. It is shared by all clients.
+
+\noindent The basic structure of Exchange Server is as follows:
+\begin{verbatim}
+open(Server_Socket);
 SynchronizedBooks DataBook;
-Data_socket(inputDataFile.cvs);
+DataThread historical_data(inputDataFile.cvs);
+historical_data.run();
 
-while (Server_socket.listen)
+while (Server_socket.listen())
 {
-	get(client);
-	run(client, DataBook);
+    get(client);
+    run(client, DataBook);
 }
-  \end{verbatim}
-  \caption{ExchangeServer: inputDataFile.cvs}
-\end{code}
+\end{verbatim}
 
 
+\subsubsection{Exchange Thread}
+When a client connects to ESS, ExchangesThread is created to handle client needs. All ExchangesThreads share order book storage structure SynchronizedBooks. They also share a list of all connected clients.
 
-\subsection{Exchange Thread}
-On a client connection Server creates an ExchangesThread to deal with client needs. All ExchangesThreads share data storage structure DataBook as well as a list of all currently active clients. On a start up thread expects to receive a message from a client indicating the type of a client.
-\\
-\\
+\noindent The communication protocol between a client and server is as follows: 
+
+\noindent The first message a server expects form a thread is a client type.
+
 \begin{tabular}{|l|l|}
   \hline
   \multicolumn{2}{|c|}{Client type} \\
   \hline
-  0 & Interactive\\ \hline
-  1 & Passive Listener \\
+  0 & Writer\\ \hline
+  1 & Reader \\
   \hline
 \end{tabular}
 \\
-\\*
-\emph{Interactive} clients send data and are only interested in receiving messages in response to their transactions. \emph{Passive Listener} clients are interested in all of the transactions but tend not to send the messages themselves.
+\\
+\emph{Writer} clients are designed to send data and receive messages only as response to their transactions. \emph{Reader} clients receive all ongoing transactions but do not to send messages themselves.
 
-The messages from clients are coming in the pre-specified format. Depending on the client's request several actions occur:
-\\
-\\
+Communication messages  are in pre-specified format:
+
+\begin{verbatim}
+long time;
+int  order_id;
+int  brokerage_id;
+char action;
+int  volume;
+int  price;
+\end{verbatim}
+
+Where \emph{time} indicates the time when requests arrived to the server, \emph{order\_id} a unique identifier for each order given by ESS, \emph{brokerage\_id} ID identifying company, which placed an order, \emph{action} one of several actions (buy, sell, cancel) described below, \emph{price} and \emph{volume} are price and amount of the stocks to be bought/sold. 
+
+\noindent Several action can possibly occur:
+
 \begin{tabular}{|l|l|}
   \hline
   Request & Action \\ \hline
   'B' & buy request, check ask book for match if no add to bid book \\ \hline
   'S' & see request, check bid book for match if no add to ask book \\ \hline
-  'D' & delete request from appropriate book if one exists \\ \hline
-  'X' & cancel order remove trade request from appropriate book\\
+  'D' & delete request for an appropriate book if one exists \\ \hline
+  'X' & cancel order remove trade request from appropriate book\\ \hline
+  'E' & change request, generated by server \\ \hline
+  'F' & order fulfilled, generated by server \\
   \hline
 \end{tabular}
 \\
 \\
-Each transaction is announced to all Passive Listeners as well as to Interactive client which intiated the transaction. 
+\noindent 'B', 'S' and 'D' actions can come from any of the clients (as a buy or sell stocks or delete requests). Actions 'E', 'F' and 'X' are generated by the server as a result of a partial match, match or delete request. 
+
+Each transaction and its consequences are announced to all Reader clients as well as to Writer client, which initiated a transaction. 
+
+The basic operation of each Exchange Thread is:
+
+\begin{verbatim}
+while (listen(request)){
+	messages=DataBook.update(request);
+	foreach(Reader)
+	 send(messages);
+}
+\end{verbatim}
 
 % the first  message showing an interest in exchange ExchangesThread checks if there is an appropriate match in the data structures (i.e. if some one wants to sell some amount of stocks the thread will look if someone wants to buy stocks at the given price), if so the match is executed if not the request is stored in the data structures. The results and the transaction are announced to all the connected clients. 
 
-\subsection{Data Storage}
-SynchronizedBooks is a shared data structure. It is shared between all of the clients. Each client can modify it by adding/removing buy/sell requests. The data structure consists of two SortedBooks. Each SortedBook is a structure that has properties of a sorted set and a hashtable. 
+\subsubsection{Synchronized Books}
+SynchronizedBooks is a shared data structure for storage of order books information. It is shared between all clients. Each client can add/remove/modify it based on client's requests. SynchronizedBooks contains two SortedBooks representing Asks/Bids Books. SortedBook is a structure that has properties of a sorted set and a hashtable. (Data is sorted by data values and can be accessed using keys).
 
-When an addition of a sell/buy request is invoked data structure tries to find a matching buy/sell request and if found the update message is sent to the clients additionally to the original sell/buy request. The update message contains information about the fact that one or both of the orders are partially/fully satisfied. The exchange message is of the form:
-\\
-\\
+When a sell/buy request is inserted into SynchronizedBooks, the data structure tries to find a matching buy/sell request. If a matching request is found an update message is generated in addition to sell/buy message. Update message contains information about the fact that one or both of the orders are partially/fully satisfied. Update message can be of the form:
+
+
 \begin{tabular}{|l|l|}
   \hline
-  Request & Action \\ \hline
+  Action & Meaning \\ \hline
   'E' & order number, update amount \\ \hline
   'F' & order was executed in full \\
 
   \hline
 \end{tabular}
 \\
-
-\subsection{Data Generation}
-
-ExchangeServer is capable of augmenting the data flow between clients with the additional data from historical data files. To accomplish this goal server has a DataThread. It can be initiated at any point by a server (for example, once there is a client connected to the server). DataThread reads a historical trace file in a .cvs format and transmits each message to the server as if it was a real request.
+\\
+SynchronizedBooks utilizes Order\_tuple to store each individual bid/ask request in SortedBooks. Stream\_tuple is used to generate as a communication message to be sent to clients.
 
 
-\section{Algorithms Engine}
+\subsubsection{Historical Data}
 
-Algorithm Engine code developed by the end users. The code makes use of DBToaster Runtime to query the continuous data from input streams specified by the users. The query results are then processed by user defined algorithms to achieve their goals. 
+ExchangeServer is capable of using historical data flow from stock trades between real clients in addition to transactions provided by Writer clients. ESS uses DataThread to extract historical data from a file and transmit it to server. DataThread can be started at any point during the execution by a server (for example, once there is a client connected to server). DataThread reads historical trace file in a .cvs format and transmits each message to server as if it was a real request. DataThread does not distinguish between client and server actions and transmit all of them as if they were requests made by some client. ExchangeThread distinguishes orders coming from historical data and from live clients by the message's data. Historical data contains order ID and timestamps for all the orders. Writer clients have 0 in those fields (except for delete).  
 
-In our example Algorithmic Engine creates and runs a set of monitoring queries for the stock trading depending on the results of the queries and the internal mechanics - algorithms decide to buy or sell stocks on a NASDAQ Trading Exchange Simulator.
 
-\subsection{Data Sources}
+\subsection{Algorithms Engine}
 
-Algorithmic Engine interacts with environment in three different ways. First of all the Engine needs to receive  the information from from DBToaster runtime. This interaction is unavoidable since the Engine needs the results of the queries. Another interaction which needs to be added is the way to specify the information stream received by a DBToaster runtime. This information needs to be passed the the Runtime in the form of c++ code for the Runtime to compile. Another optional source of interaction is infulencing the enviroment. In our example is the Engine's capability to add/remove stock requests from the Exchange Server. 
+Algorithms Engine is an application designed to emulate actions of a hedge fund. It implements a set of trading algorithms. Each trading algorithm runs a query over data produced by Exchange Server Simulator. Based on this information an algorithm makes a decision whether to buy or sell stocks. Those requests go directly to ESS. 
 
-\subsubsection{Data Stream}
+Algorithms Engine has two connections to ESS. First connection is a writer client. It sends ask/bid requests to ESS. The second connection is a reader client to monitor the results of exchanges. The second connection notifies Algorithms Engine when and if ask/bid request have been executed. 
 
-There are two interactions with outside systems needed to be implemented by the user. The first interaction is with DBToaster. A system needs to pull information from the DBToaster runtime. \emph{TODO description of the the pulling mechanism}.
+There are two concurrent execution paths inside Algorithms Engine. First path creates a reader client to ESS and starts listening to the update stream. Each order in a stream is compared to a set of internal order requests. If an incoming data is about one of the internal requests, this request is modified and appropriate statistics are changed. The second path creates one writer connection to ESS and a client connection to DBToaster Runtime. This path starts by initiating all of the trading algorithms. Each of the trading algorithms runs (or uses results of) a query over the data produced by ESS. These queries are executed by Runtime. The results of each query are used by Algorithms Engine. When data is available, trading algorithms use it to determine whether to place ask/bid order. This process repeats continuously. 
 
-Another interaction, which needs to be passed to the DBToaster Runtime, is a way for Runtime to access the data streams relevant to the Engine and over which the queries needed to be post. This information is specified as a C++ code which is sent for the compilation to the Runtime to be added to the system.
+%Algorithm Engine code developed by the end users. The code makes use of DBToaster Runtime to query the continuous data from input streams specified by the users. The query results are then processed by user defined algorithms to achieve their goals. 
 
-\subsubsection{External Influence}
+%In our example Algorithmic Engine creates and runs a set of monitoring queries for the stock trading depending on the results of the queries and the internal mechanics - algorithms decide to buy or sell stocks on a NASDAQ Trading Exchange Simulator.
 
-If the Engine implements interactive process, which needs to access outside processes or interact (influence) them then this is interactivity needs also to be added. In our example Algorithmic Engine can buy and sell stock on our Exchange Simulation Server. Thus acting like one of the clients of the server. \emph{TODO describe the system in more details}
+\subsubsection{Algorithms Engine}
 
-\subsection{Algorithm}
+AlgorithmsEngine class contains all trading algorithms, connections to ESS and a connection to DBToaster Runtime. On initiation it starts Reader connection to ESS. A trading algorithm can be added at any time during execution. 
 
-This is the part which is the most relevant to the user and will vary from system to system. In out example we encoded the learning and trading strategies for NASDAQ stock exchange. \emph{TODO describe the system in more details}
+\begin{verbatim}
+class AlgorithmsEngine
+{
+    AlgorithmsEngine();
+    void runAlgos();
+    void addAlgo(AlgoInterface * algo);
 
-\subsection{Query creator (or something like that)}
+private:
+    void getData();
+    
+    list<AlgoInterface*> my_algos;
+    DataCollection       data;
+    OrderManager         manager;
+	
+}
+\end{verbatim}
 
-Queries posed to the DBRuntime can come from various sources they can either be predefined by the user system or written and modified dynamically. In order to be active they need to be passed to the Runtime where they are compiled and added to stream observations. \emph{TODO describe the process more}
+DataCollection is an interface to DBToaster Runtime. It contains query results. OrderManager contains statistics for each algorithm and order requests from all algorithms. 
+
+The execution cycle of \emph{runAlgos()} is
+
+\begin{verbatim}
+void runAlgos()
+{
+    getData();
+    
+    foreach algo in my_algos
+        requests=algo->run(requests);
+    
+    manager.handle(requests);
+}
+\end{verbatim}
+
+Where \emph{requests} is a set of order requests generated by the algorithms.
+
+%Algorithmic Engine interacts with environment in three different ways. First of all the Engine needs to receive  the information from from DBToaster runtime. This interaction is unavoidable since the Engine needs the results of the queries. Another interaction which needs to be added is the way to specify the information stream received by a DBToaster runtime. This information needs to be passed the the Runtime in the form of c++ code for the Runtime to compile. Another optional source of interaction is infulencing the enviroment. In our example is the Engine's capability to add/remove stock requests from the Exchange Server. 
+
+\subsubsection{Order Manager}
+OrderManager is an interface with ESS. 
+
+\begin{verbatim}
+class OrderManager
+{
+    void sendOrders(function handler, deque<AlgoMessages*> messages);
+    void startReading(boost::asio::io_service& io_service)
+    void processOrder(DataTuple & tuple);
+    
+private:
+    WriterConnection *             writer;
+    WriterConnection *             reader;
+
+    ptr_map<LocalID, DataTuple>   dataOrders;
+    ptr_map<OrderID, LocalID>     orderIDtoLocalId;
+    ptr_map<LocalID, DataTuple>   executedOrders;
+}
+\end{verbatim}
+
+Order Manager has two connections to ESS: a writer and a reader clients. Each of them runs in different thread. Reader client is invoked by \emph{startReading} function. It creates a loop where \emph{processOrder} is called repeatedly. Writer client is invoked by \emph{sendOrder} function. It gets a list of order requests form trading algorithm adds them to \emph{dataOrders} list and sends them to ESS. \emph{processOrder} function in turn checks \emph{dataOrders} whether it an order with the same order ID as incoming message \emph{tuple}. If it does the update to \emph{dataOrders} is made and change in statistics for appropriate algorithm.
+
+\emph{executedOrder} stores all completed requests. \emph{orderIDtoLocalId} is a map from Server's identifier for each order to internal identifier used by Order Manager for each order.
+
+
+\subsubsection{Data Collection}
+DataCollection class provides high level interface to ESS. It contains a \emph{ToasterConnection}. 
+
+\begin{verbatim}
+class DataCollection
+{
+    void ReadSOBI();
+    void update();
+    ToasterConnection toaster.
+}
+\end{verbatim}
+
+Toaster Connection is a thrift client to DBToaster Runtime. It collects results of queries from Runtime. 
+
+Data Collections also contains a number of read and update functions to collect and extract needed data from query results.
+
+%\subsubsection{Data Stream}
+
+%There are two interactions with outside systems needed to be implemented by the user. The first interaction is with DBToaster. A system needs to pull information from the DBToaster runtime. \emph{TODO description of the the pulling mechanism}.
+
+%Another interaction, which needs to be passed to the DBToaster Runtime, is a way for Runtime to access the data streams relevant to the Engine and over which the queries needed to be post. This information is specified as a C++ code which is sent for the compilation to the Runtime to be added to the system.
+
+%\subsubsection{External Influence}
+
+%If the Engine implements interactive process, which needs to access outside processes or interact (influence) them then this is interactivity needs also to be added. In our example Algorithmic Engine can buy and sell stock on our Exchange Simulation Server. Thus acting like one of the clients of the server. \emph{TODO describe the system in more details}
+
+\subsubsection{Algorithms}
+
+Algorithms are the most interesting part of Algorithms Engine and are a driving force for DBToaster Runtime. Each Algorithms makes a decision about buying or selling stocks based on information received from ESS. Relevant information for each algorithm can be extracted by running a query over Order Books of ESS. DBToaster Runtime provides the functionality to do so. 
+
+Currently there is a set of algorithms implemented by Algorithms Engine. 
+
+\paragraph{Simple SOBI}
+
+Static Order Book Imbalance (SOBI) is a strategy of comparing the difference between last known stock price and volume-weighted average price (vwap) of stock in each order book. For example, a much greater difference between last price and vwap of an ask book to that of bid price indicates that sellers do not support current price and that price has a great chance of rising. (The reverse works for bids.)
+
+Simple SOBI strategy looks at this imbalance and when one value is four times greater than another, simple SOBI buys/sells a fixed number of stocks at a current price. (Four times greater is completely arbitrary number)
+
+\paragraph{Volatile SOBI}
+
+Volatile SOBI is a derivation of simple SOBI. It additionally takes into account information about price's standard deviation. The strategy buys/sells stocks when the difference between vwap and last price is greater than standard deviation.
+
+\paragraph{Timed SOBI}
+
+Timed SOBI is a strategy similar to Simple SOBI. It looks at an average timestamp for the top orders in each order book. The shift to older values of time stamps indicates lessened support of the current price in this order book. Appropriate buy or sell order is generated for a fixed number of shares and at a current price. 
+
+\paragraph{Market Players}
+ 
+
+This strategy creates a query over both Order Books. This query looks for all traders, which try to sell and buys stocks at the same time. In particular it looks for cases where a trader wants to sell small amount of stocks at a price a little bit higher than a current price. And the same trader wants to buy a large amount of stocks at a price lower then current price. The strategy will place a sell order just below the sell order of this trader. The revers of this strategy is also executed.
+\\
+\\
+Timed SOBI and Market Players are not yet operational. At the moment both of them are unsupported by the Runtime.
+
+%This is the part which is the most relevant to the user and will vary from system to system. In out example we encoded the learning and trading strategies for NASDAQ stock exchange. \emph{TODO describe the system in more details}
+
+\subsubsection{Query Creator}
+
+At the moment Algorithms Engine does not provide a support for writing SQL queries and sending them to be added to DBToaster Runtime. This functionality needs to be implemented. This will require additional support from both Runtime and Toaster Connection.
+
+%Queries posed to the DBRuntime can come from various sources they can either be predefined by the user system or written and modified dynamically. In order to be active they need to be passed to the Runtime where they are compiled and added to stream observations. \emph{TODO describe the process more}
 
 
 
