@@ -31,9 +31,9 @@ which is used to create continuous variables\footnote{For discrete distributions
 
 %Angle brackets around a random variable are shorthand for the variable's expectation.  All instances of this are replaced by a call to pip's expectation sampling function.  
 
-To complete the illusion, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following three effects:
+To complete the illusion of working with static data, we have modified PostgreSQL itself to add support for C-Table constructs.  Under the modified PostgreSQL when defining a datatype, it is possible to declare it as a CTYPE; doing so has the following three effects:
 \begin{itemize}
-\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.  For example, if either $(A>B)$ resolves to a CTYPE variable, 
+\item CTYPE columns (and conjunctions of CTYPE columns) may appear in the WHERE and HAVING clauses of a SELECT statement.  When found, the CTYPE components of clause are moved to the SELECT's target clause.
 {\small\begin{verbatim}
   select *
   from   inputs
@@ -47,10 +47,30 @@ is rewritten to
 \end{verbatim}}
 
 \item SELECT target clauses are rewritten to ensure that all CTYPE columns in input tables are passed through.   The exception to this is in the case of special probability-removing functions.  If the select statement contains one or more such functions (typically aggregates, or the conf operator), CTYPE columns are not passed through.  
+{\small\begin{verbatim}
+  select X,Y
+  from   inputs
+\end{verbatim}}
+is rewritten to
+{\small\begin{verbatim}
+  select X,Y,inputs.phi1,inputs.phi2,...
+  from   inputs
+\end{verbatim}}
 
 \item In the case of aggregates, the mechanism by which CTYPE columns may be passed through is unclear.  Thus If the select statement contains an aggregate and one or more input tables have CTYPE columns, the query causes an error unless the aggregate is labeled as a probability-removing function.
 
 \item UNION operations are rewritten to ensure that the number of CTYPE columns in their inputs is consistent.  If one input table has more CTYPE columns of a given type than the other, the latter is padded with NULL constraints.
+{\small\begin{verbatim}
+  -- left(X,phi1), right(X,phi1,phi2)
+  select *
+  from   left UNION right
+\end{verbatim}}
+is rewritten to
+{\small\begin{verbatim}
+  select *
+  from   (select *,NULL AS phi2 FROM left
+         ) UNION right
+\end{verbatim}}
 
 \end{itemize}
 
@@ -114,7 +134,7 @@ PIP provides several functions for analyzing the uncertainty encoded in a c-tabl
 \item \texttt{expected\_sum\_hist()}, \texttt{expected\_max\_hist()} are similar to the above aggregates in that they perform sampling.  However, instead of outputting the average of the results, it instead outputs an array of all the generated samples.  This array may be used to generate histograms and similar visualizations.
 \end{itemize}
 
-Aggregates pose a challenge for the query phase of the PIP evaluation process.  Though it is theoretically possible to create composite variables that represent aggregates of their inputs, in practice it is infeasible to do so.  The size of such a composite is not just unbounded, but linear in the size of the input table.  A composite aggregate variable could easily grow to an unmanageable level.  Instead, PIP limits random variable aggregation to the sampling phase.  
+Aggregates pose a challenge for the query phase of the PIP evaluation process.  Though it is theoretically possible to create composite variables that represent aggregates of their inputs, in practice it is infeasible to do so.  The size of such a composite is not just unbounded, but linear in the size of the input table.  A variable symbolically representing an aggregate's output could easily grow to an unmanageable level.  Instead, PIP limits random variable aggregation to the sampling phase.  
 
 
 

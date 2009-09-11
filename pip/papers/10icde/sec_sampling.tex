@@ -8,12 +8,10 @@ h(t(\vec{x}_i))
 \end{equation}
 faces a number of difficulties.  In particular, samples for which $\chi_{\phi}$ is zero do not contribute to an expectation.  If $\phi$ is a very selective condition, most samples do not contribute to the summation computation of the approximate expectation.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
 
-The primary challenge faced by PIP is exactly this. Particularly in highly selective queries, the general-purpose sampling routines provided for each distribution will produce samples that violate query constraints $\phi$.  (This is closely related to the most prominent problem in online aggregation systems \cite{OnlineAggregation,DBO}, and also in MCDB).
-
 \begin{example}\em 
 Consider a row containing the variable 
 $$[Y \Rightarrow Normal(\mu=5,\sigma^2=10)]$$
-and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$, or about $0.17$.  
+and the condition predicate $(Y > -3)$ and $(Y < 2)$.  The expectation of the variable $Y$ in the context of this row is not $5$.  Rather the expectation is taken only over samples of $Y$ that fall in the range $(-3,2)$, (coming out to approximately $0.17$).  
 \end{example}
 
 \subsection{Sampling Techniques}
@@ -99,10 +97,44 @@ By generating a small number of samples for the subgroup, PIP can generate a rou
 %integration is most effective.
 
 
-\subsection{Sampling Operators}
-After a query has been evaluated on probabilistic data, what remains is another set of probabilistic data.  To permit analysis of this data, PIP provides a set of sampling operators: functions that convert probabilistic data into deterministic metrics.  These operators take in an expression to be evaluated and the expression's context, or boolean formula of constraints associated with the expression's row and output a histogram, expectation, or higher moment for the expression under the constraints of its context.  As described in Section \ref{sec:background}, without loss of generality, it is possible to express the context as a set of conditions to be combined conjunctively.  
+\subsection{Row-Level Sampling Operators}
+Evaluating a query on a probabilistic table (or tables) produces as output another probabilistic table.  Though the raw probabilistic data has value, the ultimate goal is to compute statistical metrics: expectations, moments, etc.  To achieve this goal, PIP provides a set of sampling operators: functions that convert probabilistic data into deterministic metrics.  
 
-These basic sampling operators follow \textit{per-row sampling semantics}.  The metric in question is taken over only the volume of probability space defined by the expression's context.  For example, in the case of Monte-Carlo sampling, only samples satisfying all of the context's conditions are considered.  All other samples are discarded, not even counting towards the net value.  If the context is contradictory, a value of NAN will result.
+\begin{example}\em
+Consider the c-tables 
+\[
+\begin{tabular}{lr}
+\begin{tabular}{c|c|c}
+R & $A$ & $\phi_1$\\
+\hline
+& $5$ & $(X > 4)$ 
+\end{tabular} & \begin{tabular}{c|c|c}
+ S & $B$ & $\phi_2$ \\
+\hline
+& $X$ & $(Y > 2)$
+\end{tabular}
+\end{tabular}
+\]
+
+The query {\small\begin{verbatim}
+  select A * B as C from R, S;
+\end{verbatim}} produces the result table
+\[
+\begin{tabular}{c|c|c}
+T & $C$ & $\phi$\\
+\hline
+& $5\cdot X$ & $(X > 4) \wedge (Y > 2)$ 
+\end{tabular}
+\]
+
+It is useful to know that T contains a probabilistic value equal to $5 \cdot X$ for samples where $X > 4$ and $Y > 2$, and is empty otherwise.  However, analysis of large volumes of data in this form requires the ability to summarize and/or aggregate.  Analyzing a table containing several hundred or more rows of this form becomes easier if a histogram is available.
+\end{example}
+
+Sampling operators take in an expression to be evaluated and the expression's context, or boolean formula of constraints associated with the expression's row and output a histogram, expectation, or higher moment for the expression under the constraints of its context.  As described in Section \ref{sec:background}, without loss of generality, it is possible to express the context as a set of conditions to be combined conjunctively.  
+
+This paper focuses predominantly on sampling operators that follow \textit{per-row sampling semantics}.  Under these semantics, each row is sampled independently.  The metric in question is taken for only over the volume of probability space defined by the expression's context for each row.  For example, in the case of Monte-Carlo sampling, samples are generated for each row, but only samples satisfying the row's context are considered.  All other samples are discarded.  If the context is unsatisfiable, a value of NAN will result.
+
+The choice to focus on per-row sampling operators is motivated by efficiency concerns.  If the results table is larger than main memory, the sampling process can become IO-bound.  Per-row sampling operators require only a single pass (or potentially a second pass if additional precision is required) over the results.  While we do consider table-wide sampling semantics out of necessity for some aggregates, the development of additional table-wide techniques is beyond the scope of this paper.
 
 Note that the resulting metrics are still probabilistic data; The metric being computed is valid for the variable expression in the context of the row, but the row is still only present in the database for variable valuations satisfying the row's context.  The conf operator is used to obtain the probability of a satisfying valuation, a value known as the row's confidence.  If the conf operator is present, all conditions applying to the row are removed from the result and the resulting table is deterministic.
 
@@ -114,22 +146,26 @@ If any of the variables have a CDF available, PIP first attempts to obtain weak 
 
 %\vspace*{0.05in}
 \begin{figure}
-\begin{algorithm} The expectation operator
+\begin{algorithm} The expectation operator; Given an expression and context condition, compute  the expression's expectation given that the condition is true and optionally also compute the probability $P[C]$ of the condition being true.  If sampling is necessary, both values are computed with $\epsilon, \delta$ precision.
 \label{alg:roadmap}
 \footnotesize
 \begin{enumerate}
-\item $expectation($Expression $E,$ Condition $C,$ Bool $agg,$ Goal $\{\delta, \epsilon\})$
+\item $expectation($Expression $E,$ Condition $C,$ Bool $getP,$ Goal $\{\epsilon, \delta\})$
 \item \hspace*{0.1in} let $\bar X$ = the set of variables in $E$
 \item \hspace*{0.1in} let $target = \sqrt{2}\cdot $erf$^{-1}(1-\epsilon)$
 \item \hspace*{0.1in} let $N = 0; Sum = 0; SumSq = 0$
 \item \hspace*{0.1in} foreach variable group $K \in C$ s.t. $\exists X \in K \wedge X \in \bar X$ 
 \item \hspace*{0.2in} let $Count[K] = 0;$ $Sampler[X] = $Natural$\ \forall X \in K$
-\item \hspace*{0.2in} $consistencyCheck(K)$ (saving the interval map $S$)
+\item \hspace*{0.2in} $consistencyCheck(K)$ \textit{(See Alg \ref{alg:consistCheck})}
+\\    \hspace*{0.2in} \textit{(save the bounds map $S$ generated by consistencyCheck())}
 \item \hspace*{0.2in} If inconsistent, return $($NAN$,0)$
+\\    \hspace*{0.2in} \textit{(if a given variable has bounds, try to sample within those bounds)}
 \item \hspace*{0.2in} foreach $X$ s.t. $S[X] \neq [-\infty, \infty] \wedge X$ has CDF/CDF$^{-1}$ functions
 \item \hspace*{0.3in} $Sampler[X] =$ CDF
+\item \hspace*{0.1in} (keep sampling until we have enough samples for $\epsilon, \delta$ precision.)
 \item \hspace*{0.1in} while $\left[target \cdot \left|(\frac{Sum}{N})^2 - \frac{SumSq}{N}\right| + \frac{Sum}{N}\right] < \left[\delta \cdot Sum\right]$  \\\hspace*{0.4in} AND $N < 1/delta$
 \item \hspace*{0.2in} N = N+1
+\\    \hspace*{0.2in} \textit{(We only need samples for variables in both $E$ and $C$)}
 \item \hspace*{0.2in} foreach variable group $K \in C$ s.t. $\exists X \in K \wedge X \in \bar X$
 \item \hspace*{0.3in} if $Sampler[X] =$ Metropolis for any $X \in K$
 \item \hspace*{0.4in} run metropolis over saved state for group K
@@ -140,19 +176,23 @@ If any of the variables have a CDF available, PIP first attempts to obtain weak 
 \item \hspace*{0.6in} Sampler[X] = Metropolis $\forall X \in K$
 \item \hspace*{0.6in} scan for start point to initialize Metropolis state for $K$ 
 \item \hspace*{0.6in} if unable to find a start point return (NAN, 0)
-\item \hspace*{0.6in} continue to next K (line 13)
+\item \hspace*{0.6in} continue to next K \textit{(line 14)}
 \item \hspace*{0.5in} else return (NAN, 0)
 \item \hspace*{0.4in} generate one instance of all $X \in K$ using $Sampler[X]$
 \item \hspace*{0.3in} ... while samples do not satisfy $K$
 \item \hspace*{0.2in} update $Sum = Sum + E[\bar X]$, $SumSq = SumSq + E[\bar X]^2$
 \item \hspace*{0.1in} let $Prob = \prod_K \frac{N}{Count[K]}$ $\forall K$ not sampled via Metropolis
-\item \hspace*{0.1in} if $agg =$ True
+\\    \hspace*{0.1in} \textit{(We've gotten some work towards $P[C]$ for free already)}
+\\    \hspace*{0.1in} \textit{(If the we actually care about it, we might have more work)}
+\item \hspace*{0.1in} if $getP =$ True
+\\    \hspace*{0.2in} \textit{(Variables in $C$ but not $E$ haven't been processed yet)}
+\\    \hspace*{0.2in} \textit{(Also, Metropolis doesn't give us a probability)}
 \item \hspace*{0.2in} foreach variable group $K \in C$ \\ \hspace*{0.5in}s.t. $\not\exists X \in K \wedge [X \in \bar X \vee Sampler[X] =$ Metropolis$]$ 
 \item \hspace*{0.3in} if $|K|_{Vars} = 1$ AND $X\in K$ has a CDF function
 \item \hspace*{0.4in} use CDF to integrate $P[K]$
-\item \hspace*{0.3in} else integrate by sampling as above (w/o metropolis)
+\item \hspace*{0.3in} else integrate by sampling as above \textit{(w/o metropolis)}
 \item \hspace*{0.3in} update $Prob = Prob \cdot P[K]$
-\item \hspace*{0.1in} return $(\frac{Sum}{N}, P)$ /* \textit{P is ignored if $agg =$ False} */
+\item \hspace*{0.1in} return $(\frac{Sum}{N}, Prob)$ (P is ignored if $getP =$ False)
 \end{enumerate}
 \end{algorithm}\vspace*{-0.2in}
 \end{figure}
@@ -179,11 +219,34 @@ Aggregate operators (eg. sum, avg, stddev) applied to c-tables introduce a new f
 
 This added complexity, coupled with the frequency with which they appear at the root of a query plan, makes them an ideal point at which to perform sampling.  As aggregates compute expectations over entire tables, the probability of a given row's presence in the table can be included are included in the aggregate's expectation.  This behavior is termed \textit{per-table sampling semantics}.
 
-We begin with the simplest form of aggregate expectation, that of an aggregate that obeys linearity of expectation ($\left<f(\vec{x})\right> = f(\vec{\left<x\right>})$), such as sum().  Such aggregates are straightforward to implement: per-row expectations of $f(\vec x)\chi(\vec x)$ are computed, and aggregated (e.g., summed up).  Of note however, is the effect that the operator has on the variance of the result.  In the case of sum(), each expectation can be viewed as a Normally distributed random variable with a shared, predetermined variance.  By the law of large numbers, the sum of a set of $N$ random variables with equal variance $\sigma$ has a variance of $\frac{\sigma}{\sqrt{N}}$.  In other words, when computing the expected sum of $N$ variables, we can reduce the number of samples taken for each individual element by a factor of $\frac{1}{\sqrt{N}}$.
+We begin with the simplest form of aggregate expectation, that of an aggregate that obeys linearity of expectation ($E[f(\vec{x})] = f(\vec{E[x]})$), such as sum().  Such aggregates are straightforward to implement: per-row expectations of $f(\vec x)\chi(\vec x)$ are computed, and aggregated (e.g., summed up).  Of note however, is the effect that the operator has on the variance of the result.  In the case of sum(), each expectation can be viewed as a Normally distributed random variable with a shared, predetermined variance.  By the law of large numbers, the sum of a set of $N$ random variables with equal standard deviation $\sigma$ has a variance of $\frac{\sigma}{\sqrt{N}}$.  In other words, when computing the expected sum of $N$ variables, we can reduce the number of samples taken for each individual element by a factor of $\frac{1}{\sqrt{N}}$.
 
-If the operator does not obey linearity of expectation (e.g., computing the maximum), either the aggregate must be designed with expectation computation in mind, or the aggregate must be run on a set of sampled worlds in parallel.  This latter technique is a worst-case approach to the problem; it may be necessary to re-run the aggregate if an insufficient number of sample worlds are generated. This is still more efficient than re-running the entire query.
+If the operator does not obey linearity of expectation (e.g., the max aggregate), the aggregate implementation is made more difficult.  Any aggregate may still be implemented naively by evaluating it in parallel on a set of sample worlds instantiated prior to evaluation.  This is a worst-case approach to the problem; it may be necessary to perform a second pass over the results if an insufficient number of sample worlds are generated.  However, more efficient special case aggregates, specifically designed to compute expectations are possible.
 
-The max() aggregate can be implemented more efficiently, particularly when the target expression is a constant (ie, a value that is certain for the row in question).  Given a table table sorted over descending values of the target expression, PIP estimates the probability that the first element in the table (the highest value) is present.  The aggregate expectation is initialized as the product of this probability and the first element.  The second term is maximal only if the first term is not present; when computing the probability of the second term, we must compute the probability of all the second term's constraint atoms being fulfilled while at least one of the first atom's terms is not fulfilled.  Though the complexity of this process is exponential in the number of rows, the probability of each successive row being maximal drops exponentially.  %Thus, it only requires a number of steps logarithmic in the precision required.
+
+For example, consider the max() aggregate.  If the target expression is a constant, this aggregate can be implemented extremely efficiently.  Given a table sorted over descending values of the target expression, PIP estimates the probability that the first element in the table (the highest value) is present.  The aggregate expectation is initialized as the product of this probability and the first element.  The second term is maximal only if the first term is not present; when computing the probability of the second term, we must compute the probability of all the second term's constraint atoms being fulfilled while at least one of the first atom's terms is not fulfilled.  Though the complexity of this process is exponential in the number of rows, the probability of each successive row being maximal drops exponentially.  
+
+\begin{example}\em
+To illustrate this, consider the table (annotated with probabilities)
+\[
+\begin{tabular}{c|c|c|c}
+R & $A$ & $\phi$ & $P[\phi]$\\
+\hline
+& 5 & $X \ge 7$ & 0.7 \\
+& 4 & $Y \ge 7$ & 0.8  \\
+& 1 & $Z \ge 7$ & 0.3  \\
+& 0 & $Q \ge 7$ & 0.6  \\
+\end{tabular}
+\]
+Based on the probabilities listed above,
+$$E[\max(A)] = 5 \cdot 0.7 + 4 \cdot 0.8 + 1 \cdot 0.3 + 0 \cdot 0.6$$
+However, if the desired precision is $0.1$, we can stop scanning after the second record since the maximum any later record can change the result is $1-(1-0.7)*(1-0.8) = 0.056$.
+
+\end{example}
+
+
+
+%Thus, it only requires a number of steps logarithmic in the precision required.
 
 
 
