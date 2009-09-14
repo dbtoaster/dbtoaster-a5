@@ -1,0 +1,291 @@
+<graphml>
+    <graph id="query19" edgedefault="directed">
+    <key id="name" for="node" attr.name="name" attr.type="string"/>
+        <node id="p0">
+        <data key="name">p0</data>
+        </node>
+        <node id="dom0">
+        <data key="name">dom0</data>
+        </node>
+        <node id="var3">
+        <data key="name">var3</data>
+        </node>
+        <node id="p">
+        <data key="name">p</data>
+        </node>
+        <node id="map0">
+        <data key="name">map0</data>
+        </node>
+        <node id="map0[p0]">
+        <data key="name">map0[p0]</data>
+        </node>
+        <node id="v">
+        <data key="name">v</data>
+        </node>
+        <node id="var2">
+        <data key="name">var2</data>
+        </node>
+        <node id="bids">
+        <data key="name">bids</data>
+        </node>
+        <node id="t">
+        <data key="name">t</data>
+        </node>
+        <node id="id">
+        <data key="name">id</data>
+        </node>
+        <node id="broker_id">
+        <data key="name">broker_id</data>
+        </node>
+        <node id="t11">
+        <data key="name">t11</data>
+        </node>
+        <node id="id11">
+        <data key="name">id11</data>
+        </node>
+        <node id="broker_id11">
+        <data key="name">broker_id11</data>
+        </node>
+        <node id="p11">
+        <data key="name">p11</data>
+        </node>
+        <node id="v11">
+        <data key="name">v11</data>
+        </node>
+        <node id="var5">
+        <data key="name">var5</data>
+        </node>
+        <node id="t22">
+        <data key="name">t22</data>
+        </node>
+        <node id="id22">
+        <data key="name">id22</data>
+        </node>
+        <node id="broker_id22">
+        <data key="name">broker_id22</data>
+        </node>
+        <node id="p22">
+        <data key="name">p22</data>
+        </node>
+        <node id="v22">
+        <data key="name">v22</data>
+        </node>
+        <node id="var6">
+        <data key="name">var6</data>
+        </node>
+        <node id="map0[p]">
+        <data key="name">map0[p]</data>
+        </node>
+        <node id="var4">
+        <data key="name">var4</data>
+        </node>
+        <node id="bind0">
+        <data key="name">bind0</data>
+        </node>
+        <node id="var8">
+        <data key="name">var8</data>
+        </node>
+        <node id="map1">
+        <data key="name">map1</data>
+        </node>
+        <node id="var7">
+        <data key="name">var7</data>
+        </node>
+        <node id="map1[var8]">
+        <data key="name">map1[var8]</data>
+        </node>
+        <node id="t0">
+        <data key="name">t0</data>
+        </node>
+        <node id="id0">
+        <data key="name">id0</data>
+        </node>
+        <node id="broker_id0">
+        <data key="name">broker_id0</data>
+        </node>
+        <node id="v0">
+        <data key="name">v0</data>
+        </node>
+        <node id="var9">
+        <data key="name">var9</data>
+        </node>
+        <node id="map1[bind0]">
+        <data key="name">map1[bind0]</data>
+        </node>
+        <node id="var0">
+        <data key="name">var0</data>
+        </node>
+        <node id="var11">
+        <data key="name">var11</data>
+        </node>
+        <node id="map2">
+        <data key="name">map2</data>
+        </node>
+        <node id="var10">
+        <data key="name">var10</data>
+        </node>
+        <node id="map2[var11]">
+        <data key="name">map2[var11]</data>
+        </node>
+        <node id="var12">
+        <data key="name">var12</data>
+        </node>
+        <node id="map2[bind0]">
+        <data key="name">map2[bind0]</data>
+        </node>
+        <node id="var1">
+        <data key="name">var1</data>
+        </node>
+        <node id="var15">
+        <data key="name">var15</data>
+        </node>
+        <node id="var20">
+        <data key="name">var20</data>
+        </node>
+        <node id="var19">
+        <data key="name">var19</data>
+        </node>
+        <node id="var16">
+        <data key="name">var16</data>
+        </node>
+        <node id="var22">
+        <data key="name">var22</data>
+        </node>
+        <node id="var21">
+        <data key="name">var21</data>
+        </node>
+        <node id="map1[var22]">
+        <data key="name">map1[var22]</data>
+        </node>
+        <node id="var24">
+        <data key="name">var24</data>
+        </node>
+        <node id="var23">
+        <data key="name">var23</data>
+        </node>
+        <node id="map2[var24]">
+        <data key="name">map2[var24]</data>
+        </node>
+        <edge source="p0" target="dom0"/>
+        <edge source="var3" target="var3"/>
+        <edge source="var3" target="p"/>
+        <edge source="var3" target="p0"/>
+        <edge source="map0" target="map0[p0]"/>
+        <edge source="map0[p0]" target="p0"/>
+        <edge source="map0[p0]" target="map0[p0]"/>
+        <edge source="map0[p0]" target="v"/>
+        <edge source="map0[p0]" target="var3"/>
+        <edge source="var2" target="var2"/>
+        <edge source="var2" target="p0"/>
+        <edge source="var2" target="map0[p0]"/>
+        <edge source="dom0" target="p"/>
+        <edge source="bids" target="t"/>
+        <edge source="bids" target="id"/>
+        <edge source="bids" target="broker_id"/>
+        <edge source="bids" target="p"/>
+        <edge source="bids" target="v"/>
+        <edge source="t11" target="bids"/>
+        <edge source="id11" target="bids"/>
+        <edge source="broker_id11" target="bids"/>
+        <edge source="p11" target="bids"/>
+        <edge source="v11" target="bids"/>
+        <edge source="var5" target="var5"/>
+        <edge source="var5" target="v11"/>
+        <edge source="t22" target="bids"/>
+        <edge source="id22" target="bids"/>
+        <edge source="broker_id22" target="bids"/>
+        <edge source="p22" target="bids"/>
+        <edge source="v22" target="bids"/>
+        <edge source="var6" target="var6"/>
+        <edge source="var6" target="v22"/>
+        <edge source="var6" target="p22"/>
+        <edge source="var6" target="p"/>
+        <edge source="map0" target="map0[p]"/>
+        <edge source="map0[p]" target="p"/>
+        <edge source="map0[p]" target="var5"/>
+        <edge source="map0[p]" target="var6"/>
+        <edge source="var4" target="var4"/>
+        <edge source="var4" target="p"/>
+        <edge source="var4" target="map0[p]"/>
+        <edge source="bind0" target="var2"/>
+        <edge source="bind0" target="var4"/>
+        <edge source="var8" target="map1"/>
+        <edge source="var7" target="var7"/>
+        <edge source="var7" target="p"/>
+        <edge source="var7" target="var8"/>
+        <edge source="map1" target="map1[var8]"/>
+        <edge source="map1[var8]" target="var8"/>
+        <edge source="map1[var8]" target="map1[var8]"/>
+        <edge source="map1[var8]" target="p"/>
+        <edge source="map1[var8]" target="v"/>
+        <edge source="map1[var8]" target="var7"/>
+        <edge source="t0" target="bids"/>
+        <edge source="id0" target="bids"/>
+        <edge source="broker_id0" target="bids"/>
+        <edge source="p0" target="bids"/>
+        <edge source="v0" target="bids"/>
+        <edge source="var9" target="var9"/>
+        <edge source="var9" target="p0"/>
+        <edge source="var9" target="v0"/>
+        <edge source="var9" target="bind0"/>
+        <edge source="map1" target="map1[bind0]"/>
+        <edge source="map1[bind0]" target="bind0"/>
+        <edge source="map1[bind0]" target="var9"/>
+        <edge source="var0" target="var0"/>
+        <edge source="var0" target="map1[bind0]"/>
+        <edge source="var11" target="map2"/>
+        <edge source="var10" target="var10"/>
+        <edge source="var10" target="p"/>
+        <edge source="var10" target="var11"/>
+        <edge source="map2" target="map2[var11]"/>
+        <edge source="map2[var11]" target="var11"/>
+        <edge source="map2[var11]" target="map2[var11]"/>
+        <edge source="map2[var11]" target="v"/>
+        <edge source="map2[var11]" target="var10"/>
+        <edge source="var12" target="var12"/>
+        <edge source="var12" target="v0"/>
+        <edge source="var12" target="p0"/>
+        <edge source="var12" target="bind0"/>
+        <edge source="map2" target="map2[bind0]"/>
+        <edge source="map2[bind0]" target="bind0"/>
+        <edge source="map2[bind0]" target="var12"/>
+        <edge source="var1" target="var1"/>
+        <edge source="var1" target="map2[bind0]"/>
+        <edge source="var15" target="var0"/>
+        <edge source="var15" target="var1"/>
+        <edge source="var20" target="var20"/>
+        <edge source="var20" target="p"/>
+        <edge source="var20" target="p0"/>
+        <edge source="map0[p0]" target="var20"/>
+        <edge source="var19" target="var19"/>
+        <edge source="var19" target="p0"/>
+        <edge source="var19" target="map0[p0]"/>
+        <edge source="bind0" target="var16"/>
+        <edge source="bind0" target="var19"/>
+        <edge source="var22" target="map1"/>
+        <edge source="var21" target="var21"/>
+        <edge source="var21" target="p"/>
+        <edge source="var21" target="bind0"/>
+        <edge source="map1" target="map1[var22]"/>
+        <edge source="map1[var22]" target="var22"/>
+        <edge source="map1[var22]" target="map1[var22]"/>
+        <edge source="map1[var22]" target="p"/>
+        <edge source="map1[var22]" target="v"/>
+        <edge source="map1[var22]" target="var21"/>
+        <edge source="map1" target="var22"/>
+        <edge source="map1" target="bind0"/>
+        <edge source="map1[var22]" target="bind0"/>
+        <edge source="var24" target="map2"/>
+        <edge source="var23" target="var23"/>
+        <edge source="var23" target="p"/>
+        <edge source="var23" target="bind0"/>
+        <edge source="map2" target="map2[var24]"/>
+        <edge source="map2[var24]" target="var24"/>
+        <edge source="map2[var24]" target="map2[var24]"/>
+        <edge source="map2[var24]" target="v"/>
+        <edge source="map2[var24]" target="var23"/>
+        <edge source="map2" target="var24"/>
+        <edge source="map2" target="bind0"/>
+        <edge source="map2[var24]" target="bind0"/>
+    </graph>
+</graphml>

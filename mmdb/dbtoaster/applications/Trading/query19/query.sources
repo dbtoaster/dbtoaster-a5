@@ -1,0 +1,18 @@
+<sources>
+    <relation name="bids">
+    <stream type="socket"/>
+    <source type="DBToaster::DemoDatasets::OrderbookSocketStream" instance ="BidsOrderbook1">
+        <arg pos="0" val="&quot;20081201.csv&quot;"/>
+        <arg pos="1" val="10000"/>
+    </source>
+    <tuple type="DBToaster::DemoDatasets::OrderbookTuple"/>
+    <adaptor type="DBToaster::DemoDatasets::OrderbookTupleAdaptor">
+        <binding queryname="t" tuplename="t"/>
+        <binding queryname="id" tuplename="id"/>
+        <binding queryname="broker_id" tuplename="broker_id"/>
+        <binding queryname="p" tuplename="price"/>
+        <binding queryname="v" tuplename="volume"/>
+    </adaptor>
+    <thrift namespace="datasets"/>
+    </relation>
+</sources>

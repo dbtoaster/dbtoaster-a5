@@ -1,0 +1,274 @@
+<tree>
+<declarations>
+<attributeDecl name="attribute_identifier" type="String"/>
+<attributeDecl name="variable_identifier"  type="String"/>
+<attributeDecl name="function_identifier"  type="String"/>
+<attributeDecl name="type_identifier"      type="String"/>
+<attributeDecl name="field_identifier"     type="String"/>
+<attributeDecl name="relation_identifier"  type="String"/>
+<attributeDecl name="state_identifier"     type="String"/>
+<attributeDecl name="delta"                type="String"/>
+<attributeDecl name="aggregate"            type="String"/>
+<attributeDecl name="oplus"                type="String"/>
+<attributeDecl name="poplus"               type="String"/>
+<attributeDecl name="eterm-type"           type="String"/>
+<attributeDecl name="eterm-val"            type="String"/>
+<attributeDecl name="meterm-type"          type="String"/>
+<attributeDecl name="meterm-val"           type="String"/>
+<attributeDecl name="expression"           type="String"/>
+<attributeDecl name="bterm"                type="String"/>
+<attributeDecl name="boolexpression"       type="String"/>
+<attributeDecl name="mapexpression"        type="String"/>
+<attributeDecl name="plan"                 type="String"/>
+</declarations>
+<branch>
+    <attribute name="mapexpression" value="mapaggregate"/>
+    <attribute name="aggregate" value="sum"/>
+    <branch>
+        <attribute name="mapexpression" value="product"/>
+        <branch>
+            <attribute name="mapexpression" value="meterm"/>
+            <leaf>
+                <attribute name="meterm-type" value="attr"/>
+                <attribute name="attribute_identifier" value="unqualified,p"/>
+            </leaf>
+        </branch>
+        <branch>
+            <attribute name="mapexpression" value="meterm"/>
+            <leaf>
+                <attribute name="meterm-type" value="attr"/>
+                <attribute name="attribute_identifier" value="unqualified,v"/>
+            </leaf>
+        </branch>
+    </branch>
+    <branch>
+        <attribute name="plan" value="select"/>
+        <branch>
+            <attribute name="boolexpression" value="bterm"/>
+            <branch>
+                <attribute name="bterm" value="mgt"/>
+                <branch>
+                    <attribute name="mapexpression" value="minus"/>
+                    <branch>
+                        <attribute name="mapexpression" value="product"/>
+                        <branch>
+                            <attribute name="mapexpression" value="meterm"/>
+                            <leaf>
+                                <attribute name="meterm-type" value="float"/>
+                                <attribute name="meterm-val" value="0.25"/>
+                            </leaf>
+                        </branch>
+                        <branch>
+                            <attribute name="mapexpression" value="mapaggregate"/>
+                            <attribute name="aggregate" value="sum"/>
+                            <branch>
+                                <attribute name="mapexpression" value="meterm"/>
+                                <leaf>
+                                    <attribute name="meterm-type" value="attr"/>
+                                    <attribute name="attribute_identifier" value="unqualified,v1"/>
+                                </leaf>
+                            </branch>
+                            <leaf>
+                                <attribute name="plan" value="relation"/>
+                                <attribute name="relation_identifier" value="bids"/>
+                                <attribute name="field_identifier" value="t1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="id1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="broker_id1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="p1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="v1"/>
+                                <attribute name="type_identifier" value="int"/>
+                            </leaf>
+                        </branch>
+                    </branch>
+                    <branch>
+                        <attribute name="mapexpression" value="mapaggregate"/>
+                        <attribute name="aggregate" value="sum"/>
+                        <branch>
+                            <attribute name="mapexpression" value="meterm"/>
+                            <leaf>
+                                <attribute name="meterm-type" value="attr"/>
+                                <attribute name="attribute_identifier" value="unqualified,v2"/>
+                            </leaf>
+                        </branch>
+                        <branch>
+                            <attribute name="plan" value="select"/>
+                            <branch>
+                                <attribute name="boolexpression" value="bterm"/>
+                                <branch>
+                                    <attribute name="bterm" value="gt"/>
+                                    <branch>
+                                        <attribute name="expression" value="eterm"/>
+                                        <leaf>
+                                            <attribute name="eterm-type" value="attr"/>
+                                            <attribute name="attribute_identifier" value="unqualified,p2"/>
+                                        </leaf>
+                                    </branch>
+                                    <branch>
+                                        <attribute name="expression" value="eterm"/>
+                                        <leaf>
+                                            <attribute name="eterm-type" value="attr"/>
+                                            <attribute name="attribute_identifier" value="unqualified,p"/>
+                                        </leaf>
+                                    </branch>
+                                </branch>
+                            </branch>
+                            <leaf>
+                                <attribute name="plan" value="relation"/>
+                                <attribute name="relation_identifier" value="bids"/>
+                                <attribute name="field_identifier" value="t2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="id2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="broker_id2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="p2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="v2"/>
+                                <attribute name="type_identifier" value="int"/>
+                            </leaf>
+                        </branch>
+                    </branch>
+                </branch>
+            </branch>
+        </branch>
+        <leaf>
+            <attribute name="plan" value="relation"/>
+            <attribute name="relation_identifier" value="bids"/>
+            <attribute name="field_identifier" value="t"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="id"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="broker_id"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="p"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="v"/>
+            <attribute name="type_identifier" value="int"/>
+        </leaf>
+    </branch>
+</branch>
+<branch>
+    <attribute name="mapexpression" value="mapaggregate"/>
+    <attribute name="aggregate" value="sum"/>
+    <branch>
+        <attribute name="mapexpression" value="meterm"/>
+        <leaf>
+            <attribute name="meterm-type" value="attr"/>
+            <attribute name="attribute_identifier" value="unqualified,v"/>
+        </leaf>
+    </branch>
+    <branch>
+        <attribute name="plan" value="select"/>
+        <branch>
+            <attribute name="boolexpression" value="bterm"/>
+            <branch>
+                <attribute name="bterm" value="mgt"/>
+                <branch>
+                    <attribute name="mapexpression" value="minus"/>
+                    <branch>
+                        <attribute name="mapexpression" value="product"/>
+                        <branch>
+                            <attribute name="mapexpression" value="meterm"/>
+                            <leaf>
+                                <attribute name="meterm-type" value="float"/>
+                                <attribute name="meterm-val" value="0.25"/>
+                            </leaf>
+                        </branch>
+                        <branch>
+                            <attribute name="mapexpression" value="mapaggregate"/>
+                            <attribute name="aggregate" value="sum"/>
+                            <branch>
+                                <attribute name="mapexpression" value="meterm"/>
+                                <leaf>
+                                    <attribute name="meterm-type" value="attr"/>
+                                    <attribute name="attribute_identifier" value="unqualified,v1"/>
+                                </leaf>
+                            </branch>
+                            <leaf>
+                                <attribute name="plan" value="relation"/>
+                                <attribute name="relation_identifier" value="bids"/>
+                                <attribute name="field_identifier" value="t1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="id1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="broker_id1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="p1"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="v1"/>
+                                <attribute name="type_identifier" value="int"/>
+                            </leaf>
+                        </branch>
+                    </branch>
+                    <branch>
+                        <attribute name="mapexpression" value="mapaggregate"/>
+                        <attribute name="aggregate" value="sum"/>
+                        <branch>
+                            <attribute name="mapexpression" value="meterm"/>
+                            <leaf>
+                                <attribute name="meterm-type" value="attr"/>
+                                <attribute name="attribute_identifier" value="unqualified,v2"/>
+                            </leaf>
+                        </branch>
+                        <branch>
+                            <attribute name="plan" value="select"/>
+                            <branch>
+                                <attribute name="boolexpression" value="bterm"/>
+                                <branch>
+                                    <attribute name="bterm" value="gt"/>
+                                    <branch>
+                                        <attribute name="expression" value="eterm"/>
+                                        <leaf>
+                                            <attribute name="eterm-type" value="attr"/>
+                                            <attribute name="attribute_identifier" value="unqualified,p2"/>
+                                        </leaf>
+                                    </branch>
+                                    <branch>
+                                        <attribute name="expression" value="eterm"/>
+                                        <leaf>
+                                            <attribute name="eterm-type" value="attr"/>
+                                            <attribute name="attribute_identifier" value="unqualified,p"/>
+                                        </leaf>
+                                    </branch>
+                                </branch>
+                            </branch>
+                            <leaf>
+                                <attribute name="plan" value="relation"/>
+                                <attribute name="relation_identifier" value="bids"/>
+                                <attribute name="field_identifier" value="t2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="id2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="broker_id2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="p2"/>
+                                <attribute name="type_identifier" value="int"/>
+                                <attribute name="field_identifier" value="v2"/>
+                                <attribute name="type_identifier" value="int"/>
+                            </leaf>
+                        </branch>
+                    </branch>
+                </branch>
+            </branch>
+        </branch>
+        <leaf>
+            <attribute name="plan" value="relation"/>
+            <attribute name="relation_identifier" value="bids"/>
+            <attribute name="field_identifier" value="t"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="id"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="broker_id"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="p"/>
+            <attribute name="type_identifier" value="int"/>
+            <attribute name="field_identifier" value="v"/>
+            <attribute name="type_identifier" value="int"/>
+        </leaf>
+    </branch>
+</branch>
+</tree>
