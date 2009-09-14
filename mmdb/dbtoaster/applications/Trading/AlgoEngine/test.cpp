@@ -9,13 +9,13 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include "GuiData.h"
+//#include "GuiData.h"
 #include <protocol/TBinaryProtocol.h>
 #include <server/TSimpleServer.h>
 #include <transport/TServerSocket.h>
 #include <transport/TBufferTransports.h>
 
-#include "GUICommunication_types.h"
+//#include "GUICommunication_types.h"
 #include "GuiDataServer.h"
 
 #include "DataCollection.h"
@@ -43,6 +43,9 @@ using namespace DBToaster::DemoAlgEngine;
 
 ReaderConnection * clientPtr;
 
+#define DEBUG 1;
+
+//For testing
 void outputMessage(DataTuple & msg)
 {
 
@@ -50,8 +53,16 @@ void outputMessage(DataTuple & msg)
     clientPtr->read(boost::bind(&outputMessage, _1));
 }
 
+/*
+ * Simple main. Initialized AlgorithmsEngine and Trading algorithms and starts execution loop
+ */
+
 int main()
 {
+    
+    /*
+    *  Each io_service creates a execution thread
+    */
     boost::asio::io_service io_service;
     boost::asio::io_service io_service_reader;
 
@@ -69,23 +80,26 @@ int main()
 
     AlgorithmsEngine man(io_service, io_service_reader, 0, 2500000);
     
+    //Running data reader in a different thread
     boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service_reader));
      
  
-    
+    //Initialization of trading algorithms
     SimpleSOBI alg1;
     VolatileSOBI alg2(400);
     TimedSOBI  alg3;
     MarketPlayers alg4(0.5, 0.7);
     
+    //additoin of trading algorithms
     man.addAlgo(&alg1);
     man.addAlgo(&alg2);
     man.addAlgo(&alg3);
     man.addAlgo(&alg4);
     
+    //Adding main execution loop
     io_service.post(boost::bind(&DBToaster::DemoAlgEngine::AlgorithmsEngine::runAlgos, &man));
     
-    
+    //Initializing server for GUI
     int server_port(5502);
     shared_ptr<GuiDataHandler> handler(new GuiDataHandler(man.getDataCollection(), man.getOrderManager()));
     shared_ptr<TProcessor> processor(new GuiDataProcessor(handler));
@@ -95,9 +109,10 @@ int main()
 
     TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
     
+    //Starting server in a separate thread
     boost::thread t2(boost::bind(&apache::thrift::server::TSimpleServer::serve, &server));
-//    server.serve();
     
+    //Starting main execution loop
     io_service.run();
 
 //    boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service));

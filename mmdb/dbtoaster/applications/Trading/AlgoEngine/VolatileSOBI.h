@@ -12,6 +12,12 @@ using namespace std;
 using namespace boost;
 using namespace DBToaster::DemoAlgEngine;
 
+
+/*
+ * This is a variation of Simple SOBI strategy 
+ * the decision to buy/sell depends on standart deviation of the current price
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine
@@ -37,41 +43,46 @@ namespace DBToaster
                 
                 if (numberSamples > minimumLimitSamples) 
                 {
-                    if (asks_diff/bids_diff < (currentPrice + sampleVariance)/bids_diff )
+                    if (currentPrice > 0)
                     {
-                        DataTuple t; 
-                        AlgoMessages * msg= new AlgoMessages();
+                        //check for SD of the current price
+                        if (asks_diff/bids_diff < sampleVariance/bids_diff )
+                        {
+                            DataTuple t; 
+                            AlgoMessages * msg= new AlgoMessages();
                     
-                        t.t=0;
-                        t.id=0;
-                        t.b_id=11;
-                        t.action="S";
-                        t.price=currentPrice;
-                        t.volume=100;
+                            t.t=0;
+                            t.id=0;
+                            t.b_id=11;
+                            t.action="S";
+                            t.price=currentPrice*10000;
+                            t.volume=100;
                     
-                        msg->tuple=t;
-                        msg->type=1;
+                            msg->tuple=t;
+                            msg->type=1;
                     
-                        messages.push_back(msg);
+                            messages.push_back(msg);
+                        }
+                        
+                        //reverce 
+                        if (bids_diff/asks_diff < sampleVariance /asks_diff )
+                        {
+                            DataTuple t; 
+                            AlgoMessages * msg = new AlgoMessages();
+                    
+                            t.t=0;
+                            t.id=0;
+                            t.b_id=11;
+                            t.action="B";
+                            t.price=currentPrice*10000;
+                            t.volume=100;
+                    
+                            msg->tuple=t;
+                            msg->type=1;
+                    
+                            messages.push_back(msg);                    
+                        } 
                     }
-                
-                    if (bids_diff/asks_diff < (currentPrice - sampleVariance )/asks_diff )
-                    {
-                        DataTuple t; 
-                        AlgoMessages * msg = new AlgoMessages();
-                    
-                        t.t=0;
-                        t.id=0;
-                        t.b_id=11;
-                        t.action="B";
-                        t.price=currentPrice;
-                        t.volume=100;
-                    
-                        msg->tuple=t;
-                        msg->type=1;
-                    
-                        messages.push_back(msg);                    
-                    } 
                 }
             }
             

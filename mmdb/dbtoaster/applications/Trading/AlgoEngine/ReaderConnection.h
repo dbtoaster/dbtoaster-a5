@@ -20,6 +20,10 @@
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT "5501"
 
+/*
+ * Duplicate for a writer connection should not be used now
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine
@@ -27,7 +31,6 @@ namespace DBToaster
 
         using boost::asio::ip::tcp;
         using namespace std;
-//        using namespace tr1;
         using namespace boost;
         using namespace DBToaster::DemoAlgEngine;
 

@@ -21,6 +21,12 @@
 #define SERVER_IP "127.0.0.1"
 #define SERVER_PORT "5501"
 
+
+/*
+ * Handles connection to the Exchange Server Simulator. 
+ * supports both reading and writing to/from server
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine
@@ -34,6 +40,8 @@ namespace DBToaster
         class WriterConnection
         {
         public:
+            //constractor sets the io_service 
+            //opens connection to server
             WriterConnection(boost::asio::io_service& io_service, int t)
                 : localIOService(io_service),
                 resolver(io_service),
@@ -51,14 +59,15 @@ namespace DBToaster
 
             }
 
+            //reads data from server
             void read( boost::function<void (DataTuple& a)>  handler)
             {
                 localIOService.post(boost::bind(&WriterConnection::doRead, this, handler));
             }
 
+            //writes a tuple to a server
             void write(boost::function<void (DataTuple& a)>  handler, DataTuple& tuple, int& info)
             {
-//                cout<<"in write "<<tuple.action<<" "<<tuple.price<<endl;
                 localIOService.post(boost::bind(&WriterConnection::doSyncWrite, this, handler, tuple, info));
             }
 
@@ -66,16 +75,14 @@ namespace DBToaster
 
             void doWrite(boost::function<void (DataTuple& a)>  handler, DataTuple & tuple, int & info)
             {	
-//                cout<<"in doWrite"<<endl;
-//                flush(cout);
-//                cout<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price<<endl;
-//                cout<<"in doWrite "<<info<<endl;
+                //writes a tuple to server
                 std::stringstream ss (std::stringstream::in | std::stringstream::out);
                 ss<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price;
                 std::string strMessage=ss.str();
                 char tail=10;
                 strMessage=strMessage+tail;
 
+                //if info is equals 1 this is an order which needs to read info from server 
                 if (info == 0)
                 {
 
@@ -93,12 +100,10 @@ namespace DBToaster
 
             }
 
+            //writes data and recives a data syncronously 
             void doSyncWrite(boost::function<void (DataTuple& a)>  handler, DataTuple & tuple, int & info)
             {	
-//                cout<<"in doWrite"<<endl;
-//                flush(cout);
-//                cout<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price<<endl;
-//                cout<<"in doWrite "<<info<<endl;
+                
                 std::stringstream ss (std::stringstream::in | std::stringstream::out);
                 ss<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price;
                 std::string strMessage=ss.str();
@@ -117,10 +122,9 @@ namespace DBToaster
                 else
                 {
                     try{
-
+                        //syncronous read
                         boost::asio::write(localSocket, 
                             boost::asio::buffer(strMessage.data() ,strMessage.size()));
-//                            boost::asio::transfer_all(), ignored_error);
 
                         doSyncRead(handler);
 
@@ -134,6 +138,7 @@ namespace DBToaster
 
             }
 
+            //does syncronous read of data from server
             void doSyncRead(boost::function<void (DataTuple& a)>  handler)
             {
                 boost::asio::streambuf my_readResponse;
@@ -147,9 +152,6 @@ namespace DBToaster
                 string line;
                 getline(ist, line);
 
-
-//                cout << "handleRead size: " << readResponse.size() << endl;
-
                 DataTuple r;
                 parseLine(line, r);
                 int num=5;
@@ -159,13 +161,13 @@ namespace DBToaster
                     cout<<"handleRead: error istream is corrupted"<<endl;
                     exit(1);
                 }
-
-//               cout<<r.t<<" "<<r.id<<" "<<r.b_id<<" "<<r.action<<" "<<r.volume<<" "<<r.price<<endl;
-//                cout<<"handleRead: about to handle order r: "<<r.price<<endl;
+                
+                //handles the results of the read on the same execution loop 
                 handler(r);
 
             }
 
+            //does async read from server
             void doRead( boost::function<void (DataTuple& a)>  handler)
             {
                     //reading message from a server
@@ -177,20 +179,17 @@ namespace DBToaster
                     boost::asio::placeholders::error, _2, handler));
             }
 
+            //handles the results of a read
             void handleRead(const boost::system::error_code& error,std::size_t transferred, boost::function<void (DataTuple& a)>  handler)
             {
                 if (!error)
                 {
-//                    cout<<"handleRead: in "<<transferred<< " " << readResponse.size() << endl;
-//                    flush(cout);
-//                boost::asio::streambuf local_readResponsereadResponse);
+
                     std::istream ist(&readResponse);
 
                     string line;
                     getline(ist, line);
 
-
-//                    cout << "handleRead size: " << readResponse.size() << endl;
 
                     DataTuple r;
                     parseLine(line, r);
@@ -202,10 +201,8 @@ namespace DBToaster
                         exit(1);
                     }
 
-//                    cout<<r.t<<" "<<r.id<<" "<<r.b_id<<" "<<r.action<<" "<<r.volume<<" "<<r.price<<endl;
-//                    cout<<"handleRead: about to handle order r: "<<r.price<<endl;
-                    handler(r);	
-//                    cout<<"handleRead: done handleOrder"<<endl;		
+                    //sends data to be handled 
+                    handler(r);		
                 }
                 else
                 {
@@ -214,6 +211,7 @@ namespace DBToaster
                 }
             }
 
+            //parses order into order tuple
             inline bool parseLine(string line, DataTuple& r)
             {
                 std::istringstream ist(line);
@@ -234,6 +232,7 @@ namespace DBToaster
                 return true;
             }
 
+            //time id
             long long string_conversion(string s)
             {
                 long long value=0;
@@ -244,6 +243,7 @@ namespace DBToaster
                 return value;
             }
 
+            //connection handleing
             void handleConnection(const boost::system::error_code& error,
                 tcp::resolver::iterator endpointIterator)
             {
@@ -267,6 +267,7 @@ namespace DBToaster
                 }
             }
 
+            //dumb funciton to do nothing 
             void doNothing(const boost::system::error_code& error)
             {
                 //cout<<"inside doing nothing\n";

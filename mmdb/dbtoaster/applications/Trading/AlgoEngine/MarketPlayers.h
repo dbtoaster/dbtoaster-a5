@@ -12,6 +12,14 @@ using namespace std;
 using namespace boost;
 using namespace DBToaster::DemoAlgEngine;
 
+/*
+ * Algorithm for Market players. 
+ * it detects when a big order on one side of the order book 
+ * is used to create a match for a smaller order on the other side of the order book.
+ *
+ * Needs support for from Compiler
+ */ 
+
 namespace DBToaster
 {
     namespace DemoAlgEngine

@@ -37,49 +37,48 @@ namespace DBToaster
         {
         public:
 
+            //constructor initating io_services puts number manager and so on.
             AlgorithmsEngine(boost::asio::io_service& io_service, boost::asio::io_service& io_service_reader, int shares, int m):
             localIOService(io_service),
                manager(io_service, shares, m)
             {
+                //initates reading client
                 manager.startReading(io_service_reader);
- //               boost::thread t(boost::bind(&boost::asio::io_service::run, &io_service_reader));
             }
 
+            //main execution loop 
             void runAlgos()
             {
-//                cout<<"runAlgos: got in"<<endl;
+                //makes updates to queries needed by the algorithms
                 getData();
-                
-//                cout<<"runAlgos: got data"<<endl;
+                //simple clean up
                 cleanMessages();
-                
-//                cout<<"runAlgos: cleaned messages"<<endl;
                 
                 list<AlgoInterface*>::iterator algo_ptr=my_algos.begin();
 
+                //check if any of the algorithms want to trade stocks
                 for(; algo_ptr != my_algos.end(); algo_ptr++)
                 {
                     (*algo_ptr)->run(data, messages);
- //                   datum++;
                 }
-//                cout<<"runAlgos: ran reach algo "<<endl;
-
+                
+                //execute stock trades if needed
                 manager.sendOrders(boost::bind(&DBToaster::DemoAlgEngine::AlgorithmsEngine::runAlgos, this), messages);
-//                usleep(200);
-//                cout<<"runAlgos: done send messages"<<endl;
-
             }
 
+            //adds a new algorithm to the mix
             void addAlgo(AlgoInterface * algo)
             {
                 my_algos.push_back(algo);
             }
             
+            //returns a pointer to otder manageer
             OrderManager * getOrderManager()
             {
                 return &manager;
             }
             
+            //gets Data Collection
             DataCollection * getDataCollection()
             {
                 return &data;
@@ -87,6 +86,9 @@ namespace DBToaster
 
         private:
 
+            //gets results for each query and updates needed values for each algorithm
+            //improvement make an interface query running and do it in a loop
+            //this will allow to add queries on a fly
             void getData()
             {
                 data.readSOBIType();
@@ -96,6 +98,7 @@ namespace DBToaster
 //                data.readBrokeType();
             }
             
+            //remove already sent messages
             void cleanMessages()
             {
                 while (!messages.empty())
@@ -107,14 +110,14 @@ namespace DBToaster
             }
 
             list<AlgoInterface*> my_algos;
-            DataCollection       data;
+            DataCollection       data;        //interface to DBToaster Runtime
+            OrderManager         manager;     //interface to Exchange Simulator
             deque<AlgoMessages*> messages;
 
+            //io_services to run two independent execution paths
             boost::asio::io_service io_service_reader;
             boost::asio::io_service& localIOService;
-            
-
-            OrderManager manager;
+                  
         };
 
     };

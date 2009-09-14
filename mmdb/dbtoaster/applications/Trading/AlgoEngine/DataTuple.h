@@ -4,6 +4,11 @@
 
 #include <string>
 
+/*
+ * Tuple for storing order information.
+ * stores time, local ID, broker id (currently it is algo ID), volume and price
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine

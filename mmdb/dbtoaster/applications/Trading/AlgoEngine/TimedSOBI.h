@@ -12,6 +12,10 @@ using namespace std;
 using namespace boost;
 using namespace DBToaster::DemoAlgEngine;
 
+/*
+ * Similar to simple SOBI but adds also looks at time stamp imbalance
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine

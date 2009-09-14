@@ -30,10 +30,10 @@ using namespace apache::thrift;
 using namespace apache::thrift::protocol;
 using namespace apache::thrift::transport;
 
-#include "/home/anton/tmp/dbtoaster/query19/thrift/gen-cpp/AccessMethod.h"
+#include "/Users/antonmorozov/tmp/query19/thrift/gen-cpp/AccessMethod.h"
 using namespace DBToaster::Viewer::query19;
 
-#include "/home/anton/tmp/dbtoaster/query20/thrift/gen-cpp/AccessMethod.h"
+#include "/Users/antonmorozov/tmp/query20/thrift/gen-cpp/AccessMethod.h"
 using namespace DBToaster::Viewer::query20;
 
 //#include "/home/anton/tmp/dbtoaster/query19/thrift/gen-cpp/AccessMethod.h"
@@ -50,9 +50,16 @@ using namespace DBToaster::Viewer::query20;
 #include "AlgoTypeDefs.h"
 
 #define host "127.0.0.1"
-#define bid_port 8807
+#define bid_port 20001
 #define ask_port 20000
 
+/*
+ * This is class connects to DBToaste Runtime
+ * 
+ * Needs to be re implemented as soon as DBToaster Runtime has a thrift connector
+ *
+ * Currently collects data from two hand added querries written by DBToaster
+ */
 
 namespace DBToaster
 {
@@ -62,6 +69,7 @@ namespace DBToaster
         {
         public:
             
+            //Constructor creates client connections with two queries
             ToasterConnection():
              bid_toasterSocket(new TSocket(host, bid_port)),
              bid_socketProtocol(new TBinaryProtocol(bid_toasterSocket)),
@@ -70,27 +78,35 @@ namespace DBToaster
              ask_socketProtocol(new TBinaryProtocol(ask_toasterSocket)),
              ask_toasterClient(new DBToaster::Viewer::query20::AccessMethodClient(ask_socketProtocol))
             {
+                //opens connections
                 bid_toasterSocket->open();
                 ask_toasterSocket->open();
             }
             
+            //gets bids sum(price*volume)
             int getBidsPV()
             {
                 return bid_toasterClient->get_var0();
             }
+            //gets bids sum(volume)
             int getBidsV()
             {
                 return bid_toasterClient->get_var1();
             }
+            //gets asks sum(price*volume)
             int getAsksPV()
             {
                 return ask_toasterClient->get_var0();
             }
+            //gets asks sum(volume)
             int getAsksV()
             {
                 return ask_toasterClient->get_var1();
             }
- /*           
+
+            /*
+            //functions needed by the Market Maker algorithm
+            
             list<PVpair> getAskList()
             {
                 PVpair t;
@@ -114,9 +130,12 @@ namespace DBToaster
                 
                 return l;                
             }
- */           
+            */
+            
+
         private:
             
+            //client connections to the bids and ask SOBI stats
             boost::shared_ptr<TSocket>           bid_toasterSocket;
             boost::shared_ptr<TBinaryProtocol>   bid_socketProtocol;
             boost::shared_ptr<DBToaster::Viewer::query19::AccessMethodClient>    bid_toasterClient;

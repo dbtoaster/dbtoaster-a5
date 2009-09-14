@@ -17,6 +17,10 @@
 #include "DataTuple.h"
 #include "AlgoTypeDefs.h"
 
+/*
+ * Creates an interface for wrting and reciving data from Exchange Simulator
+ */
+
 namespace DBToaster
 {
     namespace DemoAlgEngine
@@ -30,49 +34,39 @@ namespace DBToaster
         {
         public:
 
+            //Constructor initates io_services number of shares and total amount of money available
             OrderManager(boost::asio::io_service& io_service, int shares, int m):
                 localIOService(io_service), 
                 numberShares(shares),
                 currentMoney(m)
             {
+                //initiates current local id for keeping track of the order numbers and 
                 localIdCounter=0;
+                //current stock price
                 currentStockPrice=0;
-//                numberOfMessages=0;
+                //creates a writer for sending orders to the server
                 writer=new WriterConnection(localIOService, 0);
-                
-//                numReads=0;
-//                numWrites=0;
+
             }
             
+            // Request for a set of orders, all orders are executed asyncronously. 
             void sendOrders(boost::function<void ()>  handler, deque<AlgoMessages*> & messages)
             {
-//                handler=return_function;
-//                numberOfMessages=messages.size();
-                
-//                cout<<"sendOrder size: "<<messages.size()<<endl;
-
-/*                while (!messages.empty())
-                {
-                    AlgoMessages * msg=messages.front();
-                    sendOrder(msg->tuple, msg->type);
-                    messages.pop_front();
-                    delete msg;
-                }
-                */
                 
                 deque<AlgoMessages*>::iterator message=messages.begin();
                 
+                //queues up all order requests form algorithms
                 for (; message != messages.end(); message++)
                 {
                     sendOrder((*message)->tuple, (*message)->type);
-//                    ++numWrites;
                 }
                 
-               localIOService.post(handler);
+                
+                localIOService.post(handler);
                
-//               cout<<"sendOrders: done here "<<numWrites<<endl;
             }
-
+            
+            //handles each order 
             int sendOrder(DataTuple & tuple, int & type)
             {
                 //this function is called by algorithms
@@ -84,30 +78,24 @@ namespace DBToaster
                 {
                     //this is desiged for "S" and "B" orders;
                     localIdCounter++;
- //                   cout<<"sendOrder: id "<<localIdCounter<<endl;
                     writer->write((boost::bind(&OrderManager::handleOrder, this, _1, localIdCounter)), tuple, type);
 
                     return localIdCounter;
                 }
                 else
                 {
-                    //this is for the other orders;
-//                    cout<<"wrong place wrong time"<<endl;
-//                    flush(cout);
-//                    exit(1);
-
+                    //for deletes 
                     writer->write(boost::bind(&OrderManager::handleOrder, this, tuple, localIdCounter), tuple, type);
                     return tuple.id;
                 }
 
             }
 
+            // in responce for a write it takes a responding tuple from server
+            //and stores it. Thus saving a tuple order ID for future. 
             void handleOrder(DataTuple & tuple, int & id)
             {
                 boost::mutex::scoped_lock lock(mutex);
-                
- //               cout<<"handleOrder: in"<<endl;
- //               cout<<"handleOrder: "<<tuple.action<<" "<<tuple.price<<" "<<id<<endl;
                 
                 ptr_map<LocalID, DataTuple>::iterator item=dataOrders.find(id);
 
@@ -121,9 +109,9 @@ namespace DBToaster
                     cout<<"The item with OrderID "<<tuple.id<<" and LocalID "
                         <<id<<" is already in the database"<<endl;
                 }
-//                cout<<"handleOrder "<<++numReads<<endl;
             }
 
+            //creates a continuous reading loop to get data from a server
             void startReading(boost::asio::io_service& io_service)
             {
                 reader=new WriterConnection(io_service, 1);
@@ -131,48 +119,48 @@ namespace DBToaster
                 reader->read(boost::bind(&OrderManager::processOrder,this, _1, 0));
             }
 
+            //takes a tuple from the server and extracts useful information from it
             void processOrder(DataTuple & tuple, int & temp)
             {
                 ptr_map<OrderID, LocalID>::iterator item=orderIDtoLocalId.find(tuple.id);
                 
-                if (tuple.action == "E" || tuple.action == "F")
+                //check for current price
+                if (tuple.action == "E" || tuple.action == "F" || tuple.action == "U")
                 {
-                    currentStockPrice=tuple.price;
+                    if (tuple.price !=0) {
+                        currentStockPrice=tuple.price;
+                    }
                 }
 
+                //if order Id referes to a local tuple
                 if (item != orderIDtoLocalId.end())
                 {//tuple was generated by one of the algorithms;
                     processTuple(tuple, *(item->second));
-                }              
+                }     
+                //continuous reading         
                 reader->read(boost::bind(&OrderManager::processOrder, this, _1, 0));
             }
             
+            // extracts a latest current price
             double getCurrentStockPrice()
             {
                 return (double)currentStockPrice;
             }
-
-/*            void checkAndChange(DataTuple & tuple)
-            {
-
-            }
-
-            int addTuple(DataTuple & tuple)
-            {
-                return 0;
-            }
-  */          
+        
+            //extracts a tuple referenced by the local ID
             DataTuplesPair  getTuple(LocalID localID)
             {
                 DataTuplesPair t(dataOrders[localID], executedOrders[localID]);
                 return t;
             }
 
+            //gets current number of shares
             int getCurrentShares()
             {
                 return numberShares;
             }
 
+            //gets current amount of money 
             int getCurrentMoney()
             {
                 return currentMoney;
@@ -180,17 +168,20 @@ namespace DBToaster
 
         private:
 
+            //if a tuple references a local tuple
+            //takes appropriate action and updates statistics
             void processTuple(DataTuple & tuple, LocalID & id)
             {
                 boost::mutex::scoped_lock lock(mutex);
                 
-                cout<<"In processTuple: ";
-                cout<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price<<endl;
+                if (DEBUG){
+                    cout<<"In processTuple: ";
+                    cout<<tuple.t<<" "<<tuple.id<<" "<<tuple.b_id<<" "<<tuple.action<<" "<<tuple.volume<<" "<<tuple.price<<endl;
+                }
                 
                 if (tuple.action == "D")
                 {
                     dataOrders.erase(id);
- //                   orderIDtoLocalId.erase(tuple.id);
                 }
 
                 if (tuple.action == "E")
@@ -207,7 +198,7 @@ namespace DBToaster
                     }
                     else
                     {
-                        cout<<dataOrders[id].action<<endl;
+                        cout<<"order with ID "<<id<<" and action ("<< dataOrders[id].action<<") "<<endl;
                         cout<<"In OrderManager: dataOrders should only store S/B orders (fn:processingTuple)"<<endl;
                     }
 
@@ -259,10 +250,9 @@ namespace DBToaster
             }
 
             boost::asio::io_service& localIOService;
-//            boost::function<void ()>  handler;
-//            int numberOfMessages;
 
             boost::mutex mutex;
+            bool DEBUG;
 
             WriterConnection *             writer;
             WriterConnection *             reader;
@@ -273,9 +263,6 @@ namespace DBToaster
             int currentMoney;
             
             int currentStockPrice;
-            
- //           int numReads;
- //           int numWrites;
 
             ptr_map<LocalID, DataTuple>   dataOrders;
             ptr_map<OrderID, LocalID>     orderIDtoLocalId;
