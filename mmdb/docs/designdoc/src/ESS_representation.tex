@@ -1,0 +1,110 @@
+\documentclass[11pt]{article} 
+
+\usepackage{algorithmic}
+\usepackage[small,bf]{caption}
+\usepackage{float}
+
+\voffset -3.0cm
+\hoffset -1.5cm
+\textwidth 17.0cm
+\textheight 24.0cm
+\parindent 0cm
+
+\floatstyle{plain}
+\newfloat{program}{thp}{lop}
+\floatname{program}{code}
+
+
+\begin{document}
+
+{\bf Determining Current Price} 
+
+Current price is determined by a set of basic conditional rules. Time of the day OPENING, CONTINUOUS TRADING, CLOSING, AFTER HOURS, reference price and various trade stopping conditions together determine strategy for price resolution.
+
+Here is a possible rule for current price determination
+
+\begin{program}
+    \begin{verbatim}    
+    case POSITION:
+        OPENING:
+            case MATCHING_POLICY:
+                BEST_VOLUME sPrice=bPrice=getBestVolume();
+                AUCTION     sPrice=bPrice=performAcution();
+                AVERAGE     sPrice=bPrice=getMean();
+                ...
+        TRADING:
+            case MATCHING_POLICY:
+                FIRST_IN_BOOK  sPrice=bPrice=existantTuple.price;
+                AUCTION        sPrice=bPrice=performAcution();
+                AVERAGE        sPrice=bPrice=getMean();
+                LAST_COME      sPrice=bPrice=newTuple.price;
+                BEST_REMAINING sPrice=bPrice=getNextTuple.price;
+                DOUBLE_AUCTION some form of equialibrium.
+                ...       
+        CLOSING:
+            case MATCHING_POLICY:
+                BEST_VOLUME sPrice=bPrice=getBestVolume();
+                AUCTION     sPrice=bPrice=performAcution();
+                AVERAGE     sPrice=bPrice=getMean();
+                ...
+        AFTER_HOURS:
+            case MATCHING_POLICY:
+                BEST_VOLUME sPrice=bPrice=getBestVolume();
+                AUCTION     sPrice=bPrice=performAcution();
+                AVERAGE     sPrice=bPrice=getMean();
+                ...
+    \end{verbatim}
+\caption{Price Strategy. }
+\end{program}
+
+The more complete matching rules are in Swiss Stock Exchange paper.
+\\
+\\
+{\bf Execution Loop Variations}
+
+\begin{description}
+    \item[Update Driven Execution] every data update trigers an action from a server. On an order placement (Bid/Ask order) server attempts to match it with an order in an order book. On delete an order is removed from the book (if present).
+    \item[Batch Driven Execution] Data updates are collected and actions are performed in a batch over s set of updates. Orders are not executed during the collection phase, some basic statistics about collected orders can be published. When conditions are satisfied (either time, amount or the combination of the two conditions) orders are executed (in the end of tick) and a set of actions is performed. (A possible variation is to batch only inserts bids/asks and let other updates be executed immediately.)
+    \item[Other ideas] ???
+\end{description}
+
+Both approaches have pros and cons. Update execution creates fast FIFO (price, time) order processing with competitive price. Batch execution though slower in response time is capable of supporting double auction matching and best volume matching, which first approach cannot execute. 
+\\
+\\
+{\bf Order Matching} 
+\\
+There are several possible scenarios to integrate orders coming from simulated algorithms (live) to orders coming from historical (historic) data files.
+\\
+\noindent Matching Policies:
+\begin{enumerate}
+    \item {\bf Only within} matches orders coming from historical files only with historical files and orders coming from algorithms only with orders coming from algorithms.
+    \item{\bf With anything} matches orders independent of origin, if a historic data match does not occur due to a match with a live order from an algorithm, a now unmatched historic order will be left in the order book. 
+    \item{\bf With anything, drop} similar to a match with anything above but in this case a unmatched historic order will now be dropped. 
+    \item{\bf With Duplicate} if a historic order can be matched with algorithmic order, create an artificial order equivalent to that of historic and match with it. Historic orders are only matched with historic orders. (looks for the first best match within both historic order and live orders)
+    \item{\bf With Duplicate, once} same as above only it keep track of which historic orders where matched with live orders so not to match them more then once. 
+    \item{\bf With Duplicate, live first} same as one before only first checks for a possible match with another live order, if one found does not look for historic match. 
+    \item{\bf With drop with look ahead} similar to drop but historical matches are dropped only if they are close to the current match. (closeness can be measured by a sliding window of time or number of orders)
+    \item{\bf With look back} similar to the first one, creates matches only between historical with historical, and live with live orders within a sliding window of older orders. "Old" orders can be matched with any new order regardless of it being historical or live.
+\end{enumerate}
+
+Neither of the above matching rules is perfect. Here are some of their drawbacks:
+
+Numbers 1 and 8 can create an order book imbalance where current price for historical orders does not reflect the changed reality of added live orders. Number 8 is an attempt to correct this problem. Rules 2-7 do not reflect the actual historical behavior. 
+\\
+\\
+{\bf First draft of scripting language}
+\\
+These parameter settings can be unified in:
+\begin{program}
+    \begin{verbatim}
+    select execution with execution_params
+    set pricing_model with pricing_params
+    groupby matching_strategy with matching_params
+    \end{verbatim}
+    \caption{Script}
+\end{program}  
+
+Where \underline{execution} is either batch matching or a single tuple match. \underline{pricing model} is a way to determine current price and \underline{matching strategy} is a best way to match historic and algorithmic orders.
+
+\end{document}
+
