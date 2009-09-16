@@ -9,9 +9,9 @@
 \doublespacing
 
 
-\floatstyle{ruled}
-\newfloat{code}{thp}{lop}
-\floatname{code}{Code}
+%\floatstyle{ruled}
+%\newfloat{code}{thp}{lop}
+%\floatname{code}{Code}
 
 %\DeclareGraphicsExtensions{.eps}
 
@@ -23,11 +23,11 @@
 
 \section{Introduction}
 
-DBToaster Runtime is a system build based on DBToaster. Runtime provides a stand alone interface for running user defined, DBToaster compiled queries over specified update streams. Capabilities and usage of the system are demonstrated on the example of AlgoTrader. AlgoTrader is a platform that simulates Stock Exchange and serves as a testbed for automatic Trading Algorithms.   
+DBToaster Runtime is a system build based on DBToaster. Runtime provides a stand alone interface for execution of user defined, DBToaster compiled queries over specified update streams. Capabilities and usage of the system are demonstrated on an example of AlgoTrader. AlgoTrader is a platform that simulates Stock Exchange and serves as a testbed for automatic Trading Algorithms.   
 
-DBToaster Runtime can be partitioned into three major components: Compiler, Data Sources Processor and Query Processor. Compiler receives a SQL query from a client, compiles it down to executable code and passes to Query Processor for execution. Data Sources Processor manages a set of update data streams and passes data to appropriate queries in Query Processor. Query Processor runs a set of queries over given data. The results of each query are made available to connected clients. 
+DBToaster Runtime can be partitioned into three major components: Compiler, Data Sources Processor and Query Processor. Compiler receives SQL queries from a client, compiles them down to executable code and passes to Query Processor for execution. Data Sources Processor manages a set of update data streams and passes data to appropriate queries in Query Processor. Query Processor runs a set of queries over given data. The results of each query are made available to connected clients. 
 
-AlgoTrader platform provides an example of how an application over update stream can benefit form DBToaster Runtime. AlgoTrader is a time critical application, which uses expressive set of queries over update streams. The platform consist of two components: Stocks Exchange Simulator and Trading Algorithms Engine. Stock Exchange Simulator implements a realistic simulation of an Electronic Communication Network (ECN). Each ECN serves as a matchmaker between stock buyers and sellers. Trading Algorithms Engine is a testbed for developing automatic trading strategies. Each strategy runs a set of queries over a data stream(s) coming from Stock Exchange Simulator. Based on the query results trading strategies either buy or sell stocks.
+AlgoTrader platform provides an example of how an application over update streams can benefit form DBToaster Runtime. AlgoTrader is a time critical application, which uses expressive set of queries over update streams. The platform consist of two components: Stocks Exchange Simulator and Trading Algorithms Engine. Stock Exchange Simulator implements a realistic simulation of an Electronic Communication Network (ECN). Each ECN serves as a matchmaker between stock buyers and sellers. Trading Algorithms Engine is a testbed for developing automatic trading strategies. Each strategy runs a set of queries over a data stream(s) coming from Stock Exchange Simulator. Based on query results trading strategies either buy or sell stocks.
 
 Interactions between DBToaster Runtime and AlgoTrader can be seen in figure \ref{TheBigPicture}.
 
@@ -49,9 +49,9 @@ Interactions between DBToaster Runtime and AlgoTrader can be seen in figure \ref
 
 \section{DBToaster Runtime}
 
-DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components interacts with each other. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. 
+DBToaster Runtime consists of three major components: Compiler, Query Processor and Data Sources Processor. Each of these components also interacts with each other. The complete representation of DBToaster Runtime can be found in figure \ref{DBToasterPic}. 
 
-Each of three components interacts with external environment. Compiler and Query Processor use a server to interact with users. Compiler receives SQL queries and data adaptors. Query Processor uses server to distribute query results to users. Data Sources Processor creates user specified clients to receive data a variety of sources. 
+Each of three components interacts with external environment. Compiler and Query Processor both implement a server to interact with users. Compiler receives SQL queries and data adaptors. Query Processor uses server to distribute query results to users. Data Sources Processor creates user specified clients to receive data from a variety of sources. 
 
 %Compiler receives requests from the client to instantiate a Data Source Reader for receiving data or a SQL query to process data. The created Data Reader is passed to the Data Source Processor and a Query is passed to Query Processor to run on the data. 
 
@@ -65,9 +65,13 @@ Each of three components interacts with external environment. Compiler and Query
 
 \subsection{Compiler}
 
-Compiler consists of several components. Its structure can be seen in figure \ref{CompilerPicture}. Two components responsible for compilation are SQL query pre-compiler and C++ code compiler. 
+Compiler consists of several components. Its structure can be seen in figure \ref{CompilerPicture}. The main functionality of Compiler is to receive SQL queries and Data Adaptors from users. When they are compiled, Compiler adds them to Sources Processor or Query Processor respectively.
 
-Compiler is a starting point for all user interactions with the DBToaster Runtime. Once Runtime is up and running the user initiates the contact by specifying that they need to execute a query on some specific set of data sources. The query, types and parameters of data sources are sent to User Input Handler. The Input Handler collects the information in a structured format and passes it to the Compiler Admin. Compiler Admin converts a SQL query to C++ code and C++ code to binary format. The query is then passed to the Query Admin to be added to the list of active queries. If the user asks to add a Data Source Reader. The Reader of a specified type is created and passed to the Data Sources Admin to be added to the list of active Readers. The Data Adapter is compiled into a binary format and sent to Data Sources Admin to be added to Data Adaptors. 
+%Two components responsible for compilation are SQL query pre-compiler and C++ code compiler. 
+
+Compiler is an initial point of interaction with the DBToaster Runtime. Once Runtime is up and running users initiate contact by specifying their need to execute a query on some specific set of data sources or a desire to add an update stream. User query and requests to add Data Adaptors are received by User Input Handler. When Input Handler collects all needed informations, it is passed to Compiler Admin. Compiler Admin converts  SQL queries to C++ code and C++ code to binary format. Compiled queries are passed to Query Admin to be added to a list of actively executed queries. Data Source streams (Readers) are added by a user providing a Data Adaptor for each stream. When Data Adaptor code is compiled and user specified Reader is created, both are passed to Data Sources Admin to be added to the list of active Readers. Reader and Adaptor for that Reader form a pair where Reader receives data and Adaptor converts it to a format understandable by Query Executor.
+
+%The Data Adapter is compiled into a binary format and sent to Data Sources Admin to be added to Data Adaptors. 
 
 \begin{figure}
   \includegraphics[width=4.50in]{../figures/compiler.pdf}
@@ -76,36 +80,36 @@ Compiler is a starting point for all user interactions with the DBToaster Runtim
 \end{figure}
 
 \subsubsection{User Input Handler}
-User Input Handler implements a server to respond to client requests. When a client connects to the Input Handler Server it sends a type of request and attributes of the request to the server:
+User Input Handler implements a server to handle client requests. Clients connected to Input Handler Server send request types and parameters of that request:
 \\
 \\
 \begin{tabular}{|l|l|}
   \hline
-  Type & Request Attributes \\ \hline
-  Query & Query Source file, list of Data Readers \\ \hline
-  Reader & Connection Type, Adapter Source file \\ \hline
+  Type & Parameters \\ \hline
+  Query & Query in SQL, list of Data Processor \\ \hline
+  Reader & Connection Type, code for Data Adaptor \\ \hline
 \end{tabular}
 \\
+\\
+Thus User Input Handler responds to two type of requests one to add a SQL query and another is to add Data Processor.
 \\*
-The two different types of requests are either to add a query or add a data reader.
-\\*
-Add query request needs the following data from the user:
+Add Query request requires the following information from users:
 
 \begin{itemize}
 	\item {\tt AddRequest(type="add query",\\
 		 Source="SQL Source File",\\
-	     DataReaders="list of Data Reader's IDs for Query");}
+	     DataReaders="list of Data Adaptors for this query");}
 \end{itemize}
 
-\noindent Add data reader request is as follows:
+\noindent Add Data Stream request is as follows:
 
 \begin{itemize}
-	\item {\tt AddRequest(type="add reader", \\
+	\item {\tt AddRequest(type="add stream", \\
 	     AdaptorSource="C++ Adaptor Source file",\\
 	     source="IPaddress and port or data input file");}
 \end{itemize}
 
-This information is then forwarded to the Compiler Admin in a form of a struct:
+This information is forwarded to Compiler Admin:
 
 \begin{itemize}
 	\item {\tt Struct InputRequest( int type, string fileName,\\
@@ -113,15 +117,16 @@ This information is then forwarded to the Compiler Admin in a form of a struct:
 		   list<string> sourceParameters)}
 \end{itemize}
 
-User Input Handler is implemented as a class with a server hidden inside. For now Input Handler also contains Compiler Admin. Compiler Admin can be abstracted to run in a separate thread. 
+User Input Handler serves as an interface for a server. Input Handler and Compiler Admin are currently on the same execution path. In the future if needed Compiler Admin can be separated to run in a different thread with the buffer to store user requests from User Input Handler. 
 
 \subsubsection{Compiler Admin}
 
-Once user request is received, Compiler Admin takes over. Depending on the type of the request Admin takes different actions. 
+Compiler Admin takes source code from User Input Hander, compiles it to executable code and dispatches it to either Data Sources or Query Processor. 
+%Once user request is received, Compiler Admin takes over. Depending on the type of the request Admin takes different actions. 
 
-On add SQL query request Admin passes the SQL query source file to SQL Compiler. SQL compiler returns a pointer to an containing equivalent to a query C++ file. This file is then passed to the C++ compiler by the Admin. C++ compiler returns a function handle to the compiled binary of the query. The query handle is then passed to the Query Admin to be added to the catalog together with the list of Readers for the query.
+On SQL query request Admin passes SQL query source file to SQL Compiler. SQL compiler returns a file containing C++ implementation of it. This file is passed to C++ compiler. C++ compiler returns a function handle to compiled binary of this query. Finally query handle is passed to Query Admin to be added to a list of executable queries.
 
-On add Reader request Admin passes Data Adaptor file to C++ compiler which in turn returns a function handle to the Data Adaptor. Then Admin creates a Reader and opens a connection for a reader (either a socket or a file). The handle to a Reader together with the handle for a Data Adaptor and a list of queries for this reader is passed to the Data Sources Admin. 
+On Reader request Admin passes Data Adaptor file to C++ compiler, which returns a function handle to Data Adaptor. Admin creates a Data Source Reader and opens a connection (either a socket or a file). Handle to Data Source together with handle to Data Adaptor is passed to Data Sources Admin.
 
 \noindent Compiler Admin class looks as follows:
 \begin{verbatim}
@@ -140,11 +145,11 @@ private:
 }
 \end{verbatim}
 
-Method {\tt RunAdmin(InputRequest)} takes a user request to add a query or a data source. Compiler Admin contains a SQL Compiler and C++ compiler. It also contains pointers to Query Admin and Data Sources Admin to pass compiled handlers to them.
+Method {\tt RunAdmin(InputRequest)} takes a user request specified by \emph{InputRequest}. Compiler Admin contains SQL Compiler and C++ Compiler. It also contains pointers to Query Admin and Data Sources Admin needed for parameter passing.
 
 \subsubsection{SQL Compiler}
 
-SQL complier takes a SQL query from a file and creates an optimized C++ coded to be added to the runtime. The file name containing the code is returned to the Admin.
+SQL complier takes SQL query from a file and creates an optimized, DBToaster, C++ coded to be added to the runtime. File containing code is returned to the Admin.
 
 \begin{itemize}
 	\item {\tt cCodeFileName CompileSQL(SQL file name);}
@@ -152,30 +157,34 @@ SQL complier takes a SQL query from a file and creates an optimized C++ coded to
 
 \subsubsection{C++ Compiler}
 
-C++ compiler takes file containing C++ code. C++ compiler creates a binary code version of the code and returns a function handle of it to Admin. \emph{not sure about the return form. it is possible we need to return several function handles ... not sure yet}
+C++ compiler takes file containing C++ code. It builds binary code, loads it in memory and returns a function handle to it to Admin.
 
 \begin{itemize}
 	\item {\tt functionHandle CompileC++(C++ file name);}
 \end{itemize}
 
+
+
 \subsection{Data Source Processor}
 
-\noindent Data Source Processing is done in two steps. Data Sources Admin receives two function handles from Compiler Admin a source reader and a data adaptor. 
+\noindent Data Sources Processor receives updates from various streams. Each stream is handles by a Data Source. Upon receiving an update Data Source passes it so appropriate Data Adaptor. Data Adaptor passes it to appropriate queries. 
+
+Data Sources Admin receives two function handles from Compiler Admin a Data Source and Data Adaptor. 
 
 \begin{itemize}
-\item Source Reader handle is inserted into Collection of Data Sources. It processes outside data streams and forwards received information to data dispatcher.
-\item Data Adaptor handle is inserted into a data dispatcher. Data Adaptor transforms received data into a format needed by the query.
-\end{itemize} 
+\item Data Source is inserted into Runable Sources Queue. It receives data from outside streams and forwards received information to data dispatcher.
+\item Data Adaptor is inserted into a data dispatcher. Data Adaptor transforms data from Data Source into a format specified by queries.
+\end{itemize}
 
-Data Sources Thread Pool stores threads and a collection of Source Readers. Each thread 
+Data Sources Thread Pool stores a set of execution threads and a queue of Runable Data Sources. Each thread 
 
 \begin{itemize}
-	\item Picks a Source Reader from a collection
+	\item Picks a Data Source from a queue
 	\item Performs a data read 
 	\item Forwards read data tuple to Data Dispatcher
 \end{itemize}
 
-\noindent The details of Data Source Processor can be seen in figure \ref{DataSourcePic}.
+\noindent Detailed representation of Data Sources Processor can be found in figure \ref{DataSourcePic}.
 
 %where each thread picks a Data Reader and executes a read at a time from one of them. Once read is done the results of the read are forwarded to a Data Structure Dispatch. The Dispatch uses the appropriate Data Adapter to handle the data into a structured format, then the structured data is forwarded to Query Processor, in particular to the Query Tuple Queue. The more pictorial description can be found in figure \ref{DataSourcePic}.
 
@@ -189,12 +198,14 @@ Data Sources Thread Pool stores threads and a collection of Source Readers. Each
 
 \subsubsection{Data Sources Admin}
 
-Data Sources Admin provides interface to install new Data Sources.
+Data Sources Admin provides an interface for adding new Data Sources. Each Data Source is paired up with a Data Adaptor. The later conversts raw data tuples to format understood by query.
+
+Another reason for Data Sources Admin is to provide a level of abstraction since calls for Data Source and Data Adaptor additions will be executed in the compiler execution path. 
 
 \begin{verbatim}
 class DataSourcesAdmin
 {
-	DataSourcesAdmin(InputBufferInterface*);
+    DataSourcesAdmin(InputBufferInterface*);
     addDataSource(sourceID, SourceReader, DataAdaptor);
 
 	DataDispatcher;
@@ -204,14 +215,8 @@ class DataSourcesAdmin
 }
 \end{verbatim}
  
-\noindent It also creates Data Dispatcher and Data Sources Manager.
+\noindent Data Source Admin is also responsible for handling Data Dispatcher and Data Sources Manager.
 
-These interface is needed by the compiler to install new data sources upon users request. When add Data Source is initiated
-
-\begin{itemize}
-	\item Data Adaptor is inserted into a Data Dispatcher
-	\item Data Source reader added to Data Sources Manager. It in turn adds it to a queue of available data sources to be read from.
-\end{itemize}
 
 %Data Sources Admin receives two function handles one to a data Reader and another one for a Data Adaptor from a Compiler. First Admin locks Data Adaptors and inserts a new Data Adaptor. Then Admin locks Data Readers Queue  and a handle is inserted. Each Data Readers handle implements a method \emph{readNext()} for reading data from some data source (typically a socket or a file).
 
@@ -223,17 +228,15 @@ These interface is needed by the compiler to install new data sources upon users
 
 %The Reader extracts the informations from either a file or a socket. Reader's communication with the outside world is in a standard format. On a read request, Reader first reads a header containing the information about the message followed by the message itself. For now we assume that a header is an integer containing the number of byte to be read. Once the read is completed the size and message are forwarded to Data Structures Dispatch.
 
-\noindent \emph{TODO: expand this into a section with the full description of Readers input formats}.
-
 %\noindent Data Sources Admin class contains the following:
 
 
 
-\subsubsection{Data Readers Thread Pool}
+\subsubsection{Data Sources Manager}
 
-Data Readers Thread Pool is a collection of identical threads. Each thread is responsible for getting a reader from the queue of Data Readers, executing a \emph{readNext()} message, collecting the message {\tt rawDataTuple} and sending it to Data Structures Dispatch together with the ID of a Reader.
+Data Sources Manager contains a list of identical threads. Each thread is responsible for getting a Data Source from queue of Data Sources, reading next update \emph{readNext()} message, and sending this {\tt rawDataTuple} message to Data Dispatch together with Dat Source ID.
 
-The class of the Data Readers Thread Pool looks as follows:
+Data Sources Manager is structured as follows:
 \begin{verbatim}
 class DataReadersPool
 {
@@ -241,11 +244,11 @@ class DataReadersPool
 	
     list<thread>            runningThreads;
     DataReadersQueue        sources;
-    DataDispatch            outputBuffer;
+    DataDispatch *          outputBuffer;
 }
 \end{verbatim}
 
-\noindent The class of Data Readers Thread Pool contains a Data Readers Queue:
+\noindent It contains a Data Readers Queue:
 
 \begin{verbatim}
 class DataReadersQueue
@@ -257,23 +260,23 @@ class DataReadersQueue
 }
 \end{verbatim}
 
-\noindent and a Data Dispatch.
+\noindent and a pointer to Data Dispatcher.
 
-\subsubsection{Data Dispatch}
+\subsubsection{Data Dispatcher}
 
-Data Dispatch receives an ID identifying each Data Source and a message read by the reader. 
+Data Dispatcher receives ID identifying a Data Source and a message read by that Source. 
 
 \begin{itemize}
 	\item {\tt dispatchNext(readerID, rawDataTuple);}
 \end{itemize}
 
-Based on the ID of a reader Dispatch Calls for on an appropriate Data Adaptor to convert the incoming {\tt rawDataTuple} message into a structure needed by the query. The structured tuple is then sent to an appropriate set of queues in the Data Queue for Processing. The {\tt structuredTuple} is a pair {\tt <size, bit-sequence>} such that the bit sequence can be interpreted by the query. 
+Based on Data Source ID Dispatcher calls an appropriate Data Adaptor to convert incoming {\tt rawDataTuple} message into a structure messages understood by queries. Structured tuple is then sent to an appropriate set of queues in the Input Buffer. {\tt structuredTuple} is a pair {\tt <size, bit-sequence>} such where bit sequence can be processed by queries. 
 
 \begin{verbatim}
-class DataDispatch
+class DataDispatcher
 {
 	
-	void dispatchNext(readerID, rawDataTuple);
+    void dispatchNext(readerID, rawDataTuple);
 
 private:
     void sendData();
@@ -283,23 +286,24 @@ private:
 }
 \end{verbatim}
 
-\noindent Data Adaptors map is a separate class just like Data Readers Queue
+\noindent Data Adaptors is a map enabling access to appropriate Data Adaptor for a given Data Source.
 
 \begin{verbatim}
 class DataAdaptors
 {
+public:
     functionHandle  getAdaptor(sourceID);
     void            addAdaptor(sourceID, functionHandle);
 
+privare:
     map<sourceID, functionHandle>;
 	
 }
 \end{verbatim}
-\noindent They are needed to be separated into classes to deal with concurrency.
 
 \subsection{Query Processor}
 
-Query Processor is done mostly in Query Executor with a set of Query Threads each thread picks a query-datum pair from a pool of available pairs and processes it. As data comes in after been processed it is sent to the appropriate query. As soon as query receives a datum it becomes available for execution. The structure of query processor can be found in figure \ref{QueryProcessingPic}.
+The bulk work of Query Processor is done in Query Executor with a set of Query Threads. Each thread picks a query-datum pair from a pool of available pairs and processes it. As data comes in from Data Dispatcher, it is sent to the appropriate set of queries. When query receives a datum it becomes available for execution. The structure of query processor can be found in figure \ref{QueryProcessingPic}.
 
 \begin{figure}
   \includegraphics[width=5.00in]{../figures/QueryProcessing.pdf}
@@ -309,7 +313,7 @@ Query Processor is done mostly in Query Executor with a set of Query Threads eac
 
 \subsubsection{Query Admin}
 
-Query Admin receives a function handle to a query. It also receives a list of the readers IDs for that query. Once the handle is received Admin locks Query Catalog and inserts the query there, then Query Results Queue is locked and updated to have an output queues for just inserted query. Finally Admin locks Query Tuple Queue and inserts and additional queue for data associated with the query. 
+Query Admin receives a function handle to a query. It also receives a list of Data Source IDs which provide data for that query. When Query handle is received, Admin locks Query Catalog and inserts query handle there. After that Query Results Queue is locked and updated to create an output queues for just inserted query. Finally Admin locks Query Tuple Queue and inserts and additional queue for data associated with inserted query. 
 
 Query Catalog is a map containing query ID and a handler for that query. 
 
@@ -328,13 +332,13 @@ class QueryAdmin
 
 \subsubsection{Query Executor}
 
-Query Executor consists of two inter dependent components: Input Buffer and Scheduler. Input Buffer stores data needed for query execution. Scheduler contains a set of threads which run one query at a time on data from Input Buffer. InputBufferInterface and SchedulerInterface are two classes which provide interface for InputBuffer andScheduler. 
+Query Executor consists of two inter dependent components: Input Buffer and Scheduler. Input Buffer stores data needed for query execution. Scheduler contains a set of threads. Each thread runs one query at a time one update tuple from Input Buffer. \emph{InputBufferInterface} and \emph{SchedulerInterface} are two classes providing interface for \emph{InputBuffer} and \emph{Scheduler}. 
 
 \paragraph{Input Buffer}
 
-Input Buffer is a class, which provides seamless access to the data and storage. It contains a queue per data source, each query when registered can get the data from those queues. When Input Buffer receives a new tuple from Data Dispatch, together with an ID of the data Source (in a format {\tt structuredTuple}), the new tuple is inserted into appropriate queue. If the tuple insert causes a query to be available a Scheduler is notified to add such a query for processing. If the query is already runable then the tuple is just inserted into the queue.
+Input Buffer provides seamless access to the data and storage. It contains a queue per data source. Each query needs to register with queue to access data from it. Input Buffer receives a new tuple from Data Dispatch with an ID of its data Source (in a format {\tt structuredTuple}), the new tuple is inserted into appropriate queue. If a tuple insert causes query to become available Scheduler is notified to add such a query for processing. If a query is already runnable, a tuple is just inserted into appropriate queue without any action.
 
-\noindent InputBufferInterface has the following structure:
+\noindent \emph{InputBufferInterface} has the following structure:
 
 \begin{verbatim}
 class InputBufferInterface
@@ -349,7 +353,7 @@ class InputBufferInterface
 }
 \end{verbatim}
 
-Input Buffer class has the following structure:
+\noindent Input Buffer class has the following structure:
 
 \begin{verbatim}
 class InputBuffer
@@ -372,15 +376,15 @@ class InputBuffer
 }
 \end{verbatim}
 
-\noindent Here we refer to {\tt queryID} as to an ID of a query coupled with data source. This ID is created in Query Catalog. The purpose is to make a direct link between a query and source and hide the details of dealing with several sources for each query inside the Scheduler.
+\noindent Here we refer to {\tt queryID} as an ID of a query, which needs data from a particular data source. This ID is created in Query Catalog. Its purpose is to make a direct link between a query and a source. It hides details of dealing with several sources for each query inside Scheduler.
 
-Interface function {\tt addTuple(sourceID, structuredTuple)} is called by the Data Dispatch to add a new data item. Functions {\tt getTuple(queryID), hasNext(queryID)} and{\tt removeTuples(queryID)} are required to extract tuples available for the query to be executed as well as for cleaning up queues. Functions {\tt addQuery(int queryID, int sourceID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new queries. 
+Interface function {\tt addTuple(sourceID, structuredTuple)} is called by the Data Dispatch to add a new data item. Functions {\tt getTuple(queryID)},{\tt hasNext(queryID)} and{\tt removeTuples(queryID)} are required to extract tuples available for the query to be executed as well as for cleaning up queues. Functions {\tt addQuery(int queryID, int sourceID)} and {\tt removeQuery(queryID)} are needed by Query Admin to insert or remove a new queries. 
 
 To enable this functionality we need to consider concurrency and efficiency. 
 
-\subparagraph{Concurrency:} Each queue can be accessed by several queries and only one data source. Locking needs to be enabled to prevent overlapping on insertion and deletion. Reading data should be available to all queries simultaneously. SharedTupleQueue provides this controls internally for each queue. Since there is no race between different queues there is no need to create concurrency between them.
+\subparagraph{Concurrency:} Each queue can be accessed by several queries. Also each queue has only one data source associated with it. The queue is locked on insertion and deletion form Data Source. Data reads are enabled to all queries simultaneously. \emph{SharedTupleQueue} provides this controls internally for each queue. Since there is no race between different queues there is also no need to create concurrency between them.
 
-\subparagraph{Efficiency:} The main inefficiency comes form the fact that data from one data source needs to be accessed by several queries. If we adopt a simple model (case A) where each query has its own set of queues for each of the required sources, we have inefficiency of coping data to each such queue. The benefit of such model is simplicity of implementation and use. Also the concurrency mechanisms are simple and very efficient. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what item from this queue as well as removal of used tuples. The benefit of this method is simpler storage method and memory management. Both approaches can be supported. We can hide all this details into the implementation of queue and Input Buffer. By requiring the following specification:
+\subparagraph{Efficiency:} The main inefficiency comes form a fact that data from one data source needs to be accessed by several queries. If we adopt a simple model (case A), each query has its own set of queues for each of required sources. Here we have inefficiency of coping data to each such queue. The benefit of such model is its simplicity of implementation and use. Also no need for concurrency mechanisms. Another model (case B) is to have only one queue for each data source. In this case each queue will need to keep track of which query requires what data item from this queue. Data deletion becomes complicated. The benefit of this method is simpler storage method and memory management. Both approaches can be supported. We can hide all details into the implementation of queue and Input Buffer. By requiring the following specification:
 
 \noindent Case A:
 \begin{verbatim}
@@ -424,11 +428,11 @@ struct SharedTuple
 }
 \end{verbatim}
 
-We decided to adopt Case B due to the savings of memory and copying of data tuples.
+In current implementation we decided to adopt Case B due to memory savings and efficiency of data copying copying.
 
-When a new query is inserted into Query Admin, it calls on Input Buffer with {\tt addQuery(queryID, int sourceID)} for each data source (remember that queryID is an ID indicating query source connection and can be mapped to a real query in Query Catalog). If the source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new Tuple Queue, but if it is we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it or in case B it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either a destructor or changes internal representation). When a new tuple comes in, by the call of {\tt addTuple(sourceID, structuredTuple)} in InputBuffer.
+When a new query is inserted into Query Admin, Input Buffer is called with {\tt addQuery(queryID, int sourceID)} for each data source (remember that queryID is an ID indicating query source connection and is mapped to a real query in Query Catalog). If a source is not present (we can find it though {\tt map<sourceID, list<TupleQuery*> >}) we create a new Tuple Queue. If it is present, we call {\tt join(queryID)}. {\tt join(queryID)} in case A will create a new TupleQueue and return a pointer to it. In case B, it will return a pointer to this queue and change internal structure to accommodate a new query. ({\tt removeQuery(queryID)} is a reverse. It is either remove a queue or changes internal representation). New tuples are added by the call of {\tt addTuple(sourceID, structuredTuple)} in \emph{InputBuffer} from Data Dispatcher.
 
-\subparagraph Memory Manager: to increase efficiency we want to allocate storage for the tuples in pages. Memory Manager provides an interface to receive and address of a new page and gets an old freed up page back. The writing to the page as well as management of allocation within a page will happen inside Shared Tuple Queue. 
+\subparagraph{Memory Manager} facilitates storage of data tuples by pre-allocating a number of pages. Memory Manager creates an interface for allocating and deallocating space for data by allocating a set of new page and deallocating unused pages. 
 
 \begin{verbatim}
 class MemoryManager
@@ -452,20 +456,20 @@ class PagesManager
 
 \paragraph{Scheduler}
 
-Scheduler's job to execute a query on an appropriate data tuples. This goal is achieved by having a set of identical threads execute jobs. Each thread is responsible for picking up a query from Runable Query Queue. Then thread runs a query on the data tuple from Input Buffer. The results are put into a Query Results Queues; into a set of queues for the users which are interested in the results of this query. 
+Scheduler's job is to execute a query on an appropriate data tuple. This goal is achieved by creating a set of identical threads for executing queries. Each thread is responsible for picking up a query from Runable Query Queue. Then thread runs a query on data tuple from Input Buffer. Results are put into a Query Results Queue. Results are accessed by users upon request.
 
 The execution flow within each thread is as follows:
 
 \begin{verbatim}
 get a queryID from RunableQueryQueue;
-get data a set of data tuples from Input Buffer;
-get a handle to a query function from QueryCatalog;
+get data: a set of data tuples from Input Buffer;
+get a query handle from QueryCatalog;
 
-run Query on a set of tuples;
+run Query on data;
 
 release data in InputBuffer;
 
-if more data for query 
+if more data for this query is available
 	put query onto RunableQueryQueue;
 
 put results to QueryResultsQueue;
@@ -490,12 +494,12 @@ class Scheduler
 }
 \end{verbatim}
 
-Function {\tt addRunableQuery(querySourceID)} is used by Input Buffer to check if the current query is available for running and if it is not add it to ready for a set of Runable Queries.
+Function {\tt addRunableQuery(querySourceID)} is used by Input Buffer to check if current query is available for running. If query is not available it is added to Runnable Queries.
 
-\noindent With RunableQueryQueue as follows:
+\noindent With RunnableQueryQueue as follows:
 
 \begin{verbatim}
-class RunableQueryQueue
+class RunnableQueryQueue
 {
     
     queryID        nextQuery();
@@ -517,15 +521,15 @@ Query Results Queue implements a server, where each client upon connection indic
 	\item {\tt userDataStructuresDispatch(userID, Query ID list);}
 \end{itemize}
 
-\noindent The server creates a map of query IDs and query results for each client. When a query produces an output, it is sent to the Query Result Queues. In the Result Queues the query results are dispatched to the appropriate queues.
+\noindent Server creates a map of query IDs to query results for each client. When a query produces an output, it is sent to Query Result Queues. There query results are dispatched to appropriate queues.
 
 \begin{itemize}
 	\item {\tt queryDataStructuresDispatch(queryID, queryMap);}
 \end{itemize}
 
-\noindent When a client needs a new piece of information it sends a request to the server with the ID of a query it is interested in and the number of tuples it needs. Server returns the results of the query indicated by the ID and the tuples it produced. 
+\noindent When a client needs a new piece of information it sends a request to server with query ID and number of tuples needed.  Server returns  results of that query. 
 
-Query Result Queues implements two ways for the users to access data. One is when a user asks for a complete query result and another is when a client asks for an cursor to query results.
+Query Result Queues implements two ways to access data. In the first one a user asks for a complete query result. In the second one user asks for a cursor to query results and is capable to iterate over results.
 
 Query Result Queue class is:
 
@@ -551,13 +555,13 @@ class SchedulingQueue
 
 \section{AlgoTrader}
 
-AlgoTrader is an application that applies DBToaster Runtime to the domain of Stock Exchange and Algorithmic Trading. It consists of two parts: an automatic Stock Trading Simulator and a platform for development and execution of Automatic Stock Trading Algorithms. The purpose of AlgoTrader is to demonstrate the potential of DBToaster Runtime to process time critical, expressive queries over streaming data. To demonstrate the potential of Runtime two components are needed: a source(s) of update stream and an application(s) which runs queries over it. Exchange Server Simulator provides a source of continuous stock transactions between interested parties. AlgoEngine implements a set of trading strategies. Each strategy utilizes results of a query over the data from Exchange Server Simulator to make a decision about purchase/sell of stocks. The queries are processed and executed by DBToaster Runtime.
+AlgoTrader is an application that applies DBToaster Runtime to a domain of Stock Exchange and Algorithmic Trading. It consists of two parts: an automatic Stock Trading Simulator and a platform for development and execution of Automatic Stock Trading Algorithms. The purpose of AlgoTrader is to demonstrate the potential of DBToaster Runtime to process time critical, expressive queries over streaming data. To demonstrate the potential of Runtime two components are needed: a source(s) of update stream and an application(s), which runs queries over it. Exchange Server Simulator provides a source of continuous stock transactions between interested parties. AlgoEngine implements a set of trading strategies. Each strategy utilizes results of a query over the data from Exchange Server Simulator to make a decision about purchase/sell of stocks. Queries are processed and executed by DBToaster Runtime.
   
 
 \subsection{Exchange Server Simulator}
 Exchange Server Simulator (ESS) is designed to reproduce the behavior of Electronic Communication Networks (ECN). ECN facilitates stock exchanges between different parties connected to the network. Each ECN provides certain data to its subscribers. For now we limit ourselves to complete knowledge about changes in stock order books. Order books for a stock contains all sell (ask) and buy (bid) request for each stock. This data is distributed to all subscribers as a constant stream of updates to order books. Current implementation of Exchange Server Simulator works with only one stock (for now). 
 
-Each Order Book consists of an Asks Book and Bids Book. Asks Book contains sell requests, Bids Book - buy requests. Each ask/bid requests is transmitted to all subscribers. If two requests are matched the results of such a match are transmitted as well. 
+Each Order Book consists of an Asks Book and Bids Book. Asks Book contains sell requests, Bids Book - buy requests. Each ask/bid request is transmitted to all subscribers. If two requests are matched the results of such a match are transmitted as well. 
 
 Main difference between a real ECN and a Simulator, is simulator's ability to replay the exchanges made at some earlier date and incorporate exchanges made by trading algorithms into this stream. 
 
@@ -582,9 +586,9 @@ while (Server_socket.listen())
 
 
 \subsubsection{Exchange Thread}
-When a client connects to ESS, ExchangesThread is created to handle client needs. All ExchangesThreads share order book storage structure SynchronizedBooks. They also share a list of all connected clients.
+When a client connects to ESS, ExchangesThread is created to handle client needs. All ExchangesThreads share order book storage structure: \emph{SynchronizedBooks}. They also share a list of all connected clients.
 
-\noindent The communication protocol between a client and server is as follows: 
+\noindent The communication protocol between a client and a server is as follows: 
 
 \noindent The first message a server expects form a thread is a client type.
 
@@ -598,7 +602,7 @@ When a client connects to ESS, ExchangesThread is created to handle client needs
 \end{tabular}
 \\
 \\
-\emph{Writer} clients are designed to send data and receive messages only as response to their transactions. \emph{Reader} clients receive all ongoing transactions but do not to send messages themselves.
+\emph{Writer} clients are designed to send data and receive messages only as a response to their transactions. \emph{Reader} clients receive all ongoing transactions but do not to send messages themselves.
 
 Communication messages  are in pre-specified format:
 
@@ -611,15 +615,15 @@ int  volume;
 int  price;
 \end{verbatim}
 
-Where \emph{time} indicates the time when requests arrived to the server, \emph{order\_id} a unique identifier for each order given by ESS, \emph{brokerage\_id} ID identifying company, which placed an order, \emph{action} one of several actions (buy, sell, cancel) described below, \emph{price} and \emph{volume} are price and amount of the stocks to be bought/sold. 
+Where \emph{time} indicates the time when requests arrived to the server, \emph{order\_id} a unique identifier for each order given by ESS, \emph{brokerage\_id} ID identifying company, which placed an order, \emph{action} one of several actions (buy, sell, cancel) described below, \emph{price} and \emph{volume} are price and amount of stocks to be bought/sold. 
 
 \noindent Several action can possibly occur:
 
 \begin{tabular}{|l|l|}
   \hline
   Request & Action \\ \hline
-  'B' & buy request, check ask book for match if no add to bid book \\ \hline
-  'S' & see request, check bid book for match if no add to ask book \\ \hline
+  'B' & buy request, check ask book for match, if none add it to bid book \\ \hline
+  'S' & sell request, check bid book for match, if none add it to ask book \\ \hline
   'D' & delete request for an appropriate book if one exists \\ \hline
   'X' & cancel order remove trade request from appropriate book\\ \hline
   'E' & change request, generated by server \\ \hline
@@ -628,7 +632,7 @@ Where \emph{time} indicates the time when requests arrived to the server, \emph{
 \end{tabular}
 \\
 \\
-\noindent 'B', 'S' and 'D' actions can come from any of the clients (as a buy or sell stocks or delete requests). Actions 'E', 'F' and 'X' are generated by the server as a result of a partial match, match or delete request. 
+\noindent 'B', 'S' and 'D' actions can come from any of the clients (as a buy or sell stocks request or delete request). Actions 'E', 'F' and 'X' are generated by server as a result of a partial match, match or delete request. 
 
 Each transaction and its consequences are announced to all Reader clients as well as to Writer client, which initiated a transaction. 
 
@@ -647,7 +651,7 @@ while (listen(request)){
 \subsubsection{Synchronized Books}
 SynchronizedBooks is a shared data structure for storage of order books information. It is shared between all clients. Each client can add/remove/modify it based on client's requests. SynchronizedBooks contains two SortedBooks representing Asks/Bids Books. SortedBook is a structure that has properties of a sorted set and a hashtable. (Data is sorted by data values and can be accessed using keys).
 
-When a sell/buy request is inserted into SynchronizedBooks, the data structure tries to find a matching buy/sell request. If a matching request is found an update message is generated in addition to sell/buy message. Update message contains information about the fact that one or both of the orders are partially/fully satisfied. Update message can be of the form:
+When a sell/buy request is inserted into SynchronizedBooks, it tries to find a matching buy/sell request. If a matching request is found an update message is generated in addition to sell/buy message. Update message contains information about the fact that one or both of the orders are partially/fully satisfied. Update message can be of the form:
 
 
 \begin{tabular}{|l|l|}
@@ -660,12 +664,12 @@ When a sell/buy request is inserted into SynchronizedBooks, the data structure t
 \end{tabular}
 \\
 \\
-SynchronizedBooks utilizes Order\_tuple to store each individual bid/ask request in SortedBooks. Stream\_tuple is used to generate as a communication message to be sent to clients.
+SynchronizedBooks utilizes Order\_tuple to store each individual bid/ask request in SortedBooks. Stream\_tuple is used to generate a communication message to be sent to clients.
 
 
 \subsubsection{Historical Data}
 
-ExchangeServer is capable of using historical data flow from stock trades between real clients in addition to transactions provided by Writer clients. ESS uses DataThread to extract historical data from a file and transmit it to server. DataThread can be started at any point during the execution by a server (for example, once there is a client connected to server). DataThread reads historical trace file in a .cvs format and transmits each message to server as if it was a real request. DataThread does not distinguish between client and server actions and transmit all of them as if they were requests made by some client. ExchangeThread distinguishes orders coming from historical data and from live clients by the message's data. Historical data contains order ID and timestamps for all the orders. Writer clients have 0 in those fields (except for delete).  
+ExchangeServer is capable of using historical data flow from stock trades between real clients in addition to transactions provided by Writer clients. ESS uses DataThread to extract historical data from a file and transmit it to server. DataThread can be started at any point during the execution by a server (for example, once there is a client connected to server). DataThread reads historical trace file in a .cvs format and transmits each message to server as if it was a real request. DataThread does not distinguish between client and server historical actions and transmit all of them as if they were requests made by some client. ExchangeThread distinguishes orders coming from historical data and from live clients by the message's data. Historical data contains order ID and timestamps for all orders. Writer clients have 0 in those fields (except for delete).  
 
 
 \subsection{Algorithms Engine}
@@ -674,13 +678,13 @@ Algorithms Engine is an application designed to emulate actions of a hedge fund.
 
 Algorithms Engine has two connections to ESS. First connection is a writer client. It sends ask/bid requests to ESS. The second connection is a reader client to monitor the results of exchanges. The second connection notifies Algorithms Engine when and if ask/bid request have been executed. 
 
-There are two concurrent execution paths inside Algorithms Engine. First path creates a reader client to ESS and starts listening to the update stream. Each order in a stream is compared to a set of internal order requests. If an incoming data is about one of the internal requests, this request is modified and appropriate statistics are changed. The second path creates one writer connection to ESS and a client connection to DBToaster Runtime. This path starts by initiating all of the trading algorithms. Each of the trading algorithms runs (or uses results of) a query over the data produced by ESS. These queries are executed by Runtime. The results of each query are used by Algorithms Engine. When data is available, trading algorithms use it to determine whether to place ask/bid order. This process repeats continuously. 
+There are two concurrent execution paths inside Algorithms Engine. First path creates a reader client to ESS and starts listening to the update stream. Each order in a stream is compared to a set of internal order requests. If an incoming data is about one of the internal requests, this request is modified and appropriate statistics are changed. The second path creates one writer connection to ESS and a client connection to DBToaster Runtime. This path starts by initiating all trading algorithms. Each  trading algorithm runs (or uses results of) a query over data produced by ESS. These queries are executed by Runtime. Results of each query are used by Algorithms Engine. When data is available, trading algorithms use it to determine whether to place ask/bid order. This process repeats continuously. 
 
 %Algorithm Engine code developed by the end users. The code makes use of DBToaster Runtime to query the continuous data from input streams specified by the users. The query results are then processed by user defined algorithms to achieve their goals. 
 
 %In our example Algorithmic Engine creates and runs a set of monitoring queries for the stock trading depending on the results of the queries and the internal mechanics - algorithms decide to buy or sell stocks on a NASDAQ Trading Exchange Simulator.
 
-\subsubsection{Algorithms Engine}
+\subsubsection{Algorithms Engine Class}
 
 AlgorithmsEngine class contains all trading algorithms, connections to ESS and a connection to DBToaster Runtime. On initiation it starts Reader connection to ESS. A trading algorithm can be added at any time during execution. 
 
@@ -717,7 +721,7 @@ void runAlgos()
 }
 \end{verbatim}
 
-Where \emph{requests} is a set of order requests generated by the algorithms.
+Where \emph{requests} is a set of order requests generated by algorithms.
 
 %Algorithmic Engine interacts with environment in three different ways. First of all the Engine needs to receive  the information from from DBToaster runtime. This interaction is unavoidable since the Engine needs the results of the queries. Another interaction which needs to be added is the way to specify the information stream received by a DBToaster runtime. This information needs to be passed the the Runtime in the form of c++ code for the Runtime to compile. Another optional source of interaction is infulencing the enviroment. In our example is the Engine's capability to add/remove stock requests from the Exchange Server. 
 
@@ -741,7 +745,7 @@ private:
 }
 \end{verbatim}
 
-Order Manager has two connections to ESS: a writer and a reader clients. Each of them runs in different thread. Reader client is invoked by \emph{startReading} function. It creates a loop where \emph{processOrder} is called repeatedly. Writer client is invoked by \emph{sendOrder} function. It gets a list of order requests form trading algorithm adds them to \emph{dataOrders} list and sends them to ESS. \emph{processOrder} function in turn checks \emph{dataOrders} whether it an order with the same order ID as incoming message \emph{tuple}. If it does the update to \emph{dataOrders} is made and change in statistics for appropriate algorithm.
+Order Manager has two connections to ESS: a writer and a reader clients. Each of them runs in different thread. Reader client is invoked by \emph{startReading} function. It creates a loop where \emph{processOrder} is called repeatedly. Writer client is invoked by \emph{sendOrder} function. It gets a list of order requests form trading algorithms, adds them to \emph{dataOrders} list and sends them to ESS. \emph{processOrder} function in turn checks \emph{dataOrders} whether it contains an order with the same order ID as incoming message \emph{tuple}. If it does the update to \emph{dataOrders} is made and changes in statistics for appropriate algorithm.
 
 \emph{executedOrder} stores all completed requests. \emph{orderIDtoLocalId} is a map from Server's identifier for each order to internal identifier used by Order Manager for each order.
 
@@ -790,7 +794,7 @@ Volatile SOBI is a derivation of simple SOBI. It additionally takes into account
 
 \paragraph{Timed SOBI}
 
-Timed SOBI is a strategy similar to Simple SOBI. It looks at an average timestamp for the top orders in each order book. The shift to older values of time stamps indicates lessened support of the current price in this order book. Appropriate buy or sell order is generated for a fixed number of shares and at a current price. 
+Timed SOBI is a strategy similar to Simple SOBI. It looks at an average timestamp for the top orders in each order book. A shift to older values of time stamps indicates lessened support of the current price in this order book. Appropriate buy or sell order is generated for a fixed number of shares and at a current price. 
 
 \paragraph{Market Players}
  
