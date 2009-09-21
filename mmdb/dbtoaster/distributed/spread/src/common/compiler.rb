@@ -25,42 +25,42 @@ class MapEquation
   
   def ready
     case type
-      when :plus  left.ready && right.ready;
-      when :mult  left.ready && right.ready;
-      when :sub   left.ready && right.ready;
-      when :div   left.ready && right.ready;
-      when :num   true;
-      when :map   left.ready;
-      when :param left === nil;
-      else        false;
+      when :plus  then left.ready && right.ready;
+      when :mult  then left.ready && right.ready;
+      when :sub   then left.ready && right.ready;
+      when :div   then left.ready && right.ready;
+      when :num   then true;
+      when :map   then left.ready;
+      when :param then left === nil;
+      else             false;
     end
   end
   
   def to_f
     case type
-      when :plus  left.to_f + right.to_f;
-      when :mult  left.to_f * right.to_f;
-      when :sub   left.to_f - right.to_f;
-      when :div   left.to_f / right.to_f;
-      when :num   left;
-      when :map   if ready left.value; 
-                  else raise SpreadException.new("Trying to read incomplete Equation");
-                  end
-      when :param raise SpreadException.new("Trying to read uninstantiated Equation");
+      when :plus  then left.to_f + right.to_f;
+      when :mult  then left.to_f * right.to_f;
+      when :sub   then left.to_f - right.to_f;
+      when :div   then left.to_f / right.to_f;
+      when :num   then left;
+      when :map   then if ready left.value; 
+                       else raise SpreadException.new("Trying to read incomplete Equation");
+                       end
+      when :param then raise SpreadException.new("Trying to read uninstantiated Equation");
     end
   end
   
   def instantiate(params)
     case type
-      when :plus  MapEquation.new(type, left.instantiate(params), right.instantiate(params));
-      when :mult  MapEquation.new(type, left.instantiate(params), right.instantiate(params));
-      when :sub   MapEquation.new(type, left.instantiate(params), right.instantiate(params));
-      when :div   MapEquation.new(type, left.instantiate(params), right.instantiate(params));
-      when :num   MapEquation.new(type, left);
-      when :map   MapEquation.new(type, left);
-      when :param if params[right] == nil MapEquation.new(:num, params[right])
-                  else raise SpreadException.new("Instantiating equation missing parameter: '" + right.to_s);
-                  end
+      when :plus  then MapEquation.new(type, left.instantiate(params), right.instantiate(params));
+      when :mult  then MapEquation.new(type, left.instantiate(params), right.instantiate(params));
+      when :sub   then MapEquation.new(type, left.instantiate(params), right.instantiate(params));
+      when :div   then MapEquation.new(type, left.instantiate(params), right.instantiate(params));
+      when :num   then MapEquation.new(type, left);
+      when :map   then MapEquation.new(type, left);
+      when :param then if params[right] == nil then MapEquation.new(:num, params[right])
+                       else raise SpreadException.new("Instantiating equation missing parameter: '" + right.to_s);
+                       end
     end
   end
   

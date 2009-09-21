@@ -1,3 +1,6 @@
 
-common/gen-rb: common/spread.thrift
+gen-rb: common/spread.thrift
 	thrift --gen rb common/spread.thrift
+
+clean:
+	rm -rf gen-rb

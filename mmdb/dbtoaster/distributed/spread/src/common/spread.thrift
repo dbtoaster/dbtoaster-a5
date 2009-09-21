@@ -9,10 +9,10 @@ typedef i64 MapID
 typedef i64 Version
 
 struct Entry {
-  1: MapID    source,
-  2: i64      key,
-  3: Version  version,
-  4: NodeID   node
+  1:           MapID    source,
+  2:           i64      key,
+  3:           Version  version,
+  4: optional  NodeID   node
 }
 
 typedef map<Entry,double> GetResult
@@ -42,6 +42,9 @@ service MapNode {
   void put(             1: PutCommand    cmd
                         ) throws (1:SpreadException error),
 
+  GetResult get       ( 1: list<Entry>   target
+                        ) throws (1:SpreadException error),
+
   oneway void fetch   ( 1: list<Entry>   target,
                         2: NodeID        destination,
                         3: Version       cmdid
@@ -50,7 +53,7 @@ service MapNode {
   oneway void pushget ( 1: GetResult     result,
                         2: Version       cmdid
                         ),
+  
+  string dump         ()
 
-  GetResult get       ( 1: list<Entry>   target
-                        ) throws (1:SpreadException error)
 }

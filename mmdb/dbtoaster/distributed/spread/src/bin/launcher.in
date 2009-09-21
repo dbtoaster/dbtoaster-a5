@@ -1,0 +1,13 @@
+#!/bin/bash
+
+SRCDIR=`dirname $0`/../src
+INCLUDES="
+  -I /usr/local/thrift/lib/rb/lib
+  -I $SRCDIR/common
+  -I $SRCDIR/node
+  -I $SRCDIR/gen-rb"
+
+echo ========================
+echo ruby $INCLUDES $SRCDIR/bin/--SCRIPT-- $*
+echo ========================
+ruby $INCLUDES $SRCDIR/bin/--SCRIPT-- $*
