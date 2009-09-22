@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'thrift';
 require 'map_node';
 require 'spread_types';
 require 'compiler';
@@ -97,6 +98,7 @@ class MapNodeHandler
 
   def initialize()
     @maps = Hash.new;
+    @templates = Hash.new;
   end
   
   ############# Internal Accessors
@@ -118,6 +120,11 @@ class MapNodeHandler
     puts ("Created partition " + map.to_s + " => [" + start.to_s + ":" + (start.to_i + range.to_i).to_s + "]");
   end
   
+  def createPutTemplate(index, cmd)
+    @templates[index.to_i] = MapEquation.parse(cmd);
+    puts ("Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s );
+  end
+  
   def dump
     @maps.values.collect do |map|
       map.collect do |partition|
@@ -128,8 +135,25 @@ class MapNodeHandler
   
   ############# Basic Remote Accessors
 
-  def put(cmd)
+  def put(id, template, target, paramList)
+    if ! @templates.has_key? template then raise SpreadException.new("Unknown put template: " + template); end
     
+    paramMap = Hash.new;
+    paramList.each_index do |i|
+      param = paramList[i];
+      param.type = case param.type
+        when PutFieldType::VALUE then :num;
+        when PutFieldType::ENTRY then param.value = param.entry; :map;
+        else :num;
+      end
+      paramMap[i] = param;
+    end
+    paramMap[-1] = PutField.new;
+      paramMap[-1].value = target;
+      paramMap[-1].type = :map;
+    
+    puts "In: " + @templates[template].to_s
+    puts "Out: " + @templates[template].parametrize(paramMap).to_s
   end
   
   def get(target)
@@ -158,11 +182,83 @@ class MapNodeHandler
       case cmd[0]
         when "partition" then createPartition(cmd[1], cmd[2], cmd[3]);
         when "value" then findPartition(cmd[1], cmd[2]).set(cmd[2], cmd[3], cmd[4]);
+        when "put" then cmd.shift; createPutTemplate(cmd.shift, cmd.join(" "));
       end
     end
   end
   
 end
 
+###################################################
 
-
+class MapNodeInterface
+  
+  def initialize(host, port=52982)
+    @port = port;
+    @transport = Thrift::BufferedTransport.new(Thrift::Socket.new(host, port))
+    @protocol = Thrift::BinaryProtocol.new(@transport)
+    @client = MapNode::Client.new(@protocol)
+    @getrequest = Array.new;
+    @transport.open();
+  end
+    
+  def close
+    @transport.close;
+  end
+  
+  def dump
+    @client.dump;
+  end
+  
+  def makeEntry(source, key, version, node = nil)
+    entry = Entry.new;
+    entry.source = source;
+    entry.key = key;
+    entry.version = version;
+    entry;
+  end
+  
+  ############# GET
+  
+  def queueGet(source, key, version, node = nil)
+    @getrequest.push(makeEntry(source, key, version, node));
+  end
+  
+  def issueGet
+    if @getrequest.size > 0 then request = @getrequest;
+                                 @getrequest = Array.new
+                                 @client.get(request);
+                            else Hash.new;
+    end
+  end
+  
+  def get(source, key, version)
+    @getrequest = Array.new
+    queueGet(source, key, version);
+    issueGet();
+  end
+  
+  ############# PUT
+  
+  def put(version, template, target, *params)
+    convertedParams = 
+      params.collect do |param|
+        field = PutField.new()
+        field.type = 
+          if param.is_a? Numeric then 
+            field.value = param.to_f;
+            puts "Value: " + param.to_f.to_s;
+            PutFieldType::VALUE;
+          elsif param.is_a? Entry then
+            field.entry = param;
+            puts "Entry: " + param.to_s;
+            PutFieldType::ENTRY;
+          else 
+            raise SpreadException.new("Unknown parameter type");
+          end;
+        field;
+      end
+    @client.put(version, template, target, convertedParams);
+  end
+  
+end

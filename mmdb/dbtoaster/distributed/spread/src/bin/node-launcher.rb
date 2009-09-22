@@ -1,6 +1,7 @@
 
 require 'thrift';
 require 'node';
+require 'compiler';
 
 puts "Initializing Map Node Handler..."
 

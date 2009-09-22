@@ -22,16 +22,9 @@ enum PutFieldType {
 }
 
 struct PutField {
-  1:          PutFieldType  type 
-  2:          i64           id
-  3: optional double        value
-  4: optional Entry         entry
-}
-
-struct PutCommand {
-  1: Version         id
-  2: i64             command
-  3: list<PutField>  params
+  1:          PutFieldType  type, 
+  2: optional double        value,
+  3: optional Entry         entry
 }
 
 exception SpreadException {
@@ -39,7 +32,10 @@ exception SpreadException {
 }
 
 service MapNode {
-  void put(             1: PutCommand    cmd
+  void put(             1: Version         id,
+                        2: i64             template,  //the put template ID (see the map file)
+                        3: Entry           target,    //this is treated as param #0
+                        4: list<PutField>  params     //params are offset by 1 (params[0] = #1)
                         ) throws (1:SpreadException error),
 
   GetResult get       ( 1: list<Entry>   target
