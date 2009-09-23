@@ -17,32 +17,32 @@
     
 \section{Introduction.}
 
-Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to re-run an experiment. These leads to creating simulations for testing various theories. During a simulation original data parameters are augmented with new data. A set of user defined rules specify how historical and new data interact. A format that allows to freely augment and combine existent data with new data, and provide combination rule is our goal. 
+Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to re-run an experiment. This leads to creating simulations for emulating such experiments under various conditions. During a simulation original data parameters are augmented with new data. A set of user defined rules specify how historical and new data interact. Below we describe a format that allows to freely augment and combine existent data with new data. 
 
 %In these simulations parameters during the progress of an experiment are preserved and we want to either change or augment those parameters with new information. Also we want to let users specify the results of the augmentation. 
 
 \section{Approach.}
 
-At a high level historical data together with new data can be thought of as a stream of updates to a relational table. Let's assume that there are $N$ update streams, each resulting in its own relational table. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and output as desired.
+At a high level historical data together with new data can be thought of as a stream of updates to a relational table. We assume that there are $N$ update streams, each resulting in its own relational table. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined, filtered and output as desired.
 
 
 %parameters for the experiments can be though of as a stream of updates to a relational table.  New data can be thought of as updates to some relation. If we have $N$ update streams, we will end up with $N$ different relations. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and outputted as desired. 
 
-The stock exchange simulator can be thought of as a stream processor. We can assume that there are $N$ streams coming in. Each of these streams is filtered according to certain conditions and merged together if needed. The merged streams form $K$ order-book DBs. These $K$ DBs are fed to a matching engine which generates a set of output streams.
+The stock exchange simulator can be thought of as a stream processor. We can assume that there are $N$ streams coming in. Each of these streams is filtered according to certain conditions and merged together if needed. The merged streams form $K$ order-book DBs. These $K$ DBs are fed to a matching engine, which generates a set of output streams.
 
 Generalized specification process for creating a simulator can be described in five steps:
 
 \begin{enumerate}
-    \item {\bf Input Filter}: each input stream can be filtered. This means that each incoming tuple in the stream can either be removed or it can generate extra inputs. 
-    \item {\bf Input Merging}: the set of input stream relations can be combined or subdivided into another set of $K$ relations using merging and filtering. 
-    \item {\bf Experiment}: each relation produced at a merging stage can be reduced using specifications given by users.
-    \item {\bf Output Merging}: when desired outcome for each $k$ relation is achieved we can again combine or filter them.
-    \item {\bf Output Filter}: additional conditions can be imposed on output results of each output stream as a result of either input tuples or output matchings.
+    \item {\bf Input Filter}: Each input stream can be filtered. This means that each incoming tuple in the stream can either be removed or it can generate extra inputs. 
+    \item {\bf Input Merging}: The set of input stream relations can be combined or subdivided into another set of $K$ relations using merging and filtering. 
+    \item {\bf Experiment}: For each relation produced at a merging stage is reduced/matched using specifications given by a user.
+    \item {\bf Output Merging}: Experiment outcomes can again be combined or filtered.
+    \item {\bf Output Filter}: For each output stream additional conditions can be imposed. Data within a stream can be changed based on those conditions.
 \end{enumerate}
 
 \section{Input Filter}
 
-The goal of input filter is to remove undesired tuples from input stream or to add tuples to the stream triggered by some input parameters.
+The goal of an input filter is to remove undesired tuples from input stream or to add tuples to the stream triggered by some input parameters.
 
 The desired functionality is as follows:
 
@@ -86,7 +86,7 @@ Adding extra tuples can provide a bit trickier with SQL
 \caption{SQL add filter.}
 \end{program}
 
-\noindent \emph{new\_tuple} will depend on some parameters of the condition as well as tuples coming from input stream.
+\noindent The \emph{new\_tuple} fields will depend on some parameters of the condition as well as tuples coming from input stream.
 
 Alternatively
 
@@ -96,7 +96,7 @@ B = FILTER A BY TIMESTAMP > X;\\
 STREAM B INTO {}``XYZ'';
 \end{quote}
 
-Exchange Server has two input streams. One stream is historical data from trades executed at some previous date. The second stream is additional trades coming from Trading Algorithms. The stream of updates coming from Trading Algorithms can be controlled by the user (At the moment we assume that users have complete control over trading algorithms). However, historical data can be dirty and incomplete. We want to give users control to restore or remove information impurities. For instance, data tuple where we see that an order was completed can be removed from the system since Simulator will be able to create such a matching by itself. Also if we see a change in some order (order was partially fulfilled) and we have no reference to such order in the order book we would want to add such order to the book (the concerns for this operation are noted later).
+The Exchange Server has two input streams. One stream is historical data from trades executed at some previous date. The second stream is additional trades coming from Trading Algorithms. The stream of updates coming from Trading Algorithms can be controlled by the user (At the moment we assume that users have complete control over trading algorithms). However, historical data can be dirty and incomplete. We want to give users control to restore or remove information impurities. For instance, data tuples, corresponding to orders that were completed, can be removed from the system since the Simulator will be able to create such a matching by itself. Also if we see a change in some order (the order was partially fulfilled) and we have no reference to such order in the order book, we would want to add such order to the book (the concerns for this operation are noted later).
 Exchange Server Filtering can be implemented as follows:
 
 \begin{program}
@@ -122,11 +122,11 @@ Exchange Server Filtering can be implemented as follows:
 \caption{Add/Remove Filter for ESS.}
 \end{program}
 
-\noindent \emph{getNewTuple(input)} this function is undefined. Without additional information we do not know if "S" or "B" tuple should be added as a result of "F" or "E" input. This information could have been deduced from other messages, however there is no guarantee on the message order, making it impossible to tell which messages should be paired up. 
+\noindent The \emph{getNewTuple(input)} function is undefined. Without additional information we do not know if an "S" or "B" tuple should be added as a result of an "F" or "E" input. This information could have been deduced from other messages, however there is no guarantee on the message order, making it impossible to tell which messages should be paired up. 
 
 \section{Input Merging}
 
-Often once input is received we would want to combine (join) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging will allow users to specify those conditions and create additional relations form them.
+Often, once input is received, we would want to combine (join) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging will allow users to specify those conditions and create additional relations form them.
 
 \begin{program}
     \begin{verbatim}   
@@ -172,18 +172,17 @@ STORE E INTO {}``OB'';
 \end{quote}
 
 
-Relations produced as a result of the merging are matched in Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
+A set of relations produced as a result of merging are matched in the Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
 
 \subsection{Matching Policies}
 
-Exchange Simulator has eight matching policies:
+The Exchange Simulator has eight matching policies:
 
 \begin{enumerate}
     \item {\bf Only within, skip} matches orders coming from historical files only with historical files and orders coming from algorithms only with orders coming from algorithms.
     \item{\bf With anything} matches orders independent of origin, if a historic data match does not occur due to a match with a simulated order from an algorithm, a now unmatched historic order will be left in the order book. 
-    \item{\bf With anything, drop} similar to a match with anything above but in this case a unmatched historic order will now be dropped. 
-    \item{\bf With Duplicate} if a historic order can be matched with algorithmic order, create an artificial order equivalent to that of historic and match with it. Historic orders are only matched with historic orders. (looks for the first best match within both historic order and live orders)
-    \item{\bf With Duplicate, once} same as above only it keep track of, which historic orders where matched with live orders so not to match them more than once. 
+    \item{\bf With anything, drop} similar to a match with anything above but in this case a unmatched historic order will now be dropped.
+    \item{\bf With Duplicate} if a historic order can be matched with an algorithmic order, create an artificial order equivalent to that of historic and match with this artificial order. Historic orders are only matched with historic orders. (looks for the first best match within both historic order and live orders). Each stock recorded in historic orders can be matched with only one simulated stock inquiry.  
     \item{\bf With Duplicate, live first} same as one before only first checks for a possible match with another live order, if one found do not look for historic match. 
     \item{\bf Drop with look ahead} similar to drop but historical matches are dropped only if they are close to the current match. (closeness can be measured by a sliding window of time or number of orders)
     \item{\bf Skip look back} similar to the first one, creates matches of historical with historical, and live with live orders within a sliding window of older orders. Orders older than sliding window can be matched with any new order regardless of it being historical or live.
@@ -191,7 +190,7 @@ Exchange Simulator has eight matching policies:
 
 \noindent Here is how we can implement each one of them
 
-To implement matching strategy \emph{Only within, skip} we will need two relations: historical order-book and simulated order-book.
+A matching strategy \emph{Only within, skip} needs two relations: historical order-book and simulated order-book.
 
 \begin{verbatim}   
 function historicData(inputTuple)
@@ -213,7 +212,7 @@ function simulatedData(inputTuple)
 }
 \end{verbatim}
 
-\noindent \emph{With anything}
+\noindent A matching strategy \emph{With anything} needs the following relation
 \begin{verbatim}     
 function allData(inputTuple)
 {
@@ -225,7 +224,7 @@ function allData(inputTuple)
 }
 \end{verbatim}
 
-\noindent \emph{With anything, drop}
+\noindent \emph{With anything, drop}:
 \begin{verbatim}     
 function allData(inputTuple)
 {
@@ -240,17 +239,21 @@ function allData(inputTuple)
 }
 \end{verbatim}
 
-
-\noindent \emph{With Duplicate} this is similar to skip policy we will create two views: historic and simulated. The matching function will have to be different and account for creating a duplicate remove records if they are matched. 
-
-\noindent \emph{With Duplicate, once} to implement this strategy we need to indicate that a historic tuple was already matched. this will require augmenting relation with an additional boolean field. \emph{augmentedInputTuple} has the same fields as original input tuple with an extra fields called matched.
+\noindent \emph{With Duplicate}: This strategy makes use of both historic and simulated data. Historic orders are matched only with other historic orders. Simulated orders can be matched with either a duplicate of historic orders or with other simulated orders. Similar to the \emph{skip} strategy from above we have two relations. This time a \emph{combinedView} relation will be a merged relation consisting of both historic and simulated tuples. A \emph{historicView} relation contains only historic tuples.
 
 \begin{verbatim}   
 function historicData(inputTuple)
 {
-    augmentedInputTuple=createTuple(inputTuple);
-    augmentedInputTuple.matched=false;
-    storeTuple(augmentedInputTuple, historicView);
+    storeTuple(inputTuple, historicView);
+    if (heartbeat())
+    {
+        callMatching();
+    }
+}
+
+function combinedData(inputTuple)
+{
+    storeTuple(inputTuple, combinedView);
     if (heartbeat())
     {
         callMatching();
@@ -258,9 +261,9 @@ function historicData(inputTuple)
 }
 \end{verbatim}
 
-\noindent \emph{With Duplicate, live first} is the same as \emph{With Duplicate, once} but matching function first creates matches within simulated view. And only then tries historic view.
+\noindent \emph{With Duplicate, live first} is the same as \emph{With Duplicate, once}. The matching function first tries to match simulated orders with simulated order in the \emph{combinedView} relation. When there is no matches between simulated order, the matching function will try to match historic tuples with simulated tuples.
 
-\noindent \emph{Drop with look ahead} similar to \emph{With anything, drop} but has more complicated \emph{unmatchedHistoric} function.
+\noindent \emph{Drop with look ahead} strategy is similar to \emph{With anything, drop}. It has a more complicated \emph{unmatchedHistoric} function.
 \begin{verbatim}     
 function allData(inputTuple)
 {
@@ -275,7 +278,7 @@ function allData(inputTuple)
 }
 \end{verbatim}
 
-\noindent \emph{Skip look back} is similar to skip policy. Tuples older than some time (measured in real time or in number of tuples seen) are moved to a third view.
+\noindent A \emph{Skip look back} matching strategy is similar to the skip strategy. It differs from it by moving tuples older than some "age" (measured in real time or in number of tuples seen) to a different, third relation.
 \begin{verbatim}   
 function historicData(inputTuple)
 {
@@ -302,7 +305,7 @@ function simulatedData(inputTuple)
 
 \section{Experiment.}
 
-Here we want to allow users to specify how to reduce or extract useful information from a simulation. User set specific conditions/rules on how to deal with each specific relation. 
+Here we want to allow users to specify how to reduce or extract useful information from a simulation. A user sets specific conditions/rules on how to deal with each specific relation. 
 
 \begin{program}
     \begin{verbatim}  
@@ -316,7 +319,7 @@ Here we want to allow users to specify how to reduce or extract useful informati
 \caption{Information Extraction.}
 \end{program}
 
-\emph{reduce(relation)} function specifies what information is left what tuples are still in the relation, what tuples are not in the relation. \emph{results} stores the consequences of the reduction. 
+The \emph{reduce(relation)} function specifies what information is left, what tuples are still in the relation, and what tuples are not in the relation. The \emph{results} variable stores the consequences of the reduction. 
 
 SQL does not have a very convenient way of specifying the above.
 
@@ -344,17 +347,17 @@ Exchange Server reduces relation by creating a matching between tuples in the re
 
 \section{Output Merging}
 
-This is similar to the input merging. The idea is to combine results of reduction provided by a set of reduce function from different relation into one stream. This can be done in the similar fashion. 
+This is similar to input merging. The idea is to combine reduction results provided by a set of reduce functions from different relations into one stream. This can be done in a similar fashion. 
 
-Exchange Server outputs only one stream of updates, thus in the case where matching occurs over a set of relations they all need to be combined into a single stream. 
+The Exchange Server outputs only one stream of updates. Thus, when matching occurs over a set of relations, they are combined into a single stream. 
 
 %\emph{example?}
 
 \section{Output Filtering} 
 
-The idea behind filtering output is to impose extra conditions on output streams. This is similar to the input filtering. 
+The idea behind filtering output is to impose extra conditions on output streams. This is similar to input filtering. 
 
-In the case of Exchange Server we want to impose conditions on the output stream like change in price. 
+In the case of the Exchange Server, we want to impose conditions on the output stream, such as price changes that are dependent on volume and time. 
 \begin{program}
     \begin{verbatim}  
     while (tuple )
