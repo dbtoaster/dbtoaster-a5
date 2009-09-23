@@ -1,14 +1,8 @@
-\documentclass[11pt]{article} 
+\documentclass{article} 
 
 \usepackage{algorithmic}
 \usepackage[small,bf]{caption}
 \usepackage{float}
-
-\voffset -3.0cm
-\hoffset -1.5cm
-\textwidth 17.0cm
-\textheight 24.0cm
-\parindent 0cm
 
 \floatstyle{plain}
 \newfloat{program}{thp}{lop}
@@ -16,6 +10,255 @@
 
 
 \begin{document}
+    
+\title{Stock Exchange Server Simulator}
+\author{Anton Morozov and Shubham Chopra}
+\maketitle
+    
+\section{Introduction.}
+
+Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to re-run an experiment. These leads to creating simulations for testing various theories. During a simulation original data parameters are augmented with new data. A set of user defined rules specify how historical and new data interact. A format that allows to freely augment and combine existent data with new data, and provide combination rule is our goal. 
+
+%In these simulations parameters during the progress of an experiment are preserved and we want to either change or augment those parameters with new information. Also we want to let users specify the results of the augmentation. 
+
+\section{Approach.}
+
+At a high level historical data together with new data can be thought of as a stream of updates to a relational table. Let's assume that there are $N$ update streams, each resulting in its own relational table. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and output as desired.
+
+
+%parameters for the experiments can be though of as a stream of updates to a relational table.  New data can be thought of as updates to some relation. If we have $N$ update streams, we will end up with $N$ different relations. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and outputted as desired. 
+
+The stock exchange simulator can be thought of as a stream processor. We can assume that there are $N$ streams coming in. Each of these streams is filtered according to certain conditions and merged together if needed. The merged streams form $K$ order-book DBs. These $K$ DBs are fed to a matching engine which generates a set of output streams.
+
+Generalized specification process for creating a simulator can be described in five steps:
+
+\begin{enumerate}
+    \item {\bf Input Filter}: each input stream can be filtered. This means that each incoming tuple in the stream can either be removed or it can generate extra inputs. 
+    \item {\bf Input Merging}: the set of input stream relations can be combined or subdivided into another set of $K$ relations using merging and filtering. 
+    \item {\bf Experiment}: each relation produced at a merging stage can be reduced using specifications given by users.
+    \item {\bf Output Merging}: when desired outcome for each $k$ relation is achieved we can again combine or filter them.
+    \item {\bf Output Filter}: additional conditions can be imposed on output results of each output stream as a result of either input tuples or output matchings.
+\end{enumerate}
+
+\section{Input Filter}
+
+The goal of input filter is to remove undesired tuples from input stream or to add tuples to the stream triggered by some input parameters.
+
+The desired functionality is as follows:
+
+\begin{program}
+    \begin{verbatim}   
+    while (input = getInputTuple)
+    {
+        if (match(input, conditions)
+        {
+            additionalInput=createAddInput(input);
+        }
+        if (match(input, bad_condition))
+        {
+            continue;
+        }
+        process(input, additionalInput);
+    }
+    \end{verbatim}
+\caption{Input Filter Functionality.}
+\end{program} 
+
+Potential solution to this is to use generic SQL to filter incoming tuples. For instance the code to filter out tuples will look like:
+
+\begin{program}
+    \begin{verbatim}   
+    select * 
+    from input_stream
+    where not(bad_condition)
+    \end{verbatim}
+\caption{SQL remove filter.}
+\end{program}
+
+Adding extra tuples can provide a bit trickier with SQL
+
+\begin{program}
+    \begin{verbatim}   
+    select new_tuple
+    from input_stream
+    where (condition)
+    \end{verbatim}
+\caption{SQL add filter.}
+\end{program}
+
+\noindent \emph{new\_tuple} will depend on some parameters of the condition as well as tuples coming from input stream.
+
+Alternatively
+
+\begin{quote}
+A = LOAD STREAM {}``ABC'' USING LOADER() {[}AS SCHEMA{]};\\
+B = FILTER A BY TIMESTAMP > X;\\
+STREAM B INTO {}``XYZ'';
+\end{quote}
+
+Exchange Server has two input streams. One stream is historical data from trades executed at some previous date. The second stream is additional trades coming from Trading Algorithms. The stream of updates coming from Trading Algorithms can be controlled by the user (At the moment we assume that users have complete control over trading algorithms). However, historical data can be dirty and incomplete. We want to give users control to restore or remove information impurities. For instance, data tuple where we see that an order was completed can be removed from the system since Simulator will be able to create such a matching by itself. Also if we see a change in some order (order was partially fulfilled) and we have no reference to such order in the order book we would want to add such order to the book (the concerns for this operation are noted later).
+Exchange Server Filtering can be implemented as follows:
+
+\begin{program}
+    \begin{verbatim}   
+    while (input = getInputTuple())
+    {
+        messages;
+        if (input.action == "F" || input.action == "E")
+        {
+            if (!checkTuple(relation, input.ID)
+            {
+                messages.add(getNewTuple(input));
+            }
+        }
+        else
+        {
+            messages.add(input);
+        }
+        
+        callMerging(messages);
+    }
+    \end{verbatim}
+\caption{Add/Remove Filter for ESS.}
+\end{program}
+
+\noindent \emph{getNewTuple(input)} this function is undefined. Without additional information we do not know if "S" or "B" tuple should be added as a result of "F" or "E" input. This information could have been deduced from other messages, however there is no guarantee on the message order, making it impossible to tell which messages should be paired up. 
+
+\section{Input Merging}
+
+Often once input is received we would want to combine (join) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging will allow users to specify those conditions and create additional relations form them.
+
+\begin{program}
+    \begin{verbatim}   
+    getLock();
+    while (input = getInput(sources))
+    {
+        if (conditions(input))
+        {
+            store (input);
+        }
+    }
+    releaseLock();
+    \end{verbatim}
+\caption{Joining a set of sources and filtering on a set of conditions.}
+\end{program}
+
+In SQL we can represent this with 
+
+\begin{program}
+    \begin{verbatim}   
+    select *
+    from A
+    where condition1
+    UNION
+    select *
+    from B
+    where condition2
+    ...
+    \end{verbatim}
+\caption{Possible SQL Input Merging}
+\end{program}
+
+Alternatively 
+
+\begin{quote}
+A = LOAD STREAM {}``XYZ1'' USING LOADER();\\
+B = LOAD STREAM {}``XYZ2'' USING LOADER1();\\
+C = LOAD STREAM {}``XYZ3'' USING LOADER2();\\
+
+D = UNION A, B, C;\\
+E = SORT D BY TIMESTAMP;\\
+STORE E INTO {}``OB'';
+\end{quote}
+
+
+Relations produced as a result of the merging are matched in Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
+
+For instance, if we are using drop strategy and have historical relation \emph{histView} and simulated relation \emph{simView}. 
+\begin{program}
+    \begin{verbatim}   
+    while (input = getNextTuple())
+    {
+        storeTuple(input);
+        if (heartbeat)
+        {
+            callMatching()
+        }
+    }
+    \end{verbatim}
+\caption{Exchange Matching for drop.}
+\end{program}
+
+%\emph{add a complete list of possible matchings and show how they will be implemented}.
+
+
+\section{Experiment.}
+
+Here we want to allow users to specify how to reduce or extract useful information from a simulation. User set specific conditions/rules on how to deal with each specific relation. 
+
+\begin{program}
+    \begin{verbatim}  
+    if (heartbeat) 
+        foreach (Relation r)
+        {
+            results = reduce(relation);
+            output(results);
+        }
+    \end{verbatim}
+\caption{Information Extraction.}
+\end{program}
+
+\emph{reduce(relation)} function specifies what information is left what tuples are still in the relation, what tuples are not in the relation. \emph{results} stores the consequences of the reduction. 
+
+SQL does not have a very convenient way of specifying the above.
+
+Exchange Server reduces relation by creating a matching between tuples in the relation.
+
+\begin{program}
+    \begin{verbatim}  
+    foreach (Relation R)
+    [R.sell, R.buy] = split(R);
+    sort(R.sell, price, time);
+    sort(R.buy, price, time);
+    
+    match=true;
+    results;
+    while (match)
+    {
+        topS=R.sell.top();
+        topB=R.buy.top();
+        [results, match] = tryMatching(topS. topB);
+    }
+    \end{verbatim}
+\caption{Exchange Matching}
+\end{program}
+
+
+\section{Output Merging}
+
+This is similar to the input merging. The idea is to combine results of reduction provided by a set of reduce function from different relation into one stream. This can be done in the similar fashion. 
+
+Exchange Server outputs only one stream of updates, thus in the case where matching occurs over a set of relations they all need to be combined into a single stream. 
+
+%\emph{example?}
+
+\section{Output Filtering} 
+
+The idea behind filtering output is to impose extra conditions on output streams. This is similar to the input filtering. 
+
+In the case of Exchange Server we want to impose conditions on the output stream like change in price. 
+\begin{program}
+    \begin{verbatim}  
+    while (tuple )
+    {
+        if (tuple.action = 'S' && tuple.volume > 1000)
+            setOutputPriceIncrement(increment, duration);
+    }
+    \end{verbatim}
+\caption{Exchange Output Filter.}
+\end{program}
+
+\section{Previous Discussions}
 
 {\bf Determining Current Price} 
 
