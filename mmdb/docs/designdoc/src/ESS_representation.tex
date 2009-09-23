@@ -174,23 +174,131 @@ STORE E INTO {}``OB'';
 
 Relations produced as a result of the merging are matched in Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
 
-For instance, if we are using drop strategy and have historical relation \emph{histView} and simulated relation \emph{simView}. 
-\begin{program}
-    \begin{verbatim}   
-    while (input = getNextTuple())
+\subsection{Matching Policies}
+
+Exchange Simulator has eight matching policies:
+
+\begin{enumerate}
+    \item {\bf Only within, skip} matches orders coming from historical files only with historical files and orders coming from algorithms only with orders coming from algorithms.
+    \item{\bf With anything} matches orders independent of origin, if a historic data match does not occur due to a match with a simulated order from an algorithm, a now unmatched historic order will be left in the order book. 
+    \item{\bf With anything, drop} similar to a match with anything above but in this case a unmatched historic order will now be dropped. 
+    \item{\bf With Duplicate} if a historic order can be matched with algorithmic order, create an artificial order equivalent to that of historic and match with it. Historic orders are only matched with historic orders. (looks for the first best match within both historic order and live orders)
+    \item{\bf With Duplicate, once} same as above only it keep track of, which historic orders where matched with live orders so not to match them more than once. 
+    \item{\bf With Duplicate, live first} same as one before only first checks for a possible match with another live order, if one found do not look for historic match. 
+    \item{\bf Drop with look ahead} similar to drop but historical matches are dropped only if they are close to the current match. (closeness can be measured by a sliding window of time or number of orders)
+    \item{\bf Skip look back} similar to the first one, creates matches of historical with historical, and live with live orders within a sliding window of older orders. Orders older than sliding window can be matched with any new order regardless of it being historical or live.
+\end{enumerate}
+
+\noindent Here is how we can implement each one of them
+
+To implement matching strategy \emph{Only within, skip} we will need two relations: historical order-book and simulated order-book.
+
+\begin{verbatim}   
+function historicData(inputTuple)
+{
+    storeTuple(inputTuple, historicView);
+    if (heartbeat())
     {
-        storeTuple(input);
-        if (heartbeat)
-        {
-            callMatching()
-        }
+        callMatching();
     }
-    \end{verbatim}
-\caption{Exchange Matching for drop.}
-\end{program}
+}
 
-%\emph{add a complete list of possible matchings and show how they will be implemented}.
+function simulatedData(inputTuple)
+{
+    storeTuple(inputTuple, simulatedView);
+    if (heartbeat())
+    {
+        callMatching();
+    }
+}
+\end{verbatim}
 
+\noindent \emph{With anything}
+\begin{verbatim}     
+function allData(inputTuple)
+{
+   storeTuple(inputTuple, dataView);
+   if (heartbeat())
+   {
+       callMatching();
+   }
+}
+\end{verbatim}
+
+\noindent \emph{With anything, drop}
+\begin{verbatim}     
+function allData(inputTuple)
+{
+   if (unmatchedHistoric(inputTuple))
+        return;
+    
+   storeTuple(inputTuple, dataView);
+   if (heartbeat())
+   {
+       callMatching();
+   }
+}
+\end{verbatim}
+
+
+\noindent \emph{With Duplicate} this is similar to skip policy we will create two views: historic and simulated. The matching function will have to be different and account for creating a duplicate remove records if they are matched. 
+
+\noindent \emph{With Duplicate, once} to implement this strategy we need to indicate that a historic tuple was already matched. this will require augmenting relation with an additional boolean field. \emph{augmentedInputTuple} has the same fields as original input tuple with an extra fields called matched.
+
+\begin{verbatim}   
+function historicData(inputTuple)
+{
+    augmentedInputTuple=createTuple(inputTuple);
+    augmentedInputTuple.matched=false;
+    storeTuple(augmentedInputTuple, historicView);
+    if (heartbeat())
+    {
+        callMatching();
+    }
+}
+\end{verbatim}
+
+\noindent \emph{With Duplicate, live first} is the same as \emph{With Duplicate, once} but matching function first creates matches within simulated view. And only then tries historic view.
+
+\noindent \emph{Drop with look ahead} similar to \emph{With anything, drop} but has more complicated \emph{unmatchedHistoric} function.
+\begin{verbatim}     
+function allData(inputTuple)
+{
+   if (unmatchedHistoric(inputTuple, windowSize))
+        return;
+    
+   storeTuple(inputTuple, dataView);
+   if (heartbeat())
+   {
+       callMatching();
+   }
+}
+\end{verbatim}
+
+\noindent \emph{Skip look back} is similar to skip policy. Tuples older than some time (measured in real time or in number of tuples seen) are moved to a third view.
+\begin{verbatim}   
+function historicData(inputTuple)
+{
+    storeTuple(inputTuple, historicView);
+    oldTuples(historicView, windowConditions);
+    storeTuples(oldTuples, oldTuplesView);
+    if (heartbeat())
+    {
+        callMatching();
+    }
+}
+
+function simulatedData(inputTuple)
+{
+    storeTuple(inputTuple, simulatedView);
+    oldTuples(simulatedView, windowConditions);
+    storeTuples(oldTuples, oldTuplesView);
+    if (heartbeat())
+    {
+        callMatching();
+    }
+}
+\end{verbatim}
 
 \section{Experiment.}
 
