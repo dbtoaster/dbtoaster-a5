@@ -3,6 +3,9 @@
 \usepackage{algorithmic}
 \usepackage[small,bf]{caption}
 \usepackage{float}
+\usepackage{graphicx}
+
+\graphicspath{{../}}
 
 \floatstyle{plain}
 \newfloat{program}{thp}{lop}
@@ -39,6 +42,14 @@ Generalized specification process for creating a simulator can be described in f
     \item {\bf Output Merging}: Experiment outcomes can again be combined or filtered.
     \item {\bf Output Filter}: For each output stream additional conditions can be imposed. Data within a stream can be changed based on those conditions.
 \end{enumerate}
+
+\begin{figure}
+  \includegraphics[width=4.50in]{figures/ExchangeFigure.pdf}
+  \caption{Exchange Execution Path.}
+  \label{fig:overview}
+\end{figure}
+
+Figure \ref{fig:overview} shows data execution paths and interactions between various components of the Exchange Server.
 
 \section{Input Filter}
 
