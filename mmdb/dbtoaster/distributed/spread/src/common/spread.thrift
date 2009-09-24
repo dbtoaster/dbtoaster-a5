@@ -1,7 +1,7 @@
 
 struct NodeID {
-  1: i32  host,
-  2: i16  port
+  1: string  host,
+  2: i32     port  //could use 16 bits, but thrift ints are unsigned, and I don't care
 }
 
 typedef i64 MapID

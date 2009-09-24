@@ -7,32 +7,140 @@ require 'compiler';
 
 ###################################################
 
-class CommitRecord
-  attr_reader :target, :value, :pending, :next;
-  attr_writer :next, :pending;
-  
-  def initialize(target, value)
-    @target, @value = target, value;
-    @next = nil;
-    @pending = true;
+class CommitNotification
+  def initialize(record)
+    @record = record;
   end
   
-  def to_s
-    if (@next == nil) || @next.pending then "value " + 
-                                            target.source.to_s + " " + 
-                                            target.key.to_s + " " + 
-                                            target.version.to_s + " " + 
-                                            value.to_s;
-                                       else @next.to_s;
+  def fire(entry, value)
+    @record.discover(entry, value);
+  end
+end
+
+class RemoteCommitNotification
+  def initialize(entries, destination, cmdid)
+    @entries, @destination, @cmdid = Hash.new, destination, cmdid;
+    entries.each do |e|
+      @entries[e] = nil;
+    end
+    @count = @entries.size;
+  end
+  
+  def fire(entry, value)
+    @count -= 1 unless (value = nil) || (@entries[entry] != nil);
+    @entries[entry] = value;
+    if(@count <= 0) then
+      peer = MapNodeInterface.new(destination.host, destination.port);
+      peer.pushget(@entries, @cmdid);
+      peer.close();
+      true;
+    end
+  end
+end
+
+###################################################
+
+class CommitRecord
+  attr_reader :target, :value, :next;
+  attr_writer :next;
+  
+  def initialize(target, value = nil)
+    @target, @value = target, value;
+    @next = nil;
+    # If the value is a MapEquation, we need to evaluate 
+    @required = Array.new;
+    if @value.is_a? MapEquation then
+      begin
+        @value = @value.to_f # throws an exception if it fails.
+      rescue Thrift::Exception => ex
+        #if we're unable to evaluate it straight up, we need to wait.
+        @required = @value.entries;
+      end
+    end
+    @callbacks = Array.new;
+  end
+  
+  # Unbeknownst to most users, Find is going to be a bit of a dual-purpose 
+  # workhorse.  The algorithm used by find is virtually identical to that used
+  # by insert (and in fact, insert would need to be called if we're going to
+  # guarantee that find always returns a value); so we kinda-sorta-trick it. 
+  # If value=nil, then nothing is modified (unless we're asked to return a 
+  # version that doesn't exist yet).  If value != nil, then it will replace
+  # the value of the record that matches target.
+  def find(target, value=nil)
+    if @target.version >= target.version then
+      if @target.version == target.version then
+        @value = value if value;
+        self;
+      else
+        nil; # this should only happen if we get a request for a value that's been expunged already
+      end
+    elsif @next && @next.target.version < target.version then
+      @next.find(target.version, value);
+    else
+      insert(target, value);
+      tmp = @next;
+      @next = CommitRecord.new(target, value);
+      @next.next = tmp;
+      @next;
     end
   end
   
+  def insert(target, value)
+    find(target, value);
+  end
+  
+  def to_s
+    if (@next == nil) || @next.pending then 
+      "value " + 
+        @target.source.to_s + " " + 
+        @target.key.to_s + " " + 
+        @target.version.to_s + " " + 
+        @value.to_s;
+    else 
+      @next.to_s;
+    end
+  end
+  
+  def pending
+    (@required.size > 0) && (@value != nil)
+  end
+  
+  def ready
+    !pending
+  end
+  
+  def register(callback)
+    if ready then callback.fire(@target, @value);
+    else @callbacks.push(callback);
+    end
+  end
+  
+  # Discover is the callback used upon "discovery" of map values that
+  # need to be filled in for the unevaluated expression in this record.
+  # Discover also takes charge of firing the callbacks waiting for this
+  # record to complete.
+  def discover(entry, value)
+    @required.delete_if do |req|
+      req.discover(entry, value)
+    end
+    if ready then
+      @value = @value.to_f
+      @callbacks.each do |cb|
+        cb.fire(@target, @value);
+      end
+      @callbacks = Array.new;
+    end
+  end
 end
 
 ###################################################
 
 class MapPartition
   attr_reader :mapid, :start, :range
+  
+  # A MapPartition is a chunk of a map (ID: mapid) holding keys in the
+  # range [start, start+range).  Values are stored versioned; 
   
   def initialize(mapid, start, range)
     @mapid, @start, @range = mapid.to_i, start.to_i, range.to_i;
@@ -73,13 +181,43 @@ class MapPartition
   def put(cmd)
   end
   
+  def register(target, callback)
+    #version 0 is always 0.
+    if target.version <= 0 then callback.fire(target, 0); return; end;
+    
+    # There are several possible scenarios:
+    # 1) I know about the object
+    # 1.1) I know about the desired version
+    # 1.1.1) I have committed the desired version
+    # 1.1.2) I have not committed the desired version
+    # 1.2) I don't know about the desired version
+    # 2) I don't know about the object
+    # In case 1.1.1, we can act immediately and respond to the callback
+    # In all other 1.* cases, CommitRecord.find will return a valid record for
+    # the specified target version.  This means we might get a put for a 
+    # record already stored in the DB (if we've gotten requests for that record)
+    # Case 2 is different from 1.* only in that we have to create the initial
+    # record.
+    record = @data[target.key];
+    if record != nil then
+      record = record.find(target); #guaranteed to return a value
+      if(record.value == nil) then
+        record.register(callback)
+      else
+        callback.fire(target, value)
+      end
+    else
+      @data[target.key] = CommitRecord.new(target);
+      @data[target.key].register(callback);
+    end
+  end
+  
   def set(var, vers, val)
     target = Entry.new;
       target.source = @mapid;
       target.key = var.to_i;
       target.version = vers.to_i;
     record = CommitRecord.new(target, val.to_f);
-      record.pending = false;
     @data[target.key] = record;
   end
   
@@ -99,6 +237,7 @@ class MapNodeHandler
   def initialize()
     @maps = Hash.new;
     @templates = Hash.new;
+    @cmdcallbacks = Hash.new;
   end
   
   ############# Internal Accessors
@@ -136,7 +275,9 @@ class MapNodeHandler
   ############# Basic Remote Accessors
 
   def put(id, template, target, paramList)
-    if ! @templates.has_key? template then raise SpreadException.new("Unknown put template: " + template); end
+    if ! @templates.has_key? template then 
+      raise SpreadException.new("Unknown put template: " + template); 
+    end
     
     paramMap = Hash.new;
     paramList.each_index do |i|
@@ -152,8 +293,21 @@ class MapNodeHandler
       paramMap[-1].value = target;
       paramMap[-1].type = :map;
     
-    puts "In: " + @templates[template].to_s
-    puts "Out: " + @templates[template].parametrize(paramMap).to_s
+    putCommand = @templates[template].parametrize(paramMap);
+    puts putCommand.to_s;
+#    putCommand.entries.each do |entry|
+#      # three cases:
+#      #  1) The requested map is local and we can handle it.
+#      begin
+#        findPartition(entry.source, entry.key).get(entry);
+#      rescue Thrift::Exception => ex
+#        
+#      end
+#      
+#      #  2) The requested map is not local, but we've already received the request.
+#      #  3) The requested map is not local, and the request is still pending.
+#    end
+    
   end
   
   def get(target)
@@ -167,11 +321,29 @@ class MapNodeHandler
   ############# Asynchronous Reads
 
   def fetch(target, destination, cmdid)
-  
+    request = RemoteCommitNotification.new(target, destination, cmdid);
+    target.each do |t|
+      # register will fire the trigger if the value is already defined
+      # the actual message will not be sent until all requests in this 
+      # command can be fulfilled.
+      findPartition(t.source, t.key).register(target, request);
+    end
   end
   
   def pushget(result, cmdid)
-  
+    if @cmdcallbacks[cmdid] == nil then
+      # Case 1: we don't know anything about this put.  Save the response for later use.
+      @cmdcallbacks[cmdid] = Array.new;
+      @cmdcallbacks[cmdid].push(result);
+    elsif @cmdcallbacks[cmdid].is_a? Array then
+      # Case 2: we haven't received a put message yet, but we have received other fetch results
+      @cmdcallbacks[cmdid].push(result);
+    else
+      # Case 3: we have a push message waiting for these results
+      result.each_pair do |target, value|
+        @cmdcallbacks[cmdid].discover(target, value)
+      end
+    end
   end
   
   ############# Internal Control
@@ -259,6 +431,12 @@ class MapNodeInterface
         field;
       end
     @client.put(version, template, target, convertedParams);
+  end
+  
+  ############# Asynch Ops
+  
+  def pushget(result, cmdid)
+    @client.pushget(result, cmdid)
   end
   
 end

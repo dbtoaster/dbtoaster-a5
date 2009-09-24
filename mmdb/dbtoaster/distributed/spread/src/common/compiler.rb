@@ -53,13 +53,11 @@ class MapEquation
   
   def ready
     case @type
-      when :plus  then @left.ready && @right.ready;
-      when :mult  then @left.ready && @right.ready;
-      when :sub   then @left.ready && @right.ready;
-      when :div   then @left.ready && @right.ready;
+      when :plus, :mult, :sub, :div then 
+        @left.ready && @right.ready;
       when :num   then true;
-      when :map   then @left.ready;
-      when :param then left === nil;
+      when :map   then @right != nil;
+      when :param then false;
       else             false;
     end
   end
@@ -71,8 +69,8 @@ class MapEquation
       when :sub   then @left.to_f - @right.to_f;
       when :div   then @left.to_f / @right.to_f;
       when :num   then @left;
-      when :map   then if ready @left.value; 
-                       else raise SpreadException.new("Trying to read incomplete Equation");
+      when :map   then if @right != nil then @right; 
+                       else raise SpreadException.new("Trying to read incomplete Equation"); 
                        end
       when :param then raise SpreadException.new("Trying to read uninstantiated Equation");
     end
@@ -86,18 +84,16 @@ class MapEquation
       when :div   then "(" + @left.to_s + ")/(" + @right.to_s + ")";
       when :num   then @left.to_s;
       when :param then "#" + @left.to_s;
-      when :map   then "(M"+@left.source.to_s+"["+@left.key.to_s+"("+@left.version.to_s+")])";
+      when :map   then "(M"+@left.source.to_s+"["+@left.key.to_s+"("+@left.version.to_s+")]="+@right.to_s+")";
     end
   end
   
   def parametrize(params)
     case @type
-      when :plus  then MapEquation.new(@type, @left.parametrize(params), @right.parametrize(params));
-      when :mult  then MapEquation.new(@type, @left.parametrize(params), @right.parametrize(params));
-      when :sub   then MapEquation.new(@type, @left.parametrize(params), @right.parametrize(params));
-      when :div   then MapEquation.new(@type, @left.parametrize(params), @right.parametrize(params));
-      when :num   then MapEquation.new(@type, @left);
-      when :map   then MapEquation.new(@type, @left);
+      when :plus, :mult, :sub, :div then
+        MapEquation.new(@type, @left.parametrize(params), @right.parametrize(params));
+      when :num, :map then
+        MapEquation.new(@type, @left);
       when :param then 
           if params[@left.to_i] != nil then MapEquation.new(params[@left.to_i].type, params[@left.to_i].value)
           else raise SpreadException.new("Instantiating equation missing parameter: '" + @left.to_s);
@@ -107,22 +103,27 @@ class MapEquation
   
   def entries(list = Array.new)
     case @type
-      when :num   then nil;
-      when :param then nil;
-      when :map   then list.push(@left)
-                  else @left.entries(list); @right.entries(list);
+      when :num, :param then nil;
+      when :map         then list.push(self);
+      else                   @left.entries(list); @right.entries(list);
     end  
     list
   end
   
+  def discover(entry, value)
+    if @type == :map then
+      if @left.source == entry.source && @left.key == @entry.key then
+        @right = value; return true;
+      end
+    end
+    false;
+  end 
+  
   def MapEquation.decodeVar(parser)
     case parser.next
       when "(" then decode(parser);
-      when "+" then raise SpreadException.new("Parse Error (+)");
-      when "-" then raise SpreadException.new("Parse Error (-)");
-      when "*" then raise SpreadException.new("Parse Error (*)");
-      when "/" then raise SpreadException.new("Parse Error (/)");
-      when ")" then raise SpreadException.new("Parse Error ())");
+      when "+","-","*","/",")" then 
+        raise SpreadException.new("Parse Error ("+parser.last+")");
       else
           if parser.last[0] == "#"[0] then 
             if parser.last == "#=" then
