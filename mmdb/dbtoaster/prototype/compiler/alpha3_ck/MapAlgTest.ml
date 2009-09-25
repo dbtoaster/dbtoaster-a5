@@ -64,10 +64,12 @@ RSum
 );;
 
 
-let test11 = MapAlg.simplify(Val (AggSum(one, RelAlg.one))) [] [] = ([], one);;
-let test12 = MapAlg.simplify(Val (AggSum(zero, RelAlg.one))) [] [] = ([], zero);;
+let test11 = MapAlg.simplify(Val (AggSum(one, RelAlg.one))) [] [] =
+   [([], one)];;
+let test12 = MapAlg.simplify(Val (AggSum(zero, RelAlg.one))) [] [] =
+   [([], zero)];;
 let test13 = MapAlg.simplify(Val (AggSum(zero, RelAlg.make(relR)))) [] [] =
-   ([], zero);;
+   [([], zero)];;
 
 let test16 = q2 =
   mk_sum
@@ -82,11 +84,11 @@ let test16 = q2 =
        RA_Leaf (AtomicConstraint (Eq, "B", "y"))])))]
 ;;
 
-let test17 = MapAlg.simplify q2 [] [] = ([], one);;
+let test17 = MapAlg.simplify q2 [] [] = [([], one)];;
 
 let test19 = MapAlg.simplify
     (MapAlg.delta "R" ["x"; "y"] (Val (AggSum(one, RelAlg.make(relS))))) [] []
-= ([], zero);;
+= [([], zero)];;
 
 
 let test20 =
@@ -105,26 +107,26 @@ Sum
 let test21 =
 MapAlg.simplify(Val(AggSum(Sum[Val(Var("A")); Val(Var("C"))],
   RelAlg.make(RA_MultiNatJoin [relR; relT])))) [] [] =
-([], Sum
+[([], Sum
  [Prod
    [Val (AggSum (Val (Var "A"), RelAlg.make(relR)));
     Val (AggSum (Val (Const 1), RelAlg.make(relT)))];
   Prod
    [Val (AggSum (Val (Var "C"), RelAlg.make(relT)));
     Val (AggSum (Val (Const 1), RelAlg.make(relR)))]]
-);;
+)];;
 
 let test22 =
 MapAlg.simplify (Val(AggSum(Prod[Val(Var("A")); Val(Var("C")); Val(Var("D"))],
    RelAlg.make(RA_MultiNatJoin[RA_Leaf(Rel("R", ["A"; "B"; "D"]));
                    RA_Leaf(Rel("S", ["C"; "E"]))])))) [] []
 =
-([], Prod
+[([], Prod
  [Val (AggSum (Prod [Val (Var "A"); Val (Var "D")],
               RelAlg.make(RA_Leaf (Rel ("R", ["A"; "B"; "D"])))));
   Val (AggSum (Val (Var "C"),
               RelAlg.make(RA_Leaf (Rel ("S", ["C"; "E"])))))]
-);;
+)];;
 
 
 
@@ -142,11 +144,11 @@ RA_MultiNatJoin
 
 let test23 =
 MapAlg.simplify q3 ["x"; "y"] [] =
-([], Prod
+[([], Prod
  [Val (Var "x");
   Val (AggSum (Val (Var "C"),
     RelAlg.make(RA_Leaf (Rel ("S", ["y"; "C"])))))]
-);;
+)];;
 
 let q4 = 
 Val (AggSum (Prod [Val (Var "B"); Val (Var "C")],
@@ -159,11 +161,11 @@ RA_MultiNatJoin
 
 
 let test24 = MapAlg.simplify q4 [] [] =
-   ([], Prod [Val (Var "B"); Val (Var "C")]);;
+   [([], Prod [Val (Var "B"); Val (Var "C")])];;
 let test25 = MapAlg.simplify q4 ["y"] [] =
-   ([], Prod [Val (Var "y"); Val (Var "C")]);;
+   [([], Prod [Val (Var "y"); Val (Var "C")])];;
 let test26 = MapAlg.simplify q4 ["w"] [] =
-   ([], Prod [Val (Var "B"); Val (Var "C")]);;
+   [([], Prod [Val (Var "B"); Val (Var "C")])];;
 
 
 

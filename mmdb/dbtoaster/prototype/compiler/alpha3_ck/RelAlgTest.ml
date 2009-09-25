@@ -90,7 +90,9 @@ RelAlg.extract_substitutions
      RA_MultiNatJoin
       [RA_Leaf (AtomicConstraint (Eq, "x", "AA"));
        RA_Leaf (AtomicConstraint (Eq, "x", "BB"))]))
-["AA"; "BB"];;
+["AA"; "BB"] =
+([("x", "AA"); ("AA", "AA"); ("BB", "AA")],
+ RelAlg.make(RA_Leaf (AtomicConstraint (Eq, "AA", "BB"))));;
 
 
 

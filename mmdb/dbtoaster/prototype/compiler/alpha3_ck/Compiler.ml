@@ -1,54 +1,51 @@
 open MapAlg;;
 
 
-let rec add_positions (l: 'a list) i =
-   if (l=[]) then []
-   else ((List.hd l), i) :: (add_positions (List.tl l) (i+1))
-;;
-
-(*
-add_positions ["a"; "b"; "c"] 1 = [("a", 1); ("b", 2); ("c", 3)];;
-*)
-
-
 (* the schema *)
 let all_rels = [("R", ["A"; "B"]); ("S", ["B"; "C"]);
                 ("T", ["C"; "D"]); ("U", ["A"; "D"])];;
 
 
-let string_of_list (sep: string) (l: string list): string =
-   if (l = []) then ""
-   else List.fold_left (fun x y -> x^sep^y) (List.hd l) (List.tl l);;
-
-
-let string_of_mapalg (m:mapalg_t)
+let rec string_of_mapalg (m: mapalg_t)
                      (children: (string * (string list) * mapalg_t) list) =
    let leaf_f (lf: readable_mapalg_lf_t) =
    (match lf with
       RConst(x)    -> string_of_int x
     | RVar(x)      -> x
-    | RAggSum(_,_) ->
-      let f (mapname, params, mapstructure) =
-         if (mapstructure = MapAlg.make(RVal lf)) then
-            [mapname^"["^(string_of_list ", " params)^"]"]
-         else []  
-      in
-      (List.hd (List.flatten (List.map f children)))
+    | RAggSum(f,r) ->
+      let rr = (RelAlg.make r) in
+      if (RelAlg.constraints_only rr) then
+         "(if " ^ (RelAlg.as_string rr) ^ " then " ^
+         (string_of_mapalg (MapAlg.make f) []) ^ " else 0)"
+      else
+         let f (mapname, params, mapstructure) =
+            if (mapstructure = MapAlg.make(RVal lf)) then
+               [mapname^"["^(Util.string_of_list ", " params)^"]"]
+            else []  
+         in
+         (List.hd (List.flatten (List.map f children)))
    )
    in
-      (MapAlg.rfold (fun l -> "("^(string_of_list "+" l)^")")
-                    (fun l -> "("^(string_of_list "*" l)^")")
+      (MapAlg.rfold (fun l -> "("^(Util.string_of_list "+" l)^")")
+                    (fun l -> "("^(Util.string_of_list "*" l)^")")
                     leaf_f (readable m))
 ;;
 
 
-let generate_code (reln, bound_vars, params, old_ma, new_ma, new_ma_aggs) =
+(* writes (= generates string for) one increment statement. For example,
+
+   generate_code ("R", ["x_R_A"; "x_R_B"], ["x_C"], "m",
+                  Prod[Val(Var(x_R_A)); <mR1>],
+                  [("mR1", ["x_R_B"; "x_C"], <mR1>)]) =
+   "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
+*)
+let generate_code (reln, bound_vars, params, mapn, new_ma, new_ma_aggs) =
    let loop_vars = Util.ListAsSet.diff params bound_vars
    in
-      "+"^reln^"("^(string_of_list ", " bound_vars)^ "): "^
-        (if (loop_vars=[]) then ""
-         else "foreach "^(string_of_list ", " loop_vars)^" do ")
-        ^old_ma^"["^(string_of_list ", " params)^"] += "^
+      "+"^reln^"("^(Util.string_of_list ", " bound_vars)^ "): "^
+        (if (loop_vars = []) then ""
+         else "foreach "^(Util.string_of_list ", " loop_vars)^" do ")
+        ^mapn^"["^(Util.string_of_list ", " params)^"] += "^
         (string_of_mapalg new_ma new_ma_aggs)
 ;;
 
@@ -58,43 +55,47 @@ let compile_delta_for_rel (reln:   string)
                           (mapn:   string)         (* map name *)
                           (params: string list)
                           (mapalg: mapalg_t) =
+   (* on insert into a relation R with schema A1, ..., Ak, to update map m,
+      we assume that the input tuple is given by variables
+      x_mR_A1, ..., x_mR_Ak. *)
    let bound_vars = (List.map (fun x -> "x_"^mapn^reln^"_"^x) relsch)
    in
-   let (new_params, new_ma) =
-      MapAlg.simplify (MapAlg.delta reln bound_vars mapalg)
-                      bound_vars params
+   (* compute the delta and simplify. *)
+   let s = MapAlg.simplify (MapAlg.delta reln bound_vars mapalg)
+                           bound_vars params
    in
-   let mk_triple (x, i) =
-      let t_params = (Util.ListAsSet.inter (collect_vars x)
-                            (Util.ListAsSet.union new_params bound_vars))
+   let f ((new_params, new_ma), j) =
+      (* extract nested aggregates, name them, and prepare them to be
+         processed next *)
+      let todos =
+         let mk_triple (x, i) =
+            let t_params = (Util.ListAsSet.inter (vars x)
+                               (Util.ListAsSet.union new_params bound_vars))
+            in
+            (mapn^reln^(string_of_int j)^"_"^(string_of_int i), t_params, x)
+         in
+         (List.map mk_triple (Util.add_positions (extract_aggregates new_ma) 1))
       in
-      (mapn^reln^(string_of_int i), t_params, x)
+      (reln, bound_vars, new_params, mapn, new_ma, todos)
    in
-   let todos =
-      (List.map mk_triple (add_positions (extract_aggregates new_ma) 1))
-   in
-   (bound_vars, new_params, new_ma, todos)
+   List.map f (Util.add_positions s 1)
 ;;
 
 
+(* the main compile function. call this one, not the others. *)
 let rec compile ((mapn: string),
                  (params: string list),
                  (mapalg: mapalg_t)): (string list) =
-   let f1 (reln, relsch) =
-      match (compile_delta_for_rel reln relsch mapn params mapalg) with
-         (bound_vars, new_params, new_ma, todos) ->
-         (reln, bound_vars, new_params, new_ma, todos)
+   let cdfr (reln, relsch) =
+      compile_delta_for_rel reln relsch mapn params mapalg
    in
-   let l1 = List.filter (fun (_, _, _, new_ma, _) -> (new_ma <> MapAlg.zero))
-                        (List.map f1 all_rels)
-   in
-   let l = List.map (fun (reln, bound_vars, new_params,       new_ma, todos) ->
-                         (reln, bound_vars, new_params, mapn, new_ma, todos))
-                    l1
+   (* remove deltas that are zero from list. *)
+   let l = List.filter (fun (_, _, _, _, new_ma, _) -> (new_ma <> MapAlg.zero))
+                       (List.flatten (List.map cdfr all_rels))
    in
    let ready = List.map generate_code l
    in
-   let todo = List.flatten (List.map (fun (x,y,z,v,w) -> w) l1)
+   let todo = List.flatten (List.map (fun (x,y,z,u,v,w) -> w) l)
    in
    ready @ (List.flatten (List.map compile todo))
 ;;

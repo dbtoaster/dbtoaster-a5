@@ -103,52 +103,81 @@ struct
       The result is a list of lists of variables and in general contains
       duplicates
    *)
-   let equivalence_classes (eqs: ('var_t * 'var_t) list) =
+   let equivalence_classes (eqs: ('v * 'v) list) =
       List.map ListAsSet.multiunion
          (HyperGraph.connected_components (fun x -> x)
              (List.map (fun (x,y) -> [x;y]) eqs))
 
-   let closure equalities vars =
-      let f x = (ListAsSet.inter x vars) != []
-      in
+   let closure (equalities: ('v * 'v) list) (vars: 'v list): ('v list) =
       ListAsSet.union vars
-         (List.flatten (List.filter f (equivalence_classes equalities)))
+         (List.flatten (List.filter (fun x -> (ListAsSet.inter x vars) != [])
+                                    (equivalence_classes equalities)))
 
    exception CannotUnifyParametersException of (string list)
 
-   type 'v substitution_t = ('v * 'v) list
+   type 'v mapping_t = ('v * 'v) list
 
    (* given a list of variables to be unified (i.e., a single variable from
-      this list is to be chosen by all others will be replaced,
-      find such a variable that occurs in list parameter_vars, and
+      this list is to be chosen by which all others will be replaced),
+       a variable that occurs in list parameter_vars, and
       output a mapping from the variables to the chosen variable. *)
-   let unifier (vars_to_unify: 'v list)
-               (parameter_vars: 'v list):
-               ('v substitution_t) =
+   let unifier0 (vars_to_unify: 'v list)   (* an equivalence class *)
+               (parameter_vars: 'v list):  (* the unifier must be the identity
+                                              on these variables *)
+               ('v mapping_t * (('v * 'v) list)) =
       let bv = ListAsSet.inter vars_to_unify parameter_vars
       in
-      if (List.length bv > 1) then
-         raise (CannotUnifyParametersException(bv))
-                    (* This means we are not allowed to unify; we must
-                       keep a constraint around checking that the elements
-                       of bv are the same. *)
-      else
-         let v = if (bv = []) then (List.hd vars_to_unify) else (List.hd bv)
-         in
-         List.flatten (List.map (fun x -> [(x,v)]) vars_to_unify)
+      let incons =
+         (
+         if (List.length bv > 1) then
+            List.map (fun x -> ((List.hd bv), x)) (List.tl bv)
+            (* This means we are not allowed to unify; we must
+               keep a constraint around checking that the elements
+               of bv are the same. *)
+         else []
+         )
+      in 
+      let v = if (bv = []) then (List.hd vars_to_unify) else (List.hd bv)
+      in
+      (List.flatten (List.map (fun x -> [(x,v)]) vars_to_unify), incons)
+
+   (* returns a most general unifier of the variables occuring in the
+      equations, and respecting those unless they are inconsistent
+      with a given set of required identities. Returns the unifier and
+      a fully descriptive set of inconsistent equations. For example,
+
+      (unifier [("x", "y"); ("y", "z")] ["z"]) =
+      ([("x", "z"); ("y", "z")], [])
+
+      (unifier [("x", "y"); ("y", "z")] ["y"; "z"]) =
+      ([("x", "y"); ("y", "y"); ("z", "y")], [("y", "z")])
+
+      Note the ("z", "y") tuple. This is inconsistent with the requirement
+      that the mapping is the identity on z. However, in those cases
+      where the inconsistent equations hold (here, when the variable y and
+      z have the same value), the mapping is ok. This is the way to use
+      inconsistent equations; they are additional requirements to be
+      checked.
+   *)
+   let unifier (equations: ('v * 'v) list) (identities: 'v list):
+               ('v mapping_t * (('v * 'v) list)) =
+      let (x, y) = (List.split
+                      (List.map (fun comp -> (unifier0 comp identities))
+                                (equivalence_classes equations)))
+      in
+      (List.flatten x, List.flatten y)
+
 
    exception NonFunctionalMappingException
 
-   let apply_mapping (mapping: 'v substitution_t) (l: 'v list): ('v list) =
-      let f x =
-         let g (y, z) = if(x=y) then [z] else []
-         in
-         let x2 = List.flatten (List.map g mapping)
-         in
-         if (List.length x2) = 0 then x
-         else if (List.length x2) = 1 then (List.hd x2)
-         else raise NonFunctionalMappingException
-      in (List.map f l)
+   let apply_mapping (mapping: 'v mapping_t) (x: 'v): 'v =
+      let g (y, z) = if(x = y) then [z] else []
+      in
+      let x2 = List.flatten (List.map g mapping)
+      in
+      if (List.length x2) = 0 then x
+      else if (List.length x2) = 1 then (List.hd x2)
+      else raise NonFunctionalMappingException
 end
 
 
@@ -163,6 +192,24 @@ Vars.closure [("x", "y"); ("u", "v"); ("v", "y")] ["x"] =
    ["x"; "y"; "v"; "u"];;
 
 *)
+
+
+
+(* (string_of_list ", " ["a"; "b"; "c"] = "a, b, c". *)
+let string_of_list (sep: string) (l: string list): string =
+   if (l = []) then ""
+   else List.fold_left (fun x y -> x^sep^y) (List.hd l) (List.tl l);;
+
+
+
+(* turn a list into a list of pairs of values and their positions in the list.
+   Examle:
+   add_positions ["a"; "b"; "c"] 1 = [("a", 1); ("b", 2); ("c", 3)];;
+*)
+let rec add_positions (l: 'a list) i =
+   if (l = []) then []
+   else ((List.hd l), i) :: (add_positions (List.tl l) (i+1))
+;;
 
 
 

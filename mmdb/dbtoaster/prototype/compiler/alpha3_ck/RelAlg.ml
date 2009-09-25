@@ -50,6 +50,20 @@ let rec make readable_relalg =
     | RA_MultiNatJoin(l) -> RelSemiRing.mk_prod (List.map make l)
 
 
+let as_string relalg =
+   let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
+   let prod_f l = (Util.string_of_list " and " l) in
+   let leaf_f lf =
+      match lf with
+         AtomicConstraint(Eq, x, y) -> x^"="^y
+       | AtomicConstraint(Lt, x, y) -> x^"<"^y
+       | AtomicConstraint(Le, x, y) -> x^"<="^y
+       | AtomicConstraint(Neq, x, y) -> x^"<>"^y
+       | _ -> "CANNOT_OUTPUT" (* FIXME *)
+   in
+   RelSemiRing.fold sum_f prod_f leaf_f relalg
+
+
 let lf_schema x =
    match x with
       Empty    -> [] (* to check consistency of unions, ignore relational
@@ -136,7 +150,7 @@ let split_off_equalities (monomial: relalg_t) :
    (List.flatten eqs, RelSemiRing.mk_prod(List.flatten rest))
 
 
-type substitution_t = var_t Util.Vars.substitution_t
+type substitution_t = var_t Util.Vars.mapping_t
                       (* (var_t * var_t) list *)
 
 
@@ -145,10 +159,11 @@ let apply_variable_substitution (theta: substitution_t) (alg: relalg_t):
    let substitute_leaf lf =
       match lf with
          Rel(n, vars) ->
-            RelSemiRing.mk_val (Rel(n, Util.Vars.apply_mapping theta vars))
+            RelSemiRing.mk_val
+               (Rel(n, List.map (Util.Vars.apply_mapping theta) vars))
        | AtomicConstraint(comp, x, y) ->
-            let x2 = List.hd (Util.Vars.apply_mapping theta [x]) in
-            let y2 = List.hd (Util.Vars.apply_mapping theta [y]) in
+            let x2 = Util.Vars.apply_mapping theta x in
+            let y2 = Util.Vars.apply_mapping theta y in
             (RelSemiRing.mk_val (AtomicConstraint(comp, x2, y2)))
        | _ -> (RelSemiRing.mk_val lf)
    in
@@ -165,14 +180,15 @@ let extract_substitutions (monomial: relalg_t) (bound_vars: var_t list):
       (substitution_t * relalg_t) =
    let (eqs, rest) = split_off_equalities monomial
    in
-   let substitutions =
-      (List.flatten
-         (List.map (fun comp -> (Util.Vars.unifier comp bound_vars))
-            (Util.Vars.equivalence_classes eqs)))
+   let (theta, incons) = Util.Vars.unifier eqs bound_vars
    in
-   let rest2 = apply_variable_substitution substitutions rest
+   let f (x,y) = RelSemiRing.mk_val (AtomicConstraint(Eq, x, y))
    in
-   (substitutions, rest2)
+   (* add the inconsistent equations again as constraints. *)
+   let rest2 = RelSemiRing.mk_prod([(apply_variable_substitution theta rest)]
+                                   @ (List.map f incons))
+   in
+   (theta, rest2)
 
 
 

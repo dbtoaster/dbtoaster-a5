@@ -19,8 +19,10 @@ val rfold: ('b list -> 'b) -> ('b list -> 'b) ->
            (readable_mapalg_lf_t -> 'b) -> readable_mapalg_t -> 'b
 
 
+(* (delta relname tuple mapalg) computes the delta of mapalg as tuple is
+   inserted into relation relname.
+*)
 val delta: string -> (string list) -> mapalg_t -> mapalg_t
-           (* relname tuple mapalg *)
 
 (* a pudding. Here: recursively turning a map algebra expression into a
    polynomial: The result does not use union anywhere, and sum is only used
@@ -40,12 +42,21 @@ val roly_poly: mapalg_t -> mapalg_t
    nested monomials.
 *)
 val simplify: mapalg_t -> (string list) -> (string list) ->
-                          ((string list * mapalg_t) (* list *) )
+                          ((string list * mapalg_t) list)
 
 (* all the variables that occur in the expression *)
-val collect_vars: mapalg_t -> string list
+val vars: mapalg_t -> string list
 
-(* a list consisting og the maximal AggSum subexpressions. *)
+(* (apply_variable_substitution theta mapalg) substitutes variables anywhere
+   in mapalg using mapping theta, recursively. This includes relational
+   algebra subexpressions.
+*)
+val apply_variable_substitution: ((string * string) list) ->
+                                 mapalg_t -> mapalg_t
+
+(* a list consisting of the maximal AggSum subexpressions of the input
+   map algebra expression.
+*)
 val extract_aggregates: mapalg_t -> (mapalg_t list)
 
 

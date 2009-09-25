@@ -1,16 +1,7 @@
 
 This is the SPREAD query compiler.
 
-TODOs/known bugs:
-
-* RelAlg.extract_substitutions has to be generalized so that we can support
-  self-joins. This means that sometimes we cannot eliminate equality
-  constraints but has to keep them around as if-conditions in the generated
-  code.
-
-* Inequality constraints basically work (there is no special type for
-  if-comditions, but we can represent them as non-relational relational
-  algebra), but the code generator does not generate if statements yet.
+TODOs:
 
 * The output has be be formatted in a way convenient to Oliver.
 
@@ -18,4 +9,10 @@ TODOs/known bugs:
   MapAlg.ml and Compiler.ml.
 
 * The code does not generate partition hints yet.
+
+
+Recent changes:
+
+* Inequality constraints and self-joins now work.
+
 

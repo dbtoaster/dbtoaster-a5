@@ -82,6 +82,9 @@ val readable:  relalg_t -> readable_relalg_t
 val make:      readable_relalg_t -> relalg_t
 
 
+val as_string: relalg_t -> string
+
+
 (* since we do not record column names, these are the variables used. *)
 val lf_schema: relalg_lf_t -> string list
 

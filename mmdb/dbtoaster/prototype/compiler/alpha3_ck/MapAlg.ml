@@ -41,6 +41,8 @@ and  readable_mapalg_t    = RVal    of readable_mapalg_lf_t
 
 
 
+
+
 (* function implementations *)
 
 let zero = MASemiRing.mk_val (MA_BASE.zero)
@@ -106,10 +108,10 @@ let rec delta relname tuple (mapalg: mapalg_t) =
 
 
 
-let rec collect_vars mapalg: string list =
+let rec vars mapalg: string list =
    let leaf_f x = match x with
       MA_BASE.Var(y) -> [y]
-    | MA_BASE.AggSum(f, r) -> Util.ListAsSet.union (collect_vars f)
+    | MA_BASE.AggSum(f, r) -> Util.ListAsSet.union (vars f)
                                                    (RelAlg.vars r)
     | _ -> []
    in
@@ -124,23 +126,20 @@ let rec collect_vars mapalg: string list =
 
 module MixedHyperGraph =
 struct
-   type edge_t = RelEdge of RelAlg.relalg_t
-               | MapEdge of MASemiRing.expr_t
+   type edge_t = RelEdge of RelAlg.relalg_t | MapEdge of MASemiRing.expr_t
 
    exception NotImplementedException
 
    let get_nodes hyperedge =
       match hyperedge with RelEdge(r) -> RelAlg.vars r (* or RelAlg.schema? *)
-                         | MapEdge(f) -> collect_vars f
+                         | MapEdge(f) -> vars f
 
    let extract_rel_atoms l =
-      let extract_rel_atom x = match x with RelEdge(r) -> [r] | _ -> []
-      in
+      let extract_rel_atom x = match x with RelEdge(r) -> [r] | _ -> [] in
       (List.flatten (List.map extract_rel_atom l))
 
    let extract_map_atoms l =
-      let extract_map_atom x = match x with MapEdge(r) -> [r] | _ -> []
-      in
+      let extract_map_atom x = match x with MapEdge(r) -> [r] | _ -> [] in
       MASemiRing.mk_prod (List.flatten (List.map extract_map_atom l))
 
    let make f r =
@@ -167,8 +166,8 @@ let factorize_aggsum_mm (f_monomial: mapalg_t)
                        (MixedHyperGraph.make f_monomial r_monomial))
       in
       let mk_aggsum component =
-         match (MixedHyperGraph.extract_from component) with (f, r) ->
-         (mk_aggsum f (RelAlg.hypergraph_as_monomial r))
+         match (MixedHyperGraph.extract_from component) with
+            (f, r) -> (mk_aggsum f (RelAlg.hypergraph_as_monomial r))
       in
       MASemiRing.mk_prod (List.map mk_aggsum factors)
 
@@ -197,12 +196,17 @@ let rec roly_poly (ma: mapalg_t) : mapalg_t =
 
 
 
-(* TODO: also substitute in nested aggsum expressions. *)
-let apply_variable_substitution theta m =
-   let b = List.map (fun (x,y) -> (MASemiRing.mk_val(MA_BASE.Var(x)),
-                                   MASemiRing.mk_val(MA_BASE.Var(y)))) theta
-   in
-   (MASemiRing.substitute_many b m)
+let rec apply_variable_substitution theta m =
+   let f lf = match lf with
+      MA_BASE.Var(y) -> MASemiRing.mk_val(
+                           MA_BASE.Var(Util.Vars.apply_mapping theta y))
+    | MA_BASE.AggSum(f, r) ->
+         MASemiRing.mk_val(
+            MA_BASE.AggSum(apply_variable_substitution theta f,
+                           RelAlg.apply_variable_substitution theta r))
+    | _ -> MASemiRing.mk_val(lf)
+   in 
+   (MASemiRing.apply_to_leaves f m)
 
 
 
@@ -241,8 +245,7 @@ let rec simplify_roly (ma: mapalg_t) (bound_vars: string list)
            if (r = RelAlg.zero) then raise Assert0Exception
            else if (f = MASemiRing.zero) then ([], MASemiRing.zero)
            else
-              let (b, non_eq_cons) =
-                 RelAlg.extract_substitutions r bound_vars
+              let (b, non_eq_cons) = RelAlg.extract_substitutions r bound_vars
               in
               let (_, b_img) = List.split b
               in
@@ -266,16 +269,12 @@ let rec simplify_roly (ma: mapalg_t) (bound_vars: string list)
 let simplify (ma: mapalg_t)
              (bound_vars: string list)
              (dimensions: string list) :
-             (string list * mapalg_t) =
+             ((string list * mapalg_t) list) =
    let simpl f =
-      let (b, f2) = simplify_roly f bound_vars
-      in
-      ((Util.Vars.apply_mapping b dimensions), f2)
+      let (b, f2) = simplify_roly f bound_vars in
+      ((List.map (Util.Vars.apply_mapping b) dimensions), f2)
    in
-   let l = List.map simpl (MASemiRing.sum_list (roly_poly ma))
-   in
-   if (List.length l) <> 1 then raise Assert0Exception
-   else (List.hd l)
+   List.map simpl (MASemiRing.sum_list (roly_poly ma))
 
 
 
