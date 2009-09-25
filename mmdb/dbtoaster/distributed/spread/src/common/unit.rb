@@ -23,9 +23,15 @@ class UnitTestNode
   end
   
   def start
-    @thread = Thread.new(@server) do |server|
+    @thread = Thread.new(@server, @name) do |server, name|
       puts "Starting Node " + @name.to_s;
-      server.serve;
+      begin
+        server.serve;
+      rescue Exception => e;
+        puts "Error at Node " + name.to_s + ": " + e.to_s;
+        puts e.backtrace.join("\n");
+        exit;
+      end
     end
   end
   
@@ -47,10 +53,11 @@ class UnitTestFetchStep
     @target = target.collect do |t|
       t = t.split(":");
       e = Entry.new;
-        e.source = t[0];
-        e.key = t[1];
+        e.source = t[0].to_i;
+        e.key = t[1].to_i;
         e.version = unless t.size < 3 then t[2] else 1; end
         e.node = @source;
+      e;
     end
   end
   
@@ -58,6 +65,14 @@ class UnitTestFetchStep
     node = MapNodeInterface.new(@source.host, @source.port);
     node.fetch(@target, @destination, @cmdid);
     node.close();
+  end
+  
+  def to_s
+    @target.each do |e|
+      e.source.to_s + "[" + e.key.to_s + "(" + e.version.to_s + ")]";
+    end.join(", ") + " @"
+      @source.host.to_s + ":" + @source.port.to_s + " -> "
+      @destination.host.to_s + ":" + @destination.port.to_s;
   end
 end
 
@@ -121,8 +136,17 @@ class UnitTestHarness
     end
   end
   
+  def dump()
+    @nodes.each do |node|
+      puts "---" + node.name + "---";
+      puts node.handler.dump();
+    end
+    puts "--------";
+  end
+  
   def run()
     @testcmds.each do |cmd|
+      puts "Executing: " + cmd.to_s;
       cmd.fire;
     end
   end

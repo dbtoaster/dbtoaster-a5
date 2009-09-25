@@ -13,6 +13,10 @@ puts "Starting Nodes...";
 unitTest.start();
 sleep 1;
 
+puts "Executing Node Dump...";
+
+unitTest.dump();
+
 puts "Running Test...";
 
 unitTest.run();

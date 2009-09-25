@@ -27,10 +27,10 @@ class RemoteCommitNotification
   end
   
   def fire(entry, value)
-    @count -= 1 unless (value = nil) || (@entries[entry] != nil);
+    @count -= 1 unless (value == nil) || (@entries[entry] != nil);
     @entries[entry] = value;
     if(@count <= 0) then
-      peer = MapNodeInterface.new(destination.host, destination.port);
+      peer = MapNodeInterface.new(@destination.host, @destination.port);
       peer.pushget(@entries, @cmdid);
       peer.close();
       true;
@@ -198,13 +198,14 @@ class MapPartition
     # record already stored in the DB (if we've gotten requests for that record)
     # Case 2 is different from 1.* only in that we have to create the initial
     # record.
+    
     record = @data[target.key];
     if record != nil then
       record = record.find(target); #guaranteed to return a value
       if(record.value == nil) then
-        record.register(callback)
+        record.register(callback);
       else
-        callback.fire(target, value)
+        callback.fire(target, record.value);
       end
     else
       @data[target.key] = CommitRecord.new(target);
@@ -246,7 +247,7 @@ class MapNodeHandler
     map = @maps[source.to_i];
     if map == nil then raise SpreadException.new("Request for unknown map"); end
     map.each do |partition|
-      if (key.to_i > partition.start) && (key.to_i - partition.start < partition.range)
+      if (key.to_i > partition.start.to_i) && (key.to_i - partition.start.to_i < partition.range.to_i) then
         return partition;
       end
     end
@@ -321,16 +322,30 @@ class MapNodeHandler
   ############# Asynchronous Reads
 
   def fetch(target, destination, cmdid)
-    request = RemoteCommitNotification.new(target, destination, cmdid);
-    target.each do |t|
-      # register will fire the trigger if the value is already defined
-      # the actual message will not be sent until all requests in this 
-      # command can be fulfilled.
-      findPartition(t.source, t.key).register(target, request);
+    begin
+      request = RemoteCommitNotification.new(target, destination, cmdid);
+      target.each do |t|
+        puts "Fetch: " + t.source.to_i.to_s + "[" + t.key.to_s + "(" + t.version.to_s + ")]";
+        # register will fire the trigger if the value is already defined
+        # the actual message will not be sent until all requests in this 
+        # command can be fulfilled.
+        partition = findPartition(t.source, t.key).register(t, request);
+      end
+    rescue Thrift::Exception => ex
+      puts "Error: " + ex.why;
     end
   end
   
   def pushget(result, cmdid)
+    puts "Pushget: " + result.to_s;
+    if cmdid == 0 then
+      puts("  Fetch Results Pushed: " + 
+        result.keys.collect do |e| 
+          e.source.to_s + "[" + e.key.to_s + "(" + e.version.to_s + ")] = " + result[e].to_s;
+        end.join(", "));
+      return
+    end
+    
     if @cmdcallbacks[cmdid] == nil then
       # Case 1: we don't know anything about this put.  Save the response for later use.
       @cmdcallbacks[cmdid] = Array.new;
@@ -436,12 +451,10 @@ class MapNodeInterface
   ############# Asynch Ops
   
   def pushget(result, cmdid)
-    puts "Pushget: " + result.to_s;
     @client.pushget(result, cmdid)
   end
   
   def fetch(target, destination, cmdid)
-    puts "Fetch: " + target.to_s;
     @client.fetch(target, destination, cmdid);
   end
   
