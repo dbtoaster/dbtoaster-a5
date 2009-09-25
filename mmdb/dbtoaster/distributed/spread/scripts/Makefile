@@ -1,7 +1,7 @@
 
-LAUNCHER_SCRIPTS=node.sh client.sh
+LAUNCHER_SCRIPTS=node.sh client.sh unit.sh
 
-all: node.sh client.sh
+all: $(LAUNCHER_SCRIPTS)
 
 $(LAUNCHER_SCRIPTS) : %.sh : ../src/bin/launcher.in
 	cat ../src/bin/launcher.in | sed s/--SCRIPT--/$*-launcher.rb/ > $@ 

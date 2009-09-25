@@ -295,18 +295,18 @@ class MapNodeHandler
     
     putCommand = @templates[template].parametrize(paramMap);
     puts putCommand.to_s;
-#    putCommand.entries.each do |entry|
-#      # three cases:
-#      #  1) The requested map is local and we can handle it.
-#      begin
-#        findPartition(entry.source, entry.key).get(entry);
-#      rescue Thrift::Exception => ex
-#        
-#      end
-#      
-#      #  2) The requested map is not local, but we've already received the request.
-#      #  3) The requested map is not local, and the request is still pending.
-#    end
+    
+    record = findPartition(target).insert(target, putCommand);
+    
+    if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
+      @cmdcallbacks[id].each do |response|
+        response.each_pair do |t, v|
+          record.discover(t,v);
+        end
+      end
+    end
+    @cmdcallbacks[id] = record;
+    ###### TODO: make record remove itself from @cmdcallbacks when it becomes ready.
     
   end
   
@@ -436,7 +436,13 @@ class MapNodeInterface
   ############# Asynch Ops
   
   def pushget(result, cmdid)
+    puts "Pushget: " + result.to_s;
     @client.pushget(result, cmdid)
+  end
+  
+  def fetch(target, destination, cmdid)
+    puts "Fetch: " + target.to_s;
+    @client.fetch(target, destination, cmdid);
   end
   
 end
