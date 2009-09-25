@@ -545,7 +545,7 @@ A statement {\tt LOOP\_JOIN} creates a matching.
                             top_bid.volume, top_ask.price
 \end{verbatim}
 
-The {\tt LOOP\_JOIN} statement creates a loop that runs as long as a {\tt WHILE} condition is true. A field indicator {\tt NEW} in the {\tt LOOP\_JOIN} statement in {\tt FROM} clause indicates that tables should be updated on each iteration. Conditions {\tt WHEN} are used to execute a set of statements when the condition is true. A {\tt HEARTBEAT} clause indicates under what conditions the {\tt LOOP_JOIN} statement should be executed. 
+The {\tt LOOP\_JOIN} statement creates a loop that runs as long as a {\tt WHILE} condition is true. A field indicator {\tt NEW} in the {\tt LOOP\_JOIN} statement in {\tt FROM} clause indicates that tables should be updated on each iteration. Conditions {\tt WHEN} are used to execute a set of statements when the condition is true. A {\tt HEARTBEAT} clause indicates under what conditions the {\tt LOOP\_JOIN} statement should be executed. 
 
 The above matching is for the historic data stream. A matching for the combined data stream is done similarly and for now is omitted. The result of the combined matching is a \emph{combined\_output} stream. 
 
