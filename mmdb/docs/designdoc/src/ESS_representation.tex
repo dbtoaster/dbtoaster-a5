@@ -380,6 +380,198 @@ In the case of the Exchange Server, we want to impose conditions on the output s
 \caption{Exchange Output Filter.}
 \end{program}
 
+\section{Implementation}
+
+This section presents complete descriptions of matching techniques and their implementations. 
+
+All of the following strategies assume that there are two streams of updates: historic orders stream and simulated orders stream.
+
+\subsection{Historic Tuples Duplication.}
+
+This strategy matches two trade requests. Trades, where a historic order matches with another historic order or a simulated order matches with another simulated order, are executed by matching price and volume of the two requests. However when a a simulated order can be matched with some historic order, we create a duplicate of a historic order and match with that order.
+
+This strategy can be implemented in the following way. Both input streams are filtered to have only 'S', 'B', and 'D' orders. Two streams are created from the above streams. The first stream is identical to the historic orders stream after filtering. The second stream is a combination of orders coming from both streams. Next stream tuples are inserted into a \emph{historicView} relation and a \emph{combinedView} relation, the relations are matched and a steam of outputs for each is produced. Each output stream is then cleaned up. If there is a matching between a historic order and a simulated order in a combined view relation, a new tuple is inserted into output stream to compensate for duplication of a historic order.
+
+From the above we have two input streams \emph{historic\_input\_stream} and \emph{simulated\_input\_stream}. First we create filters to remove undesired tuples:
+
+\begin{verbatim}   
+    SELECT * 
+    FROM historic_input_stream HS
+    WHERE HS.action=='B' &&
+          HS.action=='S' &&
+          HS.action=='D'
+    INTO HFS
+\end{verbatim}
+
+\begin{verbatim}  
+    SELECT *
+    FROM simulated_input_stream SS
+    WHERE SS.action=='B' &&
+          SS.action=='S' &&
+          SS.action=='D'
+    INTO SFS
+\end{verbatim}
+
+\noindent We also need to forward these data to output streams
+
+\begin{verbatim}   
+    SELECT * 
+    FROM historic_input_stream HS
+    WHERE HS.action=='B' &&
+          HS.action=='S' &&
+          HS.action=='D'
+    INTO output_stream
+\end{verbatim}
+
+\begin{verbatim}  
+    SELECT *
+    FROM simulated_input_stream SS
+    WHERE SS.action=='B' &&
+          SS.action=='S' &&
+          SS.action=='D'
+    INTO output_stream
+\end{verbatim}
+
+\noindent The next step is to merge inputs if needed. Historic stream does not need to be merged with anything so we just pass it alone. 
+
+\begin{verbatim} 
+    HFS INTO historicView
+\end{verbatim}
+
+\noindent On the other hand the \emph{combinedView} stream contains tuples from both historic and simulated streams. 
+
+\begin{verbatim}  
+    HFS
+    UNION
+    SFS
+    INTO combinedView
+\end{verbatim}
+
+\noindent After we filtered and merged input streams we can create start matching. We start by creating historical bids and asks tables and a way to remove values upon users request. 
+
+\begin{verbatim}  
+    SELECT * as bids_historicView
+    FROM historicView hv
+    RANGE UNBOUNDED
+    WHERE hv.action=='B'
+\end{verbatim}
+
+\noindent Similarly for an asks table.
+
+\begin{verbatim}  
+    SELECT * as asks_historicView
+    FROM historicView hv
+    RANGE UNBOUNDED
+    WHERE hv.action=='S'
+\end{verbatim}
+
+\noindent The asks and bids tables are updated with user deletes.
+
+\begin{verbatim}  
+    DELETE *
+    FROM asks_historicView av
+    WHERE av.id = hv.id
+            (SELECT * 
+             FROM historicView
+             RANGE NOW
+             WHERE historicView.action='D') as hv  
+
+    DELETE *
+    FROM bids_historicView bv
+    WHERE bv.id = hv.id
+            (SELECT * 
+             FROM historicView
+             RANGE NOW
+             WHERE historicView.action='D') as hv 
+\end{verbatim}
+
+Similarly we create asks and bids relations form a combined view. 
+
+When all relations are created we can start matching.
+
+\begin{verbatim}      
+    SELECT * as min_bid_price
+    FROM bids_historicView bhv
+    WHERE bhv.price = (SELECT min(price) FROM  bids_historicView))
+    
+    SELECT * as top_bid
+    FROM min_bid_price mbp
+    WHERE mbp.time = (SELECT min(time) FROM min_bid_price)
+    
+    SELECT * as max_ask_price
+    FROM asks_historicView ahv
+    WHERE ahv.price = (SELECT max(price) FROM  asks_historicView))
+    
+    SELECT * as top_ask
+    FROM max_ask_price map
+    WHERE map.time = (SELECT min(time) FROM max_ask_price)
+\end{verbatim}
+
+The above are helper tables (in this case we extract only one tuple) that are used by a matching function {\tt LOOP\_JOIN}.
+
+A statement {\tt LOOP\_JOIN} creates a matching. 
+
+\begin{verbatim}  
+    LOOP_JOIN WHILE top_bid.price<=top_ask.price
+    FROM NEW top_bid, top_ask
+    WHEN top_bid.volume = top_ask.volume 
+            (DELETE * FROM bids_historicView bhv WHERE bhv.id = top_bid.id,
+             DELETE * FROM asks_historicView ahv WHERE ahv.id = top_ask.id,
+             INSERT INTO historic_output create_F(top_bid), create_F(top_ask))
+    WHEN top_bid.volume < top_ask.volume 
+            (DELETE * FROM bids_historicView bhv WHERE bhv.id = top_bid.id,
+             INSERT INTO asks_historicView create_E(top_ask) 
+                ON DUPLICATE KEY UPDATE id = top_ask.id
+             INSERT INTO historic_output create_F(top_bid), create_E(top_bid))
+    WHEN top_bid.volume > top_ask.volume 
+            (DELETE * FROM asks_historicView ahv WHERE ahv.id = top_ask.id,
+             INSERT INTO bids_historicView create_E(top_bid) 
+                 ON DUPLICATE KEY UPDATE id = top_bid.id
+             INSERT INTO historic_output create_F(top_ask), create_E(top_bid))
+    WITH HEARTBEAT ON *
+    EVERY 1 TUPLE IN historicView
+\end{verbatim}
+
+\noindent Where constructs \emph{create\_F(top)} and \emph{create\_E(top)} are a short hand for tuples:
+
+\begin{verbatim}
+    create_F(top_bid) -> top_bid.id, top_bid.time, top_bid.action='F',
+                            top_bid.volume, top_bid.price
+    create_F(top_ask) -> top_ask.id, top_ask.time, top_ask.action='F',
+                            top_ask.volume, top_ask.price
+    create_E(top_bid) -> top_bid.id, top_bid.time, top_bid.action='E',
+                            top_ask.volume, top_bid.price
+    create_E(top_ask) -> top_ask.id, top_ask.time, top_ask.action='E',
+                            top_bid.volume, top_ask.price
+\end{verbatim}
+
+The {\tt LOOP\_JOIN} statement creates a loop that runs as long as a {\tt WHILE} condition is true. A field indicator {\tt NEW} in the {\tt LOOP\_JOIN} statement in {\tt FROM} clause indicates that tables should be updated on each iteration. Conditions {\tt WHEN} are used to execute a set of statements when the condition is true. A {\tt HEARTBEAT} clause indicates under what conditions the {\tt LOOP_JOIN} statement should be executed. 
+
+The above matching is for the historic data stream. A matching for the combined data stream is done similarly and for now is omitted. The result of the combined matching is a \emph{combined\_output} stream. 
+
+Next we merge \emph{combined\_output} and \emph{historic\_output} streams. 
+
+\begin{verbatim}
+    historic_output
+    UNION
+    combined_output
+    INTO output_stream
+\end{verbatim}
+
+The final step is to add a filter for an \emph{output\_stream} stream produced during merging. 
+
+\begin{verbatim}
+    //still working on it
+    select *
+    from output_stream
+    where action='B' & volume>1000
+    update filter
+    
+    select *
+    from output_stream
+    apply filter
+\end{verbatim}
+
 \section{Previous Discussions}
 
 {\bf Determining Current Price} 
