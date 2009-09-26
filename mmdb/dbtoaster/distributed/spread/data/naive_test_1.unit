@@ -10,17 +10,29 @@ value 1 5 1 42.1
 
 node Beta
 partition 1 100 100
+partition 2 0 200
 
 ############ Put Templates
 template 1 #= + (#0 * #1)
+template 2 #= + #0
 
 ############ Test Sequence
-# a simple put
+
+# Simple Put
 put 4 1 Beta 1:123 42.1 50
 dump Beta
+
+# Put following another Put
 put 5 1 Beta 1:123:4 1 10
 dump Beta
+
+# Put drawing values from another map
 put 6 1 Beta 1:123:5 1:1:1:Alpha 1:3:1:Alpha
 fetch 6 Alpha Beta 1:1:1 1:3:1
+
+# Put triggering a sequential race.
+put 7 2 Beta 2:50:0 1:123:6:Beta
+
+# Wait for tasks to complete and display the final state
 sleep 1;
 dump

@@ -57,6 +57,7 @@ class CommitRecord
         @required = @value.entries;
       end
     end
+    puts "Created record requiring entries: " + @required.join(", ");
     @callbacks = Array.new;
   end
   
@@ -119,28 +120,33 @@ class CommitRecord
   # need to be filled in for the unevaluated expression in this record.
   # Discover also takes charge of firing the callbacks waiting for this
   # record to complete.
-  def discover(entry, value)
+  def discover(entry, value) 
+    puts "Discovered: " + entry.to_s + " = " + value.to_s;
     @required.delete_if do |req|
-      req.discover(entry, value)
+      req.discover(entry, value);
     end
+    
     fireCallbacks;
   end
   
   def discoverLocal(handler)
-    @required.delete_if do |req|
+    # To make discoverLocal reentrant with discover, we operate off a copy of @required
+    @required.clone.each do |req|
       begin
+        # If the value is known, then register will fire immediately.
+        # in this case, register will call discover, which will in turn remove
+        # the requirement from @required.
+        # Note also that discover will fire the callbacks if it is necessary to do so.  
         handler.findPartition(req.maptarget.source, req.maptarget.key).register(req.maptarget, CommitNotification.new(self));
-        return true;
       rescue Thrift::Exception => e;
-        return false;
       end
     end
-    fireCallbacks
   end
   
   def fireCallbacks
     return unless ready;
     
+    puts "firing " + @value.to_s + "; " + @callbacks.size.to_s + " callbacks";
     @value = @value.to_f;
     @callbacks.each do |cb|
       cb.fire(@target, @value);
@@ -214,7 +220,8 @@ class MapPartition
     record = @data[target.key];
     if record != nil then
       record = record.find(target); #guaranteed to return a value
-      if(record.value == nil) then
+      if(record.pending) then
+        puts "Registering";
         record.register(callback);
       else
         callback.fire(target, record.value);
@@ -324,7 +331,7 @@ class MapNodeHandler
     record = findPartition(target.source, target.key).insert(target, putCommand);
     
     #initialize the template with values we can obtain locally
-    record.discoverLocal(self)
+    record.discoverLocal(self);
     
     #initialize the template with values we've already received
     if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
