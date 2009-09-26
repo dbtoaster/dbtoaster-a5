@@ -112,12 +112,16 @@ class MapEquation
   
   def discover(entry, value)
     if @type == :map then
-      if @left.source == entry.source && @left.key == @entry.key then
+      if @left.source == entry.source && @left.key == entry.key then
         @right = value; return true;
       end
     end
     false;
   end 
+  
+  def maptarget
+    if @type == :map then @left else nil; end
+  end
   
   def MapEquation.decodeVar(parser)
     case parser.next

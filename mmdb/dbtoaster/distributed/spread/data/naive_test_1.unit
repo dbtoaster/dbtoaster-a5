@@ -1,3 +1,5 @@
+
+############ Node Definitions
 node Alpha
 partition 1 0 100
 value 1 1 1 5.2
@@ -9,6 +11,16 @@ value 1 5 1 42.1
 node Beta
 partition 1 100 100
 
-put 1 #= + #0 * #1
+############ Put Templates
+template 1 #= + (#0 * #1)
 
-fetch Alpha Beta 1:3
+############ Test Sequence
+# a simple put
+put 4 1 Beta 1:123 42.1 50
+dump Beta
+put 5 1 Beta 1:123:4 1 10
+dump Beta
+put 6 1 Beta 1:123:5 1:1:1:Alpha 1:3:1:Alpha
+fetch 6 Alpha Beta 1:1:1 1:3:1
+sleep 1;
+dump

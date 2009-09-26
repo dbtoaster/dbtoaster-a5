@@ -75,10 +75,9 @@ class CommitRecord
       else
         nil; # this should only happen if we get a request for a value that's been expunged already
       end
-    elsif @next && @next.target.version < target.version then
-      @next.find(target.version, value);
+    elsif @next && @next.target.version <= target.version then
+      @next.find(target, value);
     else
-      insert(target, value);
       tmp = @next;
       @next = CommitRecord.new(target, value);
       @next.next = tmp;
@@ -101,7 +100,7 @@ class CommitRecord
       @next.to_s;
     end
   end
-  
+    
   def pending
     (@required.size > 0) && (@value != nil)
   end
@@ -124,13 +123,29 @@ class CommitRecord
     @required.delete_if do |req|
       req.discover(entry, value)
     end
-    if ready then
-      @value = @value.to_f
-      @callbacks.each do |cb|
-        cb.fire(@target, @value);
+    fireCallbacks;
+  end
+  
+  def discoverLocal(handler)
+    @required.delete_if do |req|
+      begin
+        handler.findPartition(req.maptarget.source, req.maptarget.key).register(req.maptarget, CommitNotification.new(self));
+        return true;
+      rescue Thrift::Exception => e;
+        return false;
       end
-      @callbacks = Array.new;
     end
+    fireCallbacks
+  end
+  
+  def fireCallbacks
+    return unless ready;
+    
+    @value = @value.to_f;
+    @callbacks.each do |cb|
+      cb.fire(@target, @value);
+    end
+    @callbacks = Array.new;
   end
 end
 
@@ -178,9 +193,6 @@ class MapPartition
     return val.value.to_f;
   end
   
-  def put(cmd)
-  end
-  
   def register(target, callback)
     #version 0 is always 0.
     if target.version <= 0 then callback.fire(target, 0); return; end;
@@ -210,6 +222,15 @@ class MapPartition
     else
       @data[target.key] = CommitRecord.new(target);
       @data[target.key].register(callback);
+    end
+  end
+  
+  def insert(target, value)
+    record = @data[target.key];
+    if(record != nil) then
+      record.insert(target, value)
+    else
+      @data[target.key] = CommitRecord.new(target, value);
     end
   end
   
@@ -251,7 +272,7 @@ class MapNodeHandler
         return partition;
       end
     end
-    raise SpreadException.new("Request for unknown partition");
+    raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.to_s + "]");
   end
   
   def createPartition(map, start, range)
@@ -297,8 +318,15 @@ class MapNodeHandler
     putCommand = @templates[template].parametrize(paramMap);
     puts putCommand.to_s;
     
-    record = findPartition(target).insert(target, putCommand);
+    target = target.clone;
+    target.version = id;
+    target.freeze;
+    record = findPartition(target.source, target.key).insert(target, putCommand);
     
+    #initialize the template with values we can obtain locally
+    record.discoverLocal(self)
+    
+    #initialize the template with values we've already received
     if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
       @cmdcallbacks[id].each do |response|
         response.each_pair do |t, v|
@@ -306,7 +334,10 @@ class MapNodeHandler
         end
       end
     end
+    
+    #register ourselves to receive updates in the future
     @cmdcallbacks[id] = record;
+    
     ###### TODO: make record remove itself from @cmdcallbacks when it becomes ready.
     
   end
@@ -337,7 +368,7 @@ class MapNodeHandler
   end
   
   def pushget(result, cmdid)
-    puts "Pushget: " + result.to_s;
+    puts "Pushget: " + result.size.to_s + " results for command " + cmdid.to_s;
     if cmdid == 0 then
       puts("  Fetch Results Pushed: " + 
         result.keys.collect do |e| 
@@ -369,7 +400,7 @@ class MapNodeHandler
       case cmd[0]
         when "partition" then createPartition(cmd[1], cmd[2], cmd[3]);
         when "value" then findPartition(cmd[1], cmd[2]).set(cmd[2], cmd[3], cmd[4]);
-        when "put" then cmd.shift; createPutTemplate(cmd.shift, cmd.join(" "));
+        when "template" then cmd.shift; createPutTemplate(cmd.shift, cmd.join(" "));
       end
     end
   end
@@ -429,7 +460,7 @@ class MapNodeInterface
   
   def put(version, template, target, *params)
     convertedParams = 
-      params.collect do |param|
+      params.flatten.collect do |param|
         field = PutField.new()
         field.type = 
           if param.is_a? Numeric then 
@@ -441,7 +472,7 @@ class MapNodeInterface
             puts "Entry: " + param.to_s;
             PutFieldType::ENTRY;
           else 
-            raise SpreadException.new("Unknown parameter type");
+            raise SpreadException.new("Unknown parameter type: " + param.class.to_s);
           end;
         field;
       end
