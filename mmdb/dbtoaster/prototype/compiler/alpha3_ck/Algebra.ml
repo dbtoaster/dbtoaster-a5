@@ -193,7 +193,7 @@ let rec relalg_delta relname (tuple: var_t list) (relalg: relalg_t) =
                   RelSemiRing.zero
             else raise Assert0Exception
                  (* the terms with nonzero delta should have been pulled
-                    out of the constraint else where.
+                    out of the constraint elsewhere.
                     FIXME: implement this. *)
    in
    RelSemiRing.delta delta_leaf relalg

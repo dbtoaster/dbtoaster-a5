@@ -132,8 +132,6 @@ struct
          (List.flatten (List.filter (fun x -> (ListAsSet.inter x vars) != [])
                                     (equivalence_classes equalities)))
 
-   exception CannotUnifyParametersException of (string list)
-
    type 'v mapping_t = ('v * 'v) list
 
    (* given a list of variables to be unified (i.e., a single variable from
