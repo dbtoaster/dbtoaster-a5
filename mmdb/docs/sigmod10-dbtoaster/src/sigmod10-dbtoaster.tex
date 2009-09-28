@@ -1,6 +1,7 @@
 \documentclass{sig-alternate}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{hyperref}
 
 \begin{document}
 \title{DBCC: Compiling Databases for High-Performance View Maintenance and Update Stream Processing}
@@ -177,6 +178,34 @@ Experimental setup:
 
 \item What dataset should we use here? TPCH/orderbook data, or generate
   synthetic distributions?
+
+\item Notes on subquery processing in existing DBMS:
+    \begin{itemize}
+    \item Common techniques: subquery flattening, handling duplicates via a
+    semijoin, replacing exists/any operators for single-row subqueries w/ early termination, etc.
+    \item Apache Derby's subqueries:
+    \url{http://db.apache.org/derby/docs/10.0/manuals/tuning/perf105.html#HDRSII-TRANSFORM-13699}
+    \item Oracle's optimization of subqueries:
+    \url{http://www.oracle.com/technology/products/bi/db/10g/pdf/twp_general_query_optimization_10gr2_0605.pdf}
+    \item Oracle includes several implementations of semijoins, (hash-, sort-merge,
+    etc.) allowing join optimization just as with regular joins.
+    \item SQL Server subquery types:
+    \url{http://technet.microsoft.com/en-us/library/ms175838.aspx}
+    \item How does our naive nesting implementation compare with other DBMS's
+    implementations of semijoins?
+        \begin{itemize}
+        \item We can ignore in/exists/any/all subqueries, and focus on scalar subqueries in predicates
+        and select lists.
+        \item Scalar aggregate subqueries must be evaluated fully, however, the subquery results for
+        duplicate outer attributes can be cached and reused.
+        \end{itemize}
+    \end{itemize}
+
+\item Predicted running times:
+    \begin{itemize}
+    \item Indexed $k$-way nested loops joins w/ accumulators: $O(n\log^{k-1}{n})$
+    \item RC(k): $\sum_{m \in maps(k)} {\mbox{update cost}(m)}$
+    \end{itemize}
 \end{itemize}
 
 \begin{figure}
@@ -233,6 +262,23 @@ DBToaster recursive compilation for real-world scenarios.
 
 \item If time permits, use a custom allocator with an identifier for each map
 assigned to use the allocator to track memory usage per map.
+
+\item We have the following formulae for the number of maps created for k-way
+joins with specific types of join graphs. These are derived by considering the
+combinations of subgraphs of size $i$ (which constitute relations we can
+aggregate), with $i = [1 \ldots k-1]$
+    \begin{itemize}
+    \item Chain: $\sum_{i=1}^{k}{i} = \frac{k(k+1)}{2}$
+    \item Star: $(\sum_{i=1}^{k-1}{\binom{k-1}{i}}) + k $
+    \item Cycle: $k*\sum_{i=1}^{k-1}{i} = \frac{k^2(k-1)}{2}$
+    \end{itemize}
+
+\item Predicted memory utilization:
+    \begin{itemize}
+    \item VWAP: mem(DBToaster) $>$ mem(VM) $>$ mem(naive) -- due to increased
+    map usage, while still needing to maintain full domain. This changes if the base
+    relation contains many duplicates, i.e. $|dom(P)| << |bids|$.
+    \end{itemize}
 \end{itemize}
 
 \begin{figure}
