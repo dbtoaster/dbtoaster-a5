@@ -97,6 +97,25 @@ let rec connected_components (get_nodes: 'edge_t -> 'node_t list)
 end
 
 
+
+
+type ('a, 'b) table_fn_t = ('a * 'b) list
+
+exception NonFunctionalMappingException
+
+let apply (theta: ('a, 'b) table_fn_t)
+          (default: 'b) (x: 'a): 'b =
+   let g (y, z) = if(x = y) then [z] else []
+   in
+   let x2 = List.flatten (List.map g theta)
+   in
+   if (List.length x2) = 0 then default
+   else if (List.length x2) = 1 then (List.hd x2)
+   else raise NonFunctionalMappingException
+
+
+
+
 module Vars =
 struct
    (* the input is a list of pairs of equated variables.
@@ -167,17 +186,10 @@ struct
       in
       (List.flatten x, List.flatten y)
 
-
-   exception NonFunctionalMappingException
-
+   (* mapping is a partial function. returns mapping(x) if mapping is defined
+      on x, otherwise x. *)
    let apply_mapping (mapping: 'v mapping_t) (x: 'v): 'v =
-      let g (y, z) = if(x = y) then [z] else []
-      in
-      let x2 = List.flatten (List.map g mapping)
-      in
-      if (List.length x2) = 0 then x
-      else if (List.length x2) = 1 then (List.hd x2)
-      else raise NonFunctionalMappingException
+      apply mapping x x
 end
 
 

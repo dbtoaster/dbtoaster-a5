@@ -1,171 +1,211 @@
-(* To run these tests, compile without MapAlg.mli *)
 
-open RelAlg;;
-open MapAlg;;
-open MA_BASE;;
-open MASemiRing;;
-
+open Algebra;;
 
 let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
 let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
 let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
 
-let relR2 = RelAlg.make relR;;
+let relR2 = make_relalg relR;;
 
 
 (* (R bowtie S) bowtie T *)
 let q = RA_MultiNatJoin [relR; relS; relT];;
 
-let q1 = MapAlg.make(RVal (RAggSum(RVal(RConst 1), relR)));;
-let q2 = MapAlg.delta "R" ["x"; "y"] q1;;
+let q1 = make_term(RVal (AggSum(RVal(Const (Int 1)), relR)));;
+let q2 = term_delta "R" ["x"; "y"] q1;;
 
 
-let test01 = readable(one)  = RVal (RConst 1);;
-let test02 = readable(zero) = RVal (RConst 0);;
-let test03 = mk_sum[] = zero;;
-let test04 = mk_sum[mk_sum[]] = zero;;
-let test05 = mk_prod[] = one;;
-let test06 = mk_sum [one;zero] = one;;
-let test07 = mk_prod[one;zero] = zero;;
-let test08 = mk_sum[zero;one;zero] = one;;
-let test09 = mk_prod[one;zero;one;one] = zero;;
+let test01 = readable_term(term_one)  = RVal (Const (Int 1));;
+let test02 = readable_term(term_zero) = RVal (Const (Int 0));;
 
-let test10 = MapAlg.delta "R" ["x"; "y"] one = zero;;
 
-MapAlg.roly_poly(
-   Val (AggSum(mk_sum[Val (AggSum(one, relR2));
-                      Val (AggSum(one, relR2))],
-               RelAlg.make(RA_MultiUnion [relR; relS; relT]))))
+(* To run these tests, compile without Algebra.mli *)
+(*
+let mk_sum  l = TermSemiRing.mk_sum l;;
+let mk_prod l = TermSemiRing.mk_prod l;;
+let mk_val  x = TermSemiRing.mk_val x;;
+
+let test03 = mk_sum [] = term_zero;;
+let test04 = mk_sum [mk_sum[]] = term_zero;;
+let test05 = mk_prod[] = term_one;;
+let test06 = mk_sum [term_one;term_zero] = term_one;;
+let test07 = mk_prod[term_one;term_zero] = term_zero;;
+let test08 = mk_sum [term_zero;term_one;term_zero] = term_one;;
+let test09 = mk_prod[term_one;term_zero;term_one;term_one] = term_zero;;
+
+let test11 = simplify(mk_val (AggSum(term_one, relalg_one))) [] [] =
+   [([], term_one)];;
+let test12 = simplify(mk_val (AggSum(term_zero, relalg_one))) [] [] =
+   [([], term_zero)];;
+let test13 = simplify(mk_val (AggSum(term_zero, make_relalg(relR)))) [] [] =
+   [([], term_zero)];;
+*)
+
+
+let test10 = term_delta "R" ["x"; "y"] term_one = term_zero;;
+
+
+roly_poly(
+   make_term(
+    RVal (AggSum(RSum[RVal (AggSum(RVal(Const (Int 1)), relR));
+                      RVal (AggSum(RVal(Const (Int 1)), relR))],
+                 RA_MultiUnion [relR; relS; relT]))))
 =
-make(
+make_term(
 RSum
  [RVal
-   (RAggSum
-     (RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"])))),
+   (AggSum
+     (RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"])))),
      RA_Leaf (Rel ("R", ["A"; "B"]))));
   RVal
-   (RAggSum
-     (RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"])))),
+   (AggSum
+     (RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"])))),
      RA_Leaf (Rel ("R", ["A"; "B"]))));
   RVal
-   (RAggSum
-     (RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"])))),
+   (AggSum
+     (RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"])))),
      RA_Leaf (Rel ("S", ["B"; "C"]))));
   RVal
-   (RAggSum
-     (RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"])))),
+   (AggSum
+     (RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"])))),
      RA_Leaf (Rel ("S", ["B"; "C"]))));
   RProd
-   [RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"]))));
-    RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("T", ["C"; "D"]))))];
+   [RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"]))));
+    RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("T", ["C"; "D"]))))];
   RProd
-   [RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("R", ["A"; "B"]))));
-    RVal (RAggSum (RVal (RConst 1), RA_Leaf (Rel ("T", ["C"; "D"]))))]]
+   [RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"]))));
+    RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("T", ["C"; "D"]))))]]
 );;
 
 
-let test11 = MapAlg.simplify(Val (AggSum(one, RelAlg.one))) [] [] =
-   [([], one)];;
-let test12 = MapAlg.simplify(Val (AggSum(zero, RelAlg.one))) [] [] =
-   [([], zero)];;
-let test13 = MapAlg.simplify(Val (AggSum(zero, RelAlg.make(relR)))) [] [] =
-   [([], zero)];;
-
-let test16 = q2 =
-  mk_sum
-   [Val (AggSum (zero, RelAlg.make(relR)));
-    Val (AggSum (one,
-     RelAlg.make(RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, "A", "x"));
-       RA_Leaf (AtomicConstraint (Eq, "B", "y"))])));
-    Val (AggSum (zero,
-     RelAlg.make(RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, "A", "x"));
-       RA_Leaf (AtomicConstraint (Eq, "B", "y"))])))]
+let test16 = readable_term q2 =
+RVal
+ (AggSum
+   (RVal (Const (Int 1)),
+    RA_MultiNatJoin
+     [RA_Leaf (AtomicConstraint (Eq, RVal (Var "A"), RVal (Var "x")));
+      RA_Leaf (AtomicConstraint (Eq, RVal (Var "B"), RVal (Var "y")))]))
 ;;
 
-let test17 = MapAlg.simplify q2 [] [] = [([], one)];;
+let test17 = simplify q2 [] [] = [([], term_one)];;
 
-let test19 = MapAlg.simplify
-    (MapAlg.delta "R" ["x"; "y"] (Val (AggSum(one, RelAlg.make(relS))))) [] []
-= [([], zero)];;
+let test19 = simplify
+    (term_delta "R" ["x"; "y"]
+        (make_term (RVal (AggSum(RVal(Const(Int 1)), relS))))) [] []
+= [([], term_zero)];;
 
-
-let test20 =
-polynomial(
-   Prod[Sum[Val(Const(1)); Prod[Sum[]]];
-        Prod[Sum[Val(Const(2)); Sum[Sum[]]]];
-        Prod[Sum[Val(Const(3)); Val(Const(4))];
-             Prod[Prod[Sum[Val(Const(5)); Prod[Prod[]]]]]]]
-) =
-Sum
- [Prod [Val (Const 2); Val (Const 3); Val (Const 5)];
-  Prod [Val (Const 2); Val (Const 4); Val (Const 5)];
-  Prod [Val (Const 2); Val (Const 3)]; Prod [Val (Const 2); Val (Const 4)]]
-;;
 
 let test21 =
-MapAlg.simplify(Val(AggSum(Sum[Val(Var("A")); Val(Var("C"))],
-  RelAlg.make(RA_MultiNatJoin [relR; relT])))) [] [] =
-[([], Sum
- [Prod
-   [Val (AggSum (Val (Var "A"), RelAlg.make(relR)));
-    Val (AggSum (Val (Const 1), RelAlg.make(relT)))];
-  Prod
-   [Val (AggSum (Val (Var "C"), RelAlg.make(relT)));
-    Val (AggSum (Val (Const 1), RelAlg.make(relR)))]]
-)];;
+List.map (fun (x,y) -> (x, readable_term y))
+(Algebra.simplify (make_term(RVal(AggSum(RSum[RVal(Var("A")); RVal(Var("C"))],
+                    RA_MultiNatJoin [relR; relT])))) [] []) =
+  [([],
+    RProd
+     [RVal (AggSum (RVal (Var "A"), RA_Leaf (Rel ("R", ["A"; "B"]))));
+      RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("T", ["C"; "D"]))))]);
+   ([],
+    RProd
+     [RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("T", ["C"; "D"]))));
+      RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["A"; "B"]))))])]
+;;
 
 let test22 =
-MapAlg.simplify (Val(AggSum(Prod[Val(Var("A")); Val(Var("C")); Val(Var("D"))],
-   RelAlg.make(RA_MultiNatJoin[RA_Leaf(Rel("R", ["A"; "B"; "D"]));
-                   RA_Leaf(Rel("S", ["C"; "E"]))])))) [] []
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (make_term(RVal(AggSum(RProd[RVal(Var("A")); RVal(Var("C")); RVal(Var("D"))],
+   (RA_MultiNatJoin[RA_Leaf(Rel("R", ["A"; "B"; "D"]));
+                   RA_Leaf(Rel("S", ["C"; "E"]))]))))) [] [])
 =
-[([], Prod
- [Val (AggSum (Prod [Val (Var "A"); Val (Var "D")],
-              RelAlg.make(RA_Leaf (Rel ("R", ["A"; "B"; "D"])))));
-  Val (AggSum (Val (Var "C"),
-              RelAlg.make(RA_Leaf (Rel ("S", ["C"; "E"])))))]
-)];;
-
+[([],
+  RProd
+   [RVal
+     (AggSum
+       (RProd [RVal (Var "A"); RVal (Var "D")],
+        RA_Leaf (Rel ("R", ["A"; "B"; "D"]))));
+    RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["C"; "E"]))))])]
+;;
 
 
 let q3 =
-Val (AggSum (Prod [Val (Var "A"); Val (Var "C")],
-RelAlg.make(
+make_term(RVal (AggSum (RProd [RVal (Var "A"); RVal (Var "C")],
 RA_MultiNatJoin
     [RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, "A", "x"));
-       RA_Leaf (AtomicConstraint (Eq, "B", "y"))];
+      [RA_Leaf (AtomicConstraint (Eq, RVal(Var("A")), RVal(Var("x"))));
+       RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("y"))))];
      RA_Leaf (Rel ("S", ["B"; "C"]))]
 ))
 );;
 
 
 let test23 =
-MapAlg.simplify q3 ["x"; "y"] [] =
-[([], Prod
- [Val (Var "x");
-  Val (AggSum (Val (Var "C"),
-    RelAlg.make(RA_Leaf (Rel ("S", ["y"; "C"])))))]
-)];;
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify q3 ["x"; "y"] []) =
+[([],
+  RProd
+   [RVal (Var "x");
+    RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["y"; "C"]))))])]
+;;
+
 
 let q4 = 
-Val (AggSum (Prod [Val (Var "B"); Val (Var "C")],
-RelAlg.make(
+make_term(
+RVal (AggSum (RProd [RVal (Var "B"); RVal (Var "C")],
 RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, "B", "x"));
-       RA_Leaf (AtomicConstraint (Eq, "B", "y"));
-       RA_Leaf (AtomicConstraint (Eq, "C", "z"))]
+      [RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("x"))));
+       RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("y"))));
+       RA_Leaf (AtomicConstraint (Eq, RVal(Var("C")), RVal(Var("z"))))]
 )));;
 
 
-let test24 = MapAlg.simplify q4 [] [] =
-   [([], Prod [Val (Var "B"); Val (Var "C")])];;
-let test25 = MapAlg.simplify q4 ["y"] [] =
-   [([], Prod [Val (Var "y"); Val (Var "C")])];;
-let test26 = MapAlg.simplify q4 ["w"] [] =
-   [([], Prod [Val (Var "B"); Val (Var "C")])];;
+let test24 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify q4 [] []) =
+   [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
+let test25 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify q4 ["y"] []) =
+   [([], RProd [RVal (Var "y"); RVal (Var "C")])];;
+let test26 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify q4 ["w"] []) =
+   [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
+
+
+
+
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (term_delta "R" ["A"; "B"]
+   (make_term(
+      RVal(AggSum(RVal(Const (Int 1)),
+                   RA_MultiNatJoin([
+ RA_Leaf(Rel("R", ["x"; "y"]));
+ RA_Leaf(Rel("R", ["y"; "z"]))]))))))
+[] ["x"]) =
+[(["x"], RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["y"; "z"])))));
+ (["x"], RVal (AggSum (RVal (Const (Int 1)), RA_Leaf (Rel ("R", ["x"; "y"])))));
+ (["x"], RVal (Const (Int 1)))]
+;;
+
+
+
+let q =
+make_term(RVal(AggSum(RVal(Const (Int 1)),
+RA_MultiNatJoin [
+   RA_Leaf (Rel ("R", ["A"; "B"]));
+   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Const(Int 5))))
+])));;
+
+
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (term_delta "R" ["x"; "y"] q) ["x"; "y"] [])
+=
+[([],
+  RVal
+   (AggSum
+     (RVal (Const (Int 1)),
+      RA_Leaf (AtomicConstraint (Eq, RVal (Var "y"), RVal (Const (Int 5)))))))]
+;;
+
+
 
 
 

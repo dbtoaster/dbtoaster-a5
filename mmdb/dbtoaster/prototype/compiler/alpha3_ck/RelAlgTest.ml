@@ -1,5 +1,8 @@
-open RelAlg;;
+open Algebra;;
 
+let make x = make_relalg x;;
+let readable x = readable_relalg x;;
+let vars x = relalg_vars x;;
 
 let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
 let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
@@ -7,7 +10,7 @@ let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
 let relU = RA_Leaf(Rel("U", ["A"; "D"]));;
 
 
-let test01 = make(RA_Leaf Empty) = zero;;
+let test01 = make(RA_Leaf Empty) = relalg_zero;;
 let test02 = polynomial (make (RA_Leaf Empty)) = make(RA_Leaf Empty);;
 let test03 = monomials  (make (RA_Leaf Empty)) = [];;
 
@@ -32,18 +35,18 @@ RA_MultiUnion
   RA_MultiNatJoin [relR; relU]; RA_MultiNatJoin [relS; relU]]
 ;;
 
-let test08 = readable (polynomial (delta "R" ["a"; "b"] q)) =
+let test08 = readable (polynomial (relalg_delta "R" ["a"; "b"] q)) =
   RA_MultiNatJoin
-   [RA_Leaf (AtomicConstraint (Eq, "A", "a"));
-    RA_Leaf (AtomicConstraint (Eq, "B", "b"));
+   [RA_Leaf (AtomicConstraint (Eq, RVal(Var("A")), RVal(Var("a"))));
+    RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));
     relS; relT]
 ;;
 
-let test09 = readable (polynomial (delta "S" ["b"; "c"] q)) =
+let test09 = readable (polynomial (relalg_delta "S" ["b"; "c"] q)) =
 RA_MultiNatJoin
  [relR;
-  RA_Leaf (AtomicConstraint (Eq, "B", "b"));
-  RA_Leaf (AtomicConstraint (Eq, "C", "c"));
+  RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));
+  RA_Leaf (AtomicConstraint (Eq, RVal(Var("C")), RVal(Var("c"))));
   relT]
 ;;
 
@@ -54,50 +57,42 @@ polynomial(make(
 make(RA_Leaf Empty)
 ;;
 
-let test11 = schema (make(RA_MultiNatJoin[relR; relS])) = ["A"; "B"; "C"] ;;
-
-
 let q12 = make(
-RA_MultiNatJoin [RA_Leaf (AtomicConstraint (Eq, "B", "xR_B"));
-       RA_Leaf (AtomicConstraint (Eq, "B", "xS_B"))]);;
+RA_MultiNatJoin [
+   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("xR_B"))));
+   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("xS_B"))))]);;
 
 
 let test12 = extract_substitutions (List.hd (monomials q12)) ["xS_B"] =
-([("B", "xS_B"); ("xR_B", "xS_B"); ("xS_B", "xS_B")], one);;
+([("B", "xS_B"); ("xR_B", "xS_B"); ("xS_B", "xS_B")], relalg_one);;
 
 let test13 = vars   q12 = ["B"; "xR_B"; "xS_B"];;
-let test14 = schema q12 = ["B"; "xR_B"; "xS_B"];;
 
 let test15 =
 extract_substitutions(make(
-RA_MultiNatJoin [RA_Leaf (AtomicConstraint (Lt, "A", "x"));
-                 RA_Leaf (AtomicConstraint (Eq, "B", "y"));
-                 RA_Leaf (Rel("S", ["B"; "C"]))])) ["y"]
+RA_MultiNatJoin [
+   RA_Leaf (AtomicConstraint (Lt, RVal(Var("A")), RVal(Var("x"))));
+   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("y"))));
+   RA_Leaf (Rel("S", ["B"; "C"]))])) ["y"]
 =
 ([("B", "y"); ("y", "y")],
 make(
  RA_MultiNatJoin
-  [RA_Leaf (AtomicConstraint (Lt, "A", "x"));
+  [RA_Leaf (AtomicConstraint (Lt, RVal(Var("A")), RVal(Var("x"))));
    RA_Leaf (Rel ("S", ["y"; "C"]))]))
 ;;
 
 
 
-(* FIXME: this throws an exception. but this scenario arises in the
-   delta of a self-join. *)
-RelAlg.extract_substitutions
-(RelAlg.make(
+let test16 =
+extract_substitutions
+(make(
      RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, "x", "AA"));
-       RA_Leaf (AtomicConstraint (Eq, "x", "BB"))]))
+      [RA_Leaf (AtomicConstraint (Eq, RVal(Var("x")), RVal(Var("AA"))));
+       RA_Leaf (AtomicConstraint (Eq, RVal(Var("x")), RVal(Var("BB"))))]))
 ["AA"; "BB"] =
 ([("x", "AA"); ("AA", "AA"); ("BB", "AA")],
- RelAlg.make(RA_Leaf (AtomicConstraint (Eq, "AA", "BB"))));;
-
-
-
-
-
+ make(RA_Leaf (AtomicConstraint (Eq, RVal(Var("AA")), RVal(Var("BB"))))));;
 
 
 

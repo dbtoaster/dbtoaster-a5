@@ -1,6 +1,9 @@
 
 This is the SPREAD query compiler.
 
+For examples of its use see CompilerTest.ml.
+
+
 TODOs:
 
 * The output has be be formatted in a way convenient to Oliver.
@@ -15,4 +18,9 @@ Recent changes:
 
 * Inequality constraints and self-joins now work.
 
+* RelAlg and MapAlg have been merged into Algebra. MapAlg expressions are
+  now called terms. AtomicConstraints are over terms, so relalg_t and
+  term_t are mutually recursive.
+
+* Types now supported.
 

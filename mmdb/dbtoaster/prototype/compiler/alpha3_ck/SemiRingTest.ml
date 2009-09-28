@@ -54,6 +54,20 @@ polynomial e2 =
 Sum [Val (Const 3); Prod [Val (Const 2); Val (Const 3)]];;
 
 
+polynomial(
+   Prod[Sum[Val(Const(1)); Prod[Sum[]]];
+        Prod[Sum[Val(Const(2)); Sum[Sum[]]]];
+        Prod[Sum[Val(Const(3)); Val(Const(4))];
+             Prod[Prod[Sum[mk_val(Const(5)); Prod[Prod[]]]]]]]
+) =
+Sum
+ [Prod [Val (Const 2); Val (Const 3); Val (Const 5)];
+  Prod [Val (Const 2); Val (Const 4); Val (Const 5)];
+  Prod [Val (Const 2); Val (Const 3)]; Prod [Val (Const 2); Val (Const 4)]]
+;;
+
+
+
 (* outputting by reconstructing the expression using a visible type *)
 type 'a expr = Sum2  of 'a expr list
              | Prod2 of 'a expr list

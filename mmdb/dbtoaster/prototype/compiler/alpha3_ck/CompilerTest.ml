@@ -1,6 +1,9 @@
+open Algebra;;
 
-open RelAlg;;
-open MapAlg;;
+(* the schema *)
+let sch = [("R", ["A"; "B"]); ("S", ["B"; "C"]);
+           ("T", ["C"; "D"]); ("U", ["A"; "D"])]
+
 
 
 let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
@@ -8,24 +11,21 @@ let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
 let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
 let relU = RA_Leaf(Rel("U", ["A"; "C"]));;
 
-let m = MapAlg.make(RVal(RAggSum(RProd[RVal (RVar("A")); RVal (RVar("C"))],
+let m = make_term(RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("C"))],
                 RA_MultiNatJoin([relR; relS]))));;
 
-let m1 =
-  MapAlg.RVal
-   (MapAlg.RAggSum (MapAlg.RVal (MapAlg.RVar "C"),
-      RA_Leaf (Rel ("S", ["x_mR_B"; "C"]))))
+let m1 = RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["x_mR_B"; "C"]))))
 ;;
 
 (Compiler.compile_delta_for_rel "R" ["A"; "B"] "m" [] m) =
 [("R", ["x_mR_A"; "x_mR_B"], [], "m",
-   MapAlg.make(RProd [RVal (RVar "x_mR_A"); m1]),
-   [("mR1_1", ["x_mR_B"], MapAlg.make(m1))])]
+   make_term(RProd [RVal (Var "x_mR_A"); m1]),
+   [("mR1_1", ["x_mR_B"], make_term(m1))])]
 ;;
 
 
 (* select sum(A*C) from R, S where R.B=S.B *)
-Compiler.compile ("m", [], m) =
+Compiler.compile sch "m" [] m =
 ["+R(x_mR_A, x_mR_B): m[] += (x_mR_A*mR1_1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): m[] += (mS1_1[x_mS_B]*x_mS_C)";
  "+S(x_mR1_1S_B, x_mR1_1S_C): mR1_1[x_mR1_1S_B] += x_mR1_1S_C";
@@ -34,12 +34,12 @@ Compiler.compile ("m", [], m) =
 
 
 (* select sum(A*C) from R, S where R.B<S.B *)
-Compiler.compile ("m", [],
-MapAlg.make(RVal(RAggSum(RProd[RVal (RVar("A")); RVal (RVar("C"))],
+Compiler.compile sch "m" []
+(make_term(RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("C"))],
                 RA_MultiNatJoin([
 RA_Leaf(Rel("R", ["A"; "B1"]));
 RA_Leaf(Rel("S", ["B2"; "C"]));
-RA_Leaf(AtomicConstraint(Lt, "B1", "B2"))
+RA_Leaf(AtomicConstraint(Lt, RVal(Var("B1")), RVal(Var("B2"))))
 ]))))) =
 ["+R(x_mR_A, x_mR_B): m[] += (x_mR_A*mR1_1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): m[] += (mS1_1[x_mS_B]*x_mS_C)";
@@ -49,7 +49,7 @@ RA_Leaf(AtomicConstraint(Lt, "B1", "B2"))
 
 
 (* select sum(A*C) from R, S where R.B=S.B group by A *)
-Compiler.compile ("m", ["A"], m) =
+Compiler.compile sch "m" ["A"] m =
 ["+R(x_mR_A, x_mR_B): m[x_mR_A] += (x_mR_A*mR1_1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): foreach A do m[A] += (mS1_1[A, x_mS_B]*x_mS_C)";
  "+S(x_mR1_1S_B, x_mR1_1S_C): mR1_1[x_mR1_1S_B] += x_mR1_1S_C";
@@ -58,11 +58,10 @@ Compiler.compile ("m", ["A"], m) =
 
 
 (* select sum(A*D) from R, S, T where R.B=S.B and S.C=T.C *)
-Compiler.compile ("m", [],
-MapAlg.make(
-   RVal(RAggSum(RProd[RVal (RVar("A")); RVal (RVar("D"))],
-                RA_MultiNatJoin([relR; relS; relT]))))
-) =
+Compiler.compile sch "m" []
+(make_term(
+   RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("D"))],
+                RA_MultiNatJoin([relR; relS; relT]))))) =
 ["+R(x_mR_A, x_mR_B): m[] += (x_mR_A*mR1_1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): m[] += (mS1_1[x_mS_B]*mS1_2[x_mS_C])";
  "+T(x_mT_C, x_mT_D): m[] += (mT1_1[x_mT_C]*x_mT_D)";
@@ -80,12 +79,8 @@ MapAlg.make(
 
 
 (* select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D *)
-Compiler.compile ("m", ["D"],
-MapAlg.make(
-   RVal(RAggSum(RVal (RVar("A")),
-                RA_MultiNatJoin([relR; relS; relT]))))
-)
-=
+Compiler.compile sch "m" ["D"]
+(make_term(RVal(AggSum(RVal(Var("A")), RA_MultiNatJoin([relR; relS; relT]))))) =
 ["+R(x_mR_A, x_mR_B): foreach D do m[D] += (x_mR_A*mR1_1[x_mR_B, D])";
  "+S(x_mS_B, x_mS_C): foreach D do m[D] += (mS1_1[x_mS_B]*mS1_2[x_mS_C, D])";
  "+T(x_mT_C, x_mT_D): m[x_mT_D] += mT1_1[x_mT_C]";
@@ -102,19 +97,17 @@ MapAlg.make(
 ;;
 
 
-
 (* select count( * ) from R group by B *)
-Compiler.compile ("m", ["B"],
-   MapAlg.make( RVal(RAggSum(RVal(RConst 1), relR))))
+Compiler.compile sch "m" ["B"]
+   (make_term( RVal(AggSum(RVal(Const (Int 1)), relR))))
 = ["+R(x_mR_A, x_mR_B): m[x_mR_B] += 1"] ;;
 
 
 (* select count( * ) from R, S where R.B=S.B group by C *)
-Compiler.compile ("m", ["C"],
-   MapAlg.make(
-      RVal(RAggSum(RVal(RConst 1),
-                   RA_MultiNatJoin([relR; relS])))))
-=
+Compiler.compile sch "m" ["C"]
+   (make_term(
+      RVal(AggSum(RVal(Const (Int 1)),
+                   RA_MultiNatJoin([relR; relS]))))) =
 ["+R(x_mR_A, x_mR_B): foreach C do m[C] += mR1_1[x_mR_B, C]";
  "+S(x_mS_B, x_mS_C): m[x_mS_C] += mS1_1[x_mS_B]";
  "+S(x_mR1_1S_B, x_mR1_1S_C): mR1_1[x_mR1_1S_B, x_mR1_1S_C] += 1";
@@ -122,11 +115,11 @@ Compiler.compile ("m", ["C"],
 ;;
 
 
-Compiler.compile ("m", ["B"],
-   MapAlg.make(
-      RVal(RAggSum(RVal(RConst 1),
-                   RA_MultiNatJoin([relR; relS])))))
-=
+(* select count( * ) from R, S where R.B = S.B group by B *)
+Compiler.compile sch "m" ["B"]
+   (make_term(
+      RVal(AggSum(RVal(Const (Int 1)),
+                   RA_MultiNatJoin([relR; relS]))))) =
 ["+R(x_mR_A, x_mR_B): m[x_mR_B] += mR1_1[x_mR_B]";
  "+S(x_mS_B, x_mS_C): m[x_mS_B] += mS1_1[x_mS_B]";
  "+S(x_mR1_1S_B, x_mR1_1S_C): mR1_1[x_mR1_1S_B] += 1";
@@ -134,12 +127,10 @@ Compiler.compile ("m", ["B"],
 ;;
 
 
-
-Compiler.compile ("m", ["B"; "C"],
-   MapAlg.make(
-      RVal(RAggSum(RVal(RConst 1),
-                   RA_MultiNatJoin([relR; relS])))))
-=
+(* select count( * ) from R, S where R.B = S.B group by B, C *)
+Compiler.compile sch "m" ["B"; "C"]
+   (make_term(RVal(AggSum(RVal(Const (Int 1)),
+                   RA_MultiNatJoin([relR; relS]))))) =
 ["+R(x_mR_A, x_mR_B): foreach C do m[x_mR_B, C] += mR1_1[x_mR_B, C]";
  "+S(x_mS_B, x_mS_C): m[x_mS_B, x_mS_C] += mS1_1[x_mS_B]";
  "+S(x_mR1_1S_B, x_mR1_1S_C): mR1_1[x_mR1_1S_B, x_mR1_1S_C] += 1";
@@ -147,15 +138,14 @@ Compiler.compile ("m", ["B"; "C"],
 ;;
 
 
-
 (* self-join *)
-Compiler.compile ("m", [],
-   MapAlg.make( RVal(RAggSum(RVal(RConst 1),
+(* select count( * ) from R r1, R r2 where r1.B = r2.A *)
+Compiler.compile sch "m" []
+   (make_term(RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
  RA_Leaf(Rel("R", ["x"; "y"]));
  RA_Leaf(Rel("R", ["y"; "z"]))
-])))))
-=
+]))))) =
 ["+R(x_mR_A, x_mR_B): m[] += mR1_1[x_mR_B]";
  "+R(x_mR_A, x_mR_B): m[] += mR2_1[x_mR_A]";
  "+R(x_mR_A, x_mR_B): m[] += (if x_mR_A=x_mR_B then 1 else 0)";
@@ -164,42 +154,23 @@ Compiler.compile ("m", [],
 ;;
 
 
-(*
-open MapAlg;;
-open MA_BASE;;
-open RelAlg;;
-
-let l =
-MapAlg.simplify (MapAlg.delta "R" ["A"; "B"]
-   (MapAlg.make(
-      RVal(RAggSum(RVal(RConst 1),
-                   RA_MultiNatJoin([
- RA_Leaf(Rel("R", ["x"; "y"]));
- RA_Leaf(Rel("R", ["y"; "z"]))]))))))
-[] ["x"];;
-
-List.map (fun (x,y) -> (x, MapAlg.readable y)) l;;
-*)
-
-
-
-(*
+(* too large to look at:
 (* select sum(A) from R, S, U
    where R.B=S.B and R.A=U.A and S.C=U.C
    group by C
 *)
-Compiler.compile ("m", ["C"],
-MapAlg.make(
-   RVal(RAggSum(RVal (RVar("A")),
-                RA_MultiNatJoin([relR; relS; relU]))))
-) ;;
+Compiler.compile sch "m" ["C"]
+(make_term(
+   RVal(AggSum(RVal (Var("A")),
+                RA_MultiNatJoin([relR; relS; relU])))))
+;;
 *)
 
 
 (* select count( * ) from R, S where R.A=S.A and R.B=S.B *)
-Compiler.compile ("m", [],
-   MapAlg.make(
-      RVal(RAggSum(RVal(RConst 1),
+Compiler.compile sch "m" []
+   (make_term(
+      RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
  RA_Leaf(Rel("R", ["x"; "y"]));
  RA_Leaf(Rel("S", ["x"; "y"]))
@@ -212,7 +183,17 @@ Compiler.compile ("m", [],
 ;;
 
 
-
+(* select count( * ) from R where R.A < 5 and R.B = 'Bla' *)
+Compiler.compile sch "q" []
+   (make_term(
+      RVal(AggSum(RVal(Const (Int 1)),
+                   RA_MultiNatJoin([
+ RA_Leaf(Rel("R", ["x"; "y"]));
+ RA_Leaf(AtomicConstraint(Lt, RVal(Var("x")), RVal(Const(Int 5))));
+ RA_Leaf(AtomicConstraint(Eq, RVal(Var("y")), RVal(Const(String "Bla"))));
+]))))) =
+["+R(x_qR_A, x_qR_B): q[] += ((if x_qR_A<5 then 1 else 0)*(if x_qR_B='Bla' then 1 else 0))"]
+;;
 
 
 
