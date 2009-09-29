@@ -1,5 +1,5 @@
 
-This is the SPREAD query compiler.
+This is the DBToaster query compiler.
 
 For examples of its use see CompilerTest.ml.
 
