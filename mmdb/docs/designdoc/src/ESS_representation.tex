@@ -1,5 +1,5 @@
 \documentclass{article} 
-
+\usepackage{color}
 \usepackage{algorithmic}
 \usepackage[small,bf]{caption}
 \usepackage{float}
@@ -20,26 +20,26 @@
     
 \section{Introduction}
 
-Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to re-create a scenario that produced the original historic data. Usually the simulations of such scenarios are created in an attempt to re-create them. In simulations the data from the original experiment is augmented with new data to create variation in the original scenario. A set of user defined rules specify how the historical and the new data interacts to produce desired outcome. Below we describe a format that allows us to specify those rules freely. 
+Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to create a scenario similar to the one that produced the original historic data. Usually the simulations of such scenarios are created. In simulations the data from the original experiment is augmented with new data to create variations of the original scenario. A set of user defined rules specify how the historical and the new data interact to produce the desired outcome. Below we describe a format that allows us to specify those rules freely. 
 
 %In these simulations parameters during the progress of an experiment are preserved and we want to either change or augment those parameters with new information. Also we want to let users specify the results of the augmentation. 
 
 \section{Approach}
 
-At a high level historical data together with new data can be thought of as a stream of updates to a relational table. We assume that there are $N$ update streams, each can be represented by its own relational table. These relations can be further combined or subdivided into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant output streams can then be combined, filtered and output as desired.
+At a high level, historical data together with new data can be thought of as a stream of updates to a relational table. We assume that there are $N$ update streams, each can be represented by its own relational table. These streams can be further combined or subdivided into a set of $K$ additional streams. For each $k$ in $K$ we can describe the desired simulation outcomes. The resultant output streams can then be combined, filtered and output as desired.
 
 
 %parameters for the experiments can be though of as a stream of updates to a relational table.  New data can be thought of as updates to some relation. If we have $N$ update streams, we will end up with $N$ different relations. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and outputted as desired. 
 
-Through out this paper we will be using a stock exchange simulator as an example. The goal of the simulator is to approximate the outcome of adding buy/sell stock request a real stock exchange. The stock exchange simulator can be thought of as a stream processor. We can assume that there are $N$ streams coming in. Each of these streams is filtered according to certain conditions and merged together if needed. The merged streams form $K$ order-books. Matching rules are applied to these $K$ order-books. These generates a set of output streams.
+In this paper we will be using a stock exchange simulator as an example. The goal of the simulator is to approximate an outcome of adding buy/sell stock request to a real stock exchange. The stock exchange simulator can be thought of as a stream processor. We can assume that there are $N$ streams coming in. Each of these streams is filtered according to certain conditions and merged together if needed. The merged streams form $K$ order-books. Matching rules are applied to these $K$ order-books. These generates a set of output streams.
 
 Generalized specification process for creating a simulator can be described in five steps:
 
 \begin{enumerate}
     \item {\bf Input Filter}: Each input stream can be filtered. This means that each incoming tuple in the stream can either be removed or it can generate extra inputs. 
-    \item {\bf Input Merging}: The set of input stream relations can be combined or subdivided into another set of $K$ relations using merging and filtering. 
-    \item {\bf Simulator Rules Application}: Each set of relations produced at a merging stage is reduced/matched using rules given by a user.
-    \item {\bf Output Merging}: Experiment outcomes can again be combined or filtered.
+    \item {\bf Input Merging}: The set of input streams can be combined or subdivided into another set of $K$ streams using merging and filtering. 
+    \item {\bf Simulator Rules Application}: Each set of streams produced at a merging stage is materialized as a set of relations. These relations are reduced/matched using rules given by a user.
+    \item {\bf Output Merging}: Experiment outcome streams can again be combined or filtered.
     \item {\bf Output Filter}: For each output stream additional conditions can be imposed. Data within a stream can be changed based on those conditions.
 \end{enumerate}
 
@@ -53,53 +53,57 @@ Figure \ref{fig:overview} shows data execution paths and interactions between va
 
 \section{Running Example}
 
-The Exchange Server Simulator is going to be our example through out this presentation. In particular we will show how one specific matching strategy can be implemented within this framework.
+The Exchange Server Simulator is going to be our example throughout this presentation. In particular we will show how one specific matching strategy can be implemented using this framework.
 
-The Exchange Server Simulator uses historical data from previously occurred "real" stock exchanges to predict the outcomes of adding buy/sell stock orders from a novel strategy. This evaluates a trading strategy. The buy/sell orders from a new strategy are combined with "real" trades using the following strategy. If a new order can be matched with some historic order an new order equal to historic order is added to the mix, otherwise a historic order are matched with a historic order and an order from trading strategies is matched with another order from trading strategies.
+The Exchange Server Simulator uses historical data from previously occurred "real" stock exchanges to predict the outcomes of adding buy/sell stock orders from a novel strategy. This evaluates a trading strategy. The buy/sell orders from a new new strategy are combined with "real" trades using the following way. If a strategy's order can be matched with some historic order a new order equal to historic order is added to the mix, otherwise a historic order are matched with a historic order and an order from a trading strategy is matched with another order from a trading strategy.
 
 \section{Input Filter}
 
 An input filter is a \emph{stream-to-stream} transformation. It is used to remove undesired updates from input stream or to add them to the stream triggered by some input parameters.
 
-The desired functionality is as follows:
+The desired functionality for a filter is as follows:
+
+\begin{itemize}
+    \item Get an input tuple
+    \item Check if a tuple satisfies conditions
+    \item If conditions are met, forward tuple to another stream
+    \item If conditions are not met, discard the tuple
+\end{itemize}
+
+The functionality for a insertion trigger.
+
+\begin{itemize}
+    \item Get an input tuple
+    \item Check if a tuple satisfies trigger conditions
+    \item If conditions are met, create a tuple and forward it a desired stream
+    \item If conditions are not met, ignore
+\end{itemize}
+
+
+\noindent SQL can be used to filter incoming tuples. For instance the code to filter out tuples will look like:
 
 \begin{verbatim}   
-    while (input = getInputTuple)
-    {
-        if (match(input, conditions)
-        {
-            additionalInput=createAddInput(input);
-        }
-        if (match(input, bad_condition))
-        {
-            continue;
-        }
-        process(input, additionalInput);
-    }
-\end{verbatim}
-
-
-\noindent Potential solution to this is to use generic SQL to filter incoming tuples. For instance the code to filter out tuples will look like:
-
-\begin{verbatim}   
-    SELECT * 
+    SELECT * as new_stream
     FROM input_stream
-    WHERE not(bad_condition)
+    WHERE tuple_condition
 \end{verbatim}
 
-\noindent Similarly extra tuples can be added with SQL based on some trigger conditions
+\noindent Similarly extra tuples can be added with SQL based on some trigger conditions,
 
 \begin{verbatim}   
-    SELECT new_tuple
+    INSERT INTO new_stream new_tuple(tuple)
+    SELECT tuple
     FROM input_stream
-    WHERE (condition)
+    WHERE trigger_condition
 \end{verbatim}
 
+\noindent where a {\tt new\_tuple(tuple)} statement is a shorthand for a creation of new tuple based on a tuple from input stream.
 
-In our example the Exchange Server has two input streams. One stream is historical data from trades executed at some previous date. The second stream is additional trades coming from Trading Algorithms. The stream of updates coming from Trading Algorithms can be controlled by the user (At the moment we assume that users have complete control over trading algorithms). However, historical data can be dirty and incomplete. We want to give users control to restore or remove information impurities. For instance, data tuples, corresponding to orders that were completed, can be removed from the system since the Simulator will be able to create such a matching by itself. Also if we see a change in some order (the order was partially fulfilled) and we have no reference to such order in the order book, we would want to add such order to the book (the concerns for this operation are noted later).
-Exchange Server Filtering can be implemented as follows:
+In our example the Exchange Server has two input streams. One stream is historical data from trades executed at some previous date. The second stream is additional trades coming from Trading Algorithms. The stream of updates coming from Trading Algorithms can be controlled by the user (at the moment we assume that users have complete control over trading algorithms). However, historical data can be dirty and incomplete. We want to give users control to restore or remove information impurities. For instance, data tuples, corresponding to orders that were completed, can be removed from the system since the Simulator will be able to create such a matching by itself. Also if we see a change in some order (the order was partially fulfilled) and we have no reference to such order in the order book, we would want to add such an order to the book (the concerns for this operation are noted later).
 
-From the above the two input streams  are a \emph{historic\_input\_stream} stream and a \emph{simulated\_input\_stream} stream. First we create filters to remove undesired tuples:
+Exchange Server Filtering can be implemented in the following way:
+
+From the above the two input streams  are a \emph{historic\_input\_stream} stream and a \emph{simulated\_input\_stream} stream. We create filters to remove undesired tuples:
 
 \begin{verbatim}   
     SELECT * 
@@ -144,7 +148,7 @@ From the above the two input streams  are a \emph{historic\_input\_stream} strea
 
 \section{Input Merging}
 
-Often, once input is received, we would want to combine (join/union) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging is also a \emph{stream-to-stream} transformation which will allows users to specify those conditions and creates additional relations form them.
+Often, once input is received, we would want to combine (join/union) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging is also a \emph{stream-to-stream} transformation, which will allows users to specify those conditions and creates additional relations from them.
 
 \begin{verbatim}   
     getLock();
@@ -173,9 +177,9 @@ Often, once input is received, we would want to combine (join/union) two input s
 \end{verbatim}
 
 
-A set of relations produced as a result of merging are matched in the Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
+A set of streams produced as a result of merging are matched in the Exchange Server. Merging provides a way to combine streams over which matching will be imposed. 
 
-The Exchange Server uses merging to duplicate historical data and merge it with the updates from new strategies
+The Exchange Server uses merging to duplicate historical data and merge it with the updates from new strategies.
 
 \begin{verbatim}  
     HFS
@@ -184,8 +188,152 @@ The Exchange Server uses merging to duplicate historical data and merge it with 
     INTO combinedView
 \end{verbatim}
 
-\subsection{Matching Policies}
+\begin{verbatim} 
+    HFS INTO historicView
+\end{verbatim}
 
+From above merging produces two streams: \emph{combinedView} and\emph{historicView}. Where a \emph{historicView} stream contains filtered tuple from a \emph{HFS} stream. And a \emph{combinedView} stream contains tuples from both a \emph{HFS} and a \emph{SFS} streams.
+
+
+\section{Simulator Rules}
+
+Simulator rules are a set of user definitions on how to create relations from input streams. They show how to reduce those relations and to produce an output stream of events. 
+
+\subsection{Stream to Relations}
+Before now all actions performed were \emph{stream-to-stream} actions. These actions allowed us to manipulate streams of incoming data to create a stream of updates to a set of relations. We need to materialize the streams into a set of relations to apply user defined rules to them. 
+
+In our running example we would want to visualize the bid and the ask order books into two relations. Each stream produced at an Input Merging stage will have a bid and an ask books.
+
+The bids order book is visualized as a set of buy requests over unbounded time frame.
+
+\begin{verbatim}  
+    SELECT * as bids_historicView
+    FROM historicView hv
+    RANGE UNBOUNDED
+    WHERE hv.action=='B'
+\end{verbatim}
+
+\noindent Similarly for an asks relation.
+
+\begin{verbatim}  
+    SELECT * as asks_historicView
+    FROM historicView hv
+    RANGE UNBOUNDED
+    WHERE hv.action=='S'
+\end{verbatim}
+
+\noindent The asks and bids relations are updated with new tuples from the stream. The stream also contains user requests to remove some tuples from those relations. This is can be accomplished with the following deletes.
+
+\begin{verbatim}  
+    DELETE *
+    FROM asks_historicView av
+    WHERE av.id = hv.id
+            (SELECT * 
+             FROM historicView
+             RANGE NOW
+             WHERE historicView.action='D') as hv  
+
+    DELETE *
+    FROM bids_historicView bv
+    WHERE bv.id = hv.id
+            (SELECT * 
+             FROM historicView
+             RANGE NOW
+             WHERE historicView.action='D') as hv 
+\end{verbatim}
+
+Similarly we can create order book relations for the \emph{combinedView} stream.
+
+\subsection{Rule Application}
+
+The main component of the system is its ability to apply a set of user defined rules, which allows them a limited manipulation on relations. The rules define how the output stream for a group of relations is produced and how the existent relations are changed. 
+
+\begin{verbatim}
+    LOOP_JOIN [WHILE condition | TIMES number]
+    FROM [NEW] relation1, [NEW] relation2, ... 
+    WHEN condition1
+        (set of statements to be executed)
+    WHEN condition2
+        ...
+    WITH HEARTBEAT ON (tuple identifier)
+    EVERY [number TUPLE | time INTERVAL] IN relation 
+\end{verbatim}
+
+The statement {\tt LOOP\_JOIN} gives users a possibility to show with a simple set of statements what are the consequences of some events. The statement provides an ability to execute a set of actions when a condition is satisfied. The conditions are specified by the {\tt WHEN} clause followed by a set of SQL statements to be executed in case the condition is true. The conditional statements can be executed repeatedly when conditions {\tt WHILE} or {\tt TIMES} are present. A {\tt WHILE} predicate followed by a condition indicates that the statements should be executed until the condition is true. A {\tt TIMES} predicate indicates how many times the conditions should be executed. A {\tt FROM} predicate indicates what tables the data is coming from, on which the {\tt WHILE} condition is applied. A field specifier {\tt NEW} indicates that the content of the table should be updated. The need to update can come as a result of new tuples inserted into a relation from an input stream or as a consequence of the executed statements.   
+
+In our running example of the Exchange Server, we provide rules where if the price on the best ask order and best bid order match we remove/update them from/in the tables and send consequences of the update to the output stream. Using above specification we have
+
+\begin{verbatim}  
+    LOOP_JOIN WHILE top_bid.price<=top_ask.price
+    FROM NEW top_bid, NEW top_ask
+    WHEN top_bid.volume = top_ask.volume 
+            (DELETE * FROM bids_historicView bhv 
+                      WHERE bhv.id = top_bid.id,
+             DELETE * FROM asks_historicView ahv 
+                      WHERE ahv.id = top_ask.id,
+             INSERT INTO historic_output: 
+                        create_F(top_bid), create_F(top_ask))
+    WHEN top_bid.volume < top_ask.volume 
+            (DELETE * FROM bids_historicView bhv 
+                      WHERE bhv.id = top_bid.id,
+             INSERT INTO asks_historicView: create_E(top_ask) 
+                ON DUPLICATE KEY UPDATE id = top_ask.id
+             INSERT INTO historic_output:
+                        create_F(top_bid), create_E(top_bid))
+    WHEN top_bid.volume > top_ask.volume 
+            (DELETE * FROM asks_historicView ahv 
+                      WHERE ahv.id = top_ask.id,
+             INSERT INTO bids_historicView: create_E(top_bid) 
+                 ON DUPLICATE KEY UPDATE id = top_bid.id
+             INSERT INTO historic_output:
+                        create_F(top_ask), create_E(top_bid))
+    WITH HEARTBEAT ON *
+    EVERY 1 TUPLE IN historicView
+\end{verbatim}
+
+In the above we compute tables {\tt top\_bid} and {\tt top\_ask} containing the best ask tuple and the best bid tuple on every iteration. We continue to iterate through the loop until the top bid and the top ask tuples cannot be matched on price. Depending on the amount of stocks in the bid and ask order the consequences of matching are also different. This matching rule is initiated on every update tuple to the \emph{historicView} stream. 
+
+
+\section{Output Merging}
+
+Output Merging is similar to Input Merging. The idea is to take streams produced by user's rules and combine them into desirable output streams. This is done similarly to Input Merging with either joining two streams on a set of attributes or doing a union of two streams.  
+
+The Exchange Server outputs only one stream of updates. Thus, when matching occurs over a set of relations, they are combined into a single stream,  
+
+\begin{verbatim}
+    historic_output
+    UNION
+    combined_output
+    INTO output_stream
+\end{verbatim}
+
+\noindent where a stream \emph{combined\_output} is an output stream resulting from applying matching rules similar to the above to \emph{combinedView}. A stream \emph{historic\_output} is a stream resulting from the above matching rule. 
+
+%\emph{example?}
+
+\section{Output Filtering} 
+
+The idea behind filtering output is to impose extra conditions on output streams. This is similar to input filtering. 
+
+In the case of the Exchange Server, we want to impose conditions on the output stream, such as price changes that are dependent on volume and time. 
+\begin{program}
+    \begin{verbatim}  
+    while (tuple )
+    {
+        if (tuple.action = 'S' && tuple.volume > 1000)
+            setOutputPriceIncrement(increment, duration);
+    }
+    \end{verbatim}
+\caption{Exchange Output Filter.}
+\end{program}
+
+\section{Implementation}
+
+This section presents complete descriptions of matching techniques and their implementations. 
+
+All of the following strategies assume that there are two streams of updates: historic orders stream and simulated orders stream.
+
+\subsection{Matching Policies}
 
 The Exchange Simulator has eight matching policies:
 
@@ -314,145 +462,12 @@ function simulatedData(inputTuple)
 }
 \end{verbatim}
 
-\section{Simulator Rules}
-
-\subsection{Stream to Relations}
-Before now all actions performed were \emph{stream-to-stream} actions. These actions allowed us to manipulate streams of incoming data to create a stream of updates to a set of relations. To apply user defined rules we need to materialize the streams of updates into a set of relations for each stream. 
-
-In our running example we would want to visualize the bid and the ask order books into two relations for each stream produced at an Input Merging stage.
-
-The bids order book is visualized as a set of buy requests over unbounded time frame.
-
-\begin{verbatim}  
-    SELECT * as bids_historicView
-    FROM historicView hv
-    RANGE UNBOUNDED
-    WHERE hv.action=='B'
-\end{verbatim}
-
-\noindent Similarly for an asks relation.
-
-\begin{verbatim}  
-    SELECT * as asks_historicView
-    FROM historicView hv
-    RANGE UNBOUNDED
-    WHERE hv.action=='S'
-\end{verbatim}
-
-\noindent The asks and bids relations are updated with new tuples from the stream. The stream also contains user requests to remove some tuples from those relations. This is can be accomplished with the following deletes.
-
-\begin{verbatim}  
-    DELETE *
-    FROM asks_historicView av
-    WHERE av.id = hv.id
-            (SELECT * 
-             FROM historicView
-             RANGE NOW
-             WHERE historicView.action='D') as hv  
-
-    DELETE *
-    FROM bids_historicView bv
-    WHERE bv.id = hv.id
-            (SELECT * 
-             FROM historicView
-             RANGE NOW
-             WHERE historicView.action='D') as hv 
-\end{verbatim}
-
-\subsection{Rule Application}
-
-The main component of the system is its ability to apply a set of user defined rules which allows them a limited manipulation on relations. The rules define how the output stream for a group of relations is produced and how the existent relations are changed. 
-
-\begin{verbatim}
-    LOOP_JOIN [WHILE condition | TIMES number]
-    FROM [NEW] relation1, [NEW] relation2, ... 
-    WHEN condition1
-        (set of statements to be executed)
-    WHEN condition2
-        ...
-    WITH HEARTBEAT ON (tuple identifier)
-    EVERY [number TUPLE | time INTERVAL] IN relation 
-\end{verbatim}
-
-The statement {\tt LOOP\_JOIN} gives users a possibility to show with a simple set of statements what are the consequences of some events. The statement provides an ability to execute a set of actions when a condition is satisfied. The conditions are specified by {\tt WHEN clause} followed by a set of SQL statements to be executed in case the condition is true. The conditional statements can be executed repeatedly when conditions {\tt WHILE} or {\tt TIMES} are present. A {\tt WHILE} predicate followed by a condition indicates that the statements should be executed until the condition is true. A {\tt TIMES} predicate indicates how many times the conditions should be executed. Predicate {\tt FROM} indicates what tables the data is for the conditions is coming from. A field specifier {\tt NEW} indicates that the content of the table should be updated. The need to update can come as a result of new tuples inserted into relation from input stream or as a consequence of the executed statements.   
-
-In our running example of the Exchange Server, we provide rules where if the price on the best ask order and best bid order match we remove/update them from/in the tables and send consequences of the update to the output stream. Using above specification we have
-
-\begin{verbatim}  
-    LOOP_JOIN WHILE top_bid.price<=top_ask.price
-    FROM NEW top_bid, NEW top_ask
-    WHEN top_bid.volume = top_ask.volume 
-            (DELETE * FROM bids_historicView bhv 
-                      WHERE bhv.id = top_bid.id,
-             DELETE * FROM asks_historicView ahv 
-                      WHERE ahv.id = top_ask.id,
-             INSERT INTO historic_output: 
-                        create_F(top_bid), create_F(top_ask))
-    WHEN top_bid.volume < top_ask.volume 
-            (DELETE * FROM bids_historicView bhv 
-                      WHERE bhv.id = top_bid.id,
-             INSERT INTO asks_historicView: create_E(top_ask) 
-                ON DUPLICATE KEY UPDATE id = top_ask.id
-             INSERT INTO historic_output:
-                        create_F(top_bid), create_E(top_bid))
-    WHEN top_bid.volume > top_ask.volume 
-            (DELETE * FROM asks_historicView ahv 
-                      WHERE ahv.id = top_ask.id,
-             INSERT INTO bids_historicView: create_E(top_bid) 
-                 ON DUPLICATE KEY UPDATE id = top_bid.id
-             INSERT INTO historic_output:
-                        create_F(top_ask), create_E(top_bid))
-    WITH HEARTBEAT ON *
-    EVERY 1 TUPLE IN historicView
-\end{verbatim}
-
-In the above we compute tables {\tt top\_bid} and {\tt top\_ask} containing the best ask tuple and the best bid tuple on every iteration. We continue to iterate through the loop until the top bid and the top ask tuples cannot be matched on price. Depending on amount of stocks in the bid and ask order the consequences of matching are also different. This matching rule is initiated on every update tuple to the \emph{historicView} updates stream. 
-
-
-\section{Output Merging}
-
-Output Merging is similar to Input Merging. The idea is take streams produced by rules and combine them into desirable output streams. This is done similarly to Input Merging with either joining two streams on a set of attributes or doing a union of two streams.  
-
-The Exchange Server outputs only one stream of updates. Thus, when matching occurs over a set of relations, they are combined into a single stream.  
-
-\begin{verbatim}
-    historic_output
-    UNION
-    combined_output
-    INTO output_stream
-\end{verbatim}
-
-Where a stream \emph{combined\_output} is an output stream resulting from applying matching rules similar to the above to \emph{combinedView}. A stream \emph{historic\_output} is a stream resulting from the above matching rule. 
-
-%\emph{example?}
-
-\section{Output Filtering} 
-
-The idea behind filtering output is to impose extra conditions on output streams. This is similar to input filtering. 
-
-In the case of the Exchange Server, we want to impose conditions on the output stream, such as price changes that are dependent on volume and time. 
-\begin{program}
-    \begin{verbatim}  
-    while (tuple )
-    {
-        if (tuple.action = 'S' && tuple.volume > 1000)
-            setOutputPriceIncrement(increment, duration);
-    }
-    \end{verbatim}
-\caption{Exchange Output Filter.}
-\end{program}
-
-\section{Implementation}
-
-This section presents complete descriptions of matching techniques and their implementations. 
-
-All of the following strategies assume that there are two streams of updates: historic orders stream and simulated orders stream.
 
 \subsection{Historic Tuples Duplication.}
 
-This strategy matches two trade requests. Trades, where a historic order matches with another historic order or a simulated order matches with another simulated order, are executed by matching price and volume of the two requests. However when a a simulated order can be matched with some historic order, we create a duplicate of a historic order and match with that order.
+This strategy matches two trade requests. Trades, where a historic order matches with another historic order or a simulated order matches with another simulated order, are executed by matching price and volume of the two requests. However when a simulated order can be matched with some historic order, we create a duplicate of a historic order and match with that order.
 
-This strategy can be implemented in the following way. Both input streams are filtered to have only 'S', 'B', and 'D' orders. Two streams are created from the above streams. The first stream is identical to the historic orders stream after filtering. The second stream is a combination of orders coming from both streams. Next stream tuples are inserted into a \emph{historicView} relation and a \emph{combinedView} relation, the relations are matched and a steam of outputs for each is produced. Each output stream is then cleaned up. If there is a matching between a historic order and a simulated order in a combined view relation, a new tuple is inserted into output stream to compensate for duplication of a historic order.
+This strategy can be implemented in the following way. Both input streams are filtered to have only 'S', 'B', and 'D' orders. Two streams are created from the above streams. The first stream is identical to the historic orders stream after filtering. The second stream is a combination of orders coming from both streams. Next stream tuples are inserted into a \emph{historicView} relation and a \emph{combinedView} relation, the relations are matched and a steam of outputs for each is produced. Each output stream is then cleaned up. If there is a matching between a historic order and a simulated order in a combined view relation, a new tuple is inserted into output stream to compensate for the duplication of a historic order.
 
 From the above we have two input streams \emph{historic\_input\_stream} and \emph{simulated\_input\_stream}. First we create filters to remove undesired tuples:
 
@@ -494,7 +509,7 @@ From the above we have two input streams \emph{historic\_input\_stream} and \emp
     INTO output_stream
 \end{verbatim}
 
-\noindent The next step is to merge inputs if needed. Historic stream does not need to be merged with anything so we just pass it alone. 
+\noindent The next step is to merge inputs, if needed. The historic stream does not need to be merged with anything so we just pass it alone. 
 
 \begin{verbatim} 
     HFS INTO historicView
@@ -509,7 +524,7 @@ From the above we have two input streams \emph{historic\_input\_stream} and \emp
     INTO combinedView
 \end{verbatim}
 
-\noindent After we filtered and merged input streams we can create start matching. We start by creating historical bids and asks tables and a way to remove values upon users request. 
+\noindent After we filtered and merged input streams we can create start matching. We start by creating historical bids and asks tables and a way to remove values upon users requests. 
 
 \begin{verbatim}  
     SELECT * as bids_historicView
