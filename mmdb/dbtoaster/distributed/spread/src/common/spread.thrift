@@ -9,10 +9,10 @@ typedef i64 MapID
 typedef i64 Version
 
 struct Entry {
-  1:           MapID    source,
-  2:           i64      key,
-  3:           Version  version,
-  4: optional  NodeID   node
+  1:           MapID      source,
+  2:           list<i64>  key,
+  3:           Version    version,
+  4: optional  NodeID     node
 }
 
 typedef map<Entry,double> GetResult
@@ -32,11 +32,11 @@ exception SpreadException {
 }
 
 service MapNode {
-  void put(             1: Version         id,
+  oneway void put(      1: Version         id,
                         2: i64             template,  //the put template ID (see the map file)
-                        3: Entry           target,    //this is treated as param #0
-                        4: list<PutField>  params     //params are offset by 1 (params[0] = #1)
-                        ) throws (1:SpreadException error),
+                        3: Entry           target,    //this is treated as param #=
+                        4: list<PutField>  params     //0-based; The first entry in the list is param #0
+                        ),
 
   GetResult get       ( 1: list<Entry>   target
                         ) throws (1:SpreadException error),

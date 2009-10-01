@@ -40,6 +40,76 @@ end
 
 ###################################################
 
+class ForeachPutRecord
+  attr_reader :version, :lastversion, :template, :next, :prev;
+  attr_writer :next, :prev;
+  
+  def initialize(version, prev, count, template, prereqs)
+    @version, @lastversion, @count, @template = version, prev, count, template;
+    if prereqs.is_a? Array then
+      @prereqs = Set.new;
+      prereqs.each do |entry| 
+        @prereqs.add(entry)
+      end
+    else
+      @prereqs = prereqs.clone;
+    end
+    @next, @prev = nil, nil;
+  end
+  
+  def receiveMessage
+    @count -- unless @count <= 0;
+  end
+  
+  def fire(entry, value)
+    @prereqs.delete(entry)
+  end
+  
+  def find(version)
+    if @version >= version then self;
+    elsif @next == nil then nil;
+    else @next.find(version)
+    end
+  end
+  
+  def pending
+    (@count > 0) && @prereqs.empty? && (@prev != nil) && (@prev.version != @lastversion) && @prev.pending;
+  end
+  
+  def ready
+    !pending;
+  end
+  
+  def add(record)
+    if record.version > @version then
+      if (@next == nil) || (@next.version < record.version) then
+        record.next = @next;
+        record.prev = self;
+        @next.prev = record;
+        @next = record;
+      else
+        @next.add(record)
+      end
+      self;
+    else
+      record.next = self;
+      @prev = record;
+      record;
+    end
+  end
+  
+  def collapse
+    @prev.prev = nil unless @prev == nil;
+    if ready then
+      @next.collapse
+    else
+      if @prev == nil then self else @prev; end
+    end
+  end
+end
+
+###################################################
+
 class CommitRecord
   attr_reader :target, :value, :next;
   attr_writer :next;
@@ -61,17 +131,30 @@ class CommitRecord
     @callbacks = Array.new;
   end
   
-  # Unbeknownst to most users, Find is going to be a bit of a dual-purpose 
-  # workhorse.  The algorithm used by find is virtually identical to that used
-  # by insert (and in fact, insert would need to be called if we're going to
-  # guarantee that find always returns a value); so we kinda-sorta-trick it. 
-  # If value=nil, then nothing is modified (unless we're asked to return a 
-  # version that doesn't exist yet).  If value != nil, then it will replace
-  # the value of the record that matches target.
-  def find(target, value=nil)
+  
+  # Find operates in two modes:
+  # Under strict mode (lax = false), only the exact version is returned.  If 
+  #   the exact version does not exist, we return nil.
+  # Under lax mode, we return the most recent version lower than the target
+  #   version.
+  def find(target, lax=false)
     if @target.version >= target.version then
       if @target.version == target.version then
-        @value = value if value;
+        self;
+      else
+        nil; # this only happens if we get a request for a value that has been mass-put but not changed.
+      end
+    elsif @next && @next.target.version <= target.version then
+      @next.find(target, value);
+    else
+      if lax then self else nil end;
+    end
+  end
+  
+  def insert(target, value)
+    if @target.version >= target.version then
+      if @target.version == target.version then
+        @value = value;
         self;
       else
         nil; # this should only happen if we get a request for a value that's been expunged already
@@ -84,10 +167,6 @@ class CommitRecord
       @next.next = tmp;
       @next;
     end
-  end
-  
-  def insert(target, value)
-    find(target, value);
   end
   
   def to_s
@@ -155,6 +234,8 @@ class CommitRecord
   end
 end
 
+
+
 ###################################################
 
 class MapPartition
@@ -164,9 +245,25 @@ class MapPartition
   # range [start, start+range).  Values are stored versioned; 
   
   def initialize(mapid, start, range)
-    @mapid, @start, @range = mapid.to_i, start.to_i, range.to_i;
+    @mapid, @start, @range = mapid.to_i, [start].flatten, [range].flatten;
+    
+    if start.size != range.size then raise SpreadException.new("Creating partition with inconsistent start/range sizes") end;
+    @start.freeze;
+    @range.freeze;
     
     @data = Hash.new;
+    @massputrecords = nil;
+    
+    @unreceivedputs = Hash.new;
+  end
+  
+  def contains?(key)
+    key = [key] unless key.is_a? Array;
+    raise SpreadException.new("Trying to determine contains with an inconsistent key size; key:" + key.size.to_s + "; partition: " + @start.size.to_s) unless key.size == @start.size;
+    key.each_index do |i|
+      if (key[i] < @start[i]) || (key[i] >= @start[i] + @range[i]) then return false end;
+    end 
+    return true;
   end
   
   # The semantics of GET are a little wonky for this map due to 
@@ -178,19 +275,27 @@ class MapPartition
   # the request comes in, we can return immediately.  If not, then we 
   # register a callback (if we're using asynch get) or fail immediately
   # (otherwise).  
+  
+  # Per-map versions also make things a little wonky.  Map versions are
+  # treated as barriers.  A map doesn't commit until every independent 
+  # update prior to it has committed.  Among other things, this means 
+  # that when we do an update, we can find the first map with a higher
+  # version number that has been committed and be sure that the highest 
+  # known prior version is correct.  Failing that, we need to rely on 
+  # the normal versioning scheme.
   def get(target)
+    
+    prevmassput = if @massputrecords != nil then @massputrecords.find(target.version) else nil end;
+    prevok = if prevmassput != nil then prevmassput.ready else nil end;
+    
     val = @data[target.key];
     if val == nil then
       # If the object isn't defined, we assume version 0 => 0.
-      if target.version > 0 then raise SpreadException.new("Request for an unknown object"); end
+      # on the other hand, if we've got a committed map, then we know the value hasn't been modified.
+      if target.version > 0 || !prevok then raise SpreadException.new("Request for an unknown object"); end
       return 0;
     end
-    while val.target.version < target.version
-      if val.next == nil
-        raise SpreadException.new("Request for unknown version");
-      end
-      val = val.next;
-    end
+    val = val.find(target, prevok);
     
     if val.pending
       raise SpreadException.new("Request for incomplete version");
@@ -199,36 +304,56 @@ class MapPartition
     return val.value.to_f;
   end
   
+  
   def register(target, callback)
+    # There are several factors of interest
+    # 1) Do we know about the object
+    # 2) Do we know about the desired version
+    # 3) Has the desired version been committed
+    # 
+    # If the answer to all of these is yes, then we can act immediately and 
+    # respond to the callback.  As long as (1) is true, then CommitRecord.find
+    # will return a valid record for the specified target version.  Simply,
+    # this means that we haven't gotten all of the gets (or the put) for that
+    # put.  Even if (1) is false, that just means we need to create the initial
+    # record ourselves.
+    #
+    # Note also that the answer to these questions can be changed by per-map
+    # versioning.  Specifically, Is the requested version less than or equal to 
+    # one that has already committed?  If so, we are free to use the last known 
+    # value for the key in question (starting at val = 0 for version 0).
+    #
+    # If this is not true, the request is for a put that has not arrived yet.  
+    # Unfortunately, we have no way to know at this point whether the put is 
+    # going to be an individual, or a map-wide put.  Thus, we defer installing 
+    # the callback until we receive the put corresponding  to the particular 
+    # version or the next massput.
+    
+    # We first check to see if a massput exists
+    massrecord = if @massputrecords == nil then nil else @massputrecords.find(target.version) end;
+    prevok = if massrecord == nil then false else massrecord.ready end;
+
     #version 0 is always 0.
     if target.version <= 0 then callback.fire(target, 0); return; end;
     
-    # There are several possible scenarios:
-    # 1) I know about the object
-    # 1.1) I know about the desired version
-    # 1.1.1) I have committed the desired version
-    # 1.1.2) I have not committed the desired version
-    # 1.2) I don't know about the desired version
-    # 2) I don't know about the object
-    # In case 1.1.1, we can act immediately and respond to the callback
-    # In all other 1.* cases, CommitRecord.find will return a valid record for
-    # the specified target version.  This means we might get a put for a 
-    # record already stored in the DB (if we've gotten requests for that record)
-    # Case 2 is different from 1.* only in that we have to create the initial
-    # record.
-    
     record = @data[target.key];
-    if record != nil then
-      record = record.find(target); #guaranteed to return a value
-      if(record.pending) then
-        puts "Registering";
-        record.register(callback);
+    record = record.find(target, prevok) unless record == nil;
+    
+    if record == nil then
+      if prevok then 
+        # if we don't have a matching record, but we do have a more recent committed mass put, 
+        # then the value has never been modified.
+        calback.fire(target, 0); 
+        return; 
       else
-        callback.fire(target, record.value);
+        # if the corresponding put hasn't arrived yet, we defer installation until it has.
+        @unreceivedputs[target.version] = Array.new unless @unreceivedputs.has_key? target.version; 
+        @unreceivedputs[target.version].push = [target, callback];
       end
+    elsif record.pending then
+      record.register(callback);
     else
-      @data[target.key] = CommitRecord.new(target);
-      @data[target.key].register(callback);
+      callback.fire(target, record.value);
     end
   end
   
@@ -275,9 +400,7 @@ class MapNodeHandler
     map = @maps[source.to_i];
     if map == nil then raise SpreadException.new("Request for unknown map"); end
     map.each do |partition|
-      if (key.to_i > partition.start.to_i) && (key.to_i - partition.start.to_i < partition.range.to_i) then
-        return partition;
-      end
+      if partition.contains? key then return partition end;
     end
     raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.to_s + "]");
   end
