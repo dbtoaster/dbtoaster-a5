@@ -5,6 +5,7 @@ let compile_delta_for_rel (reln:   string)
                           (relsch: string list)
                           (mapn:   string)         (* map name *)
                           (params: string list)
+                          (bigsum_vars: string list)
                           (term: Algebra.term_t) =
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
@@ -12,25 +13,31 @@ let compile_delta_for_rel (reln:   string)
    let bound_vars = (List.map (fun x -> "x_"^mapn^reln^"_"^x) relsch)
    in
    (* compute the delta and simplify. *)
-   let s = Algebra.simplify (Algebra.term_delta reln bound_vars term)
-                            bound_vars params
+   let s = List.filter (fun (_, t) -> t <> Algebra.term_zero)
+              (Algebra.simplify (Algebra.term_delta reln bound_vars term)
+                            (bound_vars @ bigsum_vars) params)
    in
-   let f ((new_params, new_ma), j) =
-      (* extract nested aggregates, name them, and prepare them to be
-         processed next *)
-      let todos =
-         let mk_triple (x, i) =
+   let todos =
+      let f (new_params, new_ma) =
+         let mk x =
             let t_params = (Util.ListAsSet.inter (Algebra.term_vars x)
-                              (Util.ListAsSet.union new_params bound_vars))
-            in
-            (mapn^reln^(string_of_int j)^"_"^(string_of_int i), t_params, x)
+                              (Util.ListAsSet.union new_params
+                                 (Util.ListAsSet.union bound_vars bigsum_vars)))
+            in (t_params, x)
          in
-         (List.map mk_triple (Util.add_positions
-            (Algebra.extract_aggregates new_ma) 1))
+         List.map mk (Algebra.extract_aggregates new_ma)
       in
-      (reln, bound_vars, new_params, mapn, new_ma, todos)
+      let add_name ((p, x), i) = (mapn^reln^(string_of_int i), p, x)
+      in
+      List.map add_name (Util.add_positions (Util.ListAsSet.no_duplicates
+         (List.flatten (List.map f s))) 1)
    in
-   List.map f (Util.add_positions s 1)
+   let g (new_params, new_ma) =
+      (reln, bound_vars, new_params, bigsum_vars, mapn, new_ma)
+   in
+   ((List.map g s), todos)
+
+   
 
 
 (* auxiliary for compile.
@@ -41,7 +48,8 @@ let compile_delta_for_rel (reln:   string)
                   [("mR1", ["x_R_B"; "x_C"], <mR1>)]) =
    "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
 *)
-let generate_code (reln, bound_vars, params, mapn, new_ma, new_ma_aggs) =
+let generate_code (reln, bound_vars, params, bigsum_vars,
+                   mapn, new_ma) new_ma_aggs =
    let loop_vars = Util.ListAsSet.diff params bound_vars
    in
    let fn (mapname, params, mapstructure) =
@@ -51,27 +59,27 @@ let generate_code (reln, bound_vars, params, mapn, new_ma, new_ma_aggs) =
         (if (loop_vars = []) then ""
          else "foreach "^(Util.string_of_list ", " loop_vars)^" do ")
         ^mapn^"["^(Util.string_of_list ", " params)^"] += "^
-        (Algebra.term_as_string new_ma (List.map fn new_ma_aggs))
+        (if (bigsum_vars = []) then ""
+         else "bigsum_{"^(Util.string_of_list ", " bigsum_vars)^"} ")
+        ^(Algebra.term_as_string new_ma (List.map fn new_ma_aggs))
 
 
 (* the main compile function. call this one, not the others. *)
 let rec compile (db_schema: (string * (string list)) list)
                 (mapn: string)
                 (params: string list)
+                (bigsum_vars: string list)
                 (term: Algebra.term_t): (string list) =
    let cdfr (reln, relsch) =
-      compile_delta_for_rel reln relsch mapn params term
+      compile_delta_for_rel reln relsch mapn params bigsum_vars term
    in
-   (* remove deltas that are zero from list. *)
-   let l = List.filter (fun (_, _, _, _, new_ma, _) ->
-                            (new_ma <> Algebra.term_zero))
-                       (List.flatten (List.map cdfr db_schema))
+   let (l1, l2) = (List.split (List.map cdfr db_schema))
    in
-   let ready = List.map generate_code l
+   let todo = List.flatten l2
    in
-   let todo = List.flatten (List.map (fun (x,y,z,u,v,w) -> w) l)
+   let ready = List.map (fun x -> generate_code x todo) (List.flatten l1)
    in
    ready @
-   (List.flatten (List.map (fun (x,y,z) -> compile db_schema x y z) todo))
+   (List.flatten (List.map (fun (x,y,z) -> compile db_schema x y [] z) todo))
 
 

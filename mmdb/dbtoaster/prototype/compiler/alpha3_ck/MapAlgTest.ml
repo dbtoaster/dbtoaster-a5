@@ -11,8 +11,8 @@ let relR2 = make_relalg relR;;
 (* (R bowtie S) bowtie T *)
 let q = RA_MultiNatJoin [relR; relS; relT];;
 
-let q1 = make_term(RVal (AggSum(RVal(Const (Int 1)), relR)));;
-let q2 = term_delta "R" ["x"; "y"] q1;;
+let q2 = term_delta "R" ["x"; "y"]
+   (make_term(RVal (AggSum(RVal(Const (Int 1)), relR))));;
 
 
 let test01 = readable_term(term_one)  = RVal (Const (Int 1));;
@@ -45,6 +45,7 @@ let test13 = simplify(mk_val (AggSum(term_zero, make_relalg(relR)))) [] [] =
 let test10 = term_delta "R" ["x"; "y"] term_one = term_zero;;
 
 
+let test11 =
 roly_poly(
    make_term(
     RVal (AggSum(RSum[RVal (AggSum(RVal(Const (Int 1)), relR));
@@ -125,20 +126,18 @@ List.map (fun (x,y) -> (x, readable_term y))
 ;;
 
 
-let q3 =
-make_term(RVal (AggSum (RProd [RVal (Var "A"); RVal (Var "C")],
+
+let test23 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify
+(make_term(RVal (AggSum (RProd [RVal (Var "A"); RVal (Var "C")],
 RA_MultiNatJoin
     [RA_MultiNatJoin
       [RA_Leaf (AtomicConstraint (Eq, RVal(Var("A")), RVal(Var("x"))));
        RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("y"))))];
      RA_Leaf (Rel ("S", ["B"; "C"]))]
-))
-);;
-
-
-let test23 =
-List.map (fun (x,y) -> (x, readable_term y))
-(simplify q3 ["x"; "y"] []) =
+))))
+["x"; "y"] []) =
 [([],
   RProd
    [RVal (Var "x");
@@ -146,7 +145,7 @@ List.map (fun (x,y) -> (x, readable_term y))
 ;;
 
 
-let q4 = 
+let q3 = 
 make_term(
 RVal (AggSum (RProd [RVal (Var "B"); RVal (Var "C")],
 RA_MultiNatJoin
@@ -158,20 +157,17 @@ RA_MultiNatJoin
 
 let test24 =
 List.map (fun (x,y) -> (x, readable_term y))
-(simplify q4 [] []) =
-   [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
+(simplify q3 [] []) = [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
 let test25 =
 List.map (fun (x,y) -> (x, readable_term y))
-(simplify q4 ["y"] []) =
-   [([], RProd [RVal (Var "y"); RVal (Var "C")])];;
+(simplify q3 ["y"] []) = [([], RProd [RVal (Var "y"); RVal (Var "C")])];;
 let test26 =
 List.map (fun (x,y) -> (x, readable_term y))
-(simplify q4 ["w"] []) =
-   [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
+(simplify q3 ["w"] []) = [([], RProd [RVal (Var "B"); RVal (Var "C")])];;
 
 
 
-
+let test27 =
 List.map (fun (x,y) -> (x, readable_term y))
 (simplify (term_delta "R" ["A"; "B"]
    (make_term(
@@ -187,16 +183,15 @@ List.map (fun (x,y) -> (x, readable_term y))
 
 
 
-let q =
-make_term(RVal(AggSum(RVal(Const (Int 1)),
+let test28 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (term_delta "R" ["x"; "y"]
+(make_term(RVal(AggSum(RVal(Const (Int 1)),
 RA_MultiNatJoin [
    RA_Leaf (Rel ("R", ["A"; "B"]));
    RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Const(Int 5))))
-])));;
-
-
-List.map (fun (x,y) -> (x, readable_term y))
-(simplify (term_delta "R" ["x"; "y"] q) ["x"; "y"] [])
+]))))
+) ["x"; "y"] [])
 =
 [([],
   RVal
@@ -207,6 +202,92 @@ List.map (fun (x,y) -> (x, readable_term y))
 
 
 
+
+let test29 =
+(term_delta "R" ["x"; "y"] (make_term(
+   RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(ConstantNullarySingleton)))
+))) =
+make_term (RVal(Const(Int 0)));;
+
+
+
+let test30 =
+readable_term (term_delta "R" ["x"; "y"] (make_term(
+RVal(AggSum(RVal(Const(Int 1)),
+   RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)), RVal(Var("z"))))))
+))) =
+  RSum
+   [RVal
+     (AggSum
+       (RVal (Const (Int 1)),
+        RA_MultiNatJoin
+         [RA_Leaf
+           (AtomicConstraint (Lt, RVal (Const (Int 0)), RVal (Var "z")));
+          RA_Leaf
+           (AtomicConstraint (Le, RVal (Var "z"), RVal (Const (Int 0))))]));
+    RVal
+     (AggSum
+       (RVal (Const (Int (-1))),
+        RA_MultiNatJoin
+         [RA_Leaf
+           (AtomicConstraint (Le, RVal (Var "z"), RVal (Const (Int 0))));
+          RA_Leaf
+           (AtomicConstraint (Lt, RVal (Const (Int 0)), RVal (Var "z")))]))]
+;;
+(* correct, but both conditions are unsatisfiable, so the value is 0 *)
+
+
+(* if (0 < AggSum(1, R(A,B))) then 1 else 0 *)
+let test31 =
+List.map (fun (x,y) -> (x, term_as_string y []))
+(simplify (term_delta "R" ["x"; "y"] (make_term(
+RVal(AggSum(RVal(Const(Int 1)),
+   RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)),
+      RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(Rel("R", ["A"; "B"]))))))))
+))) ["x"; "y"] [])
+=
+[([], "(if 0<(AggSum(1, R(A, B))+1) and AggSum(1, R(A, B))<=0 then 1 else 0)");
+ ([],
+  "(-1*(if (AggSum(1, R(A, B))+1)<=0 and 0<AggSum(1, R(A, B)) then 1 else 0))")]
+;;
+(* correct, but the condition of the second row is unsatisfiable, so the
+   row could be removed. *)
+
+
+let test32 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (make_term (
+RVal
+ (AggSum
+   (RVal (Const (Int 2)),
+     RA_Leaf
+       (AtomicConstraint (Le,
+           RVal
+            (AggSum
+              (RVal (Var "A"),
+                RA_Leaf
+                  (AtomicConstraint (Eq, RVal (Var "A"), RVal (Var "x"))))),
+            RVal (Const (Int 0))));
+      ))
+)) ["x"] []) =
+[([],
+  RProd
+   [RVal (Const (Int 2));
+    RVal
+     (AggSum
+       (RVal (Const (Int 1)),
+        RA_Leaf (AtomicConstraint (Le, RVal (Var "x"), RVal (Const (Int 0))))))])]
+;;
+
+
+let test33 =
+List.map (fun (x,y) -> (x, readable_term y))
+(simplify (make_term (
+RVal (AggSum (RVal (Var "A"),
+   RA_Leaf (AtomicConstraint (Eq, RVal (Var "A"), RVal (Var "x")))))
+)) ["x"] []) =
+[([], RVal (Var "x"))]
+;;
 
 
 

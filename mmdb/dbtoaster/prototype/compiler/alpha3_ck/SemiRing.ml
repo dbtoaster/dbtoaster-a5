@@ -101,6 +101,7 @@ sig
    val fold: ('b list -> 'b) -> ('b list -> 'b) -> (leaf_t -> 'b) ->
              expr_t -> 'b
 
+
    (* (apply_to_leaves f e)  applies function f to each base value leaf of
       expression e, i.e., replaces the base value v by expression (f v) *)
    val apply_to_leaves: (leaf_t -> expr_t) -> expr_t -> expr_t
@@ -225,18 +226,16 @@ struct
 
    let rec delta (lf_delta: leaf_t -> expr_t) (e: expr_t) =
       match e with
-         Sum(l)   -> Sum(List.map (fun x -> delta lf_delta x) l)
+         Sum(l)   -> mk_sum(List.map (fun x -> delta lf_delta x) l)
        | Prod([]) -> zero
-(* not needed
-       | Prod(x::l) when l=[] -> (delta lf_delta x)
-*)
        | Prod(x::l) ->
          mk_sum([
-            mk_prod( (delta lf_delta x)::l);
-            mk_prod([mk_sum[x; (delta lf_delta x)]; (delta lf_delta (Prod(l)))])
-                 (* this nesting makes sense because it renders the delta
-                    computation cheaper: delta for l is only computed once here;
-                    we can still distribute later if we need it. *)
+            mk_prod((delta lf_delta x)::l);
+            mk_prod([mk_sum[x; (delta lf_delta x)];
+                     (delta lf_delta (mk_prod(l)))])
+            (* this nesting makes sense because it renders the delta
+               computation cheaper: delta for l is only computed once here;
+               we can still distribute later if we need it. *)
          ])
        | Val(x) -> lf_delta x
 

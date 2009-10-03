@@ -1,17 +1,14 @@
 (*
-   This module is for representing positive relational algebra expressions
-   with implicit projection and terms.
+   This module is for representing
+   * positive relational algebra expressions with implicit projection and
+   * terms.
 
    Functions for computing delta expressions, variable substitution,
    and simplification are also provided.
 
-
-   Relational algebra expressions have input variables
-   (parameters / bound variables) and output variables (the result columns).
    Relational algebra expressions are built from leaves, unions, and
-   natural joins.
-   Leaves are named relations, the empty relation, the constant nullary
-   singleton, and atomic constraints.
+   natural joins.  Leaves are named relations, the empty relation, the
+   constant nullary singleton, and atomic constraints.
 
    Projections are implicitly supported.
      * We use an unordered schema model in our expressions, thus we
@@ -34,8 +31,16 @@
    some positive relational algebra operations that project away more
    columns than needed to make the unions consistent are not expressible.
 
-   Terms are built from variables, constants and aggregrate sums using
-   addition and multiplication.
+   Terms are built from variables, constants and aggregrate sums (AggSum)
+   using addition and multiplication.
+
+   AggSum(t, r), where t is a term and r is a relalg expression,
+   computes the sum of the t values for each of the tuples (no duplicate
+   elimination) computed by r. In the case that r is constraints-only
+   (i.e., no relational atoms occur in it), AggSum(t, r) computes the
+   sum of the t values for those valuations of the variables common to
+   both t and r (minus those that are parameters, which would bind their
+   domains to a single parameter value) which satisfy condition r.
 *)
 
 
@@ -98,10 +103,8 @@ val make_term:     readable_term_t -> term_t
 
 
 
-(* all the variables that occur in the expression. *)
+(* all the variables that occur in the expression resp. term. *)
 val relalg_vars: relalg_t -> string list
-
-(* all the variables that occur in the term *)
 val term_vars: term_t -> string list
 
 
@@ -135,11 +138,6 @@ val polynomial: relalg_t -> relalg_t
 
 (* return polynomial as list of monomials *)
 val monomials: relalg_t -> (relalg_t list)
-
-
-(* back and forth between a monomial and its hypergraph *)
-val monomial_as_hypergraph: relalg_t -> (relalg_t list)
-val hypergraph_as_monomial: (relalg_t list) -> relalg_t
 
 
 (* Are all the leaves of the given relational algebra
