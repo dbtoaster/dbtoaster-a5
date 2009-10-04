@@ -70,7 +70,7 @@ The desired functionality for a filter is as follows:
     \item If conditions are not met, discard the tuple
 \end{itemize}
 
-The functionality for a insertion trigger.
+The functionality for an insertion trigger.
 
 \begin{itemize}
     \item Get an input tuple
@@ -123,7 +123,7 @@ From the above the two input streams  are a \emph{historic\_input\_stream} strea
     INTO SFS
 \end{verbatim}
 
-\noindent We also need to forward these data to output streams
+\noindent We also need to forward these data to output streams,
 
 \begin{verbatim}   
     SELECT * 
@@ -143,37 +143,31 @@ From the above the two input streams  are a \emph{historic\_input\_stream} strea
     INTO output_stream
 \end{verbatim}
 
-\noindent Where an \emph{output\_stream} stream is an only output of the simulator. 
+\noindent where an \emph{output\_stream} stream is an only output of the simulator. 
 
 
 \section{Input Merging}
 
-Often, once input is received, we would want to combine (join/union) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging is also a \emph{stream-to-stream} transformation, which will allows users to specify those conditions and creates additional relations from them.
+Often, once input is received, we would want to combine (join/union) two input streams or to impose future conditions (example windowing) on the input steam. Input Merging is also a \emph{stream-to-stream} transformation.
 
-\begin{verbatim}   
-    getLock();
-    while (input = getInput(sources))
-    {
-        if (conditions(input))
-        {
-            store (input);
-        }
-    }
-    releaseLock();
-\end{verbatim}
+%, which will allow users to specify those conditions and creates additional relations from them.
+
+The desired functionality is simple.
+\begin{itemize}
+    \item Get tuple from a set of input streams
+    \item Forward tuple to output stream
+\end{itemize}
 
 
 \noindent In SQL we can combine two input streams if they have the same schema 
 
 \begin{verbatim}   
-    SELECT *
-    FROM A
-    WHERE condition1
+    input_stream1
     UNION
-    SELECT *
-    FROM B
-    WHERE condition2
+    input_stream2
+    UNION
     ...
+    INTO output_stream
 \end{verbatim}
 
 
@@ -188,11 +182,35 @@ The Exchange Server uses merging to duplicate historical data and merge it with 
     INTO combinedView
 \end{verbatim}
 
+A \emph{combinedView} stream will contain tuples from the historic data stream and the algorithm's produced stream. 
+
+In many cases we will want to distinguish between tuples coming from different streams
+
+\begin{verbatim}  
+    (SELECT augmented_tuple_historic
+     FROM HFS hs)
+    UNION
+    (SELECT augmented_tuple_simulated
+     FROM SFS ss)
+    INTO combinedView
+\end{verbatim}
+
+Here constructs \emph{augmented\_tuple\_historic} and \emph{augmented\_tuple\_simulated} are a short for:
+
+\begin{verbatim}
+    augmented_tuple_historic -> hs.id, hs.time, hs.action,
+                            hs.volume, hs.price, source="hist"
+    augmented_tuple_simulated -> ss.id, ss.time, ss.action,
+                            ss.volume, ss.price, source="sim"
+\end{verbatim}
+
+The above merging allows us to expand a tuple's schema, to include the tuples source. 
+
 \begin{verbatim} 
     HFS INTO historicView
 \end{verbatim}
 
-From above merging produces two streams: \emph{combinedView} and\emph{historicView}. Where a \emph{historicView} stream contains filtered tuple from a \emph{HFS} stream. And a \emph{combinedView} stream contains tuples from both a \emph{HFS} and a \emph{SFS} streams.
+From above merging produces two streams: \emph{combinedView} and\emph{historicView}. A \emph{historicView} stream contains filtered tuple only from a \emph{HFS} stream. A \emph{combinedView} stream contains tuples from both a \emph{HFS} and a \emph{SFS} streams. The \emph{combinedView} stream's schema can be expand if needed.
 
 
 \section{Simulator Rules}
@@ -200,7 +218,7 @@ From above merging produces two streams: \emph{combinedView} and\emph{historicVi
 Simulator rules are a set of user definitions on how to create relations from input streams. They show how to reduce those relations and to produce an output stream of events. 
 
 \subsection{Stream to Relations}
-Before now all actions performed were \emph{stream-to-stream} actions. These actions allowed us to manipulate streams of incoming data to create a stream of updates to a set of relations. We need to materialize the streams into a set of relations to apply user defined rules to them. 
+All actions performed so far were \emph{stream-to-stream} actions. These actions allowed us to manipulate streams of incoming data to create a stream of updates to a set of relations. We need to materialize the streams into a set of relations to apply user defined rules to them. 
 
 In our running example we would want to visualize the bid and the ask order books into two relations. Each stream produced at an Input Merging stage will have a bid and an ask books.
 
@@ -220,6 +238,24 @@ The bids order book is visualized as a set of buy requests over unbounded time f
     FROM historicView hv
     RANGE UNBOUNDED
     WHERE hv.action=='S'
+\end{verbatim}
+
+\noindent The bid and the asks relations for the \emph{compbineView} stream are done similarly.
+
+\begin{verbatim}  
+    SELECT * as bids_combinedView
+    FROM combinedView cv
+    RANGE UNBOUNDED
+    WHERE cv.action=='B'
+\end{verbatim}
+
+\noindent And the asks relation
+
+\begin{verbatim}  
+    SELECT * as asks_combinedView
+    FROM combinedView cv
+    RANGE UNBOUNDED
+    WHERE cv.action=='S'
 \end{verbatim}
 
 \noindent The asks and bids relations are updated with new tuples from the stream. The stream also contains user requests to remove some tuples from those relations. This is can be accomplished with the following deletes.
@@ -242,14 +278,33 @@ The bids order book is visualized as a set of buy requests over unbounded time f
              WHERE historicView.action='D') as hv 
 \end{verbatim}
 
-Similarly we can create order book relations for the \emph{combinedView} stream.
+Similarly we can create update order-book relations for the \emph{combinedView} stream.
+
+\begin{verbatim}  
+    DELETE *
+    FROM asks_combinedView av
+    WHERE av.id = cv.id
+            (SELECT * 
+             FROM combinedView
+             RANGE NOW
+             WHERE combinedView.action='D') as cv  
+
+    DELETE *
+    FROM bids_combinedView bv
+    WHERE bv.id = cv.id
+            (SELECT * 
+             FROM combinedView
+             RANGE NOW
+             WHERE combinedView.action='D') as cv 
+\end{verbatim}
+
 
 \subsection{Rule Application}
 
-The main component of the system is its ability to apply a set of user defined rules, which allows them a limited manipulation on relations. The rules define how the output stream for a group of relations is produced and how the existent relations are changed. 
+The main component of our system is its ability to apply a set of user defined rules. This provides users with a ability to manipulate the relations. The rules define how the output stream for a group of relations is produced and how the existent relations are changed. 
 
 \begin{verbatim}
-    LOOP_JOIN [WHILE condition | TIMES number]
+    REDUCE_LOOP [WHILE condition | TIMES number]
     FROM [NEW] relation1, [NEW] relation2, ... 
     WHEN condition1
         (set of statements to be executed)
@@ -259,12 +314,34 @@ The main component of the system is its ability to apply a set of user defined r
     EVERY [number TUPLE | time INTERVAL] IN relation 
 \end{verbatim}
 
-The statement {\tt LOOP\_JOIN} gives users a possibility to show with a simple set of statements what are the consequences of some events. The statement provides an ability to execute a set of actions when a condition is satisfied. The conditions are specified by the {\tt WHEN} clause followed by a set of SQL statements to be executed in case the condition is true. The conditional statements can be executed repeatedly when conditions {\tt WHILE} or {\tt TIMES} are present. A {\tt WHILE} predicate followed by a condition indicates that the statements should be executed until the condition is true. A {\tt TIMES} predicate indicates how many times the conditions should be executed. A {\tt FROM} predicate indicates what tables the data is coming from, on which the {\tt WHILE} condition is applied. A field specifier {\tt NEW} indicates that the content of the table should be updated. The need to update can come as a result of new tuples inserted into a relation from an input stream or as a consequence of the executed statements.   
+The {\tt REDUCE\_LOOP} statement gives users a possibility to show with a simple set of statements what are the consequences of some events. The statement provides an ability to execute a set of actions when a condition is satisfied. The conditions are specified by the {\tt WHEN} clause followed by a set of SQL statements to be executed in case the condition is true. The conditional statements can be executed repeatedly when conditions {\tt WHILE} or {\tt TIMES} are present. A {\tt WHILE} predicate followed by a condition indicates that the statements should be executed until the condition is true. A {\tt TIMES} predicate indicates how many times the conditions should be executed. A {\tt FROM} predicate indicates what tables the data is coming from, on which the {\tt WHILE} condition is applied. A field specifier {\tt NEW} indicates that the content of the table should be updated. The need to update can come as a result of new tuples inserted into a relation from an input stream or as a consequence of the executed statements.   
 
-In our running example of the Exchange Server, we provide rules where if the price on the best ask order and best bid order match we remove/update them from/in the tables and send consequences of the update to the output stream. Using above specification we have
+In our running example of the Exchange Server, we provide rules where if the price on the best ask order and best bid order match we remove/update them from/in the tables and send consequences of the update to the output stream.
+
+Before we start matching we need to define relations we will be using later.
+
+\begin{verbatim}      
+    SELECT * as min_bid_price
+    FROM bids_historicView bhv
+    WHERE bhv.price = (SELECT min(price) FROM  bids_historicView))
+    
+    SELECT * as top_bid
+    FROM min_bid_price mbp
+    WHERE mbp.time = (SELECT min(time) FROM min_bid_price)
+    
+    SELECT * as max_ask_price
+    FROM asks_historicView ahv
+    WHERE ahv.price = (SELECT max(price) FROM  asks_historicView))
+    
+    SELECT * as top_ask
+    FROM max_ask_price map
+    WHERE map.time = (SELECT min(time) FROM max_ask_price)
+\end{verbatim}
+
+We can start matching using above specification.
 
 \begin{verbatim}  
-    LOOP_JOIN WHILE top_bid.price<=top_ask.price
+    REDUCE_LOOP WHILE top_bid.price<=top_ask.price
     FROM NEW top_bid, NEW top_ask
     WHEN top_bid.volume = top_ask.volume 
             (DELETE * FROM bids_historicView bhv 
@@ -293,41 +370,496 @@ In our running example of the Exchange Server, we provide rules where if the pri
 
 In the above we compute tables {\tt top\_bid} and {\tt top\_ask} containing the best ask tuple and the best bid tuple on every iteration. We continue to iterate through the loop until the top bid and the top ask tuples cannot be matched on price. Depending on the amount of stocks in the bid and ask order the consequences of matching are also different. This matching rule is initiated on every update tuple to the \emph{historicView} stream. 
 
+We need to define helper relations, before starting matching
+
+\begin{verbatim}      
+    SELECT * as min_bid_price
+    FROM bids_combinedView bhv
+    WHERE bhv.price = (SELECT min(price) FROM  bids_historicView))
+    
+    SELECT * as top_bid
+    FROM min_bid_price mbp
+    WHERE mbp.time = (SELECT min(time) FROM min_bid_price)
+    
+    SELECT * as max_ask_price
+    FROM asks_combinedView ahv
+    WHERE ahv.price = (SELECT max(price) FROM  asks_historicView))
+    
+    SELECT * as top_ask
+    FROM max_ask_price map
+    WHERE map.time = (SELECT min(time) FROM max_ask_price)
+\end{verbatim}
+
+The {\tt REDUCE\_LOOP} statement for the \emph{combinedView} stream is very similar to the above. 
+
+\begin{verbatim}  
+    REDUCE_LOOP WHILE top_bid.price<=top_ask.price
+    FROM NEW top_bid, NEW top_ask
+    WHEN top_bid.volume = top_ask.volume 
+            (DELETE * FROM bids_combinedView bcv 
+                      WHERE bcv.id = top_bid.id,
+             DELETE * FROM asks_combinedView acv 
+                      WHERE acv.id = top_ask.id,
+             INSERT INTO combined_output:
+                      SELECT create_B(top_bid)
+                      FROM top_bid t
+                      WHERE t.source="hist" && top_ask.source="sim"
+             INSERT INTO combined_output:
+                      SELECT create_S(top_ask)
+                      FROM top_ask t
+                      WHERE t.source="hist" && top_bid.source="sim"
+             INSERT INTO combined_output: 
+                      SELECT create_F(top_bid), create_F(top_ask)
+                      FROM top_bids b, top_ask a
+                      WHERE not(b.source="hist" && a.source="hist"))
+    WHEN top_bid.volume < top_ask.volume 
+            (DELETE * FROM bids_combinedView bcv 
+                      WHERE bcv.id = top_bid.id,
+             INSERT INTO asks_combinedView: create_E(top_ask) 
+                ON DUPLICATE KEY UPDATE id = top_ask.id
+             INSERT INTO combined_output:
+                      SELECT create_B(top_bid)
+                      FROM top_bid t
+                      WHERE t.source="hist" && top_ask.source="sim"
+             INSERT INTO combined_output:
+                      SELECT create_S(top_ask)
+                      FROM top_ask t
+                      WHERE t.source="hist" && top_bid.source="sim"
+             INSERT INTO combined_output: 
+                      SELECT create_F(top_bid), create_F(top_ask)
+                      FROM top_bids b, top_ask a
+                      WHERE not(b.source="hist" && a.source="hist"))
+    WHEN top_bid.volume > top_ask.volume 
+            (DELETE * FROM asks_combinedView acv 
+                      WHERE acv.id = top_ask.id,
+             INSERT INTO bids_combinedView: create_E(top_bid) 
+                 ON DUPLICATE KEY UPDATE id = top_bid.id
+             INSERT INTO combined_output:
+                     SELECT create_B(top_bid)
+                     FROM top_bid t
+                     WHERE t.source="hist" && top_ask.source="sim"
+             INSERT INTO combined_output:
+                     SELECT create_S(top_ask)
+                     FROM top_ask t
+                     WHERE t.source="hist" && top_bid.source="sim"
+             INSERT INTO combined_output: 
+                     SELECT create_F(top_bid), create_F(top_ask)
+                     FROM top_bids b, top_ask a
+                     WHERE not(b.source="hist" && a.source="hist"))
+    WITH HEARTBEAT ON *
+    EVERY 1 TUPLE IN combinedView
+\end{verbatim}
+
+The matching rule for the \emph{combinedView} stream is more complicated than the matching rule for the \emph{historicView} stream. This is caused by the need to insert a duplicate of a matched historic tuple into an output stream.
+
+\subsection{REDUCE\_LOOP Simplifications}
+
+It is possible to simplify the functionality of a {\tt REDUCE\_LOOP} statement by removing a {\tt HEARTBEAT} condition out of it. The purpose of the {\tt HEARTBEAT} is to indicate when the {\tt REDUCE\_LOOP} statement should be executed. 
+
+The {\tt HEARTBEAT} condition is tied up with some stream. This means we can remove it from the definition of the {\tt REDUCE\_LOOP} statement and create a stand alone statement for some stream. 
+
+\begin{verbatim}
+    APPLY HEARTBEAT TO reduce_loop_name1, reduce_loop_name2, ...
+    ON stream
+    EVERY [number TUPLE | time INTERVAL] IN relation
+\end{verbatim}
+
+This condition imposed to a stream will trigger {\tt REDUCE\_LOOP} statements by the given names. 
+
+Consequently a {\tt REDUCE\_LOOP} statement will be modified as follows.
+
+\begin{verbatim}
+    REDUCE_LOOP name [WHILE condition | TIMES number]
+    FROM [NEW] relation1, [NEW] relation2, ... 
+    WHEN condition1
+        (set of statements to be executed)
+    WHEN condition2
+        ...
+\end{verbatim}
 
 \section{Output Merging}
 
-Output Merging is similar to Input Merging. The idea is to take streams produced by user's rules and combine them into desirable output streams. This is done similarly to Input Merging with either joining two streams on a set of attributes or doing a union of two streams.  
+Output Merging is similar to Input Merging. The idea is to take streams produced by user's rules and combine them into desirable output streams. This is done similarly to Input Merging with either joining two streams on a set of attributes or doing a union of two streams.
+
+\begin{verbatim}   
+    input_stream1
+    UNION
+    input_stream2
+    UNION
+    ...
+    INTO output_stream
+\end{verbatim}
 
 The Exchange Server outputs only one stream of updates. Thus, when matching occurs over a set of relations, they are combined into a single stream,  
 
 \begin{verbatim}
     historic_output
     UNION
-    combined_output
+    (SELECT filtered_tuple
+    FROM combined_output co)
     INTO output_stream
 \end{verbatim}
 
-\noindent where a stream \emph{combined\_output} is an output stream resulting from applying matching rules similar to the above to \emph{combinedView}. A stream \emph{historic\_output} is a stream resulting from the above matching rule. 
+\noindent where a stream \emph{combined\_output} is an output stream resulting from applying matching rules similar to the above to \emph{combinedView}. A stream \emph{historic\_output} is a stream resulting from the above matching rule. We cannot just combine two output streams, because they have different schemas. A \emph{combined\_output} stream has an extra field called \emph{source}, which needs to be removed first. A \emph{filtered\_tuple} parameter indicates a tuple from the \emph{combined\_output} stream without that field.
 
 %\emph{example?}
 
 \section{Output Filtering} 
 
-The idea behind filtering output is to impose extra conditions on output streams. This is similar to input filtering. 
+An Output filter is the last change for a system to add changes to outgoing data. In some ways it is very similar to the input filter. It can add or project away fields in the stream. It can additionally add user defined functions to the tuples in the stream.
 
-In the case of the Exchange Server, we want to impose conditions on the output stream, such as price changes that are dependent on volume and time. 
-\begin{program}
-    \begin{verbatim}  
-    while (tuple )
-    {
-        if (tuple.action = 'S' && tuple.volume > 1000)
-            setOutputPriceIncrement(increment, duration);
-    }
-    \end{verbatim}
-\caption{Exchange Output Filter.}
-\end{program}
+\begin{verbatim}
+    APPLY user_function(*)
+    FROM input_stream
+    TO   output_stream 
+\end{verbatim}
 
-\section{Implementation}
+This functionality allows for users to take a tuple from the stream and change some of its parameters.
+
+To give an example of this functionality we will look at our running example. We know from experience that stock prices respond to high volume trades by the increase in their sale price. The users can create a filter to emulate this. For example, when there is a high volume stock movement in the \emph{combined\_output} stream users might want to increase price field value in all stock transactions by a small amount for a given time frame. Thus we can add the following filter
+
+\begin{verbatim}
+    APPLY price_change(*)
+    FROM output_stream
+    TO   final_output 
+\end{verbatim}
+
+Here a \emph{price\_change(*)} function is defined on the output tuple. The output of the function is a changed tuple, where parameters are changed. In this case the \emph{price} field is dynamically changed. 
+
+The function in the {\tt APPLY} statement can be dynamic depending on the triggers from various streams. It is possible to add trigers that will change internal parameters of the function to any stream in the system. In this case we might have a trigger, 
+
+\begin{verbatim}
+    SELECT *
+    FROM combined_output co
+    WHERE co.action="B" && co.volume>1000
+\end{verbatim}
+
+that indicated then to increase the price. 
+
+\section{Alternative Simulator Structure}
+
+The current structure of the Simulator creates a fair amount of data duplication. This leads to a some amount of work duplication. For example, in our example of the Exchange Simulator we have two similar reduce loops. The reduce loop, which is responsible for handling data coming from the \emph{combinedView} stream, repeats a lot of matches between historic tuples. Those matches are ignored by the reduce loop, since they are duplicated in the first reduce loop. 
+
+Here we will present an alternative approach to the system design that reduces the amount of duplication work. The down side of this approach is a more complicated schema of the internal streams. Additionally the matching rules will have to be more complicated.  
+
+\subsection{Input Filtering}
+
+The input filtering component remains the same. The purpose of the filter is to remove tuples users do not care about. This need does not change with this approach. 
+
+\subsection{Input Merging}
+
+Previous approach used this step to duplicate the data into the various streams. This approach will merge the streams to limit the amount of duplication. The semantics of the step will remain the same but the implications will differ. In this step all the streams will be merged if they need to be used in the later reduce step.
+
+
+In the example of the exchange simulator we will have. 
+\begin{verbatim}
+    (SELECT augmented_tuple_historic
+     FROM HFS hs)
+    UNION
+    (SELECT augmented_tuple_simulated
+     FROM SFS ss)
+    INTO combinedView 
+\end{verbatim}
+
+The side effect not duplicating data is the change and unification of schemas of each input stream. 
+
+Here \emph{augmented\_tuple\_historic} and \emph{augmented\_tuple\_simulated} constructs are a short hand for:
+
+\begin{verbatim}
+    augmented_tuple_historic -> hs.id, hs.time, hs.action,
+                            hs.volume, hs.price, source="hist",
+                            base_volume=hs.volume, current_volume=0
+    augmented_tuple_simulated -> ss.id, ss.time, ss.action,
+                            ss.volume, ss.price, source="sim"hist",
+                            base_volume=hs.volume, current_volume=0
+\end{verbatim}
+
+As we can see the schema is more complex compared to similar augmented tuples in the previous case.
+
+\subsection{Simulator Rules}
+
+The simulator rules are similar to the approach above. First we need to visualize and separate data into the tables needed in the later reduce step. 
+
+This step in the Exchange Simulator is identical to the step of separating data into tables for the \emph{combinedView} stream and is omitted here.
+
+The specification for the {\tt REDUCE\_LOOP} statement will not change, how ever achieving the same functionality will be more difficult. 
+
+\begin{verbatim}
+    REDUCE_LOOP [WHILE condition | TIMES number]
+    FROM [NEW] relation1, [NEW] relation2, ... 
+    [WHEN condition1
+        (set of statements to be executed)]
+\end{verbatim}
+
+The Exchange Simulator design of the {\tt REDUCE\_LOOP} statement will change to account for more complicated matching. But before we begin we need to show how some helper relations are calculated.
+
+\begin{verbatim}      
+    SELECT * as min_bid_price
+    FROM bids_combinedView bhv
+    WHERE bhv.price = (SELECT min(price) 
+                       FROM  bids_combinedView bv"))
+    
+    SELECT * as top_bid
+    FROM min_bid_price mbp
+    WHERE mbp.time = (SELECT min(time) FROM min_bid_hist_price)
+    
+    SELECT * as min_bid_sim_price
+    FROM bids_combinedView bhv
+    WHERE bhv.price = (SELECT min(price) 
+                       FROM  bids_combinedView bv
+                       WHERE bv.current_volume<bv.base_volume))
+    
+    SELECT * as top_sim_bid
+    FROM min_bid_sim_price mbp
+    WHERE mbp.time = (SELECT min(time) FROM min_bid_sim_price)
+    
+    SELECT * as max_ask_price
+    FROM asks_combinedView ahv
+    WHERE ahv.price = (SELECT max(price) 
+                       FROM  asks_combinedView av)
+    
+    SELECT * as top_ask
+    FROM max_ask_price map
+    WHERE map.time = (SELECT min(time) FROM max_ask_price)
+    
+    SELECT * as max_ask_sim_price
+    FROM asks_combinedView asv
+    WHERE asv.price = (SELECT max(price) 
+                       FROM  asks_combinedView av
+                       WHERE bv.current_volume<bv.base_volume))
+    
+    SELECT * as top_sim_ask
+    FROM max_ask_sim_price map
+    WHERE map.time = (SELECT min(time) FROM max_ask_sim_price)
+\end{verbatim}
+
+Now we can turn back to the {\tt REDUCE\_LOOP}
+
+\begin{verbatim}  
+    REDUCE_LOOP WHILE (top_bid.price<=top_ask.price && 
+                        top_bid="hist" && top_ask="hist") ||
+                      (top_bid.price<=top_ask.price && 
+                        top_bid="sim" && top_ask="sim") ||
+                      (top_bid.price<=top_sim_ask.price && 
+                        top_bid="sim" && top_ask="hist") ||
+                      (top_sim_bid.price<=top_ask.price && 
+                        top_bid="hist" && top_ask="sim")
+    FROM NEW top_bid, NEW top_ask, NEW top_sim_bid, NEW top_sim_ask
+    WHEN (top_bid="hist" && top_ask="hist" ||
+                                top_bid="sim" && top_ask="sim") &&
+           top_bid.volume = top_ask.volume
+           (DELETE * FROM bids_combinedView bcv 
+                     WHERE bcv.id = top_bid.id,
+            DELETE * FROM asks_combinedView acv 
+                     WHERE acv.id = top_ask.id,
+            INSERT INTO combined_output:
+                     create_F(top_bid), create_F(top_ask))
+    WHEN (top_bid="hist" && top_ask="hist" ||
+                                top_bid="sim" && top_ask="sim") &&
+           top_bid.volume < top_ask.volume                     
+           (DELETE * FROM bids_combinedView bcv 
+                     WHERE bcv.id = top_bid.id,
+            INSERT INTO asks_combinedView: update_S(top_ask) 
+                     ON DUPLICATE KEY UPDATE id = top_ask.id
+            INSERT INTO combined_output: 
+                     SELECT create_F(top_bid), create_E(top_ask)
+                     FROM top_bids b, top_ask a)
+     WHEN (top_bid="hist" && top_ask="hist" ||
+                                 top_bid="sim" && top_ask="sim") &&
+            top_bid.volume > top_ask.volume                     
+           (DELETE * FROM asks_combinedView acv 
+                     WHERE acv.id = top_ask.id,
+            INSERT INTO asks_combinedView: update_B(top_bid) 
+                     ON DUPLICATE KEY UPDATE id = top_bid.id
+            INSERT INTO combined_output: 
+                     SELECT create_E(top_bid), create_F(top_ask)
+                     FROM top_bids b, top_ask a)
+     WHEN (top_bid="sim" && top_ask="hist" &&
+              top_bid.volume = top_sim_ask.current_volume)
+            (DELETE * FROM bids_combinedView bcv
+                      WHERE bcv.id = top_bids.id
+             DELETE * FROM asks_combinedView acv
+                      WHERE acv.id = 
+                        (SELECT *
+                         FROM top_sim_ask t
+                         WHERE t.source="sim")
+             INSERT INTO asks_combinedView: 
+                      (SELECT create_S(top_sim_ask)
+                       FROM top_sim_ask t
+                       WHERE t.source="hist") tuple
+                      ON DUPLICATE KEY UPDATE id= tuple.id
+             INSERT INTO combined_output:
+                     (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
+                        FROM top_sim_ask t
+                        WHERE t.source="hist")
+             INSERT INTO combined_output:
+                     create_F(top_bid))
+     WHEN (top_bid="sim" && top_ask="hist" &&
+               top_bid.volume < top_sim_ask.current_volume)
+            (DELETE * FROM bids_combinedView bcv
+                      WHERE bcv.id = top_bids.id 
+              INSERT INTO asks_combinedView: 
+                        (SELECT create_S(top_sim_ask)
+                         FROM top_sim_ask t
+                         WHERE t.source="hist") tuple
+                        ON DUPLICATE KEY UPDATE id= tuple.id
+               INSERT INTO combined_output:
+                       (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
+                         FROM top_sim_ask t
+                         WHERE t.source="hist")
+               INSERT INTO combined_output:
+                        create_F(top_bid))
+    WHEN (top_bid="sim" && top_ask="hist" &&
+               top_bid.volume > top_sim_ask.current_volume)
+            (INSERT INTO asks_combinedView: 
+                (SELECT create_S(top_sim_ask)
+                 FROM top_sim_ask t
+                 WHERE t.source="hist") tuple
+              ON DUPLICATE KEY UPDATE id= tuple.id
+             INSERT INTO bids_combinedView: create_B(top_bid)
+              ON DUPLICATE KEY UPDATE id= top_bid.id
+             INSERT INTO combined_output:
+                         (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
+                           FROM top_sim_ask t
+                           WHERE t.source="hist")
+                 INSERT INTO combined_output:
+                          create_E(top_bid))
+    WHEN (top_bid="hist" && top_ask="sim" &&
+            top_sim_bids.current_volume = top_ask.volume)
+            (DELETE * FROM asks_combinedView acv
+                      WHERE acv.id = top_asks.id
+             DELETE * FROM bids_combinedView bcv
+                      WHERE bcv.id = 
+                        (SELECT *
+                         FROM top_sim_bid t
+                         WHERE t.source="sim")
+             INSERT INTO bids_combinedView: 
+                      (SELECT create_S(top_sim_bid)
+                       FROM top_sim_bid t
+                       WHERE t.source="hist") tuple
+                      ON DUPLICATE KEY UPDATE id= tuple.id
+             INSERT INTO combined_output:
+                     (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                        FROM top_sim_bid t
+                        WHERE t.source="hist")
+             INSERT INTO combined_output:
+                     create_F(top_ask))
+     WHEN (top_bid="hist" && top_ask="sim" &&
+             top_sim_bids.current_volume < top_ask.volume)
+        (INSERT INTO asks_combinedView create_S(top_ask)
+            ON DUPLICATE KEY UPDATE id=top_ask.id
+        DELETE * FROM bids_combinedView bcv
+                  WHERE bcv.id = 
+                    (SELECT *
+                     FROM top_sim_bid t
+                     WHERE t.source="sim")
+         INSERT INTO bids_combinedView: 
+                  (SELECT create_S(top_sim_bid)
+                   FROM top_sim_bid t
+                   WHERE t.source="hist") tuple
+                  ON DUPLICATE KEY UPDATE id= tuple.id
+        INSERT INTO combined_output:
+                (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                   FROM top_sim_bid t
+                   WHERE t.source="hist")
+         INSERT INTO combined_output:
+                 create_E(top_ask))
+     WHEN (top_bid="hist" && top_ask="sim" &&
+              top_sim_bids.current_volume > top_ask.volume)              
+        (DELETE * FROM asks_combinedView acv
+                  WHERE acv.id = top_asks.id
+         INSERT INTO bids_combinedView: 
+                  (SELECT create_S(top_sim_bid)
+                  FROM top_sim_bid t
+                  WHERE t.source="hist") tuple
+                ON DUPLICATE KEY UPDATE id= tuple.id
+        INSERT INTO bids_combinedView: 
+                  (SELECT create_S_U(top_sim_bid)
+                   FROM top_sim_bid t
+                   WHERE t.source="sim") tuple
+                  ON DUPLICATE KEY UPDATE id= tuple.id
+      INSERT INTO combined_output:
+              (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                 FROM top_sim_bid t
+                 WHERE t.source="hist")
+       INSERT INTO combined_output:
+               create_F(top_ask))      
+\end{verbatim}
+
+\noindent The above shows that it is possible that the advantages of having no tuple duplication in the system can be consumed by more complicated set of rules.
+
+\subsection{Output Merging}
+
+The output merging step does not change. At this step we merge the outputs of the various {\tt REDUCE\_LOOP} statements into a set of output streams.
+
+The modified Exchange Simulator has only one one reduce loop. So in this case we do not need a merging step.
+
+\subsection{Output Filtering}
+
+The output filtering also remains unchanged. The changes to the {\tt REDUCE\_LOOP} statement do not effect the functionality of the output filter.  
+
+\section{Pro-active matching}
+
+The Exchange Simulator takes trade orders from historic data and simulated trading algorithms to produce a coherent stream of stock trades indistinguishable from the original data. Under this conditions exchange users have very limited set of tools to influence the trading. After the rules for matching are set the users have a passive role in making trading decisions. 
+
+There are two possible approaches to influence the decisions of the Exchange Server. One way is to add another source of orders. This data source can generate order according to some statistical parameters. Another approach is to add those statistical parameters as an external function to the Exchange Simulator. This function will compute parameters used by the user rules.
+
+\subsection{External}
+
+The external influence to the Exchange Simulator comes in the form of an additional stream of trade requests. The incoming requests can be generated by a user defined "trading" algorithm. The purpose of this algorithm is to give users extra control over the trades. An extreme of this strategy is to create a set of algorithms designed to recreate the behavior the stock exchange and remove the historic data completely. 
+
+The design of the External Trader Algorithm can vary depending on the needs of a particular user. We will demonstrate the concepts for those strategies.
+
+The idea behind the External Trader Algorithms is to provide control on how and when the trades are made. By injecting additional orders from the Trader Algorithms we can control the price and the volume of the trades. Naive approaches can insert tuples based on desired volume to be trades at any given time window or on the desired price for a particular stock. The simplest of the naive approaches is a random trader, which will inject a random buy/sell order at a random time.  
+
+Statistics based approaches collect information from historical orders. Based on these statistics the trade requests are inserted into the trade stream. The example of such a strategy will be a stable volume trader. The users can collect average trading volumes for different time periods of the day, the trader will insert trade request if the current traded volume falls short of the expected trading volume.
+
+Machine Learning based approaches are another form of statistical based approaches. These approaches use ML techniques to collect statistics on the historic data and then to create trades, which are similar to historic data. 
+
+\subsection{Internal}
+
+The internal influence on the Exchange Simulator is a set of restrictions placed by the users. This set of restrictions is given by the users in the form of user defined functions. It is materialized as a set of tables used by the user's rules. One possible example of this is the enforced amount of volume traded within a given time period. It can be done as follows. 
+
+First users provide a function, which returns a volume to be traded. They also set up the flow such that the {\tt REDUCE\_LOOP} statement is called on a given time interval. Then a simplified version of the reduce loop will look as follows.
+
+\begin{verbatim}
+    REDUCE_LOOP condition
+    FROM NEW top_bid, NEW top_ask, NEW volume
+    WHEN when_condition && trade_volume < volume
+        ...
+        UPDATE volume: volume - trade_volume
+        ...
+\end{verbatim}
+
+Here a \emph{trade\_volume} constant stands for the lowest of the \emph{top\_bid} and \emph{top\_ask} volumes. 
+
+\section{Exchange Evaluation}
+
+Different exchange rules create variations of the Exchange Simulator. With this many variations of the Simulator there is a need to compare them to each other. The ground truth performance of any Simulator is measured by its performance on the real Stock Exchange. This ground truth is unavailable to all but a few users. In its absence there are a few performance characteristics on which a Simulator can be evaluated. 
+
+\begin{itemize}
+    \item {\bf Stability} measures simulator's closeness to the historical data. It measures the deviation of the Simulator's current stock price with the historic stock price for the same time frame. 
+    \item {\bf Volume} measures the liquidity of the stocks traded by the evaluation Algorithms. 
+    \item {\bf Roundness} measures the ability of a simulator to equally match bid and ask orders. 
+    \item {\bf Consistency} measures the ability of the simulator to provide consistent liquidity and the fluctuations in the simulator's liquidity. 
+    \item {\bf Dominance} measures a percent of the trades from the evaluation Algorithms relative to the overall trade amount. 
+    \item {\bf Price volatility} measures how often the stock price of the simulator deviates from the historic stock price. 
+\end{itemize}
+
+\section{Development Support}
+
+The Exchange Simulator provides development support in the form of the data tables. Every table described by the system can be visualized. This feature is added to facilitate the development and debugging of user rules within the system. 
+
+The {\tt DEBUG} key word when added to any statement will store a table.
+
+\begin{verbatim}
+    DEBUG INTO name
+    EVERY [number TUPLE | time INTERVAL] 
+\end{verbatim} 
+
+This fragment will store/visualize the content of the stream or the relation into a given table. 
+
+\section{Exchange Rules}
 
 This section presents complete descriptions of matching techniques and their implementations. 
 
@@ -649,6 +1181,7 @@ The final step is to add a filter for an \emph{output\_stream} stream produced d
     apply filter
 \end{verbatim}
 
+\section{Price Determination}
 
 
 \end{document}
