@@ -32,10 +32,7 @@ representation size, while selections are efficient in c-tables.
 A c-table  over
 a set  of variables is  a relational table\footnote{
 In the following, we use a multiset semantics for tables: Tables may
-contain duplicate tuples. Using $\in$ as an iterator over multisets in
-comprehension notation $\bagopen \cdot \mid \cdot \bagclose$ preserves
-duplicates. We use $\uplus$ to denote bag union, which can be thought of
-as list concatenation if the multisets are represented as unsorted lists.
+contain duplicate tuples. Sets transformations are defined in comprehension notation $\bagopen \cdot \mid \cdot \bagclose$ with $\in$ as an iterator.  Transformations preserve duplicates.  We use $\uplus$ to denote bag union, which can be thought of as list concatenation if the multisets are represented as unsorted lists.
 }
 extended by a  column for holding a \textit{local  condition} for each
 tuple.   A local condition  is a  Boolean combination  (using ``and'',

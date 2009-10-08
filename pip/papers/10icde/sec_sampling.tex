@@ -24,11 +24,13 @@ However, without scaling the number of samples taken based on $E[\chi_\phi]$, in
 
 \paragraph{Sampling using inverse CDFs}
 \label{subsec:icdf}
-As an alternative to sampling using the generator function, PIP can use the inverse-CDF of a distribution (if available).  The CDF increases monotonically, so to obtain samples constrained to $[lower, upper]$, we compute $CDF^{-1}(Y)$ where $Y$ is chosen uniformly  from the range $(CDF(lower), CDF(upper))$.  In the event that the inverse CDF is unavailable, it may be emulated via binary search on the CDF.
+As an alternative to generator functions, PIP can also use the inverse-transform method \cite{lawSimulation}.  If available, the distribution's inverse-CDF function is used to translate a uniform-random number in the range $[0,1]$ to the variable's distribution.  
+
+This technique makes constrained sampling more efficient.  If the uniform-random input is selected from the range $[CDF(a), CDF(b)]$, the generated value is guaranteed to fall in the range $[a, b]$.  Even if precise constraints can not be obtained, this technique still reduces the volume of the sampling space, increasing the probability of getting a useful sample.
 
 %In the event that the inverse CDF is available, but the CDF is not, this technique may still be used.  Instead of sampling from the range $(CDF(lower), CDF(upper))$, we sample $x \in (L,H)$ where $L$ is initialized to $0$, and $H$ is initialized to $1$.  If $CDF^{-1}(x) \leq lower$ we set $L = x$ and try again.  Similarly, if $CDF^{-1}(x)  \geq upper$ we set $H = x$ and try again.   In this way, PIP effectively learns the values of $CDF(lower)$ and $CDF(upper)$.  
 
-If precise bounds can be derived from the constraints on a given variable, this process guarantees that each sample generated will satisfy the constraint.  Even if only weak bounds are available, the process still provides a benefit.  By reducing the size of the sampling area, the probability of selecting a viable sample is still increased.  
+%If precise bounds can be derived from the constraints on a given variable, this process guarantees that each sample generated will satisfy the constraint.  Even if only weak bounds are available, the process still provides a benefit.  By reducing the size of the sampling area, the probability of selecting a viable sample is still increased.  
 
 \paragraph{Exploiting independence}
 \label{subsec:independence}
