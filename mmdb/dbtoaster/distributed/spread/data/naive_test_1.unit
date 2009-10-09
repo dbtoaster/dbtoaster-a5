@@ -18,6 +18,6 @@ template 1 R	A;B		Map 1[A]		4+B
 ############ Test Sequence
 
 # Simple Put
-put 5 <- 2 @ Alpha : Template 1 (2, 5)
+put 5 : Template 1 (2, 5) @ Alpha
 dump Alpha
 

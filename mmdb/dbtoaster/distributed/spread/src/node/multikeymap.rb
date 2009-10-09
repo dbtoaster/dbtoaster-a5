@@ -20,13 +20,14 @@ class MultiKeyMap
     nestedvar;
   end
   
-  def []=(params, val)
-    validateParams(params)
-    
+  def []=(key, val)
+    validateParams(key)
+
     nestedvar = @basemap;
     
-    lastindex = params.pop;
-    params.each do |param|
+    lastindex = key[-1];
+    
+    key.slice(0...-1) do |param|
       nestedvar[param] = Hash.new unless nestedvar.has_key? param;
       nestedvar = nestedvar[param];
     end

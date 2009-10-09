@@ -20,6 +20,8 @@ class UnitTestNode
     @transport = Thrift::ServerSocket.new(port);
     @transportFactory = Thrift::BufferedTransportFactory.new();
     @server = Thrift::SimpleServer.new(@processor, @transport, @transportFactory);
+    
+    @client = nil;
   end
   
   def start
@@ -46,15 +48,21 @@ class UnitTestNode
   def to_s
     @name.to_s
   end
+  
+  def client
+    unless @client then
+      puts "Establishing connection to Node: " + @name + " @ port " + @port.to_s + " ...";
+      @client = MapNode::Client.connect("localhost", @port);
+    end
+    @client;
+  end
 end
 
 ###################################################
 
 class UnitTestFetchStep
   def initialize(cmdid, source, destination, target)
-    @source, @destination, @cmdid = NodeID.new, NodeID.new, cmdid;
-      @source.host = "localhost";
-      @source.port = source.port;
+    @source, @destination, @cmdid = source, NodeID.new, cmdid;
       @destination.host = "localhost";
       @destination.port = destination.port;
     @target = target.collect do |t|
@@ -69,9 +77,7 @@ class UnitTestFetchStep
   end
   
   def fire
-    node = MapNodeInterface.new(@source.host, @source.port);
-    node.fetch(@target, @destination, @cmdid);
-    node.close();
+    @source.client.fetch(@target, @destination, @cmdid);
   end
   
   def to_s
@@ -86,28 +92,26 @@ end
 class UnitTestPutStep
   def initialize(command, nodeMap, templateMap)
     parsed = 
-      /([0-9]+) *<- *([0-9]+) *@ *([0-9a-zA-Z]+) *: * Template *([0-9]+) *\(([0-9a-zA-Z, ]*)\)/.match(command)
-    raise SpreadException.new("Invalid put step string: " + command) if parsed == nil || parsed.to_a.size != 6;
+      / *([0-9]+) * : *Template *([0-9]+) *\(([0-9a-zA-Z, ]*)\) *@ *([0-9a-zA-Z]+)/.match(command)
+    raise SpreadException.new("Invalid put step string: " + command) if parsed == nil || parsed.to_a.size != 5;
     parsed = parsed.to_a;
     parsed.shift; #first result is the overall match
     
-    @cmdid, @oldversion, @destport, @template, @params = 
-      parsed[0], parsed[1], nodeMap[parsed[2]].port.to_i, parsed[3], Hash.new;
+    @cmdid, @template, @params, @dest = 
+      parsed[0], parsed[1], Hash.new, nodeMap[parsed[3]];
     
     templateParams = templateMap[@template.to_i].paramlist.clone;
-    parsed[4].split(/, */).each do |param|
+    parsed[2].split(/, */).each do |param|
       @params[templateParams.shift] = param unless templateParams.size <= 0;
     end
   end
   
   def fire
-    node = MapNodeInterface.new("localhost", @destport);
-    node.put(@cmdid, @template, @oldversion, @params);
-    node.close();
+    @dest.client.put(@cmdid.to_i, @template.to_i, PutParams.make(@params));
   end
   
   def to_s
-    @cmdid.to_s + " <- " + @oldversion.to_s + " @ [localhost:" + @destport.to_s + "] : Template " + 
+    @cmdid.to_s + " @ [localhost:" + @destport.to_s + "] : Template " + 
       @template.to_s + "(" + 
       @params.keys.collect do |key| key.to_s + ":" + @params[key].to_s end.join(", ") + ")";
   end
@@ -120,9 +124,7 @@ class UnitTestDumpStep
   
   def fire
     @nodes.each do |unitNode|
-      node = MapNodeInterface.new("localhost", unitNode.port);
-      puts node.dump;
-      node.close();
+      puts unitNode.client.dump;
     end
   end
   
@@ -228,8 +230,14 @@ class UnitTestHarness
   
   def run()
     @testcmds.each do |cmd|
-      puts "Executing: " + cmd.to_s;
-      cmd.fire;
+      puts "Sending Command: " + cmd.to_s;
+      begin
+        cmd.fire;
+      rescue Exception => e;
+        puts "Error while executing command (" + e.to_s + "); stopping run";
+        puts e.backtrace.join("\n");
+        break;
+      end
     end
   end
   

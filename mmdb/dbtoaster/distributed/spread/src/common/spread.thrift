@@ -11,8 +11,6 @@ typedef i64 Version
 struct Entry {
   1:           MapID      source,
   2:           list<i64>  key,
-  3:           Version    version,
-  4: optional  NodeID     node
 }
 
 typedef map<Entry,double> GetResult
@@ -32,19 +30,19 @@ exception SpreadException {
   1: string why
 }
 
+struct PutParams {
+  1: list<PutField> params
+}
+
 service MapNode {
   oneway void put(      1: Version         id,
                         2: i64             template,  //the put template ID (see the map file)
-                        3: Version         oldVersion,
-                        4: list<PutField>  params     //0-based; The first entry in the list is param #0
+                        3: PutParams       params
                         ),
   oneway void massput(  1: Version         id,
                         2: i64             template,
-                        3: list<i64>       partitions,
-                        4: Version         oldVersion,
-                        5: i64             expectedGets,
-                        6: list<PutField>  params,
-                        7: list<Entry>     history    //Individual puts that this put is dependent on
+                        3: i64             expectedGets,
+                        4: PutParams       params,
                         ),
   
   GetResult get       ( 1: list<Entry>   target

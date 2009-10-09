@@ -60,7 +60,7 @@ class RemoteCommitNotification
   
   def checkReady
     if (!@holding) && (@count <= 0) then
-      peer = MapNodeInterface.new(@destination.host, @destination.port);
+      peer = MapNode.connect(@destination.host, @destination.port);
       peer.pushget(@entries, @cmdid);
       peer.close();
       true;
@@ -71,16 +71,28 @@ end
 ###################################################
 
 class MassPutDiscoveryMultiplexer
-  def initialize
+  def initialize(expectedGets)
     @records = Array.new;
+    @expectedGets = expectedGets;
   end
   
   def addRecord(record)
+    if @expectedGets <= 0 then
+      record.complete;
+    end
     @records.push(record)
   end
   
   def discover(entry, value)
     @records.each do |record| record.discover(entry, value) end;
+  end
+  
+  def finishMessage
+    expectedGets -= 1;
+    if @records != nil &&  expectedGets <= 0 then
+      @records.each do |record| record.complete; end
+      @records = nil;
+    end
   end
 end
 
@@ -116,7 +128,7 @@ class MapNodeHandler
     puts ("Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s );
   end
   
-  def dump
+  def dump()
     @maps.values.collect do |map|
       map.collect do |partition|
         "partition" + partition.to_s + "\n" + partition.dump;
@@ -126,28 +138,32 @@ class MapNodeHandler
   
   ############# Basic Remote Accessors
 
-  def createValuation(template, version, paramList)
+  def createValuation(template, paramList)
     if ! @templates.has_key? template then 
       raise SpreadException.new("Unknown put template: " + template); 
     end
     
-    valuation = TemplateValuation.new(@templates[template]);
-    paramList.each do |param|
-      valuation.params[param.name] = 
-        case param.type
-          when PutFieldType::VALUE then param.value;
-          when PutFieldType::ENTRY then param.entry;
-        end
-    end
+    valuation = TemplateValuation.new(@templates[template], paramList);
     
-    valuation.prepare(@templates[template].target.instantiate(version, valuation.params).freeze)
+    #valuation.prepare(@templates[template].target.instantiate(version, valuation.params).freeze)
     
     valuation;    
   end
   
   def installDiscovery(id, record)
-    #initialize the template with values we can obtain locally
-    record.discoverLocal(self);
+    # initialize the template with values we can obtain locally
+    # we might end up changing required inside the loop, so we clone it first.
+    record.required.clone.each do |req|
+      begin
+        # If the value is known, then get() will fire immediately.
+        # in this case, get() will call discover, which will in turn remove
+        # the requirement from @required.
+        # Note also that discover will fire the callbacks if it is necessary to do so.  
+        findPartition(req.source, req.key).get(req, CommitNotification.new(self));
+      rescue Thrift::Exception => e;
+        # this just means that the partition is unavailable.
+      end
+    end
     
     #initialize the template with values we've already received
     if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
@@ -155,6 +171,7 @@ class MapNodeHandler
         response.each_pair do |t, v|
           record.discover(t,v);
         end
+        record.finishMessage;
       end
     end
     
@@ -165,19 +182,19 @@ class MapNodeHandler
   end
 
 
-  def put(id, template, oldVersion, paramList)
-    valuation = createValuation(template, oldVersion, paramList);
-    target = @templates[template].target.instantiate(id, valuation.params).freeze;
-    record = findPartition(target.source, target.key).insert(target, valuation);
+  def put(id, template, params)
+    valuation = createValuation(template, params.decipher);
+    target = @templates[template].target.instantiate(valuation.params).freeze;
+    record = findPartition(target.source, target.key).insert(target, id, valuation);
     installDiscovery(id, record);
   end
   
-  def massput(id, template, partitions, oldVersion, expectedGets, params, history)
-    valuation = createValuation(template, oldVersion, params);
-    discovery = MassPutDiscoveryMultiplexer.new;
+  def massput(id, template, expectedGets, params)
+    valuation = createValuation(template, params.decipher);
+    discovery = MassPutDiscoveryMultiplexer.new(expectedGets);
     partitions.each do |partitionKey|
       record = 
-        findPartition(template.target.source, partitionKey).massinsert(id, oldVersion, expectedGets, template, history);
+        findPartition(template.target.source, partitionKey).massInsert(id, valuation);
       discovery.addRecord(record)
     end
     installDiscovery(id, discovery);
@@ -203,10 +220,10 @@ class MapNodeHandler
       );
       target.each do |t|
         puts "Fetch: " + t.source.to_i.to_s + "[" + t.key.to_s + "(" + t.version.to_s + ")]";
-        # register will fire the trigger if the value is already defined
+        # get() will fire the trigger if the value is already defined
         # the actual message will not be sent until all requests in this 
         # command can be fulfilled.
-        partition = findPartition(t.source, t.key).register(t, request);
+        partition = findPartition(t.source, t.key).get(t, request);
       end
     rescue Thrift::Exception => ex
       puts "Error: " + ex.why;
@@ -235,6 +252,7 @@ class MapNodeHandler
       result.each_pair do |target, value|
         @cmdcallbacks[cmdid].discover(target, value)
       end
+      @cmdcallbacks[cmdid].finishMessage;
     end
   end
   
@@ -250,92 +268,6 @@ class MapNodeHandler
         when "template" then cmd.shift; createPutTemplate(cmd.shift, cmd.join(" "));
       end
     end
-  end
-  
-end
-
-###################################################
-
-class MapNodeInterface
-  
-  def initialize(host, port=52982)
-    @port = port;
-    @transport = Thrift::BufferedTransport.new(Thrift::Socket.new(host, port))
-    @protocol = Thrift::BinaryProtocol.new(@transport)
-    @client = MapNode::Client.new(@protocol)
-    @getrequest = Array.new;
-    @transport.open();
-  end
-    
-  def close
-    @transport.close;
-  end
-  
-  def dump
-    @client.dump;
-  end
-  
-  def makeEntry(source, key, version, node = nil)
-    entry = Entry.new;
-    entry.source = source;
-    entry.key = key;
-    entry.version = version;
-    entry;
-  end
-  
-  ############# GET
-  
-  def queueGet(source, key, version, node = nil)
-    @getrequest.push(makeEntry(source, key, version, node));
-  end
-  
-  def issueGet
-    if @getrequest.size > 0 then request = @getrequest;
-                                 @getrequest = Array.new
-                                 @client.get(request);
-                            else Hash.new;
-    end
-  end
-  
-  def get(source, key, version)
-    @getrequest = Array.new
-    queueGet(source, key, version);
-    issueGet();
-  end
-  
-  ############# PUT
-  
-  def put(version, template, oldversion, params)
-    convertedParams = 
-      params.keys.collect do |key|
-        field = PutField.new()
-        field.name = key
-        field.type = 
-          case params[key]
-            when Numeric, String then 
-              field.value = params[key].to_f;
-              puts "Value: " + key + " = " + params[key].to_f.to_s;
-              PutFieldType::VALUE;
-            when Entry then
-              field.entry = params[key];
-              puts "Entry: " + key + " = " + params[key].to_s;
-              PutFieldType::ENTRY;
-            else 
-              raise SpreadException.new("Unknown parameter type: " + params[key].class.to_s);
-          end;
-        field;
-      end
-    @client.put(version.to_i, template.to_i, oldversion.to_i, convertedParams);
-  end
-  
-  ############# Asynch Ops
-  
-  def pushget(result, cmdid)
-    @client.pushget(result, cmdid)
-  end
-  
-  def fetch(target, destination, cmdid)
-    @client.fetch(target, destination, cmdid);
   end
   
 end

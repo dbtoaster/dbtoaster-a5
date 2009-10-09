@@ -5,7 +5,7 @@ require 'map_node';
 require 'spread_types';
 require 'node';
 
-client = MapNodeInterface.new('localhost');
+client = MapNode::Client.connect('localhost');
 
 puts "======== Client Dump ========";
 puts client.dump();

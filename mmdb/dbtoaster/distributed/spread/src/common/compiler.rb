@@ -61,10 +61,10 @@ class TemplateEntry
     end
   end
   
-  def instantiate(version, params = Hash.new)
-    entry = Entry.new;
-    raise SpreadException.new("Instantiate expects a parameter hash") unless params.is_a? Hash;
-    entry.key = @keys.collect do |key|
+  def instantiate(params = Hash.new)
+    Entry.make(
+      @source, 
+      @keys.collect do |key|
         case key
           when String then 
             raise SpreadException.new("Converting to entry with uninstantiated parameter: " + key.to_s) unless params.has_key? key;
@@ -72,9 +72,7 @@ class TemplateEntry
           else key;
         end
       end
-    entry.source = @source;
-    entry.version = version;
-    entry;
+      );
   end
   
   def to_s
@@ -145,11 +143,17 @@ class TemplateValuation
   end
   
   def value(key)
-    case param(key)
-      when nil           then raise SpreadException.new("Converting to float with undefined parameter: " + key.to_s);
-      when TemplateEntry then entry(param(key).instantiate(@params)).to_f;
-      when Entry         then entry(param(key)).to_f
-      else                    param(key).to_f;
+    case key
+      when String then
+        case param(key)
+          when nil           then raise SpreadException.new("Converting to float with undefined parameter: " + key.to_s);
+          when TemplateEntry then entry(param(key).instantiate(@params)).to_f;
+          when Entry         then entry(param(key)).to_f
+          else                    param(key).to_f;
+        end
+      when Numeric then
+        key.to_f
+      else raise SpreadException.new("Attempting to evaluate unknown variable type: " + key.class.to_s + " = " + key.to_s);
     end
   end
   
@@ -191,7 +195,7 @@ class TemplateExpression
       else
         TemplateExpression.new(
           :val,
-          if tokenizer.last.to_f.to_s == tokenizer.last.to_s then tokenizer.last.to_f else tokenizer.last.to_s end
+          if tokenizer.last.is_number? then tokenizer.last.to_f else tokenizer.last.to_s end
         );
     end
   end
@@ -207,10 +211,10 @@ class TemplateExpression
   
   def to_f(params = TemplateValuation.new)
     case @op
-      when :plus then @left.to_f(params) + @right.to_s(params);
-      when :mult then @left.to_f(params) * @right.to_s(params);
-      when :sub  then @left.to_f(params) - @right.to_s(params);
-      when :div  then @left.to_f(params) / @right.to_s(params);
+      when :plus then @left.to_f(params) + @right.to_f(params);
+      when :mult then @left.to_f(params) * @right.to_f(params);
+      when :sub  then @left.to_f(params) - @right.to_f(params);
+      when :div  then @left.to_f(params) / @right.to_f(params);
       when :val  then 
         case @left
           when String then params.value(@left).to_f
@@ -348,9 +352,9 @@ class UpdateTemplate
   
   def to_f(params = TemplateValuation.new)
     if @conditions.to_b(params) then
-      @expression.to_f(params) + @target.to_f(params)
+      @expression.to_f(params)
     else
-      @target.to_f(params)
+      0
     end
   end
   

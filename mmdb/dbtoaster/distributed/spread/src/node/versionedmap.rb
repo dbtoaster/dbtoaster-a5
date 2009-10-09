@@ -4,55 +4,38 @@ require 'map_node';
 require 'spread_types';
 require 'compiler';
 require 'multikeymap';
+require 'ok_mixins';
 
 ###################################################
 
-class ForeachPutRecord
-  attr_reader :version, :lastversion, :template, :next, :prev, :partition;
+class MassPutRecord
+  attr_reader :version, :template, :next, :prev;
   attr_writer :next, :prev;
   
-  def initialize(version, lastversion, expectedgets, template, prereqs, partition)
-    @version, @lastversion, @expectedgets, @template, @partition = version, lastversion, expectedgets, template, partition;
-    if prereqs.is_a? Array then
-      @prereqs = Set.new;
-      prereqs.each do |entry| 
-        @prereqs.add(entry)
-      end
-    else
-      @prereqs = prereqs.clone;
-    end
+  def initialize(version, template, partition)
+    @version, @template, @partition = 
+      version, template, partition;
+    
     @next, @prev = nil, nil;
     @callbacks = Hash.new;
+    @getsPending = true;
   end
   
-  def register(target, value)
-    @callbacks[target] = value;
-  end
-  
-  def receiveMessage
-    @expectedgets -= 1 unless @expectedgets <= 0;
-    checkready();
-  end
-  
-  def fire(entry, value)
-    @prereqs.delete(entry)
-    checkReady();
-  end
-  
-  def find(version)
-    if @version >= version then self;
-    elsif @next == nil then nil;
-    else @next.find(version)
+  def register(key, callback, exemptions = Set.new)
+    raise SpreadException.new("MassPutRecord.register on a completed massput record") unless @callbacks != nil;
+    if @callbacks.has_key? target then
+      @callbacks[key].push([callback, exemptions]);
+    else
+      @callbacks[key] = [[callback, exemptions]];
     end
+  end
+  
+  def last
+    if @next then @next.last else self end;
   end
   
   def pending
-    (@expectedgets > 0) && 
-      @prereqs.empty? && 
-        ((@lastversion == 0) ||
-          ((@prev != nil) && (@prev.version != @lastversion))
-        ) && 
-      @prev.pending;
+    (@getsPending) || ((@prev != nil) && (@prev.pending));
   end
   
   def ready
@@ -60,127 +43,96 @@ class ForeachPutRecord
   end
   
   def add(record)
-    if record.version > @version then
-      if (@next == nil) || (@next.version < record.version) then
-        record.next = @next;
-        record.prev = self;
-        @next.prev = record;
-        @next = record;
-        @next.next.checkReady;
-      else
-        @next.add(record)
-      end
-      self;
-    else
-      record.next = self;
-      @prev = record;
-      checkReady;
-      record;
+    if @next then @next.add(record);
+             else @next = record; record.prev = self;
     end
   end
   
-  def collapse
-    @prev.prev = nil unless @prev == nil;
-    if ready then
-      @next.collapse
-    else
-      if @prev == nil then 
-        self;
-      else 
-        @prev.prev = nil;
-        @prev.lastversion = 0;
-        @prev; 
-      end
-    end
+  def complete
+    @getsPending = false;
+    checkReady;
   end
   
   private
   
   def checkReady
-    if ready then
-      @callbacks.each_pair do |target, callback|
-        @partition.register(target, callback);
+    if @callbacks != nil && ready then
+      @callbacks.each_pair do |target, cblist|
+        cblist.each do |callback|
+          @partition.get(target, callback[0], @version, callback[1]);
+        end
       end
+      
+      # If we've gotten this far, we've committed everything and everything is in order.  
+      # We can start deleting older mass records.
+      @partition.collapseMassRecordsTo(self);
+      
+      # This might potentially complete the next mass put.
+      @next.checkReady if @next != null;
+      
+      # And ensure that we never get called again.
+      @callbacks = nil;
     end
-    @callbacks = Hash.new;
   end
 end
 
 ###################################################
 
-class CommitRecord
-  attr_reader :target, :value, :next;
-  attr_writer :next;
+class PutRecord
+  attr_reader :target, :version, :required, :value, :next;
+  attr_writer :next, :prev;
   
-  def initialize(target, value = nil)
-    @target, @value = target, value;
-    @next = nil;
+  def initialize(target, version, value, prev = nil)
+    @target, @version, @value, @callbacks = target.clone, version.to_i, value, Array.new;
+    @next, @prev = nil, prev;
+    
     # If the value is a MapEquation, we need to evaluate 
-    @required = Array.new;
-    if @value.is_a? TemplateValuation then
-      begin
-        @value = @value.to_f # throws an exception if it fails.
-      rescue Thrift::Exception => ex
-        #if we're unable to evaluate it straight up, we need to wait.
-        @required = @value.entries.keys;
-      end
-    end
-    #puts "Created record requiring entries: " + @required.join(", ");
-    @callbacks = Array.new;
-  end
-  
-  
-  # Find operates in two modes:
-  # Under strict mode (lax = false), only the exact version is returned.  If 
-  #   the exact version does not exist, we return nil.
-  # Under lax mode, we return the most recent version lower than the target
-  #   version.
-  def find(target, lax=false)
-    if @target.version >= target.version then
-      if @target.version == target.version then
-        self;
-      else
-        nil; # this only happens if we get a request for a value that has been mass-put but not changed.
-      end
-    elsif @next && @next.target.version <= target.version then
-      @next.find(target, value);
+    @required = 
+      case @value
+        when TemplateValuation then @value.entries.keys;
+        when Numeric then Array.new;
+        else raise SpreadException.new("Creating PutRecord with value of unknown type: " + @value.class.to_s);
+      end;
+    
+    unless @prev == nil then
+      @prev.register(self); # this will lead to firing callbacks once @prev becomes ready
     else
-      if lax then self else nil end;
+      self.fireCallbacks;
     end
   end
   
-  def insert(target, value)
-    if @target.version >= target.version then
-      if @target.version == target.version then
-        @value = value;
-        self;
-      else
-        nil; # this should only happen if we get an insert past the deletion boundary
-      end
-    elsif @next && @next.target.version <= target.version then
-      @next.find(target, value);
-    else
-      tmp = @next;
-      @next = CommitRecord.new(target, value);
-      @next.next = tmp;
-      @next;
+  def last
+    if @next then @next.last else self end;
+  end
+  
+  def find(version)
+    if @version > version then @prev
+    elsif @version < version && @next != nil then @next.find(version)
+    else self;
+    end
+  end
+  
+  def insert(version, value)
+    insertpoint = find(version);
+    if insertpoint.version == version then
+      insertpoint.value = value;
+      insertpoint;
+    else 
+      newrec = PutRecord.new(@target, version, value, self);
+      newrec.next = insertpoint.next;
+      insertpoint.next = newrec;
+      newrec;
     end
   end
   
   def to_s
-    if (@next == nil) || @next.pending then 
-      "value " + 
-        @target.source.to_s + " " + 
-        @target.key.to_s + " " + 
-        @target.version.to_s + " " + 
-        @value.to_s;
-    else 
-      @next.to_s;
-    end
+    "(v" + @version.to_s + " = " + @value.to_s + "; " + 
+      if ready then "ready" else "pending" end + ")" +
+      if @next then ", " + @next.to_s else "" end;
   end
     
   def pending
-    (@required.size > 0) && (@value != nil)
+    @required.size > 0 || (@prev != nil && @prev.pending);
   end
   
   def ready
@@ -201,28 +153,23 @@ class CommitRecord
     puts "Discovered: " + entry.to_s + " = " + value.to_s;
     @required.delete(entry)
     @value.discover(entry, value) if @value.is_a? TemplateValuation;
+  end
+  
+  # CommitRecord can act as a pseudo-callback; This callback fires when
+  # the previous record is ready.
+  def fire(entry, value)
     fireCallbacks;
   end
   
-  def discoverLocal(handler)
-    # To make discoverLocal reentrant with discover, we operate off a copy of @required
-    @required.clone.each do |req|
-      begin
-        # If the value is known, then register will fire immediately.
-        # in this case, register will call discover, which will in turn remove
-        # the requirement from @required.
-        # Note also that discover will fire the callbacks if it is necessary to do so.  
-        handler.findPartition(req.source, req.key).register(req, CommitNotification.new(self));
-      rescue Thrift::Exception => e;
-      end
-    end
+  def finishMessage
+    fireCallbacks;
   end
   
   def fireCallbacks
     return unless ready;
     
-    puts "firing " + @value.to_s + "; " + @callbacks.size.to_s + " callbacks";
-    @value = @value.to_f;
+    puts "firing " + @target.to_s + "v" + @version.to_s + "; " + @callbacks.size.to_s + " callbacks";
+    @value = @value.to_f + if @prev.nil? then 0 else @prev.value.to_f end;
     @callbacks.each do |cb|
       cb.fire(@target, @value);
     end
@@ -235,7 +182,7 @@ end
 ###################################################
 
 class MapPartition
-  attr_reader :mapid, :start, :range
+  attr_reader :mapid, :start, :range;
   
   # A MapPartition is a chunk of a map (ID: mapid) holding keys in the
   # range [start, start+range).  Values are stored versioned; 
@@ -249,8 +196,6 @@ class MapPartition
     
     @data = MultiKeyMap.new(@start.size);
     @massputrecords = nil;
-    
-    @unreceivedputs = Hash.new;
   end
   
   def contains?(key)
@@ -263,131 +208,111 @@ class MapPartition
   end
   
   # The semantics of GET are a little wonky for this map due to 
-  # versioning.  Specifically, if the request is for an unknown version,
-  # an incomplete version, or a version that has already been discarded,
-  # the request will fail.  In theory, we could hold up processing 
+  # versioning.  Specifically, if the request is for an incomplete 
+  # version, the request will fail.  In theory, we could hold up processing 
   # until the version becomes available (assuming it does happen), but
   # this might tie up the worker thread.  If the data is available when
-  # the request comes in, we can return immediately.  If not, then we 
-  # register a callback (if we're using asynch get) or fail immediately
-  # (otherwise).  
+  # the request comes in, we can return immediately.  If an asynch get
+  # is required, then pass a callback parameter.
   
-  # Per-map versions also make things a little wonky.  Map versions are
-  # treated as barriers.  A map doesn't commit until every independent 
-  # update prior to it has committed.  Among other things, this means 
-  # that when we do an update, we can find the first map with a higher
-  # version number that has been committed and be sure that the highest 
-  # known prior version is correct.  Failing that, we need to rely on 
-  # the normal versioning scheme.
-  def get(target)
-    
-    prevmassput = if @massputrecords != nil then @massputrecords.find(target.version) else nil end;
-    prevok = if prevmassput != nil then prevmassput.ready else nil end;
-    
-    val = @data[target.key];
-    if val == nil then
-      # If the object isn't defined, we assume version 0 => 0.
-      # on the other hand, if we've got a committed map, then we know the value hasn't been modified.
-      if target.version > 0 || !prevok then raise SpreadException.new("Request for an unknown object"); end
-      return 0;
-    end
-    val = val.find(target, prevok);
-    
-    if val.pending
-      raise SpreadException.new("Request for incomplete version");
-    end
-    
-    return val.value.to_f;
-  end
-  
-  
-  def register(target, callback)
-    # There are several factors of interest
-    # 1) Do we know about the object
-    # 2) Do we know about the desired version
-    # 3) Has the desired version been committed
-    # 
-    # If the answer to all of these is yes, then we can act immediately and 
-    # respond to the callback.  As long as (1) is true, then CommitRecord.find
-    # will return a valid record for the specified target version.  Simply,
-    # this means that we haven't gotten all of the gets (or the put) for that
-    # put.  Even if (1) is false, that just means we need to create the initial
-    # record ourselves.
-    #
-    # Note also that the answer to these questions can be changed by per-map
-    # versioning.  Specifically, Is the requested version less than or equal to 
-    # one that has already committed?  If so, we are free to use the last known 
-    # value for the key in question (starting at val = 0 for version 0).
-    #
-    # If this is not true, the request is for a put that has not arrived yet.  
-    # Unfortunately, we have no way to know at this point whether the put is 
-    # going to be an individual, or a map-wide put.  Thus, we defer installing 
-    # the callback until we receive the put corresponding  to the particular 
-    # version or the next massput.
-    
-    # We first check to see if a massput exists
-    massrecord = if @massputrecords == nil then nil else @massputrecords.find(target.version) end;
+  # The last two parameters deserve a little extra discussion.  Both of 
+  # these parameters are used exclusively by the massput commit process.
+  # We don't know which values a massput writes to until it commits, 
+  # callbacks are deferred until the massput actually does commit.  This
+  # means that we need to be able to re-issue the query for a version that
+  # has occurred at some point in the past.  That said, it's possible that
+  # a wildcard get will include both a pending massput's results AND a set
+  # of subsequent individual updates.  In this case, we record the newer
+  # updates and exclude them from the re-issued mass-put.
+  def get(target, callback = nil, version = nil, exemptions = Set.new)
 
-    # Next, we see if the request is a multitarget request
-    if target.key.index(-1) == nil then 
-      # No -1?  Good, all keys in the target are defined... it's a single-target request.
+    # if version != nil then we know that the relevant massput has committed, and
+    # we can safely ignore the mass put records.
+    lastmassrecord =
+      if @massputrecords != nil || version != nil then
+        if version == nil then @massputrecords.last else @massputrecords.find(version) end;
+      else nil end;
+    
+    if target.key.has_wildcards? then
+      raise SpreadException("Multitarget requests with no callback are unsupported") unless callback != nil;
+      # This is a multitarget request.
       
-      #version 0 is always 0.
-      if target.version <= 0 then callback.fire(target, 0); return; end;
-      
-      record = @data[target.key];
-      record = record.find(target, massrecord == nil || massrecord.ready) unless record == nil;
-      
-      if record == nil then
-        if massrecord == nil then 
-          # if the corresponding put hasn't arrived yet, we defer installation until it has.
-          @unreceivedputs[target.version] = Array.new unless @unreceivedputs.has_key? target.version; 
-          @unreceivedputs[target.version].push([target, callback]);
-        elsif massrecord.ready
-          # if we don't have a matching record, but we do have a more recent committed mass put, 
-          # then the value has never been modified
-          calback.fire(target, 0); 
-          return; 
-        else
-          # finally, it's possible that the massput hasn't committed yet (for whatever reason)
-          # in this case, defer the callback until the mass put does commit.  
-          massrecord.register(target, callback)
+      if lastmassrecord != nil && lastmassrecord.pending then
+        # Parts of the request may be covered by a pending massput.
+        # That said, parts may NOT be covered.  Let's find those first.
+        
+        # if we're working with massput records, we know we're not working with a re-issued query
+        exemptions = Set.new;
+        @data.scan(target.key) do |key, value|
+          value = value.last;
+          if value.version >= lastmassrecord.version then 
+            value.register(callback);
+            exemptions.add(key);
+          end
         end
-      elsif record.pending then
-        record.register(callback);
+        
+        lastmassrecord.register(target, callback, exemptions);
       else
-        callback.fire(target, record.value);
+        # if the last massput has committed, OR there is no last massput, we just use what we have.
+        @data.scan(target.key) do |key, value|
+          next if exemptions.include? key; # check the skiplist
+          value = if version == nil then value.last else value.find(version) end;
+          value.register(callback);
+        end
       end
     else
-      # There's at least one -1 in the target.  This is a multitarget request.
+      # This is a single-target request  
+
+      return if exemptions.include? target;  # check the skiplist first
       
-      # To simplify our lives here, we're going to assume that the switch sends us a separate entry for 
-      # each key in its recent history.  Since we use mass-put records to discard old versions anyway...
-      # this seems like the thing to do.  This, in turn, means that a multi-target request is guaranteed
-      # to have a mass-put entry assigned to it.  This in turn, means that there are three possibilities
-      
-      if massrecord == nil then
-        # if the corresponding put hasn't arrived yet, we defer installation until it has.
-        @unreceivedputs[target.version] = Array.new unless @unreceivedputs.has_key? target.version; 
-        @unreceivedputs[target.version].push = [target, callback];
-      elsif massrecord.ready
-        # go go go
-        callback.hold;
-        @data.scan(target) do |key, value|
-          callback.fire(key, value);
-        end
-        callback.release;
+      lastrecord = @data[target.key];
+      if version == nil then
+        lastrecord = lastrecord.last unless lastrecord == nil;
       else
-        # finally, it's possible that the massput hasn't committed yet (for whatever reason)
-        # in this case, defer the callback until the mass put does commit.  
-        massrecord.register(target, callback)
+        lastrecord = lastrecord.find(version) unless lastrecord == nil;
       end
       
+      value = 
+        if lastrecord == nil then
+          if lastmassrecord == nil || lastmassrecord.ready then
+            # Case 1: We haven't gotten ANY record of this put whatsoever.  The value's never been written
+            # Case 2: This value has never been updated as the result of a mass put, thus use the default.
+            0
+          else
+            # This value may be part of a pending mass put.  Defer the callback until the put finishes.
+            lastmassrecord.register(target, callback) unless callback == nil;
+            nil;
+          end
+        elsif lastmassrecord == nil || lastmassrecord.version < lastrecord.version then
+          if lastrecord.ready then
+            # This value is not part of a newer mass put and has been committed.  Return it.
+            # (alternatively, 
+            lastrecord.value.to_f;
+          else
+            # This value is not part of a newer mass put but has not been committed.  Register the callback.
+            lastrecord.register(callback) unless callback == nil;
+            nil;
+          end
+        elsif lastmassrecord.ready then
+          # This record is part of a newer mass put... but the put has committed.  Use the old value
+          lastrecord.value.to_f;
+        else
+          # This record is part of a newer, uncommitted mass put.  Defer until we know if the put triggers a change.
+          lastmassrecord.register(target, callback) unless callback == nil;
+          nil;
+        end
+        
+      unless value == nil && callback == nil then
+        callback.fire(target, value);
+      else
+        raise SpreadException.new("Request for incomplete version") unless value != nil;
+      end
+      return value;
     end
   end
   
-  def massinsert(version, lastversion, expectedgets, template, prereqs)
-    record = ForeachPutRecord.new(version, lastversion, expectedgets, template, prereqs, self);
+  def massInsert(version, template)
+    record = MassPutRecord.new(version, template, self);
     if @massputrecords == nil then 
       @massputrecords = record;
     else
@@ -395,30 +320,17 @@ class MapPartition
     end
   end
   
-  def insert(target, value)
+  def insert(target, version, value)
     if @data.has_key? target.key then
-      record = @data[target.key].insert(target, value)
+      record = @data[target.key].insert(version, value)
     else
-      record = @data[target.key] = CommitRecord.new(target, value);
-    end
-    if @unreceivedputs.has_key? target.version then
-      @unreceivedputs.each [target.version] do |targetCallback|
-        register(targetCallback[0], targetCallback[1]);
-      end
+      record = @data[target.key] = PutRecord.new(target, version, value);
     end
     record;
   end
   
   def set(var, vers, val)
-    target = Entry.new;
-      target.source = @mapid;
-      target.key = [var.to_i];
-      target.version = [vers.to_i];
-    insert(target, val.to_f)
-  end
-  
-  def makeVersion(version)
-    massInset(version)
+    insert(Entry.make(@mapid, [var.to_i]), vers, val.to_f)
   end
   
   def to_s
@@ -430,7 +342,7 @@ class MapPartition
   
   def dump
     @data.values.collect do |entry|
-      entry.to_s
+      "Map " + entry.target.to_s + " : " + entry.to_s
     end.join "\n";
   end
   
