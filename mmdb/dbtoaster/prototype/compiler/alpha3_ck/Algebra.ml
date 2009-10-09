@@ -185,7 +185,7 @@ let constraints_only (r: relalg_t): bool =
 
 exception Assert0Exception (* should never be reached *)
 
-(* auxiliary: complement a constraint-only relalg expressions *)
+(* auxiliary: complement a constraint-only relalg expression. *)
 let complement relalg =
    let leaff lf =
       match lf with
@@ -380,11 +380,11 @@ struct
         (List.map (fun x -> TermEdge x) (TermSemiRing.prod_list f))
       @ (List.map (fun x -> RelEdge x) (monomial_as_hypergraph r))
 
-   let get_nodes hyperedge =
-      match hyperedge with RelEdge(r)  -> relalg_vars r
-                         | TermEdge(f) -> term_vars f
-
    let factorize hypergraph =
+      let get_nodes hyperedge =
+         match hyperedge with RelEdge(r)  -> relalg_vars r
+                            | TermEdge(f) -> term_vars f
+      in
       Util.HyperGraph.connected_components get_nodes hypergraph
 
    let extract_rel_atoms l =
@@ -428,7 +428,10 @@ let rec roly_poly (ma: term_t) : term_t =
       | Var(_)       -> TermSemiRing.mk_val(lf)
       | AggSum(f, r) ->
          (
-            let r2 = RelSemiRing.apply_to_leaves r_leaf_f r in
+            (* recursively normalize contents of complex terms in
+               atomic constraints. *)
+            let r2 = RelSemiRing.apply_to_leaves r_leaf_f r
+            in
             let r_monomials = monomials r2 in
             let f_monomials = TermSemiRing.sum_list (roly_poly f)
             in
@@ -545,21 +548,19 @@ let rec extract_aggregates term =
 
 
 
-
+(* pseudocode output of relalg expressions and terms. *)
 let rec relalg_as_string (relalg: relalg_t)
                          (theta: (term_t * string) list): string =
    let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
    let prod_f l = (Util.string_of_list " and " l) in
+   let constraint_as_string c x y =
+            (term_as_string x theta) ^ c ^ (term_as_string y theta) in
    let leaf_f lf =
       match lf with
-         AtomicConstraint(Eq, x, y)  ->
-            (term_as_string x theta) ^ "="  ^ (term_as_string y theta)
-       | AtomicConstraint(Lt, x, y)  ->
-            (term_as_string x theta) ^ "<"  ^ (term_as_string y theta)
-       | AtomicConstraint(Le, x, y)  ->
-            (term_as_string x theta) ^ "<=" ^ (term_as_string y theta)
-       | AtomicConstraint(Neq, x, y) ->
-            (term_as_string x theta) ^ "<>" ^ (term_as_string y theta)
+         AtomicConstraint(Eq, x, y)  -> constraint_as_string "="  x y
+       | AtomicConstraint(Lt, x, y)  -> constraint_as_string "<"  x y
+       | AtomicConstraint(Le, x, y)  -> constraint_as_string "<=" x y
+       | AtomicConstraint(Neq, x, y) -> constraint_as_string "<>" x y
        | Empty -> "false"
        | ConstantNullarySingleton -> "true"
        | Rel(r, sch) -> r^"("^(Util.string_of_list ", " sch)^")"
@@ -580,9 +581,12 @@ and term_as_string (m: term_t)
     | Var(x)      -> x
     | AggSum(f,r) ->
       if (constraints_only r) then
+         (* this is used even if the AtomicConstraints contain aggregate
+            terms. *)
          "(if " ^ (relalg_as_string r aggsum_theta) ^ " then " ^
                   (term_as_string   f aggsum_theta) ^ " else 0)"
       else
+         (* replace aggregate term by map access *)
          Util.apply aggsum_theta
                     ("AggSum("^(term_as_string   f aggsum_theta)^", "
                               ^(relalg_as_string r aggsum_theta)^")")

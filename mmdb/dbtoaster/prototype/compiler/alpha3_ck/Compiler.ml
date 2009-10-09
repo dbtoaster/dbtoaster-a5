@@ -4,36 +4,42 @@
 let compile_delta_for_rel (reln:   string)
                           (relsch: string list)
                           (mapn:   string)         (* map name *)
-                          (params: string list)
+                          (params: string list)    (* params of the map *)
                           (bigsum_vars: string list)
                           (term: Algebra.term_t) =
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
       x_mR_A1, ..., x_mR_Ak. *)
    let bound_vars = (List.map (fun x -> "x_"^mapn^reln^"_"^x) relsch)
+   (* so bound_vars is the list of parameters to the trigger, while
+      params is the list of parameters to the map. *)
    in
    (* compute the delta and simplify. *)
    let s = List.filter (fun (_, t) -> t <> Algebra.term_zero)
               (Algebra.simplify (Algebra.term_delta reln bound_vars term)
                             (bound_vars @ bigsum_vars) params)
+   (* the result is a list of pairs (new_params, new_term). *)
    in
+   (* creating the child maps still to be compiled, i.e., the subterms
+      that are aggregates with a relational algebra part that is not
+      constraints_only. *)
    let todos =
-      let f (new_params, new_ma) =
+      let f (new_params, new_term) =
          let mk x =
             let t_params = (Util.ListAsSet.inter (Algebra.term_vars x)
                               (Util.ListAsSet.union new_params
                                  (Util.ListAsSet.union bound_vars bigsum_vars)))
             in (t_params, x)
          in
-         List.map mk (Algebra.extract_aggregates new_ma)
+         List.map mk (Algebra.extract_aggregates new_term)
       in
       let add_name ((p, x), i) = (mapn^reln^(string_of_int i), p, x)
       in
       List.map add_name (Util.add_positions (Util.ListAsSet.no_duplicates
          (List.flatten (List.map f s))) 1)
    in
-   let g (new_params, new_ma) =
-      (reln, bound_vars, new_params, bigsum_vars, mapn, new_ma)
+   let g (new_params, new_term) =
+      (reln, bound_vars, new_params, bigsum_vars, mapn, new_term)
    in
    ((List.map g s), todos)
 
@@ -49,7 +55,7 @@ let compile_delta_for_rel (reln:   string)
    "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
 *)
 let generate_code (reln, bound_vars, params, bigsum_vars,
-                   mapn, new_ma) new_ma_aggs =
+                   mapn, new_term) new_term_aggs =
    let loop_vars = Util.ListAsSet.diff params bound_vars
    in
    let fn (mapname, params, mapstructure) =
@@ -61,7 +67,7 @@ let generate_code (reln, bound_vars, params, bigsum_vars,
         ^mapn^"["^(Util.string_of_list ", " params)^"] += "^
         (if (bigsum_vars = []) then ""
          else "bigsum_{"^(Util.string_of_list ", " bigsum_vars)^"} ")
-        ^(Algebra.term_as_string new_ma (List.map fn new_ma_aggs))
+        ^(Algebra.term_as_string new_term (List.map fn new_term_aggs))
 
 
 (* the main compile function. call this one, not the others. *)

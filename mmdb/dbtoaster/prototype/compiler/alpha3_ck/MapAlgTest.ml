@@ -5,8 +5,6 @@ let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
 let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
 let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
 
-let relR2 = make_relalg relR;;
-
 
 (* (R bowtie S) bowtie T *)
 let q = RA_MultiNatJoin [relR; relS; relT];;
