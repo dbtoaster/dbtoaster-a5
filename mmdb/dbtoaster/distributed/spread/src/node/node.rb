@@ -21,6 +21,7 @@ class CommitNotification
   end
   
   def fire(entry, value)
+    puts "Fired Notification: " + entry.to_s + " = " + value.to_s;
     @record.discover(entry, value);
   end
 end
@@ -50,19 +51,21 @@ class RemoteCommitNotification
     checkReady;
   end
   
-  private
-  
   def fire(entry, value)
     @count -= 1 unless @holding || (value == nil) || (@entries[entry] != nil);
     @entries[entry] = value;
     checkReady;
   end
   
+  private
+  
   def checkReady
     if (!@holding) && (@count <= 0) then
-      peer = MapNode.connect(@destination.host, @destination.port);
+      puts "Connecting to " + @destination.to_s;
+      peer = MapNode::Client.connect(@destination.host, @destination.port);
       peer.pushget(@entries, @cmdid);
       peer.close();
+      puts "push finished";
       true;
     end
   end
@@ -109,17 +112,24 @@ class MapNodeHandler
   ############# Internal Accessors
   
   def findPartition(source, key)
+    raise SpreadException.new("findPartition not implemented yet for wildcard keys") if key.include? -1;
     map = @maps[source.to_i];
-    if map == nil then raise SpreadException.new("Request for unknown map"); end
+    if map == nil then raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.join(",") + "]"); end
     map.each do |partition|
       if partition.contains? key then return partition end;
     end
     raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.to_s + "]");
   end
   
-  def createPartition(map, start, range)
+  def createPartition(map, region)
     if ! @maps.has_key? map.to_i then @maps[map.to_i] = Array.new; end
-    @maps[map.to_i].push(MapPartition.new(map.to_i, start, range));
+    @maps[map.to_i].push(
+      MapPartition.new(
+        map, 
+        region.collect do |r| r[0] end, 
+        region.collect do |r| r[1] end
+      )
+    );
     puts ("Created partition " + @maps[map.to_i].to_s);
   end
   
@@ -133,7 +143,11 @@ class MapNodeHandler
       map.collect do |partition|
         "partition" + partition.to_s + "\n" + partition.dump;
       end.join "\n"
-    end.join "\n"
+    end.join "\n";
+  end
+  
+  def localdump()
+    puts dump();
   end
   
   ############# Basic Remote Accessors
@@ -150,7 +164,7 @@ class MapNodeHandler
     valuation;    
   end
   
-  def installDiscovery(id, record)
+  def installDiscovery(id, record, params)
     # initialize the template with values we can obtain locally
     # we might end up changing required inside the loop, so we clone it first.
     record.required.clone.each do |req|
@@ -158,8 +172,8 @@ class MapNodeHandler
         # If the value is known, then get() will fire immediately.
         # in this case, get() will call discover, which will in turn remove
         # the requirement from @required.
-        # Note also that discover will fire the callbacks if it is necessary to do so.  
-        findPartition(req.source, req.key).get(req, CommitNotification.new(self));
+        # Note also that discover will fire the callbacks if it is necessary to do so. 
+        findPartition(req.source, req.key).get(req, CommitNotification.new(record));
       rescue Thrift::Exception => e;
         # this just means that the partition is unavailable.
       end
@@ -183,10 +197,11 @@ class MapNodeHandler
 
 
   def put(id, template, params)
+    puts "Params: " + params.to_s;
     valuation = createValuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = findPartition(target.source, target.key).insert(target, id, valuation);
-    installDiscovery(id, record);
+    installDiscovery(id, record, valuation.params);
   end
   
   def massput(id, template, expectedGets, params)
@@ -219,7 +234,7 @@ class MapNodeHandler
         destination, cmdid
       );
       target.each do |t|
-        puts "Fetch: " + t.source.to_i.to_s + "[" + t.key.to_s + "(" + t.version.to_s + ")]";
+        puts "Fetch: " + t.to_s;
         # get() will fire the trigger if the value is already defined
         # the actual message will not be sent until all requests in this 
         # command can be fulfilled.
@@ -262,10 +277,36 @@ class MapNodeHandler
     input.each do |line|
       cmd = line.scan(/[^ ]+/);
       case cmd[0]
-        when "partition" then createPartition(cmd[1], [cmd[2].to_i], [cmd[3].to_i]);
-        when "value" then findPartition(cmd[1], cmd[2]).set(cmd[2], cmd[3], cmd[4]);
-        when "massversion" then findPartition(cmd[1], cmd[2]).set
-        when "template" then cmd.shift; createPutTemplate(cmd.shift, cmd.join(" "));
+        when "partition" then 
+          match = /Map *([0-9]+)\[([0-9:, ]+)\]/.match(line);
+          raise SpreadException.new("Unable to parse partition line: " + line) if match.nil?;
+          map, regions = 
+            match[1], match[2];
+          
+          createPartition(
+            map.to_i, 
+            regions.split(",").collect do |r| 
+              r.split("::").collect do |n| 
+                n.to_i 
+              end 
+            end.collect do |r| [r[0], r[1]-r[0]] end
+          );
+        when "value" then 
+          match = /Map *([0-9]+) *\[([^\]]*)\] *v([0-9]+) *= *([0-9.]+)/.match(line)
+          raise SpreadException.new("Unable to parse value line: " + line) if match.nil?;
+          source, keys, version, value = 
+            match[1], match[2], match[3], match[4];
+          findPartition(
+            source.to_i, 
+            keys.split(",").collect do |k| k.to_i end
+          ).set(
+            keys.split(",").collect do |k| k.to_i end,
+            version.to_i, 
+            value.to_f
+          );
+        when "template" then 
+          cmd.shift; 
+          createPutTemplate(cmd.shift, cmd.join(" "));
       end
     end
   end

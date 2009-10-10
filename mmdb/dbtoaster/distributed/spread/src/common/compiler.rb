@@ -66,17 +66,21 @@ class TemplateEntry
       @source, 
       @keys.collect do |key|
         case key
-          when String then 
-            raise SpreadException.new("Converting to entry with uninstantiated parameter: " + key.to_s) unless params.has_key? key;
-            params[key];
+          when String then if params.has_key? key then params[key] else -1 end;
           else key;
         end
       end
       );
   end
   
-  def to_s
-    "Hash " + @source.to_s + "[" + @keys.join(",") + "]";
+  def to_s(params = Hash.new)
+    "Hash " + @source.to_s + "[" + 
+      @keys.collect do |key| 
+        case key
+          when String then if params.has_key? key then params[key].to_i.to_s else key end;
+          else key.to_s;
+        end
+      end.join(",") + "]";
   end
   
   def TemplateEntry.parse(entry)
@@ -125,13 +129,13 @@ end
 class TemplateValuation
   attr_reader :params, :entries, :template;
   
-  def initialize(template, params = Hash.new, entries = Hash.new)
+  def initialize(template = nil, params = Hash.new, entries = Hash.new)
     @template, @params, @entries = template, params, entries;
     if entries.is_a? Array then
       @entries = Hash.new;
       prepareEntries(entries);
     end
-    prepareEntries(template.entries);
+    prepareEntries(template.entries) unless template == nil;
   end
   
   def param(key)
@@ -140,6 +144,14 @@ class TemplateValuation
   
   def entry(e)
     return @entries[e]
+  end
+  
+  def has_key?(key)
+    @params.has_key? key
+  end
+  
+  def has_entry?(e)
+    @entries.has_key? e
   end
   
   def value(key)
@@ -159,6 +171,7 @@ class TemplateValuation
   
   def prepareEntries(*entries)
     entries.flatten.each do |e|
+      e = e.instantiate(@params) if e.is_a? TemplateEntry;
       @entries[e] = nil unless @entries.has_key? e;
     end
   end
@@ -176,6 +189,10 @@ class TemplateValuation
   def to_f
     @template.to_f(self)
   end
+  
+  def to_s
+    @template.expression.to_s(self);
+  end
 end
 
 ###################################################
@@ -191,7 +208,7 @@ class TemplateExpression
       when "+","-","*","/",")" then 
         raise SpreadException.new("Parse Error: Found "+tokenizer.last+" instead of rval");
       when "Map" then
-        TemplateExpression.new(:entry, TemplateEntry.decode(tokenizer));
+        TemplateExpression.new(:map, TemplateEntry.decode(tokenizer));
       else
         TemplateExpression.new(
           :val,
@@ -203,7 +220,7 @@ class TemplateExpression
   def entries(list = Array.new)
     case @op
       when :plus, :mult, :sub, :div then @left.entries(@right.entries(list));
-      when :map                     then list.push(left);
+      when :map                     then list.push(@left);
       when :val                     then list;
       else            raise SpreadException.new("Unknown Expression operator (entries): " + @op.to_s);
     end
@@ -225,13 +242,18 @@ class TemplateExpression
     end
   end
   
-  def to_s
+  def to_s(params = TemplateValuation.new)
     case @op
-      when :plus      then "(" + @left.to_s + ")+(" + @right.to_s + ")";
-      when :mult      then "(" + @left.to_s + ")*(" + @right.to_s + ")";
-      when :sub       then "(" + @left.to_s + ")-(" + @right.to_s + ")";
-      when :div       then "(" + @left.to_s + ")/(" + @right.to_s + ")";
-      when :val, :map then @left.to_s;
+      when :plus      then "(" + @left.to_s(params) + ")+(" + @right.to_s(params) + ")";
+      when :mult      then "(" + @left.to_s(params) + ")*(" + @right.to_s(params) + ")";
+      when :sub       then "(" + @left.to_s(params) + ")-(" + @right.to_s(params) + ")";
+      when :div       then "(" + @left.to_s(params) + ")/(" + @right.to_s(params) + ")";
+      when :val       then
+        case @left
+          when String then if params.has_key? @left then params.value(@left).to_s else @left end;
+          else @left.to_s
+        end
+      when :map       then @left.to_s(params.params);
       else            raise SpreadException.new("Unknown Expression operator (to_s): " + @op.to_s);
     end
   end

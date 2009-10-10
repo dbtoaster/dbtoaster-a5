@@ -11,16 +11,7 @@ class UnitTestNode
   
   def initialize(port, name, config = Array.new)
     @name, @port, @thread = name, port, nil;
-    
-    @handler = MapNodeHandler.new();
-    config.each do |f|
-      handler.setup(File.open(f));
-    end
-    @processor = MapNode::Processor.new(handler)
-    @transport = Thrift::ServerSocket.new(port);
-    @transportFactory = Thrift::BufferedTransportFactory.new();
-    @server = Thrift::SimpleServer.new(@processor, @transport, @transportFactory);
-    
+    @handler, @server = MapNode::Processor.listen(port, config)
     @client = nil;
   end
   
@@ -46,7 +37,11 @@ class UnitTestNode
   end
   
   def to_s
-    @name.to_s
+    @name.to_s + "(@" + @port.to_s + ")";
+  end
+ 
+  def shutdown
+    @client.close; @client = nil;
   end
   
   def client
@@ -61,31 +56,23 @@ end
 ###################################################
 
 class UnitTestFetchStep
-  def initialize(cmdid, source, destination, target)
-    @source, @destination, @cmdid = source, NodeID.new, cmdid;
-      @destination.host = "localhost";
-      @destination.port = destination.port;
-    @target = target.collect do |t|
-      t = t.split(":");
-      e = Entry.new;
-        e.source = t[0].to_i;
-        e.key = t[1].to_i;
-        e.version = unless t.size < 3 then [t[2].to_i] else [1]; end
-        e.node = @source;
-      e;
-    end
+  def initialize(command, nodeMap)
+    parsed = 
+      / *([0-9]+) *:([^@]*) @ *([0-9a-zA-Z]+) *-> *([0-9a-zA-Z]+)/.match(command);
+    raise SpreadException.new("Invalid fetch step string: " + command) if parsed == nil;
+    
+    @cmdid, @source, @dest = 
+      parsed[1].to_i, nodeMap[parsed[3]], nodeMap[parsed[4]];
+    
+    @target = parsed[2].split(";").collect do |e| Entry.parse(e) end;
   end
   
   def fire
-    @source.client.fetch(@target, @destination, @cmdid);
+    @source.client.fetch(@target, NodeID.make("localhost", @dest.port), @cmdid);
   end
   
   def to_s
-    @target.collect do |e|
-      e.source.to_s + "[" + e.key.to_s + "(" + e.version.to_s + ")]"
-    end.join(", ") + "@" +
-      @source.host.to_s + ":" + @source.port.to_s + " -> " +
-      @destination.host.to_s + ":" + @destination.port.to_s;
+    @target.join(", ") + " @ " + @source.to_s + " -> " + @dest.to_s;
   end
 end
 
@@ -124,7 +111,7 @@ class UnitTestDumpStep
   
   def fire
     @nodes.each do |unitNode|
-      puts unitNode.client.dump;
+      puts unitNode.client.localdump;
     end
   end
   
@@ -205,7 +192,7 @@ class UnitTestHarness
         when "fetch" then
           cmd.shift; 
           puts "Fetch: " + cmd.join(" ");
-          @testcmds.push(UnitTestFetchStep.new(cmd.shift.to_i, @indexmap[cmd.shift], @indexmap[cmd.shift], cmd));
+          @testcmds.push(UnitTestFetchStep.new(cmd.join(" "), @indexmap));
         when "put" then
           cmd.shift;
           @testcmds.push(UnitTestPutStep.new(cmd.join(" "), @indexmap, @puttemplates));

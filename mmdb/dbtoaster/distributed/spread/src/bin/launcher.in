@@ -1,8 +1,9 @@
 #!/bin/bash
 
 SRCDIR=`dirname $0`/../src
+LIBDIR=`dirname $0`/../lib
 INCLUDES="
-  -I /usr/local/thrift/lib/rb/lib
+  -I $LIBDIR/thrift/rb
   -I $SRCDIR/common
   -I $SRCDIR/node
   -I $SRCDIR/gen-rb"

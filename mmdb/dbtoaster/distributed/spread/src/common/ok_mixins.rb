@@ -7,6 +7,15 @@ class Array
     end
   end
   
+  def collect_pair(other)
+    minSize = if other.size > size then size else other.size end;
+    ret = Array.new;
+    (0...minSize).each do |i|
+      ret.push(yield self[i], other[i]);
+    end
+    ret;
+  end
+  
   def collect_hash
     ret = Hash.new
     each do |entry| 

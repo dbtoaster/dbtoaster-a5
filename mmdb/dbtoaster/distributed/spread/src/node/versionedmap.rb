@@ -153,6 +153,7 @@ class PutRecord
     puts "Discovered: " + entry.to_s + " = " + value.to_s;
     @required.delete(entry)
     @value.discover(entry, value) if @value.is_a? TemplateValuation;
+    fireCallbacks;
   end
   
   # CommitRecord can act as a pseudo-callback; This callback fires when
@@ -233,7 +234,7 @@ class MapPartition
         if version == nil then @massputrecords.last else @massputrecords.find(version) end;
       else nil end;
     
-    if target.key.has_wildcards? then
+    if target.has_wildcards? then
       raise SpreadException("Multitarget requests with no callback are unsupported") unless callback != nil;
       # This is a multitarget request.
       
@@ -330,7 +331,7 @@ class MapPartition
   end
   
   def set(var, vers, val)
-    insert(Entry.make(@mapid, [var.to_i]), vers, val.to_f)
+    insert(Entry.make(@mapid, var), vers, val.to_f)
   end
   
   def to_s

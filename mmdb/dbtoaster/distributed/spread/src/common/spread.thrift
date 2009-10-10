@@ -58,6 +58,8 @@ service MapNode {
                         ),
   
   
-  string dump         ()
-
+  string dump  (),
+  
+  oneway string localdump  (),
+  
 }
