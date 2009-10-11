@@ -98,11 +98,12 @@ class MassPutDiscoveryMultiplexer
   
   def finish_message
     @expected_gets -= 1;
-    if @records != nil && @expected_gets <= 0 then
+    if @records && @expected_gets <= 0 then
       @evaluator.foreach do |target, delta_value|
         Logger.debug("Generated Delta : " + target.to_s + " += " + delta_value.to_s, "node.rb");
         @records.each do |record| record.put(target, delta_value) end;
       end
+      @records.each do |r| r.complete end;
       @records = nil;
     end
   end
@@ -158,7 +159,7 @@ class MapNodeHandler
   def dump()
     @maps.values.collect do |map|
       map.collect do |partition|
-        "partition" + partition.to_s + "\n" + partition.dump;
+        "Partition for Map " + partition.to_s + "\n" + partition.dump;
       end.join "\n"
     end.join "\n";
   end

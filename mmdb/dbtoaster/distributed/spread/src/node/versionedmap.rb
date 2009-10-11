@@ -35,7 +35,7 @@ class MassPutRecord
   
   def register(key, callback, exemptions = Set.new)
     raise SpreadException.new("MassPutRecord.register without a callback") unless @callbacks != nil;
-    if @callbacks.has_key? target then
+    if @callbacks.has_key? key then
       @callbacks[key].push([callback, exemptions]);
     else
       @callbacks[key] = [[callback, exemptions]];
@@ -76,20 +76,20 @@ class MassPutRecord
   private
   
   def check_ready
-    if @callbacks != nil && ready then
+    if @callbacks && ready then
+      Logger.info("Massput v" + @version.to_s + " complete", "versionedmap.rb");
       @callbacks.each_pair do |target, cblist|
         cblist.each do |callback|
           @partition.get(target, callback[0], @version, callback[1]);
         end
       end
-      @callback.release;
       
       # If we've gotten this far, we've committed everything and everything is in order.  
       # We can start deleting older mass records.
-      @partition.collapse_mass_records_to(self);
+      #@partition.collapse_mass_records_to(self);
       
       # This might potentially complete the next mass put.
-      @next.check_ready if @next != null;
+      @next.check_ready if @next;
       
       # And ensure that we never get called again.
       @callbacks = nil;
@@ -252,8 +252,7 @@ class MapPartition
     # if version != nil then we know that the relevant massput has committed, and
     # we can safely ignore the mass put records.
     lastmassrecord =
-      if @massputrecords != nil || version != nil then
-        if version == nil then @massputrecords.last else @massputrecords.find(version) end;
+      if @massputrecords != nil && version.nil? then @massputrecords.last;
       else nil end;
     
     if target.has_wildcards? then

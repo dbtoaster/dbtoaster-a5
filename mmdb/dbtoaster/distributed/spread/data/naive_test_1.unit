@@ -8,15 +8,21 @@ value Map 1[3]v1 = 9.0
 value Map 1[4]v3 = 3
 value Map 1[5]v1 = 42.1
 
+partition Map 3[0::200]
+value Map 3[7]v2 = 10
+
 node Beta
 partition Map 1[100::200]
 value Map 1[102]v3 = 9.9999
+
 partition Map 2[0::200]
+value Map 2[102]v2 = 20
 
 ############ Put Templates
 template 1 R	A;B	Map 1[A]		4+B
 template 2 R	A;B	Map 1[A]		A+Map 1[B]
 template 3 R	A;B	Map 2[C]		A+Map 1[C]
+template 4 R	A;B	Map 3[B]		A+Map 2[B]
 
 ############ Test Sequence
 # Note that dumps can be used as synchs, execution pauses until the corresponding server has completed the dump.
@@ -37,8 +43,10 @@ fetch 7 : Map 1[102] @ Beta -> Alpha
 # Mass fetch test
 fetch 0 : Map 1[-1] @ Alpha -> Beta
 
-# Mass Put
+# Mass Put & Fetch of an incomplete massput
 put 8 : Template 3 (3, 42) @ Beta x1
+put 9 : Template 4 (4, 5) @ Alpha
+fetch 9 : Map 2[5] @ Beta -> Alpha
 fetch 8 : Map 1[-1] @ Alpha -> Beta
 
 # Aaaand... let's see where we stand
