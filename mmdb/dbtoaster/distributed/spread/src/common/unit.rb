@@ -2,7 +2,7 @@
 require 'thrift'
 require 'map_node'
 require 'node'
-require 'compiler'
+require 'template'
 require 'spread_types'
 require 'spread_types_mixins'
 
@@ -72,15 +72,15 @@ class UnitTestFetchStep
   end
   
   def to_s
-    @target.join(", ") + " @ " + @source.to_s + " -> " + @dest.to_s;
+    "Fetch: " + @target.join(", ") + " @ " + @source.to_s + " -> " + @dest.to_s;
   end
 end
 
 class UnitTestPutStep
   def initialize(command, node_map, template_map)
     parsed = 
-      / *([0-9]+) * : *Template *([0-9]+) *\(([0-9a-zA-Z, ]*)\) *@ *([0-9a-zA-Z]+)/.match(command)
-    raise SpreadException.new("Invalid put step string: " + command) if parsed == nil || parsed.to_a.size != 5;
+      / *([0-9]+) * : *Template *([0-9]+) *\(([0-9a-zA-Z, ]*)\) *@ *([0-9a-zA-Z]+) *(x *[0-9]+)?/.match(command)
+    raise SpreadException.new("Invalid put step string: " + command) if parsed == nil;
     parsed = parsed.to_a;
     parsed.shift; #first result is the overall match
     
@@ -91,16 +91,29 @@ class UnitTestPutStep
     parsed[2].split(/, */).each do |param|
       @params[template_params.shift] = param unless template_params.size <= 0;
     end
+    
+    @num_gets = 
+      if template_map[@template.to_i].requires_loop? then
+        raise SpreadException.new("Put for looping template without expected get count: " + command) unless !parsed[4].nil? && (parsed[4].gsub(/^x */,"").to_i > 0);
+        parsed[4].gsub(/^x */,"").to_i
+      else
+        0
+      end
   end
   
   def fire
-    @dest.client.put(@cmdid.to_i, @template.to_i, PutParams.make(@params));
+    if @num_gets > 0 then
+      @dest.client.mass_put(@cmdid.to_i, @template.to_i, @num_gets, PutParams.make(@params));
+    else
+      @dest.client.put(@cmdid.to_i, @template.to_i, PutParams.make(@params));
+    end
   end
   
   def to_s
-    @cmdid.to_s + " @ [localhost:" + @destport.to_s + "] : Template " + 
+    @cmdid.to_s + " @ [" + @dest.to_s + "] : Template " + 
       @template.to_s + "(" + 
-      @params.collect do |key, value| key.to_s + ":" + value.to_s end.join(", ") + ")";
+      @params.collect do |key, value| key.to_s + ":" + value.to_s end.join(", ") + ")" +
+      if @num_gets > 0 then "; " + @num_gets.to_s + " Gets" else "" end;
   end
 end
 
@@ -120,6 +133,22 @@ class UnitTestDumpStep
   
   def to_s
     "Dump: " + @nodes.join(", ");
+  end
+end
+
+class UnitTestSynchStep
+  def initialize(nodes)
+    @nodes = nodes;
+  end
+  
+  def fire
+    @nodes.each do |unit_node| 
+      unit_node.client.dump;
+    end
+  end
+  
+  def to_s
+    "Synch: " + @nodes.join(", ");
   end
 end
 
@@ -177,7 +206,7 @@ class UnitTestHarness
           when "template" then
             cmd.shift; 
             @puttemplates[cmd.shift.to_i] = UpdateTemplate.new(cmd.join(" "));
-          when "fetch", "put", "dump", "sleep" then cmdbuffer.push(cmd);
+          when "fetch", "put", "dump", "sleep", "synch" then cmdbuffer.push(cmd);
           else 
             linebuffer.push(line) unless linebuffer == nil;
         end
@@ -204,6 +233,13 @@ class UnitTestHarness
             @testcmds.push(UnitTestDumpStep.new(cmd.collect do |node| @indexmap[node] end));
           else
             @testcmds.push(UnitTestDumpStep.new(@nodes));
+          end
+        when "synch" then
+          cmd.shift;
+          if cmd.size > 0 then
+            @testcmds.push(UnitTestSynchStep.new(cmd.collect do |node| @indexmap[node] end));
+          else
+            @testcmds.push(UnitTestSynchStep.new(@nodes));
           end
         when "sleep" then
           @testcmds.push(UnitTestSleepStep.new(cmd[1]));

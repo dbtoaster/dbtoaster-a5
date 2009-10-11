@@ -3,4 +3,4 @@ all:
 	make -C scripts $(TARGET)
 
 clean: 
-	make TARGET=clean
+	make TARGET=clean	

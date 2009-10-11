@@ -3,7 +3,7 @@
 require 'thrift';
 require 'map_node';
 require 'spread_types';
-require 'compiler';
+require 'template';
 require 'multikeymap';
 require 'versionedmap';
 
@@ -78,9 +78,10 @@ end
 ###################################################
 
 class MassPutDiscoveryMultiplexer
-  def initialize(expected_gets)
+  def initialize(valuation, expected_gets)
     @records = Array.new;
-    @expected_gets = expected_gets; 
+    @expected_gets = expected_gets;
+    @evaluator = TemplateForeachEvaluator.new(valuation);
   end
   
   def add_record(record)
@@ -91,15 +92,23 @@ class MassPutDiscoveryMultiplexer
   end
   
   def discover(entry, value)
-    @records.each do |record| record.discover(entry, value) end;
+    Logger.debug("Discovered that " + entry.to_s + " = " + value.to_s, "node.rb");
+    @evaluator.discover(entry, value);
   end
   
   def finish_message
     @expected_gets -= 1;
     if @records != nil && @expected_gets <= 0 then
-      @records.each do |record| record.complete; end
+      @evaluator.foreach do |target, delta_value|
+        Logger.debug("Generated Delta : " + target.to_s + " += " + delta_value.to_s, "node.rb");
+        @records.each do |record| record.put(target, delta_value) end;
+      end
       @records = nil;
     end
+  end
+  
+  def required
+    @evaluator.valuation.entries.keys;
   end
 end
 
@@ -209,7 +218,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    Logger.debug("Params: " + params.to_s, "node.rb");
+    Logger.debug("Put with Params: " + params.to_s, "node.rb");
     valuation = create_valuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
@@ -217,12 +226,13 @@ class MapNodeHandler
   end
   
   def mass_put(id, template, expected_gets, params)
+    Logger.info("Mass Put with Params: " + params.to_s, "node.rb");
     valuation = create_valuation(template, params.decipher);
-    discovery = MassPutDiscoveryMultiplexer.new(expected_gets);
+    discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
       discovery.add_record(partition.mass_insert(id, valuation));
     end
-    install_discovery(id, discovery);
+    install_discovery(id, discovery, valuation.params);
   end
   
   def get(target)

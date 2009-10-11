@@ -50,6 +50,7 @@ end
 
 class TemplateEntry
   attr_reader :source, :keys;
+  alias :key :keys;
   
   def initialize(source, *keys)
     @source = source.to_i;
@@ -64,13 +65,25 @@ class TemplateEntry
   def instantiate(params = Hash.new)
     Entry.make(
       @source, 
-      @keys.collect do |key|
-        case key
-          when String then if params.has_key? key then params[key] else -1 end;
-          else key;
+      @keys.collect do |k|
+        case k
+          when String then if params.has_key? k then params[k].to_i else -1 end;
+          else k;
         end
       end
       );
+  end
+  
+  def weak_match?(entry, params = Hash.new)
+    return false unless entry.source == @source;
+    @keys.paired_loop(entry.key) do |a, b|
+      case a
+        # If the variable isn't bound, let it through
+        when String then return false if (params.has_key? a) && (params[a].to_i != b.to_i);
+        else return false if a.to_i != b.to_i;
+      end
+    end
+    return true;
   end
   
   def to_s(params = Hash.new)
@@ -182,10 +195,14 @@ class TemplateValuation
   end
   
   def discover(entry, value)
-    if @entries.has_key? entry then
+    if (@entries.has_key? entry) then
       @entries[entry] = value;
       @target = nil;
     end
+  end
+  
+  def clone(temp_vars = Hash.new)
+    TemplateValuation.new(@template, @params.merge(temp_vars), @entries.clone);
   end
   
   def to_f
@@ -233,10 +250,22 @@ class TemplateExpression
     end
   end
   
+  # See TemplateValuation.initialize for a description of what loop_vars does.
   def loop_vars(known_vars, list = Array.new)
     entries.delete_if do |entry|
       # see if any keys have not been bound (either explicitly, or via known_vars)
       entry.keys.clone.delete_if do |key| (key.is_a? Numeric) || (known_vars.include? key) end.empty?
+    end.collect do |entry|
+      [
+        entry, 
+        entry.key.collect_index do |i, k| 
+          if (k.is_a? String) && !(known_vars.include? k) then
+            [i, k]
+          else 
+            nil;
+          end
+        end.delete_if do |e| e.nil? end
+      ]
     end
   end
   
@@ -378,11 +407,24 @@ class UpdateTemplate
     # The expression for the update is [4]
     @expression = TemplateExpression.parse(line[4]);
     
+    # loopvarlist deserves a little discussion.  This is essentially a pre-computed
+    # datastructure that streamlines computation of the domain of each loop variable
+    # from the corresponding entries that arrive at a node.  This list is an Array
+    # of rules,  Array elements the form:
+    # [ TemplateEntry, [ [KEYINDEX, LOOPVAR], ... ] ]
+    # Every rule corresponds to one or more loop variables; Specifically, each rule
+    # corresponds to all the loop variables for a particular instance of a map on the RHS
+    # of the expression. 
+    # Under normal processing, the TemplateEntry is matched against incoming Entries using 
+    # weak_match? to determine if this rule is applicable.  If it is, then the KEYINDEXth 
+    # element of the entry's key is identified as a member of LOOPVAR's domain.  It is 
+    # possible for there to be multiple KEYINDEX/LOOPVAR pairs.   
     @loopvarlist = @expression.loop_vars(@paramlist);
+    
   end
   
   def requires_loop?
-    @loopvarlist.empty?
+    !@loopvarlist.empty?
   end
   
   def entries
@@ -400,10 +442,74 @@ class UpdateTemplate
   def to_s
     @relation + "\t" +
       @paramlist.join(";") + "\t" +
-      @loopvarlist.join(";") + "\t" + 
+      @loopvarlist.collect do |e| e[0].to_s end.join(";") + "\t" + 
       @target.to_s + "\t" +
       @conditions.to_s + "\t" +
       @expression.to_s;
+  end
+end
+
+###################################################
+
+class TemplateForeachEvaluator
+  attr_reader :valuation;
+
+  # Note that valuation is treated as if it were 
+  def initialize(valuation)
+    @domains, @valuation = Array.new, valuation;
+    
+    # @domains contains a list of arrays in the same order as valuation.template.loopvarlist
+    # Every array in @domains describes the domains of one or more loop variables in the
+    # foreach loop.  As we gather more and more entries, we build up the domains of the
+    # corresponding values.  
+    
+    valuation.template.loopvarlist.each do |loopentry|
+      @domains.push(Array.new);
+    end
+  end
+  
+  def discover(entry, value)
+    @valuation.template.loopvarlist.paired_loop(@domains) do |rule, row|
+      # rule[1] contains a list of elements of the form [KEYINDEX, LOOPVAR]
+      # for each element extract the KEYINDEXth value of entry.key and save it
+      # for the domain of LOOPVAR... as long as the rule is applicable (the
+      # TemplateEntry at rule[0] weakly matches entry)
+      
+      # Also, note that it is possible for the same map to appear twice with 
+      # two different sets of loop variables; One entry might potentially match 
+      # several rules.
+      
+      # It is also possible for an entry to match no rules at all; This occurs if
+      # the template's expression includes both nonlooping and looping maps.
+      row.push(rule[1].collect do |k| entry.key[k[0]] end) if rule[0].weak_match?(entry, @valuation.params);
+      Logger.debug(entry.to_s + " = " + value.to_s + "; Matches: " + rule[0].to_s + " : " + rule[0].weak_match?(entry, @valuation.params).to_s, "template.rb");
+    end
+    @valuation.entries[entry] = value;
+  end
+  
+  # Foreach is effectively a nested loop where the nesting depth is equal to the 
+  # number of maps being scanned (since we're looping over entries, we get to
+  # loop over each loop parameter for free).  The passed block is called once for
+  # each tuple in the cross-product of the domains of all loop variables (and 
+  # comes with the corresponding template valuation and target).  
+  def foreach(&callback)
+    foreach_impl(callback);
+  end
+  
+  private
+  
+  def foreach_impl(callback, depth = 0, valuation = @valuation.clone)
+    if depth >= @domains.size then
+      val = valuation.to_f;
+      callback.call(valuation.template.target.instantiate(valuation.params), val) unless val == 0;
+    else
+      @domains[depth].each do |row|
+        valuation.template.loopvarlist[depth][1].paired_loop(row) do |k, v|
+          valuation.params[k[1].to_s] = v.to_i;
+        end
+        foreach_impl(callback, depth+1, valuation);
+      end
+    end
   end
 end
 

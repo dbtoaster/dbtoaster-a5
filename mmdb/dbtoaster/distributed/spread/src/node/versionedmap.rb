@@ -2,9 +2,21 @@
 require 'thrift';
 require 'map_node';
 require 'spread_types';
-require 'compiler';
+require 'template';
 require 'multikeymap';
 require 'ok_mixins';
+
+###################################################
+
+class PutDelta
+  attr_reader :value;
+  alias :to_f :value;
+
+  def initialize(value)
+    @value = value;
+  end
+end
+
 
 ###################################################
 
@@ -22,7 +34,7 @@ class MassPutRecord
   end
   
   def register(key, callback, exemptions = Set.new)
-    raise SpreadException.new("MassPutRecord.register on a completed massput record") unless @callbacks != nil;
+    raise SpreadException.new("MassPutRecord.register without a callback") unless @callbacks != nil;
     if @callbacks.has_key? target then
       @callbacks[key].push([callback, exemptions]);
     else
@@ -45,6 +57,14 @@ class MassPutRecord
   def add(record)
     if @next then @next.add(record);
              else @next = record; record.prev = self;
+    end
+  end
+  
+  # put is called when a new target value is discovered.  
+  def put(target, delta_value)
+    raise SpreadException.new("Put for invalid target") unless @partition.mapid == target.source;
+    if @partition.contains? target.key then
+      @partition.insert(target, @version, PutDelta.new(delta_value))
     end
   end
   
@@ -91,7 +111,7 @@ class PutRecord
     @required = 
       case @value
         when TemplateValuation then @value.entries.keys;
-        when Numeric then Array.new;
+        when PutDelta, Numeric then Array.new;
         else raise SpreadException.new("Creating PutRecord with value of unknown type: " + @value.class.to_s);
       end;
     

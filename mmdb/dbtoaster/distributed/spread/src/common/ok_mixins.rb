@@ -25,12 +25,25 @@ class Array
     ret;
   end
   
+  def collect_index
+    (0...size).collect do |i|
+      yield i, self[i];
+    end
+  end
+  
   def hash_keys
     ret = Hash.new
     each do |entry|
       ret[entry] = (yield entry);
     end;
     ret;
+  end
+  
+  def find
+    each do |entry|
+      return true if(yield entry);
+    end
+    return false;
   end
 end
 

@@ -38,7 +38,8 @@ fetch 7 : Map 1[102] @ Beta -> Alpha
 fetch 0 : Map 1[-1] @ Alpha -> Beta
 
 # Mass Put
-massput 8 : Template 3 (0, 42) @ Beta
+put 8 : Template 3 (3, 42) @ Beta x1
+fetch 8 : Map 1[-1] @ Alpha -> Beta
 
 # Aaaand... let's see where we stand
 sleep 1
