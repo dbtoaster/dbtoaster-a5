@@ -18,13 +18,22 @@ template 1 R	A;B		Map 1[A]		4+B
 template 2 R	A;B		Map 1[A]		A+Map 1[B]
 
 ############ Test Sequence
+# Note that dumps can be used as synchs, execution pauses until the corresponding server has completed the dump.
 
 # Simple Put
 put 5 : Template 1 (2, 5) @ Alpha
+
+# Put of a map value that's been since updated
 put 6 : Template 2 (1, 2) @ Alpha
-put 7 : Template 2 (4, 102) @ Alpha
-#fetch 7 : Map 1[102] @ Beta -> Alpha
-#dump Beta
+
+# Fetch test
 fetch 0 : Map 1[5] @ Alpha -> Beta
-dump Alpha
+
+# Put of a remote map value
+put 7 : Template 2 (4, 102) @ Alpha
+fetch 7 : Map 1[102] @ Beta -> Alpha
+
+# Aaaand... let's see where we stand
+sleep 1
+dump
 

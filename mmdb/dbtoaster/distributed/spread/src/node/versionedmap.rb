@@ -150,7 +150,7 @@ class PutRecord
   # Discover also takes charge of firing the callbacks waiting for this
   # record to complete.
   def discover(entry, value) 
-    puts "Discovered: " + entry.to_s + " = " + value.to_s;
+    Logger.info("Discovered: " + entry.to_s + " = " + value.to_s, "versionedmap.rb");
     @required.delete(entry)
     @value.discover(entry, value) if @value.is_a? TemplateValuation;
     fireCallbacks;
@@ -163,18 +163,17 @@ class PutRecord
   end
   
   def finishMessage
-    fireCallbacks;
   end
   
   def fireCallbacks
-    return unless ready;
-    
-    puts "firing " + @target.to_s + "v" + @version.to_s + "; " + @callbacks.size.to_s + " callbacks";
-    @value = @value.to_f + if @prev.nil? then 0 else @prev.value.to_f end;
-    @callbacks.each do |cb|
-      cb.fire(@target, @value);
+    unless pending || @callbacks.nil? then
+      Logger.info("Completed " + @target.to_s + "v" + @version.to_s + "; Firing " + @callbacks.size.to_s + " callbacks", "versionedmap.rb");
+      @value = @value.to_f + if @prev.nil? then 0 else @prev.value.to_f end;
+      @callbacks.each do |cb|
+        cb.fire(@target, @value);
+      end
+      @callbacks = nil;
     end
-    @callbacks = Array.new;
   end
 end
 

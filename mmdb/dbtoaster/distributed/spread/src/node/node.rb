@@ -21,7 +21,7 @@ class CommitNotification
   end
   
   def fire(entry, value)
-    puts "Fired Notification: " + entry.to_s + " = " + value.to_s;
+    Logger.info("Fired Notification: " + entry.to_s + " = " + value.to_s, "node.rb");
     @record.discover(entry, value);
   end
 end
@@ -61,11 +61,11 @@ class RemoteCommitNotification
   
   def checkReady
     if (!@holding) && (@count <= 0) then
-      puts "Connecting to " + @destination.to_s;
+      Logger.debug("Connecting to " + @destination.to_s, "node.rb");
       peer = MapNode::Client.connect(@destination.host, @destination.port);
       peer.pushget(@entries, @cmdid);
       peer.close();
-      puts "push finished";
+      Logger.debug("push finished", "node.rb");
       true;
     end
   end
@@ -76,7 +76,7 @@ end
 class MassPutDiscoveryMultiplexer
   def initialize(expectedGets)
     @records = Array.new;
-    @expectedGets = expectedGets;
+    @expectedGets = expectedGets; 
   end
   
   def addRecord(record)
@@ -130,12 +130,12 @@ class MapNodeHandler
         region.collect do |r| r[1] end
       )
     );
-    puts ("Created partition " + @maps[map.to_i].to_s);
+    Logger.debug("Created partition " + @maps[map.to_i].to_s, "node.rb");
   end
   
   def installPutTemplate(index, cmd)
     @templates[index.to_i] = cmd;
-    puts ("Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s );
+    Logger.debug("Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s, "node.rb");
   end
   
   def dump()
@@ -167,6 +167,8 @@ class MapNodeHandler
   def installDiscovery(id, record, params)
     # initialize the template with values we can obtain locally
     # we might end up changing required inside the loop, so we clone it first.
+    
+    # This is treated as an implicit message to ourselves.  
     record.required.clone.each do |req|
       begin
         # If the value is known, then get() will fire immediately.
@@ -197,7 +199,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    puts "Params: " + params.to_s;
+    Logger.debug("Params: " + params.to_s, "node.rb");
     valuation = createValuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = findPartition(target.source, target.key).insert(target, id, valuation);
@@ -234,7 +236,7 @@ class MapNodeHandler
         destination, cmdid
       );
       target.each do |t|
-        puts "Fetch: " + t.to_s;
+        Logger.debug("Fetch: " + t.to_s, "node.rb");
         # get() will fire the trigger if the value is already defined
         # the actual message will not be sent until all requests in this 
         # command can be fulfilled.
@@ -242,16 +244,15 @@ class MapNodeHandler
       end
     rescue Thrift::Exception => ex
       puts "Error: " + ex.why;
+      puts ex.backtrace.join("\n");
     end
   end
   
   def pushget(result, cmdid)
-    puts "Pushget: " + result.size.to_s + " results for command " + cmdid.to_s;
+    Logger.info("Pushget: " + result.size.to_s + " results for command " + cmdid.to_s, "node.rb");
     if cmdid == 0 then
-      puts("  Fetch Results Pushed: " + 
-        result.keys.collect do |e| 
-          e.source.to_s + "[" + e.key.to_s + "(" + e.version.to_s + ")] = " + result[e].to_s;
-        end.join(", "));
+      Logger.info("  Fetch Results Pushed: " + 
+        result.collect do |entry, val| entry.to_s + " = " + val.to_s end.join(", "), "node.rb");
       return
     end
     

@@ -34,8 +34,41 @@ class Array
   end
 end
 
+class Hash
+  def collect
+    keys.collect do |k| yield k, self[k] end;
+  end
+end
+
 class String
   def is_number?
     to_f.to_s == self || to_i.to_s == self;
+  end
+end
+
+class Logger
+  @@logger = nil;
+  def Logger.default
+    if @@logger.nil?
+      @@logger = Logger.new(STDERR);
+      @@logger.level = Logger::WARN;
+    end
+    @@logger;
+  end
+  
+  def Logger.fatal(string, progname = nil)
+    Logger.default.fatal(progname) {string}
+  end
+  def Logger.error(string, progname = nil)
+    Logger.default.error(progname) {string}
+  end
+  def Logger.warn(string, progname = nil)
+    Logger.default.warn(progname) {string}
+  end
+  def Logger.info(string, progname = nil)
+    Logger.default.info(progname) {string}
+  end
+  def Logger.debug(string, progname = nil)
+    Logger.default.debug(progname) {string}
   end
 end

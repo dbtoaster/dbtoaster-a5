@@ -17,7 +17,7 @@ class UnitTestNode
   
   def start
     @thread = Thread.new(@server, @name) do |server, name|
-      puts "Starting Node " + @name.to_s;
+      Logger.info("Starting Node " + @name.to_s, "unit.rb @ " + name);
       begin
         server.serve;
       rescue Exception => e;
@@ -46,7 +46,7 @@ class UnitTestNode
   
   def client
     unless @client then
-      puts "Establishing connection to Node: " + @name + " @ port " + @port.to_s + " ...";
+      Logger.info("Establishing connection to Node: " + @name + " @ port " + @port.to_s + " ...", "unit.rb");
       @client = MapNode::Client.connect("localhost", @port);
     end
     @client;
@@ -110,8 +110,11 @@ class UnitTestDumpStep
   end
   
   def fire
-    @nodes.each do |unitNode|
-      puts unitNode.client.localdump;
+    @nodes.each do |unitNode| 
+      Logger.info("---" + unitNode.name + "---", "unit.rb")
+      unitNode.client.dump.each_line do |line|
+        Logger.info(line.chomp, "unit.rb");
+      end
     end
   end
   
@@ -147,7 +150,7 @@ class UnitTestHarness
   def addNode(name = @nodes.size.to_s)
     node = UnitTestNode.new(52982 + @nodes.size, name);
     @indexmap[name] = node;
-    puts "New Node " + name.to_s + " : " + @nodes.size.to_s + " @ port " + node.port.to_s;
+    Logger.info("New Node " + name.to_s + " : " + @nodes.size.to_s + " @ port " + node.port.to_s, "unit.rb");
     @nodes.push(node);
     node;
   end
@@ -163,7 +166,7 @@ class UnitTestHarness
     linebuffer = nil;
     nodename = nil;
     input.each do |line|
-      #puts "GOT: " + line;
+      Logger.debug("GOT: " + line, "unit.rb");
       if line[0] != '#' then 
         cmd = line.scan(/[^ \r\n]+/);
         case cmd[0]
@@ -182,7 +185,7 @@ class UnitTestHarness
     end
     addNode(nodename).handler.setup(linebuffer) unless linebuffer == nil;
     @nodes.each do |node|
-      puts "Loading put templates into Node " + node.name;
+      Logger.debug("Loading put templates into Node " + node.name, "unit.rb");
       @puttemplates.each_pair do |id, cmd|
         node.handler.installPutTemplate(id, cmd);
       end
@@ -191,7 +194,6 @@ class UnitTestHarness
       case cmd[0]
         when "fetch" then
           cmd.shift; 
-          puts "Fetch: " + cmd.join(" ");
           @testcmds.push(UnitTestFetchStep.new(cmd.join(" "), @indexmap));
         when "put" then
           cmd.shift;
@@ -211,13 +213,15 @@ class UnitTestHarness
   
   def dump()
     @nodes.each do |node|
-      puts node.dump;
+      node.dump.each_line do |line|
+        Logger.info(line.chomp, "unit.rb");
+      end
     end
   end
   
   def run()
     @testcmds.each do |cmd|
-      puts "Sending Command: " + cmd.to_s;
+      Logger.info("Executing Test Step: " + cmd.to_s, "unit.rb");
       begin
         cmd.fire;
       rescue Exception => e;

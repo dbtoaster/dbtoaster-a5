@@ -30,7 +30,7 @@ class Entry
   end
   
   def Entry.parse(string)
-    parsed = / *(Map)? *([0-9]+) *\[([^]]*)\]/.match(string);
+    parsed = / *(Map)? *([0-9]+) *\[([^\]]*)\]/.match(string);
     Entry.make(parsed[2], parsed[3].split(",")); # Entry.make does the to_i conversion
   end
 end
@@ -46,11 +46,11 @@ class PutParams
           case params[key]
             when Numeric, String then 
               field.value = params[key].to_f;
-              #puts "Value: " + key + " = " + params[key].to_f.to_s;
+              Logger.debug "Value: " + key + " = " + params[key].to_f.to_s;
               PutFieldType::VALUE;
             when Entry then
               field.entry = params[key];
-              #puts "Entry: " + key + " = " + params[key].to_s;
+              Logger.debug "Entry: " + key + " = " + params[key].to_s;
               PutFieldType::ENTRY;
             else 
               raise SpreadException.new("Unknown parameter type: " + params[key].class.to_s);
@@ -99,8 +99,8 @@ module MapNode
   end
   
   class Processor
-    def Processor.listen(port, config = Array.new, logger = nil)
-      handler = MapNodeHandler.new;
+    def Processor.listen(port, config = Array.new)
+      handler = MapNodeHandler.new();
       config.each do |f|
         handler.setup(
           case f
@@ -113,17 +113,13 @@ module MapNode
     
       processor = MapNode::Processor.new(handler)
       transport = Thrift::ServerSocket.new(port);
-      if logger.nil? then
-        logger = Logger.new(STDERR);
-        logger.level = Logger::INFO;
-      end
       [handler, Thrift::NonblockingServer.new(
         processor, 
         transport, 
         Thrift::FramedTransportFactory.new,
         Thrift::BinaryProtocolFactory.new,
         1,
-        logger
+        Logger.default
       )];
     end
   end

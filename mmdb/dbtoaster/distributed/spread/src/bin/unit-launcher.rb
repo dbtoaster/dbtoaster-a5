@@ -1,6 +1,8 @@
 
 require 'unit';
 
+Logger.default.level = Logger::INFO
+
 puts "=========== Initializing Unit Test ==========="
 
 unitTest = UnitTestHarness.new;
@@ -12,7 +14,7 @@ puts "=========== Starting Nodes ===========";
 
 unitTest.start();
 
-puts "Waiting 1 sec for nodes to come up..."
+Logger.info("Waiting 1 sec for nodes to come up...", "unit-launcher.rb");
 sleep 1;
 
 puts "=========== Executing Node Dump ===========";
