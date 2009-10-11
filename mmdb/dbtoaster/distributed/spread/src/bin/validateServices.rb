@@ -9,7 +9,7 @@ otherFiles = ARGV.collect do |fname|
   File.open(fname).read;
 end.join("\n");
 
-thriftFile.scan(/service +([a-zA-Z0-9]+) *\{([^}]+)\}/).each do |service|
+thriftFile.scan(/service +([a-zA-Z0-9_]+) *\{([^}]+)\}/).each do |service|
   name, content = service;
   #get rid of comments
   content.gsub!(/#[^\n\r]*/, "");
@@ -17,7 +17,7 @@ thriftFile.scan(/service +([a-zA-Z0-9]+) *\{([^}]+)\}/).each do |service|
   content.gsub!(/\/\*.*\*\//, "");
   
   funcs = 
-    content.scan(/([a-zA-Z0-9]+) *\(([^)]*)\)/).delete_if do |f| 
+    content.scan(/([a-zA-Z0-9_]+) *\(([^)]*)\)/).delete_if do |f| 
       f[0] == "throws" 
     end.collect_hash do |f| 
       [ f[0], 

@@ -39,9 +39,9 @@ service MapNode {
                         2: i64             template,  //the put template ID (see the map file)
                         3: PutParams       params
                         ),
-  oneway void massput(  1: Version         id,
+  oneway void mass_put(  1: Version         id,
                         2: i64             template,
-                        3: i64             expectedGets,
+                        3: i64             expected_gets,
                         4: PutParams       params,
                         ),
   
@@ -53,7 +53,7 @@ service MapNode {
                         3: Version       cmdid
                         ),
 
-  oneway void pushget ( 1: GetResult     result,
+  oneway void push_get ( 1: GetResult     result,
                         2: Version       cmdid
                         ),
   

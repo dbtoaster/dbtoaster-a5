@@ -1,16 +1,16 @@
 
 class Array
   def paired_loop(other)
-    minSize = if other.size > size then size else other.size end;
-    (0...minSize).each do |i|
+    min_size = if other.size > size then size else other.size end;
+    (0...min_size).each do |i|
       yield self[i], other[i];
     end
   end
   
   def collect_pair(other)
-    minSize = if other.size > size then size else other.size end;
+    min_size = if other.size > size then size else other.size end;
     ret = Array.new;
-    (0...minSize).each do |i|
+    (0...min_size).each do |i|
       ret.push(yield self[i], other[i]);
     end
     ret;

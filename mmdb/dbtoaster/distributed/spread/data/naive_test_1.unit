@@ -14,8 +14,9 @@ value Map 1[102]v3 = 9.9999
 partition Map 2[0::200]
 
 ############ Put Templates
-template 1 R	A;B		Map 1[A]		4+B
-template 2 R	A;B		Map 1[A]		A+Map 1[B]
+template 1 R	A;B	Map 1[A]		4+B
+template 2 R	A;B	Map 1[A]		A+Map 1[B]
+template 3 R	A;B	Map 2[C]		A+Map 1[C]
 
 ############ Test Sequence
 # Note that dumps can be used as synchs, execution pauses until the corresponding server has completed the dump.
@@ -32,6 +33,12 @@ fetch 0 : Map 1[5] @ Alpha -> Beta
 # Put of a remote map value
 put 7 : Template 2 (4, 102) @ Alpha
 fetch 7 : Map 1[102] @ Beta -> Alpha
+
+# Mass fetch test
+fetch 0 : Map 1[-1] @ Alpha -> Beta
+
+# Mass Put
+massput 8 : Template 3 (0, 42) @ Beta
 
 # Aaaand... let's see where we stand
 sleep 1

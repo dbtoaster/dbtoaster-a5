@@ -56,13 +56,13 @@ end
 ###################################################
 
 class UnitTestFetchStep
-  def initialize(command, nodeMap)
+  def initialize(command, node_map)
     parsed = 
-      / *([0-9]+) *:([^@]*) @ *([0-9a-zA-Z]+) *-> *([0-9a-zA-Z]+)/.match(command);
+      / *([0-9]+) *:([^@]*)@ *([0-9a-zA-Z]+) *-> *([0-9a-zA-Z]+)/.match(command);
     raise SpreadException.new("Invalid fetch step string: " + command) if parsed == nil;
     
     @cmdid, @source, @dest = 
-      parsed[1].to_i, nodeMap[parsed[3]], nodeMap[parsed[4]];
+      parsed[1].to_i, node_map[parsed[3]], node_map[parsed[4]];
     
     @target = parsed[2].split(";").collect do |e| Entry.parse(e) end;
   end
@@ -77,7 +77,7 @@ class UnitTestFetchStep
 end
 
 class UnitTestPutStep
-  def initialize(command, nodeMap, templateMap)
+  def initialize(command, node_map, template_map)
     parsed = 
       / *([0-9]+) * : *Template *([0-9]+) *\(([0-9a-zA-Z, ]*)\) *@ *([0-9a-zA-Z]+)/.match(command)
     raise SpreadException.new("Invalid put step string: " + command) if parsed == nil || parsed.to_a.size != 5;
@@ -85,11 +85,11 @@ class UnitTestPutStep
     parsed.shift; #first result is the overall match
     
     @cmdid, @template, @params, @dest = 
-      parsed[0], parsed[1], Hash.new, nodeMap[parsed[3]];
+      parsed[0], parsed[1], Hash.new, node_map[parsed[3]];
     
-    templateParams = templateMap[@template.to_i].paramlist.clone;
+    template_params = template_map[@template.to_i].paramlist.clone;
     parsed[2].split(/, */).each do |param|
-      @params[templateParams.shift] = param unless templateParams.size <= 0;
+      @params[template_params.shift] = param unless template_params.size <= 0;
     end
   end
   
@@ -100,7 +100,7 @@ class UnitTestPutStep
   def to_s
     @cmdid.to_s + " @ [localhost:" + @destport.to_s + "] : Template " + 
       @template.to_s + "(" + 
-      @params.keys.collect do |key| key.to_s + ":" + @params[key].to_s end.join(", ") + ")";
+      @params.collect do |key, value| key.to_s + ":" + value.to_s end.join(", ") + ")";
   end
 end
 
@@ -110,9 +110,9 @@ class UnitTestDumpStep
   end
   
   def fire
-    @nodes.each do |unitNode| 
-      Logger.info("---" + unitNode.name + "---", "unit.rb")
-      unitNode.client.dump.each_line do |line|
+    @nodes.each do |unit_node| 
+      Logger.info("---" + unit_node.name + "---", "unit.rb")
+      unit_node.client.dump.each_line do |line|
         Logger.info(line.chomp, "unit.rb");
       end
     end
@@ -147,7 +147,7 @@ class UnitTestHarness
     @puttemplates = Hash.new;
   end
   
-  def addNode(name = @nodes.size.to_s)
+  def add_node(name = @nodes.size.to_s)
     node = UnitTestNode.new(52982 + @nodes.size, name);
     @indexmap[name] = node;
     Logger.info("New Node " + name.to_s + " : " + @nodes.size.to_s + " @ port " + node.port.to_s, "unit.rb");
@@ -166,12 +166,12 @@ class UnitTestHarness
     linebuffer = nil;
     nodename = nil;
     input.each do |line|
-      Logger.debug("GOT: " + line, "unit.rb");
+      Logger.debug("GOT: " + line.chomp, "unit.rb");
       if line[0] != '#' then 
         cmd = line.scan(/[^ \r\n]+/);
         case cmd[0]
           when "node" then 
-            addNode(nodename).handler.setup(linebuffer) unless linebuffer == nil;
+            add_node(nodename).handler.setup(linebuffer) unless linebuffer == nil;
             if cmd.size > 1 then nodename = cmd[1] else nodename = @nodes.size.to_s; end
             linebuffer = Array.new;
           when "template" then
@@ -183,11 +183,11 @@ class UnitTestHarness
         end
       end
     end
-    addNode(nodename).handler.setup(linebuffer) unless linebuffer == nil;
+    add_node(nodename).handler.setup(linebuffer) unless linebuffer == nil;
     @nodes.each do |node|
       Logger.debug("Loading put templates into Node " + node.name, "unit.rb");
       @puttemplates.each_pair do |id, cmd|
-        node.handler.installPutTemplate(id, cmd);
+        node.handler.install_put_template(id, cmd);
       end
     end
     cmdbuffer.each do |cmd|

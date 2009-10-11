@@ -1,28 +1,31 @@
 
 require 'unit';
 
-Logger.default.level = Logger::INFO
+Logger.default.level = Logger::INFO;
 
 puts "=========== Initializing Unit Test ==========="
 
-unitTest = UnitTestHarness.new;
+unit_test = UnitTestHarness.new;
 ARGV.each do |f|
-  unitTest.setup(File.open(f));
+  case f
+    when "-v" then Logger.default.level = Logger::DEBUG;
+    else unit_test.setup(File.open(f));
+  end
 end
 
 puts "=========== Starting Nodes ===========";
 
-unitTest.start();
+unit_test.start();
 
 Logger.info("Waiting 1 sec for nodes to come up...", "unit-launcher.rb");
 sleep 1;
 
 puts "=========== Executing Node Dump ===========";
 
-unitTest.dump();
+unit_test.dump();
 
 puts "=========== Running Test ===========";
 
-unitTest.run();
+unit_test.run();
 
 sleep;

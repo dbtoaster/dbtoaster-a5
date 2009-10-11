@@ -10,7 +10,7 @@ class MultiKeyMap
   end
   
   def [](params)
-    validateParams(params)
+    validate_params(params)
     
     nestedvar = @basemap;
     params.each do |param|
@@ -21,7 +21,7 @@ class MultiKeyMap
   end
   
   def []=(key, val)
-    validateParams(key)
+    validate_params(key)
 
     nestedvar = @basemap;
     
@@ -35,7 +35,7 @@ class MultiKeyMap
   end
   
   def has_key?(params)
-    validateParams(params)
+    validate_params(params)
     
     nestedvar = @basemap;
     params.each do |param|
@@ -47,7 +47,7 @@ class MultiKeyMap
   
   def values
     ret = Array.new;
-    scanImpl(
+    scan_impl(
       [-1] * @numkeys,
       Proc.new do |key, value| ret.push(value); end
     );
@@ -55,26 +55,26 @@ class MultiKeyMap
   end
   
   def scan(params, &block)
-    validateParams(params)
-    scanImpl(params, block);
+    validate_params(params)
+    scan_impl(params, block);
   end
   
   private #################################################
 
-  def scanImpl(params, block, depth = 0, nestedmap = @basemap, paramstack = Array.new)
+  def scan_impl(params, block, depth = 0, nestedmap = @basemap, paramstack = Array.new)
     if depth >= params.size then
       block.call(paramstack.clone, nestedmap); # once we reach the inner depths, instead of a map, we have a value
     else
       if params[depth] == @wildcard then
         nestedmap.each_pair do |key, value|
           paramstack.push(key);
-          scanImpl(params, block, depth+1, value, paramstack);
+          scan_impl(params, block, depth+1, value, paramstack);
           paramstack.pop;
         end
       else
         if nestedmap.has_key? params[depth] then
           paramstack.push(params[depth]);
-          scanImpl(params, block, depth+1, nestedmap[params[depth]], paramstack)
+          scan_impl(params, block, depth+1, nestedmap[params[depth]], paramstack)
         end
       end
     end
@@ -82,7 +82,7 @@ class MultiKeyMap
   
   private
   
-  def validateParams(params)
+  def validate_params(params)
     raise SpreadException.new("MultiKeyMap: Tried to access " + @numkeys.to_s + " key array with " + params.size.to_s + " keys: " + params.join(",")) unless params.size == @numkeys;
   end
 end

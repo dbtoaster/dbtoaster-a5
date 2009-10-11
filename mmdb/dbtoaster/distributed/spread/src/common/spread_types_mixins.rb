@@ -46,11 +46,9 @@ class PutParams
           case params[key]
             when Numeric, String then 
               field.value = params[key].to_f;
-              Logger.debug "Value: " + key + " = " + params[key].to_f.to_s;
               PutFieldType::VALUE;
             when Entry then
               field.entry = params[key];
-              Logger.debug "Entry: " + key + " = " + params[key].to_s;
               PutFieldType::ENTRY;
             else 
               raise SpreadException.new("Unknown parameter type: " + params[key].class.to_s);

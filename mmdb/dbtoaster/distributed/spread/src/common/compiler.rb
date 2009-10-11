@@ -30,14 +30,14 @@ class Tokenizer
     @tokens = @tokens.flatten;
   end
   
-  def assertNext(token, errstr = nil)
+  def assert_next(token, errstr = nil)
     if self.next != token then
       errstr = "Parse Error: Expected '" + token.to_s + "' but found '" + last.to_s + "'" unless errstr != nil;
       raise SpreadException.new(errstr);
     end
   end
   
-  def tokensUpTo(token)
+  def tokens_up_to(token)
     ret = Array.new;
     while (more? && (self.next != token))
       ret.push(last);
@@ -93,9 +93,9 @@ class TemplateEntry
     source = # In some cases we get the full expression, in others we don't get "Map".
       if tokenizer.next == "Map" then tokenizer.next else tokenizer.last end;
     
-    tokenizer.assertNext("[");
+    tokenizer.assert_next("[");
     keys = 
-      tokenizer.tokensUpTo("]").delete_if do |key|
+      tokenizer.tokens_up_to("]").delete_if do |key|
         key == ","
       end.collect do |key|
         case key
@@ -133,9 +133,10 @@ class TemplateValuation
     @template, @params, @entries = template, params, entries;
     if entries.is_a? Array then
       @entries = Hash.new;
-      prepareEntries(entries);
+      prepare_entries(entries);
     end
-    prepareEntries(template.entries) unless template == nil;
+    prepare_entries(template.entries) unless template == nil;
+    @target = nil;
   end
   
   def param(key)
@@ -169,7 +170,7 @@ class TemplateValuation
     end
   end
   
-  def prepareEntries(*entries)
+  def prepare_entries(*entries)
     entries.flatten.each do |e|
       e = e.instantiate(@params) if e.is_a? TemplateEntry;
       @entries[e] = nil unless @entries.has_key? e;
@@ -177,12 +178,13 @@ class TemplateValuation
   end
   
   def prepare(*entries)
-    prepareEntries(entries);
+    prepare_entries(entries);
   end
   
   def discover(entry, value)
     if @entries.has_key? entry then
       @entries[entry] = value;
+      @target = nil;
     end
   end
   
@@ -193,6 +195,11 @@ class TemplateValuation
   def to_s
     @template.expression.to_s(self);
   end
+  
+  def target
+    @target = @template.target.instantiate(self.params) if @target.nil?
+    @target;
+  end
 end
 
 ###################################################
@@ -202,7 +209,7 @@ class TemplateExpression
     @op, @left, @right = op, left, right;
   end
   
-  def TemplateExpression.decodeVar(tokenizer)
+  def TemplateExpression.decode_var(tokenizer)
     case tokenizer.next
       when "(" then decode(tokenizer);
       when "+","-","*","/",")" then 
@@ -223,6 +230,13 @@ class TemplateExpression
       when :map                     then list.push(@left);
       when :val                     then list;
       else            raise SpreadException.new("Unknown Expression operator (entries): " + @op.to_s);
+    end
+  end
+  
+  def loop_vars(known_vars, list = Array.new)
+    entries.delete_if do |entry|
+      # see if any keys have not been bound (either explicitly, or via known_vars)
+      entry.keys.clone.delete_if do |key| (key.is_a? Numeric) || (known_vars.include? key) end.empty?
     end
   end
   
@@ -258,7 +272,7 @@ class TemplateExpression
     end
   end
   
-  def TemplateExpression.decode(tokenizer, left = decodeVar(tokenizer))
+  def TemplateExpression.decode(tokenizer, left = decode_var(tokenizer))
     op = case tokenizer.next
       when "+" then :plus
       when "-" then :sub
@@ -267,7 +281,7 @@ class TemplateExpression
       when ")" then return left;
       else raise SpreadException.new("Parse Error ("+tokenizer.last+")");
     end
-    right = decodeVar(tokenizer);
+    right = decode_var(tokenizer);
     
     if tokenizer.more? then decode(tokenizer, TemplateExpression.new(op, left, right))
     else                    TemplateExpression.new(op, left, right);
@@ -351,21 +365,24 @@ class UpdateTemplate
   
   def initialize(line)
     line = line.split("\t");
-    raise SpreadException.new("Instantiating update template with insufficient components") if line.size < 6;
+    raise SpreadException.new("Instantiating update template with insufficient components") if line.size < 5;
     
     # This template applies to updates to [0]
     @relation = line[0].to_s;
     # This template is parametrized by the parameters listed in the comma delimited list [1]
-    @paramlist = line[1].split(";");
-    # Further parameters come from looping over the params in [2], of the form 'MapID[Key,Key,...]'
-    # This will loop over the specified key number in the specified map.
-    @loopvarlist = line[2].split(";").collect do |entry| TemplateEntry.new(entry).freeze end.freeze;
-    # The target's Map Entry (template) is [3]
-    @target = TemplateEntry.parse(line[3]);
-    # The conditions for the target to apply are [4]
-    @conditions = TemplateConditionList.new(line[4]);
-    # The expression for the update is [5]
-    @expression = TemplateExpression.parse(line[5]);
+    @paramlist = line[1].split(";").collect do |k| k.gsub(/ *([^ ]) */, "\\1") end;
+    # The target's Map Entry (template) is [2]
+    @target = TemplateEntry.parse(line[2]);
+    # The conditions for the target to apply are [3]
+    @conditions = TemplateConditionList.new(line[3]);
+    # The expression for the update is [4]
+    @expression = TemplateExpression.parse(line[4]);
+    
+    @loopvarlist = @expression.loop_vars(@paramlist);
+  end
+  
+  def requires_loop?
+    @loopvarlist.empty?
   end
   
   def entries

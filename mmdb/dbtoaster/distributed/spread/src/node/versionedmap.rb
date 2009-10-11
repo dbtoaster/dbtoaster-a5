@@ -18,7 +18,7 @@ class MassPutRecord
     
     @next, @prev = nil, nil;
     @callbacks = Hash.new;
-    @getsPending = true;
+    @gets_pending = true;
   end
   
   def register(key, callback, exemptions = Set.new)
@@ -35,7 +35,7 @@ class MassPutRecord
   end
   
   def pending
-    (@getsPending) || ((@prev != nil) && (@prev.pending));
+    (@gets_pending) || ((@prev != nil) && (@prev.pending));
   end
   
   def ready
@@ -49,26 +49,27 @@ class MassPutRecord
   end
   
   def complete
-    @getsPending = false;
-    checkReady;
+    @gets_pending = false;
+    check_ready;
   end
   
   private
   
-  def checkReady
+  def check_ready
     if @callbacks != nil && ready then
       @callbacks.each_pair do |target, cblist|
         cblist.each do |callback|
           @partition.get(target, callback[0], @version, callback[1]);
         end
       end
+      @callback.release;
       
       # If we've gotten this far, we've committed everything and everything is in order.  
       # We can start deleting older mass records.
-      @partition.collapseMassRecordsTo(self);
+      @partition.collapse_mass_records_to(self);
       
       # This might potentially complete the next mass put.
-      @next.checkReady if @next != null;
+      @next.check_ready if @next != null;
       
       # And ensure that we never get called again.
       @callbacks = nil;
@@ -97,7 +98,7 @@ class PutRecord
     unless @prev == nil then
       @prev.register(self); # this will lead to firing callbacks once @prev becomes ready
     else
-      self.fireCallbacks;
+      self.fire_callbacks;
     end
   end
   
@@ -141,7 +142,7 @@ class PutRecord
   
   def register(callback)
     if ready then callback.fire(@target, @value);
-    else @callbacks.push(callback);
+    else callback.fire(@target, nil); @callbacks.push(callback);
     end
   end
   
@@ -153,19 +154,19 @@ class PutRecord
     Logger.info("Discovered: " + entry.to_s + " = " + value.to_s, "versionedmap.rb");
     @required.delete(entry)
     @value.discover(entry, value) if @value.is_a? TemplateValuation;
-    fireCallbacks;
+    fire_callbacks;
   end
   
   # CommitRecord can act as a pseudo-callback; This callback fires when
   # the previous record is ready.
   def fire(entry, value)
-    fireCallbacks;
+    fire_callbacks unless value.nil?;
   end
   
-  def finishMessage
+  def finish_message
   end
   
-  def fireCallbacks
+  def fire_callbacks
     unless pending || @callbacks.nil? then
       Logger.info("Completed " + @target.to_s + "v" + @version.to_s + "; Firing " + @callbacks.size.to_s + " callbacks", "versionedmap.rb");
       @value = @value.to_f + if @prev.nil? then 0 else @prev.value.to_f end;
@@ -202,7 +203,9 @@ class MapPartition
     key = [key] unless key.is_a? Array;
     raise SpreadException.new("Trying to determine contains with an inconsistent key size; key:" + key.size.to_s + "; partition: " + @start.size.to_s) unless key.size == @start.size;
     key.each_index do |i|
-      if (key[i].to_i < @start[i]) || (key[i].to_i >= @start[i] + @range[i]) then return false end;
+      if (key[i] != -1) &&
+         ((key[i].to_i < @start[i]) || 
+          (key[i].to_i >= @start[i] + @range[i])) then return false end;
     end 
     return true;
   end
@@ -259,6 +262,7 @@ class MapPartition
           value = if version == nil then value.last else value.find(version) end;
           value.register(callback);
         end
+        callback.release
       end
     else
       # This is a single-target request  
@@ -311,7 +315,7 @@ class MapPartition
     end
   end
   
-  def massInsert(version, template)
+  def mass_insert(version, template)
     record = MassPutRecord.new(version, template, self);
     if @massputrecords == nil then 
       @massputrecords = record;
