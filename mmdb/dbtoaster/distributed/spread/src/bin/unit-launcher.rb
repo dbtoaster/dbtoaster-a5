@@ -4,7 +4,7 @@ require 'unit';
 Logger.default_level = Logger::INFO;
 Logger.default_name = "Tosthaus Unit Test";
 
-Logger.info "=========== Initializing Unit Test ==========="
+Logger.info { "=========== Initializing Unit Test ===========" }
 
 unit_test = UnitTestHarness.new;
 ARGV.each do |f|
@@ -14,18 +14,18 @@ ARGV.each do |f|
   end
 end
 
-Logger.info "=========== Starting Nodes ===========";
+Logger.info { "=========== Starting Nodes ===========" }
 
 unit_test.start();
 
-Logger.info("Waiting 1 sec for nodes to come up...", "unit-launcher.rb");
+Logger.info { "Waiting 1 sec for nodes to come up..." }
 sleep 1;
 
-Logger.info "=========== Executing Node Dump ===========";
+Logger.info { "=========== Executing Node Dump ===========" }
 
 unit_test.dump();
 
-Logger.info "=========== Running Test ===========";
+Logger.info { "=========== Running Test ===========" }
 
 unit_test.run();
 

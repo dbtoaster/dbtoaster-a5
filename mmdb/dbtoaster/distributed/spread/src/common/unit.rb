@@ -124,9 +124,10 @@ class UnitTestDumpStep
   
   def fire
     @nodes.collect do |unit_node| 
-      "---" + unit_node.name + "---" +
-      unit_node.client.dump
-    end.join("\n").each_line do |line|
+      [ "---" + unit_node.name + "---",
+        unit_node.client.dump.split("\n").collect do |line| line.gsub(/^Map/, "   Map") end
+      ]
+    end.flatten.each do |line|
       Logger.info{ line.chomp };
     end
   end

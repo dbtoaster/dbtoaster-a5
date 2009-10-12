@@ -80,22 +80,22 @@ class Logger
   end
   
   def Logger.default_level=(default_level)
-    @@logger.level = default_level;
+    default.level = default_level;
   end
   
   def Logger.fatal(progname = @@default_name)
     Logger.default.fatal(progname) { yield }
   end
-  def Logger.error(string, progname = @@default_name)
+  def Logger.error(progname = @@default_name)
     Logger.default.error(progname) { yield }
   end
-  def Logger.warn(string, progname = @@default_name)
+  def Logger.warn(progname = @@default_name)
     Logger.default.warn(progname) { yield }
   end
-  def Logger.info(string, progname = @@default_name)
+  def Logger.info(progname = @@default_name)
     Logger.default.info(progname) { yield }
   end
-  def Logger.debug(string, progname = @@default_name)
+  def Logger.debug(progname = @@default_name)
     Logger.default.debug(progname) { yield }
   end
   def Logger.temp(string)

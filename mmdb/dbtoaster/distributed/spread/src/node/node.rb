@@ -227,7 +227,7 @@ class MapNodeHandler
   end
   
   def mass_put(id, template, expected_gets, params)
-    Logger.info "Mass Put with Params: " + params.to_s }
+    Logger.info { "Mass Put with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
