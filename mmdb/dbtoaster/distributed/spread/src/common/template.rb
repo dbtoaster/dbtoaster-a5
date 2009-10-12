@@ -97,7 +97,7 @@ class TemplateEntry
   end
   
   def TemplateEntry.parse(entry)
-    decode(Tokenizer.new(entry, /Map|[0-9]+|\[|\]|[a-zA-Z][a-zA-Z0-9_]*/));
+    decode(Tokenizer.new(entry, /Map|[0-9]+|\[|\]|[a-zA-Z][a-zA-Z0-9_]*|,/));
   end
   
   def TemplateEntry.decode(tokenizer)
@@ -482,7 +482,7 @@ class TemplateForeachEvaluator
       # It is also possible for an entry to match no rules at all; This occurs if
       # the template's expression includes both nonlooping and looping maps.
       row.push(rule[1].collect do |k| entry.key[k[0]] end) if rule[0].weak_match?(entry, @valuation.params);
-      Logger.debug(entry.to_s + " = " + value.to_s + "; Matches: " + rule[0].to_s + " : " + rule[0].weak_match?(entry, @valuation.params).to_s, "template.rb");
+      Logger.debug { entry.to_s + " = " + value.to_s + "; Matches: " + rule[0].to_s + " : " + rule[0].weak_match?(entry, @valuation.params).to_s };
     end
     @valuation.entries[entry] = value;
   end

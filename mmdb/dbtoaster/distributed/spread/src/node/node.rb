@@ -20,7 +20,7 @@ class CommitNotification
   
   def fire(entry, value)
     return if value.nil?;
-    Logger.info("Fired Notification: " + entry.to_s + " = " + value.to_s, "node.rb");
+    Logger.info {"Fired Notification: " + entry.to_s + " = " + value.to_s }
     @record.discover(entry, value);
   end
 end
@@ -40,13 +40,13 @@ class RemoteCommitNotification
   # of times.  If a fetch is multitarget, hold will be called once for every fetch and the corresponding
   # release will be called by the map when the set of results is known (but not necessarilly available)
   def hold
-    Logger.debug("Hold", "node.rb");
+    Logger.debug { "Hold" }
     @holding += 1;
   end
   
   def release
     @holding -= 1;
-    Logger.debug("Release: " + @holding.to_s, "node.rb");
+    Logger.debug { "Release: " + @holding.to_s }
     @count = 0
     @entries.each_value do |v| 
       if v == nil then @count += 1; end; 
@@ -63,13 +63,13 @@ class RemoteCommitNotification
   private
   
   def check_ready
-    Logger.debug("RemoteCallback Check Ready: holding = " + @holding.to_s + "; entries left = " + @count.to_s, "node.rb")
+    Logger.debug { "RemoteCallback Check Ready: holding = " + @holding.to_s + "; entries left = " + @count.to_s }
     if (@holding <= 0) && (@count <= 0) then
-      Logger.debug("Connecting to " + @destination.to_s, "node.rb");
+      Logger.debug { "Connecting to " + @destination.to_s }
       peer = MapNode::Client.connect(@destination.host, @destination.port);
       peer.push_get(@entries, @cmdid);
       peer.close();
-      Logger.debug("push finished", "node.rb");
+      Logger.debug { "push finished" }
       true;
     end
   end
@@ -92,7 +92,7 @@ class MassPutDiscoveryMultiplexer
   end
   
   def discover(entry, value)
-    Logger.debug("Discovered that " + entry.to_s + " = " + value.to_s, "node.rb");
+    Logger.debug {"Discovered that " + entry.to_s + " = " + value.to_s }
     @evaluator.discover(entry, value);
   end
   
@@ -100,7 +100,7 @@ class MassPutDiscoveryMultiplexer
     @expected_gets -= 1;
     if @records && @expected_gets <= 0 then
       @evaluator.foreach do |target, delta_value|
-        Logger.debug("Generated Delta : " + target.to_s + " += " + delta_value.to_s, "node.rb");
+        Logger.debug {"Generated Delta : " + target.to_s + " += " + delta_value.to_s }
         @records.each do |record| record.put(target, delta_value) end;
       end
       @records.each do |r| r.complete end;
@@ -148,12 +148,12 @@ class MapNodeHandler
         region.collect do |r| r[1] end
       )
     );
-    Logger.debug("Created partition " + @maps[map.to_i].to_s, "node.rb");
+    Logger.debug { "Created partition " + @maps[map.to_i].to_s }
   end
   
   def install_put_template(index, cmd)
     @templates[index.to_i] = cmd;
-    Logger.debug("Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s, "node.rb");
+    Logger.debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
   
   def dump()
@@ -219,7 +219,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    Logger.debug("Put with Params: " + params.to_s, "node.rb");
+    Logger.debug {"Put with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
@@ -227,7 +227,7 @@ class MapNodeHandler
   end
   
   def mass_put(id, template, expected_gets, params)
-    Logger.info("Mass Put with Params: " + params.to_s, "node.rb");
+    Logger.info "Mass Put with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
@@ -255,7 +255,7 @@ class MapNodeHandler
         destination, cmdid
       );
       target.each do |t|
-        Logger.debug("Fetch: " + t.to_s, "node.rb");
+        Logger.debug {"Fetch: " + t.to_s }
         # get() will fire the trigger if the value is already defined
         # the actual message will not be sent until all requests in this 
         # command can be fulfilled.
@@ -275,10 +275,12 @@ class MapNodeHandler
   end
   
   def push_get(result, cmdid)
-    Logger.info("Pushget: " + result.size.to_s + " results for command " + cmdid.to_s, "node.rb");
+    Logger.info {"Pushget: " + result.size.to_s + " results for command " + cmdid.to_s }
     if cmdid == 0 then
-      Logger.info("  Fetch Results Pushed: " + 
-        result.collect do |entry, val| entry.to_s + " = " + val.to_s end.join(", "), "node.rb");
+      Logger.info {
+        "  Fetch Results Pushed: " + 
+        result.collect do |entry, val| entry.to_s + " = " + val.to_s end.join(", ")
+      }
       return
     end
     

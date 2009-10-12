@@ -1,30 +1,31 @@
 
 require 'unit';
 
-Logger.default.level = Logger::INFO;
+Logger.default_level = Logger::INFO;
+Logger.default_name = "Tosthaus Unit Test";
 
-puts "=========== Initializing Unit Test ==========="
+Logger.info "=========== Initializing Unit Test ==========="
 
 unit_test = UnitTestHarness.new;
 ARGV.each do |f|
   case f
-    when "-v" then Logger.default.level = Logger::DEBUG;
+    when "-v" then Logger.default_level = Logger::DEBUG;
     else unit_test.setup(File.open(f));
   end
 end
 
-puts "=========== Starting Nodes ===========";
+Logger.info "=========== Starting Nodes ===========";
 
 unit_test.start();
 
 Logger.info("Waiting 1 sec for nodes to come up...", "unit-launcher.rb");
 sleep 1;
 
-puts "=========== Executing Node Dump ===========";
+Logger.info "=========== Executing Node Dump ===========";
 
 unit_test.dump();
 
-puts "=========== Running Test ===========";
+Logger.info "=========== Running Test ===========";
 
 unit_test.run();
 

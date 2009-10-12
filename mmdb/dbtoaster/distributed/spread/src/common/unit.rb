@@ -17,7 +17,7 @@ class UnitTestNode
   
   def start
     @thread = Thread.new(@server, @name) do |server, name|
-      Logger.info("Starting Node " + @name.to_s, "unit.rb @ " + name);
+      Logger.info {"Starting Node " + @name.to_s}
       begin
         server.serve;
       rescue Exception => e;
@@ -46,7 +46,7 @@ class UnitTestNode
   
   def client
     unless @client then
-      Logger.info("Establishing connection to Node: " + @name + " @ port " + @port.to_s + " ...", "unit.rb");
+      Logger.info {"Establishing connection to Node: " + @name + " @ port " + @port.to_s + " ..."};
       @client = MapNode::Client.connect("localhost", @port);
     end
     @client;
@@ -123,11 +123,11 @@ class UnitTestDumpStep
   end
   
   def fire
-    @nodes.each do |unit_node| 
-      Logger.info("---" + unit_node.name + "---", "unit.rb")
-      unit_node.client.dump.each_line do |line|
-        Logger.info(line.chomp, "unit.rb");
-      end
+    @nodes.collect do |unit_node| 
+      "---" + unit_node.name + "---" +
+      unit_node.client.dump
+    end.join("\n").each_line do |line|
+      Logger.info{ line.chomp };
     end
   end
   
@@ -179,7 +179,7 @@ class UnitTestHarness
   def add_node(name = @nodes.size.to_s)
     node = UnitTestNode.new(52982 + @nodes.size, name);
     @indexmap[name] = node;
-    Logger.info("New Node " + name.to_s + " : " + @nodes.size.to_s + " @ port " + node.port.to_s, "unit.rb");
+    Logger.info { "New Node " + name.to_s + " : " + @nodes.size.to_s + " @ port " + node.port.to_s }
     @nodes.push(node);
     node;
   end
@@ -195,7 +195,7 @@ class UnitTestHarness
     linebuffer = nil;
     nodename = nil;
     input.each do |line|
-      Logger.debug("GOT: " + line.chomp, "unit.rb");
+      Logger.debug { "GOT: " + line.chomp }
       if line[0] != '#' then 
         cmd = line.scan(/[^ \r\n]+/);
         case cmd[0]
@@ -214,7 +214,7 @@ class UnitTestHarness
     end
     add_node(nodename).handler.setup(linebuffer) unless linebuffer == nil;
     @nodes.each do |node|
-      Logger.debug("Loading put templates into Node " + node.name, "unit.rb");
+      Logger.debug {"Loading put templates into Node " + node.name };
       @puttemplates.each_pair do |id, cmd|
         node.handler.install_put_template(id, cmd);
       end
@@ -250,14 +250,14 @@ class UnitTestHarness
   def dump()
     @nodes.each do |node|
       node.dump.each_line do |line|
-        Logger.info(line.chomp, "unit.rb");
+        Logger.info { line.chomp }
       end
     end
   end
   
   def run()
     @testcmds.each do |cmd|
-      Logger.info("Executing Test Step: " + cmd.to_s, "unit.rb");
+      Logger.info {"Executing Test Step: " + cmd.to_s};
       begin
         cmd.fire;
       rescue Exception => e;

@@ -27,7 +27,7 @@ class MultiKeyMap
     
     lastindex = key[-1];
     
-    key.slice(0...-1) do |param|
+    key.slice(0...-1).each do |param|
       nestedvar[param] = Hash.new unless nestedvar.has_key? param;
       nestedvar = nestedvar[param];
     end
@@ -62,7 +62,7 @@ class MultiKeyMap
   private #################################################
 
   def scan_impl(params, block, depth = 0, nestedmap = @basemap, paramstack = Array.new)
-    if depth >= params.size then
+    if depth >= @numkeys then
       block.call(paramstack.clone, nestedmap); # once we reach the inner depths, instead of a map, we have a value
     else
       if params[depth] == @wildcard then

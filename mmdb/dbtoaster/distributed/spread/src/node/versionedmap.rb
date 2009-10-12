@@ -77,7 +77,7 @@ class MassPutRecord
   
   def check_ready
     if @callbacks && ready then
-      Logger.info("Massput v" + @version.to_s + " complete", "versionedmap.rb");
+      Logger.info { "Massput v" + @version.to_s + " complete" }
       @callbacks.each_pair do |target, cblist|
         cblist.each do |callback|
           @partition.get(target, callback[0], @version, callback[1]);
@@ -171,7 +171,7 @@ class PutRecord
   # Discover also takes charge of firing the callbacks waiting for this
   # record to complete.
   def discover(entry, value) 
-    Logger.info("Discovered: " + entry.to_s + " = " + value.to_s, "versionedmap.rb");
+    Logger.info {"Discovered: " + entry.to_s + " = " + value.to_s };
     @required.delete(entry)
     @value.discover(entry, value) if @value.is_a? TemplateValuation;
     fire_callbacks;
@@ -188,7 +188,7 @@ class PutRecord
   
   def fire_callbacks
     unless pending || @callbacks.nil? then
-      Logger.info("Completed " + @target.to_s + "v" + @version.to_s + "; Firing " + @callbacks.size.to_s + " callbacks", "versionedmap.rb");
+      Logger.info {"Completed " + @target.to_s + "v" + @version.to_s + "; Firing " + @callbacks.size.to_s + " callbacks" };
       @value = @value.to_f + if @prev.nil? then 0 else @prev.value.to_f end;
       @callbacks.each do |cb|
         cb.fire(@target, @value);

@@ -61,6 +61,8 @@ end
 
 class Logger
   @@logger = nil;
+  @@default_name = nil;
+  
   def Logger.default
     if @@logger.nil?
       @@logger = Logger.new(STDERR);
@@ -69,19 +71,34 @@ class Logger
     @@logger;
   end
   
-  def Logger.fatal(string, progname = nil)
-    Logger.default.fatal(progname) {string}
+  def Logger.default_name=(default_name)
+    @@default_name = default_name;
   end
-  def Logger.error(string, progname = nil)
-    Logger.default.error(progname) {string}
+  
+  def Logger.default=(logger)
+    @@logger = logger;
   end
-  def Logger.warn(string, progname = nil)
-    Logger.default.warn(progname) {string}
+  
+  def Logger.default_level=(default_level)
+    @@logger.level = default_level;
   end
-  def Logger.info(string, progname = nil)
-    Logger.default.info(progname) {string}
+  
+  def Logger.fatal(progname = @@default_name)
+    Logger.default.fatal(progname) { yield }
   end
-  def Logger.debug(string, progname = nil)
-    Logger.default.debug(progname) {string}
+  def Logger.error(string, progname = @@default_name)
+    Logger.default.error(progname) { yield }
+  end
+  def Logger.warn(string, progname = @@default_name)
+    Logger.default.warn(progname) { yield }
+  end
+  def Logger.info(string, progname = @@default_name)
+    Logger.default.info(progname) { yield }
+  end
+  def Logger.debug(string, progname = @@default_name)
+    Logger.default.debug(progname) { yield }
+  end
+  def Logger.temp(string)
+    Logger.info(string, "TEMPORARY");
   end
 end
