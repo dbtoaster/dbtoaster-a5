@@ -102,3 +102,24 @@ class Logger
     Logger.info(string, "TEMPORARY");
   end
 end
+
+module Math
+  def Math.max(*params, &block)
+    max = if params.empty? then nil else params[0] end;
+    params.each do |param|
+      if block then
+        max = param if block.call(param, max);
+      else
+        max = param if param >= max;
+      end
+    end
+    max;
+  end
+  def Math.min(*params)
+    max = if params.empty? then nil else params[0] end;
+    params.each do |param|
+      max = param unless param >= max;
+    end
+    max;
+  end
+end

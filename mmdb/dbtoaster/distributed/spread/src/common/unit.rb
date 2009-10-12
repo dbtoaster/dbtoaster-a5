@@ -123,6 +123,10 @@ class UnitTestDumpStep
   end
   
   def fire
+    # We do this fancy little loop instead of putting everything inside logger 
+    # blocks for two reasons. 
+    # 1) This generates one line of logger output for each line in the dump
+    # 2) This gathers all dumps before spitting them out.  
     @nodes.collect do |unit_node| 
       [ "---" + unit_node.name + "---",
         unit_node.client.dump.split("\n").collect do |line| line.gsub(/^Map/, "   Map") end
@@ -143,6 +147,10 @@ class UnitTestSynchStep
   end
   
   def fire
+    # we hack this up by sending two rounds of systemwide synchronous messages
+    @nodes.each do |unit_node| 
+      unit_node.client.dump;
+    end
     @nodes.each do |unit_node| 
       unit_node.client.dump;
     end

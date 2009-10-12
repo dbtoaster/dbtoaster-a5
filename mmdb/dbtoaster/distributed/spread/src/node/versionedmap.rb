@@ -17,6 +17,22 @@ class PutDelta
   end
 end
 
+###################################################
+
+class PutCompleteCallback
+  def initialize(partition, version)
+    @partition, @version = partition, version
+  end
+  
+  def release
+  
+  end
+  
+  def fire(entry, value)
+    return if value.nil?
+    @partition.collapse_record_to(entry.key, @version)
+  end
+end
 
 ###################################################
 
@@ -44,6 +60,10 @@ class MassPutRecord
   
   def last
     if @next then @next.last else self end;
+  end
+  
+  def last_ready
+    if @next && @next.ready then @next.last_ready else self end;
   end
   
   def pending
@@ -86,7 +106,7 @@ class MassPutRecord
       
       # If we've gotten this far, we've committed everything and everything is in order.  
       # We can start deleting older mass records.
-      #@partition.collapse_mass_records_to(self);
+      @partition.collapse_mass_records_to(@version);
       
       # This might potentially complete the next mass put.
       @next.check_ready if @next;
@@ -349,11 +369,24 @@ class MapPartition
     else
       record = @data[target.key] = PutRecord.new(target, version, value);
     end
+    record.register(PutCompleteCallback.new(self, version));
     record;
   end
   
   def set(var, vers, val)
     insert(Entry.make(@mapid, var), vers, val.to_f)
+  end
+  
+  def collapse_mass_records_to(version)
+    @massputrecords = @massputrecords.next while ((!@massputrecords.nil?) && (@massputrecords.version < version));
+    @massputrecords.prev = nil unless @massputrecords.nil?;
+  end
+  
+  def collapse_record_to(key, version)
+    version = Math.min(version, @massputrecords.last_ready.version) unless @massputrecords.nil?;
+    @data.replace(key) do |k, v|
+      v.find(version);
+    end
   end
   
   def to_s
