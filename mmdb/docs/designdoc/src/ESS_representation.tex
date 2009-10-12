@@ -753,8 +753,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
             INSERT INTO asks_combinedView: update_S(top_ask) 
                      ON DUPLICATE KEY UPDATE id = top_ask.id
             INSERT INTO combined_output: 
-                     SELECT create_F(top_bid), create_E(top_ask)
-                     FROM top_bids b, top_ask a)
+                     create_F(top_bid), create_E(top_ask))
      WHEN (top_bid="hist" && top_ask="hist" ||
                                  top_bid="sim" && top_ask="sim") &&
             top_bid.volume > top_ask.volume                     
@@ -763,8 +762,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
             INSERT INTO asks_combinedView: update_B(top_bid) 
                      ON DUPLICATE KEY UPDATE id = top_bid.id
             INSERT INTO combined_output: 
-                     SELECT create_E(top_bid), create_F(top_ask)
-                     FROM top_bids b, top_ask a)
+                     create_E(top_bid), create_F(top_ask))
      WHEN (top_bid="sim" && top_ask="hist" &&
               top_bid.volume = top_sim_ask.current_volume)
             (DELETE * FROM bids_combinedView bcv
@@ -775,7 +773,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                          FROM top_sim_ask t
                          WHERE t.source="sim")
              INSERT INTO asks_combinedView: 
-                      (SELECT create_S(top_sim_ask)
+                      (SELECT update_S(top_sim_ask)
                        FROM top_sim_ask t
                        WHERE t.source="hist") tuple
                       ON DUPLICATE KEY UPDATE id= tuple.id
@@ -784,36 +782,58 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                         FROM top_sim_ask t
                         WHERE t.source="hist")
              INSERT INTO combined_output:
+                     (SELECT create_F(top_sim_ask)
+                      FROM top_sim_ask t
+                      WHERE t.source="sim")
+             INSERT INTO combined_output:
                      create_F(top_bid))
      WHEN (top_bid="sim" && top_ask="hist" &&
                top_bid.volume < top_sim_ask.current_volume)
             (DELETE * FROM bids_combinedView bcv
                       WHERE bcv.id = top_bids.id 
               INSERT INTO asks_combinedView: 
-                        (SELECT create_S(top_sim_ask)
+                        (SELECT update_S(top_sim_ask)
                          FROM top_sim_ask t
                          WHERE t.source="hist") tuple
                         ON DUPLICATE KEY UPDATE id= tuple.id
+               INSERT INTO asks_combinedView:
+                        (SELECT update_S_Sim(top_sim_ask)
+                         FROM top_sim_ask t
+                         WHERE t.source="sim") tuple
+                        ON DUPLICATE KEY UPDATE id = tuple.id
                INSERT INTO combined_output:
                        (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
                          FROM top_sim_ask t
                          WHERE t.source="hist")
                INSERT INTO combined_output:
+                       (SELECT create_E(top_sim_ask)
+                        FROM top_sim_ask t
+                        WHERE t.source="sim")
+               INSERT INTO combined_output:
                         create_F(top_bid))
     WHEN (top_bid="sim" && top_ask="hist" &&
                top_bid.volume > top_sim_ask.current_volume)
-            (INSERT INTO asks_combinedView: 
-                (SELECT create_S(top_sim_ask)
+            (INSERT INTO bids_combinedView: create_B(top_bid)
+                 ON DUPLICATE KEY UPDATE id= top_bid.id
+             INSERT INTO asks_combinedView: 
+                (SELECT update_S(top_sim_ask)
                  FROM top_sim_ask t
                  WHERE t.source="hist") tuple
               ON DUPLICATE KEY UPDATE id= tuple.id
-             INSERT INTO bids_combinedView: create_B(top_bid)
-              ON DUPLICATE KEY UPDATE id= top_bid.id
+             DELETE * FROM asks_combinedView acv
+                      WHERE acv.id = 
+                         (SELECT *
+                          FROM top_sim_ask t
+                          WHERE t.source="sim")
              INSERT INTO combined_output:
                          (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
-                           FROM top_sim_ask t
-                           WHERE t.source="hist")
-                 INSERT INTO combined_output:
+                          FROM top_sim_ask t
+                          WHERE t.source="hist")
+             INSERT INTO combined_output:
+                         (SELECT create_F(top_sim_ask)
+                          FROM top_sim_ask t
+                          WHERE t.source="sim")
+             INSERT INTO combined_output:
                           create_E(top_bid))
     WHEN (top_bid="hist" && top_ask="sim" &&
             top_sim_bids.current_volume = top_ask.volume)
@@ -825,7 +845,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                          FROM top_sim_bid t
                          WHERE t.source="sim")
              INSERT INTO bids_combinedView: 
-                      (SELECT create_S(top_sim_bid)
+                      (SELECT update_S(top_sim_bid)
                        FROM top_sim_bid t
                        WHERE t.source="hist") tuple
                       ON DUPLICATE KEY UPDATE id= tuple.id
@@ -834,47 +854,59 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                         FROM top_sim_bid t
                         WHERE t.source="hist")
              INSERT INTO combined_output:
+                     (SELECT create_F(top_sim_bid)
+                        FROM top_sim_bid t
+                        WHERE t.source="sim")
+             INSERT INTO combined_output:
                      create_F(top_ask))
      WHEN (top_bid="hist" && top_ask="sim" &&
              top_sim_bids.current_volume < top_ask.volume)
         (INSERT INTO asks_combinedView create_S(top_ask)
             ON DUPLICATE KEY UPDATE id=top_ask.id
-        DELETE * FROM bids_combinedView bcv
+         DELETE * FROM bids_combinedView bcv
                   WHERE bcv.id = 
-                    (SELECT *
-                     FROM top_sim_bid t
-                     WHERE t.source="sim")
+                     (SELECT *
+                      FROM top_sim_bid t
+                      WHERE t.source="sim")
          INSERT INTO bids_combinedView: 
-                  (SELECT create_S(top_sim_bid)
-                   FROM top_sim_bid t
-                   WHERE t.source="hist") tuple
-                  ON DUPLICATE KEY UPDATE id= tuple.id
-        INSERT INTO combined_output:
-                (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
-                   FROM top_sim_bid t
-                   WHERE t.source="hist")
+                     (SELECT update_S(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="hist") tuple
+                ON DUPLICATE KEY UPDATE id= tuple.id
          INSERT INTO combined_output:
-                 create_E(top_ask))
+                     (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="hist")
+         INSERT INTO combined_output:
+                     (SELECT create_F(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="sim")           
+         INSERT INTO combined_output:
+                      create_E(top_ask))
      WHEN (top_bid="hist" && top_ask="sim" &&
               top_sim_bids.current_volume > top_ask.volume)              
         (DELETE * FROM asks_combinedView acv
                   WHERE acv.id = top_asks.id
          INSERT INTO bids_combinedView: 
-                  (SELECT create_S(top_sim_bid)
-                  FROM top_sim_bid t
-                  WHERE t.source="hist") tuple
+                     (SELECT update_S(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="hist") tuple
                 ON DUPLICATE KEY UPDATE id= tuple.id
-        INSERT INTO bids_combinedView: 
-                  (SELECT create_S_U(top_sim_bid)
-                   FROM top_sim_bid t
-                   WHERE t.source="sim") tuple
+         INSERT INTO bids_combinedView: 
+                     (SELECT create_S(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="sim") tuple
                   ON DUPLICATE KEY UPDATE id= tuple.id
-      INSERT INTO combined_output:
-              (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
-                 FROM top_sim_bid t
-                 WHERE t.source="hist")
-       INSERT INTO combined_output:
-               create_F(top_ask))      
+         INSERT INTO combined_output:
+                     (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="hist")
+         INSERT INTO combined_output:
+                     (SELECT create_E(top_sim_bid)
+                      FROM top_sim_bid t
+                      WHERE t.source="sim")
+         INSERT INTO combined_output:
+                      create_F(top_ask))      
 \end{verbatim}
 
 \noindent The above shows that it is possible that the advantages of having no tuple duplication in the system can be subsumed by a complicated set of rules.
