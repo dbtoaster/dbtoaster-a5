@@ -105,7 +105,9 @@ class MassPutDiscoveryMultiplexer
       end
       @records.each do |r| r.complete end;
       @records = nil;
+      return true;
     end
+    false;
   end
   
   def required
@@ -157,8 +159,8 @@ class MapNodeHandler
   end
   
   def dump()
-    @maps.values.collect do |map|
-      map.collect do |partition|
+    @maps.keys.sort.collect do |map|
+      @maps[map].collect do |partition|
         "Partition for Map " + partition.to_s + "\n" + partition.dump;
       end.join "\n"
     end.join "\n";
@@ -202,19 +204,22 @@ class MapNodeHandler
     end
     
     #initialize the template with values we've already received
+    gets_pending = true;
     if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
       @cmdcallbacks[id].each do |response|
         response.each_pair do |t, v|
           record.discover(t,v);
         end
-        record.finish_message;
+        gets_pending = false if record.finish_message;
       end
     end
     
     #register ourselves to receive updates in the future
-    @cmdcallbacks[id] = record;
-    
-    ###### TODO: make record remove itself from @cmdcallbacks when it becomes ready.
+    if gets_pending then
+      @cmdcallbacks[id] = record;
+    else
+      @cmdcallbacks.delete(id);
+    end
   end
 
 
@@ -296,7 +301,7 @@ class MapNodeHandler
       result.each_pair do |target, value|
         @cmdcallbacks[cmdid].discover(target, value)
       end
-      @cmdcallbacks[cmdid].finish_message;
+      @cmdcallbacks.delete(cmdid) if @cmdcallbacks[cmdid].finish_message;
     end
   end
   

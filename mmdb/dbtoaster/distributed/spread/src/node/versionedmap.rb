@@ -204,6 +204,7 @@ class PutRecord
   end
   
   def finish_message
+    ready;
   end
   
   def fire_callbacks
@@ -397,7 +398,9 @@ class MapPartition
   end
   
   def dump
-    @data.values.collect do |entry|
+    @data.values.sort do |a, b|
+      a.target.key <=> b.target.key
+    end.collect do |entry|
       "Map " + entry.target.to_s + " : " + entry.to_s
     end.join "\n";
   end

@@ -127,13 +127,17 @@ class UnitTestDumpStep
     # blocks for two reasons. 
     # 1) This generates one line of logger output for each line in the dump
     # 2) This gathers all dumps before spitting them out.  
+    generate_dump_lines.each do |line|
+      Logger.info{ line.chomp };
+    end
+  end
+  
+  def generate_dump_lines
     @nodes.collect do |unit_node| 
       [ "---" + unit_node.name + "---",
         unit_node.client.dump.split("\n").collect do |line| line.gsub(/^Map/, "   Map") end
       ]
-    end.flatten.each do |line|
-      Logger.info{ line.chomp };
-    end
+    end.flatten
   end
   
   def to_s
@@ -183,6 +187,7 @@ class UnitTestHarness
     @testcmds = Array.new;
     @indexmap = Hash.new;
     @puttemplates = Hash.new;
+    @expected_dump = nil;
   end
   
   def add_node(name = @nodes.size.to_s)
@@ -196,6 +201,13 @@ class UnitTestHarness
   def start()
     @nodes.each do |node|
       node.start();
+    end
+  end
+  
+  def expect(dump_output)
+    @expected_dump = Array.new if @expected_dump.nil?
+    dump_output.each do |line|
+      @expected_dump.push(line.chomp)
     end
   end
   
@@ -270,11 +282,37 @@ class UnitTestHarness
       begin
         cmd.fire;
       rescue Exception => e;
-        puts "Error while executing command (" + e.to_s + "); stopping run";
-        puts e.backtrace.join("\n");
-        break;
+        Logger.fatal { "Error while executing command (" + e.to_s + "); stopping run" };
+        Logger.fatal { e.backtrace.join("\n") };
+        exit;
       end
     end
+    Logger.info { "Waiting for nodes to synchronize..." }
+    UnitTestSynchStep.new(@nodes).fire;
+    Logger.info { "Generating post-run dump..." }
+    error = false;
+    if @expected_dump.nil? then
+      UnitTestDumpStep.new(@nodes).fire
+    else
+      begin
+        UnitTestDumpStep.new(@nodes).generate_dump_lines.paired_loop(@expected_dump, true) do |real, expected|
+          Logger.info { real }
+          Logger.warn { error = true; "EXPECTED: " + expected } if expected != real;
+        end
+      rescue Exception => e
+        if e.is_a? SpreadException then
+          Logger.fatal { "Error while executing post-run dump (" + e.to_s + ")" }
+          Logger.fatal { e.backtrace.join("\n") };
+        else
+          Logger.warn { "---- Results line-number mismatch, expected to see: " }
+          @expected_dump.each do |line| Logger.warn { line } end
+          Logger.warn { "---- Actually saw: " }
+          UnitTestDumpStep.new(@nodes).generate_dump_lines.each do |line| Logger.warn { line } end
+        end
+        error = true;
+      end
+    end
+    error;
   end
   
 end

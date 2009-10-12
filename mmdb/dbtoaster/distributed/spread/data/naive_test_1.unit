@@ -53,8 +53,3 @@ fetch 8 : Map 1[-1] @ Alpha -> Beta
 
 # Multi-key put
 put 10 : Template 5 (3,5) @ Alpha
-
-# Aaaand... let's see where we stand
-synch
-dump
-
