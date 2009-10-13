@@ -746,7 +746,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
             INSERT INTO combined_output:
                      create_F(top_bid), create_F(top_ask))
     WHEN (top_bid="hist" && top_ask="hist" ||
-                                top_bid="sim" && top_ask="sim") &&
+               top_bid="sim" && top_ask="sim") &&
            top_bid.volume < top_ask.volume                     
            (DELETE * FROM bids_combinedView bcv 
                      WHERE bcv.id = top_bid.id,
@@ -755,7 +755,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
             INSERT INTO combined_output: 
                      create_F(top_bid), create_E(top_ask))
      WHEN (top_bid="hist" && top_ask="hist" ||
-                                 top_bid="sim" && top_ask="sim") &&
+               top_bid="sim" && top_ask="sim") &&
             top_bid.volume > top_ask.volume                     
            (DELETE * FROM asks_combinedView acv 
                      WHERE acv.id = top_ask.id,
@@ -764,7 +764,8 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
             INSERT INTO combined_output: 
                      create_E(top_bid), create_F(top_ask))
      WHEN (top_bid="sim" && top_ask="hist" &&
-              top_bid.volume = top_sim_ask.current_volume)
+              top_bid.volume = 
+                (top_sim_ask.base_volume - top_sim_ask.current_volume))
             (DELETE * FROM bids_combinedView bcv
                       WHERE bcv.id = top_bids.id
              DELETE * FROM asks_combinedView acv
@@ -782,13 +783,14 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                         FROM top_sim_ask t
                         WHERE t.source="hist")
              INSERT INTO combined_output:
-                     (SELECT create_F(top_sim_ask)
+                     (SELECT create_s_F(top_sim_ask)
                       FROM top_sim_ask t
                       WHERE t.source="sim")
              INSERT INTO combined_output:
                      create_F(top_bid))
      WHEN (top_bid="sim" && top_ask="hist" &&
-               top_bid.volume < top_sim_ask.current_volume)
+               top_bid.volume < 
+               (top_sim_ask.base_volume - top_sim_ask.current_volume)) 
             (DELETE * FROM bids_combinedView bcv
                       WHERE bcv.id = top_bids.id 
               INSERT INTO asks_combinedView: 
@@ -797,7 +799,7 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                          WHERE t.source="hist") tuple
                         ON DUPLICATE KEY UPDATE id= tuple.id
                INSERT INTO asks_combinedView:
-                        (SELECT update_S_Sim(top_sim_ask)
+                        (SELECT create_s_S(top_sim_ask)
                          FROM top_sim_ask t
                          WHERE t.source="sim") tuple
                         ON DUPLICATE KEY UPDATE id = tuple.id
@@ -812,55 +814,57 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                INSERT INTO combined_output:
                         create_F(top_bid))
     WHEN (top_bid="sim" && top_ask="hist" &&
-               top_bid.volume > top_sim_ask.current_volume)
-            (INSERT INTO bids_combinedView: create_B(top_bid)
+               top_bid.volume > 
+                (top_sim_ask.base_volume - top_sim_ask.current_volume))
+         (INSERT INTO bids_combinedView: create_B(top_bid)
                  ON DUPLICATE KEY UPDATE id= top_bid.id
-             INSERT INTO asks_combinedView: 
-                (SELECT update_S(top_sim_ask)
-                 FROM top_sim_ask t
-                 WHERE t.source="hist") tuple
-              ON DUPLICATE KEY UPDATE id= tuple.id
-             DELETE * FROM asks_combinedView acv
-                      WHERE acv.id = 
-                         (SELECT *
-                          FROM top_sim_ask t
-                          WHERE t.source="sim")
-             INSERT INTO combined_output:
-                         (SELECT create_S(top_sim_ask), create_F(top_sim_ask)
-                          FROM top_sim_ask t
-                          WHERE t.source="hist")
-             INSERT INTO combined_output:
-                         (SELECT create_F(top_sim_ask)
-                          FROM top_sim_ask t
-                          WHERE t.source="sim")
-             INSERT INTO combined_output:
-                          create_E(top_bid))
+          INSERT INTO asks_combinedView: 
+                  (SELECT update_S(top_sim_ask)
+                   FROM top_sim_ask t
+                   WHERE t.source="hist") tuple
+                 ON DUPLICATE KEY UPDATE id= tuple.id
+          DELETE * FROM asks_combinedView acv
+                   WHERE acv.id = 
+                      (SELECT *
+                       FROM top_sim_ask t
+                       WHERE t.source="sim")
+          INSERT INTO combined_output:
+                  (SELECT create_u_S(top_sim_ask), create_u_F(top_sim_ask)
+                   FROM top_sim_ask t
+                   WHERE t.source="hist")
+          INSERT INTO combined_output:
+                  (SELECT create_s_F(top_sim_ask)
+                   FROM top_sim_ask t
+                   WHERE t.source="sim")
+          INSERT INTO combined_output:
+                   create_s_E(top_bid))
     WHEN (top_bid="hist" && top_ask="sim" &&
             top_sim_bids.current_volume = top_ask.volume)
-            (DELETE * FROM asks_combinedView acv
-                      WHERE acv.id = top_asks.id
-             DELETE * FROM bids_combinedView bcv
-                      WHERE bcv.id = 
-                        (SELECT *
-                         FROM top_sim_bid t
-                         WHERE t.source="sim")
-             INSERT INTO bids_combinedView: 
-                      (SELECT update_S(top_sim_bid)
+         (DELETE * FROM asks_combinedView acv
+                   WHERE acv.id = top_asks.id
+          DELETE * FROM bids_combinedView bcv
+                   WHERE bcv.id = 
+                      (SELECT *
                        FROM top_sim_bid t
-                       WHERE t.source="hist") tuple
-                      ON DUPLICATE KEY UPDATE id= tuple.id
+                       WHERE t.source="sim")
+          INSERT INTO bids_combinedView: 
+                  (SELECT update_B(top_sim_bid)
+                   FROM top_sim_bid t
+                   WHERE t.source="hist") tuple
+                 ON DUPLICATE KEY UPDATE id= tuple.id
              INSERT INTO combined_output:
                      (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
                         FROM top_sim_bid t
                         WHERE t.source="hist")
              INSERT INTO combined_output:
-                     (SELECT create_F(top_sim_bid)
+                     (SELECT create_b_F(top_sim_bid)
                         FROM top_sim_bid t
                         WHERE t.source="sim")
              INSERT INTO combined_output:
                      create_F(top_ask))
      WHEN (top_bid="hist" && top_ask="sim" &&
-             top_sim_bids.current_volume < top_ask.volume)
+             (top_sim_ask.base - top_sim_bids.current_volume)
+              < top_ask.volume)
         (INSERT INTO asks_combinedView create_S(top_ask)
             ON DUPLICATE KEY UPDATE id=top_ask.id
          DELETE * FROM bids_combinedView bcv
@@ -869,31 +873,32 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                       FROM top_sim_bid t
                       WHERE t.source="sim")
          INSERT INTO bids_combinedView: 
-                     (SELECT update_S(top_sim_bid)
+                     (SELECT update_B(top_sim_bid)
                       FROM top_sim_bid t
                       WHERE t.source="hist") tuple
                 ON DUPLICATE KEY UPDATE id= tuple.id
          INSERT INTO combined_output:
-                     (SELECT create_B(top_sim_bid), create_F(top_sim_bid)
+                     (SELECT create_u_B(top_sim_bid), create_u_F(top_sim_bid)
                       FROM top_sim_bid t
                       WHERE t.source="hist")
          INSERT INTO combined_output:
-                     (SELECT create_F(top_sim_bid)
+                     (SELECT create_b_F(top_sim_bid)
                       FROM top_sim_bid t
                       WHERE t.source="sim")           
          INSERT INTO combined_output:
                       create_E(top_ask))
      WHEN (top_bid="hist" && top_ask="sim" &&
-              top_sim_bids.current_volume > top_ask.volume)              
+              (top_sim_ask.base - top_sim_bids.current_volume)
+               > top_ask.volume)              
         (DELETE * FROM asks_combinedView acv
                   WHERE acv.id = top_asks.id
          INSERT INTO bids_combinedView: 
-                     (SELECT update_S(top_sim_bid)
+                     (SELECT update_B(top_sim_bid)
                       FROM top_sim_bid t
                       WHERE t.source="hist") tuple
                 ON DUPLICATE KEY UPDATE id= tuple.id
          INSERT INTO bids_combinedView: 
-                     (SELECT create_S(top_sim_bid)
+                     (SELECT create_b_B(top_sim_bid)
                       FROM top_sim_bid t
                       WHERE t.source="sim") tuple
                   ON DUPLICATE KEY UPDATE id= tuple.id
@@ -907,6 +912,133 @@ Now we can turn back to the {\tt REDUCE\_LOOP} statement.
                       WHERE t.source="sim")
          INSERT INTO combined_output:
                       create_F(top_ask))      
+\end{verbatim}
+
+The \emph{create} and {updates} statements are a short hand for the following tuples:
+
+\begin{verbatim}
+create_F(top_bid) -> top_bid.id, top_bid.time, top_bid.action="F",
+                     top_bid.volume, top_bid.price,
+                     top_bid.base_volume, top_bid.current_volume
+                     
+create_F(top_ask) -> top_ask.id, top_ask.time, top_ask.action="F",
+                     top_ask.volume, top_ask.price,
+                     top_ask.base_volume, top_ask.current_volume
+                     
+update_S(top_ask) -> top_ask.id, top_ask.time, top_ask.action,
+                     top_ask.volume - top_bid.volume, top_ask.price,
+                     top_ask.base_volume, top_ask.current_volume
+                     
+create_E(top_ask) -> top_ask.id, top_ask.time, top_ask.action="E",
+                     top_bid.volume, top_ask.price,
+                     top_ask.base_volume, top_ask.current_volume
+                     
+update_B(top_bid) -> top_bid.id, top_bid.time, top_bid.action,
+                     top_bid.volume - top_ask.volume, top_bid.price,
+                     top_bid.base_volume, top_bid.current_volume
+                     
+create_E(top_bid) -> top_bid.id, top_bid.time, top_bid.action="E",
+                     top_ask.volume, top_bid.price,
+                     top_bid.base_volume, top_bid.current_volume
+                     
+update_S(top_sim_ask) -> top_sim_ask.id, top_sim_ask.time,
+                         top_sim_ask.action, top_sim_ask.volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume + top_bid.volume
+                         
+create_S(top_sim_ask) -> top_sim_ask.id+1, top_sim_ask.time,
+                         top_sim_ask.action, top_bid.volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+                         
+create_F(top_sim_ask) -> top_sim_ask.id+1, top_sim_ask.time,
+                         top_sim_ask.action="F", top_bid.volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+
+create_u_S(top_sim_ask) -> top_sim_ask.id+1, top_sim_ask.time,
+                         top_sim_ask.action, 
+                         top_sim_ask.base_volume - top_sim_ask.current_volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+
+create_u_F(top_sim_ask) -> top_sim_ask.id+1, top_sim_ask.time,
+                         top_sim_ask.action="F", 
+                         top_sim_ask.base_volume - top_sim_ask.current_volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+                         
+create_s_S(top_sim_ask) -> top_sim_ask.id, top_sim_ask.time,
+                         top_sim_ask.action, top_sim_ask.volume - top_bid.volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+                         
+create_E(top_sim_ask) -> top_sim_ask.id, top_sim_ask.time,
+                         top_sim_ask.action="E", top_bid.volume, 
+                         top_sim_ask.price, top_sim_ask.base_volume, 
+                         top_sim_ask.current_volume
+                         
+create_B(top_bid) -> top_bid.id, top_bid.time, top_bid.action,
+                     top_bid.volume - 
+                     (top_sim_ask.base_volume - top_sim_ask.current_volume),
+                     top_bid.price,
+                     top_bid.base_volume, top_bid.current_volume
+
+create_s_F(top_bid) -> top_bid.id, top_bid.time, top_bid.action="F",
+                     top_bid.volume - 
+                     (top_sim_ask.base_volume - top_sim_ask.current_volume),
+                     top_bid.price,
+                     top_bid.base_volume, top_bid.current_volume
+                        
+create_s_E(top_bid) -> top_bid.id, top_bid.time, top_bid.action="E",
+                       top_bid.volume - 
+                       (top_sim_ask.base_volume - top_sim_ask.current_volume),
+                       top_bid.price,
+                       top_bid.base_volume, top_bid.current_volume
+                     
+update_B(top_sim_bid) -> top_sim_bid.id, top_sim_bid.time,
+                         top_sim_bid.action, top_sim_bid.volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume + top_sim_ask.volume
+                         
+create_B(top_sim_bid) -> top_sim_bid.id+1, top_sim_bid.time,
+                         top_sim_bid.action, top_ask.volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+                         
+create_F(top_sim_bid) -> top_sim_bid.id+1, top_sim_bid.time,
+                         top_sim_bid.action="F", top_ask.volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+
+create_u_B(top_sim_bid) -> top_sim_bid.id+1, top_sim_bid.time,
+                         top_sim_bid.action, 
+                         top_sim_bid.base_volume - top_sim_bid.current_volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+
+create_u_F(top_sim_bid) -> top_sim_bid.id+1, top_sim_bid.time,
+                         top_sim_bid.action="F", 
+                         top_sim_bid.base_volume - top_sim_bid.current_volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+
+create_b_F(top_sim_bid) -> top_sim_bid.id, top_sim_bid.time,
+                         top_sim_bid.action="F", top_sim_bid.volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+
+create_b_B(top_sim_bid) -> top_sim_bid.id, top_sim_bid.time,
+                         top_sim_bid.action, 
+                         top_sim_bid.volume - top_ask.volume, 
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
+                     
+create_E(top_sim_bid) -> top_sim_bid.id, top_sim_bid.time,
+                         top_sim_bid.action="E", 
+                         top_ask.volume,
+                         top_sim_bid.price, top_sim_bid.base_volume, 
+                         top_sim_bid.current_volume
 \end{verbatim}
 
 \noindent The above shows that it is possible that the advantages of having no tuple duplication in the system can be subsumed by a complicated set of rules.
