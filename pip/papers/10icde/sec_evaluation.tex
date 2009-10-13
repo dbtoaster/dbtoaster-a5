@@ -2,30 +2,33 @@
 
 \begin{figure}
 \begin{center}
-\resizebox{3in}{!}{\includegraphics{graphics/scaling_selectivity.pdf}}
+%\input{graphics/scaling_selectivity.tex}
+\resizebox{2.9in}{!}{\includegraphics{graphics/scaling_selectivity.pdf}}
 \caption{Time to complete a 1000 sample query, accounting for selectivity-induced loss of accuracy.}
 \label{fig:scaling_selectivity}
 \end{center}
+\vspace*{-0.3in}
 \end{figure}
 
 
 \begin{figure}
 \begin{center}
-\resizebox{3in}{!}{\includegraphics{graphics/query_timings.pdf}}
+\resizebox{2.9in}{!}{\includegraphics{graphics/query_timings.pdf}}
 \caption{Query evaluation times in PIP and Sample-First for a range of queries.  Sample-First's sample-count has been adjusted to match PIP's accuracy.}
 \label{fig:querytimings}
 \end{center}
+\vspace*{-0.3in}
 \end{figure}
 
 \begin{figure*}
 \begin{center}
-\subtable[]{\resizebox{3in}{!}{\includegraphics{graphics/variance.pdf}} \label{subfig:variance1}}
-\subtable[]{\resizebox{3in}{!}{\includegraphics{graphics/variance2.pdf}}\label{subfig:variance2}}
+\subtable[]{\resizebox{2.9in}{!}{\includegraphics{graphics/variance.pdf}} \label{subfig:variance1}}
+\subtable[]{\resizebox{2.9in}{!}{\includegraphics{graphics/variance2.pdf}}\label{subfig:variance2}}
 \vspace*{-0.1in}
 \caption{RMS error across the results of 30 trials of (a) a simple group-by query $Q_4$ with a selectivity of $0.005$, and (b) a complex selection query $Q_5$ with an average selectivity of $0.05$.}
 \label{fig:variance}
 \end{center}
-\vspace*{-0.20in}
+\vspace*{-0.3in}
 \end{figure*}
 
 As a comparison point for PIP's ability to manage continuous random variables, we have constructed a sample-first probabilistic extension to Postgres that emulates MCDB's tuple-bundle concept using ordinary Postgres rows.  A sampled variable is represented using an array of floats, while the tuple bundle's presence in each sampled world is represented using a densely packed array of booleans.  In lieu of an optimizer, test queries were constructed by hand so as to minimize the lifespan of either array type.
@@ -64,6 +67,7 @@ As a final test, we evaluated both PIP and our Sample-First implementation on th
 
 \begin{figure}
 \begin{center}
+%\input{graphics/iceberg_danger.tex}
 \includegraphics[width=3in]{graphics/iceberg_danger.pdf}
 \caption{Sample-First error as a fraction of the correct result in a danger-estimation query on the NSIDC's Iceberg Sighting Database.  PIP was able to obtain an exact result.}
 \end{center}
