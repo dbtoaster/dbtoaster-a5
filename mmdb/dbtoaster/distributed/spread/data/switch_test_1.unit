@@ -1,0 +1,23 @@
+
+############ Node Definitions
+node Alpha
+partition Map 1[0::100]
+partition Map 3[0::200]
+partition Map 4[0::200,0::200]
+
+node Beta
+partition Map 1[100::200]
+partition Map 2[0::200]
+
+############ Put Templates
+template 1 R	A;B	Map 1[A]		4+B
+template 2 S	A;B	Map 1[A]		A+Map 1[B]
+template 3 T	A;B	Map 2[C]		A+Map 1[C]
+template 4 T	A;B	Map 3[B]		A+Map 2[B]
+template 5 T	A;B	Map 4[A,B]		A+B
+
+############ Test Sequence
+
+update R(2, 5)
+update S(1, 2)
+update S(102, 2)

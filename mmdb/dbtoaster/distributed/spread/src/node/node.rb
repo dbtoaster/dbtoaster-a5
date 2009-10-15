@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require 'thrift';
 require 'map_node';
 require 'spread_types';
@@ -343,6 +341,16 @@ class MapNodeHandler
           create_put_template(cmd.shift, cmd.join(" "));
       end
     end
+  end
+  
+  def partitions  
+    ret = Array.new;
+    @maps.each_pair do |map, partitions|
+      partitions.each do |partition|
+        ret.push([partition.mapid, partition.start, partition.end]);
+      end
+    end
+    ret;
   end
   
 end

@@ -1,6 +1,6 @@
 
 class Array
-  def paired_loop(other, explode_on_different_size = false)
+  def each_pair(other, explode_on_different_size = false)
     raise Exception.new("Paired loop on arrays of different sizes (" + size + ", " + other.size + ")") if explode_on_different_size && (other.size != size);
     (0...Math.min(other.size, size)).each do |i|
       yield self[i], other[i];
@@ -16,11 +16,15 @@ class Array
     ret;
   end
   
-  def collect_hash
+  def collect_hash(&block);
     ret = Hash.new
     each do |entry| 
-      kv = yield entry;
-      ret[kv[0]] = kv[1];
+      if block.nil? then
+        ret[entry[0]] = entry[1];
+      else
+        kv = block.call(entry);
+        ret[kv[0]] = kv[1];
+      end
     end;
     ret;
   end
@@ -45,11 +49,30 @@ class Array
     end
     return false;
   end
+  
+  def find_pair(other)
+    each_pair(other) do |entry, oentry|
+      return true if(yield entry, oentry);
+    end
+    return false;
+  end
+  
+  def merge(*others)
+    min_size = Math.min(size, others.collect do |o| o.size end);
+    (0...min_size).collect do |i|
+      [ self[i] ].concat(others.collect do |o| o[i] end);
+    end
+  end
 end
 
 class Hash
   def collect
     keys.collect do |k| yield k, self[k] end;
+  end
+
+  def assert_key(key)
+    return self[key] if has_key? key;
+    self[key] = yield;
   end
 end
 
@@ -119,22 +142,22 @@ class Logger
 end
 
 module Math
-  def Math.max(*params, &block)
-    max = if params.empty? then nil else params[0] end;
-    params.each do |param|
-      if block then
-        max = param if block.call(param, max);
-      else
-        max = param if param >= max;
-      end
-    end
-    max;
-  end
   def Math.min(*params)
-    max = if params.empty? then nil else params[0] end;
+    params = params.flatten;
+    min = if params.empty? then nil else params[0] end;
     params.each do |param|
-      max = param unless param >= max;
+      min = param unless param >= min;
     end
-    max;
+    min;
+  end
+end
+
+class Range
+  def <=>(other)
+    return self.begin <=> other.begin;
+  end
+  
+  def overlaps?(other)
+    (self.begin < other.end) && (other.begin < self.end)
   end
 end

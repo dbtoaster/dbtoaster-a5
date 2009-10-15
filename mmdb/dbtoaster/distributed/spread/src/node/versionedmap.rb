@@ -251,6 +251,10 @@ class MapPartition
     return true;
   end
   
+  def end
+    @range.collect_pair(@start) do |r, s| s+r end;
+  end
+  
   # The semantics of GET are a little wonky for this map due to 
   # versioning.  Specifically, if the request is for an incomplete 
   # version, the request will fail.  In theory, we could hold up processing 

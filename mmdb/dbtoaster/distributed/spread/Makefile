@@ -7,3 +7,4 @@ clean:
 
 test: all
 	./scripts/unit.sh data/naive_test_1.unit -e data/naive_test_1.expect -c
+	./scripts/unit.sh data/switch_test_1.unit -c

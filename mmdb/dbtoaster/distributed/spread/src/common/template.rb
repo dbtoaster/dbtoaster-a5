@@ -74,9 +74,22 @@ class TemplateEntry
       );
   end
   
+  def clone(params = Hash.new)
+    TemplateEntry.new(
+      @source, 
+      @keys.collect do |k|
+        case k
+          when String then if params.has_key? k then params[k] else k end;
+          else k;
+        end
+      end
+    );
+    
+  end
+  
   def weak_match?(entry, params = Hash.new)
     return false unless entry.source == @source;
-    @keys.paired_loop(entry.key) do |a, b|
+    @keys.each_pair(entry.key) do |a, b|
       case a
         # If the variable isn't bound, let it through
         when String then return false if (params.has_key? a) && (params[a].to_i != b.to_i);
@@ -390,9 +403,10 @@ end
 ###################################################
 
 class UpdateTemplate
-  attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression;
+  attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index;
+  attr_writer :index;
   
-  def initialize(line)
+  def initialize(line, index = 0)
     line = line.split("\t");
     raise SpreadException.new("Instantiating update template with insufficient components") if line.size < 5;
     
@@ -421,6 +435,7 @@ class UpdateTemplate
     # possible for there to be multiple KEYINDEX/LOOPVAR pairs.   
     @loopvarlist = @expression.loop_vars(@paramlist);
     
+    @index = index;
   end
   
   def requires_loop?
@@ -429,6 +444,10 @@ class UpdateTemplate
   
   def entries
     @conditions.entries.concat(@expression.entries);
+  end
+  
+  def param_map(param_inputs)
+    @paramlist.merge(param_inputs).collect_hash;
   end
   
   def to_f(params = TemplateValuation.new)
@@ -469,7 +488,7 @@ class TemplateForeachEvaluator
   end
   
   def discover(entry, value)
-    @valuation.template.loopvarlist.paired_loop(@domains) do |rule, row|
+    @valuation.template.loopvarlist.each_pair(@domains) do |rule, row|
       # rule[1] contains a list of elements of the form [KEYINDEX, LOOPVAR]
       # for each element extract the KEYINDEXth value of entry.key and save it
       # for the domain of LOOPVAR... as long as the rule is applicable (the
@@ -504,7 +523,7 @@ class TemplateForeachEvaluator
       callback.call(valuation.template.target.instantiate(valuation.params), val) unless val == 0;
     else
       @domains[depth].each do |row|
-        valuation.template.loopvarlist[depth][1].paired_loop(row) do |k, v|
+        valuation.template.loopvarlist[depth][1].each_pair(row) do |k, v|
           valuation.params[k[1].to_s] = v.to_i;
         end
         foreach_impl(callback, depth+1, valuation);

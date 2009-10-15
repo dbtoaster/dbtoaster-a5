@@ -6,6 +6,7 @@ INCLUDES="
   -I $LIBDIR/thrift/rb
   -I $SRCDIR/common
   -I $SRCDIR/node
+  -I $SRCDIR/switch
   -I $SRCDIR/gen-rb"
 
 echo ========================

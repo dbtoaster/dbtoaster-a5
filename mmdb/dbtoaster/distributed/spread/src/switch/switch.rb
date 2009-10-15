@@ -1,0 +1,71 @@
+require 'thrift';
+require 'map_node';
+require 'spread_types';
+require 'template';
+require 'maplayout';
+
+###################################################
+
+class SwitchHandler
+  def initialize
+    @next_template = 0;
+    @next_cmd = 1;
+    @templates = Hash.new;
+    @layout = MapLayout.new;
+    @nodelist = Hash.new;
+  end
+  
+  def node(name)
+    @nodelist.assert_key(name) { MapNode::Client.connect(name.host, name.port) };
+  end
+  
+  def cmdid
+    @next_cmd;
+  end
+  
+  def next_cmd
+    @next_cmd += 1;
+  end
+
+  def update(table, params)
+    @templates[table.to_s].each do |template|
+      Logger.info { "Update triggered template: " + template.to_s }
+      param_map = template.param_map(params);
+      @layout.find_nodes(
+        template.target.clone(param_map),
+        template.entries.collect do |entry| entry.clone(param_map) end
+      ) do |write_partition, read_partitions|
+        Logger.info { "Generating put command for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
+        if template.requires_loop? then
+          node(write_partition.node_name).mass_put(cmdid, template.index, read_partitions.size, PutParams.make(param_map))
+        else
+          node(write_partition.node_name).put(cmdid, template.index, PutParams.make(param_map))
+        end
+        read_partitions.each_pair do |dest, entries|
+          Logger.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
+          node(dest).fetch(
+            entries.collect do |e| e.instantiate(params) end, 
+            write_partition.node_name, 
+            cmdid
+          );
+        end
+        next_cmd;
+      end
+    end
+  end
+  
+  def install_template(template, index = (@next_template += 1))
+    template = UpdateTemplate.new(template) if template.is_a? String;
+    template.index = index;
+    @templates.assert_key(template.relation.to_s){ Array.new }.push(template);
+  end
+  
+  def install_node(node_name, partitions)
+    partitions.each do |partition|
+      Logger.debug { "Learning of Map " + partition[0].to_s + "[" + partition[1].collect_pair(partition[2]) do |s, e| s.to_s + "::" + e.to_s end.join(" ; ") + "] @ " + node_name.to_s }
+      @layout.install(partition[0], partition[1], partition[2], node_name);
+    end
+  end
+  
+  
+end

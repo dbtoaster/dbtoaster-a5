@@ -51,7 +51,7 @@ thriftFile.scan(/service +([a-zA-Z0-9_]+) *\{([^}]+)\}/).each do |service|
         puts "  Expected: " + fvars.join(", ");
         exit -1;
       end
-      params.paired_loop(fvars) do |left, right|
+      params.each_pair(fvars) do |left, right|
         if left != right then
           puts "Error: Variable mismatch found in function " + fname;
           puts "  Found: " + left;

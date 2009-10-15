@@ -51,7 +51,7 @@ class PutParams
               field.entry = params[key];
               PutFieldType::ENTRY;
             else 
-              raise SpreadException.new("Unknown parameter type: " + params[key].class.to_s);
+              raise SpreadException.new("Unknown parameter type: " + params[key].class.to_s + " (for key " + key.to_s + ")");
           end;
         field;
       end
@@ -120,5 +120,11 @@ module MapNode
         Logger.default
       )];
     end
+  end
+end
+
+class SpreadException
+  def to_s
+    "SpreadException: " + why;
   end
 end

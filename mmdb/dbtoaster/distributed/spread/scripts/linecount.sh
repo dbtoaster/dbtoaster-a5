@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for i in src/bin src/node src/common; do 
+for i in $(find src -type d | grep -v svn | grep '/' | grep -v "gen-rb"); do 
   echo $(basename $i)":" $(find $i -type f | grep -v svn | xargs cat | grep -v "^ *#" |grep -v '^ *$' | wc -l)
 done
 echo "--------------"

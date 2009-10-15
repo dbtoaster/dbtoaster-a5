@@ -2,6 +2,7 @@
 require 'thrift'
 require 'map_node'
 require 'node'
+require 'switch'
 require 'template'
 require 'spread_types'
 require 'spread_types_mixins'
@@ -13,6 +14,10 @@ class UnitTestNode
     @name, @port, @thread = name, port, nil;
     @handler, @server = MapNode::Processor.listen(port, config)
     @client = nil;
+  end
+  
+  def id
+    NodeID.make("localhost", port);
   end
   
   def start
@@ -76,6 +81,8 @@ class UnitTestFetchStep
   end
 end
 
+###################################################
+
 class UnitTestPutStep
   def initialize(command, node_map, template_map)
     parsed = 
@@ -117,6 +124,8 @@ class UnitTestPutStep
   end
 end
 
+###################################################
+
 class UnitTestDumpStep
   def initialize(nodes)
     @nodes = nodes;
@@ -145,6 +154,8 @@ class UnitTestDumpStep
   end
 end
 
+###################################################
+
 class UnitTestSynchStep
   def initialize(nodes)
     @nodes = nodes;
@@ -165,6 +176,8 @@ class UnitTestSynchStep
   end
 end
 
+###################################################
+
 class UnitTestSleepStep
   def initialize(time)
     @time = time.to_i;
@@ -181,6 +194,26 @@ end
 
 ###################################################
 
+class UnitTestUpdateStep
+  def initialize(cmd, switch)
+    match = /([0-9a-zA-Z]+) *\(([0-9 ,]*)\)/.match(cmd);
+    raise SpreadException.new("Invalid update step: " + cmd) if match.nil?;
+    @relation, @params = 
+      match[1].to_s, match[2].split(/ *, */).collect do |var| var.to_f end;
+    @switch = switch;
+  end
+  
+  def fire
+    @switch.update(@relation, @params);
+  end
+  
+  def to_s
+    "Update: " + @relation.to_s + "(" + @params.join(", ") + ")";
+  end
+end
+
+###################################################
+
 class UnitTestHarness 
   def initialize()
     @nodes = Array.new;
@@ -188,6 +221,7 @@ class UnitTestHarness
     @indexmap = Hash.new;
     @puttemplates = Hash.new;
     @expected_dump = nil;
+    @switch = SwitchHandler.new;
   end
   
   def add_node(name = @nodes.size.to_s)
@@ -227,7 +261,7 @@ class UnitTestHarness
           when "template" then
             cmd.shift; 
             @puttemplates[cmd.shift.to_i] = UpdateTemplate.new(cmd.join(" "));
-          when "fetch", "put", "dump", "sleep", "synch" then cmdbuffer.push(cmd);
+          when "fetch", "put", "dump", "sleep", "synch", "update" then cmdbuffer.push(cmd);
           else 
             linebuffer.push(line) unless linebuffer == nil;
         end
@@ -235,10 +269,15 @@ class UnitTestHarness
     end
     add_node(nodename).handler.setup(linebuffer) unless linebuffer == nil;
     @nodes.each do |node|
-      Logger.debug {"Loading put templates into Node " + node.name };
+      Logger.debug {"Configuring Node " + node.name };
       @puttemplates.each_pair do |id, cmd|
         node.handler.install_put_template(id, cmd);
       end
+      @switch.install_node(node.id, node.handler.partitions);
+    end
+    Logger.debug { "Loading put templates into switch" }
+    @puttemplates.each_pair do |id, cmd|
+      @switch.install_template(cmd, id)
     end
     cmdbuffer.each do |cmd|
       case cmd[0]
@@ -264,6 +303,9 @@ class UnitTestHarness
           end
         when "sleep" then
           @testcmds.push(UnitTestSleepStep.new(cmd[1]));
+        when "update" then
+          cmd.shift;
+          @testcmds.push(UnitTestUpdateStep.new(cmd.join(" "), @switch));
       end
     end
   end
@@ -295,7 +337,7 @@ class UnitTestHarness
       UnitTestDumpStep.new(@nodes).fire
     else
       begin
-        UnitTestDumpStep.new(@nodes).generate_dump_lines.paired_loop(@expected_dump, true) do |real, expected|
+        UnitTestDumpStep.new(@nodes).generate_dump_lines.each_pair(@expected_dump, true) do |real, expected|
           Logger.info { real }
           Logger.warn { error = true; "EXPECTED: " + expected } if expected != real;
         end
