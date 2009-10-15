@@ -121,16 +121,25 @@ struct
    (* the input is a list of pairs of equated variables.
       The result is a list of lists of variables and in general contains
       duplicates
+
+      The get_node function is used for determining equivalence of 'v types,
+      allowing two instances to be defined equivalent if some substructure
+      matches. This is useful for var_t which is now a pair of name and type,
+      and we simply want to consider names for equivalence (typechecking can
+      be done elsewhere).
    *)
-   let equivalence_classes (eqs: ('v * 'v) list) =
+   let equivalence_classes (eqs: ('v * 'v) list) (get_node: 'v list -> 'w list) =
       List.map ListAsSet.multiunion
-         (HyperGraph.connected_components (fun x -> x)
+         (HyperGraph.connected_components get_node
              (List.map (fun (x,y) -> [x;y]) eqs))
 
-   let closure (equalities: ('v * 'v) list) (vars: 'v list): ('v list) =
+   (* See equivalence_classes for notes on the get_node function *)
+   let closure (equalities: ('v * 'v) list)
+               (vars: 'v list)
+               (get_node: 'v list -> 'w list) : ('v list) =
       ListAsSet.union vars
          (List.flatten (List.filter (fun x -> (ListAsSet.inter x vars) != [])
-                                    (equivalence_classes equalities)))
+                                    (equivalence_classes equalities get_node)))
 
    type 'v mapping_t = ('v * 'v) list
 
@@ -163,10 +172,10 @@ struct
       with a given set of required identities. Returns the unifier and
       a fully descriptive set of inconsistent equations. For example,
 
-      (unifier [("x", "y"); ("y", "z")] ["z"]) =
+      (unifier [("x", "y"); ("y", "z")] ["z"] (fun x -> x)) =
       ([("x", "z"); ("y", "z")], [])
 
-      (unifier [("x", "y"); ("y", "z")] ["y"; "z"]) =
+      (unifier [("x", "y"); ("y", "z")] ["y"; "z"] (fun x -> x)) =
       ([("x", "y"); ("y", "y"); ("z", "y")], [("y", "z")])
 
       Note the ("z", "y") tuple. This is inconsistent with the requirement
@@ -175,12 +184,16 @@ struct
       z have the same value), the mapping is ok. This is the way to use
       inconsistent equations; they are additional requirements to be
       checked.
+
+      See equivalence_classes for notes on the get_node function.
    *)
-   let unifier (equations: ('v * 'v) list) (identities: 'v list):
-               ('v mapping_t * (('v * 'v) list)) =
+   let unifier (equations: ('v * 'v) list)
+               (identities: 'v list)
+               (get_node: 'v list -> 'w list)
+               : ('v mapping_t * (('v * 'v) list)) =
       let (x, y) = (List.split
                       (List.map (fun comp -> (unifier0 comp identities))
-                                (equivalence_classes equations)))
+                                (equivalence_classes equations get_node)))
       in
       (List.flatten x, List.flatten y)
 

@@ -4,10 +4,10 @@ let make x = make_relalg x;;
 let readable x = readable_relalg x;;
 let vars x = relalg_vars x;;
 
-let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
-let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
-let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
-let relU = RA_Leaf(Rel("U", ["A"; "D"]));;
+let relR = RA_Leaf(Rel("R", [("A", TInt); ("B", TInt)]));;
+let relS = RA_Leaf(Rel("S", [("B", TInt); ("C", TInt)]));;
+let relT = RA_Leaf(Rel("T", [("C", TInt); ("D", TInt)]));;
+let relU = RA_Leaf(Rel("U", [("A", TInt); ("D", TInt)]));;
 
 
 let test01 = make(RA_Leaf Empty) = relalg_zero;;
@@ -35,18 +35,22 @@ RA_MultiUnion
   RA_MultiNatJoin [relR; relU]; RA_MultiNatJoin [relS; relU]]
 ;;
 
-let test08 = readable (polynomial (relalg_delta "R" ["a"; "b"] q)) =
+let test08 = readable
+    (polynomial (relalg_delta (fun x -> x) "R" [("a", TInt); ("b", TInt)] q)) =
   RA_MultiNatJoin
-   [RA_Leaf (AtomicConstraint (Eq, RVal(Var("A")), RVal(Var("a"))));
-    RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));
+   [RA_Leaf
+       (AtomicConstraint (Eq, RVal(Var("A", TInt)), RVal(Var("a", TInt))));
+    RA_Leaf
+        (AtomicConstraint (Eq, RVal(Var("B", TInt)), RVal(Var("b", TInt))));
     relS; relT]
 ;;
 
-let test09 = readable (polynomial (relalg_delta "S" ["b"; "c"] q)) =
+let test09 = readable
+    (polynomial (relalg_delta (fun x -> x) "S" [("b", TInt); ("c", TInt)] q)) =
 RA_MultiNatJoin
  [relR;
-  RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));
-  RA_Leaf (AtomicConstraint (Eq, RVal(Var("C")), RVal(Var("c"))));
+  RA_Leaf (AtomicConstraint (Eq, RVal(Var("B", TInt)), RVal(Var("b", TInt))));
+  RA_Leaf (AtomicConstraint (Eq, RVal(Var("C", TInt)), RVal(Var("c", TInt))));
   relT]
 ;;
 
@@ -59,27 +63,35 @@ make(RA_Leaf Empty)
 
 let q12 = make(
 RA_MultiNatJoin [
-   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("xR_B"))));
-   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("xS_B"))))]);;
+   RA_Leaf (AtomicConstraint
+       (Eq, RVal(Var("B", TInt)), RVal(Var("xR_B", TInt))));
+   RA_Leaf (AtomicConstraint
+       (Eq, RVal(Var("B", TInt)), RVal(Var("xS_B", TInt))))]);;
 
 
-let test12 = extract_substitutions (List.hd (monomials q12)) ["xS_B"] =
-([("B", "xS_B"); ("xR_B", "xS_B"); ("xS_B", "xS_B")], relalg_one);;
+let test12 = 
+    extract_substitutions (List.hd (monomials q12)) [("xS_B", TInt)] =
+    ([(("B", TInt), ("xS_B", TInt));
+    (("xR_B", TInt), ("xS_B", TInt));
+    (("xS_B", TInt), ("xS_B", TInt))], relalg_one);;
 
-let test13 = vars   q12 = ["B"; "xR_B"; "xS_B"];;
+let test13 = vars q12 = [("B", TInt); ("xR_B", TInt); ("xS_B", TInt)];;
 
 let test15 =
 extract_substitutions(make(
 RA_MultiNatJoin [
-   RA_Leaf (AtomicConstraint (Lt, RVal(Var("A")), RVal(Var("x"))));
-   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("y"))));
-   RA_Leaf (Rel("S", ["B"; "C"]))])) ["y"]
+   RA_Leaf (AtomicConstraint
+       (Lt, RVal(Var("A", TInt)), RVal(Var("x", TInt))));
+   RA_Leaf (AtomicConstraint
+       (Eq, RVal(Var("B", TInt)), RVal(Var("y", TInt))));
+   RA_Leaf (Rel("S", [("B", TInt); ("C", TInt)]))])) [("y", TInt)]
 =
-([("B", "y"); ("y", "y")],
+([(("B", TInt), ("y", TInt)); (("y", TInt), ("y", TInt))],
 make(
  RA_MultiNatJoin
-  [RA_Leaf (AtomicConstraint (Lt, RVal(Var("A")), RVal(Var("x"))));
-   RA_Leaf (Rel ("S", ["y"; "C"]))]))
+  [RA_Leaf (AtomicConstraint
+      (Lt, RVal(Var("A", TInt)), RVal(Var("x", TInt))));
+   RA_Leaf (Rel ("S", [("y", TInt); ("C", TInt)]))]))
 ;;
 
 
@@ -88,11 +100,16 @@ let test16 =
 extract_substitutions
 (make(
      RA_MultiNatJoin
-      [RA_Leaf (AtomicConstraint (Eq, RVal(Var("x")), RVal(Var("AA"))));
-       RA_Leaf (AtomicConstraint (Eq, RVal(Var("x")), RVal(Var("BB"))))]))
-["AA"; "BB"] =
-([("x", "AA"); ("AA", "AA"); ("BB", "AA")],
- make(RA_Leaf (AtomicConstraint (Eq, RVal(Var("AA")), RVal(Var("BB"))))));;
+      [RA_Leaf (AtomicConstraint
+          (Eq, RVal(Var("x", TInt)), RVal(Var("AA", TInt))));
+       RA_Leaf (AtomicConstraint
+           (Eq, RVal(Var("x", TInt)), RVal(Var("BB", TInt))))]))
+[("AA", TInt); ("BB", TInt)] =
+([(("x", TInt), ("AA", TInt));
+(("AA", TInt), ("AA", TInt));
+(("BB", TInt), ("AA", TInt))],
+ make(RA_Leaf (AtomicConstraint
+     (Eq, RVal(Var("AA", TInt)), RVal(Var("BB", TInt))))));;
 
 
 

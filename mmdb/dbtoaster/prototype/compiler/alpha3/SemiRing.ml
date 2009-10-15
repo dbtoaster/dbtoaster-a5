@@ -101,6 +101,7 @@ sig
    val fold: ('b list -> 'b) -> ('b list -> 'b) -> (leaf_t -> 'b) ->
              expr_t -> 'b
 
+
    (* (apply_to_leaves f e)  applies function f to each base value leaf of
       expression e, i.e., replaces the base value v by expression (f v) *)
    val apply_to_leaves: (leaf_t -> expr_t) -> expr_t -> expr_t
@@ -130,7 +131,8 @@ sig
       That is, if (f x) expresses change to a leaf base value x of the
       expression e, then (delta f e) expresses the overall change to e.
    *)
-   val delta: (leaf_t -> expr_t) -> expr_t -> expr_t
+   val delta: (leaf_t -> expr_t * bool) -> (expr_t -> expr_t) -> expr_t
+       -> expr_t * bool
 
    (* a polynomial is a sum of monomials.
       a monomial is a product of base values *)
@@ -223,21 +225,31 @@ struct
    let substitute_many l in_expr =
        List.fold_right (fun (x,y) -> (substitute x y)) l in_expr
 
-   let rec delta (lf_delta: leaf_t -> expr_t) (e: expr_t) =
+   let rec delta (lf_delta: leaf_t -> expr_t * bool)
+                 (negate_f: expr_t -> expr_t) (e: expr_t) =
+      let recur x = delta lf_delta negate_f x in
+      let negate (d,n) = if n then d else negate_f d in
       match e with
-         Sum(l)   -> Sum(List.map (fun x -> delta lf_delta x) l)
-       | Prod([]) -> zero
-(* not needed
-       | Prod(x::l) when l=[] -> (delta lf_delta x)
-*)
+          | Sum(l) ->
+                let delta_neg_l = List.map (fun x -> recur x) l in
+                let negated = List.exists (fun (_,n) -> n) delta_neg_l in
+                let deltas =
+                    if negated then List.map negate delta_neg_l
+                    else List.map fst delta_neg_l
+                in
+                    (mk_sum(deltas), negated)
+       | Prod([]) -> (zero, false)
        | Prod(x::l) ->
-         mk_sum([
-            mk_prod( (delta lf_delta x)::l);
-            mk_prod([mk_sum[x; (delta lf_delta x)]; (delta lf_delta (Prod(l)))])
-                 (* this nesting makes sense because it renders the delta
-                    computation cheaper: delta for l is only computed once here;
-                    we can still distribute later if we need it. *)
-         ])
+             (* this nesting makes sense because it renders the delta
+                computation cheaper: delta for l is only computed once here;
+                we can still distribute later if we need it. *)
+             let r =
+                 mk_sum([
+                     mk_prod((negate (recur x))::l);
+                     mk_prod([mk_sum[x; (negate (recur x))];
+                             (negate (recur (mk_prod(l))))])
+                 ])
+             in (r, true)
        | Val(x) -> lf_delta x
 
    (* create a flat sum of flat products of constants, vars, and

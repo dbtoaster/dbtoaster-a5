@@ -1,9 +1,15 @@
 
 (* types *)
 
-type var_t = string (* type of variable name *)
+type type_t = TInt | TLong | TDouble | TString
+type var_t = string * type_t (* type of variable name *)
 type comp_t = Eq | Lt | Le | Neq
-type const_t = Int of int | String of string
+
+type const_t = 
+    | Int of int
+    | Double of float
+    | Long of int64
+    | String of string
 
 type 'term_t generic_relalg_lf_t =
             Empty (* aka false;
@@ -15,7 +21,7 @@ type 'term_t generic_relalg_lf_t =
 type ('term_t, 'relalg_t) generic_term_lf_t =
             AggSum of ('term_t * 'relalg_t)
           | Const of const_t
-          | Var of string
+          | Var of var_t
 
 
 module rec REL_BASE :
@@ -128,9 +134,33 @@ and make_term readable_term =
     | RVal(x)  -> TermSemiRing.mk_val(lf_make x)
 
 
-
-
 (* functions *)
+
+(* fold method wrappers *)
+let fold_relalg (sum_f: ('a list -> 'a))
+                (prod_f: ('a list -> 'a))
+                (leaf_f: (readable_relalg_lf_t -> 'a))
+                (r: readable_relalg_t) : 'a =
+    let rec fold_aux rr =
+        match rr with 
+            | RA_MultiUnion(l)   ->  sum_f(List.map fold_aux l)
+            | RA_MultiNatJoin(l) -> prod_f(List.map fold_aux l)
+            | RA_Leaf(x)         -> leaf_f x
+    in
+        fold_aux r
+        
+
+let fold_term (sum_f: ('a list -> 'a))
+              (prod_f: ('a list -> 'a))
+              (leaf_f: (readable_term_lf_t -> 'a))
+              (t: readable_term_t) : 'a =
+    let rec fold_aux rt =
+        match rt with 
+            | RSum(l)  ->  sum_f(List.map fold_aux l)
+            | RProd(l) -> prod_f(List.map fold_aux l)
+            | RVal(x)  -> leaf_f x
+    in
+        fold_aux t
 
 let rec relalg_vars relalg: var_t list =
    let lf_vars lf =
@@ -156,6 +186,40 @@ and term_vars term: var_t list =
                      Util.ListAsSet.multiunion leaf_f term
 
 
+let rec declared_plan_vars (r : relalg_t) : var_t list =
+    let relalg_lf lf = match lf with
+        | Rel(rn,v) ->
+              Util.ListAsSet.no_duplicates
+                  (v@(List.map (fun (n,t) -> (rn^"."^n, t)) v))
+        | AtomicConstraint(_, t1, t2) ->
+              Util.ListAsSet.union
+                  (declared_term_vars t1) (declared_term_vars t2)
+        | _ -> []
+    in
+        RelSemiRing.fold Util.ListAsSet.multiunion
+            Util.ListAsSet.multiunion relalg_lf r
+
+and declared_term_vars (t: term_t) : var_t list =
+    let term_lf lf = match lf with
+        | AggSum(f,r) -> Util.ListAsSet.union
+              (declared_term_vars f) (declared_plan_vars r)
+        | _ -> []
+    in
+        TermSemiRing.fold Util.ListAsSet.multiunion
+            Util.ListAsSet.multiunion term_lf t
+
+let free_relalg_vars (r: relalg_t) : var_t list =
+    Util.ListAsSet.diff (relalg_vars r) (declared_plan_vars r)
+
+let free_term_vars (t: term_t) : var_t list = 
+    Util.ListAsSet.diff (term_vars t) (declared_term_vars t)
+
+let has_aggregates (m: term_t) : bool =
+    let leaves =
+        TermSemiRing.fold List.flatten List.flatten (fun x -> [x]) m in
+    let is_aggregate x = match x with | AggSum(_) -> true | _ -> false in
+        List.exists is_aggregate leaves
+
 
 
 (* TODO: enforce that the variables occurring in f are among the
@@ -171,48 +235,203 @@ let make_aggsum f r = TermSemiRing.mk_val (AggSum (f, r))
 *)
 
 
+let constraints_only (r: relalg_t): bool =
+   let leaves = RelSemiRing.fold List.flatten List.flatten (fun x -> [x]) r
+   in
+   let bad x = match x with
+         Rel(_) -> true
+       | Empty  -> true
+       | ConstantNullarySingleton -> false
+       | AtomicConstraint(_,_,_) -> false
+   in
+   (List.length (List.filter bad leaves) = 0)
 
 
 exception Assert0Exception (* should never be reached *)
 
-let rec relalg_delta relname (tuple: var_t list) (relalg: relalg_t) =
+(* auxiliary: complement a constraint-only relalg expressions *)
+let complement relalg =
+   let leaf_f lf =
+      match lf with
+         AtomicConstraint(comp, t1, t2) ->
+            RelSemiRing.mk_val(AtomicConstraint(
+               (match comp with Eq -> Neq | Neq -> Eq
+                              | Lt  -> Le | Le  -> Lt), t2, t1))
+       | ConstantNullarySingleton -> RelSemiRing.mk_val(Empty)
+       | Empty -> RelSemiRing.mk_val(ConstantNullarySingleton)
+       | _ -> raise Assert0Exception
+   in
+   (* switch prod and sum *)
+   (RelSemiRing.fold RelSemiRing.mk_prod RelSemiRing.mk_sum leaf_f relalg)
+
+
+
+(* Relational and map algebra stringification *)
+let type_as_string t = match t with
+    | TInt -> "int"
+    | TLong -> "long"
+    | TDouble -> "double"
+    | TString -> "string"
+
+let var_as_string (n,t) =
+    (* n^":"^(type_as_string t) *)
+    n
+
+let rec relalg_as_string (relalg: relalg_t)
+                         (theta: (term_t * string) list): string =
+   let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
+   let prod_f l = (Util.string_of_list " and " l) in
+   let leaf_f lf =
+      match lf with
+         AtomicConstraint(Eq, x, y)  ->
+            (term_as_string x theta) ^ "="  ^ (term_as_string y theta)
+       | AtomicConstraint(Lt, x, y)  ->
+            (term_as_string x theta) ^ "<"  ^ (term_as_string y theta)
+       | AtomicConstraint(Le, x, y)  ->
+            (term_as_string x theta) ^ "<=" ^ (term_as_string y theta)
+       | AtomicConstraint(Neq, x, y) ->
+            (term_as_string x theta) ^ "<>" ^ (term_as_string y theta)
+       | Empty -> "false"
+       | ConstantNullarySingleton -> "true"
+       | Rel(r, sch) -> r^"("^(Util.string_of_list ", "
+             (List.map var_as_string sch))^")"
+   in
+   RelSemiRing.fold sum_f prod_f leaf_f relalg
+
+and term_as_string (m: term_t)
+                   (aggsum_theta :(term_t * string) list):
+                   string =
+   let leaf_f (lf: term_lf_t) =
+   (match lf with
+      Const(c)    ->
+      (
+         match c with
+            Int(i) -> string_of_int i
+          | Double(f) -> string_of_float f
+          | Long(l) -> Int64.to_string l
+          | String(s) -> "'" ^ s ^ "'"
+      )
+    | Var(x)      -> var_as_string x
+    | AggSum(f,r) ->
+      if (constraints_only r) then
+         "(if " ^ (relalg_as_string r aggsum_theta) ^ " then " ^
+                  (term_as_string   f aggsum_theta) ^ " else 0)"
+      else
+         Util.apply aggsum_theta
+                    ("AggSum("^(term_as_string   f aggsum_theta)^", "
+                              ^(relalg_as_string r aggsum_theta)^")")
+                    (TermSemiRing.mk_val(lf))
+   )
+   in (TermSemiRing.fold (fun l -> "("^(Util.string_of_list "+" l)^")")
+                         (fun l -> "("^(Util.string_of_list "*" l)^")")
+                         leaf_f m)
+
+
+
+(* Delta computation and simplification *)
+
+(* Negate arithmetic terms, since relational algebra is positive *)
+let negate_term x =
+    TermSemiRing.mk_prod([TermSemiRing.mk_val(Const(Int(-1))); x])
+
+let negate_leaves negate_f t =
+    let negate_leaf_f lf =
+        match lf with
+            | Const _ | Var _ -> negate_f (TermSemiRing.mk_val(lf))
+            | AggSum(f,r) ->
+                  if (constraints_only r) then
+                      TermSemiRing.mk_val(AggSum(negate_f f, r))
+                  else negate_f (TermSemiRing.mk_val(lf))
+    in
+        TermSemiRing.fold
+            TermSemiRing.mk_sum TermSemiRing.mk_prod negate_leaf_f t
+
+
+let rec relalg_delta (negate_f: term_t -> term_t)
+        relname (tuple: var_t list) (relalg: relalg_t) =
    let delta_leaf lf =
       match lf with
-         Empty -> RelSemiRing.zero
+         Empty -> (RelSemiRing.zero, false)
        | Rel(r, l) when relname = r ->
             let f (x,y) = RelSemiRing.mk_val(
                              AtomicConstraint(Eq, TermSemiRing.mk_val(Var(x)),
                                                   TermSemiRing.mk_val(Var(y))))
             in
-            RelSemiRing.mk_prod (List.map f (List.combine l tuple))
-       | Rel(x, l) -> RelSemiRing.zero
-       | ConstantNullarySingleton -> RelSemiRing.zero
+            (RelSemiRing.mk_prod (List.map f (List.combine l tuple)), false)
+       | Rel(x, l) -> (RelSemiRing.zero, false)
+       | ConstantNullarySingleton -> (RelSemiRing.zero, false)
        | AtomicConstraint(comp, t1, t2) ->
-            if(((term_delta relname tuple t1) = TermSemiRing.zero) &&
-               ((term_delta relname tuple t2) = TermSemiRing.zero)) then
-                  RelSemiRing.zero
+            if(((term_delta negate_f relname tuple t1) = TermSemiRing.zero) &&
+               ((term_delta negate_f relname tuple t2) = TermSemiRing.zero))
+            then
+                  (RelSemiRing.zero, false)
             else raise Assert0Exception
                  (* the terms with nonzero delta should have been pulled
-                    out of the constraint elsewhere.
-                    FIXME: implement this. *)
+                    out of the constraint elsewhere. *)
    in
-   RelSemiRing.delta delta_leaf relalg
+       (* Note: no negation for relational algebra *)
+       fst (RelSemiRing.delta delta_leaf (fun x -> x) relalg)
 
-and term_delta relname tuple (term: term_t) =
+and term_delta_aux (negate_f: term_t -> term_t) relname tuple (term: term_t)  =
+   let negate (delta_t, negated) =
+      if negated then delta_t else negate_f delta_t in
+   let t_pm_dt t =
+      TermSemiRing.mk_sum[t; negate (term_delta_aux negate_f relname tuple t)]
+   in
    let rec leaf_delta lf =
       match lf with
-         Const(c) -> TermSemiRing.zero
-       | Var(x)   -> TermSemiRing.zero
-       | AggSum(f, relalg) ->
-            TermSemiRing.mk_sum [
-               make_aggsum (term_delta relname tuple f) relalg;
-               make_aggsum f (relalg_delta relname tuple relalg);
-               make_aggsum (term_delta relname tuple f)
-                           (relalg_delta relname tuple relalg) ]
+         Const(c) -> (TermSemiRing.zero, false)
+       | Var(x)   -> (TermSemiRing.zero, false)
+       | AggSum(f, r) ->
+            let (d_f, d_f_negated) = (term_delta_aux negate_f relname tuple f)
+            in
+            if (constraints_only r) then
+               (* FIXME: this is overkill (but supposedly correct) in the
+                  case that r does not contain AggSum terms, i.e., in the
+                  case that all contained terms have zero delta. *)
+               let new_r = (* replace each term t in r by (t + delta t) *)
+                  let leaf_f lf =
+                     (match lf with
+                        AtomicConstraint(c, t1, t2) ->
+                        RelSemiRing.mk_val(
+                            AtomicConstraint(c, t_pm_dt t1, t_pm_dt t2))
+                      | ConstantNullarySingleton ->
+                        RelSemiRing.mk_val(ConstantNullarySingleton)
+                      | _ -> raise Assert0Exception)
+                  in
+                  RelSemiRing.apply_to_leaves leaf_f r
+               in
+               (*
+                  (if (     new_r             ) then (delta f) else 0)
+                + (if (     new_r  and (not r)) then        f  else 0)
+                + (if ((not new_r) and      r ) then       -f  else 0)
+               *)
+               let delta_constraint =
+                   TermSemiRing.mk_sum [
+                      make_aggsum (negate (d_f, d_f_negated)) new_r;
+                      make_aggsum f
+                          (RelSemiRing.mk_prod [new_r; (complement r)]);
+                      make_aggsum (negate_term f)
+                          (RelSemiRing.mk_prod [ (complement new_r); r ])
+                   ]
+               in
+                   (delta_constraint, true)
+            else
+               let d_r = (relalg_delta negate_f relname tuple r) in
+               let pm_f = if d_f_negated then negate_f f else f in
+               let delta_agg =
+                   TermSemiRing.mk_sum [ (make_aggsum  d_f   r);
+                                         (make_aggsum pm_f d_r);
+                                         (make_aggsum  d_f d_r) ]
+               in
+                   (delta_agg, d_f_negated)
    in
-   TermSemiRing.delta leaf_delta term
+       TermSemiRing.delta leaf_delta negate_f term
 
-
+(* Top-level function that performs the final negation *)
+and term_delta (negate_f: term_t -> term_t) relname tuple (term: term_t)  =
+    let (r,negated) = term_delta_aux negate_f relname tuple term in
+        if negated then r else (negate_f r)
 
 
 type substitution_t = var_t Util.Vars.mapping_t
@@ -235,7 +454,7 @@ let rec apply_variable_substitution_to_relalg (theta: substitution_t)
    (RelSemiRing.apply_to_leaves substitute_leaf alg)
 
 and apply_variable_substitution_to_term theta (m: term_t) =
-   let f lf = match lf with
+   let leaf_f lf = match lf with
       Var(y) -> TermSemiRing.mk_val(
                            Var(Util.Vars.apply_mapping theta y))
     | AggSum(f, r) ->
@@ -244,12 +463,10 @@ and apply_variable_substitution_to_term theta (m: term_t) =
                            apply_variable_substitution_to_relalg theta r))
     | _ -> TermSemiRing.mk_val(lf)
    in 
-   (TermSemiRing.apply_to_leaves f m)
+   (TermSemiRing.apply_to_leaves leaf_f m)
 
 
 
-
-(* begin module RelAlg *)
 
 let polynomial (q: relalg_t): relalg_t = RelSemiRing.polynomial q
 
@@ -267,18 +484,6 @@ let monomial_as_hypergraph (monomial: relalg_t): (relalg_t list) =
 let hypergraph_as_monomial (hypergraph: relalg_t list): relalg_t =
    RelSemiRing.mk_prod hypergraph
 
-
-
-let constraints_only (r: relalg_t): bool =
-   let leaves = RelSemiRing.fold List.flatten List.flatten (fun x -> [x]) r
-   in
-   let bad x = match x with
-         Rel(_) -> true
-       | Empty  -> true
-       | ConstantNullarySingleton -> false
-       | AtomicConstraint(_,_,_) -> false
-   in
-   (List.length (List.filter bad leaves) = 0)
 
 
 (* auxiliary function used in extract_substitutions. *)
@@ -305,7 +510,8 @@ let extract_substitutions (monomial: relalg_t)
                           (substitution_t * relalg_t) =
    let (eqs, rest) = split_off_equalities monomial
    in
-   let (theta, incons) = Util.Vars.unifier eqs bound_vars
+   let (theta, incons) =
+       Util.Vars.unifier eqs bound_vars (fun v_l -> List.map fst v_l)
    in
    let f (x,y) = RelSemiRing.mk_val (AtomicConstraint(Eq,
                     TermSemiRing.Val(Var(x)), TermSemiRing.Val(Var(y))))
@@ -317,12 +523,9 @@ let extract_substitutions (monomial: relalg_t)
    in
    (theta, rest2)
 
-(* end (* module RelAlg *) *)
 
 
 
-
-(* begin module Term *)
 
 let term_zero = TermSemiRing.mk_val (TERM_BASE.zero)
 let term_one  = TermSemiRing.mk_val (TERM_BASE.one)
@@ -372,13 +575,18 @@ let factorize_aggsum_mm (f_monomial: term_t)
    level.
 *)
 let rec roly_poly (ma: term_t) : term_t =
-   let leaf_f (lf: term_lf_t): term_t =
+   let r_leaf_f (lf: relalg_lf_t) : relalg_t =
       match lf with
-        Const(_)     -> TermSemiRing.mk_val(lf)
-      | Var(_)       -> TermSemiRing.mk_val(lf)
+         AtomicConstraint(c, t1, t2) ->
+            RelSemiRing.mk_val(AtomicConstraint(c, roly_poly t1, roly_poly t2))
+       | _ -> RelSemiRing.mk_val(lf)
+   in
+   let t_leaf_f (lf: term_lf_t): term_t =
+      match lf with
       | AggSum(f, r) ->
          (
-            let r_monomials = monomials r in
+            let r2 = RelSemiRing.apply_to_leaves r_leaf_f r in
+            let r_monomials = monomials r2 in
             let f_monomials = TermSemiRing.sum_list (roly_poly f)
             in
             TermSemiRing.mk_sum (List.flatten (List.map
@@ -386,8 +594,11 @@ let rec roly_poly (ma: term_t) : term_t =
                                     f_monomials))
                r_monomials))
          )
+      | _ -> TermSemiRing.mk_val(lf)
    in
-   TermSemiRing.polynomial (TermSemiRing.apply_to_leaves leaf_f ma)
+   TermSemiRing.polynomial (TermSemiRing.apply_to_leaves t_leaf_f ma)
+
+
 
 
 (* the input map algebra expression ma must be sum- and union-free.
@@ -397,22 +608,27 @@ let rec roly_poly (ma: term_t) : term_t =
 *)
 let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
                         : (((var_t * var_t) list) * term_t) =
-   let sum_f l =
-      let (b, f) = List.split l in
-      ((List.flatten b), TermSemiRing.mk_sum(f))
+   let augment_bound_vars bound_vars b =
+      let (_, b_img) = List.split b in
+      Util.ListAsSet.union bound_vars b_img
+   in
+   let my_flatten combinator_fn l =
+      let (b, f) = List.split l
+      in ((List.flatten b), (combinator_fn f))
       (* FIXME: make sure that the concatenation of bindings does not
          lead to contradictions. *)
    in
-   let prod_f l =
-      let (b, f) = List.split l in
-      ((List.flatten b), TermSemiRing.mk_prod(f))
-      (* FIXME: make sure that the concatenation of bindings does not
-         lead to contradictions. *)
-   in
-   let leaf_f lf =
+   let r_leaf_f lf =
       match lf with
-        Const(_)     -> ([], TermSemiRing.mk_val(lf))
-      | Var(_)       -> ([], TermSemiRing.mk_val(lf))
+         AtomicConstraint(c, t1, t2) ->
+            let (l1, t1b) = simplify_roly t1 bound_vars in
+            let (l2, t2b) = simplify_roly t2 bound_vars in
+                            (* TODO: pass bindings from first to second *)
+            (l1 @ l2, RelSemiRing.mk_val(AtomicConstraint(c, t1b, t2b)))
+       | _ -> ([], RelSemiRing.mk_val lf)
+   in
+   let t_leaf_f lf =
+      match lf with
       | AggSum(f, r) ->
         (
            (* we test equality, not equivalence, to zero here. Sufficient
@@ -420,15 +636,17 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
            if (r = relalg_zero) then raise Assert0Exception
            else if (f = TermSemiRing.zero) then ([], TermSemiRing.zero)
            else
-              let (b, non_eq_cons) = extract_substitutions r bound_vars
+              (* simplify terms in atomic constraints *)
+              let (b1, r2) = RelSemiRing.fold (my_flatten RelSemiRing.mk_sum)
+                                              (my_flatten RelSemiRing.mk_prod)
+                                              r_leaf_f r
+                 (* TODO: use b1 *)
               in
-              let (_, b_img) = List.split b
-              in
-              let new_bound_vars = Util.ListAsSet.union bound_vars b_img
+              let (b, non_eq_cons) = extract_substitutions r2 bound_vars
               in
               let (b2, f2) = simplify_roly
                                 (apply_variable_substitution_to_term b f)
-                                new_bound_vars
+                                (augment_bound_vars bound_vars b)
               in
               let b3 = Util.ListAsSet.union b b2
               in
@@ -437,8 +655,10 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
                 (* we represent the if-condition as a relational algebra
                    expression to use less syntax *)
         )
+      | _ -> ([], TermSemiRing.mk_val(lf))
    in
-   TermSemiRing.fold sum_f prod_f leaf_f ma
+   TermSemiRing.fold (my_flatten TermSemiRing.mk_sum)
+                     (my_flatten TermSemiRing.mk_prod) t_leaf_f ma
 
 
 (* apply roly_poly and simplify by unifying variables.
@@ -457,60 +677,339 @@ let simplify (ma: term_t)
    List.map simpl (TermSemiRing.sum_list (roly_poly ma))
 
 
-let extract_aggregates term =
-   let leaf_f x = match x with AggSum(f, r) -> [TermSemiRing.Val x] | _ -> []
+let rec extract_aggregates term =
+   let r_aggs r =
+      let r_leaf_f lf =
+         match lf with
+            AtomicConstraint(_, t1, t2) ->
+               (extract_aggregates t1) @ (extract_aggregates t2)
+          | _ -> []
+      in
+      RelSemiRing.fold List.flatten List.flatten r_leaf_f r
    in
-   TermSemiRing.fold List.flatten List.flatten leaf_f term
-
-(* end (* module Term *) *)
-
-
-
-
-let rec relalg_as_string (relalg: relalg_t)
-                         (theta: (term_t * string) list): string =
-   let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
-   let prod_f l = (Util.string_of_list " and " l) in
-   let leaf_f lf =
-      match lf with
-         AtomicConstraint(Eq, x, y)  ->
-            (term_as_string x theta) ^ "="  ^ (term_as_string y theta)
-       | AtomicConstraint(Lt, x, y)  ->
-            (term_as_string x theta) ^ "<"  ^ (term_as_string y theta)
-       | AtomicConstraint(Le, x, y)  ->
-            (term_as_string x theta) ^ "<=" ^ (term_as_string y theta)
-       | AtomicConstraint(Neq, x, y) ->
-            (term_as_string x theta) ^ "<>" ^ (term_as_string y theta)
-       | Empty -> "false"
-       | ConstantNullarySingleton -> "true"
-       | Rel(r, sch) -> r^"("^(Util.string_of_list ", " sch)^")"
+   let t_leaf_f x =
+      match x with
+         AggSum(f, r) ->
+            (* if r is constraints_only, take the aggregates from the
+               atoms of r; otherwise, return x monolithically. *)
+            if (constraints_only r) then ((extract_aggregates f) @ (r_aggs r))
+            else [TermSemiRing.Val x]
+       | _ -> []
    in
-   RelSemiRing.fold sum_f prod_f leaf_f relalg
-
-and term_as_string (m: term_t)
-                   (aggsum_theta :(term_t * string) list):
-                   string =
-   let leaf_f (lf: term_lf_t) =
-   (match lf with
-      Const(c)    ->
-      (
-         match c with
-            Int(i) -> string_of_int i
-          | String(s) -> "'" ^ s ^ "'"
-      )
-    | Var(x)      -> x
-    | AggSum(f,r) ->
-      if (constraints_only r) then
-         "(if " ^ (relalg_as_string r aggsum_theta) ^ " then " ^
-                  (term_as_string   f aggsum_theta) ^ " else 0)"
-      else
-         Util.apply aggsum_theta
-                    ("AggSum("^(term_as_string   f aggsum_theta)^", "
-                              ^(relalg_as_string r aggsum_theta)^")")
-                    (TermSemiRing.mk_val(lf))
-   )
-   in (TermSemiRing.fold (fun l -> "("^(Util.string_of_list "+" l)^")")
-                         (fun l -> "("^(Util.string_of_list "*" l)^")")
-                         leaf_f m)
+   Util.ListAsSet.no_duplicates
+      (TermSemiRing.fold List.flatten List.flatten t_leaf_f term)
 
 
+(* Nested map term flattening *)
+
+(* (readable_term_t * readable_relalg_t opt) -> readable_term_t *)
+let mk_cond_agg (term, constraint_opt) =
+    begin match constraint_opt with
+        | None -> term
+        | Some(constraints) -> RVal(AggSum(term, constraints))
+    end
+
+(* TODO: we currently require the non-nested parts of a relalg to be
+ * identical, including non-nested constraints. Thus for flattening to
+ * work for unions of relalg terms, AggSums should be distributed
+ * over unions in the input,
+ * i.e. AggSum(Q union R) => AggSum(Q) + AggSum(R)
+ * where Q,R contain no further unions.
+ * This can be done with roly_poly, and then distributing what's left. *)
+
+(* readable_relalg_t -> readable_relalg_t list * readable_relalg_t option *)
+let rec extract_nested_constraints r =
+    match r with
+        | RA_Leaf(AtomicConstraint(op, t1, t2)) ->
+              if ((has_aggregates (make_term t1)) or
+                  (has_aggregates (make_term t2)))
+              then ([r], None) else ([], Some(r))
+
+        | RA_Leaf(_) -> ([], Some(r))
+
+        | RA_MultiUnion(l) ->
+              let (nc_ll, rest_l) =
+                  List.split (List.map extract_nested_constraints l)
+              in
+                  if not (List.for_all
+                      (fun r -> r = (List.hd rest_l)) (List.tl rest_l))
+                  then raise (Failure ("Flattening failed."))
+                  else (List.flatten nc_ll, List.hd rest_l)
+
+        | RA_MultiNatJoin(l) ->
+              let (nc_ll, rest_l) = List.split
+                  (List.map extract_nested_constraints l) in
+              let nr = List.fold_left
+                  (fun acc x -> match x with
+                      | None -> acc | Some(y) -> acc@[y])
+                  [] rest_l
+              in
+                  (List.flatten nc_ll, Some(RA_MultiNatJoin(nr)))
+
+
+(* Flattening rewrites nested aggregates in predicates to nested
+ * conditional aggregates. A conditional aggregate separates
+ * an attribute (i.e. relational variable) from its usage in a nested
+ * query, replacing that usage with a bigsum_var. Note conditional
+ * aggregates may themselves be nested, since we cannot pull bigsum_vars
+ * above conditionals (i.e. in a triple-nested query).
+ * Flattening process:
+ * -- recursively flatten aggregate argument term
+ * -- extract nested constraints from relational part
+ * -- recursively flatten nested constraints
+ * -- identify bigsum_vars as free vars in nested constraints that
+ *    are not bigsum vars from below, or params (i.e. bound from above)
+ * -- create flattened term by rotating the aggsum, as
+ *        AggSum(AggSum(arg, non-nested), nested constraints)
+*)
+(* Note: we assume top level aggregates have the same relational part,
+ * ensuring equivalent nesting and scoping of bigsum vars *)
+(* var_t list -> readable_term_t ->
+ *     ((readable_term_t * readable_relalg_t opt) *
+ *     (var_t * var_t * readable_relalg_lf_t) list) *)
+let rec flatten_term params term =
+    (*
+    let debug_nested_constraints nc rest = 
+        print_endline ("# new c: "^(string_of_int (List.length nc)));
+        List.iter 
+            (fun r -> print_endline ("NC: "^
+                (relalg_as_string (make_relalg r) [])))
+            nc;
+        print_endline ("REST: "^(relalg_as_string (make_relalg rest) []));
+    in
+    let debug_f_lifted_constraint f_r =
+        print_endline ("NCR: "^(relalg_as_string (make_relalg f_r) []))
+    in
+    let debug_nc_size c =
+        print_endline ("# new c: "^(string_of_int (List.length c)))
+    in
+    *)
+    let get_relations r =
+        fold_relalg List.flatten List.flatten
+            (fun x -> match x with | Rel _ -> [x] | _ -> []) r
+    in
+    let find_var relations (n,t) =
+        try
+            List.find (fun r -> match r with
+                | Rel(_,f) ->
+                      List.exists (fun (n2,t2) -> n=n2 && t=t2) f
+                | _ -> raise (Failure
+                      ("Internal error: expected a relation.")))
+                relations
+        with Not_found ->
+            raise (Failure ("Could not find "^n^" in relations."))
+    in
+    let mk_var_constraint l r : readable_relalg_t = 
+        RA_Leaf(AtomicConstraint(Eq, RVal(Var(l)), RVal(Var(r))))
+    in
+    let flatten_list l f g = 
+        let (new_terms_and_constraints, new_bigsum_l) =
+            List.split (List.map (flatten_term params) l)
+        in
+        let (new_terms, new_constraints) =
+            List.split new_terms_and_constraints
+        in
+            ((f new_terms new_constraints, g new_constraints),
+            Util.ListAsSet.multiunion new_bigsum_l)
+    in
+    let flatten_constraints cl =
+        let recur_if_nested t =
+            if has_aggregates (make_term t) then
+                let (tc,bsv) = flatten_term params t in
+                    (mk_cond_agg tc, bsv)
+            else (t, [])
+        in
+        let (cstrt_l, bigsum_l) = List.split (List.map
+            (fun r -> match r with
+                | RA_Leaf(AtomicConstraint(op, t1, t2)) ->
+                      let (new_t1, nbsv1) = recur_if_nested t1 in
+                      let (new_t2, nbsv2) = recur_if_nested t2 in
+                          (RA_Leaf(AtomicConstraint(op, new_t1, new_t2)),
+                          Util.ListAsSet.union nbsv1 nbsv2)
+                | _ -> raise (Failure ("Expected a constraint.")))
+            cl)
+        in
+            (cstrt_l, Util.ListAsSet.multiunion bigsum_l)
+    in
+    let local_bigsum_and_mappings params r nc nc_bigsum =
+        let nc_bigsum_vars = List.map (fun (x,_,_) -> x) nc_bigsum in
+        let nc_free_vars = List.map
+            (fun x -> Util.ListAsSet.diff
+                (free_relalg_vars (make_relalg x)) nc_bigsum_vars)
+            nc
+        in
+        let local_bigsum_vars =
+            Util.ListAsSet.diff
+                (Util.ListAsSet.multiunion nc_free_vars) params in
+        let mapping = 
+            List.map (fun ((n,t) as v) ->
+                let new_v = ("loop_"^n, t) in (v, new_v))
+                local_bigsum_vars
+        in
+        let local_bigsum = 
+            let relations = get_relations r in
+                List.map (fun (v,bsv) ->
+                    let vr = find_var relations v in (bsv,v,vr))
+                    mapping
+        in
+            (local_bigsum, mapping)
+    in
+        begin match term with
+            | RVal(AggSum(f,r)) ->
+                  (* flatten recursively *)
+                  let ((nf, nf_r), f_bigsum) = flatten_term params f in
+
+                  (* extract nested constraints from relational part *)
+                  let (nested_constraints, rest) =
+                      match extract_nested_constraints r with
+                          | (_,None) ->
+                                raise (Failure
+                                    "No relalg left during flattening.")
+                          | (x,Some(y)) ->
+                                (*debug_nested_constraints x y;*)
+                                x,y
+                  in
+
+                  (* recursively flatten within constraints *)
+                  let (nc, nc_bigsum) =
+                      flatten_constraints nested_constraints in
+
+                  (* rename and track bigsum vars *)
+                  let (local_bigsum, local_bsv_mapping) =
+                      local_bigsum_and_mappings params r nc nc_bigsum
+                  in
+
+                  (* rotate term *)
+                  let new_bigsum_constraints =
+                      List.map
+                          (fun (v, bsv) -> mk_var_constraint v bsv)
+                          local_bsv_mapping
+                  in
+
+                  let new_term =
+                      let new_sub_r =
+                          RA_MultiNatJoin([rest]@new_bigsum_constraints)
+                      in
+                          RVal(AggSum(nf, new_sub_r)) in
+
+                  let new_constraint =
+                      let c = match nf_r with
+                          | None -> nc
+                          | Some(f_r) ->
+                                (*debug_f_lifted_constraint f_r;*)
+                                [f_r]@nc
+                      in
+                      let sub_f r = readable_relalg
+                          (apply_variable_substitution_to_relalg
+                              local_bsv_mapping (make_relalg r))
+                      in
+                          (*debug_nc_size c;*)
+                          if c = [] then None
+                          else Some(RA_MultiNatJoin(List.map sub_f c))
+                  in
+
+                  (* track all bigsums below *)
+                  let bigsum =
+                      Util.ListAsSet.multiunion
+                          [f_bigsum; nc_bigsum; local_bigsum]
+                  in
+                      ((new_term, new_constraint), bigsum)
+                          
+            | RVal(_) -> ((term, None), [])
+
+            | RSum(l) ->
+                  flatten_list l
+                      (fun nl nc ->
+                          RSum(List.map mk_cond_agg (List.combine nl nc)))
+                      (fun nc -> None)
+
+            | RProd(l) ->
+                  flatten_list l
+                      (fun nl nc -> RProd(nl))
+                      (fun nc ->
+                          let valid_c = List.fold_left
+                              (fun acc x -> match x with
+                                  | None -> acc | Some(y) -> acc@[y]) [] nc
+                          in
+                              if valid_c = [] then None
+                              else Some(RA_MultiNatJoin(valid_c)))
+        end
+
+
+(* Typing helpers *)
+(* TODO: unit tests for typing *)
+exception TypeException of string
+
+(* returns the schema for a relalg, including applying implicit projections
+ * for a union and natural join *)
+let rec relalg_schema (r : readable_relalg_t) : var_t list =
+    let leaf_f lf =
+        match lf with
+            | AtomicConstraint(comp, x, y) -> []
+            | Rel(r, sch) -> sch
+            | Empty -> []
+            | ConstantNullarySingleton -> []
+    in
+    let prod_f l =
+        List.fold_left
+            (fun a b -> Util.ListAsSet.diff (a@b) (Util.ListAsSet.inter a b))
+            (List.hd l) (List.tl l)
+    in
+    let sum_f l =
+        List.fold_left Util.ListAsSet.inter (List.hd l) (List.tl l)
+    in
+        RelSemiRing.fold sum_f prod_f leaf_f (make_relalg r)
+
+(* returns the type of a map term, where the term may include params,
+ * bigsum vars and loop vars. Such vars must be passed in via the
+ * 'extra_vars' argument. 
+ * This method also ensures free variables in aggregate arguments 
+ * appear in the relational part's schema. *)
+let rec term_type (t: readable_term_t) (extra_vars: var_t list) : type_t =
+    let debug_undefined_var (n,t) f r =
+        print_endline ("Could not find var "^n);
+        print_endline ("Relational part: "^(relalg_as_string r []));
+        print_endline ("Map part: "^(term_as_string f []));
+    in
+    let promote_type a b =
+        let msg = "Type promotion mismatch:" in
+            match (a,b) with
+                | (TString, TString) -> TString
+                | (TString, _) -> raise (TypeException msg)
+                | (TDouble, TLong) | (TLong, TDouble) ->
+                      raise (TypeException (msg^" precision exception"))
+                | (TDouble, _) | (_, TDouble) -> TDouble
+                | (TLong,_) | (_, TLong) -> TLong
+                | _ -> TInt
+    in
+    let leaf_f lf = match lf with
+        | Const (Int(_))    -> TInt
+        | Const (Double(_)) -> TDouble
+        | Const (Long(_))   -> TLong
+        | Const (String(_)) -> TString
+        | Var (n,t) -> t
+        | AggSum (f, r) ->
+              (* validate types of vars used in f with those defined in r *)
+              let r_vars = relalg_schema (readable_relalg r) in
+              let f_vars = free_term_vars f in
+              let eq_name v1 v2 = (fst v1) = (fst v2) in
+              let inconsistent_vars =
+                  List.filter (fun ((n,t) as v) ->
+                      let (n2,t2) =
+                          try List.find (eq_name v)
+                              (Util.ListAsSet.union r_vars extra_vars)
+                          with Not_found ->
+                              debug_undefined_var v f r;
+                              raise (TypeException
+                                  ("No such var "^n^" in relational part"))
+                      in t <> t2)
+                      f_vars
+              in
+                  if inconsistent_vars = [] then
+                      term_type (readable_term f) extra_vars
+                  else raise (TypeException
+                      "Type inconsistencies in aggregate variable usage.")
+    in
+    let list_f l = List.fold_left promote_type (List.hd l) (List.tl l)
+    in
+        TermSemiRing.fold list_f list_f leaf_f (make_term t)

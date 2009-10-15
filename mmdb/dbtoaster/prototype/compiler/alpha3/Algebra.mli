@@ -1,17 +1,14 @@
 (*
-   This module is for representing positive relational algebra expressions
-   with implicit projection and terms.
+   This module is for representing
+   * positive relational algebra expressions with implicit projection and
+   * terms.
 
    Functions for computing delta expressions, variable substitution,
    and simplification are also provided.
 
-
-   Relational algebra expressions have input variables
-   (parameters / bound variables) and output variables (the result columns).
    Relational algebra expressions are built from leaves, unions, and
-   natural joins.
-   Leaves are named relations, the empty relation, the constant nullary
-   singleton, and atomic constraints.
+   natural joins.  Leaves are named relations, the empty relation, the
+   constant nullary singleton, and atomic constraints.
 
    Projections are implicitly supported.
      * We use an unordered schema model in our expressions, thus we
@@ -34,14 +31,27 @@
    some positive relational algebra operations that project away more
    columns than needed to make the unions consistent are not expressible.
 
-   Terms are built from variables, constants and aggregrate sums using
-   addition and multiplication.
+   Terms are built from variables, constants and aggregrate sums (AggSum)
+   using addition and multiplication.
+
+   AggSum(t, r), where t is a term and r is a relalg expression,
+   computes the sum of the t values for each of the tuples (no duplicate
+   elimination) computed by r. In the case that r is constraints-only
+   (i.e., no relational atoms occur in it), AggSum(t, r) computes the
+   sum of the t values for those valuations of the variables common to
+   both t and r (minus those that are parameters, which would bind their
+   domains to a single parameter value) which satisfy condition r.
 *)
 
-
-type var_t = string (* type of variable (name) *)
+type type_t = TInt | TLong | TDouble | TString
+type var_t = string * type_t (* type of variable (name and type) *)
 type comp_t = Eq | Lt | Le | Neq (* comparison operations *)
-type const_t = Int of int | String of string
+
+type const_t = 
+    | Int of int
+    | Double of float
+    | Long of int64
+    | String of string
 
 (* leaves of the algebra tree *)
 type 'term_t generic_relalg_lf_t =
@@ -56,7 +66,7 @@ type 'term_t generic_relalg_lf_t =
 type ('term_t, 'relalg_t) generic_term_lf_t =
             AggSum of ('term_t * 'relalg_t)
           | Const of const_t
-          | Var of string
+          | Var of var_t
 
 
 
@@ -96,18 +106,31 @@ val make_relalg:      readable_relalg_t -> relalg_t
 val readable_term: term_t -> readable_term_t
 val make_term:     readable_term_t -> term_t
 
+(* conditional aggregate construction *)
+val mk_cond_agg : readable_term_t * readable_relalg_t option
+    -> readable_term_t
 
+(* expression manipulation *)
+val fold_relalg:
+    ('a list -> 'a) -> ('a list -> 'a) ->
+    (readable_relalg_lf_t -> 'a) ->
+    readable_relalg_t -> 'a
 
-(* all the variables that occur in the expression. *)
-val relalg_vars: relalg_t -> string list
+val fold_term:
+    ('a list -> 'a) -> ('a list -> 'a) ->
+    (readable_term_lf_t -> 'a) ->
+    readable_term_t -> 'a
 
-(* all the variables that occur in the term *)
-val term_vars: term_t -> string list
+(* all the variables that occur in the expression resp. term. *)
+val relalg_vars: relalg_t -> var_t list
+val term_vars: term_t -> var_t list
 
-
+val free_relalg_vars : relalg_t -> var_t list
+val free_term_vars : term_t -> var_t list
 
 (* output relalg or term as string; replace certain nested terms by
                                     named map accesses. *)
+val type_as_string: type_t -> string
 val relalg_as_string: relalg_t -> ((term_t * string) list) -> string
 val term_as_string:   term_t   -> ((term_t * string) list) -> string
 
@@ -123,7 +146,8 @@ val relalg_zero: relalg_t
 
 (* (delta "R" t e) returns the delta on insertion of tuple t into relation R,
    for relalg expression e. *)
-val relalg_delta:     string -> (string list) -> relalg_t -> relalg_t
+val relalg_delta: (term_t -> term_t) -> string -> (var_t list) -> relalg_t
+    -> relalg_t
 
 (* turns an expression into a union of conjunctive queries (i.e., joins);
    or something strictly simpler, i.e., a flat union, a flat join, or a leaf.
@@ -136,12 +160,6 @@ val polynomial: relalg_t -> relalg_t
 (* return polynomial as list of monomials *)
 val monomials: relalg_t -> (relalg_t list)
 
-
-(* back and forth between a monomial and its hypergraph *)
-val monomial_as_hypergraph: relalg_t -> (relalg_t list)
-val hypergraph_as_monomial: (relalg_t list) -> relalg_t
-
-
 (* Are all the leaves of the given relational algebra
    expression constraints?
    That is, can it be turned into an equivalent query
@@ -150,6 +168,11 @@ val hypergraph_as_monomial: (relalg_t list) -> relalg_t
 *)
 val constraints_only: relalg_t -> bool
 
+(* Complements a constraint-only relalg expressions *)
+val complement : relalg_t -> relalg_t
+
+(* returns whether there are any AggSums in the term *)
+val has_aggregates : term_t -> bool
 
 (* (apply_variable_substitution theta e) substitutes variables in
     relational algebra expression e according to theta. *)
@@ -191,10 +214,13 @@ sig
 val term_zero: term_t
 val term_one:  term_t
 
+val negate_term: term_t -> term_t
+
 (* (delta relname tuple term) computes the delta of term as tuple is
    inserted into relation relname.
 *)
-val term_delta: string -> (string list) -> term_t -> term_t
+val term_delta: (term_t -> term_t) -> string -> (var_t list) -> term_t
+    -> term_t
 
 (* a pudding. Here: recursively turning a map algebra expression into a
    polynomial: The result does not use union anywhere, and sum is only used
@@ -220,15 +246,26 @@ val simplify: term_t -> (var_t list) -> (var_t list) ->
    in term using mapping theta, recursively. This includes relational
    algebra subexpressions.
 *)
-val apply_variable_substitution_to_term: ((string * string) list) ->
-                                 term_t -> term_t
+val apply_variable_substitution_to_term:
+    ((var_t * var_t) list) -> term_t -> term_t
 
 (* a list consisting of the maximal AggSum subexpressions of the input
    map algebra expression.
 *)
 val extract_aggregates: term_t -> (term_t list)
 
+val flatten_term : var_t list -> readable_term_t
+    -> ((readable_term_t * readable_relalg_t option) *
+        (var_t * var_t * readable_relalg_lf_t) list)
+
 (*
 end (* module type Term *)
 *)
 
+
+(* type inference *)
+val relalg_schema: readable_relalg_t -> var_t list
+
+(* returns type of a readable_term_t, using the given list of
+ * variables defined outside *)
+val term_type: readable_term_t -> var_t list -> type_t
