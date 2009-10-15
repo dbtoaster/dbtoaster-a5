@@ -35,7 +35,7 @@ class SwitchHandler
         template.target.clone(param_map),
         template.entries.collect do |entry| entry.clone(param_map) end
       ) do |write_partition, read_partitions|
-        Logger.info { "Generating put command for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
+        Logger.info { "Generating put command (v" + cmdid.to_s + ") for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
         if template.requires_loop? then
           node(write_partition.node_name).mass_put(cmdid, template.index, read_partitions.size, PutParams.make(param_map))
         else
@@ -44,7 +44,7 @@ class SwitchHandler
         read_partitions.each_pair do |dest, entries|
           Logger.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
           node(dest).fetch(
-            entries.collect do |e| e.instantiate(params) end, 
+            entries.collect do |e| e.instantiate(param_map) end, 
             write_partition.node_name, 
             cmdid
           );

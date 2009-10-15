@@ -15,6 +15,10 @@ class PutDelta
   def initialize(value)
     @value = value;
   end
+  
+  def to_s 
+    "<PutDelta: " + to_f.to_s + ">"
+  end
 end
 
 ###################################################
@@ -22,6 +26,7 @@ end
 class PutCompleteCallback
   def initialize(partition, version)
     @partition, @version = partition, version
+    Logger.debug { "Created PutCompleteCallback for version: " + version.to_s }
   end
   
   def release
@@ -30,6 +35,7 @@ class PutCompleteCallback
   
   def fire(entry, value)
     return if value.nil?
+    Logger.debug { "Firing PutCompleteCallback for version: " + @version.to_s + "; on: " + entry.to_s }
     @partition.collapse_record_to(entry.key, @version)
   end
 end
@@ -66,6 +72,15 @@ class MassPutRecord
     if @next && @next.ready then @next.last_ready else self end;
   end
   
+  def first_unready_version(cmp = nil)
+    v = last_ready;
+    if v && v.next then
+      if cmp then Math.min(cmp, v.next.version) else v.next.version end;
+    else
+      cmp;
+    end
+  end
+  
   def pending
     (@gets_pending) || ((@prev != nil) && (@prev.pending));
   end
@@ -92,8 +107,6 @@ class MassPutRecord
     @gets_pending = false;
     check_ready;
   end
-  
-  private
   
   def check_ready
     if @callbacks && ready then
@@ -147,8 +160,8 @@ class PutRecord
   end
   
   def find(version)
-    if @version > version then @prev
-    elsif @version < version && @next != nil then @next.find(version)
+    if (@version > version) && (@prev != nil) then @prev
+    elsif (@version < version) && (@next != nil) then @next.find(version)
     else self;
     end
   end
@@ -156,8 +169,9 @@ class PutRecord
   def insert(version, value)
     insertpoint = find(version);
     if insertpoint.version == version then
-      insertpoint.value = value;
-      insertpoint;
+      raise SpreadException.new("Overwriting version : " + version.to_s + " of " + @target.to_s + "; current value: " + insertpoint.value.to_s + "; new value: " + value.to_s);
+#      insertpoint.value = value;
+#      insertpoint;
     else 
       newrec = PutRecord.new(@target, version, value, self);
       newrec.next = insertpoint.next;
@@ -366,6 +380,7 @@ class MapPartition
     else
       @massputrecords = @massputrecords.add(record);
     end
+    record;
   end
   
   def insert(target, version, value)
@@ -388,8 +403,9 @@ class MapPartition
   end
   
   def collapse_record_to(key, version)
-    version = Math.min(version, @massputrecords.last_ready.version) unless @massputrecords.nil?;
+    version = @massputrecords.first_unready_version(version) unless @massputrecords.nil?;
     @data.replace(key) do |k, v|
+      Logger.debug { "Collapsing key: " + k.to_s + "; version: " + version.to_s + " to record " + v.find(version).to_s; }
       v.find(version);
     end
   end

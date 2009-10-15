@@ -50,14 +50,12 @@ end
 ###################################################
 
 class MapLayout
-  def initialize(nodelist = Hash.new)
+  def initialize()
     @maplist = Hash.new;
-    @nodelist = nodelist;
   end
   
   def install(map_id, low, high, node)
-    @maplist[map_id] = Array.new unless @maplist.has_key? map_id;
-    @maplist[map_id].push(PartitionKey.new(low, high, node));
+    @maplist.assert_key(map_id) { Array.new }.push(PartitionKey.new(low, high, node));
     sort(map_id);
   end
   
