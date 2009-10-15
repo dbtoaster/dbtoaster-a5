@@ -21,3 +21,4 @@ template 5 T	A;B	Map 4[A,B]		A+B
 update R(2, 5)
 update S(1, 2)
 update S(102, 2)
+update T(3,102)
