@@ -68,6 +68,8 @@ sig
     val dbtoaster_build_dir : string ref
     val boost_dir           : string ref
  
+    val cpp_compiler        : string ref
+                 
     val cxx_flags           : string ref
     val cxx_linker_flags    : string ref
     val cxx_linker_libs     : string ref
@@ -124,6 +126,10 @@ struct
             (ModeOption.get_extension ())
 
     (* Optional parameters *)
+    let cpp_compiler = ref "g++"
+
+    let set_cpp_compiler s = cpp_compiler := s
+
     let cxx_flags = ref ""
     let cxx_linker_flags = ref ""
     let cxx_linker_libs = ref ""
@@ -156,6 +162,7 @@ struct
         ("-d", String (set_data_sources_config), "data sources configuration");
         ("-m", Symbol (["code"; "query"; "test";],
             set_compile_mode), " compilation mode");
+        ("-compiler", String (set_cpp_compiler), "C++ compiler");
         ("-cI", String (append_cxx_include_flags), "C++ include flags");
         ("-cL", String (append_cxx_linker_flags), "C++ linker flags");
         ("-cl", String (append_cxx_linker_libs), "C++ linker libraries");
@@ -417,7 +424,7 @@ struct
 
     let build_query_cpp_compile_cmd_with_output source_file output_file =
         let output = get_output_file output_file in
-            ("g++ -o "^output^" -c "^(!CO.cxx_flags)^" "^
+            ((!CO.cpp_compiler)^" -o "^output^" -c "^(!CO.cxx_flags)^" "^
                 " "^source_file, output)
 
     let build_query_cpp_compile_cmd source_file =
@@ -425,7 +432,7 @@ struct
             (get_object_file source_file)
 
     let build_cpp_linker_cmd output_file object_files =
-        "g++ -o "^(get_binary_output_file output_file)^" "^
+        (!CO.cpp_compiler)^" -o "^(get_binary_output_file output_file)^" "^
             (List.fold_left
                 (fun acc o ->
                     (if (String.length acc) = 0 then "" else acc^" ")^o)
