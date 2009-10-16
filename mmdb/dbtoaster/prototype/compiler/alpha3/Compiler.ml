@@ -469,7 +469,7 @@ struct
         (* Generate C++ source *)
         let bc_decls = BG.get_declarations() in
         let (decls_str, events_names_args_handlers_l) =
-            CPP.generate_code bc_decls events_and_handlers
+            CPP.generate_code mapn bc_decls events_and_handlers
         in
         let instrumentation_str =
             CPPI.generate_declarations_instrumentation

@@ -88,7 +88,7 @@ sig
     val gc_declarations: (ds_var_t * datastructure) list -> code
 
     val gc_arg_list : A.var_t list -> code list
-    val gc_fun_decl: string -> A.var_t list -> code -> code
+    val gc_fun_decl: string -> A.var_t list -> code -> ds_var_t * datastructure -> code
 
     (* HACK *)
     val gc_init_delete_args : A.var_t list -> A.var_t list -> code
@@ -100,10 +100,14 @@ module CPPGenOptions :
 sig
     val use_pool_allocator : bool ref
     val simple_profiler_enabled : bool ref
+    val log_results : bool ref
 end =
 struct
     let use_pool_allocator = ref true
     let simple_profiler_enabled = ref true
+
+    (* TODO: implement result logging for maps *)
+    let log_results = ref true
 end
 
 module CPPLeafGen : LeafGenerator =
@@ -462,12 +466,19 @@ struct
 
     let gc_arg_list v_l = List.map (fun v -> [gc_basic_decl v]) v_l
 
-    let gc_fun_decl handler_name handler_vars handler_body = 
+    let gc_fun_decl handler_name handler_vars handler_body (result_n, result_ds) = 
         let handler_decl =
+            (* Note: file args must be kept synced with function object declaration in
+             *     Runtime.generate_stream_engine_file_decl_and_init
+             *     streamengine.h:
+             *         type FileStreamDispatcher::Handler,
+             *         FileStreamDispatcher.dispatch()  *)
+            let file_args = "ofstream* results, ofstream* log, ofstream* stats" in
             let var_args =
-                String.concat "," (List.flatten (gc_arg_list handler_vars))
+                String.concat "," (List.flatten (gc_arg_list handler_vars)) in
+            let arg_sep = (if file_args = "" || handler_vars = [] then "" else ", ")
             in
-                ["void "^handler_name^"("^var_args^")"]
+                ["void "^handler_name^"("^file_args^arg_sep^var_args^")"]
         in
         let profiled_body =
             if !CPPGenOptions.simple_profiler_enabled then
@@ -478,10 +489,21 @@ struct
                 ["gettimeofday(&hend, NULL);";
                 "DBToaster::Profiler::accumulate_time_span(hstart, hend, "^
                     handler_name^"_sec_span, "^handler_name^"_usec_span);"]
-            else
-                handler_body
+            else handler_body
         in
-            merge_code [handler_decl; (gc_block profiled_body);]
+        let body_with_logging =
+            if !CPPGenOptions.log_results then
+                (* TODO: support map output for queries with params *)
+                let r = match result_ds with
+                    | Map([],t) ->
+                          ["(*results) << \""^handler_name^
+                              "\" << \",\" << "^result_n^" << endl;"]
+                    | _ -> []
+                in
+                    profiled_body@r
+            else profiled_body
+        in
+            merge_code [handler_decl; (gc_block body_with_logging);]
 
     let gc_init_delete_args orig_args handler_args =
         List.map2
@@ -775,7 +797,7 @@ struct
     (* Code generation API *)
     (* (event * (string * var_t list * ordered_blocks)) list
      *     -> string * (code list) *)
-    let generate_code declarations handler_assignments =
+    let generate_code result_map declarations handler_assignments =
         let find_var_marker varname =
             try (Str.search_backward (Str.regexp (Str.quote "__"))
                 varname (String.length varname))+2
@@ -829,6 +851,7 @@ struct
                     generate_nested_block_code renamed_ord_blocks in
                 let handler_code =
                     L.gc_fun_decl handler_name renamed_args handler_body
+                        (result_map, List.assoc result_map declarations)
                 in
                 let arg_decls = 
                     List.map L.string_of_code (L.gc_arg_list renamed_args)
@@ -864,6 +887,10 @@ struct
         in
         let print_expression msg expr =
             "cout << \""^msg^"\" << ("^expr^") << endl;\n"
+        in
+        (* Note: assumes the method has an argument: ofstream* stats *)
+        let log_expression msg expr =
+            "(*stats) << \"m,\" << \""^msg^"\" << \",\" << ("^expr^") << endl;\n"
         in
         let get_size_estimate dsvar ds dstype =
             match ds with
@@ -906,35 +933,44 @@ struct
                                   (" * "^num_elems^")  + "^container_size))])
         in
         let output_exprs =
-            List.map
+            List.flatten (List.map
                 (fun (dsvar, ds) -> 
                     let ds_type = CPPLeafGen.gc_decl_type ds in
                     let size_expr = get_size_estimate dsvar ds ds_type in
-                        print_expression (dsvar^" size: ") size_expr)
-                complex_declarations
+                        [print_expression (dsvar^" size: ") size_expr;
+                         log_expression dsvar size_expr])
+                complex_declarations)
         in
         let body =
             (* Note: method name be synced with its usage in Runtime *)
-            ["void analyse_mem_usage()"; "{"]@
+            ["void analyse_mem_usage(ofstream* stats)"; "{"]@
                 (List.map (indent 1) output_exprs)@["}"]
         in
             (String.concat "\n" body)^"\n\n"
 
     let generate_handler_analysis_fn handlers =
+        let print_expression msg cost_expr =
+            "cout << "^msg^" << "^cost_expr^" << endl;" in
+        (* Note: assumes the method has an argument: ofstream* stats *)
+        let log_expression msg cost_expr = 
+            "(*stats) << \"h,\" << "^msg^" << \",\" << "^cost_expr^" << endl;"
+        in
         if !CPPGenOptions.simple_profiler_enabled then
             let output_exprs =
-                List.map
+                List.flatten (List.map
                     (fun (_, (handler_name, _, _)) ->
-                        let msg = "\""^handler_name^" cost: \"" in
+                        let print_msg = "\""^handler_name^" cost: \"" in
+                        let log_msg = "\""^handler_name^"\"" in
                         let cost_expr = "("^handler_name^"_sec_span + ("^
                             handler_name^"_usec_span / 1000000.0))"
                         in
-                            "cout << "^msg^" << "^cost_expr^" << endl;")
-                    handlers
+                            [print_expression print_msg cost_expr;
+                             log_expression log_msg cost_expr])
+                    handlers)
             in
             let body =
                 (* Note: method name be synced with its usage in Runtime *)
-                ["void analyse_handler_usage()"; "{"]@
+                ["void analyse_handler_usage(ofstream* stats)"; "{"]@
                     (List.map (indent 1) output_exprs)@["}"]
             in
                 (String.concat "\n" body)^"\n\n"
@@ -1014,7 +1050,7 @@ struct
                 ("on_insert_bids",
                 [("P", A.TInt); ("V", A.TInt)], mp2_incr_init_block)
             in
-            (CPP.generate_code declarations [(event, handler)])
+            (CPP.generate_code "m" declarations [(event, handler)])
         in
         let output = decls^"\n\n"^
             (String.concat "\n"

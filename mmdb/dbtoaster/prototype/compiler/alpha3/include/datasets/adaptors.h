@@ -49,11 +49,11 @@ namespace DBToaster
         using namespace DBToaster::Adaptors;
 
         typedef struct {
-            int t;
-            int id;
-            int broker_id;
-            int price;
-            int volume;
+            double t;
+            int    id;
+            int    broker_id;
+            double price;
+            double volume;
         } OrderbookHandlerInput;
 
         enum OrderbookType { Bids, Asks };
@@ -107,6 +107,7 @@ namespace DBToaster
                         v->price = get<2>(bid_found->second);
                         v->volume = get<3>(bid_found->second);
                         bid_orders.erase(bid_found);
+                        a.type = deleteTuple;
                     }
                     else
                     {
@@ -118,14 +119,13 @@ namespace DBToaster
                             v->price = get<2>(ask_found->second);
                             v->volume = get<3>(ask_found->second);
                             ask_orders.erase(ask_found);
+                            a.type = deleteTuple;
                         }
                         // drop invalid tuples that are neither bids nor sell...
                         else {
                             a.type = dropTuple;
                         }
                     }
-
-                    a.type = deleteTuple;
                 }
 
                 else if ( v->action == "D" )
@@ -138,6 +138,7 @@ namespace DBToaster
                         v->price = get<2>(bid_found->second);
                         v->volume = get<3>(bid_found->second);
                         bid_orders.erase(bid_found);
+                        a.type = deleteTuple;
                     }
                     else
                     {
@@ -149,14 +150,13 @@ namespace DBToaster
                             v->price = get<2>(ask_found->second);
                             v->volume = get<3>(ask_found->second);
                             ask_orders.erase(ask_found);
+                            a.type = deleteTuple;
                         }
                         // drop invalid tuples that are neither bids nor sell...
                         else {
                             a.type = dropTuple;
                         }
                     }
-
-                    a.type = deleteTuple;
                 }
 
                 /*

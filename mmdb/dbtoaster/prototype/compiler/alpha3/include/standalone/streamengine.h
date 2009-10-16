@@ -11,6 +11,7 @@
 #include <boost/any.hpp>
 #include <boost/function.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/program_options.hpp>
 
 #include "datasets/datasets.h"
 #include "datasets/filesources.h"
@@ -176,14 +177,30 @@ namespace DBToaster
         //
         // File stream dispatching
 
+        /* Note: args in Handler type, and dispatch() method must be kept synced with:
+         *     Codegen.gc_fun_decl
+         *     Runtime.generate_stream_engine_file_decl_and_init
+         */
         struct FileStreamDispatcher
         {
-            typedef boost::function<void (boost::any)> Handler;
+            // Files to pass to handlers.
+            ofstream* results;
+            ofstream* log;
+            ofstream* stats;
+
+            typedef boost::function<void (boost::any, ofstream*, ofstream*, ofstream*)> Handler;
             typedef tuple<DBToasterStreamId, DmlType> Key;
             typedef map<Key, Handler> HandlerMap;
             HandlerMap handlers;
 
             FileStreamDispatcher() {}
+
+            void setFiles(ofstream* r, ofstream* l, ofstream* s)
+            {
+                results = r;
+                log = l;
+                stats = s;
+            }
 
             void addHandler(DBToasterStreamId streamId, DmlType type, Handler h)
             {
@@ -215,7 +232,7 @@ namespace DBToaster
                     Key k = make_tuple(tuple.id, tuple.type);
                     HandlerMap::iterator hIt = handlers.find(k);
                     if ( hIt != handlers.end() ) {
-                        (hIt->second)(tuple.data);
+                        (hIt->second)(tuple.data, results, log, stats);
                     }
                 }
             }
@@ -364,6 +381,52 @@ namespace DBToaster
 
             boost::mutex mutex;
             boost::condition_variable conditionVar;
+        };
+
+        /****************************************
+         * Standard arguments
+         ****************************************/
+
+        namespace Options = ::boost::program_options;
+
+        struct EngineOptions
+        {
+            Options::options_description desc;
+
+            // Option variables.
+            string log_file_name;
+            string results_file_name;
+            string stats_file_name;
+
+            EngineOptions() : desc("Supported options")
+            {
+                desc.add_options()
+                    ("help,?", "show help")
+                    ("log,l", Options::value<string>(&log_file_name)->
+                        default_value("engine.log"), "set log file")
+                    ("results,r", Options::value<string>(&results_file_name)->
+                        default_value("engine.results"), "set results file")
+                    ("stats,s", Options::value<string>(&stats_file_name)->
+                        default_value("engine.stats"), "sets stats file");
+            }
+
+            void usage(char* argv[])
+            {
+                cout << argv[0] << " usage: " << endl;
+                cout << desc << endl;
+            }
+
+            void operator()(int argc, char* argv[])
+            {
+                Options::variables_map options;
+                Options::store(Options::parse_command_line(argc, argv, desc), options);
+                Options::notify(options);
+
+                if ( options.count("help") ) {
+                    usage(argv);
+                    exit(1);
+                }
+            }
         };
     }
 }

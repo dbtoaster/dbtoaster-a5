@@ -146,6 +146,9 @@ struct
     let set_simple_profiler state =
         Codegen.CPPGenOptions.simple_profiler_enabled := (state = "on")
 
+    let set_result_logging state =
+        Codegen.CPPGenOptions.log_results := (state = "on")
+
     let dbtoaster_arg_spec = [
         ("-s", Symbol ([(*"tml";*) "sql"], set_input_file_type),
             " input file type");
@@ -161,6 +164,7 @@ struct
         ("-simple-profiler", Symbol (["on"; "off"], set_simple_profiler), " enable simple profiling");
         ("-progress-counter", Set_int Runtime.RuntimeOptions.reset_frequency,
             "progress reporting frequency for simple profiling");
+        ("-log-results", Symbol (["on"; "off"], set_result_logging), " enable result logging");
     ]
 
 end;;
@@ -370,7 +374,7 @@ struct
                     raise (BuildException ("Could not find boost "^s))
 
         let get_boost_libraries boost_lib_dir =
-            let prefixes = ["libboost_system"; "libboost_thread"] in
+            let prefixes = ["libboost_system"; "libboost_thread"; "libboost_program_options" ] in
                 get_libraries boost_lib_dir prefixes (get_os_lib_suffix())
 
         let test_find () =

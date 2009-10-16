@@ -224,6 +224,12 @@ let generate_stream_engine_file_decl_and_init
         | (t,_) -> raise (CodegenException ("Invalid event type: "^t))
     in
 
+    (* Note: file args in function object decl must be kept synced with:
+     *     Codegen.gc_fun_decl
+     *     streamengine.h:
+     *         type FileStreamDispatcher::Handler,
+     *         FileStreamDispatcher.dispatch()  *)
+
     (* declare_handler_fun_obj:
        struct <fun obj type name>
        { <handler ret type> operator() { cast; invoke; } }
@@ -232,13 +238,14 @@ let generate_stream_engine_file_decl_and_init
         let input_instance = "input" in
         let fo_type = handler_name^"_fun_obj" in
             ([("struct "^fo_type^" { ");
-            (indent ("void operator()(boost::any data) { "));
+            (indent ("void operator()(boost::any data, "^
+                "ofstream* results, ofstream* log, ofstream* stats) { "));
             (indent (indent
                 (handler_input_type_name^" "^input_instance^" = ")));
             (indent (indent (indent ("boost::any_cast<"^
                 handler_input_type_name^">(data); "))));
             (indent (indent
-                (handler_name^"("^
+                (handler_name^"(results, log, stats, "^
                     (handler_input_args input_instance)^");")));
             (indent "}"); "};\n"],
             fo_type)
@@ -303,8 +310,10 @@ let generate_file_stream_engine_init out_chan streams_handlers_and_events =
             ["\n\nvoid init("^
                 "DBToaster::StandaloneEngine::FileMultiplexer& sources,";
              (indent
-                 "DBToaster::StandaloneEngine::FileStreamDispatcher& router)");
-             "{";]@
+                 "DBToaster::StandaloneEngine::FileStreamDispatcher& router, ");
+             (indent "ofstream* results, ofstream* log, ofstream* stats)");
+             "{";
+             (indent "router.setFiles(results, log, stats);")]@
                 (List.map indent init_body)@[ "}\n\n"; ]
         in
             list_code init_code
@@ -593,13 +602,14 @@ let generate_file_stream_testing_main query_id code_out_chan global_decls =
                 "if ( (tuple_counter % "^
                     (string_of_int !RuntimeOptions.reset_frequency)^") == 0 )";
                 "{";
-                (indent ("DBToaster::Profiler::reset_time_span("^
-                    (string_of_int !RuntimeOptions.reset_frequency)^
-                    ", tvs, tuple_counter, tup_sec_span, tup_usec_span);")); ]
+                (indent ("DBToaster::Profiler::reset_time_span_printing_global("));
+                (indent (indent ("\"tuples\", tuple_counter, "^
+                    (string_of_int !RuntimeOptions.reset_frequency)^", "^
+                    "tvs, tup_sec_span, tup_usec_span, \""^query_id^"\", log);"))); ]
             else [])@
-            [indent "analyse_mem_usage();"]@
+            [indent "analyse_mem_usage(stats);"]@
             (if !Codegen.CPPGenOptions.simple_profiler_enabled then
-                [(indent "analyse_handler_usage();"); "}"]
+                [(indent "analyse_handler_usage(stats);"); "}"]
             else [])
         in
 
@@ -615,23 +625,32 @@ let generate_file_stream_testing_main query_id code_out_chan global_decls =
             (List.map indent loop_body)@
             ["}";]@
             (if !CPPGenOptions.simple_profiler_enabled then
-                ["DBToaster::Profiler::reset_time_span("^
-                    "(tuple_counter%"^
-                    (string_of_int !RuntimeOptions.reset_frequency)^"), "^
-                    "tvs, tuple_counter, tup_sec_span, tup_usec_span);";
-                "analyse_handler_usage();";]
+                let rf =
+                    "(tuple_counter%"^(string_of_int !RuntimeOptions.reset_frequency)^")"
+                in
+                ["DBToaster::Profiler::reset_time_span_printing_global(";
+                (indent ("\"tuples\", tuple_counter, "^rf^", "^
+                    "tvs, tup_sec_span, tup_usec_span, \""^query_id^"\", log);"));
+                "analyse_handler_usage(stats);";]
             else [])@
-            ["analyse_mem_usage();" ]
+            ["analyse_mem_usage(stats);" ]
         in
         let main_code =
             ["DBToaster::StandaloneEngine::FileMultiplexer sources(12345, 20);";
             "DBToaster::StandaloneEngine::FileStreamDispatcher router;"; ""; "";
-            "void runMultiplexer()"; "{"]@
+            "void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)"; "{"]@
             (List.map indent run_body)@["}"; ""; ""]@
-            ["int main(int argc, char** argv)"]@
+            ["int main(int argc, char* argv[])"]@
                 (block
-                    (["init(sources, router);";
-                    "runMultiplexer();"]))
+                    (["DBToaster::StandaloneEngine::EngineOptions opts;";
+                    "opts(argc,argv);";
+                    "ofstream* log = new ofstream(opts.log_file_name.c_str());";
+                    "ofstream* results = new ofstream(opts.results_file_name.c_str());";
+                    "ofstream* stats = new ofstream(opts.stats_file_name.c_str());";
+                    "init(sources, router, results, log, stats);";
+                    "runMultiplexer(results, log, stats);";
+                    "log->flush(); log->close();";
+                    "results->flush(); results->close();"]))
         in
             list_code main_code
     in

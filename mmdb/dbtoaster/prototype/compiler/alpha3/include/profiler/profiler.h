@@ -1,8 +1,10 @@
 #ifndef DBTOASTER_PROFILER_H
 #define DBTOASTER_PROFILER_H
 
-#ifdef ENABLE_PROFILER
 #include <iostream>
+#include <fstream>
+
+#ifdef ENABLE_PROFILER
 #include <map>
 #include <list>
 #include <utility>
@@ -593,6 +595,8 @@ namespace DBToaster
 {
     namespace Profiler
     {
+        using namespace std;
+
         inline void accumulate_time_span(
             struct timeval& start, struct timeval& end,
             double& sec_accum, double& usec_accum)
@@ -604,9 +608,33 @@ namespace DBToaster
             usec_accum += usec;
         }
 
-        inline void reset_time_span(double reset_frequency,
-                                    struct timeval& global_start, unsigned long& counter,
-                                    double& sec_accum, double& usec_accum)
+        inline void reset_time_span(const char* counter_name,
+                                    unsigned long& counter, double reset_frequency,
+                                    double& sec_accum, double& usec_accum,
+                                    const char* text, ofstream* log = NULL)
+        {
+            // Print out:
+            // # processed, time per item since last reset, time spent in total
+            cout << "Processed " << counter << " " << counter_name << "." << endl;
+            cout << "Time per " << counter_name << ": "
+                 << ((sec_accum + (usec_accum / 1000000.0)) / reset_frequency)
+                 << endl;
+
+            if ( log != NULL ) {
+                (*log) << text << "," << counter_name << "," << counter << ","
+                       << ((sec_accum + (usec_accum / 1000000.0)) / reset_frequency)
+                       << endl;
+            }
+
+            sec_accum = 0.0;
+            usec_accum = 0.0;
+        }
+
+        inline void reset_time_span_printing_global(
+            const char* counter_name, unsigned long& counter,
+            double reset_frequency, struct timeval& global_start,
+            double& sec_accum, double& usec_accum,
+            const char* text, ofstream* log = NULL)
         {
             struct timeval end;
             gettimeofday(&end, NULL);
@@ -617,14 +645,44 @@ namespace DBToaster
 
             // Print out:
             // # processed, time per tuple since last reset, time spent in total
-            cout << "Processed " << counter << " tuples." << endl;
-            cout << "Exec time "
+            cout << "Processed " << counter << " " << counter_name << "." << endl;
+            cout << "Time per " << counter_name << ": "
                  << ((sec_accum + (usec_accum / 1000000.0)) / reset_frequency) << " "
                  << (sec + (usec / 1000000.0)) << endl;
+
+            if ( log != NULL ) {
+                (*log) << text << "," << counter_name << "," << counter << ","
+                       << ((sec_accum + (usec_accum / 1000000.0)) / reset_frequency) << " "
+                       << (sec + (usec / 1000000.0)) << endl;
+            }
 
             sec_accum = 0.0;
             usec_accum = 0.0;
         }
+
+        inline void global_time_span(
+            const char* counter_name, unsigned long& counter,
+            struct timeval& global_start,
+            const char *text, ofstream* log = NULL)
+        {
+            struct timeval end;
+            gettimeofday(&end, NULL);
+
+            long sec = end.tv_sec - global_start.tv_sec;
+            long usec = end.tv_usec - global_start.tv_usec;
+            if (usec < 0) { --sec; usec+=1000000; }
+
+            // Print out:
+            // # processed, time spent in total
+            cout << "Processed " << counter << " " << counter_name << "." << endl;
+            cout << "Total time: " << (sec + (usec / 1000000.0)) << endl;
+
+            if ( log != NULL ) {
+                (*log) << text << "," << counter_name << "," << counter << ","
+                       << (sec + (usec / 1000000.0)) << endl;
+            }
+        }
+
     };
 };
 

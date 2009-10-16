@@ -70,7 +70,7 @@ Note: to compile to C++ code, run dbtoaster with '-m code', e.g.:
 DBToaster toplevel:
 -------------------
 
-The DBToaster toplevel is using for compiling queries to a variety
+The DBToaster toplevel is useful for compiling queries to a variety
 of output formats, for developing, testing and debugging purposes.
 
 Example usage:

@@ -1,4 +1,4 @@
-CREATE TABLE BIDS (t int, id int, broker_id int, p int, v int)
+CREATE TABLE BIDS (t double, id int, broker_id int, p double, v double)
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderbookFileStream'
     ARGS '"/Users/yanif/tmp/data/cleanedData.csv",10000'
