@@ -418,7 +418,6 @@ struct
                     mapn params bigsum_vars_and_rels negate_f t
                 in
 
-                (* TODO: delete from bigsum var domains for delete handlers. *)
                 let bsv_maintenance_bc =
                     List.map (fun (bsv,v,r) -> match r with
                         | Rel(n,_) ->
@@ -427,7 +426,7 @@ struct
                         bigsum_vars_and_rels
                 in
                     BG.append_handler_blocks
-                        bc (List.flatten bsv_maintenance_bc))
+                        (List.flatten bsv_maintenance_bc) bc)
                 (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
             in
 

@@ -314,7 +314,10 @@ let generate_file_stream_engine_init out_chan streams_handlers_and_events =
              (indent "ofstream* results, ofstream* log, ofstream* stats)");
              "{";
              (indent "router.setFiles(results, log, stats);")]@
-                (List.map indent init_body)@[ "}\n\n"; ]
+                (List.map indent init_body)@
+            ["sources.initStream();";
+            "cout << \"Initialized input stream...\" << endl;";
+            "}\n\n"; ]
         in
             list_code init_code
     in

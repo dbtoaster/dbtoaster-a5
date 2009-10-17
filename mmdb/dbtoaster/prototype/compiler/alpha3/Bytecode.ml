@@ -918,11 +918,19 @@ struct
                           let (lf_map_name, lf_map_params) =
                               apply_or_fail map_bindings (make_term (RVal(lf)))
                           in
+                          let renamed_lf_map_params = List.map get_var lf_map_params in
                           let lf_map_entry =
                               (lf_map_name,
-                              List.map (fun x -> A.MKVar(get_var x))
-                                  lf_map_params)
+                              List.map (fun x -> A.MKVar(get_var x)) renamed_lf_map_params)
                           in
+                          let lf_bigsum_vars =
+                              (* TODO: initial value computation for bigsum vars *)
+                              List.filter (fun v ->
+                                  List.exists (fun (w,_,_) -> v=w) bigsum_vars_and_rels)
+                                  renamed_lf_map_params
+                          in
+                              print_endline ("term_lf_as_nblock "^lf_map_name^" leaf map bigsum: "^
+                                  (String.concat "," (List.map fst lf_bigsum_vars)));
                               single_map_assign(
                                   I.MapUpdate(map_ds, map_entry,
                                       AM.PTVal(
