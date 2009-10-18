@@ -347,44 +347,46 @@ let negate_leaves negate_f t =
             TermSemiRing.mk_sum TermSemiRing.mk_prod negate_leaf_f t
 
 
-let rec relalg_delta (negate_f: term_t -> term_t)
-        relname (tuple: var_t list) (relalg: relalg_t) =
-   let delta_leaf lf =
+let rec relalg_delta (negate: bool) (relname: string)
+                     (tuple: var_t list) (relalg: relalg_t) =
+   let delta_leaf negate lf =
       match lf with
-         Empty -> (RelSemiRing.zero, false)
+         Empty -> RelSemiRing.zero
        | Rel(r, l) when relname = r ->
             let f (x,y) = RelSemiRing.mk_val(
                              AtomicConstraint(Eq, TermSemiRing.mk_val(Var(x)),
                                                   TermSemiRing.mk_val(Var(y))))
             in
-            (RelSemiRing.mk_prod (List.map f (List.combine l tuple)), false)
-       | Rel(x, l) -> (RelSemiRing.zero, false)
-       | ConstantNullarySingleton -> (RelSemiRing.zero, false)
+            RelSemiRing.mk_prod (List.map f (List.combine l tuple))
+       | Rel(x, l) -> RelSemiRing.zero
+       | ConstantNullarySingleton -> RelSemiRing.zero
        | AtomicConstraint(comp, t1, t2) ->
-            if(((term_delta negate_f relname tuple t1) = TermSemiRing.zero) &&
-               ((term_delta negate_f relname tuple t2) = TermSemiRing.zero))
+            if(((term_delta_aux negate relname tuple t1) = TermSemiRing.zero) &&
+               ((term_delta_aux negate relname tuple t2) = TermSemiRing.zero))
             then
-                  (RelSemiRing.zero, false)
+                  RelSemiRing.zero
             else raise Assert0Exception
                  (* the terms with nonzero delta should have been pulled
                     out of the constraint elsewhere. *)
    in
-       (* Note: no negation for relational algebra *)
-       fst (RelSemiRing.delta delta_leaf (fun x -> x) relalg)
+       RelSemiRing.delta (delta_leaf negate) relalg
 
-and term_delta_aux (negate_f: term_t -> term_t) relname tuple (term: term_t)  =
-   let negate (delta_t, negated) =
-      if negated then delta_t else negate_f delta_t in
-   let t_pm_dt t =
-      TermSemiRing.mk_sum[t; negate (term_delta_aux negate_f relname tuple t)]
+and term_delta_aux (negate: bool) (relname: string)
+               (tuple: var_t list) (term: term_t)  =
+   let negate_f t =
+       if negate then TermSemiRing.mk_prod
+           [TermSemiRing.mk_val (Const(Int(-1))); t]
+       else t
    in
-   let rec leaf_delta lf =
+   let t_pm_dt t =
+      TermSemiRing.mk_sum[t; negate_f (term_delta_aux negate relname tuple t)]
+   in
+   let rec leaf_delta negate lf =
       match lf with
-         Const(c) -> (TermSemiRing.zero, false)
-       | Var(x)   -> (TermSemiRing.zero, false)
+         Const(c) -> TermSemiRing.zero
+       | Var(x)   -> TermSemiRing.zero
        | AggSum(f, r) ->
-            let (d_f, d_f_negated) = (term_delta_aux negate_f relname tuple f)
-            in
+            let d_f = term_delta_aux negate relname tuple f in
             if (constraints_only r) then
                (* FIXME: this is overkill (but supposedly correct) in the
                   case that r does not contain AggSum terms, i.e., in the
@@ -401,37 +403,43 @@ and term_delta_aux (negate_f: term_t -> term_t) relname tuple (term: term_t)  =
                   in
                   RelSemiRing.apply_to_leaves leaf_f r
                in
-               (*
-                  (if (     new_r             ) then (delta f) else 0)
-                + (if (     new_r  and (not r)) then        f  else 0)
-                + (if ((not new_r) and      r ) then       -f  else 0)
+               (* Delta +:
+                    (if (     new_r+             ) then (delta +  f) else 0)
+                  + (if (     new_r+  and (not r)) then           f  else 0)
+                  + (if ((not new_r+) and      r ) then          -f  else 0)
+
+                  Delta -:
+                    (if (    new_r-             ) then (delta -  f) else 0)
+                  + (if (    new_r-  and (not r)) then           f  else 0)
+                  + (if (not(new_r-) and      r ) then          -f  else 0)
                *)
                let delta_constraint =
                    TermSemiRing.mk_sum [
-                      make_aggsum (negate (d_f, d_f_negated)) new_r;
+                      make_aggsum d_f new_r;
                       make_aggsum f
                           (RelSemiRing.mk_prod [new_r; (complement r)]);
-                      make_aggsum (negate_term f)
+                      make_aggsum f
                           (RelSemiRing.mk_prod [ (complement new_r); r ])
                    ]
                in
-                   (delta_constraint, true)
+                   delta_constraint
             else
-               let d_r = (relalg_delta negate_f relname tuple r) in
-               let pm_f = if d_f_negated then negate_f f else f in
-               let delta_agg =
+               let d_r = (relalg_delta negate relname tuple r) in
                    TermSemiRing.mk_sum [ (make_aggsum  d_f   r);
-                                         (make_aggsum pm_f d_r);
+                                         (make_aggsum    f d_r);
                                          (make_aggsum  d_f d_r) ]
-               in
-                   (delta_agg, d_f_negated)
    in
-       TermSemiRing.delta leaf_delta negate_f term
+       TermSemiRing.delta (leaf_delta negate) term
 
-(* Top-level function that performs the final negation *)
-and term_delta (negate_f: term_t -> term_t) relname tuple (term: term_t)  =
-    let (r,negated) = term_delta_aux negate_f relname tuple term in
-        if negated then r else (negate_f r)
+and term_delta (negate: bool) (relname: string)
+               (tuple: var_t list) (term: term_t)  =
+   let negate_f t =
+       if negate then TermSemiRing.mk_prod
+           [TermSemiRing.mk_val (Const(Int(-1))); t]
+       else t
+   in
+       negate_f (term_delta_aux negate relname tuple term)
+               
 
 
 type substitution_t = var_t Util.Vars.mapping_t

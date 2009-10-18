@@ -42,7 +42,7 @@ let compile_delta_for_rel (reln:   string)
                           (mapn:   string)         (* map name *)
                           (params: var_t list)
                           (bigsum_vars: var_t list)
-                          (negate_f: term_t -> term_t)
+                          (negate: bool)
                           (term: term_t) =
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
@@ -51,7 +51,7 @@ let compile_delta_for_rel (reln:   string)
    in
    (* compute the delta and simplify. *)
    let s = List.filter (fun (_, t) -> t <> term_zero)
-              (simplify (term_delta negate_f reln bound_vars term)
+              (simplify (term_delta negate reln bound_vars term)
                             (bound_vars @ bigsum_vars) params)
    in
    let todos =
@@ -137,14 +137,14 @@ let rec compile_messages
         (mapn: string)
         (params: var_t list)
         (bigsum_vars: var_t list)
-        (negate_f: term_t -> term_t)
+        (negate: bool)
         (string_of_message:
             (string * var_t list) list ->
             string * var_t list * var_t list * var_t list * string * term_t ->
             (string * var_t list * term_t) list -> string)
         (term: term_t) : (string list) =
    let cdfr (reln, relsch) =
-      compile_delta_for_rel reln relsch mapn params bigsum_vars negate_f term
+      compile_delta_for_rel reln relsch mapn params bigsum_vars negate term
    in
 
    let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
@@ -198,22 +198,22 @@ let rec compile_messages
    (* Recur over non-duplicate terms *)
    ready @
    (List.flatten (List.map (fun (x,y,z) ->
-       compile_messages db_schema x y [] negate_f string_of_message z) todo))
+       compile_messages db_schema x y [] negate string_of_message z) todo))
 
 
 (* compiles to ck's original format *)
-let compile_readable_messages db_schema mapn params bigsum_vars negate_f term =
+let compile_readable_messages db_schema mapn params bigsum_vars negate term =
     (* Reset compilations *)
     clear_compilation();
     compile_messages
-        db_schema mapn params bigsum_vars negate_f generate_code term
+        db_schema mapn params bigsum_vars negate generate_code term
 
 (* compiles to spread message templates *)
-let compile_spread_messages db_schema mapn params bigsum_vars negate_f term =
+let compile_spread_messages db_schema mapn params bigsum_vars negate term =
     (* Reset compilations *)
     clear_compilation();
     compile_messages
-        db_schema mapn params bigsum_vars negate_f generate_spread term
+        db_schema mapn params bigsum_vars negate generate_spread term
 
 (* the main compile function. call this one, not the others. *)
 let compile_terms (db_schema: (string * var_t list) list)
@@ -222,7 +222,7 @@ let compile_terms (db_schema: (string * var_t list) list)
                   (term_l: term_t list)
                   (compile_fn:
                       (string * var_t list) list -> string -> var_t list 
-                      -> var_t list -> (term_t -> term_t) -> term_t -> string list)
+                      -> var_t list -> bool -> term_t -> string list)
                   : (string list) =
 
     let flat_term_l = List.map
@@ -230,22 +230,19 @@ let compile_terms (db_schema: (string * var_t list) list)
             (mk_cond_agg tc, bsv))
         (List.map readable_term (List.map roly_poly term_l))
     in
-    let insert_negate_f = fun x -> x in
-    let delete_negate_f = Algebra.negate_term in
     let messages_l = 
         List.map (fun (t, bigsum_vars_and_rels) ->
             let bigsum_vars =
                 List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
             let insert_messages =
-                compile_fn db_schema mapn params bigsum_vars insert_negate_f t
+                compile_fn db_schema mapn params bigsum_vars false t
             in
             let delete_messages =
                 let invert_event s =
                     (if (String.get s 0) = '+' then s.[0] <- '-'); s
                 in
                     List.map invert_event 
-                        (compile_fn db_schema
-                            mapn params bigsum_vars delete_negate_f t)
+                        (compile_fn db_schema mapn params bigsum_vars true t)
             in
                 insert_messages@delete_messages)
             (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
@@ -272,7 +269,8 @@ struct
     let generate_bytecode db_schema bigsum_vars_and_rels
                           (reln, bound_vars, params, mapn, new_ma)
                           new_ma_aggs
-                          : (string * BI.nested_block_t)
+                          : (string * BG.maintenance_terms_and_deps) *
+                            (string * BI.nested_block_t)
             =
         let loop_vars = Util.ListAsSet.diff params bound_vars in
         let fn (mapname, params, mapstructure) =
@@ -283,11 +281,11 @@ struct
             List.combine bound_vars (List.assoc reln db_schema)
         in
         let rma = A.readable_term new_ma in
-        let ma_block = 
+        let (maint, ma_block) = 
             BG.term_as_bytecode mapn rma params
                 loop_vars bigsum_vars_and_rels map_bindings arg_bindings
         in
-            (reln, (mapn, env, ma_block))
+            ((reln, maint), (reln, (mapn, env, ma_block)))
 
 
     let rec compile
@@ -295,8 +293,9 @@ struct
             (mapn: string)
             (params: var_t list)
             (bigsum_vars_and_rels: (var_t * var_t * readable_relalg_lf_t) list)
-            (negate_f: term_t -> term_t)
-            (term: A.term_t) : BG.handler_blocks
+            (negate: bool)
+            (term: A.term_t)
+            : (string * BG.maintenance_terms_and_deps) list * BG.handler_blocks
             =
         (*
         let debug_dupcheck x =
@@ -336,7 +335,7 @@ struct
         let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
         let cdfr (reln, relsch) =
             compile_delta_for_rel
-                reln relsch mapn params bigsum_vars negate_f term in
+                reln relsch mapn params bigsum_vars negate term in
         let (l1,l2) = (List.split (List.map cdfr db_schema)) in
 
         let normalized_l2 = List.flatten (List.map2
@@ -359,24 +358,24 @@ struct
             (List.map2 (fun (_,_,dt) (_,p,t) -> (get_compilation dt,p,t))
                 normalized_dups todo_dups)
         in
-        let ready_in =
-            (List.map
-                (fun (reln, bound_vars, params, _, mapn, new_ma) ->
-                    generate_bytecode db_schema bigsum_vars_and_rels
-                        (reln, bound_vars, params, mapn, new_ma)
-                        new_ma_aggs)
-                (List.flatten l1))
+        let (maint_l, ready_in) = List.split (List.map
+            (fun (reln, bound_vars, params, _, mapn, new_ma) ->
+                generate_bytecode db_schema bigsum_vars_and_rels
+                    (reln, bound_vars, params, mapn, new_ma)
+                    new_ma_aggs)
+            (List.flatten l1))
         in
         let ready = BG.create_dependent_handler_block ready_in in
 
         (* Recur over non-duplicate terms *)
-        let next =
-            List.flatten (List.map
-                (fun (x,y,z) -> compile db_schema x y [] negate_f z) todo)
+        let (next_maint_l, next_l) = List.split(
+            List.map (fun (x,y,z) -> compile db_schema x y [] negate z) todo)
         in
-            BG.merge_handler_blocks ready next
+            ((List.flatten next_maint_l)@maint_l,
+                BG.merge_handler_blocks ready (List.flatten next_l))
 
 
+    (* TODO: ensure disjoint input relations for term_l *)
     let compile_terms_to_bytecode
             (db_schema: (string * var_t list) list)
             (mapn: string)
@@ -407,26 +406,77 @@ struct
 
             clear_compilation();
 
-            let negate_f = match event_type with
-                | "insert" -> (fun x -> x)
-                | "delete" -> Algebra.negate_term
+            let negate_term = match event_type with
+                | "insert" -> false
+                | "delete" -> true
                 | _ -> raise (Failure ("Invalid event type: "^event_type))
             in
             (* event_bc_l : handler_blocks list *)
             let event_bc_l = List.map (fun (t, bigsum_vars_and_rels) ->
-                let bc = compile db_schema
-                    mapn params bigsum_vars_and_rels negate_f t
+                let (maint_by_rel, bc) =
+                    compile db_schema
+                        mapn params bigsum_vars_and_rels negate_term t
                 in
 
-                let bsv_maintenance_bc =
-                    List.map (fun (bsv,v,r) -> match r with
-                        | Rel(n,_) ->
-                              BG.generate_bigsum_maintenance event_type bsv v n
-                        | _ -> raise (Failure "Invalid bigsum datastructure"))
-                        bigsum_vars_and_rels
+
+                (* Create bigsum var bindings for initial value computation *)
+                let constraint_bindings = 
+                    List.map (fun (x,y,_) -> (x,y)) bigsum_vars_and_rels
                 in
-                    BG.append_handler_blocks
-                        (List.flatten bsv_maintenance_bc) bc)
+                let schema_bindings = Util.ListAsSet.multiunion
+                    (List.map (fun (r,f) -> List.map
+                        (fun (n,t) -> ((n, t), ("protect_"^n,t))) f) db_schema)
+                in
+
+                (* Remove init val and final dep duplicates first *)
+                let filtered_maint =
+                    let eliminate_dups l = List.fold_left
+                        (fun acc k -> if List.mem k acc then acc else acc@[k])
+                        [] l
+                    in
+                        List.fold_left (fun acc (rel, maint) ->
+                            let dup_elim_maint = eliminate_dups maint in
+                                if List.mem_assoc rel acc then
+                                    let existing_maint = List.assoc rel acc in
+                                    let new_maint = 
+                                        eliminate_dups (existing_maint@dup_elim_maint)
+                                    in
+                                        (List.remove_assoc rel acc)@[(rel, new_maint)]
+                                else
+                                    acc@[(rel, dup_elim_maint)])
+                            [] maint_by_rel
+                in
+
+                let (init_compute_bc, init_maintain_bc, final_compute_bc, final_maintain_bc) =
+                    let icm_fcm_bc =
+                        List.map (fun (rel, maint) ->
+                            BG.generate_map_maintenance rel db_schema
+                                constraint_bindings schema_bindings maint)
+                            filtered_maint
+                    in
+                    let ic = List.map (fun (x,_,_,_) -> x) icm_fcm_bc in
+                    let im = List.map (fun (_,x,_,_) -> x) icm_fcm_bc in
+                    let fc = List.map (fun (_,_,x,_) -> x) icm_fcm_bc in
+                    let fm = List.map (fun (_,_,_,x) -> x) icm_fcm_bc in
+                        (List.flatten ic, List.flatten im, List.flatten fc, List.flatten fm)
+                in
+                (* TODO: ensure bigsum var maintenance is done only once per relation *)
+                let bsv_maintenance_bc = List.flatten (List.map
+                    (fun (bsv,v,r) -> match r with
+                        | Rel(n,_) ->
+                              BG.generate_bigsum_maintenance
+                                  event_type bsv v n (List.assoc n db_schema)
+                        | _ -> raise (Failure "Invalid bigsum datastructure"))
+                    bigsum_vars_and_rels)
+                in
+                let bc_order = match event_type with
+                    | "insert" -> [init_compute_bc; bsv_maintenance_bc; init_maintain_bc; bc]
+                    | "delete" -> [final_maintain_bc; bsv_maintenance_bc; final_compute_bc; bc]
+                    | _ -> raise (Failure "Invalid event type")
+                in
+                    List.fold_left
+                        (fun acc bl -> BG.append_handler_blocks acc bl)
+                        []  bc_order)
                 (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
             in
 

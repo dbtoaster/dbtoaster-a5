@@ -146,8 +146,7 @@ val relalg_zero: relalg_t
 
 (* (delta "R" t e) returns the delta on insertion of tuple t into relation R,
    for relalg expression e. *)
-val relalg_delta: (term_t -> term_t) -> string -> (var_t list) -> relalg_t
-    -> relalg_t
+val relalg_delta: bool -> string -> (var_t list) -> relalg_t -> relalg_t
 
 (* turns an expression into a union of conjunctive queries (i.e., joins);
    or something strictly simpler, i.e., a flat union, a flat join, or a leaf.
@@ -219,8 +218,7 @@ val negate_term: term_t -> term_t
 (* (delta relname tuple term) computes the delta of term as tuple is
    inserted into relation relname.
 *)
-val term_delta: (term_t -> term_t) -> string -> (var_t list) -> term_t
-    -> term_t
+val term_delta: bool -> string -> (var_t list) -> term_t -> term_t
 
 (* a pudding. Here: recursively turning a map algebra expression into a
    polynomial: The result does not use union anywhere, and sum is only used

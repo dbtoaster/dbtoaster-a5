@@ -131,8 +131,7 @@ sig
       That is, if (f x) expresses change to a leaf base value x of the
       expression e, then (delta f e) expresses the overall change to e.
    *)
-   val delta: (leaf_t -> expr_t * bool) -> (expr_t -> expr_t) -> expr_t
-       -> expr_t * bool
+   val delta: (leaf_t -> expr_t) -> expr_t -> expr_t
 
    (* a polynomial is a sum of monomials.
       a monomial is a product of base values *)
@@ -225,31 +224,19 @@ struct
    let substitute_many l in_expr =
        List.fold_right (fun (x,y) -> (substitute x y)) l in_expr
 
-   let rec delta (lf_delta: leaf_t -> expr_t * bool)
-                 (negate_f: expr_t -> expr_t) (e: expr_t) =
-      let recur x = delta lf_delta negate_f x in
-      let negate (d,n) = if n then d else negate_f d in
+   let rec delta (lf_delta: leaf_t -> expr_t) (e: expr_t) =
+      let recur x = delta lf_delta x in
       match e with
-          | Sum(l) ->
-                let delta_neg_l = List.map (fun x -> recur x) l in
-                let negated = List.exists (fun (_,n) -> n) delta_neg_l in
-                let deltas =
-                    if negated then List.map negate delta_neg_l
-                    else List.map fst delta_neg_l
-                in
-                    (mk_sum(deltas), negated)
-       | Prod([]) -> (zero, false)
+       | Sum(l) -> mk_sum(List.map recur l)
+       | Prod([]) -> zero
        | Prod(x::l) ->
              (* this nesting makes sense because it renders the delta
                 computation cheaper: delta for l is only computed once here;
                 we can still distribute later if we need it. *)
-             let r =
-                 mk_sum([
-                     mk_prod((negate (recur x))::l);
-                     mk_prod([mk_sum[x; (negate (recur x))];
-                             (negate (recur (mk_prod(l))))])
+             mk_sum([
+                 mk_prod((recur x)::l);
+                 mk_prod([mk_sum[x; (recur x)]; (recur (mk_prod(l)))])
                  ])
-             in (r, true)
        | Val(x) -> lf_delta x
 
    (* create a flat sum of flat products of constants, vars, and

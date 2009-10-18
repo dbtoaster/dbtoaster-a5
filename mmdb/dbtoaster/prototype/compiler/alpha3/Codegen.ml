@@ -78,12 +78,15 @@ sig
     val gc_multiset_insert: ds_var_t -> value -> code
     val gc_multiset_delete: ds_var_t -> value -> code
 
+    val gc_set_insert: ds_var_t -> value -> code
+    val gc_set_delete: ds_var_t -> value -> (A.var_t * datastructure * ds_var_t) list -> code
+
     val gc_incr : accumulator -> incr_op -> value -> code
 
     val gc_map_set    : map_entry_t -> value -> code
     val gc_map_update : map_entry_t -> value -> code
     val gc_map_insert : map_entry_t -> code -> code
-    val gc_map_delete : map_entry_t -> code
+    val gc_map_delete : map_entry_t -> (A.var_t * datastructure * ds_var_t) list -> code
 
     val gc_declarations: (ds_var_t * datastructure) list -> code
 
@@ -207,6 +210,19 @@ struct
 
                       else "multiset<"^tuple_type^suffix
 
+            | Set (type_l) ->
+                  let tuple_type = gc_entry_type type_l in
+                  let suffix = if List.length type_l > 1 then " >" else ">" in
+                      if !CPPGenOptions.use_pool_allocator then
+                          let compare_type = "std::less<"^tuple_type^suffix in
+                          let allocator_type =
+                              "boost::pool_allocator<"^tuple_type^suffix
+                          in
+                              "set<"^tuple_type^", "^compare_type^", "^
+                                  allocator_type^" >"
+
+                      else "set<"^tuple_type^suffix
+
             | Map(type_l, value_type) ->
                   if type_l = [] then gc_type value_type else
                       let key_type = gc_entry_type type_l in
@@ -298,6 +314,12 @@ struct
                       if counter < (List.length f_t) then
                           prefix^"*"^iterator^suffix
                       else raise (CodegenException (msg "multiset"))
+
+            | Set(f_t) ->
+                  let (prefix, suffix) = prefix_suffix f_t in
+                      if counter < (List.length f_t) then
+                          prefix^"*"^iterator^suffix
+                      else raise (CodegenException (msg "set"))
 
             | Map(k_t,v_t) ->
                   let (prefix, suffix) = prefix_suffix k_t in
@@ -433,6 +455,34 @@ struct
     let gc_multiset_delete set_var tuple =
         gc_multiset_op set_var "erase" tuple
 
+    let gc_set_op set_var op tuple =
+        if tuple <> "" then
+            [set_var^"."^op^"("^tuple^");"]
+        else
+            let msg = "Invalid tuple code: "^tuple in
+                raise (CodegenException msg)
+
+    let gc_set_insert set_var tuple = gc_set_op set_var "insert" tuple
+
+    (* TODO: loop over datastructure checking for existing of dependent vars
+     * -- this should really be indexed for efficiency, but this complicates other
+     *    parts of the code. *)
+    let gc_set_delete set_var tuple deps =
+        (*
+        let delete_conjuncts = List.map (fun ((vn,vt), ds, dsv) ->
+            match ds with
+                | Multiset _ -> gc_value_block (dsv^".find("^vn^") == "^dsv^".end()")
+                | Set _ -> gc_value_block (dsv^".find("^vn^") == "^dsv^".end()")
+                | _ -> raise (Failure
+                      ("gc_set_delete: unexpected set datastructure dependency.")))
+            deps
+        in
+        let delete_pred = gc_conjunctive_predicate delete_conjuncts in
+        let delete_code = gc_set_op set_var "delete" tuple in
+            gc_if_cond delete_pred delete_code empty_code
+        *)
+        empty_code
+
     let gc_incr accumulator op rv =
         let (acc_op, acc_val) = 
             match op with
@@ -459,10 +509,23 @@ struct
         in
             gc_if_cond cond insert_code empty_code
 
-    let gc_map_delete (map_var, map_keys) =
-        [gc_stmt
-            ((gc_ds_var map_var)^
+    (* Note: for now, all bigsum var domains are single field multisets *)
+    let gc_map_delete (map_var, map_keys) deps =
+        let delete_conjuncts = List.map (fun ((vn,vt), ds, dsv) -> 
+            match ds with
+                | Multiset([t]) -> gc_value_block (dsv^".find("^vn^") == "^dsv^".end()")
+                | Set([t]) -> gc_value_block (dsv^".find("^vn^") == "^dsv^".end()")
+                | _ -> raise (Failure
+                      ("gc_map_delete: unexpected map datastructure dependency.")))
+            deps
+        in
+        let delete_pred = gc_conjunctive_predicate delete_conjuncts in
+        let delete_code = 
+            [gc_stmt ((gc_ds_var map_var)^
                 ".erase("^(gc_map_keys map_keys)^")")]
+        in
+            gc_if_cond delete_pred delete_code empty_code
+                
 
     let gc_arg_list v_l = List.map (fun v -> [gc_basic_decl v]) v_l
 
@@ -723,6 +786,9 @@ struct
 
                 | MultisetDelete(ds, sv, tv, ra) ->
                       gc_relalg L.gc_multiset_delete sv tv ra
+
+                | SetInsert(ds, sv, tv) -> L.gc_set_insert sv (L.gc_tuple tv)
+                | SetDelete(ds, sv, tv, deps) -> L.gc_set_delete sv (L.gc_tuple tv) deps
             end
 
     (* map_assign_t -> code *)
@@ -746,7 +812,7 @@ struct
                   in
                       L.gc_map_insert entry insert_code
 
-            | MapDelete (ds, entry) -> L.gc_map_delete entry
+            | MapDelete (ds, entry, deps) -> L.gc_map_delete entry deps
         end
 
     (* flat_assign_t -> code *)
@@ -882,6 +948,7 @@ struct
             List.filter
                 (fun (_, ds) -> match ds with
                     | Multiset(l) -> true
+                    | Set(l) -> true
                     | Map(k_l,_) -> List.length k_l > 0)
                 declarations
         in
@@ -894,7 +961,8 @@ struct
         in
         let get_size_estimate dsvar ds dstype =
             match ds with
-                | Multiset _ ->
+                | Multiset _
+                | Set _ ->
                       (* (val sz + elem sz) * #elems + container sz *)
                       let key_type = dstype^"::key_type" in
                       let val_type = dstype^"::value_type" in
