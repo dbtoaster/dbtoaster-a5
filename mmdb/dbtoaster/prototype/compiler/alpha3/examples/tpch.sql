@@ -26,15 +26,15 @@ CREATE TABLE LINEITEM (
     ADAPTOR 'DBToaster::DemoDatasets::LineitemTupleAdaptor';
 
 CREATE TABLE ORDERS (
-	orderkey       bigint,
+        orderkey       bigint,
         custkey        bigint,
-	orderstatus    text,
+        orderstatus    text,
         totalprice     double,
-	orderdate      text, -- date
+        orderdate      text, -- date
         orderpriority  text,
-	clerk          text,
+        clerk          text,
         shippriority   text,
-	comment        text
+        comment        text
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderStream'
@@ -45,15 +45,15 @@ CREATE TABLE ORDERS (
 
 
 CREATE TABLE PARTS (
-	partkey      bigint,
+        partkey      bigint,
         name         text,
-	mfgr         text,
+        mfgr         text,
         brand        text,
-	type         text,
+        type         text,
         size         integer,
-	container    text,
+        container    text,
         retailprice  double,
-	comment      text
+        comment      text
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::PartStream'
@@ -77,13 +77,13 @@ CREATE TABLE PARTSUPP (
     ADAPTOR 'DBToaster::DemoDatasets::PartSuppTupleAdaptor';
 
 CREATE TABLE CUSTOMER (
-	custkey      bigint,
+        custkey      bigint,
         name         text,
-	address      text,
+        address      text,
         nationkey    bigint,
-	phone        text,
+        phone        text,
         acctbal      double,
-	mktsegment   text,
+        mktsegment   text,
         comment      text
     )
     FROM 'file'
@@ -95,13 +95,13 @@ CREATE TABLE CUSTOMER (
 
 
 CREATE TABLE SUPPLIER (
-	suppkey      bigint,
+        suppkey      bigint,
         name         text,
-	address      text,
+        address      text,
         nationkey    bigint,
-	phone        text,
+        phone        text,
         acctbal      double,
-	comment      text
+        comment      text
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::SupplierStream'
@@ -111,7 +111,7 @@ CREATE TABLE SUPPLIER (
     ADAPTOR 'DBToaster::DemoDatasets::SupplierTupleAdaptor';
 
 CREATE TABLE REGION (
-	regionkey    bigint,
+        regionkey    bigint,
         name         text,
         comment      text
     )
@@ -123,9 +123,9 @@ CREATE TABLE REGION (
     ADAPTOR 'DBToaster::DemoDatasets::RegionTupleAdaptor';
 
 CREATE TABLE NATION (
-	nationkey    bigint,
+        nationkey    bigint,
         name         text,
-	regionkey    bigint,
+        regionkey    bigint,
         comment      text
     )
     FROM 'file'
