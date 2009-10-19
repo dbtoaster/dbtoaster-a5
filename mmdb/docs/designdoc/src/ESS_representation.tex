@@ -20,51 +20,49 @@
     
 \section{Introduction}
 
-Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to create a scenario similar to the one that produced the original historic data. Usually the simulations of such scenarios are created. In simulations the data from the original experiment is augmented with new data to create variations of the original scenario. A set of user defined rules specify how the historical and the new data interact to produce the desired outcome. Below we describe a format that allows us to specify those rules freely. 
+Observable processes such as car traffic or stock exchange are hard or impossible to predict yet we want to influence them. For instance, car traffic is observed using road sensors and can be controlled by street lights. Stock exchange is an observed stream of buy and sell requests that can be influenced by the additional trade requests. We want to influence these systems by creating algorithms to to improve control or to earn money. However making mistakes can be either costly or tragic. The algorithms are tested using the simulations of such systems before been applied to real applications. In simulations the historic data collected at some earlier date is augmented with new data produced by our algorithms to create variations of the original scenario. A set of user-defined rules specify how the historical and the new data interact to produce a coherent realistic stream of output events indistinguishable from real data stream. Our goal is to create a unified language for specifying simulations from historical data.
 
-%In these simulations parameters during the progress of an experiment are preserved and we want to either change or augment those parameters with new information. Also we want to let users specify the results of the augmentation. 
+Each process can be thought of as a set of update streams to a set of relational tables. The simulator of the process will have the same set of update streams recorded at an earlier date (a historic data stream) and it will also have an additional set of update streams (a simulated data stream) coming from the algorithms being tested. The simulator combines them to produce a specified stream. 
+
+%Our goal is to create a unified format for specifying simulations from historical data. In many instances it is hard, expensive or downright impossible to create a scenario similar to the one that produced the original historic data. Usually the simulations of such scenarios are created. In simulations the data from the original experiment is augmented with new data to create variations of the original scenario. A set of user defined rules specify how the historical and the new data interact to produce the desired outcome. Below we describe a format that allows us to specify those rules freely. 
+
 
 \section{Approach}
 
-At a high level, historical data together with new data can be thought of as a stream of updates to a relational table. We assume that there are $N$ update streams, each can be represented by its own relational table. These streams can be further combined or subdivided into a set of $K$ additional streams. For each $k$ in $K$ we can describe the desired simulation outcomes. The resultant output streams are combined, filtered and returned to the users.
+At a high level, a historical data stream together with a simulated data streams can be thought of as update streams to a set of relational table. We assume that we have a set $S_i$ of $n$ update streams. Each of these streams can be filtered from in a set $S_f$ of $n$ filtered streams. Further the streams can be further combined or subdivided into a set $S_m$ of $k$ streams. For each in $S_m$ users provide a set of rules to produce the desired simulation outcomes. Those outcomes form a set $S_r$ of $k_r \geq k$ streams. The streams after rule application can again be combined into a set $S_m '$ of $t$ streams. The resultant streams are filtered before being returned to the users.
+ 
+In this paper we will use a Stock Exchange simulator as an example. The simulators has two input streams. The first input stream is a stream of trade requests occurred at an earlier date. The second stream consists of trade requests coming from trading algorithms. The goal of the simulator is to incorporate this additional stream of trade requests to produce a realistic output stream might have occurred in a real stock exchange if the additional stock requests were given to it. Based on this simulator we will show how a similar simulator can be build. 
 
-
-%parameters for the experiments can be though of as a stream of updates to a relational table.  New data can be thought of as updates to some relation. If we have $N$ update streams, we will end up with $N$ different relations. These relations can be combined into a set of $K$ additional relations. For each $k$ in $K$ we can describe desired simulation outcomes. The resultant $K$ streams can then be combined and filtered and outputted as desired. 
-
-In this paper we will be using a simulator for the stock exchange as an example. The goal of this simulator is to approximate an outcome of adding buy/sell stock request to a stream of stock exchange occurred at some earlier date. The stock exchange simulator can be thought of as a stream processor. There are $N$ incoming streams. Each of these streams is filtered to add or remove certain tuples. Later the streams are merged together if needed. After the merging step, the streams form $K$ order-book relations. Matching rules are applied to these on these relations. Matching rules form a set of output streams.
+%In this paper we will be using a simulator for the stock exchange as an example. The goal of this simulator is to approximate an outcome of adding buy/sell stock request to a stream of stock exchange occurred at some earlier date. The stock exchange simulator can be thought of as a stream processor. There are $N$ incoming streams. Each of these streams is filtered to add or remove certain tuples. Later the streams are merged together if needed. After the merging step, the streams form $K$ order-book relations. Matching rules are applied to these on these relations. Matching rules form a set of output streams.
 
 The process for creating a simulator is given in five steps:
 
 \begin{enumerate}
-    \item {\bf Input Filter}: Each update tuple in an input stream can be removed depending on the user's rules. Additionally each tuple can trigger a conditions causing insertion of additional tuples to that stream.  
-    \item {\bf Input Merging}: Each input stream after the filtering step can be split into several streams or be merged with other streams. This results in $K$ different streams after a merging step.
-    %The set of input streams can be combined or subdivided into another set of $K$ streams using merging and filtering. 
-    \item {\bf Simulator Rules Application}: Each stream produced at a merging stage is materialized as a set of relations. These relations are reduced/matched using rules given by a user.
-    \item {\bf Output Merging}: The results of the Simulator Rules are shown as a stream of updates. These streams can again be combined or split into a set of output streams for the Simulator. 
-    % Experiment outcome streams can again be combined or filtered.
-    \item {\bf Output Filter}: Before each stream is returned to the users additional conditions can be imposed on them. Data within a stream can be changed based on the user defined rules.
-    %For each output stream additional conditions can be imposed. Data within a stream can be changed based on those conditions.
+    \item {\bf Input Filter}: Tuples are passed through a set of input filters, which can result in the removal or insertion of tuples. 
+    \item {\bf Input Merging}: Each input stream after the filtering step can be split into several streams or be merged with other streams. We call this a merging step and it results in a set $S_m$ of $k$ streams. 
+    \item {\bf Simulator Rules Application}: After a merging step each stream is materialized as a set of relations. These relations are reduced/matched using rules given by the user resulting in a set $S_r$ of streams.
+    \item {\bf Output Merging}: The output merging step mirrors the input merging step. Here the streams again are combined or split into a set $S_M '$ of streams. 
+    \item {\bf Output Filter}: Mirroring the input filter the output filter imposes additional transformations to the output tuples.
 \end{enumerate}
 
-\begin{figure}
-  \includegraphics[width=4.50in]{figures/ExchangeFigure.pdf}
-  \caption{Simulator's Execution Path.}
-  \label{fig:overview}
-\end{figure}
+%\begin{figure}
+%  \includegraphics[width=4.50in]{figures/ExchangeFigure.pdf}
+%  \caption{Simulator's Execution Path.}
+%  \label{fig:overview}
+%\end{figure}
 
-Figure \ref{fig:overview} shows data execution paths and interactions between various components of the Simulator System.
+%Figure \ref{fig:overview} shows data execution paths and interactions between various components of the Simulator System.
 
 \section{Running Example}
 
-The Exchange Server Simulator is an example used throughout this presentation. In particular, we will show how a specific matching strategy can be implemented in our framework.
+The Stock Exchange Server Simulator uses historical data from previously occurred real stock exchanges and new  buy/sell stock orders from a novel trading strategy. The orders are combined into a single stream of events to emulate the behavior of the trading strategy on the stock exchange. This allows users to evaluate a particular trading strategy. 
 
-The Exchange Server Simulator uses historical data from previously occurred real stock exchanges and new  buy/sell stock orders from a novel trading strategy. The orders are combined into a single stream of events to emulate the behavior of the trading strategy on the stock exchange. This allows users to evaluate a particular trading strategy. 
+The trade requests are combined using historic data replication strategy. Trades, where a historic order matches another historic order or a simulated order matches another simulated order, are executed by matching price and volume of a buy and a sell request. However, when a simulated order can be matched with some historic order, we create a replica of a historic order and match the simulated order with this replicated order.
 
-The trade requests are combined using historic data replication strategy. Trades, where a historic order matches with another historic order or a simulated order matches with another simulated order, are executed by matching price and volume of the two requests. However, when a simulated order can be matched with some historic order, we create a duplicate of a historic order and match with this replicated order.
+The Simulator receives two input streams. The first stream consists of trade requests from the historic data file. The second stream consists of the trade requests from the trading algorithms. Each stream is filtered to have only sell, buy and delete orders. The two input streams are mixed to create intermediate stream. The first stream is identical to the historic orders stream after filtering. The second stream is a combination of orders coming from both streams. 
 
-The Simulator receives two input streams. The first stream are trade requests form the historic data file. The second stream are the trade requests from the trading algorithms. Each stream is filtered to have only sell, buy and delete orders. The two input streams are mixed to create intermediate stream. The first stream is identical to the historic orders stream after filtering. The second stream is a combination of orders coming from both streams. At the next stage, stream tuples are inserted into  \emph{historicView} relations and \emph{combinedView} relations, the relations are matched and a steam of outputs for each is produced. Each output stream is then cleaned up. If there is a matching between a historic order and a simulated order in a combined view relation, a new tuple is inserted into output stream to compensate for the replication of a historic order.
+At the next stage, stream tuples are inserted into  \emph{historicView} relations and \emph{combinedView} relations, the relations are matched, and a steam of outputs for each is produced. Each output stream is then cleaned up. If there is a match between a historic order and a simulated order in a combined view relation, a new tuple is inserted into output stream to compensate for the replication of a historic order.
 
-Each tuple moves through the simulator using a push through policy. When a tuple is received it moves from stream to stream until it is either move to an output stream or there is no new tuple is created.
 
 \section{Input Filter}
 
@@ -627,11 +625,11 @@ The function in the {\tt APPLY} statement can be dynamic. The function can monit
 
 \section{Execution Order}
 
-Every tuple processed by the Simulator in a given order. This order is defined by the users in the form of stream/table dependencies. The dependencies are a pairwise constraints indicating that a tuple should be processed at a given stage(s) before being processed at a later stage. The dependences form a path from the input stream to the output stream. The set of such paths form a directed acyclic graph. There is nothing in the definition of the constraints that restricts a graph to be acyclic. The existence of the reduce loop step the system with the necessary iteration capabilities. 
+Every tuple processed by the simulator in a given order. This order is defined by the users in the form of stream/table dependencies. The dependencies are a pairwise constraints indicating that a tuple should be processed at a given stage(s) before being moved at a different stream. The dependences form a path from the input stream to the output stream. The set of such paths forms a directed acyclic graph. There is nothing in the definition of the constraints that restricts a graph to be acyclic. The existence of the reduce loop step provided the system with the necessary iteration capabilities. 
 
 Any two stages can be executed in parallel unless they lie on the same path. If two paths converge at some stage, the users have to specify if the streams should to be synchronized, parallelized or ordered at that point.
 
-The pairwise constraints can be inferred from the SQL statement analyses. A {\tt FROM} clause in a {\tt SELECT} statement indicates a stream or a relation that depends on a stream indicated by {\tt INTO} clause. A {\tt UNION} clause indicates a point in a DAG where several paths converge.
+The pairwise constraints can be inferred from the SQL statement analyses. A {\tt FROM} clause in a {\tt SELECT} or an {\tt INSERT} statements indicates a stream or a relation that depends on a stream indicated by {\tt INTO} clause. A {\tt UNION} clause indicates a point in a DAG where several paths converge.
 
 The {\tt UNION} clause can be re-written in the following format.
 
@@ -645,7 +643,7 @@ The {\tt UNION} clause can be re-written in the following format.
 
 The {\tt REDUCE\_LOOP} statement is a loop that influences a set of streams and relations during its execution. These streams and relations are made unavailable (locked) to the external changes. 
 
-The execution path for the running example can be seen in the figure ref. 
+A tuple moves through the simulator using a push-through policy. When a tuple is received, it moves from stream to stream until it is either moved to an output stream or no new tuple is created.
 
 \section{Alternative Simulator Structures}
 
@@ -1314,13 +1312,25 @@ Different sets of the exchange rules create variations of the Exchange Simulator
     \item {\bf Roundness} measures the ability of a simulator to equally match bid and ask orders. 
     \item {\bf Consistency} measures the ability of the simulator to provide consistent liquidity and the fluctuations in the simulator's liquidity. 
     \item {\bf Dominance} measures a percent of the trades from the evaluation Algorithms relative to the overall trade amount. 
-    \item {\bf Price volatility} measures how often the stock price of the simulator deviates from the historic stock price and by how much.
+    \item {\bf Price volatility} measures how often and by how much the stock price of the simulator deviates from the historic stock price and by how much.
 \end{itemize}
 
 The above properties provide desirable simulator guidelines. They do not guarantee the performance of the algorithms on the real stock exchange but they provide a way to compare and evaluate different simulators.
 
 \paragraph{Applications of the exchange characteristics to the trading algorithms.} 
-The Exchange Simulator characteristics can be used in combination with the performance of the trading algorithms to better evaluate algorithms' performance.
+The Exchange Simulator characteristics can be used in combination with the performance of the trading algorithms to evaluate the algorithms' performance better. These parameters give users an indication of how much they can rely on the success of the algorithms.
+
+\subparagraph{Stability} High stability (i.e. low deviation from the historical price values) indicates that the algorithms do not drastically influence the market making the predictions of the simulator more accurate. On the other hand low stability will indicate the fact that the given set of algorithms are capable of profoundly influencing the market making the predictions made by the simulator less reliable. This comes as a result of unpredictability of other players on the market. The likelihood of things remain similar in the future trades depends on the current events remain the same. The flow of trades deviating highly from the predicted values will cause other traders to change their policy. 
+
+\subparagraph{Volume} Volume that is average to the volume of the historical trades indicates the desired level for the simulator. The high volume indicates an increase in the amount of stock exchanges leading to inaccurate predictions. This can be caused by the other trades responses. A low volume only indicates that the algorithms' trades are not matched in the simulator but that they can be potentially matched in the real stock exchanges. This also leads to inaccurate predictions. 
+
+\subparagraph{Roundness} A well rounded simulator will match evenly the sell and the buy trade requests. This parameter is however not very reliable due to the market shifts or the trading algorithms. However in the presence of equivalent number of buy and sell request and no market shifts, the lack of roundness will indicate that some of the orders are not matched when they can be leading to less accurate predictions.
+
+\subparagraph{Consistency} Consistency is a direct measure of the market and the trading algorithms. High through put of the trading orders indicates the capability of the trading algorithms to create relevant trade requests. However, an exceptionally high or bursty consistency will lead to the unpredictable responses from other trading clients making the simulator's predictions less reliable. 
+
+\subparagraph{Dominance} A high dominance factor will indicate the overwhelming presence of the algorithms on the market leading to the decrease in the simulator's prediction.
+
+\subparagraph{Price volatility} A high price volatility also indicate the decrease in the simulator's predictiveness. The Often and high deviations of the stock price from the historic price indicate the algorithms' capability to drive stock prices. This can lead to the response from other trades.
 
 \section{Development Support}
 
