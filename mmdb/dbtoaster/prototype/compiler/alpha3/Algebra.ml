@@ -334,18 +334,6 @@ and term_as_string (m: term_t)
 let negate_term x =
     TermSemiRing.mk_prod([TermSemiRing.mk_val(Const(Int(-1))); x])
 
-let negate_leaves negate_f t =
-    let negate_leaf_f lf =
-        match lf with
-            | Const _ | Var _ -> negate_f (TermSemiRing.mk_val(lf))
-            | AggSum(f,r) ->
-                  if (constraints_only r) then
-                      TermSemiRing.mk_val(AggSum(negate_f f, r))
-                  else negate_f (TermSemiRing.mk_val(lf))
-    in
-        TermSemiRing.fold
-            TermSemiRing.mk_sum TermSemiRing.mk_prod negate_leaf_f t
-
 
 let rec relalg_delta (negate: bool) (relname: string)
                      (tuple: var_t list) (relalg: relalg_t) =
@@ -373,10 +361,7 @@ let rec relalg_delta (negate: bool) (relname: string)
 
 and term_delta_aux (negate: bool) (relname: string)
                (tuple: var_t list) (term: term_t)  =
-   let negate_f t =
-       if negate then TermSemiRing.mk_prod
-           [TermSemiRing.mk_val (Const(Int(-1))); t]
-       else t
+   let negate_f t = if negate then negate_term t else t
    in
    let t_pm_dt t =
       TermSemiRing.mk_sum[t; negate_f (term_delta_aux negate relname tuple t)]
@@ -419,9 +404,7 @@ and term_delta_aux (negate: bool) (relname: string)
                       make_aggsum (negate_f f)
                           (RelSemiRing.mk_prod [new_r; (complement r)]);
                       make_aggsum
-                          (if negate then f
-                          else (TermSemiRing.mk_prod
-                              ([TermSemiRing.mk_val(Const(Int(-1))); f])))
+                          (if negate then f else negate_term f)
                           (RelSemiRing.mk_prod [ (complement new_r); r ])
                    ]
                in
@@ -436,10 +419,7 @@ and term_delta_aux (negate: bool) (relname: string)
 
 and term_delta (negate: bool) (relname: string)
                (tuple: var_t list) (term: term_t)  =
-   let negate_f t =
-       if negate then TermSemiRing.mk_prod
-           [TermSemiRing.mk_val (Const(Int(-1))); t]
-       else t
+   let negate_f t = if negate then negate_term t else t
    in
        negate_f (term_delta_aux negate relname tuple term)
                
