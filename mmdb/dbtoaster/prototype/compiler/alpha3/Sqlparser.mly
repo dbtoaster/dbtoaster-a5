@@ -790,6 +790,7 @@ constraintList:
           { readable_relalg (Algebra.complement(make_relalg $2)) }
 | atomicConstraint AND constraintList   { RA_MultiNatJoin([$1; $3]) }   
 | atomicConstraint OR  constraintList   { RA_MultiUnion([$1; $3]) }
+| LPAREN constraintList RPAREN          { $2 }
 
 atomicConstraint:
 | mapTerm cmp_op mapTerm                 { create_constraint $2 $1 $3 }
