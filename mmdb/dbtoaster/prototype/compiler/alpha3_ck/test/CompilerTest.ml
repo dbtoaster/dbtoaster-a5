@@ -1,4 +1,4 @@
-open Algebra;;
+open Calculus;;
 
 (* the schema *)
 let sch = [("R", ["A"; "B"]); ("S", ["B"; "C"]);

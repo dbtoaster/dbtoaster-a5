@@ -1,5 +1,5 @@
 
-open Algebra;;
+open Calculus;;
 
 let relR = RA_Leaf(Rel("R", ["A"; "B"]));;
 let relS = RA_Leaf(Rel("S", ["B"; "C"]));;
@@ -17,7 +17,7 @@ let test01 = readable_term(term_one)  = RVal (Const (Int 1));;
 let test02 = readable_term(term_zero) = RVal (Const (Int 0));;
 
 
-(* To run these tests, compile without Algebra.mli *)
+(* To run these tests, compile without Calculus.mli *)
 (*
 let mk_sum  l = TermSemiRing.mk_sum l;;
 let mk_prod l = TermSemiRing.mk_prod l;;
@@ -31,11 +31,11 @@ let test07 = mk_prod[term_one;term_zero] = term_zero;;
 let test08 = mk_sum [term_zero;term_one;term_zero] = term_one;;
 let test09 = mk_prod[term_one;term_zero;term_one;term_one] = term_zero;;
 
-let test11 = simplify(mk_val (AggSum(term_one, relalg_one))) [] [] =
+let test11 = simplify(mk_val (AggSum(term_one, relcalc_one))) [] [] =
    [([], term_one)];;
-let test12 = simplify(mk_val (AggSum(term_zero, relalg_one))) [] [] =
+let test12 = simplify(mk_val (AggSum(term_zero, relcalc_one))) [] [] =
    [([], term_zero)];;
-let test13 = simplify(mk_val (AggSum(term_zero, make_relalg(relR)))) [] [] =
+let test13 = simplify(mk_val (AggSum(term_zero, make_relcalc(relR)))) [] [] =
    [([], term_zero)];;
 *)
 
@@ -96,7 +96,7 @@ let test19 = simplify
 
 let test21 =
 List.map (fun (x,y) -> (x, readable_term y))
-(Algebra.simplify (make_term(RVal(AggSum(RSum[RVal(Var("A")); RVal(Var("C"))],
+(Calculus.simplify (make_term(RVal(AggSum(RSum[RVal(Var("A")); RVal(Var("C"))],
                     RA_MultiNatJoin [relR; relT])))) [] []) =
   [([],
     RProd
@@ -203,7 +203,7 @@ RA_MultiNatJoin [
 
 let test29 =
 (term_delta "R" ["x"; "y"] (make_term(
-   RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(ConstantNullarySingleton)))
+   RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(True)))
 ))) =
 make_term (RVal(Const(Int 0)));;
 

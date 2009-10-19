@@ -98,6 +98,38 @@ end
 
 
 
+module MixedHyperGraph =
+struct
+   type ('a, 'b) edge_t = AEdge of 'a | BEdge of 'b
+   type ('a, 'b) hypergraph_t = (('a, 'b) edge_t) list
+
+   let make (alist: 'a list) (blist: 'b list): ('a, 'b) hypergraph_t =
+        (List.map (fun x -> AEdge x) alist)
+      @ (List.map (fun x -> BEdge x) blist)
+
+   let connected_components (a_get_nodes: 'a -> 'node_t)
+                            (b_get_nodes: 'b -> 'node_t)
+                            (hypergraph: ('a, 'b) hypergraph_t):
+                            ((('a, 'b) hypergraph_t) list) =
+      let get_nodes hyperedge =
+         match hyperedge with AEdge(a) -> a_get_nodes a
+                            | BEdge(b) -> b_get_nodes b
+      in
+      HyperGraph.connected_components get_nodes hypergraph
+
+   let extract_atoms (component: ('a, 'b) hypergraph_t):
+                                 (('a list) * ('b list)) =
+      let extract_atom x = match x with AEdge(a) -> ([a], [])
+                                      | BEdge(b) -> ([], [b])
+      in
+      let (a_ll, b_ll) = (List.split (List.map extract_atom component))
+      in
+      (List.flatten a_ll, List.flatten b_ll)
+end
+
+
+
+
 
 type ('a, 'b) table_fn_t = ('a * 'b) list
 

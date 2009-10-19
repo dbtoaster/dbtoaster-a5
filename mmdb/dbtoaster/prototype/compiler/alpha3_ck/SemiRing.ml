@@ -106,6 +106,10 @@ sig
       expression e, i.e., replaces the base value v by expression (f v) *)
    val apply_to_leaves: (leaf_t -> expr_t) -> expr_t -> expr_t
 
+   (* returns the list of leaves of an expression in top-down left to right
+      traversal order. *)
+   val leaves: expr_t -> (leaf_t list)
+
    (* (substitute f e1 e2 e3) replaces each occurrence of e1 in e3 by e2. *)
    val substitute: expr_t -> (* replace_this *)
                    expr_t -> (* by_that *)
@@ -121,11 +125,15 @@ sig
    *)
    val substitute_many: ((expr_t * expr_t) list) -> expr_t -> expr_t
 
-   (* (delta f e) returns an expression equivalent to
+   (* (delta f e) returns an expression such that
 
-      (apply_to_leaves (fun x -> mk_sum [(mk_val x); f x]) e) - e
+      mk_sum [e; (delta f e)]
 
-      but simpler, by exploiting linearity and something related to
+      is equivalent to, but simpler than,
+
+      (apply_to_leaves (fun x -> mk_sum [(mk_val x); f x]) e)
+
+      by exploiting linearity and something related to
       the product rule of differentiation in calculus.
 
       That is, if (f x) expresses change to a leaf base value x of the
@@ -213,6 +221,9 @@ struct
 
    let rec apply_to_leaves (f: leaf_t -> expr_t) (e: expr_t) =
       fold (fun x -> mk_sum x) (fun x -> mk_prod x) (fun x -> (f x)) e
+
+   let leaves (e: expr_t): (leaf_t list) =
+      fold List.flatten List.flatten (fun x -> [x]) e
 
    let rec substitute replace_this by_that in_expr =
       match in_expr with

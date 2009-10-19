@@ -13,15 +13,12 @@ TODOs:
 
 Recent changes:
 
-* Inequality constraints and self-joins now work.
-
-* RelAlg and MapAlg have been merged into Algebra. MapAlg expressions are
-  now called terms. AtomicConstraints are over terms, so relalg_t and
-  term_t are mutually recursive.
-
-* Types now supported.
-
 * Nested aggregates are supported, but we have to provide, as part of the
   input to the compiler, the list of vars over whose domain we have to sum up.
 
+* Algebra.ml(i) renamed into Calculus.ml(i)
+
+* Implemented Calculus.safe_vars
+
+* Cleaned up MixedHyperGraph and moved it to Util
 

@@ -1,4 +1,4 @@
-open Algebra;;
+open Calculus;;
 
 (*
 let vwap =
@@ -48,11 +48,11 @@ List.map (fun (x,y) -> (x, term_as_string y []))
 (simplify (term_delta "B" ["p"; "v"] vwap2) ["p"; "v"; "loop_p"] [])
 =
 [([],
-  "(if 0<="^s1^" then (p*v) else 0)");
+  "(if 0<="^s1^" then ((if p=loop_p then p else 0)*v) else 0)");
  ([],
-  "(if 0<="^s1^" and ("^s0^")<0 then AggSum((p0*v0), B(p0, v0)) else 0)");
+  "(if 0<="^s1^" and ("^s0^")<0 then AggSum((loop_p*v0), B(loop_p, v0)) else 0)");
  ([],
-  "(-1*(if "^s1^"<0 and 0<=("^s0^") then AggSum((p0*v0), B(p0, v0)) else 0))")]
+  "(-1*(if "^s1^"<0 and 0<=("^s0^") then AggSum((loop_p*v0), B(loop_p, v0)) else 0))")]
 ;;
 
 
