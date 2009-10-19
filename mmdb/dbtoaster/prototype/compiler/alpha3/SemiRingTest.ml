@@ -16,32 +16,29 @@ struct
 
 
    let delta x = match x with
-       | Const c -> (zero, false) | Incr c -> ((Const c), false);;
+       | Const c -> zero | Incr c -> (Const c);;
 end;;
 
 module TstSemiRing = SemiRing.Make(TST_BASE);;
 
-let id x = x
+let t1_delta x = TstSemiRing.mk_val (TST_BASE.delta x);;
 
-let t1_delta x = let (r, r_negated) = TST_BASE.delta x in
-    (TstSemiRing.mk_val (r), r_negated);;
-
-let test1 = TstSemiRing.delta t1_delta id TstSemiRing.one =
-    (TstSemiRing.zero, false);; 
+let test1 = TstSemiRing.delta t1_delta TstSemiRing.one =
+    TstSemiRing.zero;; 
 
 let test2 =
 TstSemiRing.polynomial
-    (fst (TstSemiRing.delta t1_delta id
+    (TstSemiRing.delta t1_delta
         (TstSemiRing.mk_sum
             [TstSemiRing.mk_val(TST_BASE.Incr 5);
-             TstSemiRing.mk_val(TST_BASE.Const 3)]))) =
+             TstSemiRing.mk_val(TST_BASE.Const 3)])) =
 TstSemiRing.mk_val (TST_BASE.Const 5);;
 
 open TST_BASE;;
 open TstSemiRing;;
 
 let test3 =
-polynomial (fst (delta t1_delta id (mk_prod [mk_val(Incr 5); mk_val(Const 3)]))) =
+polynomial (delta t1_delta (mk_prod [mk_val(Incr 5); mk_val(Const 3)])) =
 mk_prod [mk_val (Const 5); mk_val (Const 3)];;
 
 

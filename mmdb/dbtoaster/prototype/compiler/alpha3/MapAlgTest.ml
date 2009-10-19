@@ -7,8 +7,8 @@ let relT = RA_Leaf(Rel("T", [("C", TInt); ("D", TInt)]));;
 
 let relR2 = make_relalg relR;;
 
-let pos = fun x -> x
-let neg = fun x -> make_term (RProd[RVal(Const(Int(-1))); (readable_term x)])
+let pos = false
+let neg = true;;
 
 (* (R bowtie S) bowtie T *)
 let q = RA_MultiNatJoin [relR; relS; relT];;

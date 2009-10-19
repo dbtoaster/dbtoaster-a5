@@ -410,16 +410,18 @@ and term_delta_aux (negate: bool) (relname: string)
 
                   Delta -:
                     (if (    new_r-             ) then (delta -  f) else 0)
-                  + (if (    new_r-  and (not r)) then           f  else 0)
-                  + (if (not(new_r-) and      r ) then          -f  else 0)
+                  + (if (    new_r-  and (not r)) then          -f  else 0)
+                  + (if (not(new_r-) and      r ) then           f  else 0)
                *)
                let delta_constraint =
                    TermSemiRing.mk_sum [
                       make_aggsum d_f new_r;
-                      make_aggsum f
+                      make_aggsum (negate_f f)
                           (RelSemiRing.mk_prod [new_r; (complement r)]);
-                      make_aggsum (TermSemiRing.mk_prod
-                          ([TermSemiRing.mk_val(Const(Int(-1))); f]))
+                      make_aggsum
+                          (if negate then f
+                          else (TermSemiRing.mk_prod
+                              ([TermSemiRing.mk_val(Const(Int(-1))); f])))
                           (RelSemiRing.mk_prod [ (complement new_r); r ])
                    ]
                in

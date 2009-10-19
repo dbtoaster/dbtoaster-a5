@@ -1,6 +1,6 @@
 open Algebra
 
-module C=Compiler
+module C=Compiler.MessageCompiler
 module BC=Compiler.BytecodeCompiler
 
 open Sqllexer
@@ -32,7 +32,7 @@ let compile_sql_to_messages sql_str =
                     (List.map make_term t_l) C.compile_readable_messages)
             expr_l)
     in
-        print_endline (String.concat "\n" messages)
+        messages
 
 (* Simple wrapper around the parser, compiler, bytecode generator
  * to print spread messages in a toplevel *)
@@ -45,7 +45,7 @@ let compile_sql_to_spread sql_str =
                     (List.map make_term t_l) C.compile_spread_messages)
             expr_l)
     in
-        print_endline (String.concat "\n" spread_messages)
+        spread_messages
 
 (* Simple wrapper around the parser, compiler, bytecode generator
  * to directly dump out bytecode in a toplevel *)

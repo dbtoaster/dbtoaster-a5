@@ -36,218 +36,228 @@ and get_base_relations t =
         fold_term Util.ListAsSet.multiunion 
             Util.ListAsSet.multiunion term_lf t
 
-(* auxiliary for compile. *)
+(* One-step delta compilation, used by both message and bytecode compiler. *)
 let compile_delta_for_rel (reln:   string)
-                          (relsch: var_t list)
-                          (mapn:   string)         (* map name *)
-                          (params: var_t list)
-                          (bigsum_vars: var_t list)
-                          (negate: bool)
-                          (term: term_t) =
-   (* on insert into a relation R with schema A1, ..., Ak, to update map m,
-      we assume that the input tuple is given by variables
-      x_mR_A1, ..., x_mR_Ak. *)
-   let bound_vars = (List.map (fun (x,y) -> ("x_"^mapn^reln^"_"^x, y)) relsch)
-   in
-   (* compute the delta and simplify. *)
-   let s = List.filter (fun (_, t) -> t <> term_zero)
-              (simplify (term_delta negate reln bound_vars term)
-                            (bound_vars @ bigsum_vars) params)
-   in
-   let todos =
-      let f (new_params, new_ma) =
-         let mk x =
-            let t_params = (Util.ListAsSet.inter (term_vars x)
-                              (Util.ListAsSet.union new_params
-                                 (Util.ListAsSet.union bound_vars bigsum_vars)))
-            in (t_params, x)
-         in
-         List.map mk (extract_aggregates new_ma)
-      in
-      let add_name ((p, x), i) = (mapn^reln^(string_of_int i), p, x)
-      in
-      List.map add_name (Util.add_positions (Util.ListAsSet.no_duplicates
-         (List.flatten (List.map f s))) 1)
-   in
-   let g (new_params, new_ma) =
-      (reln, bound_vars, new_params, bigsum_vars, mapn, new_ma)
-   in
-   ((List.map g s), todos)
-
-
-
-
-(* auxiliary for compile.
-   Writes (= generates string for) one increment statement. For example,
-
-   generate_code ("R", ["x_R_A"; "x_R_B"], ["x_C"], "m",
-                  Prod[Val(Var(x_R_A)); <mR1>],
-                  [("mR1", ["x_R_B"; "x_C"], <mR1>)]) =
-   "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
-*)
-let generate_code db_schema
-                  (reln, bound_vars, params, bigsum_vars, mapn, new_ma)
-                  new_ma_aggs =
-   let loop_vars = Util.ListAsSet.diff params bound_vars in
-   let bv_names = List.map fst bound_vars in
-   let param_names = List.map fst params in
-   let bs_names = List.map fst bigsum_vars in
-   let lv_names = List.map fst loop_vars in
-   let fn (mapname, params, mapstructure) =
-          (mapstructure, mapname^"["^(
-              Util.string_of_list ", " (List.map fst params)^"]"))
-   in
-      "+"^reln^"("^(Util.string_of_list ", " bv_names)^ "): "^
-        (if (loop_vars = []) then ""
-         else "foreach "^(Util.string_of_list ", " lv_names)^" do ")
-        ^mapn^"["^(Util.string_of_list ", " param_names)^"] += "^
-        (if (bigsum_vars = []) then ""
-         else "bigsum_{"^(Util.string_of_list ", " bs_names)^"} ")
-        ^(term_as_string new_ma (List.map fn new_ma_aggs))
-
-let generate_spread db_schema (reln, bound_vars, params, _, mapn, new_ma) new_ma_aggs =
-   let mk_map_entry n keys =
-       let key_names = String.concat "," (List.map fst keys) in
-           "Map "^n^"["^key_names^"]"
-   in
-   let arg_bindings = 
-       List.combine bound_vars (List.assoc reln db_schema)
-   in
-   let get_arg_binding v =
-       if List.mem_assoc v arg_bindings
-       then List.assoc v arg_bindings else v
-   in
-   let substitute_args t = apply_variable_substitution_to_term arg_bindings t in
-   let bind_agg_fn (mapname, params, mapstructure) =
-       (substitute_args mapstructure,
-           mk_map_entry mapname (List.map get_arg_binding params))
-   in
-   let bound_var_names = String.concat ";"
-       (List.map (fun x -> fst (List.assoc x arg_bindings)) bound_vars)
-   in
-   let get_entry_bindings = List.map bind_agg_fn new_ma_aggs in
-   let put_entry = mk_map_entry mapn (List.map get_arg_binding params) in
-      reln^"\t"^bound_var_names^"\t"^put_entry^"\t\t"^
-          (term_as_string (substitute_args new_ma) get_entry_bindings)
-
-
-(* recursive compilation implementation *)
-let rec compile_messages
-        (db_schema: (string * var_t list) list)
-        (mapn: string)
+        (relsch: var_t list)
+        (mapn:   string)         (* map name *)
         (params: var_t list)
         (bigsum_vars: var_t list)
         (negate: bool)
-        (string_of_message:
-            (string * var_t list) list ->
-            string * var_t list * var_t list * var_t list * string * term_t ->
-            (string * var_t list * term_t) list -> string)
-        (term: term_t) : (string list) =
-   let cdfr (reln, relsch) =
-      compile_delta_for_rel reln relsch mapn params bigsum_vars negate term
-   in
-
-   let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
-
-   (* Reset any bound or loop vars to their original name *)
-   let normalize_term (n,p,t) =
-       let br = Util.ListAsSet.no_duplicates
-           (get_base_relations (readable_term t))
-       in
-
-       (* TODO: parser should disallow attributes with prefix "x_" *)
-       let is_bound_var ((a,b),x) = 
-           ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
-       in
-       let bindings = List.flatten (List.map
-           (function
-               | Rel(reln,f) ->
-                     List.filter is_bound_var
-                         (List.combine f (List.assoc reln db_schema))
-               | _ -> raise (Failure ("Expected a relation.")))
-           br)
-       in
-           (n,p,apply_variable_substitution_to_term bindings t)
-   in
-
-   let (l1, l2) = (List.split (List.map cdfr db_schema))
-   in
-   let normalized_l2 = List.flatten (List.map2
-       (fun todo_l (reln, relsch) -> List.map normalize_term todo_l)
-       l2 db_schema)
-   in
-   let ((normalized_todo, todo), (normalized_dups, todo_dups)) =
-       let (a,b) = List.partition partition_f
-           (List.combine normalized_l2 (List.flatten l2))
-       in
-           (List.split a, List.split b)
-   in
-
-   (* Track normalized targets for next step prior to recurring *)
-   List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
-
-   (* Use correct map names for duplicate terms *)
-   let new_ma_aggs = todo@
-       (List.map2 (fun (_,_,dt) (_,p,t) -> (get_compilation dt,p,t))
-           normalized_dups todo_dups)
-   in
-   let ready = List.map
-       (fun x -> string_of_message db_schema x new_ma_aggs) (List.flatten l1)
-   in
-
-   (* Recur over non-duplicate terms *)
-   ready @
-   (List.flatten (List.map (fun (x,y,z) ->
-       compile_messages db_schema x y [] negate string_of_message z) todo))
-
-
-(* compiles to ck's original format *)
-let compile_readable_messages db_schema mapn params bigsum_vars negate term =
-    (* Reset compilations *)
-    clear_compilation();
-    compile_messages
-        db_schema mapn params bigsum_vars negate generate_code term
-
-(* compiles to spread message templates *)
-let compile_spread_messages db_schema mapn params bigsum_vars negate term =
-    (* Reset compilations *)
-    clear_compilation();
-    compile_messages
-        db_schema mapn params bigsum_vars negate generate_spread term
-
-(* the main compile function. call this one, not the others. *)
-let compile_terms (db_schema: (string * var_t list) list)
-                  (mapn: string)
-                  (params: var_t list)
-                  (term_l: term_t list)
-                  (compile_fn:
-                      (string * var_t list) list -> string -> var_t list 
-                      -> var_t list -> bool -> term_t -> string list)
-                  : (string list) =
-
-    let flat_term_l = List.map
-        (fun x -> let (tc,bsv) = flatten_term params x in
-            (mk_cond_agg tc, bsv))
-        (List.map readable_term (List.map roly_poly term_l))
+        (term: term_t) =
+    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
+       we assume that the input tuple is given by variables
+       x_mR_A1, ..., x_mR_Ak. *)
+    let bound_vars = (List.map (fun (x,y) -> ("x_"^mapn^reln^"_"^x, y)) relsch)
     in
-    let messages_l = 
-        List.map (fun (t, bigsum_vars_and_rels) ->
-            let bigsum_vars =
-                List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
-            let insert_messages =
-                compile_fn db_schema mapn params bigsum_vars false t
+        (* compute the delta and simplify. *)
+    let s = List.filter (fun (_, t) -> t <> term_zero)
+        (simplify (term_delta negate reln bound_vars term)
+            (bound_vars @ bigsum_vars) params)
+    in
+    let todos =
+        let f (new_params, new_ma) =
+            let mk x =
+                let t_params = (Util.ListAsSet.inter (term_vars x)
+                    (Util.ListAsSet.union new_params
+                        (Util.ListAsSet.union bound_vars bigsum_vars)))
+                in (t_params, x)
             in
-            let delete_messages =
-                let invert_event s =
-                    (if (String.get s 0) = '+' then s.[0] <- '-'); s
+                List.map mk (extract_aggregates new_ma)
+        in
+        let add_name ((p, x), i) = (mapn^reln^(string_of_int i), p, x)
+        in
+            List.map add_name (Util.add_positions (Util.ListAsSet.no_duplicates
+                (List.flatten (List.map f s))) 1)
+    in
+    let g (new_params, new_ma) =
+        (reln, bound_vars, new_params, bigsum_vars, mapn, new_ma)
+    in
+        ((List.map g s), todos)
+
+
+(* A module to output message-oriented query processing *)
+module MessageCompiler =
+struct
+
+    (* Message generation/stringification.
+       Writes (= generates string for) one increment statement. For example,
+
+       generate_code ("R", ["x_R_A"; "x_R_B"], ["x_C"], "m",
+       Prod[Val(Var(x_R_A)); <mR1>],
+       [("mR1", ["x_R_B"; "x_C"], <mR1>)]) =
+       "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
+    *)
+    let generate_code db_schema
+            (reln, bound_vars, params, bigsum_vars, mapn, new_ma)
+            new_ma_aggs =
+        let loop_vars = Util.ListAsSet.diff params bound_vars in
+        let bv_names = List.map fst bound_vars in
+        let param_names = List.map fst params in
+        let bs_names = List.map fst bigsum_vars in
+        let lv_names = List.map fst loop_vars in
+        let fn (mapname, params, mapstructure) =
+            (mapstructure, mapname^"["^(
+                Util.string_of_list ", " (List.map fst params)^"]"))
+        in
+            "+"^reln^"("^(Util.string_of_list ", " bv_names)^ "): "^
+                (if (loop_vars = []) then ""
+                else "foreach "^(Util.string_of_list ", " lv_names)^" do ")
+            ^mapn^"["^(Util.string_of_list ", " param_names)^"] += "^
+                (if (bigsum_vars = []) then ""
+                else "bigsum_{"^(Util.string_of_list ", " bs_names)^"} ")
+            ^(term_as_string new_ma (List.map fn new_ma_aggs))
+
+    (* Spread message generation (see Spread docs for more info on message template):
+     *     "<relation name>\t<relation variables>\t<put entry>\t\t<arithmetic map term>"
+     * where:
+     *     entry = "Map <name>[<key names>]"
+     *     arithmetic map term =
+     *         constant | var | entry | arith map term op arith map term
+     *)
+    let generate_spread db_schema (reln, bound_vars, params, _, mapn, new_ma) new_ma_aggs =
+        let mk_map_entry n keys =
+            let key_names = String.concat "," (List.map fst keys) in
+                "Map "^n^"["^key_names^"]"
+        in
+        let arg_bindings = 
+            List.combine bound_vars (List.assoc reln db_schema)
+        in
+        let get_arg_binding v =
+            if List.mem_assoc v arg_bindings
+            then List.assoc v arg_bindings else v
+        in
+        let substitute_args t = apply_variable_substitution_to_term arg_bindings t in
+        let bind_agg_fn (mapname, params, mapstructure) =
+            (substitute_args mapstructure,
+            mk_map_entry mapname (List.map get_arg_binding params))
+        in
+        let bound_var_names = String.concat ";"
+            (List.map (fun x -> fst (List.assoc x arg_bindings)) bound_vars)
+        in
+        let get_entry_bindings = List.map bind_agg_fn new_ma_aggs in
+        let put_entry = mk_map_entry mapn (List.map get_arg_binding params) in
+            reln^"\t"^bound_var_names^"\t"^put_entry^"\t\t"^
+                (term_as_string (substitute_args new_ma) get_entry_bindings)
+
+
+    (* Recursive compilation implementation *)
+    let rec compile_messages
+            (db_schema: (string * var_t list) list)
+            (mapn: string)
+            (params: var_t list)
+            (bigsum_vars: var_t list)
+            (negate: bool)
+            (string_of_message:
+                (string * var_t list) list ->
+                string * var_t list * var_t list * var_t list * string * term_t ->
+                (string * var_t list * term_t) list -> string)
+            (term: term_t) : (string list) =
+        let cdfr (reln, relsch) =
+            compile_delta_for_rel reln relsch mapn params bigsum_vars negate term
+        in
+
+        let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
+
+        (* Reset any bound or loop vars to their original name *)
+        let normalize_term (n,p,t) =
+            let br = Util.ListAsSet.no_duplicates
+                (get_base_relations (readable_term t))
+            in
+
+            (* TODO: parser should disallow attributes with prefix "x_" *)
+            let is_bound_var ((a,b),x) = 
+                ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
+            in
+            let bindings = List.flatten (List.map
+                (function
+                    | Rel(reln,f) ->
+                          List.filter is_bound_var
+                              (List.combine f (List.assoc reln db_schema))
+                    | _ -> raise (Failure ("Expected a relation.")))
+                br)
+            in
+                (n,p,apply_variable_substitution_to_term bindings t)
+        in
+
+        let (l1, l2) = (List.split (List.map cdfr db_schema))
+        in
+        let normalized_l2 = List.flatten (List.map2
+            (fun todo_l (reln, relsch) -> List.map normalize_term todo_l)
+            l2 db_schema)
+        in
+        let ((normalized_todo, todo), (normalized_dups, todo_dups)) =
+            let (a,b) = List.partition partition_f
+                (List.combine normalized_l2 (List.flatten l2))
+            in
+                (List.split a, List.split b)
+        in
+
+            (* Track normalized targets for next step prior to recurring *)
+            List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
+
+            (* Use correct map names for duplicate terms *)
+            let new_ma_aggs = todo@
+                (List.map2 (fun (_,_,dt) (_,p,t) -> (get_compilation dt,p,t))
+                    normalized_dups todo_dups)
+            in
+            let ready = List.map
+                (fun x -> string_of_message db_schema x new_ma_aggs) (List.flatten l1)
+            in
+
+                (* Recur over non-duplicate terms *)
+                ready @
+                    (List.flatten (List.map (fun (x,y,z) ->
+                        compile_messages db_schema x y [] negate string_of_message z) todo))
+
+
+    (* auxiliary function to compile to ck's original format *)
+    let compile_readable_messages db_schema mapn params bigsum_vars negate term =
+        (* Reset compilations *)
+        clear_compilation();
+        compile_messages
+            db_schema mapn params bigsum_vars negate generate_code term
+
+    (* auxiliary function to compile to spread message templates *)
+    let compile_spread_messages db_schema mapn params bigsum_vars negate term =
+        (* Reset compilations *)
+        clear_compilation();
+        compile_messages
+            db_schema mapn params bigsum_vars negate generate_spread term
+
+    (* The main compile function. call this one, not the others. *)
+    let compile_terms (db_schema: (string * var_t list) list)
+            (mapn: string)
+            (params: var_t list)
+            (term_l: term_t list)
+            (compile_fn:
+                (string * var_t list) list -> string -> var_t list 
+                -> var_t list -> bool -> term_t -> string list)
+            : (string list) =
+
+        let flat_term_l = List.map
+            (fun x -> let (tc,bsv) = flatten_term params x in
+                (mk_cond_agg tc, bsv))
+            (List.map readable_term (List.map roly_poly term_l))
+        in
+        let messages_l = 
+            List.map (fun (t, bigsum_vars_and_rels) ->
+                let bigsum_vars =
+                    List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
+                let insert_messages =
+                    compile_fn db_schema mapn params bigsum_vars false t
                 in
-                    List.map invert_event 
-                        (compile_fn db_schema mapn params bigsum_vars true t)
-            in
-                insert_messages@delete_messages)
-            (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
-    in
-        List.flatten messages_l
+                let delete_messages =
+                    let invert_event s =
+                        (if (String.get s 0) = '+' then s.[0] <- '-'); s
+                    in
+                        List.map invert_event 
+                            (compile_fn db_schema mapn params bigsum_vars true t)
+                in
+                    insert_messages@delete_messages)
+                (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
+        in
+            List.flatten messages_l
+end
 
 
 module BytecodeCompiler =
@@ -266,6 +276,7 @@ struct
     (* event type (insert or delete), event relation *)
     type event = (string * string)
 
+    (* Bytecode generation *)
     let generate_bytecode db_schema bigsum_vars_and_rels
                           (reln, bound_vars, params, mapn, new_ma)
                           new_ma_aggs
@@ -287,7 +298,7 @@ struct
         in
             ((reln, maint), (reln, (mapn, env, ma_block)))
 
-
+    (* Recursive compilation *)
     let rec compile
             (db_schema: (string * var_t list) list)
             (mapn: string)
@@ -376,11 +387,13 @@ struct
 
 
     (* TODO: ensure disjoint input relations for term_l *)
+    (* Bytecode compilation for both insert and delete events *)
     let compile_terms_to_bytecode
             (db_schema: (string * var_t list) list)
             (mapn: string)
             (params: var_t list)
             (term_l: A.term_t list)
+            : (event * (string * var_t list * BG.ordered_blocks)) list
             =
         (* Reset bytecode generator for new compilation *)
         BG.clear_declarations();
@@ -447,6 +460,9 @@ struct
                             [] maint_by_rel
                 in
 
+                (* TODO: only compute the bytecode needed for this handler, and not its delete.
+                 * Right now we do this since generation uses common metadata, but this should
+                 * be separated more cleanly in the bytecode generation *)
                 let (init_compute_bc, init_maintain_bc, final_compute_bc, final_maintain_bc) =
                     let icm_fcm_bc =
                         List.map (fun (rel, maint) ->
@@ -460,6 +476,7 @@ struct
                     let fm = List.map (fun (_,_,_,x) -> x) icm_fcm_bc in
                         (List.flatten ic, List.flatten im, List.flatten fc, List.flatten fm)
                 in
+
                 (* TODO: ensure bigsum var maintenance is done only once per relation *)
                 let bsv_maintenance_bc = List.flatten (List.map
                     (fun (bsv,v,r) -> match r with
@@ -493,7 +510,7 @@ struct
             in
 
             (* event_handlers_bc:
-             *     (event * (hndl name, hndl args, ordered_blocks list)) list
+             *     (event * (hndl name, hndl args, ordered_blocks)) list
              * where event : (event type : string) * (relation : string) *)
             let event_handlers_bc = List.map
                 (fun (rel, blocks) -> create_handler event_type rel blocks)
@@ -504,7 +521,9 @@ struct
         let event_types = ["insert"; "delete"] in
             List.flatten (List.map compile_for_event event_types)
 
+
     (* TODO: ensure disjoint input relations for term_l *)
+    (* The main bytecode compilation function *)
     let compile_terms  (db_schema: (string * var_t list) list)
                        (mapn: string)
                        (params: var_t list)

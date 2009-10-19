@@ -14,7 +14,8 @@ let test01 = make(RA_Leaf Empty) = relalg_zero;;
 let test02 = polynomial (make (RA_Leaf Empty)) = make(RA_Leaf Empty);;
 let test03 = monomials  (make (RA_Leaf Empty)) = [];;
 
-
+let pos = false
+let neg = true
 
 (* (R bowtie S) bowtie T *)
 let q_r = RA_MultiNatJoin [RA_MultiNatJoin ([relR; relS]); relT];;
@@ -36,7 +37,7 @@ RA_MultiUnion
 ;;
 
 let test08 = readable
-    (polynomial (relalg_delta (fun x -> x) "R" [("a", TInt); ("b", TInt)] q)) =
+    (polynomial (relalg_delta neg "R" [("a", TInt); ("b", TInt)] q)) =
   RA_MultiNatJoin
    [RA_Leaf
        (AtomicConstraint (Eq, RVal(Var("A", TInt)), RVal(Var("a", TInt))));
@@ -46,7 +47,7 @@ let test08 = readable
 ;;
 
 let test09 = readable
-    (polynomial (relalg_delta (fun x -> x) "S" [("b", TInt); ("c", TInt)] q)) =
+    (polynomial (relalg_delta neg "S" [("b", TInt); ("c", TInt)] q)) =
 RA_MultiNatJoin
  [relR;
   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B", TInt)), RVal(Var("b", TInt))));
