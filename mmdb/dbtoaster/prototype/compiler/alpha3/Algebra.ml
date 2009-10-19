@@ -418,7 +418,7 @@ and term_delta_aux (negate: bool) (relname: string)
                       make_aggsum d_f new_r;
                       make_aggsum f
                           (RelSemiRing.mk_prod [new_r; (complement r)]);
-                      make_aggsum f
+                      make_aggsum (TermSemiRing.mk_prod ([TermSemiRing.mk_val(Const(Int(-1))); f]))
                           (RelSemiRing.mk_prod [ (complement new_r); r ])
                    ]
                in
