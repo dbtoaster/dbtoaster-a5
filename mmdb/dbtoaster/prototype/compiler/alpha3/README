@@ -6,7 +6,7 @@ i) compiling to query processing engines, i.e. binaries
 
 ii) interactive compilation to various output formats, or 
 intermediate stages (i.e. map algebra, bytecode, spread messages,
-ck's strange output format), in a toplevel.
+ck's strange/random/beautiful output format), in a toplevel.
 
 Software requirements:
     boost-1.4.0
@@ -47,6 +47,7 @@ Recognized options:
   -o output file prefix
   -d data sources configuration
   -m {code|query|test} compilation mode
+  -r recursive compilation level
   -cI C++ include flags
   -cL C++ linker flags
   -cl C++ linker libraries
@@ -180,6 +181,9 @@ TODOs:
 
 
 Recent changes:
+
+* Ability to set recursive compilation level, e.g. 1 corresponds to
+  standard view maintenance, while DBToaster recurs as far as possible.
 
 * Toplevel, with support for outputting spread messages.
 
