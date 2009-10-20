@@ -12,4 +12,4 @@ dbtoaster.top:
 	cp ../../../prototype/compiler/alpha3/dbtoaster.top ./
 
 clean: 
-	rm -f $(LAUNCHER_SCRIPTS)
+	rm -f $(LAUNCHER_SCRIPTS) dbtoaster.top

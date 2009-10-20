@@ -1,4 +1,5 @@
 
+require 'thrift';
 require 'spread_types';
 
 class Tokenizer
@@ -14,8 +15,9 @@ class Tokenizer
   end
   
   def next
-    if @tokens.size > 0 then @last = @tokens.shift;
-    else nil; end
+    @last = 
+      if @tokens.size > 0 then @tokens.shift
+      else nil; end
   end
   
   def last
@@ -100,7 +102,7 @@ class TemplateEntry
   end
   
   def to_s(params = Hash.new)
-    "Hash " + @source.to_s + "[" + 
+    "Map " + @source.to_s + "[" + 
       @keys.collect do |key| 
         case key
           when String then if params.has_key? key then params[key].to_i.to_s else key end;
@@ -129,6 +131,9 @@ class TemplateEntry
           else key;
         end
       end
+
+    source = UpdateTemplate.get_map(source, keys.size).to_s unless source.is_number?
+    
     TemplateEntry.new(source, keys)  
   end
   
@@ -239,21 +244,6 @@ class TemplateExpression
     @op, @left, @right = op, left, right;
   end
   
-  def TemplateExpression.decode_var(tokenizer)
-    case tokenizer.next
-      when "(" then decode(tokenizer);
-      when "+","-","*","/",")" then 
-        raise SpreadException.new("Parse Error: Found "+tokenizer.last+" instead of rval");
-      when "Map" then
-        TemplateExpression.new(:map, TemplateEntry.decode(tokenizer));
-      else
-        TemplateExpression.new(
-          :val,
-          if tokenizer.last.is_number? then tokenizer.last.to_f else tokenizer.last.to_s end
-        );
-    end
-  end
-  
   def entries(list = Array.new)
     case @op
       when :plus, :mult, :sub, :div then @left.entries(@right.entries(list));
@@ -314,14 +304,29 @@ class TemplateExpression
     end
   end
   
+  def TemplateExpression.decode_var(tokenizer)
+    case tokenizer.next
+      when "(" then decode(tokenizer);
+      when "+","-","*","/",")" then 
+        raise SpreadException.new("Parse Error: Found "+tokenizer.last+" instead of rval");
+      when "Map" then
+        TemplateExpression.new(:map, TemplateEntry.decode(tokenizer));
+      else
+        TemplateExpression.new(
+          :val,
+          if tokenizer.last.is_number? then tokenizer.last.to_f else tokenizer.last.to_s end
+        );
+    end
+  end
+  
   def TemplateExpression.decode(tokenizer, left = decode_var(tokenizer))
-    op = case tokenizer.next
+    op = case tokenizer.next;
       when "+" then :plus
       when "-" then :sub
       when "*" then :mult
       when "/" then :div
-      when ")" then return left;
-      else raise SpreadException.new("Parse Error ("+tokenizer.last+")");
+      when ")",nil then return left;
+      else raise SpreadException.new("Parse Error (Expected op, got '"+tokenizer.last.to_s+"')");
     end
     right = decode_var(tokenizer);
     
@@ -373,6 +378,17 @@ class TemplateCondition
   def entries
     @left.entries.concat(@right.entries);
   end
+  
+  def to_s
+    @left.to_s + 
+    case @type
+      when :lessthanequal then "<="
+      when :notequal      then "<>"
+      when :lessthan      then "<"
+      when :equal         then "="
+    end +
+    @right.to_s;
+  end
 end
 
 ###################################################
@@ -398,6 +414,10 @@ class TemplateConditionList
       cond.entries;
     end.flatten
   end
+  
+  def to_s
+    @conditions.join(" AND ");
+  end
 end
 
 ###################################################
@@ -405,6 +425,8 @@ end
 class UpdateTemplate
   attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index;
   attr_writer :index;
+  @@map_names = { "q" => { "id" => 1, "params" => 0 } };
+  @@map_id = 1;
   
   def initialize(line, index = 0)
     line = line.split("\t");
@@ -461,10 +483,19 @@ class UpdateTemplate
   def to_s
     @relation + "\t" +
       @paramlist.join(";") + "\t" +
-      @loopvarlist.collect do |e| e[0].to_s end.join(";") + "\t" + 
+#      @loopvarlist.collect do |e| e[0].to_s end.join(";") + "\t" + 
       @target.to_s + "\t" +
       @conditions.to_s + "\t" +
       @expression.to_s;
+  end
+  
+  def UpdateTemplate.get_map(map_name, params)
+    @@map_names.assert_key(map_name) { {"id" => @@map_id += 1, "params"=> params}; }
+    @@map_names[map_name]["id"];
+  end
+  
+  def UpdateTemplate.map_names
+    @@map_names;
   end
 end
 

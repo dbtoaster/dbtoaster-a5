@@ -29,6 +29,17 @@ class Array
     ret;
   end
   
+  def reduce(&block);
+    ret = Hash.new
+    each do |entry| 
+      kv = 
+        if block.nil? then entry
+        else block.call(entry) end;
+      ret.assert_key(kv[0]) do Array.new end.push(kv[1]);
+    end;
+    ret;
+  end
+  
   def collect_index
     (0...size).collect do |i|
       yield i, self[i];
@@ -62,6 +73,11 @@ class Array
     (0...min_size).collect do |i|
       [ self[i] ].concat(others.collect do |o| o[i] end);
     end
+  end
+  
+  def drop_front
+    self.shift;
+    self;
   end
 end
 
