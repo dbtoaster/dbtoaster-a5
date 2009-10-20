@@ -16,8 +16,8 @@ let compile_delta_for_rel (reln:   string)
    in
    (* compute the delta and simplify. *)
    let s = List.filter (fun (_, t) -> t <> Calculus.term_zero)
-              (Calculus.simplify (Calculus.term_delta reln bound_vars term)
-                                 (bound_vars @ bigsum_vars) params)
+       (Calculus.simplify (Calculus.term_delta false reln bound_vars term)
+                          (bound_vars @ bigsum_vars) params)
    (* the result is a list of pairs (new_params, new_term). *)
    in
    (* creating the child maps still to be compiled, i.e., the subterms

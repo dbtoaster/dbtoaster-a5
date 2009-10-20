@@ -125,6 +125,20 @@ sig
    *)
    val substitute_many: ((expr_t * expr_t) list) -> expr_t -> expr_t
 
+   (* (extract sum_combinator_f prod_combinator_f leaf_f expr);
+
+      folds an expression into a pair of values, where the first is
+
+      (fold sum_combinator_f prod_combinator_f
+            (fun lf -> let (x, y) = leaf_f lf in x) expr)
+
+      and the second is
+
+      (apply_to_leaves (fun lf -> let (x, y) = leaf_f lf in y) expr)
+   *)
+   val extract: ('a list -> 'a) -> ('a list -> 'a) -> (leaf_t -> ('a * expr_t))
+                -> expr_t -> ('a * expr_t)
+
    (* (delta f e) returns an expression such that
 
       mk_sum [e; (delta f e)]
@@ -234,6 +248,16 @@ struct
 
    let substitute_many l in_expr =
        List.fold_right (fun (x,y) -> (substitute x y)) l in_expr
+
+   let extract (sum_combinator:  'a list -> 'a)
+               (prod_combinator: 'a list -> 'a)
+               (leaf_f: leaf_t -> ('a * expr_t))
+               (expr: expr_t): ('a * expr_t) =
+      let f comb_f1 comb_f2 l =
+         let (a, b) = List.split l in
+         ((comb_f1 a), (comb_f2 b))
+      in
+      fold (f sum_combinator mk_sum) (f prod_combinator mk_prod) leaf_f expr
 
    let rec delta (lf_delta: leaf_t -> expr_t) (e: expr_t) =
       match e with

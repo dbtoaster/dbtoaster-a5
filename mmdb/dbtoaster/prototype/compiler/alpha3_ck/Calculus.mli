@@ -88,7 +88,7 @@ type 'term_t generic_relcalc_lf_t =
 type ('term_t, 'relcalc_t) generic_term_lf_t =
             AggSum of ('term_t * 'relcalc_t)
           | Const of const_t
-          | Var of string
+          | Var of var_t
 
 
 
@@ -158,9 +158,9 @@ val relcalc_one:  relcalc_t
 val relcalc_zero: relcalc_t
 
 
-(* (delta "R" t e) returns the delta on insertion of tuple t into relation R,
-   for relcalc expression e. *)
-val relcalc_delta:     string -> (string list) -> relcalc_t -> relcalc_t
+(* (delta n "R" t e) returns the delta on insertion (n=false) or
+   deletion (n=true) of tuple t into relation R, for relcalc expression e. *)
+val relcalc_delta: bool -> string -> (string list) -> relcalc_t -> relcalc_t
 
 (* turns an expression into a union of conjunctive queries (i.e., joins);
    or something strictly simpler, i.e., a flat union, a flat join, or a leaf.
@@ -218,10 +218,10 @@ module type Term = sig
 val term_zero: term_t
 val term_one:  term_t
 
-(* (delta relname tuple term) computes the delta of term as tuple is
-   inserted into relation relname.
+(* (delta deletion relname tuple term) computes the delta of term as tuple is
+   inserted (deletion=false) or deleted (deletion=true) into relation relname.
 *)
-val term_delta: string -> (string list) -> term_t -> term_t
+val term_delta: bool -> string -> (string list) -> term_t -> term_t
 
 (* a pudding. Here: recursively turning a term into a
    polynomial: The result does not use union anywhere, and sum is only used

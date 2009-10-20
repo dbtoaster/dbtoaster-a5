@@ -45,7 +45,7 @@ let s0 = "(25*AggSum(v1, B(p1, v1)))+AggSum(v2, B(p2, v2) and loop_p<p2)";;
 let s1 = "("^s0^"+(25*v)+(v*(if loop_p<p then 1 else 0)))";;
 
 List.map (fun (x,y) -> (x, term_as_string y []))
-(simplify (term_delta "B" ["p"; "v"] vwap2) ["p"; "v"; "loop_p"] [])
+(simplify (term_delta false "B" ["p"; "v"] vwap2) ["p"; "v"; "loop_p"] [])
 =
 [([],
   "(if 0<="^s1^" then ((if p=loop_p then p else 0)*v) else 0)");
