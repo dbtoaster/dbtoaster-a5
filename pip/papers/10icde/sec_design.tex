@@ -40,7 +40,7 @@ Sampling from R to compute
 {\small\begin{verbatim}
   select expected_sum(Price) from R;
 \end{verbatim}}
-is a much more focused effort.
+\noindent is a much more focused effort.
 First, we only have to consider the random variables relating to Joe;
 but determining that random variable $Y_2$ is relevant while $Y_4$
 is not requires
@@ -73,9 +73,9 @@ Thus, when instantiating a random variable, users specify both a distribution fo
 
 Rather than storing random variables directly, PIP employs the equation datatype, a flattened parse tree of an arithmetic expression, where leaves are random variables or constants.  Because an equation itself describes a random variable, albeit a composite one, we refer to equations and random variables interchangeably.  Observe that while we limit our implementation to arithmetic operators, any non-recursive expression may be similarly represented.  The equation datatype can be used to encode any target expression accepted by PostgreSQL.  
 
-Random variable equations can be combined freely with constant expressions, both in the target clause of a select statement, and in the where clause.  All targets including random variable equations are encoded as random variable equations themselves.  All where clauses including random variable equations are encoded as c-table conditions, the \textit{context} of the row.  As this allows a variable to appear several times in a given context, the variable's identifier is used as part of the seed for the pseudorandom number generator used by the sampling process.
+Random variable equations can be combined freely with constant expressions, both in the target clause of a select statement and in the where clause.  All targets including random variable equations are encoded as random variable equations themselves.  All where clauses including random variable equations are encoded as c-table conditions, the \textit{context} of the row.  As this allows a variable to appear several times in a given context, the variable's identifier is used as part of the seed for the pseudorandom number generator used by the sampling process.
 
-C-table conditions allow PIP to represent per-tuple uncertainty.  Each tuple is tagged with a condition that must hold for the variable to be present in the table.  C-table conditions are expressed as a boolean equation of \textit{atoms}, arbitrary inequalities of random variables.  The independent probability, or \textit{confidence} of the tuple is the probability of the condition being satisfied.  
+C-table conditions allow PIP to represent per-tuple uncertainty.  Each tuple is tagged with a condition that must hold for the variable to be present in the table.  C-table conditions are expressed as a boolean formula of \textit{atoms}, arbitrary inequalities of random variables.  The independent probability, or \textit{confidence} of the tuple is the probability of the condition being satisfied.  
 
 Given  tables  in which  all  conditions  are  conjunctions of  atomic conditions and  the query does not employ  duplicate elimination, then all conditions  in the output  table are conjunctions.  Thus  it makes sense to particularly optimise this scenario \cite{AJKO2008}. In the case of positive relational algebra  with the duplicate elimination  operator (i.e., we trade  duplicate   elimination  against  difference),   we  can  still efficiently  maintain  the  conditions  in  DNF,  i.e.,  as  a  simple disjunction of conjunctions of atomic conditions.
 
@@ -90,7 +90,7 @@ A condition is consistent if there is a variable assignment that makes the condi
 \item The consistency of conditions not involving variable values is always immediately apparent.
 \item Conditions $X_i = c_1 \land X_i = c_2$ with constants $c_1 \neq c_2$ are always inconsistent.
 \item Equality conditions over continuous variables $Y_j = (\cdot)$, with the exception of the identity $Y_j = Y_j$, are not inconsistent but can be treated as such (the probability mass will always be zero).  Similarly, conditions $Y_j \neq (\cdot)$, with the exception of $Y_j \neq Y_j$, can be treated as true and removed or ignored.
-\item Other forms of inconsistency can also be detected where it is efficient to do so.
+\item Other forms of inconsistency can also be detected where efficient techniques to do so are known.
 \end{enumerate}
 
 With  respect to discrete variables, inconsistency detection may be further simplified.  Rather than using abstract representations, every row containing discrete variables may be exploded into one row for every possible valuation.  Condition atoms matching each variable to its valuation are used to ensure mutual exclusion of each row.  Thus, discrete variable columns may be treated as constants for the purpose of consistency checks.  As shown in \cite{AJKO2008}, deterministic database query optimizers do a satisfactory job of ensuring that constraints over discrete variables are filtered as soon as possible.

@@ -123,9 +123,9 @@ PIP provides several functions for analyzing the uncertainty encoded in a c-tabl
 
 \begin{itemize}
 \footnotesize
-\item \texttt{conf()} performs a conjunctive integration to estimate the probability of a specific row being present in the output, in effect computing the expectation $E[1]$.  It identifies and extracts all lineage atoms from the row being processed and then performs the conjunctive integration over them as normal.
+\item \texttt{conf()} performs a conjunctive integration to estimate the probability of a specific row's condition being true.  For tables of purely conjunctive conditions, conf() can be used to compute each row's confidence. 
 
-\item \texttt{aconf()}, a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of at least one aggregated row being present in the output.  
+\item \texttt{aconf()}, a variant of conf(), is used to perform general integration.  This function is an aggregate that computes the joint probability of all equivalent rows in the table, a necessity if disjunctions are in use.  
 
 \item \texttt{expectation()} computes the expectation of a variable by repeated sampling.  If a row is specified when the function is called, the sampling process is constrained by the constraint atoms present in the row.
 

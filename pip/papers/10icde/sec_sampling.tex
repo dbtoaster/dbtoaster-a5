@@ -34,7 +34,7 @@ This technique makes constrained sampling more efficient.  If the uniform-random
 
 \paragraph{Exploiting independence}
 \label{subsec:independence}
-Prior to sampling, PIP subdivides constraint predicates into minimal independent subsets; sets of predicates sharing no common variables.  When determining subset independence, variables representing distinct values from a multivariate distribution are treated as the set of all of their component variables.  For example, consider the one row c-table 
+Prior to sampling, PIP subdivides constraint predicates into minimal independent subsets; sets of predicates sharing no common variables.  When determining subset independence, variables representing distinct values from a multivariate distribution are treated as the set of all of their component variables.  For example, consider the one row c-table of nullary schema (i.e., there is only a condition column)
 \[
 \begin{tabular}{c|c}
 R & $\phi_2$ \\
@@ -93,7 +93,7 @@ By generating a small number of samples for the subgroup, PIP can generate a rou
 
 
 \subsection{Row-Level Sampling Operators}
-Evaluating a query on a probabilistic table (or tables) produces as output another probabilistic table.  Though the raw probabilistic data has value, the ultimate goal is to compute statistical metrics: expectations, moments, etc.  To achieve this goal, PIP provides a set of sampling operators: functions that convert probabilistic data into deterministic metrics.  
+Evaluating a query on a probabilistic table (or tables) produces as output another probabilistic table.  Though the raw probabilistic data has value, the ultimate goal is to compute statistical aggregates: expectations, moments, etc.  To achieve this goal, PIP provides a set of sampling operators: functions that convert probabilistic data into deterministic aggregates.  
 
 \begin{example}\em
 Consider the c-tables 
@@ -122,18 +122,18 @@ T & $C$ & $\phi$\\
 \end{tabular}
 \]
 
-A human may find it useful to know that for a given possible world T contains one row with C equal to $5 \cdot Y_1$ in worlds described by variables $Y_1 > 4$ and $Y_2 > 2$, and is empty in all other worlds.  However, analysis of large volumes of data in this form requires the ability to summarize and/or aggregate.  Analyzing a table containing several hundred or more rows of this form becomes easier if a histogram is available.
+A human may find it useful to know that for a given possible world, T contains one row with C equal to $5 \cdot Y_1$ in worlds described by variables $Y_1 > 4$ and $Y_2 > 2$, and is empty in all other worlds.  However, analysis of large volumes of data in this form requires the ability to summarize and/or aggregate.  Analyzing a table containing several hundred or more rows of this form becomes easier if a histogram is available.
 \end{example}
 
 Sampling operators take in an expression to be evaluated and the expression's context, or boolean formula of constraints associated with the expression's row and output a histogram, expectation, or higher moment for the expression under the constraints of its context.  As described in Section \ref{sec:background}, without loss of generality, it is possible to express the context as a set of conditions to be combined conjunctively.  
 
-This paper focuses predominantly on sampling operators that follow \textit{per-row sampling semantics}.  Under these semantics, each row is sampled independently.  The metric in question is taken for only over the volume of probability space defined by the expression's context for each row.  For example, in the case of Monte-Carlo sampling, samples are generated for each row, but only samples satisfying the row's context are considered.  All other samples are discarded.  If the context is unsatisfiable, a value of NAN will result.
+This paper focuses predominantly on sampling operators that follow \textit{per-row sampling semantics}.  Under these semantics, each row is sampled independently.  The aggregate in question is taken for only over the volume of probability space defined by the expression's context for each row.  For example, in the case of Monte-Carlo sampling, samples are generated for each row, but only samples satisfying the row's context are considered.  All other samples are discarded.  If the context is unsatisfiable, a value of NAN will result.
 
 The choice to focus on per-row sampling operators is motivated by efficiency concerns.  If the results table is larger than main memory, the sampling process can become IO-bound.  Per-row sampling operators require only a single pass (or potentially a second pass if additional precision is required) over the results.  While we do consider table-wide sampling semantics out of necessity for some aggregates, the development of additional table-wide techniques is beyond the scope of this paper.
 
-Note that the resulting metrics are still probabilistic data.  For example, the expectation of a given cell is computed in the context of the cell's row; The expectation is computed only over those worlds where the row's condition holds, as in all other worlds the row does not exist.  The conf operator is used to compute the probability of satisfying the row's condition, a value known as the row's confidence.  If the conf operator is present, all conditions applying to the row are removed from the result and the resulting table is deterministic.
+Note that the resulting aggregates are still probabilistic data.  For example, the expectation of a given cell is computed in the context of the cell's row; The expectation is computed only over those worlds where the row's condition holds, as in all other worlds the row does not exist.  In order to compute the probability of satisfying the row's condition, also referred to as the row's confidence, we define a confidence operator.  If the confidence operator is present, all conditions applying to the row are removed from the result and the resulting table is deterministic.
 
-%Sampling for all targets in a select statement is done in parallel.  First, the context is examined and its conditions subdivided into independent subgroups as described above.  The required number of samples are generated for each group containing at least one variable that appears in one of the expressions being evaluated.  The probability of the remaining groups must still be computed if the conf operator is present, but it may be possible to evaluate only the group's probability more efficiently.  For example, if the group contains only one variable, the probability can be evaluated with only handful of evaluations of the variable's CDF.  Even if this is not the case, the cost of storing these additional samples in memory may be avoided.
+%Sampling for all targets in a select statement is done in parallel.  First, the context is examined and its conditions subdivided into independent subgroups as described above.  The required number of samples are generated for each group containing at least one variable that appears in one of the expressions being evaluated.  The probability of the remaining groups must still be computed if the confidence operator is present, but it may be possible to evaluate only the group's probability more efficiently.  For example, if the group contains only one variable, the probability can be evaluated with only handful of evaluations of the variable's CDF.  Even if this is not the case, the cost of storing these additional samples in memory may be avoided.
 %
 %The remaining groups are sampled to obtain values for Monte-Carlo estimation of the target expression's expectation.  By default, these samples are obtained through naive rejection sampling.  Variables are selected from the distribution $\frac{\chi(\vec{y})p(\vec{y})}{\int_{\vec{a}} \chi(\vec{a})p(\vec{a})}$ by sampling according to $p(\vec{y})$ and discarding values that do not satisfy $\phi(\vec{y})$.  The frequency with which samples are accepted is tracked, and used to compute the row's confidence if required.
 %

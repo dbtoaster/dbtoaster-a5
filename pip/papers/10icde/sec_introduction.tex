@@ -2,7 +2,7 @@ Uncertain data comes in many forms: Statistical models, scientific applications,
 
 Probabilistic  database  management  systems \cite{CKP2003, dalvi07efficient, WidomTrio2008, DM2006, KochMayBMS2008, SD2007, ORION, MCDB, BayesStore} aim at providing better support for querying uncertain data.  Queries in these systems preserve the statistical properties of the data being queried, allowing users to obtain metrics about and representations of query results.  The previously mentioned risk-management application, built on top of a probabilistic database, could use the database itself to obtain error bounds on the results of arbitrary queries over its predictions.  By encoding the statistical model for its predictions in the database itself, the risk-management application could even use the probabilistic database to estimate complex functions over many correlated variables in its model.  In effect, the application could compute all of its predictions within the probabilistic database in the first place.
 
-Few systems are general enough to efficiently query probabilistic data defined over both discrete and continuous distributions.  Those that are, generally rely on sampling to estimate desired values, as exact solutions can be hard to obtain.  If a query contains a selection predicate, samples violating the predicate are dropped and do not contribute to the expectation.  The more selective the predicate, the more samples are needed to maintain consistent accuracy.  For example, a query may combine a model predicting customer profits with a model for predicting dissatisfied customers, perhaps as a result of a corporate decision to use a cheaper, but slower shipping company.  If the query asks for profit loss due to dissatisfied customers, the query need only consider profit from customers under those conditions where the customer is dissatisfied (ie, the underlying model may include a correlation between ordering patterns and dependence on fast shipping).  
+Few systems are general enough to efficiently query probabilistic data defined over both discrete and continuous distributions.  Those that are generally rely on sampling to estimate desired values, as exact solutions can be hard to obtain.  If a query contains a selection predicate, samples violating the predicate are dropped and do not contribute to the expectation.  The more selective the predicate, the more samples are needed to maintain consistent accuracy.  For example, a query may combine a model predicting customer profits with a model for predicting dissatisfied customers, perhaps as a result of a corporate decision to use a cheaper, but slower shipping company.  If the query asks for profit loss due to dissatisfied customers, the query need only consider profit from customers under those conditions where the customer is dissatisfied (ie, the underlying model may include a correlation between ordering patterns and dependence on fast shipping).  
 
 Without knowing the likelihood that customer A is satisfied, the query engine must over-provision and waste time generating large numbers of samples, or risk needing to re-evaluate the query if additional samples are needed.  This problem is well known in online aggregation, but ignored in general-purpose (i.e., both discrete and continuous) probabilistic databases.  
 
@@ -42,10 +42,10 @@ Now consider the query
   and    O.Cust = 'Joe'
   and    S.Duration >= 7;
 \end{verbatim}}
-asking for the expected loss due to late deliveries to customers named Joe,
+\noindent asking for the expected loss due to late deliveries to customers named Joe,
 where the product is free if not delivered within seven days.
 %
-This can be approximated by monte carlo sampling from $p$,
+This can be approximated by Monte Carlo sampling from $p$,
 where $q$ represents the result of the sum aggregate query on a sample,
 here
 \[
