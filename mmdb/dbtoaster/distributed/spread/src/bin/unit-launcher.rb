@@ -3,7 +3,7 @@ require 'unit';
 require 'getoptlong';
 
 Logger.default_level = Logger::INFO;
-Logger.default_name = "Tosthaus Unit Test";
+Logger.default_name = "sliceDBread Unit Test";
 
 Logger.info { "=========== Initializing Unit Test ===========" }
 
