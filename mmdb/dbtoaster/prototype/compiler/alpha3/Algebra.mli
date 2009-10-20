@@ -128,6 +128,10 @@ val term_vars: term_t -> var_t list
 val free_relalg_vars : relalg_t -> var_t list
 val free_term_vars : term_t -> var_t list
 
+(* readable_relalg_t -> readable_relalg_lf_t list *)
+val get_base_relations_plan : readable_relalg_t -> readable_relalg_lf_t list
+val get_base_relations : readable_term_t -> readable_relalg_lf_t list
+
 (* output relalg or term as string; replace certain nested terms by
                                     named map accesses. *)
 val type_as_string: type_t -> string

@@ -14,27 +14,26 @@ let debug_compilation () =
             print_endline ("compiled("^y^"): "^(term_as_string x [])))
         (!terms_compiled)
 
-(* TODO: move this to Algebra module *)
-(* readable_relalg_t -> readable_relalg_lf_t list *)
-let rec get_base_relations_plan r =
-    let relalg_lf lf = match lf with
-        | Rel(_) -> [lf]
-        | AtomicConstraint(_, t1, t2) ->
-              (get_base_relations t1)@(get_base_relations t2)
-        | _ -> []
+(* Returns a mapping from variables in the delta, to their original names *)
+let get_bindings db_schema relations =
+    (* TODO: parser should disallow attributes with prefix "x_" *)
+    let is_bound_var ((a,b),x) = 
+        ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
     in
-        fold_relalg Util.ListAsSet.multiunion 
-            Util.ListAsSet.multiunion relalg_lf r
+        Util.ListAsSet.multiunion (List.map (function
+            | Rel(reln,f) -> List.filter is_bound_var
+                  (List.combine f (List.assoc reln db_schema))
+            | _ -> raise (Failure ("Expected a relation.")))
+            relations)
 
-(* readable_term_t -> readable_relalg_lf_t list *)
-and get_base_relations t =
-    let term_lf lf = match lf with
-        | AggSum(f,r) ->
-              (get_base_relations f)@(get_base_relations_plan r)
-        | _ -> []
+(* Reset any bound or loop vars to their original name *)
+let normalize_term db_schema ((n,p,t) as orig) =
+    let br = Util.ListAsSet.no_duplicates (get_base_relations (readable_term t))
     in
-        fold_term Util.ListAsSet.multiunion 
-            Util.ListAsSet.multiunion term_lf t
+        (*debug_compile_bindings br (get_bindings db_schema br);*)
+        ((n,p,apply_variable_substitution_to_term
+            (get_bindings db_schema br) t), orig)
+
 
 (* One-step delta compilation, used by both message and bytecode compiler. *)
 let compile_delta_for_rel (reln:   string)
@@ -87,7 +86,7 @@ struct
        [("mR1", ["x_R_B"; "x_C"], <mR1>)]) =
        "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
     *)
-    let generate_code db_schema
+    let generate_code db_schema negate
             (reln, bound_vars, params, bigsum_vars, mapn, new_ma)
             new_ma_aggs =
         let loop_vars = Util.ListAsSet.diff params bound_vars in
@@ -99,13 +98,40 @@ struct
             (mapstructure, mapname^"["^(
                 Util.string_of_list ", " (List.map fst params)^"]"))
         in
-            "+"^reln^"("^(Util.string_of_list ", " bv_names)^ "): "^
+        let evt = if negate then "-" else "+" in
+            evt^reln^"("^(Util.string_of_list ", " bv_names)^ "): "^
                 (if (loop_vars = []) then ""
                 else "foreach "^(Util.string_of_list ", " lv_names)^" do ")
             ^mapn^"["^(Util.string_of_list ", " param_names)^"] += "^
                 (if (bigsum_vars = []) then ""
                 else "bigsum_{"^(Util.string_of_list ", " bs_names)^"} ")
             ^(term_as_string new_ma (List.map fn new_ma_aggs))
+
+    let generate_remaining db_schema mapn params bigsum_vars negate term =
+        let base_rels = List.map (function
+            | Rel(n,f) -> (n,f)
+            | _ -> raise (Failure "Expected a relation."))
+            (get_base_relations (readable_term term))
+        in
+        let string_of_vars l = String.concat "," (List.map fst l) in
+        let evt = if negate then "-" else "+" in
+        let t_str = term_as_string term []
+        in
+            List.map (fun (rel, relsch) -> 
+                let bound_vars =
+                    List.map (fun (x,y) -> ("x_"^mapn^rel^"_"^x, y)) relsch
+                in
+                let loop_vars = Util.ListAsSet.diff params bound_vars in
+                let assign = rel^"("^(string_of_vars relsch)^"): "^
+                    (if (loop_vars = []) then ""
+                    else "foreach "^(string_of_vars loop_vars)^" do ")^
+                    mapn^"["^(string_of_vars params)^"]"
+                in
+                    evt^assign^" = "^
+                    (if (bigsum_vars = []) then ""
+                    else "bigsum_{"^(string_of_vars bigsum_vars)^"} ")^
+                    t_str)
+                (Util.ListAsSet.no_duplicates base_rels)
 
     (* Spread message generation (see Spread docs for more info on message template):
      *     "<relation name>\t<relation variables>\t<put entry>\t\t<arithmetic map term>"
@@ -114,7 +140,8 @@ struct
      *     arithmetic map term =
      *         constant | var | entry | arith map term op arith map term
      *)
-    let generate_spread db_schema (reln, bound_vars, params, _, mapn, new_ma) new_ma_aggs =
+    let generate_spread db_schema negate
+            (reln, bound_vars, params, _, mapn, new_ma) new_ma_aggs =
         let mk_map_entry n keys =
             let key_names = String.concat "," (List.map fst keys) in
                 "Map "^n^"["^key_names^"]"
@@ -136,7 +163,8 @@ struct
         in
         let get_entry_bindings = List.map bind_agg_fn new_ma_aggs in
         let put_entry = mk_map_entry mapn (List.map get_arg_binding params) in
-            reln^"\t"^bound_var_names^"\t"^put_entry^"\t\t"^
+        let evt = if negate then "-" else "+" in
+            evt^reln^"\t"^bound_var_names^"\t"^put_entry^"\t\t"^
                 (term_as_string (substitute_args new_ma) get_entry_bindings)
 
 
@@ -148,90 +176,76 @@ struct
             (bigsum_vars: var_t list)
             (negate: bool)
             (string_of_message:
-                (string * var_t list) list ->
+                (string * var_t list) list -> bool -> 
                 string * var_t list * var_t list * var_t list * string * term_t ->
                 (string * var_t list * term_t) list -> string)
+            (string_of_remaining_message:
+                (string * var_t list) list -> string -> var_t list -> var_t list ->
+                    bool -> term_t -> string list)
+            (level: int)
             (term: term_t) : (string list) =
-        let cdfr (reln, relsch) =
-            compile_delta_for_rel reln relsch mapn params bigsum_vars negate term
-        in
-
-        let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
-
-        (* Reset any bound or loop vars to their original name *)
-        let normalize_term (n,p,t) =
-            let br = Util.ListAsSet.no_duplicates
-                (get_base_relations (readable_term t))
+        if level = 0 then
+            string_of_remaining_message
+                db_schema mapn params bigsum_vars negate term
+        else begin
+            let recur (x,y,z) = compile_messages db_schema
+                x y [] negate string_of_message string_of_remaining_message (level-1) z
+            in
+            let cdfr (reln, relsch) =
+                compile_delta_for_rel reln relsch mapn params bigsum_vars negate term
             in
 
-            (* TODO: parser should disallow attributes with prefix "x_" *)
-            let is_bound_var ((a,b),x) = 
-                ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
-            in
-            let bindings = List.flatten (List.map
-                (function
-                    | Rel(reln,f) ->
-                          List.filter is_bound_var
-                              (List.combine f (List.assoc reln db_schema))
-                    | _ -> raise (Failure ("Expected a relation.")))
-                br)
-            in
-                (n,p,apply_variable_substitution_to_term bindings t)
-        in
+            let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
 
-        let (l1, l2) = (List.split (List.map cdfr db_schema))
-        in
-        let normalized_l2 = List.flatten (List.map2
-            (fun todo_l (reln, relsch) -> List.map normalize_term todo_l)
-            l2 db_schema)
-        in
-        let ((normalized_todo, todo), (normalized_dups, todo_dups)) =
-            let (a,b) = List.partition partition_f
-                (List.combine normalized_l2 (List.flatten l2))
-            in
-                (List.split a, List.split b)
-        in
-
-            (* Track normalized targets for next step prior to recurring *)
-            List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
-
-            (* Use correct map names for duplicate terms *)
-            let new_ma_aggs = todo@
-                (List.map2 (fun (_,_,dt) (_,p,t) -> (get_compilation dt,p,t))
-                    normalized_dups todo_dups)
-            in
-            let ready = List.map
-                (fun x -> string_of_message db_schema x new_ma_aggs) (List.flatten l1)
+            let (l1, l2) = (List.split (List.map cdfr db_schema)) in
+            let normalized_l2 = List.map (normalize_term db_schema) (List.flatten l2) in
+                (* dup_todos: normalized dup term * dup term params * dup term *)
+            let ((normalized_todo, todo), dup_todos) =
+                let (a,b) = List.partition partition_f normalized_l2 in
+                let dt = List.map (fun ((_,_,dt), (_,p,t)) -> (get_compilation dt,p,t)) b
+                in
+                    (List.split a, dt)
             in
 
-                (* Recur over non-duplicate terms *)
-                ready @
-                    (List.flatten (List.map (fun (x,y,z) ->
-                        compile_messages db_schema x y [] negate string_of_message z) todo))
+                (* Track normalized targets for next step prior to recurring *)
+                List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
 
+                (* Use correct map names for duplicate terms *)
+                let new_ma_aggs = todo@dup_todos in
+                let ready = List.map
+                    (fun x -> string_of_message db_schema negate x new_ma_aggs) (List.flatten l1)
+                in
+
+                    (* Recur over non-duplicate terms *)
+                    ready @ (List.flatten (List.map recur todo))
+        end
 
     (* auxiliary function to compile to ck's original format *)
-    let compile_readable_messages db_schema mapn params bigsum_vars negate term =
+    let compile_readable_messages db_schema mapn params bigsum_vars negate level term =
         (* Reset compilations *)
         clear_compilation();
-        compile_messages
-            db_schema mapn params bigsum_vars negate generate_code term
+        compile_messages db_schema mapn params
+            bigsum_vars negate generate_code generate_remaining level term
 
     (* auxiliary function to compile to spread message templates *)
-    let compile_spread_messages db_schema mapn params bigsum_vars negate term =
-        (* Reset compilations *)
-        clear_compilation();
-        compile_messages
-            db_schema mapn params bigsum_vars negate generate_spread term
+    let compile_spread_messages db_schema mapn params bigsum_vars negate level term =
+        let remaining_failure_fn = fun dbs mapn p bsv neg t ->
+            raise (Failure ("Spread does not support partial compilation."))
+        in
+            (* Reset compilations *)
+            clear_compilation();
+            compile_messages db_schema mapn params
+                bigsum_vars negate generate_spread remaining_failure_fn level term
 
     (* The main compile function. call this one, not the others. *)
     let compile_terms (db_schema: (string * var_t list) list)
             (mapn: string)
             (params: var_t list)
-            (term_l: term_t list)
             (compile_fn:
                 (string * var_t list) list -> string -> var_t list 
-                -> var_t list -> bool -> term_t -> string list)
+                -> var_t list -> bool -> int -> term_t -> string list)
+            (compilation_level: int)
+            (term_l: term_t list)
             : (string list) =
 
         let flat_term_l = List.map
@@ -239,19 +253,18 @@ struct
                 (mk_cond_agg tc, bsv))
             (List.map readable_term (List.map roly_poly term_l))
         in
+        let insert = false in
+        let delete = true in
         let messages_l = 
             List.map (fun (t, bigsum_vars_and_rels) ->
                 let bigsum_vars =
                     List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
-                let insert_messages =
-                    compile_fn db_schema mapn params bigsum_vars false t
+                let insert_messages = compile_fn db_schema
+                    mapn params bigsum_vars insert compilation_level t
                 in
                 let delete_messages =
-                    let invert_event s =
-                        (if (String.get s 0) = '+' then s.[0] <- '-'); s
-                    in
-                        List.map invert_event 
-                            (compile_fn db_schema mapn params bigsum_vars true t)
+                    compile_fn db_schema
+                        mapn params bigsum_vars delete compilation_level t
                 in
                     insert_messages@delete_messages)
                 (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
@@ -269,6 +282,45 @@ struct
     module BS = Bytecode.InstructionSet.NestedBlockSet
     module CPP = Codegen.CPPCodeGenerator
     module CPPI = Codegen.CPPInstrumentation
+
+    module Debug =
+    struct
+        let debug_partition_f ((x,y,z), (a,b,c)) =
+            print_endline ("dupcheck: "^(term_as_string z []));
+            debug_compilation();
+            let r = not(is_compiled(z)) in
+                if not r then print_endline
+                    ("found duplicate "^(term_as_string z []));
+                r
+
+        let debug_compile_bindings br bindings =
+            let string_of_var (n,t) = n in
+            let string_of_vars l = String.concat ","
+                (List.map (fun (x,_) -> string_of_var x) l) in
+            let ambiguous =
+                List.map (fun (x,y) ->
+                    ((x,y), List.filter (fun (u,v) -> x=u && y<>v) bindings))
+                    bindings in
+            let duplicates =
+                List.map (fun (x,y) ->
+                    ((x,y), List.filter (fun (y,_) -> x=y) bindings))
+                    bindings
+            in
+                List.iter (function
+                    | Rel(reln,_) -> print_endline ("rel: "^reln)
+                    | _ -> raise (Failure ("Expected a relation."))) br;
+                List.iter
+                    (fun ((x,_), al) -> print_endline
+                        ("Ambiguous bindings for "^(string_of_var x)^
+                            ": "^(string_of_vars al)))
+                    (List.filter (fun (_, al) -> List.length al <> 0) ambiguous);
+                List.iter
+                    (fun ((x,_), dl) -> print_endline 
+                        ("Duplicate bindings for "^(string_of_var x)^
+                            ": "^(string_of_vars dl)))
+                    (List.filter (fun (_, dl) -> List.length dl > 1) duplicates)
+
+    end
 
     (* handler name, arg names and types, code *)
     type handler = (string * ((string * string) list) * string)
@@ -298,6 +350,7 @@ struct
         in
             ((reln, maint), (reln, (mapn, env, ma_block)))
 
+
     (* Recursive compilation *)
     let rec compile
             (db_schema: (string * var_t list) list)
@@ -305,85 +358,62 @@ struct
             (params: var_t list)
             (bigsum_vars_and_rels: (var_t * var_t * readable_relalg_lf_t) list)
             (negate: bool)
+            (level: int)
             (term: A.term_t)
-            : (string * BG.maintenance_terms_and_deps) list * BG.handler_blocks
+            : (string * BG.maintenance_terms_and_deps) list * BG.handler_blocks *
+              (string * var_t list * A.term_t) list
             =
-        (*
-        let debug_dupcheck x =
-            print_endline ("dupcheck: "^(term_as_string x []));
-            debug_compilation() in
-        let debug_filter r x = if not r then
-            print_endline ("found duplicate "^(term_as_string x [])) in
+        if level = 0 then ([], [], [(mapn, params, term)])
+        else begin
+            (* returns if a compilation target has been seen before,
+             * for preventing duplicate maps *)
+            let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
 
-        let debug_partition_f ((x,y,z), (a,b,c)) =
-            debug_dupcheck z;
-            let r = not(is_compiled(z)) in
-                debug_filter r z; r in
-        *)
-        let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
 
-        (* Reset any bound or loop vars to their original name *)
-        let normalize_term (n,p,t) =
-            let br = Util.ListAsSet.no_duplicates
-                (get_base_relations (readable_term t))
+            let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
+            let cdfr (reln, relsch) =
+                compile_delta_for_rel
+                    reln relsch mapn params bigsum_vars negate term in
+            let (l1,l2) = (List.split (List.map cdfr db_schema)) in
+
+            let normalized_l2 = List.map (normalize_term db_schema) (List.flatten l2) in
+
+            (* dup_todos: normalized dup term * dup term params * dup term *)
+            let ((normalized_todo, todo), dup_todos) =
+                let (a,b) = List.partition partition_f normalized_l2 in
+                let dt = List.map (fun ((_,_,dt), (_,p,t)) -> (get_compilation dt,p,t)) b
+                in
+                    (List.split a, dt)
             in
 
-            (* TODO: parser should disallow attributes with prefix "x_" *)
-            let is_bound_var ((a,b),x) = 
-                ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
-            in
-            let bindings = List.flatten (List.map
-                (function
-                    | Rel(reln,f) ->
-                          List.filter is_bound_var
-                              (List.combine f (List.assoc reln db_schema))
-                    | _ -> raise (Failure ("Expected a relation.")))
-                    br)
-            in
-                (n,p,apply_variable_substitution_to_term bindings t)
-        in
+                (* Track normalized targets for next step prior to recurring *)
+                List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
 
-        let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
-        let cdfr (reln, relsch) =
-            compile_delta_for_rel
-                reln relsch mapn params bigsum_vars negate term in
-        let (l1,l2) = (List.split (List.map cdfr db_schema)) in
+                (* Use correct map names for duplicate terms *)
+                let new_ma_aggs = todo@dup_todos in
+                let (maint_l, ready_in) = List.split (List.map
+                    (fun (reln, bound_vars, params, _, mapn, new_ma) ->
+                        generate_bytecode db_schema bigsum_vars_and_rels
+                            (reln, bound_vars, params, mapn, new_ma)
+                            new_ma_aggs)
+                    (List.flatten l1))
+                in
+                let ready = BG.create_dependent_handler_block ready_in in
 
-        let normalized_l2 = List.flatten (List.map2
-            (fun todo_l (reln, relsch) -> List.map normalize_term todo_l)
-            l2 db_schema)
-        in
-        let ((normalized_todo, todo), (normalized_dups, todo_dups)) =
-            let (a,b) =
-                List.partition partition_f
-                    (List.combine normalized_l2 (List.flatten l2))
-            in
-                (List.split a, List.split b)
-        in
-
-        (* Track normalized targets for next step prior to recurring *)
-        List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
-
-        (* Use correct map names for duplicate terms *)
-        let new_ma_aggs = todo@
-            (List.map2 (fun (_,_,dt) (_,p,t) -> (get_compilation dt,p,t))
-                normalized_dups todo_dups)
-        in
-        let (maint_l, ready_in) = List.split (List.map
-            (fun (reln, bound_vars, params, _, mapn, new_ma) ->
-                generate_bytecode db_schema bigsum_vars_and_rels
-                    (reln, bound_vars, params, mapn, new_ma)
-                    new_ma_aggs)
-            (List.flatten l1))
-        in
-        let ready = BG.create_dependent_handler_block ready_in in
-
-        (* Recur over non-duplicate terms *)
-        let (next_maint_l, next_l) = List.split(
-            List.map (fun (x,y,z) -> compile db_schema x y [] negate z) todo)
-        in
-            ((List.flatten next_maint_l)@maint_l,
-                BG.merge_handler_blocks ready (List.flatten next_l))
+                (* Recur over non-duplicate terms *)
+                let (next_maint_l, next_l, rem_l) =
+                    let nr = List.map (fun (x,y,z) ->
+                        compile db_schema x y [] negate (level-1) z) todo
+                    in
+                    let mnt = List.map (fun (x,_,_) -> x) nr in
+                    let nxt = List.map (fun (_,x,_) -> x) nr in
+                    let rem = List.map (fun (_,_,x) -> x) nr in
+                        (mnt,nxt,rem)
+                in
+                    ((List.flatten next_maint_l)@maint_l,
+                        BG.merge_handler_blocks ready (List.flatten next_l),
+                        (List.flatten rem_l))
+        end
 
 
     (* TODO: ensure disjoint input relations for term_l *)
@@ -392,11 +422,13 @@ struct
             (db_schema: (string * var_t list) list)
             (mapn: string)
             (params: var_t list)
+            (compilation_level: int)
             (term_l: A.term_t list)
             : (event * (string * var_t list * BG.ordered_blocks)) list
             =
         (* Reset bytecode generator for new compilation *)
         BG.clear_declarations();
+        BG.clear_relations();
 
         let debug_flattening l = 
             List.iter (fun (t,v) ->
@@ -426,9 +458,9 @@ struct
             in
             (* event_bc_l : handler_blocks list *)
             let event_bc_l = List.map (fun (t, bigsum_vars_and_rels) ->
-                let (maint_by_rel, bc) =
-                    compile db_schema
-                        mapn params bigsum_vars_and_rels negate_term t
+                let (maint_by_rel, bc, remaining_terms) =
+                    compile db_schema mapn params
+                        bigsum_vars_and_rels negate_term compilation_level t
                 in
 
 
@@ -466,8 +498,10 @@ struct
                 let (init_compute_bc, init_maintain_bc, final_compute_bc, final_maintain_bc) =
                     let icm_fcm_bc =
                         List.map (fun (rel, maint) ->
-                            BG.generate_map_maintenance rel db_schema
-                                constraint_bindings schema_bindings maint)
+                            let r = BG.generate_map_maintenance rel event_type db_schema
+                                constraint_bindings schema_bindings maint
+                            in
+                                r)
                             filtered_maint
                     in
                     let ic = List.map (fun (x,_,_,_) -> x) icm_fcm_bc in
@@ -486,14 +520,20 @@ struct
                         | _ -> raise (Failure "Invalid bigsum datastructure"))
                     bigsum_vars_and_rels)
                 in
+                let (init_rem_rel_bc, final_rem_rel_bc, remaining_bc) =
+                    BG.remaining_terms_as_bytecode event_type db_schema
+                        constraint_bindings schema_bindings remaining_terms
+                in
                 let bc_order = match event_type with
-                    | "insert" -> [init_compute_bc; bsv_maintenance_bc; init_maintain_bc; bc]
-                    | "delete" -> [final_maintain_bc; bsv_maintenance_bc; final_compute_bc; bc]
+                    | "insert" -> [init_compute_bc; bsv_maintenance_bc; init_maintain_bc; init_rem_rel_bc]
+                    | "delete" ->
+                          [final_maintain_bc; final_rem_rel_bc;
+                              bsv_maintenance_bc; final_compute_bc]
                     | _ -> raise (Failure "Invalid event type")
                 in
                     List.fold_left
                         (fun acc bl -> BG.append_handler_blocks acc bl)
-                        []  bc_order)
+                        [] (bc_order@[bc; remaining_bc]))
                 (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
             in
 
@@ -527,11 +567,12 @@ struct
     let compile_terms  (db_schema: (string * var_t list) list)
                        (mapn: string)
                        (params: var_t list)
+                       (compilation_level: int)
                        (term_l: A.term_t list)
                        : string * ((handler * event) list)
             =
-        let events_and_handlers = 
-            compile_terms_to_bytecode db_schema mapn params term_l
+        let events_and_handlers = compile_terms_to_bytecode
+            db_schema mapn params compilation_level term_l
         in
 
         (* Generate C++ source *)
@@ -555,10 +596,11 @@ struct
             (db_schema: (string * var_t list) list)
             (mapn: string)
             (params: var_t list)
+            (compilation_level: int)
             (term_l: A.term_t list)
             =
-        let events_and_handlers =
-            compile_terms_to_bytecode db_schema mapn params term_l
+        let events_and_handlers = compile_terms_to_bytecode
+            db_schema mapn params compilation_level term_l
         in
             List.flatten (List.map 
                 (fun (_, (_,_,ordered_blocks)) ->

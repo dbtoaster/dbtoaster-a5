@@ -83,10 +83,10 @@ sig
 
     val gc_incr : accumulator -> incr_op -> value -> code
 
-    val gc_map_set    : map_entry_t -> value -> code
-    val gc_map_update : map_entry_t -> value -> code
-    val gc_map_insert : map_entry_t -> code -> code
-    val gc_map_delete : map_entry_t -> (A.var_t * datastructure * ds_var_t) list -> code
+    val gc_map_set_arith : map_entry_t -> value -> code
+    val gc_map_update    : map_entry_t -> value -> code
+    val gc_map_insert    : map_entry_t -> code -> code
+    val gc_map_delete    : map_entry_t -> (A.var_t * datastructure * ds_var_t) list -> code
 
     val gc_declarations: (ds_var_t * datastructure) list -> code
 
@@ -492,7 +492,7 @@ struct
         in
             [gc_stmt (accumulator^" "^acc_op^" "^acc_val)]
 
-    let gc_map_set map_entry set_value =
+    let gc_map_set_arith map_entry set_value =
         let assign_val = gc_map_entry map_entry in
             [gc_stmt (assign_val^" = "^set_value)]
 
@@ -794,8 +794,21 @@ struct
     (* map_assign_t -> code *)
     let gc_map_assign_t s : L.code =
         begin match s with
-            | MapSet (ds, entry, arith_expr) ->
-                  L.gc_map_set entry (gc_arith_mapalg_t arith_expr)
+            | MapSet (ds, entry, map_expr) ->
+                  let val_type = match ds with
+                      | Map(_,vt) -> vt
+                      | _ -> raise (CodegenException
+                            "Expected a map datastructure") in
+                  (* Assign a value by setting it to zero first, and then incrementing *)
+                  let recompute_code = gc_mapalg_t
+                      (L.gc_map_entry entry) val_type L.OpSum map_expr in
+                  let reset_entry_code =
+                      L.gc_map_set_arith entry (L.gc_const (A.Int(0)))
+                  in
+                      L.merge_code [reset_entry_code; recompute_code]
+
+            | MapSetArith (ds, entry, arith_expr) ->
+                  L.gc_map_set_arith entry (gc_arith_mapalg_t arith_expr)
 
             | MapUpdate (ds, entry, arith_expr) ->
                   L.gc_map_update entry (gc_arith_mapalg_t arith_expr)
@@ -806,9 +819,8 @@ struct
                       | _ -> raise (CodegenException
                             "Expected a map datastructure.")
                   in
-                  let insert_code =
-                      gc_mapalg_t (L.gc_map_entry entry)
-                          val_type L.OpSum map_expr
+                  let insert_code = gc_mapalg_t
+                      (L.gc_map_entry entry) val_type L.OpSum map_expr
                   in
                       L.gc_map_insert entry insert_code
 

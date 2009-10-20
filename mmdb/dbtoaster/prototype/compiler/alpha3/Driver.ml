@@ -62,6 +62,8 @@ sig
 
     val add_source               : string -> unit
 
+    val compilation_level   : int ref
+
     val source_output_file  : string ref
     val binary_output_file  : string ref
 
@@ -69,7 +71,7 @@ sig
     val boost_dir           : string ref
  
     val cpp_compiler        : string ref
-                 
+
     val cxx_flags           : string ref
     val cxx_linker_flags    : string ref
     val cxx_linker_libs     : string ref
@@ -126,8 +128,10 @@ struct
             (ModeOption.get_extension ())
 
     (* Optional parameters *)
-    let cpp_compiler = ref "g++"
+    let compilation_level = ref max_int
+    let set_compilation_level i = compilation_level := i
 
+    let cpp_compiler = ref "g++"
     let set_cpp_compiler s = cpp_compiler := s
 
     let cxx_flags = ref ""
@@ -162,6 +166,7 @@ struct
         ("-d", String (set_data_sources_config), "data sources configuration");
         ("-m", Symbol (["code"; "query"; "test";],
             set_compile_mode), " compilation mode");
+        ("-r", Int (set_compilation_level), "recursive compilation level");
         ("-compiler", String (set_cpp_compiler), "C++ compiler");
         ("-cI", String (append_cxx_include_flags), "C++ include flags");
         ("-cL", String (append_cxx_linker_flags), "C++ linker flags");
@@ -495,7 +500,7 @@ struct
      *)
     let compile_query db_schema params terms_l out_file_name =
         let (global_decls, handlers_and_events) =
-            C.compile_terms db_schema "q" params terms_l in
+            C.compile_terms db_schema "q" params !CO.compilation_level terms_l in
         let out_chan =
             if out_file_name = "" then stdout else open_out out_file_name
         in
@@ -547,7 +552,7 @@ struct
         let code_out_chan = open_out out_file_name in
 
         let (global_decls, handlers_and_events) =
-            C.compile_terms db_schema "q" params terms_l
+            C.compile_terms db_schema "q" params !CO.compilation_level terms_l
         in
         let streams_handlers_and_events = List.map
             (fun (h, ((evt_type, evt_rel) as e)) ->
@@ -623,8 +628,7 @@ struct
                 end
         in
             begin match !CO.Modes.compile_mode with
-                | `Code -> compile_query db_schema
-                      params terms_l !CO.source_output_file
+                | `Code -> compile_query db_schema params terms_l !CO.source_output_file
 
                 | `Query ->
                       begin

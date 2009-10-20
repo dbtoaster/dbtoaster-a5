@@ -3,7 +3,7 @@ open Algebra;;
 (* Name functions used in the unit test for simpler refactoring *)
 module C = Compiler.MessageCompiler
 let compile_step = Compiler.compile_delta_for_rel
-let compile_main = C.compile_readable_messages
+let compile_main a b c d e f = C.compile_readable_messages a b c d e max_int f
 
 let pos = false
 let neg = true;;

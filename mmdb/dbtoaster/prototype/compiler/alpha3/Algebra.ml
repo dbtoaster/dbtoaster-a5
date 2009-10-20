@@ -220,6 +220,26 @@ let has_aggregates (m: term_t) : bool =
     let is_aggregate x = match x with | AggSum(_) -> true | _ -> false in
         List.exists is_aggregate leaves
 
+(* readable_relalg_t -> readable_relalg_lf_t list *)
+let rec get_base_relations_plan r =
+    let relalg_lf lf = match lf with
+        | Rel(_) -> [lf]
+        | AtomicConstraint(_, t1, t2) ->
+              (get_base_relations t1)@(get_base_relations t2)
+        | _ -> []
+    in
+        fold_relalg Util.ListAsSet.multiunion 
+            Util.ListAsSet.multiunion relalg_lf r
+
+(* readable_term_t -> readable_relalg_lf_t list *)
+and get_base_relations t =
+    let term_lf lf = match lf with
+        | AggSum(f,r) ->
+              (get_base_relations f)@(get_base_relations_plan r)
+        | _ -> []
+    in
+        fold_term Util.ListAsSet.multiunion 
+            Util.ListAsSet.multiunion term_lf t
 
 
 (* TODO: enforce that the variables occurring in f are among the
