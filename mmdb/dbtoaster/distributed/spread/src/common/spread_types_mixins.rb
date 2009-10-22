@@ -1,5 +1,7 @@
 require 'spread_types';
 require 'ok_mixins';
+require 'switch_node';
+require 'map_node';
 
 class NodeID
   def to_s
@@ -110,6 +112,39 @@ module MapNode
       end
     
       processor = MapNode::Processor.new(handler)
+      transport = Thrift::ServerSocket.new(port);
+      [handler, Thrift::NonblockingServer.new(
+        processor, 
+        transport, 
+        Thrift::FramedTransportFactory.new,
+        Thrift::BinaryProtocolFactory.new,
+        1,
+        Logger.default
+      )];
+    end
+  end
+end
+
+module SwitchNode
+  class Client
+    def close
+      @iprot.trans.close;
+    end
+    
+    def Client.connect(host, port)
+      transport = Thrift::FramedTransport.new(Thrift::Socket.new(host, port))
+      protocol = Thrift::BinaryProtocol.new(transport)
+      ret = SwitchNode::Client.new(protocol);
+      transport.open;
+      ret;
+    end
+  end
+  
+  class Processor
+    def Processor.listen(port)
+      handler = SwitchNodeHandler.new();
+    
+      processor = SwitchNode::Processor.new(handler)
       transport = Thrift::ServerSocket.new(port);
       [handler, Thrift::NonblockingServer.new(
         processor, 

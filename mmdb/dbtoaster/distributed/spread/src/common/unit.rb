@@ -60,6 +60,34 @@ end
 
 ###################################################
 
+class UnitTestSwitch
+  attr_reader :handler, :server;
+  
+  def initialize()
+    @handler, @server = SwitchNode::Processor.listen(52981);
+    @thread = nil;
+  end
+  
+  def start
+    @thread = Thread.new(@server, @name) do |server, name|
+      Logger.info {"Starting Node " + @name.to_s}
+      begin
+        server.serve;
+      rescue Exception => e;
+        puts "Error at Node " + name.to_s + ": " + e.to_s;
+        puts e.backtrace.join("\n");
+        exit;
+      end
+    end
+  end
+  
+  def stop
+    @thread.exit;
+  end
+end
+
+###################################################
+
 class UnitTestFetchStep
   def initialize(command, node_map)
     parsed = 
@@ -214,6 +242,21 @@ end
 
 ###################################################
 
+class UnitTestPersistStep
+  def initialize
+  end
+  
+  def fire
+    sleep 5 while true;
+  end
+  
+  def to_s
+    "Persisting until aborted";
+  end
+end
+
+###################################################
+
 class UnitTestHarness 
   def initialize()
     @nodes = Array.new;
@@ -221,7 +264,7 @@ class UnitTestHarness
     @indexmap = Hash.new;
     @puttemplates = Hash.new;
     @expected_dump = nil;
-    @switch = SwitchHandler.new;
+    @switch = UnitTestSwitch.new;
   end
   
   def add_node(name = @nodes.size.to_s)
@@ -236,6 +279,7 @@ class UnitTestHarness
     @nodes.each do |node|
       node.start();
     end
+    @switch.start;
   end
   
   def expect(dump_output)
@@ -261,7 +305,7 @@ class UnitTestHarness
           when "template" then
             cmd.shift; 
             @puttemplates[cmd.shift.to_i] = UpdateTemplate.new(cmd.join(" "));
-          when "fetch", "put", "dump", "sleep", "synch", "update" then cmdbuffer.push(cmd);
+          when "fetch", "put", "dump", "sleep", "synch", "update", "persist" then cmdbuffer.push(cmd);
           else 
             linebuffer.push(line) unless linebuffer == nil;
         end
@@ -273,11 +317,11 @@ class UnitTestHarness
       @puttemplates.each_pair do |id, cmd|
         node.handler.install_put_template(id, cmd);
       end
-      @switch.install_node(node.id, node.handler.partitions);
+      @switch.handler.install_node(node.id, node.handler.partitions);
     end
     Logger.debug { "Loading put templates into switch" }
     @puttemplates.each_pair do |id, cmd|
-      @switch.install_template(cmd, id)
+      @switch.handler.install_template(cmd, id)
     end
     cmdbuffer.each do |cmd|
       case cmd[0]
@@ -305,7 +349,9 @@ class UnitTestHarness
           @testcmds.push(UnitTestSleepStep.new(cmd[1]));
         when "update" then
           cmd.shift;
-          @testcmds.push(UnitTestUpdateStep.new(cmd.join(" "), @switch));
+          @testcmds.push(UnitTestUpdateStep.new(cmd.join(" "), @switch.handler));
+        when "persist" then
+          @testcmds.push(UnitTestPersistStep.new());
       end
     end
   end

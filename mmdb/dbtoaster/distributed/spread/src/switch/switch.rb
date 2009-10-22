@@ -6,7 +6,7 @@ require 'maplayout';
 
 ###################################################
 
-class SwitchHandler
+class SwitchNodeHandler
   def initialize
     @next_template = 0;
     @next_cmd = 1;
@@ -28,6 +28,7 @@ class SwitchHandler
   end
 
   def update(table, params)
+    raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |template|
       Logger.info { "Update triggered template: " + template.to_s }
       param_map = template.param_map(params);
