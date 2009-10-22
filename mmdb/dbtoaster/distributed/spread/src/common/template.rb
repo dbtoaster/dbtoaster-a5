@@ -132,7 +132,7 @@ class TemplateEntry
         end
       end
 
-    source = UpdateTemplate.get_map(source, keys.size).to_s unless source.is_number?
+    source = UpdateTemplate.get_map(source, Math.min(keys.size, 1)).to_s unless source.is_number?
     
     TemplateEntry.new(source, keys)  
   end

@@ -224,7 +224,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    Logger.warn {"Put on template " + template.to_s + " with Params: " + params.to_s }
+    Logger.debug {"Put on template " + template.to_s + " with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
@@ -232,7 +232,7 @@ class MapNodeHandler
   end
   
   def mass_put(id, template, expected_gets, params)
-    Logger.warn { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
+    Logger.debug { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|

@@ -146,7 +146,7 @@ $input.each do |line|
     if $count >= $stats_every then
       puts diff.to_s + " seconds; " + ($count.to_f / diff.to_f).to_s + " updates per sec"
       $count = 0;
-      puts switch.dump unless $test;
+      puts switch.dump if ($verbose && !$test);
       $starttime = Time.now;
     end
   end

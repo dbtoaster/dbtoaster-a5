@@ -109,7 +109,7 @@ class Slicer
     sleep 0.1 while servers.find { |s| !s.ready };
     Logger.info { "Servers started; starting client" }
     SlicerProcess.new(
-      SlicerProcess.base_path + "/bin/client.sh -q -s 8 -v " + 
+      SlicerProcess.base_path + "/bin/client.sh -q -s 10000 " + 
       @transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
       @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
       if @source then "< " + SlicerProcess.base_path + "/data/" + @source else "-h" end,

@@ -1,5 +1,5 @@
 config tpch_q18.unit
-source tmp_order_db_small
+#source tmp_order_db_small
 
 node Alpha@localhost:52982
 node Beta@localhost:52983
