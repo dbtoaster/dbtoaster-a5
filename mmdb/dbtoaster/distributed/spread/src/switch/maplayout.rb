@@ -73,7 +73,7 @@ class MapLayout
   def nodes
     nodes = Set.new;
     @maplist.each_value do |val|
-      @val.each do |pkey|
+      val.each do |pkey|
         nodes.add(pkey.node_name);
       end
     end

@@ -37,7 +37,7 @@ ARGV.each do |opt|
     Logger.debug { "GOT " + cmd[0].to_s }
     unless $name.nil? then
       if cmd[0] == "node" then
-        Logger.info { "Found start for node " + cmd[1] }
+        Logger.debug { "Found start for node " + cmd[1] }
         reading = (cmd[1] == $name)
         next;
       end
@@ -52,8 +52,9 @@ end
 handler, server = MapNode::Processor.listen($port);
 handler.setup(cmds);
 
-puts "done\nStarting server on port " + $port.to_s + "..."
+puts "done\nStarting node server on port " + $port.to_s + "..."
 
+Signal.trap("HUP") { exit }
 server.serve();
 
 puts "done\n";

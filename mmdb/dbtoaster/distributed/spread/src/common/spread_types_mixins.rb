@@ -110,7 +110,10 @@ module MapNode
           end
         );
       end
-    
+      
+      logger = Logger.new(STDOUT);
+        logger.level = Logger::INFO;
+
       processor = MapNode::Processor.new(handler)
       transport = Thrift::ServerSocket.new(port);
       [handler, Thrift::NonblockingServer.new(
@@ -119,7 +122,7 @@ module MapNode
         Thrift::FramedTransportFactory.new,
         Thrift::BinaryProtocolFactory.new,
         1,
-        Logger.default
+        logger
       )];
     end
   end
@@ -143,7 +146,8 @@ module SwitchNode
   class Processor
     def Processor.listen(port)
       handler = SwitchNodeHandler.new();
-    
+      logger = Logger.new(STDOUT);
+        logger.level = Logger::INFO;
       processor = SwitchNode::Processor.new(handler)
       transport = Thrift::ServerSocket.new(port);
       [handler, Thrift::NonblockingServer.new(
@@ -152,7 +156,7 @@ module SwitchNode
         Thrift::FramedTransportFactory.new,
         Thrift::BinaryProtocolFactory.new,
         1,
-        Logger.default
+        logger
       )];
     end
   end

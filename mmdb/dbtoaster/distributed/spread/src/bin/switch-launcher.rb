@@ -71,7 +71,7 @@ puttemplates.each_pair do |id, cmd|
   puts "Loaded Template " + id.to_s + ": ON " + cmd.relation.to_s + "(" + cmd.paramlist.join(",") + ")";
 end
 
-puts "done\nStarting server..."
+puts "done\nStarting switch server on port " + port.to_s + "..."
 
 server.serve();
 

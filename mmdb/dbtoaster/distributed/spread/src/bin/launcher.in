@@ -7,9 +7,10 @@ INCLUDES="
   -I $SRCDIR/common
   -I $SRCDIR/node
   -I $SRCDIR/switch
+  -I $SRCDIR/slicer
   -I $SRCDIR/gen-rb"
 
-echo ========================
-echo ruby $INCLUDES $SRCDIR/bin/--SCRIPT-- $*
-echo ========================
+#echo ========================
+#echo ruby $INCLUDES $SRCDIR/bin/--SCRIPT-- $*
+#echo ========================
 ruby $INCLUDES $SRCDIR/bin/--SCRIPT-- $*

@@ -18,7 +18,7 @@ class CommitNotification
   
   def fire(entry, value)
     return if value.nil?;
-    Logger.info {"Fired Notification: " + entry.to_s + " = " + value.to_s }
+    Logger.debug {"Fired Notification: " + entry.to_s + " = " + value.to_s }
     @record.discover(entry, value);
   end
 end
@@ -192,8 +192,10 @@ class MapNodeHandler
         # If the value is known, then get() will fire immediately.
         # in this case, get() will call discover, which will in turn remove
         # the requirement from @required.
-        # Note also that discover will fire the callbacks if it is necessary to do so. 
+        # Note also that discover will fire the callbacks if it is necessary to do so.
+        Logger.debug { "checking for : " + req.to_s } 
         find_partition(req.source, req.key) do |partition| 
+          Logger.debug { "found : " + partition.to_s + ":" + partition.dump }
           partition.get(req, CommitNotification.new(record)) 
         end;
       rescue Thrift::Exception => e;
@@ -222,7 +224,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    Logger.info {"Put on template " + template.to_s + " with Params: " + params.to_s }
+    Logger.warn {"Put on template " + template.to_s + " with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
@@ -230,13 +232,15 @@ class MapNodeHandler
   end
   
   def mass_put(id, template, expected_gets, params)
-    Logger.info { "Mass Put with Params: " + params.to_s }
+    Logger.warn { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
       discovery.add_record(partition.mass_insert(id, valuation));
     end
     install_discovery(id, discovery, valuation.params);
+    # If we aren't waiting for anything, we need to trick the discovery multiplexer into firing a commit.
+    discovery.finish_message if expected_gets <= 0;
   end
   
   def get(target)

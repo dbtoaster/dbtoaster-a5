@@ -22,11 +22,13 @@ GetoptLong.new(
   [ "--transform"  , "-t", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--test"       , "-e", GetoptLong::NO_ARGUMENT ],
   [ "--tpch-stream", "-h", GetoptLong::NO_ARGUMENT ],
+  [ "--verbose"    , "-v", GetoptLong::NO_ARGUMENT ],
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ]
 ).each do |opt, arg|
   case opt
-    when "--quiet", "-q" then $interactive = false;
+    when "--quiet", "-q" then 
+      $interactive = false; $verbose = false;
     
     when "--use", "-u" then 
       match = / *([a-zA-Z\-+_]+) *\(([^)]*)\)/.match(arg);
@@ -34,18 +36,22 @@ GetoptLong.new(
       $cols[match[1]] = match[2].split(/ *, */).collect { |i| i.to_i };
       
     when "--transform", "-t" then
-      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+)|!)/.match(arg)
+      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+)|!|%[0-9]+)/.match(arg)
       raise "Invalid transform argument: " + arg unless match;
       $transforms.assert_key(match[1]){ Hash.new }.assert_key(match[2].to_i){ Array.new }.push(
         case match[3][0]
           when "~"[0] then [:regex, Regexp.new(match[4]), match[5]]
           when "<"[0] then [:cmp, match[6], match[7].split(/ *, */)]
           when "!"[0] then [:intify, Hash.new, 0]
+          when "%"[0] then [:mod, match[8]]
           else raise "Error: Unknown transform type: " + match[3]
         end)
         
     when "--test", "-e" then
       $test = true; $verbose = true;
+    
+    when "--verbose", "-v" then
+      $verbose = true;
       
     when "--tpch-stream", "-h" then
       tpch_dir = File.dirname(__FILE__) + "/../tpch-simple";
@@ -112,7 +118,9 @@ $input.each do |line|
                     if compare_date(t[2], params) then "1" else "0" end;
                 end
               when :intify then
-                t[1].assert_key(params[col.to_i]) { t[2] += 1; }.to_s
+                t[1].assert_key(params[col.to_i]) { t[2] += 1; }.to_s;
+              when :mod then
+                params[col.to_i] % t[1];
             end
         end
       end
@@ -138,6 +146,7 @@ $input.each do |line|
     if $count >= $stats_every then
       puts diff.to_s + " seconds; " + ($count.to_f / diff.to_f).to_s + " updates per sec"
       $count = 0;
+      puts switch.dump unless $test;
       $starttime = Time.now;
     end
   end

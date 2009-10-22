@@ -128,6 +128,13 @@ class MassPutRecord
       @callbacks = nil;
     end
   end
+  
+  def to_s(recurse = false)
+    unless recurse then "Mass Puts: " else ", " end +
+      "v"+@version.to_s+" (template:" + @template.to_s + "; " +
+      if ready then "" else " not" end +
+      " ready)" + if @next then @next.to_s(true) else "" end;
+  end
 end
 
 ###################################################
@@ -418,11 +425,12 @@ class MapPartition
   end
   
   def dump
+    @massputrecords.to_s + "\n" + 
     @data.values.sort do |a, b|
       a.target.key <=> b.target.key
     end.collect do |entry|
       "Map " + entry.target.to_s + " : " + entry.to_s
-    end.join "\n";
+    end.join("\n");
   end
   
 end

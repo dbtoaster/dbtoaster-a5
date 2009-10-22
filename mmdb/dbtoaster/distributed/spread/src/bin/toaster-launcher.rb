@@ -75,7 +75,7 @@ $domain_directives = $domain_directives.collect_hash do |e| [e[0], e[1].split(",
 
 map_info =
   UpdateTemplate.map_names.collect do |map,info|
-    domain = $domain_directives.assert_key(map) { Array.new(info["params"], 1000) };
+    domain = $domain_directives.assert_key(map) { Array.new(info["params"], 100000) };
     raise "Domain with invalid dimension.  Map: " + map + "; Expected: " + info["params"].to_s + "; Saw: " + domain.size.to_s unless info["params"].to_i == domain.size;
     
     split_partition = $partition_directives.assert_key(map) { 0 };

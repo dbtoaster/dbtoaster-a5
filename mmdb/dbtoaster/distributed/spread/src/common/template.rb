@@ -428,8 +428,8 @@ end
 class UpdateTemplate
   attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index;
   attr_writer :index;
-  @@map_names = { "q" => { "id" => 1, "params" => 0 } };
-  @@map_id = 1;
+  @@map_names = Hash.new;
+  @@map_id = 0;
   
   def initialize(line, index = 0)
     line = line.split("\t");

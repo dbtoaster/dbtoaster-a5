@@ -62,7 +62,7 @@ class SwitchNodeHandler
   def dump()
     @layout.nodes.collect do |n|
       "\n-----------" + n.to_s + "-----------\n" + node(n).dump;
-    end
+    end.join("\n");
   end
   
   def install_template(template, index = (@next_template += 1))
