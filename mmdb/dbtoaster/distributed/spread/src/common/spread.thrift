@@ -66,5 +66,7 @@ service MapNode {
 
 service SwitchNode {
   void update( 1: string table, 
-               2: list<string> params) throws (1:SpreadException error)
+               2: list<string> params) throws (1:SpreadException error),
+  
+  string dump()
 }

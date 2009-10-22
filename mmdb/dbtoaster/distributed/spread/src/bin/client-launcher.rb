@@ -22,7 +22,8 @@ GetoptLong.new(
   [ "--transform"  , "-t", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--test"       , "-e", GetoptLong::NO_ARGUMENT ],
   [ "--tpch-stream", "-h", GetoptLong::NO_ARGUMENT ],
-  [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ]
+  [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
+  [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ]
 ).each do |opt, arg|
   case opt
     when "--quiet", "-q" then $interactive = false;
@@ -54,6 +55,15 @@ GetoptLong.new(
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;
       puts "Will print stats every : " + $stats_every.to_s;
+    
+    when "--dump", "-d" then
+      unless arg.nil? || arg == "" then
+        arg = arg.split(":");
+        puts MapNode::Client.connect(arg[0], if arg.size > 1 then arg[1] else 52982 end).dump;
+      else
+        puts SwitchNode::Client.connect("localhost", 52981).dump;
+      end
+      exit(0);
   end
 end
 

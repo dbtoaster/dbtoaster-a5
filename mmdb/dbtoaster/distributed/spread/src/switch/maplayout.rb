@@ -70,6 +70,16 @@ class MapLayout
     end
   end
   
+  def nodes
+    nodes = Set.new;
+    @maplist.each_value do |val|
+      @val.each do |pkey|
+        nodes.add(pkey.node_name);
+      end
+    end
+    nodes.to_a;
+  end
+  
   def find_nodes(write, reads)
     (reads.clone << write).each do |entry| raise SpreadException.new("Invalid Entry " + entry.to_s + "; No map with that id") unless @maplist.has_key? entry.source; end;
     

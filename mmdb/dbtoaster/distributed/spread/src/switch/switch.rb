@@ -59,6 +59,12 @@ class SwitchNodeHandler
     end
   end
   
+  def dump()
+    @nodelist.nodes.collect do |n|
+      "\n-----------" + n.to_s + "-----------\n" + node(n).dump;
+    end
+  end
+  
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
     template.index = index;
