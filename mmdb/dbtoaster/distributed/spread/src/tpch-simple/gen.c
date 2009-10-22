@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <getopt.h>
 
 #define DECLARER				/* EXTERN references get defined here */
 #include "shared.h"
