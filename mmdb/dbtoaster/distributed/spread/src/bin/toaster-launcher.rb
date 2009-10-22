@@ -53,7 +53,7 @@ data = DBT.readlines
 
 # line 1 is the annoying-ass header.  Delete it
 compiled = data.drop_front.join("").gsub(/^.*string list[^\[]*\[([^#]*)"\]\n.*/, "\\1").split("\";").collect do |l|
-  l.gsub(/^ *\n? *"([^"]*) *\n?/, "\\1\n").gsub(/\\t/, "	").gsub(/\[\]/, "[1]");
+  l.gsub(/^ *\n? *"([^"]*) *\n?/, "\\1\n").gsub(/\\t/, "	").gsub(/\[\]/, "[1]").gsub(/^ *\+/, "");
 end
 
 if compiled.size < 2 then
@@ -62,9 +62,10 @@ if compiled.size < 2 then
 end
 
 # 2nd half of the rules are deletion rules.  Kill them for now.
-compiled = compiled.slice(0, compiled.size/2);
+# compiled = compiled.slice(0, compiled.size/2);
 
 templates = compiled.collect do |l|
+  puts "Loading template: " + l;
   UpdateTemplate.new(l);
 end
 

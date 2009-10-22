@@ -307,8 +307,11 @@ class TemplateExpression
   def TemplateExpression.decode_var(tokenizer)
     case tokenizer.next
       when "(" then decode(tokenizer);
-      when "+","-","*","/",")" then 
+      when "+","*","/",")" then 
         raise SpreadException.new("Parse Error: Found "+tokenizer.last+" instead of rval");
+      when "-" then
+        raise SpreadException.new("Parse Error: Found - instead of rval") unless tokenizer.next.is_number?;
+        TemplateExpression.new(:val, tokenizer.last.to_i * -1);
       when "Map" then
         TemplateExpression.new(:map, TemplateEntry.decode(tokenizer));
       else
