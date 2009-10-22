@@ -60,7 +60,7 @@ class SwitchNodeHandler
   end
   
   def dump()
-    @nodelist.nodes.collect do |n|
+    @layout.nodes.collect do |n|
       "\n-----------" + n.to_s + "-----------\n" + node(n).dump;
     end
   end
