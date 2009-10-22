@@ -16,7 +16,10 @@ class SwitchNodeHandler
   end
   
   def node(name)
-    @nodelist.assert_key(name) { MapNode::Client.connect(name.host, name.port) };
+    @nodelist.assert_key(name) do
+      Logger.info { "Establishing connection to : " + name.to_s; }
+      MapNode::Client.connect(name.host, name.port); 
+    end;
   end
   
   def cmdid
@@ -31,6 +34,7 @@ class SwitchNodeHandler
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |template|
       Logger.info { "Update triggered template: " + template.to_s }
+      raise SpreadException.new("Invalid row size (" + params.size.to_s + " and not " + template.paramlist.size.to_s + ") for template: " + template.to_s) unless params.size == template.paramlist.size;
       param_map = template.param_map(params);
       @layout.find_nodes(
         template.target.clone(param_map),

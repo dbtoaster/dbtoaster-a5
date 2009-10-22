@@ -157,7 +157,8 @@ void parse_args(int argc, char** argv){
   while((opt = getopt(argc, argv, "n:")) >= 0){
     switch(opt){
       case 'n':
-        number_of_iterations = atoi(optarg);
+        if(optarg[0] == 'u') { number_of_iterations = -1; }
+        else { number_of_iterations = atoi(optarg); }
         break;
     }
   }
@@ -219,7 +220,7 @@ int main(int argc, char** argv) {
     sd_order(0, rowcnt);
     sd_line(0, rowcnt);
   }
-  for(i = 0; i < number_of_iterations; i++)
+  for(i = 0; (i < number_of_iterations) || (number_of_iterations < 0); i++)
   {
     order_t order;
     customer_t cust;

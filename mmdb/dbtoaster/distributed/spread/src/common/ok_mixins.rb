@@ -113,13 +113,12 @@ class Logger
   def Logger.default_name=(default_name)
     @@default_name = default_name;
   end
+  def Logger.default_name
+    if @@default_name.nil? then caller_info(1) else @@default_name end;
+  end
   
   def Logger.caller_info(steps = 0)
-    begin
-      raise Exception.new;
-    rescue Exception => e;
-      return e.backtrace[2+steps].gsub(/in `([^']*)'/, "\\1").gsub(/.*\/([^\/]*)$/, "\\1")
-    end
+    caller[1+steps].gsub(/in `([^']*)'/, "\\1").gsub(/.*\/([^\/]*)$/, "\\1")
   end
   
   def Logger.default=(logger)
@@ -147,12 +146,6 @@ class Logger
   end
   def Logger.temp(string)
     Logger.info(string, "TEMPORARY");
-  end
-
-  private
-    
-  def Logger.default_name
-    if @@default_name.nil? then caller_info(1) else @@default_name end;
   end
 
 end

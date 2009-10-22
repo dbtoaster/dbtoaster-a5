@@ -172,7 +172,7 @@ class MapNodeHandler
 
   def create_valuation(template, param_list)
     if ! @templates.has_key? template then 
-      raise SpreadException.new("Unknown put template: " + template); 
+      raise SpreadException.new("Unknown put template: " + template.to_s); 
     end
     
     valuation = TemplateValuation.new(@templates[template], param_list);
@@ -222,7 +222,7 @@ class MapNodeHandler
 
 
   def put(id, template, params)
-    Logger.debug {"Put with Params: " + params.to_s }
+    Logger.info {"Put on template " + template.to_s + " with Params: " + params.to_s }
     valuation = create_valuation(template, params.decipher);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
@@ -338,7 +338,7 @@ class MapNodeHandler
           );
         when "template" then 
           cmd.shift; 
-          create_put_template(cmd.shift, cmd.join(" "));
+          install_put_template(cmd.shift, UpdateTemplate.new(cmd.join(" ")));
       end
     end
   end

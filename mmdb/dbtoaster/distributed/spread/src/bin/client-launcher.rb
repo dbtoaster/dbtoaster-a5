@@ -14,13 +14,15 @@ $test = false;
 $cols = Hash.new;
 $transforms = Hash.new;
 $input = STDIN
+$stats_every = -1;
 
 GetoptLong.new(
   [ "--quiet"      , "-q", GetoptLong::NO_ARGUMENT ],
   [ "--use"        , "-u", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--transform"  , "-t", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--test"       , "-e", GetoptLong::NO_ARGUMENT ],
-  [ "--tpch-stream", "-s", GetoptLong::OPTIONAL_ARGUMENT ]
+  [ "--tpch-stream", "-h", GetoptLong::NO_ARGUMENT ],
+  [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ]
 ).each do |opt, arg|
   case opt
     when "--quiet", "-q" then $interactive = false;
@@ -31,22 +33,27 @@ GetoptLong.new(
       $cols[match[1]] = match[2].split(/ *, */).collect { |i| i.to_i };
       
     when "--transform", "-t" then
-      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+))/.match(arg)
+      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+)|!)/.match(arg)
       raise "Invalid transform argument: " + arg unless match;
       $transforms.assert_key(match[1]){ Hash.new }.assert_key(match[2].to_i){ Array.new }.push(
         case match[3][0]
           when "~"[0] then [:regex, Regexp.new(match[4]), match[5]]
           when "<"[0] then [:cmp, match[6], match[7].split(/ *, */)]
+          when "!"[0] then [:intify, Hash.new, 0]
           else raise "Error: Unknown transform type: " + match[3]
         end)
         
     when "--test", "-e" then
       $test = true; $verbose = true;
       
-    when "--tpch-stream", "-s" then
+    when "--tpch-stream", "-h" then
       tpch_dir = File.dirname(__FILE__) + "/../tpch-simple";
       Dir.chdir(tpch_dir)
-      $input = open("|./streamgen" + if arg.nil? then "" else " " + arg end, "r");
+      $input = open("|./streamgen -n u");
+    
+    when "--stats", "-s" then
+      $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;
+      puts "Will print stats every : " + $stats_every.to_s;
   end
 end
 
@@ -69,8 +76,11 @@ def compare_date(indices, params)
   return true;
 end
 
+$starttime = nil;
+$count = 0;
 print "\n>> " if $interactive;
 $input.each do |line|
+  $starttime = Time.now unless $starttime;
   args = / *([a-zA-Z\-+_]+) *\(([^)]*)\)/.match(line);
   unless args then
     puts "ERROR: can not parse '" + line + "'";
@@ -91,6 +101,8 @@ $input.each do |line|
                   when "d" then
                     if compare_date(t[2], params) then "1" else "0" end;
                 end
+              when :intify then
+                t[1].assert_key(params[col.to_i]) { t[2] += 1; }.to_s
             end
         end
       end
@@ -110,4 +122,13 @@ $input.each do |line|
     puts "Error: " + e.to_s;
   end
   print "\n>> " if $interactive;
+  if $stats_every >= 0 then
+    $count += 1;
+    diff = (Time.now - $starttime)
+    if $count >= $stats_every then
+      puts diff.to_s + " seconds; " + ($count.to_f / diff.to_f).to_s + " updates per sec"
+      $count = 0;
+      $starttime = Time.now;
+    end
+  end
 end

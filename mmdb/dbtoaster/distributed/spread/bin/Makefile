@@ -1,5 +1,5 @@
 
-LAUNCHER_SCRIPTS=node.sh client.sh unit.sh toaster.sh
+LAUNCHER_SCRIPTS=node.sh client.sh unit.sh toaster.sh switch.sh
 
 all: $(LAUNCHER_SCRIPTS) dbtoaster.top
 
