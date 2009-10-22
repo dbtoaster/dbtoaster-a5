@@ -61,6 +61,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <errno.h>
+#define __USE_BSD
 #include <string.h>
 #ifdef HP
 #include <strings.h>
