@@ -168,6 +168,7 @@ struct
             set_compile_mode), " compilation mode");
         ("-r", Int (set_compilation_level), "recursive compilation level");
         ("-compiler", String (set_cpp_compiler), "C++ compiler");
+        ("-cflags", String (append_cxx_flags), "C++ compiler flags");
         ("-cI", String (append_cxx_include_flags), "C++ include flags");
         ("-cL", String (append_cxx_linker_flags), "C++ linker flags");
         ("-cl", String (append_cxx_linker_libs), "C++ linker libraries");

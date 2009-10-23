@@ -80,3 +80,19 @@ let compile_sql_to_bytecode sql_str compilation_level =
                     params compilation_level (List.map make_term t_l))
             expr_l)
 ;;
+
+let test_flatten sql_str params =
+    let x = List.map make_term (parse_sql_to_term sql_str) in
+    let flat_term_l = List.map
+        (fun x -> let (tc,bsv) = flatten_term params x in
+            (mk_cond_agg tc, bsv))
+        (List.map readable_term (List.map roly_poly x))
+    in
+        flat_term_l
+
+let test_simplify sql_str rel relsch mapn params bigsum_vars =
+    let flat_terms = test_flatten sql_str params in
+        Compiler.compile_delta_for_rel rel relsch mapn params bigsum_vars false
+            (make_term (fst (List.hd flat_terms)))
+;;
+

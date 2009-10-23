@@ -26,7 +26,7 @@ create table SSB_LINEORDER (
         linenumber integer,
         custkey bigint, partkey bigint, suppkey bigint,
         orderdate bigint,
-        orderpriority text, shippriority text,
+        orderpriority text, shippriority integer,
         quantity double,
         extendedprice double, ordtotalprice double,
         discount double, revenue double, supplycost double,

@@ -64,11 +64,11 @@ sig
     val gc_map_predicate:
         (A.comp_t * value * value) list -> code -> code -> code
 
-    val gc_for_loop : datastructure -> ds_var_t -> A.var_t list -> code -> code
+    val gc_for_loop : datastructure -> ds_var_t -> (A.var_t * int) list -> code -> code
 
     val gc_constraint : code -> A.comp_t -> value -> value -> code
 
-    val gc_relation : code -> datastructure -> ds_var_t -> A.var_t list -> code
+    val gc_relation : code -> datastructure -> ds_var_t -> (A.var_t * int) list -> code
 
     val gc_union : code list -> code
 
@@ -136,7 +136,7 @@ struct
             if (String.length s) <= len then indent_break s
             else
                 (* Break at nearest whitespace to len *)
-                let delims = ['?'; '('; ' '] in
+                let delims = ['?'; '('; ' '; ','] in
                 let last_pos =
                     List.fold_left
                         (fun pos d -> if pos <> len then pos else
@@ -244,7 +244,7 @@ struct
     (* Operator, and value stringifiers *)
     let gc_comp_op op =
         match op with
-            | A.Eq -> "==" | A.Lt -> "<" | A.Le -> "<=" | A.Neq -> "<>"
+            | A.Eq -> "==" | A.Lt -> "<" | A.Le -> "<=" | A.Neq -> "!="
 
     let gc_const (v) = 
         match v with
@@ -399,17 +399,23 @@ struct
         in
             gc_if_cond cond then_code else_code
 
-    let gc_for_loop datastructure dom_var loop_vars inner_code =
+    let gc_for_loop datastructure dom_var loop_vars_and_pos inner_code =
+        let debug_loop_decls dom_var vars =
+            print_endline ("Loop declarations "^dom_var^": "^
+                (String.concat "," (List.map (fun (x,_) -> fst x) vars)))
+        in
         let it_type_t = gc_iterator_type datastructure in
         let (begin_it, end_it) =
             (gc_iterator dom_var "it", gc_iterator dom_var "end") in
+
+        debug_loop_decls dom_var loop_vars_and_pos;
+
         let loop_var_decls =
-            fst (List.fold_left
-                (fun (decl_acc,counter) var_t ->
-                    (decl_acc@
-                        [gc_ds_decl datastructure var_t begin_it counter],
-                    counter+1))
-                ([], 0) loop_vars)
+            List.map (fun (var_t, pos) ->
+                gc_ds_decl datastructure var_t begin_it pos)
+                (List.fold_left (fun acc (x,pos) ->
+                    if List.mem_assoc x acc then acc else acc@[x,pos])
+                    [] loop_vars_and_pos)
         in
         let ds_name = gc_ds_var dom_var in
         let loop_code =
@@ -422,8 +428,8 @@ struct
     let gc_constraint inner_code op lv rv =
         (["if "^(gc_comparison (op, lv, rv))])@(gc_block inner_code)
 
-    let gc_relation inner_code ds ds_var loop_vars =
-        gc_for_loop ds ds_var loop_vars inner_code
+    let gc_relation inner_code ds ds_var rel_vars_and_pos =
+        gc_for_loop ds ds_var rel_vars_and_pos inner_code
 
     (* Notes:
      * -- we assume an accumulator model of computing aggregates, where
@@ -519,7 +525,10 @@ struct
                       ("gc_map_delete: unexpected map datastructure dependency.")))
             deps
         in
-        let delete_pred = gc_conjunctive_predicate delete_conjuncts in
+        let delete_pred =
+            let r = gc_conjunctive_predicate delete_conjuncts in
+                if List.length delete_conjuncts = 1 then r else gc_value_block r
+        in
         let delete_code = 
             [gc_stmt ((gc_ds_var map_var)^
                 ".erase("^(gc_map_keys map_keys)^")")]
@@ -628,7 +637,10 @@ struct
                       L.merge_code [l_code; r_code; constraint_code]
 
             | Rel(n,f,ds) ->
-                  L.gc_relation outer_code ds n f
+                  let rel_vars_and_pos = snd (List.fold_left
+                      (fun (cnt,acc) v -> (cnt+1, acc@[v,cnt])) (0,[]) f)
+                  in
+                      L.gc_relation outer_code ds n rel_vars_and_pos 
 
     (* Naive implementation processes constraints inside loops *)
     (* code -> RelAlgBase.term_t list -> code *)
@@ -1115,7 +1127,7 @@ struct
         let mp2_init =
             MapInsert(mp2_ds, ("m", [MKVar("P", A.TInt)]), init_code) in
         let map_assigns = [
-            ForEach(mp2_ds, "m", [("P", A.TInt)],
+            ForEach(mp2_ds, "m", [(("P", A.TInt), 0)],
                 [Assign([MapAssign([mp2_incr])])]);
             Assign([MapAssign([mp2_init])]); ]
         in

@@ -3,16 +3,101 @@ open Algebra
 (* datastructure to track compilations for eliminating duplicate maps *)
 let terms_compiled = ref []
 
-let add_compilation t mapn = terms_compiled := (!terms_compiled)@[t,mapn]
+let add_compilation t mapn =
+    print_endline ("Adding compilation of "^mapn^": "^(term_as_string t []));
+    terms_compiled := (!terms_compiled)@[t,mapn]
+
 let is_compiled t = List.mem_assoc t (!terms_compiled)
 let get_compilation t = List.assoc t (!terms_compiled)
 let clear_compilation () = terms_compiled := []
 
-let debug_compilation () = 
-    List.iter
-        (fun (x,y) ->
-            print_endline ("compiled("^y^"): "^(term_as_string x [])))
-        (!terms_compiled)
+
+module Debug =
+struct
+    let debug_compilation () = 
+        List.iter
+            (fun (x,y) ->
+                print_endline ("compiled("^y^"): "^(term_as_string x [])))
+            (!terms_compiled)
+
+    let debug_add_name name x p =
+        print_endline ("Creating map "^name^" for term "^(term_as_string x []));
+        print_endline ("Map "^name^" params: "^(String.concat "," (List.map fst p)))
+
+    let debug_partition_f ((x,y,z), (a,b,c)) =
+        print_endline ("dupcheck: "^(term_as_string z []));
+        debug_compilation();
+        let r = not(is_compiled(z)) in
+            if not r then print_endline
+                ("found duplicate "^(term_as_string z []));
+            r
+
+    let debug_compile_bindings br bindings =
+        let string_of_var (n,t) = n in
+        let string_of_vars l = String.concat ","
+            (List.map (fun (x,_) -> string_of_var x) l) in
+        let ambiguous =
+            List.map (fun (x,y) ->
+                ((x,y), List.filter (fun (u,v) -> x=u && y<>v) bindings))
+                bindings in
+        let duplicates =
+            List.map (fun (x,y) ->
+                ((x,y), List.filter (fun (y,_) -> x=y) bindings))
+                bindings
+        in
+            List.iter (function
+                | Rel(reln,f) -> print_endline ("rel: "^reln^" "^
+                      (String.concat "," (List.map fst f)))
+                | _ -> raise (Failure ("Expected a relation."))) br;
+            List.iter (fun (x,y) ->
+                print_endline ("bd: "^(fst x)^"->"^(fst y))) bindings;
+            List.iter
+                (fun ((x,_), al) -> print_endline
+                    ("Ambiguous bindings for "^(string_of_var x)^
+                        ": "^(string_of_vars al)))
+                (List.filter (fun (_, al) -> List.length al <> 0) ambiguous);
+            List.iter
+                (fun ((x,_), dl) -> print_endline 
+                    ("Duplicate bindings for "^(string_of_var x)^
+                        ": "^(string_of_vars dl)))
+                (List.filter (fun (_, dl) -> List.length dl > 1) duplicates)
+
+    let debug_compile_delta_inputs mapn params bigsum_vars =
+        print_endline ("compile_delta "^mapn^" input params: "^
+            (String.concat "," (List.map fst params)));
+        print_endline ("compile_delta "^mapn^" input bsvars: "^
+            (String.concat "," (List.map fst bigsum_vars)))
+
+    let debug_compile_delta_outputs mapn r =
+        List.iter (fun (a,b,c,d,e,f) ->
+            print_endline ("compile_delta "^mapn^" output bounds: "^
+                (String.concat "," (List.map fst b)));
+            print_endline ("compile_delta "^mapn^" output params: "^
+                (String.concat "," (List.map fst c)));
+            print_endline ("compile_delta "^mapn^" output bsvars: "^
+                (String.concat "," (List.map fst d))))
+            (fst r)
+ 
+    let debug_generate_bytecode_inputs mapn params =
+        print_endline ("gen bytecode "^mapn^" input params: "^
+            (String.concat "," (List.map fst params)))
+
+    let debug_compile_delta_duplicates t l =
+        List.iter (fun (n,p,(n2,p2,t2)) ->
+            print_endline ("Found dup for term "^(term_as_string t []));
+            print_endline (n^" params: "^(String.concat ", " (List.map fst p)));
+            print_endline (n2^" params: "^(String.concat ", " (List.map fst p2)))) l
+
+    let debug_flattening l = 
+        List.iter (fun (t,v) ->
+            print_endline "Flattened: ";
+            print_endline (term_as_string (make_term t) []);
+            print_endline ("Bigsum vars: "^
+                (String.concat "," (List.map (fun ((n,t),_,_) -> n) v))))
+            l
+
+end
+
 
 (* Returns a mapping from variables in the delta, to their original names *)
 let get_bindings db_schema relations =
@@ -20,19 +105,32 @@ let get_bindings db_schema relations =
     let is_bound_var ((a,b),x) = 
         ((String.length a) > 2) && ((String.sub a 0 2) = "x_")
     in
-        Util.ListAsSet.multiunion (List.map (function
-            | Rel(reln,f) -> List.filter is_bound_var
-                  (List.combine f (List.assoc reln db_schema))
-            | _ -> raise (Failure ("Expected a relation.")))
-            relations)
+    let merge_bound_vars init l =
+        List.fold_left (fun acc (x,y) ->
+            if List.mem_assoc x acc then acc else acc@[x,y])
+            init l
+    in
+        List.fold_left (fun acc lf ->
+            match lf with
+                | Rel(reln,f) ->
+                      let f_bv = List.filter is_bound_var
+                          (List.combine f (List.assoc reln db_schema))
+                      in
+                          merge_bound_vars acc f_bv
+
+                | _ -> raise (Failure ("Expected a relation.")))
+            [] relations
 
 (* Reset any bound or loop vars to their original name *)
 let normalize_term db_schema ((n,p,t) as orig) =
     let br = Util.ListAsSet.no_duplicates (get_base_relations (readable_term t))
     in
-        (*debug_compile_bindings br (get_bindings db_schema br);*)
-        ((n,p,apply_variable_substitution_to_term
-            (get_bindings db_schema br) t), orig)
+    print_endline ("Dups: "^(string_of_int (List.length br))^" "^
+        (string_of_int (List.length (Util.ListAsSet.no_duplicates br))));
+    let bindings = get_bindings db_schema br in
+        Debug.debug_compile_bindings br bindings;
+        let new_t = apply_variable_substitution_to_term bindings t in
+            ((n,p,new_t), orig)
 
 
 (* One-step delta compilation, used by both message and bytecode compiler. *)
@@ -43,15 +141,20 @@ let compile_delta_for_rel (reln:   string)
         (bigsum_vars: var_t list)
         (negate: bool)
         (term: term_t) =
+    let debug_identities identities = 
+        print_endline ("Compile delta identities: "^
+            (String.concat "," (List.map fst identities)));
+    in
     (* on insert into a relation R with schema A1, ..., Ak, to update map m,
        we assume that the input tuple is given by variables
        x_mR_A1, ..., x_mR_Ak. *)
     let bound_vars = (List.map (fun (x,y) -> ("x_"^mapn^reln^"_"^x, y)) relsch)
     in
-        (* compute the delta and simplify. *)
+    (* compute the delta and simplify. *)
+    let identities = bound_vars @ bigsum_vars in
+    debug_identities identities;
     let s = List.filter (fun (_, t) -> t <> term_zero)
-        (simplify (term_delta negate reln bound_vars term)
-            (bound_vars @ bigsum_vars) params)
+        (simplify (term_delta negate reln bound_vars term) identities params)
     in
     let todos =
         let f (new_params, new_ma) =
@@ -63,7 +166,10 @@ let compile_delta_for_rel (reln:   string)
             in
                 List.map mk (extract_aggregates new_ma)
         in
-        let add_name ((p, x), i) = (mapn^reln^(string_of_int i), p, x)
+        let add_name ((p, x), i) =
+            let name =  mapn^reln^(string_of_int i) in
+                Debug.debug_add_name name x p;
+                (name, p, x)
         in
             List.map add_name (Util.add_positions (Util.ListAsSet.no_duplicates
                 (List.flatten (List.map f s))) 1)
@@ -283,45 +389,6 @@ struct
     module CPP = Codegen.CPPCodeGenerator
     module CPPI = Codegen.CPPInstrumentation
 
-    module Debug =
-    struct
-        let debug_partition_f ((x,y,z), (a,b,c)) =
-            print_endline ("dupcheck: "^(term_as_string z []));
-            debug_compilation();
-            let r = not(is_compiled(z)) in
-                if not r then print_endline
-                    ("found duplicate "^(term_as_string z []));
-                r
-
-        let debug_compile_bindings br bindings =
-            let string_of_var (n,t) = n in
-            let string_of_vars l = String.concat ","
-                (List.map (fun (x,_) -> string_of_var x) l) in
-            let ambiguous =
-                List.map (fun (x,y) ->
-                    ((x,y), List.filter (fun (u,v) -> x=u && y<>v) bindings))
-                    bindings in
-            let duplicates =
-                List.map (fun (x,y) ->
-                    ((x,y), List.filter (fun (y,_) -> x=y) bindings))
-                    bindings
-            in
-                List.iter (function
-                    | Rel(reln,_) -> print_endline ("rel: "^reln)
-                    | _ -> raise (Failure ("Expected a relation."))) br;
-                List.iter
-                    (fun ((x,_), al) -> print_endline
-                        ("Ambiguous bindings for "^(string_of_var x)^
-                            ": "^(string_of_vars al)))
-                    (List.filter (fun (_, al) -> List.length al <> 0) ambiguous);
-                List.iter
-                    (fun ((x,_), dl) -> print_endline 
-                        ("Duplicate bindings for "^(string_of_var x)^
-                            ": "^(string_of_vars dl)))
-                    (List.filter (fun (_, dl) -> List.length dl > 1) duplicates)
-
-    end
-
     (* handler name, arg names and types, code *)
     type handler = (string * ((string * string) list) * string)
 
@@ -335,7 +402,14 @@ struct
                           : (string * BG.maintenance_terms_and_deps) *
                             (string * BI.nested_block_t)
             =
-        let loop_vars = Util.ListAsSet.diff params bound_vars in
+        let loop_vars_and_pos =
+            snd (List.fold_left (fun (cnt, lv_acc) v ->
+                let (new_lv_acc) =
+                    if List.mem v bound_vars then lv_acc else lv_acc@[v,cnt]
+                in
+                    (cnt+1, new_lv_acc))
+                (0, []) params)
+        in
         let fn (mapname, params, mapstructure) =
             (mapstructure, (mapname, params)) in
         let env = bound_vars in
@@ -345,8 +419,8 @@ struct
         in
         let rma = A.readable_term new_ma in
         let (maint, ma_block) = 
-            BG.term_as_bytecode mapn rma params
-                loop_vars bigsum_vars_and_rels map_bindings arg_bindings
+            BG.term_as_bytecode reln mapn rma params
+                loop_vars_and_pos bigsum_vars_and_rels map_bindings arg_bindings
         in
             ((reln, maint), (reln, (mapn, env, ma_block)))
 
@@ -369,14 +443,30 @@ struct
              * for preventing duplicate maps *)
             let partition_f ((x,y,z), (a,b,c)) = not(is_compiled(z)) in 
 
-
             let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
             let cdfr (reln, relsch) =
-                compile_delta_for_rel
-                    reln relsch mapn params bigsum_vars negate term in
+                Debug.debug_compile_delta_inputs mapn params bigsum_vars;
+                let r = compile_delta_for_rel
+                    reln relsch mapn params bigsum_vars negate term
+                in
+                    Debug.debug_compile_delta_outputs mapn r;
+                    r
+            in
             let (l1,l2) = (List.split (List.map cdfr db_schema)) in
 
-            let normalized_l2 = List.map (normalize_term db_schema) (List.flatten l2) in
+            let normalized_l2 =
+                let n = List.map (normalize_term db_schema) (List.flatten l2) in
+                let n_by_terms = List.fold_left (fun acc ((n,p,t), orig) ->
+                    if List.mem_assoc t acc then
+                        let existing_l = List.assoc t acc in
+                        let new_l = existing_l@[(n,p,orig)] in
+                            (List.remove_assoc t acc)@[(t,new_l)]
+                    else acc@[(t,[(n,p,orig)])]) [] n
+                in
+                    List.map (fun (t,l) ->
+                        Debug.debug_compile_delta_duplicates t l;
+                        let (x,y,z) = List.hd l in ((x,y,t),z)) n_by_terms
+            in
 
             (* dup_todos: normalized dup term * dup term params * dup term *)
             let ((normalized_todo, todo), dup_todos) =
@@ -385,7 +475,6 @@ struct
                 in
                     (List.split a, dt)
             in
-
                 (* Track normalized targets for next step prior to recurring *)
                 List.iter (fun (y,_,x) -> add_compilation x y) normalized_todo;
 
@@ -393,6 +482,7 @@ struct
                 let new_ma_aggs = todo@dup_todos in
                 let (maint_l, ready_in) = List.split (List.map
                     (fun (reln, bound_vars, params, _, mapn, new_ma) ->
+                        Debug.debug_generate_bytecode_inputs mapn params;
                         generate_bytecode db_schema bigsum_vars_and_rels
                             (reln, bound_vars, params, mapn, new_ma)
                             new_ma_aggs)
@@ -403,7 +493,7 @@ struct
                 (* Recur over non-duplicate terms *)
                 let (next_maint_l, next_l, rem_l) =
                     let nr = List.map (fun (x,y,z) ->
-                        compile db_schema x y [] negate (level-1) z) todo
+                        compile db_schema x y bigsum_vars_and_rels negate (level-1) z) todo
                     in
                     let mnt = List.map (fun (x,_,_) -> x) nr in
                     let nxt = List.map (fun (_,x,_) -> x) nr in
@@ -426,25 +516,42 @@ struct
             (term_l: A.term_t list)
             : (event * (string * var_t list * BG.ordered_blocks)) list
             =
+        let debug_compile_inputs params =
+            print_endline ("compile "^mapn^" inputs: "^
+                (String.concat "," (List.map fst params)))
+        in
+
         (* Reset bytecode generator for new compilation *)
         BG.clear_declarations();
         BG.clear_relations();
 
-        let debug_flattening l = 
-            List.iter (fun (t,v) ->
-                print_endline "Flattened: ";
-                print_endline (term_as_string (make_term t) []);
-                print_endline ("Bigsum vars: "^
-                    (String.concat "," (List.map (fun ((n,t),_,_) -> n) v))))
-                l
-        in
         let flat_term_l = List.map
             (fun x -> let (tc,bsv) = flatten_term params x in
                 (mk_cond_agg tc, bsv))
             (List.map readable_term (List.map roly_poly term_l))
         in
 
-        debug_flattening flat_term_l;
+        Debug.debug_flattening flat_term_l;
+
+        let get_db_schema_var rel var =
+            let db_f = List.assoc rel db_schema in
+            let find_var_marker varname =
+                try (Str.search_backward (Str.regexp (Str.quote "__"))
+                    varname (String.length varname))+2
+                with Not_found -> 0
+            in
+            let orig_var v =
+                let pos = find_var_marker v in
+                    String.sub v pos ((String.length v) - pos)
+            in
+            let matches = List.filter (fun v ->
+                (orig_var (fst var))=(orig_var (fst v))) db_f
+            in
+                if List.length matches <> 1 then raise (Failure
+                    ("Could not find constraint binding for "^(fst var)))
+                else
+                    List.hd matches
+        in
 
         (* Recursively compile for the schema, creating bytecode *)
         let compile_for_event event_type =
@@ -459,14 +566,18 @@ struct
             (* event_bc_l : handler_blocks list *)
             let event_bc_l = List.map (fun (t, bigsum_vars_and_rels) ->
                 let (maint_by_rel, bc, remaining_terms) =
+                    debug_compile_inputs params;
                     compile db_schema mapn params
                         bigsum_vars_and_rels negate_term compilation_level t
                 in
 
 
                 (* Create bigsum var bindings for initial value computation *)
-                let constraint_bindings = 
-                    List.map (fun (x,y,_) -> (x,y)) bigsum_vars_and_rels
+                (* Constraint bindings must be associated with the db schema's attributes,
+                 * i.e. for queries with multiple relation instances, the bindings must
+                 * contain the attributes of the instance present in the schema *)
+                let constraint_bindings = List.map (fun (x,y,r) ->
+                    (x, get_db_schema_var (get_relation_name r) y)) bigsum_vars_and_rels
                 in
                 let schema_bindings = Util.ListAsSet.multiunion
                     (List.map (fun (r,f) -> List.map
@@ -515,8 +626,9 @@ struct
                 let bsv_maintenance_bc = List.flatten (List.map
                     (fun (bsv,v,r) -> match r with
                         | Rel(n,_) ->
-                              BG.generate_bigsum_maintenance
-                                  event_type bsv v n (List.assoc n db_schema)
+                              let db_v = get_db_schema_var n v in
+                                  BG.generate_bigsum_maintenance event_type bsv
+                                      db_v n (List.assoc n db_schema)
                         | _ -> raise (Failure "Invalid bigsum datastructure"))
                     bigsum_vars_and_rels)
                 in
@@ -537,7 +649,7 @@ struct
                 (List.map (fun (t,v) -> (make_term t, v)) flat_term_l)
             in
 
-            debug_compilation();
+            Debug.debug_compilation();
 
             (* Create handlers, i.e. group compilations by input relation *)
             let create_handler event_type rel blocks =

@@ -6,24 +6,14 @@ CREATE TABLE LINEITEM (
         quantity       double,
         extendedprice  double,
         discount       double,
-        tax            double,
-        returnflag     text,
-        linestatus     text,
-        -- use text for dates
-        shipdate       text,
-        commitdate     text,
-        receiptdate    text,
-        -- end dates
-        shipinstruct   text,
-        shipmode       text,
-        comment        text
+        tax            double
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::LineitemStream'
     ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/lineitem.tbl.a",&DBToaster::DemoDatasets::parseLineitemField,16,65000000,512'
     INSTANCE 'SSBLineitem'
     TUPLE 'DBToaster::DemoDatasets::lineitem'
-    ADAPTOR 'DBToaster::DemoDatasets::LineitemTupleAdaptor';
+    ADAPTOR 'DBToaster::DemoDatasets::LineitemSimpleTupleAdaptor';
 
 CREATE TABLE ORDERS (
         orderkey       bigint,
@@ -42,7 +32,6 @@ CREATE TABLE ORDERS (
     INSTANCE 'SSBOrder'
     TUPLE 'DBToaster::DemoDatasets::order'
     ADAPTOR 'DBToaster::DemoDatasets::OrderTupleAdaptor';
-
 
 CREATE TABLE PARTS (
         partkey      bigint,
@@ -135,7 +124,20 @@ CREATE TABLE NATION (
     TUPLE 'DBToaster::DemoDatasets::nation'
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';
 
-SELECT PS.suppkey, sum(PS.availqty)
-    FROM PARTS P, PARTSUPP PS
-    WHERE P.partkey = PS.partkey
-    GROUP BY PS.suppkey;
+select c.nationkey, n1.regionkey, n2.regionkey, p.mfgr,
+    sum((l.extendedprice * (100+(-1*l.discount))))
+from
+    lineitem l,
+    orders o,
+    customer c,
+    supplier s,
+    parts p,
+    nation n1,
+    nation n2
+where l.orderkey = o.orderkey
+and o.custkey = c.custkey
+and l.suppkey = s.suppkey
+and l.partkey = p.partkey
+and c.nationkey = n1.nationkey
+and s.nationkey = n2.nationkey
+group by c.nationkey, n1.regionkey, n2.regionkey, p.mfgr;

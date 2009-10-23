@@ -333,7 +333,7 @@ struct
         | Assign of flat_assign_t list
         | IfThen of (arith_mapalg_t conjunct_t list) * (nested_assign_t list)
         | ForEach of datastructure *
-              ds_var_t * (var_t list) * (nested_assign_t list)
+              ds_var_t * ((var_t * int) list) * (nested_assign_t list)
 
     (* map defined * environment * assignments *)
     type nested_block_t = ds_var_t * (var_t list) * (nested_assign_t list)
@@ -452,7 +452,11 @@ struct
         in
         let subs_nested_f n ch = match n with
             | IfThen(cl, _) -> IfThen(subs_arith_conjuncts cl, ch)
-            | ForEach(ds,v,lv,_) -> ForEach(ds,v, subs_vars lv, ch)
+            | ForEach(ds,v,lv,_) ->
+                  let new_lv = List.map (fun (v,pos) ->
+                      (Util.Vars.apply_mapping mapping v, pos)) lv
+                  in
+                      ForEach(ds,v, new_lv, ch)
             | _ -> raise (Failure "nested_f")
         in
         let subs_block_f x = x in
@@ -551,7 +555,7 @@ struct
                   "if ("^(string_of_arith_conjuncts cl)^")"^
                       " then { "^(String.concat "; " ch)^" }"
             | ForEach(ds,v,lv,_) ->
-                  "for each ("^(string_of_vars lv)^" in "^v^") "^
+                  "for each ("^(string_of_vars (List.map fst lv))^" in "^v^") "^
                       "{ "^(String.concat "; " ch)^" }"
             | _ -> raise (Failure "nested_f")
         in
@@ -598,7 +602,7 @@ sig
         (string * InstructionSet.nested_block_t) list -> handler_blocks
 
     val term_as_bytecode :
-        string -> readable_term_t -> var_t list -> var_t list ->
+        string -> string -> readable_term_t -> var_t list -> (var_t * int) list ->
         (var_t * var_t * readable_relalg_lf_t) list ->
         term_map_bindings -> var_bindings
             -> maintenance_terms_and_deps * InstructionSet.nested_assign_t list
@@ -684,9 +688,12 @@ struct
             if (List.length x2) = 1 then (List.hd x2)
             else if (List.length x2) = 0 then
                 raise (BCGenException "No mapping found during apply or fail.")
-            else raise
-                (BCGenException
-                    "Non functional mapping exception for apply or fail.")
+            else
+                begin
+                    List.iter (fun (mapn,_) -> print_endline ("apply_or_fail: "^mapn)) x2;
+                    raise (BCGenException
+                        "Non functional mapping exception for apply or fail.")
+                end
 
     (* Handler block helpers *)
 
@@ -1050,6 +1057,7 @@ struct
             (A.Map([], val_type), (base_name^(string_of_int c), []))
 
     let rec constraints_as_nblock
+            (compile_relation: string)
             (map_entry: A.map_entry_t)
             (map_ds : A.datastructure)
             (then_term: readable_term_t)
@@ -1066,7 +1074,7 @@ struct
         let is_constraint =
             function | AtomicConstraint _ -> true | _ -> false in
         let create_block t map_entry map_ds =
-            term_as_nblock map_entry map_ds
+            term_as_nblock compile_relation map_entry map_ds
                 extra_vars bigsum_vars_and_rels map_bindings arg_bindings t
         in
         let create_block_or_arith t =
@@ -1082,6 +1090,7 @@ struct
                     let tmp_init_mu = I.MapSetArith(t_ds, t_me, tmp_init_val) in
                     let tmp_init_block = [I.Assign([I.MapAssign([tmp_init_mu])])]
                     in
+                        add_declaration (fst t_me) t_ds;
                         (tmp_init_block@t_nblock,
                             (t_maint, AM.PTVal(A.AMVal(A.AMMapEntry(t_me)))))
         in
@@ -1112,6 +1121,7 @@ struct
                     assign_l@([I.IfThen(conjunct_l, then_block)]))
 
     and term_lf_as_nblock
+            (compile_relation: string)
             (map_entry: A.map_entry_t)
             (map_ds: A.datastructure)
             (extra_vars: var_t list)
@@ -1121,7 +1131,15 @@ struct
             (lf: readable_term_lf_t)
             : maintenance_terms_and_deps * I.nested_assign_t list
             =
-        let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels in
+        let debug_leaf_map r lf_map_name lf_bigsum_vars self_bigsum_rels =
+            print_endline ("term_lf_as_nblock "^lf_map_name^" lf expr: "^
+                (relalg_as_string (make_relalg r) []));
+            print_endline ("term_lf_as_nblock "^lf_map_name^" leaf map bigsum: "^
+                (String.concat "," (List.map fst lf_bigsum_vars)));
+            print_endline ("term_lf_as_block "^lf_map_name^" self bigsum rels: "^
+                (String.concat "," self_bigsum_rels))
+        in
+        let get_var x = Util.apply arg_bindings x x in
         let single_map_assign x = [I.Assign([I.MapAssign([x])])] in
 
         (* TODO: create multidimensional datastructure for loop vars *)
@@ -1131,24 +1149,22 @@ struct
                     (fun (x,_,_) -> x = v) bigsum_vars_and_rels
                 in
                     match var_and_rel_l with
-                        | [] -> raise (BCGenException
-                              ("No bigsum datastructure found."))
-
                         | [(((bsvn, bsvt) as bsv), _, _)] ->
                               (bsv, A.Set([bsvt]), bsvn^bigsum_ds_suffix)
 
                         | _ -> raise (BCGenException
-                              ("Found duplicate bigsum datastructures.")))
+                              ("Invalid bigsum datastructure found.")))
                 l
         in
         let create_nested_for_loops b bsv_ds_vars_l =
             List.fold_left
                 (fun acc (bsv, ds, dsvar) ->
                     print_endline ("Creating for loop for: "^(fst bsv));
-                    [I.ForEach(ds, dsvar, [bsv], acc)])
+                    [I.ForEach(ds, dsvar, [(bsv, 0)], acc)])
                 b bsv_ds_vars_l
         in
-        let get_var x = Util.apply arg_bindings x x in
+        let bigsum_vars = List.map (fun (x,_,_) -> x) bigsum_vars_and_rels
+        in
             begin match lf with
                 | Const (c) -> ([], 
                   single_map_assign
@@ -1165,10 +1181,14 @@ struct
                           let f_vars = term_vars (make_term f) in
                           let local_bigsum_vars =
                               Util.ListAsSet.inter bigsum_vars f_vars in
+                          let next_bigsum_vars_and_rels = List.filter
+                              (fun (bsv,v,r) -> not(List.mem bsv local_bigsum_vars))
+                              bigsum_vars_and_rels
+                          in
                           let (cstr_maint, cstr_block) =
                               constraints_as_nblock
-                                  map_entry map_ds f
-                                  extra_vars bigsum_vars_and_rels
+                                  compile_relation map_entry map_ds f
+                                  extra_vars next_bigsum_vars_and_rels
                                   map_bindings arg_bindings r
                           in
                               if local_bigsum_vars <> [] then
@@ -1179,29 +1199,47 @@ struct
                               else
                                   (cstr_maint, cstr_block)
                       else
+                          let sub_term = make_term (RVal(lf)) in
                           let (lf_map_name, lf_map_params) =
-                              apply_or_fail map_bindings (make_term (RVal(lf)))
+                              try
+                                  apply_or_fail map_bindings sub_term
+                              with BCGenException(x) ->
+                                  print_endline ("Could not find map for term: "^
+                                      (term_as_string sub_term []));
+                                  raise (BCGenException x)
                           in
                           let renamed_lf_map_params = List.map get_var lf_map_params in
                           let lf_map_entry =
                               (lf_map_name,
                               List.map (fun x -> A.MKVar(get_var x)) renamed_lf_map_params)
                           in
+                          let lf_bigsum_vars_and_rels = List.flatten (List.map (fun u -> 
+                                  List.filter (fun (v,_,_) -> u=v) bigsum_vars_and_rels)
+                                  renamed_lf_map_params) in
                           let lf_bigsum_vars =
-                              List.filter (fun u ->
-                                  List.exists (fun (v,_,_) -> u=v) bigsum_vars_and_rels)
-                                  renamed_lf_map_params
+                              List.map (fun (x,_,_) -> x) lf_bigsum_vars_and_rels
                           in
-                              print_endline ("term_lf_as_nblock "^lf_map_name^" leaf map bigsum: "^
-                                  (String.concat "," (List.map fst lf_bigsum_vars)));
 
-                          let maint_map_entry = (lf_map_name, lf_bigsum_vars) in
+                          let maint_map_entry = (lf_map_name, renamed_lf_map_params) in
+
+                          (* Only add domain maintenance info for self-defining maps *)
                           let maint_info =
-                              if lf_bigsum_vars = [] then []
-                              else
-                                  let init_term = make_term (RVal(lf)) in
-                                  let final_dep = get_bigsum_ds lf_bigsum_vars in
-                                      [(maint_map_entry, init_term, final_dep)]
+                              let br = get_plan_base_relation_names r in
+                              let self_bigsum_vr = List.filter (fun (_,_,bsrel) ->
+                                  List.mem (get_relation_name bsrel) br)
+                                  lf_bigsum_vars_and_rels
+                              in
+                              let self_bigsum_rels =
+                                  List.map (fun (_,_,r) -> get_relation_name r) self_bigsum_vr
+                              in
+                                  debug_leaf_map r lf_map_name lf_bigsum_vars self_bigsum_rels;
+                                  if (self_bigsum_vr = [] ||
+                                          not(List.for_all (fun r -> r=compile_relation) br))
+                                  then []
+                                  else
+                                      let init_term = make_term (RVal(lf)) in
+                                      let final_dep = get_bigsum_ds lf_bigsum_vars in
+                                          [(maint_map_entry, init_term, final_dep)]
                           in
                           let lf_assign = 
                               single_map_assign(
@@ -1213,6 +1251,7 @@ struct
             end
 
     and term_as_nblock
+            (compile_relation: string)
             (map_entry: A.map_entry_t)
             (map_ds: A.datastructure)
             (extra_vars: var_t list)
@@ -1266,7 +1305,7 @@ struct
             in
             let sub_blocks = List.map2
                 (fun c_t ((mds, me), rt) ->
-                    (term_as_nblock me mds extra_vars
+                    (term_as_nblock compile_relation me mds extra_vars
                         bigsum_vars_and_rels map_bindings arg_bindings c_t,
                     ((mds, me), rt)))
                 valid_l block_maps
@@ -1341,29 +1380,34 @@ struct
             | RProd(l) ->
                   list_f l ensure_lf combine_arith_product combine_product
 
-            | RVal(lf) -> term_lf_as_nblock map_entry map_ds
+            | RVal(lf) -> term_lf_as_nblock compile_relation map_entry map_ds
                   extra_vars bigsum_vars_and_rels map_bindings arg_bindings lf
         end
 
     let term_as_bytecode
+            (compile_relation: string)
             (mapn: string)
             (t : readable_term_t)
             (params: var_t list)
-            (loop_vars: var_t list)
+            (loop_vars_and_pos: (var_t * int) list)
             (bigsum_vars_and_rels: (var_t * var_t * readable_relalg_lf_t) list)
             (map_bindings: term_map_bindings)
             (arg_bindings: var_bindings)
             : maintenance_terms_and_deps * I.nested_assign_t list
             =
-        print_endline ("term_as_bytecode input: "^
-            (term_as_string (make_term t) []));
-        print_endline ("term_as_bytecode params: "^
-            (String.concat "," (List.map fst params)));
-        print_endline ("term_as_bytecode loop_vars: "^
-            (String.concat "," (List.map fst loop_vars)));
+        let debug_term_as_bytecode_inputs mapn params loop_vars_and_pos t =
+            print_endline ("term_as_bytecode "^mapn^" input: "^
+                (term_as_string (make_term t) []));
+            print_endline ("term_as_bytecode "^mapn^" params: "^
+                (String.concat "," (List.map fst params)));
+            print_endline ("term_as_bytecode "^mapn^" loop_vars_and_pos: "^
+                (String.concat "," (List.map fst (List.map fst loop_vars_and_pos))))
+        in
+
+        debug_term_as_bytecode_inputs mapn params loop_vars_and_pos t;
         
         let extra_vars = Util.ListAsSet.multiunion
-            [loop_vars;
+            [(List.map fst loop_vars_and_pos);
             (List.map (fun (x,_,_) -> x) bigsum_vars_and_rels);
             (List.map fst arg_bindings)]
         in
@@ -1376,7 +1420,7 @@ struct
         let map_entry = (mapn, new_map_keys) in
         let map_ds = A.Map(key_types, t_type) in
         let (maint_info, term_block) =
-            term_as_nblock map_entry map_ds
+            term_as_nblock compile_relation map_entry map_ds
                 extra_vars bigsum_vars_and_rels map_bindings arg_bindings t
         in
 
@@ -1391,8 +1435,8 @@ struct
         in
             List.iter (fun (n,d) -> add_declaration n d) decls;
             let r =
-                if loop_vars <> [] then
-                    [I.ForEach(map_ds, mapn, loop_vars, term_block)]
+                if loop_vars_and_pos <> [] then
+                    [I.ForEach(map_ds, mapn, loop_vars_and_pos, term_block)]
                 else
                     term_block
             in
@@ -1456,7 +1500,11 @@ struct
                 let set_map_r =
                     let x = [I.Assign([I.MapAssign([set_map_bc])])] in
                         if params = [] then x
-                        else [I.ForEach(map_ds, mapn, params, x)]
+                        else
+                            let loop_vars_and_pos = snd (List.fold_left
+                                (fun (cnt,acc) v -> (cnt+1,acc@[v,cnt])) (0,[]) params)
+                            in
+                                [I.ForEach(map_ds, mapn, loop_vars_and_pos, x)]
                 in
                 let new_rels =
                     Util.ListAsSet.union rels_acc
@@ -1514,6 +1562,7 @@ struct
                 in
 
                 print_endline ("Init mapalg: "^(A.mapalg_as_string init_mapalg));
+                print_endline ("Init map "^mapn^" params: "^(String.concat "," (List.map fst params)));
 
                 let init_map_bc = I.MapInsert(map_ds, map_entry, init_mapalg) in
                 let init_comp_r = [I.Assign([I.MapAssign([init_map_bc])])] in

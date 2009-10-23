@@ -215,13 +215,23 @@ let free_term_vars (t: term_t) : var_t list =
     Util.ListAsSet.diff (term_vars t) (declared_term_vars t)
 
 let has_aggregates (m: term_t) : bool =
-    let leaves =
-        TermSemiRing.fold List.flatten List.flatten (fun x -> [x]) m in
-    let is_aggregate x = match x with | AggSum(_) -> true | _ -> false in
-        List.exists is_aggregate leaves
+    let leaves = TermSemiRing.fold List.flatten List.flatten 
+        (fun x -> match x with | AggSum(_) -> [x] | _ -> []) m
+    in
+        leaves <> []
+
+let has_nested_aggregates_using_vars vars t =
+    let leaves = TermSemiRing.fold List.flatten List.flatten 
+        (fun x -> match x with
+            | AggSum(_) -> let x_vars = term_vars (TermSemiRing.mk_val x) in
+                  Util.ListAsSet.inter x_vars vars 
+            | _ -> []) t
+    in
+        leaves <> []
+
 
 (* readable_relalg_t -> readable_relalg_lf_t list *)
-let rec get_base_relations_plan r =
+let rec get_plan_base_relations r =
     let relalg_lf lf = match lf with
         | Rel(_) -> [lf]
         | AtomicConstraint(_, t1, t2) ->
@@ -235,11 +245,25 @@ let rec get_base_relations_plan r =
 and get_base_relations t =
     let term_lf lf = match lf with
         | AggSum(f,r) ->
-              (get_base_relations f)@(get_base_relations_plan r)
+              (get_base_relations f)@(get_plan_base_relations r)
         | _ -> []
     in
         fold_term Util.ListAsSet.multiunion 
             Util.ListAsSet.multiunion term_lf t
+
+exception InvalidRelation
+
+let get_relation_name lf =
+    match lf with | Rel(n,_) -> n | _ -> raise InvalidRelation
+
+let get_relation_fields lf =
+    match lf with | Rel(_,f) -> f | _ -> raise InvalidRelation
+
+let get_plan_base_relation_names r =
+    List.map get_relation_name (get_plan_base_relations r)
+
+let get_base_relation_names t =
+    List.map get_relation_name (get_base_relations t)
 
 
 (* TODO: enforce that the variables occurring in f are among the
@@ -634,7 +658,7 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
          AtomicConstraint(c, t1, t2) ->
             let (l1, t1b) = simplify_roly t1 bound_vars in
             let (l2, t2b) = simplify_roly t2 bound_vars in
-                            (* TODO: pass bindings from first to second *)
+            (* TODO: pass bindings from first to second *)
             (l1 @ l2, RelSemiRing.mk_val(AtomicConstraint(c, t1b, t2b)))
        | _ -> ([], RelSemiRing.mk_val lf)
    in
@@ -651,7 +675,7 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
               let (b1, r2) = RelSemiRing.fold (my_flatten RelSemiRing.mk_sum)
                                               (my_flatten RelSemiRing.mk_prod)
                                               r_leaf_f r
-                 (* TODO: use b1 *)
+              (* TODO: use b1 *)
               in
               let (b, non_eq_cons) = extract_substitutions r2 bound_vars
               in
@@ -681,9 +705,23 @@ let simplify (ma: term_t)
              (bound_vars: var_t list)
              (dimensions: var_t list) :
              ((var_t list * term_t) list) =
+   let debug_simplify f b =
+      print_endline ("simplify input term: "^(term_as_string f []));
+      print_endline ("simplify mapping: "^(String.concat ", "
+          (List.map (fun (x,y) -> (fst x)^" "^(fst y)) b)))
+   in
    let simpl f =
       let (b, f2) = simplify_roly f bound_vars in
-      ((List.map (Util.Vars.apply_mapping b) dimensions), f2)
+
+      debug_simplify f b;
+      let ck_params = List.map (Util.Vars.apply_mapping b) dimensions in
+      let yna_test_params =
+          List.fold_left (fun acc x ->
+              let new_x = Util.Vars.apply_mapping b x in
+                  acc@[if List.mem new_x acc then x else new_x])
+              [] dimensions
+      in
+          (ck_params, f2)
    in
    List.map simpl (TermSemiRing.sum_list (roly_poly ma))
 
@@ -729,18 +767,18 @@ let mk_cond_agg (term, constraint_opt) =
  * This can be done with roly_poly, and then distributing what's left. *)
 
 (* readable_relalg_t -> readable_relalg_t list * readable_relalg_t option *)
-let rec extract_nested_constraints r =
+let rec extract_nested_constraints non_nested_fields r =
     match r with
         | RA_Leaf(AtomicConstraint(op, t1, t2)) ->
-              if ((has_aggregates (make_term t1)) or
-                  (has_aggregates (make_term t2)))
+              if ( List.exists (fun t -> has_aggregates t)
+                  (List.map make_term [t1; t2]) )
               then ([r], None) else ([], Some(r))
 
         | RA_Leaf(_) -> ([], Some(r))
 
         | RA_MultiUnion(l) ->
               let (nc_ll, rest_l) =
-                  List.split (List.map extract_nested_constraints l)
+                  List.split (List.map (extract_nested_constraints non_nested_fields) l)
               in
                   if not (List.for_all
                       (fun r -> r = (List.hd rest_l)) (List.tl rest_l))
@@ -749,11 +787,9 @@ let rec extract_nested_constraints r =
 
         | RA_MultiNatJoin(l) ->
               let (nc_ll, rest_l) = List.split
-                  (List.map extract_nested_constraints l) in
-              let nr = List.fold_left
-                  (fun acc x -> match x with
-                      | None -> acc | Some(y) -> acc@[y])
-                  [] rest_l
+                  (List.map (extract_nested_constraints non_nested_fields) l) in
+              let nr = List.fold_left (fun acc x -> match x with
+                  | None -> acc | Some(y) -> acc@[y]) [] rest_l
               in
                   (List.flatten nc_ll, Some(RA_MultiNatJoin(nr)))
 
@@ -778,8 +814,8 @@ let rec extract_nested_constraints r =
 (* var_t list -> readable_term_t ->
  *     ((readable_term_t * readable_relalg_t opt) *
  *     (var_t * var_t * readable_relalg_lf_t) list) *)
-let rec flatten_term params term =
-    (*
+let rec flatten_term_aux all_relations params term =
+
     let debug_nested_constraints nc rest = 
         print_endline ("# new c: "^(string_of_int (List.length nc)));
         List.iter 
@@ -794,28 +830,26 @@ let rec flatten_term params term =
     let debug_nc_size c =
         print_endline ("# new c: "^(string_of_int (List.length c)))
     in
-    *)
-    let get_relations r =
-        fold_relalg List.flatten List.flatten
-            (fun x -> match x with | Rel _ -> [x] | _ -> []) r
+    let debug_recur_if_nested t =
+        print_endline ("Recur "^(term_as_string t [])^" : "^
+            (string_of_bool (has_aggregates t)))
     in
+
+    let get_non_nested_relations r = fold_relalg List.flatten List.flatten
+        (fun x -> match x with | Rel _ -> [x] | _ -> []) r in
     let find_var relations (n,t) =
-        try
-            List.find (fun r -> match r with
-                | Rel(_,f) ->
-                      List.exists (fun (n2,t2) -> n=n2 && t=t2) f
-                | _ -> raise (Failure
-                      ("Internal error: expected a relation.")))
-                relations
-        with Not_found ->
-            raise (Failure ("Could not find "^n^" in relations."))
+        try List.find (fun r -> match r with
+            | Rel(_,f) -> List.exists (fun (n2,t2) -> n=n2 && t=t2) f
+            | _ -> raise (Failure ("Internal error: expected a relation.")))
+            relations
+        with Not_found -> raise (Failure ("Could not find "^n^" in relations."))
     in
     let mk_var_constraint l r : readable_relalg_t = 
         RA_Leaf(AtomicConstraint(Eq, RVal(Var(l)), RVal(Var(r))))
     in
     let flatten_list l f g = 
         let (new_terms_and_constraints, new_bigsum_l) =
-            List.split (List.map (flatten_term params) l)
+            List.split (List.map (flatten_term_aux all_relations params) l)
         in
         let (new_terms, new_constraints) =
             List.split new_terms_and_constraints
@@ -825,9 +859,10 @@ let rec flatten_term params term =
     in
     let flatten_constraints cl =
         let recur_if_nested t =
+            debug_recur_if_nested (make_term t);
             if has_aggregates (make_term t) then
-                let (tc,bsv) = flatten_term params t in
-                    (mk_cond_agg tc, bsv)
+                let (tc,bsv) = flatten_term_aux all_relations params t
+                in (mk_cond_agg tc, bsv)
             else (t, [])
         in
         let (cstrt_l, bigsum_l) = List.split (List.map
@@ -842,110 +877,95 @@ let rec flatten_term params term =
         in
             (cstrt_l, Util.ListAsSet.multiunion bigsum_l)
     in
+    let debug_relations relations = 
+        List.iter (fun r -> match r with
+            | Rel(n,f) -> print_endline ("flatten "^n^": "^
+                  (String.concat "," (List.map fst f)))
+            | _ -> raise (Failure "Expected a relation.")) relations
+    in
     let local_bigsum_and_mappings params r nc nc_bigsum =
         let nc_bigsum_vars = List.map (fun (x,_,_) -> x) nc_bigsum in
-        let nc_free_vars = List.map
-            (fun x -> Util.ListAsSet.diff
-                (free_relalg_vars (make_relalg x)) nc_bigsum_vars)
-            nc
-        in
-        let local_bigsum_vars =
-            Util.ListAsSet.diff
-                (Util.ListAsSet.multiunion nc_free_vars) params in
-        let mapping = 
-            List.map (fun ((n,t) as v) ->
-                let new_v = ("loop_"^n, t) in (v, new_v))
-                local_bigsum_vars
-        in
+        let nc_free_vars = List.map (fun x -> Util.ListAsSet.diff
+            (free_relalg_vars (make_relalg x)) nc_bigsum_vars) nc in
+        let local_bigsum_vars = Util.ListAsSet.diff
+            (Util.ListAsSet.multiunion nc_free_vars) params in
+        let mapping = List.map
+            (fun ((n,t) as v) -> (v, ("bigsum_"^n, t))) local_bigsum_vars in
         let local_bigsum = 
-            let relations = get_relations r in
-                List.map (fun (v,bsv) ->
-                    let vr = find_var relations v in (bsv,v,vr))
-                    mapping
+            debug_relations all_relations;
+            List.map (fun (v,bsv) -> (bsv, v, find_var all_relations v)) mapping
         in
             (local_bigsum, mapping)
     in
+    let flatten_aggsum f r =
+        (* flatten recursively *)
+        let ((nf, nf_r), f_bigsum) = flatten_term_aux all_relations params f in
+
+        (* extract nested constraints from relational part *)
+        let non_nested_fields = List.flatten (List.map
+            get_relation_fields (get_non_nested_relations r))
+        in
+        let (nested_constraints, rest) =
+            match extract_nested_constraints non_nested_fields r with
+                | (_,None) -> raise (Failure "No relalg left during flattening.")
+                | (x,Some(y)) -> debug_nested_constraints x y; x,y
+        in
+
+        (* recursively flatten within constraints *)
+        let (nc, nc_bigsum) = flatten_constraints nested_constraints in
+            
+        (* rename and track bigsum vars *)
+        let (local_bigsum, local_bsv_mapping) =
+            local_bigsum_and_mappings params r nc nc_bigsum
+        in
+
+        (* rotate term *)
+        let new_bigsum_constraints = List.map (fun (v, bsv) ->
+            mk_var_constraint v bsv) local_bsv_mapping
+        in
+        let new_term =
+            let new_sub_r =
+                RA_MultiNatJoin([rest]@new_bigsum_constraints)
+            in
+                RVal(AggSum(nf, new_sub_r)) in
+            
+        let new_constraint =
+            let c = match nf_r with | None -> nc
+                | Some(f_r) -> (*debug_f_lifted_constraint f_r;*) [f_r]@nc
+            in
+            let sub_f r = readable_relalg
+                (apply_variable_substitution_to_relalg
+                    local_bsv_mapping (make_relalg r))
+            in
+                (*debug_nc_size c;*)
+                if c = [] then None
+                else Some(RA_MultiNatJoin(List.map sub_f c))
+        in
+
+        (* track all bigsums below *)
+        let bigsum = Util.ListAsSet.multiunion [f_bigsum; nc_bigsum; local_bigsum]
+        in
+            ((new_term, new_constraint), bigsum)
+    in
         begin match term with
-            | RVal(AggSum(f,r)) ->
-                  (* flatten recursively *)
-                  let ((nf, nf_r), f_bigsum) = flatten_term params f in
-
-                  (* extract nested constraints from relational part *)
-                  let (nested_constraints, rest) =
-                      match extract_nested_constraints r with
-                          | (_,None) ->
-                                raise (Failure
-                                    "No relalg left during flattening.")
-                          | (x,Some(y)) ->
-                                (*debug_nested_constraints x y;*)
-                                x,y
-                  in
-
-                  (* recursively flatten within constraints *)
-                  let (nc, nc_bigsum) =
-                      flatten_constraints nested_constraints in
-
-                  (* rename and track bigsum vars *)
-                  let (local_bigsum, local_bsv_mapping) =
-                      local_bigsum_and_mappings params r nc nc_bigsum
-                  in
-
-                  (* rotate term *)
-                  let new_bigsum_constraints =
-                      List.map
-                          (fun (v, bsv) -> mk_var_constraint v bsv)
-                          local_bsv_mapping
-                  in
-
-                  let new_term =
-                      let new_sub_r =
-                          RA_MultiNatJoin([rest]@new_bigsum_constraints)
-                      in
-                          RVal(AggSum(nf, new_sub_r)) in
-
-                  let new_constraint =
-                      let c = match nf_r with
-                          | None -> nc
-                          | Some(f_r) ->
-                                (*debug_f_lifted_constraint f_r;*)
-                                [f_r]@nc
-                      in
-                      let sub_f r = readable_relalg
-                          (apply_variable_substitution_to_relalg
-                              local_bsv_mapping (make_relalg r))
-                      in
-                          (*debug_nc_size c;*)
-                          if c = [] then None
-                          else Some(RA_MultiNatJoin(List.map sub_f c))
-                  in
-
-                  (* track all bigsums below *)
-                  let bigsum =
-                      Util.ListAsSet.multiunion
-                          [f_bigsum; nc_bigsum; local_bigsum]
-                  in
-                      ((new_term, new_constraint), bigsum)
-                          
+            | RVal(AggSum(f,r)) -> flatten_aggsum f r
             | RVal(_) -> ((term, None), [])
 
-            | RSum(l) ->
-                  flatten_list l
-                      (fun nl nc ->
-                          RSum(List.map mk_cond_agg (List.combine nl nc)))
-                      (fun nc -> None)
+            | RSum(l) -> flatten_list l (fun nl nc ->
+                  RSum(List.map mk_cond_agg (List.combine nl nc)))
+                  (fun nc -> None)
 
-            | RProd(l) ->
-                  flatten_list l
-                      (fun nl nc -> RProd(nl))
-                      (fun nc ->
-                          let valid_c = List.fold_left
-                              (fun acc x -> match x with
-                                  | None -> acc | Some(y) -> acc@[y]) [] nc
-                          in
-                              if valid_c = [] then None
-                              else Some(RA_MultiNatJoin(valid_c)))
+            | RProd(l) -> flatten_list l
+                  (fun nl nc -> RProd(nl))
+                  (fun nc -> let valid_c = List.fold_left
+                      (fun acc x -> match x with
+                          | None -> acc | Some(y) -> acc@[y]) [] nc
+                  in
+                      if valid_c = [] then None
+                      else Some(RA_MultiNatJoin(valid_c)))
         end
 
+let flatten_term params t = flatten_term_aux (get_base_relations t) params t
 
 (* Typing helpers *)
 (* TODO: unit tests for typing *)

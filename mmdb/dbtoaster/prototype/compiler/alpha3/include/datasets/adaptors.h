@@ -2,6 +2,8 @@
 #define DBTOASTER_ADAPTORS_H
 
 #include <map>
+#include <tr1/cstdint>
+
 #include "datasets.h"
 #include "standalone/streamengine.h"
 
@@ -45,6 +47,7 @@ namespace DBToaster
     namespace DemoDatasets
     {
         using namespace std;
+        using namespace tr1;
         using namespace DBToaster::StandaloneEngine;
         using namespace DBToaster::Adaptors;
 
@@ -210,6 +213,44 @@ namespace DBToaster
         typedef InsertTupleAdaptor<partsupp> PartSuppTupleAdaptor;
         typedef InsertTupleAdaptor<nation> NationTupleAdaptor;
         typedef InsertTupleAdaptor<region> RegionTupleAdaptor;
+
+        // Simpified TPC-H types
+        struct SimpleLineitem
+        {
+            int64_t orderkey;
+            int64_t partkey;
+            int64_t suppkey;
+            int     linenumber;
+            double  quantity;
+            double  extendedprice;
+            double  discount;
+            double  tax;
+
+            SimpleLineitem() {}
+            SimpleLineitem(lineitem& a)
+            {
+                orderkey = a.orderkey;
+                partkey = a.partkey;
+                suppkey = a.suppkey;
+                linenumber = a.linenumber;
+                quantity = a.quantity;
+                extendedprice = a.extendedprice;
+                discount = a.discount;
+                tax = a.tax;
+            }
+        };
+
+        struct LineitemSimpleTupleAdaptor : public InsertTupleAdaptor<SimpleLineitem>
+        {
+            void operator()(DBToasterTuple& a, boost::any& b)
+            {
+                lineitem* v = boost::any_cast<lineitem>(&b);
+                SimpleLineitem r(*v);
+                a.data = r;
+            }
+        };
+
+
         typedef InsertTupleAdaptor<LinearRoadTuple> LinearRoadTupleAdaptor;
     };
 };

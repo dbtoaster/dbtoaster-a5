@@ -129,8 +129,12 @@ val free_relalg_vars : relalg_t -> var_t list
 val free_term_vars : term_t -> var_t list
 
 (* readable_relalg_t -> readable_relalg_lf_t list *)
-val get_base_relations_plan : readable_relalg_t -> readable_relalg_lf_t list
+exception InvalidRelation
+val get_plan_base_relations : readable_relalg_t -> readable_relalg_lf_t list
 val get_base_relations : readable_term_t -> readable_relalg_lf_t list
+val get_relation_name : readable_relalg_lf_t -> string
+val get_plan_base_relation_names : readable_relalg_t -> string list
+val get_base_relation_names : readable_term_t -> string list
 
 (* output relalg or term as string; replace certain nested terms by
                                     named map accesses. *)

@@ -239,7 +239,7 @@ CREATE TABLE ORDERS (
 	orderdate      text, -- date
         orderpriority  text,
 	clerk          text,
-        shippriority   text,
+        shippriority   integer,
 	comment        text
     )
     FROM 'file'
@@ -336,7 +336,7 @@ CREATE TABLE NATION (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::NationStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseSupplierField,3,100,512'
+    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseNationField,4,100,512'
     INSTANCE 'SSBNation'
     TUPLE 'DBToaster::DemoDatasets::nation'
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';
