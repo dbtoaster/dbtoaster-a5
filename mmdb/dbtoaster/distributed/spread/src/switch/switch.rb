@@ -32,7 +32,32 @@ class SwitchNodeHandler
 
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
-    @templates[table.to_s].each do |template|
+    @templates[table.to_s].each do |trigger|
+      Logger.info { "Update triggered template: " + trigger.template.to_s }
+      param_map = template.param_map(params);
+      trigger.each_update(params) do |message_set|
+        Logger.info { "Generating put command (v" + cmdid.to_s + ") : " + message_set.to_s }
+        if trigger.template.requires_loop? then
+          node(message_set.node).mass_put(cmdid, template.index, message_set.fetches.size, PutParams.make(param_map))
+        else
+          node(message_set.node).put(cmdid, template.index, PutParams.make(param_map))
+        end
+        message_set.fetches.each_pair do |dest, entries|
+          node(dest).fetch(
+            entries.collect { |e| e.entry.instantiate(param_map) },
+            message_set.node,
+            cmdid
+          )
+        end
+        next_cmd;
+      end
+    end
+  end
+  
+  def update_slow(table, params)
+    raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
+    @templates[table.to_s].each do |trigger|
+      template = trigger.template;
       Logger.info { "Update triggered template: " + template.to_s }
       raise SpreadException.new("Invalid row size (" + params.size.to_s + " and not " + template.paramlist.size.to_s + ") for template: " + template.to_s) unless params.size == template.paramlist.size;
       param_map = template.param_map(params);
@@ -49,7 +74,7 @@ class SwitchNodeHandler
         read_partitions.each_pair do |dest, entries|
           Logger.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
           node(dest).fetch(
-            entries.collect do |e| e.instantiate(param_map) end, 
+            entries.collect do |e| e.entry.instantiate(param_map) end, 
             write_partition.node_name, 
             cmdid
           );
@@ -68,7 +93,7 @@ class SwitchNodeHandler
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
     template.index = index;
-    @templates.assert_key(template.relation.to_s){ Array.new }.push(template);
+    @templates.assert_key(template.relation.to_s){ Array.new }.push(@layout.compile_trigger(template));
   end
   
   def install_node(node_name, partitions)

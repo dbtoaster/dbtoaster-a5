@@ -52,6 +52,9 @@ end
 
 class TemplateEntry
   attr_reader :source, :keys;
+  # index is something of a hack used by trigger compilation (see switch/maplayout.rb)
+  attr_reader :index;
+  attr_writer :index;
   alias :key :keys;
   
   def initialize(source, *keys)
