@@ -31,8 +31,6 @@ opts = GetoptLong.new(
   [ "-s", "--persist",   GetoptLong::NO_ARGUMENT ]
 ).each do |opt, arg| parse_arg(opt, arg) end;
 
-$nodes = ["Alpha", "Beta" ] unless $nodes.size > 0;
-
 local_dir = Dir.getwd()
 compiler_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3";
 Dir.chdir(compiler_dir)
@@ -87,6 +85,8 @@ map_info =
       "partition" => split_partition.to_i
     }
   end
+
+$nodes = ["Alpha", "Beta" ] unless $nodes.size > 0;
 
 $output.write("############ Node Definitions\n");
 $nodes.each_index do |node_index|

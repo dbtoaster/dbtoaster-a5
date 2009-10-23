@@ -3,6 +3,12 @@ config tpch_q18.unit
 
 node Alpha@localhost:52982
 node Beta@localhost:52983
+node Gamma@localhost:52984
+node Delta@localhost:52985
+node Epsilon@localhost:52986
+#node Rho@localhost:52987
+#node Bob@localhost:52988
+#node Joe@localhost:52989
 switch localhost
 
 transform ORDERS[0]%100000

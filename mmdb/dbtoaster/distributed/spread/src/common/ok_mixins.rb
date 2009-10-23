@@ -159,6 +159,14 @@ module Math
     end
     min;
   end
+  def Math.max(*params)
+    params = params.flatten;
+    min = if params.empty? then nil else params[0] end;
+    params.each do |param|
+      min = param unless param <= min;
+    end
+    min;
+  end
 end
 
 class Range
