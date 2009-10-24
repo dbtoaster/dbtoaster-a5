@@ -10,8 +10,8 @@
    The atomic formulae are relational atoms, false, true,
    and atomic constraints comparing terms using =, neq, <, and <=.
 
-   Terms are built from variables, constants and aggregrate sums (AggSum)
-   using addition and multiplication.
+   Terms are built from variables, constants, external function calls,
+   and aggregrate sums (AggSum) using addition and multiplication.
 
    AggSum(t, r), where t is a term and r is a relcalc expression,
    computes the sum of the t values for each of the tuples (no duplicate
@@ -89,6 +89,9 @@ type ('term_t, 'relcalc_t) generic_term_lf_t =
             AggSum of ('term_t * 'relcalc_t)
           | Const of const_t
           | Var of var_t
+          | External of (string * (var_t list))
+                        (* name and variable list;
+                           could be generalized to terms *)
 
 
 
@@ -129,7 +132,6 @@ val readable_term: term_t -> readable_term_t
 val make_term:     readable_term_t -> term_t
 
 
-
 (* all the variables that occur in the formula resp. term. *)
 val relcalc_vars: relcalc_t -> string list
 val term_vars:       term_t -> string list
@@ -144,10 +146,9 @@ val safe_vars: relcalc_t -> (var_t list) -> (var_t list)
 
 
 
-(* output relcalc or term as string; replace certain nested terms by
-                                    named map accesses. *)
-val relcalc_as_string: relcalc_t -> ((term_t * string) list) -> string
-val term_as_string:    term_t    -> ((term_t * string) list) -> string
+(* output relcalc or term as string. *)
+val relcalc_as_string: relcalc_t -> string
+val term_as_string:    term_t    -> string
 
 
 (*
@@ -158,9 +159,11 @@ val relcalc_one:  relcalc_t
 val relcalc_zero: relcalc_t
 
 
-(* (delta n "R" t e) returns the delta on insertion (n=false) or
-   deletion (n=true) of tuple t into relation R, for relcalc expression e. *)
-val relcalc_delta: bool -> string -> (string list) -> relcalc_t -> relcalc_t
+(* (delta f n "R" t e) returns the delta on insertion (n=false) or
+   deletion (n=true) of tuple t into relation R, for relcalc expression e,
+   where f is used to map external terms to their deltas. *)
+val relcalc_delta: (string -> (var_t list) -> term_t) ->
+                   bool -> string -> (string list) -> relcalc_t -> relcalc_t
 
 (* turns an expression into a union of conjunctive queries (i.e., joins);
    or something strictly simpler, i.e., a flat union, a flat join, or a leaf.
@@ -209,6 +212,10 @@ val apply_variable_substitution_to_relcalc: ((var_t * var_t) list)
 val extract_substitutions: relcalc_t -> (var_t list) ->
    (((var_t * var_t) list) * relcalc_t)
 
+(* a list consisting of the maximal AggSum subexpressions of the input
+   formula. *)
+val extract_aggregates_from_calc: relcalc_t -> (term_t list)
+
 (*
 end (* module type Formula *)
 
@@ -218,10 +225,12 @@ module type Term = sig
 val term_zero: term_t
 val term_one:  term_t
 
-(* (delta deletion relname tuple term) computes the delta of term as tuple is
-   inserted (deletion=false) or deleted (deletion=true) into relation relname.
+(* (delta f deletion relname tuple term) computes the delta of term as tuple is
+   inserted (deletion=false) or deleted (deletion=true) into relation relname,
+   where f is used to map external named terms to their deltas.
 *)
-val term_delta: bool -> string -> (string list) -> term_t -> term_t
+val term_delta: (string -> (var_t list) -> term_t) ->
+                bool -> string -> (string list) -> term_t -> term_t
 
 (* a pudding. Here: recursively turning a term into a
    polynomial: The result does not use union anywhere, and sum is only used
@@ -251,7 +260,29 @@ val apply_variable_substitution_to_term: ((string * string) list) ->
                                          term_t -> term_t
 
 (* a list consisting of the maximal AggSum subexpressions of the input term.  *)
-val extract_aggregates: term_t -> (term_t list)
+val extract_aggregates_from_term: term_t -> (term_t list)
+
+(* Note: the substitution is bottom-up. This means we greedily replace
+   smallest subterms, rather than largest ones. This has to be kept in
+   mind if terms in aggsum_theta may mutually contain each other. *)
+val substitute_in_term: ((term_t * term_t) list) -> term_t -> term_t
+
+
+(* given a term t, a calculus monomial r that is not constraints only,
+   and a set of bound variables,
+
+   bigsum_rewriting t r bound_vars
+
+   returns a triple
+
+   (bigsum_vars, t', r')
+
+   such that r' is constraints only and AggSum(t, r) is equivalent to
+   sum_{bigsum_vars} AggSum(t', r').
+*)
+val bigsum_rewriting: term_t -> relcalc_t -> (var_t list) ->
+                      ((var_t list) * term_t * relcalc_t)
+
 
 (*
 end (* module type Term *)

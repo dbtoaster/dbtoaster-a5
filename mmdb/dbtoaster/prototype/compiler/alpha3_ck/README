@@ -22,3 +22,9 @@ Recent changes:
 
 * Cleaned up MixedHyperGraph and moved it to Util
 
+* Added externals to terms.
+
+* Implemented function bigsum_rewriting.
+
+* Simplified signatures in Compiler.ml.
+

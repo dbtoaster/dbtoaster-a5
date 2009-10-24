@@ -19,6 +19,9 @@ type ('term_t, 'relcalc_t) generic_term_lf_t =
             AggSum of ('term_t * 'relcalc_t)
           | Const of const_t
           | Var of var_t 
+          | External of (string * (var_t list))
+                        (* name and variable list;
+                           could be generalized to terms *)
 
 
 module rec CALC_BASE :
@@ -95,9 +98,10 @@ let rec readable_relcalc (relcalc: relcalc_t): readable_relcalc_t =
 and readable_term (term: term_t): readable_term_t =
    let lf_readable lf =
       match lf with
-         Const(x)     -> Const(x)
-       | Var(x)       -> Var(x)
-       | AggSum(f, r) -> AggSum(readable_term f, readable_relcalc r)
+         Const(x)        -> Const(x)
+       | Var(x)          -> Var(x)
+       | AggSum(f, r)    -> AggSum(readable_term f, readable_relcalc r)
+       | External(n, vs) -> External(n, vs)
    in
    TermSemiRing.fold (fun l -> RSum l) (fun l -> RProd l)
                      (fun x -> RVal (lf_readable x)) term
@@ -121,9 +125,10 @@ let rec make_relcalc readable_ra =
 and make_term readable_term =
    let lf_make lf =
       match lf with
-         Const(x)    -> Const(x)
-       | Var(x)      -> Var(x)
-       | AggSum(f,r) -> AggSum(make_term f, make_relcalc r)
+         Const(x)       -> Const(x)
+       | Var(x)         -> Var(x)
+       | AggSum(f,r)    -> AggSum(make_term f, make_relcalc r)
+       | External(n,vs) -> External(n,vs)
    in
    match readable_term with
       RSum(x)  -> TermSemiRing.mk_sum( List.map make_term x)
@@ -201,7 +206,7 @@ let safe_vars (phi: relcalc_t) (param_vars: var_t list) : (var_t list) =
 
 (* TODO: enforce that the variables occurring in f are among the
    range-restricted variables of r. Otherwise throw exception. *)
-let make_aggsum f r =
+let mk_aggsum f r =
    if (r = CalcSemiRing.zero) then TermSemiRing.zero
    else if (f = TermSemiRing.zero) then TermSemiRing.zero
    else if (r = CalcSemiRing.one) then f
@@ -243,20 +248,22 @@ let complement relcalc =
 
 (* Delta computation and simplification *)
 
-(* Negate arithmetic terms, since relational algebra is positive *)
-let negate_term x =
-    TermSemiRing.mk_prod([TermSemiRing.mk_val(Const(Int(-1))); x])
+let negate_term (do_it: bool) (x: term_t): term_t =
+    if do_it then
+       TermSemiRing.mk_prod([TermSemiRing.mk_val(Const(Int(-1))); x])
+    else x
 
 
 (* Note: for ((relcalc|term)_delta true relname tuple expr),
    the resulting deletion delta is already negative, so we *add* it to
    the old value, rather than subtracting it. *)
-let rec relcalc_delta (negate: bool) (relname: string)
-                     (tuple: var_t list) (relcalc: relcalc_t) =
+let rec relcalc_delta (delta_for_external: string -> (var_t list) -> term_t)
+                      (negate: bool) (relname: string)
+                      (tuple: var_t list) (relcalc: relcalc_t) =
    let delta_leaf negate lf =
       match lf with
          False -> CalcSemiRing.zero
-       | True -> CalcSemiRing.zero
+       | True  -> CalcSemiRing.zero
        | Rel(r, l) when relname = r ->
             let f (x,y) = CalcSemiRing.mk_val(
                              AtomicConstraint(Eq, TermSemiRing.mk_val(Var(x)),
@@ -265,8 +272,10 @@ let rec relcalc_delta (negate: bool) (relname: string)
             CalcSemiRing.mk_prod (List.map f (List.combine l tuple))
        | Rel(x, l) -> CalcSemiRing.zero
        | AtomicConstraint(comp, t1, t2) ->
-            if(((term_delta_aux negate relname tuple t1) = TermSemiRing.zero) &&
-               ((term_delta_aux negate relname tuple t2) = TermSemiRing.zero))
+            let tda x = term_delta_aux delta_for_external negate relname tuple x
+            in
+            if(((tda t1) = TermSemiRing.zero) &&
+               ((tda t2) = TermSemiRing.zero))
             then
                   CalcSemiRing.zero
             else raise Assert0Exception
@@ -275,19 +284,17 @@ let rec relcalc_delta (negate: bool) (relname: string)
    in
        CalcSemiRing.delta (delta_leaf negate) relcalc
 
-and term_delta_aux (negate: bool) (relname: string)
-               (tuple: var_t list) (term: term_t)  =
-   let negate_f t = if negate then negate_term t else t
-   in
-   let t_pm_dt t =
-      TermSemiRing.mk_sum[t; negate_f (term_delta_aux negate relname tuple t)]
-   in
+and term_delta_aux (delta_for_external: string -> (var_t list) -> term_t)
+                   (negate: bool) (relname: string)
+                   (tuple: var_t list) (term: term_t)  =
    let rec leaf_delta negate lf =
       match lf with
-         Const(c) -> TermSemiRing.zero
-       | Var(x)   -> TermSemiRing.zero
+         Const(_) -> TermSemiRing.zero
+       | Var(_)   -> TermSemiRing.zero
+       | External(name, vars) -> delta_for_external name vars
        | AggSum(f, r) ->
-            let d_f = term_delta_aux negate relname tuple f in
+            let d_f = term_delta_aux delta_for_external
+                                     negate relname tuple f in
             if (constraints_only r) then
                (* FIXME: this is overkill (but supposedly correct) in the
                   case that r does not contain AggSum terms, i.e., in the
@@ -296,6 +303,11 @@ and term_delta_aux (negate: bool) (relname: string)
                   let leaf_f lf =
                      (match lf with
                         AtomicConstraint(c, t1, t2) ->
+                        let t_pm_dt t =
+                           TermSemiRing.mk_sum[t; negate_term negate
+                              (term_delta_aux delta_for_external
+                                              negate relname tuple t)]
+                        in
                         CalcSemiRing.mk_val(
                             AtomicConstraint(c, t_pm_dt t1, t_pm_dt t2))
                       | True ->
@@ -314,30 +326,29 @@ and term_delta_aux (negate: bool) (relname: string)
                   + (if (    new_r-  and (not r)) then          -f  else 0)
                   + (if (not(new_r-) and      r ) then           f  else 0)
                *)
-               let delta_constraint =
-                   TermSemiRing.mk_sum [
-                      make_aggsum d_f new_r;
-                      make_aggsum (negate_f f)
-                          (CalcSemiRing.mk_prod [new_r; (complement r)]);
-                      make_aggsum
-                          (if negate then f else negate_term f)
-                          (CalcSemiRing.mk_prod [ (complement new_r); r ])
-                   ]
-               in
-                   delta_constraint
+               TermSemiRing.mk_sum [
+                  mk_aggsum d_f new_r;
+                  mk_aggsum (negate_term negate f)
+                      (CalcSemiRing.mk_prod [new_r; (complement r)]);
+                  mk_aggsum
+                      (negate_term (not negate) f)
+                      (CalcSemiRing.mk_prod [ (complement new_r); r ])
+               ]
             else
-               let d_r = (relcalc_delta negate relname tuple r) in
-                   TermSemiRing.mk_sum [ (make_aggsum  d_f   r);
-                                         (make_aggsum    f d_r);
-                                         (make_aggsum  d_f d_r) ]
+               let d_r = (relcalc_delta delta_for_external
+                                        negate relname tuple r)
+               in
+               TermSemiRing.mk_sum [ (mk_aggsum  d_f   r);
+                                     (mk_aggsum    f d_r);
+                                     (mk_aggsum  d_f d_r) ]
    in
-       TermSemiRing.delta (leaf_delta negate) term
+   TermSemiRing.delta (leaf_delta negate) term
 
-and term_delta (negate: bool) (relname: string)
+and term_delta (delta_for_external: string -> (var_t list) -> term_t)
+               (negate: bool) (relname: string)
                (tuple: var_t list) (term: term_t)  =
-   let negate_f t = if negate then negate_term t else t
-   in
-       negate_f (term_delta_aux negate relname tuple term)
+   negate_term negate (term_delta_aux delta_for_external
+                                      negate relname tuple term)
 
 
 
@@ -451,44 +462,56 @@ let factorize_aggsum_mm (f_monomial: term_t)
                            (TermSemiRing.prod_list f_monomial)
                            (monomial_as_hypergraph r_monomial))
       in
-      let mk_aggsum component =
+      let mk_aggsum2 component =
          let (f, r) = Util.MixedHyperGraph.extract_atoms component in
-         (make_aggsum (TermSemiRing.mk_prod f) (hypergraph_as_monomial r))
+         (mk_aggsum (TermSemiRing.mk_prod f) (hypergraph_as_monomial r))
       in
-      TermSemiRing.mk_prod (List.map mk_aggsum factors)
+      TermSemiRing.mk_prod (List.map mk_aggsum2 factors)
+
+
+
+
+let rec apply_bottom_up (aggsum_f: term_t -> relcalc_t -> term_t)
+                        (aconstraint_f: comp_t -> term_t -> term_t -> relcalc_t)
+                        (term: term_t) : term_t =
+   let r_leaf_f (lf: relcalc_lf_t): relcalc_t =
+      match lf with
+         AtomicConstraint(c, t1, t2) ->
+            aconstraint_f c (apply_bottom_up aggsum_f aconstraint_f t1)
+                            (apply_bottom_up aggsum_f aconstraint_f t2)
+       | _ -> CalcSemiRing.mk_val(lf)
+   in
+   let t_leaf_f (lf: term_lf_t): term_t =
+      match lf with
+         AggSum(f, r) -> aggsum_f (apply_bottom_up aggsum_f aconstraint_f f)
+                                  (CalcSemiRing.apply_to_leaves r_leaf_f r)
+       |  _ -> TermSemiRing.mk_val(lf)
+   in
+   TermSemiRing.apply_to_leaves t_leaf_f term
 
 
 (* polynomials, recursively: in the end, +/union only occurs on the topmost
    level.
 *)
-let rec roly_poly (ma: term_t) : term_t =
-   let r_leaf_f (lf: relcalc_lf_t) : relcalc_t =
-      match lf with
-         AtomicConstraint(c, t1, t2) ->
-            CalcSemiRing.mk_val(AtomicConstraint(c, roly_poly t1, roly_poly t2))
-       | _ -> CalcSemiRing.mk_val(lf)
+let roly_poly (term: term_t) : term_t =
+   let aconstraint_f c t1 t2 =
+      CalcSemiRing.mk_val(AtomicConstraint(c,
+         (TermSemiRing.polynomial t1), (TermSemiRing.polynomial t2)))
    in
-   let t_leaf_f (lf: term_lf_t): term_t =
-      match lf with
-        Const(_)     -> TermSemiRing.mk_val(lf)
-      | Var(_)       -> TermSemiRing.mk_val(lf)
-      | AggSum(f, r) ->
-         (
-            (* recursively normalize contents of complex terms in
-               atomic constraints. *)
-            let r_monomials =
-                   monomials (CalcSemiRing.apply_to_leaves r_leaf_f r) in
-            let f_monomials = TermSemiRing.sum_list (roly_poly f)
-            in
-            (* distribute the sums in r_monomials and f_monomials and
-               factorize. *)
-            TermSemiRing.mk_sum (List.flatten (List.map
-               (fun y -> (List.map (fun x -> factorize_aggsum_mm x y)
-                                    f_monomials))
-               r_monomials))
-         )
+   let aggsum_f f r =
+      (* recursively normalize contents of complex terms in
+         atomic constraints. *)
+      let r_monomials = monomials r in
+      let f_monomials = TermSemiRing.sum_list (TermSemiRing.polynomial f)
+      in
+      (* distribute the sums in r_monomials and f_monomials and
+         factorize. *)
+      TermSemiRing.mk_sum (List.flatten (List.map
+         (fun y -> (List.map (fun x -> factorize_aggsum_mm x y)
+                              f_monomials))
+         r_monomials))
    in
-   TermSemiRing.polynomial (TermSemiRing.apply_to_leaves t_leaf_f ma)
+   TermSemiRing.polynomial (apply_bottom_up aggsum_f aconstraint_f term)
 
 
 
@@ -517,34 +540,50 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
             let (l1, t1b) = simplify_roly t1 bound_vars in
             let (l2, t2b) = simplify_roly t2 bound_vars in
                             (* TODO: pass bindings from first to second *)
-            (l1 @ l2, CalcSemiRing.mk_val(AtomicConstraint(c, t1b, t2b)))
+            (l1 @ l2,
+             CalcSemiRing.mk_val(AtomicConstraint(c, t1b, t2b)))
        | _ -> ([], CalcSemiRing.mk_val lf)
+   in
+   let simplify_calc r bound_vars =
+      (* simplify terms in atomic constraints *)
+      let (b1, r1) = CalcSemiRing.extract
+         (fun x -> raise Assert0Exception) List.flatten r_leaf_f r
+         (* the bindings that are obtained here by concatenation are
+            not necessarily consistent. What helps us is that, in practice,
+            variables that are not bound, i.e., originate inside a term,
+            do not occur in other terms. TODO: there are counterexamples
+            to this, but we can avoid them by making problematic variables
+            bound. *)
+      in
+      let (b2, r2) = extract_substitutions r1 bound_vars
+      in
+      let b3 = (Util.ListAsSet.no_duplicates b1@b2)
+      in
+      if ((Util.Function.functional b3) &&   (* not inconsistent *)
+          (Util.Function.intransitive b3))   (* excludes e.g. [x->y, y->z]:
+                                                must not map x to y if y
+                                                has been substituted. *)
+      then (b3, r2)
+      else raise Assert0Exception
    in
    let t_leaf_f lf =
       match lf with
-        Const(_)     -> ([], TermSemiRing.mk_val(lf))
-      | Var(_)       -> ([], TermSemiRing.mk_val(lf))
-      | AggSum(f, r) ->
+        Const(_)      -> ([], TermSemiRing.mk_val(lf))
+      | Var(_)        -> ([], TermSemiRing.mk_val(lf))
+      | External(_,_) -> ([], TermSemiRing.mk_val(lf))
+      | AggSum(f, r)  ->
         (
            (* we test equality, not equivalence, to zero here. Sufficient
               if we first normalize using roly_poly. *)
            if (r = relcalc_zero) then raise Assert0Exception
            else if (f = TermSemiRing.zero) then ([], TermSemiRing.zero)
            else
-              (* simplify terms in atomic constraints *)
-              let (b1, r2) = CalcSemiRing.extract
-                 (fun x -> raise Assert0Exception) List.flatten r_leaf_f r
-                 (* TODO: use b1 *)
-              in
-              let (b, non_eq_cons) = extract_substitutions r2 bound_vars
-              in
-              let augment_bound_vars bound_vars b =
-                 let (_, b_img) = List.split b in
-                 Util.ListAsSet.union bound_vars b_img
+              let (b, non_eq_cons) = simplify_calc r bound_vars
               in
               let (b2, f2) = simplify_roly
                                 (apply_variable_substitution_to_term b f)
-                                (augment_bound_vars bound_vars b)
+                                (Util.ListAsSet.union bound_vars
+                                                      (Util.Function.img b))
               in
               let b3 = Util.ListAsSet.union b b2
               in
@@ -555,6 +594,8 @@ let rec simplify_roly (ma: term_t) (bound_vars: var_t list)
         )
    in
    TermSemiRing.extract List.flatten List.flatten t_leaf_f ma
+   (* TODO: in principle, this can create an inconsistent mapping if the
+      variables of the subterms overlap. *)
 
 
 (* apply roly_poly and simplify by unifying variables.
@@ -573,22 +614,26 @@ let simplify (ma: term_t)
    List.map simpl (TermSemiRing.sum_list (roly_poly ma))
 
 
-let rec extract_aggregates term =
-   let r_aggs r =
-      let r_leaf_f lf =
-         match lf with
-            AtomicConstraint(_, t1, t2) ->
-               (extract_aggregates t1) @ (extract_aggregates t2)
-          | _ -> []
-      in
-      CalcSemiRing.fold List.flatten List.flatten r_leaf_f r
+let rec extract_aggregates_from_calc relcalc =
+   let r_leaf_f lf =
+      match lf with
+         AtomicConstraint(_, t1, t2) ->
+            (extract_aggregates_from_term t1) @
+            (extract_aggregates_from_term t2)
+       | _ -> []
    in
+   Util.ListAsSet.no_duplicates
+      (CalcSemiRing.fold List.flatten List.flatten r_leaf_f relcalc)
+
+and extract_aggregates_from_term term =
    let t_leaf_f x =
       match x with
          AggSum(f, r) ->
             (* if r is constraints_only, take the aggregates from the
                atoms of r; otherwise, return x monolithically. *)
-            if (constraints_only r) then ((extract_aggregates f) @ (r_aggs r))
+            if (constraints_only r) then
+               ((extract_aggregates_from_term f) @
+                (extract_aggregates_from_calc r))
             else [TermSemiRing.Val x]
        | _ -> []
    in
@@ -596,15 +641,32 @@ let rec extract_aggregates term =
       (TermSemiRing.fold List.flatten List.flatten t_leaf_f term)
 
 
+(* Note: the substitution is bottom-up. This means we greedily replace
+   smallest subterms, rather than largest ones. This has to be kept in
+   mind if terms in aggsum_theta may mutually contain each other.
+
+   FIXME: substitute_in_term currently can only replace AggSum terms,
+   not general terms.
+*)
+let substitute_in_term (aggsum_theta: (term_t * term_t) list)
+                       (term: term_t): term_t =
+   let aconstraint_f c t1 t2 =
+      CalcSemiRing.mk_val(AtomicConstraint(c, t1, t2))
+   in
+   let aggsum_f f r =
+      let this = TermSemiRing.mk_val(AggSum(f, r))
+      in
+      Util.Function.apply aggsum_theta this this
+   in
+   apply_bottom_up aggsum_f aconstraint_f term
 
 
 (* pseudocode output of relcalc expressions and terms. *)
-let rec relcalc_as_string (relcalc: relcalc_t)
-                         (theta: (term_t * string) list): string =
+let rec relcalc_as_string (relcalc: relcalc_t): string =
    let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
    let prod_f l = (Util.string_of_list " and " l) in
    let constraint_as_string c x y =
-            (term_as_string x theta) ^ c ^ (term_as_string y theta) in
+            (term_as_string x) ^ c ^ (term_as_string y) in
    let leaf_f lf =
       match lf with
          AtomicConstraint(Eq,  x, y) -> constraint_as_string "="  x y
@@ -617,11 +679,10 @@ let rec relcalc_as_string (relcalc: relcalc_t)
    in
    CalcSemiRing.fold sum_f prod_f leaf_f relcalc
 
-and term_as_string (m: term_t)
-                   (aggsum_theta :(term_t * string) list): string =
+and term_as_string (m: term_t): string =
    let leaf_f (lf: term_lf_t) =
    (match lf with
-      Const(c)    ->
+      Const(c)           ->
       (
          match c with
             Int(i)    -> string_of_int i
@@ -629,22 +690,83 @@ and term_as_string (m: term_t)
           | Long(l)   -> "(int64 output not implemented)" (* TODO *)
           | String(s) -> "'" ^ s ^ "'"
       )
-    | Var(x)      -> x
-    | AggSum(f,r) ->
+    | Var(x)             -> x
+    | External(n,params) -> n^"["^(Util.string_of_list ", " params)^"]"
+    | AggSum(f,r)        ->
       if (constraints_only r) then
          (* this is used even if the AtomicConstraints contain aggregate
             terms. *)
-         "(if " ^ (relcalc_as_string r aggsum_theta) ^ " then " ^
-                  (term_as_string    f aggsum_theta) ^ " else 0)"
+         "(if " ^ (relcalc_as_string r) ^ " then " ^
+                  (term_as_string    f) ^ " else 0)"
       else
-         (* replace aggregate term by map access *)
-         Util.apply aggsum_theta
-                    ("AggSum("^(term_as_string    f aggsum_theta)^", "
-                              ^(relcalc_as_string r aggsum_theta)^")")
-                    (TermSemiRing.mk_val(lf))
+         "AggSum("^(term_as_string    f)^", "
+                  ^(relcalc_as_string r)^")"
    )
    in (TermSemiRing.fold (fun l -> "("^(Util.string_of_list "+" l)^")")
                          (fun l -> "("^(Util.string_of_list "*" l)^")")
                          leaf_f m)
+
+
+
+
+let bigsum_rewriting (term: term_t)
+                     (monomial: relcalc_t)      (* not constraints only *)
+                     (bound_vars: var_t list)
+(*
+                     (map_name_prefix: string)
+*)
+                     : (var_t list) * term_t * relcalc_t =
+   (*
+   find all bigsum variables: the variables of the relational atoms
+   that are not bound and which are used in AtomicConstraint terms whose
+   delta is not zero.
+   *)
+   let bigsum_var_candidates =
+      (Util.ListAsSet.diff (safe_vars monomial bound_vars) bound_vars)
+   in
+   let calc_aggs = extract_aggregates_from_calc monomial
+   in
+(*
+   let f (agg, i) =
+      let bs_vars = Util.ListAsSet.inter bigsum_var_candidates (term_vars agg)
+      in
+      (map_name_prefix^(string_of_int i), bs_vars, agg)
+   in
+   let tab = List.map f (Util.add_positions (calc_aggs) 1)
+   in
+   let theta = List.map
+      (fun (n,vs,t) -> (t, TermSemiRing.mk_val(External(n, vs))))
+      tab
+   in
+*)
+   let calc_agg_vars = Util.ListAsSet.multiunion (List.map term_vars calc_aggs)
+   in
+   let bad lf =
+      match lf with
+         CalcSemiRing.Val(AtomicConstraint(c, t1, t2)) ->
+            not ((extract_aggregates_from_term t1 = []) &&
+                 (extract_aggregates_from_term t2 = []))
+       | _ -> false
+   in
+   let l = List.map CalcSemiRing.mk_val (CalcSemiRing.leaves monomial)
+   in
+   let bad_atoms = List.filter bad l
+   in
+   let bigsum_vars = Util.ListAsSet.inter bigsum_var_candidates calc_agg_vars
+   in
+   let new_term = TermSemiRing.mk_val(AggSum(term,
+      CalcSemiRing.mk_prod (Util.ListAsSet.diff l bad_atoms)))
+   in
+   let new_body = CalcSemiRing.mk_prod bad_atoms
+(*
+      ([CalcSemiRing.mk_val(Rel(
+          "Dom_{"^(Util.string_of_list ", " bigsum_vars)^"}", bigsum_vars))] @
+       bad_atoms)
+*)
+   in
+   (bigsum_vars, new_term, new_body)
+
+
+
 
 
