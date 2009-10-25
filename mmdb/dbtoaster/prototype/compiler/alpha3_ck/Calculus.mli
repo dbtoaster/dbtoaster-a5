@@ -146,6 +146,16 @@ val safe_vars: relcalc_t -> (var_t list) -> (var_t list)
 
 
 
+type relalg_t =
+   Alg_MultiProd of (relalg_t list)
+ | Alg_Selection of (((comp_t * var_t * var_t) list) * relalg_t)
+ | Alg_Rel of string * string
+ | Alg_True
+
+(* TODO: explain *)
+val relcalc_as_algebra: relcalc_t -> string -> (var_t list) -> relalg_t
+
+
 (* output relcalc or term as string. *)
 val relcalc_as_string: relcalc_t -> string
 val term_as_string:    term_t    -> string
@@ -213,7 +223,7 @@ val extract_substitutions: relcalc_t -> (var_t list) ->
    (((var_t * var_t) list) * relcalc_t)
 
 (* a list consisting of the maximal AggSum subexpressions of the input
-   formula. *)
+   formula whose formula part is not constraints_only. *)
 val extract_aggregates_from_calc: relcalc_t -> (term_t list)
 
 (*
@@ -241,12 +251,27 @@ val term_delta: (string -> (var_t list) -> term_t) ->
 *)
 val roly_poly: term_t -> term_t
 
-(* calls roly_poly. Then, for each (possibly nested) monomial -- i.e., sum
-   and union-free subexpression -- the function unifies variables as
-   much as possible, but does not rename the variables in the second arguments
-   (the "bound variables"). Also applies the substitution computed to the
+
+(* given a union-free term and a list of bound variables,
+   simplify_roly unifies variables as
+   much as possible, but does not rename the bound variables.
+*)
+val simplify_roly: bool -> term_t -> (var_t list) ->
+                   (((var_t * var_t) list) * term_t)
+
+
+
+(* temporarily accessible *)
+val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
+                            (((var_t * var_t) list) * relcalc_t)
+
+
+
+
+(* calls roly_poly. For each union-free term returned by roly_poly,
+   simplify_roly is called.  Also applies the substitution computed to the
    variables given in the third argument (the parameters). Returns
-   a pair consisting of the renamed parameters and the list of simplified
+   pairs consisting of renamed parameters and simplified
    nested monomials.
 *)
 val simplify: term_t -> (var_t list) -> (var_t list) ->
@@ -268,6 +293,11 @@ val extract_aggregates_from_term: term_t -> (term_t list)
 val substitute_in_term: ((term_t * term_t) list) -> term_t -> term_t
 
 
+type bs_rewrite_mode_t = ModeExtractFromCond
+                       | ModeGroupCond
+                       | ModeIntroduceDomain
+                       | ModeOpenDomain
+
 (* given a term t, a calculus monomial r that is not constraints only,
    and a set of bound variables,
 
@@ -280,8 +310,8 @@ val substitute_in_term: ((term_t * term_t) list) -> term_t -> term_t
    such that r' is constraints only and AggSum(t, r) is equivalent to
    sum_{bigsum_vars} AggSum(t', r').
 *)
-val bigsum_rewriting: term_t -> relcalc_t -> (var_t list) ->
-                      ((var_t list) * term_t * relcalc_t)
+val bigsum_rewriting: bs_rewrite_mode_t -> term_t -> (var_t list) -> string ->
+                      ((var_t list) *((term_t * term_t) list) * term_t)
 
 
 (*

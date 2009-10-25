@@ -78,8 +78,7 @@ struct
    The top-level result list thus conceptually is a MultiProduct.
 *)
 let rec connected_components (get_nodes: 'edge_t -> 'node_t list)
-                             (hypergraph: 'edge_t list)
-   (* returns  ('edge_t list list) *)
+                             (hypergraph: 'edge_t list): ('edge_t list list)
    =
    let rec complete_component c g =
       if (g = []) then c
@@ -130,6 +129,14 @@ end
 
 
 
+(* (string_of_list ", " ["a"; "b"; "c"] = "a, b, c". *)
+let string_of_list (sep: string) (l: string list): string =
+   if (l = []) then ""
+   else List.fold_left (fun x y -> x^sep^y) (List.hd l) (List.tl l);;
+
+
+
+
 module Function =
 struct
    type ('a, 'b) table_fn_t = ('a * 'b) list
@@ -171,6 +178,10 @@ struct
    let intransitive (theta: ('a, 'a) table_fn_t): bool =
       ((ListAsSet.diff (ListAsSet.inter (dom theta) (img theta))
                        (identities theta)) = [])
+
+   (* only for functions from strings to strings *)
+   let string_of_string_fn theta: string =
+      "{" ^(string_of_list ", " (List.map (fun (x,y) -> x^"->"^y) theta))^"}"
 end
 
 
@@ -259,15 +270,7 @@ Vars.equivalence_classes b =
 
 Vars.closure [("x", "y"); ("u", "v"); ("v", "y")] ["x"] =
    ["x"; "y"; "v"; "u"];;
-
 *)
-
-
-
-(* (string_of_list ", " ["a"; "b"; "c"] = "a, b, c". *)
-let string_of_list (sep: string) (l: string list): string =
-   if (l = []) then ""
-   else List.fold_left (fun x y -> x^sep^y) (List.hd l) (List.tl l);;
 
 
 
@@ -278,7 +281,11 @@ let string_of_list (sep: string) (l: string list): string =
 let rec add_positions (l: 'a list) i =
    if (l = []) then []
    else ((List.hd l), i) :: (add_positions (List.tl l) (i+1))
-;;
 
+(* add_names "foo" ["a"; "b"] = [("foo1", "a"), ("foo2", "b")] *)
+let add_names (name_prefix: string) (l: 'a list): ((string * 'a) list) =
+   let add_name (x, i) = (name_prefix^(string_of_int i), x)
+   in
+   List.map add_name (add_positions l 1)
 
 

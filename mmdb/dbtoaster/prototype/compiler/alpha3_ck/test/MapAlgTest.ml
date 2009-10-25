@@ -214,25 +214,8 @@ readable_term (term_delta Compiler.externals_forbidden false "R" ["x"; "y"] (mak
 RVal(AggSum(RVal(Const(Int 1)),
    RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)), RVal(Var("z"))))))
 ))) =
-  RSum
-   [RVal
-     (AggSum
-       (RVal (Const (Int 1)),
-        RA_MultiNatJoin
-         [RA_Leaf
-           (AtomicConstraint (Lt, RVal (Const (Int 0)), RVal (Var "z")));
-          RA_Leaf
-           (AtomicConstraint (Le, RVal (Var "z"), RVal (Const (Int 0))))]));
-    RVal
-     (AggSum
-       (RVal (Const (Int (-1))),
-        RA_MultiNatJoin
-         [RA_Leaf
-           (AtomicConstraint (Le, RVal (Var "z"), RVal (Const (Int 0))));
-          RA_Leaf
-           (AtomicConstraint (Lt, RVal (Const (Int 0)), RVal (Var "z")))]))]
+   RVal (Const (Int 0))
 ;;
-(* correct, but both conditions are unsatisfiable, so the value is 0 *)
 
 
 (* if (0 < AggSum(1, R(A,B))) then 1 else 0 *)
@@ -289,7 +272,11 @@ RVal (AggSum (RVal (Var "A"),
 
 
 (* this throws an exception because the two innermost AtomicConstraints
-   produce inconsistent variable mappings for x and y. *)
+   produce inconsistent variable mappings for x and y.
+
+   Commented out: now this doesn't throw an exception anymore.
+*)
+(*
 let test34 =
 try
 ignore
@@ -308,6 +295,46 @@ RVal (AggSum ((RVal (Const (Int 1))),
                    ])))) [] [])
 ); false
 with _ -> true;;
+*)
+
+
+let test35 =
+Calculus.simplify_roly true (make_term
+  (RVal (AggSum (RVal (Const (Int 1)),
+    RA_Leaf
+      (AtomicConstraint (Eq, RVal (Const (Int 0)),
+        RSum
+         [RVal
+           (AggSum (RVal (Const (Int 1)),
+               RA_Leaf(AtomicConstraint(Eq, RVal(Var "z"), RVal(Var "y")))));
+          RVal
+           (AggSum (RVal (Const (Int 1)),
+               RA_Leaf(AtomicConstraint(Eq, RVal(Var "z"), RVal(Var "x")))))
+]))))
+)) ["x"; "y"] =
+([], make_term (RVal (AggSum (RVal (Const (Int 1)),
+    RA_Leaf (AtomicConstraint (Eq, RVal (Const (Int 0)),
+       RSum [RVal (Const (Int 1)); RVal (Const (Int 1))]))))))
+;;
+
+
+
+let test36 =
+Calculus.simplify_roly true (make_term (
+  RVal (AggSum (RVal (Const (Int 1)),
+    RA_Leaf
+      (AtomicConstraint (Eq,
+         RVal
+           (AggSum (RVal (Const (Int 1)),
+               RA_Leaf(AtomicConstraint(Eq, RVal(Var "z"), RVal(Var "y"))))),
+         RVal
+           (AggSum (RVal (Const (Int 1)),
+               RA_Leaf(AtomicConstraint(Eq, RVal(Var "z"), RVal(Var "x")))))
+)))))) ["x"; "y"] =
+([], make_term( RVal (AggSum (RVal (Const (Int 1)),
+  RA_Leaf (AtomicConstraint (Eq, RVal (Const (Int 1)), RVal (Const (Int 1))))))
+))
+;;
 
 
 

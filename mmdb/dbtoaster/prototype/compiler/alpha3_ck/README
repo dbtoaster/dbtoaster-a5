@@ -1,15 +1,5 @@
 
-This is the SPREAD query compiler.
-
-For examples of its use see CompilerTest.ml.
-
-
-TODOs:
-
-* The output has be be formatted in a way convenient to Oliver.
-
-* The code does not generate partition hints yet.
-
+This is Christoph's shot at the query compiler.
 
 Recent changes:
 
@@ -22,9 +12,23 @@ Recent changes:
 
 * Cleaned up MixedHyperGraph and moved it to Util
 
+2009-Oct-23:
 * Added externals to terms.
 
 * Implemented function bigsum_rewriting.
 
 * Simplified signatures in Compiler.ml.
+
+* Integrated bigsum_rewriting into compile.
+
+2009-Oct-25:
+* Generalized delta to support arbritrary terms and formulas. No magic here,
+  in the case I was previously excluding, the delta is structurally not
+  simpler than the input, so if we would recursively compile, we would not
+  terminate.
+
+* Added three more bigsum_rewriting methods.
+
+* Implemented rudimentary transformation to relational algebra, with
+  extraction of explicit constraints.
 

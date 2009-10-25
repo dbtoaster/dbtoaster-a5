@@ -2,13 +2,7 @@
    the operations '+' and '*') over a base type, and for simplifying
    expressions. The module contains a function for turning an expression
    into a polynomial.
-
-   There is no output method here and CK thinks no one should be added.
-   In general, it depends on the application how the (debug) output
-   should be generated; for example, the OCAML standard library Set(A)
-   also does not know how to print itself.
 *)
-
 
 
 (* The base type t over which we define the semiring, plus its zero and one
@@ -156,12 +150,18 @@ sig
    val delta: (leaf_t -> expr_t) -> expr_t -> expr_t
 
    (* a polynomial is a sum of monomials.
-      a monomial is a product of base values *)
+      A monomial is a product of base values.
+      Creates a flat sum of flat products of leaves. *)
    val polynomial: expr_t -> expr_t
 
    (* computes a polynomial equivalent to the input but expresses it as
       a list of monomials. *)
    val monomials: expr_t -> (mono_t list)
+
+   (* casts an expression to a monomial. If that is not possible
+      (because of the presence of sums or zeros, an exception is thrown. *)
+   val cast_to_monomial: expr_t -> mono_t
+   exception CannotCastToMonomialException of expr_t
 
    (* simplifies expressions by unnesting sums of sums and products
       of products, and simplifies using ones and zeros.
@@ -198,22 +198,19 @@ struct
    let mk_val a = Val(a)
 
    let mk_sum  l      =
-      let l2 = (List.filter (fun x -> x <> zero) l)
-      in
+      let l2 = (List.filter (fun x -> x <> zero) l) in
       if(l2 = []) then zero
       else if (List.tl l2) = [] then (List.hd l2)
       else Sum(l2)
 
    let mk_prod l =
-      let zeroes = (List.filter (fun x -> x = zero) l)
-      in
+      let zeroes = (List.filter (fun x -> x = zero) l) in
       if (zeroes <> []) then zero
       else
-      let l2 = (List.filter (fun x -> x <> one) l)
-      in
-      if (l2 = []) then one
-      else if ((List.tl l2) = []) then List.hd l2
-      else Prod(l2)
+         let l2 = (List.filter (fun x -> x <> one) l) in
+         if (l2 = []) then one
+         else if ((List.tl l2) = []) then List.hd l2
+         else Prod(l2)
 
    exception NotAValException
    let get_val e =
@@ -224,10 +221,8 @@ struct
    let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
    let prod_list e = match e with Prod(l) -> l | _ -> [e]
 
-   let rec fold ( sum_f: 'b list -> 'b)
-                (prod_f: 'b list -> 'b)
-                (leaf_f: leaf_t -> 'b)
-                (e: expr_t) =
+   let rec fold ( sum_f: 'b list -> 'b) (prod_f: 'b list -> 'b)
+                (leaf_f: leaf_t -> 'b) (e: expr_t) =
       match e with
          Sum(l)  ->  sum_f(List.map (fold sum_f prod_f leaf_f) l)
        | Prod(l) -> prod_f(List.map (fold sum_f prod_f leaf_f) l)
@@ -274,29 +269,33 @@ struct
          ])
        | Val(x) -> lf_delta x
 
-   (* create a flat sum of flat products of constants, vars, and
-      query aggregates *)
    let rec polynomial (e: expr_t) =
       let mk_flat_sum x = sum_list (polynomial x)
       in
       match e with
-         Sum(l) ->
-            mk_sum (List.flatten (List.map mk_flat_sum l))
+         Sum(l)  -> mk_sum (List.flatten (List.map mk_flat_sum l))
        | Prod(l) ->
             let mk_flat_prod x = mk_prod (List.flatten (List.map prod_list x))
             in
             mk_sum (List.map mk_flat_prod
                        (Util.ListAsSet.distribute (List.map mk_flat_sum l)))
-       | _ -> e
+       | _       -> e
 
    let monomials (e: expr_t) =
-      let p = polynomial e
-      in
+      let p = polynomial e in
       if (p = zero) then []
       else
          List.map (fun x -> List.map get_val (prod_list x))
                   (sum_list (polynomial e))
 
+   exception CannotCastToMonomialException of expr_t
+
+   let cast_to_monomial (e: expr_t): mono_t =
+      let ms = monomials e in
+      if (List.length ms != 1) then raise (CannotCastToMonomialException e)
+      else List.hd ms
+
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
 end
+

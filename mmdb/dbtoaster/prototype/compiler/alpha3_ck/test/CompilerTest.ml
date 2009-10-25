@@ -23,9 +23,23 @@ Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] m =
   (Compiler.mk_external "mR1" ["x_mR_B"]))])
 ;;
 
+List.hd (fst (
+Compiler.compile_delta_for_rel "S" ["B"; "C"]
+   (Compiler.mk_external "mR1" ["x_mR_B"]) []
+(
+make_term(RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["x_mR_B"; "C"])))))
+))) =
+("S", ["x_mR1S_B"; "x_mR1S_C"], ["x_mR1S_B"],
+   make_term(RVal (Var "x_mR1S_C")));;
+
+
+
+
+
 
 (* select sum(A*C) from R, S where R.B=S.B *)
-Compiler.compile sch mt [] m =
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch mt m =
 ["+R(x_mR_A, x_mR_B): m[] += (x_mR_A*mR1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): m[] += (mS1[x_mS_B]*x_mS_C)";
  "+S(x_mR1S_B, x_mR1S_C): mR1[x_mR1S_B] += x_mR1S_C";
@@ -34,7 +48,8 @@ Compiler.compile sch mt [] m =
 
 
 (* select sum(A*C) from R, S where R.B<S.B *)
-Compiler.compile sch mt []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch mt
 (make_term(RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("C"))],
                 RA_MultiNatJoin([
 RA_Leaf(Rel("R", ["A"; "B1"]));
@@ -49,7 +64,8 @@ RA_Leaf(AtomicConstraint(Lt, RVal(Var("B1")), RVal(Var("B2"))))
 
 
 (* select sum(A*C) from R, S where R.B=S.B group by A *)
-Compiler.compile sch (Compiler.mk_external "m" ["A"]) [] m =
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["A"]) m =
 ["+R(x_mR_A, x_mR_B): m[x_mR_A] += (x_mR_A*mR1[x_mR_B])";
  "+S(x_mS_B, x_mS_C): foreach A do m[A] += (mS1[A, x_mS_B]*x_mS_C)";
  "+S(x_mR1S_B, x_mR1S_C): mR1[x_mR1S_B] += x_mR1S_C";
@@ -58,7 +74,8 @@ Compiler.compile sch (Compiler.mk_external "m" ["A"]) [] m =
 
 
 (* select sum(A*D) from R, S, T where R.B=S.B and S.C=T.C *)
-Compiler.compile sch mt []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch mt
 (make_term(
    RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("D"))],
                 RA_MultiNatJoin([relR; relS; relT]))))) =
@@ -79,7 +96,8 @@ Compiler.compile sch mt []
 
 
 (* select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D *)
-Compiler.compile sch (Compiler.mk_external "m" ["D"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["D"])
 (make_term(RVal(AggSum(RVal(Var("A")), RA_MultiNatJoin([relR; relS; relT]))))) =
 ["+R(x_mR_A, x_mR_B): foreach D do m[D] += (x_mR_A*mR1[x_mR_B, D])";
  "+S(x_mS_B, x_mS_C): foreach D do m[D] += (mS1[x_mS_B]*mS2[x_mS_C, D])";
@@ -98,13 +116,15 @@ Compiler.compile sch (Compiler.mk_external "m" ["D"]) []
 
 
 (* select count( * ) from R group by B *)
-Compiler.compile sch (Compiler.mk_external "m" ["B"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["B"])
    (make_term( RVal(AggSum(RVal(Const (Int 1)), relR))))
 = ["+R(x_mR_A, x_mR_B): m[x_mR_B] += 1"] ;;
 
 
 (* select count( * ) from R, S where R.B=S.B group by C *)
-Compiler.compile sch (Compiler.mk_external "m" ["C"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["C"])
    (make_term(
       RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([relR; relS]))))) =
@@ -116,7 +136,8 @@ Compiler.compile sch (Compiler.mk_external "m" ["C"]) []
 
 
 (* select count( * ) from R, S where R.B = S.B group by B *)
-Compiler.compile sch (Compiler.mk_external "m" ["B"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["B"])
    (make_term(
       RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([relR; relS]))))) =
@@ -128,7 +149,8 @@ Compiler.compile sch (Compiler.mk_external "m" ["B"]) []
 
 
 (* select count( * ) from R, S where R.B = S.B group by B, C *)
-Compiler.compile sch (Compiler.mk_external "m" ["B"; "C"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["B"; "C"])
    (make_term(RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([relR; relS]))))) =
 ["+R(x_mR_A, x_mR_B): foreach C do m[x_mR_B, C] += mR1[x_mR_B, C]";
@@ -140,7 +162,8 @@ Compiler.compile sch (Compiler.mk_external "m" ["B"; "C"]) []
 
 (* self-join *)
 (* select count( * ) from R r1, R r2 where r1.B = r2.A *)
-Compiler.compile sch mt []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch mt
    (make_term(RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
  RA_Leaf(Rel("R", ["x"; "y"]));
@@ -159,7 +182,8 @@ Compiler.compile sch mt []
    where R.B=S.B and R.A=U.A and S.C=U.C
    group by C
 *)
-Compiler.compile sch (Compiler.mk_external "m" ["C"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "m" ["C"])
 (make_term(
    RVal(AggSum(RVal (Var("A")),
                 RA_MultiNatJoin([relR; relS; relU])))))
@@ -168,7 +192,8 @@ Compiler.compile sch (Compiler.mk_external "m" ["C"]) []
 
 
 (* select count( * ) from R, S where R.A=S.A and R.B=S.B *)
-Compiler.compile sch mt []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch mt
    (make_term(
       RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
@@ -184,7 +209,8 @@ Compiler.compile sch mt []
 
 
 (* select count( * ) from R where R.A < 5 and R.B = 'Bla' *)
-Compiler.compile sch (Compiler.mk_external "q" []) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 sch (Compiler.mk_external "q" [])
    (make_term(
       RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
@@ -198,7 +224,8 @@ Compiler.compile sch (Compiler.mk_external "q" []) []
 
 
 (* if(0 < AggSum(1, R(A,B))) then 1 else 0 *)
-Compiler.compile [("R", ["A"; "B"])] mt []
+Compiler.compile Calculus.ModeExtractFromCond
+                 [("R", ["A"; "B"])] mt
 (make_term(
 RVal(AggSum(RVal(Const(Int 1)),
    RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)),
