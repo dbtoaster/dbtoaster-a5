@@ -67,7 +67,6 @@ type const_t = Int    of int                  (* typed constant terms *)
              | Long   of int64
              | String of string
 
-
 (* leaves (=atoms) of the calculus *)
 type 'term_t generic_relcalc_lf_t =
             False
@@ -94,10 +93,7 @@ type ('term_t, 'relcalc_t) generic_term_lf_t =
                            could be generalized to terms *)
 
 
-
-
 (* The following types are abstract; their implementation is hidden. *)
-
 type relcalc_t                 (* calculus formulae *)
 type relcalc_lf_t
 type term_t
@@ -109,7 +105,6 @@ type term_lf_t
 
 (* Auxiliary types for constructing and accessing values of the abstract
    types.
-
    TODO: RA_MultiUnion and RA_MultiNatJoin are still concepts of relational
    algebra rather than calculus; we should eventually change this to
    bigand and bigor. *)
@@ -124,6 +119,8 @@ and  readable_term_t      = RVal    of readable_term_lf_t
                           | RSum    of readable_term_t list
 
 
+
+
 (* back an forth between relcalc_t and readable_relcalc_t *)
 val readable_relcalc:  relcalc_t -> readable_relcalc_t
 val make_relcalc:      readable_relcalc_t -> relcalc_t
@@ -132,19 +129,7 @@ val readable_term: term_t -> readable_term_t
 val make_term:     readable_term_t -> term_t
 
 
-(* all the variables that occur in the formula resp. term. *)
-val relcalc_vars: relcalc_t -> string list
-val term_vars:       term_t -> string list
-
-
-(* set of safe variables of a formula; a formula phi is range-restricted
-   given a set of bound variables (which are treated like constants, i.e.,
-   are safe) iff all free variables are in (safe_vars phi bound_vars).
-   The result contains all the param_vars.
-*)
-val safe_vars: relcalc_t -> (var_t list) -> (var_t list)
-
-
+(* other output functions *)
 
 type relalg_t =
    Alg_MultiProd of (relalg_t list)
@@ -155,36 +140,70 @@ type relalg_t =
 (* TODO: explain *)
 val relcalc_as_algebra: relcalc_t -> string -> (var_t list) -> relalg_t
 
-
 (* output relcalc or term as string. *)
 val relcalc_as_string: relcalc_t -> string
 val term_as_string:    term_t    -> string
 
 
-(*
-module type Formula = sig
-*)
 
-val relcalc_one:  relcalc_t
+(* all the variables that occur in the formula resp. term. *)
+val relcalc_vars: relcalc_t -> string list
+val term_vars:       term_t -> string list
+
+(* set of safe variables of a formula; a formula phi is range-restricted
+   given a set of bound variables (which are treated like constants, i.e.,
+   are safe) iff all free variables are in (safe_vars phi bound_vars).
+   The result contains all the param_vars.
+*)
+val safe_vars: relcalc_t -> (var_t list) -> (var_t list)
+
+
 val relcalc_zero: relcalc_t
+val relcalc_one:  relcalc_t
+
+val term_zero: term_t
+val term_one:  term_t
 
 
-(* (delta f n "R" t e) returns the delta on insertion (n=false) or
-   deletion (n=true) of tuple t into relation R, for relcalc expression e,
-   where f is used to map external terms to their deltas. *)
-val relcalc_delta: (string -> (var_t list) -> term_t) ->
-                   bool -> string -> (string list) -> relcalc_t -> relcalc_t
-
-(* turns an expression into a union of conjunctive queries (i.e., joins);
-   or something strictly simpler, i.e., a flat union, a flat join, or a leaf.
-
-   In the first-order logic view, we create a dnf.
-*)
+(* turns a formula into DNF.  *)
 val polynomial: relcalc_t -> relcalc_t
 
-
-(* return polynomial as list of monomials *)
+(* return DNF as list of monomials (=conjunctions). *)
 val monomials: relcalc_t -> (relcalc_t list)
+
+
+
+(* a pudding. Here: recursively turning a term into a
+   polynomial: The result does not use union anywhere, and sum is only used
+   on the very top level of the expression.
+
+   Also factorizes AggSum monomials, i.e. turns e.g.
+   sum{A*B}(R bowtie S) for schema R(A), S(B) into sum{A}(R) * sum{B}(S).
+*)
+val roly_poly: term_t -> term_t
+
+(* given a union-free term and a list of bound variables,
+   (simplify_roly recurse term bound_vars) unifies variables as
+   much as possible, but does not rename the bound variables.
+   The result is a pair of the unifer employed and the resulting term.
+*)
+val simplify_roly: bool -> term_t -> (var_t list) ->
+                   (((var_t * var_t) list) * term_t)
+
+(* (simplify_calc_monomial recurse phi bound_vars)
+   simplifies formula phi by eliminating redundant variable bottom-up
+   (recursively through nested terms if the recurse flag is set). *)
+val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
+                            (((var_t * var_t) list) * relcalc_t)
+
+(* calls roly_poly. For each union-free term returned by roly_poly,
+   simplify_roly is called.  Also applies the substitution computed to the
+   variables given in the third argument (the parameters). Returns
+   pairs consisting of renamed parameters and simplified nested monomials.
+*)
+val simplify: term_t -> (var_t list) -> (var_t list) ->
+                        ((var_t list * term_t) list)
+
 
 
 (* Are all the atoms of the given calculus formula constraints?
@@ -194,15 +213,13 @@ val monomials: relcalc_t -> (relcalc_t list)
 *)
 val constraints_only: relcalc_t -> bool
 
-
 (* (apply_variable_substitution theta phi) substitutes variables in
     calculus formula phi according to theta. *)
 val apply_variable_substitution_to_relcalc: ((var_t * var_t) list)
                                             -> relcalc_t -> relcalc_t
 
-
 (* Given monomial m that is constraints-only and a list of variables l,
-   (extract_bindings m preferred_vars) returns a pair of
+   (extract_substitutions m preferred_vars) returns a pair of
 
    * a map f for unifying variables based on the equality constraints in m,
      prioritizing to take an element from preferred_vars for each
@@ -226,57 +243,6 @@ val extract_substitutions: relcalc_t -> (var_t list) ->
    formula whose formula part is not constraints_only. *)
 val extract_aggregates_from_calc: relcalc_t -> (term_t list)
 
-(*
-end (* module type Formula *)
-
-module type Term = sig
-*)
-
-val term_zero: term_t
-val term_one:  term_t
-
-(* (delta f deletion relname tuple term) computes the delta of term as tuple is
-   inserted (deletion=false) or deleted (deletion=true) into relation relname,
-   where f is used to map external named terms to their deltas.
-*)
-val term_delta: (string -> (var_t list) -> term_t) ->
-                bool -> string -> (string list) -> term_t -> term_t
-
-(* a pudding. Here: recursively turning a term into a
-   polynomial: The result does not use union anywhere, and sum is only used
-   on the very top level of the expression.
-
-   Also factorizes AggSum monomials, i.e. turns e.g.
-   sum{A*B}(R bowtie S) for schema R(A), S(B) into sum{A}(R) * sum{B}(S).
-*)
-val roly_poly: term_t -> term_t
-
-
-(* given a union-free term and a list of bound variables,
-   simplify_roly unifies variables as
-   much as possible, but does not rename the bound variables.
-*)
-val simplify_roly: bool -> term_t -> (var_t list) ->
-                   (((var_t * var_t) list) * term_t)
-
-
-
-(* temporarily accessible *)
-val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
-                            (((var_t * var_t) list) * relcalc_t)
-
-
-
-
-(* calls roly_poly. For each union-free term returned by roly_poly,
-   simplify_roly is called.  Also applies the substitution computed to the
-   variables given in the third argument (the parameters). Returns
-   pairs consisting of renamed parameters and simplified
-   nested monomials.
-*)
-val simplify: term_t -> (var_t list) -> (var_t list) ->
-                        ((var_t list * term_t) list)
-
 (* (apply_variable_substitution theta term) substitutes variables anywhere
    in term using mapping theta, recursively. This includes relational
    calculus subexpressions.
@@ -293,28 +259,42 @@ val extract_aggregates_from_term: term_t -> (term_t list)
 val substitute_in_term: ((term_t * term_t) list) -> term_t -> term_t
 
 
+
 type bs_rewrite_mode_t = ModeExtractFromCond
                        | ModeGroupCond
                        | ModeIntroduceDomain
                        | ModeOpenDomain
 
-(* given a term t, a calculus monomial r that is not constraints only,
-   and a set of bound variables,
+(* given a term t, a set of bound variables, and a name prefix for maps
+   to be generated,
 
-   bigsum_rewriting t r bound_vars
+   (bigsum_rewriting t bound_vars map_name_prefix)
 
    returns a triple
 
-   (bigsum_vars, t', r')
+   (bigsum_vars, theta, modified_term)
 
-   such that r' is constraints only and AggSum(t, r) is equivalent to
-   sum_{bigsum_vars} AggSum(t', r').
+   such that modified_term in ModeExtractFromCond, ModeGroupCond, and
+   ModeIntroduceDomain is equivalent to t, where some aggregate subterms
+   may have been pulled out from modified_term, as encoded in the term map
+   theta. Only ModeOpenDomain results in a nonempty list of bigsum_vars and a
+   modified_term such that t is equivalent to sum_{bigsum_vars} modified_term.
 *)
 val bigsum_rewriting: bs_rewrite_mode_t -> term_t -> (var_t list) -> string ->
                       ((var_t list) *((term_t * term_t) list) * term_t)
 
 
-(*
-end (* module type Term *)
+(* (delta f n "R" t e) returns the delta on insertion (n=false) or
+   deletion (n=true) of tuple t into relation R, for relcalc expression e,
+   where f is used to map external terms to their deltas. *)
+val relcalc_delta: (string -> (var_t list) -> term_t) ->
+                   bool -> string -> (string list) -> relcalc_t -> relcalc_t
+
+(* (delta f deletion relname tuple term) computes the delta of term as tuple is
+   inserted (deletion=false) or deleted (deletion=true) into relation relname,
+   where f is used to map external named terms to their deltas.
 *)
+val term_delta: (string -> (var_t list) -> term_t) ->
+                bool -> string -> (string list) -> term_t -> term_t
+
 
