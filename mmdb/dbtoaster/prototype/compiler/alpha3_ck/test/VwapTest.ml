@@ -1,90 +1,63 @@
 open Calculus;;
 
-let vwap =
-make_term(RVal(AggSum(
-RProd[RVal(Var "p0"); RVal(Var "v0")],
-RA_MultiNatJoin[
-   RA_Leaf(Rel("B", ["p0"; "v0"]));
-   RA_Leaf(AtomicConstraint(Le, RVal(Const (Int 0)),
-      RSum[RProd[RVal(Const (Double 0.25));
-                 RVal(AggSum(RVal(Var "v1"),
-                             RA_Leaf(Rel("B", ["p1"; "v1"]))))];
-           RVal(AggSum(RVal(Var "v2"),
+let vwap1r = RVal(AggSum(RVal(Var "v1"), RA_Leaf(Rel("B", ["p1"; "v1"]))));;
+let vwap2r = RVal(AggSum(RVal(Var "v2"),
                        RA_MultiNatJoin[RA_Leaf(Rel("B", ["p2"; "v2"]));
                                        RA_Leaf(AtomicConstraint(Lt,
                                                RVal(Var "p0"), RVal(Var "p2")))
-                                        ]))]))
-])))
-;;
-
-let vwap2 =
-make_term(RVal(AggSum(
-RProd[RVal(Var "p0"); RVal(Var "v0")],
+                                        ]));;
+let vwap = make_term(
+RVal(AggSum(RProd[RVal(Var "p0"); RVal(Var "v0")],
 RA_MultiNatJoin[
    RA_Leaf(Rel("B", ["p0"; "v0"]));
-   RA_Leaf(AtomicConstraint(Le, RVal(Const (Int 0)),
-                                RVal(External("m", ["p0"]))))
+   RA_Leaf(AtomicConstraint(Le, RProd[RVal(Const (Double 0.25)); vwap1r],
+           vwap2r))
 ])))
 ;;
 
 
-let map_deltas =
-[
-   ("m", (["p0"], make_term (RVal(External("Delta m", ["p0"])))))
-];;
+
+let r = (make_relcalc (RA_Leaf(Rel("B", ["p1"; "v1"]))));;
+
+let (flat, nested) = split_nested r ;;
+readable_relcalc nested;;
+
+((not (constraints_only r)) && ((snd (split_nested r)) <> relcalc_one))
+= false;;
 
 
-let (_, d) =
-Calculus.simplify_roly true
-   (Calculus.term_delta (Compiler.delta_for_named_map map_deltas)
-                        false "B" ["x"; "y"] vwap2) ["x"; "y"];;
-
-term_as_string d =
-"((if 0<=(m[x]+Delta m[x]) then (x*y) else 0)+AggSum((p0*v0), B(p0, v0) and 0<=(m[p0]+Delta m[p0]) and m[p0]<0)+AggSum((-1*(p0*v0)), B(p0, v0) and (m[p0]+Delta m[p0])<0 and 0<=m[p0]))"
-;;
-
-
-let (bs_vars, vwap_theta, vwap3) =
+let (bs_vars, vwap_theta, vwap_bsrw) =
    bigsum_rewriting Calculus.ModeIntroduceDomain vwap [] "aux" ;;
 
-readable_term vwap3 =
-RVal
- (AggSum
-   (RVal
-     (AggSum
-       (RProd [RVal (Var "p0"); RVal (Var "v0")],
-        RA_Leaf (Rel ("B", ["p0"; "v0"])))),
-    RA_MultiNatJoin
-     [RA_Leaf (Rel ("Dom_{p0}", ["p0"]));
-      RA_Leaf
-       (AtomicConstraint (Le, RVal (Const (Int 0)),
-         RSum
-          [RProd [RVal (Const (Double 0.25)); RVal (External ("aux1", []))];
-           RVal (External ("aux2", ["p0"]))]))]))
-;;
+term_as_string vwap_bsrw =
+"AggSum(aux1[p0], Dom_{p0}(p0) and (0.25*aux2[])<=aux3[p0])";;
+
 
 List.map (fun (x,y) -> (readable_term x, readable_term y)) vwap_theta =
-[(RVal (AggSum (RVal (Var "v1"), RA_Leaf (Rel ("B", ["p1"; "v1"])))),
-  RVal (External ("aux1", [])));
- (RVal
+[(RVal
    (AggSum
-     (RVal (Var "v2"),
-      RA_MultiNatJoin
-       [RA_Leaf (Rel ("B", ["p2"; "v2"]));
-        RA_Leaf (AtomicConstraint (Lt, RVal (Var "p0"), RVal (Var "p2")))])),
-  RVal (External ("aux2", ["p0"])))]
+     (RProd [RVal (Var "p0"); RVal (Var "v0")],
+      RA_Leaf (Rel ("B", ["p0"; "v0"])))),
+  RVal (External ("aux1", ["p0"])));
+ (vwap1r, RVal (External ("aux2", [])));
+ (vwap2r, RVal (External ("aux3", ["p0"])))]
 ;;
 
 
 
+let (bs_vars4, vwap_theta4, vwap4) =
+   bigsum_rewriting Calculus.ModeIntroduceDomain (make_term vwap1r) [] "aux" ;;
+
+term_as_string vwap4 = "AggSum(v1, B(p1, v1))";;
 
 
 Compiler.compile Calculus.ModeIntroduceDomain [("B", ["P"; "V"])]
                  (Compiler.mk_external "vwap" [])
                  vwap =
-["+On Lookup(): vwap[] := AggSum(AggSum((p0*v0), B(p0, v0)), Dom_{p0}(p0) and 0<=((0.25*vwap$1[])+vwap$2[p0]))";
- "+B(x_vwap$1B_P, x_vwap$1B_V): vwap$1[] += x_vwap$1B_V";
- "+B(x_vwap$2B_P, x_vwap$2B_V): foreach p0 do vwap$2[p0] += (x_vwap$2B_V*(if p0<x_vwap$2B_P then 1 else 0))"]
+["+On Lookup(): vwap[] := AggSum(vwap$1[p0], Dom_{p0}(p0) and (0.25*vwap$2[])<=vwap$3[p0])";
+ "+B(x_vwap$1B_P, x_vwap$1B_V): vwap$1[x_vwap$1B_P] += (x_vwap$1B_P*x_vwap$1B_V)";
+ "+B(x_vwap$2B_P, x_vwap$2B_V): vwap$2[] += x_vwap$2B_V";
+ "+B(x_vwap$3B_P, x_vwap$3B_V): foreach p0 do vwap$3[p0] += (x_vwap$3B_V*(if p0<x_vwap$3B_P then 1 else 0))"]
 ;;
  
 

@@ -14,7 +14,7 @@ let m = make_term(RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("C"))],
 
 let mt = Compiler.mk_external "m" [];;
 
-Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] m =
+Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] [] m =
 ([("R", ["x_mR_A"; "x_mR_B"], [],
    make_term(RProd [RVal (Var "x_mR_A");
                     RVal (External("mR1", ["x_mR_B"]))]))],
@@ -25,7 +25,7 @@ Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] m =
 
 List.hd (fst (
 Compiler.compile_delta_for_rel "S" ["B"; "C"]
-   (Compiler.mk_external "mR1" ["x_mR_B"]) []
+   (Compiler.mk_external "mR1" ["x_mR_B"]) [] []
 (
 make_term(RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["x_mR_B"; "C"])))))
 ))) =

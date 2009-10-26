@@ -99,6 +99,10 @@ type relcalc_lf_t
 type term_t
 type term_lf_t
 
+type var_mapping_t = (var_t * var_t) list
+
+(* the first is always the full term and the second is the external. *)
+type term_mapping_t = (term_t * term_t) list
 
 
 
@@ -237,7 +241,7 @@ val apply_variable_substitution_to_relcalc: ((var_t * var_t) list)
    topmost product of the expression.
 *)
 val extract_substitutions: relcalc_t -> (var_t list) ->
-   (((var_t * var_t) list) * relcalc_t)
+                           (var_mapping_t * relcalc_t)
 
 (* a list consisting of the maximal AggSum subexpressions of the input
    formula whose formula part is not constraints_only. *)
@@ -247,17 +251,24 @@ val extract_aggregates_from_calc: relcalc_t -> (term_t list)
    in term using mapping theta, recursively. This includes relational
    calculus subexpressions.
 *)
-val apply_variable_substitution_to_term: ((string * string) list) ->
-                                         term_t -> term_t
+val apply_variable_substitution_to_term: var_mapping_t -> term_t -> term_t
 
 (* a list consisting of the maximal AggSum subexpressions of the input term.  *)
 val extract_aggregates_from_term: term_t -> (term_t list)
 
+(* split calculus monomial into flat and nested part. *)
+val split_nested: relcalc_t -> (relcalc_t * relcalc_t)
+
 (* Note: the substitution is bottom-up. This means we greedily replace
    smallest subterms, rather than largest ones. This has to be kept in
    mind if terms in aggsum_theta may mutually contain each other. *)
-val substitute_in_term: ((term_t * term_t) list) -> term_t -> term_t
+val substitute_in_term: term_mapping_t -> term_t -> term_t
 
+(* takes a map name prefix string, a list of variables that have to
+   be communicated to the map if present, and a
+   list of (parameter list, term) pairs, creates named maps from them,
+   and returns a term to external map lookup substitution. *)
+val mk_term_mapping: string -> (((var_t list) * term_t) list) -> term_mapping_t
 
 
 type bs_rewrite_mode_t = ModeExtractFromCond
@@ -279,22 +290,23 @@ type bs_rewrite_mode_t = ModeExtractFromCond
    may have been pulled out from modified_term, as encoded in the term map
    theta. Only ModeOpenDomain results in a nonempty list of bigsum_vars and a
    modified_term such that t is equivalent to sum_{bigsum_vars} modified_term.
+   For details on the modes, see the implementation of this function.
 *)
 val bigsum_rewriting: bs_rewrite_mode_t -> term_t -> (var_t list) -> string ->
-                      ((var_t list) *((term_t * term_t) list) * term_t)
+                      ((var_t list) * term_mapping_t * term_t)
 
 
 (* (delta f n "R" t e) returns the delta on insertion (n=false) or
    deletion (n=true) of tuple t into relation R, for relcalc expression e,
    where f is used to map external terms to their deltas. *)
-val relcalc_delta: (string -> (var_t list) -> term_t) ->
+val relcalc_delta: term_mapping_t ->
                    bool -> string -> (string list) -> relcalc_t -> relcalc_t
 
 (* (delta f deletion relname tuple term) computes the delta of term as tuple is
    inserted (deletion=false) or deleted (deletion=true) into relation relname,
    where f is used to map external named terms to their deltas.
 *)
-val term_delta: (string -> (var_t list) -> term_t) ->
+val term_delta: term_mapping_t ->
                 bool -> string -> (string list) -> term_t -> term_t
 
 

@@ -1,44 +1,16 @@
-(* a library of delta functions for externals *)
-
 exception Assert0Exception of string
-
-(* external functions that only depend on their arguments, but not on the
-   database, such as division, string manipulations, etc. *)
-let delta_for_true_external name vars = Calculus.term_zero
-
-let delta_for_named_map
-      (mapping: (string * (Calculus.var_t list * Calculus.term_t)) list)
-      (name: string) (vars: Calculus.var_t list): Calculus.term_t =
-   let (vars2, term) = Util.Function.apply_strict mapping name
-      (* if the delta for external function name is not given, this raises
-         a NonFunctionalMappingException. *)
-   in
-   (* TODO: make sure that the variables vars either do not yet occur in the
-      term or are equal to vars2. Then substitute. *)
-   if (vars=vars2) then term
-   else if ((Util.ListAsSet.inter vars (Calculus.term_vars term)) = []) then
-      Calculus.apply_variable_substitution_to_term (List.combine vars2 vars)
-                                                   term
-   else raise (Assert0Exception "Compiler.delta_for_named_map")
-      (* TODO: implement the renaming of the overlapping variables before
-         the substitution. *)
-
-let externals_forbidden name vars =
-   raise (Assert0Exception "Compiler.externals_forbidden")
-
-
 
 (* making and breaking externals, i.e., map accesses. *)
 
-let mk_external (map_name: string) (params: Calculus.var_t list):
-                Calculus.term_t =
-   Calculus.make_term(Calculus.RVal(Calculus.External(map_name, params)))
+let mk_external (n: string) (vs: Calculus.var_t list) =
+   Calculus.make_term(Calculus.RVal(Calculus.External(n, vs)))
 
 let decode_map_term (map_term: Calculus.term_t):
                     (string * (Calculus.var_t list)) =
    match (Calculus.readable_term map_term) with
       Calculus.RVal(Calculus.External(n, vs)) -> (n, vs)
     | _ -> raise (Assert0Exception "Compiler.decode_map_term")
+
 
 
 
@@ -67,11 +39,8 @@ let extract_named_aggregates (name_prefix: string) bound_vars
    let extracted_terms = Util.ListAsSet.no_duplicates
                 (List.flatten (List.map extract_from_one_term workload))
    in
-   (* give names to the extracted terms *)
-   let named_terms = Util.add_names name_prefix extracted_terms
-   in
    (* create mapping *)
-   let theta = List.map (fun (n, (vs, t)) -> (t, mk_external n vs)) named_terms 
+   let theta = Calculus.mk_term_mapping name_prefix extracted_terms
    in
    (* apply substitutions to input terms. *)
    let terms_after_substition =
@@ -87,7 +56,20 @@ let compile_delta_for_rel (reln:   string)
                           (relsch: string list)
                           (map_term: Calculus.term_t)
                           (external_bound_vars: string list)
+                          (externals_mapping: Calculus.term_mapping_t)
                           (term: Calculus.term_t) =
+(*
+   print_endline ("compile_delta_for_rel: reln="^reln
+      ^"  relsch=["^(Util.string_of_list ", " relsch)^"]"
+      ^"  map_term="^(Calculus.term_as_string map_term)
+      ^"  external_bound_vars=["
+              ^(Util.string_of_list ", " external_bound_vars)^"]"
+      ^"  externals_mapping=["^(Util.string_of_list "; "
+                (List.map (fun (x,y) -> ("<"^(Calculus.term_as_string x)^", "
+                                            ^(Calculus.term_as_string y)^">"))
+                          externals_mapping))^"]"
+      ^"  term="^(Calculus.term_as_string term));
+*)
    let (mapn, params) = decode_map_term map_term
    in
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
@@ -104,8 +86,8 @@ let compile_delta_for_rel (reln:   string)
    *)
    let s = List.filter (fun (_, t) -> t <> Calculus.term_zero)
        (Calculus.simplify
-          (Calculus.term_delta externals_forbidden false reln tuple term)
-          bound_vars params)
+          (Calculus.term_delta externals_mapping false reln tuple term)
+          bound_vars params)    (* FIXME: we only create insertion triggers. *)
    in
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
@@ -140,19 +122,23 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (map_term: Calculus.term_t)
                 (term: Calculus.term_t): (string list) =
 (*
-   print_endline ("compile: t="^(Calculus.term_as_string term)^";  mt="^(Calculus.term_as_string map_term));
+   print_endline ("compile: t="^(Calculus.term_as_string term)^
+                       ";  mt="^(Calculus.term_as_string map_term));
 *)
    let (mapn, map_params) = decode_map_term map_term
    in
    let (bigsum_vars, bsrw_theta, bsrw_term) = Calculus.bigsum_rewriting
-      bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^(*reln^*)"$")
+      bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^"$")
+              (* FIXME: $ not a good idea for code generation. *)
    in
    let (completed_code, todos) =
-      if (bsrw_theta = []) then
-         (* bigsum_rewriting didn't have to do anything. *)
+      if ((bsrw_theta = []) ||
+          (bs_rewrite_mode = Calculus.ModeOpenDomain)) then
+         (* We can compute a delta for bsrw_term. *)
       (
          let cdfr (reln, relsch) =
-            compile_delta_for_rel reln relsch map_term bigsum_vars term
+            compile_delta_for_rel reln relsch map_term bigsum_vars
+                                  bsrw_theta bsrw_term
          in
          let (l1, l2) = (List.split (List.map cdfr db_schema))
          in
@@ -162,9 +148,11 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                generate_code reln tuple loop_vars mapn p "+=" bigsum_vars t)
             (List.flatten l1)
          in
-         (completed_code, (List.flatten l2))
+         (completed_code, (List.flatten l2) @ bsrw_theta)
       )
-      else
+      else (* We cannot compute a delta for bsrw_term, so we have to leave
+              it as is and hope the extracted subterms will allow us to do
+              something smart. *)
          let (_, bsrw_term_simple) =
             Calculus.simplify_roly true bsrw_term (map_params @ bigsum_vars)
             (* we didn't call compile_delta_for_rel, so the term needs
