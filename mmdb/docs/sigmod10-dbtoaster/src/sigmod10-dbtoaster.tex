@@ -2,6 +2,27 @@
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{hyperref}
+\usepackage{color}
+
+\newcommand{\comment}[1]{}
+\newcommand{\compiler}{DBCC}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\feature}[1]{\textbf{#1.}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\bigsum}{bigsum}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+%\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
 
 \begin{document}
 \title{DBCC: Compiling Databases for High-Performance View Maintenance and Update Stream Processing}
@@ -18,99 +39,8 @@
 }
 \maketitle
 
-\section{Introduction}
-
-\section{System Overview}
-
-\begin{itemize}
-\item Application embedded vs. server cluster processing models
-\item Brief architecture description for each mode.
-\item Role of the compiler in the architecture.
-\end{itemize}
-
-\section{Recursive Compilation}
-\def\algsum{\mathrm{sum}}
-
-\subsection{Map Algebra}
-Describe:
-\begin{itemize}
-\item map algebra grammar, and define terms, including variables,
-  constraints for unifications, and domains. 
-\item simplifications for presentation, i.e. assuming single top-level
-  algebra, although we can easily extend to handle sums/products of top-level
-  aggregates.
-\item relationship of group-by to a top-level map with dimensionality
-  given by group-by attributes, as opposed to a top-level nullary map for simple
-  aggregate queries.
-\item compilation overview, i.e. two primary phases delta pushdown and
-  aggregate simplification.
-\end{itemize}
-
-\subsection{Query Compilation}
-
-\subsubsection{Delta Query Derivation}
-Describe:
-\begin{itemize}
-\item concept of delta pushdown, and present delta rules.
-\item delta rule for predicates and the fact that in general, we do not
-  have positive relational algebra for insertions due to the fact that with
-  using the results of nested aggregate queries in predicates, tuples can be
-  both added and removed from the result set of the predicate. Refer to possible
-  optimizations of this rule, e.g. monotonic case.
-\end{itemize}
-
-\subsubsection{Aggregate Simplification}
-Describe/define:
-\begin{itemize}
-\item semiring abstraction of map and relational algebra.
-\item polynomials of map and relational algebra, and discuss
-canonicalization of queries to polynomials (i.e., $roly\_poly$). Discuss
-potential exponential blowup of terms, but this allows full separation of delta
-terms from old values.
-\item factorization of monomials (i.e. join trees), enabling distribution
-  of aggregates over joins, to join inputs. Describe factorization as performed
-  by finding connected components on a attribute-usage graph.
-\end{itemize}
-
-\subsubsection{Domain Maintenance}
-Describe:
-\begin{itemize}
-\item need to compute the value of a nested query when presented with
-  an outer variable value that has not been seen, and the subsequent insertion
-  into the map key domain.
-\item simple implementation with naive compilation, that can be
-  optimized when certain properties hold over the nested query. Refer to section
-  on monotonic nested queries below.
-\item reclamation of values in then map key domain when the nested
-  query value returns to its initial implicit state.
-\end{itemize}
-
-\subsection{Compilation Examples}
-\subsubsection{Flat query compilation example}
-\begin{itemize}
-\item Example: $\algsum_{a*d}(R \bowtie S \bowtie T)$, using demo-style table,
-  or a tree figure.
-\end{itemize}
-
-\subsubsection{Nested query compilation example}
-\begin{itemize}
-\item Example: VWAP query
-\[\algsum_{p*v}(\sigma_{k*\algsum_{v1}(\rho_{p1,v1}(bids)) -
-    \algsum_{v2}(\sigma_{p2 > p}(\rho_{p2,v2}(bids)))}(bids))\]
-\end{itemize}
-
-\subsection{Code Generation}
-Describe:
-\begin{itemize}
-\item accumulator language which allows simple code generation for
-procedural languages such as C++/Java.
-\item differences between simple accumulator language and implementations of
-relational algebra which pass around sets, resulting in a larger greater copying
-of data and more memory pressure. Accumulator language is even different to
-pipelining query plans, which can push tuples through to an accumulator
-(i.e. incr() function of an aggregate) at a tuple granularity, but still copies
-data from using an operator processing model.
-\end{itemize}
+\input{intro}
+\input{compilation}
 
 \section{Compiler extensions}
 \subsection{Min/Max aggregates}
@@ -139,6 +69,14 @@ data from using an operator processing model.
   relations into compilation units, enabling handler functions to be created for
   each compilation unit. This prevents monolithic event handlers, thus our
   compiled database engine may call multiple handlers for a single update stream.
+\end{itemize}
+
+\section{System Overview}
+
+\begin{itemize}
+\item Application embedded vs. server cluster processing models
+\item Brief architecture description for each mode.
+\item Role of the compiler in the architecture.
 \end{itemize}
 
 \section{Experiments}
