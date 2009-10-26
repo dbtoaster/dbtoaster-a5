@@ -1,0 +1,25 @@
+---Alpha---
+Partition for Map 1 => [0::2]
+   Map 1[1] : (v13 = 260.0; ready)
+Partition for Map 2 => [0::500]
+   Map 2[65] : (v7 = 0.0; ready)
+Partition for Map 3 => [0::500]
+
+Partition for Map 4 => [0::500]
+   Map 4[6] : (v3 = 65.0; ready)
+Partition for Map 5 => [0::500]
+   Map 5[6] : (v15 = 4.0; ready)
+   Map 5[62] : (v8 = 0.0; ready)
+Partition for Map 6 => [0::500 ; 0::1000]
+   Map 6[65, 62] : (v5 = 1.0; ready)
+---Beta---
+Partition for Map 2 => [500::1000]
+   Map 2[606] : (v11 = 65.0; ready)
+Partition for Map 3 => [500::1000]
+   Map 3[606] : (v14 = 4.0; ready)
+Partition for Map 4 => [500::1000]
+
+Partition for Map 5 => [500::1000]
+
+Partition for Map 6 => [500::1000 ; 0::1000]
+   Map 6[606, 6] : (v9 = 1.0; ready)

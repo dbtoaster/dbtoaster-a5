@@ -52,7 +52,7 @@ end
 
 class TemplateEntry
   attr_reader :source, :keys;
-  # index is something of a hack used by trigger compilation (see switch/maplayout.rb)
+  # index is used by a hack involved in trigger compilation (see switch/maplayout.rb)
   attr_reader :index;
   attr_writer :index;
   alias :key :keys;
