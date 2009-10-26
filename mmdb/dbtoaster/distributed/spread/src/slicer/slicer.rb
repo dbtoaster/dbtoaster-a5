@@ -105,7 +105,7 @@ class Slicer
         @nodes.collect { |n| "-n " + n.to_s }.join(" ") + " " +
         @config.join(" "),
         @switch
-      ).start;
+      )#.start;
     sleep 0.1 while servers.find { |s| !s.ready };
     Logger.info { "Servers started; starting client" }
     SlicerProcess.new(
@@ -114,7 +114,7 @@ class Slicer
       @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
       if @source then "< " + SlicerProcess.base_path + "/data/" + @source else "-h" end,
       @switch
-    ).start;
+    )#.start;
   end
 
 end

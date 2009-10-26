@@ -35,6 +35,10 @@ class Entry
     parsed = / *(Map)? *([0-9]+) *\[([^\]]*)\]/.match(string);
     Entry.make(parsed[2], parsed[3].split(",")); # Entry.make does the to_i conversion
   end
+  
+  def hash
+    @source.hash + @key.hash;
+  end
 end
 
 class PutParams

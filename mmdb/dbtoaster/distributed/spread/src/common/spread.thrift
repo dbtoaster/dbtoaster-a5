@@ -37,12 +37,12 @@ struct PutParams {
 service MapNode {
   oneway void put(      1: Version         id,
                         2: i64             template,  //the put template ID (see the map file)
-                        3: PutParams       params
+                        3: list<double>    params
                         ),
   oneway void mass_put(  1: Version         id,
                         2: i64             template,
                         3: i64             expected_gets,
-                        4: PutParams       params,
+                        4: list<double>    params,
                         ),
   
   GetResult get       ( 1: list<Entry>   target
@@ -60,13 +60,13 @@ service MapNode {
   
   string dump  (),
   
-  oneway string localdump  (),
+  oneway void localdump  (),
   
 }
 
 service SwitchNode {
   void update( 1: string table, 
-               2: list<string> params) throws (1:SpreadException error),
+                      2: list<string> params);
   
   string dump() throws (1:SpreadException error)
 }

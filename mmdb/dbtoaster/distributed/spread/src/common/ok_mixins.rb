@@ -114,7 +114,7 @@ class Logger
     @@default_name = default_name;
   end
   def Logger.default_name
-    if @@default_name.nil? then caller_info(1) else @@default_name end;
+    @@default_name || caller_info(1);
   end
   
   def Logger.caller_info(steps = 0)
@@ -130,19 +130,19 @@ class Logger
   end
   
   def Logger.fatal(progname = default_name)
-    Logger.default.fatal(progname) { yield }
+    (default.level < FATAL) || default.fatal(progname) { yield }
   end
   def Logger.error(progname = default_name)
-    Logger.default.error(progname) { yield }
+    (default.level < ERROR) || Logger.default.error(progname) { yield }
   end
   def Logger.warn(progname = default_name)
-    Logger.default.warn(progname) { yield }
+    (default.level < WARN) || Logger.default.warn(progname) { yield }
   end
   def Logger.info(progname = default_name)
-    Logger.default.info(progname) { yield }
+    (default.level < INFO) || Logger.default.info(progname) { yield }
   end
   def Logger.debug(progname = default_name)
-    Logger.default.debug(progname) { yield }
+    (default.level < DEBUG) || Logger.default.debug(progname) { yield }
   end
   def Logger.temp(string)
     Logger.info(string, "TEMPORARY");

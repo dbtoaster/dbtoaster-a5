@@ -18,7 +18,7 @@ def parse_arg(opt, arg)
     when "-d", "--domain"    then $domain_directives.push(arg.split("="));
     when "-t", "--test"      then $test_directives.push(arg);
     when "-s", "--persist"   then $persist = true;
-    else raise "Unknown option: " + opt;
+#    else raise "Unknown option: " + opt;
   end
 end
 
@@ -71,6 +71,8 @@ end
 $partition_directives = $partition_directives.collect_hash;
 $domain_directives = $domain_directives.collect_hash do |e| [e[0], e[1].split(",")] end;
 
+puts "=========  Maps  ==========="
+
 map_info =
   UpdateTemplate.map_names.collect do |map,info|
     domain = $domain_directives.assert_key(map) { Array.new(info["params"], 100000) };
@@ -79,6 +81,7 @@ map_info =
     split_partition = $partition_directives.assert_key(map) { 0 };
     raise "Split Partition too big.  Asked to split on: " + split_partition.to_s + "; Size: " + domain.size.to_s unless (split_partition.to_i < domain.size) || (domain.size == 0);
     
+    puts map + " : " + info["id"].to_s
     { "map"       => map, 
       "id"        => info["id"].to_i, 
       "domain"    => domain.collect{|d| d.to_i}, 

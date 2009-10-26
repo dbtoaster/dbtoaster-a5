@@ -1,9 +1,13 @@
 
-all: timestamps/validation timestamps/thrift 
+all: timestamps/validation timestamps/thrift gen-java/spread_thrift.jar
 	make -C tpch-simple
 
+gen-java/spread_thrift.jar: timestamps/thrift
+	javac -cp `echo ../lib/*.jar | tr ' ' ':'` gen-java/*.java
+	cd gen-java;jar cf spread_thrift.jar *.class
+
 timestamps/thrift: common/spread.thrift 
-	thrift --gen rb --gen cpp common/spread.thrift
+	thrift --gen rb --gen java common/spread.thrift
 	touch timestamps/thrift
 
 timestamps/validation: common/spread.thrift node/node.rb switch/switch.rb
@@ -11,5 +15,5 @@ timestamps/validation: common/spread.thrift node/node.rb switch/switch.rb
 	touch timestamps/validation
 
 clean:
-	rm -rf gen-rb gen-cpp timestamps/*
+	rm -rf gen-rb gen-java timestamps/*
 	make -C tpch-simple clean

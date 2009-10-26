@@ -16,6 +16,7 @@ transform ORDERS[1]%100000
 transform ORDERS[5]~/([0-9]*)-.*/\1/
 project   ORDERS(0,1,5,7)
 transform CUSTOMERS[0]%100000
+transform CUSTOMERS[3]%100000
 project   CUSTOMERS(0,3)
 transform LINEITEMS[0]%100000
 transform LINEITEMS[16]<d10,11

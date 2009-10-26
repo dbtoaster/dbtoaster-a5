@@ -3,6 +3,7 @@ require 'map_node';
 require 'spread_types';
 require 'template';
 require 'maplayout';
+require 'ruby-prof';
 
 ###################################################
 
@@ -13,13 +14,19 @@ class SwitchNodeHandler
     @templates = Hash.new;
     @layout = MapLayout.new;
     @nodelist = Hash.new;
+    @update_count = 0;
+    @update_timer = nil;
   end
   
   def node(name)
-    @nodelist.assert_key(name) do
-      Logger.info { "Establishing connection to : " + name.to_s; }
-      MapNode::Client.connect(name.host, name.port); 
-    end;
+#    RubyProf.pause
+    ret = 
+      @nodelist.assert_key(name) do
+  #      Logger.default.info { "Establishing connection to : " + name.to_s; }
+        MapNode::Client.connect(name.host, name.port); 
+      end;
+#    RubyProf.resume
+    ret
   end
   
   def cmdid
@@ -31,20 +38,42 @@ class SwitchNodeHandler
   end
 
   def update(table, params)
+#    RubyProf.resume;
+    if @update_count >= 30000 then
+#      tmp = Time.now;
+#      Logger.default.warn { (tmp - @update_timer).to_s + " seconds for 1000 updates; " + (1000 / (tmp - @update_timer)).to_s + " updates per sec" } unless @update_timer == nil;
+#      unless @update_count == 0 then
+#        puts "Printing stats and exiting...";
+#        result = RubyProf.stop;
+#        RubyProf::FlatPrinter.new(result).print(STDOUT) ;
+#        exit;
+#      end
+#      @update_timer = tmp;
+#      @update_count = 1;
+      exit
+    else
+      @update_count += 1;
+    end
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |trigger|
-      Logger.info { "Update triggered template: " + trigger.template.to_s }
-      param_map = template.param_map(params);
+#      Logger.default.info { "Update triggered template: " + trigger.template.to_s }
+      param_map = trigger.template.param_map(params);
       trigger.each_update(params) do |message_set|
-        Logger.info { "Generating put command (v" + cmdid.to_s + ") : " + message_set.to_s }
+#        Logger.default.info { "Generating put command (v" + cmdid.to_s + ") : " + message_set.to_s }
         if trigger.template.requires_loop? then
-          node(message_set.node).mass_put(cmdid, template.index, message_set.fetches.size, PutParams.make(param_map))
+          puts "MASS_PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";"+message_set.fetches.size.to_s+";"+params.join("/")+")@"+message_set.node.to_s;
+          node(message_set.node).mass_put(cmdid, trigger.template.index, message_set.fetches.size, params)
         else
-          node(message_set.node).put(cmdid, template.index, PutParams.make(param_map))
+          puts "PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";["+params.join("/")+"])@"+message_set.node.to_s;
+          node(message_set.node).put(cmdid, trigger.template.index, params)
         end
+#        message_set.each_fetch(params) do |dest, entries|
+#          node(dest).fetch(entries, message_set.node, cmdid);
+#        end
         message_set.fetches.each_pair do |dest, entries|
+          puts "FETCH("+entries.collect { |e| e.instantiate(param_map) }.join("/")+";"+message_set.node.to_s+";"+cmdid.to_s+")@"+dest.to_s;
           node(dest).fetch(
-            entries.collect { |e| e.entry.instantiate(param_map) },
+            entries.collect { |e| e.instantiate(param_map) },
             message_set.node,
             cmdid
           )
@@ -52,27 +81,28 @@ class SwitchNodeHandler
         next_cmd;
       end
     end
+#    RubyProf.pause;
   end
   
   def update_slow(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |trigger|
       template = trigger.template;
-      Logger.info { "Update triggered template: " + template.to_s }
+      Logger.default.info { "Update triggered template: " + template.to_s }
       raise SpreadException.new("Invalid row size (" + params.size.to_s + " and not " + template.paramlist.size.to_s + ") for template: " + template.to_s) unless params.size == template.paramlist.size;
       param_map = template.param_map(params);
       @layout.find_nodes(
         template.target.clone(param_map),
         template.entries.collect do |entry| entry.clone(param_map) end
       ) do |write_partition, read_partitions|
-        Logger.info { "Generating put command (v" + cmdid.to_s + ") for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
+        Logger.default.info { "Generating put command (v" + cmdid.to_s + ") for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
         if template.requires_loop? then
           node(write_partition.node_name).mass_put(cmdid, template.index, read_partitions.size, PutParams.make(param_map))
         else
           node(write_partition.node_name).put(cmdid, template.index, PutParams.make(param_map))
         end
         read_partitions.each_pair do |dest, entries|
-          Logger.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
+          Logger.default.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
           node(dest).fetch(
             entries.collect do |e| e.entry.instantiate(param_map) end, 
             write_partition.node_name, 
@@ -93,15 +123,15 @@ class SwitchNodeHandler
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
     template.index = index;
-    @templates.assert_key(template.relation.to_s){ Array.new }.push(@layout.compile_trigger(template));
+    compiled = @layout.compile_trigger(template);
+    Logger.default.warn { "Compiled Trigger: " + compiled.to_s }
+    @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   
   def install_node(node_name, partitions)
     partitions.each do |partition|
-      Logger.debug { "Learning of Map " + partition[0].to_s + "[" + partition[1].collect_pair(partition[2]) do |s, e| s.to_s + "::" + e.to_s end.join(" ; ") + "] @ " + node_name.to_s }
+      Logger.default.debug { "Learning of Map " + partition[0].to_s + "[" + partition[1].collect_pair(partition[2]) do |s, e| s.to_s + "::" + e.to_s end.join(" ; ") + "] @ " + node_name.to_s }
       @layout.install(partition[0], partition[1], partition[2], node_name);
     end
   end
-  
-  
 end

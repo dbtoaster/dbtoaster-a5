@@ -136,13 +136,14 @@ class MapLayout
   end
   
   def compile_trigger(template)
-    CompiledTrigger.new(template, @maplist[@template.target.source]);
+    CompiledTrigger.new(template, self);
   end
 end
 
 ###################################################
 
 class SpatialIndex
+  attr_reader :depth;
   def initialize(boundaries)
     @depth = boundaries.size;
     @map = setup_map(boundaries)
@@ -156,13 +157,15 @@ class SpatialIndex
     find(key)[1] = value;
   end
   
-  def update(depth = 0, key = Array.new, val = @map, &block)
-    if depth > @depth then
+  def update(key = Array.new, val = nil, block = nil, &in_block)
+    block = in_block if block == nil;
+    if key.size >= @depth then
       val[1] = block.call(key.clone, val[1]);
     else
-      val.each do |k|
-        key.push(k[0]);
-        update(depth + 1, key, k[1], block);
+      val = if val then val[1] else @map end;
+      val.each do |v|
+        key.push(v[0]);
+        update(key, v, block);
         key.pop;
       end
     end
@@ -177,10 +180,10 @@ class SpatialIndex
       high = val.size;
       i = 0;
       while low < high do 
-        i = (low + high) / 2;
-        if val[i][0] === k then
+        i = ((low + high) / 2).to_i;
+        if val[i][0].include? k.to_i then
           low = high = i;
-        elsif k < val[i][0].start
+        elsif k.to_i < val[i][0].begin
           if high == i then i = high = high - 1
           else high = i;
           end
@@ -190,19 +193,20 @@ class SpatialIndex
           end        
         end
       end
-      last = val;
+      raise SpreadException.new("Key: [" + key.join(",") + "] out of bounds") unless (i >= 0) && (i < val.size);
+      last = val[i];
       val = val[i][1];
     end
     last;
   end
   
-  def setup_map(boundaries, depth)
+  def setup_map(boundaries, depth = 0)
     if depth >= @depth then
       nil;
     else
       map = Array.new;
       boundaries[depth].each do |b|
-        map.push([b, setup_map(depth+1, boundaries)]);
+        map.push([b, setup_map(boundaries, depth+1)]);
       end
       map;
     end
@@ -218,18 +222,24 @@ class CompiledMessageSet
     @entry = put_template
     @fetches = 
       fetch_targets.collect do |node, entries|
-        [node, entries.collect { |e| fetch_templates[e.index] }];
+        [ node, 
+          entries.collect do |e| 
+            raise SpreadException.new("Invalid entry index!?! (" + e.entry.index.to_s + ")") unless e.entry.index >= 0 && fetch_templates.size > e.entry.index;
+            fetch_templates[e.entry.index]
+          end
+        ];
       end.collect_hash
   end
   
   def to_s
-    @entry.to_s + " @ " + @node + " ; " + @fetches.size.to_s + " fetches";
+    @entry.to_s + " @ " + @node.to_s + " ; " + @fetches.size.to_s + " fetches";
   end
 end
 
 ###################################################
 
 class CompiledTrigger
+  attr_reader :template;
   def initialize(template, layout)
     @template = template;
     # I'm going to assume that partition boundaries occur across the entire map.
@@ -244,8 +254,8 @@ class CompiledTrigger
           # this axis of the partition map.
           part.range[template.target.key.index(i)];
         end.uniq.sort do |a, b|
-          # Eliminate duplicates, and then sort over the start index.
-          a.start <=> b.start;
+          # Eliminate duplicates, and then sort over the first index.
+          a.begin <=> b.begin;
         end
       end
     
@@ -258,10 +268,10 @@ class CompiledTrigger
     @index.update do |key, oldval|
       # Pretend we just got an update for a put to a corner of the partition's keyspace.
       # Generate the parameter mapping for the update
-      param_map = template.param_map(key.collect { |k| k.start })
+      param_map = template.param_map(key.collect { |k| k.begin })
       
       put_list = Array.new;
-      i = 0;
+      i = -1;
       layout.find_nodes(
         template.target.clone(param_map),
         template.entries.collect { |e| e = e.clone(param_map); e.index = (i += 1); e; }
@@ -270,11 +280,17 @@ class CompiledTrigger
         # And save the results
         put_list.push(CompiledMessageSet.new(put_target, fetch_targets, template.target, template.entries));
       end
+#      Logger.debug { "Generated Puts: " + put_list.join(", ") + "; for key: " + key.join(", ") }
       put_list;
     end
   end
   
   def each_update(key)
     @index[key].each { |message_set| yield message_set };
+  end
+  
+  def to_s
+    "ON " + template.relation + "[" + ([0] * @index.depth).join(", ") + "] :\n" +
+      @index[[0] * @index.depth].collect { |ms| ms.to_s }.join("\n");
   end
 end

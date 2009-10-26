@@ -175,7 +175,8 @@ class MapNodeHandler
       raise SpreadException.new("Unknown put template: " + template.to_s); 
     end
     
-    valuation = TemplateValuation.new(@templates[template], param_list);
+    template = @templates[template];
+    valuation = TemplateValuation.new(template, template.param_map(param_list));
     
     #valuation.prepare(@templates[template].target.instantiate(version, valuation.params).freeze)
     
@@ -225,7 +226,7 @@ class MapNodeHandler
 
   def put(id, template, params)
     Logger.debug {"Put on template " + template.to_s + " with Params: " + params.to_s }
-    valuation = create_valuation(template, params.decipher);
+    valuation = create_valuation(template, params);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
     install_discovery(id, record, valuation.params);
@@ -233,7 +234,7 @@ class MapNodeHandler
   
   def mass_put(id, template, expected_gets, params)
     Logger.debug { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
-    valuation = create_valuation(template, params.decipher);
+    valuation = create_valuation(template, params);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
       discovery.add_record(partition.mass_insert(id, valuation));
