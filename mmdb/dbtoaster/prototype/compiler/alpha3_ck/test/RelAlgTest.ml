@@ -35,14 +35,14 @@ RA_MultiUnion
   RA_MultiNatJoin [relR; relU]; RA_MultiNatJoin [relS; relU]]
 ;;
 
-let test08 = readable (polynomial (relcalc_delta Compiler.externals_forbidden false "R" ["a"; "b"] q)) =
+let test08 = readable (polynomial (relcalc_delta [] false "R" ["a"; "b"] q)) =
   RA_MultiNatJoin
    [RA_Leaf (AtomicConstraint (Eq, RVal(Var("A")), RVal(Var("a"))));
     RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));
     relS; relT]
 ;;
 
-let test09 = readable (polynomial (relcalc_delta Compiler.externals_forbidden false "S" ["b"; "c"] q)) =
+let test09 = readable (polynomial (relcalc_delta [] false "S" ["b"; "c"] q)) =
 RA_MultiNatJoin
  [relR;
   RA_Leaf (AtomicConstraint (Eq, RVal(Var("B")), RVal(Var("b"))));

@@ -9,7 +9,7 @@ let relT = RA_Leaf(Rel("T", ["C"; "D"]));;
 (* (R bowtie S) bowtie T *)
 let q = RA_MultiNatJoin [relR; relS; relT];;
 
-let q2 = term_delta Compiler.externals_forbidden false "R" ["x"; "y"]
+let q2 = term_delta [] false "R" ["x"; "y"]
    (make_term(RVal (AggSum(RVal(Const (Int 1)), relR))));;
 
 
@@ -40,7 +40,7 @@ let test13 = simplify(mk_val (AggSum(term_zero, make_relcalc(relR)))) [] [] =
 *)
 
 
-let test10 = term_delta Compiler.externals_forbidden false "R" ["x"; "y"] term_one = term_zero;;
+let test10 = term_delta [] false "R" ["x"; "y"] term_one = term_zero;;
 
 
 let test11 =
@@ -89,7 +89,7 @@ RVal
 let test17 = simplify q2 [] [] = [([], term_one)];;
 
 let test19 = simplify
-    (term_delta Compiler.externals_forbidden false "R" ["x"; "y"]
+    (term_delta [] false "R" ["x"; "y"]
         (make_term (RVal (AggSum(RVal(Const(Int 1)), relS))))) [] []
 = [([], term_zero)];;
 
@@ -167,7 +167,7 @@ List.map (fun (x,y) -> (x, readable_term y))
 
 let test27 =
 List.map (fun (x,y) -> (x, readable_term y))
-(simplify (term_delta Compiler.externals_forbidden false "R" ["A"; "B"]
+(simplify (term_delta [] false "R" ["A"; "B"]
    (make_term(
       RVal(AggSum(RVal(Const (Int 1)),
                    RA_MultiNatJoin([
@@ -183,7 +183,7 @@ List.map (fun (x,y) -> (x, readable_term y))
 
 let test28 =
 List.map (fun (x,y) -> (x, readable_term y))
-(simplify (term_delta Compiler.externals_forbidden false "R" ["x"; "y"]
+(simplify (term_delta [] false "R" ["x"; "y"]
 (make_term(RVal(AggSum(RVal(Const (Int 1)),
 RA_MultiNatJoin [
    RA_Leaf (Rel ("R", ["A"; "B"]));
@@ -202,7 +202,7 @@ RA_MultiNatJoin [
 
 
 let test29 =
-(term_delta Compiler.externals_forbidden false "R" ["x"; "y"] (make_term(
+(term_delta [] false "R" ["x"; "y"] (make_term(
    RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(True)))
 ))) =
 make_term (RVal(Const(Int 0)));;
@@ -210,7 +210,7 @@ make_term (RVal(Const(Int 0)));;
 
 
 let test30 =
-readable_term (term_delta Compiler.externals_forbidden false "R" ["x"; "y"] (make_term(
+readable_term (term_delta [] false "R" ["x"; "y"] (make_term(
 RVal(AggSum(RVal(Const(Int 1)),
    RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)), RVal(Var("z"))))))
 ))) =
@@ -221,7 +221,7 @@ RVal(AggSum(RVal(Const(Int 1)),
 (* if (0 < AggSum(1, R(A,B))) then 1 else 0 *)
 let test31 =
 List.map (fun (x,y) -> (x, term_as_string y))
-(simplify (term_delta Compiler.externals_forbidden false "R" ["x"; "y"] (make_term(
+(simplify (term_delta [] false "R" ["x"; "y"] (make_term(
 RVal(AggSum(RVal(Const(Int 1)),
    RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)),
       RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(Rel("R", ["A"; "B"]))))))))

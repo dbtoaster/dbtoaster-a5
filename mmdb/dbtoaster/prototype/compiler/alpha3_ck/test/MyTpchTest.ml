@@ -19,7 +19,8 @@ let relLI = RA_Leaf(Rel("LI", ["OK"; "PK"; "SK"; "PR"]));;
 
 
 (* select sum(LI.Price) from LineItem LI group by LI.PK *)
-Compiler.compile tpch_sch (Compiler.mk_external "q" ["PK"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 tpch_sch (Compiler.mk_external "q" ["PK"])
    (make_term(RVal(AggSum(RVal(Var("PR")), RA_MultiNatJoin [relLI]))))
 = ["+LI(x_qLI_OK, x_qLI_PK, x_qLI_SK, x_qLI_PR): q[x_qLI_PK] += x_qLI_PR"]
 ;;
@@ -27,7 +28,8 @@ Compiler.compile tpch_sch (Compiler.mk_external "q" ["PK"]) []
 (* select sum(O.ExchangeRate * LI.Price)
    from   Order O, LineItem LI
    where  O.OK = LI.OK *)
-Compiler.compile tpch_sch (Compiler.mk_external "q" []) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 tpch_sch (Compiler.mk_external "q" [])
    (make_term(RVal(AggSum(RProd[RVal(Var("PR")); RVal(Var("XCH"))],
                           RA_MultiNatJoin [relO; relLI]))))
 =
@@ -40,7 +42,8 @@ Compiler.compile tpch_sch (Compiler.mk_external "q" []) []
 
 
 (* number of parts supplied by supplier, by supplier name *)
-Compiler.compile tpch_sch (Compiler.mk_external "q" ["SN"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 tpch_sch (Compiler.mk_external "q" ["SN"])
    (make_term(RVal(AggSum(RVal(Const (Int 1)),
                           RA_MultiNatJoin [relS; relPS]))))
 =
@@ -51,7 +54,8 @@ Compiler.compile tpch_sch (Compiler.mk_external "q" ["SN"]) []
 ;;
 
 (* profits by customer *)
-Compiler.compile tpch_sch (Compiler.mk_external "q" ["CK"]) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 tpch_sch (Compiler.mk_external "q" ["CK"])
    (make_term(RVal(AggSum(RVal(Var "PR"),
                           RA_MultiNatJoin [relO; relLI]))))
 =
@@ -63,7 +67,8 @@ Compiler.compile tpch_sch (Compiler.mk_external "q" ["CK"]) []
 
 
 (* a monstrous cyclic query *)
-Compiler.compile tpch_sch (Compiler.mk_external "q" []) []
+Compiler.compile Calculus.ModeExtractFromCond
+                 tpch_sch (Compiler.mk_external "q" [])
    (make_term(RVal(AggSum(RVal(Const (Int 1)),
                           RA_MultiNatJoin [relO; relLI; relPS]))))
 =
