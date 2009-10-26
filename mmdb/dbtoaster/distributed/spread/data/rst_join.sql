@@ -2,6 +2,8 @@
 --test S(65,62)
 --test S(606, 6)
 --test R(4,606)
+--node Alpha
+--node Beta
 create table r(a int, b int); 
 create table s(b int, c int); 
 create table t(c int, d int); 

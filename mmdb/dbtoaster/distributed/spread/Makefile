@@ -1,4 +1,4 @@
-SQL_TESTDATA=data/rst_join.unit data/tpch_q18.unit
+SQL_TESTDATA=data/tpch_q18.unit data/rst_join.unit 
 AUTO_SQL_TESTS=rst_join
 
 all: recursive $(SQL_TESTDATA)
@@ -13,7 +13,7 @@ clean:
 	
 test_data: all $(SQL_TESTDATA)
 
-$(SQL_TESTDATA) : %.unit : %.sql
+$(SQL_TESTDATA) : %.unit : %.sql src/toaster/toaster.rb
 	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@
 
 test: all test_naive test_switch $(AUTO_SQL_TESTS)

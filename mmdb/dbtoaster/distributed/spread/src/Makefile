@@ -1,5 +1,5 @@
 
-all: timestamps/validation timestamps/thrift gen-java/spread_thrift.jar
+all: timestamps/validation timestamps/thrift #gen-java/spread_thrift.jar
 	make -C tpch-simple
 
 gen-java/spread_thrift.jar: timestamps/thrift

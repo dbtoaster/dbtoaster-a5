@@ -79,6 +79,14 @@ class Array
     self.shift;
     self;
   end
+  
+  def reduce
+    ret = Hash.new;
+    each do |i|
+      ret.assert_key(i[0]){ Array.new }.push(i[1])
+    end
+    ret;
+  end
 end
 
 class Hash

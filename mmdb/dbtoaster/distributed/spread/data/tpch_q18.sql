@@ -1,6 +1,8 @@
 --persist
 --partition q:5
 --partition qLINEITEMS1:2
+--key CUSTOMERS[CID] <= ORDERS[O_CID]
+--key ORDERS[OID] <= LINEITEMS[L_OID]
 --node Alpha
 --node Beta
 --node Gamma

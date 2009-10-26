@@ -434,9 +434,9 @@ class UpdateTemplate
   @@map_names = Hash.new;
   @@map_id = 0;
   
-  def initialize(line, index = 0)
-    line = line.split("\t");
-    raise SpreadException.new("Instantiating update template with insufficient components") if line.size < 5;
+  def initialize(text_line, index = 0)
+    line = text_line.split("\t");
+    raise SpreadException.new("Instantiating update template with insufficient components: " + text_line) if line.size < 5;
     
     # This template applies to updates to [0]
     @relation = line[0].to_s;

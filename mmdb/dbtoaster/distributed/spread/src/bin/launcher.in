@@ -8,6 +8,7 @@ INCLUDES="
   -I $SRCDIR/node
   -I $SRCDIR/switch
   -I $SRCDIR/slicer
+  -I $SRCDIR/toaster
   -I $SRCDIR/gen-rb"
 
 #echo ========================
