@@ -26,7 +26,7 @@ let decode_map_term (map_term: Calculus.term_t):
 let extract_named_aggregates (name_prefix: string) bound_vars
                   (workload: ((Calculus.var_t list) * Calculus.term_t) list):
                   (((Calculus.var_t list) * Calculus.term_t) list *
-                   ((Calculus.term_t * Calculus.term_t) list)) =
+                   Calculus.term_mapping_t) =
    let extract_from_one_term (params, term) =
       let prepend_params t =
          let p = (Util.ListAsSet.inter (Calculus.term_vars t)
