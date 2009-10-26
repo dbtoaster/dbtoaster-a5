@@ -128,8 +128,7 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
    let (mapn, map_params) = decode_map_term map_term
    in
    let (bigsum_vars, bsrw_theta, bsrw_term) = Calculus.bigsum_rewriting
-      bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^"$")
-              (* FIXME: $ not a good idea for code generation. *)
+      bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^"__")
    in
    let (completed_code, todos) =
       if ((bsrw_theta = []) ||

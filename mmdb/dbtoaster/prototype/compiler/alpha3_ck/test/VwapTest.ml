@@ -54,10 +54,10 @@ term_as_string vwap4 = "AggSum(v1, B(p1, v1))";;
 Compiler.compile Calculus.ModeIntroduceDomain [("B", ["P"; "V"])]
                  (Compiler.mk_external "vwap" [])
                  vwap =
-["+On Lookup(): vwap[] := AggSum(vwap$1[p0], Dom_{p0}(p0) and (0.25*vwap$2[])<=vwap$3[p0])";
- "+B(x_vwap$1B_P, x_vwap$1B_V): vwap$1[x_vwap$1B_P] += (x_vwap$1B_P*x_vwap$1B_V)";
- "+B(x_vwap$2B_P, x_vwap$2B_V): vwap$2[] += x_vwap$2B_V";
- "+B(x_vwap$3B_P, x_vwap$3B_V): foreach p0 do vwap$3[p0] += (x_vwap$3B_V*(if p0<x_vwap$3B_P then 1 else 0))"]
+["+On Lookup(): vwap[] := AggSum(vwap__1[p0], Dom_{p0}(p0) and (0.25*vwap__2[])<=vwap$3[p0])";
+ "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[x_vwap$1B_P] += (x_vwap__1B_P*x_vwap__1B_V)";
+ "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap$2B_V";
+ "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap$3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
 ;;
  
 
