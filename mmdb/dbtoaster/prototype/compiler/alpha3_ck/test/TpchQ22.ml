@@ -112,7 +112,7 @@ List.map (fun (x,y) -> (readable_term x, readable_term y)) q22_theta =
 Compiler.compile Calculus.ModeExtractFromCond tpch_sch22
                  (Compiler.mk_external "q" ["c1.nationkey"])
                  tpch_q22 =
-["+On Lookup(): foreach c1.nationkey do q[c1.nationkey] := AggSum(c1.acctbal, C(c1.custkey, c1.nationkey, c1.acctbal) and c1.acctbal<q__1[] and 0=q__2[c1.custkey])";
+["+On Lookup(): q[c1.nationkey] := AggSum(c1.acctbal, C(c1.custkey, c1.nationkey, c1.acctbal) and c1.acctbal<q__1[] and 0=q__2[c1.custkey])";
  "+C(x_q__1C_custkey, x_q__1C_nationkey, x_q__1C_acctbal): q__1[] += (if 0<x_q__1C_acctbal then x_q__1C_acctbal else 0)";
  "+O(x_q__2O_custkey): q__2[x_q__2O_custkey] += 1"]
 ;;
@@ -120,11 +120,12 @@ Compiler.compile Calculus.ModeExtractFromCond tpch_sch22
 Compiler.compile Calculus.ModeIntroduceDomain tpch_sch22
                  (Compiler.mk_external "q" ["c1.nationkey"])
                  tpch_q22 =
-["+On Lookup(): foreach c1.nationkey do q[c1.nationkey] := AggSum(q__1[c1.acctbal, c1.custkey], Dom_{c1.acctbal, c1.custkey}(c1.acctbal, c1.custkey) and c1.acctbal<q__2[] and 0=q__3[c1.custkey])";
+["+On Lookup(): q[c1.nationkey] := AggSum(q__1[c1.acctbal, c1.custkey], Dom_{c1.acctbal, c1.custkey}(c1.acctbal, c1.custkey) and c1.acctbal<q__2[] and 0=q__3[c1.custkey])";
  "+C(x_q__1C_custkey, x_q__1C_nationkey, x_q__1C_acctbal): q__1[x_q__1C_acctbal, x_q__1C_custkey] += x_q__1C_acctbal";
  "+C(x_q__2C_custkey, x_q__2C_nationkey, x_q__2C_acctbal): q__2[] += (if 0<x_q__2C_acctbal then x_q__2C_acctbal else 0)";
  "+O(x_q__3O_custkey): q__3[x_q__3O_custkey] += 1"]
 ;;
+
 
 (* monstrous
 Compiler.compile Calculus.ModeOpenDomain tpch_sch22

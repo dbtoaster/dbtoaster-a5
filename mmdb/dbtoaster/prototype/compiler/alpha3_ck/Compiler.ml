@@ -16,41 +16,6 @@ let decode_map_term (map_term: Calculus.term_t):
 
 (* compilation functions *)
 
-(* given a list of pairs of terms and their parameters, this function
-   extracts all the nested aggregate sum terms, eliminates duplicates,
-   and then names the aggregates.
-
-   We do it in this complicated fashion to avoid creating the same
-   child terms redundantly.
-*)
-let extract_named_aggregates (name_prefix: string) bound_vars
-                  (workload: ((Calculus.var_t list) * Calculus.term_t) list):
-                  (((Calculus.var_t list) * Calculus.term_t) list *
-                   Calculus.term_mapping_t) =
-   let extract_from_one_term (params, term) =
-      let prepend_params t =
-         let p = (Util.ListAsSet.inter (Calculus.term_vars t)
-                    (Util.ListAsSet.union params bound_vars))
-         in (p, t)
-      in
-      List.map prepend_params (Calculus.extract_aggregates_from_term term)
-   in
-   (* the central duplicate elimination step. *)
-   let extracted_terms = Util.ListAsSet.no_duplicates
-                (List.flatten (List.map extract_from_one_term workload))
-   in
-   (* create mapping *)
-   let theta = Calculus.mk_term_mapping name_prefix extracted_terms
-   in
-   (* apply substitutions to input terms. *)
-   let terms_after_substition =
-      List.map (fun (p, t) ->  (p, (Calculus.substitute_in_term theta t)))
-               workload
-   in
-   (terms_after_substition, theta)
-
-
-
 (* auxiliary for compile. *)
 let compile_delta_for_rel (reln:   string)
                           (relsch: string list)
@@ -91,9 +56,16 @@ let compile_delta_for_rel (reln:   string)
    in
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
-      constraints_only.  Also substitute extracted terms by externals. *)
+      constraints_only.  Also substitute extracted terms by externals.
+
+      Note: given that aggs are now also extracted in bigsum_rewriting,
+      this is rarely used: actually, it is only used if the terms reintroduced
+      as deltas of maps that have been extracted before have aggregate
+      subterms to be extracted. This will only happen in very complicated
+      queries.
+   *)
    let (terms_after_substitution, todos) =
-      extract_named_aggregates (mapn^reln) bound_vars s
+      Calculus.extract_named_aggregates (mapn^reln) bound_vars s
    in
    ((List.map (fun (p, t) -> (reln, tuple, p, t))
               terms_after_substitution), todos)
@@ -153,13 +125,23 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
               it as is and hope the extracted subterms will allow us to do
               something smart. *)
          let (_, bsrw_term_simple) =
-            Calculus.simplify_roly true bsrw_term (map_params @ bigsum_vars)
+            Calculus.simplify_roly true bsrw_term map_params
             (* we didn't call compile_delta_for_rel, so the term needs
                to be simplified. *)
          in
+         (* an On Lookup statement is not an update trigger: it is called
+            when we want to access the query result. In principle, we
+            could drop the for loops. *)
+(*
          ([generate_code "On Lookup" [] map_params
-                           mapn map_params ":=" bigsum_vars bsrw_term_simple],
+                           mapn map_params ":=" [] bsrw_term_simple],
           bsrw_theta)
+*)
+         (* Note: no creation of for loop over the map_params -- we look
+            up one value only, for the given params. *)
+         ([("+On Lookup(): "^mapn^"["^(Util.string_of_list ", " map_params)
+           ^"] := "
+           ^(Calculus.term_as_string bsrw_term_simple))], bsrw_theta)
    in
    completed_code @
    (List.flatten (List.map

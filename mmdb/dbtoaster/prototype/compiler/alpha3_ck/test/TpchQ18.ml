@@ -90,13 +90,13 @@ RVal
 
 Compiler.compile Calculus.ModeExtractFromCond tpch_sch18 (Compiler.mk_external "q" []) q18 =
 ["+On Lookup(): q[] := AggSum(l1.quantity, L(l1.quantity, o.orderkey) and 1<=q__1[o.orderkey] and O(c.custkey, o.orderkey) and C(c.custkey))";
- "+On Lookup(): foreach l1.orderkey do q__1[l1.orderkey] := AggSum(1, L(l2.quantity, l1.orderkey) and 100<q__1__1[l1.orderkey])";
+ "+On Lookup(): q__1[l1.orderkey] := AggSum(1, L(l2.quantity, l1.orderkey) and 100<q__1__1[l1.orderkey])";
  "+L(x_q__1__1L_quantity, x_q__1__1L_orderkey): q__1__1[x_q__1__1L_orderkey] += x_q__1__1L_quantity"]
 ;;
 
 Compiler.compile Calculus.ModeGroupCond tpch_sch18 (Compiler.mk_external "q" []) q18 =
 ["+On Lookup(): q[] := AggSum(l1.quantity, L(l1.quantity, o.orderkey) and O(c.custkey, o.orderkey) and C(c.custkey) and 1=(if 1<=q__1[o.orderkey] then 1 else 0))";
- "+On Lookup(): foreach l1.orderkey do q__1[l1.orderkey] := AggSum(1, L(l2.quantity, l1.orderkey) and 1=(if 100<q__1__1[l1.orderkey] then 1 else 0))";
+ "+On Lookup(): q__1[l1.orderkey] := AggSum(1, L(l2.quantity, l1.orderkey) and 1=(if 100<q__1__1[l1.orderkey] then 1 else 0))";
  "+L(x_q__1__1L_quantity, x_q__1__1L_orderkey): q__1__1[x_q__1__1L_orderkey] += x_q__1__1L_quantity"]
 ;;
 
@@ -116,7 +116,7 @@ Compiler.compile Calculus.ModeIntroduceDomain tpch_sch18 (Compiler.mk_external "
  "+O(x_q__1L1O_custkey, x_q__1L1O_orderkey): q__1L1[x_q__1L1O_orderkey] += q__1L1O1[x_q__1L1O_custkey]";
  "+O(x_q__1L1C1O_custkey, x_q__1L1C1O_orderkey): q__1L1C1[x_q__1L1C1O_custkey, x_q__1L1C1O_orderkey] += 1";
  "+C(x_q__1L1O1C_custkey): q__1L1O1[x_q__1L1O1C_custkey] += 1";
- "+On Lookup(): foreach l1.orderkey do q__2[l1.orderkey] := AggSum(q__2__1[l2.orderkey], Dom_{l2.orderkey}(l2.orderkey) and 100<q__2__2[l2.orderkey])";
+ "+On Lookup(): q__2[l1.orderkey] := AggSum(q__2__1[l2.orderkey], Dom_{l2.orderkey}(l2.orderkey) and 100<q__2__2[l2.orderkey])";
  "+L(x_q__2__1L_quantity, x_q__2__1L_orderkey): q__2__1[x_q__2__1L_orderkey] += 1";
  "+L(x_q__2__2L_quantity, x_q__2__2L_orderkey): q__2__2[x_q__2__2L_orderkey] += x_q__2__2L_quantity"]
 ;;

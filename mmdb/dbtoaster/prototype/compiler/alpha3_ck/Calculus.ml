@@ -310,33 +310,6 @@ let complement relcalc =
    (CalcSemiRing.fold CalcSemiRing.mk_prod CalcSemiRing.mk_sum leaf_f relcalc)
 
 
-let rec extract_aggregates_from_calc relcalc =
-   let r_leaf_f lf =
-      match lf with
-         AtomicConstraint(_, t1, t2) ->
-            (extract_aggregates_from_term t1) @
-            (extract_aggregates_from_term t2)
-       | _ -> []
-   in
-   Util.ListAsSet.no_duplicates
-      (CalcSemiRing.fold List.flatten List.flatten r_leaf_f relcalc)
-
-and extract_aggregates_from_term term =
-   let t_leaf_f x =
-      match x with
-         AggSum(f, r) ->
-            (* if r is constraints_only, take the aggregates from the
-               atoms of r; otherwise, return x monolithically. *)
-            if (constraints_only r) then
-               ((extract_aggregates_from_term f) @
-                (extract_aggregates_from_calc r))
-            else [TermSemiRing.mk_val x]
-       | _ -> []
-   in
-   Util.ListAsSet.no_duplicates
-      (TermSemiRing.fold List.flatten List.flatten t_leaf_f term)
-
-
 (* split a monomial into flat atoms and nested atoms, and provide the
    list of variables shared between the two monomials created.
    An atom is nested if it is an AtomicConstraint in which at least
@@ -607,28 +580,6 @@ let simplify (term: term_t)
    List.map simpl (TermSemiRing.sum_list (roly_poly term))
 
 
-(* Note: the substitution is bottom-up. This means we greedily replace
-   smallest subterms, rather than largest ones. This has to be kept in
-   mind if terms in aggsum_theta may mutually contain each other.
-
-   FIXME: substitute_in_term currently can only replace AggSum terms,
-   not general terms.
-*)
-let substitute_in_term (aggsum_theta: term_mapping_t)
-                       (term: term_t): term_t =
-   let aconstraint_f c t1 t2 =
-      CalcSemiRing.mk_val(AtomicConstraint(c, t1, t2))
-   in
-   let aggsum_f f r =
-      let this = TermSemiRing.mk_val(AggSum(f, r))
-      in
-      Util.Function.apply aggsum_theta this this
-         (* FIXME: we have to unify the variables of the
-            externals to be matched. See also apply_term_mapping. *)
-   in
-   apply_bottom_up aggsum_f aconstraint_f term
-
-
 (* pseudocode output of relcalc expressions and terms. *)
 let rec relcalc_as_string (relcalc: relcalc_t): string =
    let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
@@ -674,6 +625,54 @@ and term_as_string (m: term_t): string =
 
 
 
+let rec extract_aggregates_from_calc (aggressive: bool) (relcalc: relcalc_t) =
+   let r_leaf_f lf =
+      match lf with
+         AtomicConstraint(_, t1, t2) ->
+            (extract_aggregates_from_term aggressive t1) @
+            (extract_aggregates_from_term aggressive t2)
+       | _ -> []
+   in
+   Util.ListAsSet.no_duplicates
+      (CalcSemiRing.fold List.flatten List.flatten r_leaf_f relcalc)
+
+and extract_aggregates_from_term (aggressive: bool) (term: term_t) =
+   let t_leaf_f x =
+      match x with
+         AggSum(f, r) ->
+            (* if r is constraints_only, take the aggregates from the
+               atoms of r; otherwise, return x monolithically. *)
+            if ((constraints_only r) && (not aggressive)) then
+               ((extract_aggregates_from_term aggressive f) @
+                (extract_aggregates_from_calc aggressive r))
+            else [TermSemiRing.mk_val x]
+       | _ -> []
+   in
+   Util.ListAsSet.no_duplicates
+      (TermSemiRing.fold List.flatten List.flatten t_leaf_f term)
+
+
+(* Note: the substitution is bottom-up. This means we greedily replace
+   smallest subterms, rather than largest ones. This has to be kept in
+   mind if terms in aggsum_theta may mutually contain each other.
+
+   FIXME: substitute_in_term currently can only replace AggSum terms,
+   not general terms.
+*)
+let substitute_in_term (aggsum_theta: term_mapping_t)
+                       (term: term_t): term_t =
+   let aconstraint_f c t1 t2 =
+      CalcSemiRing.mk_val(AtomicConstraint(c, t1, t2))
+   in
+   let aggsum_f f r =
+      let this = TermSemiRing.mk_val(AggSum(f, r))
+      in
+      Util.Function.apply aggsum_theta this this
+         (* FIXME: we have to unify the variables of the
+            externals to be matched. See also apply_term_mapping. *)
+   in
+   apply_bottom_up aggsum_f aconstraint_f term
+
 let mk_term_mapping (map_name_prefix: string)
                     (workload: (((var_t list) * term_t) list)):
                     term_mapping_t =
@@ -703,6 +702,39 @@ let apply_term_mapping (mapping: term_mapping_t)
    else raise (Assert0Exception "Calculus.apply_term_mapping")
       (* TODO: implement the renaming of the overlapping variables before
          the substitution. *)
+
+(* given a list of pairs of terms and their parameters, this function
+   extracts all the nested aggregate sum terms, eliminates duplicates,
+   and then names the aggregates.
+
+   We do it in this complicated fashion to avoid creating the same
+   child terms redundantly.
+*)
+let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
+                  (workload: ((var_t list) * term_t) list):
+                  (((var_t list) * term_t) list *
+                   term_mapping_t) =
+   let extract_from_one_term (params, term) =
+      let prepend_params t =
+         let p = (Util.ListAsSet.inter (term_vars t)
+                    (Util.ListAsSet.union params bound_vars))
+         in (p, t)
+      in
+      List.map prepend_params (extract_aggregates_from_term false term)
+   in
+   (* the central duplicate elimination step. *)
+   let extracted_terms = Util.ListAsSet.no_duplicates
+                (List.flatten (List.map extract_from_one_term workload))
+   in
+   (* create mapping *)
+   let theta = mk_term_mapping name_prefix extracted_terms
+   in
+   (* apply substitutions to input terms. *)
+   let terms_after_substition =
+      List.map (fun (p, t) ->  (p, (substitute_in_term theta t)))
+               workload
+   in
+   (terms_after_substition, theta)
 
 
 
@@ -744,10 +776,15 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                      AggSum(1, nested) = 1. The advantage of this over
                      ModeExtractFromCond is that there is less work to do
                      at runtime iterating over all the tuples of flat. *)
+                  let grouped_conds =
+                     TermSemiRing.mk_val(AggSum(term_one, nested))
+                  in
                   ([], (TermSemiRing.mk_val (
                      AggSum(t, CalcSemiRing.mk_prod([flat;
                        CalcSemiRing.mk_val(AtomicConstraint(Eq, term_one,
-                          TermSemiRing.mk_val(AggSum(term_one, nested))))])))))
+                          grouped_conds))])))))
+                  (* TODO: the whole point of this mode is that grouped_conds
+                     is made external, but this is not happening yet. *)
                 | ModeIntroduceDomain ->
                   (* introduce explicit domain relations. List
                      ModeExtractFromCond but with duplicate elimination of
@@ -772,17 +809,20 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                                TermSemiRing.mk_val(AggSum(t, flat)), nested)))
                )
             in
+            (* now extract ALL nested aggregates *)
             let agg_plus_vars agg =
                (Util.ListAsSet.inter (term_vars agg) bs_vars, agg)
             in
-            let head_contrib = (* this is an optimization; could always be [] *)
-               (match mode with
-                  ModeIntroduceDomain | ModeOpenDomain ->
-                     [TermSemiRing.mk_val(AggSum(t, flat))]
-                | _ -> [])
+            let extract_sub_aggregates_from_term t =
+               match t with
+                  TermSemiRing.Val(AggSum(t, r)) ->
+                     (extract_aggregates_from_term false t) @
+                     (extract_aggregates_from_calc false r)
+                | _ -> raise (Assert0Exception
+                  "Calculus.bigsum_rewriting.extract_sub_aggregates_from_term")
             in
             let aggs = (List.map agg_plus_vars
-               (head_contrib @ (extract_aggregates_from_calc nested)))
+               (extract_sub_aggregates_from_term new_term))
             in
             let theta = mk_term_mapping map_name_prefix aggs
             in

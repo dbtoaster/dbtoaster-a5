@@ -222,6 +222,12 @@ val constraints_only: relcalc_t -> bool
 val apply_variable_substitution_to_relcalc: ((var_t * var_t) list)
                                             -> relcalc_t -> relcalc_t
 
+(* (apply_variable_substitution theta term) substitutes variables anywhere
+   in term using mapping theta, recursively. This includes relational
+   calculus subexpressions.
+*)
+val apply_variable_substitution_to_term: var_mapping_t -> term_t -> term_t
+
 (* Given monomial m that is constraints-only and a list of variables l,
    (extract_substitutions m preferred_vars) returns a pair of
 
@@ -244,17 +250,11 @@ val extract_substitutions: relcalc_t -> (var_t list) ->
                            (var_mapping_t * relcalc_t)
 
 (* a list consisting of the maximal AggSum subexpressions of the input
-   formula whose formula part is not constraints_only. *)
-val extract_aggregates_from_calc: relcalc_t -> (term_t list)
-
-(* (apply_variable_substitution theta term) substitutes variables anywhere
-   in term using mapping theta, recursively. This includes relational
-   calculus subexpressions.
-*)
-val apply_variable_substitution_to_term: var_mapping_t -> term_t -> term_t
-
-(* a list consisting of the maximal AggSum subexpressions of the input term.  *)
-val extract_aggregates_from_term: term_t -> (term_t list)
+   formula/term. If the first argument is false, we do not pull out
+   AggSum(t, r) subexpressions that are ifs (i.e., r is constraints
+   only); instead, we recursively extract from t and r. *)
+val extract_aggregates_from_calc: bool -> relcalc_t -> (term_t list)
+val extract_aggregates_from_term: bool -> term_t -> (term_t list)
 
 (* split calculus monomial into flat and nested part. *)
 val split_nested: relcalc_t -> (relcalc_t * relcalc_t)
@@ -269,6 +269,17 @@ val substitute_in_term: term_mapping_t -> term_t -> term_t
    list of (parameter list, term) pairs, creates named maps from them,
    and returns a term to external map lookup substitution. *)
 val mk_term_mapping: string -> (((var_t list) * term_t) list) -> term_mapping_t
+
+(* given a list of pairs of terms and their parameters, this function
+   extracts all the nested aggregate sum terms, eliminates duplicates,
+   and then names the aggregates.
+
+   We do it in this complicated fashion to avoid creating the same
+   child terms redundantly.
+*)
+val extract_named_aggregates: string -> (var_t list) ->
+                              (((var_t list) * term_t) list)  ->
+                              ((((var_t list) * term_t) list * term_mapping_t))
 
 
 type bs_rewrite_mode_t = ModeExtractFromCond

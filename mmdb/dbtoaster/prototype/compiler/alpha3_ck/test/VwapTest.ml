@@ -35,23 +35,11 @@ let (bs_vars, vwap_theta, vwap_bsrw) =
 term_as_string vwap_bsrw =
 "AggSum(aux1[p0], Dom_{p0}(p0) and (0.25*aux2[])<=aux3[p0])";;
 
-
-List.map (fun (x,y) -> (readable_term x, readable_term y)) vwap_theta =
-[(RVal
-   (AggSum
-     (RProd [RVal (Var "p0"); RVal (Var "v0")],
-      RA_Leaf (Rel ("B", ["p0"; "v0"])))),
-  RVal (External ("aux1", ["p0"])));
- (vwap1r, RVal (External ("aux2", [])));
- (vwap2r, RVal (External ("aux3", ["p0"])))]
+List.map (fun (x,y) -> (term_as_string x, term_as_string y)) vwap_theta =
+[("AggSum((p0*v0), B(p0, v0))", "aux1[p0]");
+ ("AggSum(v1, B(p1, v1))", "aux2[]");
+ ("AggSum(v2, B(p2, v2) and p0<p2)", "aux3[p0]")]
 ;;
-
-
-
-let (bs_vars4, vwap_theta4, vwap4) =
-   bigsum_rewriting Calculus.ModeIntroduceDomain (make_term vwap1r) [] "aux" ;;
-
-term_as_string vwap4 = "AggSum(v1, B(p1, v1))";;
 
 
 Compiler.compile Calculus.ModeExtractFromCond [("B", ["P"; "V"])]
