@@ -17,14 +17,17 @@ RA_MultiNatJoin[
 
 
 
-let r = (make_relcalc (RA_Leaf(Rel("B", ["p1"; "v1"]))));;
+let (bs_vars, vwap_theta, vwap_bsrw) =
+   bigsum_rewriting Calculus.ModeExtractFromCond vwap [] "aux" ;;
 
-let (flat, nested) = split_nested r ;;
-readable_relcalc nested;;
+term_as_string vwap_bsrw =
+"AggSum((p0*v0), B(p0, v0) and (0.25*aux1[])<=aux2[p0])";;
 
-((not (constraints_only r)) && ((snd (split_nested r)) <> relcalc_one))
-= false;;
+let (bs_vars, vwap_theta, vwap_bsrw) =
+   bigsum_rewriting Calculus.ModeOpenDomain vwap [] "aux" ;;
 
+term_as_string vwap_bsrw =
+"(if (0.25*aux2[])<=aux3[p0] then aux1[p0] else 0)";;
 
 let (bs_vars, vwap_theta, vwap_bsrw) =
    bigsum_rewriting Calculus.ModeIntroduceDomain vwap [] "aux" ;;
@@ -51,13 +54,32 @@ let (bs_vars4, vwap_theta4, vwap4) =
 term_as_string vwap4 = "AggSum(v1, B(p1, v1))";;
 
 
+Compiler.compile Calculus.ModeExtractFromCond [("B", ["P"; "V"])]
+                 (Compiler.mk_external "vwap" [])
+                 vwap =
+["+On Lookup(): vwap[] := AggSum((p0*v0), B(p0, v0) and (0.25*vwap__1[])<=vwap__2[p0])";
+ "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[] += x_vwap__1B_V";
+ "+B(x_vwap__2B_P, x_vwap__2B_V): foreach p0 do vwap__2[p0] += (x_vwap__2B_V*(if p0<x_vwap__2B_P then 1 else 0))"]
+;;
+
 Compiler.compile Calculus.ModeIntroduceDomain [("B", ["P"; "V"])]
                  (Compiler.mk_external "vwap" [])
                  vwap =
-["+On Lookup(): vwap[] := AggSum(vwap__1[p0], Dom_{p0}(p0) and (0.25*vwap__2[])<=vwap$3[p0])";
- "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[x_vwap$1B_P] += (x_vwap__1B_P*x_vwap__1B_V)";
- "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap$2B_V";
- "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap$3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
+["+On Lookup(): vwap[] := AggSum(vwap__1[p0], Dom_{p0}(p0) and (0.25*vwap__2[])<=vwap__3[p0])";
+ "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[x_vwap__1B_P] += (x_vwap__1B_P*x_vwap__1B_V)";
+ "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap__2B_V";
+ "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap__3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
 ;;
  
+Compiler.compile Calculus.ModeOpenDomain [("B", ["P"; "V"])]
+                 (Compiler.mk_external "vwap" [])
+                 vwap =
+["+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then ((if p0=x_vwapB_P then p0 else 0)*x_vwapB_V) else 0)";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (vwap__1[p0]*(if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then 1 else 0)*(if vwap__3[p0]<(0.25*vwap__2[]) then 1 else 0))";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (-1*vwap__1[p0]*(if (vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0)))<((0.25*vwap__2[])+(0.25*x_vwapB_V)) then 1 else 0)*(if (0.25*vwap__2[])<=vwap__3[p0] then 1 else 0))";
+ "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[x_vwap__1B_P] += (x_vwap__1B_P*x_vwap__1B_V)";
+ "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap__2B_V";
+ "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap__3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
+;;
+
 

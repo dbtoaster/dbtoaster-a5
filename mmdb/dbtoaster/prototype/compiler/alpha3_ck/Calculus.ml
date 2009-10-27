@@ -760,7 +760,7 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                           "Dom_{"^(Util.string_of_list ", " bs_vars)^"}",
                           bs_vars)); nested])))))
                           (* TODO: we should also collect the information
-                             needed to maintain the maps here. *)
+                             needed to maintain the domain relation here. *)
                 | ModeOpenDomain ->
                   (* like ModeIntroduceDomain, but the domain is implicit.
                      There are free bigsum variables, and the loop to iterate

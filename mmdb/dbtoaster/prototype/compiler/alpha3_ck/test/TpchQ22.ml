@@ -42,22 +42,43 @@ let (_, q22_theta, q22_b) =
    Calculus.bigsum_rewriting Calculus.ModeIntroduceDomain
                              tpch_q22 ["c1.nationkey"] "foo";;
 
+term_as_string q22_b =
+"AggSum(foo1[c1.acctbal, c1.custkey], Dom_{c1.acctbal, c1.custkey}(c1.acctbal, c1.custkey) and c1.acctbal<foo2[] and 0=foo3[c1.custkey])";;
+
+let (_, q22_theta, q22_b) =
+   Calculus.bigsum_rewriting Calculus.ModeExtractFromCond
+                             tpch_q22 ["c1.nationkey"] "foo";;
+
+term_as_string q22_b =
+"AggSum(c1.acctbal, C(c1.custkey, c1.nationkey, c1.acctbal) and c1.acctbal<foo1[] and 0=foo2[c1.custkey])";;
+
+let (_, q22_theta, q22_b) =
+   Calculus.bigsum_rewriting Calculus.ModeGroupCond
+                             tpch_q22 ["c1.nationkey"] "foo";;
+
+term_as_string q22_b =
+"AggSum(c1.acctbal, C(c1.custkey, c1.nationkey, c1.acctbal) and 1=(if c1.acctbal<foo1[] and 0=foo2[c1.custkey] then 1 else 0))";;
+
+let (_, q22_theta, q22_b) =
+   Calculus.bigsum_rewriting Calculus.ModeOpenDomain
+                             tpch_q22 ["c1.nationkey"] "foo";;
+
+term_as_string q22_b =
+"(if c1.acctbal<foo2[] and 0=foo3[c1.custkey] then foo1[c1.acctbal, c1.custkey] else 0)";;
+
+
 readable_term q22_b =
 RVal
  (AggSum
    (RVal (External ("foo1", ["c1.acctbal"; "c1.custkey"])),
     RA_MultiNatJoin
      [RA_Leaf
-       (Rel ("Dom_{c1.acctbal, c1.custkey}", ["c1.acctbal"; "c1.custkey"]));
-      RA_MultiNatJoin
-       [RA_Leaf
-         (AtomicConstraint (Lt, RVal (Var "c1.acctbal"),
-           RVal (External ("foo2", []))));
-        RA_Leaf
-         (AtomicConstraint (Eq, RVal (Const (Int 0)),
-           RVal (External ("foo3", ["c1.custkey"]))))]]))
+       (AtomicConstraint (Lt, RVal (Var "c1.acctbal"),
+         RVal (External ("foo2", []))));
+      RA_Leaf
+       (AtomicConstraint (Eq, RVal (Const (Int 0)),
+         RVal (External ("foo3", ["c1.custkey"]))))]))
 ;;
-
 
 List.map (fun (x,y) -> (readable_term x, readable_term y)) q22_theta =
 [(RVal
