@@ -44,7 +44,7 @@ Rather than maintaining a datacube partitioned across an array of disks, SpreadD
 
 Because all state is stored in-memory rather than on-disk, SpreadDB is amenable to the use of non-linear datastructures, for example datacubes.  Moreover, because data is partitioned, the task of projecting and aggregating is be easily farmed out to the hosting nodes.  Using a set of novel compilation and optimization techniques, SpreadDB translates datacube construction queries into an entire data warehouse infrastructure.  
 
-SpreadDB's compiler produces an aggressively optimized execution plan that translates updates to the individual tables of an underlying relational database updates into delta operations on the warehouse.  Additionally, the compiler generates a \textit{distribution plan} that guides data partitioning across nodes within the warehouse to maximize communication efficiency.  The result is a warehouse infrastructure that not only answers OLAP queries quickly and efficiently, but that can use live data to answer those queries.
+SpreadDB's compiler produces an aggressively optimized execution plan that translates updates to the individual relations of an underlying relational database updates into delta operations on the warehouse.  Additionally, the compiler generates a \textit{distribution plan} that guides data partitioning across nodes within the warehouse to maximize communication efficiency.  The result is a warehouse infrastructure that not only answers OLAP queries quickly and efficiently, but that can use live data to answer those queries.
 
 \begin{example}\textit
 As a running example in this paper, we will use a datacube loosely based on TPC-H\cite{tpch} Query 12:
@@ -81,12 +81,17 @@ As a running example in this paper, we will use a datacube loosely based on TPC-
 \label{fig:example}  
 \end{figure}
 
+The remainder of this paper is organized as follows.  Section \ref{sec:relatedwork} discusses prior work in the field of OLAP query processing.  In Section \ref{sec:architecture}, we provide an overview of SpreadDB's online infrastructure and discuss how data is managed within that infrastructure.  Section \ref{sec:architecture} describes the offline compilation process used to manage and optimize SpreadDB.  Section \ref{sec:experiments} presents a series of experiments that demonstrate the viability and scalability of in-memory data warehouses.  Finally, Section \ref{sec:optimizations} discusses a set of optimizations provoked by our experiments.  The paper concludes with Section \ref{sec:conclusions}
+
+\section{Related Work}
+\label{sec:relatedwork}
+
 \section{Architecture}
 \label{sec:architecture}
 \begin{figure}
 \begin{center}
 \includegraphics[width=3in]{images/Architecture.pdf}
-\caption{SperadDB's architecture.}
+\caption{SpreadDB's architecture.}
 \label{fig:arch}
 \end{center}
 \end{figure}
@@ -94,13 +99,15 @@ SpreadDB consists of three components: a runtime, a \textit{Query Layer}, and a 
 
 Adjacent to the runtime is the \textit{Query Layer}, a component that acts as an intermediary between the end user and the dw nodes.  The query layer accepts roll-up and drill-down queries, translates them into the corresponding set of data warehouse lookups, and executes those queries on the warehouse.
 
-SpreadDB's final component is a compiler that guides the behavior of the other three components.  Given an arbitrary SQL query, the SpreadDB compiler produces a set of update rules, or \textit{Triggers}.  Each trigger is invoked at the Switch when one of the query's input tables is modified, and begins the process of applying the appropriate changes within the warehouse.  
+SpreadDB's final component is a compiler that guides the behavior of the other three components.  The SpreadDB compiler takes schemas for one or more input relations and an arbitrary SQL query as input.  The query is decomposed into a set of subqueries, each representing a join over some subset of the input relations.  Each subquery is materialized into a \textit{map}, that is partitioned across the DW nodes.  
 
-Changes applied by a trigger are a form of delta-encoding.  SpreadDB maintains a set of \textit{Maps} on the DW Nodes to minimize the work required to process any individual update to an input table.  Every trigger incrementally updates the appropriate map, potentially using data from other maps.  The compilation and construction of triggers is discussed in further detail in Section \ref{sec:compilation}.  In short, every trigger consists of one or more \textit{Map Update Rules} that take the following form:
-$$+R(Params)\ :\ Map[Key, Key, \ldots]\ += Expression$$
-Here, the Trigger is fired when the tuple $(Params)$ is inserted into Table $R$.  When this happens, the target $Map$ is modified by the corresponding algebraic $Expression$ of constants, references to other maps, and variables bound to the input parameters.  Map references are indexed by one or more $Key$s, which may be constants or variables, but not references to other maps.  Thus, the total latency for expression evaluation on a quiescent system is limited to at most two network hops.  
+Based on these subqueries, the compiler generates a series of \textit{update rules} that translate changes in the input relations to map deltas.  These update rules take the form:
+$$+R(x_1, x_2, x_3, \ldots)\ :\ Map\ K[y_1, y_2, \ldots]\ += Expression$$
+That is, when the tuple $(x_1, x_2, x_3, \ldots)$ is inserted into input relation $R$, adjust the target $Map\ K[y_1, y_2, \ldots]$ by the indicated arithmetic expression over constants, variables ($x_n$), or the contents of other maps.  
+ 
+It is possible for an update rule to modify an an entire cross section of a map.  Such updates are expressed via variables in the update rule not bound to one of the input parameters.  We refer to these as loop variables.  A loop variable occurs exactly twice in an update rule, once as a key in the target map, and once as an key for a map in the expression.  Thus an update rule with loop variables behaves as if it were a set of parallel updates; every update corresponds to one possible valuation of all loop variables selected from the domains of the map they index into.
 
-Finally, some Update Rules may modify an entire cross section of a map.  Such updates are expressed via unbound variables in the update rule-that is, variables not bound to one of the input parameters.  These loop parameters occur both as a target key and within the update expression.  Update rules behave as if they were a set of parallel updates; every update in the set corresponds to one valuation of all loop variables selected from their contextually identified domains.  
+When a tuple is added to or removed from an input relation, the Switch composes a set of messages parametrized on the tuple's contents and dispatches them into the data warehouse as a sequence of map reads and writes.  Nodes being read from accept and process the requests and forward the responses to the appropriate writers.  We refer to this entire sequence of operations as an update.
 
 \subsection{Anatomy of an Update}
 
@@ -112,7 +119,10 @@ Finally, some Update Rules may modify an entire cross section of a map.  Such up
 \end{center}
 \end{figure}
 
-A map update begins at the Switch when an input table is modified.  Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW Node managing a map being written to.  Additionally, the Switch identifies all DW Nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required (i.e., if SpreadDB is being used standalone, without an underlying database), the switch can log the update to disk for persistence.
+A map update begins at the Switch when an input table is modified.  
+
+
+Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW Node managing a map being written to.  Additionally, the Switch identifies all DW Nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required (i.e., if SpreadDB is being used standalone, without an underlying database), the switch can log the update to disk for persistence.
 
 The nodes receiving a FETCH request perform the appropriate reads and send their responses to the PUT nodes in a PUSH message.  Upon receipt of all necessary PUSH messages, the PUT nodes compute the update expression and modify the affected maps.  An illustration of the complete message-passing process is presented in Figure \ref{fig:updatestep}.  
 
@@ -176,7 +186,9 @@ If the update requires a loop, the destination node must do some processing.  Th
 
 \subsection{Consistency Model}
 
-SpreadDB's update delta-encoding uses materialize subqueries already stored within the warehouse to perform updates.  This dependency requires that all reads see a consistent snapshot of the warehouse at the completion of the previous update.  Thus, all reads and writes must be executed as if there were a total ordering over all updates.  As the clearinghouse for updates, the Switch presents an ideal point for generating this ordering.  
+The materialize
+
+SpreadDB's update delta-encoding uses materialized subqueries already stored within the warehouse to perform updates.  This dependency requires that all reads see a consistent snapshot of the warehouse at the completion of the previous update.  Thus, all reads and writes must be executed as if there were a total ordering over all updates.  As the clearinghouse for updates, the Switch presents an ideal point for generating this ordering.  
 
 Every update is assigned a version number by the switch as it is issued.  The 
 As they are 
@@ -212,7 +224,14 @@ Some trickery will be required to get this table into the middleware.  Perhaps t
 \subsection{Layout}
 How do we partition data (the layout)?  Where do various bits of code get executed live?  What kind of runtime analytics do we need to collect to manage the data layout on the fly? 
 
-\section{Distributing the Switch}
+
+\section{Experiments}
+\label{sec:experiments}
+
+\section{Optimizations}
+\label{sec:optimizations}
+
+\subsection{Distributing the Switch}
 \label{sec:distswitch}
 The role of the switch is to provide a synchronization mechanism for the updates.  Specifically, the delta encoding approach used by the update rules requires that all update rules be applied to a consistent snapshot of the maps.  The current implementation of SpreadDB performs this synchronization at a single node.  However, limiting the switch to only one node creates a scaling bottleneck.  
 
@@ -240,8 +259,8 @@ For example, in Figure \ref{fig:dataflow} without removing any edges, $Depth(M1)
 %\subsection{Distributed Queries}
 %
 
-\section{Experiments}
-\label{sec:experiments}
+\section{Conclusions}
+\label{sec:conclusions}
 
 \bibliographystyle{abbrv}
 \bibliography{spread}
