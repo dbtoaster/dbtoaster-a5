@@ -64,7 +64,7 @@ Online Aggregation in the Cloud}
 %\subsection{}
 
 \abstract{
-In this paper we present SpreadDB\footnote{The name ``SpreadDB" is anonymized for double-blind reviewing}, a compiler for producing customized data warehouses.  SpreadDB uses a novel set of techniques to compile the execution of complex queries down to simple message-passing operations between a set of map datastructures.  By expressing the query result in terms of a recursively defined view-maintenence problem, the data warehouse is able to maintain a set of intermediate results that make it possible to incrementally update the data warehouse in realtime.  The intermediate results produced by these incremental updates can also be used to simplify processing of OLAP-style queries.  Furthermore, the ease of partitioning and distributing SpreadDB's map datastructures makes it feasible to deploy the entire data warehouse in-memory.  The result is a power-efficient data warehousing infrastructure that can maintain synchronization with a relational database, allowing online processing of high-volume aggregate queries.
+In this paper we present Cumulus, a compiler for producing customized data warehouses.  Cumulus uses a novel set of techniques to compile the execution of complex queries down to simple message-passing operations between a set of map datastructures.  By expressing the query result in terms of a recursively defined view-maintenence problem, the data warehouse is able to maintain a set of intermediate results that make it possible to incrementally update the data warehouse in realtime.  The intermediate results produced by these incremental updates can also be used to simplify processing of OLAP-style queries.  Furthermore, the ease of partitioning and distributing Cumulus' map datastructures makes it feasible to deploy the entire data warehouse in-memory.  The result is a power-efficient data warehousing infrastructure that can maintain synchronization with a relational database, allowing online processing of high-volume aggregate queries.
 }
 
 
@@ -79,15 +79,15 @@ In this paper we present SpreadDB\footnote{The name ``SpreadDB" is anonymized fo
 \begin{figure}
 \begin{center}
 \includegraphics[width=3in]{images/Architecture.pdf}
-\caption{SpreadDB's architecture.}
+\caption{Cumulus' architecture.}
 \label{fig:arch}
 \end{center}
 \end{figure}
-SpreadDB consists of three components: a runtime, a \textit{Query Layer}, and a compiler.  A diagram of this architecture is presented in Figure \ref{fig:arch}.  The warehousing runtime accepts relation updates at a coordinator node called the \textit{Switch}, and distributes their data throughout an array of data warehouse storage nodes, or \textit{DW Nodes}.  Though this paper focuses on a runtime with a centralized switch, we discuss a distributed switch implementation in Section \ref{sec:distswitch}.
+Cumulus consists of three components: a runtime, a \textit{Query Layer}, and a compiler.  A diagram of this architecture is presented in Figure \ref{fig:arch}.  The warehousing runtime accepts relation updates at a coordinator node called the \textit{Switch}, and distributes their data throughout an array of data warehouse storage nodes, or \textit{DW Nodes}.  Though this paper focuses on a runtime with a centralized switch, we discuss a distributed switch implementation in Section \ref{sec:distswitch}.
 
 Adjacent to the runtime is the \textit{Query Layer}, a component that acts as an intermediary between the end user and the dw nodes.  The query layer accepts roll-up and drill-down queries, translates them into the corresponding set of data warehouse lookups, and executes those queries on the warehouse.
 
-SpreadDB's final component is a compiler that guides the behavior of the other three components.  The SpreadDB compiler takes schemas for one or more input relations and an arbitrary SQL query as input.  The query is decomposed into a set of subqueries, each representing a join over some subset of the input relations.  Each subquery is materialized into a \textit{map}, that is partitioned across the DW nodes.  
+Cumulus' final component is a compiler that guides the behavior of the other three components.  The Cumulus compiler takes schemas for one or more input relations and an arbitrary SQL query as input.  The query is decomposed into a set of subqueries, each representing a join over some subset of the input relations.  Each subquery is materialized into a \textit{map}, that is partitioned across the DW nodes.  
 
 Based on these subqueries, the compiler generates a series of \textit{update rules} that translate changes in the input relations to map deltas.  These update rules take the form:
 $$+R(x_1, x_2, x_3, \ldots)\ :\ Map\ K[\ldots]\ += Expression$$
@@ -120,7 +120,7 @@ The update corresponding to this rule is coordinated by a subset of nodes that s
 \end{center}
 \end{figure}
 
-A map update begins at the Switch when an input table is modified.  Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW Node managing a map being written to.  Additionally, the Switch identifies all DW Nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required (i.e., if SpreadDB is being used standalone, without an underlying database), the switch can log the update to disk for persistence.
+A map update begins at the Switch when an input table is modified.  Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW Node managing a map being written to.  Additionally, the Switch identifies all DW Nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required (i.e., if Cumulus is being used standalone, without an underlying database), the switch can log the update to disk for persistence.
 
 The nodes receiving a FETCH request perform the appropriate reads and send their responses to the PUT nodes in a PUSH message.  Upon receipt of all necessary PUSH messages, the PUT nodes compute the update expression and modify the affected maps.  An illustration of the complete message-passing process is presented in Figure \ref{fig:updatestep}.  
 
@@ -182,22 +182,15 @@ FETCH responses, or PUSH messages for an update are sent to the node managing th
 
 If the update requires a loop, the destination node must do some processing.  The node first generates a set of tables, one for each map reference in the update expression.  Arriving map values populate tables that correspond to any map reference matching the value's keys, where loop variables act as wildcards.  When all values have been received, the destination node computes the natural join of all of the generated tables, effectively producing one update value for every assigned value in the domain of all of the loop variables.  The loop-free update is a special case of this where each generated table contains only one row.  The collation algorithm is shown in Figure \ref{alg:collation}
 
-\subsection{Consistency Model}
+\subsection{Update Consistency and Garbage Collection}
 
-The materialize
+Cumulus' delta-encoding approach allows it to be agnostic to the order in which it processes input tuples.  However, this flexibility requires that an update's effect on the warehouse be logically atomic.  Atomicity is of particular importance, since the set of update rules triggered by a given update switch typically span the breadth of the data-dependency graph; Updates to any input relation typically have at least one read to a map updated by every other relation.
 
-SpreadDB's update delta-encoding uses materialized subqueries already stored within the warehouse to perform updates.  This dependency requires that all reads see a consistent snapshot of the warehouse at the completion of the previous update.  Thus, all reads and writes must be executed as if there were a total ordering over all updates.  As the clearinghouse for updates, the Switch presents an ideal point for generating this ordering.  
+As the clearinghouse for updates, the Switch presents an ideal point for generating a total ordering over all tuples to be inserted into the warehouse.  The Switch maintains a version number for each node, incremented on every PUT dispatched to the node hosting it.  FETCHes sent to that node are tagged with the version number of the last PUT sent to the node, while PUTs are dependent on the completion of the prior PUT.
 
-Every update is assigned a version number by the switch as it is issued.  The 
-As they are 
+Data warehouse nodes ensure consistent evaluation of updates by buffering PUT requests received out of order, or prior to the completion of an earlier PUT request.  Similarly, FETCH requests for a particular version are buffered until the corresponding PUT request has completed, if it hasn't already done so.
 
-Every update is assigned a version number by the switch.  The maps that each update modifies and reads are known.  The switch maintains a list of modification times for each partition in the warehouse.  With each request to the DW Nodes, the switch attaches a version 
-
- first looks up the most recent modification time for each get required by the update, and subsequently updates the modification times for each put required by the update.  
-
-When applying gets, each warehouse node first ensures that it has successfully applied all requests prior to the indicated version number.  A short history of prior incarnations of each partition are also maintained in case a get arrives after a subsequent put.  Each put also includes the version number of the last fully completed update.  This allows the target node to discard old incarnations of the partition.
-
-Some trickery will be required to get this table into the middleware.  Perhaps the switch can periodically broadcast it over?
+Periodically, the switch queries each node for the completion status of pending PUT requests.  For each node, it computes the lowest FETCH version number for a read associated with an incomplete PUT request.  The Switch then disseminates these version numbers throughout the warehouse with a COMMIT message.  When a node receives a COMMIT, it snapshots its maps by discarding all updates for values that were overwritten before the commit version.
 
 \section{Compilation}
 \label{sec:compilation}
@@ -231,7 +224,7 @@ How do we partition data (the layout)?  Where do various bits of code get execut
 
 \subsection{Distributing the Switch}
 \label{sec:distswitch}
-The role of the switch is to provide a synchronization mechanism for the updates.  Specifically, the delta encoding approach used by the update rules requires that all update rules be applied to a consistent snapshot of the maps.  The current implementation of SpreadDB performs this synchronization at a single node.  However, limiting the switch to only one node creates a scaling bottleneck.  
+The role of the switch is to provide a synchronization mechanism for the updates.  Specifically, the delta encoding approach used by the update rules requires that all update rules be applied to a consistent snapshot of the maps.  The current implementation of Cumulus performs this synchronization at a single node.  However, limiting the switch to only one node creates a scaling bottleneck.  
 
 Despite the cloud computing mantra of rejecting consistency, this application requires it.  Complex locking protocols have poor scaling performance, so a simpler, lock-free protocol is required.  We achieve this goal by introducing the notion of \textit{pipeline scheduling}.  Pipeline scheduling exploits the acyclicity of compiler-generated data-flow graphs to allow nodes to correctly interleave and process update rules with only limited network overhead and processing latency.
 
@@ -288,7 +281,7 @@ For example, in Figure \ref{fig:dataflow} without removing any edges, $Depth(M1)
 %\end{itemize}
 %
 %\end{itemize}
-%\caption{SpreadDB's API}
+%\caption{Cumulus' API}
 %\label{fig:api}
 %\end{center}
 %\end{figure}
