@@ -180,9 +180,12 @@ k}-fraction of the total stock volume in each of the bid and ask order
 books. SOBI then compares the two VWAPs. For simplicity, we present the VWAP for
 the bids only:
 
-\begin{verbatim} select avg(b2.price * b2.volume) as bid_vwap from bids b2 where
-k * (select sum(volume) from bids) > (select sum(volume) from bids b1 where
-b1.price > b2.price);
+\begin{verbatim}
+select avg(b2.price * b2.volume) as bid_vwap
+from bids b2 where
+    k * (select sum(volume) from bids)
+    > (select sum(volume) from bids b1
+        where b1.price > b2.price);
 \end{verbatim} % as vwap_input
 %
 Above, the contents of the bids order book is continually changing, and
@@ -256,21 +259,13 @@ executors whose performance significantly dominates existing relational database
 and stream processing engines across a variety of applications.
 \end{enumerate}
 
-
-This paper is laid out as follows. Section 2 describes the role of the compiler,
-and a high-level view of \compiler, a new project at Cornell investigating
-database engine runtimes using executors custom compiled for repeated and
-standing queries.  \comment{ As part of its scope, \compiler\ will investigate
-scaling compiled queries over both multi-core and distributed main-memory
-databases.  } \comment{ Section 3 describes our map algebra that enables query
-transformations to both select the maps we maintain during execution, and derive
-the maintenance tasks for each map. We also describe structural query
-decomposition techniques for minimizing the memory consumption of the internal
-data structures need by our techniques.  } Section 3 describes our map algebra
-that picks map to materialize, and a structural query decomposition technique
-for minimizing the memory consumption of these maps. Section 4 describes the
-aforementioned extensions to the compiler for bulk operations and lazy
-evaluation. Finally prior to discussing related work and concluding, Section 5
-presents experimental results demonstrating the significant benefits of our
-techniques over a standard relational database, a streaming engine, as well as a
-direct compilation of the query plan as a straight-line function.
+The remainder of this paper is as follows. Section 2 describes the compilation
+process, including \compiler's framework for representing queries using map
+datastructures and relational calculus, and the generation of source code to
+maintain these maps given an update stream. Section 3 describes extensions to the
+compiler focusing on more expressive aggregates and optimizations. Section 4
+presents an overview of the system model and infrastructure for executing
+\compiler's queries. Finally prior to discussing related work and concluding,
+Section 5 presents experimental results demonstrating the significant benefits
+of our techniques over a standard relational database, a streaming engine, as
+well as a direct compilation of the query plan as a straight-line function.

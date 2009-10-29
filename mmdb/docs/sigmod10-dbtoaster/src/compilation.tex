@@ -1,10 +1,31 @@
 \section{Recursive Compilation}
-\def\dom{\mathrm{dom}}
+\def\Dom{\mathrm{Dom}}
 \def\algsum{\mathrm{sum}}
 \def\algif{\mathrm{if}}
 \def\algthen{\mathrm{then}}
 \def\algelse{\mathrm{else}}
 \def\algforeach{\mathrm{foreach}}
+
+\newcommand\caret{\mathbin{\char`\^}}
+\renewcommand{\algorithmiccomment}[1]{// #1}
+
+\feature{Data and Query Model.}
+\compiler\ focuses on applications issuing standing queries on a database which
+subsequently process continuously changing, large volumes of input tuples.
+\compiler\ is capable of compiling a wide variety of SQL queries including the
+core relational algebra, standard aggregates (\texttt{sum}, \texttt{avg},
+\texttt{count}, \texttt{min}, \texttt{max}), subqueries and nested aggregates.
+Our data model differs from today's data stream processors, in that we consider
+a database as a set of relations each subject to an arbitrary sequence of
+inserts, updates and deletes. In contrast, data stream processors assume a
+well-defined separation between tuples' insert and delete operations on the
+stream (value- or count-based windows), or assume ordered deletion semantics
+(punctuations or heartbeats). In \compiler, each tuple has an arbitrary
+lifetime, thus our standing queries process a database spanning an arbitrary
+valid time using temporal database terminology. Indeed, many stream
+applications, such as order book trading and moving object applications, are
+self-managing, in that the application logic and delta patterns ensure that
+state does not grow unboundedly in practice.
 
 \compiler's recursive compilation algorithm performs its work on queries
 represented in a \textit{map} calculus. We start this section with a description
@@ -13,6 +34,7 @@ as transformations of terms in the calculus, identifying key properties of terms
 that hold following each compilation stage.
 
 \subsection{Map Algebra}
+\feature{Map terms}
 The map calculus consists of the following types of terms:
 
 \[
@@ -29,53 +51,65 @@ f*g
 
 Above $c,x$ denote numerical constants and variables respectively, $f,g$ are map
 calculus terms (or simply \textit{maps}) and $\algsum_f(Q)$ denotes a sum
-aggregation consisting of a positive relational algebra expression $Q$.
+aggregation consisting of a relational calculus formula $Q$.
 
-\feature{Map terms}
 Variables in maps are either {\em free} or {\em bound}.
-Given a map $f$ with free variables $\vec{x}$ (referred to in the order in which they
-first appear in $f$), $f[\vec{a}]$, where $\vec{a}$ is a tuple of variables and constants
-of the same arity as $\vec{x}$, denotes the substitution of each $x_i$ in $f$, by $a_i$. The
-variables $\vec{x}$ in $f[\vec{a}]$ are then called bound.
-For example, the free variables of $5 * x + y$ are $x,y$ and
-$(5 * x + y)[z, 2]$ is $5 * z + 2$ with free variable $z$.
-The number of free variables in a map is also called the map's arity.
-We occasionally use $f[]$ to indicate a map term $f$ with all variables bound.
+Given a map $f$ with free variables $\vec{x}$ (referred to in the order in which
+they first appear in $f$), $f[\vec{a}]$, where $\vec{a}$ is a tuple of variables
+and constants of the same arity as $\vec{x}$, denotes the substitution of each
+$x_i$ in $f$, by $a_i$. The variables $\vec{x}$ in $f[\vec{a}]$ are then called
+bound.  For example, the free variables of $5 * x + y$ are $x,y$ and $(5 * x +
+y)[z, 2]$ is $5 * z + 2$ with free variable $z$.  The number of free variables
+in a map is also called the map's arity.  We occasionally use $f[]$ to indicate
+a map term $f$ with all variables bound.
+We also define one particular kind of aggregate term, namely a
+\textit{constraint-only} aggregate, where the relational part of the aggregation
+contains only constraints, and each constraint includes at least one scalar
+subaggregate query. Constraint-only aggregates are equivalent to conditionals,
+that is:
+\begin{align*}
+\algsum_{1}(\phi( & <,100,\algsum_{A}(R(A,B)))) =\\
+& \algif \; \phi(<,100,\algsum_{A}(R(A,B))) \; \algthen \; 1 \; \algelse \; 0
+\end{align*}
 
-\feature{Relational algebra expressions}
-Next, our (positive) relational algebra expressions include:
+\feature{Relational calculus formulae}
+Next, we present our relational calculus formulae, which is a simplification of
+the domain relational calculus:
 
 \[
 R(A,B)
 \quad
-\rho_{X,Y}(R)
+\{\tuple{a,b}\}
 \quad
 \phi(\theta,f,g)
 \quad
-R \Join S
+R \wedge S
 \quad
-R \cup S
+R \vee S
 \quad
 \emptyset
 \quad
-\{\tuple{a,b}\}
+\{\tuple{}\}
 \]
 
-denoting relations (where attributes are pairs of variables and domains, denoted
-$A, \dom(A)$), renaming, constraints, natural joins, unions with implicit
-projections, the empty set and a constant nullary relation. Here a constraint is
-a triple of a comparison operator $\theta \in \{<=,<,=,!=,>,>=\}$, and two map
-terms enabling nested queries, denoted $\phi(\theta, f, g)$. A union with an
-implicit projection yields a relation contains only the intersection of input
-variables, i.e. $R(A,B,C) \cup S(B,C,D) = T(B,C)$, where $R,S,T$ are relations,
-along with their schemas. We can express the selection operator ($\sigma$) as a
-natural join of a relation and a binary constraint, i.e.  $\sigma_{a<5}(R(A,B))
-= R(A,B) \Join \phi(<,A,5)$.  W.l.o.g, we will use renaming only directly above
-the leaves of a relational algebra syntax tree.  We use a multiset semantics for
-relations as in SQL; none of the operations of relational algebra eliminate
-duplicates.  We return to the difference operation later.
-
+\noindent respectively denoting relations (where attributes are pairs of
+variables and domains, denoted $A, \Dom(A)$), tuples, constraints, conjunctions,
+disjunctions, the empty set and a constant nullary relation. Here a constraint
+is a triple of a comparison operator $\theta \in \{<=,<,=,!=,>,>=\}$, and two
+map terms enabling nested queries, denoted $\phi(\theta, f, g)$.  A conjunction
+of two relations, $R \wedge S$, corresponds to a natural join between the two
+relations, while a disjunction $R \vee S$, represents a union with an implicit
+projection (a projection to common variables of $R$ and $S$).
+We can express selection operator ($\sigma$) from relational algebra as a
+conjunction of a relation and a binary constraint, i.e.  $\sigma_{a<5}(R(A,B))
+= R(A,B) \wedge \phi(<,A,5)$.  W.l.o.g, we will use renaming only directly above
+the leaves of a calculus formula syntax tree.  We use a multiset semantics for
+relations as in SQL; none of the operations of relational calculus eliminate
+duplicates.
+\todo{We return to the difference operation later.}
 \todo{Example SQL query and our representation here?}
+\todo{Safe and unsafe variables, and their relationship to bound variables, or
+  do we describe this during aggregate simplification?}
 
 \feature{Group-by aggregations}
 Our aggregation terms with all variables bound, i.e. $\algsum_{f}(Q)[]$,
@@ -84,75 +118,75 @@ $g[]$ is a scalar value, while SQL aggregates yield a singleton relation).  We
 represent SQL group-by aggregates as map terms with free variables corresponding
 to group-by attributes. However a map term $g[\vec{a}]$
 differs from a SQL group-by aggregate since the function $g$ is defined everywhere.
-That is, suppose $g[a] = \algsum_{B}(R(A,B) \Join \phi(\theta,A,0))[a]$. Here $g[a]$
+That is, suppose $g[a] = \algsum_{B}(R(A,B) \wedge \phi(\theta,A,0))[a]$. Here $g[a]$
 produces $\{\tuple{0}\}$ rather than $\emptyset$ when
-$R(a,B) \Join \phi(\theta,a,0))$ is the empty relation and
+$R(a,B) \wedge \phi(\theta,a,0))$ is the empty relation and
 $\algsum_{B}(\emptyset) = 0$, while the SQL aggregate-group-by query
 $\sigma_{A=a}$(\texttt{select $A$, sum$(B)$ from $Q$ group by $A$})
-gives no value on tuples $\{\tuple{a}\}$ that do not exist in $\dom(A)$.
+gives no value on tuples $\{\tuple{a}\}$ that do not exist in $\Dom(A)$.
 
 
 \feature{Monomials, polynomials and semirings}
-We adopt a canonical representation for map terms and relational algebra
-expressions, based on distributivity properties of their operations. We define
+We adopt a canonical representation for map terms and relational calculus
+formulae, based on distributivity properties of their operations. We define
 basic map terms as constants, variables, and aggregate operations, and the basic
-relational algebra expression as relations, constraints, an empty and a constant
+calculus formulae as relations, constraints, an empty and a constant
 nullary relation. These are the only elements that can appear as leaves in our
-parse trees. Next we observe that natural joins and unions in the relational
-algebra exhibit the same associativity and distributivity properties as the
+parse trees. Next we observe that conjunctions and disjunctions in our relational
+calculus exhibit the same associativity and distributivity properties as the
 addition and multiplication operators for map terms. That is:
 
 \[
 f*(g+h) = (f*g) + (f*h)
-\qquad
-R \Join(S \cup T) = (R \Join S) \cup (S \Join T)
+\quad
+R \wedge(S \vee T) = (R \wedge S) \vee (S \wedge T)
 \]
 
-We refer to natural joins and multiplications as products for the relational
-algebra and maps respectively, and union and addition as sums.  We can then
-define a \textit{monomial} as a product of basic map terms or relational algebra
-expressions, and a \textit{polynomial} as a sum of monomials. We use polynomials
-of map terms and relational algebra for simplicity of compilation -- polynomials
-provide separation between the occurrence of sums and products in the parse tree
-(that is no product expression can contain a sum operator).
-We provide an example of a map term and relational algebra, monomials
-and polynomials in Figure~\ref{tbl:monpolyex}.
 
-\begin{figure*}[ht]
+We refer to conjunctions and multiplications as products for the calculus and
+maps respectively, and disjunction and addition as sums.  We can then define a
+\textit{monomial} as a product of basic map terms or calculus, and a
+\textit{polynomial} as a sum of monomials. We use polynomials of map terms and
+calculus formulae for simplicity of compilation -- polynomials provide
+separation between the occurrence of sums and products in the parse tree (that
+is no product expression can contain a sum operator).  We provide an example of
+a map term and calculus formulae, monomials and polynomials in
+Figure~\ref{tbl:monpolyex}.
+
+\begin{figure*}[htbp]
 \begin{center}
 \begin{tabular}{c|c|c}
-           & Map term & Relational algebra\\
+           & Map term & Relational calculus formula\\
 \hline
 Monomial   & $5*x*sum_{f}(Q)$
-           & $R(A,B) \Join S(C,D) \Join \phi(=,B,C)$\\
+           & $R(A,B) \wedge S(C,D) \wedge \phi(=,B,C)$\\
 Polynomial & $(5*x*sum_{f}(Q_1)) + sum_g(Q_1) $
-           & $(R(A,B) \Join S(C,D) \Join \phi(=,B,C)) \cup (T(A,D) \Join U(B,C,D))$
+           & $(R(A,B) \wedge S(C,D) \wedge \phi(=,B,C)) \cup (T(A,D) \wedge U(B,C,D))$
 \end{tabular}
 \label{tbl:monpolyex}
-\caption{Map term and relational algebra, monomial and polynomial examples.}
+\caption{Map term and relational calculus, monomial and polynomial examples.}
 \end{center}
 \end{figure*}
 
 Given such consideration of monomials and polynomials, we can encapsulate such
 distributivity properties or products over sums using semirings of map terms,
-and relational algebra expressions. A semiring is a set of elements, over which
-both a sum ($+$) and a product ($\times$) operator can be defined, along with two specific
+and calculus formulae. A semiring is a set of elements, over which both a sum
+($+$) and a product ($\times$) operator can be defined, along with two specific
 identity elements: a zero and a one element. For map terms, the zero and one
-elements correspond to the constants 0 and 1, while for relational algebra,
-these are the empty set ($\emptyset$) and the constant nullary relation
+elements correspond to the constants 0 and 1, while for the calculus, these are
+the empty set ($\emptyset$) and the constant nullary relation
 ($\{\tuple{}\}$). The semiring defines simplifications between zero elements and
 sums and products, as well as between one elements and products.
 
 \feature{Polynomial construction}
-\compiler\ transforms queries into polynomial form using an
-algorithm named \textit{roly-poly}. In addition to recursively transforming
-nested map terms in constraints, roly-poly performs one key simplification,
-namely factorization of aggregation terms over the corresponding relational
-algebra expression. We describe this factorization in more detail now.
+\compiler\ transforms queries into polynomial form by performing one key
+simplification, namely factorization of aggregate argument terms over their
+corresponding calculus formulae, in addition to recursively transforming
+nested map terms in constraints. We now describe this in more detail.
 
 Consider an aggregate term $q[] = \algsum_{f}(Q)$. Following recursively
 constructing polynomials of $f$ and $Q$, we can consider $f$ a polynomial map
-term with monomials $M_f$, and $Q$ a polynomial relational algebra expression
+term with monomials $M_f$, and $Q$ a polynomial relational calculus formula
 with monomials $M_Q$. Factorizing involves separating uncorrelated basic
 elements of monomials, that is for some term and relational monomial $m_f
 \in M_f, m_Q \in M_Q$, we may be able to partition monomial elements (recall
@@ -163,7 +197,7 @@ aggregation. The desired term-relational pairs are:
 vars(l_{fi}) \cap vars(l_{Qi}) \neq \emptyset\}\]
 
 \noindent where $vars(l_{fi}), vars(l_{Qi})$ denotes variables used by sets of basic
-map terms and relational expressions respectively, and $l_{fi} and l_{Qi}$ are minimal
+map terms and calculus formulae respectively, and $l_{fi} and l_{Qi}$ are minimal
 subsets where the property holds. This property states that for any resulting
 pair $(l_{fi}, l_{Qi})$, the map term $l_{fi}$ uses variables defined in $l_{Qi}$. We can
 then write the resulting factorized term as:
@@ -171,11 +205,11 @@ $\algsum_{l_{f1}}(l_{Q1}) + \ldots + \algsum_{l_{fn}}(l_{Qn})$.
 We give a simple example of factorization below:
 
 \begin{align*}
-\algsum_{A*B*D*E}( & R(A,B,C) \Join S(D,E,F) =\\
+\algsum_{A*B*D*E}( & R(A,B,C) \wedge S(D,E,F) =\\
 & \algsum_{A*B}(R(A,B,C)) * \algsum_{D*E}(S(D,E,F))
 \end{align*}
 
-Here a term and relational monomial pair $(A*B*D*E, R \Join S)$ is factorized
+Here a term and relational monomial pair $(A*B*D*E, R \wedge S)$ is factorized
 into a set of term-relational monomials $\{(A*B,R), (D*E,S)\}$. Due to space
 constraints, we omit the full details of an algorithm for computing such a
 factorization, and simply sketch an outline. Our approach constructs a graph for
@@ -186,26 +220,19 @@ $\{(A,B), (B,C), (C,A), (D,E), (D,F), (E,F)\}$ as defined by the variables from
 relations $R,S$. Note that the map term monomial $A*B*D*E$ does not induce edges
 since each basic map term is a single variable. Factorization then involves
 determining connected components on such a graph.
-\todo{Discuss exponential blowup of terms from constructing polynomials.}
-\todo{Describe nested polynomial structure.}
 
-\feature{Nested queries, and flattening}
-In addition to constructing a polynomial, we perform query flattening to handle
-queries with nested aggregates (recall that map terms can appear in both
-aggregate arguments, and constraints in our grammar). We defer the description
-of this flattening process until we cover our representation of nested queries
-below.
-\todo{Define nested queries, flattening, and constraint-only aggregates here.}
-\todo{Show flattening example?}
-\todo{Define concept of constraints-only aggregate here.}
+In general, the construction of polynomials may lead to an exponential number of
+basic terms in our maps, however this is often acceptable in practice since
+queries tend to be small. This exponential query representation is exhibited in
+many other contexts, including in the conversion between disjunctive and
+conjunctive normal forms in first-order logic. In summary, our polynomials have
+a well-defined structure. The top-level of a parse tree is a map polynomial,
+which may include aggregate terms. These aggregate terms include a polynomial
+calculus formulae, in addition to a potentially nested aggregate argument map
+polynomial. Relational calculus polynomials themselves may include nested map
+polynomials, in our constraints.  This nested polynomial structure is
+illustrated in Figure [XXX].
 
-\begin{itemize}
-\item simplifications for presentation, i.e. assuming single top-level
-  algebra, although we can easily extend to handle sums/products of top-level
-  aggregates.
-\item compilation overview, i.e. two primary phases delta pushdown and
-  aggregate simplification.
-\end{itemize}
 
 \subsection{Query Compilation}
 In this section we describe the core compilation mechanisms applied to map and
@@ -224,25 +251,28 @@ present in an update stream tuple. As an overview, \compiler\ replaces the
 appropriate relations with the new delta's bound variables, and unifies these
 bound variables to produce a delta query that is simpler in nature than the
 original query.
-\todo{Give a simple delta example here.}
-We now describe the transformations performed with deltas on
-both map terms and relational algebra expressions in more detail.
-
-\begin{figure*}
+As a simple example, we can write
 \begin{align*}
-\Delta_{+R(\vec{r})} f \oplus g & := & \Delta_{+R(\vec{r})} f \oplus \Delta_{+R(\vec{r})} g \\
-\Delta_{+R(\vec{r})} f \otimes g & := &
+\Delta_{+R(a,b)} \algsum_{A}(R(A,B) & \wedge S(B,C)) =\\
+& \algsum_{a}(S(B,C) \wedge \phi(=,b,B))
+\end{align*}
+\noindent~where we can see we have eliminated one input relation to the join
+with a single tuple, and propagated the bound variables $a,b$ throughout the
+term.  We now describe the transformations performed with deltas on both map
+terms and calculus formulae in more detail.
+
+\begin{figure}
+\begin{align*}
+\Delta_{+R(\vec{r})} f \oplus g & := 
+    \Delta_{+R(\vec{r})} f \oplus \Delta_{+R(\vec{r})} g \\
+\Delta_{+R(\vec{r})} f \otimes g & := 
 (\Delta_{+R(\vec{r})}f)\otimes g \oplus
 (f \oplus \Delta_{+R(\vec{r})} f)\otimes(\Delta_{+R(\vec{r})}g)\\
-\end{align*}
-\begin{align*}
-\Delta_{+R(\vec{r})}(c) & := & 0 \\
-\Delta_{+R(\vec{r})}(x) & := & 0 \\
-\Delta_{+R(\vec{r})} \algsum_{f}(Q) & := &
+\Delta_{+R(\vec{r})}(c) & := 0 \\
+\Delta_{+R(\vec{r})}(x) & := 0 \\
+\Delta_{+R(\vec{r})} \algsum_{f}(Q) & :=
 \begin{cases}
-(\algif\; \phi_{i,new} \;
-\algthen\; \Delta_{+R(\vec{r})}\; f \algelse\; 0)
-& \mbox{ when $Q = \bigwedge_i \phi_i(\theta_i,g_i,h_i)$}\\
+(\algif\; \phi_{i,new} \; \algthen\; \Delta_{+R(\vec{r})}\; f \algelse\; 0)\\
 \;\; + (\algif\;
   \left( \phi_{i,new} \wedge \neg \phi_{i,old } \right)
 \; \algthen\; f \;\algelse\; 0)\\
@@ -251,56 +281,69 @@ both map terms and relational algebra expressions in more detail.
 \algthen\; -f \;\algelse\; 0)
 \\
 \mbox{where }
-  \phi_{i,new} = \bigwedge_i
+  \phi_{i,new} = \\
+  \qquad
+    \bigwedge_i
     \phi_i(\theta_i, g_i+\Delta_{+R(\vec{r})}g_i, h_i + \Delta_{+R(\vec{r})}h_i)
 \\
 \mbox{and }
   \phi_{i,old} = \bigwedge_i \phi_i(\theta_i, g_i, h_i)
 \\
+\ldots \mbox{ when $Q = \bigwedge_i \phi_i(\theta_i,g_i,h_i)$}
 \\
-\algsum_{\Delta_{R(\vec{r})}f}(Q) + \algsum_{f}(\Delta_{+R(\vec{r})} Q) +
-\algsum_{\Delta_{+R(\vec{r})}f}(\Delta_{+R(\vec{r})} Q)
-& \mbox{ otherwise}
+\\
+\algsum_{\Delta_{R(\vec{r})}f}(Q) + \algsum_{f}(\Delta_{+R(\vec{r})} Q)\\
+\; \; + \algsum_{\Delta_{+R(\vec{r})}f}(\Delta_{+R(\vec{r})} Q)\\
+\ldots \mbox{ otherwise}
 \end{cases}
-\end{align*}
-\begin{align*}
-\Delta_{+R(\vec{r})}(S(\vec{A}))         & := & 
+\\
+\Delta_{+R(\vec{r})}(S(\vec{A}))         & :=
 \begin{cases}
 \{\tuple{\vec{r}}\} & \mbox{ if $R = S$}\\
 \emptyset           & \mbox{ otherwise}
 \end{cases}
 \\
-\Delta_{+R(\vec{r})}(\phi(\theta, f, g)) & := &
+\Delta_{+R(\vec{r})}(\phi(\theta, f, g)) & :=
 \begin{cases}
 \emptyset & \mbox{ $\Delta_{+R(\vec{r})} f = 0, \Delta_{+R(\vec{r})} g = 0$}\\
 \bot      & \mbox{ otherwise}
 \end{cases}
 \\
-\Delta_{+R(\vec{r})} \emptyset           & := & \emptyset \\
-\Delta_{+R(\vec{r})} \{\tuple{\vec{r}}\} & := & \emptyset \\
+\Delta_{+R(\vec{r})} \emptyset           & := \emptyset \\
+\Delta_{+R(\vec{r})} \{\tuple{\vec{r}}\} & := \emptyset \\
 \end{align*}
-\label{fig:delta}
-\caption{Delta transformations of semirings, map terms and relational algebra
-  expressions. \todo{Replace $\bigwedge_i$ with one of $\Join_i, \bigotimes_i, \prod_i$}}
-\end{figure*}
+\label{fig:deltarules}
+\caption{Delta transformations of semirings, map terms and relational calculus
+  formulae.}
+\end{figure}
 
-Figure [REF] presents delta transformations for a semiring, which applies to
-both semirings of map terms and relational algebra expressions. The symbols
-$\oplus, \otimes$ corresponds to semiring sum and product operators for both
-types of expressions. The figure also describes deltas of basic map terms, which
-is straightforward for constants and variables, while for sum aggregates, such a
-delta turns out to be identical to a delta for a sum operation in a
-semiring. The interesting case is for a constraint-only aggregate. Here the
-relational part of the aggregation contains constraints only, where each
-constraint includes at least one scalar subaggregate query, that is the
-constraint is of the form $\phi(\theta, poly(\algsum_{f}(Q)), g)$, where 
-$poly(\algsum_f(Q))$ indicates an arbitrary polynomial using at least one
-aggregation. The delta for such a constraint-only aggregate is based on the
-insertion and removal of tuples in the result set, considering i) ii) iii)
-\todo{finish...}
-\todo{give simple example to illustrate this transformation only}
+Figure~\ref{fig:deltarules} presents delta transformations for a semiring, which
+applies to both semirings of map terms and relational calculus formulae. The
+symbols $\oplus, \otimes$ corresponds to semiring sum and product operators for
+both types of expressions. The figure also describes deltas of basic map terms,
+which is straightforward for constants and variables, while for sum aggregates,
+we sum the combinations of how we may apply deltas to the aggregate argument and
+relational part.
 
-Finally, we come to deltas for relational algebra expressions. The main point to
+The interesting case is for a constraint-only aggregate, whose value can
+arbitrarly change despite conjunctive monomials. This is based on the insertion
+and removal of tuples in the result set, when considering a constraint-only
+aggregate as a conditional. There are three cases:
+i) rows whose new value satisfy the condition are
+  incremented by the delta query value;
+ii) rows whose new value satisfy the condition, but did not previously, must
+  be added to the result set (note that these rows are a subset of those
+  incremented by the delta query value in the previous case);
+iii) rows which previously satisfied the condition but do not any more, must be
+  removed from the result set, according to the old value they contribute.
+While this condition holds in the general case for arbitrary nested
+conditionals, we briefly revisit optimizing this delta rule in the presence of
+monotonic aggregates in Section [XXX].
+\todo{Give simple example to illustrate this transformation only.}
+\todo{Change constraints-only case to match single rule for deltas with five
+  branches in the new calculus.}
+
+Finally, we come to deltas for relational calculus formulae. The main point to
 note is that the delta for a constraint is only defined for non-nested
 constraints, that is when then map term arguments in the constraint have a
 zero-valued delta. \compiler\ explicitly flattens queries to ensure this
@@ -308,47 +351,61 @@ property, lifting such constraints whenever possible, otherwise transforming to
 a constraints-only aggregate, which can then be handled with the appropriate map
 term delta transformation.
 
-\begin{itemize}
-\item delta rule for predicates and the fact that in general, we do not
-  have positive relational algebra for insertions due to the fact that with
-  using the results of nested aggregate queries in predicates, tuples can be
-  both added and removed from the result set of the predicate. Refer to possible
-  optimizations of this rule, e.g. monotonic case.
-\end{itemize}
 
 \feature{Aggregate Simplification}
 Following delta query derivation, we simplify the resulting map term by
 exploiting variables bound by the delta. In short, delta bound variables, which
 are constants supplied from a tuple at runtime, enable constraint
 simplification, via variable unification, resulting in the propagation of delta
-bound variables throughout map and relational algebra expressions. The map term
-on which no further bound variable propagation may be applied is used to compute
-an increment to the query result given an inserted or deleted tuple. We describe
-this process in more detail.
+bound variables throughout maps and relational calculus. The map term
+on which no further bound variable propagation may be applied is used for delta
+query evaluation. We describe this process in more detail.
 
-Given an aggregate term, our simplification process applies in two phases. First
-we identify equality constraints in the relational part of the aggregate,
-constructing a mapping from variable pairs found equated by performing variable
-unification. Our unification algorithm accepts a set of variable identities that
-must be preserved during unification and consequently in any mapping. Indeed,
-delta bound variables are passed as identities to ensure that these variables
-are present in the resulting map term used to compute increments. Unification
-yields both a map term with equality constraints corresponding to mappings
-removed from the term, and the mappings themselves. However, requiring variables
-as identities during unification can lead to inconsistencies -- a mapping entry
-that does not preserve the required identities. Such inconsistencies must remain
-present in the resulting map term.
-\todo{Need a more formal description of unification algorithm.}
+Given an aggregate term $\algsum_{f}(r)$, our simplification process applies in
+two phases. First we identify equality constraints in the relational part of the
+aggregate $r$, constructing a mapping from equated variable pairs by performing
+variable unification. This mapping is used to perform variable substitution. Our
+unification algorithm accepts a set of identities defining variables that must
+be preserved in any mapping (i.e. must not appear in the domain of a
+mapping). Indeed, delta bound variables are passed as identities to substitute
+as many safe and unsafe variables as possible with these bound
+variables.
+
+Unification yields a map term with equality constraints corresponding
+to mappings removed. 
+For example, unifying the query
+$\algsum_{1}(R(A,B) \wedge S(C,D) \wedge \phi(=,B,C))$
+with variables $C,D$ as identities yields $\algsum_{1}(R(A,C) \wedge S(C,D))$.
+However, requiring variables as identities during
+unification can lead to inconsistencies -- a mapping entry that does not
+preserve the required identities. Such inconsistencies must remain present in
+the resulting map term.
+For example, unifying
+$\algsum_{1}(R(A,B) \wedge S(C,D) \wedge T(E,F) \wedge \phi(=,B,C) \wedge
+\phi(=,D,E)$ with $C,D,E,F$ as identities yields
+ $\algsum_{1}(R(A,C) \wedge S(C,D) \wedge T(E,F) \wedge \phi(=,D,E))$.
 
 The mapping obtained from the relational part of the aggregate can then be used
 to perform substitutions in the aggregate argument map term. We recursively
 apply this simplification to any nested aggregates in constraint map terms.
-\todo{Describe this with examples -- this is too cryptic as is.}
+At a high level, this form of aggregate simplification induces a structured
+propagation of delta bound variables. Delta bound variables are propagated
+top-down through a parse tree as a result of recursive application, first being
+passed to the relational part of aggregates to replace safe and unsafe
+variables. Subsequently aggregate simplification propagates delta bound
+variables into the aggregate argument term, essentially a sideways propagation
+within sibling parse trees present at aggregates.
+\todo{Show parse tree of bound variable propagation.}
+
 
 \feature{Recursive compilation}
 Together, the delta query derivation and aggregate simplification form one step
 of our recursive compilation algorithm that is applied for a delta to a single
-relation. Our recursive compilation algorithm works by starting with a flattened
+relation. 
+Algorithm \ref{alg:compile} shows our algorithm for recursively compiling deltas
+to produce source code. This is a simplified algorithm that does not present our
+handling of nested queries. We return to this in the following section.
+Our recursive compilation algorithm works by starting with a flattened
 query, compiling deltas for all relations. This results in a set of simplified
 delta map terms which we can evaluate to compute the query result. Note that
 each delta map term contains one fewer input relation, replaced with bound
@@ -362,32 +419,58 @@ variables have been replaced by bound variables from deltas.
 \todo{Note on $k$-level compilation, and using naive compiler to do the rest
   after $k$}
 
+\newcommand{\indentcode}{\hspace{5mm}}
+\begin{algorithm}
+\caption{compile($db\_schema, map, params, term$)}
+\label{alg:compile}
+\begin{algorithmic}[1]
+\STATE $code \leftarrow []$
+\FOR{$(relation, schema) \in db\_schema$}
+  \STATE \COMMENT{Compile delta for a single relation event}
+  \STATE $bound\_vars \leftarrow prefix("b\_\_", schema) \cup ext\_vars$
+  \STATE $dt \leftarrow filter(\lambda x. x \neq 0, simplify($
+    \STATE \indentcode $delta(ext\_maps,term),bound\_vars, params)$
+  \STATE $name\_prefix \leftarrow map+relation$
+  \STATE $(done, todos) \leftarrow extract\_aggregates($
+    \STATE \indentcode $dt, name\_prefix, bound\_vars)$
+  \FOR{$(done\_terms, done\_params) \in done$}
+     \STATE $code += generate\_code(relation,$
+     \STATE \indentcode $map, done\_terms, done\_params)$
+  \ENDFOR
+  \STATE \COMMENT{Recur for remaining terms}
+  \FOR{$(next\_map, next\_params, next\_term) \in todo$}
+  \STATE $code += compile(db\_schema, $
+  \STATE \indentcode $next\_map, next\_params, next\_term)$
+  \ENDFOR
+\ENDFOR
+\RETURN $code$
+\end{algorithmic}
+\end{algorithm}
 
-\feature{Flat query compilation example}
+\begin{example}\feature{Flat query compilation example}
 We now walk through compiling the following flat query, given in SQL as
 \texttt{select sum(a*d) from R join S join T}, and in our representation as:
-\[\algsum_{A*D}(R(A,B) \Join S(B,C) \Join T(C,D))\]
-
+\[\algsum_{A*D}(R(A,B) \wedge S(B,C) \wedge T(C,D))\]
 \begin{align*}
-& q[] = \algsum_{A*D}(R(A,B) \Join S(B,C) \Join T(C,D))\\
-& \hspace{-1.5cm}\mbox{Compilation level 1:}\\
+& q[] = \algsum_{A*D}(R(A,B) \wedge S(B,C) \wedge T(C,D))\\
+& \hspace{-1.5cm}\mbox{\sc Compilation level 1:}\\
 \Delta_{+R(a,b)} & q[] +=
-a * \underbrace{\algsum_{D}(S(B,C) \Join T(C,D) \Join \phi(=,b,B)}_{qR[B']}\\
+a * \underbrace{\algsum_{D}(S(B,C) \wedge T(C,D) \wedge \phi(=,b,B)}_{qR[B']}\\
 \Delta_{+S(b,c)} & q[] +=
-\underbrace{\algsum_{A}(R(A,B) \Join \phi(=,B,b))}_{qS1[B']} * \\
-& \underbrace{\algsum_{D}(T(C,D) \Join \phi(=,c,C))}_{qS2[C']}\\
+\underbrace{\algsum_{A}(R(A,B) \wedge \phi(=,B,b))}_{qS1[B']} * \\
+& \underbrace{\algsum_{D}(T(C,D) \wedge \phi(=,c,C))}_{qS2[C']}\\
 \Delta_{+T(c,d)} & q[] +=
-d * \underbrace{\algsum_{A}(R(A,B) \Join S(B,C) \Join \phi(=,c,C)}_{qT[C']}\\
+d * \underbrace{\algsum_{A}(R(A,B) \wedge S(B,C) \wedge \phi(=,c,C)}_{qT[C']}\\
 \\
-& \hspace{-1.5cm}\mbox{Compilation level 2:}\\
+& \hspace{-1.5cm}\mbox{\sc Compilation level 2:}\\
 \Delta_{+S(b,c)} & \algforeach \; B': qR[B'] += \\
-& \algsum_{D}(T(C,D) \Join \phi(=,B',b) \Join \phi(=,C,c))
+& \algsum_{D}(T(C,D) \wedge \phi(=,B',b) \wedge \phi(=,C,c))
  \\
 \therefore \Delta_{+S(b,c)} & qR[b] +=
-\underbrace{\algsum(T(C,D) \Join \phi(=,C,c))}_{qRS[C'] = qS2[C']}
+\underbrace{\algsum(T(C,D) \wedge \phi(=,C,c))}_{qRS[C'] = qS2[C']}
 \\
 \Delta_{+T(c,d)} & \algforeach \; B': qR[B'] +=  \\
-& d * \underbrace{\algsum_{1}(S(B,C) \Join \phi(=,B',B) \Join
+& d * \underbrace{\algsum_{1}(S(B,C) \wedge \phi(=,B',B) \wedge
   \phi(=,C,c))}_{qRT[B'',C']}
 \\
 \Delta_{+R(a,b)} & qS1[B'] = \algforeach \; B': qS1[B'] +=
@@ -401,44 +484,40 @@ d * \algsum_{1}(\phi(=,C',c))
 \\
 \therefore \Delta_{+T(c,d)} & qS2[c] += d\\
 \Delta_{+R(a,b)} & \algforeach \; C': qT[C'] += \\
-& a * \underbrace{\algsum_{1}(S(B,C) \Join \phi(=,b,B) \Join
+& a * \underbrace{\algsum_{1}(S(B,C) \wedge \phi(=,b,B) \wedge
   \phi(=,C,C'))}_{qTR[B',C''] = qRT[B'',C']}
 \\
 \Delta_{+S(c,d)} & \algforeach \; C': qT[C'] += \\
-& \algsum_{A}(R(A,B) \Join \phi(=,B,b) \Join \phi(=,c,C'))\\
+& \algsum_{A}(R(A,B) \wedge \phi(=,B,b) \wedge \phi(=,c,C'))\\
 \therefore \Delta_{+S(b,c)} & qT[c] +=
-\underbrace{\algsum_{A}(R(A,B) \Join \phi(=,B,b))}_{qTS[B'] = qS1[B']}
+\underbrace{\algsum_{A}(R(A,B) \wedge \phi(=,B,b))}_{qTS[B'] = qS1[B']}
 \\
-& \hspace{-1.5cm}\mbox{Compilation level 3:}\\
+& \hspace{-1.5cm}\mbox{\sc Compilation level 3:}\\
 \Delta_{+S(b,c)} & \algforeach B',C': qRT[B',C'] += \\
-& \algsum_{1}(\phi(=,B',b) \Join \phi(=,C',c))
+& \algsum_{1}(\phi(=,B',b) \wedge \phi(=,C',c))
 \\
 \therefore \Delta_{+S(b,c)} & qRT[b,c] += 1
 \end{align*}
+\end{example}
 \todo{Add starting equations for each term with tuple in place of relation.}
 \todo{Show handler code/pseudocode.}
 
 
 \subsection{Nested query compilation}
-Throughout this section, we use the VWAP query on orderbooks as our example of a
-nested query. The SQL and \compiler\ representation of this query is as follows:
+Throughout this section, we use a simpler form of the VWAP query on orderbooks
+as our example of a nested query. The SQL representation of this query is as
+follows:
 
-\texttt{select sum(P*V) from Bids(P,V)\\
-where 0.25*(select sum(V1) from Bids(P1,V1) >\\
-(select sum(V2) from Bids(P2,V2) where P2 > P)}
+\begin{verbatim}
+select sum(P*V) from Bids(P,V)
+    where 1000 >
+    (select sum(V2) from Bids(P2,V2) where P2 > P)
+\end{verbatim}
 
+and the \compiler\ calculus representation:
 \begin{align*}
-\algsum_{P*V}(& Bids(P,V) \Join \\
-& \phi(>, 0.25*\algsum_{V1}(Bids(P1,V1)), \\
-&  \qquad \algsum_{V2}(Bids(P2,V2) \Join \phi(>,P2,P))))
-\end{align*}
-
-We also use a simpler form of the VWAP for discussion, which is simpler in its
-constraint using a single aggregate rather than comparing two aggregates:
-
-\begin{align*}
-\algsum_{P*V}(& Bids(P,V) \Join \\
-& \phi(>, 1000, \algsum_{V2}(Bids(P2,V2) \Join \phi(>,P2,P))))
+\algsum_{P*V}(& Bids(P,V) \wedge \\
+& \phi(>, 1000, \algsum_{V2}(Bids(P2,V2) \wedge \phi(>,P2,P))))
 \end{align*}
 
 \feature{Nested variable extraction and flattening}
@@ -500,25 +579,24 @@ constraint between the original nested variable and the \bigsum\ variable. We
 present an example of this transformation below.
 
 \begin{align*}
-\algsum_{P*V}( & \underbrace{B(P,V)}_{r} \Join \\
-& \underbrace{\phi(<, 1000, \algsum_{V2}(B(P2,V2) \Join \phi(>, P2, P)))}_{c}) \\
-= & \; \algsum_{f}(\phi(<, 1000, \algsum_{V2}(B(P2,V2) \Join \phi(>, P2, \xi)))) \\
-\mbox{ where } f = & \; \algsum_{P*V}(B(P,V) \Join \phi(=,P,\xi))
+\algsum_{P*V}( & \underbrace{B(P,V)}_{r} \wedge \\
+& \underbrace{\phi(<, 1000, \algsum_{V2}(B(P2,V2) \wedge \phi(>, P2, P)))}_{c}) \\
+= & \; \algsum_{f}(\phi(<, 1000, \algsum_{V2}(B(P2,V2) \wedge \phi(>, P2, \xi)))) \\
+\mbox{ where } f = & \; \algsum_{P*V}(B(P,V) \wedge \phi(=,P,\xi))
 \end{align*}
 
 Above, $\xi$ is the \bigsum\ variable introduced for the nested usage of $P$.
 The general form of our transformation is:
 
 \begin{align*}
-\algsum_{f}( & Q(\vec{A}) \Join \bigwedge_i \phi_i(\theta_i, g_i[\vec{A}], h_i[\vec{A}])) \\
-= & \; \algsum_{\algsum_{f}(Q(\vec{A}) \Join \bigwedge_i \phi(=,A_i,\xi_i))}(
-\bigwedge_i \phi_i(\theta_i, g_i[\vec{A} \mapsto \vec{\xi}], h_i[\vec{A} \mapsto \vec{\xi}]))
+\algsum_{f}( & Q(\vec{A}) \wedge \bigwedge_i \phi_i(\theta_i, g_i[\vec{A}], h_i[\vec{A}])) \\
+= & \; \algsum_{
+\underbrace{\algsum_{f}(Q(\vec{A}) \wedge \bigwedge_i \phi(=,A_i,\xi_i))}_{t}}(
+\underbrace{\bigwedge_i \phi_i(\theta_i, g_i[\vec{A} \mapsto \vec{\xi}], h_i[\vec{A} \mapsto \vec{\xi}])}_{c})
 \end{align*}
 
 \noindent where $g[\vec{A} \mapsto \vec{xi}]$ denotes the substitution of
-variables $\vec{A}$ by variables $\vec{xi}$ in the map term $g$.
-\todo{Recap the delta transformation for constraints-only aggregates, and
-explain the terms where we compute deltas above.}
+variables $\vec{A}$ by variables $\vec{xi}$ in the map term $g$. 
 
 \feature{Domain maintenance}
 Given our flattening transformation described above, our recursive compilation
@@ -531,7 +609,7 @@ variable domains. In general, map term evaluation with unseen values of \bigsum\
 variables cannot be performed incrementally with delta map terms. Consider a map
 $m$ defined as the following map term:
 
-\[\algsum_{A}(R(A,B)\Join \phi(\theta, 0, \xi))\]
+\[\algsum_{A}(R(A,B)\wedge \phi(\theta, 0, \xi))\]
 
 \todo{Better example.}
 
@@ -551,40 +629,55 @@ presence of monotonic map terms. We return to these optimizations in Section
 [XXX].
 
 
-Describe:
-\begin{itemize}
-\item reclamation of values in then map key domain when the nested
-  query value returns to its initial implicit state.
-\end{itemize}
-
-\feature{Nested query compilation example}
-We present a compilation trace for the VWAP query shown above. First we present
-the flattened form:
-
+\begin{example}\feature{Nested query compilation example}
+We present a compilation trace for the original VWAP query (not the simplified
+form shown above). First we present the flattened form:
 \begin{align*}
-q[] & = \algsum_{P*V}( Bids(P,V) \Join \\
-& \qquad \phi(>, 0.25*\algsum_{V1}(Bids(P1,V1)), \\
-&  \qquad \qquad \algsum_{V2}(Bids(P2,V2) \Join \phi(>,P2,P))))\\
+q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
+    & \algthen \; \algsum_{P*V}(Bids(P,V) \wedge bigsum\_p = P) \;
+      \algelse \; 0 \Big]\\
+\mbox{where } & f = \algsum_{V1}(Bids(P1,V1))\\
+\mbox{and } & g = \algsum_{V2}(Bids(P2,V2) \wedge P2 > bigsum\_p)
+\\
+& \hspace{-1.75cm}\mbox{\sc Compilation level 1:}\\
+\Delta_{+Bids(p,v)} & q[] += \sum_{bigsum\_p} \Big[ \\
+& [ \algif \; \phi(>,\underbrace{f}_{m1[]}+\Delta f, \underbrace{g}_{m2[bigsum\_p]}+\Delta g) \; \\
+& \algthen \; \Delta \algsum_{P*V}(Bids(P,V) \wedge bigsum\_p = P) \;
+    \algelse \; 0 ] \\
++ \; & [ \algif \; \phi(>,\underline{f}+\Delta f, \underline{g}+\Delta g) \wedge
+    \neg\phi(>,\underline{f},\underline{g}) \\
+& \algthen \; \underbrace{\algsum_{P*V}(Bids(P,V) \wedge
+    bigsum\_p = P)}_{m3[bigsum\_p]} \;
+    \algelse \; 0 ] \\
++ \; & [ \algif \; \neg \phi(>, \underline{f}+\Delta f, \underline{g}+\Delta g)
+    \wedge \phi(>,\underline{f},\underline{g}) ] \\
+& \algthen \; - \underline{\algsum_{P*V}(Bids(P,V) \wedge bigsum\_p = P)} \;
+    \algelse \; 0
+\Big]\\
+& \hspace{-1.75cm}\mbox{\sc Compilation level 2:}\\
+\Delta_{+Bids(p,v)} \; & m1[] += v\\
+\Delta_{+Bids(p,v)} \; & \algforeach \; bigsum\_p : \; m2[bigsum\_p] += \\
+& \qquad \algif \; p > bigsum\_p \;\algthen \; v \; \algelse \; 0 \\
+\Delta_{+Bids(p,v)} \; & \algforeach \; m3[bigsum\_p] += \\
+& \qquad \algif \; bigsum\_p = p \; \algthen \; p*v \; \algelse \; 0\\
+\therefore \; & m3[p] += p*v
 \end{align*}
+\end{example}
 
-Now the compilation:
-\begin{align*}
-q[] & = \algsum_{P*V}( Bids(P,V) \Join \\
-& \qquad \phi(>, 0.25*\algsum_{V1}(Bids(P1,V1)), \\
-&  \qquad \qquad \algsum_{V2}(Bids(P2,V2) \Join \phi(>,P2,P))))\\
-& \hspace{-1cm}\mbox{Compilation level 1:}\\
-& \hspace{-1cm}\mbox{Compilation level 2:}\\
-\end{align*}
+Above, the underlined terms correspond to duplicate map terms, where maps can be
+reused.
 
+\comment{
 \subsection{Code Generation}
 Describe:
 \begin{itemize}
 \item accumulator language which allows simple code generation for
 procedural languages such as C++/Java.
 \item differences between simple accumulator language and implementations of
-relational algebra which pass around sets, resulting in a larger greater copying
-of data and more memory pressure. Accumulator language is even different to
-pipelining query plans, which can push tuples through to an accumulator
+relational calculus which pass around sets, resulting in a larger greater
+copying of data and more memory pressure. Accumulator language is even different
+to pipelining query plans, which can push tuples through to an accumulator
 (i.e. incr() function of an aggregate) at a tuple granularity, but still copies
 data from using an operator processing model.
 \end{itemize}
+}

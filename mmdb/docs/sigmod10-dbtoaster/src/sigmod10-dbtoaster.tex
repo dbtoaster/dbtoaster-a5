@@ -3,6 +3,8 @@
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{color}
+\usepackage{algorithm}
+\usepackage[noend]{algorithmic}
 
 \newcommand{\comment}[1]{}
 \newcommand{\compiler}{DBCC}
@@ -23,6 +25,8 @@
 \newtheorem{remark}[theorem]{Remark}
 \newtheorem{conjecture}[theorem]{Conjecture}
 \newtheorem{proviso}[theorem]{Proviso}
+
+\graphicspath{{../figures}{./figures}}
 
 \begin{document}
 \title{DBCC: Compiling Databases for High-Performance View Maintenance and Update Stream Processing}
@@ -71,13 +75,7 @@
   compiled database engine may call multiple handlers for a single update stream.
 \end{itemize}
 
-\section{System Overview}
-
-\begin{itemize}
-\item Application embedded vs. server cluster processing models
-\item Brief architecture description for each mode.
-\item Role of the compiler in the architecture.
-\end{itemize}
+\input{overview}
 
 \section{Experiments}
 Experimental setup:
@@ -314,8 +312,11 @@ Postgres, DBMS 'X' and HSQLDB to DBToaster's compiled query processing}
 
 \subsection{DBToaster Cost Model}
 
-\section{Related Work}
+\input{relwork}
 
 \section{Conclusions}
+
+\bibliographystyle{abbrv}
+\bibliography{ref}
 
 \end{document}
