@@ -1,13 +1,13 @@
-all: spread.pdf
-	if [ `uname` == "Darwin" ] ; then open spread.pdf; fi
+all: main.pdf
+	if [ `uname` == "Darwin" ] ; then open main.pdf; fi
 
-spread.pdf: spread.tex spread.bbl
-	pdflatex spread
-	pdflatex spread
+main.pdf: main.tex main.bbl
+	pdflatex main
+	pdflatex main
 
-spread.bbl: spread.bib
-	pdflatex spread
-	bibtex spread
+main.bbl: main.bib
+	pdflatex main
+	bibtex main
 
 clean:
-	rm -f spread.blg spread.aux spread.pdf spread.log spread.bbl
+	rm -f main.blg main.aux main.pdf main.log main.bbl

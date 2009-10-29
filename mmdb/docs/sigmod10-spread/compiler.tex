@@ -1,71 +1,8 @@
-%\documentclass{article}
-\documentclass{sig-alternate}
-
-
-\usepackage{latexsym}
-\usepackage{amsmath}
-\usepackage{color}
-%\usepackage{epsfig}
-%\usepackage{epic}
-%\usepackage{eepic}
-%\usepackage{xspace}
-
-
-%\addtolength{\textwidth}{1in}
-%\addtolength{\oddsidemargin}{-0.5in}
-%\addtolength{\evensidemargin}{-0.5in}
-%\addtolength{\textheight}{0.8in}
-%\addtolength{\topmargin}{-0.5in}
-%\leftmargini 2.9ex
-
-
-\def\punto{$\hspace*{\fill}\Box$}
-\newcommand{\nop}[1]{}
-\newcommand{\tuple}[1]{{\langle#1\rangle}}
-\def\lBrack{\lbrack\!\lbrack}
-\def\rBrack{\rbrack\!\rbrack}
-\newcommand{\Bracks}[1]{\lBrack#1\rBrack}
-
-
-\newtheorem{theorem}{Theorem}[section]
-\newtheorem{metatheorem}{Metatheorem}[section]
-\newtheorem{example}[theorem]{Example}
-\newtheorem{algorithm}[theorem]{Algorithm}
-\newtheorem{definition}[theorem]{Definition}
-\newtheorem{proposition}[theorem]{Proposition}
-\newtheorem{property}[theorem]{Property}
-\newtheorem{corollary}[theorem]{Corollary}
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{remark}[theorem]{Remark}
-\newtheorem{conjecture}[theorem]{Conjecture}
-\newtheorem{proviso}[theorem]{Proviso}
-\newtheorem{todo}[theorem]{ToDo}
-
-
-\title{The Cumulus System for Exact
-%, Low-Latency
-Online Aggregation in the Cloud}
-
-
-\author{}
-\date{}
-
-\toappear{}
-
-
-\begin{document}
-
-
-\maketitle
-
-
-%\begin{abstract}
-%\end{abstract}
-
 
 \section{Introduction}
 
 
+CK WILL MERGE THIS WITH OLIVER'S SECTION.
 
 At the heart of our approach is a new aggressive recursive incremental
 view maintenance mechanism, and the observation that a large class of
@@ -112,7 +49,8 @@ We present experimental results that demonstrate the viability of the approach.
 \section{Related Work}
 
 
-Data cubes.
+Data cubes. Online aggregation (that is, by approximation -- Haas, Hellerstein;
+Dobra, Jermaine).
 
 
 A large body of previous research has focused on incremental view maintenance
@@ -159,6 +97,11 @@ as Cumulus.
 
 
 This section describes the Cumulus query compiler.
+
+TODO: provide introduction and overview to the section. Fill in missing part
+on how negated calculus is handled in delta processing. Provide
+pseudocode for compilation algorithm. Explain how ``for x m[x] += if(x=b) ...''
+is turned into ``x[b] += ...''. Compile running example.
 
 
 \subsection{Cumulus Query Calculus and M3F}
@@ -753,4 +696,3 @@ The deletion triggers are like the insertion triggers with += replaced by -=.
 %\bibliography{bibtex}
 
 
-\end{document}
