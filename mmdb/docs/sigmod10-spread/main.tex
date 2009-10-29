@@ -1,15 +1,54 @@
 \documentclass{sig-alternate}
 
 
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{color}
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{epstopdf}
 \usepackage{algorithmic}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
+
+
+\def\punto{$\hspace*{\fill}\Box$}
+\newcommand{\nop}[1]{}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\def\lBrack{\lbrack\!\lbrack}
+\def\rBrack{\rbrack\!\rbrack}
+\newcommand{\Bracks}[1]{\lBrack#1\rBrack}
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+
+
+\nop{
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{example}[theorem]{Example}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+\newtheorem{todo}[theorem]{ToDo}
+} % end nop
+
+
+
 \conferenceinfo{SIGMOD}{'10 Indianapolis, IN}
 
-\title{Streamlining Data Warehousing through Compilation}
+
+\title{The Cumulus System for Exact
+%, Low-Latency
+Online Aggregation in the Cloud}
+
+
+%\title{Streamlining Data Warehousing through Compilation}
 \numberofauthors{3}
 \author{}%Oliver Kennedy, Yanif Ahmad, Christoph Koch}
 %\date{}                                           % Activate to display a given date or no date
@@ -27,68 +66,13 @@
 \abstract{
 In this paper we present SpreadDB\footnote{The name ``SpreadDB" is anonymized for double-blind reviewing}, a compiler for producing customized data warehouses.  SpreadDB uses a novel set of techniques to compile the execution of complex queries down to simple message-passing operations between a set of map datastructures.  By expressing the query result in terms of a recursively defined view-maintenence problem, the data warehouse is able to maintain a set of intermediate results that make it possible to incrementally update the data warehouse in realtime.  The intermediate results produced by these incremental updates can also be used to simplify processing of OLAP-style queries.  Furthermore, the ease of partitioning and distributing SpreadDB's map datastructures makes it feasible to deploy the entire data warehouse in-memory.  The result is a power-efficient data warehousing infrastructure that can maintain synchronization with a relational database, allowing online processing of high-volume aggregate queries.
 }
-\section{Introduction}
-
-As computer memory grows with respect to the size of data warehouses, the notion of an entirely in-memory data warehouse has become not just feasible, but appealing.  Such a facilty would not only have lower response latency than a comparable disk-based one - especially for queries with random-access patterns, but would be free of the maintenence\cite{}, cooling\cite{}, and power\cite{1154557} costs associated with hard drives.  Moreover, by keeping data entirely in-memory, large datastructures meant to streamline read accesses from disk are not required; Persistence, if required, can be achieved with minimal storage space simply by logging updates.
-
-This paper presents SpreadDB, a system for pushing OLAP precomputations into the cloud; SpreadDB automates the process of creating, loading, and managing in-memory data warehouse infrastructures.  Using a compiler that translates ordinary SQL queries down a simple read/write message-passing model, SpreadDB distributes both processing and storage involved in very large queries.  For example, SpreadDB can compute and distribute the results of a denormalization query.  Thanks to a novel recursive query subdivision technique, the compiler's output is also able to incrementally maintain the query output, keeping the data warehouse constantly synchronized with the source data.
-
-SpreadDB targets OLAP applications that perform real-time analytics of transactionally maintained and/or streaming data.  By feeding it an SQL query, SpreadDB's infrastructure becomes linked to a set of tables in a relational database.  SpreadDB denormalizes the relevant portions of the database, and keeps the denormalized copy synchronized using only a stream of updates to the individual input relations.  
-
-All state in SpreadDB is stored in memory rather than on disk, so not only can complete table scans be completed quickly, but index structures can be simpler and more efficient.  Because the query results are already partitioned across nodes in the warehouse, the work of processing queries can be farmed out as well.  Moreover, the datastructures already used to store intermediate query results bear many similarities to those used by datacube\cite{datacube} implementations and can be used to further simplify the process of aggregation and projection.  Combining these features with its ability to synchronize with an underlying relational database in real time, SpreadDB is able to efficiently process OLAP queries on live transactional data. 
-
-The detailed technical contributions of this paper are as follows.
-\begin{itemize}
-\item We present SpreadDB, a system for constructing in-memory data warehouse infrastructures that support OLAP queries on high volumes of transactional or streaming data in real-time.
-
-\item We describe the SpreadDB infrastructure, and show how it can be used to efficiently distribute the processing and storage requirements of a large data warehouse.
-
-\item We describe the SpreadDB compiler and show how, using a novel recursive compilation technique, it reduces large join/group by SQL queries down to an extremely straightforward and parallelizable message-passing model. 
-
-\item We show evidence for the scalability of the SpreadDB model by examining SpreadDB's performance on examples drawn from the TPC-H\cite{tpch2008} decision support query benchmark. 
-\end{itemize}
-
-\begin{example}\textit
-As a running example in this paper, we will use a datacube construction query (shown in Figure \ref{fig:example}) that joins three tables: one storing customer information, one storing orders placed by those customers, and one storing each order's individual line items.  The resulting datacube analyzes the interactions between the way each item was shipped, each customer's nation of origin, the order's priority, and whether the item's arrival and shipping times were late.
-\end{example}
 
 
-\begin{figure}
-\begin{center}
-\textbf{Schema}
-\end{center}
-\begin{algorithmic}
-\STATE \textbf{create table} customers(cid \textit{int}, nation \textit{int}); 
-\STATE \textbf{create table} orders(
-\STATE \hspace*{0.1in} oid \textit{int}, o\_cid \textit{int}, opriority \textit{int}, spriority \textit{int},
-\STATE \hspace*{0.1in}  \textbf{foreign key}(o\_cid) \textbf{references} customers(cid)
-\STATE );
-\STATE \textbf{create table} lineitems(
-\STATE \hspace*{0.1in} l\_oid \textit{int}, lateship \textit{int}, latedelivery \textit{bool}, shipmode \textit{bool},
-\STATE \hspace*{0.1in} \textbf{foreign key}(l\_oid) \textbf{references} orders(oid)
-\STATE );
-\end{algorithmic}
-\begin{center}
-\textbf{Query}
-\end{center}
-\begin{algorithmic}
-\STATE \textbf{select} count(*),
-\STATE \hspace*{0.1in} nation, cid, oid, opriority, spriority, 
-\STATE \hspace*{0.1in} lateship, latedelivery, shipmode 
-\STATE \textbf{from} customers, orders, lineitems 
-\STATE \textbf{where} o\_cid=cid and l\_oid=oid 
-\STATE \textbf{group by cube} 
-\STATE \hspace*{0.1in} nation, cid, oid, opriority, spriority, 
-\STATE \hspace*{0.1in} lateship, latedelivery, shipmode;
-\end{algorithmic}
-\caption{An example query that constructs a warehouse for analyzing customer behavior with respect to shipping.  Given a table of customers, orders, and lineitems in those orders, the query builds a datacube over the full join of those tables.}
-\label{fig:example}  
-\end{figure}
+\input{introduction}
 
-The remainder of this paper is organized as follows.  Section \ref{sec:relatedwork} discusses prior work in the field of OLAP query processing.  In Section \ref{sec:architecture}, we provide an overview of SpreadDB's online infrastructure and discuss how data is managed within that infrastructure.  Section \ref{sec:architecture} describes the offline compilation process used to manage and optimize SpreadDB.  Section \ref{sec:experiments} presents a series of experiments that demonstrate the viability and scalability of in-memory data warehouses.  Finally, Section \ref{sec:optimizations} discusses a set of optimizations provoked by our experiments.  The paper concludes with Section \ref{sec:conclusions}
 
-\section{Related Work}
-\label{sec:relatedwork}
+\input{compiler}
+
 
 \section{Architecture}
 \label{sec:architecture}
