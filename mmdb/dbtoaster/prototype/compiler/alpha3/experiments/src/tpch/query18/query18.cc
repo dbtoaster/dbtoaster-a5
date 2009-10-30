@@ -401,65 +401,37 @@ void on_insert_LINEITEM(
     if ( qCUSTOMER2.find(make_tuple(ORDERKEY,ORDERKEY)) == qCUSTOMER2.end() )
     {
         multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double>,
-             std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
+            std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
             boost::pool_allocator<tuple<int64_t,int64_t,int64_t,int,double,double,double,
             double> > >::iterator LINEITEM_it2 = LINEITEM.begin();
         multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double>,
-             std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
+            std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
             boost::pool_allocator<tuple<int64_t,int64_t,int64_t,int,double,double,double,
             double> > >::iterator LINEITEM_end1 = LINEITEM.end();
         for (; LINEITEM_it2 != LINEITEM_end1; ++LINEITEM_it2)
         {
             int64_t protect_L1__ORDERKEY = get<0>(*LINEITEM_it2);
-            int64_t L2__PARTKEY = get<1>(*LINEITEM_it2);
-            int64_t L2__SUPPKEY = get<2>(*LINEITEM_it2);
-            int L2__LINENUMBER = get<3>(*LINEITEM_it2);
-            double L2__QUANTITY = get<4>(*LINEITEM_it2);
-            double L2__EXTENDEDPRICE = get<5>(*LINEITEM_it2);
-            double L2__DISCOUNT = get<6>(*LINEITEM_it2);
-            double L2__TAX = get<7>(*LINEITEM_it2);
-            int64_t var3 = 0;
-            var3 += ORDERKEY;
-            int64_t var4 = 0;
-            var4 += ORDERKEY;
-            if ( var3 == var4 )
+            if ( ORDERKEY == protect_L1__ORDERKEY )
             {
-                int64_t var1 = 0;
-                var1 += ORDERKEY;
-                int64_t var2 = 0;
-                var2 += protect_L1__ORDERKEY;
-                if ( var1 == var2 )
-                {
-                    qCUSTOMER2[make_tuple(ORDERKEY,ORDERKEY)] += 1;
-                }
+                qCUSTOMER2[make_tuple(ORDERKEY,ORDERKEY)] += 1;
             }
         }
     }
     if ( qCUSTOMER3.find(ORDERKEY) == qCUSTOMER3.end() )
     {
         multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double>,
-             std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
+            std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
             boost::pool_allocator<tuple<int64_t,int64_t,int64_t,int,double,double,double,
             double> > >::iterator LINEITEM_it4 = LINEITEM.begin();
         multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double>,
-             std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
+            std::less<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> >, 
             boost::pool_allocator<tuple<int64_t,int64_t,int64_t,int,double,double,double,
             double> > >::iterator LINEITEM_end3 = LINEITEM.end();
         for (; LINEITEM_it4 != LINEITEM_end3; ++LINEITEM_it4)
         {
             int64_t protect_L1__ORDERKEY = get<0>(*LINEITEM_it4);
-            int64_t L3__PARTKEY = get<1>(*LINEITEM_it4);
-            int64_t L3__SUPPKEY = get<2>(*LINEITEM_it4);
-            int L3__LINENUMBER = get<3>(*LINEITEM_it4);
             double L3__QUANTITY = get<4>(*LINEITEM_it4);
-            double L3__EXTENDEDPRICE = get<5>(*LINEITEM_it4);
-            double L3__DISCOUNT = get<6>(*LINEITEM_it4);
-            double L3__TAX = get<7>(*LINEITEM_it4);
-            int64_t var5 = 0;
-            var5 += ORDERKEY;
-            int64_t var6 = 0;
-            var6 += protect_L1__ORDERKEY;
-            if ( var5 == var6 )
+            if ( ORDERKEY == protect_L1__ORDERKEY )
             {
                 qCUSTOMER3[ORDERKEY] += L3__QUANTITY;
             }
@@ -469,10 +441,11 @@ void on_insert_LINEITEM(
     bigsum_L1__ORDERKEY_dom.insert(ORDERKEY);
     LINEITEM.insert(make_tuple(
         ORDERKEY,PARTKEY,SUPPKEY,LINENUMBER,QUANTITY,EXTENDEDPRICE,DISCOUNT,TAX));
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it28 = q.begin();
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_end27 = q.end();
+
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_it28 = q.begin();
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_end27 = q.end();
     for (; q_it28 != q_end27; ++q_it28)
     {
         int64_t C__CUSTKEY = q_it28->first;
@@ -486,140 +459,86 @@ void on_insert_LINEITEM(
             ++bigsum_L1__ORDERKEY_dom_it26)
         {
             int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it26;
+
+            // new = old + (dt.1 + dt.2 + dt.3), where
+            // dt.1 = if new then df else 0
+            // dt.2 = if new and not old then f else 0
+            // dt.3 = if not new and old then -f else 0
             cstr216 = 0;
-            cstr216217 = 0;
+
+            // new.1 (old): sum_{bigsum_l2__orderkey} t
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it8 = bigsum_L1__ORDERKEY_dom.begin();
+                >::iterator bigsum_L2__ORDERKEY_dom_it6 = bigsum_L2__ORDERKEY_dom.begin();
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end7 = bigsum_L1__ORDERKEY_dom.end();
+                >::iterator bigsum_L2__ORDERKEY_dom_end5 = bigsum_L2__ORDERKEY_dom.end();
             for (
-                ; bigsum_L1__ORDERKEY_dom_it8 != bigsum_L1__ORDERKEY_dom_end7; 
-                ++bigsum_L1__ORDERKEY_dom_it8)
+                ; bigsum_L2__ORDERKEY_dom_it6 != bigsum_L2__ORDERKEY_dom_end5; 
+                ++bigsum_L2__ORDERKEY_dom_it6)
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it8;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it6 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end5 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it6 != bigsum_L2__ORDERKEY_dom_end5; 
-                    ++bigsum_L2__ORDERKEY_dom_it6)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it6;
-                    cstr216217 += ( ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it6;
+                cstr216 += ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY]?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] : 0);
             }
-            cstr216218 = 0;
+
+            // new.2 (dt.1): sum_{bigsum_l2__orderkey} if new then dt else 0
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it12 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end11 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it12 != bigsum_L1__ORDERKEY_dom_end11; 
-                ++bigsum_L1__ORDERKEY_dom_it12)
+                >::iterator bigsum_L2__ORDERKEY_dom_it10 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+
+            if ( bigsum_L1__ORDERKEY == ORDERKEY &&
+                 (bigsum_L2__ORDERKEY_dom_it10 != bigsum_L2__ORDERKEY_dom.end()) )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it12;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it10 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end9 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it10 != bigsum_L2__ORDERKEY_dom_end9; 
-                    ++bigsum_L2__ORDERKEY_dom_it10)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it10;
-                    cstr216218 += ( (
-                         100 < qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( (
-                         ORDERKEY == bigsum_L2__ORDERKEY )? ( 1 ) : ( 0 ) ) )?
-                         ( ( ( ( ORDERKEY == bigsum_L1__ORDERKEY ) && (
-                         ORDERKEY == bigsum_L2__ORDERKEY ) )? ( 1 ) : ( 0 ) ) ) : ( 0 ) );
-                }
+                cstr216218 += (100 < qCUSTOMER3[ORDERKEY]+QUANTITY? 1 : 0);
             }
-            cstr216219 = 0;
+
+
+            // new.3 (dt.2): sum_{bigsum_l2__orderkey} if new and not old then t else 0
+            cstr216 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it16 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end15 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it16 != bigsum_L1__ORDERKEY_dom_end15; 
-                ++bigsum_L1__ORDERKEY_dom_it16)
+                >::iterator bigsum_L2__ORDERKEY_dom_it14 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+
+            if ( bigsum_L2__ORDERKEY_dom_it14 != bigsum_L2__ORDERKEY_dom.end() )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it16;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it14 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end13 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it14 != bigsum_L2__ORDERKEY_dom_end13; 
-                    ++bigsum_L2__ORDERKEY_dom_it14)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it14;
-                    cstr216219 += ( ( (
-                         100 < qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( (
-                         ORDERKEY == bigsum_L2__ORDERKEY )?
-                         ( 1 ) : ( 0 ) ) ) && ( qCUSTOMER3[bigsum_L2__ORDERKEY] <= 100 ) )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                cstr216 += (
+                    (100 < qCUSTOMER3[ORDERKEY]+QUANTITY) && ( qCUSTOMER3[ORDERKEY] <= 100 )?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,ORDERKEY)] : 0 );
             }
-            cstr216220 = 0;
-            cstr216220246 = 0;
+
+            // new.4 (dt.3): sum_{bigsum_l2__orderkey} if not new and old then -t else 0
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it20 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end19 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it20 != bigsum_L1__ORDERKEY_dom_end19; 
-                ++bigsum_L1__ORDERKEY_dom_it20)
+                >::iterator bigsum_L2__ORDERKEY_dom_it18 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+
+            if ( bigsum_L2__ORDERKEY_dom_it18 !== bigsum_L2__ORDERKEY_dom.end() )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it20;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it18 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end17 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it18 != bigsum_L2__ORDERKEY_dom_end17; 
-                    ++bigsum_L2__ORDERKEY_dom_it18)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it18;
-                    cstr216220246 += ( ( (
-                         qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( ( ORDERKEY == bigsum_L2__ORDERKEY )?
-                         ( 1 ) : ( 0 ) ) <= 100 ) && ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] ) )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                cstr216 += -1*(
+                    ( (qCUSTOMER3[ORDERKEY]+QUANTITY <= 100 ) && ( 100 < qCUSTOMER3[ORDERKEY] ) )?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,ORDERKEY)] : 0 );
             }
-            cstr216220 += -1*cstr216220246;
-            cstr216 += cstr216217+cstr216218+cstr216219+cstr216220;
+
+            // old: sum_{bigsum_l2__orderkey} t
             cstr259 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it24 = bigsum_L1__ORDERKEY_dom.begin();
+                >::iterator bigsum_L2__ORDERKEY_dom_it22 = bigsum_L2__ORDERKEY_dom.begin();
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end23 = bigsum_L1__ORDERKEY_dom.end();
+            >::iterator bigsum_L2__ORDERKEY_dom_end21 = bigsum_L2__ORDERKEY_dom.end();
             for (
-                ; bigsum_L1__ORDERKEY_dom_it24 != bigsum_L1__ORDERKEY_dom_end23; 
-                ++bigsum_L1__ORDERKEY_dom_it24)
+                ; bigsum_L2__ORDERKEY_dom_it22 != bigsum_L2__ORDERKEY_dom_end21; 
+                ++bigsum_L2__ORDERKEY_dom_it22)
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it24;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it22 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end21 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it22 != bigsum_L2__ORDERKEY_dom_end21; 
-                    ++bigsum_L2__ORDERKEY_dom_it22)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it22;
-                    cstr259 += ( ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it22;
+                cstr259 += ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY]?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] : 0);
             }
+
+            // Not new and old => -f
             if ( ( cstr216 < 1 ) && ( 1 <= cstr259 ) )
             {
                 q215 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
             }
         }
+
         q[C__CUSTKEY] += -1*q215;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it48 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -636,110 +555,60 @@ void on_insert_LINEITEM(
             ++bigsum_L1__ORDERKEY_dom_it46)
         {
             int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it46;
+
+            // new = old + (dt.1 + dt.2 + dt.3), where
+            // dt.1 = if new then df else 0
+            // dt.2 = if new and not old then f else 0
+            // dt.3 = if not new and old then -f else 0
             cstr125 = 0;
-            cstr125126 = 0;
+
+            // new.1 (old): sum_{bigsum_l2__orderkey} t
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it32 = bigsum_L1__ORDERKEY_dom.begin();
+                >::iterator bigsum_L2__ORDERKEY_dom_it30 = bigsum_L2__ORDERKEY_dom.begin();
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end31 = bigsum_L1__ORDERKEY_dom.end();
+                >::iterator bigsum_L2__ORDERKEY_dom_end29 = bigsum_L2__ORDERKEY_dom.end();
             for (
-                ; bigsum_L1__ORDERKEY_dom_it32 != bigsum_L1__ORDERKEY_dom_end31; 
-                ++bigsum_L1__ORDERKEY_dom_it32)
+                ; bigsum_L2__ORDERKEY_dom_it30 != bigsum_L2__ORDERKEY_dom_end29; 
+                ++bigsum_L2__ORDERKEY_dom_it30)
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it32;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it30 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end29 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it30 != bigsum_L2__ORDERKEY_dom_end29; 
-                    ++bigsum_L2__ORDERKEY_dom_it30)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it30;
-                    cstr125126 += ( ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it30;
+                cstr125 += ( ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] )?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] : 0 );
             }
-            cstr125127 = 0;
+
+            // new.2 (dt.1): sum_{bigsum_l2__orderkey} if new then dt else 0
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it36 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end35 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it36 != bigsum_L1__ORDERKEY_dom_end35; 
-                ++bigsum_L1__ORDERKEY_dom_it36)
+                >::iterator bigsum_L2__ORDERKEY_dom_it34 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+            if ( bigsum_L1__ORDERKEY == ORDERKEY &&
+                 ( bigsum_L2__ORDERKEY_dom_it34 != bigsum_L2__ORDERKEY_dom.end() ) )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it36;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it34 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end33 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it34 != bigsum_L2__ORDERKEY_dom_end33; 
-                    ++bigsum_L2__ORDERKEY_dom_it34)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it34;
-                    cstr125127 += ( (
-                         100 < qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( (
-                         ORDERKEY == bigsum_L2__ORDERKEY )? ( 1 ) : ( 0 ) ) )?
-                         ( ( ( ( ORDERKEY == bigsum_L1__ORDERKEY ) && (
-                         ORDERKEY == bigsum_L2__ORDERKEY ) )? ( 1 ) : ( 0 ) ) ) : ( 0 ) );
-                }
+                cstr125 += (100 < qCUSTOMER3[ORDERKEY]+QUANTITY? 1 : 0);
             }
-            cstr125128 = 0;
+
+
+            // new.3 (dt.2): sum_{bigsum_l2__orderkey} if new and not old then t else 0
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it40 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end39 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it40 != bigsum_L1__ORDERKEY_dom_end39; 
-                ++bigsum_L1__ORDERKEY_dom_it40)
+                >::iterator bigsum_L2__ORDERKEY_dom_it38 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+
+            if ( bigsum_L2__ORDERKEY_dom_it38 != bigsum_L2__ORDERKEY_dom.end() )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it40;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it38 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end37 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it38 != bigsum_L2__ORDERKEY_dom_end37; 
-                    ++bigsum_L2__ORDERKEY_dom_it38)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it38;
-                    cstr125128 += ( ( (
-                         100 < qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( (
-                         ORDERKEY == bigsum_L2__ORDERKEY )?
-                         ( 1 ) : ( 0 ) ) ) && ( qCUSTOMER3[bigsum_L2__ORDERKEY] <= 100 ) )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                cstr125 += ( ( (100 < qCUSTOMER3[ORDERKEY]+QUANTITY)
+                               && ( qCUSTOMER3[ORDERKEY] <= 100 ) )?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,ORDERKEY)] : 0);
             }
-            cstr125129 = 0;
-            cstr125129155 = 0;
+
+            // new.4 (dt.3): sum_{bigsum_l2__orderkey} if not new and old then -t else 0
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it44 = bigsum_L1__ORDERKEY_dom.begin();
-            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end43 = bigsum_L1__ORDERKEY_dom.end();
-            for (
-                ; bigsum_L1__ORDERKEY_dom_it44 != bigsum_L1__ORDERKEY_dom_end43; 
-                ++bigsum_L1__ORDERKEY_dom_it44)
+                >::iterator bigsum_L2__ORDERKEY_dom_it42 = bigsum_L2__ORDERKEY_dom.begin();
+
+            if ( bigsum_L2__ORDERKEY_dom_it42 != bigsum_L2__ORDERKEY_dom.end() )
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it44;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it42 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end41 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it42 != bigsum_L2__ORDERKEY_dom_end41; 
-                    ++bigsum_L2__ORDERKEY_dom_it42)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it42;
-                    cstr125129155 += ( ( (
-                         qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY*( ( ORDERKEY == bigsum_L2__ORDERKEY )?
-                         ( 1 ) : ( 0 ) ) <= 100 ) && ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] ) )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                cstr125 += -1*( (
+                    (qCUSTOMER3[ORDERKEY]+QUANTITY <= 100) && ( 100 < qCUSTOMER3[ORDERKEY] ) )?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,ORDERKEY)] : 0 );
             }
-            cstr125129 += -1*cstr125129155;
-            cstr125 += cstr125126+cstr125127+cstr125128+cstr125129;
+
+            // if new then delta f
             if ( 1 <= cstr125 )
             {
                 q[C__CUSTKEY] += QUANTITY*qLINEITEM1[make_tuple(
@@ -747,10 +616,11 @@ void on_insert_LINEITEM(
             }
         }
     }
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it72 = q.begin();
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_end71 = q.end();
+
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_it72 = q.begin();
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_end71 = q.end();
     for (; q_it72 != q_end71; ++q_it72)
     {
         int64_t C__CUSTKEY = q_it72->first;
@@ -763,31 +633,38 @@ void on_insert_LINEITEM(
             ++bigsum_L1__ORDERKEY_dom_it70)
         {
             int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it70;
+
+            // new = old + (dt.1 + dt.2 + dt.3), where
+            // dt.1 = if new then df else 0
+            // dt.2 = if new and not old then f else 0
+            // dt.3 = if not new and old then -f else 0
             cstr169 = 0;
-            cstr169170 = 0;
+
+            // new.1 (old): sum_{bigsum_l2__orderkey} t
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_it52 = bigsum_L1__ORDERKEY_dom.begin();
+                >::iterator bigsum_L2__ORDERKEY_dom_it50 = bigsum_L2__ORDERKEY_dom.begin();
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                >::iterator bigsum_L1__ORDERKEY_dom_end51 = bigsum_L1__ORDERKEY_dom.end();
+                >::iterator bigsum_L2__ORDERKEY_dom_end49 = bigsum_L2__ORDERKEY_dom.end();
             for (
-                ; bigsum_L1__ORDERKEY_dom_it52 != bigsum_L1__ORDERKEY_dom_end51; 
-                ++bigsum_L1__ORDERKEY_dom_it52)
+                ; bigsum_L2__ORDERKEY_dom_it50 != bigsum_L2__ORDERKEY_dom_end49; 
+                ++bigsum_L2__ORDERKEY_dom_it50)
             {
-                int64_t bigsum_L1__ORDERKEY = *bigsum_L1__ORDERKEY_dom_it52;
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_it50 = bigsum_L2__ORDERKEY_dom.begin();
-                set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
-                    >::iterator bigsum_L2__ORDERKEY_dom_end49 = bigsum_L2__ORDERKEY_dom.end();
-                for (
-                    ; bigsum_L2__ORDERKEY_dom_it50 != bigsum_L2__ORDERKEY_dom_end49; 
-                    ++bigsum_L2__ORDERKEY_dom_it50)
-                {
-                    int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it50;
-                    cstr169170 += ( ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY] )?
-                         ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
-                }
+                int64_t bigsum_L2__ORDERKEY = *bigsum_L2__ORDERKEY_dom_it50;
+                cstr169 += ( 100 < qCUSTOMER3[bigsum_L2__ORDERKEY]?
+                    qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] : 0 );
             }
-            cstr169171 = 0;
+
+
+            // new.2 (dt.1): sum_{bigsum_l2__orderkey} if new then dt else 0
+            set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
+                >::iterator bigsum_L2__ORDERKEY_dom_it54 = bigsum_L2__ORDERKEY_dom.find(ORDERKEY);
+
+            if ( bigsum_L1__ORDERKEY == ORDERKEY &&
+                 (bigsum_L2__ORDERKEY_dom_it54 != bigsum_L2__ORDERKEY_dom.end()) )
+            {
+                cstr169171 += ((100 < qCUSTOMER3[bigsum_L2__ORDERKEY]+QUANTITY)? 1 : 0 );
+            }
+
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it56 = bigsum_L1__ORDERKEY_dom.begin();
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -813,6 +690,7 @@ void on_insert_LINEITEM(
                          ORDERKEY == bigsum_L2__ORDERKEY ) )? ( 1 ) : ( 0 ) ) ) : ( 0 ) );
                 }
             }
+
             cstr169172 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it60 = bigsum_L1__ORDERKEY_dom.begin();
@@ -839,6 +717,7 @@ void on_insert_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr169173 = 0;
             cstr169173199 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -865,6 +744,7 @@ void on_insert_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr169173 += -1*cstr169173199;
             cstr169 += cstr169170+cstr169171+cstr169172+cstr169173;
             cstr210 = 0;
@@ -890,13 +770,15 @@ void on_insert_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
+            // if new and not old then f
             if ( ( 1 <= cstr169 ) && ( cstr210 < 1 ) )
             {
-                q[C__CUSTKEY] += qCUSTOMER4[make_tuple(
-                    bigsum_L1__ORDERKEY,C__CUSTKEY)];
+                q[C__CUSTKEY] += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
             }
         }
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER1_it74 = qCUSTOMER1.begin();
@@ -912,6 +794,7 @@ void on_insert_LINEITEM(
             QUANTITY*qCUSTOMER1LINEITEM1[make_tuple(
             bigsum_L1__ORDERKEY,x_qCUSTOMER_C__CUSTKEY,ORDERKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER1ORDERS1_it76 = qCUSTOMER1ORDERS1.begin();
@@ -926,19 +809,15 @@ void on_insert_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
-        qCUSTOMER2_it78 = qCUSTOMER2.begin();
-    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
-        qCUSTOMER2_end77 = qCUSTOMER2.end();
-    for (; qCUSTOMER2_it78 != qCUSTOMER2_end77; ++qCUSTOMER2_it78)
-    {
-        int64_t bigsum_L1__ORDERKEY = get<0>(qCUSTOMER2_it78->first);
-        qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += ( ( (
-             bigsum_L1__ORDERKEY == ORDERKEY ) && (
-             bigsum_L1__ORDERKEY == bigsum_L2__ORDERKEY ) )? ( 1 ) : ( 0 ) );
+        qCUSTOMER2_it78 = qCUSTOMER2.find(make_tuple(ORDERKEY,ORDERKEY));
+
+    if ( qCUSTOMER2_it78 != qCUSTOMER2.end() ) {
+        qCUSTOMER2[make_tuple(ORDERKEY,ORDERKEY)] += 1;        
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator qCUSTOMER3_it80 = 
         qCUSTOMER3.begin();
@@ -951,6 +830,7 @@ void on_insert_LINEITEM(
         qCUSTOMER3[bigsum_L2__ORDERKEY] += QUANTITY*( (
              bigsum_L2__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_it82 = qCUSTOMER4.begin();
@@ -965,6 +845,7 @@ void on_insert_LINEITEM(
             bigsum_L1__ORDERKEY,C__CUSTKEY)] += QUANTITY*qCUSTOMER4LINEITEM1[make_tuple(
             bigsum_L1__ORDERKEY,C__CUSTKEY,ORDERKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4ORDERS1_it84 = qCUSTOMER4ORDERS1.begin();
@@ -979,6 +860,7 @@ void on_insert_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qORDERS1_it86 = qORDERS1.begin();
@@ -992,6 +874,7 @@ void on_insert_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_LINEITEM_sec_span, on_insert_LINEITEM_usec_span);
@@ -1037,6 +920,7 @@ void on_insert_CUSTOMER(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr13 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
             >::iterator bigsum_L1__ORDERKEY_dom_it94 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1061,6 +945,7 @@ void on_insert_CUSTOMER(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr14 = 0;
         cstr1412 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1086,6 +971,7 @@ void on_insert_CUSTOMER(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr14 += -1*cstr1412;
         cstr1 += cstr12+cstr13+cstr14;
         if ( 1 <= cstr1 )
@@ -1093,6 +979,7 @@ void on_insert_CUSTOMER(
             q[CUSTKEY] += qCUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
         }
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it120 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -1135,6 +1022,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr4042 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it108 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1161,6 +1049,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr4043 = 0;
             cstr404351 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1188,6 +1077,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr4043 += -1*cstr404351;
             cstr40 += cstr4041+cstr4042+cstr4043;
             cstr58 = 0;
@@ -1214,6 +1104,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( cstr40 < 1 ) && ( 1 <= cstr58 ) )
             {
                 q39 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
@@ -1221,6 +1112,7 @@ void on_insert_CUSTOMER(
         }
         q[CUSTKEY] += -1*q39;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it140 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -1262,6 +1154,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr1820 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it128 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1288,6 +1181,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr1821 = 0;
             cstr182129 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1315,6 +1209,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr1821 += -1*cstr182129;
             cstr18 += cstr1819+cstr1820+cstr1821;
             cstr34 = 0;
@@ -1341,6 +1236,7 @@ void on_insert_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( 1 <= cstr18 ) && ( cstr34 < 1 ) )
             {
                 q[CUSTKEY] += qCUSTOMER4[make_tuple(
@@ -1348,6 +1244,7 @@ void on_insert_CUSTOMER(
             }
         }
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_it142 = qCUSTOMER4.begin();
@@ -1362,12 +1259,12 @@ void on_insert_CUSTOMER(
             bigsum_L1__ORDERKEY,CUSTKEY)];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_it144 = qCUSTOMER4LINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_end143 = qCUSTOMER4LINEITEM1.end();
     for (
         ; qCUSTOMER4LINEITEM1_it144 != qCUSTOMER4LINEITEM1_end143; 
@@ -1379,12 +1276,12 @@ void on_insert_CUSTOMER(
             qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1_it146 = qLINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1_end145 = qLINEITEM1.end();
     for (; qLINEITEM1_it146 != qLINEITEM1_end145; ++qLINEITEM1_it146)
     {
@@ -1393,6 +1290,7 @@ void on_insert_CUSTOMER(
             bigsum_L1__ORDERKEY,CUSTKEY,bigsum_L1__ORDERKEY)] += 
             qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
     }
+
     qORDERS4[CUSTKEY] += 1;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
@@ -1406,6 +1304,7 @@ void on_insert_ORDERS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
     q61 = 0.0;
     set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> >::iterator 
         bigsum_L1__ORDERKEY_dom_it160 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1440,6 +1339,7 @@ void on_insert_ORDERS(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr6466 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
             >::iterator bigsum_L1__ORDERKEY_dom_it154 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1464,6 +1364,7 @@ void on_insert_ORDERS(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr6467 = 0;
         cstr646775 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1489,6 +1390,7 @@ void on_insert_ORDERS(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr6467 += -1*cstr646775;
         cstr64 += cstr6465+cstr6466+cstr6467;
         if ( 1 <= cstr64 )
@@ -1497,6 +1399,7 @@ void on_insert_ORDERS(
         }
     }
     q[CUSTKEY] += qORDERS4[CUSTKEY]*q61;
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it180 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -1539,6 +1442,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr103105 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it168 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1565,6 +1469,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr103106 = 0;
             cstr103106114 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1594,6 +1499,7 @@ void on_insert_ORDERS(
             }
             cstr103106 += -1*cstr103106114;
             cstr103 += cstr103104+cstr103105+cstr103106;
+
             cstr121 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it176 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1618,6 +1524,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( cstr103 < 1 ) && ( 1 <= cstr121 ) )
             {
                 q102 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
@@ -1625,6 +1532,7 @@ void on_insert_ORDERS(
         }
         q[C__CUSTKEY] += -1*q102;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it200 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -1666,6 +1574,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr8183 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it188 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1692,6 +1601,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr8184 = 0;
             cstr818492 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1721,6 +1631,7 @@ void on_insert_ORDERS(
             }
             cstr8184 += -1*cstr818492;
             cstr81 += cstr8182+cstr8183+cstr8184;
+
             cstr97 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it196 = bigsum_L1__ORDERKEY_dom.begin();
@@ -1745,6 +1656,7 @@ void on_insert_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( 1 <= cstr81 ) && ( cstr97 < 1 ) )
             {
                 q[C__CUSTKEY] += qCUSTOMER4[make_tuple(
@@ -1766,12 +1678,12 @@ void on_insert_ORDERS(
             bigsum_L1__ORDERKEY,ORDERKEY)];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER1LINEITEM1_it204 = qCUSTOMER1LINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER1LINEITEM1_end203 = qCUSTOMER1LINEITEM1.end();
     for (
         ; qCUSTOMER1LINEITEM1_it204 != qCUSTOMER1LINEITEM1_end203; 
@@ -1782,11 +1694,12 @@ void on_insert_ORDERS(
             bigsum_L1__ORDERKEY,CUSTKEY,bigsum_L1__ORDERKEY)] += ( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
-    map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
+
+    map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_it206 = qCUSTOMER4.begin();
-    map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
+    map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_end205 = qCUSTOMER4.end();
     for (; qCUSTOMER4_it206 != qCUSTOMER4_end205; ++qCUSTOMER4_it206)
     {
@@ -1796,12 +1709,12 @@ void on_insert_ORDERS(
             bigsum_L1__ORDERKEY,ORDERKEY)]*qORDERS4[CUSTKEY];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_it208 = qCUSTOMER4LINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_end207 = qCUSTOMER4LINEITEM1.end();
     for (
         ; qCUSTOMER4LINEITEM1_it208 != qCUSTOMER4LINEITEM1_end207; 
@@ -1812,13 +1725,14 @@ void on_insert_ORDERS(
             bigsum_L1__ORDERKEY,CUSTKEY,bigsum_L1__ORDERKEY)] += ( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) )*qORDERS4[CUSTKEY];
     }
-    qLINEITEM1[make_tuple(ORDERKEY,CUSTKEY,ORDERKEY)] += ( (
-         ORDERKEY == bigsum_L1__ORDERKEY )? ( 1 ) : ( 0 ) )*qORDERS4[CUSTKEY];
-    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
+
+    qLINEITEM1[make_tuple(ORDERKEY,CUSTKEY,ORDERKEY)] += qORDERS4[CUSTKEY];
+
+    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1CUSTOMER1_it210 = qLINEITEM1CUSTOMER1.begin();
-    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
+    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> >,
+        boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1CUSTOMER1_end209 = qLINEITEM1CUSTOMER1.end();
     for (
         ; qLINEITEM1CUSTOMER1_it210 != qLINEITEM1CUSTOMER1_end209; 
@@ -1828,6 +1742,7 @@ void on_insert_ORDERS(
         qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)] += ( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_ORDERS_sec_span, on_insert_ORDERS_usec_span);
@@ -1848,15 +1763,15 @@ void on_delete_LINEITEM(
     {
         qCUSTOMER2.erase(make_tuple(ORDERKEY,ORDERKEY));
     }
-    if ( bigsum_L2__ORDERKEY_dom.find(ORDERKEY) == bigsum_L2__ORDERKEY_dom.end(
-        ) )
+    if ( bigsum_L2__ORDERKEY_dom.find(ORDERKEY) == bigsum_L2__ORDERKEY_dom.end() )
     {
         qCUSTOMER3.erase(ORDERKEY);
     }
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it230 = q.begin();
-    map<int64_t,double,std::less<int64_t 
-        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_end229 = q.end();
+
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_it230 = q.begin();
+    map<int64_t,double,std::less<int64_t>,
+        boost::pool_allocator<pair<int64_t,double> > >::iterator q_end229 = q.end();
     for (; q_it230 != q_end229; ++q_it230)
     {
         int64_t C__CUSTKEY = q_it230->first;
@@ -1895,6 +1810,7 @@ void on_delete_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr454456 = 0;
             cstr454456462 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1924,6 +1840,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr454456 += -1*cstr454456462;
+
             cstr454457 = 0;
             cstr454457478 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1953,6 +1870,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr454457 += -1*-1*cstr454457478;
+
             cstr454458 = 0;
             cstr454458491 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -1983,6 +1901,7 @@ void on_delete_LINEITEM(
             }
             cstr454458 += -1*cstr454458491;
             cstr454 += cstr454455+cstr454456+cstr454457+cstr454458;
+
             if ( 1 <= cstr454 )
             {
                 q452 += QUANTITY*qLINEITEM1[make_tuple(
@@ -2033,6 +1952,7 @@ void on_delete_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr509511 = 0;
             cstr509511517 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2062,6 +1982,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr509511 += -1*cstr509511517;
+
             cstr509512 = 0;
             cstr509512533 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2091,6 +2012,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr509512 += -1*-1*cstr509512533;
+
             cstr509513 = 0;
             cstr509513546 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2121,6 +2043,7 @@ void on_delete_LINEITEM(
             }
             cstr509513 += -1*cstr509513546;
             cstr509 += cstr509510+cstr509511+cstr509512+cstr509513;
+
             cstr558 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it250 = bigsum_L1__ORDERKEY_dom.begin();
@@ -2152,6 +2075,7 @@ void on_delete_LINEITEM(
         }
         q[C__CUSTKEY] += -1*-1*q507;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it278 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -2194,6 +2118,7 @@ void on_delete_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr564566 = 0;
             cstr564566572 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2223,6 +2148,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr564566 += -1*cstr564566572;
+
             cstr564567 = 0;
             cstr564567588 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2252,6 +2178,7 @@ void on_delete_LINEITEM(
                 }
             }
             cstr564567 += -1*-1*cstr564567588;
+
             cstr564568 = 0;
             cstr564568601 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2282,6 +2209,7 @@ void on_delete_LINEITEM(
             }
             cstr564568 += -1*cstr564568601;
             cstr564 += cstr564565+cstr564566+cstr564567+cstr564568;
+
             cstr615 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it274 = bigsum_L1__ORDERKEY_dom.begin();
@@ -2306,6 +2234,7 @@ void on_delete_LINEITEM(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( cstr564 < 1 ) && ( 1 <= cstr615 ) )
             {
                 q563 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
@@ -2328,6 +2257,7 @@ void on_delete_LINEITEM(
             -1*QUANTITY*qCUSTOMER1LINEITEM1[make_tuple(
             bigsum_L1__ORDERKEY,x_qCUSTOMER_C__CUSTKEY,ORDERKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER1ORDERS1_it282 = qCUSTOMER1ORDERS1.begin();
@@ -2343,19 +2273,15 @@ void on_delete_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += -1*QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
-        qCUSTOMER2_it284 = qCUSTOMER2.begin();
-    map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
-        >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
-        qCUSTOMER2_end283 = qCUSTOMER2.end();
-    for (; qCUSTOMER2_it284 != qCUSTOMER2_end283; ++qCUSTOMER2_it284)
-    {
-        int64_t bigsum_L1__ORDERKEY = get<0>(qCUSTOMER2_it284->first);
-        qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += -1*( 
-            ( ( bigsum_L1__ORDERKEY == ORDERKEY ) && (
-             bigsum_L1__ORDERKEY == bigsum_L2__ORDERKEY ) )? ( 1 ) : ( 0 ) );
+        qCUSTOMER2_it284 = qCUSTOMER2.find(make_tuple(ORDERKEY,ORDERKEY));
+
+    if ( qCUSTOMER2_it284 != qCUSTOMER2.end() ) {
+        qCUSTOMER2[make_tuple(ORDERKEY,ORDERKEY)] += -1;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator qCUSTOMER3_it286 = 
         qCUSTOMER3.begin();
@@ -2368,6 +2294,7 @@ void on_delete_LINEITEM(
         qCUSTOMER3[bigsum_L2__ORDERKEY] += -1*QUANTITY*( (
              bigsum_L2__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_it288 = qCUSTOMER4.begin();
@@ -2382,6 +2309,7 @@ void on_delete_LINEITEM(
             bigsum_L1__ORDERKEY,C__CUSTKEY)] += -1*QUANTITY*qCUSTOMER4LINEITEM1[make_tuple(
             bigsum_L1__ORDERKEY,C__CUSTKEY,ORDERKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4ORDERS1_it290 = qCUSTOMER4ORDERS1.begin();
@@ -2397,6 +2325,7 @@ void on_delete_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += -1*QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qORDERS1_it292 = qORDERS1.begin();
@@ -2410,6 +2339,7 @@ void on_delete_LINEITEM(
             bigsum_L1__ORDERKEY,bigsum_L1__ORDERKEY)] += -1*QUANTITY*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_LINEITEM_sec_span, on_delete_LINEITEM_usec_span);
@@ -2456,6 +2386,7 @@ void on_delete_CUSTOMER(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr303305 = 0;
         cstr303305311 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2483,6 +2414,7 @@ void on_delete_CUSTOMER(
             }
         }
         cstr303305 += -1*-1*cstr303305311;
+
         cstr303306 = 0;
         cstr303306317 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2511,12 +2443,14 @@ void on_delete_CUSTOMER(
         }
         cstr303306 += -1*cstr303306317;
         cstr303 += cstr303304+cstr303305+cstr303306;
+
         if ( 1 <= cstr303 )
         {
             q301 += qCUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
         }
     }
     q[CUSTKEY] += -1*q301;
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it326 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -2559,6 +2493,7 @@ void on_delete_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr326328 = 0;
             cstr326328334 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2587,6 +2522,7 @@ void on_delete_CUSTOMER(
                 }
             }
             cstr326328 += -1*-1*cstr326328334;
+
             cstr326329 = 0;
             cstr326329340 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2616,6 +2552,7 @@ void on_delete_CUSTOMER(
             }
             cstr326329 += -1*cstr326329340;
             cstr326 += cstr326327+cstr326328+cstr326329;
+
             cstr345 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it322 = bigsum_L1__ORDERKEY_dom.begin();
@@ -2640,6 +2577,7 @@ void on_delete_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( 1 <= cstr326 ) && ( cstr345 < 1 ) )
             {
                 q324 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
@@ -2647,6 +2585,7 @@ void on_delete_CUSTOMER(
         }
         q[CUSTKEY] += -1*-1*q324;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it346 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -2689,6 +2628,7 @@ void on_delete_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr351353 = 0;
             cstr351353359 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2717,6 +2657,7 @@ void on_delete_CUSTOMER(
                 }
             }
             cstr351353 += -1*-1*cstr351353359;
+
             cstr351354 = 0;
             cstr351354365 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2746,6 +2687,7 @@ void on_delete_CUSTOMER(
             }
             cstr351354 += -1*cstr351354365;
             cstr351 += cstr351352+cstr351353+cstr351354;
+
             cstr372 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it342 = bigsum_L1__ORDERKEY_dom.begin();
@@ -2770,6 +2712,7 @@ void on_delete_CUSTOMER(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( cstr351 < 1 ) && ( 1 <= cstr372 ) )
             {
                 q350 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
@@ -2777,6 +2720,7 @@ void on_delete_CUSTOMER(
         }
         q[CUSTKEY] += -1*q350;
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER4_it348 = qCUSTOMER4.begin();
@@ -2791,11 +2735,11 @@ void on_delete_CUSTOMER(
             bigsum_L1__ORDERKEY,CUSTKEY)];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_it350 = qCUSTOMER4LINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_end349 = qCUSTOMER4LINEITEM1.end();
     for (
@@ -2808,11 +2752,11 @@ void on_delete_CUSTOMER(
             -1*qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1_it352 = qLINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1_end351 = qLINEITEM1.end();
     for (; qLINEITEM1_it352 != qLINEITEM1_end351; ++qLINEITEM1_it352)
@@ -2822,6 +2766,7 @@ void on_delete_CUSTOMER(
             bigsum_L1__ORDERKEY,CUSTKEY,bigsum_L1__ORDERKEY)] += 
             -1*qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)];
     }
+
     qORDERS4[CUSTKEY] += -1;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
@@ -2869,6 +2814,7 @@ void on_delete_ORDERS(
                      ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
             }
         }
+
         cstr379381 = 0;
         cstr379381387 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2896,6 +2842,7 @@ void on_delete_ORDERS(
             }
         }
         cstr379381 += -1*-1*cstr379381387;
+
         cstr379382 = 0;
         cstr379382393 = 0;
         set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -2972,6 +2919,7 @@ void on_delete_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr402404 = 0;
             cstr402404410 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -3000,6 +2948,7 @@ void on_delete_ORDERS(
                 }
             }
             cstr402404 += -1*-1*cstr402404410;
+
             cstr402405 = 0;
             cstr402405416 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -3029,6 +2978,7 @@ void on_delete_ORDERS(
             }
             cstr402405 += -1*cstr402405416;
             cstr402 += cstr402403+cstr402404+cstr402405;
+
             cstr421 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it382 = bigsum_L1__ORDERKEY_dom.begin();
@@ -3053,6 +3003,7 @@ void on_delete_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( 1 <= cstr402 ) && ( cstr421 < 1 ) )
             {
                 q400 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
@@ -3060,6 +3011,7 @@ void on_delete_ORDERS(
         }
         q[C__CUSTKEY] += -1*-1*q400;
     }
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it406 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -3102,6 +3054,7 @@ void on_delete_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             cstr427429 = 0;
             cstr427429435 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -3130,6 +3083,7 @@ void on_delete_ORDERS(
                 }
             }
             cstr427429 += -1*-1*cstr427429435;
+
             cstr427430 = 0;
             cstr427430441 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
@@ -3159,6 +3113,7 @@ void on_delete_ORDERS(
             }
             cstr427430 += -1*cstr427430441;
             cstr427 += cstr427428+cstr427429+cstr427430;
+
             cstr448 = 0;
             set<int64_t, std::less<int64_t>, boost::pool_allocator<int64_t> 
                 >::iterator bigsum_L1__ORDERKEY_dom_it402 = bigsum_L1__ORDERKEY_dom.begin();
@@ -3183,6 +3138,7 @@ void on_delete_ORDERS(
                          ( qCUSTOMER2[make_tuple(bigsum_L1__ORDERKEY,bigsum_L2__ORDERKEY)] ) : ( 0 ) );
                 }
             }
+
             if ( ( cstr427 < 1 ) && ( 1 <= cstr448 ) )
             {
                 q426 += qCUSTOMER4[make_tuple(bigsum_L1__ORDERKEY,C__CUSTKEY)];
@@ -3190,6 +3146,7 @@ void on_delete_ORDERS(
         }
         q[C__CUSTKEY] += -1*q426;
     }
+
     map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::iterator 
         qCUSTOMER1_it408 = qCUSTOMER1.begin();
@@ -3234,11 +3191,11 @@ void on_delete_ORDERS(
             bigsum_L1__ORDERKEY,ORDERKEY)]*qORDERS4[CUSTKEY];
     }
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_it414 = qCUSTOMER4LINEITEM1.begin();
     
-        map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
+    map<tuple<int64_t,int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t,int64_t>,int> > >::iterator 
         qCUSTOMER4LINEITEM1_end413 = qCUSTOMER4LINEITEM1.end();
     for (
@@ -3250,8 +3207,9 @@ void on_delete_ORDERS(
             bigsum_L1__ORDERKEY,CUSTKEY,bigsum_L1__ORDERKEY)] += -1*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) )*qORDERS4[CUSTKEY];
     }
-    qLINEITEM1[make_tuple(ORDERKEY,CUSTKEY,ORDERKEY)] += -1*( (
-         ORDERKEY == bigsum_L1__ORDERKEY )? ( 1 ) : ( 0 ) )*qORDERS4[CUSTKEY];
+
+    qLINEITEM1[make_tuple(ORDERKEY,CUSTKEY,ORDERKEY)] += -1*qORDERS4[CUSTKEY];
+
     map<tuple<int64_t,int64_t>,int,std::less<tuple<int64_t,int64_t> 
         >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,int> > >::iterator 
         qLINEITEM1CUSTOMER1_it416 = qLINEITEM1CUSTOMER1.begin();
@@ -3266,6 +3224,7 @@ void on_delete_ORDERS(
         qLINEITEM1CUSTOMER1[make_tuple(bigsum_L1__ORDERKEY,CUSTKEY)] += -1*( (
              bigsum_L1__ORDERKEY == ORDERKEY )? ( 1 ) : ( 0 ) );
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_ORDERS_sec_span, on_delete_ORDERS_usec_span);
