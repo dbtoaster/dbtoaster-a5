@@ -172,44 +172,42 @@ class DBToaster
   end
   
   def toast_keys
-    useless_maps = [nil];
-    until useless_maps.empty? do
-      # Cascade foreign key dependencies; If in R[A,B] x S[B,C] x T[C,D]
-      # both B and C are keys, used as foreign keys in S and T respectively
-      # then we need the closure of the dependencies
-      @key_deps = Hash.new
-      @keys.each_pair do |map, key_list|
-        key_list.each_value do |refs|
-          refs.each_pair do |ref_map, ref_keys|
-            @key_deps.assert_key(map){ Hash.new }.assert_key(ref_map){ Array.new }.concat(ref_keys.clone)
-          end
+    # Cascade foreign key dependencies; If in R[A,B] x S[B,C] x T[C,D]
+    # both B and C are keys, used as foreign keys in S and T respectively
+    # then we need the closure of the dependencies
+    @key_deps = Hash.new
+    @keys.each_pair do |map, key_list|
+      key_list.each_value do |refs|
+        refs.each_pair do |ref_map, ref_keys|
+          @key_deps.assert_key(map){ Hash.new }.assert_key(ref_map){ Array.new }.concat(ref_keys.clone)
         end
       end
-      
-      inserting = true;
-      while inserting
-        inserting = false;
-        @key_deps.each_pair do |map,reference_list|
-          puts "Checking M: " + map;
-          reference_list.each_key do |ref_map|
-            puts "    Checking RM: " + ref_map;
-            if @key_deps.has_key? ref_map then
-              @key_deps[ref_map].each_pair do |ref_ref_map, ref_ref_keys|
-                ref_ref_keys.each do |ref_ref_key|
-                  puts "      Checking RK: " + ref_ref_key
-                  if !@key_deps[map].assert_key(ref_ref_map){ Array.new }.include? ref_ref_key then
-                    inserting = true;
-                    puts "        Creating new dependency " + map + "<= " + ref_ref_map + "[" + ref_ref_key + "]";
-                    @key_deps[map][ref_ref_map].push(ref_ref_key)
-                  end
+    end
+    inserting = true;
+    while inserting
+      inserting = false;
+      @key_deps.each_pair do |map,reference_list|
+        puts "Checking M: " + map;
+        reference_list.each_key do |ref_map|
+          puts "    Checking RM: " + ref_map;
+          if @key_deps.has_key? ref_map then
+            @key_deps[ref_map].each_pair do |ref_ref_map, ref_ref_keys|
+              ref_ref_keys.each do |ref_ref_key|
+                puts "      Checking RK: " + ref_ref_key
+                if !@key_deps[map].assert_key(ref_ref_map){ Array.new }.include? ref_ref_key then
+                  inserting = true;
+                  puts "        Creating new dependency " + map + "<= " + ref_ref_map + "[" + ref_ref_key + "]";
+                  @key_deps[map][ref_ref_map].push(ref_ref_key)
                 end
               end
             end
           end
         end
       end
-      
-      
+    end
+
+    useless_maps = [nil];
+    until useless_maps.empty? do
       
       # We might be able to eliminate some update rules based on foreign 
       # key dependencies (which we assume all cascade).  Specifically, 
