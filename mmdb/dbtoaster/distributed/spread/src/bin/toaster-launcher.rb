@@ -8,18 +8,21 @@ $output = STDOUT;
 
 $toaster = DBToaster.new()
 $success = false;
+$options = Hash.new;
 
 opts = GetoptLong.new(
-  [ "-o", "--output",    GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-n", "--node",      GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-p", "--partition", GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-d", "--domain",    GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-t", "--test",      GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-s", "--persist",   GetoptLong::NO_ARGUMENT ]
+  [ "-o", "--output",      GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-n", "--node",        GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-p", "--partition",   GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-d", "--domain",      GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-t", "--test",        GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-s", "--persist",     GetoptLong::NO_ARGUMENT ],
+  [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
-    when "-o", "--output"    then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
-    else                          $toaster.parse_arg(opt, arg)
+    when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
+    when "-k", "--ignore-keys" then $options[:toast_keys] = false;
+    else                           $toaster.parse_arg(opt, arg)
   end
 end
 
@@ -27,7 +30,7 @@ ARGV.each do |f|
   $toaster.load(File.open(f).readlines);
 end
 
-$toaster.toast;
+$toaster.toast($options);
 
 puts "=========  Maps  ==========="
 $toaster.map_info.each_value do |info|
