@@ -9,23 +9,20 @@
 \newcommand\caret{\mathbin{\char`\^}}
 \renewcommand{\algorithmiccomment}[1]{// #1}
 
-\feature{Data and Query Model.}
+\feature{Query Compilation and Processing Overview}
 \compiler\ focuses on applications issuing standing queries on a database which
-subsequently process continuously changing, large volumes of input tuples.
-\compiler\ is capable of compiling a wide variety of SQL queries including the
-core relational algebra, standard aggregates (\texttt{sum}, \texttt{avg},
-\texttt{count}, \texttt{min}, \texttt{max}), subqueries and nested aggregates.
-Our data model differs from today's data stream processors, in that we consider
-a database as a set of relations each subject to an arbitrary sequence of
-inserts, updates and deletes. In contrast, data stream processors assume a
-well-defined separation between tuples' insert and delete operations on the
-stream (value- or count-based windows), or assume ordered deletion semantics
-(punctuations or heartbeats). In \compiler, each tuple has an arbitrary
-lifetime, thus our standing queries process a database spanning an arbitrary
-valid time using temporal database terminology. Indeed, many stream
-applications, such as order book trading and moving object applications, are
-self-managing, in that the application logic and delta patterns ensure that
-state does not grow unboundedly in practice.
+subsequently process continuously changing, large volumes of input tuples.  Our
+data model differs from existing stream processors, namely we consider a
+database as a set of relations, each subject to an arbitrary sequence of
+inserts, updates and deletes. In contrast, stream processors assume a rigid
+insertion and deletion semantics, through constructs such as windows, or
+punctuations and heartbeats. In \compiler, each tuple has an arbitrary
+lifetime. Indeed, many stream applications, such as order book trading and
+moving object applications, are self-managing -- the application logic and event
+sources ensure that state does not grow unboundedly in practice.  \compiler\
+produces imperative procedures to process queries given data manipulation
+events. In this section we describe the compilation algorithm to transform
+declarative queries into event handlers.
 
 \compiler's recursive compilation algorithm performs its work on queries
 represented in a \textit{map} calculus. We start this section with a description
@@ -33,7 +30,7 @@ of the map calculus, and subsequently describe the various stages of compilation
 as transformations of terms in the calculus, identifying key properties of terms
 that hold following each compilation stage.
 
-\subsection{Map Algebra}
+\subsection{Map Calculus}
 \feature{Map terms}
 The map calculus consists of the following types of terms:
 
@@ -153,6 +150,28 @@ is no product expression can contain a sum operator).  We provide an example of
 a map term and calculus formulae, monomials and polynomials in
 Figure~\ref{tbl:monpolyex}.
 
+\comment{
+\begin{figure}[htbp]
+\begin{tabular}{l|c}
+Terminology & Notation, example \\
+\hline
+Map monomial                 & \\
+Safe variables               & \\
+Unsafe variables             & \\
+Delta                        & \\
+Basic term                   & \\
+Basic calculus element       & \\
+Map polynomial               & \\
+Relational monomial          & \\
+Relational polynomial        & \\
+Semiring operations          & \\
+Map semiring elements        & \\
+Relational semiring elements & \\
+Constraint-only aggregate    & \\
+\end{tabular}
+\end{figure}
+}
+
 \begin{figure*}[htbp]
 \begin{center}
 \begin{tabular}{c|c|c}
@@ -166,6 +185,39 @@ Polynomial & $(5*x*sum_{f}(Q_1)) + sum_g(Q_1) $
 \label{tbl:monpolyex}
 \caption{Map term and relational calculus, monomial and polynomial examples.}
 \end{center}
+\end{figure*}
+
+\begin{figure*}
+\begin{tabular}{l|c|l|c|c}
+Compilation procedure & Method & Description & Example input & Example output \\
+\hline
+Polynomial construction     & $roly\_poly$ &
+& $3 * (\algsum_{1}(R(A,B)) + \algsum_{1}(S(C,D)))$
+& $(3*\algsum_{1}(R(A,B))) + (3*\algsum_{1}(S(C,D)))$
+\\
+Delta transformation        & $delta$ &
+&
+&
+\\
+Factorization               & $simplify$ &
+&
+&
+\\
+Bound variable propagation  & $simplify$ &
+&
+&
+\\
+Aggregate extraction        & $extract\_aggregates$ &
+&
+&
+\\
+Bigsum rewriting            & &
+&
+&
+\\
+\end{tabular}
+\caption{Summary of transformations performed during recursive compilation.}
+\label{fig:methodsummary}
 \end{figure*}
 
 Given such consideration of monomials and polynomials, we can encapsulate such
@@ -414,10 +466,14 @@ terms as the new starting point for compilation. Thus by compiling again for
 all relations, we obtain deltas of delta map terms, and repeat the process until
 the delta map terms produced contain no relations, rather, all relations'
 variables have been replaced by bound variables from deltas.
+
 \todo{Comment on renaming of bound variables in a map term to a free variable
  during map construction.}
+
 \todo{Note on $k$-level compilation, and using naive compiler to do the rest
   after $k$}
+
+\todo{Briefly describe aggregate extraction.}
 
 \newcommand{\indentcode}{\hspace{5mm}}
 \begin{algorithm}
@@ -500,7 +556,34 @@ d * \algsum_{1}(\phi(=,C',c))
 \end{align*}
 \end{example}
 \todo{Add starting equations for each term with tuple in place of relation.}
-\todo{Show handler code/pseudocode.}
+
+\noindent The resulting code is:
+
+\begin{verbatim}
+int q;
+map<int, int> qR, qS1, qS2, qT;
+map<tuple<int, int>, int> qRT;
+
+void on_insert_R(int a, int b) {
+    q += a*qR[b]; qS1[b] += a;
+    foreach c in keys(qT): qT[c] += a * qRT[b,c];
+}
+
+void on_insert_S(int b, int c) {
+    q += qS1[b] * qS2[c];
+    qR[b] += qS2[c]; qT[c] += qS1[b];
+    qRT[b,c] += 1;
+}
+
+void on_insert_T(int c, int d) {
+    q += d*qT[c]; qS2[c] += d;
+    foreach b in keys(qR): qR[b] += d * qRT[b,c];
+}
+\end{verbatim}
+
+We omit the code produced for handling deletions on the input stream -- the code
+is analagous to the insertion code seen above with decrements to maps instead of
+increments.
 
 
 \subsection{Nested query compilation}
@@ -609,7 +692,7 @@ variable domains. In general, map term evaluation with unseen values of \bigsum\
 variables cannot be performed incrementally with delta map terms. Consider a map
 $m$ defined as the following map term:
 
-\[\algsum_{A}(R(A,B)\wedge \phi(\theta, 0, \xi))\]
+\[\algsum_{A}(R(A,B)\wedge \phi(<, 0, \xi))\]
 
 \todo{Better example.}
 
@@ -636,7 +719,7 @@ form shown above). First we present the flattened form:
 q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
     & \algthen \; \algsum_{P*V}(Bids(P,V) \wedge bigsum\_p = P) \;
       \algelse \; 0 \Big]\\
-\mbox{where } & f = \algsum_{V1}(Bids(P1,V1))\\
+\mbox{where } & f = 0.25*\algsum_{V1}(Bids(P1,V1))\\
 \mbox{and } & g = \algsum_{V2}(Bids(P2,V2) \wedge P2 > bigsum\_p)
 \\
 & \hspace{-1.75cm}\mbox{\sc Compilation level 1:}\\
@@ -665,7 +748,40 @@ q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
 \end{example}
 
 Above, the underlined terms correspond to duplicate map terms, where maps can be
-reused.
+reused. The code produced is:
+
+\begin{verbatim}
+int q, m1;
+map<int, int> m2, m3;
+
+void on_insert_bids(int p, int v) {
+  // Initial value computation
+  if ( !m2.haskey(p) )
+    foreach b_p, b_v in bids: m2[p] += (p < b_p? b_v : 0);
+
+  if ( !m3.haskey(p) ) {
+    foreach b_p, b_v in bids:
+      m3[] += (p == b_p? b_p*b_v : 0);
+  }
+
+  // Compilation level 1
+  foreach bigsum_p in dom_bigsum_p:
+    q += if (m1+0.25*v > m2[bigsum_p]+(p>bigsum_p? v : 0))
+         then (p==bigsum_p? p*v : 0) else 0
+    q += if (m1+0.25*v > m2[bigsum_p]+(p>bigsum_p? v : 0))
+           && (m1 <= m2[bigsum_p])
+         then m3[bigsum_p] else 0
+    q += if (m1+0.25*v <= m2[bigsum_p]+(p>bigsum_p? v : 0))
+           && (m1 > m2[bigsum_p])
+         then -m3[bigsum_p] else 0
+
+  // Compilation level 2
+  m1 += 0.25*v;
+  foreach bigsum_p in keys(m2):
+    m2[bigsum_p] += (p > bigsum_p? v : 0);
+  m3[p] += p*v;
+}
+\end{verbatim}
 
 \comment{
 \subsection{Code Generation}

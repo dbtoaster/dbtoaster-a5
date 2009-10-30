@@ -7,7 +7,7 @@
 \usepackage[noend]{algorithmic}
 
 \newcommand{\comment}[1]{}
-\newcommand{\compiler}{DBCC}
+\newcommand{\compiler}{Serjeant}
 \newcommand{\todo}[1]{\textcolor{red}{#1}}
 \newcommand{\feature}[1]{\textbf{#1.}}
 \newcommand{\tuple}[1]{{\langle#1\rangle}}
@@ -29,7 +29,7 @@
 \graphicspath{{../figures}{./figures}}
 
 \begin{document}
-\title{DBCC: Compiling Databases for High-Performance View Maintenance and Update Stream Processing}
+\title{Serjeant: Compiling Databases for High-Performance View Maintenance and Update Stream Processing}
 \numberofauthors{2}
 \author{
 \alignauthor Yanif Ahmad\\
@@ -42,6 +42,28 @@
     \email{koch@cs.cornell.edu}
 }
 \maketitle
+
+\begin{abstract}
+We present \compiler, a novel SQL query compiler for generating database engines
+for high-performance main-memory processing of streaming data. \compiler\
+aggressively compiles aggregate queries to C++ code, to perform incremental view
+maintenance of continuous queries posed on streaming data. While today's
+state-of-the-art view maintenance considers a single delta on each input
+relation, \compiler\ uses a recursive compilation technique to successively
+simplify queries, exploiting combinations of input deltas to eliminate joins,
+and factorize aggregates. \compiler\ automatically determines subparts of
+queries to eagerly maintain as map data structures during compilation, and
+generates code that both computes query results from maps, and maintains maps
+given their interdependencies.  \compiler\ is capable of generating incremental
+engines for a wide range of aggregate queries, including nested aggregate
+queries with predicates, which to the best of our knowledge has not been
+addressed in the literature.  Our work is motivated by applications that require
+the highly efficient answering of fixed workloads of aggregation queries, such
+as in data stream processing, online data warehouse loading, and in financial
+applications. As we show, our techniques are at least one to two orders of
+magnitude faster than state-of-the-art database and stream processing engines on
+such workloads.
+\end{abstract}
 
 \input{intro}
 \input{compilation}
