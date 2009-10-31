@@ -205,7 +205,7 @@ void on_delete_PARTSUPP(
         hstart, hend, on_delete_PARTSUPP_sec_span, on_delete_PARTSUPP_usec_span);
 }
 
-DBToaster::DemoDatasets::SupplierStream SSBSupplier("/Users/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512);
+DBToaster::DemoDatasets::SupplierStream SSBSupplier("/home/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::SupplierTupleAdaptor> SSBSupplier_adaptor(new DBToaster::DemoDatasets::SupplierTupleAdaptor());
 static int streamSSBSupplierId = 0;
@@ -220,7 +220,7 @@ struct on_insert_SUPPLIER_fun_obj {
 
 on_insert_SUPPLIER_fun_obj fo_on_insert_SUPPLIER_0;
 
-DBToaster::DemoDatasets::PartSuppStream SSBPartSupp("/Users/yanif/datasets/tpch/sf1/singlefile/partsupp.tbl.a",&DBToaster::DemoDatasets::parsePartSuppField,5,820000,512);
+DBToaster::DemoDatasets::PartSuppStream SSBPartSupp("/home/yanif/datasets/tpch/sf1/singlefile/partsupp.tbl.a",&DBToaster::DemoDatasets::parsePartSuppField,5,820000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::PartSuppTupleAdaptor> SSBPartSupp_adaptor(new DBToaster::DemoDatasets::PartSuppTupleAdaptor());
 static int streamSSBPartSuppId = 1;

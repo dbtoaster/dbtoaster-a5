@@ -1,6 +1,6 @@
-CXX=g++
-CXXFLAGS=-DENABLE_SIMPLE_PROFILER -I../include -I/Users/yanif/software/boost/include
-LDFLAGS=-L/Users/yanif/software/boost/lib -lboost_system -lboost_thread -lboost_program_options
+CXX=g++44
+CXXFLAGS=-DENABLE_SIMPLE_PROFILER -I/home/yanif/workspace/dbtc_alpha3/include -I/home/yanif/software/boost/include
+LDFLAGS=-L/home/yanif/software/boost/lib -lboost_system -lboost_thread -lboost_program_options
 
 all: vwap ssb query11 query18 query22
 
