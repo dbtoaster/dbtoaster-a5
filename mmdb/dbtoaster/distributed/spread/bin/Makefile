@@ -1,7 +1,7 @@
 
 COMPILER_DIR=../../../prototype/compiler/alpha3
 COMPILER_FILES=$(wildcard $(COMPILER_DIR)/*.ml)
-LAUNCHER_SCRIPTS=node.sh client.sh unit.sh toaster.sh switch.sh slicer.sh
+LAUNCHER_SCRIPTS=node.sh client.sh unit.sh toaster.sh switch.sh slicer.sh tpch.sh
 
 all: $(LAUNCHER_SCRIPTS) dbtoaster.top
 

@@ -3,13 +3,14 @@ require 'ok_mixins';
 require 'template'
 
 class DBToaster
-  attr_reader :compiled, :templates, :map_info, :test_directives, :persist;
+  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @domain_directives = Hash.new;
     @test_directives = Array.new;
+    @slice_directives = Array.new;
     @keys = Hash.new;
     @persist = false;
     @compiled = nil;
@@ -39,16 +40,18 @@ class DBToaster
   
   def parse_arg(opt, arg)
     case opt
-      when "-n", "--node"      then @nodes.push(arg);
-      when "-p", "--partition" then 
+      when "--node"      then 
+        @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
+      when "--partition" then 
         arg = arg.split(":");
         @partition_directives[arg[0]] = arg[1];
-      when "-d", "--domain"    then
+      when "--domain"    then
         arg = arg.split("=");
-        @domain_directives[arg[0]] = arg[1].split(/, */);
-      when "-t", "--test"      then @test_directives.push(arg);
-      when "-s", "--persist"   then @persist = true;
-      when "-k", "--key"       then 
+        @domain_directives[arg[0]] = arg[1].split(/, */).collect { |d| if d == "*" then nil else d end };
+      when "--test"      then @test_directives.push(arg);
+      when "--slice"     then @slice_directives.push(arg);
+      when "--persist"   then @persist = true;
+      when "--key"       then 
         match = / *([^ \[]+) *\[ *([^\]]+) *\] *<= *([^ \[-]+) *\[ *([^\]]+) *\]/.match(arg)
         raise "Invalid key argument: " + arg unless match;
         @keys.assert_key(match[1]){ Hash.new }.assert_key(match[2]){ Hash.new }[match[3]] = [match[4]];
@@ -89,6 +92,7 @@ class DBToaster
       toast_maps;
       toast_dag;
       toast_keys if opts.fetch(:toast_keys, true);
+      toast_domains;
       @DBT = nil;
     rescue Exception => e
       #puts "Error toasting.  Compiler output: \n" + data.join("");
@@ -125,7 +129,7 @@ class DBToaster
     # We get the map names from UpdateTemplate, which keeps a hash map of name => ID
     @map_info =
       UpdateTemplate.map_names.collect do |map,info|
-        domain = @domain_directives.assert_key(map) { Array.new(info["params"], 100000) };
+        domain = @domain_directives.fetch(map) { Array.new(info["params"], nil) };
         raise "Domain with invalid dimension.  Map: " + map + "; Expected: " + info["params"].to_s + "; Saw: " + domain.size.to_s unless info["params"].to_i == domain.size;
         
         split_partition = @partition_directives.assert_key(map) do
@@ -137,7 +141,8 @@ class DBToaster
         [ info["id"].to_i,
           { "map"        => map, 
             "id"         => info["id"].to_i, 
-            "domain"     => domain.collect{|d| d.to_i}, 
+            "in_domain"  => domain.collect{|d| d.to_i}, 
+            "domain"     => domain,
             "partition"  => split_partition.to_i,
             "reads_from" => Array.new,
             "writes_to"  => Array.new,
@@ -277,6 +282,58 @@ class DBToaster
     end #until useless_maps.empty? 
   end
   
+  def toast_domains
+    # Start by extracting each map's domains from the template's inputs
+    @templates.collect do |template|
+      if @domain_directives.has_key? template.relation then template else nil end;
+    end.compact.each do |template|
+      template.target.keys.each_with_index do |i, key|
+        if template.paramlist.include? key then
+          if @map_info[template.target.source]["domain"][i] == nil && @domain_directives[template.relation][template.paramlist.index(key)] then
+            #puts @map_info[template.target.source]["map"].to_s + "[" + key.to_s + ":" + i.to_s + "] = " + @domain_directives[template.relation][template.paramlist.index(key)].to_s
+            @map_info[template.target.source]["domain"][i] = @domain_directives[template.relation][template.paramlist.index(key)].to_i;
+          elsif @map_info[template.target.source]["domain"][i] && !@domain_directives[template.relation][template.paramlist.index(key)]
+            raise "Error: Incompatible domain for map " + @map_info[template.target.source]["map"].to_s + ", key " + i.to_s + "; Template " + template.index.to_s + " says it is " + @domain_directives[template.relation][i].to_s + ", but prior declarations said " + @map_info[template.target.source]["domain"][i].to_s unless @domain_directives[template.relation][i].to_i == @map_info[template.target.source]["domain"][i].to_i;
+          end
+        end
+      end
+    end
+    
+    # Now propagate those domains through the templates.
+    changing = true;
+    while changing
+      changing = false;
+      
+      @templates.each do |template|
+        template.target.keys.each_with_index do |i, key|
+          # Only need to propagate loop variables that haven't been given a domain yet.
+          if @map_info[template.target.source]["domain"][i].nil? then
+            #puts "Checking for updates to " + @map_info[template.target.source]["map"] + "[" + key + "] from template " + template.index.to_s
+            template.entries.each do |entry|
+              #puts "  " + @map_info[entry.source]["map"] + "[" + entry.keys.join(",") + "]";
+              if entry.keys.include? key then
+                ei = entry.keys.index(key)
+                #puts "    Found! (@" + ei.to_s + "; " + @map_info[entry.source]["domain"].join(",") + ")";
+                unless @map_info[entry.source]["domain"][ei].nil? then
+                  #puts @map_info[template.target.source]["map"].to_s + "[" + key.to_s + ":" + i.to_s + "] = " + @map_info[entry.source]["domain"][ei].to_s;
+                  @map_info[template.target.source]["domain"][i] = @map_info[entry.source]["domain"][ei];
+                  changing = true;
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+    
+    # Finally, assign defaults to all other domains
+    @map_info.each_value do |info|
+      info["domain"].collect! do |d|
+        if d.nil? then 2147483647 else d.to_i end;
+      end
+    end
+  end
+  
   ########################################################
   ## Utility functions
   ########################################################
@@ -318,7 +375,7 @@ class DBToaster
           end
         end
       end
-      yield node, partitions;
+      yield node["name"], partitions, node["address"], (node["port"] || 52982);
     end
   end
   

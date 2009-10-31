@@ -21,7 +21,7 @@ GetoptLong.new(
   [ "--use"        , "-u", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--transform"  , "-t", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--test"       , "-e", GetoptLong::NO_ARGUMENT ],
-  [ "--tpch-stream", "-h", GetoptLong::NO_ARGUMENT ],
+  [ "--tpch-stream", "-h", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--verbose"    , "-v", GetoptLong::NO_ARGUMENT ],
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ]
@@ -54,9 +54,7 @@ GetoptLong.new(
       $verbose = true;
       
     when "--tpch-stream", "-h" then
-      tpch_dir = File.dirname(__FILE__) + "/../tpch-simple";
-      Dir.chdir(tpch_dir)
-      $input = open("|./streamgen -n u");
+      $input = open("|" + File.dirname(__FILE__) + "/../../src/tpch.sh -d " + arg + $cols.keys.collect { |t| "--" + t }.join(" "))
     
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;

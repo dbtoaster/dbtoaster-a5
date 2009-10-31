@@ -7,6 +7,12 @@ class Array
     end
   end
   
+  def each_with_index
+    each_index do |i|
+      yield i, self[i];
+    end
+  end
+  
   def collect_pair(other)
     min_size = if other.size > size then size else other.size end;
     ret = Array.new;
@@ -56,9 +62,17 @@ class Array
   
   def find
     each do |entry|
-      return true if(yield entry);
+      r = yield entry;
+      return r if r;
     end
     return false;
+  end
+  
+  def assert
+    each do |entry|
+      return false unless yield entry;
+    end
+    return true;
   end
   
   def find_pair(other)
@@ -184,5 +198,11 @@ class Range
   
   def overlaps?(other)
     (self.begin < other.end) && (other.begin < self.end)
+  end
+end
+
+class MatchData
+  def map(keys)
+    keys.merge(to_a.drop_front).collect_hash
   end
 end

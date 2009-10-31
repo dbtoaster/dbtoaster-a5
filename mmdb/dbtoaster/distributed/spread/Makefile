@@ -14,7 +14,7 @@ clean:
 test_data: all $(SQL_TESTDATA)
 
 $(SQL_TESTDATA) : %.unit : %.sql src/toaster/toaster.rb
-	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@
+	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@ -s $(subst .unit,.slice,$@)
 
 test: all test_naive test_switch $(AUTO_SQL_TESTS)
 
