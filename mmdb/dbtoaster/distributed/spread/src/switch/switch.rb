@@ -3,7 +3,6 @@ require 'map_node';
 require 'spread_types';
 require 'template';
 require 'maplayout';
-require 'ruby-prof';
 
 ###################################################
 
@@ -61,17 +60,17 @@ class SwitchNodeHandler
       trigger.each_update(params) do |message_set|
 #        Logger.default.info { "Generating put command (v" + cmdid.to_s + ") : " + message_set.to_s }
         if trigger.template.requires_loop? then
-          puts "MASS_PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";"+message_set.fetches.size.to_s+";"+params.join("/")+")@"+message_set.node.to_s;
+          #puts "MASS_PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";"+message_set.fetches.size.to_s+";"+params.join("/")+")@"+message_set.node.to_s;
           node(message_set.node).mass_put(cmdid, trigger.template.index, message_set.fetches.size, params)
         else
-          puts "PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";["+params.join("/")+"])@"+message_set.node.to_s;
+          #puts "PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";["+params.join("/")+"])@"+message_set.node.to_s;
           node(message_set.node).put(cmdid, trigger.template.index, params)
         end
 #        message_set.each_fetch(params) do |dest, entries|
 #          node(dest).fetch(entries, message_set.node, cmdid);
 #        end
         message_set.fetches.each_pair do |dest, entries|
-          puts "FETCH("+entries.collect { |e| e.instantiate(param_map) }.join("/")+";"+message_set.node.to_s+";"+cmdid.to_s+")@"+dest.to_s;
+          #puts "FETCH("+entries.collect { |e| e.instantiate(param_map) }.join("/")+";"+message_set.node.to_s+";"+cmdid.to_s+")@"+dest.to_s;
           node(dest).fetch(
             entries.collect { |e| e.instantiate(param_map) },
             message_set.node,

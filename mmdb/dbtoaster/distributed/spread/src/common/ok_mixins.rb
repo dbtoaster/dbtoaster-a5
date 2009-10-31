@@ -101,6 +101,20 @@ class Array
     end
     ret;
   end
+  
+  def tabulate
+    widths = [];
+    each do |row|
+      row.each_index do |i|
+        widths[i] = Math.max(widths[i].to_i, row[i].to_s.size);
+      end
+    end
+    collect do |row|
+      row.collect_pair(widths) do |col, width|
+        col.to_s + (" " * (width - col.to_s.size));
+      end.join("  ")
+    end.join("\n");
+  end
 end
 
 class Hash
@@ -204,5 +218,17 @@ end
 class MatchData
   def map(keys)
     keys.merge(to_a.drop_front).collect_hash
+  end
+end
+
+class Queue
+  # Return an array of all elements pending in the queue.
+  # If nothing is pending, block until something is.
+  # Note: this method is NOT synchronized for multiple READERS.  
+  def pop_pending 
+    ret = Array.new
+    ret.push(pop) if empty?;
+    ret.push(pop) until empty?;
+    ret;
   end
 end

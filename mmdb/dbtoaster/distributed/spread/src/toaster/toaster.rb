@@ -3,7 +3,7 @@ require 'ok_mixins';
 require 'template'
 
 class DBToaster
-  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist;
+  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
@@ -14,6 +14,7 @@ class DBToaster
     @keys = Hash.new;
     @persist = false;
     @compiled = nil;
+    @switch = "localhost";
     
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
@@ -41,7 +42,8 @@ class DBToaster
   def parse_arg(opt, arg)
     case opt
       when "--node"      then 
-        @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
+        @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9\.]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
+      when "--switch"    then @switch = arg;
       when "--partition" then 
         arg = arg.split(":");
         @partition_directives[arg[0]] = arg[1];
@@ -289,13 +291,18 @@ class DBToaster
     end.compact.each do |template|
       template.target.keys.each_with_index do |i, key|
         if template.paramlist.include? key then
-          if @map_info[template.target.source]["domain"][i] == nil && @domain_directives[template.relation][template.paramlist.index(key)] then
-            #puts @map_info[template.target.source]["map"].to_s + "[" + key.to_s + ":" + i.to_s + "] = " + @domain_directives[template.relation][template.paramlist.index(key)].to_s
-            @map_info[template.target.source]["domain"][i] = @domain_directives[template.relation][template.paramlist.index(key)].to_i;
-          elsif @map_info[template.target.source]["domain"][i] && !@domain_directives[template.relation][template.paramlist.index(key)]
-            raise "Error: Incompatible domain for map " + @map_info[template.target.source]["map"].to_s + ", key " + i.to_s + "; Template " + template.index.to_s + " says it is " + @domain_directives[template.relation][i].to_s + ", but prior declarations said " + @map_info[template.target.source]["domain"][i].to_s unless @domain_directives[template.relation][i].to_i == @map_info[template.target.source]["domain"][i].to_i;
+          unless @domain_directives[template.relation][template.paramlist.index(key)].nil? then
+            if @map_info[template.target.source]["domain"][i].nil? then
+              #puts @map_info[template.target.source]["map"].to_s + "[" + key.to_s + ":" + i.to_s + "] = " + @domain_directives[template.relation][template.paramlist.index(key)].to_s
+              @map_info[template.target.source]["domain"][i] = @domain_directives[template.relation][template.paramlist.index(key)].to_i;
+            else
+              raise "Error: Incompatible domain for map " + 
+                @map_info[template.target.source]["map"].to_s + ", key " + i.to_s + "; Template " + 
+                template.index.to_s + " says it is " + @domain_directives[template.relation][template.paramlist.index(key)].to_s + 
+                ", but prior declarations said " + @map_info[template.target.source]["domain"][i].to_s unless @domain_directives[template.relation][template.paramlist.index(key)].to_i == @map_info[template.target.source]["domain"][i].to_i;
+            end
           end
-        end
+        end 
       end
     end
     

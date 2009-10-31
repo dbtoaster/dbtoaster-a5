@@ -24,7 +24,7 @@ class TableInfo
   end
   
   def cmd_arg
-    "--" + @name.downcase;
+    "--" + @name.upcase;
   end
   
   def open(data_dir)
@@ -77,14 +77,14 @@ end
 
 
 GetoptLong.new(
-  [ "--regions"        , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--nations"        , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--customers"      , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--orders"         , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--lineitems"      , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--parts"          , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--supp"           , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--partsupp"       , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--REGIONS"        , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--NATIONS"        , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--CUSTOMERS"      , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--ORDERS"         , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--LINEITEMS"      , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--PARTS"          , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--SUPP"           , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--PARTSUPP"       , GetoptLong::OPTIONAL_ARGUMENT],
   [ "-d", "--data"     , GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
   case opt

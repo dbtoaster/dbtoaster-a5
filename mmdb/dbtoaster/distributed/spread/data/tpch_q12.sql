@@ -1,16 +1,17 @@
 --persist
---partition q:6
---partition qLINEITEMS1:0
---key CUSTOMERS[CID] <= ORDERS[O_CID]
---key ORDERS[OID] <= LINEITEMS[L_OID]
---node Alpha@localhost:52982
---node Beta@localhost:52983
---node Gamma@localhost:52984
---node Delta@localhost:52985
---node Epsilon@localhost:52986
---#node Rho@localhost:52987
---#node Bob@localhost:52988
---#node Joe@localhost:52989
+--partition q:5
+--partition qLINEITEMS1:2
+--#key CUSTOMERS[CID] <= ORDERS[O_CID]
+--#key ORDERS[OID] <= LINEITEMS[L_OID]
+--switch wl03.cac.cornell.edu
+--node Node01@wl04.cac.cornell.edu:52982
+--node Node02@wl05.cac.cornell.edu:52982
+--node Node03@wl06.cac.cornell.edu:52982
+--node Node04@wl07.cac.cornell.edu:52982
+--node Node05@wl08.cac.cornell.edu:52982
+--node Node06@wl09.cac.cornell.edu:52982
+--node Node07@wl10.cac.cornell.edu:52982
+--node Node08@wl11.cac.cornell.edu:52982
 --#slice transform ORDERS[0]%100000
 --#slice transform ORDERS[1]%100000
 --slice transform ORDERS[5]~/([0-9]*)-.*/\1/
@@ -26,7 +27,7 @@
 --domain CUSTOMERS=7500000,25
 --domain ORDERS=300000000,*,10,*
 --domain LINEITEMS=*,2,2,100
---source tpch_100m
+--slice source tpch/100m
 create table customers(cid int, nid int); 
 create table orders(oid int, o_cid int, opriority int, spriority int);
 create table lineitems(l_oid int, lateship int, latecommit int, shipmode int);

@@ -1,12 +1,14 @@
 
 require 'ok_mixins'
+require 'thread'
 
 class SlicerProcess
-  attr_reader :ready;
+  attr_reader :ready, :queue;
   attr_writer :ready;
   
-  def initialize(cmd, host)
-    @cmd, @host = cmd, host, nil;
+  def initialize(cmd, host, queue = false)
+    @cmd, @host = cmd, host;
+    @queue = Queue.new if queue;
   end
   
   def start
@@ -16,20 +18,55 @@ class SlicerProcess
       ssh.write(cmd.chomp + " 2>&1\n");
       ssh.each do |line|
         manager.ready = true if line.include? "Starting #<Thrift::NonblockingServer";
-        print line;
+        if @queue then
+          queue.push(line)
+        else
+          print line;
+        end
       end
       Logger.info { "SSH pid " + ssh.pid.to_s + " complete"; }
     end
     at_exit do 
-      Logger.info { "Killing SSH to " + @host + " and waiting..."; }
       Process.kill("HUP", process.pid); thread.join; 
-      Logger.info { "... done"; }
+      Logger.info { "Killed SSH to " + @host; }
     end
     self;
   end
   
   def SlicerProcess.base_path
     "dbtoaster/distributed/spread";
+  end
+end
+
+class SlicerMonitor
+  def initialize(hosts)
+    @connections = hosts.collect do |h|
+      SlicerProcess.new("PS1=''; while true; do sleep 5; ps auxww | grep ruby | grep -v grep; done", h, true);
+    end
+  end
+  
+  def start
+    @connections.each { |c| c.start };
+    Thread.new(@connections) do |connections|
+      loop do
+        log = connections.collect do |c| 
+          c.queue.pop_pending
+        end.flatten.collect do |line|
+          if /ruby .*-launcher.rb/.match(line) then
+            line.chomp.gsub(
+              /^.*(oak5.+)$/, "\\1" # XXX temporary hack to get rid of the bash prompt at the start
+            ).gsub(
+              /-I [^ ]* */, ""
+            ).gsub(
+              /ruby +[^ ]*\/([^\/ \-]*-launcher).rb/, "\\1"
+            ).gsub(
+              / (node-launcher .*-n *( [^ ]+).*)| ([^ ]+)-launcher.*/, " \\2\\3"
+            ).split(" ").values_at(10, 2, 3, 5)
+          end
+        end.compact.tabulate
+        puts log;
+      end
+    end
   end
 end
 
@@ -105,16 +142,21 @@ class Slicer
         @nodes.collect { |n| "-n " + n.to_s }.join(" ") + " " +
         @config.join(" "),
         @switch
-      )#.start;
+      ).start;
+
+    monitor = SlicerMonitor.new(@nodes.collect { |n| n.host } << @switch);
+    monitor.start
+
     sleep 0.1 while servers.find { |s| !s.ready };
-    Logger.info { "Servers started; starting client" }
-    SlicerProcess.new(
-      SlicerProcess.base_path + "/bin/client.sh -q " + 
+
+    client_cmd = 
+      SlicerProcess.base_path + "/bin/client.sh -q -s " + 
       @transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
       @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
-      "-h " + @source,
-      @switch
-    )#.start;
+      "-h " + @source
+
+    Logger.info { "Servers started; starting client: " + client_cmd }
+    SlicerProcess.new(client_cmd, @switch).start;
   end
 
 end

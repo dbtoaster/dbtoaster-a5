@@ -14,6 +14,7 @@ $options = Hash.new;
 opts = GetoptLong.new(
   [ "-o", "--output",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",        GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--switch",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--partition",   GetoptLong::REQUIRED_ARGUMENT ],
   [       "--domain",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--test",        GetoptLong::REQUIRED_ARGUMENT ],
@@ -22,7 +23,8 @@ opts = GetoptLong.new(
   [       "--key",         GetoptLong::REQUIRED_ARGUMENT ],
   [ "-r", "--transforms",  GetoptLong::REQUIRED_ARGUMENT ],
   [       "--persist",     GetoptLong::NO_ARGUMENT ],
-  [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ]
+  [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ],
+  [ "-w", "--switch-addr", GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
@@ -47,15 +49,28 @@ $toaster.map_info.each_value do |info|
   puts info["map"].to_s + "(" + info["id"].to_s + ")" unless info["discarded"];
 end
 
+map_keys = Hash.new;
 $output.write("\n\n############ Put Templates\n");
 $toaster.each_template do |i, template|
   $output.write("template " + (i+1).to_s + " " + template.to_s + "\n");
+  map_keys.assert_key(template.target.source) { template.target.keys };
 end
 
 #$output.write("\n\n############ Map Information\n");
 #$toaster.each_map do |map, info|
 #  $output.write("map " + map.to_s + " => Depth " + info["depth"].to_s + ";");
 #end
+
+puts "==== Partition Choices =====";
+
+$toaster.map_info.each_value do |info|
+  unless info["discarded"] then
+    puts info["map"].to_s + "(" + info["id"].to_s + ") : Partition on " + map_keys[info["id"]][info["partition"]] + " out of [" + map_keys[info["id"]].join(",") + "]";
+  end
+end
+
+
+
 
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
@@ -75,7 +90,7 @@ $output.write($toaster.test_directives.collect do |l| "update " + l end.join("\n
 $output.write("persist\n") if $toaster.persist;
 
 if $slicefile 
-  $slicefile.write("switch localhost\n");
+  $slicefile.write("switch " + $toaster.switch + "\n");
   $slicefile.write($toaster.slice_directives.join("\n"));
 end
 

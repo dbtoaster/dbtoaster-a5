@@ -23,7 +23,7 @@ GetoptLong.new(
   case opt
     when "-p", "--port" then port = arg.to_i;
     when "-n", "--node" then 
-      match = /([a-zA-Z]+)@([a-zA-Z.0-9\-]+)(:[0-9]+)?/.match(arg)
+      match = /([a-zA-Z0-9]+)@([a-zA-Z\.0-9\-]+)(:[0-9]+)?/.match(arg)
       raise "Invalid node parameter: " + arg unless match;
       node_addrs[match[1]] = NodeID.make(
         match[2],
