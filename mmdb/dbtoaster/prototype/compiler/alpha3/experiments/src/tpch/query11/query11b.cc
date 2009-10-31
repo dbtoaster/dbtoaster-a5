@@ -29,10 +29,10 @@ using namespace tr1;
 
 using namespace DBToaster::Profiler;
 map<int64_t,double,std::less<int64_t 
-    >,boost::pool_allocator<pair<int64_t,double> > > qSUPPLIER1;
-double q;
+    >,boost::pool_allocator<pair<int64_t,double> > > b_qSUPPLIER1;
+double b_q;
 map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > > 
-    qPARTSUPP1;
+    b_qPARTSUPP1;
 
 double on_insert_SUPPLIER_sec_span = 0.0;
 double on_insert_SUPPLIER_usec_span = 0.0;
@@ -47,25 +47,25 @@ double on_delete_PARTSUPP_usec_span = 0.0;
 
 void analyse_mem_usage(ofstream* stats)
 {
-   cout << "qSUPPLIER1 size: " << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
+   cout << "b_qSUPPLIER1 size: " << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
        + sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
+       * b_qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "qSUPPLIER1" << "," << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
+   (*stats) << "m," << "b_qSUPPLIER1" << "," << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
        + sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
+       * b_qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
 
-   cout << "qPARTSUPP1 size: " << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
+   cout << "b_qPARTSUPP1 size: " << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
        + sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
+       * b_qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "qPARTSUPP1" << "," << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
+   (*stats) << "m," << "b_qPARTSUPP1" << "," << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
        + sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
+       * b_qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
 
 }
 
@@ -89,12 +89,12 @@ void on_insert_SUPPLIER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    q += qSUPPLIER1[SUPPKEY];
-    qPARTSUPP1[SUPPKEY] += 1;
+    b_q += b_qSUPPLIER1[SUPPKEY];
+    b_qPARTSUPP1[SUPPKEY] += 1;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_SUPPLIER_sec_span, on_insert_SUPPLIER_usec_span);
-    (*results) << "on_insert_SUPPLIER" << "," << q << endl;
+    (*results) << "on_insert_SUPPLIER" << "," << b_q << endl;
 }
 
 void on_insert_PARTSUPP(
@@ -103,12 +103,12 @@ void on_insert_PARTSUPP(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    q += SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-    qSUPPLIER1[SUPPKEY] += SUPPLYCOST*AVAILQTY;
+    b_q += SUPPLYCOST*AVAILQTY*b_qPARTSUPP1[SUPPKEY];
+    b_qSUPPLIER1[SUPPKEY] += SUPPLYCOST*AVAILQTY;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_PARTSUPP_sec_span, on_insert_PARTSUPP_usec_span);
-    (*results) << "on_insert_PARTSUPP" << "," << q << endl;
+    (*results) << "on_insert_PARTSUPP" << "," << b_q << endl;
 }
 
 void on_delete_SUPPLIER(
@@ -118,12 +118,12 @@ void on_delete_SUPPLIER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    q += -1*qSUPPLIER1[SUPPKEY];
-    qPARTSUPP1[SUPPKEY] += -1;
+    b_q += -1*b_qSUPPLIER1[SUPPKEY];
+    b_qPARTSUPP1[SUPPKEY] += -1;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_SUPPLIER_sec_span, on_delete_SUPPLIER_usec_span);
-    (*results) << "on_delete_SUPPLIER" << "," << q << endl;
+    (*results) << "on_delete_SUPPLIER" << "," << b_q << endl;
 }
 
 void on_delete_PARTSUPP(
@@ -132,12 +132,12 @@ void on_delete_PARTSUPP(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    q += -1*SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-    qSUPPLIER1[SUPPKEY] += -1*SUPPLYCOST*AVAILQTY;
+    b_q += -1*SUPPLYCOST*AVAILQTY*b_qPARTSUPP1[SUPPKEY];
+    b_qSUPPLIER1[SUPPKEY] += -1*SUPPLYCOST*AVAILQTY;
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_PARTSUPP_sec_span, on_delete_PARTSUPP_usec_span);
-    (*results) << "on_delete_PARTSUPP" << "," << q << endl;
+    (*results) << "on_delete_PARTSUPP" << "," << b_q << endl;
 }
 
 DBToaster::DemoDatasets::SupplierStream SSBSupplier("/Users/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512);

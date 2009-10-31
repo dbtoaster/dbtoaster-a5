@@ -28,11 +28,21 @@ using namespace tr1;
 
 
 using namespace DBToaster::Profiler;
-map<int64_t,double,std::less<int64_t 
-    >,boost::pool_allocator<pair<int64_t,double> > > q;
 
-map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> 
-    >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > > qSUPPLIER1;
+// Datastructures for inner query (part b)
+double b_q;
+
+map<int64_t,double,std::less<int64_t>,
+    boost::pool_allocator<pair<int64_t,double> > > b_qSUPPLIER1;
+
+map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > > 
+    b_qPARTSUPP1;
+
+// Datastructures for outer query (part a)
+map<int64_t,double,std::less<int64_t>,boost::pool_allocator<pair<int64_t,double> > > q;
+
+map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,
+    boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > > qSUPPLIER1;
 
 map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > > 
     qPARTSUPP1;
@@ -102,6 +112,10 @@ void on_insert_SUPPLIER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    b_q += b_qSUPPLIER1[SUPPKEY];
+    b_qPARTSUPP1[SUPPKEY] += 1;
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it2 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -111,7 +125,11 @@ void on_insert_SUPPLIER(
         int64_t PS__PARTKEY = q_it2->first;
         q[PS__PARTKEY] += qSUPPLIER1[make_tuple(PS__PARTKEY,SUPPKEY)];
     }
+
     qPARTSUPP1[SUPPKEY] += 1;
+
+    // TODO: filter result by q[PS__PARTKEY] > b_q*FRACTION
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_SUPPLIER_sec_span, on_insert_SUPPLIER_usec_span);
@@ -123,8 +141,15 @@ void on_insert_PARTSUPP(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    b_q += SUPPLYCOST*AVAILQTY*b_qPARTSUPP1[SUPPKEY];
+    b_qSUPPLIER1[SUPPKEY] += SUPPLYCOST*AVAILQTY;
+
     q[PARTKEY] += SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
     qSUPPLIER1[make_tuple(PARTKEY,SUPPKEY)] += SUPPLYCOST*AVAILQTY;
+
+    // TODO: filter result by q[PS__PARTKEY] > b_q*FRACTION
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_PARTSUPP_sec_span, on_insert_PARTSUPP_usec_span);
@@ -137,6 +162,10 @@ void on_delete_SUPPLIER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    b_q += -1*b_qSUPPLIER1[SUPPKEY];
+    b_qPARTSUPP1[SUPPKEY] += -1;
+
     map<int64_t,double,std::less<int64_t 
         >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it4 = q.begin();
     map<int64_t,double,std::less<int64_t 
@@ -146,7 +175,11 @@ void on_delete_SUPPLIER(
         int64_t PS__PARTKEY = q_it4->first;
         q[PS__PARTKEY] += -1*qSUPPLIER1[make_tuple(PS__PARTKEY,SUPPKEY)];
     }
+
     qPARTSUPP1[SUPPKEY] += -1;
+
+    // TODO: filter result by q[PS__PARTKEY] > b_q*FRACTION
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_SUPPLIER_sec_span, on_delete_SUPPLIER_usec_span);
@@ -158,8 +191,15 @@ void on_delete_PARTSUPP(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    b_q += -1*SUPPLYCOST*AVAILQTY*b_qPARTSUPP1[SUPPKEY];
+    b_qSUPPLIER1[SUPPKEY] += -1*SUPPLYCOST*AVAILQTY;
+
     q[PARTKEY] += -1*SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
     qSUPPLIER1[make_tuple(PARTKEY,SUPPKEY)] += -1*SUPPLYCOST*AVAILQTY;
+
+    // TODO: filter result by q[PS__PARTKEY] > b_q*FRACTION
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_PARTSUPP_sec_span, on_delete_PARTSUPP_usec_span);

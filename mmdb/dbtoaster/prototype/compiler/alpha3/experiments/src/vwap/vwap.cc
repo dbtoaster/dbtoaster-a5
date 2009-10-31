@@ -234,12 +234,16 @@ void on_delete_BIDS(
     gettimeofday(&hstart, NULL);
     tuple<double, int, int, double, double> t = make_tuple(T,ID,BROKER_ID,P,V);
     BIDS.erase(t);
+    // TODO: keep a count of P-values, i.e. select p,count(*) from bids group by p
+    // For now we'll skip domain finalization
+    /*
     if ( BIDS.find(t) == BIDS.end() )
     {
         bigsum_B__P_dom.erase(P);
         qBIDS1.erase(P);
         qBIDS3.erase(P);
     }
+    */
 
     set<double, std::less<double>, boost::pool_allocator<double> >::iterator 
         bigsum_B__P_dom_it18 = bigsum_B__P_dom.begin();
