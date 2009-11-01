@@ -65,7 +65,7 @@ puts "==== Partition Choices =====";
 
 $toaster.map_info.each_value do |info|
   unless info["discarded"] then
-    puts info["map"].to_s + "(" + info["id"].to_s + ") : Partition on " + map_keys[info["id"]][info["partition"]] + " out of [" + map_keys[info["id"]].join(",") + "]";
+    puts info["map"].to_s + "(" + info["id"].to_s + ") : Partition on " + map_keys[info["id"]][info["partition"]].to_s + " out of [" + map_keys[info["id"]].join(",") + "]";
   end
 end
 

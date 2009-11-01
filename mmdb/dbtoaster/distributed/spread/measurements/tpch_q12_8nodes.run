@@ -1,0 +1,523 @@
+-sh-3.2$ ./bin/slicer.sh data/tpch_q12.slice 
+I, Ø2009-10-31T15:29:00.011361 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18870 starting: dbtoaster/distributed/spread/bin/node.sh -n Node01 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.011740 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18873 starting: dbtoaster/distributed/spread/bin/node.sh -n Node02 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012057 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18876 starting: dbtoaster/distributed/spread/bin/node.sh -n Node03 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012290 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18879 starting: dbtoaster/distributed/spread/bin/node.sh -n Node04 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012459 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18882 starting: dbtoaster/distributed/spread/bin/node.sh -n Node05 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012541 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18885 starting: dbtoaster/distributed/spread/bin/node.sh -n Node06 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012614 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18888 starting: dbtoaster/distributed/spread/bin/node.sh -n Node07 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012782 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18891 starting: dbtoaster/distributed/spread/bin/node.sh -n Node08 -p 52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.012959 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18894 starting: dbtoaster/distributed/spread/bin/switch.sh -n Node01?wl04.cac.cornell.edu:52982 -n Node02?wl05.cac.cornell.edu:52982 -n Node03?wl06.cac.cornell.edu:52982 -n Node04?wl07.cac.cornell.edu:52982 -n Node05?wl08.cac.cornell.edu:52982 -n Node06?wl09.cac.cornell.edu:52982 -n Node07?wl10.cac.cornell.edu:52982 -n Node08?wl11.cac.cornell.edu:52982 dbtoaster/distributed/spread/data/tpch_q12.unit -q 
+I, Ø2009-10-31T15:29:00.013454 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18897 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.013565 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18900 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.013693 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18903 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.013833 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18906 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.014573 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18909 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.014699 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18912 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.014815 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18915 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.014903 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18918 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+I, Ø2009-10-31T15:29:00.014975 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18921 starting: PS1=''; while true; do sleep 5; ps auxww Ä grep ruby Ä grep -v grep; done
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+tcgetattr: Invalid argument
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:41 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:28:39 2009 from wl01.cac.cornell.edu
+Last login: Sat Oct 31 15:29:06 2009 from wl01.cac.cornell.edu
+
+Last login: Sat Oct 31 15:29:07 2009 from wl01.cac.cornell.edu
+-sh-3.2$ done
+Initializing Server...
+-sh-3.2$ done
+Initializing Server...
+-sh-3.2$ done
+Initializing Server...
+-sh-3.2$ done
+Initializing Server...
+done
+Starting node server on port 52982...
+I, Ø2009-10-31T15:29:07.588529 £24724?  INFO -- : Starting £<Thrift::NonblockingServer:0x0000001abf4b68>
+done
+Starting node server on port 52982...
+I, Ø2009-10-31T15:29:07.591809 £20082?  INFO -- : Starting £<Thrift::NonblockingServer:0x0000000aa5a498>
+done
+Starting node server on port 52982...
+done
+Starting node server on port 52982...
+I, Ø2009-10-31T15:29:07.588319 £5070?  INFO -- : Starting £<Thrift::NonblockingServer:0x00000013a7ec98>
+I, Ø2009-10-31T15:29:07.589815 £21076?  INFO -- : Starting £<Thrift::NonblockingServer:0x000000033e5078>
+-sh-3.2$ done
+Initializing Switch...
+-sh-3.2$ done
+Initializing Server...
+-sh-3.2$ done
+Initializing Server...
+Identified node Node01 at wl04.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 0::37500000, 0::7500000, 0::25?
+  2Ø0::37500000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø0::937500, 0::25?
+  4Ø0::268435455, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 0::37500000, 0::10, 0::2147483647?
+  6Ø0::37500000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node02 at wl05.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 37500000::75000000, 0::7500000, 0::25?
+  2Ø37500000::75000000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø937500::1875000, 0::25?
+  4Ø268435455::536870910, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 37500000::75000000, 0::10, 0::2147483647?
+  6Ø37500000::75000000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node03 at wl06.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 75000000::112500000, 0::7500000, 0::25?
+  2Ø75000000::112500000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø1875000::2812500, 0::25?
+  4Ø536870910::805306365, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 75000000::112500000, 0::10, 0::2147483647?
+  6Ø75000000::112500000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node04 at wl07.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 112500000::150000000, 0::7500000, 0::25?
+  2Ø112500000::150000000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø2812500::3750000, 0::25?
+  4Ø805306365::1073741820, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 112500000::150000000, 0::10, 0::2147483647?
+  6Ø112500000::150000000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node05 at wl08.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 150000000::187500000, 0::7500000, 0::25?
+  2Ø150000000::187500000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø3750000::4687500, 0::25?
+done
+Starting node server on port 52982...
+  4Ø1073741820::1342177275, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 150000000::187500000, 0::10, 0::2147483647?
+  6Ø150000000::187500000, 0::2147483647, 0::10, 0::2147483647?
+done
+Starting node server on port 52982...
+I, Ø2009-10-31T15:29:07.609686 £25490?  INFO -- : Starting £<Thrift::NonblockingServer:0x0000000de1faa8>
+Identified node Node06 at wl09.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 187500000::225000000, 0::7500000, 0::25?
+  2Ø187500000::225000000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø4687500::5625000, 0::25?
+  4Ø1342177275::1610612730, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 187500000::225000000, 0::10, 0::2147483647?
+I, Ø2009-10-31T15:29:07.607755 £16893?  INFO -- : Starting £<Thrift::NonblockingServer:0x0000000a4f9258>
+  6Ø187500000::225000000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node07 at wl10.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 225000000::262500000, 0::7500000, 0::25?
+  2Ø225000000::262500000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø5625000::6562500, 0::25?
+  4Ø1610612730::1879048185, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 225000000::262500000, 0::10, 0::2147483647?
+  6Ø225000000::262500000, 0::2147483647, 0::10, 0::2147483647?
+Identified node Node08 at wl11.cac.cornell.edu:52982 : 
+  1Ø0::100, 0::2, 0::2, 0::2147483647, 0::10, 262500000::300000000, 0::7500000, 0::25?
+  2Ø262500000::300000000, 0::2147483647, 0::10, 0::2147483647, 0::2, 0::2, 0::100?
+  3Ø6562500::7500000, 0::25?
+  4Ø1879048185::2147483640, 0::2, 0::2, 0::100?
+  5Ø0::7500000, 0::25, 262500000::300000000, 0::10, 0::2147483647?
+  6Ø262500000::300000000, 0::2147483647, 0::10, 0::2147483647?
+W, Ø2009-10-31T15:29:07.612359 £22717?  WARN -- : Compiled Trigger: ON CUSTOMERSØ0, 0? :
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl05.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl06.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl07.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl08.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl09.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl10.cac.cornell.edu:52982 ; 0 fetches
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,CID,NID? ? wl11.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 1: ON CUSTOMERS(CID,NID)
+W, Ø2009-10-31T15:29:07.614790 £22717?  WARN -- : Compiled Trigger: ON ORDERSØ0, 0, 0, 0? :
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,OID,O_CID,NID? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 2: ON ORDERS(OID,O_CID,OPRIORITY,SPRIORITY)
+W, Ø2009-10-31T15:29:07.616715 £22717?  WARN -- : Compiled Trigger: ON LINEITEMSØ0, 0, 0, 0? :
+Map 1ØSHIPMODE,LATECOMMIT,LATESHIP,SPRIORITY,OPRIORITY,L_OID,O_CID,NID? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 3: ON LINEITEMS(L_OID,LATESHIP,LATECOMMIT,SHIPMODE)
+-sh-3.2$ done
+Initializing Server...
+W, Ø2009-10-31T15:29:07.618506 £22717?  WARN -- : Compiled Trigger: ON ORDERSØ0, 0, 0, 0? :
+Map 2ØOID,O_CID,OPRIORITY,SPRIORITY,LATESHIP,LATECOMMIT,SHIPMODE? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 4: ON ORDERS(OID,O_CID,OPRIORITY,SPRIORITY)
+W, Ø2009-10-31T15:29:07.620207 £22717?  WARN -- : Compiled Trigger: ON LINEITEMSØ0, 0, 0, 0? :
+Map 2ØL_OID,x_qCUSTOMERS_CID,OPRIORITY,SPRIORITY,LATESHIP,LATECOMMIT,SHIPMODE? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 5: ON LINEITEMS(L_OID,LATESHIP,LATECOMMIT,SHIPMODE)
+W, Ø2009-10-31T15:29:07.621345 £22717?  WARN -- : Compiled Trigger: ON ORDERSØ0, 0, 0, 0? :
+Map 6ØOID,O_CID,OPRIORITY,SPRIORITY? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 6: ON ORDERS(OID,O_CID,OPRIORITY,SPRIORITY)
+done
+Starting node server on port 52982...
+W, Ø2009-10-31T15:29:07.622375 £22717?  WARN -- : Compiled Trigger: ON CUSTOMERSØ0, 0? :
+Map 3ØCID,NID? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 7: ON CUSTOMERS(CID,NID)
+I, Ø2009-10-31T15:29:07.619367 £31192?  INFO -- : Starting £<Thrift::NonblockingServer:0x00000005b95aa8>
+-sh-3.2$ done
+Initializing Server...
+W, Ø2009-10-31T15:29:07.628790 £22717?  WARN -- : Compiled Trigger: ON LINEITEMSØ0, 0, 0, 0? :
+Map 4ØL_OID,LATESHIP,LATECOMMIT,SHIPMODE? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 8: ON LINEITEMS(L_OID,LATESHIP,LATECOMMIT,SHIPMODE)
+W, Ø2009-10-31T15:29:07.630002 £22717?  WARN -- : Compiled Trigger: ON CUSTOMERSØ0, 0? :
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl05.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl06.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl07.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl08.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl09.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl10.cac.cornell.edu:52982 ; 0 fetches
+Map 5ØCID,NID,x_qLINEITEMS_L_OID,OPRIORITY,SPRIORITY? ? wl11.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 9: ON CUSTOMERS(CID,NID)
+W, Ø2009-10-31T15:29:07.631760 £22717?  WARN -- : Compiled Trigger: ON ORDERSØ0, 0, 0, 0? :
+Map 5ØO_CID,NID,OID,OPRIORITY,SPRIORITY? ? wl04.cac.cornell.edu:52982 ; 0 fetches
+Loaded Template 10: ON ORDERS(OID,O_CID,OPRIORITY,SPRIORITY)
+done
+Starting switch server on port 52981...
+I, Ø2009-10-31T15:29:07.631947 £22717?  INFO -- : Starting £<Thrift::NonblockingServer:0x0000000e0af6c8>
+done
+Starting node server on port 52982...
+I, Ø2009-10-31T15:29:07.631834 £25740?  INFO -- : Starting £<Thrift::NonblockingServer:0x00000014c9eaa8>
+I, Ø2009-10-31T15:29:07.660953 £18868?  INFO -- slicer.rb:158:start: Servers started; starting client: dbtoaster/distributed/spread/bin/client.sh -q -s -t 'ORDERSØ5?«/(Ø0-9?*)-.*/?1/' -t 'LINEITEMSØ16?<d10,11' -t 'LINEITEMSØ17?<d10,12' -t 'LINEITEMSØ14?!' -u 'ORDERS(0,1,5,7)' -u 'CUSTOMERS(0,3)' -u 'LINEITEMS(0,16,17,14)' -h tpch/100m
+I, Ø2009-10-31T15:29:07.662700 £18868?  INFO -- slicer.rb:17:block in start: SSH pid 18925 starting: dbtoaster/distributed/spread/bin/client.sh -q -s -t 'ORDERSØ5?«/(Ø0-9?*)-.*/?1/' -t 'LINEITEMSØ16?<d10,11' -t 'LINEITEMSØ17?<d10,12' -t 'LINEITEMSØ14?!' -u 'ORDERS(0,1,5,7)' -u 'CUSTOMERS(0,3)' -u 'LINEITEMS(0,16,17,14)' -h tpch/100m
+tcgetattr: Invalid argument
+Last login: Sat Oct 31 15:29:06 2009 from wl01.cac.cornell.edu
+-sh-3.2$ Will print stats every : 1000
+Reading: Ädbtoaster/distributed/spread/bin/../src/bin/../../bin/tpch.sh -d tpch/100m --ORDERS --CUSTOMERS --LINEITEMS
+2.83414 seconds; 352.840720641888 updates per sec
+Node01  63.0  0.1  16668
+Node02  50.4  0.0  15412
+Node03  51.2  0.0  15436
+Node04  51.8  0.0  15460
+Node05  49.6  0.0  15436
+Node06  54.2  0.0  15424
+Node07  48.6  0.0  15456
+Node08  52.6  0.0  15408
+switch  71.4  0.0  15400
+client  7.0   0.0  15160
+tpch    1.7   0.0  4504 
+2.83517 seconds; 352.712535756233 updates per sec
+2.831935 seconds; 353.115449330581 updates per sec
+Node01  81.0  0.1  23432
+Node02  71.0  0.1  21372
+Node03  70.4  0.1  21352
+Node04  71.8  0.1  21412
+Node05  69.3  0.1  21376
+Node06  73.4  0.1  21372
+Node07  69.2  0.1  21388
+Node08  72.8  0.1  21360
+switch  84.2  0.0  15388
+client  5.4   0.0  15160
+tpch    1.5   0.0  4504 
+2.769215 seconds; 361.113167449981 updates per sec
+Node01  87.6  0.1  30912
+Node02  78.8  0.1  26844
+Node03  78.0  0.1  26872
+Node04  79.3  0.1  26860
+Node05  77.3  0.1  26876
+Node06  80.0  0.1  26832
+Node07  77.4  0.1  26808
+Node08  79.8  0.1  26816
+switch  88.0  0.0  15392
+client  5.4   0.0  15160
+tpch    1.5   0.0  4504 
+2.780189 seconds; 359.687776622381 updates per sec
+2.844489 seconds; 351.556993189286 updates per sec
+Node01  90.8  0.2  38156
+Node02  83.6  0.1  31628
+Node03  82.7  0.1  31740
+Node04  84.1  0.1  31600
+Node05  82.4  0.1  31628
+Node06  84.3  0.1  31616
+Node07  82.7  0.1  31660
+Node08  84.5  0.1  31584
+switch  90.3  0.0  15388
+client  5.1   0.0  15160
+tpch    1.4   0.0  4504 
+2.826263 seconds; 353.824113325618 updates per sec
+2.818658 seconds; 354.778763510862 updates per sec
+Node01  92.7  0.2  45624
+Node02  86.7  0.2  36812
+Node03  85.9  0.2  36748
+Node04  87.1  0.2  36740
+Node05  85.7  0.2  36884
+Node06  87.2  0.2  36744
+Node07  86.0  0.2  36852
+Node08  87.4  0.2  36800
+switch  91.5  0.0  15408
+client  5.0   0.0  15160
+tpch    1.3   0.0  4504 
+2.815583 seconds; 355.166230226564 updates per sec
+2.814783 seconds; 355.267173348709 updates per sec
+Node01  94.0  0.3  52880
+Node02  88.9  0.2  42260
+Node03  88.2  0.2  42252
+Node04  89.1  0.2  42316
+Node05  88.0  0.2  42292
+Node06  89.2  0.2  42244
+Node07  88.2  0.2  42300
+Node08  89.4  0.2  42232
+switch  92.3  0.0  15408
+client  5.0   0.0  15160
+tpch    1.3   0.0  4504 
+2.813017 seconds; 355.490208555441 updates per sec
+Node01  95.0  0.3  60436
+Node02  90.5  0.2  47832
+Node03  89.9  0.2  47948
+Node04  90.6  0.2  47844
+Node05  89.8  0.2  47888
+Node06  90.8  0.2  47904
+Node07  89.9  0.2  47876
+Node08  91.0  0.2  47844
+switch  92.9  0.0  15400
+client  5.0   0.0  15160
+tpch    1.3   0.0  4504 
+2.805276 seconds; 356.47116362169 updates per sec
+2.79868 seconds; 357.31130390041 updates per sec
+Node01  95.7  0.4  68156
+Node02  91.5  0.3  53232
+Node03  90.8  0.3  53164
+Node04  91.6  0.3  53236
+Node05  90.8  0.3  53196
+Node06  91.6  0.3  53248
+Node07  91.0  0.3  53344
+Node08  91.9  0.3  53220
+switch  93.4  0.0  15396
+client  5.0   0.0  15160
+tpch    1.3   0.0  4504 
+2.64326 seconds; 378.320710032309 updates per sec
+2.55249 seconds; 391.774306657421 updates per sec
+Node01  96.2  0.4  77244
+Node02  90.2  0.3  57376
+Node03  89.6  0.3  57252
+Node04  90.2  0.3  57276
+Node05  89.5  0.3  57412
+Node06  90.2  0.3  57364
+Node07  89.7  0.3  57388
+Node08  90.4  0.3  57320
+switch  92.2  0.0  15408
+client  5.1   0.0  15160
+tpch    1.4   0.0  4504 
+3.282732 seconds; 304.624319012335 updates per sec
+Node01  96.6  0.5  85276
+Node02  82.0  0.3  57440
+Node03  81.3  0.3  57324
+Node04  81.9  0.3  57348
+Node05  81.4  0.3  57476
+Node06  82.0  0.3  57432
+Node07  81.6  0.3  57456
+Node08  82.2  0.3  57436
+switch  85.7  0.0  15388
+client  5.0   0.0  15160
+tpch    1.3   0.0  4504 
+4.870957 seconds; 205.298465989332 updates per sec
+Node01  96.9  0.5  90444
+Node02  74.8  0.3  57456
+Node03  74.2  0.3  57404
+Node04  74.7  0.3  57348
+Node05  74.2  0.3  57492
+Node06  74.8  0.3  57448
+Node07  74.4  0.3  57472
+Node08  75.0  0.3  57436
+switch  80.3  0.0  15408
+client  4.8   0.0  15160
+tpch    1.3   0.0  4504 
+4.854847 seconds; 205.979714705736 updates per sec
+Node01  97.2  0.5  94688
+Node02  68.5  0.3  57456
+Node03  68.0  0.3  57404
+Node04  68.5  0.3  57348
+Node05  68.0  0.3  57492
+Node06  68.6  0.3  57448
+Node07  68.2  0.3  57472
+Node08  68.8  0.3  57436
+switch  75.8  0.0  15404
+client  4.7   0.0  15160
+tpch    1.3   0.0  4504 
+4.948784 seconds; 202.069841803562 updates per sec
+Node01  97.5  0.6  101328
+Node02  63.2  0.3  57456 
+Node03  62.7  0.3  57404 
+Node04  63.2  0.3  57348 
+Node05  62.8  0.3  57492 
+Node06  63.3  0.3  57448 
+Node07  62.9  0.3  57472 
+Node08  63.5  0.3  57436 
+switch  71.3  0.0  15408 
+client  4.6   0.0  15160 
+tpch    1.2   0.0  4504  
+6.172557 seconds; 162.007414431329 updates per sec
+Node01  97.7  0.6  104936
+Node02  58.7  0.3  57456 
+Node03  58.3  0.3  57404 
+Node04  58.7  0.3  57348 
+Node05  58.3  0.3  57492 
+Node06  58.8  0.3  57448 
+Node07  58.4  0.3  57472 
+Node08  58.9  0.3  57436 
+switch  68.1  0.0  15384 
+client  4.5   0.0  15160 
+tpch    1.2   0.0  4504  
+4.725142 seconds; 211.633851427111 updates per sec
+Node01  97.8  0.6  110884
+Node02  54.8  0.3  57456 
+Node03  54.4  0.3  57404 
+Node04  54.8  0.3  57348 
+Node05  54.4  0.3  57492 
+Node06  54.8  0.3  57448 
+Node07  54.5  0.3  57472 
+Node08  55.0  0.3  57436 
+switch  65.4  0.0  15408 
+client  4.5   0.0  15160 
+tpch    1.2   0.0  4504  
+4.478751 seconds; 223.276534015845 updates per sec
+Node01  98.0  0.7  115416
+Node02  51.4  0.3  57456 
+Node03  51.0  0.3  57404 
+Node04  51.3  0.3  57348 
+Node05  51.0  0.3  57492 
+Node06  51.4  0.3  57448 
+Node07  51.1  0.3  57472 
+Node08  51.6  0.3  57436 
+switch  62.7  0.0  15408 
+client  4.4   0.0  15160 
+tpch    1.2   0.0  4504  
+6.152369 seconds; 162.539015458923 updates per sec
+Node01  98.1  0.7  119256
+Node02  48.4  0.3  57456 
+Node03  48.0  0.3  57404 
+Node04  48.3  0.3  57348 
+Node05  48.0  0.3  57492 
+Node06  48.4  0.3  57448 
+Node07  48.1  0.3  57472 
+Node08  48.5  0.3  57436 
+switch  60.0  0.0  15392 
+client  4.3   0.0  15160 
+tpch    1.1   0.0  4504  
+Node01  98.3  0.7  122248
+Node02  45.7  0.3  57456 
+Node03  45.3  0.3  57404 
+Node04  45.6  0.3  57348 
+Node05  45.3  0.3  57492 
+Node06  45.7  0.3  57448 
+Node07  45.4  0.3  57472 
+Node08  45.8  0.3  57436 
+switch  57.4  0.0  15408 
+client  4.2   0.0  15160 
+tpch    1.1   0.0  4504  
+8.521494 seconds; 117.350314393227 updates per sec
+Node01  98.4  0.7  126060
+Node02  43.3  0.3  57456 
+Node03  42.9  0.3  57404 
+Node04  43.2  0.3  57348 
+Node05  43.0  0.3  57492 
+Node06  43.3  0.3  57448 
+Node07  43.0  0.3  57472 
+Node08  43.4  0.3  57436 
+switch  55.1  0.0  15392 
+client  4.1   0.0  15160 
+tpch    1.1   0.0  4504  
+8.411084 seconds; 118.890739885608 updates per sec
+Node01  98.5  0.7  129132
+Node02  41.1  0.3  57456 
+Node03  40.8  0.3  57404 
+Node04  41.1  0.3  57348 
+Node05  40.8  0.3  57492 
+Node06  41.1  0.3  57448 
+Node07  40.9  0.3  57472 
+Node08  41.2  0.3  57436 
+switch  53.2  0.0  15388 
+client  4.0   0.0  15160 
+tpch    1.0   0.0  4504  
+Node01  98.6  0.8  132464
+Node02  39.1  0.3  57456 
+Node03  38.8  0.3  57404 
+Node04  39.1  0.3  57348 
+Node05  38.9  0.3  57492 
+Node06  39.2  0.3  57448 
+Node07  38.9  0.3  57472 
+Node08  39.3  0.3  57436 
+switch  51.3  0.0  15408 
+client  3.9   0.0  15160 
+tpch    1.0   0.0  4504  
+7.081659 seconds; 141.209849274019 updates per sec
+Node01  98.6  0.8  133728
+Node02  37.4  0.3  57456 
+Node03  37.1  0.3  57404 
+Node04  37.3  0.3  57348 
+Node05  37.1  0.3  57492 
+Node06  37.4  0.3  57448 
+Node07  37.2  0.3  57472 
+Node08  37.5  0.3  57436 
+switch  50.0  0.0  15400 
+client  3.9   0.0  15160 
+tpch    1.0   0.0  4504  
+4.806774 seconds; 208.039737254133 updates per sec
+Node01  98.7  0.8  136200
+Node02  35.7  0.3  57456 
+Node03  35.4  0.3  57404 
+Node04  35.7  0.3  57348 
+Node05  35.5  0.3  57492 
+Node06  35.8  0.3  57448 
+Node07  35.6  0.3  57472 
+Node08  35.8  0.3  57436 
+switch  48.7  0.0  15408 
+client  3.8   0.0  15160 
+tpch    1.0   0.0  4504  
+5.614911 seconds; 178.097212938905 updates per sec
+Node01  98.8  0.8  138644
+Node02  34.2  0.3  57456 
+Node03  34.0  0.3  57404 
+Node04  34.2  0.3  57348 
+Node05  34.0  0.3  57492 
+Node06  34.3  0.3  57448 
+Node07  34.1  0.3  57472 
+Node08  34.4  0.3  57436 
+switch  47.6  0.0  15388 
+client  3.8   0.0  15160 
+tpch    1.0   0.0  4504  
+6.175262 seconds; 161.936449012204 updates per sec
+Node01  98.9  0.8  143232
+Node02  32.9  0.3  57456 
+Node03  32.6  0.3  57404 
+Node04  32.8  0.3  57348 
+Node05  32.6  0.3  57492 
+Node06  32.9  0.3  57448 
+Node07  32.7  0.3  57472 
+Node08  33.0  0.3  57436 
+switch  46.5  0.0  15404 
+client  3.8   0.0  15160 
+tpch    1.0   0.0  4504  
+5.257655 seconds; 190.198862420604 updates per sec
+/home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/socket.rb:119:in `rescue in read': end of file reached (Thrift::TransportException)
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/socket.rb:95:in `read'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/base_transport.rb:52:in `read_all'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/framed_transport.rb:78:in `read_frame'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/framed_transport.rb:49:in `read'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/transport/base_transport.rb:52:in `read_all'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/protocol/binary_protocol.rb:186:in `read_i32'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/protocol/binary_protocol.rb:111:in `read_message_begin'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/lib/thrift/rb/thrift/client.rb:45:in `receive_message'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/src/gen-rb/switch_node.rb:24:in `recv_update'
+	from /home/fs01/oak5/dbtoaster/distributed/spread/src/gen-rb/switch_node.rb:16:in `update'
+	from dbtoaster/distributed/spread/bin/../src/bin/client-launcher.rb:136:in `block in <main>'
+	from dbtoaster/distributed/spread/bin/../src/bin/client-launcher.rb:97:in `each'
+	from dbtoaster/distributed/spread/bin/../src/bin/client-launcher.rb:97:in `<main>'
+dbtoaster/distributed/spread/bin/../src/bin/../../bin/../src/bin/tpch-launcher.rb:131:in `write': Broken pipe - <STDOUT> (Errno::EPIPE)
+	from dbtoaster/distributed/spread/bin/../src/bin/../../bin/../src/bin/tpch-launcher.rb:131:in `puts'
+	from dbtoaster/distributed/spread/bin/../src/bin/../../bin/../src/bin/tpch-launcher.rb:131:in `puts'
+	from dbtoaster/distributed/spread/bin/../src/bin/../../bin/../src/bin/tpch-launcher.rb:131:in `interleave'
+	from dbtoaster/distributed/spread/bin/../src/bin/../../bin/../src/bin/tpch-launcher.rb:136:in `<main>'
+
