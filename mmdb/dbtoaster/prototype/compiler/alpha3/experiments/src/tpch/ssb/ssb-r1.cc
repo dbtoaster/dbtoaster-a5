@@ -2964,7 +2964,7 @@ void on_delete_CUSTOMER(
         hstart, hend, on_delete_CUSTOMER_sec_span, on_delete_CUSTOMER_usec_span);
 }
 
-DBToaster::DemoDatasets::NationStream SSBNation("/Users/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseNationField,4,100,512);
+DBToaster::DemoDatasets::NationStream SSBNation("/home/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseNationField,4,100,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::NationTupleAdaptor> SSBNation_adaptor(new DBToaster::DemoDatasets::NationTupleAdaptor());
 static int streamSSBNationId = 0;
@@ -2979,7 +2979,7 @@ struct on_insert_NATION_fun_obj {
 
 on_insert_NATION_fun_obj fo_on_insert_NATION_0;
 
-DBToaster::DemoDatasets::LineitemStream SSBLineitem("/Users/yanif/datasets/tpch/sf1/singlefile/lineitem.tbl.a",&DBToaster::DemoDatasets::parseLineitemField,16,65000000,512);
+DBToaster::DemoDatasets::LineitemStream SSBLineitem("/home/yanif/datasets/tpch/sf1/singlefile/lineitem.tbl.a",&DBToaster::DemoDatasets::parseLineitemField,16,65000000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::LineitemSimpleTupleAdaptor> SSBLineitem_adaptor(new DBToaster::DemoDatasets::LineitemSimpleTupleAdaptor());
 static int streamSSBLineitemId = 1;
@@ -2994,7 +2994,7 @@ struct on_insert_LINEITEM_fun_obj {
 
 on_insert_LINEITEM_fun_obj fo_on_insert_LINEITEM_1;
 
-DBToaster::DemoDatasets::OrderStream SSBOrder("/Users/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512);
+DBToaster::DemoDatasets::OrderStream SSBOrder("/home/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::OrderTupleAdaptor> SSBOrder_adaptor(new DBToaster::DemoDatasets::OrderTupleAdaptor());
 static int streamSSBOrderId = 2;
@@ -3009,7 +3009,7 @@ struct on_insert_ORDERS_fun_obj {
 
 on_insert_ORDERS_fun_obj fo_on_insert_ORDERS_2;
 
-DBToaster::DemoDatasets::SupplierStream SSBSupplier("/Users/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512);
+DBToaster::DemoDatasets::SupplierStream SSBSupplier("/home/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::SupplierTupleAdaptor> SSBSupplier_adaptor(new DBToaster::DemoDatasets::SupplierTupleAdaptor());
 static int streamSSBSupplierId = 3;
@@ -3024,7 +3024,7 @@ struct on_insert_SUPPLIER_fun_obj {
 
 on_insert_SUPPLIER_fun_obj fo_on_insert_SUPPLIER_3;
 
-DBToaster::DemoDatasets::PartStream SSBParts("/Users/yanif/datasets/tpch/sf1/singlefile/part.tbl.a",&DBToaster::DemoDatasets::parsePartField,9,2100000,512);
+DBToaster::DemoDatasets::PartStream SSBParts("/home/yanif/datasets/tpch/sf1/singlefile/part.tbl.a",&DBToaster::DemoDatasets::parsePartField,9,2100000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::PartTupleAdaptor> SSBParts_adaptor(new DBToaster::DemoDatasets::PartTupleAdaptor());
 static int streamSSBPartsId = 4;
@@ -3039,7 +3039,7 @@ struct on_insert_PARTS_fun_obj {
 
 on_insert_PARTS_fun_obj fo_on_insert_PARTS_4;
 
-DBToaster::DemoDatasets::CustomerStream SSBCustomer("/Users/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512);
+DBToaster::DemoDatasets::CustomerStream SSBCustomer("/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::CustomerTupleAdaptor> SSBCustomer_adaptor(new DBToaster::DemoDatasets::CustomerTupleAdaptor());
 static int streamSSBCustomerId = 5;

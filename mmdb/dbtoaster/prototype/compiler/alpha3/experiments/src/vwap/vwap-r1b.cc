@@ -174,7 +174,7 @@ void on_delete_BIDS(
     (*results) << "on_delete_BIDS" << "," << q << endl;
 }
 
-DBToaster::DemoDatasets::OrderbookFileStream VwapBids("/Users/yanif/tmp/data/cleanedData.csv",10000);
+DBToaster::DemoDatasets::OrderbookFileStream VwapBids("/home/yanif/datasets/orderbook/MSFT/20081201.csv",10000);
 
 boost::shared_ptr<DBToaster::DemoDatasets::BidsOrderbookTupleAdaptor> VwapBids_adaptor(new DBToaster::DemoDatasets::BidsOrderbookTupleAdaptor());
 static int streamVwapBidsId = 0;
