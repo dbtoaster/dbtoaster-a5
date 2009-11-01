@@ -211,6 +211,19 @@ class SpatialIndex
       map;
     end
   end
+  
+  def collect(val = @map, key = Array.new, ret = Array.new)
+    if key.size >= depth then
+      ret.push(yield key, val);
+    else
+      val.each do |v|
+        key.push(v[0]);
+        collect(v[1], key, ret) { |k, v| yield k, v };
+        key.pop;
+      end
+    end
+    ret;
+  end
 end
 
 ###################################################
@@ -256,7 +269,24 @@ class CompiledTrigger
         end.uniq.sort do |a, b|
           # Eliminate duplicates, and then sort over the first index.
           a.begin <=> b.begin;
-        end
+        end.collect do |r|
+          # Further subdivision may be necessary for the fetches.  
+          # Identify corresponding ranges in the maps being read from
+          subdivisions = template.entries.collect do |e|
+            if e.keys.include? i then
+              layout.maplist[e.source].collect do |part|
+                part.range[e.key.index(i)] if part.range[e.key.index(i)].overlaps? r;
+              end
+            end
+          end.flatten.compact.uniq
+          # If there are 0 or 1 corresponding ranges, all the reads occur on the same boundary lines
+          # If there are more ranges... we need to subdivide
+          if subdivisions.size > 1 then
+            subdivisions
+          else
+            r
+          end
+        end.flatten
       end
     
     # The result (boundaries) is a list of lists of ranges, the same input that
@@ -290,7 +320,11 @@ class CompiledTrigger
   end
   
   def to_s
-    "ON " + template.relation + "[" + ([0] * @index.depth).join(", ") + "] :\n" +
-      @index[[0] * @index.depth].collect { |ms| ms.to_s }.join("\n");
+    @index.collect do |key, msg_sets|
+      "ON " + template.relation + "[" + 
+        key.collect { |k| k.begin.to_s + "::" + k.end.to_s }.join(", ") + 
+      "] :\n" +
+      msg_sets.collect { |ms| "   " + ms.to_s }.join("\n");
+    end.join("\n");
   end
 end

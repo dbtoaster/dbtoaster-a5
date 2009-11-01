@@ -37,22 +37,6 @@ class SwitchNodeHandler
   end
 
   def update(table, params)
-#    RubyProf.resume;
-    if @update_count >= 30000 then
-#      tmp = Time.now;
-#      Logger.default.warn { (tmp - @update_timer).to_s + " seconds for 1000 updates; " + (1000 / (tmp - @update_timer)).to_s + " updates per sec" } unless @update_timer == nil;
-#      unless @update_count == 0 then
-#        puts "Printing stats and exiting...";
-#        result = RubyProf.stop;
-#        RubyProf::FlatPrinter.new(result).print(STDOUT) ;
-#        exit;
-#      end
-#      @update_timer = tmp;
-#      @update_count = 1;
-      exit
-    else
-      @update_count += 1;
-    end
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |trigger|
 #      Logger.default.info { "Update triggered template: " + trigger.template.to_s }
@@ -80,7 +64,6 @@ class SwitchNodeHandler
         next_cmd;
       end
     end
-#    RubyProf.pause;
   end
   
   def update_slow(table, params)
@@ -121,9 +104,10 @@ class SwitchNodeHandler
   
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
+    puts "Loading Template " + index.to_s + ": " + template.summary;
     template.index = index;
     compiled = @layout.compile_trigger(template);
-    Logger.default.warn { "Compiled Trigger: " + compiled.to_s }
+    puts "Compiled Trigger: \n" + compiled.to_s;
     @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   

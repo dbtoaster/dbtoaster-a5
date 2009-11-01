@@ -36,14 +36,15 @@ GetoptLong.new(
       $cols[match[1]] = match[2].split(/ *, */).collect { |i| i.to_i };
       
     when "--transform", "-t" then
-      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+)|!|%([0-9]+))/.match(arg)
+      match = / *([a-zA-Z\-+_]*) *\[([0-9,]+)\](~\/([^\/]*)\/([^\/]*)\/|<([a-z]?)([0-9, ]+)|#|%([0-9]+)|@([0-9]+)\/([0-9]+))/.match(arg)
       raise "Invalid transform argument: " + arg unless match;
       $transforms.assert_key(match[1]){ Hash.new }.assert_key(match[2].to_i){ Array.new }.push(
         case match[3][0]
           when "~"[0] then [:regex, Regexp.new(match[4]), match[5]]
           when "<"[0] then [:cmp, match[6], match[7].split(/ *, */)]
-          when "!"[0] then [:intify, Hash.new, 0]
+          when "#"[0] then [:intify, Hash.new, 0]
           when "%"[0] then [:mod, match[8].to_i]
+          when "@"[0] then [:rotate, match[9].to_i, match[10].to_i]
           else raise "Error: Unknown transform type: " + match[3]
         end)
         
@@ -120,6 +121,9 @@ $input.each do |line|
                 t[1].assert_key(params[col.to_i]) { t[2] += 1; }.to_s;
               when :mod then
                 (params[col.to_i].to_i % t[1].to_i).to_s;
+              when :rotate then
+                ((params[col.to_i].to_i % t[1].to_i) * (t[2].to_i / t[1].to_i) + (params[col.to_i].to_i / t[1].to_i).to_i).to_s;
+                
             end
         end
       end
@@ -142,9 +146,8 @@ $input.each do |line|
   if $stats_every >= 0 then
     $count += 1;
     diff = (Time.now - $starttime)
-    if $count >= $stats_every then
-      puts diff.to_s + " seconds; " + ($count.to_f / diff.to_f).to_s + " updates per sec"
-      $count = 0;
+    if $count % $stats_every == 0 then
+      puts diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
       puts switch.dump if ($verbose && !$test);
       $starttime = Time.now;
     end

@@ -495,6 +495,10 @@ class UpdateTemplate
       @expression.to_s;
   end
   
+  def summary
+    "ON " + @relation + " : Map " + target.source.to_s + " <- " + entries.collect { |e| "Map " + e.source.to_s }.join(", ");
+  end
+  
   def UpdateTemplate.get_map(map_name, params)
     @@map_names.assert_key(map_name) { {"id" => @@map_id += 1, "params"=> params}; }
     @@map_names[map_name]["id"];

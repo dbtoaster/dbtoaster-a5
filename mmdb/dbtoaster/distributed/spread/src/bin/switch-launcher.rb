@@ -68,7 +68,7 @@ nodes.each_pair do |id, partitions|
 end
 puttemplates.each_pair do |id, cmd|
   handler.install_template(cmd, id)
-  puts "Loaded Template " + id.to_s + ": ON " + cmd.relation.to_s + "(" + cmd.paramlist.join(",") + ")";
+  puts "Loaded Template " + id.to_s;
 end
 
 puts "done\nStarting switch server on port " + port.to_s + "..."

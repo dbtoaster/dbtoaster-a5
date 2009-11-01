@@ -49,10 +49,11 @@ ARGV.each do |opt|
   end
 end
 
-handler, server = MapNode::Processor.listen($port);
+$name = "Solo Node" unless $name;
+handler, server = MapNode::Processor.listen($port, $name);
 handler.setup(cmds);
 
-puts "done\nStarting node server on port " + $port.to_s + "..."
+puts "done\nStarting node " + $name + " server on port " + $port.to_s + "..."
 
 Signal.trap("HUP") { exit }
 server.serve();

@@ -103,8 +103,8 @@ module MapNode
   end
   
   class Processor
-    def Processor.listen(port, config = Array.new)
-      handler = MapNodeHandler.new();
+    def Processor.listen(port, name = "Unknown MapNode", config = Array.new)
+      handler = MapNodeHandler.new(name);
       config.each do |f|
         handler.setup(
           case f

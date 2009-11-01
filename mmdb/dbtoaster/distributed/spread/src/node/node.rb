@@ -24,6 +24,8 @@ class CommitNotification
 end
 
 class RemoteCommitNotification
+  @@nodecache = Hash.new;
+  
   def initialize(entries, destination, cmdid)
     @entries, @destination, @cmdid = Hash.new, destination, cmdid;
     entries.each do |e|
@@ -64,9 +66,8 @@ class RemoteCommitNotification
     Logger.debug { "RemoteCallback Check Ready: holding = " + @holding.to_s + "; entries left = " + @count.to_s }
     if (@holding <= 0) && (@count <= 0) then
       Logger.debug { "Connecting to " + @destination.to_s }
-      peer = MapNode::Client.connect(@destination.host, @destination.port);
+      peer = @@nodecache.assert_key(@destination.to_s) { MapNode::Client.connect(@destination.host, @destination.port) };
       peer.push_get(@entries, @cmdid);
-      peer.close();
       Logger.debug { "push finished" }
       true;
     end
@@ -115,12 +116,53 @@ end
 
 ###################################################
 
+class MapNodeStats
+  def initialize(name)
+    @name = name;
+    @stats = @mass_puts = @puts = @fetches = @pushes = 0;
+  end
+  
+  def stat
+    if ((@stats += 1) % 50000) == 0 then
+      Logger.warn { "Status: " + @name + ";" + 
+        " put "      + @puts.to_s +
+        " mass_put " + @mass_puts.to_s +
+        " fetch "    + @fetches.to_s +
+        " pushes "    + @pushes.to_s +
+      "" }
+    end
+  end
+  
+  def mass_put
+    @mass_puts += 1;
+    stat;
+  end
+  
+  def put
+    @puts += 1;
+    stat;
+  end
+  
+  def fetch
+    @fetches += 1;
+    stat;
+  end
+  
+  def push
+    @pushes += 1;
+    stat;
+  end
+end
+
+###################################################
+
 class MapNodeHandler
 
-  def initialize()
+  def initialize(name)
     @maps = Hash.new;
     @templates = Hash.new;
     @cmdcallbacks = Hash.new;
+    @stats = MapNodeStats.new(name);
   end
   
   ############# Internal Accessors
@@ -230,6 +272,7 @@ class MapNodeHandler
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
     install_discovery(id, record, valuation.params);
+    @stats.put;
   end
   
   def mass_put(id, template, expected_gets, params)
@@ -242,6 +285,7 @@ class MapNodeHandler
     install_discovery(id, discovery, valuation.params);
     # If we aren't waiting for anything, we need to trick the discovery multiplexer into firing a commit.
     discovery.finish_message if expected_gets <= 0;
+    @stats.mass_put;
   end
   
   def get(target)
@@ -277,9 +321,10 @@ class MapNodeHandler
         end
       end
     rescue Thrift::Exception => ex
-      puts "Error: " + ex.why;
+      puts "Error: " + ex.to_s;
       puts ex.backtrace.join("\n");
     end
+    @stats.fetch;
   end
   
   def push_get(result, cmdid)
@@ -306,6 +351,7 @@ class MapNodeHandler
       end
       @cmdcallbacks.delete(cmdid) if @cmdcallbacks[cmdid].finish_message;
     end
+    @stats.push;
   end
   
   ############# Internal Control

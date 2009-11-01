@@ -57,7 +57,7 @@ class TableInfo
   end
   
   def valid
-    @line && @deps.assert { |d| d[1].finished_key? @line[d[0]].to_i }
+    (@line != nil) # && @deps.assert { |d| d[1].finished_key? @line[d[0]].to_i }
   end
 end
 
