@@ -781,31 +781,8 @@ DBToaster::StandaloneEngine::FileStreamDispatcher router;
 
 void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
 {
-    unsigned long tuple_counter = 0;
-    double tup_sec_span = 0.0;
-    double tup_usec_span = 0.0;
-    struct timeval tvs, tve;
-    gettimeofday(&tvs, NULL);
-    while ( sources.streamHasInputs() ) {
-        struct timeval tups, tupe;
-        gettimeofday(&tups, NULL);
-        DBToaster::StandaloneEngine::DBToasterTuple t = sources.nextInput();
-        router.dispatch(t);
-        ++tuple_counter;
-        gettimeofday(&tupe, NULL);
-        DBToaster::Profiler::accumulate_time_span(tups, tupe, tup_sec_span, tup_usec_span);
-        if ( (tuple_counter % 100) == 0 )
-        {
-            DBToaster::Profiler::reset_time_span_printing_global(
-                "tuples", tuple_counter, 100, tvs, tup_sec_span, tup_usec_span, "query", log);
-            analyse_mem_usage(stats);
-            analyse_handler_usage(stats);
-        }
-    }
-    DBToaster::Profiler::reset_time_span_printing_global(
-        "tuples", tuple_counter, (tuple_counter%100), tvs, tup_sec_span, tup_usec_span, "query", log);
-    analyse_handler_usage(stats);
-    analyse_mem_usage(stats);
+    cout << "Sleeping..." << endl;
+    sleep(1000);
 }
 
 

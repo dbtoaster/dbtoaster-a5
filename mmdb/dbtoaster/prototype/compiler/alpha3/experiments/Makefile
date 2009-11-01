@@ -1,5 +1,5 @@
 CXX=g++44
-CXXFLAGS=-DENABLE_SIMPLE_PROFILER -I/home/yanif/workspace/dbtc_alpha3/include -I/home/yanif/software/boost/include
+CXXFLAGS=-g -DENABLE_SIMPLE_PROFILER -I/home/yanif/workspace/dbtc_alpha3/include -I/home/yanif/software/boost/include
 LDFLAGS=-L/home/yanif/software/boost/lib -lboost_system -lboost_thread -lboost_program_options
 
 all: vwap ssb query11 query18 query22
@@ -43,3 +43,10 @@ clean:
 	rm -f src/tpch/query11/query11 src/tpch/query11/*.o
 	rm -f src/tpch/query18/query18 src/tpch/query18/*.o
 	rm -f src/tpch/query22/query22 src/tpch/query22/*.o
+
+expclean:
+	rm -f src/vwap/engine.* src/vwap/log
+	rm -f src/tpch/ssb/engine.* src/tpch/ssb/log
+	rm -f src/tpch/query11/engine.* src/tpch/query11/log
+	rm -f src/tpch/query18/engine.* src/tpch/query18/log
+	rm -f src/tpch/query22/engine.* src/tpch/query22/log

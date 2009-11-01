@@ -23,6 +23,8 @@ using namespace tr1;
 #include "datasets/adaptors.h"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/pool/pool.hpp>
+#include <boost/pool/pool_alloc.hpp>
 
 
 using namespace DBToaster::Profiler;
@@ -30,16 +32,20 @@ using namespace DBToaster::Profiler;
 // Datastructures for inner query (part b)
 double b_q;
 
-map<int64_t,double> b_qSUPPLIER1;
+map<int64_t,double,std::less<int64_t>,
+    boost::pool_allocator<pair<int64_t,double> > > b_qSUPPLIER1;
 
-map<int64_t,int> b_qPARTSUPP1;
+map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > > 
+    b_qPARTSUPP1;
 
 // Datastructures for outer query (part a)
-map<int64_t,double> q;
+map<int64_t,double,std::less<int64_t>,boost::pool_allocator<pair<int64_t,double> > > q;
 
-map<tuple<int64_t,int64_t>,double> qSUPPLIER1;
+map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,
+    boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > > qSUPPLIER1;
 
-map<int64_t,int> qPARTSUPP1;
+map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > > 
+    qPARTSUPP1;
 
 double on_insert_SUPPLIER_sec_span = 0.0;
 double on_insert_SUPPLIER_usec_span = 0.0;
@@ -51,40 +57,42 @@ double on_delete_PARTSUPP_sec_span = 0.0;
 double on_delete_PARTSUPP_usec_span = 0.0;
 
 
+
 void analyse_mem_usage(ofstream* stats)
 {
-   cout << "qSUPPLIER1 size: " << (((sizeof(map<tuple<int64_t,int64_t>,double>::key_type)
-       + sizeof(map<tuple<int64_t,int64_t>,double>::mapped_type)
+   cout << "qSUPPLIER1 size: " << (((sizeof(map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_type)
+       + sizeof(map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<tuple<int64_t,int64_t>,double>::key_type, map<tuple<int64_t,int64_t>,double>::value_type, _Select1st<map<tuple<int64_t,int64_t>,double>::value_type>, map<tuple<int64_t,int64_t>,double>::key_compare>))) << endl;
+       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_type, map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::value_type, _Select1st<map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::value_type>, map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "qSUPPLIER1" << "," << (((sizeof(map<tuple<int64_t,int64_t>,double>::key_type)
-       + sizeof(map<tuple<int64_t,int64_t>,double>::mapped_type)
+   (*stats) << "m," << "qSUPPLIER1" << "," << (((sizeof(map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_type)
+       + sizeof(map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<tuple<int64_t,int64_t>,double>::key_type, map<tuple<int64_t,int64_t>,double>::value_type, _Select1st<map<tuple<int64_t,int64_t>,double>::value_type>, map<tuple<int64_t,int64_t>,double>::key_compare>))) << endl;
+       * qSUPPLIER1.size())  + (sizeof(struct _Rb_tree<map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_type, map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::value_type, _Select1st<map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::value_type>, map<tuple<int64_t,int64_t>,double,std::less<tuple<int64_t,int64_t> >,boost::pool_allocator<pair<tuple<int64_t,int64_t>,double> > >::key_compare>))) << endl;
 
-   cout << "q size: " << (((sizeof(map<int64_t,double>::key_type)
-       + sizeof(map<int64_t,double>::mapped_type)
+   cout << "q size: " << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
+       + sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * q.size())  + (sizeof(struct _Rb_tree<map<int64_t,double>::key_type, map<int64_t,double>::value_type, _Select1st<map<int64_t,double>::value_type>, map<int64_t,double>::key_compare>))) << endl;
+       * q.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "q" << "," << (((sizeof(map<int64_t,double>::key_type)
-       + sizeof(map<int64_t,double>::mapped_type)
+   (*stats) << "m," << "q" << "," << (((sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type)
+       + sizeof(map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * q.size())  + (sizeof(struct _Rb_tree<map<int64_t,double>::key_type, map<int64_t,double>::value_type, _Select1st<map<int64_t,double>::value_type>, map<int64_t,double>::key_compare>))) << endl;
+       * q.size())  + (sizeof(struct _Rb_tree<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_type, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type, _Select1st<map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::value_type>, map<int64_t,double,std::less<int64_t >,boost::pool_allocator<pair<int64_t,double> > >::key_compare>))) << endl;
 
-   cout << "qPARTSUPP1 size: " << (((sizeof(map<int64_t,int>::key_type)
-       + sizeof(map<int64_t,int>::mapped_type)
+   cout << "qPARTSUPP1 size: " << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
+       + sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int>::key_type, map<int64_t,int>::value_type, _Select1st<map<int64_t,int>::value_type>, map<int64_t,int>::key_compare>))) << endl;
+       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "qPARTSUPP1" << "," << (((sizeof(map<int64_t,int>::key_type)
-       + sizeof(map<int64_t,int>::mapped_type)
+   (*stats) << "m," << "qPARTSUPP1" << "," << (((sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type)
+       + sizeof(map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int>::key_type, map<int64_t,int>::value_type, _Select1st<map<int64_t,int>::value_type>, map<int64_t,int>::key_compare>))) << endl;
+       * qPARTSUPP1.size())  + (sizeof(struct _Rb_tree<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_type, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type, _Select1st<map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::value_type>, map<int64_t,int,std::less<int64_t >,boost::pool_allocator<pair<int64_t,int> > >::key_compare>))) << endl;
 
+    stats->flush();
+    cout.flush();
 }
-
 
 void analyse_handler_usage(ofstream* stats)
 {
@@ -113,8 +121,10 @@ void on_insert_SUPPLIER(
     b_q += b_qSUPPLIER1[SUPPKEY];
     b_qPARTSUPP1[SUPPKEY] += 1;
 
-    map<int64_t,double>::iterator q_it2 = q.begin();
-    map<int64_t,double>::iterator q_end1 = q.end();
+    map<int64_t,double,std::less<int64_t 
+        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it2 = q.begin();
+    map<int64_t,double,std::less<int64_t 
+        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_end1 = q.end();
     for (; q_it2 != q_end1; ++q_it2)
     {
         int64_t PS__PARTKEY = q_it2->first;
@@ -161,8 +171,10 @@ void on_delete_SUPPLIER(
     b_q += -1*b_qSUPPLIER1[SUPPKEY];
     b_qPARTSUPP1[SUPPKEY] += -1;
 
-    map<int64_t,double>::iterator q_it4 = q.begin();
-    map<int64_t,double>::iterator q_end3 = q.end();
+    map<int64_t,double,std::less<int64_t 
+        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_it4 = q.begin();
+    map<int64_t,double,std::less<int64_t 
+        >,boost::pool_allocator<pair<int64_t,double> > >::iterator q_end3 = q.end();
     for (; q_it4 != q_end3; ++q_it4)
     {
         int64_t PS__PARTKEY = q_it4->first;
@@ -295,6 +307,8 @@ void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
         "tuples", tuple_counter, (tuple_counter%10000), tvs, tup_sec_span, tup_usec_span, "query", log);
     analyse_handler_usage(stats);
     analyse_mem_usage(stats);
+
+    boost::singleton_pool<boost::pool_allocator_tag, sizeof(int)>::release_memory();
 }
 
 
