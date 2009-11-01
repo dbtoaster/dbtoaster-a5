@@ -245,6 +245,11 @@ namespace DBToaster
             void operator()(DBToasterTuple& a, boost::any& b)
             {
                 lineitem* v = boost::any_cast<lineitem>(&b);
+                if ( v == NULL )
+                    cout << "Invalid lineitem, found type " << b.type().name() << endl;
+
+                assert( v != NULL );
+
                 SimpleLineitem r(*v);
                 a.data = r;
             }

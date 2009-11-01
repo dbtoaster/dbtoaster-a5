@@ -147,6 +147,10 @@ namespace DBToaster
                 if ( !s->streamHasInputs() )
                 {
                     cout << "Done with stream " << currentStream << endl;
+                    inputIds.erase(s);
+                    vector<TupleAdaptor>::iterator adaptorIt = inputAdaptors.begin();
+                    advance(adaptorIt, currentStream);
+                    inputAdaptors.erase(adaptorIt);
                     inputs.erase(inputs.begin()+currentStream);
                     --numStreams;
 
