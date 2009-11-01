@@ -26,20 +26,17 @@ using namespace tr1;
 
 
 using namespace DBToaster::Profiler;
-
 map<int64_t,double> q;
 
-set<int64_t> bigsum_C1__CUSTKEY_dom;
-
-set<double> bigsum_C1__ACCTBAL_dom;
+double qCUSTOMER1;
+map<int64_t,int> qCUSTOMER2;
+map<tuple<double,int64_t,int64_t>,double> qCUSTOMER3;
 
 multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> > CUSTOMER;
+multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> > ORDERS;
 
-double qCUSTOMER1;
-
-map<int64_t,int> qCUSTOMER2;
-
-map<tuple<double,int64_t,int64_t>,double> qCUSTOMER3;
+set<int64_t> bigsum_C1__CUSTKEY_dom;
+set<double> bigsum_C1__ACCTBAL_dom;
 
 double on_insert_CUSTOMER_sec_span = 0.0;
 double on_insert_CUSTOMER_usec_span = 0.0;
@@ -61,6 +58,14 @@ void analyse_mem_usage(ofstream* stats)
    (*stats) << "m," << "bigsum_C1__CUSTKEY_dom" << "," << (((sizeof(set<int64_t>::value_type)
        + sizeof(struct _Rb_tree_node_base))
        * bigsum_C1__CUSTKEY_dom.size())  + (sizeof(struct _Rb_tree<set<int64_t>::key_type, set<int64_t>::value_type, _Identity<set<int64_t>::value_type>, set<int64_t>::key_compare>))) << endl;
+
+   cout << "ORDERS size: " << (((sizeof(multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type)
+       + sizeof(struct _Rb_tree_node_base))
+       * ORDERS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::key_type, multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type, _Identity<multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type>, multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::key_compare>))) << endl;
+
+   (*stats) << "m," << "ORDERS" << "," << (((sizeof(multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type)
+       + sizeof(struct _Rb_tree_node_base))
+       * ORDERS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::key_type, multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type, _Identity<multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::value_type>, multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> >::key_compare>))) << endl;
 
    cout << "q size: " << (((sizeof(map<int64_t,double>::key_type)
        + sizeof(map<int64_t,double>::mapped_type)
@@ -110,7 +115,6 @@ void analyse_mem_usage(ofstream* stats)
 
 }
 
-
 void analyse_handler_usage(ofstream* stats)
 {
    cout << "on_insert_CUSTOMER cost: " << (on_insert_CUSTOMER_sec_span + (on_insert_CUSTOMER_usec_span / 1000000.0)) << endl;
@@ -134,8 +138,11 @@ void on_insert_CUSTOMER(
     if ( qCUSTOMER3.find(make_tuple(ACCTBAL,CUSTKEY,NATIONKEY)) == qCUSTOMER3.end() )
     {
         
-        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> >::iterator CUSTOMER_it2 = CUSTOMER.begin();
-        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> >::iterator CUSTOMER_end1 = CUSTOMER.end();
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_it2 = CUSTOMER.begin();
+        
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_end1 = CUSTOMER.end();
         for (; CUSTOMER_it2 != CUSTOMER_end1; ++CUSTOMER_it2)
         {
             int64_t protect_C1__CUSTKEY = get<0>(*CUSTOMER_it2);
@@ -187,7 +194,6 @@ void on_insert_CUSTOMER(
                 ; bigsum_C1__ACCTBAL_dom_it8 != bigsum_C1__ACCTBAL_dom_end7; 
                 ++bigsum_C1__ACCTBAL_dom_it8)
             {
-                // TODO: The first two conjunct cannot hold simultaneously.
                 double bigsum_C1__ACCTBAL = *bigsum_C1__ACCTBAL_dom_it8;
                 q[NATIONKEY] +=
                     -1*( ( ( qCUSTOMER1+( ( 0 < ACCTBAL )? ACCTBAL : 0 ) <= bigsum_C1__ACCTBAL )
@@ -216,7 +222,6 @@ void on_insert_CUSTOMER(
                 ; bigsum_C1__ACCTBAL_dom_it14 != bigsum_C1__ACCTBAL_dom_end13; 
                 ++bigsum_C1__ACCTBAL_dom_it14)
             {
-                // TODO: The first and third conjunct cannot hold simultaneously.
                 double bigsum_C1__ACCTBAL = *bigsum_C1__ACCTBAL_dom_it14;
                 q[NATIONKEY] +=
                     -1*( ( ( qCUSTOMER2[bigsum_C1__CUSTKEY] != 0 )
@@ -245,7 +250,6 @@ void on_insert_CUSTOMER(
                 ; bigsum_C1__ACCTBAL_dom_it20 != bigsum_C1__ACCTBAL_dom_end19; 
                 ++bigsum_C1__ACCTBAL_dom_it20)
             {
-                // TODO: the first and third conjuncts cannot hold simultaneously
                 double bigsum_C1__ACCTBAL = *bigsum_C1__ACCTBAL_dom_it20;
                 q[NATIONKEY] += ( ( ( bigsum_C1__ACCTBAL < qCUSTOMER1+((0 < ACCTBAL)? ACCTBAL : 0) )
                                     && ( 0 == qCUSTOMER2[bigsum_C1__CUSTKEY] )
@@ -273,7 +277,6 @@ void on_insert_CUSTOMER(
                 ; bigsum_C1__ACCTBAL_dom_it26 != bigsum_C1__ACCTBAL_dom_end25; 
                 ++bigsum_C1__ACCTBAL_dom_it26)
             {
-                // TODO: the last two conjuncts cannot hold simultaneously
                 double bigsum_C1__ACCTBAL = *bigsum_C1__ACCTBAL_dom_it26;
                 q[NATIONKEY] += ( ( ( bigsum_C1__ACCTBAL < qCUSTOMER1+((0 < ACCTBAL)? ACCTBAL : 0) )
                                     && ( 0 == qCUSTOMER2[bigsum_C1__CUSTKEY] )
@@ -283,18 +286,48 @@ void on_insert_CUSTOMER(
         }
     }
 
-    qCUSTOMER1 += (0 < ACCTBAL)? ACCTBAL : 0;
-
-    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_it34 =
-        qCUSTOMER3.find(make_tuple(ACCTBAL,CUSTKEY,NATIONKEY));
-    set<double>::iterator bigsum_C1__ACCTBAL_dom_it32 = bigsum_C1__ACCTBAL_dom.find(ACCTBAL);
-
-    if ( !(qCUSTOMER3_it34 == qCUSTOMER3.end() ||
-           bigsum_C1__ACCTBAL_dom_it32 == bigsum_C1__ACCTBAL_dom.end()) )
+    qCUSTOMER1 = 0;
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_it32 = CUSTOMER.begin();
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_end31 = CUSTOMER.end();
+    for (; CUSTOMER_it32 != CUSTOMER_end31; ++CUSTOMER_it32)
     {
-        qCUSTOMER3[make_tuple(ACCTBAL,CUSTKEY,NATIONKEY)] += ACCTBAL;
+        double C2__ACCTBAL = get<5>(*CUSTOMER_it32);
+        if ( 0 < C2__ACCTBAL )
+            qCUSTOMER1 += C2__ACCTBAL;
     }
-    
+
+    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_it36 = qCUSTOMER3.begin();
+    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_end35 = qCUSTOMER3.end();
+    for (; qCUSTOMER3_it36 != qCUSTOMER3_end35; ++qCUSTOMER3_it36)
+    {
+        double ACCTBAL = get<0>(qCUSTOMER3_it36->first);
+        int64_t CUSTKEY = get<1>(qCUSTOMER3_it36->first);
+        int64_t NATIONKEY = get<2>(qCUSTOMER3_it36->first);
+
+        tuple<double, int64_t, int64_t> key = make_tuple(ACCTBAL,CUSTKEY,NATIONKEY);
+        qCUSTOMER3[key] = 0;
+        
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_it34 = CUSTOMER.begin();
+        
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_end33 = CUSTOMER.end();
+        for (; CUSTOMER_it34 != CUSTOMER_end33; ++CUSTOMER_it34)
+        {
+            int64_t protect_C1__CUSTKEY = get<0>(*CUSTOMER_it34);
+            int64_t protect_C1__NATIONKEY = get<3>(*CUSTOMER_it34);
+            double protect_C1__ACCTBAL = get<5>(*CUSTOMER_it34);
+
+            if ( (ACCTBAL == protect_C1__ACCTBAL) &&
+                 (NATIONKEY == protect_C1__NATIONKEY) &&
+                 (CUSTKEY == protect_C1__CUSTKEY) )
+            {
+                qCUSTOMER3[key] += ACCTBAL;
+            }
+        }
+    }
 
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
@@ -308,6 +341,9 @@ void on_insert_ORDERS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+    ORDERS.insert(make_tuple(
+        ORDERKEY,CUSTKEY,ORDERSTATUS,TOTALPRICE,ORDERDATE,ORDERPRIORITY,CLERK,
+        SHIPPRIORITY,COMMENT));
 
     map<int64_t,double>::iterator q_it40 = q.begin();
     map<int64_t,double>::iterator q_end39 = q.end();
@@ -328,7 +364,6 @@ void on_insert_ORDERS(
                 ; bigsum_C1__ACCTBAL_dom_it36 != bigsum_C1__ACCTBAL_dom_end35; 
                 ++bigsum_C1__ACCTBAL_dom_it36)
             {
-                // TODO: the first two conjuncts cannot hold simultaneously
                 double bigsum_C1__ACCTBAL = *bigsum_C1__ACCTBAL_dom_it36;
                 q[C1__NATIONKEY] +=
                     -1*( ( ( qCUSTOMER1 <= bigsum_C1__ACCTBAL )
@@ -424,11 +459,25 @@ void on_insert_ORDERS(
         }
     }
 
-    map<int64_t,int>::iterator qCUSTOMER2_it60 = qCUSTOMER2.find(CUSTKEY);
-
-    if ( qCUSTOMER2_it60 != qCUSTOMER2.end() )
+    map<int64_t,int>::iterator qCUSTOMER2_it64 = qCUSTOMER2.begin();
+    map<int64_t,int>::iterator qCUSTOMER2_end63 = qCUSTOMER2.end();
+    for (; qCUSTOMER2_it64 != qCUSTOMER2_end63; ++qCUSTOMER2_it64)
     {
-        qCUSTOMER2[CUSTKEY] += 1;
+        int64_t C1__CUSTKEY = qCUSTOMER2_it64->first;
+        qCUSTOMER2[C1__CUSTKEY] = 0;
+        
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+            >::iterator ORDERS_it62 = ORDERS.begin();
+        
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+            >::iterator ORDERS_end61 = ORDERS.end();
+
+        for (; ORDERS_it62 != ORDERS_end61; ++ORDERS_it62)
+        {
+            int64_t protect_C1__CUSTKEY = get<1>(*ORDERS_it62);
+            if ( C1__CUSTKEY == protect_C1__CUSTKEY )
+                qCUSTOMER2[C1__CUSTKEY] += 1;
+        }
     }
 
     gettimeofday(&hend, NULL);
@@ -445,11 +494,14 @@ void on_delete_CUSTOMER(
     gettimeofday(&hstart, NULL);
     CUSTOMER.erase(make_tuple(
         CUSTKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,MKTSEGMENT,COMMENT));
-    if ( bigsum_C1__ACCTBAL_dom.find(ACCTBAL) == bigsum_C1__ACCTBAL_dom.end()
-         && bigsum_C1__CUSTKEY_dom.find(CUSTKEY) == bigsum_C1__CUSTKEY_dom.end() )
+    /*
+    if ( ( bigsum_C1__ACCTBAL_dom.find(ACCTBAL) == bigsum_C1__ACCTBAL_dom.end(
+        ) ) && ( bigsum_C1__CUSTKEY_dom.find(CUSTKEY) == bigsum_C1__CUSTKEY_dom.end(
+        ) ) )
     {
         qCUSTOMER3.erase(make_tuple(ACCTBAL,CUSTKEY,NATIONKEY));
     }
+    */
 
     set<int64_t>::iterator bigsum_C1__CUSTKEY_dom_it64 = bigsum_C1__CUSTKEY_dom.find(CUSTKEY);
     set<double>::iterator bigsum_C1__ACCTBAL_dom_it62 = bigsum_C1__ACCTBAL_dom.find(ACCTBAL);
@@ -577,16 +629,50 @@ void on_delete_CUSTOMER(
         }
     }
 
-    qCUSTOMER1 += (0 < ACCTBAL? -ACCTBAL : 0);
-
-    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_it92 =
-        qCUSTOMER3.find(make_tuple(ACCTBAL,CUSTKEY,NATIONKEY));
-    set<double>::iterator bigsum_C1__ACCTBAL_dom_it90 = bigsum_C1__ACCTBAL_dom.find(ACCTBAL);
-
-    if ( !( qCUSTOMER3_it92 == qCUSTOMER3.end() ||
-            bigsum_C1__ACCTBAL_dom_it90 == bigsum_C1__ACCTBAL_dom.end() ) )
+    qCUSTOMER1 = 0;
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_it94 = CUSTOMER.begin();
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_end93 = CUSTOMER.end();
+    for (; CUSTOMER_it94 != CUSTOMER_end93; ++CUSTOMER_it94)
     {
-        qCUSTOMER3[make_tuple(ACCTBAL,CUSTKEY,NATIONKEY)] += -ACCTBAL;
+        double C2__ACCTBAL = get<5>(*CUSTOMER_it94);
+        if ( 0 < C2__ACCTBAL )
+            qCUSTOMER1 += C2__ACCTBAL;
+    }
+
+    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_it98 = 
+        qCUSTOMER3.begin();
+    map<tuple<double,int64_t,int64_t>,double>::iterator qCUSTOMER3_end97 = 
+        qCUSTOMER3.end();
+    for (; qCUSTOMER3_it98 != qCUSTOMER3_end97; ++qCUSTOMER3_it98)
+    {
+        double ACCTBAL = get<0>(qCUSTOMER3_it98->first);
+        int64_t CUSTKEY = get<1>(qCUSTOMER3_it98->first);
+        int64_t NATIONKEY = get<2>(qCUSTOMER3_it98->first);
+
+        tuple<double,int64_t,int64_t> key = make_tuple(ACCTBAL,CUSTKEY,NATIONKEY);
+        qCUSTOMER3[key] = 0;
+        
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_it96 = CUSTOMER.begin();
+        
+        multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+            >::iterator CUSTOMER_end95 = CUSTOMER.end();
+
+        for (; CUSTOMER_it96 != CUSTOMER_end95; ++CUSTOMER_it96)
+        {
+            int64_t protect_C1__CUSTKEY = get<0>(*CUSTOMER_it96);
+            int64_t protect_C1__NATIONKEY = get<3>(*CUSTOMER_it96);
+            double protect_C1__ACCTBAL = get<5>(*CUSTOMER_it96);
+
+            if ( (ACCTBAL == protect_C1__ACCTBAL) &&
+                 (NATIONKEY == protect_C1__NATIONKEY) &&
+                 (CUSTKEY == protect_C1__CUSTKEY) )
+            {
+                qCUSTOMER3[key] += ACCTBAL;
+            }
+        }
     }
 
     gettimeofday(&hend, NULL);
@@ -601,6 +687,9 @@ void on_delete_ORDERS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+    ORDERS.erase(make_tuple(
+        ORDERKEY,CUSTKEY,ORDERSTATUS,TOTALPRICE,ORDERDATE,ORDERPRIORITY,CLERK,
+        SHIPPRIORITY,COMMENT));
 
     map<int64_t,double>::iterator q_it98 = q.begin();
     map<int64_t,double>::iterator q_end97 = q.end();
@@ -716,11 +805,25 @@ void on_delete_ORDERS(
         }
     }
 
-    map<int64_t,int>::iterator qCUSTOMER2_it118 = qCUSTOMER2.find(CUSTKEY);
-
-    if ( qCUSTOMER2_it118 != qCUSTOMER2.end() )
+    map<int64_t,int>::iterator qCUSTOMER2_it126 = qCUSTOMER2.begin();
+    map<int64_t,int>::iterator qCUSTOMER2_end125 = qCUSTOMER2.end();
+    for (; qCUSTOMER2_it126 != qCUSTOMER2_end125; ++qCUSTOMER2_it126)
     {
-        qCUSTOMER2[CUSTKEY] += -1;
+        int64_t C1__CUSTKEY = qCUSTOMER2_it126->first;
+        qCUSTOMER2[C1__CUSTKEY] = 0;
+        
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+            >::iterator ORDERS_it124 = ORDERS.begin();
+        
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+            >::iterator ORDERS_end123 = ORDERS.end();
+
+        for (; ORDERS_it124 != ORDERS_end123; ++ORDERS_it124)
+        {
+            int64_t protect_C1__CUSTKEY = get<1>(*ORDERS_it124);
+            if ( C1__CUSTKEY == protect_C1__CUSTKEY )
+                qCUSTOMER2[C1__CUSTKEY] += 1;
+        }
     }
 
     gettimeofday(&hend, NULL);
@@ -728,7 +831,7 @@ void on_delete_ORDERS(
         hstart, hend, on_delete_ORDERS_sec_span, on_delete_ORDERS_usec_span);
 }
 
-DBToaster::DemoDatasets::CustomerStream SSBCustomer("/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512);
+DBToaster::DemoDatasets::CustomerStream SSBCustomer("/Users/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::CustomerTupleAdaptor> SSBCustomer_adaptor(new DBToaster::DemoDatasets::CustomerTupleAdaptor());
 static int streamSSBCustomerId = 0;
@@ -743,7 +846,7 @@ struct on_insert_CUSTOMER_fun_obj {
 
 on_insert_CUSTOMER_fun_obj fo_on_insert_CUSTOMER_0;
 
-DBToaster::DemoDatasets::OrderStream SSBOrder("/home/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512);
+DBToaster::DemoDatasets::OrderStream SSBOrder("/Users/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512);
 
 boost::shared_ptr<DBToaster::DemoDatasets::OrderTupleAdaptor> SSBOrder_adaptor(new DBToaster::DemoDatasets::OrderTupleAdaptor());
 static int streamSSBOrderId = 1;
@@ -813,16 +916,16 @@ void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
         ++tuple_counter;
         gettimeofday(&tupe, NULL);
         DBToaster::Profiler::accumulate_time_span(tups, tupe, tup_sec_span, tup_usec_span);
-        if ( (tuple_counter % 100) == 0 )
+        if ( (tuple_counter % 10000) == 0 )
         {
             DBToaster::Profiler::reset_time_span_printing_global(
-                "tuples", tuple_counter, 100, tvs, tup_sec_span, tup_usec_span, "query", log);
+                "tuples", tuple_counter, 10000, tvs, tup_sec_span, tup_usec_span, "query", log);
             analyse_mem_usage(stats);
             analyse_handler_usage(stats);
         }
     }
     DBToaster::Profiler::reset_time_span_printing_global(
-        "tuples", tuple_counter, (tuple_counter%100), tvs, tup_sec_span, tup_usec_span, "query", log);
+        "tuples", tuple_counter, (tuple_counter%10000), tvs, tup_sec_span, tup_usec_span, "query", log);
     analyse_handler_usage(stats);
     analyse_mem_usage(stats);
 }
