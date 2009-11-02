@@ -1,5 +1,5 @@
 CXX=g++44
-CXXFLAGS=-g -DENABLE_SIMPLE_PROFILER -I/home/yanif/workspace/dbtc_alpha3/include -I/home/yanif/software/boost/include
+CXXFLAGS=-O3 -DENABLE_SIMPLE_PROFILER -I/home/yanif/workspace/dbtc_alpha3/include -I/home/yanif/software/boost/include
 LDFLAGS=-L/home/yanif/software/boost/lib -lboost_system -lboost_thread -lboost_program_options
 
 all: vwap ssb query11 query18 query22 \
@@ -11,7 +11,7 @@ all: vwap ssb query11 query18 query22 \
 VWAP_OBJS = src/vwap/vwap.o
 VWAP_R1_OBJS = src/vwap/vwap-r1.o
 VWAP_R1B_OBJS = src/vwap/vwap-r1b.o
-VWAP_N_OBJS = src/vwap/vwap-n.o
+VWAP_N_OBJS = naive/vwap/vwap.o
 
 vwap: $(VWAP_OBJS)
 	$(CXX) -o src/vwap/vwap $(CXXFLAGS) $(VWAP_OBJS) $(LDFLAGS)
@@ -23,13 +23,13 @@ vwapr1b: $(VWAP_R1B_OBJS)
 	$(CXX) -o src/vwap/vwap-r1b $(CXXFLAGS) $(VWAP_R1B_OBJS) $(LDFLAGS)
 
 vwapn: $(VWAP_N_OBJS)
-	$(CXX) -o src/vwap/vwap-n $(CXXFLAGS) $(VWAP_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/vwap/vwap-n $(CXXFLAGS) $(VWAP_N_OBJS) $(LDFLAGS)
 
 # SSB queries
 
 SSB_OBJS = src/tpch/ssb/ssb.o
 SSB_R1_OBJS = src/tpch/ssb/ssb-r1.o
-SSB_R1_OBJS = src/tpch/ssb/ssb-n.o
+SSB_N_OBJS = naive/tpch/ssb/ssb.o
 
 ssb: $(SSB_OBJS)
 	$(CXX) -o src/tpch/ssb/ssb $(CXXFLAGS) $(SSB_OBJS) $(LDFLAGS)
@@ -38,20 +38,20 @@ ssbr1: $(SSB_R1_OBJS)
 	$(CXX) -o src/tpch/ssb/ssb-r1 $(CXXFLAGS) $(SSB_R1_OBJS) $(LDFLAGS)
 
 ssbn: $(SSB_N_OBJS)
-	$(CXX) -o src/tpch/ssb/ssb-n $(CXXFLAGS) $(SSB_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/tpch/ssb/ssb-n $(CXXFLAGS) $(SSB_N_OBJS) $(LDFLAGS)
 
 
 # TPCH queries
 
 QUERY11_OBJS = src/tpch/query11/query11.o
 QUERY11_R1_OBJS = src/tpch/query11/query11-r1.o
-QUERY11_N_OBJS = src/tpch/query11/query11-n.o
+QUERY11_N_OBJS = naive/tpch/query11/query11.o
 QUERY18_OBJS = src/tpch/query18/query18.o
 QUERY18_R1_OBJS = src/tpch/query18/query18-r1.o
-QUERY18_N_OBJS = src/tpch/query18/query18-n.o
+QUERY18_N_OBJS = naive/tpch/query18/query18.o
 QUERY22_OBJS = src/tpch/query22/query22.o
 QUERY22_R1_OBJS = src/tpch/query22/query22-r1.o
-QUERY22_N_OBJS = src/tpch/query22/query22-n.o
+QUERY22_N_OBJS = naive/tpch/query22/query22.o
 
 
 query11: $(QUERY11_OBJS)
@@ -61,7 +61,7 @@ query11r1: $(QUERY11_R1_OBJS)
 	$(CXX) -o src/tpch/query11/query11-r1 $(CXXFLAGS) $(QUERY11_R1_OBJS) $(LDFLAGS)
 
 query11n: $(QUERY11_N_OBJS)
-	$(CXX) -o src/tpch/query11/query11-n $(CXXFLAGS) $(QUERY11_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/tpch/query11/query11-n $(CXXFLAGS) $(QUERY11_N_OBJS) $(LDFLAGS)
 
 
 query18: $(QUERY18_OBJS)
@@ -71,7 +71,7 @@ query18r1: $(QUERY18_R1_OBJS)
 	$(CXX) -o src/tpch/query18/query18-r1 $(CXXFLAGS) $(QUERY18_R1_OBJS) $(LDFLAGS)
 
 query18n: $(QUERY18_N_OBJS)
-	$(CXX) -o src/tpch/query18/query18-n $(CXXFLAGS) $(QUERY18_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/tpch/query18/query18-n $(CXXFLAGS) $(QUERY18_N_OBJS) $(LDFLAGS)
 
 
 query22: $(QUERY22_OBJS)
@@ -81,7 +81,7 @@ query22r1: $(QUERY22_R1_OBJS)
 	$(CXX) -o src/tpch/query22/query22-r1 $(CXXFLAGS) $(QUERY22_R1_OBJS) $(LDFLAGS)
 
 query22n: $(QUERY22_N_OBJS)
-	$(CXX) -o src/tpch/query22/query22-n $(CXXFLAGS) $(QUERY22_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/tpch/query22/query22-n $(CXXFLAGS) $(QUERY22_N_OBJS) $(LDFLAGS)
 
 
 # Common rules
@@ -95,9 +95,14 @@ query22n: $(QUERY22_N_OBJS)
 clean:
 	rm -f src/vwap/vwap src/vwap/vwap-r1 src/vwap/vwap-r1b src/vwap/*.o
 	rm -f src/tpch/ssb/ssb src/tpch/ssb/ssb-r1 src/tpch/ssb/*.o
-	rm -f src/tpch/query11/query11 src/tpch/query11/query11-r1 src/tpch/query11/query11-n src/tpch/query11/*.o
-	rm -f src/tpch/query18/query18 src/tpch/query18/query18-r1 src/tpch/query18/query18-n src/tpch/query18/*.o
-	rm -f src/tpch/query22/query22 src/tpch/query22/query22-r1 src/tpch/query22/query22-n src/tpch/query22/*.o
+	rm -f src/tpch/query11/query11 src/tpch/query11/query11-r1 src/tpch/query11/*.o
+	rm -f src/tpch/query18/query18 src/tpch/query18/query18-r1 src/tpch/query18/*.o
+	rm -f src/tpch/query22/query22 src/tpch/query22/query22-r1 src/tpch/query22/*.o
+	rm -f naive/vwap/vwap-n naive/vwap/*.o
+	rm -f naive/tpch/ssb/ssb-n naive/tpch/ssb/*.o
+	rm -f naive/tpch/query11/query11-n naive/tpch/query11/*.o
+	rm -f naive/tpch/query18/query18-n naive/tpch/query18/*.o
+	rm -f naive/tpch/query22/query22-n naive/tpch/query22/*.o
 
 expclean:
 	rm -f src/vwap/engine.* src/vwap/log
@@ -105,3 +110,6 @@ expclean:
 	rm -f src/tpch/query11/engine.* src/tpch/query11/log
 	rm -f src/tpch/query18/engine.* src/tpch/query18/log
 	rm -f src/tpch/query22/engine.* src/tpch/query22/log
+	rm -f naive/tpch/query11/engine.* naive/tpch/query11/log
+	rm -f naive/tpch/query18/engine.* naive/tpch/query18/log
+	rm -f naive/tpch/query22/engine.* naive/tpch/query22/log
