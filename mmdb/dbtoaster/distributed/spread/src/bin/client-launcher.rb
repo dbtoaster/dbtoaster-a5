@@ -25,8 +25,8 @@ GetoptLong.new(
   [ "--tpch-stream", "-h", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--verbose"    , "-v", GetoptLong::NO_ARGUMENT ],
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
-  [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ]
-  [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ],
+  [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ],
+  [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg|
   case opt
     when "--quiet", "-q" then 
@@ -44,7 +44,7 @@ GetoptLong.new(
         case match[3][0]
           when "~"[0] then [:regex, Regexp.new(match[4]), match[5]]
           when "<"[0] then [:cmp, match[6], match[7].split(/ *, */)]
-          when "#"[0] then [:intify, Hash.new, 0]
+          when "#"[0] then [:intify, Hash.new, 0, match[1]+":"+match[2]]
           when "%"[0] then [:mod, match[8].to_i]
           when "@"[0] then [:rotate, match[9].to_i, match[10].to_i]
           else raise "Error: Unknown transform type: " + match[3]
@@ -124,7 +124,7 @@ $input.each do |line|
                     if compare_date(t[2], params) then "1" else "0" end;
                 end
               when :intify then
-                t[1].assert_key(params[col.to_i]) { t[2] += 1; }.to_s;
+                t[1].assert_key(params[col.to_i]) { puts "Domain of " + t[3] + " now at " + (t[2]+1).to_s; t[2] += 1; }.to_s;
               when :mod then
                 (params[col.to_i].to_i % t[1].to_i).to_s;
               when :rotate then
@@ -156,7 +156,12 @@ $input.each do |line|
       puts diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
       puts switch.dump if ($verbose && !$test);
       $starttime = Time.now;
-      sleep ($ratelimit - diff) if $ratelimit && diff < $ratelimit;
+      if $ratelimit then
+        $limittime = $starttime + $ratelimit unless $limittime;
+        diff = $limittime - Time.now;
+        sleep(diff) if diff > 0;
+        $limittime = Time.now + $ratelimit;
+      end
     end
   end
 end

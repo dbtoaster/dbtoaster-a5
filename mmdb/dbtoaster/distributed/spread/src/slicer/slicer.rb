@@ -150,13 +150,19 @@ class Slicer
     sleep 0.1 while servers.find { |s| !s.ready };
 
     client_cmd = 
-      SlicerProcess.base_path + "/bin/client.sh -q -s " + 
+      SlicerProcess.base_path + "/bin/client.sh -q -s -l 200 " + 
       @transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
       @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
       "-h " + @source
+    
+    query_cmd = 
+      SlicerProcess.base_path + "/bin/query.sh -l sum " +
+        @nodes.collect { |n| "-n " + n.to_s }.join(" ") + " " +
+        @config.join(" ");
 
-    Logger.info { "Servers started; starting client: " + client_cmd }
+    Logger.info { "Servers started; starting clients" }
     SlicerProcess.new(client_cmd, @switch).start;
+    SlicerProcess.new(query_cmd, @switch).start;
   end
 
 end

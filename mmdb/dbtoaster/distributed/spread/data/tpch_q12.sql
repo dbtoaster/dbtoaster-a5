@@ -12,13 +12,25 @@
 --node Node06@wl09.cac.cornell.edu:52982
 --node Node07@wl10.cac.cornell.edu:52982
 --node Node08@wl11.cac.cornell.edu:52982
---slice transform ORDERS[0]@8/600000
---slice transform ORDERS[1]@8/15000
+--node Node09@wl12.cac.cornell.edu:52982
+--node Node10@wl13.cac.cornell.edu:52982
+--node Node11@wl14.cac.cornell.edu:52982
+--node Node12@wl15.cac.cornell.edu:52982
+--node Node13@wl16.cac.cornell.edu:52982
+--node Node14@wl17.cac.cornell.edu:52982
+--node Node15@wl18.cac.cornell.edu:52982
+--node Node16@wl19.cac.cornell.edu:52982
+--node Node17@wl20.cac.cornell.edu:52982
+--node Node18@wl21.cac.cornell.edu:52982
+--node Node19@wl22.cac.cornell.edu:52982
+--node Node20@wl23.cac.cornell.edu:52982
+--slice transform ORDERS[0]@20/600000
+--slice transform ORDERS[1]@20/15000
 --slice transform ORDERS[5]~/([0-9]*)-.*/\1/
 --slice project   ORDERS(0,1,5,7)
---slice transform CUSTOMERS[0]@8/15000
+--slice transform CUSTOMERS[0]@20/15000
 --slice project   CUSTOMERS(0,3)
---slice transform LINEITEMS[0]@8/600000
+--slice transform LINEITEMS[0]@20/600000
 --slice transform LINEITEMS[16]<d10,11
 --slice transform LINEITEMS[17]<d10,12
 --slice transform LINEITEMS[14]#
