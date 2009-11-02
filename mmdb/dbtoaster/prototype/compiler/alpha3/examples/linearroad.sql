@@ -8,7 +8,7 @@ CREATE TABLE INPUT(
         dow integer, tod integer, day integer )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::LinearRoadFileStream'
-    ARGS '"/Users/yanif/datasets/linearroad/datafile625seconds.dat",10000'
+    ARGS '"/home/yanif/datasets/linearroad/datafile625seconds.dat",10000'
     INSTANCE 'LRInput'
     TUPLE 'DBToaster::DemoDatasets::LinearRoadTuple'
     ADAPTOR 'DBToaster::DemoDatasets::LinearRoadTupleAdaptor';

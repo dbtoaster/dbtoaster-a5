@@ -33,38 +33,6 @@ CREATE TABLE ORDERS (
     TUPLE 'DBToaster::DemoDatasets::order'
     ADAPTOR 'DBToaster::DemoDatasets::OrderTupleAdaptor';
 
-CREATE TABLE PARTS (
-        partkey      bigint,
-        name         text,
-        mfgr         text,
-        brand        text,
-        type         text,
-        size         integer,
-        container    text,
-        retailprice  double,
-        comment      text
-    )
-    FROM 'file'
-    SOURCE 'DBToaster::DemoDatasets::PartStream'
-    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/part.tbl.a",&DBToaster::DemoDatasets::parsePartField,9,2100000,512'
-    INSTANCE 'SSBParts'
-    TUPLE 'DBToaster::DemoDatasets::part'
-    ADAPTOR 'DBToaster::DemoDatasets::PartTupleAdaptor';
-
-CREATE TABLE PARTSUPP (
-        partkey      bigint,
-        suppkey      bigint,
-        availqty     int,
-        supplycost   double,
-        comment      text
-    )
-    FROM 'file'
-    SOURCE 'DBToaster::DemoDatasets::PartSuppStream'
-    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/partsupp.tbl.a",&DBToaster::DemoDatasets::parsePartSuppField,5,820000,512'
-    INSTANCE 'SSBPartSupp'
-    TUPLE 'DBToaster::DemoDatasets::partsupp'
-    ADAPTOR 'DBToaster::DemoDatasets::PartSuppTupleAdaptor';
-
 CREATE TABLE CUSTOMER (
         custkey      bigint,
         name         text,
@@ -81,7 +49,6 @@ CREATE TABLE CUSTOMER (
     INSTANCE 'SSBCustomer'
     TUPLE 'DBToaster::DemoDatasets::customer'
     ADAPTOR 'DBToaster::DemoDatasets::CustomerTupleAdaptor';
-
 
 CREATE TABLE SUPPLIER (
         suppkey      bigint,
@@ -124,20 +91,15 @@ CREATE TABLE NATION (
     TUPLE 'DBToaster::DemoDatasets::nation'
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';
 
-select c.nationkey, n1.regionkey, n2.regionkey, p.mfgr,
-    sum((l.extendedprice * (100+(-1*l.discount))))
-from
-    lineitem l,
-    orders o,
-    customer c,
-    supplier s,
-    parts p,
-    nation n1,
-    nation n2
-where l.orderkey = o.orderkey
-and o.custkey = c.custkey
-and l.suppkey = s.suppkey
-and l.partkey = p.partkey
-and c.nationkey = n1.nationkey
-and s.nationkey = n2.nationkey
-group by c.nationkey, n1.regionkey, n2.regionkey, p.mfgr;
+
+
+
+select n.name, sum(l.extendedprice * (1 + -1*l.discount))
+from customer c, orders o, lineitem l, supplier s, nation n, region r
+where c.custkey = o.custkey
+and l.orderkey  = o.orderkey
+and l.suppkey   = s.suppkey
+and c.nationkey = s.nationkey
+and s.nationkey = n.nationkey
+and n.regionkey = r.regionkey
+group by n.name

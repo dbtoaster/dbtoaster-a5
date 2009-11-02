@@ -1,6 +1,12 @@
 CREATE TABLE LINEITEM (
         orderkey       bigint,
-        quantity       double
+        partkey        bigint,
+        suppkey        bigint,
+        linenumber     int,
+        quantity       double,
+        extendedprice  double,
+        discount       double,
+        tax            double
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::LineitemStream'
@@ -11,7 +17,14 @@ CREATE TABLE LINEITEM (
 
 CREATE TABLE ORDERS (
         orderkey       bigint,
-        custkey        bigint
+        custkey        bigint,
+        orderstatus    text,
+        totalprice     double,
+        orderdate      text, -- date
+        orderpriority  text,
+        clerk          text,
+        shippriority   integer,
+        comment        text
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderStream'
@@ -21,7 +34,14 @@ CREATE TABLE ORDERS (
     ADAPTOR 'DBToaster::DemoDatasets::OrderTupleAdaptor';
 
 CREATE TABLE CUSTOMER (
-        custkey      bigint
+        custkey      bigint,
+        name         text,
+        address      text,
+        nationkey    bigint,
+        phone        text,
+        acctbal      double,
+        mktsegment   text,
+        comment      text
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::CustomerStream'
@@ -30,11 +50,13 @@ CREATE TABLE CUSTOMER (
     TUPLE 'DBToaster::DemoDatasets::customer'
     ADAPTOR 'DBToaster::DemoDatasets::CustomerTupleAdaptor';
 
-select sum(1)
-from customer c, orders o, lineitem l1
-where 1 <=
-      (select sum(1) from lineitem l2
-       where l1.orderkey = l2.orderkey)
-and c.custkey = o.custkey
-and o.orderkey = l1.orderkey;
---group by c.custkey;
+
+select   l.orderkey, o.shippriority, sum(l.extendedprice)
+from     customer c, orders o, lineitem l
+where    c.custkey = o.custkey
+and      l.orderkey = o.orderkey
+group by l.orderkey, o.shippriority;
+
+
+
+

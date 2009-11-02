@@ -1,7 +1,7 @@
 CREATE TABLE BIDS (t double, id int, broker_id int, p double, v double)
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderbookFileStream'
-    ARGS '"/Users/yanif/tmp/data/cleanedData.csv",10000'
+    ARGS '"/home/yanif/tmp/data/cleanedData.csv",10000'
     INSTANCE 'VwapBids'
     TUPLE 'DBToaster::DemoDatasets::OrderbookTuple'
     ADAPTOR 'DBToaster::DemoDatasets::BidsOrderbookTupleAdaptor'

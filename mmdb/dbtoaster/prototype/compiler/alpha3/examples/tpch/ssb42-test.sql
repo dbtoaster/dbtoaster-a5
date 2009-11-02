@@ -125,7 +125,7 @@ CREATE TABLE NATION (
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';
 
 select c.nationkey, n1.regionkey, n2.regionkey, p.mfgr,
-    sum((l.extendedprice * (100+(-1*l.discount))))
+    sum(l.extendedprice)
 from
     lineitem l,
     orders o,

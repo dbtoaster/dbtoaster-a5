@@ -20,7 +20,7 @@ CREATE TABLE LINEITEM (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::LineitemStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/lineitem.tbl.a",&DBToaster::DemoDatasets::parseLineitemField,16,65000000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/lineitem.tbl.a",&DBToaster::DemoDatasets::parseLineitemField,16,65000000,512'
     INSTANCE 'SSBLineitem'
     TUPLE 'DBToaster::DemoDatasets::lineitem'
     ADAPTOR 'DBToaster::DemoDatasets::LineitemTupleAdaptor';
@@ -38,7 +38,7 @@ CREATE TABLE ORDERS (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512'
     INSTANCE 'SSBOrder'
     TUPLE 'DBToaster::DemoDatasets::order'
     ADAPTOR 'DBToaster::DemoDatasets::OrderTupleAdaptor';
@@ -57,7 +57,7 @@ CREATE TABLE PARTS (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::PartStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/part.tbl.a",&DBToaster::DemoDatasets::parsePartField,9,2100000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/part.tbl.a",&DBToaster::DemoDatasets::parsePartField,9,2100000,512'
     INSTANCE 'SSBParts'
     TUPLE 'DBToaster::DemoDatasets::part'
     ADAPTOR 'DBToaster::DemoDatasets::PartTupleAdaptor';
@@ -71,7 +71,7 @@ CREATE TABLE PARTSUPP (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::PartSuppStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/partsupp.tbl.a",&DBToaster::DemoDatasets::parsePartSuppField,5,820000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/partsupp.tbl.a",&DBToaster::DemoDatasets::parsePartSuppField,5,820000,512'
     INSTANCE 'SSBPartSupp'
     TUPLE 'DBToaster::DemoDatasets::partsupp'
     ADAPTOR 'DBToaster::DemoDatasets::PartSuppTupleAdaptor';
@@ -88,7 +88,7 @@ CREATE TABLE CUSTOMER (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::CustomerStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512'
     INSTANCE 'SSBCustomer'
     TUPLE 'DBToaster::DemoDatasets::customer'
     ADAPTOR 'DBToaster::DemoDatasets::CustomerTupleAdaptor';
@@ -105,7 +105,7 @@ CREATE TABLE SUPPLIER (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::SupplierStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/supplier.tbl.a",&DBToaster::DemoDatasets::parseSupplierField,7,110000,512'
     INSTANCE 'SSBSupplier'
     TUPLE 'DBToaster::DemoDatasets::supplier'
     ADAPTOR 'DBToaster::DemoDatasets::SupplierTupleAdaptor';
@@ -117,7 +117,7 @@ CREATE TABLE REGION (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::RegionStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/region.tbl",&DBToaster::DemoDatasets::parseRegionField,3,100,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/region.tbl",&DBToaster::DemoDatasets::parseRegionField,3,100,512'
     INSTANCE 'SSBRegion'
     TUPLE 'DBToaster::DemoDatasets::region'
     ADAPTOR 'DBToaster::DemoDatasets::RegionTupleAdaptor';
@@ -130,7 +130,7 @@ CREATE TABLE NATION (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::NationStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseNationField,4,100,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/nation.tbl",&DBToaster::DemoDatasets::parseNationField,4,100,512'
     INSTANCE 'SSBNation'
     TUPLE 'DBToaster::DemoDatasets::nation'
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';

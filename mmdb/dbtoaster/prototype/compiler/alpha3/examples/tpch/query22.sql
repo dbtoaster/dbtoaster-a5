@@ -11,7 +11,7 @@ CREATE TABLE ORDERS (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::OrderStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/orders.tbl.a",&DBToaster::DemoDatasets::parseOrderField,9,17000000,512'
     INSTANCE 'SSBOrder'
     TUPLE 'DBToaster::DemoDatasets::order'
     ADAPTOR 'DBToaster::DemoDatasets::OrderTupleAdaptor';
@@ -28,7 +28,7 @@ CREATE TABLE CUSTOMER (
     )
     FROM 'file'
     SOURCE 'DBToaster::DemoDatasets::CustomerStream'
-    ARGS '"/Users/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512'
+    ARGS '"/home/yanif/datasets/tpch/sf1/singlefile/customer.tbl.a",&DBToaster::DemoDatasets::parseCustomerField,8,1600000, 512'
     INSTANCE 'SSBCustomer'
     TUPLE 'DBToaster::DemoDatasets::customer'
     ADAPTOR 'DBToaster::DemoDatasets::CustomerTupleAdaptor';
