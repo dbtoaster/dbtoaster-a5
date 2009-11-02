@@ -174,22 +174,27 @@ void on_insert_PARTSUPP(
 
     // B
     b_q += SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-    map<int64_t,double>::iterator b_qSUPPLIER1_it8 = b_qSUPPLIER1.begin();
-    map<int64_t,double>::iterator b_qSUPPLIER1_end7 = b_qSUPPLIER1.end();
-    for (; b_qSUPPLIER1_it8 != b_qSUPPLIER1_end7; ++b_qSUPPLIER1_it8)
-    {
-        int64_t x_qSUPPLIER_S__SUPPKEY = b_qSUPPLIER1_it8->first;
-        b_qSUPPLIER1[x_qSUPPLIER_S__SUPPKEY] = 0;
 
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_it6 = PARTSUPP.begin();
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_end5 = PARTSUPP.end();
-        for (; PARTSUPP_it6 != PARTSUPP_end5; ++PARTSUPP_it6)
+    // A
+    q[PARTKEY] += SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
+
+    multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
+        PARTSUPP_it6 = PARTSUPP.begin();
+    multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
+        PARTSUPP_end5 = PARTSUPP.end();
+    for (; PARTSUPP_it6 != PARTSUPP_end5; ++PARTSUPP_it6)
+    {
+        int64_t protect_PS__PARTKEY = get<0>(*PARTSUPP_it6);
+        int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it6);
+        int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it6);
+        double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it6);
+
+        map<int64_t,double>::iterator b_qSUPPLIER1_it8 = b_qSUPPLIER1.begin();
+        map<int64_t,double>::iterator b_qSUPPLIER1_end7 = b_qSUPPLIER1.end();
+        for (; b_qSUPPLIER1_it8 != b_qSUPPLIER1_end7; ++b_qSUPPLIER1_it8)
         {
-            int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it6);
-            int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it6);
-            double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it6);
+            int64_t x_qSUPPLIER_S__SUPPKEY = b_qSUPPLIER1_it8->first;
+            b_qSUPPLIER1[x_qSUPPLIER_S__SUPPKEY] = 0;
 
             if ( x_qSUPPLIER_S__SUPPKEY == protect_PS__SUPPKEY )
             {
@@ -197,37 +202,25 @@ void on_insert_PARTSUPP(
                     (protect_PS__SUPPLYCOST*protect_PS__AVAILQTY);
             }
         }
-    }
 
-    // A
-    q[PARTKEY] += SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-
-    map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_it10 = qSUPPLIER1.begin();
-    map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_end9 = qSUPPLIER1.end();
-    for (; qSUPPLIER1_it10 != qSUPPLIER1_end9; ++qSUPPLIER1_it10)
-    {
-        int64_t PARTKEY = get<0>(qSUPPLIER1_it10->first);
-        int64_t x_qSUPPLIER_S__SUPPKEY = get<1>(qSUPPLIER1_it10->first);
-
-        qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] = 0;
-
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator PARTSUPP_it8 = PARTSUPP.begin();
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator PARTSUPP_end7 = PARTSUPP.end();
-        for (; PARTSUPP_it8 != PARTSUPP_end7; ++PARTSUPP_it8)
+        map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_it10 = qSUPPLIER1.begin();
+        map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_end9 = qSUPPLIER1.end();
+        for (; qSUPPLIER1_it10 != qSUPPLIER1_end9; ++qSUPPLIER1_it10)
         {
-            int64_t protect_PS__PARTKEY = get<0>(*PARTSUPP_it8);
-            int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it8);
-            int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it8);
-            double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it8);
+            int64_t PARTKEY = get<0>(qSUPPLIER1_it10->first);
+            int64_t x_qSUPPLIER_S__SUPPKEY = get<1>(qSUPPLIER1_it10->first);
+
+            qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] = 0;
 
             if ( x_qSUPPLIER_S__SUPPKEY == protect_PS__SUPPKEY
                  && PARTKEY == protect_PS__PARTKEY )
             {
-                    qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] +=
-                        (protect_PS__SUPPLYCOST*protect_PS__AVAILQTY);
+                qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] +=
+                    (protect_PS__SUPPLYCOST*protect_PS__AVAILQTY);
             }
         }
     }
+
 
     // TODO: output q[partkey] > b_q
 
@@ -297,53 +290,45 @@ void on_delete_PARTSUPP(
 
     // B
     b_q += -1*SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-    map<int64_t,double>::iterator b_qSUPPLIER1_it16 = b_qSUPPLIER1.begin();
-    map<int64_t,double>::iterator b_qSUPPLIER1_end15 = b_qSUPPLIER1.end();
-    for (; b_qSUPPLIER1_it16 != b_qSUPPLIER1_end15; ++b_qSUPPLIER1_it16)
-    {
-        int64_t x_qSUPPLIER_S__SUPPKEY = b_qSUPPLIER1_it16->first;
-        b_qSUPPLIER1[x_qSUPPLIER_S__SUPPKEY] = 0;
 
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_it14 = PARTSUPP.begin();
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_end13 = PARTSUPP.end();
-        for (; PARTSUPP_it14 != PARTSUPP_end13; ++PARTSUPP_it14)
+    // A
+    q[PARTKEY] += -1*SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
+
+
+    multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
+        PARTSUPP_it14 = PARTSUPP.begin();
+    multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
+        PARTSUPP_end13 = PARTSUPP.end();
+    for (; PARTSUPP_it14 != PARTSUPP_end13; ++PARTSUPP_it14)
+    {
+        int64_t protect_PS__PARTKEY = get<0>(*PARTSUPP_it14);
+        int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it14);
+        int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it14);
+        double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it14);
+
+        map<int64_t,double>::iterator b_qSUPPLIER1_it16 = b_qSUPPLIER1.begin();
+        map<int64_t,double>::iterator b_qSUPPLIER1_end15 = b_qSUPPLIER1.end();
+        for (; b_qSUPPLIER1_it16 != b_qSUPPLIER1_end15; ++b_qSUPPLIER1_it16)
         {
-            int64_t protect_PS__PARTKEY = get<0>(*PARTSUPP_it14);
-            int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it14);
-            int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it14);
-            double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it14);
+            int64_t x_qSUPPLIER_S__SUPPKEY = b_qSUPPLIER1_it16->first;
+            b_qSUPPLIER1[x_qSUPPLIER_S__SUPPKEY] = 0;
+            
             if ( x_qSUPPLIER_S__SUPPKEY == protect_PS__SUPPKEY )
             {
                 b_qSUPPLIER1[x_qSUPPLIER_S__SUPPKEY] += 
                     (protect_PS__SUPPLYCOST*protect_PS__AVAILQTY);
             }
         }
-    }
 
-    // A
-    q[PARTKEY] += -1*SUPPLYCOST*AVAILQTY*qPARTSUPP1[SUPPKEY];
-
-    map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_it20 = qSUPPLIER1.begin();
-    map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_end19 = qSUPPLIER1.end();
-    for (; qSUPPLIER1_it20 != qSUPPLIER1_end19; ++qSUPPLIER1_it20)
-    {
-        int64_t PARTKEY = get<0>(qSUPPLIER1_it20->first);
-        int64_t x_qSUPPLIER_S__SUPPKEY = get<1>(qSUPPLIER1_it20->first);
-
-        qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] = 0;
-
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_it18 = PARTSUPP.begin();
-        multiset<tuple<int64_t,int64_t,int,double,string> >::iterator 
-            PARTSUPP_end17 = PARTSUPP.end();
-        for (; PARTSUPP_it18 != PARTSUPP_end17; ++PARTSUPP_it18)
+        map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_it20 = qSUPPLIER1.begin();
+        map<tuple<int64_t,int64_t>,double>::iterator qSUPPLIER1_end19 = qSUPPLIER1.end();
+        for (; qSUPPLIER1_it20 != qSUPPLIER1_end19; ++qSUPPLIER1_it20)
         {
-            int64_t protect_PS__PARTKEY = get<0>(*PARTSUPP_it18);
-            int64_t protect_PS__SUPPKEY = get<1>(*PARTSUPP_it18);
-            int protect_PS__AVAILQTY = get<2>(*PARTSUPP_it18);
-            double protect_PS__SUPPLYCOST = get<3>(*PARTSUPP_it18);
+            int64_t PARTKEY = get<0>(qSUPPLIER1_it20->first);
+            int64_t x_qSUPPLIER_S__SUPPKEY = get<1>(qSUPPLIER1_it20->first);
+
+            qSUPPLIER1[make_tuple(PARTKEY,x_qSUPPLIER_S__SUPPKEY)] = 0;
+
             if ( x_qSUPPLIER_S__SUPPKEY == protect_PS__SUPPKEY
                  && PARTKEY == protect_PS__PARTKEY )
             {
@@ -352,6 +337,7 @@ void on_delete_PARTSUPP(
             }
         }
     }
+
 
     // TODO: output q[partkey] > b_q
 

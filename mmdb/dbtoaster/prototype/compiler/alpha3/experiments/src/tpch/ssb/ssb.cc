@@ -843,10 +843,9 @@ void on_insert_NATION(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it2 = q.begin(
-        );
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end1 = q.end(
-        );
+
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it2 = q.begin();
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end1 = q.end();
     for (; q_it2 != q_end1; ++q_it2)
     {
         string P__MFGR = get<0>(q_it2->first);
@@ -854,10 +853,9 @@ void on_insert_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,NATIONKEY)] += qNATION3[make_tuple(
             NATIONKEY,P__MFGR)]*100;
     }
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it4 = q.begin(
-        );
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end3 = q.end(
-        );
+
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it4 = q.begin();
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end3 = q.end();
     for (; q_it4 != q_end3; ++q_it4)
     {
         string P__MFGR = get<0>(q_it4->first);
@@ -865,10 +863,9 @@ void on_insert_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,NATIONKEY)] += qNATION6[make_tuple(
             NATIONKEY,P__MFGR)]*-1;
     }
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it6 = q.begin(
-        );
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end5 = q.end(
-        );
+
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it6 = q.begin();
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end5 = q.end();
     for (; q_it6 != q_end5; ++q_it6)
     {
         string P__MFGR = get<0>(q_it6->first);
@@ -877,10 +874,9 @@ void on_insert_NATION(
             P__MFGR,N2__REGIONKEY,REGIONKEY,NATIONKEY)] += qNATION2[make_tuple(
             P__MFGR,NATIONKEY,N2__REGIONKEY)]*100;
     }
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it8 = q.begin(
-        );
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end7 = q.end(
-        );
+
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it8 = q.begin();
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end7 = q.end();
     for (; q_it8 != q_end7; ++q_it8)
     {
         string P__MFGR = get<0>(q_it8->first);
@@ -889,10 +885,10 @@ void on_insert_NATION(
             P__MFGR,N2__REGIONKEY,REGIONKEY,NATIONKEY)] += qNATION5[make_tuple(
             P__MFGR,NATIONKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it10 = 
         q.begin();
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end9 = q.end(
-        );
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end9 = q.end();
     for (; q_it10 != q_end9; ++q_it10)
     {
         string P__MFGR = get<0>(q_it10->first);
@@ -902,10 +898,10 @@ void on_insert_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY)] += qNATION1[make_tuple(
             NATIONKEY,P__MFGR,C__NATIONKEY,REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it12 = 
         q.begin();
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end11 = q.end(
-        );
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end11 = q.end();
     for (; q_it12 != q_end11; ++q_it12)
     {
         string P__MFGR = get<0>(q_it12->first);
@@ -915,6 +911,7 @@ void on_insert_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY)] += qNATION4[make_tuple(
             NATIONKEY,P__MFGR,C__NATIONKEY,REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it14 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end13 = 
@@ -927,6 +924,7 @@ void on_insert_NATION(
             x_qCUSTOMER_C__CUSTKEY,P__MFGR,REGIONKEY)] += qCUSTOMER1NATION1[make_tuple(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,
         double>::iterator qCUSTOMER1PARTS1_it16 = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_end15 
@@ -955,6 +953,7 @@ void on_insert_NATION(
             x_qCUSTOMER_C__CUSTKEY,P__MFGR,REGIONKEY)] += qCUSTOMER3NATION1[make_tuple(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,
         double>::iterator qCUSTOMER3PARTS1_it20 = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_end19 
@@ -970,6 +969,7 @@ void on_insert_NATION(
             qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qCUSTOMER3PARTS_P__PARTKEY,x_qCUSTOMER_C__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it22 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end21 = 
@@ -981,10 +981,10 @@ void on_insert_NATION(
             x_qLINEITEM_L__ORDERKEY,NATIONKEY,REGIONKEY)] += qLINEITEM1NATION1[make_tuple(
             x_qLINEITEM_L__ORDERKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_it24 = 
         qLINEITEM3.begin();
-    map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_end23 = qLINEITEM3.end(
-        );
+    map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_end23 = qLINEITEM3.end();
     for (; qLINEITEM3_it24 != qLINEITEM3_end23; ++qLINEITEM3_it24)
     {
         int64_t x_qLINEITEM_L__SUPPKEY = get<0>(qLINEITEM3_it24->first);
@@ -992,6 +992,7 @@ void on_insert_NATION(
             x_qLINEITEM_L__SUPPKEY,REGIONKEY)] += qLINEITEM3NATION1[make_tuple(
             x_qLINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_it26 = 
         qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,
@@ -1004,6 +1005,7 @@ void on_insert_NATION(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             qNATION1NATION1[make_tuple(x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it28 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end27 = 
@@ -1016,6 +1018,7 @@ void on_insert_NATION(
             P__MFGR,x_qNATION_N1__NATIONKEY,REGIONKEY)] += qNATION1NATION1[make_tuple(
             NATIONKEY,P__MFGR,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_it30 = 
         qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,
@@ -1028,6 +1031,7 @@ void on_insert_NATION(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             qNATION4NATION1[make_tuple(x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it32 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end31 = 
@@ -1040,6 +1044,7 @@ void on_insert_NATION(
             P__MFGR,x_qNATION_N1__NATIONKEY,REGIONKEY)] += qNATION4NATION1[make_tuple(
             NATIONKEY,P__MFGR,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it34 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end33 = 
@@ -1052,6 +1057,7 @@ void on_insert_NATION(
             x_qORDERS_O__ORDERKEY,P__MFGR,REGIONKEY)] += qORDERS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it36 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_end35 = 
@@ -1065,6 +1071,7 @@ void on_insert_NATION(
             qORDERS1PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_it38 = 
         qORDERS2.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_end37 = 
@@ -1076,6 +1083,7 @@ void on_insert_NATION(
             x_qORDERS_O__CUSTKEY,NATIONKEY,REGIONKEY)] += 
             qLINEITEM1NATION1ORDERS1[make_tuple(x_qORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it40 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end39 = 
@@ -1088,6 +1096,7 @@ void on_insert_NATION(
             x_qORDERS_O__ORDERKEY,P__MFGR,REGIONKEY)] += qORDERS3NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it42 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_end41 = 
@@ -1101,6 +1110,7 @@ void on_insert_NATION(
             qORDERS3PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_it44 = 
         qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1112,6 +1122,7 @@ void on_insert_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,REGIONKEY,REGIONKEY)] += 
             qPARTS1NATION3[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_it46 = 
         qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1126,6 +1137,7 @@ void on_insert_NATION(
             qPARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,C__NATIONKEY,REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_it48 = 
         qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1138,6 +1150,7 @@ void on_insert_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY,REGIONKEY)] += 
             qPARTS1NATION2[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it50 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1152,6 +1165,7 @@ void on_insert_NATION(
             qPARTS1NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,x_qPARTS1NATION_N1__NATIONKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it52 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_end51 = 
@@ -1166,6 +1180,7 @@ void on_insert_NATION(
             qPARTS1NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_it54 = 
         qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1177,6 +1192,7 @@ void on_insert_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,REGIONKEY,REGIONKEY)] += 
             qPARTS2NATION3[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_it56 = 
         qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1191,6 +1207,7 @@ void on_insert_NATION(
             qPARTS2NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,C__NATIONKEY,REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_it58 = 
         qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
@@ -1203,6 +1220,7 @@ void on_insert_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY,REGIONKEY)] += 
             qPARTS2NATION2[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it60 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1217,6 +1235,7 @@ void on_insert_NATION(
             qPARTS2NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,x_qPARTS2NATION_N1__NATIONKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it62 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_end61 = 
@@ -1231,6 +1250,7 @@ void on_insert_NATION(
             qPARTS2NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qSUPPLIER1_it64 
         = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,
@@ -1243,6 +1263,7 @@ void on_insert_NATION(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             qSUPPLIER1NATION1[make_tuple(x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it66 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1271,6 +1292,7 @@ void on_insert_NATION(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             qSUPPLIER3NATION1[make_tuple(x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it70 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1286,6 +1308,7 @@ void on_insert_NATION(
             qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_NATION_sec_span, on_insert_NATION_usec_span);
@@ -1298,10 +1321,9 @@ void on_insert_ORDERS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it72 = 
-        q.begin();
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end71 = q.end(
-        );
+
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it72 = q.begin();
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end71 = q.end();
     for (; q_it72 != q_end71; ++q_it72)
     {
         string P__MFGR = get<0>(q_it72->first);
@@ -1313,10 +1335,10 @@ void on_insert_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it74 = 
         q.begin();
-    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end73 = q.end(
-        );
+    map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end73 = q.end();
     for (; q_it74 != q_end73; ++q_it74)
     {
         string P__MFGR = get<0>(q_it74->first);
@@ -1328,6 +1350,7 @@ void on_insert_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it76 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end75 = 
@@ -1340,6 +1363,7 @@ void on_insert_ORDERS(
             CUSTKEY,P__MFGR,N2__REGIONKEY)] += qORDERS1[make_tuple(
             ORDERKEY,P__MFGR,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,
         double>::iterator qCUSTOMER1NATION1_it78 = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_end77 
@@ -1354,6 +1378,7 @@ void on_insert_ORDERS(
             CUSTKEY,x_qCUSTOMER1NATION_N1__NATIONKEY,P__MFGR)] += 
             qORDERS1NATION1[make_tuple(ORDERKEY,x_qCUSTOMER1NATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,
         double>::iterator qCUSTOMER1PARTS1_it80 = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_end79 
@@ -1368,6 +1393,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER1PARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)] += 
             qORDERS1PARTS1[make_tuple(ORDERKEY,x_qCUSTOMER1PARTS_P__PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it82 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1385,6 +1411,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)] += qORDERS1PARTS1NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER1PARTS_P__PARTKEY,x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,
         double>::iterator qCUSTOMER1SUPPLIER1_it84 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -1400,6 +1427,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER1SUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)] += 
             qORDERS1SUPPLIER1[make_tuple(ORDERKEY,x_qCUSTOMER1SUPPLIER_S__SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1SUPPLIER1PARTS1_it86 = qCUSTOMER1SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1418,6 +1446,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qCUSTOMER1SUPPLIER1PARTS_P__PARTKEY,
             x_qCUSTOMER1SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it88 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end87 = 
@@ -1430,6 +1459,7 @@ void on_insert_ORDERS(
             CUSTKEY,P__MFGR,N2__REGIONKEY)] += qORDERS3[make_tuple(
             ORDERKEY,P__MFGR,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,
         double>::iterator qCUSTOMER3NATION1_it90 = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_end89 
@@ -1444,6 +1474,7 @@ void on_insert_ORDERS(
             CUSTKEY,x_qCUSTOMER3NATION_N1__NATIONKEY,P__MFGR)] += 
             qORDERS3NATION1[make_tuple(ORDERKEY,x_qCUSTOMER3NATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,
         double>::iterator qCUSTOMER3PARTS1_it92 = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_end91 
@@ -1458,6 +1489,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER3PARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)] += 
             qORDERS3PARTS1[make_tuple(ORDERKEY,x_qCUSTOMER3PARTS_P__PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it94 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1475,6 +1507,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)] += qORDERS3PARTS1NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER3PARTS_P__PARTKEY,x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,
         double>::iterator qCUSTOMER3SUPPLIER1_it96 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -1490,6 +1523,7 @@ void on_insert_ORDERS(
             x_qCUSTOMER3SUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)] += 
             qORDERS3SUPPLIER1[make_tuple(ORDERKEY,x_qCUSTOMER3SUPPLIER_S__SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3SUPPLIER1PARTS1_it98 = qCUSTOMER3SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1508,6 +1542,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qCUSTOMER3SUPPLIER1PARTS_P__PARTKEY,
             x_qCUSTOMER3SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it100 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end99 = 
@@ -1535,6 +1570,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qLINEITEM1NATION_N1__NATIONKEY)] += 
             qLINEITEM1NATION1ORDERS1[make_tuple(CUSTKEY,x_qLINEITEM1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION1_it104 = qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_end103 
@@ -1551,6 +1587,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it106 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -1568,6 +1605,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it108 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end107 = 
@@ -1582,10 +1620,9 @@ void on_insert_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it110 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end109 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it110 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end109 = qNATION3.end();
     for (; qNATION3_it110 != qNATION3_end109; ++qNATION3_it110)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it110->first);
@@ -1594,6 +1631,7 @@ void on_insert_ORDERS(
             x_qNATION_N1__NATIONKEY,P__MFGR)] += qNATION3ORDERS1[make_tuple(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it112 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end111 
@@ -1610,6 +1648,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it114 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -1627,6 +1666,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it116 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end115 = 
@@ -1641,10 +1681,9 @@ void on_insert_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it118 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end117 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it118 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end117 = qNATION6.end();
     for (; qNATION6_it118 != qNATION6_end117; ++qNATION6_it118)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it118->first);
@@ -1653,6 +1692,7 @@ void on_insert_ORDERS(
             x_qNATION_N1__NATIONKEY,P__MFGR)] += qNATION6ORDERS1[make_tuple(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR,CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it120 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end119 
@@ -1669,6 +1709,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qPARTS_P__PARTKEY,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it122 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1688,6 +1729,7 @@ void on_insert_ORDERS(
             x_qPARTS1NATION_N1__NATIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it124 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1709,6 +1751,7 @@ void on_insert_ORDERS(
             x_qPARTS1NATION_N1__NATIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it126 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -1727,6 +1770,7 @@ void on_insert_ORDERS(
             N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it128 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end127 = 
@@ -1742,6 +1786,7 @@ void on_insert_ORDERS(
             qPARTS1NATION3ORDERS1[make_tuple(
             ORDERKEY,x_qPARTS_P__PARTKEY,x_qPARTS1NATION_N1__NATIONKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it130 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -1759,6 +1804,7 @@ void on_insert_ORDERS(
             qPARTS1NATION3LINEITEM1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY,x_qPARTS1NATION3LINEITEM_L__SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it132 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end131 
@@ -1775,6 +1821,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qPARTS_P__PARTKEY,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it134 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1794,6 +1841,7 @@ void on_insert_ORDERS(
             x_qPARTS2NATION_N1__NATIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it136 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1815,6 +1863,7 @@ void on_insert_ORDERS(
             x_qPARTS2NATION_N1__NATIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it138 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -1833,6 +1882,7 @@ void on_insert_ORDERS(
             N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it140 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end139 = 
@@ -1848,6 +1898,7 @@ void on_insert_ORDERS(
             qPARTS2NATION3ORDERS1[make_tuple(
             ORDERKEY,x_qPARTS_P__PARTKEY,x_qPARTS2NATION_N1__NATIONKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it142 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -1864,6 +1915,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it144 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -1882,6 +1934,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it146 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1901,6 +1954,7 @@ void on_insert_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it148 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1922,6 +1976,7 @@ void on_insert_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it150 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -1938,6 +1993,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it152 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -1956,6 +2012,7 @@ void on_insert_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it154 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -1975,6 +2032,7 @@ void on_insert_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it156 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -1996,6 +2054,7 @@ void on_insert_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_ORDERS_sec_span, on_insert_ORDERS_usec_span);
@@ -2024,6 +2083,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it160 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end159 = 
@@ -2040,6 +2100,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)]*100;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it162 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end161 = 
@@ -2055,6 +2116,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it164 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2074,6 +2136,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it166 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2088,6 +2151,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it168 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2106,6 +2170,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER1SUPPLIER1_it170 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -2122,6 +2187,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1SUPPLIER1PARTS1_it172 = qCUSTOMER1SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2136,6 +2202,7 @@ void on_insert_LINEITEM(
             PARTKEY,SUPPKEY,x_qCUSTOMER_C__CUSTKEY)] += 
             EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(ORDERKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it174 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end173 = 
@@ -2151,6 +2218,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it176 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2170,6 +2238,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it178 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2184,6 +2253,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it180 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2202,6 +2272,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER3SUPPLIER1_it182 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -2218,6 +2289,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3SUPPLIER1PARTS1_it184 = qCUSTOMER3SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2233,6 +2305,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION1_it186 = qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_end185 
@@ -2250,6 +2323,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it188 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -2268,6 +2342,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it190 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end189 = 
@@ -2283,10 +2358,9 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it192 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end191 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it192 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end191 = qNATION3.end();
     for (; qNATION3_it192 != qNATION3_end191; ++qNATION3_it192)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it192->first);
@@ -2297,6 +2371,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY,SUPPKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it194 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -2314,6 +2389,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY,x_qNATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it196 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end195 
@@ -2331,6 +2407,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it198 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -2349,6 +2426,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it200 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end199 = 
@@ -2364,10 +2442,9 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it202 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end201 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it202 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end201 = qNATION6.end();
     for (; qNATION6_it202 != qNATION6_end201; ++qNATION6_it202)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it202->first);
@@ -2378,6 +2455,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY,SUPPKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it204 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -2395,6 +2473,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY,x_qNATION6ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it206 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end205 = 
@@ -2407,6 +2486,7 @@ void on_insert_LINEITEM(
             ORDERKEY,P__MFGR,N2__REGIONKEY)] += EXTENDEDPRICE*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it208 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2423,6 +2503,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it210 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2435,6 +2516,7 @@ void on_insert_LINEITEM(
             ORDERKEY,PARTKEY,N2__REGIONKEY)] += EXTENDEDPRICE*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS1PARTS1NATION1_it212 = qORDERS1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2450,6 +2532,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1SUPPLIER1_it214 
         = qORDERS1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2478,6 +2561,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it218 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2494,6 +2578,7 @@ void on_insert_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it220 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2506,6 +2591,7 @@ void on_insert_LINEITEM(
             ORDERKEY,PARTKEY,N2__REGIONKEY)] += 
             EXTENDEDPRICE*DISCOUNT*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS3PARTS1NATION1_it222 = qORDERS3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2521,6 +2607,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3SUPPLIER1_it224 
         = qORDERS3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -2551,6 +2638,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it228 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2568,6 +2656,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it230 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2586,6 +2675,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it232 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2602,6 +2692,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qPARTS1NATION_N1__NATIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it234 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end233 = 
@@ -2616,6 +2707,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qPARTS1NATION3LINEITEM1[make_tuple(
             ORDERKEY,x_qPARTS1NATION_N1__NATIONKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it236 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2634,6 +2726,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY,x_qPARTS1NATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it238 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end237 
@@ -2649,6 +2742,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it240 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2666,6 +2760,7 @@ void on_insert_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it242 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2684,6 +2779,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it244 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -2700,6 +2796,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qPARTS2NATION_N1__NATIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it246 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end245 = 
@@ -2714,6 +2811,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qPARTS1NATION3LINEITEM1[make_tuple(
             ORDERKEY,x_qPARTS2NATION_N1__NATIONKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it248 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2732,6 +2830,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY,x_qPARTS2NATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it250 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -2746,6 +2845,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it252 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -2763,6 +2863,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it254 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2776,6 +2877,7 @@ void on_insert_LINEITEM(
             PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)] += 
             EXTENDEDPRICE*qLINEITEM1[make_tuple(ORDERKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it256 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2791,6 +2893,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*qLINEITEM1NATION1[make_tuple(
             ORDERKEY,x_qSUPPLIER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it258 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -2805,6 +2908,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it260 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -2822,6 +2926,7 @@ void on_insert_LINEITEM(
             ORDERKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it262 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -2836,6 +2941,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it264 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -2851,6 +2957,7 @@ void on_insert_LINEITEM(
             EXTENDEDPRICE*DISCOUNT*qLINEITEM1NATION1[make_tuple(
             ORDERKEY,x_qSUPPLIER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_LINEITEM_sec_span, on_insert_LINEITEM_usec_span);
@@ -2877,6 +2984,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,P__MFGR,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it268 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end267 = 
@@ -2891,6 +2999,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,P__MFGR,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it270 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end269 = 
@@ -2905,6 +3014,7 @@ void on_insert_CUSTOMER(
             x_qLINEITEM_L__ORDERKEY,CUSTKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM1NATION1_it272 = 
         qLINEITEM1NATION1.begin();
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM1NATION1_end271 = 
@@ -2935,6 +3045,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it276 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -2948,6 +3059,7 @@ void on_insert_CUSTOMER(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)] += qCUSTOMER1NATION1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it278 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end277 = 
@@ -2960,16 +3072,16 @@ void on_insert_CUSTOMER(
             P__MFGR,NATIONKEY,N2__REGIONKEY)] += qCUSTOMER1[make_tuple(
             CUSTKEY,P__MFGR,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it280 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end279 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it280 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end279 = qNATION3.end();
     for (; qNATION3_it280 != qNATION3_end279; ++qNATION3_it280)
     {
         string P__MFGR = get<1>(qNATION3_it280->first);
         qNATION3[make_tuple(NATIONKEY,P__MFGR)] += qCUSTOMER1NATION1[make_tuple(
             CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it282 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -2984,6 +3096,7 @@ void on_insert_CUSTOMER(
             x_qNATION3ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR,CUSTKEY)] += 
             qORDERS1NATION1[make_tuple(x_qNATION3ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it284 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end283 
@@ -2999,6 +3112,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it286 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -3012,6 +3126,7 @@ void on_insert_CUSTOMER(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)] += qCUSTOMER3NATION1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it288 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end287 = 
@@ -3024,16 +3139,16 @@ void on_insert_CUSTOMER(
             P__MFGR,NATIONKEY,N2__REGIONKEY)] += qCUSTOMER3[make_tuple(
             CUSTKEY,P__MFGR,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it290 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end289 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it290 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end289 = qNATION6.end();
     for (; qNATION6_it290 != qNATION6_end289; ++qNATION6_it290)
     {
         string P__MFGR = get<1>(qNATION6_it290->first);
         qNATION6[make_tuple(NATIONKEY,P__MFGR)] += qCUSTOMER3NATION1[make_tuple(
             CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it292 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -3048,6 +3163,7 @@ void on_insert_CUSTOMER(
             x_qNATION6ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR,CUSTKEY)] += 
             qORDERS3NATION1[make_tuple(x_qNATION6ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_it294 = 
         qORDERS2.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_end293 = 
@@ -3059,6 +3175,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,NATIONKEY,N1__REGIONKEY)] += qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it296 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end295 
@@ -3074,6 +3191,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it298 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3091,6 +3209,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,
             x_qPARTS1NATION_N1__NATIONKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it300 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3108,6 +3227,7 @@ void on_insert_CUSTOMER(
             qCUSTOMER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it302 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3121,6 +3241,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)] += qCUSTOMER1PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it304 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end303 = 
@@ -3133,6 +3254,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += qCUSTOMER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it306 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3151,6 +3273,7 @@ void on_insert_CUSTOMER(
             x_qPARTS1NATION3LINEITEM_L__ORDERKEY,CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             x_qPARTS1NATION3LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1ORDERS1_it308 = qPARTS1NATION3LINEITEM1ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3165,6 +3288,7 @@ void on_insert_CUSTOMER(
             CUSTKEY,NATIONKEY,x_qPARTS1NATION3LINEITEM_L__SUPPKEY)] += 
             qLINEITEM3NATION1[make_tuple(x_qPARTS1NATION3LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it310 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3182,6 +3306,7 @@ void on_insert_CUSTOMER(
             qORDERS1PARTS1NATION1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__ORDERKEY,x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3ORDERS1LINEITEM1_it312 = qPARTS1NATION3ORDERS1LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3197,6 +3322,7 @@ void on_insert_CUSTOMER(
             qLINEITEM3NATION1[make_tuple(
             x_qPARTS1NATION3ORDERS1LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it314 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end313 
@@ -3212,6 +3338,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it316 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3229,6 +3356,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,
             x_qPARTS2NATION_N1__NATIONKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it318 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3246,6 +3374,7 @@ void on_insert_CUSTOMER(
             qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it320 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3259,6 +3388,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)] += qCUSTOMER3PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it322 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end321 = 
@@ -3271,6 +3401,7 @@ void on_insert_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it324 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3288,6 +3419,7 @@ void on_insert_CUSTOMER(
             qORDERS3PARTS1NATION1[make_tuple(
             x_qPARTS2NATION3ORDERS_O__ORDERKEY,x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it326 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -3303,6 +3435,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it328 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -3317,6 +3450,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)] += qCUSTOMER1SUPPLIER1[make_tuple(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it330 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3334,6 +3468,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER1PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,
             CUSTKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it332 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3351,6 +3486,7 @@ void on_insert_CUSTOMER(
             qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             x_qSUPPLIER1PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it334 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -3366,6 +3502,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it336 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -3380,6 +3517,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)] += qCUSTOMER3SUPPLIER1[make_tuple(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it338 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3397,6 +3535,7 @@ void on_insert_CUSTOMER(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,
             CUSTKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it340 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3414,6 +3553,7 @@ void on_insert_CUSTOMER(
             qCUSTOMER3SUPPLIER1PARTS1[make_tuple(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,CUSTKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_CUSTOMER_sec_span, on_insert_CUSTOMER_usec_span);
@@ -3441,6 +3581,7 @@ void on_insert_SUPPLIER(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it344 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end343 = 
@@ -3456,6 +3597,7 @@ void on_insert_SUPPLIER(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it346 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end345 = 
@@ -3471,6 +3613,7 @@ void on_insert_SUPPLIER(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it348 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -3485,6 +3628,7 @@ void on_insert_SUPPLIER(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)] += qCUSTOMER1SUPPLIER1[make_tuple(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it350 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3502,6 +3646,7 @@ void on_insert_SUPPLIER(
             x_qCUSTOMER1PARTS_P__PARTKEY,SUPPKEY,
             x_qCUSTOMER_C__CUSTKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it352 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3519,6 +3664,7 @@ void on_insert_SUPPLIER(
             qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             x_qCUSTOMER1PARTS_P__PARTKEY,SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it354 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end353 = 
@@ -3534,6 +3680,7 @@ void on_insert_SUPPLIER(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it356 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -3548,6 +3695,7 @@ void on_insert_SUPPLIER(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)] += qCUSTOMER3SUPPLIER1[make_tuple(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it358 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3565,6 +3713,7 @@ void on_insert_SUPPLIER(
             x_qCUSTOMER3PARTS_P__PARTKEY,SUPPKEY,
             x_qCUSTOMER_C__CUSTKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it360 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3582,6 +3731,7 @@ void on_insert_SUPPLIER(
             qCUSTOMER3SUPPLIER1PARTS1[make_tuple(
             x_qCUSTOMER3PARTS_P__PARTKEY,SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_it362 = 
         qLINEITEM3.begin();
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_end361 = 
@@ -3606,6 +3756,7 @@ void on_insert_SUPPLIER(
             NATIONKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)] += qSUPPLIER1[make_tuple(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it366 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -3620,6 +3771,7 @@ void on_insert_SUPPLIER(
             NATIONKEY,P__MFGR,x_qNATION1NATION_N1__NATIONKEY)] += 
             qSUPPLIER1NATION1[make_tuple(SUPPKEY,P__MFGR,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it368 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end367 = 
@@ -3634,16 +3786,16 @@ void on_insert_SUPPLIER(
             SUPPKEY,P__MFGR,x_qNATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it370 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end369 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it370 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end369 = qNATION3.end();
     for (; qNATION3_it370 != qNATION3_end369; ++qNATION3_it370)
     {
         string P__MFGR = get<1>(qNATION3_it370->first);
         qNATION3[make_tuple(NATIONKEY,P__MFGR)] += qSUPPLIER1NATION1[make_tuple(
             SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it372 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -3663,6 +3815,7 @@ void on_insert_SUPPLIER(
             P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qNATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it374 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end373 
@@ -3676,6 +3829,7 @@ void on_insert_SUPPLIER(
             NATIONKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)] += qSUPPLIER3[make_tuple(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it376 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -3690,6 +3844,7 @@ void on_insert_SUPPLIER(
             NATIONKEY,P__MFGR,x_qNATION4NATION_N1__NATIONKEY)] += 
             qSUPPLIER3NATION1[make_tuple(SUPPKEY,P__MFGR,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it378 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end377 = 
@@ -3704,16 +3859,16 @@ void on_insert_SUPPLIER(
             SUPPKEY,P__MFGR,x_qNATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it380 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end379 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it380 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end379 = qNATION6.end();
     for (; qNATION6_it380 != qNATION6_end379; ++qNATION6_it380)
     {
         string P__MFGR = get<1>(qNATION6_it380->first);
         qNATION6[make_tuple(NATIONKEY,P__MFGR)] += qSUPPLIER3NATION1[make_tuple(
             SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it382 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -3733,6 +3888,7 @@ void on_insert_SUPPLIER(
             P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qNATION6ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it384 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end383 = 
@@ -3747,6 +3903,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it386 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -3760,6 +3917,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)] += qORDERS1SUPPLIER1[make_tuple(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it388 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3777,6 +3935,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,
             SUPPKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS1PARTS1NATION1_it390 = qORDERS1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3794,6 +3953,7 @@ void on_insert_SUPPLIER(
             qORDERS1SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it392 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end391 = 
@@ -3808,6 +3968,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it394 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -3821,6 +3982,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)] += qORDERS3SUPPLIER1[make_tuple(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it396 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3838,6 +4000,7 @@ void on_insert_SUPPLIER(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,
             SUPPKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS3PARTS1NATION1_it398 = qORDERS3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3855,6 +4018,7 @@ void on_insert_SUPPLIER(
             qORDERS3SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it400 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end399 
@@ -3871,6 +4035,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it402 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3886,6 +4051,7 @@ void on_insert_SUPPLIER(
             qSUPPLIER1PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it404 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -3903,6 +4069,7 @@ void on_insert_SUPPLIER(
             qSUPPLIER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it406 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -3920,6 +4087,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,
             x_qPARTS1NATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it408 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end407 = 
@@ -3932,6 +4100,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += qSUPPLIER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it410 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3946,6 +4115,7 @@ void on_insert_SUPPLIER(
             x_qPARTS1NATION3LINEITEM_L__ORDERKEY,NATIONKEY,SUPPKEY)] += 
             qLINEITEM1NATION1[make_tuple(x_qPARTS1NATION3LINEITEM_L__ORDERKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1ORDERS1_it412 = qPARTS1NATION3LINEITEM1ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3961,6 +4131,7 @@ void on_insert_SUPPLIER(
             qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3LINEITEM1ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it414 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -3982,6 +4153,7 @@ void on_insert_SUPPLIER(
             SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3ORDERS1LINEITEM1_it416 = qPARTS1NATION3ORDERS1LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -3997,6 +4169,7 @@ void on_insert_SUPPLIER(
             qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it418 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end417 
@@ -4013,6 +4186,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it420 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4028,6 +4202,7 @@ void on_insert_SUPPLIER(
             qSUPPLIER3PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it422 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -4045,6 +4220,7 @@ void on_insert_SUPPLIER(
             qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it424 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4062,6 +4238,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,
             x_qPARTS2NATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it426 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end425 = 
@@ -4074,6 +4251,7 @@ void on_insert_SUPPLIER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it428 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4095,6 +4273,7 @@ void on_insert_SUPPLIER(
             SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS2NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_SUPPLIER_sec_span, on_insert_SUPPLIER_usec_span);
@@ -4120,6 +4299,7 @@ void on_insert_PARTS(
             MFGR,N2__REGIONKEY,N1__REGIONKEY,C__NATIONKEY)] += qPARTS1[make_tuple(
             PARTKEY,C__NATIONKEY,N2__REGIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it432 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end431 = 
@@ -4133,6 +4313,7 @@ void on_insert_PARTS(
             MFGR,N2__REGIONKEY,N1__REGIONKEY,C__NATIONKEY)] += qPARTS2[make_tuple(
             PARTKEY,C__NATIONKEY,N2__REGIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it434 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end433 = 
@@ -4145,6 +4326,7 @@ void on_insert_PARTS(
             x_qCUSTOMER_C__CUSTKEY,MFGR,N2__REGIONKEY)] += qCUSTOMER1PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it436 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4161,6 +4343,7 @@ void on_insert_PARTS(
             qCUSTOMER1PARTS1NATION1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,x_qCUSTOMER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER1SUPPLIER1_it438 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -4178,6 +4361,7 @@ void on_insert_PARTS(
             qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER1SUPPLIER_S__SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it440 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end439 = 
@@ -4190,6 +4374,7 @@ void on_insert_PARTS(
             x_qCUSTOMER_C__CUSTKEY,MFGR,N2__REGIONKEY)] += qCUSTOMER3PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it442 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4206,6 +4391,7 @@ void on_insert_PARTS(
             qCUSTOMER3PARTS1NATION1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,x_qCUSTOMER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER3SUPPLIER1_it444 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -4238,6 +4424,7 @@ void on_insert_PARTS(
             qPARTS1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it448 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -4253,6 +4440,7 @@ void on_insert_PARTS(
             qPARTS1NATION1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it450 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end449 = 
@@ -4265,10 +4453,9 @@ void on_insert_PARTS(
             MFGR,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)] += qPARTS1NATION2[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it452 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end451 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it452 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end451 = qNATION3.end();
     for (; qNATION3_it452 != qNATION3_end451; ++qNATION3_it452)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it452->first);
@@ -4276,6 +4463,7 @@ void on_insert_PARTS(
             x_qNATION_N1__NATIONKEY,MFGR)] += qPARTS1NATION3[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it454 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -4294,6 +4482,7 @@ void on_insert_PARTS(
             x_qNATION3ORDERS_O__ORDERKEY,PARTKEY,x_qNATION_N1__NATIONKEY,
             x_qNATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it456 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end455 
@@ -4308,6 +4497,7 @@ void on_insert_PARTS(
             qPARTS2NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it458 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -4323,6 +4513,7 @@ void on_insert_PARTS(
             qPARTS2NATION1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it460 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end459 = 
@@ -4335,10 +4526,9 @@ void on_insert_PARTS(
             MFGR,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)] += qPARTS2NATION2[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it462 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end461 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it462 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end461 = qNATION6.end();
     for (; qNATION6_it462 != qNATION6_end461; ++qNATION6_it462)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it462->first);
@@ -4346,6 +4536,7 @@ void on_insert_PARTS(
             x_qNATION_N1__NATIONKEY,MFGR)] += qPARTS2NATION3[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it464 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -4364,6 +4555,7 @@ void on_insert_PARTS(
             x_qNATION6ORDERS_O__ORDERKEY,PARTKEY,x_qNATION_N1__NATIONKEY,
             x_qNATION6ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it466 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end465 = 
@@ -4376,6 +4568,7 @@ void on_insert_PARTS(
             x_qORDERS_O__ORDERKEY,MFGR,N2__REGIONKEY)] += qORDERS1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it468 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4391,6 +4584,7 @@ void on_insert_PARTS(
             qORDERS1PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1SUPPLIER1_it470 
         = qORDERS1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4407,6 +4601,7 @@ void on_insert_PARTS(
             qORDERS1SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS1SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it472 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end471 = 
@@ -4419,6 +4614,7 @@ void on_insert_PARTS(
             x_qORDERS_O__ORDERKEY,MFGR,N2__REGIONKEY)] += qORDERS3PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it474 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4434,6 +4630,7 @@ void on_insert_PARTS(
             qORDERS3PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3SUPPLIER1_it476 
         = qORDERS3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -4450,6 +4647,7 @@ void on_insert_PARTS(
             qORDERS3SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS3SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it478 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -4464,6 +4662,7 @@ void on_insert_PARTS(
             qSUPPLIER1PARTS1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it480 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -4480,6 +4679,7 @@ void on_insert_PARTS(
             qSUPPLIER1PARTS1NATION1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it482 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -4494,6 +4694,7 @@ void on_insert_PARTS(
             qSUPPLIER3PARTS1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it484 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -4510,6 +4711,7 @@ void on_insert_PARTS(
             qSUPPLIER3PARTS1NATION1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_insert_PARTS_sec_span, on_insert_PARTS_usec_span);
@@ -4532,6 +4734,7 @@ void on_delete_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,NATIONKEY)] += -1*qNATION3[make_tuple(
             NATIONKEY,P__MFGR)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it488 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end487 = 
@@ -4543,6 +4746,7 @@ void on_delete_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,NATIONKEY)] += -1*qNATION6[make_tuple(
             NATIONKEY,P__MFGR)]*-1;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it490 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end489 = 
@@ -4555,6 +4759,7 @@ void on_delete_NATION(
             P__MFGR,N2__REGIONKEY,REGIONKEY,NATIONKEY)] += -1*qNATION2[make_tuple(
             P__MFGR,NATIONKEY,N2__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it492 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end491 = 
@@ -4567,6 +4772,7 @@ void on_delete_NATION(
             P__MFGR,N2__REGIONKEY,REGIONKEY,NATIONKEY)] += -1*qNATION5[make_tuple(
             P__MFGR,NATIONKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it494 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end493 = 
@@ -4580,6 +4786,7 @@ void on_delete_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY)] += -1*qNATION1[make_tuple(
             NATIONKEY,P__MFGR,C__NATIONKEY,REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it496 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end495 = 
@@ -4593,6 +4800,7 @@ void on_delete_NATION(
             P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY)] += -1*qNATION4[make_tuple(
             NATIONKEY,P__MFGR,C__NATIONKEY,REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it498 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end497 = 
@@ -4605,6 +4813,7 @@ void on_delete_NATION(
             x_qCUSTOMER_C__CUSTKEY,P__MFGR,REGIONKEY)] += -1*qCUSTOMER1NATION1[make_tuple(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it500 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4633,6 +4842,7 @@ void on_delete_NATION(
             x_qCUSTOMER_C__CUSTKEY,P__MFGR,REGIONKEY)] += -1*qCUSTOMER3NATION1[make_tuple(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it504 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4648,6 +4858,7 @@ void on_delete_NATION(
             -1*qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qCUSTOMER3PARTS_P__PARTKEY,x_qCUSTOMER_C__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it506 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end505 = 
@@ -4659,6 +4870,7 @@ void on_delete_NATION(
             x_qLINEITEM_L__ORDERKEY,NATIONKEY,REGIONKEY)] += 
             -1*qLINEITEM1NATION1[make_tuple(x_qLINEITEM_L__ORDERKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_it508 = 
         qLINEITEM3.begin();
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_end507 = 
@@ -4670,6 +4882,7 @@ void on_delete_NATION(
             x_qLINEITEM_L__SUPPKEY,REGIONKEY)] += -1*qLINEITEM3NATION1[make_tuple(
             x_qLINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION1_it510 = qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_end509 
@@ -4682,6 +4895,7 @@ void on_delete_NATION(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             -1*qNATION1NATION1[make_tuple(x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it512 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end511 = 
@@ -4694,6 +4908,7 @@ void on_delete_NATION(
             P__MFGR,x_qNATION_N1__NATIONKEY,REGIONKEY)] += -1*qNATION1NATION1[make_tuple(
             NATIONKEY,P__MFGR,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it514 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end513 
@@ -4706,6 +4921,7 @@ void on_delete_NATION(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             -1*qNATION4NATION1[make_tuple(x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it516 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end515 = 
@@ -4718,6 +4934,7 @@ void on_delete_NATION(
             P__MFGR,x_qNATION_N1__NATIONKEY,REGIONKEY)] += -1*qNATION4NATION1[make_tuple(
             NATIONKEY,P__MFGR,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it518 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end517 = 
@@ -4730,6 +4947,7 @@ void on_delete_NATION(
             x_qORDERS_O__ORDERKEY,P__MFGR,REGIONKEY)] += -1*qORDERS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it520 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4745,6 +4963,7 @@ void on_delete_NATION(
             -1*qORDERS1PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_it522 = 
         qORDERS2.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_end521 = 
@@ -4756,6 +4975,7 @@ void on_delete_NATION(
             x_qORDERS_O__CUSTKEY,NATIONKEY,REGIONKEY)] += 
             -1*qLINEITEM1NATION1ORDERS1[make_tuple(x_qORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it524 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end523 = 
@@ -4768,6 +4988,7 @@ void on_delete_NATION(
             x_qORDERS_O__ORDERKEY,P__MFGR,REGIONKEY)] += -1*qORDERS3NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it526 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4783,6 +5004,7 @@ void on_delete_NATION(
             -1*qORDERS3PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it528 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end527 
@@ -4794,6 +5016,7 @@ void on_delete_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,REGIONKEY,REGIONKEY)] += 
             -1*qPARTS1NATION3[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it530 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end529 
@@ -4808,6 +5031,7 @@ void on_delete_NATION(
             -1*qPARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,C__NATIONKEY,REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it532 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end531 
@@ -4820,6 +5044,7 @@ void on_delete_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY,REGIONKEY)] += 
             -1*qPARTS1NATION2[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it534 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4835,6 +5060,7 @@ void on_delete_NATION(
             -1*qPARTS1NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,x_qPARTS1NATION_N1__NATIONKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it536 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4850,6 +5076,7 @@ void on_delete_NATION(
             -1*qPARTS1NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it538 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end537 
@@ -4861,6 +5088,7 @@ void on_delete_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,REGIONKEY,REGIONKEY)] += 
             -1*qPARTS2NATION3[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it540 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end539 
@@ -4875,6 +5103,7 @@ void on_delete_NATION(
             -1*qPARTS2NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,C__NATIONKEY,REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it542 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end541 
@@ -4887,6 +5116,7 @@ void on_delete_NATION(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY,REGIONKEY)] += 
             -1*qPARTS2NATION2[make_tuple(x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it544 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4902,6 +5132,7 @@ void on_delete_NATION(
             -1*qPARTS2NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,x_qPARTS2NATION_N1__NATIONKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it546 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -4917,6 +5148,7 @@ void on_delete_NATION(
             -1*qPARTS2NATION1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,NATIONKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it548 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -4929,6 +5161,7 @@ void on_delete_NATION(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             -1*qSUPPLIER1NATION1[make_tuple(x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it550 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4957,6 +5190,7 @@ void on_delete_NATION(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY,REGIONKEY)] += 
             -1*qSUPPLIER3NATION1[make_tuple(x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it554 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -4972,6 +5206,7 @@ void on_delete_NATION(
             -1*qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_NATION_sec_span, on_delete_NATION_usec_span);
@@ -4999,6 +5234,7 @@ void on_delete_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it558 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end557 = 
@@ -5014,6 +5250,7 @@ void on_delete_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it560 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end559 = 
@@ -5026,6 +5263,7 @@ void on_delete_ORDERS(
             CUSTKEY,P__MFGR,N2__REGIONKEY)] += -1*qORDERS1[make_tuple(
             ORDERKEY,P__MFGR,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it562 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -5042,6 +5280,7 @@ void on_delete_ORDERS(
             -1*qORDERS1NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER1NATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it564 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5057,6 +5296,7 @@ void on_delete_ORDERS(
             -1*qORDERS1PARTS1[make_tuple(
             ORDERKEY,x_qCUSTOMER1PARTS_P__PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it566 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5074,6 +5314,7 @@ void on_delete_ORDERS(
             x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)] += -1*qORDERS1PARTS1NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER1PARTS_P__PARTKEY,x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER1SUPPLIER1_it568 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -5090,6 +5331,7 @@ void on_delete_ORDERS(
             -1*qORDERS1SUPPLIER1[make_tuple(
             ORDERKEY,x_qCUSTOMER1SUPPLIER_S__SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1SUPPLIER1PARTS1_it570 = qCUSTOMER1SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5108,6 +5350,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qCUSTOMER1SUPPLIER1PARTS_P__PARTKEY,
             x_qCUSTOMER1SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it572 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end571 = 
@@ -5120,6 +5363,7 @@ void on_delete_ORDERS(
             CUSTKEY,P__MFGR,N2__REGIONKEY)] += -1*qORDERS3[make_tuple(
             ORDERKEY,P__MFGR,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it574 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -5136,6 +5380,7 @@ void on_delete_ORDERS(
             -1*qORDERS3NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER3NATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it576 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5151,6 +5396,7 @@ void on_delete_ORDERS(
             -1*qORDERS3PARTS1[make_tuple(
             ORDERKEY,x_qCUSTOMER3PARTS_P__PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it578 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5168,6 +5414,7 @@ void on_delete_ORDERS(
             x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)] += -1*qORDERS3PARTS1NATION1[make_tuple(
             ORDERKEY,x_qCUSTOMER3PARTS_P__PARTKEY,x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER3SUPPLIER1_it580 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -5184,6 +5431,7 @@ void on_delete_ORDERS(
             -1*qORDERS3SUPPLIER1[make_tuple(
             ORDERKEY,x_qCUSTOMER3SUPPLIER_S__SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3SUPPLIER1PARTS1_it582 = qCUSTOMER3SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5202,6 +5450,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qCUSTOMER3SUPPLIER1PARTS_P__PARTKEY,
             x_qCUSTOMER3SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it584 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end583 = 
@@ -5230,6 +5479,7 @@ void on_delete_ORDERS(
             -1*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qLINEITEM1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION1_it588 = qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_end587 
@@ -5246,6 +5496,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it590 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -5263,6 +5514,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it592 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end591 = 
@@ -5277,10 +5529,9 @@ void on_delete_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it594 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end593 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it594 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end593 = qNATION3.end();
     for (; qNATION3_it594 != qNATION3_end593; ++qNATION3_it594)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it594->first);
@@ -5289,6 +5540,7 @@ void on_delete_ORDERS(
             x_qNATION_N1__NATIONKEY,P__MFGR)] += -1*qNATION3ORDERS1[make_tuple(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it596 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end595 
@@ -5305,6 +5557,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it598 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -5322,6 +5575,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it600 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end599 = 
@@ -5336,10 +5590,9 @@ void on_delete_ORDERS(
             ORDERKEY,P__MFGR,N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it602 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end601 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it602 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end601 = qNATION6.end();
     for (; qNATION6_it602 != qNATION6_end601; ++qNATION6_it602)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it602->first);
@@ -5348,6 +5601,7 @@ void on_delete_ORDERS(
             x_qNATION_N1__NATIONKEY,P__MFGR)] += -1*qNATION6ORDERS1[make_tuple(
             ORDERKEY,x_qNATION_N1__NATIONKEY,P__MFGR,CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it604 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end603 
@@ -5364,6 +5618,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qPARTS_P__PARTKEY,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it606 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -5383,6 +5638,7 @@ void on_delete_ORDERS(
             x_qPARTS1NATION_N1__NATIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it608 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5404,6 +5660,7 @@ void on_delete_ORDERS(
             x_qPARTS1NATION_N1__NATIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it610 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5422,6 +5679,7 @@ void on_delete_ORDERS(
             N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it612 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end611 = 
@@ -5437,6 +5695,7 @@ void on_delete_ORDERS(
             -1*qPARTS1NATION3ORDERS1[make_tuple(
             ORDERKEY,x_qPARTS_P__PARTKEY,x_qPARTS1NATION_N1__NATIONKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it614 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -5454,6 +5713,7 @@ void on_delete_ORDERS(
             -1*qPARTS1NATION3LINEITEM1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY,x_qPARTS1NATION3LINEITEM_L__SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it616 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end615 
@@ -5470,6 +5730,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qPARTS_P__PARTKEY,N2__REGIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it618 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -5489,6 +5750,7 @@ void on_delete_ORDERS(
             x_qPARTS2NATION_N1__NATIONKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it620 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5510,6 +5772,7 @@ void on_delete_ORDERS(
             x_qPARTS2NATION_N1__NATIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it622 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5528,6 +5791,7 @@ void on_delete_ORDERS(
             N2__REGIONKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it624 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end623 = 
@@ -5543,6 +5807,7 @@ void on_delete_ORDERS(
             -1*qPARTS2NATION3ORDERS1[make_tuple(
             ORDERKEY,x_qPARTS_P__PARTKEY,x_qPARTS2NATION_N1__NATIONKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it626 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -5559,6 +5824,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it628 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -5577,6 +5843,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it630 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -5596,6 +5863,7 @@ void on_delete_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it632 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5618,6 +5886,7 @@ void on_delete_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it634 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -5634,6 +5903,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it636 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -5652,6 +5922,7 @@ void on_delete_ORDERS(
             ORDERKEY,x_qSUPPLIER_S__SUPPKEY,P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it638 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -5671,6 +5942,7 @@ void on_delete_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qORDERS2[make_tuple(
             CUSTKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it640 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5693,6 +5965,7 @@ void on_delete_ORDERS(
             x_qSUPPLIER_S__SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             CUSTKEY,x_qSUPPLIER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_ORDERS_sec_span, on_delete_ORDERS_usec_span);
@@ -5721,6 +5994,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it644 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end643 = 
@@ -5737,6 +6011,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)]*100;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it646 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end645 = 
@@ -5752,6 +6027,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it648 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -5771,6 +6047,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it650 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5785,6 +6062,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it652 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5803,6 +6081,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER1SUPPLIER1_it654 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -5819,6 +6098,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1SUPPLIER1PARTS1_it656 = qCUSTOMER1SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5834,6 +6114,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it658 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end657 = 
@@ -5849,6 +6130,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it660 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -5868,6 +6150,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it662 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -5882,6 +6165,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it664 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5900,6 +6184,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qCUSTOMER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER3SUPPLIER1_it666 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -5916,6 +6201,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3SUPPLIER1PARTS1_it668 = qCUSTOMER3SUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -5931,6 +6217,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1CUSTOMER1[make_tuple(
             ORDERKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION1_it670 = qNATION1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION1_end669 
@@ -5948,6 +6235,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it672 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -5966,6 +6254,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it674 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end673 = 
@@ -5981,10 +6270,9 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it676 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end675 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it676 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end675 = qNATION3.end();
     for (; qNATION3_it676 != qNATION3_end675; ++qNATION3_it676)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it676->first);
@@ -5995,6 +6283,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY,SUPPKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it678 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -6012,6 +6301,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY,x_qNATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it680 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end679 
@@ -6029,6 +6319,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it682 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -6047,6 +6338,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it684 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end683 = 
@@ -6062,10 +6354,9 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it686 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end685 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it686 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end685 = qNATION6.end();
     for (; qNATION6_it686 != qNATION6_end685; ++qNATION6_it686)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it686->first);
@@ -6076,6 +6367,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qNATION_N1__NATIONKEY,SUPPKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it688 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -6093,6 +6385,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qNATION_N1__NATIONKEY,x_qNATION6ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it690 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end689 = 
@@ -6105,6 +6398,7 @@ void on_delete_LINEITEM(
             ORDERKEY,P__MFGR,N2__REGIONKEY)] += -1*EXTENDEDPRICE*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it692 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -6121,6 +6415,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it694 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6133,6 +6428,7 @@ void on_delete_LINEITEM(
             ORDERKEY,PARTKEY,N2__REGIONKEY)] += -1*EXTENDEDPRICE*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS1PARTS1NATION1_it696 = qORDERS1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6148,6 +6444,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1SUPPLIER1_it698 
         = qORDERS1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -6176,6 +6473,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)]*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it702 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -6192,6 +6490,7 @@ void on_delete_LINEITEM(
             PARTKEY,P__MFGR)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it704 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6204,6 +6503,7 @@ void on_delete_LINEITEM(
             ORDERKEY,PARTKEY,N2__REGIONKEY)] += 
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM3[make_tuple(SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS3PARTS1NATION1_it706 = qORDERS3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6219,6 +6519,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qORDERS3PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3SUPPLIER1_it708 
         = qORDERS3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -6249,6 +6550,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it712 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6266,6 +6568,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it714 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6284,6 +6587,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it716 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6300,6 +6604,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qPARTS1NATION_N1__NATIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it718 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end717 = 
@@ -6314,6 +6619,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qPARTS1NATION3LINEITEM1[make_tuple(
             ORDERKEY,x_qPARTS1NATION_N1__NATIONKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it720 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6332,6 +6638,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qPARTS1NATION_N1__NATIONKEY,x_qPARTS1NATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it722 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end721 
@@ -6347,6 +6654,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it724 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6364,6 +6672,7 @@ void on_delete_LINEITEM(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it726 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6382,6 +6691,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)]*qLINEITEM3NATION1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it728 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6398,6 +6708,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qPARTS2NATION_N1__NATIONKEY)]*qLINEITEM3[make_tuple(
             SUPPKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it730 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end729 = 
@@ -6412,6 +6723,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qPARTS1NATION3LINEITEM1[make_tuple(
             ORDERKEY,x_qPARTS2NATION_N1__NATIONKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it732 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6430,6 +6742,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qPARTS1NATION3ORDERS1LINEITEM1[make_tuple(
             SUPPKEY,x_qPARTS2NATION_N1__NATIONKEY,x_qPARTS2NATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it734 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -6444,6 +6757,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it736 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -6461,6 +6775,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it738 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6474,6 +6789,7 @@ void on_delete_LINEITEM(
             PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)] += 
             -1*EXTENDEDPRICE*qLINEITEM1[make_tuple(ORDERKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it740 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6489,6 +6805,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*qLINEITEM1NATION1[make_tuple(
             ORDERKEY,x_qSUPPLIER1PARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it742 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -6503,6 +6820,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)]*qLINEITEM2[make_tuple(PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it744 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -6520,6 +6838,7 @@ void on_delete_LINEITEM(
             ORDERKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)]*qLINEITEM2[make_tuple(
             PARTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it746 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6534,6 +6853,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1[make_tuple(
             ORDERKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it748 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6549,6 +6869,7 @@ void on_delete_LINEITEM(
             -1*EXTENDEDPRICE*DISCOUNT*qLINEITEM1NATION1[make_tuple(
             ORDERKEY,x_qSUPPLIER3PARTS1NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_LINEITEM_sec_span, on_delete_LINEITEM_usec_span);
@@ -6575,6 +6896,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,P__MFGR,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it752 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end751 = 
@@ -6589,6 +6911,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,P__MFGR,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_it754 = 
         qLINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qLINEITEM1_end753 = 
@@ -6603,6 +6926,7 @@ void on_delete_CUSTOMER(
             x_qLINEITEM_L__ORDERKEY,CUSTKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM1NATION1_it756 = 
         qLINEITEM1NATION1.begin();
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM1NATION1_end755 = 
@@ -6633,6 +6957,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it760 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -6646,6 +6971,7 @@ void on_delete_CUSTOMER(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)] += -1*qCUSTOMER1NATION1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it762 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end761 = 
@@ -6658,10 +6984,9 @@ void on_delete_CUSTOMER(
             P__MFGR,NATIONKEY,N2__REGIONKEY)] += -1*qCUSTOMER1[make_tuple(
             CUSTKEY,P__MFGR,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it764 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end763 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it764 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end763 = qNATION3.end();
     for (; qNATION3_it764 != qNATION3_end763; ++qNATION3_it764)
     {
         string P__MFGR = get<1>(qNATION3_it764->first);
@@ -6669,6 +6994,7 @@ void on_delete_CUSTOMER(
             NATIONKEY,P__MFGR)] += -1*qCUSTOMER1NATION1[make_tuple(
             CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it766 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -6683,6 +7009,7 @@ void on_delete_CUSTOMER(
             x_qNATION3ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR,CUSTKEY)] += 
             -1*qORDERS1NATION1[make_tuple(x_qNATION3ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it768 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end767 
@@ -6698,6 +7025,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it770 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -6711,6 +7039,7 @@ void on_delete_CUSTOMER(
             x_qNATION_N1__NATIONKEY,P__MFGR,NATIONKEY)] += -1*qCUSTOMER3NATION1[make_tuple(
             CUSTKEY,x_qNATION_N1__NATIONKEY,P__MFGR)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it772 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end771 = 
@@ -6723,10 +7052,9 @@ void on_delete_CUSTOMER(
             P__MFGR,NATIONKEY,N2__REGIONKEY)] += -1*qCUSTOMER3[make_tuple(
             CUSTKEY,P__MFGR,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it774 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end773 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it774 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end773 = qNATION6.end();
     for (; qNATION6_it774 != qNATION6_end773; ++qNATION6_it774)
     {
         string P__MFGR = get<1>(qNATION6_it774->first);
@@ -6734,6 +7062,7 @@ void on_delete_CUSTOMER(
             NATIONKEY,P__MFGR)] += -1*qCUSTOMER3NATION1[make_tuple(
             CUSTKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it776 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -6748,6 +7077,7 @@ void on_delete_CUSTOMER(
             x_qNATION6ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR,CUSTKEY)] += 
             -1*qORDERS3NATION1[make_tuple(x_qNATION6ORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_it778 = 
         qORDERS2.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator qORDERS2_end777 = 
@@ -6759,6 +7089,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,NATIONKEY,N1__REGIONKEY)] += -1*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it780 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end779 
@@ -6774,6 +7105,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it782 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6791,6 +7123,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,
             x_qPARTS1NATION_N1__NATIONKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it784 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6808,6 +7141,7 @@ void on_delete_CUSTOMER(
             -1*qCUSTOMER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,x_qPARTS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it786 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6821,6 +7155,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)] += -1*qCUSTOMER1PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it788 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end787 = 
@@ -6833,6 +7168,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += -1*qCUSTOMER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it790 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -6851,6 +7187,7 @@ void on_delete_CUSTOMER(
             x_qPARTS1NATION3LINEITEM_L__ORDERKEY,CUSTKEY)]*qLINEITEM3NATION1[make_tuple(
             x_qPARTS1NATION3LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1ORDERS1_it792 = qPARTS1NATION3LINEITEM1ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -6865,6 +7202,7 @@ void on_delete_CUSTOMER(
             CUSTKEY,NATIONKEY,x_qPARTS1NATION3LINEITEM_L__SUPPKEY)] += 
             -1*qLINEITEM3NATION1[make_tuple(x_qPARTS1NATION3LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it794 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6882,6 +7220,7 @@ void on_delete_CUSTOMER(
             -1*qORDERS1PARTS1NATION1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__ORDERKEY,x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3ORDERS1LINEITEM1_it796 = qPARTS1NATION3ORDERS1LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -6897,6 +7236,7 @@ void on_delete_CUSTOMER(
             -1*qLINEITEM3NATION1[make_tuple(
             x_qPARTS1NATION3ORDERS1LINEITEM_L__SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it798 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end797 
@@ -6912,6 +7252,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it800 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6929,6 +7270,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,CUSTKEY,
             x_qPARTS2NATION_N1__NATIONKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it802 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -6946,6 +7288,7 @@ void on_delete_CUSTOMER(
             -1*qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,x_qPARTS2NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it804 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -6959,6 +7302,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY,N2__REGIONKEY)] += -1*qCUSTOMER3PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it806 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end805 = 
@@ -6971,6 +7315,7 @@ void on_delete_CUSTOMER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += -1*qCUSTOMER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it808 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -6988,6 +7333,7 @@ void on_delete_CUSTOMER(
             -1*qORDERS3PARTS1NATION1[make_tuple(
             x_qPARTS2NATION3ORDERS_O__ORDERKEY,x_qPARTS_P__PARTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it810 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -7003,6 +7349,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it812 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -7017,6 +7364,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)] += -1*qCUSTOMER1SUPPLIER1[make_tuple(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1_it814 = qSUPPLIER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7034,6 +7382,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER1PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,
             CUSTKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER1PARTS1NATION1_it816 = qSUPPLIER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7051,6 +7400,7 @@ void on_delete_CUSTOMER(
             -1*qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             x_qSUPPLIER1PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it818 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -7066,6 +7416,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)]*qCUSTOMER2[make_tuple(
             NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it820 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -7080,6 +7431,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER_S__SUPPKEY,P__MFGR,NATIONKEY)] += -1*qCUSTOMER3SUPPLIER1[make_tuple(
             x_qSUPPLIER_S__SUPPKEY,CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1_it822 = qSUPPLIER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7097,6 +7449,7 @@ void on_delete_CUSTOMER(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,
             CUSTKEY)]*qCUSTOMER2[make_tuple(NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qSUPPLIER3PARTS1NATION1_it824 = qSUPPLIER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7114,6 +7467,7 @@ void on_delete_CUSTOMER(
             -1*qCUSTOMER3SUPPLIER1PARTS1[make_tuple(
             x_qSUPPLIER3PARTS_P__PARTKEY,x_qSUPPLIER_S__SUPPKEY,CUSTKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_CUSTOMER_sec_span, on_delete_CUSTOMER_usec_span);
@@ -7141,6 +7495,7 @@ void on_delete_SUPPLIER(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it828 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end827 = 
@@ -7156,6 +7511,7 @@ void on_delete_SUPPLIER(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it830 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end829 = 
@@ -7171,6 +7527,7 @@ void on_delete_SUPPLIER(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it832 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7185,6 +7542,7 @@ void on_delete_SUPPLIER(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)] += -1*qCUSTOMER1SUPPLIER1[make_tuple(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER1PARTS1_it834 
         = qCUSTOMER1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7202,6 +7560,7 @@ void on_delete_SUPPLIER(
             x_qCUSTOMER1PARTS_P__PARTKEY,SUPPKEY,
             x_qCUSTOMER_C__CUSTKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER1PARTS1NATION1_it836 = qCUSTOMER1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7219,6 +7578,7 @@ void on_delete_SUPPLIER(
             -1*qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             x_qCUSTOMER1PARTS_P__PARTKEY,SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it838 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end837 = 
@@ -7234,6 +7594,7 @@ void on_delete_SUPPLIER(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it840 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7248,6 +7609,7 @@ void on_delete_SUPPLIER(
             x_qCUSTOMER_C__CUSTKEY,NATIONKEY,P__MFGR)] += -1*qCUSTOMER3SUPPLIER1[make_tuple(
             SUPPKEY,x_qCUSTOMER_C__CUSTKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qCUSTOMER3PARTS1_it842 
         = qCUSTOMER3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7265,6 +7627,7 @@ void on_delete_SUPPLIER(
             x_qCUSTOMER3PARTS_P__PARTKEY,SUPPKEY,
             x_qCUSTOMER_C__CUSTKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qCUSTOMER3PARTS1NATION1_it844 = qCUSTOMER3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7282,6 +7645,7 @@ void on_delete_SUPPLIER(
             -1*qCUSTOMER3SUPPLIER1PARTS1[make_tuple(
             x_qCUSTOMER3PARTS_P__PARTKEY,SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_it846 = 
         qLINEITEM3.begin();
     map<tuple<int64_t,int64_t>,int>::iterator qLINEITEM3_end845 = 
@@ -7306,6 +7670,7 @@ void on_delete_SUPPLIER(
             NATIONKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)] += -1*qSUPPLIER1[make_tuple(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it850 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -7321,6 +7686,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER1NATION1[make_tuple(
             SUPPKEY,P__MFGR,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it852 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end851 = 
@@ -7336,10 +7702,9 @@ void on_delete_SUPPLIER(
             SUPPKEY,P__MFGR,x_qNATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it854 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end853 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it854 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end853 = qNATION3.end();
     for (; qNATION3_it854 != qNATION3_end853; ++qNATION3_it854)
     {
         string P__MFGR = get<1>(qNATION3_it854->first);
@@ -7347,6 +7712,7 @@ void on_delete_SUPPLIER(
             NATIONKEY,P__MFGR)] += -1*qSUPPLIER1NATION1[make_tuple(
             SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it856 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -7366,6 +7732,7 @@ void on_delete_SUPPLIER(
             P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qNATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it858 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end857 
@@ -7379,6 +7746,7 @@ void on_delete_SUPPLIER(
             NATIONKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)] += -1*qSUPPLIER3[make_tuple(
             SUPPKEY,P__MFGR,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it860 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -7394,6 +7762,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER3NATION1[make_tuple(
             SUPPKEY,P__MFGR,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it862 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end861 = 
@@ -7409,10 +7778,9 @@ void on_delete_SUPPLIER(
             SUPPKEY,P__MFGR,x_qNATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it864 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end863 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it864 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end863 = qNATION6.end();
     for (; qNATION6_it864 != qNATION6_end863; ++qNATION6_it864)
     {
         string P__MFGR = get<1>(qNATION6_it864->first);
@@ -7420,6 +7788,7 @@ void on_delete_SUPPLIER(
             NATIONKEY,P__MFGR)] += -1*qSUPPLIER3NATION1[make_tuple(
             SUPPKEY,P__MFGR,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it866 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -7439,6 +7808,7 @@ void on_delete_SUPPLIER(
             P__MFGR)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qNATION6ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it868 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end867 = 
@@ -7454,6 +7824,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it870 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7467,6 +7838,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)] += -1*qORDERS1SUPPLIER1[make_tuple(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS1PARTS1_it872 = 
         qORDERS1PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7484,6 +7856,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,
             SUPPKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS1PARTS1NATION1_it874 = qORDERS1PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7501,6 +7874,7 @@ void on_delete_SUPPLIER(
             -1*qORDERS1SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS1PARTS_P__PARTKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it876 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end875 = 
@@ -7516,6 +7890,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it878 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7529,6 +7904,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,NATIONKEY,P__MFGR)] += -1*qORDERS3SUPPLIER1[make_tuple(
             x_qORDERS_O__ORDERKEY,SUPPKEY,P__MFGR)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qORDERS3PARTS1_it880 = 
         qORDERS3PARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7546,6 +7922,7 @@ void on_delete_SUPPLIER(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,
             SUPPKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qORDERS3PARTS1NATION1_it882 = qORDERS3PARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7563,6 +7940,7 @@ void on_delete_SUPPLIER(
             -1*qORDERS3SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,x_qORDERS3PARTS_P__PARTKEY,SUPPKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS1_it884 = qPARTS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS1_end883 
@@ -7579,6 +7957,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1_it886 = qPARTS1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7594,6 +7973,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER1PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION1NATION1_it888 = qPARTS1NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7611,6 +7991,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,x_qPARTS1NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS1NATION2_it890 = 
         qPARTS1NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7628,6 +8009,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,
             x_qPARTS1NATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_it892 = 
         qPARTS1NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS1NATION3_end891 = 
@@ -7640,6 +8022,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += -1*qSUPPLIER1PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1_it894 = qPARTS1NATION3LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -7655,6 +8038,7 @@ void on_delete_SUPPLIER(
             -1*qLINEITEM1NATION1[make_tuple(
             x_qPARTS1NATION3LINEITEM_L__ORDERKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3LINEITEM1ORDERS1_it896 = qPARTS1NATION3LINEITEM1ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -7670,6 +8054,7 @@ void on_delete_SUPPLIER(
             -1*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3LINEITEM1ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS1NATION3ORDERS1_it898 = qPARTS1NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7691,6 +8076,7 @@ void on_delete_SUPPLIER(
             SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
         qPARTS1NATION3ORDERS1LINEITEM1_it900 = qPARTS1NATION3ORDERS1LINEITEM1.begin();
     map<tuple<int64_t,int64_t,int64_t>,int>::iterator 
@@ -7706,6 +8092,7 @@ void on_delete_SUPPLIER(
             -1*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS1NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,
         double>::iterator qPARTS2_it902 = qPARTS2.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator qPARTS2_end901 
@@ -7722,6 +8109,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)]*qSUPPLIER2[make_tuple(
             NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1_it904 = qPARTS2NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7737,6 +8125,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER3PARTS1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION1NATION1_it906 = qPARTS2NATION1NATION1.begin();
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator 
@@ -7754,6 +8143,7 @@ void on_delete_SUPPLIER(
             -1*qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,x_qPARTS2NATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t>,double>::iterator qPARTS2NATION2_it908 = 
         qPARTS2NATION2.begin();
     map<tuple<int64_t,int64_t,int64_t>,
@@ -7771,6 +8161,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,SUPPKEY,
             x_qPARTS2NATION_N1__NATIONKEY)]*qSUPPLIER2[make_tuple(NATIONKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_it910 = 
         qPARTS2NATION3.begin();
     map<tuple<int64_t,int64_t>,double>::iterator qPARTS2NATION3_end909 = 
@@ -7783,6 +8174,7 @@ void on_delete_SUPPLIER(
             x_qPARTS_P__PARTKEY,NATIONKEY)] += -1*qSUPPLIER3PARTS1NATION1[make_tuple(
             x_qPARTS_P__PARTKEY,SUPPKEY,NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
         qPARTS2NATION3ORDERS1_it912 = qPARTS2NATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,int64_t,int64_t>,double>::iterator 
@@ -7804,6 +8196,7 @@ void on_delete_SUPPLIER(
             SUPPKEY)]*qLINEITEM1NATION1ORDERS1[make_tuple(
             x_qPARTS2NATION3ORDERS_O__CUSTKEY,NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_SUPPLIER_sec_span, on_delete_SUPPLIER_usec_span);
@@ -7829,6 +8222,7 @@ void on_delete_PARTS(
             MFGR,N2__REGIONKEY,N1__REGIONKEY,C__NATIONKEY)] += -1*qPARTS1[make_tuple(
             PARTKEY,C__NATIONKEY,N2__REGIONKEY,N1__REGIONKEY)]*100;
     }
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it916 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end915 = 
@@ -7842,6 +8236,7 @@ void on_delete_PARTS(
             MFGR,N2__REGIONKEY,N1__REGIONKEY,C__NATIONKEY)] += -1*qPARTS2[make_tuple(
             PARTKEY,C__NATIONKEY,N2__REGIONKEY,N1__REGIONKEY)]*-1;
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_it918 = 
         qCUSTOMER1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER1_end917 = 
@@ -7854,6 +8249,7 @@ void on_delete_PARTS(
             x_qCUSTOMER_C__CUSTKEY,MFGR,N2__REGIONKEY)] += -1*qCUSTOMER1PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER1NATION1_it920 
         = qCUSTOMER1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7870,6 +8266,7 @@ void on_delete_PARTS(
             -1*qCUSTOMER1PARTS1NATION1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,x_qCUSTOMER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER1SUPPLIER1_it922 = qCUSTOMER1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -7887,6 +8284,7 @@ void on_delete_PARTS(
             -1*qCUSTOMER1SUPPLIER1PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER1SUPPLIER_S__SUPPKEY,x_qCUSTOMER_C__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_it924 = 
         qCUSTOMER3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qCUSTOMER3_end923 = 
@@ -7899,6 +8297,7 @@ void on_delete_PARTS(
             x_qCUSTOMER_C__CUSTKEY,MFGR,N2__REGIONKEY)] += -1*qCUSTOMER3PARTS1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qCUSTOMER3NATION1_it926 
         = qCUSTOMER3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -7915,6 +8314,7 @@ void on_delete_PARTS(
             -1*qCUSTOMER3PARTS1NATION1[make_tuple(
             PARTKEY,x_qCUSTOMER_C__CUSTKEY,x_qCUSTOMER3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator 
         qCUSTOMER3SUPPLIER1_it928 = qCUSTOMER3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,double>::iterator 
@@ -7947,6 +8347,7 @@ void on_delete_PARTS(
             -1*qPARTS1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION1NATION1_it932 = 
         qNATION1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -7962,6 +8363,7 @@ void on_delete_PARTS(
             -1*qPARTS1NATION1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,x_qNATION1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_it934 = 
         qNATION2.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION2_end933 = 
@@ -7974,10 +8376,9 @@ void on_delete_PARTS(
             MFGR,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)] += -1*qPARTS1NATION2[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION3_it936 = qNATION3.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION3_end935 = qNATION3.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION3_it936 = qNATION3.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION3_end935 = qNATION3.end();
     for (; qNATION3_it936 != qNATION3_end935; ++qNATION3_it936)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION3_it936->first);
@@ -7985,6 +8386,7 @@ void on_delete_PARTS(
             x_qNATION_N1__NATIONKEY,MFGR)] += -1*qPARTS1NATION3[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION3ORDERS1_it938 = qNATION3ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -8003,6 +8405,7 @@ void on_delete_PARTS(
             x_qNATION3ORDERS_O__ORDERKEY,PARTKEY,x_qNATION_N1__NATIONKEY,
             x_qNATION3ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qNATION4_it940 = qNATION4.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator qNATION4_end939 
@@ -8017,6 +8420,7 @@ void on_delete_PARTS(
             -1*qPARTS2NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qNATION4NATION1_it942 = 
         qNATION4NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -8032,6 +8436,7 @@ void on_delete_PARTS(
             -1*qPARTS2NATION1NATION1[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,x_qNATION4NATION_N1__NATIONKEY)];
     }
+
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_it944 = 
         qNATION5.begin();
     map<tuple<string,int64_t,int64_t>,double>::iterator qNATION5_end943 = 
@@ -8044,10 +8449,9 @@ void on_delete_PARTS(
             MFGR,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)] += -1*qPARTS2NATION2[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY,N2__REGIONKEY)];
     }
-    map<tuple<int64_t,string>,double>::iterator qNATION6_it946 = qNATION6.begin(
-        );
-    map<tuple<int64_t,string>,double>::iterator qNATION6_end945 = qNATION6.end(
-        );
+
+    map<tuple<int64_t,string>,double>::iterator qNATION6_it946 = qNATION6.begin();
+    map<tuple<int64_t,string>,double>::iterator qNATION6_end945 = qNATION6.end();
     for (; qNATION6_it946 != qNATION6_end945; ++qNATION6_it946)
     {
         int64_t x_qNATION_N1__NATIONKEY = get<0>(qNATION6_it946->first);
@@ -8055,6 +8459,7 @@ void on_delete_PARTS(
             x_qNATION_N1__NATIONKEY,MFGR)] += -1*qPARTS2NATION3[make_tuple(
             PARTKEY,x_qNATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
         qNATION6ORDERS1_it948 = qNATION6ORDERS1.begin();
     map<tuple<int64_t,int64_t,string,int64_t>,double>::iterator 
@@ -8073,6 +8478,7 @@ void on_delete_PARTS(
             x_qNATION6ORDERS_O__ORDERKEY,PARTKEY,x_qNATION_N1__NATIONKEY,
             x_qNATION6ORDERS_O__CUSTKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_it950 = 
         qORDERS1.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS1_end949 = 
@@ -8085,6 +8491,7 @@ void on_delete_PARTS(
             x_qORDERS_O__ORDERKEY,MFGR,N2__REGIONKEY)] += -1*qORDERS1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1NATION1_it952 = 
         qORDERS1NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -8100,6 +8507,7 @@ void on_delete_PARTS(
             -1*qORDERS1PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS1SUPPLIER1_it954 
         = qORDERS1SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -8116,6 +8524,7 @@ void on_delete_PARTS(
             -1*qORDERS1SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS1SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_it956 = 
         qORDERS3.begin();
     map<tuple<int64_t,string,int64_t>,double>::iterator qORDERS3_end955 = 
@@ -8128,6 +8537,7 @@ void on_delete_PARTS(
             x_qORDERS_O__ORDERKEY,MFGR,N2__REGIONKEY)] += -1*qORDERS3PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,N2__REGIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3NATION1_it958 = 
         qORDERS3NATION1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -8143,6 +8553,7 @@ void on_delete_PARTS(
             -1*qORDERS3PARTS1NATION1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS3NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,int64_t,string>,double>::iterator qORDERS3SUPPLIER1_it960 
         = qORDERS3SUPPLIER1.begin();
     map<tuple<int64_t,int64_t,string>,
@@ -8159,6 +8570,7 @@ void on_delete_PARTS(
             -1*qORDERS3SUPPLIER1PARTS1[make_tuple(
             x_qORDERS_O__ORDERKEY,PARTKEY,x_qORDERS3SUPPLIER_S__SUPPKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER1_it962 = qSUPPLIER1.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -8173,6 +8585,7 @@ void on_delete_PARTS(
             -1*qSUPPLIER1PARTS1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER1NATION1_it964 
         = qSUPPLIER1NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -8189,6 +8602,7 @@ void on_delete_PARTS(
             -1*qSUPPLIER1PARTS1NATION1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,x_qSUPPLIER1NATION_N1__NATIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t,int64_t>,
         double>::iterator qSUPPLIER3_it966 = qSUPPLIER3.begin();
     map<tuple<int64_t,string,int64_t,int64_t>,double>::iterator 
@@ -8203,6 +8617,7 @@ void on_delete_PARTS(
             -1*qSUPPLIER3PARTS1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,C__NATIONKEY,N1__REGIONKEY)];
     }
+
     map<tuple<int64_t,string,int64_t>,double>::iterator qSUPPLIER3NATION1_it968 
         = qSUPPLIER3NATION1.begin();
     map<tuple<int64_t,string,int64_t>,
@@ -8219,6 +8634,7 @@ void on_delete_PARTS(
             -1*qSUPPLIER3PARTS1NATION1[make_tuple(
             PARTKEY,x_qSUPPLIER_S__SUPPKEY,x_qSUPPLIER3NATION_N1__NATIONKEY)];
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_PARTS_sec_span, on_delete_PARTS_usec_span);
