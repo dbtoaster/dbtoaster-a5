@@ -15,6 +15,7 @@ $cols = Hash.new;
 $transforms = Hash.new;
 $input = STDIN
 $stats_every = -1;
+$ratelimit = nil;
 
 GetoptLong.new(
   [ "--quiet"      , "-q", GetoptLong::NO_ARGUMENT ],
@@ -25,6 +26,7 @@ GetoptLong.new(
   [ "--verbose"    , "-v", GetoptLong::NO_ARGUMENT ],
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ]
+  [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ],
 ).each do |opt, arg|
   case opt
     when "--quiet", "-q" then 
@@ -70,9 +72,13 @@ GetoptLong.new(
         puts SwitchNode::Client.connect("localhost", 52981).dump;
       end
       exit(0);
+    
+    when "--ratelimit", "-l" then
+      $ratelimit = arg.to_f;
   end
 end
 
+$ratelimit = $stats_every.to_f / $ratelimit if $ratelimit;
 
 
 switch = SwitchNode::Client.connect("localhost", 52981) unless $test;
@@ -145,11 +151,12 @@ $input.each do |line|
   print "\n>> " if $interactive;
   if $stats_every >= 0 then
     $count += 1;
-    diff = (Time.now - $starttime)
     if $count % $stats_every == 0 then
+      diff = (Time.now - $starttime)
       puts diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
       puts switch.dump if ($verbose && !$test);
       $starttime = Time.now;
+      sleep ($ratelimit - diff) if $ratelimit && diff < $ratelimit;
     end
   end
 end
