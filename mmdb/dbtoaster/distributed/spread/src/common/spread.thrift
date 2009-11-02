@@ -19,6 +19,12 @@ enum PutFieldType {
   VALUE = 1, ENTRY = 2, ENTRYVALUE = 3
 }
 
+enum AggregateType {
+  SUM = 1,
+  MAX = 2,
+  AVG = 3
+}
+
 struct PutField {
   1:          PutFieldType  type, 
   2:          string        name,
@@ -35,11 +41,12 @@ struct PutParams {
 }
 
 service MapNode {
-  oneway void put(      1: Version         id,
+  oneway void put     ( 1: Version         id,
                         2: i64             template,  //the put template ID (see the map file)
                         3: list<double>    params
                         ),
-  oneway void mass_put(  1: Version         id,
+
+  oneway void mass_put( 1: Version         id,
                         2: i64             template,
                         3: i64             expected_gets,
                         4: list<double>    params,
@@ -53,10 +60,13 @@ service MapNode {
                         3: Version       cmdid
                         ),
 
-  oneway void push_get ( 1: GetResult     result,
+  oneway void push_get( 1: GetResult     result,
                         2: Version       cmdid
                         ),
   
+  GetResult aggreget  ( 1: list<Entry>   target,
+                        2: AggregateType agg
+                        ) throws (1:SpreadException error),
   
   string dump  (),
   

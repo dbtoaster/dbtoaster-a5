@@ -41,7 +41,7 @@ end
 class SlicerMonitor
   def initialize(hosts)
     @connections = hosts.collect do |h|
-      SlicerProcess.new("PS1=''; while true; do sleep 5; ps auxww | grep ruby | grep -v grep; done", h, true);
+      SlicerProcess.new("export PS1='';\nwhile true; do sleep 5; ps auxww | grep ruby | grep -v grep; done", h, true);
     end
   end
   

@@ -291,9 +291,24 @@ class MapNodeHandler
   def get(target)
     ret = Hash.new()
     target.each do |t|
+      raise SpreadException("Multitarget get requests are unsupported; use aggreget()") unless t.has_wildcards?;
       ret[t] = find_partition(t.source,t.key).get(t);
     end
     ret;
+  end
+  
+  def aggreget(target, agg)
+    target.collect_hash do |t|
+      values = [];
+      if t.has_wildcards? then
+        find_partition(t.source, t.key) do |partition|
+          values.concat(partition.get(t));
+        end
+      else
+        values.push(find_partition(t.source, t.key).get(t));
+      end
+      [t, AggregateType.aggregate(agg, values)]
+    end
   end
   
   ############# Asynchronous Reads

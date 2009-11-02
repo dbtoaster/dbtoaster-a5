@@ -302,32 +302,43 @@ class MapPartition
       else nil end;
     
     if target.has_wildcards? then
-      raise SpreadException("Multitarget requests with no callback are unsupported") unless callback != nil;
       # This is a multitarget request.
       
-      if lastmassrecord != nil && lastmassrecord.pending then
-        # Parts of the request may be covered by a pending massput.
-        # That said, parts may NOT be covered.  Let's find those first.
-        
-        # if we're working with massput records, we know we're not working with a re-issued query
-        exemptions = Set.new;
+      unless callback then
+        # deliver the most recent completed results now, even if they're out of date
+        ret = Array.new;
         @data.scan(target.key) do |key, value|
-          value = value.last;
-          if value.version >= lastmassrecord.version then 
-            value.register(callback);
-            exemptions.add(key);
-          end
+          value = value.next while (value.next && value.next.ready);
+          ret.push(value.value)
         end
-        
-        lastmassrecord.register(target, callback, exemptions);
+        return ret;
       else
-        # if the last massput has committed, OR there is no last massput, we just use what we have.
-        @data.scan(target.key) do |key, value|
-          next if exemptions.include? key; # check the skiplist
-          value = if version == nil then value.last else value.find(version) end;
-          value.register(callback);
+        # deliver results as they come in
+        
+        if lastmassrecord != nil && lastmassrecord.pending then
+          # Parts of the request may be covered by a pending massput.
+          # That said, parts may NOT be covered.  Let's find those first.
+          
+          # if we're working with massput records, we know we're not working with a re-issued query
+          exemptions = Set.new;
+          @data.scan(target.key) do |key, value|
+            value = value.last;
+            if value.version >= lastmassrecord.version then 
+              value.register(callback);
+              exemptions.add(key);
+            end
+          end
+          
+          lastmassrecord.register(target, callback, exemptions);
+        else
+          # if the last massput has committed, OR there is no last massput, we just use what we have.
+          @data.scan(target.key) do |key, value|
+            next if exemptions.include? key; # check the skiplist
+            value = if version == nil then value.last else value.find(version) end;
+            value.register(callback);
+          end
+          callback.release
         end
-        callback.release
       end
     else
       # This is a single-target request  
@@ -371,7 +382,7 @@ class MapPartition
           nil;
         end
         
-      unless value == nil && callback == nil then
+      unless value == nil || callback == nil then
         callback.fire(target, value);
       else
         raise SpreadException.new("Request for incomplete version") unless value != nil;

@@ -18,7 +18,7 @@ end
 
 class Entry 
   def to_s
-    @source.to_s + "[" + @key.join(", ") + "]";
+    @source.to_s + "[" + @key.collect { |k| if k < 0 then "*" else k.to_s end }.join(", ") + "]";
   end
   
   def has_wildcards?
@@ -87,13 +87,23 @@ class PutParams
   end
 end
 
+module AggregateType
+  def AggregateType.aggregate(type, values)
+    case type
+      when SUM then sum = 0.0; values.each { |v| sum += v.to_f }; sum
+      when AVG then sum = 0.0; values.each { |v| sum += v.to_f }; sum / values.size.to_f
+      when MAX then Math.max(values);
+    end
+  end
+end
+
 module MapNode
   class Client
     def close
       @iprot.trans.close;
     end
     
-    def Client.connect(host, port)
+    def Client.connect(host, port = 52982)
       transport = Thrift::FramedTransport.new(Thrift::Socket.new(host, port))
       protocol = Thrift::BinaryProtocol.new(transport)
       ret = MapNode::Client.new(protocol);

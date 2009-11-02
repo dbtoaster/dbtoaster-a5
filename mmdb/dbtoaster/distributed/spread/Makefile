@@ -26,3 +26,9 @@ test_switch:
 
 $(AUTO_SQL_TESTS) : % : data/%.unit
 	if [ -f data/$@.expect ] ; then ./bin/unit.sh data/$@.unit -e data/$@.expect; else ./bin/unit.sh data/$@.unit; fi
+
+measurements: measurements/.timestamp
+
+measurements/.timestamp: $(wildcard measurements/*.run) src/bin/graph-launcher.rb
+	./bin/graph.sh
+	touch measurements/.timestamp

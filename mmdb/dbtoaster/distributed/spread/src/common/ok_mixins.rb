@@ -115,6 +115,23 @@ class Array
       end.join("  ")
     end.join("\n");
   end
+  
+  def matrix_transpose
+    width = Math.max(collect { |r| r.size })
+    ret = Array.new;
+    (0...width).each { ret.push(Array.new) }
+    each do |row|
+      (0...width).each do |i|
+        ret[i].push(row[i]);
+      end
+    end
+    ret
+  end
+  
+  def concat!
+    (0...size).each { concat(shift) }
+    self;
+  end
 end
 
 class Hash
@@ -232,3 +249,4 @@ class Queue
     ret;
   end
 end
+
