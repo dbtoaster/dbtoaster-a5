@@ -5,6 +5,7 @@ LDFLAGS=-L/home/yanif/software/boost/lib -lboost_system -lboost_thread -lboost_p
 all:    vwap        vwapr1        vwapr1b        vwapn \
 	pricespread pricespreadr1 pricespreadn \
 	axfinder    axfinderr1    axfindern \
+	missedtrades    missedtradesr1    missedtradesn \
 	ssb         ssbr1         ssbn \
 	query3      query3r1      query3n \
 	query5      query5r1      query5n \
@@ -15,22 +16,22 @@ all:    vwap        vwapr1        vwapr1b        vwapn \
 
 # VWAP
 
-VWAP_OBJS = src/vwap/vwap.o
-VWAP_R1_OBJS = src/vwap/vwap-r1.o
-VWAP_R1B_OBJS = src/vwap/vwap-r1b.o
-VWAP_N_OBJS = naive/vwap/vwap.o
+VWAP_OBJS = src/finance/vwap/vwap.o
+VWAP_R1_OBJS = src/finance/vwap/vwap-r1.o
+VWAP_R1B_OBJS = src/finance/vwap/vwap-r1b.o
+VWAP_N_OBJS = naive/finance/vwap/vwap.o
 
 vwap: $(VWAP_OBJS)
-	$(CXX) -o src/vwap/vwap $(CXXFLAGS) $(VWAP_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/vwap/vwap $(CXXFLAGS) $(VWAP_OBJS) $(LDFLAGS)
 
 vwapr1: $(VWAP_R1_OBJS)
-	$(CXX) -o src/vwap/vwap-r1 $(CXXFLAGS) $(VWAP_R1_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/vwap/vwap-r1 $(CXXFLAGS) $(VWAP_R1_OBJS) $(LDFLAGS)
 
 vwapr1b: $(VWAP_R1B_OBJS)
-	$(CXX) -o src/vwap/vwap-r1b $(CXXFLAGS) $(VWAP_R1B_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/vwap/vwap-r1b $(CXXFLAGS) $(VWAP_R1B_OBJS) $(LDFLAGS)
 
 vwapn: $(VWAP_N_OBJS)
-	$(CXX) -o naive/vwap/vwap-n $(CXXFLAGS) $(VWAP_N_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/finance/vwap/vwap-n $(CXXFLAGS) $(VWAP_N_OBJS) $(LDFLAGS)
 
 # Pricespread
 PS_OBJS = src/finance/pricespread/pricespread.o
@@ -56,11 +57,25 @@ axfinder: $(AX_OBJS)
 	$(CXX) -o src/finance/axfinder/axfinder $(CXXFLAGS) $(AX_OBJS) $(LDFLAGS)
 
 axfinderr1: $(AX_R1_OBJS)
-	$(CXX) -o naive/finance/axfinder/axfinder-r1 $(CXXFLAGS) $(AX_R1_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/axfinder/axfinder-r1 $(CXXFLAGS) $(AX_R1_OBJS) $(LDFLAGS)
 
 axfindern: $(AX_N_OBJS)
 	$(CXX) -o naive/finance/axfinder/axfinder-n $(CXXFLAGS) $(AX_N_OBJS) $(LDFLAGS)
 
+
+# Missed trades
+MT_OBJS = src/finance/missedtrades/missedtrades.o
+MT_R1_OBJS = src/finance/missedtrades/missedtrades-r1.o
+MT_N_OBJS = naive/finance/missedtrades/missedtrades.o
+
+missedtrades: $(MT_OBJS)
+	$(CXX) -o src/finance/missedtrades/missedtrades $(CXXFLAGS) $(MT_OBJS) $(LDFLAGS)
+
+missedtradesr1: $(MT_R1_OBJS)
+	$(CXX) -o src/finance/missedtrades/missedtrades-r1 $(CXXFLAGS) $(MT_R1_OBJS) $(LDFLAGS)
+
+missedtradesn: $(MT_N_OBJS)
+	$(CXX) -o naive/finance/missedtrades/missedtrades-n $(CXXFLAGS) $(MT_N_OBJS) $(LDFLAGS)
 
 # SSB queries
 
@@ -184,7 +199,9 @@ query22n: $(QUERY22_N_OBJS)
 
 # Clean up
 clean:
-	rm -f src/vwap/vwap src/vwap/vwap-r1 src/vwap/vwap-r1b src/vwap/*.o
+	rm -f src/finance/vwap/vwap src/finance/vwap/vwap-r1 src/finance/vwap/vwap-r1b src/finance/vwap/*.o
+	rm -f src/finance/pricespread/pricespread src/finance/pricespread/pricespread-r1 src/finance/pricespread/*.o
+	rm -f src/finance/axfinder/axfinder src/finance/axfinder/axfinder-r1 src/finance/axfinder/*.o
 	rm -f src/tpch/ssb/ssb src/tpch/ssb/ssb-r1 src/tpch/ssb/*.o
 	rm -f src/tpch/query3/query3 src/tpch/query3/query3-r1 src/tpch/query3/*.o
 	rm -f src/tpch/query5/query5 src/tpch/query5/query5-r1 src/tpch/query5/*.o
@@ -192,7 +209,9 @@ clean:
 	rm -f src/tpch/query17/query17 src/tpch/query17/query17-r1 src/tpch/query17/*.o
 	rm -f src/tpch/query18/query18 src/tpch/query18/query18-r1 src/tpch/query18/*.o
 	rm -f src/tpch/query22/query22 src/tpch/query22/query22-r1 src/tpch/query22/*.o
-	rm -f naive/vwap/vwap-n naive/vwap/*.o
+	rm -f naive/finance/vwap/vwap-n naive/finance/vwap/*.o
+	rm -f naive/finance/pricespread/pricespread-n naive/finance/pricespread/*.o
+	rm -f naive/finance/axfinder/axfinder-n naive/finance/axfinder/*.o
 	rm -f naive/tpch/ssb/ssb-n naive/tpch/ssb/*.o
 	rm -f naive/tpch/query3/query3-n naive/tpch/query3/*.o
 	rm -f naive/tpch/query5/query5-n naive/tpch/query5/*.o
@@ -202,7 +221,9 @@ clean:
 	rm -f naive/tpch/query22/query22-n naive/tpch/query22/*.o
 
 expclean:
-	rm -f src/vwap/engine.* src/vwap/log
+	rm -f src/finance/vwap/engine.* src/finance/vwap/log
+	rm -f src/finance/pricespread/engine.* src/finance/pricespread/log
+	rm -f src/finance/axfinder/engine.* src/finance/axfinder/log
 	rm -f src/tpch/ssb/engine.* src/tpch/ssb/log
 	rm -f src/tpch/query3/engine.* src/tpch/query3/log
 	rm -f src/tpch/query5/engine.* src/tpch/query5/log
@@ -210,6 +231,9 @@ expclean:
 	rm -f src/tpch/query17/engine.* src/tpch/query17/log
 	rm -f src/tpch/query18/engine.* src/tpch/query18/log
 	rm -f src/tpch/query22/engine.* src/tpch/query22/log
+	rm -f naive/finance/vwap/engine.* naive/finance/vwap/log
+	rm -f naive/finance/pricespread/engine.* naive/finance/pricespread/log
+	rm -f naive/finance/axfinder/engine.* naive/finance/axfinder/log
 	rm -f naive/tpch/query3/engine.* naive/tpch/query3/log
 	rm -f naive/tpch/query5/engine.* naive/tpch/query5/log
 	rm -f naive/tpch/query11/engine.* naive/tpch/query11/log
