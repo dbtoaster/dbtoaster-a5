@@ -837,12 +837,115 @@ void analyse_handler_usage(ofstream* stats)
 }
 
 
+multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> > CUSTOMER;
+multiset<tuple<int64_t,string,string,string,string,int,string,double,string> > PARTS;
+
+map<int64_t, list<tuple<int64_t, int64_t> > > PK_idx_OK_SK; // maintained by LINEITEM
+
+map<int64_t, unordered_set<int64_t> > CK_idx_OK; // maintained by ORDERS
+
+map<int64_t,int64_t> SK_idx_NK; // maintained by SUPPLIER
+
+map<int64_t,int64_t> CK_idx_NK; // maintained by CUSTOMER
+
+map<int64_t,int64_t> NK_idx_RK; // maintained by NATION
+
+void indexed_result_domain_maintenance()
+{
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_it10 = CUSTOMER.begin();
+                
+    multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+        >::iterator CUSTOMER_end9 = CUSTOMER.end();
+    for (; CUSTOMER_it10 != CUSTOMER_end9; ++CUSTOMER_it10)
+    {
+        int64_t C__CUSTKEY = get<0>(*CUSTOMER_it10);
+        int64_t C__NATIONKEY = get<3>(*CUSTOMER_it10);
+
+        // (CK,NK) in CUSTOMER        
+        map<int64_t,int64_t>::iterator nk_found = CK_idx_NK.find(C__CUSTKEY);
+        if ( nk_found != CK_idx_NK.end() )
+        {
+            int64_t N_NATIONKEY = nk_found->second;
+
+            // (NK,RK) in REGION
+            map<int64_t,int64_t>::iterator rk_found = NK_idx_RK.find(N_NATIONKEY);
+            if ( rk_found != NK_idx_RK.end() )
+            {
+                int64_t REGIONKEY = rk_found->second;
+
+                // For all parts,
+                multiset<tuple<int64_t,string,string,string,string,int,string,double,string> 
+                    >::iterator PARTS_it8 = PARTS.begin();
+                    
+                multiset<tuple<int64_t,string,string,string,string,int,string,double,string> 
+                    >::iterator PARTS_end7 = PARTS.end();
+                for (; PARTS_it8 != PARTS_end7; ++PARTS_it8)
+                {
+                    int64_t P__PARTKEY = get<0>(*PARTS_it8);
+                    string P__MFGR = get<2>(*PARTS_it8);
+
+                    tuple<string,int64_t,int64_t,int64_t> key =
+                        make_tuple(P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY);
+
+                    // (CK,RK,RK,P_MFGR) not in q
+                    if ( q.find(key) == q.end() )
+                    {
+                        // (OK,CK) in ORDERS
+                        map<int64_t, unordered_set<int64_t> >::iterator ck_orders_found =
+                            CK_idx_OK.find(C__CUSTKEY);
+
+                        // (OK,SK,PK) in LINEITEM
+                        map<int64_t,list<tuple<int64_t,int64_t> > >::iterator ok_sk_found =
+                            PK_idx_OK_SK.find(P__PARTKEY);
+
+                        if ( (ck_orders_found != CK_idx_OK.end()) && (ok_sk_found != PK_idx_OK_SK.end()) )
+                        {
+                            unordered_set<int64_t>& ck_orders = ck_orders_found->second;
+                            list<tuple<int64_t,int64_t> >::iterator ok_sk_it = ok_sk_found->second.begin();
+                            list<tuple<int64_t,int64_t> >::iterator ok_sk_end = ok_sk_found->second.end();
+
+                            for (; ok_sk_it != ok_sk_end; ++ok_sk_it)
+                            {
+                                int64_t O__ORDERKEY = get<0>(*ok_sk_it);
+                                int64_t S__SUPPKEY = get<1>(*ok_sk_it);
+
+                                unordered_set<int64_t>::iterator ok_found = ck_orders.find(O__ORDERKEY);
+
+                                // (SK,NK2) in SUPPLIER
+                                map<int64_t, int64_t>::iterator nk_found = SK_idx_NK.find(S__SUPPKEY);
+
+                                // (PK,CK) in LINEITEM join ORDERS
+                                // && (NK=NK2)
+                                if ( (ok_found != ck_orders.end())
+                                     && (nk_found != SK_idx_NK.end() && nk_found->second == N_NATIONKEY) )
+                                {
+                                        q[make_tuple(P__MFGR,REGIONKEY,REGIONKEY,C__NATIONKEY)] = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+////////////////////////////////////////
+//
+// Triggers
+
 void on_insert_NATION(
     ofstream* results, ofstream* log, ofstream* stats, int64_t NATIONKEY,string 
     NAME,int64_t REGIONKEY,string COMMENT)
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    NK_idx_RK[NATIONKEY] = REGIONKEY;
+
+    indexed_result_domain_maintenance();
 
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it2 = q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end1 = q.end();
@@ -1321,6 +1424,10 @@ void on_insert_ORDERS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    CK_idx_OK[CUSTKEY].insert(ORDERKEY);
+
+    indexed_result_domain_maintenance();
 
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it72 = q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end71 = q.end();
@@ -2067,6 +2174,11 @@ void on_insert_LINEITEM(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    PK_idx_OK_SK[PARTKEY].push_back(make_tuple(ORDERKEY,SUPPKEY));
+
+    indexed_result_domain_maintenance();
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it158 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end157 = 
@@ -2970,6 +3082,12 @@ void on_insert_CUSTOMER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    CUSTOMER.insert(make_tuple(CUSTKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,MKTSEGMENT,COMMENT));
+    CK_idx_NK[CUSTKEY] = NATIONKEY;
+
+    indexed_result_domain_maintenance();
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it266 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end265 = 
@@ -3566,6 +3684,11 @@ void on_insert_SUPPLIER(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    SK_idx_NK[SUPPKEY] = NATIONKEY;
+
+    indexed_result_domain_maintenance();
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it342 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end341 = 
@@ -4286,6 +4409,12 @@ void on_insert_PARTS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
+
+    PARTS.insert(make_tuple(
+        PARTKEY,NAME,MFGR,BRAND,TYPE,SIZE,CONTAINER,RETAILPRICE,COMMENT));
+
+    indexed_result_domain_maintenance();
+
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_it430 = 
         q.begin();
     map<tuple<string,int64_t,int64_t,int64_t>,double>::iterator q_end429 = 
