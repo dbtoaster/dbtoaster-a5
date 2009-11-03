@@ -23,17 +23,19 @@ systems communities, such as large scale file systems, key-value stores, and
 map-reduce
 \cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}.
 Further impetus has resulted from the current need to develop data management
-technology for multicore and cloud computing, and by the example given by a
-number of innovative recent database startup companies that develop
-databases based on new architectures.
+technology for multicore and cloud computing.
 %
+%, and by the example given by a
+%number of innovative recent database startup companies that develop
+%databases based on new architectures.
 %\footnote{Examples are Vertica and Paraccel, who build column stores,
 %and Greenplum, Asterdata, and Netezza, who take databases into the Cloud.}
 
-There is a recent tendency among pundits outside the database community to
+There is a recent tendency among pundits
+outside the database community to
 negate the power and convenience of queries in languages such as SQL, and to
 think of key-value stores -- with only the power to look up data by
-keys -- as (much more efficient) databases.
+keys -- as (much more efficient) database query engines.
 %
 %It shall not be denied that,
 %with clever engineering, a surprising range of problems can be solved
@@ -41,17 +43,16 @@ keys -- as (much more efficient) databases.
 %
 However, expressive query languages such as SQL do not cease to have
 important applications and a substantial user base.
-To this day, processing SQL queries and using a system as lightweight and
-as easy to update as a key-value store are two goals that we
-do not know how to reconcile.
+Alas, we do not know how to process SQL queries on updateable data
+using a system as lightweight as a key-value store.
 
 This paper contributes a fundamental and versatile building block for
 enabling new, more lightweight and nimble data processing systems based
 on SQL aggregation que\-ries. We believe that our contribution
 constitutes an important
 step towards achieving the contradiction in terms mentioned
-above: executing complex aggregation queries using little more than a key-value
-store.
+above: executing complex aggregation queries on updateable data
+using little more than a key-value store.
 
 At the heart of our approach is a new aggressive recursive incremental
 view maintenance mechanism.
@@ -61,8 +62,8 @@ Our approach is based on compilation, reducing
 queries to programs that are not based on classical query operators.
 A large class of
 SQL aggregation queries can be compiled down to very simple message
-passing programs that implement incremental view maintenance of
-the input queries. These message passing programs keep a hierarchy of map data
+passing programs that incrementally maintain materialized views of
+the queries. These message passing programs keep a hierarchy of map data
 structures (which may be served out of a key-value store) up to date
 and can share computation in the case that multiple aggregation queries (e.g.,
 a data cube) need to be maintained.  Most importantly, though, these message
@@ -104,6 +105,58 @@ parallelization as nonincremental evaluation.
 \subsection{Message passing programs}
 
 
+We compile SQL aggregation queries to programs in {\em map maintenance
+message}\/ (M3)  format. An M3 program consists of a set of triggers of
+the form
+\[
+\mbox{{\tt on insert into $R$($\vec{x}$) \{
+($\vec{y}$:$D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ += $s$
+\}}}
+\]
+or
+\[
+\mbox{{\tt on delete from $R$($\vec{x}$) \{
+($\vec{y}$:$D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ -= $s$
+\}}}
+\]
+where $R$ is a relation name,
+$\vec{x}$ and $\vec{y}$ are distinct tuples of variables and
+$s$ is either a term or of the form
+{\tt if $\phi$ then $t$ else 0}, where $t$ is a term.
+Terms are built from addition, multiplication,
+constants, variables from $\vec{x}$, external function calls $f(\vec{z})$,
+and map accesses $m_1[\vec{z}_1], \dots, m_k[\vec{z}_k]$ where
+$m$, $m_1$, $\dots$, $m_k$ are pairwise distinct
+and the variables in $\vec{z}_1, \dots, \vec{z}_k$ are a nonoverlapping
+subsets of the variables in $\vec{x}, \vec{y}$.
+Conditions $\phi$ are conjunctions of comparisons $t'' \;\theta\; t'''$,
+where $t'',t'''$ are terms without map accesses and
+$\theta \in \{ =,<,\le,\neq \}$.
+$D_{\vec{y}}$ defines the domain of variable tuples $\vec{y}$.
+If $\vec{y}$ consists of zero variables, we omit $(\vec{y}: D_{\vec{y}})$.
+For each relation name, there may by multiple insert and delete triggers.
+
+
+Map values are initially zero. 
+A simple sequential semantics can be assigned to M3 programs by turning
+expressions
+$
+\mbox{{\tt ($\vec{y}$:$D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
+$
+into
+\[
+\mbox{{\tt foreach $\vec{y}$ in $D_{\vec{y}}$ do
+$m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
+\]
+and reading the modified programs as straightforward pseudocode.
+
+
+Throughout this section, in all examples, the delete-triggers are precisely
+like the insert-triggers, but with {\tt +=} replaced by
+{\tt -=}.\footnote{There are queries for which this is not the case.}
+Thus, to save space, the deletion triggers are omitted.
+
+
 \begin{example}\em
 \label{ex:TPCH-Q12}
 Consider the following query on a TPC-H like schema,
@@ -116,11 +169,9 @@ GROUP BY C.cid;
 \end{verbatim}
 Here, cid is a key for the Customer relation and oid is a key for the
 Order relation, but oid is not a key for LineItem.
-Our compilation approach translates this query to the M3F program
+Our compiler translates this query to the M3 program
 \begin{verbatim}
-on insert into Customer (cid, ...) {
-  qO1[cid] += 1
-}
+on insert into Customer (cid, ...) { qO1[cid] += 1 }
 on insert into Order (oid, cid, ...) {
   qL[cid, oid] += qO1[cid]
 }
@@ -128,21 +179,61 @@ on insert into LineItem (oid, ...) {
   (cid: Customer.cid) q[cid] += qL[cid, oid]
 }
 \end{verbatim}
-The map q represents the results of the query, and maps qO1 and qL are
-auxiliary.
+
+Let us ignore parallelization first.
+Replace the code of the final trigger by
+{\tt foreach cid in Customer.cid do q[cid] += qL[cid, oid]}.
+Customer.cid are the {\em distinct} values in column cid of relation Customer.
+It is not hard to see that this trigger program correct maintains the
+query result, for each {\tt cid}, as {\tt q[cid]}.
+(The maps {\tt qO1} and {\tt qL} are auxiliary.)
+We assume that
+there are no cascading deletes and, for instance, before we can delete an
+Order, we have to delete all associated lineitems.
 \punto
 \end{example}
 
 
-\begin{example}\em
-Given an additional supplier relation, we now ask, for each supplier (sid),
+{\em Parallelization}.
+We could have used the syntax {\tt foreach $\vec{y}$ in $D_{\vec{y}}$ do
+$m[\vec{x}, \vec{y}]$ $\pm$= $s$} but we chose not to because it suggests,
+incorrectly, that a nonconstant amount of work is needed to bring aggregate
+values up to date. Of course, polynomial amounts of work are in fact need,
+but only because in general there are many aggregate values -- in a
+map representing the result of a group-by query or in an auxiliary map --
+to be maintained. In fact, each statement
+{\tt ($\vec{y}: D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}
+writes each value $m[\vec{x}, \vec{y}]$ only once: This work admits
+{\em embarassing parallelism}.
+
+Assume that the storage of individual maps
+is partitioned across several machines. To execute a statement
+{\tt ($\vec{y}: D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}
+in a trigger invocation with arguments $\vec{x} = \vec{a}$,
+where $s$ uses map lookups $m_i[\vec{x}_i, \vec{y}_i]$,
+each node storing a value $m_i[\vec{a}_i, \vec{y}_i] = v$,
+for $\vec{y}_i$ arbitrary, sends the message
+$m_i[\vec{a}_i, \vec{y}_i] = v$ to the node managing value
+$m[\vec{a}, \vec{y}]$. This way, that node receives all the values it
+needs to update all $m$ values it represents.
+Of course this requires a suitable protocol to ensure overall consistency
+and that the right versions of map values are read and written in the right
+order.
+
+
+
+\begin{example}[join on non-key columns]\em
+\label{ex:nation}
+Given an additional supplier relation, we now ask, for each supplier id (sid),
 for the number of customers of the same nation.
 \begin{verbatim}
 SELECT   S.sid, SUM(1)
 FROM     Customer C, Supplier S
 WHERE    C.nation = S.nation
 GROUP BY S.sid;
-
+\end{verbatim}
+The compiler produces the following triggers.
+\begin{verbatim}
 on insert into Customer (cid, nation) {
   (sid: Supplier.sid) q[sid] += qC[sid, nation];
   qS[nation] += 1
@@ -152,13 +243,29 @@ on insert into Supplier (sid, nation) {
   qC[sid, nation] += 1
 }
 \end{verbatim}
+To understand that this pair
+(quadruple, if the deletion triggers are taken into account) of
+mutually dependent triggers indeed correctly maintains the query result in q,
+verify that auxiliary map {\tt qS} maintains the query
+\begin{verbatim}
+SELECT nation, SUM(1) FROM Customer GROUP BY nation;
+\end{verbatim}
+and auxiliary map qC maintains query
+\begin{verbatim}
+SELECT   sid, nation, SUM(1) FROM Supplier
+GROUP BY sid, nation;
+\end{verbatim}
+The statements updating {\tt q} assure that,
+whenever a customer (resp., supplier) is inserted, the count of
+matching suppliers (resp., customers) is added to {\tt q}.
+\punto
 \end{example}
 
 
-\begin{example}\em
+\begin{example}[star-join decomposition]\em
 \label{ex:ssb}
-This query uses a simple schema motivated by the start schema
-benchmark (SSB) schema, with relations Date(\underline{datekey}, year),
+Con\-sider \\ a simplified version of the star schema
+benchmark (SSB) schema with relations Date(\underline{datekey}, year),
 Part(\underline{partkey}, partcat), where partcat stands for a part category,
 and LineOrder(datekey, partkey, revenue), which may contain duplicate tuples.
 The query asks for the total revenues grouped by year and part category.
@@ -171,10 +278,10 @@ AND      P.partkey=L.partkey
 GROUP BY P.partcat, D.year;
 
 on insert into Date (datekey, year) {
- mPL[datekey, year] += 1
+  mPL[datekey, year] += 1
 }
 on insert into Part (partkey, partcat) {
- mDL[partkey, partcat] += 1
+  mDL[partkey, partcat] += 1
 }
 on insert into LineOrder
            (datekey, partkey, revenue) {
@@ -185,6 +292,11 @@ on insert into LineOrder
 }
 \end{verbatim}
 
+Observe how, on insertion into LineOrder, the code for incrementally
+maintaining the query result {\tt m} decomposes into
+two parts with disjoint variables, 
+{\tt mDL[partkey, partcat]} and {\tt mPL[datekey, year]}.
+
 The maps mPL and mDL have value at most
 one at each position because datekey and partkey are keys for Date and Part,
 respectively.
@@ -194,28 +306,27 @@ datekey and partkey, we instruct nodes
 to send their {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
 for any {\tt x} and {\tt y},
 to nodes maintaining {\tt m[x, *]} and {\tt m[*, y]}, respectively.
-The node managing
-{\tt m[u, v]} receives {\tt mDL[partkey, u]} and {\tt mPL[datekey, v]}
-(possibly from distinct nodes) and can
-increment {\tt m[u, v]} by
+A node managing {\tt m[u, v]} receives, possibly from distinct nodes,
+{\tt mDL[partkey, u]} and {\tt mPL[datekey, v]}
+and can increment {\tt m[u, v]} by
 {\tt revenue*mDL[partkey, u]*mPL[datekey, v]}.
+%
+%We only send nonzero {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
+%but at least an empty message so that the node managing m knows that it does
+%not have to wait for anything more.
 \punto
 \end{example}
 
 
-We only send nonzero {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
-but at least an empty message so that the node managing m knows that it does
-not have to wait for anything more.
-
-
-\begin{example}\em
+\begin{example}[self-join with complex condition]\em
+\label{ex:selfjoin}
 In this final example, we consider the data\-base of a matchmaking Web site
-that matches humans based on personal profiles. persons are
+that matches humans based on personal profiles. Persons are
 represented by a relation Person(\underline{id}, prop), where
-prop stands for possibly multiple property columns. Let score() be a
-function that maps a pair of property tuples to a compatibility score.
+prop stands for possibly multiple property col\-umns. Let score$(\cdot, \cdot)$
+be a function that maps a pair of property tuples to a compatibility score.
 The following query computes, for each person in the database, the number of
-matches with compatibility score >= 0.9.
+matches with compatibility score $\ge 0.9$.
 \begin{verbatim}
 SELECT   P1.id, SUM(1)
 FROM     Person P1, Person P2
@@ -224,9 +335,9 @@ AND      0.9 <= score(P1.prop, P2.prop)
 GROUP BY P1.id;
 \end{verbatim}
 
-Our compilation approach turns this query into the following M3F program,
-with map {\tt q[.]} representing the query result and maps {\tt q1[.,.]}
-and {\tt q2[.,.,.]} auxiliary.
+Our compilation approach turns this query into the following M3 program,
+with map {\tt q[.]} representing the query result and auxiliary
+maps {\tt q1[.,.]} and {\tt q2[.,.,.]}.
 \begin{verbatim}
 on insert into Person (id, prop) {
   q[id] += q1[id, prop];
@@ -244,60 +355,23 @@ on insert into Person (id, prop) {
     else 0
 }
 \end{verbatim}
-Note that whenever we read a value in such a map program, it has to be
-the version of the value from before the start of the program. This is 
-ensured in this program because we write q1 and q2 in entries 3 and 4 only
-after we have read from q1 and q2 in the first two entries.
-But note in particular that also the domains
-(id2: Person.id), ((id1, prop1): Person), ((id2, prop2): Person)
-are the old ones, before the insertion of the current tuple (id, prop).
-
-The program again has the property that for
-each map value to be written, only constantly much work has to be done,
-and constantly many lookups have to be made.
-
-This program is the conceptually most difficult so far, so let us look at it
-in more detail. It is easy to see that entries 3 and 4 of the program
-maintain q1 and q2 as the queries
-\begin{verbatim}
-q1[id, prop] =
-SELECT SUM(1) FROM Person P2
-WHERE id<>P2.id and 0.9<=score(prop, P2.prop) 
-
-q2[id1, id, prop] =
-SELECT SUM(1) FROM Person P1
-WHERE P1.id<>id and 0.9<=score(P1.prop, prop)
-AND   P1.id=id1 
-\end{verbatim}
-
-Now entry 1 of the program sets the q value for the new person, and
-entry 2 updates the q values of the persons that were present previously.
-For example, suppose score() is 1 on all inputs and assume that, currently,
-there are three persons. Then q is two for each id. Now add a fourth person.
-Then q1 is three for the new person and q2 is one for each of the old persons.
-By default, q is 0 for the new person before the update.
-%
-\begin{center}
-\begin{tabular}{c|c|c|c|c}
-   & before    & \multicolumn{3}{c}{after insert} \\
-id & q[id]     & q1[id,.] & q2[id,.,.] & q[id] \\
-\hline
-1  & 2         &          & 1          & 3 \\
-2  & 2         &          & 1          & 3 \\
-3  & 2         &          & 1          & 3 \\
-4  & undef./0  & 3        &            & 3 \\
-\end{tabular}
-\end{center}
-%
-After execution of the on-insert trigger, q is three for each of the four
-persons.
+We will establish later that this M3 program is indeed correct.
+For now, we challenge the reader to find a 
+fundamentally different (ideally, simpler) way to
+perform the incremental maintenance of {\tt q}
+which has the M3 property of embarassing parallelism, with each value
+to be updated only requiring a constant amount of work.
+Examples~\ref{ex:TPCH-Q12} and \ref{ex:ssb} were chosen for simplicity,
+but we believe that this example and to a lesser degree
+Example~\ref{ex:nation} show that creating M3 programs in general
+is nontrivial.
 \punto
 \end{example}
 
 
 It shall be emphasized that for each of the examples of this section,
-and the paper as a whole, the compilation approach described results exactly
-in the M3F programs reported.
+and the paper as a whole, our compilation approach produces exactly
+the M3 programs shown.
 
 
 \nop{
@@ -335,13 +409,25 @@ in the M3F programs reported.
 } % end nop
 
 
+The fragment of SQL queries that we can compile to M3 essentially comprises
+arithmetic expressions over SUM-agg\-regation queries with group-by.
+This allows us to define COUNT and AVG queries.
+We exclude MIN and MAX queries, aggregation
+nested into FROM or WHERE clauses, the DISTINCT and HAVING keywords,
+outerjoins,
+and the relational difference operation. At the end of this paper, we will
+discuss which of these features can be added without fundamental difficulties.
+
+
 \subsection{The Cumulus System}
 
 
 We have developed a system, Cumulus\footnote{A Cumulus cloud is an
-aggregation cloud, thus the name.}, that interprets this message passing
-protocol in a cluster or computing cloud, performing fast and scalable
-online incremental maintenance of exact aggregation views.
+aggregation cloud, thus the name.}, that parallelizes the
+execution of M3 programs in a cluster or computing cloud.
+Cumulus performs incremental maintenance of exact aggregation views online, and
+executes an efficient
+protocol to ensure consistency of map data and query results,
 
 While it is no fundamental requirement of our compilation
 approach, we have chosen to use the resources of the cloud to maintain
@@ -376,18 +462,19 @@ query processing by message passing.
 Our main technical contributions are as follows.
 \begin{itemize}
 \item
-We present the Cumulus map maintenance message format (M3F), a language
+We present M3, a massively parallelizable language
 for message passing programs that can be used to incrementally maintain
-SQL aggregation queries, and which is massively parallelizable.
+SQL aggregation queries.
 
 \item
-We describe our compiler for translating SQL aggregation queries to M3F
+We describe our compiler for translating SQL aggregation queries to M3
 programs. Our compilation technique is based on a novel, aggressive, recursive
 form of incremental view maintenance.
 
 \item
 We present Cumulus, our system for exact online aggregation in realtime.
-We describe the Cumulus message passing protocol and
+We describe the Cumulus message passing protocol, which assures
+consistency of the maps using only few messages, and
 infrastructure, and show how it can be used to efficiently distribute the
 processing and storage requirements of query processing and
 the incremental maintenance of large aggregate views and datacubes.
@@ -399,7 +486,7 @@ benchmark.
 
 
 The remainder of this paper is organized as follows.
-Section \ref{sec:compiler} describes our SQL to M3F compiler.
+Section \ref{sec:compiler} describes our SQL to M3 compiler.
 In Section \ref{sec:architecture}, we provide an overview of Cumulus's online
 infrastructure and discuss how data is managed within that infrastructure.
 Section \ref{sec:experiments} presents
