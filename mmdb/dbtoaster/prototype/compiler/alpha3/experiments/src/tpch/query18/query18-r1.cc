@@ -910,6 +910,8 @@ void on_insert_CUSTOMER(
     CUSTOMER.insert(make_tuple(
         CUSTKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,MKTSEGMENT,COMMENT));
 
+    if ( q.find(CUSTKEY) = q.end() ) { q[CUSTKEY] = 0; }
+
     set<int64_t>::iterator bigsum_L1__ORDERKEY_dom_it100 = bigsum_L1__ORDERKEY_dom.begin();
     set<int64_t>::iterator bigsum_L1__ORDERKEY_dom_end99 = bigsum_L1__ORDERKEY_dom.end();
     for (

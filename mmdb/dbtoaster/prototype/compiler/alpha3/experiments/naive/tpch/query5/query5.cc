@@ -270,9 +270,9 @@ void on_insert_LINEITEM(
                                 var14 += protect_R__REGIONKEY;
                                 if ( var13 == var14 )
                                 {
-                                    string var11 = 0;
+                                    string var11 = "";
                                     var11 += N__NAME;
-                                    string var12 = 0;
+                                    string var12 = "";
                                     var12 += protect_N__NAME;
                                     if ( var11 == var12 )
                                     {
@@ -424,9 +424,9 @@ void on_insert_LINEITEM(
                                 var31 += protect_R__REGIONKEY;
                                 if ( var30 == var31 )
                                 {
-                                    string var28 = 0;
+                                    string var28 = "";
                                     var28 += N__NAME;
-                                    string var29 = 0;
+                                    string var29 = "";
                                     var29 += protect_N__NAME;
                                     if ( var28 == var29 )
                                     {
@@ -605,9 +605,9 @@ void on_insert_ORDERS(
                                 var45 += protect_R__REGIONKEY;
                                 if ( var44 == var45 )
                                 {
-                                    string var42 = 0;
+                                    string var42 = "";
                                     var42 += N__NAME;
-                                    string var43 = 0;
+                                    string var43 = "";
                                     var43 += protect_N__NAME;
                                     if ( var42 == var43 )
                                     {
@@ -759,9 +759,9 @@ void on_insert_ORDERS(
                                 var62 += protect_R__REGIONKEY;
                                 if ( var61 == var62 )
                                 {
-                                    string var59 = 0;
+                                    string var59 = "";
                                     var59 += N__NAME;
-                                    string var60 = 0;
+                                    string var60 = "";
                                     var60 += protect_N__NAME;
                                     if ( var59 == var60 )
                                     {
@@ -939,9 +939,9 @@ void on_insert_SUPPLIER(
                                 var76 += protect_R__REGIONKEY;
                                 if ( var75 == var76 )
                                 {
-                                    string var73 = 0;
+                                    string var73 = "";
                                     var73 += N__NAME;
-                                    string var74 = 0;
+                                    string var74 = "";
                                     var74 += protect_N__NAME;
                                     if ( var73 == var74 )
                                     {
@@ -1093,9 +1093,9 @@ void on_insert_SUPPLIER(
                                 var93 += protect_R__REGIONKEY;
                                 if ( var92 == var93 )
                                 {
-                                    string var90 = 0;
+                                    string var90 = "";
                                     var90 += N__NAME;
-                                    string var91 = 0;
+                                    string var91 = "";
                                     var91 += protect_N__NAME;
                                     if ( var90 == var91 )
                                     {
@@ -1273,9 +1273,9 @@ void on_insert_CUSTOMER(
                                 var107 += protect_R__REGIONKEY;
                                 if ( var106 == var107 )
                                 {
-                                    string var104 = 0;
+                                    string var104 = "";
                                     var104 += N__NAME;
-                                    string var105 = 0;
+                                    string var105 = "";
                                     var105 += protect_N__NAME;
                                     if ( var104 == var105 )
                                     {
@@ -1427,9 +1427,9 @@ void on_insert_CUSTOMER(
                                 var124 += protect_R__REGIONKEY;
                                 if ( var123 == var124 )
                                 {
-                                    string var121 = 0;
+                                    string var121 = "";
                                     var121 += N__NAME;
-                                    string var122 = 0;
+                                    string var122 = "";
                                     var122 += protect_N__NAME;
                                     if ( var121 == var122 )
                                     {
@@ -1614,9 +1614,9 @@ void on_insert_NATION(
                                 var138 += protect_R__REGIONKEY;
                                 if ( var137 == var138 )
                                 {
-                                    string var135 = 0;
+                                    string var135 = "";
                                     var135 += NAME;
-                                    string var136 = 0;
+                                    string var136 = "";
                                     var136 += protect_N__NAME;
                                     if ( var135 == var136 )
                                     {
@@ -1771,9 +1771,9 @@ void on_insert_NATION(
                                 var155 += protect_R__REGIONKEY;
                                 if ( var154 == var155 )
                                 {
-                                    string var152 = 0;
+                                    string var152 = "";
                                     var152 += NAME;
-                                    string var153 = 0;
+                                    string var153 = "";
                                     var153 += protect_N__NAME;
                                     if ( var152 == var153 )
                                     {
@@ -1952,9 +1952,9 @@ void on_insert_REGION(
                                 var169 += protect_R__REGIONKEY;
                                 if ( var168 == var169 )
                                 {
-                                    string var166 = 0;
+                                    string var166 = "";
                                     var166 += N__NAME;
-                                    string var167 = 0;
+                                    string var167 = "";
                                     var167 += protect_N__NAME;
                                     if ( var166 == var167 )
                                     {
@@ -2109,9 +2109,9 @@ void on_insert_REGION(
                                 var186 += protect_R__REGIONKEY;
                                 if ( var185 == var186 )
                                 {
-                                    string var183 = 0;
+                                    string var183 = "";
                                     var183 += N__NAME;
-                                    string var184 = 0;
+                                    string var184 = "";
                                     var184 += protect_N__NAME;
                                     if ( var183 == var184 )
                                     {
@@ -2292,9 +2292,9 @@ void on_delete_LINEITEM(
                                 var200 += protect_R__REGIONKEY;
                                 if ( var199 == var200 )
                                 {
-                                    string var197 = 0;
+                                    string var197 = "";
                                     var197 += N__NAME;
-                                    string var198 = 0;
+                                    string var198 = "";
                                     var198 += protect_N__NAME;
                                     if ( var197 == var198 )
                                     {
@@ -2449,9 +2449,9 @@ void on_delete_LINEITEM(
                                 var217 += protect_R__REGIONKEY;
                                 if ( var216 == var217 )
                                 {
-                                    string var214 = 0;
+                                    string var214 = "";
                                     var214 += N__NAME;
-                                    string var215 = 0;
+                                    string var215 = "";
                                     var215 += protect_N__NAME;
                                     if ( var214 == var215 )
                                     {
@@ -2633,9 +2633,9 @@ void on_delete_ORDERS(
                                 var231 += protect_R__REGIONKEY;
                                 if ( var230 == var231 )
                                 {
-                                    string var228 = 0;
+                                    string var228 = "";
                                     var228 += N__NAME;
-                                    string var229 = 0;
+                                    string var229 = "";
                                     var229 += protect_N__NAME;
                                     if ( var228 == var229 )
                                     {
@@ -2790,9 +2790,9 @@ void on_delete_ORDERS(
                                 var248 += protect_R__REGIONKEY;
                                 if ( var247 == var248 )
                                 {
-                                    string var245 = 0;
+                                    string var245 = "";
                                     var245 += N__NAME;
-                                    string var246 = 0;
+                                    string var246 = "";
                                     var246 += protect_N__NAME;
                                     if ( var245 == var246 )
                                     {
@@ -2973,9 +2973,9 @@ void on_delete_SUPPLIER(
                                 var262 += protect_R__REGIONKEY;
                                 if ( var261 == var262 )
                                 {
-                                    string var259 = 0;
+                                    string var259 = "";
                                     var259 += N__NAME;
-                                    string var260 = 0;
+                                    string var260 = "";
                                     var260 += protect_N__NAME;
                                     if ( var259 == var260 )
                                     {
@@ -3130,9 +3130,9 @@ void on_delete_SUPPLIER(
                                 var279 += protect_R__REGIONKEY;
                                 if ( var278 == var279 )
                                 {
-                                    string var276 = 0;
+                                    string var276 = "";
                                     var276 += N__NAME;
-                                    string var277 = 0;
+                                    string var277 = "";
                                     var277 += protect_N__NAME;
                                     if ( var276 == var277 )
                                     {
@@ -3313,9 +3313,9 @@ void on_delete_CUSTOMER(
                                 var293 += protect_R__REGIONKEY;
                                 if ( var292 == var293 )
                                 {
-                                    string var290 = 0;
+                                    string var290 = "";
                                     var290 += N__NAME;
-                                    string var291 = 0;
+                                    string var291 = "";
                                     var291 += protect_N__NAME;
                                     if ( var290 == var291 )
                                     {
@@ -3470,9 +3470,9 @@ void on_delete_CUSTOMER(
                                 var310 += protect_R__REGIONKEY;
                                 if ( var309 == var310 )
                                 {
-                                    string var307 = 0;
+                                    string var307 = "";
                                     var307 += N__NAME;
-                                    string var308 = 0;
+                                    string var308 = "";
                                     var308 += protect_N__NAME;
                                     if ( var307 == var308 )
                                     {
@@ -3651,9 +3651,9 @@ void on_delete_NATION(
                                 var324 += protect_R__REGIONKEY;
                                 if ( var323 == var324 )
                                 {
-                                    string var321 = 0;
+                                    string var321 = "";
                                     var321 += NAME;
-                                    string var322 = 0;
+                                    string var322 = "";
                                     var322 += protect_N__NAME;
                                     if ( var321 == var322 )
                                     {
@@ -3808,9 +3808,9 @@ void on_delete_NATION(
                                 var341 += protect_R__REGIONKEY;
                                 if ( var340 == var341 )
                                 {
-                                    string var338 = 0;
+                                    string var338 = "";
                                     var338 += NAME;
-                                    string var339 = 0;
+                                    string var339 = "";
                                     var339 += protect_N__NAME;
                                     if ( var338 == var339 )
                                     {
@@ -3989,9 +3989,9 @@ void on_delete_REGION(
                                 var355 += protect_R__REGIONKEY;
                                 if ( var354 == var355 )
                                 {
-                                    string var352 = 0;
+                                    string var352 = "";
                                     var352 += N__NAME;
-                                    string var353 = 0;
+                                    string var353 = "";
                                     var353 += protect_N__NAME;
                                     if ( var352 == var353 )
                                     {
@@ -4146,9 +4146,9 @@ void on_delete_REGION(
                                 var372 += protect_R__REGIONKEY;
                                 if ( var371 == var372 )
                                 {
-                                    string var369 = 0;
+                                    string var369 = "";
                                     var369 += N__NAME;
-                                    string var370 = 0;
+                                    string var370 = "";
                                     var370 += protect_N__NAME;
                                     if ( var369 == var370 )
                                     {

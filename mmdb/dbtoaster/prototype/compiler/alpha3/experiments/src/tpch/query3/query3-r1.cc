@@ -292,10 +292,9 @@ void on_insert_ORDERS(
         SHIPPRIORITY,COMMENT));
     q[make_tuple(
         SHIPPRIORITY,ORDERKEY)] += qORDERS1[ORDERKEY]*qORDERS2[CUSTKEY];
-    map<tuple<int64_t,int64_t,int>,double>::iterator qCUSTOMER1_it18 = 
-        qCUSTOMER1.begin();
-    map<tuple<int64_t,int64_t,int>,double>::iterator qCUSTOMER1_end17 = 
-        qCUSTOMER1.end();
+
+    map<tuple<int64_t,int64_t,int>,double>::iterator qCUSTOMER1_it18 = qCUSTOMER1.begin();
+    map<tuple<int64_t,int64_t,int>,double>::iterator qCUSTOMER1_end17 = qCUSTOMER1.end();
     for (; qCUSTOMER1_it18 != qCUSTOMER1_end17; ++qCUSTOMER1_it18)
     {
         int64_t L__ORDERKEY = get<0>(qCUSTOMER1_it18->first);
@@ -304,10 +303,10 @@ void on_insert_ORDERS(
         qCUSTOMER1[make_tuple(
             L__ORDERKEY,x_qCUSTOMER_C__CUSTKEY,SHIPPRIORITY)] = 0;
         
-            multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
             >::iterator ORDERS_it16 = ORDERS.begin();
         
-            multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+        multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
             >::iterator ORDERS_end15 = ORDERS.end();
         for (; ORDERS_it16 != ORDERS_end15; ++ORDERS_it16)
         {
@@ -369,6 +368,7 @@ void on_insert_ORDERS(
             }
         }
     }
+
     map<tuple<int64_t,int>,int>::iterator qLINEITEM1_it24 = qLINEITEM1.begin();
     map<tuple<int64_t,int>,int>::iterator qLINEITEM1_end23 = qLINEITEM1.end();
     for (; qLINEITEM1_it24 != qLINEITEM1_end23; ++qLINEITEM1_it24)

@@ -28,27 +28,33 @@ using namespace tr1;
 
 
 using namespace DBToaster::Profiler;
+multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> > LINEITEM;
+multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> > ORDERS;
+multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> >  CUSTOMER;
 multiset<tuple<int64_t,string,string,int64_t,string,double,string> > SUPPLIER;
+multiset<tuple<int64_t,string,int64_t,string> > NATION;
+multiset<tuple<int64_t,string,string> > REGION;
+
+
+map<string,double> q;
+
 map<tuple<string,int64_t>,double> qREGION1;
-map<tuple<int64_t,int64_t,string>,double> qSUPPLIER1;
 map<tuple<string,int64_t>,double> qREGION2;
+
+map<tuple<int64_t,int64_t,string>,double> qSUPPLIER1;
 map<tuple<int64_t,int64_t,string>,double> qSUPPLIER2;
-multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> > 
-    LINEITEM;
+
 map<tuple<int64_t,int64_t,string>,double> qORDERS1;
 map<tuple<int64_t,int64_t,string>,double> qORDERS2;
-multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> > 
-    ORDERS;
-multiset<tuple<int64_t,string,string> > REGION;
+
+
 map<tuple<int64_t,int64_t,string>,int> qLINEITEM1;
+
 map<int64_t,double> qNATION1;
-map<string,double> q;
-multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> > 
-    CUSTOMER;
 map<int64_t,int> qNATION2;
-map<tuple<int64_t,int64_t,string>,double> qCUSTOMER1;
-multiset<tuple<int64_t,string,int64_t,string> > NATION;
 map<int64_t,double> qNATION3;
+
+map<tuple<int64_t,int64_t,string>,double> qCUSTOMER1;
 map<tuple<int64_t,int64_t,string>,double> qCUSTOMER2;
 
 double on_insert_REGION_sec_span = 0.0;
@@ -1327,7 +1333,7 @@ void on_insert_REGION(
     }
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
-        hstart, hend, on_insert_REGION_sec_span, on_insert_REGION_usec_span);
+        hstart, hend, on_insertREGION_sec_span, on_insert_REGION_usec_span);
 }
 
 void on_insert_LINEITEM(
@@ -2163,10 +2169,9 @@ void on_insert_LINEITEM(
             }
         }
     }
-    map<tuple<string,int64_t>,double>::iterator qREGION1_it176 = qREGION1.begin(
-        );
-    map<tuple<string,int64_t>,double>::iterator qREGION1_end175 = qREGION1.end(
-        );
+
+    map<tuple<string,int64_t>,double>::iterator qREGION1_it176 = qREGION1.begin();
+    map<tuple<string,int64_t>,double>::iterator qREGION1_end175 = qREGION1.end();
     for (; qREGION1_it176 != qREGION1_end175; ++qREGION1_it176)
     {
         string N__NAME = get<0>(qREGION1_it176->first);
@@ -3453,10 +3458,9 @@ void on_insert_ORDERS(
             }
         }
     }
-    map<tuple<string,int64_t>,double>::iterator qREGION1_it284 = qREGION1.begin(
-        );
-    map<tuple<string,int64_t>,double>::iterator qREGION1_end283 = qREGION1.end(
-        );
+
+    map<tuple<string,int64_t>,double>::iterator qREGION1_it284 = qREGION1.begin();
+    map<tuple<string,int64_t>,double>::iterator qREGION1_end283 = qREGION1.end();
     for (; qREGION1_it284 != qREGION1_end283; ++qREGION1_it284)
     {
         string N__NAME = get<0>(qREGION1_it284->first);
@@ -5034,6 +5038,7 @@ void on_insert_SUPPLIER(
             }
         }
     }
+
     map<tuple<string,int64_t>,double>::iterator qREGION1_it416 = qREGION1.begin(
         );
     map<tuple<string,int64_t>,double>::iterator qREGION1_end415 = qREGION1.end(
@@ -7362,10 +7367,9 @@ void on_insert_NATION(
             }
         }
     }
-    map<tuple<string,int64_t>,double>::iterator qREGION1_it608 = qREGION1.begin(
-        );
-    map<tuple<string,int64_t>,double>::iterator qREGION1_end607 = qREGION1.end(
-        );
+
+    map<tuple<string,int64_t>,double>::iterator qREGION1_it608 = qREGION1.begin();
+    map<tuple<string,int64_t>,double>::iterator qREGION1_end607 = qREGION1.end();
     for (; qREGION1_it608 != qREGION1_end607; ++qREGION1_it608)
     {
         string NAME = get<0>(qREGION1_it608->first);
@@ -7510,10 +7514,9 @@ void on_insert_NATION(
             }
         }
     }
-    map<tuple<string,int64_t>,double>::iterator qREGION2_it620 = qREGION2.begin(
-        );
-    map<tuple<string,int64_t>,double>::iterator qREGION2_end619 = qREGION2.end(
-        );
+
+    map<tuple<string,int64_t>,double>::iterator qREGION2_it620 = qREGION2.begin();
+    map<tuple<string,int64_t>,double>::iterator qREGION2_end619 = qREGION2.end();
     for (; qREGION2_it620 != qREGION2_end619; ++qREGION2_it620)
     {
         string NAME = get<0>(qREGION2_it620->first);
