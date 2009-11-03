@@ -412,7 +412,16 @@ class MapPartition
   end
   
   def set(var, vers, val)
-    insert(Entry.make(@mapid, var), vers, val.to_f)
+    @data[var] = PutRecord.new(Entry.make(@mapid, var), vers, val.to_f);
+  end
+  
+  def lookup(target)
+    ret = Hash.new
+    @data.scan(target.key) do |key, value|
+      value = value.last;
+      ret[key] = value.value
+    end
+    return ret;
   end
   
   def collapse_mass_records_to(version)

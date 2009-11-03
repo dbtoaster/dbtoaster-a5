@@ -57,8 +57,8 @@ GetoptLong.new(
       $verbose = true;
       
     when "--tpch-stream", "-h" then
-      puts "Reading: " + "|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t }.join(" ")
-      $input = open("|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t }.join(" "))
+      puts "Reading: " + "|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t + " upfront" }.join(" ")
+      $input = open("|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t + " upfront" }.join(" "))
     
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;

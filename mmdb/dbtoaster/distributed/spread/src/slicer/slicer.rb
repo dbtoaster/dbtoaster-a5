@@ -144,10 +144,9 @@ class Slicer
         @switch
       ).start;
 
-    monitor = SlicerMonitor.new(@nodes.collect { |n| n.host } << @switch);
-    monitor.start
-
     sleep 0.1 while servers.find { |s| !s.ready };
+
+    monitor = SlicerMonitor.new(@nodes.collect { |n| n.host } << @switch);
 
     client_cmd = 
       SlicerProcess.base_path + "/bin/client.sh -q -s -l 200 " + 
@@ -161,6 +160,7 @@ class Slicer
         @config.join(" ");
 
     Logger.info { "Servers started; starting clients" }
+    monitor.start
     SlicerProcess.new(client_cmd, @switch).start;
     SlicerProcess.new(query_cmd, @switch).start;
   end

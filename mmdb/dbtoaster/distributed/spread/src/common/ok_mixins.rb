@@ -220,6 +220,14 @@ module Math
     end
     min;
   end
+  def Math.sum(*params)
+    tot = 0.0;
+    params.each { |param| tot += param.to_f }
+    tot;
+  end
+  def Math.avg(*params)
+    sum(*params) / params.size;
+  end
 end
 
 class Range

@@ -12,6 +12,8 @@ puts "done\nInitializing Server..."
 
 $port = 52982;
 $name = nil;
+$preload = nil;
+$preload_shifts = Hash.new;
 
 Logger.default_level = Logger::INFO;
 Logger.default_name = "sliceDBread";
@@ -19,6 +21,7 @@ Logger.default_name = "sliceDBread";
 GetoptLong.new(
   [ "-p", "--port",    GetoptLong::REQUIRED_ARGUMENT ],
   [ "-n", "--name",    GetoptLong::REQUIRED_ARGUMENT ],
+  [ "--preload",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-q", "--quiet",   GetoptLong::NO_ARGUMENT ],
   [ "-v", "--verbose", GetoptLong::NO_ARGUMENT ]
 ).each do |opt, arg|
@@ -27,6 +30,8 @@ GetoptLong.new(
     when "-n", "--name" then $name = arg; Logger.default_name = nil;
     when "-q", "--quiet" then Logger.default_level = Logger::WARN;
     when "-v", "--verbose" then Logger.default_level = Logger::DEBUG;
+    when "--preload" then $preload = arg;
+    when "--shift"   then arg = arg.split(":"); $preload_shifts[arg[0]] = arg[1].to_i;
   end
 end
 cmds = Array.new;
@@ -52,6 +57,9 @@ end
 $name = "Solo Node" unless $name;
 handler, server = MapNode::Processor.listen($port, $name);
 handler.setup(cmds);
+handler.preload(File.new($preload), $preload_shifts) if $preload;
+puts "dumping..."
+handler.localdump
 
 puts "done\nStarting node " + $name + " server on port " + $port.to_s + "..."
 
