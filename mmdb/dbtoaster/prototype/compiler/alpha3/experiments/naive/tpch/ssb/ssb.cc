@@ -155,11 +155,142 @@ void analyse_handler_usage(ofstream* stats)
    (*stats) << "h," << "on_delete_NATION" << "," << (on_delete_NATION_sec_span + (on_delete_NATION_usec_span / 1000000.0)) << endl;
 }
 
+void naive_result_domain_maintenance()
+{
+    multiset<tuple<int64_t,string,int64_t,string> >::iterator NATION_it14 = NATION.begin();
+    multiset<tuple<int64_t,string,int64_t,string> >::iterator NATION_end13 = NATION.end();
+    for (; NATION_it14 != NATION_end13; ++NATION_it14)
+    {
+        int64_t protect_N1__NATIONKEY = get<0>(*NATION_it14);
+        string protect_N1__NAME = get<1>(*NATION_it14);
+        int64_t protect_N1__REGIONKEY = get<2>(*NATION_it14);
+        string protect_N1__COMMENT = get<3>(*NATION_it14);
+
+        multiset<tuple<int64_t,string,int64_t,string> >::iterator NATION_it12 = NATION.begin();
+        multiset<tuple<int64_t,string,int64_t,string> >::iterator NATION_end11 = NATION.end();
+
+        for (; NATION_it12 != NATION_end11; ++NATION_it12)
+        {
+            int64_t N2__NATIONKEY = get<0>(*NATION_it12);
+            string N2__NAME = get<1>(*NATION_it12);
+            int64_t N2__REGIONKEY = get<2>(*NATION_it12);
+            string N2__COMMENT = get<3>(*NATION_it12);
+
+            if ( N2__REGIONKEY == protect_N1__REGIONKEY )
+            {
+                multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+                    >::iterator CUSTOMER_it10 = CUSTOMER.begin();
+                
+                multiset<tuple<int64_t,string,string,int64_t,string,double,string,string> 
+                    >::iterator CUSTOMER_end9 = CUSTOMER.end();
+                for (; CUSTOMER_it10 != CUSTOMER_end9; ++CUSTOMER_it10)
+                {
+                    int64_t protect_C__CUSTKEY = get<0>(*CUSTOMER_it10);
+                    string protect_C__NAME = get<1>(*CUSTOMER_it10);
+                    string protect_C__ADDRESS = get<2>(*CUSTOMER_it10);
+                    int64_t protect_C__NATIONKEY = get<3>(*CUSTOMER_it10);
+                    string protect_C__PHONE = get<4>(*CUSTOMER_it10);
+                    double protect_C__ACCTBAL = get<5>(*CUSTOMER_it10);
+                    string protect_C__MKTSEGMENT = get<6>(*CUSTOMER_it10);
+                    string protect_C__COMMENT = get<7>(*CUSTOMER_it10);
+                    
+                    if ( protect_C__NATIONKEY == protect_N1__NATIONKEY )
+                    {
+                        multiset<tuple<int64_t,string,string,string,string,int,string,double,string> 
+                            >::iterator PARTS_it8 = PARTS.begin();
+                    
+                        multiset<tuple<int64_t,string,string,string,string,int,string,double,string> 
+                            >::iterator PARTS_end7 = PARTS.end();
+                        for (; PARTS_it8 != PARTS_end7; ++PARTS_it8)
+                        {
+                            int64_t protect_P__PARTKEY = get<0>(*PARTS_it8);
+                            string protect_P__NAME = get<1>(*PARTS_it8);
+                            string protect_P__MFGR = get<2>(*PARTS_it8);
+                            string protect_P__BRAND = get<3>(*PARTS_it8);
+                            string protect_P__TYPE = get<4>(*PARTS_it8);
+                            int protect_P__SIZE = get<5>(*PARTS_it8);
+                            string protect_P__CONTAINER = get<6>(*PARTS_it8);
+                            double protect_P__RETAILPRICE = get<7>(*PARTS_it8);
+                            string protect_P__COMMENT = get<8>(*PARTS_it8);
+
+                            tuple<string,int64_t,int64_t,int64_t> key =
+                                make_tuple(protect_P__MFGR,protect_N1__REGIONKEY,N2__REGIONKEY,protect_C__NATIONKEY);
+
+                            if ( q.find(key) == q.end() )
+                            {
+                                multiset<tuple<int64_t,string,string,int64_t,string,double,string> >::iterator 
+                                    SUPPLIER_it6 = SUPPLIER.begin();
+                                
+                                multiset<tuple<int64_t,string,string,int64_t,string,double,string> >::iterator 
+                                    SUPPLIER_end5 = SUPPLIER.end();
+                                for (; SUPPLIER_it6 != SUPPLIER_end5; ++SUPPLIER_it6)
+                                {
+                                    int64_t protect_S__SUPPKEY = get<0>(*SUPPLIER_it6);
+                                    string protect_S__NAME = get<1>(*SUPPLIER_it6);
+                                    string protect_S__ADDRESS = get<2>(*SUPPLIER_it6);
+                                    int64_t protect_S__NATIONKEY = get<3>(*SUPPLIER_it6);
+                                    string protect_S__PHONE = get<4>(*SUPPLIER_it6);
+                                    double protect_S__ACCTBAL = get<5>(*SUPPLIER_it6);
+                                    string protect_S__COMMENT = get<6>(*SUPPLIER_it6);
+                                    
+                                    multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+                                        >::iterator ORDERS_it4 = ORDERS.begin();
+                                    
+                                    multiset<tuple<int64_t,int64_t,string,double,string,string,string,int,string> 
+                                        >::iterator ORDERS_end3 = ORDERS.end();
+                                    for (; ORDERS_it4 != ORDERS_end3; ++ORDERS_it4)
+                                    {
+                                        int64_t protect_O__ORDERKEY = get<0>(*ORDERS_it4);
+                                        int64_t protect_O__CUSTKEY = get<1>(*ORDERS_it4);
+                                        string protect_O__ORDERSTATUS = get<2>(*ORDERS_it4);
+                                        double protect_O__TOTALPRICE = get<3>(*ORDERS_it4);
+                                        string protect_O__ORDERDATE = get<4>(*ORDERS_it4);
+                                        string protect_O__ORDERPRIORITY = get<5>(*ORDERS_it4);
+                                        string protect_O__CLERK = get<6>(*ORDERS_it4);
+                                        int protect_O__SHIPPRIORITY = get<7>(*ORDERS_it4);
+                                        string protect_O__COMMENT = get<8>(*ORDERS_it4);
+                                
+                                        multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> 
+                                            >::iterator LINEITEM_it2 = LINEITEM.begin();
+                                
+                                        multiset<tuple<int64_t,int64_t,int64_t,int,double,double,double,double> 
+                                            >::iterator LINEITEM_end1 = LINEITEM.end();
+                                        for (; LINEITEM_it2 != LINEITEM_end1; ++LINEITEM_it2)
+                                        {
+                                            int64_t protect_L__ORDERKEY = get<0>(*LINEITEM_it2);
+                                            int64_t protect_L__PARTKEY = get<1>(*LINEITEM_it2);
+                                            int64_t protect_L__SUPPKEY = get<2>(*LINEITEM_it2);
+                                            int protect_L__LINENUMBER = get<3>(*LINEITEM_it2);
+                                            double protect_L__QUANTITY = get<4>(*LINEITEM_it2);
+                                            double protect_L__EXTENDEDPRICE = get<5>(*LINEITEM_it2);
+                                            double protect_L__DISCOUNT = get<6>(*LINEITEM_it2);
+                                            double protect_L__TAX = get<7>(*LINEITEM_it2);
+                                            
+                                            if ( protect_L__ORDERKEY == protect_O__ORDERKEY
+                                                 && protect_O__CUSTKEY == protect_C__CUSTKEY 
+                                                 && protect_L__SUPPKEY == protect_S__SUPPKEY
+                                                 && protect_L__PARTKEY == protect_P__PARTKEY
+                                                 && protect_S__NATIONKEY == N2__NATIONKEY )
+                                            {
+                                                q[make_tuple(protect_P__MFGR,protect_N1__REGIONKEY,
+                                                             N2__REGIONKEY,protect_C__NATIONKEY)] = 0;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 
 ////////////////////////////////////////
 //
 // Query plan
-
 
 void recompute()
 {
@@ -318,6 +449,7 @@ void on_insert_LINEITEM(
     LINEITEM.insert(make_tuple(
         ORDERKEY,PARTKEY,SUPPKEY,LINENUMBER,QUANTITY,EXTENDEDPRICE,DISCOUNT,TAX));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
@@ -336,6 +468,7 @@ void on_insert_ORDERS(
         ORDERKEY,CUSTKEY,ORDERSTATUS,TOTALPRICE,ORDERDATE,ORDERPRIORITY,CLERK,
         SHIPPRIORITY,COMMENT));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
@@ -353,6 +486,7 @@ void on_insert_SUPPLIER(
     SUPPLIER.insert(make_tuple(
         SUPPKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,COMMENT));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
@@ -370,6 +504,7 @@ void on_insert_PARTS(
     PARTS.insert(make_tuple(
         PARTKEY,NAME,MFGR,BRAND,TYPE,SIZE,CONTAINER,RETAILPRICE,COMMENT));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
@@ -387,6 +522,7 @@ void on_insert_CUSTOMER(
     CUSTOMER.insert(make_tuple(
         CUSTKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,MKTSEGMENT,COMMENT));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
@@ -402,6 +538,7 @@ void on_insert_NATION(
     gettimeofday(&hstart, NULL);
     NATION.insert(make_tuple(NATIONKEY,NAME,REGIONKEY,COMMENT));
 
+    naive_result_domain_maintenance();
     recompute();
 
     gettimeofday(&hend, NULL);
