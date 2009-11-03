@@ -33,18 +33,18 @@ vwapn: $(VWAP_N_OBJS)
 	$(CXX) -o naive/vwap/vwap-n $(CXXFLAGS) $(VWAP_N_OBJS) $(LDFLAGS)
 
 # Pricespread
-PS_OBJS = src/finance/pricespread.o
-PS_R1_OBJS = src/finance/pricespread-r1.o
-PS_N_OBJS = naive/finance/pricespread.o
+PS_OBJS = src/finance/pricespread/pricespread.o
+PS_R1_OBJS = src/finance/pricespread/pricespread-r1.o
+PS_N_OBJS = naive/finance/pricespread/pricespread.o
 
 pricespread: $(PS_OBJS)
-	$(CXX) -o src/finance/pricespread $(CXXFLAGS) $(PS_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/pricespread/pricespread $(CXXFLAGS) $(PS_OBJS) $(LDFLAGS)
 
 pricespreadr1: $(PS_R1_OBJS)
-	$(CXX) -o src/finance/pricespread-r1 $(CXXFLAGS) $(PS_R1_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/pricespread/pricespread-r1 $(CXXFLAGS) $(PS_R1_OBJS) $(LDFLAGS)
 
-pricespreadn: $(PS_R1B_OBJS)
-	$(CXX) -o naive/finance/pricespread-n $(CXXFLAGS) $(PS_N_OBJS) $(LDFLAGS)
+pricespreadn: $(PS_N_OBJS)
+	$(CXX) -o naive/finance/pricespread/pricespread-n $(CXXFLAGS) $(PS_N_OBJS) $(LDFLAGS)
 	
 
 # Ax finder
@@ -53,13 +53,13 @@ AX_R1_OBJS = src/finance/axfinder/axfinder-r1.o
 AX_N_OBJS = naive/finance/axfinder/axfinder.o
 
 axfinder: $(AX_OBJS)
-	$(CXX) -o src/finance/axfinder $(CXXFLAGS) $(AX_OBJS) $(LDFLAGS)
+	$(CXX) -o src/finance/axfinder/axfinder $(CXXFLAGS) $(AX_OBJS) $(LDFLAGS)
 
 axfinderr1: $(AX_R1_OBJS)
-	$(CXX) -o naive/finance/axfinder-r1 $(CXXFLAGS) $(AX_R1_OBJS) $(LDFLAGS)
+	$(CXX) -o naive/finance/axfinder/axfinder-r1 $(CXXFLAGS) $(AX_R1_OBJS) $(LDFLAGS)
 
-axfinder: $(AX_N_OBJS)
-	$(CXX) -o naive/finance/axfinder-n $(CXXFLAGS) $(AX_N_OBJS) $(LDFLAGS)
+axfindern: $(AX_N_OBJS)
+	$(CXX) -o naive/finance/axfinder/axfinder-n $(CXXFLAGS) $(AX_N_OBJS) $(LDFLAGS)
 
 
 # SSB queries

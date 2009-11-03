@@ -23,13 +23,19 @@ using namespace tr1;
 #include "datasets/adaptors.h"
 #include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/pool/pool.hpp>
+#include <boost/pool/pool_alloc.hpp>
 
 
 using namespace DBToaster::Profiler;
 double q;
-map<double,double> qBIDS1;
+map<double,double,std::less<double >,
+    boost::pool_allocator<pair<double,double> > > qBIDS1;
 double qBIDS2;
-multiset<tuple<double,int,int,double,double> > BIDS;
+
+multiset<tuple<double,int,int,double,double>, 
+    std::less<tuple<double,int,int,double,double> >, 
+    boost::pool_allocator<tuple<double,int,int,double,double> > > BIDS;
 
 double q80;
 double q57;
@@ -45,25 +51,26 @@ double on_delete_BIDS_usec_span = 0.0;
 
 void analyse_mem_usage(ofstream* stats)
 {
-   cout << "BIDS size: " << (((sizeof(multiset<tuple<double,int,int,double,double> >::value_type)
+   cout << "BIDS size: " << (((sizeof(multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type)
        + sizeof(struct _Rb_tree_node_base))
-       * BIDS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<double,int,int,double,double> >::key_type, multiset<tuple<double,int,int,double,double> >::value_type, _Identity<multiset<tuple<double,int,int,double,double> >::value_type>, multiset<tuple<double,int,int,double,double> >::key_compare>))) << endl;
+       * BIDS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::key_type, multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type, _Identity<multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type>, multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "BIDS" << "," << (((sizeof(multiset<tuple<double,int,int,double,double> >::value_type)
+   (*stats) << "m," << "BIDS" << "," << (((sizeof(multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type)
        + sizeof(struct _Rb_tree_node_base))
-       * BIDS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<double,int,int,double,double> >::key_type, multiset<tuple<double,int,int,double,double> >::value_type, _Identity<multiset<tuple<double,int,int,double,double> >::value_type>, multiset<tuple<double,int,int,double,double> >::key_compare>))) << endl;
+       * BIDS.size())  + (sizeof(struct _Rb_tree<multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::key_type, multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type, _Identity<multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::value_type>, multiset<tuple<double,int,int,double,double>, std::less<tuple<double,int,int,double,double> >, boost::pool_allocator<tuple<double,int,int,double,double> > >::key_compare>))) << endl;
 
-   cout << "qBIDS1 size: " << (((sizeof(map<double,double>::key_type)
-       + sizeof(map<double,double>::mapped_type)
+   cout << "qBIDS1 size: " << (((sizeof(map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_type)
+       + sizeof(map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qBIDS1.size())  + (sizeof(struct _Rb_tree<map<double,double>::key_type, map<double,double>::value_type, _Select1st<map<double,double>::value_type>, map<double,double>::key_compare>))) << endl;
+       * qBIDS1.size())  + (sizeof(struct _Rb_tree<map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_type, map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::value_type, _Select1st<map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::value_type>, map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_compare>))) << endl;
 
-   (*stats) << "m," << "qBIDS1" << "," << (((sizeof(map<double,double>::key_type)
-       + sizeof(map<double,double>::mapped_type)
+   (*stats) << "m," << "qBIDS1" << "," << (((sizeof(map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_type)
+       + sizeof(map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::mapped_type)
        + sizeof(struct _Rb_tree_node_base))
-       * qBIDS1.size())  + (sizeof(struct _Rb_tree<map<double,double>::key_type, map<double,double>::value_type, _Select1st<map<double,double>::value_type>, map<double,double>::key_compare>))) << endl;
+       * qBIDS1.size())  + (sizeof(struct _Rb_tree<map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_type, map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::value_type, _Select1st<map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::value_type>, map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::key_compare>))) << endl;
 
 }
+
 
 void analyse_handler_usage(ofstream* stats)
 {
@@ -82,8 +89,16 @@ void on_insert_BIDS(
     gettimeofday(&hstart, NULL);
     if ( qBIDS1.find(P) == qBIDS1.end() )
     {
-        multiset<tuple<double,int,int,double,double> >::iterator BIDS_it2 = BIDS.begin();
-        multiset<tuple<double,int,int,double,double> >::iterator BIDS_end1 = BIDS.end();
+        multiset<tuple<double,int,int,double,double>, 
+            std::less<tuple<double,int,int,double,double> >, 
+            boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+            BIDS_it2 = BIDS.begin();
+
+        multiset<tuple<double,int,int,double,double>, 
+            std::less<tuple<double,int,int,double,double> >, 
+            boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+            BIDS_end1 = BIDS.end();
+
         for (; BIDS_it2 != BIDS_end1; ++BIDS_it2)
         {
             double B2__P = get<3>(*BIDS_it2);
@@ -100,8 +115,12 @@ void on_insert_BIDS(
 
     // Incrementally maintain qBIDS1, qBIDS2 only, since these are the simple
     // inner queries.
-    map<double,double>::iterator qBIDS1_it14 = qBIDS1.begin();
-    map<double,double>::iterator qBIDS1_end13 = qBIDS1.end();
+    map<double,double,std::less<double >,
+        boost::pool_allocator<pair<double,double> > >::iterator qBIDS1_it14 = qBIDS1.begin();
+
+    map<double,double,std::less<double >,
+        boost::pool_allocator<pair<double,double> > >::iterator qBIDS1_end13 = qBIDS1.end();
+
     for (; qBIDS1_it14 != qBIDS1_end13; ++qBIDS1_it14)
     {
         double bigsum_B__P = qBIDS1_it14->first;
@@ -112,8 +131,15 @@ void on_insert_BIDS(
 
     q = 0.0;
 
-    multiset<tuple<double,int,int,double,double> >::iterator q_it = BIDS.begin();
-    multiset<tuple<double,int,int,double,double> >::iterator q_end = BIDS.end();
+    multiset<tuple<double,int,int,double,double>, 
+        std::less<tuple<double,int,int,double,double> >, 
+        boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+        q_it = BIDS.begin();
+
+    multiset<tuple<double,int,int,double,double>, 
+        std::less<tuple<double,int,int,double,double> >, 
+        boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+        q_end = BIDS.end();
 
     for (; q_it != q_end; ++q_it)
     {
@@ -146,8 +172,12 @@ void on_delete_BIDS(
     }
     */
 
-    map<double,double>::iterator qBIDS1_it30 = qBIDS1.begin();
-    map<double,double>::iterator qBIDS1_end29 = qBIDS1.end();
+    map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::iterator
+        qBIDS1_it30 = qBIDS1.begin();
+
+    map<double,double,std::less<double >,boost::pool_allocator<pair<double,double> > >::iterator
+        qBIDS1_end29 = qBIDS1.end();
+
     for (; qBIDS1_it30 != qBIDS1_end29; ++qBIDS1_it30)
     {
         double bigsum_B__P = qBIDS1_it30->first;
@@ -156,8 +186,15 @@ void on_delete_BIDS(
 
     qBIDS2 += -1*V;
 
-    multiset<tuple<double,int,int,double,double> >::iterator q_it = BIDS.begin();
-    multiset<tuple<double,int,int,double,double> >::iterator q_end = BIDS.end();
+    multiset<tuple<double,int,int,double,double>, 
+        std::less<tuple<double,int,int,double,double> >, 
+        boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+        q_it = BIDS.begin();
+
+    multiset<tuple<double,int,int,double,double>, 
+         std::less<tuple<double,int,int,double,double> >, 
+        boost::pool_allocator<tuple<double,int,int,double,double> > >::iterator
+        q_end = BIDS.end();
 
     for (; q_it != q_end; ++q_it)
     {
