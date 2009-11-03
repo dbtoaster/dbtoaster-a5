@@ -1,29 +1,306 @@
 \section{Introduction}
 
-As computer memory grows with respect to the size of data warehouses, the notion of an entirely in-memory data warehouse has become not just feasible, but appealing.  Such a facilty would not only have lower response latency than a comparable disk-based one - especially for queries with random-access patterns, but would be free of the maintenence\cite{}, cooling\cite{}, and power\cite{1154557} costs associated with hard drives.  Moreover, by keeping data entirely in-memory, large datastructures meant to streamline read accesses from disk are not required; Persistence, if required, can be achieved with minimal storage space simply by logging updates.
 
-This paper presents Cumulus, a system for pushing OLAP precomputations into the cloud; Cumulus automates the process of creating, loading, and managing in-memory data warehouse infrastructures.  Using a compiler that translates ordinary SQL queries down a simple read/write message-passing model, Cumulus distributes both processing and storage involved in very large queries.  For example, Cumulus can compute and distribute the results of a denormalization query.  Thanks to a novel recursive query subdivision technique, the compiler's output is also able to incrementally maintain the query output, keeping the data warehouse constantly synchronized with the source data.
+Recent years have seen the beginning of a paradigm shift in data management
+research from incrementally
+improving decades-old database technology
+%
+% (particularly, OLTP) -- System R and
+% the long line of systems that have followed it --
+%
+to questioning established
+architectures and creating fundamentally different, more lightweight, and
+often domain-specific systems (cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
+Part of the impetus for this change was given by users --
+or rather, potential user groups such as scientists and the builders of
+large-scale Web sites and services such as Google, Amazon, and Ebay,
+who, despite a need for data management systems, have found current databases
+not to scale to their needs.
+One can observe a trend to disregard database contributions
+in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on
+robust technologies mostly pioneered by the operating systems and distributed
+systems communities, such as large scale file systems, key-value stores, and
+map-reduce
+\cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}.
+Further impetus has resulted from the current need to develop data management
+technology for multicore and cloud computing, and by the example given by a
+number of innovative recent database startup companies that develop
+databases based on new architectures.
+%
+%\footnote{Examples are Vertica and Paraccel, who build column stores,
+%and Greenplum, Asterdata, and Netezza, who take databases into the Cloud.}
 
-Cumulus targets OLAP applications that perform real-time analytics of transactionally maintained and/or streaming data.  By feeding it an SQL query, Cumulus's infrastructure becomes linked to a set of tables in a relational database.  Cumulus denormalizes the relevant portions of the database, and keeps the denormalized copy synchronized using only a stream of updates to the individual input relations.  
+There is a recent tendency among pundits outside the database community to
+negate the power and convenience of queries in languages such as SQL, and to
+think of key-value stores -- with only the power to look up data by
+keys -- as (much more efficient) databases.
+%
+%It shall not be denied that,
+%with clever engineering, a surprising range of problems can be solved
+%using key-value stores.
+%
+However, expressive query languages such as SQL do not cease to have
+important applications and a substantial user base.
+To this day, processing SQL queries and using a system as lightweight and
+as easy to update as a key-value store are two goals that we
+do not know how to reconcile.
 
-All state in Cumulus is stored in memory rather than on disk, so not only can complete table scans be completed quickly, but index structures can be simpler and more efficient.  Because the query results are already partitioned across nodes in the warehouse, the work of processing queries can be farmed out as well.  Moreover, the datastructures already used to store intermediate query results bear many similarities to those used by datacube\cite{datacube} implementations and can be used to further simplify the process of aggregation and projection.  Combining these features with its ability to synchronize with an underlying relational database in real time, Cumulus is able to efficiently process OLAP queries on live transactional data. 
+This paper contributes a fundamental and versatile building block for
+enabling new, more lightweight and nimble data processing systems based
+on SQL aggregation que\-ries. We believe that our contribution
+constitutes an important
+step towards achieving the contradiction in terms mentioned
+above: executing complex aggregation queries using little more than a key-value
+store.
 
-The detailed technical contributions of this paper are as follows.
-\begin{itemize}
-\item We present Cumulus, a system for constructing in-memory data warehouse infrastructures that support OLAP queries on high volumes of transactional or streaming data in real-time.
+At the heart of our approach is a new aggressive recursive incremental
+view maintenance mechanism.
+In most traditional database query processors, the  basic building blocks of
+queries are large-grained operators such as joins.
+Our approach is based on compilation, reducing
+queries to programs that are not based on classical query operators.
+A large class of
+SQL aggregation queries can be compiled down to very simple message
+passing programs that implement incremental view maintenance of
+the input queries. These message passing programs keep a hierarchy of map data
+structures (which may be served out of a key-value store) up to date
+and can share computation in the case that multiple aggregation queries (e.g.,
+a data cube) need to be maintained.  Most importantly, though, these message
+passing programs can be massively parallelized to the degree that the updating
+of each single result aggregate value can be done in constant time on normal
+off-the-shelf computers.\footnote{That is,
+we assume that addition and multiplication
+of {\em two numbers} can be performed in constant time, which is true for
+%
+%bounded precision numbers such as 
+%
+standard base types such as int and float,
+but we assume no unrealistic models such
+as aggregators with unbounded fan-in, as used in some theoretical models of
+parallel computation. Our implementation indeed incrementally maintains
+individual aggregate values in constant time. Note that since there are
+usually many more aggregate values to maintain than there are processors,
+this does not mean that each update is processed in constant time.
+``Constant time'' is with respect to the size of the data, not the compiled
+query.}
+To the best of our knowledge, it was not known before
+that this is possible.
 
-\item We describe the Cumulus infrastructure, and show how it can be used to efficiently distribute the processing and storage requirements of a large data warehouse.
+In particular, no such constant-time parallel processing technique
+is known for nonincremental query
+evaluation: Indeed, it is unlikely to exist.\footnote{Constant-time
+bounded fan-in nonincremental
+parallel processing is known not to be possible for
+the class of queries we address,
+unless the complexity class TC0 collapses into NC0, which it is not known
+to do \cite{Joh90}.} Classical incremental view maintenance approaches, which
+express the delta (=change) to a query result given an update again
+as a (slightly simpler) query, fare no better: Generally,
+given a query, there is another query whose delta is the first query.
+Thus, classical incremental view maintenance has the same limits to
+parallelization as nonincremental evaluation.
 
-\item We describe the Cumulus compiler and show how, using a novel recursive compilation technique, it reduces large join/group by SQL queries down to an extremely straightforward and parallelizable message-passing model. 
 
-\item We show evidence for the scalability of the Cumulus model by examining Cumulus's performance on examples drawn from the TPC-H\cite{tpch2008} decision support query benchmark. 
-\end{itemize}
+\subsection{Message passing programs}
 
-\begin{example}\textit
-As a running example in this paper, we will use a datacube construction query (shown in Figure \ref{fig:example}) that joins three tables: one storing customer information, one storing orders placed by those customers, and one storing each order's individual line items.  The resulting datacube analyzes the interactions between the way each item was shipped, each customer's nation of origin, the order's priority, and whether the item's arrival and shipping times were late.
+
+\begin{example}\em
+\label{ex:TPCH-Q12}
+Consider the following query on a TPC-H like schema,
+which counts the number of LineItems per customer id.
+\begin{verbatim}
+SELECT   C.cid, SUM(1)
+FROM     Customer C, Order O, LineItem L
+WHERE    C.cid=O.cid AND O.oid=L.oid
+GROUP BY C.cid;
+\end{verbatim}
+Here, cid is a key for the Customer relation and oid is a key for the
+Order relation, but oid is not a key for LineItem.
+Our compilation approach translates this query to the M3F program
+\begin{verbatim}
+on insert into Customer (cid, ...) {
+  qO1[cid] += 1
+}
+on insert into Order (oid, cid, ...) {
+  qL[cid, oid] += qO1[cid]
+}
+on insert into LineItem (oid, ...) {
+  (cid: Customer.cid) q[cid] += qL[cid, oid]
+}
+\end{verbatim}
+The map q represents the results of the query, and maps qO1 and qL are
+auxiliary.
+\punto
 \end{example}
 
 
+\begin{example}\em
+Given an additional supplier relation, we now ask, for each supplier (sid),
+for the number of customers of the same nation.
+\begin{verbatim}
+SELECT   S.sid, SUM(1)
+FROM     Customer C, Supplier S
+WHERE    C.nation = S.nation
+GROUP BY S.sid;
+
+on insert into Customer (cid, nation) {
+  (sid: Supplier.sid) q[sid] += qC[sid, nation];
+  qS[nation] += 1
+}
+on insert into Supplier (sid, nation) {
+  q[sid] += qS[nation];
+  qC[sid, nation] += 1
+}
+\end{verbatim}
+\end{example}
+
+
+\begin{example}\em
+\label{ex:ssb}
+This query uses a simple schema motivated by the start schema
+benchmark (SSB) schema, with relations Date(\underline{datekey}, year),
+Part(\underline{partkey}, partcat), where partcat stands for a part category,
+and LineOrder(datekey, partkey, revenue), which may contain duplicate tuples.
+The query asks for the total revenues grouped by year and part category.
+
+\begin{verbatim}
+SELECT   P.partcat, D.year, SUM(revenue)
+FROM     Date D, Part P, LineOrder L
+WHERE    D.datekey=L.datekey
+AND      P.partkey=L.partkey
+GROUP BY P.partcat, D.year;
+
+on insert into Date (datekey, year) {
+ mPL[datekey, year] += 1
+}
+on insert into Part (partkey, partcat) {
+ mDL[partkey, partcat] += 1
+}
+on insert into LineOrder
+           (datekey, partkey, revenue) {
+  (partcat: Part.partcat, year: Date.year)
+  m[partcat, year] += revenue
+                    * mDL[partkey, partcat]
+                    * mPL[datekey, year]
+}
+\end{verbatim}
+
+The maps mPL and mDL have value at most
+one at each position because datekey and partkey are keys for Date and Part,
+respectively.
+
+On insert into LineOrder, given values for
+datekey and partkey, we instruct nodes
+to send their {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
+for any {\tt x} and {\tt y},
+to nodes maintaining {\tt m[x, *]} and {\tt m[*, y]}, respectively.
+The node managing
+{\tt m[u, v]} receives {\tt mDL[partkey, u]} and {\tt mPL[datekey, v]}
+(possibly from distinct nodes) and can
+increment {\tt m[u, v]} by
+{\tt revenue*mDL[partkey, u]*mPL[datekey, v]}.
+\punto
+\end{example}
+
+
+We only send nonzero {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
+but at least an empty message so that the node managing m knows that it does
+not have to wait for anything more.
+
+
+\begin{example}\em
+In this final example, we consider the data\-base of a matchmaking Web site
+that matches humans based on personal profiles. persons are
+represented by a relation Person(\underline{id}, prop), where
+prop stands for possibly multiple property columns. Let score() be a
+function that maps a pair of property tuples to a compatibility score.
+The following query computes, for each person in the database, the number of
+matches with compatibility score >= 0.9.
+\begin{verbatim}
+SELECT   P1.id, SUM(1)
+FROM     Person P1, Person P2
+WHERE    P1.id <> P2.id
+AND      0.9 <= score(P1.prop, P2.prop)
+GROUP BY P1.id;
+\end{verbatim}
+
+Our compilation approach turns this query into the following M3F program,
+with map {\tt q[.]} representing the query result and maps {\tt q1[.,.]}
+and {\tt q2[.,.,.]} auxiliary.
+\begin{verbatim}
+on insert into Person (id, prop) {
+  q[id] += q1[id, prop];
+
+  (id2: Person.id) q[id2] += q2[id2, id, prop];
+
+  ((id1, prop1): Person)
+  q1[id1, prop1] +=
+    if id1<>id and 0.9<=score(prop1, prop) then 1
+    else 0;
+
+  ((id2, prop2): Person)
+  q2[id, id2, prop2] +=
+    if id<>id2 and 0.9<=score(prop, prop2) then 1
+    else 0
+}
+\end{verbatim}
+Note that whenever we read a value in such a map program, it has to be
+the version of the value from before the start of the program. This is 
+ensured in this program because we write q1 and q2 in entries 3 and 4 only
+after we have read from q1 and q2 in the first two entries.
+But note in particular that also the domains
+(id2: Person.id), ((id1, prop1): Person), ((id2, prop2): Person)
+are the old ones, before the insertion of the current tuple (id, prop).
+
+The program again has the property that for
+each map value to be written, only constantly much work has to be done,
+and constantly many lookups have to be made.
+
+This program is the conceptually most difficult so far, so let us look at it
+in more detail. It is easy to see that entries 3 and 4 of the program
+maintain q1 and q2 as the queries
+\begin{verbatim}
+q1[id, prop] =
+SELECT SUM(1) FROM Person P2
+WHERE id<>P2.id and 0.9<=score(prop, P2.prop) 
+
+q2[id1, id, prop] =
+SELECT SUM(1) FROM Person P1
+WHERE P1.id<>id and 0.9<=score(P1.prop, prop)
+AND   P1.id=id1 
+\end{verbatim}
+
+Now entry 1 of the program sets the q value for the new person, and
+entry 2 updates the q values of the persons that were present previously.
+For example, suppose score() is 1 on all inputs and assume that, currently,
+there are three persons. Then q is two for each id. Now add a fourth person.
+Then q1 is three for the new person and q2 is one for each of the old persons.
+By default, q is 0 for the new person before the update.
+%
+\begin{center}
+\begin{tabular}{c|c|c|c|c}
+   & before    & \multicolumn{3}{c}{after insert} \\
+id & q[id]     & q1[id,.] & q2[id,.,.] & q[id] \\
+\hline
+1  & 2         &          & 1          & 3 \\
+2  & 2         &          & 1          & 3 \\
+3  & 2         &          & 1          & 3 \\
+4  & undef./0  & 3        &            & 3 \\
+\end{tabular}
+\end{center}
+%
+After execution of the on-insert trigger, q is three for each of the four
+persons.
+\punto
+\end{example}
+
+
+It shall be emphasized that for each of the examples of this section,
+and the paper as a whole, the compilation approach described results exactly
+in the M3F programs reported.
+
+
+\nop{
 \begin{figure}
 \begin{center}
 \textbf{Schema}
@@ -55,9 +332,82 @@ As a running example in this paper, we will use a datacube construction query (s
 \caption{An example query that constructs a warehouse for analyzing customer behavior with respect to shipping.  Given a table of customers, orders, and lineitems in those orders, the query builds a datacube over the full join of those tables.}
 \label{fig:example}  
 \end{figure}
+} % end nop
 
-The remainder of this paper is organized as follows.  Section \ref{sec:relatedwork} discusses prior work in the field of OLAP query processing.  In Section \ref{sec:architecture}, we provide an overview of Cumulus's online infrastructure and discuss how data is managed within that infrastructure.  Section \ref{sec:architecture} describes the offline compilation process used to manage and optimize Cumulus.  Section \ref{sec:experiments} presents a series of experiments that demonstrate the viability and scalability of in-memory data warehouses.  Finally, Section \ref{sec:optimizations} discusses a set of optimizations provoked by our experiments.  The paper concludes with Section \ref{sec:conclusions}
 
-\section{Related Work}
-\label{sec:relatedwork}
+\subsection{The Cumulus System}
+
+
+We have developed a system, Cumulus\footnote{A Cumulus cloud is an
+aggregation cloud, thus the name.}, that interprets this message passing
+protocol in a cluster or computing cloud, performing fast and scalable
+online incremental maintenance of exact aggregation views.
+
+While it is no fundamental requirement of our compilation
+approach, we have chosen to use the resources of the cloud to maintain
+the data in main memory, allowing for very low latency updating and querying.
+At the time of writing this,
+Terabyte-sized memory chips (DIMMs and flash) have already been announced by
+manufacturers, and already now, large data warehouses
+can be run in main memory in the cloud, where additional hardware costs
+(main memory is more expensive per TB than hard disks) are
+offset by greater robustness of the system, lower maintenance
+costs, lower heat production \cite{1154557}, and of course by of orders
+of magnitude better speed and latency characteristics.
+
+The Cumulus protoype aims at demonstrating our results in the context of
+pushing OLAP into the cloud.
+Cumulus automates  the process of  creating, loading,
+and  maintaining  in-memory  data  warehouses.
+(Optional logging of updates to secondary storage
+for persistency is supported.)
+Cumulus targets OLAP applications  that perform real-time analytics of
+relational data.  By feeding it an SQL query, Cumulus's infrastructure
+becomes linked to  a set of OLTP databases.  Cumulus  keeps the
+data warehouse synchronized with the source databases via an
+update stream. It achieves synchronization {\em in realtime}
+through parallelization, keeping data in main memory, and our approach of
+query processing by message passing.
+
+
+\subsection{Contributions and Structure of the Paper}
+
+
+Our main technical contributions are as follows.
+\begin{itemize}
+\item
+We present the Cumulus map maintenance message format (M3F), a language
+for message passing programs that can be used to incrementally maintain
+SQL aggregation queries, and which is massively parallelizable.
+
+\item
+We describe our compiler for translating SQL aggregation queries to M3F
+programs. Our compilation technique is based on a novel, aggressive, recursive
+form of incremental view maintenance.
+
+\item
+We present Cumulus, our system for exact online aggregation in realtime.
+We describe the Cumulus message passing protocol and
+infrastructure, and show how it can be used to efficiently distribute the
+processing and storage requirements of query processing and
+the incremental maintenance of large aggregate views and datacubes.
+
+\item We show evidence for the scalability of our approach by examining the
+performance of Cumulus on examples drawn from the TPC-H\cite{tpch2008}
+benchmark. 
+\end{itemize}
+
+
+The remainder of this paper is organized as follows.
+Section \ref{sec:compiler} describes our SQL to M3F compiler.
+In Section \ref{sec:architecture}, we provide an overview of Cumulus's online
+infrastructure and discuss how data is managed within that infrastructure.
+Section \ref{sec:experiments} presents
+experimental results that demonstrate the viability and scalability of
+Cumulus.
+Section \ref{sec:relatedwork} discusses related work.
+The paper concludes with Section \ref{sec:conclusions}
+
+
+
 

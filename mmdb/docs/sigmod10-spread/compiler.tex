@@ -1,99 +1,7 @@
 
-\section{Introduction}
-
-
-CK WILL MERGE THIS WITH OLIVER'S SECTION.
-
-At the heart of our approach is a new aggressive recursive incremental
-view maintenance mechanism, and the observation that a large class of
-SQL aggregation queries can be compiled down to a very simple message
-passing protocol which keeps a hierarchy of map data structures -- of
-which MOLAP data cubes are a special case -- up to date.
-
-We have developed a system, Cumulus, that interprets this message passing
-protocol in a cluster or computing cloud, performing fast and scalable
-online incremental maintenance of exact aggregation views. 
-
-While this is in no way a fundamental requirement of our compilation
-approach, we have chosen to use the resources of the cloud to maintain
-the data warehouse in main memory, allowing for very low latency
-updating and querying.
-
-The system runs in main memory (with optional logging of updates).
-Terabyte-sized memory chips (DIMMs) will soon be available, and already now,
-large data warehouses
-can be run in main memory in the cloud, where additional hardware costs
-(main memory is more expensive per TB than hard disks) are
-offset by greater robustness of the system, lower maintenance
-costs, lower heat production, and of course by of orders of magnitude
-better speed and latency characteristics.
-
-
-The technical contributions of this paper are as follow.
-\begin{itemize}
-\item
-We describe our aggressive recursive incremental view maintenance mechanism.
-
-\item
-We present the Cumulus M3F (map maintenance message format).
-
-\item
-We present the Cumulus protocol and system, and show how we can achieve
-scale by distributing storage and computation.
-
-\item
-We present experimental results that demonstrate the viability of the approach.
-\end{itemize}
-
-
-\section{Related Work}
-
-
-Data cubes. Online aggregation (that is, by approximation -- Haas, Hellerstein;
-Dobra, Jermaine).
-
-
-A large body of previous research has focused on incremental view maintenance
-of relational database queries. The
-focus of this work was always on only one level of delta rewriting
-and then using classical relational query processing techniques
-based on interpreted query plans and heavyweight monolithic query operators
-(such as joins).
-In general, however, this means
-that the rewritten query is still an arbitrarily complex query (in the number
-of joins) and the message passing technique employed in Cumulus is not
-applicable.
-
-
-Most of the previous work on incremental view maintenance does not observe or leverage the fact that aggregation in queries can actually make incremental maintenance {\em easier}, rather than harder, because it greatly reduces the amount of data in the result and because numbers have additional algebraic properties that relations do not have and which allow for further decomposition and optimization of queries.
-
-
-Column stores [Kersten, Stonebraker] are a prominent and successful
-instance of the recent trend
-to abandon rather old database technologies and try out new architectural
-para\-digms. Column stores have also been shown to be particularly well suited
-for OLAP. However, column stores are fundamentally a secondary storage
-concept; in main memory, it does not seem to be particularly meaningful to talk of column or row stores. To date, there has also been no work
-on incremental view maintenance in column stores.
-Indeed, they are notoriously bad at updating (worse than classical row stores).
-
-H-Store is an OLTP system that abandons classical concurrency control and
-recovery baggage for very high performance. It is interesting for the
-fresh look at things, and for the viewpoint that even OLTP systems should
-be much simpler, nimbler systems than classical databases, which is also
-part of the vision behind Cumulus. However, H-Store solves a problem very
-different from the one addressed by Cumulus.
-
-Recently, a number of startups have taken off with the idea of running
-databases -- even classical technology such as Postgres -- in the cloud
-(e.g. Greenplum and Aster Data). While several systems aim at OLAP
-applications, none of them allows for true online aggregation as Cumulus does,
-and none of the systems takes as radical a lightweight, systemsy approach
-as Cumulus.
-
-
 
 \section{Query Compilation}
+\label{sec:compiler}
 
 
 This section describes the Cumulus query compiler.
@@ -159,7 +67,7 @@ The bound variables of a subformula are the bound variables of the formula.
 Given a set of bound variables $B$,
 the {\em safe variables} of a formula are defined bottom-up
 as usual in relational
-calculus (see e.g. \cite{AHV95}). In particular,
+calculus (see e.g. \cite{DBLP:books/aw/AbiteboulHV95}). In particular,
 \begin{eqnarray*}
 \safe_B(R(\vec{x})) &:=& \{x_i\} \cup B \\
 \safe_B(\phi \land \psi) &:=& \safe_B(\phi) \cup \safe_B(\psi) \\
@@ -600,7 +508,7 @@ where we assume that the schema of $R$ is $(A,B)$.
 
 
 \subsection{Compilation Algorithm}
-
+\label{sec:compilation-alg}
 
 
 The compilation algorithm employs {\em recursive incremental view
@@ -680,19 +588,85 @@ and an analogous simplification applies to $m_L[k_L]$ on insert into $O$.
 
 Overall, we obtain the insertion triggers
 \begin{verbatim}
-on insert into O(kO,  rO ): q[] += mO[kO]*rO;
-on insert into L(kL,  pL ): q[] += pL*mL[kL];
-on insert into L(kOL, pOL): mO[kOL] += pOL;
-on insert into O(kLO, rLO): mL[kLO] += rLO;
+on insert into O(kO,  rO ) { q[] += mO[kO]*rO }
+on insert into L(kL,  pL ) { q[] += pL*mL[kL] }
+on insert into L(kOL, pOL) { mO[kOL] += pOL }
+on insert into O(kLO, rLO) { mL[kLO] += rLO }
 \end{verbatim}
 The deletion triggers are like the insertion triggers with += replaced by -=.
 \punto
 \end{example}
 
 
+\begin{remark}[Implementation Advice]
+\em
+There have been, in total, five prototypes of our compiler, and
+in each subsequent generation, our picture of the problem has become clearer.
+The compiler precisely as described in the section has been implemented
+in OCAML in less than 1500 lines of code. We caution the reader against
+abandoning our choice of using a calculus perspective
+in favor of relational algebra with aggregates, or of misunderstanding
+the exact role of safe and bound variables as used in this section.
+We have made these mistakes in the past, resulting in 
+a very difficult, and by about an order of magnitude larger, piece of code.
+It may not be easy to see, but we strongly believe that
+our choices here are not theoretical pedantism,
+but key to allowing for exact yet concise presentation
+and painless implementation.
+\end{remark}
 
 
-%\bibliographystyle{abbrv}
-%\bibliography{bibtex}
+\subsection{Keys and Foreign Key Constraints}
+
+
+\begin{example}\em
+Consider again the query of Example~\ref{ex:TPCH-Q12},
+\begin{verbatim}
+SELECT   C.cid, SUM(1)
+FROM     Customer C, Order O, LineItem L
+WHERE    C.cid=O.cid AND O.oid=L.oid
+GROUP BY C.cid;
+\end{verbatim}
+
+The compilation algorithm of Section~\ref{sec:compilation-alg} yields the
+following M3F program:
+\begin{verbatim}
++Customer(cid, nation):
+  q[cid] += qC[cid];
+  foreach oid do qL[cid, oid] += qLC[oid, cid];
+  qO1[cid] += 1
+
++Order(oid, cid, ...):
+  q[cid] += qO1[cid]*qO2[oid];
+  qC[cid] += qO2[oid];
+  qL[cid, oid] += qO1[cid];
+  qLC[oid, cid] += 1
+
++LineItem(oid, ...):
+  foreach cid do  q[cid] += qL[cid, oid];
+  foreach cid do qC[cid] += qLC[oid, cid];
+  qO2[oid] += 1
+
++Customer(cid, nation):
+  qO1[cid] += 1
+
++Order(oid, cid, ...):
+  qL[cid, oid] += qO1[cid];
+
++LineItem(oid, ...):
+  foreach cid do  q[cid] += qL[cid, oid];
+\end{verbatim}
+\end{example}
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=2.5in]{images/q12_graph.pdf}
+\caption{Data-flow graph for the example query.  Light and dashed edges can be optimized out, given foreign key constraints.
+TODO: CHANGE MAP NAMES TO BE CONSISTENT WITH EXAMPLE; ROTATE FIGURE.}
+\label{fig:dataflow}
+\end{center}
+\end{figure}
+
 
 
