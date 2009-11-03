@@ -845,16 +845,16 @@ void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
         ++tuple_counter;
         gettimeofday(&tupe, NULL);
         DBToaster::Profiler::accumulate_time_span(tups, tupe, tup_sec_span, tup_usec_span);
-        if ( (tuple_counter % 10000) == 0 )
+        if ( (tuple_counter % 100) == 0 )
         {
             DBToaster::Profiler::reset_time_span_printing_global(
-                "tuples", tuple_counter, 10000, tvs, tup_sec_span, tup_usec_span, "query", log);
+                "tuples", tuple_counter, 100, tvs, tup_sec_span, tup_usec_span, "query", log);
             analyse_mem_usage(stats);
             analyse_handler_usage(stats);
         }
     }
     DBToaster::Profiler::reset_time_span_printing_global(
-        "tuples", tuple_counter, (tuple_counter%10000), tvs, tup_sec_span, tup_usec_span, "query", log);
+        "tuples", tuple_counter, (tuple_counter%100), tvs, tup_sec_span, tup_usec_span, "query", log);
     analyse_handler_usage(stats);
     analyse_mem_usage(stats);
 }

@@ -91,7 +91,7 @@ void analyse_handler_usage(ofstream* stats)
 //
 // Part A plans
 
-void recompute_partA()
+inline void recompute_partA()
 {
     map<int64_t,double>::iterator q_it6 = q.begin();
     map<int64_t,double>::iterator q_end5 = q.end();
@@ -131,7 +131,7 @@ void recompute_partA()
 //
 // Part B plans
 
-void recompute_partB()
+inline void recompute_partB()
 {
     b_q = 0;
     multiset<tuple<int64_t,string,string,int64_t,string,double,string> 
