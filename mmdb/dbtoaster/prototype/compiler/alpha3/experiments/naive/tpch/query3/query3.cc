@@ -220,6 +220,12 @@ void on_insert_ORDERS(
     ORDERS.insert(make_tuple(
         ORDERKEY,CUSTKEY,ORDERSTATUS,TOTALPRICE,ORDERDATE,ORDERPRIORITY,CLERK,
         SHIPPRIORITY,COMMENT));
+
+    if ( q.find(ORDERKEY, SHIPPRIORITY) == q.end() )
+    {
+        q[make_tuple(SHIPPRIORITY,ORDERKEY)] = 0;
+    }
+
     map<tuple<int,int64_t>,double>::iterator q_it16 = q.begin();
     map<tuple<int,int64_t>,double>::iterator q_end15 = q.end();
     for (; q_it16 != q_end15; ++q_it16)

@@ -185,6 +185,7 @@ void on_insert_ASKS(
     q[BROKER_ID] += -1*qASKS4[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += V*qASKS1[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += V*qASKS3[make_tuple(BROKER_ID,P)];
+
     map<tuple<int,double>,double>::iterator qBIDS1_it4 = qBIDS1.begin();
     map<tuple<int,double>,double>::iterator qBIDS1_end3 = qBIDS1.end();
     for (; qBIDS1_it4 != qBIDS1_end3; ++qBIDS1_it4)
@@ -225,6 +226,7 @@ void on_insert_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qBIDS2_it8 = qBIDS2.begin();
     map<tuple<int,double>,int>::iterator qBIDS2_end7 = qBIDS2.end();
     for (; qBIDS2_it8 != qBIDS2_end7; ++qBIDS2_it8)
@@ -264,6 +266,7 @@ void on_insert_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qBIDS3_it12 = qBIDS3.begin();
     map<tuple<int,double>,double>::iterator qBIDS3_end11 = qBIDS3.end();
     for (; qBIDS3_it12 != qBIDS3_end11; ++qBIDS3_it12)
@@ -304,6 +307,7 @@ void on_insert_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qBIDS4_it16 = qBIDS4.begin();
     map<tuple<int,double>,int>::iterator qBIDS4_end15 = qBIDS4.end();
     for (; qBIDS4_it16 != qBIDS4_end15; ++qBIDS4_it16)
@@ -359,6 +363,7 @@ void on_insert_BIDS(
     q[BROKER_ID] += qBIDS3[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*V*qBIDS2[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*V*qBIDS4[make_tuple(BROKER_ID,P)];
+
     map<tuple<int,double>,int>::iterator qASKS1_it20 = qASKS1.begin();
     map<tuple<int,double>,int>::iterator qASKS1_end19 = qASKS1.end();
     for (; qASKS1_it20 != qASKS1_end19; ++qASKS1_it20)
@@ -398,6 +403,7 @@ void on_insert_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qASKS2_it24 = qASKS2.begin();
     map<tuple<int,double>,double>::iterator qASKS2_end23 = qASKS2.end();
     for (; qASKS2_it24 != qASKS2_end23; ++qASKS2_it24)
@@ -438,6 +444,7 @@ void on_insert_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qASKS3_it28 = qASKS3.begin();
     map<tuple<int,double>,int>::iterator qASKS3_end27 = qASKS3.end();
     for (; qASKS3_it28 != qASKS3_end27; ++qASKS3_it28)
@@ -477,6 +484,7 @@ void on_insert_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qASKS4_it32 = qASKS4.begin();
     map<tuple<int,double>,double>::iterator qASKS4_end31 = qASKS4.end();
     for (; qASKS4_it32 != qASKS4_end31; ++qASKS4_it32)
@@ -533,6 +541,7 @@ void on_delete_ASKS(
     q[BROKER_ID] += -1*-1*qASKS4[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*V*qASKS1[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*V*qASKS3[make_tuple(BROKER_ID,P)];
+
     map<tuple<int,double>,double>::iterator qBIDS1_it36 = qBIDS1.begin();
     map<tuple<int,double>,double>::iterator qBIDS1_end35 = qBIDS1.end();
     for (; qBIDS1_it36 != qBIDS1_end35; ++qBIDS1_it36)
@@ -573,6 +582,7 @@ void on_delete_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qBIDS2_it40 = qBIDS2.begin();
     map<tuple<int,double>,int>::iterator qBIDS2_end39 = qBIDS2.end();
     for (; qBIDS2_it40 != qBIDS2_end39; ++qBIDS2_it40)
@@ -612,6 +622,7 @@ void on_delete_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qBIDS3_it44 = qBIDS3.begin();
     map<tuple<int,double>,double>::iterator qBIDS3_end43 = qBIDS3.end();
     for (; qBIDS3_it44 != qBIDS3_end43; ++qBIDS3_it44)
@@ -652,6 +663,7 @@ void on_delete_ASKS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qBIDS4_it48 = qBIDS4.begin();
     map<tuple<int,double>,int>::iterator qBIDS4_end47 = qBIDS4.end();
     for (; qBIDS4_it48 != qBIDS4_end47; ++qBIDS4_it48)
@@ -691,6 +703,7 @@ void on_delete_ASKS(
             }
         }
     }
+
     gettimeofday(&hend, NULL);
     DBToaster::Profiler::accumulate_time_span(
         hstart, hend, on_delete_ASKS_sec_span, on_delete_ASKS_usec_span);
@@ -707,6 +720,7 @@ void on_delete_BIDS(
     q[BROKER_ID] += -1*-1*V*qBIDS4[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*qBIDS1[make_tuple(BROKER_ID,P)];
     q[BROKER_ID] += -1*qBIDS3[make_tuple(BROKER_ID,P)];
+
     map<tuple<int,double>,int>::iterator qASKS1_it52 = qASKS1.begin();
     map<tuple<int,double>,int>::iterator qASKS1_end51 = qASKS1.end();
     for (; qASKS1_it52 != qASKS1_end51; ++qASKS1_it52)
@@ -746,6 +760,7 @@ void on_delete_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qASKS2_it56 = qASKS2.begin();
     map<tuple<int,double>,double>::iterator qASKS2_end55 = qASKS2.end();
     for (; qASKS2_it56 != qASKS2_end55; ++qASKS2_it56)
@@ -786,6 +801,7 @@ void on_delete_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,int>::iterator qASKS3_it60 = qASKS3.begin();
     map<tuple<int,double>,int>::iterator qASKS3_end59 = qASKS3.end();
     for (; qASKS3_it60 != qASKS3_end59; ++qASKS3_it60)
@@ -825,6 +841,7 @@ void on_delete_BIDS(
             }
         }
     }
+
     map<tuple<int,double>,double>::iterator qASKS4_it64 = qASKS4.begin();
     map<tuple<int,double>,double>::iterator qASKS4_end63 = qASKS4.end();
     for (; qASKS4_it64 != qASKS4_end63; ++qASKS4_it64)
@@ -955,16 +972,16 @@ void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
         ++tuple_counter;
         gettimeofday(&tupe, NULL);
         DBToaster::Profiler::accumulate_time_span(tups, tupe, tup_sec_span, tup_usec_span);
-        if ( (tuple_counter % 10000) == 0 )
+        if ( (tuple_counter % 100) == 0 )
         {
             DBToaster::Profiler::reset_time_span_printing_global(
-                "tuples", tuple_counter, 10000, tvs, tup_sec_span, tup_usec_span, "query", log);
+                "tuples", tuple_counter, 100, tvs, tup_sec_span, tup_usec_span, "query", log);
             analyse_mem_usage(stats);
             analyse_handler_usage(stats);
         }
     }
     DBToaster::Profiler::reset_time_span_printing_global(
-        "tuples", tuple_counter, (tuple_counter%10000), tvs, tup_sec_span, tup_usec_span, "query", log);
+        "tuples", tuple_counter, (tuple_counter%100), tvs, tup_sec_span, tup_usec_span, "query", log);
     analyse_handler_usage(stats);
     analyse_mem_usage(stats);
 }

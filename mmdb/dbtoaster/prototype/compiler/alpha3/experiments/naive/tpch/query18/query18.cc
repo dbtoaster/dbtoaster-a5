@@ -211,6 +211,11 @@ void on_insert_CUSTOMER(
     CUSTOMER.insert(make_tuple(
         CUSTKEY,NAME,ADDRESS,NATIONKEY,PHONE,ACCTBAL,MKTSEGMENT,COMMENT));
 
+    if ( q.find(CUSTKEY) == q.end() )
+    {
+        q[CUSTKEY] = 0;
+    }
+
     recompute();
 
     gettimeofday(&hend, NULL);

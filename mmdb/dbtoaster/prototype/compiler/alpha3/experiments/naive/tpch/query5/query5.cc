@@ -1502,6 +1502,12 @@ void on_insert_NATION(
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
     NATION.insert(make_tuple(NATIONKEY,NAME,REGIONKEY,COMMENT));
+
+    if ( q.find(NAME) == q.end() )
+    {
+        q[NAME] = 0;
+    }
+
     map<string,double>::iterator q_it130 = q.begin();
     map<string,double>::iterator q_end129 = q.end();
     for (; q_it130 != q_end129; ++q_it130)

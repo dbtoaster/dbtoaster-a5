@@ -92,7 +92,7 @@ void on_insert_ASKS(
 {
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
-    ASKS.insert(make_tuple(T,ID,BROKER_ID,P,V));
+
     map<int,double>::iterator q_it18 = q.begin();
     map<int,double>::iterator q_end17 = q.end();
     for (; q_it18 != q_end17; ++q_it18)
@@ -322,6 +322,10 @@ void on_insert_BIDS(
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
     BIDS.insert(make_tuple(T,ID,BROKER_ID,P,V));
+    if ( q.find(BROKER_ID) == q.end() )
+    {
+        q[BROKER_ID] += 0;
+    }
     map<int,double>::iterator q_it36 = q.begin();
     map<int,double>::iterator q_end35 = q.end();
     for (; q_it36 != q_end35; ++q_it36)
@@ -551,6 +555,7 @@ void on_delete_ASKS(
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
     ASKS.erase(make_tuple(T,ID,BROKER_ID,P,V));
+
     map<int,double>::iterator q_it54 = q.begin();
     map<int,double>::iterator q_end53 = q.end();
     for (; q_it54 != q_end53; ++q_it54)
@@ -780,6 +785,10 @@ void on_delete_BIDS(
     struct timeval hstart, hend;
     gettimeofday(&hstart, NULL);
     BIDS.erase(make_tuple(T,ID,BROKER_ID,P,V));
+    if ( q.find(BROKER_ID) == q.end() )
+    {
+        q[BROKER_ID] += 0;
+    }
     map<int,double>::iterator q_it72 = q.begin();
     map<int,double>::iterator q_end71 = q.end();
     for (; q_it72 != q_end71; ++q_it72)
@@ -1087,16 +1096,16 @@ void runMultiplexer(ofstream* results, ofstream* log, ofstream* stats)
         ++tuple_counter;
         gettimeofday(&tupe, NULL);
         DBToaster::Profiler::accumulate_time_span(tups, tupe, tup_sec_span, tup_usec_span);
-        if ( (tuple_counter % 10000) == 0 )
+        if ( (tuple_counter % 100) == 0 )
         {
             DBToaster::Profiler::reset_time_span_printing_global(
-                "tuples", tuple_counter, 10000, tvs, tup_sec_span, tup_usec_span, "query", log);
+                "tuples", tuple_counter, 100, tvs, tup_sec_span, tup_usec_span, "query", log);
             analyse_mem_usage(stats);
             analyse_handler_usage(stats);
         }
     }
     DBToaster::Profiler::reset_time_span_printing_global(
-        "tuples", tuple_counter, (tuple_counter%10000), tvs, tup_sec_span, tup_usec_span, "query", log);
+        "tuples", tuple_counter, (tuple_counter%100), tvs, tup_sec_span, tup_usec_span, "query", log);
     analyse_handler_usage(stats);
     analyse_mem_usage(stats);
 }
