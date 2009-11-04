@@ -154,9 +154,10 @@ with {\em bound variables} groupcols.
 
 
 \begin{example}\em
-The query of Example~\ref{ex:nation} translates to
-$\AggSum(1, \mbox{Customer}(c,n_c) \land \mbox{Supplier}(s, n_s) \land
-n_c=n_s)$ in the calculus, with bound variable $s$.
+\label{ex:self-join-calc}
+The query of Example~\ref{ex:self-join} translates to
+$\AggSum(1, \mbox{Customer}(c_1,n_1) \land \mbox{Customer}(c_2, n_2) \land
+n_1=n_2)$ in the calculus, with bound variable $c_1$.
 \punto
 \end{example}
 
@@ -200,6 +201,8 @@ be maximally simplified, in a single bottom-up pass of the expression.
 A term ($\AggSum$ or other) maximally simplified in this way
 is a sum of terms that contain neither $+$ nor $\lor$; we call such 
 normalized terms {\em recursively monomial}.
+Define function RecMonomials to compute the list of recursively monomials
+of a term.
 
 \def\vars{\mbox{vars}}
 
@@ -239,6 +242,11 @@ $\AggSum(t, \phi)$ is equivalent to
 \[
 \prod_{C \in {\cal C}} \AggSum(t_C, \phi_C).
 \]
+
+{\em Recursive factorization}, given term $\AggSum(t, \phi)$, first recursively
+factorizes the aggregate terms in $t$ before applying factorization as
+just described on the top level.
+
 
 \begin{example}\em
 The connected components of term
@@ -335,6 +343,29 @@ m_2[x] \mapsto \AggSum(u, R(u, x))
 \end{example}
 
 
+{\bf Lifting ifs}. Observe that if $\phi$ is a constraints-only term in which
+all variables are bound, then
+\begin{eqnarray*}
+\AggSum(t, \phi \land \psi) &=& \AggSum(\AggSum(t, \psi), \phi) \\
+t * \AggSum(t', \phi) &=& \AggSum(t * t', \phi)
+\end{eqnarray*}
+Thus we can lift $\phi$ to the top of a recursively monomial term.
+Let function LiftIfs do exactly this.
+
+\begin{example}\em
+This will be used in Example~\ref{ex:self-join-compile}:
+\begin{multline*}
+\mbox{LiftIfs}((-1) * \AggSum(1, C(c_2, n) \land c_1=c), \{c_1, c, n\}) = \\
+\AggSum((-1) * \AggSum(1, C(c_2, n)), c_1=c).
+\end{multline*}
+\end{example}
+
+
+Given a recursively monomial term $t$ and a set of bound variables $B$,
+let the function Simplify($t$, $B$) recursively factorize $t$, then perform
+variable elimination, and finally if-lifting.
+
+
 \subsection{Delta Computation}
 
 
@@ -388,62 +419,9 @@ respectively.)
 
 
 \begin{proposition}
+\label{prop:delta-correct}
 This definition of $\dt$ satisfies Equation \ref{eq:delta}.
 \end{proposition}
-
-\begin{proof}
-It is easy to see that our definition is correct in the case of insertions.
-For the deletion case, all we need to show is that
-\begin{equation}
-\Delta_{-R(\vec{t})}(\alpha + \Delta_{+R(\vec{t})} \alpha) = \alpha.
-\label{eq:delta2}
-\end{equation}
-
-
-\def\dtp{\Delta_{+}}
-\def\dtm{\Delta_{-}}
-
-
-We use $\dtp$ and $\dtm$ as shortcuts for $\Delta_{+R(\vec{t})}$
-and $\Delta_{-R(\vec{t})}$, respectively.
-Let $\alpha' = \alpha+\dtp\alpha$ and $\beta' = \beta+\dtp\beta$.
-Consider the expression
-\[
-\overbrace{\color{white}{\alpha\beta +
-\color{black}{\overbrace{\color{white}{
-(\dtp \alpha)\beta + (\dtp \alpha)(\dtp \beta)
-+ \alpha(\dtp \beta)}}^{\dtp (\alpha\beta)}}}}^{\alpha' \beta'}
-\color{white}{+ (\dtp \alpha)(\dtp \beta)}
-\]
-
-\vspace{-14mm}
-
-\[
-\alpha\beta +
-\underbrace{(\dtp \alpha)\beta + (\dtp \alpha)(\dtp \beta)}_{
-(\dtp \alpha)\beta'}
-+ \underbrace{
-\alpha(\dtp \beta) + (\dtp \alpha)(\dtp \beta)}_{\alpha'(\dtp \beta)}
-\]
-Since $\alpha'\beta' = \alpha\beta + \dtp(\alpha\beta)$,
-\begin{equation}
-\dtp(\alpha\beta) + (\dtp\alpha)(\dtp\beta) =
-(\dtp \alpha)\beta' + \alpha'(\dtp \beta).
-\label{eq:delta3}
-\end{equation}
-We can verify by inspection of our definition that
-\begin{equation}
-\dtm(\alpha'\beta') + (\dtp \alpha)\beta' + \alpha'(\dtp \beta) =
-(\dtp\alpha)(\dtp\beta).
-\label{eq:delta4}
-\end{equation}
-Summing up Equations \ref{eq:delta3} and \ref{eq:delta4}, we obtain
-\[
-\dtp(\alpha\beta) + \dtm(\alpha'\beta') = 0,
-\]
-which proves Equation~\ref{eq:delta2}.
-%\punto
-\end{proof}
 
 
 \def\duv{\Delta_{\pm R(u,v)}}
@@ -454,236 +432,197 @@ Say how negated calculus is handled in delta processing.
 \end{todo}
 
 
+\def\dc{\Delta_{\pm C(c,n)}}
+
+
 \begin{example}\em
-Consider the query
-\begin{verbatim}
-SELECT SUM(r1.A * r2.B) FROM R r1, R r2
-WHERE r1.B=r2.A;
-\end{verbatim}
-over relation $R$ of schema $(A,B)$
-whose deltas on insertion/deletion of
-$R$-tuples is
-$\duv \AggSum(x*z, R(x,y) \land R(y,z))$ =
-$\AggSum(x*z, \duv (R(x,y) \land R(y,z)))$
-because $\duv (x*z) = 0$. Since
-$\duv R(x,y) = (x=u \land y=v)$ and
-$\duv R(y,z) = (y=u \land z=v)$,%
-%
+\label{ex:self-join-delta}
+Consider the query of Example~\ref{ex:self-join}, which translates to the
+calculus as
+\[
+q[c_1] = \AggSum(1, C(c_1,n_1) \land C(c_2, n_2) \land n_1=n_2)
+\]
+where $C$ is short for Customer (see Example~\ref{ex:self-join-calc}).
+Now, since $(\dc n_1=n_2) = 0$ and thus
+\[
+(\dc C(c_2, n_2) \land n_1=n_2) = (c_2=c \land n_2=n)^\pm \land n_1=n_2,
+\]
 \begin{multline*}
-\AggSum(x*z, \duv (R(x,y) \land R(y,z))) = \\
-\AggSum(x*z, ((x=u \land y=v)^\pm \land R(y,z)) \\
-\lor\;
- (R(x,y) \land (y=u \land z=v)^\pm) \\
-\lor\;
- ((x=u \land y=v)^\pm \land (y=u \land z=v)^\pm)) =
+\dc \AggSum(1, C(c_1,n_1) \land C(c_2, n_2) \land n_1=n_2) = \\
+\AggSum(1, \dc (C(c_1,n_1) \land (C(c_2, n_2) \land n_1=n_2))) = \\
+\AggSum(1, 
+((c_1=c \land n_1=n)^\pm \land (C(c_2, n_2) \land n_1=n_2)) \lor \\
+(C(c_1,n_1) \land (c_2=c \land n_2=n)^\pm \land n_1=n_2) \lor \\
+((c_1=c \land n_1=n)^\pm \land (c_2=c \land n_2=n)^\pm \land n_1=n_2) =
 \end{multline*}
 
 \vspace{-6mm}
 
 \begin{eqnarray*}
-&\pm& \AggSum(x*z, x=u \land y=v \land R(y,z)) \\
-&\pm& \AggSum(x*z, R(x,y) \land y=u \land z=v) \\
-&+  & \AggSum(x*z, x=u \land y=v \land y=u \land z=v).
+&\pm& \AggSum(1, c_1=c \land n_1=n \land C(c_2, n_2)       \land n_1=n_2) \\
+&\pm& \AggSum(1, C(c_1,n_1)        \land c_2=c \land n_2=n \land n_1=n_2) \\
+&+&   \AggSum(1, c_1=c \land n_1=n \land c_2=c \land n_2=n \land n_1=n_2)
 \end{eqnarray*}
-Assuming no other bound variables than $u$ and $v$,
-this simplifies to
-$\pm \AggSum(u*z, R(v,z))
- \pm \AggSum(x*v, (R(x,u))
- +   (\mbox{if }(u=v) \mbox{ then }(u*v)\mbox{ else }0)$.
 
-Now suppose $R$ currently stores $\{\!| (1,1), (1,1) |\!\}$
-(i.e., two copies of tuple $(1,1)$; the query has value 4)
-and we insert another copy of tuple $(1,1)$.
-Then $\Delta_{+R(1,1)} = 2 + 2 + 1 = 5$, which is
-correct: the new value of the query is 9. Now if we delete one of the tuples
-$(1,1)$,
-$\Delta_{-R(1,1)} = -3 -3 +1 = -5$, and we get back to query value 4. 
+Simplifying this with bound variable $c_1$ yields
+%\begin{eqnarray*}
+%&\pm& \AggSum(1, c_1=c \land C(c_2, n)) \\
+%&\pm& \AggSum(1, C(c_1,n)) \\
+%&+&   \AggSum(1, c_1=c)
+%\end{eqnarray*}
+\[
+\pm \AggSum(1, c_1=c \land C(c_2, n))
+\pm \AggSum(1, C(c_1,n))
++   \AggSum(1, c_1=c)
+\]
+
+Now suppose $C$ currently stores tuples (Joe, USA) and (Bill, USA).
+Then $q$[Joe] = $q$[Bill]=2 (and $q$[Dan] would be 0 by default).
+Now insert (Dan, USA).
+Let $q'[c_1] = \Delta_{+C(\mathrm{Dan}, \mathrm{USA})} q$.
+Then $q'$[Dan] = 2 + 0 + 1 = 3 and
+$q'$[Joe] = $q$[Bill] = 0 + 1 + 0, thus, after insertion,
+$q[\cdot] = 3$ for all three customers.
+On deletion of Bill (let
+$q''[c_1] = \Delta_{-C(\mathrm{Bill}, \mathrm{USA})} q$) we get
+$q''$[Dan] = $q''$[Joe] = 0 - 1 + 0 = -1 and
+$q''$[Bill] = -3 - 1 + 1 = -3. Thus, after deletion,
+$q$[Dan] = $q$[Joe] = 2 (and $q$[Bill] = 0, which is relevant because we might
+later insert a Bill tuple again).
+
+Let us for a moment consider the alternative query that does not group by
+$c_1$: That is, the aggregate term for the query is the same, and the delta does not change, but $c_1$ now is not bound. Then simplifying $\dc q$ yields
+\[
+\pm \AggSum(1, C(c_2, n)) \pm \AggSum(1, C(c_1,n)) + 1.
+\]
+Suppose we again start with the two tuple database (Joe, USA) and (Bill, USA):
+Then $q[\,] = 4$. We add (Dan, USA) and
+$\Delta_{+C(\mathrm{Dan}, \mathrm{USA})} q = 2 + 2 + 1 = 5$, changing
+$q[\,]$ to 9. We remove Bill and get
+$\Delta_{-C(\mathrm{Bill}, \mathrm{USA})} q = -3 - 3 + 1 = -5$, changing
+$q[\,]$ back to 4 again.
 \punto
 \end{example}
 
 
-\nop{
-Note that $u$ and $v$ are bound variables (to be treated like constants).
-Thus, for instance,
-$\AggSum(u, R(v, v))$ corresponds to SQL
-select u from R where R.A=v and R.B=v,
-where we assume that the schema of $R$ is $(A,B)$.
-} % end nop
 
 
 \subsection{Compilation Algorithm}
 \label{sec:compilation-alg}
 
 
+
+
 The compilation algorithm employs {\em recursive incremental view
-maintenance}. The algorithm Compile($t$, $\vec{b}$) takes a term $t$ to be
-compiled and a tuple of bound variables.
-For each trigger to be created (that is, for schema $R_1, \dots, R_k$,
-the triggers are $+R_1, -R_1, \dots, +R_k, -R_k$),
-we apply $\Delta$ for that trigger to $t$ and then normalize and
-apply variable simplification. This creates a list of recursively monomials.
-In each term $t'$ of this list, we extract the non-constraints-only aggregate
-subterms using ExtractAggregates. We union together the mappings of
-extractions, and eliminate duplicates. These are the todos.
-The remainder term does not contain aggregates, just variables, constants, *,
-if-then-else constructs, and map lookups.
-By this extraction, we are committing ourselves to incrementally maintaining
-the map $m[\vec{x}] = s$. 
-The remainder term is the trigger code. For each pair $(m[\vec{x}], s)$
-of the todos, we recursively call Compile($s$, $\vec{x}$) to create the update
-triggers for map $m$.
+maintenance}. The algorithm Compile($n$, $\vec{b}$, $t$) take a name $n$ that
+represents the query result, a tuple of bound variables $\vec{b}$ (the map
+arguments), and a term $t$ representing the query to be compiled.
+For each trigger to be created (that is, for each relation name $R$ of
+the schema, there is an insert and a delete trigger),
+we apply $\Delta$, compute the monomials of the delta, and then simplify.
+Then we extract the non-constraints-only aggregate
+subterms of each monomial obtained.
+
+The remainder terms do not contain aggregates, just variables, constants, *,
+if-then-else constructs, and map lookups, and we can turn them into
+M3 map update statements. (These terms can be e.g.\ read as C or Java rvalue
+expressions.)
+
+We union together the mappings produced by the calls to ExtractAggregates,
+and eliminate duplicates. 
+These are the definitions of the auxiliary maps we are using.
+This is the remaining work to be
+done: we recursively call Compile to create update triggers for these
+auxiliary maps as well.
 
 
-\begin{algorithm} { }~{ }
+The Compile is given as Algorithm~\ref{algo}. 
+Here, SimplifyArgs is a function that takes bound variables that contain
+$\vec{b}$ and a statement of the form
+($\vec{x}\vec{y}: D_{\vec{x}\vec{y}}$) $q[\vec{x}\vec{y}]$ {\tt +=}
+$\AggSum(t, \vec{x}=\vec{b})$
+and simplifies it to the equivalent statement
+($\vec{y}: D_{\vec{y}}$) $q[\vec{b}\vec{y}]$ {\tt +=} $t$.
+Note: We lift ifs to be able to apply this optimization.
+
+
+
+\begin{figure}
 \begin{verbatim}
-function Compile(t: term, bound_vars: var list)
-returns an M3 program
+algorithm Compile(map_name: string,
+                  map_args: var list,
+                  t: term)
+outputs an M3 program
 begin
-   for each relation R in the schema do
-      args = turn schema into list of new argument
-             variable names;
-      tR = Simplify((Delta_{R(args)} t), bound_vars);
-      tRs = RecMonomials(tR);
-      for each t_i in tRs do
-         (t'_i, Theta_i) =
-             ExtractAggregates(t', bound_vars);
+for each relation R in the schema and
+         pm in {+,-} do
+  trigger_args = turn schema into list of new
+                 argument variable names;
+  tRs = RecMonomials((Delta_{pm R(args)} t));
+  for each t_i in tRs do
+    bound_vars = trigger_args union map_args;
+    (t'_i, Theta_i) =
+       ExtractAggregates(Simplify(t',
+          bound_vars), bound_vars);
+    s = SimplifyArgs(((map_args: D_map_args)
+           m[map_args] pm= t'_i), trigger_args);
 
-      TODO: FINISH
+    if pm=`+' then
+      output ``on insert into R(trigger_args) {s}'';
+    else
+      output ``on delete from R(trigger_args) {s}'';
+
+  Theta = eliminate_duplicates(bigcup_i Theta_i);
+  for each (m[a] -> t') in Theta do
+    Compile(m, a, t');
 end
 \end{verbatim}
-\end{algorithm}
 
-\begin{todo}
-Explais RecMonomials.
-Explain how ``for x m[x] += if(x=b) ...''
-is turned into ``x[b] += ...''.
-\end{todo}
+\vspace{-6mm}
+
+\caption{The compilation algorithm.}
+\label{algo}
+\end{figure}
+
+
+Note that the use of Simplify, SimplifyArgs and duplicate elimination
+is not necessary for correctness of the compiled M3 programs, but is important
+to create small and efficient programs.
 
 
 \begin{example}\em
-Consider a simplified TPC-H like schema with relations O(K, R)
-and L(K, P). Orders O have an order key K and the currence exchange rate R fixed for this order (for
-foreign customers). Line items L have an {\em order} key
-K and a price P. We compile the query
-\begin{verbatim}
-SELECT SUM(L.P * O.R) FROM O, L WHERE O.K = L.K
-\end{verbatim}
-which asks for the sum total of all LineItem prices weighted by the exchange
-rates of their orders.
-
-The corresponding calculus term is
-\[
-q[] = \AggSum(p*r, O(k, r) \land L(k, p)).
-\]
-There are no group-by columns, so we compile as Compile($q$, $\emptyset$, $t$).
-We first compute the (insertion) delta for $O$,
-\[
-\Delta_{+O(k_{O}, r_{O})} q =
-\AggSum(p*r, k=k_{O} \land r=r_{O} \land L(k, p))
-\]
-and simplify with bound variables $\{k_{O}, r_{O}\}$ to
-\[
-\AggSum(p, L(k_{O}, p))*r_{O}
-\]
-We extract aggregates to get the pair
-\[
-\big( m_O[k_{O}]*r_{O},
-\{ m_O[k_{O}] \mapsto \AggSum(p, L(k_{O}, p)) \} \big)
-\]
-Thus $\Delta_{+O(k_{O}, r_{O})} q = m_O[k_{O}]*r_{O}$
-and we have to incrementally maintain $m_O[k_O]$.
+\label{ex:self-join-compile}
+Consider the query $q[c_1]$ of
+Example~\ref{ex:self-join}, for which we already know
+the simplified $\dc q$ from Example~\ref{ex:self-join-delta}.
+After simplification and extraction of non-constraints-only aggregates,
+the RecMonomials of the insertion/deletion triggers\footnote{Here,
+$(\pm 1) * t$ is a shortcut for $t$ in the insertion case and
+$(-1)*t$ in the deletion case.} are
+$t'_1 = \AggSum((\pm 1) * \mbox{qC1}[n], c_1=c)$,
+$t'_2 = (\pm 1) * \mbox{qC2}[c_1, n]$, and
+$t'_3 = \AggSum(1, c_1=c)$
+where
 \begin{eqnarray*}
-\Delta_{+L(k_{L}, p_{L})} q &=&
-   \AggSum(p*r, O(k, r) \land k=k_{L} \land p=_{L}) \\
-&=& p_{L} * m_L[k_{L}]
+\mbox{qC1}[n] &\mapsto& \AggSum(1, C(c_2, n)) \\
+\mbox{qC2}[c_1, n] &\mapsto& \AggSum(1, C(c_1,n)).
 \end{eqnarray*}
-with $m_L[k_{L}] = \AggSum(r, O(k_{L}, r))$ to be incrementally maintained.
-We run Compile($m_O$, $\{k_{O}\}$, $\AggSum(p, L(k_{O}, p))$)
-and Compile($m_L$, $\{k_{L}\}$, $\AggSum(r, O(k_{L}, r))$) and obtain
-\begin{eqnarray*}
-\Delta_{+O(k_{OO}, r_{OO})} m_O[k_O] &=& 0 \\
-\Delta_{+L(k_{OL}, p_{OL})} m_O[k_O] &=& (k_{OL} = k_O) \;?\; p_{OL} \;:\; 0 \\
-\Delta_{+O(k_{LO}, r_{LO})} m_L[k_L] &=& (k_{LO} = k_L) \;?\; r_{LO} \;:\; 0 \\
-\Delta_{+L(k_{LL}, p_{LL})} m_L[k_L] &=& 0.
-\end{eqnarray*}
-
-We have to incrementally maintain the maps $m_O[\cdot]$ and
-$m_L[\cdot]$ for all values in the domain of order keys (i.e., all the order
-keys present in the database). However, for bound variables
-$k_{OL}, p_{OL}$,
+Using SimplifyArgs, we get the three trigger statements
 \[
-\mbox{for each $k_O$ do $m_O[k_O]$ += $(k_{OL} = k_O) \;?\; p_{OL} \;:\; 0$}
+q[c] \mbox{ {\tt $\pm$=} qC1}[n]; \quad\;
+(c_1: D_{c_1}) \; q[c_1] \mbox{ {\tt $\pm$=} qC2}[c_1, n]; \quad\;
+q[c] \mbox{ {\tt +=} } 1.
 \]
-simplifies to $m_O[k_{OL}]$ += $p_{OL}$,
-and an analogous simplification applies to $m_L[k_L]$ on insert into $O$.
-
-Overall, we obtain the insertion triggers
-\begin{verbatim}
-on insert into O(kO,  rO ) { q[] += mO[kO]*rO }
-on insert into L(kL,  pL ) { q[] += pL*mL[kL] }
-on insert into L(kOL, pOL) { mO[kOL] += pOL }
-on insert into O(kLO, rLO) { mL[kLO] += rLO }
-\end{verbatim}
-The deletion triggers are like the insertion triggers with += replaced by -=.
+We further have to compile qC1 and qC2. Since
+\[
+\dc \mbox{qC1}[n] = \dc \mbox{qC2}[c,n] = \pm 1,
+\]
+the compiled M3 program is exactly as shown in Example~\ref{ex:self-join}.
 \punto
 \end{example}
 
 
-\begin{example}\em
-We continue Example~\ref{ex:selfjoin}.
-Note that whenever we read a value in such a map program, it has to be
-the version of the value from before the start of the program. This is 
-ensured in this program because we write q1 and q2 in entries 3 and 4 only
-after we have read from q1 and q2 in the first two entries.
-But note in particular that also the domains
-(id2: Person.id), ((id1, prop1): Person), ((id2, prop2): Person)
-are the old ones, before the insertion of the current tuple (id, prop).
-
-The program again has the property that for
-each map value to be written, only constantly much work has to be done,
-and constantly many lookups have to be made.
-
-This program is the conceptually most difficult so far, so let us look at it
-in more detail. It is easy to see that entries 3 and 4 of the program
-maintain q1 and q2 as the queries
-\begin{verbatim}
-q1[id, prop] =
-SELECT SUM(1) FROM Person P2
-WHERE id<>P2.id and 0.9<=score(prop, P2.prop) 
-
-q2[id1, id, prop] =
-SELECT SUM(1) FROM Person P1
-WHERE P1.id<>id and 0.9<=score(P1.prop, prop)
-AND   P1.id=id1 
-\end{verbatim}
-
-Now entry 1 of the program sets the q value for the new person, and
-entry 2 updates the q values of the persons that were present previously.
-For example, suppose score() is 1 on all inputs and assume that, currently,
-there are three persons. Then q is two for each id. Now add a fourth person.
-Then q1 is three for the new person and q2 is one for each of the old persons.
-By default, q is 0 for the new person before the update.
-%
-\begin{center}
-\begin{tabular}{c|c|c|c|c}
-   & before    & \multicolumn{3}{c}{after insert} \\
-id & q[id]     & q1[id,.] & q2[id,.,.] & q[id] \\
-\hline
-1  & 2         &          & 1          & 3 \\
-2  & 2         &          & 1          & 3 \\
-3  & 2         &          & 1          & 3 \\
-4  & undef./0  & 3        &            & 3 \\
-\end{tabular}
-\end{center}
-%
-After execution of the on-insert trigger, q is three for each of the four
-persons.
-\punto
-\end{example}
-
-
-\begin{remark}[Implementation Advice]
-\em
+{\em Implementation Advice}.
 There have been, in total, five prototypes of our compiler, and
 in each subsequent generation, our picture of the problem has become clearer.
 The compiler precisely as described in the section has been implemented
@@ -697,10 +636,19 @@ It may not be easy to see, but we strongly believe that
 our choices here are not theoretical pedantism,
 but key to allowing for exact yet concise presentation
 and painless implementation.
-\end{remark}
 
 
-\subsection{Keys and Foreign Key Constraints}
+\subsection{Keys and Domains}
+
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=2.5in]{images/q12_graph.pdf}
+\caption{Data-flow graph for the example query.  Light and dashed edges can be optimized out, given foreign key constraints.
+TODO: CHANGE MAP NAMES TO BE CONSISTENT WITH EXAMPLE; ROTATE FIGURE.}
+\label{fig:dataflow}
+\end{center}
+\end{figure}
 
 
 \begin{example}\em
@@ -715,42 +663,29 @@ GROUP BY C.cid;
 The compilation algorithm of Section~\ref{sec:compilation-alg} yields the
 following M3 program:
 \begin{verbatim}
-+Customer(cid, nation):
+on insert into Customer(cid, nation) {
   q[cid] += qC[cid];
   foreach oid do qL[cid, oid] += qLC[oid, cid];
   qO1[cid] += 1
-
-+Order(oid, cid, ...):
+}
+on insert into Order(oid, cid, ...) {
   q[cid] += qO1[cid]*qO2[oid];
   qC[cid] += qO2[oid];
   qL[cid, oid] += qO1[cid];
   qLC[oid, cid] += 1
-
-+LineItem(oid, ...):
+}
+on insert into LineItem(oid, ...) {
   foreach cid do  q[cid] += qL[cid, oid];
   foreach cid do qC[cid] += qLC[oid, cid];
   qO2[oid] += 1
-
-+Customer(cid, nation):
-  qO1[cid] += 1
-
-+Order(oid, cid, ...):
-  qL[cid, oid] += qO1[cid];
-
-+LineItem(oid, ...):
-  foreach cid do  q[cid] += qL[cid, oid];
+}
 \end{verbatim}
+The simplification with foreign key constraints yields exactly the
+M3 program of Example~\ref{ex:TPCH-Q12}.
+\punto
 \end{example}
 
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=2.5in]{images/q12_graph.pdf}
-\caption{Data-flow graph for the example query.  Light and dashed edges can be optimized out, given foreign key constraints.
-TODO: CHANGE MAP NAMES TO BE CONSISTENT WITH EXAMPLE; ROTATE FIGURE.}
-\label{fig:dataflow}
-\end{center}
-\end{figure}
 
 
 

@@ -31,9 +31,8 @@ technology for multicore and cloud computing.
 %\footnote{Examples are Vertica and Paraccel, who build column stores,
 %and Greenplum, Asterdata, and Netezza, who take databases into the Cloud.}
 
-There is a recent tendency among pundits
-outside the database community to
-negate the power and convenience of queries in languages such as SQL, and to
+There is a recent tendency among pundits outside the database community to
+contest the need for powerful queries, and to
 think of key-value stores -- with only the power to look up data by
 keys -- as (much more efficient) database query engines.
 %
@@ -105,8 +104,8 @@ parallelization as nonincremental evaluation.
 \subsection{Message passing programs}
 
 
-We compile SQL aggregation queries to programs in {\em map maintenance
-message}\/ (M3)  format. An M3 program consists of a set of triggers of
+We compile SQL aggregation queries to {\em map maintenance
+message}\/ (M3) programs. An M3 program consists of a set of triggers of
 the form
 \[
 \mbox{{\tt on insert into $R$($\vec{x}$) \{
@@ -151,12 +150,6 @@ $m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
 and reading the modified programs as straightforward pseudocode.
 
 
-Throughout this section, in all examples, the delete-triggers are precisely
-like the insert-triggers, but with {\tt +=} replaced by
-{\tt -=}.\footnote{There are queries for which this is not the case.}
-Thus, to save space, the deletion triggers are omitted.
-
-
 \begin{example}\em
 \label{ex:TPCH-Q12}
 Consider the following query on a TPC-H like schema,
@@ -179,6 +172,10 @@ on insert into LineItem (oid, ...) {
   (cid: Customer.cid) q[cid] += qL[cid, oid]
 }
 \end{verbatim}
+
+In this and the following example, the delete-triggers are precisely
+like the insert-triggers, but with {\tt +=} replaced by {\tt -=}.
+Thus, to save space, the deletion triggers are omitted.
 
 Let us ignore parallelization first.
 Replace the code of the final trigger by
@@ -222,46 +219,6 @@ order.
 
 
 
-\begin{example}[join on non-key columns]\em
-\label{ex:nation}
-Given an additional supplier relation, we now ask, for each supplier id (sid),
-for the number of customers of the same nation.
-\begin{verbatim}
-SELECT   S.sid, SUM(1)
-FROM     Customer C, Supplier S
-WHERE    C.nation = S.nation
-GROUP BY S.sid;
-\end{verbatim}
-The compiler produces the following triggers.
-\begin{verbatim}
-on insert into Customer (cid, nation) {
-  (sid: Supplier.sid) q[sid] += qC[sid, nation];
-  qS[nation] += 1
-}
-on insert into Supplier (sid, nation) {
-  q[sid] += qS[nation];
-  qC[sid, nation] += 1
-}
-\end{verbatim}
-To understand that this pair
-(quadruple, if the deletion triggers are taken into account) of
-mutually dependent triggers indeed correctly maintains the query result in q,
-verify that auxiliary map {\tt qS} maintains the query
-\begin{verbatim}
-SELECT nation, SUM(1) FROM Customer GROUP BY nation;
-\end{verbatim}
-and auxiliary map qC maintains query
-\begin{verbatim}
-SELECT   sid, nation, SUM(1) FROM Supplier
-GROUP BY sid, nation;
-\end{verbatim}
-The statements updating {\tt q} assure that,
-whenever a customer (resp., supplier) is inserted, the count of
-matching suppliers (resp., customers) is added to {\tt q}.
-\punto
-\end{example}
-
-
 \begin{example}[star-join decomposition]\em
 \label{ex:ssb}
 Con\-sider \\ a simplified version of the star schema
@@ -283,8 +240,7 @@ on insert into Date (datekey, year) {
 on insert into Part (partkey, partcat) {
   mDL[partkey, partcat] += 1
 }
-on insert into LineOrder
-           (datekey, partkey, revenue) {
+on insert into LineOrder (datekey, partkey, revenue) {
   (partcat: Part.partcat, year: Date.year)
   m[partcat, year] += revenue
                     * mDL[partkey, partcat]
@@ -318,52 +274,44 @@ and can increment {\tt m[u, v]} by
 \end{example}
 
 
-\begin{example}[self-join with complex condition]\em
-\label{ex:selfjoin}
-In this final example, we consider the data\-base of a matchmaking Web site
-that matches humans based on personal profiles. Persons are
-represented by a relation Person(\underline{id}, prop), where
-prop stands for possibly multiple property col\-umns. Let score$(\cdot, \cdot)$
-be a function that maps a pair of property tuples to a compatibility score.
-The following query computes, for each person in the database, the number of
-matches with compatibility score $\ge 0.9$.
+\begin{example}[self-join]\em
+\label{ex:self-join}
+We now ask, for each customer id (cid),
+for the number of customers of the same nation (including the customer
+identified by cid in the count).
 \begin{verbatim}
-SELECT   P1.id, SUM(1)
-FROM     Person P1, Person P2
-WHERE    P1.id <> P2.id
-AND      0.9 <= score(P1.prop, P2.prop)
-GROUP BY P1.id;
+SELECT   C1.cid, SUM(1)
+FROM     Customer C1, Supplier C2
+WHERE    C1.nation = C2.nation
+GROUP BY C1.cid;
 \end{verbatim}
-
-Our compilation approach turns this query into the following M3 program,
-with map {\tt q[.]} representing the query result and auxiliary
-maps {\tt q1[.,.]} and {\tt q2[.,.,.]}.
+The compiler produces the following triggers.
 \begin{verbatim}
-on insert into Person (id, prop) {
-  q[id] += q1[id, prop];
-
-  (id2: Person.id) q[id2] += q2[id2, id, prop];
-
-  ((id1, prop1): Person)
-  q1[id1, prop1] +=
-    if id1<>id and 0.9<=score(prop1, prop) then 1
-    else 0;
-
-  ((id2, prop2): Person)
-  q2[id, id2, prop2] +=
-    if id<>id2 and 0.9<=score(prop, prop2) then 1
-    else 0
+on insert into Customer (cid, nation) {
+  q[cid] += qC1[nation];
+  (cid2: Customer.cid) q[cid2] += qC2[cid2, nation];
+  q[cid] += 1;
+  qC1[nation] += 1;
+  qC2[cid, nation] += 1
+}
+on delete from Customer (cid, nation) {
+  q[cid] -= qC1[nation];
+  (cid2: Customer.cid) q[cid2] -= qC2[cid2, nation];
+  q[cid] += 1;
+  qC1[nation] -= 1;
+  qC2[cid, nation] -= 1
 }
 \end{verbatim}
-We will establish later that this M3 program is indeed correct.
+We will establish later that this M3 program is indeed correct
+(and that ``{\tt +=}'' in the third statement of the on-delete trigger
+is not a typo).
 For now, we challenge the reader to find a 
 fundamentally different (ideally, simpler) way to
 perform the incremental maintenance of {\tt q}
 which has the M3 property of embarassing parallelism, with each value
 to be updated only requiring a constant amount of work.
 Examples~\ref{ex:TPCH-Q12} and \ref{ex:ssb} were chosen for simplicity,
-but we believe that this example and to a lesser degree
-Example~\ref{ex:nation} show that creating M3 programs in general
+but we believe that this example shows that creating M3 programs in general
 is nontrivial.
 \punto
 \end{example}
@@ -372,41 +320,6 @@ is nontrivial.
 It shall be emphasized that for each of the examples of this section,
 and the paper as a whole, our compilation approach produces exactly
 the M3 programs shown.
-
-
-\nop{
-\begin{figure}
-\begin{center}
-\textbf{Schema}
-\end{center}
-\begin{algorithmic}
-\STATE \textbf{create table} customers(cid \textit{int}, nation \textit{int}); 
-\STATE \textbf{create table} orders(
-\STATE \hspace*{0.1in} oid \textit{int}, o\_cid \textit{int}, opriority \textit{int}, spriority \textit{int},
-\STATE \hspace*{0.1in}  \textbf{foreign key}(o\_cid) \textbf{references} customers(cid)
-\STATE );
-\STATE \textbf{create table} lineitems(
-\STATE \hspace*{0.1in} l\_oid \textit{int}, lateship \textit{int}, latedelivery \textit{bool}, shipmode \textit{bool},
-\STATE \hspace*{0.1in} \textbf{foreign key}(l\_oid) \textbf{references} orders(oid)
-\STATE );
-\end{algorithmic}
-\begin{center}
-\textbf{Query}
-\end{center}
-\begin{algorithmic}
-\STATE \textbf{select} count(*),
-\STATE \hspace*{0.1in} nation, cid, oid, opriority, spriority, 
-\STATE \hspace*{0.1in} lateship, latedelivery, shipmode 
-\STATE \textbf{from} customers, orders, lineitems 
-\STATE \textbf{where} o\_cid=cid and l\_oid=oid 
-\STATE \textbf{group by cube} 
-\STATE \hspace*{0.1in} nation, cid, oid, opriority, spriority, 
-\STATE \hspace*{0.1in} lateship, latedelivery, shipmode;
-\end{algorithmic}
-\caption{An example query that constructs a warehouse for analyzing customer behavior with respect to shipping.  Given a table of customers, orders, and lineitems in those orders, the query builds a datacube over the full join of those tables.}
-\label{fig:example}  
-\end{figure}
-} % end nop
 
 
 The fragment of SQL queries that we can compile to M3 essentially comprises
