@@ -91,7 +91,8 @@ $output.write("persist\n") if $toaster.persist;
 
 if $slicefile 
   $slicefile.write("switch " + $toaster.switch + "\n");
-  $slicefile.write($toaster.slice_directives.join("\n"));
+  $slicefile.write($toaster.slice_directives.join("\n") + "\n");
+  $slicefile.write("preload " + $toaster.preload + "\n") if $toaster.preload;
 end
 
 $success = true;

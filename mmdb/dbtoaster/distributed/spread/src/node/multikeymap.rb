@@ -2,11 +2,12 @@
 require 'spread_types';
 
 class MultiKeyMap
-  attr_reader :numkeys;
+  attr_reader :numkeys, :empty;
   
   def initialize(numkeys, default = nil, wildcard = -1)
     @numkeys, @wildcard, @default = numkeys.to_i, wildcard, default;
     @basemap = Hash.new;
+    @empty = true;
   end
   
   def [](params)
@@ -22,6 +23,7 @@ class MultiKeyMap
   
   def []=(key, val)
     validate_params(key)
+    @empty = false;
 
     nestedvar = @basemap;
     

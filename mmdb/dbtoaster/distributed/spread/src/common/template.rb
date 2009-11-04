@@ -162,6 +162,7 @@ end
 
 class TemplateValuation
   attr_reader :params, :entries, :template;
+  attr_writer :params, :entries;
   
   def initialize(template = nil, params = Hash.new, entries = Hash.new)
     @template, @params, @entries = template, params, entries;

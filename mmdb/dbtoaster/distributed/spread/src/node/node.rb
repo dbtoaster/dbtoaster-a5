@@ -409,31 +409,19 @@ class MapNodeHandler
     end
   end
   
-  def preload(input, shifts = Hash.new)
+  def preload(input_files, shifts = Hash.new)
     cnt = 0;
-    input.each do |line|
-      cmd = /^ *([a-zA-Z0-9_\-]+) *\(([0-9., ]+)\)/.match(line)
-      raise SpreadException.new("Can't match preload line : " + line) unless cmd;
-      dummy, table, params = *cmd;
-      params = params.split(/, */);
-      @templates.each_value do |template|
-        if template.relation == table then
-          valuation = TemplateValuation.new(template, template.param_map(params.collect_pair(template.paramlist) { |param, name| shifts.fetch(name, 0).to_f+param.to_i }))
-          template.entries.each do |entry|
-            values = @maps[entry.source][0].lookup(entry.instantiate(valuation.params));
-            if values.size > 0 then
-              key = values.keys[0];
-              key.each_pair(entry.keys) do |k, name|
-                valuation.params[name] = k unless valuation.params.has_key? name;
-              end
-              valuation.discover(Entry.make(entry.source, key), values[key]);
-            end
-          end
-          insert = template.target.instantiate(valuation.params);
-          @maps[insert.source][0].set(insert.key, 0, template.expression.to_f(valuation)) unless insert.has_wildcards?;
-        end
+    in_tables = Hash.new;
+    @maps.each_pair do |map, values|
+      Logger.warn { "Preloading : Map " + map.to_s + " <-- " + input_files[map.to_i-1]; }
+      input = File.open(input_files[map.to_i-1]);
+      input.each do |line|
+        values[0].set(
+          line.split(/, */).collect_index do |i,k|
+            k.to_i + shifts.fetch([map, i], 0)
+          end, 0, 1
+        );
       end
-      puts "Preloading: " + cnt.to_s + " lines processed" if (cnt += 1) % 10000 == 0;
     end
   end
   

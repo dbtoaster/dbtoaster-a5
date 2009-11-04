@@ -1,6 +1,8 @@
 
 require 'ok_mixins'
 require 'thread'
+require 'thrift';
+require 'spread_types';
 
 class SlicerProcess
   attr_reader :ready, :queue;
@@ -78,11 +80,12 @@ class SlicerNode
     match, @name, @host, @port = match.to_a;
   end
   
-  def process(config)
+  def process(config, preload_flag = "")
     SlicerProcess.new(
       SlicerProcess.base_path + "/bin/node.sh" + 
       " -n " + @name.to_s + 
       " -p " + @port.to_s + 
+      preload_flag + 
       " " + config.join(" "), 
       @host.to_s
     );
@@ -106,6 +109,7 @@ class Slicer
     @switch = "localhost";
     @mode = :quiet;
     @source = nil;
+    @preload = nil;
   end
   
   def setup(input)
@@ -119,6 +123,7 @@ class Slicer
         when "transform" then @transforms.push(line.gsub(/^transform */, ""));
         when "project" then @projections.push(line.gsub(/^project */, ""));
         when "source" then @source = line.gsub(/^source */, "");
+        when "preload" then @preload = line.gsub(/^preload */, "");
       end
     end
   end
@@ -131,11 +136,29 @@ class Slicer
     end
   end
   
+  def preload_flag(frac)
+    if @preload then
+      tokens = @preload.split(/ /);
+      flag = " --preload " + tokens.shift;
+      until tokens.empty?
+        map,key,shift = *(tokens.shift.split(/:/));
+        raise "Invalid preload column shift: " + map +":"+key+":"+shift if map.nil? or key.nil? or shift.nil?
+        flag = flag + " --shift " + map + ":" + key + ":" + (shift.to_f * frac).to_i.to_s;
+      end
+    else
+      "";
+    end
+    flag;
+  end
+  
   def start
     @config << self.mode_flag
+    
+    frac = 1.0/@nodes.size.to_f
+    i = 0.0;
     servers = 
       @nodes.collect do |n|
-        n.process(@config).start;
+        n.process(@config, preload_flag((i += 1.0) * frac)).start;
       end <<
       SlicerProcess.new(
         SlicerProcess.base_path + "/bin/switch.sh " +

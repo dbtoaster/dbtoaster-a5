@@ -3,7 +3,7 @@ require 'ok_mixins';
 require 'template'
 
 class DBToaster
-  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch;
+  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
@@ -15,6 +15,7 @@ class DBToaster
     @persist = false;
     @compiled = nil;
     @switch = "localhost";
+    @preload = nil;
     
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
@@ -58,6 +59,7 @@ class DBToaster
         raise "Invalid key argument: " + arg unless match;
         @keys.assert_key(match[1]){ Hash.new }.assert_key(match[2]){ Hash.new }[match[3]] = [match[4]];
   #    else raise "Unknown option: " + opt;
+      when "--preload"   then @preload = arg;
     end
   end
   

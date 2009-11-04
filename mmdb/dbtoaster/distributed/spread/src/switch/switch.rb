@@ -104,10 +104,10 @@ class SwitchNodeHandler
   
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
-    puts "Loading Template " + index.to_s + ": " + template.summary;
+    Logger.debug { "Loading Template " + index.to_s + ": " + template.summary; }
     template.index = index;
     compiled = @layout.compile_trigger(template);
-    puts "Compiled Trigger: \n" + compiled.to_s;
+    Logger.debug { "Compiled Trigger: \n" + compiled.to_s; }
     @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   

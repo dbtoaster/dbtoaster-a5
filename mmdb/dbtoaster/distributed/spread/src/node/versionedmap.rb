@@ -141,7 +141,7 @@ end
 
 class PutRecord
   attr_reader :target, :version, :required, :value, :next;
-  attr_writer :next, :prev;
+  attr_writer :next, :prev, :value;
   
   def initialize(target, version, value, prev = nil)
     @target, @version, @value, @callbacks = target.clone, version.to_i, value, Array.new;
@@ -412,12 +412,16 @@ class MapPartition
   end
   
   def set(var, vers, val)
-    @data[var] = PutRecord.new(Entry.make(@mapid, var), vers, val.to_f);
+    if @data.has_key? var then
+      @data[var].value += val.to_f;
+    else 
+      @data[var] = PutRecord.new(Entry.make(@mapid, var), vers, val.to_f);
+    end
   end
   
-  def lookup(target)
+  def lookup(key)
     ret = Hash.new
-    @data.scan(target.key) do |key, value|
+    @data.scan(key) do |key, value|
       value = value.last;
       ret[key] = value.value
     end
@@ -453,6 +457,9 @@ class MapPartition
     end.join("\n");
   end
   
+  def empty?
+    @data.empty;
+  end
 end
 
 

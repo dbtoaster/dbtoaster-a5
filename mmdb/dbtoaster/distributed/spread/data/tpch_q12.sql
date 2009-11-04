@@ -1,8 +1,8 @@
 --persist
 --partition q:5
 --partition qLINEITEMS1:2
---#key CUSTOMERS[CID] <= ORDERS[O_CID]
---#key ORDERS[OID] <= LINEITEMS[L_OID]
+--#key CUSTOMERS[CID]
+--#key ORDERS[OID]
 --switch wl03.cac.cornell.edu
 --node Node01@wl04.cac.cornell.edu:52982
 --node Node02@wl05.cac.cornell.edu:52982
@@ -24,23 +24,44 @@
 --node Node18@wl21.cac.cornell.edu:52982
 --node Node19@wl22.cac.cornell.edu:52982
 --node Node20@wl23.cac.cornell.edu:52982
---slice transform ORDERS[0]@20/600000
---slice transform ORDERS[1]@20/15000
+--node Node21@wl24.cac.cornell.edu:52982
+--node Node22@wl25.cac.cornell.edu:52982
+--node Node23@wl26.cac.cornell.edu:52982
+--node Node24@wl27.cac.cornell.edu:52982
+--node Node25@wl28.cac.cornell.edu:52982
+--node Node26@wl29.cac.cornell.edu:52982
+--node Node27@wl30.cac.cornell.edu:52982
+--node Node28@wl31.cac.cornell.edu:52982
+--node Node29@wl32.cac.cornell.edu:52982
+--node Node30@wl33.cac.cornell.edu:52982
+--node Node31@wl34.cac.cornell.edu:52982
+--node Node32@wl35.cac.cornell.edu:52982
+--node Node33@wl36.cac.cornell.edu:52982
+--node Node34@wl37.cac.cornell.edu:52982
+--node Node35@wl38.cac.cornell.edu:52982
+--node Node36@wl39.cac.cornell.edu:52982
+--node Node37@wl40.cac.cornell.edu:52982
+--node Node38@wl41.cac.cornell.edu:52982
+--node Node39@wl42.cac.cornell.edu:52982
+--node Node40@wl43.cac.cornell.edu:52982
+--slice transform ORDERS[0]@20/30000000
+--slice transform ORDERS[1]@20/750000
 --slice transform ORDERS[5]~/([0-9]*)-.*/\1/
 --slice project   ORDERS(0,1,5,7)
---slice transform CUSTOMERS[0]@20/15000
+--slice transform CUSTOMERS[0]@20/750000
 --slice project   CUSTOMERS(0,3)
---slice transform LINEITEMS[0]@20/600000
+--slice transform LINEITEMS[0]@20/30000000
 --slice transform LINEITEMS[16]<d10,11
 --slice transform LINEITEMS[17]<d10,12
 --slice transform LINEITEMS[14]#
 --slice project   LINEITEMS(0,16,17,14)
---#domain CUSTOMERS=7500000,25
---#domain ORDERS=300000000,*,10,*
---#domain LINEITEMS=*,2,2,100
---domain CUSTOMERS=15000,25
---domain ORDERS=600000,*,10,*
---domain LINEITEMS=600000,2,2,100
+--domain CUSTOMERS=750000,25
+--domain ORDERS=30000000,*,10,*
+--domain LINEITEMS=30000000,2,2,100
+--preload tpch/q12.Map1.txt:tpch/q12.Map2.txt:tpch/q12.Map3.txt:tpch/q12.Map4.txt:tpch/q12.Map5.txt:tpch/q12.Map6.txt 1:5:30000000 1:6:750000 2:0:30000000 2:1:750000 3:0:750000 4:0:30000000 5:0:750000 5:2:30000000 6:0:30000000 6:1:750000
+--#domain CUSTOMERS=15000,25
+--#domain ORDERS=600000,*,10,*
+--#domain LINEITEMS=600000,2,2,100
 --slice source tpch/100m
 create table customers(cid int, nid int); 
 create table orders(oid int, o_cid int, opriority int, spriority int);
