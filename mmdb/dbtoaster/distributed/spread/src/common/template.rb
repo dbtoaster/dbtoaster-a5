@@ -500,6 +500,14 @@ class UpdateTemplate
     "ON " + @relation + " : Map " + target.source.to_s + " <- " + entries.collect { |e| "Map " + e.source.to_s }.join(", ");
   end
   
+  def access_patterns(map)
+    @expression.entries.collect do |entry|
+      if entry.source == map then
+        entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact
+      end
+    end.compact;
+  end
+  
   def UpdateTemplate.get_map(map_name, params)
     @@map_names.assert_key(map_name) { {"id" => @@map_id += 1, "params"=> params}; }
     @@map_names[map_name]["id"];

@@ -187,7 +187,8 @@ class MapNodeHandler
       MapPartition.new(
         map, 
         region.collect do |r| r[0] end, 
-        region.collect do |r| r[1] end
+        region.collect do |r| r[1] end,
+        @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq
       )
     );
     Logger.debug { "Created partition " + @maps[map.to_i].to_s }

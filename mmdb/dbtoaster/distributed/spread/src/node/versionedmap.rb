@@ -250,14 +250,14 @@ class MapPartition
   # A MapPartition is a chunk of a map (ID: mapid) holding keys in the
   # range [start, start+range).  Values are stored versioned; 
   
-  def initialize(mapid, start, range)
+  def initialize(mapid, start, range, patterns)
     @mapid, @start, @range = mapid.to_i, [start].flatten, [range].flatten;
     
     if start.size != range.size then raise SpreadException.new("Creating partition with inconsistent start/range sizes") end;
     @start.freeze;
     @range.freeze;
     
-    @data = MultiKeyMap.new(@start.size);
+    @data = MultiKeyMap.new(@start.size, patterns);
     @massputrecords = nil;
   end
   

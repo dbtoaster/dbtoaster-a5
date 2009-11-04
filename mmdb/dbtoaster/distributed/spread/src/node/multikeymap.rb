@@ -4,98 +4,70 @@ require 'spread_types';
 class MultiKeyMap
   attr_reader :numkeys, :empty;
   
-  def initialize(numkeys, default = nil, wildcard = -1)
+  def initialize(numkeys, patterns, default = nil, wildcard = -1)
     @numkeys, @wildcard, @default = numkeys.to_i, wildcard, default;
-    @basemap = Hash.new;
+    @patterns = patterns.delete_if { |pattern| pattern.size >= numkeys }.collect_hash do |pattern| 
+      [ pattern.sort, 
+        Hash.new { Array.new }
+      ]
+    end
+    @basemap = Hash.new(0);
     @empty = true;
   end
   
   def [](params)
-    validate_params(params)
-    
-    nestedvar = @basemap;
-    params.each do |param|
-      return @default unless nestedvar.has_key? param;
-      nestedvar = nestedvar[param];
-    end
-    nestedvar;
+    @basemap[params];
   end
   
   def []=(key, val)
     validate_params(key)
-    @empty = false;
-
-    nestedvar = @basemap;
-    
-    lastindex = key[-1];
-    
-    key.slice(0...-1).each do |param|
-      nestedvar[param] = Hash.new unless nestedvar.has_key? param;
-      nestedvar = nestedvar[param];
+    unless @basemap.has_key? key then
+      @patterns.each_pair do |pattern, hsh|
+        # hsh is the hash for this access pattern that stores the pattern inverses;
+        # Between the pattern and its inverse, we have a fully specified key.  Break the
+        # key we just added down and add it.
+        # so pull out the components in the pattern and 
+        hsh[pattern.collect { |k| key[k] }].add(key.freeze);
+      end
     end
-    nestedvar[lastindex] = val;
+    @empty = false;
+    @basemap[key] = val;
   end
   
-  def has_key?(params)
-    validate_params(params)
-    
-    nestedvar = @basemap;
-    params.each do |param|
-      return false unless nestedvar.has_key? param;
-      nestedvar = nestedvar[param];
-    end
-    true;
+  def has_key?(key)
+    @basemap.has_key? key;
   end
   
   def values
-    ret = Array.new;
-    scan_impl(
-      [-1] * @numkeys,
-      Proc.new do |key, value| ret.push(value) end,
-      false
-    );
-    ret;
+    @basemap.values;
   end
   
-  def scan(key, &block)
-    validate_params(key)
-    scan_impl(key, block, false);
-  end
-  
-  def replace(key, &block);
-    validate_params(key)
-    scan_impl(key, block, true);
-  end
-  
-  private #################################################
-
-  def scan_impl(params, block, replace, depth = 0, nestedmap = @basemap, paramstack = Array.new, parentmap = nil)
-    if depth >= @numkeys then
-      # once we reach the inner depths, instead of a map, we have a value
-      newval = block.call(paramstack.clone, nestedmap);
-      parentmap[paramstack[-1]] = newval if replace;
-    else
-      if params[depth] == @wildcard then
-        nestedmap.each_pair do |key, value|
-          paramstack.push(key);
-          scan_impl(params, block, replace, depth+1, value, paramstack, nestedmap);
-          paramstack.pop;
-        end
-      else
-        if nestedmap.has_key? params[depth] then
-          paramstack.push(params[depth]);
-          scan_impl(params, block, replace, depth+1, nestedmap[params[depth]], paramstack, nestedmap);
-          paramstack.pop;
-        end
-      end
+  def scan(partial_key)
+    find_pattern(key).each do |key|
+      yield key, @basemap[key];
     end
   end
   
-  private
+  def replace(partial_key);
+    find_pattern(key).each do |key|
+      @basemap[key] = yield key, @basemap[key];
+    end
+  end
+  
+  private #################################################
   
   def validate_params(params)
     raise SpreadException.new("MultiKeyMap: Tried to access multi-key map with non-array key '" + params.to_s + "' of type: " + params.class.to_s) unless params.is_a? Array;
     raise SpreadException.new("MultiKeyMap: Tried to access " + @numkeys.to_s + " key array with " + params.size.to_s + " keys: " + params.join(",")) unless params.size == @numkeys;
+  end
+  
+  def find_pattern(key)
+    validate_params(key)
+    pattern = key.collect_index { |i, k| i += 1; i if k == wildcard }.compact.sort
+    return [key] if pattern.size == @numkeys # special case the fully specified access pattern
+    ret = @patterns[pattern];
+    raise SpreadException.new("Invalid Access Pattern on key : [" + key.join(",") + "]") unless ret;
+    ret[key.clone.delete_if { |k| k == wildcard }];
   end
 end
 
