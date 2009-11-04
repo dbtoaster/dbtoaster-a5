@@ -522,22 +522,21 @@ the schema, there is an insert and a delete trigger),
 we apply $\Delta$, compute the monomials of the delta, and then simplify.
 Then we extract the non-constraints-only aggregate
 subterms of each monomial obtained.
-
-The remainder terms do not contain aggregates, just variables, constants, *,
+The remainder terms of the extraction
+do not contain aggregates, just variables, constants, *,
 if-then-else constructs, and map lookups, and we can turn them into
 M3 map update statements. (These terms can be e.g.\ read as C or Java rvalue
 expressions.)
-
+%
 We union together the mappings produced by the calls to ExtractAggregates,
 and eliminate duplicates. 
 These are the definitions of the auxiliary maps we are using.
-This is the remaining work to be
-done: we recursively call Compile to create update triggers for these
+We recursively call Compile to create update triggers for the
 auxiliary maps as well.
 
 
-The Compile is given as Algorithm~\ref{algo}. 
-Here, SimplifyArgs is a function that takes bound variables that contain
+The Compile function is given in Figure~\ref{fig:compilation-algo}. 
+SimplifyArgs is a function that takes bound variables that contain
 $\vec{b}$ and a statement of the form
 ($\vec{x}\vec{y}: D_{\vec{x}\vec{y}}$) $q[\vec{x}\vec{y}]$ {\tt +=}
 $\AggSum(t, \vec{x}=\vec{b})$
@@ -548,40 +547,40 @@ Note: We lift ifs to be able to apply this optimization.
 
 
 \begin{figure}
-\begin{verbatim}
-algorithm Compile(map_name: string,
-                  map_args: var list,
-                  t: term)
-outputs an M3 program
-begin
-for each relation R in the schema and
-         pm in {+,-} do
-  trigger_args = turn schema into list of new
-                 argument variable names;
-  tRs = RecMonomials((Delta_{pm R(args)} t));
-  for each t_i in tRs do
-    bound_vars = trigger_args union map_args;
-    (t'_i, Theta_i) =
-       ExtractAggregates(Simplify(t',
-          bound_vars), bound_vars);
-    s = SimplifyArgs(((map_args: D_map_args)
-           m[map_args] pm= t'_i), trigger_args);
-
-    if pm=`+' then
-      output ``on insert into R(trigger_args) {s}'';
-    else
-      output ``on delete from R(trigger_args) {s}'';
-
-  Theta = eliminate_duplicates(bigcup_i Theta_i);
-  for each (m[a] -> t') in Theta do
-    Compile(m, a, t');
-end
-\end{verbatim}
+\begin{tabbing}
+{\bf algorithm} Compile(\=map\_name: string, \\
+                  \>map\_args: var list, \\
+                  \>t: term) \\
+outputs an M3 program \\
+{\bf begin} \\
+{\bf for each} relation $R$ in the schema,
+               pm in $\{+,-\}$ {\bf do} \\
+~~\=
+  trigger\_args = \=turn columns names of $R$ into list \\
+\>               \>of new argument variable names; \\
+\>{\bf for each} $t_i$ in
+        RecMonomials($\Delta_{pm R(\mathrm{trigger\_args})} t$) {\bf do} \\
+\>~~\=bound\_vars = trigger\_args $\cup$ map\_args; \\
+\>\>($t'_i$, $\Theta_i$) = ExtractAggregates( \\
+\>\>~~      Simplify($t'$, bound\_vars), bound\_vars); \\
+\>\>s = SimplifyArgs(((map\_args: $D_{\mathrm{map\_args}}$) \\
+\>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args); \\
+\\
+\>\>{\bf if} pm=`+' {\bf then} \\
+\>\>~~{\bf output} on insert into $R$(trigger\_args) $\{s\}$; \\
+\>\>{\bf else} \\
+\>\>~~{\bf output} on delete from $R$(trigger\_args) $\{s\}$; \\
+\\
+\>$\Theta$ = eliminate\_duplicates($\bigcup_i \Theta_i$); \\
+\>{\bf for each} $(m[\vec{x}] \mapsto t')$ in $\Theta$ {\bf do}
+                 Compile($m, \vec{x}, t'$); \\
+{\bf end}
+\end{tabbing}
 
 \vspace{-6mm}
 
 \caption{The compilation algorithm.}
-\label{algo}
+\label{fig:compilation-algo}
 \end{figure}
 
 
