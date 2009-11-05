@@ -21,8 +21,10 @@ and a compiler.  A diagram of this architecture is presented in Figure \ref{fig:
 The query layer of Cumulus acts as an intermediary between the users
 and the DW nodes.  The query layer accepts roll-up/drill-down/slice/dice
 queries, translates them into the corresponding set of data warehouse
-lookups, and creates a query result from the data returned. The Query Layer is
-implemented in a client-side API that runs on the user machines.
+lookups, and creates a query result from the data returned.
+%
+% The Query Layer is
+% implemented in a client-side API that runs on the user machines.
 
 Cumulus' final component is the compiler, which was discussed in the
 previous section. The compiler translates SQL aggregation queries
@@ -31,7 +33,7 @@ The maps suggested by the compiler -- and maintained by the M3 program --
 are partitioned across the DW nodes to keep network traffic to a minimum.  
 
 
-This section is structured as follows. We first give an description of
+This section is structured as follows. We first give a description of
 the meaning of message passing programs in the context of distributed
 evaluation. Then we discuss the protocol for message passing, and the role
 of the switch in update processing. Next, we explain how our protocol, and
@@ -66,12 +68,16 @@ written to.
 \end{figure}
 
 
-A map update begins at the Switch when an input table is modified.  Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW Node managing a map being written to.  Additionally, the Switch identifies all DW Nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required (i.e., if Cumulus is being used standalone, without an underlying database), the switch can log the update to disk for persistence.
+A map update begins at the Switch when an input table is modified.  Each input table is associated with one or more triggers, each requiring a write to some range of map values and zero or more reads from different maps.  For each trigger, the Switch identifies and sends a PUT message to each DW node managing a map being written to.  Additionally, the Switch identifies all DW nodes managing maps that will be read from and sends a FETCH message to them, requesting the desired map values.  Finally, if required,
+%
+% (i.e., if Cumulus is being used standalone, without an underlying database),
+%
+the switch can log the update to disk for persistence.
 
 The nodes receiving a FETCH request perform the appropriate reads and send their responses to the PUT nodes in a PUSH message.  Upon receipt of all necessary PUSH messages, the PUT nodes compute the update expression and modify the affected maps.  An illustration of the complete message-passing process is presented in Figure \ref{fig:updatestep}.  
 
 \subsubsection{Trigger Dispatch}
-Maps are partitioned along dimensional axes when they grow beyond the capacity of a single node, akin to the partitioning done in grid files\cite{318586}.  To streamline the dispatch of messages to component nodes, the switch pre-generates a spatial index for each template, similar to the grid file directory.  Every entry in the spatial index contains a set of PUT and FETCH messages.  When the template is triggered, the tuple's values are used to index into the spatial index and the corresponding messages are parametrized and sent.  The algorithm for generating the spatial index is presented in Figure \ref{alg:dispatch}.
+Maps are partitioned along dimensional axes when they grow beyond the capacity of a single node, akin to the partitioning done in grid files\cite{318586}.  To streamline the dispatch of messages to component nodes, the switch pre-generates a spatial index for each template\footnote{Elsewhere called map update statement. It is convenient to think of such a statement, particularly if it is of the {\tt foreach} form, as a template of message passing.}, similar to the grid file directory.  Every entry in the spatial index contains a set of PUT and FETCH messages.  When the template is triggered, the tuple's values are used to index into the spatial index and the corresponding messages are parametrized and sent.  The algorithm for generating the spatial index is presented in Figure \ref{alg:dispatch}.
 
 \begin{figure}
 \begin{algorithmic}[1]
