@@ -508,6 +508,28 @@ $q[\,]$ back to 4.
 \label{sec:compilation-alg}
 
 
+An M3 program consists of a set of triggers of the form
+\[
+\mbox{{\tt on <action> $R$($\vec{x}$) \{ $s_1$; $\dots$; $s_k$ \}}}
+\]
+where {\tt <action>} is either {\tt insert into} or {\tt delete from},
+$R$ is a relation name,
+and the $s_i$ are statements of the form
+\begin{equation}
+\mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ $\pm$= $t$}}
+%\label{eq:foreach}
+\end{equation}
+where $\vec{x}$ and $\vec{y}$ are distinct tuples of variables and
+$t$ is a term in which all aggregates are constraints-only (or in other
+words, functional if-statements).
+If $\vec{y}$ consists of zero variables, we omit
+{\tt foreach $\vec{y}$ do}.
+Let $m_1[\vec{z}_1], \dots, m_k[\vec{z}_k]$ be the map accesses in $t$.
+Then $m$, $m_1$, $\dots$, $m_k$ must be pairwise distinct
+and the variables in $\vec{z}_1, \dots, \vec{z}_k$ must be a nonoverlapping
+subsets of the variables in $\vec{x}, \vec{y}$.
+%
+For each relation name, there may by multiple insert and delete triggers.
 
 
 The compilation algorithm employs {\em recursive incremental view
@@ -602,18 +624,18 @@ After simplification and extraction of non-constraints-only aggregates,
 the RecMonomials of the insertion/deletion triggers\footnote{Here,
 $(\pm 1) * t$ is a shortcut for $t$ in the insertion case and
 $(-1)*t$ in the deletion case.} are
-$t'_1 = \AggSum((\pm 1) * \mbox{qC1}[n], c_1=c)$,
-$t'_2 = (\pm 1) * \mbox{qC2}[c_1, n]$, and
+$t'_1 = \AggSum((\pm 1) * \mbox{q1}[n], c_1=c)$,
+$t'_2 = (\pm 1) * \mbox{q2}[c_1, n]$, and
 $t'_3 = \AggSum(1, c_1=c)$
 where
 \begin{eqnarray*}
-\mbox{qC1}[n] &\mapsto& \AggSum(1, C(c_2, n)) \\
-\mbox{qC2}[c_1, n] &\mapsto& \AggSum(1, C(c_1,n)).
+\mbox{q1}[n] &\mapsto& \AggSum(1, C(c_2, n)) \\
+\mbox{q2}[c_1, n] &\mapsto& \AggSum(1, C(c_1,n)).
 \end{eqnarray*}
 Using SimplifyArgs, we get the three trigger statements
 \[
-q[c] \mbox{ {\tt $\pm$=} qC1}[n]; \quad\quad
-\mbox{{\tt foreach $c_1$ do}} \; q[c_1] \mbox{ {\tt $\pm$=} qC2}[c_1, n];
+q[c] \mbox{ {\tt $\pm$=} q1}[n]; \quad\quad
+\mbox{{\tt foreach $c_1$ do}} \; q[c_1] \mbox{ {\tt $\pm$=} q2}[c_1, n];
 \]
 
 \vspace{-6mm}
@@ -621,9 +643,9 @@ q[c] \mbox{ {\tt $\pm$=} qC1}[n]; \quad\quad
 \[
 q[c] \mbox{ {\tt +=} } 1.
 \]
-We further have to compile qC1 and qC2. Since
+We further have to compile q1 and q2. Since
 \[
-\dc \mbox{qC1}[n] = \dc \mbox{qC2}[c,n] = \pm 1,
+\dc \mbox{q1}[n] = \dc \mbox{q2}[c,n] = \pm 1,
 \]
 the compiled M3 program is exactly as shown in Example~\ref{ex:self-join}.
 \punto
@@ -696,6 +718,16 @@ TODO: FINISH.
 \subsection{Key-Foreign Key Join Optimization}
 
 
+\begin{figure}
+\begin{center}
+\includegraphics[width=2in]{images/q12_graph.pdf}
+\caption{Data-flow graph for the example query.
+Light and dashed edges can be optimized out, given foreign key constraints.}
+\label{fig:dataflow}
+\end{center}
+\end{figure}
+
+
 When relations are joined along a key-foreign key relationship,
 then we may assume that the transactional databases providing the updates
 enforce their consistency. In particular, this means that we cannot use
@@ -729,27 +761,20 @@ acyclic (even if there are self-joins).
 } % nop
 
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=2in]{images/q12_graph.pdf}
-\caption{Data-flow graph for the example query.
-Light and dashed edges can be optimized out, given foreign key constraints.}
-\label{fig:dataflow}
-\end{center}
-\end{figure}
-
-
 \begin{example}\em
-Consider again the query of Example~\ref{ex:TPCH-Q12},
+\label{ex:TPCH-Q12}
+Consider the following query on a TPC-H like schema,
+which counts the number of LineItems per customer id.
 \begin{verbatim}
 SELECT   C.cid, SUM(1)
 FROM     Customer C, Order O, LineItem L
 WHERE    C.cid=O.cid AND O.oid=L.oid
 GROUP BY C.cid;
 \end{verbatim}
-
+Here, cid is a key for the Customer relation and oid is a key for the
+Order relation, but oid is not a key for LineItem.
 The compilation algorithm of Section~\ref{sec:compilation-alg} yields the
-following M3 program:
+following insert triggers:
 \begin{verbatim}
 on insert into Customer(cid, nation) {
   q[cid] += qC[cid];
@@ -778,7 +803,19 @@ can be removed because {\tt qC} represents the number of line items for this
 customer, and the customer is new. The solid thin lines represent
 feasible updates to maps that have become disconnected from the query result
 map, and can be eliminated.
-The simplification yields the M3 program shown in Example~\ref{ex:TPCH-Q12}.
+The simplification yields the M3 program
+\begin{verbatim}
+on insert into Customer (cid, ...) { qO1[cid] += 1 }
+on insert into Order (oid, cid, ...) {
+  qL[cid, oid] += qO1[cid]
+}
+on insert into LineItem (oid, ...) {
+  foreach cid do q[cid] += qL[cid, oid]
+}
+\end{verbatim}
+
+The delete-triggers are precisely
+like the insert-triggers, but with {\tt +=} replaced by {\tt -=}.
 \punto
 \end{example}
 

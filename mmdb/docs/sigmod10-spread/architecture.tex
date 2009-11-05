@@ -39,33 +39,22 @@ the design of switch and DW nodes, guarantees consistency of the
 map datastructures. Finally, we discuss distributing the switch.
 
 
-\subsection{Message Passing Programs}
-
-
-Based on these subqueries, the compiler generates a series of \textit{update rules} that translate changes in the input relations to map deltas.  These update rules take the form:
-$$+R(x_1, x_2, x_3, \ldots)\ :\ Map\ K[\ldots]\ += Expression$$
-That is, when the tuple $(x_1, x_2, x_3, \ldots)$ is inserted into input relation $R$, adjust the target map $K$ by the indicated arithmetic expression over constants, variables ($x_n$), or the contents of other maps.  
- 
-It is possible for an update rule to modify an entire cross-section of a map.  Such updates are expressed via variables in the update rule not bound to one of the input parameters.  We refer to these as loop variables.  A loop variable occurs exactly twice in an update rule, once as a key in the target map, and once as an key for a map in the expression.  Thus an update rule with loop variables behaves as if it were a set of parallel updates; every update corresponds to one possible valuation of all loop variables selected from the domains of the map they index into.
-
-When a tuple is added to or removed from an input relation, the Switch composes a set of messages parametrized on the tuple's contents and dispatches them into the data warehouse as a sequence of map reads and writes.  Nodes being read from accept and process the requests and forward the responses to the appropriate writers.  We refer to this entire sequence of operations as an update.
-
-
-\begin{example}\em
-One of the rules the compiler generates for updates to the lineitems table in the example datacube is
-\begin{verbatim}
-+lineitems(oid, ...) {
-   (cid: Customer.cid) m1[cid] += m5[cid, oid]
-}
-\end{verbatim}
-
-Here, m1 represents the query output $count(*)$, while m5 represents the natural join $customers \bowtie orders$\footnote{m5 actually represents the $count(*)$ of the join, grouped by all columns.  However, because $cid$ and $oid$ are keys for each input table, the count is binary; Each entry in m5 is either 0 or 1.  It is also possible to treat m5 as a map from $(cid,oid)$ to $\{(nation, opriority, spriority)\}$. }.  Note that the variables $cid$, $nation$, $opriority$, and $spriority$ do not appear in the input tuple.  These variables are treated as loop variables; an entire cross-section of m1 will be updated by the values stored in the corresponding portion of m5.  
-
-The update corresponding to this rule is coordinated by a subset of nodes that store partitions of Map 1.  Each node coordinates updates only for those partitions it stores locally.  Simultaneously, read requests are dispatched by the switch to a subset of the nodes managing partitions of Map 5, and the responses are forwarded to the appropriate Map 1 nodes.  
-\end{example}
-
-
 \subsection{Anatomy of an Update}
+
+
+When a tuple is added to or removed from an input relation, the Switch
+composes a set of messages parametrized on the tuple's contents and
+dispatches them to the DW nodes as a sequence of map reads and writes.
+Nodes being read from accept and process the requests and forward the
+responses to the appropriate writers.  We refer to this entire sequence
+of operations as an update.
+The update corresponding to an M3 statement is coordinated by the subset of
+nodes that store partitions of the map being written to.  Each node
+coordinates updates only for those partitions it stores locally.
+Simultaneously, read requests are dispatched by the switch to a subset
+of the nodes managing partitions of the maps being read from, and the
+responses are forwarded to the appropriate nodes managing the map to be
+written to.  
 
 
 \begin{figure}
@@ -145,7 +134,7 @@ Cumulus' delta-encoding approach allows it to be agnostic to the order in which 
 
 As the clearinghouse for updates, the Switch presents an ideal point for generating a total ordering over all tuples to be inserted into the warehouse.  The Switch maintains a version number for each node, incremented on every PUT dispatched to the node hosting it.  FETCHes sent to that node are tagged with the version number of the last PUT sent to the node, while PUTs are dependent on the completion of the prior PUT.
 
-Data warehouse nodes ensure consistent evaluation of updates by buffering PUT requests received out of order, or prior to the completion of an earlier PUT request.  Similarly, FETCH requests for a particular version are buffered until the corresponding PUT request has completed, if it hasn't already done so.
+Data warehouse nodes ensure consistent evaluation of updates by buffering PUT requests received out of order, or prior to the completion of an earlier PUT request.  Similarly, FETCH requests for a particular version are buffered until the corresponding PUT request has completed, if it has not already done so.
 
 Periodically, the switch queries each node for the completion status of pending PUT requests.  For each node, it computes the lowest FETCH version number for a read associated with an incomplete PUT request.  The Switch then disseminates these version numbers throughout the warehouse with a COMMIT message.  When a node receives a COMMIT, it snapshots its maps by discarding all updates for values that were overwritten before the commit version.
 
@@ -158,27 +147,14 @@ The role of the switch is to provide a synchronization mechanism for the updates
 
 Despite the cloud computing mantra of rejecting consistency, this application requires it.  Complex locking protocols have poor scaling performance, so a simpler, lock-free protocol is required.  We achieve this goal by introducing the notion of \textit{pipeline scheduling}.  Pipeline scheduling exploits the acyclicity of compiler-generated data-flow graphs to allow nodes to correctly interleave and process update rules with only limited network overhead and processing latency.
 
-\subsubsection{Pipeline Scheduling}
 
-
+{\em Pipeline Scheduling}.
 Loose clock synchronization between nodes is assumed, and allows time to be partitioned into a sequence of numbered ticks, each lasting on the order of seconds.  When a set of updates is triggered, a switch node sends tentative put requests to all participating nodes.  These nodes respond with their current tick counter, and the switch forwards the maximum returned tick to all nodes.
 
 The updates are considered to have been posted at the maximum returned tick.  However processing is deferred for a number of ticks equal to the depth of the map being updated.  The result is a data-flow process resembling a parallelized CPU pipeline.
 
 During a given tick, all updates scheduled for processing are evaluated.  Once all updates scheduled for the tick have completed, the node responds to FETCH requests for the tick with PUSH messages.  Recall that each edge in the data flow graph represents a FETCH request for a specific update.  The difference in depth between the edge's ends is the number of ticks in advance of the PUT that the response is sent.  
 
-For example, in Figure \ref{fig:dataflow} without removing any edges, $Depth(M1) = 2$, $Depth(M2) = 1$, and $Depth(M4) = 0$.  Updates to map $M1$ scheduled for processing during tick 4 would receive data from map $M2$ during tick 3, and from map $M1$ during tick 2.
-
-%\subsection{Synchronizing Ticks}
-%Ensuring that nodes are operating on the same tick poses two challenges.  First, the nodes must 
-%
-%Clock tick synchronization requires two pieces of functionality: Asserting 
-%
-%Loose clock tick synchronization requires two stages.  
-%
-%is achieved through a cascading gossip protocol.
-%
-%
-%\subsection{Distributed Queries}
-
+For example, in Figure \ref{fig:dataflow} without removing any edges,
+$Depth(q) = 2$, $Depth(qC) = 1$, and $Depth(qO2) = 0$.  Updates to map $q$ scheduled for processing during tick 4 would receive data from map $q_C$ during tick 3, and from map $q$ during tick 2.
 
