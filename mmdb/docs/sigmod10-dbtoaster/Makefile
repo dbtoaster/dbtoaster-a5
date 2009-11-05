@@ -1,6 +1,6 @@
 PDFLATEX=/usr/texbin/pdflatex
 BIBTEX=/usr/texbin/bibtex
-TEXTARGET=sigmod10-dbtoaster
+TEXTARGET=sigmod10-serjeant
 
 all:
 	env TEXINPUTS="src:" $(PDFLATEX) -output-directory=doc/ $(TEXTARGET).tex
