@@ -1,4 +1,5 @@
 \section{Introduction}
+\label{sec:intro}
 
 Modern relational databases focus almost exclusively on providing flexible and
 extensible querying capabilities in dynamic environments, supporting both schema
@@ -50,7 +51,7 @@ simple straight-line code sequences.
 
 
 Our query compilation framework is based on the notion of composing maps
-definable in a {\em map algebra}\/ closely motivated by SQL.  We compile insert,
+definable in a {\em map calculus}\/ closely motivated by SQL.  We compile insert,
 update, and delete operations into efficient code for computing deltas of these
 maps. This corresponds to a form of tuple-at-a-time processing in a query plan,
 but can be highly optimized by modern C++ compilers to yield an efficient native
@@ -246,12 +247,12 @@ code containing straight-line functions for processing tuple inserts, deletes
 and updates along a path through the query plan. Modern C++ compilers can
 aggressively optimize this function allowing our query executor to eliminate
 significant query interpretation overhead.
-  \item We present a map algebra as the foundations for producing our
+  \item We present a map calculus as the foundations for producing our
 tuple-processing functions, where map expressions can contain parameterized
-aggregates. The map algebra can easily represent operations on in-memory
+aggregates. The map calculus can easily represent operations on in-memory
 hashtables that are directly used to implement SQL group-by aggregations in
-main-memory data\-ba\-ses. Through our map algebra, we present a compilation
-algorithm that applies rewrites to map algebra expressions, leaving them in a
+main-memory data\-ba\-ses. Through our map calculus, we present a compilation
+algorithm that applies rewrites to calculus formulae, leaving them in a
 form that contains no relational operations, allowing for straightforward
 generation of procedural code.
   \item We experimentally demonstrate that \compiler\ is able to produce query
