@@ -375,10 +375,9 @@ such that,
 given current database $\db$ and values $\vec{b}$ for the bound variables,
 \begin{eqnarray}
 \Bracks{\alpha}(\db \pm R(\vec{t}), \vec{b}) &=&
-\,\Bracks{\alpha}(\db, \vec{b}) \pm \,\Bracks{\dt \alpha}(\db, \vec{b})
+\,\Bracks{\alpha}(\db, \vec{b}) \pm \,\Bracks{\dt \alpha}(\db, \vec{b}).
 \label{eq:delta}
 \end{eqnarray}
-as follows.
 
 The delta rules for semirings are as follows. We use $+$ and $*$ for the
 addition and multiplication operations; for formulae, these are of course
@@ -690,13 +689,14 @@ on insert into Customer (cid, nation) {
 which is correct if the inserted cid and nation values are
 already in the domains of variables cid2, nation1, and nation2.
 But suppose cid is new. 
+TODO: FINISH.
 \end{example}
 
 
 \subsection{Key-Foreign Key Join Optimization}
 
 
-When relations are joined via along a key-foreign key relationship,
+When relations are joined along a key-foreign key relationship,
 then we may assume that the transactional databases providing the updates
 enforce their consistency. In particular, this means that we cannot use
 a foreign key value until it has been inserted as a key; for instance, in

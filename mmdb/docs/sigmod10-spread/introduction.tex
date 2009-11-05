@@ -9,8 +9,9 @@ improving decades-old database technology
 % the long line of systems that have followed it --
 %
 to questioning established
-architectures and creating fundamentally different, more lightweight, and
-often domain-specific systems (cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
+architectures and creating fundamentally different, more lightweight systems
+that are often domain-specific
+(cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
 Part of the impetus for this change was given by 
 potential users such as scientists and the builders of
 large-scale Web sites and services such as Google, Amazon, and Ebay,
@@ -86,7 +87,7 @@ query.}
 To the best of our knowledge, it was not known before
 that this is possible.
 
-In particular, no such constant-time parallel processing technique
+In comparison, no such constant-time parallel processing technique
 is known for nonincremental query
 evaluation: Indeed, it is unlikely to exist.\footnote{Constant-time
 bounded fan-in nonincremental
@@ -184,19 +185,20 @@ Order, we have to delete all associated lineitems.
 
 
 {\em Parallelization}.
-The syntax
+The syntax of statements
 \begin{equation}
 \mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
 \label{eq:foreach}
 \end{equation}
-is misleading in that it suggests
+is misleading in that it suggests a loop --
 that a nonconstant amount of work is needed to bring aggregate
 values up to date. Of course, polynomial amounts of work are in fact need,
 but only because in general there are many aggregate values -- in a
 map representing the result of a group-by query or in an auxiliary map --
 to be maintained. In fact, each statement of form (\ref{eq:foreach})
 writes each value $m[\vec{x}, \vec{y}]$ only once and admits
-{\em embarassing parallelism}.
+{\em embarassing parallelism}: $m$ can be partitioned across many machines
+that share the work.
 
 Assume that the storage of individual maps
 is partitioned across several machines. To execute a statement of form
