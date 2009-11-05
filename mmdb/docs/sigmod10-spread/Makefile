@@ -1,7 +1,7 @@
 all: main.pdf
-	if [ `uname` == "Darwin" ] ; then open main.pdf; fi
+#	if [ `uname` == "Darwin" ] ; then open main.pdf; fi
 
-main.pdf: main.tex main.bbl
+main.pdf: main.bbl $(wildcard *.tex)
 	pdflatex main
 	pdflatex main
 
