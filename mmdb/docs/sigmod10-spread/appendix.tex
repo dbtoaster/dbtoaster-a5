@@ -422,3 +422,76 @@ on insert into LineOrder
 \caption{An example query that constructs a warehouse for analyzing customer behavior with respect to shipping.  Given a table of customers, orders, and lineitems in those orders, the query builds a datacube over the full join of those tables.}
 \label{fig:example}  
 \end{figure}
+
+
+\section{Algorithms from the Arhitecture Section}
+
+
+\begin{figure}
+\begin{algorithmic}[1]
+\STATE $Msgs \leftarrow \emptyset$
+\FORALL{Update $U \in$ Trigger}
+	\STATE Region $Reg = \pi_{U.target.loop\_vars} \left(index(U.target\_map)\right)$
+	\FORALL{Partition $\{P | P\in U.target\_map \wedge (P \cap Reg \neq \emptyset)\}$}
+		\STATE $Reads = \emptyset$
+		\FORALL{Ref $R \in get\_map\_refs(U.expression)$}
+			\STATE $RReg \leftarrow \pi_{R.loop\_vars} P$
+			\STATE $RPart \leftarrow \{RP | RP\in R.map \wedge (RP \cap RReg \neq \emptyset)\}$
+			\STATE $Reads \leftarrow Reads \cup \{(ReadP.node, R)\}$
+		\ENDFOR
+		\STATE $Reads \leftarrow group\_by\_node(Reads)$
+		\STATE $Msgs \leftarrow put(U, P, Reads.size)$
+		\FORALL{$($Node $N, \{$Ref $R\}) \in Reads$}
+		  \STATE // PUSH results to $P.node$
+			\STATE $Msgs \leftarrow fetch(N, \{R\}, P.node)$
+		\ENDFOR
+	\ENDFOR
+\ENDFOR
+\end{algorithmic}
+\caption{The Switch's trigger dispatch algorithm}
+\label{alg:dispatch}
+\end{figure}
+
+
+\begin{figure}
+\begin{algorithmic}[1]
+\STATE Given: Update $U$
+\FORALL{Ref $R \in U.expression$}
+	\STATE $Inputs \leftarrow Inputs \cup (R, \emptyset)$
+\ENDFOR
+\FORALL{$($Ref $InR,$ Value $V) \in \cup(msg_{PUSH})$}
+	\FORALL{$(R, Table) \in Inputs$}
+		\IF{$check\_match(InR, R)$}
+			\STATE $Table \leftarrow Table \cup (InR.keys, V)$
+		\ENDIF
+	\ENDFOR
+\ENDFOR
+\FORALL{$(K,\{V\}) \in $ JOIN $ (Keys, Val) \in Inputs$}
+	\STATE $Target = bind\_vars(U.target \leftarrow Keys)$
+	\STATE $apply(Target, bind\_vars(U.expression \leftarrow \{V\}))$
+\ENDFOR
+\end{algorithmic}
+\caption{The DW Node's collation algorithm}
+\label{alg:collation}
+\end{figure}
+
+
+\section{Distributing the Switch}
+\label{sec:distswitch}
+
+
+The role of the switch is to provide a synchronization mechanism for the updates.  Specifically, the delta encoding approach used by the update rules requires that all update rules be applied to a consistent snapshot of the maps.  The current implementation of Cumulus performs this synchronization at a single node.  However, limiting the switch to only one node creates a scaling bottleneck.  
+
+Despite the cloud computing mantra of rejecting consistency, this application requires it.  Complex locking protocols have poor scaling performance, so a simpler, lock-free protocol is required.  We achieve this goal by introducing the notion of \textit{pipeline scheduling}.  Pipeline scheduling exploits the acyclicity of compiler-generated data-flow graphs to allow nodes to correctly interleave and process update rules with only limited network overhead and processing latency.
+
+
+{\em Pipeline Scheduling}.
+Loose clock synchronization between nodes is assumed, and allows time to be partitioned into a sequence of numbered ticks, each lasting on the order of seconds.  When a set of updates is triggered, a switch node sends tentative put requests to all participating nodes.  These nodes respond with their current tick counter, and the switch forwards the maximum returned tick to all nodes.
+
+The updates are considered to have been posted at the maximum returned tick.  However processing is deferred for a number of ticks equal to the depth of the map being updated.  The result is a data-flow process resembling a parallelized CPU pipeline.
+
+During a given tick, all updates scheduled for processing are evaluated.  Once all updates scheduled for the tick have completed, the node responds to FETCH requests for the tick with PUSH messages.  Recall that each edge in the data flow graph represents a FETCH request for a specific update.  The difference in depth between the edge's ends is the number of ticks in advance of the PUT that the response is sent.  
+
+For example, in Figure \ref{fig:dataflow} without removing any edges,
+$Depth(q) = 2$, $Depth(qC) = 1$, and $Depth(qO2) = 0$.  Updates to map $q$ scheduled for processing during tick 4 would receive data from map $q_C$ during tick 3, and from map $q$ during tick 2.
+
