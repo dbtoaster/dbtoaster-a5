@@ -1,5 +1,5 @@
-PDFLATEX=/usr/texbin/pdflatex
-BIBTEX=/usr/texbin/bibtex
+PDFLATEX=pdflatex
+BIBTEX=bibtex
 TEXTARGET=sigmod10-serjeant
 
 all:
