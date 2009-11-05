@@ -260,13 +260,13 @@ executors whose performance significantly dominates existing relational database
 and stream processing engines across a variety of applications.
 \end{enumerate}
 
-The remainder of this paper is as follows. Section 2 describes the compilation
-process, including \compiler's framework for representing queries using map
-datastructures and relational calculus, and the generation of source code to
-maintain these maps given an update stream. Section 3 describes extensions to the
-compiler focusing on more expressive aggregates and optimizations. Section 4
-presents an overview of the system model and infrastructure for executing
-\compiler's queries. Finally prior to discussing related work and concluding,
-Section 5 presents experimental results demonstrating the significant benefits
-of our techniques over a standard relational database, a streaming engine, as
-well as a direct compilation of the query plan as a straight-line function.
+The remainder of this paper is as follows. Section 2 describes the map calculus
+used by \compiler and the core properties of this internal representation and
+its correspondance to map data structures. Section 3 presents the compilation
+algorithm and the various transformations and simplifications it applies to
+calculus formulae. Section 4 presents an overview of the system model and
+infrastructure for executing \compiler's queries. Finally prior to discussing
+related work and concluding, Section 5 presents experimental results
+demonstrating the significant benefits of our techniques over a standard
+relational database, a streaming engine, as well as a direct compilation of the
+query plan as a straight-line function.
