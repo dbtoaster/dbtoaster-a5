@@ -11,10 +11,10 @@ improving decades-old database technology
 to questioning established
 architectures and creating fundamentally different, more lightweight, and
 often domain-specific systems (cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
-Part of the impetus for this change was given by users --
-or rather, potential user groups such as scientists and the builders of
+Part of the impetus for this change was given by 
+potential users such as scientists and the builders of
 large-scale Web sites and services such as Google, Amazon, and Ebay,
-who, despite a need for data management systems, have found current databases
+who have a need for data management systems but have found current databases
 not to scale to their needs.
 One can observe a trend to disregard database contributions
 in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on
@@ -115,7 +115,7 @@ the form
 or
 \[
 \mbox{{\tt on delete from $R$($\vec{x}$) \{
-($\vec{y}$:$D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ -= $s$
+foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ -= $s$
 \}}}
 \]
 where $R$ is a relation name,
@@ -131,23 +131,18 @@ subsets of the variables in $\vec{x}, \vec{y}$.
 Conditions $\phi$ are conjunctions of comparisons $t'' \;\theta\; t'''$,
 where $t'',t'''$ are terms without map accesses and
 $\theta \in \{ =,<,\le,\neq \}$.
-$D_{\vec{y}}$ defines the domain of variable tuples $\vec{y}$.
-If $\vec{y}$ consists of zero variables, we omit $(\vec{y}: D_{\vec{y}})$.
+If $\vec{y}$ consists of zero variables, we omit
+{\tt foreach $\vec{y}$ do}.
 For each relation name, there may by multiple insert and delete triggers.
 
-
-Map values are initially zero. 
-A simple sequential semantics can be assigned to M3 programs by turning
-expressions
-$
-\mbox{{\tt ($\vec{y}$:$D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
-$
-into
-\[
-\mbox{{\tt foreach $\vec{y}$ in $D_{\vec{y}}$ do
-$m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
-\]
-and reading the modified programs as straightforward pseudocode.
+M3 programs can be read as straightforward pseudocode.
+There are subtle issues to be discussed later about the domains of 
+variable tuples
+to be iterated over by foreach loops. Let us for now assume that
+{\tt foreach $\vec{x}$ do $(\dots)$} iterates over all distinct tuples of
+values currently in the
+database, and that map values $m[\vec{x}]$ for $\vec{x}$ containing newly
+inserted values are initially zero.
 
 
 \begin{example}\em
@@ -169,7 +164,7 @@ on insert into Order (oid, cid, ...) {
   qL[cid, oid] += qO1[cid]
 }
 on insert into LineItem (oid, ...) {
-  (cid: Customer.cid) q[cid] += qL[cid, oid]
+  foreach cid do q[cid] += qL[cid, oid]
 }
 \end{verbatim}
 
@@ -178,11 +173,8 @@ like the insert-triggers, but with {\tt +=} replaced by {\tt -=}.
 Thus, to save space, the deletion triggers are omitted.
 
 Let us ignore parallelization first.
-Replace the code of the final trigger by
-{\tt foreach cid in Customer.cid do q[cid] += qL[cid, oid]}.
-Customer.cid are the {\em distinct} values in column cid of relation Customer.
 It is not hard to see that this trigger program correct maintains the
-query result, for each {\tt cid}, as {\tt q[cid]}.
+query result, for each distinct {\tt cid} in Customer.cid, as {\tt q[cid]}.
 (The maps {\tt qO1} and {\tt qL} are auxiliary.)
 We assume that
 there are no cascading deletes and, for instance, before we can delete an
@@ -192,20 +184,23 @@ Order, we have to delete all associated lineitems.
 
 
 {\em Parallelization}.
-We could have used the syntax {\tt foreach $\vec{y}$ in $D_{\vec{y}}$ do
-$m[\vec{x}, \vec{y}]$ $\pm$= $s$} but we chose not to because it suggests,
-incorrectly, that a nonconstant amount of work is needed to bring aggregate
+The syntax
+\begin{equation}
+\mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ $\pm$= $s$}}
+\label{eq:foreach}
+\end{equation}
+is misleading in that it suggests
+that a nonconstant amount of work is needed to bring aggregate
 values up to date. Of course, polynomial amounts of work are in fact need,
 but only because in general there are many aggregate values -- in a
 map representing the result of a group-by query or in an auxiliary map --
-to be maintained. In fact, each statement
-{\tt ($\vec{y}: D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}
-writes each value $m[\vec{x}, \vec{y}]$ only once: This work admits
+to be maintained. In fact, each statement of form (\ref{eq:foreach})
+writes each value $m[\vec{x}, \vec{y}]$ only once and admits
 {\em embarassing parallelism}.
 
 Assume that the storage of individual maps
-is partitioned across several machines. To execute a statement
-{\tt ($\vec{y}: D_{\vec{y}}$) $m[\vec{x}, \vec{y}]$ $\pm$= $s$}
+is partitioned across several machines. To execute a statement of form
+(\ref{eq:foreach})
 in a trigger invocation with arguments $\vec{x} = \vec{a}$,
 where $s$ uses map lookups $m_i[\vec{x}_i, \vec{y}_i]$,
 each node storing a value $m_i[\vec{a}_i, \vec{y}_i] = v$,
@@ -241,7 +236,7 @@ on insert into Part (partkey, partcat) {
   mDL[partkey, partcat] += 1
 }
 on insert into LineOrder (datekey, partkey, revenue) {
-  (partcat: Part.partcat, year: Date.year)
+  foreach (partcat, year) do
   m[partcat, year] += revenue
                     * mDL[partkey, partcat]
                     * mPL[datekey, year]
@@ -285,26 +280,21 @@ FROM     Customer C1, Supplier C2
 WHERE    C1.nation = C2.nation
 GROUP BY C1.cid;
 \end{verbatim}
-The compiler produces the following triggers.
+The compiler produces the following on-insert trigger:
 \begin{verbatim}
 on insert into Customer (cid, nation) {
   q[cid] += qC1[nation];
-  (cid2: Customer.cid) q[cid2] += qC2[cid2, nation];
+  foreach cid2 do q[cid2] += qC2[cid2, nation];
   q[cid] += 1;
   qC1[nation] += 1;
   qC2[cid, nation] += 1
 }
-on delete from Customer (cid, nation) {
-  q[cid] -= qC1[nation];
-  (cid2: Customer.cid) q[cid2] -= qC2[cid2, nation];
-  q[cid] += 1;
-  qC1[nation] -= 1;
-  qC2[cid, nation] -= 1
-}
 \end{verbatim}
-We will establish later that this M3 program is indeed correct
-(and that ``{\tt +=}'' in the third statement of the on-delete trigger
-is not a typo).
+The on-delete trigger is just like the on-insert trigger with {\tt +=}
+changed to {\tt -=} everywhere other than in the third statement
+({\tt q[cid] += 1}), which remains unchanged.
+We will establish later that this M3 program is indeed correct.
+
 For now, we challenge the reader to find a 
 fundamentally different (ideally, simpler) way to
 perform the incremental maintenance of {\tt q}
@@ -323,8 +313,8 @@ the M3 programs shown.
 
 
 The fragment of SQL queries that we can compile to M3 essentially comprises
-arithmetic expressions over SUM-agg\-regation queries with group-by.
-This allows us to define COUNT and AVG queries.
+SUM-agg\-regation queries with group-by.
+COUNT and AVG queries can be defined by arithmetic expressions over these.
 We exclude MIN and MAX queries, aggregation
 nested into FROM or WHERE clauses, the DISTINCT and HAVING keywords,
 outerjoins,

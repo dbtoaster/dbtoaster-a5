@@ -43,9 +43,7 @@ and builtin functions $f$) is
 An aggregate term $\AggSum(t, \phi)$
 is {\em constraints-only} if $\phi$ does not
 contain relational atoms $R(\vec{x})$ (but atomic constraints $s \theta t$).
-Given just the bound variables, all variables
-occurring in $\phi$ are safe and we can determine the truth value of
-$\phi$. We can also think of such an aggregate term as a (functional)
+We can also think of such an aggregate term as a (functional)
 if-statement (if $\phi$ then t else 0)
 or, using C syntax, ($\phi$ ? $t$ : 0).
 
@@ -134,21 +132,15 @@ straightforward.
 %
 A SQL aggregate query
 \begin{verbatim}
-SELECT groupcols, g(SUM(t1), ..., SUM(tk))
+SELECT groupcols, SUM(t)
 FROM   R1 r11, R1 r12, ..., R2 r21, ...
 WHERE  cond
 GROUP BY groupcols
 \end{verbatim}
-where {\tt g(\dots)} denotes an arithmetic expression
-over its arguments (i.e., {\tt AVG(t)} can be encoded as {\tt SUM(t)/SUM(1)})
 is expressed in the calculus as
 \[
-g(\AggSum(t1, \phi), \dots, \AggSum(tk, \phi))
-\]
-where
-\[
-\phi = R_1(\vec{x}_{11}) \land R_1(\vec{x}_{12}) \land \dots
-\land R_2(\vec{x}_{21}) \land \dots \land \mbox{cond}
+\AggSum(t, R_1(\vec{x}_{11}) \land R_1(\vec{x}_{12}) \land \dots
+\land R_2(\vec{x}_{21}) \land \dots \land \mbox{cond})
 \]
 with {\em bound variables} groupcols.
 
@@ -207,7 +199,7 @@ of a term.
 \def\vars{\mbox{vars}}
 
 {\bf Factorization of monomial aggregate terms}.
-For expression $e$ either a formula or a term, let $\vars(e)$
+For $e$ either a formula or a term, let $\vars(e)$
 be the set of all variables occurring in $e$.
 Factorization employs the equivalence
 \[
@@ -383,7 +375,7 @@ such that,
 given current database $\db$ and values $\vec{b}$ for the bound variables,
 \begin{eqnarray}
 \Bracks{\alpha}(\db \pm R(\vec{t}), \vec{b}) &=&
-\,\Bracks{\alpha}(\db) \pm \,\Bracks{\dt \alpha}(\db, \vec{b})
+\,\Bracks{\alpha}(\db, \vec{b}) \pm \,\Bracks{\dt \alpha}(\db, \vec{b})
 \label{eq:delta}
 \end{eqnarray}
 as follows.
@@ -407,7 +399,7 @@ For atomic formulae and terms,
    &+ & \AggSum(\quad\quad\quad\; \,t,  & (\dt \phi)) \\
    &+ & \AggSum((\dt t), & (\dt \phi))
 \\[1ex]
-\dt R(x_1, \dots, x_k) &:=& \pm \bigwedge_{i=1}^k (x_i = t_i)
+\dt R(x_1, \dots, x_k) &:=& \big( \bigwedge_{i=1}^k (x_i = t_i) \big)^\pm
 \end{array}\]
 and, for $S$ a relation different from $R$,
 \[
@@ -417,6 +409,20 @@ For all other atomic terms and formulae, $\dt$ is the zero-element
 of their respective semirings (that is, $0$ and $\textit{false}$,
 respectively.)
 
+Here $(\cdot)^\pm$ is an annotation that we do not give a formal semantics
+to for space limitations, but explain how to eliminate. $\phi^+$ is just
+$\phi$ and $\phi^-$ intuitively defines a relation of ``negative'' tuples.
+We define $\phi^- \land \psi = \phi \land \psi^- = (\phi \land \psi)^-$,
+$\phi^- \land \psi^- = \phi \land \psi$, and
+$\AggSum(t, \phi^-) = -\AggSum(t, \phi)$. To
+push $(.)^-$ up beyond $\lor$, we first compute
+a DNF, push $\lor$ out of the formula across $\AggSum$, and then apply
+the above rules to the remaining monomial formulae.
+For example,
+$\AggSum(t, \phi \land (\psi \lor \pi^-)) =$
+$\AggSum(t, \phi \land \psi) + \AggSum(t, \phi \land \pi^-) =$
+$\AggSum(t, \phi \land \psi) - \AggSum(t, \phi \land \pi)$.
+
 
 \begin{proposition}
 \label{prop:delta-correct}
@@ -425,13 +431,6 @@ This definition of $\dt$ satisfies Equation \ref{eq:delta}.
 
 
 \def\duv{\Delta_{\pm R(u,v)}}
-
-
-\begin{todo}
-Say how negated calculus is handled in delta processing.
-\end{todo}
-
-
 \def\dc{\Delta_{\pm C(c,n)}}
 
 
@@ -479,18 +478,17 @@ Simplifying this with bound variable $c_1$ yields
 Now suppose $C$ currently stores tuples (Joe, USA) and (Bill, USA).
 Then $q$[Joe] = $q$[Bill]=2 (and $q$[Dan] would be 0 by default).
 Now insert (Dan, USA).
-Let $q'[c_1] = \Delta_{+C(\mathrm{Dan}, \mathrm{USA})} q$.
-Then $q'$[Dan] = 2 + 0 + 1 = 3 and
-$q'$[Joe] = $q$[Bill] = 0 + 1 + 0, thus, after insertion,
-$q[\cdot] = 3$ for all three customers.
-On deletion of Bill (let
-$q''[c_1] = \Delta_{-C(\mathrm{Bill}, \mathrm{USA})} q$) we get
-$q''$[Dan] = $q''$[Joe] = 0 - 1 + 0 = -1 and
-$q''$[Bill] = -3 - 1 + 1 = -3. Thus, after deletion,
-$q$[Dan] = $q$[Joe] = 2 (and $q$[Bill] = 0, which is relevant because we might
-later insert a Bill tuple again).
+The changes to the query map are
+\begin{eqnarray*}
+q[\mbox{Joe}]  &\mbox{+=}& 0 + 1 + 0 = 3 \\
+q[\mbox{Bill}] &\mbox{+=}& 0 + 1 + 0 = 3 \\
+q[\mbox{Dan}]  &\mbox{+=}& 2 + 0 + 1 = 3.
+\end{eqnarray*}
+On deletion of Bill we get
+$q$[Dan] := $q$[Joe] += 0 - 1 + 0 = 2 and
+$q$[Bill] += -3 - 1 + 1 = 0.
 
-Let us for a moment consider the alternative query that does not group by
+Let us for a moment consider the same query except that we do not group by
 $c_1$: That is, the aggregate term for the query is the same, and the delta does not change, but $c_1$ now is not bound. Then simplifying $\dc q$ yields
 \[
 \pm \AggSum(1, C(c_2, n)) \pm \AggSum(1, C(c_1,n)) + 1.
@@ -500,7 +498,7 @@ Then $q[\,] = 4$. We add (Dan, USA) and
 $\Delta_{+C(\mathrm{Dan}, \mathrm{USA})} q = 2 + 2 + 1 = 5$, changing
 $q[\,]$ to 9. We remove Bill and get
 $\Delta_{-C(\mathrm{Bill}, \mathrm{USA})} q = -3 - 3 + 1 = -5$, changing
-$q[\,]$ back to 4 again.
+$q[\,]$ back to 4.
 \punto
 \end{example}
 
@@ -514,8 +512,8 @@ $q[\,]$ back to 4 again.
 
 
 The compilation algorithm employs {\em recursive incremental view
-maintenance}. The algorithm Compile($n$, $\vec{b}$, $t$) take a name $n$ that
-represents the query result, a tuple of bound variables $\vec{b}$ (the map
+maintenance}. The algorithm Compile($n$, $\vec{b}$, $t$) takes a name $n$ that
+represents the query result map, a tuple of bound variables $\vec{b}$ (the map
 arguments), and a term $t$ representing the query to be compiled.
 For each trigger to be created (that is, for each relation name $R$ of
 the schema, there is an insert and a delete trigger),
@@ -538,10 +536,10 @@ auxiliary maps as well.
 The Compile function is given in Figure~\ref{fig:compilation-algo}. 
 SimplifyArgs is a function that takes bound variables that contain
 $\vec{b}$ and a statement of the form
-($\vec{x}\vec{y}: D_{\vec{x}\vec{y}}$) $q[\vec{x}\vec{y}]$ {\tt +=}
+{\tt foreach $\vec{x}\vec{y}$ do $q[\vec{x}\vec{y}]$ +=}
 $\AggSum(t, \vec{x}=\vec{b})$
 and simplifies it to the equivalent statement
-($\vec{y}: D_{\vec{y}}$) $q[\vec{b}\vec{y}]$ {\tt +=} $t$.
+{\tt foreach $\vec{y}$ do $q[\vec{b}\vec{y}]$ +=} $t$.
 Note: We lift ifs to be able to apply this optimization.
 
 
@@ -556,22 +554,20 @@ outputs an M3 program \\
 {\bf for each} relation $R$ in the schema,
                pm in $\{+,-\}$ {\bf do} \\
 ~~\=
-  trigger\_args = \=turn columns names of $R$ into list \\
+  trigger\_args =: \=turn columns names of $R$ into list \\
 \>               \>of new argument variable names; \\
 \>{\bf for each} $t_i$ in
         RecMonomials($\Delta_{pm R(\mathrm{trigger\_args})} t$) {\bf do} \\
-\>~~\=bound\_vars = trigger\_args $\cup$ map\_args; \\
-\>\>($t'_i$, $\Theta_i$) = ExtractAggregates( \\
+\>~~\=bound\_vars =: trigger\_args $\cup$ map\_args; \\
+\>\>($t'_i$, $\Theta_i$) := ExtractAggregates( \\
 \>\>~~      Simplify($t'$, bound\_vars), bound\_vars); \\
-\>\>s = SimplifyArgs(((map\_args: $D_{\mathrm{map\_args}}$) \\
-\>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args); \\
-\\
+\>\>s := SimplifyArgs({\tt foreach} map\_args {\tt do} \\
+\>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args); \\[1ex]
 \>\>{\bf if} pm=`+' {\bf then} \\
-\>\>~~{\bf output} on insert into $R$(trigger\_args) $\{s\}$; \\
+\>\>~~{\bf output} {\tt on insert into} $R$(trigger\_args) $\{s\}$; \\
 \>\>{\bf else} \\
-\>\>~~{\bf output} on delete from $R$(trigger\_args) $\{s\}$; \\
-\\
-\>$\Theta$ = eliminate\_duplicates($\bigcup_i \Theta_i$); \\
+\>\>~~{\bf output} {\tt on delete from} $R$(trigger\_args) $\{s\}$; \\[1ex]
+\>$\Theta$ := $\bigcup_i \Theta_i$; /* eliminates duplicates */ \\
 \>{\bf for each} $(m[\vec{x}] \mapsto t')$ in $\Theta$ {\bf do}
                  Compile($m, \vec{x}, t'$); \\
 {\bf end}
@@ -587,6 +583,15 @@ outputs an M3 program \\
 Note that the use of Simplify, SimplifyArgs and duplicate elimination
 is not necessary for correctness of the compiled M3 programs, but is important
 to create small and efficient programs.
+
+
+\begin{theorem}
+Given a query term $t$ and bound variables $\vec{x}$ by which results
+are to be grouped,
+the output of Compile($m$, $\vec{x}$, $t$) is an M3 program that
+correctly maintains the query in map $m[\vec{x}]$ under inserts and deletes.
+\end{theorem}
+
 
 
 \begin{example}\em
@@ -608,8 +613,13 @@ where
 \end{eqnarray*}
 Using SimplifyArgs, we get the three trigger statements
 \[
-q[c] \mbox{ {\tt $\pm$=} qC1}[n]; \quad\;
-(c_1: D_{c_1}) \; q[c_1] \mbox{ {\tt $\pm$=} qC2}[c_1, n]; \quad\;
+q[c] \mbox{ {\tt $\pm$=} qC1}[n]; \quad\quad
+\mbox{{\tt foreach $c_1$ do}} \; q[c_1] \mbox{ {\tt $\pm$=} qC2}[c_1, n];
+\]
+
+\vspace{-6mm}
+
+\[
 q[c] \mbox{ {\tt +=} } 1.
 \]
 We further have to compile qC1 and qC2. Since
@@ -632,19 +642,98 @@ the exact role of safe and bound variables as used in this section.
 We have made these mistakes in the past, resulting in 
 a very difficult, and by about an order of magnitude larger, piece of code.
 It may not be easy to see, but we strongly believe that
-our choices here are not theoretical pedantism,
-but key to allowing for exact yet concise presentation
+our choices here are not pedantism,
+but key to allowing for concise presentation
 and painless implementation.
 
 
-\subsection{Keys and Domains}
+\subsection{Domains}
+
+
+We have addressed domains of variables to loop over in foreach statements
+in a handwavy fashion in the introduction. Let us now be precise about this
+issue.
+We can assign a domain $R.A$, where $R$ is a relation name and $A$ is
+a column name to each variable.
+For instance, given atomic formula Customer$(x,y)$, where
+the first column of Customer is cid, variable $x$ has domain Customer.cid.
+This annotation or typing of variables can be propagated bottom-up.
+Each variable being looped over can be typed in this way.
+
+The M3 programs that our compiler creates are correct if we assume
+an a priori given domain of each variable
+that we will never have to add to later (while inserts are processed).
+A {\tt foreach $\vec{x}$} statement loops over all the distinct tuples
+$\vec{x}$ that we can construct from these variable domains.
+
+Unfortunately, it is not a realistic assumption that these variable domains
+are known in advance. For practical reasons, we have to start with empty
+domains, to which we add when tuples are inserted. However, this means that,
+in general, we need to do further work to create initial map values for new
+domain elements.
+
+
+\begin{example}\em
+We modify the query of Example~\ref{ex:self-join}. We now ask, for each cid,
+for the number of customers from {\em different}\/ nations.
+The insert trigger for this query is
+\begin{verbatim}
+on insert into Customer (cid, nation) {
+  q[cid] += q1[nation];
+  foreach cid2 do q[cid2] += q2[cid2, nation];
+  foreach nation1 do q1[nation1] +=
+    if nation <> nation1 then 1 else 0;
+  foreach nation2 do q2[cid, nation2] +=
+    if nation <> nation2 then 1 else 0
+}
+\end{verbatim}
+which is correct if the inserted cid and nation values are
+already in the domains of variables cid2, nation1, and nation2.
+But suppose cid is new. 
+\end{example}
+
+
+\subsection{Key-Foreign Key Join Optimization}
+
+
+When relations are joined via along a key-foreign key relationship,
+then we may assume that the transactional databases providing the updates
+enforce their consistency. In particular, this means that we cannot use
+a foreign key value until it has been inserted as a key; for instance, in
+TPC-H, we cannot insert an order with a customer id for which there is
+no customer; we first have to insert a suitable customer tuple.
+Conversely, we cannot delete a customer until all its dependent orders
+have been deleted.\footnote{Suitable code to implement ON DELETE CASCADE
+semantics in M3 can be generated by compilation as well, but this is not
+covered here because of lack of space.}
+Because of lack of space, we only give an illustrative example which
+is suggestive of the general algorithm.
+
+
+\nop{
+Thus, given key-foreign key joins, certain M3 statements that our compilation
+algorithm produces are superfluous.
+Consider a statement
+{\tt foreach $\vec{y}$ do $m_2[\vec{x}\vec{y}]$ $\pm$= $t$}
+in an on-insert trigger for relation $R$, .
+
+These can be eliminated -- as an
+optimization -- by analyzing the data flow graph of the program.
+The nodes of this graph are the
+map names of the M3 program and where there is an edge labeled $R$ from
+node $m_1$ to $m_2$ if there is an M3 statement
+{\tt foreach $\cdot$ do $m_2[\cdot]$ $\pm$= $t$} where
+$m_1$ appears in $t$ in an insert or delete trigger for relation $R$.
+Note that our compilation approach guarantees that this graph is always
+acyclic (even if there are self-joins).
+} % nop
 
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=2.5in]{images/q12_graph.pdf}
-\caption{Data-flow graph for the example query.  Light and dashed edges can be optimized out, given foreign key constraints.
-TODO: CHANGE MAP NAMES TO BE CONSISTENT WITH EXAMPLE; ROTATE FIGURE.}
+\includegraphics[width=2in]{images/q12_graph.pdf}
+\caption{Data-flow graph for the example query.
+Light and dashed edges can be optimized out, given foreign key constraints.}
 \label{fig:dataflow}
 \end{center}
 \end{figure}
@@ -679,12 +768,18 @@ on insert into LineItem(oid, ...) {
   qO2[oid] += 1
 }
 \end{verbatim}
-The simplification with foreign key constraints yields exactly the
-M3 program of Example~\ref{ex:TPCH-Q12}.
+
+Consider the data flow graph for this program, which is shown in
+Figure~\ref{fig:dataflow} and which illustrates the dependencies between
+maps through updates to certain relations (the edge labels). All M3 statements
+other than those contributing only bold edges can be removed. For example,
+the statement {\tt q[cid] += qC[cid]} in {\tt on insert into Customer}
+can be removed because {\tt qC} represents the number of line items for this
+customer, and the customer is new. The solid thin lines represent
+feasible updates to maps that have become disconnected from the query result
+map, and can be eliminated.
+The simplification yields the M3 program shown in Example~\ref{ex:TPCH-Q12}.
 \punto
 \end{example}
-
-
-
 
 
