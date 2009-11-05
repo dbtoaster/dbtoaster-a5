@@ -1,0 +1,28 @@
+\section{Compiler extensions}
+\subsection{Min/Max aggregates}
+\begin{itemize}
+\item Aggregate rules for min/max queries.
+\item Describe the need to maintain relational state for handling delete min/max.
+\item Describe the issues with nesting min/max aggregates with existing map
+  algebra terms.
+\end{itemize}
+
+\subsection{Monotonic nested queries}
+\begin{itemize}
+\item Describe potential to keep only a limited subset of variables defined from
+  outer queries, which in the extreme case of monotonic queries simplifies down
+  to a single value.
+\item Describe data structures enabling initial values to be computed from
+  the nested query result of a neighbouring outer variable value.
+\end{itemize}
+
+\subsection{Compiling multiple queries}
+\begin{itemize}
+\item Currently support multiple aggregates specified on top of the same
+  relational statement, which may subsequently share maps if there are any
+  equivalent map algebra expressions found common during compilation.
+\item We partition queries with common (but not an equivalent set of) input
+  relations into compilation units, enabling handler functions to be created for
+  each compilation unit. This prevents monolithic event handlers, thus our
+  compiled database engine may call multiple handlers for a single update stream.
+\end{itemize}
