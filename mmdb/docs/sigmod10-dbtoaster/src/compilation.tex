@@ -8,7 +8,7 @@ overview of the compilation process, including these two core phases, as well as
 precompilation steps and additional methods needed to recursively apply the core
 compilation described here.
 
-\begin{figure*}
+\begin{figure*}[htbp]
 \begin{center}
 \begin{tabular}{|l|c|l|}
 \hline
@@ -86,7 +86,7 @@ with a single tuple, and propagated the bound variables $a,b$ throughout the
 term.  We now describe the transformations performed with deltas on both map
 terms and calculus formulae in more detail.
 
-\begin{figure}
+\begin{figure}[htbp]
 \begin{align*}
 \Delta_{+R(\vec{r})} f \oplus g & := 
     \Delta_{+R(\vec{r})} f \oplus \Delta_{+R(\vec{r})} g \\
@@ -216,7 +216,7 @@ variables into the aggregate argument term, essentially a sideways propagation
 within sibling parse trees present at aggregates.
 
 \newcommand{\indentcode}{\hspace{5mm}}
-\begin{algorithm}
+\begin{algorithm}[htbp]
 \caption{compile($db\_schema, map, params, term$)}
 \label{alg:compile}
 \begin{algorithmic}[1]
