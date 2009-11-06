@@ -729,9 +729,10 @@ do this if all the joins in the query are equijoins.
 
 \begin{theorem}
 Given a $\AggSum$ term $q$ in which, for all atomic constraints
-$t\, \theta\, t'$, $\theta$ is equality and $t$ and $t'$ are variables.
+$t\, \theta\, t'$, if both $t$ and $t'$ contain variables, then
+$\theta$ is equality.
 Then, whenever a map of the M3 program created from $q$ by Compile
-is undefined, it's value is zero.
+is undefined, its value is zero.
 \end{theorem}
 
 That is, we can always initialize undefined values that we encounter while
@@ -796,6 +797,9 @@ TODO: FINISH.
 \begin{figure}
 \begin{center}
 \includegraphics[width=2.5in]{images/q12_graph.pdf}
+
+\vspace{-4mm}
+
 \caption{Data-flow graph for the example query.
 Light and dashed edges can be eliminated.}
 \label{fig:dataflow}
@@ -879,13 +883,12 @@ feasible updates to maps that have become disconnected from the query result
 map, and can be eliminated.
 The simplification yields the M3 program
 \begin{verbatim}
-on insert into Customer (cid, ...) { qO1[cid] += 1 }
-on insert into Order (oid, cid, ...) {
-  qL[cid, oid] += qO1[cid]
-}
-on insert into LineItem (oid, ...) {
-  foreach cid do q[cid] += qL[cid, oid]
-}
+on insert into Customer (cid, ...)
+  { qO1[cid] += 1 }
+on insert into Order (oid, cid, ...)
+  { qL[cid, oid] += qO1[cid] }
+on insert into LineItem (oid, ...)
+  { foreach cid do q[cid] += qL[cid, oid] }
 \end{verbatim}
 
 The delete-triggers are precisely
