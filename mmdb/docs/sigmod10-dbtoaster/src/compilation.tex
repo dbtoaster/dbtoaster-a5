@@ -3,10 +3,7 @@ In this section we describe the core compilation mechanisms applied to map and
 relational polynomials. Our compilation algorithm proceeds by recursively
 applying a basic compilation step. The basic compilation step applies in two
 phases, first deriving a \textit{delta} query to an input query, followed by
-simplification of the delta query. Figure~\ref{fig:methodsummary} presents an
-overview of the compilation process, including these two core phases, as well as
-precompilation steps and additional methods needed to recursively apply the core
-compilation described here.
+simplification of the delta query. 
 
 \begin{figure*}[htbp]
 \begin{center}
@@ -58,6 +55,7 @@ bound variable propagation & & out:
 \\
 \hline
 \end{tabular}
+\vspace{-3mm}
 \caption{Summary of transformations performed during recursive compilation, to
 show the input and output of each transformation. For a complete walkthrough see
 the VWAP compilation example.}
@@ -86,68 +84,12 @@ with a single tuple, and propagated the bound variables $a,b$ throughout the
 term.  We now describe the transformations performed with deltas on both map
 terms and calculus formulae in more detail.
 
-\begin{figure}[htbp]
-\begin{align*}
-\Delta_{+R(\vec{r})} f \oplus g & := 
-    \Delta_{+R(\vec{r})} f \oplus \Delta_{+R(\vec{r})} g \\
-\Delta_{+R(\vec{r})} f \otimes g & := 
-(\Delta_{+R(\vec{r})}f)\otimes g \oplus
-(f \oplus \Delta_{+R(\vec{r})} f)\otimes(\Delta_{+R(\vec{r})}g)\\
-\Delta_{+R(\vec{r})}(c) & := 0 \\
-\Delta_{+R(\vec{r})}(x) & := 0 \\
-\Delta_{+R(\vec{r})} \algsum_{f}(Q) & :=
-\begin{cases}
-(\algif\; \phi_{i,new} \; \algthen\; \Delta_{+R(\vec{r})}\; f \algelse\; 0)\\
-\;\; + (\algif\;
-  \left( \phi_{i,new} \wedge \neg \phi_{i,old } \right)
-\; \algthen\; f \;\algelse\; 0)\\
-\;\; + (\algif\;
-\left( \neg \phi_{i,new} \wedge \phi_{i,old} \right) \;
-\algthen\; -f \;\algelse\; 0)
-\\
-\mbox{where }
-  \phi_{i,new} = \\
-  \qquad
-    \bigwedge_i
-    \phi_i(\theta_i, g_i+\Delta_{+R(\vec{r})}g_i, h_i + \Delta_{+R(\vec{r})}h_i)
-\\
-\mbox{and }
-  \phi_{i,old} = \bigwedge_i \phi_i(\theta_i, g_i, h_i)
-\\
-\ldots \mbox{ when $Q = \bigwedge_i \phi_i(\theta_i,g_i,h_i)$}
-\\
-\\
-\algsum_{\Delta_{R(\vec{r})}f}(Q) + \algsum_{f}(\Delta_{+R(\vec{r})} Q)\\
-\; \; + \algsum_{\Delta_{+R(\vec{r})}f}(\Delta_{+R(\vec{r})} Q)\\
-\ldots \mbox{ otherwise}
-\end{cases}
-\\
-\Delta_{+R(\vec{r})}(S(\vec{A}))         & :=
-\begin{cases}
-\{\tuple{\vec{r}}\} & \mbox{ if $R = S$}\\
-\emptyset           & \mbox{ otherwise}
-\end{cases}
-\\
-\Delta_{+R(\vec{r})}(\phi(\theta, f, g)) & :=
-\begin{cases}
-\emptyset & \mbox{ $\Delta_{+R(\vec{r})} f = 0, \Delta_{+R(\vec{r})} g = 0$}\\
-\bot      & \mbox{ otherwise}
-\end{cases}
-\\
-\Delta_{+R(\vec{r})} \emptyset           & := \emptyset \\
-\Delta_{+R(\vec{r})} \{\tuple{\vec{r}}\} & := \emptyset \\
-\end{align*}
-\caption{Delta transformations of semirings, map terms and relational calculus
-  formulae.}
-\label{fig:deltarules}
-\end{figure}
 
 Figure~\ref{fig:deltarules} presents delta transformations for a semiring, which
 applies to both semirings of map terms and relational calculus formulae. The
 figure also describes deltas of basic map terms, which is straightforward for
 constants and variables, while for sum aggregates, we sum the combinations of
 how we may apply deltas to the aggregate argument and relational part.
-
 The interesting case is for a constraint-only aggregate, whose value can
 arbitrarly change despite conjunctive monomials. This is based on the insertion
 and removal of tuples in the result set, when considering a constraint-only
@@ -159,7 +101,6 @@ ii) rows whose new value satisfy the condition, but did not previously, must
   incremented by the delta query value in the previous case);
 iii) rows which previously satisfied the condition but do not any more, must be
   removed from the result set, according to the old value they contribute.
-\todo{Give simple example to illustrate this transformation only.}
 
 Finally, we come to deltas for relational calculus formulae. The main point to
 note is that the delta for a constraint is only defined for non-nested
@@ -253,28 +194,25 @@ Together, the delta query derivation and aggregate simplification form one step
 of our recursive compilation algorithm that is applied for a delta to a single
 relation. 
 Algorithm \ref{alg:compile} shows our algorithm for recursively compiling deltas
-to produce source code. This is a simplified algorithm that does not present our
-handling of nested queries. We return to this in the following section.  Our
-recursive compilation algorithm works by starting with a flattened query,
-compiling deltas for all relations. This results in a set of simplified delta
-map terms which we can evaluate to compute the query result. Note that each
-delta map term contains one fewer input relation, replaced with bound
-variables. We begin a recursive compilation step by extracting any remaining
-aggregates in our delta map terms, and using these as the new starting point for
-compilation. Thus by compiling again for all relations, we obtain deltas of
-delta map terms, and repeat the process until the delta map terms produced
-contain no relations, rather, all relations' variables have been replaced by
-bound variables from deltas.
+to produce source code. Our recursive compilation algorithm works by starting
+with a flattened query, compiling deltas for all relations. This results in a
+set of simplified delta map terms which we can evaluate to compute the query
+result. Note that each delta map term contains one fewer input relation,
+replaced with bound variables. We begin a recursive compilation step by
+extracting any remaining aggregates in our delta map terms, and using these as
+the new starting point for compilation. Thus by compiling again for all
+relations, we obtain deltas of delta map terms, and repeat the process until the
+delta map terms produced contain no relations, rather, all relations' variables
+have been replaced by bound variables from deltas.
 
-There are two points to note regarding aggregate extraction prior to compiling
-recursively. We track aggregates remaining inside delta map terms in a list of
-declared maps, indicating that we will physically materialize a datastructure to
-maintain the result of the aggregate. We perform a simple deduplication to avoid
-creating redundant maps, since different recursive compilation paths may produce
-identical maps. Finally, aggregate extraction determines map keys or
-\textit{parameters}. These are the delta bound variables from the current
-compilation step, that will not be available when considering a delta to a
-different input relation. For example consider the query
+Regarding aggregate extraction, we track aggregates remaining inside delta map
+terms in a list of declared maps, indicating that we will physically materialize
+a datastructure to maintain the result of the aggregate. We perform a simple
+deduplication to avoid creating redundant maps, since different recursive
+compilation paths may produce identical maps. Finally, aggregate extraction
+determines map keys or \textit{parameters}. These are the delta bound variables
+from the current compilation step, that will not be available when considering a
+delta to a different input relation. For example consider the query
 $\algsum_{A*D}(R(A,B) \wedge S(B,C) \wedge T(C,D)$, and its delta map term
 following compilation for $\Delta_{+R(a,b)}$:
 
@@ -286,8 +224,7 @@ a parameter to the map, and no longer bound when considering a different
 delta. Thus we replace $b$ with a fresh variable, and evaluate for each value of
 $b$ (i.e. the domain of variable as defined by the map key domain). For the map
 $m[b]$ above, the new term is:
-
-\[\algsum_{D}(S(B,C) \wedge T(C,D) \wedge \phi(=,B',B)\]
+$\algsum_{D}(S(B,C) \wedge T(C,D) \wedge \phi(=,B',B)$
 
 \noindent~However often such parameters are unified given constraints in the map
 term (as would happen with $\Delta_{+S(b,c)} m[b]$). Note that until we consider
@@ -297,10 +234,17 @@ contraction of map key domains in the nested query case, and we will return to
 this issue of domain maintenance and initial values computation for previously
 unseen delta bound variables.
 
+Figure~\ref{fig:methodsummary} presents an
+overview of the compilation process, including these two core phases, as well as
+precompilation steps and additional methods needed to recursively apply the core
+compilation described here.
+
+
 \begin{example}\feature{Flat query compilation example}
 We now walk through compiling the following flat query, given in SQL as
-\texttt{select sum(a*d) from R join S join T}, and in our representation as:
-\[\algsum_{A*D}(R(A,B) \wedge S(B,C) \wedge T(C,D))\]
+\texttt{select sum(a*d) from R join S join T}:
+
+\vspace{-3mm}
 \begin{align*}
 & q[] = \algsum_{A*D}(R(A,B) \wedge S(B,C) \wedge T(C,D))\\
 & \hspace{-1.5cm}\mbox{\sc Compilation level 1:}\\
@@ -311,7 +255,10 @@ a * \underbrace{\algsum_{D}(S(B,C) \wedge T(C,D) \wedge \phi(=,b,B)}_{qR[B']}\\
 & \underbrace{\algsum_{D}(T(C,D) \wedge \phi(=,c,C))}_{qS2[C']}\\
 \Delta_{+T(c,d)} & q[] +=
 d * \underbrace{\algsum_{A}(R(A,B) \wedge S(B,C) \wedge \phi(=,c,C)}_{qT[C']}\\
-\\
+\end{align*}
+
+\vspace{-10mm}
+\begin{align*}
 & \hspace{-1.5cm}\mbox{\sc Compilation level 2:}\\
 \Delta_{+S(b,c)} & \algforeach \; B': qR[B'] += \\
 & \algsum_{D}(T(C,D) \wedge \phi(=,B',b) \wedge \phi(=,C,c))
@@ -325,8 +272,11 @@ d * \underbrace{\algsum_{A}(R(A,B) \wedge S(B,C) \wedge \phi(=,c,C)}_{qT[C']}\\
 \\
 \Delta_{+R(a,b)} & qS1[B'] = \algforeach \; B': qS1[B'] +=
 a * \algsum_{1}(\phi(=,b,B'))
-\\
-\therefore \Delta_{+R(a,b)} & qS1[b] += a \\
+\end{align*}
+
+\vspace{-7mm}
+\begin{align*}
+\therefore \Delta_{+R(a,b)} & qS1[b] += a\\
 \Delta_{+T(c,d)} & qS1[B'] = 0 \\
 \Delta_{+R(a,b)} & qS2[C'] = 0 \\
 \Delta_{+T(c,d)} & qS2[C'] = \algforeach \; C': qS2[C'] +=
@@ -336,12 +286,16 @@ d * \algsum_{1}(\phi(=,C',c))
 \Delta_{+R(a,b)} & \algforeach \; C': qT[C'] += \\
 & a * \underbrace{\algsum_{1}(S(B,C) \wedge \phi(=,b,B) \wedge
   \phi(=,C,C'))}_{qTR[B',C''] = qRT[B'',C']}
-\\
+\end{align*}
+\begin{align*}
 \Delta_{+S(c,d)} & \algforeach \; C': qT[C'] += \\
 & \algsum_{A}(R(A,B) \wedge \phi(=,B,b) \wedge \phi(=,c,C'))\\
 \therefore \Delta_{+S(b,c)} & qT[c] +=
 \underbrace{\algsum_{A}(R(A,B) \wedge \phi(=,B,b))}_{qTS[B'] = qS1[B']}
-\\
+\end{align*}
+
+\vspace{-3mm}
+\begin{align*}
 & \hspace{-1.5cm}\mbox{\sc Compilation level 3:}\\
 \Delta_{+S(b,c)} & \algforeach B',C': qRT[B',C'] += \\
 & \algsum_{1}(\phi(=,B',b) \wedge \phi(=,C',c))
@@ -383,15 +337,7 @@ increments.
 Recall the VWAP query presented in Section~\ref{sec:intro}, with the average
 aggregate replaced by a sum aggregate. Note that we can simply compute the
 average by computing both the sum and count aggregates, and dividing at the top
-aggregation level.
-
-\begin{Verbatim}
-select sum(P*V) from Bids(P,V)
-    where 0.25*(select sum(V1) from Bids(P1,V1)) >
-    (select sum(V2) from Bids(P2,V2) where P2 > P)
-\end{Verbatim}
-
-and the \compiler\ calculus representation:
+aggregation level. The \compiler\ calculus representation is:
 \begin{align*}
 \algsum_{P*V}( & Bids(P,V) \wedge \\
 & \phi(>, 0.25*\algsum_{V1}(Bids(P1,V1)), \\
@@ -432,12 +378,10 @@ In the delta rules above, we have not defined a delta transformation in the case
 where constraints contain map terms with non-zero deltas. This occurs with
 scalar subaggregate queries, and in this section we describe a transformation
 that \textit{flattens} out such queries when they are provided by the user, into
-a constraint-only aggregate. The delta transformation for a constraint-only
-aggregate may then apply to correctly derive a delta query for a nested
-query. We apply flattening as a preprocessing step, prior to performing any
-compilation. Note that this flattening concerns nested queries within
-constraints -- nested queries that occur as aggregate arguments are directly
-handled in the delta rules described above.
+a constraint-only aggregate. We apply flattening as a preprocessing step, prior
+to performing any compilation. Note that this flattening concerns nested queries
+within constraints -- nested queries that occur as aggregate arguments are
+directly handled in the delta rules described above.
 
 Our flattening transformation is essentially a parse tree rotation operation
 that separates the usage of variables in a nested fashion from their originating
@@ -461,12 +405,14 @@ to ensure the original query's semantics hold. This constraint equates the
 bigsum variable to the original variable that was used in nested fashion. We can
 abstractly represent this transformation as:
 
+\vspace{-3mm}
 \begin{align*}
 \algsum_{f}(\mathcal{R(\vec{A})} \wedge \phi[\vec{A}]) :=
 \sum_{\xi} \algsum_{f^*}(\phi[\vec{A} \mapsto \vec{\xi}]) \\
  \mbox{ where} f^* = \algsum_{f}(\mathcal{R(\vec{A})} \wedge \vec{A} = \vec{\xi})
 \end{align*}
 
+\vspace{-2mm}
 \noindent~where $\mathcal{R(\vec{A})}$ is a relational calculus formula that
 does not contain constraints with nested aggregates, and defines safe variables
 $\vec{A}$, $\phi$ is a constraint whose terms include nested aggregates and
@@ -509,6 +455,7 @@ generally the case that the map term for these new parameter values yields zero
 on an arbitrary database. We present both situations by example for a map
 $m[B']$ accessed by an unseen value $b'$, starting with a map term that is equivalent to zero:
 
+\vspace{-3mm}
 \[\algsum_{A}(R(A,B) \wedge \phi(=,B,B'))\]
 
 \noindent~Here if $b'$ corresponds to a new domain value for $B'$, we can infer
@@ -516,6 +463,7 @@ that the value does not lie in the domain fo $B$, otherwise $m[b']$ would have
 been incrementally for $\Delta_{+R(a,b')}$. Thus the initial value of the map is
 zero. Now consider the map term:
 
+\vspace{-3mm}
 \[\algsum_{A}(R(A,B)\wedge \phi(<, B, B'))\]
 
 \noindent~Here the relation $R$ may indeed contain values of $B$ satisfying the
@@ -539,7 +487,9 @@ q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
       \algelse \; 0 \Big]\\
 \mbox{where } & f = 0.25*\algsum_{V1}(Bids(P1,V1))\\
 \mbox{and } & g = \algsum_{V2}(Bids(P2,V2) \wedge P2 > bigsum\_p)
-\\
+\end{align*}
+
+\begin{align*}
 & \hspace{-1.75cm}\mbox{\sc Compilation level 1:}\\
 \Delta_{+Bids(p,v)} & q[] += \sum_{bigsum\_p} \Big[ \\
 & [ \algif \; \phi(>,\underbrace{f}_{m1[]}+\Delta f, \underbrace{g}_{m2[bigsum\_p]}+\Delta g) \; \\
@@ -554,7 +504,10 @@ q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
     \wedge \phi(>,\underline{f},\underline{g}) ] \\
 & \algthen \; - \underline{\algsum_{P*V}(Bids(P,V) \wedge bigsum\_p = P)} \;
     \algelse \; 0
-\Big]\\
+\Big]
+\end{align*}
+
+\begin{align*}
 & \hspace{-1.75cm}\mbox{\sc Compilation level 2:}\\
 \Delta_{+Bids(p,v)} \; & m1[] += v\\
 \Delta_{+Bids(p,v)} \; & \algforeach \; bigsum\_p : \; m2[bigsum\_p] += \\
@@ -569,9 +522,7 @@ Above, the underlined terms correspond to duplicate map terms, where maps can be
 reused. The code produced is:
 
 \begin{Verbatim}
-int q, m1;
-map<int, int> m2, m3;
-set<int> dom_bigsum_p;
+int q, m1; map<int, int> m2, m3; set<int> dom_bigsum_p;
 
 void on_insert_bids(int p, int v) {
   dom_bigsum_p.insert(p);
@@ -585,20 +536,22 @@ void on_insert_bids(int p, int v) {
     foreach b_p, b_v in bids:
       m3[] += (p == b_p? b_p*b_v : 0);
   }
+\end{Verbatim}
 
+\begin{Verbatim}
   // Compilation level 1
   foreach bigsum_p in dom_bigsum_p:
     q += if (m1+0.25*v >
               m2[bigsum_p]+(p>bigsum_p? v : 0))
-         then (p==bigsum_p? p*v : 0) else 0
+         then (p==bigsum_p? p*v : 0) else 0;
     q += if (m1+0.25*v >
                m2[bigsum_p]+(p>bigsum_p? v : 0))
              && (m1 <= m2[bigsum_p])
-         then m3[bigsum_p] else 0
+         then m3[bigsum_p] else 0;
     q += if (m1+0.25*v <=
                m2[bigsum_p]+(p>bigsum_p? v : 0))
            && (m1 > m2[bigsum_p])
-         then -m3[bigsum_p] else 0
+         then -m3[bigsum_p] else 0;
 
   // Compilation level 2
   m1 += 0.25*v;
@@ -607,6 +560,20 @@ void on_insert_bids(int p, int v) {
   m3[p] += p*v;
 }
 \end{Verbatim}
+
+
+\begin{figure*}[htbp]
+\begin{center}
+\includegraphics[scale=0.35]{figures/dbt-arch-embedded}
+\includegraphics[scale=0.35]{figures/dbt-arch-standalone}
+\end{center}
+\vspace{-5mm}
+\caption{\compiler\ compiled query evaluation modes: i) compilation for embedded
+  query processing ii) query object compilation for use in a distributed stream
+  processing engine.}
+\label{fig:overview}
+\end{figure*}
+
 
 \comment{
 \subsection{Code Generation}

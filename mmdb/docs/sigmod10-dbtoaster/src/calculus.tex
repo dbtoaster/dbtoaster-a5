@@ -36,6 +36,7 @@ that hold following each compilation stage.
 \feature{Map terms}
 The map calculus consists of the following types of terms:
 
+\vspace{-3mm}
 \[
 c 
 \quad\;\;
@@ -75,6 +76,7 @@ that is:
 Next, we present our relational calculus formulae, which is a simplification of
 the domain relational calculus:
 
+\vspace{-3mm}
 \[
 R(A,B)
 \quad
@@ -105,10 +107,12 @@ conjunction of a relation and a binary constraint, i.e.  $\sigma_{a<5}(R(A,B))
 the leaves of a calculus formula syntax tree.  We use a multiset semantics for
 relations as in SQL; none of the operations of relational calculus eliminate
 duplicates.
+\comment{
 \todo{We return to the difference operation later.}
 \todo{Example SQL query and our representation here?}
 \todo{Safe and unsafe variables, and their relationship to bound variables, or
   do we describe this during aggregate simplification?}
+}
 
 \feature{Group-by aggregations}
 Our aggregation terms with all variables bound, i.e. $\algsum_{f}(Q)[]$,
@@ -135,6 +139,7 @@ parse trees. Next we observe that conjunctions and disjunctions in our relationa
 calculus exhibit the same associativity and distributivity properties as the
 addition and multiplication operators for map terms. That is:
 
+\vspace{-3mm}
 \[
 f*(g+h) = (f*g) + (f*h)
 \quad
@@ -149,8 +154,9 @@ maps respectively, and disjunction and addition as sums.  We can then define a
 calculus formulae for simplicity of compilation -- polynomials provide
 separation between the occurrence of sums and products in the parse tree (that
 is no product expression can contain a sum operator).  We provide examples of
-monomials and polynomials of both map and relational calculus formulae below:
+these monomials and polynomials:
 
+\vspace{-3mm}
 \begin{align*}
 \mbox{Map monomial: } &
 5*x*sum_{f}(Q)\\
@@ -217,6 +223,64 @@ we use the symbols $\oplus$ and $\otimes$ to denote sum and product
 respectively. It should be clear from the context whether we are referring
 to the map or relational semiring.
 
+%\vspace{-3mm}
+\begin{figure}[htbp]
+\begin{align*}
+\Delta_{+R(\vec{r})} f \oplus g & := 
+    \Delta_{+R(\vec{r})} f \oplus \Delta_{+R(\vec{r})} g \\
+\Delta_{+R(\vec{r})} f \otimes g & := 
+(\Delta_{+R(\vec{r})}f)\otimes g \oplus
+(f \oplus \Delta_{+R(\vec{r})} f)\otimes(\Delta_{+R(\vec{r})}g)\\
+\Delta_{+R(\vec{r})}(c) & := 0 \\
+\Delta_{+R(\vec{r})}(x) & := 0 \\
+\Delta_{+R(\vec{r})} \algsum_{f}(Q) & :=
+\begin{cases}
+(\algif\; \phi_{i,new} \; \algthen\; \Delta_{+R(\vec{r})}\; f \algelse\; 0)\\
+\;\; + (\algif\;
+  \left( \phi_{i,new} \wedge \neg \phi_{i,old } \right)
+\; \algthen\; f \;\algelse\; 0)\\
+\;\; + (\algif\;
+\left( \neg \phi_{i,new} \wedge \phi_{i,old} \right) \;
+\algthen\; -f \;\algelse\; 0)
+\\
+\mbox{where }
+  \phi_{i,new} = \\
+  \qquad
+    \bigwedge_i
+    \phi_i(\theta_i, g_i+\Delta_{+R(\vec{r})}g_i, h_i + \Delta_{+R(\vec{r})}h_i)
+\\
+\mbox{and }
+  \phi_{i,old} = \bigwedge_i \phi_i(\theta_i, g_i, h_i)
+\\
+\ldots \mbox{ when $Q = \bigwedge_i \phi_i(\theta_i,g_i,h_i)$}
+\\
+\\
+\algsum_{\Delta_{R(\vec{r})}f}(Q) + \algsum_{f}(\Delta_{+R(\vec{r})} Q)\\
+\; \; + \algsum_{\Delta_{+R(\vec{r})}f}(\Delta_{+R(\vec{r})} Q)\\
+\ldots \mbox{ otherwise}
+\end{cases}
+\\
+\Delta_{+R(\vec{r})}(S(\vec{A}))         & :=
+\begin{cases}
+\{\tuple{\vec{r}}\} & \mbox{ if $R = S$}\\
+\emptyset           & \mbox{ otherwise}
+\end{cases}
+\\
+\Delta_{+R(\vec{r})}(\phi(\theta, f, g)) & :=
+\begin{cases}
+\emptyset & \mbox{ $\Delta_{+R(\vec{r})} f = 0, \Delta_{+R(\vec{r})} g = 0$}\\
+\bot      & \mbox{ otherwise}
+\end{cases}
+\\
+\Delta_{+R(\vec{r})} \emptyset           & := \emptyset \\
+\Delta_{+R(\vec{r})} \{\tuple{\vec{r}}\} & := \emptyset \\
+\end{align*}
+\vspace{-10mm}
+\caption{Delta transformations of semirings, map terms and relational calculus
+  formulae.}
+\label{fig:deltarules}
+\end{figure}
+
 \feature{Polynomial construction}
 \compiler\ transforms queries into polynomial form by performing one key
 simplification, namely factorization of aggregate argument terms over their
@@ -232,6 +296,7 @@ elements of monomials, that is for some term and relational monomial $m_f
 monomials are products of basic elements) into term-relational pairs for simpler
 aggregation. The desired term-relational pairs are:
 
+\vspace{-3mm}
 \[\{(l_{fi},l_{Qi}) | l_{fi} \subseteq m_f, l_{Qi} \subseteq m_Q,
 vars(l_{fi}) \cap vars(l_{Qi}) \neq \emptyset\}\]
 
@@ -241,8 +306,9 @@ subsets where the property holds. This property states that for any resulting
 pair $(l_{fi}, l_{Qi})$, the map term $l_{fi}$ uses variables defined in $l_{Qi}$. We can
 then write the resulting factorized term as:
 $\algsum_{l_{f1}}(l_{Q1}) + \ldots + \algsum_{l_{fn}}(l_{Qn})$.
-We give a simple example of factorization below:
+We give an example of factorization below:
 
+\vspace{-3mm}
 \begin{align*}
 \algsum_{A*B*D*E}( & R(A,B,C) \wedge S(D,E,F) =\\
 & \algsum_{A*B}(R(A,B,C)) * \algsum_{D*E}(S(D,E,F))
@@ -260,6 +326,8 @@ relations $R,S$. Note that the map term monomial $A*B*D*E$ does not induce edges
 since each basic map term is a single variable. Factorization then involves
 determining connected components on such a graph.
 
+
+\comment{
 \feature{Summary}
 In general, the construction of polynomials may lead to an exponential number of
 basic terms in our maps, however this is often acceptable in practice since
@@ -270,7 +338,5 @@ a well-defined structure. The top-level of a parse tree is a map polynomial,
 which may include aggregate terms. These aggregate terms include a polynomial
 calculus formulae, in addition to a potentially nested aggregate argument map
 polynomial. Relational calculus polynomials themselves may include nested map
-polynomials, in our constraints.  \todo{This nested polynomial structure is
-illustrated in Figure [XXX].}
-
-
+polynomials, in our constraints.
+}

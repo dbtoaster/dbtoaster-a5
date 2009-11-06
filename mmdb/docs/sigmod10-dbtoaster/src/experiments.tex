@@ -7,9 +7,24 @@ C++ code for fully recursively compiled queries, it can also produce code for
 partially compiled queries to a user-specified nesting level, with the remaining
 portions of the query compiled as a relational query plan. Note that a standard
 query plan corresponds to zero levels of compilation, while view maintenance
-corresponds to one level of compilation. Furthermore, in our query plan
+corresponds to one level of compilation.
+\comment{
+Furthermore, in our query plan
 compilation, we do not have a full-fledged query optimizer and joins are
 manually selected as indexed nested loops joins or hash joins.
+}
+
+
+\begin{figure}[tb]
+\vspace{-6mm}
+\hspace{-3mm}\includegraphics[scale=0.33]{figures/cpu-comparison}
+\vspace{-13mm}
+\caption{Query processing performance ratio of view maintenance and naive plans
+  w.r.t to recursively compiled queries. Note the logarithmic scale y-axis
+  indicates the $\log_{10}$ of \compiler's speedup, hence a value of 1
+  corresponds to 10x  slower.}
+\label{fig:cpucomp}
+\end{figure}
 
 \subsection{Experimental setup}
 The hardware platform used for our experiments is an 8-core Dual Intel Xeon
@@ -25,13 +40,16 @@ exemplified by the VWAP query discussed throughout this paper.  The dataset used
 for this application is the TotalView-ITCH~\cite{totalview-url} historical order
 book from the NASDAQ stock exchange for a 3-month period from December 2008 to
 February 2009, for the MSFT (Microsoft) symbol. In addition to the VWAP query,
-we consider two other queries. The first, denoted Ax, is a query which
+we consider two other queries, shown in Figure~\ref{fig:obqueries}.
+\comment{
+The first, denoted Ax, is a query which
 determines any simultaneous positioning by a broker on both the bid and asks
 orderbooks with a significant difference in order volume. This is commonly
 performed by a market maker, or 'ax', to entice buyers or sellers into the
 market. The second, denoted PS, tracks the price spread between the bids and
 asks orderbooks and is used as an estimate of the trade price. The queries are
 shown in Figure~\ref{fig:obqueries}.
+}
 
 \begin{figure}[htbp]
 Ax finder (Ax) query:
@@ -48,18 +66,20 @@ select sum(a.p+-1*b.p) from bids b, asks a
 where (b.v>0.0001*(select sum(b1.v) from bids b1))
 and (a.v>0.0001*(select sum(a1.v) from asks a1))
 \end{Verbatim}
-\caption{Orderbook queries: Ax and PS. The VWAP query can be found in
-  Section~\ref{sec:intro}.}
+\vspace{-3mm}
+\caption{Orderbook queries: Ax and PS.}
 \label{fig:obqueries}
 \end{figure}
 
 Our second workload reflects the online data warehousing application discussed
 in the introduction. Here the dataset is TPC-H, generated with scale factor 1
-for in-memory processing. The queries used here are queries 3, 11 and 17, which
-respectively determine shipping priorities (i.e. finding unshipped orders with
+for in-memory processing. The queries used here are queries 3, 11 and 17 --
+\comment{
+which respectively determine shipping priorities (i.e. finding unshipped orders with
 high value), important stocks for suppliers in various nations, and the revenue
-obtained from small quantity orders. We refer to the TPC-H
-specification~\cite{tpch-url} for full details of these queries.
+obtained from small quantity orders.
+}
+we refer to the TPC-H specification~\cite{tpch-url} for their details.
 
 \subsection{Query Processing Performance}
 Our first set of experimental results look at the query processing performance
@@ -84,40 +104,6 @@ conjectures of this paper, these results show that view maintenance does not go
 far enough -- \compiler\ significantly outperforms view maintenance queries in
 our entire workload.
 
-The figure also reveals a significant speedup gap for \compiler between the
-orderbook queries and the TPC-H queries, where \compiler tends to be
-approximately 3 orders of magnitude faster for TPC-H queries and approximately
-1-25 orders of magnitude faster for orderbook queries. This can be explained by
-the different dataset characteristics -- order books remain relatively small
-during the run, thus the effects of performing fully incremental processing are
-relatively diminished compared to the TPC-H case. We expect our technique to
-provide maximal advantages as the in-memory database size approaches that of
-main-memory capacities.
-We now briefly discuss the results of the Ax query. The
-Ax query is a binary join query with simple range predicates, and a group-by
-aggregate. In this scenario, our naive implementation uses a nested-loops join
-that can be highly optimized by the C++ compiler for efficient register and
-cache usage, as opposed to an indexed nested-loops join which uses map data
-structures. We plan on investigating the cache performance of \compiler's
-queries as a topic of future work.
-
-\begin{figure}[tb]
-\hspace{-3mm}\includegraphics[scale=0.33]{figures/cpu-comparison}
-\vspace{-10mm}
-\caption{Query processing performance ratio of view maintenance and naive plans
-  w.r.t to recursively compiled queries. Note the logarithmic scale y-axis
-  indicates the $\log_{10}$ of \compiler's speedup, hence a value of 1
-  corresponds to 10x  slower.}
-\label{fig:cpucomp}
-\end{figure}
-
-Finally, since our figure only indicates relative performances, we present
-absolute per-tuple processing times in Table~\ref{tbl:cpuabs}. This reaffirms
-that \compiler\ is also efficient in absolute terms, with the TPC-h per-tuple
-processing times on the order of microseconds and 10s of microseconds. While our
-experiments were performed in batch fashion and thus indicate throughput, these
-low per-tuple overheads give us confidence that our engines are also capable of
-providing low latencies.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -135,12 +121,49 @@ query17  & 3.66E-05    & 0.0287   & 0.0454 \\
 \hline
 \end{tabular}
 \end{center}
+\vspace{-3mm}
 \caption{Per-tuple processing times for the recursive compilation, view
   maintenance and naive query processing strategies.}
 \label{tbl:cpuabs}
 \end{figure}
 
 
+The figure also reveals a significant speedup gap for \compiler between the
+orderbook queries and the TPC-H queries, where \compiler tends to be
+approximately 3 orders of magnitude faster for TPC-H queries and approximately
+1-25 orders of magnitude faster for orderbook queries. This can be explained by
+the different dataset characteristics -- order books remain relatively small
+during the run, thus the effects of performing fully incremental processing are
+relatively diminished compared to the TPC-H case. We expect our technique to
+provide maximal advantages as the in-memory database size approaches that of
+main-memory capacities.
+We now briefly discuss the results of the Ax query. The
+Ax query is a binary join query with simple range predicates, and a group-by
+aggregate. In this scenario, our naive implementation uses a nested-loops join
+that can be highly optimized by the C++ compiler for efficient register and
+cache usage, as opposed to an indexed nested-loops join which uses map data
+structures. We plan on investigating the cache performance of \compiler's
+queries as a topic of future work.
+
+
+\begin{figure}[htbp]
+\vspace{-9mm}
+\includegraphics[scale=0.31]{figures/orderbk-mem}
+\vspace{-14mm}
+\caption{Memory utilization of \compiler's datastructures for the VWAP, Ax and
+  PS queries}
+\label{fig:orderbkmem}
+\end{figure}
+
+Finally, since our figure only indicates relative performances, we present
+absolute per-tuple processing times in Table~\ref{tbl:cpuabs}. This reaffirms
+that \compiler\ is also efficient in absolute terms, with the TPC-h per-tuple
+processing times on the order of microseconds and 10s of microseconds.
+\comment{
+While our experiments were performed in batch fashion and thus indicate
+throughput, these low per-tuple overheads give us confidence that our engines
+are also capable of providing low latencies.
+}
 
 \subsection{Memory Utilization}
 The next set of memory results looks at the memory utilization of \compiler's
@@ -148,6 +171,7 @@ internally maintained maps. These are displayed separately for the orderbook
 queries and the TPC-H queries in Figure~\ref{fig:orderbkmem} and
 Figure~\ref{fig:tpchmem} respectively. We start with Figure~\ref{fig:orderbkmem}
 which concerns the VWAP, Ax, and PS queries.
+
 
 The first point we make is to reaffirm the point that order books are small (but
 frequently and arbitrarily updated), and this can be seen by the scale of the
@@ -157,12 +181,24 @@ consumption very early on in their runs. The internal datastructures kept for PS
 are minimal since there are no group-bys nor is there any nested variable usage
 in the query. For the Ax query, memory utilization is slightly larger due to the
 group-by on broker ids, as well as the join predicate on the price attribute
-(which results in a loop variable). Thus one of the maps maintained internally
+(which results in a loop variable).
+\comment{
+Thus one of the maps maintained internally
 by \compiler\ uses both of these attributes as keys, and given that the price
 attribute is a numeric type, this map dominates memory usage. Note that despite
 price being a double precision type, order book prices do not take on
 arbitrarily many values, rather are typically given in increments of 100 units
 according to the NASDAQ ITCH specification.
+}
+
+\begin{figure}[htbp]
+\vspace{-9mm}
+\includegraphics[scale=0.31]{figures/tpch-mem}
+\vspace{-14mm}
+\caption{Memory utilization of \compiler's datastructures for TPC-H query 3, 11
+  and 17.}
+\label{fig:tpchmem}
+\end{figure}
 
 The VWAP query has the largest memory consumption due to the presence of a
 nested variable usage, namely the price attribute. This nested variable usage
@@ -173,44 +209,34 @@ dominates memory usage in the VWAP query, but again, since orderbooks are
 small, this does not consume significant space. Alternatively, to avoid keeping
 the bids relation, we could simply maintain the map for every domain value
 seen. However this incurs additional computational overhead for inactive domain
-values, but this decision could be left to an optimizer and the full treatment
-of choosing which approach is outside the scope of this work.
-
-\begin{figure}[htbp]
-\includegraphics[scale=0.33]{figures/orderbk-mem}
-\caption{Memory utilization of \compiler's datastructures for the VWAP, Ax and
-  PS queries}
-\label{fig:orderbkmem}
-\end{figure}
-
-\begin{figure}[htbp]
-\includegraphics[scale=0.33]{figures/tpch-mem}
-\caption{Memory utilization of \compiler's datastructures for TPC-H query 3, 11
-  and 17.}
-\label{fig:tpchmem}
-\end{figure}
+values, but this decision could be left to an optimizer.
 
 Figure~\ref{fig:tpchmem} demonstrates that the TPC-H queries consume
-significantly more memory than the order book queries primarily due to the
-dataset characteristics and the larger domains of map key attributes, as well as
-the fact that our application is an append-only data warehouse with no
-deletions. The figure shows that queries 3 and 11 tail off in their memory
-utilization during the run, with query 3 consuming approximately 350Mb, and
-query 11 approximately 800Mb. The memory consumption of query 3 is not dominated
-by any one map, but loosely evenly divided between 5 maps, one for the group-by
-aggregate that is the result for the query, and the rest as aggregates
-decomposed over the join of the lineitem, orders and customers tables. Query
-11's memory consumption is however skewed, with a single map dominating. This
-map has both the partkey and supplier key as its index, and aggregates the total
-product of the cost and available quantity of the part for the part and supplier
-pair. Query 17 on the other hand scales almost linearly throughout the
-experiment run. This query uses 8 datastructures (maps and domains), with two
-sizeable maps consuming nearly 600Mb of memory at the end of the run. These maps
-are both sub-aggregates over the lineitem relation, with a map key of the
-partkey attribute, instantiated by the flattening of the nested aggregate query.
+significantly more memory than the order book queries primarily due to the the
+larger domains of map key attributes, and the fact that our application is an
+append-only data warehouse. The figure shows that queries 3 and 11 tail off in
+their memory utilization during the run, with query 3 consuming approximately
+350Mb, and query 11 approximately 800Mb.  The memory consumption of query 3 is
+loosely evenly divided between 5 maps. Query 11's memory consumption is however
+skewed, with a single map. Query 17 on the other hand scales almost linearly
+throughout the experiment run. This query uses 8 datastructures (maps and
+domains), with two sizeable maps consuming nearly 600Mb of memory.
 
 \comment{
-\begin{figure}[htbp]
+ The memory consumption of query 3 is
+loosely evenly divided between 5 maps, one for the group-by aggregate result,
+and the rest as aggregates decomposed over the join of the lineitem, orders and
+customers tables. Query 11's memory consumption is however skewed, with a single
+map which has both the partkey and supplier key as its index dominating. Query
+17 on the other hand scales almost linearly throughout the experiment run. This
+query uses 8 datastructures (maps and domains), with two sizeable maps consuming
+nearly 600Mb of memory at the end of the run. These maps are both sub-aggregates
+over the lineitem relation, with a map key of the partkey attribute,
+instantiated by the flattening of the nested aggregate query.
+}
+
+\comment{
+\begin{figure}[tb]
 \begin{tabular}{|r|c|c|c|}
 \hline  & \multicolumn{3}{|c|}{Map datastructure}\\
 \hline
@@ -236,6 +262,15 @@ at the end of the experiment can be found in Table~\ref{tbl:map-mem}.
 }
 
 
+\begin{figure}[htbp]
+\begin{center}
+\includegraphics[scale=0.32]{figures/dbcomp}
+\end{center}
+\vspace{-4mm}
+\caption{Comparison of \compiler's processing times to DBMS 'X'.}
+\label{fig:dbcomp}
+\end{figure}
+
 
 \subsection{DBMS comparison}
 In the final part of our experiments section, we compare the performance of a
@@ -244,7 +279,9 @@ queries implemented using incremental materialized views, and naive processing
 in DBMS 'X'. Note that many commercial database systems are extremely restricted
 in the kinds of queries supported via incremental view maintenance, and to the
 best of our knowledge, none can handle the general nested aggregate queries
-supported by \compiler. We provide the following references to DBMS
+supported by \compiler.
+\comment{
+We provide the following references to DBMS
 documentation on queries that may be maintained incrementally in three major
 DBMS:
 i) Oracle: {\tiny
@@ -253,13 +290,8 @@ ii) MS SQL Server 2008: {\tiny
     \url{http://msdn.microsoft.com/en-us/library/dd171921.aspx}}
 iii) IBM DB2: {\tiny
     \url{http://publib.boulder.ibm.com/infocenter/db2luw/v9r5/index.jsp?topic=/com.ibm.db2.luw.sql.ref.doc/doc/r0000927.html}}.
+}
 
-
-\begin{figure}[htbp]
-\includegraphics[scale=0.35]{figures/dbcomp}
-\caption{Comparison of \compiler's processing times to DBMS 'X'.}
-\label{fig:dbcomp}
-\end{figure}
 
 Given these restrictions, we are only able to compare using the Ax and TPC-H
 Query 3 workloads. The results are shown in Figure~\ref{fig:dbcomp}, with a

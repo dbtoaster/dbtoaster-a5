@@ -146,10 +146,10 @@
 \headheight 12pt                % Height of box containing running head.
 \headsep 25pt                   % Space between running head and text.
 
-\textheight 666pt       % 9 1/4 column height
-\textwidth 42pc         % Width of text line.
+\textheight 668pt       % 9 1/4 column height
+\textwidth 42.5pc         % Width of text line.
                         % For two-column mode:
-\columnsep 2pc          %    Space between columns
+\columnsep 1.75pc          %    Space between columns
 \columnseprule 0pt      %    Width of rule between columns.
 \hfuzz 1pt              % Allow some variation in column width, otherwise it's
                         % too hard to typeset in narrow columns.
@@ -158,24 +158,24 @@
                         % footnote =3D height of normal \footnotesize strut,
                         % so no extra space between footnotes.
 
-\skip\footins 8.1pt plus 4pt minus 2pt  % Space between last line of text and
+\skip\footins 8.1pt plus 3pt minus 2pt  % Space between last line of text and
                                         % top of first footnote.
-\floatsep 11pt plus 2pt minus 2pt       % Space between adjacent floats moved
+\floatsep 8pt plus 2pt minus 2pt       % Space between adjacent floats moved
                                         % to top or bottom of text page.
-\textfloatsep 18pt plus 2pt minus 4pt   % Space between main text and floats
+\textfloatsep 8pt plus 2pt minus 2pt   % Space between main text and floats
                                         % at top or bottom of page.
-\intextsep 11pt plus 2pt minus 2pt      % Space between in-text figures and
+\intextsep 8pt plus 2pt minus 2pt      % Space between in-text figures and
                                         % text.
 \@ifundefined{@maxsep}{\newdimen\@maxsep}{}% this is for LaTeX2e
-\@maxsep 18pt                           % The maximum of \floatsep,
+\@maxsep 10pt                           % The maximum of \floatsep,
                                         % \textfloatsep and \intextsep (minus
                                         % the stretch and shrink).
-\dblfloatsep 11pt plus 2pt minus 2pt    % Same as \floatsep for double-column
+\dblfloatsep 8pt plus 2pt minus 2pt    % Same as \floatsep for double-column
                                         % figures in two-column mode.
-\dbltextfloatsep 18pt plus 2pt minus 4pt% \textfloatsep for double-column
+\dbltextfloatsep 8pt plus 2pt minus 2pt% \textfloatsep for double-column
                                         % floats.
 \@ifundefined{@dblmaxsep}{\newdimen\@dblmaxsep}{}% this is for LaTeX2e
-\@dblmaxsep 18pt                        % The maximum of \dblfloatsep and
+\@dblmaxsep 10pt                        % The maximum of \dblfloatsep and
                                         % \dbltexfloatsep.
 \@fptop 0pt plus 1fil    % Stretch at top of float page/column. (Must be
                          % 0pt plus ...)

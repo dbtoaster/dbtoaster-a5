@@ -28,12 +28,14 @@ code that is substantially simpler than the code needed for query processing in
 previous incremental view maintenance approaches.
 
 \compiler\ provides three key advantages.
+
 \begin{itemize}
+\vspace{-2mm}
 \item By generating C++ code that performs all the processing required for an
 input tuple from a fixed query plan execution path, we avoid overheads that
 traditionally arise when query processors interpret query plans stored in
 dynamic data structures.
-
+\vspace{-2mm}
 \item By recursive compilation, asymptotically faster code can be obtained
 because the computation of increments may decompose into code that avoids
 database scans or joins.
@@ -41,7 +43,7 @@ database scans or joins.
 In addition, certain redundancies in query definitions are exposed and very
 easily eliminated that have traditionally been considered too difficult to
 detect and eliminate by query optimization techniques.
-
+\vspace{-2mm}
 \item Our new delta processing techniques are designed specifically for
 compilation to native code and support aggressive inlining and other
 optimizations performed by modern compilers which lead to surprisingly small and
@@ -77,7 +79,7 @@ query result on the insertion of tuple $(a,b)$ into $R$ by incrementing it by $a
 * q_D[b]$, where $q_D[b]$ is the result of the SQL query
 \begin{verbatim} select sum(D) from S where C = b;
 \end{verbatim} Similarly, we can maintain $q$ under insertion of tuple $(c,d)$
-into $S$ by adding $q_A[c] * d$ to $q$, where $q_A[c]$ is the result of query
+into $S$ by adding $q_A[c] * d$ to $q$, where $q_A[c]$ is the result of
 \begin{verbatim} select sum(A) from R where B = c;
 \end{verbatim} Now, rather than stopping here (which would be in line with more
 traditional incremental view maintenance mechanisms), we recursively compute,
@@ -87,29 +89,23 @@ on insertion of tuple $(c,d)$ into $S$, $q_D[c]$ is incremented by $d$.  In this
 case, the recursive computation of increments allows to eliminate all SQL code
 and leads to extremely efficient straight-line code:
 \begin{Verbatim}
-on initialization do q := 0;
-
-on insert into R values (a,b) do {
+on insert into R values (a,b) do:
     q += a * q_D[b];
     if q_A[b] is undefined then
         q_A[b] := 0; q_A[b] += a;
-}
 
-on insert into S values (c,d) do {
+on insert into S values (c,d) do:
     q += q_A[c] * d;
     if q_D[c] is undefined then
         q_D[c] := 0; q_D[c] += d;
-}
 
-on delete of (a,b) from R do {
+on delete of (a,b) from R do:
     q -= a * q_D[b]; q_A[b] -= a;
-}
 
-on delete of (c,d) from S do {
+on delete of (c,d) from S do:
     q -= q_A[c] * d; q_D[c] -= d;
-}
-
 \end{Verbatim}
+
 Here, $q_A[.]$ and $q_D[.]$ are auxiliary associative array data
 structures.  It is not hard to verify that this code for incrementally
 maintaining $q$ is correct.
@@ -135,10 +131,10 @@ perform incremental maintenance of $q$.
 
 
 \compiler\ is particularly well suited in continuous query applications where a
-view has to be maintained through high data update rates. \compiler\ is
+view has to be maintained for high data update rates. \compiler\ is
 motivated by applications that require the highly efficient answering of fixed
 workloads of aggregation queries, such as in data stream processing, online data
-warehouse loading, and in financial applications. Our work on \compiler\ was
+warehouse loading, and in financial applications. \compiler\ was
 particularly motivated by the need for query processing support in algorithmic
 equities trading, which in our view cannot be efficiently served by any of the
 data management tools available today, as well as aggregate processing in data
@@ -160,6 +156,7 @@ books. Investors continually add, modify or withdraw limit orders, thus we view
 order books as relations subject to high volumes of order inserts, updates and
 deletes.
 
+\comment{
 Investors and automated trading systems express diverse trading strategies on
 these order books, and the success of trading depends critically on the speed at
 which the programmed strategies process the data.  In fact, the availability of
@@ -167,6 +164,7 @@ order book data has yielded substantial opportunities for automatic, algorithmic
 trading approaches, and in recent years, algorithmic trading systems have come
 to account for a majority of volume traded at the major US and European stock
 markets.
+}
 
 Unlike stream processing scenarios \cite{abadi-vldbj:03,motwani-cidr:03}, order
 books do not grow unboundedly in practice, but cannot be expressed by windows
@@ -204,7 +202,7 @@ such a way that loading remains inefficient.  Compiling data integration and
 aggregation queries together may yield efficient code for loading the warehouse
 which may avoid the materialization of large intermediate results.
 
-
+\comment{
 \textbf{Complex event processing, real-time business intelligence and data
 stream analytics.}  The need to keep pace with the growing volume of logistic
 and operational data has encouraged businesses to adopt high throughput oriented
@@ -220,6 +218,7 @@ opportunities for improving the efficiency and throughput of such applications
 by supporting a deeper analysis of both client and data processing
 functionality, that can subsequently be leveraged to optimize the whole
 application.
+}
 
 \medskip
 
@@ -259,16 +258,16 @@ form that contains no relational operations, allowing for straightforward
 generation of procedural code.
   \item We experimentally demonstrate that \compiler\ is able to produce query
 executors whose performance significantly dominates existing relational database
-and stream processing engines across a variety of applications.
+engines across a variety of applications.
 \end{enumerate}
 
 The remainder of this paper is as follows. Section 2 describes the map calculus
-used by \compiler and the core properties of this internal representation and
+used by \compiler\ and the core properties of this internal representation and
 its correspondance to map data structures. Section 3 presents the compilation
 algorithm and the various transformations and simplifications it applies to
 calculus formulae. Section 4 presents an overview of the system model and
 infrastructure for executing \compiler's queries. Finally prior to discussing
 related work and concluding, Section 5 presents experimental results
 demonstrating the significant benefits of our techniques over a standard
-relational database, a streaming engine, as well as a direct compilation of the
-query plan as a straight-line function.
+relational database, as well as a direct compilation of the query plan as a
+straight-line function.

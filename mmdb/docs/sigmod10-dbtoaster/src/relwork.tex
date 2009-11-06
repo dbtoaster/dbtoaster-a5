@@ -12,27 +12,27 @@ Database management systems have long realised the benefits of compilation in
 their ability to \textit{prepare} and execute SQL queries and stored procedures
 since the days of System R~\cite{chamberlin-tods:81}, which investigated
 compilation to machine code for computing architectures from that era. To the
-best of our knowledge, modern database systems do not generate assembly, rather
-compilation produces query plans -- a network of operators implementing the
-relational algebra, and fundamentally processing with a Volcano-style
-iterator-based approach~\cite{graefe-tkde:94}. We view query plans as
-interpreted programs, that is while the operators themselves have efficient
-implementations, the plan is a data structure representing a composition of
-operators, and must be inspected, and dispatched by the query execution engine
-(i.e the interpreter). 
+best of our knowledge, modern database systems do not generate assembly but
+query plans -- a network of operators fundamentally processing with a
+Volcano-style iterator-based approach~\cite{graefe-tkde:94}. We view query plans
+as interpreted programs, the plan is a data structure maintaining a composition
+of efficient operator implementations, and must be inspected, and dispatched by
+the query execution engine (i.e the interpreter).
+\comment{
 Furthermore, in such systems, continuous query processing
 is often an afterthought, and added in the form of triggers, views and
-incremental view maintenance algorithms. In contrast our approach to compilation
-generates engines that differ significantly from plan-based approaches in that
-our generated code is designed for per-tuple processing, and thus streaming, and
-does not incur any of the overhead of having to inspect plan data structures.
-
-Other related works have looked at the issue of database generation, for example
-the work by Batory et al. on the GENESIS~\cite{batory-tse:88} system. Such work
-is much more in the spirit of extensible database systems, such as Starburst and
-Postgres. We focus purely on the query processing aspect, in the main-memory
-context, as opposed to attempting to define database generation languages, or
-tools to support modular database architectures.
+incremental view maintenance algorithms.
+}
+In contrast our compilation generates engines that differ
+significantly from plan-based approaches in that our generated code is designed
+for per-tuple processing, and thus streaming, and does not incur any of the
+overhead of having to inspect plan data structures.
+Database compilers have also looked at database generation, for example the work by Batory
+et al. on the GENESIS~\cite{batory-tse:88} system. Such work is much more in the
+spirit of extensible database systems, such as Starburst and Postgres. We focus
+purely on the query processing aspect, in the main-memory context, as opposed to
+attempting to define database generation languages, or tools to support modular
+database architectures.
 
 
 \textbf{View maintenance.}
@@ -41,7 +41,7 @@ topics ranging from efficient view maintenance algorithms given base relation
 deltas~\cite{colby-sigmod:96}, which may be eagerly or lazily
 applied~\cite{yan-vldb:95,zhou-vldb:07}, to the question of which views to
 actually materialize and how to use such views during query
-optimization~\cite{kotidis-tods:01,zhou-icde:07}.
+optimization~\cite{kotidis-tods:01}.
 Zhou et al.~\cite{zhou-vldb:07} describe a lazy view materialization technique,
 where their computation of deltas from single tuples starts from a similar point
 to ours, however, their approach does not generalize like our map calculus,
@@ -84,9 +84,11 @@ performance.
 }
 
 \noindent \textbf{Stream and event processing.}
-Our work can loosely be compared to complex event and stream processing
-engines~\cite{wu-sigmod:06,agrawal-sigmod:08,white-pods:07,motwani-cidr:03,abadi-vldbj:03}
+Our work can loosely be compared to complex event and stream processing engines
+such as Aurora, STREAM, Cayuga,
+SASE+~\cite{wu-sigmod:06,agrawal-sigmod:08,white-pods:07,motwani-cidr:03,abadi-vldbj:03}
 due to the common goal of handling frequently changing data.
+\comment{
 SASE+~\cite{agrawal-sigmod:08} and Cayuga~\cite{white-pods:07} are complex event
 processors that focus on sequence and pattern query processing on event streams
 using NFA-based approaches to process a variety of patterns including Kleene
@@ -94,6 +96,7 @@ closures and negation operators. Relational stream processing engines such as
 STREAM~\cite{motwani-cidr:03} and Aurora~\cite{abadi-vldbj:03} investigate
 continuous query processing architectures that are capable of evaluating
 stream-equivalent versions of the standard relation algebra.
+}
 \comment{From the systems
 perspective, several novel techniques were developed including scheduling, load
 shedding, and approximate query processing.
@@ -102,26 +105,29 @@ Many of these systems are simultaneously addressing the issue of efficiency and
 the semantic requirements of their target applications, exploiting such semantic
 properties to attain performance. In contrast, our approach does not use such
 novel data and query models -- we focus on standard relational queries, but
-critically address performance issues of arbitrary updates to a database snapshot. We
-also argue for an alternative to plan-based execution, and design query
+critically address performance issues of arbitrary updates to a database
+snapshot.
+\comment{
+We also argue for an alternative to plan-based execution, and design query
 executors to best suit continuous execution in a main-memory environment.
+}
 
-We briefly comment on two other recent works on data stream processing. first
-the SPADE~\cite{gedik-sigmod:08} language designed for IBM's System S stream
-processing engine. SPADE is a declarative language for specifying data stream
-applications, however the authors do also discuss their implementation including
-their compilation process. The authors discuss compiler optimizations such as
-operator grouping for execution across multiple hardware contexts, and operator
-fusion to reduce internal queueing. Note that \compiler\ completely eliminates
-any internal queueing, since we produce a single-straight line function, and
-automatically derives appropriate data structures to support query processing
-via a single function. This latter issue is not considered in SPADE. Finally,
-StreamBase~\cite{streambase}, a commercialization of the Aurora stream
-processing engine has also studied the problem of compiling stream programs,
-however there is little documentation~\cite{sb-patent} regarding the technical
-details of their techniques. To the best of our knowledge, their compilation
-process does not include generating straight-line processing functions in the
-same aggressive manner as \compiler.
+
+The SPADE~\cite{gedik-sigmod:08} language of IBM's System S stream processing
+engine, is a declarative language for specifying data stream applications. The
+authors discuss their implementation including their compilation process and
+compiler optimizations such as operator grouping for execution across multiple
+hardware contexts, and operator fusion to reduce internal queueing. Note that
+\compiler\ completely eliminates any internal queueing, since we produce a
+single-straight line function, and automatically derives appropriate data
+structures to support query processing via a single function. This latter issue
+is not considered in SPADE. Finally, StreamBase~\cite{streambase}, a
+commercialization of the Aurora stream processing engine has also studied the
+problem of compiling stream programs, however there is little
+documentation~\cite{sb-patent} regarding the technical details of their
+techniques. To the best of our knowledge, their compilation process does not
+include generating straight-line processing functions in the same aggressive
+manner as \compiler.
 
  \comment{
  TODO:
@@ -183,14 +189,9 @@ row-oriented main memory query processor that extensively uses compression on
 denormalized relations, and applies aggregates while scanning these relations as
 its main query processing functionality.
 }
-
-These interest in these systems highlight the potential for exploring
-main-memory database architectures, but derive from standard plan-based query
-processing techniques, and do not study compilation.  For now we have looked at
-describing queries as tuple functions, and exploit aggressive recursive
-compilation. Having only started generating our runtime, we can now
-proceed to the systems level aspects of our tuple functions, for example
-investigating cache performance in much greater depth, and in particular
-understanding which of the above techniques and optimizations can be applied in
-our context, as well as leveraging relevant work from the compiler and
-programming languages communities.
+These systems highlight the potential for exploring main-memory database
+architectures, but do not address continuous processing and compilation. Having
+only started generating our runtime, we can now proceed to the systems level
+aspects of our tuple functions, for example investigating cache performance in
+much greater depth, and in particular understanding which of the above
+techniques and optimizations can be applied in our context.
