@@ -11,7 +11,7 @@ compiling to M3 programs. Much work is left to be down, however.
 
 
 We have excluded a number of features from the SQL fragment we support.
-MAX and MIN aggregates and the DISTINCT keywords can we added without
+MAX and MIN aggregates and the DISTINCT keywords can be added without
 fundamental problems, needing only moderate extensions of M3; however,
 additional data structures are needed to keep actual database relations
 and auxiliary relations
@@ -20,11 +20,14 @@ second-best tuple is when a maximum or minimum value is removed. We
 have built a prototype compiler that implements these features, but lacked the
 space for treatment.
 
+\nop{
 Aggregates nested inside FROM and particularly WHERE clauses in general
 do not admit recursive compilations of deltas: While it is possible to express
 deltas for such queries, the deltas are not structurally simpler than the
 input query, and in general, recursive compilation does not terminate,
 or does not result in query operator-free code.
+} % end nop
+
 
 We only address single-tuple updates in this paper.
 Batching and set-at-a-time techniques have often been

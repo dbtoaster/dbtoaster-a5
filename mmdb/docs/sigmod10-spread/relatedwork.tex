@@ -6,13 +6,14 @@
 
 Database compilers \cite{DBLP:conf/pods/Batory88,DBLP:journals/jiis/BatoryT97}.
 
-Data cubes \cite{datacube}.
+
 Online aggregation (that is, by approximation --
 \cite{DBLP:conf/sigmod/HaasH99, DBLP:conf/sigmod/RusuXPWJJD08, DBLP:conf/sigmod/AcharyaGPR99}).
 
 A large body of previous research has focused on incremental view maintenance
-of relational database queries. The
-focus of this work was always on only one level of delta rewriting
+of relational database queries
+\cite{roussopoulos-tods:91,griffin-sigmod:95,colby-sigmod:96,yan-vldb:95,kotidis-tods:01,zhou-vldb:07}.
+The focus of this work was always on only one level of delta rewriting
 and then using classical relational query processing techniques
 based on interpreted query plans and heavyweight monolithic query operators
 (such as joins).
@@ -23,6 +24,8 @@ applicable.
 
 Most of the previous work on incremental view maintenance does not observe or leverage the fact that aggregation in queries can actually make incremental maintenance {\em easier}, rather than harder, because it greatly reduces the amount of data in the result and because numbers have additional algebraic properties that relations do not have and which allow for further decomposition and optimization of queries.
 
+
+\nop{
 Column stores \cite{DBLP:journals/tods/Batory79,DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07}
 are a prominent and successful instance of the recent trend
 to abandon rather old database technologies and try out new architectural
@@ -32,7 +35,6 @@ concept; in main memory, it does not seem to be particularly meaningful to talk 
 on incremental view maintenance in column stores.
 Indeed, they are notoriously bad at updating (worse than classical row stores).
 
-\nop{
 H-Store is an OLTP system that abandons classical concurrency control and
 recovery baggage for very high performance. It is interesting for the
 fresh look at things, and for the viewpoint that even OLTP systems should

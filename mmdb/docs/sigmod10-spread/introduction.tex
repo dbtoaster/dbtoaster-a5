@@ -8,8 +8,11 @@ improving decades-old database technology
 % (particularly, OLTP) -- System R and
 % the long line of systems that have followed it --
 %
-to questioning established
-architectures and creating fundamentally different, more lightweight systems
+to questioning established architectures 
+%(cf.\ the recent work on column stores
+%\cite{DBLP:journals/tods/Batory79,DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07})
+%
+and creating fundamentally different, more lightweight systems
 that are often domain-specific
 (cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
 Part of the impetus for this change was given by 
@@ -66,7 +69,7 @@ passing programs that incrementally maintain materialized views of
 the queries. These message passing programs keep a hierarchy of map data
 structures (which may be served out of a key-value store) up to date
 and can share computation in the case that multiple aggregation queries (e.g.,
-a data cube) need to be maintained.  Most importantly, though, these message
+a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message
 passing programs can be massively parallelized to the degree that the updating
 of each single result aggregate value can be done in constant time on normal
 off-the-shelf computers.\footnote{That is,
