@@ -28,18 +28,17 @@ Unless otherwise specified, trials take place on a cluster of 41 nodes, includin
 % Q20: l, p, ps, s, n
 % Q21: s, l, o, n
 % Q22: c
-We study the behavior of 3 categories of query.
+We study the behavior of 2 categories of query: 
 \begin{itemize}
 \item $Customer \bowtie Orders \bowtie Lineitem$
 \item $Part \bowtie Partsupp \bowtie Supplier$
-\item $Lineitem \bowtie Part \bowtie Partsupp \bowtie Supplier \bowtie Nation$
 \end{itemize}
-The selection of datacube construction queries is guided by the TPC-H query workload.  18 of the 22 queries in the TPC-H workload can be evaluated on a datacube generated over one of the enumerated joins.  Where the specific query being computed is not a variable, we use a slightly more complex version of TPCH Query 12 that corresponds to the first of these joins.  Unless otherwise noted, the query uses the following 6 group-by columns taken directly from the input tables: 
+We refer to these joins as COL, and PPsS respectively, denoting the join path.The selection of datacube construction queries is guided by the TPC-H query workload.  12 of the 22 queries in the TPC-H workload can be evaluated on a datacube generated over one of the enumerated joins.  Where the specific query being computed is not a variable, we use a warehouse construction query corresponding to the first of these joins.  Unless otherwise noted, the query uses 8 group by columns.  6 group-by columns are taken directly from the input tables: 
 
 {\noindent $CustomerKey, NationKey, OrderKey,$ \\
 $OrderPriority, ShippingPriority, ShipMode$}
 
-\noindent and precomputes 2 group-by columns from the boolean expressions
+\noindent The remaining 2 group-by columns are values for the boolean expressions:
 
 {\noindent $ShipDate > CommitDate$ as $ShipLate$\\
 $RecvDate > CommitDate$ as $RecvLate$}
@@ -75,16 +74,43 @@ We expand on these results, showing the CPU utilization of the 20-node case in F
 \end{center}
 \end{figure}
 
+\subsection{Key-Foreign Key Join Optimization}
+\label{sec:key_fkey}
+We next measure the benefits of applying the Key-Foreign Key join optimization described in Section \ref{sec:key_fkey}.  Figure \ref{fig:fkbenefittable} shows how much the execution plan for two queries can be simplified by applying the optimization, while Figure \ref{fig:fkupdatethroughput} shows the improvement in update throughput.  
+ 
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+ & \multicolumn{2}{c|} {\textbf Original} & \multicolumn{2}{c|} {\textbf Optimized} \\
+{\textbf Query} & {\textbf Maps} & {\textbf Rules} & {\textbf Maps} & {\textbf Rules} \\ \hline
+COL  & 6 & 10 & 3 & 3 \\ \hline
+PPsS & 10 & 19 & 4 & 5 \\ \hline
+\end{tabular}
+\caption{Simplication in Cumulus' execution plan as a result of applying the Key-Foreign Key join optimization for the example queries.}
+\label{fig:fkbenefittable}
+\end{center}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=3.0in]{images/foreignkey.pdf}
+\caption{Maximum update throughput increase as a result of applying the Key-Foreign Key join optimization to the example queries.}
+\label{fig:fkupdatethroughput}
+\end{center}
+\end{figure}
+
 \subsection{Aggregation}
 % Removal order: 
 % COL: Order.OrderPriority, LineItem.ShipLate, Customer.NID, LineItem.ShipMode, Order.ShipPriority, LineItem.RecvLate
 % PPSS: Type, MFGR
-We next consider the behavior of Cumulus with respect to redundancy in the query workload.  Figure \ref{fig:aggvsupdates} shows the update rate as a function of the number of group-by aggregate columns in the query.  For each query, a randomly selected subset of the non-key group-by aggregate terms are removed.  While each group-by column adds another dimension to one or more maps, foreach loops iterate only over values actually defined in the input maps.  Because the removed columns are functionally dependent on at least one of the two remaining key columns, adding them to the query does not de-aggregate the query result and no aditional work is required.
+Finally, we consider the behavior of Cumulus with respect to redundancy in the query workload.  Figure \ref{fig:aggvsupdates} shows the update rate as a function of the number of group-by aggregate columns in the query.  For each query, a randomly selected subset of the non-key group-by aggregate terms are removed.  While each group-by column adds another dimension to one or more maps, foreach loops iterate only over values actually defined in the input maps.  Because the removed columns are functionally dependent on at least one of the two remaining key columns, adding them to the query does not de-aggregate the query result and no aditional work is required.
 
 \begin{figure}
 \begin{center}
 \includegraphics[width=3.0in]{images/aggvsupdates.pdf}
-\caption{Update rate as a function of number of dependent group-by columns added}
+\caption{Update rate as a function of number of dependent group-by columns added.}
 \label{fig:aggvsupdates}
 \end{center}
 \end{figure}
@@ -94,7 +120,7 @@ Similarly, Figure \ref{fig:aggvslatency} shows the effect of de-aggregation on q
 \begin{figure}
 \begin{center}
 \includegraphics[width=3.0in]{images/aggvslatency.pdf}
-\caption{Query latency as a function of the number of dependent group-by columns added}
+\caption{Query latency as a function of the number of dependent group-by columns added.}
 \label{fig:aggvslatency}
 \end{center}
 \end{figure}
