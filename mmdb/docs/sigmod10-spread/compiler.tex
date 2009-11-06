@@ -258,10 +258,10 @@ $\AggSum(5, \textit{true})$ simplifies to $5$.
 
 
 {\bf Variable elimination}.
-Given an abitrary monomial formula $\phi = \bigwedge (E, O)$,
-where $E$ are the equality
-atoms $x=y$ and $O$ are the remaining atoms (either set may be empty) and
-a set of bound variables $B$.
+Given an abitrary monomial formula $\phi = \bigwedge (E \cup O)$,
+where $E$ is the set of equality
+atoms $x=y$ and $O$ is the set of remaining atoms (either set may be empty),
+and a set of bound variables $B$.
 We eliminate redundant variables as follows.
 
 Consider the equivalence classes of the equivalence relation $E$.
@@ -290,7 +290,7 @@ Given term $\AggSum(y*v*r, R(z, v) \land v<q
 \land x=y \land x=z \land u=v \land v=w \land q=r)$
 and bound variables $\{x,y,z,r\}$.
 The variable equivalence classes are
-$\{ \{x,y,z\}, \{u,v,w\}, \{q,r\} \}$. We chose the rightmost variable in
+$\{ \{x,y,z\}, \{u,v,w\}, \{q,r\} \}$. We choose the rightmost variable in
 each class as the variable to substitute by. In the first class, we can choose
 freely because all members are bound. In the second we can choose freely
 because none are bound. In the third, we must choose $r$ because it is bound
@@ -341,7 +341,7 @@ all variables are bound, then
 \AggSum(t, \phi \land \psi) &=& \AggSum(\AggSum(t, \psi), \phi) \\
 t * \AggSum(t', \phi) &=& \AggSum(t * t', \phi)
 \end{eqnarray*}
-Thus we can lift $\phi$ to the top of a recursively monomial term.
+Thus, given a recursively monomial term, we can lift $\phi$ to the top. 
 Let function LiftIfs do exactly this.
 
 \begin{example}\em
@@ -474,9 +474,9 @@ Simplifying this with bound variable $c_1$ yields
 +   \AggSum(1, c_1=c)
 \]
 
-Now suppose $C$ currently stores tuples (Joe, USA) and (Bill, USA).
+Now suppose $C$ currently stores tuples (Joe, US) and (Bill, US).
 Then $q$[Joe] = $q$[Bill]=2 (and $q$[Dan] would be 0 by default).
-Now insert (Dan, USA).
+Now insert (Dan, US).
 The changes to the query map are
 \begin{eqnarray*}
 q[\mbox{Joe}]  &\mbox{+=}& 0 + 1 + 0 = 3 \\
@@ -492,44 +492,63 @@ $c_1$: That is, the aggregate term for the query is the same, and the delta does
 \[
 \pm \AggSum(1, C(c_2, n)) \pm \AggSum(1, C(c_1,n)) + 1.
 \]
-Suppose we again start with the two tuple database (Joe, USA) and (Bill, USA):
-Then $q[\,] = 4$. We add (Dan, USA) and
-$\Delta_{+C(\mathrm{Dan}, \mathrm{USA})} q = 2 + 2 + 1 = 5$, changing
+Suppose we again start with the two tuple database (Joe, US) and (Bill, US):
+Then $q[\,] = 4$. We add (Dan, US) and
+$\Delta_{+C(\mathrm{Dan}, \mathrm{US})} q = 2 + 2 + 1 = 5$, changing
 $q[\,]$ to 9. We remove Bill and get
-$\Delta_{-C(\mathrm{Bill}, \mathrm{USA})} q = -3 - 3 + 1 = -5$, changing
+$\Delta_{-C(\mathrm{Bill}, \mathrm{US})} q = -3 - 3 + 1 = -5$, changing
 $q[\,]$ back to 4.
 \punto
 \end{example}
 
 
 
-
-\subsection{Compilation Algorithm}
-\label{sec:compilation-alg}
+\subsection{M3 Programs}
 
 
 An M3 program consists of a set of triggers of the form
 \[
-\mbox{{\tt on <action> $R$($\vec{x}$) \{ $s_1$; $\dots$; $s_k$ \}}}
+\mbox{{\tt on <action> $R$($\vec{x}\vec{y}$) \{ $s_1$; $\dots$; $s_k$ \}}}
 \]
 where {\tt <action>} is either {\tt insert into} or {\tt delete from},
-$R$ is a relation name,
+$R$ is a relation name, $\vec{x}\vec{y}$ are argument variables,
 and the $s_i$ are statements of the form
-\begin{equation}
-\mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ $\pm$= $t$}}
-%\label{eq:foreach}
-\end{equation}
-where $\vec{x}$ and $\vec{y}$ are distinct tuples of variables and
+\[
+\mbox{$m[\vec{x}]$ $\pm${\tt =} $t$ ~~~~~~ or ~~~~~~
+{\tt foreach $\vec{z}$ do $m[\vec{x}\vec{z}]$ $\pm$= $t$}}
+\]
+where $\vec{z}$ are variables distinct from $\vec{x}\vec{y}$ and
 $t$ is a term in which all aggregates are constraints-only (or in other
 words, functional if-statements).
-If $\vec{y}$ consists of zero variables, we omit
-{\tt foreach $\vec{y}$ do}.
-Let $m_1[\vec{z}_1], \dots, m_k[\vec{z}_k]$ be the map accesses in $t$.
+Let $m_1[\vec{v}_1], \dots, m_k[\vec{v}_k]$ be the map accesses in $t$.
 Then $m$, $m_1$, $\dots$, $m_k$ must be pairwise distinct
-and the variables in $\vec{z}_1, \dots, \vec{z}_k$ must be a nonoverlapping
+and the variables in $\vec{v}_1, \dots, \vec{v}_k$ must be a nonoverlapping
 subsets of the variables in $\vec{x}, \vec{y}$.
 %
 For each relation name, there may by multiple insert and delete triggers.
+
+
+Statements of the form $m[\vec{x}]$ {\tt +=} $t$,
+where term $t$ is the simplified delta
+of an aggregate term $q$, are a shortcut for
+\begin{tabbing}
+~~~{\bf if} $m$ is defined on $\vec{x}$ {\tt then} $m[\vec{x}]$ {\tt +=} $t$;
+{\bf else} $m[\vec{x}]$ := $q[\vec{x}]$
+\end{tabbing}
+This means that if $m$ is undefined on $\vec{x}$, it has to be initialized
+by evaluating the query $q$ whose result $m$ represents, parameterized by
+$\vec{x}$.
+%
+In a statement of the form
+{\tt foreach $\vec{z}$ do $m[\vec{x}\vec{z}]$ $\pm$= $t$},
+$m[\vec{x}\vec{z}]$ is updated for all
+values $\vec{z}$ such that $\vec{x}\vec{z}$ is currently in the
+domain of $m$ (causing no modifications of map domains).
+
+
+
+\subsection{Compilation Algorithm}
+\label{sec:compilation-alg}
 
 
 The compilation algorithm employs {\em recursive incremental view
@@ -561,27 +580,31 @@ $\vec{b}$ and a statement of the form
 $\AggSum(t, \vec{x}=\vec{b})$
 and simplifies it to the equivalent statement
 {\tt foreach $\vec{y}$ do $q[\vec{b}\vec{y}]$ +=} $t$.
-Note: We lift ifs to be able to apply this optimization.
+We lift ifs to be able to apply this optimization.
+%
+Note that the use of Simplify, SimplifyArgs and duplicate elimination
+is not necessary for correctness of the compiled M3 programs, but is important
+to create small and efficient programs.
 
 
 
 \begin{figure}
 \begin{tabbing}
 {\bf algorithm} Compile(\=map\_name: string, \\
-                  \>map\_args: var list, \\
-                  \>t: term) \\
+                  \>map\_args: var list,
+                    t: term) \\
 outputs an M3 program \\
 {\bf begin} \\
 {\bf for each} relation $R$ in the schema,
                pm in $\{+,-\}$ {\bf do} \\
 ~~\=
   trigger\_args =: \=turn columns names of $R$ into list \\
-\>               \>of new argument variable names; \\
+\>               \>of new argument variable names; \\[1ex]
 \>{\bf for each} $t_i$ in
-        RecMonomials($\Delta_{pm R(\mathrm{trigger\_args})} t$) {\bf do} \\
-\>~~\=bound\_vars =: trigger\_args $\cup$ map\_args; \\
+        RecMonomials($\Delta_{pm R(\mathrm{trigger\_args})} t$) {\bf do} \\[1ex]
+\>~~\=bound\_vars =: trigger\_args $\cup$ map\_args; \\[1ex]
 \>\>($t'_i$, $\Theta_i$) := ExtractAggregates( \\
-\>\>~~      Simplify($t'$, bound\_vars), bound\_vars); \\
+\>\>~~      Simplify($t'$, bound\_vars), bound\_vars); \\[1ex]
 \>\>s := SimplifyArgs({\tt foreach} map\_args {\tt do} \\
 \>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args); \\[1ex]
 \>\>{\bf if} pm=`+' {\bf then} \\
@@ -601,9 +624,23 @@ outputs an M3 program \\
 \end{figure}
 
 
-Note that the use of Simplify, SimplifyArgs and duplicate elimination
-is not necessary for correctness of the compiled M3 programs, but is important
-to create small and efficient programs.
+Compile produces M3 programs in which each trigger contains a single statement,
+but there may be several triggers for the same tuple insertion or deletion
+event. Moreover, there may be maps that are read by some of these triggers
+and written by others.
+The semantics of M3 statements
+is such that the map values read are assumed to be from
+before the update. In an implementation, one can make sure that no dirty
+reads happen by double-buffering the maps, i.e., by writing changes to
+a copy than is commited when all triggers for an update have finished, and
+is read from in the next update.
+An alternative is to perform a suitable topological sort of
+the statements\footnote{Our compilation approach assures that this is always
+possible. Moreover, the order in which the compiler outputs the triggers
+is such a topological sort.}
+that assures that no map is read after it is written, 
+and to merge triggers according to this topological sort.
+We have done the latter in the M3 examples shown so far.
 
 
 \begin{theorem}
@@ -670,30 +707,23 @@ and painless implementation.
 } % end nop
 
 
-\subsection{Domains}
+%\subsection{Domains}
 
 
-We have addressed domains of variables to loop over in foreach statements
-in a handwavy fashion in the introduction. Let us now be precise about this
-issue.
-We can assign a domain $R.A$, where $R$ is a relation name and $A$ is
-a column name to each variable.
-For instance, given atomic formula Customer$(x,y)$, where
-the first column of Customer is cid, variable $x$ has domain Customer.cid.
-This annotation or typing of variables can be propagated bottom-up.
-Each variable being looped over can be typed in this way.
+\nop{
+Above, we have implicitly assumed that maps $m$ are defined everywhere,
+or at least on all the argument tuples that we will encounter while
+running an M3 program. We have assumed that the program starts on an
+empty database (no tuples have been inserted yet) and all maps have value
+0 everywhere, which is correct because all maps are defined to represent
+$\AggSum$ terms, which are 0 on an empty database.
 
-The M3 programs that our compiler creates are correct if we assume
-an a priori given domain of each variable
-that we will never have to add to later (while inserts are processed).
-A {\tt foreach $\vec{x}$} statement loops over all the distinct tuples
-$\vec{x}$ that we can construct from these variable domains.
+Unfortunately, it is not a realistic assumption that map domains are known
+in advance: We cannot know what the tuples inserted later will contain,
+and incrementing maps for all values of an absurdly large domain
+is infeasible too.
 
-Unfortunately, it is not a realistic assumption that these variable domains
-are known in advance. For practical reasons, we have to start with empty
-domains, to which we add when tuples are inserted. However, this means that,
-in general, we need to do further work to create initial map values for new
-domain elements.
+
 
 
 \begin{example}\em
@@ -715,16 +745,18 @@ already in the domains of variables cid2, nation1, and nation2.
 But suppose cid is new. 
 TODO: FINISH.
 \end{example}
+} % end nop
 
 
 \subsection{Key-Foreign Key Join Optimization}
+\label{sec:key_fkey}
 
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=2in]{images/q12_graph.pdf}
+\includegraphics[width=3in]{images/q12_graph.pdf}
 \caption{Data-flow graph for the example query.
-Light and dashed edges can be optimized out, given foreign key constraints.}
+Light and dashed edges can be eliminated.}
 \label{fig:dataflow}
 \end{center}
 \end{figure}
@@ -780,14 +812,13 @@ following insert triggers:
 \begin{verbatim}
 on insert into Customer(cid, nation) {
   q[cid] += qC[cid];
-  foreach oid do qL[cid, oid] += qLC[oid, cid];
+  foreach oid do qL[cid, oid] += qCL[oid, cid];
   qO1[cid] += 1
 }
 on insert into Order(oid, cid, ...) {
   q[cid] += qO1[cid]*qO2[oid];
-  qC[cid] += qO2[oid];
-  qL[cid, oid] += qO1[cid];
-  qLC[oid, cid] += 1
+  qC[cid] += qO2[oid];  qL[cid, oid] += qO1[cid];
+  qCL[oid, cid] += 1;   qLC[oid, cid] += 1
 }
 on insert into LineItem(oid, ...) {
   foreach cid do  q[cid] += qL[cid, oid];
@@ -799,7 +830,7 @@ on insert into LineItem(oid, ...) {
 Consider the data flow graph for this program, which is shown in
 Figure~\ref{fig:dataflow} and which illustrates the dependencies between
 maps through updates to certain relations (the edge labels). All M3 statements
-other than those contributing only bold edges can be removed. For example,
+contributing dashed edges can be removed because these increments are zero unless a foreign key constraint is violated in the data. For example,
 the statement {\tt q[cid] += qC[cid]} in {\tt on insert into Customer}
 can be removed because {\tt qC} represents the number of line items for this
 customer, and the customer is new. The solid thin lines represent

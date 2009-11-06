@@ -1,4 +1,5 @@
 
+
 \section{The Cumulus System}
 \label{sec:architecture}
 
@@ -7,11 +8,13 @@
 
 
 \begin{figure}
-\begin{center}
-\includegraphics[width=3in]{images/Architecture.pdf}
+\hspace{-3mm}
+\includegraphics[width=3.4in]{images/Architecture.pdf}
+
+\vspace{-4mm}
+
 \caption{Cumulus' architecture.}
 \label{fig:arch}
-\end{center}
 \end{figure}
 
 
@@ -70,7 +73,7 @@ a record that identifies, for each map access of the statement,
 which DW nodes store any relevant data for executing this
 statement.
 %
-In the curreny prototype of Cumulus, maps are partitioned along
+In the current prototype of Cumulus, maps are partitioned along
 dimensional axes, akin to the partitioning done in grid files\cite{318586}.
 
 
@@ -206,11 +209,11 @@ Then the following PUSH messages will be sent:
 \begin{tabular}{ll|l}
 from & to & message \\
 \hline
-$N_1$ & $N_4$ & PUSH($t$, mPL:$\{ [d_1, 2005] \mapsto 1 \}$) \\
+$N_1$ & $N_4$ & PUSH($t$, mPL: $\{ [d_1, 2005] \mapsto 1 \}$) \\
 $N_2$ & $N_4$ & PUSH($t$, mDL: $\emptyset$) \\
-$N_2$ & $N_5$ & PUSH($t$, mPL:$\emptyset$; mDL: $\emptyset$) \\
-$N_3$ & $N_4$ & PUSH($t$, mDL:$\{ [p_1, red] = 1 \}$) \\
-$N_3$ & $N_5$ & PUSH($t$, mDL:$\{ [p_1, red] = 1 \}$) \\
+$N_2$ & $N_5$ & PUSH($t$, mPL: $\emptyset$; mDL: $\emptyset$) \\
+$N_3$ & $N_4$ & PUSH($t$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
+$N_3$ & $N_5$ & PUSH($t$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
 \end{tabular}
 \end{center}
 \end{example}
@@ -289,17 +292,10 @@ Node $N_5$ proceeds analogously.
 In general, the order of execution among the statements of a single update
 does not matter as long as all
 statements read only map values not yet modified by other statements processing
-this or a later update. This could be assured by a suitable topological sort of
-the statements\footnote{Such a topological sort of the statements
-assures that no map is read after it is written.
-It is a property of our compilation approach that there are no cyclic dependencies between maps among the statements of a single update -- so a topological sort is always possible -- and the order in which the
-compiler outputs triggers statements is already such a valid
-topological sort.
-We have implicitly performed such a topological sort in the M3 examples we have
-shown so far and have shown trigger implementations as sequences of
-statements.}, but in the Cumulus runtime we instead maintain versions of
+this or a later update.
+This could be assured by a suitable topological sort of
+the statements, but in the Cumulus runtime we instead maintain versions of
 the maps (and reads are always on the old version of the map).
-
 
 The relative order by which the Switch sends messages
 belonging to the execution of a single M3 statement does not matter.

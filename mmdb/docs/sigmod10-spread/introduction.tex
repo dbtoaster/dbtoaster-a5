@@ -96,12 +96,12 @@ $\Delta$Customer
 & $\Delta$q[3] & q[3]
 & $\Delta$q[4] & q[4] \\
 \hline
-$+$(1,US) &         +1 & 1 &              &   &              &   &&   \\
-$+$(2,UK) &            & 1 &            1 & 1 &              &   &&   \\
-$+$(3,UK) &            & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
-$+$(4,US) & +q2[4,US] & 2 &              & 2 &              & 2 & +q1[US] + 1 & 2 \\
-$-$(3,UK) &            & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
-$+$(3,{\bf US}) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
+insert (1,US) &         +1 & 1 &              &   &              &   &&   \\
+insert (2,UK) &            & 1 &            1 & 1 &              &   &&   \\
+insert (3,UK) &            & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
+insert (4,US) & +q2[4,US] & 2 &              & 2 &              & 2 & +q1[US] + 1 & 2 \\
+delete (3,UK) &            & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
+insert (3,{\bf US}) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
 \end{tabular}
 \end{center}
 
@@ -130,27 +130,32 @@ parallelization as nonincremental evaluation.
 \subsection{Message passing programs}
 
 
-We compile SQL aggregation queries to {\em map maintenance
-message}\/ (M3) programs.
-All state including the query result is represented by map data
+We introduce {\em map maintenance message}\/ (M3) programs and
+compile SQL aggregation queries to M3.
+All state including query results are represented by map data
 structures. 
 M3 programs consist of insert and delete triggers -- sequences
 of {\em map update statements}\/ of the form
-{\tt $m[\vec{x}]$ $\pm$= $t$} or
 \begin{equation}
-\mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}, \vec{y}]$ $\pm$= $t$}},
+\mbox{{\tt $m[\vec{x}]$ $\pm$= $t$}}
+\label{eq:nonforeach}
+\end{equation}
+or
+\begin{equation}
+\mbox{{\tt foreach $\vec{y}$ do $m[\vec{x}\vec{y}]$ $\pm$= $t$}},
 \label{eq:foreach}
 \end{equation}
-where $m$ is a map name and $t$ is essentially a $C$ or Java rvalue expression.
-When we increment a field $m[\vec{a}]$ of a map
-that is undefined (i.e., $\vec{a}$ is not in the domain of $m$),
-we use zero as the default value for $m[\vec{a}]$.\footnote{This is correct
+where $\vec{x}$ are arguments of the trigger,
+$m$ is a map name, and $t$ is essentially a $C$ or Java rvalue expression.
+In a statement of form (\ref{eq:nonforeach}),
+when we increment a field of $m[\vec{x}]$
+that is undefined (i.e., $\vec{x}$ is not in the domain of $m$),
+we use zero as the default value for $m[\vec{x}]$.\footnote{This is correct
 for the examples of this section; the general case will be studied later.}
-In a statement
-of the form (\ref{eq:foreach}),
+In a statement of the form (\ref{eq:foreach}),
 $m[\vec{x}\vec{y}]$ is updated for all
-values $\vec{x}\vec{y}$ of its current
-domain, where $\vec{x}$ are arguments of the trigger and are fixed.
+values $\vec{y}$ such that $\vec{x}\vec{y}$ is currently in the
+domain of $m$.
 
 
 \begin{example}\em
@@ -159,13 +164,14 @@ Given a relation Customer(\underline{cid}, nation).
 We ask, for each customer id (cid),
 for the number of customers of the same nation (including the customer
 identified by cid).
+The SQL query is
 \begin{verbatim}
 SELECT   C1.cid, SUM(1)
 FROM     Customer C1, Supplier C2
 WHERE    C1.nation = C2.nation
 GROUP BY C1.cid;
 \end{verbatim}
-The compiler produces the following on-insert trigger:
+Our compiler produces the following M3 on-insert trigger:
 \begin{verbatim}
 on insert into Customer (cid, nation) {
   q[cid] += q1[nation];
@@ -195,17 +201,18 @@ to be updated only requiring a constant amount of work.}
 The syntax of statements of the form (\ref{eq:foreach})
 is misleading in that it suggests a loop --
 that a nonconstant amount of work is needed to bring aggregate
-values up to date. Of course, polynomial amounts of work are in fact needed,
+values up to date. Polynomial amounts of work are in fact needed,
 but only because in general there are many aggregate values
 to be maintained -- in a
 map representing the result of a group-by query or in an auxiliary map.
 In fact, each statement of form (\ref{eq:foreach})
-writes each value $m[\vec{x}, \vec{y}]$ only once and admits
+writes each value $m[\vec{x}\vec{y}]$ only once and admits
 {\em embarassing parallelism}: $m$ can be partitioned across many machines
 that share the work. A map update statement specifies a
 pattern of {\em message passing} between nodes reading and nodes writing
 map values.
 
+\nop{
 Assume that the storage of individual maps
 is partitioned across several machines. To execute a statement of form
 (\ref{eq:foreach})
@@ -215,11 +222,11 @@ each node storing a value $m_i[\vec{a}_i, \vec{y}_i] = v$,
 for $\vec{y}_i$ arbitrary, sends the message
 $m_i[\vec{a}_i, \vec{y}_i] = v$ to the node managing value
 $m[\vec{a}, \vec{y}]$. This way, that node receives all the values it
-needs to update all $m$ values it represents.
+needs to update all $m$ values that it represents.
 Of course this requires a suitable protocol to ensure overall consistency
 and that the right versions of map values are read and written in the right
 order.
-
+} % end nop
 
 
 \begin{example}[star-join decomposition]\em
@@ -252,20 +259,17 @@ on insert into LineOrder (datekey, partkey, revenue) {
 \end{verbatim}
 The delete-triggers are precisely
 like the insert-triggers, but with {\tt +=} replaced by {\tt -=}.
-Thus, to save space, the deletion triggers are omitted.\footnote{We assume
-here that there are no cascading deletes.}
+We assume here that there are no cascading deletes.
 
-Observe how, on insertion into LineOrder, the code for incrementally
-maintaining the query result {\tt m} decomposes into
-two parts with disjoint variables, 
-{\tt mDL[partkey, partcat]} and {\tt mPL[datekey, year]}.
-
-The maps mPL and mDL have value at most
+The maps {\tt mPL} and {\tt mDL} have value at most
 one at each position because datekey and partkey are keys for Date and Part,
 respectively.
 
-On insert into LineOrder, given values for
-datekey and partkey, we instruct nodes
+Observe how the {\tt on insert into LineOrder} code for incrementally
+maintaining the query result {\tt m} decomposes into
+two parts with disjoint variables, 
+{\tt mDL[partkey, partcat]} and {\tt mPL[datekey, year]}.
+Given values for datekey and partkey, we instruct nodes
 to send their {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
 for any {\tt x} and {\tt y},
 to nodes maintaining {\tt m[x, *]} and {\tt m[*, y]}, respectively.
@@ -313,16 +317,16 @@ the data {\em in main memory}\/,
 allowing for very low latency updating and querying.
 At the time of writing this,
 Terabyte-sized memory chips (DIMMs and flash) have already been announced by
-manufacturers, and already now, large data warehouses
-can be run in main memory in the cloud, where the financial premium of
-main memory over disks is
+manufacturers, and already now, main memory capacities of clusters
+are sufficient to run substantial data warehouses in
+main memory, the financial premium of which over disks is
 offset by greater robustness of the system, lower maintenance
 costs, lower heat production \cite{1154557}, and of course by of orders
 of magnitude better speed and latency characteristics.
 
 The Cumulus protoype aims at demonstrating our results in the context of
 pushing OLAP into the cloud.
-Cumulus automates  the process of  creating, loading,
+Cumulus automates  the process of loading
 and  maintaining  in-memory  data  warehouses.
 (Optional logging of updates to secondary storage
 for persistency is supported.)
