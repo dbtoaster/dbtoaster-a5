@@ -58,6 +58,12 @@ end
 $name = "Solo Node" unless $name;
 handler, server = MapNode::Processor.listen($port, $name);
 handler.setup(cmds);
+
+handler.patterns.each_pair do |map, patterns|
+  puts "============== Patterns ============";
+  puts ("====> Map " + map.to_s + " : (" + patterns.collect { |pat| pat.join(",") }.join("); ("));
+end
+
 puts "Preloading : " + $preload.to_a.join(", ");
 handler.preload($preload, $preload_shifts) if $preload;
 

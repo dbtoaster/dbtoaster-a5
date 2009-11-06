@@ -412,8 +412,9 @@ class MapPartition
   end
   
   def set(var, vers, val)
-    if @data.has_key? var then
-      @data[var].value += val.to_f;
+    record = @data[var]
+    if record then
+      record.value = record.value + val.to_f;
     else 
       @data[var] = PutRecord.new(Entry.make(@mapid, var), vers, val.to_f);
     end
@@ -459,6 +460,10 @@ class MapPartition
   
   def empty?
     @data.empty;
+  end
+  
+  def patterns
+    @data.patterns;
   end
 end
 

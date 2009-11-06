@@ -1,8 +1,6 @@
 --persist
---partition q:5
---partition qLINEITEMS1:2
---#key CUSTOMERS[CID]
---#key ORDERS[OID]
+--key CUSTOMERS[CID] <= ORDERS[O_CID]
+--key ORDERS[OID] <= LINEITEMS[L_OID]
 --switch wl03.cac.cornell.edu
 --node Node01@wl04.cac.cornell.edu:52982
 --node Node02@wl05.cac.cornell.edu:52982
@@ -44,13 +42,13 @@
 --node Node38@wl41.cac.cornell.edu:52982
 --node Node39@wl42.cac.cornell.edu:52982
 --node Node40@wl43.cac.cornell.edu:52982
---slice transform ORDERS[0]@20/30000000
---slice transform ORDERS[1]@20/750000
+--slice transform ORDERS[0]@40/30000000
+--slice transform ORDERS[1]@40/750000
 --slice transform ORDERS[5]~/([0-9]*)-.*/\1/
 --slice project   ORDERS(0,1,5,7)
---slice transform CUSTOMERS[0]@20/750000
+--slice transform CUSTOMERS[0]@40/750000
 --slice project   CUSTOMERS(0,3)
---slice transform LINEITEMS[0]@20/30000000
+--slice transform LINEITEMS[0]@40/30000000
 --slice transform LINEITEMS[16]<d10,11
 --slice transform LINEITEMS[17]<d10,12
 --slice transform LINEITEMS[14]#
@@ -58,12 +56,14 @@
 --domain CUSTOMERS=750000,25
 --domain ORDERS=30000000,*,10,*
 --domain LINEITEMS=30000000,2,2,100
---preload tpch/q12.Map1.txt:tpch/q12.Map2.txt:tpch/q12.Map3.txt:tpch/q12.Map4.txt:tpch/q12.Map5.txt:tpch/q12.Map6.txt 1:5:30000000 1:6:750000 2:0:30000000 2:1:750000 3:0:750000 4:0:30000000 5:0:750000 5:2:30000000 6:0:30000000 6:1:750000
+--preload tpch/q12_maps/q12.Map1.8:tpch/q12_maps/q12.Map2.8:tpch/q12_maps/q12.Map3.8:tpch/q12_maps/q12.Map4.8:tpch/q12_maps/q12.Map5.8:tpch/q12_maps/q12.Map6.8 1:5:30000000 1:7:750000 2:0:30000000 2:1:750000 3:0:750000 4:0:30000000 5:0:750000 5:2:30000000 6:0:30000000 6:1:750000
 --#domain CUSTOMERS=15000,25
 --#domain ORDERS=600000,*,10,*
 --#domain LINEITEMS=600000,2,2,100
 --slice source tpch/100m
+--partition q:5
+--partition qLINEITEMS1:2
 create table customers(cid int, nid int); 
 create table orders(oid int, o_cid int, opriority int, spriority int);
 create table lineitems(l_oid int, lateship int, latecommit int, shipmode int);
-select sum(1),nid,cid,oid,opriority,spriority,lateship,latecommit,shipmode from customers,orders,lineitems where o_cid=cid and l_oid=oid group by nid,cid,oid,opriority,spriority,lateship,latecommit,shipmode;
+select sum(1),cid,nid,oid,opriority,spriority,lateship,latecommit,shipmode from customers,orders,lineitems where o_cid=cid and l_oid=oid group by cid,nid,oid,opriority,spriority,lateship,latecommit,shipmode;

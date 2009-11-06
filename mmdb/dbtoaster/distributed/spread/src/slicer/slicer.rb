@@ -171,8 +171,8 @@ class Slicer
 
     monitor = SlicerMonitor.new(@nodes.collect { |n| n.host } << @switch);
 
-    client_cmd = 
-      SlicerProcess.base_path + "/bin/client.sh -q -s -l 200 " + 
+    client_cmd = #-l 200
+      SlicerProcess.base_path + "/bin/client.sh -q -s  " + 
       @transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
       @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
       "-h " + @source

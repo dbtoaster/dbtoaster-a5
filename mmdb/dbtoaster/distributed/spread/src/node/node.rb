@@ -196,6 +196,7 @@ class MapNodeHandler
   
   def install_put_template(index, cmd)
     @templates[index.to_i] = cmd;
+    @maps.each_pair { |mid, mlist| mlist.each { |m| cmd.access_patterns(mid).each { |pat| m.add_pattern(pat) } } }
     Logger.debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
   
@@ -413,6 +414,7 @@ class MapNodeHandler
   def preload(input_files, shifts = Hash.new)
     cnt = 0;
     in_tables = Hash.new;
+    GC.disable
     @maps.each_pair do |map, values|
       Logger.warn { "Preloading : Map " + map.to_s + " <-- " + input_files[map.to_i-1]; }
       input = File.open(input_files[map.to_i-1]);
@@ -424,6 +426,11 @@ class MapNodeHandler
         );
       end
     end
+    GC.enable;
+    ObjectSpace.garbage_collect;
+    Logger.warn { "Preload complete; Sleeping for 1 min to allow garbage collector to run" };
+    sleep 120;
+    Logger.warn { "Sleep complete" };
   end
   
   def partitions  
@@ -434,6 +441,12 @@ class MapNodeHandler
       end
     end
     ret;
+  end
+  
+  def patterns
+    @maps.collect do |map, values|
+      [ map, values.collect { |part| part.patterns.keys }.uniq ]
+    end.collect_hash
   end
   
 end

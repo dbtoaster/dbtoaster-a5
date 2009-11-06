@@ -175,33 +175,38 @@ class CompiledTrigger
     # efficient, but this change makes things infintely easier to think about.
     boundaries =
       template.paramlist.collect do |i|
-        # For each parameter in the table to be uploaded, find its domain by 
-        # scanning the corresponding components of the target map's partitions.
-        layout.maplist[template.target.source].collect do |part|
-          # So, for each partition, extract all of the ranges covered by
-          # this axis of the partition map.
-          part.range[template.target.key.index(i)];
-        end.uniq.sort do |a, b|
-          # Eliminate duplicates, and then sort over the first index.
-          a.begin <=> b.begin;
-        end.collect do |r|
-          # Further subdivision may be necessary for the fetches.  
-          # Identify corresponding ranges in the maps being read from
-          subdivisions = template.entries.collect do |e|
-            if e.keys.include? i then
-              layout.maplist[e.source].collect do |part|
-                part.range[e.key.index(i)] if part.range[e.key.index(i)].overlaps? r;
+        if template.target.key.include? i then
+          # For each parameter in the table to be uploaded, find its domain by 
+          # scanning the corresponding components of the target map's partitions.
+          layout.maplist[template.target.source].collect do |part|
+            # So, for each partition, extract all of the ranges covered by
+            # this axis of the partition map.
+            part.range[template.target.key.index(i)];
+          end.uniq.sort do |a, b|
+            # Eliminate duplicates, and then sort over the first index.
+            a.begin <=> b.begin;
+          end.collect do |r|
+            # Further subdivision may be necessary for the fetches.  
+            # Identify corresponding ranges in the maps being read from
+            subdivisions = template.entries.collect do |e|
+              if e.keys.include? i then
+                layout.maplist[e.source].collect do |part|
+                  part.range[e.key.index(i)] if part.range[e.key.index(i)].overlaps? r;
+                end
               end
+            end.flatten.compact.uniq
+            # If there are 0 or 1 corresponding ranges, all the reads occur on the same boundary lines
+            # If there are more ranges... we need to subdivide
+            if subdivisions.size > 1 then
+              subdivisions
+            else
+              r
             end
-          end.flatten.compact.uniq
-          # If there are 0 or 1 corresponding ranges, all the reads occur on the same boundary lines
-          # If there are more ranges... we need to subdivide
-          if subdivisions.size > 1 then
-            subdivisions
-          else
-            r
-          end
-        end.flatten
+          end.flatten
+        else
+          # If the key is irrelevant, then just use an infinite range.
+          [((-1.0/0)..(1.0/0))]
+        end
       end
     
     # The result (boundaries) is a list of lists of ranges, the same input that
