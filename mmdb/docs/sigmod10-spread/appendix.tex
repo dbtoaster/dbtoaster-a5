@@ -495,3 +495,20 @@ During a given tick, all updates scheduled for processing are evaluated.  Once a
 For example, in Figure \ref{fig:dataflow} without removing any edges,
 $Depth(q) = 2$, $Depth(qC) = 1$, and $Depth(qO2) = 0$.  Updates to map $q$ scheduled for processing during tick 4 would receive data from map $q_C$ during tick 3, and from map $q$ during tick 2.
 
+
+\subsection{Old Consistency Stuff}
+
+
+For consistency, an update's effect on the warehouse be logically atomic.  Atomicity is of particular importance, since the set of update rules triggered by a given update switch typically span the breadth of the data-dependency graph; Updates to any input relation typically have at least one read to a map updated by every other relation.
+
+As the clearinghouse for updates, the Switch presents an ideal point for generating a total ordering over all tuples to be inserted into the warehouse.  The Switch maintains a version number for each node, incremented on every PUT dispatched to the node hosting it.  FETCHes sent to that node are tagged with the version number of the last PUT sent to the node, while PUTs are dependent on the completion of the prior PUT.
+
+DW nodes ensure consistent evaluation of updates by buffering PUT requests received out of order, or prior to the completion of an earlier PUT request.  Similarly, FETCH requests for a particular version are buffered until the corresponding PUT request has completed, if it has not already done so.
+
+Periodically, the switch queries each node for the completion status of pending PUT requests.  For each node, it computes the lowest FETCH version number for a read associated with an incomplete PUT request.  The Switch then disseminates these version numbers throughout the warehouse with a COMMIT message.  When a node receives a COMMIT, it snapshots its maps by discarding all updates for values that were overwritten before the commit version.
+
+
+\subsection{Precomputing message groups in the switch}
+
+{\em Indexing message sets}.
+To streamline the dispatch of messages to component nodes, the switch pre-generates a spatial index for each template\footnote{Elsewhere called map update statement. It is convenient to think of such a statement, particularly if it is of the {\tt foreach} form, as a template of message passing.}, similar to the grid file directory.  Every entry in the spatial index contains a set of PUT and FETCH messages.  When the template is triggered, the tuple's values are used to index into the spatial index and the corresponding messages are parametrized and sent.  The algorithm for generating the spatial index is presented in Figure \ref{alg:dispatch}.

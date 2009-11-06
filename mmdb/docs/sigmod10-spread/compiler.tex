@@ -749,7 +749,7 @@ One of the triggers that Compile creates is
 \]
 Assume that we have started with empty domains for all maps and
 some S tuples have been inserted. Now we insert the first R tuple, $a$.
-Then $qR[a]$ is undefined, but its correct value is not zero.
+Then $qR[a]$ is undefined, but its correct value in general is not zero.
 However, the correct value is simply
 $qR' = \AggSum(1, S(y))$, which can be incrementally maintained by
 an M3 trigger.

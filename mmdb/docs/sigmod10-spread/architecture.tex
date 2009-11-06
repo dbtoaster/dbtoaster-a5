@@ -35,8 +35,6 @@ are partitioned across the DW nodes to keep network traffic to a minimum.
 The switch does not store any map data, but manages
 the information about data placement (how maps are partitioned and which
 partitions are located on which nodes).
-Cumulus currently does only static data placement and does not migrate
-data to balance load across DW nodes -- this is future work.
 
 The runtime is designed to implement exact online aggregation, and
 we conceive it to be used for main-memory OLAP.
@@ -59,8 +57,7 @@ log later to recreate the data warehouse in main memory.
 We could also log the map states using techniques as surveyed in
 \cite{DBLP:journals/pvldb/SallesCSDGKW09}
 for faster recovery, but this is currently not done.
-We currently do not deal with node failures (which would naturally
-be addressed using redundant data placement), and this is future work.
+
 
 
 \subsection{Data Placement}
@@ -129,8 +126,7 @@ $\vec{x}\vec{y}$), an M3 program processes a set of statements of the form
 \]
 in {\em arbitrary}\/ order.
 %
-Each update has a sequence number (e.g., the $i$ if it is the $i$-th update
-message received so far on the update stream. All messages sent by the
+Each update has a sequence number identifying it. All messages sent by the
 Switch contain this update sequence number.
 
 For a given statement, the Switch proceeds as follows.
@@ -154,7 +150,8 @@ The writers buffer received PUSH messages. For each write task to be
 done, they receive a PUT message from the Switch which instructs them
 what write to perform and which readers to expect PUSH messages from.
 Readers who have received a FETCH message from the Switch always
-send a PUSH message to the writers identified by the Switch in the FETCH
+send a PUSH message to the writers that were
+identified by the Switch in the FETCH
 message: if a reader has no relevant data, it sends an empty PUSH message to
 the writer to allow it to move on.
 This allows the writer to know when all necessary PUSH messages have been
@@ -239,92 +236,86 @@ A DW Node receives and processes FETCH, PUSH, and PUT messages
 as just described.
 It has to process the messages it receives from the Switch 
 in the order they are {\em sent}\/. For example, a
-TCP connection with the Switch ensures this. Apart from protocol messages
+TCP connection with the Switch ensures that messages from the 
+Switch do not arrive out of order. Apart from protocol messages
 that ensure in-order delivery of FETCH and PUT messages, the Switch receives no
 messages from the DW Nodes.
-The processing of received PUSH messages from other DW Nodes is done in the
-order they are received, even though no particular order is
-necessary for correctness.
+Incoming PUSH messages are buffered for inspection when it is the turn of
+the corresponding PUT message to be processed.
 
-Internally, each DW Node maintains committed versions (identified
+\nop{
+Internally, each DW Node maintains the current version
+of the committed versions (identified
 by update sequence numbers) of the maps it maintains. In practice, we
 will only need to keep a relatively small number of versions, and we will always know when an old version is not needed anymore and an be dropped.
 Since consecutive versions only have small differences, we maintain
 old versions as diffs to the latest version.
+} % end nop
 
-\begin{todo}
-In addition, a DW Node has a buffer for received PUSH messages. 
+The state of the DW Node includes, apart from a queue 
+for the messages from the Switch and a buffer for PUSH messages, a
+current update sequence number $t$ and a number
+of map partitions that are stored and maintained at the node.
+Conceptually, two versions of the map partitions are maintained,
+one that represents a committed, consistent version of the data from the time after the
+update with sequence number $t-1$ has been completed and before the update
+of sequence number $t$ has started. This is the version from which FETCH
+requests with update sequence number $t$ are served. The other
+version is a working copy to which the writes of update sequence number
+$t$ are applied.
 
-An old version of map data has to be kept as long as there
+The main thread of control processes the waiting messages from the Switch
+in order.
+For either a FETCH($t', \cdot$) or PUT($t', \cdot$) message, if its
+update sequence number $t'$ is greater
+than the local update sequence number $t$, then we set $t := t'$
+and copy the working copy of the map partitions to the committed version.
 
+Additionally,
+for a FETCH message($t'$, push $m[\vec{\pi}]$ to $Ns$),
+we read the requested data $m[\vec{\pi}]$ from the commited version of
+the map partitions and send it in PUSH messages to the set of recipient
+nodes $Ns$.
 
-Writing is done as follows:
-The PUT nodes compute the update expression and modify the affected maps.  
-
-Looping updates require the Switch to match corresponding read and write partitions.  The correspondence is obtained by identifying intersections between partitions of the target map that are affected by the update, and those of each map in the update expression.  This is equivalent to a join over components of the spatial index stored at the Switch.  Loop-free updates are a special case of this, where only one partition is required from each map.
-
-
-{\em Get Collation}.
-FETCH responses, or PUSH messages for an update are sent to the node managing the partition being updated.  Having received the number of FETCH messages sent by the switch with the PUT message, the destination node can buffer PUSH messages until all have arrived.  At this point, if the update is loop-free, the destination node simply uses the contents of the PUSH messages to evaluate the update expression.
-
-If the update requires a loop, the destination node must do some processing.  The node first generates a set of tables, one for each map reference in the update expression.  Arriving map values populate tables that correspond to any map reference matching the value's keys, where loop variables act as wildcards.  When all values have been received, the destination node computes the natural join of all of the generated tables, effectively producing one update value for every assigned value in the domain of all of the loop variables.  The loop-free update is a special case of this where each generated table contains only one row.
-\end{todo}
+For a message PUT($t'$, $s$ with messages from $Ns$), where $s$ is an M3
+statement, we block until all PUSH messages have arrived for all
+senders announced in set $Ns$.
+Let $m_1[\vec{t}_1]$, $\dots$, $m_k[\vec{t}_k]$ be the map accesses occuring in
+$s$. For each $m_i$, 
+we extract the data from the PUSH messages corresponding
+to the current PUT message and put it in a table $T_i$.
+If $\vec{t}_i$ consists of constants only (i.e., does not contain any
+of the variables that the optional foreach loop loops over), and $T_i$ is
+empty, then we have to compute an inital value for $m_i[\vec{t}_i]$.
+Currently, the DW nodes do not (but the compiler does) support $<$/$\le$-join
+conditions, and the M3 programs produced guarantee that the map value must be
+0.  We compute
+$T_1 \times \dots \times T_k$, and, for each tuple of that product table,
+evaluate $s$ and make one map update.
+If $s$ does not contain a foreach-loop, then each $T_i$ contains exactly
+one value, and we update exactly one map value.
 
 
 \begin{example}\em
 \label{ex:switch_msg3}
 We continue Example~\ref{ex:switch_msg2}.
-Node $N_4$ knows from the PUT message that it will receive
-one message with timestamp $t$ from $N_1$ with mPL values and one message each
-from $N_2$ and $N_3$ with mDL values. It buffers those until it has receive
-all three messages and then updates $m$ for all pairs of an mPL value and an
-mDL value.
-For
-
-Node $N_5$ proceeds analogously.
+Node $N_4$ knows from its message
+\begin{center}
+\begin{tabular}{ll}
+PUT($t$,   & {\tt foreach $(x,y)$ do} \\
+           & ~~{\tt m[$x,y$] += 500 * mDL[$p_1$, $x$]} \\
+           & ~~{\tt ~~~~~~~~~~~~~ * mPL[$d_1$, $y$]} \\
+           & with messages from $\{N_1, N_2, N_3\})$
+\end{tabular}
+\end{center}
+that it will receive messages with timestamp $t$ from nodes $N_1$, $N_2$, and
+$N_3$.
+The information it receives from the PUSH messages is
+$T_{mDL} = \{ [p_1, red] \mapsto 1 \}$ and
+$T_{mPL} = \{ [d_1, 2005] \mapsto 1 \}$.
+Thus, $N_4$ executes the update
+{\tt m[red, 2005] += 500 * 1 * 1}
+on the working copy of $m$. 
 \punto
 \end{example}
 
-
-\subsection{Message Ordering and Consistency}
-
-
-In general, the order of execution among the statements of a single update
-does not matter as long as all
-statements read only map values not yet modified by other statements processing
-this or a later update.
-This could be assured by a suitable topological sort of
-the statements, but in the Cumulus runtime we instead maintain versions of
-the maps (and reads are always on the old version of the map).
-
-The relative order by which the Switch sends messages
-belonging to the execution of a single M3 statement does not matter.
-However, messages from the switch to one and the same node
-(those will have different timestamps) have to arrive there in order.
-This can be made sure by using TCP connections between the switch and nodes
-or simulating them.
-
-Analogously, the order in which PUSH messages are sent or received does not matter.
-
-
-
-\subsection{Old Consistency Stuff}
-
-
-For consistency, an update's effect on the warehouse be logically atomic.  Atomicity is of particular importance, since the set of update rules triggered by a given update switch typically span the breadth of the data-dependency graph; Updates to any input relation typically have at least one read to a map updated by every other relation.
-
-As the clearinghouse for updates, the Switch presents an ideal point for generating a total ordering over all tuples to be inserted into the warehouse.  The Switch maintains a version number for each node, incremented on every PUT dispatched to the node hosting it.  FETCHes sent to that node are tagged with the version number of the last PUT sent to the node, while PUTs are dependent on the completion of the prior PUT.
-
-DW nodes ensure consistent evaluation of updates by buffering PUT requests received out of order, or prior to the completion of an earlier PUT request.  Similarly, FETCH requests for a particular version are buffered until the corresponding PUT request has completed, if it has not already done so.
-
-Periodically, the switch queries each node for the completion status of pending PUT requests.  For each node, it computes the lowest FETCH version number for a read associated with an incomplete PUT request.  The Switch then disseminates these version numbers throughout the warehouse with a COMMIT message.  When a node receives a COMMIT, it snapshots its maps by discarding all updates for values that were overwritten before the commit version.
-
-
-
-
-\nop{
-\subsection{Precomputing message groups in the switch}
-
-{\em Indexing message sets}.
-To streamline the dispatch of messages to component nodes, the switch pre-generates a spatial index for each template\footnote{Elsewhere called map update statement. It is convenient to think of such a statement, particularly if it is of the {\tt foreach} form, as a template of message passing.}, similar to the grid file directory.  Every entry in the spatial index contains a set of PUT and FETCH messages.  When the template is triggered, the tuple's values are used to index into the spatial index and the corresponding messages are parametrized and sent.  The algorithm for generating the spatial index is presented in Figure \ref{alg:dispatch}.
-} % end nop
