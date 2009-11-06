@@ -55,30 +55,27 @@ PPsS computes the following aggregate:
 {\noindent$SUM((Retailprice - SupplyCost) \cdot AvailQty)$}
 
 
-\begin{figure}
+\begin{figure*}[t!]
 \begin{center}
-\includegraphics[width=3.0in]{images/expandingbreakdown.pdf}
-\caption{Query latencies leading up to the node processing breakdown point.}
+\begin{tabular}{cc}
+\includegraphics[width=3.0in]{images/100mbUpdatesVsCPUCompletion.pdf} & \includegraphics[width=3.0in]{images/100mbUpdatesVsMemory.pdf}\\
+(a) & (b) \\
+\includegraphics[width=3.0in]{images/expandingbreakdown.pdf} & \includegraphics[width=3.0in]{images/foreignkey.pdf}\\
+(c) & (d) \\
+\includegraphics[width=3.0in]{images/aggvsupdates.pdf} & \includegraphics[width=3.0in]{images/aggvslatency.pdf}\\
+(e) & (f) \\
+\end{tabular}
+\caption{(a) CPU Utilization over the course of a series of updates on an empty database.  (b) Memory usage over the course of a series of updates on an empty database.  (c) Query latencies leading up to the node processing breakdown point.  (d) Improvement in update rate as due to the Foreign-Key Join optimization.  (e) Update rate as a function of number of dependent group-by columns added.  (f) Query latency as a function of the number of dependent group-by columns added. }
 \label{fig:expandingbreakdown}
-\end{center}
-\end{figure}
-\begin{figure}
-\begin{center}
-\includegraphics[width=3.0in]{images/100mbUpdatesVsCPUCompletion.pdf}
-\caption{CPU Utilization as Query 1 approaches its increasingly CPU-intensive completion.}
 \label{fig:20nodes100mbUpdatesVsCPUCompletion}
-\end{center}
-\end{figure}
-\begin{figure}
-\begin{center}
-\includegraphics[width=3.0in]{images/100mbUpdatesVsMemory.pdf}
-\caption{Map memory over the course of inserting a TPC-H database of scaling factor 0.1}
 \label{fig:20nodes100mbUpdatesVsMemory}
+\label{fig:fkupdatethroughput}
+\label{fig:aggvsupdates}
+\label{fig:aggvslatency}
 \end{center}
-\end{figure}
+\end{figure*}
 
 \begin{figure}
-\begin{center}
 \begin{tabular}{|c|c|c|c|c|}
 \hline
  & \multicolumn{2}{c|} {\textbf Original} & \multicolumn{2}{c|} {\textbf Optimized} \\
@@ -86,30 +83,22 @@ PPsS computes the following aggregate:
 COL  & 6 & 20 & 3 & 6 \\ \hline
 PPsS & 10 & 38 & 4 & 10 \\ \hline
 \end{tabular}
-\caption{Simplication in Cumulus' execution plan as a result of applying the Key-Foreign Key join optimization for the example queries.}
+\caption{Simplication in Cumulus' execution plan as a result of applying the Key-Foreign Key Join optimization for the example queries.}
 \label{fig:fkbenefittable}
-\end{center}
 \end{figure}
 
 \subsection{Scalability}
 
 The first point of our analysis is to study the behavior of Cumulus under increasing load.  We start with an empty database and issue inserts that cause progressively more complex inserts.  Using the COL query to construct the warehouse, we perform Customer, Order, and Lineitem inserts, interleaved with each other.  As the number of inserts grows, so does the frequency with which Orders correspond to already-inserted Customers (and visa versa).  With the increased frequency of correspondence, additional work needs to be done to insert tuples into maps.  
 
-Figure \ref{fig:expandingbreakdown} tracks the breakdown points of individual Cumulus nodes at varying loads and cluster sizes.  As inserts occur, aggregation queries are posed to the cluster to measure performance.  Query latency remains relatively constant, only growing significantly once the system is saturated by updates.  The elbow in each graph represents the point at which the cluster has reached its processing capacity.  Note that the cluster's processing capacity scales linearly with the cluster size; a 20 node cluster can trivially handle the demands placed on it when every insert is guaranteed to trigger many map updates.  A 40 node cluster not only handles a much higher update rate, but also remains more responsive to OLAP queries as each node is responsible for aggregating a smaller fraction of the data.
+Figure \ref{fig:expandingbreakdown}c tracks the breakdown points of individual Cumulus nodes at varying loads and cluster sizes.  As inserts occur, aggregation queries are posed to the cluster to measure performance.  Query latency remains relatively constant, only growing significantly once the system is saturated by updates.  The elbow in each graph represents the point at which the cluster has reached its processing capacity.  Note that the cluster's processing capacity scales linearly with the cluster size; a 20 node cluster can trivially handle the demands placed on it when every insert is guaranteed to trigger many map updates.  A 40 node cluster not only handles a much higher update rate, but also remains more responsive to OLAP queries as each node is responsible for aggregating a smaller fraction of the data.
 
-We expand on these results, showing the CPU utilization of the 20-node and 40-node cases in Figure \ref{fig:20nodes100mbUpdatesVsCPUCompletion}, and Memory utilization in Figure \ref{fig:20nodes100mbUpdatesVsMemory}.  Even as the domains of a given loop variable increase (the sharp increase in the slope of the completion line), per-node processor usage manages to tail off at about 30\%, increasing to 40\% only towards the very end in the 20 node case.  Similarly, despite increased usage due to inefficient memory management in Ruby, node memory usage scales linearly with the amount of data being stored at the node.
+We expand on these results, showing the CPU utilization of the 20-node and 40-node cases in Figure \ref{fig:20nodes100mbUpdatesVsCPUCompletion}a, and Memory utilization in Figure \ref{fig:20nodes100mbUpdatesVsMemory}b.  Even as the domains of a given loop variable increase (the sharp increase in the slope of the completion line), per-node processor usage manages to tail off at about 30\%, increasing to 40\% only towards the very end in the 20 node case.  Similarly, despite increased usage due to inefficient memory management in Ruby, node memory usage scales linearly with the amount of data being stored at the node.
 
 
 \subsection{Key-Foreign Key Join Optimization}
 \label{sec:key_fkey}
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=3.0in]{images/foreignkey.pdf}
-\caption{Maximum update throughput increase as a result of applying the Key-Foreign Key join optimization to the example queries.}
-\label{fig:fkupdatethroughput}
-\end{center}
-\end{figure}
 We next measure the benefits of applying the Key-Foreign Key join optimization described in Section \ref{sec:key_fkey}.  We apply foreign key constraints as documented in the TPC-H specification: 
 \begin{itemize}
 \item $Order.CustKey$ references $Customer$
@@ -118,7 +107,7 @@ We next measure the benefits of applying the Key-Foreign Key join optimization d
 
 \end{itemize}
 
-Figure \ref{fig:fkbenefittable} shows how much the M3 statement and maps can be simplified by applying the optimization, and Figure \ref{fig:fkupdatethroughput} shows the improvement in update throughput.  .  A relatively simple query like $COUNT(*)$ requires only a small number of maps to begin with.  While the number of maps is only reduced by half, the rules are dramatically simplified, each insert or delete fires only a single trigger.
+Figure \ref{fig:fkbenefittable} shows how much the M3 statement and maps can be simplified by applying the optimization, and Figure \ref{fig:fkupdatethroughput}d shows the improvement in update throughput.  .  A relatively simple query like $COUNT(*)$ requires only a small number of maps to begin with.  While the number of maps is only reduced by half, the rules are dramatically simplified, each insert or delete fires only a single trigger.
 
 By comparison, a more complex query like PPsS begins with a much greater number of maps in order to store all terms used in the aggregate.  However, because operations on the outermost maps are guaranteed never to affect the query result, most of the intermediate values for each map and the operations required to maintain them can be discarded.
 
@@ -127,22 +116,7 @@ By comparison, a more complex query like PPsS begins with a much greater number 
 % COL: Order.OrderPriority, LineItem.ShipLate, Customer.NID, LineItem.ShipMode, Order.ShipPriority, LineItem.RecvLate
 % PPSS: Type, MFGR
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=3.0in]{images/aggvsupdates.pdf}
-\caption{Update rate as a function of number of dependent group-by columns added.}
-\label{fig:aggvsupdates}
-\end{center}
-\end{figure}
+Finally, we consider the behavior of Cumulus with respect to redundancy in the query workload.  Figure \ref{fig:aggvsupdates}e shows the update rate as a function of the number of group-by aggregate columns in the query.  For each query, a randomly selected subset of the non-key group-by aggregate terms are removed.  While each group-by column adds another dimension to one or more maps, foreach loops iterate only over values actually defined in the input maps.  Because the removed columns are functionally dependent on at least one of the two remaining key columns, adding them to the query does not de-aggregate the query result and no aditional work is required.
 
-\begin{figure}
-\begin{center}
-\includegraphics[width=3.0in]{images/aggvslatency.pdf}
-\caption{Query latency as a function of the number of dependent group-by columns added.}
-\label{fig:aggvslatency}
-\end{center}
-\end{figure}
-Finally, we consider the behavior of Cumulus with respect to redundancy in the query workload.  Figure \ref{fig:aggvsupdates} shows the update rate as a function of the number of group-by aggregate columns in the query.  For each query, a randomly selected subset of the non-key group-by aggregate terms are removed.  While each group-by column adds another dimension to one or more maps, foreach loops iterate only over values actually defined in the input maps.  Because the removed columns are functionally dependent on at least one of the two remaining key columns, adding them to the query does not de-aggregate the query result and no aditional work is required.
-
-Similarly, Figure \ref{fig:aggvslatency} shows the effect of de-aggregation on query latency.  As updates occurred within the cluster, th cluster was continuously asked to provide a running count of the sum with no group-by columns.  Shown in the figure is the average response time with respect to the number of group-by columns in the query itself.  Removing all the non-key group-by columns produces a query that groups line-items together.  The factor of four decrease in query processing time corresponds to the average number of lineitems per order.  Combined with Cumulus' processing scalability, this graph demonstrates the feasibility of implementing and incrementally maintaining an entire data-cube in the cloud; The extra work of processing partial aggregates (as in a partially materialized datacube) can be spread out across nodeds in the cloud.  Conversely, an OLAP user need only interact with map partitions for the aggregate closest to their query, limiting the number of message required to pose the query.
+Similarly, Figure \ref{fig:aggvslatency}f shows the effect of de-aggregation on query latency.  As updates occurred within the cluster, th cluster was continuously asked to provide a running count of the sum with no group-by columns.  Shown in the figure is the average response time with respect to the number of group-by columns in the query itself.  Removing all the non-key group-by columns produces a query that groups line-items together.  The factor of four decrease in query processing time corresponds to the average number of lineitems per order.  Combined with Cumulus' processing scalability, this graph demonstrates the feasibility of implementing and incrementally maintaining an entire data-cube in the cloud; The extra work of processing partial aggregates (as in a partially materialized datacube) can be spread out across nodeds in the cloud.  Conversely, an OLAP user need only interact with map partitions for the aggregate closest to their query, limiting the number of message required to pose the query.
 
