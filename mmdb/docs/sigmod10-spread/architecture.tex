@@ -168,18 +168,18 @@ received and the write can be carried out.
 \begin{tabular}{l|r@{~}l}
 to node & & message \\
 \hline
-$N_1$ & FETCH($t$, & push mPL[$d_1$, *] to $\{N_4\}$) \\[.7ex]
-$N_2$ & FETCH($t$, & push mPL[$d_1$, *] to $\{N_5\}$ and \\
-      &            & push mDL[$p_1$, *] to $\{N_4, N_5\}$) \\[.7ex]
-$N_3$ & FETCH($t$, & push mDL[$p_1$, *] to $\{N_4, N_5\}$) \\[.7ex]
-$N_4$ & PUT($t$,   & {\tt foreach $(x,y)$ do} \\
-      &            & ~~{\tt m[$x,y$] += 500 * mDL[$p_1$, $x$]} \\
-      &            & ~~{\tt ~~~~~~~~~~~~~ * mPL[$d_1$, $y$]} \\
-      &            & with messages from $\{N_1, N_2, N_3\})$ \\[.7ex]
-$N_5$ & PUT($t$,   & {\tt foreach $(x,y)$ do} \\
-      &            & ~~{\tt m[$x,y$] += 500 * mDL[$p_1$, $x$]} \\
-      &            & ~~{\tt ~~~~~~~~~~~~~ * mPL[$d_1$, $y$]} \\
-      &            & with messages from $\{N_1, N_2, N_3\})$
+$N_1$ & FETCH($t$, $s$, & push mPL[$d_1$, *] to $\{N_4\}$) \\[.7ex]
+$N_2$ & FETCH($t$, $s$, & push mPL[$d_1$, *] to $\{N_5\}$ and \\
+      &                 & push mDL[$p_1$, *] to $\{N_4, N_5\}$) \\[.7ex]
+$N_3$ & FETCH($t$, $s$, & push mDL[$p_1$, *] to $\{N_4, N_5\}$) \\[.7ex]
+$N_4$ & PUT($t$,   $s$, & {\tt foreach $(x,y)$ do} \\
+      &                 & ~~{\tt m[$x,y$] += 500 * mDL[$p_1$, $x$]} \\
+      &                 & ~~{\tt ~~~~~~~~~~~~~ * mPL[$d_1$, $y$]} \\
+      &                 & with messages from $\{N_1, N_2, N_3\})$ \\[.7ex]
+$N_5$ & PUT($t$,   $s$, & {\tt foreach $(x,y)$ do} \\
+      &                 & ~~{\tt m[$x,y$] += 500 * mDL[$p_1$, $x$]} \\
+      &                 & ~~{\tt ~~~~~~~~~~~~~ * mPL[$d_1$, $y$]} \\
+      &                 & with messages from $\{N_1, N_2, N_3\})$
 \end{tabular}
 \end{center}
 
@@ -198,6 +198,8 @@ from there.
 Suppose again that
 {\tt on insert into LineOrder($d_1$, $p_1$, $500$)} is triggered and $t$ is
 the sequence id of this update.
+This trigger contains only one statement,
+for which we generate an identifier $s$.
 Then the switch sends the messages shown in Figure~\ref{fig:switch_msg}.
 %
 Let the current state of the maps be
@@ -209,11 +211,11 @@ Then the following PUSH messages will be sent:
 \begin{tabular}{ll|l}
 from & to & message \\
 \hline
-$N_1$ & $N_4$ & PUSH($t$, mPL: $\{ [d_1, 2005] \mapsto 1 \}$) \\
-$N_2$ & $N_4$ & PUSH($t$, mDL: $\emptyset$) \\
-$N_2$ & $N_5$ & PUSH($t$, mPL: $\emptyset$; mDL: $\emptyset$) \\
-$N_3$ & $N_4$ & PUSH($t$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
-$N_3$ & $N_5$ & PUSH($t$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
+$N_1$ & $N_4$ & PUSH($t$, $s$, mPL: $\{ [d_1, 2005] \mapsto 1 \}$) \\
+$N_2$ & $N_4$ & PUSH($t$, $s$, mDL: $\emptyset$) \\
+$N_2$ & $N_5$ & PUSH($t$, $s$, mPL: $\emptyset$; mDL: $\emptyset$) \\
+$N_3$ & $N_4$ & PUSH($t$, $s$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
+$N_3$ & $N_5$ & PUSH($t$, $s$, mDL: $\{ [p_1, red] \mapsto 1 \}$) \\
 \end{tabular}
 \end{center}
 \end{example}
@@ -269,24 +271,25 @@ $t$ are applied.
 
 The main thread of control processes the waiting messages from the Switch
 in order.
-For either a FETCH($t', \cdot$) or PUT($t', \cdot$) message, if its
+For either a FETCH($t', s, \cdot$) or PUT($t', s,\cdot$) message, if its
 update sequence number $t'$ is greater
 than the local update sequence number $t$, then we set $t := t'$
 and copy the working copy of the map partitions to the committed version.
 
 Additionally,
-for a FETCH message($t'$, push $m[\vec{\pi}]$ to $Ns$),
+for a FETCH message($t'$, $s$, push $m[\vec{\pi}]$ to $Ns$),
 we read the requested data $m[\vec{\pi}]$ from the commited version of
 the map partitions and send it in PUSH messages to the set of recipient
 nodes $Ns$.
 
-For a message PUT($t'$, $s$ with messages from $Ns$), where $s$ is an M3
-statement, we block until all PUSH messages have arrived for all
+For a message PUT($t'$, $s$, $st$ with messages from $Ns$), where $st$
+is an M3 statement and $s$ the identifier used for it throughout the 
+system, we block until all PUSH messages have arrived for all
 senders announced in set $Ns$.
 Let $m_1[\vec{t}_1]$, $\dots$, $m_k[\vec{t}_k]$ be the map accesses occuring in
-$s$. For each $m_i$, 
+$st$. For each $m_i$, 
 we extract the data from the PUSH messages corresponding
-to the current PUT message and put it in a table $T_i$.
+to the current PUT message (i.e., agreeing on $s$) and put it in a table $T_i$.
 If $\vec{t}_i$ consists of constants only (i.e., does not contain any
 of the variables that the optional foreach loop loops over), and $T_i$ is
 empty, then we have to compute an inital value for $m_i[\vec{t}_i]$.
