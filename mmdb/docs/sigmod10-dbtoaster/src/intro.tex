@@ -86,7 +86,8 @@ Here, on insertion of tuple $(a,b)$ into $R$, $q_A[b]$ is incremented by $a$ and
 on insertion of tuple $(c,d)$ into $S$, $q_D[c]$ is incremented by $d$.  In this
 case, the recursive computation of increments allows to eliminate all SQL code
 and leads to extremely efficient straight-line code:
-\begin{verbatim} on initialization do q := 0;
+\begin{Verbatim}
+on initialization do q := 0;
 
 on insert into R values (a,b) do {
     q += a * q_D[b];
@@ -108,7 +109,7 @@ on delete of (c,d) from S do {
     q -= q_A[c] * d; q_D[c] -= d;
 }
 
-\end{verbatim}
+\end{Verbatim}
 Here, $q_A[.]$ and $q_D[.]$ are auxiliary associative array data
 structures.  It is not hard to verify that this code for incrementally
 maintaining $q$ is correct.
@@ -181,13 +182,14 @@ k}-fraction of the total stock volume in each of the bid and ask order
 books. SOBI then compares the two VWAPs. For simplicity, we present the VWAP for
 the bids only:
 
-\begin{verbatim}
+\begin{Verbatim}
 select avg(b2.price * b2.volume) as bid_vwap
 from bids b2 where
     k * (select sum(volume) from bids)
     > (select sum(volume) from bids b1
         where b1.price > b2.price);
-\end{verbatim} % as vwap_input
+\end{Verbatim}
+% as vwap_input
 %
 Above, the contents of the bids order book is continually changing, and
 \compiler\ produces a new output on every insert, update or delete.

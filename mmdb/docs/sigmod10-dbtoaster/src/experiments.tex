@@ -30,15 +30,36 @@ determines any simultaneous positioning by a broker on both the bid and asks
 orderbooks with a significant difference in order volume. This is commonly
 performed by a market maker, or 'ax', to entice buyers or sellers into the
 market. The second, denoted PS, tracks the price spread between the bids and
-asks orderbooks and is used as an estimate of the trade price.
+asks orderbooks and is used as an estimate of the trade price. The queries are
+shown in Figure~\ref{fig:obqueries}.
+
+\begin{figure}[htbp]
+Ax finder (Ax) query:
+\begin{Verbatim}
+select b.broker_id, sum(a.v+-1*b.v)
+from bids b, asks a
+where b.broker_id = a.broker_id
+and ((a.p > 1000+b.p) or (b.p > 1000+a.p))
+group by b.broker_id
+\end{Verbatim}
+Price spread (PS) query:
+\begin{Verbatim}
+select sum(a.p+-1*b.p) from bids b, asks a
+where (b.v>0.0001*(select sum(b1.v) from bids b1))
+and (a.v>0.0001*(select sum(a1.v) from asks a1))
+\end{Verbatim}
+\caption{Orderbook queries: Ax and PS. The VWAP query can be found in
+  Section~\ref{sec:intro}.}
+\label{fig:obqueries}
+\end{figure}
 
 Our second workload reflects the online data warehousing application discussed
 in the introduction. Here the dataset is TPC-H, generated with scale factor 1
 for in-memory processing. The queries used here are queries 3, 11 and 17, which
 respectively determine shipping priorities (i.e. finding unshipped orders with
 high value), important stocks for suppliers in various nations, and the revenue
-obtained from small quantity orders. We refer to the TPC-H specification for
-full details of these queries.
+obtained from small quantity orders. We refer to the TPC-H
+specification~\cite{tpch-url} for full details of these queries.
 
 \subsection{Query Processing Performance}
 Our first set of experimental results look at the query processing performance

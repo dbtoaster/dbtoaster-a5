@@ -159,10 +159,7 @@ ii) rows whose new value satisfy the condition, but did not previously, must
   incremented by the delta query value in the previous case);
 iii) rows which previously satisfied the condition but do not any more, must be
   removed from the result set, according to the old value they contribute.
-
 \todo{Give simple example to illustrate this transformation only.}
-\todo{Change constraints-only case to match single rule for deltas with five
-  branches in the new calculus.}
 
 Finally, we come to deltas for relational calculus formulae. The main point to
 note is that the delta for a constraint is only defined for non-nested
@@ -217,7 +214,6 @@ passed to the relational part of aggregates to replace safe and unsafe
 variables. Subsequently aggregate simplification propagates delta bound
 variables into the aggregate argument term, essentially a sideways propagation
 within sibling parse trees present at aggregates.
-\todo{Show parse tree of bound variable propagation.}
 
 \newcommand{\indentcode}{\hspace{5mm}}
 \begin{algorithm}
@@ -356,7 +352,7 @@ d * \algsum_{1}(\phi(=,C',c))
 
 \noindent The resulting code is:
 
-\begin{verbatim}
+\begin{Verbatim}
 int q;
 map<int, int> qR, qS1, qS2, qT;
 map<tuple<int, int>, int> qRT;
@@ -376,7 +372,7 @@ void on_insert_T(int c, int d) {
     q += d*qT[c]; qS2[c] += d;
     foreach b in keys(qR): qR[b] += d * qRT[b,c];
 }
-\end{verbatim}
+\end{Verbatim}
 
 We omit the code produced for handling deletions on the input stream -- the code
 is analagous to the insertion code seen above with decrements to maps instead of
@@ -389,11 +385,11 @@ aggregate replaced by a sum aggregate. Note that we can simply compute the
 average by computing both the sum and count aggregates, and dividing at the top
 aggregation level.
 
-\begin{verbatim}
+\begin{Verbatim}
 select sum(P*V) from Bids(P,V)
     where 0.25*(select sum(V1) from Bids(P1,V1)) >
     (select sum(V2) from Bids(P2,V2) where P2 > P)
-\end{verbatim}
+\end{Verbatim}
 
 and the \compiler\ calculus representation:
 \begin{align*}
@@ -572,7 +568,7 @@ q[] & = \sum_{bigsum\_p}{\Big[\algif \; \phi(>, f, g) }\\
 Above, the underlined terms correspond to duplicate map terms, where maps can be
 reused. The code produced is:
 
-\begin{verbatim}
+\begin{Verbatim}
 int q, m1;
 map<int, int> m2, m3;
 set<int> dom_bigsum_p;
@@ -610,7 +606,7 @@ void on_insert_bids(int p, int v) {
     m2[bigsum_p] += (p > bigsum_p? v : 0);
   m3[p] += p*v;
 }
-\end{verbatim}
+\end{Verbatim}
 
 \comment{
 \subsection{Code Generation}
