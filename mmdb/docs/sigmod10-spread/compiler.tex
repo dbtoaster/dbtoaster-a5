@@ -557,7 +557,11 @@ for most queries.
 
 
 The compilation algorithm employs {\em recursive incremental view
-maintenance}. The algorithm Compile($n$, $\vec{b}$, $t$) takes a name $n$ that
+maintenance}. It takes a query and computes the delta given an update to it.
+Then, to incrementally maintain the delta, it
+computes the delta to the delta, and so on.
+
+The algorithm Compile($n$, $\vec{b}$, $t$) takes a name $n$ that
 represents the query result map, a tuple of bound variables $\vec{b}$ (the map
 arguments), and a term $t$ representing the query to be compiled.
 For each trigger to be created (that is, for each relation name $R$ of
@@ -637,7 +641,7 @@ The semantics of M3 statements
 is such that the map values read are assumed to be from
 before the update. In an implementation, one can make sure that no dirty
 reads happen by double-buffering the maps, i.e., by writing changes to
-a copy than is commited when all triggers for an update have finished, and
+a copy that is commited when all triggers for an update have finished, and
 is read from in the next update.
 An alternative is to perform a suitable topological sort of
 the statements\footnote{Our compilation approach assures that this is always

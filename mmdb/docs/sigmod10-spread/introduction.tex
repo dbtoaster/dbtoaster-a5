@@ -6,9 +6,9 @@ research from incrementally improving decades-old database technology
 to questioning established architectures 
 and creating fundamentally different, more lightweight systems
 that are often domain-specific
-(cf.\ e.g.\ column stores
-\cite{DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07}
-and H-Store \cite{DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
+(e.g.,
+%\cite{DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07}
+\cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
 Part of the impetus for this change was given by 
 potential users such as scientists and the builders of
 large-scale Web sites and services such as Google, Amazon, and Ebay,
@@ -29,7 +29,9 @@ technology for multicore and cloud computing.
 %\footnote{Examples are Vertica and Paraccel, who build column stores,
 %and Greenplum, Asterdata, and Netezza, who take databases into the Cloud.}
 
-There is a recent tendency among pundits outside the database community to
+There is a recent tendency
+among pundits
+outside the database community to
 contest the need for powerful queries, and to
 think of key-value stores -- with only the power to look up data by
 keys -- as (much more efficient) database query engines.
@@ -47,8 +49,8 @@ This paper contributes a fundamental and versatile building block for
 enabling new, more lightweight and nimble data processing systems based
 on SQL aggregation que\-ries. We believe that our contribution
 constitutes an important
-step towards achieving the contradiction in terms mentioned
-above: executing complex aggregation queries on updateable data
+step towards achieving the apparent contradiction in terms of
+executing complex aggregation queries on updateable data
 using little more than a key-value store.
 
 At the heart of our approach is a new aggressive recursive
@@ -61,13 +63,12 @@ A large class of
 SQL aggregation queries can be compiled down to very simple message
 passing programs that incrementally maintain materialized views of
 the queries. These message passing programs keep a hierarchy of map data
-structures (which may be served out of a key-value store) up to date
-and can share computation in the case that multiple aggregation queries (e.g.,
+structures (which may be served out of a key-value store) up to date.
+They can share computation in the case that multiple aggregation queries (e.g.,
 a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message
 passing programs can be massively parallelized to the degree that the updating
 of each single result aggregate value can be done in constant time on normal
-off-the-shelf computers.\footnote{That is,
-we assume that addition and multiplication
+off-the-shelf computers.\footnote{We assume that addition and multiplication
 of {\em two numbers} can be performed in constant time, which is true for
 %
 %bounded precision numbers such as 
@@ -79,27 +80,28 @@ parallel computation. Our implementation indeed incrementally maintains
 individual aggregate values in constant time. Note that since there are
 usually many more aggregate values to maintain than there are processors,
 this does not mean that each update is processed in constant time.
-``Constant time'' is with respect to the size of the data, not the compiled
-query.}
+%``Constant time'' is with respect to the size of the data, not the compiled
+%query.
+}
 To the best of our knowledge, it was not known before
 that this is possible.
 
 
 \begin{figure*}[!]
 \begin{center}
-\begin{tabular}{c|rc|rc|rc|rc}
-$\Delta$Customer
+\begin{tabular}{c|c|rc|rc|rc|rc}
+Time & $\Delta$Customer
 & $\Delta$q[1] & q[1]
 & $\Delta$q[2] & q[2]
 & $\Delta$q[3] & q[3]
 & $\Delta$q[4] & q[4] \\
 \hline
-insert (1,US) &         +1 & 1 &              &   &              &   &&   \\
-insert (2,UK) &            & 1 &            1 & 1 &              &   &&   \\
-insert (3,UK) &            & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
-insert (4,US) & +q2[4,US] & 2 &              & 2 &              & 2 & +q1[US] + 1 & 2 \\
-delete (3,UK) &            & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
-insert (3,{\bf US}) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
+1&insert (1,US) &         +1 & 1 &              &   &              &   &&   \\
+2&insert (2,UK) &            & 1 &            1 & 1 &              &   &&   \\
+3&insert (3,UK) &            & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
+4&insert (4,US) & +q2[4,US] & 2 &              & 2 &              & 2 & +q1[US] + 1 & 2 \\
+5&delete (3,UK) &            & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
+6&insert (3,{\bf US}) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
 \end{tabular}
 \end{center}
 
@@ -306,15 +308,16 @@ difficulties at the end of this paper.
 We have developed a system, Cumulus\footnote{A Cumulus cloud is an
 aggregation cloud, thus the name.}, that parallelizes the
 execution of M3 programs in a cluster or computing cloud.
+It executes an efficient
+protocol to ensure consistency of map data and query results.
+%
 Cumulus performs incremental maintenance of {\em exact}\/
 aggregation views online.
 In that sense it differs from the literature on online aggregation that
 is primarily concerned with sampling-based techniques that only produce
-approximate results.
+approximate results
 \cite{DBLP:conf/sigmod/HaasH99, DBLP:conf/sigmod/RusuXPWJJD08, DBLP:conf/sigmod/AcharyaGPR99}.
 
-It executes an efficient
-protocol to ensure consistency of map data and query results.
 
 While it is no fundamental requirement of our compilation
 approach, we have chosen to use the resources of the cloud to maintain
@@ -341,7 +344,7 @@ becomes linked to  a set of OLTP databases.  Cumulus  keeps the
 data warehouse synchronized with the source databases via an
 update stream. It achieves incremental aggregate
 view maintenance {\em in realtime}
-through parallelization, keeping data in main memory, and through
+through parallelization, representation in main memory, and
 our approach of query processing by message passing.
 
 
@@ -358,7 +361,10 @@ SQL aggregation queries.
 \item
 We describe our compiler for translating SQL aggregation queries to M3
 programs. Our compilation technique is based on a novel, aggressive, recursive
-form of incremental view maintenance.
+form of incremental view maintenance and differs from previous
+database compilers \cite{DBLP:conf/pods/Batory88,DBLP:journals/jiis/BatoryT97}
+that aimed at allowing for the more flexible composition of
+more conventional database components.
 
 \item
 We present Cumulus, our system for exact online aggregation in realtime.
@@ -366,7 +372,7 @@ We describe the Cumulus message passing protocol, which assures
 consistency of the maps using only few messages, and
 infrastructure, and show how it can be used to efficiently distribute the
 processing and storage requirements of query processing and
-the incremental maintenance of large aggregate views and datacubes.
+the incremental maintenance of large aggregate views.
 
 \item We show evidence for the scalability of our approach by examining the
 performance of Cumulus on examples drawn from the TPC-H\cite{tpch2008}
