@@ -544,7 +544,12 @@ In a statement of the form
 $m[\vec{x}\vec{z}]$ is updated for all
 values $\vec{z}$ such that $\vec{x}\vec{z}$ is currently in the
 domain of $m$ (causing no modifications of map domains).
-
+In the evaluation of $t$, if $t$ contains a map access $m'[\vec{w}]$
+such that $m'$ is undefined on $\vec{w}$, then $m'[\vec{w}]$ is initialized
+by evaluating the query defining $m'$ for the arguments $\vec{w}$, as
+above. We will see at the end of Section~\ref{sec:compilation-alg} that
+initialization by evaluating a query from scratch can be completely avoided
+for most queries.
 
 
 \subsection{Compilation Algorithm}
@@ -710,22 +715,54 @@ and painless implementation.
 %\subsection{Domains}
 
 
+{\em Dealing with undefined map values efficiently}.
+Let us now return to the problem of finding a initial value for an
+$m[\vec{x}]$ where $\vec{x}$ is not yet in the domain of $m$ and thus
+the current value has not been computed by incremental view maintenance.
+In general, this means that we have to compute $m[\vec{x}]$ from scratch,
+using the query that defines $m$. However, fortunately, we never need to
+do this if all the joins in the query are equijoins.
+
+\begin{theorem}
+Given a $\AggSum$ term $q$ in which, for all atomic constraints
+$t\, \theta\, t'$, $\theta$ is equality and $t$ and $t'$ are variables.
+Then, whenever a map of the M3 program created from $q$ by Compile
+is undefined, it's value is zero.
+\end{theorem}
+
+That is, we can always initialize undefined values that we encounter while
+evaluating an M3 program with 0. This is in general not true for queries
+with inequality join conditions. However, there is an extended version of
+the compilation algorithm that compiles
+queries in which all join conditions
+are using only = and $\neq$ into M3 programs where it is again correct
+to initialize undefined map values with 0. This algorithm is beyond the
+scope of the paper, but we give an example.
+
+
+\begin{example}\em
+Consider the query $q = \AggSum(1, R(x) \land S(y) \land x \neq y)$.
+Then, $\Delta_{+R(a)} q = \AggSum(1, S(y) \land a \neq y) =: qR[a]$.
+One of the triggers that Compile creates is
+\[
+\mbox{{\tt on insert into R(x) \{ q[] += qR[x] \}}}
+\]
+Assume that we have started with empty domains for all maps and
+some S tuples have been inserted. Now we insert the first R tuple, $a$.
+Then $qR[a]$ is undefined, but its correct value is not zero.
+However, the correct value is simply
+$qR' = \AggSum(1, S(y))$, which can be incrementally maintained by
+an M3 trigger.
+\punto
+\end{example}
+
+
+There is no restriction on non-join constraints, i.e., constraints
+involving constants. These may use comparisons $<$ and $\le$ as well.
+
+
+
 \nop{
-Above, we have implicitly assumed that maps $m$ are defined everywhere,
-or at least on all the argument tuples that we will encounter while
-running an M3 program. We have assumed that the program starts on an
-empty database (no tuples have been inserted yet) and all maps have value
-0 everywhere, which is correct because all maps are defined to represent
-$\AggSum$ terms, which are 0 on an empty database.
-
-Unfortunately, it is not a realistic assumption that map domains are known
-in advance: We cannot know what the tuples inserted later will contain,
-and incrementing maps for all values of an absurdly large domain
-is infeasible too.
-
-
-
-
 \begin{example}\em
 We modify the query of Example~\ref{ex:self-join}. We now ask, for each cid,
 for the number of customers from {\em different}\/ nations.
@@ -754,7 +791,7 @@ TODO: FINISH.
 
 \begin{figure}
 \begin{center}
-\includegraphics[width=3in]{images/q12_graph.pdf}
+\includegraphics[width=2.5in]{images/q12_graph.pdf}
 \caption{Data-flow graph for the example query.
 Light and dashed edges can be eliminated.}
 \label{fig:dataflow}
