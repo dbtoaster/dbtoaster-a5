@@ -237,6 +237,42 @@ at the end of the experiment can be found in Table~\ref{tbl:map-mem}.
 
 
 
+\subsection{DBMS comparison}
+In the final part of our experiments section, we compare the performance of a
+commerical DBMS 'X' to \compiler, reporting on the per-tuple processing time for
+queries implemented using incremental materialized views, and naive processing
+in DBMS 'X'. Note that many commercial database systems are extremely restricted
+in the kinds of queries supported via incremental view maintenance, and to the
+best of our knowledge, none can handle the general nested aggregate queries
+supported by \compiler. We provide the following references to DBMS
+documentation on queries that may be maintained incrementally in three major
+DBMS:
+i) Oracle: {\tiny
+    \url{http://download.oracle.com/docs/cd/B28359_01/server.111/b28313/basicmv.htm#i1007007}}
+ii) MS SQL Server 2008: {\tiny
+    \url{http://msdn.microsoft.com/en-us/library/dd171921.aspx}}
+iii) IBM DB2: {\tiny
+    \url{http://publib.boulder.ibm.com/infocenter/db2luw/v9r5/index.jsp?topic=/com.ibm.db2.luw.sql.ref.doc/doc/r0000927.html}}.
+
+
+\begin{figure}[htbp]
+\includegraphics[scale=0.35]{figures/dbcomp}
+\caption{Comparison of \compiler's processing times to DBMS 'X'.}
+\label{fig:dbcomp}
+\end{figure}
+
+Given these restrictions, we are only able to compare using the Ax and TPC-H
+Query 3 workloads. The results are shown in Figure~\ref{fig:dbcomp}, with a
+logarithmic scale for the processing times. Note the the repeat method
+corresponds to naive query processing, where the original plan-based query is
+issued following every update. This figure reiterates the findings of directly
+compiling the methods from \compiler. We see that \compiler significantly
+outperforms both view maintenance and the naive processing mechanisms by at
+least 2 orders of magnitude for the Ax query, and by 4 orders of magnitude on
+TPC-H query 3. As expected, incremental view maintenance outperforms naive
+processing for the Ax query, however, somewhat surprisingly, the materialized
+view implementation of query 3 performs worse than the naive processing
+method. We are currently in the process of determining the cause.
 
 
 
