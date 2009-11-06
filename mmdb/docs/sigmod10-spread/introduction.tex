@@ -2,19 +2,13 @@
 
 
 Recent years have seen the beginning of a paradigm shift in data management
-research from incrementally
-improving decades-old database technology
-%
-% (particularly, OLTP) -- System R and
-% the long line of systems that have followed it --
-%
+research from incrementally improving decades-old database technology
 to questioning established architectures 
-%(cf.\ the recent work on column stores
-%\cite{DBLP:journals/tods/Batory79,DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07})
-%
 and creating fundamentally different, more lightweight systems
 that are often domain-specific
-(cf.\ e.g. \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
+(cf.\ e.g.\ column stores
+\cite{DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07}
+and H-Store \cite{DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
 Part of the impetus for this change was given by 
 potential users such as scientists and the builders of
 large-scale Web sites and services such as Google, Amazon, and Ebay,
@@ -57,8 +51,8 @@ step towards achieving the contradiction in terms mentioned
 above: executing complex aggregation queries on updateable data
 using little more than a key-value store.
 
-At the heart of our approach is a new aggressive recursive incremental
-view maintenance mechanism.
+At the heart of our approach is a new aggressive recursive
+incremental view maintenance mechanism.
 In most traditional database query processors, the  basic building blocks of
 queries are large-grained operators such as joins.
 Our approach is based on compilation, reducing
@@ -89,6 +83,7 @@ this does not mean that each update is processed in constant time.
 query.}
 To the best of our knowledge, it was not known before
 that this is possible.
+
 
 \begin{figure*}[!]
 \begin{center}
@@ -122,7 +117,8 @@ bounded fan-in nonincremental
 parallel processing is known not to be possible for
 the class of queries we address,
 unless the complexity class TC0 collapses into NC0, which it is not known
-to do \cite{Joh90}.} Classical incremental view maintenance approaches, which
+to do \cite{Joh90}.} Classical incremental view maintenance approaches
+\cite{roussopoulos-tods:91,griffin-sigmod:95,colby-sigmod:96,yan-vldb:95,kotidis-tods:01,zhou-vldb:07}, which
 express the delta (=change) to a query result given an update again
 as a (slightly simpler) query, fare no better: Generally,
 given a query, there is another query whose delta is the first query.
@@ -310,7 +306,13 @@ difficulties at the end of this paper.
 We have developed a system, Cumulus\footnote{A Cumulus cloud is an
 aggregation cloud, thus the name.}, that parallelizes the
 execution of M3 programs in a cluster or computing cloud.
-Cumulus performs incremental maintenance of exact aggregation views online.
+Cumulus performs incremental maintenance of {\em exact}\/
+aggregation views online.
+In that sense it differs from the literature on online aggregation that
+is primarily concerned with sampling-based techniques that only produce
+approximate results.
+\cite{DBLP:conf/sigmod/HaasH99, DBLP:conf/sigmod/RusuXPWJJD08, DBLP:conf/sigmod/AcharyaGPR99}.
+
 It executes an efficient
 protocol to ensure consistency of map data and query results.
 
@@ -379,7 +381,7 @@ infrastructure and discuss how data is managed within that infrastructure.
 Section \ref{sec:experiments} presents
 experimental results that demonstrate the viability and scalability of
 Cumulus.
-Section \ref{sec:relatedwork} discusses related work.
+%Section \ref{sec:relatedwork} discusses related work.
 The paper concludes with Section \ref{sec:conclusions}.
 
 

@@ -109,6 +109,7 @@ $N_3$.
 \subsection{Update Protocol}
 
 
+\nop{
 \begin{figure}
 \begin{center}
 \includegraphics[width=1.5in]{images/UpdateStep.pdf}
@@ -116,6 +117,7 @@ $N_3$.
 \label{fig:updatestep}
 \end{center}
 \end{figure}
+} % end nop
 
 
 On an {\em update} (an insertion or deletion of a tuple
@@ -156,8 +158,9 @@ message: if a reader has no relevant data, it sends an empty PUSH message to
 the writer to allow it to move on.
 This allows the writer to know when all necessary PUSH messages have been
 received and the write can be carried out.
-An illustration of the complete message-passing process is given
-in Figure \ref{fig:updatestep}.  
+
+%An illustration of the complete message-passing process is given
+%in Figure \ref{fig:updatestep}.  
 
 
 \begin{figure}
