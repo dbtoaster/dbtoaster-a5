@@ -159,9 +159,7 @@ ii) rows whose new value satisfy the condition, but did not previously, must
   incremented by the delta query value in the previous case);
 iii) rows which previously satisfied the condition but do not any more, must be
   removed from the result set, according to the old value they contribute.
-While this condition holds in the general case for arbitrary nested
-conditionals, we briefly revisit optimizing this delta rule in the presence of
-monotonic aggregates in Section~\ref{sec:extensions}
+
 \todo{Give simple example to illustrate this transformation only.}
 \todo{Change constraints-only case to match single rule for deltas with five
   branches in the new calculus.}

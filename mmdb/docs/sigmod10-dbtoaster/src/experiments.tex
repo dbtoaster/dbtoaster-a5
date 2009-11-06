@@ -7,15 +7,9 @@ C++ code for fully recursively compiled queries, it can also produce code for
 partially compiled queries to a user-specified nesting level, with the remaining
 portions of the query compiled as a relational query plan. Note that a standard
 query plan corresponds to zero levels of compilation, while view maintenance
-corresponds to one level of compilation.
-
-\begin{itemize}
-    \item Naive compilation: query-plan based compilation, with joins
-      implemented as IL-joins or hash-joins. Note we will not implement a
-      DP-optimizer, but simply manually specify join algorithm for our workload.
-      This is intended to reflect existing (purely in-memory) implementations of
-      query plans.
-\end{itemize}
+corresponds to one level of compilation. Furthermore, in our query plan
+compilation, we do not have a full-fledged query optimizer and joins are
+manually selected as indexed nested loops joins or hash joins.
 
 \subsection{Experimental setup}
 The hardware platform used for our experiments is an 8-core Dual Intel Xeon
@@ -175,7 +169,7 @@ of choosing which approach is outside the scope of this work.
 \label{fig:tpchmem}
 \end{figure}
 
-Figure~\ref{fig:tpch-mem} demonstrates that the TPC-H queries consume
+Figure~\ref{fig:tpchmem} demonstrates that the TPC-H queries consume
 significantly more memory than the order book queries primarily due to the
 dataset characteristics and the larger domains of map key attributes, as well as
 the fact that our application is an append-only data warehouse with no
