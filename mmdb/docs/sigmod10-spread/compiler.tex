@@ -42,7 +42,7 @@ and builtin functions $f$) is
 
 An aggregate term $\AggSum(t, \phi)$
 is {\em constraints-only} if $\phi$ does not
-contain relational atoms $R(\vec{x})$ (but atomic constraints $s \theta t$).
+contain relational atoms $R(\vec{x})$.
 We can also think of such an aggregate term as a (functional)
 if-statement (if $\phi$ then t else 0)
 or, using C syntax, ($\phi$ ? $t$ : 0).
@@ -90,7 +90,7 @@ becomes valid for bound variables $\{u,y\}$.
 
 \def\db{{\cal{A}}}
 
-The semantics of formulas and terms is given by a (polymorphic) function
+The semantics of formulae and terms is given by a (polymorphic) function
 $\Bracks{\cdot}(\cdot, \cdot)$ that takes a database and values for the
 bound variables as arguments. Given database $\db$ and values $\vec{b}$ for
 the bound variables,
@@ -99,11 +99,11 @@ $\Bracks{t}(\db, \vec{b})$ evaluates to a value of the type of
 terms.\footnote{In practice,
 we have several types such as integers and floats, but
 here we will not talk about types and will assume that all terms evaluate to,
-say, floating point numbers. However, our implementation supports the
+say, floating point numbers. Our implementation supports the
 main data types of SQL, and no noteworthy observations were made achieving
 this.}
 We assume a multiset semantics for relations, which is important to note
-since we focus on computing aggregates. The multiset semantics of formulas
+since we focus on computing aggregates. The multiset semantics of formulae
 is defined by their well-known translation to relational algebra
 (Codd's theorem), and the standard multi-set semantics of
 (in our case, positive) relational algebra. 
@@ -177,7 +177,7 @@ in the semiring of formulae, $\land$ is the product operation,
 $\lor$ is addition,
 and $\textit{false}$ and $\textit{true}$ are 0 and 1, respectively.
 
-For arbitrary terms $s$ and $t$ and formulas $\phi$ and $\psi$,
+For arbitrary terms $s$ and $t$ and formulae $\phi$ and $\psi$,
 $\AggSum$ terms can be simplified using the following equations (to be
 applied by replacing a left by a right hand side expression)
 \begin{eqnarray*}
@@ -188,8 +188,8 @@ applied by replacing a left by a right hand side expression)
 \AggSum(t, \phi \lor \psi) &=& \AggSum(t, \phi) + \AggSum(t, \psi)
 \end{eqnarray*}
 
-All these algebraic laws can be applied, and the calculus expression
-be maximally simplified, in a single bottom-up pass of the expression.
+These algebraic laws can be applied in conjunction with those for forming
+polynomials in a single bottom-up pass of the expression.
 A term ($\AggSum$ or other) maximally simplified in this way
 is a sum of terms that contain neither $+$ nor $\lor$; we call such 
 normalized terms {\em recursively monomial}.
@@ -221,7 +221,7 @@ maximum cardinality set of subsets of $T \cup F$ such that for any
 two components $C_1, C_2 \in {\cal C}$ with $C_1 \neq C_2$,
 $\vars(C_1) \cap \vars(C_2) = \emptyset$. Asking for the maximum number of
 nonoverlapping components is of course the same as asking for components of
-minimum size, and the set of connected components is unique and can be computed
+minimum size. The set of connected components is unique and can be computed
 in linear time using Tarjan's algorithm. Given ${\cal C}$, each component
 $C \in {\cal C}$ can again be partitioned by sort into a monomial term $t_C$
 and a monomial formula $\phi_C$.
@@ -234,10 +234,6 @@ $\AggSum(t, \phi)$ is equivalent to
 \[
 \prod_{C \in {\cal C}} \AggSum(t_C, \phi_C).
 \]
-
-{\em Recursive factorization}, given term $\AggSum(t, \phi)$, first recursively
-factorizes the aggregate terms in $t$ before applying factorization as
-just described on the top level.
 
 
 \begin{example}\em
@@ -257,6 +253,11 @@ $\AggSum(5, \textit{true})$ simplifies to $5$.
 \end{example}
 
 
+{\em Recursive factorization}, given term $\AggSum(t, \phi)$, first recursively
+factorizes the aggregate terms in $t$ before applying factorization as
+just described on the top level.
+
+
 {\bf Variable elimination}.
 Given an abitrary monomial formula $\phi = \bigwedge (E \cup O)$,
 where $E$ is the set of equality
@@ -274,7 +275,7 @@ $\Theta$ that maps each unbound variable $y$ of $E$ to $x_{[y]}$ (where $[y]$ is
 equivalence class of $y$) and is the identity on the bound variables.
 Now substitute all variables in $O$
 using $\Theta$, obtaining $O'$. Let
-$E' =  \bigcup \{ y = x_{[y]} | y \in ((B \cap [y]) -  x_{[y]}) \}$.
+$E' =  \bigcup \{ y = x_{[y]} \mid y \in ((B \cap [y]) - \{ x_{[y]} \}) \}$.
 Then we replace $\phi$ by $(\bigwedge O') \land \bigwedge E'$.
 
 Given a term $\AggSum(t,\phi)$ where $\phi$ is a monomial,
@@ -351,11 +352,6 @@ This will be used in Example~\ref{ex:self-join-compile}:
 \AggSum((-1) * \AggSum(1, C(c_2, n)), c_1=c).
 \end{multline*}
 \end{example}
-
-
-Given a recursively monomial term $t$ and a set of bound variables $B$,
-let the function Simplify($t$, $B$) recursively factorize $t$, then perform
-variable elimination, and finally if-lifting.
 
 
 \subsection{Delta Computation}
@@ -463,41 +459,27 @@ Now, since $(\dc n_1=n_2) = 0$ and thus
 \end{eqnarray*}
 
 Simplifying this with bound variable $c_1$ yields
-%\begin{eqnarray*}
-%&\pm& \AggSum(1, c_1=c \land C(c_2, n)) \\
-%&\pm& \AggSum(1, C(c_1,n)) \\
-%&+&   \AggSum(1, c_1=c)
-%\end{eqnarray*}
 \[
 \pm \AggSum(1, c_1=c \land C(c_2, n))
 \pm \AggSum(1, C(c_1,n))
 +   \AggSum(1, c_1=c)
 \]
 
-Now suppose $C$ currently stores tuples (Joe, US) and (Bill, US).
-Then $q$[Joe] = $q$[Bill]=2 (and $q$[Dan] would be 0 by default).
-Now insert (Dan, US).
-The changes to the query map are
-\begin{eqnarray*}
-q[\mbox{Joe}]  &\mbox{+=}& 0 + 1 + 0 = 3 \\
-q[\mbox{Bill}] &\mbox{+=}& 0 + 1 + 0 = 3 \\
-q[\mbox{Dan}]  &\mbox{+=}& 2 + 0 + 1 = 3.
-\end{eqnarray*}
-On deletion of Bill we get
-$q$[Dan] := $q$[Joe] += 0 - 1 + 0 = 2 and
-$q$[Bill] += -3 - 1 + 1 = 0.
-
 Let us for a moment consider the same query except that we do not group by
 $c_1$: That is, the aggregate term for the query is the same, and the delta does not change, but $c_1$ now is not bound. Then simplifying $\dc q$ yields
 \[
 \pm \AggSum(1, C(c_2, n)) \pm \AggSum(1, C(c_1,n)) + 1.
 \]
-Suppose we again start with the two tuple database (Joe, US) and (Bill, US):
-Then $q[\,] = 4$. We add (Dan, US) and
-$\Delta_{+C(\mathrm{Dan}, \mathrm{US})} q = 2 + 2 + 1 = 5$, changing
-$q[\,]$ to 9. We remove Bill and get
-$\Delta_{-C(\mathrm{Bill}, \mathrm{US})} q = -3 - 3 + 1 = -5$, changing
-$q[\,]$ back to 4.
+The query sums the squares of the counts of customers for each nation:
+If there are $f(n) = \AggSum(1, C(c_1,n))$
+customers for nation $n$, then the query result is
+$q = \sum_n f(n)^2$. After adding one customer to nation $n'$, the query result
+is
+\[
+\big( f(n')+1 \big)^2 + \sum_{n \neq n'} f(n)^2 =
+\underbrace{2 f(n') + 1}_{\Delta_{+C(c,n)} q} + q.
+\]
+Thus our derivation is correct.
 \punto
 \end{example}
 
@@ -583,6 +565,9 @@ auxiliary maps as well.
 
 
 The Compile function is given in Figure~\ref{fig:compilation-algo}. 
+Given a recursively monomial term $t$ and a set of bound variables $B$,
+the function Simplify($t$, $B$) recursively factorizes $t$, then performs
+variable elimination, and finally if-lifting.
 SimplifyArgs is a function that takes bound variables that contain
 $\vec{b}$ and a statement of the form
 {\tt foreach $\vec{x}\vec{y}$ do $q[\vec{x}\vec{y}]$ +=}
@@ -607,15 +592,15 @@ outputs an M3 program \\
 {\bf for each} relation $R$ in the schema,
                pm in $\{+,-\}$ {\bf do} \\
 ~~\=
-  trigger\_args =: \=turn columns names of $R$ into list \\
+  trigger\_args := \=turn columns names of $R$ into list \\
 \>               \>of new argument variable names; \\[1ex]
 \>{\bf for each} $t_i$ in
         RecMonomials($\Delta_{pm R(\mathrm{trigger\_args})} t$) {\bf do} \\[1ex]
-\>~~\=bound\_vars =: trigger\_args $\cup$ map\_args; \\[1ex]
+\>~~\=bound\_vars := trigger\_args $\cup$ map\_args; \\[1ex]
 \>\>($t'_i$, $\Theta_i$) := ExtractAggregates( \\
-\>\>~~      Simplify($t'$, bound\_vars), bound\_vars); \\[1ex]
-\>\>s := SimplifyArgs({\tt foreach} map\_args {\tt do} \\
-\>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args); \\[1ex]
+\>\>~~      Simplify($t_i$, bound\_vars), bound\_vars); \\[1ex]
+\>\>s := SimplifyArgs\big(({\tt foreach} map\_args {\tt do} \\
+\>\>~~       map\_name[map\_args] pm= $t'_i$), trigger\_args\big); \\[1ex]
 \>\>{\bf if} pm=`+' {\bf then} \\
 \>\>~~{\bf output} {\tt on insert into} $R$(trigger\_args) $\{s\}$; \\
 \>\>{\bf else} \\
@@ -635,8 +620,8 @@ outputs an M3 program \\
 
 Compile produces M3 programs in which each trigger contains a single statement,
 but there may be several triggers for the same tuple insertion or deletion
-event. Moreover, there may be maps that are read by some of these triggers
-and written by others.
+event, and maps may be read by some of these triggers
+{\em and}\/ written by others.
 The semantics of M3 statements
 is such that the map values read are assumed to be from
 before the update. In an implementation, one can make sure that no dirty
@@ -728,6 +713,7 @@ using the query that defines $m$. However, fortunately, we never need to
 do this if all the joins in the query are equijoins.
 
 \begin{theorem}
+\label{theo:eq_zero}
 Given a $\AggSum$ term $q$ in which, for all atomic constraints
 $t\, \theta\, t'$, if both $t$ and $t'$ contain variables, then
 $\theta$ is equality.
@@ -736,15 +722,20 @@ is undefined, its value is zero.
 \end{theorem}
 
 That is, we can always initialize undefined values that we encounter while
-evaluating an M3 program with 0. This is in general not true for queries
-with inequality join conditions. However, there is an extended version of
-the compilation algorithm that compiles
-queries in which all join conditions
-are using only = and $\neq$ into M3 programs where it is again correct
-to initialize undefined map values with 0. This algorithm is beyond the
-scope of the paper, but we give an example.
+evaluating an M3 program with 0.
 
-
+This is in general not true for queries
+with inequality join conditions. However, we can eliminate
+inequalities involving $\neq$ (but not $<$ or $\le$) using the rule
+\begin{multline*}
+\AggSum(t, \phi(\vec{x}, y, z) \land y \neq z) = \\
+\AggSum(t, \phi(\vec{x}, y, z)) -
+\AggSum(t, \phi(\vec{x}, y, z) \land y=z)
+\end{multline*}
+and then apply Theorem~\ref{theo:eq_zero} to see that it is again correct
+to initialize undefined map values with 0.
+%
+\nop{
 \begin{example}\em
 Consider the query $q = \AggSum(1, R(x) \land S(y) \land x \neq y)$.
 Then, $\Delta_{+R(a)} q = \AggSum(1, S(y) \land a \neq y) =: qR[a]$.
@@ -755,13 +746,14 @@ One of the triggers that Compile creates is
 Assume that we have started with empty domains for all maps and
 some S tuples have been inserted. Now we insert the first R tuple, $a$.
 Then $qR[a]$ is undefined, but its correct value in general is not zero.
-However, the correct value is simply
-$qR' = \AggSum(1, S(y))$, which can be incrementally maintained by
-an M3 trigger.
+%
+We can fix this by rewriting $q$ as
+$\AggSum(1, R(x) \land S(y)) - \AggSum(1, R(x) \land S(x))$, and compiling
+this query in the normal way.
 \punto
 \end{example}
-
-
+} % end nop
+%
 There is no restriction on non-join constraints, i.e., constraints
 involving constants. These may use comparisons $<$ and $\le$ as well.
 

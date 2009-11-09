@@ -12,6 +12,7 @@
 
 \renewcommand{\baselinestretch}{.98}
 
+
 \def\punto{$\hspace*{\fill}\Box$}
 \newcommand{\nop}[1]{}
 \newcommand{\tuple}[1]{{\langle#1\rangle}}
@@ -62,19 +63,12 @@
 \abstract{
 We present Cumulus, a distributed exact online aggregation system.
 Cumulus compiles a set of SQL aggregation queries
-%
-% or a datacube
-%
 down to a message-passing program that incrementally maintains
 the query results by simple and highly efficient local modifications.
 Surprisingly, our message passing programs
 perform only a {\em constant}\/ amount of work
 for each tuple inserted or deleted and each
 aggregate value to be maintained.
-%
-%assuming constant-time read/write access to individual data items.
-%This can be guaranteed if the data is kept in main memory.
-%
 Our message-passing protocol allows for massive parallelization.
 
 The Cumulus runtime system is a distributed key-value store for
@@ -91,7 +85,6 @@ and using the resources of the cloud to keep its store in main memory.
 \input{compiler}
 \input{architecture}
 \input{experiments}
-\input{relatedwork}
 \input{conclusion}
 
 

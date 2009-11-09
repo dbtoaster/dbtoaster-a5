@@ -96,11 +96,11 @@ Time & $\Delta$Customer
 & $\Delta$q[3] & q[3]
 & $\Delta$q[4] & q[4] \\
 \hline
-1&insert (1,US) &         +1 & 1 &              &   &              &   &&   \\
-2&insert (2,UK) &            & 1 &            1 & 1 &              &   &&   \\
-3&insert (3,UK) &            & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
-4&insert (4,US) & +q2[4,US] & 2 &              & 2 &              & 2 & +q1[US] + 1 & 2 \\
-5&delete (3,UK) &            & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
+1&insert (1,US) &        +1 & 1 &             &   &             &   &&   \\
+2&insert (2,UK) &           & 1 &          +1 & 1 &             &   &&   \\
+3&insert (3,UK) &           & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
+4&insert (4,US) & +q2[4,US] & 2 &             & 2 &             & 2 & +q1[US] + 1 & 2 \\
+5&delete (3,UK) &           & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
 6&insert (3,{\bf US}) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
 \end{tabular}
 \end{center}
@@ -202,38 +202,23 @@ to be updated only requiring a constant amount of work.}
 The syntax of statements of the form (\ref{eq:foreach})
 is misleading in that it suggests a loop --
 that a nonconstant amount of work is needed to bring aggregate
-values up to date. Polynomial amounts of work are in fact needed,
-but only because in general there are many aggregate values
+values up to date. Nonconstant amounts of work are only needed
+because in general there are many aggregate values
 to be maintained -- in a
 map representing the result of a group-by query or in an auxiliary map.
-In fact, each statement of form (\ref{eq:foreach})
+Each statement of form (\ref{eq:foreach})
 writes each value $m[\vec{x}\vec{y}]$ only once and admits
 {\em embarassing parallelism}: $m$ can be partitioned across many machines
 that share the work. A map update statement specifies a
 pattern of {\em message passing} between nodes reading and nodes writing
 map values.
 
-\nop{
-Assume that the storage of individual maps
-is partitioned across several machines. To execute a statement of form
-(\ref{eq:foreach})
-in a trigger invocation with arguments $\vec{x} = \vec{a}$,
-where term $t$ uses map lookups $m_i[\vec{x}_i, \vec{y}_i]$,
-each node storing a value $m_i[\vec{a}_i, \vec{y}_i] = v$,
-for $\vec{y}_i$ arbitrary, sends the message
-$m_i[\vec{a}_i, \vec{y}_i] = v$ to the node managing value
-$m[\vec{a}, \vec{y}]$. This way, that node receives all the values it
-needs to update all $m$ values that it represents.
-Of course this requires a suitable protocol to ensure overall consistency
-and that the right versions of map values are read and written in the right
-order.
-} % end nop
 
-
-\begin{example}[star-join decomposition]\em
+\begin{example}\em
 \label{ex:ssb}
-Con\-sider \\ a simplified version of the star schema
-benchmark (SSB) schema with relations Date(\underline{datekey}, year),
+Con\-sider a simplified version of the Star Schema
+Benchmark schema \cite{poneil-ssb:07}
+with relations Date(\underline{datekey}, year),
 Part(\underline{partkey}, partcat), where partcat stands for a part category,
 and LineOrder(datekey, partkey, revenue), which may contain duplicate tuples.
 The query asks for the total revenues grouped by year and part category.
@@ -266,7 +251,7 @@ The maps {\tt mPL} and {\tt mDL} have value at most
 one at each position because datekey and partkey are keys for Date and Part,
 respectively.
 
-Observe how the {\tt on insert into LineOrder} code for incrementally
+Observe how the statement for incrementally
 maintaining the query result {\tt m} decomposes into
 two parts with disjoint variables, 
 {\tt mDL[partkey, partcat]} and {\tt mPL[datekey, year]}.
@@ -276,7 +261,7 @@ for any {\tt x} and {\tt y},
 to nodes maintaining {\tt m[x, *]} and {\tt m[*, y]}, respectively.
 A node managing {\tt m[u, v]} receives, possibly from distinct nodes,
 {\tt mDL[partkey, u]} and {\tt mPL[datekey, v]}
-and can increment {\tt m[u, v]} by
+and can increment {\tt m[u, v]} by the value
 {\tt revenue*mDL[partkey, u]*mPL[datekey, v]}.
 %
 %We only send nonzero {\tt mDL[partkey, x]} and {\tt mPL[datekey, y]} values,
@@ -374,9 +359,10 @@ infrastructure, and show how it can be used to efficiently distribute the
 processing and storage requirements of query processing and
 the incremental maintenance of large aggregate views.
 
-\item We show evidence for the scalability of our approach by examining the
-performance of Cumulus on examples drawn from the TPC-H\cite{tpch2008}
-benchmark. 
+\item
+We show evidence for the scalability of our approach by examining the
+performance of Cumulus on examples drawn from the TPC-H benchmark
+\cite{tpch2008}.
 \end{itemize}
 
 

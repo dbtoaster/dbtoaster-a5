@@ -31,7 +31,7 @@ at a coordinator node called the \textit{Switch}, which delegates
 update work to a number of data storage and query processing nodes, or
 \textit{DW Nodes}.
 The maps suggested by the compiler -- and maintained by the M3 program --
-are partitioned across the DW nodes to keep network traffic to a minimum.  
+are partitioned across the DW Nodes to keep network traffic to a minimum.  
 The switch does not store any map data, but manages
 the information about data placement (how maps are partitioned and which
 partitions are located on which nodes).
@@ -39,7 +39,7 @@ partitions are located on which nodes).
 The runtime is designed to implement exact online aggregation, and
 we conceive it to be used for main-memory OLAP.
 The query layer accepts roll-up/drill-down/slice/dice queries,
-instructs the Switch to have the DW nodes send a consistent version of
+instructs the Switch to have the DW Nodes send a consistent version of
 the relevant data to the querying node (the user's machine),
 collects the result chunks there, and
 finalizes the query answer
@@ -64,10 +64,10 @@ for faster recovery, but this is currently not done.
 
 
 The Switch maintains information how map data is partitioned across
-DW nodes. In the most general case, this would be a function
+DW Nodes. In the most general case, this would be a function
 that maps a tuple update and a statement (id) from the M3 program to
 a record that identifies, for each map access of the statement,
-which DW nodes store any relevant data for executing this
+which DW Nodes store any relevant data for executing this
 statement.
 %
 In the current prototype of Cumulus, maps are partitioned along
@@ -106,9 +106,6 @@ $N_3$.
 \end{example}
 
 
-\subsection{Update Protocol}
-
-
 \nop{
 \begin{figure}
 \begin{center}
@@ -118,6 +115,9 @@ $N_3$.
 \end{center}
 \end{figure}
 } % end nop
+
+
+\subsection{Update Protocol}
 
 
 On an {\em update} (an insertion or deletion of a tuple
@@ -133,8 +133,8 @@ Switch contain this update sequence number.
 
 For a given statement, the Switch proceeds as follows.
 It composes a set of messages parametrized on $\vec{x}\vec{y}$ and
-dispatches them to the DW nodes.
-Nodes being read from are sent FETCH requests, which leads them to forward
+dispatches them to the DW Nodes.
+DW Nodes being read from are sent FETCH requests, which leads them to forward
 PUSH messages containing the data read
 to the appropriate writers. The writers are also
 informed of their role by the Switch through PUT messages.
@@ -154,7 +154,7 @@ what write to perform and which readers to expect PUSH messages from.
 Readers who have received a FETCH message from the Switch always
 send a PUSH message to the writers that were
 identified by the Switch in the FETCH
-message: if a reader has no relevant data, it sends an empty PUSH message to
+message: If a reader has no relevant data, it sends an empty PUSH message to
 the writer to allow it to move on.
 This allows the writer to know when all necessary PUSH messages have been
 received and the write can be carried out.
@@ -237,8 +237,7 @@ PUSHed locally inside that node.
 \subsection{Anatomy of a DW Node}
 
 
-A DW Node receives and processes FETCH, PUSH, and PUT messages
-as just described.
+A DW Node receives and processes FETCH, PUSH, and PUT messages.
 It has to process the messages it receives from the Switch 
 in the order they are {\em sent}\/. For example, a
 TCP connection with the Switch ensures that messages from the 
@@ -277,35 +276,35 @@ than the local update sequence number $t$, then we set $t := t'$
 and copy the working copy of the map partitions to the committed version.
 
 Additionally,
-for a FETCH message($t'$, $s$, push $m[\vec{\pi}]$ to $Ns$),
-we read the requested data $m[\vec{\pi}]$ from the commited version of
+for a FETCH message($t'$, $s$, push $m[\vec{\pi}]$ to $\textit{Ns}$),
+we read the requested data $m[\vec{\pi}]$ from the committed version of
 the map partitions and send it in PUSH messages to the set of recipient
-nodes $Ns$.
+nodes $\textit{Ns}$.
 
-For a message PUT($t'$, $s$, $st$ with messages from $Ns$), where $st$
+For a message PUT($t'$, $s$, $st$ with messages from $\textit{Ns}$), where $st$
 is an M3 statement and $s$ the identifier used for it throughout the 
 system, we block until all PUSH messages have arrived for all
-senders announced in set $Ns$.
+senders announced in set $\textit{Ns}$.
 Let $m_1[\vec{t}_1]$, $\dots$, $m_k[\vec{t}_k]$ be the map accesses occuring in
 $st$. For each $m_i$, 
 we extract the data from the PUSH messages corresponding
-to the current PUT message (i.e., agreeing on $s$) and put it in a table $T_i$.
+to the current PUT message (i.e., agreeing on $t'$ and $s$) and put it in a table $T_i$.
 If $\vec{t}_i$ consists of constants only (i.e., does not contain any
 of the variables that the optional foreach loop loops over), and $T_i$ is
-empty, then we have to compute an inital value for $m_i[\vec{t}_i]$.
-Currently, the DW nodes do not (but the compiler does) support $<$/$\le$-join
-conditions, and the M3 programs produced guarantee that the map value must be
-0.  We compute
-$T_1 \times \dots \times T_k$, and, for each tuple of that product table,
-evaluate $s$ and make one map update.
-If $s$ does not contain a foreach-loop, then each $T_i$ contains exactly
+empty, then we have to compute an inital value for
+$m_i[\vec{t}_i]$.\footnote{Currently,
+the DW Nodes do not (but the compiler does) support $<$/$\le$-join conditions,
+and the M3 programs produced guarantee that the map value must be 0.}
+For each tuple of the product table $T_1 \times \dots \times T_k$,
+we evaluate $st$ and perform one map update.
+If $st$ does not contain a foreach-loop, then each $T_i$ contains exactly
 one value, and we update exactly one map value.
 
 
 \begin{example}\em
 \label{ex:switch_msg3}
 We continue Example~\ref{ex:switch_msg2}.
-Node $N_4$ knows from its message
+Node $N_4$ knows from the message
 \begin{center}
 \begin{tabular}{ll}
 PUT($t$,   & {\tt foreach $(x,y)$ do} \\
@@ -314,9 +313,10 @@ PUT($t$,   & {\tt foreach $(x,y)$ do} \\
            & with messages from $\{N_1, N_2, N_3\})$
 \end{tabular}
 \end{center}
+that it has received from the Switch
 that it will receive messages with timestamp $t$ from nodes $N_1$, $N_2$, and
 $N_3$.
-The information it receives from the PUSH messages is
+The information it receives in these three PUSH messages is
 $T_{mDL} = \{ [p_1, red] \mapsto 1 \}$ and
 $T_{mPL} = \{ [d_1, 2005] \mapsto 1 \}$.
 Thus, $N_4$ executes the update
