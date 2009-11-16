@@ -1,6 +1,6 @@
 --persist
---key CUSTOMERS[CID] <= ORDERS[O_CID]
---key ORDERS[OID] <= LINEITEMS[L_OID]
+--#key CUSTOMERS[CID] <= ORDERS[O_CID]
+--#key ORDERS[OID] <= LINEITEMS[L_OID]
 --switch wl03.cac.cornell.edu
 --node Node01@wl04.cac.cornell.edu:52982
 --node Node02@wl05.cac.cornell.edu:52982

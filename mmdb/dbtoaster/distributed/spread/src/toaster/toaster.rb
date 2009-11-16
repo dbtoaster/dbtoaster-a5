@@ -99,7 +99,7 @@ class DBToaster
       toast_domains;
       @DBT = nil;
     rescue Exception => e
-      #puts "Error toasting.  Compiler output: \n" + data.join("");
+      puts "Error toasting.  Compiler output: \n" + data.join("");
       raise e;
     end
     self;

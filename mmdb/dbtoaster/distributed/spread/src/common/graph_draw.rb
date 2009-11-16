@@ -70,12 +70,53 @@ class Graph
     self;
   end
   
+  def limit(col, range)
+    col = @keys.index(col) if col.is_a? String;
+    if @subgraphs then @subgraphs.each { |sg| sg.limit(col, range) }
+    else
+      @lines.delete_if { |l| not range === l.split(@fs)[col].to_i };
+    end
+  end
+  
+  def pivot(col, agg)
+    col = @keys.index(col) if col.is_a? String;
+    @lines = @subgraphs.collect do |sg|
+      sg.name + " " + 
+        case agg
+          when :avg then sg.compute_average(col).to_s;
+          when :max then sg.compute_max(col).to_s;
+        end
+    end
+    @subgraphs = nil;
+  end
+  
+  def adjust(col) 
+    col = @keys.index(col) if col.is_a? String;
+    if @subgraphs then @subgraphs.each { |sg| sg.adjust(col) { |val| yield val } }
+    else
+      @lines = @lines.collect do |l| 
+        l = l.split(@fs);
+        l[col] = yield l[col];
+        l.join(" ");
+      end
+    end
+  end
+  
+  def compute_average(col)
+    Math.avg(*@lines.collect { |l| l.split(@fs)[col].to_i });
+  end
+  
+  def compute_max(col)
+    Math.max(*@lines.collect { |l| l.split(@fs)[col].to_i });
+  end
+  
   def make_counter(regex, sep=" ", counter_last = nil)
     if @subgraphs then @subgraphs.each { |sg| sg.make_counter(regex, sep, counter_last) }
     else
+      counter_last = "0";
       @lines.collect! do |line|
         if match = regex.match(line) then
-          counter_last = match[1];
+          counter_last = (if match.size > 1 then match[1] else (counter_last.to_i) + 1 end).to_s
         end
         if counter_last then
           counter_last + sep + line;
@@ -181,50 +222,114 @@ class Graph
     self;
   end
   
-  def graph(out_file = nil, out_format = "pdf enhanced", generate = true)
-    if @subgraphs then
-      text = @subgraphs.collect { |sg| sg.graph(out_file, out_format, false) }.join(", ");
-    else
-      tmp = Tempfile.new("graph_draw_data");
-      tmp.write(@lines.join("\n"));
-      tmp.flush;
-      text = 
-        "'" + tmp.path.to_s + "' " + 
-        "title \"" + @name.to_s + "\" " +
-        "axis x" + @axis[0].to_s + "y" + @axis[1].to_s + " " +
-        "with " + @style;
+  def generate_plot(text, out_file = nil, out_format = "pdf enhanced")
+    gp = File.popen("gnuplot", "w+");
+    if out_file then
+      gp.write("set terminal " + out_format + ";\n");
+      gp.write("set output '" + out_file + "';\n");
     end
-    if generate then
-      gp = File.popen("gnuplot", "w+");
-      if out_file then
-        gp.write("set terminal " + out_format + ";\n");
-        gp.write("set output '" + out_file + "';\n");
-      end
-      axis_names.each_pair do |name, index|
-        unless name.to_s[1] == "1"[0] then
-          if @range[index] then
-            gp.write("set " + name.to_s + "range [" + @range[index].begin.to_s + ":" + @range[index].end.to_s + "];\n");
-            if name.to_s[1] == "2"[0] then
-              gp.write("set " + name.to_s + "tics autofreq;\n");
-              gp.write("set " + name.to_s.slice(0,1) + "tics nomirror;\n");
-            end
+    axis_names.each_pair do |name, index|
+      unless name.to_s[1] == "1"[0] then
+        if @range[index] then
+          gp.write("set " + name.to_s + "range [" + @range[index].begin.to_s + ":" + @range[index].end.to_s + "];\n");
+          if name.to_s[1] == "2"[0] then
+            gp.write("set " + name.to_s + "tics autofreq;\n");
+            gp.write("set " + name.to_s.slice(0,1) + "tics nomirror;\n");
           end
         end
       end
-      if keys.size >= 2 then
-        gp.write("set xlabel \"" + keys[0] +"\";\n")
-        gp.write("set ylabel \"" + keys[1] +"\";\n")
-      end
-      gp.write(@directives.join(";\n") + ";\n") unless @directives.empty?;
-      gp.write("plot " + text + ";\n");
-      gp.close;
-      system("open " + out_file) if out_file && (`uname`.chomp == "Darwin");
     end
-    text;
+    if @keys.size >= 2 then
+      gp.write("set xlabel \"" + @keys[0] +"\";\n")
+      gp.write("set ylabel \"" + @keys[1] +"\";\n")
+    end
+    gp.write(@directives.join(";\n") + ";\n") unless @directives.empty?;
+    gp.write("plot " + text + ";\n");
+    gp.close;
+    system("open " + out_file) if out_file && (`uname`.chomp == "Darwin");
+  end
+  
+  def graph_data_nonrecursive
+    tmp = Tempfile.new("graph_draw_data");
+    tmp.write(@lines.join("\n"));
+    tmp.flush;
+    text = 
+      "'" + tmp.path.to_s + "' " + 
+      "title \"" + @name.to_s + "\" " +
+      "axis x" + @axis[0].to_s + "y" + @axis[1].to_s + " " +
+      "with " + @style;
+  end
+  
+  def graph_data(type = :basic, params = Hash.new(0))
+    if @subgraphs then
+      case type
+        when :basic then @subgraphs.collect { |sg| sg.graph_data(type) }.join(", ");
+        when :bar   then @subgraphs.collect { |sg| ret = sg.graph_data(type, params); params[:shift] = params[:shift] + params[:box_width]; ret; }.join(", ");
+      end
+    else
+      case type
+        when :basic then
+          graph_data_nonrecursive
+        when :bar   then
+          lines = @lines;
+          @style = "boxes fs pattern"
+          @lines = @lines.collect_index do |i, line|
+            (params[:field_width]*i+params[:shift]).to_s + " " + line.split(@fs)[1]
+          end
+          ret = graph_data_nonrecursive
+          @lines = lines;
+          ret;
+      end
+    end
+  end
+  
+  def bar_graph_keys
+    if @subgraphs then
+      ret = @subgraphs[0].bar_graph_keys
+      ret[1] *= @subgraphs.size;
+      ret;
+    else
+      [ @lines.collect { |line| line.split(@fs)[0] }, 1 ];
+    end
+  end
+  
+  def graph(out_file = nil)
+    generate_plot(graph_data, out_file);
+  end
+  
+  def graph_bar(out_file = nil)
+    old_directives = @directives.clone;
+    old_x_range = @range[0];
+    old_style = @style;
+    
+    line_names, width = *bar_graph_keys;
+    box_width = 0.75
+    field_width = 0.5 + box_width*width
+    puts field_width.to_s;
+
+    directive("set style data boxes");
+    directive("set boxwidth " + box_width.to_s);
+    directive("set xtic rotate by -25");
+
+    directive("set xtics (" +
+      line_names.collect_index do |i, lname|
+        "\"  " + lname+"\" " +(i*field_width + 0.1+(field_width/2.0)).to_s
+      end.join(", ") + ")"
+    );
+    @range[0] = (0..(0.5+field_width*line_names.size))
+    generate_plot(graph_data(:bar, {:shift => 0.9, :box_width => box_width, :field_width => field_width }), out_file);
+    
+    
+    @range[0] = old_x_range;
+    @directives = old_directives;
   end
   
   def axis_names
     { :x => 0, :y => 2, :x1 => 0, :x2 => 1, :y1 => 2, :y2 => 3 }
   end
 end
+
+
+
+
 

@@ -1,6 +1,6 @@
 --persist
---key PARTS[PID] <= PARTSUPP[PS_PID]
---key SUPP[SID] <= PARTSUPP[PS_SID]
+--#key PARTS[PID] <= PARTSUPP[PS_PID]
+--#key SUPP[SID] <= PARTSUPP[PS_SID]
 --switch wl03.cac.cornell.edu
 --node Node01@wl04.cac.cornell.edu:52982
 --node Node02@wl05.cac.cornell.edu:52982
