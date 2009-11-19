@@ -132,6 +132,24 @@ class Array
     (0...size).each { concat(shift) }
     self;
   end
+  
+  def each_cross_product(depth = 0, pattern = Array.new)
+    if depth >= size then
+      if depth == 0 then yield pattern.clone else yield end;
+    else
+      self[depth].each do |val|
+        pattern.push(val);
+        each_cross_product(depth+1, pattern) { if depth == 0 then yield pattern.clone else yield end };
+        pattern.pop;
+      end
+    end
+  end
+  
+  def cross_product(depth = 0, pattern = Array.new)
+    ret = Array.new;
+    each_cross_product { |out| ret.push(out) };
+    ret;
+  end
 end
 
 class Hash
@@ -227,6 +245,18 @@ module Math
   end
   def Math.avg(*params)
     sum(*params) / params.size;
+  end
+end
+
+class Fixnum
+  @@max_fixnum = nil;
+  
+  def Fixnum.max_fixnum
+    # Ruby transparently upgrades Fixnums to Bignums when they would otherwise overflow a fixnum.
+    # This function returns the maximum size a number can be (on this platform) and still be a fixnum.
+    # In addition to the sign bit, Ruby also uses one bit to identify this as an integer rather than an object.
+    # This number should be something like 1.844674407370955e+19 on a 64 bit; f'ref TPC-H maxes out at 2147483647
+    @@max_fixnum || (@@max_fixnum = (2**(((1.size)*8)-2))-1);
   end
 end
 

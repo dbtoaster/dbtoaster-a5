@@ -8,7 +8,7 @@ class NodeID
     host + ":" + port.to_s;
   end
   
-  def NodeID.make(host, port)
+  def NodeID.make(host, port = 52982)
     n = NodeID.new;
     n.host = host.to_s;
     n.port = port.to_i;
@@ -17,12 +17,16 @@ class NodeID
 end
 
 class Entry 
+  def Entry.wildcard
+    -1;
+  end
+  
   def to_s
     @source.to_s + "[" + @key.collect { |k| if k < 0 then "*" else k.to_s end }.join(", ") + "]";
   end
   
   def has_wildcards?
-    @key.include? -1;
+    @key.include? wildcard;
   end
   
   def Entry.make(source, key)
@@ -38,6 +42,26 @@ class Entry
   
   def hash
     @source.hash + @key.hash;
+  end
+  
+  def hashed_key
+    # A key array with hashes and nil values for wildcards
+    @key.collect do |k|
+      k.hash.abs if k != wildcard;
+    end
+  end
+  
+  def partition(sizes)
+    compute_partition(@key, sizes);
+  end
+  
+  def Entry.compute_partition(keys, sizes)
+    keys.zip(sizes).collect do |k, s|
+      if s == 0 then 0
+      elsif k < 0 then -1
+      else (k.hash.abs.to_f * (size.to_f / Fixnum.max_fixnum.to_f))
+      end
+    end
   end
 end
 

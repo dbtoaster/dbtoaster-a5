@@ -65,21 +65,19 @@ puts "==== Partition Choices =====";
 
 $toaster.map_info.each_value do |info|
   unless info["discarded"] then
-    puts info["map"].to_s + "(" + info["id"].to_s + ") : Partition on " + map_keys[info["id"]][info["partition"]].to_s + " out of [" + map_keys[info["id"]].join(",") + "]";
+    puts info["map"].to_s + "(" + info["id"].to_s + ")\n" + 
+      info["partition"][info["partition"].size-1].collect_index { |i,c| "    " + map_keys[info["id"]][i].to_s + " (" + i.to_s + "): " + (c.to_i + 1).to_s }.join("\n");
   end
 end
-
-
-
 
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");
+  $output.write("address " + address.to_s + ":" + port.to_s + "\n");
   partitions.each_pair do |map, plist|
     plist.each do |partition|
-      $output.write("partition Map " + map.to_s + "[" + 
-        partition.collect { |pkey| pkey.begin.to_s + "::" + pkey.end.to_s }.join(",") + "]\n");
+      $output.write("partition Map " + map.to_s + "[" + partition.join(",") + "]\n");
     end
   end
   $slicefile.write("node " + node + "@" + address.to_s + ":" + port.to_s + "\n") if $slicefile;

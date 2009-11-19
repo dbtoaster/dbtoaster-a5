@@ -2,249 +2,138 @@ require 'thrift';
 require 'map_node';
 require 'spread_types';
 require 'spatial_index';
-
-###################################################
-
-class PartitionKey
-  attr_reader :range, :node_name
-  
-  def initialize(low, high, node_name)
-    @range = low.collect_pair(high) do |l, h| (l...h) end
-    @node_name = node_name;
-  end
-  
-  def contains?(key)
-    return false unless key.size == @range.size;
-    @range.each_pair(key) do |r, k|
-      return false unless (k.is_a? String) || r === k;
-    end
-    return true;
-  end
-  
-  def <=>(other)
-    @range <=> other.range;
-  end
-  
-  def overlaps?(other)
-    @range.each_pair(other.range) do |a, b|
-      return true unless (a.end < b.begin) || (b.end < a.begin);
-    end
-    return false;
-  end
-  
-  def to_s
-    @range.collect do |a| a.begin.to_s + "::" + a.end.to_s end.join(" ; ") + " @ " + @node_name.to_s
-  end
-end
-
-###################################################
-
-class EntryPartitions
-  attr_reader :entry, :partitions;
-  
-  def initialize(entry)
-    @entry = entry;
-    @partitions = Array.new;
-  end
-end
-
 ###################################################
 
 class MapLayout
+  # IMPORTANT NOTE: THIS CLASS IS WRITTEN TO ASSUME THAT PARTITIONING IS DONE
+  # UNIFORMLY ACROSS ALL MAPS WITH A PARTICULAR "KEY".  IF IN ANY 
+  # TEMPLATE/TRIGGER, THE SAME KEY IS USED TO INDEX INTO THE SAME MAP, THE
+  # PARTITION BOUNDARIES FOR THAT KEY IN BOTH MAPS HAD BETTER BE THE SAME.
+
   attr_reader :maplist;
   
   def initialize()
-    @maplist = Hash.new;
+    @maplist = Hash.new { Hash.new };
+    @partition_sizes = Hash.new { Array.new };
   end
   
-  def install(map_id, low, high, node)
-    @maplist.assert_key(map_id) { Array.new }.push(PartitionKey.new(low, high, node));
-    sort(map_id);
+  def set_partition_size(map_id, size)
+    @partition_sizes[map_id] = size.clone.freeze;
   end
   
-  def validate
-    @maplist.each_key do |map_id|
-      last = nil;
-      sort(map_id);
-      @maplist[map_id].each do |partition|
-        raise SpreadException.new("Overlapping partition boundaries for map : " + map_id.to_s) unless last.nil? || last.overlaps?(partition);
-        last = partition;
-      end
-    end
+  def install(map_id, partition, node)
+    @maplist[map_id][partition] = node;
   end
   
   def nodes
     nodes = Set.new;
-    @maplist.each_value do |val|
-      val.each do |pkey|
-        nodes.add(pkey.node_name);
+    @maplist.each_value do |partitions|
+      partitions.each_value do |node|
+        nodes.add(node);
       end
     end
     nodes.to_a;
   end
   
-  def find_nodes(write, reads)
-    (reads.clone << write).each do |entry| raise SpreadException.new("Invalid Entry " + entry.to_s + "; No map with that id") unless @maplist.has_key? entry.source; end;
+  def compile_trigger(template)
+    compiled_trigger = CompiledTrigger.new(template);
     
-    @maplist[write.source].each do |write_partition|
-      Logger.debug { "Checking Partition : " + write_partition.to_s + " for " + write.key.join(", ") } 
-      if write_partition.contains? write.key then
-        Logger.debug { "Collecting GETS for : " + write_partition.to_s };
-      
-        loop_ranges = write.key.collect_pair(write_partition.range) do |key, range|
-          if key.is_a? String then [key, range] else nil end;
-        end.compact.collect_hash do |pair| pair end;
-        
-        read_partitions = Hash.new
-        
-        reads.collect do |read_entry|
-          sources = EntryPartitions.new(read_entry);
-          @maplist[read_entry.source].each do |read_partition|
-            unless (read_entry.key.find_pair(read_partition.range) do |key, range|
-                case key
-                  when String then !(range.overlaps? loop_ranges[key]);
-                  else             !(range === key);
-                end
-              end) then
-                sources.partitions.push(read_partition)
-            end
-          end
-          sources;
-        end.each do |ep|
-          ep.partitions.each do |partition|
-            read_partitions.assert_key(partition.node_name) { Array.new }
-            read_partitions[partition.node_name].push(ep);
-          end
+    ([template.target].concat(template.entries)).collect do |e|
+      partition_node_pairs = @maplist[e.source].to_a;
+      partition_node_pairs.collect { |pnp| [e.keys.zip(pnp[0]), pnp[1], e] }
+    end.each_cross_product do |candidate_write_and_reads|
+      key_partition_map = Hash.new;
+      if candidate_write_and_reads.assert do |partition_node|
+        # Iterate over all partitions defined by this entry in the candidate.  If there's a key
+        # conflict, then the candidate is invalid.  Otherwise, define the key for comparison against
+        # later elements.
+        partition_node[0].assert do |key_partition|
+          key_partition_map.assert_key(key_partition[0]) { key_partition[1] } == key_partition[1];
         end
-        read_partitions.each_value do |entries| entries.uniq! end;
-        read_partitions.delete(write_partition.node_name);
-        yield write_partition, read_partitions;
+      end then # candidate_write_and_reads.assert (candidate is self-consistent)
+        target = candidate_write_and_reads.shift;
+        compiled_trigger.discover_fragment(
+          target[1], 
+          target[2],
+          candidate_write_and_reads.collect { |r| r[1] },
+          candidate_write_and_reads.collect { |r| r[2] },
+          key_partition_map
+        )
       end
     end
-  end
-  
-  def lookup(entry)
-    raise SpreadException.new("Invalid Entry " + entry.to_s + "; No map with that id") unless @maplist.has_key? entry.source;
-    @maplist[entry.source].each do |partition|
-      return partition if partition.contains? entry.key;
-    end
-    raise SpreadException.new("Invalid Entry " + entry.to_s + "; No corresponding partition");
-  end
-  
-  def sort(map_id)
-    @maplist[map_id].sort!;
-    last = nil;
-  end
-  
-  def compile_trigger(template)
-    CompiledTrigger.new(template, self);
-  end
-end
-
-###################################################
-
-class CompiledMessageSet
-  attr_reader :node, :entry, :fetches;
-  def initialize(put_target, fetch_targets, put_template, fetch_templates)
-    @node = put_target.node_name;
-    @entry = put_template
-    @fetches = 
-      fetch_targets.collect do |node, entries|
-        [ node, 
-          entries.collect do |e| 
-            raise SpreadException.new("Invalid entry index!?! (" + e.entry.index.to_s + ")") unless e.entry.index >= 0 && fetch_templates.size > e.entry.index;
-            fetch_templates[e.entry.index]
-          end
-        ];
-      end.collect_hash
-  end
-  
-  def to_s
-    @entry.to_s + " @ " + @node.to_s + " ; " + @fetches.size.to_s + " fetches";
   end
 end
 
 ###################################################
 
 class CompiledTrigger
-  attr_reader :template;
-  def initialize(template, layout)
-    @template = template;
-    # I'm going to assume that partition boundaries occur across the entire map.
-    # If that's not true, this code will have to change.  It doesn't need to be
-    # efficient, but this change makes things infintely easier to think about.
-    boundaries =
-      template.paramlist.collect do |i|
-        if template.target.key.include? i then
-          # For each parameter in the table to be uploaded, find its domain by 
-          # scanning the corresponding components of the target map's partitions.
-          layout.maplist[template.target.source].collect do |part|
-            # So, for each partition, extract all of the ranges covered by
-            # this axis of the partition map.
-            part.range[template.target.key.index(i)];
-          end.uniq.sort do |a, b|
-            # Eliminate duplicates, and then sort over the first index.
-            a.begin <=> b.begin;
-          end.collect do |r|
-            # Further subdivision may be necessary for the fetches.  
-            # Identify corresponding ranges in the maps being read from
-            subdivisions = template.entries.collect do |e|
-              if e.keys.include? i then
-                layout.maplist[e.source].collect do |part|
-                  part.range[e.key.index(i)] if part.range[e.key.index(i)].overlaps? r;
-                end
-              end
-            end.flatten.compact.uniq
-            # If there are 0 or 1 corresponding ranges, all the reads occur on the same boundary lines
-            # If there are more ranges... we need to subdivide
-            if subdivisions.size > 1 then
-              subdivisions
-            else
-              r
+  def initialize(trigger)
+    @trigger = trigger;
+    @index = Hash.new { Hash.new { Hash.new { Array.new } } }
+    @relevant_params = 
+      (trigger.entries << trigger.target).collect do |e| 
+        e.keys 
+      end.flatten.delete_if do |k|
+        not trigger.paramlist.include? k;
+      end.collect_hash do |k|
+        [k, 0, trigger.paramlist.index(k)];
+      end
+    @partition_size = Array.new(trigger.paramlist.size, 1);
+  end
+  
+  def recompute_partition_size
+    @partition_size = template.paramlist.collect { |param| @relevant_params.fetch(param, [nil, 1])[1] };
+  end
+  
+  def discover_fragment(put_node, put_entry, fetch_nodes, fetch_entries, key_partition_map)
+    put_map = @index[trigger.param_list.collect { |param| 
+      if @relevant_params.has_key? param 
+      then  @relevant_params[param] = Math.max(key_partition_map[param], @relevant_params[param]); 
+            key_partition_map[param] 
+      else  0 
+      end 
+    }][put_node]
+    
+    fetch_nodes.each_pair(fetch_entries) do |node, entry|
+      put_map[node].push(
+        [
+          entry.source, 
+          entry.keys.collect do |k|
+            if k.is_a? Number then k
+            elsif template.paramlist.include? k then k
+            else -1;
             end
-          end.flatten
-        else
-          # If the key is irrelevant, then just use an infinite range.
-          [((-1.0/0)..(1.0/0))]
-        end
-      end
-    
-    # The result (boundaries) is a list of lists of ranges, the same input that
-    # SpatialIndex expects
-    @index = SpatialIndex.new(boundaries);
-    
-    # Now we need to loop over all possible targets in the space to generate
-    # gets and puts for the trigger
-    @index.update do |key, oldval|
-      # Pretend we just got an update for a put to a corner of the partition's keyspace.
-      # Generate the parameter mapping for the update
-      param_map = template.param_map(key.collect { |k| k.begin })
-      
-      put_list = Array.new;
-      i = -1;
-      layout.find_nodes(
-        template.target.clone(param_map),
-        template.entries.collect { |e| e = e.clone(param_map); e.index = (i += 1); e; }
-      ) do |put_target, fetch_targets|
-        
-        # And save the results
-        put_list.push(CompiledMessageSet.new(put_target, fetch_targets, template.target, template.entries));
-      end
-#      Logger.debug { "Generated Puts: " + put_list.join(", ") + "; for key: " + key.join(", ") }
-      put_list;
+          end
+        ]
+      ) if node != put_node;
     end
+    recompute_partition_size;
   end
   
-  def each_update(key)
-    @index[key].each { |message_set| yield message_set };
+  def fire(params)
+    raise SpreadException.new("Wildcard in paramlist: #{params.join(", ")}") unless params.assert { |part| part >= 0 };
+    put_nodes = Array.new;
+    @index[Entry.compute_partition(params, @partition_size)].each_pair do |put_node, fetchlist|
+      fetchlist.each_pair do |fetch_node, entry_list|
+        yield(
+          entry_list.collect do |source, keys|
+            Entry.make(source, keys.collect { |k| if k.is_a? String then params[@relevant_params[k][2]] else k end })
+          end,
+          fetch_node,
+          put_node,
+          put_nodes.size);
+      end
+      put_nodes.push([put_node, fetchlist.size]);
+    end
+    put_nodes;
   end
   
-  def to_s
-    @index.collect do |key, msg_sets|
-      "ON " + template.relation + "[" + 
-        key.collect { |k| k.begin.to_s + "::" + k.end.to_s }.join(", ") + 
-      "] :\n" +
-      msg_sets.collect { |ms| "   " + ms.to_s }.join("\n");
-    end.join("\n");
+  def requires_loop?
+    @template.requires_loop?;
+  end
+  
+  def index
+    @template.index
   end
 end
+

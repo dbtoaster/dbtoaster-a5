@@ -245,35 +245,16 @@ end
 ###################################################
 
 class MapPartition
-  attr_reader :mapid, :start, :range;
+  attr_reader :mapid, :partition;
   
   # A MapPartition is a chunk of a map (ID: mapid) holding keys in the
   # range [start, start+range).  Values are stored versioned; 
   
-  def initialize(mapid, start, range, patterns)
-    @mapid, @start, @range = mapid.to_i, [start].flatten, [range].flatten;
+  def initialize(mapid, partition, patterns)
+    @mapid, @partition = mapid.to_i, partition;
     
-    if start.size != range.size then raise SpreadException.new("Creating partition with inconsistent start/range sizes") end;
-    @start.freeze;
-    @range.freeze;
-    
-    @data = MultiKeyMap.new(@start.size, patterns);
+    @data = MultiKeyMap.new(@partition.size, patterns);
     @massputrecords = nil;
-  end
-  
-  def contains?(key)
-    key = [key] unless key.is_a? Array;
-    raise SpreadException.new("Trying to determine contains with an inconsistent key size; key:" + key.size.to_s + "; partition: " + @start.size.to_s) unless key.size == @start.size;
-    key.each_index do |i|
-      if (key[i] != -1) &&
-         ((key[i].to_i < @start[i]) || 
-          (key[i].to_i >= @start[i] + @range[i])) then return false end;
-    end 
-    return true;
-  end
-  
-  def end
-    @range.collect_pair(@start) do |r, s| s+r end;
   end
   
   # The semantics of GET are a little wonky for this map due to 
@@ -443,10 +424,7 @@ class MapPartition
   end
   
   def to_s
-    mapid.to_s + " => [" + 
-      (0...@start.size).collect do |i|
-        @start[i].to_s + "::" + (@start[i].to_i + @range[i].to_i).to_s
-      end.join(" ; ") + "]";
+    mapid.to_s + " => [" + @partition.join(",") + "]";
   end
   
   def dump
@@ -464,6 +442,10 @@ class MapPartition
   
   def patterns
     @data.patterns;
+  end
+  
+  def add_pattern(partition)
+    @data.add_pattern(partition);
   end
 end
 

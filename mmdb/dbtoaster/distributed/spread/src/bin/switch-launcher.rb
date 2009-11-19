@@ -5,6 +5,7 @@ require 'switch';
 require 'spread_types_mixins';
 require 'template';
 require 'getoptlong';
+require 'config';
 
 puts "done\nInitializing Switch..."
 
@@ -34,39 +35,20 @@ GetoptLong.new(
   end
 end
 
-nodes = Hash.new;
-curr_node = nil;
-puttemplates = Hash.new;
-    
-ARGV.collect { |f| File.new(f).readlines }.flatten.each do |line|
-  Logger.debug { "GOT: " + line.chomp }
-  if line[0] != '#'[0] then 
-    cmd = line.scan(/[^ \r\n]+/);
-    case cmd[0]
-      when "node" then curr_node = nodes.assert_key(cmd[1]){ Array.new }
-      when "template" then cmd.shift; puttemplates[cmd.shift.to_i] = UpdateTemplate.new(cmd.join(" "));
-      when "partition" then 
-        match = /Map *([0-9]+)\[([0-9:, ]+)\]/.match(line);
-        raise SpreadException.new("Unable to parse partition line: " + line) if match.nil?;
-        curr_node.push(
-          [ match[1].to_i,
-            match[2].split(/ *, */).collect { |c| c.split(/ *:: */)[0].to_i }.freeze,
-            match[2].split(/ *, */).collect { |c| c.split(/ *:: */)[1].to_i }.freeze
-          ]);
-    end
-  end
-end
+conf = Config.new;
+
+ARGV.each { |f| conf.load(File.new(f)) };
 
 handler, server = SwitchNode::Processor.listen(port);
 
-nodes.each_pair do |id, partitions|
-  handler.install_node(node_addrs[id], partitions);
-  puts("Identified node " + id.to_s + " at " + node_addrs[id].to_s + " : \n" + 
-    partitions.collect do |pinfo|
-      "  " + pinfo[0].to_s + "[" + pinfo[1].collect_pair(pinfo[2]){ |s, e| s.to_s + "::" + e.to_s }.join(", ") +"]";
+conf.nodes.each_pair do |node, info|
+  handler.install_node(info["address"], info["partitions"]);
+  puts("Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 
+    info["partitions"].collect do |map, partition|
+      "  Map " + map.to_s + "[" + partition.join(",") +"]";
     end.join("\n"));
 end
-puttemplates.each_pair do |id, cmd|
+conf.templates.each_pair do |id, cmd|
   handler.install_template(cmd, id)
   puts "Loaded Template " + id.to_s;
 end

@@ -39,58 +39,17 @@ class SwitchNodeHandler
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     @templates[table.to_s].each do |trigger|
-#      Logger.default.info { "Update triggered template: " + trigger.template.to_s }
-      param_map = trigger.template.param_map(params);
-      trigger.each_update(params) do |message_set|
-#        Logger.default.info { "Generating put command (v" + cmdid.to_s + ") : " + message_set.to_s }
-        if trigger.template.requires_loop? then
-          #puts "MASS_PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";"+message_set.fetches.size.to_s+";"+params.join("/")+")@"+message_set.node.to_s;
-          node(message_set.node).mass_put(cmdid, trigger.template.index, message_set.fetches.size, params)
-        else
-          #puts "PUT("+cmdid.to_s+";"+trigger.template.index.to_s+";["+params.join("/")+"])@"+message_set.node.to_s;
-          node(message_set.node).put(cmdid, trigger.template.index, params)
-        end
-#        message_set.each_fetch(params) do |dest, entries|
-#          node(dest).fetch(entries, message_set.node, cmdid);
-#        end
-        message_set.fetches.each_pair do |dest, entries|
-          #puts "FETCH("+entries.collect { |e| e.instantiate(param_map) }.join("/")+";"+message_set.node.to_s+";"+cmdid.to_s+")@"+dest.to_s;
-          node(dest).fetch(
-            entries.collect { |e| e.instantiate(param_map) },
-            message_set.node,
-            cmdid
-          )
-        end
-        next_cmd;
+      put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
+        node(fetch_node).fetch(fetch_entries, put_node, cmdid+put_index);
       end
-    end
-  end
-  
-  def update_slow(table, params)
-    raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
-    @templates[table.to_s].each do |trigger|
-      template = trigger.template;
-      Logger.default.info { "Update triggered template: " + template.to_s }
-      raise SpreadException.new("Invalid row size (" + params.size.to_s + " and not " + template.paramlist.size.to_s + ") for template: " + template.to_s) unless params.size == template.paramlist.size;
-      param_map = template.param_map(params);
-      @layout.find_nodes(
-        template.target.clone(param_map),
-        template.entries.collect do |entry| entry.clone(param_map) end
-      ) do |write_partition, read_partitions|
-        Logger.default.info { "Generating put command (v" + cmdid.to_s + ") for : Map " + template.target.source.to_s + "[" + write_partition.to_s.gsub(/ @/, "] @") }
-        if template.requires_loop? then
-          node(write_partition.node_name).mass_put(cmdid, template.index, read_partitions.size, PutParams.make(param_map))
-        else
-          node(write_partition.node_name).put(cmdid, template.index, PutParams.make(param_map))
+      if trigger.requires_loop?
+        put_nodes.each do |put_node, num_gets|
+          node(put_node[0]).mass_put(cmdid, template.index, num_gets, params);
+          next_cmd;
         end
-        read_partitions.each_pair do |dest, entries|
-          Logger.default.info { "Fetching: " + entries.join(", " ) + " from " + dest.to_s }
-          node(dest).fetch(
-            entries.collect do |e| e.entry.instantiate(param_map) end, 
-            write_partition.node_name, 
-            cmdid
-          );
-        end
+      else
+        raise SpreadException.new("More than one put node for a non-mass put") unless put_nodes.size == 1;
+        put_nodes[0][0].put(cmdid, template.index, params);
         next_cmd;
       end
     end
@@ -111,10 +70,16 @@ class SwitchNodeHandler
     @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   
-  def install_node(node_name, partitions)
-    partitions.each do |partition|
-      Logger.default.debug { "Learning of Map " + partition[0].to_s + "[" + partition[1].collect_pair(partition[2]) do |s, e| s.to_s + "::" + e.to_s end.join(" ; ") + "] @ " + node_name.to_s }
-      @layout.install(partition[0], partition[1], partition[2], node_name);
+  def install_node(node_name, partition_list)
+    partition_list.each_pair do |map, partitions|
+      partitions.each do |partition|
+        Logger.default.debug { "Learning of Map " + map.to_s + "[" + partition.join(", ") + "] @ " + node_name.to_s }
+        @layout.install(map, partition, node_name);
+      end
     end
+  end
+  
+  def define_partition(map, sizes)
+    @layout.set_partition_size(map, sizes);
   end
 end

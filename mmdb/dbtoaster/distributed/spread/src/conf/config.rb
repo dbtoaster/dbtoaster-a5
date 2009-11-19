@@ -4,10 +4,18 @@ require 'ok_mixins'
 require 'getoptlong'
 
 class Config
-  attr_reader :templates, :nodes;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port;
+  attr_writer :my_name, :my_port;
   def initialize
-    @nodes = Hash.new;
+    @nodes = Hash.new { |h,k| h[k] = { 
+      "partitions" => Hash.new  { |h,k| h[k] = Array.new }, 
+      "values" => Hash.new { |h,k| h[k] = Hash.new }, 
+      "address" => NodeID.make("localhost") 
+    } };
     @templates = Hash.new;
+    @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
+    @my_name = nil;
+    @my_port = 52982;
   end
   
   def load(input)
@@ -19,19 +27,18 @@ class Config
         when "node" then 
           curr_node = cmd[1].chomp;
 
+        when "address" then
+          @nodes[curr_node]["address"] = NodeID.make(*cmd[1].chomp.split(/:/));
 
         when "partition" then 
-          match = /Map *([0-9]+)\[([0-9:, ]+)\]/.match(line);
+          match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
           raise SpreadException.new("Unable to parse partition line: " + line) if match.nil?;
-          dummy, map, regions = *match;
+          dummy, map, segment = *match;
+          segment = segment.split(/, */).collect { |i| i.to_i }
           
-          node_prefs(curr_node)["partitions"].assert_key(map.to_i) { Array.new }.push(
-            regions.split(",").collect do |r| 
-              raise "Can't parse partition line: '"+line.chomp+"' Element '" + r + "' improperly formed" unless r.split("::").size == 2
-              r.split("::").collect { |n| n.to_i }
-            end.collect do |r| (r[0]...r[1]) end
-          )
-
+          @nodes[curr_node]["partitions"][map.to_i].push(segment);
+          @partition_sizes[map.to_i] = 
+            segment.zip(@partition_sizes[map.to_i]).collect { |sizes| if sizes[1].nil? then sizes[0] else Math.max(*sizes) end };
 
         when "value" then 
           match = /Map *([0-9]+) *\[([^\]]*)\] *v([0-9]+) *= *([0-9.]+)/.match(line)
@@ -39,7 +46,7 @@ class Config
           
           dummy, source, keys, version, value = *match;
           
-          node_prefs(curr_node)["values"].assert_key(map.to_i) { Hash.new }[keys.split(/, */).collect do |k| k.to_i end] = value.to_f;
+          @nodes[curr_node]["values"][map.to_i][keys.split(/, */).collect do |k| k.to_i end] = value.to_f;
 
 
         when "template" then 
@@ -59,12 +66,8 @@ class Config
       when "-n", "--node" then 
         match = /([a-zA-Z0-9_\-]+)@([a-zA-Z0-9._\-]+)(:([0-9]+))?/.match(arg)
         raise "Invalid Node Parameter: " + arg unless match;
-        node_prefs(match[1])["address"] = NodeID.make(match[2], match[4].to_i);
+        @nodes[match[1]]["address"] = NodeID.make(match[2], match[4].to_i);
     end
-  end
-  
-  def node_prefs(node)
-    @nodes.assert_key(node) { { "partitions" => Hash.new, "values" => Hash.new } }
   end
   
   def each_partition(node)
@@ -81,7 +84,7 @@ class Config
   
   def range_test(map)
     boundaries = @nodes.collect do |node, prefs|
-      prefs["partitions"].fetch(map){ Array.new }
+      prefs["partitions"][map]
     end.concat!.matrix_transpose
     
     puts(boundaries.collect do |key_ranges|
@@ -93,7 +96,7 @@ class Config
   
   def partition_ranges(map)
     @nodes.collect do |node, prefs|
-      prefs["partitions"].fetch(map){ Array.new }
+      prefs["partitions"][map]
     end.concat!.matrix_transpose.collect do |ranges|
       ranges.sort { |a, b| a.begin <=> b.begin }.uniq
     end
@@ -130,5 +133,18 @@ class Config
       end 
     end
     ret;
+  end
+  
+  def my_name
+    return @my_name if @my_name;
+    @nodes.each_pair do |node, info|
+      return @my_name = node if (info["address"].host == `hostname`.chomp) && 
+                                (info["address"].port.to_i == @my_port.to_i);
+    end
+    "Solo Node";
+  end
+  
+  def my_config
+    @nodes[my_name];
   end
 end

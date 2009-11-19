@@ -159,50 +159,47 @@ end
 class MapNodeHandler
 
   def initialize(name)
-    @maps = Hash.new;
+    @maps = Hash.new { |h,k| h[k] = Hash.new };
     @templates = Hash.new;
     @cmdcallbacks = Hash.new;
     @stats = MapNodeStats.new(name);
+    @partition_sizes = Hash.new;
   end
   
   ############# Internal Accessors
   
   def find_partition(source, key, &callback)
     raise SpreadException.new("find_partition for wildcard keys requires a callback") if key.include?(-1)&& callback.nil?;
-    map = @maps[source.to_i];
-    if map == nil then raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.join(",") + "]; Known maps: " + @maps.keys.join(", ")); end
-    map.each do |partition|
-      if partition.contains? key then 
-        if callback then callback.call(partition)
-        else return partition 
-        end
-      end
+    
+    if @maps.has_key? source.to_i then
+      @maps[source.to_i][Entry.compute_partition(key, @partition_sizes[source.to_i])];
+    else
+      raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.join(",") + "]; Known maps: " + @maps.keys.join(", "));
     end
-    raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.to_s + "]") if callback.nil?;
   end
   
-  def create_partition(map, region)
-    if ! @maps.has_key? map.to_i then @maps[map.to_i] = Array.new; end
-    @maps[map.to_i].push(
-      MapPartition.new(
-        map, 
-        region.collect do |r| r[0] end, 
-        region.collect do |r| r[1] end,
-        @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq
-      )
-    );
+  def create_partition(map, partition, size)
+    @partition_sizes[map] = size;
+    @maps[map.to_i][partition] = MapPartition.new(map, partition, @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq);
     Logger.debug { "Created partition " + @maps[map.to_i].to_s }
   end
   
   def install_put_template(index, cmd)
     @templates[index.to_i] = cmd;
-    @maps.each_pair { |mid, mlist| mlist.each { |m| cmd.access_patterns(mid).each { |pat| m.add_pattern(pat) } } }
+    @maps.each_pair do |map, partition_list| 
+      partition_list.each_value do |partition| 
+        cmd.access_patterns(map).each do |pat| 
+          puts "Adding Pattern: " + pat.join(", ");
+          partition.add_pattern(pat)
+        end
+      end
+    end
     Logger.debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
   
   def dump()
     @maps.keys.sort.collect do |map|
-      @maps[map].collect do |partition|
+      @maps[map].collect do |key, partition|
         "Partition for Map " + partition.to_s + "\n" + partition.dump;
       end.join "\n"
     end.join "\n";
@@ -373,41 +370,21 @@ class MapNodeHandler
   
   ############# Internal Control
   
-  def setup(input)
-    input.each do |line|
-      cmd = line.scan(/[^ ]+/);
-      case cmd[0]
-        when "partition" then 
-          match = /Map *([0-9]+)\[([0-9:, ]+)\]/.match(line);
-          raise SpreadException.new("Unable to parse partition line: " + line) if match.nil?;
-          map, regions = 
-            match[1], match[2];
-          
-          create_partition(
-            map.to_i, 
-            regions.split(",").collect do |r| 
-              r.split("::").collect do |n| 
-                n.to_i 
-              end 
-            end.collect do |r| [r[0], r[1]-r[0]] end
-          );
-        when "value" then 
-          match = /Map *([0-9]+) *\[([^\]]*)\] *v([0-9]+) *= *([0-9.]+)/.match(line)
-          raise SpreadException.new("Unable to parse value line: " + line) if match.nil?;
-          source, keys, version, value = 
-            match[1], match[2], match[3], match[4];
-          find_partition(
-            source.to_i, 
-            keys.split(",").collect do |k| k.to_i end
-          ).set(
-            keys.split(",").collect do |k| k.to_i end,
-            version.to_i, 
-            value.to_f
-          );
-        when "template" then 
-          cmd.shift; 
-          install_put_template(cmd.shift, UpdateTemplate.new(cmd.join(" ")));
+  def setup(config)
+    config.my_config["partitions"].each_pair do |map, partition_list|
+      partition_list.each do |partition|
+        create_partition(map, partition, config.partition_sizes[map])
       end
+    end
+    
+    config.my_config["values"].each_pair do |map, keylist|
+      keylist.each_pair do |key, value|
+        find_partition(map, key).set(key, 0, value);
+      end
+    end
+    
+    config.templates.each_pair do |tid, template|
+      install_put_template(tid, template);
     end
   end
   
@@ -415,11 +392,11 @@ class MapNodeHandler
     cnt = 0;
     in_tables = Hash.new;
     GC.disable
-    @maps.each_pair do |map, values|
+    @maps.each_pair do |map, partitions|
       Logger.warn { "Preloading : Map " + map.to_s + " <-- " + input_files[map.to_i-1]; }
       input = File.open(input_files[map.to_i-1]);
       input.each do |line|
-        values[0].set(
+        partitions.values[0].set(
           line.split(/, */).collect_index do |i,k|
             k.to_i + shifts.fetch([map, i], 0)
           end, 0, 1
@@ -436,17 +413,17 @@ class MapNodeHandler
   def partitions  
     ret = Array.new;
     @maps.each_pair do |map, partitions|
-      partitions.each do |partition|
-        ret.push([partition.mapid, partition.start, partition.end]);
+      partitions.each_value do |partition|
+        ret.push([partition.mapid, partition.partition]);
       end
     end
     ret;
   end
   
   def patterns
-    @maps.collect do |map, values|
-      [ map, values.collect { |part| part.patterns.keys }.uniq ]
-    end.collect_hash
+    @maps.collect do |map, partitions|
+      [ map, partitions.values[0].patterns.keys ]
+    end
   end
   
 end
