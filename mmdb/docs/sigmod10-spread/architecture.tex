@@ -276,7 +276,7 @@ than the local update sequence number $t$, then we set $t := t'$
 and copy the working copy of the map partitions to the committed version.
 
 Additionally,
-for a FETCH message($t'$, $s$, push $m[\vec{\pi}]$ to $\textit{Ns}$),
+for a message FETCH($t'$, $s$, push $m[\vec{\pi}]$ to $\textit{Ns}$),
 we read the requested data $m[\vec{\pi}]$ from the committed version of
 the map partitions and send it in PUSH messages to the set of recipient
 nodes $\textit{Ns}$.

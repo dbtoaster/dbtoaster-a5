@@ -168,7 +168,7 @@ identified by cid).
 The SQL query is
 \begin{verbatim}
 SELECT   C1.cid, SUM(1)
-FROM     Customer C1, Supplier C2
+FROM     Customer C1, Customer C2
 WHERE    C1.nation = C2.nation
 GROUP BY C1.cid;
 \end{verbatim}
@@ -367,14 +367,13 @@ performance of Cumulus on examples drawn from the TPC-H benchmark
 
 
 The remainder of this paper is organized as follows.
-Section \ref{sec:compiler} describes our SQL to M3 compiler.
+Section~\ref{sec:compiler} describes our SQL to M3 compiler.
 In Section \ref{sec:architecture}, we provide an overview of Cumulus's online
 infrastructure and discuss how data is managed within that infrastructure.
-Section \ref{sec:experiments} presents
+Section~\ref{sec:experiments} presents
 experimental results that demonstrate the viability and scalability of
-Cumulus.
-%Section \ref{sec:relatedwork} discusses related work.
-The paper concludes with Section \ref{sec:conclusions}.
+Cumulus. Related work is discussed in Section~\ref{sec:relatedwork}.
+The paper concludes with Section~\ref{sec:conclusions}.
 
 
 
