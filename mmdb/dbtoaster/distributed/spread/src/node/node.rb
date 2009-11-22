@@ -2,7 +2,7 @@ require 'thrift';
 require 'map_node';
 require 'spread_types';
 require 'template';
-require 'multikeymap';
+require 'multikeymap_ruby';
 require 'versionedmap';
 
 ###################################################
@@ -189,7 +189,6 @@ class MapNodeHandler
     @maps.each_pair do |map, partition_list| 
       partition_list.each_value do |partition| 
         cmd.access_patterns(map).each do |pat| 
-          puts "Adding Pattern: " + pat.join(", ");
           partition.add_pattern(pat)
         end
       end

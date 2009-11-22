@@ -138,7 +138,6 @@ class DBToaster
         split_per_weight = split_per_weight ** (1.0/weight_count.to_f) if weight_count > 0;
         
         
-        puts "Map : "  + map + "; " + info["params"].to_s
         final_partitions = (0...info["params"].to_i).collect do |col|
           ptype, magnitude = *setup_partition.fetch(col, [:exact, 1]);
           
@@ -152,6 +151,7 @@ class DBToaster
         [ info["id"].to_i,
           { "map"        => map, 
             "id"         => info["id"].to_i, 
+            "num_keys"   => info["params"].to_i,
             "partition"  => final_partitions,
             "reads_from" => Array.new,
             "writes_to"  => Array.new,

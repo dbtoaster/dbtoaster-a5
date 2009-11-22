@@ -128,6 +128,10 @@ module MapNode
     end
     
     def Client.connect(host, port = 52982)
+      if host.is_a? NodeID then
+        port = host.port;
+        host = host.host;
+      end
       transport = Thrift::FramedTransport.new(Thrift::Socket.new(host, port))
       protocol = Thrift::BinaryProtocol.new(transport)
       ret = MapNode::Client.new(protocol);
@@ -137,17 +141,8 @@ module MapNode
   end
   
   class Processor
-    def Processor.listen(port, name = "Unknown MapNode", config = Array.new)
+    def Processor.listen(port, name = "Unknown MapNode")
       handler = MapNodeHandler.new(name);
-      config.each do |f|
-        handler.setup(
-          case f
-            when File then f;
-            when String then File.open(f);
-            else raise SpreadException.new("Unusable processor configuration source: " + f.to_s);
-          end
-        );
-      end
       
       logger = Logger.new(STDOUT);
         logger.level = Logger::INFO;

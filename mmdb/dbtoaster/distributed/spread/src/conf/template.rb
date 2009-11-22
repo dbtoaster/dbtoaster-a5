@@ -503,7 +503,7 @@ class UpdateTemplate
   def access_patterns(map)
     @expression.entries.collect do |entry|
       if entry.source == map then
-        puts "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",");
+#        puts "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",");
         entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact
       end
     end.compact;

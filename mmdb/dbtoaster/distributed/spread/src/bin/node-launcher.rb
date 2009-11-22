@@ -8,7 +8,7 @@ require 'template';
 require 'getoptlong';
 require 'config';
 
-puts "done\nInitializing Server..."
+puts "Initializing Server...\n"
 
 Logger.default_level = Logger::INFO;
 Logger.default_name = "sliceDBread";
@@ -36,8 +36,8 @@ Logger.default_name = $config.my_name;
 handler, server = MapNode::Processor.listen($config.my_port, $config.my_name);
 handler.setup($config);
 
+puts "============== Patterns ============";
 handler.patterns.each do |map, patterns|
-  puts "============== Patterns ============";
   puts ("====> Map " + map.to_s + " : " +
     patterns.collect { |pat| "("+ pat.join(",") + ")" }.join("; "));
 end

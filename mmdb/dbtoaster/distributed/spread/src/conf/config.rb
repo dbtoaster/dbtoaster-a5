@@ -1,11 +1,14 @@
 
-require 'template'
-require 'ok_mixins'
-require 'getoptlong'
+require 'template';
+require 'ok_mixins';
+require 'getoptlong';
+require 'spread_types_mixins';
 
 class Config
-  attr_reader :templates, :nodes, :partition_sizes, :my_port;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch;
   attr_writer :my_name, :my_port;
+  attr_reader :client_transforms, :client_projections, :client_sourcefile, :client_ratelimit;
+  
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
       "partitions" => Hash.new  { |h,k| h[k] = Array.new }, 
@@ -16,12 +19,20 @@ class Config
     @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
     @my_name = nil;
     @my_port = 52982;
+    @switch = NodeID.make("localhost", 52981) 
+    
+    # Debugging tools; Preprocessing that happens when the client reads from TPCH
+    @client_transforms = Array.new;
+    @client_projections = Array.new;
+    @client_sourcefile;
+    @client_ratelimit = nil;
   end
   
   def load(input)
     curr_node = "Solo Node"
     
     input.each do |line|
+#      puts "Reading config line: " + line;
       cmd = line.scan(/[^ ]+/);
       case cmd[0]
         when "node" then 
@@ -52,6 +63,13 @@ class Config
         when "template" then 
           cmd.shift; 
           @templates[cmd.shift] = UpdateTemplate.new(cmd.join(" "));
+        
+        when "switch"    then @switch = NodeID.make(cmd[1].chomp, 52981);
+        
+        when "limit"     then cmd.shift; @client_ratelimit = cmd[1].chomp.to_i;
+        when "transform" then cmd.shift; @client_transforms.push(cmd.join(" ").chomp);
+        when "project"   then cmd.shift; @client_projections.push(cmd.join(" ").chomp);
+        when "source"    then cmd.shift; @client_sourcefile = cmd.join(" ");
       end
     end
   end
@@ -138,8 +156,10 @@ class Config
   def my_name
     return @my_name if @my_name;
     @nodes.each_pair do |node, info|
-      return @my_name = node if (info["address"].host == `hostname`.chomp) && 
-                                (info["address"].port.to_i == @my_port.to_i);
+      puts "Checking " + node + " / " + @my_name.to_s;
+      return @my_name = node if (info["address"].port.to_i == @my_port.to_i) &&
+                                ((info["address"].host == `hostname`.chomp) ||
+                                 (info["address"].host == "localhost"));
     end
     "Solo Node";
   end

@@ -1,50 +1,190 @@
 
-require 'ok_mixins'
-require 'thread'
+require 'ok_mixins';
+require 'thread';
 require 'thrift';
 require 'spread_types';
+require 'config';
+require 'remotemanager';
+require 'slicer_node';
+require 'pty';
 
-class SlicerProcess
-  attr_reader :ready, :queue;
-  attr_writer :ready;
-  
-  def initialize(cmd, host, queue = false)
-    @cmd, @host = cmd, host;
-    @queue = Queue.new if queue;
-  end
-  
-  def start
-    process = IO.popen("ssh -t -t " + @host, "w+");
-    thread = Thread.new(process, @cmd, self) do |ssh, cmd, manager|
-      Logger.info { "SSH pid " + ssh.pid.to_s + " starting: " + cmd.chomp; }
-      ssh.write(cmd.chomp + " 2>&1\n");
-      ssh.each do |line|
-        manager.ready = true if line.include? "Starting #<Thrift::NonblockingServer";
-        if @queue then
-          queue.push(line)
-        else
-          print line;
+class SlicerNodeHandler
+  attr_reader :config, :verbosity, :is_master;
+  attr_writer :message_handler;
+
+  def initialize(config_file, spread_path, verbosity = :quiet)
+    @config_file = config_file;
+    @config = Config.new();
+      @config.load(File.open(config_file));
+    @monitor_intake = Queue.new;
+    @spread_path = spread_path;
+    @verbosity = verbosity;
+    @is_master = false;
+    @message_handler = nil;
+    
+    @monitor = Thread.new(@monitor_intake) do |intake|
+      clients = Array.new;
+      finished = false;
+      master = false;
+      until finished do
+        cmd = intake.pop;
+        case cmd[0]
+          when :data    then clients.each { |c| c.receive_log(cmd[1]) };
+          when :client  then clients.push(cmd[1]);
+          when :exit    then finished = true;
+          when :master  then master = true;
         end
       end
-      Logger.info { "SSH pid " + ssh.pid.to_s + " complete"; }
     end
-    at_exit do 
-      Process.kill("HUP", process.pid); thread.join; 
-      Logger.info { "Killed SSH to " + @host; }
-    end
-    self;
   end
   
-  def SlicerProcess.base_path
-    "dbtoaster/distributed/spread";
+  def verbosity_flag 
+    case @verbosity
+      when :quiet then "-q"
+      when :normal then ""
+      when :verbose then "-v"
+    end
+  end
+  
+  def start_process(cmd)
+    #cmd = cmd + " 1>&2";
+    Logger.info { "Running: " + cmd; }
+    Thread.new(cmd, @monitor_intake) do |cmd, output|
+      begin
+        PTY.spawn(cmd) do |stdin, stdout, pid|
+          stdin.each { |line| output.push([:data, line]); }
+        end
+      rescue PTY::ChildExited
+      end
+    end
+  end
+  
+  def start_switch()
+    start_process(
+      @spread_path+"/bin/switch.sh " + verbosity_flag + " " + @config_file
+    )
+  end
+  
+  def start_node(port)
+    start_process(
+      @spread_path+"/bin/node.sh -p " + verbosity_flag + " " + port.to_s + " " + @config_file
+    )
+  end
+  
+  def start_client()
+    raise "To run the client, the configuration file must have a source line" unless @config.client_sourcefile;
+    start_process(
+      @spread_path+"/bin/client.sh -q -s " + 
+        if @config.client_ratelimit then "-l " + @config.limit.to_s + " " else "" end +
+        @config.client_transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
+        @config.client_projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
+        "-h " + @config.client_sourcefile.to_s
+    )
+  end
+  
+  def start_logging(target)
+    @monitor_intake.push([:client, MapNode::Client.connect(target)]);
+  end
+  
+  def receive_log(log_message)
+    if @is_master then
+      if @message_handler.nil? then 
+        puts log_message;
+      else 
+        @message_handler = @message_handler.call(log_message, @message_handler)
+      end
+    end
+  end
+  
+  def declare_master(&message_handler);
+    @monitor_intake.push([:client, self]) unless @is_master;
+    @is_master = true;
+    @message_handler = message_handler;
+  end
+  
+  def poll_stats()
+    `ps aux`.split("\n").delete_if { |line| /ruby.*-launcher|redis-server/.match(line).nil? }.join("\n");
+  end
+  
+  def shutdown()
+    @monitor_intake.push([:exit]);
+  end
+end
+
+module SlicerNode 
+  class Manager
+    def initialize(host, spread_path, config_file)
+      @host = host;
+      @process = RemoteProcess.new(
+        spread_path + "/src/slicer.sh --serve " + config_file,
+        host, 
+        true
+      )
+      @ready = false;
+    end
+    
+    def running
+      @process.status;
+    end
+    
+    def log
+      ret = "";
+      ret += @process.log.pop until @process.log.empty?
+      ret;
+    end
+    
+    def check_error
+      puts log unless running;
+      running;
+    end
+    
+    def client
+      @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
+      if @client then @client
+      else @client = Client.connect(@host)
+      end
+    end
+  end
+  
+  class Client
+    def close
+      @iprot.trans.close;
+    end
+    
+    def Client.connect(host, port = 52980)
+      if host.is_a? NodeID then
+        port = host.port;
+        host = host.host;
+      end
+      transport = Thrift::FramedTransport.new(Thrift::Socket.new(host, port));
+      protocol = Thrift::BinaryProtocol.new(transport);
+      ret = SlicerNode::Client.new(protocol);
+      transport.open;
+      ret;
+    end
+  end
+  
+  class Processor
+    def Processor.listen(config_file, spread_path, verbosity = :quiet, port = 52980);
+      handler = SlicerNodeHandler.new(config_file, spread_path, verbosity);
+
+      processor = SlicerNode::Processor.new(handler);
+      transport = Thrift::ServerSocket.new(port);
+      [handler, Thrift::NonblockingServer.new(
+        processor, 
+        transport, 
+        Thrift::FramedTransportFactory.new,
+        Thrift::BinaryProtocolFactory.new,
+        1,
+        nil
+      )];
+    end
   end
 end
 
 class SlicerMonitor
-  def initialize(hosts)
-    @connections = hosts.collect do |h|
-      SlicerProcess.new("export PS1='';\nwhile true; do sleep 5; ps auxww | grep ruby | grep -v grep; done", h, true);
-    end
+  def initialize(slicers)
+    @slicers = slicers.each
   end
   
   def start
@@ -56,8 +196,6 @@ class SlicerMonitor
         end.flatten.collect do |line|
           if /ruby .*-launcher.rb/.match(line) then
             line.chomp.gsub(
-              /^.*(oak5.+)$/, "\\1" # XXX temporary hack to get rid of the bash prompt at the start
-            ).gsub(
               /-I [^ ]* */, ""
             ).gsub(
               /ruby +[^ ]*\/([^\/ \-]*-launcher).rb/, "\\1"
@@ -70,122 +208,4 @@ class SlicerMonitor
       end
     end
   end
-end
-
-class SlicerNode
-  attr_reader :name, :host, :port, :path
-  def initialize(cmd)
-    match = /node *([a-zA-Z0-9\+-_]+) *@ *([a-zA-Z0-9.\-]+):([0-9]+)/.match(cmd)
-    raise "Invalid node command: " + cmd unless match;
-    match, @name, @host, @port = match.to_a;
-  end
-  
-  def process(config, preload_flag = "")
-    SlicerProcess.new(
-      SlicerProcess.base_path + "/bin/node.sh" + 
-      " -n " + @name.to_s + 
-      " -p " + @port.to_s + 
-      preload_flag + 
-      " " + config.join(" "), 
-      @host.to_s
-    );
-  end
-  
-  def to_s
-    @name + "@" + @host + ":" + port;
-  end
-end
-
-class Slicer
-  attr_reader :mode;
-  attr_writer :mode;
-  
-  def initialize()
-    @processes = Array.new;
-    @nodes = Array.new;
-    @config = Array.new;
-    @transforms = Array.new;
-    @projections = Array.new;
-    @switch = "localhost";
-    @mode = :quiet;
-    @source = nil;
-    @preload = nil;
-  end
-  
-  def setup(input)
-    input.each do |line|
-      line.chomp!;
-      next if line[0] == "#"[0];
-      case line.split(/ +/)[0];
-        when "node" then @nodes.push(SlicerNode.new(line));
-        when "config" then @config.push(SlicerProcess.base_path + "/data/" + line.split(/ +/)[1]);
-        when "switch" then @switch = line.split(/ +/)[1]; raise "Invalid switch cmd: " + line unless @switch;
-        when "transform" then @transforms.push(line.gsub(/^transform */, ""));
-        when "project" then @projections.push(line.gsub(/^project */, ""));
-        when "source" then @source = line.gsub(/^source */, "");
-        when "preload" then @preload = line.gsub(/^preload */, "");
-      end
-    end
-  end
-  
-  def mode_flag
-    case @mode
-      when :quiet   then "-q "
-      when :verbose then "-v "
-      else ""
-    end
-  end
-  
-  def preload_flag(frac)
-    if @preload then
-      tokens = @preload.split(/ /);
-      flag = " --preload " + tokens.shift;
-      until tokens.empty?
-        map,key,shift = *(tokens.shift.split(/:/));
-        raise "Invalid preload column shift: " + map +":"+key+":"+shift if map.nil? or key.nil? or shift.nil?
-        flag = flag + " --shift " + map + ":" + key + ":" + (shift.to_f * frac).to_i.to_s;
-      end
-    else
-      "";
-    end
-    flag;
-  end
-  
-  def start
-    @config << self.mode_flag
-    
-    frac = 1.0/@nodes.size.to_f
-    i = 0.0;
-    servers = 
-      @nodes.collect do |n|
-        n.process(@config, preload_flag((i += 1.0) * frac)).start;
-      end <<
-      SlicerProcess.new(
-        SlicerProcess.base_path + "/bin/switch.sh " +
-        @nodes.collect { |n| "-n " + n.to_s }.join(" ") + " " +
-        @config.join(" "),
-        @switch
-      ).start;
-
-    sleep 0.1 while servers.find { |s| !s.ready };
-
-    monitor = SlicerMonitor.new(@nodes.collect { |n| n.host } << @switch);
-
-    client_cmd = #-l 200
-      SlicerProcess.base_path + "/bin/client.sh -q -s  " + 
-      @transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
-      @projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
-      "-h " + @source
-    
-    query_cmd = 
-      SlicerProcess.base_path + "/bin/query.sh -l sum " +
-        @nodes.collect { |n| "-n " + n.to_s }.join(" ") + " " +
-        @config.join(" ");
-
-    Logger.info { "Servers started; starting clients" }
-    monitor.start
-    SlicerProcess.new(client_cmd, @switch).start;
-    SlicerProcess.new(query_cmd, @switch).start;
-  end
-
 end

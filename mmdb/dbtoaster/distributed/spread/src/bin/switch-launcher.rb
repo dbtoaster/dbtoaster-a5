@@ -7,6 +7,8 @@ require 'template';
 require 'getoptlong';
 require 'config';
 
+$stdout.sync = true;
+
 puts "done\nInitializing Switch..."
 
 Logger.default_level = Logger::INFO;
@@ -50,11 +52,9 @@ conf.nodes.each_pair do |node, info|
 end
 conf.templates.each_pair do |id, cmd|
   handler.install_template(cmd, id)
-  puts "Loaded Template " + id.to_s;
+#  puts "Loaded Template " + id.to_s;
 end
 
-puts "done\nStarting switch server on port " + port.to_s + "..."
+puts "Starting switch server on port " + port.to_s + "..."
 
 server.serve();
-
-puts "done\n";

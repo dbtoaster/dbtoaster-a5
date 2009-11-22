@@ -38,18 +38,19 @@ class SwitchNodeHandler
 
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
+    params.collect! { |param| param.to_i }
     @templates[table.to_s].each do |trigger|
       put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
         node(fetch_node).fetch(fetch_entries, put_node, cmdid+put_index);
       end
       if trigger.requires_loop?
         put_nodes.each do |put_node, num_gets|
-          node(put_node[0]).mass_put(cmdid, template.index, num_gets, params);
+          node(put_node).mass_put(cmdid.to_i, trigger.index.to_i, num_gets.to_i, params);
           next_cmd;
         end
       else
         raise SpreadException.new("More than one put node for a non-mass put") unless put_nodes.size == 1;
-        put_nodes[0][0].put(cmdid, template.index, params);
+        node(put_nodes[0][0]).put(cmdid.to_i, trigger.index.to_i, params);
         next_cmd;
       end
     end

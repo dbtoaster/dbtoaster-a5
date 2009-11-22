@@ -5,8 +5,6 @@ require 'template';
 require 'toaster';
 
 $output = STDOUT;
-$slicefile = nil;
-
 $toaster = DBToaster.new()
 $success = false;
 $options = Hash.new;
@@ -18,7 +16,6 @@ opts = GetoptLong.new(
   [       "--partition",   GetoptLong::REQUIRED_ARGUMENT ],
   [       "--domain",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--test",        GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-s", "--slicefile",   GetoptLong::REQUIRED_ARGUMENT ],
   [       "--slice",       GetoptLong::REQUIRED_ARGUMENT ],
   [       "--key",         GetoptLong::REQUIRED_ARGUMENT ],
   [ "-r", "--transforms",  GetoptLong::REQUIRED_ARGUMENT ],
@@ -29,7 +26,6 @@ opts = GetoptLong.new(
   case opt
     when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-k", "--ignore-keys" then $options[:toast_keys] = false;
-    when "-s", "--slicefile"   then $slicefile = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     else                            $toaster.parse_arg(opt, arg)
   end
 end
@@ -40,13 +36,10 @@ end
 
 $toaster.toast($options);
 
-raise "Error: --slice requires a --output" if $slicefile && !($output.is_a? File);
-$slicefile.write("config " + File.basename($output.path) + "\n") if $slicefile;
-
 
 puts "=========  Maps  ==========="
 $toaster.map_info.each_value do |info|
-  puts info["map"].to_s + "(" + info["id"].to_s + ")" unless info["discarded"];
+  puts info["map"].to_s + "(" + info["id"].to_s + ")" + " : " + info["num_keys"].to_s + " keys" unless info["discarded"];
 end
 
 map_keys = Hash.new;
@@ -80,17 +73,15 @@ $toaster.each_node do |node, partitions, address, port|
       $output.write("partition Map " + map.to_s + "[" + partition.join(",") + "]\n");
     end
   end
-  $slicefile.write("node " + node + "@" + address.to_s + ":" + port.to_s + "\n") if $slicefile;
 end
 
 $output.write("\n\n############ Test Sequence\n");
 $output.write($toaster.test_directives.collect do |l| "update " + l end.join("\n")+"\n");
 $output.write("persist\n") if $toaster.persist;
 
-if $slicefile 
-  $slicefile.write("switch " + $toaster.switch + "\n");
-  $slicefile.write($toaster.slice_directives.join("\n") + "\n");
-  $slicefile.write("preload " + $toaster.preload + "\n") if $toaster.preload;
+unless $toaster.slice_directives.empty? then
+  $output.write("\n\n############ Slicer Debugging Directives\n");
+  $output.write($toaster.slice_directives.join("\n") + "\n");
 end
 
 $success = true;

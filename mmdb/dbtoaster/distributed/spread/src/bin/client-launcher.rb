@@ -8,12 +8,13 @@ require 'spread_types_mixins';
 require 'node';
 require 'getoptlong';
 
+$stdout.sync = true;
 $interactive = true;
 $verbose = false;
 $test = false;
 $cols = Hash.new;
 $transforms = Hash.new;
-$input = STDIN
+$input = $stdin
 $stats_every = -1;
 $ratelimit = nil;
 

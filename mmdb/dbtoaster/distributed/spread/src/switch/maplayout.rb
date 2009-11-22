@@ -13,8 +13,8 @@ class MapLayout
   attr_reader :maplist;
   
   def initialize()
-    @maplist = Hash.new { Hash.new };
-    @partition_sizes = Hash.new { Array.new };
+    @maplist = Hash.new { |h,k| h[k] = Hash.new };
+    @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
   end
   
   def set_partition_size(map_id, size)
@@ -61,6 +61,7 @@ class MapLayout
         )
       end
     end
+    compiled_trigger
   end
 end
 
@@ -69,7 +70,7 @@ end
 class CompiledTrigger
   def initialize(trigger)
     @trigger = trigger;
-    @index = Hash.new { Hash.new { Hash.new { Array.new } } }
+    @index = Hash.new { |h,k| h[k] = Hash.new { |ih,ik| ih[ik] = Hash.new { |iih,iik| iih[iik] = Array.new } } }
     @relevant_params = 
       (trigger.entries << trigger.target).collect do |e| 
         e.keys 
@@ -82,11 +83,11 @@ class CompiledTrigger
   end
   
   def recompute_partition_size
-    @partition_size = template.paramlist.collect { |param| @relevant_params.fetch(param, [nil, 1])[1] };
+    @partition_size = @trigger.paramlist.collect { |param| @relevant_params.fetch(param, [nil, 1])[1] };
   end
   
   def discover_fragment(put_node, put_entry, fetch_nodes, fetch_entries, key_partition_map)
-    put_map = @index[trigger.param_list.collect { |param| 
+    put_map = @index[@trigger.paramlist.collect { |param| 
       if @relevant_params.has_key? param 
       then  @relevant_params[param] = Math.max(key_partition_map[param], @relevant_params[param]); 
             key_partition_map[param] 
@@ -111,7 +112,7 @@ class CompiledTrigger
   end
   
   def fire(params)
-    raise SpreadException.new("Wildcard in paramlist: #{params.join(", ")}") unless params.assert { |part| part >= 0 };
+    raise SpreadException.new("Wildcard in paramlist: #{params.join(", ")}") unless params.assert { |part| part.to_i >= 0 };
     put_nodes = Array.new;
     @index[Entry.compute_partition(params, @partition_size)].each_pair do |put_node, fetchlist|
       fetchlist.each_pair do |fetch_node, entry_list|
@@ -129,11 +130,11 @@ class CompiledTrigger
   end
   
   def requires_loop?
-    @template.requires_loop?;
+    @trigger.requires_loop?;
   end
   
   def index
-    @template.index
+    @trigger.index
   end
 end
 

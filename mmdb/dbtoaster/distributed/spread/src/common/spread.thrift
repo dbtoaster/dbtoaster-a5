@@ -76,7 +76,17 @@ service MapNode {
 
 service SwitchNode {
   void update( 1: string table, 
-                      2: list<string> params);
+               2: list<string> params),
   
   string dump() throws (1:SpreadException error)
+}
+
+service SlicerNode {
+  void start_switch  ( ),
+  void start_node    ( 1: i32 port  ),
+  void start_client  ( ),
+  void shutdown      ( ),
+  void start_logging ( 1: NodeID target ),
+  void receive_log   ( 1: string log_message ),
+  string poll_stats  ( )
 }

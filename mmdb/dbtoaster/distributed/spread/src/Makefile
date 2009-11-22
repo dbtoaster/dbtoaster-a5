@@ -10,8 +10,8 @@ timestamps/thrift: common/spread.thrift
 	thrift --gen rb common/spread.thrift
 	touch timestamps/thrift
 
-timestamps/validation: common/spread.thrift node/node.rb switch/switch.rb
-	bin/validateServices.rb common/spread.thrift node/node.rb switch/switch.rb
+timestamps/validation: common/spread.thrift node/node.rb switch/switch.rb slicer/slicer.rb
+	bin/validateServices.rb common/spread.thrift node/node.rb switch/switch.rb slicer/slicer.rb
 	touch timestamps/validation
 
 clean:

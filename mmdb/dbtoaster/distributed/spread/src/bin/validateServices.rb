@@ -21,7 +21,7 @@ thriftFile.scan(/service +([a-zA-Z0-9_]+) *\{([^}]+)\}/).each do |service|
       f[0] == "throws" 
     end.collect_hash do |f| 
       [ f[0], 
-        f[1].gsub(/[ \t\r\n]+/, " ").split(/ *, */).collect do |var| var.split(/ /)[-1] end
+        f[1].gsub(/[ \t\r\n]+/, " ").chomp(" ").split(/ *, */).collect do |var| var.split(/ /)[-1] end
       ] end;
 
   puts "==> Checking Service: " + name;
@@ -43,12 +43,12 @@ thriftFile.scan(/service +([a-zA-Z0-9_]+) *\{([^}]+)\}/).each do |service|
       puts "Error: Function: " + fname + " is not defined";
       exit -1;
     else
-      params = match[0].split(/ *, */).collect do |var| var.gsub(/ *=.*/, "") end
+      params = match[0].chomp(" ").split(/ *, */).collect do |var| var.gsub(/ *=.*/, "") end
       puts "   `---> Checking for " + fname + "(" + fvars.join(", ") + ")";
       if fvars.size != params.size then
         puts "Error: Function " + fname + " has incorrect number of variables";
-        puts "  Found: " + params.join(", ");
-        puts "  Expected: " + fvars.join(", ");
+        puts "  Found: '" + params.join(", ") + "' (" + params.size.to_s + " vars)";
+        puts "  Expected: '" + fvars.join(", ") + "' (" + fvars.size.to_s + " vars)";
         exit -1;
       end
       params.each_pair(fvars) do |left, right|

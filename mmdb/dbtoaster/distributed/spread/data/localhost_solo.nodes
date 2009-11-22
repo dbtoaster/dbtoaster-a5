@@ -1,0 +1,3 @@
+--persist
+--switch localhost
+--node Node01@localhost:52982

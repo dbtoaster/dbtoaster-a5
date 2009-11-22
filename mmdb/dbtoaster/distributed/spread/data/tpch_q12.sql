@@ -5,7 +5,7 @@
 --slice transform LINEITEMS[17]<d10,12
 --slice transform LINEITEMS[14]#
 --slice project   LINEITEMS(0,16,17,14)
---slice source tpch/100m
+--slice source test
 --partition Map q on 5 weight by 1
 --partition Map qLINEITEMS1 on 2 weight by 1
 create table customers(cid int, nid int); 
