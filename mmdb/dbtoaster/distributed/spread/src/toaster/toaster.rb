@@ -5,7 +5,7 @@ require 'template'
 class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload;
 
-  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
+  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../dbtc_alpha3")
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @test_directives = Array.new;
@@ -21,6 +21,8 @@ class DBToaster
     puts toaster_dir+"/"+toaster_cmd;
     @DBT = open("|"+toaster_cmd, "w+");
     @DBT.write("open DBToasterTop;;\n");
+    @DBT.write("#print_depth 10000;;\n");
+    @DBT.write("#print_length 10000;;\n");
     @DBT.write("compile_sql_to_spread \"");
     Dir.chdir(local_dir);
   end
