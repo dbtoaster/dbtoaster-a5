@@ -2,10 +2,24 @@ require 'thrift';
 require 'map_node';
 require 'spread_types';
 require 'template';
-require 'multikeymap_ruby';
+require 'multikeymap';
 require 'versionedmap';
 
 ###################################################
+
+class LogNotification
+  def initialize()
+    nil
+  end
+  
+  # for the semantics of Hold and Release, see RemoteCommitNotification
+  def release
+  end
+  
+  def fire(entry, value)
+    puts entry.to_s + " = " + value.to_s;
+  end
+end
 
 class CommitNotification
   def initialize(record)
@@ -164,6 +178,7 @@ class MapNodeHandler
     @cmdcallbacks = Hash.new;
     @stats = MapNodeStats.new(name);
     @partition_sizes = Hash.new;
+    @log_maps = Set.new;
   end
   
   ############# Internal Accessors
@@ -226,7 +241,7 @@ class MapNodeHandler
   def install_discovery(id, record, params)
     # initialize the template with values we can obtain locally
     # we might end up changing required inside the loop, so we clone it first.
-    
+        
     # This is treated as an implicit message to ourselves.  
     record.required.clone.each do |req|
       begin
@@ -269,6 +284,7 @@ class MapNodeHandler
     valuation = create_valuation(template, params);
     target = @templates[template].target.instantiate(valuation.params).freeze;
     record = find_partition(target.source, target.key).insert(target, id, valuation);
+    record.register(LogNotification.new) if(@log_maps.include? valuation.target.source);
     install_discovery(id, record, valuation.params);
     @stats.put;
   end
@@ -278,7 +294,12 @@ class MapNodeHandler
     valuation = create_valuation(template, params);
     discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
     find_partition(valuation.target.source, valuation.target.key) do |partition|
-      discovery.add_record(partition.mass_insert(id, valuation));
+      record = partition.mass_insert(id, valuation)
+      if(@log_maps.include? valuation.target.source) then
+        record.register(nil, LogNotification.new)
+        puts "WORD!"
+      end
+      discovery.add_record(record);
     end
     install_discovery(id, discovery, valuation.params);
     # If we aren't waiting for anything, we need to trick the discovery multiplexer into firing a commit.
@@ -385,6 +406,8 @@ class MapNodeHandler
     config.templates.each_pair do |tid, template|
       install_put_template(tid, template);
     end
+    
+    @log_maps.merge(config.log_maps);
   end
   
   def preload(input_files, shifts = Hash.new)

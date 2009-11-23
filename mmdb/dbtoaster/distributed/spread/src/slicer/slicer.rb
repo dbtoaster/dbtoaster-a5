@@ -67,18 +67,19 @@ class SlicerNodeHandler
   
   def start_node(port)
     start_process(
-      @spread_path+"/bin/node.sh -p " + verbosity_flag + " " + port.to_s + " " + @config_file
+      @spread_path+"/bin/node.sh -p " + port.to_s + " " + verbosity_flag + " " + @config_file
     )
   end
   
   def start_client()
-    raise "To run the client, the configuration file must have a source line" unless @config.client_sourcefile;
+    raise "To run the client, the configuration file must have a source line" unless @config.client_debug["sourcefile"];
     start_process(
       @spread_path+"/bin/client.sh -q -s " + 
-        if @config.client_ratelimit then "-l " + @config.limit.to_s + " " else "" end +
-        @config.client_transforms.collect { |t| "-t '" + t + "'" }.join(" ") + " " +
-        @config.client_projections.collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
-        "-h " + @config.client_sourcefile.to_s
+        if @config.client_debug["ratelimit"] then "-l " + @config.client_debug["ratelimit"].to_s + " " else "" end +
+        @config.client_debug["transforms"].collect { |t| "-t '" + t + "'" }.join(" ") + " " +
+        @config.client_debug["projections"].collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
+        @config.client_debug["upfront"].collect { |up| "--upfront " + up }.join(" ") + " " +        
+        "-h " + @config.client_debug["sourcefile"].to_s
     )
   end
   

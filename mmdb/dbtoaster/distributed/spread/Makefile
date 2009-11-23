@@ -1,4 +1,4 @@
-SQL_TESTDATA=data/tpch_LONG.unit data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit
+SQL_TESTDATA=data/tpch_LONG.unit data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit data/tpch_nonkey.unit
 AUTO_SQL_TESTS=rst_join
 
 all: recursive $(SQL_TESTDATA)

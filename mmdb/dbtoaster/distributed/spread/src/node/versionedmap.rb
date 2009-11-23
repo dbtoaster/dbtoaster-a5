@@ -51,17 +51,13 @@ class MassPutRecord
       version, template, partition;
     
     @next, @prev = nil, nil;
-    @callbacks = Hash.new;
+    @callbacks = Hash.new { |h, k| h[k] = Array.new };
     @gets_pending = true;
   end
   
   def register(key, callback, exemptions = Set.new)
     raise SpreadException.new("MassPutRecord.register without a callback") unless @callbacks != nil;
-    if @callbacks.has_key? key then
-      @callbacks[key].push([callback, exemptions]);
-    else
-      @callbacks[key] = [[callback, exemptions]];
-    end
+    @callbacks[key ? key : @template].push([callback, exemptions]);
   end
   
   def last
@@ -253,7 +249,7 @@ class MapPartition
   def initialize(mapid, partition, patterns)
     @mapid, @partition = mapid.to_i, partition;
     
-    @data = MultiKeyMap.new(@partition.size, patterns);
+    @data = MultiKeyMap.new(@partition.size, patterns, "Map" + mapid.to_s);
     @massputrecords = nil;
   end
   
@@ -418,7 +414,7 @@ class MapPartition
   def collapse_record_to(key, version)
     version = @massputrecords.first_unready_version(version) unless @massputrecords.nil?;
     @data.replace(key) do |k, v|
-      Logger.debug { "Collapsing key: " + k.to_s + "; version: " + version.to_s + " to record " + v.find(version).to_s; }
+      Logger.warn { "Collapsing key: " + k.to_s + "; version: " + version.to_s + " to record " + v.find(version).to_s; }
       v.find(version);
     end
   end

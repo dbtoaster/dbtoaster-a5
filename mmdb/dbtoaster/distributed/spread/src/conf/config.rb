@@ -5,9 +5,8 @@ require 'getoptlong';
 require 'spread_types_mixins';
 
 class Config
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug;
   attr_writer :my_name, :my_port;
-  attr_reader :client_transforms, :client_projections, :client_sourcefile, :client_ratelimit;
   
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
@@ -19,13 +18,17 @@ class Config
     @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
     @my_name = nil;
     @my_port = 52982;
-    @switch = NodeID.make("localhost", 52981) 
+    @switch = NodeID.make("localhost", 52981);
+    @log_maps = Set.new;
     
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
-    @client_transforms = Array.new;
-    @client_projections = Array.new;
-    @client_sourcefile;
-    @client_ratelimit = nil;
+    @client_debug = { 
+      "transforms" => Array.new, 
+      "projections" => Array.new, 
+      "upfront" => Array.new,
+      "sourcefile" => nil, 
+      "ratelimit" => nil
+    }
   end
   
   def load(input)
@@ -40,6 +43,8 @@ class Config
 
         when "address" then
           @nodes[curr_node]["address"] = NodeID.make(*cmd[1].chomp.split(/:/));
+        
+        when "switch"    then @switch = NodeID.make(cmd[1].chomp, 52981);
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
@@ -64,12 +69,13 @@ class Config
           cmd.shift; 
           @templates[cmd.shift] = UpdateTemplate.new(cmd.join(" "));
         
-        when "switch"    then @switch = NodeID.make(cmd[1].chomp, 52981);
+        when "log_map"   then cmd.shift; @log_maps.add(cmd.shift.to_i);
         
-        when "limit"     then cmd.shift; @client_ratelimit = cmd[1].chomp.to_i;
-        when "transform" then cmd.shift; @client_transforms.push(cmd.join(" ").chomp);
-        when "project"   then cmd.shift; @client_projections.push(cmd.join(" ").chomp);
-        when "source"    then cmd.shift; @client_sourcefile = cmd.join(" ");
+        when "limit"     then cmd.shift; @client_debug["ratelimit"] = cmd[1].chomp.to_i;
+        when "transform" then cmd.shift; @client_debug["transforms"].push(cmd.join(" ").chomp);
+        when "project"   then cmd.shift; @client_debug["projections"].push(cmd.join(" ").chomp);
+        when "source"    then cmd.shift; @client_debug["sourcefile"] = cmd.join(" ");
+        when "upfront"   then cmd.shift; @client_debug["upfront"].push(cmd.shift.chomp);
       end
     end
   end

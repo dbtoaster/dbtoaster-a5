@@ -1,0 +1,135 @@
+
+require 'thrift';
+require 'spread_types';
+require 'bdb2';
+require 'ok_mixins'
+
+
+class MultiKeyMap
+  attr_reader :numkeys, :empty, :patterns;
+  
+  def initialize(numkeys, patterns, name = "", default = nil, wildcard = -1)
+    @numkeys, @wildcard, @default = numkeys.to_i, wildcard, default;
+    #@patterns = patterns.delete_if { |pattern| pattern.size >= numkeys };
+    patterns.delete_if { |pattern| pattern.size >= numkeys };
+    initialize_db(patterns, name);
+    @empty = true;
+    @name = name;
+  end
+  
+  def add_pattern(pattern)
+    unless (pattern.size >= numkeys) or (@patterns.has_key? pattern.sort) then
+      @patterns[pattern.sort.freeze] = Hash.new { Array.new }
+    end
+  end
+  
+  def [](key)
+    @basemap[Marshal.dump(key)].to_f;
+  end
+  
+  def []=(key, val)
+    validate_params(key);
+    raise "Error: Attempt to set a value for a wildcard key" if key.include? @wildcard;
+    #We don't have to check if k exists in the map, it'd be overwritten by the new value
+    @basemap.put(nil, Marshal.dump(key), val.to_s, 0);
+  end
+  
+  def has_key?(key)
+    ret = @basemap.get(nil, Marshal.dump(key), nil, 0);
+    if(ret == 0)
+      return true;
+    else
+      return false;
+    end
+  end
+  
+  def values
+    @basemap.values;
+  end
+  
+  def scan(partial_key)
+    validate_params(partial_key)
+    if partial_key.include? @wildcard then
+      pattern = partial_key.collect_index { |i, k| i if k != @wildcard }.compact.sort
+      raise SpreadException.new("MKM: #{@name} (with patterns: #{@patterns.keys.join(",")}) partial key: #{params.join(",")}") unless (@patterns.has_key? pattern);
+
+      cur, pattern_key = @patterns[pattern].cursor(nil, 0), Marshal.dump(pattern.collect{|k| partial_key[k]})
+      key, pkey, val = cur.pget(pattern_key, nil, Bdb::DB_SET);
+
+      while key
+        yield Marshal.restore(pkey), val.to_f;
+        key, pkey, val = cur.pget(pattern_key, nil, Bdb::DB_NEXT_DUP);
+      end
+    else
+      yield partial_key, self[partial_key]
+    end
+    cur.close;
+  end
+  
+  def replace(partial_key)
+    new_vals = Array.new;
+    scan(partial_key) do |key, val|
+      new_vals.push([key, (yield key, val)]);
+    end
+    new_vals.each do |key, val|
+      self[key] = val;
+    end
+  end
+  
+  def close
+    @patterns.each do |pattern|
+      @patterns[pattern].close;
+  end
+  end
+  
+  private #################################################
+
+  def validate_params(params)
+    unless (params.is_a? Array)
+      puts "Error : Param is not an array, param class : #{params.class()}";
+    end
+    unless (params.size ==@numkeys)
+      puts "Error : Param of wrong length, param length : #{params.size}";
+    end
+  end
+  
+  def find_pattern(key)
+    validate_params(key)
+    pattern = key.collect_index { |i, k| i if k != @wildcard }.compact.sort
+    return [key] if pattern.size == @numkeys   # special case the fully specified access pattern
+    return @basemap.keys if pattern.size == 0  # also special case the full map scan
+    ret = @patterns[pattern];
+    raise SpreadException.new("Invalid Access Pattern on key : [" + key.join(",") + "]; " + pattern.join(",")) unless ret;
+    ret[pattern.collect { |k| key[k] }];
+  end
+  
+  
+  def initialize_db(patterns, name, basepath = ".", delete_old = true)
+    Logger.warn { "Creating database for map : " + name };
+    env = Bdb::Env.new(0);
+    env.cachesize = 128*1024*1024
+    env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+    @basemap = env.db;
+    if (File.exist? "#{basepath}/db_#{name}_primary.db") && delete_old then
+      File.delete("#{basepath}/db_#{name}_primary.db")
+    end
+    @basemap.open(nil, "#{basepath}/db_#{name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    @patterns = Hash.new;
+    db = Array.new;
+    i = 0;
+    patterns.each do |pattern|
+      #puts "#{pattern}"
+      db[i] = env.db;
+      db[i].flags = Bdb::DB_DUPSORT;
+      if (File.exist? "#{basepath}/db_#{name}_#{i}.db") && delete_old then
+        File.delete("#{basepath}/db_#{name}_#{i}.db")
+      end
+      db[i].open(nil, "#{basepath}/db_#{name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+      @basemap.associate(nil, db[i], 0, proc { |sdb, key, data| Marshal.dump(pattern.collect{|k| Marshal.load(key)[k]})});
+      @patterns[pattern] = db[i];
+      i = i + 1;
+      
+    end
+    
+  end
+end

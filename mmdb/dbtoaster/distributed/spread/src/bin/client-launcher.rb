@@ -17,6 +17,7 @@ $transforms = Hash.new;
 $input = $stdin
 $stats_every = -1;
 $ratelimit = nil;
+$upfront_cols = Set.new;
 
 GetoptLong.new(
   [ "--quiet"      , "-q", GetoptLong::NO_ARGUMENT ],
@@ -27,7 +28,8 @@ GetoptLong.new(
   [ "--verbose"    , "-v", GetoptLong::NO_ARGUMENT ],
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ],
-  [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ]
+  [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ],
+  [ "--upfront"    ,       GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg|
   case opt
     when "--quiet", "-q" then 
@@ -57,9 +59,16 @@ GetoptLong.new(
     when "--verbose", "-v" then
       $verbose = true;
       
+    when "--upfront" then
+      puts "Starting by fully loading all " + arg + " rows";
+      $upfront_cols.add(arg);
+      
     when "--tpch-stream", "-h" then
-      puts "Reading: " + "|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t + " upfront" }.join(" ")
-      $input = open("|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + $cols.keys.collect { |t| "--" + t + " upfront" }.join(" "))
+      puts "Generating stream command";
+      cmd = "|" + File.dirname(__FILE__) + "/../../bin/tpch.sh -d " + arg + " " + 
+        $cols.keys.collect { |t| "--" + t + ($upfront_cols.include?(t) ? " upfront" : "") }.join(" ");
+      puts "Reading: " + cmd
+      $input = open(cmd)
     
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;

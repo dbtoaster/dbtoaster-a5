@@ -18,7 +18,7 @@ GetoptLong.new(
   [       "--serve", GetoptLong::NO_ARGUMENT ]
 ).each do |opt,arg|
   case opt
-    when "-q", "--quiet" then $verbosity = :quiet; Logger.default_level = Logger::WARN;
+    when "-q", "--quiet" then Logger.default_level = Logger::WARN if $verbosity == :quiet; $verbosity = :quiet;
     when       "--serve" then $serving = true;
   end
 end
