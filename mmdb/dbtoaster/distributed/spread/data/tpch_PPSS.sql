@@ -1,8 +1,7 @@
 --slice transform PARTS[2]~/^[^#]*#([0-9]+)/\1/
---slice transform PARTS[3]~/^[^#]*#([0-9]+)/\1/
---slice transform PARTS[4]#
+--slice transform PARTS[4]~/^[^#]*#([0-9]+)/\1/
 --slice transform PARTS[6]#
---slice project   PARTS(0,2,3,4,5,6)
+--slice project   PARTS(0,2,4,5,6,7)
 --slice project   SUPP(0,3)
 --slice project   PARTSUPP(0,1,2,3)
 --slice source tpch/100m
