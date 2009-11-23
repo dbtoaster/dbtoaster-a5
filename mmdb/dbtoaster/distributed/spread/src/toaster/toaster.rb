@@ -5,7 +5,7 @@ require 'template'
 class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload;
 
-  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../dbtc_alpha3")
+  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @test_directives = Array.new;
