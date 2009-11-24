@@ -235,11 +235,9 @@ class MassValuationApplicator
   
   def apply(partition_list)
     if partition_list.find { |part| part.backlogged? } || (not ready?) then
-      puts "I have to wait for some data????" if @log
       @records = partition_list.collect_hash { |part| [part.partition, part.declare_pending] };
       complete if ready?
     else
-      puts "All data is ready and available! (#{valuation.target.source})" if @log
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
       @evaluator.foreach do |target, delta_value|
         puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
@@ -375,9 +373,7 @@ class MapNodeHandler
         # If the value is known, then get() will fire immediately.
         # Note also that discover will fire the callbacks if it is necessary to do so.
         Logger.debug { "checking for : " + req.to_s } 
-        puts "Checking for #{req}" if applicator.log;
         loop_partitions(req.source, req.key) do |partition| 
-          puts "Found partition" if applicator.log;
           Logger.debug { "found : " + partition.to_s + ":" + partition.dump }
           applicator.expect_local
           partition.get(
