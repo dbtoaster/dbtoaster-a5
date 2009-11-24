@@ -59,7 +59,7 @@ class Entry
     keys.zip(sizes).collect do |k, s|
       if s == 0 then 0
       elsif k < 0 then -1
-      else (k.hash.abs.to_f * (size.to_f / Fixnum.max_fixnum.to_f))
+      else (k.hash.abs.to_f * (s.to_f / Fixnum.max_fixnum.to_f))
       end
     end
   end
