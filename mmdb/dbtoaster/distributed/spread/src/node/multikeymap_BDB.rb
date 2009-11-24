@@ -8,18 +8,18 @@ require 'ok_mixins'
 class MultiKeyMap
   attr_reader :numkeys, :empty, :patterns;
   
-  def initialize(numkeys, patterns, name = "", default = nil, wildcard = -1)
-    @numkeys, @wildcard, @default = numkeys.to_i, wildcard, default;
+  def initialize(numkeys, patterns, name = "", basepath = ".", default = nil, wildcard = -1)
+    @numkeys, @wildcard, @default, @basepath = numkeys.to_i, wildcard, default, basepath;
     #@patterns = patterns.delete_if { |pattern| pattern.size >= numkeys };
     patterns.delete_if { |pattern| pattern.size >= numkeys };
-    initialize_db(patterns, name);
     @empty = true;
     @name = name;
+    initialize_db(patterns);
   end
   
   def add_pattern(pattern)
     unless (pattern.size >= numkeys) or (@patterns.has_key? pattern.sort) then
-      @patterns[pattern.sort.freeze] = Hash.new { Array.new }
+      create_secondary_index(pattern.sort.freeze);
     end
   end
   
@@ -29,6 +29,7 @@ class MultiKeyMap
   
   def []=(key, val)
     validate_params(key);
+    #puts "#{@name}[#{key.join(",")}] = #{val}";
     raise "Error: Attempt to set a value for a wildcard key" if key.include? @wildcard;
     #We don't have to check if k exists in the map, it'd be overwritten by the new value
     @basemap.put(nil, Marshal.dump(key), val.to_s, 0);
@@ -53,7 +54,9 @@ class MultiKeyMap
       pattern = partial_key.collect_index { |i, k| i if k != @wildcard }.compact.sort
       raise SpreadException.new("MKM: #{@name} (with patterns: #{@patterns.keys.join(",")}) partial key: #{params.join(",")}") unless (@patterns.has_key? pattern);
 
-      cur, pattern_key = @patterns[pattern].cursor(nil, 0), Marshal.dump(pattern.collect{|k| partial_key[k]})
+      cur = @patterns[pattern].cursor(nil, 0);
+      pattern_key = Marshal.dump(pattern.collect{|k| partial_key[k]});
+      
       key, pkey, val = cur.pget(pattern_key, nil, Bdb::DB_SET);
 
       while key
@@ -79,7 +82,11 @@ class MultiKeyMap
   def close
     @patterns.each do |pattern|
       @patterns[pattern].close;
+    end
   end
+  
+  def sync
+    @basemap.sync
   end
   
   private #################################################
@@ -104,32 +111,34 @@ class MultiKeyMap
   end
   
   
-  def initialize_db(patterns, name, basepath = ".", delete_old = true)
-    Logger.warn { "Creating database for map : " + name };
-    env = Bdb::Env.new(0);
-    env.cachesize = 128*1024*1024
-    env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
-    @basemap = env.db;
-    if (File.exist? "#{basepath}/db_#{name}_primary.db") && delete_old then
-      File.delete("#{basepath}/db_#{name}_primary.db")
-    end
-    @basemap.open(nil, "#{basepath}/db_#{name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-    @patterns = Hash.new;
-    db = Array.new;
-    i = 0;
-    patterns.each do |pattern|
-      #puts "#{pattern}"
-      db[i] = env.db;
-      db[i].flags = Bdb::DB_DUPSORT;
-      if (File.exist? "#{basepath}/db_#{name}_#{i}.db") && delete_old then
-        File.delete("#{basepath}/db_#{name}_#{i}.db")
+  def initialize_db(patterns, delete_old = true)
+    Logger.warn { "Creating database for map : #{@name}" };
+    @env = Bdb::Env.new(0);
+    @env.cachesize = 128*1024*1024
+    @env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+    @basemap = @env.db;
+    if (File.exist? "#{@basepath}/db_#{@name}_primary.db") && delete_old then
+      File.delete("#{@basepath}/db_#{@name}_primary.db")
+      i = 0;
+      while File.exist? "#{@basepath}/db_#{@name}_#{i}.db"
+        File.delete("#{@basepath}/db_#{@name}_#{i}.db")
+        i += 1;
       end
-      db[i].open(nil, "#{basepath}/db_#{name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-      @basemap.associate(nil, db[i], 0, proc { |sdb, key, data| Marshal.dump(pattern.collect{|k| Marshal.load(key)[k]})});
-      @patterns[pattern] = db[i];
-      i = i + 1;
-      
     end
-    
+    Logger.warn { "Creating Primary Index: #{@basepath}/db_#{@name}_primary.db" }
+    @basemap.open(nil, "#{@basepath}/db_#{@name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    @patterns = Hash.new;
+    patterns.each { |pattern| create_secondary_index(pattern) }
+  end
+  
+  def create_secondary_index(pattern)
+    i = @patterns.size;
+    db = @env.db;
+    db.flags = Bdb::DB_DUPSORT;
+    Logger.warn { "Creating Secondary Index: #{@basepath}/db_#{@name}_#{i}.db (#{pattern.join(", ")})" }
+    db.open(nil, "#{@basepath}/db_#{@name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    @basemap.associate(nil, db, 0, proc { |sdb, key, data| key = Marshal.load(key); Marshal.dump(pattern.collect{|k| key[k]})});
+    #puts "Creating secondary key for #{@name} #{key.join(",")}; #{pattern.join(",")}"; 
+    @patterns[pattern] = db;
   end
 end

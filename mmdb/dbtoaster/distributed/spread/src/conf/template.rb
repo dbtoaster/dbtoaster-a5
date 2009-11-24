@@ -170,7 +170,7 @@ class TemplateValuation
       @entries = Hash.new;
       prepare_entries(entries);
     end
-    prepare_entries(template.entries) unless template == nil;
+    prepare_entries(*template.entries) unless template == nil;
     @target = nil;
   end
   
@@ -225,6 +225,10 @@ class TemplateValuation
   
   def clone(temp_vars = Hash.new)
     TemplateValuation.new(@template, @params.merge(temp_vars), @entries.clone);
+  end
+  
+  def ready?
+    @template.ready?(self)
   end
   
   def to_f
@@ -289,6 +293,14 @@ class TemplateExpression
         end
       when :map  then params.entry(@left.instantiate(params.params)).to_f;
       else            raise SpreadException.new("Unknown Expression operator (to_f): " + @op.to_s);
+    end
+  end
+  
+  def ready?(params = TemplateValuation.new)
+    case @op
+      when :plus, :mult, :sub, :div then @left.ready && @right.ready
+      when :val then (@left.is_a? Numeric) || (params.has_param? @left)
+      when :map then @left.keys.assert { |key| @left.is_a? Numeric || (params.has_param? key) }
     end
   end
   
@@ -382,6 +394,10 @@ class TemplateCondition
     end
   end
   
+  def ready?(params = TemplateValuation.new)
+    @left.ready?(params) && @right.ready?(params);
+  end
+  
   def entries
     @left.entries.concat(@right.entries);
   end
@@ -414,6 +430,10 @@ class TemplateConditionList
       unless cond.to_b(params) then return false; end;
     end
     return true;
+  end
+  
+  def ready?(params = TemplateValuation.new)
+    @conditions.assert { |cond| cond.ready?(params) };
   end
   
   def entries
@@ -479,6 +499,10 @@ class UpdateTemplate
     @paramlist.merge(param_inputs).collect_hash;
   end
   
+  def ready?(params = TemplateValuation.new)
+    @conditions.ready?(params) && @expression.ready?(params);
+  end
+  
   def to_f(params = TemplateValuation.new)
     if @conditions.to_b(params) then
       @expression.to_f(params)
@@ -504,7 +528,7 @@ class UpdateTemplate
     @expression.entries.collect do |entry|
       if entry.source == map then
 #        puts "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",");
-        entry.keys.collect_index { |i,k| i unless @paramlist.include? k }.compact
+        entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact
       end
     end.compact;
   end

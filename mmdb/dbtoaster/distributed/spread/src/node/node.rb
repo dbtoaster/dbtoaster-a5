@@ -21,6 +21,8 @@ class LogNotification
   end
 end
 
+###################################################
+
 class CommitNotification
   def initialize(record)
     @record = record;
@@ -36,6 +38,8 @@ class CommitNotification
     @record.discover(entry, value);
   end
 end
+
+###################################################
 
 class RemoteCommitNotification
   @@nodecache = Hash.new;
@@ -90,54 +94,15 @@ end
 
 ###################################################
 
-class MassPutDiscoveryMultiplexer
-  def initialize(valuation, expected_gets)
-    @records = Array.new;
-    @expected_gets = expected_gets;
-    @evaluator = TemplateForeachEvaluator.new(valuation);
-  end
-  
-  def add_record(record)
-    if @expected_gets <= 0 then
-      record.complete;
-    end
-    @records.push(record)
-  end
-  
-  def discover(entry, value)
-    Logger.debug {"Discovered that " + entry.to_s + " = " + value.to_s }
-    @evaluator.discover(entry, value);
-  end
-  
-  def finish_message
-    @expected_gets -= 1;
-    if @records && @expected_gets <= 0 then
-      @evaluator.foreach do |target, delta_value|
-        Logger.debug {"Generated Delta : " + target.to_s + " += " + delta_value.to_s }
-        @records.each do |record| record.put(target, delta_value) end;
-      end
-      @records.each do |r| r.complete end;
-      @records = nil;
-      return true;
-    end
-    false;
-  end
-  
-  def required
-    @evaluator.valuation.entries.keys;
-  end
-end
-
-###################################################
-
 class MapNodeStats
-  def initialize(name)
-    @name = name;
+  def initialize(name, handler)
+    @name, @handler = name, handler;
     @stats = @mass_puts = @puts = @fetches = @pushes = 0;
   end
   
   def stat
     if ((@stats += 1) % 50000) == 0 then
+      @handler.sync;
       Logger.warn { "Status: " + @name + ";" + 
         " put "      + @puts.to_s +
         " mass_put " + @mass_puts.to_s +
@@ -170,26 +135,169 @@ end
 
 ###################################################
 
+class ValuationApplicator
+  attr_reader :valuation, :log;
+  
+  def initialize(id, target, valuation, handler, log)
+    @id, @target, @valuation, @handler, @log = id, target, valuation, handler, log;
+    @final_val, @record = nil, nil;
+    begin
+      @final_val = @valuation.to_f
+    rescue SpreadException => e
+      # it's not ready
+      Logger.debug { e.to_s }
+    end
+  end
+  
+  def ready?
+    not @final_val.nil?
+  end
+  
+  def discover(key, value)
+    puts "Discovered that : #{key} = #{value}";
+    @valuation.discover(key, value)
+    begin
+      @final_val = @valuation.to_f
+      if @record then
+        puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{final_val}" if @log;
+        @record.discover(@target.key, @final_val).finish;
+        @handler.finish_valuating(@id);
+      end
+    rescue SpreadException => e
+      # it's not ready
+      Logger.debug { e.to_s }
+    end
+  end
+  
+  def finish_message
+  end
+  
+  def expect_local
+  end
+  
+  def find_local
+  end
+  
+  def apply(partitions)
+    if @final_val then
+      puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{@final_val}" if @log;
+      partitions[0].update(@target.key, @final_val);
+      @handler.finish_valuating(@id);
+    else
+      @record = partitions[0].declare_pending;
+    end
+  end
+end
+
+###################################################
+
+class MassValuationApplicator
+  attr_reader :log;
+  
+  def initialize(id, valuation, expected_gets, handler, log)
+    @id, @handler, @log = id, handler, log;
+    @expected_gets = expected_gets+1  #One, local get is implicit
+    @final_val, @records = nil, nil;
+    @expected_locals = 0;
+    @evaluator = TemplateForeachEvaluator.new(valuation);
+    puts "Creating insert for #{valuation.target.source}; expecting #{@expected_gets} gets" if @log;
+  end
+  
+  def valuation
+    @evaluator.valuation;
+  end
+  
+  def discover(key, value)
+    puts "Discovered that #{key} = #{value}" if @log;
+    @evaluator.discover(key, value)
+  end
+  
+  def expect_local
+    @expected_locals += 1;
+  end
+  
+  def find_local
+    @expected_locals -= 1;
+    complete if ready?
+  end
+  
+  def ready?
+    (@expected_gets <= 0) && (@expected_locals <= 0);
+  end
+  
+  def finish_message
+    @expected_gets -= 1;
+    if ready? then
+      complete;
+      @records = nil;
+    end
+  end
+  
+  def apply(partition_list)
+    if partition_list.find { |part| part.backlogged? } || (not ready?) then
+      puts "I have to wait for some data????" if @log
+      @records = partition_list.collect_hash { |part| [part.partition, part.declare_pending] };
+      complete if ready?
+    else
+      puts "All data is ready and available! (#{valuation.target.source})" if @log
+      partitions = partition_list.collect_hash { |part| [part.partition, part] };
+      @evaluator.foreach do |target, delta_value|
+        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
+        partitions[target.partition(@handler.partition_sizes[@evaluator.valuation.target.source])].update(target.key, delta_value);
+      end
+      @handler.finish_valuating(@id);
+    end
+  end
+  
+  private
+  
+  def complete
+    return unless @records;
+    @evaluator.foreach do |target, delta_value|
+      puts "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" if @log;
+      @records[target.partition].discover(target, delta_value);
+    end
+    @records.each_value { |record| record.finish }
+    @handler.finish_valuating(@id);
+  end
+end
+
+###################################################
+
 class MapNodeHandler
+  attr_reader :partition_sizes;
 
   def initialize(name)
     @maps = Hash.new { |h,k| h[k] = Hash.new };
     @templates = Hash.new;
     @cmdcallbacks = Hash.new;
-    @stats = MapNodeStats.new(name);
+    @stats = MapNodeStats.new(name, self);
     @partition_sizes = Hash.new;
     @log_maps = Set.new;
   end
   
   ############# Internal Accessors
   
-  def find_partition(source, key, &callback)
-    raise SpreadException.new("find_partition for wildcard keys requires a callback") if key.include?(-1)&& callback.nil?;
+  def sync
+    @maps.each_value { |partitions| partitions.each_value { |partition| partition.sync } };
+  end
+  
+  def find_partition(source, key)
+    raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
     
     if @maps.has_key? source.to_i then
       @maps[source.to_i][Entry.compute_partition(key, @partition_sizes[source.to_i])];
     else
       raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.join(",") + "]; Known maps: " + @maps.keys.join(", "));
+    end
+  end
+  
+  def loop_partitions(source, key)
+    key = Entry.compute_partition(key, @partition_sizes[source.to_i]);
+    @maps[source].each_pair do |map_key, partition|
+      if key.zip(map_key).assert { |k, mk| (k == -1) || (k == mk) } then
+        yield partition;
+      end
     end
   end
   
@@ -238,43 +346,56 @@ class MapNodeHandler
     valuation;    
   end
   
-  def install_discovery(id, record, params)
+  def finish_valuating(id)
+    @cmdcallbacks.delete(id);
+  end
+  
+  def preload_locals(id, applicator)
     # initialize the template with values we can obtain locally
+    # These are values that either...
+    # 1) Exist in a local partition
+    # 2) Have already been received thanks to some network hiccup.
     # we might end up changing required inside the loop, so we clone it first.
-        
-    # This is treated as an implicit message to ourselves.  
-    record.required.clone.each do |req|
-      begin
-        # If the value is known, then get() will fire immediately.
-        # in this case, get() will call discover, which will in turn remove
-        # the requirement from @required.
-        # Note also that discover will fire the callbacks if it is necessary to do so.
-        Logger.debug { "checking for : " + req.to_s } 
-        find_partition(req.source, req.key) do |partition| 
-          Logger.debug { "found : " + partition.to_s + ":" + partition.dump }
-          partition.get(req, CommitNotification.new(record)) 
-        end;
-      rescue Thrift::Exception => e;
-        # this just means that the partition is unavailable.
-      end
-    end
     
     #initialize the template with values we've already received
-    gets_pending = true;
-    if (@cmdcallbacks[id] != nil) && (@cmdcallbacks[id].is_a? Array) then
+    if (@cmdcallbacks[id] != nil) then
       @cmdcallbacks[id].each do |response|
         response.each_pair do |t, v|
-          record.discover(t,v);
+          applicator.discover(t,v);
         end
-        gets_pending = false if record.finish_message;
+        applicator.finish_message;
       end
     end
     
+    @cmdcallbacks.delete(id);
+    
+    # This is also treated as an implicit message to ourselves.  
+    applicator.valuation.entries.keys.each do |req|
+      begin
+        # If the value is known, then get() will fire immediately.
+        # Note also that discover will fire the callbacks if it is necessary to do so.
+        Logger.debug { "checking for : " + req.to_s } 
+        puts "Checking for #{req}" if applicator.log;
+        loop_partitions(req.source, req.key) do |partition| 
+          puts "Found partition" if applicator.log;
+          Logger.debug { "found : " + partition.to_s + ":" + partition.dump }
+          applicator.expect_local
+          partition.get(
+            req.key,
+            proc { |key, value| applicator.discover(Entry.make(req.source, key), value) },
+            proc { applicator.find_local }
+          )
+        end;
+      rescue Thrift::Exception => e;
+        # this just means that we don't have the partition for this requirement.
+        Logger.debug { e.to_s }
+      end
+    end
+    applicator.finish_message;
+    
     #register ourselves to receive updates in the future
-    if gets_pending then
-      @cmdcallbacks[id] = record;
-    else
-      @cmdcallbacks.delete(id);
+    unless applicator.ready? then
+      @cmdcallbacks[id] = applicator;
     end
   end
 
@@ -283,27 +404,20 @@ class MapNodeHandler
     Logger.debug {"Put on template " + template.to_s + " with Params: " + params.to_s }
     valuation = create_valuation(template, params);
     target = @templates[template].target.instantiate(valuation.params).freeze;
-    record = find_partition(target.source, target.key).insert(target, id, valuation);
-    record.register(LogNotification.new) if(@log_maps.include? valuation.target.source);
-    install_discovery(id, record, valuation.params);
+    applicator = ValuationApplicator.new(id, target, valuation, self, (@log_maps.include? valuation.target.source));
+    preload_locals(id, applicator)
+    applicator.apply([find_partition(target.source, target.key)]);
     @stats.put;
   end
   
   def mass_put(id, template, expected_gets, params)
     Logger.debug { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
     valuation = create_valuation(template, params);
-    discovery = MassPutDiscoveryMultiplexer.new(valuation, expected_gets);
-    find_partition(valuation.target.source, valuation.target.key) do |partition|
-      record = partition.mass_insert(id, valuation)
-      if(@log_maps.include? valuation.target.source) then
-        record.register(nil, LogNotification.new)
-        puts "WORD!"
-      end
-      discovery.add_record(record);
-    end
-    install_discovery(id, discovery, valuation.params);
-    # If we aren't waiting for anything, we need to trick the discovery multiplexer into firing a commit.
-    discovery.finish_message if expected_gets <= 0;
+    applicator = MassValuationApplicator.new(id, valuation, expected_gets, self, (@log_maps.include? valuation.target.source));
+    preload_locals(id, applicator);
+    plist = Array.new;
+    loop_partitions(valuation.target.source, valuation.target.key) { |partition| plist.push(partition) }
+    applicator.apply(plist);
     @stats.mass_put;
   end
   
@@ -320,7 +434,7 @@ class MapNodeHandler
     target.collect_hash do |t|
       values = [];
       if t.has_wildcards? then
-        find_partition(t.source, t.key) do |partition|
+        loop_partitions(t.source, t.key) do |partition|
           values.concat(partition.get(t));
         end
       else
@@ -346,12 +460,20 @@ class MapNodeHandler
         # the actual message will not be sent until all requests in this 
         # command can be fulfilled.
         if t.has_wildcards? then
-          find_partition(t.source, t.key) do |partition|
+          loop_partitions(t.source, t.key) do |partition|
             request.hold;
-            partition.get(t, request);
+            partition.get(
+              t, 
+              proc { |key, value| request.fire(Entry.make(t.source, key), value) },
+              proc { request.release }
+            );
           end
         else
-          find_partition(t.source, t.key).get(t, request);
+          find_partition(t.source, t.key).get(
+            t, 
+            proc { |key, value| request.fire(Entry.make(t.source, key), value) },
+            nil
+          );
         end
       end
     rescue Thrift::Exception => ex
@@ -383,7 +505,7 @@ class MapNodeHandler
       result.each_pair do |target, value|
         @cmdcallbacks[cmdid].discover(target, value)
       end
-      @cmdcallbacks.delete(cmdid) if @cmdcallbacks[cmdid].finish_message;
+      @cmdcallbacks[cmdid].finish_message;
     end
     @stats.push;
   end
@@ -408,28 +530,6 @@ class MapNodeHandler
     end
     
     @log_maps.merge(config.log_maps);
-  end
-  
-  def preload(input_files, shifts = Hash.new)
-    cnt = 0;
-    in_tables = Hash.new;
-    GC.disable
-    @maps.each_pair do |map, partitions|
-      Logger.warn { "Preloading : Map " + map.to_s + " <-- " + input_files[map.to_i-1]; }
-      input = File.open(input_files[map.to_i-1]);
-      input.each do |line|
-        partitions.values[0].set(
-          line.split(/, */).collect_index do |i,k|
-            k.to_i + shifts.fetch([map, i], 0)
-          end, 0, 1
-        );
-      end
-    end
-    GC.enable;
-    ObjectSpace.garbage_collect;
-    Logger.warn { "Preload complete; Sleeping for 1 min to allow garbage collector to run" };
-    sleep 120;
-    Logger.warn { "Sleep complete" };
   end
   
   def partitions  

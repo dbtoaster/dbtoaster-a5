@@ -52,14 +52,14 @@ class Entry
   end
   
   def partition(sizes)
-    compute_partition(@key, sizes);
+    Entry.compute_partition(@key, sizes);
   end
   
   def Entry.compute_partition(keys, sizes)
     keys.zip(sizes).collect do |k, s|
       if s == 0 then 0
       elsif k < 0 then -1
-      else (k.hash.abs.to_f * (s.to_f / Fixnum.max_fixnum.to_f))
+      else (k.hash.abs.to_f * (s.to_f / Fixnum.max_fixnum.to_f)).to_i
       end
     end
   end
