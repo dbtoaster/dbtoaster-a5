@@ -3,7 +3,7 @@
 #define BDB2_H
 
 #include <ruby.h>
-#include <version.h>
+//#include <version.h>
 #include <extconf.h>
 #include <db.h>
 
@@ -23,7 +23,7 @@
 #define FNLEN 40
 
 #define filename_copy(fp,fv) \
-  strncpy(fp,RSTRING(fv)->ptr,FNLEN);
+  strncpy(fp,RSTRING_PTR(fv),FNLEN);
 
 #define filename_dup(fpd,fps) \
   strncpy(fpd,fps,FNLEN);

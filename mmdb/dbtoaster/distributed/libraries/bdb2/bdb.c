@@ -224,7 +224,7 @@ VALUE db_open(VALUE obj, VALUE vtxn, VALUE vdisk_file,
   if ( ! NIL_P(vtxn) )
     Data_Get_Struct(vtxn,t_txnh,txn);
 
-  if ( TYPE(vlogical_db)==T_STRING && RSTRING(vlogical_db)->len > 0 )
+  if ( TYPE(vlogical_db)==T_STRING && RSTRING_LEN(vlogical_db) > 0 )
     logical_db=StringValueCStr(vlogical_db);
     
   if ( FIXNUM_P(vdbtype) ) {
@@ -235,7 +235,7 @@ VALUE db_open(VALUE obj, VALUE vtxn, VALUE vdisk_file,
     }
   }
 
-  if ( TYPE(vdisk_file)!=T_STRING || RSTRING(vdisk_file)->len < 1 ) {
+  if ( TYPE(vdisk_file)!=T_STRING || RSTRING_LEN(vdisk_file) < 1 ) {
     raise_error(0,"db_open Bad disk file name");
     return Qnil;
   }
@@ -439,7 +439,7 @@ VALUE db_close(VALUE obj, VALUE vflags)
   if ( dbh->db==NULL || strlen(dbh->filename)==0 )
     return Qnil;
 
-  if (! NIL_P(dbh->adbc) && RARRAY(dbh->adbc)->len > 0 ) {
+  if (! NIL_P(dbh->adbc) && RARRAY_LEN(dbh->adbc) > 0 ) {
     rb_warning("%s/%d %s",__FILE__,__LINE__,
 	       "cursor handles still open");
     while ( (cur=rb_ary_pop(dbh->adbc)) != Qnil ) {
@@ -492,13 +492,13 @@ VALUE db_put(VALUE obj, VALUE vtxn, VALUE vkey, VALUE vdata, VALUE vflags)
   Data_Get_Struct(obj,t_dbh,dbh);
 
   StringValue(vkey);
-  key.data = RSTRING(vkey)->ptr;
-  key.size = RSTRING(vkey)->len;
+  key.data = RSTRING_PTR(vkey);
+  key.size = RSTRING_LEN(vkey);
   key.flags = LMEMFLAG;
 
   StringValue(vdata);
-  data.data = RSTRING(vdata)->ptr;
-  data.size = RSTRING(vdata)->len;
+  data.data = RSTRING_PTR(vdata);
+  data.size = RSTRING_LEN(vdata);
   data.flags = LMEMFLAG;
 
   rv = dbh->db->put(dbh->db,txn?txn->txn:NULL,&key,&data,flags);
@@ -544,14 +544,14 @@ VALUE db_get(VALUE obj, VALUE vtxn, VALUE vkey, VALUE vdata, VALUE vflags)
 
   StringValue(vkey);
 
-  key.data = RSTRING(vkey)->ptr;
-  key.size = RSTRING(vkey)->len;
+  key.data = RSTRING_PTR(vkey);
+  key.size = RSTRING_LEN(vkey);
   key.flags = LMEMFLAG;
 
   if ( ! NIL_P(vdata) ) {
     StringValue(vdata);
-    data.data = RSTRING(vdata)->ptr;
-    data.size = RSTRING(vdata)->len;
+    data.data = RSTRING_PTR(vdata);
+    data.size = RSTRING_LEN(vdata);
     data.flags = LMEMFLAG;
   }
 
@@ -599,14 +599,14 @@ VALUE db_pget(VALUE obj, VALUE vtxn, VALUE vkey, VALUE vdata, VALUE vflags)
 
   StringValue(vkey);
 
-  key.data = RSTRING(vkey)->ptr;
-  key.size = RSTRING(vkey)->len;
+  key.data = RSTRING_PTR(vkey);
+  key.size = RSTRING_LEN(vkey);
   key.flags = LMEMFLAG;
 
   if ( ! NIL_P(vdata) ) {
     StringValue(vdata);
-    data.data = RSTRING(vdata)->ptr;
-    data.size = RSTRING(vdata)->len;
+    data.data = RSTRING_PTR(vdata);
+    data.size = RSTRING_LEN(vdata);
     data.flags = LMEMFLAG;
   }
 
@@ -669,9 +669,9 @@ VALUE db_join(VALUE obj, VALUE vacurs, VALUE vflags)
   flags=NUM2INT(vflags);
   Data_Get_Struct(obj,t_dbh,dbh);
 
-  curs = ALLOCA_N(DBC *,RARRAY(vacurs)->len);
-  for (i=0; i<RARRAY(vacurs)->len; i++) {
-    Data_Get_Struct(RARRAY(vacurs)->ptr[i],t_dbch,dbch);
+  curs = ALLOCA_N(DBC *,RARRAY_LEN(vacurs));
+  for (i=0; i<RARRAY_LEN(vacurs); i++) {
+    Data_Get_Struct(RARRAY_PTR(vacurs)[i],t_dbch,dbch);
     curs[i]=dbch->dbc;
   }
   curs[i]=NULL;
@@ -716,14 +716,14 @@ VALUE db_compact(VALUE obj, VALUE vtxn, VALUE vstart_key,
 
   if ( ! NIL_P(vstart_key) ) {
     StringValue(vstart_key);
-    start_key.data=RSTRING(vstart_key)->ptr;
-    start_key.size=RSTRING(vstart_key)->len;
+    start_key.data=RSTRING_PTR(vstart_key);
+    start_key.size=RSTRING_LEN(vstart_key);
     start_key.flags= LMEMFLAG;
   }
   if ( ! NIL_P(vstop_key) ) {
     StringValue(vstop_key);
-    stop_key.data=RSTRING(vstop_key)->ptr;
-    stop_key.size=RSTRING(vstop_key)->len;
+    stop_key.data=RSTRING_PTR(vstop_key);
+    stop_key.size=RSTRING_LEN(vstop_key);
     stop_key.flags= LMEMFLAG;
   }
   if ( ! NIL_P(vtxn) )
@@ -923,8 +923,8 @@ VALUE db_key_range(VALUE obj, VALUE vtxn, VALUE vkey, VALUE vflags)
 
   memset(&key,0,sizeof(DBT));
   StringValue(vkey);
-  key.data = RSTRING(vkey)->ptr;
-  key.size = RSTRING(vkey)->len;
+  key.data = RSTRING_PTR(vkey);
+  key.size = RSTRING_LEN(vkey);
   key.flags = LMEMFLAG;
 
   rv=dbh->db->key_range(dbh->db,txn?txn->txn:NULL,&key,
@@ -966,8 +966,8 @@ VALUE db_del(VALUE obj, VALUE vtxn, VALUE vkey, VALUE vflags)
   Data_Get_Struct(obj,t_dbh,dbh);
 
   StringValue(vkey);
-  key.data = RSTRING(vkey)->ptr;
-  key.size = RSTRING(vkey)->len;
+  key.data = RSTRING_PTR(vkey);
+  key.size = RSTRING_LEN(vkey);
   key.flags = LMEMFLAG;
 
   rv = dbh->db->del(dbh->db,txn?txn->txn:NULL,&key,flags);
@@ -1013,8 +1013,8 @@ int assoc_callback(DB *secdb,const DBT* key, const DBT* data, DBT* result)
     rb_warning("return from assoc callback not a string!");
 
   StringValue(retv);
-  result->data=RSTRING(retv)->ptr;
-  result->size=RSTRING(retv)->len;
+  result->data=RSTRING_PTR(retv);
+  result->size=RSTRING_LEN(retv);
   result->flags=LMEMFLAG;
   return 0;
 }
@@ -1168,14 +1168,14 @@ VALUE dbc_get(VALUE obj, VALUE vkey, VALUE vdata, VALUE vflags)
 
   if ( ! NIL_P(vkey) ) {
     StringValue(vkey);
-    key.data = RSTRING(vkey)->ptr;
-    key.size = RSTRING(vkey)->len;
+    key.data = RSTRING_PTR(vkey);
+    key.size = RSTRING_LEN(vkey);
     key.flags = LMEMFLAG;
   }
   if ( ! NIL_P(vdata) ) {
     StringValue(vdata);
-    data.data = RSTRING(vdata)->ptr;
-    data.size = RSTRING(vdata)->len;
+    data.data = RSTRING_PTR(vdata);
+    data.size = RSTRING_LEN(vdata);
     data.flags = LMEMFLAG;
   }
 
@@ -1214,14 +1214,14 @@ VALUE dbc_pget(VALUE obj, VALUE vkey, VALUE vdata, VALUE vflags)
 
   if ( ! NIL_P(vkey) ) {
     StringValue(vkey);
-    key.data = RSTRING(vkey)->ptr;
-    key.size = RSTRING(vkey)->len;
+    key.data = RSTRING_PTR(vkey);
+    key.size = RSTRING_LEN(vkey);
     key.flags = LMEMFLAG;
   }
   if ( ! NIL_P(vdata) ) {
     StringValue(vdata);
-    data.data = RSTRING(vdata)->ptr;
-    data.size = RSTRING(vdata)->len;
+    data.data = RSTRING_PTR(vdata);
+    data.size = RSTRING_LEN(vdata);
     data.flags = LMEMFLAG;
   }
 
@@ -1264,14 +1264,14 @@ VALUE dbc_put(VALUE obj, VALUE vkey, VALUE vdata, VALUE vflags)
 
   if ( ! NIL_P(vkey) ) {
     StringValue(vkey);
-    key.data = RSTRING(vkey)->ptr;
-    key.size = RSTRING(vkey)->len;
+    key.data = RSTRING_PTR(vkey);
+    key.size = RSTRING_LEN(vkey);
     key.flags = LMEMFLAG;
   }
 
   StringValue(vdata);
-  data.data = RSTRING(vdata)->ptr;
-  data.size = RSTRING(vdata)->len;
+  data.data = RSTRING_PTR(vdata);
+  data.size = RSTRING_LEN(vdata);
   data.flags = LMEMFLAG;
 
   rv = dbch->dbc->c_put(dbch->dbc,&key,&data,flags);
@@ -1438,14 +1438,14 @@ VALUE env_close(VALUE obj)
   if ( eh->env==NULL )
     return Qnil;
 
-  if (RARRAY(eh->adb)->len > 0) {
+  if (RARRAY_LEN(eh->adb) > 0) {
     rb_warning("%s/%d %s",__FILE__,__LINE__,
 	       "database handles still open");
     while ( (db=rb_ary_pop(eh->adb)) != Qnil ) {
       db_close(db,INT2FIX(0));
     }
   }
-  if (RARRAY(eh->atxn)->len > 0) {
+  if (RARRAY_LEN(eh->atxn) > 0) {
     rb_warning("%s/%d %s",__FILE__,__LINE__,
 	       "database transactions still open");
     while ( (db=rb_ary_pop(eh->atxn)) != Qnil ) {
@@ -1821,7 +1821,7 @@ VALUE db_stat(VALUE obj, VALUE vtxn, VALUE vflags)
  */
 VALUE stat_aref(VALUE obj, VALUE vname)
 {
-  rb_iv_get(obj,RSTRING(rb_str_concat(rb_str_new2("@"),vname))->ptr);
+  rb_iv_get(obj,RSTRING_PTR(rb_str_concat(rb_str_new2("@"),vname)));
 }
 
 /*
