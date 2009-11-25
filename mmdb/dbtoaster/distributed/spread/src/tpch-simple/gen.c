@@ -90,7 +90,7 @@ void print_lineitem(line_t *l){
   clean_string(l->shipinstruct,MAXAGG_LEN + 1);
   clean_string(l->shipmode    ,MAXAGG_LEN + 1);
   clean_string(l->comment     ,L_CMNT_MAX + 1);
-  printf("LINEITEMS(%llu, %llu, %llu, %llu, %llu, %llu, %llu, %llu, %c, %c, %s, %s, %s, %s, %s, %s)\n",
+  printf("LINEITEM(%llu, %llu, %llu, %llu, %llu, %llu, %llu, %llu, %c, %c, %s, %s, %s, %s, %s, %s)\n",
     l->okey,
     l->partkey,
     l->suppkey,
@@ -116,7 +116,7 @@ void print_customer(customer_t *c){
   clean_string(c->phone     , PHONE_LEN + 1);
   clean_string(c->mktsegment, MAXAGG_LEN + 1);
   clean_string(c->comment   , C_CMNT_MAX + 1);
-  printf("CUSTOMERS(%llu, %s, %s, %llu, %s, %llu, %s, %s)\n",
+  printf("CUSTOMER(%llu, %s, %s, %llu, %s, %llu, %s, %s)\n",
     c->custkey,
     c->name,
     c->address,
