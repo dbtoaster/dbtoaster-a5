@@ -63,27 +63,27 @@ end
 
 tables = Array.new;
 [ 
-  [ "REGIONS"  , "region.tbl"  , nil              , 5      , "rkey", ["rkey", "name", "comment"] ],
-  [ "NATIONS"  , "nation.tbl"  , nil              , 25     , "nkey", ["nkey", "name", "rkey", "comment"] ],
-  [ "CUSTOMERS", "customer.tbl", nil              , 150000 , "ckey", ["ckey", "name", "address", "nkey", "phone", "acctbal", "mktsegment", "comment"] ],
-  [ "ORDERS"   , "orders.tbl"  , "order.tbl.u1"   , 1500000, "okey", ["okey", "ckey", "status", "totalprice", "orderdate", "opriority", "clerk", "spriority", "comment"] ],
-  [ "PARTS"    , "part.tbl"    , nil              , 200000 , "pkey", ["pkey", "name", "mggr", "brand", "type", "size", "container", "retailprice", "comment"] ],
-  [ "SUPP"     , "supplier.tbl", nil              , 10000  , "skey", ["skey", "name", "address", "nationkey", "phone", "acctbal", "comment"] ],
-  [ "LINEITEMS", "lineitem.tbl", "lineitem.tbl.u1", 6000000, nil   , ["okey", "pkey", "skey", "linenumber", "quantity", "extendedprice", "discount", "tax", "returnflag", "linestatus", "shipdate", "commitdate", "receiptdate", "shipinstruct", "shipmode", "comment"] ],
-  [ "PARTSUPP" , "partsupp.tbl", nil              , 800000 , nil   , ["pkey", "skey", "availqty", "supplycost", "comment"] ],
+  ["LINEITEM"  , "lineitem.tbl", "lineitem.tbl.u1", 6000000, nil   ,        ["l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"] ],
+  ["ORDERS"    , "orders.tbl"  , "order.tbl.u1"   , 1500000, "o_orderkey",  ["o_orderkey", "o_custkey", "o_status", "o_totalprice", "o_orderdate", "o_opriority", "o_clerk", "o_spriority", "o_comment"] ],
+  ["PART"      , "part.tbl"    , nil              , 200000 , "p_partkey",   ["p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size", "p_container", "p_retailprice", "p_comment"] ],
+  ["PARTSUPP"  , "partsupp.tbl", nil              , 800000 , nil   ,        ["ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"] ],
+  ["CUSTOMER"  , "customer.tbl", nil              , 150000 , "c_custkey",   ["c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"] ],
+  ["SUPPLIER"  , "supplier.tbl", nil              , 10000  , "s_suppkey",   ["s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"] ],
+  ["REGION"    , "region.tbl"  , nil              , 5      , "r_regionkey", ["r_regionkey", "r_name", "r_comment"] ],
+  ["NATION"    , "nation.tbl"  , nil              , 25     , "n_nationkey", ["n_nationkey", "n_name", "n_regionkey", "n_comment"] ]
 ].each do |t| 
   tables.push(TableInfo.new(t, tables));
 end
 
 
 GetoptLong.new(
-  [ "--REGIONS"        , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--NATIONS"        , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--CUSTOMERS"      , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--REGION"         , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--NATION"         , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--CUSTOMER"       , GetoptLong::OPTIONAL_ARGUMENT],
   [ "--ORDERS"         , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--LINEITEMS"      , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--PARTS"          , GetoptLong::OPTIONAL_ARGUMENT],
-  [ "--SUPP"           , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--LINEITEM"       , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--PART"           , GetoptLong::OPTIONAL_ARGUMENT],
+  [ "--SUPPLIER"       , GetoptLong::OPTIONAL_ARGUMENT],
   [ "--PARTSUPP"       , GetoptLong::OPTIONAL_ARGUMENT],
   [ "-d", "--data"     , GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
