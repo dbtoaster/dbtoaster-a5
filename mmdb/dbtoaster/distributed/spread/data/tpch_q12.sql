@@ -1,14 +1,18 @@
+--alias CUSTOMER,C,ORDERS,O,LINEITEM,L
 --slice transform ORDERS[5]~/([0-9]*)-.*/\1/
+--slice transform LINEITEM[16]<d10,11
+--slice transform LINEITEM[17]<d10,12
+--slice transform LINEITEM[14]#
+--slice project   LINEITEM(0,16,17,14)
 --slice project   ORDERS(0,1,5,7)
---slice project   CUSTOMERS(0,3)
---slice transform LINEITEMS[16]<d10,11
---slice transform LINEITEMS[17]<d10,12
---slice transform LINEITEMS[14]#
---slice project   LINEITEMS(0,16,17,14)
+--slice project   CUSTOMER(0,3)
 --slice source test
 --partition Map q on 5 weight by 1
---partition Map qLINEITEMS1 on 2 weight by 1
-create table customers(cid int, nid int); 
-create table orders(oid int, o_cid int, opriority int, spriority int);
-create table lineitems(l_oid int, lateship int, latecommit int, shipmode int);
-select sum(1),cid,nid,oid,opriority,spriority,lateship,latecommit,shipmode from customers,orders,lineitems where o_cid=cid and l_oid=oid group by cid,nid,oid,opriority,spriority,lateship,latecommit,shipmode;
+--partition Map qLINEITEM1 on 2 weight by 1
+create table customer(c_custkey int, c_nationkey int); 
+create table orders(o_orderkey int, o_custkey int, o_opriority int, o_spriority int);
+create table lineitem(l_orderkey int, l_lateship int, l_latecommit int, l_shipmode int);
+select sum(1),c_custkey,c_nationkey,o_orderkey,o_opriority,o_spriority,l_lateship,l_latecommit,l_shipmode
+from customer c, orders o, lineitem l
+where o_custkey=c_custkey and l_orderkey=o_orderkey
+group by c_custkey,c_nationkey,o_orderkey,o_opriority,o_spriority,l_lateship,l_latecommit,l_shipmode;

@@ -1,26 +1,25 @@
---slice project CUSTOMERS(0,3)
---slice project SUPP(0,3)
+--slice project CUSTOMER(0,3)
+--slice project SUPPLIER(0,3)
 --slice project ORDERS(0,1)
---slice project LINEITEMS(0,1,2,3,4)
-create table customers(cid int, c_nid int);
-create table supp(sid int, s_nid int);
-create table orders(oid int, o_cid int);
-create table lineitems(l_oid int, l_pid int, l_sid int, linenumber int, quantity float);
+--slice project LINEITEM(0,1,2,3,4)
+--alias CUSTOMER,C,SUPPLIER,S,ORDERS,O,LINEITEM,L
+create table customer(c_custkey int, c_nationkey int);
+create table supplier(s_suppkey int, s_nationkey int);
+create table orders(o_orderkey int, o_custkey int);
+create table lineitem(l_orderkey int, l_partkey int, l_suppkey int, l_linenumber int, l_quantity float);
 
 -- Compute national demand per part, i.e. the total quantity bought
 -- and sold by suppliers and customers in the same nation
-select l.l_pid, sum(l.quantity) from
-    customers c, supp s,
-    orders o, lineitems l
-where
-    c.c_nid = s.s_nid
-and s.sid = l.l_sid
-and c.cid = o.o_cid
-and o.oid = l.l_oid
-group by l.l_pid;
+select l_partkey, sum(l_quantity)
+from customer c, supplier s, orders o, lineitem l
+where c_nationkey = s_nationkey
+and   s_suppkey   = l_suppkey
+and   c_custkey   = o_orderkey
+and   o_orderkey  = l_orderkey
+group by l_partkey;
 
 -- TODO: second aggregate query for final averaging.
 -- Weights national demand per part by total amount of the part sold.
---select l.l_pid, sum(l.quantity)
+--select l_partkey, sum(l_quantity)
 --from lineitem l
---group by l.l_pid
+--group by l_partkey

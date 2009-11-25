@@ -1,28 +1,28 @@
---slice project CUSTOMERS(0,3)
+--alias SUPPLIER,S,PARTSUPP,PS,PART,P,CUSTOMER,C,LINEITEM,L,ORDERS,O
+--slice project CUSTOMER(0,3)
 --slice project ORDERS(0,1)
---slice project LINEITEMS(0,3,4,5,6)
---slice project SUPP(0,3)
---slice project PARTS(0,7)
+--slice project LINEITEM(0,3,4,5,6)
+--slice project SUPPLIER(0,3)
+--slice project PART(0,7)
 --slice project PARTSUPP(0,1,2,3)
-
-create table customers(cid int, c_nid int);
-create table orders(oid int, o_cid int);
-create table lineitems(l_oid int, linenumber int, quantity float, extendedprice float, discount float);
-create table supp(sid int, s_nid int);
-create table parts(pid int, retailprice float);
-create table partsupp(ps_pid int, ps_sid int, availqty int, supplycost float);
+create table customer(c_custkey int, c_nationkey int);
+create table orders(o_orderkey int, o_custkey int);
+create table lineitem(l_orderkey int, l_linenumber int, l_quantity float, l_extendedprice float, l_discount float);
+create table supplier(s_suppkey int, s_nationkey int);
+create table part(p_partkey int, p_retailprice float);
+create table partsupp(ps_partkey int, ps_suppkey int, ps_availqty int, ps_supplycost float);
 
 -- Compute "national debt", i.e. difference of inventory value
 -- and customer spending in the same nation
-select s.s_nid,
-       sum(ps.availqty * (p.retailprice + (-1 * ps.supplycost)) +
-           (-1 * (l.quantity * (l.extendedprice + (-1 * l.discount)))))
+select s_nationkey,
+       sum(ps_availqty * (p_retailprice + (-1 * ps_supplycost)) +
+           (-1 * (l_quantity * (l_extendedprice + (-1 * l_discount)))))
 from
-supp s, partsupp ps, parts p,
-customers c, lineitems l, orders o
-where s.s_nid = c.c_nid
-and   s.sid = ps.ps_sid
-and   p.pid = ps.ps_pid
-and   c.cid = o.o_cid
-and   o.oid = l.l_oid
-group by s.s_nid
+supplier s, partsupp ps, part p,
+customer c, lineitem l, orders o
+where s_nationkey = c_nationkey
+and   s_suppkey = ps_suppkey
+and   p_partkey = ps_partkey
+and   c_custkey = o_custkey
+and   o_orderkey = l_orderkey
+group by s_nationkey
