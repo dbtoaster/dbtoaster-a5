@@ -50,6 +50,9 @@ conf.nodes.each_pair do |node, info|
       "  Map " + map.to_s + "[" + partition.join(",") +"]";
     end.join("\n"));
 end
+conf.partition_sizes.each_pair do |map, sizes|
+  handler.define_partition(map, sizes);
+end
 conf.templates.each_pair do |id, cmd|
   handler.install_template(cmd, id)
 #  puts "Loaded Template " + id.to_s;

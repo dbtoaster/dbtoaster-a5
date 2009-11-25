@@ -10,6 +10,8 @@ class SwitchNodeHandler
   def initialize
     @next_template = 0;
     @next_cmd = 1;
+    @next_update = 1;
+    @fetch_count = 0;
     @templates = Hash.new;
     @layout = MapLayout.new;
     @nodelist = Hash.new;
@@ -35,12 +37,18 @@ class SwitchNodeHandler
   def next_cmd
     @next_cmd += 1;
   end
+  
+  def next_update
+    puts "Switch: #{@next_update} updates processed; #{@next_cmd} puts, #{@fetch_count} fetches" if (@next_update % 1000 == 0) 
+    @next_update += 1;
+  end
 
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     params.collect! { |param| param.to_i }
     @templates[table.to_s].each do |trigger|
       put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
+        @fetch_count += 1;
         node(fetch_node).fetch(fetch_entries, put_node, cmdid+put_index);
       end
       if trigger.requires_loop?
@@ -49,11 +57,12 @@ class SwitchNodeHandler
           next_cmd;
         end
       else
-        raise SpreadException.new("More than one put node for a non-mass put") unless put_nodes.size == 1;
+        raise SpreadException.new("More than one put node (#{put_nodes.size}) for a non-mass put: Template: #{trigger.index}; Entry #{table} => #{params.join(",")}") unless put_nodes.size == 1;
         node(put_nodes[0][0]).put(cmdid.to_i, trigger.index.to_i, params);
         next_cmd;
       end
     end
+    next_update
   end
   
   def dump()
@@ -67,7 +76,7 @@ class SwitchNodeHandler
     Logger.debug { "Loading Template " + index.to_s + ": " + template.summary; }
     template.index = index;
     compiled = @layout.compile_trigger(template);
-    Logger.debug { "Compiled Trigger: \n" + compiled.to_s; }
+#    puts "Compiled Trigger: \n" + compiled.to_s;
     @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   

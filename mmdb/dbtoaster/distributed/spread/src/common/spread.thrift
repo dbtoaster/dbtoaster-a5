@@ -82,11 +82,11 @@ service SwitchNode {
 }
 
 service SlicerNode {
-  void start_switch  ( ),
-  void start_node    ( 1: i32 port  ),
-  void start_client  ( ),
+  oneway void start_switch  ( ),
+  oneway void start_node    ( 1: i32 port  ),
+  oneway void start_client  ( ),
   void shutdown      ( ),
-  void start_logging ( 1: NodeID target ),
-  void receive_log   ( 1: string log_message ),
+  oneway void start_logging ( 1: NodeID target ),
+  oneway void receive_log   ( 1: string log_message ),
   string poll_stats  ( )
 }

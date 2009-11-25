@@ -8,7 +8,7 @@ require 'ok_mixins'
 class MultiKeyMap
   attr_reader :numkeys, :empty, :patterns;
   
-  def initialize(numkeys, patterns, name = "", basepath = ".", default = nil, wildcard = -1)
+  def initialize(numkeys, patterns, name = "", basepath = "/tmp", default = nil, wildcard = -1)
     @numkeys, @wildcard, @default, @basepath = numkeys.to_i, wildcard, default, basepath;
     #@patterns = patterns.delete_if { |pattern| pattern.size >= numkeys };
     patterns.delete_if { |pattern| pattern.size >= numkeys };
@@ -63,10 +63,10 @@ class MultiKeyMap
         yield Marshal.restore(pkey), val.to_f;
         key, pkey, val = cur.pget(pattern_key, nil, Bdb::DB_NEXT_DUP);
       end
+      cur.close;
     else
       yield partial_key, self[partial_key]
     end
-    cur.close;
   end
   
   def replace(partial_key)
@@ -115,7 +115,7 @@ class MultiKeyMap
     Logger.warn { "Creating database for map : #{@name}" };
     @env = Bdb::Env.new(0);
     @env.cachesize = 128*1024*1024
-    @env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+    @env.open(@basepath, Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
     @basemap = @env.db;
     if (File.exist? "#{@basepath}/db_#{@name}_primary.db") && delete_old then
       File.delete("#{@basepath}/db_#{@name}_primary.db")

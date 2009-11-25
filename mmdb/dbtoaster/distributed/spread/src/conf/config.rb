@@ -5,7 +5,7 @@ require 'getoptlong';
 require 'spread_types_mixins';
 
 class Config
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path;
   attr_writer :my_name, :my_port;
   
   def initialize
@@ -20,6 +20,12 @@ class Config
     @my_port = 52982;
     @switch = NodeID.make("localhost", 52981);
     @log_maps = Set.new;
+    
+    @spread_path = "#{File.dirname(__FILE__)}/../.."
+    if (@spread_path[0] != '/'[0]) || (@spread_path == "") then
+      @spread_path = "#{`pwd`}/#{@spread_path}"
+    end
+    Logger.info { "Spread Path is : #{@spread_path}" }
     
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 
@@ -54,7 +60,7 @@ class Config
           
           @nodes[curr_node]["partitions"][map.to_i].push(segment);
           @partition_sizes[map.to_i] = 
-            segment.zip(@partition_sizes[map.to_i]).collect { |sizes| if sizes[1].nil? then sizes[0] else Math.max(*sizes) end };
+            segment.zip(@partition_sizes[map.to_i]).collect { |sizes| if sizes[1].nil? then sizes[0].to_i+1 else Math.max(sizes[0]+1, sizes[1]) end };
 
         when "value" then 
           match = /Map *([0-9]+) *\[([^\]]*)\] *v([0-9]+) *= *([0-9.]+)/.match(line)
@@ -64,7 +70,8 @@ class Config
           
           @nodes[curr_node]["values"][map.to_i][keys.split(/, */).collect do |k| k.to_i end] = value.to_f;
 
-
+        when "spread_path" then cmd.shift; @spread_path = cmd.shift.chomp;
+        
         when "template" then 
           cmd.shift; 
           @templates[cmd.shift] = UpdateTemplate.new(cmd.join(" "));
@@ -162,7 +169,6 @@ class Config
   def my_name
     return @my_name if @my_name;
     @nodes.each_pair do |node, info|
-      puts "Checking " + node + " / " + @my_name.to_s;
       return @my_name = node if (info["address"].port.to_i == @my_port.to_i) &&
                                 ((info["address"].host == `hostname`.chomp) ||
                                  (info["address"].host == "localhost"));

@@ -26,16 +26,26 @@ end
 raise "usage: slicer.sh CONFIG" unless ARGV.size >= 1;
 
 $config_file = ARGV[0]
-$spread_dir = File.dirname(__FILE__) + "/../..";
 
-$local_node, $local_server = SlicerNode::Processor.listen($config_file, $spread_dir, $verbosity);
+$local_node, $local_server = SlicerNode::Processor.listen($config_file, $verbosity);
+
+server_thread = Thread.new($local_server) { |server| server.serve }
+Logger.info { "Sleeping for server to come up." }
+sleep 0.5;
 
 if $serving then
   puts "====> Server Ready <===="
 else
   $pending_servers = $local_node.config.nodes.size + 1; # the +1 is for the switch
   $local_node.declare_master do |log_message, handler|
-    $pending_servers -= 1 if /Starting #<Thrift::NonblockingServer:/.match(log_message)
+    # This block gets executed every time we get a log message from one of our clients;
+    # we use it to figure out when the switch/nodes have all started so we can initialize the
+    # client.  After that point, returning nil removes this block from the loop.
+
+    if /Starting #<Thrift::NonblockingServer:/.match(log_message) then
+      $pending_servers -= 1 
+      Logger.info { "A server just came up; #{$pending_servers} servers left" }
+    end
     if $pending_servers <= 0 then
       Logger.info { "Server Initialization complete, Starting Client..." };
       $clients[$local_node.config.switch.host].start_client
@@ -43,22 +53,30 @@ else
     puts log_message;
     if $pending_servers > 0 then handler else nil end;
   end
+  
+  
   $clients = Hash.new do |h,k|
-    manager = SlicerNode::Manager.initialize(k, $spread_dir, $config_file);
+    manager = SlicerNode::Manager.new(k, $local_node.config.spread_path, $config_file);
     Thread.new(manager) { |manager| loop { exit unless manager.check_error; sleep 10; } };
-    manager.client.start_logging(NodeID.make(`hostname`, 52980));
+    manager.client.start_logging(NodeID.make(`hostname`.chomp, 52980));
     h[k] = manager.client;
   end
   $clients["localhost"] = $local_node;
   
   Logger.info { "Starting Nodes..." };
   $local_node.config.nodes.each do |node, node_info|
-    Logger.info { "Starting : " + node };
+    Logger.info { "Starting : #{node} @ #{node_info["address"]}" };
     $clients[node_info["address"].host].start_node(node_info["address"].port);
   end
   
-  Logger.info { "Starting Switch..." };
+  Logger.info { "Starting Switch @ #{$local_node.config.switch.host}..." };
   $clients[$local_node.config.switch.host].start_switch;
+
+  Logger.info { "Starting Monitor" }
+  monitor = SlicerMonitor.new($clients.keys.delete_if { |c| c == "localhost" }.uniq);
+
+  Logger.info { "Sleeping until finished" };
 end
 
-$local_server.serve;
+Signal.trap("HUP") { exit }
+sleep;

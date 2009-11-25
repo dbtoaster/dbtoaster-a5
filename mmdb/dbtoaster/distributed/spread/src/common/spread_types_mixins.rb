@@ -26,7 +26,7 @@ class Entry
   end
   
   def has_wildcards?
-    @key.include? wildcard;
+    @key.include? Entry.wildcard;
   end
   
   def Entry.make(source, key)
@@ -56,12 +56,13 @@ class Entry
   end
   
   def Entry.compute_partition(keys, sizes)
-    keys.zip(sizes).collect do |k, s|
-      if s == 0 then 0
+    ret = keys.zip(sizes).collect do |k, s|
+      if s <= 1 then 0
       elsif k < 0 then -1
-      else (k.hash.abs.to_f * (s.to_f / Fixnum.max_fixnum.to_f)).to_i
+      else (k.to_i % s.to_i)
       end
     end
+    ret;
   end
 end
 

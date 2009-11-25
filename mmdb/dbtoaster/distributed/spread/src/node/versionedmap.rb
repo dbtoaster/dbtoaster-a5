@@ -91,8 +91,9 @@ class MapPartition
   
   def finish_pending
     while (not @pending.empty?) && @pending[0].ready
-      @pending.updates.each { |target, delta| set(target, delta) };
-      @pending.fire;
+      pending = @pending.shift; 
+      pending.updates.each { |target, delta| set(target, delta) };
+      pending.fire;
     end
   end
   

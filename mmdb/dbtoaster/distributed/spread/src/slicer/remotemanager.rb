@@ -9,6 +9,7 @@ class RemoteProcess
     @log = Queue.new if queue;
     
     process = IO.popen("ssh -t -t " + @host, "w+");
+    Logger.info { "Starting remote process: #{cmd}" }
     @thread = Thread.new(process, @cmd, @log) do |ssh, cmd, log|
       Logger.info { "SSH pid " + ssh.pid.to_s + " starting: " + cmd.chomp; }
       ssh.write(cmd.chomp + " 2>&1\n");
@@ -22,7 +23,7 @@ class RemoteProcess
       Logger.info { "SSH pid " + ssh.pid.to_s + " complete"; }
     end
     at_exit do 
-      Process.kill("HUP", process.pid); thread.join; 
+      Process.kill("HUP", process.pid); 
       Logger.info { "Killed SSH to " + @host; }
     end
   end

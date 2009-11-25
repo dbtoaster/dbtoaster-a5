@@ -1,4 +1,4 @@
-SQL_TESTDATA=data/tpch_LONG.unit data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit data/tpch_nonkey.unit
+SQL_TESTDATA=data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit data/tpch_nonkey.unit
 AUTO_SQL_TESTS=rst_join
 
 all: recursive $(SQL_TESTDATA)
@@ -13,8 +13,8 @@ clean:
 	
 test_data: all $(SQL_TESTDATA)
 
-$(SQL_TESTDATA) : %.unit : %.sql src/toaster/toaster.rb
-	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@ data/localhost_solo.nodes
+$(SQL_TESTDATA) : %.unit : %.sql src/toaster/toaster.rb data/wl10.nodes
+	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@ data/wl10.nodes
 
 test: all test_naive test_switch $(AUTO_SQL_TESTS)
 

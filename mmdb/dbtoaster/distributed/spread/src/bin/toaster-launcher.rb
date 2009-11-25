@@ -65,6 +65,8 @@ end
 
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
+$output.write("switch " + $toaster.switch+"\n");
+
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");
   $output.write("address " + address.to_s + ":" + port.to_s + "\n");

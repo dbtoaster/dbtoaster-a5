@@ -12,12 +12,12 @@ class SlicerNodeHandler
   attr_reader :config, :verbosity, :is_master;
   attr_writer :message_handler;
 
-  def initialize(config_file, spread_path, verbosity = :quiet)
+  def initialize(config_file, verbosity = :quiet)
     @config_file = config_file;
     @config = Config.new();
       @config.load(File.open(config_file));
     @monitor_intake = Queue.new;
-    @spread_path = spread_path;
+    @spread_path = @config.spread_path;
     @verbosity = verbosity;
     @is_master = false;
     @message_handler = nil;
@@ -35,6 +35,7 @@ class SlicerNodeHandler
           when :master  then master = true;
         end
       end
+      puts "Leaving monitor thread!";
     end
   end
   
@@ -52,6 +53,7 @@ class SlicerNodeHandler
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
         PTY.spawn(cmd) do |stdin, stdout, pid|
+          at_exit { Process.kill("HUP", pid) };
           stdin.each { |line| output.push([:data, line]); }
         end
       rescue PTY::ChildExited
@@ -84,7 +86,7 @@ class SlicerNodeHandler
   end
   
   def start_logging(target)
-    @monitor_intake.push([:client, MapNode::Client.connect(target)]);
+    @monitor_intake.push([:client, SlicerNode::Client.connect(target)]);
   end
   
   def receive_log(log_message)
@@ -117,7 +119,7 @@ module SlicerNode
     def initialize(host, spread_path, config_file)
       @host = host;
       @process = RemoteProcess.new(
-        spread_path + "/src/slicer.sh --serve " + config_file,
+        "cd #{spread_path}; ./bin/slicer.sh --serve #{config_file}",
         host, 
         true
       )
@@ -140,7 +142,9 @@ module SlicerNode
     end
     
     def client
+      Logger.warn { "Waiting for slicer to spawn on : #{host}" }
       @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
+      Logger.warn { "Slicer spawned on : #{host}" }
       if @client then @client
       else @client = Client.connect(@host)
       end
@@ -166,8 +170,8 @@ module SlicerNode
   end
   
   class Processor
-    def Processor.listen(config_file, spread_path, verbosity = :quiet, port = 52980);
-      handler = SlicerNodeHandler.new(config_file, spread_path, verbosity);
+    def Processor.listen(config_file, verbosity = :quiet, port = 52980);
+      handler = SlicerNodeHandler.new(config_file, verbosity);
 
       processor = SlicerNode::Processor.new(handler);
       transport = Thrift::ServerSocket.new(port);
@@ -184,29 +188,37 @@ module SlicerNode
 end
 
 class SlicerMonitor
-  def initialize(slicers)
-    @slicers = slicers.each
-  end
-  
-  def start
-    @connections.each { |c| c.start };
-    Thread.new(@connections) do |connections|
+  def initialize(nodes, interval = 5)
+    @nodes = nodes.collect do |node| 
+      [ 
+        conn = SlicerNode::Client.connect(node),
+        out_blocker = Queue.new,
+        in_blocker = Queue.new,
+        Thread.new(node, conn, out_blocker, in_blocker) do |n, c, ob, ib|
+          loop do
+            ib.pop;
+            ob.push(c.poll_stats.split("\n").collect { |l| "#{n}  #{l}"}.join("\n"))
+          end
+        end
+      ]
+    end
+    @monitor = Thread.new(@nodes, interval) do |nodes, interval|
       loop do
-        log = connections.collect do |c| 
-          c.queue.pop_pending
-        end.flatten.collect do |line|
+        sleep interval;
+        nodes.each { |c, ob, ib| ib.push(1) }
+        log = nodes.collect { |c, ob, ib| ob.pop.split("\n") }.flatten.collect do |line|
           if /ruby .*-launcher.rb/.match(line) then
             line.chomp.gsub(
               /-I [^ ]* */, ""
             ).gsub(
-              /ruby +[^ ]*\/([^\/ \-]*-launcher).rb/, "\\1"
-            ).gsub(
-              / (node-launcher .*-n *( [^ ]+).*)| ([^ ]+)-launcher.*/, " \\2\\3"
-            ).split(" ").values_at(10, 2, 3, 5)
+              /ruby +[^ ]*\/([^\/ \-]*)-launcher.rb.*/, "\\1"
+            )
           end
-        end.compact.tabulate
-        puts log;
+        end
+        puts log.join("\n");
       end
     end
   end
 end
+
+

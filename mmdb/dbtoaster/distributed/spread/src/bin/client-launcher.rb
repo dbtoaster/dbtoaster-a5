@@ -91,7 +91,7 @@ end
 $ratelimit = $stats_every.to_f / $ratelimit if $ratelimit;
 
 
-switch = SwitchNode::Client.connect("localhost", 52981) unless $test;
+switch = SwitchNode::Client.connect(`hostname`.chomp, 52981) unless $test;
 
 def compare_date(indices, params)
   indices = indices.collect{ |i| params[i.to_i] };

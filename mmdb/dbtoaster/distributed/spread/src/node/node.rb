@@ -154,7 +154,7 @@ class ValuationApplicator
   end
   
   def discover(key, value)
-    puts "Discovered that : #{key} = #{value}";
+    puts "Discovered that : #{key} = #{value}" if @log;
     @valuation.discover(key, value)
     begin
       @final_val = @valuation.to_f
@@ -241,7 +241,8 @@ class MassValuationApplicator
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
       @evaluator.foreach do |target, delta_value|
         puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
-        partitions[target.partition(@handler.partition_sizes[@evaluator.valuation.target.source])].update(target.key, delta_value);
+        partition = target.partition(@handler.partition_sizes[target.source]);
+        partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;
       end
       @handler.finish_valuating(@id);
     end
@@ -253,7 +254,8 @@ class MassValuationApplicator
     return unless @records;
     @evaluator.foreach do |target, delta_value|
       puts "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" if @log;
-      @records[target.partition].discover(target, delta_value);
+      partition = target.partition(@handler.partition_sizes[target.source]);
+      @records[partition].discover(target.key, delta_value) if @records.has_key? partition;
     end
     @records.each_value { |record| record.finish }
     @handler.finish_valuating(@id);
@@ -283,10 +285,11 @@ class MapNodeHandler
   def find_partition(source, key)
     raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
     
-    if @maps.has_key? source.to_i then
-      @maps[source.to_i][Entry.compute_partition(key, @partition_sizes[source.to_i])];
+    partition = Entry.compute_partition(key, @partition_sizes[source.to_i]);
+    if (@maps.has_key? source.to_i) && (@maps[source.to_i].has_key? partition) then
+      @maps[source.to_i][partition];
     else
-      raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + key.join(",") + "]; Known maps: " + @maps.keys.join(", "));
+      raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + partition.join(",") + "]; Known maps: " + @maps.collect {|k,v| k.to_s+"{"+v.keys.collect { |partid| "[#{partid.join(",")}]" }.join(";") + "}"}.join(", "));
     end
   end
   
@@ -301,7 +304,7 @@ class MapNodeHandler
   
   def create_partition(map, partition, size)
     @partition_sizes[map] = size;
-    @maps[map.to_i][partition] = MapPartition.new(map, partition, @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq);
+    @maps[map.to_i][partition.collect { |partdim| partdim.to_i }] = MapPartition.new(map, partition, @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq);
     Logger.debug { "Created partition " + @maps[map.to_i].to_s }
   end
   
@@ -459,14 +462,14 @@ class MapNodeHandler
           loop_partitions(t.source, t.key) do |partition|
             request.hold;
             partition.get(
-              t, 
+              t.key, 
               proc { |key, value| request.fire(Entry.make(t.source, key), value) },
               proc { request.release }
             );
           end
         else
           find_partition(t.source, t.key).get(
-            t, 
+            t.key, 
             proc { |key, value| request.fire(Entry.make(t.source, key), value) },
             nil
           );
@@ -480,7 +483,7 @@ class MapNodeHandler
   end
   
   def push_get(result, cmdid)
-    Logger.info {"Pushget: " + result.size.to_s + " results for command " + cmdid.to_s }
+    Logger.debug {"Pushget: " + result.size.to_s + " results for command " + cmdid.to_s }
     if cmdid == 0 then
       Logger.info {
         "  Fetch Results Pushed: " + 
