@@ -3,7 +3,7 @@ require 'ok_mixins';
 require 'template'
 
 class DBToaster
-  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload;
+  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload, :map_formulae;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
@@ -15,6 +15,9 @@ class DBToaster
     @compiled = nil;
     @switch = "localhost";
     @preload = nil;
+    @schemas = nil;
+    @map_aliases = Hash.new;
+    @map_formulae = nil;
     
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
@@ -62,6 +65,7 @@ class DBToaster
         @keys.assert_key(match[1]){ Hash.new }.assert_key(match[2]){ Hash.new }[match[3]] = [match[4]];
   #    else raise "Unknown option: " + opt;
       when "--preload"   then @preload = arg;
+      when "--alias"     then @map_aliases = Hash[*arg.split(",").collect{ |x| x.strip }]
     end
   end
   
@@ -89,13 +93,16 @@ class DBToaster
       if @compiled.size < 2 then
         raise "Error compiling, no compiler output:" + data.join("");
       end
-      
+
       # Make sure we have SOME nodes.
       raise "SQL file defines no nodes!  Either invoke toaster with --node, or include a --node directive in the SQL file" unless @nodes.size > 0;
   
       toast_templates;
       toast_schemas;
       toast_maps;
+
+      generate_map_queries(data);
+      
       @DBT = nil;
     rescue Exception => e
       puts "Error toasting.  Compiler output: \n" + data.join("");
@@ -161,6 +168,145 @@ class DBToaster
           }
         ]
       end.collect_hash
+  end
+
+  # Generate bootstrap queries
+  def generate_map_queries(compiler_output)
+    compiled_maps = compiler_output.select do |l|
+      l =~ /Adding compilation of/
+    end.collect do |l|
+      n = l.chomp.gsub(/Adding compilation of ([a-zA-Z0-9]+): .*/, "\\1")
+    end
+    
+    @map_formulae = Hash[*compiler_output.select do |l|
+        if l =~ /Creating map/ then 
+          n = l.chomp.gsub(/Creating map ([a-zA-Z0-9]+) .*/, "\\1")
+          not(compiled_maps.index(n).nil?)
+        else false end 
+      end.collect do |l|
+        
+        n,t = l.chomp.gsub(/Creating map ([a-zA-Z0-9]+) for term (.*)/, "\\1 \\2").split(" ",2)
+
+        puts n+": "+t
+        
+        # Substitutions for variables -> params (i.e. dom vars)
+        key_param_subs = Hash.new
+        
+        # Separate aggregate vs. relational part
+        agg,rel_t = t.gsub(/AggSum\((.*)\)/, "\\1").split(",", 2)
+        
+        t_rels = []
+        t_preds = []
+        rel_t.split(" and ").each do |t|
+          if t =~ /\(/ then t_rels.push(t) else t_preds.push(t) end 
+        end
+
+        rels = t_rels.collect do |r|
+          # Separate relation names and fields
+          rel_n, rel_f = r.gsub(/([a-zA-Z0-9]+)\(([^\)]*)\)/,"\\1 \\2").split(" ",2)
+          rel_alias = @map_aliases.key?(rel_n) ? @map_aliases[rel_n] : nil
+          fields_and_prefixes = rel_f.split(",").collect do |f|
+              x=f.strip;
+              prefix = if (p_idx = x.index('__')).nil? then "" else x[0,p_idx] end; 
+              [x,prefix]
+            end
+          
+          # Check if prefix matches schema alias, otherwise add predicate
+          invalid_indexes = []
+          domains = Hash.new
+          fields_and_prefixes.each_index do |i|
+            f, p = fields_and_prefixes[i]
+            if p != rel_alias then invalid_indexes.push(i) end
+          end;
+          predicates =
+            invalid_indexes.collect do |i|
+              f,p = fields_and_prefixes[i]
+              orig_f = if @schemas.key? rel_n then @schemas[rel_n][i] else "xxx" end;
+
+              (if f =~ /^x_/ then
+                attr_idx = f.index('__')-1
+                dom_rel_start = f[0,attr_idx].rindex('_')+1
+                dom_rel_alias = f[dom_rel_start..attr_idx]
+                dom_attr = f[attr_idx+1..-1]
+                dom_rel = if @map_aliases.value?(dom_rel_alias)
+                  then @map_aliases.index(dom_rel_alias)
+                  else dom_rel_alias end
+
+                puts dom_rel
+                puts dom_rel_alias
+
+                dom_idx = @schemas[dom_rel].index(dom_rel_alias+dom_attr)
+                
+
+                param = "dom_" + dom_rel_alias + dom_attr
+                if domains.key?(dom_rel) then
+                  domains[dom_rel].push(dom_idx)
+                else
+                  domains[dom_rel] = [dom_idx]
+                end
+                # Substitute both the LHS and RHS of the constraint for keys
+                key_param_subs[f] = param
+                key_param_subs[orig_f] = param
+                ":"+param
+              else f.sub(/__/, ".") end) + " = " + orig_f.sub(/__/, ".")
+            end
+          
+          # Return [relation name, [fields, predicates, domains]]
+          [rel_n, fields_and_prefixes.collect { |f,p| f }, predicates, domains]
+      end;
+      where_clause = 
+        (rels.select { |x| x[2].length > 0 }.collect { |x| x[2] }.join(" and "));
+      
+      # Map params, which should contain only groupby cols, and domain vars.
+      map_id = @map_info.select { |k,v| v["map"] == n }.first[0]
+      keys = @templates.select { |t| t.target.source == map_id }.
+        first.target.keys.collect do |k|
+          if key_param_subs.key?(k) then key_param_subs[k] else k end
+        end
+
+      # Map access patterns
+      ap = @templates.collect do |t|
+          t.access_patterns(map_id).compact.join(",")
+        end.select{|x| x.length > 0}.join("|")
+
+      # Group bys
+      params = rels.collect do |x|
+        x[3].to_a.collect { |r,i| i.collect { |j| "dom_"+@schemas[r][j] }  }
+      end.flatten
+      
+      group_bys = keys.reject { |k| params.include?(k) }
+
+      keys_s = keys.collect do |k|
+        if group_bys.include?(k) then "Q."+group_bys.index(k).to_s else k end
+      end.join(",")
+      
+      # Domains (i.e. relations + positions) for map params
+      param_sources = rels.collect do |x|
+          x[3].to_a.collect { |r,i| i.collect { |j|
+            r+"."+(j.to_s)+"=>"+"dom_"+@schemas[r][j] }  }
+        end.to_a.select{|x| x.length > 0}.join(",")
+
+      # SQL query
+      query = 
+        "select "+
+          (group_bys.length > 0? group_bys.join(",").gsub(/__/,".")+"," : "") +
+          "sum("+agg.gsub(/__/,".")+")"+
+        " from "+(rels.collect do |x|
+          x[0]+(@map_aliases.key?(x[0]) ? " "+@map_aliases[x[0]] : "")
+        end.join(", ")) +
+        (where_clause.length > 0 || t_preds.length > 0?
+          (" where " + where_clause + t_preds.join(" and ")) : "") +
+        (group_bys.length > 0?
+          (" group by " + group_bys.join(",").gsub(/__/,".")) : "")
+
+      # Binding vars for parameterized SQL query
+      bindvars =
+        rels.collect do |x|
+          x[3].to_a.collect { |r,i| i.collect { |j| "dom_"+@schemas[r][j] } }
+        end.flatten.join(",");
+
+      [n,[param_sources, query, bindvars, keys_s+(ap.length > 0? "/"+ap : "")].join("\n")]
+    end.flatten]
   end  
     
   ########################################################
