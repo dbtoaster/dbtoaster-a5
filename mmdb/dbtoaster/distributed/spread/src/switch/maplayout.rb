@@ -73,7 +73,7 @@ class MapLayout
           if valuations.has_key? k then
             [ [k, valuations[k]] ]
           else
-            (0...(map_refs.find { |ref| @partition_sizes[ref.source][ref.key.index(param)] if ref.key.include? param } || 1)).collect do |i|
+            (0...(map_refs.find { |ref| @partition_sizes[ref.source][ref.key.index(k)] if ref.key.include? k } || 1)).collect do |i|
               [k, i]
             end
           end
