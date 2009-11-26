@@ -3,6 +3,8 @@
 require 'oci8'
 require 'bdb2'
 
+$env = nil
+
 $dataset_path = "/home/yanif/datasets/tpch/100m"
 $output_path = "."
 
@@ -60,12 +62,15 @@ def interpret_keys(keys, names, values, result)
   end
 end
 
+def initialize_env()
+  $env = Bdb::Env.new(0);
+  $env.cachesize = 128*1024*1024
+  $env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+end
+
 def initialize_db(name, patterns, basepath = ".", delete_old = true)
   puts "Creating database for map : " + name ;
-  env = Bdb::Env.new(0);
-  env.cachesize = 128*1024*1024
-  env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
-  primary_db = env.db;
+  primary_db = $env.db;
   if (File.exist? "#{basepath}/db_#{name}_primary.db") && delete_old then
     File.delete("#{basepath}/db_#{name}_primary.db")
   end
@@ -75,7 +80,7 @@ def initialize_db(name, patterns, basepath = ".", delete_old = true)
   i = 0;
   patterns.each do |pattern|
     #puts "#{pattern}"
-    db[i] = env.db;
+    db[i] = $env.db;
     db[i].flags = Bdb::DB_DUPSORT;
     if (File.exist? "#{basepath}/db_#{name}_#{i}.db") && delete_old then
       File.delete("#{basepath}/db_#{name}_#{i}.db")
@@ -85,7 +90,7 @@ def initialize_db(name, patterns, basepath = ".", delete_old = true)
     secondary_dbs[pattern] = db[i];
     i = i + 1;
   end
-  [env, primary_db, secondary_dbs]
+  [primary_db, secondary_dbs]
 end
 
 def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
@@ -102,7 +107,7 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
   puts "Executing #{query}"
 
   # Create BerkeleyDB database, and secondary indexes from aps
-  env, primary, secondaries = initialize_db(name, aps, out_path)
+  primary, secondaries = initialize_db(name, aps, out_path)
 
   counter = 0
   while not(finished(domvars.length, domfiles))
@@ -139,7 +144,9 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
   # Close databases
   secondaries.each_value { |db| db.close(0) }
   primary.close(0)
-  env.close
+  #env.close
+
+  domfiles.each { |x,f| f.close }
 end
 
 #####################
@@ -232,7 +239,9 @@ def main(f)
     exit
   end
 
+  initialize_env;
   process(lines)
+  $env.close
 end
 
 if ARGV.length != 1 then
