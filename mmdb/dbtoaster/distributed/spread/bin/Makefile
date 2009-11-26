@@ -1,10 +1,10 @@
 
-COMPILER_DIR=../../../prototype/compiler/alpha3
+COMPILER_DIR=../../dbtoaster/compiler/alpha3
 COMPILER_FILES=$(wildcard $(COMPILER_DIR)/*.ml)
 REDIS_DIR=../../libraries/redis-1.02
 LAUNCHER_SCRIPTS=$(patsubst ../src/bin/%-launcher.rb,%.sh,$(wildcard ../src/bin/*-launcher.rb))
 
-all: $(LAUNCHER_SCRIPTS) dbtoaster.top redis-server-recurse redis-server
+all: $(LAUNCHER_SCRIPTS) dbtoaster.top
 
 $(LAUNCHER_SCRIPTS) : %.sh : ../src/bin/launcher.in
 	cat ../src/bin/launcher.in | sed s/--SCRIPT--/$*-launcher.rb/ > $@ 
