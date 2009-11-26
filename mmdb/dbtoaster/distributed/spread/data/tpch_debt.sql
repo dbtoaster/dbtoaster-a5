@@ -5,6 +5,7 @@
 --slice project SUPPLIER(0,3)
 --slice project PART(0,7)
 --slice project PARTSUPP(0,1,2,3)
+--slice source ~/tpch/100m
 create table customer(c_custkey int, c_nationkey int);
 create table orders(o_orderkey int, o_custkey int);
 create table lineitem(l_orderkey int, l_linenumber int, l_quantity float, l_extendedprice float, l_discount float);

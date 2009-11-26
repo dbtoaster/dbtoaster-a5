@@ -16,9 +16,8 @@ class RemoteProcess
       ssh.each do |line|
         if @log then
           log.push(line)
-        else
-          print line;
         end
+        print line;
       end
       Logger.info { "SSH pid " + ssh.pid.to_s + " complete"; }
     end

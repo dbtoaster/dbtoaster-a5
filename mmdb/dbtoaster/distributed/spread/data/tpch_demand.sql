@@ -3,6 +3,7 @@
 --slice project ORDERS(0,1)
 --slice project LINEITEM(0,1,2,3,4)
 --alias CUSTOMER,C,SUPPLIER,S,ORDERS,O,LINEITEM,L
+--slice source ~/tpch/100m
 create table customer(c_custkey int, c_nationkey int);
 create table supplier(s_suppkey int, s_nationkey int);
 create table orders(o_orderkey int, o_custkey int);
