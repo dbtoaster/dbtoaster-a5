@@ -76,7 +76,7 @@ class SwitchNodeHandler
     Logger.debug { "Loading Template " + index.to_s + ": " + template.summary; }
     template.index = index;
     compiled = @layout.compile_trigger(template);
-#    puts "Compiled Trigger: \n" + compiled.to_s;
+    puts "Compiled Trigger: \n" + compiled.to_s;
     @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
   end
   

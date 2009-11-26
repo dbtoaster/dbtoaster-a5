@@ -98,17 +98,19 @@ class MapNodeStats
   def initialize(name, handler)
     @name, @handler = name, handler;
     @stats = @mass_puts = @puts = @fetches = @pushes = 0;
+    @max_push = @push_size = 0;
   end
   
   def stat
     if ((@stats += 1) % 50000) == 0 then
       @handler.sync;
-      Logger.warn { "Status: " + @name + ";" + 
+      puts "Status: " + @name + ";" + 
         " put "      + @puts.to_s +
         " mass_put " + @mass_puts.to_s +
         " fetch "    + @fetches.to_s +
-        " pushes "    + @pushes.to_s +
-      "" }
+        " pushes "   + @pushes.to_s +
+        " avg_push " + (@push_size.to_f / @pushes.to_f).to_s +
+        " max_push " + @max_push.to_s
     end
   end
   
@@ -127,8 +129,10 @@ class MapNodeStats
     stat;
   end
   
-  def push
+  def push(size)
     @pushes += 1;
+    @push_size += size
+    @max_push = size if @max_push < size;
     stat;
   end
 end
@@ -506,7 +510,7 @@ class MapNodeHandler
       end
       @cmdcallbacks[cmdid].finish_message;
     end
-    @stats.push;
+    @stats.push(result.size);
   end
   
   ############# Internal Control

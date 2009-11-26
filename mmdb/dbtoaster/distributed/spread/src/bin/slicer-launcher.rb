@@ -33,6 +33,24 @@ server_thread = Thread.new($local_server) { |server| server.serve }
 Logger.info { "Sleeping for server to come up." }
 sleep 0.5;
 
+def spin_up_slicers(*slicer_nodes)
+  puts "Spinning up slicers"
+  slicer_nodes.collect do |node|
+    [
+      node, 
+      Thread.new(node) do |node| 
+        manager = SlicerNode::Manager.new(node, $local_node.config.spread_path, $config_file);
+        manager.client.start_logging(NodeID.make(`hostname`.chomp, 52980));
+        Thread.current[:client] = manager.client;
+      end
+    ]
+  end.collect_hash do |node, init_thread|
+    init_thread.join;
+    puts "Slicer for #{node} is active";
+    [node, init_thread[:client]]
+  end
+end
+
 if $serving then
   puts "====> Server Ready <===="
 else
@@ -54,13 +72,13 @@ else
     if $pending_servers > 0 then handler else nil end;
   end
   
-  
-  $clients = Hash.new do |h,k|
-    manager = SlicerNode::Manager.new(k, $local_node.config.spread_path, $config_file);
-    Thread.new(manager) { |manager| loop { exit unless manager.check_error; sleep 10; } };
-    manager.client.start_logging(NodeID.make(`hostname`.chomp, 52980));
-    h[k] = manager.client;
+  nodes = Set.new
+  $local_node.config.nodes.each do |node, node_info|
+    nodes.add(node_info["address"].host);
   end
+  nodes.add($local_node.config.switch.host);
+  
+  $clients = spin_up_slicers(*nodes.to_a);
   $clients["localhost"] = $local_node;
   
   Logger.info { "Starting Nodes..." };

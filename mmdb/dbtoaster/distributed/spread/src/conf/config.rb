@@ -78,7 +78,7 @@ class Config
         
         when "log_map"   then cmd.shift; @log_maps.add(cmd.shift.to_i);
         
-        when "limit"     then cmd.shift; @client_debug["ratelimit"] = cmd[1].chomp.to_i;
+        when "ratelimit" then cmd.shift; @client_debug["ratelimit"] = cmd.join(" ").chomp.to_i;
         when "transform" then cmd.shift; @client_debug["transforms"].push(cmd.join(" ").chomp);
         when "project"   then cmd.shift; @client_debug["projections"].push(cmd.join(" ").chomp);
         when "source"    then cmd.shift; @client_debug["sourcefile"] = cmd.join(" ");

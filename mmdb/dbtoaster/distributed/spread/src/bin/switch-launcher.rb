@@ -58,6 +58,17 @@ conf.templates.each_pair do |id, cmd|
 #  puts "Loaded Template " + id.to_s;
 end
 
+#Thread.current[:main_thread] = 0;
+#Thread.new do
+#  Thread.current[:monitor_thread] = 0;
+#  loop do
+#    sleep 10
+#    puts(Thread.list.collect do |t|
+#      t.inspect + " : " + t.keys.collect { |k| k.to_s }.join(",");
+#    end)
+#  end
+#end
+
 puts "Starting switch server on port " + port.to_s + "..."
 
 server.serve();

@@ -113,12 +113,42 @@ class DBToaster
   
   def toast_templates
     index = 0;
-    @templates = @compiled.collect do |l|
+
+    templates_by_relation = Hash.new { |h, k| h[k] = Array.new }
+
+    @compiled.collect do |l|
 #      puts "Loading template: " + l;
       UpdateTemplate.new(l, index += 1);
     end.delete_if do |template|
       template.relation[0] == "-"[0];
+    end.each do |template|
+      rel_temps = templates_by_relation[ [template.relation, template.target.source] ];
+      if rel_temps.empty? || (not rel_temps[0].conditions.conditions.empty?) then
+        rel_temps.unshift(template);
+      elsif (not template.conditions.conditions.empty?) then
+        rel_temps.push(template);
+      else
+        rel_keys = rel_temps[0].entries.collect{ |e| e.key }.flatten.uniq
+        new_key_names = template.entries.collect{ |e| e.key }.flatten.uniq.collect_hash do |key|
+          if template.paramlist.include? key then 
+            [key, rel_temps[0].paramlist[template.paramlist.index(key)]]
+          else
+            name = key;
+            i = 1;
+            while rel_keys.include? name
+              name = "#{key}_#{i}"
+              i += 1;
+            end
+            [key, name];
+          end
+        end
+        template.expression.rename(new_key_names);
+        rel_temps[0].add_expression(template.expression);
+      end
     end
+    
+    @templates = templates_by_relation.collect { |rel, tlist| tlist }.flatten
+    
   end
   
   def toast_schemas

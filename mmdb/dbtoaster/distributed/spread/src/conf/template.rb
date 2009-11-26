@@ -300,7 +300,7 @@ class TemplateExpression
     case @op
       when :plus, :mult, :sub, :div then @left.ready && @right.ready
       when :val then (@left.is_a? Numeric) || (params.has_param? @left)
-      when :map then @left.keys.assert { |key| @left.is_a? Numeric || (params.has_param? key) }
+      when :map then @left.keys.assert { |key| key.is_a? Numeric || (params.has_param? key) }
     end
   end
   
@@ -317,6 +317,13 @@ class TemplateExpression
         end
       when :map       then @left.to_s(params.params);
       else            raise SpreadException.new("Unknown Expression operator (to_s): " + @op.to_s);
+    end
+  end
+  
+  def rename(new_names)
+    case @op
+      when :plus, :mult, :sub, :div then @left.rename(new_names) && @right.rename(new_names)
+      when :map then @left.keys.collect! { |key| if new_names.has_key? key then new_names[key] else key end }
     end
   end
   
@@ -485,6 +492,10 @@ class UpdateTemplate
     @loopvarlist = @expression.loop_vars(@paramlist);
     
     @index = index;
+  end
+  
+  def add_expression(expression)
+    @expression = TemplateExpression.new(:plus, @expression, expression);
   end
   
   def requires_loop?
