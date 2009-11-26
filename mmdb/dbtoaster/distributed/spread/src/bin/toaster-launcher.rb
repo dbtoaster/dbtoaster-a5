@@ -5,6 +5,7 @@ require 'template';
 require 'toaster';
 
 $output = STDOUT;
+$boot = STDOUT;
 $toaster = DBToaster.new()
 $success = false;
 $options = Hash.new;
@@ -21,11 +22,13 @@ opts = GetoptLong.new(
   [ "-r", "--transforms",  GetoptLong::REQUIRED_ARGUMENT ],
   [       "--persist",     GetoptLong::NO_ARGUMENT ],
   [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ],
-  [ "-w", "--switch-addr", GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-w", "--switch-addr", GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-b", "--boot",        GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-k", "--ignore-keys" then $options[:toast_keys] = false;
+    when "-b", "--boot"        then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success }; 
     else                            $toaster.parse_arg(opt, arg)
   end
 end
@@ -53,6 +56,16 @@ end
 #$toaster.each_map do |map, info|
 #  $output.write("map " + map.to_s + " => Depth " + info["depth"].to_s + ";");
 #end
+
+puts "========== Map definitions ==========="
+$toaster.map_info.each_value do |info|
+  n = info["map"].to_s
+  if $toaster.map_formulae.key?(n) then
+    f = $toaster.map_formulae[n]
+    $boot.write(n+"\n"+f+"\n")
+  end
+end
+
 
 puts "==== Partition Choices =====";
 
