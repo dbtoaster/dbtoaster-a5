@@ -49,7 +49,7 @@ class SlicerNodeHandler
   
   def start_process(cmd)
     #cmd = cmd + " 1>&2";
-    Logger.info { "Running: " + cmd; }
+    @monitor_intake.push([:data, "Running: " + cmd ]);
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
         PTY.spawn(cmd) do |stdin, stdout, pid|
