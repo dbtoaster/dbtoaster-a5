@@ -4,64 +4,6 @@
 \appendix
 
 
-\section{Proof of Proposition~\ref{prop:delta-correct}}
-
-
-\begin{proof}
-It is easy to see that our definition is correct in the case of insertions.
-For the deletion case, all we need to show is that
-\begin{equation}
-\Delta_{-R(\vec{t})}(\alpha + \Delta_{+R(\vec{t})} \alpha) = \alpha.
-\label{eq:delta2}
-\end{equation}
-
-
-\def\dtp{\Delta_{+}}
-\def\dtm{\Delta_{-}}
-
-
-We use $\dtp$ and $\dtm$ as shortcuts for $\Delta_{+R(\vec{t})}$
-and $\Delta_{-R(\vec{t})}$, respectively.
-Let $\alpha' = \alpha+\dtp\alpha$ and $\beta' = \beta+\dtp\beta$.
-Consider the expression
-\[
-\overbrace{\color{white}{\alpha\beta +
-\color{black}{\overbrace{\color{white}{
-(\dtp \alpha)\beta + (\dtp \alpha)(\dtp \beta)
-+ \alpha(\dtp \beta)}}^{\dtp (\alpha\beta)}}}}^{\alpha' \beta'}
-\color{white}{+ (\dtp \alpha)(\dtp \beta)}
-\]
-
-\vspace{-14mm}
-
-\[
-\alpha\beta +
-\underbrace{(\dtp \alpha)\beta + (\dtp \alpha)(\dtp \beta)}_{
-(\dtp \alpha)\beta'}
-+ \underbrace{
-\alpha(\dtp \beta) + (\dtp \alpha)(\dtp \beta)}_{\alpha'(\dtp \beta)}
-\]
-Since $\alpha'\beta' = \alpha\beta + \dtp(\alpha\beta)$,
-\begin{equation}
-\dtp(\alpha\beta) + (\dtp\alpha)(\dtp\beta) =
-(\dtp \alpha)\beta' + \alpha'(\dtp \beta).
-\label{eq:delta3}
-\end{equation}
-We can verify by inspection of our definition that
-\begin{equation}
-\dtm(\alpha'\beta') + (\dtp \alpha)\beta' + \alpha'(\dtp \beta) =
-(\dtp\alpha)(\dtp\beta).
-\label{eq:delta4}
-\end{equation}
-Summing up Equations \ref{eq:delta3} and \ref{eq:delta4}, we obtain
-\[
-\dtp(\alpha\beta) + \dtm(\alpha'\beta') = 0,
-\]
-which proves Equation~\ref{eq:delta2}.
-%\punto
-\end{proof}
-
-
 \section{Further Examples}
 
 
@@ -258,7 +200,7 @@ where we assume that the schema of $R$ is $(A,B)$.
 
 \begin{example}\em
 Consider a simplified TPC-H like schema with relations O(K, R)
-and L(K, P). Orders O have an order key K and the currence exchange rate R fixed for this order (for
+and L(K, P). Orders O have an order key K and the current exchange rate R fixed for this order (for
 foreign customers). Line items L have an {\em order} key
 K and a price P. We compile the query
 \begin{verbatim}

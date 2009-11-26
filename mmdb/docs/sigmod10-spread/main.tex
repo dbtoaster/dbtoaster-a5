@@ -74,10 +74,10 @@ Our message-passing protocol allows for massive parallelization.
 The Cumulus runtime system is a distributed key-value store for
 aggregate-group-by query results that implements our message passing protocol
 for incremental result maintenance.
-Cumulus efficiently answers OLAP queries using this store.
-Cumulus performs the incremental maintenance of large views under
-considerable update loads in realtime, leveraging parallelism
-and using the resources of the cloud to keep its store in main memory.
+Cumulus uses the resources of the cloud to leverage parallelism
+and keep its store in main memory.
+Cumulus is able to perform the incremental maintenance of
+large views under considerable update loads in realtime.
 }
 
 
@@ -99,7 +99,7 @@ and using the resources of the cloud to keep its store in main memory.
 }
 
 
-%\input{appendix}
+\input{appendix}
 
 
 \end{document}  

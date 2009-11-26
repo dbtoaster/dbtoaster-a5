@@ -297,9 +297,9 @@ It executes an efficient
 protocol to ensure consistency of map data and query results.
 %
 Cumulus performs incremental maintenance of {\em exact}\/
-aggregation views online.
+aggregate views online.
 In that sense it differs from the literature on online aggregation that
-is primarily concerned with sampling-based techniques that only produce
+is primarily concerned with sampling-based techniques that produce
 approximate results
 \cite{DBLP:conf/sigmod/HaasH99, DBLP:conf/sigmod/RusuXPWJJD08, DBLP:conf/sigmod/AcharyaGPR99}.
 
@@ -312,25 +312,22 @@ At the time of writing this,
 Terabyte-sized memory chips (DIMMs and flash) have already been announced by
 manufacturers, and already now, main memory capacities of clusters
 are sufficient to run substantial data warehouses in
-main memory, the financial premium of which over disks is
+main memory. The financial premium of main memory over disks is
 offset by greater robustness of the system, lower maintenance
 costs, lower heat production \cite{1154557}, and of course by of orders
 of magnitude better speed and latency characteristics.
 
-The Cumulus protoype aims at demonstrating our results in the context of
-pushing OLAP into the cloud.
+The Cumulus protoype uses our results to
+push OLAP into the cloud.
 Cumulus automates  the process of loading
 and  maintaining  in-memory  data  warehouses.
-(Optional logging of updates to secondary storage
-for persistency is supported.)
 Cumulus targets OLAP applications  that perform real-time analytics of
-relational data.  By feeding it an SQL query, Cumulus's infrastructure
-becomes linked to  a set of OLTP databases.  Cumulus  keeps the
-data warehouse synchronized with the source databases via an
+relational data.  Cumulus  keeps the
+data warehouse synchronized with the source OLTP databases via an
 update stream. It achieves incremental aggregate
 view maintenance {\em in realtime}
 through parallelization, representation in main memory, and
-our approach of query processing by message passing.
+query processing by message passing.
 
 
 \subsection{Contributions and Structure of the Paper}
@@ -352,9 +349,9 @@ that aimed at allowing for the more flexible composition of
 more conventional database components.
 
 \item
-We present Cumulus, our system for exact online aggregation in realtime.
+We present Cumulus, our realtime exact online aggregation system.
 We describe the Cumulus message passing protocol, which assures
-consistency of the maps using only few messages, and
+consistency of the maps using few messages, and
 infrastructure, and show how it can be used to efficiently distribute the
 processing and storage requirements of query processing and
 the incremental maintenance of large aggregate views.
