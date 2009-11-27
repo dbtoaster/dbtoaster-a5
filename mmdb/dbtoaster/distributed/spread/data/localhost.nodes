@@ -1,6 +1,6 @@
 --persist
---switch pit074.cs.cornell.edu
---node Node01@pit074.cs.cornell.edu:52982
---node Node02@pit074.cs.cornell.edu:52983
---node Node03@pit074.cs.cornell.edu:52984
---node Node04@pit074.cs.cornell.edu:52985
+--switch localhost
+--node Node01@localhost:52982
+--node Node02@localhost:52983
+--#node Node03@pit074.cs.cornell.edu:52984
+--#node Node04@pit074.cs.cornell.edu:52985

@@ -43,7 +43,7 @@ end
 ###################################################
 
 class MapPartition
-  attr_reader :mapid, :partition
+  attr_reader :mapid, :partition, :pending_cleared
   
   # A MapPartition is a chunk of Map {mapid}, that holds keys those keys described by
   # {partition};  The partitioning scheme is hash-based, so we will see the keys where
@@ -58,6 +58,7 @@ class MapPartition
     
     @data = MultiKeyMap.new(@partition.size, patterns, "Map" + mapid.to_s);
     @pending = Array.new;
+    @pending_cleared = 0
   end
   
   def get(target, on_entry, on_finish)
@@ -94,6 +95,7 @@ class MapPartition
       pending = @pending.shift; 
       pending.updates.each { |target, delta| set(target, delta) };
       pending.fire;
+      @pending_cleared += 1;
     end
   end
   
@@ -117,6 +119,10 @@ class MapPartition
   
   def backlogged?
     not @pending.empty?
+  end
+  
+  def backlog
+    @pending.size;
   end
   
   def empty?

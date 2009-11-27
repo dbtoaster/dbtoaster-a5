@@ -35,7 +35,11 @@ module Thrift
       @shutdown_semaphore = Mutex.new
       @transport_semaphore = Mutex.new
     end
-
+    
+    def backlog
+      @io_manager.backlog
+    end
+    
     def serve
       @logger.info "Starting #{self}"
       @server_transport.listen
@@ -106,6 +110,10 @@ module Thrift
         @signal_pipes[1].sync = true
         @worker_queue = Queue.new
         @shutdown_queue = Queue.new
+      end
+      
+      def backlog
+        @worker_queue.size;
       end
 
       def add_connection(socket)

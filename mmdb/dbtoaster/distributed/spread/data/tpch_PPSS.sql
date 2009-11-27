@@ -11,7 +11,7 @@
 --#partition Map qPARTS1 on 0 weight by 1, 1 into 2 pieces
 --#partition Map qPARTS2 on 0 weight by 1, 1 into 2 pieces
 --#partition Map qPARTSUPP2 on 0 weight by 1, 1 into 4 pieces
---slice ratelimit 100
+--#slice ratelimit 100
 create table part(p_partkey int, p_mfgr int, p_type int, p_size int, p_container int, p_retailprice float);
 create table partsupp(ps_partkey int, ps_suppkey int, ps_availqty int, ps_supplycost float);
 create table supplier(s_suppkey int, s_nationkey int);

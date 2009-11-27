@@ -78,7 +78,7 @@ else
   end
   nodes.add($local_node.config.switch.host);
   
-  $clients = spin_up_slicers(*nodes.to_a);
+  $clients = spin_up_slicers(*(nodes.to_a.delete_if { |n| n == "localhost" }));
   $clients["localhost"] = $local_node;
   
   Logger.info { "Starting Nodes..." };

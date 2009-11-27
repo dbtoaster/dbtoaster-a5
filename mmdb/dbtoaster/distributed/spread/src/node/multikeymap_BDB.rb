@@ -13,7 +13,7 @@ class MultiKeyMap
     #@patterns = patterns.delete_if { |pattern| pattern.size >= numkeys };
     patterns.delete_if { |pattern| pattern.size >= numkeys };
     @empty = true;
-    @name = name;
+    @name = "#{name}-#{Process.pid.to_s}";
     initialize_db(patterns);
   end
   
@@ -127,16 +127,18 @@ class MultiKeyMap
     end
     Logger.warn { "Creating Primary Index: #{@basepath}/db_#{@name}_primary.db" }
     @basemap.open(nil, "#{@basepath}/db_#{@name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    at_exit { File.delete "#{@basepath}/db_#{@name}_primary.db" } if delete_old;
     @patterns = Hash.new;
     patterns.each { |pattern| create_secondary_index(pattern) }
   end
   
-  def create_secondary_index(pattern)
+  def create_secondary_index(pattern, delete_old = true)
     i = @patterns.size;
     db = @env.db;
     db.flags = Bdb::DB_DUPSORT;
     Logger.warn { "Creating Secondary Index: #{@basepath}/db_#{@name}_#{i}.db (#{pattern.join(", ")})" }
     db.open(nil, "#{@basepath}/db_#{@name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    at_exit { File.delete "#{@basepath}/db_#{@name}_#{i}.db" } if delete_old;
     @basemap.associate(nil, db, 0, proc { |sdb, key, data| key = Marshal.load(key); Marshal.dump(pattern.collect{|k| key[k]})});
     #puts "Creating secondary key for #{@name} #{key.join(",")}; #{pattern.join(",")}"; 
     @patterns[pattern] = db;

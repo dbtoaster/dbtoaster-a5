@@ -150,6 +150,16 @@ class Array
     each_cross_product { |out| ret.push(out) };
     ret;
   end
+  
+  def sum(&pr)
+    tot = 0;
+    if pr then
+      each { |e| tot += pr.call(e) }
+    else
+      each { |e| tot += e.to_i }
+    end
+    tot;
+  end
 end
 
 class Hash

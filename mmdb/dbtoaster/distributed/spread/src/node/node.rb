@@ -102,7 +102,7 @@ class MapNodeStats
   end
   
   def stat
-    if ((@stats += 1) % 50000) == 0 then
+    if ((@stats += 1) % 5000) == 0 then
       @handler.sync;
       puts "Status: " + @name + ";" + 
         " put "      + @puts.to_s +
@@ -110,7 +110,8 @@ class MapNodeStats
         " fetch "    + @fetches.to_s +
         " pushes "   + @pushes.to_s +
         " avg_push " + (@push_size.to_f / @pushes.to_f).to_s +
-        " max_push " + @max_push.to_s
+        " max_push " + @max_push.to_s + 
+        " backlog(pending/cleared/server) " + @handler.backlog.to_s + "/" + @handler.cleared_backlog.to_s + "/" + @handler.server_backlog.to_s
     end
   end
   
@@ -515,6 +516,18 @@ class MapNodeHandler
   
   ############# Internal Control
   
+  def backlog
+    @maps.values.sum { |partitions| partitions.values.sum { |part| part.backlog } };
+  end
+  
+  def cleared_backlog
+    @maps.values.sum { |partitions| partitions.values.sum { |part| part.pending_cleared } };
+  end
+  
+  def server_backlog
+    if @server then @server.backlog else 0 end;
+  end
+  
   def setup(config)
     config.my_config["partitions"].each_pair do |map, partition_list|
       partition_list.each do |partition|
@@ -549,6 +562,10 @@ class MapNodeHandler
     @maps.collect do |map, partitions|
       [ map, partitions.values[0].patterns.keys ]
     end
+  end
+  
+  def designate_server(server)
+    @server = server;
   end
   
 end

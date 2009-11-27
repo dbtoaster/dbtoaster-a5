@@ -150,14 +150,16 @@ module MapNode
 
       processor = MapNode::Processor.new(handler)
       transport = Thrift::ServerSocket.new(port);
-      [handler, Thrift::NonblockingServer.new(
+      server = Thrift::NonblockingServer.new(
         processor, 
         transport, 
         Thrift::FramedTransportFactory.new,
         Thrift::BinaryProtocolFactory.new,
         1,
         logger
-      )];
+      );
+      handler.designate_server(server);
+      [handler, server];
     end
   end
 end

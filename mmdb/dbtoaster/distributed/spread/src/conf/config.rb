@@ -23,7 +23,7 @@ class Config
     
     @spread_path = "#{File.dirname(__FILE__)}/../.."
     if (@spread_path[0] != '/'[0]) || (@spread_path == "") then
-      @spread_path = "#{`pwd`}/#{@spread_path}"
+      @spread_path = "#{`pwd`.chomp}/#{@spread_path}"
     end
     Logger.info { "Spread Path is : #{@spread_path}" }
     
