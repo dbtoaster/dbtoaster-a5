@@ -170,7 +170,12 @@ module SwitchNode
       @iprot.trans.close;
     end
     
-    def Client.connect(host, port)
+    def Client.connect(host, port = nil)
+      if host.is_a? NodeID then
+        port = host.port;
+        host = host.host;
+      end
+      raise "Invalid port" unless port;
       transport = Thrift::FramedTransport.new(Thrift::Socket.new(host, port))
       protocol = Thrift::BinaryProtocol.new(transport)
       ret = SwitchNode::Client.new(protocol);
@@ -201,5 +206,11 @@ end
 class SpreadException
   def to_s
     "SpreadException: " + why;
+  end
+  
+  def SpreadException.backoff(why)
+    ret = SpreadException.new(why);
+    ret.retry = true;
+    ret;
   end
 end

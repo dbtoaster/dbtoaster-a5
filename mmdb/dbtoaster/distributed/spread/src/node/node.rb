@@ -568,4 +568,33 @@ class MapNodeHandler
     @server = server;
   end
   
+  def monitor_backlog(switch, local_id, water_marks = (7000...10000))
+    return if @backlog_monitor;
+    @backlog_monitor = Thread.new(self, switch, water_marks, local_id) do |handler, callback_addr, range, me|
+      state = :low
+      callback = nil;
+      sleep 3;
+      loop do
+        begin
+          backlog = handler.server_backlog
+          if state == :low && backlog > range.end then
+            puts "Node #{me} requesting backoff";
+            callback = SwitchNode::Client.connect(callback_addr) unless callback;
+            callback.request_backoff(me);
+            state = :high;
+          elsif state == :high && backlog < range.begin then
+            puts "Node #{me} no longer needs backoff"
+            callback = SwitchNode::Client.connect(callback_addr) unless callback;
+            callback.finish_backoff(me);
+            state = :low
+          end
+        rescue Exception => e
+          puts e.to_s;
+          puts e.get_backtrace;
+        end
+        sleep 1;
+      end
+    end
+  end
+  
 end

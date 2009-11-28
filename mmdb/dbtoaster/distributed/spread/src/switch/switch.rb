@@ -17,6 +17,7 @@ class SwitchNodeHandler
     @nodelist = Hash.new;
     @update_count = 0;
     @update_timer = nil;
+    @backoff_nodes = Set.new;
   end
   
   def node(name)
@@ -43,8 +44,19 @@ class SwitchNodeHandler
     @next_update += 1;
   end
 
+  def request_backoff(node)
+    @backoff_nodes.add(node);
+    #puts "Switch: #{node} requesting backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}";
+  end
+  
+  def finish_backoff(node)
+    @backoff_nodes.delete(node);
+    #puts "Switch: #{node} no longer needs backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}";
+  end
+
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
+    raise SpreadException.backoff("Backoff: Nodes #{@backoff_nodes.to_a.join(",")} lagged") unless @backoff_nodes.empty?;
     params.collect! { |param| param.to_i }
     @templates[table.to_s].each do |trigger|
       put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|

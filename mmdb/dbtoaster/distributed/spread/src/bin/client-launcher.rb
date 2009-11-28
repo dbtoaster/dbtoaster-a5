@@ -152,8 +152,19 @@ $input.each do |line|
         params.push(tmp_params[i]);
       end
     end
-    
-    switch.update(table, params) unless $test;
+    success = false
+    backoff = 0.125
+    until success do
+      begin
+        switch.update(table, params) unless $test;
+        success = true;
+      rescue SpreadException => e;
+        raise e unless e.retry;
+        puts "Backoff requested, sleeping for #{backoff}"
+        sleep backoff;
+        backoff *= 2;
+      end
+    end
     puts table+"("+params.join(", ")+")" if $verbose;
   rescue SpreadException => e
     puts "Error: " + e.to_s;

@@ -35,6 +35,7 @@ Logger.default_name = $config.my_name;
 
 handler, server = MapNode::Processor.listen($config.my_port, $config.my_name);
 handler.setup($config);
+handler.monitor_backlog($config.switch, $config.my_config["address"]);
 
 puts "============== Patterns ============";
 handler.patterns.each do |map, patterns|

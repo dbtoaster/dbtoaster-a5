@@ -33,7 +33,8 @@ struct PutField {
 }
 
 exception SpreadException {
-  1: string why
+  1: string why,
+  2: optional bool retry
 }
 
 struct PutParams {
@@ -70,15 +71,18 @@ service MapNode {
   
   string dump  (),
   
-  oneway void localdump  (),
+  oneway void localdump  ()
   
 }
 
 service SwitchNode {
   void update( 1: string table, 
-               2: list<string> params),
+               2: list<string> params) throws (1:SpreadException error),
   
-  string dump() throws (1:SpreadException error)
+  string dump() throws (1:SpreadException error),
+  
+  oneway void request_backoff( 1: NodeID node ),
+  oneway void finish_backoff( 1: NodeID node)
 }
 
 service SlicerNode {
