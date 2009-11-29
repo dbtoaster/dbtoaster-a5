@@ -10,6 +10,10 @@ $toaster = DBToaster.new()
 $success = false;
 $options = Hash.new;
 
+# Use home directory as default partition file location, since this is also
+# the default for the source directive.
+$pfile_basepath = "~"
+
 opts = GetoptLong.new(
   [ "-o", "--output",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",        GetoptLong::REQUIRED_ARGUMENT ],
@@ -23,12 +27,14 @@ opts = GetoptLong.new(
   [       "--persist",     GetoptLong::NO_ARGUMENT ],
   [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ],
   [ "-w", "--switch-addr", GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-b", "--boot",        GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-b", "--boot",        GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-p", "--pfile",       GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-k", "--ignore-keys" then $options[:toast_keys] = false;
-    when "-b", "--boot"        then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success }; 
+    when "-b", "--boot"        then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
+    when "-p", "--pfile"       then $pfile_basepath = arg;
     else                            $toaster.parse_arg(opt, arg)
   end
 end
@@ -61,11 +67,33 @@ puts "========== Map definitions ==========="
 $toaster.map_info.each_value do |info|
   n = info["map"].to_s
   if $toaster.map_formulae.key?(n) then
-    f = $toaster.map_formulae[n]
-    $boot.write(n+"\n"+f+"\n")
+    boot_spec = $toaster.map_formulae[n]
+
+    last_node_partition = info["partition"][info["partition"].size-1]
+    partition_keys = []
+    last_node_partition.each_index do |i|
+      if last_node_partition[i] != 0 then partition_keys.push(i) end
+    end
+  
+    partition_sizes = partition_keys.collect do |i|
+      info["partition"][info["partition"].size-1][i]+1
+    end
+  
+    #node_partitions = info["partition"].collect do |np|
+    #  partition_keys.collect { |i| np[i] }.join(".")
+    #end
+
+    boot_spec_s = [ "param_sources", "query", "params", "keys"].collect do |k|
+      boot_spec[k]
+    end.join("\n")+(boot_spec["aps"].length > 0? ("/"+boot_spec["aps"]) : "");
+
+    p = [ partition_keys.join(","), partition_sizes.join(",") ].join("/")
+    map_def = [n, boot_spec_s, p].join("\n")
+    
+    puts map_def
+    $boot.write(map_def+"\n")
   end
 end
-
 
 puts "==== Partition Choices =====";
 
@@ -84,8 +112,24 @@ $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");
   $output.write("address " + address.to_s + ":" + port.to_s + "\n");
   partitions.each_pair do |map, plist|
-    plist.each do |partition|
-      $output.write("partition Map " + map.to_s + "[" + partition.join(",") + "]\n");
+    plist.each_index do |pidx|
+      segment = plist[pidx]
+      map_segment = map.to_s + "[" + segment.join(",") + "]"
+      map_name = $toaster.map_info[map]["map"].to_s
+      node_id = $toaster.map_info[map]["partition"].index(segment)
+
+      $output.write("partition Map " + map_segment + "\n");
+
+      if $toaster.map_formulae.key? map_name then
+        primary_pfile = "#{$pfile_basepath}/node#{node_id.to_s}/db_#{map_name}_primary.db"
+        aps = $toaster.map_formulae[map_name]["aps"].split("|")
+        secondary_pfiles = []
+        aps.each_index do |i| secondary_pfiles.push(
+          "#{$pfile_basepath}/node#{node_id.to_s}/db_#{map_name}_#{i}.db")
+        end
+        node_pfiles = [primary_pfile].concat(secondary_pfiles).join(",")
+        $output.write("pfile Map " + map_segment + " " + node_pfiles + "\n")
+      end
     end
   end
 end
