@@ -1,6 +1,6 @@
 #!/bin/sh
 
-dataset_dir=/home/yanif/cumulus-pvldb/tpch/
+dataset_dir=/home/fs01/yna3/spread/tpch/pfile/
 
 while getopts ":d:" option
 do
@@ -52,7 +52,7 @@ for i in 1g 10g; do
 #  for m in `echo $mapnames`; do
     for (( j=0; j<$old_num_nodes; j++ )); do   
       echo "Repartitioning $j => $output_node"
-      ./bootstrap.rb -l $j -s $output_node -r $rspec_file -d $input_dir -o $output_dir
+      ./repartition.rb -l $j -s $output_node -r $rspec_file -d $input_dir -o $output_dir
     done
 #  done
 done
