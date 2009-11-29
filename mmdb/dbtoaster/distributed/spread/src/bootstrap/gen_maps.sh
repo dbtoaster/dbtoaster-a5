@@ -59,7 +59,7 @@ for i in 1g 10g; do
     rm -rf __db* maps/*
     for (( n=0; n<$num_nodes; n++ )); do
         for m in `echo $mapnames`; do
-            time ./bootstrap.rb -d $dataset_dir/$i -n $n -m $m -o $tmp_dir $boot_file
+            time ./bootstrap.rb -d $dataset_dir/$i -s $n -m $m -o $tmp_dir $boot_file
         done
     done
 
