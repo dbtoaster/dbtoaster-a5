@@ -3,9 +3,11 @@ require 'ok_mixins';
 require 'template'
 
 class DBToaster
-  attr_reader :compiled, :templates, :map_info, :test_directives, :slice_directives, :persist, :switch, :preload, :map_formulae;
+  attr_reader :compiled, :templates, :map_info, :test_directives,
+    :slice_directives, :persist, :switch, :preload, :map_formulae;
 
-  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null", toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
+  def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null",
+                 toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @test_directives = Array.new;
@@ -18,6 +20,7 @@ class DBToaster
     @schemas = nil;
     @map_aliases = Hash.new;
     @map_formulae = nil;
+    @query = "";
     
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
@@ -35,12 +38,13 @@ class DBToaster
   ########################################################
   
   def load(sql_lines)
-    @DBT.write(
-      sql_lines.collect do |l|
-        if l[0..1] == "--" then l = l.split(" "); parse_arg(l.shift, l.join(" ")); nil
-        else l.chomp end;
-      end.compact.join(" ") 
-    );
+    r = sql_lines.collect do |l|
+      if l[0..1] == "--" then l = l.split(" "); parse_arg(l.shift, l.join(" ")); nil
+      else l.chomp end;
+    end.compact.join(" ")
+    select_stmt = r.match(/select[^;]+;/) 
+    @query += select_stmt[0].gsub(/;/, "") unless select_stmt.nil?;
+    @DBT.write(r);
     self;
   end
   
@@ -221,6 +225,8 @@ class DBToaster
         
         # Substitutions for variables -> params (i.e. dom vars)
         key_param_subs = Hash.new
+        pred_var_subs = Hash.new
+        param_constraints = Hash.new
         
         # Separate aggregate vs. relational part
         agg,rel_t = t.gsub(/AggSum\((.*)\)/, "\\1").split(",", 2)
@@ -251,7 +257,9 @@ class DBToaster
           predicates =
             invalid_indexes.collect do |i|
               f,p = fields_and_prefixes[i]
-              orig_f = if @schemas.key? rel_n then @schemas[rel_n][i] else "xxx" end;
+              orig_f = if @schemas.key? rel_n then @schemas[rel_n][i]
+                  else raise "Could not find schema for relation #{rel_n}"
+                end
 
               (if f =~ /^x_/ then
                 attr_idx = f.index('__')-1
@@ -262,8 +270,8 @@ class DBToaster
                   then @map_aliases.index(dom_rel_alias)
                   else dom_rel_alias end
 
-                puts dom_rel
-                puts dom_rel_alias
+                puts "Rel: #{dom_rel} attr: #{dom_attr} orig: #{orig_f}"
+                puts "Alias: #{dom_rel_alias} attr: #{dom_attr} orig: #{orig_f}"
 
                 dom_idx = @schemas[dom_rel].index(dom_rel_alias+dom_attr)
                 
@@ -274,9 +282,17 @@ class DBToaster
                 else
                   domains[dom_rel] = [dom_idx]
                 end
+                
                 # Substitute both the LHS and RHS of the constraint for keys
                 key_param_subs[f] = param
                 key_param_subs[orig_f] = param
+                
+                # Substitute only the bound var for constraints
+                pred_var_subs[f] = ":"+param
+
+                # Track param constraints to promote params to group-bys
+                param_constraints[":"+param] = orig_f.sub(/__/, ".")
+
                 ":"+param
               else f.sub(/__/, ".") end) + " = " + orig_f.sub(/__/, ".")
             end
@@ -284,8 +300,6 @@ class DBToaster
           # Return [relation name, [fields, predicates, domains]]
           [rel_n, fields_and_prefixes.collect { |f,p| f }, predicates, domains]
       end;
-      where_clause = 
-        (rels.select { |x| x[2].length > 0 }.collect { |x| x[2] }.join(" and "));
       
       # Map params, which should contain only groupby cols, and domain vars.
       map_id = @map_info.select { |k,v| v["map"] == n }.first[0]
@@ -295,9 +309,12 @@ class DBToaster
         end
 
       # Map access patterns
+      default_ap = (0...keys.size).to_a.join(",")
       ap = @templates.collect do |t|
-          t.access_patterns(map_id).compact.join(",")
-        end.select{|x| x.length > 0}.join("|")
+          t.access_patterns(map_id).compact.collect do |ap|
+            ap.join(".")
+          end.uniq.join(",")
+        end.uniq.select{|x| (x.length > 0) && !(x == default_ap)}.join("|")
 
       # Group bys
       params = rels.collect do |x|
@@ -305,16 +322,45 @@ class DBToaster
       end.flatten
       
       group_bys = keys.reject { |k| params.include?(k) }
-
-      keys_s = keys.collect do |k|
-        if group_bys.include?(k) then "Q."+group_bys.index(k).to_s else k end
-      end.join(",")
       
       # Domains (i.e. relations + positions) for map params
       param_sources = rels.collect do |x|
           x[3].to_a.collect { |r,i| i.collect { |j|
             r+"."+(j.to_s)+"=>"+"dom_"+@schemas[r][j] }  }
         end.to_a.select{|x| x.length > 0}.join(",")
+
+      # Substitute params in any constraints in original formula
+      subbed_t_preds = t_preds.join(" and ")
+      pred_var_subs.each_pair do |s,t|
+        subbed_t_preds = subbed_t_preds.gsub(Regexp.quote(s), t)
+      end
+      
+      # Promote params to group-bys
+      promoted_params = []
+      extra_group_bys = []
+      param_constraints.each_pair do |p,v|
+        puts "Match #{p}: "+subbed_t_preds.match(p).to_s
+        if subbed_t_preds.match(p).nil? then
+          promoted_params.push(p)
+          extra_group_bys.push(v)
+        end
+      end
+      
+      puts "Extra group-bys: " + extra_group_bys.join(",")
+      puts "Promoted params: " + promoted_params.join(",")
+      group_bys.concat(extra_group_bys.collect)
+
+      # Primary map keys
+      keys_s = keys.collect do |k|
+        if group_bys.include?(k) then "Q."+group_bys.index(k).to_s
+        elsif promoted_params.include?(":"+k) then
+          "Q."+group_bys.index(extra_group_bys[promoted_params.index(":"+k)]).to_s
+        else k end
+      end.join(",")
+
+      where_clause = rels.select { |x| x[2].length > 0 }.collect do |x|
+       x[2].select { |y| not(promoted_params.any? { |gb| y.match(gb) }) }
+      end.join(" and ");
 
       # SQL query
       query = 
@@ -324,8 +370,8 @@ class DBToaster
         " from "+(rels.collect do |x|
           x[0]+(@map_aliases.key?(x[0]) ? " "+@map_aliases[x[0]] : "")
         end.join(", ")) +
-        (where_clause.length > 0 || t_preds.length > 0?
-          (" where " + where_clause + t_preds.join(" and ")) : "") +
+        (where_clause.length > 0 || subbed_t_preds.length > 0?
+          (" where " + where_clause + subbed_t_preds) : "") +
         (group_bys.length > 0?
           (" group by " + group_bys.join(",").gsub(/__/,".")) : "")
 
@@ -335,8 +381,24 @@ class DBToaster
           x[3].to_a.collect { |r,i| i.collect { |j| "dom_"+@schemas[r][j] } }
         end.flatten.join(",");
 
-      [n,[param_sources, query, bindvars, keys_s+(ap.length > 0? "/"+ap : "")].join("\n")]
+      [n,
+        { "param_sources" => param_sources,
+          "query" => query,
+          "params" => bindvars,
+          "keys" => keys_s,
+          "aps" => ap
+        }]
     end.flatten]
+    
+    # Add the top-level query
+    group_by_match = @query.match(/group *by *([^;]*)/)
+    q_group_bys = group_by_match[1].split(",").collect { |gb| gb.strip } unless group_by_match.nil?;
+    q_keys_s = []
+    q_group_bys.each_index {|i| q_keys_s.push("Q."+i.to_s) }
+    @map_formulae["q"] = {
+      "param_sources" => "", "query" => @query, "params" => "",
+      "keys" => q_keys_s, "aps" => ""
+    } 
   end  
     
   ########################################################
