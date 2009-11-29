@@ -10,7 +10,8 @@ class Config
   
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
-      "partitions" => Hash.new  { |h,k| h[k] = Array.new }, 
+      "partitions" => Hash.new  { |h,k| h[k] = Array.new },
+      "pfiles" => Hash.new { |h,k| h[k] = Hash.new }
       "values" => Hash.new { |h,k| h[k] = Hash.new }, 
       "address" => NodeID.make("localhost") 
     } };
@@ -62,6 +63,18 @@ class Config
           @partition_sizes[map.to_i] = 
             segment.zip(@partition_sizes[map.to_i]).collect { |sizes| if sizes[1].nil? then sizes[0].to_i+1 else Math.max(sizes[0]+1, sizes[1]) end };
 
+        when "pfile" then
+          match = /Map *([0-9]+)\[([0-9, ]+)\] *(.+)/.match(line);
+          raise SpreadException.new("Unable to parse partition file line: "+line) if match.nil?;
+          dummy, map, segment, file_l = *match;
+          segment = segment.split(/, */).collect { |i| i.to_i }
+          pfiles = file_l.split(",") 
+          if @nodes[curr_node]["partitions"][map.to_i].include? segment then
+            @nodes[curr_node]["pfiles"][map.to_i][segment] = [pfiles[0], pfiles[1..-1]];
+          else
+            raise SpreadException "Partition must be declared for a node before any file."
+          end
+          
         when "value" then 
           match = /Map *([0-9]+) *\[([^\]]*)\] *v([0-9]+) *= *([0-9.]+)/.match(line)
           raise SpreadException.new("Unable to parse value line: " + line) if match.nil?;
