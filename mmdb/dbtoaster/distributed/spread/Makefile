@@ -16,7 +16,7 @@ clean:
 test_data: all $(SQL_TESTDATA)
 
 $(SQL_TESTDATA) : %.unit : %.sql src/toaster/toaster.rb data/wl10.nodes
-	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@ -b $(subst .unit,.boot,$@) data/wl10.nodes
+	./bin/toaster.sh $(subst .unit,.sql,$@) -o $@ -b $(subst .unit,.boot,$@) -p tpch/pfile/100m data/wl10.nodes
 
 $(SQL_LOCALTESTS) : %_local.unit : %.sql src/toaster/toaster.rb data/localhost.nodes
 	./bin/toaster.sh $(subst _local.unit,.sql,$@) -o $@ -b $(subst .unit,.boot,$@) data/localhost.nodes
