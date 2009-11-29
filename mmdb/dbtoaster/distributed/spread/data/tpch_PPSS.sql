@@ -16,7 +16,7 @@ create table part(p_partkey int, p_mfgr int, p_type int, p_size int, p_container
 create table partsupp(ps_partkey int, ps_suppkey int, ps_availqty int, ps_supplycost float);
 create table supplier(s_suppkey int, s_nationkey int);
 select 
-  sum((p_retailprice + (-1 * ps_supplycost)) * ps_availqty), s_nationkey
+  s_nationkey, sum((p_retailprice + (-1 * ps_supplycost)) * ps_availqty)
 from
   part p, partsupp ps, supplier s
 where
