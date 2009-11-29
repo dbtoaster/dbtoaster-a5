@@ -533,7 +533,7 @@ class MapNodeHandler
   def setup(config)
     config.my_config["partitions"].each_pair do |map, partition_list|
       partition_list.each do |partition|
-        pfiles = config.myconfig["pfiles"][map].fetch(partition, nil);
+        pfiles = config.my_config["pfiles"][map].fetch(partition, nil);
         create_partition(map, partition, config.partition_sizes[map], pfiles)
       end
     end

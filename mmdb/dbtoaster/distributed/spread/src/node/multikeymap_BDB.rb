@@ -131,7 +131,8 @@ class MultiKeyMap
     at_exit { File.delete "#{db_file}" } if delete_old;
     @patterns = Hash.new;
     patterns.each do |pattern|
-      create_secondary_index(pattern, sfiles, not(pfile.nil?)) end
+      create_secondary_index(pattern, sfiles, not(pfile.nil?))
+    end
   end
   
   def cleanup_db
@@ -154,7 +155,7 @@ class MultiKeyMap
     Logger.warn { "Creating Secondary Index: #{sdb_file} (#{pattern.join(", ")})" }
     if has_pfile && s_pfile.nil?
       raise SpreadException.new("Missing bootstrap file for secondary index #{i}.");
-    else if not(sp_file.nil?)
+    elsif not(s_pfile.nil?)
       FileUtils.cp s_pfile, sdb_file;
     end
     db.open(nil, sdb_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);

@@ -11,7 +11,7 @@ class Config
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
       "partitions" => Hash.new  { |h,k| h[k] = Array.new },
-      "pfiles" => Hash.new { |h,k| h[k] = Hash.new }
+      "pfiles" => Hash.new { |h,k| h[k] = Hash.new },
       "values" => Hash.new { |h,k| h[k] = Hash.new }, 
       "address" => NodeID.make("localhost") 
     } };
