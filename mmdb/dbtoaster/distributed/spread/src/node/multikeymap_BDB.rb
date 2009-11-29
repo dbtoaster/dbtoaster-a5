@@ -1,20 +1,23 @@
 
+require 'fileutils';
 require 'thrift';
 require 'spread_types';
 require 'bdb2';
-require 'ok_mixins'
+require 'ok_mixins';
 
 
 class MultiKeyMap
   attr_reader :numkeys, :empty, :patterns;
   
-  def initialize(numkeys, patterns, name = "", basepath = "/tmp", default = nil, wildcard = -1)
+  def initialize(numkeys, patterns, name = "", pfiles = [],
+                 basepath = "/tmp", default = nil, wildcard = -1)
     @numkeys, @wildcard, @default, @basepath = numkeys.to_i, wildcard, default, basepath;
     #@patterns = patterns.delete_if { |pattern| pattern.size >= numkeys };
     patterns.delete_if { |pattern| pattern.size >= numkeys };
     @empty = true;
     @name = "#{name}-#{Process.pid.to_s}";
-    initialize_db(patterns);
+    pfile, sfiles = pfiles;
+    initialize_db(patterns, pfile, sfiles);
   end
   
   def add_pattern(pattern)
@@ -111,13 +114,28 @@ class MultiKeyMap
   end
   
   
-  def initialize_db(patterns, delete_old = true)
+  def initialize_db(patterns, pfile = nil, sfiles = [], delete_old = true)
     Logger.warn { "Creating database for map : #{@name}" };
     @env = Bdb::Env.new(0);
     @env.cachesize = 128*1024*1024
     @env.open(@basepath, Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
     @basemap = @env.db;
-    if (File.exist? "#{@basepath}/db_#{@name}_primary.db") && delete_old then
+    db_file = "#{@basepath}/db_#{@name}_primary.db"
+    if not(pfile.nil?) && (File.exist? pfile) then
+      FileUtils.cp pfile, db_file;
+      delete_old = false;
+    end
+    cleanup_db if delete_old;
+    Logger.warn { "Creating Primary Index: #{db_file}" }
+    @basemap.open(nil, "#{db_file}", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    at_exit { File.delete "#{db_file}" } if delete_old;
+    @patterns = Hash.new;
+    patterns.each do |pattern|
+      create_secondary_index(pattern, sfiles, not(pfile.nil?)) end
+  end
+  
+  def cleanup_db
+    if (File.exist? "#{@basepath}/db_#{@name}_primary.db") then
       File.delete("#{@basepath}/db_#{@name}_primary.db")
       i = 0;
       while File.exist? "#{@basepath}/db_#{@name}_#{i}.db"
@@ -125,20 +143,22 @@ class MultiKeyMap
         i += 1;
       end
     end
-    Logger.warn { "Creating Primary Index: #{@basepath}/db_#{@name}_primary.db" }
-    @basemap.open(nil, "#{@basepath}/db_#{@name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-    at_exit { File.delete "#{@basepath}/db_#{@name}_primary.db" } if delete_old;
-    @patterns = Hash.new;
-    patterns.each { |pattern| create_secondary_index(pattern) }
   end
-  
-  def create_secondary_index(pattern, delete_old = true)
+
+  def create_secondary_index(pattern, sfiles = [], has_pfile = false, delete_old = true)
     i = @patterns.size;
     db = @env.db;
     db.flags = Bdb::DB_DUPSORT;
-    Logger.warn { "Creating Secondary Index: #{@basepath}/db_#{@name}_#{i}.db (#{pattern.join(", ")})" }
-    db.open(nil, "#{@basepath}/db_#{@name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-    at_exit { File.delete "#{@basepath}/db_#{@name}_#{i}.db" } if delete_old;
+    s_pfile = sfiles.fetch(i, nil);
+    sdb_file = "#{@basepath}/db_#{@name}_#{i}.db"
+    Logger.warn { "Creating Secondary Index: #{sdb_file} (#{pattern.join(", ")})" }
+    if has_pfile && s_pfile.nil?
+      raise SpreadException.new("Missing bootstrap file for secondary index #{i}.");
+    else if not(sp_file.nil?)
+      FileUtils.cp s_pfile, sdb_file;
+    end
+    db.open(nil, sdb_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    at_exit { File.delete sdb_file } if delete_old;
     @basemap.associate(nil, db, 0, proc { |sdb, key, data| key = Marshal.load(key); Marshal.dump(pattern.collect{|k| key[k]})});
     #puts "Creating secondary key for #{@name} #{key.join(",")}; #{pattern.join(",")}"; 
     @patterns[pattern] = db;
