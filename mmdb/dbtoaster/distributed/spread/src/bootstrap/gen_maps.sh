@@ -43,10 +43,18 @@ echo "Maps: $mapnames"
 echo "# nodes: $num_nodes"
 
 for i in 1g 10g; do
+    mv_query_file=${boot_file%.boot}_mv.sql
+    mv_cleanup_file=${boot_file%.boot}_mv_cleanup.sql
 
     ./gen_ctl.sh $i
     sqlplus / @tpch_boot.sql 
     ./tpch_load.sh
+
+    # One-time materialized view construction, that should be reused by queries issued in bootstrap.rb
+    # Note: this requires Oracle Enterprise Edition.
+    awk '{ i = i+1; if (i%6==1) { name = $0 }; if (i%6==3) { print "drop materialized view " name ";"; print "create materialized view " name " never refresh enable query rewrite as " $0 ";"} }' $boot_file > $mv_query_file && grep "drop materialized" $mv_query_file > $mv_cleanup_file
+
+    sqlplus / @$mv_query_file
 
     rm -rf __db* maps/*
     for (( n=0; n<$num_nodes; n++ )); do
@@ -58,4 +66,7 @@ for i in 1g 10g; do
     test -d $output_dir/$i || (echo "Creating $output_dir/$i" && mkdir -p $output_dir/$i/)
     mv __db* $output_dir/$i/
     mv maps/* $output_dir/$i/
+
+    sqlplus / @$mv_cleanup_file
+    rm $mv_query_file $mv_cleanup_file
 done
