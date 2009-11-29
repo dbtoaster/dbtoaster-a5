@@ -54,7 +54,7 @@ end
 def initialize_env()
   $env = Bdb::Env.new(0);
   $env.cachesize = 128*1024*1024
-  $env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+  $env.open("/tmp", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
 end
 
 def initialize_node_db(name, i, patterns, basepath)
@@ -201,14 +201,14 @@ def process_repartition_spec(rspec)
     node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
 
     aps = unless ap_l.nil? then
-            ap_l.split("|").map { |x| x.split(",").map { |y| y.to_i } }
+            ap_l.split("|").map { |x| x.split(".").map { |y| y.to_i } }
           else [] end
 
     puts "Repartitioning #{name}" +
       " en: #{existing_num_nodes.to_s}" +
       " pk: " + partition_dims.join(",")
     " ds: " +  partition_dim_sizes.join(",")
-    " aps: " + aps.collect { |x| x.join(",") }.join("|")
+    " aps: " + aps.collect { |x| x.join(".") }.join("|")
 
     repartition($dataset_path, $output_path,
                 name, existing_num_nodes, aps,

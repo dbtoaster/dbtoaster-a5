@@ -21,7 +21,7 @@ spec_lines = f.readlines
   aps =
     if key_l_ap_opt.length > 1 then
       key_l_ap_opt[1].split("|").map do
-      |x| x.split(",").map { |y| y.to_i } end
+      |x| x.split(".").map { |y| y.to_i } end
     else [] end
 
   pk_l, ds_l = partition_l.strip.split("/")
@@ -30,7 +30,7 @@ spec_lines = f.readlines
   existing_num_nodes = partition_dim_sizes.inject(1) { |acc,x| acc*x }
 
   partition_dims_s = partition_dims.join(",")
-  aps_s = aps.collect{ |x| x.join(",") }.join("|")
+  aps_s = aps.collect{ |x| x.join(".") }.join("|")
   o.write("#{name.strip}/#{existing_num_nodes}/#{partition_dims_s}/#{new_num_nodes.to_s}"+(aps_s.length>0? "/#{aps_s}" : "")+"\n")
 end
 

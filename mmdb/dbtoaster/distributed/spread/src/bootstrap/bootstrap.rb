@@ -436,7 +436,7 @@ def process_bootstrap_spec(spec_lines)
       aps =
         if key_l_ap_opt.length > 1 then
           key_l_ap_opt[1].split("|").map do
-          |x| x.split(",").map { |y| y.to_i } end
+          |x| x.split(".").map { |y| y.to_i } end
         else [] end
 
       pk_l, ds_l = partition_l.strip.split("/")
@@ -482,14 +482,14 @@ def process_repartition_spec(rspec)
     node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
 
     aps = unless ap_l.nil? then
-            ap_l.split("|").map { |x| x.split(",").map { |y| y.to_i } }
+            ap_l.split("|").map { |x| x.split(".").map { |y| y.to_i } }
           else [] end
 
     puts "Repartitioning #{name}" +
       " en: #{existing_num_nodes.to_s}" +
       " pk: " + partition_dims.join(",")
     " ds: " +  partition_dim_sizes.join(",")
-    " aps: " + aps.collect { |x| x.join(",") }.join("|")
+    " aps: " + aps.collect { |x| x.join(".") }.join("|")
 
     repartition($dataset_path, $output_path,
                 name, existing_num_nodes, aps,
