@@ -5,7 +5,7 @@ output_dir=tpch/
 tmp_dir=maps/
 
 if [ $# -lt 1 ]; then
-    echo "Usage $0 [-d data dir] [-o output dir] [-t temp dir] <boot spec>"
+    echo "Usage $0 [-d data dir] [-o output dir] [-t temp dir] <boot spec> <num nodes>"
     exit
 fi
 
@@ -31,6 +31,7 @@ if [ ! -f $1 ]; then
 fi
 
 boot_file=$1
+num_nodes=$2
 mapnames=`awk '{ i=i+1; if (i%6 == 1) { names = names j $0; j = " " } } END { print names }' $boot_file`
 
 # Print task
@@ -39,6 +40,7 @@ echo "Dataset: $dataset_dir"
 echo "Output dir: $output_dir"
 echo "Temp dir: $tmp_dir"
 echo "Maps: $mapnames"
+echo "# nodes: $num_nodes"
 
 for i in 1g 10g; do
 
@@ -47,7 +49,7 @@ for i in 1g 10g; do
     ./tpch_load.sh
 
     rm -rf __db* maps/*
-    for n in 0 1 2 3 4 5 6 7; do
+    for (( n=0; n<$num_nodes; n++ )); do
         for m in `echo $mapnames`; do
             time ./bootstrap.rb -d $dataset_dir/$i -n $n -m $m -o $tmp_dir $boot_file
         done
