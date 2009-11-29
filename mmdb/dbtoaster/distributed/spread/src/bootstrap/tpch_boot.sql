@@ -101,3 +101,5 @@ CREATE TABLE REGION (
         r_comment        varchar(152),
         primary key      (r_regionkey)
     );
+
+exit;

@@ -2,11 +2,23 @@
 
 require 'oci8'
 require 'bdb2'
+require 'fileutils'
+require 'getoptlong'
 
-$env = nil
 
 $dataset_path = "/home/yanif/datasets/tpch/100m"
 $output_path = "."
+$spec_file = nil
+$repartition_spec = nil
+
+$map_names = []
+$nodes = []
+
+#
+# Internals
+#############
+
+$env = nil
 
 $tables = {
   "LINEITEM"  => [ "lineitem.tbl", "lineitem.tbl.u1", 6000000, nil   ,        ["l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"] ],
@@ -18,6 +30,100 @@ $tables = {
   "REGION"    => [ "region.tbl"  , nil              , 5      , "r_regionkey", ["r_regionkey", "r_name", "r_comment"] ],
   "NATION"    => [ "nation.tbl"  , nil              , 25     , "n_nationkey", ["n_nationkey", "n_name", "n_regionkey", "n_comment"] ],
 }
+
+class Array
+  def each_cross_product(depth = 0, pattern = Array.new)
+    if depth >= size then
+      if depth == 0 then yield pattern.clone else yield end;
+    else
+      self[depth].each do |val|
+        pattern.push(val);
+        each_cross_product(depth+1, pattern) { if depth == 0 then yield pattern.clone else yield end };
+        pattern.pop;
+      end
+    end
+  end
+  
+  def cross_product(depth = 0, pattern = Array.new)
+    ret = Array.new;
+    each_cross_product { |out| ret.push(out) };
+    ret;
+  end
+end
+
+def initialize_env()
+  $env = Bdb::Env.new(0);
+  $env.cachesize = 128*1024*1024
+  $env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+end
+
+def initialize_node_db(name, i, patterns, basepath, delete_old)
+  puts "Creating database for node #{i} map #{name}";
+
+  #puts "Getting env db..."
+  node_primary_db = $env.db;
+  #puts "Got env db..."
+
+  if not(File.directory?(File.join("#{basepath}","node#{i}"))) then
+    FileUtils.makedirs(File.join("#{basepath}", "node#{i}"))
+  end
+
+  node_db_file = File.join("#{basepath}", "node#{i}", "db_#{name}_primary.db")
+
+  #puts "Deleting prior primary..."
+
+  if (File.exist? node_db_file) && delete_old then
+    File.delete(node_db_file)
+  end
+
+  #puts "Opening primary..."
+  node_primary_db.open(nil, node_db_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+  node_secondary_dbs = Hash.new;
+  node_db = Array.new;
+  j = 0;
+  #puts "Opened primary."
+
+  patterns.each do |pattern|
+    #puts "#{pattern}"
+
+    #puts "Getting secondary default db"
+    node_db[j] = $env.db;
+    #puts "Got secondary default db"
+
+    node_db[j].flags = Bdb::DB_DUPSORT;
+    node_pdb_file = File.join("#{basepath}","node#{i}", "db_#{name}_#{j}.db")
+    if (File.exist? node_pdb_file) && delete_old then
+      File.delete(node_pdb_file)
+    end
+
+    #puts "Opening #{node_pdb_file}"
+    node_db[j].open(nil, node_pdb_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
+    node_primary_db.associate(nil, node_db[j], 0,
+      proc { |sdb, key, data| Marshal.dump(pattern.map{|k| Marshal.load(key)[k]})});
+    node_secondary_dbs[pattern] = node_db[j];
+    j = j + 1;
+  end
+  [node_primary_db, node_secondary_dbs]
+end
+
+def initialize_db(name, num_nodes, patterns, basepath = ".", delete_old = true)
+  (0...num_nodes).collect do |i|
+    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? i) then
+      initialize_node_db(name, i, patterns, basepath, delete_old)
+    end
+  end
+end
+
+def load_db(in_path, name, num_nodes)
+  (0...num_nodes).collect do |i|
+    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? i) then
+      node_db = $env.db
+      node_db_file = "#{in_path}/node#{i}/db_#{name}_primary.db"
+      node_db.open(nil, node_db_file, nil, Bdb::Db::HASH, Bdb::DB_RDONLY, 0)
+      node_db
+    end
+  end
+end
 
 def finished(numvars, domfiles)
   domfiles.select{ |v,f| f.eof }.length == numvars
@@ -62,38 +168,22 @@ def interpret_keys(keys, names, values, result)
   end
 end
 
-def initialize_env()
-  $env = Bdb::Env.new(0);
-  $env.cachesize = 128*1024*1024
-  $env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
+def validate_entry(entry, keys)
+  unless (entry.is_a? Array)
+    puts "Error : Param is not an array, param class : #{params.class()}";
+  end
+  unless (entry.size == keys.size)
+    puts "Error : Param of wrong length, param length : #{params.size}";
+  end
 end
 
-def initialize_db(name, patterns, basepath = ".", delete_old = true)
-  puts "Creating database for map : " + name ;
-  primary_db = $env.db;
-  if (File.exist? "#{basepath}/db_#{name}_primary.db") && delete_old then
-    File.delete("#{basepath}/db_#{name}_primary.db")
-  end
-  primary_db.open(nil, "#{basepath}/db_#{name}_primary.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-  secondary_dbs = Hash.new;
-  db = Array.new;
-  i = 0;
-  patterns.each do |pattern|
-    #puts "#{pattern}"
-    db[i] = $env.db;
-    db[i].flags = Bdb::DB_DUPSORT;
-    if (File.exist? "#{basepath}/db_#{name}_#{i}.db") && delete_old then
-      File.delete("#{basepath}/db_#{name}_#{i}.db")
-    end
-    db[i].open(nil, "#{basepath}/db_#{name}_#{i}.db", nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
-    primary_db.associate(nil, db[i], 0, proc { |sdb, key, data| Marshal.dump(pattern.map{|k| Marshal.load(key)[k]})});
-    secondary_dbs[pattern] = db[i];
-    i = i + 1;
-  end
-  [primary_db, secondary_dbs]
+# Should be kept in sync with Spread's Entry.compute_partition
+def compute_partition(partition_keys, partition_dim_sizes, entry)
+  partition_keys.collect { |i| entry[i] % partition_dim_sizes[i] }
 end
 
-def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
+def generate_from_domains(in_path, out_path, name, domvars, query, bindvars, keys, aps,
+                          partition_dims, partition_dim_sizes, node_partitions)
   domfiles = domvars.map do |r,p,v|
       [[p,v], File.open(File.join(in_path, $tables[r][0]), "r") ]
     end
@@ -107,7 +197,8 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
   puts "Executing #{query}"
 
   # Create BerkeleyDB database, and secondary indexes from aps
-  primary, secondaries = initialize_db(name, aps, out_path)
+  num_nodes = node_partitions.size
+  node_dbs = initialize_db(name, num_nodes, aps, out_path)
 
   counter = 0
   while not(finished(domvars.length, domfiles))
@@ -117,20 +208,25 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
     cursor.exec()
     while r = cursor.fetch()
       entry = interpret_keys(keys,names,values,r)
+      segment = compute_partition(partition_dims, partition_dim_sizes, entry)
+      node_idx = node_partitions.index(segment)
 
-      # Validate entry
-      unless (entry.is_a? Array)
-        puts "Error : Param is not an array, param class : #{params.class()}";
-      end
-      unless (entry.size == keys.size)
-        puts "Error : Param of wrong length, param length : #{params.size}";
+      if node_idx.nil? then
+        raise "No valid node partition found for #{segment.join(',').to_s}"
       end
 
-      # Write out k,v to BDB
-      raise "Error: Attempt to set a value for a wildcard key" if entry.include?(-1);
-      primary.put(nil, Marshal.dump(entry), r[-1].to_s, 0);
+      if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+        primary, secondaries = node_dbs[node_idx]
 
+        # Validate entry
+        validate_entry(entry, keys)
+
+        # Write out k,v to BDB
+        raise "Error: Attempt to set a value for a wildcard key" if entry.include?(-1);
+        primary.put(nil, Marshal.dump(entry), r[-1].to_s, 0);
+      end
     end
+
     values = next_values(domfiles,values)
 
     counter += 1
@@ -142,11 +238,121 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps)
   puts "Map #{name} size: #{counter}"
 
   # Close databases
-  secondaries.each_value { |db| db.close(0) }
-  primary.close(0)
-  #env.close
+  node_dbs.each do |primary, secondaries|
+    unless secondaries.nil? then secondaries.each_value { |db| db.close(0) } end
+    unless primary.nil? then primary.close(0) end
+  end
 
   domfiles.each { |x,f| f.close }
+end
+
+def generate_from_query(out_path, name, query, keys, aps,
+                        partition_dims, partition_dim_sizes, node_partitions)
+  # Connect, prepare map query
+  conn = OCI8.new(nil,nil)
+  cursor = conn.parse(query)
+
+  puts "Executing #{query}"
+
+  # Create BerkeleyDB database, and secondary indexes from aps
+  num_nodes = node_partitions.size
+  node_dbs = initialize_db(name, num_nodes, aps, out_path)
+
+  #puts "Actually execing query..."
+
+  counter = 0
+  cursor.exec()
+  while r = cursor.fetch()
+    #puts "#{name} #{counter}"
+
+    entry = keys.map { |k| r[k.sub(/Q\./,"").to_i] }
+    segment = compute_partition(partition_dims, partition_dim_sizes, entry)
+    node_idx = node_partitions.index(segment)
+
+    if node_idx.nil? then
+      puts "NS: "+keys.join(",") + " " + entry.join(",")
+      puts "R: " + r.to_s
+      raise "No valid node partition found for  #{segment.join(',').to_s}"
+    end
+
+    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+      primary, secondaries = node_dbs[node_idx]
+
+      # Validate entry
+      validate_entry(entry, keys)
+
+      # Write out k,v to BDB
+      raise "Error: Attempt to set a value for a wildcard key" if entry.include?(-1);
+      primary.put(nil, Marshal.dump(entry), r[-1].to_s, 0);
+    end
+
+    counter += 1
+    if (counter % 10000) == 0 then
+      puts "Processed #{counter} tuples for #{name}"
+    end
+  end
+
+  puts "Map #{name} size: #{counter}"
+
+  # Close databases
+  node_dbs.each do |primary, secondaries|
+    unless secondaries.nil? then secondaries.each_value { |db| db.close(0) } end
+    unless primary.nil? then primary.close(0) end
+  end
+end
+
+def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps,
+                 partition_dims, partition_dim_sizes, node_partitions)
+  if keys.all? { |k| k =~ /Q\./ } then
+    generate_from_query(out_path, name, query,
+      keys, aps, partition_dims, partition_dim_sizes, node_partitions)
+  else
+    generate_from_domains(in_path, out_path,
+      name, domvars, query, bindvars,
+      keys, aps, partition_dims, partition_dim_sizes, node_partitions)
+  end
+end
+
+
+def repartition(in_path, out_path, name, existing_num_nodes,
+                aps, partition_dims, partition_dim_sizes, node_partitions)
+  
+  # Create BerkeleyDB database, and secondary indexes from aps
+  num_nodes = node_partitions.size
+  node_dbs = initialize_db(name, num_nodes, aps, out_path)
+
+  # Read from all dbs, recomputing partitions.
+  existing_dbs = load_db(in_path, name, existing_num_nodes).compact
+  existing_dbs.each do |db|
+    edb_cursor = db.cursor(nil,0)
+    counter = 0
+
+    until (r = edb_cursor.get(nil,nil,Bdb::DB_NEXT)).nil?
+      k,v=r
+      entry = Marshal.restore(k)
+      segment = compute_partition(partition_dims, partition_dim_sizes, entry)
+      node_idx = node_partitions.index(segment)
+      if node_idx.nil? then
+        raise "Error: No valid node partition found for #{segment.join(',').to_s}"
+      end
+
+      if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+        primary, secondaries = node_dbs[node_idx]
+        primary.put(nil, k, v, 0)
+      end
+
+      counter += 1
+      if counter % 1000 == 0 then
+        puts "Processed #{counter} tuples"
+      end
+    end
+  end
+
+  # Close databases
+  node_dbs.each do |primary, secondaries|
+    unless secondaries.nil? then secondaries.each_value { |db| db.close(0) } end
+    unless primary.nil? then primary.close(0) end
+  end
 end
 
 #####################
@@ -201,52 +407,140 @@ end
 #####################
 #
 # Top level
-# Read 5 line blocks
 
-def process(lines)
-  (0...lines.length).step(5) do |i|
-    name, domvar_l, query, bindvar_l, keys_ap_l = lines[i,5]
-
-    # Split dom vars, and for each dom var split tables and positions
-    domvars = domvar_l.strip.split(",").map do |x|
-      rp,v = x.split("=>",2) 
-      r,p=rp.split(".")
-      [r,p,v]
-    end
-
-    # Split bind vars
-    bindvars = bindvar_l.strip.split(",")
-    
-    # Split keys and access patterns
-    key_l_ap_opt = keys_ap_l.strip.split("/")
-    keys = key_l_ap_opt[0].split(",")
-    aps =
-      if key_l_ap_opt.length > 1 then
-        key_l_ap_opt[1].split("|").map do
-        |x| x.split(",").map { |y| y.to_i } end
-      else [] end
-    
-    generate_map($dataset_path, $output_path,
-      name.strip, domvars, query.strip, bindvars, keys, aps)
-    #test(name, domvars, query, bindvars)
-  end
-end
-
-def main(f)
-  lines = File.open(f, "r").readlines
-  if (lines.length % 5) != 0 then
-    puts "Invalid input file, expected 5 lines per map."
-    exit
-  end
-
-  initialize_env;
-  process(lines)
-  $env.close
-end
-
-if ARGV.length != 1 then
+def print_usage
   puts "Usage: bootstrap.rb <map spec file>"
+  puts "Usage: bootstrap.rb [-r|--repartition] <repartition spec> -d <in path> -o <out path>"
   exit
 end
 
-main(ARGV[0])
+def process_bootstrap_spec(spec_lines)
+  # Read 6 line blocks
+  (0...spec_lines.length).step(6) do |i|
+    name, domvar_l, query, bindvar_l, keys_ap_l, partition_l = spec_lines[i,6]
+
+    name = name.strip
+    query = query.strip
+
+    if $maps.nil? or ($maps.length == 0) or ($maps.include? name) then
+
+      # Split dom vars, and for each dom var split tables and positions
+      domvars = domvar_l.strip.split(",").map do |x|
+        rp,v = x.split("=>",2) 
+        r,p=rp.split(".")
+        [r,p,v]
+      end
+
+      # Split bind vars
+      bindvars = bindvar_l.strip.split(",")
+      
+      # Split keys and access patterns
+      key_l_ap_opt = keys_ap_l.strip.split("/")
+      keys = key_l_ap_opt[0].split(",")
+      aps =
+        if key_l_ap_opt.length > 1 then
+          key_l_ap_opt[1].split("|").map do
+          |x| x.split(",").map { |y| y.to_i } end
+        else [] end
+
+      pk_l, ds_l = partition_l.strip.split("/")
+      partition_dims = pk_l.split(",").collect { |x| x.to_i }
+      partition_dim_sizes = ds_l.split(",").collect { |x| x.to_i }
+      node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
+
+      puts "Bootstrapping map #{name}: " +
+        " keys: "+keys.join(",") +
+        " pd: "+partition_dims.join(",") +
+        " pds: "+partition_dim_sizes.join(",") +
+        " nn: "+node_partitions.size.to_s
+
+      generate_map($dataset_path, $output_path,
+                   name, domvars, query, bindvars,
+                   keys, aps, partition_dims, partition_dim_sizes, node_partitions)
+      #test(name, domvars, query, bindvars)
+    end
+  end
+end
+
+#
+# Spec format: <name>/<existing # nodes>/<dims indexes>/<dim sizes>[/<access patterns>]
+# where:
+#   dim indexes: indexes of partition keys in the full set of map keys
+#   dim sizes: # of partitions for each dimension in dim indexes
+#   access partition example: 0|1|2|0,1|1,2
+#     specifies 4 access partitions, separated by '|', with dims separated by ','
+
+def process_repartition_spec(rspec)
+  name_l, en_l, pk_l,ds_l,ap_l = rspec.strip.split("/")
+  if ([ name_l, en_l, pk_l, ds_l ].any? { |x| x.nil? }) then
+    print_usage
+  end
+
+  name = name_l.to_s
+  existing_num_nodes = en_l.to_i
+
+  partition_dims = pk_l.split(",").collect { |x| x.to_i }
+  partition_dim_sizes = ds_l.split(",").collect { |x| x.to_i }
+  node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
+
+  aps = unless ap_l.nil? then
+          ap_l.split("|").map { |x| x.split(",").map { |y| y.to_i } }
+        else [] end
+
+  puts "Repartitioning #{name}" +
+    " en: #{existing_num_nodes.to_s}" +
+    " pk: " + partition_dims.join(",")
+    " ds: " +  partition_dim_sizes.join(",")
+    " aps: " + aps.collect { |x| x.join(",") }.join("|")
+
+  repartition($dataset_path, $output_path,
+              name, existing_num_nodes, aps,
+              partition_dims, partition_dim_sizes, node_partitions)
+end
+
+
+def main
+  unless (not($spec_file.nil?)) ^ (not($repartition_spec.nil?))
+    print_usage
+  end
+
+  initialize_env;
+  unless $spec_file.nil? then
+    lines = File.open($spec_file, "r").readlines
+    if (lines.length % 6) != 0 then
+      puts "Invalid input file, expected 6 lines per map."
+      exit
+    end
+    process_bootstrap_spec(lines)
+  else
+    lines = File.open($repartition_spec, "r").readlines
+    lines.each { |l| process_repartition_spec(l) }
+  end
+  $env.close
+end
+
+opts = GetoptLong.new(
+  [ "-f", "--file",         GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-r", "--repartition",  GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-o", "--output",       GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-d", "--domains",      GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-m", "--maps",         GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-n", "--nodes",        GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt,arg|
+  case opt
+    when "-f", "--file"         then $spec_file = arg;
+    when "-r", "--repartition"  then $repartition_spec = arg;
+    when "-d", "--domains"      then (if File.directory? arg then
+                                       $dataset_path = arg
+                                      else raise "Error: no such directory #{arg}" end);
+    when "-o", "--output"       then (if File.directory? arg then
+                                        $output_path = arg 
+                                      else raise "Error: no such directory #{arg}" end);
+    when "-m", "--maps"         then $maps = arg.split(",");
+    when "-n", "--nodes"        then $nodes = arg.split(",").collect { |x| x.to_i };
+  end
+end
+
+$spec_file = ARGV[0] if ($spec_file.nil?) and (ARGV.length > 0);
+main;
+
