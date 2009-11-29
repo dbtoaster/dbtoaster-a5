@@ -12,13 +12,18 @@ fi
 while getopts ":d:o:" option
 do
     case $option in
-      d)  test -d $OPTARG && dataset_dir=$OPTARG || echo "No such dataset dir $OPTARG";;
-      o)  test -d $OPTARG && output_dir=$OPTARG || echo "No such output dir $OPTARG";;
-      o)  test -d $OPTARG && tmp_dir=$OPTARG || echo "No such temporary dir $OPTARG";;
+      d)  dataset_dir=$OPTARG;;
+      o)  output_dir=$OPTARG;;
+      o)  tmp_dir=$OPTARG;;
     esac
 done
 
 shift $(($OPTIND - 1))
+
+if [[ !( -d $dataset_dir && -d $output_dir && -d $tmp_dir ) ]]; then
+    echo "Invalid directories: $dataset_dir, $output_dir, $tmp_dir"
+    exit
+fi
 
 if [ ! -f $1 ]; then
     echo "No such file: $1"
