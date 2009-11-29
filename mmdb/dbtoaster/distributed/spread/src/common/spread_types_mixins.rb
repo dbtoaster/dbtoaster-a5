@@ -66,6 +66,40 @@ class Entry
   end
 end
 
+class PutRequest
+  def PutRequest.make(template, id_offset, num_gets)
+    put_request = PutRequest.new;
+    put_request.template = template.to_i;
+    put_request.id_offset = id_offset.to_i;
+    put_request.num_gets = num_gets.to_i;
+    put_request;
+  end
+end
+
+class GetRequest
+  attr_reader :replacements;
+  attr_writer :replacements;
+
+  def GetRequest.make(target, id_offset, entries)
+    get_request = GetRequest.new;
+    get_request.target = target;
+    get_request.id_offset = id_offset.to_i;
+    replacements = Array.new;
+    get_request.entries = 
+      entries.collect_index do |ei, e|
+        e_new = Entry.new;
+        e_new.source = e.source;
+        e_new.key = e.key.collect_index do |i,k| 
+          replacements.push([ei,i,k]) if (k.is_a? Numeric) && (k >= 0); 
+          k.to_i;
+        end
+        e_new;
+      end
+    get_request.replacements = replacements;
+    get_request;
+  end
+end
+
 class PutParams
   def PutParams.make(params)
     ret = PutParams.new;
@@ -205,11 +239,17 @@ end
 
 class SpreadException
   def to_s
-    "SpreadException: " + why;
+    "SpreadException: " + why.to_s;
+  end
+  
+  def SpreadException.make(why)
+    e = SpreadException.new;
+    e.why = why;
+    e;
   end
   
   def SpreadException.backoff(why)
-    ret = SpreadException.new(why);
+    ret = SpreadException.make(why);
     ret.retry = true;
     ret;
   end

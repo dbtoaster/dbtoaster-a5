@@ -6,9 +6,9 @@ require 'spatial_index';
 
 class MapLayout
   # IMPORTANT NOTE: THIS CLASS IS WRITTEN TO ASSUME THAT PARTITIONING IS DONE
-  # UNIFORMLY ACROSS ALL MAPS WITH A PARTICULAR "KEY".  IF IN ANY 
-  # TEMPLATE/TRIGGER, THE SAME KEY IS USED TO INDEX INTO THE SAME MAP, THE
-  # PARTITION BOUNDARIES FOR THAT KEY IN BOTH MAPS HAD BETTER BE THE SAME.
+  # DEMI-UNIFORMLY ACROSS ALL MAPS WITH A PARTICULAR "KEY".  IF IN ANY 
+  # TEMPLATE/TRIGGER, THE SAME KEY IS USED TO INDEX INTO TWO MAPS, THE BIGGER
+  # PARTITION BOUNDARY FOR THAT KEY HAD BETTER DIVISIBLE BY THE SMALLER.
 
   attr_reader :maplist;
   
@@ -43,7 +43,7 @@ class MapLayout
       map_refs.collect { |ref| @partition_sizes[ref.source][ref.key.index(param)] if ref.key.include? param }.compact;
     end.collect { |fragment| if fragment.size <= 0 then [1] else fragment.sort.reverse end }
     
-    raise SpreadException.new ("Error: template #{template.index}: Largest partition size for a given key must be evenly divisible by all smaller partition sizes") unless partition_fragments.assert { |f| f.assert { |small_f| (f[0] % small_f) == 0 } }
+    raise SpreadException.new("Error: template #{template.index}: Largest partition size for a given key must be evenly divisible by all smaller partition sizes") unless partition_fragments.assert { |f| f.assert { |small_f| (f[0] % small_f) == 0 } }
     
     partition_size = partition_fragments.collect { |f| f[0] }
     
@@ -105,6 +105,8 @@ end
 ###################################################
 
 class CompiledTrigger
+  attr_reader :trigger, :partition_size;
+
   def initialize(trigger, partition_size)
     @trigger = trigger;
     @index = Hash.new { |h,k| h[k] = Hash.new { |ih,ik| ih[ik] = Hash.new { |iih,iik| iih[iik] = Set.new } } }
@@ -117,6 +119,14 @@ class CompiledTrigger
         [k, [k, 0, trigger.paramlist.index(k)]];
       end
     @partition_size = partition_size
+  end
+  
+  def relation
+    trigger.relation;
+  end
+  
+  def message_index
+    @index;
   end
   
   def discover_put(input, put_node)
@@ -168,3 +178,131 @@ class CompiledTrigger
   end
 end
 
+###################################################
+
+class MetaCompiledNodeMessage
+  attr_reader :node, :puts, :fetches;
+  
+  def initialize(node)
+    @node = node;
+
+    # List of [TemplateID, id_offset, Expected Gets]
+    @puts = Array.new;
+    
+    # Map of TargetNode -> [id_offset, List of Entry]
+    @fetches = Hash.new { |h,k| h[k] = Array.new }; 
+  end
+  
+  def compile
+    @put_messages = @puts.collect { |params| PutRequest.make(*params); }
+    @fetch_messages = @fetches.collect do |target, get_sets| 
+      get_sets.collect do |get_set|
+        GetRequest.make(target, get_set[0], get_set[1].to_a.clone);
+      end
+    end.concat!;
+    @replacements = @fetch_messages.collect_index do |i, get| 
+      get.replacements.collect { |params| params.unshift(i) }
+    end.concat!
+  end
+  
+  def dispatch(node_handler, params, base_cmd_id)
+    @replacements.each do |request, entry, key_dimension, param| 
+      @fetch_messages[request].entries[entry].key[key_dimension] = params[param];
+    end
+    node_handler.meta_request(base_cmd_id, @put_messages, @fetch_messages, params);
+  end
+  
+  def to_s(line_leader = "")
+    "#{line_leader}[#{node}] <= Templates #{@puts.collect { |pu| pu[0] }.uniq.join(",")}" +
+      @fetches.collect do |target, entry_offset_list|
+        "\n#{line_leader}  [#{target}] <= [#{node}] : " + 
+        entry_offset_list.collect do |id_offset, entry_list|
+          entry_list.to_a.join(", ");
+        end.join(", ")
+      end.join("");
+  end
+end
+
+###################################################
+
+class MetaCompiledTrigger
+  def initialize(relation)
+    @relation = relation;
+    @cmd_size = Hash.new(0);
+    @partition_size = nil;
+    initialize_nodes;
+  end
+  
+  def initialize_nodes
+    old_nodes = @nodes;
+    @nodes = Hash.new { |h,k| h[k] = Hash.new { |ih,ik| ih[ik] = MetaCompiledNodeMessage.new(ik) } }
+    old_nodes
+  end
+  
+  def load(trigger)
+    raise "Invalid trigger; Expected relation #{@relation}, but got trigger for relation #{trigger.relation}" unless trigger.relation == @relation;
+    
+    if @partition_size then
+      rescaling = @partition_size.zip(trigger.partition_size).collect { |a, b| if a < b then b.to_f / a.to_f else 1 end }
+      raise "Conflicting partition sizes #{@partition_size.join(",")} <= #{trigger.partition_size.join(",")}" unless rescaling.assert { |a| a.to_i.to_f == a };
+      rescaling.each_with_index do |i, r|
+        old_keys = @nodes.keys
+        (1...r.to_i).each do |mult|
+          old_keys.each do |key|
+            new_key = key.clone;
+            new_key[i] = key[i] + mult.to_i * @partition_size[i];  #### THIS LINE ASSUMES MODULUS PARTITIONING
+            @nodes[new_key] = @nodes[key].clone;
+          end
+        end
+      end
+      @partition_size = @partition_size.zip(rescaling).collect { |old, mult| old * mult.to_i }
+    else
+      @partition_size = trigger.partition_size;
+    end
+    
+    rescaling = @partition_size.zip(trigger.partition_size).collect { |a, b| if b < a then a.to_f / b.to_f else 1 end }
+    raise "Conflicting partition sizes #{@partition_size.join(",")} <= #{trigger.partition_size.join(",")}" unless rescaling.assert { |a| a.to_i.to_f == a };
+    rescaling = 
+    
+    
+    rescaling.collect { |a| (0...a.to_i).to_a }.each_cross_product do |pshift|
+      trigger.message_index.each_pair do |partition, put_list|
+        partition = partition.clone.zip(pshift, @partition_size).collect do |base, shift, size|
+          base + shift * size;
+        end
+        put_list.each_pair do |put_node, fetch_list|
+          @nodes[partition][put_node].puts.push([trigger.index, @cmd_size[partition], trigger.requires_loop? ? fetch_list.size : -1]);
+          fetch_list.each_pair do |fetch_node, fetch_entries|
+            raise "Nil fetch_entries" unless fetch_entries;
+            @nodes[partition][fetch_node].fetches[put_node].push([@cmd_size[partition], fetch_entries])
+          end
+          @cmd_size[partition] = @cmd_size[partition] + 1;
+        end
+      end
+    end
+  end
+  
+  def compile
+    @nodes.each_value do |partition_nodes|
+      partition_nodes.each_value do |nodeMessage|
+        nodeMessage.compile;
+      end
+    end
+  end
+  
+  def fire(params)
+    partition = Entry.compute_partition(params, @partition_size);
+    @nodes[partition].each_value do |nodeMessage|
+      yield nodeMessage;
+    end
+    @cmd_size[partition]
+  end
+  
+  def to_s
+    @nodes.keys.sort.collect do |partition|
+      nodes = @nodes[partition];
+      "#{@relation}[#{partition.join(", ")}]" + 
+      nodes.values.collect { |n| "\n" + n.to_s("   ") }.join("");
+    end.join("\n")
+  end
+end

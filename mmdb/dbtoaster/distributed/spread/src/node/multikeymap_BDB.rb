@@ -16,7 +16,7 @@ class MultiKeyMap
     patterns.delete_if { |pattern| pattern.size >= numkeys };
     @empty = true;
     @name = "#{name}-#{Process.pid.to_s}";
-    @pfile, @sfiles = pfiles;
+    @pfile, @sfiles = *pfiles;
     #puts "Node #{name} pfiles, p: #{@pfile} s: #{@sfiles.join(",")}"
     initialize_db(patterns);
   end
@@ -122,7 +122,7 @@ class MultiKeyMap
     @env.open(@basepath, Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
     @basemap = @env.db;
     db_file = "#{@basepath}/db_#{@name}_primary.db"
-    if not(@pfile.nil?) && (File.exist? @pfile) then
+    if @pfile && (File.exist? @pfile) then
       puts "Copying primary pfile #{@pfile}=>#{db_file}"
       FileUtils.cp @pfile, db_file;
       delete_old = false;
@@ -155,9 +155,9 @@ class MultiKeyMap
     s_pfile = @sfiles.fetch(i, nil) unless @sfiles.nil?;
     sdb_file = "#{@basepath}/db_#{@name}_#{i}.db"
     Logger.warn { "Creating Secondary Index: #{sdb_file} (#{pattern.join(", ")})" }
-    if not(@pfile.nil?) && s_pfile.nil? then
+    if @pfile && s_pfile.nil? then
       raise SpreadException.new("Missing bootstrap file for secondary index #{i}.");
-    elsif not(@pfile.nil?) && not(s_pfile.nil?) && (File.exist? s_pfile) then
+    elsif @pfile && s_pfile && (File.exist? s_pfile) then
       puts "Copying secondary pfile #{s_pfile}=>#{sdb_file}"
       FileUtils.cp s_pfile, sdb_file;
     end

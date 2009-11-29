@@ -288,13 +288,13 @@ class MapNodeHandler
   end
   
   def find_partition(source, key)
-    raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
+    raise SpreadException.make("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
     
     partition = Entry.compute_partition(key, @partition_sizes[source.to_i]);
     if (@maps.has_key? source.to_i) && (@maps[source.to_i].has_key? partition) then
       @maps[source.to_i][partition];
     else
-      raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + partition.join(",") + "]; Known maps: " + @maps.collect {|k,v| k.to_s+"{"+v.keys.collect { |partid| "[#{partid.join(",")}]" }.join(";") + "}"}.join(", "));
+      raise SpreadException.make("Request for unknown partition: " + source.to_s + "[" + partition.join(",") + "]; Known maps: " + @maps.collect {|k,v| k.to_s+"{"+v.keys.collect { |partid| "[#{partid.join(",")}]" }.join(";") + "}"}.join(", "));
     end
   end
   
@@ -514,6 +514,19 @@ class MapNodeHandler
       @cmdcallbacks[cmdid].finish_message;
     end
     @stats.push(result.size);
+  end
+  
+  def meta_request(base_cmd, put_list, get_list, params)
+    put_list.each do |put_request|
+      if put_request.num_gets >= 0 then
+        mass_put(put_request.id_offset+base_cmd, put_request.template, put_request.num_gets, params);
+      else
+        put(put_request.id_offset+base_cmd, put_request.template, params);
+      end
+    end
+    get_list.each do |get_request|
+      fetch(get_request.entries, get_request.target, get_request.id_offset+base_cmd);
+    end
   end
   
   ############# Internal Control

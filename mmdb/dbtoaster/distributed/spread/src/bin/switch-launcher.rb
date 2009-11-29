@@ -57,6 +57,7 @@ conf.templates.each_pair do |id, cmd|
   handler.install_template(cmd, id)
 #  puts "Loaded Template " + id.to_s;
 end
+handler.metacompile_templates;
 
 #Thread.current[:main_thread] = 0;
 #Thread.new do

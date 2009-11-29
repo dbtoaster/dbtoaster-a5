@@ -41,6 +41,18 @@ struct PutParams {
   1: list<PutField> params
 }
 
+struct PutRequest {
+  1: i64 template,
+  2: i64 id_offset,
+  3: i64 num_gets
+}
+
+struct GetRequest {
+  1: NodeID target,
+  2: i64    id_offset,
+  3: list<Entry> entries
+}
+
 service MapNode {
   oneway void put     ( 1: Version         id,
                         2: i64             template,  //the put template ID (see the map file)
@@ -64,6 +76,11 @@ service MapNode {
   oneway void push_get( 1: GetResult     result,
                         2: Version       cmdid
                         ),
+  
+  oneway void meta_request( 1: i64 base_cmd,
+                            2: list<PutRequest> put_list,
+                            3: list<GetRequest> get_list,
+                            4: list<double> params)
   
   GetResult aggreget  ( 1: list<Entry>   target,
                         2: AggregateType agg
