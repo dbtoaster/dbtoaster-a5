@@ -53,10 +53,10 @@ class MapPartition
   # that is used to generate a secondary index over the data; Wildcard reads over this 
   # map partition can only follow one of those access patterns
   
-  def initialize(mapid, partition, patterns)
+  def initialize(mapid, partition, patterns, pfiles)
     @mapid, @partition = mapid.to_i, partition;
     
-    @data = MultiKeyMap.new(@partition.size, patterns, "Map" + mapid.to_s);
+    @data = MultiKeyMap.new(@partition.size, patterns, "Map" + mapid.to_s, pfiles);
     @pending = Array.new;
     @pending_cleared = 0
   end

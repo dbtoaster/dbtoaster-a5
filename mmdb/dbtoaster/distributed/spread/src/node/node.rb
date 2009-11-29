@@ -307,9 +307,11 @@ class MapNodeHandler
     end
   end
   
-  def create_partition(map, partition, size)
+  def create_partition(map, partition, size, pfiles)
     @partition_sizes[map] = size;
-    @maps[map.to_i][partition.collect { |partdim| partdim.to_i }] = MapPartition.new(map, partition, @templates.values.collect { |t| t.access_patterns(map.to_i) }.concat!.uniq);
+    @maps[map.to_i][partition.collect { |partdim| partdim.to_i }] =
+      MapPartition.new(map, partition,  @templates.values.collect do |t|
+        t.access_patterns(map.to_i) end.concat!.uniq, pfiles);
     Logger.debug { "Created partition " + @maps[map.to_i].to_s }
   end
   
@@ -531,7 +533,8 @@ class MapNodeHandler
   def setup(config)
     config.my_config["partitions"].each_pair do |map, partition_list|
       partition_list.each do |partition|
-        create_partition(map, partition, config.partition_sizes[map])
+        pfiles = config.myconfig["pfiles"][map].fetch(partition, nil);
+        create_partition(map, partition, config.partition_sizes[map], pfiles)
       end
     end
     
