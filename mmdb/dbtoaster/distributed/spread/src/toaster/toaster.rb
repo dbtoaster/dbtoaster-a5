@@ -313,7 +313,7 @@ class DBToaster
       ap = @templates.collect do |t|
           t.access_patterns(map_id).compact.collect do |ap|
             ap.join(".")
-          end.uniq.join(",")
+          end.uniq.join("|")
         end.uniq.select{|x| (x.length > 0) && !(x == default_ap)}.join("|")
 
       # Group bys
@@ -358,9 +358,9 @@ class DBToaster
         else k end
       end.join(",")
 
-      where_clause = rels.select { |x| x[2].length > 0 }.collect do |x|
+      where_clause = rels.collect do |x|
        x[2].select { |y| not(promoted_params.any? { |gb| y.match(gb) }) }
-      end.join(" and ");
+      end.compact.select { |x| x.length > 0 }.join(" and ");
 
       # SQL query
       query = 
