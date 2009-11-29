@@ -348,7 +348,7 @@ class DBToaster
       
       puts "Extra group-bys: " + extra_group_bys.join(",")
       puts "Promoted params: " + promoted_params.join(",")
-      group_bys.concat(extra_group_bys.collect)
+      group_bys.concat(extra_group_bys)
 
       # Primary map keys
       keys_s = keys.collect do |k|
@@ -394,7 +394,7 @@ class DBToaster
     group_by_match = @query.match(/group *by *([^;]*)/)
     q_group_bys = group_by_match[1].split(",").collect { |gb| gb.strip } unless group_by_match.nil?;
     q_keys_s = []
-    q_group_bys.each_index {|i| q_keys_s.push("Q."+i.to_s) }
+    q_group_bys.each_index {|i| q_keys_s.push("Q."+i.to_s) } unless q_group_bys.nil?;
     @map_formulae["q"] = {
       "param_sources" => "", "query" => @query, "params" => "",
       "keys" => q_keys_s, "aps" => ""
