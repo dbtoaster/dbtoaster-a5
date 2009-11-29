@@ -16,8 +16,9 @@ class MultiKeyMap
     patterns.delete_if { |pattern| pattern.size >= numkeys };
     @empty = true;
     @name = "#{name}-#{Process.pid.to_s}";
-    pfile, sfiles = pfiles;
-    initialize_db(patterns, pfile, sfiles);
+    @pfile, @sfiles = pfiles;
+    #puts "Node #{name} pfiles, p: #{@pfile} s: #{@sfiles.join(",")}"
+    initialize_db(patterns);
   end
   
   def add_pattern(pattern)
@@ -114,15 +115,16 @@ class MultiKeyMap
   end
   
   
-  def initialize_db(patterns, pfile = nil, sfiles = [], delete_old = true)
+  def initialize_db(patterns, delete_old = true)
     Logger.warn { "Creating database for map : #{@name}" };
     @env = Bdb::Env.new(0);
     @env.cachesize = 128*1024*1024
     @env.open(@basepath, Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
     @basemap = @env.db;
     db_file = "#{@basepath}/db_#{@name}_primary.db"
-    if not(pfile.nil?) && (File.exist? pfile) then
-      FileUtils.cp pfile, db_file;
+    if not(@pfile.nil?) && (File.exist? @pfile) then
+      puts "Copying primary pfile #{@pfile}=>#{db_file}"
+      FileUtils.cp @pfile, db_file;
       delete_old = false;
     end
     cleanup_db if delete_old;
@@ -131,7 +133,7 @@ class MultiKeyMap
     at_exit { File.delete "#{db_file}" } if delete_old;
     @patterns = Hash.new;
     patterns.each do |pattern|
-      create_secondary_index(pattern, sfiles, not(pfile.nil?))
+      create_secondary_index(pattern)
     end
   end
   
@@ -146,16 +148,17 @@ class MultiKeyMap
     end
   end
 
-  def create_secondary_index(pattern, sfiles = [], has_pfile = false, delete_old = true)
+  def create_secondary_index(pattern, delete_old = true)
     i = @patterns.size;
     db = @env.db;
     db.flags = Bdb::DB_DUPSORT;
-    s_pfile = sfiles.fetch(i, nil);
+    s_pfile = @sfiles.fetch(i, nil) unless @sfiles.nil?;
     sdb_file = "#{@basepath}/db_#{@name}_#{i}.db"
     Logger.warn { "Creating Secondary Index: #{sdb_file} (#{pattern.join(", ")})" }
-    if has_pfile && s_pfile.nil?
+    if not(@pfile.nil?) && s_pfile.nil? then
       raise SpreadException.new("Missing bootstrap file for secondary index #{i}.");
-    elsif not(s_pfile.nil?)
+    elsif not(@pfile.nil?) && not(s_pfile.nil?) && (File.exist? s_pfile) then
+      puts "Copying secondary pfile #{s_pfile}=>#{sdb_file}"
       FileUtils.cp s_pfile, sdb_file;
     end
     db.open(nil, sdb_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
