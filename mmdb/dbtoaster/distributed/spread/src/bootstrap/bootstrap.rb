@@ -5,14 +5,14 @@ require 'bdb2'
 require 'fileutils'
 require 'getoptlong'
 
-
 $dataset_path = "/home/yanif/datasets/tpch/100m"
 $output_path = "."
 $spec_file = nil
 $repartition_spec = nil
 
-$map_names = []
-$nodes = []
+$map_names   = []
+$write_nodes = []
+$read_nodes  = []
 
 #
 # Internals
@@ -57,7 +57,7 @@ def initialize_env()
   $env.open(".", Bdb::DB_INIT_CDB | Bdb::DB_INIT_MPOOL | Bdb::DB_CREATE, 0);
 end
 
-def initialize_node_db(name, i, patterns, basepath, delete_old)
+def initialize_node_db(name, i, patterns, basepath)
   puts "Creating database for node #{i} map #{name}";
 
   #puts "Getting env db..."
@@ -69,12 +69,6 @@ def initialize_node_db(name, i, patterns, basepath, delete_old)
   end
 
   node_db_file = File.join("#{basepath}", "node#{i}", "db_#{name}_primary.db")
-
-  #puts "Deleting prior primary..."
-
-  if (File.exist? node_db_file) && delete_old then
-    File.delete(node_db_file)
-  end
 
   #puts "Opening primary..."
   node_primary_db.open(nil, node_db_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
@@ -92,9 +86,6 @@ def initialize_node_db(name, i, patterns, basepath, delete_old)
 
     node_db[j].flags = Bdb::DB_DUPSORT;
     node_pdb_file = File.join("#{basepath}","node#{i}", "db_#{name}_#{j}.db")
-    if (File.exist? node_pdb_file) && delete_old then
-      File.delete(node_pdb_file)
-    end
 
     #puts "Opening #{node_pdb_file}"
     node_db[j].open(nil, node_pdb_file, nil, Bdb::Db::HASH, Bdb::DB_CREATE, 0);
@@ -106,23 +97,24 @@ def initialize_node_db(name, i, patterns, basepath, delete_old)
   [node_primary_db, node_secondary_dbs]
 end
 
-def initialize_db(name, num_nodes, patterns, basepath = ".", delete_old = true)
+def initialize_db(name, num_nodes, patterns, basepath = ".")
   (0...num_nodes).collect do |i|
-    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? i) then
-      initialize_node_db(name, i, patterns, basepath, delete_old)
+    if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? i) then
+      initialize_node_db(name, i, patterns, basepath)
     end
   end
 end
 
 def load_db(in_path, name, num_nodes)
-  (0...num_nodes).collect do |i|
-    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? i) then
+  (0...num_nodes).collect { |i|
+    if $read_nodes.nil? or ($read_nodes.length == 0) or ($read_nodes.include? i) then
+      puts "Loading database for node #{i} map #{name}"
       node_db = $env.db
       node_db_file = "#{in_path}/node#{i}/db_#{name}_primary.db"
       node_db.open(nil, node_db_file, nil, Bdb::Db::HASH, Bdb::DB_RDONLY, 0)
       node_db
     end
-  end
+  }
 end
 
 def finished(numvars, domfiles)
@@ -215,7 +207,7 @@ def generate_from_domains(in_path, out_path, name, domvars, query, bindvars, key
         raise "No valid node partition found for #{segment.join(',').to_s}"
       end
 
-      if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+      if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
         primary, secondaries = node_dbs[node_idx]
 
         # Validate entry
@@ -275,7 +267,7 @@ def generate_from_query(out_path, name, query, keys, aps,
       raise "No valid node partition found for  #{segment.join(',').to_s}"
     end
 
-    if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+    if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
       primary, secondaries = node_dbs[node_idx]
 
       # Validate entry
@@ -336,7 +328,7 @@ def repartition(in_path, out_path, name, existing_num_nodes,
         raise "Error: No valid node partition found for #{segment.join(',').to_s}"
       end
 
-      if $nodes.nil? or ($nodes.length == 0) or ($nodes.include? node_idx) then
+      if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
         primary, secondaries = node_dbs[node_idx]
         primary.put(nil, k, v, 0)
       end
@@ -346,9 +338,13 @@ def repartition(in_path, out_path, name, existing_num_nodes,
         puts "Processed #{counter} tuples"
       end
     end
+
+    edb_cursor.close
   end
 
   # Close databases
+  existing_dbs.each { |db| db.close(0) }
+
   node_dbs.each do |primary, secondaries|
     unless secondaries.nil? then secondaries.each_value { |db| db.close(0) } end
     unless primary.nil? then primary.close(0) end
@@ -477,25 +473,28 @@ def process_repartition_spec(rspec)
   end
 
   name = name_l.to_s
-  existing_num_nodes = en_l.to_i
 
-  partition_dims = pk_l.split(",").collect { |x| x.to_i }
-  partition_dim_sizes = ds_l.split(",").collect { |x| x.to_i }
-  node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
+  if $maps.nil? or ($maps.length == 0) or ($maps.include? name) then
+    existing_num_nodes = en_l.to_i
 
-  aps = unless ap_l.nil? then
-          ap_l.split("|").map { |x| x.split(",").map { |y| y.to_i } }
-        else [] end
+    partition_dims = pk_l.split(",").collect { |x| x.to_i }
+    partition_dim_sizes = ds_l.split(",").collect { |x| x.to_i }
+    node_partitions = partition_dim_sizes.collect { |di| (0...di).to_a }.cross_product
 
-  puts "Repartitioning #{name}" +
-    " en: #{existing_num_nodes.to_s}" +
-    " pk: " + partition_dims.join(",")
+    aps = unless ap_l.nil? then
+            ap_l.split("|").map { |x| x.split(",").map { |y| y.to_i } }
+          else [] end
+
+    puts "Repartitioning #{name}" +
+      " en: #{existing_num_nodes.to_s}" +
+      " pk: " + partition_dims.join(",")
     " ds: " +  partition_dim_sizes.join(",")
     " aps: " + aps.collect { |x| x.join(",") }.join("|")
 
-  repartition($dataset_path, $output_path,
-              name, existing_num_nodes, aps,
-              partition_dims, partition_dim_sizes, node_partitions)
+    repartition($dataset_path, $output_path,
+                name, existing_num_nodes, aps,
+                partition_dims, partition_dim_sizes, node_partitions)
+  end
 end
 
 
@@ -525,7 +524,8 @@ opts = GetoptLong.new(
   [ "-o", "--output",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-d", "--domains",      GetoptLong::REQUIRED_ARGUMENT ],
   [ "-m", "--maps",         GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-n", "--nodes",        GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-l", "--read-nodes",   GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-s", "--write-nodes",  GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt,arg|
   case opt
     when "-f", "--file"         then $spec_file = arg;
@@ -537,7 +537,8 @@ opts = GetoptLong.new(
                                         $output_path = arg 
                                       else raise "Error: no such directory #{arg}" end);
     when "-m", "--maps"         then $maps = arg.split(",");
-    when "-n", "--nodes"        then $nodes = arg.split(",").collect { |x| x.to_i };
+    when "-l", "--read-nodes"   then $read_nodes = arg.split(",").collect { |x| x.to_i };
+    when "-s", "--write-nodes"  then $write_nodes = arg.split(",").collect { |x| x.to_i };
   end
 end
 
