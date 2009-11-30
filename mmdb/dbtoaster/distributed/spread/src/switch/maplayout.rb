@@ -262,12 +262,10 @@ class MetaCompiledTrigger
     
     rescaling = @partition_size.zip(trigger.partition_size).collect { |a, b| if b < a then a.to_f / b.to_f else 1 end }
     raise "Conflicting partition sizes #{@partition_size.join(",")} <= #{trigger.partition_size.join(",")}" unless rescaling.assert { |a| a.to_i.to_f == a };
-    rescaling = 
-    
-    
+
     rescaling.collect { |a| (0...a.to_i).to_a }.each_cross_product do |pshift|
       trigger.message_index.each_pair do |partition, put_list|
-        partition = partition.clone.zip(pshift, @partition_size).collect do |base, shift, size|
+        partition = partition.clone.zip(pshift, trigger.partition_size).collect do |base, shift, size|
           base + shift * size;
         end
         put_list.each_pair do |put_node, fetch_list|
