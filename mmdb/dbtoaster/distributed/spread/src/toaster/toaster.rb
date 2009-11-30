@@ -261,41 +261,48 @@ class DBToaster
                   else raise "Could not find schema for relation #{rel_n}"
                 end
 
-              (if f =~ /^x_/ then
-                attr_idx = f.index('__')-1
-                dom_rel_start = f[0,attr_idx].rindex('_')+1
-                dom_rel_alias = f[dom_rel_start..attr_idx]
-                dom_attr = f[attr_idx+1..-1]
-                dom_rel = if @map_aliases.value?(dom_rel_alias)
-                  then @map_aliases.index(dom_rel_alias)
-                  else dom_rel_alias end
+              unifications = []
+              norm_orig_f = orig_f.sub(/__/, ".")
+              new_f =
+                if f =~ /^x_/ then
+                  attr_idx = f.index('__')-1
+                  dom_rel_start = f[0,attr_idx].rindex('_')+1
+                  dom_rel_alias = f[dom_rel_start..attr_idx]
+                  dom_attr = f[attr_idx+1..-1]
+                  dom_rel = if @map_aliases.value?(dom_rel_alias)
+                    then @map_aliases.index(dom_rel_alias)
+                    else dom_rel_alias end
+  
+                  puts "Rel: #{dom_rel} attr: #{dom_attr} orig: #{orig_f}"
+                  puts "Alias: #{dom_rel_alias} attr: #{dom_attr} orig: #{orig_f}"
+  
+                  dom_idx = @schemas[dom_rel].index(dom_rel_alias+dom_attr)
+                  
+  
+                  param = "dom_" + dom_rel_alias + dom_attr
+                  if domains.key?(dom_rel) then
+                    domains[dom_rel].push(dom_idx)
+                  else
+                    domains[dom_rel] = [dom_idx]
+                  end
+                  
+                  # Substitute both the LHS and RHS of the constraint for keys
+                  key_param_subs[f] = param
+                  key_param_subs[orig_f] = param
+                  
+                  # Substitute only the bound var for constraints
+                  pred_var_subs[f] = ":"+param
+  
+                  # Track param constraints to promote params to group-bys
+                  existing_unifiers = param_constraints.fetch(":"+param, [])
+                  unifications.concat([existing_unifiers[0] + " = " + norm_orig_f]) if existing_unifiers.length > 0;
+                  param_constraints[":"+param] = existing_unifiers.push(norm_orig_f)
+  
+                  ":"+param
+                else f.sub(/__/, ".") end;
 
-                puts "Rel: #{dom_rel} attr: #{dom_attr} orig: #{orig_f}"
-                puts "Alias: #{dom_rel_alias} attr: #{dom_attr} orig: #{orig_f}"
-
-                dom_idx = @schemas[dom_rel].index(dom_rel_alias+dom_attr)
-                
-
-                param = "dom_" + dom_rel_alias + dom_attr
-                if domains.key?(dom_rel) then
-                  domains[dom_rel].push(dom_idx)
-                else
-                  domains[dom_rel] = [dom_idx]
-                end
-                
-                # Substitute both the LHS and RHS of the constraint for keys
-                key_param_subs[f] = param
-                key_param_subs[orig_f] = param
-                
-                # Substitute only the bound var for constraints
-                pred_var_subs[f] = ":"+param
-
-                # Track param constraints to promote params to group-bys
-                param_constraints[":"+param] = orig_f.sub(/__/, ".")
-
-                ":"+param
-              else f.sub(/__/, ".") end) + " = " + orig_f.sub(/__/, ".")
-            end
+              unifications.push([new_f + " = " + norm_orig_f])
+            end.flatten.uniq
           
           # Return [relation name, [fields, predicates, domains]]
           [rel_n, fields_and_prefixes.collect { |f,p| f }, predicates, domains]
@@ -335,14 +342,16 @@ class DBToaster
         subbed_t_preds = subbed_t_preds.gsub(Regexp.quote(s), t)
       end
       
-      # Promote params to group-bys
+      # Promote params to group-bys if they do not appear in any additional
+      # constraints. Note this is very conservative, and params can still be
+      # promoted if they appear in equality constraints.
       promoted_params = []
       extra_group_bys = []
-      param_constraints.each_pair do |p,v|
+      param_constraints.each_pair do |p,v_l|
         puts "Match #{p}: "+subbed_t_preds.match(p).to_s
         if subbed_t_preds.match(p).nil? then
-          promoted_params.push(p)
-          extra_group_bys.push(v)
+          promoted_params.concat(Array.new(v_l.size, p))
+          extra_group_bys.concat(v_l)
         end
       end
       
