@@ -1,7 +1,0 @@
-Welcome to Redis 1.02
-
-This is a bug fix release addressing just a single non critical bug.
-
-CHANGELOG for Redis 1.02
-
-2009-09-17 fixed compilation issues in Mac OS X Snow Leopard against 32 bit binary builds.
