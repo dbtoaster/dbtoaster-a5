@@ -7,7 +7,7 @@ class DBToaster
     :slice_directives, :persist, :switch, :preload, :map_formulae;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null",
-                 toaster_dir = File.dirname(__FILE__) + "/../../../../prototype/compiler/alpha3")
+                 toaster_dir = File.dirname(__FILE__) + "/../../../prototype/compiler/alpha3")
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @test_directives = Array.new;
