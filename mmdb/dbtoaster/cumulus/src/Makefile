@@ -1,5 +1,9 @@
 
-all: timestamps/validation timestamps/thrift #gen-java/spread_thrift.jar
+CLASSFILES=\
+	node/MultiKeyMapJavaImpl.class
+CLASSPATH=../lib/je.jar
+
+all: timestamps/validation timestamps/thrift bin/jrb_compat.jar #gen-java/spread_thrift.jar
 	#make -C tpch-simple
 
 gen-java/spread_thrift.jar: timestamps/thrift
@@ -14,6 +18,12 @@ timestamps/validation: common/spread.thrift node/node.rb switch/switch.rb slicer
 	bin/validateServices.rb common/spread.thrift node/node.rb switch/switch.rb slicer/slicer.rb
 	touch timestamps/validation
 
+$(CLASSFILES) : %.class : %.java
+	javac -cp $(CLASSPATH) $<
+
+bin/jrb_compat.jar: $(CLASSFILES)
+	jar cf $@ $(CLASSFILES) $(subst $$,\$$, $(wildcard $(subst .class,\$$*.class,$(CLASSFILES))))
+
 clean:
-	rm -rf gen-* timestamps/*
+	rm -rf gen-* timestamps/* $(CLASSFILES) bin/jrb_compat.jar
 	make -C tpch-simple clean
