@@ -1,0 +1,10 @@
+--- !ruby/object:RI::MethodDescription 
+aliases: []
+
+block_params: 
+comment: 
+full_name: Spec::Matchers::Matcher#diffable?
+is_singleton: false
+name: diffable?
+params: ()
+visibility: public
