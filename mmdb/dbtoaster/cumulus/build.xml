@@ -1,0 +1,25 @@
+<project name="Cumulus" default="main" basedir=".">
+  <property name="src"   location="src/java" />
+  <property name="build" location="build" />
+  <property name="bin"   location="bin" />
+  <property file="build.properties" />
+  
+  <path id="classpath">
+    <pathelement path="${jrb_home}/lib/jruby.jar" />
+    <pathelement path="lib/je.jar" />
+    <pathelement path="jr
+  </path>
+  
+  <target name="init">
+    <mkdir dir="${build}" />
+  </target>
+  
+  <target name="main" depends="init">
+    <javac srcdir="${src}" destdir="${build}" classpathref="classpath" />
+  </target>
+  
+  <target name="clean">
+    <delete dir="${build}" />
+    <
+  </target>
+</project>
