@@ -1,1 +1,2 @@
 node  org.dbtoaster.cumulus.node.MapNode
+chef  org.dbtoaster.cumulus.chef.ChefNode

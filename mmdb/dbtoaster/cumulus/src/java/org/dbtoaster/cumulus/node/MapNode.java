@@ -54,9 +54,6 @@ public class MapNode
   
   public static class MapNodeClient extends Client implements MapNodeIFace
   {
-    protected TProtocol iprot;
-    protected TProtocol oprot;
-    
     public MapNodeClient(InetSocketAddress s, Selector selector) throws IOException {
       super(s, selector);
     }
@@ -66,7 +63,7 @@ public class MapNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.PUT);
+        oprot.putObject(MapNodeMethod.PUT);
         oprot.putLong(id);
         oprot.putLong(template);
         oprot.putObject(params);
@@ -79,7 +76,7 @@ public class MapNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.MASS_PUT);
+        oprot.putObject(MapNodeMethod.MASS_PUT);
         oprot.putLong(id);
         oprot.putLong(template);
         oprot.putLong(expected_gets);
@@ -94,7 +91,7 @@ public class MapNode
       Map<Entry, Double> r = null;
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.GET);
+        oprot.putObject(MapNodeMethod.GET);
         oprot.putObject(target);
         oprot.endMessage();
         waitForFrame();
@@ -108,7 +105,7 @@ public class MapNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.FETCH);
+        oprot.putObject(MapNodeMethod.FETCH);
         oprot.putObject(target);
         oprot.putObject(destination);
         oprot.putLong(cmdid);
@@ -124,7 +121,7 @@ public class MapNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.PUSH_GET);
+        oprot.putObject(MapNodeMethod.PUSH_GET);
         oprot.putObject(result);
         oprot.putLong(cmdid);
         oprot.endMessage();
@@ -137,7 +134,7 @@ public class MapNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.META_REQUEST);
+        oprot.putObject(MapNodeMethod.META_REQUEST);
         oprot.putLong(base_cmd);
         oprot.putObject(put_list);
         oprot.putObject(get_list);
@@ -152,7 +149,7 @@ public class MapNode
       Map<Entry, Double> r = null;
       try {
         oprot.beginMessage();
-        oprot.putObject(Processor.MapNodeMethod.AGGREGET);
+        oprot.putObject(MapNodeMethod.AGGREGET);
         oprot.putObject(target);
         oprot.putInteger(agg);
         oprot.endMessage();
@@ -166,7 +163,7 @@ public class MapNode
     {
       String r = null;
       try {
-        oprot.putObject(Processor.MapNodeMethod.DUMP);
+        oprot.putObject(MapNodeMethod.DUMP);
         waitForFrame();
         r = (String) iprot.getObject();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
@@ -176,7 +173,7 @@ public class MapNode
     public void localdump() throws TException
     {
       try {
-        oprot.putObject(Processor.MapNodeMethod.LOCALDUMP);
+        oprot.putObject(MapNodeMethod.LOCALDUMP);
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
@@ -185,21 +182,13 @@ public class MapNode
     }
   }
     
-  public static class Processor implements TProcessor
+  public static enum MapNodeMethod {
+    PUT, MASS_PUT, GET, FETCH, PUSH_GET,
+    META_REQUEST, AGGREGET, DUMP, LOCALDUMP };
+
+  public static class Processor extends TProcessor<MapNodeMethod>
   {
-    public static interface HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot) throws TException;
-    }
-        
-    public enum MapNodeMethod {
-      PUT, MASS_PUT, GET, FETCH, PUSH_GET,
-      META_REQUEST, AGGREGET, DUMP, LOCALDUMP };
-
     private MapNodeIFace handler;
-
-    protected final HashMap<MapNodeMethod, HandlerFunction> handlerMap =
-      new HashMap<MapNodeMethod, HandlerFunction>();
     
     public Processor(MapNodeIFace h)
     {
@@ -215,61 +204,22 @@ public class MapNode
       handlerMap.put(MapNodeMethod.LOCALDUMP, new localdump());
     }
         
-    public boolean process(TProtocol iprot, TProtocol oprot)
-      throws TException
-    {
-      MapNodeMethod key;
-      try
-      {
-        //System.out.println("Getting method...");
-        key = (MapNodeMethod) iprot.getObject();
-        //System.out.println("Got method key: " + key);
-
-        HandlerFunction fn = handlerMap.get(key);
-        if ( fn == null )
-        {
-          // TODO: Thrift sends out an exception here...
-          String message = "No handler found for " + key;
-          System.out.println(message);
-          //throw new TException(message);
-          return false;
-        }
-        
-        fn.process(iprot, oprot);
-      } catch (TException te)
-      {
-      } catch (TProtocolException tpe)
-      {
-          // TODO: write out an exception...
-      }
-      
-      return true;
-    }
-        
-    private class put implements HandlerFunction
+    private class put extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
       {
-        try
-        {
-          Long id = iprot.getLong();
-          Long template = iprot.getLong();
-          List<Double> params = (List<Double>) iprot.getObject();
-          handler.put(id, template, params);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        }
+        Long id = iprot.getLong();
+        Long template = iprot.getLong();
+        List<Double> params = (List<Double>) iprot.getObject();
+        handler.put(id, template, params);
       }
     }
         
-    private class mass_put implements HandlerFunction
+    private class mass_put extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
       {
         try
         {
@@ -287,131 +237,79 @@ public class MapNode
       }
     }
 
-    private class get implements HandlerFunction
+    private class get extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException,SpreadException
       {
-        try
-        {
-          List<Entry> target = (List<Entry>) iprot.getObject();
-          Map<Entry, Double> r = handler.get(target);
-          oprot.putObject(r);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        } catch (SpreadException spe)
-        {
-          throw new TException("Function exception: " + spe.getMessage());
-        }
+        List<Entry> target = (List<Entry>) iprot.getObject();
+        Map<Entry, Double> r = handler.get(target);
+        oprot.putObject(r);
       }
     }
 
-    private class fetch implements HandlerFunction
+    private class fetch extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
       {
-        try
-        {
-          List<Entry> target = (List<Entry>) iprot.getObject();
-          NodeID destination = (NodeID) iprot.getObject();
-          Long cmdid = iprot.getLong();
-          handler.fetch(target, destination, cmdid);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-          }
-        }
-    }
-
-    private class push_get implements HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
-      {
-        try
-        {
-          Map<Entry, Double> result = (Map<Entry, Double>) iprot.getObject();
-          Long cmdid = iprot.getLong();
-          handler.push_get(result, cmdid);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        }
+        List<Entry> target = (List<Entry>) iprot.getObject();
+        NodeID destination = (NodeID) iprot.getObject();
+        Long cmdid = iprot.getLong();
+        handler.fetch(target, destination, cmdid);
       }
     }
 
-    private class meta_request implements HandlerFunction
+    private class push_get extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
       {
-        try {
-          Long base_cmd = iprot.getLong();
-          List<PutRequest> put_list = (List<PutRequest>) iprot.getObject();
-          List<GetRequest> get_list = (List<GetRequest>) iprot.getObject();
-          List<Double> params = (List<Double>) iprot.getObject();
-          handler.meta_request(base_cmd, put_list, get_list, params);
-        } catch (TProtocolException tpe)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        }
+        Map<Entry, Double> result = (Map<Entry, Double>) iprot.getObject();
+        Long cmdid = iprot.getLong();
+        handler.push_get(result, cmdid);
       }
     }
 
-    private class aggreget implements HandlerFunction
+    private class meta_request extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
       {
-        try
-        {
-          List<Entry> target = (List<Entry>) iprot.getObject();
-          int agg = iprot.getInteger();
-          Map<Entry, Double> r = handler.aggreget(target, agg);
-          oprot.putObject(r);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        } catch (SpreadException spe) {
-          throw new TException("Function exception: " + spe.getMessage());
-        }
+        Long base_cmd = iprot.getLong();
+        List<PutRequest> put_list = (List<PutRequest>) iprot.getObject();
+        List<GetRequest> get_list = (List<GetRequest>) iprot.getObject();
+        List<Double> params = (List<Double>) iprot.getObject();
+        handler.meta_request(base_cmd, put_list, get_list, params);
       }
     }
 
-    private class dump implements HandlerFunction
+    private class aggreget extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException,SpreadException
       {
-        try
-        {
-          String r = handler.dump();
-          oprot.putObject(r);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        }
+        List<Entry> target = (List<Entry>) iprot.getObject();
+        int agg = iprot.getInteger();
+        Map<Entry, Double> r = handler.aggreget(target, agg);
+        oprot.putObject(r);
       }
     }
 
-    private class localdump implements HandlerFunction
+    private class dump extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException
+        throws TException,TProtocolException
+      {
+        String r = handler.dump();
+        oprot.putObject(r);
+      }
+    }
+
+    private class localdump extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException,TProtocolException
       {
         handler.localdump();
       }
@@ -424,7 +322,7 @@ public class MapNode
     conf.defineOption("name", true);
     conf.configure(args);
     
-    MapNodeIFace handler = conf.loadRubyObject("src/ruby/node/node.rb", MapNodeIFace.class);
+    MapNodeIFace handler = conf.loadRubyObject("node/node.rb", MapNodeIFace.class);
     Server s = new Server(new MapNode.Processor(handler), 52982);
     Thread t = new Thread(s);
     

@@ -114,25 +114,4 @@ public class Server implements Runnable
     {
         p.getTransport().write();
     }
-    
-    public static void main(String args[]) throws Exception
-    {
-        String rubyImpl = "ruby/mapnode.rb";
-
-        System.setProperty("jruby.home", "/Users/xthemage/Documents/DBToaster/mmdb/dbtoaster/cumulus/lib/jruby-1.4.0");
-        ScriptingContainer container = new ScriptingContainer();
-        container.getProvider().getRubyInstanceConfig().
-            setCompatVersion(CompatVersion.RUBY1_9);
-        
-        System.out.println("Loading ruby interface impl...");
-        Object receiver = container.runScriptlet(PathType.CLASSPATH, rubyImpl);
-        MapNodeIFace handler = container.getInstance(receiver, MapNodeIFace.class);
-        System.out.println("Found handler..");
-
-        Server s = new Server(new MapNode.Processor(handler), 9999);
-        Thread t = new Thread(s);
-        
-        t.start();
-        t.join();
-    }
 }

@@ -14,8 +14,6 @@ public abstract class Client
   protected TProtocol iprot;
   protected TProtocol oprot;
   protected Semaphore pendingFrames = new Semaphore(0);
-  
-  
 
   public Client(InetSocketAddress s, Selector selector) throws IOException
   {
