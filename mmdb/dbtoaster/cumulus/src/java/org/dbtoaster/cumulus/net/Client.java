@@ -1,5 +1,6 @@
 package org.dbtoaster.cumulus.net;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
@@ -40,7 +41,7 @@ public abstract class Client
     new HashMap<Class,HashMap<InetSocketAddress,Object>>();
   protected static SocketMonitor monitor = null;
   
-  protected static <T extends Client> T get(InetSocketAddress addr, Class<T> c) throws IOException
+  public static <T extends Client> T get(InetSocketAddress addr, Class<T> c) throws IOException
   {
     HashMap<InetSocketAddress,Object> cTypeSingletons = singletons.get(c);
     if(cTypeSingletons == null){
@@ -57,6 +58,21 @@ public abstract class Client
         System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
         e.printStackTrace();
       } catch(InstantiationException e){
+        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
+        e.printStackTrace();
+      } catch(IllegalArgumentException e){
+        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
+        e.printStackTrace();
+      } catch(InvocationTargetException e){
+        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
+        e.printStackTrace();
+      } catch(IllegalAccessException e){
+        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
+        e.printStackTrace();
+      } catch(ExceptionInInitializerError e){
+        if(IOException.class.isAssignableFrom(e.getException().getClass())){
+          throw (IOException)e.getException();
+        }
         System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
         e.printStackTrace();
       }

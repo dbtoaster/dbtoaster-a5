@@ -3,7 +3,9 @@ package org.dbtoaster.cumulus.node;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Selector;
 
 import org.dbtoaster.cumulus.net.NetTypes.*;
 import org.dbtoaster.cumulus.net.TProtocol.TProtocolException;
@@ -46,7 +48,7 @@ public class MapNode
     public void localdump() throws TException;
   }
   
-  public static MapNodeClient getClient(InetSocketAddress addr){
+  public static MapNodeClient getClient(InetSocketAddress addr) throws IOException {
     return Client.get(addr, MapNodeClient.class);
   }
   
@@ -54,9 +56,10 @@ public class MapNode
   {
     protected TProtocol iprot;
     protected TProtocol oprot;
-
-    public MapNodeClient(TProtocol prot) { this(prot, prot); }
-    public MapNodeClient(TProtocol in, TProtocol out) { iprot = in; oprot = out; }
+    
+    public MapNodeClient(InetSocketAddress s, Selector selector) throws IOException {
+      super(s, selector);
+    }
 
     public void put(long id, long template, List<Double> params)
       throws TException
