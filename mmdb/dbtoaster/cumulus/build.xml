@@ -2,24 +2,32 @@
   <property name="src"   location="src/java" />
   <property name="build" location="build" />
   <property name="bin"   location="bin" />
-  <property file="build.properties" />
+  <property name="jar"   location="${bin}/cumulus.jar" />
+  <property file="local.properties" />
   
   <path id="classpath">
-    <pathelement path="${jrb_home}/lib/jruby.jar" />
+    <pathelement path="${jruby.home}/lib/jruby.jar" />
     <pathelement path="lib/je.jar" />
-    <pathelement path="jr
   </path>
   
   <target name="init">
     <mkdir dir="${build}" />
+    <mkdir dir="${bin}" />
+    <pathconvert refid="classpath" property="compile.classpath" />
+    <property name="run.classpath" value="${compile.classpath}:${jar}" />
+    <exec executable="src/tools/make_launchers.sh">
+      <arg value="${run.classpath}" />
+    </exec>
+    
   </target>
   
   <target name="main" depends="init">
     <javac srcdir="${src}" destdir="${build}" classpathref="classpath" />
+    <jar basedir="${build}" destfile="${jar}" />
   </target>
   
   <target name="clean">
     <delete dir="${build}" />
-    <
+    <delete dir="${bin}" />
   </target>
 </project>
