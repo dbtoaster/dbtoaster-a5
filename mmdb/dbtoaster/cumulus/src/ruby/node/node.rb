@@ -272,6 +272,8 @@ end
 
 class MapNodeHandler
   attr_reader :partition_sizes;
+  
+  include Java::org::dbtoaster::cumulus::node::MapNode::MapNodeIFace;
 
   def initialize(name)
     @maps = Hash.new { |h,k| h[k] = Hash.new };

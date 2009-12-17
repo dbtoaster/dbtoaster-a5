@@ -1,5 +1,6 @@
 <project name="Cumulus" default="main" basedir=".">
-  <property name="src"   location="src/java" />
+  <property name="java.src"   location="src/java" />
+  <property name="ruby.src"   location="src/ruby" />
   <property name="build" location="build" />
   <property name="bin"   location="bin" />
   <property name="jar"   location="${bin}/cumulus.jar" />
@@ -22,8 +23,11 @@
   </target>
   
   <target name="main" depends="init">
-    <javac srcdir="${src}" destdir="${build}" classpathref="classpath" />
-    <jar basedir="${build}" destfile="${jar}" />
+    <javac srcdir="${java.src}" destdir="${build}" classpathref="classpath" />
+    <jar destfile="${jar}">
+      <fileset dir="${build}" />
+      <fileset dir="${ruby.src}" />
+    </jar>
   </target>
   
   <target name="clean">
