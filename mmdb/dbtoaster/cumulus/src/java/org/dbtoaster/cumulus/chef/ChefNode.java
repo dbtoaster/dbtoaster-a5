@@ -33,6 +33,10 @@ public class ChefNode
     public void finish_backoff(String nodeID)
       throws TException;
   }
+  
+  public static ChefNodeClient getClient(InetSocketAddress addr) throws IOException {
+    return Client.get(addr, ChefNodeClient.class);
+  }
 
   public static class ChefNodeClient extends Client implements ChefNodeIFace
   {

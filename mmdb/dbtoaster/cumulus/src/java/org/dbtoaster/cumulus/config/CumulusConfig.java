@@ -116,7 +116,7 @@ public class CumulusConfig extends Properties
     }
     //System.out.println(container.get("$:").toString());
     
-    Object receiver = container.runScriptlet(PathType.ABSOLUTE, getProperty("cumulus.home") + "/" + rObjectFile);
+    Object receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
     T handler = container.getInstance(receiver, rInterface);
     return handler;
   }
