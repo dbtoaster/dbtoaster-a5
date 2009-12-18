@@ -49,7 +49,15 @@ public class MapNode
   }
   
   public static MapNodeClient getClient(InetSocketAddress addr) throws IOException {
-    return Client.get(addr, MapNodeClient.class);
+    System.out.println("Creating: " + addr);
+    try {
+      MapNodeClient c = Client.get(addr, MapNodeClient.class);
+    System.out.println("Created: " + c);
+    return c;
+    } catch(Exception e){
+      e.printStackTrace();
+      return null;
+    }
   }
   
   public static class MapNodeClient extends Client implements MapNodeIFace

@@ -14,20 +14,13 @@ class ChefNodeHandler
     @fetch_count = 0;
     @templates = Hash.new { |h,k| h[k] = Array.new };
     @layout = MapLayout.new;
-    @nodelist = Hash.new;
+    @nodelist = Hash.new { |h,k| puts "Looking up #{k}"; h[k] = MapNode::getClient(k); };
     @update_count = 0;
     @update_timer = nil;
     @backoff_nodes = Array.new;
     @metacompiled = nil
   end
   
-  def node(name)
-    ret = 
-      @nodelist.assert_key(name) do
-        MapNode::getClient(name); 
-      end;
-    ret
-  end
   
   def cmdid
     @next_cmd;
@@ -61,7 +54,7 @@ class ChefNodeHandler
       puts "metacompiled: #{table} : #{@metacompiled.has_key?(table.to_s)}; '#{@metacompiled.keys.join("','")}'; #{@metacompiled[table.to_s]}"
       @next_cmd += @metacompiled[table.to_s].fire(params) do |nodeMessage|
         puts "Dispatching: #{nodeMessage}"
-        nodeMessage.dispatch(node(nodeMessage.node), params, @next_cmd);
+        nodeMessage.dispatch(@nodelist[nodeMessage.node], params, @next_cmd);
       end
       next_update;
     else
@@ -69,16 +62,16 @@ class ChefNodeHandler
       @templates[table.to_s].each do |trigger|
         put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
           @fetch_count += 1;
-          node(fetch_node).fetch(fetch_entries, put_node, cmdid+put_index);
+          @nodelist[fetch_node].fetch(fetch_entries, put_node, cmdid+put_index);
         end
         if trigger.requires_loop?
           put_nodes.each do |put_node, num_gets|
-            node(put_node).mass_put(cmdid.to_i, trigger.index.to_i, num_gets.to_i, params);
+            @nodelist[put_node].mass_put(cmdid.to_i, trigger.index.to_i, num_gets.to_i, params);
             next_cmd;
           end
         else
           raise SpreadException.new("More than one put node (#{put_nodes.size}) for a non-mass put: Template: #{trigger.index}; Entry #{table} => #{params.join(",")}") unless put_nodes.size == 1;
-          node(put_nodes[0][0]).put(cmdid.to_i, trigger.index.to_i, params);
+          @nodelist[put_nodes[0][0]].put(cmdid.to_i, trigger.index.to_i, params);
           next_cmd;
         end
       end
@@ -88,7 +81,7 @@ class ChefNodeHandler
   
   def dump()
     @layout.nodes.collect do |n|
-      "\n-----------" + n.to_s + "-----------\n" + node(n).dump;
+      "\n-----------" + n.to_s + "-----------\n" + @nodelist[n].dump;
     end.join("\n");
   end
   

@@ -68,8 +68,10 @@ public class TTransport
         channel.socket().setSoLinger(false, 0);
         channel.socket().setSoTimeout(0);
         channel.connect(server);
-        key = registerSelector(s, SelectionKey.OP_CONNECT);
-        key.attach(this);
+        if(s != null){
+          key = registerSelector(s, SelectionKey.OP_CONNECT);
+          key.attach(this);
+        }
     }
 
     public void finishConnection() throws IOException

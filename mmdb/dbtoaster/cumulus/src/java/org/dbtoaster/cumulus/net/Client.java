@@ -4,6 +4,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
@@ -15,10 +16,12 @@ public abstract class Client
   protected TProtocol oprot;
   protected Semaphore pendingFrames = new Semaphore(0);
 
-  public Client(InetSocketAddress s, Selector selector) throws IOException
+  public Client(InetSocketAddress saddr, Selector selector) throws IOException
   {
-    this(new TProtocol(new TTransport(s)));
-    iprot.getTransport().connect(selector);
+    this(new TProtocol(new TTransport(saddr)));
+    iprot.getTransport().connect(null);
+    connectTransport(this);
+    pendingFrames.acquireUninterruptibly();
   }
   public Client(TProtocol prot) { this(prot, prot); }
   public Client(TProtocol in, TProtocol out) { iprot = in; oprot = out; }
@@ -81,16 +84,24 @@ public abstract class Client
   
   protected static void startMonitor() throws IOException
   {
+    if(monitor != null) { return; }
     monitor = new SocketMonitor();
     monitor.start();
+  }
+  
+  protected static void connectTransport(Client c) throws IOException {
+    startMonitor();
+    monitor.connectTransport(c);
   }
   
   protected static class SocketMonitor extends Thread {
     Selector selector;
     boolean terminated;
+    ConcurrentLinkedQueue<Client> newClientQueue;
     
     public SocketMonitor() throws IOException
     {
+      newClientQueue = new ConcurrentLinkedQueue<Client>();
       selector = Selector.open();
       terminated = false;
     }
@@ -99,12 +110,24 @@ public abstract class Client
       return selector;
     }
     
+    public void connectTransport(Client c) throws IOException {
+      newClientQueue.add(c);
+      selector.wakeup();
+    }
+    
     public void run()
     {
       while (!terminated)
       {
         try 
         {
+          Client newClient;
+          while((newClient = newClientQueue.poll()) != null){
+            newClient.getInputProtocol().getTransport().
+              registerSelector(selector, SelectionKey.OP_CONNECT).attach(newClient);
+            newClient.processFrame(); //client blocks on this completion;
+          }
+          
           selector.select();
           Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
           while(keys.hasNext())
