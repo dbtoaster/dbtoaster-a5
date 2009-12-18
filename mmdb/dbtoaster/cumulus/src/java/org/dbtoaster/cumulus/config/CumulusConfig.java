@@ -132,6 +132,7 @@ public class CumulusConfig extends Properties
     receiver = container.runScriptlet(PathType.CLASSPATH, "config/config.rb");
     RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
     
+    rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
       rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }

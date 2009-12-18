@@ -116,6 +116,9 @@ class RubyConfig
         match = /([a-zA-Z0-9_\-]+)@([a-zA-Z0-9._\-]+)(:([0-9]+))?/.match(arg)
         raise "Invalid Node Parameter: " + arg unless match;
         @nodes[match[1]]["address"] = java::net::InetSocketAddress.new(match[2], match[4].to_i);
+      when "cumulus.home" then
+        @spread_path = arg.chomp;
+        
       else
         @unknown_opts[opt] = arg;
         puts "Adding #{opt} = #{arg} , #{@unknown_opts.length}"
