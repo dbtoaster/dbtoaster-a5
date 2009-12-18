@@ -7,12 +7,6 @@ class Array
     end
   end
   
-  def each_with_index
-    each_index do |i|
-      yield i, self[i];
-    end
-  end
-  
   def collect_pair(other)
     min_size = if other.size > size then size else other.size end;
     ret = Array.new;

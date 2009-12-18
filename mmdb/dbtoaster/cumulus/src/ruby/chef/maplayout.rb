@@ -244,7 +244,7 @@ class MetaCompiledTrigger
     if @partition_size then
       rescaling = @partition_size.zip(trigger.partition_size).collect { |a, b| if a < b then b.to_f / a.to_f else 1 end }
       raise "Conflicting partition sizes #{@partition_size.join(",")} <= #{trigger.partition_size.join(",")}" unless rescaling.assert { |a| a.to_i.to_f == a };
-      rescaling.each_with_index do |i, r|
+      rescaling.each_with_index do |r,i|
         old_keys = @nodes.keys
         (1...r.to_i).each do |mult|
           old_keys.each do |key|
