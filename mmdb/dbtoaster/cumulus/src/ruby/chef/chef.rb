@@ -12,7 +12,7 @@ class ChefNodeHandler
     @next_cmd = 1;
     @next_update = 1;
     @fetch_count = 0;
-    @templates = Hash.new;
+    @templates = Hash.new { |h,k| h[k] = Array.new };
     @layout = MapLayout.new;
     @nodelist = Hash.new;
     @update_count = 0;
@@ -24,8 +24,7 @@ class ChefNodeHandler
   def node(name)
     ret = 
       @nodelist.assert_key(name) do
-  #      Logger.default.info { "Establishing connection to : " + name.to_s; }
-        Java::org::dbtoaster::cumulus::chef::MapNode::getClient(name); 
+        MapNode::getClient(name); 
       end;
     ret
   end
@@ -56,13 +55,17 @@ class ChefNodeHandler
   def update(table, params)
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     raise SpreadException.backoff("Backoff: Nodes #{@backoff_nodes.to_a.join(",")} lagged") unless @backoff_nodes.empty?;
-    params.collect! { |param| param.to_i }
+    params = params.collect { |param| param.to_i }
+    puts "Update"
     if @metacompiled then 
+      puts "metacompiled: #{table} : #{@metacompiled.has_key?(table.to_s)}; '#{@metacompiled.keys.join("','")}'; #{@metacompiled[table.to_s]}"
       @next_cmd += @metacompiled[table.to_s].fire(params) do |nodeMessage|
+        puts "Dispatching: #{nodeMessage}"
         nodeMessage.dispatch(node(nodeMessage.node), params, @next_cmd);
       end
       next_update;
     else
+      puts "standardcompiled"
       @templates[table.to_s].each do |trigger|
         put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
           @fetch_count += 1;
@@ -91,7 +94,8 @@ class ChefNodeHandler
   
   def metacompile_templates
     @metacompiled = 
-      @templates.to_a.collect_hash do |relation, templates|
+      @templates.to_a.collect_hash do |relation|
+        relation, templates = *relation;
         mct = MetaCompiledTrigger.new(relation)
         templates.each { |t| mct.load(t) }
         mct.compile;
@@ -102,17 +106,15 @@ class ChefNodeHandler
   
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
-    Logger.debug { "Loading Template " + index.to_s + ": " + template.summary; }
     template.index = index;
     compiled = @layout.compile_trigger(template);
     #puts "Compiled Trigger: \n" + compiled.to_s;
-    @templates.assert_key(template.relation.to_s){ Array.new }.push(compiled);
+    @templates[template.relation.to_s].push(compiled);
   end
   
   def install_node(node_name, partition_list)
     partition_list.each_pair do |map, partitions|
       partitions.each do |partition|
-        Logger.default.debug { "Learning of Map " + map.to_s + "[" + partition.join(", ") + "] @ " + node_name.to_s }
         @layout.install(map, partition, node_name);
       end
     end
@@ -124,4 +126,21 @@ class ChefNodeHandler
 end
 
 
-ChefNodeHandler.new;
+handler = ChefNodeHandler.new;
+$config.nodes.each_pair do |node, info|
+  handler.install_node(info["address"], info["partitions"]);
+#  puts("Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 
+#    info["partitions"].collect do |map, partition|
+#      "  Map " + map.to_s + "[" + partition.join(",") +"]";
+#    end.join("\n"));
+end
+$config.partition_sizes.each_pair do |map, sizes|
+  handler.define_partition(map, sizes);
+end
+$config.templates.each_pair do |id, cmd|
+  handler.install_template(cmd, id)
+#  puts "Loaded Template " + id.to_s;
+end
+handler.metacompile_templates;
+
+handler;

@@ -2,6 +2,7 @@ package org.dbtoaster.cumulus.chef;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -149,10 +150,12 @@ public class ChefNode
     conf.configure(args);
     
     ChefNodeIFace handler = conf.loadRubyObject("chef/chef.rb", ChefNodeIFace.class);
-    Server s = new Server(new ChefNode.Processor(handler), 52982);
+    Server s = new Server(new ChefNode.Processor(handler), 52981);
     Thread t = new Thread(s);
     
-    
+    ArrayList<Double> params = new ArrayList<Double>();
+    params.add(2.0); params.add(5.0);
+    handler.update("R", params);
     
     t.start();
     t.join();

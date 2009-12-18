@@ -26,28 +26,13 @@ public class NetTypes implements Serializable
       }
       return partition;
     }
-    
-    public class MapID implements Serializable
-    {
-        private static final long serialVersionUID = 4324708081367859054L;
-        public Long id;
-        public MapID() {}
-        public MapID(Long i) { id = i; }
-    }
 
-    public class Version implements Serializable
-    {
-        private static final long serialVersionUID = 5734311767421788523L;
-        public Long version;
-        public Version(Long v) { version = v; }
-    }
-
-    public class Entry implements Serializable
+    public static class Entry implements Serializable
     {
         private static final long serialVersionUID = -2903891636269280218L;
-        public MapID source;
+        public int source;
         public List<Long> key;
-        public Entry(MapID s, List<Long> k) { source = s; key = k; }
+        public Entry(int s, List<Long> k) { source = s; key = k; }
         
         public boolean hasWildcards(){
           return key.contains(-1);
@@ -59,7 +44,7 @@ public class NetTypes implements Serializable
         }
     }
     
-    public class PutField implements Serializable
+    public static class PutField implements Serializable
     {
         private static final long serialVersionUID = -1097435268974958528L;
         public PutFieldType type;
@@ -75,14 +60,14 @@ public class NetTypes implements Serializable
         }
     }
     
-    public class PutParams implements Serializable
+    public static class PutParams implements Serializable
     {
         private static final long serialVersionUID = 8494808974470927541L;
         public List<PutField> params;
         public PutParams(List<PutField> p) { params = p; }
     }
     
-    public class PutRequest implements Serializable
+    public static class PutRequest implements Serializable
     {
         private static final long serialVersionUID = 569304468319713239L;
         public Long template;
@@ -97,7 +82,7 @@ public class NetTypes implements Serializable
         }
     }
     
-    public class GetRequest implements Serializable
+    public static class GetRequest implements Serializable
     {
         private static final long serialVersionUID = -5725021639950315949L;
         public InetSocketAddress target;

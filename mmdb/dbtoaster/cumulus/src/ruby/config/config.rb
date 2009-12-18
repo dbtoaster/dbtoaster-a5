@@ -44,8 +44,6 @@ class RubyConfig
   
   def load(input)
     curr_node = "Solo Node"
-    
-    puts "Loading!"
     if(input.is_a? String) then
       input = File.new(input);
     end

@@ -82,7 +82,7 @@ class MapLayout
             key_partition = e.keys.collect_index { |i,k| fetch_valuations[k] % @partition_sizes[e.source][i] }
             fetch_node = @maplist[e.source][key_partition]
 #            puts "        Requires fetch: #{e}:[#{key_partition}] @ #{fetch_node}";
-            e = MapEntry.make(
+            e = MapEntry.new(
               e.source,
               e.keys.collect do |k| 
                 if k.is_a? String 
@@ -139,12 +139,12 @@ class CompiledTrigger
   def fire(params)
     raise SpreadException.new("Wildcard in paramlist: #{params.join(", ")}") unless params.assert { |part| part.to_i >= 0 };
     put_nodes = Array.new;
-#    puts "Partition: #{MapEntry.compute_partition(params, @partition_size)} / #{@partition_size.join(",")}"
-    @index[MapEntry.compute_partition(params, @partition_size)].each_pair do |put_node, fetchlist|
+#    puts "Partition: #{NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long))} / #{@partition_size.join(",")}"
+    @index[NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long)).to_a].each_pair do |put_node, fetchlist|
       fetchlist.each_pair do |fetch_node, entry_list|
         yield(
           entry_list.collect do |e|
-            MapEntry.make(e.source, e.key.collect { |k| if k.is_a? String then k.to_i elsif k < 0 then k else params[k] end });
+            MapEntry.new(e.source, e.key.collect { |k| if k.is_a? String then k.to_i elsif k < 0 then k else params[k] end });
           end,
           fetch_node,
           put_node,
@@ -193,10 +193,10 @@ class MetaCompiledNodeMessage
   end
   
   def compile
-    @put_messages = @puts.collect { |params| PutRequest.make(*params); }
+    @put_messages = @puts.collect { |params| PutRequest.new(params[0].to_i, params[1].to_i, params[2].to_i); }
     @fetch_messages = @fetches.collect do |target, get_sets| 
       get_sets.collect do |get_set|
-        GetRequest.make(target, get_set[0], get_set[1].to_a.clone);
+        GetRequest.new(target, get_set[0], get_set[1].to_a.clone);
       end
     end.concat!;
     @replacements = @fetch_messages.collect_index do |i, get| 
@@ -288,8 +288,11 @@ class MetaCompiledTrigger
   end
   
   def fire(params)
-    partition = MapEntry.compute_partition(params, @partition_size);
+    puts "Fire! (#{@nodes.size} nodes)";
+    partition = NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long)).to_a;
+    puts "preparing!: #{partition.join(",")}"
     @nodes[partition].each_value do |nodeMessage|
+      puts "Yield!"
       yield nodeMessage;
     end
     @cmd_size[partition]

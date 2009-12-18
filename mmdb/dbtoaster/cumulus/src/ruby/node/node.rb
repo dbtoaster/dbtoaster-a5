@@ -618,8 +618,6 @@ class MapNodeHandler
   
 end
 
-puts "Path: " + $config.spread_path
-
 handler = MapNodeHandler.new($config.my_name);
 handler.setup($config, $config.my_name);
 return handler;
