@@ -1,4 +1,5 @@
 
+
 require 'config/template';
 require 'util/ok_mixins';
 require 'getoptlong';
@@ -44,6 +45,11 @@ class RubyConfig
   def load(input)
     curr_node = "Solo Node"
     
+    puts "Loading!"
+    if(input.is_a? String) then
+      input = File.new(input);
+    end
+    
     input.each do |line|
 #      puts "Reading config line: " + line;
       cmd = line.scan(/[^ ]+/);
@@ -52,7 +58,10 @@ class RubyConfig
           curr_node = cmd[1].chomp;
 
         when "address" then
-          @nodes[curr_node]["address"] = java::net::InetSocketAddress.new(*cmd[1].chomp.split(/:/));
+          address = cmd[1].chomp.split(/:/);
+          port = (address[1] || 52982).to_i;
+          address = address[0];
+          @nodes[curr_node]["address"] = java::net::InetSocketAddress.new(address, port);
         
         when "switch"    then @switch = java::net::InetSocketAddress.new(cmd[1].chomp, 52981);
 
@@ -83,8 +92,7 @@ class RubyConfig
           raise SpreadException.new("Unable to parse value line: " + line) if match.nil?;
           
           dummy, source, keys, version, value = *match;
-          
-          @nodes[curr_node]["values"][map.to_i][keys.split(/, */).collect do |k| k.to_i end] = value.to_f;
+          @nodes[curr_node]["values"][source.to_i][keys.split(/, */).collect do |k| k.to_i end] = value.to_f;
 
         when "spread_path" then cmd.shift; @spread_path = cmd.shift.chomp;
         
@@ -101,12 +109,6 @@ class RubyConfig
         when "upfront"   then cmd.shift; @client_debug["upfront"].push(cmd.shift.chomp);
       end
     end
-  end
-  
-  def RubyConfig.opts
-    [
-      [ "-n", "--node", GetoptLong::REQUIRED_ARGUMENT ]
-    ]
   end
   def parse_opt(opt, arg)
     case opt

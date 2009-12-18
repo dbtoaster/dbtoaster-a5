@@ -1,6 +1,5 @@
 
-require 'thrift_compat';
-require 'spatial_index';
+require 'util/spatial_index';
 
 ###################################################
 

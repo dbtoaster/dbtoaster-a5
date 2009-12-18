@@ -11,6 +11,7 @@ public abstract class TProcessor<ProtocolMethods extends Enum>
       throws TException,TProtocolException,SpreadException;
     
     public String toString(){
+      System.out.println("HandlerFunction.toString()");
       Class me = getClass();
       String nodeTypeName = "";
       if(me.isMemberClass()){

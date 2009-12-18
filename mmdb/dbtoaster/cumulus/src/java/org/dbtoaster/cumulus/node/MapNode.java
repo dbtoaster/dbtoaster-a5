@@ -30,7 +30,7 @@ public class MapNode
     public Map<Entry,Double> get(List<Entry> target)
       throws SpreadException, TException;
 
-    public void fetch(List<Entry> target, NodeID destination, long cmdid)
+    public void fetch(List<Entry> target, InetSocketAddress destination, long cmdid)
       throws TException;
 
     public void push_get(Map<Entry,Double> result, long cmdid)
@@ -100,7 +100,7 @@ public class MapNode
       return r;
     }
   
-    public void fetch(List<Entry> target, NodeID destination, long cmdid)
+    public void fetch(List<Entry> target, InetSocketAddress destination, long cmdid)
       throws TException
     {
       try {
@@ -254,7 +254,7 @@ public class MapNode
         throws TException,TProtocolException
       {
         List<Entry> target = (List<Entry>) iprot.getObject();
-        NodeID destination = (NodeID) iprot.getObject();
+        InetSocketAddress destination = (InetSocketAddress) iprot.getObject();
         Long cmdid = iprot.getLong();
         handler.fetch(target, destination, cmdid);
       }
@@ -319,7 +319,6 @@ public class MapNode
   public static void main(String args[]) throws Exception
   {
     CumulusConfig conf = new CumulusConfig();
-    conf.defineOption("name", true);
     conf.configure(args);
     
     MapNodeIFace handler = conf.loadRubyObject("node/node.rb", MapNodeIFace.class);

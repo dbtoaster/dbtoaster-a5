@@ -5,6 +5,8 @@ require 'chef/maplayout';
 ###################################################
 
 class ChefNodeHandler
+  include Java::org::dbtoaster::cumulus::chef::ChefNode::ChefNodeIFace;
+  
   def initialize
     @next_template = 0;
     @next_cmd = 1;
@@ -15,7 +17,7 @@ class ChefNodeHandler
     @nodelist = Hash.new;
     @update_count = 0;
     @update_timer = nil;
-    @backoff_nodes = Set.new;
+    @backoff_nodes = Array.new;
     @metacompiled = nil
   end
   
@@ -23,7 +25,7 @@ class ChefNodeHandler
     ret = 
       @nodelist.assert_key(name) do
   #      Logger.default.info { "Establishing connection to : " + name.to_s; }
-        MapNode::Client.connect(name.host, name.port); 
+        Java::org::dbtoaster::cumulus::chef::MapNode::getClient(name); 
       end;
     ret
   end
@@ -122,3 +124,4 @@ class ChefNodeHandler
 end
 
 
+ChefNodeHandler.new;

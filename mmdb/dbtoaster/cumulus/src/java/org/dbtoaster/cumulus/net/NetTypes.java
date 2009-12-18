@@ -2,7 +2,8 @@ package org.dbtoaster.cumulus.net;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.ArrayList;
 
 public class NetTypes implements Serializable
 {
@@ -10,13 +11,20 @@ public class NetTypes implements Serializable
 
     enum PutFieldType { VALUE, ENTRY, ENTRYVALUE };
     enum AggregateType { SUM, MAX, AVG };
-    
-    public class NodeID implements Serializable
+        
+    public static Long[] computePartition(Long[] key, Long[] partitionSizes)
     {
-        private static final long serialVersionUID = 1707076743312170206L;
-        public InetSocketAddress id;
-        public NodeID() {}
-        public NodeID(InetSocketAddress i) { id = i; }
+      Long[] partition = new Long[key.length];
+      for(int i = 0; i < key.length; i++){
+        if(partitionSizes[i] <= 1) { 
+          partition[i] = Long.valueOf(0);
+        } else if(key[i] < 0) {
+          partition[i] = Long.valueOf(-1);
+        } else { 
+          partition[i] = key[i] % partitionSizes[i];
+        }
+      }
+      return partition;
     }
     
     public class MapID implements Serializable
@@ -31,7 +39,6 @@ public class NetTypes implements Serializable
     {
         private static final long serialVersionUID = 5734311767421788523L;
         public Long version;
-        public Version() {}
         public Version(Long v) { version = v; }
     }
 
@@ -39,9 +46,17 @@ public class NetTypes implements Serializable
     {
         private static final long serialVersionUID = -2903891636269280218L;
         public MapID source;
-        public LinkedList<Long> key;
-        public Entry() {}
-        public Entry(MapID s, LinkedList<Long> k) { source = s; key = k; }
+        public List<Long> key;
+        public Entry(MapID s, List<Long> k) { source = s; key = k; }
+        
+        public boolean hasWildcards(){
+          return key.contains(-1);
+        }
+        
+        public Long[] partition(Long[] partitionSizes)
+        {
+          return computePartition(key.toArray(partitionSizes), partitionSizes);
+        }
     }
     
     public class PutField implements Serializable
@@ -51,7 +66,6 @@ public class NetTypes implements Serializable
         public String name;
         public Double value;
         public Entry entry;
-        public PutField() {}
         public PutField(PutFieldType pt, String n, Double v, Entry e)
         {
             type = pt;
@@ -64,9 +78,8 @@ public class NetTypes implements Serializable
     public class PutParams implements Serializable
     {
         private static final long serialVersionUID = 8494808974470927541L;
-        public LinkedList<PutField> params;
-        public PutParams() {}
-        public PutParams(LinkedList<PutField> p) { params = p; }
+        public List<PutField> params;
+        public PutParams(List<PutField> p) { params = p; }
     }
     
     public class PutRequest implements Serializable
@@ -87,11 +100,11 @@ public class NetTypes implements Serializable
     public class GetRequest implements Serializable
     {
         private static final long serialVersionUID = -5725021639950315949L;
-        public NodeID target;
+        public InetSocketAddress target;
         public Long id_offset;
-        public LinkedList<Entry> entries;
+        public List<Entry> entries;
         public GetRequest() {}
-        public GetRequest(NodeID t, Long i, LinkedList<Entry> e)
+        public GetRequest(InetSocketAddress t, Long i, List<Entry> e)
         {
             target = t;
             id_offset = i;

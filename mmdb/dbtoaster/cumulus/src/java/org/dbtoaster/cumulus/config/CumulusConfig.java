@@ -26,6 +26,8 @@ public class CumulusConfig extends Properties
     super();
     parameters = new HashMap<String,String>();
     parameterOptions = new HashSet<CumulusOption>();
+    
+    defineOption("n", "node", true);
   }
   
   public CumulusConfig(String args[]) throws IOException
@@ -126,6 +128,7 @@ public class CumulusConfig extends Properties
     
     Object receiver;
     
+    receiver = container.runScriptlet(PathType.CLASSPATH, "util/jrb_compat.rb");
     receiver = container.runScriptlet(PathType.CLASSPATH, "config/config.rb");
     RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
     
@@ -163,7 +166,6 @@ public class CumulusConfig extends Properties
     
     public boolean match(String opt)
     {
-      System.out.println("(" + longForm + " || " + shortForm + ") =?= " + opt + " : a) " + opt.equals(this.longForm) + "; b) " + (shortForm != null) + "; c) " + opt.equals(shortForm));
       return  opt.equals(this.longForm) || 
               ((shortForm != null) && (opt.equals(shortForm)));
     }

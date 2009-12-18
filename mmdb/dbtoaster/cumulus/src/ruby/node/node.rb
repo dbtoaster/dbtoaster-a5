@@ -292,8 +292,7 @@ class MapNodeHandler
   
   def find_partition(source, key)
     raise SpreadException.make("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
-    
-    partition = MapEntry.compute_partition(key, @partition_sizes[source.to_i]);
+    partition = NetTypes.compute_partition(key.to_java(:Long), @partition_sizes[source.to_i].to_java(:Long)).to_a;
     if (@maps.has_key? source.to_i) && (@maps[source.to_i].has_key? partition) then
       @maps[source.to_i][partition];
     else
@@ -302,7 +301,7 @@ class MapNodeHandler
   end
   
   def loop_partitions(source, key)
-    key = MapEntry.compute_partition(key, @partition_sizes[source.to_i]);
+    key = NetTypes.compute_partition(key.to_java(:Long), @partition_sizes[source.to_i].to_java(:Long));
     @maps[source].each_pair do |map_key, partition|
       if key.zip(map_key).assert { |k, mk| (k == -1) || (k == mk) } then
         yield partition;
@@ -547,6 +546,7 @@ class MapNodeHandler
   end
   
   def setup(config, name)
+    puts "Initializing node: #{name}";
     config.my_config["partitions"].each_pair do |map, partition_list|
       partition_list.each do |partition|
         pfiles = config.my_config["pfiles"][map].fetch(partition, nil);
@@ -556,7 +556,7 @@ class MapNodeHandler
     
     config.my_config["values"].each_pair do |map, keylist|
       keylist.each_pair do |key, value|
-        find_partition(map, key).set(key, 0, value);
+        find_partition(map, key).set(key, value);
       end
     end
     

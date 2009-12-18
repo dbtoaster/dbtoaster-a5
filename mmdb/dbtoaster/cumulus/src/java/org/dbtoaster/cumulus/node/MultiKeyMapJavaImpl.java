@@ -5,7 +5,7 @@ import java.util.*;
 import com.sleepycat.je.*;
 
 public class MultiKeyMapJavaImpl {
-  public static final int DEFAULT_CACHE_SIZE = 128*1024*1024;
+  public static final int DEFAULT_CACHE_SIZE = 64*1024*1024;
   protected static Environment env = null;
   
   protected final int                         numkeys;
@@ -66,9 +66,21 @@ public class MultiKeyMapJavaImpl {
     }
   }
   
+  public String patternName(Integer[] pattern){
+    StringBuilder sb = new StringBuilder("{");
+    String sep = "";
+    for(Integer element : pattern){
+      sb.append(sep + element.toString());
+      sep = ",";
+    }
+    return sb.toString()+"}";
+  }
+  
   public void add_pattern(Integer[] pattern){
+    if((pattern.length >= numkeys) || (pattern.length == 0)) { return; }
     String secondaryName = basepath + "/db_" + dbName + "_" + patterns.size() + ".db";
-    System.out.println("Creating secondary db at : " + secondaryName);
+    
+    System.out.println("Creating secondary db (" + patternName(pattern) + ") at : " + secondaryName);
     patterns.put(serializeKey(pattern), new MKPattern(pattern, env, secondaryName, basemap));
   }
   
