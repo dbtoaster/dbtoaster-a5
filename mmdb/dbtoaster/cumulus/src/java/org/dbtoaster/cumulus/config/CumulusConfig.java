@@ -42,6 +42,9 @@ public class CumulusConfig extends Properties
   public void defineOption(String shortName, String longName, boolean requiresParameter)
   {
     parameterOptions.add(new CumulusOption(longName, shortName, requiresParameter));
+    if(!requiresParameter){
+      parameters.put(longName, null);
+    }
   }
   
   public void assertProperty(String property)
@@ -76,13 +79,19 @@ public class CumulusConfig extends Properties
     for(String arg : args){
       if(option == null){
         if(isOption(arg)){
+          boolean found = false;
           for(CumulusOption potential : parameterOptions){
             if(potential.match(arg)){
-              option = potential;
+              found = true;
+              if(potential.requiresParameter){
+                option = potential;
+              } else {
+                parameters.put(potential.name, "YES");
+              }
               break;
             }
           }
-          if(option == null){
+          if(!found){
             System.err.println("Invalid parameter switch : " + arg);
             usage();
           }
@@ -138,14 +147,13 @@ public class CumulusConfig extends Properties
     public final String longForm;
     public final String shortForm;
     public final String name;
-    
-    public boolean requiresParameter;
+    public final boolean requiresParameter;
     
     public CumulusOption(String longForm, String shortForm, boolean requiresParameter)
     {
       this.name = longForm;
       this.longForm = "--" + longForm;
-      if(shortForm == null){
+      if(shortForm != null){
         this.shortForm = "-" + shortForm;
       } else {
         this.shortForm = null;
@@ -155,6 +163,7 @@ public class CumulusConfig extends Properties
     
     public boolean match(String opt)
     {
+      System.out.println("(" + longForm + " || " + shortForm + ") =?= " + opt + " : a) " + opt.equals(this.longForm) + "; b) " + (shortForm != null) + "; c) " + opt.equals(shortForm));
       return  opt.equals(this.longForm) || 
               ((shortForm != null) && (opt.equals(shortForm)));
     }
