@@ -51,11 +51,14 @@ class SlicerNodeHandler
     @monitor_intake.push([:data, "Running: " + cmd ]);
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
+        puts "Spawning: #{cmd}"
         PTY.spawn(cmd) do |stdin, stdout, pid|
+          puts "Starting process pid #{pid}"
           at_exit { Process.kill("HUP", pid) };
           stdin.each { |line| output.push([:data, line]); }
         end
-      rescue PTY::ChildExited
+      #rescue PTY::ChildExited
+      #  puts "Ran #{cmd}"
       end
     end
   end
@@ -67,8 +70,10 @@ class SlicerNodeHandler
   end
   
   def start_node(port)
+    # TODO: port argument for node.
     start_process(
-      @spread_path+"/bin/node.sh -p " + port.to_s + " " + verbosity_flag + " " + @config_file
+      #@spread_path+"/bin/node.sh -p " + port.to_s + " " + verbosity_flag + " " + @config_file
+      @spread_path+"/bin/node.sh " + verbosity_flag + " " + @config_file
     )
   end
   
@@ -141,7 +146,8 @@ module SlicerNode
     end
     
     def client
-      Logger.warn { "Waiting for slicer to spawn on : #{host}" }
+      #Logger.warn { "Waiting for slicer to spawn on : #{@host}" }
+      puts "Waiting for slicer to spawn on : #{@host}"
       @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
       Logger.warn { "Slicer spawned on : #{host}" }
       if @client then @client
@@ -205,34 +211,25 @@ $serving = $config["serve"];
 $verbosity = :normal;
   
 $config_file = $config['config_file']
-puts "Config #{$config['config_file']}"
-
-$config_file = "data/naive_test_1.unit"
 puts "Config file: #{$config_file}"
-puts "Name: #{$config.my_name}"
-puts "Serving: #{$serving}"
-puts "Nodes: #{$config.nodes.length}"
-puts "Templates: #{$config.templates.length}"
-puts "Parts: #{$config.partition_sizes.length}"
-puts "Switch: #{$config.switch}"
-
-#raise "usage: slicer.sh CONFIG" unless ARGV.size >= 1;
-#$config_file = ARGV[0]
 
 $local_node = SlicerNodeHandler.new($config_file, $verbosity);
 
 def spin_up_slicers(*slicer_nodes)
-  puts "Spinning up slicers"
+  puts "Spinning up slicers #{slicer_nodes.length}"
   slicer_nodes.collect do |node|
     [
       node, 
-      Thread.new(node) do |node| 
+      Thread.new(node) do |node|
+        puts "Starting slicer manager for #{node}" 
         manager = SlicerNode::Manager.new(node, $config.spread_path, $config_file);
-        manager.client.start_logging(NodeID.make(`hostname`.chomp, 52980));
+        puts "Starting slicer client for #{node}"
+        manager.client.start_logging(`hostname`.chomp, 52980);
         Thread.current[:client] = manager.client;
       end
     ]
-  end.collect_hash do |node, init_thread|
+  end.collect_hash do |nt|
+    node, init_thread = nt
     init_thread.join;
     puts "Slicer for #{node} is active";
     [node, init_thread[:client]]
@@ -248,14 +245,16 @@ else
     # we use it to figure out when the switch/nodes have all started so we can initialize the
     # client.  After that point, returning nil removes this block from the loop.
 
-    # TODO: new initialization string
-    if /Starting #<Thrift::NonblockingServer:/.match(log_message) then
+    # TODO: test new initialization string
+    if /Starting Cumulus Server/.match(log_message) then
       $pending_servers -= 1 
-      Logger.info { "A server just came up; #{$pending_servers} servers left" }
+      #Logger.info { "A server just came up; #{$pending_servers} servers left" }
+      puts "A server just came up; #{$pending_servers} servers left"
     end
     if $pending_servers <= 0 then
-      Logger.info { "Server Initialization complete, Starting Client..." };
-      $clients[$config.switch.host].start_client
+      #Logger.info { "Server Initialization complete, Starting Client..." };
+      puts "Server Initialization complete, Starting Client..." ;
+      $clients[$config.switch.getHostName].start_client
     end
     puts log_message;
     if $pending_servers > 0 then handler else nil end;
@@ -265,24 +264,25 @@ else
   $config.nodes.each do |node, node_info|
     nodes.push(node_info["address"].getHostName);
   end
-  nodes.push($config.switch.getHostName);
+  nodes.push($config.switch.toString);
   
   $clients = spin_up_slicers(*(nodes.to_a.delete_if { |n| n == "localhost" }));
   $clients["localhost"] = $local_node;
   
   Logger.info { "Starting Nodes..." };
   $config.nodes.each do |node, node_info|
-    Logger.info { "Starting : #{node} @ #{node_info["address"].getHostName}" };
+    #Logger.info { "Starting : #{node} @ #{node_info["address"].getHostName}" };
+    puts "Starting : #{node} @ #{node_info["address"].getHostName}" ;
     $clients[node_info["address"].getHostName].start_node(node_info["address"].getPort);
   end
   
-  Logger.info { "Starting Switch @ #{$config.switch.getHostName}..." };
-  $clients[$config.switch.getHostName].start_switch;
+  #Logger.info { "Starting Switch @ #{$config.switch.getHostName}..." };
+  #$clients[$config.switch.getHostName].start_switch;
 
-  Logger.info { "Starting Monitor" }
-  monitor = SlicerMonitor.new($clients.keys.delete_if { |c| c == "localhost" }.uniq);
+  #Logger.info { "Starting Monitor" }
+  #monitor = SlicerMonitor.new($clients.keys.delete_if { |c| c == "localhost" }.uniq);
 
-  Logger.info { "Sleeping until finished" };
+  #Logger.info { "Sleeping until finished" };
 end
 
 return $local_node

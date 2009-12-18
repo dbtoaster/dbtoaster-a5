@@ -121,12 +121,10 @@ class RubyConfig
         
       else
         @unknown_opts[opt] = arg;
-        puts "Adding #{opt} = #{arg} , #{@unknown_opts.length}"
     end
   end
   
   def [](opt)
-    puts "Looking up #{opt} #{@unknown_opts.length} #{@unknown_opts.to_s}"
     @unknown_opts[opt];
   end
   

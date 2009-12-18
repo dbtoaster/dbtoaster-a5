@@ -131,7 +131,9 @@ public class CumulusConfig extends Properties
     receiver = container.runScriptlet(PathType.CLASSPATH, "util/jrb_compat.rb");
     receiver = container.runScriptlet(PathType.CLASSPATH, "config/config.rb");
     RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
-    
+
+    rConfig.parse_opt("config_file", getProperty("cumulus.config"));
+
     rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
       rConfig.parse_opt(parameter.getKey(), parameter.getValue());
@@ -143,7 +145,7 @@ public class CumulusConfig extends Properties
     
     receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
     T handler = container.getInstance(receiver, rInterface);
-    System.out.println("done");
+    System.out.println("Config done.");
     return handler;
   }
   

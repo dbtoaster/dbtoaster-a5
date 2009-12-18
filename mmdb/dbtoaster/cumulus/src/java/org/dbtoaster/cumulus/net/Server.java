@@ -5,7 +5,7 @@ import java.net.*;
 import java.nio.channels.*;
 import java.util.*;
 
-import org.dbtoaster.cumulus.net.MapNode.MapNodeIFace;
+import org.dbtoaster.cumulus.node.MapNode.MapNodeIFace;
 import org.jruby.CompatVersion;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
@@ -36,6 +36,7 @@ public class Server implements Runnable
         server_transport.registerSelector(selector);
         
         framesProcessed = 0L;
+        System.out.println("Starting Cumulus Server");
     }
 
     public void run()

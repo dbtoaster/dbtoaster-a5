@@ -19,7 +19,7 @@ public class SlicerNode
         void start_node(int port) throws TException;
         void start_client() throws TException;
         void shutdown() throws TException;
-        void start_logging(NodeID target) throws TException;
+        void start_logging(InetSocketAddress target) throws TException;
         void receive_log(String log_message) throws TException;
         String poll_stats() throws TException;
     }
@@ -78,7 +78,7 @@ public class SlicerNode
             } catch (TProtocolException e) { throw new TException(e.getMessage()); }
         }
 
-        public void start_logging(NodeID target) throws TException
+        public void start_logging(InetSocketAddress target) throws TException
         {
             try {
                 oprot.beginMessage();
@@ -185,7 +185,7 @@ public class SlicerNode
             throws TException
             {
                 try {
-                    NodeID target = (NodeID) iprot.getObject();
+                    InetSocketAddress target = (InetSocketAddress) iprot.getObject();
                     handler.start_logging(target);
                 } catch (TProtocolException e) {
                     throw new TException(
