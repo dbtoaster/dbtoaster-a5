@@ -1,2 +1,3 @@
-node  org.dbtoaster.cumulus.node.MapNode
-chef  org.dbtoaster.cumulus.chef.ChefNode
+node   org.dbtoaster.cumulus.node.MapNode
+chef   org.dbtoaster.cumulus.chef.ChefNode
+slicer org.dbtoaster.cumulus.slicer.SlicerNode

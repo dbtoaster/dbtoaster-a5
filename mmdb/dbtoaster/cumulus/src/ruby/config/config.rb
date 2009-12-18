@@ -5,7 +5,7 @@ require 'getoptlong';
 
 class RubyConfig
   attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path;
-  attr_writer :my_name, :my_port;
+  attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
   
@@ -114,12 +114,14 @@ class RubyConfig
         match = /([a-zA-Z0-9_\-]+)@([a-zA-Z0-9._\-]+)(:([0-9]+))?/.match(arg)
         raise "Invalid Node Parameter: " + arg unless match;
         @nodes[match[1]]["address"] = java::net::InetSocketAddress.new(match[2], match[4].to_i);
-      default
+      else
         @unknown_opts[opt] = arg;
+        puts "Adding #{opt} = #{arg} , #{@unknown_opts.length}"
     end
   end
   
   def [](opt)
+    puts "Looking up #{opt} #{@unknown_opts.length} #{@unknown_opts.to_s}"
     @unknown_opts[opt];
   end
   
