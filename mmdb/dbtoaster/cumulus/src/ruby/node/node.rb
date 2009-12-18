@@ -564,7 +564,7 @@ class MapNodeHandler
       install_put_template(tid, template);
     end
     
-    @log_maps.append(config.log_maps);
+    @log_maps.concat(config.log_maps);
   end
   
   def partitions  
@@ -618,4 +618,6 @@ class MapNodeHandler
   
 end
 
-return MapNodeHandler.new($option_name)
+handler = MapNodeHandler.new($config.my_name);
+handler.setup($config, $config.my_name);
+return handler;

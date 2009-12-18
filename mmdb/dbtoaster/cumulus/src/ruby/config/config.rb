@@ -1,32 +1,35 @@
 
-require 'thrift_compat';
-require 'template';
-require 'ok_mixins';
+require 'config/template';
+require 'util/ok_mixins';
 require 'getoptlong';
 
-class Config
+class RubyConfig
   attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path;
   attr_writer :my_name, :my_port;
+  
+  include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
   
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
       "partitions" => Hash.new  { |h,k| h[k] = Array.new },
       "pfiles" => Hash.new { |h,k| h[k] = Hash.new },
       "values" => Hash.new { |h,k| h[k] = Hash.new }, 
-      "address" => NodeID.make("localhost") 
+      "address" => java::net::InetSocketAddress.new("localhost", 52982) 
     } };
     @templates = Hash.new;
     @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
     @my_name = nil;
     @my_port = 52982;
-    @switch = NodeID.make("localhost", 52981);
-    @log_maps = Set.new;
+    @switch = java::net::InetSocketAddress.new("localhost", 52981);
+    @log_maps = Array.new;
     
     @spread_path = "#{File.dirname(__FILE__)}/../.."
     if (@spread_path[0] != '/'[0]) || (@spread_path == "") then
       @spread_path = "#{`pwd`.chomp}/#{@spread_path}"
     end
     Logger.info { "Spread Path is : #{@spread_path}" }
+    
+    @unknown_opts = Hash.new;
     
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 
@@ -49,9 +52,9 @@ class Config
           curr_node = cmd[1].chomp;
 
         when "address" then
-          @nodes[curr_node]["address"] = NodeID.make(*cmd[1].chomp.split(/:/));
+          @nodes[curr_node]["address"] = java::net::InetSocketAddress.new(*cmd[1].chomp.split(/:/));
         
-        when "switch"    then @switch = NodeID.make(cmd[1].chomp, 52981);
+        when "switch"    then @switch = java::net::InetSocketAddress.new(cmd[1].chomp, 52981);
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
@@ -100,7 +103,7 @@ class Config
     end
   end
   
-  def Config.opts
+  def RubyConfig.opts
     [
       [ "-n", "--node", GetoptLong::REQUIRED_ARGUMENT ]
     ]
@@ -110,8 +113,14 @@ class Config
       when "-n", "--node" then 
         match = /([a-zA-Z0-9_\-]+)@([a-zA-Z0-9._\-]+)(:([0-9]+))?/.match(arg)
         raise "Invalid Node Parameter: " + arg unless match;
-        @nodes[match[1]]["address"] = NodeID.make(match[2], match[4].to_i);
+        @nodes[match[1]]["address"] = java::net::InetSocketAddress.new(match[2], match[4].to_i);
+      default
+        @unknown_opts[opt] = arg;
     end
+  end
+  
+  def [](opt)
+    @unknown_opts[opt];
   end
   
   def each_partition(node)
@@ -183,8 +192,8 @@ class Config
     return @my_name if @my_name;
     @nodes.each_pair do |node, info|
       return @my_name = node if (info["address"].port.to_i == @my_port.to_i) &&
-                                ((info["address"].host == `hostname`.chomp) ||
-                                 (info["address"].host == "localhost"));
+                                ((info["address"].host_name == `hostname`.chomp) ||
+                                 (info["address"].host_name == "localhost"));
     end
     "Solo Node";
   end
@@ -193,3 +202,5 @@ class Config
     @nodes[my_name];
   end
 end
+
+$config = RubyConfig.new;

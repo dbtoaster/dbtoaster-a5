@@ -16,6 +16,11 @@ public class CumulusConfig extends Properties
   HashMap<String,String> parameters;
   HashSet<CumulusOption> parameterOptions;
   
+  public interface RubyConfigIface {
+    public void load(String input);
+    public void parse_opt(String opt, String arg);
+  }
+  
   public CumulusConfig()
   {
     super();
@@ -60,7 +65,7 @@ public class CumulusConfig extends Properties
   
   public void usage()
   {
-    System.err.println("Usage: script propertiesfile");
+    System.err.println("Usage: {script} cumulusConfigFile [options]");
     System.exit(1);
   }
   
@@ -91,8 +96,9 @@ public class CumulusConfig extends Properties
     }
     args = nonParameterArgs.toArray(args);
   
-    if(args.length < 1){ usage(); }
+    if(args.length < 2){ usage(); }
     load(new FileInputStream(args[0]));
+    setProperty("cumulus.config", args[1]);
     setSystemProperty("jruby.home");
   }
   
@@ -104,20 +110,27 @@ public class CumulusConfig extends Properties
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface, HashMap<String,String> specialParams)
   {
     assertProperty("cumulus.home");
-    System.out.println("Creating Object : " + getProperty("cumulus.home") + "/" + rObjectFile);
+    System.out.print("Creating Object : " + getProperty("cumulus.home") + "/" + rObjectFile + " ... ");
+    System.out.flush();
     ScriptingContainer container = new ScriptingContainer();
     container.getProvider().getRubyInstanceConfig().setCompatVersion(CompatVersion.RUBY1_9);
     
+    Object receiver;
+    
+    receiver = container.runScriptlet(PathType.CLASSPATH, "config/config.rb");
+    RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
+    
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
-      container.put("option_" + parameter.getKey(), parameter.getValue());
+      rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }
     for(Map.Entry<String,String> parameter : specialParams.entrySet()){
-      container.put("option_" + parameter.getKey(), parameter.getValue());
+      rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }
-    //System.out.println(container.get("$:").toString());
+    rConfig.load(getProperty("cumulus.config"));
     
-    Object receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
+    receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
     T handler = container.getInstance(receiver, rInterface);
+    System.out.println("done");
     return handler;
   }
   

@@ -185,8 +185,8 @@ class Logger
   
   def Logger.default
     if @@logger.nil?
-      @@logger = Logger.new(STDERR);
-      @@logger.level = Logger::WARN;
+      @@logger = Logger.new();
+#      @@logger.level = Logger::WARN;
     end
     @@logger;
   end
@@ -211,19 +211,19 @@ class Logger
   end
   
   def Logger.fatal(progname = default_name)
-    (default.level < FATAL) || default.fatal(progname) { yield }
+#    (default.level < FATAL) || default.fatal(progname) { yield }
   end
   def Logger.error(progname = default_name)
-    (default.level < ERROR) || Logger.default.error(progname) { yield }
+#    (default.level < ERROR) || Logger.default.error(progname) { yield }
   end
   def Logger.warn(progname = default_name)
-    (default.level < WARN) || Logger.default.warn(progname) { yield }
+#    (default.level < WARN) || Logger.default.warn(progname) { yield }
   end
   def Logger.info(progname = default_name)
-    (default.level < INFO) || Logger.default.info(progname) { yield }
+#    (default.level < INFO) || Logger.default.info(progname) { yield }
   end
   def Logger.debug(progname = default_name)
-    (default.level < DEBUG) || Logger.default.debug(progname) { yield }
+#    (default.level < DEBUG) || Logger.default.debug(progname) { yield }
   end
   def Logger.temp(string)
     Logger.info(string, "TEMPORARY");
