@@ -4,7 +4,6 @@ require 'logger';
 require 'thread';
 require 'pty';
 require 'util/ok_mixins';
-require 'config/config';
 require 'slicer/remotemanager';
 
 
