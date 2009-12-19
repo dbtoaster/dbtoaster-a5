@@ -1,7 +1,6 @@
-#!/usr/bin/env jruby
 
-require 'node';
 require 'getoptlong';
+
 
 $stdout.sync = true;
 $interactive = true;
@@ -12,7 +11,7 @@ $transforms = Hash.new;
 $input = $stdin
 $stats_every = -1;
 $ratelimit = nil;
-$upfront_cols = Set.new;
+$upfront_cols = Array.new;
 
 GetoptLong.new(
   [ "--quiet"      , "-q", GetoptLong::NO_ARGUMENT ],
@@ -56,7 +55,7 @@ GetoptLong.new(
       
     when "--upfront" then
       puts "Starting by fully loading all " + arg + " rows";
-      $upfront_cols.add(arg);
+      $upfront_cols.push(arg);
       
     when "--tpch-stream", "-h" then
       puts "Generating stream command";
@@ -87,7 +86,7 @@ end
 
 $ratelimit = $stats_every.to_f / $ratelimit if $ratelimit;
 
-switch_addr = java.net.InetSocketAddress(`hostname`.chomp, 52981);
+switch_addr = java.net.InetSocketAddress.new(`hostname`.chomp, 52981);
 switch = Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(switch_addr) unless $test;
 
 def compare_date(indices, params)
@@ -183,3 +182,4 @@ $input.each do |line|
     end
   end
 end
+

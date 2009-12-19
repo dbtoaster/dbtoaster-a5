@@ -1,3 +1,4 @@
-node   org.dbtoaster.cumulus.node.MapNode
-chef   org.dbtoaster.cumulus.chef.ChefNode
-slicer org.dbtoaster.cumulus.slicer.SlicerNode
+node   org.dbtoaster.cumulus.node.MapNode       java
+chef   org.dbtoaster.cumulus.chef.ChefNode      java
+slicer org.dbtoaster.cumulus.slicer.SlicerNode  java
+client client/client.rb                         jruby
