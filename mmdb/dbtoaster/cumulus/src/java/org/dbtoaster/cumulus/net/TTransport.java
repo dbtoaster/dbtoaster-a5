@@ -130,7 +130,7 @@ public class TTransport
         int bytesSent = len;
         synchronized(writeBuffer)
         {
-            System.out.println(server + ": sending: " + len);
+            //System.out.println(server + ": sending: " + len);
             try {
                 writeBuffer.mark();
                 writeBuffer.putInt(len);

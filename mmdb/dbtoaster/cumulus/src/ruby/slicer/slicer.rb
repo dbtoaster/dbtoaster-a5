@@ -70,10 +70,8 @@ class SlicerNodeHandler
   end
   
   def start_node(port)
-    # TODO: port argument for node.
     start_process(
-      #@spread_path+"/bin/node.sh -p " + port.to_s + " " + verbosity_flag + " " + @config_file
-      @spread_path+"/bin/node.sh " + verbosity_flag + " " + @config_file
+      @spread_path+"/bin/node.sh -p " + port.to_s + " " + verbosity_flag + " " + @config_file
     )
   end
   
@@ -90,7 +88,6 @@ class SlicerNodeHandler
   end
   
   def start_logging(host)
-    puts "Starting logging"
     @monitor_intake.push([:client, SlicerNode::Client.connect(host)]);
   end
   
@@ -111,9 +108,7 @@ class SlicerNodeHandler
   end
   
   def poll_stats()
-    r=`ps aux`.split("\n").delete_if { |line| /org.dbtoaster.cumulus.*Node/.match(line).nil? }.join("\n");
-    puts "Poll stats: #{r}"
-    r
+    `ps aux`.split("\n").delete_if { |line| /org.dbtoaster.cumulus.*Node/.match(line).nil? }.join("\n");
   end
   
   def shutdown()
@@ -154,8 +149,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       # This block gets executed every time we get a log message from one of our clients;
       # we use it to figure out when the switch/nodes have all started so we can initialize the
       # client.  After that point, returning nil removes this block from the loop.
-  
-      # TODO: test new initialization string
+
       if /Starting Cumulus Server/.match(log_message) then
         $pending_servers -= 1 
         #Logger.info { "A server just came up; #{$pending_servers} servers left" }
@@ -163,8 +157,8 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       end
       if $pending_servers <= 0 then
         #Logger.info { "Server Initialization complete, Starting Client..." };
-        #puts "Server Initialization complete, Starting Client..." ;
-        #$clients[$config.switch.getHostName].start_client
+        puts "Server Initialization complete, Starting Client..." ;
+        $clients[$config.switch.getHostName].start_client
       end
       puts log_message;
       if $pending_servers > 0 then handler else nil end;
@@ -275,12 +269,7 @@ class SlicerMonitor
         nodes.each { |c, ob, ib| ib.push(1) }
         log = nodes.collect { |c, ob, ib| ob.pop.split("\n") }.flatten.collect do |line|
           if /org.dbtoaster.cumulus.*Node/.match(line) then
-            #line.chomp.gsub(
-            #  /-I [^ ]* */, ""
-            #).gsub(
-            #  /ruby +[^ ]*\/([^\/ \-]*)-launcher.rb.*/, "\\1"
-            #)
-            line.chomp.gsub(/.*(org.dbtoaster.cumulus.*Node).*/, "\\1")
+            line.chomp.gsub(/java .cp [^\ ]*\ *org.dbtoaster.cumulus.(.*Node).*/, "\\1")
           end
         end
         puts log.join("\n");

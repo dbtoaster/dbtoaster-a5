@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
@@ -55,12 +56,18 @@ public abstract class Client
     if(ret == null){
       try { 
         
-        System.out.println("Constructor for " + addr.toString() + ", " + c.getName() +
+        System.out.println(InetAddress.getLocalHost() + " constructor for " + addr.toString() + ", " + c.getName() +
             " monitor: " + (monitor == null? "null" : monitor));
+        
+        //Thread.dumpStack();
+
         Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Selector.class);
-        System.out.println("Constructor: " + cons);
+        
+        System.out.println(InetAddress.getLocalHost() + " constructor: " + cons);
+        
         ret = cons.newInstance(addr, monitor.selector());
-        System.out.println("Built for " + addr.toString() + ", " + c.getName());
+        
+        System.out.println(InetAddress.getLocalHost() + " built for " + addr.toString() + ", " + c.getName());
         cTypeSingletons.put(addr, ret);
         
       } catch(NoSuchMethodException e){

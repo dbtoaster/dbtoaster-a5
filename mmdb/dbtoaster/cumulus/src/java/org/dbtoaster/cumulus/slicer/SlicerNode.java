@@ -108,6 +108,7 @@ public class SlicerNode
                 oprot.beginMessage();
                 oprot.putObject(SlicerNodeMethod.POLL_STATS);
                 oprot.endMessage();
+                waitForFrame();
                 r = (String) iprot.getObject();
             } catch (TProtocolException e) { throw new TException(e.getMessage()); }
             return r;

@@ -321,10 +321,14 @@ public class MapNode
   public static void main(String args[]) throws Exception
   {
     CumulusConfig conf = new CumulusConfig();
+    conf.defineOption("p", "port", true);
     conf.configure(args);
     
+    String portProperty = conf.getProperty("port");
+    Integer nodePort = portProperty == null? 52982 : Integer.parseInt(portProperty);  
+    
     MapNodeIFace handler = conf.loadRubyObject("node/node.rb", MapNodeIFace.class);
-    Server s = new Server(new MapNode.Processor(handler), 52982);
+    Server s = new Server(new MapNode.Processor(handler), nodePort);
     Thread t = new Thread(s);
     
     t.start();
