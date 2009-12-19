@@ -121,7 +121,7 @@ public class CumulusConfig extends Properties
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface, HashMap<String,String> specialParams)
   {
     assertProperty("cumulus.home");
-    System.out.print("Creating Object : " + getProperty("cumulus.home") + "/" + rObjectFile + " ... ");
+    System.out.println("Creating Object : " + rObjectFile + " ... ");
     System.out.flush();
     ScriptingContainer container = new ScriptingContainer();
     container.getProvider().getRubyInstanceConfig().setCompatVersion(CompatVersion.RUBY1_9);
@@ -145,7 +145,6 @@ public class CumulusConfig extends Properties
     
     receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
     T handler = container.getInstance(receiver, rInterface);
-    System.out.println("Config done.");
     return handler;
   }
   

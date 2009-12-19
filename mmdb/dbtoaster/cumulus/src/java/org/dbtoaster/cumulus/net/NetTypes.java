@@ -42,6 +42,32 @@ public class NetTypes implements Serializable
         {
           return computePartition(key.toArray(partitionSizes), partitionSizes);
         }
+        
+        public String toString()
+        {
+          StringBuilder sb = new StringBuilder("Map " + source + "[");
+          String sep = "";
+          for(Long l : key){
+            sb.append(sep+l);
+            sep = ",";
+          }
+          return sb.toString() + "]";
+        }
+        
+        public boolean equals(Object o){
+          try {
+            Entry e = (Entry)o;
+            return 
+              (e.source == source) &&
+              (key.equals(e.key));
+          } catch(ClassCastException e){
+            return false;
+          }
+        }
+        
+        public int hashCode(){
+          return source * key.hashCode();
+        }
     }
     
     public static class PutField implements Serializable

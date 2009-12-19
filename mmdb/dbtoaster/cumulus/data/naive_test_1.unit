@@ -23,7 +23,7 @@ partition Map 4[0,0]
 
 ############ Put Templates
 template 1 R	A;B	Map 1[A]		4+B
-template 2 R	A;B	Map 1[A]		A+Map 1[B]
+template 2 R	A;B	Map 3[A]		A+Map 1[B]
 #template 3 R	A;B	Map 2[C]		A+Map 1[C]
 #template 4 R	A;B	Map 3[B]		A+Map 2[B]
 template 5 R	A;B	Map 4[A,B]		A+B

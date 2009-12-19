@@ -102,15 +102,15 @@ class MapPartition
   end
   
   def to_s
-    mapid.to_s + " => [" + @partition.join(",") + "]";
+    "Map #{mapid}[#{@partition.join(",")}]";
   end
   
   def dump
     @pending.join("\n").to_s + "\n" + 
-    @data.values.sort do |a, b|
-      a.target.key <=> b.target.key
+    @data.values.to_a.sort do |a,b|
+      a[0].to_a <=> b[0].to_a
     end.collect do |entry|
-      "Map " + entry.target.to_s + " : " + entry.to_s
+      "Map #{@mapid}[#{entry[0].to_a.join(",")}] = #{entry[1]}";
     end.join("\n");
   end
   

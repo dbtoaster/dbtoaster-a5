@@ -25,13 +25,13 @@ class MapLayout
   end
   
   def nodes
-    nodes = Set.new;
+    nodes = Array.new;
     @maplist.each_value do |partitions|
       partitions.each_value do |node|
-        nodes.add(node);
+        nodes.push(node);
       end
     end
-    nodes.to_a;
+    nodes.uniq;
   end
   
   def compile_trigger(template)
@@ -288,11 +288,8 @@ class MetaCompiledTrigger
   end
   
   def fire(params)
-    puts "Fire! (#{@nodes.size} nodes)";
     partition = NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long)).to_a;
-    puts "preparing!: #{partition.join(",")}"
     @nodes[partition].each_value do |nodeMessage|
-      puts "Yield!"
       yield nodeMessage;
     end
     @cmd_size[partition]

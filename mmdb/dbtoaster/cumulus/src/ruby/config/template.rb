@@ -65,7 +65,7 @@ class TemplateEntry
   end
   
   def instantiate(params = Hash.new)
-    MapEntry.make(
+    MapEntry.new(
       @source, 
       @keys.collect do |k|
         case k
@@ -167,7 +167,7 @@ class TemplateValuation
       @entries = Hash.new;
       prepare_entries(entries);
     end
-    prepare_entries(*template.entries) unless template == nil;
+    prepare_entries(template.entries) unless template == nil;
     @target = nil;
   end
   
@@ -202,8 +202,8 @@ class TemplateValuation
     end
   end
   
-  def prepare_entries(*entries)
-    entries.flatten.each do |e|
+  def prepare_entries(entries)
+    entries.each do |e|
       e = e.instantiate(@params) if e.is_a? TemplateEntry;
       @entries[e] = nil unless @entries.has_key? e;
     end
@@ -217,6 +217,8 @@ class TemplateValuation
     if (@entries.has_key? entry) then
       @entries[entry] = value;
       @target = nil;
+    else
+      puts "Discovered unknown entry! : #{entry}; Expected one of : #{@entries.keys.join(",")}"
     end
   end
   

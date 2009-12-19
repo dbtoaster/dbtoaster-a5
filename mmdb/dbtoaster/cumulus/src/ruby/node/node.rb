@@ -160,18 +160,18 @@ class ValuationApplicator
   end
   
   def discover(key, value)
-    puts "Discovered that : #{key} = #{value}" if @log;
+#    puts "Discovered that : #{key} = #{value}";
     @valuation.discover(key, value)
     begin
       @final_val = @valuation.to_f
       if @record then
-        puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{final_val}" if @log;
+#        puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{final_val}";
         @record.discover(@target.key, @final_val).finish;
         @handler.finish_valuating(@id);
       end
     rescue SpreadException => e
       # it's not ready
-      Logger.debug { e.to_s }
+      #puts e.to_s;
     end
   end
   
@@ -186,7 +186,7 @@ class ValuationApplicator
   
   def apply(partitions)
     if @final_val then
-      puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{@final_val}" if @log;
+#      puts "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{@final_val}" if @log;
       partitions[0].update(@target.key, @final_val);
       @handler.finish_valuating(@id);
     else
@@ -206,7 +206,7 @@ class MassValuationApplicator
     @final_val, @records = nil, nil;
     @expected_locals = 0;
     @evaluator = TemplateForeachEvaluator.new(valuation);
-    puts "Creating insert for #{valuation.target.source}; expecting #{@expected_gets} gets" if @log;
+#    puts "Creating insert for #{valuation.target.source}; expecting #{@expected_gets} gets" if @log;
   end
   
   def valuation
@@ -214,7 +214,7 @@ class MassValuationApplicator
   end
   
   def discover(key, value)
-    puts "Discovered that #{key} = #{value}" if @log;
+#    puts "Discovered that #{key} = #{value}" if @log;
     @evaluator.discover(key, value)
   end
   
@@ -246,7 +246,7 @@ class MassValuationApplicator
     else
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
       @evaluator.foreach do |target, delta_value|
-        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
+#        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
         partition = target.partition(@handler.partition_sizes[target.source]);
         partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;
       end
@@ -259,7 +259,7 @@ class MassValuationApplicator
   def complete
     return unless @records;
     @evaluator.foreach do |target, delta_value|
-      puts "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" if @log;
+#      puts "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" if @log;
       partition = target.partition(@handler.partition_sizes[target.source]);
       @records[partition].discover(target.key, delta_value) if @records.has_key? partition;
     end
@@ -291,12 +291,12 @@ class MapNodeHandler
   end
   
   def find_partition(source, key)
-    raise SpreadException.make("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
+    raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
     partition = NetTypes.compute_partition(key.to_java(:Long), @partition_sizes[source.to_i].to_java(:Long)).to_a;
     if (@maps.has_key? source.to_i) && (@maps[source.to_i].has_key? partition) then
       @maps[source.to_i][partition];
     else
-      raise SpreadException.make("Request for unknown partition: " + source.to_s + "[" + partition.join(",") + "]; Known maps: " + @maps.collect {|k,v| k.to_s+"{"+v.keys.collect { |partid| "[#{partid.join(",")}]" }.join(";") + "}"}.join(", "));
+      raise SpreadException.new("Request for unknown partition: " + source.to_s + "[" + partition.join(",") + "]; Known maps: " + @maps.collect {|k,v| k.to_s+"{"+v.keys.collect { |partid| "[#{partid.join(",")}]" }.join(";") + "}"}.join(", "));
     end
   end
   
@@ -381,20 +381,21 @@ class MapNodeHandler
     
     # This is also treated as an implicit message to ourselves.  
     applicator.valuation.entries.keys.each do |req|
+#      puts "Checking for #{req}"
       begin
         # If the value is known, then get() will fire immediately.
         # Note also that discover will fire the callbacks if it is necessary to do so.
-        Logger.debug { "checking for : " + req.to_s } 
+#        puts "checking for : #{req.source}[#{req.key.to_a.join(",")}]";
         loop_partitions(req.source, req.key) do |partition| 
-          Logger.debug { "found : " + partition.to_s + ":" + partition.dump }
+#          puts "found : " + partition.to_s 
           applicator.expect_local
           partition.get(
             req.key,
-            proc { |key, value| applicator.discover(MapEntry.make(req.source, key), value) },
+            proc { |key, value| applicator.discover(MapEntry.new(req.source, key), value) },
             proc { applicator.find_local }
           )
         end;
-      rescue Thrift::Exception => e;
+      rescue Exception => e;
         # this just means that we don't have the partition for this requirement.
         Logger.debug { e.to_s }
       end
@@ -472,19 +473,19 @@ class MapNodeHandler
             request.hold;
             partition.get(
               t.key, 
-              proc { |key, value| request.fire(MapEntry.make(t.source, key), value) },
+              proc { |key, value| request.fire(MapEntry.new(t.source, key), value) },
               proc { request.release }
             );
           end
         else
           find_partition(t.source, t.key).get(
             t.key, 
-            proc { |key, value| request.fire(MapEntry.make(t.source, key), value) },
+            proc { |key, value| request.fire(MapEntry.new(t.source, key), value) },
             nil
           );
         end
       end
-    rescue Thrift::Exception => ex
+    rescue Exception => ex
       puts "Error: " + ex.to_s;
       puts ex.backtrace.join("\n");
     end

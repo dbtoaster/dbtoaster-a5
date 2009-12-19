@@ -25,7 +25,7 @@ public class ChefNode
     public void update(String relation, List<Double> params)
       throws TException;
     
-    public void dump()
+    public String dump()
       throws TException;
     
     public void request_backoff(String nodeID)
@@ -57,11 +57,13 @@ public class ChefNode
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
-    public void dump()
+    public String dump()
       throws TException
     {
       try {
         oprot.putObject(ChefNodeMethod.DUMP);
+        waitForFrame();
+        return (String)iprot.getObject();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
@@ -119,7 +121,7 @@ public class ChefNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException
       {
-        handler.dump();
+        oprot.putObject(handler.dump());
       }
     }
     
@@ -156,7 +158,7 @@ public class ChefNode
     ArrayList<Double> params = new ArrayList<Double>();
     params.add(2.0); params.add(5.0);
     handler.update("R", params);
-    handler.dump();
+    System.out.println(handler.dump());
     
     t.start();
     t.join();

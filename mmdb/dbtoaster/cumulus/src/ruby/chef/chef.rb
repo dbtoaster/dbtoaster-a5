@@ -49,16 +49,12 @@ class ChefNodeHandler
     raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
     raise SpreadException.backoff("Backoff: Nodes #{@backoff_nodes.to_a.join(",")} lagged") unless @backoff_nodes.empty?;
     params = params.collect { |param| param.to_i }
-    puts "Update"
     if @metacompiled then 
-      puts "metacompiled: #{table} : #{@metacompiled.has_key?(table.to_s)}; '#{@metacompiled.keys.join("','")}'; #{@metacompiled[table.to_s]}"
       @next_cmd += @metacompiled[table.to_s].fire(params) do |nodeMessage|
-        puts "Dispatching: #{nodeMessage}"
         nodeMessage.dispatch(@nodelist[nodeMessage.node], params, @next_cmd);
       end
       next_update;
     else
-      puts "standardcompiled"
       @templates[table.to_s].each do |trigger|
         put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
           @fetch_count += 1;
@@ -94,7 +90,7 @@ class ChefNodeHandler
         mct.compile;
         [relation, mct]
       end
-    puts @metacompiled.values.join("\n\n");
+    #puts @metacompiled.values.join("\n\n");
   end
   
   def install_template(template, index = (@next_template += 1))

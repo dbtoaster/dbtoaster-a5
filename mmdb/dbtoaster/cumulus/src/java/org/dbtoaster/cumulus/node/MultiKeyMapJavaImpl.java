@@ -9,7 +9,7 @@ public class MultiKeyMapJavaImpl {
   protected static Environment env = null;
   
   protected final int                         numkeys;
-  protected final Integer                     wildcard;
+  public    final Integer                     wildcard;
   protected final Double                      defaultValue;
   protected final String                      basepath;
   protected final String                      dbName;
@@ -87,13 +87,16 @@ public class MultiKeyMapJavaImpl {
   public Double get(Integer[] key){
     DatabaseEntry entry = new DatabaseEntry();
     if(basemap.get(null, serializeKey(key), entry, LockMode.DEFAULT) == OperationStatus.SUCCESS){
+//      System.out.println("get "+dbName+"[" + patternName(key) + "] = " + deserializeValue(entry));
       return deserializeValue(entry);
     } else {
+//      System.out.println("get "+dbName+"[" + patternName(key) + "] = NOT FOUND");
       return defaultValue;
     }
   }
   
   public void put(Integer[] key, Double value){
+//    System.out.println("put "+dbName+"[" + patternName(key) + "] = " + value);
     basemap.put(null, serializeKey(key), serializeValue(value));
   }
   
@@ -111,6 +114,9 @@ public class MultiKeyMapJavaImpl {
     int cnt = 0;
     for(Integer dim : partialKey){
       if(dim != wildcard) { cnt ++; }
+    }
+    if(cnt == numkeys){
+      return null;
     }
     Integer[] pattern = new Integer[cnt];
     cnt = 0;
@@ -210,16 +216,17 @@ public class MultiKeyMapJavaImpl {
     
     public MKFullCursor(Cursor c){
       this.c = c;
-      this.first = false;
+      this.first = true;
       key = new DatabaseEntry();
       data = new DatabaseEntry();
     }
     
     public boolean next(){
       if (first) {
+        first = false;
         return c.getFirst(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS;
       } else {
-        return c.getNextDup(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS;
+        return c.getNext(key, data, LockMode.DEFAULT) == OperationStatus.SUCCESS;
       }
     }
     

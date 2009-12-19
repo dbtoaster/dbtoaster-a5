@@ -8,7 +8,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.ArrayList;
 
 public class TProtocol
 {
@@ -181,6 +182,15 @@ public class TProtocol
         
         return r;
     }
+    
+    public <E> List<E> getList(Class<E> type) throws TProtocolException {
+        int len = getLong().intValue();
+        List<E> ret = new ArrayList<E>(len);
+        for(; len > 0; len--){
+          ret.add((E)getObject());
+        }
+        return ret;
+    }
 
     public void putObject(Object o) throws TProtocolException
     {
@@ -233,6 +243,20 @@ public class TProtocol
         if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
         try {
             out.writeFloat(f);
+            sendObject();
+        } catch (IOException ioe) {
+            throw new TProtocolException("Protocol failed to write object.");
+        }
+    }
+    
+    public <E, T extends List<E>> void putList(T list) throws TProtocolException
+    {
+        if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
+        try {
+            out.writeLong(list.size());
+            for(E element : list){
+              out.writeObject(element);
+            }
             sendObject();
         } catch (IOException ioe) {
             throw new TProtocolException("Protocol failed to write object.");

@@ -14,7 +14,7 @@ class MultiKeyMap
   end
   
   def [](key)
-    @java_impl.get(key.to_java(:Integer));
+    @java_impl.get(key.to_java(:Integer)) || 0.0;
   end
   
   def []=(key, val)
@@ -36,6 +36,10 @@ class MultiKeyMap
   end
   
   def scan(partial_key)
+    unless partial_key.include? @java_impl.wildcard then
+      yield(partial_key, self[partial_key]);
+      return;
+    end
     partial_key = partial_key.collect { |k| k unless k == @wildcard };
     cursor = @java_impl.scan(partial_key.to_java(:Integer));
     while cursor.next;

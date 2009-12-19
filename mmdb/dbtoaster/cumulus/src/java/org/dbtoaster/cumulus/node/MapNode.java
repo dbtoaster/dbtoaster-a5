@@ -142,9 +142,9 @@ public class MapNode
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.META_REQUEST);
         oprot.putLong(base_cmd);
-        oprot.putObject(put_list);
-        oprot.putObject(get_list);
-        oprot.putObject(params);
+        oprot.putList(put_list);
+        oprot.putList(get_list);
+        oprot.putList(params);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
@@ -279,9 +279,9 @@ public class MapNode
         throws TException,TProtocolException
       {
         Long base_cmd = iprot.getLong();
-        List<PutRequest> put_list = (List<PutRequest>) iprot.getObject();
-        List<GetRequest> get_list = (List<GetRequest>) iprot.getObject();
-        List<Double> params = (List<Double>) iprot.getObject();
+        List<PutRequest> put_list = iprot.getList(PutRequest.class);
+        List<GetRequest> get_list = iprot.getList(GetRequest.class);
+        List<Double> params = iprot.getList(Double.class);
         handler.meta_request(base_cmd, put_list, get_list, params);
       }
     }
