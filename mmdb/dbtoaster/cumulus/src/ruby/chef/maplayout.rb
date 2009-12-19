@@ -108,7 +108,7 @@ class CompiledTrigger
 
   def initialize(trigger, partition_size)
     @trigger = trigger;
-    @index = Hash.new { |h,k| h[k] = Hash.new { |ih,ik| ih[ik] = Hash.new { |iih,iik| iih[iik] = Set.new } } }
+    @index = Hash.new { |h,k| h[k] = Hash.new { |ih,ik| ih[ik] = Hash.new { |iih,iik| iih[iik] = Array.new } } }
     @relevant_params = 
       (trigger.entries << trigger.target).collect do |e| 
         e.keys 
@@ -133,7 +133,9 @@ class CompiledTrigger
   end
   
   def discover_fetch(input, put_node, fetch_node, fetch_entry)
-    @index[input][put_node][fetch_node].add(fetch_entry) unless put_node == fetch_node;
+    unless put_node == fetch_node
+      @index[input][put_node][fetch_node].push(fetch_entry) unless @index[input][put_node][fetch_node].include? fetch_entry;
+    end
   end
   
   def fire(params)
