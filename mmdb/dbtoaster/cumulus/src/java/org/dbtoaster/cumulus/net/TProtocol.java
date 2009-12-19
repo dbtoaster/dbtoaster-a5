@@ -286,8 +286,10 @@ public class TProtocol
     // Non-blocking read, returns if we have a valid frame to read.
     boolean getFrame() throws IOException
     {
-        //System.out.println("Read remaining at start: " + readRemaining);
-        //System.out.println("inBuffer remaining: " + inBuffer.remaining());
+        System.out.println(transport.getRemote() +
+            ": read remaining at start: " + readRemaining);
+        System.out.println(transport.getRemote() +
+            ": inBuffer remaining: " + inBuffer.remaining());
 
         if ( readRemaining == null )
         {
@@ -326,7 +328,8 @@ public class TProtocol
             inBuffer.mark();
         }
         
-        //System.out.println("Read remaining for obj: " + readRemaining);
+        System.out.println(transport.getRemote() +
+            ": read remaining for obj: " + readRemaining);
         
         int length = readRemaining; 
         byte[] buf = new byte[length];

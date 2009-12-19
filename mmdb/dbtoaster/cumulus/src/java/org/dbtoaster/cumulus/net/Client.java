@@ -1,6 +1,7 @@
 package org.dbtoaster.cumulus.net;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
@@ -53,8 +54,16 @@ public abstract class Client
     T ret = (T)cTypeSingletons.get(addr);
     if(ret == null){
       if(monitor == null){ startMonitor(); }
+      System.out.println("Started monitor for " + addr.toString() + ", " + c.getName());
       try { 
-        ret = c.getConstructor(InetSocketAddress.class, Selector.class).newInstance(addr, monitor.selector());
+        
+        System.out.println("Constructor for " + addr.toString() + ", " + c.getName() +
+            " monitor: " + (monitor == null? "null" : monitor));
+        Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Selector.class);
+        System.out.println("Constructor: " + cons);
+        ret = cons.newInstance(addr, monitor.selector());
+        System.out.println("Built for " + addr.toString() + ", " + c.getName());
+        
       } catch(NoSuchMethodException e){
         System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
         e.printStackTrace();
@@ -76,9 +85,13 @@ public abstract class Client
         }
         System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
         e.printStackTrace();
+      } catch (Exception e) {
+          System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
+          e.printStackTrace();
       }
     }
     
+    System.out.println("Creating client for " + c.getName());
     return ret;
   }
   
@@ -134,16 +147,24 @@ public abstract class Client
             SelectionKey key = keys.next();
             Client c = (Client)key.attachment();
             
+            boolean processed = false;
+
             if(key.isConnectable()){
               handleConnect(c);
+              processed = true;
             }
             if(key.isReadable()){
               handleRead(c);
+              processed = true;
             }
             if(key.isWritable()) {
               handleWrite(c);
-//            } else {
-//              System.err.println("Key registered for select in Client, but neither readable nor writable");
+              processed = true;
+            }
+            
+            if ( !processed ) {
+              System.err.println("Key registered for select in Client, "+
+                  "but neither readable nor writable");
             }
           }
         } catch (IOException ioe) {

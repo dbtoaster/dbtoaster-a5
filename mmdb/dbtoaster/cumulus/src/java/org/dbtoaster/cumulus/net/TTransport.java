@@ -61,6 +61,7 @@ public class TTransport
     public void connect(Selector s) throws IOException
     {
         channel = SocketChannel.open();
+        System.out.println("Connecting transport to " + server);
         channel.configureBlocking(false);
         channel.socket().setSendBufferSize(socketSendBufferSize);
         channel.socket().setReceiveBufferSize(socketRecvBufferSize);
@@ -129,7 +130,7 @@ public class TTransport
         int bytesSent = len;
         synchronized(writeBuffer)
         {
-            //System.out.println("Sending: " + len);
+            System.out.println(server + ": sending: " + len);
             try {
                 writeBuffer.mark();
                 writeBuffer.putInt(len);
@@ -190,6 +191,8 @@ public class TTransport
         
         return Math.min(bytesRecv, len);
     }
+
+    public InetSocketAddress getRemote() { return server; }
 
     public String toString()
     {

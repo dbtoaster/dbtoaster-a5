@@ -19,22 +19,25 @@ public class SlicerNode
         void start_node(int port) throws TException;
         void start_client() throws TException;
         void shutdown() throws TException;
-        void start_logging(InetSocketAddress target) throws TException;
+        void start_logging(String host) throws TException;
         void receive_log(String log_message) throws TException;
         String poll_stats() throws TException;
     }
     
+    public interface PrimarySlicerNodeIFace extends SlicerNodeIFace
+    {
+        void bootstrap() throws TException;
+    }
+
     public static SlicerNodeClient getClient(InetSocketAddress addr)
         throws IOException
     {
+        System.out.println("Creating SlicerNodeClient...");
         return Client.get(addr, SlicerNodeClient.class);
     }
 
     public static class SlicerNodeClient extends Client implements SlicerNodeIFace
     {
-        protected TProtocol iprot;
-        protected TProtocol oprot;
-
         public SlicerNodeClient(InetSocketAddress s, Selector selector)
             throws IOException
         {
@@ -78,12 +81,12 @@ public class SlicerNode
             } catch (TProtocolException e) { throw new TException(e.getMessage()); }
         }
 
-        public void start_logging(InetSocketAddress target) throws TException
+        public void start_logging(String host) throws TException
         {
             try {
                 oprot.beginMessage();
                 oprot.putObject(SlicerNodeMethod.START_LOGGING);
-                oprot.putObject(target);
+                oprot.putObject(host);
                 oprot.endMessage();
             } catch (TProtocolException e) { throw new TException(e.getMessage()); }
         }
@@ -109,20 +112,15 @@ public class SlicerNode
             } catch (TProtocolException e) { throw new TException(e.getMessage()); }
             return r;
         }
-        
-        public void processFrame() {}
     }
 
-    public enum SlicerNodeMethod {
+    public static enum SlicerNodeMethod {
         START_SWITCH, START_NODE, START_CLIENT,
         SHUTDOWN, START_LOGGING, RECEIVE_LOG, POLL_STATS };
 
     public static class Processor extends TProcessor<SlicerNodeMethod>
     {
         private SlicerNodeIFace handler;
-
-        protected final HashMap<SlicerNodeMethod, HandlerFunction> handlerMap =
-            new HashMap<SlicerNodeMethod, HandlerFunction>();
 
         public Processor(SlicerNodeIFace h)
         {
@@ -185,8 +183,8 @@ public class SlicerNode
             throws TException
             {
                 try {
-                    InetSocketAddress target = (InetSocketAddress) iprot.getObject();
-                    handler.start_logging(target);
+                    String host = (String) iprot.getObject();
+                    handler.start_logging(host);
                 } catch (TProtocolException e) {
                     throw new TException(
                         "Protocol error for SlicerNodeHandler." +
@@ -235,13 +233,23 @@ public class SlicerNode
       conf.defineOption("serve", false);
       conf.configure(args);
       
-      SlicerNodeIFace handler = conf.loadRubyObject("slicer/slicer.rb", SlicerNodeIFace.class);
+      PrimarySlicerNodeIFace handler = conf.loadRubyObject("slicer/slicer.rb", PrimarySlicerNodeIFace.class);
       Server s = new Server(new SlicerNode.Processor(handler), 52980);
 
       System.out.println("Created slicer node handler...");
       
       Thread t = new Thread(s);
       t.start();
+      
+      // Start up slicer network.
+      String serveOption = conf.getProperty("serve");
+      System.out.println("Serve option: " + serveOption);
+      if ( serveOption == null || !(serveOption.equals("YES")) ) {
+          Thread.sleep(2000);
+          handler.bootstrap();
+      }
+      
+      // Join with primary slicer server.
       t.join();
     }
 }

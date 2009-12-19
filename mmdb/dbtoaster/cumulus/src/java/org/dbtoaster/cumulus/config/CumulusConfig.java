@@ -89,6 +89,7 @@ public class CumulusConfig extends Properties
                 option = potential;
               } else {
                 parameters.put(potential.name, "YES");
+                setProperty(potential.name, "YES");
               }
               break;
             }
@@ -102,6 +103,7 @@ public class CumulusConfig extends Properties
         }
       } else {
         parameters.put(option.name, arg);
+        setProperty(option.name, arg);
         option = null;
       }
     }
