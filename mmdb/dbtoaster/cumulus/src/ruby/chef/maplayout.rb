@@ -86,8 +86,8 @@ class MapLayout
               e.source,
               e.keys.collect do |k| 
                 if k.is_a? String 
-                  then if template.paramlist.include? k then template.paramlist.index(k) else -1 end
-                  else "#{k}"
+                  then if template.paramlist.include? k then "#{template.paramlist.index(k)}" else -1 end
+                  else k.to_i
                 end
               end
             )
@@ -146,7 +146,7 @@ class CompiledTrigger
       fetchlist.each_pair do |fetch_node, entry_list|
         yield(
           entry_list.collect do |e|
-            MapEntry.new(e.source, e.key.collect { |k| if k.is_a? String then k.to_i elsif k < 0 then k else params[k] end });
+            MapEntry.new(e.source, e.key.collect { |k| if k.is_a? String then params[k.to_i] elsif k < 0 then k else params[k] end });
           end,
           fetch_node,
           put_node,
@@ -202,7 +202,7 @@ class MetaCompiledNodeMessage
       end
     end.concat!;
     @replacements = @fetch_messages.collect_index do |i, get| 
-      get.replacements.collect { |params| params.unshift(i) }
+      get.replacements.to_a.collect { |params| params.to_a.unshift(i) }
     end.concat!
   end
   

@@ -26,21 +26,24 @@ public class NetTypes implements Serializable
       }
       return partition;
     }
-
+    
     public static class Entry implements Serializable
     {
         private static final long serialVersionUID = -2903891636269280218L;
         public int source;
-        public List<Long> key;
-        public Entry(int s, List<Long> k) { source = s; key = k; }
+        public Long[] key;
+        public Entry(int s, List<Long> k) { source = s; key = k.toArray(key); }
         
         public boolean hasWildcards(){
-          return key.contains(-1);
+          for(Long k : key){
+            if((long)k == -1){ return true; }
+          }
+          return false;
         }
         
         public Long[] partition(Long[] partitionSizes)
         {
-          return computePartition(key.toArray(partitionSizes), partitionSizes);
+          return computePartition(key, partitionSizes);
         }
         
         public String toString()
@@ -70,6 +73,32 @@ public class NetTypes implements Serializable
         }
     }
     
+    public static List<Long> extractNumericsFromList(List<Object> input){
+      List<Long> ret = new ArrayList<Long>(input.size());
+      for(Object potential : input){
+        if(Number.class.isAssignableFrom(potential.getClass())){
+          ret.add(((Number)potential).longValue());
+        } else {
+          ret.add(null);
+        }
+      }
+      return ret;
+    }
+    
+    public static class ParametrizedEntry extends Entry
+    {
+      public String[] parameters;
+      public ParametrizedEntry(int s, List<Object> k){
+        super(s, extractNumericsFromList(k));
+        parameters = new String[key.length];
+        for(int i = 0; i < key.length; i++){
+          if(key[i] == null){
+            parameters[i] = k.get(i).toString();
+          }
+        }
+      }
+    }
+    
     public static class PutField implements Serializable
     {
         private static final long serialVersionUID = -1097435268974958528L;
@@ -89,8 +118,8 @@ public class NetTypes implements Serializable
     public static class PutParams implements Serializable
     {
         private static final long serialVersionUID = 8494808974470927541L;
-        public List<PutField> params;
-        public PutParams(List<PutField> p) { params = p; }
+        public PutField[] params;
+        public PutParams(List<PutField> p) { params = p.toArray(params); }
     }
     
     public static class PutRequest implements Serializable
@@ -113,13 +142,28 @@ public class NetTypes implements Serializable
         private static final long serialVersionUID = -5725021639950315949L;
         public InetSocketAddress target;
         public Long id_offset;
-        public List<Entry> entries;
+        public Entry[] entries;
+        public Integer[][] replacements;
         public GetRequest() {}
-        public GetRequest(InetSocketAddress t, Long i, List<Entry> e)
+        public GetRequest(InetSocketAddress t, Long ido, List<ParametrizedEntry> e_list)
         {
             target = t;
-            id_offset = i;
-            entries = e;
+            id_offset = ido;
+            entries = e_list.toArray(entries);
+            int ei = 0;
+            List<Integer[]> tempReplacements = new ArrayList<Integer[]>();
+            for(ParametrizedEntry e : e_list){
+              int i = 0;
+              for(String k : e.parameters){
+                if(k != null){
+                  Integer[] replacement = {ei, i, Integer.parseInt(k)};
+                  tempReplacements.add(replacement);
+                }
+                i++;
+              }
+              ei++;
+            }
+            replacements = tempReplacements.toArray(replacements);
         }
     }
 }
