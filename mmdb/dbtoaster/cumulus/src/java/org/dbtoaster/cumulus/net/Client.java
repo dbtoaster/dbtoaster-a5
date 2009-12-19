@@ -125,7 +125,6 @@ public abstract class Client
           while((newClient = newClientQueue.poll()) != null){
             newClient.getInputProtocol().getTransport().
               registerSelector(selector, SelectionKey.OP_CONNECT).attach(newClient);
-            newClient.processFrame(); //client blocks on this completion;
           }
           
           selector.select();
@@ -143,8 +142,8 @@ public abstract class Client
             }
             if(key.isWritable()) {
               handleWrite(c);
-            } else {
-              System.err.println("Key registered for select in Client, but neither readable nor writable");
+//            } else {
+//              System.err.println("Key registered for select in Client, but neither readable nor writable");
             }
           }
         } catch (IOException ioe) {
@@ -161,6 +160,7 @@ public abstract class Client
       if(c.getOutputProtocol() != c.getInputProtocol()){
         c.getOutputProtocol().getTransport().finishConnection();
       }
+      c.processFrame(); //client blocks on this completion;
     }
     
     void handleRead(Client c) throws IOException

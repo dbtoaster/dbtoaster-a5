@@ -49,10 +49,8 @@ public class MapNode
   }
   
   public static MapNodeClient getClient(InetSocketAddress addr) throws IOException {
-    System.out.println("Creating: " + addr);
     try {
       MapNodeClient c = Client.get(addr, MapNodeClient.class);
-    System.out.println("Created: " + c);
     return c;
     } catch(Exception e){
       e.printStackTrace();
@@ -183,10 +181,6 @@ public class MapNode
       try {
         oprot.putObject(MapNodeMethod.LOCALDUMP);
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-    
-    public void processFrame(){
-      
     }
   }
     

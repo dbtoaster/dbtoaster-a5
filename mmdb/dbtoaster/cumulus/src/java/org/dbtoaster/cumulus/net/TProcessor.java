@@ -28,7 +28,9 @@ public abstract class TProcessor<ProtocolMethods extends Enum>
     {
       try
       {
+        System.out.println("Invoking process");
         process(iprot, oprot);
+        System.out.println("Returned from process");
       } catch (TProtocolException e) {
         throw new TException("Protocol error for " + toString());
       } catch (SpreadException e) {

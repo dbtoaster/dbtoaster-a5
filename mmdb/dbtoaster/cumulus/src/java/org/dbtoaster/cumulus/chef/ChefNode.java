@@ -156,6 +156,7 @@ public class ChefNode
     ArrayList<Double> params = new ArrayList<Double>();
     params.add(2.0); params.add(5.0);
     handler.update("R", params);
+    handler.dump();
     
     t.start();
     t.join();

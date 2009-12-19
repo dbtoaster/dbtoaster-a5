@@ -23,7 +23,7 @@
   </target>
   
   <target name="main" depends="init">
-    <javac srcdir="${java.src}" destdir="${build}" classpathref="classpath" />
+    <javac srcdir="${java.src}" destdir="${build}" classpathref="classpath" debug="true" />
     <jar destfile="${jar}">
       <fileset dir="${build}" />
       <fileset dir="${ruby.src}" />

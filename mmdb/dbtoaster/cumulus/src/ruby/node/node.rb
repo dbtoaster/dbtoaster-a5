@@ -598,12 +598,12 @@ class MapNodeHandler
           backlog = handler.server_backlog
           if state == :low && backlog > range.end then
             puts "Node #{me} requesting backoff";
-            callback = SwitchNode::Client.connect(callback_addr) unless callback;
+            callback = ChefNode.getClient(callback_addr) unless callback;
             callback.request_backoff(me);
             state = :high;
           elsif state == :high && backlog < range.begin then
             puts "Node #{me} no longer needs backoff"
-            callback = SwitchNode::Client.connect(callback_addr) unless callback;
+            callback = ChefNode.getClient(callback_addr) unless callback;
             callback.finish_backoff(me);
             state = :low
           end

@@ -48,6 +48,7 @@ public class Server implements Runnable
                 //System.out.println("Server invoking select...");
                 selector.select();
     
+                System.out.println("Select returned");
                 // Get set of ready objects
                 Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
     
@@ -60,14 +61,17 @@ public class Server implements Runnable
                     
                     // Remove current entry
                     keys.remove();
-    
+                    System.out.println("Checking key!");
                     if (key.isAcceptable()) {
+                        System.out.println("Acceptable!");
                         TServerTransport kt = (TServerTransport) key.attachment();
                         kt.accept();
                     } else if (key.isReadable()) {
+                        System.out.println("Readable!");
                         TProtocol p = (TProtocol) key.attachment();
                         handleRead(p);
                     } else if (key.isWritable()) {
+                        System.out.println("Writable!");
                         TProtocol p = (TProtocol) key.attachment();
                         handleWrite(p);
                     } else {
