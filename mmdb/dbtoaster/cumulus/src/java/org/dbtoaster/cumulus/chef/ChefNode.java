@@ -155,11 +155,6 @@ public class ChefNode
     Server s = new Server(new ChefNode.Processor(handler), 52981);
     Thread t = new Thread(s);
     
-    ArrayList<Double> params = new ArrayList<Double>();
-    params.add(2.0); params.add(5.0);
-    handler.update("R", params);
-    System.out.println(handler.dump());
-    
     t.start();
     t.join();
   }
