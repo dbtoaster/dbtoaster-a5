@@ -10,7 +10,7 @@ FORMAT=$(grep $i $LAUNCHERS | awk '{print $3}');
 if [ "$FORMAT" = "java" ] ; then 
 EXEC_STRING="java -cp --CLASSPATH-- --CLASS-- \$(dirname \$0)/../local.properties \$*"
 elif [ "$FORMAT" = "jruby" ] ; then 
-EXEC_STRING="jruby -J-cp --CLASSPATH-- -e \"include Java;require '--CLASS--';\" \$*"
+EXEC_STRING="jruby -J-cp --CLASSPATH-- -e \"include Java;require '--CLASS--';\" -- \$*"
 fi
 
 EXEC_CMD=$(echo "$EXEC_STRING" | 

@@ -240,7 +240,7 @@ module SlicerNode
     
     def Client.connect(host, port = 52980)
       dest = java.net.InetSocketAddress.new(host, port);
-      puts "Connecting to #{dest.toString}; #{caller[0]}";
+      puts "Connecting to #{dest.toString}";
       ret = Java::org::dbtoaster::cumulus::slicer::SlicerNode::getClient(dest);
       puts "Connected to #{dest.toString}";
       return ret
