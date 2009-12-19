@@ -137,6 +137,7 @@ public class CumulusConfig extends Properties
     rConfig.parse_opt("config_file", getProperty("cumulus.config"));
 
     rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
+    rConfig.parse_opt("compiler.home", getProperty("compiler.home"));
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
       rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }

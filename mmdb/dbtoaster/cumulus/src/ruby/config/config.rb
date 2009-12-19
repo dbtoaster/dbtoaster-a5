@@ -5,7 +5,7 @@ require 'util/ok_mixins';
 require 'getoptlong';
 
 class RubyConfig
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path, :compiler_path;
   attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
@@ -116,6 +116,9 @@ class RubyConfig
         @nodes[match[1]]["address"] = java::net::InetSocketAddress.new(match[2], match[4].to_i);
       when "cumulus.home" then
         @spread_path = arg.chomp;
+      
+      when "compiler.home" then
+        @compiler_path = arg.chomp;
         
       else
         @unknown_opts[opt] = arg;
