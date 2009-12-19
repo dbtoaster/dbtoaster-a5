@@ -9,7 +9,7 @@ class DBToaster
     :slice_directives, :persist, :switch, :preload, :map_formulae;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null",
-                 toaster_dir = File.dirname($config.compiler_path))
+                 toaster_dir = $config.compiler_path)
     @nodes = Array.new;
     @partition_directives = Hash.new;
     @test_directives = Array.new;
@@ -24,10 +24,10 @@ class DBToaster
     @map_formulae = nil;
     @query = "";
     
+    puts toaster_dir+"/"+toaster_cmd;
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
-    puts toaster_dir+"/"+toaster_cmd;
-    @DBT = open("|"+toaster_cmd, "w+");
+    @DBT = IO.popen(toaster_cmd, "w+");
     @DBT.write("open DBToasterTop;;\n");
     @DBT.write("#print_depth 10000;;\n");
     @DBT.write("#print_length 10000;;\n");
@@ -469,15 +469,16 @@ end
 
 $output = STDOUT;
 $boot = STDOUT;
-$toaster = DBToaster.new("./dbtoaster.top -noprompt 2> /dev/null", File.dirname('/home/fs01/yna3/dbtoaster/compiler/alpha3/dbtoaster.top'))
 $success = false;
 $options = Hash.new;
+$toaster_opts = []
 
 # Use home directory as default partition file location, since this is also
 # the default for the source directive.
 $pfile_basepath = "~"
 
 opts = GetoptLong.new(
+  [ "-l", "--localprops",  GetoptLong::REQUIRED_ARGUMENT ],
   [ "-o", "--output",      GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",        GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch",      GetoptLong::REQUIRED_ARGUMENT ],
@@ -494,13 +495,17 @@ opts = GetoptLong.new(
   [ "-p", "--pfile",       GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
+    when "-l", "--localprops"  then $config.load_local_properties(arg)
     when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-k", "--ignore-keys" then $options[:toast_keys] = false;
     when "-b", "--boot"        then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-p", "--pfile"       then $pfile_basepath = arg;
-    else                            $toaster.parse_arg(opt, arg)
+    else                            $toaster_opts.push([opt, arg])
   end
 end
+
+$toaster = DBToaster.new()
+$toaster_opts.each { |oa| opt, arg = oa; $toaster.parse_arg(opt, arg) }
 
 ARGV.each do |f|
   $toaster.load(File.open(f).readlines);

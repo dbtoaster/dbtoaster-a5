@@ -108,6 +108,18 @@ class RubyConfig
       end
     end
   end
+  
+  def load_local_properties(properties)
+    if(properties.is_a? String) then
+      properties = File.new(properties);
+    end
+
+    properties.each do |line|
+      opt, arg = line.split('=', 2)
+      parse_opt(opt.strip,arg.strip)
+    end
+  end
+
   def parse_opt(opt, arg)
     case opt
       when "-n", "--node" then 
