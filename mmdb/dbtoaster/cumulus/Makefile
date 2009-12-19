@@ -1,5 +1,6 @@
 #SQL_TESTDATA=data/tpch_gap.unit
-SQL_TESTDATA=data/tpch_LONG.unit data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit data/tpch_PPSS_nid.unit data/tpch_demand.unit data/tpch_debt.unit
+SQL_TESTDATA=data/tpch_PPSS.unit
+#SQL_TESTDATA=data/tpch_LONG.unit data/tpch_q12.unit data/tpch_PPSS.unit data/rst_join.unit data/tpch_PPSS_nid.unit data/tpch_demand.unit data/tpch_debt.unit
 AUTO_SQL_TESTS=rst_join
 SQL_LOCALTESTS=data/tpch_PPSS_local.unit
 

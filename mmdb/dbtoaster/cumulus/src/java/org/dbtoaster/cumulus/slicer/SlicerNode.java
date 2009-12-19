@@ -248,6 +248,8 @@ public class SlicerNode
       if ( serveOption == null || !(serveOption.equals("YES")) ) {
           Thread.sleep(2000);
           handler.bootstrap();
+      } else {
+          System.out.println("====> Server Ready <====");
       }
       
       // Join with primary slicer server.

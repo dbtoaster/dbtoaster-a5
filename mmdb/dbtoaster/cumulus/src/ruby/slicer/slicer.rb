@@ -282,16 +282,9 @@ end
 #Logger.default_level = Logger::INFO;
 #Logger.default_name = nil;
 
-$serving = $config["serve"];
 $verbosity = :normal;
-  
 $config_file = $config['config_file']
 puts "Config file: #{$config_file}"
 
 $local_node = PrimarySlicerNodeHandler.new($config_file, $verbosity);
-
-if $serving then
-  puts "====> Server Ready <===="
-end
-
 return $local_node

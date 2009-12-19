@@ -1,5 +1,6 @@
-node   org.dbtoaster.cumulus.node.MapNode       java
-chef   org.dbtoaster.cumulus.chef.ChefNode      java
-slicer org.dbtoaster.cumulus.slicer.SlicerNode  java
-client tools/client.rb                          jruby
-tpch   tools/tpch.rb                            jruby
+node    org.dbtoaster.cumulus.node.MapNode       java
+chef    org.dbtoaster.cumulus.chef.ChefNode      java
+slicer  org.dbtoaster.cumulus.slicer.SlicerNode  java
+client  tools/client.rb                          jruby
+tpch    tools/tpch.rb                            jruby
+toaster toaster/toaster.rb                       jruby
