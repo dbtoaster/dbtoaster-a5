@@ -41,7 +41,7 @@ public abstract class Client
   /////////////////////////////////////////////////////////////////////////////////
   protected static HashMap<Class,HashMap<InetSocketAddress,Object>> singletons = 
     new HashMap<Class,HashMap<InetSocketAddress,Object>>();
-  protected static SocketMonitor monitor = null;
+  protected static SocketMonitor monitor = new SocketMonitor();
   
   public static <T extends Client> T get(InetSocketAddress addr, Class<T> c) throws IOException
   {
@@ -53,8 +53,6 @@ public abstract class Client
     
     T ret = (T)cTypeSingletons.get(addr);
     if(ret == null){
-      if(monitor == null){ startMonitor(); }
-      System.out.println("Started monitor for " + addr.toString() + ", " + c.getName());
       try { 
         
         System.out.println("Constructor for " + addr.toString() + ", " + c.getName() +
@@ -95,15 +93,7 @@ public abstract class Client
     return ret;
   }
   
-  protected static void startMonitor() throws IOException
-  {
-    if(monitor != null) { return; }
-    monitor = new SocketMonitor();
-    monitor.start();
-  }
-  
   protected static void connectTransport(Client c) throws IOException {
-    startMonitor();
     monitor.connectTransport(c);
   }
   
@@ -117,6 +107,7 @@ public abstract class Client
       newClientQueue = new ConcurrentLinkedQueue<Client>();
       selector = Selector.open();
       terminated = false;
+      start();
     }
     
     public Selector selector(){
