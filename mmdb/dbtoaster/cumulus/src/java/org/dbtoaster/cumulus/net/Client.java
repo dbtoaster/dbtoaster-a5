@@ -61,6 +61,7 @@ public abstract class Client
         System.out.println("Constructor: " + cons);
         ret = cons.newInstance(addr, monitor.selector());
         System.out.println("Built for " + addr.toString() + ", " + c.getName());
+        cTypeSingletons.put(addr, ret);
         
       } catch(NoSuchMethodException e){
         System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
@@ -102,12 +103,17 @@ public abstract class Client
     boolean terminated;
     ConcurrentLinkedQueue<Client> newClientQueue;
     
-    public SocketMonitor() throws IOException
+    public SocketMonitor()
     {
-      newClientQueue = new ConcurrentLinkedQueue<Client>();
-      selector = Selector.open();
-      terminated = false;
-      start();
+      try {
+        newClientQueue = new ConcurrentLinkedQueue<Client>();
+        selector = Selector.open();
+        terminated = false;
+        start();
+      } catch (IOException e){
+        e.printStackTrace();
+        System.exit(-1);
+      }
     }
     
     public Selector selector(){

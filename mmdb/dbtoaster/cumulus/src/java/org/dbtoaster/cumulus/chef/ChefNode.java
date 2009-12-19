@@ -52,7 +52,7 @@ public class ChefNode
         oprot.beginMessage();
         oprot.putObject(ChefNodeMethod.UPDATE);
         oprot.putObject(relation);
-        oprot.putObject(params);
+        oprot.putList(params);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
@@ -110,8 +110,8 @@ public class ChefNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException
       {
-        String       relation = (String      )iprot.getObject();
-        List<Double> params   = (List<Double>)iprot.getObject();
+        String       relation = (String)iprot.getObject();
+        List<Double> params   =         iprot.getList(Double.class);
         handler.update(relation, params);
       } 
     }

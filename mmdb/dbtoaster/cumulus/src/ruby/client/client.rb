@@ -109,61 +109,65 @@ $count = 0;
 print "\n>> " if $interactive;
 $input.each do |line|
   $starttime = Time.now unless $starttime;
-  args = / *([a-zA-Z\-+_]+) *\(([^)]*)\)/.match(line);
-  unless args then
-    puts "ERROR: can not parse '" + line + "'";
-    next;
-  end
-  begin
-    table = args[1];
-    params = args[2].split(/ *, */);
-    
-    if $transforms.has_key? table then
-      $transforms[table].each_pair do |col,tlist|
-        tlist.each do |t|
-          params[col.to_i] = 
-            case t[0]
-              when :regex then params[col.to_i].gsub(t[1], t[2]);
-              when :cmp   then
-                case t[1]
-                  when "d" then
-                    if compare_date(t[2], params) then "1" else "0" end;
-                end
-              when :intify then
-                t[1].assert_key(params[col.to_i]) { puts "Domain of " + t[3] + " now at " + (t[2]+1).to_s; t[2] += 1; }.to_s;
-              when :mod then
-                (params[col.to_i].to_i % t[1].to_i).to_s;
-              when :rotate then
-                ((params[col.to_i].to_i % t[1].to_i) * (t[2].to_i / t[1].to_i) + (params[col.to_i].to_i / t[1].to_i).to_i).to_s;
-                
-            end
+  if line.chomp == "dump" then
+    puts switch.dump();
+  else
+    args = / *([a-zA-Z\-+_]+) *\(([^)]*)\)/.match(line);
+    unless args then
+      puts "ERROR: can not parse '" + line.chomp + "'";
+      next;
+    end
+    begin
+      table = args[1];
+      params = args[2].split(/ *, */);
+      
+      if $transforms.has_key? table then
+        $transforms[table].each_pair do |col,tlist|
+          tlist.each do |t|
+            params[col.to_i] = 
+              case t[0]
+                when :regex then params[col.to_i].gsub(t[1], t[2]);
+                when :cmp   then
+                  case t[1]
+                    when "d" then
+                      if compare_date(t[2], params) then "1" else "0" end;
+                  end
+                when :intify then
+                  t[1].assert_key(params[col.to_i]) { puts "Domain of " + t[3] + " now at " + (t[2]+1).to_s; t[2] += 1; }.to_s;
+                when :mod then
+                  (params[col.to_i].to_i % t[1].to_i).to_s;
+                when :rotate then
+                  ((params[col.to_i].to_i % t[1].to_i) * (t[2].to_i / t[1].to_i) + (params[col.to_i].to_i / t[1].to_i).to_i).to_s;
+                  
+              end
+          end
         end
       end
-    end
-    
-    if $cols.has_key? table then
-      tmp_params = params;
-      params = Array.new;
-      $cols[table].each do |i|
-        params.push(tmp_params[i]);
+      
+      if $cols.has_key? table then
+        tmp_params = params;
+        params = Array.new;
+        $cols[table].each do |i|
+          params.push(tmp_params[i]);
+        end
       end
+      success = false
+      #backoff = 0.125
+      until success do
+        #begin
+          switch.update(table, params) unless $test;
+          success = true;
+        #rescue SpreadException => e;
+        #  raise e unless e.retry;
+        #  puts "Backoff requested, sleeping for #{backoff}"
+        #  sleep backoff;
+        #  backoff *= 2;
+        #end
+      end
+      puts table+"("+params.join(", ")+")" if $verbose;
+    rescue SpreadException => e
+      puts "Error: " + e.to_s;
     end
-    success = false
-    #backoff = 0.125
-    until success do
-      #begin
-        switch.update(table, params) unless $test;
-        success = true;
-      #rescue SpreadException => e;
-      #  raise e unless e.retry;
-      #  puts "Backoff requested, sleeping for #{backoff}"
-      #  sleep backoff;
-      #  backoff *= 2;
-      #end
-    end
-    puts table+"("+params.join(", ")+")" if $verbose;
-  rescue SpreadException => e
-    puts "Error: " + e.to_s;
   end
   print "\n>> " if $interactive;
   if $stats_every >= 0 then
