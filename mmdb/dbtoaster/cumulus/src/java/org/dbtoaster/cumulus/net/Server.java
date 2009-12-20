@@ -40,6 +40,7 @@ public class Server implements Runnable
 
     public void run()
     {
+        System.out.println("Starting Cumulus Server");
         // Wait for something of interest to happen
         while (!terminated)
         {
@@ -97,14 +98,14 @@ public class Server implements Runnable
             {
                 server_processor.process(p, p);
             
-                ++framesProcessed;
-                if ( (framesProcessed % 1000) == 0 ) {
-                    lastProcessingTime = System.currentTimeMillis();
-                    Long span = lastProcessingTime - processingStartTime;
-                    System.out.println("Processed " + framesProcessed +
-                        " frames: " + (span.doubleValue() / 1000));
-                   System.out.println("Protocol state: " + p.toString());
-                }
+//                ++framesProcessed;
+//                if ( (framesProcessed % 1000) == 0 ) {
+//                    lastProcessingTime = System.currentTimeMillis();
+//                    Long span = lastProcessingTime - processingStartTime;
+//                    System.out.println("Processed " + framesProcessed +
+//                        " frames: " + (span.doubleValue() / 1000));
+//                   System.out.println("Protocol state: " + p.toString());
+//                }
             }
         }
     }

@@ -82,7 +82,7 @@ class RemoteCommitNotification
     Logger.debug { "RemoteCallback Check Ready: holding = " + @holding.to_s + "; entries left = " + @count.to_s }
     if (@holding <= 0) && (@count <= 0) then
       Logger.debug { "Connecting to " + @destination.to_s }
-      peer = @@nodecache.assert_key(@destination.to_s) { MapNode::Client.connect(@destination.host, @destination.port) };
+      peer = MapNode.getClient(@destination);
       peer.push_get(@entries, @cmdid);
       Logger.debug { "push finished" }
       true;
@@ -292,7 +292,7 @@ class MapNodeHandler
   
   def find_partition(source, key)
     raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
-    partition = NetTypes.compute_partition(key.to_java(:Long), @partition_sizes[source.to_i].to_java(:Long)).to_a;
+    partition = NetTypes.compute_partition(key, @partition_sizes[source.to_i]).to_a;
     if (@maps.has_key? source.to_i) && (@maps[source.to_i].has_key? partition) then
       @maps[source.to_i][partition];
     else
@@ -301,7 +301,7 @@ class MapNodeHandler
   end
   
   def loop_partitions(source, key)
-    key = NetTypes.compute_partition(key.to_java(:Long), @partition_sizes[source.to_i].to_java(:Long));
+    key = NetTypes.compute_partition(key, @partition_sizes[source.to_i]);
     @maps[source].each_pair do |map_key, partition|
       if key.zip(map_key).assert { |k, mk| (k == -1) || (k == mk) } then
         yield partition;
@@ -370,8 +370,8 @@ class MapNodeHandler
     #initialize the template with values we've already received
     if (@cmdcallbacks[id] != nil) then
       @cmdcallbacks[id].each do |response|
-        response.each_pair do |t, v|
-          applicator.discover(t,v);
+        response.each do |target_value|
+          applicator.discover(target_value[0], target_value[1]);
         end
         applicator.finish_message;
       end
@@ -460,7 +460,7 @@ class MapNodeHandler
       # When we create the notification, we need to exclude all multi-target targets, since
       # those targets will never actually be instantiated.
       request = RemoteCommitNotification.new(
-        target.clone.delete_if do |entry| entry.has_wildcards? end, 
+        target.to_a.clone.delete_if do |entry| entry.has_wildcards? end, 
         destination, cmdid
       );
       target.each do |t|
@@ -511,8 +511,8 @@ class MapNodeHandler
       @cmdcallbacks[cmdid].push(result);
     else
       # Case 3: we have a push message waiting for these results
-      result.each_pair do |target, value|
-        @cmdcallbacks[cmdid].discover(target, value)
+      result.each do |target_value|
+        @cmdcallbacks[cmdid].discover(target_value[0], target_value[1])
       end
       @cmdcallbacks[cmdid].finish_message;
     end

@@ -9,36 +9,36 @@ public class MultiKeyMapJavaImpl {
   protected static Environment env = null;
   
   protected final int                         numkeys;
-  public    final Integer                     wildcard;
+  public    final Long                        wildcard;
   protected final Double                      defaultValue;
   protected final String                      basepath;
   protected final String                      dbName;
   protected HashMap<DatabaseEntry,MKPattern>  patterns;
   protected Database                          basemap;
     
-  private static ArrayList<Integer[]> translateArray(Integer[][] array){
-    ArrayList<Integer[]> ret = new ArrayList<Integer[]>();
-    for(Integer[] entry : array) { ret.add(entry); }
+  private static ArrayList<Long[]> translateArray(Long[][] array){
+    ArrayList<Long[]> ret = new ArrayList<Long[]>();
+    for(Long[] entry : array) { ret.add(entry); }
     return ret;
   }
   
-  public MultiKeyMapJavaImpl(int numkeys, Integer[][] patterns){
+  public MultiKeyMapJavaImpl(int numkeys, Long[][] patterns){
     this(numkeys, translateArray(patterns));
   }
   
-  public MultiKeyMapJavaImpl(int numkeys, Integer[][] patterns, String dbName, Double defaultValue){
+  public MultiKeyMapJavaImpl(int numkeys, Long[][] patterns, String dbName, Double defaultValue){
     this(numkeys, translateArray(patterns), dbName, defaultValue);
   }
   
-  public MultiKeyMapJavaImpl(int numkeys, List<Integer[]> patterns){
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns){
     this(numkeys, patterns, "", 0.0);
   }
   
-  public MultiKeyMapJavaImpl(int numkeys, List<Integer[]> patterns, String dbName, Double defaultValue){
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, Double defaultValue){
     this(numkeys, patterns, dbName, "/tmp", defaultValue, null);
   }
   
-  public MultiKeyMapJavaImpl(int numkeys, List<Integer[]> patterns, String dbName, String basepath, Double defaultValue, Integer wildcard){
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, String basepath, Double defaultValue, Long wildcard){
     this.numkeys = numkeys;
     this.wildcard = wildcard;
     this.defaultValue = defaultValue;
@@ -61,30 +61,31 @@ public class MultiKeyMapJavaImpl {
     dbConf.setAllowCreate(true);
     this.basemap = env.openDatabase(null, primaryName, dbConf);
     
-    for(Integer[] pattern : patterns){
+    for(Long[] pattern : patterns){
       add_pattern(pattern);
     }
   }
   
-  public String patternName(Integer[] pattern){
+  public String patternName(Long[] pattern){
     StringBuilder sb = new StringBuilder("{");
     String sep = "";
-    for(Integer element : pattern){
+    for(Long element : pattern){
       sb.append(sep + element.toString());
       sep = ",";
     }
     return sb.toString()+"}";
   }
   
-  public void add_pattern(Integer[] pattern){
-    if((pattern.length >= numkeys) || (pattern.length == 0)) { return; }
-    String secondaryName = basepath + "/db_" + dbName + "_" + patterns.size() + ".db";
+  public void add_pattern(Long[] pattern){
+    if((pattern.length >= numkeys) || (pattern.length == 0)) { return; } // don't need to add 0 length, or full length patterns
+    if(patterns.get(serializeKey(pattern)) != null) { return; }          // don't add duplicate patterns
     
+    String secondaryName = basepath + "/db_" + dbName + "_" + patterns.size() + ".db";
     System.out.println("Creating secondary db (" + patternName(pattern) + ") at : " + secondaryName);
     patterns.put(serializeKey(pattern), new MKPattern(pattern, env, secondaryName, basemap));
   }
   
-  public Double get(Integer[] key){
+  public Double get(Long[] key){
     DatabaseEntry entry = new DatabaseEntry();
     if(basemap.get(null, serializeKey(key), entry, LockMode.DEFAULT) == OperationStatus.SUCCESS){
 //      System.out.println("get "+dbName+"[" + patternName(key) + "] = " + deserializeValue(entry));
@@ -95,12 +96,12 @@ public class MultiKeyMapJavaImpl {
     }
   }
   
-  public void put(Integer[] key, Double value){
+  public void put(Long[] key, Double value){
 //    System.out.println("put "+dbName+"[" + patternName(key) + "] = " + value);
     basemap.put(null, serializeKey(key), serializeValue(value));
   }
   
-  public boolean has_key(Integer[] key){
+  public boolean has_key(Long[] key){
     DatabaseEntry entry = new DatabaseEntry();
     entry.setPartial(0, 0, true);
     return basemap.get(null, serializeKey(key), entry, LockMode.DEFAULT) == OperationStatus.SUCCESS;
@@ -110,18 +111,18 @@ public class MultiKeyMapJavaImpl {
     return new MKFullCursor(basemap.openCursor(null, CursorConfig.DEFAULT));
   }
   
-  public MKCursor scan(Integer[] partialKey){
+  public MKCursor scan(Long[] partialKey){
     int cnt = 0;
-    for(Integer dim : partialKey){
+    for(Long dim : partialKey){
       if(dim != wildcard) { cnt ++; }
     }
     if(cnt == numkeys){
       return null;
     }
-    Integer[] pattern = new Integer[cnt];
+    Long[] pattern = new Long[cnt];
     cnt = 0;
     for(int i = 0; i < partialKey.length; i++){
-      if(partialKey[i] != wildcard) { pattern[cnt] = i; cnt++; }
+      if(partialKey[i] != wildcard) { pattern[cnt] = (long)i; cnt++; }
     }
     return patterns.get(serializeKey(pattern)).getCursor(partialKey, basemap);
   }
@@ -130,10 +131,10 @@ public class MultiKeyMapJavaImpl {
     
   }
   
-  protected static void serializeKey(Integer[] key, DatabaseEntry entry){
+  protected static void serializeKey(Long[] key, DatabaseEntry entry){
     StringBuilder sb = new StringBuilder();
     String sep = "";
-    for(Integer dim : key) { 
+    for(Long dim : key) { 
       sb.append(sep);
       sb.append(dim);
       sep = ",";
@@ -141,18 +142,18 @@ public class MultiKeyMapJavaImpl {
     entry.setData(sb.toString().getBytes());
   }
   
-  protected static DatabaseEntry serializeKey(Integer[] key){
+  protected static DatabaseEntry serializeKey(Long[] key){
     DatabaseEntry entry = new DatabaseEntry();
     serializeKey(key, entry);
     return entry;
   }
   
-  protected static Integer[] deserializeKey(DatabaseEntry key){
+  protected static Long[] deserializeKey(DatabaseEntry key){
     String preSplitKey = new String(key.getData());
     String[] splitKey = preSplitKey.split(",");
-    Integer[] parsed = new Integer[splitKey.length];
+    Long[] parsed = new Long[splitKey.length];
     for(int i = 0; i < parsed.length; i++){
-      parsed[i] = Integer.parseInt(splitKey[i]);
+      parsed[i] = Long.parseLong(splitKey[i]);
     }
     return parsed;
   }
@@ -166,13 +167,13 @@ public class MultiKeyMapJavaImpl {
   }
   
   protected class MKPattern implements SecondaryKeyCreator {
-    protected final Integer[] pattern;
+    protected final Long[] pattern;
     protected final SecondaryDatabase index;
-    private Integer[] patternBuffer;
+    private Long[] patternBuffer;
     
-    public MKPattern(Integer[] pattern, Environment env, String databaseName, Database primaryDatabase){
+    public MKPattern(Long[] pattern, Environment env, String databaseName, Database primaryDatabase){
       this.pattern = pattern;
-      patternBuffer = new Integer[pattern.length];
+      patternBuffer = new Long[pattern.length];
       
       SecondaryConfig dbConfig = new SecondaryConfig();
       dbConfig.setAllowCreate(true);
@@ -181,7 +182,7 @@ public class MultiKeyMapJavaImpl {
       index = env.openSecondaryDatabase(null, databaseName, primaryDatabase, dbConfig);
     }
     
-    public MKCursor getCursor(Integer[] partialKey, Database primary){
+    public MKCursor getCursor(Long[] partialKey, Database primary){
       DatabaseEntry entry = new DatabaseEntry();
       entry.setPartial(0, 0, true);
       SecondaryCursor c = index.openCursor(null, CursorConfig.DEFAULT);
@@ -189,23 +190,33 @@ public class MultiKeyMapJavaImpl {
       return new MKCursor(c, primary);
     }
     
-    public DatabaseEntry createSecondaryKey(Integer[] key){
+    public DatabaseEntry createSecondaryKey(Long[] key){
       DatabaseEntry result = new DatabaseEntry();
       createSecondaryKey(key, result);
       return result;
     }
     
-    public void createSecondaryKey(Integer[] pkey, DatabaseEntry skey){
+    public void createSecondaryKey(Long[] pkey, DatabaseEntry skey){
       for(int i = 0; i < pattern.length; i++){
-        patternBuffer[i] = pkey[pattern[i]];
+        patternBuffer[i] = pkey[pattern[i].intValue()];
       }
       MultiKeyMapJavaImpl.serializeKey(patternBuffer, skey);
     }
     
     public boolean createSecondaryKey(SecondaryDatabase secondary, DatabaseEntry key, DatabaseEntry data, DatabaseEntry result){
-      Integer[] original = MultiKeyMapJavaImpl.deserializeKey(key);
+      Long[] original = MultiKeyMapJavaImpl.deserializeKey(key);
       createSecondaryKey(original, result);
       return true;
+    }
+    
+    public String toString(){
+      StringBuilder sb = new StringBuilder("<");
+      String sep = "";
+      for(Long dim : pattern){
+        sb.append(sep + dim);
+        sep = ",";
+      }
+      return sb.toString() + "/>";
     }
   }
   
@@ -230,7 +241,7 @@ public class MultiKeyMapJavaImpl {
       }
     }
     
-    public Integer[] key(){
+    public Long[] key(){
       return MultiKeyMapJavaImpl.deserializeKey(key);
     }
     
@@ -272,7 +283,7 @@ public class MultiKeyMapJavaImpl {
       }
     }
     
-    public Integer[] key(){
+    public Long[] key(){
       return MultiKeyMapJavaImpl.deserializeKey(pKey);
     }
     

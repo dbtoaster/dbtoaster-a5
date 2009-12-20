@@ -14,7 +14,7 @@ class ChefNodeHandler
     @fetch_count = 0;
     @templates = Hash.new { |h,k| h[k] = Array.new };
     @layout = MapLayout.new;
-    @nodelist = Hash.new { |h,k| puts "Looking up #{k}"; h[k] = MapNode::getClient(k); };
+    @nodelist = Hash.new { |h,k| h[k] = MapNode::getClient(k); };
     @update_count = 0;
     @update_timer = nil;
     @backoff_nodes = Array.new;

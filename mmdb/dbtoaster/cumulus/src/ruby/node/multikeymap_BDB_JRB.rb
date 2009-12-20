@@ -10,19 +10,19 @@ class MultiKeyMap
   end
   
   def add_pattern(pattern)
-    @java_impl.add_pattern(pattern.to_java(:Integer))
+    @java_impl.add_pattern((pattern.is_a? Array) ? pattern.to_java(:Long) : pattern)
   end
   
   def [](key)
-    @java_impl.get(key.to_java(:Integer)) || 0.0;
+    @java_impl.get((key.is_a? Array) ? key.to_java(:Long) : key) || 0.0;
   end
   
   def []=(key, val)
-    @java_impl.put(key.to_java(:Integer), val);
+    @java_impl.put((key.is_a? Array) ? key.to_java(:Long) : key, val);
   end
   
   def has_key?(key)
-    @java_impl.has_key(key.to_java(:Integer));
+    @java_impl.has_key((key.is_a? Array) ? key.to_java(:Long) : key);
   end
   
   def values
@@ -41,7 +41,7 @@ class MultiKeyMap
       return;
     end
     partial_key = partial_key.collect { |k| k unless k == @wildcard };
-    cursor = @java_impl.scan(partial_key.to_java(:Integer));
+    cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
     while cursor.next;
       yield cursor.key.to_a.collect { |k| k.to_i }, cursor.value.to_f;
     end
@@ -50,7 +50,7 @@ class MultiKeyMap
   
   def replace(partial_key)
     partial_key = partial_key.collect { |k| k unless k == @wildcard };
-    cursor = @java_impl.scan(partial_key.to_java(:Integer));
+    cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
     while cursor.next;
       new_val = yield cursor.key.to_a.collect { |k| k.to_i }, cursor.value.to_f;
       cursor.replace(new_val);

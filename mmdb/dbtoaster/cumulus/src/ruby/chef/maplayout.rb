@@ -82,7 +82,7 @@ class MapLayout
             key_partition = e.keys.collect_index { |i,k| fetch_valuations[k] % @partition_sizes[e.source][i] }
             fetch_node = @maplist[e.source][key_partition]
 #            puts "        Requires fetch: #{e}:[#{key_partition}] @ #{fetch_node}";
-            e = MapEntry.new(
+            e = ParametrizedEntry.new(
               e.source,
               e.keys.collect do |k| 
                 if k.is_a? String 

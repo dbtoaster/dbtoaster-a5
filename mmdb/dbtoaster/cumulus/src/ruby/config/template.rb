@@ -218,7 +218,7 @@ class TemplateValuation
       @entries[entry] = value;
       @target = nil;
     else
-      puts "Discovered unknown entry! : #{entry}; Expected one of : #{@entries.keys.join(",")}"
+      puts "Discovered unknown entry! : #{entry}:#{entry.hashCode}; Expected one of : #{@entries.keys.collect{|e| "#{e}:#{e.diff(entry)}:#{e.hashCode}"}.join(",")}";
     end
   end
   

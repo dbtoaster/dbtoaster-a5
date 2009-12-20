@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.ListIterator;
 
 public class NetTypes implements Serializable
 {
@@ -25,52 +26,105 @@ public class NetTypes implements Serializable
         }
       }
       return partition;
+    }  
+    
+    private static final Long[] tempLongArray = new Long[0];
+    public static Long[] computePartition(List<Long> key, List<Long> partitionSizes)
+    {
+      return computePartition(key.toArray(tempLongArray), partitionSizes.toArray(tempLongArray));
+    }
+    public static Long[] computePartition(Long[] key, List<Long> partitionSizes)
+    {
+      return computePartition(key, partitionSizes.toArray(tempLongArray));
+    }
+    public static Long[] computePartition(List<Long> key, Long[] partitionSizes)
+    {
+      return computePartition(key.toArray(tempLongArray), partitionSizes);
     }
     
     public static class Entry implements Serializable
     {
-        private static final long serialVersionUID = -2903891636269280218L;
-        public int source;
-        public Long[] key;
-        public Entry(int s, List<Long> k) { source = s; key = k.toArray(key); }
-        
-        public boolean hasWildcards(){
-          for(Long k : key){
-            if((long)k == -1){ return true; }
+      private static final long serialVersionUID = -2903891636269280218L;
+      public int source;
+      public Long[] key;
+      public Entry(int s, List<Long> k) { source = s; setKey(k); }
+      public Entry(int s, Long[] k) { source = s; key = k; }
+      
+      public void setKey(List<Long> k){
+        key = new Long[k.size()];
+        for(int i = 0; i < k.size(); i++){
+          key[i] = k.get(i);
+        }
+      }
+      
+      public boolean hasWildcards(){
+        for(Long k : key){
+          if((long)k == -1){ return true; }
+        }
+        return false;
+      }
+      
+      public Long[] partition(Long[] partitionSizes)
+      {
+        return computePartition(key, partitionSizes);
+      }
+      
+      public String toString()
+      {
+        StringBuilder sb = new StringBuilder("Map " + source + "[");
+        String sep = "";
+        for(Long l : key){
+          sb.append(sep+l);
+          sep = ",";
+        }
+        return sb.toString() + "]";
+      }
+      
+      public Entry toEntry(){
+        return this;
+      }
+      
+      public boolean equals(Object o){
+        try {
+          Entry e = (Entry)o;
+          if(e.source != source)         { return false; }
+          if(e.key.length != key.length) { return false; }
+          for(int i = 0; i < key.length; i++){
+            if(
+              ((key[i] == null) && (e.key[i] != null)) ||
+              ((key[i] != null) && ((long)key[i] != (long)e.key[i]))
+              ) { return false; }
           }
-          return false;
+          return true;
+        } catch(ClassCastException e){
+           return false;
         }
-        
-        public Long[] partition(Long[] partitionSizes)
-        {
-          return computePartition(key, partitionSizes);
-        }
-        
-        public String toString()
-        {
-          StringBuilder sb = new StringBuilder("Map " + source + "[");
-          String sep = "";
-          for(Long l : key){
-            sb.append(sep+l);
-            sep = ",";
+      }
+      
+      public String diff(Object o){
+        try {
+          Entry e = (Entry)o;
+          if(e.source != source)               { return "A"; }
+          if(e.key.length != key.length)       { return "B"; }
+          for(int i = 0; i < key.length; i++){
+            if(
+              ((key[i] == null) && (e.key[i] != null)) ||
+              ((key[i] != null) && ((long)key[i] != (long)e.key[i]))
+              ) { return "C"+i; }
           }
-          return sb.toString() + "]";
+          return "-";
+        } catch(ClassCastException e){
+          return "D";
         }
-        
-        public boolean equals(Object o){
-          try {
-            Entry e = (Entry)o;
-            return 
-              (e.source == source) &&
-              (key.equals(e.key));
-          } catch(ClassCastException e){
-            return false;
-          }
+      }
+      
+      public int hashCode(){
+        int hashCode = source;
+        for(Long dim : key) {
+          hashCode = 31 * hashCode + (dim == null ? 0 : dim.hashCode());
         }
-        
-        public int hashCode(){
-          return source * key.hashCode();
-        }
+        return hashCode;
+      }
     }
     
     public static List<Long> extractNumericsFromList(List<Object> input){
@@ -85,6 +139,13 @@ public class NetTypes implements Serializable
       return ret;
     }
     
+    public static void regularizeEntryList(List<Entry> list){
+      Entry e;
+      for(ListIterator<Entry> i = list.listIterator(); i.hasNext(); ){
+        i.set(i.next());
+      }
+    }
+    
     public static class ParametrizedEntry extends Entry
     {
       public String[] parameters;
@@ -96,6 +157,14 @@ public class NetTypes implements Serializable
             parameters[i] = k.get(i).toString();
           }
         }
+      }
+      
+      public Entry toEntry(){
+        return new Entry(source, key);
+      }
+      
+      public String toString(){
+        return super.toString() + "(Parametrized)";
       }
     }
     
@@ -118,7 +187,7 @@ public class NetTypes implements Serializable
     public static class PutParams implements Serializable
     {
         private static final long serialVersionUID = 8494808974470927541L;
-        public PutField[] params;
+        public PutField[] params = new PutField[0];
         public PutParams(List<PutField> p) { params = p.toArray(params); }
     }
     
@@ -149,7 +218,7 @@ public class NetTypes implements Serializable
         {
             target = t;
             id_offset = ido;
-            entries = e_list.toArray(entries);
+            entries = e_list.toArray(new Entry[0]);
             int ei = 0;
             List<Integer[]> tempReplacements = new ArrayList<Integer[]>();
             for(ParametrizedEntry e : e_list){
@@ -163,7 +232,7 @@ public class NetTypes implements Serializable
               }
               ei++;
             }
-            replacements = tempReplacements.toArray(replacements);
+            replacements = tempReplacements.toArray(new Integer[0][]);
         }
     }
 }

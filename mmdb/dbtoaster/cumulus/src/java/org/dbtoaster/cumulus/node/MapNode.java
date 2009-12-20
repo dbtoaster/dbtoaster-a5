@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 
-import org.dbtoaster.cumulus.net.NetTypes.*;
+import org.dbtoaster.cumulus.net.NetTypes;
 import org.dbtoaster.cumulus.net.TProtocol.TProtocolException;
 import org.dbtoaster.cumulus.net.Server;
 import org.dbtoaster.cumulus.net.TException;
@@ -27,20 +27,20 @@ public class MapNode
     public void mass_put(long id, long template, long expected_gets, List<Double> params)
       throws TException;
 
-    public Map<Entry,Double> get(List<Entry> target)
+    public Map<NetTypes.Entry,Double> get(List<NetTypes.Entry> target)
       throws SpreadException, TException;
 
-    public void fetch(List<Entry> target, InetSocketAddress destination, long cmdid)
+    public void fetch(List<NetTypes.Entry> target, InetSocketAddress destination, long cmdid)
       throws TException;
 
-    public void push_get(Map<Entry,Double> result, long cmdid)
+    public void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
       throws TException;
 
-    public void meta_request(long base_cmd, List<PutRequest> put_list,
-                             List<GetRequest> get_list, List<Double> params)
+    public void meta_request(long base_cmd, List<NetTypes.PutRequest> put_list,
+                             List<NetTypes.GetRequest> get_list, List<Double> params)
       throws TException;
 
-    public Map<Entry,Double> aggreget(List<Entry> target, int agg)
+    public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
       throws SpreadException, TException;
 
     public String dump() throws TException;
@@ -91,22 +91,22 @@ public class MapNode
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
-    public Map<Entry,Double> get(List<Entry> target)
+    public Map<NetTypes.Entry,Double> get(List<NetTypes.Entry> target)
       throws SpreadException, TException
     {
-      Map<Entry, Double> r = null;
+      Map<NetTypes.Entry, Double> r = null;
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.GET);
         oprot.putObject(target);
         oprot.endMessage();
         waitForFrame();
-        r = (Map<Entry, Double>) iprot.getObject();
+        r = (Map<NetTypes.Entry, Double>) iprot.getObject();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
       return r;
     }
   
-    public void fetch(List<Entry> target, InetSocketAddress destination, long cmdid)
+    public void fetch(List<NetTypes.Entry> target, InetSocketAddress destination, long cmdid)
       throws TException
     {
       try {
@@ -122,20 +122,20 @@ public class MapNode
       }
     }
     
-    public void push_get(Map<Entry,Double> result, long cmdid)
+    public void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
       throws TException
     {
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.PUSH_GET);
-        oprot.putObject(result);
+        oprot.putMap(result);
         oprot.putLong(cmdid);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
-    public void meta_request(long base_cmd, List<PutRequest> put_list,
-                             List<GetRequest> get_list, List<Double> params)
+    public void meta_request(long base_cmd, List<NetTypes.PutRequest> put_list,
+                             List<NetTypes.GetRequest> get_list, List<Double> params)
       throws TException
     {
       try {
@@ -149,10 +149,10 @@ public class MapNode
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
-    public Map<Entry,Double> aggreget(List<Entry> target, int agg)
+    public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
       throws SpreadException, TException
     {
-      Map<Entry, Double> r = null;
+      Map<NetTypes.Entry, Double> r = null;
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.AGGREGET);
@@ -160,7 +160,7 @@ public class MapNode
         oprot.putInteger(agg);
         oprot.endMessage();
         waitForFrame();
-        r = (Map<Entry, Double>) iprot.getObject();
+        r = (Map<NetTypes.Entry, Double>) iprot.getObject();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
       return r;
     }
@@ -244,8 +244,9 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException,SpreadException
       {
-        List<Entry> target = (List<Entry>) iprot.getObject();
-        Map<Entry, Double> r = handler.get(target);
+        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        NetTypes.regularizeEntryList(target);
+        Map<NetTypes.Entry, Double> r = handler.get(target);
         oprot.putObject(r);
       }
     }
@@ -255,7 +256,8 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException
       {
-        List<Entry> target = (List<Entry>) iprot.getObject();
+        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        NetTypes.regularizeEntryList(target);
         InetSocketAddress destination = (InetSocketAddress) iprot.getObject();
         Long cmdid = iprot.getLong();
         handler.fetch(target, destination, cmdid);
@@ -267,7 +269,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException
       {
-        Map<Entry, Double> result = (Map<Entry, Double>) iprot.getObject();
+        Map<NetTypes.Entry, Double> result = iprot.getMap(NetTypes.Entry.class, Double.class);
         Long cmdid = iprot.getLong();
         handler.push_get(result, cmdid);
       }
@@ -279,8 +281,8 @@ public class MapNode
         throws TException,TProtocolException
       {
         Long base_cmd = iprot.getLong();
-        List<PutRequest> put_list = iprot.getList(PutRequest.class);
-        List<GetRequest> get_list = iprot.getList(GetRequest.class);
+        List<NetTypes.PutRequest> put_list = iprot.getList(NetTypes.PutRequest.class);
+        List<NetTypes.GetRequest> get_list = iprot.getList(NetTypes.GetRequest.class);
         List<Double> params = iprot.getList(Double.class);
         handler.meta_request(base_cmd, put_list, get_list, params);
       }
@@ -291,9 +293,10 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException,SpreadException
       {
-        List<Entry> target = (List<Entry>) iprot.getObject();
+        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        NetTypes.regularizeEntryList(target);
         int agg = iprot.getInteger();
-        Map<Entry, Double> r = handler.aggreget(target, agg);
+        Map<NetTypes.Entry, Double> r = handler.aggreget(target, agg);
         oprot.putObject(r);
       }
     }

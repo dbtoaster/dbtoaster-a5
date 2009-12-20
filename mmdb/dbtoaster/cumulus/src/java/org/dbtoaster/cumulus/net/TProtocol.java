@@ -10,6 +10,8 @@ import java.nio.ByteBuffer;
 import java.nio.InvalidMarkException;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 public class TProtocol
 {
@@ -192,6 +194,17 @@ public class TProtocol
         return ret;
     }
 
+    public <K,V> Map<K,V> getMap(Class<K> keyType, Class<V> valueType) throws TProtocolException {
+        int len = getLong().intValue();
+        Map<K,V> ret = new HashMap<K,V>();
+        for(; len > 0; len--){
+          K key = (K)getObject();
+          V value = (V)getObject();
+          ret.put(key, value);
+        }
+        return ret;
+    }
+
     public void putObject(Object o) throws TProtocolException
     {
         if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
@@ -256,6 +269,21 @@ public class TProtocol
             out.writeLong(list.size());
             for(E element : list){
               out.writeObject(element);
+            }
+            sendObject();
+        } catch (IOException ioe) {
+            throw new TProtocolException("Protocol failed to write object.");
+        }
+    }
+    
+    public <K, V, T extends Map<K,V>> void putMap(T map) throws TProtocolException
+    {
+        if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
+        try {
+            out.writeLong(map.size());
+            for(Map.Entry<K,V> entry : map.entrySet()){
+              out.writeObject(entry.getKey());
+              out.writeObject(entry.getValue());
             }
             sendObject();
         } catch (IOException ioe) {

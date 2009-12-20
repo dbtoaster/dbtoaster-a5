@@ -87,7 +87,7 @@ GetoptLong.new(
   [ "--PARTSUPP"       , GetoptLong::OPTIONAL_ARGUMENT],
   [ "-d", "--data"     , GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
-  puts "Found OPT: #{opt}=#{arg}";
+  #puts "Found OPT: #{opt}=#{arg}";
   case opt
     when "-d", "--data" then
       data_dir = arg;

@@ -1,6 +1,6 @@
 
 require 'getoptlong';
-
+require 'config/config';
 
 $stdout.sync = true;
 $interactive = true;
@@ -59,10 +59,10 @@ GetoptLong.new(
       
     when "--tpch-stream", "-h" then
       puts "Generating stream command";
-      cmd = "|" + $config.spread_path + "/bin/tpch.sh -d " + arg + " " + 
+      cmd = $config.spread_path + "/bin/tpch.sh -d " + arg + " " + 
         $cols.keys.collect { |t| "--" + t + ($upfront_cols.include?(t) ? " upfront" : "") }.join(" ");
       puts "Reading: " + cmd
-      $input = open(cmd)
+      $input = IO.popen(cmd, "r+")
     
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;

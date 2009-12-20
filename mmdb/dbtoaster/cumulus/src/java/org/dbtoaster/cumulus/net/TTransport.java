@@ -24,8 +24,8 @@ public class TTransport
     private Long totalRead;
     private Long totalWritten;
     
-    private final int readBufferSize = 32*1024; 
-    private final int writeBufferSize = 32*1024;
+    private final int readBufferSize = 256*1024; 
+    private final int writeBufferSize = 256*1024;
     private final int socketSendBufferSize = 32*1024;
     private final int socketRecvBufferSize = 32*1024;
 
@@ -61,7 +61,7 @@ public class TTransport
     public void connect(Selector s) throws IOException
     {
         channel = SocketChannel.open();
-        System.out.println("Connecting transport to " + server);
+//        System.out.println("Connecting transport to " + server);
         channel.configureBlocking(false);
         channel.socket().setSendBufferSize(socketSendBufferSize);
         channel.socket().setReceiveBufferSize(socketRecvBufferSize);
@@ -80,7 +80,7 @@ public class TTransport
         if ( channel.isConnectionPending() ) {
             channel.finishConnect();
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-            System.out.println("Connected to " + server.toString());
+//            System.out.println("Connected to " + server.toString());
             System.out.flush();
         }
     }

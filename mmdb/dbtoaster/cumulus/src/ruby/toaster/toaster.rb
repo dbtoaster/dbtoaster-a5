@@ -24,7 +24,7 @@ class DBToaster
     @map_formulae = nil;
     @query = "";
     
-    puts toaster_dir+"/"+toaster_cmd;
+    puts "#{toaster_dir}/#{toaster_cmd}";
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
     @DBT = IO.popen(toaster_cmd, "w+");
@@ -610,5 +610,7 @@ unless $toaster.slice_directives.empty? then
   $output.write("\n\n############ Slicer Debugging Directives\n");
   $output.write($toaster.slice_directives.join("\n") + "\n");
 end
+
+$output.flush;
 
 $success = true;
