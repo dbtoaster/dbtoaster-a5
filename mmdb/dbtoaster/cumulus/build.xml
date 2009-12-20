@@ -1,4 +1,8 @@
 <project name="Cumulus" default="main" basedir=".">
+  <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <classpath><pathelement location="lib/ant-contrib-1.0b3.jar" /></classpath>
+  </taskdef>
+  
   <property name="src"   location="src" />
   <property name="build" location="build" />
   <property name="bin"   location="bin" />
@@ -11,6 +15,18 @@
   </path>
   
   <target name="init">
+    <if>
+      <not><isset property="cumulus.home" /></not>
+      <then>
+        <echo file="local.properties">
+jruby.home    = /home/fs01/oak5/src/jruby-1.4.0
+cumulus.home  = /home/fs01/oak5/dbtoaster/cumulus
+compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
+        </echo>
+        <fail message="Properties file initialized.  Edit local.properties and re-run the compiler" />
+      </then>
+    </if>
+    
     <mkdir dir="${build}" />
     <mkdir dir="${bin}" />
     <copy todir="${bin}">
