@@ -269,7 +269,7 @@ class SlicerMonitor
         nodes.each { |c, ob, ib| ib.push(1) }
         log = nodes.collect { |c, ob, ib| ob.pop.split("\n") }.flatten.collect do |line|
           if /org.dbtoaster.cumulus.*Node/.match(line) then
-            line.chomp.gsub(/java .cp [^\ ]*\ *org.dbtoaster.cumulus.(.*Node).*/, "\\1")
+            line.chomp.gsub(/java.*org.dbtoaster.cumulus.(.*Node).*/, "\\1")
           end
         end
         puts log.join("\n");
