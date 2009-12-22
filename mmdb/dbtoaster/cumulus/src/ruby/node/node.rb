@@ -448,6 +448,8 @@ class MapNodeHandler
     # we might end up changing required inside the loop, so we clone it first.
     
     #initialize the template with values we've already received
+    
+    puts "#{__LINE__}";
     if (@cmdcallbacks[id] != nil) then
       @cmdcallbacks[id].each do |response|
         response.each do |target_value|
@@ -457,8 +459,10 @@ class MapNodeHandler
       end
     end
     
+    puts "#{__LINE__}";
     @cmdcallbacks.delete(id);
     
+    puts "#{__LINE__}";
     # This is also treated as an implicit message to ourselves.  
     applicator.valuation.template.entries.each do |req|
 #      puts "Checking for #{req}"
@@ -482,6 +486,7 @@ class MapNodeHandler
     end
     applicator.finish_message;
     
+    puts "#{__LINE__}";
     #register ourselves to receive updates in the future
     unless applicator.ready? then
       @cmdcallbacks[id] = applicator;
@@ -623,7 +628,9 @@ class MapNodeHandler
           applicator = ValuationApplicator.new(
             base_cmd + put_msg.id_offset, target, valuation, self, false
           )
+          puts "before preloads";
           preload_locals(base_cmd + put_msg.id_offset, applicator);
+          puts "after preloads";
           @stats.put;
         else
           valuation = put_msg.template.valuation(params);
