@@ -1,6 +1,8 @@
 package org.dbtoaster.cumulus.config;
 
+import java.util.Map;
 import java.util.HashMap;
+import java.util.List;
 import java.util.ArrayList;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -20,8 +22,8 @@ public class CompiledM3Program
   }
   
   public FetchComponent installFetchComponent(String relation, Object entry, int id_offset, Object target, List<Long> partition_sizes, Object entry_mapping, Object target_partitions){
-    FetchComponent ret = new FetchComponent(template, id_offset, target, partition_sizes, entry_mapping, target_partitions);
-    getRelationComponent(relation).puts.add(ret);
+    FetchComponent ret = new FetchComponent(entry, id_offset, target, partition_sizes, entry_mapping, target_partitions);
+    getRelationComponent(relation).fetches.add(ret);
     return ret;
   }
   
@@ -56,13 +58,15 @@ public class CompiledM3Program
     
     public boolean match(List<Long> partition){
       for(List<Long> cmp : partition_values){
+        boolean valid = true;
         for(int i = 0; i < partition.size(); i++){
           if((cmp.get(i) != null) && 
              (((long)partition.get(i) % (long)partition_sizes.get(i)) != (long)cmp.get(i))){
+            valid = false;
             break;
           }
         }
-        if(i >= partition.size()){
+        if(valid){
           return true;
         }
       }
@@ -89,8 +93,7 @@ public class CompiledM3Program
     public final Object target;
     public final Object entry_mapping;
     public final Object target_partitions;
-    pu
-    public Condition condition = new Condition();
+    public Condition condition;
     
     public FetchComponent(Object entry, long id_offset, Object target, List<Long> partition_sizes, Object entry_mapping, Object target_partitions){
       this.entry = entry;

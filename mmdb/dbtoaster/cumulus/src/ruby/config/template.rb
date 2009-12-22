@@ -72,26 +72,25 @@ class TemplateEntry
   def instantiate(params = nil)
     MapEntry.new(
       @source, 
-      @keys.collect do |k|
-        case k
-          when TemplateVariable then k.to_f(params)
-          else k;
-        end
-      end
-      );
+      instantiated_key(params)
+    );
   end
   
   def clone(params = nil)
     TemplateEntry.new(
       nil, # Shouldn't be any strings in the paramlist.
       @source, 
-      @keys.collect do |k|
-        case k
-          when TemplateVariable then k.to_f(params)
-          else k;
-        end
-      end
+      instantiated_key(params)
     );
+  end
+  
+  def instantiated_key(params = nil)
+    @keys.collect do |k|
+      case k
+        when TemplateVariable then k.to_f(params)
+        else k;
+      end
+    end
   end
   
   def partition(params = nil, partition_size = $config.partition_sizes[@source])
@@ -99,12 +98,7 @@ class TemplateEntry
       Array.new(@keys.size, -1);
     else
       NetTypes.computePartition(
-        @keys.collect do |k|
-          case k
-            when TemplateVariable then k.to_f(params)
-            else k;
-          end
-        end,
+        instantiated_key(params),
         partition_size
       ).to_a;
     end

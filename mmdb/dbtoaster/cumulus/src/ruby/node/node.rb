@@ -40,25 +40,33 @@ end
 ###################################################
 
 class PluralRemoteCommitNotification
-  attr_reader :cmdid, :params, :subqueries
-  def initialize(entries, cmdid, params)
+  attr_reader :cmdid, :params, :subqueries;
+  def initialize(cmdid, params)
     @cmdid, @params = cmdid, params;
-    @count = @entries.size;
     @subqueries = Array.new;
+    @hold = true;
   end
   
   def register_subquery(fetch_component)
-    @subqueries.push(PluralRemoteCommitSubquery.new(fetch_component, self));
+    sq = PluralRemoteCommitSubquery.new(fetch_component, self);
+    @subqueries.push(sq);
+    sq;
+  end
+  
+  def finish_setup
+    @hold = false;
+    check_ready;
   end
   
   def check_ready
+    return if @hold;
     if @subqueries.assert { |sq| sq.ready } then
-      destinations = Hash.new { Hash.new };
+      destinations = Hash.new { |h,k| h[k] = Hash.new };
       @subqueries.each do |sq|
         sq.load_destinations(destinations)
       end
       destinations.each_pair do |node, entries|
-        MapNode.getClient(node).push_get()
+        MapNode.getClient(node).push_get(entries, cmdid)
       end
     end
   end
@@ -629,11 +637,21 @@ class MapNodeHandler
         end
       end
     end
-    put_entries = rules.fetches.collect do |fetch_msg|
+    put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
+    rules.fetches.each do |fetch_msg|
       if fetch_msg.condition.match(params) then
-        [ fetch_msg.condition.
+        key = fetch_msg.entry.instantiated_key(params);
+        loop_partitions(fetch_msg.entry.source, key) do |partition|
+          sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg);
+          partition.get(
+            key, 
+            proc { |key, value| sq.fire(MapEntry.new(t.source, key), value) },
+            proc { request.release } if sq.requires_loop
+          );
+        end
       end
     end
+    put_entries.each_value { |rcn| rcn.finish_setup };
   end
   
   ############# Internal Control
