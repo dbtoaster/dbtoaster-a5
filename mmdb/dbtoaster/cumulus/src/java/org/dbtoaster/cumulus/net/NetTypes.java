@@ -146,28 +146,6 @@ public class NetTypes implements Serializable
       }
     }
     
-    public static class ParametrizedEntry extends Entry
-    {
-      public String[] parameters;
-      public ParametrizedEntry(int s, List<Object> k){
-        super(s, extractNumericsFromList(k));
-        parameters = new String[key.length];
-        for(int i = 0; i < key.length; i++){
-          if(key[i] == null){
-            parameters[i] = k.get(i).toString();
-          }
-        }
-      }
-      
-      public Entry toEntry(){
-        return new Entry(source, key);
-      }
-      
-      public String toString(){
-        return super.toString() + "(Parametrized)";
-      }
-    }
-    
     public static class PutField implements Serializable
     {
         private static final long serialVersionUID = -1097435268974958528L;

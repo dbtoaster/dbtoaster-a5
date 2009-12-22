@@ -39,6 +39,73 @@ end
 
 ###################################################
 
+class PluralRemoteCommitNotification
+  attr_reader :cmdid, :params, :subqueries
+  def initialize(entries, cmdid, params)
+    @cmdid, @params = cmdid, params;
+    @count = @entries.size;
+    @subqueries = Array.new;
+  end
+  
+  def register_subquery(fetch_component)
+    @subqueries.push(PluralRemoteCommitSubquery.new(fetch_component, self));
+  end
+  
+  def check_ready
+    if @subqueries.assert { |sq| sq.ready } then
+      destinations = Hash.new { Hash.new };
+      @subqueries.each do |sq|
+        sq.load_destinations(destinations)
+      end
+      destinations.each_pair do |node, entries|
+        MapNode.getClient(node).push_get()
+      end
+    end
+  end
+end
+
+###################################################
+
+class PluralRemoteCommitSubquery
+  attr_reader :requires_loop, :ready;
+  
+  def initialize(fetch_component, parent)
+    @fetch_component, @parent = fetch_component, parent;
+    @requires_loop = @fetch_component.entry.requires_loop?;
+    @entries = Hash.new;
+    @ready = false;
+  end
+  
+  def fire(entry, value)
+    @entries[entry] = value;
+    unless @requires_loop then
+      @ready = true;
+      @parent.check_ready;
+    end
+  end
+  
+  def release
+    @ready = true;
+    @parent.check_ready;
+  end
+  
+  def load_destinations(destinations)
+    params = parent.params.clone;
+    partition_size = $config.partition_sizes[@fetch_component.target.source];
+    @entries.each_pair do |entry, value|
+      @fetch_component.entry_mapping.each { |mapping| params[mapping[1]] = entry.key[mapping[0]]; } 
+      target_partition = @fetch_component.target.partition(params, partition_size);
+      @fetch_component.target_partitions.each_pair do |partition, node|
+        if partition.zip(target_partition).assert { |partition| (partition[1] == -1) || (partition[1] == partition[0]) } then
+          destinations[node][entry] = value;
+        end
+      end
+    end
+  end
+end
+
+###################################################
+
 class RemoteCommitNotification
   @@nodecache = Hash.new;
   
@@ -282,6 +349,7 @@ class MapNodeHandler
     @stats = MapNodeStats.new(name, self);
     @partition_sizes = Hash.new;
     @log_maps = Array.new;
+    @program = CompiledM3Program.new;
   end
   
   ############# Internal Accessors
@@ -326,6 +394,10 @@ class MapNodeHandler
         end
       end
     end
+    cmd.compile_to_local(
+      @program, 
+      @maps.collect_hash { |map_partitions| [ map_partitions[0], map_partitions[1].keys ] }
+    );
     Logger.debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
   
@@ -529,6 +601,38 @@ class MapNodeHandler
     end
     get_list.each do |get_request|
       fetch(get_request.entries, get_request.target, get_request.id_offset+base_cmd);
+    end
+  end
+  
+  def update(relation, params, base_cmd)
+    rules = @program.getRelationComponent(relation);
+    rules.puts.each do |put_msg|
+      if put_msg.condition.match(params) then
+        if put_msg.num_gets == -1 then
+          valuation = put_msg.template.valuation;
+          target = valuation.target;
+          applicator = ValuationApplicator.new(
+            base_cmd + put_msg.id_offset, target, valuation, self, false
+          )
+          preload_locals(base_cmd + put_msg.id_offset, applicator);
+          @stats.put;
+        else
+          valuation = put_msg.template.valuation;
+          applicator = MassValuationApplicator(
+            base_cmd + put_msg.id_offset, valuation, put_msg.num_gets, self, false
+          )
+          preload_locals(base_cmd + put_msg.id_offset, applicator);
+          plist = Array.new;
+          loop_partitions(valuation.target.source, valuation.target.key) { |partition| plist.push(partition) }
+          applicator.apply(plist);
+          @stats.mass_put;
+        end
+      end
+    end
+    put_entries = rules.fetches.collect do |fetch_msg|
+      if fetch_msg.condition.match(params) then
+        [ fetch_msg.condition.
+      end
     end
   end
   

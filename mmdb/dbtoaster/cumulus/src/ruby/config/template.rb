@@ -54,68 +54,93 @@ class TemplateEntry
   attr_writer :index;
   alias :key :keys;
   
-  def initialize(source, *keys)
+  def initialize(template, source, *keys)
     @source = source.to_i;
     @keys = keys.flatten.collect do |key|
       case key
-        when String then if key.to_i.to_s == key then key.to_i else key end;
+        when String then 
+          if key.to_i.to_s == key then 
+            key.to_i 
+          else 
+            TemplateVariable.new(key, template);
+          end;
         else key
       end
     end
   end
   
-  def instantiate(params = Hash.new)
+  def instantiate(params = nil)
     MapEntry.new(
       @source, 
       @keys.collect do |k|
         case k
-          when String then if params.has_key? k then params[k].to_i else -1 end;
+          when TemplateVariable then k.to_f(params)
           else k;
         end
       end
       );
   end
   
-  def clone(params = Hash.new)
+  def clone(params = nil)
     TemplateEntry.new(
+      nil, # Shouldn't be any strings in the paramlist.
       @source, 
       @keys.collect do |k|
         case k
-          when String then if params.has_key? k then params[k] else k end;
+          when TemplateVariable then k.to_f(params)
           else k;
         end
       end
     );
-    
   end
   
-  def weak_match?(entry, params = Hash.new)
+  def partition(params = nil, partition_size = $config.partition_sizes[@source])
+    if(params == nil)
+      Array.new(@keys.size, -1);
+    else
+      NetTypes.computePartition(
+        @keys.collect do |k|
+          case k
+            when TemplateVariable then k.to_f(params)
+            else k;
+          end
+        end,
+        partition_size
+      ).to_a;
+    end
+  end
+  
+  def weak_match?(entry, params = nil)
     return false unless entry.source == @source;
     @keys.each_pair(entry.key) do |a, b|
       case a
         # If the variable isn't bound, let it through
-        when String then return false if (params.has_key? a) && (params[a].to_i != b.to_i);
+        when TemplateVariable then val = k.to_f(params); return false if (val != -1) && (val != b.to_i);
         else return false if a.to_i != b.to_i;
       end
     end
     return true;
   end
   
-  def to_s(params = Hash.new)
+  def requires_loop?
+    @keys.assert { |dim| dim.is_a? Numeric || dim.type == :param };
+  end
+  
+  def to_s(params = nil)
     "Map " + @source.to_s + "[" + 
       @keys.collect do |key| 
         case key
-          when String then if params.has_key? key then params[key].to_i.to_s else key end;
+          when TemplateVariable then key.to_f(params) == -1 ? key.name : key.to_f(params);
           else key.to_s;
         end
       end.join(",") + "]";
   end
   
-  def TemplateEntry.parse(entry)
-    decode(Tokenizer.new(entry, /Map|[0-9]+|\[|\]|[a-zA-Z][a-zA-Z0-9_]*|,/));
+  def TemplateEntry.parse(template, entry)
+    decode(template, Tokenizer.new(entry, /Map|[0-9]+|\[|\]|[a-zA-Z][a-zA-Z0-9_]*|,/));
   end
   
-  def TemplateEntry.decode(tokenizer)
+  def TemplateEntry.decode(template, tokenizer)
     # Expects tokens of the form "Map" "source" "[" "key" ("," "key" (...)) "]"
     
     source = # In some cases we get the full expression, in others we don't get "Map".
@@ -134,7 +159,7 @@ class TemplateEntry
 
     source = UpdateTemplate.get_map(source, Math.max(keys.size, 1)).to_s unless source.is_number?
     
-    TemplateEntry.new(source, keys)  
+    TemplateEntry.new(template, source, keys)  
   end
   
   def ==(other)
@@ -158,76 +183,29 @@ end
 ###################################################
 
 class TemplateValuation
-  attr_reader :params, :entries, :template;
-  attr_writer :params, :entries;
-  
-  def initialize(template = nil, params = Hash.new, entries = Hash.new)
-    @template, @params, @entries = template, params, entries;
-    if entries.is_a? Array then
-      @entries = Hash.new;
-      prepare_entries(entries);
-    end
-    prepare_entries(template.entries) unless template == nil;
-    @target = nil;
-  end
-  
-  def param(key)
-    return @params[key];
-  end
-  
-  def entry(e)
-    return @entries[e]
-  end
-  
-  def has_key?(key)
-    @params.has_key? key
-  end
-  
-  def has_entry?(e)
-    @entries.has_key? e
-  end
-  
-  def value(key)
-    case key
-      when String then
-        case param(key)
-          when nil           then raise SpreadException.new("Converting to float with undefined parameter: " + key.to_s);
-          when TemplateEntry then entry(param(key).instantiate(@params)).to_f;
-          when MapEntry      then entry(param(key)).to_f
-          else                    param(key).to_f;
-        end
-      when Numeric then
-        key.to_f
-      else raise SpreadException.new("Attempting to evaluate unknown variable type: " + key.class.to_s + " = " + key.to_s);
+  attr_reader :params;
+
+  def initialize(template, params, entries = nil)
+    @template, @params = template, params;
+    @instance = Array.new(template.varlist.length, 0);
+    @entry_values = template.entries.collect { |entry| [entry, Array.new] };
+    if template.paramlist.length + template.varlist.length > @params.length then
+      @params.append(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
     end
   end
   
-  def prepare_entries(entries)
-    entries.each do |e|
-      e = e.instantiate(@params) if e.is_a? TemplateEntry;
-      @entries[e] = nil unless @entries.has_key? e;
-    end
-  end
-  
-  def prepare(*entries)
-    prepare_entries(entries);
+  def entries[](entry)
+    @entry_values[entry][1][@instance[entry]][1];
   end
   
   def discover(entry, value)
-    if (@entries.has_key? entry) then
-      @entries[entry] = value;
-      @target = nil;
-    else
-      puts "Discovered unknown entry! : #{entry}:#{entry.hashCode}; Expected one of : #{@entries.keys.collect{|e| "#{e}:#{e.diff(entry)}:#{e.hashCode}"}.join(",")}";
+    @entry_values.each do |parametrization|
+      parametrization[1].push([entry,value]) if(parametrization[0].weak_match?(entry, @params));
     end
   end
   
-  def clone(temp_vars = Hash.new)
-    TemplateValuation.new(@template, @params.merge(temp_vars), @entries.clone);
-  end
-  
   def ready?
-    @template.ready?(self)
+    @entry_values.assert { |entry| entry[1].size > 0 }
   end
   
   def to_f
@@ -239,8 +217,26 @@ class TemplateValuation
   end
   
   def target
-    @target = @template.target.instantiate(self.params) if @target.nil?
+    @target = @template.target.instantiate(@params) if @target.nil?
     @target;
+  end
+  
+  def loop
+    orig_instance = @instance;
+    @entry_values.collect { |parametrization| (0..parametrization[1].size) }.each_cross_product do |parametrization|
+      @instance = parametrization;
+      
+      # extract loop variables from the currently active entry set
+      @template.loopvarlist.each do |loopentry|
+        loopentry[1].each do |replacement|
+          @params[replacement[1].ref] = entries[loopentry[0]].key[replacement[0]];
+        end
+      end
+      
+      # and instantiate the value 
+      yield @template.target.instantiate(@params), @template.to_f(self);
+    end
+    @instance = orig_instance;
   end
 end
 
@@ -251,7 +247,7 @@ class TemplateExpression
     @op, @left, @right = op, left, right;
   end
   
-  def entries(list = Array.new)
+  def entries(list = Array.new, num_list = )
     case @op
       when :plus, :mult, :sub, :div then @left.entries(@right.entries(list));
       when :map                     then list.push(@left);
@@ -261,25 +257,20 @@ class TemplateExpression
   end
   
   # See TemplateValuation.initialize for a description of what loop_vars does.
-  def loop_vars(known_vars, list = Array.new)
-    entries.delete_if do |entry|
+  def loop_vars(template)
+    template.entries.collect do |entry|
       # see if any keys have not been bound (either explicitly, or via known_vars)
-      entry.keys.clone.delete_if do |key| (key.is_a? Numeric) || (known_vars.include? key) end.empty?
-    end.collect do |entry|
+      entry unless entry.keys.assert { |key| (key.is_a? Numeric) || (key.type == :param) }
+    end.compact.collect do |entry|
       [
-        entry, 
-        entry.key.collect_index do |i, k| 
-          if (k.is_a? String) && !(known_vars.include? k) then
-            [i, k]
-          else 
-            nil;
-          end
+        template.entries.index(entry), 
+        entry.key.collect_index { |k| [i,k] if (k.is_a? TemplateVariable) && (key.type == :var) }.compact;
         end.delete_if do |e| e.nil? end
       ]
     end
   end
   
-  def to_f(params = TemplateValuation.new)
+  def to_f(params = nil)
     case @op
       when :plus then @left.to_f(params) + @right.to_f(params);
       when :mult then @left.to_f(params) * @right.to_f(params);
@@ -287,19 +278,11 @@ class TemplateExpression
       when :div  then @left.to_f(params) / @right.to_f(params);
       when :val  then 
         case @left
-          when String then params.value(@left).to_f
-          else             @left.to_f;
+          when TemplateVariable then @left.to_f(params ? params.params : nil)
+          else                       @left.to_f;
         end
-      when :map  then params.entry(@left.instantiate(params.params)).to_f;
+      when :map  then @params.entries[@right];
       else            raise SpreadException.new("Unknown Expression operator (to_f): " + @op.to_s);
-    end
-  end
-  
-  def ready?(params = TemplateValuation.new)
-    case @op
-      when :plus, :mult, :sub, :div then @left.ready && @right.ready
-      when :val then (@left.is_a? Numeric) || (params.has_param? @left)
-      when :map then @left.keys.assert { |key| key.is_a? Numeric || (params.has_param? key) }
     end
   end
   
@@ -311,7 +294,7 @@ class TemplateExpression
       when :div       then "(" + @left.to_s(params) + ")/(" + @right.to_s(params) + ")";
       when :val       then
         case @left
-          when String then if params.has_key? @left then params.value(@left).to_s else @left end;
+          when TemplateVariable then if params.to_f(@left) == -1 then params.name else params.to_f(@left);
           else @left.to_s
         end
       when :map       then @left.to_s(params.params);
@@ -319,14 +302,7 @@ class TemplateExpression
     end
   end
   
-  def rename(new_names)
-    case @op
-      when :plus, :mult, :sub, :div then @left.rename(new_names) && @right.rename(new_names)
-      when :map then @left.keys.collect! { |key| if new_names.has_key? key then new_names[key] else key end }
-    end
-  end
-  
-  def TemplateExpression.decode_var(tokenizer)
+  def TemplateExpression.decode_var(template, tokenizer)
     case tokenizer.next
       when "(" then decode(tokenizer);
       when "+","*","/",")" then 
@@ -335,7 +311,9 @@ class TemplateExpression
         raise SpreadException.new("Parse Error: Found - instead of rval") unless tokenizer.next.is_number?;
         TemplateExpression.new(:val, tokenizer.last.to_i * -1);
       when "Map" then
-        TemplateExpression.new(:map, TemplateEntry.decode(tokenizer));
+        entry = TemplateEntry.decode(template, tokenizer);
+        template.entries.push(entry);
+        TemplateExpression.new(:map, entry, template.entries.size-1);
       else
         TemplateExpression.new(
           :val,
@@ -344,7 +322,7 @@ class TemplateExpression
     end
   end
   
-  def TemplateExpression.decode(tokenizer, left = decode_var(tokenizer))
+  def TemplateExpression.decode(template, tokenizer, left = decode_var(template, tokenizer))
     op = case tokenizer.next;
       when "+" then :plus
       when "-" then :sub
@@ -353,15 +331,16 @@ class TemplateExpression
       when ")",nil then return left;
       else raise SpreadException.new("Parse Error (Expected op, got '"+tokenizer.last.to_s+"')");
     end
-    right = decode_var(tokenizer);
+    right = decode_var(template, tokenizer);
     
     if tokenizer.more? then decode(tokenizer, TemplateExpression.new(op, left, right))
     else                    TemplateExpression.new(op, left, right);
     end
   end
   
-  def TemplateExpression.parse(line)
+  def TemplateExpression.parse(template, line)
     decode(
+      template,
       Tokenizer.new(
         line, 
         /\(|\)|\+|-|\/|\*|[0-9]*\.[0-9]+|[0-9]+|[a-zA-Z][a-zA-Z0-9_]*|Map|\[|\]|,/
@@ -375,7 +354,7 @@ end
 class TemplateCondition
   attr_reader :type, :left, :right;
   
-  def initialize(line)
+  def initialize(template, line)
     parsed = line.scan(/<=|<>|<|=|[^<>=]+/);
     raise SpreadException.new("Condition: " + line + " contains " + parsed.size.to_s + " != 3 terms") unless parsed.size == 3;
     @type = 
@@ -386,8 +365,8 @@ class TemplateCondition
         when "="  then :equal
         else raise SpreadException.new("Condition: " + line + " of invalid type: " + parsed[1]);
       end
-    @left  = TemplateExpression.parse(parsed[0]);
-    @right = TemplateExpression.parse(parsed[2]);
+    @left  = TemplateExpression.parse(template, parsed[0]);
+    @right = TemplateExpression.parse(template, parsed[2]);
   end
   
   def to_b(params = TemplateValuation.new)
@@ -398,10 +377,6 @@ class TemplateCondition
       when :equal         then @left.to_f(params) == @right.to_f(params);
       else raise SpreadException.new("Corrupt condition type: " + @type.to_s);
     end
-  end
-  
-  def ready?(params = TemplateValuation.new)
-    @left.ready?(params) && @right.ready?(params);
   end
   
   def entries
@@ -438,10 +413,6 @@ class TemplateConditionList
     return true;
   end
   
-  def ready?(params = TemplateValuation.new)
-    @conditions.assert { |cond| cond.ready?(params) };
-  end
-  
   def entries
     @conditions.collect do |cond|
       cond.entries;
@@ -455,8 +426,34 @@ end
 
 ###################################################
 
+class TemplateVariable
+  attr_reader :ref, :type, :name
+  def initialize(name, template)
+    @name = name
+    if template.paramlist.include? name then
+      @ref = template.paramlist.index(name);
+      @type = :param;
+    elsif template.varlist.include? name then
+      @ref = template.varlist.index(name) + template.paramlist.length;
+      @type = :var;
+    else
+      template.varlist.append(name);
+      @ref = template.varlist.index(name) + template.paramlist.length;
+      @type = :var;
+    end
+  end
+  
+  def to_f(params = nil)
+    return -1 if params == nil;
+    return -1 if params.length <= @ref;
+    return params[@ref];
+  end
+end
+
+###################################################
+
 class UpdateTemplate
-  attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index;
+  attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index, :varlist, :entries;
   attr_writer :index;
   @@map_names = Hash.new;
   @@map_id = 0;
@@ -465,16 +462,19 @@ class UpdateTemplate
     line = text_line.split("\t");
     raise SpreadException.new("Instantiating update template with insufficient components: " + text_line) if line.size < 5;
     
+    @entries = Array.new;
+    
     # This template applies to updates to [0]
     @relation = line[0].to_s;
     # This template is parametrized by the parameters listed in the comma delimited list [1]
     @paramlist = line[1].split(";").collect do |k| k.gsub(/ *([^ ]) */, "\\1") end;
+    @varlist = Array.new;
     # The target's Map Entry (template) is [2]
-    @target = TemplateEntry.parse(line[2]);
+    @target = TemplateEntry.parse(self, line[2]);
     # The conditions for the target to apply are [3]
-    @conditions = TemplateConditionList.new(line[3]);
+    @conditions = TemplateConditionList.new(self, line[3]);
     # The expression for the update is [4]
-    @expression = TemplateExpression.parse(line[4]);
+    @expression = TemplateExpression.parse(self, line[4]);
     
     # loopvarlist deserves a little discussion.  This is essentially a pre-computed
     # datastructure that streamlines computation of the domain of each loop variable
@@ -488,9 +488,13 @@ class UpdateTemplate
     # weak_match? to determine if this rule is applicable.  If it is, then the KEYINDEXth 
     # element of the entry's key is identified as a member of LOOPVAR's domain.  It is 
     # possible for there to be multiple KEYINDEX/LOOPVAR pairs.   
-    @loopvarlist = @expression.loop_vars(@paramlist);
+    @loopvarlist = @expression.loop_vars(self);
     
     @index = index;
+  end
+  
+  def valuation(params)
+    return TemplateValuation.new(this, params);
   end
   
   def add_expression(expression)
@@ -501,16 +505,8 @@ class UpdateTemplate
     !@loopvarlist.empty?
   end
   
-  def entries
-    @conditions.entries.concat(@expression.entries);
-  end
-  
   def param_map(param_inputs)
     @paramlist.merge(param_inputs).collect_hash;
-  end
-  
-  def ready?(params = TemplateValuation.new)
-    @conditions.ready?(params) && @expression.ready?(params);
   end
   
   def to_f(params = TemplateValuation.new)
@@ -543,6 +539,58 @@ class UpdateTemplate
     end.compact;
   end
   
+  def project_param(entry, term_list)
+    (0...@paramlist.size).collect do |param|
+      entry.key.zip(term_list).find do |dim|
+        dim[1] if (dim[0].is_a? TemplateVariable) && (dim[0].type == :param) && (dim[0].ref == param)
+      end
+    end
+  end
+  
+  def constant_entry_is_local(entry, map_partitions)
+    # this function verifies that any constants in the target key are potentially present locally.
+    # if that's not true (eg, for q[] on anything but the first node), then this template will never be 
+    # triggered locally and we can ignore it.
+    entry.key.zip((0...entry.key.size).to_a).assert do |dim| 
+      (dim[0].is_a? TemplateVariable) || 
+      map_partitions.find { |part| part[dim[1]] == dim[0] % $config.partition_sizes[entry.source][dim[1]] }
+    end
+  end
+  
+  def compile_to_local(program, map_partitions)
+    if constant_entry_is_local(@target, map_partitions) then
+      put_message = program.installPutComponent(
+        @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
+      );
+      map_partitions[@target.source].each do |partition|
+        # figure out when we need to turn this update into a put.
+        put_message.condition.addPartition(project_param(@target, partition))
+      end
+    end
+      
+    #figure out when this update results in us sending data.
+    @entries.each do |entry|
+      if constant_entry_is_local(entry, map_partitions) then
+        target_nodes = Hash.new;
+        $config.nodes.each_pair do |node, node_info|
+          node_info["partitions"][entry.source].each do |partition|
+            target_nodes[partition] = node;
+          end
+        end
+
+        fetch_message = program.installFetchComponent(
+          @relation, entry, @index, @target, 
+          project_param(entry, $config.partition_sizes[entry.source]), 
+          entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].target] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var },
+          target_nodes
+        );
+        map_partitions[entry.source] do |partition|
+          fetch_message.condition.addPartition(project_param(entry, partition));
+        end
+      end
+    end
+  end
+  
   def UpdateTemplate.get_map(map_name, params)
     @@map_names.assert_key(map_name) { {"id" => @@map_id += 1, "params"=> params}; }
     @@map_names[map_name]["id"];
@@ -552,69 +600,3 @@ class UpdateTemplate
     @@map_names;
   end
 end
-
-###################################################
-
-class TemplateForeachEvaluator
-  attr_reader :valuation;
-
-  # Note that valuation is treated as if it were 
-  def initialize(valuation)
-    @domains, @valuation = Array.new, valuation;
-    
-    # @domains contains a list of arrays in the same order as valuation.template.loopvarlist
-    # Every array in @domains describes the domains of one or more loop variables in the
-    # foreach loop.  As we gather more and more entries, we build up the domains of the
-    # corresponding values.  
-    
-    valuation.template.loopvarlist.each do |loopentry|
-      @domains.push(Array.new);
-    end
-  end
-  
-  def discover(entry, value)
-    @valuation.template.loopvarlist.each_pair(@domains) do |rule, row|
-      # rule[1] contains a list of elements of the form [KEYINDEX, LOOPVAR]
-      # for each element extract the KEYINDEXth value of entry.key and save it
-      # for the domain of LOOPVAR... as long as the rule is applicable (the
-      # TemplateEntry at rule[0] weakly matches entry)
-      
-      # Also, note that it is possible for the same map to appear twice with 
-      # two different sets of loop variables; One entry might potentially match 
-      # several rules.
-      
-      # It is also possible for an entry to match no rules at all; This occurs if
-      # the template's expression includes both nonlooping and looping maps.
-      row.push(rule[1].collect do |k| entry.key[k[0]] end) if rule[0].weak_match?(entry, @valuation.params);
-#      Logger.debug { entry.to_s + " = " + value.to_s + "; Matches: " + rule[0].to_s + " : " + rule[0].weak_match?(entry, @valuation.params).to_s };
-    end
-    @valuation.entries[entry] = value;
-  end
-  
-  # Foreach is effectively a nested loop where the nesting depth is equal to the 
-  # number of maps being scanned (since we're looping over entries, we get to
-  # loop over each loop parameter for free).  The passed block is called once for
-  # each tuple in the cross-product of the domains of all loop variables (and 
-  # comes with the corresponding template valuation and target).  
-  def foreach(&callback)
-    foreach_impl(callback);
-  end
-  
-  private
-  
-  def foreach_impl(callback, depth = 0, valuation = @valuation.clone)
-    if depth >= @domains.size then
-      val = valuation.to_f;
-      callback.call(valuation.template.target.instantiate(valuation.params), val) unless val == 0;
-    else
-      @domains[depth].each do |row|
-        valuation.template.loopvarlist[depth][1].each_pair(row) do |k, v|
-          valuation.params[k[1].to_s] = v.to_i;
-        end
-        foreach_impl(callback, depth+1, valuation);
-      end
-    end
-  end
-end
-
-
