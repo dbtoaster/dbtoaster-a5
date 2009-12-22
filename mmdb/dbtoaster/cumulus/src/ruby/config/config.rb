@@ -32,7 +32,7 @@ class RubyConfig
     Logger.info { "Spread Path is : #{@spread_path}" }
     
     @unknown_opts = Hash.new;
-    @num_switches = 2
+    @num_switches = 0;
 
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 

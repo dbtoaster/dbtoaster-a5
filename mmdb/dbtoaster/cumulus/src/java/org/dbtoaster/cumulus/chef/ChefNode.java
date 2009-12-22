@@ -74,7 +74,7 @@ public class ChefNode
         oprot.beginMessage();
         oprot.putObject(ChefNodeMethod.FORWARD_UPDATE);
         oprot.putObject(relation);
-        oprot.putObject(params);
+        oprot.putList(params);
         oprot.putInteger(basecmd);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
@@ -86,7 +86,7 @@ public class ChefNode
       try {
         oprot.beginMessage();
         oprot.putObject(ChefNodeMethod.SET_FOWARDERS);
-        oprot.putObject(nodes);
+        oprot.putList(nodes);
         oprot.putInteger(nodeOrChef);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
@@ -138,6 +138,8 @@ public class ChefNode
     {
       handler = h;
       handlerMap.put(ChefNodeMethod.UPDATE, new update());
+      handlerMap.put(ChefNodeMethod.FORWARD_UPDATE, new forward_update());
+      handlerMap.put(ChefNodeMethod.SET_FOWARDERS, new set_forwarders());
       handlerMap.put(ChefNodeMethod.DUMP, new dump());
       handlerMap.put(ChefNodeMethod.REQUEST_BACKOFF, new request_backoff());
       handlerMap.put(ChefNodeMethod.FINISH_BACKOFF, new finish_backoff());
@@ -152,6 +154,29 @@ public class ChefNode
         List<Double> params   =         iprot.getList(Double.class);
         handler.update(relation, params);
       } 
+    }
+    
+    private class forward_update extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException, TProtocolException
+      {
+        String       relation = (String)iprot.getObject();
+        List<Double> params   =         iprot.getList(Double.class);
+        Integer      basecmd  =         iprot.getInteger();
+        handler.forward_update(relation, params, basecmd);
+      }
+    }
+
+    private class set_forwarders extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException, TProtocolException
+      {
+        List<InetSocketAddress> nodes = iprot.getList(InetSocketAddress.class);
+        Integer nodeType = iprot.getInteger();
+        handler.set_forwarders(nodes, nodeType);
+      }
     }
     
     private class dump extends TProcessor.HandlerFunction

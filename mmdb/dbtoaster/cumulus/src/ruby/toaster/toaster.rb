@@ -18,7 +18,7 @@ class DBToaster
     @persist = false;
     @compiled = nil;
     @switch = "localhost";
-    @switch_forwarders = 2;
+    @switch_forwarders = 0;
     @preload = nil;
     @schemas = nil;
     @map_aliases = Hash.new;
@@ -56,7 +56,7 @@ class DBToaster
       when "--node"      then 
         @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9\.]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
       when "--switch"    then @switch = arg;
-      when "--switch-forwarders" then @switch_forwarders = arg; 
+      when "--switch-forwarders" then @switch_forwarders = arg.to_i; 
       when "--partition" then 
         match = /Map *([a-zA-Z0-9_]+) *on *(.*)/.match(arg);
         raise "Invalid partition directive: " + arg unless match;
@@ -577,7 +577,7 @@ end
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
 $output.write("switch " + $toaster.switch+"\n");
-$output.write("switch_forwarders " + $toaster.switch+"\n");
+$output.write("switch_forwarders " + $toaster.switch_forwarders.to_s+"\n");
 
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");

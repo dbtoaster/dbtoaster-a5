@@ -88,7 +88,7 @@ public class MapNode
           oprot.beginMessage();
           oprot.putObject(MapNodeMethod.UPDATE);
           oprot.putObject(relation);
-          oprot.putObject(new ArrayList(params));
+          oprot.putList(params);
           oprot.putInteger(basecmd);
           oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
@@ -102,7 +102,7 @@ public class MapNode
         oprot.putObject(MapNodeMethod.PUT);
         oprot.putLong(id);
         oprot.putLong(template);
-        oprot.putObject(params);
+        oprot.putList(params);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
@@ -116,7 +116,7 @@ public class MapNode
         oprot.putLong(id);
         oprot.putLong(template);
         oprot.putLong(expected_gets);
-        oprot.putObject(params);
+        oprot.putList(params);
         oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
@@ -128,10 +128,10 @@ public class MapNode
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.GET);
-        oprot.putObject(target);
+        oprot.putList(target);
         oprot.endMessage();
         waitForFrame();
-        r = (Map<NetTypes.Entry, Double>) iprot.getObject();
+        r = iprot.getMap(NetTypes.Entry.class, Double.class);
       } catch (TProtocolException e) { throw new TException(e.getMessage());
       } catch (IOException e) { throw new TException(e.getMessage()); }
       
@@ -144,7 +144,7 @@ public class MapNode
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.FETCH);
-        oprot.putObject(target);
+        oprot.putList(target);
         oprot.putObject(destination);
         oprot.putLong(cmdid);
         oprot.endMessage();
@@ -188,11 +188,11 @@ public class MapNode
       try {
         oprot.beginMessage();
         oprot.putObject(MapNodeMethod.AGGREGET);
-        oprot.putObject(target);
+        oprot.putList(target);
         oprot.putInteger(agg);
         oprot.endMessage();
         waitForFrame();
-        r = (Map<NetTypes.Entry, Double>) iprot.getObject();
+        r = iprot.getMap(NetTypes.Entry.class, Double.class);
       } catch (TProtocolException e) { throw new TException(e.getMessage());
       } catch (IOException e) { throw new TException(e.getMessage()); }
 
@@ -250,7 +250,7 @@ public class MapNode
       {
 //        System.out.println("In Java");
         String relation = (String) iprot.getObject();
-        List<Double> params = (List<Double>) iprot.getObject();
+        List<Double> params = iprot.getList(Double.class);
         Integer basecmd = iprot.getInteger();
         handler.update(relation, params, basecmd);
       }
@@ -263,7 +263,7 @@ public class MapNode
       {
         Long id = iprot.getLong();
         Long template = iprot.getLong();
-        List<Double> params = (List<Double>) iprot.getObject();
+        List<Double> params = iprot.getList(Double.class);
         handler.put(id, template, params);
       }
     }
@@ -278,7 +278,7 @@ public class MapNode
           Long id = iprot.getLong();
           Long template = iprot.getLong();
           Long expected_gets = iprot.getLong();
-          List<Double> params = (List<Double>) iprot.getObject();
+          List<Double> params = iprot.getList(Double.class);
           handler.mass_put(id, template, expected_gets, params);
         } catch (TProtocolException e)
         {
@@ -294,7 +294,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException,SpreadException
       {
-        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        List<NetTypes.Entry> target = iprot.getList(NetTypes.Entry.class);
         NetTypes.regularizeEntryList(target);
         Map<NetTypes.Entry, Double> r = handler.get(target);
         oprot.putObject(r);
@@ -306,7 +306,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException
       {
-        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        List<NetTypes.Entry> target = iprot.getList(NetTypes.Entry.class);
         NetTypes.regularizeEntryList(target);
         InetSocketAddress destination = (InetSocketAddress) iprot.getObject();
         Long cmdid = iprot.getLong();
@@ -343,7 +343,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException,TProtocolException,SpreadException
       {
-        List<NetTypes.Entry> target = (List<NetTypes.Entry>) iprot.getObject();
+        List<NetTypes.Entry> target = iprot.getList(NetTypes.Entry.class);
         NetTypes.regularizeEntryList(target);
         int agg = iprot.getInteger();
         Map<NetTypes.Entry, Double> r = handler.aggreget(target, agg);

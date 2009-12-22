@@ -85,7 +85,7 @@ class ChefNodeHandler
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
-      if client.is_a? MapNodeClient then
+      if client.is_a? MapNode::MapNodeClient then
         client.update(table, params, cmdid.to_i)
       else client.forward_update(table, params, cmdid.to_i) end
     end
@@ -97,7 +97,7 @@ class ChefNodeHandler
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
-      if client.is_a? MapNodeClient then
+      if client.is_a? MapNode::MapNodeClient then
         client.update(table, params, basecmd)
       else client.forward_update(table, params, basecmd) end
     end

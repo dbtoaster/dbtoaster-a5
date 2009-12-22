@@ -165,24 +165,29 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     end
     
     switches = Hash.new
-    if ($config.num_switches < $config.nodes.size) &&
-      ($config.nodes.size % $config.num_switches == 0)
-    then
-      nodes_per_switch = $config.nodes.size / $config.num_switches;
-      (0...$config_file.num_switches).each do |switchid|
-        nodeid = $config.nodes[switchid][1]["address"]
-        startidx=switchid*nodes_per_switch
-        endidx=((switchid+1)*nodes_per_switch)
-        switch_nodes = $config.nodes[startidx...endidx].collect do |node, node_info|
-          node_info["address"]
-        end 
-        switches[nodeid] = [switch_nodes, true]
-      end
+    if $config.num_switches == 0 then
+      switches[$config.switch] =
+        [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
     else
-      puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
+      if ($config.num_switches < $config.nodes.size) &&
+        ($config.nodes.size % $config.num_switches == 0)
+        then
+        nodes_per_switch = $config.nodes.size / $config.num_switches;
+        (0...$config_file.num_switches).each do |switchid|
+          nodeid = $config.nodes[switchid][1]["address"]
+          startidx=switchid*nodes_per_switch
+          endidx=((switchid+1)*nodes_per_switch)
+          switch_nodes = $config.nodes[startidx...endidx].collect do |node, node_info|
+            node_info["address"]
+          end 
+          switches[nodeid] = [switch_nodes, 1]
+        end
+      else
+        puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
+      end
+      switch_forwarders = [switches.keys(), 0]
+      switches[$config.switch] = switch_forwarders
     end
-    switch_forwarders = [switches.keys(), false]
-    switches[$config.switch] = switch_forwarders
 
     nodes = []
     $config.nodes.each do |node, node_info|
@@ -213,7 +218,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     sleep(10)
 
     switches.each do |switch_node, clients_and_type|
-      clients, forward_to_nodes = clients_and_types
+      clients, forward_to_nodes = clients_and_type
       puts "Setting Switch forwarders @ #{switch_node.getHostName}"
       ChefNode.getClient(switch_node).set_forwarders(clients, forward_to_nodes);
     end
