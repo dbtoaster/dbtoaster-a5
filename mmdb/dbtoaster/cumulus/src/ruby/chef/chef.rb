@@ -14,7 +14,7 @@ class ChefNodeHandler
     @fetch_count = 0;
     @templates = Hash.new { |h,k| h[k] = Array.new };
     @layout = MapLayout.new;
-    @nodelist = Hash.new { |h,k| h[k] = MapNode::getClient(k, 3); };
+    @nodelist = nil;
     @update_count = 0;
     @update_timer = nil;
     @start_time = nil;
@@ -29,7 +29,7 @@ class ChefNodeHandler
   end
   
   def next_cmd
-    @next_cmd += @num_templates;
+    @next_cmd += @num_templates + 1;
   end
   
   def next_update
@@ -82,10 +82,13 @@ class ChefNodeHandler
 #  end
   
   def update(table, params)
-    @nodelist.each_pair do |h,client|
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
+    params = params.collect { |param| param.to_f };
+    @nodelist.each do |client|
       client.update(table, params, cmdid.to_i)
     end
     next_cmd;
+    next_update;
   end
   
   def dump()
@@ -128,7 +131,7 @@ class ChefNodeHandler
 end
 
 
-handler = ChefNodeHandler.new($config.templates);
+handler = ChefNodeHandler.new($config.templates.size);
 $config.nodes.each_pair do |node, info|
   handler.install_node(info["address"], info["partitions"]);
 #  puts("Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 

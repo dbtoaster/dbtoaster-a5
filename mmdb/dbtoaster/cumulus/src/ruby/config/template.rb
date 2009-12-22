@@ -177,19 +177,23 @@ end
 ###################################################
 
 class TemplateValuation
-  attr_reader :params;
+  attr_reader :params, :template;
 
   def initialize(template, params, entries = nil)
-    @template, @params = template, params;
+    @template, @params = template, params.to_a;
     @instance = Array.new(template.varlist.length, 0);
     @entry_values = template.entries.collect { |entry| [entry, Array.new] };
     if template.paramlist.length + template.varlist.length > @params.length then
-      @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
+      @params = @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
     end
   end
   
   def [](entry)
-    @entry_values[entry][1][@instance[entry]][1];
+    entry_column = @entry_values[entry];
+    instance = @instance[entry];
+    entry_element = entry_column[1][instance];
+    raise SpreadException.new("Incomplete valuation") unless entry_element;
+    entry_element ? entry_element[1] : nil;
   end
   
   def discover(entry, value)
@@ -491,7 +495,7 @@ class UpdateTemplate
   end
   
   def valuation(params)
-    return TemplateValuation.new(this, params);
+    return TemplateValuation.new(self, params);
   end
   
   def add_expression(expression)
@@ -539,8 +543,8 @@ class UpdateTemplate
   def project_param(entry, term_list)
     (0...@paramlist.size).collect do |param|
       entry.key.zip(term_list).find do |dim|
-        dim[1] if (dim[0].is_a? TemplateVariable) && (dim[0].type == :param) && (dim[0].ref == param)
-      end
+        dim[1].to_i if (dim[0].is_a? TemplateVariable) && (dim[0].type == :param) && (dim[0].ref == param)
+      end || nil;
     end
   end
   
@@ -578,7 +582,7 @@ class UpdateTemplate
         fetch_message = program.installFetchComponent(
           @relation, entry, @index, @target, 
           project_param(entry, $config.partition_sizes[entry.source]), 
-          entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].target] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var },
+          entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].ref] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var },
           target_nodes
         );
         map_partitions[entry.source].each do |partition|

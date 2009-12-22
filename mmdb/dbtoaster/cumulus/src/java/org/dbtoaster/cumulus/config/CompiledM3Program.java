@@ -48,22 +48,38 @@ public class CompiledM3Program
     protected List<List<Long>> partition_values = new ArrayList<List<Long>>();
     protected List<Long> partition_sizes;
     
+    public void checkClassCast(List<Long> list) {
+      long foo;
+      for(Long entry : list){
+        try {
+          foo = (long)entry;
+        } catch (NullPointerException e){}
+      }
+    }
+    
     public Condition(List<Long> partition_sizes){
       this.partition_sizes = partition_sizes;
+      checkClassCast(partition_sizes);
     }
     
     public void addPartition(List<Long> partition){
       partition_values.add(partition);
+      checkClassCast(partition);
     }
     
-    public boolean match(List<Long> partition){
+    public boolean match(List<Double> partition){
       for(List<Long> cmp : partition_values){
         boolean valid = true;
         for(int i = 0; i < partition.size(); i++){
-          if((cmp.get(i) != null) && 
-             (((long)partition.get(i) % (long)partition_sizes.get(i)) != (long)cmp.get(i))){
-            valid = false;
-            break;
+          if(cmp.get(i) != null){
+            long foo;
+            foo = (long)((double)partition.get(i));
+            foo = (long)partition_sizes.get(i);
+            foo = (long)cmp.get(i);
+            if(((long)((double)partition.get(i)) % (long)partition_sizes.get(i)) != (long)cmp.get(i)){
+              valid = false;
+              break;
+            }
           }
         }
         if(valid){

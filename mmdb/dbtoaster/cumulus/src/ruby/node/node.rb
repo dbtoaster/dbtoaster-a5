@@ -66,7 +66,7 @@ class PluralRemoteCommitNotification
         sq.load_destinations(destinations)
       end
       destinations.each_pair do |node, entries|
-        MapNode.getClient(node).push_get(entries, cmdid)
+        MapNode.getClient(node).push_get(entries, cmdid) unless $config.my_config["address"].equals(node);
       end
     end
   end
@@ -460,7 +460,7 @@ class MapNodeHandler
     @cmdcallbacks.delete(id);
     
     # This is also treated as an implicit message to ourselves.  
-    applicator.valuation.entries.keys.each do |req|
+    applicator.valuation.template.entries.each do |req|
 #      puts "Checking for #{req}"
       begin
         # If the value is known, then get() will fire immediately.
@@ -613,11 +613,12 @@ class MapNodeHandler
   end
   
   def update(relation, params, base_cmd)
+    puts "In Ruby"
     rules = @program.getRelationComponent(relation);
     rules.puts.each do |put_msg|
       if put_msg.condition.match(params) then
         if put_msg.num_gets == -1 then
-          valuation = put_msg.template.valuation;
+          valuation = put_msg.template.valuation(params);
           target = valuation.target;
           applicator = ValuationApplicator.new(
             base_cmd + put_msg.id_offset, target, valuation, self, false
@@ -625,7 +626,7 @@ class MapNodeHandler
           preload_locals(base_cmd + put_msg.id_offset, applicator);
           @stats.put;
         else
-          valuation = put_msg.template.valuation;
+          valuation = put_msg.template.valuation(params);
           applicator = MassValuationApplicator(
             base_cmd + put_msg.id_offset, valuation, put_msg.num_gets, self, false
           )
@@ -637,6 +638,7 @@ class MapNodeHandler
         end
       end
     end
+    puts "Done with puts";
     put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
     rules.fetches.each do |fetch_msg|
       if fetch_msg.condition.match(params) then

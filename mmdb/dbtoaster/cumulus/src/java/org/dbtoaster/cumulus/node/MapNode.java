@@ -247,6 +247,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException, TProtocolException
       {
+        System.out.println("In Java");
         String relation = (String) iprot.getObject();
         List<Double> params = (List<Double>) iprot.getObject();
         Integer basecmd = iprot.getInteger();
