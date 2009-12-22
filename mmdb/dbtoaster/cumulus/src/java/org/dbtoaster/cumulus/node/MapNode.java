@@ -1,6 +1,5 @@
 package org.dbtoaster.cumulus.node;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.io.IOException;
@@ -21,6 +20,9 @@ public class MapNode
 {
   public interface MapNodeIFace
   {
+    public void update(String relation, List<Double> params, int basecmd)
+      throws TException;
+
     public void put(long id, long template, List<Double> params)
       throws TException;
 
@@ -50,18 +52,45 @@ public class MapNode
   
   public static MapNodeClient getClient(InetSocketAddress addr) throws IOException {
     try {
-      MapNodeClient c = Client.get(addr, MapNodeClient.class);
+      MapNodeClient c = Client.get(addr, 1, MapNodeClient.class);
     return c;
     } catch(Exception e){
       e.printStackTrace();
       return null;
     }
   }
-  
+
+  public static MapNodeClient getClient(InetSocketAddress addr, Integer sendFrameBatchSize)
+    throws IOException
+  {
+    try {
+      MapNodeClient c = Client.get(addr, sendFrameBatchSize, MapNodeClient.class);
+    return c;
+    } catch(Exception e){
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   public static class MapNodeClient extends Client implements MapNodeIFace
   {
-    public MapNodeClient(InetSocketAddress s, Selector selector) throws IOException {
-      super(s, selector);
+    public MapNodeClient(InetSocketAddress s, Integer sendFrameBatchSize, Selector selector)
+      throws IOException
+    {
+      super(s, sendFrameBatchSize, selector);
+    }
+
+    public void update(String relation, List<Double> params, int basecmd)
+      throws TException
+    {
+      try {
+          oprot.beginMessage();
+          oprot.putObject(MapNodeMethod.UPDATE);
+          oprot.putObject(relation);
+          oprot.putObject(params);
+          oprot.putInteger(basecmd);
+          oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
 
     public void put(long id, long template, List<Double> params)
@@ -102,7 +131,9 @@ public class MapNode
         oprot.endMessage();
         waitForFrame();
         r = (Map<NetTypes.Entry, Double>) iprot.getObject();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+      } catch (TProtocolException e) { throw new TException(e.getMessage());
+      } catch (IOException e) { throw new TException(e.getMessage()); }
+      
       return r;
     }
   
@@ -161,7 +192,9 @@ public class MapNode
         oprot.endMessage();
         waitForFrame();
         r = (Map<NetTypes.Entry, Double>) iprot.getObject();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+      } catch (TProtocolException e) { throw new TException(e.getMessage());
+      } catch (IOException e) { throw new TException(e.getMessage()); }
+
       return r;
     }
     
@@ -172,9 +205,11 @@ public class MapNode
         oprot.putObject(MapNodeMethod.DUMP);
         waitForFrame();
         r = (String) iprot.getObject();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-        return r;
-      }
+      } catch (TProtocolException e) { throw new TException(e.getMessage());
+      } catch (IOException e) { throw new TException(e.getMessage()); }
+      
+      return r;
+    }
     
     public void localdump() throws TException
     {
@@ -185,7 +220,7 @@ public class MapNode
   }
     
   public static enum MapNodeMethod {
-    PUT, MASS_PUT, GET, FETCH, PUSH_GET,
+    UPDATE, PUT, MASS_PUT, GET, FETCH, PUSH_GET,
     META_REQUEST, AGGREGET, DUMP, LOCALDUMP };
 
   public static class Processor extends TProcessor<MapNodeMethod>
@@ -195,6 +230,7 @@ public class MapNode
     public Processor(MapNodeIFace h)
     {
       handler = h;
+      handlerMap.put(MapNodeMethod.UPDATE, new update());
       handlerMap.put(MapNodeMethod.PUT, new put());
       handlerMap.put(MapNodeMethod.MASS_PUT, new mass_put());
       handlerMap.put(MapNodeMethod.GET, new get());
@@ -205,7 +241,19 @@ public class MapNode
       handlerMap.put(MapNodeMethod.DUMP, new dump());
       handlerMap.put(MapNodeMethod.LOCALDUMP, new localdump());
     }
-        
+     
+    private class update extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException, TProtocolException
+      {
+        String relation = (String) iprot.getObject();
+        List<Double> params = (List<Double>) iprot.getObject();
+        Integer basecmd = iprot.getInteger();
+        handler.update(relation, params, basecmd);
+      }
+    }
+
     private class put extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
