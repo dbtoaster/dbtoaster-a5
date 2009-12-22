@@ -87,7 +87,7 @@ class TemplateEntry
   def instantiated_key(params = nil)
     @keys.collect do |k|
       case k
-        when TemplateVariable then k.to_f(params)
+        when TemplateVariable then k.to_f(params).to_i
         else k;
       end
     end
@@ -109,7 +109,7 @@ class TemplateEntry
     @keys.each_pair(entry.key) do |a, b|
       case a
         # If the variable isn't bound, let it through
-        when TemplateVariable then val = k.to_f(params); return false if (val != -1) && (val != b.to_i);
+        when TemplateVariable then val = a.to_f(params); return false if (val != -1) && (val != b.to_i);
         else return false if a.to_i != b.to_i;
       end
     end
@@ -181,7 +181,7 @@ class TemplateValuation
 
   def initialize(template, params, entries = nil)
     @template, @params = template, params.to_a;
-    @instance = Array.new(template.varlist.length, 0);
+    @instance = Array.new(template.entries.size, 0);
     @entry_values = template.entries.collect { |entry| [entry, Array.new] };
     if template.paramlist.length + template.varlist.length > @params.length then
       @params = @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
@@ -559,6 +559,7 @@ class UpdateTemplate
   end
   
   def compile_to_local(program, map_partitions)
+#    puts "Compiling ##{@index}: #{summary}";
     if constant_entry_is_local(@target, map_partitions) then
       put_message = program.installPutComponent(
         @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
@@ -575,14 +576,14 @@ class UpdateTemplate
         target_nodes = Hash.new;
         $config.nodes.each_pair do |node, node_info|
           node_info["partitions"][entry.source].each do |partition|
-            target_nodes[partition] = node;
+            target_nodes[partition] = node_info["address"];
           end
         end
 
         fetch_message = program.installFetchComponent(
           @relation, entry, @index, @target, 
           project_param(entry, $config.partition_sizes[entry.source]), 
-          entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].ref] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var },
+          entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].ref] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var }.compact,
           target_nodes
         );
         map_partitions[entry.source].each do |partition|

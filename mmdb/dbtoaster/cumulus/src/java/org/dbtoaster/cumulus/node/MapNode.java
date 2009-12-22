@@ -1,6 +1,7 @@
 package org.dbtoaster.cumulus.node;
 
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -87,7 +88,7 @@ public class MapNode
           oprot.beginMessage();
           oprot.putObject(MapNodeMethod.UPDATE);
           oprot.putObject(relation);
-          oprot.putObject(params);
+          oprot.putObject(new ArrayList(params));
           oprot.putInteger(basecmd);
           oprot.endMessage();
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
@@ -247,7 +248,7 @@ public class MapNode
       public void process(TProtocol iprot, TProtocol oprot)
         throws TException, TProtocolException
       {
-        System.out.println("In Java");
+//        System.out.println("In Java");
         String relation = (String) iprot.getObject();
         List<Double> params = (List<Double>) iprot.getObject();
         Integer basecmd = iprot.getInteger();

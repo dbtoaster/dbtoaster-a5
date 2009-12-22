@@ -100,7 +100,8 @@ class RubyConfig
         
         when "template" then 
           cmd.shift; 
-          @templates[cmd.shift] = UpdateTemplate.new(cmd.join(" "));
+          index = cmd.shift.to_i
+          @templates[index] = UpdateTemplate.new(cmd.join(" "), index);
         
         when "log_map"   then cmd.shift; @log_maps.add(cmd.shift.to_i);
         

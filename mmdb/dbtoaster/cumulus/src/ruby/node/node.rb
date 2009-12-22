@@ -42,7 +42,7 @@ end
 class PluralRemoteCommitNotification
   attr_reader :cmdid, :params, :subqueries;
   def initialize(cmdid, params)
-    @cmdid, @params = cmdid, params;
+    @cmdid, @params = cmdid, params.to_a;
     @subqueries = Array.new;
     @hold = true;
   end
@@ -98,7 +98,7 @@ class PluralRemoteCommitSubquery
   end
   
   def load_destinations(destinations)
-    params = parent.params.clone;
+    params = @parent.params.clone;
     partition_size = $config.partition_sizes[@fetch_component.target.source];
     @entries.each_pair do |entry, value|
       @fetch_component.entry_mapping.each { |mapping| params[mapping[1]] = entry.key[mapping[0]]; } 
@@ -449,7 +449,6 @@ class MapNodeHandler
     
     #initialize the template with values we've already received
     
-    puts "#{__LINE__}";
     if (@cmdcallbacks[id] != nil) then
       @cmdcallbacks[id].each do |response|
         response.each do |target_value|
@@ -459,10 +458,8 @@ class MapNodeHandler
       end
     end
     
-    puts "#{__LINE__}";
     @cmdcallbacks.delete(id);
     
-    puts "#{__LINE__}";
     # This is also treated as an implicit message to ourselves.  
     applicator.valuation.template.entries.each do |req|
 #      puts "Checking for #{req}"
@@ -486,7 +483,6 @@ class MapNodeHandler
     end
     applicator.finish_message;
     
-    puts "#{__LINE__}";
     #register ourselves to receive updates in the future
     unless applicator.ready? then
       @cmdcallbacks[id] = applicator;
@@ -618,7 +614,7 @@ class MapNodeHandler
   end
   
   def update(relation, params, base_cmd)
-    puts "In Ruby"
+#    puts "In Ruby"
     rules = @program.getRelationComponent(relation);
     rules.puts.each do |put_msg|
       if put_msg.condition.match(params) then
@@ -628,15 +624,15 @@ class MapNodeHandler
           applicator = ValuationApplicator.new(
             base_cmd + put_msg.id_offset, target, valuation, self, false
           )
-          puts "before preloads";
+#          puts "Creating put: #{base_cmd + put_msg.id_offset}"
           preload_locals(base_cmd + put_msg.id_offset, applicator);
-          puts "after preloads";
           @stats.put;
         else
           valuation = put_msg.template.valuation(params);
           applicator = MassValuationApplicator(
             base_cmd + put_msg.id_offset, valuation, put_msg.num_gets, self, false
           )
+#          puts "Creating mass-put: #{base_cmd + put_msg.id_offset}"
           preload_locals(base_cmd + put_msg.id_offset, applicator);
           plist = Array.new;
           loop_partitions(valuation.target.source, valuation.target.key) { |partition| plist.push(partition) }
@@ -645,16 +641,16 @@ class MapNodeHandler
         end
       end
     end
-    puts "Done with puts";
+#    puts "Done with puts";
     put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
     rules.fetches.each do |fetch_msg|
       if fetch_msg.condition.match(params) then
-        key = fetch_msg.entry.instantiated_key(params);
-        loop_partitions(fetch_msg.entry.source, key) do |partition|
+        loop_key = fetch_msg.entry.instantiated_key(params);
+        loop_partitions(fetch_msg.entry.source, loop_key) do |partition|
           sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg);
           partition.get(
-            key, 
-            proc { |key, value| sq.fire(MapEntry.new(t.source, key), value) },
+            loop_key, 
+            proc { |key, value| sq.fire(MapEntry.new(fetch_msg.entry.source, key), value) },
             if sq.requires_loop then proc { request.release } else nil end
           );
         end
