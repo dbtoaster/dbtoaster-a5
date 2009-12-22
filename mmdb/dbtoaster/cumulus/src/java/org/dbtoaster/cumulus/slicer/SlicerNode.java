@@ -115,7 +115,9 @@ public class SlicerNode
                 oprot.endMessage();
                 waitForFrame();
                 r = (String) iprot.getObject();
-            } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+            } catch (TProtocolException e) { throw new TException(e.getMessage()); 
+            } catch (IOException e) { throw new TException(e.getMessage()); }
+
             return r;
         }
     }
