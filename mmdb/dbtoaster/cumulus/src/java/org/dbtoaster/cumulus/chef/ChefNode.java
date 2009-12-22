@@ -25,14 +25,17 @@ public class ChefNode
     public void update(String relation, List<Double> params)
       throws TException;
     
-    public String dump()
+    public void forward_update(String relation, List<Double> params, int basecmd)
       throws TException;
     
-    public void request_backoff(String nodeID)
+    public void set_forwarders(List<InetSocketAddress> nodes, int nodeOrChef)
       throws TException;
     
-    public void finish_backoff(String nodeID)
-      throws TException;
+    public String dump() throws TException;
+    
+    public void request_backoff(String nodeID) throws TException;
+    
+    public void finish_backoff(String nodeID) throws TException;
   }
   
   public static ChefNodeClient getClient(InetSocketAddress addr) throws IOException {
@@ -64,6 +67,31 @@ public class ChefNode
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
+    public void forward_update(String relation, List<Double> params, int basecmd)
+      throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(ChefNodeMethod.FORWARD_UPDATE);
+        oprot.putObject(relation);
+        oprot.putObject(params);
+        oprot.putInteger(basecmd);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+    
+    public void set_forwarders(List<InetSocketAddress> nodes, int nodeOrChef)
+        throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(ChefNodeMethod.SET_FOWARDERS);
+        oprot.putObject(nodes);
+        oprot.putInteger(nodeOrChef);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+
     public String dump()
       throws TException
     {
@@ -98,7 +126,9 @@ public class ChefNode
     }
   }
     
-  public static enum ChefNodeMethod { UPDATE,DUMP,REQUEST_BACKOFF,FINISH_BACKOFF };
+  public static enum ChefNodeMethod {
+      UPDATE,FORWARD_UPDATE,SET_FOWARDERS,DUMP,REQUEST_BACKOFF,FINISH_BACKOFF
+  };
   
   public static class Processor extends TProcessor<ChefNodeMethod>
   {

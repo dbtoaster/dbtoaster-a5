@@ -85,10 +85,29 @@ class ChefNodeHandler
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
-      client.update(table, params, cmdid.to_i)
+      if client.is_a? MapNodeClient then
+        client.update(table, params, cmdid.to_i)
+      else client.forward_update(table, params, cmdid.to_i) end
     end
     next_cmd;
     next_update;
+  end
+  
+  def forward_update(table, params, basecmd)
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
+    params = params.collect { |param| param.to_f };
+    @nodelist.each do |client|
+      if client.is_a? MapNodeClient then
+        client.update(table, params, basecmd)
+      else client.forward_update(table, params, basecmd) end
+    end
+  end
+
+  def set_forwarders(nodes, map_nodes)
+    @nodelist = nodes.collect do |node_info|
+      if map_nodes then MapNode.getClient(node_info, 3)
+      else ChefNode.getClient(node_info) end
+    end
   end
   
   def dump()

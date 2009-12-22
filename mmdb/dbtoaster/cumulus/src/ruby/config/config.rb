@@ -5,7 +5,8 @@ require 'util/ok_mixins';
 require 'getoptlong';
 
 class RubyConfig
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path, :compiler_path;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch,
+    :log_maps, :client_debug, :spread_path, :compiler_path, :num_switches;
   attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
@@ -31,7 +32,8 @@ class RubyConfig
     Logger.info { "Spread Path is : #{@spread_path}" }
     
     @unknown_opts = Hash.new;
-    
+    @num_switches = 2
+
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 
       "transforms" => Array.new, 
@@ -62,6 +64,8 @@ class RubyConfig
           @nodes[curr_node]["address"] = java::net::InetSocketAddress.new(address, port);
         
         when "switch"    then @switch = java::net::InetSocketAddress.new(cmd[1].chomp, 52981);
+          
+        when "switch_forwarders" then @num_switches = cmd[1].chomp.to_i;  
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);

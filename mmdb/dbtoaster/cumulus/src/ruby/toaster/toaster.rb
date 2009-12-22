@@ -6,7 +6,7 @@ require 'config/template';
 
 class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives,
-    :slice_directives, :persist, :switch, :preload, :map_formulae;
+    :slice_directives, :persist, :switch, :switch_forwarders, :preload, :map_formulae;
 
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null",
                  toaster_dir = $config.compiler_path)
@@ -18,6 +18,7 @@ class DBToaster
     @persist = false;
     @compiled = nil;
     @switch = "localhost";
+    @switch_forwarders = 2;
     @preload = nil;
     @schemas = nil;
     @map_aliases = Hash.new;
@@ -55,6 +56,7 @@ class DBToaster
       when "--node"      then 
         @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9\.]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
       when "--switch"    then @switch = arg;
+      when "--switch-forwarders" then @switch_forwarders = arg; 
       when "--partition" then 
         match = /Map *([a-zA-Z0-9_]+) *on *(.*)/.match(arg);
         raise "Invalid partition directive: " + arg unless match;
@@ -477,21 +479,22 @@ $toaster_opts = []
 $pfile_basepath = "~"
 
 opts = GetoptLong.new(
-  [ "-l", "--localprops",  GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-o", "--output",      GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--node",        GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--switch",      GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--partition",   GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--domain",      GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--test",        GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--slice",       GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--key",         GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-r", "--transforms",  GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--persist",     GetoptLong::NO_ARGUMENT ],
-  [ "-k", "--ignore-keys", GetoptLong::NO_ARGUMENT ],
-  [ "-w", "--switch-addr", GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-b", "--boot",        GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-p", "--pfile",       GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-l", "--localprops",        GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-o", "--output",            GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--node",              GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--switch",            GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--switch-forwarders", GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--partition",         GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--domain",            GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--test",              GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--slice",             GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--key",               GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-r", "--transforms",        GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--persist",           GetoptLong::NO_ARGUMENT ],
+  [ "-k", "--ignore-keys",       GetoptLong::NO_ARGUMENT ],
+  [ "-w", "--switch-addr",       GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-b", "--boot",              GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-l", "--localprops"  then $config.load_local_properties(arg)
@@ -574,6 +577,7 @@ end
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
 $output.write("switch " + $toaster.switch+"\n");
+$output.write("switch_forwarders " + $toaster.switch+"\n");
 
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");

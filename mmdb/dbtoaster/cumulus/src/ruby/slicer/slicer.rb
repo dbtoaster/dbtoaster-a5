@@ -164,6 +164,26 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       if $pending_servers > 0 then handler else nil end;
     end
     
+    switches = Hash.new
+    if ($config.num_switches < $config.nodes.size) &&
+      ($config.nodes.size % $config.num_switches == 0)
+    then
+      nodes_per_switch = $config.nodes.size / $config.num_switches;
+      (0...$config_file.num_switches).each do |switchid|
+        nodeid = $config.nodes[switchid][1]["address"]
+        startidx=switchid*nodes_per_switch
+        endidx=((switchid+1)*nodes_per_switch)
+        switch_nodes = $config.nodes[startidx...endidx].collect do |node, node_info|
+          node_info["address"]
+        end 
+        switches[nodeid] = [switch_nodes, true]
+      end
+    else
+      puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
+    end
+    switch_forwarders = [switches.keys(), false]
+    switches[$config.switch] = switch_forwarders
+
     nodes = []
     $config.nodes.each do |node, node_info|
       puts "Launching #{node_info['address'].getHostName}"
@@ -182,9 +202,21 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       $clients[node_info["address"].getHostName].start_node(node_info["address"].getPort);
     end
     
-    #Logger.info { "Starting Switch @ #{$config.switch.getHostName}..." };
-    puts "Starting Switch @ #{$config.switch.getHostName}...";
-    $clients[$config.switch.getHostName].start_switch;
+    puts "Starting Switches"
+    switches.each do |switch_node, clients_and_type|
+      #Logger.info { "Starting Switch @ #{switch_node.getHostName}..." };
+      puts "Starting Switch @ #{switch_node.getHostName}..."
+      $clients[switch_node.getHostName].start_switch;
+    end
+
+    # Wait for switches to start up -- this is a hack for now.
+    sleep(10)
+
+    switches.each do |switch_node, clients_and_type|
+      clients, forward_to_nodes = clients_and_types
+      puts "Setting Switch forwarders @ #{switch_node.getHostName}"
+      ChefNode.getClient(switch_node).set_forwarders(clients, forward_to_nodes);
+    end
   
     #Logger.info { "Starting Monitor" }
     puts "Starting Monitor";
