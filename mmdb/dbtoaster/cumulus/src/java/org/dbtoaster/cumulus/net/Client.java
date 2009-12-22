@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
@@ -18,13 +17,16 @@ public abstract class Client
   protected TProtocol oprot;
   protected Semaphore pendingFrames = new Semaphore(0);
 
-  public Client(InetSocketAddress saddr, Selector selector) throws IOException
+  public Client(InetSocketAddress saddr, Integer sendFrameBatchSize, Selector selector)
+      throws IOException
   {
     this(new TProtocol(new TTransport(saddr)));
+    oprot.setFrameBatchSize(sendFrameBatchSize);
     iprot.getTransport().connect(null);
     connectTransport(this);
     pendingFrames.acquireUninterruptibly();
   }
+
   public Client(TProtocol prot) { this(prot, prot); }
   public Client(TProtocol in, TProtocol out) { iprot = in; oprot = out; }
   
@@ -35,7 +37,8 @@ public abstract class Client
     pendingFrames.release();
   }
   
-  public void waitForFrame(){
+  public void waitForFrame() throws IOException {
+    registerRead(this);
     pendingFrames.acquireUninterruptibly();
   }
   
@@ -44,7 +47,9 @@ public abstract class Client
     new HashMap<Class,HashMap<InetSocketAddress,Object>>();
   protected static SocketMonitor monitor = new SocketMonitor();
   
-  public static <T extends Client> T get(InetSocketAddress addr, Class<T> c) throws IOException
+  public static <T extends Client> T get(InetSocketAddress addr,
+          Integer sendFrameBatchSize, Class<T> c)
+      throws IOException
   {
     HashMap<InetSocketAddress,Object> cTypeSingletons = singletons.get(c);
     if(cTypeSingletons == null){
@@ -56,18 +61,8 @@ public abstract class Client
     if(ret == null){
       try { 
         
-        //System.out.println(InetAddress.getLocalHost() + " constructor for " + addr.toString() + ", " + c.getName() +
-        //    " monitor: " + (monitor == null? "null" : monitor));
-        
-        //Thread.dumpStack();
-
-        Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Selector.class);
-        
-        //System.out.println(InetAddress.getLocalHost() + " constructor: " + cons);
-        
-        ret = cons.newInstance(addr, monitor.selector());
-        
-        //System.out.println(InetAddress.getLocalHost() + " built for " + addr.toString() + ", " + c.getName());
+        Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Integer.class, Selector.class);
+        ret = cons.newInstance(addr, sendFrameBatchSize, monitor.selector());
         cTypeSingletons.put(addr, ret);
         
       } catch(NoSuchMethodException e){
@@ -97,7 +92,6 @@ public abstract class Client
       }
     }
     
-//    System.out.println("Creating client for " + c.getName());
     return ret;
   }
   
@@ -105,15 +99,25 @@ public abstract class Client
     monitor.connectTransport(c);
   }
   
+  protected static void registerRead(Client c) throws IOException {
+    monitor.registerRead(c);
+  }
+  
+  protected class ClientInterests {
+      public Client client;
+      public Integer interest;
+      ClientInterests(Client c, Integer i) { client = c; interest = i; }
+  }
+
   protected static class SocketMonitor extends Thread {
     Selector selector;
     boolean terminated;
-    ConcurrentLinkedQueue<Client> newClientQueue;
+    ConcurrentLinkedQueue<ClientInterests> pendingInterests;
     
     public SocketMonitor()
     {
       try {
-        newClientQueue = new ConcurrentLinkedQueue<Client>();
+        pendingInterests = new ConcurrentLinkedQueue<ClientInterests>();
         selector = Selector.open();
         terminated = false;
         start();
@@ -128,20 +132,25 @@ public abstract class Client
     }
     
     public void connectTransport(Client c) throws IOException {
-      newClientQueue.add(c);
+      pendingInterests.add(c.new ClientInterests(c, SelectionKey.OP_CONNECT));
       selector.wakeup();
     }
     
+    public void registerRead(Client c) throws IOException {
+      pendingInterests.add(c.new ClientInterests(c, SelectionKey.OP_READ));
+      selector.wakeup();
+    }
+
     public void run()
     {
       while (!terminated)
       {
         try 
         {
-          Client newClient;
-          while((newClient = newClientQueue.poll()) != null){
-            newClient.getInputProtocol().getTransport().
-              registerSelector(selector, SelectionKey.OP_CONNECT).attach(newClient);
+          ClientInterests newInterest;
+          while((newInterest = pendingInterests.poll()) != null) {
+            TTransport t = newInterest.client.getInputProtocol().getTransport();
+            t.registerSelector(selector, newInterest.interest).attach(newInterest.client);
           }
           
           selector.select();
@@ -150,6 +159,7 @@ public abstract class Client
           {
             SelectionKey key = keys.next();
             Client c = (Client)key.attachment();
+            keys.remove();
             
             boolean processed = false;
 

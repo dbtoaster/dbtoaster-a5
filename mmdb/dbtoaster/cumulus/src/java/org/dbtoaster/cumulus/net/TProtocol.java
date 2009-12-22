@@ -31,7 +31,9 @@ public class TProtocol
     ByteArrayOutputStream baos;
     ObjectOutputStream out;
 
-    private final int frameBufferSize = 32*1024;
+    private final int frameBufferSize = 1024*1024;
+    private int frameBatchCount = 10;
+    private int frameCount = 0;
 
     TTransport transport;
     
@@ -54,6 +56,8 @@ public class TProtocol
     }
     
     public TTransport getTransport() { return transport; }
+
+    public void setFrameBatchSize(Integer s) { frameBatchCount = s; }
 
     void reset()
     {
@@ -298,17 +302,24 @@ public class TProtocol
     // Non-blocking write, returns if we successfully queued for transport.
     boolean sendFrame()
     {
-        if ( !batch ) {
+        ++frameCount;
+        if ( !batch &&
+            (frameBatchCount == 1 ||
+                (frameCount < 100 || ((frameCount % frameBatchCount) == 0))) )
+        {
             try {
                 out.flush();
                 byte[] buf = baos.toByteArray();
                 int bytesSent = transport.send(buf, 0, buf.length);
+                if ( bytesSent != buf.length ) --frameCount;
                 return bytesSent == buf.length;
             } catch (IOException e) { e.printStackTrace(); }
         }
 
         // Pretend as if we succeeded if we're in the middle of a batch.
-        return batch || false;
+        return batch
+            || (frameBatchCount != 1 &&
+                ((frameCount >= 100) && ((frameCount % frameBatchCount) != 0)));
     }
    
     // Non-blocking read, returns if we have a valid frame to read.
@@ -455,8 +466,11 @@ public class TProtocol
     void sendObject()
     {
         try {
-            while ( !sendFrame() ) { Thread.yield(); }
-            if ( !batch ) {
+            while ( !sendFrame() ) { transport.waitForWrite(); }
+
+            if ( !batch && (frameBatchCount == 1 ||
+                    (frameCount < 100 || (frameCount % frameBatchCount) == 0)) )
+            {
                 baos = new ByteArrayOutputStream();
                 out = new ObjectOutputStream(baos);
             }

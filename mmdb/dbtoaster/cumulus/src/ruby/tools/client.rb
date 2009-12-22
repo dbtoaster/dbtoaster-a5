@@ -174,7 +174,7 @@ $input.each do |line|
     $count += 1;
     if $count % $stats_every == 0 then
       diff = (Time.now - $starttime)
-      puts diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
+      puts "client: " + diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
       puts switch.dump if ($verbose && !$test);
       $starttime = Time.now;
       if $ratelimit then
@@ -186,4 +186,6 @@ $input.each do |line|
     end
   end
 end
+
+sleep 1000;
 

@@ -14,9 +14,10 @@ class ChefNodeHandler
     @fetch_count = 0;
     @templates = Hash.new { |h,k| h[k] = Array.new };
     @layout = MapLayout.new;
-    @nodelist = Hash.new { |h,k| h[k] = MapNode::getClient(k); };
+    @nodelist = Hash.new { |h,k| h[k] = MapNode::getClient(k, 3); };
     @update_count = 0;
     @update_timer = nil;
+    @start_time = nil;
     @backoff_nodes = Array.new;
     @metacompiled = nil
   end
@@ -31,7 +32,11 @@ class ChefNodeHandler
   end
   
   def next_update
-    puts "Switch: #{@next_update} updates processed; #{@next_cmd} puts, #{@fetch_count} fetches" if (@next_update % 1000 == 0) 
+    @start_time = Time.now if @start_time.nil?; 
+    if (@next_update % 1000 == 0) then
+      rate = @next_update / (Time.now - @start_time)
+      puts "Switch: #{@next_update} updates processed, rate: #{rate}, #{@next_cmd} puts, #{@fetch_count} fetches"
+    end
     @next_update += 1;
   end
 
@@ -45,34 +50,41 @@ class ChefNodeHandler
     #puts "Switch: #{node} no longer needs backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}";
   end
 
+#  def update(table, params)
+#    raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
+#    raise SpreadException.backoff("Backoff: Nodes #{@backoff_nodes.to_a.join(",")} lagged") unless @backoff_nodes.empty?;
+#    params = params.collect { |param| param.to_i }
+#    if @metacompiled then 
+#      @next_cmd += @metacompiled[table.to_s].fire(params) do |nodeMessage|
+#        nodeMessage.dispatch(@nodelist[nodeMessage.node], params, @next_cmd);
+#      end
+#      next_update;
+#    else
+#      @templates[table.to_s].each do |trigger|
+#        put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
+#          @fetch_count += 1;
+#          @nodelist[fetch_node].fetch(fetch_entries, put_node, cmdid+put_index);
+#        end
+#        if trigger.requires_loop?
+#          put_nodes.each do |put_node, num_gets|
+#            @nodelist[put_node].mass_put(cmdid.to_i, trigger.index.to_i, num_gets.to_i, params);
+#            next_cmd;
+#          end
+#        else
+#          raise SpreadException.new("More than one put node (#{put_nodes.size}) for a non-mass put: Template: #{trigger.index}; Entry #{table} => #{params.join(",")}") unless put_nodes.size == 1;
+#          @nodelist[put_nodes[0][0]].put(cmdid.to_i, trigger.index.to_i, params);
+#          next_cmd;
+#        end
+#      end
+#      next_update
+#    end
+#  end
+  
   def update(table, params)
-    raise SpreadException.new("Unknown table '"+table.to_s+"'") unless @templates.has_key? table.to_s;
-    raise SpreadException.backoff("Backoff: Nodes #{@backoff_nodes.to_a.join(",")} lagged") unless @backoff_nodes.empty?;
-    params = params.collect { |param| param.to_i }
-    if @metacompiled then 
-      @next_cmd += @metacompiled[table.to_s].fire(params) do |nodeMessage|
-        nodeMessage.dispatch(@nodelist[nodeMessage.node], params, @next_cmd);
-      end
-      next_update;
-    else
-      @templates[table.to_s].each do |trigger|
-        put_nodes = trigger.fire(params) do |fetch_entries, fetch_node, put_node, put_index|
-          @fetch_count += 1;
-          @nodelist[fetch_node].fetch(fetch_entries, put_node, cmdid+put_index);
-        end
-        if trigger.requires_loop?
-          put_nodes.each do |put_node, num_gets|
-            @nodelist[put_node].mass_put(cmdid.to_i, trigger.index.to_i, num_gets.to_i, params);
-            next_cmd;
-          end
-        else
-          raise SpreadException.new("More than one put node (#{put_nodes.size}) for a non-mass put: Template: #{trigger.index}; Entry #{table} => #{params.join(",")}") unless put_nodes.size == 1;
-          @nodelist[put_nodes[0][0]].put(cmdid.to_i, trigger.index.to_i, params);
-          next_cmd;
-        end
-      end
-      next_update
+    @nodelist.each_pair do |h,client|
+      client.update(table, params, cmdid.to_i)
     end
+    @next_cmd += @next_template
   end
   
   def dump()
@@ -127,9 +139,9 @@ $config.partition_sizes.each_pair do |map, sizes|
   handler.define_partition(map, sizes);
 end
 $config.templates.each_pair do |id, cmd|
-  handler.install_template(cmd, id)
+  handler.install_template(cmd)
 #  puts "Loaded Template " + id.to_s;
 end
-handler.metacompile_templates;
+#handler.metacompile_templates;
 
 handler;

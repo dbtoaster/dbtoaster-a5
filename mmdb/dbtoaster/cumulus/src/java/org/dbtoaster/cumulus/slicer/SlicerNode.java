@@ -32,16 +32,21 @@ public class SlicerNode
     public static SlicerNodeClient getClient(InetSocketAddress addr)
         throws IOException
     {
-        System.out.println("Creating SlicerNodeClient...");
-        return Client.get(addr, SlicerNodeClient.class);
+        return Client.get(addr, 1, SlicerNodeClient.class);
+    }
+
+    public static SlicerNodeClient getClient(InetSocketAddress addr, Integer sendFrameBatchSize)
+        throws IOException
+    {
+        return Client.get(addr, sendFrameBatchSize, SlicerNodeClient.class);
     }
 
     public static class SlicerNodeClient extends Client implements SlicerNodeIFace
     {
-        public SlicerNodeClient(InetSocketAddress s, Selector selector)
+        public SlicerNodeClient(InetSocketAddress s, Integer sendFrameBatchSize, Selector selector)
             throws IOException
         {
-            super(s, selector);
+            super(s, sendFrameBatchSize, selector);
         }
 
         public void start_switch() throws TException

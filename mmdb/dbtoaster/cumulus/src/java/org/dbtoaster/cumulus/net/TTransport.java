@@ -8,6 +8,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 
 public class TTransport
 {
@@ -18,16 +22,70 @@ public class TTransport
     
     private SelectionKey key;
     
+    private Semaphore pendingWrites;
+
+    // Key interest change batching.
+    class InterestBuffer
+    {
+        Timer taskRunner;
+        boolean scheduled;
+        long delay;
+
+        private int keyOperation;
+        boolean enableOperation;
+        ConcurrentLinkedQueue<SelectionKey> pendingKeys;
+
+        class KeyTask extends TimerTask
+        {
+            public void run()
+            {
+                SelectionKey k;
+                while ( (k = pendingKeys.poll()) != null ) {
+                    k.interestOps(enableOperation?
+                        (k.interestOps() | keyOperation) :
+                        (k.interestOps() ^ keyOperation));
+                }
+                selector.wakeup();
+                scheduled = false;
+            }
+        }
+
+        InterestBuffer(int op, boolean enable, long d) {
+            taskRunner = new Timer();
+            scheduled = false;
+            delay = d;
+
+            keyOperation = op;
+            enableOperation = enable;
+            pendingKeys = new ConcurrentLinkedQueue<SelectionKey>();
+        }
+
+        public void addKey(SelectionKey k) {
+            pendingKeys.add(k);
+            synchronized ( taskRunner ) {
+                if ( !scheduled ) {
+                    scheduled = true;
+                    taskRunner.schedule(new KeyTask(), delay);
+                }
+            }
+        }
+
+    }
+    
+    InterestBuffer registerWriteTask;
+    //InterestBuffer registerReadTask;
+    //InterestBuffer cancelReadTask;
+
     private ByteBuffer readBuffer;
     private ByteBuffer writeBuffer;
     
     private Long totalRead;
     private Long totalWritten;
     
-    private final int readBufferSize = 256*1024; 
-    private final int writeBufferSize = 256*1024;
-    private final int socketSendBufferSize = 32*1024;
-    private final int socketRecvBufferSize = 32*1024;
+    private final int readBufferSize = 1024*1024; 
+    private final int writeBufferSize = 1024*1024;
+    private final int socketSendBufferSize = 1024*1024;
+    private final int socketRecvBufferSize = 1024*1024;
 
     public TTransport(InetSocketAddress s)
     {
@@ -37,6 +95,11 @@ public class TTransport
         
         totalRead = 0L;
         totalWritten = 0L;
+        
+        pendingWrites = new Semaphore(0);
+        registerWriteTask = new InterestBuffer(SelectionKey.OP_WRITE, true, 1000);
+        //registerReadTask = new InterestBuffer(SelectionKey.OP_READ, true, 200);
+        //cancelReadTask = new InterestBuffer(SelectionKey.OP_READ, false, 200);
     }
     
     public TTransport(SocketChannel c) throws IOException
@@ -49,6 +112,11 @@ public class TTransport
         
         totalRead = 0L;
         totalWritten = 0L;
+
+        pendingWrites = new Semaphore(0);
+        registerWriteTask = new InterestBuffer(SelectionKey.OP_WRITE, true, 1000);
+        //registerReadTask = new InterestBuffer(SelectionKey.OP_READ, true, 200);
+        //cancelReadTask = new InterestBuffer(SelectionKey.OP_READ, false, 200);
     }
 
     public SelectionKey registerSelector(Selector s, int interests) throws IOException
@@ -61,7 +129,7 @@ public class TTransport
     public void connect(Selector s) throws IOException
     {
         channel = SocketChannel.open();
-//        System.out.println("Connecting transport to " + server);
+        //System.out.println("Connecting transport to " + server);
         channel.configureBlocking(false);
         channel.socket().setSendBufferSize(socketSendBufferSize);
         channel.socket().setReceiveBufferSize(socketRecvBufferSize);
@@ -80,7 +148,7 @@ public class TTransport
         if ( channel.isConnectionPending() ) {
             channel.finishConnect();
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-//            System.out.println("Connected to " + server.toString());
+            //System.out.println("Connected to " + server.toString());
             System.out.flush();
         }
     }
@@ -114,6 +182,9 @@ public class TTransport
         {
             writeBuffer = (ByteBuffer) writeBuffer.flip();
             bytesWritten = channel.write(writeBuffer);
+            
+            // Note we immediately apply the key change here since this
+            // should only be called from the selector thread.
             if ( writeBuffer.hasRemaining() )
                 key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
             else
@@ -122,25 +193,32 @@ public class TTransport
         }
         totalWritten += bytesWritten;
         //System.out.println("Transport wrote: " + bytesWritten + ", " + toString());
+        
+        if ( writeBuffer.remaining() > 0 ) writeAvailable();
+
         return bytesWritten;
     }
+    
+    public void waitForWrite() { pendingWrites.acquireUninterruptibly(); }
+    
+    public void writeAvailable() { pendingWrites.release(); }
 
     public int send(byte[] buf, int off, int len)
     {
-        int bytesSent = len;
+        int bytesSent = 0;
         synchronized(writeBuffer)
         {
             //System.out.println(server + ": sending: " + len);
-            try {
-                writeBuffer.mark();
+
+            // Manually detect overflow.
+            if ( writeBuffer.remaining() >= (4+len) )
+            {
                 writeBuffer.putInt(len);
-                writeBuffer.put(ByteBuffer.wrap(buf, off, len));
-                key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
-                selector.wakeup();
-            } catch (BufferOverflowException e) {
-                writeBuffer.reset();
-                bytesSent = 0;
-                //System.out.println("Buffer overflow, req: " + len + ", " + toString());
+                writeBuffer.put(buf, off, len);
+                //key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+                registerWriteTask.addKey(key);
+                //selector.wakeup();
+                bytesSent = len;
             }
         }
         
@@ -159,10 +237,13 @@ public class TTransport
             if ( bytesRecv > 0 )
             {
                 readBuffer.flip();
-                try {
+
+                // Manually detect underflow.
+                if ( len <= readBuffer.remaining() )
+                {
                     readBuffer.get(buf, off, len);
                     readBuffer.compact();
-                } catch (BufferUnderflowException e) {
+                } else {
                     bytesRecv = 0;
                     readBuffer.compact();
                     //System.out.println("Buffer underflow, req: " + len + ",  "+ toString());
@@ -174,15 +255,17 @@ public class TTransport
             {
                 if ( bytesRecv < len ) {
                     //System.out.println("Adding key " + key + " for read.");
-                    key.interestOps(key.interestOps() | SelectionKey.OP_READ);                    
+                    key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+                    //registerReadTask.addKey(key);
                 }
 
                 else {
                     //System.out.println("Removing key " + key + " for read.");
                     key.interestOps(key.interestOps() ^ SelectionKey.OP_READ);
+                    //cancelReadTask.addKey(key);
                 }
 
-                selector.wakeup();
+                //selector.wakeup();
             }
             else {
                 System.out.println("Invalid key: " + key);

@@ -36,13 +36,20 @@ public class ChefNode
   }
   
   public static ChefNodeClient getClient(InetSocketAddress addr) throws IOException {
-    return Client.get(addr, ChefNodeClient.class);
+    return Client.get(addr, 1, ChefNodeClient.class);
+  }
+
+  public static ChefNodeClient getClient(InetSocketAddress addr, Integer sendFrameBatchSize)
+    throws IOException {
+    return Client.get(addr, sendFrameBatchSize, ChefNodeClient.class);
   }
 
   public static class ChefNodeClient extends Client implements ChefNodeIFace
   {
-    public ChefNodeClient(InetSocketAddress s, Selector selector) throws IOException {
-      super(s, selector);
+    public ChefNodeClient(InetSocketAddress s, Integer sendFrameBatchSize, Selector selector)
+      throws IOException
+    {
+      super(s, sendFrameBatchSize, selector);
     }
     
     public void update(String relation, List<Double> params)
@@ -64,7 +71,8 @@ public class ChefNode
         oprot.putObject(ChefNodeMethod.DUMP);
         waitForFrame();
         return (String)iprot.getObject();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+      } catch (TProtocolException e) { throw new TException(e.getMessage());
+      } catch (IOException e) { throw new TException(e.getMessage()); }
     }
     
     public void request_backoff(String nodeID)
