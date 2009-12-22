@@ -404,7 +404,7 @@ class MapNodeHandler
     end
     cmd.compile_to_local(
       @program, 
-      @maps.collect_hash { |map_partitions| [ map_partitions[0], map_partitions[1].keys ] }
+      @maps.to_a.collect_hash { |map_partitions| [ map_partitions[0], map_partitions[1].keys ] }
     );
     Logger.debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
@@ -646,7 +646,7 @@ class MapNodeHandler
           partition.get(
             key, 
             proc { |key, value| sq.fire(MapEntry.new(t.source, key), value) },
-            proc { request.release } if sq.requires_loop
+            if sq.requires_loop then proc { request.release } else nil end
           );
         end
       end

@@ -7,7 +7,7 @@ require 'chef/maplayout';
 class ChefNodeHandler
   include Java::org::dbtoaster::cumulus::chef::ChefNode::ChefNodeIFace;
   
-  def initialize
+  def initialize(num_templates)
     @next_template = 0;
     @next_cmd = 1;
     @next_update = 1;
@@ -20,6 +20,7 @@ class ChefNodeHandler
     @start_time = nil;
     @backoff_nodes = Array.new;
     @metacompiled = nil
+    @num_templates = num_templates;
   end
   
   
@@ -28,7 +29,7 @@ class ChefNodeHandler
   end
   
   def next_cmd
-    @next_cmd += 1;
+    @next_cmd += @num_templates;
   end
   
   def next_update
@@ -84,7 +85,7 @@ class ChefNodeHandler
     @nodelist.each_pair do |h,client|
       client.update(table, params, cmdid.to_i)
     end
-    @next_cmd += @next_template
+    next_cmd;
   end
   
   def dump()
@@ -127,7 +128,7 @@ class ChefNodeHandler
 end
 
 
-handler = ChefNodeHandler.new;
+handler = ChefNodeHandler.new($config.templates);
 $config.nodes.each_pair do |node, info|
   handler.install_node(info["address"], info["partitions"]);
 #  puts("Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 
@@ -138,10 +139,10 @@ end
 $config.partition_sizes.each_pair do |map, sizes|
   handler.define_partition(map, sizes);
 end
-$config.templates.each_pair do |id, cmd|
-  handler.install_template(cmd)
+#$config.templates.each_pair do |id, cmd|
+#  handler.install_template(cmd)
 #  puts "Loaded Template " + id.to_s;
-end
+#end
 #handler.metacompile_templates;
 
 handler;

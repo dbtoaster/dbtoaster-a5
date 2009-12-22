@@ -115,8 +115,10 @@ class RubyConfig
     end
 
     properties.each do |line|
-      opt, arg = line.split('=', 2)
-      parse_opt(opt.strip,arg.strip)
+      if line.strip != "" then
+        opt, arg = line.split('=', 2)
+        parse_opt(opt.strip,arg.strip)
+      end
     end
   end
 

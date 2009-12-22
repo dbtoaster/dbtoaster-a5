@@ -184,11 +184,11 @@ class TemplateValuation
     @instance = Array.new(template.varlist.length, 0);
     @entry_values = template.entries.collect { |entry| [entry, Array.new] };
     if template.paramlist.length + template.varlist.length > @params.length then
-      @params.append(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
+      @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
     end
   end
   
-  def entries[](entry)
+  def [](entry)
     @entry_values[entry][1][@instance[entry]][1];
   end
   
@@ -223,7 +223,7 @@ class TemplateValuation
       # extract loop variables from the currently active entry set
       @template.loopvarlist.each do |loopentry|
         loopentry[1].each do |replacement|
-          @params[replacement[1].ref] = entries[loopentry[0]].key[replacement[0]];
+          @params[replacement[1].ref] = self[loopentry[0]].key[replacement[0]];
         end
       end
       
@@ -241,7 +241,7 @@ class TemplateExpression
     @op, @left, @right = op, left, right;
   end
   
-  def entries(list = Array.new, num_list = )
+  def entries(list = Array.new)
     case @op
       when :plus, :mult, :sub, :div then @left.entries(@right.entries(list));
       when :map                     then list.push(@left);
@@ -258,8 +258,7 @@ class TemplateExpression
     end.compact.collect do |entry|
       [
         template.entries.index(entry), 
-        entry.key.collect_index { |k| [i,k] if (k.is_a? TemplateVariable) && (key.type == :var) }.compact;
-        end.delete_if do |e| e.nil? end
+        entry.key.collect_index { |k| [i,k] if (k.is_a? TemplateVariable) && (key.type == :var) }.compact
       ]
     end
   end
@@ -275,12 +274,12 @@ class TemplateExpression
           when TemplateVariable then @left.to_f(params ? params.params : nil)
           else                       @left.to_f;
         end
-      when :map  then @params.entries[@right];
+      when :map  then params[@right];
       else            raise SpreadException.new("Unknown Expression operator (to_f): " + @op.to_s);
     end
   end
   
-  def to_s(params = TemplateValuation.new)
+  def to_s(params = nil)
     case @op
       when :plus      then "(" + @left.to_s(params) + ")+(" + @right.to_s(params) + ")";
       when :mult      then "(" + @left.to_s(params) + ")*(" + @right.to_s(params) + ")";
@@ -288,17 +287,17 @@ class TemplateExpression
       when :div       then "(" + @left.to_s(params) + ")/(" + @right.to_s(params) + ")";
       when :val       then
         case @left
-          when TemplateVariable then if params.to_f(@left) == -1 then params.name else params.to_f(@left);
+          when TemplateVariable then if params.to_f(@left) == -1 then params.name else params.to_f(@left) end;
           else @left.to_s
         end
-      when :map       then @left.to_s(params.params);
+      when :map       then @left.to_s(params ? params.params : params);
       else            raise SpreadException.new("Unknown Expression operator (to_s): " + @op.to_s);
     end
   end
   
   def TemplateExpression.decode_var(template, tokenizer)
     case tokenizer.next
-      when "(" then decode(tokenizer);
+      when "(" then decode(template, tokenizer);
       when "+","*","/",")" then 
         raise SpreadException.new("Parse Error: Found "+tokenizer.last+" instead of rval");
       when "-" then
@@ -327,7 +326,7 @@ class TemplateExpression
     end
     right = decode_var(template, tokenizer);
     
-    if tokenizer.more? then decode(tokenizer, TemplateExpression.new(op, left, right))
+    if tokenizer.more? then decode(template, tokenizer, TemplateExpression.new(op, left, right))
     else                    TemplateExpression.new(op, left, right);
     end
   end
@@ -394,9 +393,9 @@ end
 class TemplateConditionList
   attr_reader :conditions;
   
-  def initialize(line)
+  def initialize(template, line)
     @conditions = line.split(/ *AND */).collect do |cond|
-      TemplateCondition.new(cond);
+      TemplateCondition.new(template, cond);
     end
   end
   
@@ -431,7 +430,7 @@ class TemplateVariable
       @ref = template.varlist.index(name) + template.paramlist.length;
       @type = :var;
     else
-      template.varlist.append(name);
+      template.varlist.push(name);
       @ref = template.varlist.index(name) + template.paramlist.length;
       @type = :var;
     end
@@ -441,6 +440,10 @@ class TemplateVariable
     return -1 if params == nil;
     return -1 if params.length <= @ref;
     return params[@ref];
+  end
+  
+  def to_s(params = nil)
+    return "#{name}:#{to_f(params)}"
   end
 end
 
@@ -578,7 +581,7 @@ class UpdateTemplate
           entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].target] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var },
           target_nodes
         );
-        map_partitions[entry.source] do |partition|
+        map_partitions[entry.source].each do |partition|
           fetch_message.condition.addPartition(project_param(entry, partition));
         end
       end

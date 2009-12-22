@@ -148,7 +148,6 @@ class DBToaster
             [key, name];
           end
         end
-        template.expression.rename(new_key_names);
         rel_temps[0].add_expression(template.expression);
       end
     end
