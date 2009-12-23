@@ -156,8 +156,9 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     else
       subtree_nodes=(fanout**level)
       (0...fanout).each do |i|
+        next_parent = java.net.InetSocketAddress.new(addresses[addr_idx+i].getHostName, 52981);
         switches = switches.merge(build_chef_internal_nodes(
-          fanout,level-1,addresses[addr_idx+i],addresses,(addr_idx+fanout)+i*subtree_nodes))
+          fanout,level-1,next_parent,addresses,(addr_idx+fanout)+i*subtree_nodes))
       end
       switches[parent] = [addresses[addr_idx...(addr_idx+fanout)].collect do |n|
           java.net.InetSocketAddress.new(n.getHostName, 52981)
@@ -192,8 +193,10 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
         
       leaves = []
       switches.each_value do |ch,node_type|
-        leaves.concat(ch.select { |c| not(switches.key?(c)) })
+        leaves = leaves.concat(ch.select { |c| not(switches.key?(c)) }).uniq
       end
+
+      puts "Leaves: " + leaves.collect { |n| n.getHostName }.join(",")
 
       node_addr_idx = 0;
 
