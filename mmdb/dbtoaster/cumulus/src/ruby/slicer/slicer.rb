@@ -165,6 +165,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     switches = Hash.new
     node_addresses = $config.nodes.to_a.delete_if do |node,node_info|
       node_info["address"].getHostName == "localhost"
+    end
 
     if num_nodes > $config.nodes.size then
       puts "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
