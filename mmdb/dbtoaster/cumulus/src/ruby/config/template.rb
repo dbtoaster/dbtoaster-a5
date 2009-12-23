@@ -464,6 +464,7 @@ class UpdateTemplate
     raise SpreadException.new("Instantiating update template with insufficient components: " + text_line) if line.size < 5;
     
     @entries = Array.new;
+    @allocation_grid = nil;
     
     # This template applies to updates to [0]
     @relation = line[0].to_s;
@@ -490,40 +491,6 @@ class UpdateTemplate
     # element of the entry's key is identified as a member of LOOPVAR's domain.  It is 
     # possible for there to be multiple KEYINDEX/LOOPVAR pairs.   
     @loopvarlist = @expression.loop_vars(self);
-    
-    
-    # Allocation grid is an n-dimensional hypertable; Every possible valuation of the
-    # underlying relation maps to one specific cell in the allocation grid; and the
-    # contents of that cell are the set of nodes that need to push values to perform
-    # this template.
-    @allocation_grid_sizes = Array.new(@paramlist.size+@varlist.size, 1)
-    [target].concat(@entries).each do |entry|
-      entry.key.zip($config.partition_sizes[entry.source]).each do |dim|
-        if dim[0].is_a? TemplateVariable then
-          @allocation_grid_sizes[dim[0].ref] = Math.max(@allocation_grid_sizes[dim[0].ref], dim[1]);
-        end
-      end
-    end
-    count = 1;
-    @allocation_grid_sizes.each { |s| count *= s; }
-    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
-    @allocation_grid = Hash.new
-    @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
-      grid_cell = Array.new
-      @allocation_grid[global_partition] = grid_cell;
-      @entries.each do |entry|
-        entry_partition = entry.key.zip($config.partition_sizes[entry.source]).collect do |dim|
-          if(dim[0].is_a? Numeric) then 
-            dim[0] % dim[1];
-          else
-            global_partition[dim[0].ref] % dim[1];
-          end
-        end
-        
-        entry_owner = $config.partition_owners[entry.source][entry_partition];
-        grid_cell.push(entry_owner) unless grid_cell.include? entry_owner;
-      end
-    end
     
     @index = index;
   end
@@ -574,6 +541,43 @@ class UpdateTemplate
     end.compact;
   end
   
+  def compute_allocation_grid
+    return if @allocation_grid;
+    
+    # Allocation grid is an n-dimensional hypertable; Every possible valuation of the
+    # underlying relation maps to one specific cell in the allocation grid; and the
+    # contents of that cell are the set of nodes that need to push values to perform
+    # this template.
+    @allocation_grid_sizes = Array.new(@paramlist.size+@varlist.size, 1)
+    [target].concat(@entries).each do |entry|
+      entry.key.zip($config.partition_sizes[entry.source]).each do |dim|
+        if dim[0].is_a? TemplateVariable then
+          @allocation_grid_sizes[dim[0].ref] = Math.max(@allocation_grid_sizes[dim[0].ref], dim[1]);
+        end
+      end
+    end
+    count = 1;
+    @allocation_grid_sizes.each { |s| count *= s; }
+    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
+    @allocation_grid = Hash.new
+    @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
+      grid_cell = Array.new
+      @allocation_grid[global_partition] = grid_cell;
+      @entries.each do |entry|
+        entry_partition = entry.key.zip($config.partition_sizes[entry.source]).collect do |dim|
+          if(dim[0].is_a? Numeric) then 
+            dim[0] % dim[1];
+          else
+            global_partition[dim[0].ref] % dim[1];
+          end
+        end
+        
+        entry_owner = $config.partition_owners[entry.source][entry_partition];
+        grid_cell.push(entry_owner) unless grid_cell.include? entry_owner;
+      end
+    end
+  end
+  
   def project_param(entry, term_list)
     (0...@paramlist.size).collect do |param|
       entry.key.zip(term_list).find do |dim|
@@ -598,13 +602,15 @@ class UpdateTemplate
       if partition.zip(@target.instantiated_key(cell_partition), $config.partition_sizes[@target.source]).assert do |dim|
         dim[0] == (dim[1] % dim[2]);
       end then
-        projection[cell_partition](grid_cell);
+        projection[cell_partition] = grid_cell;
       end
     end
     projection;
   end
   
   def compile_to_local(program, map_partitions)
+    compute_allocation_grid;
+    
     puts "Compiling Local Instance of ##{@index}: #{summary}";
     if constant_entry_is_local(@target, map_partitions) then
       put_message = program.installPutComponent(
