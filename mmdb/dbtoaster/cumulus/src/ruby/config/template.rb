@@ -192,14 +192,18 @@ class TemplateValuation
     entry_column = @entry_values[entry];
     instance = @instance[entry];
     entry_element = entry_column[1][instance];
-    raise SpreadException.new("Incomplete valuation") unless entry_element;
+    raise "Incomplete valuation: missing #{entry} (in instance [#{@instance.join(",")}], values: [#{entry_column[1].join(",")}]" unless entry_element;
+#    raise "Incomplete valuation";
     entry_element ? entry_element[1] : nil;
   end
   
   def discover(entry, value)
+    found = false;
     @entry_values.each do |parametrization|
+      found = true;
       parametrization[1].push([entry,value]) if(parametrization[0].weak_match?(entry, @params));
     end
+    puts "Discovered #{entry} = #{value}, but no match in: #{@entry_values.collect {|e| e[0]}.join(",")}" unless found;
   end
   
   def ready?
@@ -221,7 +225,7 @@ class TemplateValuation
   
   def foreach
     orig_instance = @instance;
-    @entry_values.collect { |parametrization| (0..parametrization[1].size) }.each_cross_product do |parametrization|
+    @entry_values.collect { |parametrization| (0...parametrization[1].size) }.each_cross_product do |parametrization|
       @instance = parametrization;
       
       # extract loop variables from the currently active entry set
@@ -621,6 +625,7 @@ class UpdateTemplate
         partition_nodes = 
           project_grid_to_entry(@target, partition).values.flatten.uniq;
         partition_nodes.delete($config.my_config["address"]);
+        raise "Error: NIL in Put" if partition_nodes.find { |t| t.nil? };
         
         put_message.condition.addPartition(project_param(@target, partition), partition_nodes.size)
       end
@@ -644,9 +649,16 @@ class UpdateTemplate
         );
         map_partitions[entry.source].each do |partition|
           targets = project_grid_to_entry(entry, partition).keys.collect do |grid_partition|
-            $config.partition_owners[entry.source][entry.instantiated_key(grid_partition)];
+            entry_partition = 
+              entry.instantiated_key(grid_partition).zip($config.partition_sizes[entry.source]).collect do |dim| 
+                dim[0] % dim[1];
+              end
+            
+#            raise "Error: unclaimed partition: Map #{entry.source}[#{entry_partition}] in #{$config.partition_owners}" unless $config.partition_owners[entry.source][entry_partition];
+            $config.partition_owners[entry.source][entry_partition];
           end.uniq
           targets.delete($config.my_config["address"]);
+          raise "Error: NIL in Fetch" if targets.find { |t| t.nil? };
           fetch_message.condition.addPartition(project_param(entry, partition), targets);
         end
       end

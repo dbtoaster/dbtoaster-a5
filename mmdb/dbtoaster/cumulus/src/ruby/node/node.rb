@@ -66,6 +66,7 @@ class PluralRemoteCommitNotification
         sq.load_destinations(destinations)
       end
       destinations.each_pair do |node, entries|
+#        puts "Connecting to #{node}..."
         MapNode.getClient(node).push_get(entries, cmdid) unless $config.my_config["address"].equals(node);
       end
     end
@@ -82,6 +83,7 @@ class PluralRemoteCommitSubquery
     @requires_loop = @fetch_component.entry.requires_loop?;
     @entries = Hash.new;
     @ready = false;
+    raise "Error: NIL in Expected" if @expected_destinations.find { |t| t.nil? };
   end
   
   def fire(entry, value)
@@ -105,6 +107,7 @@ class PluralRemoteCommitSubquery
       @fetch_component.entry_mapping.each { |mapping| params[mapping[1]] = entry.key[mapping[0]]; } 
       target_partition = @fetch_component.target.partition(params, partition_size);
       @fetch_component.target_partitions.each_pair do |partition, node|
+        raise "Error: NIL in LOAD" if node.nil?;
         if partition.zip(target_partition).assert { |partition| (partition[1] == -1) || (partition[1] == partition[0]) } then
           destinations[node][entry] = value;
         end
@@ -157,7 +160,7 @@ class RemoteCommitNotification
   def check_ready
     Logger.debug { "RemoteCallback Check Ready: holding = " + @holding.to_s + "; entries left = " + @count.to_s }
     if (@holding <= 0) && (@count <= 0) then
-      Logger.debug { "Connecting to " + @destination.to_s }
+#      puts "Connecting to " + @destination.to_s;
       peer = MapNode.getClient(@destination);
       peer.push_get(@entries, @cmdid);
       Logger.debug { "push finished" }
@@ -225,7 +228,7 @@ class ValuationApplicator
     @final_val, @record = nil, nil;
     begin
       @final_val = @valuation.to_f
-    rescue SpreadException => e
+    rescue Exception => e
       # it's not ready
       Logger.debug { e.to_s }
     end
@@ -245,7 +248,7 @@ class ValuationApplicator
         @record.discover(@target.key, @final_val).finish;
         @handler.finish_valuating(@id);
       end
-    rescue SpreadException => e
+    rescue Exception => e
       # it's not ready
       #puts e.to_s;
     end
@@ -317,7 +320,7 @@ class MassValuationApplicator
       complete if ready?
     else
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
-      @valuator.foreach do |target, delta_value|
+      @valutation.foreach do |target, delta_value|
 #        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
         partition = target.partition(@handler.partition_sizes[target.source]);
         partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;
@@ -330,7 +333,7 @@ class MassValuationApplicator
   
   def complete
     return unless @records;
-    @evaluator.foreach do |target, delta_value|
+    @valuation.foreach do |target, delta_value|
 #      puts "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" if @log;
       partition = target.partition(@handler.partition_sizes[target.source]);
       @records[partition].discover(target.key, delta_value) if @records.has_key? partition;
