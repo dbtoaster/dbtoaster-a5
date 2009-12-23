@@ -208,7 +208,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     else
       if ($config.num_switches < $config.nodes.size) &&
         ($config.nodes.size % $config.num_switches == 0)
-        then
+      then
         nodes_per_switch = $config.nodes.size / $config.num_switches;
         (0...$config.num_switches).each do |switchid|
           node_addr = node_addresses[switchid]
