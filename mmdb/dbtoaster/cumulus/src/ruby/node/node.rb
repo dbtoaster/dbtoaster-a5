@@ -100,7 +100,7 @@ class PluralRemoteCommitSubquery
   def load_destinations(destinations)
     params = @parent.params.clone;
     partition_size = $config.partition_sizes[@fetch_component.target.source];
-    expected_destinations.each { |dest| destinations[dest] }; # prime the destination buffer
+    @expected_destinations.each { |dest| destinations[dest] }; # prime the destination buffer
     @entries.each_pair do |entry, value|
       @fetch_component.entry_mapping.each { |mapping| params[mapping[1]] = entry.key[mapping[0]]; } 
       target_partition = @fetch_component.target.partition(params, partition_size);
@@ -274,24 +274,20 @@ end
 ###################################################
 
 class MassValuationApplicator
-  attr_reader :log;
+  attr_reader :log, :valuation;
   
   def initialize(id, valuation, expected_gets, handler, log)
     @id, @handler, @log = id, handler, log;
     @expected_gets = expected_gets+1  #One, local get is implicit
     @final_val, @records = nil, nil;
     @expected_locals = 0;
-    @evaluator = TemplateForeachEvaluator.new(valuation);
+    @valuation = valuation;
 #    puts "Creating insert for #{valuation.target.source}; expecting #{@expected_gets} gets" if @log;
-  end
-  
-  def valuation
-    @evaluator.valuation;
   end
   
   def discover(key, value)
 #    puts "Discovered that #{key} = #{value}" if @log;
-    @evaluator.discover(key, value)
+    @valuation.discover(key, value)
   end
   
   def expect_local
@@ -321,7 +317,7 @@ class MassValuationApplicator
       complete if ready?
     else
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
-      @evaluator.foreach do |target, delta_value|
+      @valuator.foreach do |target, delta_value|
 #        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
         partition = target.partition(@handler.partition_sizes[target.source]);
         partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;
@@ -634,7 +630,7 @@ class MapNodeHandler
           # for ourselves so that nothing gets committed until we've had a chance to finish
           # reading everything there is to be read.  This "push" occurs (in preload_locals)
           # regardless of whether there is actually any local data useful for this put.
-          applicator = MassValuationApplicator(
+          applicator = MassValuationApplicator.new(
             base_cmd + put_msg.id_offset, valuation, sources + 1, self, false
           ) 
 #          puts "Creating mass-put: #{base_cmd + put_msg.id_offset}"

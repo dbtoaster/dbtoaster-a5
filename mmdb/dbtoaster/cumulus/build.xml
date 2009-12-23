@@ -29,12 +29,6 @@ compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
     
     <mkdir dir="${build}" />
     <mkdir dir="${bin}" />
-    <copy todir="${bin}">
-      <fileset dir="${src}/tools">
-        <include name="**/*.sh" />
-      </fileset>
-    </copy>
-    <chmod dir="${bin}" includes="**/*.sh" perm="+w" />
     
     <pathconvert refid="classpath" property="compile.classpath" />
     <property name="run.classpath" value="${compile.classpath}:${jar}" />

@@ -219,7 +219,7 @@ class TemplateValuation
     @target;
   end
   
-  def loop
+  def foreach
     orig_instance = @instance;
     @entry_values.collect { |parametrization| (0..parametrization[1].size) }.each_cross_product do |parametrization|
       @instance = parametrization;
@@ -558,7 +558,7 @@ class UpdateTemplate
     end
     count = 1;
     @allocation_grid_sizes.each { |s| count *= s; }
-    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
+#    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
     @allocation_grid = Hash.new
     @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
       grid_cell = Array.new
@@ -599,7 +599,7 @@ class UpdateTemplate
   def project_grid_to_entry(entry, partition)
     projection = Hash.new;
     @allocation_grid.each_pair do |cell_partition, grid_cell| 
-      if partition.zip(@target.instantiated_key(cell_partition), $config.partition_sizes[@target.source]).assert do |dim|
+      if partition.zip(entry.instantiated_key(cell_partition), $config.partition_sizes[entry.source]).assert do |dim|
         dim[0] == (dim[1] % dim[2]);
       end then
         projection[cell_partition] = grid_cell;
@@ -611,7 +611,7 @@ class UpdateTemplate
   def compile_to_local(program, map_partitions)
     compute_allocation_grid;
     
-    puts "Compiling Local Instance of ##{@index}: #{summary}";
+#    puts "Compiling Local Instance of ##{@index}: #{summary}";
     if constant_entry_is_local(@target, map_partitions) then
       put_message = program.installPutComponent(
         @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
@@ -644,9 +644,9 @@ class UpdateTemplate
         );
         map_partitions[entry.source].each do |partition|
           targets = project_grid_to_entry(entry, partition).keys.collect do |grid_partition|
-            $config.partition_owner[entry.source][entry.instantiated_key(grid_partition)];
+            $config.partition_owners[entry.source][entry.instantiated_key(grid_partition)];
           end.uniq
-          partition_nodes.delete($config.my_config["address"]);
+          targets.delete($config.my_config["address"]);
           fetch_message.condition.addPartition(project_param(entry, partition), targets);
         end
       end

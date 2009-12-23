@@ -6,7 +6,7 @@ require 'getoptlong';
 
 class RubyConfig
   attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :num_switches,
-    :log_maps, :client_debug, :spread_path, :compiler_path;
+    :log_maps, :client_debug, :spread_path, :compiler_path, :partition_owners;
   attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
