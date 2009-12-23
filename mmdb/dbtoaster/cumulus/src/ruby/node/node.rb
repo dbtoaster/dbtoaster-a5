@@ -47,8 +47,8 @@ class PluralRemoteCommitNotification
     @hold = true;
   end
   
-  def register_subquery(fetch_component)
-    sq = PluralRemoteCommitSubquery.new(fetch_component, self);
+  def register_subquery(fetch_component, destinations)
+    sq = PluralRemoteCommitSubquery.new(fetch_component, self, destinations);
     @subqueries.push(sq);
     sq;
   end
@@ -77,8 +77,8 @@ end
 class PluralRemoteCommitSubquery
   attr_reader :requires_loop, :ready;
   
-  def initialize(fetch_component, parent)
-    @fetch_component, @parent = fetch_component, parent;
+  def initialize(fetch_component, parent, expected_destinations)
+    @fetch_component, @parent, @expected_destinations = fetch_component, parent, expected_destinations;
     @requires_loop = @fetch_component.entry.requires_loop?;
     @entries = Hash.new;
     @ready = false;
@@ -100,6 +100,7 @@ class PluralRemoteCommitSubquery
   def load_destinations(destinations)
     params = @parent.params.clone;
     partition_size = $config.partition_sizes[@fetch_component.target.source];
+    expected_destinations.each { |dest| destinations[dest] }; # prime the destination buffer
     @entries.each_pair do |entry, value|
       @fetch_component.entry_mapping.each { |mapping| params[mapping[1]] = entry.key[mapping[0]]; } 
       target_partition = @fetch_component.target.partition(params, partition_size);
@@ -617,8 +618,8 @@ class MapNodeHandler
 #    puts "In Ruby"
     rules = @program.getRelationComponent(relation);
     rules.puts.each do |put_msg|
-      if put_msg.condition.match(params) then
-        if put_msg.num_gets == -1 then
+      if (sources = put_msg.condition.match(params)) then
+        unless put_msg.template.requires_loop? then
           valuation = put_msg.template.valuation(params);
           target = valuation.target;
           applicator = ValuationApplicator.new(
@@ -629,9 +630,13 @@ class MapNodeHandler
           @stats.put;
         else
           valuation = put_msg.template.valuation(params);
+          # sources implicitly excludes the local node; we add a placeholder "expected_push" 
+          # for ourselves so that nothing gets committed until we've had a chance to finish
+          # reading everything there is to be read.  This "push" occurs (in preload_locals)
+          # regardless of whether there is actually any local data useful for this put.
           applicator = MassValuationApplicator(
-            base_cmd + put_msg.id_offset, valuation, put_msg.num_gets, self, false
-          )
+            base_cmd + put_msg.id_offset, valuation, sources + 1, self, false
+          ) 
 #          puts "Creating mass-put: #{base_cmd + put_msg.id_offset}"
           preload_locals(base_cmd + put_msg.id_offset, applicator);
           plist = Array.new;
@@ -644,10 +649,10 @@ class MapNodeHandler
 #    puts "Done with puts";
     put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
     rules.fetches.each do |fetch_msg|
-      if fetch_msg.condition.match(params) then
+      if (destinations = fetch_msg.condition.match(params)) then
         loop_key = fetch_msg.entry.instantiated_key(params);
         loop_partitions(fetch_msg.entry.source, loop_key) do |partition|
-          sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg);
+          sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg, destinations);
           partition.get(
             loop_key, 
             proc { |key, value| sq.fire(MapEntry.new(fetch_msg.entry.source, key), value) },

@@ -45,7 +45,7 @@ public class CompiledM3Program
   }
   
   public class Condition {
-    protected List<List<Long>> partition_values = new ArrayList<List<Long>>();
+    protected List<ConditionComparator> partition_values = new ArrayList<ConditionComparator>();
     protected List<Long> partition_sizes;
     
     public void checkClassCast(List<Long> list) {
@@ -63,37 +63,47 @@ public class CompiledM3Program
     }
     
     public void addPartition(List<Long> partition){
-      partition_values.add(partition);
+      addPartition(partition, new Boolean(true));
+    }
+    
+    public void addPartition(List<Long> partition, Object reference){
+      partition_values.add(new ConditionComparator(partition, reference));
       checkClassCast(partition);
     }
     
-    public boolean match(List<Double> partition){
-      for(List<Long> cmp : partition_values){
-        boolean valid = true;
+    public Object match(List<Double> partition){
+      for(ConditionComparator cmp : partition_values){
+        Object ret = cmp.match(partition);
+        if(ret != null) { return ret; }
+      }
+      return null;
+    }
+  
+    public class ConditionComparator {
+      protected List<Long> cmp;
+      protected Object reference;
+      
+      public ConditionComparator(List<Long> cmp, Object reference){
+        this.cmp = cmp;
+        this.reference = reference;
+      }
+      
+      public Object match(List<Double> partition){
         for(int i = 0; i < partition.size(); i++){
           if(cmp.get(i) != null){
-            long foo;
-            foo = (long)((double)partition.get(i));
-            foo = (long)partition_sizes.get(i);
-            foo = (long)cmp.get(i);
             if(((long)((double)partition.get(i)) % (long)partition_sizes.get(i)) != (long)cmp.get(i)){
-              valid = false;
-              break;
+              return null;
             }
           }
         }
-        if(valid){
-          return true;
-        }
+        return reference;
       }
-      return false;
     }
   }
   
   public class PutComponent {
     public final Object template;
     public final long id_offset;
-    public long num_gets = -1;
     public Condition condition;
     
     public PutComponent(Object template, long id_offset, List<Long> partition_sizes){

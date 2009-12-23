@@ -5,8 +5,7 @@ require 'util/ok_mixins';
 require 'getoptlong';
 
 class RubyConfig
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch,
-    :log_maps, :client_debug, :spread_path, :compiler_path, :num_switches;
+  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :log_maps, :client_debug, :spread_path, :compiler_path;
   attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
@@ -20,6 +19,7 @@ class RubyConfig
     } };
     @templates = Hash.new;
     @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
+    @partition_owners = Hash.new { |h,k| h[k] = Hash.new };
     @my_name = nil;
     @my_port = 52982;
     @switch = java::net::InetSocketAddress.new("localhost", 52981);
@@ -32,8 +32,7 @@ class RubyConfig
     Logger.info { "Spread Path is : #{@spread_path}" }
     
     @unknown_opts = Hash.new;
-    @num_switches = 0;
-
+    
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 
       "transforms" => Array.new, 
@@ -64,8 +63,6 @@ class RubyConfig
           @nodes[curr_node]["address"] = java::net::InetSocketAddress.new(address, port);
         
         when "switch"    then @switch = java::net::InetSocketAddress.new(cmd[1].chomp, 52981);
-          
-        when "switch_forwarders" then @num_switches = cmd[1].chomp.to_i;  
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
@@ -76,6 +73,7 @@ class RubyConfig
           @nodes[curr_node]["partitions"][map.to_i].push(segment);
           @partition_sizes[map.to_i] = 
             segment.zip(@partition_sizes[map.to_i]).collect { |sizes| if sizes[1].nil? then sizes[0].to_i+1 else Math.max(sizes[0]+1, sizes[1]) end };
+          @partition_owners[map.to_i][segment] = @nodes[curr_node]["address"];
 
         when "pfile" then
           match = /Map *([0-9]+)\[([0-9, ]+)\] *(.+)/.match(line);

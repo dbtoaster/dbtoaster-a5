@@ -491,6 +491,40 @@ class UpdateTemplate
     # possible for there to be multiple KEYINDEX/LOOPVAR pairs.   
     @loopvarlist = @expression.loop_vars(self);
     
+    
+    # Allocation grid is an n-dimensional hypertable; Every possible valuation of the
+    # underlying relation maps to one specific cell in the allocation grid; and the
+    # contents of that cell are the set of nodes that need to push values to perform
+    # this template.
+    @allocation_grid_sizes = Array.new(@paramlist.size+@varlist.size, 1)
+    [target].concat(@entries).each do |entry|
+      entry.key.zip($config.partition_sizes[entry.source]).each do |dim|
+        if dim[0].is_a? TemplateVariable then
+          @allocation_grid_sizes[dim[0].ref] = Math.max(@allocation_grid_sizes[dim[0].ref], dim[1]);
+        end
+      end
+    end
+    count = 1;
+    @allocation_grid_sizes.each { |s| count *= s; }
+    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
+    @allocation_grid = Hash.new
+    @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
+      grid_cell = Array.new
+      @allocation_grid[global_partition] = grid_cell;
+      @entries.each do |entry|
+        entry_partition = entry.key.zip($config.partition_sizes[entry.source]).collect do |dim|
+          if(dim[0].is_a? Numeric) then 
+            dim[0] % dim[1];
+          else
+            global_partition[dim[0].ref] % dim[1];
+          end
+        end
+        
+        entry_owner = $config.partition_owners[entry.source][entry_partition];
+        grid_cell.push(entry_owner) unless grid_cell.include? entry_owner;
+      end
+    end
+    
     @index = index;
   end
   
@@ -558,15 +592,31 @@ class UpdateTemplate
     end
   end
   
+  def project_grid_to_entry(entry, partition)
+    projection = Hash.new;
+    @allocation_grid.each_pair do |cell_partition, grid_cell| 
+      if partition.zip(@target.instantiated_key(cell_partition), $config.partition_sizes[@target.source]).assert do |dim|
+        dim[0] == (dim[1] % dim[2]);
+      end then
+        projection[cell_partition](grid_cell);
+      end
+    end
+    projection;
+  end
+  
   def compile_to_local(program, map_partitions)
-#    puts "Compiling ##{@index}: #{summary}";
+    puts "Compiling Local Instance of ##{@index}: #{summary}";
     if constant_entry_is_local(@target, map_partitions) then
       put_message = program.installPutComponent(
         @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
       );
       map_partitions[@target.source].each do |partition|
         # figure out when we need to turn this update into a put.
-        put_message.condition.addPartition(project_param(@target, partition))
+        partition_nodes = 
+          project_grid_to_entry(@target, partition).values.flatten.uniq;
+        partition_nodes.delete($config.my_config["address"]);
+        
+        put_message.condition.addPartition(project_param(@target, partition), partition_nodes.size)
       end
     end
       
@@ -587,7 +637,11 @@ class UpdateTemplate
           target_nodes
         );
         map_partitions[entry.source].each do |partition|
-          fetch_message.condition.addPartition(project_param(entry, partition));
+          targets = project_grid_to_entry(entry, partition).keys.collect do |grid_partition|
+            $config.partition_owner[entry.source][entry.instantiated_key(grid_partition)];
+          end.uniq
+          partition_nodes.delete($config.my_config["address"]);
+          fetch_message.condition.addPartition(project_param(entry, partition), targets);
         end
       end
     end
