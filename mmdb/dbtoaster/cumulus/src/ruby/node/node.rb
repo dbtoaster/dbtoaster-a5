@@ -320,7 +320,7 @@ class MassValuationApplicator
       complete if ready?
     else
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
-      @valutation.foreach do |target, delta_value|
+      @valuation.foreach do |target, delta_value|
 #        puts "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" if @log;
         partition = target.partition(@handler.partition_sizes[target.source]);
         partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;

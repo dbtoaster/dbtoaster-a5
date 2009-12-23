@@ -144,16 +144,24 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
   end
 
   def build_chef_internal_nodes(fanout,level,parent,addresses,addr_idx)
+    puts "Building internal nodes with parent #{parent.getHostName}"
+    puts "Internal nodes: #{addr_idx} #{fanout}, " +
+      (addresses[addr_idx...(addr_idx+fanout)].collect { |n| n.getHostName }).join(",");
+
     switches = Hash.new
     if level == 0 then
-      switches[parent] = addresses[addr_idx...(addr_idx+fanout)]
+      switches[parent] = [addresses[addr_idx...(addr_idx+fanout)].collect do |n|
+          java.net.InetSocketAddress.new(n.getHostName, 52981)
+        end, 0];
     else
       subtree_nodes=(fanout**level)
       (0...fanout).each do |i|
         switches = switches.merge(build_chef_internal_nodes(
           fanout,level-1,addresses[addr_idx+i],addresses,(addr_idx+fanout)+i*subtree_nodes))
       end
-      switches[parent] = addresses[addr_idx...(addr_idx+fanout)];
+      switches[parent] = [addresses[addr_idx...(addr_idx+fanout)].collect do |n|
+          java.net.InetSocketAddress.new(n.getHostName, 52981)
+        end, 0];
     end
     switches;
   end
@@ -165,7 +173,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     switches = Hash.new
     node_addresses = $config.nodes.to_a.delete_if do |node,node_info|
       node_info["address"].getHostName == "localhost"
-    end
+    end.collect { |node, node_info| node_info["address"] }
 
     if num_nodes > $config.nodes.size then
       puts "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
@@ -174,25 +182,35 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       switches[$config.switch] =
         [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
     else
-      if (leaf_nodes % $config.nodes.size != 0) then
+      if ($config.nodes.size % leaf_nodes != 0) then
         puts "Non-uniform forwarding workload detected. Last node will do less work..."
+      end
+
+      # Build internal nodes.
+      switches = switches.merge(build_chef_internal_nodes(
+        fanout,depth-1,$config.switch,node_addresses,0));
+        
+      leaves = []
+      switches.each_value do |ch,node_type|
+        leaves.concat(ch.select { |c| not(switches.key?(c)) })
       end
 
       node_addr_idx = 0;
 
+      if leaves.size != leaf_nodes then
+        puts "Incorrect number of leaf nodes: #{leaves.size}, expected #{leaf_nodes}"
+        leaf_nodes = leaves.size
+      end
+
       # Build the leaf layer.
       nodes_per_leaf = $config.nodes.size / leaf_nodes;
       (0...leaf_nodes).each do |leafid|
-        node_addr = node_addresses[node_addr_idx];
-        switch_addr = java.net.InetSocketAddress.new(node_addr.getHostName, 52981);
+        switch_addr = leaves[leafid];
         switches[switch_addr] =
           [node_addresses[node_addr_idx...(node_addr_idx+nodes_per_leaf)], 1];
-        node_addr_idx += nodes_per_leaf
+        node_addr_idx += nodes_per_leaf;
       end
 
-      # Build internal nodes.
-      switches.merge(build_chef_internal_nodes(
-        fanout,depth-1,$config.switch,node_addresses,node_addr_idx));
     end
     switches;
   end
@@ -251,14 +269,14 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       if $pending_servers <= 0 then
         sleep(20)
         #Logger.info { "Server Initialization complete, Starting Client..." };
-        puts "Server Initialization complete, Starting Client..." ;
+        puts "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." ;
         $clients[$config.switch.getHostName].start_client
       end
       puts log_message;
       if $pending_servers > 0 then handler else nil end;
     end
 
-    switches = build_chef_flat_forwarding_tree()
+    switches = build_chef_forwarding_tree(1,2)
     print_forwarding_tree(switches)
 
     nodes = []
