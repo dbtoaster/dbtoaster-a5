@@ -54,7 +54,7 @@ class SlicerNodeHandler
         puts "Spawning: #{cmd}"
         PTY.spawn(cmd) do |stdin, stdout, pid|
           puts "Starting process pid #{pid}"
-          at_exit { Process.kill("HUP", pid) };
+          at_exit { puts "Killing #{cmd}"; Process.kill("HUP", pid) };
           stdin.each { |line| output.push([:data, line]); }
         end
       #rescue PTY::ChildExited
@@ -143,6 +143,98 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     end
   end
 
+  def build_chef_internal_nodes(fanout,level,parent,addresses,addr_idx)
+    switches = Hash.new
+    if level == 0 then
+      switches[parent] = addresses[addr_idx...(addr_idx+fanout)]
+    else
+      subtree_nodes=(fanout**level)
+      (0...fanout).each do |i|
+        switches = switches.merge(build_chef_internal_nodes(
+          fanout,level-1,addresses[addr_idx+i],addresses,(addr_idx+fanout)+i*subtree_nodes))
+      end
+      switches[parent] = addresses[addr_idx...(addr_idx+fanout)];
+    end
+    switches;
+  end
+
+  def build_chef_forwarding_tree(depth, fanout)
+    num_nodes = (fanout**(depth+1)-1)/(fanout-1);
+    leaf_nodes = fanout**depth;
+
+    switches = Hash.new
+    node_addresses = $config.nodes.to_a.delete_if do |node,node_info|
+      node_info["address"].getHostName == "localhost"
+
+    if num_nodes > $config.nodes.size then
+      puts "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
+        "#{$config.nodes.size} nodes available."
+      puts "Defaulting to 1 chef."
+      switches[$config.switch] =
+        [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
+    else
+      if (leaf_nodes % $config.nodes.size != 0) then
+        puts "Non-uniform forwarding workload detected. Last node will do less work..."
+      end
+
+      node_addr_idx = 0;
+
+      # Build the leaf layer.
+      nodes_per_leaf = $config.nodes.size / leaf_nodes;
+      (0...leaf_nodes).each do |leafid|
+        node_addr = node_addresses[node_addr_idx];
+        switch_addr = java.net.InetSocketAddress.new(node_addr.getHostName, 52981);
+        switches[switch_addr] =
+          [node_addresses[node_addr_idx...(node_addr_idx+nodes_per_leaf)], 1];
+        node_addr_idx += nodes_per_leaf
+      end
+
+      # Build internal nodes.
+      switches.merge(build_chef_internal_nodes(
+        fanout,depth-1,$config.switch,node_addresses,node_addr_idx));
+    end
+    switches;
+  end
+
+  def build_chef_flat_forwarding_tree()
+    switches = Hash.new
+    node_addresses = $config.nodes.to_a.delete_if do |node,node_info|
+      node_info["address"].getHostName == "localhost"
+    end.collect { |node, node_info| node_info["address"] }
+    if $config.num_switches == 0 then
+      switches[$config.switch] =
+        [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
+    else
+      if ($config.num_switches < $config.nodes.size) &&
+        ($config.nodes.size % $config.num_switches == 0)
+        then
+        nodes_per_switch = $config.nodes.size / $config.num_switches;
+        (0...$config.num_switches).each do |switchid|
+          node_addr = node_addresses[switchid]
+          startidx=switchid*nodes_per_switch
+          endidx=((switchid+1)*nodes_per_switch)
+          switch_addr = java.net.InetSocketAddress.new(node_addr.getHostName, 52981);
+          switches[switch_addr] = [node_addresses[startidx...endidx], 1]
+        end
+      else
+        puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
+      end
+      switch_forwarders = [switches.keys(), 0]
+      switches[$config.switch] = switch_forwarders
+    end
+    switches
+  end
+
+  def print_forwarding_tree(switches)
+    puts "========================"
+    puts "Created forwarding tree:"
+    switches.each_pair do |p,ch|
+      children = ch.collect { |c| c.getHostName }.join(",");
+      puts "Parent: #{p.getHostName} children: #{children}"
+    end
+    puts "========================"
+  end
+
   def bootstrap()
     $pending_servers = $config.nodes.size + 1; # the +1 is for the switch
     $local_node.declare_master do |log_message, handler|
@@ -156,6 +248,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
         puts "A server just came up; #{$pending_servers} servers left"
       end
       if $pending_servers <= 0 then
+        sleep(20)
         #Logger.info { "Server Initialization complete, Starting Client..." };
         puts "Server Initialization complete, Starting Client..." ;
         $clients[$config.switch.getHostName].start_client
@@ -163,31 +256,9 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       puts log_message;
       if $pending_servers > 0 then handler else nil end;
     end
-    
-    switches = Hash.new
-    if $config.num_switches == 0 then
-      switches[$config.switch] =
-        [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
-    else
-      if ($config.num_switches < $config.nodes.size) &&
-        ($config.nodes.size % $config.num_switches == 0)
-        then
-        nodes_per_switch = $config.nodes.size / $config.num_switches;
-        (0...$config_file.num_switches).each do |switchid|
-          nodeid = $config.nodes[switchid][1]["address"]
-          startidx=switchid*nodes_per_switch
-          endidx=((switchid+1)*nodes_per_switch)
-          switch_nodes = $config.nodes[startidx...endidx].collect do |node, node_info|
-            node_info["address"]
-          end 
-          switches[nodeid] = [switch_nodes, 1]
-        end
-      else
-        puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
-      end
-      switch_forwarders = [switches.keys(), 0]
-      switches[$config.switch] = switch_forwarders
-    end
+
+    switches = build_chef_flat_forwarding_tree()
+    print_forwarding_tree(switches)
 
     nodes = []
     $config.nodes.each do |node, node_info|
@@ -215,7 +286,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     end
 
     # Wait for switches to start up -- this is a hack for now.
-    sleep(10)
+    sleep(20)
 
     switches.each do |switch_node, clients_and_type|
       clients, forward_to_nodes = clients_and_type

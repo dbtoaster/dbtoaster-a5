@@ -1,5 +1,7 @@
 package org.dbtoaster.cumulus.net;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.HashMap;
 import org.dbtoaster.cumulus.net.TProtocol.TProtocolException;
 
@@ -49,16 +51,22 @@ public abstract class TProcessor<ProtocolMethods extends Enum>
       HandlerFunction fn = handlerMap.get(key);
       if ( fn == null ) {
         // TODO: Thrift sends out an exception here...
-        String message = "No handler found for " + key;
+        String host = InetAddress.getLocalHost().getHostName();
+        String message = host +
+          ": no handler found for " + key.getClass().getName() + "::" + key;
+        
         System.out.println(message);
+        
+        for (ProtocolMethods k : handlerMap.keySet()) {
+            System.out.println(host + " handler fn: " + k);
+        }
         return false;
       }
-      
       fn.invoke_process(iprot, oprot);
     } catch (TException te) {
     } catch (TProtocolException tpe) {
         // TODO: write out an exception...
-    }
+    } catch (UnknownHostException e) { e.printStackTrace(); }
     
     return true;
   }

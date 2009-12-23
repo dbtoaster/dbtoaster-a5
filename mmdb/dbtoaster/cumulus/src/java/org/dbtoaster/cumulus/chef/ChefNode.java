@@ -85,7 +85,7 @@ public class ChefNode
     {
       try {
         oprot.beginMessage();
-        oprot.putObject(ChefNodeMethod.SET_FOWARDERS);
+        oprot.putObject(ChefNodeMethod.SET_FORWARDERS);
         oprot.putList(nodes);
         oprot.putInteger(nodeOrChef);
         oprot.endMessage();
@@ -127,7 +127,7 @@ public class ChefNode
   }
     
   public static enum ChefNodeMethod {
-      UPDATE,FORWARD_UPDATE,SET_FOWARDERS,DUMP,REQUEST_BACKOFF,FINISH_BACKOFF
+      UPDATE,FORWARD_UPDATE,SET_FORWARDERS,DUMP,REQUEST_BACKOFF,FINISH_BACKOFF
   };
   
   public static class Processor extends TProcessor<ChefNodeMethod>
@@ -139,7 +139,7 @@ public class ChefNode
       handler = h;
       handlerMap.put(ChefNodeMethod.UPDATE, new update());
       handlerMap.put(ChefNodeMethod.FORWARD_UPDATE, new forward_update());
-      handlerMap.put(ChefNodeMethod.SET_FOWARDERS, new set_forwarders());
+      handlerMap.put(ChefNodeMethod.SET_FORWARDERS, new set_forwarders());
       handlerMap.put(ChefNodeMethod.DUMP, new dump());
       handlerMap.put(ChefNodeMethod.REQUEST_BACKOFF, new request_backoff());
       handlerMap.put(ChefNodeMethod.FINISH_BACKOFF, new finish_backoff());

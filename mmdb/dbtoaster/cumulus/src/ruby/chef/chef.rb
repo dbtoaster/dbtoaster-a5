@@ -21,6 +21,7 @@ class ChefNodeHandler
     @backoff_nodes = Array.new;
     @metacompiled = nil
     @num_templates = num_templates;
+    @batch_size = 10;
   end
   
   
@@ -82,19 +83,23 @@ class ChefNodeHandler
 #  end
   
   def update(table, params)
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
       if client.is_a? MapNode::MapNodeClient then
         client.update(table, params, cmdid.to_i)
-      else client.forward_update(table, params, cmdid.to_i) end
+      else
+        #puts "Forwarding update out..."
+        client.forward_update(table, params, cmdid.to_i)
+      end
     end
     next_cmd;
     next_update;
   end
   
   def forward_update(table, params, basecmd)
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], 3) } unless @nodelist;
+    #puts "Forwarding update in..."
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
       if client.is_a? MapNode::MapNodeClient then
@@ -104,9 +109,18 @@ class ChefNodeHandler
   end
 
   def set_forwarders(nodes, map_nodes)
+    node_str = nodes.collect { |node_info| node_info.getHostName }.join(",")
+    if map_nodes > 0 then
+      puts "Setting forwards to map nodes: #{node_str}"
+    else
+      puts "Setting forwards to switch nodes: #{node_str}"
+    end
     @nodelist = nodes.collect do |node_info|
-      if map_nodes then MapNode.getClient(node_info, 3)
-      else ChefNode.getClient(node_info) end
+      if map_nodes > 0 then 
+        MapNode.getClient(node_info, @batch_size)
+      else
+        ChefNode.getClient(node_info, @batch_size)
+      end
     end
   end
   
