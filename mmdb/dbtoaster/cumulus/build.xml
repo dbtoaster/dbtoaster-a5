@@ -22,6 +22,19 @@ compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
       </then>
     </if>
     <if>
+      <not><isset property="log4j.rootLogger" /></not>
+      <then>
+        <echo file="local.properties" append="true">
+log4j.rootLogger=INFO,A1
+log4j.appender.A1=org.apache.log4j.ConsoleAppender
+log4j.appender.A1.layout=org.apache.log4j.PatternLayout
+log4j.appender.A1.layout.ConversionPattern=%-4r [%t] %-5p %c %x - %m%n
+</echo>
+        <echo message="Adding default logger settings to configuration file" />
+      </then>
+    </if>
+    
+    <if>
       <not><available file="${compiler.home}/dbtoaster.top" /></not>
       <then>
 	<exec executable="make" dir="${compiler.home}"><arg value="top" /></exec>

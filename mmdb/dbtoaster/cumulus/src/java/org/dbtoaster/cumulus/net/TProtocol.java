@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
+import org.apache.log4j.Logger;
+
 public class TProtocol
 {
     public class TProtocolException extends Exception
@@ -34,6 +36,8 @@ public class TProtocol
     private final int frameBufferSize = 1024*1024;
     private int frameBatchCount = 10;
     private int frameCount = 0;
+
+    public final static Logger logger = Logger.getLogger("dbtoaster.Net.TProtocol");
 
     TTransport transport;
     
@@ -65,10 +69,8 @@ public class TProtocol
         in = null;
         sizeRead = null;
         readRemaining = null;
-        /*
-        System.out.println("Reset transport, " + toString());
-        System.out.println("Resetting transport for input.");
-        */
+        logger.debug("Reset transport, " + toString());
+        logger.debug("Resetting transport for input.");
     }
 
     public String toString()
@@ -90,11 +92,9 @@ public class TProtocol
         while ( r == null )
         {
             try {
-                //if ( in != null ) System.out.println("getObject avail before: " + in.available());
                 if ( in == null ) recvObject();
                 if ( in == null ) { throw new TProtocolException("Invalid input protocol."); }
                 r = in.readObject();
-                //if ( in != null ) System.out.println("getObject avail after: " + in.available());
             } catch (EOFException e) {
                 reset();
             } catch (IOException ioe) {
@@ -213,7 +213,7 @@ public class TProtocol
     {
         if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
         try {
-            //System.out.println("Putting " + o);
+            logger.warn("Putting " + o);
             out.writeObject(o);
             sendObject();
         } catch (IOException ioe) {
@@ -325,10 +325,6 @@ public class TProtocol
     // Non-blocking read, returns if we have a valid frame to read.
     boolean getFrame() throws IOException
     {
-        //System.out.println(transport.getRemote() +
-        //    ": read remaining at start: " + readRemaining);
-        //System.out.println(transport.getRemote() +
-        //    ": inBuffer remaining: " + inBuffer.remaining());
 
         if ( readRemaining == null )
         {
@@ -337,19 +333,12 @@ public class TProtocol
             byte[] buf = new byte[length];
             int bytesRead = transport.recv(buf, 0, length);
             
-            /*
-            System.out.println("Read transport: " + bytesRead +
-                " requested: " + length +
-                " prev sizeRead: " + (sizeRead == null? 0 : sizeRead));
-            */
-
             if ( bytesRead < length ) {
                 sizeRead = (sizeRead == null? bytesRead : sizeRead + bytesRead);
                 inBuffer.put(buf, 0, bytesRead);
                 return false;
             }
             else {
-                //System.out.println("Read frame size, br: " + bytesRead + ", " + toString());
                 sizeRead = 0;
                 inBuffer.put(buf);
             }
@@ -367,21 +356,14 @@ public class TProtocol
             inBuffer.mark();
         }
         
-        //System.out.println(transport.getRemote() +
-        //    ": read remaining for obj: " + readRemaining);
-        
         int length = readRemaining; 
         byte[] buf = new byte[length];
         int bytesRead = transport.recv(buf, 0, length);
 
         // Get an object.
-        //System.out.println("Transport recv, br: " + bytesRead +
-        //    ", req: " + length + ", " + toString());
-
         inBuffer.put(buf, 0, bytesRead);
         if ( readRemaining <= bytesRead )
         {
-            //System.out.println("Reading frame, br: " + bytesRead + " " + toString());
 
             // Set limit as the end of data read.
             inBuffer.limit(inBuffer.position());
@@ -398,8 +380,6 @@ public class TProtocol
                 inBuffer.get(b);
                 inBuffer.compact();
                 
-                //System.out.println("Start:" + startPos + " end: " + endPos);
-
                 bais = new ByteArrayInputStream(b);
                 in = new ObjectInputStream(bais);
                 sizeRead = 0;
@@ -414,15 +394,7 @@ public class TProtocol
                 } catch (EOFException e2) {
                 } catch (Exception e2) { e2.printStackTrace(); }
                 */
-
-                /*
-                System.out.println("Created an object of length: " + b.length +
-                    " avail 1: " + bais.available() +
-                    " avail 2: " + in.available());
-                */
                 
-                //System.out.println("Got marked frame " + frameCounter + ", " + toString());
-
             } catch (InvalidMarkException e) {
                 byte[] b = new byte[readRemaining];
                 inBuffer.get(b, 0, readRemaining);
@@ -441,24 +413,16 @@ public class TProtocol
                 } catch (EOFException e2) {
                 } catch (Exception e2) { e2.printStackTrace(); }
                 */
-
-                /*
-                System.out.println("Created an object of length: " + b.length +
-                    " avail 1: " + bais.available() +
-                    " avail 2: " + in.available());
-                */
-                
-                //System.out.println("Got frame " + frameCounter + ", " + toString());
             }
 
             return true;
         }
         else {
             readRemaining -= bytesRead;
-            //System.out.println("Partial read, br: " + bytesRead + ", " + toString());
+            logger.trace("Partial read, br: " + bytesRead + ", " + toString());
         }
         
-        //System.out.println("Insufficient data to create object...");
+        logger.trace("Insufficient data to create object...");
         return false; 
     }
 
@@ -482,7 +446,7 @@ public class TProtocol
     {
         while ( !getFrame() ) {
             //try {
-                //System.out.println("Blocking...");
+                logger.trace("Blocking...");
                 //Thread.sleep(1000);
                 Thread.yield();
             //} catch (InterruptedException e) { e.printStackTrace(); }

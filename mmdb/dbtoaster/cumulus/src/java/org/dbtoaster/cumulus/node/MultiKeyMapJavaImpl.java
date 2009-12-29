@@ -3,6 +3,7 @@ package org.dbtoaster.cumulus.node;
 import java.io.*;
 import java.util.*;
 import com.sleepycat.je.*;
+import org.apache.log4j.Logger;
 
 public class MultiKeyMapJavaImpl {
   public static final int DEFAULT_CACHE_SIZE = 64*1024*1024;
@@ -15,6 +16,9 @@ public class MultiKeyMapJavaImpl {
   protected final String                      dbName;
   protected HashMap<DatabaseEntry,MKPattern>  patterns;
   protected Database                          basemap;
+  
+  protected static final Logger               logger 
+      = Logger.getLogger("dbtoaster.Node.MultiKeyMapJavaImpl");
     
   private static ArrayList<Long[]> translateArray(Long[][] array){
     ArrayList<Long[]> ret = new ArrayList<Long[]>();
@@ -56,7 +60,7 @@ public class MultiKeyMapJavaImpl {
     }
     
     String primaryName = basepath + "/db_" + dbName + "_primary.db";
-    System.out.println("Creating db at : " + primaryName);
+    logger.debug("Creating db at : " + primaryName);
     DatabaseConfig dbConf = new DatabaseConfig();
     dbConf.setAllowCreate(true);
     this.basemap = env.openDatabase(null, primaryName, dbConf);
@@ -81,23 +85,23 @@ public class MultiKeyMapJavaImpl {
     if(patterns.get(serializeKey(pattern)) != null) { return; }          // don't add duplicate patterns
     
     String secondaryName = basepath + "/db_" + dbName + "_" + patterns.size() + ".db";
-    System.out.println("Creating secondary db (" + patternName(pattern) + ") at : " + secondaryName);
+    logger.debug("Creating secondary db (" + patternName(pattern) + ") at : " + secondaryName);
     patterns.put(serializeKey(pattern), new MKPattern(pattern, env, secondaryName, basemap));
   }
   
   public Double get(Long[] key){
     DatabaseEntry entry = new DatabaseEntry();
     if(basemap.get(null, serializeKey(key), entry, LockMode.DEFAULT) == OperationStatus.SUCCESS){
-//      System.out.println("get "+dbName+"[" + patternName(key) + "] = " + deserializeValue(entry));
+      logger.trace("get "+dbName+"[" + patternName(key) + "] = " + deserializeValue(entry));
       return deserializeValue(entry);
     } else {
-//      System.out.println("get "+dbName+"[" + patternName(key) + "] = NOT FOUND");
+      logger.trace("get "+dbName+"[" + patternName(key) + "] = NOT FOUND");
       return defaultValue;
     }
   }
   
   public void put(Long[] key, Double value){
-//    System.out.println("put "+dbName+"[" + patternName(key) + "] = " + value);
+    logger.trace("put "+dbName+"[" + patternName(key) + "] = " + value);
     basemap.put(null, serializeKey(key), serializeValue(value));
   }
   

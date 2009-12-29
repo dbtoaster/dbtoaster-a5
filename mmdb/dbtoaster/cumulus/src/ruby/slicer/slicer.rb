@@ -12,7 +12,8 @@ class SlicerNodeHandler
   attr_writer :message_handler;
 
   include Java::org::dbtoaster::cumulus::slicer::SlicerNode::SlicerNodeIFace;
-  include CLogMixin;
+  include CLogMixins;
+  self.logger_segment = "Slicer";
 
   def initialize(config_file, verbosity = :quiet)
     @config_file = config_file;
@@ -49,7 +50,7 @@ class SlicerNodeHandler
   
   def start_process(cmd)
     #cmd = cmd + " 1>&2";
-    @monitor_intake.push([:data, "Running: " + cmd ]);
+#    @monitor_intake.push([:data, "Running: " + cmd ]);
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
         debug { "Spawning: #{cmd}" }
@@ -118,8 +119,7 @@ end
 
 class PrimarySlicerNodeHandler < SlicerNodeHandler
   include Java::org::dbtoaster::cumulus::slicer::SlicerNode::PrimarySlicerNodeIFace;
-  include CLogMixin;
-  
+
   def spin_up_slicers(*slicer_nodes)
     debug { "Spinning up slicers #{slicer_nodes.length}" }
     slicer_nodes.collect do |node|
@@ -178,7 +178,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
     if num_nodes > $config.nodes.size then
       warn { "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
-        "#{$config.nodes.size} nodes available.\nDefaulting to 1 chef." }
+        "#{$config.nodes.size} nodes available; Defaulting to 1 chef." }
       switches[$config.switch] =
         [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
     else
@@ -253,7 +253,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       switches.to_a.collect do |ch|
         children = ch[1][0].collect { |c| c.getHostName }.join(",");
         "Parent: #{ch[0].getHostName} children: #{children}"
-      end.join("\n") + "\n"
+      end.join("\n") + "\n" +
       "========================"
     }
   end
@@ -321,9 +321,11 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 end
 
 module SlicerNode 
-  include CLogMixin;
   
   class Manager
+    include CLogMixins;
+    self.logger_segment = "Slicer";
+    
     def initialize(host, spread_path, config_file)
       @host = host;
       @process = RemoteProcess.new(
@@ -350,10 +352,8 @@ module SlicerNode
     end
     
     def client
-      #Logger.warn { "Waiting for slicer to spawn on : #{@host}" }
       debug { "Waiting for slicer to spawn on : #{@host}" }
       @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
-      #Logger.warn { "Slicer spawned on : #{@host}" }
       debug { "Slicer spawned on : #{@host}" }
       if @client then @client
       else @client = Client.connect(@host)
@@ -362,10 +362,6 @@ module SlicerNode
   end
   
   class Client
-    def close
-      @iprot.trans.close;
-    end
-    
     def Client.connect(host, port = 52980)
       dest = java.net.InetSocketAddress.new(host, port);
       debug { "Connecting to #{dest.toString}" }

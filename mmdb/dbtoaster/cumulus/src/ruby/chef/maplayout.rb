@@ -11,6 +11,9 @@ class MapLayout
 
   attr_reader :maplist;
   
+  include CLogMixins;
+  self.logger_segment = "MapLayout";
+  
   def initialize()
     @maplist = Hash.new { |h,k| h[k] = Hash.new };
     @partition_sizes = Hash.new { |h,k| h[k] = Array.new };
@@ -51,7 +54,7 @@ class MapLayout
     partition_size.collect do |size|
       (0...size).to_a
     end.each_cross_product do |relation_partition|
-#      puts "#{template.relation} (#{template.index}) : " + relation_partition.join(",");
+      trace { "#{template.relation} (#{template.index}) : " + relation_partition.join(",") }
       template.target.keys.collect_index do |i, key_dim|
         if template.paramlist.include? key_dim then
           [ relation_partition[template.paramlist.index(key_dim)] % @partition_sizes[template.target.source][i] ]
@@ -61,7 +64,7 @@ class MapLayout
       end.each_cross_product do |put_partition|
         put_node = @maplist[template.target.source][put_partition]
         compiled_trigger.discover_put(relation_partition, put_node)
-#        puts "   Requires put: " + put_partition.zip(template.target.keys).collect { |part, key| "#{key}:#{part}" }.join(",") + " @ #{put_node}" ;
+        trace { "   Requires put: " + put_partition.zip(template.target.keys).collect { |part, key| "#{key}:#{part}" }.join(",") + " @ #{put_node}" };
         valuations = 
           template.paramlist.zip(relation_partition).concat(
             template.target.keys.zip(put_partition)
@@ -81,7 +84,7 @@ class MapLayout
           template.entries.each do |e|
             key_partition = e.keys.collect_index { |i,k| fetch_valuations[k] % @partition_sizes[e.source][i] }
             fetch_node = @maplist[e.source][key_partition]
-#            puts "        Requires fetch: #{e}:[#{key_partition}] @ #{fetch_node}";
+            trace { "        Requires fetch: #{e}:[#{key_partition}] @ #{fetch_node}" }
             e = ParametrizedEntry.new(
               e.source,
               e.keys.collect do |k| 
@@ -105,6 +108,9 @@ end
 
 class CompiledTrigger
   attr_reader :trigger, :partition_size;
+  
+  include CLogMixins;
+  self.logger_segment = "MapLayout";
 
   def initialize(trigger, partition_size)
     @trigger = trigger;
@@ -141,7 +147,7 @@ class CompiledTrigger
   def fire(params)
     raise SpreadException.new("Wildcard in paramlist: #{params.join(", ")}") unless params.assert { |part| part.to_i >= 0 };
     put_nodes = Array.new;
-#    puts "Partition: #{NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long))} / #{@partition_size.join(",")}"
+    debug { "Partition: #{NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long))} / #{@partition_size.join(",")}" };
     @index[NetTypes.compute_partition(params.to_java(:Long), @partition_size.to_java(:Long)).to_a].each_pair do |put_node, fetchlist|
       fetchlist.each_pair do |fetch_node, entry_list|
         yield(

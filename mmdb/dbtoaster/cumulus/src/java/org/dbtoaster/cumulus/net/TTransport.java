@@ -13,6 +13,8 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Semaphore;
 
+import org.apache.log4j.Logger;
+
 public class TTransport
 {
     private Selector selector;
@@ -23,6 +25,8 @@ public class TTransport
     private SelectionKey key;
     
     private Semaphore pendingWrites;
+    
+    protected final static Logger logger = Logger.getLogger("dbtoaster.Net.TTransport");
 
     // Key interest change batching.
     class InterestBuffer
@@ -129,7 +133,7 @@ public class TTransport
     public void connect(Selector s) throws IOException
     {
         channel = SocketChannel.open();
-        //System.out.println("Connecting transport to " + server);
+        logger.trace("Connecting transport to " + server);
         channel.configureBlocking(false);
         channel.socket().setSendBufferSize(socketSendBufferSize);
         channel.socket().setReceiveBufferSize(socketRecvBufferSize);
@@ -148,7 +152,7 @@ public class TTransport
         if ( channel.isConnectionPending() ) {
             channel.finishConnect();
             key.interestOps(SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-            //System.out.println("Connected to " + server.toString());
+            logger.info("Connected to " + server.toString());
             System.out.flush();
         }
     }
@@ -171,7 +175,7 @@ public class TTransport
             channel.close();
         }
         totalRead += bytesRead;
-        //System.out.println("TTransport read: " + bytesRead + ", " + toString());
+        logger.trace("TTransport read: " + bytesRead + ", " + toString());
         return bytesRead;
     }
 
@@ -192,7 +196,7 @@ public class TTransport
             writeBuffer.compact();
         }
         totalWritten += bytesWritten;
-        //System.out.println("Transport wrote: " + bytesWritten + ", " + toString());
+        logger.trace("Transport wrote: " + bytesWritten + ", " + toString());
         
         if ( writeBuffer.remaining() > 0 ) writeAvailable();
 
@@ -208,7 +212,7 @@ public class TTransport
         int bytesSent = 0;
         synchronized(writeBuffer)
         {
-            //System.out.println(server + ": sending: " + len);
+            logger.trace(server + ": sending: " + len);
 
             // Manually detect overflow.
             if ( writeBuffer.remaining() >= (4+len) )
@@ -232,7 +236,7 @@ public class TTransport
         {
             bytesRecv = readBuffer.position();
             
-            //System.out.println("TTransport recv, " + " br: " + bytesRecv + ", " + toString());
+            logger.trace("TTransport recv, " + " br: " + bytesRecv + ", " + toString());
 
             if ( bytesRecv > 0 )
             {
@@ -246,7 +250,7 @@ public class TTransport
                 } else {
                     bytesRecv = 0;
                     readBuffer.compact();
-                    //System.out.println("Buffer underflow, req: " + len + ",  "+ toString());
+                    logger.trace("Buffer underflow, req: " + len + ",  "+ toString());
                     //e.printStackTrace();
                 }
             }
@@ -254,13 +258,13 @@ public class TTransport
             if ( key.isValid() )
             {
                 if ( bytesRecv < len ) {
-                    //System.out.println("Adding key " + key + " for read.");
+                    logger.trace("Adding key " + key + " for read.");
                     key.interestOps(key.interestOps() | SelectionKey.OP_READ);
                     //registerReadTask.addKey(key);
                 }
 
                 else {
-                    //System.out.println("Removing key " + key + " for read.");
+                    logger.trace("Removing key " + key + " for read.");
                     key.interestOps(key.interestOps() ^ SelectionKey.OP_READ);
                     //cancelReadTask.addKey(key);
                 }
@@ -268,7 +272,7 @@ public class TTransport
                 //selector.wakeup();
             }
             else {
-                System.out.println("Invalid key: " + key);
+                logger.warn("Invalid key: " + key);
             }
         }
         

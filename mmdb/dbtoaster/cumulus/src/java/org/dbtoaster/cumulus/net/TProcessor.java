@@ -5,15 +5,18 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import org.dbtoaster.cumulus.net.TProtocol.TProtocolException;
 
+import org.apache.log4j.Logger;
+
 public abstract class TProcessor<ProtocolMethods extends Enum>
 {
+  protected static final Logger logger = Logger.getLogger("dbtoaster.Net.TProcessor");
+
   public static abstract class HandlerFunction
   {
     public abstract void process(TProtocol iprot, TProtocol oprot) 
       throws TException,TProtocolException,SpreadException;
     
     public String toString(){
-      System.out.println("HandlerFunction.toString()");
       Class me = getClass();
       String nodeTypeName = "";
       if(me.isMemberClass()){
@@ -55,10 +58,10 @@ public abstract class TProcessor<ProtocolMethods extends Enum>
         String message = host +
           ": no handler found for " + key.getClass().getName() + "::" + key;
         
-        System.out.println(message);
+        logger.error(message);
         
         for (ProtocolMethods k : handlerMap.keySet()) {
-            System.out.println(host + " handler fn: " + k);
+            logger.error(host + " handler fn: " + k);
         }
         return false;
       }

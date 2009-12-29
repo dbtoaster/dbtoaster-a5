@@ -10,6 +10,8 @@ import org.jruby.CompatVersion;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 
+import org.apache.log4j.Logger;
+
 public class Server implements Runnable
 {
     Selector selector;
@@ -22,6 +24,8 @@ public class Server implements Runnable
     Long framesProcessed;
     Long processingStartTime;
     Long lastProcessingTime;
+    
+    protected static final Logger logger = Logger.getLogger("dbtoaster.Net.Server");
 
     public Server(TProcessor processor, int port)
         throws IOException
@@ -40,12 +44,12 @@ public class Server implements Runnable
 
     public void run()
     {
-        System.out.println("Starting Cumulus Server");
+        logger.info("Starting Cumulus Server");
         // Wait for something of interest to happen
         while (!terminated)
         {
             try {
-                //System.out.println("Server invoking select...");
+                logger.debug("Server invoking select...");
                 selector.select();
     
                 // Get set of ready objects
@@ -56,7 +60,7 @@ public class Server implements Runnable
                 {
                     // Get key from set
                     SelectionKey key = keys.next();
-                    //System.out.println("Key: " + key);
+                    logger.trace("Key: " + key);
                     
                     // Remove current entry
                     keys.remove();
@@ -70,11 +74,11 @@ public class Server implements Runnable
                         TProtocol p = (TProtocol) key.attachment();
                         handleWrite(p);
                     } else {
-                        System.err.println("Ooops");
+                        logger.debug("Ooops");
                     }
                 }
                 
-                //System.out.println("Selector keys: " + selector.keys().size());
+                logger.debug("Selector keys: " + selector.keys().size());
 
             } catch (IOException ioe) {
                 ioe.printStackTrace();
@@ -93,7 +97,7 @@ public class Server implements Runnable
             if ( processingStartTime == null )
                 processingStartTime = System.currentTimeMillis();
 
-            //System.out.println("Handle read: " + bytesRead);
+            logger.trace("Handle read: " + bytesRead);
             while ( p.getFrame() )
             {
                 server_processor.process(p, p);

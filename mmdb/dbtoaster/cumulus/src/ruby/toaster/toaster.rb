@@ -8,6 +8,9 @@ class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives,
     :slice_directives, :persist, :switch, :switch_forwarders, :preload, :map_formulae;
 
+  include CLogMixins;
+  self.logger_segment = "Toaster";
+
   def initialize(toaster_cmd = "./dbtoaster.top -noprompt 2> /dev/null",
                  toaster_dir = $config.compiler_path)
     @nodes = Array.new;
@@ -25,7 +28,7 @@ class DBToaster
     @map_formulae = nil;
     @query = "";
     
-    puts "#{toaster_dir}/#{toaster_cmd}";
+    debug { "#{toaster_dir}/#{toaster_cmd}" }
     local_dir = Dir.getwd()
     Dir.chdir(toaster_dir)
     @DBT = IO.popen(toaster_cmd, "w+");
@@ -113,8 +116,7 @@ class DBToaster
       
       @DBT = nil;
     rescue Exception => e
-      puts "Error toasting.  Compiler output: \n" + data.join("");
-      raise e;
+      error(e) { "Error toasting.  Compiler output: \n" + data.join("") };
     end
     self;
   end
@@ -125,7 +127,7 @@ class DBToaster
     templates_by_relation = Hash.new { |h, k| h[k] = Array.new }
 
     @compiled.collect do |l|
-#      puts "Loading template: " + l;
+      debug { "Loading template: " + l }
       UpdateTemplate.new(l, index += 1);
     end.delete_if do |template|
       template.relation[0] == "-"[0];
@@ -224,7 +226,7 @@ class DBToaster
         
         n,t = l.chomp.gsub(/Creating map ([a-zA-Z0-9]+) for term (.*)/, "\\1 \\2").split(" ",2)
 
-        puts n+": "+t
+        debug { n+": "+t }
         
         # Substitutions for variables -> params (i.e. dom vars)
         key_param_subs = Hash.new
@@ -276,8 +278,8 @@ class DBToaster
                     then @map_aliases.index(dom_rel_alias)
                     else dom_rel_alias end
   
-                  puts "Rel: #{dom_rel} attr: #{dom_attr} orig: #{orig_f}"
-                  puts "Alias: #{dom_rel_alias} attr: #{dom_attr} orig: #{orig_f}"
+                  debug { "Rel: #{dom_rel} attr: #{dom_attr} orig: #{orig_f}" }
+                  debug { "Alias: #{dom_rel_alias} attr: #{dom_attr} orig: #{orig_f}" }
   
                   dom_idx = @schemas[dom_rel].index(dom_rel_alias+dom_attr)
                   
@@ -351,15 +353,15 @@ class DBToaster
       promoted_params = []
       extra_group_bys = []
       param_constraints.each_pair do |p,v_l|
-        puts "Match #{p}: "+subbed_t_preds.match(p).to_s
+        debug { "Match #{p}: "+subbed_t_preds.match(p).to_s }
         if subbed_t_preds.match(p).nil? then
           promoted_params.concat(Array.new(v_l.size, p))
           extra_group_bys.concat(v_l)
         end
       end
       
-      puts "Extra group-bys: " + extra_group_bys.join(",")
-      puts "Promoted params: " + promoted_params.join(",")
+      debug { "Extra group-bys: " + extra_group_bys.join(",") }
+      debug { "Promoted params: " + promoted_params.join(",") }
       group_bys.concat(extra_group_bys)
 
       # Primary map keys
@@ -469,7 +471,7 @@ end
 # Wrapper execution
 
 $output = STDOUT;
-$boot = STDOUT;
+$boot = nil;
 $success = false;
 $options = Hash.new;
 $toaster_opts = []
@@ -516,9 +518,9 @@ end
 $toaster.toast($options);
 
 
-puts "=========  Maps  ==========="
+CLog.debug { "=========  Maps  ===========" }
 $toaster.map_info.each_value do |info|
-  puts info["map"].to_s + "(" + info["id"].to_s + ")" + " : " + info["num_keys"].to_s + " keys" unless info["discarded"];
+  CLog.debug { info["map"].to_s + "(" + info["id"].to_s + ")" + " : " + info["num_keys"].to_s + " keys" unless info["discarded"]; }
 end
 
 map_keys = Hash.new;
@@ -533,7 +535,7 @@ end
 #  $output.write("map " + map.to_s + " => Depth " + info["depth"].to_s + ";");
 #end
 
-puts "========== Map definitions ==========="
+CLog.debug { "========== Map definitions ===========" }
 $toaster.map_info.each_value do |info|
   n = info["map"].to_s
   if $toaster.map_formulae.key?(n) then
@@ -560,17 +562,19 @@ $toaster.map_info.each_value do |info|
     p = [ partition_keys.join(","), partition_sizes.join(",") ].join("/")
     map_def = [n, boot_spec_s, p].join("\n")
     
-    puts map_def
-    $boot.write(map_def+"\n")
+    CLog.debug { map_def }
+    $boot.write(map_def+"\n") if $boot
   end
 end
 
-puts "==== Partition Choices =====";
+CLog.info { "==== Partition Choices =====" }
 
 $toaster.map_info.each_value do |info|
   unless info["discarded"] then
-    puts info["map"].to_s + "(" + info["id"].to_s + ")\n" + 
-      info["partition"][info["partition"].size-1].collect_index { |i,c| "    " + map_keys[info["id"]][i].to_s + " (" + i.to_s + "): " + (c.to_i + 1).to_s }.join("\n");
+    CLog.info { info["map"].to_s + "(" + info["id"].to_s + ")" }
+    info["partition"][info["partition"].size-1].each_with_index do |c,i| 
+      CLog.info { "    " + map_keys[info["id"]][i].to_s + " (" + i.to_s + "): " + (c.to_i + 1).to_s }
+    end
   end
 end
 

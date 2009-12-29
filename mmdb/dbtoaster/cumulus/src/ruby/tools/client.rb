@@ -54,28 +54,28 @@ GetoptLong.new(
       $verbose = true;
       
     when "--upfront" then
-      puts "Starting by fully loading all " + arg + " rows";
+      CLog.debug { "Starting by fully loading all " + arg + " rows" }
       $upfront_cols.push(arg);
       
     when "--tpch-stream", "-h" then
-      puts "Generating stream command";
+      CLog.debug { "Generating stream command" }
       cmd = $config.spread_path + "/bin/tpch.sh -d " + arg + " " + 
         $cols.keys.collect { |t| "--" + t + ($upfront_cols.include?(t) ? " upfront" : "") }.join(" ");
-      puts "Reading: " + cmd
+      CLog.debug { "Reading: " + cmd }
       $input = IO.popen(cmd, "r+")
     
     when "--stats", "-s" then
       $stats_every = (if arg.nil? || arg == "" then 1000 else arg end).to_i;
-      puts "Will print stats every : " + $stats_every.to_s;
+      CLog.info { "Will print stats every : " + $stats_every.to_s }
     
     when "--dump", "-d" then
       unless arg.nil? || arg == "" then
         arg = arg.split(":");
         dest = java.net.InetSockAddress(arg[0], if arg.size > 1 then arg[1] else 52982 end);
-        puts Java::org::dbtoaster::cumulus::node::MapNode::getClient(dest).dump
+        CLog.info { Java::org::dbtoaster::cumulus::node::MapNode::getClient(dest).dump }
       else
         dest = java.net.InetSockAddress("localhost", 52981);
-        puts Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(dest).dump
+        CLog.info { Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(dest).dump }
       end
       exit(0);
     

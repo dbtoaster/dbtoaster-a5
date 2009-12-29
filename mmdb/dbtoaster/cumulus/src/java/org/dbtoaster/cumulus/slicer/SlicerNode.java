@@ -11,6 +11,8 @@ import org.dbtoaster.cumulus.net.*;
 import org.dbtoaster.cumulus.net.TProtocol.TProtocolException;
 import org.dbtoaster.cumulus.net.NetTypes.*;
 
+import org.apache.log4j.Logger;
+
 public class SlicerNode
 {
     public interface SlicerNodeIFace
@@ -237,6 +239,7 @@ public class SlicerNode
     public static void main(String args[]) throws Exception
     {
       CumulusConfig conf = new CumulusConfig();
+      Logger logger = Logger.getLogger("dbtoaster.Slicer");
       conf.defineOption("q", "quiet", false);
       conf.defineOption("serve", false);
       conf.configure(args);
@@ -244,14 +247,14 @@ public class SlicerNode
       PrimarySlicerNodeIFace handler = conf.loadRubyObject("slicer/slicer.rb", PrimarySlicerNodeIFace.class);
       Server s = new Server(new SlicerNode.Processor(handler), 52980);
 
-      System.out.println("Created slicer node handler...");
+      logger.info("Created slicer node handler...");
       
       Thread t = new Thread(s);
       t.start();
       
       // Start up slicer network.
       String serveOption = conf.getProperty("serve");
-      System.out.println("Serve option: " + serveOption);
+      logger.debug("Serve option: " + serveOption);
       if ( serveOption == null || !(serveOption.equals("YES")) ) {
           Thread.sleep(2000);
           handler.bootstrap();

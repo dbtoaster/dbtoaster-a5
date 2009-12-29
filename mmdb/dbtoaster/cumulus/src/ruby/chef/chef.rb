@@ -6,7 +6,10 @@ require 'chef/maplayout';
 
 class ChefNodeHandler
   include Java::org::dbtoaster::cumulus::chef::ChefNode::ChefNodeIFace;
-  
+
+  include CLogMixins;
+  self.logger_segment = "Chef";
+    
   def initialize(num_templates)
     @next_template = 0;
     @next_cmd = 1;
@@ -37,19 +40,19 @@ class ChefNodeHandler
     @start_time = Time.now if @start_time.nil?; 
     if (@next_update % 1000 == 0) then
       rate = @next_update / (Time.now - @start_time)
-      puts "Switch: #{@next_update} updates processed, rate: #{rate}, #{@next_cmd} puts, #{@fetch_count} fetches"
+      info { "Switch: #{@next_update} updates processed, rate: #{rate}, #{@next_cmd} puts, #{@fetch_count} fetches" }
     end
     @next_update += 1;
   end
 
   def request_backoff(node)
     @backoff_nodes.add(node);
-    #puts "Switch: #{node} requesting backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}";
+    debug { "Switch: #{node} requesting backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}" };
   end
   
   def finish_backoff(node)
     @backoff_nodes.delete(node);
-    #puts "Switch: #{node} no longer needs backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}";
+    debug { "Switch: #{node} no longer needs backoff; backoff set now at #{@backoff_nodes.to_a.join(",")}" }
   end
 
 #  def update(table, params)
@@ -89,7 +92,7 @@ class ChefNodeHandler
       if client.is_a? MapNode::MapNodeClient then
         client.update(table, params, cmdid.to_i)
       else
-        #puts "Forwarding update out..."
+        trace { "Forwarding update out..." }
         client.forward_update(table, params, cmdid.to_i)
       end
     end
@@ -98,7 +101,7 @@ class ChefNodeHandler
   end
   
   def forward_update(table, params, basecmd)
-    #puts "Forwarding update in..."
+    trace { "Forwarding update in..." }
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
@@ -111,9 +114,9 @@ class ChefNodeHandler
   def set_forwarders(nodes, map_nodes)
     node_str = nodes.collect { |node_info| node_info.getHostName }.join(",")
     if map_nodes > 0 then
-      puts "Setting forwards to map nodes: #{node_str}"
+      debug { "Setting forwards to map nodes: #{node_str}" }
     else
-      puts "Setting forwards to switch nodes: #{node_str}"
+      debug { "Setting forwards to switch nodes: #{node_str}" }
     end
     @nodelist = nodes.collect do |node_info|
       if map_nodes > 0 then 
@@ -139,14 +142,14 @@ class ChefNodeHandler
         mct.compile;
         [relation, mct]
       end
-    #puts @metacompiled.values.join("\n\n");
+    debug { @metacompiled.values.join("\n\n") }
   end
   
   def install_template(template, index = (@next_template += 1))
     template = UpdateTemplate.new(template) if template.is_a? String;
     template.index = index;
     compiled = @layout.compile_trigger(template);
-    #puts "Compiled Trigger: \n" + compiled.to_s;
+    debug { "Compiled Trigger: \n" + compiled.to_s };
     @templates[template.relation.to_s].push(compiled);
   end
   
@@ -167,17 +170,17 @@ end
 handler = ChefNodeHandler.new($config.templates.size);
 $config.nodes.each_pair do |node, info|
   handler.install_node(info["address"], info["partitions"]);
-#  puts("Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 
-#    info["partitions"].collect do |map, partition|
-#      "  Map " + map.to_s + "[" + partition.join(",") +"]";
-#    end.join("\n"));
+  CLog.debug { "Identified node " + node.to_s + " at " + info["address"].to_s + "\n" + 
+    info["partitions"].collect do |map, partition|
+      "  Map " + map.to_s + "[" + partition.join(",") +"]";
+    end.join("\n") };
 end
 $config.partition_sizes.each_pair do |map, sizes|
   handler.define_partition(map, sizes);
 end
 #$config.templates.each_pair do |id, cmd|
 #  handler.install_template(cmd)
-#  puts "Loaded Template " + id.to_s;
+#  debug { "Loaded Template " + id.to_s }
 #end
 #handler.metacompile_templates;
 

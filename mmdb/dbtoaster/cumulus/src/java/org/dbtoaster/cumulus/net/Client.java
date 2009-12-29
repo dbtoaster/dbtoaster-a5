@@ -11,11 +11,15 @@ import java.nio.channels.Selector;
 import java.nio.channels.SelectionKey;
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
+
 public abstract class Client
 {
   protected TProtocol iprot;
   protected TProtocol oprot;
   protected Semaphore pendingFrames = new Semaphore(0);
+  
+  protected static final Logger logger = Logger.getLogger("dbtoaster.Net.Client");
 
   public Client(InetSocketAddress saddr, Integer sendFrameBatchSize, Selector selector)
       throws IOException
@@ -66,29 +70,22 @@ public abstract class Client
         cTypeSingletons.put(addr, ret);
         
       } catch(NoSuchMethodException e){
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(InstantiationException e){
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(IllegalArgumentException e){
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(InvocationTargetException e){
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(IllegalAccessException e){
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(ExceptionInInitializerError e){
         if(IOException.class.isAssignableFrom(e.getException().getClass())){
           throw (IOException)e.getException();
         }
-        System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-        e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch (Exception e) {
-          System.err.println("Error: Class '" + c.toString() + "' is not a valid Client subclass");
-          e.printStackTrace();
+        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       }
     }
     
@@ -177,7 +174,7 @@ public abstract class Client
             }
             
             if ( !processed ) {
-              System.err.println("Key registered for select in Client, "+
+              logger.debug("Key registered for select in Client, "+
                   "but neither readable nor writable");
             }
           }

@@ -126,6 +126,8 @@ class RubyConfig
         parse_opt(opt.strip,arg.strip)
       end
     end
+    
+    Java::org.apache.log4j.PropertyConfigurator.configure(properties.path);
   end
 
   def parse_opt(opt, arg)

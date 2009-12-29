@@ -11,11 +11,14 @@ import org.jruby.CompatVersion;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.apache.log4j.PropertyConfigurator;
+import org.apache.log4j.Logger;
 
 public class CumulusConfig extends Properties
 {
   HashMap<String,String> parameters;
   HashSet<CumulusOption> parameterOptions;
+  
+  protected static Logger logger = null;
   
   public interface RubyConfigIface {
     public void load(String input);
@@ -54,13 +57,13 @@ public class CumulusConfig extends Properties
   {
     if(getProperty(property) == null)
     {
-      System.err.println("Config file does not contain property : " + property);
+      logger.error("Config file does not contain property : " + property);
     }
   }
   
   public void dumpProperty(String property)
   {
-    System.out.println(property + " = " + getProperty(property));
+    logger.info(property + " = " + getProperty(property));
   }
   
   public void setSystemProperty(String property)
@@ -115,6 +118,7 @@ public class CumulusConfig extends Properties
     setProperty("cumulus.config", args[1]);
     setSystemProperty("jruby.home");
     PropertyConfigurator.configure(this); //Log4J configuration
+    logger = Logger.getLogger("dbtoaster.Config");
   }
   
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface)
@@ -125,7 +129,7 @@ public class CumulusConfig extends Properties
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface, HashMap<String,String> specialParams)
   {
     assertProperty("cumulus.home");
-    System.out.println("Creating Object : " + rObjectFile + " ... ");
+    logger.info("Creating Object : " + rObjectFile + " ... ");
     System.out.flush();
     ScriptingContainer container = new ScriptingContainer();
     container.getProvider().getRubyInstanceConfig().setCompatVersion(CompatVersion.RUBY1_9);
@@ -139,6 +143,7 @@ public class CumulusConfig extends Properties
     rConfig.parse_opt("config_file", getProperty("cumulus.config"));
     rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
     rConfig.parse_opt("compiler.home", getProperty("compiler.home"));
+    rConfig.parse_opt("object_file", rObjectFile);
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
       rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }

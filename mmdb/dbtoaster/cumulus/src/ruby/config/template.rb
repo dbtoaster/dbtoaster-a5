@@ -178,7 +178,7 @@ end
 
 class TemplateValuation
   attr_reader :params, :template;
-
+  
   def initialize(template, params, entries = nil)
     @template, @params = template, params.to_a;
     @instance = Array.new(template.entries.size, 0);
@@ -203,7 +203,7 @@ class TemplateValuation
       found = true;
       parametrization[1].push([entry,value]) if(parametrization[0].weak_match?(entry, @params));
     end
-    puts "Discovered #{entry} = #{value}, but no match in: #{@entry_values.collect {|e| e[0]}.join(",")}" unless found;
+    warn { "Discovered #{entry} = #{value}, but no match in: #{@entry_values.collect {|e| e[0]}.join(",")}" } unless found;
   end
   
   def ready?
@@ -539,7 +539,7 @@ class UpdateTemplate
   def access_patterns(map)
     @expression.entries.collect do |entry|
       if entry.source == map then
-#        puts "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",");
+        CLog.debug { "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",") }
         entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact
       end
     end.compact;
@@ -562,7 +562,7 @@ class UpdateTemplate
     end
     count = 1;
     @allocation_grid_sizes.each { |s| count *= s; }
-#    puts "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries";
+    CLog.debug { "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries" }
     @allocation_grid = Hash.new
     @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
       grid_cell = Array.new
@@ -615,7 +615,7 @@ class UpdateTemplate
   def compile_to_local(program, map_partitions)
     compute_allocation_grid;
     
-#    puts "Compiling Local Instance of ##{@index}: #{summary}";
+    CLog.debug { "Compiling Local Instance of ##{@index}: #{summary}" }
     if constant_entry_is_local(@target, map_partitions) then
       put_message = program.installPutComponent(
         @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
