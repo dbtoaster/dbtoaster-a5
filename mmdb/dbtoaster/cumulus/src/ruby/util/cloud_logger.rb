@@ -2,7 +2,7 @@
 #Java::org::slf4j::LoggerFactory;
 
 $logProjectName = "dbtoaster.cumulus";
-$logProcessName = File.basename($0, ".sh").to_lower;
+$logProcessName = File.basename($0, ".sh").downcase;
 
 class CLog
   def CLog.get(name = nil)

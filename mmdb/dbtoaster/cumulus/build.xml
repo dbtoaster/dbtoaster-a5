@@ -21,6 +21,12 @@ compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
         <fail message="Properties file initialized.  Edit local.properties and re-run the compiler" />
       </then>
     </if>
+    <if>
+      <not><available file="${compiler.home}/dbtoaster.top" /></not>
+      <then>
+	<exec executable="make" dir="${compiler.home}"><arg value="top" /></exec>
+      </then>
+    </if>
     
     <mkdir dir="${build}" />
     <mkdir dir="${bin}" />
