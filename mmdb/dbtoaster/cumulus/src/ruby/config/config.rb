@@ -1,5 +1,4 @@
 
-
 require 'config/template';
 require 'util/ok_mixins';
 require 'getoptlong';

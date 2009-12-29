@@ -10,6 +10,7 @@ import java.io.IOException;
 import org.jruby.CompatVersion;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
+import org.apache.log4j.PropertyConfigurator;
 
 public class CumulusConfig extends Properties
 {
@@ -113,6 +114,7 @@ public class CumulusConfig extends Properties
     load(new FileInputStream(args[0]));
     setProperty("cumulus.config", args[1]);
     setSystemProperty("jruby.home");
+    PropertyConfigurator.configure(this); //Log4J configuration
   }
   
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface)
@@ -135,7 +137,6 @@ public class CumulusConfig extends Properties
     RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
 
     rConfig.parse_opt("config_file", getProperty("cumulus.config"));
-
     rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
     rConfig.parse_opt("compiler.home", getProperty("compiler.home"));
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
@@ -146,6 +147,8 @@ public class CumulusConfig extends Properties
     }
     rConfig.load(getProperty("cumulus.config"));
     
+    receiver = container.runScriptlet(PathType.CLASSPATH, "util/cloud_logger.rb");
+
     receiver = container.runScriptlet(PathType.CLASSPATH, rObjectFile);
     T handler = container.getInstance(receiver, rInterface);
     return handler;

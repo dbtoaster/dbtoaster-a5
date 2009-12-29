@@ -12,6 +12,7 @@ class SlicerNodeHandler
   attr_writer :message_handler;
 
   include Java::org::dbtoaster::cumulus::slicer::SlicerNode::SlicerNodeIFace;
+  include CLogMixin;
 
   def initialize(config_file, verbosity = :quiet)
     @config_file = config_file;
@@ -34,7 +35,7 @@ class SlicerNodeHandler
           when :master  then master = true;
         end
       end
-      puts "Leaving monitor thread!";
+      debug { "Leaving monitor thread!" };
     end
   end
   
@@ -51,14 +52,12 @@ class SlicerNodeHandler
     @monitor_intake.push([:data, "Running: " + cmd ]);
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
-        puts "Spawning: #{cmd}"
+        debug { "Spawning: #{cmd}" }
         PTY.spawn(cmd) do |stdin, stdout, pid|
-          puts "Starting process pid #{pid}"
-          at_exit { puts "Killing #{cmd}"; Process.kill("HUP", pid) };
+          debug { "Starting process pid #{pid}" }
+          at_exit { debug { "Killing #{cmd}" }; Process.kill("HUP", pid) };
           stdin.each { |line| output.push([:data, line]); }
         end
-      #rescue PTY::ChildExited
-      #  puts "Ran #{cmd}"
       end
     end
   end
@@ -119,16 +118,17 @@ end
 
 class PrimarySlicerNodeHandler < SlicerNodeHandler
   include Java::org::dbtoaster::cumulus::slicer::SlicerNode::PrimarySlicerNodeIFace;
+  include CLogMixin;
   
   def spin_up_slicers(*slicer_nodes)
-    puts "Spinning up slicers #{slicer_nodes.length}"
+    debug { "Spinning up slicers #{slicer_nodes.length}" }
     slicer_nodes.collect do |node|
       [
         node, 
         Thread.new(node) do |node|
-          puts "Starting slicer manager for #{node}"; 
+          debug { "Starting slicer manager for #{node}" }
           manager = SlicerNode::Manager.new(node, $config.spread_path, $config_file);
-          puts "Starting slicer client for #{node}";
+          debug { "Starting slicer client for #{node}" }
           sleep(5);
           manager.client.start_logging(`hostname`.chomp);
           Thread.current[:client] = manager.client;
@@ -136,17 +136,17 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       ]
     end.collect_hash do |nt|
       node, init_thread = nt
-      puts "Joining slicer client thread";
+      debug { "Joining slicer client thread" }
       init_thread.join;
-      puts "Slicer for #{node} is active";
+      debug { "Slicer for #{node} is active" }
       [node, init_thread[:client]]
     end
   end
 
   def build_chef_internal_nodes(fanout,level,parent,addresses,addr_idx)
-    puts "Building internal nodes with parent #{parent.getHostName}"
-    puts "Internal nodes: #{addr_idx} #{fanout}, " +
-      (addresses[addr_idx...(addr_idx+fanout)].collect { |n| n.getHostName }).join(",");
+    debug "Building internal nodes with parent #{parent.getHostName}"
+    debug { "Internal nodes: #{addr_idx} #{fanout}, " +
+      (addresses[addr_idx...(addr_idx+fanout)].collect { |n| n.getHostName }).join(",") }
 
     switches = Hash.new
     if level == 0 then
@@ -177,14 +177,13 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     end.collect { |node, node_info| node_info["address"] }
 
     if num_nodes > $config.nodes.size then
-      puts "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
-        "#{$config.nodes.size} nodes available."
-      puts "Defaulting to 1 chef."
+      warn { "Invalid chef forwarding tree, requested #{num_nodes} forwarders, "+
+        "#{$config.nodes.size} nodes available.\nDefaulting to 1 chef." }
       switches[$config.switch] =
         [$config.nodes.collect { |node, node_info| node_info["address"] }, 1]
     else
       if ($config.nodes.size % leaf_nodes != 0) then
-        puts "Non-uniform forwarding workload detected. Last node will do less work..."
+        warn { "Non-uniform forwarding workload detected. Last node will do less work..." }
       end
 
       # Build internal nodes.
@@ -196,12 +195,12 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
         leaves = leaves.concat(ch.select { |c| not(switches.key?(c)) }).uniq
       end
 
-      puts "Leaves: " + leaves.collect { |n| n.getHostName }.join(",")
+      debug { "Leaves: " + leaves.collect { |n| n.getHostName }.join(",") }
 
       node_addr_idx = 0;
 
       if leaves.size != leaf_nodes then
-        puts "Incorrect number of leaf nodes: #{leaves.size}, expected #{leaf_nodes}"
+        debug { "Incorrect number of leaf nodes: #{leaves.size}, expected #{leaf_nodes}" }
         leaf_nodes = leaves.size
       end
 
@@ -239,7 +238,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
           switches[switch_addr] = [node_addresses[startidx...endidx], 1]
         end
       else
-        puts "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}"
+        debug { "Invalid # switches: #{$config.num_switches}, must be a factor of #{$config.nodes.size}" }
       end
       switch_forwarders = [switches.keys(), 0]
       switches[$config.switch] = switch_forwarders
@@ -248,13 +247,15 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
   end
 
   def print_forwarding_tree(switches)
-    puts "========================"
-    puts "Created forwarding tree:"
-    switches.each_pair do |p,ch|
-      children = ch[0].collect { |c| c.getHostName }.join(",");
-      puts "Parent: #{p.getHostName} children: #{children}"
-    end
-    puts "========================"
+    debug {
+     "========================\n" + 
+     "Created forwarding tree:\n" +
+      switches.to_a.collect do |ch|
+        children = ch[1][0].collect { |c| c.getHostName }.join(",");
+        "Parent: #{ch[0].getHostName} children: #{children}"
+      end.join("\n") + "\n"
+      "========================"
+    }
   end
 
   def bootstrap()
@@ -266,13 +267,11 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
       if /Starting Cumulus Server/.match(log_message) then
         $pending_servers -= 1 
-        #Logger.info { "A server just came up; #{$pending_servers} servers left" }
-        puts "A server just came up; #{$pending_servers} servers left"
+        debug { "A server just came up; #{$pending_servers} servers left" }
       end
       if $pending_servers <= 0 then
         sleep(20)
-        #Logger.info { "Server Initialization complete, Starting Client..." };
-        puts "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." ;
+        debug { "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." }
         $clients[$config.switch.getHostName].start_client
       end
       puts log_message;
@@ -284,7 +283,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
     nodes = []
     $config.nodes.each do |node, node_info|
-      puts "Launching #{node_info['address'].getHostName}"
+      debug { "Launching #{node_info['address'].getHostName}" }
       nodes.push(node_info["address"].getHostName);
     end
     nodes.push($config.switch.getHostName);
@@ -293,17 +292,17 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     $clients["localhost"] = $local_node;
     
     #Logger.info { "Starting Nodes..." };
-    puts "Starting Nodes..." ;
+    debug { "Starting Nodes..." }
     $config.nodes.each do |node, node_info|
       #Logger.info { "Starting : #{node} @ #{node_info["address"].getHostName}" };
-      puts "Starting : #{node} @ #{node_info["address"].getHostName}" ;
+      debug { "Starting : #{node} @ #{node_info["address"].getHostName}" }
       $clients[node_info["address"].getHostName].start_node(node_info["address"].getPort);
     end
     
-    puts "Starting Switches"
+    debug { "Starting Switches" }
     switches.each do |switch_node, clients_and_type|
       #Logger.info { "Starting Switch @ #{switch_node.getHostName}..." };
-      puts "Starting Switch @ #{switch_node.getHostName}..."
+      debug { "Starting Switch @ #{switch_node.getHostName}..." }
       $clients[switch_node.getHostName].start_switch;
     end
 
@@ -312,19 +311,18 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
     switches.each do |switch_node, clients_and_type|
       clients, forward_to_nodes = clients_and_type
-      puts "Setting Switch forwarders @ #{switch_node.getHostName}"
+      debug { "Setting Switch forwarders @ #{switch_node.getHostName}" }
       ChefNode.getClient(switch_node).set_forwarders(clients, forward_to_nodes);
     end
   
-    #Logger.info { "Starting Monitor" }
-    puts "Starting Monitor";
+    debug { "Starting Monitor"; }
     monitor = SlicerMonitor.new($clients.keys.delete_if { |c| c == "localhost" }.uniq);
-  
-    #Logger.info { "Sleeping until finished" };
   end  
 end
 
 module SlicerNode 
+  include CLogMixin;
+  
   class Manager
     def initialize(host, spread_path, config_file)
       @host = host;
@@ -353,10 +351,10 @@ module SlicerNode
     
     def client
       #Logger.warn { "Waiting for slicer to spawn on : #{@host}" }
-      puts "Waiting for slicer to spawn on : #{@host}"
+      debug { "Waiting for slicer to spawn on : #{@host}" }
       @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
       #Logger.warn { "Slicer spawned on : #{@host}" }
-      puts "Slicer spawned on : #{@host}"
+      debug { "Slicer spawned on : #{@host}" }
       if @client then @client
       else @client = Client.connect(@host)
       end
@@ -370,9 +368,9 @@ module SlicerNode
     
     def Client.connect(host, port = 52980)
       dest = java.net.InetSocketAddress.new(host, port);
-      puts "Connecting to #{dest.toString}";
+      debug { "Connecting to #{dest.toString}" }
       ret = Java::org::dbtoaster::cumulus::slicer::SlicerNode::getClient(dest);
-      puts "Connected to #{dest.toString}";
+      debug { "Connected to #{dest.toString}" }
       return ret
     end
   end
@@ -414,7 +412,7 @@ end
 
 $verbosity = :normal;
 $config_file = $config['config_file']
-puts "Config file: #{$config_file}"
+CLog.debug { "Config file: #{$config_file}" }
 
 $local_node = PrimarySlicerNodeHandler.new($config_file, $verbosity);
 return $local_node

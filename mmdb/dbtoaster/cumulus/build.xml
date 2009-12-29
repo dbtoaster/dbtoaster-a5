@@ -9,11 +9,6 @@
   <property name="jar"   location="${bin}/cumulus.jar" />
   <property file="local.properties" />
   
-  <path id="classpath">
-    <pathelement path="${jruby.home}/lib/jruby.jar" />
-    <pathelement path="lib/je.jar" />
-  </path>
-  
   <target name="init">
     <if>
       <not><isset property="cumulus.home" /></not>
@@ -22,7 +17,7 @@
 jruby.home    = /home/fs01/oak5/src/jruby-1.4.0
 cumulus.home  = /home/fs01/oak5/dbtoaster/cumulus
 compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
-        </echo>
+</echo>
         <fail message="Properties file initialized.  Edit local.properties and re-run the compiler" />
       </then>
     </if>
@@ -30,6 +25,12 @@ compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
     <mkdir dir="${build}" />
     <mkdir dir="${bin}" />
     
+    <path id="classpath">
+      <pathelement path="${jruby.home}/lib/jruby.jar" />
+      <pathelement path="lib/je.jar" />
+      <pathelement path="lib/log4j-1.2.15.jar" />
+    </path>
+  
     <pathconvert refid="classpath" property="compile.classpath" />
     <property name="run.classpath" value="${compile.classpath}:${jar}" />
     <exec executable="src/tools/make_launchers.sh">
