@@ -330,7 +330,7 @@ class TemplateExpression
       when "*" then :mult
       when "/" then :div
       when ")",nil then return left;
-      else raise SpreadException.new("Parse Error (Expected op, got '"+tokenizer.last.to_s+"')");
+      else raise "Parse Error (Expected op, got '#{tokenizer.last}')";
     end
     right = decode_var(template, tokenizer);
     
@@ -465,22 +465,27 @@ class UpdateTemplate
   
   def initialize(text_line, index = 0)
     line = text_line.split("\t");
-    raise SpreadException.new("Instantiating update template with insufficient components: " + text_line) if line.size < 5;
+    raise "Instantiating update template with insufficient components: #{text_line}" if line.size < 5;
     
     @entries = Array.new;
     @allocation_grid = nil;
     
-    # This template applies to updates to [0]
-    @relation = line[0].to_s;
-    # This template is parametrized by the parameters listed in the comma delimited list [1]
-    @paramlist = line[1].split(";").collect do |k| k.gsub(/ *([^ ]) */, "\\1") end;
-    @varlist = Array.new;
-    # The target's Map Entry (template) is [2]
-    @target = TemplateEntry.parse(self, line[2]);
-    # The conditions for the target to apply are [3]
-    @conditions = TemplateConditionList.new(self, line[3]);
-    # The expression for the update is [4]
-    @expression = TemplateExpression.parse(self, line[4]);
+    begin
+      # This template applies to updates to [0]
+      @relation = line[0].to_s;
+      # This template is parametrized by the parameters listed in the comma delimited list [1]
+      @paramlist = line[1].split(";").collect do |k| k.gsub(/ *([^ ]) */, "\\1") end;
+      @varlist = Array.new;
+      # The target's Map Entry (template) is [2]
+      @target = TemplateEntry.parse(self, line[2]);
+      # The conditions for the target to apply are [3]
+      @conditions = TemplateConditionList.new(self, line[3]);
+      # The expression for the update is [4]
+      @expression = TemplateExpression.parse(self, line[4]);
+    rescue Exception => e
+      puts e.backtrace.join("\n");
+      raise e;
+    end
     
     # loopvarlist deserves a little discussion.  This is essentially a pre-computed
     # datastructure that streamlines computation of the domain of each loop variable
