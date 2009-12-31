@@ -144,7 +144,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
   end
 
   def build_chef_internal_nodes(fanout,level,parent,addresses,addr_idx)
-    debug "Building internal nodes with parent #{parent.getHostName}"
+    debug { "Building internal nodes with parent #{parent.getHostName}" }
     debug { "Internal nodes: #{addr_idx} #{fanout}, " +
       (addresses[addr_idx...(addr_idx+fanout)].collect { |n| n.getHostName }).join(",") }
 
@@ -364,9 +364,9 @@ module SlicerNode
   class Client
     def Client.connect(host, port = 52980)
       dest = java.net.InetSocketAddress.new(host, port);
-      debug { "Connecting to #{dest.toString}" }
+      CLog.debug { "Connecting to #{dest.toString}" }
       ret = Java::org::dbtoaster::cumulus::slicer::SlicerNode::getClient(dest);
-      debug { "Connected to #{dest.toString}" }
+      CLog.debug { "Connected to #{dest.toString}" }
       return ret
     end
   end

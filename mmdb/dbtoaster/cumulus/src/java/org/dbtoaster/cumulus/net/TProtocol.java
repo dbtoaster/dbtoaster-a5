@@ -213,7 +213,7 @@ public class TProtocol
     {
         if ( out == null ) { throw new TProtocolException("Invalid output protocol."); }
         try {
-            logger.warn("Putting " + o);
+            logger.trace("Putting " + o);
             out.writeObject(o);
             sendObject();
         } catch (IOException ioe) {

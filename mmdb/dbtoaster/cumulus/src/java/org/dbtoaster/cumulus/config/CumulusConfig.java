@@ -7,11 +7,13 @@ import java.util.HashSet;
 import java.util.ArrayList;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.InetAddress;
 import org.jruby.CompatVersion;
 import org.jruby.embed.PathType;
 import org.jruby.embed.ScriptingContainer;
 import org.apache.log4j.PropertyConfigurator;
 import org.apache.log4j.Logger;
+import org.apache.log4j.MDC;
 
 public class CumulusConfig extends Properties
 {
@@ -115,9 +117,14 @@ public class CumulusConfig extends Properties
   
     if(args.length < 2){ usage(); }
     load(new FileInputStream(args[0]));
+    
     setProperty("cumulus.config", args[1]);
+    setProperty("hostname", InetAddress.getLocalHost().getHostName());
+    
     setSystemProperty("jruby.home");
+    
     PropertyConfigurator.configure(this); //Log4J configuration
+    MDC.put("hostname", getProperty("hostname"));
     logger = Logger.getLogger("dbtoaster.Config");
   }
   
