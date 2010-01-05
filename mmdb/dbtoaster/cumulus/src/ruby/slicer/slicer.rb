@@ -396,6 +396,7 @@ class SlicerMonitor
             line.chomp.gsub(/java.*org.dbtoaster.cumulus.(.*Node).*/, "\\1")
           end
         end
+        puts "--------- #{ Date.new } ----------";
         puts log.join("\n");
       end
     end

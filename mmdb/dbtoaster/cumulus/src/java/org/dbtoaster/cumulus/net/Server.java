@@ -44,7 +44,9 @@ public class Server implements Runnable
 
     public void run()
     {
-        logger.info("Starting Cumulus Server");
+        // Slicer needs to see the following string as soon as the server is up.  
+        // It gets printed regardless of debug mode.
+        System.out.println("====> Starting Cumulus Server <====");
         // Wait for something of interest to happen
         while (!terminated)
         {
