@@ -396,8 +396,9 @@ class SlicerMonitor
             line.chomp.gsub(/java.*org.dbtoaster.cumulus.(.*Node).*/, "\\1")
           end
         end
-        puts "--------- #{ Date.new } ----------";
+        puts "-- BEGIN STATUS: #{Time.new.to_s} --";
         puts log.join("\n");
+        puts "-- END STATUS --";
       end
     end
   end
