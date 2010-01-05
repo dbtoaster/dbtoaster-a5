@@ -4,3 +4,4 @@ slicer  org.dbtoaster.cumulus.slicer.SlicerNode  java
 client  tools/client.rb                          jruby
 tpch    tools/tpch.rb                            jruby
 toaster toaster/toaster.rb                       jruby
+graph   tools/cumulus_graph                      jruby

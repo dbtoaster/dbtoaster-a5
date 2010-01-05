@@ -1,3 +1,48 @@
+class Tokenizer
+  def initialize(string, token)
+    @tokens = string.scan(token);
+    @last = nil;
+  end
+  
+  def scan
+    while @tokens.size > 0
+      if !(yield @tokens.shift) then break; end
+    end
+  end
+  
+  def next
+    @last = 
+      if @tokens.size > 0 then @tokens.shift
+      else nil; end
+  end
+  
+  def last
+    @last;
+  end
+  
+  def more?
+    @tokens.size > 0;
+  end
+  
+  def flatten
+    @tokens = @tokens.flatten;
+  end
+  
+  def assert_next(token, errstr = nil)
+    if self.next != token then
+      errstr = "Parse Error: Expected '" + token.to_s + "' but found '" + last.to_s + "'" unless errstr != nil;
+      raise SpreadException.new(errstr);
+    end
+  end
+  
+  def tokens_up_to(token)
+    ret = Array.new;
+    while (more? && (self.next != token))
+      ret.push(last);
+    end
+    ret;
+  end
+end
 
 class Array
   def each_pair(other, explode_on_different_size = false)
