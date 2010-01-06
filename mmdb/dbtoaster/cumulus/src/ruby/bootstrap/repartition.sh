@@ -1,6 +1,5 @@
 #!/bin/sh
 
-ruby_cp=$JRUBY_HOME/lib/jruby.jar:$CUMULUS_HOME/lib/je.jar:$CUMULUS_HOME/bin/cumulus.jar
 dataset_dir=/home/yanif/cumulus-pvldb/tpch/
 
 while getopts ":d:" option
@@ -51,16 +50,16 @@ for i in 1g 10g; do
     for (( j=0; j<$old_num_nodes; j++ )); do   
       for (( k=0; k<$num_nodes; k++ )); do
         echo "Repartitioning $j => $k"
-          jruby -J-cp $ruby_cp bootstrap.rb -l $j -s $k -r $rspec_file -d $input_dir -o $output_dir
+          ../../bin/bootstrap.sh -l $j -s $k -r $rspec_file -d $input_dir -o $output_dir
       done
     done
 
 # Per-map repartitioning
-#     jruby -J-cp $ruby_cp bootstrap.rb -l $j -r $rspec_file -d $input_dir -o $output_dir
+#     ../../bin/bootstrap.sh -l $j -r $rspec_file -d $input_dir -o $output_dir
 #  done
 
 # Per-dataset repartitioning
-#  jruby -J-cp $ruby_cp bootstrap.rb -r $rspec_file -d $input_dir -o $output_dir
+#  ../../bin/bootstrap.sh -r $rspec_file -d $input_dir -o $output_dir
 
     mv __db* $output_dir/
 done

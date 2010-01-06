@@ -1,6 +1,5 @@
 #!/bin/sh
 
-ruby_cp=$JRUBY_HOME/lib/jruby.jar:$CUMULUS_HOME/lib/je.jar:$CUMULUS_HOME/bin/cumulus.jar
 dataset_dir=/home/fs01/yna3/spread/tpch/pfile/
 
 while getopts ":d:" option
@@ -48,12 +47,12 @@ for i in 1g 10g; do
 
   test -f $rspec_file || \
     (echo "Creating repartition spec" && \
-      jruby -J-cp $ruby_cp gen_repartition_spec.rb $boot_file $num_nodes $rspec_file)
+      ../../bin/gen_rpspec.sh $boot_file $num_nodes $rspec_file)
   
 #  for m in `echo $mapnames`; do
     for (( j=0; j<$old_num_nodes; j++ )); do   
       echo "Repartitioning $j => $output_node"
-      jruby -J-cp $ruby_cp repartition.rb -q -l $j -s $output_node -r $rspec_file -d $input_dir -o $output_dir
+      ../../bin/repartition.sh -q -l $j -s $output_node -r $rspec_file -d $input_dir -o $output_dir
     done
 #  done
 done

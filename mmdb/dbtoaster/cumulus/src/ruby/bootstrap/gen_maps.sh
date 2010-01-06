@@ -1,7 +1,5 @@
 #!/bin/sh
 
-ruby_cp=$JRUBY_HOME/lib/jruby.jar:$CUMULUS_HOME/lib/je.jar:$CUMULUS_HOME/bin/cumulus.jar
-
 dataset_dir=/home/yanif/datasets/tpch/
 output_dir=tpch/
 tmp_dir=maps/
@@ -61,7 +59,7 @@ for i in 1g 10g; do
     rm -rf __db* maps/*
     for (( n=0; n<$num_nodes; n++ )); do
         for m in `echo $mapnames`; do
-            time jruby -J-cp $ruby_cp bootstrap.rb -d $dataset_dir/$i -s $n -m $m -o $tmp_dir $boot_file
+            time ../../bin/bootstrap.sh -d $dataset_dir/$i -s $n -m $m -o $tmp_dir $boot_file
         done
     done
 
