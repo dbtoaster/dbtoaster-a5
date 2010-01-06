@@ -490,6 +490,7 @@ opts = GetoptLong.new(
   [       "--node",              GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch-forwarders", GetoptLong::REQUIRED_ARGUMENT ],
+  [       "--switch-tree",       GetoptLong::REQUIRED_ARGUMENT ],
   [       "--partition",         GetoptLong::REQUIRED_ARGUMENT ],
   [       "--domain",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--test",              GetoptLong::REQUIRED_ARGUMENT ],
