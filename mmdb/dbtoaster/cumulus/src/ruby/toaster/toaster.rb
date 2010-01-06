@@ -3,10 +3,11 @@ require 'getoptlong';
 require 'util/ok_mixins';
 require 'config/config';
 require 'config/template';
+require 'fileutils';
 
 class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives,
-    :slice_directives, :persist, :switch, :switch_forwarders, :preload, :map_formulae;
+    :slice_directives, :persist, :switch, :switch_forwarders, :switch_tree, :preload, :map_formulae;
 
   include CLogMixins;
   self.logger_segment = "Toaster";
@@ -22,6 +23,7 @@ class DBToaster
     @compiled = nil;
     @switch = "localhost";
     @switch_forwarders = 0;
+    @switch_tree = [];
     @preload = nil;
     @schemas = nil;
     @map_aliases = Hash.new;
@@ -59,7 +61,8 @@ class DBToaster
       when "--node"      then 
         @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9\.]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
       when "--switch"    then @switch = arg;
-      when "--switch-forwarders" then @switch_forwarders = arg.to_i; 
+      when "--switch-forwarders" then @switch_forwarders = arg.to_i;
+      when "--switch-tree" then @switch_tree = arg.split(',', 2).collect { |p| p.to_i }
       when "--partition" then 
         match = /Map *([a-zA-Z0-9_]+) *on *(.*)/.match(arg);
         raise "Invalid partition directive: " + arg unless match;
@@ -152,6 +155,7 @@ class DBToaster
             [key, name];
           end
         end
+        rel_temps[0].entries.concat(template.entries)
         rel_temps[0].add_expression(template.expression);
       end
     end
@@ -496,14 +500,14 @@ opts = GetoptLong.new(
   [ "-k", "--ignore-keys",       GetoptLong::NO_ARGUMENT ],
   [ "-w", "--switch-addr",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-b", "--boot",              GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ],
 ).each do |opt, arg| 
   case opt
-    when "-l", "--localprops"  then $config.load_local_properties(arg)
-    when "-o", "--output"      then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
-    when "-k", "--ignore-keys" then $options[:toast_keys] = false;
-    when "-b", "--boot"        then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
-    when "-p", "--pfile"       then $pfile_basepath = arg;
+    when "-l", "--localprops"      then $config.load_local_properties(arg)
+    when "-o", "--output"          then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
+    when "-k", "--ignore-keys"     then $options[:toast_keys] = false;
+    when "-b", "--boot"            then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
+    when "-p", "--pfile"           then $pfile_basepath = arg;
     else                            $toaster_opts.push([opt, arg])
   end
 end
@@ -581,7 +585,11 @@ end
 $output.write("\n\n############ Node Definitions\n");
 first_node = true;
 $output.write("switch " + $toaster.switch+"\n");
-$output.write("switch_forwarders " + $toaster.switch_forwarders.to_s+"\n");
+if $toaster.switch_tree.size == 2 then
+  $output.write("switch_tree " +($toaster.switch_tree.collect{ |i| i.to_i }.join(","))+"\n")
+else
+  $output.write("switch_forwarders " + $toaster.switch_forwarders.to_s+"\n");
+end
 
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");

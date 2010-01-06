@@ -278,7 +278,13 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       if $pending_servers > 0 then handler else nil end;
     end
 
-    switches = build_chef_forwarding_tree(1,2)
+    if $config.switch_tree.size == 2 then
+      puts 'Building hierarchical forwarding tree...'
+      switches = build_chef_forwarding_tree($config.switch_tree[0], $config.switch_tree[1])
+    else
+      puts "Building flat forwarding tree..."
+      switches = build_chef_flat_forwarding_tree();
+    end
     print_forwarding_tree(switches)
 
     nodes = []

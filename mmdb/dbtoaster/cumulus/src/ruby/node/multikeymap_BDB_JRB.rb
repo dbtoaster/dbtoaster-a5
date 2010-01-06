@@ -3,6 +3,8 @@ include Java;
 include_class Java::org::dbtoaster::cumulus::node::MultiKeyMapJavaImpl;
 
 class MultiKeyMap 
+  attr_reader :wildcard;
+
   def initialize(numkeys, patterns, name = "", pfiles = [],
                  basepath = "/tmp", default = nil, wildcard = -1)
     @java_impl = MultiKeyMapJavaImpl.new(numkeys, patterns, name, default);

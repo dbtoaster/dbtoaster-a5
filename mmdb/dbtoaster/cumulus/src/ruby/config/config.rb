@@ -4,8 +4,12 @@ require 'util/ok_mixins';
 require 'getoptlong';
 
 class RubyConfig
-  attr_reader :templates, :nodes, :partition_sizes, :my_port, :switch, :num_switches,
-    :log_maps, :client_debug, :spread_path, :compiler_path, :partition_owners;
+  attr_reader :templates, :nodes, :my_port,
+    :switch, :num_switches, :switch_tree,
+    :log_maps, :client_debug,
+    :spread_path, :compiler_path,
+    :hadoop_path, :hadoop_dfs_path, :hadoop_job_path,
+    :partition_sizes, :partition_owners;
   attr_writer :my_name, :my_port, :unknown_opts;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
@@ -31,8 +35,15 @@ class RubyConfig
     end
     Logger.info { "Spread Path is : #{@spread_path}" }
     
+    @compiler_path = nil;
+    
+    @hadoop_path = nil;
+    @hadoop_dfs_path = nil;
+    @hadoop_job_path = nil;
+
     @unknown_opts = Hash.new;
     @num_switches = 0;
+    @switch_tree = [];
 
     # Debugging tools; Preprocessing that happens when the client reads from TPCH
     @client_debug = { 
@@ -66,6 +77,9 @@ class RubyConfig
         when "switch"    then @switch = java::net::InetSocketAddress.new(cmd[1].chomp, 52981);
 
         when "switch_forwarders" then @num_switches = cmd[1].chomp.to_i;  
+
+        when "switch_tree" then
+          @switch_tree = cmd[1].chomp.split(",", 2).collect{ |p| p.to_i }
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
@@ -141,7 +155,16 @@ class RubyConfig
       
       when "compiler.home" then
         @compiler_path = arg.chomp;
-        
+      
+      when "hadoop.home" then
+        @hadoop_path = arg.chomp;
+
+      when "hadoop.dfs.home" then
+        @hadoop_dfs_path = arg.chomp;
+
+      when "hadoop.jobs.home" then
+        @hadoop_job_path = arg.chomp;
+
       else
         @unknown_opts[opt] = arg;
     end
