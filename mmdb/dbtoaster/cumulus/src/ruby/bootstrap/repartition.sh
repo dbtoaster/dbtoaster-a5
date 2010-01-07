@@ -44,22 +44,22 @@ for i in 1g 10g; do
   test -d $input_dir || (echo "Failed to find input dir $input_dir" && exit)
   test -d $output_dir || (echo "Creating $output_dir" && mkdir -p $output_dir)
 
-  ./gen_repartition_spec.rb $boot_file $num_nodes $rspec_file
+  ../../../bin/gen_rpspec.sh $boot_file $num_nodes $rspec_file
   
 #  for m in `echo $mapnames`; do
     for (( j=0; j<$old_num_nodes; j++ )); do   
       for (( k=0; k<$num_nodes; k++ )); do
         echo "Repartitioning $j => $k"
-          ../../bin/bootstrap.sh -l $j -s $k -r $rspec_file -d $input_dir -o $output_dir
+          ../../../bin/bootstrap.sh -l $j -s $k -r $rspec_file -d $input_dir -o $output_dir
       done
     done
 
 # Per-map repartitioning
-#     ../../bin/bootstrap.sh -l $j -r $rspec_file -d $input_dir -o $output_dir
+#     ../../../bin/bootstrap.sh -l $j -r $rspec_file -d $input_dir -o $output_dir
 #  done
 
 # Per-dataset repartitioning
-#  ../../bin/bootstrap.sh -r $rspec_file -d $input_dir -o $output_dir
+#  ../../../bin/bootstrap.sh -r $rspec_file -d $input_dir -o $output_dir
 
     mv __db* $output_dir/
 done
