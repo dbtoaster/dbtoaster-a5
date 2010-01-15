@@ -595,6 +595,9 @@ class UpdateTemplate
         # figure out when we need to turn this update into a put.
         targets = 
         nodes_grouped_by_relation(project_grid_to_entry(@target, partition)).each_pair do |cell_partition, source_nodes|
+          source_nodes = source_nodes.clone;
+          source_nodes.delete($config.my_config["address"]);
+#          CLog.debug { "  me == #{$config.my_config["address"]}" }
           CLog.debug { "  triggers put on: [#{cell_partition.collect{|e| e || "*"}.join(",")}] with gets from: #{source_nodes.join(",")}" }
           put_message.condition.addPartition(cell_partition, source_nodes.size)
         end
