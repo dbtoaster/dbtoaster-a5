@@ -42,6 +42,9 @@ end
 class MapPartition
   attr_reader :mapid, :partition, :pending_cleared
   
+  include CLogMixins;
+  self.logger_segment = "Node";
+
   # A MapPartition is a chunk of Map {mapid}, that holds keys those keys described by
   # {partition};  The partitioning scheme is hash-based, so we will see the keys where
   # {key[i].hash % (num_maps)} is equal to {partition[i]}
@@ -61,8 +64,8 @@ class MapPartition
   def get(target, on_entry, on_finish)
     if on_entry then
       if @pending.size > 0 
-        then @pending[-1].register(target, on_entry, on_finish);
-        else fire(target, on_entry, on_finish);
+      then @pending[-1].register(target, on_entry, on_finish);
+      else fire(target, on_entry, on_finish);
       end
     else
       raise SpreadException.new("Get for a wildcard target (#{target}) without a callback") if target.has_wildcards?
@@ -88,7 +91,9 @@ class MapPartition
   end
   
   def finish_pending
+    debug { "Finished Pending (Map #{@mapid}): #{@pending.size} pending" }
     while (not @pending.empty?) && @pending[0].ready
+      trace { "Discarding Pending" }
       pending = @pending.shift; 
       pending.updates.each { |target, delta| set(target, delta) };
       pending.fire;
@@ -97,8 +102,9 @@ class MapPartition
   end
   
   def fire(target, on_entry, on_finish)
+    trace { "Ready to execute read request on Map #{@mapid}[#{target.join(",")}]; entry callback:#{on_entry}; finish callback:#{on_finish}" }
     @data.scan(target) { |key, value| on_entry.call(key, value) };
-    on_finish.call() if on_finish; 
+    on_finish.call() unless on_finish.nil?; 
   end
   
   def to_s

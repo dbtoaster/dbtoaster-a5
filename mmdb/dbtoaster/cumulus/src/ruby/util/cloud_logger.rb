@@ -96,7 +96,7 @@ end
 
 module CLogMixins
   def trace(throwable = nil)
-    return unless CLog.enabled?
+    return unless CLog.enabled? && self.class.local_logger.isTraceEnabled();
     if throwable then
       self.class.local_logger.trace(yield, throwable)
     else
@@ -105,7 +105,7 @@ module CLogMixins
   end
   
   def debug(throwable = nil)
-    return unless CLog.enabled?
+    return unless CLog.enabled? && self.class.local_logger.isDebugEnabled();
     if throwable then
       self.class.local_logger.debug(yield, throwable)
     else
@@ -114,7 +114,7 @@ module CLogMixins
   end
   
   def info(throwable = nil)
-    return unless CLog.enabled?
+    return unless CLog.enabled? && self.class.local_logger.isInfoEnabled();
     if throwable then
       self.class.local_logger.info(yield, throwable)
     else
@@ -141,15 +141,15 @@ module CLogMixins
   end
   
   module ClassMethods
-    @@classLogger = nil;
-  
     def logger_segment=(segment)
-      @@classLogger = CLog.get("#{segment}#{segment ? "." : ""}#{self.name}");
+#      puts "Creating Logger: #{segment}#{segment ? "." : ""}#{self.name}";
+      self.instance_variable_set(:@classLogger, CLog.get("#{segment}#{segment ? "." : ""}#{self.name}"));
     end
     
     def local_logger
-      self.logger_segment=nil unless @@classLogger;
-      @@classLogger;
+      self.logger_segment=nil unless self.instance_variable_defined?(:@classLogger);
+#      puts "local logger: #{self.instance_variable_get(:@classLogger).getName}"
+      self.instance_variable_get(:@classLogger);
     end
   end
   

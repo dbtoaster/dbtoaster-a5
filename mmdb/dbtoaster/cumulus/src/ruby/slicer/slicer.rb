@@ -56,7 +56,7 @@ class SlicerNodeHandler
         debug { "Spawning: #{cmd}" }
         PTY.spawn(cmd) do |stdin, stdout, pid|
           debug { "Starting process pid #{pid}" }
-          at_exit { debug { "Killing #{cmd}" }; Process.kill("HUP", pid) };
+          at_exit { debug { "Killing #{cmd}" }; Process.kill("KILL", pid) };
           stdin.each { |line| output.push([:data, line]); }
         end
       end
@@ -259,6 +259,8 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
   end
 
   def bootstrap()
+    # TODO: The switches and the forwarding tree setup process should be done below in the declare_master proc
+    #       Specifically the pending server count is incorrect.
     $pending_servers = $config.nodes.size + 1; # the +1 is for the switch
     $local_node.declare_master do |log_message, handler|
       # This block gets executed every time we get a log message from one of our clients;
@@ -267,22 +269,23 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
       if /Starting Cumulus Server/.match(log_message) then
         $pending_servers -= 1 
-        debug { "A server just came up; #{$pending_servers} servers left" }
+        info { "A server just came up; #{$pending_servers} servers left" }
       end
       if $pending_servers <= 0 then
         sleep(20)
-        debug { "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." }
+        info { "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." }
         $clients[$config.switch.getHostName].start_client
       end
-      puts log_message;
+      trace { log_message }
+#      puts log_message;
       if $pending_servers > 0 then handler else nil end;
     end
 
     if $config.switch_tree.size == 2 then
-      puts 'Building hierarchical forwarding tree...'
+      debug { 'Building hierarchical forwarding tree...' }
       switches = build_chef_forwarding_tree($config.switch_tree[0], $config.switch_tree[1])
     else
-      puts "Building flat forwarding tree..."
+      debug { "Building flat forwarding tree..." }
       switches = build_chef_flat_forwarding_tree();
     end
     print_forwarding_tree(switches)

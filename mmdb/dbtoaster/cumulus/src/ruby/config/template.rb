@@ -145,7 +145,7 @@ class TemplateValuation
     entry_column = @entry_values[entry];
     instance = @instance[entry];
     entry_element = entry_column[1][instance];
-    raise "Incomplete valuation: missing #{entry} (in instance [#{@instance.join(",")}], values: [#{entry_column[1].join(",")}]" unless entry_element;
+    raise "Incomplete valuation: missing #{entry} (in instance [#{@instance.join(",")}], values: [#{entry_column[1].join(",")}])" unless entry_element;
 #    raise "Incomplete valuation";
     entry_element ? entry_element[1] : nil;
   end
@@ -156,7 +156,7 @@ class TemplateValuation
       found = true;
       parametrization[1].push([entry,value]) if(parametrization[0].weak_match?(entry, @params));
     end
-    warn { "Discovered #{entry} = #{value}, but no match in: #{@entry_values.collect {|e| e[0]}.join(",")}" } unless found;
+    CLog.warn { "Discovered #{entry} = #{value}, but no match in: #{@entry_values.collect {|e| e[0]}.join(",")}" } unless found;
   end
   
   def ready?
@@ -497,8 +497,8 @@ class UpdateTemplate
   def access_patterns(map)
     @expression.entries.collect do |entry|
       if entry.source == map then
-        CLog.debug { "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact.join(",") }
-        entry.keys.collect_index { |i,k| i if @paramlist.include? k }.compact
+        CLog.debug { "Map " + map.to_s + ": " + entry.keys.collect_index { |i,k| i if k.type == :param }.compact.join(",") }
+        entry.keys.collect_index { |i,k| i if k.type == :param }.compact
       end
     end.compact;
   end
@@ -523,6 +523,7 @@ class UpdateTemplate
     CLog.debug { "Creating allocation grid for template #{@index}(#{@summary}); #{count} entries" }
     @allocation_grid = Hash.new
     @allocation_grid_sizes.collect { |size| (0...size) }.each_cross_product do |global_partition|
+      CLog.trace { "allocation grid [#{global_partition.join(",")}] : " }
       grid_cell = Array.new
       @allocation_grid[global_partition] = grid_cell;
       @entries.each do |entry|
@@ -535,6 +536,7 @@ class UpdateTemplate
         end
         
         entry_owner = $config.partition_owners[entry.source][entry_partition];
+        CLog.trace { "   requires #{entry} @ #{entry_owner}" }
         grid_cell.push(entry_owner) unless grid_cell.include? entry_owner;
       end
     end
@@ -548,7 +550,7 @@ class UpdateTemplate
     end
   end
   
-  def constant_entry_is_local(entry, map_partitions)
+  def constants_in_partition_are_local(entry, map_partitions)
     # this function verifies that any constants in the target key are potentially present locally.
     # if that's not true (eg, for q[] on anything but the first node), then this template will never be 
     # triggered locally and we can ignore it.
@@ -570,28 +572,38 @@ class UpdateTemplate
     projection;
   end
   
+  def nodes_grouped_by_relation(grid)
+    targets = Hash.new { |h,k| h[k] = Array.new };
+    grid.each_pair do |grid_partition, destination_nodes|
+      grouped_by = targets[grid_partition[0...@paramlist.size]]
+      destination_nodes.each { |node| grouped_by.push(node) unless grouped_by.include? node }
+    end
+    targets;
+  end
+  
   def compile_to_local(program, map_partitions)
     compute_allocation_grid;
     
+    return unless map_partitions[@target.source];
+    
     CLog.debug { "Compiling Local Instance of ##{@index}: #{summary}" }
-    if constant_entry_is_local(@target, map_partitions) then
+    if constants_in_partition_are_local(@target, map_partitions) then
       put_message = program.installPutComponent(
-        @relation, self, @index, project_param(@target, $config.partition_sizes[@target.source])
+        @relation, self, @index, @allocation_grid_sizes[0...@paramlist.size]
       );
       map_partitions[@target.source].each do |partition|
         # figure out when we need to turn this update into a put.
-        partition_nodes = 
-          project_grid_to_entry(@target, partition).values.flatten.uniq;
-        partition_nodes.delete($config.my_config["address"]);
-        raise "Error: NIL in Put" if partition_nodes.find { |t| t.nil? };
-        
-        put_message.condition.addPartition(project_param(@target, partition), partition_nodes.size)
+        targets = 
+        nodes_grouped_by_relation(project_grid_to_entry(@target, partition)).each_pair do |cell_partition, source_nodes|
+          CLog.debug { "  triggers put on: [#{cell_partition.collect{|e| e || "*"}.join(",")}] with gets from: #{source_nodes.join(",")}" }
+          put_message.condition.addPartition(cell_partition, source_nodes.size)
+        end
       end
     end
       
     #figure out when this update results in us sending data.
     @entries.each do |entry|
-      if constant_entry_is_local(entry, map_partitions) then
+      if constants_in_partition_are_local(entry, map_partitions) then
         target_nodes = Hash.new;
         $config.nodes.each_pair do |node, node_info|
           node_info["partitions"][entry.source].each do |partition|
@@ -601,23 +613,30 @@ class UpdateTemplate
 
         fetch_message = program.installFetchComponent(
           @relation, entry, @index, @target, 
-          project_param(entry, $config.partition_sizes[entry.source]), 
+          @allocation_grid_sizes[0...@paramlist.size], 
           entry.keys.zip((0...entry.key.size).to_a).collect { |dim| [dim[1], dim[0].ref] if(dim[0].is_a? TemplateVariable) && dim[0].type == :var }.compact,
           target_nodes
         );
+        CLog.debug { "  will send push for Map #{entry.source} <- {#{fetch_message.entry_mapping.collect{|mapping| mapping.join(" := ")}.join(", ")}}" }
         map_partitions[entry.source].each do |partition|
-          targets = project_grid_to_entry(entry, partition).keys.collect do |grid_partition|
-            entry_partition = 
-              entry.instantiated_key(grid_partition).zip($config.partition_sizes[entry.source]).collect do |dim| 
+          partition_targets = Hash.new { |h,k| h[k] = Array.new };
+          project_grid_to_entry(entry, partition).keys.each do |grid_partition|
+            destination_partition = 
+              @target.instantiated_key(grid_partition).zip($config.partition_sizes[@target.source]).collect do |dim| 
                 dim[0] % dim[1];
               end
+            CLog.trace { "    ... considering {#{grid_partition.join(",")}} -> Map #{@target.source}[#{destination_partition.join(",")}] @ #{$config.partition_owners[@target.source][destination_partition]}" }
             
-#            raise "Error: unclaimed partition: Map #{entry.source}[#{entry_partition}] in #{$config.partition_owners}" unless $config.partition_owners[entry.source][entry_partition];
-            $config.partition_owners[entry.source][entry_partition];
-          end.uniq
-          targets.delete($config.my_config["address"]);
-          raise "Error: NIL in Fetch" if targets.find { |t| t.nil? };
-          fetch_message.condition.addPartition(project_param(entry, partition), targets);
+            unless ($config.partition_owners[@target.source][destination_partition] == $config.my_config["address"]) ||
+                   (partition_targets[grid_partition[0...@paramlist.size]].include? $config.partition_owners[@target.source][destination_partition])
+            then   partition_targets[grid_partition[0...@paramlist.size]].push($config.partition_owners[@target.source][destination_partition])
+            end
+          end
+          partition_targets.each_pair do |grid_partition, targets|;
+            CLog.debug { "    ... will send on: [#{grid_partition.join(",")}] to #{targets.join(", ")}" }
+            raise "Error: NIL in Fetch" if targets.find { |t| t.nil? };
+            fetch_message.condition.addPartition(grid_partition, targets);
+          end
         end
       end
     end

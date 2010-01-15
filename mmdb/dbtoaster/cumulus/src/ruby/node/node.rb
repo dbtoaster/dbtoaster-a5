@@ -75,8 +75,10 @@ class PluralRemoteCommitNotification
         sq.load_destinations(destinations)
       end
       destinations.each_pair do |node, entries|
-        debug { "Connecting to #{node}..." };
-        MapNode.getClient(node).push_get(entries, cmdid) unless $config.my_config["address"].equals(node);
+        unless $config.my_config["address"].equals(node) then
+          debug { "Sending data for command #{@cmdid} to #{node}" };
+          MapNode.getClient(node).push_get(entries, cmdid);
+        end
       end
     end
   end
@@ -85,11 +87,10 @@ end
 ###################################################
 
 class PluralRemoteCommitSubquery
-  attr_reader :requires_loop, :ready;
+  attr_reader :ready;
   
   def initialize(fetch_component, parent, expected_destinations)
     @fetch_component, @parent, @expected_destinations = fetch_component, parent, expected_destinations;
-    @requires_loop = @fetch_component.entry.requires_loop?;
     @entries = Hash.new;
     @ready = false;
     raise "Error: NIL in Expected" if @expected_destinations.find { |t| t.nil? };
@@ -97,13 +98,10 @@ class PluralRemoteCommitSubquery
   
   def fire(entry, value)
     @entries[entry] = value;
-    unless @requires_loop then
-      @ready = true;
-      @parent.check_ready;
-    end
   end
   
   def release
+    @parent.trace { "Subquery for cmd #{@parent.cmdid} released" }
     @ready = true;
     @parent.check_ready;
   end
@@ -206,7 +204,8 @@ class MapNodeStats
         " pushes "   + @pushes.to_s +
         " avg_push " + (@push_size.to_f / @pushes.to_f).to_s +
         " max_push " + @max_push.to_s + 
-        " backlog(pending/cleared/server) " + @handler.backlog.to_s + "/" + @handler.cleared_backlog.to_s + "/" + @handler.server_backlog.to_s }
+        " backlog " + @handler.backlog.to_s +
+        " completed " + @handler.cleared_backlog.to_s }
     end
   end
   
@@ -248,7 +247,7 @@ class ValuationApplicator
       @final_val = @valuation.to_f
     rescue Exception => e
       # it's not ready
-      trace { e.to_s }
+      trace { "Valuation Init: #{e}" }
     end
   end
   
@@ -268,7 +267,7 @@ class ValuationApplicator
       end
     rescue Exception => e
       # it's not ready
-      trace { e.to_s }
+      trace { "Valuation Discover: #{e}" }
     end
   end
   
@@ -283,10 +282,11 @@ class ValuationApplicator
   
   def apply(partitions)
     if @final_val then
-      trace { "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{@final_val}" }
+      trace { "Map #{valuation.target} += #{@final_val}" }
       partitions[0].update(@target.key, @final_val);
       @handler.finish_valuating(@id);
     else
+      trace { "Deferring change to Map #{valuation.target}" }
       @record = partitions[0].declare_pending;
     end
   end
@@ -306,7 +306,7 @@ class MassValuationApplicator
     @final_val, @records = nil, nil;
     @expected_locals = 0;
     @valuation = valuation;
-    trace { "Creating insert for #{valuation.target.source}; expecting #{@expected_gets} gets" }
+    trace { "Creating insert for Map #{valuation.target.source}; Cmd:#{@id}; expecting #{@expected_gets} gets" }
   end
   
   def discover(key, value)
@@ -329,6 +329,7 @@ class MassValuationApplicator
   
   def finish_message
     @expected_gets -= 1;
+    debug { "Got message (#{@id}): #{@expected_gets} gets left, #{@expected_locals} locals left" }
     if ready? then
       complete;
       @records = nil;
@@ -421,6 +422,7 @@ class MapNodeHandler
     @maps.each_pair do |map, partition_list| 
       partition_list.each_value do |partition| 
         cmd.access_patterns(map).each do |pat| 
+          debug { "Loading pattern: #{pat.join(",")}" }
           partition.add_pattern(pat)
         end
       end
@@ -489,19 +491,23 @@ class MapNodeHandler
       begin
         # If the value is known, then get() will fire immediately.
         # Note also that discover will fire the callbacks if it is necessary to do so.
-        trace { "checking for : #{req.source}[#{req.key.to_a.join(",")}]" }
-        loop_partitions(req.source, req.key) do |partition| 
-          trace { "found : " + partition.to_s }
+        req_key = req.instantiated_key(applicator.valuation.params);
+        loop_partitions(req.source, req_key) do |partition| 
+          trace { "found partition : " + partition.to_s }
           applicator.expect_local
           partition.get(
-            req.key,
+            req_key,
             proc { |key, value| applicator.discover(MapEntry.new(req.source, key), value) },
             proc { applicator.find_local }
           )
         end;
       rescue Exception => e;
         # this just means that we don't have the partition for this requirement.
-        trace { e.to_s }
+        if e.is_a? SpreadException then
+          trace { "Preload Locals: #{e}" }
+        else
+          raise e;
+        end
       end
     end
     applicator.finish_message;
@@ -607,17 +613,22 @@ class MapNodeHandler
     
     if @cmdcallbacks[cmdid] == nil then
       # Case 1: we don't know anything about this put.  Save the response for later use.
+      trace { "Pushget: Command unknown; first push" }
       @cmdcallbacks[cmdid] = Array.new;
       @cmdcallbacks[cmdid].push(result);
     elsif @cmdcallbacks[cmdid].is_a? Array then
       # Case 2: we haven't received a put message yet, but we have received other fetch results
+      trace { "Pushget: Command unknown; subsequent push" }
       @cmdcallbacks[cmdid].push(result);
     else
       # Case 3: we have a push message waiting for these results
+      trace { "Pushget: Matched to command" }
       result.each do |target_value|
         @cmdcallbacks[cmdid].discover(target_value[0], target_value[1])
       end
-      @cmdcallbacks[cmdid].finish_message;
+      # it's possible that (for a non-looping put) discover will call finish_valuating,
+      # so we need to check whether the callback still exists;
+      @cmdcallbacks[cmdid].finish_message if @cmdcallbacks[cmdid];
     end
     @stats.push(result.size);
   end
@@ -637,6 +648,26 @@ class MapNodeHandler
   
   def update(relation, params, base_cmd)
     rules = @program.getRelationComponent(relation);
+    debug { "Update (ID ##{base_cmd}): #{relation}(#{params.join(", ")})" }
+    put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
+    rules.fetches.each do |fetch_msg|
+      if (destinations = fetch_msg.condition.match(params)) then
+        loop_key = fetch_msg.entry.instantiated_key(params);
+        loop_partitions(fetch_msg.entry.source, loop_key) do |partition|
+          sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg, destinations);
+          trace { "Subquery for cmd #{base_cmd+fetch_msg.id_offset}: Send #{fetch_msg.entry} -> #{destinations.join(",")}" }
+          partition.get(
+            loop_key, 
+            proc { |key, value| sq.fire(MapEntry.new(fetch_msg.entry.source, key), value) },
+            proc { || sq.release }
+          );
+        end
+      end
+    end
+    put_entries.each_value { |rcn| rcn.finish_setup };
+
+    debug { "Update (ID ##{base_cmd}): Done with fetches" }
+
     rules.puts.each do |put_msg|
       if (sources = put_msg.condition.match(params)) then
         unless put_msg.template.requires_loop? then
@@ -647,15 +678,17 @@ class MapNodeHandler
           )
           debug { "Creating put: #{base_cmd + put_msg.id_offset}" }
           preload_locals(base_cmd + put_msg.id_offset, applicator);
+          applicator.apply([find_partition(target.source, target.key)]);
           @stats.put;
         else
           valuation = put_msg.template.valuation(params);
+          # okennedy: is the following comment true?  I don't think so
           # sources implicitly excludes the local node; we add a placeholder "expected_push" 
           # for ourselves so that nothing gets committed until we've had a chance to finish
           # reading everything there is to be read.  This "push" occurs (in preload_locals)
           # regardless of whether there is actually any local data useful for this put.
           applicator = MassValuationApplicator.new(
-            base_cmd + put_msg.id_offset, valuation, sources + 1, self, false
+            base_cmd + put_msg.id_offset, valuation, sources, self, false
           ) 
           debug { "Creating mass-put: #{base_cmd + put_msg.id_offset}" }
           preload_locals(base_cmd + put_msg.id_offset, applicator);
@@ -666,22 +699,6 @@ class MapNodeHandler
         end
       end
     end
-    debug { "Done with puts" }
-    put_entries = Hash.new { |h,k| h[k] = PluralRemoteCommitNotification.new(k, params) }
-    rules.fetches.each do |fetch_msg|
-      if (destinations = fetch_msg.condition.match(params)) then
-        loop_key = fetch_msg.entry.instantiated_key(params);
-        loop_partitions(fetch_msg.entry.source, loop_key) do |partition|
-          sq = put_entries[base_cmd + fetch_msg.id_offset].register_subquery(fetch_msg, destinations);
-          partition.get(
-            loop_key, 
-            proc { |key, value| sq.fire(MapEntry.new(fetch_msg.entry.source, key), value) },
-            if sq.requires_loop then proc { request.release } else nil end
-          );
-        end
-      end
-    end
-    put_entries.each_value { |rcn| rcn.finish_setup };
   end
   
   ############# Internal Control

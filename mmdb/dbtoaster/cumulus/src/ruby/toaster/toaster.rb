@@ -501,7 +501,7 @@ opts = GetoptLong.new(
   [ "-k", "--ignore-keys",       GetoptLong::NO_ARGUMENT ],
   [ "-w", "--switch-addr",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-b", "--boot",              GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-l", "--localprops"      then $config.load_local_properties(arg)

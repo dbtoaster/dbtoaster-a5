@@ -5,6 +5,8 @@ import java.util.*;
 import com.sleepycat.je.*;
 import org.apache.log4j.Logger;
 
+import org.dbtoaster.cumulus.net.SpreadException;
+
 public class MultiKeyMapJavaImpl {
   public static final int DEFAULT_CACHE_SIZE = 64*1024*1024;
   protected static Environment env = null;
@@ -115,7 +117,7 @@ public class MultiKeyMapJavaImpl {
     return new MKFullCursor(basemap.openCursor(null, CursorConfig.DEFAULT));
   }
   
-  public MKCursor scan(Long[] partialKey){
+  public MKCursor scan(Long[] partialKey) throws SpreadException {
     int cnt = 0;
     for(Long dim : partialKey){
       if(dim != wildcard) { cnt ++; }
@@ -128,11 +130,36 @@ public class MultiKeyMapJavaImpl {
     for(int i = 0; i < partialKey.length; i++){
       if(partialKey[i] != wildcard) { pattern[cnt] = (long)i; cnt++; }
     }
-    return patterns.get(serializeKey(pattern)).getCursor(partialKey, basemap);
+    MKPattern targetPattern = patterns.get(serializeKey(pattern));
+    if(targetPattern == null){
+      throw new SpreadException("Request for pattern: [" + prettyPattern(pattern) + "], which doesn't exist.  Known patterns:  " + prettyListPatterns());
+    }
+    return targetPattern.getCursor(partialKey, basemap);
   }
   
   protected void cleanup(){
     
+  }
+  
+  protected String prettyListPatterns(){
+    StringBuffer buf = new StringBuffer();
+    String sep = "";
+    for(MKPattern pattern : patterns.values()){
+      buf.append(pattern.toString());
+      sep = "; ";
+    }
+    return buf.toString();
+  }
+  
+  protected static String prettyPattern(Long[] pattern){
+    StringBuffer buf = new StringBuffer("[");
+    String sep = "";
+    for(Long dim : pattern){
+      buf.append(sep);
+      buf.append(dim);
+      sep = ",";
+    }
+    return buf.toString() + "]";
   }
   
   protected static void serializeKey(Long[] key, DatabaseEntry entry){
@@ -190,7 +217,10 @@ public class MultiKeyMapJavaImpl {
       DatabaseEntry entry = new DatabaseEntry();
       entry.setPartial(0, 0, true);
       SecondaryCursor c = index.openCursor(null, CursorConfig.DEFAULT);
-      c.getSearchKey(createSecondaryKey(partialKey), entry, LockMode.DEFAULT);
+      if(c.getSearchKey(createSecondaryKey(partialKey), entry, LockMode.DEFAULT) != OperationStatus.SUCCESS){
+        //no matching keys
+        return null;
+      }
       return new MKCursor(c, primary);
     }
     

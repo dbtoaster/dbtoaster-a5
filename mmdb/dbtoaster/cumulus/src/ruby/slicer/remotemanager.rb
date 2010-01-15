@@ -18,7 +18,7 @@ class RemoteProcess
         if @log then
           log.push(line)
         end
-        print line;
+#        print line;
       end
       debug { "SSH pid " + ssh.pid.to_s + " complete"; }
     end
