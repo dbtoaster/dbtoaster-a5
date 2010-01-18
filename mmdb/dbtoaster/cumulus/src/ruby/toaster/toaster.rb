@@ -213,6 +213,14 @@ class DBToaster
       end.collect_hash
   end
 
+  def normalize_keys(keys)
+    keys.collect do |k|
+      case k when TemplateVariable then k.name;
+        else k.to_s;
+      end
+    end
+  end
+
   # Generate bootstrap queries
   def generate_map_queries(compiler_output)
     compiled_maps = compiler_output.select do |l|
@@ -319,8 +327,7 @@ class DBToaster
       
       # Map params, which should contain only groupby cols, and domain vars.
       map_id = @map_info.select { |k,v| v["map"] == n }.first[0]
-      keys = @templates.select { |t| t.target.source == map_id }.
-        first.target.keys.collect do |k|
+      keys = normalize_keys(@templates.select { |t| t.target.source == map_id }.first.target.keys).collect do |k|
           if key_param_subs.key?(k) then key_param_subs[k] else k end
         end
 
@@ -383,7 +390,7 @@ class DBToaster
       # SQL query
       query = 
         "select "+
-          (group_bys.length > 0? group_bys.join(",").gsub(/__/,".")+"," : "") +
+        (group_bys.length > 0? group_bys.join(",").gsub(/__/,".")+"," : "") +
           "sum("+agg.gsub(/__/,".")+")"+
         " from "+(rels.collect do |x|
           x[0]+(@map_aliases.key?(x[0]) ? " "+@map_aliases[x[0]] : "")
@@ -485,7 +492,6 @@ $toaster_opts = []
 $pfile_basepath = "~"
 
 opts = GetoptLong.new(
-  [ "-l", "--localprops",        GetoptLong::REQUIRED_ARGUMENT ],
   [ "-o", "--output",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",              GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch",            GetoptLong::REQUIRED_ARGUMENT ],
@@ -504,7 +510,6 @@ opts = GetoptLong.new(
   [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
-    when "-l", "--localprops"      then $config.load_local_properties(arg)
     when "-o", "--output"          then $output = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
     when "-k", "--ignore-keys"     then $options[:toast_keys] = false;
     when "-b", "--boot"            then $boot = File.open(arg, "w+"); at_exit { File.delete(arg) unless $toaster.success? && $success };
@@ -568,9 +573,11 @@ $toaster.map_info.each_value do |info|
     map_def = [n, boot_spec_s, p].join("\n")
     
     CLog.debug { map_def }
-    $boot.write(map_def+"\n") if $boot
+    $boot.write(map_def+"\n") if $boot;
   end
 end
+
+$boot.flush if $boot;
 
 CLog.info { "==== Partition Choices =====" }
 
@@ -603,17 +610,6 @@ $toaster.each_node do |node, partitions, address, port|
       node_id = $toaster.map_info[map]["partition"].index(segment)
 
       $output.write("partition Map " + map_segment + "\n");
-
-      if $toaster.map_formulae.key? map_name then
-        primary_pfile = "#{$pfile_basepath}/node#{node_id.to_s}/db_#{map_name}_primary.db"
-        aps = $toaster.map_formulae[map_name]["aps"].split("|")
-        secondary_pfiles = []
-        aps.each_index do |i| secondary_pfiles.push(
-          "#{$pfile_basepath}/node#{node_id.to_s}/db_#{map_name}_#{i}.db")
-        end
-        node_pfiles = [primary_pfile].concat(secondary_pfiles).join(",")
-        $output.write("pfile Map " + map_segment + " " + node_pfiles + "\n")
-      end
     end
   end
 end

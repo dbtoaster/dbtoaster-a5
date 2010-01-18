@@ -1,80 +1,18 @@
 
-require 'oci8'
-require 'node/multikeymap'
+require 'java'
+require 'rubygems'
 require 'fileutils'
 require 'getoptlong'
+require 'bootstrap_mixins'
 
 $dataset_path = "/home/yanif/datasets/tpch/100m"
 $output_path = "."
 $spec_file = nil
 $repartition_spec = nil
 
-$map_names   = []
-$write_nodes = []
-$read_nodes  = []
-
-#
-# Internals
-#############
-
-$env = nil
-
-$tables = {
-  "LINEITEM"  => [ "lineitem.tbl", "lineitem.tbl.u1", 6000000, nil   ,        ["l_orderkey", "l_partkey", "l_suppkey", "l_linenumber", "l_quantity", "l_extendedprice", "l_discount", "l_tax", "l_returnflag", "l_linestatus", "l_shipdate", "l_commitdate", "l_receiptdate", "l_shipinstruct", "l_shipmode", "l_comment"] ],
-  "ORDERS"    => [ "orders.tbl"  , "order.tbl.u1"   , 1500000, "o_orderkey",  ["o_orderkey", "o_custkey", "o_status", "o_totalprice", "o_orderdate", "o_opriority", "o_clerk", "o_spriority", "o_comment"] ],
-  "PART"      => [ "part.tbl"    , nil              , 200000 , "p_partkey",   ["p_partkey", "p_name", "p_mfgr", "p_brand", "p_type", "p_size", "p_container", "p_retailprice", "p_comment"] ],
-  "PARTSUPP"  => [ "partsupp.tbl", nil              , 800000 , nil   ,        ["ps_partkey", "ps_suppkey", "ps_availqty", "ps_supplycost", "ps_comment"] ],
-  "CUSTOMER"  => [ "customer.tbl", nil              , 150000 , "c_custkey",   ["c_custkey", "c_name", "c_address", "c_nationkey", "c_phone", "c_acctbal", "c_mktsegment", "c_comment"] ],
-  "SUPPLIER"  => [ "supplier.tbl", nil              , 10000  , "s_suppkey",   ["s_suppkey", "s_name", "s_address", "s_nationkey", "s_phone", "s_acctbal", "s_comment"] ],
-  "REGION"    => [ "region.tbl"  , nil              , 5      , "r_regionkey", ["r_regionkey", "r_name", "r_comment"] ],
-  "NATION"    => [ "nation.tbl"  , nil              , 25     , "n_nationkey", ["n_nationkey", "n_name", "n_regionkey", "n_comment"] ],
-}
-
-class Array
-  def each_cross_product(depth = 0, pattern = Array.new)
-    if depth >= size then
-      if depth == 0 then yield pattern.clone else yield end;
-    else
-      self[depth].each do |val|
-        pattern.push(val);
-        each_cross_product(depth+1, pattern) { if depth == 0 then yield pattern.clone else yield end };
-        pattern.pop;
-      end
-    end
-  end
-  
-  def cross_product(depth = 0, pattern = Array.new)
-    ret = Array.new;
-    each_cross_product { |out| ret.push(out) };
-    ret;
-  end
-end
-
-def initialize_node_db(name, i, num_keys, patterns, basepath)
-  puts "Creating database for node #{i} map #{name}";
-  node_db_path = File.join("#{basepath}", "node#{i}")
-  
-  # TODO: pfiles
-  MultiKeyMap.new(num_keys, patterns, name, [], node_db_path)
-end
-
-def initialize_db(name, num_nodes, num_keys, patterns, basepath = ".")
-  (0...num_nodes).collect do |i|
-    if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? i) then
-      initialize_node_db(name, i, num_keys, patterns, basepath)
-    end
-  end
-end
-
-def load_db(in_path, name, num_nodes, num_keys)
-  (0...num_nodes).collect { |i|
-    if $read_nodes.nil? or ($read_nodes.length == 0) or ($read_nodes.include? i) then
-      puts "Loading database for node #{i} map #{name}"
-      existing_db_path = File.join("#{in_path}", "node#{i}")
-      MultiKeyMap.new(num_keys, [], name, [], existing_db_path)
-    end
-  }
-end
+# Oracle JDBC driver
+#orcl_driver = Java::JavaClass.for_name("oracle.jdbc.driver.OracleDriver")
+#puts "Loaded Oracle driver: #{orcl_driver.java_class}"
 
 def finished(numvars, domfiles)
   domfiles.select{ |v,f| f.eof }.length == numvars
@@ -113,23 +51,9 @@ end
 def interpret_keys(keys, names, values, result)
   keys.map do |k|
     if k =~ /Q\./ then
-      result[k.gsub(/Q\.([0-9]+)/, "\\1").to_i]
+      result.getLong((k.gsub(/Q\.([0-9]+)/, "\\1").to_i)+1)
     else values[names.index(k)] end
   end
-end
-
-def validate_entry(entry, keys)
-  unless (entry.is_a? Array)
-    puts "Error : Param is not an array, param class : #{params.class()}";
-  end
-  unless (entry.size == keys.size)
-    puts "Error : Param of wrong length, param length : #{params.size}";
-  end
-end
-
-# Should be kept in sync with Spread's Entry.compute_partition
-def compute_partition(partition_keys, partition_dim_sizes, entry)
-  partition_keys.collect { |i| entry[i] % partition_dim_sizes[i] }
 end
 
 def generate_from_domains(in_path, out_path, name, domvars, query, bindvars, keys, aps,
@@ -141,8 +65,9 @@ def generate_from_domains(in_path, out_path, name, domvars, query, bindvars, key
   values = next_values(domfiles,[])
 
   # Connect, prepare map query
-  conn = OCI8.new(nil,nil)
-  cursor = conn.parse(query)
+  url = "jdbc:oracle:thin:@localhost:1521:tpch"
+  conn = java.sql.DriverManager.getConnection(url, "cumulus", "slicedbread")
+  query_stmt = conn.prepareStatement(query)
 
   puts "Executing #{query}"
 
@@ -152,29 +77,13 @@ def generate_from_domains(in_path, out_path, name, domvars, query, bindvars, key
 
   counter = 0
   while not(finished(domvars.length, domfiles))
-    values.each_index do |i|
-      cursor.bind_param(":"+names[i],values[i])
-    end
-    cursor.exec()
-    while r = cursor.fetch()
-      entry = interpret_keys(keys,names,values,r)
-      segment = compute_partition(partition_dims, partition_dim_sizes, entry)
-      node_idx = node_partitions.index(segment)
-
-      if node_idx.nil? then
-        raise "No valid node partition found for #{segment.join(',').to_s}"
-      end
-
-      if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
-        node_mk_map = node_dbs[node_idx]
-
-        # Validate entry
-        validate_entry(entry, keys)
-
-        # Write out k,v to map
-        raise "Error: Attempt to set a value for a wildcard key" if entry.include?(node_mk_map.wildcard);
-        node_mk_map[entry] = r[-1].to_s;
-      end
+    values.each_index { |i| query_stmt.setLong(i+1,values[i]) }
+    rs = query_stmt.executeQuery()
+    while rs.next() do
+      entry = interpret_keys(keys,names,values,rs)
+      value = rs.getDouble(keys.size+1)
+      write_mk_entry(keys, partition_dims, partition_dim_sizes, node_partitions, node_dbs, entry, value)
+      rs.close()
     end
 
     values = next_values(domfiles,values)
@@ -194,9 +103,11 @@ end
 
 def generate_from_query(out_path, name, query, keys, aps,
                         partition_dims, partition_dim_sizes, node_partitions)
+
   # Connect, prepare map query
-  conn = OCI8.new(nil,nil)
-  cursor = conn.parse(query)
+  url = "jdbc:oracle:thin:@localhost:1521:tpch"
+  conn = java.sql.DriverManager.getConnection(url, "cumulus", "slicedbread")
+  query_stmt = conn.prepareStatement(query)
 
   puts "Executing #{query}"
 
@@ -204,44 +115,24 @@ def generate_from_query(out_path, name, query, keys, aps,
   num_nodes = node_partitions.size
   node_dbs = initialize_db(name, num_nodes, keys.size, aps, out_path)
 
-  #puts "Actually execing query..."
-
   counter = 0
-  cursor.exec()
-  while r = cursor.fetch()
-    #puts "#{name} #{counter}"
-
-    entry = keys.map { |k| r[k.sub(/Q\./,"").to_i] }
-    segment = compute_partition(partition_dims, partition_dim_sizes, entry)
-    node_idx = node_partitions.index(segment)
-
-    if node_idx.nil? then
-      puts "NS: "+keys.join(",") + " " + entry.join(",")
-      puts "R: " + r.to_s
-      raise "No valid node partition found for  #{segment.join(',').to_s}"
-    end
-
-    if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
-      node_mk_map = node_dbs[node_idx]
-
-      # Validate entry
-      validate_entry(entry, keys)
-
-      # Write out k,v to map
-      raise "Error: Attempt to set a value for a wildcard key" if entry.include?(node_mk_map.wildcard);
-      node_mk_map[entry] = r[-1].to_s;
-    end
+  rs = query_stmt.executeQuery()
+  while rs.next() do
+    entry = keys.map { |k| rs.getLong(k.sub(/Q\./,"").to_i+1) }
+    value = rs.getDouble(keys.size+1)
+    write_mk_entry(keys, partition_dims, partition_dim_sizes, node_partitions, node_dbs, entry, value)
 
     counter += 1
     if (counter % 10000) == 0 then
       puts "Processed #{counter} tuples for #{name}"
     end
   end
+  rs.close()
 
   puts "Map #{name} size: #{counter}"
 
   # Close maps
-  node_dbs.each { |mk| mk.close }
+  node_dbs.each { |mk| mk.close if mk; }
 end
 
 def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps,
@@ -256,40 +147,6 @@ def generate_map(in_path, out_path, name, domvars, query, bindvars, keys, aps,
   end
 end
 
-
-def repartition(in_path, out_path, name, num_keys, existing_num_nodes,
-                aps, partition_dims, partition_dim_sizes, node_partitions)
-  
-  num_nodes = node_partitions.size
-  node_dbs = initialize_db(name, num_nodes, num_keys, aps, out_path)
-
-  # Read from all maps, recomputing partitions.
-  existing_dbs = load_db(in_path, name, existing_num_nodes, num_keys).compact
-  existing_dbs.each do |edb_mk|
-    counter = 0
-    ebd_mk.scan do |entry, value|
-      segment = compute_partition(partition_dims, partition_dim_sizes, entry)
-      node_idx = node_partitions.index(segment)
-      if node_idx.nil? then
-        raise "Error: No valid node partition found for #{segment.join(',').to_s}"
-      end
-
-      if $write_nodes.nil? or ($write_nodes.length == 0) or ($write_nodes.include? node_idx) then
-        node_mk_map = node_dbs[node_idx]
-        node_mk_map[entry] = value
-      end
-
-      counter += 1
-      if counter % 1000 == 0 then
-        puts "Processed #{counter} tuples"
-      end
-    end
-    
-  end
-
-  existing_dbs.each { |mk| mk.close }
-  node_dbs.each { |mk| mk.close }
-end
 
 #####################
 #
@@ -337,8 +194,17 @@ def test(name, domvars, query, bindvars)
   end
 end
 
-#gen_test()
-
+def multikeymap_test
+  num_keys = 2
+  patterns = []
+  name = "testmap"
+  mk = MultiKeyMap.new(num_keys, patterns, name)
+  keys = [[1,1], [2,2]]
+  val = 1.0
+  keys.each { |k| mk[k] = val; val += 1.0 }
+  keys.each { |k| r = mk[k]; puts "Key/val: #{k.join(",")} #{r}" }
+  mk.close
+end
 
 #####################
 #
@@ -444,7 +310,6 @@ def main
     print_usage
   end
 
-  initialize_env;
   unless $spec_file.nil? then
     lines = File.open($spec_file, "r").readlines
     if (lines.length % 6) != 0 then
@@ -456,7 +321,6 @@ def main
     lines = File.open($repartition_spec, "r").readlines
     lines.each { |l| process_repartition_spec(l) }
   end
-  $env.close
 end
 
 opts = GetoptLong.new(
@@ -486,3 +350,6 @@ end
 $spec_file = ARGV[0] if ($spec_file.nil?) and (ARGV.length > 0);
 main;
 
+# Unit test invocation
+#gen_test()
+#multikeymap_test;

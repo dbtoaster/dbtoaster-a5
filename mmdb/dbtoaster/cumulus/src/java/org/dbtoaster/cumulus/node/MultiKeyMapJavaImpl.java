@@ -9,7 +9,9 @@ import org.dbtoaster.cumulus.net.SpreadException;
 
 public class MultiKeyMapJavaImpl {
   public static final int DEFAULT_CACHE_SIZE = 64*1024*1024;
+  
   protected static Environment env = null;
+  protected Environment localEnv = null;
   
   protected final int                         numkeys;
   public    final Long                        wildcard;
@@ -39,12 +41,20 @@ public class MultiKeyMapJavaImpl {
   public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns){
     this(numkeys, patterns, "", 0.0);
   }
-  
+
   public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, Double defaultValue){
-    this(numkeys, patterns, dbName, "/tmp", defaultValue, null);
+    this(numkeys, patterns, dbName, "/tmp", null, defaultValue, null);
   }
-  
-  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, String basepath, Double defaultValue, Long wildcard){
+
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, String basepath, Double defaultValue){
+    this(numkeys, patterns, dbName, basepath, null, defaultValue, null);
+  }
+
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, String basepath, String envpath, Double defaultValue){
+    this(numkeys, patterns, dbName, basepath, envpath, defaultValue, null);
+  }
+
+  public MultiKeyMapJavaImpl(int numkeys, List<Long[]> patterns, String dbName, String basepath, String envpath, Double defaultValue, Long wildcard){
     this.numkeys = numkeys;
     this.wildcard = wildcard;
     this.defaultValue = defaultValue;
@@ -52,7 +62,17 @@ public class MultiKeyMapJavaImpl {
     this.dbName = dbName;
     this.patterns = new HashMap<DatabaseEntry,MKPattern>();
     
-    if(env == null){
+    System.out.println("Creating BDBJ env...");
+
+    if ( envpath != null ) {
+        EnvironmentConfig envConfig = new EnvironmentConfig();
+        envConfig.setAllowCreate(true);
+        envConfig.setLocking(false);
+        envConfig.setTransactional(false);
+        envConfig.setCacheSize(DEFAULT_CACHE_SIZE);
+        localEnv = new Environment(new File(basepath, envpath), envConfig);
+    }
+    else if(env == null){
       EnvironmentConfig envConfig = new EnvironmentConfig();
       envConfig.setAllowCreate(true);
       envConfig.setLocking(false);
@@ -60,17 +80,28 @@ public class MultiKeyMapJavaImpl {
       envConfig.setCacheSize(DEFAULT_CACHE_SIZE);
       env = new Environment(new File(basepath), envConfig);
     }
-    
+
+    System.out.println("Creating BDBJ primary...");
+
     String primaryName = basepath + "/db_" + dbName + "_primary.db";
     logger.debug("Creating db at : " + primaryName);
     DatabaseConfig dbConf = new DatabaseConfig();
     dbConf.setAllowCreate(true);
-    this.basemap = env.openDatabase(null, primaryName, dbConf);
+    //dbConf.setTemporary(false);
+    //dbConf.setTransactional(true);
+    dbConf.setDeferredWrite(true);
+    this.basemap = getEnvironment().openDatabase(null, primaryName, dbConf);
+    
+    System.out.println("Opened BDBJ primary " + primaryName + " , env home " + getEnvironment().getHome() + " ...");
+    if ( basemap == null ) System.out.println("Null basemap");
+    else basemap.sync();
     
     for(Long[] pattern : patterns){
       add_pattern(pattern);
     }
   }
+  
+  Environment getEnvironment() { return localEnv == null? env : localEnv; }
   
   public String patternName(Long[] pattern){
     StringBuilder sb = new StringBuilder("{");
@@ -88,7 +119,7 @@ public class MultiKeyMapJavaImpl {
     
     String secondaryName = basepath + "/db_" + dbName + "_" + patterns.size() + ".db";
     logger.debug("Creating secondary db (" + patternName(pattern) + ") at : " + secondaryName);
-    patterns.put(serializeKey(pattern), new MKPattern(pattern, env, secondaryName, basemap));
+    patterns.put(serializeKey(pattern), new MKPattern(pattern, getEnvironment(), secondaryName, basemap));
   }
   
   public Double get(Long[] key){
@@ -113,6 +144,15 @@ public class MultiKeyMapJavaImpl {
     return basemap.get(null, serializeKey(key), entry, LockMode.DEFAULT) == OperationStatus.SUCCESS;
   }
   
+  public void close() {
+      try {
+          basemap.close();
+      } catch(DatabaseException dbe) {
+          System.err.println("Error closing mkmap.");
+          System.exit(-1);
+      }
+  }
+
   public MKFullCursor fullScan(){
     return new MKFullCursor(basemap.openCursor(null, CursorConfig.DEFAULT));
   }

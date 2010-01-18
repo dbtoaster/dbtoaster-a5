@@ -8,9 +8,9 @@ class MultiKeyMap
   include CLogMixins;
   self.logger_segment = "Node.BDB";
 
-  def initialize(numkeys, patterns, name = "", pfiles = [],
-                 basepath = "/tmp", default = nil, wildcard = -1)
-    @java_impl = MultiKeyMapJavaImpl.new(numkeys, patterns, name, default);
+  def initialize(numkeys, patterns, name = "", 
+                 basepath = "/tmp", envpath = nil, default = nil, wildcard = -1)
+    @java_impl = MultiKeyMapJavaImpl.new(numkeys, patterns, name, basepath, envpath, default);
     @wildcard = wildcard
   end
   
@@ -67,9 +67,11 @@ class MultiKeyMap
   end
   
   def close
+    @java_impl.close
   end
   
   def sync
+    @java_impl.sync
   end
   
 end
