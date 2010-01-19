@@ -9,6 +9,8 @@ require 'fileutils';
 # Bootstrap mapreduce code gen
 
 class HadoopCompiler
+  include CLogMixins
+
   attr_reader :stages;
   
   def initialize()
@@ -24,7 +26,7 @@ class HadoopCompiler
     end
   end
 
-  def compile_template(template)
+  def compile_template(template, patterns)
     # stage {
     #    jobname,
     #    in_file (in rel file), out_file (out dbt map file), 
@@ -152,8 +154,8 @@ class HadoopCompiler
       lookup_bind_exprs = lookups.collect do |e|
           lookup_theta[e.to_s] = "vals[#{lookup_idx}]";
           params = normalize_keys(e.keys).collect{ |k| input_theta[k] }.join(",");
-          emapname = "map#{e.source.to_s}"
-          map_lookup = "vals[#{lookup_idx}] = #{emapname}.get([#{params}])";
+          emapname = "@map#{e.source.to_s}"
+          map_lookup = "vals[#{lookup_idx}] = #{emapname}[#{params}]";
           lookup_idx += 1;
           map_lookup
         end;
@@ -172,9 +174,9 @@ class HadoopCompiler
             slice_val_theta[e.to_s] = "mapvals[#{slice_idx}]";
             slice_theta[e.source] = slice_idx;
             slice_access_pattern = normalize_keys(e.keys).collect do |k|
-              loopvars.include?(k) ? "wildcard" : input_theta[k]
+              loopvars.include?(k) ? "@wildcard" : input_theta[k]
             end.join(",");
-            emapname = "map#{e.source.to_s}"
+            emapname = "@map#{e.source.to_s}"
             slice_init = "cursors << #{emapname}.scan([#{slice_access_pattern}])"
             slice_idx += 1;
             slice_init
@@ -218,6 +220,14 @@ class HadoopCompiler
         (constraints.nil? || constraints.empty?) ? nil : "  end",
         "end"].compact;
   
+      stage["map_init_code"] = ["@wildcard = -1"].concat(
+        template.entries.collect do |e|
+          map_patterns = patterns[e.source].collect { |ap| "["+ap.join(",")+"]"}
+          ["map#{e.source.to_s}_nk = #{e.keys.size}",
+            "map#{e.source.to_s}_patterns = [#{map_patterns.join(",")}]",
+            "@map#{e.source.to_s} = MultiKeyMap.new(map#{e.source.to_s}_nk, map#{e.source.to_s}_patterns, \"Map#{e.source.to_s}\")"]
+        end.flatten.uniq)
+
       stage["map_code"] = [
           "outputs = []; cursors = [];",
           lookup_bind_exprs,
@@ -263,7 +273,19 @@ class HadoopCompiler
       
       debug { "Compiling MR for: #{template.to_s}"; }
 
-      mapid, mr_stage = compile_template(template);
+      patterns = Hash.new
+      template.entries.each do |e|
+        patterns[e.source] = [] unless patterns.key?(e.source)
+
+        nps = []
+        $config.templates.values.collect do |t|
+            t.access_patterns(e.source)
+        end.select { |p| p.size > 0 }.each { |aps| aps.each { |p| nps << p } }
+
+        patterns[e.source] = ((patterns[e.source].concat(nps)).uniq)
+      end
+
+      mapid, mr_stage = compile_template(template, patterns);
       map_stages[mapid] = map_stages[mapid].push(mr_stage);
 
       # Track children to compute scores
@@ -371,7 +393,7 @@ class HadoopCompiler
     require_str = [
       "require 'mrtoolkit';",
       "require 'join_utils';",
-      "require 'multikeymap_HBASE';"
+      "require 'multikeymap_HBase_JRB';"
       ].join("\n")
 
     mapper_methods = [
