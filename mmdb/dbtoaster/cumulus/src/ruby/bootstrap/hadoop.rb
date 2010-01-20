@@ -25,6 +25,11 @@ class HadoopCompiler
       end
     end
   end
+  
+  def translate_path_to_hdfs(path)
+    hdfs_path = File.expand_path(hdfs_path).gsub(File.expand_path("~"), "") unless (path =~ /~/).nil?;
+    hdfs_path = File.join($config.hadoop_dfs_path, hdfs_path) unless (hdfs_path[0].chr == '/' || hdfs_path =~ /^hdfs:\/\//);  
+  end
 
   def compile_template(template, patterns)
     # stage {
@@ -69,10 +74,12 @@ class HadoopCompiler
     stage["out_file"]        = File.join("$config.outputs", mapfile);
     
     #  MR input path for relation file
-    stage["in_path"]         = File.join($config.hadoop_dfs_path, stage["jobname"], relname, "chunks");
+    source_rel_path          = translate_path_to_hdfs($config.client_debug["sourcedir"])
+    stage["in_path"]         = File.join([source_rel_path, relname, "chunks"]); 
     
     #  MR output path for map
-    stage["out_path"]        = File.join($config.hadoop_dfs_path, stage["jobname"], mapname, "chunks");
+    map_out_path             = translate_path_to_hdfs($config.client_debug["targetdir"])
+    stage["out_path"]        = File.join([map_out_path, stage["jobname"], mapname, "chunks"]);
 
     stage["in_fields"]       = template.paramlist;
     #stage["out_fields"]      = (0...template.target.keys.length).to_a.collect { |i| "kdim#{i.to_s}" }.concat(["value"]);
@@ -500,21 +507,28 @@ end
 
 $config_file = ""
 $mr_job_path = "."
+$source_path = nil
+$output_path = "maps"
 
 opts = GetoptLong.new(
   [ "-c", "--config-file",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-l", "--localprops",        GetoptLong::REQUIRED_ARGUMENT ],
-  [ "-j", "--hadoop-job-path",   GetoptLong::REQUIRED_ARGUMENT ]
+  [ "-j", "--hadoop-job-path",   GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-i", "--source-path",       GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-o", "--output-path",       GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
   case opt
     when "-c", "--config-file"     then $config_file = arg; 
     when "-l", "--localprops"      then $config.load_local_properties(arg)
-    when "-j", "--hadoop-job-path" then $mr_job_path = arg; 
-
+    when "-j", "--hadoop-job-path" then $mr_job_path = arg;
+    when "-i", "--source-path"     then $source_path = arg;
+    when "-o", "--output-path"     then $output_path = arg;  
   end
 end
 
 $config.load($config_file)
+$config.client_debug["sourcedir"] = $source_path unless $source_path.nil?
+$config.client_debug["targetdir"] = $output_path
 
 #########################
 #
