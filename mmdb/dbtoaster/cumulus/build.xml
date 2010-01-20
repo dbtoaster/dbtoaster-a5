@@ -7,6 +7,7 @@
   <property name="build" location="build" />
   <property name="bin"   location="bin" />
   <property name="jar"   location="${bin}/cumulus.jar" />
+  <property name="bootjar" location="${bin}/bootstrap.jar" />
   <property file="local.properties" />
   
   <target name="init">
@@ -55,6 +56,9 @@ log4j.appender.A1.layout.ConversionPattern=%d{HH:mm:ss,SSS} [%X{hostname}-%t] %-
     <exec executable="src/tools/make_launchers.sh">
       <arg value="${run.classpath}" />
     </exec>
+  	
+  	<copy file="${src}/ruby/bootstrap/run_hadoop.sh" tofile="${bin}/run_hadoop.sh"/>
+  	<chmod file="${bin}/run_hadoop.sh" perm="755"/>
   </target>
   
   <target name="main" depends="init">
@@ -63,6 +67,12 @@ log4j.appender.A1.layout.ConversionPattern=%d{HH:mm:ss,SSS} [%X{hostname}-%t] %-
       <fileset dir="${build}" />
       <fileset dir="${src}/ruby" />
     </jar>
+  	<jar destfile="${bootjar}">
+      <fileset dir="${src}/ruby/bootstrap">
+      	<include name="multikeymap_HBase_JRB.rb"/>
+      	<include name="join_utils.rb"/>
+      </fileset>
+  	</jar>
   </target>
   
   <target name="clean">
