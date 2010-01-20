@@ -10,7 +10,7 @@ class RubyConfig
     :spread_path, :compiler_path,
     :hadoop_path, :hadoop_dfs_path, :hadoop_job_path,
     :partition_sizes, :partition_owners;
-  attr_writer :my_name, :my_port, :unknown_opts;
+  attr_writer :my_name, :my_port, :unknown_opts, :client_debug;
   
   include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
   
@@ -49,7 +49,7 @@ class RubyConfig
       "transforms" => Array.new, 
       "projections" => Array.new, 
       "upfront" => Array.new,
-      "sourcefile" => nil, 
+      "sourcedir" => nil, 
       "ratelimit" => nil
     }
   end
@@ -110,7 +110,7 @@ class RubyConfig
         when "ratelimit" then cmd.shift; @client_debug["ratelimit"] = cmd.join(" ").chomp.to_i;
         when "transform" then cmd.shift; @client_debug["transforms"].push(cmd.join(" ").chomp);
         when "project"   then cmd.shift; @client_debug["projections"].push(cmd.join(" ").chomp);
-        when "source"    then cmd.shift; @client_debug["sourcefile"] = cmd.join(" ");
+        when "source"    then cmd.shift; @client_debug["sourcedir"] = cmd.join(" ").chomp;
         when "upfront"   then cmd.shift; @client_debug["upfront"].push(cmd.shift.chomp);
       end
     end
