@@ -27,8 +27,10 @@ class HadoopCompiler
   end
   
   def translate_path_to_hdfs(path)
+    hdfs_path = path;
     hdfs_path = File.expand_path(hdfs_path).gsub(File.expand_path("~"), "") unless (path =~ /~/).nil?;
-    hdfs_path = File.join($config.hadoop_dfs_path, hdfs_path) unless (hdfs_path[0].chr == '/' || hdfs_path =~ /^hdfs:\/\//);  
+    hdfs_path = File.join($config.hadoop_dfs_path, hdfs_path) unless (hdfs_path[0].chr == '/' || hdfs_path =~ /^hdfs:\/\//);
+    hdfs_path  
   end
 
   def compile_template(template, patterns)
@@ -264,8 +266,8 @@ class HadoopCompiler
           "outputs = []; cursors = [];",
           lookup_bind_exprs,
           cursor_inits,
-          "nljoin(cursors)",
-          predicate_and_output_block,
+          "nljoin(cursors) " + predicate_and_output_block[0],
+          predicate_and_output_block[1..-1],
           "outputs"
         ].flatten;
     
@@ -536,11 +538,17 @@ $config.client_debug["targetdir"] = $output_path
 
 $mrcompiler = HadoopCompiler.new();
 hadoop_jobs = $mrcompiler.compile_program()
+
+jobfilepath = $mr_job_path[0] == "/"[0] ?
+  $mr_job_path : File.join($config.hadoop_job_path, $mr_job_path);
+stagefile = File.open(File.join(jobfilepath, "stages"), "w+")
 hadoop_jobs.each do |name,job|
-  jobfilepath = $mr_job_path[0] == "/"[0] ?
-    $mr_job_path : File.join($config.hadoop_job_path, $mr_job_path);
   FileUtils.mkdir_p(jobfilepath) unless File.directory?(jobfilepath);
   jobfile = File.open(File.join(jobfilepath, name), "w+");
   jobfile.write(job);
-  jobfile.close();
+  jobfile.close;
+  
+  stagefile.write(name+"\n")
 end
+
+stagefile.close;
