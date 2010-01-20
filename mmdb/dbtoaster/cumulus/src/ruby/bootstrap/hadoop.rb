@@ -77,14 +77,25 @@ class HadoopCompiler
     stage["in_fields"]       = template.paramlist;
     #stage["out_fields"]      = (0...template.target.keys.length).to_a.collect { |i| "kdim#{i.to_s}" }.concat(["value"]);
     stage["out_fields"]      = ["key", "value"];
+    
+    stage["reduce_in_fields"]       = ["key", "value"];
+    stage["reduce_out_fields"]      = ["key", "value"];
 
     stage["input_maps"]      = template.entries.collect { |e| e.source };
 
     stage["builtin_map"]     = false;
     stage["builtin_reduce"]  = false;
 
+    stage["extra_files"] = [
+      "\"bin/bootstrap.jar\"",
+      "\"lib/commons-logging-1.0.4.jar\"",
+      "\"lib/hadoop-0.20.1-core.jar\"",
+      "\"lib/hbase-0.20.2.jar\"",
+      "\"lib/zookeeper-3.2.1.jar\"",
+      "\"lib/log4j-1.2.15.jar\"" ]
+
     input_theta = Hash.new
-    template.paramlist.each { |f| input_theta[f] = "input.#{f}" }
+    template.paramlist.each { |f| input_theta[f] = "input.#{f}.to_f" }
       
     debug { "Input theta: #{input_theta.to_s}" }
 
@@ -104,13 +115,27 @@ class HadoopCompiler
         "rv.value = #{arith_expr};",
         "rv"]
 
-      #stage["reduce_group_init_code"] = ["@acc = 0", "nil"]
-      #stage["reduce_code"] = ["@acc = @acc + value", "nil"]
-      #stage["reduce_group_final_code"] =
-      #  ["output.key = @last;", "output.value = @acc; output" ]
+      target_map_patterns = patterns[template.target.source].collect { |ap| "["+ap.join(",")+"]" }
+      stage["reduce_init_code"] = [
+        "map#{template.target.source}_nk = #{template.target.keys.size}",
+        "map#{template.target.source}_patterns = [#{target_map_patterns.join(",")}]",
+        "@map#{template.target.source} = "+
+          "MultiKeyMap.new("+
+            "map#{template.target.source}_nk,"+
+            "map#{template.target.source}_patterns,"+
+            "\"Map#{template.target.source}\")",
+        "nil" ]
+      stage["reduce_group_init_code"] = [ "@acc = 0", "nil"]
+      stage["reduce_code"] = ["@acc = @acc + input.value.to_f", "nil"]
+      stage["reduce_group_final_code"] =
+        ["output.key = @last",
+          "output.value = @acc",
+          "@map#{template.target.source}[output.key.split(\",\").collect { |k| k.to_i }] = output.value.to_f",
+          "output" ]
+      stage["reduce_final_code"] = [ "@map#{template.target.source}.close", "nil" ]
     
-      stage["reduce_code"] = ["UniqueSumReduce"];
-      stage["builtin_reduce"] = true;
+      #stage["reduce_code"] = ["UniqueSumReduce"];
+      #stage["builtin_reduce"] = true;
 
     else
 
@@ -222,7 +247,7 @@ class HadoopCompiler
   
       stage["map_init_code"] = ["@wildcard = -1"].concat(
         template.entries.collect do |e|
-          map_patterns = patterns[e.source].collect { |ap| "["+ap.join(",")+"]"}
+          map_patterns = patterns[e.source].collect { |ap| "["+ap.join(",")+"]" }
           ["map#{e.source.to_s}_nk = #{e.keys.size}",
             "map#{e.source.to_s}_patterns = [#{map_patterns.join(",")}]",
             "@map#{e.source.to_s} = MultiKeyMap.new(map#{e.source.to_s}_nk, map#{e.source.to_s}_patterns, \"Map#{e.source.to_s}\")"]
@@ -237,13 +262,27 @@ class HadoopCompiler
           "outputs"
         ].flatten;
     
-      #stage["reduce_group_init_code"] = ["@acc = 0", "nil"]
-      #stage["reduce_code"] = ["@acc = @acc + value", "nil"]
-      #stage["reduce_group_final_code"] =
-      #  ["output.key = @last;", "output.value = @acc; output" ]
-        
-      stage["reduce_code"] = ["UniqueSumReduce"];
-      stage["builtin_reduce"] = true;
+      target_map_patterns = patterns[template.target.source].collect { |ap| "["+ap.join(",")+"]" }
+      stage["reduce_init_code"] = [
+        "map#{template.target.source}_nk = #{template.target.keys.size}",
+        "map#{template.target.source}_patterns = [#{target_map_patterns.join(",")}]",
+        "@map#{template.target.source} = "+
+          "MultiKeyMap.new("+
+            "map#{template.target.source}_nk,"+
+            "map#{template.target.source}_patterns,"+
+            "\"Map#{template.target.source}\")",
+        "nil" ]
+      stage["reduce_group_init_code"] = [ "@acc = 0", "nil"]
+      stage["reduce_code"] = ["@acc = @acc + input.value.to_f", "nil"]
+      stage["reduce_group_final_code"] =
+        ["output.key = @last",
+          "output.value = @acc",
+          "@map#{template.target.source}[@last.split(\",\").collect { |k| k.to_i }] = output.value.to_f",
+          "output" ]
+      stage["reduce_final_code"] = [ "@map#{template.target.source}.close", "nil" ]
+
+      #stage["reduce_code"] = ["UniqueSumReduce"];
+      #stage["builtin_reduce"] = true;
     end
       
     return [template.target.source, stage]
@@ -274,7 +313,7 @@ class HadoopCompiler
       debug { "Compiling MR for: #{template.to_s}"; }
 
       patterns = Hash.new
-      template.entries.each do |e|
+      [template.target].concat(template.entries).each do |e|
         patterns[e.source] = [] unless patterns.key?(e.source)
 
         nps = []
@@ -440,6 +479,7 @@ class HadoopCompiler
       else gc_mrt_reducer_class(stage["jobname"], reducer_methods)
       end
 
+    # TODO: partitioner and outputformat for HFileOutputFormat
     job_lines = [ "job",
       [ "mapper #{mapper_class}",
         "reducer #{reducer_class}",
@@ -449,8 +489,8 @@ class HadoopCompiler
     
     job_class, job_str = gc_mrt_job_class(stage["jobname"], [job_lines]);
 
-    code = [require_str, mapper_str, reducer_str, job_str].compact.join("\n")
-    code;
+    code = [require_str, "", mapper_str, "", reducer_str, "", job_str].compact.join("\n")
+    code
   end
 end
 

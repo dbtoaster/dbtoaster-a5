@@ -61,22 +61,33 @@ class MultiKeyMap
     #@patterns << pattern
   end
   
+  def get_key_bytes(key)
+    if (key.is_a? Array) then
+      key_bb = java.nio.ByteBuffer.allocate(key.size*java.lang.Long::SIZE)
+      key_bb.asLongBuffer.put(key.to_java(:long))
+      key_bb = key_bb.array()
+    else
+      key_bb = Bytes.toBytes(key)
+    end
+    key_bb
+  end
+
   def [](key)
-    getd = Get.new((key.is_a? Array) ? key.to_java(:byte) : key)
+    getd = Get.new(get_key_bytes(key))
     getd.addColumn(Bytes.toBytes("value"))
     result = @htable.get(getd)
     Bytes.toDouble(result.value())
   end
   
   def []=(key, val)
-    putd = Put.new((key.is_a? Array) ? key.to_java(:byte) : key)
+    putd = Put.new(get_key_bytes(key))
     key.each_index do |k_i| putd.add(Bytes.toBytes("key#{k_i.to_s}"), nil, Bytes.toBytes(key[k_i])) end
     putd.add(Bytes.toBytes("value"), nil, Bytes.toBytes(val))
     @htable.put(putd)
   end
   
   def has_key?(key)
-    getd = Get.new((key.is_a? Array) ? key.to_java(:byte) : key)
+    getd = Get.new(get_key_bytes(key))
     getd.addColumn(Bytes.toBytes("value"))
     @htable.exists(getd)
   end
@@ -182,11 +193,11 @@ end
 
 def test
   m = MultiKeyMap.new(2, [], "x")
-  keys = [[1,1], [1,2], [2,2]]
+  keys = [[1000000,1000000], [1000000,2000000], [2000000,2000000]]
   val = 1.0
   keys.each do |k|  m[k] = val; val += 1.0; end
   keys.each do |k|  x = m[k]; puts "Key #{k}: #{x}"; end
-  slices = [[1,-1], [-1,2]]
+  slices = [[1000000,-1], [-1,2000000]]
   slices.each do |s| m.scan(s) { |k,v| puts "Key #{k}: #{v.to_s}" } end
 end
 
