@@ -354,7 +354,7 @@ class MassValuationApplicator
     return unless @records;
     @valuation.foreach do |target, delta_value|
       trace { "Map #{valuation.target.source}[#{target.join(",")}] += #{delta_value}" }
-      partition = target.partition(@handler.partition_sizes[target.source]);
+      partition = target.partition(@handler.partition_sizes[target.source].to_java(:Long));
       @records[partition].discover(target.key, delta_value) if @records.has_key? partition;
     end
     @records.each_value { |record| record.finish }
@@ -395,19 +395,22 @@ class MapNodeHandler
   
   def loop_partitions(source, key)
     key = NetTypes.compute_partition(key, @partition_sizes[source.to_i]);
+    trace { "loop_partitions: looking for map #{source} in {#{@maps.keys.join(",")}}" }
     @maps[source].each_pair do |map_key, partition|
+      trace { "loop_partitions: [#{key.to_a.join(",")} =?= #{map_key.to_a.join(",")}]" }
       if key.zip(map_key).assert { |k, mk| (k == -1) || (k == mk) } then
+        trace {"  ...yes!"}
         yield partition;
       end
     end
   end
   
   def create_partition(map, partition, size)
-    @partition_sizes[map] = size;
+    @partition_sizes[map.to_i] = size;
     @maps[map.to_i][partition.collect { |partdim| partdim.to_i }] =
       MapPartition.new(map, partition,  @templates.values.collect do |t|
         t.access_patterns(map.to_i) end.concat!.uniq);
-    debug { "Created partition " + @maps[map.to_i].to_s }
+    debug { "Created partition #{@maps[map.to_i]} (size: #{size.join(",")})" }
   end
   
   def install_put_template(index, cmd)
@@ -670,7 +673,7 @@ class MapNodeHandler
           applicator = ValuationApplicator.new(
             base_cmd + put_msg.id_offset, target, valuation, self, false
           )
-          debug { "Creating put: #{base_cmd + put_msg.id_offset}" }
+          debug { "Creating put: #{base_cmd + put_msg.id_offset} -> #{target}" }
           preload_locals(base_cmd + put_msg.id_offset, applicator);
           applicator.apply([find_partition(target.source, target.key)]);
           @stats.put;
@@ -684,7 +687,7 @@ class MapNodeHandler
           applicator = MassValuationApplicator.new(
             base_cmd + put_msg.id_offset, valuation, sources, self, false
           ) 
-          debug { "Creating mass-put: #{base_cmd + put_msg.id_offset}" }
+          debug { "Creating mass-put: #{base_cmd + put_msg.id_offset} -> #{valuation.target}" }
           preload_locals(base_cmd + put_msg.id_offset, applicator);
           plist = Array.new;
           loop_partitions(valuation.target.source, valuation.target.key) { |partition| plist.push(partition) }

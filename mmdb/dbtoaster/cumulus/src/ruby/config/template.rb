@@ -136,9 +136,9 @@ class TemplateValuation
     @template, @params = template, params.to_a;
     @instance = Array.new(template.entries.size, 0);
     @entry_values = template.entries.collect { |entry| [entry, Array.new] };
-    if template.paramlist.length + template.varlist.length > @params.length then
-      @params = @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
-    end
+#    if template.paramlist.length + template.varlist.length > @params.length then
+#      @params = @params.concat(Array.new(template.paramlist.length + template.varlist.length - @params.length, nil))
+#    end
   end
   
   def [](entry)
