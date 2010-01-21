@@ -91,7 +91,7 @@ class MapPartition
   end
   
   def finish_pending
-    debug { "Finished Pending (Map #{@mapid}): #{@pending.size} pending" }
+    start_size = @pending.size;
     while (not @pending.empty?) && @pending[0].ready
       trace { "Discarding Pending" }
       pending = @pending.shift; 
@@ -99,6 +99,7 @@ class MapPartition
       pending.fire;
       @pending_cleared += 1;
     end
+    debug { "Finished Pending (Map #{@mapid}): #{@pending.size} pending (down from #{start_size})" }
   end
   
   def fire(target, on_entry, on_finish)

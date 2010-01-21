@@ -120,6 +120,9 @@ end
 class PrimarySlicerNodeHandler < SlicerNodeHandler
   include Java::org::dbtoaster::cumulus::slicer::SlicerNode::PrimarySlicerNodeIFace;
 
+  include CLogMixins;
+  self.logger_segment = "Slicer";
+
   def spin_up_slicers(*slicer_nodes)
     debug { "Spinning up slicers #{slicer_nodes.length}" }
     slicer_nodes.collect do |node|
@@ -296,6 +299,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
       nodes.push(node_info["address"].getHostName);
     end
     nodes.push($config.switch.getHostName);
+    nodes.uniq!;
     
     $clients = spin_up_slicers(*(nodes.to_a.delete_if { |n| n == "localhost" }));
     $clients["localhost"] = $local_node;
@@ -361,8 +365,13 @@ module SlicerNode
     end
     
     def client
-      debug { "Waiting for slicer to spawn on : #{@host}" }
-      @ready = /====> Server Ready <====/.match(@process.log.pop) until @ready
+      @client if @ready && @client;
+      debug { "Waiting for slicer to spawn on : #{@host}" };
+      until @ready do
+        line = @process.log.pop;
+        @ready = /====> Server Ready <====/.match(line);
+        trace { line }
+      end
       debug { "Slicer spawned on : #{@host}" }
       if @client then @client
       else @client = Client.connect(@host)

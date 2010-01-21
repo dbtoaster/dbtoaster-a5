@@ -196,7 +196,6 @@ class MapNodeStats
   
   def stat
     if ((@stats += 1) % 5000) == 0 then
-      @handler.sync;
       info { "Status: " + @name + ";" + 
         " put "      + @puts.to_s +
         " mass_put " + @mass_puts.to_s +
@@ -211,24 +210,20 @@ class MapNodeStats
   
   def mass_put
     @mass_puts += 1;
-    stat;
   end
   
   def put
     @puts += 1;
-    stat;
   end
   
   def fetch
     @fetches += 1;
-    stat;
   end
   
   def push(size)
     @pushes += 1;
     @push_size += size
     @max_push = size if @max_push < size;
-    stat;
   end
 end
 
@@ -247,6 +242,7 @@ class ValuationApplicator
       @final_val = @valuation.to_f
     rescue Exception => e
       # it's not ready
+      raise e unless e.message.include? "Incomplete valuation"
       trace { "Valuation Init: #{e}" }
     end
   end
@@ -260,13 +256,14 @@ class ValuationApplicator
     @valuation.discover(key, value)
     begin
       @final_val = @valuation.to_f
+      debug { "Single Put Update #{@id} : Map #{valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
       if @record then
-        trace { "Map #{valuation.target.source}[#{@target.key.join(",")}] += #{final_val}" }
         @record.discover(@target.key, @final_val).finish;
         @handler.finish_valuating(@id);
       end
     rescue Exception => e
       # it's not ready
+      raise e unless e.message.include? "Incomplete valuation"
       trace { "Valuation Discover: #{e}" }
     end
   end
@@ -282,7 +279,7 @@ class ValuationApplicator
   
   def apply(partitions)
     if @final_val then
-      trace { "Map #{valuation.target} += #{@final_val}" }
+      debug { "Single Put Update #{@id} : Map #{valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
       partitions[0].update(@target.key, @final_val);
       @handler.finish_valuating(@id);
     else
@@ -385,10 +382,6 @@ class MapNodeHandler
   end
   
   ############# Internal Accessors
-  
-  def sync
-    @maps.each_value { |partitions| partitions.each_value { |partition| partition.sync } };
-  end
   
   def find_partition(source, key)
     raise SpreadException.new("find_partition for wildcard keys uses loop_partitions") if key.include?(-1);
@@ -602,7 +595,7 @@ class MapNodeHandler
   end
   
   def push_get(result, cmdid)
-    debug {"Pushget: " + result.size.to_s + " results for command " + cmdid.to_s }
+    debug {"Pushget: #{result.size} results for command #{cmdid} from #{Java::org::dbtoaster::cumulus::net::Server.activeSender}" }
     if cmdid == 0 then
       info {
         "  Fetch Results Pushed: " + 
@@ -662,6 +655,7 @@ class MapNodeHandler
             proc { || sq.release }
           );
         end
+        @stats.fetch;
       end
     end
     put_entries.each_value { |rcn| rcn.finish_setup };
@@ -699,6 +693,7 @@ class MapNodeHandler
         end
       end
     end
+    @stats.stat;
   end
   
   ############# Internal Control

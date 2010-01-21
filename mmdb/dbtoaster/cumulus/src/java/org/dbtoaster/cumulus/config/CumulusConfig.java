@@ -5,7 +5,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.HashSet;
 import java.util.ArrayList;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.net.InetAddress;
 import org.jruby.CompatVersion;
@@ -21,6 +24,7 @@ public class CumulusConfig extends Properties
   HashSet<CumulusOption> parameterOptions;
   
   protected static Logger logger = null;
+  protected static String splitHostname = null;
   
   public interface RubyConfigIface {
     public void load(String input);
@@ -117,6 +121,11 @@ public class CumulusConfig extends Properties
   
     if(args.length < 2){ usage(); }
     load(new FileInputStream(args[0]));
+    if(hostname() != null){
+      if(new File(args[0].replaceAll("local\\.properties", hostname()+".properties")).exists()){
+        load(new FileInputStream(args[0].replaceAll("local\\.properties", hostname()+".properties")));
+      }
+    }
     
     setProperty("cumulus.config", args[1]);
     setProperty("hostname", InetAddress.getLocalHost().getHostName());
@@ -126,6 +135,19 @@ public class CumulusConfig extends Properties
     PropertyConfigurator.configure(this); //Log4J configuration
     MDC.put("hostname", getProperty("hostname"));
     logger = Logger.getLogger("dbtoaster.Config");
+  }
+  
+  protected String hostname(){
+    if(splitHostname != null){ return splitHostname; }
+    try {
+      splitHostname = InetAddress.getLocalHost().getHostName();
+      if((splitHostname != null) && (splitHostname.indexOf(".") >= 0)){
+        splitHostname = splitHostname.substring(0, splitHostname.indexOf("."));
+      }
+    } catch (Exception e){
+      logger.debug("Unable to obtain hostname.  Ignoring.  (" + e.getMessage() + ")");
+    }
+    return splitHostname;
   }
   
   public <T> T loadRubyObject(String rObjectFile, Class<T> rInterface)
@@ -147,10 +169,11 @@ public class CumulusConfig extends Properties
     receiver = container.runScriptlet(PathType.CLASSPATH, "config/config.rb");
     RubyConfigIface rConfig = container.getInstance(receiver, RubyConfigIface.class);
 
-    rConfig.parse_opt("config_file", getProperty("cumulus.config"));
     rConfig.parse_opt("cumulus.home", getProperty("cumulus.home"));
     rConfig.parse_opt("compiler.home", getProperty("compiler.home"));
+    rConfig.parse_opt("config_file", getProperty("cumulus.config"));
     rConfig.parse_opt("object_file", rObjectFile);
+    
     for(Map.Entry<String,String> parameter : parameters.entrySet()){
       rConfig.parse_opt(parameter.getKey(), parameter.getValue());
     }

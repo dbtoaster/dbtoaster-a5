@@ -91,6 +91,12 @@ public class Server implements Runnable
         // Never ends
     }
     
+    
+    protected static TProtocol activeProtocol = null;
+    protected static InetSocketAddress activeSender(){
+      return activeProtocol.getTransport().getRemote();
+    }
+    
     void handleRead(TProtocol p) throws TException, IOException
     {
         int bytesRead = p.getTransport().read();
@@ -100,6 +106,7 @@ public class Server implements Runnable
                 processingStartTime = System.currentTimeMillis();
 
             logger.trace("Handle read: " + bytesRead);
+            activeProtocol = p;
             while ( p.getFrame() )
             {
                 server_processor.process(p, p);

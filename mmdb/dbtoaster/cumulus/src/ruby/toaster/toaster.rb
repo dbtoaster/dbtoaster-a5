@@ -491,6 +491,8 @@ $toaster_opts = []
 # the default for the source directive.
 $pfile_basepath = "~"
 
+$toaster = DBToaster.new()
+
 opts = GetoptLong.new(
   [ "-o", "--output",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",              GetoptLong::REQUIRED_ARGUMENT ],
@@ -518,7 +520,6 @@ opts = GetoptLong.new(
   end
 end
 
-$toaster = DBToaster.new()
 $toaster_opts.each { |oa| opt, arg = oa; $toaster.parse_arg(opt, arg) }
 
 ARGV.each do |f|

@@ -76,7 +76,8 @@ public abstract class Client
       } catch(IllegalArgumentException e){
         logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(InvocationTargetException e){
-        logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
+        logger.error("Error: Unable to instantiate class '" + c.toString() + "'", e);
+        throw (IOException)e.getCause();
       } catch(IllegalAccessException e){
         logger.error("Error: Class '" + c.toString() + "' is not a valid Client subclass", e);
       } catch(ExceptionInInitializerError e){

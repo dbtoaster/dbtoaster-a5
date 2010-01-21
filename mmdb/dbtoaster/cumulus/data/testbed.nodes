@@ -1,0 +1,7 @@
+--persist
+--slice source ~/dbtoaster/tpch/100m
+--switch slicedbread5
+--node Node01@slicedbread1:52982
+--node Node02@slicedbread2:52982
+--node Node03@slicedbread3:52982
+--node Node04@slicedbread4:52982

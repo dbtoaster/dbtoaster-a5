@@ -1,3 +1,4 @@
 --persist
+--slice source ~/tpch/100m
 --switch localhost
 --node Node01@localhost:52982

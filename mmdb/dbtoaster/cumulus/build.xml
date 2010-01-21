@@ -8,9 +8,33 @@
   <property name="bin"   location="bin" />
   <property name="jar"   location="${bin}/cumulus.jar" />
   <property name="bootjar" location="${bin}/bootstrap.jar" />
-  <property file="local.properties" />
   
   <target name="init">
+    <!-- 
+      To deal with heterogeneous site installations, we clone each compile into a site-specific
+      copy.  Properties are read from local.properties, and can be overridden on a per-site basis
+      by creating a file called X.properties, where X is the first dotted component of the site's
+      hostname.
+      
+      To build for a non-local site, specify -Dhostname=X on the command line.
+    -->
+    <if>
+      <not><isset property="hostname" /></not>
+      <then>
+        <exec executable="hostname" outputproperty="hostname.full"/>
+        <propertyregex property="hostname" input="${hostname.full}" regexp="^([^.]*)(\..*)?" select="\1" />
+      </then>
+    </if>
+    <if>
+      <available file="${hostname}.properties" />
+      <then>
+        <echo message="Using: ${hostname}.properties" />
+        <property file="${hostname}.properties" />
+      </then>
+    </if>
+    <property file="local.properties" />
+    
+    <!-- Of course, it's possible that the properties file doesn't exist yet.  Fix that. -->
     <if>
       <not><isset property="cumulus.home" /></not>
       <then>
@@ -22,6 +46,7 @@ compiler.home = /home/fs01/oak5/dbtoaster/prototype/compiler/alpha3
         <fail message="Properties file initialized.  Edit local.properties and re-run the compiler" />
       </then>
     </if>
+    <!-- Set log4j defaults if they're not there already. -->
     <if>
       <not><isset property="log4j.rootLogger" /></not>
       <then>
@@ -35,26 +60,31 @@ log4j.appender.A1.layout.ConversionPattern=%d{HH:mm:ss,SSS} [%X{hostname}-%t] %-
       </then>
     </if>
     
+    <!-- Compile DBToaster itself -->
     <if>
       <not><available file="${compiler.home}/dbtoaster.top" /></not>
       <then>
-	<exec executable="make" dir="${compiler.home}"><arg value="top" /></exec>
+        <exec executable="make" dir="${compiler.home}"><arg value="top" /></exec>
       </then>
     </if>
     
+    <!-- Initialize compilation and intermediate directories -->
     <mkdir dir="${build}" />
     <mkdir dir="${bin}" />
     
+    <!-- Set up the classpath, and use it to compute the runtime classpath -->
     <path id="classpath">
       <pathelement path="${jruby.home}/lib/jruby.jar" />
       <pathelement path="lib/je.jar" />
       <pathelement path="lib/log4j-1.2.15.jar" />
     </path>
-  
     <pathconvert refid="classpath" property="compile.classpath" />
     <property name="run.classpath" value="${compile.classpath}:${jar}" />
+    
+    <!-- Produce the necessary launcher scripts -->
     <exec executable="src/tools/make_launchers.sh">
       <arg value="${run.classpath}" />
+      <arg value="${hostname}" />
     </exec>
   	
   	<copy file="${src}/ruby/bootstrap/run_hadoop.sh" tofile="${bin}/run_hadoop.sh"/>

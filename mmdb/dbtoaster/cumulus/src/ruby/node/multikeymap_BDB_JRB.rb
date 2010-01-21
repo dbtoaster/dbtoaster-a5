@@ -75,3 +75,5 @@ class MultiKeyMap
   end
   
 end
+
+at_exit { `rm -f /tmp/je.* /tmp/*.jdb` }
