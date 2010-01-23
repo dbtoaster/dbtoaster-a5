@@ -230,10 +230,14 @@ class TemplateExpression
       when :mult then @left.to_f(params) * @right.to_f(params);
       when :sub  then @left.to_f(params) - @right.to_f(params);
       when :div  then @left.to_f(params) / @right.to_f(params);
-      when :val  then 
+      when :val  then
         case @left
           when TemplateVariable then @left.to_f(params ? params.params : nil)
-          else                       @left.to_f;
+          else                       
+            if @right.nil? then @left.to_f else 
+              raise SpreadException("Unknown parameter value") if params.nil?;
+              params.params[@right];
+            end
         end
       when :map  then params[@right];
       else            raise SpreadException.new("Unknown Expression operator (to_f): " + @op.to_s);
@@ -269,10 +273,14 @@ class TemplateExpression
         template.entries.push(entry);
         TemplateExpression.new(:map, entry, template.entries.size-1);
       else
-        TemplateExpression.new(
-          :val,
-          if tokenizer.last.is_number? then tokenizer.last.to_f else tokenizer.last.to_s end
-        );
+        if tokenizer.last.is_number? then 
+          TemplateExpression.new(:val, tokenizer.last.to_f)
+        else
+          param = tokenizer.last.to_s
+          param_idx = template.paramlist.index(param)
+          raise SpreadException.new("Parse Error: No field "+param+" found in "+template.paramlist.join(",")) unless param_idx;
+          TemplateExpression.new(:val, param, param_idx)
+        end 
     end
   end
   

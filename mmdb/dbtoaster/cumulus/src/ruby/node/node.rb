@@ -299,6 +299,7 @@ class ValuationApplicator
     @id, @target, @valuation, @handler, @log = id, target, valuation, handler, log;
     @final_val, @record = nil, nil;
     begin
+      debug { "Init #{@valuation.target.source} eval #{@id}" }
       @final_val = @valuation.to_f
     rescue Exception => e
       # it's not ready
@@ -315,8 +316,9 @@ class ValuationApplicator
     trace { "Discovered that : #{key} = #{value}" }
     @valuation.discover(key, value)
     begin
+      debug { "Discover #{@valuation.target.source} eval #{@id}" }
       @final_val = @valuation.to_f
-      debug { "Single Put Update #{@id} : Map #{valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
+      debug { "Single Put Update #{@id} : Map #{@valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
       if @record then
         @record.discover(@target.key, @final_val).finish;
         @handler.finish_valuating(@id);
@@ -339,7 +341,7 @@ class ValuationApplicator
   
   def apply(partitions)
     if @final_val then
-      debug { "Single Put Update #{@id} : Map #{valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
+      debug { "Single Put Update #{@id} : Map #{@valuation.target.source}[#{@target.key.to_a.join(",")}] += #{@final_val}" }
       partitions[0].update(@target.key, @final_val);
       @handler.finish_valuating(@id);
     else
@@ -677,7 +679,7 @@ class MapNodeHandler
       trace { "Pushget: Command unknown; subsequent push" }
       @cmdcallbacks[cmdid].push(result);
     else
-      # Case 3: we have a push message waiting for these results
+      # Case 3: we have a put waiting for these results
       trace { "Pushget: Matched to command" }
       result.each do |target_value|
         @cmdcallbacks[cmdid].discover(target_value[0], target_value[1])
@@ -728,6 +730,7 @@ class MapNodeHandler
     rules.puts.each do |put_msg|
       if (sources = put_msg.condition.match(params)) then
         unless put_msg.template.requires_loop? then
+          debug { "Creating single put valuation, params: " + params.join(",") }
           valuation = put_msg.template.valuation(params);
           target = valuation.target;
           applicator = ValuationApplicator.new(
