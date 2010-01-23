@@ -42,12 +42,16 @@ class MultiKeyMap
   
   def scan(partial_key)
     trace { "Scanning for : #{partial_key.join(",")}" }
-    unless partial_key.include? @wildcard then
-      yield(partial_key, self[partial_key]);
-      return;
+    if partial_key.all? { |k| k == @wildcard } then
+      cursor = @java_impl.fullScan;
+    else
+      unless partial_key.include? @wildcard then
+        yield(partial_key, self[partial_key]);
+        return;
+      end
+      partial_key = partial_key.collect { |k| k unless k == @wildcard };
+      cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
     end
-    partial_key = partial_key.collect { |k| k unless k == @wildcard };
-    cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
     return unless cursor; # a null cursor means no values match the key
     while cursor.next;
       yield cursor.key.to_a.collect { |k| k.to_i }, cursor.value.to_f;
@@ -56,8 +60,12 @@ class MultiKeyMap
   end
   
   def replace(partial_key)
-    partial_key = partial_key.collect { |k| k unless k == @wildcard };
-    cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
+    if partial_key.all? { |k| k == @wildcard } then
+      cursor = @java_impl.fullScan;
+    else
+      partial_key = partial_key.collect { |k| k unless k == @wildcard };
+      cursor = @java_impl.scan((partial_key.is_a? Array) ? partial_key.to_java(:Long) : partial_key);
+    end
     return unless cursor; # a null cursor means no values match the key
     while cursor.next;
       new_val = yield cursor.key.to_a.collect { |k| k.to_i }, cursor.value.to_f;

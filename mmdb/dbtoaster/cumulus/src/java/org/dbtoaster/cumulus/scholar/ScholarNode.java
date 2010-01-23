@@ -82,7 +82,7 @@ public class ScholarNode
       }
     }
   }
-  
+
   public static void main(String[] args) throws Exception
   {
       CumulusConfig conf = new CumulusConfig();
@@ -90,10 +90,10 @@ public class ScholarNode
       conf.configure(args);
       
       String portProperty = conf.getProperty("port");
-      Integer nodePort = portProperty == null? 52983 : Integer.parseInt(portProperty);  
+      Integer scholarPort = portProperty == null? 52983 : Integer.parseInt(portProperty);  
       
       ScholarNodeIFace handler = conf.loadRubyObject("scholar/scholar.rb", ScholarNodeIFace.class);
-      Server s = new Server(new ScholarNode.Processor(handler), nodePort);
+      Server s = new Server(new ScholarNode.Processor(handler), scholarPort);
       Thread t = new Thread(s);
       
       t.start();

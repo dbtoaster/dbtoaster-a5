@@ -156,7 +156,9 @@ class QueryCompleteNotification
     return if @hold;
     if @partition_accesses.assert { |dep| dep.ready } then
       results = @partition_accesses.inject(Hash.new) { |acc, p| acc.merge(p.results) }
-      ScholarNode.getClient($config.scholar).push_result(results, cmdid)
+      info { "Sending #{results.size.to_s} results to #{$config.scholar.getHostName}." }
+      info { results.collect { |e,v| e.to_s + " = " + v.to_s }.join(" / ") }
+      Java::org::dbtoaster::cumulus::scholar::ScholarNode.getClient($config.scholar).push_results(results, cmdid)
     end
   end
 end
@@ -399,7 +401,7 @@ class MassValuationApplicator
       partitions = partition_list.collect_hash { |part| [part.partition, part] };
       @valuation.foreach do |target, delta_value|
         trace { "Map #{valuation.target.source}[#{target.key.join(",")}] += #{delta_value}" }
-        partition = target.partition(@handler.partition_sizes[target.source]);
+        partition = target.partition(@handler.partition_sizes[target.source].to_java(:Long));
         partitions[partition].update(target.key, delta_value) if partitions.has_key? partition;
       end
       @handler.finish_valuating(@id);
@@ -474,7 +476,7 @@ class MapNodeHandler
   def install_put_template(index, cmd)
     @templates[index.to_i] = cmd;
     @maps.each_pair do |map, partition_list| 
-      partition_list.each_value do |partition| 
+      partition_list.each_value do |partition|
         cmd.access_patterns(map).each do |pat| 
           debug { "Loading pattern: #{pat.join(",")}" }
           partition.add_pattern(pat)

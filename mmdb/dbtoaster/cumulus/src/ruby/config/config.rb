@@ -81,7 +81,7 @@ class RubyConfig
         when "switch_tree" then
           @switch_tree = cmd[1].chomp.split(",", 2).collect{ |p| p.to_i }
 
-        when "scholar" then @scholar = java::net::InetSocketAddress.new(cmd[1].chomp, 52893); 
+        when "scholar" then @scholar = java::net::InetSocketAddress.new(cmd[1].chomp, 52983); 
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);

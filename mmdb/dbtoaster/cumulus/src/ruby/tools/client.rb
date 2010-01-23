@@ -1,6 +1,7 @@
 
 require 'getoptlong';
 require 'config/config';
+require 'scholar/scholar_handler';
 
 $stdout.sync = true;
 $interactive = true;
@@ -102,8 +103,19 @@ puts "Client query result #{$result_map}, params #{$result_map_params.join(",")}
 
 $ratelimit = $stats_every.to_f / $ratelimit if $ratelimit;
 
+# Create chef handle
 chef_addr = java.net.InetSocketAddress.new(`hostname`.chomp, 52981);
 chef = Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(chef_addr) unless $test;
+
+# Create scholar server
+unless $test then
+  scholar_port = 52983;
+  handler = ScholarNodeHandler.new();
+  scholar_processor = Java::org::dbtoaster::cumulus::scholar::ScholarNode::Processor.new(handler);
+  scholar = Java::org::dbtoaster::cumulus::net::Server.new(scholar_processor, scholar_port);
+  scholar_thread = java.lang.Thread.new(scholar);
+  scholar_thread.start;
+end
 
 def compare_date(indices, params)
   indices = indices.collect{ |i| params[i.to_i] };
@@ -211,4 +223,4 @@ $input.each do |line|
 end
 
 sleep 1000;
-
+java.lang.Thread.join(scholar_thread) unless scholar_thread.nil?;
