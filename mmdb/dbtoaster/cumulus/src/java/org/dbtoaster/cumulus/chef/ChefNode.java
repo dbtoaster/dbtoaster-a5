@@ -16,6 +16,7 @@ import org.dbtoaster.cumulus.net.TProcessor;
 import org.dbtoaster.cumulus.net.TProtocol;
 import org.dbtoaster.cumulus.net.SpreadException;
 import org.dbtoaster.cumulus.net.Client;
+import org.dbtoaster.cumulus.node.MapNode.MapNodeMethod;
 import org.dbtoaster.cumulus.config.CumulusConfig;
 
 public class ChefNode
@@ -29,6 +30,11 @@ public class ChefNode
       throws TException;
     
     public void set_forwarders(List<InetSocketAddress> nodes, int nodeOrChef)
+      throws TException;
+    
+    public void query(Long id, List<Double> params) throws TException;
+    
+    public void forward_query(Long id, List<Double> params, int basecmd)
       throws TException;
     
     public String dump() throws TException;
@@ -92,6 +98,31 @@ public class ChefNode
       } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
 
+    public void query(Long id, List<Double> params)
+    throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(ChefNodeMethod.QUERY);
+        oprot.putLong(id);
+        oprot.putList(params);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+
+    public void forward_query(Long id, List<Double> params, int basecmd)
+    throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(ChefNodeMethod.FORWARD_QUERY);
+        oprot.putLong(id);
+        oprot.putList(params);
+        oprot.putInteger(basecmd);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+
     public String dump()
       throws TException
     {
@@ -127,7 +158,8 @@ public class ChefNode
   }
     
   public static enum ChefNodeMethod {
-      UPDATE,FORWARD_UPDATE,SET_FORWARDERS,DUMP,REQUEST_BACKOFF,FINISH_BACKOFF
+      UPDATE,FORWARD_UPDATE,SET_FORWARDERS,QUERY,FORWARD_QUERY,
+      DUMP,REQUEST_BACKOFF,FINISH_BACKOFF
   };
   
   public static class Processor extends TProcessor<ChefNodeMethod>
@@ -140,6 +172,8 @@ public class ChefNode
       handlerMap.put(ChefNodeMethod.UPDATE, new update());
       handlerMap.put(ChefNodeMethod.FORWARD_UPDATE, new forward_update());
       handlerMap.put(ChefNodeMethod.SET_FORWARDERS, new set_forwarders());
+      handlerMap.put(ChefNodeMethod.QUERY, new query());
+      handlerMap.put(ChefNodeMethod.FORWARD_QUERY, new forward_query());
       handlerMap.put(ChefNodeMethod.DUMP, new dump());
       handlerMap.put(ChefNodeMethod.REQUEST_BACKOFF, new request_backoff());
       handlerMap.put(ChefNodeMethod.FINISH_BACKOFF, new finish_backoff());
@@ -179,6 +213,29 @@ public class ChefNode
       }
     }
     
+    private class query extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException, TProtocolException
+      {
+        Long id = iprot.getLong();
+        List<Double> params = iprot.getList(Double.class);
+        handler.query(id, params);
+      }
+    }
+
+    private class forward_query extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException, TProtocolException
+      {
+        Long id = iprot.getLong();
+        List<Double> params = iprot.getList(Double.class);
+        Integer basecmd = iprot.getInteger();
+        handler.forward_query(id, params, basecmd);
+      }
+    }
+
     private class dump extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)

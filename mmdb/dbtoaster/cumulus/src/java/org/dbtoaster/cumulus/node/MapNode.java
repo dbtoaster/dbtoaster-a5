@@ -46,19 +46,17 @@ public class MapNode
     public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
       throws SpreadException, TException;
 
+    public void query(long id, List<Double> params, int basecmd)
+        throws TException;
+
     public String dump() throws TException;
 
     public void localdump() throws TException;
   }
   
-  public static MapNodeClient getClient(InetSocketAddress addr) throws IOException {
-    try {
-      MapNodeClient c = Client.get(addr, 1, MapNodeClient.class);
-    return c;
-    } catch(Exception e){
-      e.printStackTrace();
-      return null;
-    }
+  public static MapNodeClient getClient(InetSocketAddress addr) throws IOException
+  {
+    return getClient(addr,1);
   }
 
   public static MapNodeClient getClient(InetSocketAddress addr, Integer sendFrameBatchSize)
@@ -199,6 +197,19 @@ public class MapNode
       return r;
     }
     
+    public void query(long id, List<Double> params, int basecmd)
+        throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(MapNodeMethod.QUERY);
+        oprot.putLong(id);
+        oprot.putList(params);
+        oprot.putInteger(basecmd);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+
     public String dump() throws TException
     {
       String r = null;
@@ -222,7 +233,7 @@ public class MapNode
     
   public static enum MapNodeMethod {
     UPDATE, PUT, MASS_PUT, GET, FETCH, PUSH_GET,
-    META_REQUEST, AGGREGET, DUMP, LOCALDUMP };
+    META_REQUEST, AGGREGET, QUERY, DUMP, LOCALDUMP };
 
   public static class Processor extends TProcessor<MapNodeMethod>
   {
@@ -239,6 +250,7 @@ public class MapNode
       handlerMap.put(MapNodeMethod.PUSH_GET, new push_get());
       handlerMap.put(MapNodeMethod.META_REQUEST, new meta_request());
       handlerMap.put(MapNodeMethod.AGGREGET, new aggreget());
+      handlerMap.put(MapNodeMethod.QUERY, new query());
       handlerMap.put(MapNodeMethod.DUMP, new dump());
       handlerMap.put(MapNodeMethod.LOCALDUMP, new localdump());
     }
@@ -347,6 +359,18 @@ public class MapNode
         int agg = iprot.getInteger();
         Map<NetTypes.Entry, Double> r = handler.aggreget(target, agg);
         oprot.putObject(r);
+      }
+    }
+
+    private class query extends TProcessor.HandlerFunction
+    {
+      public void process(TProtocol iprot, TProtocol oprot)
+        throws TException,TProtocolException
+      {
+        Long id = iprot.getLong();
+        List<Double> params = iprot.getList(Double.class);
+        Integer basecmd = iprot.getInteger();
+        handler.query(id, params, basecmd);
       }
     }
 

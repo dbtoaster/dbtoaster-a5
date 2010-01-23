@@ -1,6 +1,7 @@
 --persist
 --slice source ~/tpch/100m
 --switch wl10.cac.cornell.edu
+--scholar wl10.cac.cornell.edu
 --node Node01@wl11.cac.cornell.edu:52982
 --node Node02@wl12.cac.cornell.edu:52982
 --node Node03@wl13.cac.cornell.edu:52982

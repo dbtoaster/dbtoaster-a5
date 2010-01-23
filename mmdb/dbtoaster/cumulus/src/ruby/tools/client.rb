@@ -14,6 +14,7 @@ $ratelimit = nil;
 $upfront_cols = Array.new;
 
 GetoptLong.new(
+  [ "--config"     , "-c", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--quiet"      , "-q", GetoptLong::NO_ARGUMENT ],
   [ "--use"        , "-u", GetoptLong::REQUIRED_ARGUMENT ],
   [ "--transform"  , "-t", GetoptLong::REQUIRED_ARGUMENT ],
@@ -26,6 +27,8 @@ GetoptLong.new(
   [ "--upfront"    ,       GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg|
   case opt
+    when "--config", "-c" then $config.load(arg)
+
     when "--quiet", "-q" then 
       $interactive = false; $verbose = false;
     
@@ -84,10 +87,23 @@ GetoptLong.new(
   end
 end
 
+# Query result
+$result_map = $config.templates.values.collect do |t|
+  t.target.source unless $config.templates.values.any? do |t2|
+    t2.entries.any? { |e| e.source == t.target.source }
+  end;
+end.compact[0]
+
+puts "Client query result #{$result_map}"
+
+$result_map_params = $config.templates[$result_map].target.keys.collect { |k| -1 }
+
+puts "Client query result #{$result_map}, params #{$result_map_params.join(",")}"
+
 $ratelimit = $stats_every.to_f / $ratelimit if $ratelimit;
 
-switch_addr = java.net.InetSocketAddress.new(`hostname`.chomp, 52981);
-switch = Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(switch_addr) unless $test;
+chef_addr = java.net.InetSocketAddress.new(`hostname`.chomp, 52981);
+chef = Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(chef_addr) unless $test;
 
 def compare_date(indices, params)
   indices = indices.collect{ |i| params[i.to_i] };
@@ -105,12 +121,13 @@ def compare_date(indices, params)
 end
 
 $starttime = nil;
-$count = 0;
+$update_count = 0;
+$stats_count = 0;
 print "\n>> " if $interactive;
 $input.each do |line|
   $starttime = Time.now unless $starttime;
   if line.chomp == "dump" then
-    puts switch.dump();
+    puts chef.dump();
   else
     args = / *([a-zA-Z\-+_]+) *\(([^)]*)\)/.match(line);
     unless args then
@@ -155,7 +172,7 @@ $input.each do |line|
       #backoff = 0.125
       until success do
         #begin
-          switch.update(table, params) unless $test;
+          chef.update(table, params) unless $test;
           success = true;
         #rescue SpreadException => e;
         #  raise e unless e.retry;
@@ -164,6 +181,12 @@ $input.each do |line|
         #  backoff *= 2;
         #end
       end
+      
+      $update_count += 1
+
+      # Send out queries periodically to get result.
+      chef.query($result_map, $result_map_params) if $update_count % 1000 == 0;
+
       puts table+"("+params.join(", ")+")" if $verbose;
     rescue SpreadException => e
       puts "Error: " + e.to_s;
@@ -171,11 +194,11 @@ $input.each do |line|
   end
   print "\n>> " if $interactive;
   if $stats_every >= 0 then
-    $count += 1;
-    if $count % $stats_every == 0 then
+    $stats_count += 1;
+    if $stats_count % $stats_every == 0 then
       diff = (Time.now - $starttime)
-      puts "client: " + diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $count.to_s + " updates total";
-      puts switch.dump if ($verbose && !$test);
+      puts "client: " + diff.to_s + " seconds; " + ($stats_every.to_f / diff.to_f).to_s + " updates per sec; " + $stats_count.to_s + " updates total";
+      puts chef.dump if ($verbose && !$test);
       $starttime = Time.now;
       if $ratelimit then
         $limittime = $starttime + $ratelimit unless $limittime;

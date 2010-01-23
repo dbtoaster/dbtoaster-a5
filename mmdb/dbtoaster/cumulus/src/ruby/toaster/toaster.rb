@@ -7,7 +7,10 @@ require 'fileutils';
 
 class DBToaster
   attr_reader :compiled, :templates, :map_info, :test_directives,
-    :slice_directives, :persist, :switch, :switch_forwarders, :switch_tree, :preload, :map_formulae;
+    :slice_directives, :persist,
+    :switch, :switch_forwarders, :switch_tree,
+    :scholar,
+    :preload, :map_formulae;
 
   include CLogMixins;
   self.logger_segment = "Toaster";
@@ -24,6 +27,7 @@ class DBToaster
     @switch = "localhost";
     @switch_forwarders = 0;
     @switch_tree = [];
+    @scholar = "localhost";
     @preload = nil;
     @schemas = nil;
     @map_aliases = Hash.new;
@@ -62,7 +66,8 @@ class DBToaster
         @nodes.push(/ *([a-zA-Z0-9_]+) *@ *([a-zA-Z_\-0-9\.]+)(:([0-9]+))?/.match(arg).map(["name", "address", "dummy", "port"]));
       when "--switch"    then @switch = arg;
       when "--switch-forwarders" then @switch_forwarders = arg.to_i;
-      when "--switch-tree" then @switch_tree = arg.split(',', 2).collect { |p| p.to_i }
+      when "--switch-tree" then @switch_tree = arg.split(',', 2).collect { |p| p.to_i };
+      when "--scholar"   then @scholar = arg; 
       when "--partition" then 
         match = /Map *([a-zA-Z0-9_]+) *on *(.*)/.match(arg);
         raise "Invalid partition directive: " + arg unless match;
@@ -496,9 +501,10 @@ $toaster = DBToaster.new()
 opts = GetoptLong.new(
   [ "-o", "--output",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--node",              GetoptLong::REQUIRED_ARGUMENT ],
-  [       "--switch",            GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-w", "--switch",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch-forwarders", GetoptLong::REQUIRED_ARGUMENT ],
   [       "--switch-tree",       GetoptLong::REQUIRED_ARGUMENT ],
+  [ "-s", "--scholar",           GetoptLong::REQUIRED_ARGUMENT ],
   [       "--partition",         GetoptLong::REQUIRED_ARGUMENT ],
   [       "--domain",            GetoptLong::REQUIRED_ARGUMENT ],
   [       "--test",              GetoptLong::REQUIRED_ARGUMENT ],
@@ -507,7 +513,6 @@ opts = GetoptLong.new(
   [ "-r", "--transforms",        GetoptLong::REQUIRED_ARGUMENT ],
   [       "--persist",           GetoptLong::NO_ARGUMENT ],
   [ "-k", "--ignore-keys",       GetoptLong::NO_ARGUMENT ],
-  [ "-w", "--switch-addr",       GetoptLong::REQUIRED_ARGUMENT ],
   [ "-b", "--boot",              GetoptLong::REQUIRED_ARGUMENT ],
   [ "-p", "--pfile",             GetoptLong::REQUIRED_ARGUMENT ]
 ).each do |opt, arg| 
@@ -599,6 +604,8 @@ if $toaster.switch_tree.size == 2 then
 else
   $output.write("switch_forwarders " + $toaster.switch_forwarders.to_s+"\n");
 end
+
+$output.write("scholar " + $toaster.scholar+"\n");
 
 $toaster.each_node do |node, partitions, address, port|
   $output.write("node " + node.to_s + "\n");

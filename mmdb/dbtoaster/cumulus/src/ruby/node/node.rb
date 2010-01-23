@@ -106,6 +106,11 @@ class PluralRemoteCommitSubquery
     @parent.check_ready;
   end
   
+  # computes entries (k-v pairs) per node for pushing data.
+  # fetch_component members:
+  # -- entry mappings are pairs of array indexes, (key index, paramlist index) 
+  # -- target_partitions associates a partition to a node, note this assumes
+  #    partition assignments are unique
   def load_destinations(destinations)
     params = @parent.params.clone;
     partition_size = $config.partition_sizes[@fetch_component.target.source];
@@ -120,6 +125,59 @@ class PluralRemoteCommitSubquery
         end
       end
     end
+  end
+end
+
+###################################################
+
+class QueryCompleteNotification
+  include CLogMixins;
+  self.logger_segment = "Node";
+
+  attr_reader :cmdid, :params, :partition_accesses;
+  def initialize(cmdid, params)
+    @cmdid, @params = cmdid, params.to_a;
+    @partition_accesses = Array.new;
+    @hold = true;
+  end
+
+  def register_partition()
+    p = PartitionAccessNotification.new(self);
+    @partition_accesses.push(p);
+    p;
+  end
+  
+  def finish_setup
+    @hold = false;
+    check_ready;
+  end
+  
+  def check_ready
+    return if @hold;
+    if @partition_accesses.assert { |dep| dep.ready } then
+      results = @partition_accesses.inject(Hash.new) { |acc, p| acc.merge(p.results) }
+      ScholarNode.getClient($config.scholar).push_result(results, cmdid)
+    end
+  end
+end
+
+class PartitionAccessNotification
+  attr_reader :ready, :results;
+  
+  def initialize(parent)
+    @parent = parent;
+    @results = Hash.new;
+    @ready = false;
+  end
+  
+  def fire(entry, value)
+    @results[entry] = value;
+  end
+  
+  def release
+    @parent.trace { "Partition access for cmd #{@parent.cmdid} released" }
+    @ready = true;
+    @parent.check_ready;
   end
 end
 
@@ -697,6 +755,20 @@ class MapNodeHandler
       end
     end
     @stats.stat;
+  end
+  
+  def query(mapid, params, basecmd)
+    query_requests = Hash.new { |h,k| h[k] = QueryCompleteNotification.new(k, params) }
+    mapid_offset = @templates[mapid].index
+    loop_key = @templates[mapid].target.instantiated_key(params);
+    loop_partitions(mapid, loop_key) do |partition|
+      query_cb = query_requests[basecmd+mapid_offset].register_partition()
+      partition.get(loop_key,
+        proc { |key,value| query_cb.fire(MapEntry.new(mapid, key), value) },
+        proc { || query_cb.release });
+    end
+    
+    query_requests.each_value { |qcn| qcn.finish_setup }
   end
   
   ############# Internal Control

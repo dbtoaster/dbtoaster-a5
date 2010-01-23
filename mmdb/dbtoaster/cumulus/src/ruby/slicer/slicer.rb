@@ -78,7 +78,7 @@ class SlicerNodeHandler
   def start_client()
     raise "To run the client, the configuration file must have a source line" unless $config.client_debug["sourcedir"];
     start_process(
-      @spread_path+"/bin/client.sh -q -s " + 
+      @spread_path+"/bin/client.sh -c #{@config_file} -q -s " + 
         if $config.client_debug["ratelimit"] then "-l " + $config.client_debug["ratelimit"].to_s + " " else "" end +
         $config.client_debug["transforms"].collect { |t| "-t '" + t + "'" }.join(" ") + " " +
         $config.client_debug["projections"].collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +

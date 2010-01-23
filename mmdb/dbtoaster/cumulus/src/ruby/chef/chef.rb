@@ -127,6 +127,25 @@ class ChefNodeHandler
     end
   end
   
+  def query(mapid, params)
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist.each do |client|
+      if client.is_a? MapNode::MapNodeClient then
+        client.query(mapid, params, cmdid.to_i)
+      else client.forward_query(mapid, params, cmdid.to_i) end
+    end
+    next_cmd;
+  end
+  
+  def forward_query(mapid, params, basecmd)
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist.each do |client|
+      if client.is_a? MapNode::MapNodeClient then
+        client.query(mapid, params, basecmd)
+      else client.forward_query(mapid, params, basecmd) end
+    end
+  end
+
   def dump()
     @layout.nodes.collect do |n|
       "\n-----------" + n.to_s + "-----------\n" + @nodelist[n].dump;

@@ -6,6 +6,7 @@ require 'getoptlong';
 class RubyConfig
   attr_reader :templates, :nodes, :my_port,
     :switch, :num_switches, :switch_tree,
+    :scholar,
     :log_maps, :client_debug,
     :spread_path, :compiler_path,
     :hadoop_path, :hadoop_dfs_path, :hadoop_job_path,
@@ -79,6 +80,8 @@ class RubyConfig
 
         when "switch_tree" then
           @switch_tree = cmd[1].chomp.split(",", 2).collect{ |p| p.to_i }
+
+        when "scholar" then @scholar = java::net::InetSocketAddress.new(cmd[1].chomp, 52893); 
 
         when "partition" then 
           match = /Map *([0-9]+)\[([0-9, ]+)\]/.match(line);
