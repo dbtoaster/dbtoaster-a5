@@ -54,7 +54,7 @@ def load_db(in_path, name, num_nodes, num_keys)
   (0...num_nodes).collect { |i|
     if $read_nodes.nil? or ($read_nodes.length == 0) or ($read_nodes.include? i) then
       puts "Loading database for node #{i} map #{name}"
-      MultiKeyMap.new(num_keys, [], name, [], in_path, "node#{i}")
+      MultiKeyMap.new(num_keys, [], name, in_path, "node#{i}")
     end
   }
 end
@@ -104,7 +104,7 @@ def repartition(in_path, out_path, name, num_keys, existing_num_nodes,
   existing_dbs = load_db(in_path, name, existing_num_nodes, num_keys).compact
   existing_dbs.each do |edb_mk|
     counter = 0
-    ebd_mk.scan do |entry, value|
+    edb_mk.scan([]) do |entry, value|
       write_mk_entry(nil, partition_dims, partition_dim_sizes, node_partitions, node_dbs, entry, value)
 
       counter += 1
