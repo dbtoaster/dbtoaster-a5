@@ -2,6 +2,7 @@
 require 'getoptlong';
 require 'config/config';
 require 'scholar/scholar_handler';
+require 'fileutils';
 
 $stdout.sync = true;
 $interactive = true;
@@ -13,6 +14,7 @@ $input = $stdin
 $stats_every = -1;
 $ratelimit = nil;
 $upfront_cols = Array.new;
+$validate = false;
 
 GetoptLong.new(
   [ "--config"     , "-c", GetoptLong::REQUIRED_ARGUMENT ],
@@ -25,7 +27,8 @@ GetoptLong.new(
   [ "--stats"      , "-s", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--dump"       , "-d", GetoptLong::OPTIONAL_ARGUMENT ],
   [ "--ratelimit"  , "-l", GetoptLong::REQUIRED_ARGUMENT ],
-  [ "--upfront"    ,       GetoptLong::REQUIRED_ARGUMENT ]
+  [ "--upfront"    ,       GetoptLong::REQUIRED_ARGUMENT ],
+  [ "--validate"   ,       GetoptLong::NO_ARGUMENT ]
 ).each do |opt, arg|
   case opt
     when "--config", "-c" then $config.load(arg)
@@ -85,8 +88,37 @@ GetoptLong.new(
     
     when "--ratelimit", "-l" then
       $ratelimit = arg.to_f;
+      
+    when "--validate" then 
+      $validate = true; 
   end
 end
+
+class Validator
+  def initialize(validation_dir = "validation")
+    FileUtils.mkdir(validation_dir) unless File.directory?(validation_dir);
+    @output_dir = validation_dir
+    @tables = Hash.new
+    @queries = 0
+  end
+
+  def update(table, params)
+    @tables[table] = [] unless @tables.key?(table);
+    @tables[table] << params
+  end
+  
+  def query()
+    @tables.each_pair do |k,v|
+      filename = File.join(@output_dir,"valid_#{k.to_s}.#{@queries}")
+      f = open(filename, "w+")
+      v.each { |params| f.write(params.join(",")+"\n") }
+      f.close
+    end
+    @queries += 1
+  end
+end
+
+$validator = Validator.new() if $validate;
 
 # Query result
 $result_map = $config.templates.values.collect do |t|
@@ -110,7 +142,7 @@ chef = Java::org::dbtoaster::cumulus::chef::ChefNode::getClient(chef_addr) unles
 # Create scholar server
 unless $test then
   scholar_port = 52983;
-  handler = ScholarNodeHandler.new();
+  handler = ScholarNodeHandler.new("results");
   scholar_processor = Java::org::dbtoaster::cumulus::scholar::ScholarNode::Processor.new(handler);
   scholar = Java::org::dbtoaster::cumulus::net::Server.new(scholar_processor, scholar_port);
   scholar_thread = java.lang.Thread.new(scholar);
@@ -146,7 +178,7 @@ $input.each do |line|
       puts "ERROR: can not parse '" + line.chomp + "'";
       next;
     end
-    begin
+    #begin
       table = args[1];
       params = args[2].split(/ *, */);
       
@@ -198,11 +230,17 @@ $input.each do |line|
 
       # Send out queries periodically to get result.
       chef.query($result_map, $result_map_params) if $update_count % 1000 == 0;
+      
+      # Log updates for external validation.
+      if $validate then
+        $validator.update(table,params);
+        $validator.query() if $update_count % 1000 == 0;
+      end
 
       puts table+"("+params.join(", ")+")" if $verbose;
-    rescue SpreadException => e
-      puts "Error: " + e.to_s;
-    end
+    #rescue SpreadException => e
+    #  puts "Error: " + e.to_s;
+    #end
   end
   print "\n>> " if $interactive;
   if $stats_every >= 0 then

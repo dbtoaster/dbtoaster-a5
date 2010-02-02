@@ -83,7 +83,8 @@ class SlicerNodeHandler
         $config.client_debug["transforms"].collect { |t| "-t '" + t + "'" }.join(" ") + " " +
         $config.client_debug["projections"].collect { |pr| "-u '" + pr + "'"}.join(" ") + " " +
         $config.client_debug["upfront"].collect { |up| "--upfront " + up }.join(" ") + " " +        
-        "-h " + $config.client_debug["sourcedir"].to_s
+        "-h " + $config.client_debug["sourcedir"].to_s +
+        if $config.client_debug["validate"] then " --validate" else "" end
     )
   end
   

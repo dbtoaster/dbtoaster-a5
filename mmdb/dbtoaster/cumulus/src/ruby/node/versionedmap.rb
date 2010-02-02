@@ -92,14 +92,15 @@ class MapPartition
   
   def finish_pending
     start_size = @pending.size;
+    update_count = 0;
     while (not @pending.empty?) && @pending[0].ready
       trace { "Discarding Pending" }
       pending = @pending.shift; 
-      pending.updates.each { |target, delta| set(target, delta) };
+      pending.updates.each { |target, delta| update_count += 1; set(target, delta) };
       pending.fire;
       @pending_cleared += 1;
     end
-    debug { "Finished Pending (Map #{@mapid}): #{@pending.size} pending (down from #{start_size})" }
+    debug { "Finished Pending (Map #{@mapid}): #{@pending.size} pending (down from #{start_size}) (updates #{update_count})" }
   end
   
   def fire(target, on_entry, on_finish)

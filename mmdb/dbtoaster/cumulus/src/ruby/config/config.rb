@@ -51,7 +51,8 @@ class RubyConfig
       "projections" => Array.new, 
       "upfront" => Array.new,
       "sourcedir" => nil, 
-      "ratelimit" => nil
+      "ratelimit" => nil,
+      "validate" => false
     }
   end
   
@@ -115,6 +116,7 @@ class RubyConfig
         when "project"   then cmd.shift; @client_debug["projections"].push(cmd.join(" ").chomp);
         when "source"    then cmd.shift; @client_debug["sourcedir"] = cmd.join(" ").chomp;
         when "upfront"   then cmd.shift; @client_debug["upfront"].push(cmd.shift.chomp);
+        when "validate"  then cmd.shift; @client_debug["validate"] = true; 
       end
     end
   end

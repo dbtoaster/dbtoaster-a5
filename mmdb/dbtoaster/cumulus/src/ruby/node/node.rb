@@ -156,9 +156,9 @@ class QueryCompleteNotification
     return if @hold;
     if @partition_accesses.assert { |dep| dep.ready } then
       results = @partition_accesses.inject(Hash.new) { |acc, p| acc.merge(p.results) }
-      info { "Sending #{results.size.to_s} results to #{$config.scholar.getHostName}." }
-      info { results.collect { |e,v| e.to_s + " = " + v.to_s }.join(" / ") }
-      Java::org::dbtoaster::cumulus::scholar::ScholarNode.getClient($config.scholar).push_results(results, cmdid)
+      debug { "Request #{@cmdid} sending #{results.size.to_s} results to #{$config.scholar.getHostName}." }
+      debug { results.collect { |e,v| e.to_s + " = " + v.to_s }.join(" / ") }
+      Java::org::dbtoaster::cumulus::scholar::ScholarNode.getClient($config.scholar).push_results(results, @cmdid)
     end
   end
 end
@@ -441,6 +441,7 @@ class MapNodeHandler
     @partition_sizes = Hash.new;
     @log_maps = Array.new;
     @program = CompiledM3Program.new;
+    #@queries = Hash.new;
   end
   
   ############# Internal Accessors
@@ -687,6 +688,11 @@ class MapNodeHandler
       # it's possible that (for a non-looping put) discover will call finish_valuating,
       # so we need to check whether the callback still exists;
       @cmdcallbacks[cmdid].finish_message if @cmdcallbacks[cmdid];
+      #unless @cmdcallbacks[cmdid] then
+      #  @queries.each_key do |qcmd_id|
+      #    qcmd_id
+      #  end
+      #end
     end
     @stats.push(result.size);
   end
@@ -762,18 +768,30 @@ class MapNodeHandler
     @stats.stat;
   end
   
-  def query(mapid, params, basecmd)
-    query_requests = Hash.new { |h,k| h[k] = QueryCompleteNotification.new(k, params) }
-    mapid_offset = @templates[mapid].index
+  def apply_query(mapid, cmdid, params)
     loop_key = @templates[mapid].target.instantiated_key(params);
+    query_requests = Hash.new { |h,k| h[k] = QueryCompleteNotification.new(k, params) }
     loop_partitions(mapid, loop_key) do |partition|
-      query_cb = query_requests[basecmd+mapid_offset].register_partition()
+      #debug { "Cmd #{basecmd} registering partition." }
+      query_cb = query_requests[cmdid].register_partition()
       partition.get(loop_key,
-        proc { |key,value| query_cb.fire(MapEntry.new(mapid, key), value) },
+        proc { |key,value|
+          #debug { "PCB #{basecmd} #{key.join(",")} #{value}" }
+          query_cb.fire(MapEntry.new(mapid, key), value) },
         proc { || query_cb.release });
     end
-    
     query_requests.each_value { |qcn| qcn.finish_setup }
+  end
+
+  def query(mapid, params, basecmd)
+    mapid_offset = @templates[mapid].index
+#    pending_cmds = 0;
+#    @cmdcallbacks.each_key do |cb_id| pending_cmd += 1 if cb_id<basecmd; end
+#    if pending_cmds == 0 then
+      apply_query(mapid, basecmd+mapid_offset, params);
+#    else
+#      @queries[basecmd] = [mapid, params, pending_cmds]
+#    end
   end
   
   ############# Internal Control
