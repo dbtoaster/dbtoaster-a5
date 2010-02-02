@@ -17,7 +17,7 @@ class ScholarNodeHandler
     debug { "Got #{results.size.to_s} results for request #{cmdid.to_s}" }
     results.each do |entry_value|
       debug { "#{entry_value[0].to_s},#{entry_value[1].to_s}" }
-      @output.write("#{@requests[cmdid].to_s},#{entry_value[0].to_s},#{entry_value[1].to_s}\n");
+      @output.write("#{@requests[cmdid].to_s},#{cmdid.to_s},#{entry_value[0].to_s},#{entry_value[1].to_s}\n");
     end
     @output.flush
   end

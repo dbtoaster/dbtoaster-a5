@@ -119,6 +119,7 @@ class Validator
 end
 
 $validator = Validator.new() if $validate;
+puts "Client validation enabled..." if $validate;
 
 # Query result
 $result_map = $config.templates.values.collect do |t|

@@ -156,8 +156,8 @@ class QueryCompleteNotification
     return if @hold;
     if @partition_accesses.assert { |dep| dep.ready } then
       results = @partition_accesses.inject(Hash.new) { |acc, p| acc.merge(p.results) }
-      debug { "Request #{@cmdid} sending #{results.size.to_s} results to #{$config.scholar.getHostName}." }
-      debug { results.collect { |e,v| e.to_s + " = " + v.to_s }.join(" / ") }
+      info { "Request #{@cmdid} sending #{results.size.to_s} results to #{$config.scholar.getHostName}." }
+      info { results.collect { |e,v| e.to_s + " = " + v.to_s }.join(" / ") }
       Java::org::dbtoaster::cumulus::scholar::ScholarNode.getClient($config.scholar).push_results(results, @cmdid)
     end
   end
