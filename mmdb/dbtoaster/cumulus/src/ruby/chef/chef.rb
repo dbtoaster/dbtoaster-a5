@@ -86,14 +86,15 @@ class ChefNodeHandler
 #  end
   
   def update(table, params)
+    breadcrumb = cmdid.to_i
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
+      trace { "Update #{breadcrumb} #{table}(#{params.join(",")}) => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then
-        client.update(table, params, cmdid.to_i)
+        client.update(table, params, breadcrumb)
       else
-        trace { "Forwarding update out..." }
-        client.forward_update(table, params, cmdid.to_i)
+        client.forward_update(table, params, breadcrumb)
       end
     end
     next_cmd;
@@ -101,10 +102,10 @@ class ChefNodeHandler
   end
   
   def forward_update(table, params, basecmd)
-    trace { "Forwarding update in..." }
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
+      trace { "FUpdate  #{basecmd} #{table}(#{params.join(",")}) => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then
         client.update(table, params, basecmd)
       else client.forward_update(table, params, basecmd) end
@@ -128,11 +129,13 @@ class ChefNodeHandler
   end
   
   def query(mapid, params)
+    breadcrumb = cmdid.to_i
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     @nodelist.each do |client|
+      trace { "Query #{breadcrumb} Map #{mapid}[#{params.join(",")}] => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then
-        client.query(mapid, params, cmdid.to_i)
-      else client.forward_query(mapid, params, cmdid.to_i) end
+        client.query(mapid, params, breadcrumb)
+      else client.forward_query(mapid, params, breadcrumb) end
     end
     next_cmd;
   end
@@ -140,6 +143,7 @@ class ChefNodeHandler
   def forward_query(mapid, params, basecmd)
     @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
     @nodelist.each do |client|
+      trace { "FQuery #{basecmd} Map #{mapid}[#{params.join(",")}] => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then
         client.query(mapid, params, basecmd)
       else client.forward_query(mapid, params, basecmd) end
