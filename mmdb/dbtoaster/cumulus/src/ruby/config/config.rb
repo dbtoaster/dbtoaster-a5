@@ -65,7 +65,7 @@ class RubyConfig
     input.each do |line|
 #      puts "Reading config line: " + line;
       cmd = line.scan(/[^ ]+/);
-      case cmd[0]
+      case cmd[0].chomp
         when "node" then 
           curr_node = cmd[1].chomp;
 
