@@ -493,6 +493,8 @@ class MapNodeHandler
     debug {"Loaded Put Template ["+index.to_s+"]: " + @templates[index.to_i].to_s }
   end
   
+  ############# Debugging Accessors
+  
   def dump()
     @maps.keys.sort.collect do |map|
       @maps[map].collect do |key, partition|
@@ -505,9 +507,12 @@ class MapNodeHandler
     info { dump() }
   end
   
-  ############# Basic Remote Accessors
+  ############# Remote Accessor Utility Code
 
   def create_valuation(template, param_list)
+    # Given a Template ID, find the corresponding template and produce a 
+    # TemplateValuation (config/template.rb) for it.
+    
     if ! @templates.has_key? template then 
       raise SpreadException.new("Unknown put template: " + template.to_s); 
     end
@@ -576,28 +581,8 @@ class MapNodeHandler
       @cmdcallbacks[id] = applicator;
     end
   end
-
-
-  def put(id, template, params)
-    debug {"Put on template " + template.to_s + " with Params: " + params.to_s }
-    valuation = create_valuation(template, params);
-    target = @templates[template].target.instantiate(valuation.params).freeze;
-    applicator = ValuationApplicator.new(id, target, valuation, self, (@log_maps.include? valuation.target.source));
-    preload_locals(id, applicator)
-    applicator.apply([find_partition(target.source, target.key)]);
-    @stats.put;
-  end
   
-  def mass_put(id, template, expected_gets, params)
-    debug { "Mass Put (id:" + id.to_s + "; template:" + template.to_s + ") with Params: " + params.to_s }
-    valuation = create_valuation(template, params);
-    applicator = MassValuationApplicator.new(id, valuation, expected_gets, self, (@log_maps.include? valuation.target.source));
-    preload_locals(id, applicator);
-    plist = Array.new;
-    loop_partitions(valuation.target.source, valuation.target.key) { |partition| plist.push(partition) }
-    applicator.apply(plist);
-    @stats.mass_put;
-  end
+  ############# Synchronous Remote Accessors
   
   def get(target)
     ret = Hash.new()
@@ -622,43 +607,7 @@ class MapNodeHandler
     end
   end
   
-  ############# Asynchronous Reads
-
-  def fetch(target, destination, cmdid)
-    begin
-      # When we create the notification, we need to exclude all multi-target targets, since
-      # those targets will never actually be instantiated.
-      request = RemoteCommitNotification.new(
-        target.to_a.clone.delete_if do |entry| entry.has_wildcards? end, 
-        destination, cmdid
-      );
-      target.each do |t|
-        debug {"Fetch: " + t.to_s }
-        # get() will fire the trigger if the value is already defined
-        # the actual message will not be sent until all requests in this 
-        # command can be fulfilled.
-        if t.has_wildcards? then
-          loop_partitions(t.source, t.key) do |partition|
-            request.hold;
-            partition.get(
-              t.key, 
-              proc { |key, value| request.fire(MapEntry.new(t.source, key), value) },
-              proc { request.release }
-            );
-          end
-        else
-          find_partition(t.source, t.key).get(
-            t.key, 
-            proc { |key, value| request.fire(MapEntry.new(t.source, key), value) },
-            nil
-          );
-        end
-      end
-    rescue Exception => ex
-      error(ex) { "Error in Fetch" }
-    end
-    @stats.fetch;
-  end
+  ############# Asynchronous Remote Accessors
   
   def push_get(result, cmdid)
     debug {"Pushget: #{result.size} results for command #{cmdid} from #{Java::org::dbtoaster::cumulus::net::Server.activeSender}" }
@@ -695,19 +644,6 @@ class MapNodeHandler
       #end
     end
     @stats.push(result.size);
-  end
-  
-  def meta_request(base_cmd, put_list, get_list, params)
-    put_list.each do |put_request|
-      if put_request.num_gets >= 0 then
-        mass_put(put_request.id_offset+base_cmd, put_request.template, put_request.num_gets, params);
-      else
-        put(put_request.id_offset+base_cmd, put_request.template, params);
-      end
-    end
-    get_list.each do |get_request|
-      fetch(get_request.entries, get_request.target, get_request.id_offset+base_cmd);
-    end
   end
   
   def update(relation, params, base_cmd)

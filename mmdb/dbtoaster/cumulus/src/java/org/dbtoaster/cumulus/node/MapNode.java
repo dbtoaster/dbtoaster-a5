@@ -21,30 +21,17 @@ public class MapNode
 {
   public interface MapNodeIFace
   {
-    public void update(String relation, List<Double> params, int basecmd)
-      throws TException;
-
-    public void put(long id, long template, List<Double> params)
-      throws TException;
-
-    public void mass_put(long id, long template, long expected_gets, List<Double> params)
-      throws TException;
-
     public Map<NetTypes.Entry,Double> get(List<NetTypes.Entry> target)
       throws SpreadException, TException;
 
-    public void fetch(List<NetTypes.Entry> target, InetSocketAddress destination, long cmdid)
-      throws TException;
+    public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
+      throws SpreadException, TException;
 
     public void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
       throws TException;
 
-    public void meta_request(long base_cmd, List<NetTypes.PutRequest> put_list,
-                             List<NetTypes.GetRequest> get_list, List<Double> params)
+    public void update(String relation, List<Double> params, int basecmd)
       throws TException;
-
-    public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
-      throws SpreadException, TException;
 
     public void query(long id, List<Double> params, int basecmd)
         throws TException;
@@ -79,46 +66,6 @@ public class MapNode
       super(s, sendFrameBatchSize, selector);
     }
 
-    public void update(String relation, List<Double> params, int basecmd)
-      throws TException
-    {
-      try {
-          oprot.beginMessage();
-          oprot.putObject(MapNodeMethod.UPDATE);
-          oprot.putObject(relation);
-          oprot.putList(params);
-          oprot.putInteger(basecmd);
-          oprot.endMessage();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-
-    public void put(long id, long template, List<Double> params)
-      throws TException
-    {
-      try {
-        oprot.beginMessage();
-        oprot.putObject(MapNodeMethod.PUT);
-        oprot.putLong(id);
-        oprot.putLong(template);
-        oprot.putList(params);
-        oprot.endMessage();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-
-    public void mass_put(long id, long template, long expected_gets, List<Double> params)
-      throws TException
-    {
-      try {
-        oprot.beginMessage();
-        oprot.putObject(MapNodeMethod.MASS_PUT);
-        oprot.putLong(id);
-        oprot.putLong(template);
-        oprot.putLong(expected_gets);
-        oprot.putList(params);
-        oprot.endMessage();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-    
     public Map<NetTypes.Entry,Double> get(List<NetTypes.Entry> target)
       throws SpreadException, TException
     {
@@ -136,49 +83,6 @@ public class MapNode
       return r;
     }
   
-    public void fetch(List<NetTypes.Entry> target, InetSocketAddress destination, long cmdid)
-      throws TException
-    {
-      try {
-        oprot.beginMessage();
-        oprot.putObject(MapNodeMethod.FETCH);
-        oprot.putList(target);
-        oprot.putObject(destination);
-        oprot.putLong(cmdid);
-        oprot.endMessage();
-      } catch (TProtocolException e) {
-        e.printStackTrace();
-        throw new TException(e.getMessage());
-      }
-    }
-    
-    public void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
-      throws TException
-    {
-      try {
-        oprot.beginMessage();
-        oprot.putObject(MapNodeMethod.PUSH_GET);
-        oprot.putMap(result);
-        oprot.putLong(cmdid);
-        oprot.endMessage();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-    
-    public void meta_request(long base_cmd, List<NetTypes.PutRequest> put_list,
-                             List<NetTypes.GetRequest> get_list, List<Double> params)
-      throws TException
-    {
-      try {
-        oprot.beginMessage();
-        oprot.putObject(MapNodeMethod.META_REQUEST);
-        oprot.putLong(base_cmd);
-        oprot.putList(put_list);
-        oprot.putList(get_list);
-        oprot.putList(params);
-        oprot.endMessage();
-      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
-    }
-    
     public Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
       throws SpreadException, TException
     {
@@ -195,6 +99,31 @@ public class MapNode
       } catch (IOException e) { throw new TException(e.getMessage()); }
 
       return r;
+    }
+    
+    public void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
+      throws TException
+    {
+      try {
+        oprot.beginMessage();
+        oprot.putObject(MapNodeMethod.PUSH_GET);
+        oprot.putMap(result);
+        oprot.putLong(cmdid);
+        oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
+    }
+    
+    public void update(String relation, List<Double> params, int basecmd)
+      throws TException
+    {
+      try {
+          oprot.beginMessage();
+          oprot.putObject(MapNodeMethod.UPDATE);
+          oprot.putObject(relation);
+          oprot.putList(params);
+          oprot.putInteger(basecmd);
+          oprot.endMessage();
+      } catch (TProtocolException e) { throw new TException(e.getMessage()); }
     }
     
     public void query(long id, List<Double> params, int basecmd)
@@ -242,62 +171,13 @@ public class MapNode
     public Processor(MapNodeIFace h)
     {
       handler = h;
-      handlerMap.put(MapNodeMethod.UPDATE, new update());
-      handlerMap.put(MapNodeMethod.PUT, new put());
-      handlerMap.put(MapNodeMethod.MASS_PUT, new mass_put());
       handlerMap.put(MapNodeMethod.GET, new get());
-      handlerMap.put(MapNodeMethod.FETCH, new fetch());
-      handlerMap.put(MapNodeMethod.PUSH_GET, new push_get());
-      handlerMap.put(MapNodeMethod.META_REQUEST, new meta_request());
       handlerMap.put(MapNodeMethod.AGGREGET, new aggreget());
+      handlerMap.put(MapNodeMethod.PUSH_GET, new push_get());
+      handlerMap.put(MapNodeMethod.UPDATE, new update());
       handlerMap.put(MapNodeMethod.QUERY, new query());
       handlerMap.put(MapNodeMethod.DUMP, new dump());
       handlerMap.put(MapNodeMethod.LOCALDUMP, new localdump());
-    }
-     
-    private class update extends TProcessor.HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot)
-        throws TException, TProtocolException
-      {
-        String relation = (String) iprot.getObject();
-        List<Double> params = iprot.getList(Double.class);
-        Integer basecmd = iprot.getInteger();
-        handler.update(relation, params, basecmd);
-      }
-    }
-
-    private class put extends TProcessor.HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot)
-        throws TException,TProtocolException
-      {
-        Long id = iprot.getLong();
-        Long template = iprot.getLong();
-        List<Double> params = iprot.getList(Double.class);
-        handler.put(id, template, params);
-      }
-    }
-        
-    private class mass_put extends TProcessor.HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot)
-        throws TException,TProtocolException
-      {
-        try
-        {
-          Long id = iprot.getLong();
-          Long template = iprot.getLong();
-          Long expected_gets = iprot.getLong();
-          List<Double> params = iprot.getList(Double.class);
-          handler.mass_put(id, template, expected_gets, params);
-        } catch (TProtocolException e)
-        {
-          throw new TException(
-            "Protocol error for MapNodeHandler." +
-            getClass().getName());
-        }
-      }
     }
 
     private class get extends TProcessor.HandlerFunction
@@ -312,16 +192,16 @@ public class MapNode
       }
     }
 
-    private class fetch extends TProcessor.HandlerFunction
+    private class aggreget extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException,TProtocolException
+        throws TException,TProtocolException,SpreadException
       {
         List<NetTypes.Entry> target = iprot.getList(NetTypes.Entry.class);
         NetTypes.regularizeEntryList(target);
-        InetSocketAddress destination = (InetSocketAddress) iprot.getObject();
-        Long cmdid = iprot.getLong();
-        handler.fetch(target, destination, cmdid);
+        int agg = iprot.getInteger();
+        Map<NetTypes.Entry, Double> r = handler.aggreget(target, agg);
+        oprot.putObject(r);
       }
     }
 
@@ -335,30 +215,16 @@ public class MapNode
         handler.push_get(result, cmdid);
       }
     }
-
-    private class meta_request extends TProcessor.HandlerFunction
+     
+    private class update extends TProcessor.HandlerFunction
     {
       public void process(TProtocol iprot, TProtocol oprot)
-        throws TException,TProtocolException
+        throws TException, TProtocolException
       {
-        Long base_cmd = iprot.getLong();
-        List<NetTypes.PutRequest> put_list = iprot.getList(NetTypes.PutRequest.class);
-        List<NetTypes.GetRequest> get_list = iprot.getList(NetTypes.GetRequest.class);
+        String relation = (String) iprot.getObject();
         List<Double> params = iprot.getList(Double.class);
-        handler.meta_request(base_cmd, put_list, get_list, params);
-      }
-    }
-
-    private class aggreget extends TProcessor.HandlerFunction
-    {
-      public void process(TProtocol iprot, TProtocol oprot)
-        throws TException,TProtocolException,SpreadException
-      {
-        List<NetTypes.Entry> target = iprot.getList(NetTypes.Entry.class);
-        NetTypes.regularizeEntryList(target);
-        int agg = iprot.getInteger();
-        Map<NetTypes.Entry, Double> r = handler.aggreget(target, agg);
-        oprot.putObject(r);
+        Integer basecmd = iprot.getInteger();
+        handler.update(relation, params, basecmd);
       }
     }
 

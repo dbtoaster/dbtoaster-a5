@@ -419,7 +419,7 @@ end
 ###################################################
 
 class UpdateTemplate
-  attr_reader :relation, :paramlist, :loopvarlist, :target, :conditions, :expression, :index, :varlist, :entries;
+  attr_reader :relation, :paramlist, :varlist, :target, :conditions, :expression, :index, :entries, :loopvarlist;
   attr_writer :index;
   @@map_names = Hash.new;
   @@map_id = 0;
