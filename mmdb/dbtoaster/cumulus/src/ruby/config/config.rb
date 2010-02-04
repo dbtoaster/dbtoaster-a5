@@ -13,8 +13,6 @@ class RubyConfig
     :partition_sizes, :partition_owners;
   attr_writer :my_name, :my_port, :unknown_opts, :client_debug;
   
-  include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;
-  
   def initialize
     @nodes = Hash.new { |h,k| h[k] = { 
       "partitions" => Hash.new  { |h,k| h[k] = Array.new },
@@ -245,4 +243,10 @@ class RubyConfig
   end
 end
 
+# Bit of a hack here, the RubyConfigIface is only required when running in pure java mode,
+# but during the compilation process, we need to run some ruby code before the java code 
+# has been compiled.  Consequently, we only include the Iface if we're running in java mode
+if $jruby_config_mode != true then
+  RubyConfig.class_eval('include Java::org::dbtoaster::cumulus::config::CumulusConfig::RubyConfigIface;');
+end
 $config = RubyConfig.new;

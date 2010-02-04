@@ -14,7 +14,7 @@ EXEC_STRING="java -Xms256m -Xmx1025m -server -Djruby.compile.mode=FORCE -Djruby.
 elif [ "$FORMAT" = "java-prof" ] ; then 
 EXEC_STRING="java -Xms256m -Xmx1025m  -Xrunhprof:cpu=samples,file=\$(basename \$0 .sh)_\$(hostname),thread=y -cp --CLASSPATH-- --CLASS-- \$(dirname \$0)/../local.properties \$*"
 elif [ "$FORMAT" = "jruby" ] ; then 
-EXEC_STRING="jruby -J-cp --CLASSPATH-- -e \"include Java;\\\$launcherClass='--CLASS--';require 'tools/launcher_init';require '--CLASS--';\" -- \$(dirname \$0)/../local.properties \$*"
+EXEC_STRING="jruby -J-cp src/ruby:--CLASSPATH-- -e \"include Java;\\\$launcherClass='--CLASS--';require 'tools/launcher_init';require '--CLASS--';\" -- \$(dirname \$0)/../local.properties \$*"
 fi
 
 EXEC_CMD=$(echo "$EXEC_STRING" | 

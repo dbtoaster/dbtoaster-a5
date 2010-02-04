@@ -21,6 +21,7 @@ template 16 PARTSUPP	PS__PS_PARTKEY;PS__PS_SUPPKEY;PS__PS_AVAILQTY;PS__PS_SUPPLY
 
 ############ Node Definitions
 switch wl10.cac.cornell.edu
+switch_tree 2,2
 node Node01
 address wl11.cac.cornell.edu:52982
 partition Map 1[0]

@@ -11,3 +11,4 @@ repartition bootstrap/repartition.rb                 jruby
 gen_rpspec  bootstrap/gen_rpspec.rb                  jruby
 hadooper    bootstrap/hadoop.rb                      jruby
 hdinput     bootstrap/tpch_hadoop.rb                 jruby
+rpcgen      tools/rpcgen.rb                          jruby

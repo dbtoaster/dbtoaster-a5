@@ -1,3 +1,4 @@
+$jruby_config_mode = true;
 require 'config/config';
 conf_file = ARGV.shift;
 hostname = `hostname`.chomp.sub(/^([^.]*)\.?.*/, "\\1");

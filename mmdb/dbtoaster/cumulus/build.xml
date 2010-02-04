@@ -91,7 +91,31 @@ log4j.appender.A1.layout.ConversionPattern=%d{HH:mm:ss,SSS} [%X{hostname}-%t] %-
   	<chmod file="${bin}/run_hadoop.sh" perm="755"/>
   </target>
   
-  <target name="main" depends="init">
+  <target name="rpc">
+    <propertyregex property="rpc.target" input="${rpc.source}" regexp="\.rpc" replace=".java" />
+    <outofdate>
+      <sourcefiles><pathelement path="${rpc.source}"/><pathelement path="${src}/ruby/tools/rpcgen.rb"/></sourcefiles>
+      <targetfiles><pathelement path="${rpc.target}"/></targetfiles>
+      <sequential>
+        <echo message="Compiling ${rpc.source}"/>
+        <exec executable="${bin}/rpcgen.sh" output="${rpc.target}" failonerror="true">
+          <arg value="${rpc.source}" />
+        </exec>
+      </sequential>
+    </outofdate>
+  </target>
+  
+  <target name="rpc.all" depends="init">
+    <foreach target="rpc" param="rpc.source">
+      <path id="rpc.potentials">
+        <fileset dir="${src}/java">
+          <include name="**/*.rpc" />
+        </fileset>
+      </path>
+    </foreach>
+  </target>
+  
+  <target name="main" depends="init,rpc.all">
     <javac srcdir="${src}/java" destdir="${build}" classpathref="classpath" debug="true" />
     <jar destfile="${jar}">
       <fileset dir="${build}" />

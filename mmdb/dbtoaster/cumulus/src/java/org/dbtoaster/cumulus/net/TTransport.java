@@ -236,7 +236,7 @@ public class TTransport
         {
             bytesRecv = readBuffer.position();
             
-            logger.trace("TTransport recv, " + " br: " + bytesRecv + ", " + toString());
+            logger.trace("TTransport recv: "+len+", " + " br: " + bytesRecv + ", " + toString());
 
             if ( bytesRecv > 0 )
             {

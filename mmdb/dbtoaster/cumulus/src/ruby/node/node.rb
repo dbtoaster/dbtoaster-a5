@@ -661,6 +661,7 @@ class MapNodeHandler
             proc { |key, value| sq.fire(MapEntry.new(fetch_msg.entry.source, key), value) },
             proc { || sq.release }
           );
+          @stats.fetch
         end
         @stats.fetch;
       end

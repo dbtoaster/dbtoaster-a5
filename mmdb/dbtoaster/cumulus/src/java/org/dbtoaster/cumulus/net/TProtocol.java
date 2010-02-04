@@ -26,6 +26,7 @@ public class TProtocol
     Integer sizeRead;
     Integer readRemaining;
     ByteBuffer inBuffer;
+    ByteBuffer outBuffer;
 
     ByteArrayInputStream bais;
     ObjectInputStream in;
@@ -49,6 +50,7 @@ public class TProtocol
     {
         transport = t;
         inBuffer = ByteBuffer.allocate(frameBufferSize);
+        outBuffer = null;
 
         baos = new ByteArrayOutputStream();
         out = new ObjectOutputStream(baos);
@@ -309,10 +311,15 @@ public class TProtocol
         {
             try {
                 out.flush();
-                byte[] buf = baos.toByteArray();
-                int bytesSent = transport.send(buf, 0, buf.length);
-                if ( bytesSent != buf.length ) --frameCount;
-                return bytesSent == buf.length;
+                if(outBuffer == null){
+                  outBuffer = ByteBuffer.allocate(baos.size()+4);
+                  outBuffer.putInt(baos.size());
+                  outBuffer.put(baos.toByteArray());
+                }
+                int bytesSent = transport.send(outBuffer.array(), 0, baos.size()+4);
+                if ( bytesSent != baos.size()+4 ) --frameCount;
+                else outBuffer = null;
+                return bytesSent == baos.size()+4;
             } catch (IOException e) { e.printStackTrace(); }
         }
 
