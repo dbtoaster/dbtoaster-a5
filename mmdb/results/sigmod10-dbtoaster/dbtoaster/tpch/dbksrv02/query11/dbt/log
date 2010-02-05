@@ -1,0 +1,741 @@
+Initialized input stream...
+Processed 10000 tuples.
+Time per tuples: 0.000492874 2.4718
+qSUPPLIER1 size: 173255872
+q size: 63120
+qPARTSUPP1 size: 324460
+on_insert_SUPPLIER cost: 4.84771
+on_insert_PARTSUPP cost: 0.02226
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 20000 tuples.
+Time per tuples: 0.00422201 23.5923
+qSUPPLIER1 size: 725053664
+q size: 122640
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 46.9517
+on_insert_PARTSUPP cost: 0.048494
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Done with stream 0
+Processed 30000 tuples.
+Time per tuples: 0.000317297 25.1855
+qSUPPLIER1 size: 756268120
+q size: 240048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.07894
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 40000 tuples.
+Time per tuples: 7.1608e-06 25.2278
+qSUPPLIER1 size: 756828120
+q size: 360048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.109696
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 50000 tuples.
+Time per tuples: 7.1828e-06 25.2701
+qSUPPLIER1 size: 757388120
+q size: 480048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.140454
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 60000 tuples.
+Time per tuples: 7.1088e-06 25.3121
+qSUPPLIER1 size: 757948120
+q size: 600048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.170558
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 70000 tuples.
+Time per tuples: 7.1552e-06 25.3544
+qSUPPLIER1 size: 758508120
+q size: 720048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.201322
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 80000 tuples.
+Time per tuples: 7.1354e-06 25.3965
+qSUPPLIER1 size: 759068120
+q size: 840048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.231772
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 90000 tuples.
+Time per tuples: 7.1614e-06 25.4388
+qSUPPLIER1 size: 759628120
+q size: 960048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.262804
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 100000 tuples.
+Time per tuples: 7.1316e-06 25.4808
+qSUPPLIER1 size: 760188120
+q size: 1080048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.29343
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 110000 tuples.
+Time per tuples: 7.1882e-06 25.5232
+qSUPPLIER1 size: 760748120
+q size: 1200048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.324216
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 120000 tuples.
+Time per tuples: 7.1934e-06 25.5655
+qSUPPLIER1 size: 761308120
+q size: 1320048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.35526
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 130000 tuples.
+Time per tuples: 7.1778e-06 25.6079
+qSUPPLIER1 size: 761868120
+q size: 1440048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.386292
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 140000 tuples.
+Time per tuples: 7.1456e-06 25.6501
+qSUPPLIER1 size: 762428120
+q size: 1560048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.41689
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 150000 tuples.
+Time per tuples: 7.1916e-06 25.6925
+qSUPPLIER1 size: 762988120
+q size: 1680048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.447736
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 160000 tuples.
+Time per tuples: 7.188e-06 25.7349
+qSUPPLIER1 size: 763548120
+q size: 1800048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.478906
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 170000 tuples.
+Time per tuples: 7.2196e-06 25.7774
+qSUPPLIER1 size: 764108120
+q size: 1920048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.510078
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 180000 tuples.
+Time per tuples: 7.192e-06 25.82
+qSUPPLIER1 size: 764668120
+q size: 2040048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.540856
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 190000 tuples.
+Time per tuples: 7.2264e-06 25.8625
+qSUPPLIER1 size: 765228120
+q size: 2160048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.572292
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 200000 tuples.
+Time per tuples: 7.2228e-06 25.9049
+qSUPPLIER1 size: 765788120
+q size: 2280048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.603132
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 210000 tuples.
+Time per tuples: 7.1924e-06 25.9473
+qSUPPLIER1 size: 766348120
+q size: 2400048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.634064
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 220000 tuples.
+Time per tuples: 7.2268e-06 25.9898
+qSUPPLIER1 size: 766908120
+q size: 2520048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.665222
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 230000 tuples.
+Time per tuples: 7.2416e-06 26.0324
+qSUPPLIER1 size: 767468120
+q size: 2640048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.696476
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 240000 tuples.
+Time per tuples: 7.2406e-06 26.075
+qSUPPLIER1 size: 768028120
+q size: 2760048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.72785
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 250000 tuples.
+Time per tuples: 7.2104e-06 26.1175
+qSUPPLIER1 size: 768588120
+q size: 2880048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.759286
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 260000 tuples.
+Time per tuples: 7.1662e-06 26.1598
+qSUPPLIER1 size: 769148120
+q size: 3000048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.790142
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 270000 tuples.
+Time per tuples: 7.225e-06 26.2023
+qSUPPLIER1 size: 769708120
+q size: 3120048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.82097
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 280000 tuples.
+Time per tuples: 7.1854e-06 26.2448
+qSUPPLIER1 size: 770268120
+q size: 3240048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.852036
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 290000 tuples.
+Time per tuples: 7.2586e-06 26.2876
+qSUPPLIER1 size: 770828120
+q size: 3360048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.883702
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 300000 tuples.
+Time per tuples: 7.8068e-06 26.3331
+qSUPPLIER1 size: 771388120
+q size: 3480048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.92019
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 310000 tuples.
+Time per tuples: 7.8666e-06 26.3789
+qSUPPLIER1 size: 771948120
+q size: 3600048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.9569
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 320000 tuples.
+Time per tuples: 7.3572e-06 26.4221
+qSUPPLIER1 size: 772508120
+q size: 3720048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 0.989188
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 330000 tuples.
+Time per tuples: 7.3366e-06 26.4651
+qSUPPLIER1 size: 773068120
+q size: 3840048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.02108
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 340000 tuples.
+Time per tuples: 7.2474e-06 26.5081
+qSUPPLIER1 size: 773628120
+q size: 3960048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.05255
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 350000 tuples.
+Time per tuples: 7.2854e-06 26.551
+qSUPPLIER1 size: 774188120
+q size: 4080048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.08409
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 360000 tuples.
+Time per tuples: 7.2798e-06 26.594
+qSUPPLIER1 size: 774748120
+q size: 4200048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.11589
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 370000 tuples.
+Time per tuples: 7.4326e-06 26.6376
+qSUPPLIER1 size: 775308120
+q size: 4320048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.14847
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 380000 tuples.
+Time per tuples: 7.3074e-06 26.6806
+qSUPPLIER1 size: 775868120
+q size: 4440048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.18017
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 390000 tuples.
+Time per tuples: 7.301e-06 26.7235
+qSUPPLIER1 size: 776428120
+q size: 4560048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.21185
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 400000 tuples.
+Time per tuples: 7.301e-06 26.7665
+qSUPPLIER1 size: 776988120
+q size: 4680048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.24347
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 410000 tuples.
+Time per tuples: 7.3586e-06 26.8096
+qSUPPLIER1 size: 777548120
+q size: 4800048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.27578
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 420000 tuples.
+Time per tuples: 7.3062e-06 26.8526
+qSUPPLIER1 size: 778108120
+q size: 4920048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.3074
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 430000 tuples.
+Time per tuples: 7.3106e-06 26.8955
+qSUPPLIER1 size: 778668120
+q size: 5040048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.33942
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 440000 tuples.
+Time per tuples: 7.2778e-06 26.9384
+qSUPPLIER1 size: 779228120
+q size: 5160048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.37112
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 450000 tuples.
+Time per tuples: 7.3518e-06 26.9815
+qSUPPLIER1 size: 779788120
+q size: 5280048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.40326
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 460000 tuples.
+Time per tuples: 7.2832e-06 27.0244
+qSUPPLIER1 size: 780348120
+q size: 5400048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.43472
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 470000 tuples.
+Time per tuples: 7.2626e-06 27.0672
+qSUPPLIER1 size: 780908120
+q size: 5520048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.4665
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 480000 tuples.
+Time per tuples: 7.2606e-06 27.1098
+qSUPPLIER1 size: 781468120
+q size: 5640048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.49787
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 490000 tuples.
+Time per tuples: 7.2718e-06 27.1527
+qSUPPLIER1 size: 782028120
+q size: 5760048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.52971
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 500000 tuples.
+Time per tuples: 7.2524e-06 27.1955
+qSUPPLIER1 size: 782588120
+q size: 5880048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.56117
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 510000 tuples.
+Time per tuples: 7.2876e-06 27.2386
+qSUPPLIER1 size: 783148120
+q size: 6000048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.59313
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 520000 tuples.
+Time per tuples: 7.2908e-06 27.2815
+qSUPPLIER1 size: 783708120
+q size: 6120048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.62494
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 530000 tuples.
+Time per tuples: 7.337e-06 27.3248
+qSUPPLIER1 size: 784268120
+q size: 6240048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.65722
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 540000 tuples.
+Time per tuples: 7.317e-06 27.3677
+qSUPPLIER1 size: 784828120
+q size: 6360048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.68882
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 550000 tuples.
+Time per tuples: 7.3248e-06 27.4108
+qSUPPLIER1 size: 785388120
+q size: 6480048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.72097
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 560000 tuples.
+Time per tuples: 7.2714e-06 27.4535
+qSUPPLIER1 size: 785948120
+q size: 6600048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.75268
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 570000 tuples.
+Time per tuples: 7.3496e-06 27.4967
+qSUPPLIER1 size: 786508120
+q size: 6720048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.78494
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 580000 tuples.
+Time per tuples: 7.2988e-06 27.5395
+qSUPPLIER1 size: 787068120
+q size: 6840048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.8165
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 590000 tuples.
+Time per tuples: 7.3446e-06 27.5826
+qSUPPLIER1 size: 787628120
+q size: 6960048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.8485
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 600000 tuples.
+Time per tuples: 7.2408e-06 27.6253
+qSUPPLIER1 size: 788188120
+q size: 7080048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.88031
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 610000 tuples.
+Time per tuples: 7.3166e-06 27.6683
+qSUPPLIER1 size: 788748120
+q size: 7200048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.91254
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 620000 tuples.
+Time per tuples: 7.2522e-06 27.7111
+qSUPPLIER1 size: 789308120
+q size: 7320048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.94431
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 630000 tuples.
+Time per tuples: 7.3176e-06 27.7541
+qSUPPLIER1 size: 789868120
+q size: 7440048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 1.97629
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 640000 tuples.
+Time per tuples: 7.3174e-06 27.7972
+qSUPPLIER1 size: 790428120
+q size: 7560048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.00869
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 650000 tuples.
+Time per tuples: 7.3396e-06 27.8403
+qSUPPLIER1 size: 790988120
+q size: 7680048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.04075
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 660000 tuples.
+Time per tuples: 7.2676e-06 27.8831
+qSUPPLIER1 size: 791548120
+q size: 7800048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.07239
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 670000 tuples.
+Time per tuples: 7.2818e-06 27.9261
+qSUPPLIER1 size: 792108120
+q size: 7920048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.10432
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 680000 tuples.
+Time per tuples: 7.3544e-06 27.9692
+qSUPPLIER1 size: 792668120
+q size: 8040048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.13642
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 690000 tuples.
+Time per tuples: 7.3322e-06 28.0123
+qSUPPLIER1 size: 793228120
+q size: 8160048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.16855
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 700000 tuples.
+Time per tuples: 7.281e-06 28.0552
+qSUPPLIER1 size: 793788120
+q size: 8280048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.20014
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 710000 tuples.
+Time per tuples: 7.346e-06 28.0982
+qSUPPLIER1 size: 794348120
+q size: 8400048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.232
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 720000 tuples.
+Time per tuples: 7.3066e-06 28.1413
+qSUPPLIER1 size: 794908120
+q size: 8520048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.26421
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 730000 tuples.
+Time per tuples: 7.3496e-06 28.1845
+qSUPPLIER1 size: 795468120
+q size: 8640048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.29652
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 740000 tuples.
+Time per tuples: 7.324e-06 28.2276
+qSUPPLIER1 size: 796028120
+q size: 8760048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.32867
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 750000 tuples.
+Time per tuples: 7.414e-06 28.2711
+qSUPPLIER1 size: 796588120
+q size: 8880048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.36112
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 760000 tuples.
+Time per tuples: 7.3566e-06 28.3143
+qSUPPLIER1 size: 797148120
+q size: 9000048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.39344
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 770000 tuples.
+Time per tuples: 7.3584e-06 28.3574
+qSUPPLIER1 size: 797708120
+q size: 9120048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.42564
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 780000 tuples.
+Time per tuples: 7.35e-06 28.4006
+qSUPPLIER1 size: 798268120
+q size: 9240048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.4579
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 790000 tuples.
+Time per tuples: 7.3698e-06 28.4439
+qSUPPLIER1 size: 798828120
+q size: 9360048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.49029
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 800000 tuples.
+Time per tuples: 7.4124e-06 28.4874
+qSUPPLIER1 size: 799388120
+q size: 9480048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.52289
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Done with stream 0
+Processed 810000 tuples.
+Time per tuples: 7.4878e-06 28.5314
+qSUPPLIER1 size: 799948120
+q size: 9600048
+qPARTSUPP1 size: 440048
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.55601
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+Processed 810000 tuples.
+Time per tuples: nan 28.5315
+on_insert_SUPPLIER cost: 50.051
+on_insert_PARTSUPP cost: 2.55601
+on_delete_SUPPLIER cost: 0
+on_delete_PARTSUPP cost: 0
+qSUPPLIER1 size: 799948120
+q size: 9600048
+qPARTSUPP1 size: 440048

@@ -1,0 +1,5 @@
+query,tuples,100,0.00424824 0.212485
+query,tuples,200,0.193131 9.86933
+query,tuples,300,0.612813 46.0102
+query,tuples,400,2.22772 232.396
+query,tuples,500,5.418 724.297
