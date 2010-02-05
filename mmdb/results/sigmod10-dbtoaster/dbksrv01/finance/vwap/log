@@ -1,0 +1,11 @@
+Initialized input stream...
+Processed 10000 tuples.
+Time per tuples: 0.120544 602.728
+BIDS size: 229488
+on_insert_BIDS cost: 1188.15
+on_delete_BIDS cost: 17.1193
+Processed 20000 tuples.
+Time per tuples: 0.0311064 758.266
+BIDS size: 247280
+on_insert_BIDS cost: 1491.18
+on_delete_BIDS cost: 25.1109

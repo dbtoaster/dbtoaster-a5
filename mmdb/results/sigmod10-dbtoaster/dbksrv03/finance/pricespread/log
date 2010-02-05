@@ -1,0 +1,1953 @@
+Initialized input stream...
+Processed 100 tuples.
+Time per tuples: 1.616e-05 0.000867
+BIDS size: 624
+ASKS size: 496
+on_insert_ASKS cost: 3e-05
+on_insert_BIDS cost: 0.000232
+on_delete_ASKS cost: 0
+on_delete_BIDS cost: 0.000154
+Processed 200 tuples.
+Time per tuples: 2.046e-05 0.002047
+BIDS size: 1072
+ASKS size: 1264
+on_insert_ASKS cost: 0.000394
+on_insert_BIDS cost: 0.000624
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 300 tuples.
+Time per tuples: 8.042e-05 0.006211
+BIDS size: 1968
+ASKS size: 3952
+on_insert_ASKS cost: 0.00597
+on_insert_BIDS cost: 0.001908
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 400 tuples.
+Time per tuples: 0.00029318 0.021003
+BIDS size: 2288
+ASKS size: 7472
+on_insert_ASKS cost: 0.031786
+on_insert_BIDS cost: 0.004116
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 500 tuples.
+Time per tuples: 0.0005802 0.050147
+BIDS size: 2864
+ASKS size: 10288
+on_insert_ASKS cost: 0.078304
+on_insert_BIDS cost: 0.01444
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 600 tuples.
+Time per tuples: 0.00097024 0.098796
+BIDS size: 3376
+ASKS size: 13104
+on_insert_ASKS cost: 0.160136
+on_insert_BIDS cost: 0.028444
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 700 tuples.
+Time per tuples: 0.00131486 0.164671
+BIDS size: 4144
+ASKS size: 15280
+on_insert_ASKS cost: 0.252038
+on_insert_BIDS cost: 0.066956
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 800 tuples.
+Time per tuples: 0.0013832 0.233968
+BIDS size: 5360
+ASKS size: 16496
+on_insert_ASKS cost: 0.31781
+on_insert_BIDS cost: 0.138592
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 900 tuples.
+Time per tuples: 0.00288162 0.378187
+BIDS size: 6320
+ASKS size: 19504
+on_insert_ASKS cost: 0.538008
+on_insert_BIDS cost: 0.205154
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1000 tuples.
+Time per tuples: 0.00308116 0.532383
+BIDS size: 7024
+ASKS size: 21872
+on_insert_ASKS cost: 0.777112
+on_insert_BIDS cost: 0.273054
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1100 tuples.
+Time per tuples: 0.00319158 0.6921
+BIDS size: 7728
+ASKS size: 23664
+on_insert_ASKS cost: 1.00259
+on_insert_BIDS cost: 0.365784
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1200 tuples.
+Time per tuples: 0.00520134 0.952299
+BIDS size: 8624
+ASKS size: 26096
+on_insert_ASKS cost: 1.38002
+on_insert_BIDS cost: 0.507284
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1300 tuples.
+Time per tuples: 0.00624492 1.26469
+BIDS size: 9264
+ASKS size: 28720
+on_insert_ASKS cost: 1.87798
+on_insert_BIDS cost: 0.632638
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1400 tuples.
+Time per tuples: 0.00445206 1.48743
+BIDS size: 11184
+ASKS size: 28848
+on_insert_ASKS cost: 1.90556
+on_insert_BIDS cost: 1.04947
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1500 tuples.
+Time per tuples: 0.00764986 1.87005
+BIDS size: 12144
+ASKS size: 31088
+on_insert_ASKS cost: 2.43758
+on_insert_BIDS cost: 1.28126
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1600 tuples.
+Time per tuples: 0.00966982 2.35368
+BIDS size: 12976
+ASKS size: 33648
+on_insert_ASKS cost: 3.1536
+on_insert_BIDS cost: 1.53097
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1700 tuples.
+Time per tuples: 0.0108619 2.89691
+BIDS size: 13744
+ASKS size: 36144
+on_insert_ASKS cost: 3.97139
+on_insert_BIDS cost: 1.79821
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1800 tuples.
+Time per tuples: 0.0110915 3.45164
+BIDS size: 14832
+ASKS size: 38000
+on_insert_ASKS cost: 4.65579
+on_insert_BIDS cost: 2.2219
+on_delete_ASKS cost: 2.4e-05
+on_delete_BIDS cost: 0.0004
+Processed 1900 tuples.
+Time per tuples: 0.0158011 4.24182
+BIDS size: 15600
+ASKS size: 40752
+on_insert_ASKS cost: 5.86943
+on_insert_BIDS cost: 2.55708
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.0004
+Processed 2000 tuples.
+Time per tuples: 0.0158938 5.03665
+BIDS size: 16688
+ASKS size: 42864
+on_insert_ASKS cost: 6.91392
+on_insert_BIDS cost: 3.10078
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.0004
+Processed 2100 tuples.
+Time per tuples: 0.0154153 5.80756
+BIDS size: 18352
+ASKS size: 44016
+on_insert_ASKS cost: 7.54066
+on_insert_BIDS cost: 4.01451
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.0004
+Processed 2200 tuples.
+Time per tuples: 0.0174563 6.68051
+BIDS size: 19312
+ASKS size: 46000
+on_insert_ASKS cost: 8.71991
+on_insert_BIDS cost: 4.57977
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.0004
+Processed 2300 tuples.
+Time per tuples: 0.013923 7.37679
+BIDS size: 20720
+ASKS size: 46768
+on_insert_ASKS cost: 9.21865
+on_insert_BIDS cost: 5.47246
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.0004
+Processed 2400 tuples.
+Time per tuples: 0.0272621 8.74004
+BIDS size: 21872
+ASKS size: 49008
+on_insert_ASKS cost: 10.7705
+on_insert_BIDS cost: 6.44862
+on_delete_ASKS cost: 0.029946
+on_delete_BIDS cost: 0.197178
+Processed 2500 tuples.
+Time per tuples: 0.0343699 10.4587
+BIDS size: 22128
+ASKS size: 50672
+on_insert_ASKS cost: 12.0666
+on_insert_BIDS cost: 7.56353
+on_delete_ASKS cost: 0.083304
+on_delete_BIDS cost: 1.16812
+Processed 2600 tuples.
+Time per tuples: 0.0393077 12.4242
+BIDS size: 22384
+ASKS size: 51760
+on_insert_ASKS cost: 12.9349
+on_insert_BIDS cost: 9.16626
+on_delete_ASKS cost: 0.083304
+on_delete_BIDS cost: 2.62623
+Processed 2700 tuples.
+Time per tuples: 0.0327492 14.0618
+BIDS size: 22384
+ASKS size: 52720
+on_insert_ASKS cost: 14.1642
+on_insert_BIDS cost: 9.93668
+on_delete_ASKS cost: 0.552162
+on_delete_BIDS cost: 3.4312
+Processed 2800 tuples.
+Time per tuples: 0.0233017 15.227
+BIDS size: 23024
+ASKS size: 52976
+on_insert_ASKS cost: 14.4973
+on_insert_BIDS cost: 11.1527
+on_delete_ASKS cost: 0.67104
+on_delete_BIDS cost: 4.0924
+Processed 2900 tuples.
+Time per tuples: 0.0166753 16.0609
+BIDS size: 23024
+ASKS size: 53104
+on_insert_ASKS cost: 14.841
+on_insert_BIDS cost: 11.6808
+on_delete_ASKS cost: 0.919026
+on_delete_BIDS cost: 4.63939
+Processed 3000 tuples.
+Time per tuples: 0.0129082 16.7065
+BIDS size: 23152
+ASKS size: 53360
+on_insert_ASKS cost: 15.296
+on_insert_BIDS cost: 12.0283
+on_delete_ASKS cost: 1.16475
+on_delete_BIDS cost: 4.8813
+Processed 3100 tuples.
+Time per tuples: 0.0201301 17.7131
+BIDS size: 24176
+ASKS size: 53488
+on_insert_ASKS cost: 15.7573
+on_insert_BIDS cost: 13.0846
+on_delete_ASKS cost: 1.5378
+on_delete_BIDS cost: 5.00268
+Processed 3200 tuples.
+Time per tuples: 0.0241523 18.9209
+BIDS size: 24368
+ASKS size: 53552
+on_insert_ASKS cost: 16.1664
+on_insert_BIDS cost: 13.9746
+on_delete_ASKS cost: 1.9142
+on_delete_BIDS cost: 5.74143
+Processed 3300 tuples.
+Time per tuples: 0.0325744 20.5498
+BIDS size: 24752
+ASKS size: 53936
+on_insert_ASKS cost: 17.0466
+on_insert_BIDS cost: 15.0498
+on_delete_ASKS cost: 2.4752
+on_delete_BIDS cost: 6.48125
+Processed 3400 tuples.
+Time per tuples: 0.03402 22.2509
+BIDS size: 25712
+ASKS size: 54448
+on_insert_ASKS cost: 18.2544
+on_insert_BIDS cost: 16.2142
+on_delete_ASKS cost: 3.25133
+on_delete_BIDS cost: 6.73365
+Processed 3500 tuples.
+Time per tuples: 0.0270383 23.603
+BIDS size: 26992
+ASKS size: 54704
+on_insert_ASKS cost: 19.0722
+on_insert_BIDS cost: 17.4975
+on_delete_ASKS cost: 3.85294
+on_delete_BIDS cost: 6.73365
+Processed 3600 tuples.
+Time per tuples: 0.0263977 24.923
+BIDS size: 28336
+ASKS size: 54896
+on_insert_ASKS cost: 19.7966
+on_insert_BIDS cost: 18.8583
+on_delete_ASKS cost: 4.40648
+on_delete_BIDS cost: 6.73365
+Processed 3700 tuples.
+Time per tuples: 0.0379654 26.8214
+BIDS size: 29488
+ASKS size: 55216
+on_insert_ASKS cost: 20.8803
+on_insert_BIDS cost: 20.4326
+on_delete_ASKS cost: 5.1889
+on_delete_BIDS cost: 7.08844
+Processed 3800 tuples.
+Time per tuples: 0.0359349 28.6183
+BIDS size: 29744
+ASKS size: 56816
+on_insert_ASKS cost: 22.6172
+on_insert_BIDS cost: 21.4901
+on_delete_ASKS cost: 5.1889
+on_delete_BIDS cost: 7.88627
+Processed 3900 tuples.
+Time per tuples: 0.0301472 30.1258
+BIDS size: 30192
+ASKS size: 58096
+on_insert_ASKS cost: 24.1417
+on_insert_BIDS cost: 22.4476
+on_delete_ASKS cost: 5.26487
+on_delete_BIDS cost: 8.34201
+Processed 4000 tuples.
+Time per tuples: 0.0197696 31.1144
+BIDS size: 30768
+ASKS size: 58672
+on_insert_ASKS cost: 24.8957
+on_insert_BIDS cost: 23.3562
+on_delete_ASKS cost: 5.34255
+on_delete_BIDS cost: 8.57796
+Processed 4100 tuples.
+Time per tuples: 0.025844 32.4068
+BIDS size: 30896
+ASKS size: 59760
+on_insert_ASKS cost: 26.6784
+on_insert_BIDS cost: 23.5786
+on_delete_ASKS cost: 5.84098
+on_delete_BIDS cost: 8.65797
+Processed 4200 tuples.
+Time per tuples: 0.0177996 33.2969
+BIDS size: 31088
+ASKS size: 60080
+on_insert_ASKS cost: 27.1535
+on_insert_BIDS cost: 24.301
+on_delete_ASKS cost: 5.92509
+on_delete_BIDS cost: 9.15566
+Processed 4300 tuples.
+Time per tuples: 0.037685 35.1813
+BIDS size: 31152
+ASKS size: 60912
+on_insert_ASKS cost: 29.1691
+on_insert_BIDS cost: 24.7056
+on_delete_ASKS cost: 6.93873
+on_delete_BIDS cost: 9.48911
+Processed 4400 tuples.
+Time per tuples: 0.0351341 36.9382
+BIDS size: 31984
+ASKS size: 61488
+on_insert_ASKS cost: 30.4105
+on_insert_BIDS cost: 26.1141
+on_delete_ASKS cost: 7.46157
+on_delete_BIDS cost: 9.8287
+Processed 4500 tuples.
+Time per tuples: 0.038023 38.8395
+BIDS size: 32432
+ASKS size: 61552
+on_insert_ASKS cost: 31.6748
+on_insert_BIDS cost: 27.0485
+on_delete_ASKS cost: 8.71254
+on_delete_BIDS cost: 10.1802
+Processed 4600 tuples.
+Time per tuples: 0.0426525 40.9722
+BIDS size: 32368
+ASKS size: 61680
+on_insert_ASKS cost: 33.4516
+on_insert_BIDS cost: 27.391
+on_delete_ASKS cost: 10.4162
+on_delete_BIDS cost: 10.6213
+Processed 4700 tuples.
+Time per tuples: 0.034626 42.7037
+BIDS size: 32368
+ASKS size: 61936
+on_insert_ASKS cost: 34.8137
+on_insert_BIDS cost: 27.8878
+on_delete_ASKS cost: 11.4914
+on_delete_BIDS cost: 11.1488
+Processed 4800 tuples.
+Time per tuples: 0.0342167 44.4147
+BIDS size: 32560
+ASKS size: 63856
+on_insert_ASKS cost: 37.6161
+on_insert_BIDS cost: 28.2338
+on_delete_ASKS cost: 11.6729
+on_delete_BIDS cost: 11.2396
+Processed 4900 tuples.
+Time per tuples: 0.0213047 45.48
+BIDS size: 32560
+ASKS size: 64304
+on_insert_ASKS cost: 38.7969
+on_insert_BIDS cost: 28.4169
+on_delete_ASKS cost: 12.2498
+on_delete_BIDS cost: 11.4287
+Processed 5000 tuples.
+Time per tuples: 0.0187638 46.4184
+BIDS size: 32432
+ASKS size: 64688
+on_insert_ASKS cost: 39.8149
+on_insert_BIDS cost: 28.5078
+on_delete_ASKS cost: 12.7296
+on_delete_BIDS cost: 11.7157
+Processed 5100 tuples.
+Time per tuples: 0.0319482 48.0159
+BIDS size: 32688
+ASKS size: 64944
+on_insert_ASKS cost: 41.212
+on_insert_BIDS cost: 29.0542
+on_delete_ASKS cost: 13.7886
+on_delete_BIDS cost: 11.907
+Processed 5200 tuples.
+Time per tuples: 0.0282618 49.4292
+BIDS size: 32944
+ASKS size: 65456
+on_insert_ASKS cost: 42.1561
+on_insert_BIDS cost: 30.0639
+on_delete_ASKS cost: 13.986
+on_delete_BIDS cost: 12.5812
+Processed 5300 tuples.
+Time per tuples: 0.0150681 50.1827
+BIDS size: 33136
+ASKS size: 65648
+on_insert_ASKS cost: 42.5341
+on_insert_BIDS cost: 30.7085
+on_delete_ASKS cost: 14.0827
+on_delete_BIDS cost: 12.9681
+Processed 5400 tuples.
+Time per tuples: 0.0361005 51.9879
+BIDS size: 33392
+ASKS size: 65456
+on_insert_ASKS cost: 43.6767
+on_insert_BIDS cost: 31.3777
+on_delete_ASKS cost: 15.5871
+on_delete_BIDS cost: 13.261
+Processed 5500 tuples.
+Time per tuples: 0.0411787 54.047
+BIDS size: 34160
+ASKS size: 65712
+on_insert_ASKS cost: 44.5432
+on_insert_BIDS cost: 33.3208
+on_delete_ASKS cost: 16.0952
+on_delete_BIDS cost: 14.0602
+Processed 5600 tuples.
+Time per tuples: 0.0477005 56.4322
+BIDS size: 34352
+ASKS size: 65776
+on_insert_ASKS cost: 45.71
+on_insert_BIDS cost: 34.6941
+on_delete_ASKS cost: 17.2144
+on_delete_BIDS cost: 15.1697
+Processed 5700 tuples.
+Time per tuples: 0.0491194 58.8883
+BIDS size: 34480
+ASKS size: 66096
+on_insert_ASKS cost: 46.9913
+on_insert_BIDS cost: 36.178
+on_delete_ASKS cost: 18.038
+on_delete_BIDS cost: 16.4917
+Processed 5800 tuples.
+Time per tuples: 0.0550794 61.6424
+BIDS size: 35184
+ASKS size: 66096
+on_insert_ASKS cost: 49.1626
+on_insert_BIDS cost: 37.2578
+on_delete_ASKS cost: 20.2935
+on_delete_BIDS cost: 16.4917
+Processed 5900 tuples.
+Time per tuples: 0.030974 63.1912
+BIDS size: 35504
+ASKS size: 66608
+on_insert_ASKS cost: 50.3488
+on_insert_BIDS cost: 38.2442
+on_delete_ASKS cost: 20.7041
+on_delete_BIDS cost: 17.005
+Processed 6000 tuples.
+Time per tuples: 0.0477262 65.5777
+BIDS size: 35376
+ASKS size: 66544
+on_insert_ASKS cost: 51.7462
+on_insert_BIDS cost: 39.0293
+on_delete_ASKS cost: 22.2581
+on_delete_BIDS cost: 18.04
+Processed 6100 tuples.
+Time per tuples: 0.0379836 67.477
+BIDS size: 35632
+ASKS size: 67248
+on_insert_ASKS cost: 53.6746
+on_insert_BIDS cost: 39.7408
+on_delete_ASKS cost: 23.0986
+on_delete_BIDS cost: 18.3571
+Processed 6200 tuples.
+Time per tuples: 0.0577047 70.3624
+BIDS size: 36528
+ASKS size: 67120
+on_insert_ASKS cost: 55.5527
+on_insert_BIDS cost: 41.3247
+on_delete_ASKS cost: 25.2973
+on_delete_BIDS cost: 18.4655
+Processed 6300 tuples.
+Time per tuples: 0.087503 74.7377
+BIDS size: 40560
+ASKS size: 67056
+on_insert_ASKS cost: 55.879
+on_insert_BIDS cost: 48.7197
+on_delete_ASKS cost: 25.7547
+on_delete_BIDS cost: 19.0351
+Processed 6400 tuples.
+Time per tuples: 0.0394242 76.7091
+BIDS size: 40496
+ASKS size: 67312
+on_insert_ASKS cost: 57.7528
+on_insert_BIDS cost: 48.9429
+on_delete_ASKS cost: 27.2575
+on_delete_BIDS cost: 19.377
+Processed 6500 tuples.
+Time per tuples: 0.0607574 79.7471
+BIDS size: 40432
+ASKS size: 69616
+on_insert_ASKS cost: 62.1921
+on_insert_BIDS cost: 49.5163
+on_delete_ASKS cost: 27.6077
+on_delete_BIDS cost: 20.0884
+Processed 6600 tuples.
+Time per tuples: 0.0486831 82.1814
+BIDS size: 41584
+ASKS size: 69808
+on_insert_ASKS cost: 63.4919
+on_insert_BIDS cost: 51.8614
+on_delete_ASKS cost: 28.5904
+on_delete_BIDS cost: 20.3282
+Processed 6700 tuples.
+Time per tuples: 0.0491877 84.641
+BIDS size: 42032
+ASKS size: 69744
+on_insert_ASKS cost: 65.0565
+on_insert_BIDS cost: 53.0762
+on_delete_ASKS cost: 30.3544
+on_delete_BIDS cost: 20.7024
+Processed 6800 tuples.
+Time per tuples: 0.0449918 86.8907
+BIDS size: 42864
+ASKS size: 70768
+on_insert_ASKS cost: 67.2521
+on_insert_BIDS cost: 54.8779
+on_delete_ASKS cost: 30.6079
+on_delete_BIDS cost: 20.9499
+Processed 6900 tuples.
+Time per tuples: 0.0425892 89.0203
+BIDS size: 43248
+ASKS size: 71024
+on_insert_ASKS cost: 68.2575
+on_insert_BIDS cost: 56.5898
+on_delete_ASKS cost: 31.1277
+on_delete_BIDS cost: 21.9707
+Processed 7000 tuples.
+Time per tuples: 0.0763156 92.8362
+BIDS size: 43376
+ASKS size: 71472
+on_insert_ASKS cost: 71.9414
+on_insert_BIDS cost: 57.2384
+on_delete_ASKS cost: 34.0277
+on_delete_BIDS cost: 22.3684
+Processed 7100 tuples.
+Time per tuples: 0.0782203 96.7474
+BIDS size: 44208
+ASKS size: 74032
+on_insert_ASKS cost: 77.2342
+on_insert_BIDS cost: 59.356
+on_delete_ASKS cost: 34.0277
+on_delete_BIDS cost: 22.7786
+Processed 7200 tuples.
+Time per tuples: 0.0612087 99.808
+BIDS size: 44464
+ASKS size: 75568
+on_insert_ASKS cost: 80.9744
+on_insert_BIDS cost: 60.5972
+on_delete_ASKS cost: 34.4628
+on_delete_BIDS cost: 23.4818
+Processed 7300 tuples.
+Time per tuples: 0.0590087 102.759
+BIDS size: 44336
+ASKS size: 76272
+on_insert_ASKS cost: 83.8078
+on_insert_BIDS cost: 61.3092
+on_delete_ASKS cost: 35.7941
+on_delete_BIDS cost: 24.5051
+Processed 7400 tuples.
+Time per tuples: 0.0643034 105.974
+BIDS size: 44336
+ASKS size: 77040
+on_insert_ASKS cost: 87.6958
+on_insert_BIDS cost: 61.4508
+on_delete_ASKS cost: 38.0491
+on_delete_BIDS cost: 24.6497
+Processed 7500 tuples.
+Time per tuples: 0.0608184 109.015
+BIDS size: 45616
+ASKS size: 77040
+on_insert_ASKS cost: 88.5622
+on_insert_BIDS cost: 65.0385
+on_delete_ASKS cost: 38.9323
+on_delete_BIDS cost: 25.3931
+Processed 7600 tuples.
+Time per tuples: 0.0757434 112.802
+BIDS size: 46896
+ASKS size: 78000
+on_insert_ASKS cost: 91.2678
+on_insert_BIDS cost: 68.6953
+on_delete_ASKS cost: 39.3824
+on_delete_BIDS cost: 26.1537
+Processed 7700 tuples.
+Time per tuples: 0.0878581 117.195
+BIDS size: 47408
+ASKS size: 78576
+on_insert_ASKS cost: 94.4836
+on_insert_BIDS cost: 71.1222
+on_delete_ASKS cost: 41.2709
+on_delete_BIDS cost: 27.4068
+Processed 7800 tuples.
+Time per tuples: 0.0608611 120.239
+BIDS size: 48688
+ASKS size: 79152
+on_insert_ASKS cost: 96.5036
+on_insert_BIDS cost: 74.3905
+on_delete_ASKS cost: 41.9087
+on_delete_BIDS cost: 27.5659
+Processed 7900 tuples.
+Time per tuples: 0.103123 125.395
+BIDS size: 51696
+ASKS size: 79088
+on_insert_ASKS cost: 96.9921
+on_insert_BIDS cost: 82.7119
+on_delete_ASKS cost: 42.5752
+on_delete_BIDS cost: 28.4002
+Processed 8000 tuples.
+Time per tuples: 0.0933486 130.062
+BIDS size: 53936
+ASKS size: 80432
+on_insert_ASKS cost: 100.511
+on_insert_BIDS cost: 88.5263
+on_delete_ASKS cost: 42.5752
+on_delete_BIDS cost: 28.4002
+Processed 8100 tuples.
+Time per tuples: 0.0858117 134.353
+BIDS size: 55280
+ASKS size: 82096
+on_insert_ASKS cost: 105.076
+on_insert_BIDS cost: 92.36
+on_delete_ASKS cost: 42.5752
+on_delete_BIDS cost: 28.5812
+Processed 8200 tuples.
+Time per tuples: 0.0601547 137.361
+BIDS size: 56304
+ASKS size: 82416
+on_insert_ASKS cost: 107.085
+on_insert_BIDS cost: 95.2352
+on_delete_ASKS cost: 43.7061
+on_delete_BIDS cost: 28.5812
+Processed 8300 tuples.
+Time per tuples: 0.0930458 142.014
+BIDS size: 57776
+ASKS size: 82992
+on_insert_ASKS cost: 109.321
+on_insert_BIDS cost: 100.582
+on_delete_ASKS cost: 44.2767
+on_delete_BIDS cost: 29.7314
+Processed 8400 tuples.
+Time per tuples: 0.0415752 144.092
+BIDS size: 58800
+ASKS size: 83376
+on_insert_ASKS cost: 110.47
+on_insert_BIDS cost: 103.59
+on_delete_ASKS cost: 44.2767
+on_delete_BIDS cost: 29.7314
+Processed 8500 tuples.
+Time per tuples: 0.0942863 148.807
+BIDS size: 59312
+ASKS size: 85296
+on_insert_ASKS cost: 116.737
+on_insert_BIDS cost: 105.738
+on_delete_ASKS cost: 44.6899
+on_delete_BIDS cost: 30.3298
+Processed 8600 tuples.
+Time per tuples: 0.0630122 151.958
+BIDS size: 59504
+ASKS size: 87088
+on_insert_ASKS cost: 122.421
+on_insert_BIDS cost: 106.355
+on_delete_ASKS cost: 44.6899
+on_delete_BIDS cost: 30.3298
+Processed 8700 tuples.
+Time per tuples: 0.0908621 156.501
+BIDS size: 61104
+ASKS size: 88112
+on_insert_ASKS cost: 125.947
+on_insert_BIDS cost: 111.696
+on_delete_ASKS cost: 44.9077
+on_delete_BIDS cost: 30.3298
+Processed 8800 tuples.
+Time per tuples: 0.104276 161.715
+BIDS size: 62576
+ASKS size: 89072
+on_insert_ASKS cost: 130.274
+on_insert_BIDS cost: 116.693
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 8900 tuples.
+Time per tuples: 0.149069 169.168
+BIDS size: 63152
+ASKS size: 92720
+on_insert_ASKS cost: 143.136
+on_insert_BIDS cost: 118.736
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9000 tuples.
+Time per tuples: 0.0974571 174.041
+BIDS size: 64816
+ASKS size: 93680
+on_insert_ASKS cost: 146.666
+on_insert_BIDS cost: 124.95
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9100 tuples.
+Time per tuples: 0.22393 185.238
+BIDS size: 66928
+ASKS size: 97328
+on_insert_ASKS cost: 160.89
+on_insert_BIDS cost: 133.117
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9200 tuples.
+Time per tuples: 0.173389 193.908
+BIDS size: 70384
+ASKS size: 98096
+on_insert_ASKS cost: 164.024
+on_insert_BIDS cost: 147.321
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9300 tuples.
+Time per tuples: 0.15355 201.585
+BIDS size: 71920
+ASKS size: 100144
+on_insert_ASKS cost: 172.906
+on_insert_BIDS cost: 153.793
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9400 tuples.
+Time per tuples: 0.175934 210.382
+BIDS size: 72560
+ASKS size: 103408
+on_insert_ASKS cost: 187.683
+on_insert_BIDS cost: 156.607
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9500 tuples.
+Time per tuples: 0.107726 215.769
+BIDS size: 74032
+ASKS size: 104240
+on_insert_ASKS cost: 191.559
+on_insert_BIDS cost: 163.503
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9600 tuples.
+Time per tuples: 0.122356 221.887
+BIDS size: 76272
+ASKS size: 104560
+on_insert_ASKS cost: 193.116
+on_insert_BIDS cost: 174.181
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9700 tuples.
+Time per tuples: 0.0345392 223.614
+BIDS size: 76272
+ASKS size: 105264
+on_insert_ASKS cost: 196.569
+on_insert_BIDS cost: 174.181
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9800 tuples.
+Time per tuples: 0.153703 231.299
+BIDS size: 76720
+ASKS size: 107888
+on_insert_ASKS cost: 209.704
+on_insert_BIDS cost: 176.415
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 9900 tuples.
+Time per tuples: 0.198085 241.203
+BIDS size: 80240
+ASKS size: 108208
+on_insert_ASKS cost: 211.37
+on_insert_BIDS cost: 194.556
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 10000 tuples.
+Time per tuples: 0.189785 250.693
+BIDS size: 80944
+ASKS size: 111024
+on_insert_ASKS cost: 226.508
+on_insert_BIDS cost: 198.396
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 30.3298
+Processed 10100 tuples.
+Time per tuples: 0.182957 259.841
+BIDS size: 82416
+ASKS size: 112048
+on_insert_ASKS cost: 232.243
+on_insert_BIDS cost: 208.758
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 32.5273
+Processed 10200 tuples.
+Time per tuples: 0.263459 273.014
+BIDS size: 84720
+ASKS size: 113840
+on_insert_ASKS cost: 242.567
+on_insert_BIDS cost: 223.302
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 34.0033
+Processed 10300 tuples.
+Time per tuples: 0.322647 289.147
+BIDS size: 87664
+ASKS size: 116144
+on_insert_ASKS cost: 256.338
+on_insert_BIDS cost: 241.396
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 34.4003
+Processed 10400 tuples.
+Time per tuples: 0.225891 300.441
+BIDS size: 88816
+ASKS size: 118576
+on_insert_ASKS cost: 271.656
+on_insert_BIDS cost: 248.666
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 34.4003
+Processed 10500 tuples.
+Time per tuples: 0.114978 306.19
+BIDS size: 90416
+ASKS size: 118768
+on_insert_ASKS cost: 272.882
+on_insert_BIDS cost: 258.936
+on_delete_ASKS cost: 46.0101
+on_delete_BIDS cost: 34.4003
+Processed 10600 tuples.
+Time per tuples: 0.201199 316.25
+BIDS size: 92720
+ASKS size: 118896
+on_insert_ASKS cost: 275.833
+on_insert_BIDS cost: 273.968
+on_delete_ASKS cost: 48.1457
+on_delete_BIDS cost: 34.4003
+Processed 10700 tuples.
+Time per tuples: 0.321121 332.307
+BIDS size: 95344
+ASKS size: 119728
+on_insert_ASKS cost: 285.777
+on_insert_BIDS cost: 291.732
+on_delete_ASKS cost: 52.5491
+on_delete_BIDS cost: 34.4003
+Processed 10800 tuples.
+Time per tuples: 0.129379 338.776
+BIDS size: 96816
+ASKS size: 120112
+on_insert_ASKS cost: 288.402
+on_insert_BIDS cost: 302.044
+on_delete_ASKS cost: 52.5491
+on_delete_BIDS cost: 34.4003
+Processed 10900 tuples.
+Time per tuples: 0.152973 346.424
+BIDS size: 96944
+ASKS size: 121648
+on_insert_ASKS cost: 300.971
+on_insert_BIDS cost: 302.946
+on_delete_ASKS cost: 54.3735
+on_delete_BIDS cost: 34.4003
+Processed 11000 tuples.
+Time per tuples: 0.15096 353.973
+BIDS size: 97392
+ASKS size: 123312
+on_insert_ASKS cost: 312.855
+on_insert_BIDS cost: 306.158
+on_delete_ASKS cost: 54.3735
+on_delete_BIDS cost: 34.4003
+Processed 11100 tuples.
+Time per tuples: 0.144033 361.174
+BIDS size: 98800
+ASKS size: 123888
+on_insert_ASKS cost: 317.043
+on_insert_BIDS cost: 316.372
+on_delete_ASKS cost: 54.3735
+on_delete_BIDS cost: 34.4003
+Processed 11200 tuples.
+Time per tuples: 0.0988626 366.118
+BIDS size: 99632
+ASKS size: 124272
+on_insert_ASKS cost: 320.352
+on_insert_BIDS cost: 322.473
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 34.4003
+Processed 11300 tuples.
+Time per tuples: 0.280662 380.151
+BIDS size: 100592
+ASKS size: 127024
+on_insert_ASKS cost: 341.153
+on_insert_BIDS cost: 329.736
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 34.4003
+Processed 11400 tuples.
+Time per tuples: 0.315579 395.93
+BIDS size: 102896
+ASKS size: 128496
+on_insert_ASKS cost: 352.64
+on_insert_BIDS cost: 348.787
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 35.4187
+Processed 11500 tuples.
+Time per tuples: 0.277835 409.822
+BIDS size: 104560
+ASKS size: 130288
+on_insert_ASKS cost: 367.047
+on_insert_BIDS cost: 362.163
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 35.4187
+Processed 11600 tuples.
+Time per tuples: 0.291673 424.406
+BIDS size: 106096
+ASKS size: 132272
+on_insert_ASKS cost: 383.576
+on_insert_BIDS cost: 374.8
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 35.4187
+Processed 11700 tuples.
+Time per tuples: 0.206627 434.737
+BIDS size: 106096
+ASKS size: 134704
+on_insert_ASKS cost: 404.237
+on_insert_BIDS cost: 374.8
+on_delete_ASKS cost: 54.8497
+on_delete_BIDS cost: 35.4187
+Processed 11800 tuples.
+Time per tuples: 0.262342 447.854
+BIDS size: 107056
+ASKS size: 136496
+on_insert_ASKS cost: 420.318
+on_insert_BIDS cost: 383.815
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 11900 tuples.
+Time per tuples: 0.210279 458.369
+BIDS size: 108016
+ASKS size: 137904
+on_insert_ASKS cost: 432.825
+on_insert_BIDS cost: 392.335
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12000 tuples.
+Time per tuples: 0.32079 474.408
+BIDS size: 110384
+ASKS size: 139056
+on_insert_ASKS cost: 443.215
+on_insert_BIDS cost: 414.023
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12100 tuples.
+Time per tuples: 0.390633 493.94
+BIDS size: 112624
+ASKS size: 140976
+on_insert_ASKS cost: 461.142
+on_insert_BIDS cost: 435.158
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12200 tuples.
+Time per tuples: 0.560547 521.968
+BIDS size: 115056
+ASKS size: 144304
+on_insert_ASKS cost: 493.406
+on_insert_BIDS cost: 458.946
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12300 tuples.
+Time per tuples: 0.413298 542.633
+BIDS size: 115632
+ASKS size: 147824
+on_insert_ASKS cost: 528.96
+on_insert_BIDS cost: 464.721
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12400 tuples.
+Time per tuples: 0.310681 558.167
+BIDS size: 117360
+ASKS size: 149104
+on_insert_ASKS cost: 542.177
+on_insert_BIDS cost: 482.571
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12500 tuples.
+Time per tuples: 0.343758 575.355
+BIDS size: 119536
+ASKS size: 150192
+on_insert_ASKS cost: 553.677
+on_insert_BIDS cost: 505.446
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12600 tuples.
+Time per tuples: 0.336723 592.191
+BIDS size: 122160
+ASKS size: 150704
+on_insert_ASKS cost: 559.232
+on_insert_BIDS cost: 533.561
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12700 tuples.
+Time per tuples: 0.491038 616.743
+BIDS size: 125424
+ASKS size: 151856
+on_insert_ASKS cost: 571.953
+on_insert_BIDS cost: 569.943
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12800 tuples.
+Time per tuples: 0.254457 629.466
+BIDS size: 127280
+ASKS size: 152240
+on_insert_ASKS cost: 576.305
+on_insert_BIDS cost: 591.036
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 12900 tuples.
+Time per tuples: 0.354646 647.199
+BIDS size: 129200
+ASKS size: 153392
+on_insert_ASKS cost: 589.642
+on_insert_BIDS cost: 613.162
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13000 tuples.
+Time per tuples: 0.24962 659.68
+BIDS size: 130608
+ASKS size: 154096
+on_insert_ASKS cost: 597.943
+on_insert_BIDS cost: 629.821
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13100 tuples.
+Time per tuples: 0.346417 677.001
+BIDS size: 131632
+ASKS size: 155952
+on_insert_ASKS cost: 620.254
+on_insert_BIDS cost: 642.151
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13200 tuples.
+Time per tuples: 0.274992 690.751
+BIDS size: 132784
+ASKS size: 157040
+on_insert_ASKS cost: 633.59
+on_insert_BIDS cost: 656.313
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13300 tuples.
+Time per tuples: 0.254937 703.498
+BIDS size: 132784
+ASKS size: 159088
+on_insert_ASKS cost: 659.083
+on_insert_BIDS cost: 656.313
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13400 tuples.
+Time per tuples: 0.430277 725.012
+BIDS size: 134000
+ASKS size: 161264
+on_insert_ASKS cost: 686.675
+on_insert_BIDS cost: 671.747
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13500 tuples.
+Time per tuples: 0.583948 754.209
+BIDS size: 136112
+ASKS size: 163632
+on_insert_ASKS cost: 717.598
+on_insert_BIDS cost: 699.217
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13600 tuples.
+Time per tuples: 0.646869 786.553
+BIDS size: 139440
+ASKS size: 165104
+on_insert_ASKS cost: 737.347
+on_insert_BIDS cost: 744.154
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13700 tuples.
+Time per tuples: 0.441219 808.614
+BIDS size: 141104
+ASKS size: 166640
+on_insert_ASKS cost: 758.45
+on_insert_BIDS cost: 767.171
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13800 tuples.
+Time per tuples: 0.251146 821.171
+BIDS size: 142320
+ASKS size: 167216
+on_insert_ASKS cost: 766.462
+on_insert_BIDS cost: 784.273
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 13900 tuples.
+Time per tuples: 0.557631 849.053
+BIDS size: 145072
+ASKS size: 168368
+on_insert_ASKS cost: 782.845
+on_insert_BIDS cost: 823.651
+on_delete_ASKS cost: 55.4243
+on_delete_BIDS cost: 35.9816
+Processed 14000 tuples.
+Time per tuples: 0.400996 869.103
+BIDS size: 146608
+ASKS size: 169456
+on_insert_ASKS cost: 799.582
+on_insert_BIDS cost: 846.064
+on_delete_ASKS cost: 56.3735
+on_delete_BIDS cost: 35.9816
+Processed 14100 tuples.
+Time per tuples: 0.34104 886.155
+BIDS size: 147184
+ASKS size: 171184
+on_insert_ASKS cost: 825.087
+on_insert_BIDS cost: 854.662
+on_delete_ASKS cost: 56.3735
+on_delete_BIDS cost: 35.9816
+Processed 14200 tuples.
+Time per tuples: 0.531399 912.725
+BIDS size: 149808
+ASKS size: 172080
+on_insert_ASKS cost: 838.646
+on_insert_BIDS cost: 894.241
+on_delete_ASKS cost: 56.3735
+on_delete_BIDS cost: 35.9816
+Processed 14300 tuples.
+Time per tuples: 0.503684 937.91
+BIDS size: 152944
+ASKS size: 172208
+on_insert_ASKS cost: 840.621
+on_insert_BIDS cost: 942.633
+on_delete_ASKS cost: 56.3735
+on_delete_BIDS cost: 35.9816
+Processed 14400 tuples.
+Time per tuples: 0.479239 961.872
+BIDS size: 154160
+ASKS size: 173808
+on_insert_ASKS cost: 866.554
+on_insert_BIDS cost: 962.616
+on_delete_ASKS cost: 57.3756
+on_delete_BIDS cost: 36.9862
+Processed 14500 tuples.
+Time per tuples: 0.510653 987.405
+BIDS size: 155440
+ASKS size: 175728
+on_insert_ASKS cost: 897.199
+on_insert_BIDS cost: 983.035
+on_delete_ASKS cost: 57.3756
+on_delete_BIDS cost: 36.9862
+Processed 14600 tuples.
+Time per tuples: 0.499868 1012.4
+BIDS size: 157552
+ASKS size: 175920
+on_insert_ASKS cost: 904.459
+on_insert_BIDS cost: 1019.47
+on_delete_ASKS cost: 61.5838
+on_delete_BIDS cost: 39.0676
+Processed 14700 tuples.
+Time per tuples: 0.538525 1039.32
+BIDS size: 159152
+ASKS size: 177584
+on_insert_ASKS cost: 931.954
+on_insert_BIDS cost: 1045.83
+on_delete_ASKS cost: 61.5838
+on_delete_BIDS cost: 39.0676
+Processed 14800 tuples.
+Time per tuples: 0.524679 1065.56
+BIDS size: 159600
+ASKS size: 179888
+on_insert_ASKS cost: 971.552
+on_insert_BIDS cost: 1055.46
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 14900 tuples.
+Time per tuples: 0.402516 1085.68
+BIDS size: 160560
+ASKS size: 181296
+on_insert_ASKS cost: 995.442
+on_insert_BIDS cost: 1071.83
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15000 tuples.
+Time per tuples: 0.899318 1130.65
+BIDS size: 161008
+ASKS size: 186032
+on_insert_ASKS cost: 1077.53
+on_insert_BIDS cost: 1079.67
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15100 tuples.
+Time per tuples: 0.511027 1156.2
+BIDS size: 161392
+ASKS size: 188528
+on_insert_ASKS cost: 1121.83
+on_insert_BIDS cost: 1086.47
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15200 tuples.
+Time per tuples: 0.624307 1187.42
+BIDS size: 162288
+ASKS size: 191088
+on_insert_ASKS cost: 1168.04
+on_insert_BIDS cost: 1102.68
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15300 tuples.
+Time per tuples: 0.446334 1209.73
+BIDS size: 162288
+ASKS size: 193520
+on_insert_ASKS cost: 1212.68
+on_insert_BIDS cost: 1102.68
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15400 tuples.
+Time per tuples: 0.334077 1226.44
+BIDS size: 163760
+ASKS size: 193840
+on_insert_ASKS cost: 1218.61
+on_insert_BIDS cost: 1130.15
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15500 tuples.
+Time per tuples: 0.814215 1267.15
+BIDS size: 167536
+ASKS size: 194352
+on_insert_ASKS cost: 1228.27
+on_insert_BIDS cost: 1201.92
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15600 tuples.
+Time per tuples: 0.617333 1298.02
+BIDS size: 169328
+ASKS size: 195760
+on_insert_ASKS cost: 1255.47
+on_insert_BIDS cost: 1236.45
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15700 tuples.
+Time per tuples: 0.501938 1323.11
+BIDS size: 171248
+ASKS size: 196400
+on_insert_ASKS cost: 1267.99
+on_insert_BIDS cost: 1274.12
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15800 tuples.
+Time per tuples: 0.844169 1365.32
+BIDS size: 172592
+ASKS size: 199280
+on_insert_ASKS cost: 1325.68
+on_insert_BIDS cost: 1300.85
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 15900 tuples.
+Time per tuples: 0.577074 1394.18
+BIDS size: 174256
+ASKS size: 200432
+on_insert_ASKS cost: 1349.14
+on_insert_BIDS cost: 1335.1
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16000 tuples.
+Time per tuples: 0.812681 1434.81
+BIDS size: 174256
+ASKS size: 204336
+on_insert_ASKS cost: 1430.4
+on_insert_BIDS cost: 1335.1
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16100 tuples.
+Time per tuples: 0.529657 1461.29
+BIDS size: 175728
+ASKS size: 205360
+on_insert_ASKS cost: 1452
+on_insert_BIDS cost: 1366.47
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16200 tuples.
+Time per tuples: 0.687716 1495.68
+BIDS size: 176752
+ASKS size: 207536
+on_insert_ASKS cost: 1498.79
+on_insert_BIDS cost: 1388.45
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16300 tuples.
+Time per tuples: 0.530481 1522.2
+BIDS size: 177648
+ASKS size: 209072
+on_insert_ASKS cost: 1532.2
+on_insert_BIDS cost: 1408.08
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16400 tuples.
+Time per tuples: 0.809629 1562.68
+BIDS size: 181296
+ASKS size: 209072
+on_insert_ASKS cost: 1532.2
+on_insert_BIDS cost: 1489.04
+on_delete_ASKS cost: 62.6679
+on_delete_BIDS cost: 41.2152
+Processed 16500 tuples.
+Time per tuples: 0.734136 1599.39
+BIDS size: 182384
+ASKS size: 211120
+on_insert_ASKS cost: 1579.68
+on_insert_BIDS cost: 1513.51
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 16600 tuples.
+Time per tuples: 0.658515 1632.32
+BIDS size: 184880
+ASKS size: 211504
+on_insert_ASKS cost: 1588.38
+on_insert_BIDS cost: 1570.67
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 16700 tuples.
+Time per tuples: 0.771886 1670.91
+BIDS size: 187952
+ASKS size: 211760
+on_insert_ASKS cost: 1594.34
+on_insert_BIDS cost: 1641.89
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 16800 tuples.
+Time per tuples: 1.01225 1721.52
+BIDS size: 189616
+ASKS size: 214384
+on_insert_ASKS cost: 1656.21
+on_insert_BIDS cost: 1681.25
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 16900 tuples.
+Time per tuples: 0.615886 1752.32
+BIDS size: 190832
+ASKS size: 215728
+on_insert_ASKS cost: 1688.49
+on_insert_BIDS cost: 1710.55
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17000 tuples.
+Time per tuples: 0.77878 1791.26
+BIDS size: 191408
+ASKS size: 218352
+on_insert_ASKS cost: 1752.3
+on_insert_BIDS cost: 1724.62
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17100 tuples.
+Time per tuples: 0.792272 1830.87
+BIDS size: 193264
+ASKS size: 219696
+on_insert_ASKS cost: 1785.6
+on_insert_BIDS cost: 1770.54
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17200 tuples.
+Time per tuples: 0.707676 1866.26
+BIDS size: 193584
+ASKS size: 222192
+on_insert_ASKS cost: 1848.38
+on_insert_BIDS cost: 1778.53
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17300 tuples.
+Time per tuples: 0.914954 1912
+BIDS size: 194416
+ASKS size: 224944
+on_insert_ASKS cost: 1918.52
+on_insert_BIDS cost: 1799.88
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17400 tuples.
+Time per tuples: 1.03135 1963.57
+BIDS size: 194672
+ASKS size: 228656
+on_insert_ASKS cost: 2015.03
+on_insert_BIDS cost: 1806.5
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17500 tuples.
+Time per tuples: 0.998594 2013.5
+BIDS size: 194992
+ASKS size: 232112
+on_insert_ASKS cost: 2106.33
+on_insert_BIDS cost: 1815.06
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17600 tuples.
+Time per tuples: 0.670115 2047.01
+BIDS size: 195440
+ASKS size: 234160
+on_insert_ASKS cost: 2161.3
+on_insert_BIDS cost: 1827.1
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17700 tuples.
+Time per tuples: 1.18648 2106.33
+BIDS size: 195696
+ASKS size: 238256
+on_insert_ASKS cost: 2272.88
+on_insert_BIDS cost: 1834.16
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17800 tuples.
+Time per tuples: 0.603287 2136.5
+BIDS size: 196464
+ASKS size: 239664
+on_insert_ASKS cost: 2311.83
+on_insert_BIDS cost: 1855.54
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 17900 tuples.
+Time per tuples: 0.682388 2170.62
+BIDS size: 197424
+ASKS size: 241136
+on_insert_ASKS cost: 2353.07
+on_insert_BIDS cost: 1882.55
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 18000 tuples.
+Time per tuples: 0.911143 2216.17
+BIDS size: 199920
+ASKS size: 241840
+on_insert_ASKS cost: 2373.1
+on_insert_BIDS cost: 1953.61
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 18100 tuples.
+Time per tuples: 0.924045 2262.38
+BIDS size: 201712
+ASKS size: 243248
+on_insert_ASKS cost: 2413.6
+on_insert_BIDS cost: 2005.49
+on_delete_ASKS cost: 64.1328
+on_delete_BIDS cost: 41.2152
+Processed 18200 tuples.
+Time per tuples: 0.956854 2310.22
+BIDS size: 202544
+ASKS size: 244656
+on_insert_ASKS cost: 2467.72
+on_insert_BIDS cost: 2031.76
+on_delete_ASKS cost: 77.5304
+on_delete_BIDS cost: 43.1111
+Processed 18300 tuples.
+Time per tuples: 0.88814 2354.63
+BIDS size: 203632
+ASKS size: 246064
+on_insert_ASKS cost: 2509.12
+on_insert_BIDS cost: 2071.57
+on_delete_ASKS cost: 77.5304
+on_delete_BIDS cost: 50.7199
+Processed 18400 tuples.
+Time per tuples: 1.08821 2409.04
+BIDS size: 206640
+ASKS size: 246320
+on_insert_ASKS cost: 2516.73
+on_insert_BIDS cost: 2166.95
+on_delete_ASKS cost: 77.5304
+on_delete_BIDS cost: 56.5426
+Processed 18500 tuples.
+Time per tuples: 1.06473 2462.27
+BIDS size: 208944
+ASKS size: 246896
+on_insert_ASKS cost: 2543.83
+on_insert_BIDS cost: 2236.5
+on_delete_ASKS cost: 87.3675
+on_delete_BIDS cost: 56.5426
+Processed 18600 tuples.
+Time per tuples: 0.783462 2501.45
+BIDS size: 211056
+ASKS size: 247344
+on_insert_ASKS cost: 2557.48
+on_insert_BIDS cost: 2301.18
+on_delete_ASKS cost: 87.3675
+on_delete_BIDS cost: 56.5426
+Processed 18700 tuples.
+Time per tuples: 0.872287 2549.06
+BIDS size: 211632
+ASKS size: 249456
+on_insert_ASKS cost: 2628.72
+on_insert_BIDS cost: 2312.17
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 18800 tuples.
+Time per tuples: 0.507779 2599.45
+BIDS size: 213296
+ASKS size: 250992
+on_insert_ASKS cost: 2652.94
+on_insert_BIDS cost: 2338.71
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 18900 tuples.
+Time per tuples: 0.45459 2644.18
+BIDS size: 214896
+ASKS size: 252208
+on_insert_ASKS cost: 2672.58
+on_insert_BIDS cost: 2364.53
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 19000 tuples.
+Time per tuples: 0.551456 2697.75
+BIDS size: 218224
+ASKS size: 252208
+on_insert_ASKS cost: 2672.58
+on_insert_BIDS cost: 2419.68
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 19100 tuples.
+Time per tuples: 0.734226 2767.96
+BIDS size: 219568
+ASKS size: 255152
+on_insert_ASKS cost: 2723.12
+on_insert_BIDS cost: 2442.56
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 19200 tuples.
+Time per tuples: 0.737432 2837.34
+BIDS size: 220592
+ASKS size: 258288
+on_insert_ASKS cost: 2778.75
+on_insert_BIDS cost: 2460.67
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 19300 tuples.
+Time per tuples: 0.536295 2887.15
+BIDS size: 220592
+ASKS size: 261232
+on_insert_ASKS cost: 2832.38
+on_insert_BIDS cost: 2460.67
+on_delete_ASKS cost: 92.3795
+on_delete_BIDS cost: 56.5426
+Processed 19400 tuples.
+Time per tuples: 0.69125 2950.71
+BIDS size: 220592
+ASKS size: 264816
+on_insert_ASKS cost: 2900.26
+on_insert_BIDS cost: 2460.67
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 19500 tuples.
+Time per tuples: 0.575563 3002.99
+BIDS size: 221424
+ASKS size: 266992
+on_insert_ASKS cost: 2941.66
+on_insert_BIDS cost: 2476.83
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 19600 tuples.
+Time per tuples: 0.403491 3039.17
+BIDS size: 222640
+ASKS size: 267824
+on_insert_ASKS cost: 2957.87
+on_insert_BIDS cost: 2500.97
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 19700 tuples.
+Time per tuples: 0.268427 3063.09
+BIDS size: 223280
+ASKS size: 268528
+on_insert_ASKS cost: 2971.89
+on_insert_BIDS cost: 2513.79
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 19800 tuples.
+Time per tuples: 0.776939 3131.93
+BIDS size: 225392
+ASKS size: 270256
+on_insert_ASKS cost: 3006.62
+on_insert_BIDS cost: 2556.75
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 19900 tuples.
+Time per tuples: 1.05937 3224.4
+BIDS size: 227312
+ASKS size: 273392
+on_insert_ASKS cost: 3072.16
+on_insert_BIDS cost: 2597.14
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20000 tuples.
+Time per tuples: 1.12841 3321.32
+BIDS size: 228848
+ASKS size: 277040
+on_insert_ASKS cost: 3151.28
+on_insert_BIDS cost: 2630.87
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20100 tuples.
+Time per tuples: 0.615733 3373.61
+BIDS size: 229104
+ASKS size: 279536
+on_insert_ASKS cost: 3207.03
+on_insert_BIDS cost: 2636.68
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20200 tuples.
+Time per tuples: 0.730992 3435.16
+BIDS size: 229552
+ASKS size: 282288
+on_insert_ASKS cost: 3269.83
+on_insert_BIDS cost: 2646.99
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20300 tuples.
+Time per tuples: 0.371634 3466.24
+BIDS size: 229936
+ASKS size: 283504
+on_insert_ASKS cost: 3298.04
+on_insert_BIDS cost: 2655.94
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20400 tuples.
+Time per tuples: 1.00144 3549.31
+BIDS size: 231216
+ASKS size: 286448
+on_insert_ASKS cost: 3367.56
+on_insert_BIDS cost: 2686.56
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20500 tuples.
+Time per tuples: 1.07729 3637.68
+BIDS size: 232304
+ASKS size: 289776
+on_insert_ASKS cost: 3448.56
+on_insert_BIDS cost: 2713.28
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20600 tuples.
+Time per tuples: 1.21963 3736.66
+BIDS size: 232624
+ASKS size: 294320
+on_insert_ASKS cost: 3562.42
+on_insert_BIDS cost: 2721.38
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20700 tuples.
+Time per tuples: 0.954808 3813.4
+BIDS size: 233456
+ASKS size: 297200
+on_insert_ASKS cost: 3636.51
+on_insert_BIDS cost: 2742.78
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20800 tuples.
+Time per tuples: 0.38522 3844.16
+BIDS size: 233840
+ASKS size: 298288
+on_insert_ASKS cost: 3664.91
+on_insert_BIDS cost: 2752.9
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 20900 tuples.
+Time per tuples: 0.64258 3895.29
+BIDS size: 233840
+ASKS size: 300720
+on_insert_ASKS cost: 3729.16
+on_insert_BIDS cost: 2752.9
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21000 tuples.
+Time per tuples: 0.51506 3936.05
+BIDS size: 234608
+ASKS size: 301872
+on_insert_ASKS cost: 3760.01
+on_insert_BIDS cost: 2773.56
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21100 tuples.
+Time per tuples: 0.922993 4008.7
+BIDS size: 235568
+ASKS size: 304304
+on_insert_ASKS cost: 3825.97
+on_insert_BIDS cost: 2799.9
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21200 tuples.
+Time per tuples: 1.22552 4104.47
+BIDS size: 236400
+ASKS size: 307888
+on_insert_ASKS cost: 3925.24
+on_insert_BIDS cost: 2823.18
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21300 tuples.
+Time per tuples: 0.651242 4155.03
+BIDS size: 236592
+ASKS size: 310000
+on_insert_ASKS cost: 3984.89
+on_insert_BIDS cost: 2828.65
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21400 tuples.
+Time per tuples: 0.642889 4204.68
+BIDS size: 237872
+ASKS size: 310960
+on_insert_ASKS cost: 4012.48
+on_insert_BIDS cost: 2865.34
+on_delete_ASKS cost: 93.6182
+on_delete_BIDS cost: 56.5426
+Processed 21500 tuples.
+Time per tuples: 1.03172 4283.76
+BIDS size: 238384
+ASKS size: 313840
+on_insert_ASKS cost: 4098.42
+on_insert_BIDS cost: 2880.62
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 21600 tuples.
+Time per tuples: 0.804564 4344.99
+BIDS size: 239344
+ASKS size: 315568
+on_insert_ASKS cost: 4149.82
+on_insert_BIDS cost: 2909.67
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 21700 tuples.
+Time per tuples: 1.40777 4451.38
+BIDS size: 241008
+ASKS size: 318512
+on_insert_ASKS cost: 4239.7
+on_insert_BIDS cost: 2960.57
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 21800 tuples.
+Time per tuples: 1.20004 4541.38
+BIDS size: 242416
+ASKS size: 320944
+on_insert_ASKS cost: 4315.55
+on_insert_BIDS cost: 3004.71
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 21900 tuples.
+Time per tuples: 1.59081 4659.92
+BIDS size: 242416
+ASKS size: 325936
+on_insert_ASKS cost: 4474.63
+on_insert_BIDS cost: 3004.71
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22000 tuples.
+Time per tuples: 0.856357 4723.24
+BIDS size: 244016
+ASKS size: 326960
+on_insert_ASKS cost: 4507.9
+on_insert_BIDS cost: 3057.08
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22100 tuples.
+Time per tuples: 1.31527 4820.01
+BIDS size: 244272
+ASKS size: 330672
+on_insert_ASKS cost: 4630.8
+on_insert_BIDS cost: 3065.7
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22200 tuples.
+Time per tuples: 0.758316 4875.42
+BIDS size: 244848
+ASKS size: 332336
+on_insert_ASKS cost: 4686.93
+on_insert_BIDS cost: 3085.41
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22300 tuples.
+Time per tuples: 1.1208 4956.96
+BIDS size: 244848
+ASKS size: 335600
+on_insert_ASKS cost: 4799.01
+on_insert_BIDS cost: 3085.41
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22400 tuples.
+Time per tuples: 1.91703 5095.31
+BIDS size: 245296
+ASKS size: 340592
+on_insert_ASKS cost: 4974.62
+on_insert_BIDS cost: 3101.5
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22500 tuples.
+Time per tuples: 1.7159 5218.11
+BIDS size: 246256
+ASKS size: 344368
+on_insert_ASKS cost: 5111.22
+on_insert_BIDS cost: 3136.48
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22600 tuples.
+Time per tuples: 1.44655 5320.94
+BIDS size: 246960
+ASKS size: 347568
+on_insert_ASKS cost: 5229.82
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22700 tuples.
+Time per tuples: 0.962676 5389.07
+BIDS size: 246960
+ASKS size: 350128
+on_insert_ASKS cost: 5326.09
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22800 tuples.
+Time per tuples: 1.49247 5494.19
+BIDS size: 246960
+ASKS size: 354032
+on_insert_ASKS cost: 5475.33
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 22900 tuples.
+Time per tuples: 1.59786 5606.09
+BIDS size: 246960
+ASKS size: 358128
+on_insert_ASKS cost: 5635.12
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 23000 tuples.
+Time per tuples: 1.32093 5698.13
+BIDS size: 246960
+ASKS size: 361456
+on_insert_ASKS cost: 5767.21
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 23100 tuples.
+Time per tuples: 1.73787 5818.53
+BIDS size: 246960
+ASKS size: 365744
+on_insert_ASKS cost: 5940.99
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 23200 tuples.
+Time per tuples: 0.924083 5882.23
+BIDS size: 246960
+ASKS size: 367984
+on_insert_ASKS cost: 6033.4
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 95.5793
+on_delete_BIDS cost: 56.5426
+Processed 23300 tuples.
+Time per tuples: 1.39396 5977.93
+BIDS size: 246960
+ASKS size: 371184
+on_insert_ASKS cost: 6170.01
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23400 tuples.
+Time per tuples: 0.951174 6042.99
+BIDS size: 246960
+ASKS size: 373424
+on_insert_ASKS cost: 6265.12
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23500 tuples.
+Time per tuples: 2.10342 6186.16
+BIDS size: 246960
+ASKS size: 378288
+on_insert_ASKS cost: 6475.46
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23600 tuples.
+Time per tuples: 1.66614 6298.97
+BIDS size: 246960
+ASKS size: 382064
+on_insert_ASKS cost: 6642.07
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23700 tuples.
+Time per tuples: 1.84858 6423.4
+BIDS size: 246960
+ASKS size: 386160
+on_insert_ASKS cost: 6826.93
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23800 tuples.
+Time per tuples: 1.20572 6504.18
+BIDS size: 246960
+ASKS size: 388784
+on_insert_ASKS cost: 6947.5
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 23900 tuples.
+Time per tuples: 0.534288 6539.9
+BIDS size: 246960
+ASKS size: 389936
+on_insert_ASKS cost: 7000.93
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 24000 tuples.
+Time per tuples: 0.994907 6607.64
+BIDS size: 246960
+ASKS size: 392112
+on_insert_ASKS cost: 7100.42
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 24100 tuples.
+Time per tuples: 1.0539 6712.34
+BIDS size: 246960
+ASKS size: 395440
+on_insert_ASKS cost: 7205.81
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 24200 tuples.
+Time per tuples: 1.62651 6871.66
+BIDS size: 246960
+ASKS size: 400432
+on_insert_ASKS cost: 7368.45
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 24300 tuples.
+Time per tuples: 1.35461 7002.39
+BIDS size: 246960
+ASKS size: 404464
+on_insert_ASKS cost: 7503.91
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426
+Processed 24400 tuples.
+Time per tuples: 1.36721 7132.75
+BIDS size: 246960
+ASKS size: 408432
+on_insert_ASKS cost: 7640.63
+on_insert_BIDS cost: 3162.53
+on_delete_ASKS cost: 98.3671
+on_delete_BIDS cost: 56.5426

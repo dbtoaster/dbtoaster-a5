@@ -1,0 +1,415 @@
+Initialized input stream...
+Processed 100 tuples.
+Time per tuples: 2.512e-05 0.001319
+SUPPLIER size: 3216
+PARTSUPP size: 4656
+q size: 48
+on_insert_PARTSUPP cost: 0.000996
+on_insert_SUPPLIER cost: 0.00099
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 200 tuples.
+Time per tuples: 0.00014678 0.00891
+SUPPLIER size: 7528
+PARTSUPP size: 8328
+q size: 48
+on_insert_PARTSUPP cost: 0.007572
+on_insert_SUPPLIER cost: 0.00859
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 300 tuples.
+Time per tuples: 0.00039054 0.028579
+SUPPLIER size: 10432
+PARTSUPP size: 13152
+q size: 48
+on_insert_PARTSUPP cost: 0.032736
+on_insert_SUPPLIER cost: 0.021976
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 400 tuples.
+Time per tuples: 0.00076872 0.067158
+SUPPLIER size: 13688
+PARTSUPP size: 17688
+q size: 48
+on_insert_PARTSUPP cost: 0.078776
+on_insert_SUPPLIER cost: 0.052284
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 500 tuples.
+Time per tuples: 0.00136762 0.135679
+SUPPLIER size: 16328
+PARTSUPP size: 22728
+q size: 48
+on_insert_PARTSUPP cost: 0.175416
+on_insert_SUPPLIER cost: 0.09189
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 600 tuples.
+Time per tuples: 0.0021658 0.244114
+SUPPLIER size: 21432
+PARTSUPP size: 25752
+q size: 48
+on_insert_PARTSUPP cost: 0.263898
+on_insert_SUPPLIER cost: 0.219414
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 700 tuples.
+Time per tuples: 0.00323556 0.40603
+SUPPLIER size: 24864
+PARTSUPP size: 30144
+q size: 48
+on_insert_PARTSUPP cost: 0.46274
+on_insert_SUPPLIER cost: 0.34358
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 800 tuples.
+Time per tuples: 0.00445136 0.628738
+SUPPLIER size: 27504
+PARTSUPP size: 35184
+q size: 48
+on_insert_PARTSUPP cost: 0.785208
+on_insert_SUPPLIER cost: 0.465734
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 900 tuples.
+Time per tuples: 0.00581178 0.91948
+SUPPLIER size: 33224
+PARTSUPP size: 37704
+q size: 48
+on_insert_PARTSUPP cost: 0.988466
+on_insert_SUPPLIER cost: 0.843058
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1000 tuples.
+Time per tuples: 0.00742818 1.29104
+SUPPLIER size: 37712
+PARTSUPP size: 41232
+q size: 48
+on_insert_PARTSUPP cost: 1.34824
+on_insert_SUPPLIER cost: 1.22556
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1100 tuples.
+Time per tuples: 0.00926182 1.75428
+SUPPLIER size: 44752
+PARTSUPP size: 42672
+q size: 48
+on_insert_PARTSUPP cost: 1.5233
+on_insert_SUPPLIER cost: 1.97606
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1200 tuples.
+Time per tuples: 0.0112352 2.31619
+SUPPLIER size: 49592
+PARTSUPP size: 45912
+q size: 48
+on_insert_PARTSUPP cost: 2.03052
+on_insert_SUPPLIER cost: 2.59178
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1300 tuples.
+Time per tuples: 0.0132725 2.97997
+SUPPLIER size: 52496
+PARTSUPP size: 50736
+q size: 48
+on_insert_PARTSUPP cost: 2.91528
+on_insert_SUPPLIER cost: 3.03377
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1400 tuples.
+Time per tuples: 0.0155904 3.75964
+SUPPLIER size: 58920
+PARTSUPP size: 52680
+q size: 48
+on_insert_PARTSUPP cost: 3.33969
+on_insert_SUPPLIER cost: 4.16779
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1500 tuples.
+Time per tuples: 0.0181525 4.66742
+SUPPLIER size: 64288
+PARTSUPP size: 55488
+q size: 48
+on_insert_PARTSUPP cost: 4.03506
+on_insert_SUPPLIER cost: 5.28709
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1600 tuples.
+Time per tuples: 0.0205876 5.69697
+SUPPLIER size: 67280
+PARTSUPP size: 60240
+q size: 48
+on_insert_PARTSUPP cost: 5.40051
+on_insert_SUPPLIER cost: 5.97991
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1700 tuples.
+Time per tuples: 0.0235373 6.87398
+SUPPLIER size: 71944
+PARTSUPP size: 63624
+q size: 48
+on_insert_PARTSUPP cost: 6.50433
+on_insert_SUPPLIER cost: 7.22925
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1800 tuples.
+Time per tuples: 0.026355 8.19188
+SUPPLIER size: 76784
+PARTSUPP size: 66864
+q size: 48
+on_insert_PARTSUPP cost: 7.64902
+on_insert_SUPPLIER cost: 8.7195
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 1900 tuples.
+Time per tuples: 0.0298876 9.68645
+SUPPLIER size: 82504
+PARTSUPP size: 69384
+q size: 48
+on_insert_PARTSUPP cost: 8.69219
+on_insert_SUPPLIER cost: 10.6645
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2000 tuples.
+Time per tuples: 0.0329361 11.3334
+SUPPLIER size: 86288
+PARTSUPP size: 73488
+q size: 48
+on_insert_PARTSUPP cost: 10.5372
+on_insert_SUPPLIER cost: 12.1126
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2100 tuples.
+Time per tuples: 0.0361989 13.1435
+SUPPLIER size: 88840
+PARTSUPP size: 78600
+q size: 48
+on_insert_PARTSUPP cost: 13.0891
+on_insert_SUPPLIER cost: 13.1801
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2200 tuples.
+Time per tuples: 0.0398392 15.1356
+SUPPLIER size: 90336
+PARTSUPP size: 84576
+q size: 48
+on_insert_PARTSUPP cost: 16.3939
+on_insert_SUPPLIER cost: 13.8587
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2300 tuples.
+Time per tuples: 0.0445001 17.3608
+SUPPLIER size: 97904
+PARTSUPP size: 85584
+q size: 48
+on_insert_PARTSUPP cost: 17.0208
+on_insert_SUPPLIER cost: 17.6812
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2400 tuples.
+Time per tuples: 0.0481246 19.7672
+SUPPLIER size: 102920
+PARTSUPP size: 88680
+q size: 48
+on_insert_PARTSUPP cost: 19.0491
+on_insert_SUPPLIER cost: 20.4647
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2500 tuples.
+Time per tuples: 0.0522828 22.3815
+SUPPLIER size: 108376
+PARTSUPP size: 91416
+q size: 48
+on_insert_PARTSUPP cost: 21.022
+on_insert_SUPPLIER cost: 23.7195
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2600 tuples.
+Time per tuples: 0.056557 25.2095
+SUPPLIER size: 116472
+PARTSUPP size: 91992
+q size: 48
+on_insert_PARTSUPP cost: 21.4544
+on_insert_SUPPLIER cost: 28.9422
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2700 tuples.
+Time per tuples: 0.0614474 28.2821
+SUPPLIER size: 122104
+PARTSUPP size: 94584
+q size: 48
+on_insert_PARTSUPP cost: 23.6282
+on_insert_SUPPLIER cost: 32.9125
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2800 tuples.
+Time per tuples: 0.0656948 31.567
+SUPPLIER size: 126504
+PARTSUPP size: 98184
+q size: 48
+on_insert_PARTSUPP cost: 26.8942
+on_insert_SUPPLIER cost: 36.2154
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 2900 tuples.
+Time per tuples: 0.0712743 35.1308
+SUPPLIER size: 131872
+PARTSUPP size: 100992
+q size: 48
+on_insert_PARTSUPP cost: 29.6507
+on_insert_SUPPLIER cost: 40.5857
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3000 tuples.
+Time per tuples: 0.0754371 38.9029
+SUPPLIER size: 139000
+PARTSUPP size: 102360
+q size: 48
+on_insert_PARTSUPP cost: 31.0784
+on_insert_SUPPLIER cost: 46.701
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3100 tuples.
+Time per tuples: 0.0808394 42.945
+SUPPLIER size: 143048
+PARTSUPP size: 106248
+q size: 48
+on_insert_PARTSUPP cost: 35.4439
+on_insert_SUPPLIER cost: 50.4189
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3200 tuples.
+Time per tuples: 0.0862808 47.2592
+SUPPLIER size: 149208
+PARTSUPP size: 108408
+q size: 48
+on_insert_PARTSUPP cost: 38.0156
+on_insert_SUPPLIER cost: 56.4746
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3300 tuples.
+Time per tuples: 0.0922426 51.8715
+SUPPLIER size: 152816
+PARTSUPP size: 112656
+q size: 48
+on_insert_PARTSUPP cost: 43.4488
+on_insert_SUPPLIER cost: 60.2651
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3400 tuples.
+Time per tuples: 0.0981203 56.7777
+SUPPLIER size: 156688
+PARTSUPP size: 116688
+q size: 48
+on_insert_PARTSUPP cost: 48.8643
+on_insert_SUPPLIER cost: 64.6611
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3500 tuples.
+Time per tuples: 0.104236 61.9897
+SUPPLIER size: 163024
+PARTSUPP size: 118704
+q size: 48
+on_insert_PARTSUPP cost: 51.7842
+on_insert_SUPPLIER cost: 72.1642
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3600 tuples.
+Time per tuples: 0.109332 67.4564
+SUPPLIER size: 167600
+PARTSUPP size: 122160
+q size: 48
+on_insert_PARTSUPP cost: 57.0389
+on_insert_SUPPLIER cost: 77.8421
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3700 tuples.
+Time per tuples: 0.115893 73.2513
+SUPPLIER size: 171384
+PARTSUPP size: 126264
+q size: 48
+on_insert_PARTSUPP cost: 63.5761
+on_insert_SUPPLIER cost: 82.8936
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3800 tuples.
+Time per tuples: 0.12259 79.381
+SUPPLIER size: 175696
+PARTSUPP size: 129936
+q size: 48
+on_insert_PARTSUPP cost: 69.8106
+on_insert_SUPPLIER cost: 88.9176
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 3900 tuples.
+Time per tuples: 0.130047 85.8835
+SUPPLIER size: 179480
+PARTSUPP size: 134040
+q size: 48
+on_insert_PARTSUPP cost: 77.1274
+on_insert_SUPPLIER cost: 94.6049
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4000 tuples.
+Time per tuples: 0.136193 92.6933
+SUPPLIER size: 182560
+PARTSUPP size: 138720
+q size: 48
+on_insert_PARTSUPP cost: 85.948
+on_insert_SUPPLIER cost: 99.403
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4100 tuples.
+Time per tuples: 0.143376 99.8623
+SUPPLIER size: 184408
+PARTSUPP size: 144408
+q size: 48
+on_insert_PARTSUPP cost: 97.2015
+on_insert_SUPPLIER cost: 102.487
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4200 tuples.
+Time per tuples: 0.15153 107.439
+SUPPLIER size: 192152
+PARTSUPP size: 145272
+q size: 48
+on_insert_PARTSUPP cost: 98.9815
+on_insert_SUPPLIER cost: 115.859
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4300 tuples.
+Time per tuples: 0.158241 115.351
+SUPPLIER size: 198928
+PARTSUPP size: 146928
+q size: 48
+on_insert_PARTSUPP cost: 102.642
+on_insert_SUPPLIER cost: 128.022
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4400 tuples.
+Time per tuples: 0.165141 123.608
+SUPPLIER size: 204736
+PARTSUPP size: 149376
+q size: 48
+on_insert_PARTSUPP cost: 108.165
+on_insert_SUPPLIER cost: 139.012
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4500 tuples.
+Time per tuples: 0.172535 132.235
+SUPPLIER size: 210368
+PARTSUPP size: 151968
+q size: 48
+on_insert_PARTSUPP cost: 114.401
+on_insert_SUPPLIER cost: 150.03
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
+Processed 4600 tuples.
+Time per tuples: 0.181366 141.304
+SUPPLIER size: 213272
+PARTSUPP size: 156792
+q size: 48
+on_insert_PARTSUPP cost: 126.503
+on_insert_SUPPLIER cost: 156.064
+on_delete_PARTSUPP cost: 0
+on_delete_SUPPLIER cost: 0
