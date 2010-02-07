@@ -119,7 +119,7 @@ class SlicerNodeHandler
 end
 
 class PrimarySlicerNodeHandler < SlicerNodeHandler
-  include Java::org::dbtoaster::cumulus::slicer::SlicerNode::PrimarySlicerNodeIFace;
+  include Java::org::dbtoaster::cumulus::slicer::PrimarySlicerNodeIFace;
 
   include CLogMixins;
   self.logger_segment = "Slicer";
@@ -265,7 +265,7 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
   def bootstrap()
     # TODO: The switches and the forwarding tree setup process should be done below in the declare_master proc
     #       Specifically the pending server count is incorrect.
-    $pending_servers = $config.nodes.size + 1; # the +1 is for the switch
+    $pending_servers = $config.nodes.size; # we add the switches below, once we know how many there'll be.
     $local_node.declare_master do |log_message, handler|
       # This block gets executed every time we get a log message from one of our clients;
       # we use it to figure out when the switch/nodes have all started so we can initialize the
@@ -276,7 +276,16 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
         info { "A server just came up; #{$pending_servers} servers left" }
       end
       if $pending_servers <= 0 then
-        sleep(20)
+        # Sort of a hack to put the forwarder initialization here, but jruby takes a good few seconds
+        # to compile a script, so by the time the client comes up, the new forwarding tables should be
+        # properly installed.  Either way, it's more streamlined than sleep(20)
+        
+        $switches.each do |switch_node, clients_and_type|
+          clients, forward_to_nodes = clients_and_type
+          debug { "Setting Switch forwarders @ #{switch_node.getHostName}" }
+          ChefNode.getClient(switch_node).set_forwarders(clients, forward_to_nodes);
+        end
+        
         info { "Server Initialization complete, Starting Client @ #{$config.switch.getHostName}..." }
         $clients[$config.switch.getHostName].start_client
       end
@@ -287,12 +296,13 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
 
     if $config.switch_tree.size == 2 then
       debug { 'Building hierarchical forwarding tree...' }
-      switches = build_chef_forwarding_tree($config.switch_tree[0], $config.switch_tree[1])
+      $switches = build_chef_forwarding_tree($config.switch_tree[0], $config.switch_tree[1])
     else
       debug { "Building flat forwarding tree..." }
-      switches = build_chef_flat_forwarding_tree();
+      $switches = build_chef_flat_forwarding_tree();
     end
-    print_forwarding_tree(switches)
+    print_forwarding_tree($switches)
+    $pending_servers += $switches.size;
 
     nodes = []
     $config.nodes.each do |node, node_info|
@@ -314,19 +324,10 @@ class PrimarySlicerNodeHandler < SlicerNodeHandler
     end
     
     debug { "Starting Switches" }
-    switches.each do |switch_node, clients_and_type|
+    $switches.each do |switch_node, clients_and_type|
       #Logger.info { "Starting Switch @ #{switch_node.getHostName}..." };
       debug { "Starting Switch @ #{switch_node.getHostName}..." }
       $clients[switch_node.getHostName].start_switch;
-    end
-
-    # Wait for switches to start up -- this is a hack for now.
-    sleep(20)
-
-    switches.each do |switch_node, clients_and_type|
-      clients, forward_to_nodes = clients_and_type
-      debug { "Setting Switch forwarders @ #{switch_node.getHostName}" }
-      ChefNode.getClient(switch_node).set_forwarders(clients, forward_to_nodes);
     end
   
     debug { "Starting Monitor"; }

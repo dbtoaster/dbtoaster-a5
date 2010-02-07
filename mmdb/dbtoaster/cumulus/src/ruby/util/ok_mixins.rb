@@ -1,13 +1,20 @@
 class Tokenizer
-  def initialize(string, token)
+  def initialize(string, token, input_source = nil)
     @tokens = string.scan(token);
     @last = nil;
+    @input_source = input_source;
+    @string = string;
   end
   
   def scan
     while @tokens.size > 0
       if !(yield @tokens.shift) then break; end
     end
+  end
+  
+  def peek
+    if @tokens.size > 0 then @tokens[0]
+    else nil; end
   end
   
   def next
@@ -29,10 +36,17 @@ class Tokenizer
   end
   
   def assert_next(token, errstr = nil)
-    if self.next != token then
-      errstr = "Parse Error: Expected '" + token.to_s + "' but found '" + last.to_s + "'" unless errstr != nil;
-      raise SpreadException.new(errstr);
+    case token
+      when String then raise_error(errstr || "Expected '#{token}' but found '#{last}'") unless self.next == token
+      when Array  then raise_error(errstr || "Expected '#{token.join("','")}' but found '#{last}'") unless token.include? self.next;
     end
+    self.last;
+  end
+  
+  def raise_error(errstr);
+    errstr = "#{errstr} (line #{@input_source.lineno})" if @input_source;
+    errstr = "#{errstr} (#{@string})" unless @input_source;
+    raise "Parse Error: #{errstr}";
   end
   
   def tokens_up_to(token)

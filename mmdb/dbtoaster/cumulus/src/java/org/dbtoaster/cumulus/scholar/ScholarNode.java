@@ -24,13 +24,8 @@ public class ScholarNode
   
   public static ScholarNodeClient getClient(InetSocketAddress addr)
   {
-    return getClient(addr, 1);  
-  }
-  
-  public static ScholarNodeClient getClient(InetSocketAddress addr, Integer sendFrameBatchSize)
-  {
     try {
-      ScholarNodeClient c = Client.get(addr, sendFrameBatchSize, ScholarNodeClient.class);
+      ScholarNodeClient c = Client.get(addr, ScholarNodeClient.class);
     return c;
     } catch(Exception e){
       e.printStackTrace();
@@ -40,10 +35,10 @@ public class ScholarNode
   
   public static class ScholarNodeClient extends Client implements ScholarNodeIFace
   {
-    public ScholarNodeClient(InetSocketAddress s, Integer sendFrameBatchSize, Selector selector)
+    public ScholarNodeClient(InetSocketAddress s, Selector selector)
       throws IOException
     {
-      super(s, sendFrameBatchSize, selector);
+      super(s, selector);
     }
 
     public void push_results(Map<NetTypes.Entry, Double> results, int cmdid)

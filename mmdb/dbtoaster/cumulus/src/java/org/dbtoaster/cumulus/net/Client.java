@@ -21,11 +21,10 @@ public abstract class Client
   
   protected static final Logger logger = Logger.getLogger("dbtoaster.Net.Client");
 
-  public Client(InetSocketAddress saddr, Integer sendFrameBatchSize, Selector selector)
+  public Client(InetSocketAddress saddr, Selector selector)
       throws IOException
   {
     this(new TProtocol(new TTransport(saddr)));
-    oprot.setFrameBatchSize(sendFrameBatchSize);
     iprot.getTransport().connect(null);
     connectTransport(this);
     pendingFrames.acquireUninterruptibly();
@@ -51,8 +50,7 @@ public abstract class Client
     new HashMap<Class,HashMap<InetSocketAddress,Object>>();
   protected static SocketMonitor monitor = new SocketMonitor();
   
-  public static <T extends Client> T get(InetSocketAddress addr,
-          Integer sendFrameBatchSize, Class<T> c)
+  public static <T extends Client> T get(InetSocketAddress addr, Class<T> c)
       throws IOException
   {
     HashMap<InetSocketAddress,Object> cTypeSingletons = singletons.get(c);
@@ -65,8 +63,8 @@ public abstract class Client
     if(ret == null){
       try { 
         
-        Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Integer.class, Selector.class);
-        ret = cons.newInstance(addr, sendFrameBatchSize, monitor.selector());
+        Constructor<T> cons = c.getConstructor(InetSocketAddress.class, Selector.class);
+        ret = cons.newInstance(addr, monitor.selector());
         cTypeSingletons.put(addr, ret);
         
       } catch(NoSuchMethodException e){
@@ -189,11 +187,16 @@ public abstract class Client
     
     void handleConnect(Client c) throws IOException
     {
-      c.getOutputProtocol().getTransport().finishConnection();
-      if(c.getOutputProtocol() != c.getInputProtocol()){
+      try {
         c.getOutputProtocol().getTransport().finishConnection();
+        if(c.getOutputProtocol() != c.getInputProtocol()){
+          c.getOutputProtocol().getTransport().finishConnection();
+        }
+        c.processFrame(); //client blocks on this completion;
+      } catch(IOException e) {
+        logger.debug("Error in connection to [" + c.getClass().toString() + " -> " + c.getOutputProtocol().getTransport().getRemote().toString() + "]: " + e.getMessage());
+        throw e;
       }
-      c.processFrame(); //client blocks on this completion;
     }
     
     void handleRead(Client c) throws IOException

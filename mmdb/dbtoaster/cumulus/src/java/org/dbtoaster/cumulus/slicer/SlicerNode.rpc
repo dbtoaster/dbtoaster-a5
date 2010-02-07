@@ -1,0 +1,21 @@
+#default_port 52980
+#optional_arg q quiet
+#optional_arg serve
+#code post_processing
+      // Start up slicer network.
+      String serveOption = conf.getProperty("serve");
+      logger.debug("Serve option: " + serveOption);
+      if ( serveOption == null || !(serveOption.equals("YES")) ) {
+          Thread.sleep(2000);
+          ((PrimarySlicerNodeIFace)handler).bootstrap();
+      } else {
+          System.out.println("====> Server Ready <====");
+      }
+#end
+void start_switch()
+void start_node(int port)
+void start_client()
+void shutdown()
+void start_logging(String host)
+void receive_log(String log_message)
+String poll_stats()

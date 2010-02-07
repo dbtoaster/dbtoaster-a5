@@ -217,7 +217,6 @@ public class TTransport
             // Manually detect overflow.
             if ( writeBuffer.remaining() >= (4+len) )
             {
-                writeBuffer.putInt(len);
                 writeBuffer.put(buf, off, len);
                 //key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
                 registerWriteTask.addKey(key);

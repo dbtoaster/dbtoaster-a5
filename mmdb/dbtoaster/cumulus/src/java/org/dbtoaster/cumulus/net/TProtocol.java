@@ -35,8 +35,7 @@ public class TProtocol
     ObjectOutputStream out;
 
     private final int frameBufferSize = 1024*1024;
-    private int frameBatchCount = 10;
-    private int frameCount = 0;
+    private int frameCount;
 
     public final static Logger logger = Logger.getLogger("dbtoaster.Net.TProtocol");
 
@@ -62,8 +61,6 @@ public class TProtocol
     }
     
     public TTransport getTransport() { return transport; }
-
-    public void setFrameBatchSize(Integer s) { frameBatchCount = s; }
 
     void reset()
     {
@@ -305,13 +302,11 @@ public class TProtocol
     boolean sendFrame()
     {
         ++frameCount;
-        if ( !batch &&
-            (frameBatchCount == 1 ||
-                (frameCount < 100 || ((frameCount % frameBatchCount) == 0))) )
+        if ( !batch )
         {
             try {
-                out.flush();
                 if(outBuffer == null){
+                  out.flush();
                   outBuffer = ByteBuffer.allocate(baos.size()+4);
                   outBuffer.putInt(baos.size());
                   outBuffer.put(baos.toByteArray());
@@ -324,9 +319,7 @@ public class TProtocol
         }
 
         // Pretend as if we succeeded if we're in the middle of a batch.
-        return batch
-            || (frameBatchCount != 1 &&
-                ((frameCount >= 100) && ((frameCount % frameBatchCount) != 0)));
+        return batch;
     }
    
     // Non-blocking read, returns if we have a valid frame to read.
@@ -439,8 +432,7 @@ public class TProtocol
         try {
             while ( !sendFrame() ) { transport.waitForWrite(); }
 
-            if ( !batch && (frameBatchCount == 1 ||
-                    (frameCount < 100 || (frameCount % frameBatchCount) == 0)) )
+            if ( !batch )
             {
                 baos = new ByteArrayOutputStream();
                 out = new ObjectOutputStream(baos);

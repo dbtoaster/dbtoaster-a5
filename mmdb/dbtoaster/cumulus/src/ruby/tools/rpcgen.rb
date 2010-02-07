@@ -3,16 +3,35 @@ raise "Error: RPC file argument required" if ARGV.empty?
 
 messages = Array.new;
 
+tokens = [
+  "[a-zA-Z0-9.!_:]+",
+  ",",
+  "<",
+  ">",
+  "\\(",
+  "\\)",
+  "#"
+]
+
 class RPCParam
   attr_reader :name;
-  def initialize(param)
-    param = param.chomp.split(" ");
-    @name = param.pop;
-    @type = 
-      case param.join(" ")
-        when /List *< *(\w+) *>/ then @wrapper = :list; $~[1]
-        when /.+/ then @wrapper = :none; $~[0]
-      end
+  def initialize(tokenizer)
+    case tokenizer.next
+      when "List" then 
+        @wrapper = :list
+        tokenizer.assert_next("<");
+        @type = tokenizer.next;
+        tokenizer.assert_next(">");
+      when "Map"  then
+        @wrapper = :map
+        tokenizer.assert_next("<");
+        @type = "#{tokenizer.next}#{tokenizer.assert_next(",")}#{tokenizer.next}";
+        tokenizer.assert_next(">");
+      else
+        @wrapper = :none
+        @type = tokenizer.last
+    end
+    @name = tokenizer.next;
   end
   
   def to_s
@@ -22,6 +41,7 @@ class RPCParam
   def full_type
     case @wrapper
       when :list then "List<#{@type}>";
+      when :map  then "Map<#{@type}>";
       when :none then "#{@type}";
     end
   end
@@ -29,13 +49,14 @@ class RPCParam
   def RPCParam.put_type(type, wrapper=:none)
     case wrapper
       when :list then "List"
+      when :map  then "Map"
       when :none then
         case type
-          when "Long"   then "Long"
-          when "int"    then "Integer"
-          when "Double" then "Double"
-          when "String" then "Object"
-          else raise "Unknown type: #{type}"
+          when "Long","long" then "Long"
+          when "int"         then "Integer"
+          when "Double"      then "Double"
+          when "String"      then "Object"
+          else raise "Unknown type: #{type} (input line #{$in.lineno})"
         end
       end
   end
@@ -52,6 +73,7 @@ class RPCParam
     "#{self} = #{if generic_encoder? then "("+full_type+")" else "" end}iprot." +
     case @wrapper
       when :list then "getList(#{@type}.class);"
+      when :map  then "getMap(#{@type.split(",").collect{|e| "#{e}.class"}.join(", ")});"
       when :none then "get#{RPCParam.put_type(@type, @wrapper)}();"
     end
   end
@@ -59,10 +81,17 @@ end
 
 class RPCMessage
   attr_reader :rpc_name;
-  def initialize(ret_type, rpc_name, params)
-    @ret_type, @rpc_name = ret_type, rpc_name;
-    params = params.split(/, */) unless params.is_a? Array;
-    @params = params.collect { |param| RPCParam.new(param) }
+  def initialize(tokenizer)
+    rpc_type = RPCParam.new(tokenizer);
+    @ret_type, @rpc_name = rpc_type.full_type, rpc_type.name;
+    @params = Array.new;
+    tokenizer.assert_next("(");
+    unless tokenizer.peek == ")" then
+      loop do
+        @params.push(RPCParam.new(tokenizer));
+        break unless tokenizer.assert_next([",",")"]) == ",";
+      end
+    end
   end
   
   def to_s
@@ -124,11 +153,47 @@ end
 
 $class_name = File.basename(ARGV[0], ".rpc")
 $package_name = File.basename(File.dirname(ARGV[0]));
+$default_port = 52981
+$cmd_line_args = [ ["\"p\"", "\"port\"", "true"] ];
+$code_chunks = Hash.new { |h,k| h[k] = Array.new }
+$code_chunking_mode = nil;
+
 $out = $stdout;
-
+$in = File.new(ARGV[0]);
+tokenizer_regexp = Regexp.new(tokens.join("|"));
+#$stderr.puts "Using Tokenizer: #{tokenizer_regexp}"
 $messages = 
-  File.new(ARGV[0]).read.scan(/(\w+) (\w+)\(([^)]*)\)/).collect { |ret_type, rpc_name, params| RPCMessage.new(ret_type, rpc_name, params) };
+  $in.read.collect do |line|
+    if $code_chunking_mode then
+      if line.chomp == "#end" then
+        $code_chunking_mode = nil;
+      else
+        $code_chunks[$code_chunking_mode].push(line.chomp);
+      end
+      nil
+    elsif (tok = Tokenizer.new(line, tokenizer_regexp)).peek == "#" then
+      tok.next;
+      case tok.next
+        when "default_port" then $default_port = tok.next
+        when "required_arg" then 
+          tok.next; 
+          $cmd_line_args.push(tok.peek ? ["\"#{tok.last}\"", "\"#{tok.next}\"", true] : ["\"#{tok.last}\"", true]);
+        when "optional_arg" then 
+          tok.next; 
+          $cmd_line_args.push(tok.peek ? ["\"#{tok.last}\"", "\"#{tok.next}\"", false] : ["\"#{tok.last}\"", false]);
+        when "code"
+          $code_chunking_mode = tok.next;
+          
+      end
+      nil
+    else
+      RPCMessage.new(tok) if line.chomp != "";
+    end
+  end.compact
 
+def dump_code_chunk(chunk)
+  $out.puts $code_chunks[chunk].join("\n") if $code_chunks.has_key? chunk;
+end
 
 $out.puts "package org.dbtoaster.cumulus.#{$package_name};";
 $out.puts "";
@@ -141,7 +206,7 @@ $out.puts "";
   "java.net.InetSocketAddress",
   "java.nio.channels.Selector",
   "org.apache.log4j.Logger",
-  "org.dbtoaster.cumulus.net.NetTypes.*",
+  "org.dbtoaster.cumulus.net.NetTypes",
   "org.dbtoaster.cumulus.net.TProtocol.TProtocolException",
   "org.dbtoaster.cumulus.net.Server",
   "org.dbtoaster.cumulus.net.TException",
@@ -162,20 +227,20 @@ $out.puts($messages.collect { |message| message.export_iface("    ") }.join("\n\
 $out.puts "  }";
 $out.puts "";
 $out.puts "  public static #{$class_name}Client getClient(InetSocketAddress addr) throws IOException {";
-$out.puts "    return Client.get(addr, 1, #{$class_name}Client.class);";
-$out.puts "  }";
-$out.puts "";
-$out.puts "  public static #{$class_name}Client getClient(InetSocketAddress addr, Integer sendFrameBatchSize)";
-$out.puts "    throws IOException {";
-$out.puts "    return Client.get(addr, sendFrameBatchSize, #{$class_name}Client.class);";
+$out.puts "    try {"
+$out.puts "      return Client.get(addr, #{$class_name}Client.class);";
+$out.puts "    } catch(Exception e){"
+$out.puts "      e.printStackTrace();"
+$out.puts "      return null;"
+$out.puts "    }"
 $out.puts "  }";
 $out.puts "";
 $out.puts "  public static class #{$class_name}Client extends Client implements #{$class_name}IFace";
 $out.puts "  {";
-$out.puts "    public #{$class_name}Client(InetSocketAddress s, Integer sendFrameBatchSize, Selector selector)";
+$out.puts "    public #{$class_name}Client(InetSocketAddress s, Selector selector)";
 $out.puts "      throws IOException";
 $out.puts "    {";
-$out.puts "      super(s, sendFrameBatchSize, selector);";
+$out.puts "      super(s, selector);";
 $out.puts "    }";
 $out.puts $messages.collect { |m| m.export_encoder("    ") }.join("\n");
 $out.puts "  }";
@@ -199,13 +264,15 @@ $out.puts "";
 $out.puts "  public static void main(String args[]) throws Exception";
 $out.puts "  {";
 $out.puts "    CumulusConfig conf = new CumulusConfig();";
+$cmd_line_args.each { |arg| $out.puts "    conf.defineOption(#{arg.join(", ")});" }
 $out.puts "    conf.configure(args);";
 $out.puts "    logger.debug(\"Starting #{$class_name} server\");";
 $out.puts "    #{$class_name}IFace handler = conf.loadRubyObject(\"#{$package_name}/#{$package_name}.rb\", #{$class_name}IFace.class);";
-$out.puts "    Server s = new Server(new #{$class_name}.Processor(handler), 52981);";
+$out.puts "    Server s = new Server(new #{$class_name}.Processor(handler), (conf.getProperty(\"port\") == null) ? #{$default_port} : Integer.parseInt(conf.getProperty(\"port\")));";
 $out.puts "    Thread t = new Thread(s);";
 $out.puts "";
 $out.puts "    t.start();";
+dump_code_chunk("post_processing");
 $out.puts "    t.join();";
 $out.puts "  }";
 $out.puts "}";

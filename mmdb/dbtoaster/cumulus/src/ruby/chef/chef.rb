@@ -24,7 +24,6 @@ class ChefNodeHandler
     @backoff_nodes = Array.new;
     @metacompiled = nil
     @num_templates = num_templates;
-    @batch_size = 10;
   end
   
   
@@ -87,7 +86,7 @@ class ChefNodeHandler
   
   def update(table, params)
     breadcrumb = cmdid.to_i
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"]) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
       trace { "Update #{breadcrumb} #{table}(#{params.join(",")}) => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
@@ -102,7 +101,7 @@ class ChefNodeHandler
   end
   
   def forward_update(table, params, basecmd)
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"]) } unless @nodelist;
     params = params.collect { |param| param.to_f };
     @nodelist.each do |client|
       trace { "FUpdate  #{basecmd} #{table}(#{params.join(",")}) => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
@@ -121,16 +120,16 @@ class ChefNodeHandler
     end
     @nodelist = nodes.collect do |node_info|
       if map_nodes > 0 then 
-        MapNode.getClient(node_info, @batch_size)
+        MapNode.getClient(node_info)
       else
-        ChefNode.getClient(node_info, @batch_size)
+        ChefNode.getClient(node_info)
       end
     end
   end
   
   def query(mapid, params)
     breadcrumb = cmdid.to_i
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"]) } unless @nodelist;
     @nodelist.each do |client|
       trace { "Query #{breadcrumb} Map #{mapid}[#{params.join(",")}] => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then
@@ -141,7 +140,7 @@ class ChefNodeHandler
   end
   
   def forward_query(mapid, params, basecmd)
-    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"], @batch_size) } unless @nodelist;
+    @nodelist = $config.nodes.values.collect { |node_info| MapNode.getClient(node_info["address"]) } unless @nodelist;
     @nodelist.each do |client|
       trace { "FQuery #{basecmd} Map #{mapid}[#{params.join(",")}] => #{client.getOutputProtocol.getTransport.getRemote.getHostName}" }
       if client.is_a? MapNode::MapNodeClient then

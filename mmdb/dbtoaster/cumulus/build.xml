@@ -98,7 +98,7 @@ log4j.appender.A1.layout.ConversionPattern=%d{HH:mm:ss,SSS} [%X{hostname}-%t] %-
       <targetfiles><pathelement path="${rpc.target}"/></targetfiles>
       <sequential>
         <echo message="Compiling ${rpc.source}"/>
-        <exec executable="${bin}/rpcgen.sh" output="${rpc.target}" failonerror="true">
+        <exec executable="${bin}/rpcgen.sh" output="${rpc.target}" logError="true" failonerror="true">
           <arg value="${rpc.source}" />
         </exec>
       </sequential>
