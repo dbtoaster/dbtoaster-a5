@@ -401,6 +401,7 @@ namespace DBToaster
             string log_file_name;
             string results_file_name;
             string stats_file_name;
+            string progress_trace_file_name;
 
             EngineOptions() : desc("Supported options")
             {
@@ -411,7 +412,9 @@ namespace DBToaster
                     ("results,r", Options::value<string>(&results_file_name)->
                         default_value("engine.results"), "set results file")
                     ("stats,s", Options::value<string>(&stats_file_name)->
-                        default_value("engine.stats"), "sets stats file");
+                        default_value("engine.stats"), "sets stats file")
+                    ("progress,p", Options::value<string>(&progress_trace_file_name)->
+                     default_value("engine.progress"), "set progress trace file");
             }
 
             void usage(char* argv[])
