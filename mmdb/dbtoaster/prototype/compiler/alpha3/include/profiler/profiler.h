@@ -682,7 +682,52 @@ namespace DBToaster
                        << (sec + (usec / 1000000.0)) << endl;
             }
         }
+        
+        // Workload progress statistics
+        unsigned int handler_counter = 0;
 
+        struct ProgressIndicator
+        {
+            unsigned int counter;
+            double app_t;
+            double wall_t;
+            ProgressIndicator(unsigned int c, double at, double wt)
+            {
+                counter = c;
+                app_t = at;
+                wall_t = wt;
+            }
+
+            string as_string() const
+            {
+                ostringstream oss;
+                oss << counter << "," << app_t << "," << wall_t;
+                return oss.str();
+            }
+        };
+
+        list<ProgressIndicator> progress_trace;
+
+        void trace_progress(double app_t, struct timeval& wall_t)
+        {
+            // Update progress stats.
+            ++handler_counter;
+            if ( (handler_counter % handler_frequency) == 0 ) {
+                double wt = wall_t.tv_sec + (wall_t.tv_usec / 1000000.0);
+                ProgressIndicator p(handler_counter, app_t, wt);
+                progress_trace.push_back(p);
+            }
+        }
+
+        void output_progress_trace(const char* filename)
+        {
+            ofstream trace_out(filename);
+            list<ProgressIndicator>::const_iterator pt_it = progress_trace.begin();
+            list<ProgressIndicator>::const_iterator pt_end = progress_trace.end();
+            for (; pt_it != pt_end; ++pt_it)
+                trace_out << pt_it->as_string() << endl;
+            trace_out.close();
+        }
     };
 };
 
