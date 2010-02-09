@@ -525,10 +525,14 @@ struct
         BG.clear_declarations();
         BG.clear_relations();
 
-        let flat_term_l = List.map
-            (fun x -> let (tc,bsv) = flatten_term params x in
-                (mk_cond_agg tc, bsv))
-            (List.map readable_term (List.map roly_poly term_l))
+        let flat_term_l = 
+            if compilation_level = 0 then
+                List.map (fun t -> (readable_term (roly_poly t),[])) term_l
+            else
+                List.map
+                    (fun x -> let (tc,bsv) = flatten_term params x in
+                        (mk_cond_agg tc, bsv))
+                    (List.map readable_term (List.map roly_poly term_l))
         in
 
         Debug.debug_flattening flat_term_l;

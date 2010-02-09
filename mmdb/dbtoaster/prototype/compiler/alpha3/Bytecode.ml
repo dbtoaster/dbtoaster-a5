@@ -1132,6 +1132,9 @@ struct
             : maintenance_terms_and_deps * I.nested_assign_t list
             =
         let debug_leaf_map r lf_map_name lf_bigsum_vars self_bigsum_rels =
+            print_endline ("term_lf_as_nblock "^lf_map_name^" bsvr: "^
+                (String.concat "," 
+                    (List.map (fun (x,_,_) -> fst x) bigsum_vars_and_rels)));
             print_endline ("term_lf_as_nblock "^lf_map_name^" lf expr: "^
                 (relalg_as_string (make_relalg r) []));
             print_endline ("term_lf_as_nblock "^lf_map_name^" leaf map bigsum: "^
@@ -1181,9 +1184,10 @@ struct
                           let f_vars = term_vars (make_term f) in
                           let local_bigsum_vars =
                               Util.ListAsSet.inter bigsum_vars f_vars in
-                          let next_bigsum_vars_and_rels = List.filter
-                              (fun (bsv,v,r) -> not(List.mem bsv local_bigsum_vars))
-                              bigsum_vars_and_rels
+                          let next_bigsum_vars_and_rels =
+                              List.filter
+                                  (fun (bsv,v,r) -> not(List.mem bsv local_bigsum_vars))
+                                  bigsum_vars_and_rels
                           in
                           let (cstr_maint, cstr_block) =
                               constraints_as_nblock
@@ -1395,16 +1399,21 @@ struct
             (arg_bindings: var_bindings)
             : maintenance_terms_and_deps * I.nested_assign_t list
             =
-        let debug_term_as_bytecode_inputs mapn params loop_vars_and_pos t =
+        let debug_term_as_bytecode_inputs
+                mapn params loop_vars_and_pos bigsum_vars_and_rels t
+        =
             print_endline ("term_as_bytecode "^mapn^" input: "^
                 (term_as_string (make_term t) []));
             print_endline ("term_as_bytecode "^mapn^" params: "^
                 (String.concat "," (List.map fst params)));
             print_endline ("term_as_bytecode "^mapn^" loop_vars_and_pos: "^
-                (String.concat "," (List.map fst (List.map fst loop_vars_and_pos))))
+                (String.concat "," (List.map fst (List.map fst loop_vars_and_pos))));
+            print_endline ("term_as_bytecode "^mapn^" bsvr: "^
+                (String.concat ","
+                    (List.map (fun (x,_,_) -> fst x) bigsum_vars_and_rels)))
         in
 
-        debug_term_as_bytecode_inputs mapn params loop_vars_and_pos t;
+        debug_term_as_bytecode_inputs mapn params loop_vars_and_pos bigsum_vars_and_rels t;
         
         let extra_vars = Util.ListAsSet.multiunion
             [(List.map fst loop_vars_and_pos);
@@ -1503,6 +1512,11 @@ struct
                         else
                             let loop_vars_and_pos = snd (List.fold_left
                                 (fun (cnt,acc) v -> (cnt+1,acc@[v,cnt])) (0,[]) params)
+                            in
+                            let param_bc =
+                                I.MapInsert(map_ds, map_entry, M.PTVal(A.Const(Int(0)))) in
+                            let param_r =
+                                [I.Assign([I.MapAssign([param_bc])])]
                             in
                                 [I.ForEach(map_ds, mapn, loop_vars_and_pos, x)]
                 in

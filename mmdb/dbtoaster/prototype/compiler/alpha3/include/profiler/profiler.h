@@ -685,7 +685,7 @@ namespace DBToaster
         
         // Workload progress statistics
         unsigned int handler_counter = 0;
-        unsigned int handler_frequency = 100;
+        unsigned int handler_frequency = 1000;
 
         struct ProgressIndicator
         {
