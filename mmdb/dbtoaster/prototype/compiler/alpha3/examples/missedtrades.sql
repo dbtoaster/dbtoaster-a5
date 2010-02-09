@@ -16,8 +16,10 @@ CREATE TABLE ASKS (t double, id int, broker_id int, p double, v double)
     ADAPTOR 'DBToaster::DemoDatasets::AsksOrderbookTupleAdaptor'
     BINDINGS 't,t,id,id,broker_id,broker_id,p,price,v,volume';
 
-
--- look at spread between significant orders
-select sum(a.p+-1*b.p) from bids b, asks a
-where ( b.v>0.0001*(select sum(b1.v) from bids b1) )
-and ( a.v>0.0001*(select sum(a1.v) from asks a1) )
+select b.broker_id, sum(a.p*a.v+-1*(b.p*b.v))
+from bids b, asks a
+where 0.25*(select sum(a1.v) from asks a1) >
+           (select sum(a2.v) from asks a2 where a2.p > a.p)
+and   0.25*(select sum(b1.v) from bids b1) >
+           (select sum(b2.v) from bids b2 where b2.p > b.p)
+group by b.broker_id

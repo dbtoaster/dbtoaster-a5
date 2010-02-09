@@ -124,7 +124,7 @@ CREATE TABLE NATION (
     TUPLE 'DBToaster::DemoDatasets::nation'
     ADAPTOR 'DBToaster::DemoDatasets::NationTupleAdaptor';
 
-select c.nationkey, n1.regionkey, n2.regionkey, p.mfgr,
+select c.nationkey, n1.regionkey, n2.regionkey, -- p.mfgr,
     sum((l.extendedprice * (100+(-1*l.discount))))
 from
     lineitem l,
@@ -140,4 +140,4 @@ and l.suppkey = s.suppkey
 and l.partkey = p.partkey
 and c.nationkey = n1.nationkey
 and s.nationkey = n2.nationkey
-group by c.nationkey, n1.regionkey, n2.regionkey, p.mfgr;
+group by c.nationkey, n1.regionkey, n2.regionkey;--, p.mfgr;
