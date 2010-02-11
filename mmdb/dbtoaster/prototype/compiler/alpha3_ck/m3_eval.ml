@@ -94,6 +94,10 @@ let rec eval_calc (incr_calc: calc_t)
                   (theta: valuation_t) (db: db_t)
                 : (var_t list * slice_t * db_t) =
 
+   print_string("CALC <incr> "^(list_to_string
+        (fun (k,v) -> "("^k^", "^(string_of_int v)^")") (sshowmap theta))
+        ^" <db> --   ");
+
    (* do arithmetics *)
    let do_op op m1 m2 =
       let (outv1, res1, db1) = eval_calc m1 theta db in
@@ -172,6 +176,11 @@ let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
 
 let eval_stmt (theta: valuation_t) (db: db_t)
               ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc) : db_t =
+(*
+   print_string("STMT "^(list_to_string
+        (fun (k,v) -> "("^k^", "^(string_of_int v)^")") (sshowmap theta))
+        ^" <db> (("^lhs_mapn^" <lhs_inv> <lhs_outv> <init_calc>), incr_calc) --   ");
+*)
    let lhs_inv_imgs     = apply theta lhs_inv in
    let lhs_map:map_t    = (StringMap.find lhs_mapn db) in
    let (old_slice, db1) =
@@ -212,15 +221,16 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
    let (inv_imgs, _) = List.split
       (map_to_list ListMap.fold (fun x->x) (StringMap.find lhs_mapn db))
    in
-   let ii_filter inv_img =
+   let ii_filter inv_img : db_t list =
       let inv_theta  = (make_valuation lhs_inv inv_img) in
       if (consistent_valuations theta inv_theta) then
         [(eval_stmt (combine_valuations theta inv_theta) db
                 ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc))]
       else []
    in
-   List.fold_left (fun db0 x -> db_merge x db0 ) StringMap.empty
-                  (List.flatten (List.map ii_filter inv_imgs))
+   let dbs = (List.flatten (List.map ii_filter inv_imgs)) in
+   if dbs = [] then db
+   else List.fold_left (fun db0 x -> db_merge x db0 ) StringMap.empty dbs
 ;;
 
 
@@ -228,5 +238,16 @@ let eval_trig (trig_args: var_t list) (tuple: const_t list) db block =
    let theta = make_valuation trig_args tuple
    in
    List.fold_left (fun db stmt -> eval_stmt_loop theta db stmt) db block;;
+
+
+
+let make_empty_db schema: db_t =
+   list_to_smap (List.map (fun (mapn, itypes, rtypes) ->
+             (mapn, (if(List.length itypes = 0) then
+                list_to_lmap [([], list_to_lmap [])]
+             else list_to_lmap []))
+            ) schema)
+;;
+
 
 

@@ -14,7 +14,6 @@ type mapacc_t = map_id_t * (var_t list) * (var_t list) * calc_t
 
 and  calc_t = Mult of calc_t * calc_t
             | Add  of calc_t * calc_t
-            | Neg  of calc_t
             | Const of const_t
             | Var of var_t
             | IfThenElse0 of cond_t * calc_t  (* if cond then calc else 0 *)
