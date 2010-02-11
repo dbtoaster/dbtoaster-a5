@@ -93,11 +93,11 @@ let apply theta l = List.map (fun x -> StringMap.find x theta) l;;
 let rec eval_calc (incr_calc: calc_t)
                   (theta: valuation_t) (db: db_t)
                 : (var_t list * slice_t * db_t) =
-
+(*
    print_string("CALC <incr> "^(list_to_string
         (fun (k,v) -> "("^k^", "^(string_of_int v)^")") (sshowmap theta))
         ^" <db> --   ");
-
+*)
    (* do arithmetics *)
    let do_op op m1 m2 =
       let (outv1, res1, db1) = eval_calc m1 theta db in
