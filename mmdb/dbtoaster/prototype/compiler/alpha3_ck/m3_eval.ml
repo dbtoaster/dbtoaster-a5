@@ -221,16 +221,14 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
    let (inv_imgs, _) = List.split
       (map_to_list ListMap.fold (fun x->x) (StringMap.find lhs_mapn db))
    in
-   let ii_filter inv_img : db_t list =
+   let ii_filter db inv_img : db_t =
       let inv_theta  = (make_valuation lhs_inv inv_img) in
       if (consistent_valuations theta inv_theta) then
-        [(eval_stmt (combine_valuations theta inv_theta) db
-                ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc))]
-      else []
+        (eval_stmt (combine_valuations theta inv_theta) db
+                ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc))
+      else db
    in
-   let dbs = (List.flatten (List.map ii_filter inv_imgs)) in
-   if dbs = [] then db
-   else List.fold_left (fun db0 x -> db_merge x db0 ) StringMap.empty dbs
+   List.fold_left ii_filter db inv_imgs
 ;;
 
 
