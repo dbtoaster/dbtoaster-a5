@@ -89,6 +89,7 @@ gshowmap db;;
                       += Sum(1, b<a);
 
      (for y) q1[y][b] := Sum(1,            y<z and R(z,b))
+                       = Sum_{z: y<z} q3[z,b]
                       += Sum(1, y<a);
 
      (for z) q2[z][a] := Sum(1, R(a,y) and y<z           )
@@ -118,7 +119,9 @@ let prog2: prog_t =
       (("q", [], ["a"; "b"], (Null[])),
        IfThenElse0((Lt(Var("b"), Var("a"))), Const(1)));
 
-      (("q1", ["y"], ["b"], (Null["b"])),
+      (("q1", ["y"], ["b"],
+        IfThenElse0((Lt(Var("y"), Var("z"))),
+                     MapAccess("q3", [], ["z"; "b"], (Null ["z"; "b"])))),
        IfThenElse0((Lt(Var("y"), Var("a"))), Const(1)));
 
       (("q2", ["z"], ["a"],

@@ -18,11 +18,6 @@ and  calc_t = Mult of calc_t * calc_t
             | Var of var_t
             | IfThenElse0 of cond_t * calc_t  (* if cond then calc else 0 *)
             | MapAccess of mapacc_t
-            | BigSum of (var_t list) * cond_t * calc_t
-              (* BigSum(vs, cond[vs; ...], calc[vs; ...]):
-                 all vars of vs must be of type Out in calc.
-                 Sum up the calc values for those values of vs that
-                 satisfy cond, where vs are In vars in cond. *)
             | Null of (var_t list) (* the mythical null-slice *)
 and  cond_t = Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
@@ -45,6 +40,9 @@ type stmt_t = mapacc_t * calc_t;;
 (*
 The loop vars are implicit: the variables of the left-hand side minus
 the trigger arguments.
+
+The bigsum vars are implicit: (the variables of the right-hand side
+minus left-hand-side variables) - trigger vars
 *)
 
 type pm_t = Insert | Delete;;

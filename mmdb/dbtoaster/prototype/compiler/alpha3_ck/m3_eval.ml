@@ -18,8 +18,18 @@ type valuation_t = int StringMap.t;;
 
 
 
+(* if there are duplicate keys, they get overwritten *)
 let list_to_lmap l =
    List.fold_left (fun m (k,v) ->   ListMap.add k v m)   ListMap.empty l;;
+
+
+let list_to_lmap2 l =
+   List.fold_left (fun m (k,v) ->
+                   let v2 = if(ListMap.mem k m) then ListMap.find k m
+                            else 0 in
+                   ListMap.add k (v+v2) m)
+                  ListMap.empty l
+;;
 
 let list_to_smap l =
    List.fold_left (fun m (k,v) -> StringMap.add k v m) StringMap.empty l;;
@@ -56,13 +66,7 @@ let merge reconcile_f (m1: 'a) (m2: 'a): 'a =
        else v) m) m1 m2;;
 
 let slice_merge sl1 sl2 : slice_t = merge (+) sl1 sl2;;
-let map_merge m1 m2 : map_t = merge slice_merge m1 m2;;
 
-let db_merge db1 db2 : db_t =
-   StringMap.fold (fun mapn map db -> StringMap.add mapn
-      (if (StringMap.mem mapn db) then
-         (map_merge (StringMap.find mapn db) map)
-       else map) db) db1 db2;;
 
 
 (* VALUATIONS *)
@@ -143,7 +147,6 @@ let rec eval_calc (incr_calc: calc_t)
                                       (StringMap.find x theta))], db)
                 (* note: x is not necessarily and out-var! remove from the
                    slice keys later! *)
-    | BigSum(_, _, _) -> failwith "not implemented"
     | Null(outv) -> (outv, (list_to_lmap []), db)
 ;;
 
@@ -156,10 +159,6 @@ let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
    let ((rhs_outv: var_t list), slice0, db0) = (eval_calc calc theta db)
    in
    let slice_filter (k,_) =
-      if (List.length rhs_outv) != (List.length k) then
-         failwith ("ARGH: "^(list_to_string (fun x->x) rhs_outv)^" vs. "
-                  ^(slice_to_string slice0))
-      else
       (consistent_valuations theta (make_valuation rhs_outv k))
    in
    let key_refiner (k,v) =  (* valuations are consistent *)
@@ -169,8 +168,13 @@ let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
       let new_k = apply ext_theta lhs_outv in
       (new_k, v)
    in
-   ((list_to_lmap (List.map key_refiner
-      (List.filter slice_filter (showslice slice0)))), db0)
+   let slice_list =
+   (List.map key_refiner
+      (List.filter slice_filter (showslice slice0)))
+   in
+      (* in the presence of bigsum variables, there may be duplicates
+         after key_refinement. These have to be summed up. *)
+   ((list_to_lmap2 slice_list), db0)
 ;;
 
 
