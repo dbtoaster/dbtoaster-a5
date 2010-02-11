@@ -7,11 +7,12 @@ type var_type_t = VT_String | VT_Int;;
 type var_t = var_id_t;;  (*  * var_type_t *)
 type map_id_t = string;;
 
-type mapacc_t = map_id_t * (var_t list) * (var_t list);;
+                                                        (* inital val *)
+type mapacc_t = map_id_t * (var_t list) * (var_t list) * calc_t
 (* the variables are either of In or Out type; this is globally declared in
    the M3 program's (map_type_t list) field (see below). *)
 
-type calc_t = Mult of calc_t * calc_t
+and  calc_t = Mult of calc_t * calc_t
             | Add  of calc_t * calc_t
             | Neg  of calc_t
             | Const of const_t
@@ -23,6 +24,7 @@ type calc_t = Mult of calc_t * calc_t
                  all vars of vs must be of type Out in calc.
                  Sum up the calc values for those values of vs that
                  satisfy cond, where vs are In vars in cond. *)
+            | Null of (var_t list) (* the mythical null-slice *)
 and  cond_t = Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
             | Lt  of calc_t * calc_t;;
@@ -39,11 +41,8 @@ Q is a conjunctive query, so it can be represented as a *list* of
 atomic formulae. Or shall the frontend decide the join order?
 *)
 
-(*             (left-hand side,  init,         increment) *)
-(*
-type stmt_t = mapacc_t       * full_calc_t * calc_t;;
-*)
-type stmt_t = mapacc_t       *      calc_t * calc_t;;
+              (* left-hand side, increment *)
+type stmt_t = mapacc_t * calc_t;;
 (*
 The loop vars are implicit: the variables of the left-hand side minus
 the trigger arguments.
@@ -71,5 +70,13 @@ type map_type_t = map_id_t * (var_type_t list) * (var_type_t list);;
    be of Out type. *)
 
 type prog_t = (map_type_t list) * (trig_t list);;
+
+
+(*
+let validate_prog prog =
+   ()
+*)
+
+
 
 

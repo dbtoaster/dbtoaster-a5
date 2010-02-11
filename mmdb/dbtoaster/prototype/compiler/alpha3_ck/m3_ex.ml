@@ -4,7 +4,7 @@ let prog0: prog_t =
 (
 [ ("q", [], [VT_Int; VT_Int]) ],
 [
-   (Insert, "R", ["a"; "b"], [ (("q", [], ["a"; "b"]), Const(0), Var("a")) ])
+   (Insert, "R", ["a"; "b"], [ (("q", [], ["a"; "b"], Const(0)), Var("a")) ])
 ])
 ;;
 
@@ -44,12 +44,13 @@ let prog2: prog_t =
 [
    (Insert, "R", ["a"; "b"],
       [
-      (("q", [], ["a"]), Const(0), MapAccess("q1", [], ["b"]));
-      (("q", [], ["x"]), Const(0), MapAccess("q2", [], ["x"; "a"]));
-      (("q", [], ["a"]), Const(0),
+      (("q", [], ["a"],       Const(0)), MapAccess("q1", [], ["b"], Const(0)));
+      (("q", [], ["x"],       Var("x")),
+       MapAccess("q2", [], ["x"; "a"], Var("x")));
+      (("q", [], ["a"],       Const(0)),
               IfThenElse0((Eq(Var("b"), Var("a"))), Const(1)));
-      (("q1", [], ["a"]), Const(0), Const(1));
-      (("q2", [], ["a"; "b"]), Const(0), Const(1))
+      (("q1", [], ["a"],      Const(0)), Const(1));
+      (("q2", [], ["a"; "b"], Const(0)), Const(1))
       ])
 ]);;
 
@@ -80,9 +81,9 @@ let prog3: prog_t =
 [
    (Insert, "R", ["a"; "b"],
    [
-      (("q", [], []), Const(0), MapAccess("q1", [], ["x"]));
-                                  (* x is a bigsum variable *)
-      (("q1", [], ["a"]), Const(0), Var("a"))
+      (("q", [], [],     Const(0)), MapAccess("q1", [], ["x"], Const(0)));
+                                    (* x is a bigsum variable *)
+      (("q1", [], ["a"], Const(0)), Var("a"))
    ])
 ])
 ;;
@@ -135,63 +136,35 @@ let prog1: prog_t =
 [
    (Insert, "R", ["a"; "b"],
       [
-      (("q", [], ["a"; "w"]),                         (* lhs  *)
-       Const(0),
-(*
-Sum(1, R(a,y) and y<z and R(z,w)),         (* init; still pseudocode *)
-*)
-       MapAccess("q1", ["b"], ["w"]));              (* incr *)
+      (("q", [], ["a"; "w"], (Null[])),
+       MapAccess("q1", ["b"], ["w"], (Null ["w"])));
 
-      (("q", [], ["x"; "b"]),
-       Const(0), (* temporary: incorrect *)
-(*
-       Sum(1, R(x,y) and y<z and R(z,b)),
-*)
-       MapAccess("q2", ["a"], ["x"]));
+      (("q", [], ["x"; "b"], (Null[])),
+       MapAccess("q2", ["a"], ["x"], (Null ["x"])));
 
-      (("q", [], ["a"; "b"]),
-       Const(0), (* temporary: incorrect *)
-(*
-       Sum(1, R(a,y) and y<z and R(z,b)),
-*)
+      (("q", [], ["a"; "b"], (Null[])),
        IfThenElse0((Lt(Var("b"), Var("a"))), Const(1)));
 
-      (("q1", ["y"], ["b"]),
-       Const(0), (* temporary: incorrect *)
-(*
-       Sum(1, y<z and R(z,b)),
-*)
+      (("q1", ["y"], ["b"], (Null["b"])),
        IfThenElse0((Lt(Var("y"), Var("a"))), Const(1)));
 
-      (("q2", ["z"], ["a"]),
-       Const(0), (* temporary: incorrect *)
-(*
-       Sum(1, R(a,y) and y<z),
-*)
+      (("q2", ["z"], ["a"], (Null["a"])),
        IfThenElse0((Lt(Var("b"), Var("z"))), Const(1)))
       ])
 ]);;
 
-
 let q  = list_to_lmap [([], list_to_lmap [])];;
-let q1 = list_to_lmap [([2], list_to_lmap [([2],1); ([4],1)])];;
-let q2 = list_to_lmap [([3], list_to_lmap [([1],1); ([3],1)])];;
-
-let db:db_t = list_to_smap [("q", q); ("q1", q1); ("q2", q2)];;
-
+let q1 = list_to_lmap [];;
+let q2 = list_to_lmap [];;
+let db = list_to_smap [("q", q); ("q1", q1); ("q2", q2)];;
 gshowmap db;;
 
+let (_, _, _, block) = List.hd (snd prog1);;
 
 let db = eval_trig ["a";"b"] [4;2] db block;;
 gshowmap db;;
 
 let db = eval_trig ["a";"b"] [1;1] db block;;
 gshowmap db;;
-
-
-
-
-
-
 
 

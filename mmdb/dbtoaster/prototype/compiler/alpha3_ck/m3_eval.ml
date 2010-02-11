@@ -24,22 +24,21 @@ let list_to_lmap l =
 let list_to_smap l =
    List.fold_left (fun m (k,v) -> StringMap.add k v m) StringMap.empty l;;
 
-let robust_list_to_smap l =
-   List.fold_left (fun m (k,v) -> if (StringMap.mem k m) then m
-                                  else StringMap.add k v m) StringMap.empty l;;
-
-(*
-let robust_list_to_lmap l =
-   List.fold_left (fun m (k,v) -> if (ListMap.mem k m) then m
-                                  else ListMap.add k v m) ListMap.empty l;;
-*)
-
 let map_to_list fold_f f m = fold_f (fun s n l -> (s, f n) :: l) m [];;
 
 let showslice m = map_to_list ListMap.fold   (fun x->x) m;;
 let lshowmap  m = map_to_list ListMap.fold   showslice  m;;
 let gshowmap  m = map_to_list StringMap.fold lshowmap   m;;
 let sshowmap  m = map_to_list StringMap.fold (fun x->x) m;;
+
+let list_to_string elem_to_string l =
+   "["^(List.fold_left (fun s x -> s^" "^(elem_to_string x)) "" l)^" ]";;
+
+let slice_to_string m = list_to_string
+   (fun (k,v) -> "("^(list_to_string string_of_int k)^", "
+                    ^(string_of_int v)^")")
+   (showslice m);;
+
 
 let map_product valcomb_f m1 m2 =
    let l1 = (showslice m1) in
@@ -78,10 +77,9 @@ let combine_valuations theta1 theta2 : valuation_t =
 ;;
 
 let consistent_valuations (theta1: valuation_t) (theta2: valuation_t) : bool =
-   let l = map_to_list StringMap.fold (fun x->x) theta1
-   in
    List.for_all (fun (x,y) -> (not(StringMap.mem x theta2)) ||
-                                 ((StringMap.find x theta2) = y)) l
+                                 ((StringMap.find x theta2) = y))
+                (map_to_list StringMap.fold (fun x->x) theta1)
 ;;
 
 let apply theta l = List.map (fun x -> StringMap.find x theta) l;;
@@ -96,22 +94,25 @@ let rec eval_calc (incr_calc: calc_t)
                   (theta: valuation_t) (db: db_t)
                 : (var_t list * slice_t * db_t) =
 
-   print_string "CALC--";
    (* do arithmetics *)
    let do_op op m1 m2 =
       let (outv1, res1, db1) = eval_calc m1 theta db in
       let (outv2, res2, db2) = eval_calc m2 theta db1 in
          ((outv1@outv2), (map_product op res1 res2), db2)
+         (* the variable ordering is not necessarily the same as in
+            the map outv spec. *)
    in
    (* check a condition *)
    let tst (op: int -> int -> bool) m1 m2 m =
-       let (_, bb, _) = do_op op m1 m2 in
-       let b = ListMap.find [] bb in
-       let res0 = list_to_lmap [([], 0)] in
-       if b then (eval_calc m theta db) else ([], res0, db)
+       let (cond_outv, bb, db1) =
+          do_op (fun x y -> if (op x y) then 1 else 0) m1 m2 in
+       let bb2 = (List.for_all (fun (_,v) -> (v=1)) (showslice bb)) in
+       if bb2 then (eval_calc m theta db1)
+       else ([], (list_to_lmap [([], 0)]), db1)
+            (* TODO: is it correct to assume there are no variables here *)
    in
    match incr_calc with
-      MapAccess(mapn, inv, outv) ->
+      MapAccess(mapn, inv, outv, init_calc) ->
       (
          let inv_imgs : const_t list = apply theta inv
          in
@@ -120,12 +121,12 @@ let rec eval_calc (incr_calc: calc_t)
              (outv, (ListMap.find inv_imgs m), db)
           else
              (* initial value computation for leaves of the expression tree. *)
-             (* FIXME *)
-             let init_calc = Const(0) in
-             let (_, init_slice, _) = eval_calc init_calc theta db in
-             let m2 = (ListMap.add inv_imgs init_slice m) in
-             ([], init_slice, StringMap.add mapn m2 db)
+             (
+             let (init_outv, init_slice, _) = eval_calc init_calc theta db in
+             (init_outv, init_slice,
+              StringMap.add mapn (ListMap.add inv_imgs init_slice m) db)
                         (* update the database *)
+             )
          )
       )
     | Add (c1, c2)                -> do_op ( + ) c1 c2
@@ -134,8 +135,12 @@ let rec eval_calc (incr_calc: calc_t)
     | IfThenElse0(Leq(c1, c2), c) -> tst  ( <= ) c1 c2 c
     | IfThenElse0( Eq(c1, c2), c) -> tst  ( =  ) c1 c2 c
     | Const(i)                    -> ([], list_to_lmap [([], i)], db)
-    | Var(x) -> ([], list_to_lmap [([], (StringMap.find x theta))], db)
-    | _ -> failwith "not implemented"
+    | Var(x) -> ([x], list_to_lmap [([(StringMap.find x theta)],
+                                      (StringMap.find x theta))], db)
+                (* note: x is not necessarily and out-var! remove from the
+                   slice keys later! *)
+    | BigSum(_, _, _) -> failwith "not implemented"
+    | Null(outv) -> (outv, (list_to_lmap []), db)
 ;;
 
 
@@ -144,17 +149,19 @@ let rec eval_calc (incr_calc: calc_t)
    extends the keys of slice back to the signature of the lhs map *)
 let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
                 : (slice_t * db_t) =
-   print_string "CALC2--";
    let ((rhs_outv: var_t list), slice0, db0) = (eval_calc calc theta db)
    in
    let slice_filter (k,_) =
       if (List.length rhs_outv) != (List.length k) then
-         failwith "ARGH"
+         failwith ("ARGH: "^(list_to_string (fun x->x) rhs_outv)^" vs. "
+                  ^(slice_to_string slice0))
       else
       (consistent_valuations theta (make_valuation rhs_outv k))
    in
-   let key_refiner (k,v) =  (* valu's are consistent *)
+   let key_refiner (k,v) =  (* valuations are consistent *)
       let ext_theta = combine_valuations theta (make_valuation rhs_outv k) in
+                  (* normalizes the key orderings to that of the variable
+                     ordering lhs_outv. *)
       let new_k = apply ext_theta lhs_outv in
       (new_k, v)
    in
@@ -164,10 +171,9 @@ let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
 
 
 let eval_stmt (theta: valuation_t) (db: db_t)
-              ((lhs_mapn, lhs_inv, lhs_outv), init_calc, incr_calc) : db_t =
-   print_string "STMT--";
-   let lhs_inv_imgs = apply theta lhs_inv in
-   let lhs_map:map_t = (StringMap.find lhs_mapn db) in
+              ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc) : db_t =
+   let lhs_inv_imgs     = apply theta lhs_inv in
+   let lhs_map:map_t    = (StringMap.find lhs_mapn db) in
    let (old_slice, db1) =
       if (ListMap.mem  lhs_inv_imgs lhs_map) then
          (* note: this is satisfied if the in-vars are in the map_t map,
@@ -186,7 +192,7 @@ let eval_stmt (theta: valuation_t) (db: db_t)
          eval_calc2 lhs_outv init_calc theta db
    in
    let (delta, db2) = eval_calc2 lhs_outv incr_calc theta db1 in
-   let new_slice = slice_merge old_slice delta in
+   let new_slice    = slice_merge old_slice delta in
    let m = ListMap.add lhs_inv_imgs new_slice lhs_map (* overwrite *) in
    StringMap.add lhs_mapn m db2
 ;;
@@ -195,9 +201,14 @@ let eval_stmt (theta: valuation_t) (db: db_t)
 
 
 let eval_stmt_loop (theta: valuation_t) (db: db_t)
-                   ((lhs_mapn, lhs_inv, lhs_outv), init_calc, incr_calc)
+                   ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
                    : db_t =
-   print_string "STMT-LOOP--";
+(*
+   print_string("STMT-LOOP "^(list_to_string
+        (fun (k,v) -> "("^k^", "^(string_of_int v)^")") (sshowmap theta))
+        ^" <db> (("^lhs_mapn^", "^(list_to_string (fun x->x) lhs_inv)
+        ^", "^(list_to_string (fun x->x) lhs_outv)^", <init>), <incr>) --   ");
+*)
    let (inv_imgs, _) = List.split
       (map_to_list ListMap.fold (fun x->x) (StringMap.find lhs_mapn db))
    in
@@ -205,7 +216,7 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
       let inv_theta  = (make_valuation lhs_inv inv_img) in
       if (consistent_valuations theta inv_theta) then
         [(eval_stmt (combine_valuations theta inv_theta) db
-                ((lhs_mapn, lhs_inv, lhs_outv), init_calc, incr_calc))]
+                ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc))]
       else []
    in
    List.fold_left (fun db0 x -> db_merge x db0 ) StringMap.empty
@@ -214,7 +225,6 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
 
 
 let eval_trig (trig_args: var_t list) (tuple: const_t list) db block =
-   print_string "TRIG--";
    let theta = make_valuation trig_args tuple
    in
    List.fold_left (fun db stmt -> eval_stmt_loop theta db stmt) db block;;
