@@ -12,17 +12,19 @@ type mapacc_t = map_id_t * (var_t list) * (var_t list) * calc_t
 (* the variables are either of In or Out type; this is globally declared in
    the M3 program's (map_type_t list) field (see below). *)
 
-and  calc_t = Mult of calc_t * calc_t
-            | Add  of calc_t * calc_t
+and  calc_t = Add  of calc_t * calc_t
+            | Mult of calc_t * calc_t
             | Const of const_t
             | Var of var_t
-            | IfThenElse0 of cond_t * calc_t  (* if cond then calc else 0 *)
+            | IfThenElse0 of calc_t * calc_t
+                  (* if (cond != 0) then calc else 0 *)
             | MapAccess of mapacc_t
             | Null of (var_t list) (* the mythical null-slice *)
-and  cond_t = Leq of calc_t * calc_t
+(* conditions*)
+            | Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
-            | Lt  of calc_t * calc_t;;
-            (* Eq is eliminated by front-end *)
+            | Lt  of calc_t * calc_t
+;;
 
 (*
 type full_calc_t;;
