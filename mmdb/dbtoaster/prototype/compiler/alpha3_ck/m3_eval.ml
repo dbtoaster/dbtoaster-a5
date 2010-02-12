@@ -14,7 +14,6 @@ end);;
 type slice_t = int ListMap.t;;
 type map_t = slice_t ListMap.t;;
 type db_t = map_t StringMap.t;;
-type valuation_t = int StringMap.t;;
 
 
 
@@ -69,25 +68,29 @@ let slice_merge sl1 sl2 : slice_t = merge (+) sl1 sl2;;
 
 
 
-(* VALUATIONS *)
+(* VARIABLE VALUATIONS *)
+module Valuation =
+struct
+   type t = int StringMap.t
 
-let make_valuation (vars: var_t list) (values: const_t list) =
-   list_to_smap (List.combine vars values)
-;;
+   let make (vars: var_t list) (values: const_t list) : t =
+      list_to_smap (List.combine vars values)
 
-(* assume that theta 1 and 2 agree on the keys they have in common *)
-let combine_valuations theta1 theta2 : valuation_t =
-   StringMap.fold (fun k v t -> StringMap.add k v t) theta1 theta2
-;;
+   (* assume that theta 1 and 2 agree on the keys they have in common *)
+   let combine (theta1:t) (theta2:t) : t =
+      StringMap.fold (fun k v t -> StringMap.add k v t) theta1 theta2
 
-let consistent_valuations (theta1: valuation_t) (theta2: valuation_t) : bool =
-   List.for_all (fun (x,y) -> (not(StringMap.mem x theta2)) ||
-                                 ((StringMap.find x theta2) = y))
-                (map_to_list StringMap.fold (fun x->x) theta1)
-;;
+   let to_list (theta:t) = map_to_list StringMap.fold (fun x->x) theta
 
-let apply theta l = List.map (fun x -> StringMap.find x theta) l;;
+   let consistent (theta1: t) (theta2: t) : bool =
+      List.for_all (fun (x,y) -> (not(StringMap.mem x theta2)) ||
+                                    ((StringMap.find x theta2) = y))
+                   (map_to_list StringMap.fold (fun x->x) theta1)
 
+   let apply (theta:t) l = List.map (fun x -> StringMap.find x theta) l
+
+   let dom (theta:t) = let (dom, rng) = List.split (to_list theta) in dom
+end;;
 
 
 
@@ -95,7 +98,7 @@ let apply theta l = List.map (fun x -> StringMap.find x theta) l;;
 
 
 let rec eval_calc (incr_calc: calc_t)
-                  (theta: valuation_t) (db: db_t)
+                  (theta: Valuation.t) (db: db_t)
                 : (var_t list * slice_t * db_t) =
 (*
    print_string("CALC <incr> "^(list_to_string
@@ -112,30 +115,26 @@ let rec eval_calc (incr_calc: calc_t)
    in
    (* check a condition *)
    let tst (op: int -> int -> bool) m1 m2 m =
-       let (cond_outv, bb, db1) =
-          do_op (fun x y -> if (op x y) then 1 else 0) m1 m2 in
-       let bb2 = (List.for_all (fun (_,v) -> (v=1)) (showslice bb)) in
-       if bb2 then (eval_calc m theta db1)
+       let int_op x y = if (op x y) then 1 else 0 in
+       let (cond_outv, bb, db1) = do_op int_op m1 m2 in
+       if (List.for_all (fun (_,v) -> (v=1)) (showslice bb)) then
+          (eval_calc m theta db1)
        else ([], (list_to_lmap [([], 0)]), db1)
             (* TODO: is it correct to assume there are no variables here *)
    in
    match incr_calc with
       MapAccess(mapn, inv, outv, init_calc) ->
       (
+         let m        : map_t        = (StringMap.find mapn db) in
          let inv_imgs : const_t list = apply theta inv
          in
-         let m : map_t = (StringMap.find mapn db) in
-         (if (ListMap.mem inv_imgs m) then
+         if (ListMap.mem inv_imgs m) then
              (outv, (ListMap.find inv_imgs m), db)
           else
              (* initial value computation for leaves of the expression tree. *)
-             (
-             let (init_outv, init_slice, _) = eval_calc init_calc theta db in
+             let (init_outv, init_slice, db1) = eval_calc init_calc theta db in
              (init_outv, init_slice,
-              StringMap.add mapn (ListMap.add inv_imgs init_slice m) db)
-                        (* update the database *)
-             )
-         )
+              StringMap.add mapn (ListMap.add inv_imgs init_slice m) db1)
       )
     | Add (c1, c2)                -> do_op ( + ) c1 c2
     | Mult(c1, c2)                -> do_op ( * ) c1 c2
@@ -143,9 +142,9 @@ let rec eval_calc (incr_calc: calc_t)
     | IfThenElse0(Leq(c1, c2), c) -> tst  ( <= ) c1 c2 c
     | IfThenElse0( Eq(c1, c2), c) -> tst  ( =  ) c1 c2 c
     | Const(i)                    -> ([], list_to_lmap [([], i)], db)
-    | Var(x) -> ([x], list_to_lmap [([(StringMap.find x theta)],
-                                      (StringMap.find x theta))], db)
-                (* note: x is not necessarily and out-var! remove from the
+    | Var(x) -> let v = StringMap.find x theta in
+                ([x], list_to_lmap [([v], v)], db)
+                (* note: x is not necessarily an out-var! remove from the
                    slice keys later! *)
     | Null(outv) -> (outv, (list_to_lmap []), db)
 ;;
@@ -154,23 +153,22 @@ let rec eval_calc (incr_calc: calc_t)
 
 (* postprocess the results of eval_calc.
    extends the keys of slice back to the signature of the lhs map *)
-let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
+let eval_calc2 lhs_outv (calc: calc_t) (theta: Valuation.t) (db: db_t)
                 : (slice_t * db_t) =
    let ((rhs_outv: var_t list), slice0, db0) = (eval_calc calc theta db)
    in
    let slice_filter (k,_) =
-      (consistent_valuations theta (make_valuation rhs_outv k))
+      (Valuation.consistent theta (Valuation.make rhs_outv k))
    in
    let key_refiner (k,v) =  (* valuations are consistent *)
-      let ext_theta = combine_valuations theta (make_valuation rhs_outv k) in
+      let ext_theta = Valuation.combine theta (Valuation.make rhs_outv k) in
                   (* normalizes the key orderings to that of the variable
                      ordering lhs_outv. *)
-      let new_k = apply ext_theta lhs_outv in
+      let new_k = Valuation.apply ext_theta lhs_outv in
       (new_k, v)
    in
-   let slice_list =
-   (List.map key_refiner
-      (List.filter slice_filter (showslice slice0)))
+   let slice_list = (List.map key_refiner
+                       (List.filter slice_filter (showslice slice0)))
    in
       (* in the presence of bigsum variables, there may be duplicates
          after key_refinement. These have to be summed up. *)
@@ -178,25 +176,17 @@ let eval_calc2 lhs_outv (calc: calc_t) (theta: valuation_t) (db: db_t)
 ;;
 
 
-let eval_stmt (theta: valuation_t) (db: db_t)
+let eval_stmt (theta: Valuation.t) (db: db_t)
               ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc) : db_t =
 (*
    print_string("STMT "^(list_to_string
         (fun (k,v) -> "("^k^", "^(string_of_int v)^")") (sshowmap theta))
         ^" <db> (("^lhs_mapn^" <lhs_inv> <lhs_outv> <init_calc>), incr_calc) --   ");
 *)
-   let lhs_inv_imgs     = apply theta lhs_inv in
+   let lhs_inv_imgs     = Valuation.apply theta lhs_inv in
    let lhs_map:map_t    = (StringMap.find lhs_mapn db) in
    let (old_slice, db1) =
-      if (ListMap.mem  lhs_inv_imgs lhs_map) then
-         (* note: this is satisfied if the in-vars are in the map_t map,
-            but the slice corresponding to these in-vars may be empty!
-            Example:
-            let q  = list_to_lmap [([], list_to_lmap [])];;
-            where q has no in-vars.
-            In this case the else-branch is not visited / the init-code
-            is not called.
-         *)
+      if (ListMap.mem lhs_inv_imgs lhs_map) then
          ((ListMap.find lhs_inv_imgs lhs_map), db)
       else
          (* initial value computation. This is the case where information
@@ -213,7 +203,7 @@ let eval_stmt (theta: valuation_t) (db: db_t)
 
 
 
-let eval_stmt_loop (theta: valuation_t) (db: db_t)
+let eval_stmt_loop (theta: Valuation.t) (db: db_t)
                    ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
                    : db_t =
 (*
@@ -226,9 +216,9 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
       (map_to_list ListMap.fold (fun x->x) (StringMap.find lhs_mapn db))
    in
    let ii_filter db inv_img : db_t =
-      let inv_theta  = (make_valuation lhs_inv inv_img) in
-      if (consistent_valuations theta inv_theta) then
-        (eval_stmt (combine_valuations theta inv_theta) db
+      let inv_theta  = (Valuation.make lhs_inv inv_img) in
+      if (Valuation.consistent theta inv_theta) then
+        (eval_stmt (Valuation.combine theta inv_theta) db
                 ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc))
       else db
    in
@@ -237,7 +227,7 @@ let eval_stmt_loop (theta: valuation_t) (db: db_t)
 
 
 let eval_trig (trig_args: var_t list) (tuple: const_t list) db block =
-   let theta = make_valuation trig_args tuple
+   let theta = Valuation.make trig_args tuple
    in
    List.fold_left (fun db stmt -> eval_stmt_loop theta db stmt) db block;;
 
