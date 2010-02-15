@@ -1,11 +1,11 @@
 (* m3 interface module *)
 
 
-type const_t = int;; (* CString of string | CInt of int | CFloat of float;; *)
-type var_id_t = string;;
-type var_type_t = VT_String | VT_Int;;
-type var_t = var_id_t;;  (*  * var_type_t *)
-type map_id_t = string;;
+type const_t = int (* CString of string | CInt of int | CFloat of float *)
+type var_id_t = string
+type var_type_t = VT_String | VT_Int
+type var_t = var_id_t (*  * var_type_t *)
+type map_id_t = string
 
                                                         (* inital val *)
 type mapacc_t = map_id_t * (var_t list) * (var_t list) * calc_t
@@ -24,10 +24,10 @@ and  calc_t = Add  of calc_t * calc_t
             | Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
             | Lt  of calc_t * calc_t
-;;
+
 
 (*
-type full_calc_t;;
+type full_calc_t
 *)
 (* 
 the calculus with Sum(t, Q) expressions
@@ -38,7 +38,7 @@ atomic formulae. Or shall the frontend decide the join order?
 *)
 
               (* left-hand side, increment *)
-type stmt_t = mapacc_t * calc_t;;
+type stmt_t = mapacc_t * calc_t
 (*
 The loop vars are implicit: the variables of the left-hand side minus
 the trigger arguments.
@@ -47,11 +47,11 @@ The bigsum vars are implicit: (the variables of the right-hand side
 minus left-hand-side variables) - trigger vars
 *)
 
-type pm_t = Insert | Delete;;
-type rel_id_t = string;;
+type pm_t = Insert | Delete
+type rel_id_t = string
 
 (* (Insert/Delete, relation name, trigger args, ordered block of statements) *)
-type trig_t = pm_t * rel_id_t * (var_t list) * (stmt_t list);;
+type trig_t = pm_t * rel_id_t * (var_t list) * (stmt_t list)
 (* the front-end guarantees that the statements of the trigger are ordered
    in a way that old and new versions are accessed correctly, e.g.
 
@@ -63,19 +63,12 @@ type trig_t = pm_t * rel_id_t * (var_t list) * (stmt_t list);;
 *)   
 
 (*                name       in_vars             out_vars *)
-type map_type_t = map_id_t * (var_type_t list) * (var_type_t list);;
+type map_type_t = map_id_t * (var_type_t list) * (var_type_t list)
 (* the dependency graph of the maps must form a dag. All the top elements
    are queries accessible from the outside; all arguments of those maps must
    be of Out type. *)
 
-type prog_t = (map_type_t list) * (trig_t list);;
-
-
-(*
-let validate_prog prog =
-   ()
-*)
-
+type prog_t = (map_type_t list) * (trig_t list)
 
 
 
