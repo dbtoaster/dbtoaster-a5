@@ -1,3 +1,4 @@
+
 exception Assert0Exception of string
 
 (* making and breaking externals, i.e., map accesses. *)
@@ -14,15 +15,65 @@ let decode_map_term (map_term: Calculus.term_t):
 
 
 
+(* conversion of calculus expressions to M3 expressions *)
+let rec to_m3 (t: Calculus.readable_term_t) =
+   let calc_lf_to_m3 lf =
+      match lf with
+         Calculus.AtomicConstraint(Calculus.Eq,  t1, t2) ->
+                                          M3.Eq ((to_m3 t1), (to_m3 t2))
+       | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
+                                          M3.Leq((to_m3 t1), (to_m3 t2))
+       | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
+                                          M3.Lt ((to_m3 t1), (to_m3 t2))
+         (* AtomicConstraint(Neq, t1, t2) -> ... *)
+       | _ -> failwith "Compiler.to_m3: TODO cond"
+   in
+   let calc_to_m3 calc =
+      match calc with
+         Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
+       | _                    -> failwith "Compiler.to_m3: TODO calc"
+   in
+   let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
+      match lf with
+         Calculus.AggSum(t,phi)         -> M3.IfThenElse0((calc_to_m3 phi),
+                                                          (to_m3 t))
+       | Calculus.External(mapn, vars)  -> M3.MapAccess(mapn, [], vars,
+                                                    (M3.Const 0))
+                                 (* TODO: which ones are the in-vars?
+                                    add the init calc expression, now 0 *)
+       | Calculus.Var(v)                -> M3.Var(v)
+       | Calculus.Const(Calculus.Int c) -> M3.Const(c)
+       | Calculus.Const(_)              ->
+                                   failwith "Compiler.to_m3: TODO lf_const"
+   in
+   match t with
+      Calculus.RVal(lf)      -> lf_to_m3 lf
+    | Calculus.RNeg(t1)      -> M3.Mult((M3.Const (-1)), (to_m3 t1))
+    | Calculus.RProd(t1::[]) -> (to_m3 t1)
+    | Calculus.RProd(t1::l)  -> M3.Mult((to_m3 t1), (to_m3 (Calculus.RProd l)))
+    | Calculus.RProd([])     -> M3.Const 1  (* impossible case, though *)
+    | Calculus.RSum(t1::[])  -> (to_m3 t1)
+    | Calculus.RSum(t1::l)   -> M3.Add ((to_m3 t1), (to_m3 (Calculus.RSum  l)))
+    | Calculus.RSum([])      -> M3.Const 0  (* impossible case, though *)
+    
+
+
+
+
+
 (* compilation functions *)
 
 (* auxiliary for compile. *)
 let compile_delta_for_rel (reln:   string)
                           (relsch: string list)
+                          (delete: bool)
                           (map_term: Calculus.term_t)
                           (external_bound_vars: string list)
                           (externals_mapping: Calculus.term_mapping_t)
-                          (term: Calculus.term_t) =
+                          (term: Calculus.term_t)
+   : ((bool * string * Calculus.var_t list *
+                Calculus.var_t list * Calculus.term_t) list *
+      Calculus.term_mapping_t) =
 (*
    print_endline ("compile_delta_for_rel: reln="^reln
       ^"  relsch=["^(Util.string_of_list ", " relsch)^"]"
@@ -49,10 +100,9 @@ let compile_delta_for_rel (reln:   string)
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
-   let s = List.filter (fun (_, t) -> t <> Calculus.term_zero)
-       (Calculus.simplify
-          (Calculus.term_delta externals_mapping false reln tuple term)
-          bound_vars params)    (* FIXME: we only create insertion triggers. *)
+   let s = Calculus.simplify
+          (Calculus.term_delta externals_mapping delete reln tuple term)
+          bound_vars params
    in
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
@@ -67,8 +117,11 @@ let compile_delta_for_rel (reln:   string)
    let (terms_after_substitution, todos) =
       Calculus.extract_named_aggregates (mapn^reln) bound_vars s
    in
-   ((List.map (fun (p, t) -> (reln, tuple, p, t))
-              terms_after_substitution), todos)
+   ((List.map (fun (p, t) -> (delete, reln, tuple, p, t))
+              terms_after_substitution),
+    todos)
+
+
 
 
 (* auxiliary for compile.
@@ -78,14 +131,28 @@ let compile_delta_for_rel (reln:   string)
       (Prod[Val(Var(x_R_A)); Val(External("mR1", ["x_R_B"; "x_C"]))]) =
    "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
 *)
-let generate_code reln tuple loop_vars mapn params oper bigsum_vars new_term =
-   "+"^reln^"("^(Util.string_of_list ", " tuple)^ "): "^
+let generate_code (delete:bool)
+                  reln tuple loop_vars mapn params oper bigsum_vars new_term =
+   (if delete then "-" else "+")
+   ^reln^"("^(Util.string_of_list ", " tuple)^ "): "^
    (if (loop_vars = []) then ""
     else "foreach "^(Util.string_of_list ", " loop_vars)^" do ")
    ^mapn^"["^(Util.string_of_list ", " params)^"] "^oper^" "^
    (if (bigsum_vars = []) then ""
     else "bigsum_{"^(Util.string_of_list ", " bigsum_vars)^"} ")
    ^(Calculus.term_as_string new_term)
+
+
+
+
+(*
+let generate_m3 (delete: bool)
+                reln tuple loop_vars mapn params oper bigsum_vars new_term =
+   ((if delete then M3.Delete else M3.Insert),
+    reln, tuple,
+    [((mapn, [], params, init_term), (to_m3 new_term))])
+*)
+
 
 
 (* the main compile function. call this one, not the others. *)
@@ -107,16 +174,32 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
           (bs_rewrite_mode = Calculus.ModeOpenDomain)) then
          (* We can compute a delta for bsrw_term. *)
       (
-         let cdfr (reln, relsch) =
-            compile_delta_for_rel reln relsch map_term bigsum_vars
+         let cdfr (delete, reln, relsch) =
+            compile_delta_for_rel reln relsch delete map_term bigsum_vars
                                   bsrw_theta bsrw_term
          in
-         let (l1, l2) = (List.split (List.map cdfr db_schema))
+         let insdel (reln, relsch) =
+            [(false, reln, relsch)]
+(*
+            [(false, reln, relsch); (true, reln, relsch)]
+            (* this makes too many copies of the rules maintaining the
+               auxiliary maps. *)
+*)
+         in
+         let triggers = List.flatten (List.map insdel db_schema) in
+         let (l1, l2) = (List.split (List.map cdfr triggers))
          in
          let completed_code = List.map
-            (fun (reln, tuple, p, t) ->
-               let loop_vars = Util.ListAsSet.diff p tuple in
-               generate_code reln tuple loop_vars mapn p "+=" bigsum_vars t)
+            (fun (delete, reln, tuple, p, t) ->
+(*
+               if(bigsum_vars <> (Util.ListAsSet.diff (free t)) p) then
+                  failwith "I thought that should hold."
+               else
+*)
+               let loop_vars = Util.ListAsSet.diff p tuple
+               in
+               generate_code delete
+                             reln tuple loop_vars mapn p "+=" bigsum_vars t)
             (List.flatten l1)
          in
          (completed_code, (List.flatten l2) @ bsrw_theta)
@@ -146,5 +229,6 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
    completed_code @
    (List.flatten (List.map
       (fun (t, mt) -> compile bs_rewrite_mode db_schema mt t) todos))
+
 
 

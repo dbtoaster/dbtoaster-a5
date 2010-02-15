@@ -14,8 +14,8 @@ let m = make_term(RVal(AggSum(RProd[RVal (Var("A")); RVal (Var("C"))],
 
 let mt = Compiler.mk_external "m" [];;
 
-Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] [] m =
-([("R", ["x_mR_A"; "x_mR_B"], [],
+Compiler.compile_delta_for_rel "R" ["A"; "B"] false mt [] [] m =
+([(false, "R", ["x_mR_A"; "x_mR_B"], [],
    make_term(RProd [RVal (Var "x_mR_A");
                     RVal (External("mR1", ["x_mR_B"]))]))],
  [(make_term(RVal (AggSum (RVal (Var "C"),
@@ -24,12 +24,12 @@ Compiler.compile_delta_for_rel "R" ["A"; "B"] mt [] [] m =
 ;;
 
 List.hd (fst (
-Compiler.compile_delta_for_rel "S" ["B"; "C"]
+Compiler.compile_delta_for_rel "S" ["B"; "C"] false
    (Compiler.mk_external "mR1" ["x_mR_B"]) [] []
 (
 make_term(RVal (AggSum (RVal (Var "C"), RA_Leaf (Rel ("S", ["x_mR_B"; "C"])))))
 ))) =
-("S", ["x_mR1S_B"; "x_mR1S_C"], ["x_mR1S_B"],
+(false, "S", ["x_mR1S_B"; "x_mR1S_C"], ["x_mR1S_B"],
    make_term(RVal (Var "x_mR1S_C")));;
 
 
@@ -233,10 +233,17 @@ RVal(AggSum(RVal(Const(Int 1)),
 ))
 =
 ["+R(x_mR_A, x_mR_B): m[] += (if 0<(mR1[]+1) and mR1[]<=0 then 1 else 0)";
- "+R(x_mR_A, x_mR_B): m[] += (-1*(if (mR1[]+1)<=0 and 0<mR1[] then 1 else 0))";
+ "+R(x_mR_A, x_mR_B): m[] += (-1*(if 0<mR1[] and (mR1[]+1)<=0 then 1 else 0))";
  "+R(x_mR1R_A, x_mR1R_B): mR1[] += 1"]
 ;;
 
+(* old version: SemiRing and old delta -- it's equivalent.
+
+["+R(x_mR_A, x_mR_B): m[] += (if 0<(mR1[]+1) and mR1[]<=0 then 1 else 0)";
+ "+R(x_mR_A, x_mR_B): m[] += (-1*(if (mR1[]+1)<=0 and 0<mR1[] then 1 else 0))";
+ "+R(x_mR1R_A, x_mR1R_B): mR1[] += 1"]
+;;
+*)
 
 
 

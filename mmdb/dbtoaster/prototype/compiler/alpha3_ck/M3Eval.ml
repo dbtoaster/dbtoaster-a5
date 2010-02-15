@@ -1,12 +1,5 @@
 open M3
 
-(* List helper functions *)
-
-let union l1 l2 = l1@(List.filter (fun k -> (not (List.mem k l1))) l2)
-
-let list_to_string elem_to_string l =
-   "["^(List.fold_left (fun str x -> str^" "^(elem_to_string x)) "" l)^" ]"
-
 
 (* General map types and helper functions *)
 
@@ -51,7 +44,7 @@ struct
    let combine (sl1: 'a t) (sl2: 'a t) : 'a t =
       aggregate ((ListSMap.to_list sl1)@(ListSMap.to_list sl2))
 
-   let key_to_string k = list_to_string string_of_int k
+   let key_to_string k = Util.list_to_string string_of_int k
 
    (* assumes const_t is int *)
    let to_string (val_to_string_f: 'a -> string) (m: 'a ListMap.t) =
@@ -88,7 +81,7 @@ let slice_to_string slice = ValuationMap.to_string string_of_int slice
 let nmap_to_string  m     = ValuationMap.to_string slice_to_string m
 let db_to_string (db:db_t) : string = StringSMap.to_string (fun x->x)
                                        nmap_to_string db
-let vars_to_string vs = list_to_string (fun x->x) vs
+let vars_to_string vs = Util.list_to_string (fun x->x) vs
 
 let lshowmap  m =   ListSMap.to_list (  ListMap.map ListSMap.to_list m)
 let gshowmap  m = StringSMap.to_list (StringMap.map lshowmap  m)
@@ -143,7 +136,7 @@ let rec calc_to_string calc =
 
 (*
 let rec calc_schema calc =
-   let op c1 c2 = union (calc_schema c1) (calc_schema c2)
+   let op c1 c2 = Util.ListAsSet.union (calc_schema c1) (calc_schema c2)
    in
    match calc with
       MapAccess(mapn, inv, outv, init_calc) -> outv
@@ -162,7 +155,7 @@ let rec calc_schema calc =
 let update_db mapn inv_imgs slice db =
 (*
    print_string ("Updating the database: "^mapn^"->"^
-                  (list_to_string string_of_int inv_imgs)^"->"^
+                  (Util.list_to_string string_of_int inv_imgs)^"->"^
                   (slice_to_string slice));
 *)
    let m = StringMap.find mapn db in
@@ -191,7 +184,7 @@ let rec eval_calc (incr_calc: calc_t)
       let f (_, r, d) (k,v1) =
          let th = StringSMap.combine theta (Valuation.make outv1 k) in
          let (o2, r2, d2) = eval_calc m2 th d in
-         let schema = union outv1 o2 in
+         let schema = Util.ListAsSet.union outv1 o2 in
          let r3 = ValuationMap.complete_keys o2 schema th
                      (ListMap.map (fun v2 -> op v1 v2) r2)
          in
@@ -271,8 +264,8 @@ let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
               : (slice_t * db_t) =
 (*
    print_string("\nSTMT (th="^(Valuation.to_string theta)
-   ^", db=_, stmt=(("^lhs_mapn^" "^(list_to_string (fun x->x) lhs_inv)^" "
-              ^(list_to_string (fun x->x) lhs_outv)^" _), _))\n");
+   ^", db=_, stmt=(("^lhs_mapn^" "^(Util.list_to_string (fun x->x) lhs_inv)^" "
+              ^(Util.list_to_string (fun x->x) lhs_outv)^" _), _))\n");
 *)
    let ((delta:slice_t), db1) = eval_calc2 lhs_outv incr_calc theta db
    in
@@ -281,7 +274,7 @@ let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
       in
 (*
       print_string ("@STMT.init{th="^(Valuation.to_string theta2)
-                    ^", key="^(list_to_string string_of_int k)
+                    ^", key="^(Util.list_to_string string_of_int k)
                     ^", db="^(db_to_string db1));
 *)
       let a = (fst (eval_calc2 lhs_outv init_calc theta2 db1))
@@ -303,7 +296,7 @@ let eval_stmt_loop stmt (theta: Valuation.t) (db: db_t) : db_t =
    let ((lhs_mapn, lhs_inv, _, _), _) = stmt in
 (*
    print_string("\nSTMT-LOOP "^(Valuation.to_string theta)
-        ^" <db> (("^lhs_mapn^", "^(list_to_string (fun x->x) lhs_inv)
+        ^" <db> (("^lhs_mapn^", "^(Util.list_to_string (fun x->x) lhs_inv)
         ^", <lhs_outv>), <init>), <incr>) --   ");
 *)
    let lhs_map = StringMap.find lhs_mapn db

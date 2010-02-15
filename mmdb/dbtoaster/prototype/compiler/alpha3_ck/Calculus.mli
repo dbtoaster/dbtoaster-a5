@@ -114,13 +114,15 @@ type term_mapping_t = (term_t * term_t) list
    bigand and bigor. *)
 type readable_relcalc_lf_t = readable_term_t generic_relcalc_lf_t
 and  readable_relcalc_t    = RA_Leaf         of readable_relcalc_lf_t
+                           | RA_Neg          of readable_relcalc_t
                            | RA_MultiUnion   of readable_relcalc_t list
                            | RA_MultiNatJoin of readable_relcalc_t list
-and  readable_term_lf_t   =
+and  readable_term_lf_t    =
          (readable_term_t, readable_relcalc_t) generic_term_lf_t
-and  readable_term_t      = RVal    of readable_term_lf_t
-                          | RProd   of readable_term_t list
-                          | RSum    of readable_term_t list
+and  readable_term_t       = RVal    of readable_term_lf_t
+                           | RNeg    of readable_term_t
+                           | RProd   of readable_term_t list
+                           | RSum    of readable_term_t list
 
 
 
@@ -240,7 +242,7 @@ val apply_variable_substitution_to_term: var_mapping_t -> term_t -> term_t
    Note: the result map is not necessarily complete;
    for the variables and columns
    on which it is not defined, it is the identity. Thus, if this
-   map is to be applied to a SemiRing, use substitute_many.
+   map is to be applied to a Ring, use substitute_many.
 
    Update: the relational calculus expression does not have to be
    a monomial, but if it isn't, the function works with the

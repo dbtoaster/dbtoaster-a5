@@ -90,8 +90,7 @@ let test17 = simplify q2 [] [] = [([], term_one)];;
 
 let test19 = simplify
     (term_delta [] false "R" ["x"; "y"]
-        (make_term (RVal (AggSum(RVal(Const(Int 1)), relS))))) [] []
-= [([], term_zero)];;
+        (make_term (RVal (AggSum(RVal(Const(Int 1)), relS))))) [] [] = [];;
 
 
 let test21 =
@@ -218,6 +217,19 @@ RVal(AggSum(RVal(Const(Int 1)),
 ;;
 
 
+
+let x =
+relcalc_delta [] false "R" ["x"; "y"] (make_relcalc(
+   RA_Leaf(AtomicConstraint(Lt, RVal(Const (Int 0)),
+      RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(Rel("R", ["A"; "B"]))))))))
+;;
+
+relcalc_as_string x;;
+
+
+
+
+
 (* if (0 < AggSum(1, R(A,B))) then 1 else 0 *)
 let test31 =
 List.map (fun (x,y) -> (x, term_as_string y))
@@ -227,10 +239,20 @@ RVal(AggSum(RVal(Const(Int 1)),
       RVal(AggSum(RVal(Const(Int 1)), RA_Leaf(Rel("R", ["A"; "B"]))))))))
 ))) ["x"; "y"] [])
 =
+[([],
+  "(if 0<(AggSum(1, R(A, B))+1) and AggSum(1, R(A, B))<=0 then 1 else 0)");
+ ([],
+  "(-1*(if 0<AggSum(1, R(A, B)) and (AggSum(1, R(A, B))+1)<=0 then 1 else 0))")]
+;;
+
+(* This is what the compiler produced before we moved to the Ring and the
+   new way of computing deltas: (It's equivalent!)
+
 [([], "(if 0<(AggSum(1, R(A, B))+1) and AggSum(1, R(A, B))<=0 then 1 else 0)");
  ([],
   "(-1*(if (AggSum(1, R(A, B))+1)<=0 and 0<AggSum(1, R(A, B)) then 1 else 0))")]
 ;;
+*)
 (* correct, but the condition of the second row is unsatisfiable, so the
    row could be removed. *)
 

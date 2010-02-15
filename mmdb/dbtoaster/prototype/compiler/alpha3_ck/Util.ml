@@ -12,6 +12,9 @@ struct
    let subset l1 l2 = ((diff l1 l2) = [])     (* is l1 a subset of l2 ? *)
    let inter l1 l2 = diff l1 (diff l1 l2)               (* intersection *)
    let union l1 l2 = l1 @ (diff l2 l1)
+(* alternative impl
+   let union l1 l2 = l1@(List.filter (fun k -> (not (List.mem k l1))) l2)
+*)
 
    (* eliminates duplicates if the element lists of l are duplicate free. *)
    let multiunion l = List.fold_left union [] l
@@ -128,12 +131,19 @@ end
 
 
 
+let string_of_list0 (sep: string) (elem_to_string: 'a -> string)
+                    (l: 'a list): string =
+   if (l = []) then ""
+   else List.fold_left (fun x y -> x^sep^(elem_to_string y))
+                       (elem_to_string (List.hd l))
+                       (List.tl l)
 
 (* (string_of_list ", " ["a"; "b"; "c"] = "a, b, c". *)
 let string_of_list (sep: string) (l: string list): string =
-   if (l = []) then ""
-   else List.fold_left (fun x y -> x^sep^y) (List.hd l) (List.tl l);;
+   string_of_list0 sep (fun x->x) l
 
+let list_to_string (elem_to_string: 'a -> string) (l: 'a list) : string =
+   "["^(string_of_list0 "; " elem_to_string l)^" ]"
 
 
 

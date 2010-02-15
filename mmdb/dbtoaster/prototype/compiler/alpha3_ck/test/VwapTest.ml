@@ -62,6 +62,20 @@ Compiler.compile Calculus.ModeIntroduceDomain [("B", ["P"; "V"])]
 Compiler.compile Calculus.ModeOpenDomain [("B", ["P"; "V"])]
                  (Compiler.mk_external "vwap" [])
                  vwap =
+["+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} ((if p0=x_vwapB_P then p0 else 0)*x_vwapB_V*(if (0.25*vwap__2[])<=vwap__3[p0] then 1 else 0))";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (vwap__1[p0]*(if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then 1 else 0)*(if vwap__3[p0]<(0.25*vwap__2[]) then 1 else 0))";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (vwap__1[p0]*-1*(if (0.25*vwap__2[])<=vwap__3[p0] then 1 else 0)*(if (vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0)))<((0.25*vwap__2[])+(0.25*x_vwapB_V)) then 1 else 0))";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} ((if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then ((if p0=x_vwapB_P then p0 else 0)*x_vwapB_V) else 0)*(if vwap__3[p0]<(0.25*vwap__2[]) then 1 else 0))";
+ "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} ((if (vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0)))<((0.25*vwap__2[])+(0.25*x_vwapB_V)) then ((if p0=x_vwapB_P then p0 else 0)*x_vwapB_V) else 0)*-1*(if (0.25*vwap__2[])<=vwap__3[p0] then 1 else 0))";
+ "+B(x_vwap__1B_P, x_vwap__1B_V): vwap__1[x_vwap__1B_P] += (x_vwap__1B_P*x_vwap__1B_V)";
+ "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap__2B_V";
+ "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap__3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
+;;
+(* is this correct? *)
+
+
+(* semiring version. is it equivalent to the new output?
+
 ["+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then ((if p0=x_vwapB_P then p0 else 0)*x_vwapB_V) else 0)";
  "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (vwap__1[p0]*(if ((0.25*vwap__2[])+(0.25*x_vwapB_V))<=(vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0))) then 1 else 0)*(if vwap__3[p0]<(0.25*vwap__2[]) then 1 else 0))";
  "+B(x_vwapB_P, x_vwapB_V): vwap[] += bigsum_{p0} (-1*vwap__1[p0]*(if (vwap__3[p0]+(x_vwapB_V*(if p0<x_vwapB_P then 1 else 0)))<((0.25*vwap__2[])+(0.25*x_vwapB_V)) then 1 else 0)*(if (0.25*vwap__2[])<=vwap__3[p0] then 1 else 0))";
@@ -69,5 +83,5 @@ Compiler.compile Calculus.ModeOpenDomain [("B", ["P"; "V"])]
  "+B(x_vwap__2B_P, x_vwap__2B_V): vwap__2[] += x_vwap__2B_V";
  "+B(x_vwap__3B_P, x_vwap__3B_V): foreach p0 do vwap__3[p0] += (x_vwap__3B_V*(if p0<x_vwap__3B_P then 1 else 0))"]
 ;;
-
+*)
 
