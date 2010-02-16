@@ -96,18 +96,11 @@ let make_empty_db schema: db_t =
    StringSMap.from_list (List.map f schema)
 
 
-let rec k_tuples k (src: 'a list) : 'a list list =
-   if (k <= 0) then [[]]
-   else
-   List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
-                (k_tuples (k-1) src))
-
-
 let make_empty_db_wdom schema (dom: const_t list): db_t =
    let f (mapn, itypes, rtypes) =
       let map = ListSMap.from_list
                    (List.map (fun t -> (t, ListSMap.from_list []))
-                             (k_tuples (List.length itypes) dom))
+                             (Util.k_tuples (List.length itypes) dom))
       in
       (mapn, map)
    in

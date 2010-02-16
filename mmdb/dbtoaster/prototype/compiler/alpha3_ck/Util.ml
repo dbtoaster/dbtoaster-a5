@@ -299,3 +299,14 @@ let add_names (name_prefix: string) (l: 'a list): ((string * 'a) list) =
    List.map add_name (add_positions l 1)
 
 
+(* creates all k-tuples of elements of the list src.
+   Example: k_tuples 3 [1;2] =
+            [[1; 1; 1]; [2; 1; 1]; [1; 2; 1]; [2; 2; 1]; [1; 1; 2];
+             [2; 1; 2]; [1; 2; 2]; [2; 2; 2]]
+*)
+let rec k_tuples k (src: 'a list) : 'a list list =
+   if (k <= 0) then [[]]
+   else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
+                               (k_tuples (k-1) src))
+
+
