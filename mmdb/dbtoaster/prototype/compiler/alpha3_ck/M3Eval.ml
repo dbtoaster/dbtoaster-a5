@@ -201,16 +201,10 @@ let rec eval_calc (incr_calc: calc_t)
             if (ListMap.mem inv_imgs m) then
                 (outv, (ListMap.find inv_imgs m), db)
             else
-            (
                 (* initial value comp'n for leaves of the expression tree. *)
-                let (init_outv, init_slice, db1) = eval_calc init_calc theta db
+                let (init_slice, db1) = eval_calc2 outv init_calc theta db
                 in
-                let init_slice2 = ValuationMap.complete_keys
-                            init_outv outv theta init_slice
-                in
-                (outv, init_slice2,
-                 (update_db mapn inv_imgs init_slice2 db1))
-            )
+                (outv, init_slice, (update_db mapn inv_imgs init_slice db1))
          ) in
          let slice3 = (ValuationMap.filter rhs_outv theta slice2)
          in
@@ -239,7 +233,7 @@ let rec eval_calc (incr_calc: calc_t)
 
 (* postprocess the results of eval_calc.
    extends the keys of slice back to the signature of the lhs map *)
-let eval_calc2 lhs_outv (calc: calc_t) (theta: Valuation.t) (db: db_t)
+and eval_calc2 lhs_outv (calc: calc_t) (theta: Valuation.t) (db: db_t)
                 : (slice_t * db_t) =
    let (rhs_outv, slice0, db0) = (eval_calc calc theta db) in
 (*
