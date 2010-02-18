@@ -1,0 +1,199 @@
+\documentclass{article}
+\usepackage{fullpage}
+\newcommand{\comment}[1]{}
+\begin{document}
+\title{Job talk notes}
+\author{Yanif Ahmad}
+\date{\today}
+\maketitle
+
+\section{Slide 2: Data management}
+Data management has historically been a labour-intensive task, for example in
+much of the 20th century, customers interacted with banks through tellers, who
+would maintain banking information and transactions in ledgers, stored in
+the back office in files. You can imagine the difficulty in accounting and
+auditing back then before the advent of spreadsheets, and of course, databases.
+
+\section{Slide 3: Databases: a refresher}
+Databases are computer programs designed to store, represent and access
+structured data, to ease the burden of data management. The basic unit of data
+is a record, that is a row or a tuple, which provides values for a set of
+columns, or attributes. These attributes define a table or a relation, in the
+example we have an employee relations indicating birthdays, wages etc.
+Typically a database will consist of many relations in a normalized form which
+provides a compact representation of records. These tables can be combined and
+transformed leading us to the second role of databases beyond archiving, namely...
+
+\section{Slide 4: Databases: query processing}
+to answer questions about the data stored, by processing queries. Queries are
+programs issued by database users, and modern databases support declarative
+languages, which provide a high-level almost English-like interface to pose
+questions. Declarative languages allow users to specify properties of query
+results, rather than forcing them to state an algorithm. Indeed, it is the role
+of a query compiler and optimizer to generate an efficient algorithm, or query
+plan, to compute answers.  In our example, we have a simple query over a
+customers and orders relation, as often found in a sales database, asking for
+the total spending of each customer. This query is turned into a program, made
+up of a standard set of toolboxes, or operators, for manipulating relations, as
+defined by the relational algebra.
+\comment{
+For those of you familiar with databases, this algebra contains operators such
+as selections, projections, unions, joins and differences.
+}
+
+This simple example of query processing consists of a join and grouping-aggregate
+operator, where the join looks for matching customer ids in the two tables, as
+with customer 3 named Manny, and the aggregate sums up the price attribute for
+each individual. Database languages have become more and more expressive over
+the years, and we'll now look at classes of applications where database systems
+are heavily used.
+
+\section{Slide 5: DBMS in the 60s}
+The prototypical application for databases arose in the 1960s, when
+many corporations, especially financial institutions, desired the automation of
+online transaction processing, OLTP, as I've already hinted with automated
+teller machines. Transactions are the basic unit of work for databases, and
+databases provide certain operational guarantees of transactions, such as
+atomicity of queries within transactions, and consistency across transactions.
+OLTP is widely used today in many industries including the banking,
+manufacturing, and e-commerce sectors.  Indeed, databases are in such widespread
+use today that chances are whenever you click on a webpage somewhere, you're
+almost certainly issuing a transaction to a database. OLTP primarily involves
+select-project-join queries, and examples of these include listing the
+withdrawals made by a customer from their checking account in the previous day,
+or to find available flights.
+
+\section{Slide 6: DBMS in the 80s}
+The mid-80s witnessed the proliferation of another killer application
+for databases, that of analytical query processing, which makes heavy use of
+aggregations to compute statistics over database records. Such queries are
+widely used for business intelligence such as sales and marketing, decision
+support systems, and logistics. Major OLAP users include large supermarket
+chains, such as Walmart or Target, who make inventory decisions across their
+stores by querying sales volumes by categories such as age,
+gender, state, and providing such statistics through visualization and reporting
+tools to store managers. For example a store manager might wish to know the
+total number of games consoles sold to females between the ages of 19 and 45 to
+determine whether to make promotional offers.
+
+\section{Slide 7: DBMS in the mid-2000s}
+Earlier this decade, the well-established roles of data and queries were brought
+into question by stream processing applications. Whereas for OLTP and OLAP
+applications, the data was relatively static, compared to the breadth of queries
+posed, stream processing raised the needs of data management techniques for
+monitoring applications, where the queries were the persistent element in the
+system, while the data changed rapidly. Thus stream processing looked at novel
+architectures for evaluating continuous queries over continuously arriving data,
+which avoided the expense of touching persistent storage during query
+processing.  Stream processing targeted applications such as computer network
+monitoring, traffic monitoring, and weather monitoring amongst many others, and
+an example query is that of tracking any weather stations that have detected
+different wind gusts larger than 40 mph and 20 mph within the last 2 hours.
+
+Now that we've seen three major classes of applications using databases over the
+last few decades, I'll now move onto three example applications that have most
+recently begun to draw attention, and indicate another application category for
+databases that are addressed poorly by today's systems.
+
+\section{Slide 8: Algorithmic trading}
+The first of these is algorithmic trading on order book data. While algorithmic
+trading via technical analysis has been considered a natural app for stream
+processing, high-frequency trading with order books has been relatively untouched.
+Nonetheless, this is an area heavily involved in data management with approx
+73\% of all equities trades in the US performed without a human in the loop,
+providing lucrative opportunities for trading firms as evidenced by an
+approximately 15\% return across the industry. 
+
+Order books represent the market microstructure at an electronic exchange such
+as NASDAQ, and the NYSE. Exchanges maintain a table of all buyers in the market
+in a bid order book, and all sellers in a market in the asks order book. The
+basic set of actions on an order book include order book updates, as insertions
+and removals of orders by algos (show anim 1), and the update of orders when the
+exchange executes trades, which may be partial executions (show anim 2). In such
+an application, algos pose queries on the order books as part of trading
+strategies, attempting to detect signals within the order books.
+
+\section{Slide 12: Microbloggging}
+Another popular computing app is that of microblogging and personal status
+feeds, exemplified by Facebook and Twitter. Here users post events, and
+commentary, about their daily lives and interests, creating simple threads that
+can be updated at any time, as friends add comments and users remove unwanted
+posts. The role of querying is clear here, as the hosting services analyze hot
+trends across a vast number of feeds (Facebook has approx 350 million users as
+of last Dec) for advertising purposes.
+
+\section{Slide 13: Cloud management}
+As more and more enterprises shift their computational needs into cloud
+infrastructures with their growing ease of use, system metadata in compute cloud
+management can benefit greatly from data management techniques. A recent trace
+by providers of a cloud management framework, RightScale, pointed out
+approximately 60000 compute slice instances started per day on Amazon EC2, and
+this is just the uppermost layer of the metadata to be managed. As clouds
+provide more and more user-facing features such as load balancing and migration,
+as well as internal tracing such as resource failure detection and system
+availabilities to determine snap instance pricing, cloud system metadata will be
+updated in enormous volumes.
+
+\section{Slide 14: Update-intensive apps}
+These three applications I've briefly discussed are all examples of
+update-intensive applications. To emphasize, order book trading arbitrarily
+inserts, deletes and updates entries on an exchange's order books. Microblogging
+feeds contain dynamically changing threads with comments and posts arbitrarily
+added and removed. Cloud management infrastructures support clients who
+arbitrarily instantiate slices based on user demands, whose instantiation
+ripples udpates of what must be monitored throughout the system. All of these
+applications make limited use of relational databases due to their limited
+abilities to handle updates and scale out -- relational databases have a
+notoriously poor reputation for handling updates.  Indeed update-intensive apps
+follow a trend exhibited in other data management domains, a trend where when
+commerical databases cannot handle an app's needs...
+
+\section{Slide 15: The Rise of Lightweight Databases}
+the application's community avoids using relational databases. This
+has occurred quite a few times in recent popular computing appications,
+including for more established large web companies such as Google, Amazon and
+Ebay, as well as for more recent endeavors such as Facebook, Twitter and so
+forth, as well as in scientific applications. Instead these communities have
+rolled their own lightweight systems, that scale out both in terms of
+application dimensions, such as the number of updates, queries and data sizes
+handled, as well as platform concerns, running on orders of magnitudes more
+servers than relational databases. These lightweight systems all trade off
+expressiveness and consistency for scalability.
+We can see examples of this trend in the many new product offerings from
+industry throughout several areas of data management including
+stream processing, with Streambase and more recently IBM and Microsoft
+considering this a viable market, in analytics and databases for the cloud, with
+column-store architectures and databases integrating mapreduce engines such as
+Vertica, and Greenplum, and in simple key-value stores for flexible metadata
+management such as HBase and Dynamo.
+All in all we're seeing data management tools that are simpler, more
+specialized, more scalable.
+
+\section{Slide 16: The DBToaster Project}
+The takeaway from this trend is clear -- today's data management tools are
+simply not scalable nor flexible enough to meet a growing range of application
+needs as the applications built on top of databases diversify and evolve in
+modern times. The long-term goal of the DBToaster project is to develop
+techniques for generating nimble, lightweight systems for data management
+applications, and in this project, we're primarily focusing on compilation to
+lightweight systems. As we'll see in this talk, DBToaster is starting out with
+query processing in update-intensive applications, where there has been little
+work reasoning about query properties from an incremental perspective, and
+there's room here to discover deep properties to exploit for scalability.  To
+really put the emphasis on a lightweight query incremental processor, DBToaster
+supports an well-known query language with SQL, and attempts to do a
+significantly better job of fulfilling the promise of declarative languages for
+update-intensive apps, really narrowing the gap to where query
+processing performance can match that of hand-written code.
+
+\section{Slide 17: Talk outline}
+
+\section{Slide 18: Update processing example}
+\section{Slide 19: Update-intensive app characteristics}
+\section{Slide 22: Update-intensive app characteristics}
+\section{Slide 23: State-of-the-art in update processing (view def)}
+\section{Slide 24: State-of-the-art in update processing (IVM)}
+\section{Slide 28: State-of-the-art in update processing (windows)}
+\section{Slide 33: State-of-the-art in update processing (SPE queries)}
+\section{Slide 38: DBToaster: Technical focus of this talk}
+\end{document}
