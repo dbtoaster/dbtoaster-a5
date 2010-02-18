@@ -62,9 +62,8 @@ struct
 
    let to_string key_to_string val_to_string m =
       let list_to_string elem_to_string l =
-         let tup_f str x = str^" "^(elem_to_string x)
-      in
-         "["^(List.fold_left tup_f "" l)^" ]"
+         let tup_f str x = str^" "^(elem_to_string x) in
+            "["^(List.fold_left tup_f "" l)^" ]"
       in
       let elem_to_string (k,v) =
          (key_to_string k)^"->" ^(val_to_string v)^";"

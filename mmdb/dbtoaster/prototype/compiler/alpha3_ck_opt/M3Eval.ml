@@ -2,6 +2,7 @@ open M3
 
 
 (* General map types and helper functions *)
+let vars_to_string vs = Util.list_to_string (fun x->x) vs
 
 module ListMap = Map.Make (struct
    type t = const_t list
@@ -17,8 +18,11 @@ struct
    module StringMap = Map.Make (String)
    module StringSMap = SuperMap.Make(StringMap)
    type key = StringMap.key
-   type t = int StringMap.t
+   type t = const_t StringMap.t
 
+   (* TODO: change when const_t is generalized *)
+   let string_of_const_t = string_of_int
+    
    (* Note: ordered result *)
    let make (vars: var_t list) (values: const_t list) : t =
       StringSMap.from_list (List.combine vars values)
@@ -50,37 +54,95 @@ struct
 
    (* TODO: does order matter here? *)
    let to_string (theta:t) : string =
-      StringSMap.to_string (fun x->x) (fun v -> (string_of_int v)) theta
+      StringSMap.to_string (fun x->x) (fun v -> (string_of_const_t v)) theta
 end
 
 
-module ValuationMap =
+module Slice =
 struct
-   type 'a t = 'a ListMap.t
+  
+   (* Slices need not preserve orderings between entries, thus
+    * we can use an unordered data structure such as a Hashtbl *)
+   type slice_key = const_t list
+   type slice_t   = (slice_key, int) Hashtbl.t
 
-   let make = ListSMap.from_list
+   (* Slice helpers *)
+   let empty_slice ()     = Hashtbl.create 10
+   let mem  k sl          = Hashtbl.mem sl k
+   let find k sl          = Hashtbl.find sl k
+   let add  k v sl        = (Hashtbl.replace sl k v; sl)
+   let fold f acc sl      = Hashtbl.fold f sl acc
 
-   let aggregate (l: (ListMap.key * int) list) : 'a t =
-      let aux m (k,v) = 
-         let v2 = if(ListMap.mem k m) then ListMap.find k m
-                  else 0 in
-         ListMap.add k (v + v2) m
+   (* TODO: refactor, common to both slices and maps *)
+   let safe_add k v sl =
+      if ((mem k sl) && ((find k sl) <> v)) then
+         failwith "Slice.safe_add"
+      else add k v sl
+
+   (* TODO: refactor, common to both slices and maps *)
+   let from_list l = List.fold_left (fun sl (k,v) -> safe_add k v sl) (empty_slice()) l
+
+   (* map applying f over the range of the slice *) 
+   let map f sl =
+      let aux k v nsl = add k (f v) nsl in
+      fold aux (empty_slice()) sl
+
+   (* map that applies f to both keys and values
+    * returns a new slice, does not modify args in-place *)
+   let map_kv f sl =
+      let aux k v nsl = let (nk,nv) = f k v in add nk nv nsl in
+         fold aux (empty_slice()) sl
+
+   (* merge two slices, preserving duplicates
+    * returns a new slice, does not modify args in-place *)
+   let merge sl1 sl2 =
+      let aux k v msl = Hashtbl.add msl k v; msl in
+      fold aux (Hashtbl.copy sl1) sl2
+
+   let slice_to_list sl = Hashtbl.fold (fun k v l -> (k,v)::l) sl []
+   
+   let slice_kv_to_string ks vs sl =
+      let f k v acc =
+        (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^";"
       in 
-      List.fold_left aux ListMap.empty l
-
-   let combine (sl1: 'a t) (sl2: 'a t) : 'a t =
-      aggregate ((ListSMap.to_list sl1)@(ListSMap.to_list sl2))
-
-   let key_to_string k = Util.list_to_string string_of_int k
+      "["^(fold f "" sl)^"]"
+   
+   (* filter that applies f to both keys and values.
+    * assumes add has replace semantics
+    * returns new slice, does not modify arg slice *)
+   let slice_filter_kv f sl =
+      let aux k v nsl = if (f k v) then add k v nsl else nsl in
+         fold aux (empty_slice()) sl
+   
+   (* assumes key is an int list, i.e. const_t is int *) 
+   let key_to_string k = Util.list_to_string Valuation.string_of_const_t k
 
    (* assumes const_t is int *)
-   let to_string (val_to_string_f: 'a -> string) (m: 'a ListMap.t) =
-      ListSMap.to_string key_to_string val_to_string_f m
+   let slice_to_string (slice : slice_t) =
+      slice_kv_to_string key_to_string string_of_int slice
+   
+   (* Slice methods for calculus evaluation *)
+
+   (* assumes add has replace semantics, so that fold & add removes duplicates
+    * when starting with an empty slice.
+    * returns new slice, does not modify arg slice *)
+   let aggregate (sl: slice_t) : slice_t =
+      let aux k v nsl = 
+         let v2 = if(mem k nsl) then find k nsl else 0 in
+         add k (v + v2) nsl
+      in 
+      fold aux (empty_slice()) sl
+
+   (* assumes slice data structure can contain duplicates following
+    * a merge. Slice contains dups until aggregated. *)
+   (* TODO: optimize double new slice creation in merge, and then in aggregate *)
+   let combine (sl1: slice_t) (sl2: slice_t) : slice_t =
+      aggregate (merge sl1 sl2)
 
    (* assumes valuation theta and (Valuation.make current_outv k)
       are consistent *)
    let complete_keys current_outv desired_outv theta slice =
-      let key_refiner (k,v) =
+      let key_refiner k v =
          (* TODO: simplify combine if theta, current_outv are disjoint,
           * or already consistent *)
          let ext_theta = Valuation.combine theta
@@ -93,40 +155,97 @@ struct
    in
       (* in the presence of bigsum variables, there may be duplicates
          after key_refinement. These have to be summed up using aggregate. *)
-   aggregate (List.map key_refiner (ListSMap.to_list slice))
+      (* TODO: optimize double slice creation, in map and then aggregate *)
+      aggregate (map_kv key_refiner slice)
 
-   let filter (outv: var_t list) (theta: Valuation.t) (slice: 'a t) : ('a t) =
+   (* filters slice entries to those consistent in terms of given variables, and theta *) 
+   let filter (outv: var_t list) (theta: Valuation.t) (slice: slice_t) : slice_t =
       let aux k v = (Valuation.consistent theta (Valuation.make outv k))
       in
-      ListSMap.filteri aux slice
+      slice_filter_kv aux slice
+
+   (* Merges two slices, reconciling entries to a single entry.
+    * Assumes each individual slice has unique entries.
+    * Merges in two phases, first phase transforms and reconciles if necessary,
+    * second phase ignores entries already reconciled, transforms and
+    * merges remaining. *)
+   (* TODO: implement ignores with a hashset/bitvector *)
+   let mergei f1 f2 f12 sl1 sl2 =
+      let aux f sl k v (ignores, msl) =
+         if mem k sl then
+            (* reconcile and ignore later *)
+            (add k 0 ignores, add k (f12 k (find k sl) v) msl)
+         else (ignores, add k (f k v) msl)
+      in
+      let aux2 f ignores k v msl =
+        if mem k ignores then msl else add k (f k v) msl
+      in
+      let (ignores, partial) =
+        fold (aux f1 sl2) (empty_slice(), empty_slice()) sl1
+      in
+         fold (aux2 f2 ignores) partial sl2   
 end
 
+module DbMap =
+struct
+   type map_t = Slice.slice_t ListMap.t
+   
+   let dbmap_map          = ListMap.map
+   let dbmap_to_list      = ListSMap.to_list
+   let dbmap_kv_to_string = ListSMap.to_string 
+   
+   let mem  = ListMap.mem
+   let find = ListMap.find
+   let add  = ListMap.add
+   let fold = ListMap.fold
+   
+   (* Map construction *)
+   let empty_map () = ListMap.empty
 
-type slice_t = int ListMap.t
-type map_t   = slice_t ListMap.t (* nested map *)
+   (* TODO: refactor, common to both slices and maps *)
+   let safe_add k v m =
+      if ((mem k m) && ((find k m) <> v)) then
+         failwith "DbMap.safe_add"
+      else add k v m
 
-let slice_to_string slice = ValuationMap.to_string string_of_int slice 
-let nmap_to_string  m     = ValuationMap.to_string slice_to_string m
+   (* TODO: refactor, common to both slices and maps *)
+   let from_list l = List.fold_left (fun m (k,v) -> safe_add k v m) (empty_map()) l
+   
+   (* Map methods for calculus evaluation *)
 
-let vars_to_string vs = Util.list_to_string (fun x->x) vs
+   let dom (m: map_t) = let aux k v nd = (k::nd) in fold aux m []
 
-let lshowmap  m =   ListSMap.to_list (  ListMap.map ListSMap.to_list m)
+   (* assumes key is an int list, i.e. const_t is int *) 
+   let key_to_string k = Util.list_to_string string_of_int k
+
+   (* assumes const_t is int *)
+   let nmap_to_string (m: map_t) =
+      dbmap_kv_to_string key_to_string Slice.slice_to_string m
+      
+   let showmap (m : map_t) = dbmap_to_list (dbmap_map Slice.slice_to_list m)
+   
+   let show_sorted_map (m : map_t) =
+      let sort_slice =
+        List.sort (fun (outk1,_) (outk2,_) -> compare outk1 outk2)
+      in 
+      List.sort (fun (ink1,_) (ink2,_) -> compare ink1 ink2)
+         (List.map (fun (ink,sl) -> (ink, sort_slice sl)) (showmap m))
+end
 
 module Database =
 struct
-    type db_t    = (string, map_t) Hashtbl.t
+    type db_t    = (string, DbMap.map_t) Hashtbl.t
 
     let concat_string s t delim =
         (if (String.length s = 0) then "" else delim)^t
 
-    (* TODO: is fold order important here? *)
     let db_to_string (db:db_t) : string =
         let to_string key_to_string val_to_string db =
             let elem_to_string k v = (key_to_string k)^"->"^(val_to_string v) in
                 Hashtbl.fold
                     (fun k v s -> concat_string s " " (elem_to_string k v)) db ""
         in
-        "["^(to_string (fun x->x) nmap_to_string db)^"]"
+        "["^(to_string (fun x->x) DbMap.nmap_to_string db)^"]"
 
     let safe_add db k v =
         begin
@@ -142,41 +261,49 @@ struct
     let make_empty_db schema: db_t =
         let f (mapn, itypes, _) =
             (mapn, (if(List.length itypes = 0) then
-                ListSMap.from_list [([], ListSMap.from_list [])]
-                else ListSMap.from_list []))
+                DbMap.from_list [([], Slice.from_list [])]
+                else DbMap.from_list []))
         in
             from_list (List.map f schema)
     
     
     let make_empty_db_wdom schema (dom: const_t list): db_t =
         let f (mapn, itypes, rtypes) =
-            let map = ListSMap.from_list
-                        (List.map (fun t -> (t, ListSMap.from_list []))
+            let map = DbMap.from_list
+                        (List.map (fun t -> (t, Slice.from_list []))
                             (Util.k_tuples (List.length itypes) dom))
             in
             (mapn, map)
         in
             from_list (List.map f schema)
 
-    let update_db mapn inv_imgs slice db : unit =
+    let update mapn inv_imgs slice db : unit =
     (*
        print_string ("Updating the database: "^mapn^"->"^
                       (Util.list_to_string string_of_int inv_imgs)^"->"^
-                      (slice_to_string slice));
+                      (Slice.slice_to_string slice));
     *)
         let m = Hashtbl.find db mapn in
-            Hashtbl.replace db mapn (ListMap.add inv_imgs slice m)
+            Hashtbl.replace db mapn (DbMap.add inv_imgs slice m)
             
     let get_map mapn db =
         try Hashtbl.find db mapn
         with Not_found -> failwith ("Database.get_map "^mapn)
         
-    (* TODO: is fold order important here? *)
-    let showdb db =
-        Hashtbl.fold (fun k v acc -> acc@[(k, (lshowmap v))]) db []
+    let showdb_f show_f db =
+        Hashtbl.fold (fun k v acc -> acc@[(k, (show_f v))]) db []
+    
+    let showdb db = showdb_f DbMap.showmap db
+
+    let show_sorted_db db =
+       List.sort (fun (n1,_) (n2,_) -> compare n1 n2)
+          (showdb_f DbMap.show_sorted_map db)
 end;;
 
-open Database;;
+(* type aliases *)
+type slice_t = Slice.slice_t
+type map_t   = DbMap.map_t
+type db_t    = Database.db_t
 
 
 (* THE INTERPRETER *)
@@ -222,13 +349,12 @@ let rec calc_schema calc =
    May extend other maps of the database through initial value computation
    on expression leaves.
 *)
-let rec eval_calc (incr_calc: calc_t)
-                  (theta: Valuation.t) (db: db_t)
+let rec eval_calc (incr_calc: calc_t) (theta: Valuation.t) (db: db_t)
                   : (var_t list * slice_t) =
 (*
    print_string("\neval_calc "^(calc_to_string incr_calc)^
                 " "^(Valuation.to_string theta)
-                          ^" "^(db_to_string db)^"   ");
+                          ^" "^(Database.db_to_string db)^"   ");
 *)
    (* compose: evaluate m1 first, and run m2 on the resulting database.
       Note: databases are now mutable, thus m1 will update the db in place *)
@@ -240,13 +366,15 @@ let rec eval_calc (incr_calc: calc_t)
          let th = Valuation.combine theta (Valuation.make outv1 k) in
          let (o2, r2) = eval_calc m2 th db in
          let schema = Util.ListAsSet.union outv1 o2 in
-         let r3 = ValuationMap.complete_keys o2 schema th
-                     (ListMap.map (fun v2 -> op v1 v2) r2)
+         let r3 = Slice.complete_keys o2 schema th
+                     (Slice.map (fun v2 -> op v1 v2) r2)
          in
-         (schema, (ListSMap.combine r r3)) (* r, r3 have no overlap *)
+         (* r, r3 have no overlap so it should be safe to merge slices *) 
+         (schema, (Slice.merge r r3))
       in
-      List.fold_left f ([], (ListSMap.from_list []))
-                     (ListSMap.to_list res1)
+      (* TODO: optimize, iterate directly over slice *)
+      List.fold_left f ([], (Slice.from_list []))
+                     (Slice.slice_to_list res1)
          (* the variable ordering is not necessarily the same as in
             the map outv spec. *)
    in
@@ -256,20 +384,20 @@ let rec eval_calc (incr_calc: calc_t)
    match incr_calc with
       MapAccess(mapn, inv, outv, init_calc) ->
       (
-         let m        : map_t        = get_map mapn db in
+         let m        : map_t        = Database.get_map mapn db in
          let inv_imgs : const_t list = Valuation.apply theta inv
          in
          let (rhs_outv, (slice2: slice_t)) = (
-            if (ListMap.mem inv_imgs m) then
-                (outv, (ListMap.find inv_imgs m))
+            if (DbMap.mem inv_imgs m) then
+                (outv, (DbMap.find inv_imgs m))
             else
                 (* initial value comp'n for leaves of the expression tree. *)
                 let init_slice = eval_calc2 outv init_calc theta db
                 in
-                    update_db mapn inv_imgs init_slice db;
+                    Database.update mapn inv_imgs init_slice db;
                     (outv, init_slice)
          ) in
-         let slice3 = (ValuationMap.filter rhs_outv theta slice2)
+         let slice3 = (Slice.filter rhs_outv theta slice2)
          in
          (rhs_outv, slice3)
       )
@@ -280,16 +408,16 @@ let rec eval_calc (incr_calc: calc_t)
     | Eq  (c1, c2)        -> do_op (int_op (= )) c1 c2 theta db
     | IfThenElse0(c1, c2) -> do_op (fun v cond -> if (cond<>0) then v else 0)
                                    c2 c1 theta db
-    | Null(outv)          -> (outv, ListMap.empty)
-    | Const(i)            -> ([], ListSMap.from_list [([], i)])
+    | Null(outv)          -> (outv, Slice.empty_slice())
+    | Const(i)            -> ([], Slice.from_list [([], i)])
     | Var(x)              -> if (not (Valuation.bound x theta)) then
                                   failwith ("CALC/case Var("^x^"): theta="^
                                             (Valuation.to_string theta))
 (*
-                                  ([x], ListMap.empty)
+                                  ([x], Slice.empty_slice())
 *)
                              else let v = Valuation.value x theta in
-                                  ([x], ListSMap.from_list [([v], v)])
+                                  ([x], Slice.from_list [([v], v)])
                              (* note: x is not necessarily an out-var!
                                 remove from the slice keys later! *)
 
@@ -301,12 +429,11 @@ and eval_calc2 lhs_outv (calc: calc_t) (theta: Valuation.t) (db: db_t)
    let (rhs_outv, slice0) = (eval_calc calc theta db) in
 (*
    print_string ("End of CALC; outv="^(vars_to_string rhs_outv)^
-                 " slice="^(slice_to_string slice0)^
-                 ("db="^(db_to_string db)));
+                 " slice="^(Slice.slice_to_string slice0)^
+                 ("db="^(Database.db_to_string db)));
 *)
-   let slice1 = ValuationMap.complete_keys rhs_outv lhs_outv theta slice0
-   in
-   slice1
+   let slice1 = Slice.complete_keys rhs_outv lhs_outv theta slice0 in
+      slice1
 
 
 let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
@@ -326,18 +453,18 @@ let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
 (*
       print_string ("@STMT.init{th="^(Valuation.to_string theta2)
                     ^", key="^(Util.list_to_string string_of_int k)
-                    ^", db="^(db_to_string db));
+                    ^", db="^(Database.db_to_string db));
 *)
       let a = (eval_calc2 lhs_outv init_calc theta2 db)
       in
-      if (ListMap.mem k a) then (ListMap.find k a)+v2
+      if (Slice.mem k a) then (Slice.find k a)+v2
       else
 (*
          failwith "ARGH, initial value computation did not find value"
 *)
-         v2 + (if (ListMap.mem k a) then (ListMap.find k a) else 0)
+         v2 + (if (Slice.mem k a) then (Slice.find k a) else 0)
    in
-   let new_slice = ListSMap.mergei (fun k v -> v) f2 (fun k v1 v2 -> v1+v2)
+   let new_slice = Slice.mergei (fun k v -> v) f2 (fun k v1 v2 -> v1+v2)
                                    current delta
    in
    new_slice
@@ -351,18 +478,18 @@ let eval_stmt_loop stmt (theta: Valuation.t) (db: db_t) : unit =
         ^" <db> (("^lhs_mapn^", "^(Util.list_to_string (fun x->x) lhs_inv)
         ^", <lhs_outv>), <init>), <incr>) --   ");
 *)
-   let lhs_map = get_map lhs_mapn db in
+   let lhs_map = Database.get_map lhs_mapn db in
    let ii_filter db inv_img : unit =
       let inv_theta  = (Valuation.make lhs_inv inv_img) in
       (if (Valuation.consistent theta inv_theta) then
-         let slice = ListMap.find inv_img lhs_map in
+         let slice = DbMap.find inv_img lhs_map in
          let new_slice =
             (* TODO: simplify combine if theta, inv_theta are disjoint *)
             (eval_stmt stmt (Valuation.combine theta inv_theta) slice db)
          in
-            update_db lhs_mapn inv_img new_slice db)
+            Database.update lhs_mapn inv_img new_slice db)
    in
-   List.iter (ii_filter db) (ListSMap.dom lhs_map)
+   List.iter (ii_filter db) (DbMap.dom lhs_map)
 
 
 let eval_trig (trig_args: var_t list) (tuple: const_t list) db block =

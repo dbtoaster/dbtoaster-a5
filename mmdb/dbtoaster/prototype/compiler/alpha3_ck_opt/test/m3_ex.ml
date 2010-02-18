@@ -17,7 +17,7 @@ let db = Database.make_empty_db (fst prog0);;
 (eval_trig ["a";"b"] [2;4] db block);;
 (eval_trig ["a";"b"] [3;4] db block);;
 (eval_trig ["a";"b"] [1;1] db block);;
-Database.showdb db = [("q", [([], [([4], 8); ([1], 1)])])] ;;
+Database.show_sorted_db db = [("q", [([], [([1], 1); ([4], 8);])])] ;;
 
 
 
@@ -68,8 +68,8 @@ let db = Database.make_empty_db (fst prog1);;
 (eval_trig ["a";"b"] [5;5] db block);;
 (eval_trig ["a";"b"] [5;4] db block);;
 
-lshowmap (Database.get_map "q" db) =
-   [([], [([5], 11); ([4], 2); ([3], 4); ([2], 0)])] ;;
+DbMap.show_sorted_map (Database.get_map "q" db) =
+   [([], [([2], 0); ([3], 4); ([4], 2); ([5], 11)])] ;;
 
 
 
@@ -180,12 +180,13 @@ eval_trig ["a";"b"] [5;5] db block;;
 eval_trig ["a";"b"] [2;2] db block;;
 eval_trig ["a";"b"] [1;2] db block;;
 
-lshowmap (Database.get_map "q" db) =
+DbMap.show_sorted_map (Database.get_map "q" db) =
 [([],
-  [([5; 5], 4); ([5; 3], 4); ([5; 2], 2); ([5; 1], 0); ([4; 5], 2);
-   ([4; 3], 2); ([4; 2], 1); ([4; 1], 0); ([2; 5], 10); ([2; 3], 13);
-   ([2; 2], 8); ([2; 1], 9); ([1; 5], 2); ([1; 3], 2); ([1; 2], 1);
-   ([1; 1], 0)])]
+  [([1; 1], 0); ([1; 2], 1); ([1; 3], 2);  ([1; 5], 2);
+   ([2; 1], 9); ([2; 2], 8); ([2; 3], 13); ([2; 5], 10);
+   ([4; 1], 0); ([4; 2], 1); ([4; 3], 2);  ([4; 5], 2);
+   ([5; 1], 0); ([5; 2], 2); ([5; 3], 4);  ([5; 5], 4);
+   ])]
 ;;
 (* this is correct according to Postgres *)
 
