@@ -1,7 +1,7 @@
 
 open M3;;
 open M3Eval;;
-
+open Unix;;
 
 (* q[y] = Sum(x, R(x,y)) *)
 let prog0: prog_t =
@@ -191,3 +191,24 @@ DbMap.show_sorted_map (Database.get_map "q" db) =
 (* this is correct according to Postgres *)
 
 
+(* Simple benchmarking *)
+let seed = 12345;;
+Random.init seed;;
+let randl n lb ub = let r = ref [] in
+   for i = 1 to n do r := ((lb + (Random.int (ub-lb)))::!r) done; !r
+ 
+let db = Database.make_empty_db (fst prog2);;
+
+let num_tuples = 100 in
+let start = Unix.gettimeofday() in
+for i = 0 to num_tuples do
+   let tuple = randl 2 1 100 in
+   (*
+   print_endline ((string_of_int i)^": "^
+      (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));
+   *)
+   eval_trig ["a"; "b"] tuple db block;
+done;
+let finish = Unix.gettimeofday() in
+   print_endline ("Tuples: "^(string_of_int num_tuples)^
+      " in "^(string_of_float (finish -. start)))
