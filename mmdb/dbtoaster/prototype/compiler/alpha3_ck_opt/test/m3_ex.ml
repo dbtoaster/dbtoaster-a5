@@ -199,10 +199,10 @@ let randl n lb ub = let r = ref [] in
  
 let db = Database.make_empty_db (fst prog2);;
 
-let num_tuples = 100 in
+let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
 for i = 0 to num_tuples do
-   let tuple = randl 2 1 100 in
+   let tuple = randl 2 1 5 in
    (*
    print_endline ((string_of_int i)^": "^
       (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));

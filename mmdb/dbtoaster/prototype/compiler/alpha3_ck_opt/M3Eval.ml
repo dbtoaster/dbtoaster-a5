@@ -17,8 +17,17 @@ struct
    (* the keys are variable names *)
    module StringMap = Map.Make (String)
    module StringSMap = SuperMap.Make(StringMap)
+
    type key = StringMap.key
    type t = const_t StringMap.t
+
+   type extension_key = string list
+   type valuation_extension = string list
+   type extension_cache = (extension_key, valuation_extension) Hashtbl.t
+   
+   let valuation_extensions = Hashtbl.create 10 
+   let add_extension k v = (Hashtbl.replace valuation_extensions k v; v)
+   let find_extension k = Hashtbl.find valuation_extensions k
 
    (* TODO: change when const_t is generalized *)
    let string_of_const_t = string_of_int
@@ -30,6 +39,8 @@ struct
    (* Note: ordered result *)
    let to_list m = StringMap.fold (fun s n l -> (s,n)::l) m []
 
+   let vars theta = StringMap.fold (fun k _ acc -> k::acc) theta []
+
    let bound var theta = StringMap.mem var theta
    
    let value var theta = StringMap.find var theta
@@ -39,16 +50,11 @@ struct
         (not(StringMap.mem k m2)) || ((StringMap.find k m2) = v))
         (to_list m1)
 
-   let safe_add k v m =
-      if ((StringMap.mem k m) && ((StringMap.find k m) <> v)) then
-         failwith "Valuation.safe_add"
-      else StringMap.add k v m
-
-   (* adds m2 to m1.  assumes that m1 and m2 are consistent. *)
+   (* extends m1 by given vars from m2.
+    * assumes that m1 and m2 are consistent. *)
    (* Note: ordered result *)
-   (* Note: consistency check in safe_add can be avoided if m1 and m2
-    * are disjoint, in which case we can just merge *)
-   let combine (m1: t) (m2: t) : t = StringMap.fold safe_add m1 m2
+   let extend (m1: t) (m2: t) (ext : var_t list) : t =
+       List.fold_left (fun acc k -> StringMap.add k (value k m2) acc) m1 ext
 
    let apply (m: t) (l: key list) = List.map (fun x -> StringMap.find x m) l
 
@@ -141,15 +147,11 @@ struct
 
    (* assumes valuation theta and (Valuation.make current_outv k)
       are consistent *)
-   let complete_keys current_outv desired_outv theta slice =
+   let extend_keys current_outv desired_outv theta extensions slice =
       let key_refiner k v =
-         (* TODO: simplify combine if theta, current_outv are disjoint,
-          * or already consistent *)
-         let ext_theta = Valuation.combine theta
-                                           (Valuation.make current_outv k)
-                         (* normalizes the key orderings to that of the
-                            variable ordering outv. *)
-         in
+         let ext_theta = Valuation.extend
+            (Valuation.make current_outv k) theta extensions in
+         (* normalizes the key orderings to that of the variable ordering outv. *)
          let new_k = Valuation.apply ext_theta desired_outv in
          (new_k, v)
    in
@@ -170,6 +172,10 @@ struct
     * second phase ignores entries already reconciled, transforms and
     * merges remaining. *)
    (* TODO: implement ignores with a hashset/bitvector *)
+   (* yna note: in our usage, f2 is much more expensive to evaluate than f1,
+    * since f2 blindly performs initial value computation. Thus we should
+    * invoke f2 as few times as possible, making it the slice we ignore
+    * whenever we can *)
    let mergei f1 f2 f12 sl1 sl2 =
       let aux f sl k v (ignores, msl) =
          if mem k sl then
@@ -325,7 +331,6 @@ let rec calc_to_string calc =
     | Const(i)            -> string_of_int i
     | Var(x)              -> x
 
-(*
 let rec calc_schema calc =
    let op c1 c2 = Util.ListAsSet.union (calc_schema c1) (calc_schema c2)
    in
@@ -336,13 +341,10 @@ let rec calc_schema calc =
     | Lt  (c1, c2)        -> op c1 c2
     | Leq (c1, c2)        -> op c1 c2
     | Eq  (c1, c2)        -> op c1 c2
-    | IfThenElse0(c1, c2) -> op c1 c2
+    | IfThenElse0(c1, c2) -> op c2 c1
     | Null(outv)          -> outv
     | Const(i)            -> []
     | Var(x)              -> [x]
-*)
-
-
 
 (* Evaluates an expression, i.e. the right-hand side of an M3 statement.
    The resulting slice is consistent with theta.
@@ -350,7 +352,7 @@ let rec calc_schema calc =
    on expression leaves.
 *)
 let rec eval_calc (incr_calc: calc_t) (theta: Valuation.t) (db: db_t)
-                  : (var_t list * slice_t) =
+                  : slice_t =
 (*
    print_string("\neval_calc "^(calc_to_string incr_calc)^
                 " "^(Valuation.to_string theta)
@@ -359,22 +361,63 @@ let rec eval_calc (incr_calc: calc_t) (theta: Valuation.t) (db: db_t)
    (* compose: evaluate m1 first, and run m2 on the resulting database.
       Note: databases are now mutable, thus m1 will update the db in place *)
    let rec do_op op (m1:calc_t) (m2:calc_t) (theta:Valuation.t) (db:db_t)
-             : (var_t list * slice_t) =
-      let (outv1, res1) = eval_calc m1 theta db in
-      let f (_, r) (k,v1) =
-         (* TODO: simplify combine if theta, outv1 are disjoint, or already consistent *)
-         let th = Valuation.combine theta (Valuation.make outv1 k) in
-         let (o2, r2) = eval_calc m2 th db in
-         let schema = Util.ListAsSet.union outv1 o2 in
-         let r3 = Slice.complete_keys o2 schema th
+             : slice_t =
+
+      let outv1 = calc_schema m1 in
+      let outv2 = calc_schema m2 in
+      let schema = Util.ListAsSet.union outv1 outv2 in
+      let theta_extensions = Util.ListAsSet.diff outv1 (Valuation.vars theta) in
+      let schema_extensions = Util.ListAsSet.diff outv1 outv2 in
+      
+      let res1 = eval_calc m1 theta db in
+      
+      let f r (k,v1) =
+         
+         (* TODO: add positional information to M3 AST. *)
+         (* yna note: valuation lookups in expressions seem to need positional information
+          * about the calc expr. For example the same calc expr can appear in
+          * multiple times in an AST, yet theta will be different for the
+          * specific point in the AST, thus may need to be extended less (note
+          * that theta is monotonically growing from LHS calc exprs to RHS calc
+          * exprs in the AST. For now, we don't bother to optimize for this,
+          * since the lookup key is large (size of the calc expr), and doing
+          * the lookup may be more expensive than just combining valuations. *)
+         (* yna note: there are a few options:
+          * i. compute the vars to extend theta once per do_op
+          * ii. lookup the vars to extend theta
+          * iii. combine as currently.
+          * we should use option i. or ii., favoring i. if the lookup is
+          * expensive, and/or we don't want to keep positional information.
+          * it is still worthwhile to use i. *if* the function "f" is evaluated
+          * many times, which may happen because res1 is a slice. in the case
+          * res1 is a one-element slice, it doesn't make much difference to
+          * use option i. or iii.
+          * if we're doing lookups, we can use a key of, both of which can
+          * be computed once per do_op:
+          *    theta vars * outv1
+          * this isn't significantly cheaper than option i., thus I think
+          * lookups for calc expressions should only be done with positional
+          * information. *)
+
+         let th = Valuation.extend theta (Valuation.make outv1 k) theta_extensions in
+         let r2 = eval_calc m2 th db in
+
+         (* Since schema is a superset of outv2, we can just extend the
+          * valuations of r2 for vars in (outv1 - outv2), because any overlap of
+          * outv2 & th vars is known to be consistent. *)
+         (* yna note: valuation lookups.
+          * we have the same issue with needing positional information here as
+          * above. again we can determine o2 and schema once per do_op call,
+          * and use this information in complete_keys. *)
+
+         let r3 = Slice.extend_keys outv2 schema th schema_extensions
                      (Slice.map (fun v2 -> op v1 v2) r2)
          in
-         (* r, r3 have no overlap so it should be safe to merge slices *) 
-         (schema, (Slice.merge r r3))
+            (* r, r3 have no overlap so it should be safe to merge slices *) 
+            Slice.merge r r3
       in
       (* TODO: optimize, iterate directly over slice *)
-      List.fold_left f ([], (Slice.from_list []))
-                     (Slice.slice_to_list res1)
+      List.fold_left f (Slice.from_list []) (Slice.slice_to_list res1)
          (* the variable ordering is not necessarily the same as in
             the map outv spec. *)
    in
@@ -387,19 +430,22 @@ let rec eval_calc (incr_calc: calc_t) (theta: Valuation.t) (db: db_t)
          let m        : map_t        = Database.get_map mapn db in
          let inv_imgs : const_t list = Valuation.apply theta inv
          in
-         let (rhs_outv, (slice2: slice_t)) = (
+         let slice2 : slice_t = (
             if (DbMap.mem inv_imgs m) then
-                (outv, (DbMap.find inv_imgs m))
+                DbMap.find inv_imgs m
             else
                 (* initial value comp'n for leaves of the expression tree. *)
                 let init_slice = eval_calc2 outv init_calc theta db
                 in
                     Database.update mapn inv_imgs init_slice db;
-                    (outv, init_slice)
+                    init_slice
          ) in
-         let slice3 = (Slice.filter rhs_outv theta slice2)
-         in
-         (rhs_outv, slice3)
+         (* TODO: can we optimize between rhs_outv and theta?
+          * Perhaps even in Slice.filter?
+          * The only kind of optimization is a data structure that
+          * allows direct retrieval for values of rhs_outv rather than
+          * scanning and filtering in Slice.filter *)
+         Slice.filter outv theta slice2
       )
     | Add (c1, c2)        -> do_op ( + )         c1 c2 theta db
     | Mult(c1, c2)        -> do_op ( * )         c1 c2 theta db
@@ -408,34 +454,42 @@ let rec eval_calc (incr_calc: calc_t) (theta: Valuation.t) (db: db_t)
     | Eq  (c1, c2)        -> do_op (int_op (= )) c1 c2 theta db
     | IfThenElse0(c1, c2) -> do_op (fun v cond -> if (cond<>0) then v else 0)
                                    c2 c1 theta db
-    | Null(outv)          -> (outv, Slice.empty_slice())
-    | Const(i)            -> ([], Slice.from_list [([], i)])
+    | Null(outv)          -> Slice.empty_slice()
+    | Const(i)            -> Slice.from_list [([], i)]
     | Var(x)              -> if (not (Valuation.bound x theta)) then
                                   failwith ("CALC/case Var("^x^"): theta="^
                                             (Valuation.to_string theta))
-(*
-                                  ([x], Slice.empty_slice())
-*)
+                                  (* Slice.empty_slice() *)
                              else let v = Valuation.value x theta in
-                                  ([x], Slice.from_list [([v], v)])
+                                  Slice.from_list [([v], v)]
                              (* note: x is not necessarily an out-var!
                                 remove from the slice keys later! *)
-
 
 (* postprocess the results of eval_calc.
    extends the keys of slice back to the signature of the lhs map *)
 and eval_calc2 lhs_outv (calc: calc_t) (theta: Valuation.t) (db: db_t)
                 : slice_t =
-   let (rhs_outv, slice0) = (eval_calc calc theta db) in
+
+   let rhs_outv = calc_schema calc in
+   let slice0   = eval_calc calc theta db in
 (*
    print_string ("End of CALC; outv="^(vars_to_string rhs_outv)^
                  " slice="^(Slice.slice_to_string slice0)^
-                 ("db="^(Database.db_to_string db)));
+                 (" db="^(Database.db_to_string db))^
+                 (" theta="^(Valuation.to_string theta)));
 *)
-   let slice1 = Slice.complete_keys rhs_outv lhs_outv theta slice0 in
-      slice1
+   (* Vars in rhs_outv intersect theta are known to be consistent
+    * since calc is evaluated with theta. However rhs_outv may contain out vars
+    * from the db. Thus we simply need to merge:
+    *     lhs_outv cap rhs_outv) with lhs_outv cap theta *)
+   (* TODO: this can be computed once per calc expr, but we need positional
+    * info per calc expr. *) 
+   let rhs_extensions =
+      Util.ListAsSet.inter lhs_outv (Valuation.vars theta)
+   in
+   Slice.extend_keys rhs_outv lhs_outv theta rhs_extensions slice0
 
-
+(* yna note: theta contains union of all tuple-vars and in-vars *) 
 let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
               (theta: Valuation.t) (current: slice_t) (db: db_t)
               : slice_t =
@@ -447,8 +501,15 @@ let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
    let (delta:slice_t) = eval_calc2 lhs_outv incr_calc theta db
    in
    let f2 k v2 =
-      (* TODO: simplify combine if theta, lhs_outv are disjoint *)
-      let theta2 = Valuation.combine theta (Valuation.make lhs_outv k)
+      (* yna note: valuation lookup: lhs_mapn * lhs_outv *)
+      let theta_extensions =
+         try Valuation.find_extension(lhs_mapn::lhs_outv)
+         with Not_found ->
+            Valuation.add_extension (lhs_mapn::lhs_outv)
+               (Util.ListAsSet.diff lhs_outv (Valuation.vars theta))
+      in
+      let theta2 =
+         Valuation.extend theta (Valuation.make lhs_outv k) theta_extensions
       in
 (*
       print_string ("@STMT.init{th="^(Valuation.to_string theta2)
@@ -464,14 +525,16 @@ let eval_stmt ((lhs_mapn, lhs_inv, lhs_outv, init_calc), incr_calc)
 *)
          v2 + (if (Slice.mem k a) then (Slice.find k a) else 0)
    in
-   let new_slice = Slice.mergei (fun k v -> v) f2 (fun k v1 v2 -> v1+v2)
-                                   current delta
+   let new_slice =
+       Slice.mergei (fun k v -> v) f2 (fun k v1 v2 -> v1+v2) current delta
    in
    new_slice
 
 
-
-let eval_stmt_loop stmt (theta: Valuation.t) (db: db_t) : unit =
+(* TODO: can we use a data structure that lets us get only those map entries
+ * whose intersection of in-vars and tuple-vars, match up value-wise,
+ * rather than scan+filter *)
+let eval_stmt_loop stmt (theta: Valuation.t) (db: db_t) =
    let ((lhs_mapn, lhs_inv, _, _), _) = stmt in
 (*
    print_string("\nSTMT-LOOP "^(Valuation.to_string theta)
@@ -479,14 +542,18 @@ let eval_stmt_loop stmt (theta: Valuation.t) (db: db_t) : unit =
         ^", <lhs_outv>), <init>), <incr>) --   ");
 *)
    let lhs_map = Database.get_map lhs_mapn db in
-   let ii_filter db inv_img : unit =
-      let inv_theta  = (Valuation.make lhs_inv inv_img) in
+   let theta_extensions =
+      try Valuation.find_extension (lhs_mapn::lhs_inv)
+      with Not_found ->
+         Valuation.add_extension (lhs_mapn::lhs_inv)
+            (Util.ListAsSet.diff lhs_inv (Valuation.vars theta))
+   in
+   let ii_filter db inv_img =
+      let inv_theta = (Valuation.make lhs_inv inv_img) in
       (if (Valuation.consistent theta inv_theta) then
+         let new_theta = Valuation.extend theta inv_theta theta_extensions in
          let slice = DbMap.find inv_img lhs_map in
-         let new_slice =
-            (* TODO: simplify combine if theta, inv_theta are disjoint *)
-            (eval_stmt stmt (Valuation.combine theta inv_theta) slice db)
-         in
+         let new_slice = eval_stmt stmt new_theta slice db in
             Database.update lhs_mapn inv_img new_slice db)
    in
    List.iter (ii_filter db) (DbMap.dom lhs_map)

@@ -8,7 +8,7 @@ all:
 	ocamlc -c M3.ml
 	ocamlc -c Compiler.ml
 	ocamlc -c M3Eval.ml
-	ocamlmktop -o alpha3_ck unix.cma Util.cmo Ring.cmo SuperMap.cmo \
+	ocamlmktop -o dbtoaster_top unix.cma Util.cmo Ring.cmo SuperMap.cmo \
                                 Calculus.cmo M3.cmo M3Eval.cmo Compiler.cmo
 
 benchmark:
@@ -24,4 +24,4 @@ benchmark:
                                 Calculus.cmx M3.cmx M3Eval.cmx Compiler.cmx test/m3_ex.ml
 
 clean:
-	rm -f *.cmi *.cmo *.cmx *.o alpha3_ck m3_ex
+	rm -f *.cmi *.cmo *.cmx *.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex
