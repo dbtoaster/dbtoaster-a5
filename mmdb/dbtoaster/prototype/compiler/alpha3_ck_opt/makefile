@@ -25,7 +25,7 @@ benchmark: native
                                 Calculus.cmx M3.cmx M3Eval.cmx Compiler.cmx test/m3_ex.ml
 
 vwap: native
-	ocamlopt -o vwap unix.cmxa Util.cmx Ring.cmx SuperMap.cmx \
+	ocamlopt -o vwap str.cmxa unix.cmxa Util.cmx Ring.cmx SuperMap.cmx \
                                 Calculus.cmx M3.cmx M3Eval.cmx Compiler.cmx test/vwap_m3_ex.ml
 
 clean:
