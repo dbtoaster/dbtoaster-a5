@@ -81,7 +81,7 @@ let prog_vwap: prog_t =
           (("q", [], [], (Const(0))), 
             (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(0)) (Const(0))
               (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Var("b")) (IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")))
-                (MapAccess("q3", [], ["d"], (Const(0))))
+                (Mult((MapAccess("q3", [], ["d"], (Const(0)))), Const(-1)))
               )
             )
           );
@@ -93,6 +93,35 @@ let prog_vwap: prog_t =
           (("q3", [], ["a"], (Const(0))), Mult(Var("a"), Var("b")));
           
           (("q4", [], ["a"], (Const(0))), Var("b"))
+        ]
+      );
+
+      (Delete, "BID", ["a"; "b"],
+        [
+          (("q", [], [], (Const(0))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(0)) (Const(0)) (Mult(Mult(Var("a"), Var("b")), Const(-1)))));
+          (("q", [], [], (Const(0))), 
+            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(0)) (Const(0))
+              (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Mult(Var("b"), Const(-1))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))))
+                (MapAccess("q3", [], ["d"], (Const(0))))
+              )
+            )
+          );
+          (("q", [], [], (Const(0))), 
+            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(0)) (Const(0))
+              (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Mult(Var("b"), Const(-1))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))))
+                (Mult(MapAccess("q3", [], ["d"], (Const(0))), Const(-1)))
+              )
+            )
+          );
+          
+          (("q1", [], [], (Const(0))), Mult(Var("b"), Const(-1)));
+          
+          (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))));
+          
+          (("q3", [], ["a"], (Const(0))), Mult(Mult(Var("a"), Var("b")), Const(-1)));
+          
+          (("q4", [], ["a"], (Const(0))), Mult(Var("b"), Const(-1)))
+          
         ]
       )
   ]);;
