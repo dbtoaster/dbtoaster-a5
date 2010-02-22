@@ -1,94 +1,7 @@
-
-exception Assert0Exception of string
-
-type binding_t = bool Map.Make(String).t
-type binding_set_element = 
-    Binding_Present of Calculus.var_t
-  | Binding_Not_Present
-type bindings_set_t = binding_set_element list
-type inner_bindings_set_t = (Calculus.term_t * Calculus.term_t * bindings_set_t) list
-module BindingMap = Map.Make(String)
-type binding_map_t = bindings_set_t BindingMap.t
-
 (* making and breaking externals, i.e., map accesses. *)
 
 let mk_external (n: string) (vs: Calculus.var_t list) =
    Calculus.make_term(Calculus.RVal(Calculus.External(n, vs)))
-
-let decode_map_term (map_term: Calculus.term_t):
-                    (string * (Calculus.var_t list)) =
-   match (Calculus.readable_term map_term) with
-      Calculus.RVal(Calculus.External(n, vs)) -> (n, vs)
-    | _ -> raise (Assert0Exception "Compiler.decode_map_term")
-
-let rec to_m3_map_access (mapn:M3.map_id_t) (mapvars:M3.var_t list) (bindings:bindings_set_t) : M3.mapacc_t =
-  (
-    mapn,
-    (List.fold_right2
-      (fun var binding input_vars -> 
-        match binding with
-            Binding_Present(b) -> input_vars
-          | Binding_Not_Present -> var :: input_vars
-      ) mapvars bindings []
-    ),
-    (List.fold_right2
-      (fun var binding output_vars -> 
-        match binding with
-            Binding_Present(b) -> var :: output_vars
-          | Binding_Not_Present -> output_vars
-      ) mapvars bindings []
-    ),
-    (M3.Null[])
-  )
-
-
-(* conversion of calculus expressions to M3 expressions *)
-let rec to_m3 (t: Calculus.readable_term_t) (my_bindings:bindings_set_t) (inner_bindings:binding_map_t) =
-   let calc_lf_to_m3 lf =
-      match lf with
-         Calculus.AtomicConstraint(Calculus.Eq,  t1, t2) ->
-                                          M3.Eq ((to_m3 t1 my_bindings inner_bindings), (to_m3 t2 my_bindings inner_bindings))
-       | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
-                                          M3.Leq((to_m3 t1 my_bindings inner_bindings), (to_m3 t2 my_bindings inner_bindings))
-       | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
-                                          M3.Lt ((to_m3 t1 my_bindings inner_bindings), (to_m3 t2 my_bindings inner_bindings))
-         (* AtomicConstraint(Neq, t1, t2) -> ... *)
-       | _ -> failwith "Compiler.to_m3: TODO cond"
-   in
-   let calc_to_m3 calc =
-      match calc with
-         Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
-       | _                    -> failwith "Compiler.to_m3: TODO calc"
-   in
-   let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
-      match lf with
-         Calculus.AggSum(t,phi)             -> M3.IfThenElse0((calc_to_m3 phi),
-                                                          (to_m3 t my_bindings inner_bindings))
-       | Calculus.External(mapn, map_vars)      -> 
-          (
-            try
-              M3.MapAccess(to_m3_map_access mapn map_vars (BindingMap.find mapn inner_bindings))
-            with Not_found -> 
-              failwith ("Unable to find map '"^mapn^"' in {"^
-                (BindingMap.fold (fun k v accum -> accum^", "^k) inner_bindings "")^"}\n")
-          )
-       | Calculus.Var(v)                    -> M3.Var(v)
-       | Calculus.Const(Calculus.Int c)     -> M3.Const (M3.CInt c)
-       | Calculus.Const(Calculus.Double c)  -> M3.Const (M3.CFloat c)
-       | Calculus.Const(_)                  ->
-                                          failwith "Compiler.to_m3: TODO String,Long"
-
-   in
-   match t with
-      Calculus.RVal(lf)      -> lf_to_m3 lf
-    | Calculus.RNeg(t1)      -> M3.Mult((M3.Const (M3.CInt (-1))), (to_m3 t1 my_bindings inner_bindings))
-    | Calculus.RProd(t1::[]) -> (to_m3 t1 my_bindings inner_bindings)
-    | Calculus.RProd(t1::l)  -> M3.Mult((to_m3 t1 my_bindings inner_bindings), (to_m3 (Calculus.RProd l) my_bindings inner_bindings))
-    | Calculus.RProd([])     -> M3.Const (M3.CInt 1)  (* impossible case, though *)
-    | Calculus.RSum(t1::[])  -> (to_m3 t1 my_bindings inner_bindings)
-    | Calculus.RSum(t1::l)   -> M3.Add ((to_m3 t1 my_bindings inner_bindings), (to_m3 (Calculus.RSum  l) my_bindings inner_bindings))
-    | Calculus.RSum([])      -> M3.Const (M3.CInt 0)  (* impossible case, though *)
-    
 
 (* compilation functions *)
 
@@ -115,7 +28,7 @@ let compile_delta_for_rel (reln:   string)
                           externals_mapping))^"]"
       ^"  term="^(Calculus.term_as_string term));
 *)
-   let (mapn, params) = decode_map_term map_term
+   let (mapn, params) = Calculus.decode_map_term map_term
    in
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
@@ -150,49 +63,17 @@ let compile_delta_for_rel (reln:   string)
               terms_after_substitution),
     todos)
 
-let rec find_binding_calc_lf (var: Calculus.var_t) (calc: Calculus.readable_relcalc_lf_t) =
-  (match calc with
-      Calculus.False                                      -> false
-    | Calculus.True                                       -> false
-    | Calculus.AtomicConstraint(comp, inner_t1, inner_t2) -> 
-          (find_binding_term var inner_t1) || (find_binding_term var inner_t2)
-    | Calculus.Rel(relname, relvars)                      -> 
-          List.fold_left (fun found curr_var -> (found || (curr_var = var))) false relvars
-  )
-and find_binding_calc (var: Calculus.var_t) (calc: Calculus.readable_relcalc_t) =
-  (match calc with
-      Calculus.RA_Leaf(leaf)       -> find_binding_calc_lf var leaf
-    | Calculus.RA_Neg(inner_calc)  -> find_binding_calc var inner_calc
-    | Calculus.RA_MultiUnion(u)    -> 
-          failwith "Compiler.ml: finding output vars in MultiUnion not implemented yet"
-    | Calculus.RA_MultiNatJoin(j)  -> 
-          List.fold_left (fun found curr_calc -> (found || (find_binding_calc var curr_calc))) false j
-  )
-and find_binding_term (var: Calculus.var_t) (term: Calculus.readable_term_t) = 
-  (match term with 
-      Calculus.RVal(Calculus.AggSum(inner_t,phi))  -> 
-          (find_binding_calc var phi) || (find_binding_term var inner_t)
-    | Calculus.RVal(Calculus.External(mapn, vars)) ->
-          failwith "Compiler.ml: (extract_output_vars) A portion of an uncompiled term is already compiled!"
-    | Calculus.RVal(Calculus.Var(v))               -> false
-    | Calculus.RVal(Calculus.Const(c))             -> false
-    | Calculus.RNeg(inner_t)                       -> (find_binding_term var inner_t)
-    | Calculus.RProd(inner_ts)                     -> 
-          List.fold_left (fun found curr_t -> (found || (find_binding_term var curr_t))) false inner_ts
-    | Calculus.RSum(inner_ts)                      ->
-          List.fold_left (fun found curr_t -> (found || (find_binding_term var curr_t))) false inner_ts
-  );;
 
-let extract_output_vars ((t: Calculus.term_t), (mt: Calculus.term_t)): (Calculus.term_t * Calculus.term_t * bindings_set_t) =
+let extract_output_vars ((t: Calculus.term_t), (mt: Calculus.term_t)): (Calculus.term_t * Calculus.term_t * CalcToM3.bindings_set_t) =
   (t, mt, (
     let outer_term = (Calculus.readable_term t) in 
     match (Calculus.readable_term mt) with
         Calculus.RVal(Calculus.External(n, vs)) -> 
               List.map 
                 (fun var -> 
-                    if (find_binding_term var outer_term) 
-                    then Binding_Present(var)
-                    else Binding_Not_Present
+                    if (CalcToM3.find_binding_term var outer_term) 
+                    then CalcToM3.Binding_Present(var)
+                    else CalcToM3.Binding_Not_Present
                 ) vs
       | _ -> failwith "LHS of a map definition is not an External()"
   ))
@@ -216,19 +97,6 @@ let generate_classic (delete:bool)
     else "bigsum_{"^(Util.string_of_list ", " bigsum_vars)^"} ")
    ^(Calculus.term_as_string new_term)
 
-let generate_m3 (delete: bool)
-                reln tuple loop_vars mapn params oper bigsum_vars new_term ovars inner_ovars =
-   ((if delete then M3.Delete else M3.Insert),
-    reln, tuple,
-    [((to_m3_map_access mapn params ovars), 
-      (to_m3 (Calculus.readable_term new_term) ovars 
-      (List.fold_left (fun in_ovar_map (in_rhs, in_map, in_ovars) -> 
-          match (Calculus.readable_term in_map) with
-              Calculus.RVal(Calculus.External(match_map, match_vars)) -> (BindingMap.add match_map in_ovars in_ovar_map)
-            | _ -> failwith "Compiler.ml: Improperly typed map LHS"
-        ) BindingMap.empty inner_ovars
-      )
-    ))]);;
 
 
 (* the main compile function. call this one, not the others. *)
@@ -236,13 +104,13 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (string list)) list)
                 (map_term: Calculus.term_t)
                 (term: Calculus.term_t) 
-                (output_vars: bindings_set_t) 
+                (output_vars: CalcToM3.bindings_set_t) 
                 generate_code =
 (*
    print_endline ("compile: t="^(Calculus.term_as_string term)^
                        ";  mt="^(Calculus.term_as_string map_term));
 *)
-   let (mapn, map_params) = decode_map_term map_term
+   let (mapn, map_params) = Calculus.decode_map_term map_term
    in
    let (bigsum_vars, bsrw_theta, bsrw_term) = Calculus.bigsum_rewriting
       bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^"__")
@@ -272,10 +140,8 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                   failwith "I thought that should hold."
                else
 *)
-               let loop_vars = Util.ListAsSet.diff p tuple
-               in
-               generate_code delete
-                             reln tuple loop_vars mapn p "+=" bigsum_vars t output_vars inner_output_vars)
+               generate_code delete reln tuple (term, map_term, output_vars) p t inner_output_vars
+            )
             (List.flatten l1)
          in
          (completed_code, inner_output_vars)
@@ -284,6 +150,26 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
    completed_code @
    (List.flatten (List.map
       (fun (t, mt, inner_output_vars) -> compile bs_rewrite_mode db_schema mt t inner_output_vars generate_code) todos));;
+
+
+let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descriptors : M3.trig_t * CalcToM3.relation_availability_map_t =
+  let (map_target_access, ra_map1) = (CalcToM3.to_m3_map_access map_descriptor CalcToM3.StringMap.empty) in
+  let (map_update_trig, ra_map2) = (CalcToM3.to_m3 (Calculus.readable_term term) 
+      (List.fold_left (fun descriptor_map descriptor -> 
+          let (_, in_map, _) = descriptor in
+            match (Calculus.readable_term in_map) with
+                Calculus.RVal(Calculus.External(match_map, match_vars)) -> (CalcToM3.StringMap.add match_map descriptor descriptor_map)
+              | _ -> failwith "Compiler.ml: Improperly typed map LHS"
+        ) CalcToM3.StringMap.empty inner_descriptors
+      )
+      ra_map1
+    ) in
+   (  ( (if delete then M3.Delete else M3.Insert),
+        reln, tuple,
+        [(map_target_access, map_update_trig)]
+      ),
+      ra_map2
+   );;
 
 module StatementMap = Map.Make(struct
    type t = M3.pm_t * M3.rel_id_t
@@ -294,7 +180,15 @@ module MapMap = Map.Make(String)
 let rec compile_m3 (db_schema: (string * (string list)) list)
                    (map_term: Calculus.term_t)
                    (term: Calculus.term_t) : M3.prog_t =
-  let compiled_code = (compile Calculus.ModeOpenDomain db_schema map_term term [] generate_m3) in
+  let compiled_with_ra_map = (compile Calculus.ModeOpenDomain db_schema map_term term [] generate_m3) in
+  let (compiled_code, ra_map) = (List.fold_right
+    (fun (new_compiled, new_ra_map) (curr_compiled, curr_ra_map) -> 
+      (new_compiled :: curr_compiled, (CalcToM3.StringMap.fold
+        (fun rel presence ret -> (CalcToM3.StringMap.add rel presence ret))
+        new_ra_map curr_ra_map
+      ))
+    ) compiled_with_ra_map ([], CalcToM3.StringMap.empty)
+  ) in
   let triggers_by_relation = 
     (List.fold_right (
       fun (pm, rel_id, var, stmt) collection -> 
@@ -324,13 +218,29 @@ let rec compile_m3 (db_schema: (string * (string list)) list)
     ) in
   let var_type vars = (List.map (fun v -> M3.VT_Int) vars) in
   (
-    (MapMap.fold
+    (* MAP LIST *)
+    (MapMap.fold (* the maps as defined by the query *)
       (fun map_id (in_map_vars, out_map_vars) map_list -> 
         (map_id, (var_type in_map_vars), (var_type out_map_vars)) :: map_list
-      ) mapvars_by_map []),
+      ) mapvars_by_map []) @
+    (StatementMap.fold (* additional maps as needed to store data for initial value computations *)
+      (fun (pm, rel_id) (var, stmt) rel_map_list -> 
+        if ((pm = M3.Insert) && (CalcToM3.StringMap.mem rel_id ra_map))
+        then ("INPUT_MAP_"^rel_id, [], (List.map (fun v-> M3.VT_Int) var)) :: rel_map_list
+        else rel_map_list
+      ) triggers_by_relation []),
+    
+    (* STMT LIST *)
     (StatementMap.fold 
       (fun (pm, rel_id) (var, stmt) trigger_list -> 
-        (pm, rel_id, var, stmt) :: trigger_list
+        (pm, rel_id, var, 
+          ( 
+            if (CalcToM3.StringMap.mem rel_id ra_map) 
+            then (("INPUT_MAP_"^rel_id, [], var, M3.Const(M3.CInt(0))), M3.Const(M3.CInt(1))) :: stmt
+            else stmt
+          )
+        ) ::
+        trigger_list
       ) triggers_by_relation [])
   );;
   
