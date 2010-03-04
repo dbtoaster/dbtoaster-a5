@@ -71,4 +71,30 @@ type map_type_t = map_id_t * (var_type_t list) * (var_type_t list)
 type prog_t = (map_type_t list) * (trig_t list)
 
 
+module Prepared =
+struct
+   type pcalc_id_t = int
+
+   type pmapacc_t =
+      map_id_t * (var_t list) * (var_t list) * ecalc_t
+
+   and  pcalc_t =
+                | Const of const_t
+                | Var of var_t
+                | Add  of        ecalc_t * ecalc_t
+                | Mult of        ecalc_t * ecalc_t
+                | Leq  of        ecalc_t * ecalc_t
+                | Eq   of        ecalc_t * ecalc_t
+                | Lt   of        ecalc_t * ecalc_t
+                | IfThenElse0 of ecalc_t * ecalc_t
+                | MapAccess of pmapacc_t
+                | Null of (var_t list)
+                
+   and ecalc_t = pcalc_t * pcalc_id_t
+
+   type pstmt_t    = (pmapacc_t * ecalc_t) * pcalc_id_t
+   type ptrig_t    = pm_t * rel_id_t * (var_t list) * (pstmt_t list)
+   type pprog_t    = (map_type_t list) * (ptrig_t list)
+end
+
 

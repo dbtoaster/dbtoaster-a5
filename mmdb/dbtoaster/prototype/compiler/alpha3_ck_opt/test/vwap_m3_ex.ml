@@ -1,5 +1,5 @@
 open M3;;
-open M3Eval;;
+open M3Compiler;;
 open Unix;;
 
 (* SELECT avg(b2.price * b2.volume) 
@@ -137,13 +137,15 @@ in
 (* Database *)
 let db = Database.make_empty_db (fst prog_vwap) in
 
-(* Blocks *)
-let (_,_,_,insert_block) = List.hd (snd prog_vwap) in
-let (_,_,_,delete_block) = List.nth (snd prog_vwap) 1 in
+(* Code *)
+let (_,_,_,p_ins_block) = List.hd (prepare_triggers (snd prog_vwap)) in
+let (_,_,_,p_del_block) = List.nth (prepare_triggers (snd prog_vwap)) 1 in
+let insert_trig = compile_ptrig ["a";"b"] p_ins_block in
+let delete_trig = compile_ptrig ["a";"b"] p_del_block in
 
 (* Handlers *)
-let insert t = eval_trig ["a"; "b"] t db insert_block in
-let delete t = eval_trig ["a"; "b"] t db delete_block in
+let insert t = insert_trig t db in
+let delete t = delete_trig t db in
 
 let exchange_processor input_file query =
    let orders_in = open_in input_file in
@@ -202,7 +204,11 @@ let exchange_processor input_file query =
             
             | _ -> failwith "Invalid exchange message"
          in
-            begin if do_query then query event_type bids_event old_tuple new_tuple end
+            begin if do_query then
+               query event_type bids_event old_tuple new_tuple;
+               if ((!tuples) mod 10000) = 0 then 
+                  print_endline ("Processed "^(string_of_int (!tuples))^" tuples.");
+            end
       done;
 
       (* should never reach here... *)
@@ -232,7 +238,7 @@ let vwap_query result_chan_opt
    (match result_chan_opt with
     | None -> ()
     | Some(rc) ->
-       output_string rc ((DbMap.nmap_to_string (Database.get_map "q" db))^"\n"))
+       output_string rc ((Database.dbmap_to_string (Database.get_map "q" db))^"\n"))
 in    
 
 
@@ -241,7 +247,7 @@ let random_processor () =
     let start = Unix.gettimeofday() in
     for i = 0 to num_tuples do
        let tuple = randl 2 1 10 in
-       eval_trig ["a"; "b"] tuple db insert_block;
+       insert_trig tuple db ;
     done;
     let finish = Unix.gettimeofday() in
     print_endline ("Tuples: "^(string_of_int num_tuples)^

@@ -1,6 +1,6 @@
 
 open M3;;
-open M3Eval;;
+open M3Compiler;;
 open Unix;;
 
 (* q[y] = Sum(x, R(x,y)) *)
@@ -10,13 +10,16 @@ let prog0: prog_t =
 [ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], Const(0)), Var("a")) ]) ])
 ;;
 
-let (_, _, trigger_args, block) = List.hd (snd prog0);;
 let db = Database.make_empty_db (fst prog0);;
 
-(eval_trig ["a";"b"] [3;4] db block);;
-(eval_trig ["a";"b"] [2;4] db block);;
-(eval_trig ["a";"b"] [3;4] db block);;
-(eval_trig ["a";"b"] [1;1] db block);;
+let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog0));;
+let cblock = compile_ptrig ["a"; "b"] pblock;;
+
+(cblock [3;4] db);;
+(cblock [2;4] db);;
+(cblock [3;4] db);;
+(cblock [1;1] db);;
+
 Database.show_sorted_db db = [("q", [([], [([1], 1); ([4], 8);])])] ;;
 
 
@@ -55,20 +58,23 @@ let prog1: prog_t =
       ])
 ]);;
 
-let (_, _, _, block) = List.hd (snd prog1);;
 let db = Database.make_empty_db (fst prog1);;
 
+(* Code *)
+let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog1));;
+let cblock = compile_ptrig ["a"; "b"] pblock;;
 
-(eval_trig ["a";"b"] [2;9] db block);;
-(eval_trig ["a";"b"] [4;3] db block);;
-(eval_trig ["a";"b"] [5;2] db block);;
-(eval_trig ["a";"b"] [4;2] db block);;
-(eval_trig ["a";"b"] [3;5] db block);;
-(eval_trig ["a";"b"] [5;5] db block);;
-(eval_trig ["a";"b"] [5;5] db block);;
-(eval_trig ["a";"b"] [5;4] db block);;
+(cblock [2;9] db);;
+(cblock [4;3] db);;
+(cblock [5;2] db);;
+(cblock [4;2] db);;
+(cblock [3;5] db);;
+(cblock [5;5] db);;
+(cblock [5;5] db);;
+(cblock [5;4] db);;
 
-DbMap.show_sorted_map (Database.get_map "q" db) =
+
+Database.show_sorted_map (Database.get_map "q" db) =
    [([], [([2], 0); ([3], 4); ([4], 2); ([5], 11)])] ;;
 
 
@@ -163,24 +169,23 @@ let prog2: prog_t =
       ])
 ]);;
 
-let (_, _, _, block) = List.hd (snd prog2);;
-(*
-let db = Database.make_empty_db_wdom (fst prog2) [1;2;3;4];;
-*)
 let db = Database.make_empty_db (fst prog2);;
-eval_trig ["a";"b"] [5;5] db block;;
-eval_trig ["a";"b"] [2;1] db block;;
-eval_trig ["a";"b"] [2;1] db block;;
-eval_trig ["a";"b"] [4;2] db block;;
-eval_trig ["a";"b"] [2;1] db block;;
-eval_trig ["a";"b"] [2;3] db block;;
-eval_trig ["a";"b"] [5;3] db block;;
-eval_trig ["a";"b"] [5;3] db block;;
-eval_trig ["a";"b"] [5;5] db block;;
-eval_trig ["a";"b"] [2;2] db block;;
-eval_trig ["a";"b"] [1;2] db block;;
 
-DbMap.show_sorted_map (Database.get_map "q" db) =
+let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog2));;
+let cblock = compile_ptrig ["a"; "b"] pblock;;
+cblock [5;5] db;;
+cblock [2;1] db;;
+cblock [2;1] db;;
+cblock [4;2] db;;
+cblock [2;1] db;;
+cblock [2;3] db;;
+cblock [5;3] db;;
+cblock [5;3] db;;
+cblock [5;5] db;;
+cblock [2;2] db;;
+cblock [1;2] db;;
+
+Database.show_sorted_map (Database.get_map "q" db) =
 [([],
   [([1; 1], 0); ([1; 2], 1); ([1; 3], 2);  ([1; 5], 2);
    ([2; 1], 9); ([2; 2], 8); ([2; 3], 13); ([2; 5], 10);
@@ -207,7 +212,7 @@ for i = 0 to num_tuples do
    print_endline ((string_of_int i)^": "^
       (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));
    *)
-   eval_trig ["a"; "b"] tuple db block;
+   cblock tuple db;
 done;
 let finish = Unix.gettimeofday() in
    print_endline ("Tuples: "^(string_of_int num_tuples)^
