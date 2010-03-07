@@ -134,14 +134,14 @@ let randl n lb ub = let r = ref [] in
    for i = 1 to n do r := ((lb + (Random.int (ub-lb)))::!r) done; !r
 in
 
-(* Database *)
-let db = Database.make_empty_db (fst prog_vwap) in
-
 (* Code *)
-let (_,_,_,p_ins_block) = List.hd (prepare_triggers (snd prog_vwap)) in
-let (_,_,_,p_del_block) = List.nth (prepare_triggers (snd prog_vwap)) 1 in
-let insert_trig = compile_ptrig ["a";"b"] p_ins_block in
-let delete_trig = compile_ptrig ["a";"b"] p_del_block in
+let prepared_vwap = prepare_triggers (snd prog_vwap) in
+let vwap_triggers = compile_ptrig prepared_vwap in
+let insert_trig = List.hd vwap_triggers in
+let delete_trig = List.nth vwap_triggers 1 in
+
+(* Database *)
+let db = Database.make_empty_db (fst prog_vwap) (snd prepared_vwap) in
 
 (* Handlers *)
 let insert t = insert_trig t db in

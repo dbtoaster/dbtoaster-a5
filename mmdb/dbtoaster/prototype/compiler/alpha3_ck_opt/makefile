@@ -4,6 +4,7 @@ SOURCE = \
 	Ring.ml \
 	SuperMap.ml \
 	HashMap.ml \
+	SliceableMap.ml \
 	Calculus.mli \
 	Calculus.ml \
 	M3.ml \

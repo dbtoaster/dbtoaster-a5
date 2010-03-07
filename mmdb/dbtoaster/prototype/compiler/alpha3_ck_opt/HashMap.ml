@@ -2,6 +2,36 @@ module type MapKey = sig type t end
 
 module type S =
 sig
+   type key
+   type 'a t
+   
+   val empty_map : unit -> 'a t
+   val mem  : key -> 'a t -> bool
+   val find : key -> 'a t -> 'a
+   val add  : key -> 'a -> 'a t -> 'a t
+   val fold : (key -> 'a -> 'b -> 'b) -> 'b -> 'a t -> 'b
+   
+   val safe_add : key -> 'a -> 'a t -> 'a t
+   
+   val mapi : (key -> 'a -> key * 'a) -> 'a t -> 'a t
+   val map  : ('a -> 'a) -> 'a t -> 'a t
+   
+   val to_string : (key -> string) -> ('a -> string) -> 'a t -> string
+   val from_list : (key * 'a) list -> 'a t
+   
+   val union  : 'a t -> 'a t -> 'a t
+   val mergei :
+      (key -> 'a -> 'a) -> (key -> 'a -> 'a) -> (key -> 'a -> 'a -> 'a) ->
+      'a t -> 'a t -> 'a t
+
+   val merge  :
+      ('a -> 'a) -> ('a -> 'a) -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+   
+   val filteri : (key -> 'a -> bool) -> 'a t -> 'a t
+   val filter  : ('a -> bool) -> 'a t -> 'a t
+   
+   val dom : 'a t -> key list
+   val rng : 'a t -> 'a list
 end
 
 module Make = functor (M : MapKey) ->

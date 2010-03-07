@@ -10,17 +10,19 @@ let prog0: prog_t =
 [ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], Const(0)), Var("a")) ]) ])
 ;;
 
-let db = Database.make_empty_db (fst prog0);;
+let prepared_prog0 = prepare_triggers (snd prog0);;
+let cblock = List.hd (compile_ptrig prepared_prog0);;
 
-let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog0));;
-let cblock = compile_ptrig ["a"; "b"] pblock;;
+let db = Database.make_empty_db (fst prog0) (snd prepared_prog0);;
+
+patterns_to_string (snd prepared_prog0);;
 
 (cblock [3;4] db);;
 (cblock [2;4] db);;
 (cblock [3;4] db);;
 (cblock [1;1] db);;
 
-Database.show_sorted_db db = [("q", [([], [([1], 1); ([4], 8);])])] ;;
+Database.show_sorted_db db = [(["q"], [([], [([1], 1); ([4], 8);])])] ;;
 
 
 
@@ -58,11 +60,11 @@ let prog1: prog_t =
       ])
 ]);;
 
-let db = Database.make_empty_db (fst prog1);;
-
 (* Code *)
-let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog1));;
-let cblock = compile_ptrig ["a"; "b"] pblock;;
+let prepared_prog1 = prepare_triggers (snd prog1);;
+let cblock = List.hd (compile_ptrig prepared_prog1);;
+
+let db = Database.make_empty_db (fst prog1) (snd prepared_prog1);;
 
 (cblock [2;9] db);;
 (cblock [4;3] db);;
@@ -169,10 +171,11 @@ let prog2: prog_t =
       ])
 ]);;
 
-let db = Database.make_empty_db (fst prog2);;
+let prepared_prog2 = prepare_triggers (snd prog2);;
+let cblock = List.hd (compile_ptrig prepared_prog2);;
 
-let (_, _, _, pblock) = List.hd (prepare_triggers (snd prog2));;
-let cblock = compile_ptrig ["a"; "b"] pblock;;
+let db = Database.make_empty_db (fst prog2) (snd prepared_prog2);;
+
 cblock [5;5] db;;
 cblock [2;1] db;;
 cblock [2;1] db;;
@@ -202,7 +205,7 @@ Random.init seed;;
 let randl n lb ub = let r = ref [] in
    for i = 1 to n do r := ((lb + (Random.int (ub-lb)))::!r) done; !r
  
-let db = Database.make_empty_db (fst prog2);;
+let db = Database.make_empty_db (fst prog2) (snd prepared_prog2);;
 
 let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
