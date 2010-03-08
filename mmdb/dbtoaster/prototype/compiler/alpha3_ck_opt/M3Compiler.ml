@@ -98,26 +98,18 @@ struct
 
    (* Slice methods for calculus evaluation *)
 
-   (* assumes add has replace semantics, so that fold & add removes duplicates
-    * when starting with an empty slice.
-    * returns new slice, does not modify arg slice *)
-   let aggregate (m: t) : t =
-      try
-      let aux secondaries k v nm = 
-         let v2 = if(VM.mem k nm) then VM.find k nm else 0 in
-         VM.add k (v + v2) nm
-      in 
-      VM.fold aux (VM.empty_map_w_secondaries m) m
-      with Failure x -> failwith ("aggregate: "^x)
-
-   (* assumes slice data structure can contain duplicates following
-    * a merge. Slice contains dups until aggregated. *)
-   (* TODO: optimize double new slice creation in merge, and then in aggregate *)
-   let combine (m1: t) (m2: t) : t = aggregate (VM.union m1 m2)
-
+   (* Indexed aggregate, iterates over all partial keys given by pattern,
+    * and aggregate over key-value pairs corresponding to each partial key.
+    * assumes add has replace semantics, so that fold & add removes duplicates.
+    * returns a new map, does not modify in-place. *)
+   let indexed_aggregate aggf pat m =
+      let aux pk kv nm =
+         let (nk,nv) = aggf pk kv in VM.add nk nv nm
+      in VM.fold_index aux pat m (VM.empty_map())
+      
    (* assumes valuation theta and (Valuation.make current_outv k)
       are consistent *)
-   let extend_keys (current_outv: var_t list) (desired_outv: var_t list)
+   let concat_keys (current_outv: var_t list) (desired_outv: var_t list)
          (theta: Valuation.t) (extensions: var_t list) (m: t) =
       let key_refiner k v =
          let ext_theta = Valuation.extend
@@ -125,11 +117,25 @@ struct
          (* normalizes the key orderings to that of the variable ordering outv. *)
          let new_k = Valuation.apply ext_theta desired_outv in
          (new_k, v)
-   in
-      (* in the presence of bigsum variables, there may be duplicates
-         after key_refinement. These have to be summed up using aggregate. *)
-      (* TODO: optimize double slice creation, in map and then aggregate *)
-      aggregate (VM.mapi key_refiner m)
+   in VM.mapi key_refiner m
+
+   (* assumes valuation theta and (Valuation.make current_outv k)
+      are consistent *)
+   let project_keys (pat: ValuationMap.pattern) (pat_outv: var_t list)
+        (desired_outv: var_t list) (theta: Valuation.t)
+        (extensions: var_t list) (m: t)
+   =
+      let aux pk kv =
+         let aggv = List.fold_left (fun x (y,z) -> x+z) 0 kv in
+         let ext_theta =
+            Valuation.extend (Valuation.make pat_outv pk) theta extensions in
+         (* normalizes the key orderings to that of the variable ordering outv. *)
+         let new_k = Valuation.apply ext_theta desired_outv in
+            (new_k, aggv)
+      in
+         (* in the presence of bigsum variables, there may be duplicates
+          * after key_refinement. These have to be summed up using aggregate. *)
+         indexed_aggregate aux pat m
       
    (* filters slice entries to those consistent in terms of given variables, and theta *) 
    let filter (outv: var_t list) (theta: Valuation.t) (m: t) : t =
@@ -449,6 +455,8 @@ let rec pcalc_schema (calc : M3P.pcalc_t) =
 let rec compile_pcalc patterns incr_calc =
    let int_op op x y = if (op x y) then 1 else 0 in
    let compile_op op m1 m2 =
+      (* TODO: thread around theta vars, precompute when to expect a slice or
+       * singleton, and optimize cross product. *)
       let aux ecalc = (pcalc_schema (fst ecalc),
          (try
          Valuation.find_extension (Valuation.pos_extension (snd ecalc))
@@ -460,11 +468,17 @@ let rec compile_pcalc patterns incr_calc =
       (fun theta db ->
          let res1 = cm1 theta db in
          let f _ k v1 r =
-            (* extend with out vars from LHS calc. This is for bigsum vars in IfThenElse0 *)
+            (* extend with out vars from LHS calc. This is for bigsum vars in
+             * IfThenElse0, so that these bigsum vars can be used as in vars
+             * for map lookups. *)
             let th = Valuation.extend theta (Valuation.make outv1 k) theta_ext in
             let r2 = cm2 th db in
             (* perform cross product, extend out vars (slice key) to schema *)
-            let r3 = AggregateMap.extend_keys outv2 schema th schema_ext
+            (* We can exploit schema monotonicity, and uniqueness of
+             * map keys, implying this call to extend_keys will never do any
+             * aggregation and can be simplified to key concatenation
+             * and reindexing. *)
+            let r3 = AggregateMap.concat_keys outv2 schema th schema_ext
                (ValuationMap.map (fun v2 -> op v1 v2) r2)
             in
                (* r, r3 have no overlap -- safe to union slices.
@@ -475,19 +489,24 @@ let rec compile_pcalc patterns incr_calc =
    in
    let ccalc =
       match incr_calc with
+        (* TODO: optimize when all outv are bound vars. Here, the result need
+         * not be a slice, and we can avoid container overhead, if the map also
+         * has no in vars.
+         * In general this requires threading around bound vars, just as for
+         * evaluation *)
         M3P.MapAccess(mapn, inv, outv, init_ecalc) ->
             let cinit = compile_pcalc2 patterns outv init_ecalc in
             let out_patterns = get_out_patterns patterns mapn in
             (* Note: we extend theta for init value comp with bound out vars,
-             * so we can use them for the partial key here *)
+             * thus we can use the extension to find bound vars for the partial
+             * key here *)
             let patv = try Valuation.find_extension
                   (Valuation.pos_extension (snd init_ecalc))
-               with Not_found -> failwith "compile_pcalc MapAccess"
-            in
+               with Not_found -> failwith "compile_pcalc MapAccess" in
             let pat = List.map (index outv) patv in
             (fun theta db ->
             let m = Database.get_map mapn db in
-            (* yna note: all in vars must be bound for lookup *)
+            (* all in vars must be bound for lookup *)
             let inv_imgs = Valuation.apply theta inv in
             let slice2 =
                if (ValuationMap.mem inv_imgs m) then ValuationMap.find inv_imgs m
@@ -499,7 +518,7 @@ let rec compile_pcalc patterns incr_calc =
                      Database.update mapn inv_imgs init_slice_w_indexes db;
                      init_slice_w_indexes
             in
-               (* yna note: this can be a slice access for outv not in theta *)
+               (* This can be a slice access for outv not in theta *)
                (* We must remove secondary indexes from lookups during calculus, 
                 * evaluation, since we don't want them propagated around. *)
                let pkey = Valuation.apply theta patv in
@@ -533,6 +552,9 @@ let rec compile_pcalc patterns incr_calc =
 
 and compile_pcalc2 patterns lhs_outv ecalc =
    let rhs_outv = pcalc_schema (fst ecalc) in
+   let rhs_projection = Util.ListAsSet.inter rhs_outv lhs_outv in
+   let rhs_pattern = List.map (index rhs_outv) rhs_projection in
+   (* TODO: see below for optimization where maps accesses in ecalc have no in vars *)
    let ccalc = compile_pcalc patterns (fst ecalc) in
    (* project slice w/ rhs schema to lhs schema, extending by out vars that are bound *)
    let rhs_extensions =
@@ -543,7 +565,7 @@ and compile_pcalc2 patterns lhs_outv ecalc =
       (fun theta db ->
        (* There may be loop vars in lhs_outv, i.e. they are not in theta,
         * thus evaluating the incr calc outputs a slice.
-        * Note all in vars that are loop vars are bound in theta here. *)
+        * Note all in vars that are loop vars are bound in theta here. *) 
        let slice0 = ccalc theta db in
 (*
        print_string ("End of PCALC; outv="^(vars_to_string rhs_outv)^
@@ -551,7 +573,24 @@ and compile_pcalc2 patterns lhs_outv ecalc =
                  (" db="^(Database.db_to_string db))^
                  (" theta="^(Valuation.to_string theta)));
 *)
-       AggregateMap.extend_keys rhs_outv lhs_outv theta rhs_extensions slice0)
+       (* Note this aggregates bigsum vars present in the RHS map.
+        * We use an indexed aggregation, however, since, slice0 will not
+        * actually have any secondary indexes (we strip them during calculus
+        * evaluation), we build an index with the necessary pattern here. *)
+       (* TODO:
+        * what if there are no bigsum vars present? then we may still have
+        * loop vars which result in slices. these loop vars must all be present
+        * in lhs_outv, since the map's lhs_inv are all bound in theta.
+        *
+        * what if all lhs_outv are bound? then we don't need to index, and can
+        * just aggregate everything in this slice. this can be detected and
+        * generated from compile_pstmt.
+        *
+        * this will always be a slice, unless map accesses in the calc have no
+        * in vars, thus we need no initial value computation. *)
+       let slice1 = ValuationMap.add_secondary_index slice0 rhs_pattern in
+          AggregateMap.project_keys rhs_pattern rhs_projection lhs_outv
+             theta rhs_extensions slice1)
 
 let compile_pstmt patterns
    (((lhs_mapn, lhs_inv, lhs_outv, init_ecalc), incr_ecalc), psid)
@@ -583,6 +622,7 @@ let compile_pstmt patterns
           let a = cinit theta2 db in
           v2 + (if (ValuationMap.mem k a) then (ValuationMap.find k a) else 0)
        in
+       (* TODO: optimize merging for the case of a single value rather than a map *)
        let new_slice = ValuationMap.merge_rk
           (fun v->v) f2 (fun v1 v2 -> v1+v2) current_slice delta_slice
        in
@@ -609,8 +649,6 @@ let compile_pstmt_loop patterns trig_args pstmt =
            let new_theta = Valuation.extend theta inv_theta theta_extensions in
            let slice = ValuationMap.find inv_img lhs_map in
            (* Subslice based on bound out vars *)
-           (* TODO: what if there are no loop out vars?
-            * optimize for non-slice calculus evaluation *)
            (* Partitioning to work slice is not cheaper for now, since
             * creating the unchanged partition creates a new slice, which
             * is essentially the same as in merge *)
@@ -621,6 +659,11 @@ let compile_pstmt_loop patterns trig_args pstmt =
            let new_slice = ValuationMap.union
               unchanged_slice (cstmt new_theta work_slice db)
            *)
+           (* TODO: what if there are no loop out vars?
+            * Database update will be for a single value and any init value
+            * computation.
+            * This will still be a map, but we don't need to pass in a map, and
+            * can use a single value instead. *)
            let new_slice = cstmt new_theta slice db
            in Database.update lhs_mapn inv_img new_slice db
          in

@@ -47,6 +47,8 @@ sig
    val slice_keys : pattern -> partial_key -> 'a t -> key list
    val partition_slice : pattern -> partial_key -> 'a t -> 'a t * 'a t
 
+   val fold_index : (partial_key -> (key * 'a) list -> 'b -> 'b) -> pattern -> 'a t -> 'b -> 'b
+
    (* removes secondary indices *)
    val strip_indexes : 'a t -> 'a t
    
@@ -301,6 +303,11 @@ struct
    let partition_slice pat pkey m = 
       let kd = slice_keys pat pkey m in
          (slice pat pkey m, filteri (fun k v -> not(List.mem k kd)) m)
+
+   let fold_index f pat m acc =
+      let aux pk kl acc =
+         let kv = List.map (fun k -> (k, find k m)) kl in f pk kv acc
+      in SecondaryIndex.fold aux (IndexMap.find pat (snd m)) acc
 
    (* Removes secondary indexes, used during map lookups in calculus *)
    let strip_indexes (p,s) = (p, IndexMap.empty)

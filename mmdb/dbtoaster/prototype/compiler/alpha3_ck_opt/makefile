@@ -17,7 +17,7 @@ bytecode:
 	ocamlc -c $(SOURCE)
 
 native:
-	ocamlopt -c $(SOURCE)
+	ocamlopt -ccopt -O3 -c $(SOURCE)
 
 top: bytecode
 	ocamlmktop -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
