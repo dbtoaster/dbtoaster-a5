@@ -522,10 +522,6 @@ let prepare_triggers (triggers : trig_t list)
    in
    let prepare_block (trig_args : var_t list) (bl : stmt_t list)
          : (M3P.pstmt_t list * pattern_map * singletons) =
-      (*
-      let (pbl, patsl) = List.split (List.map (prepare_stmt trig_args) bl) in
-      let patterns = List.fold_left merge_pattern_maps (empty_pattern_map()) patsl
-      *)
       let bl_pat_sing_l = List.map (prepare_stmt trig_args) bl in
       let pbl = List.map (fun (x,y,z) -> x) bl_pat_sing_l in
       let patterns = List.fold_left merge_pattern_maps (empty_pattern_map())
@@ -568,23 +564,41 @@ type compiled_code =
    | UpdateSlice of slice_update_code
    | UpdateSingleton of singleton_update_code
 
-let rec compile_pcalc patterns incr_calc : slice_code =
+let get_singleton_code x =
+   match x with | Singleton(c) -> c | _ -> failwith "invalid singleton code"
+
+let get_slice_code x =
+   match x with | Slice(c) -> c | _ -> failwith "invalid slice code"
+
+let rec compile_pcalc singleton patterns incr_calc : compiled_code =
    let int_op op x y = if (op x y) then 1 else 0 in
-   let compile_op op m1 m2 : slice_code =
+   let compile_op op m1 m2 : compiled_code =
       let aux ecalc = (pcalc_schema (fst ecalc),
          VExt.find_extension (VExt.pos_extension (snd ecalc)),
-         compile_pcalc patterns (fst ecalc)) in
+         compile_pcalc singleton patterns (fst ecalc)) in
       let (outv1, theta_ext, cm1) = aux m1 in
       let (outv2, schema_ext, cm2) = aux m2 in
       let schema = Util.ListAsSet.union outv1 outv2 in
-         (fun theta db ->
-             let res1 = cm1 theta db in
+         if singleton then
+         let (cm1_i, cm2_i) = (get_singleton_code cm1, get_singleton_code cm2)
+         in Singleton (fun theta db ->
+            (* Since there are no bigsum vars, we don't need to evaluate RHS
+             * with an extended theta *)
+            let (r1,r2) = (cm1_i theta db, cm2_i theta db) in
+            match (r1,r2) with
+             | ([], _) | (_,[]) -> []
+             | ([(_,v1)], [(_,v2)]) -> [(Valuation.apply theta schema, op v1 v2)]
+             | _ -> failwith "compile_op: invalid singleton")
+         else
+         let (cm1_l, cm2_l) = (get_slice_code cm1, get_slice_code cm2)
+         in Slice (fun theta db ->
+             let res1 = cm1_l theta db in
              let f _ k v1 r =
                 (* extend with out vars from LHS calc. This is for bigsum vars in
                  * IfThenElse0, so that these bigsum vars can be used as in vars
                  * for map lookups. *)
                 let th = Valuation.extend theta (Valuation.make outv1 k) theta_ext in
-                let r2 = cm2 th db in
+                let r2 = cm2_l th db in
                 (* perform cross product, extend out vars (slice key) to schema *)
                 (* We can exploit schema monotonicity, and uniqueness of
                  * map keys, implying this call to extend_keys will never do any
@@ -599,10 +613,10 @@ let rec compile_pcalc patterns incr_calc : slice_code =
              in
              ValuationMap.fold f (ValuationMap.empty_map_w_secondaries res1) res1)
    in
-   let ccalc : slice_code =
+   let ccalc : compiled_code =
       match incr_calc with
         M3P.MapAccess(mapn, inv, outv, init_ecalc) ->
-            let cinit = compile_pcalc2 patterns outv init_ecalc in
+            let cinit = compile_pcalc2 singleton patterns outv init_ecalc in
             let out_patterns = get_out_patterns patterns mapn in
             (* Note: we extend theta for this map access' init value comp
              * with bound out vars, thus we can use the extension to find
@@ -611,27 +625,47 @@ let rec compile_pcalc patterns incr_calc : slice_code =
                   (VExt.pos_extension (snd init_ecalc))
                with Not_found -> failwith "compile_pcalc MapAccess" in
             let pat = List.map (index outv) patv in
-            (fun theta db ->
-               let m = Database.get_map mapn db in
-               (* all in vars must be bound for lookup *)
-               let inv_imgs = Valuation.apply theta inv in
-               let slice2 =
-                  if (ValuationMap.mem inv_imgs m) then
-                     ValuationMap.find inv_imgs m
-                  else
-                     let init_slice = cinit theta db in
-                     let init_slice_w_indexes = List.fold_left
-                        ValuationMap.add_secondary_index init_slice out_patterns
-                     in
-                        Database.update mapn inv_imgs init_slice_w_indexes db;
-                        init_slice_w_indexes
-               in
-                  (* This can be a slice access for outv not in theta *)
-                  (* We must remove secondary indexes from lookups during calculus, 
-                   * evaluation, since we don't want them propagated around. *)
-                  let pkey = Valuation.apply theta patv in
-                  let lookup_slice = ValuationMap.slice pat pkey slice2 in
-                     (ValuationMap.strip_indexes lookup_slice))
+            if singleton then
+            let cinit_i = get_singleton_code cinit
+            in Singleton (fun theta db ->
+                  let m = Database.get_map mapn db in
+                  let inv_img = Valuation.apply theta inv in
+                  let slice =
+                     if ValuationMap.mem inv_img m then
+                        ValuationMap.find inv_img m
+                     else
+                        let init_singleton = cinit_i theta db in
+                        let init_slice = ValuationMap.from_list
+                           init_singleton out_patterns
+                        in Database.update mapn inv_img init_slice db;
+                           init_slice
+                  in
+                  let outv_img = Valuation.apply theta outv in
+                     if ValuationMap.mem outv_img slice then
+                        [(outv_img, ValuationMap.find outv_img slice)]
+                     else [])
+            else let cinit_l = get_slice_code cinit
+            in Slice (fun theta db ->
+                  let m = Database.get_map mapn db in
+                  (* all in vars must be bound for lookup *)
+                  let inv_imgs = Valuation.apply theta inv in
+                  let slice2 =
+                     if (ValuationMap.mem inv_imgs m) then
+                        ValuationMap.find inv_imgs m
+                     else
+                        let init_slice = cinit_l theta db in
+                        let init_slice_w_indexes = List.fold_left
+                           ValuationMap.add_secondary_index init_slice out_patterns
+                        in
+                           Database.update mapn inv_imgs init_slice_w_indexes db;
+                           init_slice_w_indexes
+                  in
+                     (* This can be a slice access for outv not in theta *)
+                     (* We must remove secondary indexes from lookups during calculus, 
+                      * evaluation, since we don't want them propagated around. *)
+                     let pkey = Valuation.apply theta patv in
+                     let lookup_slice = ValuationMap.slice pat pkey slice2 in
+                        (ValuationMap.strip_indexes lookup_slice))
 
       | M3P.Add (c1, c2) -> compile_op ( + )         c1 c2
       | M3P.Mult(c1, c2) -> compile_op ( * )         c1 c2
@@ -641,10 +675,20 @@ let rec compile_pcalc patterns incr_calc : slice_code =
       | M3P.IfThenElse0(c1, c2) ->
            compile_op (fun v cond -> if (cond<>0) then v else 0) c2 c1
         
-      | M3P.Null(outv) -> (fun theta db -> ValuationMap.empty_map())
-      | M3P.Const(i)   -> (fun theta db -> ValuationMap.from_list [([], i)] [])
+      | M3P.Null(outv) ->
+         if singleton then Singleton (fun theta db -> [])
+         else Slice (fun theta db -> ValuationMap.empty_map())
+
+      | M3P.Const(i)   ->
+         if singleton then Singleton (fun theta db -> [([], i)])
+         else Slice (fun theta db -> ValuationMap.from_list [([], i)] [])
+
       | M3P.Var(x)     ->
-         (fun theta db ->
+         if singleton then Singleton (fun theta db ->
+            if (not (Valuation.bound x theta)) then
+               failwith ("CALC/case Var("^x^"): theta="^(Valuation.to_string theta))
+            else let v = Valuation.value x theta in [([v], v)])
+         else Slice (fun theta db ->
             if (not (Valuation.bound x theta)) then
                failwith ("CALC/case Var("^x^"): theta="^(Valuation.to_string theta))
             else let v = Valuation.value x theta in ValuationMap.from_list [([v], v)] [])
@@ -657,24 +701,48 @@ let rec compile_pcalc patterns incr_calc : slice_code =
                       " "^(Database.db_to_string db)^"   ")
       in
 *)
-      (fun theta db -> (*debug theta db;*) ccalc theta db)
+      if singleton then
+         let ccalc_i = get_singleton_code ccalc
+         in Singleton (fun theta db -> (*debug theta db;*) ccalc_i theta db)
+      else let ccalc_l = get_slice_code ccalc
+         in Slice (fun theta db -> (*debug theta db;*) ccalc_l theta db)
 
 
 (* TODO: optimizations
  * -- aggregating blindy over entire slice for fully bound lhs_outv 
  *)
-and compile_pcalc2 patterns lhs_outv ecalc : slice_code =
+and compile_pcalc2 singleton patterns lhs_outv ecalc : compiled_code =
    let rhs_outv = pcalc_schema (fst ecalc) in
    (* project slice w/ rhs schema to lhs schema, extending by out vars that are bound *)
    let rhs_extensions = VExt.find_extension (VExt.pos_extension (snd ecalc)) in
    let rhs_projection = Util.ListAsSet.inter rhs_outv lhs_outv in
    let rhs_pattern = List.map (index rhs_outv) rhs_projection in
-   let ccalc = compile_pcalc patterns (fst ecalc) in
-      (fun theta db ->
+   let ccalc = compile_pcalc singleton patterns (fst ecalc) in
+      if singleton then let ccalc_i = get_singleton_code ccalc
+      in Singleton (fun theta db ->
+(*
+         let debug =
+            print_endline ("End of PCALC_S; outv="^(vars_to_string lhs_outv)^
+                          " k="^(Util.list_to_string Valuation.string_of_const_t k)^
+                          " v="^(Valuation.string_of_const_t v)^
+                         (" db="^(Database.db_to_string db))^
+                         (" theta="^(Valuation.to_string theta)));
+         in
+*)
+         let r = ccalc_i theta db in
+         match r with
+          | [] -> []
+          | [(k,v)] -> (* debug; *) 
+            [((Valuation.apply theta lhs_outv), v)] 
+
+          | _ -> failwith "compile_pcalc2_singleton: invalid singleton")
+
+      else let ccalc_l = get_slice_code ccalc
+      in Slice (fun theta db ->
          (* There may be loop vars in lhs_outv, i.e. they are not in theta,
           * thus evaluating the incr calc outputs a slice.
           * Note all in vars that are loop vars are bound in theta here. *) 
-          let slice0 = ccalc theta db in
+          let slice0 = ccalc_l theta db in
 (*
           print_endline ("End of PCALC; outv="^(vars_to_string rhs_outv)^
                          " slice="^(Database.slice_to_string slice0)^
@@ -697,99 +765,6 @@ and compile_pcalc2 patterns lhs_outv ecalc : slice_code =
             AggregateMap.project_keys rhs_pattern rhs_projection lhs_outv
                theta rhs_extensions slice1)
 
-and compile_pcalc_singleton patterns incr_calc : singleton_code =
-(*
-   let singleton_to_string s =
-      match s with
-       | [] -> ""
-       | [(k,v)] -> 
-          ((Util.list_to_string Valuation.string_of_const_t k)^"->"^
-             (Valuation.string_of_const_t v))
-       | _ -> failwith "singleton_to_string: invalid singleton"
-   in
-*)
-   let int_op op x y = if (op x y) then 1 else 0 in
-   let compile_op op m1 m2 : singleton_code =
-      let aux ecalc =
-         (pcalc_schema (fst ecalc), compile_pcalc_singleton patterns (fst ecalc)) in
-      let ((outv1, cm1), (outv2, cm2)) = (aux m1, aux m2) in
-      let schema = Util.ListAsSet.union outv1 outv2 in
-      (fun theta db ->
-         (* Since there are no bigsum vars, we don't need to evaluate RHS
-          * with an extended theta *)
-         let (r1,r2) = (cm1 theta db, cm2 theta db) in
-         match (r1,r2) with
-          | ([], _) | (_,[]) -> []
-          | ([(_,v1)], [(_,v2)]) -> [(Valuation.apply theta schema, op v1 v2)]
-          | _ -> failwith "compile_op: invalid singleton")
-   in
-   let ccalc : singleton_code =
-      match incr_calc with
-        M3P.MapAccess(mapn, inv, outv, init_ecalc) ->
-            let cinit = compile_pcalc2_singleton patterns outv init_ecalc in
-            let out_patterns = get_out_patterns patterns mapn in
-            (fun theta db ->
-               let m = Database.get_map mapn db in
-               let inv_img = Valuation.apply theta inv in
-               let slice =
-                  if ValuationMap.mem inv_img m then
-                     ValuationMap.find inv_img m
-                  else
-                     let init_singleton = cinit theta db in
-                     let init_slice = ValuationMap.from_list
-                        init_singleton out_patterns
-                     in Database.update mapn inv_img init_slice db;
-                        init_slice
-               in
-               let outv_img = Valuation.apply theta outv in
-                  if ValuationMap.mem outv_img slice then
-                     [(outv_img, ValuationMap.find outv_img slice)]
-                  else []
-            )
-
-      | M3P.Add (c1, c2) -> compile_op ( + )         c1 c2
-      | M3P.Mult(c1, c2) -> compile_op ( * )         c1 c2
-      | M3P.Lt  (c1, c2) -> compile_op (int_op (< )) c1 c2
-      | M3P.Leq (c1, c2) -> compile_op (int_op (<=)) c1 c2
-      | M3P.Eq  (c1, c2) -> compile_op (int_op (= )) c1 c2
-      | M3P.IfThenElse0(c1, c2) ->
-           compile_op (fun v cond -> if (cond<>0) then v else 0) c2 c1
-        
-      | M3P.Null(outv) -> (fun theta db -> [])
-      | M3P.Const(i)   -> (fun theta db -> [([], i)])
-      | M3P.Var(x)     ->
-         (fun theta db ->
-            if (not (Valuation.bound x theta)) then
-               failwith ("CALC/case Var("^x^"): theta="^(Valuation.to_string theta))
-            else let v = Valuation.value x theta in [([v], v)])
-      
-      in
-(*
-      let debug theta db =
-         print_string("\neval_pcalc_singleton "^(pcalc_to_string incr_calc)^
-                      " "^(Valuation.to_string theta)^
-                      " "^(Database.db_to_string db)^"   ")
-      in
-*)
-      (fun theta db -> (*debug theta db;*) ccalc theta db)
-
-and compile_pcalc2_singleton patterns lhs_outv ecalc : singleton_code =
-   let ccalc = compile_pcalc_singleton patterns (fst ecalc) in
-   (fun theta db ->
-      let r = ccalc theta db in
-      match r with
-       | [] -> []
-       | [(k,v)] -> 
-(*
-         print_endline ("End of PCALC_S; outv="^(vars_to_string lhs_outv)^
-                       " k="^(Util.list_to_string Valuation.string_of_const_t k)^
-                       " v="^(Valuation.string_of_const_t v)^
-                      (" db="^(Database.db_to_string db))^
-                      (" theta="^(Valuation.to_string theta)));
-*)
-         [((Valuation.apply theta lhs_outv), v)]
-       | _ -> failwith "compile_pcalc2_singleton: invalid singleton")
-
 
 (* Optimizations: handles
  * -- current_slice singleton
@@ -799,17 +774,11 @@ and compile_pcalc2_singleton patterns lhs_outv ecalc : singleton_code =
 let compile_pstmt patterns singletons
    (((lhs_mapn, lhs_inv, lhs_outv, init_ecalc), incr_ecalc), psid) : compiled_code
    =
-   let aux ecalc : compiled_code = if List.mem (snd ecalc) singletons
-      then
-         begin
-            print_endline ("singleton calc="^(pcalc_to_string (fst ecalc)));
-            Singleton(compile_pcalc2_singleton patterns lhs_outv ecalc)
-         end
-      else
-         begin
-            print_endline ("slice calc="^(pcalc_to_string (fst ecalc)));
-            Slice(compile_pcalc2 patterns lhs_outv ecalc)
-         end
+   let aux ecalc : compiled_code =
+      let singleton = List.mem (snd ecalc) singletons in
+      print_endline ((if singleton then "singleton" else "slice")^
+                     " calc="^(pcalc_to_string (fst ecalc)));
+      compile_pcalc2 singleton patterns lhs_outv ecalc
    in
    let (cincr, cinit) = (aux incr_ecalc, aux init_ecalc) in
    (* extend init theta by out vars that are not in the init calc, i.e. are bound *)
