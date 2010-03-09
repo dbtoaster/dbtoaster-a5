@@ -54,7 +54,9 @@ sig
    
    val add_secondary_index : 'a t -> pattern -> 'a t
    val extend_secondary_indexes: 'a t -> 'a t -> 'a t
-   val union_secondary_indexes: 'a t -> 'a t -> 'a t 
+   val union_secondary_indexes: 'a t -> 'a t -> 'a t
+   
+   val validate_indexes : 'a t -> unit 
 end
 
 module Make = functor (M : MapKey) ->
@@ -138,6 +140,21 @@ struct
       let new_m2 = extend_secondary_indexes m2 m1 in
          IndexMap.fold union_secondary_index (snd new_m2) new_m1
 
+   let secondary_to_string si =
+      let key_to_string = Util.list_to_string M.to_string in
+      SecondaryIndex.fold (fun pk kl acc ->
+         acc^" "^(key_to_string pk)^"->["^
+            (String.concat ";" (List.map key_to_string kl))^"]")
+         si ""
+
+   let validate_indexes m =
+      let aux k v =
+         let valid = IndexMap.fold
+            (fun pat si acc -> acc && (mem_secondary si k)) (snd m) true
+         in if not(valid) then
+            (failwith ("validate_indexes "^(Util.list_to_string M.to_string k)))
+      in Hashtbl.iter aux (fst m)
+
 
    (* Map helpers *)
    let empty_map () = (Hashtbl.create 10, IndexMap.empty)
@@ -199,7 +216,7 @@ struct
       let f _ k v acc =
         (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^";"
       in 
-      "["^(fold f "" m)^"]"
+      "["^(fold f "" m)^"]<pat="^(string_of_patterns m)^">"
 
    let from_list l patterns = List.fold_left
       (fun m (k,v) -> safe_add k v m) (empty_map_w_patterns patterns) l
@@ -291,8 +308,11 @@ struct
          
    (* Secondary index methods *)
    let get_keys sim pat pkey =
-      try SecondaryIndex.find pkey (IndexMap.find pat sim)
-      with Not_found -> []
+      let index = if IndexMap.mem pat sim then IndexMap.find pat sim
+         else ((*print_endline "Pattern not found.";*) SecondaryIndex.empty)
+      in if SecondaryIndex.mem pkey index
+         then SecondaryIndex.find pkey index
+         else ((*print_endline ("Not found: "^(secondary_to_string index));*) [])
 
    let slice pat pkey m =
       let aux acc k = add k (find k m) acc

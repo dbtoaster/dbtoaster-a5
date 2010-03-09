@@ -141,7 +141,7 @@ let insert_trig = List.hd vwap_triggers in
 let delete_trig = List.nth vwap_triggers 1 in
 
 (* Database *)
-let db = Database.make_empty_db (fst prog_vwap) (snd prepared_vwap) in
+let db = Database.make_empty_db (fst prog_vwap) (let (_,pats,_) = prepared_vwap in pats) in
 
 (* Handlers *)
 let insert t = insert_trig t db in

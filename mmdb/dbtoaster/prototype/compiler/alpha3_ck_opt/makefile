@@ -22,8 +22,8 @@ native:
 top: bytecode
 	ocamlmktop -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
 
-benchmark: native
-	ocamlopt -ccopt -O3 -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
+benchmark: bytecode
+	ocamlc -o m3_ex unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
 
 vwap: native
 	ocamlopt -ccopt -O3 -o vwap str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/vwap_m3_ex.ml

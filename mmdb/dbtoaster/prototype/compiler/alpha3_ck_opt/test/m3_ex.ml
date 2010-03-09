@@ -13,9 +13,9 @@ let prog0: prog_t =
 let prepared_prog0 = prepare_triggers (snd prog0);;
 let cblock = List.hd (compile_ptrig prepared_prog0);;
 
-let db = Database.make_empty_db (fst prog0) (snd prepared_prog0);;
+let db = Database.make_empty_db (fst prog0) (let (_,pats,_) = prepared_prog0 in pats);;
 
-patterns_to_string (snd prepared_prog0);;
+patterns_to_string (let (_,pats,_) = prepared_prog0 in pats);;
 
 (cblock [3;4] db);;
 (cblock [2;4] db);;
@@ -64,7 +64,7 @@ let prog1: prog_t =
 let prepared_prog1 = prepare_triggers (snd prog1);;
 let cblock = List.hd (compile_ptrig prepared_prog1);;
 
-let db = Database.make_empty_db (fst prog1) (snd prepared_prog1);;
+let db = Database.make_empty_db (fst prog1) (let (_,x,_) = prepared_prog1 in x);;
 
 (cblock [2;9] db);;
 (cblock [4;3] db);;
@@ -174,7 +174,7 @@ let prog2: prog_t =
 let prepared_prog2 = prepare_triggers (snd prog2);;
 let cblock = List.hd (compile_ptrig prepared_prog2);;
 
-let db = Database.make_empty_db (fst prog2) (snd prepared_prog2);;
+let db = Database.make_empty_db (fst prog2) (let (_,x,_) = prepared_prog2 in x);;
 
 cblock [5;5] db;;
 cblock [2;1] db;;
@@ -205,7 +205,7 @@ Random.init seed;;
 let randl n lb ub = let r = ref [] in
    for i = 1 to n do r := ((lb + (Random.int (ub-lb)))::!r) done; !r
  
-let db = Database.make_empty_db (fst prog2) (snd prepared_prog2);;
+let db = Database.make_empty_db (fst prog2) (let (_,x,_) = prepared_prog2 in x);;
 
 let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
@@ -215,7 +215,7 @@ for i = 0 to num_tuples do
    print_endline ((string_of_int i)^": "^
       (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));
    *)
-   cblock tuple db;
+   cblock tuple db
 done;
 let finish = Unix.gettimeofday() in
    print_endline ("Tuples: "^(string_of_int num_tuples)^
