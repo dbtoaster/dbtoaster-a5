@@ -625,47 +625,52 @@ let rec compile_pcalc singleton patterns incr_calc : compiled_code =
                   (VExt.pos_extension (snd init_ecalc))
                with Not_found -> failwith "compile_pcalc MapAccess" in
             let pat = List.map (index outv) patv in
-            if singleton then
-            let cinit_i = get_singleton_code cinit
-            in Singleton (fun theta db ->
+            (* code that returns the initial value slice *)
+            let init_val_slice_code =
+               match cinit with
+                | Singleton(cinit_i) ->
+                   (fun theta db inv_img ->
+                   (* TODO: replace with Database.update_value since cinit is a singleton *)
+                   let init_singleton = cinit_i theta db in
+                   let init_slice = ValuationMap.from_list
+                      init_singleton out_patterns
+                   in Database.update mapn inv_img init_slice db; init_slice)
+                
+                | Slice(cinit_l) ->
+                   (fun theta db inv_img ->
+                   let init_slice = cinit_l theta db in
+                   let init_slice_w_indexes = List.fold_left
+                      ValuationMap.add_secondary_index init_slice out_patterns
+                   in
+                      Database.update mapn inv_img init_slice_w_indexes db;
+                      init_slice_w_indexes)
+                 
+                 | _ -> failwith "invalid initial value code"
+            in
+            (* code that returns the map slice we're accessing *)
+            let slice_access_code =
+               (fun theta db ->
                   let m = Database.get_map mapn db in
                   let inv_img = Valuation.apply theta inv in
-                  let slice =
                      if ValuationMap.mem inv_img m then
                         ValuationMap.find inv_img m
-                     else
-                        let init_singleton = cinit_i theta db in
-                        let init_slice = ValuationMap.from_list
-                           init_singleton out_patterns
-                        in Database.update mapn inv_img init_slice db;
-                           init_slice
-                  in
-                  let outv_img = Valuation.apply theta outv in
-                     if ValuationMap.mem outv_img slice then
-                        [(outv_img, ValuationMap.find outv_img slice)]
-                     else [])
-            else let cinit_l = get_slice_code cinit
-            in Slice (fun theta db ->
-                  let m = Database.get_map mapn db in
-                  (* all in vars must be bound for lookup *)
-                  let inv_imgs = Valuation.apply theta inv in
-                  let slice2 =
-                     if (ValuationMap.mem inv_imgs m) then
-                        ValuationMap.find inv_imgs m
-                     else
-                        let init_slice = cinit_l theta db in
-                        let init_slice_w_indexes = List.fold_left
-                           ValuationMap.add_secondary_index init_slice out_patterns
-                        in
-                           Database.update mapn inv_imgs init_slice_w_indexes db;
-                           init_slice_w_indexes
-                  in
-                     (* This can be a slice access for outv not in theta *)
-                     (* We must remove secondary indexes from lookups during calculus, 
-                      * evaluation, since we don't want them propagated around. *)
-                     let pkey = Valuation.apply theta patv in
-                     let lookup_slice = ValuationMap.slice pat pkey slice2 in
-                        (ValuationMap.strip_indexes lookup_slice))
+                     else init_val_slice_code theta db inv_img)
+            in
+            (* code that does the final stage of the lookup on the slice *)
+            if singleton then Singleton (fun theta db ->
+               let slice = slice_access_code theta db in
+               let outv_img = Valuation.apply theta outv in
+                  if ValuationMap.mem outv_img slice then
+                     [(outv_img, ValuationMap.find outv_img slice)]
+                  else [])
+            else Slice (fun theta db ->
+               let slice = slice_access_code theta db in
+                  (* This can be a slice access for outv not in theta *)
+                  (* We must remove secondary indexes from lookups during calculus, 
+                   * evaluation, since we don't want them propagated around. *)
+                  let pkey = Valuation.apply theta patv in
+                  let lookup_slice = ValuationMap.slice pat pkey slice in
+                     (ValuationMap.strip_indexes lookup_slice))
 
       | M3P.Add (c1, c2) -> compile_op ( + )         c1 c2
       | M3P.Mult(c1, c2) -> compile_op ( * )         c1 c2
@@ -786,97 +791,67 @@ let compile_pstmt patterns singletons
       VExt.find_extension (VExt.pos_extension (snd init_ecalc))
       with Not_found -> failwith "eval_pstmt init"
    in
-      match (cincr, cinit) with
-       | (Slice (cincrf), Slice(cinitf)) -> UpdateSlice
-          (fun theta current_slice db ->
+   let init_value_code =
 (*
-           print_string("\nPSTMT (th="^(Valuation.to_string theta)
-           ^", db=_, stmt=(("^lhs_mapn^" "^(Util.list_to_string (fun x->x) lhs_inv)^" "
-                  ^(Util.list_to_string (fun x->x) lhs_outv)^" _), _))\n");
+      let debug theta2 db k =
+         print_string ("@PSTMT.init{th="^(Valuation.to_string theta2)
+                      ^", key="^(Util.list_to_string string_of_int k)
+                      ^", db="^(Database.db_to_string db));
+      in
 *)
-           let delta_slice = cincrf theta db in
-           let f2 k v2 = 
-              let theta2 = Valuation.extend theta
-                 (Valuation.make lhs_outv k) theta_extensions
-              in
+      match cinit with
+      | Singleton(cinitf) ->
+         (fun theta db k v ->
+            let theta2 = Valuation.extend
+               theta (Valuation.make lhs_outv k) theta_extensions
+            in (* debug theta2 db k; *)
+            (match cinitf theta2 db with
+             | [] -> v
+             | [(init_k, init_v)] -> v+(if init_k = k then init_v else 0)
+             | _ -> failwith "invalid init singleton" )) 
+      | Slice(cinitf) ->
+         (fun theta db k v ->
+            let theta2 = Valuation.extend
+               theta (Valuation.make lhs_outv k) theta_extensions
+            in (* debug theta2 db k; *)
+            let init_slice = cinitf theta2 db in
+            let init_v =
+               if ValuationMap.mem k init_slice
+               then (ValuationMap.find k init_slice) else 0
+            in v + init_v)
+      | _ -> failwith "invalid init value code"
+   in
 (*
-              print_string ("@PSTMT.init{th="^(Valuation.to_string theta2)
-                        ^", key="^(Util.list_to_string string_of_int k)
-                        ^", db="^(Database.db_to_string db));
+   let debug =
+      print_string("\nPSTMT (th="^(Valuation.to_string theta)
+                  ^", db=_, stmt=(("^lhs_mapn^" "^(Util.list_to_string (fun x->x) lhs_inv)^" "
+                  ^(Util.list_to_string (fun x->x) lhs_outv)^" _), _))\n")
+   in
 *)
-              let a = cinitf theta2 db in
-              v2 + (if (ValuationMap.mem k a) then (ValuationMap.find k a) else 0)
-           in
-           let new_slice = ValuationMap.merge_rk
-              (fun v->v) f2 (fun v1 v2 -> v1+v2) current_slice delta_slice
-           in new_slice)
-
-       | (Singleton(cincrf), Slice(cinitf)) -> UpdateSingleton
-          (fun theta current_singleton db ->
-             (*
-             print_endline ("IL incr_calc="^(pcalc_to_string (fst incr_ecalc))^
-                            " init_calc="^(pcalc_to_string (fst init_ecalc)));
-             *)
-             let r = cincrf theta db in
-             match (current_singleton,r) with
-             | (s, []) -> s
-             | ([], [(delta_k, delta_v)]) ->
-                 let theta2 = Valuation.extend theta
-                    (Valuation.make lhs_outv delta_k) theta_extensions in
-                let init_slice = cinitf theta2 db in
-                let new_v = delta_v +
-                   (if (ValuationMap.mem delta_k init_slice)
-                   then (ValuationMap.find delta_k init_slice) else 0)
-                in [(delta_k, new_v)]
-
-             | ([(current_k, current_v)], [(delta_k, delta_v)]) ->
-                if delta_k = current_k then [delta_k, current_v+delta_v]
-                else failwith "compile_pstmt: invalid init singleton update"
-
-             | _ -> failwith "compile_pstmt: invalid singleton update")
-
-       | (Slice(cincrf), Singleton(cinitf)) -> UpdateSlice
+      match cincr with
+       | Slice(cincrf) -> UpdateSlice
           (fun theta current_slice db ->
              let delta_slice = cincrf theta db in
-             let f2 k v2 =
-                let theta2 = Valuation.extend theta
-                   (Valuation.make lhs_outv k) theta_extensions
-                in (match cinitf theta2 db with
-                   | [] -> v2
-                   | [(init_k, init_v)] ->
-                     v2+(if (init_k = k) then init_v else 0)
-                   | _ -> failwith "compile_pstmt: invalid init singleton")
-             in
-             let new_slice = ValuationMap.merge_rk
-                (fun v->v) f2 (fun v1 v2 -> v1+v2) current_slice delta_slice
-             in new_slice)
+                ValuationMap.merge_rk
+                   (fun v->v) (init_value_code theta db) (fun v1 v2 -> v1+v2)
+                   current_slice delta_slice)
 
-       | (Singleton(cincrf), Singleton(cinitf)) -> UpdateSingleton
+       | Singleton(cincrf) -> UpdateSingleton
           (fun theta current_singleton db ->
-             (*
-             print_endline ("II incr_calc="^(pcalc_to_string (fst incr_ecalc))^
-                " init_calc="^(pcalc_to_string (fst init_ecalc)));
-             *)
-             let r = cincrf theta db in
-             match (current_singleton, r) with
+             let delta_slice = cincrf theta db in
+             match (current_singleton, delta_slice) with
               | (s, []) -> s
               | ([], [(delta_k, delta_v)]) ->
-                 let theta2 = Valuation.extend theta
-                    (Valuation.make lhs_outv delta_k) theta_extensions
-                 in (match cinitf theta2 db with
-                      | [] -> [(delta_k, delta_v)]
-                      | [(init_k, init_v)] ->
-                         if delta_k = init_k then [(init_k, delta_v+init_v)]
-                         else [(delta_k, delta_v)]
-                      | _ -> failwith "compile_pstmt: invalid singleton")
-              
+                 [(delta_k, init_value_code theta db delta_k delta_v)]
               | ([(current_k, current_v)], [(delta_k, delta_v)]) ->
-                 if delta_k = current_k then [(delta_k, current_v+delta_v)]
-                 else [(current_k, current_v)]
+                if delta_k = current_k then [delta_k, current_v+delta_v]
+                else
+                   (* failwith "compile_pstmt: invalid init singleton update" *)
+                   [(current_k, current_v)]
+              | _ -> failwith "invalid singleton update")
 
-              | _ -> failwith "compile_pstmt: invalid update.")
+       | _ -> failwith "compile_pstmt: invalid update"
 
-       | _ -> failwith "compile_pstmt: unhandled merge case." 
 
 let compile_pstmt_loop patterns singletons trig_args pstmt : compiled_stmt =
    let (((lhs_mapn, lhs_inv, lhs_outv, _), _), lhs_pid) = pstmt in
