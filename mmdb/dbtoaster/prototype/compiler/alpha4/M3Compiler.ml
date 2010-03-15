@@ -302,6 +302,19 @@ end
 (* M3 preparation and compilation *)
 module M3P = M3.Prepared
 
+(* Simple prepared statement helpers *)
+let get_calc ecalc = fst ecalc
+let get_meta ecalc = snd ecalc
+let get_extensions ecalc = let (_,x,_,_) = get_meta ecalc in x
+let get_id ecalc = let (x,_,_,_) = get_meta ecalc in x
+let get_singleton ecalc = let (_,_,x,_) = get_meta ecalc in x
+let get_product ecalc = let (_,_,_,x) = get_meta ecalc in x
+
+let get_ecalc aggecalc = fst aggecalc
+let get_agg_meta aggecalc = snd aggecalc
+let get_agg_name aggmeta = fst aggmeta
+let get_full_agg aggmeta = snd aggmeta
+
 let rec calc_schema calc =
    let op c1 c2 = Util.ListAsSet.union (calc_schema c1) (calc_schema c2) in
    match calc with
@@ -316,13 +329,28 @@ let rec calc_schema calc =
     | Const(i)            -> []
     | Var(x)              -> [x]
 
+let rec calc_vars calc =
+   let op c1 c2 = Util.ListAsSet.union (calc_vars c1) (calc_vars c2) in
+   match calc with
+      MapAccess(mapn, inv, outv, init_calc) -> inv@outv
+    | Add (c1, c2)        -> op c1 c2
+    | Mult(c1, c2)        -> op c1 c2
+    | Lt  (c1, c2)        -> op c1 c2
+    | Leq (c1, c2)        -> op c1 c2
+    | Eq  (c1, c2)        -> op c1 c2
+    | IfThenElse0(c1, c2) -> op c2 c1
+    | Null(outv)          -> outv
+    | Const(i)            -> []
+    | Var(x)              -> [x]
+
 let rec pcalc_to_string calc =
    let ots op e1 e2 =
-      op^"("^(pcalc_to_string (fst e1))^", "^(pcalc_to_string (fst e2))^")" in
+      op^"("^(pcalc_to_string (get_calc e1))^
+      ", "^(pcalc_to_string (get_calc e2))^")" in
    match calc with
       M3P.MapAccess(mapn, inv, outv, init_aggecalc) ->
-         "MapAccess("^mapn^", "^(vars_to_string inv)^", "^
-         (vars_to_string outv)^", "^(pcalc_to_string (fst (fst init_aggecalc)))^")"
+         "MapAccess("^mapn^", "^(vars_to_string inv)^", "^(vars_to_string outv)^
+         ", "^(pcalc_to_string (get_calc (get_ecalc init_aggecalc)))^")"
     | M3P.Add (e1, e2)        -> ots "Add"  e1 e2
     | M3P.Mult(e1, e2)        -> ots "Mult" e1 e2
     | M3P.Lt  (e1, e2)        -> ots "Lt"   e1 e2
@@ -335,7 +363,7 @@ let rec pcalc_to_string calc =
 
 let rec pcalc_schema (calc : M3P.pcalc_t) =
    let op c1 c2 =
-      Util.ListAsSet.union (pcalc_schema (fst c1)) (pcalc_schema (fst c2)) in
+      Util.ListAsSet.union (pcalc_schema (get_calc c1)) (pcalc_schema (get_calc c2)) in
    match calc with
       M3P.MapAccess(mapn, inv, outv, init_ecalc) -> outv
     | M3P.Add (c1, c2)        -> op c1 c2
@@ -348,14 +376,25 @@ let rec pcalc_schema (calc : M3P.pcalc_t) =
     | M3P.Const(i)            -> []
     | M3P.Var(x)              -> [x]
 
+(* TODO: validate x * m[x] *)
 let prepare_triggers (triggers : trig_t list)
    : (M3P.ptrig_t list * pattern_map) =
-   let get_singleton meta = snd meta in
-   let get_extensions meta = fst meta in
-   let rec prepare_calc (lhs_vars: var_t list)
+   let prep_counter = ref [] in
+   let add_counter() = prep_counter := 0::(!prep_counter) in
+   let remove_counter() =
+      if !prep_counter != [] then prep_counter := (List.tl !prep_counter)
+   in
+   let prepare() =
+      if !prep_counter = [] then add_counter();
+      let current = List.hd (!prep_counter) in
+         prep_counter := (current+1)::(List.tl !prep_counter);
+         current
+   in
+   let save_counter f = add_counter(); let r = f() in remove_counter(); r in
+   let rec prepare_calc (update_mapn : string) (lhs_vars: var_t list)
                         (theta_vars : var_t list) (calc : calc_t)
          : (M3P.ecalc_t * pattern_map) =
-      let recur = prepare_calc lhs_vars in
+      let recur = prepare_calc update_mapn lhs_vars in
       let prepare_aux c propagate defv theta_ext
             : (M3P.ecalc_t * var_t list * pattern_map) =
          let outv = calc_schema c in
@@ -364,7 +403,8 @@ let prepare_triggers (triggers : trig_t list)
          let (pc, pm) = recur (theta_vars@theta_ext) c in 
          (* Override metadata, assumes recursive call to prepare_calc has
           * already done this for its children. *)
-         let new_pc = (fst pc, (ext, get_singleton (snd pc)))
+         let new_pc_meta = let (x,_,y,z) = get_meta pc in (x,ext,y,z) in
+         let new_pc = (get_calc pc, new_pc_meta)
          in (new_pc, outv, pm)
       in
       let prepare_op (f : M3P.ecalc_t -> M3P.ecalc_t -> M3P.pcalc_t)
@@ -373,18 +413,20 @@ let prepare_triggers (triggers : trig_t list)
       =
          let (e1, c1_outv, p1_patterns) = prepare_aux c1 false theta_vars [] in
          let (e2, _, p2_patterns) =
-            prepare_aux c2 true c1_outv (get_extensions (snd e1)) in
+            prepare_aux c2 true c1_outv (get_extensions e1) in
          let patterns = merge_pattern_maps p1_patterns p2_patterns in
-         let singleton = (get_singleton (snd e1)) && (get_singleton (snd e2))
+         let singleton = (get_singleton e1) && (get_singleton e2) in
+         let (c1_vars, c2_vars) = (calc_vars c1, calc_vars c2) in
+         let product = (Util.ListAsSet.inter c1_vars c2_vars) = []
          (* Safe to use empty theta extensions, since this will get overriden
           * by recursive calls for binary ops *) 
-         in ((f e1 e2, ([], singleton)), patterns) 
+         in ((f e1 e2, (prepare(), [], singleton, product)), patterns) 
       in
       match calc with
-        | Const(c)      -> ((M3P.Const(c), ([], true)), empty_pattern_map())
+        | Const(c)      -> ((M3P.Const(c), (prepare(), [], true, false)), empty_pattern_map())
         | Var(v)        -> 
            (* Bigsum vars are not LHS vars, and are slices. *)
-           ((M3P.Var(v), ([], List.mem v lhs_vars)), empty_pattern_map())
+           ((M3P.Var(v), (prepare(), [], List.mem v lhs_vars, false)), empty_pattern_map())
 
         | Add  (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Add  (e1, e2)) c1 c2
         | Mult (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Mult (e1, e2)) c1 c2
@@ -407,19 +449,25 @@ let prepare_triggers (triggers : trig_t list)
               Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) outv in
            
            let (init_ecalc, patterns) =
-              prepare_calc init_lhs_vars theta_vars init_calc in
+              save_counter (fun () -> 
+                 prepare_calc mapn init_lhs_vars theta_vars init_calc)
+           in
            let new_patterns = 
               if (List.length outv) = (List.length bound_outv) then patterns
               else merge_pattern_maps patterns (singleton_pattern_map
                       (mapn, make_out_pattern outv bound_outv)) in
+           let new_init_agg_meta = (update_mapn^"_init_"^mapn, full_agg) in
+           let new_init_meta = let (x,_,y,z) =
+              get_meta init_ecalc in (x,bound_outv,y,z) in
            let new_init_aggecalc =
-              (((fst init_ecalc), (bound_outv, get_singleton (snd init_ecalc))), full_agg)
+              (((get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
-           let r = (M3P.MapAccess(mapn, inv, outv, new_init_aggecalc), ([], singleton))
+           let new_incr_meta = (prepare(), [], singleton, false) in
+           let r = (M3P.MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
         
         (* TODO: are null slices singletons? *)
-        | Null (outv) -> ((M3P.Null(outv), ([], true)), empty_pattern_map())
+        | Null (outv) -> ((M3P.Null(outv), (prepare(), [], true, false)), empty_pattern_map())
    in
 
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.pstmt_t * pattern_map) =
@@ -445,19 +493,21 @@ let prepare_triggers (triggers : trig_t list)
       (* Set up top-level extensions for an entire incr/init RHS.
        * Incr M3 is extended by bound out variables.
        * Init M3 is extended by LHS out vars that do not appear in the RHS out vars. *)
-      let prepare_stmt_ext calc ext ext_theta =
+      let prepare_stmt_ext name_suffix calc ext ext_theta =
          let calc_theta_vars = Util.ListAsSet.union theta_w_loopinv
             (if ext_theta then ext else []) in
-         let (c, patterns) = prepare_calc theta_w_lhs calc_theta_vars calc in
-         let csingle = get_singleton (snd c) in 
-         let new_c = ((fst c, (ext, csingle)), full_agg) in
-            print_endline ("singleton="^(string_of_bool csingle)^
-                           " calc="^(pcalc_to_string (fst c)));
+         let (c, patterns) =
+            prepare_calc lmapn theta_w_lhs calc_theta_vars calc in
+         let new_c_aggmeta = (lmapn^name_suffix, full_agg) in
+         let new_c_meta = let (x,_,y,z) = get_meta c in (x,ext,y,z) in
+         let new_c = ((get_calc c, new_c_meta), new_c_aggmeta) in
+            print_endline ("singleton="^(string_of_bool (get_singleton c))^
+                           " calc="^(pcalc_to_string (get_calc c)));
             (new_c, patterns) 
       in
 
-      let (init_ca, init_patterns) = prepare_stmt_ext init_calc init_ext true in
-      let (incr_ca, incr_patterns) = prepare_stmt_ext incr_calc bound_outv false in
+      let (init_ca, init_patterns) = prepare_stmt_ext "_init" init_calc init_ext true in
+      let (incr_ca, incr_patterns) = prepare_stmt_ext "_incr" incr_calc bound_outv false in
 
       let pstmt = ((lmapn, linv, loutv, init_ca), incr_ca, loop_inv) in
 
@@ -522,16 +572,14 @@ let get_slice_code x =
    match x with | Slice(c) -> c | _ -> failwith "invalid slice code"
 
 let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
-   let get_extensions ecalc = fst (snd ecalc) in
-   let singleton = snd (snd incr_ecalc) in
    let int_op op x y = if (op x y) then 1 else 0 in
    let compile_op op m1 m2 : compiled_code =
-      let aux ecalc = (pcalc_schema (fst ecalc), get_extensions ecalc,
+      let aux ecalc = (pcalc_schema (get_calc ecalc), get_extensions ecalc,
                          compile_pcalc patterns ecalc) in
       let (outv1, theta_ext, cm1) = aux m1 in
       let (outv2, schema_ext, cm2) = aux m2 in
       let schema = Util.ListAsSet.union outv1 outv2 in
-         if singleton then
+         if get_singleton incr_ecalc then
          let (cm1_i, cm2_i) = (get_singleton_code cm1, get_singleton_code cm2)
          in Singleton (fun theta db ->
             (* Since there are no bigsum vars, we don't need to evaluate RHS
@@ -555,6 +603,7 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                 | _ -> failwith "compile_op: invalid singleton")
 
           | (Slice(cm1_l), Singleton(cm2_i)) ->
+             (* TODO: optimize product *)
              Slice (fun theta db ->
                 let res1 = cm1_l theta db in
                 let th2 = Valuation.make outv2 (Valuation.apply theta outv2) in
@@ -572,6 +621,15 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                 in ValuationMap.fold f (ValuationMap.empty_map()) res1) 
 
           | (Slice(cm1_l), Slice(cm2_l)) ->
+             (* TODO: optimize product case *)
+             (*
+             if product then
+             Slice (fun theta db ->
+             let res1 = cm1_l theta db in
+             let res2 = cm2_l theta db
+             in ValuationMap.product res1 res2)
+             else
+             *)
              Slice (fun theta db ->
              let res1 = cm1_l theta db in
              let f k v1 r =
@@ -598,15 +656,15 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
          end
    in
    let ccalc : compiled_code =
-      match (fst incr_ecalc) with
+      match (get_calc incr_ecalc) with
         M3P.MapAccess(mapn, inv, outv, init_aggecalc) ->
-            let cinit = compile_pcalc2
-               patterns (snd init_aggecalc) outv (fst init_aggecalc) in
+            let cinit = compile_pcalc2 patterns
+               (get_agg_meta init_aggecalc) outv (get_ecalc init_aggecalc) in
             let out_patterns = get_out_patterns patterns mapn in
             (* Note: we extend theta for this map access' init value comp
              * with bound out vars, thus we can use the extension to find
              * bound vars for the partial key here *)
-            let patv = fst (snd (fst init_aggecalc)) in
+            let patv = get_extensions (get_ecalc init_aggecalc) in
             let pat = List.map (index outv) patv in
             (* code that returns the initial value slice *)
             let init_val_slice_code =
@@ -644,7 +702,7 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                      else init_val_slice_code theta db inv_img)
             in
             (* code that does the final stage of the lookup on the slice *)
-            if singleton then Singleton (fun theta db ->
+            if get_singleton incr_ecalc then Singleton (fun theta db ->
                let slice = slice_access_code theta db in
                let outv_img = Valuation.apply theta outv in
                   if ValuationMap.mem outv_img slice then
@@ -668,15 +726,15 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
            compile_op (fun v cond -> if (cond<>0) then v else 0) c2 c1
         
       | M3P.Null(outv) ->
-         if singleton then Singleton (fun theta db -> [])
+         if get_singleton incr_ecalc then Singleton (fun theta db -> [])
          else Slice (fun theta db -> ValuationMap.empty_map())
 
       | M3P.Const(i)   ->
-         if singleton then Singleton (fun theta db -> [i])
+         if get_singleton incr_ecalc then Singleton (fun theta db -> [i])
          else Slice (fun theta db -> ValuationMap.from_list [([], i)] [])
 
       | M3P.Var(x)     ->
-         if singleton then Singleton (fun theta db ->
+         if get_singleton incr_ecalc then Singleton (fun theta db ->
             if (not (Valuation.bound x theta)) then
                failwith ("CALC/case Var("^x^"): theta="^(Valuation.to_string theta))
             else let v = Valuation.value x theta in [v])
@@ -693,7 +751,7 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                       " "^(Database.db_to_string db)^"   ")
       in
 *)
-      if singleton then
+      if get_singleton incr_ecalc then
          let ccalc_i = get_singleton_code ccalc
          in Singleton (fun theta db -> (*debug theta db;*) ccalc_i theta db)
       else let ccalc_l = get_slice_code ccalc
@@ -703,15 +761,14 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
 (* Optimizations:
  * -- aggregates blindy over entire slice for fully bound lhs_outv 
  * -- skips aggregating when rhs_outv = lhs_outv *)
-and compile_pcalc2 patterns lhs_bound lhs_outv ecalc : compiled_code =
-   let rhs_outv = pcalc_schema (fst ecalc) in
+and compile_pcalc2 patterns agg_meta lhs_outv ecalc : compiled_code =
+   let rhs_outv = pcalc_schema (get_calc ecalc) in
    (* project slice w/ rhs schema to lhs schema, extending by out vars that are bound *)
-   let rhs_ext = fst (snd ecalc) in
+   let rhs_ext = get_extensions ecalc in
    let rhs_projection = Util.ListAsSet.inter rhs_outv lhs_outv in
    let rhs_pattern = List.map (index rhs_outv) rhs_projection in
    let ccalc = compile_pcalc patterns ecalc in
-   let singleton = snd (snd ecalc) in
-      if singleton then let ccalc_i = get_singleton_code ccalc in
+      if get_singleton ecalc then let ccalc_i = get_singleton_code ccalc in
 (*
       let debug theta db k v =
          print_endline ("End of PCALC_S; outv="^(vars_to_string lhs_outv)^
@@ -739,7 +796,7 @@ and compile_pcalc2 patterns lhs_bound lhs_outv ecalc : compiled_code =
 *)
       begin if rhs_outv = lhs_outv then
       Slice (fun theta db -> ccalc_l theta db)
-      else if lhs_bound then
+      else if get_full_agg agg_meta then
       Singleton (fun theta db ->
          let slice0 = ccalc_l theta db in
             [ValuationMap.fold (fun k v acc -> acc+v) 0 slice0])
@@ -767,13 +824,13 @@ let compile_pstmt patterns
       : compiled_code
    =
    let aux aggecalc : compiled_code =
-      let singleton = snd (snd (fst aggecalc)) in
+      let singleton = get_singleton (get_ecalc aggecalc) in
       print_endline ((if singleton then "singleton" else "slice")^
-                     " calc="^(pcalc_to_string (fst (fst aggecalc))));
-      compile_pcalc2 patterns (snd aggecalc) lhs_outv (fst aggecalc)
+                     " calc="^(pcalc_to_string (get_calc (get_ecalc aggecalc))));
+      compile_pcalc2 patterns (get_agg_meta aggecalc) lhs_outv (get_ecalc aggecalc)
    in
    let (cincr, cinit) = (aux incr_aggecalc, aux init_aggecalc) in
-   let init_ext = fst (snd (fst init_aggecalc)) in
+   let init_ext = get_extensions (get_ecalc init_aggecalc) in
    let init_value_code =
 (*
       let debug theta2 db k =

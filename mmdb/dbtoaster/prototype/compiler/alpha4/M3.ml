@@ -76,11 +76,11 @@ struct
    
    type pextension_t   = var_t list
    
-   (* theta extension, singleton *)
-   type pcalcmeta_t    = pextension_t * bool
+   (* id, theta extension, singleton *)
+   type pcalcmeta_t    = int * pextension_t * bool * bool
 
-   (* full aggregation *)   
-   type paggmeta_t     = bool
+   (* name, full aggregation *)   
+   type paggmeta_t     = string * bool
    
    (* loop in vars extension *)
    type pstmtmeta_t    = pextension_t
