@@ -2,8 +2,6 @@
 SOURCE = \
 	Util.ml \
 	Ring.ml \
-	SuperMap.ml \
-	HashMap.ml \
 	SliceableMap.mli \
 	SliceableMap.ml \
 	Calculus.mli \

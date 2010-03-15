@@ -25,17 +25,17 @@ module Valuation : ValuationSig =
 struct
    (* the keys are variable names *)
    module StringMap = Map.Make (String)
-   module StringSMap = SuperMap.Make(StringMap)
 
    type key = StringMap.key
    type t = const_t StringMap.t
 
    (* TODO: change when const_t is generalized *)
    let string_of_const_t = string_of_int
-    
+
    (* Note: ordered result *)
    let make (vars: var_t list) (values: const_t list) : t =
-      StringSMap.from_list (List.combine vars values)
+      List.fold_left (fun acc (k,v) -> StringMap.add k v acc)
+         StringMap.empty (List.combine vars values)
 
    (* Note: ordered result *)
    let to_list m = StringMap.fold (fun s n l -> (s,n)::l) m []
@@ -55,13 +55,13 @@ struct
     * assumes that m1 and m2 are consistent. *)
    (* Note: ordered result *)
    let extend (m1: t) (m2: t) (ext : var_t list) : t =
-       List.fold_left (fun acc k -> StringMap.add k (value k m2) acc) m1 ext
+      List.fold_left (fun acc k -> StringMap.add k (value k m2) acc) m1 ext
 
    let apply (m: t) (l: key list) = List.map (fun x -> StringMap.find x m) l
 
-   (* TODO: does order matter here? *)
    let to_string (theta:t) : string =
-      StringSMap.to_string (fun x->x) (fun v -> (string_of_const_t v)) theta
+      StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else " ")^
+         k^"->"^(string_of_const_t v)) theta ""
 end
 
 (* Map whose keys are valuations, and values are polymorphic *)
