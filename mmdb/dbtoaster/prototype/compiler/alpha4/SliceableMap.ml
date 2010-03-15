@@ -24,7 +24,8 @@ sig
    val map_rk : (key -> 'a -> 'b) -> 'a t -> 'b t 
    
    val union  : 'a t -> 'a t -> 'a t
-   
+   val product : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+
    val mergei :
       (key -> 'a -> 'a) -> (key -> 'a -> 'a) -> (key -> 'a -> 'a -> 'a) ->
       'a t -> 'a t -> 'a t
@@ -240,6 +241,17 @@ struct
       in
       fold aux (union_secondary_indexes m1 m2) m2
       with Failure x -> failwith ("union: "^x)
+
+   (* Computes a cross product of two maps, where the resulting map is indexed
+    * by concatenating individual map keys. This applies the given function to
+    * each pair of values encountered
+    * TODO: right now this drops all secondary indexes, which is fine for
+    * our needs, but a general implementation should maintain existing
+    * indexes to their new key positions. *)
+   let product f m1 m2 =
+      let aux k v acc =
+         fold (fun k2 v2 acc -> add (k@k2) (f v v2) acc) acc m2
+      in fold aux (empty_map()) m1
 
    (* Merges two slices, reconciling entries to a single entry.
     * This is a generic merge where fs can remap keys, thus we rebuild secondary

@@ -50,6 +50,13 @@ sig
    (* Merges two maps, preserving duplicates as hidden bindings. *)
    val union  : 'a t -> 'a t -> 'a t
 
+   (* Computes a Cartesian product of two maps, applying the given function
+    * on each pair of values in the product.
+    * TODO: right now this drops all secondary indexes, which is fine for
+    * our needs, but a general implementation should maintain existing
+    * indexes to their new key positions. *)
+   val product : ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+
    (* Merges and reconciles two maps, mapping each binding encountered
     * during merge. Constructs merged map from scratch, allowing 
     * modification of bindings by mapping functions. *)

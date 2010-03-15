@@ -573,13 +573,13 @@ let get_slice_code x =
 
 let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
    let int_op op x y = if (op x y) then 1 else 0 in
-   let compile_op op m1 m2 : compiled_code =
+   let compile_op ecalc op m1 m2 : compiled_code =
       let aux ecalc = (pcalc_schema (get_calc ecalc), get_extensions ecalc,
                          compile_pcalc patterns ecalc) in
       let (outv1, theta_ext, cm1) = aux m1 in
       let (outv2, schema_ext, cm2) = aux m2 in
       let schema = Util.ListAsSet.union outv1 outv2 in
-         if get_singleton incr_ecalc then
+         if get_singleton ecalc then
          let (cm1_i, cm2_i) = (get_singleton_code cm1, get_singleton_code cm2)
          in Singleton (fun theta db ->
             (* Since there are no bigsum vars, we don't need to evaluate RHS
@@ -603,7 +603,16 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                 | _ -> failwith "compile_op: invalid singleton")
 
           | (Slice(cm1_l), Singleton(cm2_i)) ->
-             (* TODO: optimize product *)
+             if get_product ecalc then
+             Slice (fun theta db ->
+                let res1 = cm1_l theta db in
+                let k2 = Valuation.apply theta outv2 in
+                begin match (cm2_i theta db) with
+                 | [] -> ValuationMap.empty_map()
+                 | [v2] -> ValuationMap.mapi (fun k v -> (k@k2, op v v2)) res1
+                 | _ -> failwith "compile_op: invalid singleton"
+                end)
+             else
              Slice (fun theta db ->
                 let res1 = cm1_l theta db in
                 let th2 = Valuation.make outv2 (Valuation.apply theta outv2) in
@@ -621,15 +630,12 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                 in ValuationMap.fold f (ValuationMap.empty_map()) res1) 
 
           | (Slice(cm1_l), Slice(cm2_l)) ->
-             (* TODO: optimize product case *)
-             (*
-             if product then
+             if get_product ecalc then
              Slice (fun theta db ->
-             let res1 = cm1_l theta db in
-             let res2 = cm2_l theta db
-             in ValuationMap.product res1 res2)
+                let res1 = cm1_l theta db in
+                let res2 = cm2_l theta db
+                in ValuationMap.product op res1 res2)
              else
-             *)
              Slice (fun theta db ->
              let res1 = cm1_l theta db in
              let f k v1 r =
@@ -717,13 +723,13 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
                   let lookup_slice = ValuationMap.slice pat pkey slice in
                      (ValuationMap.strip_indexes lookup_slice))
 
-      | M3P.Add (c1, c2) -> compile_op ( + )         c1 c2
-      | M3P.Mult(c1, c2) -> compile_op ( * )         c1 c2
-      | M3P.Lt  (c1, c2) -> compile_op (int_op (< )) c1 c2
-      | M3P.Leq (c1, c2) -> compile_op (int_op (<=)) c1 c2
-      | M3P.Eq  (c1, c2) -> compile_op (int_op (= )) c1 c2
-      | M3P.IfThenElse0(c1, c2) ->
-           compile_op (fun v cond -> if (cond<>0) then v else 0) c2 c1
+      | M3P.Add (c1, c2) -> compile_op incr_ecalc ( + )         c1 c2
+      | M3P.Mult(c1, c2) -> compile_op incr_ecalc ( * )         c1 c2
+      | M3P.Lt  (c1, c2) -> compile_op incr_ecalc (int_op (< )) c1 c2
+      | M3P.Leq (c1, c2) -> compile_op incr_ecalc (int_op (<=)) c1 c2
+      | M3P.Eq  (c1, c2) -> compile_op incr_ecalc (int_op (= )) c1 c2
+      | M3P.IfThenElse0(c1, c2) -> compile_op incr_ecalc
+         (fun v cond -> if (cond<>0) then v else 0) c2 c1
         
       | M3P.Null(outv) ->
          if get_singleton incr_ecalc then Singleton (fun theta db -> [])
