@@ -73,10 +73,20 @@ type prog_t = (map_type_t list) * (trig_t list)
 
 module Prepared =
 struct
-   type pcalc_id_t = int
+   
+   type pextension_t   = var_t list
+   
+   (* theta extension, singleton *)
+   type pcalcmeta_t    = pextension_t * bool
+
+   (* full aggregation *)   
+   type paggmeta_t     = bool
+   
+   (* loop in vars extension *)
+   type pstmtmeta_t    = pextension_t
 
    type pmapacc_t =
-      map_id_t * (var_t list) * (var_t list) * ecalc_t
+      map_id_t * (var_t list) * (var_t list) * aggecalc_t
 
    and  pcalc_t =
                 | Const of const_t
@@ -90,9 +100,10 @@ struct
                 | MapAccess of pmapacc_t
                 | Null of (var_t list)
                 
-   and ecalc_t = pcalc_t * pcalc_id_t
+   and ecalc_t     = pcalc_t * pcalcmeta_t
+   and aggecalc_t  = ecalc_t * paggmeta_t
 
-   type pstmt_t    = (pmapacc_t * ecalc_t) * pcalc_id_t
+   type pstmt_t    = pmapacc_t * aggecalc_t * pstmtmeta_t
    type ptrig_t    = pm_t * rel_id_t * (var_t list) * (pstmt_t list)
    type pprog_t    = (map_type_t list) * (ptrig_t list)
 end

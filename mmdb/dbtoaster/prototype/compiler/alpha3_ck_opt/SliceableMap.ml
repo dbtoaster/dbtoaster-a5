@@ -1,28 +1,30 @@
 module type MapKey = sig type t val to_string: t -> string end
 
-module type S =
+module type S = functor (M: MapKey) ->
 sig
-   type key
-   type partial_key
-   type pattern
+   type key         = M.t list
+   type partial_key = M.t list
+   type pattern     = int list
 
    type 'a t
+   type secondary_t
    
    val empty_map : unit -> 'a t
+   val empty_map_w_patterns : pattern list -> 'a t
+
    val mem  : key -> 'a t -> bool
    val find : key -> 'a t -> 'a
    val add  : key -> 'a -> 'a t -> 'a t
-   val fold : (key -> 'a -> 'b -> 'b) -> 'b -> 'a t -> 'b
-   
    val safe_add : key -> 'a -> 'a t -> 'a t
    
-   val mapi : (key -> 'a -> key * 'a) -> 'a t -> 'a t
-   val map  : ('a -> 'a) -> 'a t -> 'a t
+   val fold : (key -> 'a -> 'b -> 'b) -> 'b -> 'a t -> 'b   
    
-   val to_string : (key -> string) -> ('a -> string) -> 'a t -> string
-   val from_list : (key * 'a) list -> 'a t
+   val mapi : (key -> 'a -> key * 'b) -> 'a t -> 'b t
+   val map  : ('a -> 'b) -> 'a t -> 'b t
+   val map_rk : (key -> 'a -> 'b) -> 'a t -> 'b t 
    
    val union  : 'a t -> 'a t -> 'a t
+   
    val mergei :
       (key -> 'a -> 'a) -> (key -> 'a -> 'a) -> (key -> 'a -> 'a -> 'a) ->
       'a t -> 'a t -> 'a t
@@ -31,7 +33,8 @@ sig
       ('a -> 'a) -> ('a -> 'a) -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
 
    val merge_rk:
-      ('a -> 'a) -> ('a -> 'a) -> ('a -> 'a -> 'a) -> 'a t -> 'a t -> 'a t
+      (key -> 'a -> 'a) -> (key -> 'a -> 'a) -> (key -> 'a -> 'a -> 'a) ->
+      'a t -> 'a t -> 'a t
    
    val filteri : (key -> 'a -> bool) -> 'a t -> 'a t
    val filter  : ('a -> bool) -> 'a t -> 'a t
@@ -41,6 +44,11 @@ sig
 
    val dom : 'a t -> key list
    val rng : 'a t -> 'a list
+      
+   val from_list : (key * 'a) list -> pattern list -> 'a t
+   val to_list : 'a t -> (key * 'a) list
+   
+   val to_string : (key -> string) -> ('a -> string) -> 'a t -> string
    
    (* Secondary index methods *)
    val slice : pattern -> partial_key -> 'a t -> 'a t
@@ -48,18 +56,15 @@ sig
    val partition_slice : pattern -> partial_key -> 'a t -> 'a t * 'a t
 
    val fold_index : (partial_key -> (key * 'a) list -> 'b -> 'b) -> pattern -> 'a t -> 'b -> 'b
-
-   (* removes secondary indices *)
-   val strip_indexes : 'a t -> 'a t
    
    val add_secondary_index : 'a t -> pattern -> 'a t
    val extend_secondary_indexes: 'a t -> 'a t -> 'a t
-   val union_secondary_indexes: 'a t -> 'a t -> 'a t
+   val strip_indexes : 'a t -> 'a t
    
    val validate_indexes : 'a t -> unit 
 end
 
-module Make = functor (M : MapKey) ->
+module Make : S = functor (M: MapKey) ->
 struct
    type key            = M.t list
    type partial_key    = M.t list
@@ -68,10 +73,10 @@ struct
    module SecondaryIndex  = Map.Make(struct type t = partial_key let compare = Pervasives.compare end)
    module IndexMap        = Map.Make(struct type t = pattern let compare = Pervasives.compare end)
 
-   type 'a primary_t   = (key, 'a) Hashtbl.t
-   type secondary_t    = (key list) SecondaryIndex.t
-   type secondaries    = secondary_t IndexMap.t 
-   type 'a t           =  'a primary_t * secondaries
+   type 'a primary_t    = (key, 'a) Hashtbl.t
+   type secondary_index = (key list) SecondaryIndex.t
+   type secondary_t     = secondary_index IndexMap.t 
+   type 'a t            =  'a primary_t * secondary_t
    
    
    (* Secondary index helpers *)
@@ -191,7 +196,7 @@ struct
          (fst m, new_second)
 
    (* f must accept secondaries as first argument *)
-   let fold f acc m = Hashtbl.fold (f (snd m)) (fst m) acc
+   let fold f acc m = Hashtbl.fold f (fst m) acc
 
    let safe_add k v m =
       if ((mem k m) && ((find k m) <> v)) then
@@ -202,26 +207,17 @@ struct
     * returns a new slice, does not modify args in-place *)
    (* TODO: this currently rebuilds secondary indices with add -- optimize *)
    let mapi f m =
-      fold (fun _ k v nm -> let (nk,nv) = f k v in add nk nv nm)
+      fold (fun k v nm -> let (nk,nv) = f k v in add nk nv nm)
          (empty_map_w_secondaries m) m
 
-   (* map that applies f to v only
-    * since k cannot change, we can avoid rebuilding secondary indexes *)
-   let map f m =
-      let new_m = Hashtbl.fold
-         (fun k v nm -> Hashtbl.replace nm k (f v); nm) (fst m) (Hashtbl.create 100)
-      in (new_m, (snd m))
+   (* map that exploiting keys that do not change, so we can avoid rebuilding
+    * secondary indexes *)
+   let map_rk f m =
+      let new_m = Hashtbl.fold (fun k v nm -> Hashtbl.replace nm k (f k v); nm)
+                     (fst m) (Hashtbl.create 100)
+      in (new_m, snd m) 
 
-   let to_string ks vs m =
-      let f _ k v acc =
-        (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^";"
-      in 
-      "["^(fold f "" m)^"]<pat="^(string_of_patterns m)^">"
-
-   let from_list l patterns = List.fold_left
-      (fun m (k,v) -> safe_add k v m) (empty_map_w_patterns patterns) l
-
-   let to_list m = Hashtbl.fold (fun k v l -> (k,v)::l) (fst m) []
+   let map f m = map_rk (fun k v -> f v) m
 
    let copy m = (Hashtbl.copy (fst m), (snd m))
 
@@ -231,7 +227,7 @@ struct
     * adding to any secondary index while adding to the primary. *)
    let union m1 m2 =
       try
-      let aux sim k v nm =
+      let aux k v nm =
          let (nprim, nsecond) = nm in
          Hashtbl.add nprim k v;
          (* For debugging, ensure key already exists in the secondary index union *)
@@ -257,12 +253,12 @@ struct
     * invoke f2 as few times as possible, making it the slice we ignore
     * whenever we can *)
    let mergei f1 f2 f12 m1 m2 =
-      let aux f m secondaries k v (ignores, nm) =
+      let aux f m k v (ignores, nm) =
          if mem k m then
             ((Hashtbl.add ignores k 0; ignores),
              add k (f12 k (find k m) v) nm)
          else (ignores, add k (f k v) nm) in
-      let aux2 f ignores secondaries k v nm =
+      let aux2 f ignores k v nm =
         if Hashtbl.mem ignores k then nm else add k (f k v) nm in
       let merged_map = extend_secondary_indexes
          (empty_map_w_secondaries m1) (empty_map_w_secondaries m2) in
@@ -271,15 +267,15 @@ struct
       in fold (aux2 f2 ignores) partial m2
    
    (* In-place merge, assumes add has replace semantics,
-    * Exploits that f1...f12 cannot remap keys, but f12 gets passed the key. *)
+    * Exploits that f1...f12 cannot remap keys, but f2 gets passed the key. *)
    let merge_rk f1 f2 f12 m1 m2 =
-      let aux _ k v m =
-         if mem k m then add k (f12 (find k m) v) m
+      let aux k v m =
+         if mem k m then add k (f12 k (find k m) v) m
          else add k (f2 k v) m
-      in fold aux (map f1 (extend_secondary_indexes m1 m2)) m2
-         
+      in fold aux (map_rk f1 (extend_secondary_indexes m1 m2)) m2
+
    let merge f1 f2 f12 m1 m2 =
-      merge_rk f1 f2 (fun k v1 v2 -> f12 v1 v2) m1 m2
+      merge_rk (fun k v -> f1 v) (fun k v -> f2 v) (fun k v1 v2 -> f12 v1 v2) m1 m2
 
    (* filter that applies f to both keys and values.
     * assumes add has replace semantics
@@ -287,13 +283,13 @@ struct
    (* TODO: bulk copy secondary indexes rather than rebuild via add *)
    (* TODO: use a secondary index structure w/ efficient deletion *)
    let filteri f m =
-      let aux secondaries k v nm = if (f k v) then add k v nm else nm in
+      let aux k v nm = if (f k v) then add k v nm else nm in
          fold aux (empty_map_w_secondaries m) m
          
    let filter f m = filteri (fun k v -> f v) m
 
    let partitioni f m =
-      let aux secondaries k v (lnm, rnm) =
+      let aux k v (lnm, rnm) =
          if f k v then (add k v lnm, rnm)
          else (lnm, add k v rnm)
       in fold aux (empty_map_w_secondaries m, empty_map_w_secondaries m) m
@@ -301,10 +297,25 @@ struct
    let partition f m = partitioni (fun k v -> f v) m
 
    (* Domain and range return duplicate-free lists *)
-   let dom m = let aux secondaries k v nd = (k::nd) in fold aux [] m
+   let dom m = let aux k v nd = (k::nd) in fold aux [] m
    let rng m =
-      let aux secondaries k v nd = if List.mem v nd then nd else (v::nd) in
+      let aux k v nd = if List.mem v nd then nd else (v::nd) in
          fold aux [] m
+
+   (* Construction helpers *)
+   let from_list l patterns = List.fold_left
+      (fun m (k,v) -> safe_add k v m) (empty_map_w_patterns patterns) l
+
+   let to_list m = Hashtbl.fold (fun k v l -> (k,v)::l) (fst m) []
+
+
+   (* Stringification *)
+   let to_string ks vs m =
+      let f k v acc =
+        (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^";"
+      in 
+      "["^(fold f "" m)^"]<pat="^(string_of_patterns m)^">"
+
          
    (* Secondary index methods *)
    let get_keys sim pat pkey =

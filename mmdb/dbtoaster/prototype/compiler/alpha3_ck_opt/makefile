@@ -4,6 +4,7 @@ SOURCE = \
 	Ring.ml \
 	SuperMap.ml \
 	HashMap.ml \
+	SliceableMap.mli \
 	SliceableMap.ml \
 	Calculus.mli \
 	Calculus.ml \
@@ -14,7 +15,7 @@ SOURCE = \
 all: top
 
 bytecode:
-	ocamlc -c $(SOURCE)
+	ocamlc -g -c $(SOURCE)
 
 native:
 	ocamlopt -ccopt -O3 -c $(SOURCE)
@@ -23,7 +24,7 @@ top: bytecode
 	ocamlmktop -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
 
 benchmark: bytecode
-	ocamlc -o m3_ex unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
+	ocamlc -g -o m3_ex unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
 
 vwap: native
 	ocamlopt -ccopt -O3 -o vwap str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/vwap_m3_ex.ml
