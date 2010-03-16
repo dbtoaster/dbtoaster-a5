@@ -911,3 +911,8 @@ and term_delta (theta: term_mapping_t) (delete: bool)
    TermRing.delta (leaf_delta delete) term
 
 
+let decode_map_term (map_term: term_t):
+                    (string * (var_t list)) =
+   match (readable_term map_term) with
+      RVal(External(n, vs)) -> (n, vs)
+    | _ -> failwith "Compiler.decode_map_term";;

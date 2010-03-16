@@ -134,6 +134,7 @@ val make_relcalc:      readable_relcalc_t -> relcalc_t
 val readable_term: term_t -> readable_term_t
 val make_term:     readable_term_t -> term_t
 
+val decode_map_term: term_t -> (string * (var_t list))
 
 (* other output functions *)
 

@@ -1,65 +1,7 @@
-
-exception Assert0Exception of string
-
 (* making and breaking externals, i.e., map accesses. *)
 
 let mk_external (n: string) (vs: Calculus.var_t list) =
    Calculus.make_term(Calculus.RVal(Calculus.External(n, vs)))
-
-let decode_map_term (map_term: Calculus.term_t):
-                    (string * (Calculus.var_t list)) =
-   match (Calculus.readable_term map_term) with
-      Calculus.RVal(Calculus.External(n, vs)) -> (n, vs)
-    | _ -> raise (Assert0Exception "Compiler.decode_map_term")
-
-
-
-
-(* conversion of calculus expressions to M3 expressions *)
-let rec to_m3 (t: Calculus.readable_term_t) =
-   let calc_lf_to_m3 lf =
-      match lf with
-         Calculus.AtomicConstraint(Calculus.Eq,  t1, t2) ->
-                                          M3.Eq ((to_m3 t1), (to_m3 t2))
-       | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
-                                          M3.Leq((to_m3 t1), (to_m3 t2))
-       | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
-                                          M3.Lt ((to_m3 t1), (to_m3 t2))
-         (* AtomicConstraint(Neq, t1, t2) -> ... *)
-       | _ -> failwith "Compiler.to_m3: TODO cond"
-   in
-   let calc_to_m3 calc =
-      match calc with
-         Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
-       | _                    -> failwith "Compiler.to_m3: TODO calc"
-   in
-   let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
-      match lf with
-         Calculus.AggSum(t,phi)         -> M3.IfThenElse0((calc_to_m3 phi),
-                                                          (to_m3 t))
-       | Calculus.External(mapn, vars)  -> M3.MapAccess(mapn, [], vars,
-                                                    (M3.Const 0))
-                                 (* TODO: which ones are the in-vars?
-                                    add the init calc expression, now 0 *)
-       | Calculus.Var(v)                -> M3.Var(v)
-       | Calculus.Const(Calculus.Int c) -> M3.Const(c)
-       | Calculus.Const(_)              ->
-                                   failwith "Compiler.to_m3: TODO lf_const"
-   in
-   match t with
-      Calculus.RVal(lf)      -> lf_to_m3 lf
-    | Calculus.RNeg(t1)      -> M3.Mult((M3.Const (-1)), (to_m3 t1))
-    | Calculus.RProd(t1::[]) -> (to_m3 t1)
-    | Calculus.RProd(t1::l)  -> M3.Mult((to_m3 t1), (to_m3 (Calculus.RProd l)))
-    | Calculus.RProd([])     -> M3.Const 1  (* impossible case, though *)
-    | Calculus.RSum(t1::[])  -> (to_m3 t1)
-    | Calculus.RSum(t1::l)   -> M3.Add ((to_m3 t1), (to_m3 (Calculus.RSum  l)))
-    | Calculus.RSum([])      -> M3.Const 0  (* impossible case, though *)
-    
-
-
-
-
 
 (* compilation functions *)
 
@@ -86,7 +28,7 @@ let compile_delta_for_rel (reln:   string)
                           externals_mapping))^"]"
       ^"  term="^(Calculus.term_as_string term));
 *)
-   let (mapn, params) = decode_map_term map_term
+   let (mapn, params) = Calculus.decode_map_term map_term
    in
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
@@ -94,7 +36,7 @@ let compile_delta_for_rel (reln:   string)
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
-   let tuple      = (List.map (fun x -> "x_"^mapn^reln^"_"^x) relsch) in
+   let tuple      = relsch in
    let bound_vars = tuple @ external_bound_vars (* there must be no overlap *)
    in
    (* compute the delta and simplify.
@@ -122,7 +64,20 @@ let compile_delta_for_rel (reln:   string)
     todos)
 
 
-
+let extract_output_vars ((t: Calculus.term_t), (mt: Calculus.term_t)): (Calculus.term_t * Calculus.term_t * CalcToM3.bindings_set_t) =
+  (t, mt, (
+    let outer_term = (Calculus.readable_term t) in 
+    match (Calculus.readable_term mt) with
+        Calculus.RVal(Calculus.External(n, vs)) -> 
+              List.map 
+                (fun var -> 
+                    if (CalcToM3.find_binding_term var outer_term) 
+                    then CalcToM3.Binding_Present(var)
+                    else CalcToM3.Binding_Not_Present
+                ) vs
+      | _ -> failwith "LHS of a map definition is not an External()"
+  ))
+;;
 
 (* auxiliary for compile.
    Writes (= generates string for) one increment statement. For example,
@@ -131,8 +86,8 @@ let compile_delta_for_rel (reln:   string)
       (Prod[Val(Var(x_R_A)); Val(External("mR1", ["x_R_B"; "x_C"]))]) =
    "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
 *)
-let generate_code (delete:bool)
-                  reln tuple loop_vars mapn params oper bigsum_vars new_term =
+let generate_classic (delete:bool)
+                  reln tuple loop_vars mapn params oper bigsum_vars new_term ovars inner_ovars =
    (if delete then "-" else "+")
    ^reln^"("^(Util.string_of_list ", " tuple)^ "): "^
    (if (loop_vars = []) then ""
@@ -144,34 +99,23 @@ let generate_code (delete:bool)
 
 
 
-
-(*
-let generate_m3 (delete: bool)
-                reln tuple loop_vars mapn params oper bigsum_vars new_term =
-   ((if delete then M3.Delete else M3.Insert),
-    reln, tuple,
-    [((mapn, [], params, init_term), (to_m3 new_term))])
-*)
-
-
-
 (* the main compile function. call this one, not the others. *)
 let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (string list)) list)
                 (map_term: Calculus.term_t)
-                (term: Calculus.term_t): (string list) =
+                (term: Calculus.term_t) 
+                (output_vars: CalcToM3.bindings_set_t) 
+                generate_code =
 (*
    print_endline ("compile: t="^(Calculus.term_as_string term)^
                        ";  mt="^(Calculus.term_as_string map_term));
 *)
-   let (mapn, map_params) = decode_map_term map_term
+   let (mapn, map_params) = Calculus.decode_map_term map_term
    in
    let (bigsum_vars, bsrw_theta, bsrw_term) = Calculus.bigsum_rewriting
       bs_rewrite_mode (Calculus.roly_poly term) [] (mapn^"__")
    in
    let (completed_code, todos) =
-      if ((bsrw_theta = []) ||
-          (bs_rewrite_mode = Calculus.ModeOpenDomain)) then
          (* We can compute a delta for bsrw_term. *)
       (
          let cdfr (delete, reln, relsch) =
@@ -187,8 +131,8 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
 *)
          in
          let triggers = List.flatten (List.map insdel db_schema) in
-         let (l1, l2) = (List.split (List.map cdfr triggers))
-         in
+         let (l1, l2) = (List.split (List.map cdfr triggers)) in
+         let inner_output_vars = (List.map extract_output_vars ((List.flatten l2) @ bsrw_theta)) in
          let completed_code = List.map
             (fun (delete, reln, tuple, p, t) ->
 (*
@@ -196,39 +140,107 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                   failwith "I thought that should hold."
                else
 *)
-               let loop_vars = Util.ListAsSet.diff p tuple
-               in
-               generate_code delete
-                             reln tuple loop_vars mapn p "+=" bigsum_vars t)
+               generate_code delete reln tuple (term, map_term, output_vars) p t inner_output_vars
+            )
             (List.flatten l1)
          in
-         (completed_code, (List.flatten l2) @ bsrw_theta)
+         (completed_code, inner_output_vars)
       )
-      else (* We cannot compute a delta for bsrw_term, so we have to leave
-              it as is and hope the extracted subterms will allow us to do
-              something smart. *)
-         let (_, bsrw_term_simple) =
-            Calculus.simplify_roly true bsrw_term map_params
-            (* we didn't call compile_delta_for_rel, so the term needs
-               to be simplified. *)
-         in
-         (* an On Lookup statement is not an update trigger: it is called
-            when we want to access the query result. In principle, we
-            could drop the for loops. *)
-(*
-         ([generate_code "On Lookup" [] map_params
-                           mapn map_params ":=" [] bsrw_term_simple],
-          bsrw_theta)
-*)
-         (* Note: no creation of for loop over the map_params -- we look
-            up one value only, for the given params. *)
-         ([("+On Lookup(): "^mapn^"["^(Util.string_of_list ", " map_params)
-           ^"] := "
-           ^(Calculus.term_as_string bsrw_term_simple))], bsrw_theta)
    in
    completed_code @
    (List.flatten (List.map
-      (fun (t, mt) -> compile bs_rewrite_mode db_schema mt t) todos))
+      (fun (t, mt, inner_output_vars) -> compile bs_rewrite_mode db_schema mt t inner_output_vars generate_code) todos));;
 
 
+let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descriptors : M3.trig_t * CalcToM3.relation_availability_map_t =
+  let (map_target_access, ra_map1) = (CalcToM3.to_m3_map_access map_descriptor CalcToM3.StringMap.empty) in
+  let (map_update_trig, ra_map2) = (CalcToM3.to_m3 (Calculus.readable_term term) 
+      (List.fold_left (fun descriptor_map descriptor -> 
+          let (_, in_map, _) = descriptor in
+            match (Calculus.readable_term in_map) with
+                Calculus.RVal(Calculus.External(match_map, match_vars)) -> (CalcToM3.StringMap.add match_map descriptor descriptor_map)
+              | _ -> failwith "Compiler.ml: Improperly typed map LHS"
+        ) CalcToM3.StringMap.empty inner_descriptors
+      )
+      ra_map1
+    ) in
+   (  ( (if delete then M3.Delete else M3.Insert),
+        reln, tuple,
+        [(map_target_access, map_update_trig)]
+      ),
+      ra_map2
+   );;
 
+module StatementMap = Map.Make(struct
+   type t = M3.pm_t * M3.rel_id_t
+   let compare = compare
+end)
+module MapMap = Map.Make(String)
+
+let rec compile_m3 (db_schema: (string * (string list)) list)
+                   (map_term: Calculus.term_t)
+                   (term: Calculus.term_t) : M3.prog_t =
+  let compiled_with_ra_map = (compile Calculus.ModeOpenDomain db_schema map_term term [] generate_m3) in
+  let (compiled_code, ra_map) = (List.fold_right
+    (fun (new_compiled, new_ra_map) (curr_compiled, curr_ra_map) -> 
+      (new_compiled :: curr_compiled, (CalcToM3.StringMap.fold
+        (fun rel presence ret -> (CalcToM3.StringMap.add rel presence ret))
+        new_ra_map curr_ra_map
+      ))
+    ) compiled_with_ra_map ([], CalcToM3.StringMap.empty)
+  ) in
+  let triggers_by_relation = 
+    (List.fold_right (
+      fun (pm, rel_id, var, stmt) collection -> 
+        StatementMap.add (pm, rel_id) (
+          let (old_var, old_list) = 
+            ( if (StatementMap.mem (pm, rel_id) collection) 
+              then StatementMap.find (pm, rel_id) collection 
+              else (var, [])
+            ) in
+            if ((compare old_var var) <> 0) 
+            then failwith "Compiler.ml: compile_m3: Relation variables don't match between different triggers"
+            else (old_var, stmt @ old_list)
+        ) collection
+      ) compiled_code StatementMap.empty
+    ) in
+  let mapvars_by_map =
+    (List.fold_right (
+      fun (pm, rel_id, var, stmt_list) collection ->
+        (List.fold_right (
+          fun ((map_id, in_map_vars, out_map_vars, init_calc), update_calc) inner_collection ->
+            if (MapMap.mem map_id inner_collection)
+            then inner_collection
+            else (MapMap.add map_id (in_map_vars, out_map_vars) inner_collection)
+          )
+        ) stmt_list collection
+      ) compiled_code MapMap.empty
+    ) in
+  let var_type vars = (List.map (fun v -> M3.VT_Int) vars) in
+  (
+    (* MAP LIST *)
+    (MapMap.fold (* the maps as defined by the query *)
+      (fun map_id (in_map_vars, out_map_vars) map_list -> 
+        (map_id, (var_type in_map_vars), (var_type out_map_vars)) :: map_list
+      ) mapvars_by_map []) @
+    (StatementMap.fold (* additional maps as needed to store data for initial value computations *)
+      (fun (pm, rel_id) (var, stmt) rel_map_list -> 
+        if ((pm = M3.Insert) && (CalcToM3.StringMap.mem rel_id ra_map))
+        then ("INPUT_MAP_"^rel_id, [], (List.map (fun v-> M3.VT_Int) var)) :: rel_map_list
+        else rel_map_list
+      ) triggers_by_relation []),
+    
+    (* STMT LIST *)
+    (StatementMap.fold 
+      (fun (pm, rel_id) (var, stmt) trigger_list -> 
+        (pm, rel_id, var, 
+          ( 
+            if (CalcToM3.StringMap.mem rel_id ra_map) 
+            then (("INPUT_MAP_"^rel_id, [], var, M3.Const(M3.CInt(0))), M3.Const(M3.CInt(1))) :: stmt
+            else stmt
+          )
+        ) ::
+        trigger_list
+      ) triggers_by_relation [])
+  );;
+  
