@@ -1,7 +1,7 @@
 (* m3 interface module *)
 
 
-type const_t = CInt of int | CFloat of float | CBool of bool (* CString of string | CInt of int | CFloat of float *)
+type const_t = CInt of int | CFloat of float | CBool of bool
 type var_id_t = string
 type var_type_t = VT_String | VT_Int
 type var_t = var_id_t (*  * var_type_t *)
@@ -151,13 +151,13 @@ let rec c_prod (a : const_t) (b : const_t) : const_t =
           | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
       )
     | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)";;
-
+    
 module Prepared =
 struct
    
    type pextension_t   = var_t list
    
-   (* id, theta extension, singleton *)
+   (* id, theta extension, singleton, cross product *)
    type pcalcmeta_t    = int * pextension_t * bool * bool
 
    (* name, full aggregation *)   
@@ -177,9 +177,9 @@ struct
                 | Leq  of        ecalc_t * ecalc_t
                 | Eq   of        ecalc_t * ecalc_t
                 | Lt   of        ecalc_t * ecalc_t
-                | IfThenElse0 of ecalc_t * ecalc_t
                 | And  of        ecalc_t * ecalc_t
-                | MapAccess of pmapacc_t
+                | IfThenElse0 of ecalc_t * ecalc_t
+                | MapAccess   of pmapacc_t
                 | Null of (var_t list)
                 
    and ecalc_t     = pcalc_t * pcalcmeta_t
@@ -189,4 +189,5 @@ struct
    type ptrig_t    = pm_t * rel_id_t * (var_t list) * (pstmt_t list)
    type pprog_t    = (map_type_t list) * (ptrig_t list)
 end
+
 

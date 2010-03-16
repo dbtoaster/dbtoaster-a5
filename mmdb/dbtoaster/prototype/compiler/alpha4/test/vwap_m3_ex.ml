@@ -43,21 +43,21 @@ let init_q2 cmp_var free_var =
                  (
                    Lt(Var(cmp_var), Var(free_var))
                  ),
-                 MapAccess("q4", [], [free_var], (Const(0)))
+                 MapAccess("q4", [], [free_var], (Const(CInt(0))))
                )
-  with Not_found -> print_string "Not_found in init_q2\n";(Const(0));;
+  with Not_found -> print_string "Not_found in init_q2\n";(Const(CInt(0)));;
   
 
 let cmp_q2 free_var cmp_var cmp_op lhs_offset rhs_offset valid_val = 
   try
     IfThenElse0(
       (cmp_op
-        (Mult(Const(4), Add(MapAccess("q2", [cmp_var], [], (init_q2 cmp_var free_var)), rhs_offset)))
-        (Add(MapAccess("q1", [], [], (Const(0))), Mult(Const(4), lhs_offset)))
+        (Mult(Const(CInt(4)), Add(MapAccess("q2", [cmp_var], [], (init_q2 cmp_var free_var)), rhs_offset)))
+        (Add(MapAccess("q1", [], [], (Const(CInt(0)))), Mult(Const(CInt(4)), lhs_offset)))
       ),
       valid_val
     )
-  with Not_found -> print_string "Not_found in cmp_q\n2";(Const(0));;
+  with Not_found -> print_string "Not_found in cmp_q\n2";(Const(CInt(0)));;
 
 
 let prog_vwap: prog_t = 
@@ -70,57 +70,57 @@ let prog_vwap: prog_t =
   [
       (Insert, "BID", ["a"; "b"],
         [
-          (("q", [], [], (Const(0))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(0)) (Const(0)) (Mult(Var("a"), Var("b")))));
-          (("q", [], [], (Const(0))), 
-            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(0)) (Const(0))
+          (("q", [], [], (Const(CInt(0)))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(CInt(0))) (Const(CInt(0))) (Mult(Var("a"), Var("b")))));
+          (("q", [], [], (Const(CInt(0)))), 
+            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(CInt(0))) (Const(CInt(0)))
               (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Var("b")) (IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")))
-                (MapAccess("q3", [], ["d"], (Const(0))))
+                (MapAccess("q3", [], ["d"], (Const(CInt(0)))))
               )
             )
           );
-          (("q", [], [], (Const(0))), 
-            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(0)) (Const(0))
+          (("q", [], [], (Const(CInt(0)))), 
+            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(CInt(0))) (Const(CInt(0)))
               (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Var("b")) (IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")))
-                (Mult((MapAccess("q3", [], ["d"], (Const(0)))), Const(-1)))
+                (Mult((MapAccess("q3", [], ["d"], (Const(CInt(0))))), Const(CInt(-1))))
               )
             )
           );
           
-          (("q1", [], [], (Const(0))), Var("b"));
+          (("q1", [], [], (Const(CInt(0)))), Var("b"));
           
           (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")));
           
-          (("q3", [], ["a"], (Const(0))), Mult(Var("a"), Var("b")));
+          (("q3", [], ["a"], (Const(CInt(0)))), Mult(Var("a"), Var("b")));
           
-          (("q4", [], ["a"], (Const(0))), Var("b"))
+          (("q4", [], ["a"], (Const(CInt(0)))), Var("b"))
         ]
       );
 
       (Delete, "BID", ["a"; "b"],
         [
-          (("q", [], [], (Const(0))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(0)) (Const(0)) (Mult(Mult(Var("a"), Var("b")), Const(-1)))));
-          (("q", [], [], (Const(0))), 
-            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(0)) (Const(0))
-              (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Mult(Var("b"), Const(-1))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))))
-                (MapAccess("q3", [], ["d"], (Const(0))))
+          (("q", [], [], (Const(CInt(0)))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(CInt(0))) (Const(CInt(0))) (Mult(Mult(Var("a"), Var("b")), Const(CInt(-1))))));
+          (("q", [], [], (Const(CInt(0)))), 
+            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(CInt(0))) (Const(CInt(0)))
+              (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Mult(Var("b"), Const(CInt(-1)))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CInt(-1)))))
+                (MapAccess("q3", [], ["d"], (Const(CInt(0)))))
               )
             )
           );
-          (("q", [], [], (Const(0))), 
-            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(0)) (Const(0))
-              (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Mult(Var("b"), Const(-1))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))))
-                (Mult(MapAccess("q3", [], ["d"], (Const(0))), Const(-1)))
+          (("q", [], [], (Const(CInt(0)))), 
+            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(CInt(0))) (Const(CInt(0)))
+              (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Mult(Var("b"), Const(CInt(-1)))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CInt(-1)))))
+                (Mult(MapAccess("q3", [], ["d"], (Const(CInt(0)))), Const(CInt(-1))))
               )
             )
           );
           
-          (("q1", [], [], (Const(0))), Mult(Var("b"), Const(-1)));
+          (("q1", [], [], (Const(CInt(0)))), Mult(Var("b"), Const(CInt(-1))));
           
-          (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(-1))));
+          (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CInt(-1)))));
           
-          (("q3", [], ["a"], (Const(0))), Mult(Mult(Var("a"), Var("b")), Const(-1)));
+          (("q3", [], ["a"], (Const(CInt(0)))), Mult(Mult(Var("a"), Var("b")), Const(CInt(-1))));
           
-          (("q4", [], ["a"], (Const(0))), Mult(Var("b"), Const(-1)))
+          (("q4", [], ["a"], (Const(CInt(0)))), Mult(Var("b"), Const(CInt(-1))))
           
         ]
       )
@@ -131,7 +131,7 @@ let seed = 12345;;
 Random.init seed;;
 
 let randl n lb ub = let r = ref [] in
-   for i = 1 to n do r := ((lb + (Random.int (ub-lb)))::!r) done; !r
+   for i = 1 to n do r := ((CInt(lb + (Random.int (ub-lb))))::!r) done; !r
 in
 
 (* Code *)
@@ -161,7 +161,7 @@ let exchange_processor input_file query =
          let order_id = int_of_string(List.nth orders_fields 1) in
          let event_type = List.nth orders_fields 2 in
          let tuple = List.fold_left (fun acc i ->
-            acc@[int_of_string(List.nth orders_fields i)]) [] ([4;3])
+            acc@[CInt(int_of_string(List.nth orders_fields i))]) [] ([4;3])
          in
          incr tuples;
          let (do_query, bids_event, old_tuple, new_tuple) = 
@@ -182,8 +182,14 @@ let exchange_processor input_file query =
                else
                   let book = if in_bids then bids_order_book else asks_order_book in
                   let old_tuple = Hashtbl.find book order_id in
-                  let new_tuple = List.map2 (fun v d -> v-d) old_tuple tuple in
-                     if (List.nth new_tuple 1) = 0 then Hashtbl.remove book order_id;
+                  let new_tuple = List.map2 (fun v d ->
+                     match d with
+                        | CInt(x) -> M3.c_sum v (CInt(-x))
+                        | CFloat(x) -> M3.c_sum v (CFloat(-.x))
+                        | _ -> failwith "invalid tuple numeric field")
+                     old_tuple tuple
+                  in
+                     if (List.nth new_tuple 1) = CInt(0) then Hashtbl.remove book order_id;
                      (true, in_bids, old_tuple, new_tuple)
                end
                
