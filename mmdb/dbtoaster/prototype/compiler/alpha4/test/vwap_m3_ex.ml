@@ -2,6 +2,7 @@ open M3Common
 open M3Common.Patterns
 
 open M3Compiler
+open M3OCaml
 open M3Interpreter
 open M3Interpreter.CG
 

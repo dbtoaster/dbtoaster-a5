@@ -5,6 +5,7 @@ open M3Common
 open M3Common.Patterns
 
 open M3Compiler
+open M3OCaml
 open M3Interpreter
 open M3Interpreter.CG
 
@@ -219,10 +220,10 @@ let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
 for i = 0 to num_tuples do
    let tuple = randl 2 1.0 5.0 in
-   (*
+   (**)
    print_endline ((string_of_int i)^": "^
-      (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));
-   *)
+      (List.fold_left (fun acc v -> match v with | CFloat(f) -> acc^" "^(string_of_float f)) "" tuple));
+   (**)
    eval_trigger cblock tuple db
 done;
 let finish = Unix.gettimeofday() in
