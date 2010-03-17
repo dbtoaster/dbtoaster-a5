@@ -103,7 +103,7 @@ struct
         (desired_outv: var_t list) (theta: Valuation.t)
         (extensions: var_t list) (m: t) =
       let aux pk kv =
-         let aggv = List.fold_left (fun x (y,z) -> M3.c_sum x z) (M3.CInt(0)) kv in
+         let aggv = List.fold_left (fun x (y,z) -> M3.c_sum x z) (M3.CFloat(0.0)) kv in
          let ext_theta =
             Valuation.extend (Valuation.make pat_outv pk) theta extensions in
          (* Normalizes the key orderings to that of the variable ordering desired_outv.
@@ -323,7 +323,6 @@ let rec calc_schema calc =
     | Lt  (c1, c2)        -> op c1 c2
     | Leq (c1, c2)        -> op c1 c2
     | Eq  (c1, c2)        -> op c1 c2
-    | And (c1, c2)        -> op c1 c2
     | IfThenElse0(c1, c2) -> op c2 c1
     | Null(outv)          -> outv
     | Const(i)            -> []
@@ -338,7 +337,6 @@ let rec calc_vars calc =
     | Lt  (c1, c2)        -> op c1 c2
     | Leq (c1, c2)        -> op c1 c2
     | Eq  (c1, c2)        -> op c1 c2
-    | And (c1, c2)        -> op c1 c2
     | IfThenElse0(c1, c2) -> op c2 c1
     | Null(outv)          -> outv
     | Const(i)            -> []
@@ -357,7 +355,6 @@ let rec pcalc_to_string calc =
     | M3P.Lt  (e1, e2)        -> ots "Lt"   e1 e2
     | M3P.Leq (e1, e2)        -> ots "Leq"  e1 e2
     | M3P.Eq  (e1, e2)        -> ots "Eq"   e1 e2
-    | M3P.And (e1, e2)        -> ots "And"  e1 e2
     | M3P.IfThenElse0(e1, e2) -> ots "IfThenElse0" e1 e2
     | M3P.Null(outv)          -> "Null("^(vars_to_string outv)^")"
     | M3P.Const(i)            -> string_of_const i
@@ -373,7 +370,6 @@ let rec pcalc_schema (calc : M3P.pcalc_t) =
     | M3P.Lt  (c1, c2)        -> op c1 c2
     | M3P.Leq (c1, c2)        -> op c1 c2
     | M3P.Eq  (c1, c2)        -> op c1 c2
-    | M3P.And (c1, c2)        -> op c1 c2
     | M3P.IfThenElse0(c1, c2) -> op c2 c1
     | M3P.Null(outv)          -> outv
     | M3P.Const(i)            -> []
@@ -436,7 +432,6 @@ let prepare_triggers (triggers : trig_t list)
         | Leq  (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Leq  (e1, e2)) c1 c2
         | Eq   (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Eq   (e1, e2)) c1 c2
         | Lt   (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Lt   (e1, e2)) c1 c2
-        | And  (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.And  (e1, e2)) c1 c2
         | IfThenElse0 (c1,c2) -> prepare_op (fun e1 e2 -> M3P.IfThenElse0 (e2, e1)) c2 c1
         
         | MapAccess (mapn, inv, outv, init_calc) ->
@@ -583,7 +578,7 @@ let get_update_slice_code x =
    match x with | UpdateSlice(c) -> c | _ -> failwith "invalid slice code"
 
 let rec compile_pcalc patterns (incr_ecalc) : compiled_code = 
-   let int_op op x y = (M3.CBool(op x y)) in
+   let int_op op x y = if (op x y) then M3.CFloat(1.0) else M3.CFloat(0.0) in
    let compile_op ecalc op e1 e2 : compiled_code =
       let aux ecalc = (pcalc_schema (get_calc ecalc), get_extensions ecalc,
                          compile_pcalc patterns ecalc) in
@@ -761,18 +756,12 @@ let rec compile_pcalc patterns (incr_ecalc) : compiled_code =
       | M3P.Lt  (c1, c2) -> compile_op incr_ecalc (int_op (< )) c1 c2
       | M3P.Leq (c1, c2) -> compile_op incr_ecalc (int_op (<=)) c1 c2
       | M3P.Eq  (c1, c2) -> compile_op incr_ecalc (int_op (= )) c1 c2
-      | M3P.And (c1, c2) -> compile_op incr_ecalc (fun a b ->
-          match (a,b) with
-           | (M3.CBool(ba), M3.CBool(bb)) -> M3.CBool(ba&&bb)
-           | (M3.CBool(_), _) -> failwith "AND performed on non-boolean: rhs"
-           | (_, _) -> failwith "AND performed on non-boolean: lhs") c1 c2
-
       | M3P.IfThenElse0(c1, c2) ->
            compile_op incr_ecalc (fun v cond ->
-              match cond with
-               | CBool(bcond) -> if bcond then v else CInt(0)
-               | _ -> failwith "IfThenElse0 with a non-boolean condition")
-              c2 c1
+              (match cond with
+                CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0)
+              )
+            ) c2 c1
         
       | M3P.Null(outv) ->
          if get_singleton incr_ecalc then Singleton (fun theta db -> [])
@@ -857,7 +846,7 @@ and compile_pcalc2 patterns agg_meta lhs_outv ecalc : compiled_code =
       else if get_full_agg agg_meta then
       Singleton (fun theta db ->
          let slice0 = ccalc_l theta db in
-            [ValuationMap.fold (fun k v acc -> M3.c_sum acc v) (M3.CInt(0)) slice0])
+            [ValuationMap.fold (fun k v acc -> M3.c_sum acc v) (M3.CFloat(0.0)) slice0])
       else
       Slice (fun theta db ->
          let slice0 = ccalc_l theta db in
@@ -921,7 +910,7 @@ let compile_pstmt patterns
             let init_slice = cinitf theta2 db in
             let init_v =
                if ValuationMap.mem k init_slice
-               then (ValuationMap.find k init_slice) else M3.CInt(0)
+               then (ValuationMap.find k init_slice) else M3.CFloat(0.0)
             in M3.c_sum v init_v)
    in
 (*

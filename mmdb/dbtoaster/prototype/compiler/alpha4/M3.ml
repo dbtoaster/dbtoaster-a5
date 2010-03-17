@@ -1,7 +1,7 @@
 (* m3 interface module *)
 
 
-type const_t = CInt of int | CFloat of float | CBool of bool
+type const_t = (* CInt of int | *) CFloat of float (* | CBool of bool *)
 type var_id_t = string
 type var_type_t = VT_String | VT_Int
 type var_t = var_id_t (*  * var_type_t *)
@@ -24,7 +24,6 @@ and  calc_t = Add  of calc_t * calc_t
             | Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
             | Lt  of calc_t * calc_t
-            | And of calc_t * calc_t
 
 
 (*
@@ -78,9 +77,9 @@ let rec pretty_print_map_access (mapn, inv, outv, init_calc): string =
 
 and string_of_const v =
   match v with
-      CInt(i)   -> string_of_int i
-    | CFloat(f) -> string_of_float f
-    | CBool(b)  -> if (b) then "false" else "true"
+      CFloat(f) -> string_of_float f
+ (* | CInt(i)   -> string_of_int i *)
+ (* | CBool(b)  -> if (b) then "false" else "true" *)
 
 and string_of_var_type v = 
   match v with
@@ -96,7 +95,7 @@ and pretty_print_calc calc : string =
     | Lt(c1, c2)         -> ots "<" c1 c2
     | Leq(c1, c2)        -> ots "<=" c1 c2
     | Eq(c1, c2)         -> ots "==" c1 c2
-    | And(c1, c2)        -> ots "AND" c1 c2
+ (* | And(c1, c2)        -> ots "AND" c1 c2 *)
     | IfThenElse0(c1,c2) -> "{ IF "^(pretty_print_calc c1)^" THEN "^(pretty_print_calc c2)^" }"
     | Null(outv)         -> "Null["^(vars_to_string outv)^"]"
     | Const(c)           -> string_of_const(c)
@@ -122,35 +121,39 @@ and pretty_print_prog ((maps, trigs):prog_t) =
 
 let rec c_sum (a : const_t) (b : const_t) : const_t = 
   match a with
-      CInt(i1) -> (
+ (*   CInt(i1) -> (
         match b with
             CInt(i2) -> CInt(i1 + i2)
           | CFloat(f2) -> CFloat((float_of_int i1) +. f2)
           | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
       )
+ *)
     | CFloat(f1) -> (
         match b with
-            CInt(i2) -> CFloat(f1 +. (float_of_int i2))
+ (*         CInt(i2) -> CFloat(f1 +. (float_of_int i2)) *)
           | CFloat(f2) -> CFloat(f1 +. f2)
-          | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
+ (*       | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
       )
-    | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)";;
+ (* | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+;; 
 
 let rec c_prod (a : const_t) (b : const_t) : const_t =
   match a with
-      CInt(i1) -> (
+ (*   CInt(i1) -> (
         match b with
             CInt(i2) -> CInt(i1 * i2)
           | CFloat(f2) -> CFloat((float_of_int i1) *. f2)
           | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
       )
+ *)
     | CFloat(f1) -> (
         match b with
-            CInt(i2) -> CFloat(f1 *. (float_of_int i2))
+ (*         CInt(i2) -> CFloat(f1 *. (float_of_int i2)) *)
           | CFloat(f2) -> CFloat(f1 *. f2)
-          | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
+ (*       | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
       )
-    | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)";;
+ (* | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+;;
     
 module Prepared =
 struct
@@ -177,7 +180,6 @@ struct
                 | Leq  of        ecalc_t * ecalc_t
                 | Eq   of        ecalc_t * ecalc_t
                 | Lt   of        ecalc_t * ecalc_t
-                | And  of        ecalc_t * ecalc_t
                 | IfThenElse0 of ecalc_t * ecalc_t
                 | MapAccess   of pmapacc_t
                 | Null of (var_t list)

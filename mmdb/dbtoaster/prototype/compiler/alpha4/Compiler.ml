@@ -1,3 +1,7 @@
+
+module StringMap = Map.Make(String)
+module StringSet = Set.Make(String)
+
 (* making and breaking externals, i.e., map accesses. *)
 
 let mk_external (n: string) (vs: Calculus.var_t list) =
@@ -64,7 +68,9 @@ let compile_delta_for_rel (reln:   string)
     todos)
 
 
-let extract_output_vars ((t: Calculus.term_t), (mt: Calculus.term_t)): (Calculus.term_t * Calculus.term_t * CalcToM3.bindings_set_t) =
+let extract_output_vars 
+  ((t: Calculus.term_t), (mt: Calculus.term_t)): 
+  CalcToM3.map_ref_t =
   (t, mt, (
     let outer_term = (Calculus.readable_term t) in 
     match (Calculus.readable_term mt) with
@@ -104,7 +110,7 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (string list)) list)
                 (map_term: Calculus.term_t)
                 (term: Calculus.term_t) 
-                (output_vars: CalcToM3.bindings_set_t) 
+                (output_vars: CalcToM3.bindings_list_t) 
                 generate_code =
 (*
    print_endline ("compile: t="^(Calculus.term_as_string term)^
@@ -152,17 +158,17 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
       (fun (t, mt, inner_output_vars) -> compile bs_rewrite_mode db_schema mt t inner_output_vars generate_code) todos));;
 
 
-let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descriptors : M3.trig_t * CalcToM3.relation_availability_map_t =
-  let (map_target_access, ra_map1) = (CalcToM3.to_m3_map_access map_descriptor CalcToM3.StringMap.empty) in
+let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descriptors : M3.trig_t * CalcToM3.relation_set_t =
+  let (map_target_access, ra_map1) = (CalcToM3.to_m3_map_access map_descriptor) in
   let (map_update_trig, ra_map2) = (CalcToM3.to_m3 (Calculus.readable_term term) 
       (List.fold_left (fun descriptor_map descriptor -> 
           let (_, in_map, _) = descriptor in
             match (Calculus.readable_term in_map) with
-                Calculus.RVal(Calculus.External(match_map, match_vars)) -> (CalcToM3.StringMap.add match_map descriptor descriptor_map)
+                Calculus.RVal(Calculus.External(match_map, match_vars)) -> 
+                  (StringMap.add match_map descriptor descriptor_map)
               | _ -> failwith "Compiler.ml: Improperly typed map LHS"
-        ) CalcToM3.StringMap.empty inner_descriptors
+        ) StringMap.empty inner_descriptors
       )
-      ra_map1
     ) in
    (  ( (if delete then M3.Delete else M3.Insert),
         reln, tuple,
@@ -180,14 +186,16 @@ module MapMap = Map.Make(String)
 let rec compile_m3 (db_schema: (string * (string list)) list)
                    (map_term: Calculus.term_t)
                    (term: Calculus.term_t) : M3.prog_t =
-  let compiled_with_ra_map = (compile Calculus.ModeOpenDomain db_schema map_term term [] generate_m3) in
+  let compiled_with_ra_map = 
+    (compile Calculus.ModeOpenDomain db_schema map_term term [] generate_m3) 
+  in
   let (compiled_code, ra_map) = (List.fold_right
     (fun (new_compiled, new_ra_map) (curr_compiled, curr_ra_map) -> 
-      (new_compiled :: curr_compiled, (CalcToM3.StringMap.fold
-        (fun rel presence ret -> (CalcToM3.StringMap.add rel presence ret))
-        new_ra_map curr_ra_map
-      ))
-    ) compiled_with_ra_map ([], CalcToM3.StringMap.empty)
+      (
+        new_compiled :: curr_compiled, 
+        (StringSet.union new_ra_map curr_ra_map)
+      )
+    ) compiled_with_ra_map ([], StringSet.empty)
   ) in
   let triggers_by_relation = 
     (List.fold_right (
@@ -225,7 +233,7 @@ let rec compile_m3 (db_schema: (string * (string list)) list)
       ) mapvars_by_map []) @
     (StatementMap.fold (* additional maps as needed to store data for initial value computations *)
       (fun (pm, rel_id) (var, stmt) rel_map_list -> 
-        if ((pm = M3.Insert) && (CalcToM3.StringMap.mem rel_id ra_map))
+        if ((pm = M3.Insert) && (StringSet.mem rel_id ra_map))
         then ("INPUT_MAP_"^rel_id, [], (List.map (fun v-> M3.VT_Int) var)) :: rel_map_list
         else rel_map_list
       ) triggers_by_relation []),
@@ -235,8 +243,8 @@ let rec compile_m3 (db_schema: (string * (string list)) list)
       (fun (pm, rel_id) (var, stmt) trigger_list -> 
         (pm, rel_id, var, 
           ( 
-            if (CalcToM3.StringMap.mem rel_id ra_map) 
-            then (("INPUT_MAP_"^rel_id, [], var, M3.Const(M3.CInt(0))), M3.Const(M3.CInt(1))) :: stmt
+            if (StringSet.mem rel_id ra_map) 
+            then (("INPUT_MAP_"^rel_id, [], var, M3.Const(M3.CFloat(0.0))), M3.Const(M3.CFloat(1.0))) :: stmt
             else stmt
           )
         ) ::

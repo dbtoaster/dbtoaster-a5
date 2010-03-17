@@ -7,6 +7,7 @@ SOURCE = \
 	Calculus.mli \
 	Calculus.ml \
 	M3.ml \
+	CalcToM3.mli \
 	CalcToM3.ml \
 	Compiler.ml \
 	M3Compiler.ml

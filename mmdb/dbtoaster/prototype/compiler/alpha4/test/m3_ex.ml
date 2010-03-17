@@ -7,7 +7,7 @@ open Unix;;
 let prog0: prog_t =
 (
 [ ("q", [], [VT_Int]) ],
-[ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], Const(CInt(0))), Var("a")) ]) ])
+[ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], Const(CFloat(0.0))), Var("a")) ]) ])
 ;;
 
 let prepared_prog0 = prepare_triggers (snd prog0);;
@@ -17,12 +17,12 @@ let db = Database.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pa
 
 patterns_to_string (let (_,pats) = prepared_prog0 in pats);;
 
-(cblock [CInt(3);CInt(4)] db);;
-(cblock [CInt(2);CInt(4)] db);;
-(cblock [CInt(3);CInt(4)] db);;
-(cblock [CInt(1);CInt(1)] db);;
+(cblock [CFloat(3.0);CFloat(4.0)] db);;
+(cblock [CFloat(2.0);CFloat(4.0)] db);;
+(cblock [CFloat(3.0);CFloat(4.0)] db);;
+(cblock [CFloat(1.0);CFloat(1.0)] db);;
 
-Database.show_sorted_db db = [(["q"], [([], [([CInt(1)], CInt(1)); ([CInt(4)], CInt(8));])])] ;;
+Database.show_sorted_db db = [(["q"], [([], [([CFloat(1.0)], CFloat(1.0)); ([CFloat(4.0)], CFloat(8.0));])])] ;;
 
 
 
@@ -49,14 +49,14 @@ let prog1: prog_t =
 [
    (Insert, "R", ["a"; "b"],
       [
-      (("q", [], ["a"],       Const(CInt(0))),
+      (("q", [], ["a"],       Const(CFloat(0.0))),
        MapAccess("q1", [], ["b"], (Null ["b"])));
       (("q", [], ["x"],       Var("x")),
        MapAccess("q2", [], ["x"; "a"], (Null ["x"; "a"])));
-      (("q", [], ["a"],       Const(CInt(0))),
-              IfThenElse0((Eq(Var("b"), Var("a"))), Const(CInt(1))));
-      (("q1", [], ["a"],      Const(CInt(0))), Const(CInt(1)));
-      (("q2", [], ["a"; "b"], Const(CInt(0))), Const(CInt(1)))
+      (("q", [], ["a"],       Const(CFloat(0.0))),
+              IfThenElse0((Eq(Var("b"), Var("a"))), Const(CFloat(1.0))));
+      (("q1", [], ["a"],      Const(CFloat(0.0))), Const(CFloat(1.0)));
+      (("q2", [], ["a"; "b"], Const(CFloat(0.0))), Const(CFloat(1.0)))
       ])
 ]);;
 
@@ -66,18 +66,18 @@ let cblock = List.hd (compile_ptrig prepared_prog1);;
 
 let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 
-(cblock [CInt(2);CInt(9)] db);;
-(cblock [CInt(4);CInt(3)] db);;
-(cblock [CInt(5);CInt(2)] db);;
-(cblock [CInt(4);CInt(2)] db);;
-(cblock [CInt(3);CInt(5)] db);;
-(cblock [CInt(5);CInt(5)] db);;
-(cblock [CInt(5);CInt(5)] db);;
-(cblock [CInt(5);CInt(4)] db);;
+(cblock [CFloat(2.0);CFloat(9.0)] db);;
+(cblock [CFloat(4.0);CFloat(3.0)] db);;
+(cblock [CFloat(5.0);CFloat(2.0)] db);;
+(cblock [CFloat(4.0);CFloat(2.0)] db);;
+(cblock [CFloat(3.0);CFloat(5.0)] db);;
+(cblock [CFloat(5.0);CFloat(5.0)] db);;
+(cblock [CFloat(5.0);CFloat(5.0)] db);;
+(cblock [CFloat(5.0);CFloat(4.0)] db);;
 
 
 Database.show_sorted_map (Database.get_map "q" db) =
-   [([], [([CInt(2)], CInt(0)); ([CInt(3)], CInt(4)); ([CInt(4)], CInt(2)); ([CInt(5)], CInt(11))])] ;;
+   [([], [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0)); ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))])] ;;
 
 
 
@@ -132,15 +132,15 @@ Database.show_sorted_map (Database.get_map "q" db) =
 *)
 
 let init_q x w = IfThenElse0( Lt(Var("y"), Var("z")),
-   Mult(MapAccess("q3", [], [x; "y"], Const(CInt(0))),
-        MapAccess("q3", [], ["z"; w], Const(CInt(0))))
+   Mult(MapAccess("q3", [], [x; "y"], Const(CFloat(0.0))),
+        MapAccess("q3", [], ["z"; w], Const(CFloat(0.0))))
 );;
 
 let init_q1 y w = IfThenElse0((Lt(Var(y), Var("z"))),
-                     MapAccess("q3", [], ["z"; w], Const(CInt(0))));;
+                     MapAccess("q3", [], ["z"; w], Const(CFloat(0.0))));;
 
 let init_q2 x z = IfThenElse0((Lt(Var("y"), Var(z))),
-                     MapAccess("q3", [], [x; "y"], Const(CInt(0))));;
+                     MapAccess("q3", [], [x; "y"], Const(CFloat(0.0))));;
 
 
 let prog2: prog_t =
@@ -159,15 +159,15 @@ let prog2: prog_t =
        MapAccess("q2", ["a"], ["x"], (init_q2 "x" "a")));
 
       (("q", [], ["a"; "b"], (init_q "a" "b")),
-       IfThenElse0((Lt(Var("b"), Var("a"))), Const(CInt(1))));
+       IfThenElse0((Lt(Var("b"), Var("a"))), Const(CFloat(1.0))));
 
       (("q1", ["y"], ["b"], (init_q1 "y" "b")),
-       IfThenElse0((Lt(Var("y"), Var("a"))), Const(CInt(1))));
+       IfThenElse0((Lt(Var("y"), Var("a"))), Const(CFloat(1.0))));
 
       (("q2", ["z"], ["a"], (init_q2 "a" "z")),
-       IfThenElse0((Lt(Var("b"), Var("z"))), Const(CInt(1))));
+       IfThenElse0((Lt(Var("b"), Var("z"))), Const(CFloat(1.0))));
 
-      (("q3", [], ["a"; "b"], Const(CInt(0))), Const(CInt(1)))
+      (("q3", [], ["a"; "b"], Const(CFloat(0.0))), Const(CFloat(1.0)))
       ])
 ]);;
 
@@ -176,24 +176,24 @@ let cblock = List.hd (compile_ptrig prepared_prog2);;
 
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
-cblock [CInt(5);CInt(5)] db;;
-cblock [CInt(2);CInt(1)] db;;
-cblock [CInt(2);CInt(1)] db;;
-cblock [CInt(4);CInt(2)] db;;
-cblock [CInt(2);CInt(1)] db;;
-cblock [CInt(2);CInt(3)] db;;
-cblock [CInt(5);CInt(3)] db;;
-cblock [CInt(5);CInt(3)] db;;
-cblock [CInt(5);CInt(5)] db;;
-cblock [CInt(2);CInt(2)] db;;
-cblock [CInt(1);CInt(2)] db;;
+cblock [CFloat(5.0);CFloat(5.0)] db;;
+cblock [CFloat(2.0);CFloat(1.0)] db;;
+cblock [CFloat(2.0);CFloat(1.0)] db;;
+cblock [CFloat(4.0);CFloat(2.0)] db;;
+cblock [CFloat(2.0);CFloat(1.0)] db;;
+cblock [CFloat(2.0);CFloat(3.0)] db;;
+cblock [CFloat(5.0);CFloat(3.0)] db;;
+cblock [CFloat(5.0);CFloat(3.0)] db;;
+cblock [CFloat(5.0);CFloat(5.0)] db;;
+cblock [CFloat(2.0);CFloat(2.0)] db;;
+cblock [CFloat(1.0);CFloat(2.0)] db;;
 
 Database.show_sorted_map (Database.get_map "q" db) =
 [([],
-  [([CInt(1); CInt(1)], CInt(0)); ([CInt(1); CInt(2)], CInt(1)); ([CInt(1); CInt(3)], CInt(2));  ([CInt(1); CInt(5)], CInt(2));
-   ([CInt(2); CInt(1)], CInt(9)); ([CInt(2); CInt(2)], CInt(8)); ([CInt(2); CInt(3)], CInt(13)); ([CInt(2); CInt(5)], CInt(10));
-   ([CInt(4); CInt(1)], CInt(0)); ([CInt(4); CInt(2)], CInt(1)); ([CInt(4); CInt(3)], CInt(2));  ([CInt(4); CInt(5)], CInt(2));
-   ([CInt(5); CInt(1)], CInt(0)); ([CInt(5); CInt(2)], CInt(2)); ([CInt(5); CInt(3)], CInt(4));  ([CInt(5); CInt(5)], CInt(4));
+  [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
+   ([CFloat(2.0); CFloat(1.0)], CFloat(9.0)); ([CFloat(2.0); CFloat(2.0)], CFloat(8.0)); ([CFloat(2.0); CFloat(3.0)], CFloat(13.0)); ([CFloat(2.0); CFloat(5.0)], CFloat(10.0));
+   ([CFloat(4.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(4.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(4.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(4.0); CFloat(5.0)], CFloat(2.0));
+   ([CFloat(5.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(5.0); CFloat(2.0)], CFloat(2.0)); ([CFloat(5.0); CFloat(3.0)], CFloat(4.0));  ([CFloat(5.0); CFloat(5.0)], CFloat(4.0));
    ])]
 ;;
 (* this is correct according to Postgres *)
@@ -203,7 +203,7 @@ Database.show_sorted_map (Database.get_map "q" db) =
 let seed = 12345;;
 Random.init seed;;
 let randl n lb ub = let r = ref [] in
-   for i = 1 to n do r := (CInt((lb + (Random.int (ub-lb))))::!r) done; !r
+   for i = 1 to n do r := (CFloat(float_of_int (lb + (Random.int (ub-lb))))::!r) done; !r
  
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
