@@ -7,10 +7,12 @@ SOURCE = \
 	Calculus.mli \
 	Calculus.ml \
 	M3.ml \
-	CalcToM3.mli \
+	M3Common.ml \
 	CalcToM3.ml \
 	Compiler.ml \
-	M3Compiler.ml
+	M3Codegen.mli \
+	M3Compiler.ml \
+	M3Interpreter.ml
 
 all: top
 

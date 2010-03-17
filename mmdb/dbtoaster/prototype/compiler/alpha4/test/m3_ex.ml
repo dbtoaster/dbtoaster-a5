@@ -1,7 +1,15 @@
 
-open M3;;
-open M3Compiler;;
-open Unix;;
+open Unix
+
+open M3Common
+open M3Common.Patterns
+
+open M3Compiler
+open M3Interpreter
+open M3Interpreter.CG
+
+module Compiler = M3Compiler.Make(M3Interpreter.CG)
+open Compiler;;
 
 (* q[y] = Sum(x, R(x,y)) *)
 let prog0: prog_t =
@@ -17,10 +25,10 @@ let db = Database.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pa
 
 patterns_to_string (let (_,pats) = prepared_prog0 in pats);;
 
-(cblock [CFloat(3.0);CFloat(4.0)] db);;
-(cblock [CFloat(2.0);CFloat(4.0)] db);;
-(cblock [CFloat(3.0);CFloat(4.0)] db);;
-(cblock [CFloat(1.0);CFloat(1.0)] db);;
+(eval_trigger cblock [CFloat(3.0);CFloat(4.0)] db);;
+(eval_trigger cblock [CFloat(2.0);CFloat(4.0)] db);;
+(eval_trigger cblock [CFloat(3.0);CFloat(4.0)] db);;
+(eval_trigger cblock [CFloat(1.0);CFloat(1.0)] db);;
 
 Database.show_sorted_db db = [(["q"], [([], [([CFloat(1.0)], CFloat(1.0)); ([CFloat(4.0)], CFloat(8.0));])])] ;;
 
@@ -66,14 +74,14 @@ let cblock = List.hd (compile_ptrig prepared_prog1);;
 
 let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 
-(cblock [CFloat(2.0);CFloat(9.0)] db);;
-(cblock [CFloat(4.0);CFloat(3.0)] db);;
-(cblock [CFloat(5.0);CFloat(2.0)] db);;
-(cblock [CFloat(4.0);CFloat(2.0)] db);;
-(cblock [CFloat(3.0);CFloat(5.0)] db);;
-(cblock [CFloat(5.0);CFloat(5.0)] db);;
-(cblock [CFloat(5.0);CFloat(5.0)] db);;
-(cblock [CFloat(5.0);CFloat(4.0)] db);;
+(eval_trigger cblock [CFloat(2.0);CFloat(9.0)] db);;
+(eval_trigger cblock [CFloat(4.0);CFloat(3.0)] db);;
+(eval_trigger cblock [CFloat(5.0);CFloat(2.0)] db);;
+(eval_trigger cblock [CFloat(4.0);CFloat(2.0)] db);;
+(eval_trigger cblock [CFloat(3.0);CFloat(5.0)] db);;
+(eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db);;
+(eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db);;
+(eval_trigger cblock [CFloat(5.0);CFloat(4.0)] db);;
 
 
 Database.show_sorted_map (Database.get_map "q" db) =
@@ -176,17 +184,17 @@ let cblock = List.hd (compile_ptrig prepared_prog2);;
 
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
-cblock [CFloat(5.0);CFloat(5.0)] db;;
-cblock [CFloat(2.0);CFloat(1.0)] db;;
-cblock [CFloat(2.0);CFloat(1.0)] db;;
-cblock [CFloat(4.0);CFloat(2.0)] db;;
-cblock [CFloat(2.0);CFloat(1.0)] db;;
-cblock [CFloat(2.0);CFloat(3.0)] db;;
-cblock [CFloat(5.0);CFloat(3.0)] db;;
-cblock [CFloat(5.0);CFloat(3.0)] db;;
-cblock [CFloat(5.0);CFloat(5.0)] db;;
-cblock [CFloat(2.0);CFloat(2.0)] db;;
-cblock [CFloat(1.0);CFloat(2.0)] db;;
+eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db;;
+eval_trigger cblock [CFloat(2.0);CFloat(1.0)] db;;
+eval_trigger cblock [CFloat(2.0);CFloat(1.0)] db;;
+eval_trigger cblock [CFloat(4.0);CFloat(2.0)] db;;
+eval_trigger cblock [CFloat(2.0);CFloat(1.0)] db;;
+eval_trigger cblock [CFloat(2.0);CFloat(3.0)] db;;
+eval_trigger cblock [CFloat(5.0);CFloat(3.0)] db;;
+eval_trigger cblock [CFloat(5.0);CFloat(3.0)] db;;
+eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db;;
+eval_trigger cblock [CFloat(2.0);CFloat(2.0)] db;;
+eval_trigger cblock [CFloat(1.0);CFloat(2.0)] db;;
 
 Database.show_sorted_map (Database.get_map "q" db) =
 [([],
@@ -203,19 +211,19 @@ Database.show_sorted_map (Database.get_map "q" db) =
 let seed = 12345;;
 Random.init seed;;
 let randl n lb ub = let r = ref [] in
-   for i = 1 to n do r := (CFloat(float_of_int (lb + (Random.int (ub-lb))))::!r) done; !r
+   for i = 1 to n do r := (CFloat((lb +. (Random.float (ub-.lb))))::!r) done; !r
  
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
 let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
 for i = 0 to num_tuples do
-   let tuple = randl 2 1 5 in
+   let tuple = randl 2 1.0 5.0 in
    (*
    print_endline ((string_of_int i)^": "^
       (List.fold_left (fun acc v -> acc^" "^(string_of_int v)) "" tuple));
    *)
-   cblock tuple db
+   eval_trigger cblock tuple db
 done;
 let finish = Unix.gettimeofday() in
    print_endline ("Tuples: "^(string_of_int num_tuples)^

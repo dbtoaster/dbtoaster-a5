@@ -1,6 +1,12 @@
-open M3;;
-open M3Compiler;;
-open Unix;;
+open M3Common
+open M3Common.Patterns
+
+open M3Compiler
+open M3Interpreter
+open M3Interpreter.CG
+
+module Compiler = M3Compiler.Make(M3Interpreter.CG)
+open Compiler;;
 
 (* SELECT avg(b2.price * b2.volume) 
 FROM   bids b2
@@ -131,7 +137,7 @@ let seed = 12345;;
 Random.init seed;;
 
 let randl n lb ub = let r = ref [] in
-   for i = 1 to n do r := ((CInt(lb + (Random.int (ub-lb))))::!r) done; !r
+   for i = 1 to n do r := ((CFloat(lb +. (Random.float (ub-.lb))))::!r) done; !r
 in
 
 (* Code *)
@@ -144,8 +150,8 @@ let delete_trig = List.nth vwap_triggers 1 in
 let db = Database.make_empty_db (fst prog_vwap) (let (_,pats) = prepared_vwap in pats) in
 
 (* Handlers *)
-let insert t = insert_trig t db in
-let delete t = delete_trig t db in
+let insert t = eval_trigger insert_trig t db in
+let delete t = eval_trigger delete_trig t db in
 
 let exchange_processor input_file query =
    let orders_in = open_in input_file in
@@ -161,7 +167,7 @@ let exchange_processor input_file query =
          let order_id = int_of_string(List.nth orders_fields 1) in
          let event_type = List.nth orders_fields 2 in
          let tuple = List.fold_left (fun acc i ->
-            acc@[CInt(int_of_string(List.nth orders_fields i))]) [] ([4;3])
+            acc@[CFloat(float_of_string(List.nth orders_fields i))]) [] ([4;3])
          in
          incr tuples;
          let (do_query, bids_event, old_tuple, new_tuple) = 
@@ -184,9 +190,8 @@ let exchange_processor input_file query =
                   let old_tuple = Hashtbl.find book order_id in
                   let new_tuple = List.map2 (fun v d ->
                      match d with
-                        | CInt(x) -> M3.c_sum v (CInt(-x))
-                        | CFloat(x) -> M3.c_sum v (CFloat(-.x))
-                        | _ -> failwith "invalid tuple numeric field")
+                        (*| CInt(x) -> c_sum v (CInt(-x))*)
+                        | CFloat(x) -> c_sum v (CFloat(-.x)))
                      old_tuple tuple
                   in
                      if (List.nth new_tuple 1) = CFloat(0.0) then Hashtbl.remove book order_id;
@@ -252,8 +257,8 @@ let random_processor () =
     let num_tuples = 10000 in
     let start = Unix.gettimeofday() in
     for i = 0 to num_tuples do
-       let tuple = randl 2 1 10 in
-       insert_trig tuple db ;
+       let tuple = randl 2 1.0 10.0 in
+       eval_trigger insert_trig tuple db
     done;
     let finish = Unix.gettimeofday() in
     print_endline ("Tuples: "^(string_of_int num_tuples)^
