@@ -152,8 +152,6 @@ let slice_var x =
       else let v = Valuation.value x theta in
          ValuationMap.from_list [([v], v)] [])
 
-let null () = Singleton (fun theta db -> [])
-
 (* Operators *)
 let int_op op x y = if (op x y) then M3.CFloat(1.0) else M3.CFloat(0.0)
 

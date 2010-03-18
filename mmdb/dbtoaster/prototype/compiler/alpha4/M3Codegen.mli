@@ -32,8 +32,6 @@ sig
    val const: const_t -> code_t
    val singleton_var: var_t -> code_t
    val slice_var: var_t -> code_t
-   (* TODO: remove nulls *)
-   val null: unit -> code_t
 
    val add_op  : op_t
    val mult_op : op_t

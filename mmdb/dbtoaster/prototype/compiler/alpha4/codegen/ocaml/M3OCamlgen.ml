@@ -123,8 +123,6 @@ struct
    let singleton_var v = ["["^v^"]"]
    let slice_var v = ["Valuation.from_list [(["^v^"], "^v^")] []"]
    
-   let null() = ["[]"]
-   
    let int_op op      = "(fun a b -> if ("^op^" a b) then 1.0 else 0.0)"
    let add_op         = "c_sum"
    (* Note: can't use prefix form due to ambiguity with comments. *)
