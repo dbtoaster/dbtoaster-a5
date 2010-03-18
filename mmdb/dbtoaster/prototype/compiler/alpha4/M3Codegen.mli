@@ -135,9 +135,15 @@ sig
       string -> var_t list -> var_t list -> var_t list -> int list -> bool ->
       code_t -> code_t
 
-   (* trigger args, statement code block -> trigger code *)
-   val trigger : var_t list -> code_t list -> code_t
+   (* event, rel, trigger args, statement code block -> trigger code *)
+   val trigger : pm_t -> rel_id_t -> var_t list -> code_t list -> code_t
    
+   (* TODO: pass in data source spec, adaptor spec etc. *)
+   (* schema, patterns, triggers -> top level code *)
+   val main : map_type_t list -> pattern_map -> code_t list -> code_t
+
+   val output : code_t -> out_channel -> unit
+
    (* Interpreter methods *)
    val eval_trigger : code_t -> const_t list -> db_t -> unit
 end

@@ -322,7 +322,7 @@ let compile_ptrig (ptrig, patterns) =
       let (event, rel, trig_args, pblock) = ptrig in
       let aux2 = compile_pstmt_loop patterns trig_args in
       let cblock = List.map aux2 pblock in
-      trigger trig_args cblock
+      trigger event rel trig_args cblock
    in List.map aux ptrig
 
 end

@@ -14,18 +14,27 @@ SOURCE = \
 	codegen/ocaml/SliceableMap.mli \
 	codegen/ocaml/SliceableMap.ml \
 	codegen/ocaml/M3OCaml.ml \
-	codegen/ocaml/M3Interpreter.ml
+	codegen/ocaml/M3Interpreter.ml \
+	codegen/ocaml/M3OCamlgen.ml
+
+RUNTIME = \
+	Util.ml \
+	M3.ml \
+	M3Common.ml \
+	codegen/ocaml/SliceableMap.mli \
+	codegen/ocaml/SliceableMap.ml \
+	codegen/ocaml/M3OCaml.ml
 
 all: top
 
 bytecode:
-	ocamlc -c -I codegen/ocaml/ $(SOURCE)
+	ocamlc -I codegen/ocaml/ -c $(SOURCE)
 
 native:
-	ocamlopt -ccopt -O3 -c -I codegen/ocaml/ $(SOURCE)
+	ocamlopt -I codegen/ocaml/ -ccopt -O3 -c $(SOURCE)
 
 top: bytecode
-	ocamlmktop -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
+	ocamlmktop -I codegen/ocaml/ -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
 
 benchmark: native
 	ocamlopt -I codegen/ocaml/ -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
@@ -33,8 +42,14 @@ benchmark: native
 vwap: native
 	ocamlopt -I codegen/ocaml/ -ccopt -O3 -o vwap str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/vwap_m3_ex.ml
 
-clean:
-	rm -f *.cmi *.cmo *.cmx *.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap
-
 test: top
 	./dbtoaster_top test/m3_ex.ml
+
+runtime:
+	ocamlopt -I codegen/ocaml -ccopt -O3 -c $(RUNTIME)
+
+query: runtime query.ml
+	ocamlopt -I codegen/ocaml -ccopt -O3 -o query unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME))) query.ml
+
+clean:
+	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap

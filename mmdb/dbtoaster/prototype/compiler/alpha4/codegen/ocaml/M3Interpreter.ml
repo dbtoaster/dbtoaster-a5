@@ -486,11 +486,18 @@ let statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code =
 (* TODO: this code expects a tuple arg, returns unit, and should be reflected
  * in resulting code_t *)
 (* trigger args, statement code block -> trigger code *)
-let trigger trig_args stmt_block =
+let trigger event rel trig_args stmt_block =
    let cblock = List.map get_statement stmt_block in
    Trigger (fun tuple db ->
       let theta = Valuation.make trig_args tuple in
          List.iter (fun cstmt -> cstmt theta db) cblock)
+
+(* No top level code generated for the interpreter *)
+let main schema patterns triggers =
+   failwith "interpreter should be directly invoked"
+
+(* No file output for interpreter *)
+let output out_chan = failwith "interpreter cannot write source code"
 
 let eval_trigger trigger tuple db = (get_trigger trigger) tuple db
 
