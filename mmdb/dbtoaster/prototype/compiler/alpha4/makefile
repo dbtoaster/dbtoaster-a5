@@ -17,6 +17,12 @@ SOURCE = \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml
 
+LEX  = parser/Sqllexer.mll
+YACC = parser/Sqlparser.mly
+
+GENERATED_SOURCE = $(subst .mly,.ml,$(YACC)) $(subst .mly,.mli,$(YACC)) $(subst .mll,.ml,$(LEX)) 
+#SOURCE += $(GENERATED_SOURCE)
+
 RUNTIME = \
 	Util.ml \
 	M3.ml \
@@ -27,7 +33,11 @@ RUNTIME = \
 
 all: top
 
-bytecode:
+lex_yacc:
+	ocamlyacc $(YACC)
+	ocamllex $(LEX)
+
+bytecode: #lex_yacc
 	ocamlc -I codegen/ocaml/ -c $(SOURCE)
 
 native:
@@ -52,4 +62,4 @@ query: runtime query.ml
 	ocamlopt -I codegen/ocaml -ccopt -O3 -o query unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME))) query.ml
 
 clean:
-	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap
+	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)
