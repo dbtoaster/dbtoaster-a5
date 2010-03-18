@@ -14,7 +14,6 @@ let rec calc_vars_aux f calc =
     | Eq  (c1, c2)        -> op c1 c2
 (*    | And (c1, c2)        -> op c1 c2 *)
     | IfThenElse0(c1, c2) -> op c2 c1
-    | Null(outv)          -> outv
     | Const(i)            -> []
     | Var(x)              -> [x]
 
@@ -46,7 +45,6 @@ and pretty_print_calc calc : string =
     | Eq(c1, c2)         -> ots "==" c1 c2
  (* | And(c1, c2)        -> ots "AND" c1 c2 *)
     | IfThenElse0(c1,c2) -> "{ IF "^(pretty_print_calc c1)^" THEN "^(pretty_print_calc c2)^" }"
-    | Null(outv)         -> "Null["^(vars_to_string outv)^"]"
     | Const(c)           -> string_of_const(c)
     | Var(x)             -> x
 
@@ -136,7 +134,6 @@ let rec pcalc_to_string calc =
     | M3P.Eq  (e1, e2)        -> ots "Eq"   e1 e2
 (*    | M3P.And (e1, e2)        -> ots "And"  e1 e2 *)
     | M3P.IfThenElse0(e1, e2) -> ots "IfThenElse0" e1 e2
-    | M3P.Null(outv)          -> "Null("^(vars_to_string outv)^")"
     | M3P.Const(i)            -> string_of_const i
     | M3P.Var(x)              -> x
 
@@ -152,7 +149,6 @@ let rec pcalc_schema (calc : M3P.pcalc_t) =
     | M3P.Eq  (c1, c2)        -> op c1 c2
 (*    | M3P.And (c1, c2)        -> op c1 c2 *)
     | M3P.IfThenElse0(c1, c2) -> op c2 c1
-    | M3P.Null(outv)          -> outv
     | M3P.Const(i)            -> []
     | M3P.Var(x)              -> [x]
 

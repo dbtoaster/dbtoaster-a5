@@ -19,7 +19,6 @@ and  calc_t = Add  of calc_t * calc_t
                (* if (cond != 0) then calc else 0 *)
             | IfThenElse0 of calc_t * calc_t
             | MapAccess of mapacc_t
-            | Null of (var_t list) (* the mythical null-slice *)
                (* conditions*)
             | Leq of calc_t * calc_t
             | Eq  of calc_t * calc_t
@@ -98,7 +97,6 @@ struct
                 | Lt   of        ecalc_t * ecalc_t
                 | IfThenElse0 of ecalc_t * ecalc_t
                 | MapAccess   of pmapacc_t
-                | Null of (var_t list)
                 
    and ecalc_t     = pcalc_t * pcalcmeta_t
    and aggecalc_t  = ecalc_t * paggmeta_t

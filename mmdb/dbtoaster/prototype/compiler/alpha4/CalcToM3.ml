@@ -10,25 +10,33 @@ type map_key_binding_t =
 type bindings_list_t = map_key_binding_t list
 type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t) 
 
+type m3_condition_or_none =
+    EmptyCondition
+  | Condition of M3.calc_t
+
 let rec to_m3_initializer 
   (map_definition: Calculus.readable_term_t) : 
     (M3.calc_t * relation_set_t) = 
   let rec cond_to_init phi base_term : 
-    (M3.calc_t * relation_set_t * M3.calc_t) = 
+    (M3.calc_t * relation_set_t * m3_condition_or_none) = 
       match phi with
         Calculus.RA_Leaf(Calculus.False) ->
-          (M3.Const(M3.CFloat(0.0)), StringSet.empty, M3.Null[])
+          (M3.Const(M3.CFloat(0.0)), StringSet.empty, EmptyCondition)
       | Calculus.RA_Leaf(Calculus.True) -> 
-          (base_term, StringSet.empty, M3.Null[])
+          (base_term, StringSet.empty, EmptyCondition)
       | Calculus.RA_Leaf(Calculus.AtomicConstraint(c, t1, t2)) -> 
           let (lh_term, ra_map1) = (to_m3_initializer t1) in
           let (rh_term, ra_map2) = (to_m3_initializer t2) in
           let ra_map = (StringSet.union ra_map1 ra_map2) in
             (match c with
-                Calculus.Eq  -> (base_term, ra_map, M3.Eq(lh_term, rh_term))
-              | Calculus.Lt  -> (base_term, ra_map, M3.Lt(lh_term, rh_term))
-              | Calculus.Le  -> (base_term, ra_map, M3.Leq(lh_term, rh_term))
-              | Calculus.Neq -> failwith "TODO: Handle NEQ"
+                Calculus.Eq  -> 
+                  (base_term, ra_map, Condition(M3.Eq(lh_term, rh_term)))
+              | Calculus.Lt  -> 
+                  (base_term, ra_map, Condition(M3.Lt(lh_term, rh_term)))
+              | Calculus.Le  -> 
+                  (base_term, ra_map, Condition(M3.Leq(lh_term, rh_term)))
+              | Calculus.Neq -> 
+                  failwith "TODO: Handle NEQ"
             )
 
       | Calculus.RA_Leaf(Calculus.Rel(mapn,map_vars)) -> 
@@ -44,7 +52,7 @@ let rec to_m3_initializer
           (
             M3.Mult(M3.MapAccess(ma_term), base_term), 
             (StringSet.singleton mapn),
-            M3.Null[]
+            EmptyCondition
           )
       
       | Calculus.RA_MultiNatJoin(t::[]) -> 
@@ -59,16 +67,17 @@ let rec to_m3_initializer
           in
           let ra_map = (StringSet.union ra_map1 ra_map2) in
             ( match phi2 with
-                M3.Null(l) -> (term3, ra_map, phi3)
-              | _          -> (
-                  match phi3 with
-                      M3.Null(l2) -> (term3, ra_map, phi2)
-                    | _           ->  (term3, ra_map, M3.Add(phi3, phi2))
-                  )
-          )
+                EmptyCondition -> (term3, ra_map, phi3)
+              | Condition(phi2_as_m3) -> 
+                ( match phi3 with
+                    EmptyCondition -> (term3, ra_map, phi2)
+                  | Condition(phi3_as_m3) ->
+                    (term3, ra_map, Condition(M3.Add(phi3_as_m3, phi2_as_m3)))
+                )
+            )
 
       | Calculus.RA_MultiNatJoin([]) -> 
-          (base_term, StringSet.empty, M3.Null[])
+          (base_term, StringSet.empty, EmptyCondition)
 
       | Calculus.RA_Neg(t)        -> failwith "TODO:Handle RA_Neg"
       | Calculus.RA_MultiUnion(l) -> failwith "TODO:Handle RA_MultiUnion"
@@ -81,11 +90,10 @@ let rec to_m3_initializer
             (cond_to_init phi base_term) in
             (
               match result_phi with
-                M3.Null(_) -> 
-                  (term, (StringSet.union ra_map1 ra_map2))
-              | _ -> 
+                EmptyCondition -> (term, (StringSet.union ra_map1 ra_map2))
+              | Condition(result_phi_as_m3) -> 
                   (
-                    M3.IfThenElse0(result_phi, term), 
+                    M3.IfThenElse0(result_phi_as_m3, term), 
                     (StringSet.union ra_map1 ra_map2)
                   )
             )

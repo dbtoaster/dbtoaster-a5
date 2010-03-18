@@ -35,3 +35,6 @@ vwap: native
 
 clean:
 	rm -f *.cmi *.cmo *.cmx *.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap
+
+test: top
+	./dbtoaster_top test/m3_ex.ml

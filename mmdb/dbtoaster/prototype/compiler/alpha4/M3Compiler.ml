@@ -94,8 +94,6 @@ let prepare_triggers (triggers : trig_t list)
            let r = (M3P.MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
         
-        (* TODO: are null slices singletons? *)
-        | Null (outv) -> ((M3P.Null(outv), (prepare(), [], true, false)), empty_pattern_map())
    in
 
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.pstmt_t * pattern_map) =
@@ -233,10 +231,6 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
 
       | M3P.IfThenElse0(c1, c2) ->
            compile_op incr_ecalc CG.ifthenelse0_op c2 c1
-
-      | M3P.Null(outv) ->
-         if get_singleton incr_ecalc then null()
-         else failwith "invalid null singleton"
 
       | M3P.Const(i)   ->
          if get_singleton incr_ecalc then (const i)

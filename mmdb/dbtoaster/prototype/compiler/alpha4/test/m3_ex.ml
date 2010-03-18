@@ -8,7 +8,6 @@ open M3Compiler
 open M3OCaml
 open M3Interpreter
 open M3Interpreter.CG
-
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
 
