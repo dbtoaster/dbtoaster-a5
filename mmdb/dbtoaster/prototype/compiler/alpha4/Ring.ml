@@ -1,8 +1,9 @@
-(* A module for representing the algebraic structure of a commutative
-   ring with 1 and multivariate expressions in it (using
-   the operations '+', unary '-', and '*') over a base type, and for
-   simplifying expressions. The module contains a function for turning an
-   expression into a polynomial.
+(* A module for representing expressions of a commutative
+   ring with 1 (using the operations '+', unary '-', and '*')
+   over a base type, and for simplifying expressions.
+   The module contains a function for turning an
+   expression into a polynomial and for computing a delta of an expression
+   given a delta-function for atomic expressions (particularly, variables).
 *)
 
 
@@ -38,15 +39,12 @@ sig
       fly that the implementations of other functions of Ring may
       depend upon. 
    *)
-(*
-   type expr_t
-*)
-
-(* currently not abstract, for debugging in the interactive ocaml toplevel *)
    type expr_t = Val  of leaf_t
                | Sum  of expr_t list
                | Prod of expr_t list
                | Neg  of expr_t
+(* type expr_t *) (* currently not abstract, for debugging *)
+
 
    (* constant multiplicity represented by int; could be an arbitrary
       constant ring element. *)
@@ -125,7 +123,7 @@ sig
    *)
    val substitute_many: ((expr_t * expr_t) list) -> expr_t -> expr_t
 
-   (* (extract sum_combinator_f prod_combinator_f leaf_f expr);
+   (* (extract sum_combinator_f prod_combinator_f neg_f leaf_f expr);
 
       folds an expression into a pair of values, where the first is
 
@@ -156,13 +154,17 @@ sig
    val delta: (leaf_t -> expr_t) -> expr_t -> expr_t
 
    (* a polynomial is a sum of monomials.
-      A monomial is a product of base values.
-      Creates a flat sum of flat products of leaves.
-      The polynomial is expressed as a list of monomials. *)
+      A monomial is a (possibly negated) product of base values.
+      turns an arbitrary expression into a polynomial represents as a list
+      of monomials represented as mono_t values.
+   *)
    val polynomial: expr_t -> (mono_t list)
    (* val polynomial: expr_t -> expr_t *)
 
+   (* turns a monomial into a product expression *)
    val monomial_to_expr: mono_t -> expr_t
+
+   (* turns the input expression into a sum of products. *)
    val polynomial_expr:  expr_t -> expr_t
 
    (* casts an expression to a monomial. If that is not possible
@@ -186,7 +188,20 @@ end
 (* For using Ring, there should be no need to read on below.
    The following code implements a ring with some standard operations
    on expressions; there is nothing specific to DBToaster in here.
+
+
+   Representation invariant:
+   * If the value of an expression is zero, it is syntactically represented
+   as zero. (We automatically rewrite 0*x=x*0 to 0 and 0+x=x+0 to x.)
+
+   We also always represent 1*x=x*1 as x.
+
+   But we do not internally represent expressions as polynomials, because
+   this transformation may produce exponential blow-up. So the function
+   for conversion to a polynomial is not a dummy.
 *)
+
+
 
 
 module Make = functor (T : Base) ->
@@ -205,6 +220,9 @@ struct
 
    let mk_val a = Val(a)
 
+   (* any construction of complex expressions is done with mk_sum and mk_prod,
+      which enforce the representation invariant.
+   *)
    let mk_sum  l =
       let l2 = (List.filter (fun x -> x <> zero) l) in
       if(l2 = []) then zero
