@@ -41,7 +41,7 @@ bytecode: #lex_yacc
 	ocamlc -I codegen/ocaml/ -c $(SOURCE)
 
 native:
-	ocamlopt -I codegen/ocaml/ -ccopt -O3 -c $(SOURCE)
+	ocamlopt -I codegen/ocaml/ -ccopt -O3 -nodynlink -unsafe -noassert -c $(SOURCE)
 
 top: bytecode
 	ocamlmktop -I codegen/ocaml/ -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
@@ -59,7 +59,7 @@ runtime:
 	ocamlopt -I codegen/ocaml -ccopt -O3 -c $(RUNTIME)
 
 query: runtime query.ml
-	ocamlopt -I codegen/ocaml -ccopt -O3 -o query unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME))) query.ml
+	ocamlopt -I codegen/ocaml -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME))) query.ml
 
 clean:
 	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)

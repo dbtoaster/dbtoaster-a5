@@ -263,6 +263,10 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
+       print_endline ("singleton_init_lookup: "^mapn^" "^
+                      (vars_to_string inv)^" "^
+                      (vars_to_string outv)^" "^
+                      (Util.list_to_string string_of_const outv_img));
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value
@@ -280,6 +284,8 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
+       print_endline ("slice_init_lookup: "^mapn^" "^
+                      (vars_to_string inv));
           Database.update mapn inv_img init_slice_w_indexes db;
           init_slice_w_indexes)
 

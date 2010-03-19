@@ -58,9 +58,9 @@ let prog1: prog_t =
    (Insert, "R", ["a"; "b"],
       [
       (("q", [], ["a"],       Const(CFloat(0.0))),
-       MapAccess("q1", [], ["b"], (Null ["b"])));
+       MapAccess("q1", [], ["b"], (Const(CFloat(0.0)))));
       (("q", [], ["x"],       Var("x")),
-       MapAccess("q2", [], ["x"; "a"], (Null ["x"; "a"])));
+       MapAccess("q2", [], ["x"; "a"], (Const(CFloat(0.0)))));
       (("q", [], ["a"],       Const(CFloat(0.0))),
               IfThenElse0((Eq(Var("b"), Var("a"))), Const(CFloat(1.0))));
       (("q1", [], ["a"],      Const(CFloat(0.0))), Const(CFloat(1.0)));
@@ -211,18 +211,18 @@ Database.show_sorted_map (Database.get_map "q" db) =
 let seed = 12345;;
 Random.init seed;;
 let randl n lb ub = let r = ref [] in
-   for i = 1 to n do r := (CFloat((lb +. (Random.float (ub-.lb))))::!r) done; !r
+   for i = 1 to n do r := (CFloat(float(lb + (Random.int (ub-lb))))::!r) done; !r
  
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
 let num_tuples = 10000 in
 let start = Unix.gettimeofday() in
 for i = 0 to num_tuples do
-   let tuple = randl 2 1.0 5.0 in
-   (**)
+   let tuple = randl 2 1 5 in
+   (*
    print_endline ((string_of_int i)^": "^
       (List.fold_left (fun acc v -> match v with | CFloat(f) -> acc^" "^(string_of_float f)) "" tuple));
-   (**)
+   *)
    eval_trigger cblock tuple db
 done;
 let finish = Unix.gettimeofday() in

@@ -214,8 +214,13 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
             let pat = List.map (index outv) patv in
             (* code that returns the initial value slice *)
             let init_val_code =
-               if get_singleton (get_ecalc init_aggecalc) then
-                  singleton_init_lookup mapn inv out_patterns outv cinit
+               print_endline ("generating init lookup for "^mapn^" "^
+                              (vars_to_string inv)^" "^
+                              (vars_to_string outv)^" "^
+                              (string_of_bool (get_singleton (get_ecalc init_aggecalc)))); 
+               if (get_singleton (get_ecalc init_aggecalc)) ||
+                  (get_full_agg (get_agg_meta init_aggecalc))
+               then singleton_init_lookup mapn inv out_patterns outv cinit
                else slice_init_lookup mapn inv out_patterns cinit
             in
             (* code that does the final stage of the lookup on the slice *)

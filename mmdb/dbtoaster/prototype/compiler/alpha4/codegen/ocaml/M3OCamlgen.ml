@@ -5,8 +5,11 @@ open M3OCaml
 module CG : M3Codegen.CG =
 struct
    type op_t         = string
-   type code_t       = string list
+   type code_t       = Lines of string list | Inline of string
    type debug_code_t = string list
+
+   let get_lines c = match c with Lines(l) -> l | Inline(c) -> [c]
+   let inline s = "(List.hd "^s^")"
 
    (* Code prettification *)
    (*
@@ -23,7 +26,7 @@ struct
 
    let tab s           = "   "^s
    let rec indent n s  = if n = 0 then s else indent (n-1) (List.map tab s)
-   let tabify l        = List.map tab l
+   let tabify l        = Lines(List.map tab l)
 
    (* Static code generation *)
    let list_to_string f l = "["^(String.concat ";" (List.map f l))^"]"
@@ -77,15 +80,25 @@ struct
       let ext_idx = List.map (index vars) ext_vars in
          bind_vars_from_list_indices (List.combine ext_vars ext_idx) consts_list
 
-   let vars_list vars = "["^(String.concat "," vars)^"]"
+   let vars_list vars = "["^(String.concat ";" vars)^"]"
+   
+   (* bindings: vars * const list  *)
+   let inline_vars_list vars bindings =
+      (* The last binding overrides others. *)
+      let rbindings = List.rev bindings in
+      let aux v =
+         let valid = List.filter (fun (vl,cl_v) -> List.mem v vl) rbindings in
+         if valid = [] then v else
+            let (vl, cl_v) = List.hd valid in
+               ("List.nth "^cl_v^" "^(string_of_int (index vl v)))
+      in vars_list (List.map aux vars)
 
    (* Debugging helpers *)
+   (*
    let debug_sequence cdebug ccalc = ["(*"]@cdebug@[";*)"]@ccalc
    let debug_expr incr_calc = 
-      ["print_string(\"\\neval_pcalc \""^(pcalc_to_string incr_calc)^
-                   "\" \"^(Database.db_to_string db)^\"   \")"]
+      ["print_string(\"\\neval_pcalc "^(pcalc_to_string incr_calc)^" \"^(Database.db_to_string db)^\"   \")"]
 
-   (* lhs_outv *)
    let debug_singleton_rhs_expr lhs_outv =
       ["(fun k v ->";
        "print_endline (\"End of PCALC_S; outv=\"^\""^(vars_list lhs_outv)^"\"^";
@@ -93,7 +106,6 @@ struct
        "               \" v=\"^(string_of_const v)^";
        "              (\" db=\"^(Database.db_to_string db))))"]
 
-   (* rhs_outv *)
    let debug_slice_rhs_expr rhs_outv =
       ["(fun slice0 ->";
        "print_endline (\"End of PCALC; outv=\"^\""^(vars_list rhs_outv)^"\"^";
@@ -106,147 +118,221 @@ struct
        "             ^\"key=\"^(Util.list_to_string string_of_const k)";
        "             ^\", db=\"^(Database.db_to_string db)))"]
 
-   (* lhs_mapn, lhs_inv, lhs_outv *)
    let debug_stmt lhs_mapn lhs_inv lhs_outv =
       ["print_string(\"\\nPSTMT (db=_\"^";
        "            \", stmt=(("^(string_const lhs_mapn)^"\"^";
        "            \" "^(vars_list lhs_inv)^" \"^";
        "            \""^(vars_list lhs_outv)^" _), _))\\n\"))"]
+   *)
+   
+   let debug_sequence cdebug ccalc = ccalc
+   let debug_expr incr_calc = []
+   let debug_singleton_rhs_expr lhs_outv = []
+   let debug_slice_rhs_expr rhs_outv = []
+   let debug_rhs_init () = []
+   let debug_stmt lhs_mapn lhs_inv lhs_outv = []
 
 
    (* Code generation for M3 AST elements *)
 
    (* TODO: potential loss of precision with OCaml's string_of_float
     * without formatting. *)
-   let const c = match c with | CFloat(f) -> ["[CFloat("^(string_of_float f)^")]"]
+   let const c = match c with | CFloat(f) ->
+      Inline("[CFloat("^(string_of_float f)^")]")
 
-   let singleton_var v = ["["^v^"]"]
-   let slice_var v = ["Valuation.from_list [(["^v^"], "^v^")] []"]
+   let singleton_var v = Inline("["^v^"]")
+   let slice_var v = Lines(["ValuationMap.from_list [(["^v^"], "^v^")] []"])
    
-   let int_op op      = "(fun a b -> if ("^op^" a b) then 1.0 else 0.0)"
+   let int_op op      = "(fun a b -> if ("^op^" a b) then CFloat(1.0) else CFloat(0.0))"
    let add_op         = "c_sum"
    (* Note: can't use prefix form due to ambiguity with comments. *)
-   let mult_op        = "c_mult"
+   let mult_op        = "c_prod"
    let eq_op          = int_op "(=)"
    let lt_op          = int_op "(<)"
    let leq_op         = int_op "(<=)"
-   let ifthenelse0_op = "(fun v cond -> if cond <> 0 then v else 0.0)"
+   let ifthenelse0_op =
+      "(fun v cond -> match cond with"^
+      " | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))"
 
-   let op_singleton_expr op ce1 ce2 = tabify (
-      ["let (r1,r2) = (";]@ce1@[","]@ce2@[") in";
-       "match (r1,r2) with";
-       " | ([], _) | (_,[]) -> []";
-       " | ([v1], [v2]) -> ("^op^" v1 v2)";
-       " | _ -> failwith \"op_singleton_expr: invalid singleton\"" ])
+   let op_singleton_expr op ce1 ce2 =
+      let aux s in_s = tabify (
+         ["let r = ";]@s@[" in";
+          "match r with";
+          " | [] -> []";
+          " | [v] -> [("^op^" v "^(inline in_s)^")]";
+          " | _ -> failwith \"op_singleton_expr: invalid singleton\"" ])
+      in
+      match (ce1, ce2) with
+       | (Lines(ce1_l), Lines(ce2_l)) -> tabify (
+         ["let (r1,r2) = ((";]@ce1_l@["),("]@ce2_l@[")) in";
+          "match (r1,r2) with";
+          " | ([], _) | (_,[]) -> []";
+          " | ([v1], [v2]) -> [("^op^" v1 v2)]";
+          " | _ -> failwith \"op_singleton_expr: invalid singleton\"" ])
+
+       | (Inline(ce1_i), Lines(ce2_l)) -> aux ce2_l ce1_i
+       | (Lines(ce1_l), Inline(ce2_i)) -> aux ce1_l ce2_i
+       | (Inline(ce1_i), Inline(ce2_i)) ->
+          Inline("[("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")]")
 
    let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
-      ["let res1 = "]@ce1@
+      ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let f k v1 r =";
        "   let r2 = "]@ 
       (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
-      (indent 1 ce2)@
-      ["in";
+      (indent 1 (get_lines ce2))@
+      ["   in";
        "   let r3 = ";
               (* Inlined AggregateMap.concat_keys *) 
        "      ValuationMap.mapi (fun k2 v2 -> "]@
       (* Bind outv2, and schema_ext. Note schema_ext corresponds to
        * vars in outv1 which can be accessed through const list "k" *)
+      (let new_k = inline_vars_list schema [(outv2, "k2"); (schema_ext, "k")] in
+      ["         ("^new_k^", ("^op^" v1 v2))"])@
+(*      
       (indent 2 (bind_vars_from_list outv2 "k2"))@
       (indent 2 (bind_vars_from_list schema_ext "k"))@
       ["      let new_k = "^(vars_list schema)^" in";
-       "         (new_k, ("^op^" v1 v2))) r2";
+       "         (new_k, ("^op^" v1 v2))"]@
+*)
+      ["      ) r2";
        "   in ValuationMap.union r r3";
        "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
        
    let op_slice_product_expr op ce1 ce2 = tabify (
-      ["let res1 = "]@ce1@
+      ["let res1 = "]@(get_lines ce1)@
       ["in";
-       "let res2 = "]@ce2@
+       "let res2 = "]@(get_lines ce2)@
       ["in ValuationMap.product "^op^" res1 res2"])
 
    (* Note: no need to bind outv2 anywhere in this code, since in this case
     * outv2 is bound from above *)
    let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
-      ["let res1 = "]@ce1@
-      ["in";
-       "let f k v r = ";
-       "   let res2 = "]@
-       (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
-       (indent 1 ce2)@
-      ["in";
-       "   begin match res2 with";
-       "    | [] -> r";
-       "    | [v2] ->";
-       "       let nv = ("^op^" v v2) in";
-       "       let nk = "]@
-       (indent 3 (bind_vars_from_list schema_ext "k"))@
-      ["          "^(vars_list schema);
-       "       in ValuationMap.add nk nv r";
-       "    | _ -> failwith \"op_lslice_expr: invalid singleton\"";
-       "   end";
-       "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
+      let f_body =
+         match ce2 with
+          | Lines(ce2_l) ->
+            ["   let res2 = "]@
+             (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
+             (indent 1 ce2_l)@
+            ["   in";
+             "   begin match res2 with";
+             "    | [] -> r";
+             "    | [v2] ->";
+             "       let nv = ("^op^" v v2) in"]@
+            (let nk = inline_vars_list schema [(schema_ext, "k")] in
+            ["       let nk = "^nk])@
+(*
+            ["       let nk = "]@
+             (indent 3 (bind_vars_from_list schema_ext "k"))@
+            ["          "^(vars_list schema)]@
+*)
+            ["       in ValuationMap.add nk nv r";
+             "    | _ -> failwith \"op_lslice_expr: invalid singleton\"";
+             "   end"]
+          | Inline(ce2_i) ->
+            (let nk = inline_vars_list schema [(schema_ext, "k")] in
+            ["   let nk = "^nk])@
+             (* schema_ext will contain superset of theta_ext so we dont
+              * need to extend the scope with both.
+              * TODO: check this *)
+(*              
+             ***(indent 1 (bind_vars_from_extension outv1 "k" theta_ext))@***
+             (indent 1 (bind_vars_from_list schema_ext "k"))@
+            ["    let nk = "^(vars_list schema)]@
+*)
+            ["    in ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
+      in
+         ["let res1 = "]@(get_lines ce1)@
+         ["in";
+          "let f k v r = ";]@f_body@
+         ["in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
    
    (* Note: no need to bind any vars from outv2 since these should be bound
     * from above *)
    let op_lslice_product_expr op outv2 ce1 ce2 = tabify (
-      ["let res1 = "]@ce1@
+      let body = match ce2 with
+         | Lines(ce2_l) ->
+            ["let res2 = "]@ce2_l@
+            ["in";
+             "   begin match res2 with";
+             "    | [] ->  ValuationMap.empty_map()";
+             "    | [v2] -> ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v v2))) res1";
+             "    | _ -> failwith \"op_lslice_product_expr: invalid singleton\"";
+             "   end"]
+         | Inline(ce2_i) ->
+            ["ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v "^(inline ce2_i)^"))) res1"]
+      in
+      ["let res1 = "]@(get_lines ce1)@
       ["in";
-       "let k2 = "^(vars_list outv2)^" in";
-       "let res2 = "]@ce2@
-      ["in";
-       "   begin match res2 with";
-       "    | [] ->  ValuationMap.empty_map()";
-       "    | [v2] -> ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v v2))) res1";
-       "    | _ -> failwith \"op_lslice_product_expr: invalid singleton\"";
-       "   end"])
+       "let k2 = "^(vars_list outv2)^" in"]@body)
 
    (* Note: no need to bind vars schema_ext since these should be bound from
     * above. *)
    let op_rslice_expr op outv2 schema schema_ext ce1 ce2 = tabify (
-      ["let res1 = "]@ce1@
-      ["in";
-       "  match res1 with";
-       "   | [] -> ValuationMap.empty_map()";
-       "   | [v] ->";
-       "      let r = "]@
-       (indent 2 ce2)@
-      ["      in ValuationMap.mapi (fun k2 v2 ->";
-       "         let new_k = "]@
-       (indent 3 (bind_vars_from_list outv2 "k2"))@
-      ["         "^(vars_list schema);
-       "         in (new_k, ("^op^" v v2))) r";
-       "   | _ -> failwith \"op_rslice_expr: invalid singleton\""])
+      let body ce1_v =
+         ["let r = "]@
+          (get_lines ce2)@
+         ["in ValuationMap.mapi (fun k2 v2 ->"]@
+         (let nk = inline_vars_list schema [(outv2, "k2")] in
+         ["   ("^nk^", ("^op^" "^ce1_v^" v2))) r"])
+(*
+         ["   let new_k = "]@
+          (indent 1 (bind_vars_from_list outv2 "k2"))@
+         ["   "^(vars_list schema);
+          "   in (new_k, ("^op^" "^ce1_v^" v2))) r"]
+*)
+      in 
+      match ce1 with
+       | Lines(ce1_l) ->
+         ["let res1 = "]@ce1_l@
+         ["in";
+          "   match res1 with";
+          "    | [] -> ValuationMap.empty_map()";
+          "    | [v] ->"]@
+         (indent 2 (body "v"))@
+         ["   | _ -> failwith \"op_rslice_expr: invalid singleton\""]
+       | Inline(ce1_i) -> (body (inline ce1_i)))
 
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = string_const mapn in
       let cout_patterns = patterns_const out_patterns in
-      tabify (
-      ["let inv_img = "^(vars_list inv)^" in";
-       "let init_val = "]@cinit@
-      ["in";
-       "let outv_img = "^(vars_list outv)^" in";
-       "begin match init_val with";
-       " | [] -> ValuationMap.empty_map()";
-       " | [v] -> (Database.update_value "^cmapn;
-       "            "^cout_patterns;
-       "            inv_img outv_img v db;";
-       "           ValuationMap.from_list [(outv_img, v)] "^cout_patterns^")";
-       " | _ -> failwith \"MapAccess: invalid singleton\"";
-       "end"])
+      if inv = [] then
+         let error =
+            "singleton_init_lookup: invalid init value for a "^
+            "lookup with no in vars."
+         in tabify(["failwith \""^error^"\""])
+      else
+      let body v = 
+         ["(Database.update_value "^cmapn^" "^cout_patterns^" "^(vars_list inv)^" "^(vars_list outv)^" "^v^" db;";
+          "   ValuationMap.from_list [("^(vars_list outv)^", "^v^")] "^cout_patterns^")"]
+      in
+      tabify (match cinit with
+         | Lines(cinit_l) ->
+            ["let init_val = "]@cinit_l@ ["in";
+             "begin match init_val with";
+             " | [] -> ValuationMap.empty_map()";
+             " | [v] -> "]@
+             (indent 2 (body "v"))@
+            [" | _ -> failwith \"MapAccess: invalid singleton\""; "end"]
+         | Inline(cinit_i) -> (body (inline cinit_i)))
        
    let slice_init_lookup mapn inv out_patterns cinit =
       let cmapn = string_const mapn in
       let cout_patterns = patterns_const out_patterns in
+      if inv = [] then
+         let error =
+            "singleton_init_lookup: invalid init value for a lookup with no in vars."
+         in tabify(["failwith \""^error^"\""])
+      else
       tabify (
-      ["let inv_img = "^(vars_list inv)^" in";
-       "let init_slice = "]@cinit@
+      ["let init_slice = "]@(get_lines cinit)@
       ["in";
        "let init_slice_w_indexes = List.fold_left";
        "   ValuationMap.add_secondary_index init_slice "^cout_patterns;
-       "in (Database.update "^cmapn^" inv_img init_slices_w_indexes db;";
+       "in (Database.update "^cmapn^" "^(vars_list inv)^" init_slice_w_indexes db;";
        "    init_slice_w_indexes)"])
 
    let lookup_aux mapn inv init_val_code =
@@ -254,10 +340,9 @@ struct
       ["let slice =";
        "   let m = Database.get_map "^cmapn^" db in";
        "   let inv_img = "^(vars_list inv)^" in";
-       "      if ValuationMap.mem inv_img m then";
-       "         ValuationMap.find inv_img m";
+       "      if ValuationMap.mem inv_img m then ValuationMap.find inv_img m";
        "      else "]@
-       (indent 2 init_val_code)@
+       (indent 2 (get_lines init_val_code))@
       ["in"]
 
    let singleton_lookup mapn inv outv init_val_code = tabify (
@@ -272,89 +357,126 @@ struct
        "let lookup_slice = ValuationMap.slice "^(pattern_const pat)^" pkey slice in";
        "   (ValuationMap.strip_indexes lookup_slice)"])
 
-   let singleton_expr ccalc cdebug = tabify (
-      ["let r = "]@ccalc@
-      ["in";
-       "match r with";
-       " | [] -> []";
-       " | [v] -> (* "]@(indent 2 cdebug)@[" [] v *) [v]";
-       " | _ -> failwith \"singleton_expr: invalid singleton\""])
+   (* TODO: add debugging to inlined code *)
+   let singleton_expr ccalc cdebug =
+      match ccalc with
+       | Lines(ccalc_l) -> tabify (
+         ["let r = "]@ccalc_l@
+         ["in";
+          "match r with";
+          " | [] -> []";
+          " | [v] -> (* "]@(indent 2 cdebug)@[" [] v *) [v]";
+          " | _ -> failwith \"singleton_expr: invalid singleton\""])
+       | Inline(ccalc_i) -> Inline(ccalc_i)
 
    let direct_slice_expr ccalc cdebug = tabify (
-      ["let r = "]@ccalc@
+      ["let r = "]@(get_lines ccalc)@
       ["in"; "(* "]@cdebug@[" r; *)"; "r"])
 
    let full_agg_slice_expr ccalc cdebug = tabify (
-      ["let slice0 = "]@ccalc@
+      ["let slice0 = "]@(get_lines ccalc)@
       ["in"; "(* "]@cdebug@[" slice0; *)";
-       "[ValuationMap.fold (fun k v acc -> c_sum v acc) 0.0 slice0]"])
+       "[ValuationMap.fold (fun k v acc -> c_sum v acc) (CFloat(0.0)) slice0]"])
 
    (* Note: no need to bind vars in rhs_ext, these come from above. *)
    let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
       let cpat = pattern_const rhs_pattern in
       tabify (
-      ["let slice0 = "]@ccalc@
+      ["let slice0 = "]@(get_lines ccalc)@
       ["in"; "(* "]@cdebug@[" slice0; *)";
        "let slice1 = ValuationMap.add_secondary_index slice0 "^cpat^" in";
           (* Inlined version of AggregateMap.project_keys *)
-       "   VM.fold_index (fun pk kv nm ->";
+       "   ValuationMap.fold_index (fun pk kv nm ->";
        "      let (nk,nv) ="; 
-       "         let aggv = List.fold_left (fun x (y,z) -> c_sum x z) 0.0 kv in "]@
+       "         let aggv = List.fold_left (fun x (y,z) -> c_sum x z) (CFloat(0.0)) kv in "]@
       (indent 3 (bind_vars_from_list rhs_projection "pk"))@
       ["         let new_k = "^(vars_list lhs_outv)^" in (new_k, aggv)";
-       "      in VM.add nk nv nm)"; 
-       "   "^cpat^" slice1 (VM.empty_map())"])
+       "      in ValuationMap.add nk nv nm)"; 
+       "   "^cpat^" slice1 (ValuationMap.empty_map())"])
 
+   (* TODO: add debugging to inlined code *)
    (* returns a function with sig:
     *   AggregateMap.agg_t list -> AggregateMap.agg_t *)
-   let singleton_init cinit cdebug = tabify (
-      ["(fun _ v ->";
-       "(* "]@cdebug@[" [] v; *)";
-       "let iv = "]@cinit@
-      ["in";
-       "match iv with";
-       " | [] -> v";
-       " | [init_v] -> c_sum v init_v";
-       " | _ -> failwith \"singleton_init: invalid singleton\")"])
+   let singleton_init cinit cdebug =
+      match cinit with
+       | Lines(cinit_l) -> tabify (
+         ["(fun _ v ->";
+          "(* "]@cdebug@[" [] v; *)";
+          "let iv = "]@cinit_l@
+         ["in";
+          "match iv with";
+          " | [] -> v";
+          " | [init_v] -> c_sum v init_v";
+          " | _ -> failwith \"singleton_init: invalid singleton\")"])
+ 
+       | Inline(cinit_i) -> Inline("(fun _ v -> c_sum v "^(inline cinit_i)^")")
 
    (* returns a function with sig:
     *   AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
    let slice_init lhs_outv init_ext cinit cdebug = tabify (
       ["(fun k v ->";
        "(* "]@cdebug@[" k v; *)";
-       "let init_slice = "]@cinit@
+       "let init_slice = "]@
+       (indent 1 (bind_vars_from_list lhs_outv "k"))@
+       (get_lines cinit)@
       ["in";
        "let init_v =";
        "   if ValuationMap.mem k init_slice";
-       "   then (ValuationMap.find k init_slice) else 0.0";
+       "   then (ValuationMap.find k init_slice) else CFloat(0.0)";
        "in c_sum v init_v)"])
 
    (* assume cinit is a function with sig:
     *   val cinit: AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
-   let singleton_update lhs_outv cincr cinit cdebug = tabify (
-      ["(fun current_singleton ->";
-       "(* "]@cdebug@["; *)";
-       "let delta_slice = "]@cincr@
-      ["in match (current_singleton, delta_slice) with";
-       "   | (s, []) -> s";
-       "   | ([], [delta_v]) ->";
-       "      let delta_k = "^(vars_list lhs_outv)^" in";
-       "      let iv = "]@
-       (indent 2 cinit)@
-       ["        delta_k delta_v";
-       "      in [iv]";
-       "   | ([current_v], [delta_v]) -> [c_sum current_v delta_v]";
-       "   | _ -> failwith \"singleton_update: invalid singleton\")"])
+   let singleton_update lhs_outv cincr cinit cdebug =
+      let iv_code v = match cinit with
+         | Lines(cinit_l) -> 
+            ["let delta_k = "^(vars_list lhs_outv)^" in";
+             "let iv = "]@
+             (indent 1 cinit_l)@
+            ["  delta_k "^v;
+             "in [iv]"]
+         | Inline(cinit_i) ->
+            (* Note no need to call inline function, since cinit_i is a function,
+             * not a list *)
+            ["["^cinit_i^" "^(vars_list lhs_outv)^" "^v^"]"]
+      in
+      tabify (match cincr with 
+       | Lines(cincr_l) ->
+         ["(fun current_singleton ->";
+          "(* "]@cdebug@["; *)";
+          "let delta_slice = "]@cincr_l@
+         ["in match (current_singleton, delta_slice) with";
+          "   | (s, []) -> s";
+          "   | ([], [delta_v]) ->"]@(indent 2 (iv_code "delta_v"))@
+         ["   | ([current_v], [delta_v]) -> [c_sum current_v delta_v]";
+          "   | _ -> failwith \"singleton_update: invalid singleton\")"]
+       
+       | Inline(cincr_i) ->
+         ["(fun current_singleton ->";
+          "(* "]@cdebug@["; *)";
+          "match current_singleton with";
+          " | [] -> "]@(indent 2 (iv_code (inline cincr_i)))@
+         [" | [current_v] -> [c_sum current_v "^(inline cincr_i)^"]";
+          " | _ -> failwith \"singleton_update: invalid singleton\")"])
 
    (* assume cinit is a function with sig:
     *   val cinit: AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
    let slice_update cincr cinit cdebug = tabify (
-      ["(fun current_slice ->";
-       "(* "]@cdebug@["; *)";
-       "let delta_slice = "]@cincr@[" in";
-       "   ValuationMap.merge_rk (fun k v -> v)"]@
-       (indent 1 cinit)@
-      ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"])
+      match cinit with
+       | Lines(cinit_l) ->
+         ["(fun current_slice ->";
+          "(* "]@cdebug@["; *)";
+          "let delta_slice = "]@(get_lines cincr)@[" in";
+          "   ValuationMap.merge_rk (fun k v -> v)"]@
+          (indent 1 cinit_l)@
+         ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"]
+       | Inline(cinit_i) ->
+         ["(fun current_slice ->";
+          "(* "]@cdebug@["; *)";
+          "let delta_slice = "]@(get_lines cincr)@[" in";
+          "   ValuationMap.merge_rk (fun k v -> v)"]@
+          (indent 1 [cinit_i])@
+         ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"])
 
    (* assume cstmt is a function with sig:
     *   val cstmt: AggregateMap.agg_t list -> AggregateMap.agg_t list *)
@@ -367,7 +489,7 @@ struct
        "let singleton =";
        "   if ValuationMap.mem outv_img in_slice";
        "   then [ValuationMap.find outv_img in_slice] else [] in";
-       "let new_value = "]@cstmt@
+       "let new_value = "]@(get_lines cstmt)@
       ["   singleton";
        "in";
        "match new_value with";
@@ -380,20 +502,21 @@ struct
    let db_slice_update lhs_mapn cstmt = 
       let cmapn = string_const lhs_mapn in tabify (
       ["(fun inv_img in_slice ->";
-       "let new_slice = "]@cstmt@
+       "let new_slice = "]@(get_lines cstmt)@
       ["   in_slice";
        "in";
-       "   Database.update "^cmapn^" inv_img new_slice)"])
+       "   Database.update "^cmapn^" inv_img new_slice db)"])
 
    let statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code = 
       let cmapn = string_const lhs_mapn in
       let cpat = pattern_const pat in tabify (
-      ["let lhs_map = Database.get_map "^cmapn^" db in";
-       "let iifilter db inv_img = "]@
+      ["(*** Update "^lhs_mapn^" ***)";
+       "let lhs_map = Database.get_map "^cmapn^" db in";
+       "let iifilter inv_img = "]@
        (indent 1 (bind_vars_from_extension lhs_inv "inv_img" lhs_ext))@
       ["   let slice = ValuationMap.find inv_img lhs_map in";
        "   let db_f = "]@
-       (indent 1 db_update_code)@
+       (indent 1 (get_lines db_update_code))@
       ["   in";
        "      db_f inv_img slice";
        "in";
@@ -401,30 +524,31 @@ struct
        "let inv_imgs = "^
           (if direct then "[pkey]"
            else ("ValuationMap.slice_keys "^cpat^" pkey lhs_map"));
-       "in List.iter (iifilter db) inv_imgs"])
+       "in List.iter iifilter inv_imgs;"])
    
    let trigger event rel trig_args stmt_block =
       let trigger_name = match event with
          | Insert -> "on_insert_"^rel
          | Delete -> "on_delete_"^rel
-      in
+      in Lines (
       ["let "^trigger_name^" = (fun tuple -> "]@
        (indent 1 (bind_vars_from_list trig_args "tuple"))@
-       (List.flatten stmt_block)@
-      [");;"]
+       (List.flatten (List.map get_lines stmt_block))@
+      [");;"])
    
    (* TODO: generate data source initialization etc. *)
    (* TODO: generate a dummy benchmarker *)
-   let main schema patterns triggers =
+   let main schema patterns triggers = Lines (
       ["open M3Common";
+       "open M3Common.Patterns";
        "open M3OCaml\n";
        "let db = Database.make_empty_db ";
        "   "^(schema_const schema);
        "   "^(pattern_map_const patterns)^";;\n\n"]@
-       (List.flatten triggers)
+       (List.flatten (List.map get_lines triggers)))
 
    let output code out_chan =
-      output_string out_chan (String.concat "\n" code);
+      output_string out_chan (String.concat "\n" (get_lines code));
       flush out_chan
 
    (* No direct evaluation of OCaml source code. *)
