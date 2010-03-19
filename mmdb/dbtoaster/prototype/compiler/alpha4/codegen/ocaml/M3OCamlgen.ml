@@ -156,8 +156,8 @@ struct
 
    let op_singleton_expr op ce1 ce2 =
       let aux s in_s = tabify (
-         ["let r = ";]@s@[" in";
-          "match r with";
+         ["let r = ";]@s@
+         ["in match r with";
           " | [] -> []";
           " | [v] -> [("^op^" v "^(inline in_s)^")]";
           " | _ -> failwith \"op_singleton_expr: invalid singleton\"" ])
@@ -217,8 +217,7 @@ struct
             ["   let res2 = "]@
              (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
              (indent 1 ce2_l)@
-            ["   in";
-             "   begin match res2 with";
+            ["   in begin match res2 with";
              "    | [] -> r";
              "    | [v2] ->";
              "       let nv = ("^op^" v v2) in"]@
@@ -256,8 +255,7 @@ struct
       let body = match ce2 with
          | Lines(ce2_l) ->
             ["let res2 = "]@ce2_l@
-            ["in";
-             "   begin match res2 with";
+            ["in begin match res2 with";
              "    | [] ->  ValuationMap.empty_map()";
              "    | [v2] -> ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v v2))) res1";
              "    | _ -> failwith \"op_lslice_product_expr: invalid singleton\"";
@@ -311,8 +309,8 @@ struct
       in
       tabify (match cinit with
          | Lines(cinit_l) ->
-            ["let init_val = "]@cinit_l@ ["in";
-             "begin match init_val with";
+            ["let init_val = "]@cinit_l@
+            ["in begin match init_val with";
              " | [] -> ValuationMap.empty_map()";
              " | [v] -> "]@
              (indent 2 (body "v"))@
@@ -342,20 +340,24 @@ struct
        "   let inv_img = "^(vars_list inv)^" in";
        "      if ValuationMap.mem inv_img m then ValuationMap.find inv_img m";
        "      else "]@
-       (indent 2 (get_lines init_val_code))@
-      ["in"]
+       (indent 2 (get_lines init_val_code))
 
    let singleton_lookup mapn inv outv init_val_code = tabify (
       (lookup_aux mapn inv init_val_code)@
-      ["let outv_img = "^(vars_list outv)^" in";
+      ["in";
+       "let outv_img = "^(vars_list outv)^" in";
        "   if ValuationMap.mem outv_img slice";
        "   then [ValuationMap.find outv_img slice] else []"])
 
    let slice_lookup mapn inv pat patv init_val_code = tabify (
       (lookup_aux mapn inv init_val_code)@
-      ["let pkey = "^(vars_list patv)^" in";
+      (if patv = [] then
+      ["in ValuationMap.strip_indexes slice"]
+      else
+      ["in";
+       "let pkey = "^(vars_list patv)^" in";
        "let lookup_slice = ValuationMap.slice "^(pattern_const pat)^" pkey slice in";
-       "   (ValuationMap.strip_indexes lookup_slice)"])
+       "   (ValuationMap.strip_indexes lookup_slice)"]))
 
    (* TODO: add debugging to inlined code *)
    let singleton_expr ccalc cdebug =
@@ -517,14 +519,16 @@ struct
       ["   let slice = ValuationMap.find inv_img lhs_map in";
        "   let db_f = "]@
        (indent 1 (get_lines db_update_code))@
-      ["   in";
-       "      db_f inv_img slice";
-       "in";
+      ["   in db_f inv_img slice"]@
+      (if patv = [] then
+      ["in iifilter [];"]
+       else
+      ["in";
        "let pkey = "^(vars_list patv)^" in";
        "let inv_imgs = "^
           (if direct then "[pkey]"
            else ("ValuationMap.slice_keys "^cpat^" pkey lhs_map"));
-       "in List.iter iifilter inv_imgs;"])
+       "in List.iter iifilter inv_imgs;"]))
    
    let trigger event rel trig_args stmt_block =
       let trigger_name = match event with
