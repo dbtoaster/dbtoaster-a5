@@ -105,3 +105,22 @@ struct
    type ptrig_t    = pm_t * rel_id_t * (var_t list) * (pstmt_t list)
    type pprog_t    = (map_type_t list) * (ptrig_t list)
 end
+
+(* M3 data sources *)
+(* Data source model
+ * -- sources correspond to I/O resources.
+ * -- adaptors correspond to events per relation/stream.
+ * -- 1 source may feed multiple adaptors, e.g. sources can represent
+ *    multiplexed data streams (i.e. union streams).
+ * -- source implementations must perform dispatching to adaptors.
+ *)
+
+type source_type_t = Binary | Text | Lines
+
+type source_t =
+   FileSource of source_type_t * string option
+ | SocketSource of source_type_t * inet_addr option
+ 
+(* source type w/o instance info, adaptor name, params *)
+type adaptor_t = source_t * string * (string * string) list
+
