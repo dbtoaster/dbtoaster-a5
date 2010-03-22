@@ -115,12 +115,29 @@ end
  * -- source implementations must perform dispatching to adaptors.
  *)
 
-type source_type_t = Binary | Text | Lines
+
+(* 
+  Most of these are self explanatory.  VarSize is a little nonintuitive.  A
+  VarSize-delimited frame is assumed to have an integer (4 byte) size field
+  located at off_to_size bytes into the stream.  The size field is assumed to
+  contain the number of bytes remaining in the frame AFTER THE SIZE FIELD plus
+  the value of off_to_end.
+  
+  In other words, the size of the frame delivered to the adaptor will be:
+    off_to_size + 4 + [size] - off_to_end
+  
+  If the size field contains the size of the data following it, off_to_end = 0
+  If the size field contains the total frame size, off_to_end = off_to_size
+*)
+type framing_t = 
+    FixedSize of int     (* FixedSize(width)     *)
+  | Delimited of string  (* Delimited(delimiter) *)
+  | VarSize of int * int (* VarSize(off_to_size, off_to_end) *)
 
 type source_t =
-   FileSource of source_type_t * string option
- | SocketSource of source_type_t * inet_addr option
+   FileSource of string
+ | SocketSource of inet_addr
  
-(* source type w/o instance info, adaptor name, params *)
-type adaptor_t = source_t * string * (string * string) list
+(* adaptor name, (param = value) list *)
+type adaptor_t = string * (string * string) list
 
