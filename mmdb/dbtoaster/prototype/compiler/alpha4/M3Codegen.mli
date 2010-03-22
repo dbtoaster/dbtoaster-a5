@@ -14,6 +14,9 @@ sig
    type debug_code_t
    type db_t
 
+   (* Data sources *)
+   type source_impl_t
+
    (* Debugging helpers *)
    val debug_sequence: debug_code_t -> code_t -> code_t
    val debug_expr : pcalc_t -> debug_code_t
@@ -136,9 +139,24 @@ sig
    (* event, rel, trigger args, statement code block -> trigger code *)
    val trigger : pm_t -> rel_id_t -> var_t list -> code_t list -> code_t
    
-   (* TODO: pass in data source spec, adaptor spec etc. *)
-   (* schema, patterns, triggers -> top level code *)
-   val main : map_type_t list -> pattern_map -> code_t list -> code_t
+   (* Data source code generation *)
+   
+   (* source type, adaptor type
+    * -> source impl type,
+    *    source and adaptor declaration code, (optional)
+    *    source and adaptor initialization code (optional) *)
+   val source: source_t -> framing_t -> (string * adaptor_t) list ->
+               source_impl_t * code_t option * code_t option
+   
+   (* source impl type -> initialization code *)
+   val init_source : source_impl_t -> code_t option
+
+   (* Runtime generation *)
+
+   (* schema, patterns, source decls and inits, triggers -> top level code *)
+   val main : map_type_t list -> pattern_map ->
+              (source_impl_t * code_t option * code_t option) list ->
+              code_t list -> code_t
 
    val output : code_t -> out_channel -> unit
 

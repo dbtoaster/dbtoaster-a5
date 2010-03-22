@@ -232,3 +232,119 @@ struct
        List.sort (fun (n1,_) (n2,_) -> compare n1 n2)
           (showdb_f show_sorted_map db)
 end
+
+(* Data sources *)
+module Adaptors =
+struct
+   type adaptor = framing_t * (string -> event list)
+   type adaptor_generator = (string * string) list -> adaptor
+   type adaptor_registry = (string, adaptor_generator) Hashtbl.t
+   
+   let adaptors = Hashtbl.create 10
+
+   let get_source_type a = fst a
+   let get_adaptor a = snd a
+
+   let create_adaptor ((name, params) : string * ((string * string) list)) : adaptor =
+      if Hashtbl.mem adaptors name then ((Hashtbl.find adaptors name) params)
+      else failwith ("No adaptor named "^name^" found")
+
+   let add name (generator : adaptor_generator) =
+      Hashtbl.add adaptors name generator
+   
+   let to_string reg = Hashtbl.fold (fun k v acc -> acc^" "^k) adaptors ""
+end
+
+(*
+module type SyncSource = 
+sig
+   type t
+
+   val create: Adaptor.adaptor list -> string -> t 
+   val has_next: t -> bool
+   val next: t -> event
+end
+
+module type SyncMultiplexer = functor (S : SyncSource) ->
+sig
+   type t = S.t list
+   val create : unit -> t
+   val add_stream: t -> S.t -> t
+   val remove_stream: t -> S.t -> t
+   val has_next: t -> bool
+   val next: t -> event
+end
+
+module FileSource : Sync =
+struct
+   type fs_t = Binary of in_channel | Text of in_channel | Lines of in_channel
+   type t = fs_t * int * Adaptor.adaptor list * (event list ref)
+
+   let escalate_fs_t cur a =
+      match (cur_t, get_source_type a) with
+       | ("b", _) -> "b"
+       | ("t", Binary) -> "b"
+       | ("t", _) -> "t"
+       | ("l", Binary) -> "b"
+       | ("l", Text) -> "t"
+       | _ -> "l"
+       
+   let create adaptors filename =
+      let ic = open_in filename in
+      let fs =
+         let base = List.fold_left escalate_fs_t "l" adaptors
+         in match base with
+          | "b" -> Binary(open_in_bin filename)
+          | "t" -> Text(open_in filename)
+          | "l" -> Lines(open_in filename)
+      in (ns, in_channel_length (get_channel ns), adaptors, ref []) 
+
+   let get_input = match fs_t with
+      | Binary(ic) | Text(ic) -> input ic buf pos len
+      | Lines(ic) -> input_line ic
+
+   let has_next fs =
+      let (ns,len,_,buf) = fs in not(!buf = [] && ((pos_in (get_channel ns)) = len))
+
+   let next fs =
+      let (ns,len,a,buf) = fs in
+         if !buf = [] then
+            let e = List.hd !buf in buf := List.tl !buf; ((ns,len,a,buf), e)
+         else
+         let events = ref [] in
+         let tuple = ref "" in
+         while events = [] do
+            tuple := tuple^(get_input ns);
+            events := List.flatten (List.map (fun x -> x !tuple) a)
+         done;
+         buf := List.tl !events;
+         ((ns,len,a,buf), List.hd !events)
+end
+
+module SM : SyncMultiplexer = functor (S : Sync) ->
+struct
+   type t = S.t list
+   
+   let create () = []
+
+   let add_stream fm s = fm@[s]
+   
+   let remove_stream fm s = List.filter (fun x -> x <> s) fm
+   
+   let has_next fm = List.exists S.has_next fm
+   
+   let next fm =
+      let nfm = ref fm in
+      let i = ref (Random.int (List.length !nfm)) in
+      let event = ref None in
+      while !event = None do
+         let s = List.nth !nfm !i in
+            if S.has_next s then event := Some(S.next s);
+            nfm := List.filter (fun x -> S.has_next x) !nfm;
+            if !event = None then i := Random.int(List.length !nfm);
+      done;
+      match !event with Some(ev) -> (!nfm, ev) | _ -> failwith "No event found."
+end
+
+module FileMultiplexer = SM(FileSource)
+*)

@@ -542,7 +542,7 @@ struct
    
    (* TODO: generate data source initialization etc. *)
    (* TODO: generate a dummy benchmarker *)
-   let main schema patterns triggers = Lines (
+   let main schema patterns sources triggers = Lines (
       ["open M3Common";
        "open M3Common.Patterns";
        "open M3OCaml\n";
@@ -559,5 +559,11 @@ struct
    type db_t = Database.db_t
    let eval_trigger trigger tuple db =
       failwith "Cannot directly evaluate OCaml source"
+
+   (* Sources *)
+   type source_impl_t = source_t * framing_t * (string * adaptor_t) list
+   let source src framing rel_adaptors = ((src, framing, rel_adaptors), None, None) 
+   let init_source src_impls =
+      failwith "Source initialization not yet implemented"
 
 end

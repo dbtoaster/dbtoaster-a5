@@ -133,11 +133,14 @@ let prog_vwap: prog_t =
       )
   ]);;
 
+let bids_adaptor =
+   (FileSource (Lines, None), "orderbookcsv", [("book", "bids"); ("fields", "")])
+   
+let asks_adaptor =
+   (FileSource (Lines, None), "orderbookcsv", [("book", "asks"); ("fields", "")])
+   
+let sources =
+   [(FileSource (Lines, Some("vwap.csv")), bids_adaptor);
+    (FileSource (Lines, Some("vwap.csv")), asks_adaptor)];;
 
-let prepared_vwap = prepare_triggers (snd prog_vwap);;
-let schema_vwap = fst prog_vwap;;
-let patterns_vwap = snd prepared_vwap;;
-let ctrigs = compile_ptrig prepared_vwap;;
-let out_file = open_out "query.ml" in
-   output (main schema_vwap patterns_vwap ctrigs) out_file;
-   close_out out_file
+compile_query (prog_vwap, sources);;

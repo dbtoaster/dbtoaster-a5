@@ -330,4 +330,20 @@ let compile_ptrig (ptrig, patterns) =
       trigger event rel trig_args cblock
    in List.map aux ptrig
 
+let compile_query ((schema,m3prog), sources) out_file_name =
+   let prepared_prog = prepare_triggers m3prog in
+   let patterns = snd prepared_prog in
+   let ctrigs = compile_ptrig prepared_prog in
+   let sources_and_adaptors =
+      List.fold_left (fun acc (s,f,rel,a) ->
+         if List.mem_assoc (s,f) acc then
+            let existing = List.assoc (s,f) acc
+            in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc)
+         else ((s,f),[rel,a])::acc) [] sources in
+   let csource =
+      List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors in
+   let out_file = open_out out_file_name in
+      output (main schema patterns csource ctrigs) out_file;
+      close_out out_file
+   
 end

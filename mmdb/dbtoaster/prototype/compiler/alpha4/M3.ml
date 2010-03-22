@@ -107,6 +107,8 @@ struct
 end
 
 (* M3 data sources *)
+type event = pm_t * rel_id_t * const_t list
+
 (* Data source model
  * -- sources correspond to I/O resources.
  * -- adaptors correspond to events per relation/stream.
@@ -136,7 +138,7 @@ type framing_t =
 
 type source_t =
    FileSource of string
- | SocketSource of inet_addr
+ | SocketSource of Unix.inet_addr
  
 (* adaptor name, (param = value) list *)
 type adaptor_t = string * (string * string) list

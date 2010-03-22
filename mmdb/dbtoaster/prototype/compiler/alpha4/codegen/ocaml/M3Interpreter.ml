@@ -1,5 +1,6 @@
 open M3Common
 open M3OCaml
+open M3OCaml.Adaptors
 
 (* Simple OCaml interpreter generator *)
 module CG : M3Codegen.CG with type db_t = Database.db_t =
@@ -41,7 +42,8 @@ type compiled_code =
    | UpdateSlice            of slice_update_code
    | DatabaseUpdate         of db_update_code
    | Statement              of compiled_stmt 
-   | Trigger                of compiled_trigger              
+   | Trigger                of compiled_trigger
+   | Toplevel               of (unit -> unit)
 
 type env_debug_code = (Valuation.t -> Database.db_t -> unit)
 type slice_debug_code = (Valuation.t -> Database.db_t -> AggregateMap.t -> unit)
@@ -496,8 +498,23 @@ let trigger event rel trig_args stmt_block =
       let theta = Valuation.make trig_args tuple in
          List.iter (fun cstmt -> cstmt theta db) cblock)
 
+(* No sources for interpreter *)
+type source_impl_t = File of in_channel * adaptor list
+   | Socket of Unix.file_descr * adaptor list
+
+let source src framing (rel_adaptors : (string * adaptor_t) list) =
+   let src_impl = match src with
+    | FileSource(fn) ->
+       let adaptor_impls = List.map (fun (r,a) -> create_adaptor a) rel_adaptors
+       in File(open_in fn, adaptor_impls)
+       
+    | SocketSource(_) -> failwith "Sockets not yet implemented."
+   in (src_impl, None, None)
+
+let init_source src_impls = None
+
 (* No top level code generated for the interpreter *)
-let main schema patterns triggers =
+let main schema patterns sources triggers =
    failwith "interpreter should be directly invoked"
 
 (* No file output for interpreter *)
