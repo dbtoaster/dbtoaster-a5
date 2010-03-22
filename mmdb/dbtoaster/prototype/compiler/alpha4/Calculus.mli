@@ -60,7 +60,9 @@
 *)
 
 
-type var_t   = string                         (* type of variables *)
+
+type type_t = TInt | TLong | TDouble | TString
+type var_t   = string * type_t                (* type of variables *)
 type comp_t  = Eq | Lt | Le | Neq             (* comparison operations *)
 type const_t = Int    of int                  (* typed constant terms *)
              | Double of float
@@ -154,8 +156,8 @@ val term_as_string:    term_t    -> string
 
 
 (* all the variables that occur in the formula resp. term. *)
-val relcalc_vars: relcalc_t -> string list
-val term_vars:       term_t -> string list
+val relcalc_vars: relcalc_t -> var_t list
+val term_vars:       term_t -> var_t list
 
 (* set of safe variables of a formula; a formula phi is range-restricted
    given a set of bound variables (which are treated like constants, i.e.,
@@ -314,13 +316,27 @@ val bigsum_rewriting: bs_rewrite_mode_t -> term_t -> (var_t list) -> string ->
    deletion (n=true) of tuple t into relation R, for relcalc expression e,
    where f is used to map external terms to their deltas. *)
 val relcalc_delta: term_mapping_t ->
-                   bool -> string -> (string list) -> relcalc_t -> relcalc_t
+                   bool -> string -> (var_t list) -> relcalc_t -> relcalc_t
 
 (* (delta f deletion relname tuple term) computes the delta of term as tuple is
    inserted (deletion=false) or deleted (deletion=true) into relation relname,
    where f is used to map external named terms to their deltas.
 *)
 val term_delta: term_mapping_t ->
-                bool -> string -> (string list) -> term_t -> term_t
+                bool -> string -> (var_t list) -> term_t -> term_t
 
+(* (fold_calc sum_f prod_f neg_f leaf_f c) scans through c and applies leaf_f
+   to all leaves in c, and sum_f, prod_f, and neg_f recursively to the results
+   according to the calculus parse tree, respectively at the union, nat join
+   and negation nodes
+*)
+val fold_calc: ('a list -> 'a) -> ('a list -> 'a) -> ('a -> 'a) -> 
+               (readable_relcalc_lf_t -> 'a) -> (readable_relcalc_t) -> 'a
 
+(* (fold_term sum_f prod_f neg_f leaf_f t) scans through c and applies leaf_f
+   to all leaves in c, and sum_f, prod_f, and neg_f recursively to the results
+   according to the calculus parse tree, respectively at the union, nat join
+   and negation nodes
+*)
+val fold_term: ('a list -> 'a) -> ('a list -> 'a) -> ('a -> 'a) -> 
+               (readable_term_lf_t -> 'a) -> (readable_term_t) -> 'a

@@ -1,7 +1,8 @@
 
 (* types *)
 
-type var_t  = string                          (* type of variables *)
+type type_t = TInt | TLong | TDouble | TString
+type var_t   = string * type_t                (* type of variables *)
 type comp_t  = Eq | Lt | Le | Neq             (* comparison operations *)
 type const_t = Int    of int                  (* typed constant terms *)
              | Double of float
@@ -263,9 +264,13 @@ let relcalc_as_algebra (r: relcalc_t) (rn_name_prefix: string)
                 (List.map (fun (n, (r, vs)) -> ((n, vs), Alg_Rel(r, n)))
                           (Util.add_names rn_name_prefix rels))
    in
-   let g (n, vs) = (Util.add_names (n^".") vs)
+   let g ((n, vs):string * (var_t list)): (var_t * var_t) list = 
+      (List.combine 
+          (Util.add_names (n^".") (snd (List.split vs))) 
+          vs
+      )
    in
-   let vars2 = (List.flatten (List.map g vars)) @
+   let vars2:(var_t*var_t) list = (List.flatten (List.map g vars)) @
                (List.map (fun x -> (x, x)) bound_vars)
    in
    let components: (var_t * var_t) list list =
@@ -608,7 +613,8 @@ let rec relcalc_as_string (relcalc: relcalc_t): string =
             constraint_as_string op  x y
        | False       -> "false"
        | True        -> "true"
-       | Rel(r, sch) -> r^"("^(Util.string_of_list ", " sch)^")"
+       | Rel(r, sch) -> 
+            r^"("^(Util.string_of_list ", " (fst (List.split sch)))^")"
    in
    CalcRing.fold sum_f prod_f neg_f leaf_f relcalc
 
@@ -622,8 +628,9 @@ and term_as_string (m: term_t): string =
           | Long(l)   -> "(int64 output not implemented)" (* TODO *)
           | String(s) -> "'" ^ s ^ "'"
          )
-    | Var(x)             -> x
-    | External(n,params) -> n^"["^(Util.string_of_list ", " params)^"]"
+    | Var(x)             -> (fst x)
+    | External(n,params) -> 
+          n^"["^(Util.string_of_list ", " (fst (List.split params)))^"]"
     | AggSum(f,r)        ->
       if (constraints_only r) then
          "(if " ^ (relcalc_as_string r) ^ " then " ^
@@ -808,7 +815,9 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                   ([], (TermRing.mk_val(AggSum(
                        TermRing.mk_val(AggSum(t, flat)),
                        CalcRing.mk_prod([CalcRing.mk_val(Rel(
-                          "Dom_{"^(Util.string_of_list ", " bs_vars)^"}",
+                          "Dom_{"^(Util.string_of_list ", " 
+                            (fst (List.split bs_vars))
+                          )^"}",
                           bs_vars)); nested])))))
                           (* TODO: we should also collect the information
                              needed to maintain the domain relation here. *)
@@ -916,3 +925,26 @@ let decode_map_term (map_term: term_t):
    match (readable_term map_term) with
       RVal(External(n, vs)) -> (n, vs)
     | _ -> failwith "Compiler.decode_map_term";;
+
+let fold_calc (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
+              (leaf_f: readable_relcalc_lf_t -> 'a) (calc: readable_relcalc_t): 
+              'a =
+  let rec fold_aux rr = 
+      match rr with
+        | RA_Leaf(x)         -> leaf_f x
+        | RA_Neg(x)          -> neg_f (fold_aux x)
+        | RA_MultiUnion(l)   -> sum_f (List.map fold_aux l)
+        | RA_MultiNatJoin(l) -> prod_f (List.map fold_aux l)
+  in fold_aux calc;;
+
+let fold_term (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
+              (leaf_f: readable_term_lf_t -> 'a) (term: readable_term_t): 
+              'a =
+  let rec fold_aux rr = 
+      match rr with
+        | RVal(x)  -> leaf_f x
+        | RNeg(x)  -> neg_f (fold_aux x)
+        | RSum(l)  -> sum_f (List.map fold_aux l)
+        | RProd(l) -> prod_f (List.map fold_aux l)
+  in fold_aux term;;
+  

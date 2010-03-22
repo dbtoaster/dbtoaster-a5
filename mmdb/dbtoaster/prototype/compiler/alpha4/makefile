@@ -20,8 +20,8 @@ SOURCE = \
 LEX  = parser/Sqllexer.mll
 YACC = parser/Sqlparser.mly
 
-GENERATED_SOURCE = $(subst .mly,.ml,$(YACC)) $(subst .mly,.mli,$(YACC)) $(subst .mll,.ml,$(LEX)) 
-#SOURCE += $(GENERATED_SOURCE)
+GENERATED_SOURCE = $(subst .mly,.mli,$(YACC)) $(subst .mly,.ml,$(YACC)) $(subst .mll,.ml,$(LEX)) 
+SOURCE += $(GENERATED_SOURCE)
 
 RUNTIME = \
 	Util.ml \
@@ -31,26 +31,31 @@ RUNTIME = \
 	codegen/ocaml/SliceableMap.ml \
 	codegen/ocaml/M3OCaml.ml
 
+INCLUDE = \
+	-I codegen/ocaml/ \
+	-I parser/ \
+	str.cma
+
 all: top
 
 lex_yacc:
 	ocamlyacc $(YACC)
 	ocamllex $(LEX)
 
-bytecode: #lex_yacc
-	ocamlc -I codegen/ocaml/ -c $(SOURCE)
+bytecode: lex_yacc
+	ocamlc $(INCLUDE) -c $(SOURCE)
 
 native:
-	ocamlopt -I codegen/ocaml/ -ccopt -O3 -nodynlink -unsafe -noassert -c $(SOURCE)
+	ocamlopt $(INCLUDE) -ccopt -O3 -nodynlink -unsafe -noassert -c $(SOURCE)
 
 top: bytecode
-	ocamlmktop -I codegen/ocaml/ -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
+	ocamlmktop $(INCLUDE) -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
 
 benchmark: native
-	ocamlopt -I codegen/ocaml/ -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
+	ocamlopt $(INCLUDE) -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
 
 vwap: native
-	ocamlopt -I codegen/ocaml/ -ccopt -O3 -o vwap str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/vwap_m3_ex.ml
+	ocamlopt $(INCLUDE) -ccopt -O3 -o vwap str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/vwap_m3_ex.ml
 
 test: top
 	./dbtoaster_top test/m3_ex.ml
@@ -62,4 +67,4 @@ query: runtime query.ml
 	ocamlopt -I codegen/ocaml -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME))) query.ml
 
 clean:
-	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)
+	rm -f *.cmi *.cmo *.cmx *.o codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster_top m3_ex vwap parser/*.cmo parser/*.cmi $(GENERATED_SOURCE)

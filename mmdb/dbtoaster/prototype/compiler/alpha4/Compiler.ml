@@ -11,10 +11,10 @@ let mk_external (n: string) (vs: Calculus.var_t list) =
 
 (* auxiliary for compile. *)
 let compile_delta_for_rel (reln:   string)
-                          (relsch: string list)
+                          (relsch: Calculus.var_t list)
                           (delete: bool)
                           (map_term: Calculus.term_t)
-                          (external_bound_vars: string list)
+                          (external_bound_vars: Calculus.var_t list)
                           (externals_mapping: Calculus.term_mapping_t)
                           (term: Calculus.term_t)
    : ((bool * string * Calculus.var_t list *
@@ -107,7 +107,7 @@ let generate_classic (delete:bool)
 
 (* the main compile function. call this one, not the others. *)
 let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
-                (db_schema: (string * (string list)) list)
+                (db_schema: (string * (Calculus.var_t list)) list)
                 (map_term: Calculus.term_t)
                 (term: Calculus.term_t) 
                 (output_vars: CalcToM3.bindings_list_t) 
@@ -158,7 +158,10 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
       (fun (t, mt, inner_output_vars) -> compile bs_rewrite_mode db_schema mt t inner_output_vars generate_code) todos));;
 
 
-let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descriptors : M3.trig_t * CalcToM3.relation_set_t =
+let generate_m3 (delete: bool) (reln:M3.rel_id_t) (tuple:Calculus.var_t list) 
+                (map_descriptor:CalcToM3.map_ref_t) params
+                (term:Calculus.term_t) inner_descriptors : 
+                M3.trig_t * CalcToM3.relation_set_t =
   let (map_target_access, ra_map1) = (CalcToM3.to_m3_map_access map_descriptor) in
   let (map_update_trig, ra_map2) = (CalcToM3.to_m3 (Calculus.readable_term term) 
       (List.fold_left (fun descriptor_map descriptor -> 
@@ -171,7 +174,7 @@ let generate_m3 (delete: bool) reln tuple map_descriptor params term inner_descr
       )
     ) in
    (  ( (if delete then M3.Delete else M3.Insert),
-        reln, tuple,
+        reln, (CalcToM3.translate_schema tuple),
         [(map_target_access, map_update_trig)]
       ),
       ra_map2
@@ -183,7 +186,7 @@ module StatementMap = Map.Make(struct
 end)
 module MapMap = Map.Make(String)
 
-let rec compile_m3 (db_schema: (string * (string list)) list)
+let rec compile_m3 (db_schema: (string * (Calculus.var_t list)) list)
                    (map_term: Calculus.term_t)
                    (term: Calculus.term_t) : M3.prog_t =
   let compiled_with_ra_map = 

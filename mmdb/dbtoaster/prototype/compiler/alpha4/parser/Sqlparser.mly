@@ -1,6 +1,18 @@
 %{
     open Calculus
-
+    
+    type stream_type = string
+    type source_type = string
+    type source_args = string
+    type tuple_type = string
+    type adaptor_type = string
+    type adaptor_bindings = (string * string) list
+    type source_instance = string
+    type source_info = 
+            string *
+                (stream_type * source_type * source_args * tuple_type *
+                    adaptor_type * adaptor_bindings * string * source_instance)
+    
     let parse_error s =
         let lex_pos = symbol_end_pos () in
         let line_pos_str = string_of_int (lex_pos.Lexing.pos_lnum) in
@@ -23,12 +35,12 @@
 
     (* SQL->DBToaster typing *)
 
-    let create_type t val_as_string =
+    let create_type t =
         match t with
-            | "int" | "integer" -> Int(int_of_string val_as_string)
-            | "int8" | "bigint" -> Long(Int64.of_string val_as_string)
-            | "float" | "double" -> Double(float_of_string val_as_string)
-            | "text" -> String(val_as_string)
+            | "int" | "integer" -> TInt
+            | "int8" | "bigint" -> TLong
+            | "float" | "double" -> TDouble
+            | "text" -> TString
             | _ -> raise Parse_error
 
     (* Aggregate function definitions *)
@@ -42,7 +54,7 @@
     (* Table definitions *)
 
     (* table name -> fields *)
-    let relations = Hashtbl.create 10
+    let relations:((string, Calculus.var_t list) Hashtbl.t) = Hashtbl.create 10
 
     (* table name -> (file name, delimiter) *)
     let relation_sources = Hashtbl.create 10
@@ -50,7 +62,6 @@
     let add_relation name fields =
         Hashtbl.replace relations (String.uppercase name) fields
 
-    (* See Runtime.ml for contents of source info. *)
     let add_source name source_info =
         Hashtbl.replace relation_sources
             (String.uppercase name) (name, source_info)
@@ -96,26 +107,30 @@
             | AtomicConstraint(_, t1, t2) ->
                   (get_base_relations t1)@(get_base_relations t2)
             | _ -> []
-        in
-            fold_relalg Util.ListAsSet.multiunion 
-                Util.ListAsSet.multiunion relalg_lf r
+        in let noop i = i in
+          fold_calc Util.ListAsSet.multiunion 
+                    Util.ListAsSet.multiunion 
+                    noop relalg_lf r
 
     (* readable_term_t -> readable_relalg_lf_t list *)
     and get_base_relations t =
         let term_lf lf = match lf with
             | AggSum(f,r) ->
                   (get_base_relations f)@(get_base_relations_plan r)
+              (* OK: We can skip External here, right? Externals are references
+                 to subqueries, and not relations... I think. *)
             | _ -> []
-        in
-            fold_term Util.ListAsSet.multiunion 
-                Util.ListAsSet.multiunion term_lf t
+        in let noop i = i in
+          fold_term Util.ListAsSet.multiunion
+                    Util.ListAsSet.multiunion
+                    noop term_lf t
 
     (* readable_relalg_t -> readable_term_lf_t list *)
     let get_free_variables_from_plan r =
         (*
         let debug_free_vars bound_vars vars =
             print_endline ("RelAlg xx : "^
-                (Algebra.relalg_as_string (make_relalg r) []));
+                (Calculus.relalg_as_string (make_relalg r) []));
             print_endline ("Bound vars: "^
                 (String.concat "," (List.map fst bound_vars)));
             print_endline ("Used vars: "^
@@ -133,7 +148,7 @@
                           raise (Failure (msg)))
             (get_base_relations_plan r))
         in
-        let vars = relalg_vars (make_relalg r) in
+        let vars = relcalc_vars (make_relcalc r) in
             (*debug_free_vars bound_vars vars;*)
             Util.ListAsSet.diff vars bound_vars
 
@@ -142,7 +157,7 @@
         (*
         let debug_free_vars bound_vars vars =
             print_endline ("Term : "^
-                (Algebra.term_as_string (make_term t) []));
+                (Calculus.term_as_string (make_term t) []));
             print_endline ("Bound vars: "^
                 (String.concat "," (List.map fst bound_vars)));
             print_endline ("Used vars: "^
@@ -293,8 +308,8 @@
                 (List.combine free_vars free_var_fields)
         in
         let r = 
-            readable_relalg (apply_variable_substitution_to_relalg
-                free_var_mappings (make_relalg ra_to_qualify))
+            readable_relcalc (apply_variable_substitution_to_relcalc
+                free_var_mappings (make_relcalc ra_to_qualify))
         in
             (*debug_qualify_free_var_names r;*)
             r
@@ -422,7 +437,8 @@
             r
 
     let rec replace_relations_in_relalg fields r =
-        let replace_relalg_lf lf = match lf with
+        let replace_relalg_lf lf = 
+          match lf with
             | Rel(n,f) ->
                   let original_n = get_original n in
                   let new_f =
@@ -441,9 +457,10 @@
                       replace_relations_in_term fields t1,
                       replace_relations_in_term fields t2))
             | _ -> RA_Leaf(lf)
-        in
-            fold_relalg (fun x -> RA_MultiUnion(x))
-                (fun x -> RA_MultiNatJoin(x)) replace_relalg_lf r
+        in 
+            fold_calc (fun x -> RA_MultiUnion(x))
+                (fun x -> RA_MultiNatJoin(x)) 
+                (fun x -> x) replace_relalg_lf r
 
     and replace_relations_in_term fields t =
         let replace_term_lf lf = match lf with
@@ -453,7 +470,8 @@
             | _ -> RVal(lf)
         in
             fold_term (fun x -> RSum(x))
-                (fun x -> RProd(x)) replace_term_lf t
+                (fun x -> RProd(x)) 
+                (fun x -> x) replace_term_lf t
 
     let rename_var name fields = 
         let (rel, field_name) = get_field_and_relation name in
@@ -483,7 +501,7 @@
 
     let concat_stmt (t,s,p) n =
         let r = if t = [] then n else [(t,s,p)]@n in
-            (r, relation_sources)
+            (r) (*, relation_sources) *)
 
     let get_db_schema t_l =
         let br = get_base_relations (List.hd t_l) in
@@ -536,7 +554,7 @@
 // start   
 %start dbtoasterSqlList
 // (terms, db_schema, params) list, relation_sources
-%type <(Algebra.readable_term_t list * (string * Algebra.var_t list) list * Algebra.var_t list) list * (string, Runtime.source_info) Hashtbl.t> dbtoasterSqlList
+%type <(Calculus.readable_term_t list * (string * Calculus.var_t list) list * Calculus.var_t list) list (* * (string, source_info) Hashtbl.t *)> dbtoasterSqlList
     
 %%
 
@@ -544,7 +562,7 @@ dbtoasterSqlList:
 | dbtoasterSqlStmt EOF    { concat_stmt $1 [] }
 | dbtoasterSqlStmt EOSTMT EOF    { concat_stmt $1 [] }
 | dbtoasterSqlStmt EOSTMT dbtoasterSqlList
-          { clear_aliases(); concat_stmt $1 (fst $3) }
+          { clear_aliases(); concat_stmt $1 $3 }
 
 dbtoasterSqlStmt:
 | createAnonTableStmt    { let _ = $1 in ([],[],[]) }
@@ -718,8 +736,8 @@ tableExpression:
 | ID
         {
             let r = String.uppercase $1 in
-            let r_fields =
-                try Hashtbl.find relations r
+            let r_fields : Calculus.var_t list =
+                try (Hashtbl.find relations r)
                 with Not_found ->
                     print_endline ("Could not find relation "^r);
                     raise Parse_error
@@ -786,8 +804,7 @@ whereClause:
 // be safely complemented.
 constraintList:
 | atomicConstraint                      { $1 }
-| NOT atomicConstraint
-          { readable_relalg (Algebra.complement(make_relalg $2)) }
+| NOT atomicConstraint                  { RA_Neg($2) }
 | atomicConstraint AND constraintList   { RA_MultiNatJoin([$1; $3]) }   
 | atomicConstraint OR  constraintList   { RA_MultiUnion([$1; $3]) }
 | LPAREN constraintList RPAREN          { $2 }

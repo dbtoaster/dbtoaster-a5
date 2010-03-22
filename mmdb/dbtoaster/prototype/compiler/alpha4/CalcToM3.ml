@@ -102,8 +102,8 @@ let rec to_m3_initializer
           (M3.Const(M3.CFloat(float_of_int c)), StringSet.empty)
       | Calculus.Const(Calculus.Double d) -> 
           (M3.Const(M3.CFloat(d)), StringSet.empty)
-      | Calculus.Var(v) -> 
-          (M3.Var(v), StringSet.empty)
+      | Calculus.Var(vn,vt) -> 
+          (M3.Var(vn), StringSet.empty)
       | Calculus.Const(_) -> 
           failwith "TODO: Handle String,Long in to_m3_initializer"
       | Calculus.External(s,vs) -> 
@@ -177,7 +177,9 @@ and to_m3_map_access
         ) mapvars bindings []
       ) 
   in
-  ((mapn, input_var_list, output_var_list, 
+  ((mapn, 
+    (fst (List.split input_var_list)), 
+    (fst (List.split output_var_list)), 
     
       (*  Doing something smarter with the initializers... in particular, it 
           might be a good idea to see if any of the initialzers can be further 
@@ -244,8 +246,8 @@ let rec to_m3
                   inner_bindings "")^"}\n"
                 )
           )
-       | Calculus.Var(v)                    -> 
-            (M3.Var(v), StringSet.empty)
+       | Calculus.Var(vn,vt)                -> 
+            (M3.Var(vn), StringSet.empty)
        | Calculus.Const(Calculus.Int c)     -> 
             (M3.Const (M3.CFloat (float_of_int c)), StringSet.empty)
        | Calculus.Const(Calculus.Double c)  -> 
@@ -326,3 +328,7 @@ and find_binding_term
           ) false inner_ts
   );;
 
+let translate_var (calc_var:Calculus.var_t): M3.var_t = (fst calc_var)
+
+let translate_schema (calc_schema:Calculus.var_t list): M3.var_t list = 
+  (List.map translate_var calc_schema)

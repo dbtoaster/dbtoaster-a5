@@ -106,3 +106,7 @@ val find_binding_term:
   Calculus.var_t ->
   Calculus.readable_term_t ->
   bool
+
+val translate_var: Calculus.var_t -> M3.var_t
+
+val translate_schema: Calculus.var_t list -> M3.var_t list
