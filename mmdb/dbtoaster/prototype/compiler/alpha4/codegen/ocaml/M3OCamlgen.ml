@@ -31,9 +31,10 @@ struct
    (* Static code generation *)
    let list_to_string f l = "["^(String.concat ";" (List.map f l))^"]"
 
+   let pm_const pm = match pm with | Insert -> "\"ins\"" | Delete -> "\"del\"" 
+
    let string_const x = "\""^x^"\""
    let string_pair_const (x,y) = "("^(string_const x)^","^(string_const y)^")"
-   let pm_const pm = match pm with | Insert -> "\"ins\"" | Delete -> "\"del\"" 
    let pattern_const p = list_to_string string_of_int p
    let patterns_const ps = list_to_string pattern_const ps
 
@@ -547,6 +548,10 @@ struct
     *                    source inst name, adaptor rel list *)
    type source_impl_t = string * (string * string) list
    
+   let source_const src = match src with
+      | FileSource(fn) -> "FileSource("^(string_const fn)^")"
+      | SocketSource(addr) -> "SocketSource("^(string_const addr)^")"
+
    let framing_const fr = match fr with
       | FixedSize(l) -> "FixedSize("^(string_of_int l)^")"
       | Delimited(s) -> "Delimited("^(string_const s)^")"
@@ -576,30 +581,35 @@ struct
    (* TODO:
     * -- random sources *)
    let source src fr rel_adaptors =
+      let source_name = gen_source_name () in
+      let adaptor_meta = List.map
+         (fun (r,a) -> ((gen_adaptor_name(), r), a)) rel_adaptors in
+      let s = (source_name, List.map fst adaptor_meta) in
+      let framing_spec = framing_const fr in
+      let adaptor_aux (name,params) =
+         "   ("^(string_const name)^","^
+         (list_to_string string_pair_const params)^")" in
+      let adaptor_nl = List.map (fun ((n,r),a) -> 
+         ((r,n), ["let "^n^" = Adaptors.create_adaptor "; (adaptor_aux a)^" in"]))
+         adaptor_meta in
+      let (adaptor_rels_names, adaptor_lines_l) = List.split adaptor_nl in
+      let adaptor_lines = List.flatten adaptor_lines_l in
+      let adaptor_vars = list_to_string
+         (fun (x,y)->"("^(string_const x)^","^y^")") adaptor_rels_names in
       match src with
-       | FileSource(fn) ->
-          let source_name = gen_source_name () in
-          let adaptor_meta = List.map
-             (fun (r,a) -> ((gen_adaptor_name(), r), a)) rel_adaptors in
-          let s = (source_name, List.map fst adaptor_meta) in
-          let framing_spec = framing_const fr in
-          let adaptor_aux (name,params) =
-             "   ("^(string_const name)^","^
-             (list_to_string string_pair_const params)^")" in
-          let adaptor_nl = List.map (fun ((n,r),a) -> 
-             (n, ["let "^n^" = Adaptors.create_adaptor "; (adaptor_aux a)^" in"]))
-             adaptor_meta in
-          let (adaptor_names, adaptor_lines_l) = List.split adaptor_nl in
-          let adaptor_lines = List.flatten adaptor_lines_l in
+       | FileSource _ ->
+          let source_spec = source_const src in
           let decl_lines =
-             let adaptor_vars = list_to_string (fun x->x) adaptor_names in
              ["let "^source_name^" = "^
-               "FileSource.create "^framing_spec^" "^adaptor_vars^" "^(string_const fn)^" in"]
+               "FileSource.create "^source_spec^" "^framing_spec^" "^
+                  adaptor_vars^" in"]
           in (s, Some(Lines(adaptor_lines@decl_lines)), None)
        | _ -> failwith "Unsupported data source"
 
    (* TODO:
     * -- standard adaptors
+    * -- use integers rather than strings for stream dispatching for efficiency
+    *    (requires changing stream_event type, and source creation)
     * -- generate a dummy benchmarker: random source, multiplexed, each w/ fixed # of tuples *)
    let main schema patterns sources triggers = Lines (
       let sources_lines = List.flatten (List.map (fun (impl,decl,init) ->
