@@ -148,9 +148,6 @@ sig
    val source: source_t -> framing_t -> (string * adaptor_t) list ->
                source_impl_t * code_t option * code_t option
    
-   (* source impl type -> initialization code *)
-   val init_source : source_impl_t -> code_t option
-
    (* Runtime generation *)
 
    (* schema, patterns, source decls and inits, triggers -> top level code *)

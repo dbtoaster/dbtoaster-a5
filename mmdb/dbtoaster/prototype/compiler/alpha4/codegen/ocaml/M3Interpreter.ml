@@ -511,8 +511,6 @@ let source src framing (rel_adaptors : (string * adaptor_t) list) =
     | SocketSource(_) -> failwith "Sockets not yet implemented."
    in (src_impl, None, None)
 
-let init_source src_impls = None
-
 (* No top level code generated for the interpreter *)
 let main schema patterns sources triggers =
    failwith "interpreter should be directly invoked"

@@ -255,14 +255,13 @@ struct
    let to_string reg = Hashtbl.fold (fun k v acc -> acc^" "^k) adaptors ""
 end
 
-(*
 module type SyncSource = 
 sig
    type t
 
-   val create: Adaptor.adaptor list -> string -> t 
+   val create: framing_t -> Adaptors.adaptor list -> string -> t 
    val has_next: t -> bool
-   val next: t -> event
+   val next: t -> t * (event option)
 end
 
 module type SyncMultiplexer = functor (S : SyncSource) ->
@@ -272,56 +271,64 @@ sig
    val add_stream: t -> S.t -> t
    val remove_stream: t -> S.t -> t
    val has_next: t -> bool
-   val next: t -> event
+   val next: t -> t * (event option)
 end
 
-module FileSource : Sync =
+module FileSource : SyncSource =
 struct
-   type fs_t = Binary of in_channel | Text of in_channel | Lines of in_channel
-   type t = fs_t * int * Adaptor.adaptor list * (event list ref)
+   type fs_t = framing_t * in_channel
+   type t = fs_t option * Adaptors.adaptor list * (event list ref)
 
-   let escalate_fs_t cur a =
-      match (cur_t, get_source_type a) with
-       | ("b", _) -> "b"
-       | ("t", Binary) -> "b"
-       | ("t", _) -> "t"
-       | ("l", Binary) -> "b"
-       | ("l", Text) -> "t"
-       | _ -> "l"
-       
-   let create adaptors filename =
-      let ic = open_in filename in
-      let fs =
-         let base = List.fold_left escalate_fs_t "l" adaptors
-         in match base with
-          | "b" -> Binary(open_in_bin filename)
-          | "t" -> Text(open_in filename)
-          | "l" -> Lines(open_in filename)
-      in (ns, in_channel_length (get_channel ns), adaptors, ref []) 
+   let create framing adaptors filename =
+      let ns = Some(framing, open_in filename) in (ns, adaptors, ref []) 
 
-   let get_input = match fs_t with
-      | Binary(ic) | Text(ic) -> input ic buf pos len
-      | Lines(ic) -> input_line ic
+   (* TODO: variable sized frames
+    * returns (None,"") at end of file *)
+   let get_input ns = match ns with
+      | None -> failwith "invalid access on finished source"
+      | Some(fr, inc) ->
+         begin try match fr with
+             | FixedSize(len) ->
+                let buf = String.create len in
+                really_input inc buf 0 len; (Some(fr,inc), buf)
+             | Delimited(s) ->
+                if s = "\n" then (Some(fr, inc), input_line inc) else
+                let delim_len = String.length s in
+                let tok = String.create delim_len in
+                let buf = ref (String.create 1024) in
+                let pos = ref 0 in
+                   while (really_input inc tok 0 delim_len; tok != s) do
+                      if ( (!pos) + delim_len >= (String.length (!buf)) ) then
+                         buf := (!buf)^(String.create 1024);
+                      for i = 0 to delim_len do (!buf).[(!pos)+i] <- tok.[i] done;
+                      pos := (!pos) + delim_len;
+                   done;
+                   (Some(fr,inc), !buf)
+             | VarSize(off_to_size, off_to_end) ->
+                failwith "VarSize frames not yet implemented."
+          with End_of_file -> (close_in inc; (None, ""))
+         end 
 
-   let has_next fs =
-      let (ns,len,_,buf) = fs in not(!buf = [] && ((pos_in (get_channel ns)) = len))
+   let has_next fs = let (ns,_,buf) = fs in not((ns = None) && (!buf = []))
 
-   let next fs =
-      let (ns,len,a,buf) = fs in
+   (* returns (_, None) at end of file *)
+   let next fs : t * (event option) =
+      let (ns,a,buf) = fs in
          if !buf = [] then
-            let e = List.hd !buf in buf := List.tl !buf; ((ns,len,a,buf), e)
+            let e = List.hd (!buf)
+            in buf := List.tl (!buf); ((ns,a,buf), Some(e))
          else
-         let events = ref [] in
-         let tuple = ref "" in
-         while events = [] do
-            tuple := tuple^(get_input ns);
-            events := List.flatten (List.map (fun x -> x !tuple) a)
-         done;
-         buf := List.tl !events;
-         ((ns,len,a,buf), List.hd !events)
+         begin
+            let (new_ns, tuple) = get_input ns in
+            if tuple != "" then
+               let events = List.flatten (List.map (fun (_,f) -> f tuple) a) in
+                  buf := List.tl events;
+                  ((new_ns,a,buf), Some(List.hd events))
+            else ((new_ns,a,buf), None)
+         end
 end
 
-module SM : SyncMultiplexer = functor (S : Sync) ->
+module SM : SyncMultiplexer = functor (S : SyncSource) ->
 struct
    type t = S.t list
    
@@ -333,18 +340,21 @@ struct
    
    let has_next fm = List.exists S.has_next fm
    
-   let next fm =
+   (* returns (_, None) at end of file *)
+   let next fm : t * (event option) =
       let nfm = ref fm in
       let i = ref (Random.int (List.length !nfm)) in
       let event = ref None in
-      while !event = None do
+      while ((List.length (!nfm)) > 0) && (!event = None) do
          let s = List.nth !nfm !i in
-            if S.has_next s then event := Some(S.next s);
-            nfm := List.filter (fun x -> S.has_next x) !nfm;
-            if !event = None then i := Random.int(List.length !nfm);
+         event := snd (S.next s);
+         nfm := List.filter (fun x -> S.has_next x) (!nfm);
+         if !event = None then i := Random.int(List.length (!nfm));
       done;
-      match !event with Some(ev) -> (!nfm, ev) | _ -> failwith "No event found."
+      (!nfm, !event)
 end
 
 module FileMultiplexer = SM(FileSource)
-*)
+
+(* TODO: RandomSource *)
+(* TODO: multiplexer of random sources *)

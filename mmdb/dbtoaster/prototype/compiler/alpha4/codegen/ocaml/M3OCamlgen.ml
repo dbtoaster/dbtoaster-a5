@@ -31,7 +31,9 @@ struct
    (* Static code generation *)
    let list_to_string f l = "["^(String.concat ";" (List.map f l))^"]"
 
-   let string_const x = "\""^x^"\"" 
+   let string_const x = "\""^x^"\""
+   let string_pair_const (x,y) = "("^(string_const x)^","^(string_const y)^")"
+   let pm_const pm = match pm with | Insert -> "\"ins\"" | Delete -> "\"del\"" 
    let pattern_const p = list_to_string string_of_int p
    let patterns_const ps = list_to_string pattern_const ps
 
@@ -531,25 +533,114 @@ struct
        "in List.iter iifilter inv_imgs;"]))
    
    let trigger event rel trig_args stmt_block =
-      let trigger_name = match event with
-         | Insert -> "on_insert_"^rel
-         | Delete -> "on_delete_"^rel
-      in Lines (
+      let trigger_name = "on_"^(pm_const event)^"_rel" in Lines (
       ["let "^trigger_name^" = (fun tuple -> "]@
        (indent 1 (bind_vars_from_list trig_args "tuple"))@
        (List.flatten (List.map get_lines stmt_block))@
       [");;"])
+
+   (* Sources *)
+   (* TODO: naming conventions for:
+    * -- FileSource names in declaration from source_impl_t
+    *    ++ val get_source_instance: source_impl_t -> string
+    * -- source_impl_t = string * (rel_id_t list)
+    *                    source inst name, adaptor rel list *)
+   type source_impl_t = string * (string * string) list
    
-   (* TODO: generate data source initialization etc. *)
-   (* TODO: generate a dummy benchmarker *)
+   let framing_const fr = match fr with
+      | FixedSize(l) -> "FixedSize("^(string_of_int l)^")"
+      | Delimited(s) -> "Delimited("^(string_const s)^")"
+      | VarSize(s,e) -> "VarSize("^(string_of_int s)^","^(string_of_int e)^")"
+
+   let src_counter = ref 0
+   let adaptor_counter = ref 0
+
+   let gen_source_name() =
+      let r = "src"^(string_of_int !src_counter) in incr src_counter; r
+   
+   let gen_adaptor_name() =
+      let r = "adaptor"^(string_of_int !adaptor_counter)
+      in incr adaptor_counter; r
+
+   let get_source_instance impl = fst impl
+   let get_source_adaptor_instances impl = List.map fst (snd impl)
+
+   (* Source geneation:
+    * -- code to declare sources:
+    *    ++ adaptor creation, naming adaptors according to relations
+    *       adaptors will be embedded into the main method
+    *    ++ FileSource creation with framing_t and adaptor instances
+    * -- code to initialize sources
+    *    ++ none for now w/ file sources
+    *)
+   (* TODO:
+    * -- random sources *)
+   let source src fr rel_adaptors =
+      match src with
+       | FileSource(fn) ->
+          let source_name = gen_source_name () in
+          let adaptor_meta = List.map
+             (fun (r,a) -> ((gen_adaptor_name(), r), a)) rel_adaptors in
+          let s = (source_name, List.map fst adaptor_meta) in
+          let framing_spec = framing_const fr in
+          let adaptor_aux (name,params) =
+             "   ("^(string_const name)^","^
+             (list_to_string string_pair_const params)^")" in
+          let adaptor_nl = List.map (fun ((n,r),a) -> 
+             (n, ["let "^n^" = Adaptors.create_adaptor "; (adaptor_aux a)^" in"]))
+             adaptor_meta in
+          let (adaptor_names, adaptor_lines_l) = List.split adaptor_nl in
+          let adaptor_lines = List.flatten adaptor_lines_l in
+          let decl_lines =
+             let adaptor_vars = list_to_string (fun x->x) adaptor_names in
+             ["let "^source_name^" = "^
+               "FileSource.create "^framing_spec^" "^adaptor_vars^" "^(string_const fn)^" in"]
+          in (s, Some(Lines(adaptor_lines@decl_lines)), None)
+       | _ -> failwith "Unsupported data source"
+
+   (* TODO:
+    * -- standard adaptors
+    * -- generate a dummy benchmarker: random source, multiplexed, each w/ fixed # of tuples *)
    let main schema patterns sources triggers = Lines (
+      let sources_lines = List.flatten (List.map (fun (impl,decl,init) ->
+         let aux c = match c with
+            | None -> [] | Some(Lines(x)) -> x | Some(Inline(x)) -> [x]
+         in List.flatten (List.map aux [decl; init])) sources) in
+      let multiplexer_lines =
+         ["let mux = FileMultiplexer.create() in"]@
+         (List.map (fun (impl,_,_) ->
+            let inst_name = get_source_instance impl in
+            "FileMultiplexer.add_stream "^inst_name^";") sources) in
+      let dispatch_aux evt r =
+         "| ("^(pm_const evt)^","^(string_const r)^") -> "^
+            "on_"^(pm_const evt)^"_"^r^" t" in
+      let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
+         List.flatten (List.map (fun (_,r) ->
+            [dispatch_aux Insert r; dispatch_aux Delete r]) (snd impl))) sources)
+      in
+      let main_lines =
+      ["let main() = "]@
+       (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
+      ["   let start = Unix.gettimeofday() in";
+       "   while FileMultiplexer.has_next mux do";
+       "   let (pm,r,t) = FileMultiplexer.next mux in";
+       "      match (pm,r) with"]@
+       (indent 2 dispatch_lines)@
+      ["   done";
+       "   let finish = Unix.gettimeofday() in";
+       "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)))";
+       "in main();;"]
+      in
       ["open M3Common";
        "open M3Common.Patterns";
        "open M3OCaml\n";
+       "open StandardAdaptors";
+       "StandardAdaptors.initialize();";
        "let db = Database.make_empty_db ";
        "   "^(schema_const schema);
        "   "^(pattern_map_const patterns)^";;\n\n"]@
-       (List.flatten (List.map get_lines triggers)))
+       (List.flatten (List.map get_lines triggers))@
+       main_lines)
 
    let output code out_chan =
       output_string out_chan (String.concat "\n" (get_lines code));
@@ -559,11 +650,5 @@ struct
    type db_t = Database.db_t
    let eval_trigger trigger tuple db =
       failwith "Cannot directly evaluate OCaml source"
-
-   (* Sources *)
-   type source_impl_t = source_t * framing_t * (string * adaptor_t) list
-   let source src framing rel_adaptors = ((src, framing, rel_adaptors), None, None) 
-   let init_source src_impls =
-      failwith "Source initialization not yet implemented"
 
 end
