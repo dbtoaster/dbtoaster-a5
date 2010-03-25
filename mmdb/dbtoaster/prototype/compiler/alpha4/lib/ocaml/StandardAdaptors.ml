@@ -27,7 +27,11 @@ let offset_tokens param_val =
 let tokenizers : (string * (string -> string -> string list)) list =
    [("fields", field_tokens); ("offsets", offset_tokens)]
 
-(* TODO: preprocessing projection *)
+(* param_val: field indexes to project down to, i.e. "0,2,3" *)
+let preproject param_val =
+   let field_ids =
+      List.map int_of_string (Str.split (Str.regexp ",") param_val)
+   in (fun fields -> List.map (List.nth fields) field_ids)
 
 (* param_val: "upper" | "lower" *)
 let change_case param_val =
@@ -66,7 +70,7 @@ let substring param_val =
    
 (* Preprocessing: param key, prep fn *)
 let preprocessors : (string * (string -> string list -> string list)) list =
-   [("case", change_case); ("substring", substring)]
+   [("project", preproject); ("case", change_case); ("substring", substring)]
 
 (* param_val: (int|float) list
  * Builds a tuple, i.e. a const_t list from a string list given the expected
@@ -107,10 +111,16 @@ let constructors : (string * (string -> string list -> const_t list)) list =
    [("schema", build_tuple)]
 
 (* TODO: precision management transformations *)
-(* TODO: postprocessing projection *)
+
+(* param_val: field ids to project *)
+let postproject param_val =
+   let field_ids =
+      List.map int_of_string (Str.split (Str.regexp ",") param_val
+   in (fun fields -> List.map (List.nth fields) field_ids)
+
 (* Post processing: param key, postp fn *)
 let postprocessors : (string * (string -> const_t list -> const_t list)) list =
-   []
+   [("postproject", postproject)]
 
 let build_event param_val =
    match param_val with
@@ -223,7 +233,10 @@ let orderbook_generator params =
     | _ -> failwith ("invalid orderbook type: "^book_type)
 
 (* TPC-H *)
-let lineitem_params = csv_params "|" "int,int,int,int,float,float,float,float,hash,hash,hash,hash,hash,hash,hash,hash" "insert"
+let li_schema =
+   "int,int,int,int,float,float,float,float,hash,hash,hash,hash,hash,hash,hash,hash"
+
+let lineitem_params = csv_params "|" li_schema "insert"
 let order_params    = csv_params "|" "int,int,hash,float,hash,hash,hash,int,hash" "insert"
 let part_params     = csv_params "|" "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
 let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
@@ -234,7 +247,7 @@ let generators =
    [("csv", standard_generator);
     ("orderbook", orderbook_generator)]
 
-(* TODO: unit tests for standard adaptors *)
+(* TODO: unit tests for generators *)
 
 let initialize() =
    List.iter (fun (x,y) -> Adaptors.add x y) generators
