@@ -245,7 +245,7 @@ end
  *    adaptors+relations *)
 module Adaptors =
 struct
-   type adaptor = framing_t * (string -> event list)
+   type adaptor = string -> event list
    type adaptor_generator = (string * string) list -> adaptor
    type adaptor_registry = (string, adaptor_generator) Hashtbl.t
    
@@ -364,7 +364,7 @@ struct
             if tuple != "" then
                let aux r (pm,cl) = (pm,r,cl) in
                let events = List.flatten (List.map
-                  (fun (r,(_,f)) -> List.map (aux r) (f tuple)) ra)
+                  (fun (r,f) -> List.map (aux r) (f tuple)) ra)
                in buf := List.tl events;
                   ((new_ns,ra,buf), Some(List.hd events))
             else ((new_ns,ra,buf), None)
@@ -401,3 +401,5 @@ module FileMultiplexer = SM(FileSource)
 
 (* TODO: RandomSource *)
 (* TODO: multiplexer of random sources *)
+
+(* TODO: unit tests for file sources + multiplexer *)

@@ -15,6 +15,7 @@ SOURCE = \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/M3OCaml.ml \
+	lib/ocaml/StandardAdaptors.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml
 
@@ -30,7 +31,8 @@ RUNTIME = \
 	M3Common.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
-	lib/ocaml/M3OCaml.ml
+	lib/ocaml/M3OCaml.ml \
+	lib/ocaml/StandardAdaptors.ml
 
 all: top
 
@@ -45,7 +47,7 @@ native:
 	ocamlopt $(INCLUDES) -ccopt -O3 -nodynlink -unsafe -noassert -c $(SOURCE)
 
 top: bytecode
-	ocamlmktop $(INCLUDES) -o dbtoaster_top unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
+	ocamlmktop $(INCLUDES) -o dbtoaster_top str.cma unix.cma $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE))) 
 
 benchmark: native
 	ocamlopt $(INCLUDES) -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
