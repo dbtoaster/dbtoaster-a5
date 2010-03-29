@@ -115,7 +115,7 @@ let constructors : (string * (string -> string list -> const_t list)) list =
 (* param_val: field ids to project *)
 let postproject param_val =
    let field_ids =
-      List.map int_of_string (Str.split (Str.regexp ",") param_val
+      List.map int_of_string (Str.split (Str.regexp ",") param_val)
    in (fun fields -> List.map (List.nth fields) field_ids)
 
 (* Post processing: param key, postp fn *)
