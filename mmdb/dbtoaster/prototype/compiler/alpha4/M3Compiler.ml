@@ -1,6 +1,6 @@
 open M3Common
 open M3Common.Patterns
-
+open M3
 (* M3 preparation and compilation *)
 module M3P = M3.Prepared
 

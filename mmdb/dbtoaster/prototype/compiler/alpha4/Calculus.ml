@@ -700,14 +700,17 @@ let mk_term_mapping (map_name_prefix: string)
    List.map (fun (n, (vs, t)) -> (t, TermRing.mk_val(External(n, vs))))
             (Util.add_names map_name_prefix workload)
 
+let decode_map_term (map_term: term_t):
+                    (string * (var_t list)) =
+   match (readable_term map_term) with
+      RVal(External(n, vs)) -> (n, vs)
+    | _ -> failwith "Compiler.decode_map_term";;
+
+let map_term (map_name:string) (map_vars:var_t list): term_t =
+  make_term (RVal(External(map_name, map_vars)))
+
 let apply_term_mapping (mapping: term_mapping_t)
                        (map_term: term_t) : term_t =
-   let decode_map_term mt =
-      match mt with
-         TermRing.Val(External(n, vs)) -> (n, vs)
-       | _ -> raise (Assert0Exception
-                       "Calculus.apply_term_mapping.decode_map_term")
-   in
    let (name, vars) = decode_map_term map_term in
    let (vars2, term) = Util.Function.apply_strict
       (List.map (fun (x,y) -> let (n,vs) = decode_map_term y in
@@ -920,11 +923,150 @@ and term_delta (theta: term_mapping_t) (delete: bool)
    TermRing.delta (leaf_delta delete) term
 
 
-let decode_map_term (map_term: term_t):
-                    (string * (var_t list)) =
-   match (readable_term map_term) with
-      RVal(External(n, vs)) -> (n, vs)
-    | _ -> failwith "Compiler.decode_map_term";;
+exception TermsNotEquivalent
+module StringMap = Map.Make(String)
+
+let rec equate_terms (term_a:readable_term_t) 
+                     (term_b:readable_term_t): (string StringMap.t) =
+  let build_mapping:(var_t list -> var_t list -> string StringMap.t) =
+    List.fold_left2 
+      (fun mapping (a_name, a_type) (b_name, b_type) ->
+        if a_type == b_type then
+          if StringMap.mem a_name mapping then
+            if (StringMap.find a_name mapping) == b_name then
+              mapping
+            else raise TermsNotEquivalent
+          else 
+            StringMap.add a_name b_name mapping
+        else
+          raise TermsNotEquivalent (* TODO: type escalation? *)
+      ) StringMap.empty
+  in
+  let merge_mappings:
+    (string StringMap.t -> string StringMap.t -> string StringMap.t) =
+    StringMap.fold 
+      (fun var_a var_b merged_mapping ->
+        if StringMap.mem var_a merged_mapping then
+          if (StringMap.find var_a merged_mapping) == var_b then
+            merged_mapping
+          else
+            raise TermsNotEquivalent
+        else
+          StringMap.add var_a var_b merged_mapping
+      )
+  in
+  let equate_c_leaves lf_a lf_b =
+    match lf_a with 
+    | False -> if lf_b == False then StringMap.empty 
+                                else raise TermsNotEquivalent
+    | True  -> if lf_b == True  then StringMap.empty 
+                                else raise TermsNotEquivalent
+    | AtomicConstraint(cmp, term_a_1, term_a_2) ->
+      (match lf_b with 
+      | AtomicConstraint(cmp, term_b_1, term_b_2) ->
+        merge_mappings (equate_terms term_a_1 term_b_1)
+                       (equate_terms term_a_2 term_b_2)
+        (* TODO: for some comparators, we might be able to swap
+           term_b_1 and term_b_2 *)
+      | _ -> raise TermsNotEquivalent
+      )
+    | Rel(name_a, vars_a) ->
+      (match lf_b with
+      | Rel(name_b, vars_b) ->
+        if name_a == name_b then build_mapping vars_a vars_b
+                            else raise TermsNotEquivalent
+      | _ -> raise TermsNotEquivalent)
+  in
+  let rec equate_calc phi_a phi_b =
+    match phi_a with
+    | RA_Leaf(lf_a) ->
+      (match phi_b with RA_Leaf(lf_b) -> equate_c_leaves lf_a lf_b
+                      | _ -> raise TermsNotEquivalent)
+    | RA_Neg(subcalc_a) ->
+      (match phi_b with RA_Neg(subcalc_b) -> equate_calc subcalc_a subcalc_b
+                      | _ -> raise TermsNotEquivalent)
+      (* TODO: Double Negation? *)
+    | RA_MultiUnion(subcalc_a::[]) ->
+      (match phi_b with
+      | RA_MultiUnion(subcalc_b::[]) -> equate_calc subcalc_a subcalc_b
+      | _ -> raise TermsNotEquivalent)
+    | RA_MultiUnion(subcalc_a::rest_a) ->
+      (match phi_b with
+      | RA_MultiUnion(subcalc_b::rest_b) -> 
+        merge_mappings (equate_calc subcalc_a subcalc_b)
+             (equate_calc (RA_MultiUnion(rest_a)) (RA_MultiUnion(rest_b)))
+      | _ -> raise TermsNotEquivalent) (* TODO: Ordering shouldn't matter *)
+    | RA_MultiUnion([]) -> if phi_a == phi_b then StringMap.empty
+                                             else raise TermsNotEquivalent
+    | RA_MultiNatJoin(subcalc_a::[]) ->
+      (match phi_b with
+      | RA_MultiNatJoin(subcalc_b::[]) -> equate_calc subcalc_a subcalc_b
+      | _ -> raise TermsNotEquivalent)
+    | RA_MultiNatJoin(subcalc_a::rest_a) ->
+      (match phi_b with
+      | RA_MultiNatJoin(subcalc_b::rest_b) -> 
+        merge_mappings (equate_calc subcalc_a subcalc_b)
+             (equate_calc (RA_MultiNatJoin(rest_a)) (RA_MultiNatJoin(rest_b)))
+      | _ -> raise TermsNotEquivalent) (* TODO: Ordering shouldn't matter *)
+    | RA_MultiNatJoin([]) -> if phi_a == phi_b then StringMap.empty
+                                               else raise TermsNotEquivalent
+  in
+  let equate_t_leaves lf_a lf_b = 
+    match lf_a with
+    | AggSum(theta_a, phi_a) -> 
+      (match lf_b with 
+        | AggSum(theta_b, phi_b) -> 
+          merge_mappings (equate_terms theta_a theta_b) 
+                         (equate_calc phi_a phi_b)
+        | _ -> raise TermsNotEquivalent
+      )
+    | Const(c) -> if lf_b == Const(c) then StringMap.empty 
+                                      else raise TermsNotEquivalent
+    | Var(name_a, type_a) -> 
+      (match lf_b with
+      | Var(name_b, type_b) -> 
+        if type_a == type_b then build_mapping [(name_a, type_a)] 
+                                               [(name_b, type_b)]
+                            else raise TermsNotEquivalent 
+                            (* TODO: type escalation? *)
+      | _ -> raise TermsNotEquivalent)
+    | External(name_a, vars_a) -> (* These shouldn't appear anywhere? *)
+      (match lf_b with 
+      | External(name_b, vars_b) -> 
+        if name_a == name_b then build_mapping vars_a vars_b
+                            else raise TermsNotEquivalent
+      | _ -> raise TermsNotEquivalent)
+  in
+    match term_a with
+    | RVal(lf_a) -> (match term_b with RVal(lf_b) -> equate_t_leaves lf_a lf_b 
+                                     | _ -> raise TermsNotEquivalent)
+    | RNeg(subterm_a) -> 
+      (match term_b with RNeg(subterm_b) -> equate_terms subterm_a subterm_b
+                       | _ -> raise TermsNotEquivalent) (* TODO: double negs *)
+    | RProd(subterm_a::[]) -> 
+      (match term_b with
+      | RProd(subterm_b::[]) -> equate_terms subterm_a subterm_b
+      | _                    -> raise TermsNotEquivalent)
+    | RProd(subterm_a::rest_a) ->
+      (match term_b with
+      | RProd(subterm_b::rest_b) -> 
+        merge_mappings (equate_terms subterm_a subterm_b)
+                       (equate_terms (RProd(rest_a)) (RProd(rest_b)))
+      | _ -> raise TermsNotEquivalent) (* TODO: prod is commutative *)
+    | RProd([]) -> if term_a == term_b then StringMap.empty
+                                       else raise TermsNotEquivalent
+    | RSum(subterm_a::[]) -> 
+      (match term_b with
+      | RSum(subterm_b::[]) -> equate_terms subterm_a subterm_b
+      | _                   -> raise TermsNotEquivalent)
+    | RSum(subterm_a::rest_a) ->
+      (match term_b with
+      | RSum(subterm_b::rest_b) -> 
+        merge_mappings (equate_terms subterm_a subterm_b)
+                       (equate_terms (RSum(rest_a)) (RSum(rest_b)))
+      | _ -> raise TermsNotEquivalent) (* TODO: sum is commutative *)
+    | RSum([]) -> if term_a == term_b then StringMap.empty
+                                      else raise TermsNotEquivalent
 
 let fold_calc (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
               (leaf_f: readable_relcalc_lf_t -> 'a) (calc: readable_relcalc_t): 

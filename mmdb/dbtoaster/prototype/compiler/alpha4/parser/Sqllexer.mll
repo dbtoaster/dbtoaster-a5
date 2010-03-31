@@ -52,6 +52,14 @@ let keywords =
         "TUPLE", TUPLE;
         "ADAPTOR", ADAPTOR;
         "BINDINGS", BINDINGS;
+        "SOCKET", SOCKET;
+        "FILE", FILE;
+        "FIXEDWIDTH", FIXEDWIDTH;
+        "DELIMITED", DELIMITED;
+        "LINE", LINE;
+        "VARSIZE", VARSIZE;
+        "OFFSET", OFFSET;
+        "ADJUSTBY", ADJUSTBY;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
@@ -122,6 +130,7 @@ rule tokenize = parse
 | singlecm      { tokenize lexbuf}
 | multicmst     { comment 1 lexbuf }
 | ';'           { EOSTMT }
+| ":="          { SETVALUE }
 | eof           { EOF }
 
 and comment depth = parse

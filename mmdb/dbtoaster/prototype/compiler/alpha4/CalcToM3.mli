@@ -19,7 +19,7 @@
   relation.  The returned relation_set_t will have [IRname] for each input 
   relation referenced in this way.
 *)
-type relation_set_t = Set.Make(String).t
+type relation_set_t = (Calculus.var_t list) Map.Make(String).t
 
 (*
   Variable bindings are used to distinguish between Input and Output Variables.
@@ -107,6 +107,37 @@ val find_binding_term:
   Calculus.readable_term_t ->
   bool
 
+(*
+  Basic type translators
+*)
 val translate_var: Calculus.var_t -> M3.var_t
 
 val translate_schema: Calculus.var_t list -> M3.var_t list
+
+(*
+  Translate the compiler's notion of a map definition:
+    (map_definition, map_term) 
+  into a full M3 map definition (a map_ref_t).  This effectively boils down to 
+  identifying output variables in the map definition and storing them as a
+  bindings_list_t
+*)
+val translate_map_ref: Compiler.map_ref_t -> map_ref_t
+
+(* 
+  Functions for iteratively constructing an M3.prog_t.  Start with init_m3_prog
+  and add maps using build_m3_prog.  This process serves two purposes.  First,
+  when building a program for one query, duplicate maps will be eliminated.
+  More importantly, this makes it possible for the output of one compilation
+  run to be easily merged with the output of other compilation runs.
+*)
+module M3ProgInProgress : sig
+  type t
+  type insertion = (map_ref_t * M3.trig_t list * relation_set_t)
+  
+  val init: t
+  val build: t -> insertion -> t
+  
+  val get_maps: t -> M3.map_type_t list
+  val get_triggers: t -> M3.trig_t list
+  val finalize: t -> M3.prog_t
+end

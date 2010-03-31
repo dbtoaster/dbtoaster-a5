@@ -1,5 +1,7 @@
 include M3
 
+module StringMap = Map.Make(String)
+
 let vars_to_string vs = Util.list_to_string (fun x->x) vs
 
 let rec calc_vars_aux f calc =
@@ -65,6 +67,90 @@ and pretty_print_map (mapn, input_var_types, output_var_types) : string =
 and pretty_print_prog ((maps, trigs):prog_t) = 
   (List.fold_left (fun oldstr map -> oldstr^(pretty_print_map map)) "" maps)^
   (List.fold_left (fun oldstr trig -> oldstr^(pretty_print_trig trig)) "" trigs);;
+
+let rename_maps (mapping:(M3.map_id_t) StringMap.t)
+                ((stmt_defn, stmt_calc):M3.stmt_t): M3.stmt_t =
+  let rec sub_calc calc : M3.calc_t =
+    match calc with
+    | MapAccess(ma)      -> MapAccess(sub_ma ma)
+    | Add(c1, c2)        ->         Add((sub_calc c1), (sub_calc c2))
+    | Mult(c1, c2)       ->        Mult((sub_calc c1), (sub_calc c2))
+    | Lt(c1, c2)         ->          Lt((sub_calc c1), (sub_calc c2))
+    | Leq(c1, c2)        ->         Leq((sub_calc c1), (sub_calc c2))
+    | Eq(c1, c2)         ->          Eq((sub_calc c1), (sub_calc c2))
+    | IfThenElse0(c1,c2) -> IfThenElse0((sub_calc c1), (sub_calc c2))
+    | Const(c)           -> Const(c)
+    | Var(x)             -> Var(x)
+  and sub_ma (mapacc_name, ma_ivars, ma_ovars, ma_icalc) : M3.mapacc_t =
+    if StringMap.mem mapacc_name mapping then
+      (StringMap.find mapacc_name mapping, 
+       ma_ivars, ma_ovars, sub_calc ma_icalc)
+    else
+      (mapacc_name, ma_ivars, ma_ovars, sub_calc ma_icalc)
+  in
+    (sub_ma stmt_defn, sub_calc stmt_calc)
+
+let rename_vars (src_vars:M3.var_t list) (dst_vars:M3.var_t list) 
+                ((stmt_defn, stmt_calc):M3.stmt_t): M3.stmt_t =
+  (* make sure the dst_vars are safe *)
+  let rec check_safe_var var calc =
+    match calc with 
+    | MapAccess(ma)      -> check_mapacc var ma
+    | Add(c1, c2)        -> (check_safe_var var c1) && (check_safe_var var c2)
+    | Mult(c1, c2)       -> (check_safe_var var c1) && (check_safe_var var c2)
+    | Lt(c1, c2)         -> (check_safe_var var c1) && (check_safe_var var c2)
+    | Leq(c1, c2)        -> (check_safe_var var c1) && (check_safe_var var c2)
+    | Eq(c1, c2)         -> (check_safe_var var c1) && (check_safe_var var c2)
+    | IfThenElse0(c1,c2) -> (check_safe_var var c1) && (check_safe_var var c2)
+    | Const(c)           -> true
+    | Var(x)             -> x <> var
+  and check_mapacc var (_,ivars,ovars,icalc) = 
+    if
+      (List.fold_right (fun x old -> (x == var)||(old)) ivars false) ||
+      (List.fold_right (fun x old -> (x == var)||(old)) ovars false) then
+      false
+    else
+      check_safe_var var icalc
+  in
+  let rec check_var_list list replacements in_mapping =
+    let (todos, mapping) = 
+      List.fold_left2 (fun (todos,mapping) var replacement -> 
+        (
+          if var == replacement then (todos, mapping)
+          else
+            (if (check_mapacc replacement stmt_defn) &&
+               (check_safe_var replacement stmt_calc) then todos
+                                                      else replacement::todos),
+            StringMap.add var replacement mapping
+        )
+      ) ([], in_mapping) list replacements
+    in
+      if (List.length todos) > 1 then
+        check_var_list todos (List.map (fun x -> x^"_p") todos) in_mapping
+      else
+        mapping
+  in
+  let mapping = check_var_list src_vars dst_vars StringMap.empty in
+  let map_var var = 
+    if StringMap.mem var mapping then StringMap.find var mapping
+                                 else var
+  in
+  let rec sub_stmt calc : M3.calc_t = 
+    match calc with 
+    | MapAccess(ma)      -> MapAccess(sub_ma ma)
+    | Add(c1, c2)        ->         Add((sub_stmt c1), (sub_stmt c2))
+    | Mult(c1, c2)       ->        Mult((sub_stmt c1), (sub_stmt c2))
+    | Lt(c1, c2)         ->          Lt((sub_stmt c1), (sub_stmt c2))
+    | Leq(c1, c2)        ->         Leq((sub_stmt c1), (sub_stmt c2))
+    | Eq(c1, c2)         ->          Eq((sub_stmt c1), (sub_stmt c2))
+    | IfThenElse0(c1,c2) -> IfThenElse0((sub_stmt c1), (sub_stmt c2))
+    | Const(c)           -> Const(c)
+    | Var(x)             -> Var(map_var x)
+  and sub_ma (name, ivars, ovars, icalc) : M3.mapacc_t = 
+    (name, List.map map_var ivars, List.map map_var ovars, sub_stmt icalc)
+  in
+    (sub_ma stmt_defn, sub_stmt stmt_calc)
+    
 
 let rec c_sum (a : const_t) (b : const_t) : const_t = 
   match a with
@@ -185,13 +271,14 @@ let get_filtered_patterns filter_f pm mapn =
                       then List.assoc mapn pm else []
    in List.map get_pattern (List.filter filter_f map_patterns)
 
-let get_in_patterns pm mapn = get_filtered_patterns
+let get_in_patterns (pm:pattern_map) mapn = get_filtered_patterns
    (function | In _ -> true | _ -> false) pm mapn
 
-let get_out_patterns pm mapn = get_filtered_patterns
+let get_out_patterns (pm:pattern_map) mapn = get_filtered_patterns
    (function | Out _ -> true | _ -> false) pm mapn
 
-let get_out_pattern_by_vars pm mapn vars = List.hd (get_filtered_patterns
+let get_out_pattern_by_vars (pm:pattern_map) mapn vars = 
+  List.hd (get_filtered_patterns
    (function Out(x,y) -> x = vars | _ -> false) pm mapn)
 
 let add_pattern pm (mapn,pat) =

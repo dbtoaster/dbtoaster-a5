@@ -1,3 +1,5 @@
+open M3
+open M3.Prepared
 open M3Common
 open M3Common.Patterns
 open M3OCaml
@@ -548,9 +550,12 @@ struct
     *                    source inst name, adaptor rel list *)
    type source_impl_t = string * (string * string) list
    
+   let addr_const addr port = 
+     (string_const (Unix.string_of_inet_addr addr))^", "^(string_of_int port)
+   
    let source_const src = match src with
       | FileSource(fn) -> "FileSource("^(string_const fn)^")"
-      | SocketSource(addr) -> "SocketSource("^(string_const addr)^")"
+      | SocketSource(addr,port) -> "SocketSource("^(addr_const addr port)^")"
 
    let framing_const fr = match fr with
       | FixedSize(l) -> "FixedSize("^(string_of_int l)^")"

@@ -1,3 +1,6 @@
+module StringMap = Map.Make(String)
+module StringSet = Set.Make(String)
+
 (* Set operations on lists. We do not enforce that the input lists
    have no duplicates. Goal: I want to see the lists for easier debugging,
    otherwise I would instantiate Set (which would be abstract). *)
@@ -60,6 +63,29 @@ struct
             List.map (g) (List.hd l)
          in
          List.flatten (List.map f (distribute (List.tl l)));;
+    
+end;;
+
+module MapAsSet =
+struct
+  let union (merge:(string -> 'a -> 'a -> 'a)) 
+            (map_a:'a StringMap.t)
+            (map_b:'a StringMap.t): 'a StringMap.t =
+    StringMap.fold (fun k v accum -> 
+      if StringMap.mem k accum then
+        StringMap.add k (merge k (StringMap.find k accum) v) accum
+      else 
+        StringMap.add k v accum
+    ) map_a map_b
+
+  let left_priority k vl vr = vl
+  let right_priority k vl vr = vr
+  
+  let union_right a b: 'a StringMap.t = 
+    (union right_priority a b)
+  
+  let singleton k v = StringMap.add k v StringMap.empty
+  
 end;;
 
 

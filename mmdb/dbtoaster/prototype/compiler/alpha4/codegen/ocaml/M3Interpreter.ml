@@ -1,3 +1,4 @@
+open M3
 open M3Common
 open M3OCaml
 open M3OCaml.Adaptors

@@ -129,7 +129,7 @@ type stream_event = pm_t * rel_id_t * const_t list
   VarSize-delimited frame is assumed to have an integer (4 byte) size field
   located at off_to_size bytes into the stream.  The size field is assumed to
   contain the number of bytes remaining in the frame AFTER THE SIZE FIELD plus
-  the value of off_to_end.
+  the value of off_to_end. (so bytes remaining = [size] - off_to_end)
   
   In other words, the size of the frame delivered to the adaptor will be:
     off_to_size + 4 + [size] - off_to_end
@@ -144,8 +144,9 @@ type framing_t =
 
 type source_t =
    FileSource of string
- | SocketSource of string
+ | SocketSource of Unix.inet_addr * int
  
 (* adaptor name, (param = value) list *)
 type adaptor_t = string * (string * string) list
 
+type relation_input_t = source_t * framing_t * adaptor_t

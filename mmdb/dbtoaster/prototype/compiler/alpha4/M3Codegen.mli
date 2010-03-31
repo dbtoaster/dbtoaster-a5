@@ -1,5 +1,6 @@
+open M3
 open M3Common
-open M3Common.Prepared
+open M3.Prepared
 open M3Common.Patterns
 
 (* Note this interface doesn't distinguish Singleton, UpdateSingleton etc. 

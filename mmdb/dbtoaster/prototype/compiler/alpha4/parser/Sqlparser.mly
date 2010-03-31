@@ -1,17 +1,8 @@
 %{
     open Calculus
     
-    type stream_type = string
-    type source_type = string
-    type source_args = string
-    type tuple_type = string
-    type adaptor_type = string
-    type adaptor_bindings = (string * string) list
-    type source_instance = string
-    type source_info = 
-            string *
-                (stream_type * source_type * source_args * tuple_type *
-                    adaptor_type * adaptor_bindings * string * source_instance)
+    exception SQLParseError of string
+    exception FeatureUnsupported of string
     
     let parse_error s =
         let lex_pos = symbol_end_pos () in
@@ -20,7 +11,7 @@
             (lex_pos.Lexing.pos_cnum - lex_pos.Lexing.pos_bol)
         in
             print_endline
-                ("Parsing error at line: "^line_pos_str^
+                ("Parsing error '"^s^"' at line: "^line_pos_str^
                     " char: "^(char_pos_str));
             flush stdout
 
@@ -30,7 +21,7 @@
             (List.map
                 (function
                     | Rel(n,_) -> n
-                    | _ -> raise (Failure "Invalid relation."))
+                    | _ -> raise (SQLParseError "Invalid relation."))
                 rl)
 
     (* SQL->DBToaster typing *)
@@ -41,7 +32,7 @@
             | "int8" | "bigint" -> TLong
             | "float" | "double" -> TDouble
             | "text" -> TString
-            | _ -> raise Parse_error
+            | _ -> raise (SQLParseError("Unknown Type '"^t^"'"))
 
     (* Aggregate function definitions *)
 
@@ -56,15 +47,16 @@
     (* table name -> fields *)
     let relations:((string, Calculus.var_t list) Hashtbl.t) = Hashtbl.create 10
 
-    (* table name -> (file name, delimiter) *)
-    let relation_sources = Hashtbl.create 10
+    (* table name -> source * framing * adaptor *)
+    let relation_sources:((string,M3.relation_input_t) Hashtbl.t)
+      = Hashtbl.create 10
 
     let add_relation name fields =
         Hashtbl.replace relations (String.uppercase name) fields
 
     let add_source name source_info =
         Hashtbl.replace relation_sources
-            (String.uppercase name) (name, source_info)
+            (String.uppercase name) (source_info)
 
     (* Table aliasing in queries *)
 
@@ -145,7 +137,7 @@
                       let msg =  "Internal error: "^
                           "get_free_variables_from_plan expected a relation"
                       in
-                          raise (Failure (msg)))
+                          failwith msg)
             (get_base_relations_plan r))
         in
         let vars = relcalc_vars (make_relcalc r) in
@@ -173,7 +165,7 @@
                       let msg =  "Internal error: "^
                           "get_free_variables_from_map_term expected a relation"
                       in
-                          raise (Failure (msg)))
+                          failwith msg)
             (get_base_relations t))
         in
         let vars = term_vars (make_term t) in
@@ -205,7 +197,7 @@
     let get_field_relations fields field_name =
         if Hashtbl.mem fields field_name
         then Hashtbl.find fields field_name
-        else raise (Failure ("No field "^field_name^" found in any table."))
+        else raise (SQLParseError ("No field "^field_name^" found in any table."))
 
     (* readable_relalg_lf_t list
      *    -> (string, (string * type_t) list) Hashtbl.t *)
@@ -238,7 +230,7 @@
             List.iter
                 (function
                     | Rel(n,f) -> add_fields m n f
-                    | _ -> raise (Failure
+                    | _ -> (failwith 
                           ("Internal error: expected a relation.")))
                 global_relations;
             m
@@ -268,11 +260,15 @@
                     else
                         ("Invalid field '"^relation_name^"."^field_name^"'")
                 in
-                    raise (Failure msg)
+                    raise (SQLParseError msg)
             else
                 let r =
+                  try
                     if relation_name = "" then List.hd field_relations
                     else relation_name
+                  with Failure("hd") -> 
+                    raise (SQLParseError("Invalid field '"^
+                           relation_name^"."^field_name^"'"))
                 in
                 let field_type =
                     List.assoc r (List.combine field_relations field_types)
@@ -345,20 +341,25 @@
                   let (rel, field_name) = get_field_and_relation id in
                   let field_relations = get_field_relations fields field_name in
                   let (relation_name, field_type) =
+                    try
                       if rel = "" then List.hd field_relations
                       else 
                           List.find (fun (r,_) -> r = rel) field_relations
+                    with Failure("hd") -> 
+                      raise (SQLParseError("Invalid field '"^
+                             rel^"."^field_name^"'"))
+
                   in
                       if not(List.mem
                           (relation_name, field_name, field_type) group_bys)
                       then
-                          raise (Failure
+                          raise (SQLParseError
                               ("Invalid group by field "^
                                   relation_name^"."^field_name))
                       else
                           (relation_name, field_name, field_type)
 
-            | _ -> raise (Failure
+            | _ -> raise (SQLParseError
                   ("Internal error: expected a `Column for a group-by column"))
 
     (* relalg_lf_t -> string list -> [< `Column of string] list
@@ -394,8 +395,8 @@
         match op_token with
             | `Sum -> RSum([l;r])
             | `Product -> RProd([l;r])
-            | `Minus -> raise Parse_error
-            | `Divide -> raise Parse_error
+            | `Minus -> raise (FeatureUnsupported("Subtraction"))
+            | `Divide -> raise (FeatureUnsupported("Division"))
 
     let create_map_term_list aggregate_list table join_list predicate_opt =
         let relational =
@@ -425,11 +426,11 @@
                                             qualify_aggregate_arguments f plan
                                         in
                                             RVal(AggSum(new_f, plan))
-                                  | _ -> raise (Failure
+                                  | _ -> raise (SQLParseError
                                         ("Found multiple aggregate arguments "^
                                             "for standard aggregates."))
                               end
-                        | _ -> raise (Failure
+                        | _ -> raise (SQLParseError
                               ("Found non-aggregate in select list.")))
                 aggregate_list
         in
@@ -498,12 +499,22 @@
         let fields = get_field_relations_map base_relations in
             List.map (fun (r,f,t) ->
                 (rename_var (r^"."^f) fields, t)) group_bys
+    
+    let extract_relation_sources sources = 
+        (Hashtbl.fold 
+          (fun relation (source, framing, adaptor) list -> 
+            (relation, source, framing, adaptor)::list) 
+          sources []
+        )
 
-    let concat_stmt (t,s,p) n =
+    let concat_stmt (t,s,p) (n,old_sources) =
         let r = if t = [] then n else [(t,s,p)]@n in
-            (r) (*, relation_sources) *)
+            (r, (extract_relation_sources relation_sources))
 
     let get_db_schema t_l =
+      if t_l == [] then
+        raise (SQLParseError("Looking up schema for empty term list: get_db_schema"))
+      else
         let br = get_base_relations (List.hd t_l) in
             List.fold_left
                 (fun acc r -> match r with
@@ -512,27 +523,6 @@
                     | _ -> raise (Failure
                           "Internal error: expected a relation."))
             [] br
-
-    let get_source_info stream_type source_type
-            source_args source_instance tuple_type adaptor_type adaptor_bindings_str
-            =
-        let adaptor_bindings =
-            let bindings_l = Str.split (Str.regexp ",") adaptor_bindings_str in
-            let (crf_l, ctf_l) =
-                List.partition
-                    (fun (c, _) -> (c mod 2) = 0)
-                    (snd (List.fold_left
-                        (fun (c, acc) id -> (c+1, acc@[(c, id)]))
-                        (0, []) bindings_l))
-            in
-            let (_, rel_fields) = List.split crf_l in
-            let (_, tuple_fields) = List.split ctf_l in
-                List.combine
-                    (List.map String.uppercase rel_fields) tuple_fields
-        in
-        let thrift_ns = "" in
-            (stream_type, source_type, source_args, tuple_type,
-            adaptor_type, adaptor_bindings, thrift_ns, source_instance)
 
 %}
 
@@ -546,6 +536,7 @@
 %token AS
 %token JOIN INNER OUTER LEFT RIGHT ON   
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
+%token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS
 %token EOSTMT
@@ -553,14 +544,24 @@
 
 // start   
 %start dbtoasterSqlList
-// (terms, db_schema, params) list, relation_sources
-%type <(Calculus.readable_term_t list * (string * Calculus.var_t list) list * Calculus.var_t list) list (* * (string, source_info) Hashtbl.t *)> dbtoasterSqlList
+/* 
+  List of
+    List of Query Expressions       : target terms
+    List of Input Relations         : db schema
+    List of Output Vars / Group Bys : query parameters
+  List of                           : relation sources
+    Relation Name
+    Input Source
+    Framing Method
+    Read Adaptor
+*/
+%type < ( Calculus.readable_term_t list * (string * Calculus.var_t list) list * Calculus.var_t list) list * (string * M3.source_t * M3.framing_t * M3.adaptor_t) list > dbtoasterSqlList
     
 %%
 
 dbtoasterSqlList:
-| dbtoasterSqlStmt EOF    { concat_stmt $1 [] }
-| dbtoasterSqlStmt EOSTMT EOF    { concat_stmt $1 [] }
+| dbtoasterSqlStmt EOF    { concat_stmt $1 ([],[]) }
+| dbtoasterSqlStmt EOSTMT EOF    { concat_stmt $1 ([],[]) }
 | dbtoasterSqlStmt EOSTMT dbtoasterSqlList
           { clear_aliases(); concat_stmt $1 $3 }
 
@@ -579,58 +580,35 @@ createAnonTableStmt:
             add_relation name fields
     }
 
+sourceStmt:
+|   FILE STRING       { M3.FileSource($2) }
+|   SOCKET STRING INT { M3.SocketSource(Unix.inet_addr_of_string $2, $3) }
+|   SOCKET INT        { M3.SocketSource(Unix.inet_addr_any, $2) }
+
+framingStmt:
+|   FIXEDWIDTH INT                  { M3.FixedSize($2) }
+|   LINE DELIMITED                  { M3.Delimited("\n") }
+|   STRING DELIMITED                { M3.Delimited($1) }
+|   VARSIZE                         { M3.VarSize(0,0) }
+|   VARSIZE OFFSET INT              { M3.VarSize($3,0) }
+|   VARSIZE OFFSET INT ADJUSTBY INT { M3.VarSize($3,$5) }
+
+adaptorParams:
+|   ID SETVALUE STRING                     { [($1,$3)] }
+|   ID SETVALUE STRING COMMA adaptorParams { ($1,$3)::$5 }
+
+adaptorStmt:
+|   ID LPAREN adaptorParams RPAREN { ($1, $3) }
+|   ID                             { ($1, []) }
+
 createTableStmt:
-|   CREATE TABLE ID LPAREN fieldList RPAREN
-    FROM STRING SOURCE STRING TUPLE STRING
-    {
+|   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt 
+    framingStmt adaptorStmt { 
         let name = $3 in
         let fields = $5 in
-        let source_info = 
-            let tuple_type = $12 in
-            let adaptor_type =
-                "DBToaster::Adaptors::InsertAdaptor<"^tuple_type^">" in
-            let adaptor_bindings_str =
-                String.concat "," (List.map
-                    (fun (id,_) -> id^","^(String.lowercase id)) fields)
-            in
-                get_source_info "file" $10 $8 (name^"Source")
-                    tuple_type adaptor_type adaptor_bindings_str
-        in
-            add_relation name fields;
-            add_source name source_info
-    }
-
-|   CREATE TABLE ID LPAREN fieldList RPAREN
-    FROM STRING
-    SOURCE STRING ARGS STRING INSTANCE STRING
-    TUPLE STRING
-    ADAPTOR STRING
-    {
-        let name = $3 in
-        let fields = $5 in
-        let source_info =
-            let adaptor_bindings_str =
-                String.concat "," (List.map
-                    (fun (id, ty) -> id^","^(String.lowercase id)) fields)
-            in
-                get_source_info $8 $10 $12 $14 $16 $18 adaptor_bindings_str
-        in
-            add_relation name fields;
-            add_source name source_info
-    }
-
-|   CREATE TABLE ID LPAREN fieldList RPAREN
-    FROM STRING
-    SOURCE STRING ARGS STRING INSTANCE STRING
-    TUPLE STRING
-    ADAPTOR STRING BINDINGS STRING
-    {
-        let name = $3 in
-        let fields = $5 in
-        let source_info = get_source_info $8 $10 $12 $14 $16 $18 $20
-        in
-            add_relation name fields;
-            add_source name source_info
+        let source_info = ($8,$9,$10) in
+          add_relation name fields;
+          add_source name source_info
     }
 
 fieldList:
@@ -667,7 +645,12 @@ selectStmt:
                           create_map_term_list
                               aggregate_list table join_list predicate_opt
                       in
-                      let base_relations = get_base_relations (List.hd t_l) in
+                      let base_relations = 
+                        try
+                          get_base_relations (List.hd t_l)
+                        with Failure("hd") -> 
+                          raise (SQLParseError("Looking up relations for empty term list: selectStmt"))
+                      in
                       let valid_group_bys =
                           qualify_group_by_fields
                               base_relations group_by_fields group_by_columns
@@ -682,7 +665,7 @@ selectStmt:
                       in
                           (renamed_t_l, db_schema, params)
 
-                | _ -> raise Parse_error
+                | _ -> raise (FeatureUnsupported("ORDER BY"))
     }   
 
 scalarSelectStmt:
@@ -699,7 +682,11 @@ scalarSelectStmt:
             in
                 match cl with
                     | [] -> List.rev al
-                    | _ -> raise Parse_error
+                    | `Column(a)::l -> 
+                        raise (SQLParseError(
+                          "Found non-aggregate "^a^" in select list."
+                        ))
+                    | _ -> failwith "Non-aggregate, non-column type in select list (Bug in Sqlparser.mly)"
         in
         let table = $4 in
         let join_list = $5 in
@@ -707,8 +694,12 @@ scalarSelectStmt:
         let t_l = create_map_term_list
             aggregate_list table join_list predicate_opt
         in
+          try
             pop_relations (get_base_relations (List.hd t_l));
             (t_l, [], [])
+          with Failure("hd") ->
+            raise (SQLParseError("Looking up schema for empty term list"))
+
     }
 
 //
@@ -726,7 +717,8 @@ selectItem:
           {
               try `Aggregate(
                   Hashtbl.find aggregate_functions (String.uppercase $1), $3)
-              with Not_found -> raise Parse_error
+              with Not_found -> 
+                  raise (SQLParseError("Unknown aggregate '"^$1^"'"))
           }
 
 // 
@@ -739,8 +731,7 @@ tableExpression:
             let r_fields : Calculus.var_t list =
                 try (Hashtbl.find relations r)
                 with Not_found ->
-                    print_endline ("Could not find relation "^r);
-                    raise Parse_error
+                    raise (SQLParseError("Undefined Relation '"^r^"'"))
             in
             let relation = Rel(r, r_fields) in
                 push_relation relation;
@@ -753,8 +744,7 @@ tableExpression:
             let r_fields =
                 try Hashtbl.find relations r
                 with Not_found ->
-                    print_endline ("Could not find relation "^r);
-                    raise Parse_error
+                    raise (SQLParseError("Undefined Relation '"^r^"'"))
             in
             let relation = Rel(new_r, r_fields) in
                 add_alias r new_r;
@@ -768,7 +758,7 @@ tableExpression:
            let subplan = $2 in
            let rel_name = $4 in
            *)
-           raise Parse_error
+           raise (FeatureUnsupported ("Nested SELECT Statements in Target"))
        }
 
 //
@@ -783,9 +773,12 @@ joinClause:
 | COMMA tableExpression                      { [$2] }
 | JOIN tableExpression joinOnClause          { [$2] @ $3 }
 | INNER JOIN tableExpression joinOnClause    { [$3] @ $4 }
-| OUTER JOIN tableExpression joinOnClause    { raise Parse_error }
-| LEFT  JOIN tableExpression joinOnClause    { raise Parse_error }   
-| RIGHT JOIN tableExpression joinOnClause    { raise Parse_error }   
+| OUTER JOIN tableExpression joinOnClause
+                              { raise (FeatureUnsupported("OUTER JOIN")) }
+| LEFT  JOIN tableExpression joinOnClause     
+                              { raise (FeatureUnsupported("LEFT JOIN")) } 
+| RIGHT JOIN tableExpression joinOnClause
+                              { raise (FeatureUnsupported("RIGHT JOIN")) }  
 
 // TODO: where do we check the join predicate to ensure no nested aggregates?
 joinOnClause:   
@@ -810,9 +803,9 @@ constraintList:
 | LPAREN constraintList RPAREN          { $2 }
 
 atomicConstraint:
-| mapTerm cmp_op mapTerm                 { create_constraint $2 $1 $3 }
-| mapTerm BETWEEN mapTerm AND mapTerm    { raise Parse_error }
-| LPAREN atomicConstraint RPAREN         { $2 }
+| mapTerm cmp_op mapTerm               { create_constraint $2 $1 $3 }
+| mapTerm BETWEEN mapTerm AND mapTerm  { raise (FeatureUnsupported("BETWEEN")) }
+| LPAREN atomicConstraint RPAREN       { $2 }
 
 //
 // Expressions
@@ -824,11 +817,14 @@ mapTermList:
 mapTerm:
 | value                       { RVal($1) }
 | scalarSelectStmt
-          {
-              let (t_l,_,_) = $1 in
-                  if List.length t_l = 1 then List.hd t_l
-                  else raise Parse_error
-          }
+    {
+      let (t_l,_,_) = $1 in
+        try
+          if List.length t_l = 1 then List.hd t_l
+          else raise (FeatureUnsupported ("Nested SELECT Statements in Target"))
+        with Failure("hd") -> 
+          raise (SQLParseError("Looking up schema for empty term list"))
+    }
 | LPAREN mapTerm RPAREN       { $2 }
 | mapTerm arith_op mapTerm    { create_binary_map_term $2 $1 $3 }
 

@@ -137,6 +137,7 @@ val readable_term: term_t -> readable_term_t
 val make_term:     readable_term_t -> term_t
 
 val decode_map_term: term_t -> (string * (var_t list))
+val map_term: string -> var_t list -> term_t
 
 (* other output functions *)
 
@@ -324,6 +325,16 @@ val relcalc_delta: term_mapping_t ->
 *)
 val term_delta: term_mapping_t ->
                 bool -> string -> (var_t list) -> term_t -> term_t
+
+(*  (equate_terms term_a term_b): weak comparison operator. 
+    If the specified terms are equivalent queries (they produce the same result
+    set), return a mapping of 
+      Variables In term_a -> Equivalent variable in term_b
+    Throws TermsNotEquivalent if the terms are not equivalent queries.
+*)
+exception TermsNotEquivalent
+val equate_terms: readable_term_t -> 
+                  readable_term_t -> (string Map.Make(String).t)
 
 (* (fold_calc sum_f prod_f neg_f leaf_f c) scans through c and applies leaf_f
    to all leaves in c, and sum_f, prod_f, and neg_f recursively to the results
