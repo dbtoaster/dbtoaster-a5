@@ -48,10 +48,10 @@ INCLUDE_OBJ = \
 	unix.cma
 INCLUDE_OPT = $(subst .cma,.cmxa,$(INCLUDE_OBJ))
  
-OC_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OBJ)
+OC_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OBJ) -g
 OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT)
 
-all: top 
+all: top driver
 
 lex_yacc:
 	ocamlyacc $(YACC_SOURCE)

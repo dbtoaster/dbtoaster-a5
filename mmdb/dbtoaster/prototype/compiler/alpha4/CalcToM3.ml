@@ -351,7 +351,7 @@ let translate_map_ref ((t, mt): Compiler.map_ref_t): map_ref_t =
       | _ -> failwith "LHS of a map definition is not an External()"
   ))
 
-module M3ProgInProgress = struct
+module M3InProgress = struct
   type mapping_params = (string * int list * int list)
   type map_mapping = mapping_params StringMap.t
   
@@ -394,7 +394,7 @@ module M3ProgInProgress = struct
     let (map_name, map_vars) = Calculus.decode_map_term map_term in
     let mapping = 
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
-        if result == NoMapping then
+        if result = NoMapping then
           try 
             let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
             let cmp_in_vars = split_vars true cmp_vars cmp_bindings in
@@ -403,12 +403,12 @@ module M3ProgInProgress = struct
                          (haystack:Calculus.var_t list) = 
               let (index, _) =
                 (List.fold_left (fun (found, index) cmp -> 
-                  ( (if cmp == needle then index else found),
+                  ( (if cmp = needle then index else found),
                     index + 1
                   )
                 ) (-1, 1) haystack)
               in
-              if index == -1 then raise Calculus.TermsNotEquivalent
+              if index = -1 then raise Calculus.TermsNotEquivalent
                                    (*shouldn't happen*)
               else index
             in
@@ -432,7 +432,7 @@ module M3ProgInProgress = struct
           curr_del,
           StringMap.add map_name m curr_mapping, (* just add a mapping *)
           curr_refs,
-          curr_ra_map (* no new triggers == no new mappings *)
+          curr_ra_map (* no new triggers = no new mappings *)
         )
       | NoMapping  -> 
         let (insert_trigs, delete_trigs) =

@@ -130,7 +130,7 @@ val translate_map_ref: Compiler.map_ref_t -> map_ref_t
   More importantly, this makes it possible for the output of one compilation
   run to be easily merged with the output of other compilation runs.
 *)
-module M3ProgInProgress : sig
+module M3InProgress : sig
   type t
   type insertion = (map_ref_t * M3.trig_t list * relation_set_t)
   
@@ -140,4 +140,11 @@ module M3ProgInProgress : sig
   val get_maps: t -> M3.map_type_t list
   val get_triggers: t -> M3.trig_t list
   val finalize: t -> M3.prog_t
+  
+  (* generate_m3 can be passed in to Compiler.compile to produce 
+     an M3ProgInProgress.t  Call finalize on it to get an M3.prog_t
+  *) 
+  val generate_m3: Compiler.map_ref_t -> 
+                   Compiler.trigger_definition list ->
+                   t -> t
 end
