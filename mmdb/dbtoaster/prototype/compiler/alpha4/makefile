@@ -45,7 +45,7 @@ INCLUDE_DIR = \
 	-I lib/ocaml
 INCLUDE_OBJ = \
 	str.cma \
-	unix.cma
+	unix.cma 
 INCLUDE_OPT = $(subst .cma,.cmxa,$(INCLUDE_OBJ))
  
 OC_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OBJ) -g
@@ -85,7 +85,8 @@ query: runtime query.ml
 	ocamlopt $(INCLUDES) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(XOBJ) query.ml
 
 clean:
-	rm -f *.cmi *.cmo *.cmx *.o \
-	    codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o \
-	    lib/ocaml/*.cmi lib/ocaml/*.cmo lib/ocaml/*.cmx lib/ocaml/*.o \
-	    test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)
+	rm -f $(OBJ) $(subst .cmo,.cmi,$(OBJ)) $(XOBJ) dbtoaster dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)
+#	rm -f *.cmi *.cmo *.cmx *.o \
+#	    codegen/ocaml/*.cmi codegen/ocaml/*.cmo codegen/ocaml/*.cmx codegen/ocaml/*.o \
+#	    lib/ocaml/*.cmi lib/ocaml/*.cmo lib/ocaml/*.cmx lib/ocaml/*.o \
+#	    test/*.cmi test/*.cmo test/*.cmx test/*.o dbtoaster dbtoaster_top m3_ex vwap $(GENERATED_SOURCE)

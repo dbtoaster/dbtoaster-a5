@@ -190,6 +190,19 @@ struct
       if (List.length x2) = 0 then default
       else if (List.length x2) = 1 then (List.hd x2)
       else raise NonFunctionalMappingException
+    
+   let string_of_table_fn (theta:('a,'b) table_fn_t)
+                          (left_to_s:('a -> string))
+                          (right_to_s:('b -> string)): string =
+     match (List.fold_left (fun accum (x,y) ->
+          Some((match accum with | Some(a) -> a^", " | None -> "")^
+               "{ "^(left_to_s x)^
+               " => "^(right_to_s y)^
+               " }"
+          )
+        ) None theta) with
+      | Some(a) -> "[ "^a^" ]"
+      | None -> "[]"
 
    let apply_strict (theta: ('a, 'b) table_fn_t) (x: 'a): 'b =
       let g (y, z) = if(x = y) then [z] else []
@@ -228,6 +241,10 @@ struct
       The result is a list of lists of variables and in general contains
       duplicates
    *)
+   let filter_selfs eqns = List.filter (fun (a,b) -> a <> b) eqns 
+   
+   let get_selfs eqns = List.filter (fun (a,b) -> a = b) eqns 
+   
    let equivalence_classes (eqs: ('v * 'v) list) =
       List.map ListAsSet.multiunion
          (HyperGraph.connected_components (fun x -> x)
@@ -286,9 +303,9 @@ struct
                ('v mapping_t * (('v * 'v) list)) =
       let (x, y) = (List.split
                       (List.map (fun comp -> (unifier0 comp identities))
-                                (equivalence_classes equations)))
+                                (equivalence_classes (filter_selfs equations))))
       in
-      (List.flatten x, List.flatten y)
+      ((List.flatten x)@(get_selfs equations), List.flatten y)
 
    (* mapping is a partial function. returns mapping(x) if mapping is defined
       on x, otherwise x. *)

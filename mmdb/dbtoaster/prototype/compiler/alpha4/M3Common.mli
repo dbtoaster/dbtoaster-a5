@@ -6,6 +6,7 @@ val string_of_var_type: M3.var_type_t -> string
 
 val pretty_print_map_access: M3.mapacc_t -> string
 val pretty_print_calc: M3.calc_t -> string
+val pretty_print_stmt: M3.stmt_t -> string
 val pretty_print_trig: M3.trig_t -> string
 val pretty_print_type_list: M3.var_type_t list -> string
 val pretty_print_map: M3.map_type_t -> string

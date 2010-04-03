@@ -50,12 +50,15 @@ and pretty_print_calc calc : string =
     | Const(c)           -> string_of_const(c)
     | Var(x)             -> x
 
+and pretty_print_stmt (mapacc, delta_term) : string =
+  (pretty_print_map_access mapacc)^" += "^(pretty_print_calc delta_term)
+
 and pretty_print_trig (pm, rel_id, var_id, statements) : string =
   "ON " ^
   (match pm with Insert -> "+" | Delete -> "-") ^
   rel_id ^ "[" ^(vars_to_string var_id)^ "] : " ^
-  (List.fold_left (fun oldstr (mapacc, delta_term) ->
-    oldstr^"\n"^(pretty_print_map_access mapacc)^" += "^(pretty_print_calc delta_term)
+  (List.fold_left (fun oldstr stmt ->
+    oldstr^"\n"^(pretty_print_stmt stmt)
   ) " " statements)^"\n"
   
 and pretty_print_type_list (l:var_type_t list) : string = 

@@ -214,7 +214,11 @@ let rec to_m3
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
               (M3.Lt (lhs, rhs), ra_map)
          (* AtomicConstraint(Neq, t1, t2) -> ... *)
-       | _ -> failwith "Compiler.to_m3: TODO cond"
+       | _ -> failwith ("Compiler.to_m3: TODO constraint '"^
+                   (Calculus.relcalc_as_string
+                     (Calculus.make_relcalc (Calculus.RA_Leaf(lf))))^"' in '"^
+                   (Calculus.term_as_string
+                     (Calculus.make_term t))^"'")
    in
    let calc_to_m3 calc =
       match calc with
@@ -370,6 +374,10 @@ module M3InProgress = struct
   let add_to_trigger_map rel vars stmts tmap =
     if List.mem_assoc rel tmap then
       let (tvars, tstmts) = List.assoc rel tmap in
+      
+       (print_string (rel^"["^(Util.string_of_list ", " vars)^"] -> ["^
+                             (Util.string_of_list ", " tvars)^"]\n");
+       print_string ((Util.list_to_string M3Common.pretty_print_stmt (List.map (M3Common.rename_vars vars tvars) stmts))^"\n");
       let joint_stmts = 
         (* We assume that we receive statements through build in the order that
            the statements should be executed in; This is rarely relevant but it
@@ -383,6 +391,7 @@ module M3InProgress = struct
             stmts
       in
         (rel, (tvars, joint_stmts))::(List.remove_assoc rel tmap)
+        )
     else
        (rel, (vars, stmts))::tmap
 
@@ -395,7 +404,16 @@ module M3InProgress = struct
     let mapping = 
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
         if result = NoMapping then
+          (print_string ("Comparing "^(Calculus.term_as_string map_term)^
+                         "{ "^(Calculus.term_as_string query_term)^
+                         " } =?= "^(Calculus.term_as_string cmp_map_term)^
+                         "{ "^(Calculus.term_as_string cmp_term)^
+                         " }\n");
           try 
+            let var_mappings = Calculus.equate_terms 
+                (Calculus.readable_term query_term)
+                (Calculus.readable_term cmp_term)
+            in
             let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
             let cmp_in_vars = split_vars true cmp_vars cmp_bindings in
             let cmp_out_vars = split_vars false cmp_vars cmp_bindings in
@@ -408,10 +426,11 @@ module M3InProgress = struct
                   )
                 ) (-1, 1) haystack)
               in
-              if index = -1 then raise Calculus.TermsNotEquivalent
+              if index = -1 then raise (Calculus.TermsNotEquivalent("Variable Not Found"))
                                    (*shouldn't happen*)
               else index
             in
+              (print_string "Found!\n";
               Mapping(
                 cmp_name,
                 List.fold_right (fun in_var mapping -> 
@@ -421,7 +440,9 @@ module M3InProgress = struct
                   (index_of out_var cmp_out_vars)::mapping
                 ) (split_vars false map_vars map_bindings) []
               )
-          with Calculus.TermsNotEquivalent -> NoMapping
+              )
+          with Calculus.TermsNotEquivalent(a) -> (print_string (a^"\n");NoMapping)
+        )
         else result
       ) NoMapping (snd (List.split curr_refs))
     in
@@ -473,7 +494,7 @@ module M3InProgress = struct
                         )
                       )
                     ),
-                    Calculus.map_term relation schema
+                    Calculus.map_term ("INPUT_MAP_"^relation) schema
                   ),
                 (* The triggers: On insert add 1, On delete sub 1 *)
                 [ (
@@ -483,15 +504,15 @@ module M3InProgress = struct
                         M3.Const(M3.CFloat(0.0))
                       ), (
                         M3.Const(M3.CFloat(1.0))
-                      ) ) ] );
-                  (
+                      ) ) ] )
+                  (*
                   M3.Delete, relation, (translate_schema schema),
                   [ ( ( "INPUT_MAP_"^relation, [], 
                         (translate_schema schema), 
                         M3.Const(M3.CFloat(0.0))
                       ), (
                         M3.Const(M3.CFloat(-1.0))
-                      ) ) ] )
+                      ) ) ] *)
                 ],
                 (* The RA Map; Should technically be negative, but eh *)
                 StringMap.empty
@@ -538,25 +559,39 @@ module M3InProgress = struct
   let generate_m3 (map_ref: Compiler.map_ref_t)
                   (triggers: Compiler.trigger_definition list)
                   (accum: t): t =
+    (print_string ("Translating:"^(Calculus.term_as_string (fst map_ref))^
+                   " := "^(Calculus.term_as_string (snd map_ref))^"\n"));
     let map_ref_as_m3 = translate_map_ref map_ref in
-    let (target_access, ra_map1) = to_m3_map_access map_ref_as_m3 in
-    let (update, ra_map2) = 
-      (to_m3 (Calculus.readable_term (fst map_ref)) 
-             (get_map_refs accum)
-      ) in
-    let triggers_as_m3 = 
-      List.map (fun (delete, reln, relvars, params, expr) ->
+    let (triggers_as_m3, ra_map) = 
+      List.fold_left (fun (tlist,ra_map) 
+                          (delete, reln, relvars, params, expr) -> (********** <- It's here: Use Params ********)
+        let sub_map_params (map_definition, map_term, map_bindings) params =
+          (map_definition, (Calculus.map_term (fst (Calculus.decode_map_term map_term)) params), map_bindings)
+        in
+        let (target_access, ra_map_access) = (to_m3_map_access (sub_map_params map_ref_as_m3 params)) in
+        let (update,ra_map_update) = (to_m3 (Calculus.readable_term expr) 
+                                         (get_map_refs accum)) in
+        let ra_map_ret = MapAsSet.union_right (MapAsSet.union_right ra_map_access ra_map_update) ra_map in
+        let update_trigger = (
+            (if delete then M3.Delete else M3.Insert),
+            reln, (translate_schema relvars),
+            [(target_access, update)]
+          )
+        in
         (
-          (if delete then M3.Delete else M3.Insert),
-          reln, (translate_schema relvars),
-          [(target_access, update)]
+          (print_string ("Produced Trigger: "^(M3Common.pretty_print_trig update_trigger));
+          if delete then 
+            (tlist, ra_map)
+          else
+            (tlist @ [ update_trigger ], ra_map_ret)
+          )
         )
-      ) triggers
+      ) ([], StringMap.empty) triggers
     in
       build accum (
         map_ref_as_m3,
         triggers_as_m3,
-        MapAsSet.union_right ra_map1 ra_map2
+        ra_map
       )
 end
 

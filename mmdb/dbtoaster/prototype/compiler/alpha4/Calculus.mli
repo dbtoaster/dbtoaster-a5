@@ -332,7 +332,7 @@ val term_delta: term_mapping_t ->
       Variables In term_a -> Equivalent variable in term_b
     Throws TermsNotEquivalent if the terms are not equivalent queries.
 *)
-exception TermsNotEquivalent
+exception TermsNotEquivalent of string
 val equate_terms: readable_term_t -> 
                   readable_term_t -> (string Map.Make(String).t)
 

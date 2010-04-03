@@ -396,6 +396,53 @@ let polynomial (q: relcalc_t): relcalc_t = CalcRing.mk_sum (monomials q)
 
 
 
+(* pseudocode output of relcalc expressions and terms. *)
+let rec relcalc_as_string (relcalc: relcalc_t): string =
+   let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
+   let prod_f l = (Util.string_of_list " and " l) in
+   let neg_f x = "-("^x^")" in
+   let constraint_as_string c x y =
+            (term_as_string x) ^ c ^ (term_as_string y) in
+   let leaf_f lf =
+      match lf with
+         AtomicConstraint(c,  x, y) ->
+            let op = match c with
+               Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
+            in
+            constraint_as_string op  x y
+       | False       -> "false"
+       | True        -> "true"
+       | Rel(r, sch) -> 
+            r^"("^(Util.string_of_list ", " (fst (List.split sch)))^")"
+   in
+   CalcRing.fold sum_f prod_f neg_f leaf_f relcalc
+
+and term_as_string (m: term_t): string =
+   let leaf_f (lf: term_lf_t) =
+   (match lf with
+      Const(c)           ->
+         (match c with
+            Int(i)    -> string_of_int i
+          | Double(d) -> string_of_float d
+          | Long(l)   -> "(int64 output not implemented)" (* TODO *)
+          | String(s) -> "'" ^ s ^ "'"
+         )
+    | Var(x)             -> (fst x)
+    | External(n,params) -> 
+          n^"["^(Util.string_of_list ", " (fst (List.split params)))^"]"
+    | AggSum(f,r)        ->
+      if (constraints_only r) then
+         "(if " ^ (relcalc_as_string r) ^ " then " ^
+                  (term_as_string    f) ^ " else 0)"
+      else
+         "AggSum("^(term_as_string f)^", " ^(relcalc_as_string r)^")"
+   )
+   in (TermRing.fold (fun l -> "("^(Util.string_of_list "+" l)^")")
+                     (fun l -> "("^(Util.string_of_list "*" l)^")")
+                     (fun x -> "-("^x^")")
+                     leaf_f m)
+;;
+
 
 
 
@@ -425,11 +472,14 @@ let extract_substitutions (monomial: relcalc_t)
                           (var_mapping_t * relcalc_t) =
    let (eqs, rest) = split_off_equalities monomial
    in
+ (*print_string ("substitutions for: "^(relcalc_as_string monomial)^"\n")*)
+ (*print_string ("eqs: "^(Util.Function.string_of_table_fn eqs fst fst)^"\n")*)
    (* an equation will be in eqs_to_keep if it tries to set two bound vars
       equal, where we are not allowed to replace either. We have to keep
       these equalities. *)
    let (theta, eqs_to_keep) = Util.Vars.unifier eqs bound_vars
    in
+ (*print_string ("t: "^(Util.Function.string_of_table_fn theta fst fst)^"\n")*)
    let f (x,y) = CalcRing.mk_val (AtomicConstraint(Eq,
                     TermRing.mk_val(Var(x)), TermRing.mk_val(Var(y))))
    in
@@ -549,7 +599,7 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
                raise (Assert0Exception "Calculus.simplify_roly.t_leaf_f")
             else if (f = TermRing.zero) then ([], TermRing.zero)
             else
-               let (b, non_eq_cons) =
+               let ((b:(var_t * var_t) list), non_eq_cons) =
                   simplify_calc_monomial recurse r bound_vars
                in
                let f1 = apply_variable_substitution_to_term b f
@@ -595,55 +645,6 @@ let simplify (term: term_t)
    in
    List.filter (fun (_, t) -> t <> TermRing.zero)
       (List.map simpl (TermRing.sum_list (roly_poly term)))
-
-
-(* pseudocode output of relcalc expressions and terms. *)
-let rec relcalc_as_string (relcalc: relcalc_t): string =
-   let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
-   let prod_f l = (Util.string_of_list " and " l) in
-   let neg_f x = "-("^x^")" in
-   let constraint_as_string c x y =
-            (term_as_string x) ^ c ^ (term_as_string y) in
-   let leaf_f lf =
-      match lf with
-         AtomicConstraint(c,  x, y) ->
-            let op = match c with
-               Eq -> "=" | Lt -> "<" | Le -> "<=" | Neq -> "<>"
-            in
-            constraint_as_string op  x y
-       | False       -> "false"
-       | True        -> "true"
-       | Rel(r, sch) -> 
-            r^"("^(Util.string_of_list ", " (fst (List.split sch)))^")"
-   in
-   CalcRing.fold sum_f prod_f neg_f leaf_f relcalc
-
-and term_as_string (m: term_t): string =
-   let leaf_f (lf: term_lf_t) =
-   (match lf with
-      Const(c)           ->
-         (match c with
-            Int(i)    -> string_of_int i
-          | Double(d) -> string_of_float d
-          | Long(l)   -> "(int64 output not implemented)" (* TODO *)
-          | String(s) -> "'" ^ s ^ "'"
-         )
-    | Var(x)             -> (fst x)
-    | External(n,params) -> 
-          n^"["^(Util.string_of_list ", " (fst (List.split params)))^"]"
-    | AggSum(f,r)        ->
-      if (constraints_only r) then
-         "(if " ^ (relcalc_as_string r) ^ " then " ^
-                  (term_as_string    f) ^ " else 0)"
-      else
-         "AggSum("^(term_as_string f)^", " ^(relcalc_as_string r)^")"
-   )
-   in (TermRing.fold (fun l -> "("^(Util.string_of_list "+" l)^")")
-                     (fun l -> "("^(Util.string_of_list "*" l)^")")
-                     (fun x -> "-("^x^")")
-                     leaf_f m)
-
-
 
 
 let rec extract_aggregates_from_calc (aggressive: bool) (relcalc: relcalc_t) =
@@ -704,7 +705,7 @@ let decode_map_term (map_term: term_t):
                     (string * (var_t list)) =
    match (readable_term map_term) with
       RVal(External(n, vs)) -> (n, vs)
-    | _ -> failwith "Compiler.decode_map_term";;
+    | _ -> failwith "Calculus.decode_map_term";;
 
 let map_term (map_name:string) (map_vars:var_t list): term_t =
   make_term (RVal(External(map_name, map_vars)))
@@ -923,7 +924,7 @@ and term_delta (theta: term_mapping_t) (delete: bool)
    TermRing.delta (leaf_delta delete) term
 
 
-exception TermsNotEquivalent
+exception TermsNotEquivalent of string
 module StringMap = Map.Make(String)
 
 let rec equate_terms (term_a:readable_term_t) 
@@ -931,15 +932,16 @@ let rec equate_terms (term_a:readable_term_t)
   let build_mapping:(var_t list -> var_t list -> string StringMap.t) =
     List.fold_left2 
       (fun mapping (a_name, a_type) (b_name, b_type) ->
-        if a_type == b_type then
+        if a_type = b_type then
           if StringMap.mem a_name mapping then
-            if (StringMap.find a_name mapping) == b_name then
+            if (StringMap.find a_name mapping) = b_name then
               mapping
-            else raise TermsNotEquivalent
+            else raise (TermsNotEquivalent("Inconsistent Variable Mapping: "^a_name^"->"^
+                                          (StringMap.find a_name mapping)^" or "^b_name))
           else 
             StringMap.add a_name b_name mapping
         else
-          raise TermsNotEquivalent (* TODO: type escalation? *)
+          raise (TermsNotEquivalent("No type escalation yet")) (* TODO: type escalation? *)
       ) StringMap.empty
   in
   let merge_mappings:
@@ -947,20 +949,21 @@ let rec equate_terms (term_a:readable_term_t)
     StringMap.fold 
       (fun var_a var_b merged_mapping ->
         if StringMap.mem var_a merged_mapping then
-          if (StringMap.find var_a merged_mapping) == var_b then
+          if (StringMap.find var_a merged_mapping) = var_b then
             merged_mapping
           else
-            raise TermsNotEquivalent
+            raise (TermsNotEquivalent("Inconsistent Variable Mapping: "^var_a^"->"^
+                                     (StringMap.find var_a merged_mapping)^" or "^var_b))
         else
           StringMap.add var_a var_b merged_mapping
       )
   in
   let equate_c_leaves lf_a lf_b =
     match lf_a with 
-    | False -> if lf_b == False then StringMap.empty 
-                                else raise TermsNotEquivalent
-    | True  -> if lf_b == True  then StringMap.empty 
-                                else raise TermsNotEquivalent
+    | False -> if lf_b = False then StringMap.empty 
+                                else raise (TermsNotEquivalent("c_leaf: false != true"))
+    | True  -> if lf_b = True  then StringMap.empty 
+                                else raise (TermsNotEquivalent("c_leaf: true != false"))
     | AtomicConstraint(cmp, term_a_1, term_a_2) ->
       (match lf_b with 
       | AtomicConstraint(cmp, term_b_1, term_b_2) ->
@@ -968,48 +971,48 @@ let rec equate_terms (term_a:readable_term_t)
                        (equate_terms term_a_2 term_b_2)
         (* TODO: for some comparators, we might be able to swap
            term_b_1 and term_b_2 *)
-      | _ -> raise TermsNotEquivalent
+      | _ -> raise (TermsNotEquivalent("Atomic Constraint != something"))
       )
     | Rel(name_a, vars_a) ->
       (match lf_b with
       | Rel(name_b, vars_b) ->
-        if name_a == name_b then build_mapping vars_a vars_b
-                            else raise TermsNotEquivalent
-      | _ -> raise TermsNotEquivalent)
+        if name_a = name_b then build_mapping vars_a vars_b
+                            else raise (TermsNotEquivalent(name_a^"[] != "^name_b^"[]"))
+      | _ -> raise (TermsNotEquivalent((name_a^"[] != something not a relation"))))
   in
   let rec equate_calc phi_a phi_b =
     match phi_a with
     | RA_Leaf(lf_a) ->
       (match phi_b with RA_Leaf(lf_b) -> equate_c_leaves lf_a lf_b
-                      | _ -> raise TermsNotEquivalent)
+                      | _ -> raise (TermsNotEquivalent("RA_Leaf != something")))
     | RA_Neg(subcalc_a) ->
       (match phi_b with RA_Neg(subcalc_b) -> equate_calc subcalc_a subcalc_b
-                      | _ -> raise TermsNotEquivalent)
+                      | _ -> raise (TermsNotEquivalent("RA_Neg != something")))
       (* TODO: Double Negation? *)
     | RA_MultiUnion(subcalc_a::[]) ->
       (match phi_b with
       | RA_MultiUnion(subcalc_b::[]) -> equate_calc subcalc_a subcalc_b
-      | _ -> raise TermsNotEquivalent)
+      | _ -> raise (TermsNotEquivalent("RA_MultiUnion([a]) != something not a one-element RA_MultiUnion")))
     | RA_MultiUnion(subcalc_a::rest_a) ->
       (match phi_b with
       | RA_MultiUnion(subcalc_b::rest_b) -> 
         merge_mappings (equate_calc subcalc_a subcalc_b)
              (equate_calc (RA_MultiUnion(rest_a)) (RA_MultiUnion(rest_b)))
-      | _ -> raise TermsNotEquivalent) (* TODO: Ordering shouldn't matter *)
-    | RA_MultiUnion([]) -> if phi_a == phi_b then StringMap.empty
-                                             else raise TermsNotEquivalent
+      | _ -> raise (TermsNotEquivalent("RA_MultiUnion(a) != something not a RA_MultiUnion"))) (* TODO: Ordering shouldn't matter *)
+    | RA_MultiUnion([]) -> if phi_a = phi_b then StringMap.empty
+                                             else raise (TermsNotEquivalent("RA_MultiUnion != something not an empty RA_MultiUnion"))
     | RA_MultiNatJoin(subcalc_a::[]) ->
       (match phi_b with
       | RA_MultiNatJoin(subcalc_b::[]) -> equate_calc subcalc_a subcalc_b
-      | _ -> raise TermsNotEquivalent)
+      | _ -> raise (TermsNotEquivalent("RA_MultiNatJoin([a]) != something not a one-element RA_MultiNatJoin")))
     | RA_MultiNatJoin(subcalc_a::rest_a) ->
       (match phi_b with
       | RA_MultiNatJoin(subcalc_b::rest_b) -> 
         merge_mappings (equate_calc subcalc_a subcalc_b)
              (equate_calc (RA_MultiNatJoin(rest_a)) (RA_MultiNatJoin(rest_b)))
-      | _ -> raise TermsNotEquivalent) (* TODO: Ordering shouldn't matter *)
-    | RA_MultiNatJoin([]) -> if phi_a == phi_b then StringMap.empty
-                                               else raise TermsNotEquivalent
+      | _ -> raise (TermsNotEquivalent("RA_MultiUnion(a) != something not a RA_MultiUnion"))) (* TODO: Ordering shouldn't matter *)
+    | RA_MultiNatJoin([]) -> if phi_a = phi_b then StringMap.empty
+                                               else raise (TermsNotEquivalent("RA_MultiNatJoin != something not an empty RA_MultiNatJoin"))
   in
   let equate_t_leaves lf_a lf_b = 
     match lf_a with
@@ -1018,55 +1021,55 @@ let rec equate_terms (term_a:readable_term_t)
         | AggSum(theta_b, phi_b) -> 
           merge_mappings (equate_terms theta_a theta_b) 
                          (equate_calc phi_a phi_b)
-        | _ -> raise TermsNotEquivalent
+        | _ -> raise (TermsNotEquivalent("AggSum != something"))
       )
-    | Const(c) -> if lf_b == Const(c) then StringMap.empty 
-                                      else raise TermsNotEquivalent
+    | Const(c) -> if lf_b = Const(c) then StringMap.empty 
+                                      else raise (TermsNotEquivalent("Const != Const"))
     | Var(name_a, type_a) -> 
       (match lf_b with
       | Var(name_b, type_b) -> 
-        if type_a == type_b then build_mapping [(name_a, type_a)] 
+        if type_a = type_b then build_mapping [(name_a, type_a)] 
                                                [(name_b, type_b)]
-                            else raise TermsNotEquivalent 
+                            else raise (TermsNotEquivalent("Var("^name_a^") of a different type than Var("^name_b^")"))
                             (* TODO: type escalation? *)
-      | _ -> raise TermsNotEquivalent)
+      | _ -> raise (TermsNotEquivalent("Var != something")))
     | External(name_a, vars_a) -> (* These shouldn't appear anywhere? *)
       (match lf_b with 
       | External(name_b, vars_b) -> 
-        if name_a == name_b then build_mapping vars_a vars_b
-                            else raise TermsNotEquivalent
-      | _ -> raise TermsNotEquivalent)
+        if name_a = name_b then build_mapping vars_a vars_b
+                            else raise (TermsNotEquivalent("External("^name_a^") != External("^name_b^")"))
+      | _ -> raise (TermsNotEquivalent("External != something")))
   in
     match term_a with
     | RVal(lf_a) -> (match term_b with RVal(lf_b) -> equate_t_leaves lf_a lf_b 
-                                     | _ -> raise TermsNotEquivalent)
+                                     | _ -> raise (TermsNotEquivalent("RVal != something")))
     | RNeg(subterm_a) -> 
       (match term_b with RNeg(subterm_b) -> equate_terms subterm_a subterm_b
-                       | _ -> raise TermsNotEquivalent) (* TODO: double negs *)
+                       | _ -> raise (TermsNotEquivalent("RNeg != something"))) (* TODO: double negs *)
     | RProd(subterm_a::[]) -> 
       (match term_b with
       | RProd(subterm_b::[]) -> equate_terms subterm_a subterm_b
-      | _                    -> raise TermsNotEquivalent)
+      | _                    -> raise (TermsNotEquivalent("RProd != one-term RProd")))
     | RProd(subterm_a::rest_a) ->
       (match term_b with
       | RProd(subterm_b::rest_b) -> 
         merge_mappings (equate_terms subterm_a subterm_b)
                        (equate_terms (RProd(rest_a)) (RProd(rest_b)))
-      | _ -> raise TermsNotEquivalent) (* TODO: prod is commutative *)
-    | RProd([]) -> if term_a == term_b then StringMap.empty
-                                       else raise TermsNotEquivalent
+      | _ -> raise (TermsNotEquivalent("RProd != something"))) (* TODO: prod is commutative *)
+    | RProd([]) -> if term_a = term_b then StringMap.empty
+                                       else raise (TermsNotEquivalent("RProd != empty RProd"))
     | RSum(subterm_a::[]) -> 
       (match term_b with
       | RSum(subterm_b::[]) -> equate_terms subterm_a subterm_b
-      | _                   -> raise TermsNotEquivalent)
+      | _                   -> raise (TermsNotEquivalent("RSum != one-term RSum")))
     | RSum(subterm_a::rest_a) ->
       (match term_b with
       | RSum(subterm_b::rest_b) -> 
         merge_mappings (equate_terms subterm_a subterm_b)
                        (equate_terms (RSum(rest_a)) (RSum(rest_b)))
-      | _ -> raise TermsNotEquivalent) (* TODO: sum is commutative *)
-    | RSum([]) -> if term_a == term_b then StringMap.empty
-                                      else raise TermsNotEquivalent
+      | _ -> raise (TermsNotEquivalent("RSum != something"))) (* TODO: sum is commutative *)
+    | RSum([]) -> if term_a = term_b then StringMap.empty
+                                      else raise (TermsNotEquivalent("RSum != empty RSum"))
 
 let fold_calc (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
               (leaf_f: readable_relcalc_lf_t -> 'a) (calc: readable_relcalc_t): 

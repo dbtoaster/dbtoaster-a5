@@ -213,6 +213,7 @@ if language == L_CALC then
 else ();;
 
 (********* TRANSLATE RELCALC TO M3 *********)
+
 let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip = 
   fst
     (List.fold_left (fun (accum,sub_id) q ->
@@ -240,6 +241,8 @@ let m3_prog =
   in
     CalcToM3.M3InProgress.finalize m3_prog_in_prog;;
 
+
+print_string "--------------------------------------\n";;
 if language == L_M3 then
   (
     output_string output_file (M3Common.pretty_print_prog m3_prog);
