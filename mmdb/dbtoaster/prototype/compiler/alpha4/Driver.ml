@@ -242,7 +242,6 @@ let m3_prog =
     CalcToM3.M3InProgress.finalize m3_prog_in_prog;;
 
 
-print_string "--------------------------------------\n";;
 if language == L_M3 then
   (
     output_string output_file (M3Common.pretty_print_prog m3_prog);

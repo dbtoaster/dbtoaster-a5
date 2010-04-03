@@ -167,26 +167,22 @@ and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t):
 and to_m3_map_access 
   ((map_definition, map_term, bindings):map_ref_t) : 
   M3.mapacc_t * relation_set_t =
-  
   let (mapn, mapvars) = (Calculus.decode_map_term map_term) in
-  let (init_stmt, ret_ra_map) = 
-    (to_m3_initializer (Calculus.readable_term map_definition)) 
-  in
   let input_var_list = (split_vars true mapvars bindings) in
   let output_var_list = (split_vars false mapvars bindings) in
-  ((mapn, 
-    (fst (List.split input_var_list)), 
-    (fst (List.split output_var_list)), 
-    
+  let (init_stmt, ret_ra_map) = 
       (*  Doing something smarter with the initializers... in particular, it 
           might be a good idea to see if any of the initialzers can be further 
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
-    (
-      if (List.length input_var_list) > 0
-      then init_stmt
-      else M3.Const(M3.CFloat(0.0))
-    )
+    if (List.length input_var_list) > 0
+      then (to_m3_initializer (Calculus.readable_term map_definition)) 
+      else (M3.Const(M3.CFloat(0.0)), StringMap.empty)
+  in
+  ((mapn, 
+    (fst (List.split input_var_list)), 
+    (fst (List.split output_var_list)), 
+    init_stmt
   ), ret_ra_map);;
 
 (********************************)
@@ -374,10 +370,6 @@ module M3InProgress = struct
   let add_to_trigger_map rel vars stmts tmap =
     if List.mem_assoc rel tmap then
       let (tvars, tstmts) = List.assoc rel tmap in
-      
-       (print_string (rel^"["^(Util.string_of_list ", " vars)^"] -> ["^
-                             (Util.string_of_list ", " tvars)^"]\n");
-       print_string ((Util.list_to_string M3Common.pretty_print_stmt (List.map (M3Common.rename_vars vars tvars) stmts))^"\n");
       let joint_stmts = 
         (* We assume that we receive statements through build in the order that
            the statements should be executed in; This is rarely relevant but it
@@ -391,7 +383,6 @@ module M3InProgress = struct
             stmts
       in
         (rel, (tvars, joint_stmts))::(List.remove_assoc rel tmap)
-        )
     else
        (rel, (vars, stmts))::tmap
 
@@ -404,17 +395,22 @@ module M3InProgress = struct
     let mapping = 
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
         if result = NoMapping then
-          (print_string ("Comparing "^(Calculus.term_as_string map_term)^
-                         "{ "^(Calculus.term_as_string query_term)^
-                         " } =?= "^(Calculus.term_as_string cmp_map_term)^
-                         "{ "^(Calculus.term_as_string cmp_term)^
-                         " }\n");
           try 
             let var_mappings = Calculus.equate_terms 
                 (Calculus.readable_term query_term)
                 (Calculus.readable_term cmp_term)
             in
             let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
+            (* We get 2 different mappings; Check to see they're consistent *)
+            if not (List.for_all2 (fun (a,_) (b,_) -> (a = b) ||
+                  (* It shouldn't happen that a doesn't have a mapping in b, but
+                     if it does, that just means the variable is unused in the
+                     map definition *)
+                    (StringMap.mem a var_mappings) || 
+                    ((StringMap.find a var_mappings) = b)
+                  ) map_vars cmp_vars)
+              then failwith "Inconsistent variable mappings in CalcToM3.build"
+              else
             let cmp_in_vars = split_vars true cmp_vars cmp_bindings in
             let cmp_out_vars = split_vars false cmp_vars cmp_bindings in
             let index_of (needle:Calculus.var_t)
@@ -426,11 +422,11 @@ module M3InProgress = struct
                   )
                 ) (-1, 1) haystack)
               in
-              if index = -1 then raise (Calculus.TermsNotEquivalent("Variable Not Found"))
+              if index = -1 then 
+                raise (Calculus.TermsNotEquivalent("Variable Not Found"))
                                    (*shouldn't happen*)
               else index
             in
-              (print_string "Found!\n";
               Mapping(
                 cmp_name,
                 List.fold_right (fun in_var mapping -> 
@@ -440,9 +436,7 @@ module M3InProgress = struct
                   (index_of out_var cmp_out_vars)::mapping
                 ) (split_vars false map_vars map_bindings) []
               )
-              )
-          with Calculus.TermsNotEquivalent(a) -> (print_string (a^"\n");NoMapping)
-        )
+          with Calculus.TermsNotEquivalent(a) -> (*print_string (a^"\n");*)NoMapping
         else result
       ) NoMapping (snd (List.split curr_refs))
     in
@@ -559,14 +553,17 @@ module M3InProgress = struct
   let generate_m3 (map_ref: Compiler.map_ref_t)
                   (triggers: Compiler.trigger_definition list)
                   (accum: t): t =
-    (print_string ("Translating:"^(Calculus.term_as_string (fst map_ref))^
-                   " := "^(Calculus.term_as_string (snd map_ref))^"\n"));
     let map_ref_as_m3 = translate_map_ref map_ref in
     let (triggers_as_m3, ra_map) = 
       List.fold_left (fun (tlist,ra_map) 
                           (delete, reln, relvars, params, expr) -> (********** <- It's here: Use Params ********)
         let sub_map_params (map_definition, map_term, map_bindings) params =
-          (map_definition, (Calculus.map_term (fst (Calculus.decode_map_term map_term)) params), map_bindings)
+          let (map_name, map_vars) = (Calculus.decode_map_term map_term) in
+          (
+            (Calculus.apply_variable_substitution_to_term (List.combine map_vars params) map_definition), 
+            (Calculus.map_term map_name params), 
+            map_bindings
+          )
         in
         let (target_access, ra_map_access) = (to_m3_map_access (sub_map_params map_ref_as_m3 params)) in
         let (update,ra_map_update) = (to_m3 (Calculus.readable_term expr) 
@@ -579,12 +576,10 @@ module M3InProgress = struct
           )
         in
         (
-          (print_string ("Produced Trigger: "^(M3Common.pretty_print_trig update_trigger));
           if delete then 
             (tlist, ra_map)
           else
             (tlist @ [ update_trigger ], ra_map_ret)
-          )
         )
       ) ([], StringMap.empty) triggers
     in

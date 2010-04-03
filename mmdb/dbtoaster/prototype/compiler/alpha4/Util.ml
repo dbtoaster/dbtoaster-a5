@@ -169,7 +169,7 @@ let string_of_list (sep: string) (l: string list): string =
    string_of_list0 sep (fun x->x) l
 
 let list_to_string (elem_to_string: 'a -> string) (l: 'a list) : string =
-   "["^(string_of_list0 "; " elem_to_string l)^" ]"
+   "[ "^(string_of_list0 "; " elem_to_string l)^" ]"
 
 
 

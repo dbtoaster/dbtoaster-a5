@@ -83,9 +83,9 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 ((map_definition, map_term): map_ref_t)
                 (generate_code:'a output_translator)
                 (accum:'a): 'a =
-  (print_string ("Compiling: " ^ 
+  (*print_string ("Compiling: " ^ 
                   (Calculus.term_as_string map_term)^" := "^
-                  (Calculus.term_as_string map_definition)^"\n"));
+                  (Calculus.term_as_string map_definition)^"\n")*)
   let (mapn, map_params) = Calculus.decode_map_term map_term in
   let (bigsum_vars, bsrw_theta, bsrw_term) = 
     Calculus.bigsum_rewriting

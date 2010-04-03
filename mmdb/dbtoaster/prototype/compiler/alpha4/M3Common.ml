@@ -23,7 +23,7 @@ let calc_schema = calc_vars_aux (fun inv outv -> outv)
 let calc_vars = calc_vars_aux (fun inv outv -> inv@outv)
 
 let rec pretty_print_map_access (mapn, inv, outv, init_calc): string =
-  "{ "^mapn^"["^(vars_to_string inv)^"]["^(vars_to_string outv)^"] := ("^(pretty_print_calc init_calc)^") }"
+  "{ "^mapn^(vars_to_string inv)^(vars_to_string outv)^" := ("^(pretty_print_calc init_calc)^") }"
 
 and string_of_const v =
   match v with
@@ -56,13 +56,13 @@ and pretty_print_stmt (mapacc, delta_term) : string =
 and pretty_print_trig (pm, rel_id, var_id, statements) : string =
   "ON " ^
   (match pm with Insert -> "+" | Delete -> "-") ^
-  rel_id ^ "[" ^(vars_to_string var_id)^ "] : " ^
+  rel_id ^(vars_to_string var_id)^ ": " ^
   (List.fold_left (fun oldstr stmt ->
     oldstr^"\n"^(pretty_print_stmt stmt)
   ) " " statements)^"\n"
   
 and pretty_print_type_list (l:var_type_t list) : string = 
-  "["^(List.fold_left (fun old_str v -> old_str^(string_of_var_type v)^", ") "" l)^"]"
+  (Util.list_to_string string_of_var_type l)
 
 and pretty_print_map (mapn, input_var_types, output_var_types) : string =
   mapn ^ " " ^ (pretty_print_type_list input_var_types) ^(pretty_print_type_list output_var_types)^"\n"
