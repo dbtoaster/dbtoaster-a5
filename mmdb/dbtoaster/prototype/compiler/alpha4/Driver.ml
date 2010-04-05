@@ -21,16 +21,19 @@ let (flags,helptext,flagtext) =
     let flags = 
       [ (["-l";"--lang"], 
             ("LANG",   ARG), "ocaml|cpp|calc|m3",
-            "specify the output language (default: ocaml)");
+            "Specify the output language (default: ocaml).");
         (["-o"],
             ("OUTPUT", ARG), "<outfile>",
-            "output to <outputfile> (default: stdout)" );
+            "Output to <outputfile> (default: stdout)." );
+        (["-c"],
+            ("COMPILE", ARG), "<obj_file>",
+            "Invoke secondary compiler to compile to <obj_file>." );
         (["-d"],
             ("DEBUG",  ARG_LIST), "<flag> [-d <flag> [...]]",
-            "enable a debug flag" );
+            "Enable a debug flag." );
         (["-?"], 
             ("HELP",   NO_ARG),  "", 
-            "display this help text" );
+            "Display this help text." );
       ]
     in 
       List.fold_left (fun (m,doc_left,doc_right,doc_width) (klist,v,pdoc,doc) -> 
@@ -260,4 +263,50 @@ let compile_function: (M3.prog_t * M3.relation_input_t list ->
     (* Calc should have been outputted before M3 generation *)
 ;;
 
-compile_function (m3_prog, sources) (GenericIO.O_FileDescriptor(output_file));;
+let compile = compile_function (m3_prog, sources);;
+
+if (not (flag_bool "COMPILE")) || (flag_bool "OUTPUT") then
+  (* If we've gotten a -c but no -o, don't output the intermediaries *)
+  compile (GenericIO.O_FileDescriptor(output_file))
+else ();;
+
+(********* COMPILE [language of your choosing] *********)
+
+let compile_ocaml in_file_name =
+  let ocaml_cc = "ocamlopt" in
+  let ocaml_lib_ext = ".cmxa" in
+  let dbt_lib_ext = ".cmx" in
+  let ocaml_libs = [ "unix"; "str" ] in
+  let dbt_lib_path = Filename.basename (flag_val_force "$0") in
+  let dbt_includes = [ "lib/ocaml" ] in
+  let dbt_libs = [ "Util";
+                   "M3";
+                   "M3Common";
+                   "lib/ocaml/SliceableMap";
+                   "lib/ocaml/M3OCaml";
+                   "lib/ocaml/StandardAdaptors" ] in
+    (* would nice to generate args dynamically off the makefile *)
+    Unix.execvp ocaml_cc 
+      ( Array.of_list (
+        [ ocaml_cc; "-ccopt"; "-O3" ] @
+        (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
+        (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
+        (List.map (fun x -> dbt_lib_path^x^dbt_lib_ext) dbt_libs) @
+        ["-" ; in_file_name]
+      ));;
+  
+let compile_ocaml_via_tmp () =
+  compile (GenericIO.O_TempFile("dbtoaster_", ".ml", compile_ocaml));;
+
+if flag_bool "COMPILE" then
+  match language with
+  | L_OCAML ->  
+    (
+      match (flag_val "OUTPUT") with
+        | None      -> compile_ocaml_via_tmp ()
+        | Some("-") -> compile_ocaml_via_tmp ()
+        | Some(a)   -> compile_ocaml a
+    )
+  | L_CPP   -> failwith "Compilation of C++ not implemented yet"
+  | _       -> failwith "No external compiler available for this language"
+else ()

@@ -641,16 +641,17 @@ struct
        "   let (pm,r,t) = FileMultiplexer.next mux in";
        "      match (pm,r) with"]@
        (indent 2 dispatch_lines)@
-      ["   done";
+      ["   done;";
        "   let finish = Unix.gettimeofday() in";
        "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)))";
        "in main();;"]
       in
-      ["open M3Common";
-       "open M3Common.Patterns";
-       "open M3OCaml\n";
-       "open StandardAdaptors";
-       "StandardAdaptors.initialize();";
+      ["open M3;;";
+       "open M3Common;;";
+       "open M3Common.Patterns;;";
+       "open M3OCaml;;\n";
+       "open StandardAdaptors;;";
+       "StandardAdaptors.initialize();;";
        "let db = Database.make_empty_db ";
        "   "^(schema_const schema);
        "   "^(pattern_map_const patterns)^";;\n\n"]@

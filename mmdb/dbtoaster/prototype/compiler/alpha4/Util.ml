@@ -357,6 +357,7 @@ struct
   type out_t = 
     | O_FileName of string * open_flag list
     | O_FileDescriptor of out_channel
+    | O_TempFile of string * string * (string -> unit)
   ;;
   
   type in_t =
@@ -370,6 +371,9 @@ struct
       let file = open_out_gen flags 0x777 fn in
         (block file;close_out file)
     | O_FileDescriptor(file) -> block file
+    | O_TempFile(prefix, suffix, finished_cb) -> 
+      let (filename, file) = (Filename.open_temp_file prefix suffix) in
+        (block file;close_out file;finished_cb filename)
   ;;
 
   let read (fd:in_t) (block:in_channel -> unit): unit =
