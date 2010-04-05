@@ -33,7 +33,8 @@ struct
    (* Static code generation *)
    let list_to_string f l = "["^(String.concat ";" (List.map f l))^"]"
 
-   let pm_const pm = match pm with | Insert -> "\"ins\"" | Delete -> "\"del\"" 
+   let pm_const pm = match pm with | Insert -> "Insert" | Delete -> "Delete" 
+   let pm_name pm  = match pm with | Insert -> "ins" | Delete -> "del" 
 
    let string_const x = "\""^x^"\""
    let string_pair_const (x,y) = "("^(string_const x)^","^(string_const y)^")"
@@ -86,6 +87,11 @@ struct
          bind_vars_from_list_indices (List.combine ext_vars ext_idx) consts_list
 
    let vars_list vars = "["^(String.concat ";" vars)^"]"
+   
+   
+   (* "var_" prepended to all variables to keep OCAML from thinking
+      that they're modules *)
+   let clean_var_name var = "var_"^var
    
    (* bindings: vars * const list  *)
    let inline_vars_list vars bindings =
@@ -536,7 +542,7 @@ struct
        "in List.iter iifilter inv_imgs;"]))
    
    let trigger event rel trig_args stmt_block =
-      let trigger_name = "on_"^(pm_const event)^"_rel" in Lines (
+      let trigger_name = "on_"^(pm_name event)^"_"^rel in Lines (
       ["let "^trigger_name^" = (fun tuple -> "]@
        (indent 1 (bind_vars_from_list trig_args "tuple"))@
        (List.flatten (List.map get_lines stmt_block))@
@@ -554,13 +560,13 @@ struct
      (string_const (Unix.string_of_inet_addr addr))^", "^(string_of_int port)
    
    let source_const src = match src with
-      | FileSource(fn) -> "FileSource("^(string_const fn)^")"
-      | SocketSource(addr,port) -> "SocketSource("^(addr_const addr port)^")"
+      | FileSource(fn) -> "(FileSource("^(string_const fn)^"))"
+      | SocketSource(addr,port) -> "(SocketSource("^(addr_const addr port)^"))"
 
    let framing_const fr = match fr with
-      | FixedSize(l) -> "FixedSize("^(string_of_int l)^")"
-      | Delimited(s) -> "Delimited("^(string_const s)^")"
-      | VarSize(s,e) -> "VarSize("^(string_of_int s)^","^(string_of_int e)^")"
+      | FixedSize(l) -> "(FixedSize("^(string_of_int l)^"))"
+      | Delimited(s) -> "(Delimited("^(string_const s)^"))"
+      | VarSize(s,e) -> "(VarSize("^(string_of_int s)^","^(string_of_int e)^"))"
 
    let src_counter = ref 0
    let adaptor_counter = ref 0
@@ -622,26 +628,31 @@ struct
             | None -> [] | Some(Lines(x)) -> x | Some(Inline(x)) -> [x]
          in List.flatten (List.map aux [decl; init])) sources) in
       let multiplexer_lines =
-         ["let mux = FileMultiplexer.create() in"]@
+         ["let mux = "]@
+         ["  let mux = FileMultiplexer.create() in" ]@
          (List.map (fun (impl,_,_) ->
             let inst_name = get_source_instance impl in
-            "FileMultiplexer.add_stream "^inst_name^";") sources) in
+              "    let mux = FileMultiplexer.add_stream mux "^inst_name^" in"
+         ) sources)@["  mux";"in"] in
       let dispatch_aux evt r =
-         "| ("^(pm_const evt)^","^(string_const r)^") -> "^
-            "on_"^(pm_const evt)^"_"^r^" t" in
+         "| Some("^(pm_const evt)^","^(string_const r)^", t) -> "^
+            "on_"^(pm_name evt)^"_"^r^" t" in
       let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
          List.flatten (List.map (fun (_,r) ->
-            [dispatch_aux Insert r; dispatch_aux Delete r]) (snd impl))) sources)
+            [dispatch_aux Insert r(*; dispatch_aux Delete r*)]) (snd impl))) sources)
       in
       let main_lines =
       ["let main() = "]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
       ["   let start = Unix.gettimeofday() in";
        "   while FileMultiplexer.has_next mux do";
-       "   let (pm,r,t) = FileMultiplexer.next mux in";
-       "      match (pm,r) with"]@
+       "   let (_,evt) = FileMultiplexer.next mux in";
+       "      match evt with"]@
        (indent 2 dispatch_lines)@
-      ["   done;";
+      ["      | None -> ()";
+       "      | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
+       "      | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
+       "   done;";
        "   let finish = Unix.gettimeofday() in";
        "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)))";
        "in main();;"]

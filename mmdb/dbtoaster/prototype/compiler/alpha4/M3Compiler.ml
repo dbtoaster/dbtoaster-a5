@@ -5,8 +5,9 @@ open M3
 module M3P = M3.Prepared
 
 (* TODO: validate x * m[x] *)
-let prepare_triggers (triggers : trig_t list)
+let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
    : (M3P.ptrig_t list * pattern_map) =
+   let sanitize_vars = List.map sanitize_var in
    let prep_counter = ref [] in
    let add_counter() = prep_counter := 0::(!prep_counter) in
    let remove_counter() =
@@ -53,8 +54,9 @@ let prepare_triggers (triggers : trig_t list)
       match calc with
         | Const(c)      -> ((M3P.Const(c), (prepare(), [], true, false)), empty_pattern_map())
         | Var(v)        -> 
+            let sv = sanitize_var v in
            (* Bigsum vars are not LHS vars, and are slices. *)
-           ((M3P.Var(v), (prepare(), [], List.mem v lhs_vars, false)), empty_pattern_map())
+           ((M3P.Var(sv), (prepare(), [], List.mem sv lhs_vars, false)), empty_pattern_map())
 
         | Add  (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Add  (e1, e2)) c1 c2
         | Mult (c1,c2)  -> prepare_op (fun e1 e2 -> M3P.Mult (e1, e2)) c1 c2
@@ -64,26 +66,26 @@ let prepare_triggers (triggers : trig_t list)
         | IfThenElse0 (c1,c2) -> prepare_op (fun e1 e2 -> M3P.IfThenElse0 (e2, e1)) c2 c1
         
         | MapAccess (mapn, inv, outv, init_calc) ->
-
+           let (sinv,soutv) = (sanitize_vars inv,sanitize_vars outv) in
            (* Determine slice or singleton.
             * singleton: no in vars, and fully bound out vars. *)
-           let bound_outv = Util.ListAsSet.inter outv theta_vars in
-           let full_agg = ((List.length bound_outv) = (List.length outv)) in
+           let bound_outv = Util.ListAsSet.inter soutv theta_vars in
+           let full_agg = ((List.length bound_outv) = (List.length soutv)) in
            let singleton = (List.length inv = 0) && full_agg in
            
            (* Use map scope for lhs vars during recursive prepare for initial
             * value calculus. *)
            let init_lhs_vars =
-              Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) outv in
+             Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) soutv in
            
            let (init_ecalc, patterns) =
               save_counter (fun () -> 
                  prepare_calc mapn init_lhs_vars theta_vars init_calc)
            in
            let new_patterns = 
-              if (List.length outv) = (List.length bound_outv) then patterns
+              if (List.length soutv) = (List.length bound_outv) then patterns
               else merge_pattern_maps patterns (singleton_pattern_map
-                      (mapn, make_out_pattern outv bound_outv)) in
+                      (mapn, make_out_pattern soutv bound_outv)) in
            let new_init_agg_meta = (update_mapn^"_init_"^mapn, full_agg) in
            let new_init_meta = let (x,_,y,z) =
               get_meta init_ecalc in (x,bound_outv,y,z) in
@@ -91,7 +93,7 @@ let prepare_triggers (triggers : trig_t list)
               (((get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
            let new_incr_meta = (prepare(), [], singleton, false) in
-           let r = (M3P.MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
+           let r = (M3P.MapAccess(mapn, sinv, soutv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
         
    in
@@ -99,22 +101,22 @@ let prepare_triggers (triggers : trig_t list)
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.pstmt_t * pattern_map) =
 
       let ((lmapn, linv, loutv, init_calc), incr_calc) = stmt in
-
+      let (slinv, sloutv) = (sanitize_vars linv,sanitize_vars loutv) in
       let partition v1 v2 =
          (Util.ListAsSet.inter v1 v2, Util.ListAsSet.diff v1 v2) in
-      let (bound_inv, loop_inv) = partition linv theta_vars in
-      let (bound_outv, loop_outv) = partition loutv theta_vars in
+      let (bound_inv, loop_inv) = partition slinv theta_vars in
+      let (bound_outv, loop_outv) = partition sloutv theta_vars in
       
       (* For compile_pstmt_loop, extend with loop in vars *)
       let theta_w_loopinv = Util.ListAsSet.union theta_vars loop_inv in
       let theta_w_lhs = Util.ListAsSet.union
-         (Util.ListAsSet.union theta_vars linv) loutv
+         (Util.ListAsSet.union theta_vars slinv) sloutv
       in
       let full_agg = (List.length loop_outv) = 0 in 
 
       (* Checking bigsum vars for slices is now done locally by passing down
        * LHS vars through M3 preparation. *)
-      let init_ext = (Util.ListAsSet.diff loutv (calc_schema init_calc)) in
+      let init_ext = (Util.ListAsSet.diff sloutv (calc_schema init_calc)) in
       
       (* Set up top-level extensions for an entire incr/init RHS.
        * Incr M3 is extended by bound out variables.
@@ -136,14 +138,14 @@ let prepare_triggers (triggers : trig_t list)
       let (incr_ca, incr_patterns) = prepare_stmt_ext "_incr" incr_calc bound_outv false in
 
       let pstmtmeta = loop_inv in 
-      let pstmt = ((lmapn, linv, loutv, init_ca), incr_ca, pstmtmeta) in
+      let pstmt = ((lmapn, slinv, sloutv, init_ca), incr_ca, pstmtmeta) in
 
       let extra_patterns =
          let extras =
-            (if (List.length bound_inv) = (List.length linv) then []
-             else [(lmapn, (make_in_pattern linv bound_inv))])@
-            (if (List.length bound_outv) = (List.length loutv) then []
-             else [(lmapn, (make_out_pattern loutv bound_outv))])
+            (if (List.length bound_inv) = (List.length slinv) then []
+             else [(lmapn, (make_in_pattern slinv bound_inv))])@
+            (if (List.length bound_outv) = (List.length sloutv) then []
+             else [(lmapn, (make_out_pattern sloutv bound_outv))])
          in List.fold_left add_pattern (empty_pattern_map()) extras
       in
 
@@ -164,8 +166,9 @@ let prepare_triggers (triggers : trig_t list)
 
    let prepare_trig (t : trig_t) : (M3P.ptrig_t * pattern_map) =
       let (ev,rel,args,block) = t in
-      let (pblock, patterns) = prepare_block args block in
-         ((ev, rel, args, pblock), patterns)
+      let sargs = sanitize_vars args in
+      let (pblock, patterns) = prepare_block sargs block in
+         ((ev, rel, sargs, pblock), patterns)
    in
    let blocks_maps_l = List.map prepare_trig triggers in
    let (pblocks, pms) = List.split blocks_maps_l in
@@ -320,7 +323,37 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
       then db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt
       else db_slice_update lhs_mapn cstmt
    in statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code
-          
+
+(*
+let rec sanitize_calc pc:M3P.pcalc_t = 
+  match pc with 
+  | M3P.Const(c)         -> M3P.Const(c)
+  | M3P.Var(v)           -> M3P.Var(clean_var_name v)
+  | M3P.Add(a,b)         ->         M3P.Add(sanitize_calc a, sanitize_calc b)
+  | M3P.Mult(a,b)        ->        M3P.Mult(sanitize_calc a, sanitize_calc b)
+  | M3P.Leq(a,b)         ->         M3P.Add(sanitize_calc a, sanitize_calc b)
+  | M3P.Eq(a,b)          ->         M3P.Add(sanitize_calc a, sanitize_calc b)
+  | M3P.Lt(a,b)          ->         M3P.Add(sanitize_calc a, sanitize_calc b)
+  | M3P.IfThenElse0(a,b) -> M3P.IfThenElse0(sanitize_calc a, sanitize_calc b)
+  | M3P.MapAccess(ma)    -> M3P.MapAccess(sanitize_mapaccess ma)
+and sanitize_vars:(string list -> string list) = List.map clean_var_name
+and sanitize_map_access 
+  (mapid, ivars, ovars, ((init, (pcmid,pcmtext,pcm_s,pcm_c) pam):M3P.pmapacc_t =
+  (
+    mapid,
+    sanitize_vars ivars,
+    sanitize_vars ovars,
+    (
+      ( sanitize_calc init,
+        ( pcmid,
+          sanitize_vars pcmtext,
+          pcm_s,
+          pcm_c
+        )),
+      pam
+    )
+  )
+*)
 
 let compile_ptrig (ptrig, patterns) =
    let aux ptrig =
@@ -333,7 +366,7 @@ let compile_ptrig (ptrig, patterns) =
 let compile_query (((schema,m3prog):M3.prog_t), 
                    (sources:M3.relation_input_t list)) 
                   (out_file_name:Util.GenericIO.out_t) =
-   let prepared_prog = prepare_triggers m3prog in
+   let prepared_prog = prepare_triggers m3prog clean_var_name in
    let patterns = snd prepared_prog in
    let ctrigs = compile_ptrig prepared_prog in
    let sources_and_adaptors =

@@ -81,6 +81,9 @@ sig
    
    (*  mapn, inv, pat, patv, init lookup code -> map lookup code *)
    val slice_lookup: string -> var_t list -> int list -> var_t list -> code_t -> code_t 
+   
+   (*  var_name -> language-safe variable name  *)
+   val clean_var_name: string -> string
 
    (* M3 RHS expr generation *)
  

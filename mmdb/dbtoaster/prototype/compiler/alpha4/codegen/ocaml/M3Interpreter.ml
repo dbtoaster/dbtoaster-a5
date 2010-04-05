@@ -307,6 +307,8 @@ let singleton_lookup mapn inv outv init_val_code =
             [ValuationMap.find outv_img slice]
          else [])
    
+let clean_var_name var = var
+
 (* mapn, inv, pat, patv, init lookup code -> map lookup code *)
 let slice_lookup mapn inv pat patv init_val_code =
    let ivc_l = get_slice_code init_val_code in
