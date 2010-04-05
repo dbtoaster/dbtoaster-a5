@@ -129,8 +129,8 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
          let new_c_aggmeta = (lmapn^name_suffix, full_agg) in
          let new_c_meta = let (x,_,y,z) = get_meta c in (x,ext,y,z) in
          let new_c = ((get_calc c, new_c_meta), new_c_aggmeta) in
-            print_endline ("singleton="^(string_of_bool (get_singleton c))^
-                           " calc="^(pcalc_to_string (get_calc c)));
+            (*print_endline ("singleton="^(string_of_bool (get_singleton c))^
+                           " calc="^(pcalc_to_string (get_calc c)));*)
             (new_c, patterns) 
       in
 
@@ -217,10 +217,10 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
             let pat = List.map (index outv) patv in
             (* code that returns the initial value slice *)
             let init_val_code =
-               print_endline ("generating init lookup for "^mapn^" "^
+               (*print_endline ("generating init lookup for "^mapn^" "^
                               (vars_to_string inv)^" "^
                               (vars_to_string outv)^" "^
-                              (string_of_bool (get_singleton (get_ecalc init_aggecalc)))); 
+                              (string_of_bool (get_singleton (get_ecalc init_aggecalc))));*) 
                if (get_singleton (get_ecalc init_aggecalc)) ||
                   (get_full_agg (get_agg_meta init_aggecalc))
                then singleton_init_lookup mapn inv out_patterns outv cinit
@@ -283,9 +283,9 @@ let compile_pstmt patterns
       : code_t
    =
    let aux aggecalc : code_t =
-      let singleton = get_singleton (get_ecalc aggecalc) in
+      (*let singleton = get_singleton (get_ecalc aggecalc) in
       print_endline ((if singleton then "singleton" else "slice")^
-                     " calc="^(pcalc_to_string (get_calc (get_ecalc aggecalc))));
+                     " calc="^(pcalc_to_string (get_calc (get_ecalc aggecalc))));*)
       compile_pcalc2 patterns (get_agg_meta aggecalc) lhs_outv (get_ecalc aggecalc)
    in
    let (cincr, cinit) = (aux incr_aggecalc, aux init_aggecalc) in

@@ -174,7 +174,7 @@ let asks_params = [("book", "asks")]
 
 let orderbook_generator params =
    let get_float_const c =
-      match c with | CFloat(x) -> x | _ -> failwith "invalid float const" in 
+      match c with | CFloat(x) -> x (*| _ -> failwith "invalid float const"*) in 
    let required = ["book"] in
    let valid = List.for_all (fun k -> List.mem_assoc k params) required in
    if not(valid) then

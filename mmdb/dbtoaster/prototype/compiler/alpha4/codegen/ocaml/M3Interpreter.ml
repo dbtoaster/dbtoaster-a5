@@ -100,7 +100,7 @@ let get_singleton_debug_code x =
 
 (* Debugging helpers *)
 let debug_sequence cdebug ccalc =
-   let df = get_env_debug_code cdebug in
+   (*let df = get_env_debug_code cdebug in*)
    match ccalc with
     | Singleton(f) ->
        Singleton (fun theta db -> (* df theta db; *) f theta db)
@@ -330,7 +330,7 @@ let slice_lookup mapn inv pat patv init_val_code =
 (* m3 expr code -> m3 rhs expr code *)
 let singleton_expr ccalc cdebug =
    let ccalc_i = get_singleton_code ccalc in
-   let cdebug_i = get_singleton_debug_code cdebug in
+   (*let cdebug_i = get_singleton_debug_code cdebug in*)
    Singleton (fun theta db ->
       let r = ccalc_i theta db in
       match r with
@@ -341,7 +341,7 @@ let singleton_expr ccalc cdebug =
 (* m3 expr code, debug code -> m3 rhs expr code *)
 let direct_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   let cdebug_l = get_slice_debug_code cdebug in
+   (*let cdebug_l = get_slice_debug_code cdebug in*)
       Slice (fun theta db -> let r = ccalc_l theta db
              in (* cdebug_l theta db r; *) r)
 
@@ -349,7 +349,7 @@ let direct_slice_expr ccalc cdebug =
 (* m3 expr code -> m3 rhs expr code *)
 let full_agg_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   let ccdebug_l = get_slice_debug_code cdebug in
+   (*let ccdebug_l = get_slice_debug_code cdebug in*)
       Singleton (fun theta db ->
          let slice0 = ccalc_l theta db in
          (* cdebug_l theta db slice0; *)
@@ -359,7 +359,7 @@ let full_agg_slice_expr ccalc cdebug =
 (* rhs_pattern, rhs_projection, lhs_outv, rhs_ext, m3 expr code -> m3 rhs expr code *)
 let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   let cdebug_l = get_slice_debug_code cdebug in
+   (*let cdebug_l = get_slice_debug_code cdebug in*)
       Slice (fun theta db ->
          let slice0 = ccalc_l theta db in
          (* Note this aggregates bigsum vars present in the RHS map.
@@ -377,7 +377,7 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
 (* init calc code, debug code -> init code *)
 let singleton_init cinit cdebug =
    let cinitf = get_singleton_code cinit in
-   let cdebug_i = get_singleton_debug_code cdebug in
+   (*let cdebug_i = get_singleton_debug_code cdebug in*)
       SingletonValueFunction (fun theta db _ v ->
          (* cdebug_i theta2 db [] v; *)
          (match cinitf theta db with
@@ -388,7 +388,7 @@ let singleton_init cinit cdebug =
 (* lhs_outv, init_ext, init calc code, debug code -> init code *)
 let slice_init lhs_outv init_ext cinit cdebug =
    let cinitf = get_slice_code cinit in
-   let cdebug_i = get_singleton_debug_code cdebug in 
+   (*let cdebug_i = get_singleton_debug_code cdebug in *)
       SingletonValueFunction (fun theta db k v ->
          let theta2 =
             Valuation.extend theta (Valuation.make lhs_outv k) init_ext in
@@ -407,7 +407,7 @@ let slice_init lhs_outv init_ext cinit cdebug =
 let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
    let cincrf = get_singleton_code cincr in
    let cinitf = f init_value_code in
-   let cdebug_e = get_env_debug_code cdebug in
+   (*let cdebug_e = get_env_debug_code cdebug in*)
    UpdateSingleton (fun theta current_singleton db ->
       (* cdebug_e theta db; *)
       let delta_slice = cincrf theta db in
@@ -425,7 +425,7 @@ let singleton_update = singleton_update_aux get_singleton_value_function_code
 let slice_update_aux f cincr init_value_code cdebug =
    let cincrf = get_slice_code cincr in
    let cinitf = f init_value_code in
-   let cdebug_e = get_env_debug_code cdebug in
+   (*let cdebug_e = get_env_debug_code cdebug in*)
    UpdateSlice (fun theta current_slice db ->
       (* cdebug_e theta db; *)
       let delta_slice = cincrf theta db in
