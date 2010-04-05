@@ -78,7 +78,7 @@ native: lex_yacc
 top: bytecode
 	ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(OBJ)
 
-driver: bytecode
+driver: bytecode runtime
 	ocamlc $(OC_FLAGS) -o dbtoaster $(OBJ) Driver.ml
 
 benchmark: native
@@ -91,10 +91,10 @@ test: top
 	./dbtoaster_top test/m3_ex.ml
 
 runtime:
-	ocamlopt $(INCLUDES) -ccopt -O3 -c $(RUNTIME)
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -c $(RUNTIME)
 
 query: runtime query.ml
-	ocamlopt $(INCLUDES) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(XOBJ) query.ml
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(XOBJ) query.ml
 
 clean:
 	rm -f $(CLEAN_OBJ)

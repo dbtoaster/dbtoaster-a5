@@ -277,7 +277,7 @@ let compile_ocaml in_file_name =
   let ocaml_lib_ext = ".cmxa" in
   let dbt_lib_ext = ".cmx" in
   let ocaml_libs = [ "unix"; "str" ] in
-  let dbt_lib_path = Filename.basename (flag_val_force "$0") in
+  let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
   let dbt_includes = [ "lib/ocaml" ] in
   let dbt_libs = [ "Util";
                    "M3";
@@ -291,8 +291,8 @@ let compile_ocaml in_file_name =
         [ ocaml_cc; "-ccopt"; "-O3" ] @
         (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
-        (List.map (fun x -> dbt_lib_path^x^dbt_lib_ext) dbt_libs) @
-        ["-" ; in_file_name]
+        (List.map (fun x -> dbt_lib_path^"/"^x^dbt_lib_ext) dbt_libs) @
+        ["-" ; in_file_name ; "-o" ; (flag_val_force "COMPILE") ]
       ));;
   
 let compile_ocaml_via_tmp () =
