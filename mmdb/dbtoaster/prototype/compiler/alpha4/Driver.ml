@@ -241,12 +241,23 @@ let m3_prog =
   in
     CalcToM3.M3InProgress.finalize m3_prog_in_prog;;
 
-
-if language == L_M3 then
-  (
-    output_string output_file (M3Common.pretty_print_prog m3_prog);
-    exit 0
-  )
-else ();;
+debug_line "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 (********* TRANSLATE M3 TO [language of your choosing] *********)
+
+module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
+
+let compile_function: (M3.prog_t * M3.relation_input_t list -> 
+                       Util.GenericIO.out_t -> unit) = 
+  match language with
+  | L_OCAML -> M3OCamlCompiler.compile_query
+  | L_CPP   -> failwith "Compilation to C++ not implemented yet"
+  | L_M3    -> (fun (p, s) f -> 
+      GenericIO.write f (fun fd -> 
+          output_string fd (M3Common.pretty_print_prog p)))
+  | L_NONE  -> (fun q f -> ())
+  | _       -> failwith "Error: Asked to output unknown language"
+    (* Calc should have been outputted before M3 generation *)
+;;
+
+compile_function (m3_prog, sources) (GenericIO.O_FileDescriptor(output_file));;

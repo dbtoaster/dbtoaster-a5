@@ -149,4 +149,7 @@ type source_t =
 (* adaptor name, (param = value) list *)
 type adaptor_t = string * (string * string) list
 
-type relation_input_t = source_t * framing_t * adaptor_t
+(* A fully described relation/input source: 
+     file|socket * framing descriptor * relation_name * adaptor 
+*)
+type relation_input_t = source_t * framing_t * string * adaptor_t

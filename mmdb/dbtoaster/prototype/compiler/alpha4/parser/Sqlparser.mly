@@ -500,10 +500,12 @@
             List.map (fun (r,f,t) ->
                 (rename_var (r^"."^f) fields, t)) group_bys
     
-    let extract_relation_sources sources = 
+    let extract_relation_sources 
+      (sources:(string,M3.relation_input_t) Hashtbl.t): 
+      M3.relation_input_t list =
         (Hashtbl.fold 
-          (fun relation (source, framing, adaptor) list -> 
-            (relation, source, framing, adaptor)::list) 
+          (fun _ (source, framing, relation, adaptor) list -> 
+            (source, framing, relation, adaptor)::list) 
           sources []
         )
 
@@ -555,7 +557,7 @@
     Framing Method
     Read Adaptor
 */
-%type < ( Calculus.readable_term_t list * (string * Calculus.var_t list) list * Calculus.var_t list) list * (string * M3.source_t * M3.framing_t * M3.adaptor_t) list > dbtoasterSqlList
+%type < ( Calculus.readable_term_t list * (string * Calculus.var_t list) list * Calculus.var_t list) list * M3.relation_input_t list > dbtoasterSqlList
     
 %%
 
@@ -598,15 +600,15 @@ adaptorParams:
 |   ID SETVALUE STRING COMMA adaptorParams { ($1,$3)::$5 }
 
 adaptorStmt:
-|   ID LPAREN adaptorParams RPAREN { ($1, $3) }
-|   ID                             { ($1, []) }
+|   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
+|   ID                             { (String.lowercase $1, []) }
 
 createTableStmt:
 |   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt 
     framingStmt adaptorStmt { 
         let name = $3 in
         let fields = $5 in
-        let source_info = ($8,$9,$10) in
+        let source_info = ($8,$9,name,$10) in
           add_relation name fields;
           add_source name source_info
     }

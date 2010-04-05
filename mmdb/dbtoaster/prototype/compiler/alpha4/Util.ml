@@ -352,4 +352,31 @@ let rec k_tuples k (src: 'a list) : 'a list list =
    else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
                                (k_tuples (k-1) src))
 
+module GenericIO =
+struct
+  type out_t = 
+    | O_FileName of string * open_flag list
+    | O_FileDescriptor of out_channel
+  ;;
+  
+  type in_t =
+    | I_FileName of string
+    | I_FileDescriptor of in_channel
+  ;;
+  
+  let write (fd:out_t) (block:out_channel -> unit): unit =
+    match fd with
+    | O_FileName(fn,flags) -> 
+      let file = open_out_gen flags 0x777 fn in
+        (block file;close_out file)
+    | O_FileDescriptor(file) -> block file
+  ;;
 
+  let read (fd:in_t) (block:in_channel -> unit): unit =
+    match fd with
+    | I_FileName(fn) -> 
+      let file = open_in fn in
+        (block file;close_in file)
+    | I_FileDescriptor(file) -> block file
+  ;;
+end
