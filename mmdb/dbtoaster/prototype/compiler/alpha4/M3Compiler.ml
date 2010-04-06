@@ -324,37 +324,6 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
       else db_slice_update lhs_mapn cstmt
    in statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code
 
-(*
-let rec sanitize_calc pc:M3P.pcalc_t = 
-  match pc with 
-  | M3P.Const(c)         -> M3P.Const(c)
-  | M3P.Var(v)           -> M3P.Var(clean_var_name v)
-  | M3P.Add(a,b)         ->         M3P.Add(sanitize_calc a, sanitize_calc b)
-  | M3P.Mult(a,b)        ->        M3P.Mult(sanitize_calc a, sanitize_calc b)
-  | M3P.Leq(a,b)         ->         M3P.Add(sanitize_calc a, sanitize_calc b)
-  | M3P.Eq(a,b)          ->         M3P.Add(sanitize_calc a, sanitize_calc b)
-  | M3P.Lt(a,b)          ->         M3P.Add(sanitize_calc a, sanitize_calc b)
-  | M3P.IfThenElse0(a,b) -> M3P.IfThenElse0(sanitize_calc a, sanitize_calc b)
-  | M3P.MapAccess(ma)    -> M3P.MapAccess(sanitize_mapaccess ma)
-and sanitize_vars:(string list -> string list) = List.map clean_var_name
-and sanitize_map_access 
-  (mapid, ivars, ovars, ((init, (pcmid,pcmtext,pcm_s,pcm_c) pam):M3P.pmapacc_t =
-  (
-    mapid,
-    sanitize_vars ivars,
-    sanitize_vars ovars,
-    (
-      ( sanitize_calc init,
-        ( pcmid,
-          sanitize_vars pcmtext,
-          pcm_s,
-          pcm_c
-        )),
-      pam
-    )
-  )
-*)
-
 let compile_ptrig (ptrig, patterns) =
    let aux ptrig =
       let (event, rel, trig_args, pblock) = ptrig in

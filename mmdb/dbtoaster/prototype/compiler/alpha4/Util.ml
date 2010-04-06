@@ -357,6 +357,9 @@ struct
   type out_t = 
     | O_FileName of string * open_flag list
     | O_FileDescriptor of out_channel
+    (* TempFile with a continuation; After write() has finished its callback
+       block, The TempFile continuation is invoked with the filename of the
+       temporary file.  The file will be deleted on continuation return *)
     | O_TempFile of string * string * (string -> unit)
   ;;
   
@@ -373,7 +376,8 @@ struct
     | O_FileDescriptor(file) -> block file
     | O_TempFile(prefix, suffix, finished_cb) -> 
       let (filename, file) = (Filename.open_temp_file prefix suffix) in
-        (block file;close_out file;finished_cb filename)
+        (block file;flush file;close_out file;
+         finished_cb filename;Unix.unlink filename)
   ;;
 
   let read (fd:in_t) (block:in_channel -> unit): unit =

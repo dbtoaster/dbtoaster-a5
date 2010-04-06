@@ -596,10 +596,11 @@ framingStmt:
 |   VARSIZE OFFSET INT ADJUSTBY INT { M3.VarSize($3,$5) }
 
 adaptorParams:
-|   ID SETVALUE STRING                     { [($1,$3)] }
-|   ID SETVALUE STRING COMMA adaptorParams { ($1,$3)::$5 }
+|   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
+|   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase $1,$3)::$5 }
 
 adaptorStmt:
+|   ID LPAREN RPAREN               { (String.lowercase $1, []) }
 |   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
 |   ID                             { (String.lowercase $1, []) }
 

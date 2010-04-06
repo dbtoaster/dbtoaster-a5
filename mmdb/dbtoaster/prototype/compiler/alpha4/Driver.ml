@@ -60,8 +60,8 @@ let (flags,helptext,flagtext) =
         right^"\n"
       ) "" helptext_left helptext_right,
       List.fold_left (fun accum left -> 
-        accum^"["^left^"] "
-      ) "" helptext_left
+        accum @ ["["^left^"]"]
+      ) [] helptext_left
     )
 ;;
 
@@ -142,10 +142,27 @@ let debug (mode:string) (f:(unit->'a)): unit =
 let debug_line (mode:string) (f:(unit->string)): unit =
   debug mode (fun () -> print_line (f ()));;
 
+let debug_flag df = StringSet.mem df debug_modes;;
+
 if flag_bool "HELP" then
   (
     print_string (
-      (flag_val_force "$0")^" "^flagtext^"file1 [file2 [...]]\n\n"^helptext
+      let max_width = 80 in
+      let app_name = (flag_val_force "$0") in
+      let (indent_width,skip_line) = 
+        if (String.length app_name) * 4 > max_width then
+          (4, "\n    ") else (String.length app_name, "")
+      in
+      let (indented_app_invocation,_) = 
+        (List.fold_left (fun (accum,width) field ->
+          if width + (String.length field) + 1 > max_width then
+            ( accum^"\n"^(String.make (indent_width+1) ' ')^field,
+              (String.length field)+1 )
+          else
+            ( accum^" "^field, width+(String.length field)+1 )
+        ) ("", indent_width) (flagtext@["file1 [file2 [...]]"]))
+      in
+        app_name^skip_line^indented_app_invocation^"\n\n"^helptext
     );
     exit 0
   )
@@ -156,7 +173,7 @@ else ();;
 let input_files = if (flag_bool "FILES") then flag_vals "FILES" 
                   else give_up "No files provided";;
     
-type language_t = L_OCAML | L_CPP | L_CALC | L_M3 | L_NONE;;
+type language_t = L_OCAML | L_CPP | L_SQL | L_CALC | L_M3 | L_NONE;;
 
 let language = match flag_val "LANG" with
   | None -> L_OCAML
@@ -167,7 +184,8 @@ let language = match flag_val "LANG" with
     | "CALCULUS" -> L_CALC
     | "CALC"     -> L_CALC
     | "M3"       -> L_M3
-    | "NONE"     -> L_NONE
+    | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL w/ Inserts *)
+    | "NONE"     -> L_NONE (* Used for getting just debug output *)
     | "DEBUG"    -> L_NONE
     | _          -> (give_up ("Unknown output language '"^a^"'"));;
 
@@ -215,6 +233,15 @@ if language == L_CALC then
   )
 else ();;
 
+(********* PRODUCE SQL FOR COMPARISON *********)
+
+if language == L_SQL then
+  (
+    (* failwith "Translation to normal SQL unsupported at the moment"; *)
+    exit 0
+  )
+else ();;
+
 (********* TRANSLATE RELCALC TO M3 *********)
 
 let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip = 
@@ -254,7 +281,7 @@ let compile_function: (M3.prog_t * M3.relation_input_t list ->
                        Util.GenericIO.out_t -> unit) = 
   match language with
   | L_OCAML -> M3OCamlCompiler.compile_query
-  | L_CPP   -> failwith "Compilation to C++ not implemented yet"
+  | L_CPP   -> give_up "Compilation to C++ not implemented yet"
   | L_M3    -> (fun (p, s) f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
@@ -273,9 +300,9 @@ else ();;
 (********* COMPILE [language of your choosing] *********)
 
 let compile_ocaml in_file_name =
-  let ocaml_cc = "ocamlopt" in
-  let ocaml_lib_ext = ".cmxa" in
-  let dbt_lib_ext = ".cmx" in
+  let ocaml_cc = "ocamlc" in
+  let ocaml_lib_ext = ".cma" in
+  let dbt_lib_ext = ".ml" in
   let ocaml_libs = [ "unix"; "str" ] in
   let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
   let dbt_includes = [ "lib/ocaml" ] in
@@ -289,6 +316,7 @@ let compile_ocaml in_file_name =
     Unix.execvp ocaml_cc 
       ( Array.of_list (
         [ ocaml_cc; "-ccopt"; "-O3" ] @
+        (if debug_flag "COMPILE-WITH-GDB" then [ "-g" ] else []) @
         (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
         (List.map (fun x -> dbt_lib_path^"/"^x^dbt_lib_ext) dbt_libs) @
@@ -307,6 +335,6 @@ if flag_bool "COMPILE" then
         | Some("-") -> compile_ocaml_via_tmp ()
         | Some(a)   -> compile_ocaml a
     )
-  | L_CPP   -> failwith "Compilation of C++ not implemented yet"
-  | _       -> failwith "No external compiler available for this language"
+  | L_CPP   -> give_up "Compilation of C++ not implemented yet"
+  | _       -> give_up "No external compiler available for this language"
 else ()

@@ -355,7 +355,7 @@ struct
    (* returns (_, None) at end of file *)
    let next fs : t * (stream_event option) =
       let (ns,ra,buf) = fs in
-         if !buf = [] then
+         if !buf != [] then
             let e = List.hd (!buf)
             in buf := List.tl (!buf); ((ns,ra,buf), Some(e))
          else
@@ -398,6 +398,13 @@ struct
 end
 
 module FileMultiplexer = SM(FileSource)
+
+let string_of_evt (action:M3.pm_t) 
+                  (relation:string) 
+                  (tuple:M3.const_t list): string =
+  "Dispatching "^
+  (match action with Insert -> "insert" | Delete -> "delete")^
+  " of "^relation^(Util.list_to_string string_of_const tuple);;
 
 (* TODO: RandomSource *)
 (* TODO: multiplexer of random sources *)

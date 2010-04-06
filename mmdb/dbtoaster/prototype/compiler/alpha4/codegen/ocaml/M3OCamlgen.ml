@@ -635,8 +635,10 @@ struct
               "    let mux = FileMultiplexer.add_stream mux "^inst_name^" in"
          ) sources)@["  mux";"in"] in
       let dispatch_aux evt r =
-         "| Some("^(pm_const evt)^","^(string_const r)^", t) -> "^
-            "on_"^(pm_name evt)^"_"^r^" t" in
+         "| Some("^(pm_const evt)^","^(string_const r)^", t) -> ("^
+            "print_string ((M3OCaml.string_of_evt "^(pm_const evt)^" "^
+                (string_const r)^" t)^\"\\n\");"^
+            "on_"^(pm_name evt)^"_"^r^" t)" in
       let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
          List.flatten (List.map (fun (_,r) ->
             [dispatch_aux Insert r(*; dispatch_aux Delete r*)]) (snd impl))) sources)

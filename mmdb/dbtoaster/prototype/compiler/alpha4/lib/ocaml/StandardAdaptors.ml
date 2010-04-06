@@ -138,17 +138,27 @@ let event_constructors : (string * (string -> const_t list -> event list)) list 
 let standard_generator params =
    let match_keys l = List.map (fun (k,v) -> (List.assoc k l) v)
       (List.filter (fun (k,v) -> List.mem_assoc k l) params) in
+   let match_unique_default l fn_class default =
+      let m = match_keys l in match m with
+       | [f] -> f
+       | [] -> default
+       | _ -> failwith ("Multiple "^fn_class^"s specified for CSV adaptor")
+   in
    let match_unique l fn_class =
       let m = match_keys l in match m with
        | [f] -> f
-       | [] -> failwith ("No "^fn_class^" specified for adaptor")
-       | _ -> failwith ("Multiple "^fn_class^"s specified for adaptor")
+       | [] -> failwith ("No "^fn_class^" specified for CSV adaptor")
+       | _ -> failwith ("Multiple "^fn_class^"s specified for CSV adaptor")
    in
-   let token_fn = match_unique tokenizers "tokenizer" in 
+   let token_fn = 
+     match_unique_default tokenizers "tokenizer" (field_tokens ",") in
    let prep_fns = match_keys preprocessors in
    let const_fn = match_unique constructors "constructor" in
    let post_fns = match_keys postprocessors in
-   let event_const_fn = match_unique event_constructors "event constructor" in
+   let event_const_fn = 
+     match_unique_default event_constructors "event constructor" 
+                          (build_event "insert")
+   in
    (fun tuple ->
       let pre_fields = List.fold_left
          (fun acc_fields prf -> prf acc_fields) (token_fn tuple) prep_fns in

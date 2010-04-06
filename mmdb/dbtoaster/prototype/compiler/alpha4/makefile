@@ -37,11 +37,6 @@ OTHER_SOURCE = \
 OBJ = $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE)))
 XOPBJ = $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE)))
 
-CLEAN_OBJ = \
-	$(OBJ) $(subst .cmo,.cmi,$(OBJ)) $(XOBJ) $(subst .ml,.cmi,$(OTHER_SOURCE)) \
-	$(subst .ml,.cmo,$(OTHER_SOURCE)) $(subst .ml,.cmx,$(OTHER_SOURCE))\
-	$(GENERATED_SOURCE) dbtoaster dbtoaster_top m3_ex vwap query
-
 RUNTIME = \
 	Util.ml \
 	M3.ml \
@@ -50,6 +45,13 @@ RUNTIME = \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/M3OCaml.ml \
 	lib/ocaml/StandardAdaptors.ml
+
+CLEAN_OBJ = \
+	$(OBJ) $(subst .cmo,.cmi,$(OBJ)) $(XOBJ) $(subst .ml,.cmi,$(OTHER_SOURCE)) \
+	$(subst .ml,.cmo,$(OTHER_SOURCE)) $(subst .ml,.cmx,$(OTHER_SOURCE))\
+	$(GENERATED_SOURCE) $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME)))\
+	*.o dbtoaster dbtoaster_top m3_ex vwap query
+
 
 INCLUDE_DIR = \
 	-I codegen/ocaml/ \
@@ -63,7 +65,11 @@ INCLUDE_OPT = $(subst .cma,.cmxa,$(INCLUDE_OBJ))
 OC_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OBJ) -g
 OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT)
 
-all: top driver
+all: dbtoaster_top dbtoaster
+
+driver: dbtoaster
+
+top: dbtoaster_top
 
 lex_yacc:
 	ocamlyacc $(YACC_SOURCE)
@@ -75,10 +81,10 @@ bytecode: lex_yacc
 native: lex_yacc
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -c $(SOURCE)
 
-top: bytecode
+dbtoaster_top: bytecode
 	ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(OBJ)
 
-driver: bytecode runtime
+dbtoaster: bytecode runtime
 	ocamlc $(OC_FLAGS) -o dbtoaster $(OBJ) Driver.ml
 
 benchmark: native
@@ -86,6 +92,9 @@ benchmark: native
 
 vwap: native
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap unix.cmxa $(XOBJ) test/vwap_m3_ex.ml
+
+test/%: test/%.sql dbtoaster
+	./dbtoaster $< -c test/$* -o test/$*.ml -d compile-with-gdb
 
 test: top
 	./dbtoaster_top test/m3_ex.ml
