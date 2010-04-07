@@ -154,10 +154,11 @@ sig
    
    (* Runtime generation *)
 
-   (* schema, patterns, source decls and inits, triggers -> top level code *)
+   (* schema, patterns, source decls and inits, triggers, toplevel queries
+      -> top level code *)
    val main : map_type_t list -> pattern_map ->
               (source_impl_t * code_t option * code_t option) list ->
-              code_t list -> code_t
+              code_t list -> string list -> code_t
 
    val output : code_t -> out_channel -> unit
 

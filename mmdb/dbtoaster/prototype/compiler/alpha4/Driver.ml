@@ -131,19 +131,25 @@ else ();;
 
 (********* TRANSLATE RELCALC TO M3 *********)
 
+let toplevel_queries = ref []
+
 let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip = 
   fst
     (List.fold_left (fun (accum,sub_id) q ->
       (try 
-        Compiler.compile Calculus.ModeOpenDomain
-                         dbschema
-                         (Calculus.make_term q,
-                          Calculus.map_term 
-                            (qname^"_"^(string_of_int sub_id))
-                            qvars
-                         )
-                         CalcToM3.M3InProgress.generate_m3
-                         accum
+        let subq_name = (qname^"_"^(string_of_int sub_id)) in
+        (
+          toplevel_queries := !toplevel_queries @ [subq_name];
+          Compiler.compile Calculus.ModeOpenDomain
+                           dbschema
+                           (Calculus.make_term q,
+                            Calculus.map_term 
+                              (qname^"_"^(string_of_int sub_id))
+                              qvars
+                           )
+                           CalcToM3.M3InProgress.generate_m3
+                           accum
+        )
       with 
         |Util.Function.NonFunctionalMappingException -> 
             Printexc.print_backtrace stdout; give_up "Error!"
@@ -164,20 +170,20 @@ debug_line "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 
-let compile_function: (M3.prog_t * M3.relation_input_t list -> 
+let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
   | L_OCAML -> M3OCamlCompiler.compile_query
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
-  | L_M3    -> (fun (p, s) f -> 
+  | L_M3    -> (fun (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
-  | L_NONE  -> (fun q f -> ())
+  | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)
 ;;
 
-let compile = compile_function (m3_prog, sources);;
+let compile = compile_function (m3_prog, sources) !toplevel_queries;;
 
 if (not (flag_bool "COMPILE")) || (flag_bool "OUTPUT") then
   (* If we've gotten a -c but no -o, don't output the intermediaries *)

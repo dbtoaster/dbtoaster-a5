@@ -334,6 +334,7 @@ let compile_ptrig (ptrig, patterns) =
 
 let compile_query (((schema,m3prog):M3.prog_t), 
                    (sources:M3.relation_input_t list)) 
+                  (toplevel_queries:string list)
                   (out_file_name:Util.GenericIO.out_t) =
    let prepared_prog = prepare_triggers m3prog clean_var_name in
    let patterns = snd prepared_prog in
@@ -347,7 +348,8 @@ let compile_query (((schema,m3prog):M3.prog_t),
    let csource =
       List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors in
    Util.GenericIO.write out_file_name 
-     (fun out_file -> output (main schema patterns csource ctrigs) out_file; 
+     (fun out_file -> output (main schema patterns csource ctrigs
+                              toplevel_queries) out_file; 
                       output_string out_file "\n");
    
 end

@@ -626,7 +626,7 @@ struct
     * -- use integers rather than strings for stream dispatching for efficiency
     *    (requires changing stream_event type, and source creation)
     * -- generate a dummy benchmarker: random source, multiplexed, each w/ fixed # of tuples *)
-   let main schema patterns sources triggers = Lines (
+   let main schema patterns sources triggers toplevel_queries = Lines (
       let sources_lines = List.flatten (List.map (fun (impl,decl,init) ->
          let aux c = match c with
             | None -> [] | Some(Lines(x)) -> x | Some(Inline(x)) -> [x]
@@ -645,6 +645,9 @@ struct
          List.flatten (List.map (fun (_,r) ->
             [dispatch_aux Insert r(*; dispatch_aux Delete r*)]) (snd impl))) sources)
       in
+      let query_aux (f:(string -> string list)) = 
+        List.flatten (List.map f toplevel_queries)
+      in
       let main_lines =
       ["let main() = "]@
       ["let arguments = (ParseArgs.parse (ParseArgs.compile";
@@ -653,18 +656,30 @@ struct
        "let log_evt = if ParseArgs.flag_bool arguments \"VEROBSE\" then";
        "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
        "      print_endline (M3OCaml.string_of_evt pm rel t))";
-       "  else (fun evt -> ()) in"]@
+       "  else (fun evt -> ()) in";
+       "let log_results = if ParseArgs.flag_bool arguments \"VEROBSE\" then";
+       "    (fun () -> "]@
+       (query_aux (fun q -> [
+       "      print_endline (\""^q^": \"^(";
+       "        Database.dbmap_to_string (";
+       "          Database.get_map \""^q^"\" db";
+       "      )))"
+       ]))@[
+       "    )";
+       "  else (fun () -> ()) in"]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
       ["   let start = Unix.gettimeofday() in";
        "   while FileMultiplexer.has_next !mux do";
        "   let (new_mux,evt) = FileMultiplexer.next !mux in";
        "    ( log_evt evt;";
        "      mux := new_mux;";
-       "      match evt with"]@
+       "      (match evt with "]@
        (indent 2 dispatch_lines)@
       ["      | None -> ()";
        "      | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
        "      | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
+       "      );";
+       "      log_results ()";
        "    )";
        "   done;";
        "   let finish = Unix.gettimeofday() in";
