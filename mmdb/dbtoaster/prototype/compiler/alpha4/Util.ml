@@ -352,6 +352,10 @@ let rec k_tuples k (src: 'a list) : 'a list list =
    else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
                                (k_tuples (k-1) src))
 
+(* IO Operation abstraction - one level up from streams.  Mostly there to
+   support file/close blocks, but has some useful temporary file functionality
+   and eases simultaneous use of both channels and raw filenames (and 
+   eventually, sockets as well perhaps? *)
 module GenericIO =
 struct
   type out_t = 
@@ -368,6 +372,7 @@ struct
     | I_FileDescriptor of in_channel
   ;;
   
+  (* write fd (fun out -> ... ; (write to out);) *)
   let write (fd:out_t) (block:out_channel -> unit): unit =
     match fd with
     | O_FileName(fn,flags) -> 
@@ -380,6 +385,7 @@ struct
          finished_cb filename;Unix.unlink filename)
   ;;
 
+  (* read fd (fun in -> ... ; (read from in);) *)
   let read (fd:in_t) (block:in_channel -> unit): unit =
     match fd with
     | I_FileName(fn) -> 
@@ -393,20 +399,21 @@ exception GenericCompileError of string;;
 
 let give_up err = raise (GenericCompileError(err));;
 
+(* Utilities for managing command line arguments (analagous to Ruby's GetOpt) *)
 module ParseArgs =
 struct
   type flag_type_t = 
-    | NO_ARG    (* Switch takes no argument, next term processed normally *)
-    | OPT_ARG   (* Next term processed normally if switch, or as arg if not *)
-    | ARG       (* Next term is arg; Error if switch; replaces old *)
-    | ARG_LIST  (* Next term is arg; Error if switch; appended to old *)
+    | NO_ARG    (* Flag takes no argument, next term processed normally *)
+    | OPT_ARG   (* Next term processed normally if flag, or as arg if not *)
+    | ARG       (* Next term is arg; Error if flag; replaces old *)
+    | ARG_LIST  (* Next term is arg; Error if flag; appended to old *)
   ;;
   
   type flags_t = 
-    ( string list *             (* Command line switches (eg -l, --list) *)
-      (string * flag_type_t) *  (* Switch identifier, Switch type *)
-      string *                  (* Switch argument names *)
-      string                    (* Switch documentation *)
+    ( string list *             (* Command line flag (eg -l, --list) *)
+      (string * flag_type_t) *  (* Flag identifier, Flag type *)
+      string *                  (* Flag argument names *)
+      string                    (* Flag documentation *)
     ) list;;
   
   type compiled_flags_t = 
@@ -416,6 +423,10 @@ struct
   type arguments_t = (string list) StringMap.t
   ;;
   
+  (* Translate a flags_t (see above) into a compiled_flags_t;
+     The compiled version uses a string map rather than a list, and stores
+     the documentation in a more output-friendly form.
+   *)
   let compile (flags:flags_t): compiled_flags_t = 
     let (cflags, helptext_left,helptext_right,help_width) =
       List.fold_left (fun (m,doc_left,doc_right,doc_width) (klist,v,pdoc,doc) -> 
@@ -446,6 +457,12 @@ struct
         ) [] helptext_left
       );;
   
+  (* Parse flag arguments using a compiled_flags_t;
+     Returns a value that can be used with the various flag_* functions below.
+     Creates several "default" flags:
+       - "FILES" => The non-flag/flag-argument parameters (ie, input files)
+       - "$0"    => The process name
+   *)
   let parse ((flags,_,_):compiled_flags_t): arguments_t =
     let (parse_state,(last_flag,last_type)) = 
       Array.fold_left (fun (parse_state,(last_flag,last_type)) arg ->
@@ -487,33 +504,47 @@ struct
     in
       parse_state;;
   
+  (* Return a list of values associated with a flag.  Value returned depends
+     on the flag's type.
+       NO_ARG   => [] -> false | [""] -> true
+       OPT_ARG  => [] (flag not present) | [""] (arg not present) | [something]
+       ARG      => [] (flag not present) | [something]
+       ARG_LIST => the list of arguments to the flag
+  *)
   let flag_vals (arguments:arguments_t) (flag:string): string list = 
     if StringMap.mem flag arguments then (StringMap.find flag arguments)
                                     else [];;
   
+  (* Return a single value as a string option; Fails on ARG_LIST flags *)
   let flag_val (arguments:arguments_t) (flag:string): string option = 
     match (flag_vals arguments flag) with
     | []   -> None
     | [a]  -> Some(a)
     | _    -> failwith "Internal Error: single-value flag argument with multiple values";;
   
+  (* Return a single value; Userfriendly error if there's no value *)
   let flag_val_force (arguments:arguments_t) (flag:string): string =
     match flag_val arguments flag with
     | None    -> give_up ("Missing flag: "^flag)
     | Some(a) -> a;;
   
+  (* Return an ARG_LIST as a StringSet *)
   let flag_set (arguments:arguments_t) (flag:string): StringSet.t = 
     List.fold_right (fun f s -> StringSet.add (String.uppercase f) s)
                     (flag_vals arguments flag) StringSet.empty;;
   
+  (* For NO_ARG or OPT_ARG: Return true if the flag is present, false if not *)
   let flag_bool (arguments:arguments_t) (flag:string): bool =
     match (flag_vals arguments flag) with
     | [] -> false
     | _  -> true;;
   
   (*
-    let (flag_vals, flag_val, flag_val_force, flag_set, flag_bool) = 
-      ParseArgs.curry arguments;;
+    Generate programmer-friendly curried forms of the flag_* functions
+    
+    eg: 
+      let (flag_vals, flag_val, flag_val_force, flag_set, flag_bool) = 
+        ParseArgs.curry arguments;;
   *)
   let curry (arguments:arguments_t) = 
     ( flag_vals      arguments,
@@ -523,6 +554,10 @@ struct
       flag_bool      arguments
     )
   
+  (*
+    Produce user-readable, nicely formatted, documentation on program usage
+    using the help text provided when specifying the flags.
+  *)
   let helptext (arguments:arguments_t)
                ((_,helptext,flagtext):compiled_flags_t): string = 
     (
