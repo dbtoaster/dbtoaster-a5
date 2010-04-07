@@ -564,9 +564,10 @@ struct
       | SocketSource(addr,port) -> "(SocketSource("^(addr_const addr port)^"))"
 
    let framing_const fr = match fr with
-      | FixedSize(l) -> "(FixedSize("^(string_of_int l)^"))"
-      | Delimited(s) -> "(Delimited("^(string_const s)^"))"
-      | VarSize(s,e) -> "(VarSize("^(string_of_int s)^","^(string_of_int e)^"))"
+      | FixedSize(l)    -> "(FixedSize("^(string_of_int l)^"))"
+      | Delimited("\n") ->  "(Delimited(\"\\n\"))"
+      | Delimited(s)    -> "(Delimited("^(string_const s)^"))"
+      | VarSize(s,e)    -> "(VarSize("^(string_of_int s)^","^(string_of_int e)^"))"
 
    let src_counter = ref 0
    let adaptor_counter = ref 0
@@ -613,7 +614,10 @@ struct
           let decl_lines =
              ["let "^source_name^" = "^
                "FileSource.create "^source_spec^" "^framing_spec^" "^
-                  adaptor_vars^" in"]
+                  adaptor_vars^" "^
+                 (string_const 
+                    (Util.list_to_string (fun (r,_) -> r) rel_adaptors))^
+                  " in"]
           in (s, Some(Lines(adaptor_lines@decl_lines)), None)
        | _ -> failwith "Unsupported data source"
 
@@ -633,27 +637,35 @@ struct
          (List.map (fun (impl,_,_) ->
             let inst_name = get_source_instance impl in
               "    let mux = FileMultiplexer.add_stream mux "^inst_name^" in"
-         ) sources)@["  mux";"in"] in
+         ) sources)@["  ref mux";"in"] in
       let dispatch_aux evt r =
-         "| Some("^(pm_const evt)^","^(string_const r)^", t) -> ("^
-            "print_string ((M3OCaml.string_of_evt "^(pm_const evt)^" "^
-                (string_const r)^" t)^\"\\n\");"^
-            "on_"^(pm_name evt)^"_"^r^" t)" in
+         "| Some("^(pm_const evt)^","^(string_const r)^", t) -> "^
+            "on_"^(pm_name evt)^"_"^r^" t" in
       let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
          List.flatten (List.map (fun (_,r) ->
             [dispatch_aux Insert r(*; dispatch_aux Delete r*)]) (snd impl))) sources)
       in
       let main_lines =
       ["let main() = "]@
+      ["let arguments = (ParseArgs.parse (ParseArgs.compile";
+       "  [([\"-v\"],(\"VEROBSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\")";
+       "  ])) in";
+       "let log_evt = if ParseArgs.flag_bool arguments \"VEROBSE\" then";
+       "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
+       "      print_endline (M3OCaml.string_of_evt pm rel t))";
+       "  else (fun evt -> ()) in"]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
       ["   let start = Unix.gettimeofday() in";
-       "   while FileMultiplexer.has_next mux do";
-       "   let (_,evt) = FileMultiplexer.next mux in";
+       "   while FileMultiplexer.has_next !mux do";
+       "   let (new_mux,evt) = FileMultiplexer.next !mux in";
+       "    ( log_evt evt;";
+       "      mux := new_mux;";
        "      match evt with"]@
        (indent 2 dispatch_lines)@
       ["      | None -> ()";
        "      | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
        "      | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
+       "    )";
        "   done;";
        "   let finish = Unix.gettimeofday() in";
        "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)))";
@@ -664,6 +676,7 @@ struct
        "open M3Common.Patterns;;";
        "open M3OCaml;;\n";
        "open StandardAdaptors;;";
+       "open Util;;";
        "StandardAdaptors.initialize();;";
        "let db = Database.make_empty_db ";
        "   "^(schema_const schema);

@@ -1,10 +1,6 @@
 
 open Util
 
-exception GenericCompileError of string;;
-
-let give_up err = raise (GenericCompileError(err));;
-
 let print_line x = print_string (x^"\n");;
 
 let valid_langs = 
@@ -16,123 +12,31 @@ let valid_langs =
 
 type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST
 
-let (flags,helptext,flagtext) = 
-  let (flags,helptext_left,helptext_right,help_width) =
-    let flags = 
-      [ (["-l";"--lang"], 
-            ("LANG",   ARG), "ocaml|cpp|calc|m3",
-            "Specify the output language (default: ocaml).");
-        (["-o"],
-            ("OUTPUT", ARG), "<outfile>",
-            "Output to <outputfile> (default: stdout)." );
-        (["-c"],
-            ("COMPILE", ARG), "<obj_file>",
-            "Invoke secondary compiler to compile to <obj_file>." );
-        (["-d"],
-            ("DEBUG",  ARG_LIST), "<flag> [-d <flag> [...]]",
-            "Enable a debug flag." );
-        (["-?"], 
-            ("HELP",   NO_ARG),  "", 
-            "Display this help text." );
-      ]
-    in 
-      List.fold_left (fun (m,doc_left,doc_right,doc_width) (klist,v,pdoc,doc) -> 
-        let left_text = (List.fold_left (fun accum k ->
-            if accum = "" then k else accum^"|"^k
-          ) "" klist)^(if pdoc = "" then "" else " "^pdoc)
-        in
-          (
-            List.fold_left (fun m2 k ->
-              StringMap.add k v m2
-            ) m klist,
-            doc_left@[left_text],
-            doc_right@[doc],
-            if (String.length left_text)+5 > doc_width 
-              then (String.length left_text)+5
-              else doc_width
-          ) 
-      )(StringMap.empty,[],[],0) flags
-  in
-    ( flags, 
-      List.fold_left2 (fun accum left right -> 
-        accum^left^
-        (String.make (help_width-(String.length left)) ' ')^
-        right^"\n"
-      ) "" helptext_left helptext_right,
-      List.fold_left (fun accum left -> 
-        accum @ ["["^left^"]"]
-      ) [] helptext_left
-    )
-;;
+let flag_descriptors = 
+  ParseArgs.compile
+    [ (["-l";"--lang"], 
+          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3",
+          "Specify the output language (default: ocaml).");
+      (["-o"],
+          ("OUTPUT",  ParseArgs.ARG), "<outfile>",
+          "Output to <outputfile> (default: stdout)." );
+      (["-c"],
+          ("COMPILE", ParseArgs.ARG), "<obj_file>",
+          "Invoke secondary compiler to compile to <obj_file>." );
+      (["-d"],
+          ("DEBUG",   ParseArgs.ARG_LIST), "<flag> [-d <flag> [...]]",
+          "Enable a debug flag." );
+      (["-?"], 
+          ("HELP",    ParseArgs.NO_ARG),  "", 
+          "Display this help text." );
+    ];;
 
-let arguments = 
-  let (parse_state,(last_flag,last_type)) = 
-    Array.fold_left (fun (parse_state,(last_flag,last_type)) arg ->
-      if (String.length arg > 1) && (arg.[0] = '-') then 
-        ((*print_line ("arg: "^arg^"; FLAG!");*)
-          if (last_type <> NO_ARG) && (last_type <> OPT_ARG) then
-            give_up ("Missing argument to flag: "^last_flag)
-          else
-            if not (StringMap.mem arg flags) then
-              give_up ("Unknown flag: "^arg)
-            else
-              let (flag, flag_type) = StringMap.find arg flags in
-                match flag_type with
-                | NO_ARG -> 
-                    (StringMap.add flag [""] parse_state, (flag, flag_type))
-                | OPT_ARG ->
-                    (StringMap.add flag [] parse_state, (flag, flag_type))
-                | _ -> (parse_state, (flag, flag_type))
-        )
-      else
-        ((*print_line ("arg: "^arg^"; NOT FLAG:"^last_flag);*)
-          let append_to_entry k v m =
-            if StringMap.mem k m then
-              StringMap.add k ((StringMap.find k m)@[v]) m
-            else
-              StringMap.add k [v] m
-          in
-            match last_type with
-            | NO_ARG -> 
-                (append_to_entry "FILES" arg parse_state, ("", NO_ARG))
-            | OPT_ARG -> 
-                (StringMap.add last_flag [arg] parse_state, ("", NO_ARG))
-            | ARG -> 
-                (StringMap.add last_flag [arg] parse_state, ("", NO_ARG))
-            | ARG_LIST -> 
-                (append_to_entry last_flag arg parse_state, ("", NO_ARG))
-        )
-    ) (StringMap.empty, ("$0", ARG)) Sys.argv
-  in
-    parse_state;;
+let arguments = ParseArgs.parse flag_descriptors;;
 
-(********* UTILITIES FOR VALIDATING/EXTRACTING ARGUMENTS *********)
+(********* UTILITIES FOR ACCESSING FLAGS *********)
 
-let flag_vals (flag:string): string list = 
-  if StringMap.mem flag arguments then (StringMap.find flag arguments)
-                                  else []
-
-let flag_val (flag:string): string option = 
-  match (flag_vals flag) with
-  | []   -> None
-  | [a]  -> Some(a)
-  | _    -> failwith "Internal Error: single-value flag argument with multiple values";;
-
-let flag_val_force (flag:string): string =
-  match flag_val flag with
-  | None    -> give_up ("Missing flag: "^flag)
-  | Some(a) -> a
-
-let flag_set (flag:string): StringSet.t = 
-  List.fold_right (fun f s -> StringSet.add (String.uppercase f) s)
-                  (flag_vals flag) StringSet.empty
-
-let flag_bool (flag:string): bool =
-  match (flag_vals flag) with
-  | [] -> false
-  | _  -> true;;
-
-(********* UTILITIES FOR ACCESSING DEBUGFLAGS *********)
+let (flag_vals, flag_val, flag_val_force, flag_set, flag_bool) = 
+  ParseArgs.curry arguments;;
 
 let debug_modes = flag_set "DEBUG";;
 
@@ -146,24 +50,7 @@ let debug_flag df = StringSet.mem df debug_modes;;
 
 if flag_bool "HELP" then
   (
-    print_string (
-      let max_width = 80 in
-      let app_name = (flag_val_force "$0") in
-      let (indent_width,skip_line) = 
-        if (String.length app_name) * 4 > max_width then
-          (4, "\n    ") else (String.length app_name, "")
-      in
-      let (indented_app_invocation,_) = 
-        (List.fold_left (fun (accum,width) field ->
-          if width + (String.length field) + 1 > max_width then
-            ( accum^"\n"^(String.make (indent_width+1) ' ')^field,
-              (String.length field)+1 )
-          else
-            ( accum^" "^field, width+(String.length field)+1 )
-        ) ("", indent_width) (flagtext@["file1 [file2 [...]]"]))
-      in
-        app_name^skip_line^indented_app_invocation^"\n\n"^helptext
-    );
+    print_string (ParseArgs.helptext arguments flag_descriptors);
     exit 0
   )
 else ();;

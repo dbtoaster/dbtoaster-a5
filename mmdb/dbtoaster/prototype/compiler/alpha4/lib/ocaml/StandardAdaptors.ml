@@ -2,6 +2,8 @@ open M3
 open M3Common
 open M3OCaml
 
+exception AbortEventConstruction
+
 (* Standard parameters/transformations for all adaptors *)
 
 (* param_val: delimiter *)
@@ -98,8 +100,10 @@ let build_tuple param_val =
       let nf = List.length fields in
       let common =
          if nf = num_fns then List.map2 (fun bf f -> bf f) build_fns fields
+         else if nf = 0 then
+           raise AbortEventConstruction (* no fields => no event *)
          else if nf < num_fns then
-            List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
+           List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
          else List.map2 (fun bf f -> bf f) build_fns (sub [] fields 0 num_fns)
       in
       let extension = if nf > num_fns then
@@ -123,7 +127,7 @@ let postprocessors : (string * (string -> const_t list -> const_t list)) list =
    [("postproject", postproject)]
 
 let build_event param_val =
-   match param_val with
+  match param_val with
     | "insert" -> (fun fields -> [(Insert, fields)])
     | "delete" -> (fun fields -> [(Delete, fields)])
     | _ -> failwith ("invalid event type "^param_val)
@@ -160,11 +164,17 @@ let standard_generator params =
                           (build_event "insert")
    in
    (fun tuple ->
-      let pre_fields = List.fold_left
-         (fun acc_fields prf -> prf acc_fields) (token_fn tuple) prep_fns in
-      let post_fields = List.fold_left
-         (fun acc_fields postf -> postf acc_fields) (const_fn pre_fields) post_fns
-      in event_const_fn post_fields) 
+      (*print_endline tuple;*)
+      try
+        ( 
+          let pre_fields = List.fold_left
+             (fun acc_fields prf -> prf acc_fields) (token_fn tuple) prep_fns in
+          let post_fields = List.fold_left
+             (fun acc_fields postf -> postf acc_fields) (const_fn pre_fields) post_fns
+          in event_const_fn post_fields
+        )
+      with AbortEventConstruction -> []
+    ) 
 
 (* Generic CSV, w/ user-defined field delimiter *)
 let csv_params delim schema event =

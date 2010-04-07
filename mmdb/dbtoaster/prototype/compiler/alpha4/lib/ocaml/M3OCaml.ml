@@ -269,14 +269,15 @@ module type SyncSource =
 sig
    type t
 
-   val create: source_t -> framing_t -> (rel_id_t * Adaptors.adaptor) list -> t 
+   val create: source_t -> framing_t -> (rel_id_t * Adaptors.adaptor) list ->
+               string -> t 
    val has_next: t -> bool
    val next: t -> t * (stream_event option)
 end
 
 module type SyncMultiplexer = functor (S : SyncSource) ->
 sig
-   type t = S.t list
+   type t = (S.t ref) list
    val create : unit -> t
    val add_stream: t -> S.t -> t
    val remove_stream: t -> S.t -> t
@@ -313,13 +314,13 @@ end
 module FileSource : SyncSource =
 struct
    type fs_t = framing_t * in_channel
-   type t = fs_t option * (string * Adaptors.adaptor) list * (stream_event list ref)
+   type t = fs_t option * (string * Adaptors.adaptor) list * (stream_event list ref) * string
 
-   let create source_t framing rels_adaptors =
+   let create source_t framing rels_adaptors name =
       match source_t with
        | FileSource(filename) ->
          let ns = Some(framing, open_in filename)
-         in (ns, rels_adaptors, ref [])
+         in (ns, rels_adaptors, ref [], name)
        | _ -> failwith "invalid file source" 
 
    (* TODO: variable sized frames
@@ -350,38 +351,43 @@ struct
           with End_of_file -> (close_in inc; (None, ""))
          end 
 
-   let has_next fs = let (ns,_,buf) = fs in not((ns = None) && (!buf = []))
+   let has_next fs = let (ns,_,buf,_) = fs in not((ns = None) && (!buf = []))
 
    (* returns (_, None) at end of file *)
    let next fs : t * (stream_event option) =
-      let (ns,ra,buf) = fs in
+      let (ns,ra,buf,name) = fs in
          if !buf != [] then
             let e = List.hd (!buf)
-            in buf := List.tl (!buf); ((ns,ra,buf), Some(e))
+            in buf := List.tl (!buf); ((ns,ra,buf,name), Some(e))
          else
          begin
+          (
             let (new_ns, tuple) = get_input ns in
             if tuple != "" then
                let aux r (pm,cl) = (pm,r,cl) in
                let events = List.flatten (List.map
-                  (fun (r,f) -> List.map (aux r) (f tuple)) ra)
-               in buf := List.tl events;
-                  ((new_ns,ra,buf), Some(List.hd events))
-            else ((new_ns,ra,buf), None)
+                  (fun (r,f) -> List.map (aux r) (f tuple)) ra) in
+               if List.length events > 0 then
+                 ( buf := List.tl events;
+                   ((new_ns,ra,buf,name), Some(List.hd events)) )
+               else
+                 ((new_ns,ra,buf,name), None)
+            else ((new_ns,ra,buf,name), None)
+           )
          end
 end
 
 module SM : SyncMultiplexer = functor (S : SyncSource) ->
 struct
-   type t = S.t list
+   type t = (S.t ref) list
    
    let create () = []
 
-   let add_stream fm s = fm@[s]
+   let add_stream fm s = fm@[(ref s)]
    
-   let remove_stream fm s = List.filter (fun x -> x <> s) fm
+   let remove_stream fm s = List.filter (fun x -> !x <> s) fm
    
-   let has_next fm = List.exists S.has_next fm
+   let has_next fm = List.exists (fun x -> S.has_next !x) fm
    
    (* returns (_, None) at end of file *)
    let next fm : t * (stream_event option) =
@@ -390,9 +396,11 @@ struct
       let event = ref None in
       while ((List.length (!nfm)) > 0) && (!event = None) do
          let s = List.nth !nfm !i in
-         event := snd (S.next s);
-         nfm := List.filter (fun x -> S.has_next x) (!nfm);
-         if !event = None then i := Random.int(List.length (!nfm));
+         let next = (S.next !s) in
+         event := snd next;
+         s := fst next;
+         nfm := List.filter (fun x -> S.has_next !x) (!nfm);
+         if (List.length (!nfm) > 0) then i := Random.int(List.length (!nfm));
       done;
       (!nfm, !event)
 end
@@ -402,9 +410,8 @@ module FileMultiplexer = SM(FileSource)
 let string_of_evt (action:M3.pm_t) 
                   (relation:string) 
                   (tuple:M3.const_t list): string =
-  "Dispatching "^
-  (match action with Insert -> "insert" | Delete -> "delete")^
-  " of "^relation^(Util.list_to_string string_of_const tuple);;
+  (match action with Insert -> "Inserting" | Delete -> "Deleting")^
+  " "^relation^(Util.list_to_string string_of_const tuple);;
 
 (* TODO: RandomSource *)
 (* TODO: multiplexer of random sources *)
