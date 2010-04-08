@@ -360,21 +360,19 @@ struct
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
     
-   let rec cmp_exprs (cmp_leaf:leaf_t -> leaf_t -> 'a option -> 'a option)
+   let rec cmp_exprs (leaf_f: leaf_t -> leaf_t -> 'a option -> 'a option)
                      (a: expr_t) (b: expr_t) 
-                     (accum:'a option): 'a option =
+                     (accum: 'a option): 'a option =
       if accum = None then None
       else
-        let do_recurse = List.fold_right2 (cmp_exprs cmp_leaf) in
-        match a with
-        | Val(xa)  -> 
-          ( match b with Val(xb) -> cmp_leaf xa xb accum | _ -> None )
-        | Neg(ae)  -> 
-          ( match b with Neg(be) -> cmp_exprs cmp_leaf ae be accum | _ -> None )
-        | Sum(ae)  -> 
-          ( match b with Sum(be) -> do_recurse ae be accum | _ -> None )
-        | Prod(ae) -> 
-          ( match b with Prod(be) -> do_recurse ae be accum | _ -> None )
+        let do_recur = List.fold_right2 (cmp_exprs leaf_f)
+        in
+        match (a,b) with
+          (Val  xa, Val  xb) -> leaf_f xa xb accum 
+        | (Neg  ae, Neg  be) -> cmp_exprs leaf_f ae be accum
+        | (Sum  ae, Sum  be) -> do_recur ae be accum
+        | (Prod ae, Prod be) -> do_recur ae be accum
+        | _ -> None
    
 end
 
