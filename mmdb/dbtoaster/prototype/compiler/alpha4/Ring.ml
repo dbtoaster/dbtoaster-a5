@@ -180,6 +180,23 @@ sig
       blow-up in the worst case, simplify is always polynomial-time.
    *)
    val simplify: expr_t -> expr_t
+   
+   (* cmp_exprs cmp_leaf expr_a expr_b accum -> accum
+      
+      Helper function for comparing expressions.  
+      
+      Performs a DFS in parallel over two expressions.  If any differences are
+      encountered between the two expressions, cmp_exprs will immediately return
+      None.  cmp_leaf will be invoked to determine whether two leaves are 
+      equivalent.  
+      
+      A positive result (Some(x)) is guaranteed to be an equivalent expr, while
+      a negative result (None) only indicates that we were not able to establish
+      equivalence.  Among other things, form normalization, double-negation,
+      and Product/Sum commutability are not handled properly (yet).
+   *)
+   val cmp_exprs: (leaf_t -> leaf_t -> 'a option -> 'a option) ->
+                  expr_t ->  expr_t -> 'a option -> 'a option
 end
 
 
@@ -342,6 +359,23 @@ struct
 
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
+    
+   let rec cmp_exprs (cmp_leaf:leaf_t -> leaf_t -> 'a option -> 'a option)
+                     (a: expr_t) (b: expr_t) 
+                     (accum:'a option): 'a option =
+      if accum = None then None
+      else
+        let do_recurse = List.fold_right2 (cmp_exprs cmp_leaf) in
+        match a with
+        | Val(xa)  -> 
+          ( match b with Val(xb) -> cmp_leaf xa xb accum | _ -> None )
+        | Neg(ae)  -> 
+          ( match b with Neg(be) -> cmp_exprs cmp_leaf ae be accum | _ -> None )
+        | Sum(ae)  -> 
+          ( match b with Sum(be) -> do_recurse ae be accum | _ -> None )
+        | Prod(ae) -> 
+          ( match b with Prod(be) -> do_recurse ae be accum | _ -> None )
+   
 end
 
 

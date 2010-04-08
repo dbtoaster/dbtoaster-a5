@@ -396,10 +396,7 @@ module M3InProgress = struct
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
         if result = NoMapping then
           try 
-            let var_mappings = Calculus.equate_terms 
-                (Calculus.readable_term query_term)
-                (Calculus.readable_term cmp_term)
-            in
+            let var_mappings = Calculus.equate_terms query_term cmp_term in
             let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
             (* We get 2 different mappings; Check to see they're consistent *)
             if not (List.for_all2 (fun (a,_) (b,_) -> (a = b) ||
