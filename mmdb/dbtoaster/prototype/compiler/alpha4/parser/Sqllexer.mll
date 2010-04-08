@@ -54,12 +54,15 @@ let keywords =
         "BINDINGS", BINDINGS;
         "SOCKET", SOCKET;
         "FILE", FILE;
+        "PIPE", PIPE;
         "FIXEDWIDTH", FIXEDWIDTH;
         "DELIMITED", DELIMITED;
         "LINE", LINE;
         "VARSIZE", VARSIZE;
         "OFFSET", OFFSET;
         "ADJUSTBY", ADJUSTBY;
+        "POSTGRES", POSTGRES;
+        "RELATION", RELATION
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
@@ -131,6 +134,7 @@ rule tokenize = parse
 | multicmst     { comment 1 lexbuf }
 | ';'           { EOSTMT }
 | ":="          { SETVALUE }
+| '.'           { PERIOD }
 | eof           { EOF }
 
 and comment depth = parse

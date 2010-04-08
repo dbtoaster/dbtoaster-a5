@@ -512,6 +512,7 @@ let source src framing (rel_adaptors : (string * adaptor_t) list) =
        in File(open_in fn, adaptor_impls)
        
     | SocketSource(_) -> failwith "Sockets not yet implemented."
+    | PipeSource(_)   -> failwith "Pipes not yet implemented."
    in (src_impl, None, None)
 
 (* No top level code generated for the interpreter *)

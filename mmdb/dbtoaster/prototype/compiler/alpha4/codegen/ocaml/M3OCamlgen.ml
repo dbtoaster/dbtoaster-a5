@@ -36,7 +36,8 @@ struct
    let pm_const pm = match pm with | Insert -> "Insert" | Delete -> "Delete" 
    let pm_name pm  = match pm with | Insert -> "ins" | Delete -> "del" 
 
-   let string_const x = "\""^x^"\""
+   let string_const x = 
+        "\""^(Str.global_replace (Str.regexp "\"") "\\\"" x)^"\""
    let string_pair_const (x,y) = "("^(string_const x)^","^(string_const y)^")"
    let pattern_const p = list_to_string string_of_int p
    let patterns_const ps = list_to_string pattern_const ps
@@ -562,6 +563,7 @@ struct
    let source_const src = match src with
       | FileSource(fn) -> "(FileSource("^(string_const fn)^"))"
       | SocketSource(addr,port) -> "(SocketSource("^(addr_const addr port)^"))"
+      | PipeSource(p) -> "(PipeSource("^(string_const p)^"))"
 
    let framing_const fr = match fr with
       | FixedSize(l)    -> "(FixedSize("^(string_of_int l)^"))"
@@ -608,8 +610,7 @@ struct
       let adaptor_lines = List.flatten adaptor_lines_l in
       let adaptor_vars = list_to_string
          (fun (x,y)->"("^(string_const x)^","^y^")") adaptor_rels_names in
-      match src with
-       | FileSource _ ->
+      let make_file_source () = 
           let source_spec = source_const src in
           let decl_lines =
              ["let "^source_name^" = "^
@@ -619,6 +620,10 @@ struct
                     (Util.list_to_string (fun (r,_) -> r) rel_adaptors))^
                   " in"]
           in (s, Some(Lines(adaptor_lines@decl_lines)), None)
+      in
+      match src with
+       | FileSource _ -> make_file_source ()
+       | PipeSource _ -> make_file_source ()
        | _ -> failwith "Unsupported data source"
 
    (* TODO:

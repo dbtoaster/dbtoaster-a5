@@ -1,0 +1,55 @@
+DBT-SQL documentation
+
+DBT-SQL is a set of extensions to basic SQL to support compilation via 
+DBToaster.
+
+--------------------------------------
+
+SELECT sum(expression) [, sum(expression2)[, ...]] 
+  FROM r1[, r2[, ...]] 
+  WHERE condition
+
+The select statement is unchanged, although the target expression can only have
+aggregate terms in it.  Currently, only sum is supported.
+
+--------------------------------------
+
+CREATE TABLE r(col1 type[, col2 type[, ...]]) FROM sourceStatement
+
+The first half of the create table statement is unchanged, but since we are 
+operating in a streaming context, the compiler needs to know where the data will 
+come from.  sourceStatement can be one of four things:
+
+sourceStatement := 
+    FILE filename framingStatement adaptorStatement
+  | SOCKET [bindAddr] port framingStatement adaptorStatement
+  | PIPE pipeCommand framingStatement adaptorStatement
+  | POSTGRES [database.]relation(col1 type[, col2 type[, ...]])
+
+FILE and SOCKET are straightforward (SOCKET has little to no support at the 
+moment).  PIPE acts like FILE except the data comes from the specified command
+rather than a file.  
+
+POSTGRES is a shorthand for a PIPE source that invokes `psql` with the 
+appropriate arguments and frame deocder and adaptor.  `psql` is assumed to be in
+the path.
+
+framingStatement and adaptorStatement are as follows
+
+framingStatement :=
+    FIXEDWIDTH width
+ |  LINE DELIMITED
+ |  string DELIMITED
+ |  VARSIZE
+ |  VARSIZE OFFSET offset
+ |  VARSIZE OFFSET offset ADJUSTBY adjustby
+
+adaptorStatement := 
+    CSV[(param1 := val1[, param2 := val2[, ...]])]
+
+framingStatement specifies how input records are separated: FXEDWITDH, LINE 
+DELIMITED and string DELIMITED are self-explanatory.  For documentation on 
+VARSIZE, see M3.ml
+
+adaptorStatement specifies how fields are to be parsed out of a given record.
+Currently, the only tested adaptor is CSV.  See libs/ocaml/StandardAdaptors.ml

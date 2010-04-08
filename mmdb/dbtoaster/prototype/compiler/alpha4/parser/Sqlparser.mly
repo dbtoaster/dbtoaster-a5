@@ -534,11 +534,12 @@
 %token SUM MINUS PRODUCT DIVIDE
 %token EQ NE LT LE GT GE
 %token AND OR NOT BETWEEN
-%token COMMA LPAREN RPAREN
+%token COMMA LPAREN RPAREN PERIOD
 %token AS
 %token JOIN INNER OUTER LEFT RIGHT ON   
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
+%token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS
 %token EOSTMT
@@ -582,10 +583,15 @@ createAnonTableStmt:
             add_relation name fields
     }
 
+pipeArgs:
+|   STRING                { [$1] }
+|   STRING COMMA pipeArgs { $1::$3 }
+
 sourceStmt:
-|   FILE STRING       { M3.FileSource($2) }
-|   SOCKET STRING INT { M3.SocketSource(Unix.inet_addr_of_string $2, $3) }
-|   SOCKET INT        { M3.SocketSource(Unix.inet_addr_any, $2) }
+|   FILE STRING        { M3.FileSource($2) }
+|   SOCKET STRING INT  { M3.SocketSource(Unix.inet_addr_of_string $2, $3) }
+|   SOCKET INT         { M3.SocketSource(Unix.inet_addr_any, $2) }
+|   PIPE STRING        { M3.PipeSource($2) }
 
 framingStmt:
 |   FIXEDWIDTH INT                  { M3.FixedSize($2) }
@@ -604,12 +610,35 @@ adaptorStmt:
 |   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
 |   ID                             { (String.lowercase $1, []) }
 
+postgresFieldList:
+|   ID ID                          { ($1, $2) }
+|   ID ID COMMA postgresFieldList  { let (n,t) = $4 in ($1^","^n, $2^","^t) }
+
+relationInputStmt:
+|   sourceStmt framingStmt adaptorStmt { ($1,$2,$3) }
+|   POSTGRES ID LPAREN postgresFieldList RPAREN {
+        let (names,types) = $4 in
+        let db_rel = Str.split (Str.regexp "\\.") $2 in
+        let (db,rel) = 
+          if List.length db_rel > 1 
+          then (List.nth db_rel 0, List.nth db_rel 1)
+          else ("", List.nth db_rel 0)
+        in
+          (
+            M3.PipeSource("psql "^db^" -A -t -c \"SELECT "^names^
+                          " FROM "^rel^"\""),
+            M3.Delimited("\n"),
+            ("csv", [("fields","|");("schema",types)])
+            (* ;("skiplines","2");("trimwhitespace","") *)
+          )
+    }
+
 createTableStmt:
-|   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt 
-    framingStmt adaptorStmt { 
+|   CREATE TABLE ID LPAREN fieldList RPAREN FROM relationInputStmt { 
         let name = $3 in
         let fields = $5 in
-        let source_info = ($8,$9,name,$10) in
+        let (source,framing,adaptor) = $8 in
+        let source_info = (source,framing,name,adaptor) in
           add_relation name fields;
           add_source name source_info
     }

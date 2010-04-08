@@ -321,6 +321,9 @@ struct
        | FileSource(filename) ->
          let ns = Some(framing, open_in filename)
          in (ns, rels_adaptors, ref [], name)
+       | PipeSource(pipe_cmd) ->
+         let ns = Some(framing, Unix.open_process_in pipe_cmd)
+         in (ns, rels_adaptors, ref [], name)
        | _ -> failwith "invalid file source" 
 
    (* TODO: variable sized frames

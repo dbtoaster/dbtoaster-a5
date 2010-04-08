@@ -144,6 +144,7 @@ type framing_t =
 
 type source_t =
    FileSource of string
+ | PipeSource of string
  | SocketSource of Unix.inet_addr * int
  
 (* adaptor name, (param = value) list *)

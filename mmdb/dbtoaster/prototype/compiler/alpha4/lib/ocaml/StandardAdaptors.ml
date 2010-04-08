@@ -69,10 +69,22 @@ let substring param_val =
          (counter+1,acc@[String.sub f off len])
       else (counter+1,acc@[f])
    in (fun fields -> snd (List.fold_left aux (0,[]) fields))
-   
+
+let skiplines param_val = 
+  let num = ref (int_of_string param_val) in
+  (fun fields -> 
+    if !num > 0 then (num := !num - 1; raise AbortEventConstruction)
+                else fields
+  )
+
+let trimwhitespace param_val = 
+  (fun fields -> List.map (Str.global_replace (Str.regexp "^ *\\(.*[^ ]\\) *$")
+                                              "\\1") fields)
+
 (* Preprocessing: param key, prep fn *)
 let preprocessors : (string * (string -> string list -> string list)) list =
-   [("project", preproject); ("case", change_case); ("substring", substring)]
+   [("project", preproject); ("case", change_case); ("substring", substring);
+    ("skiplines", skiplines); ("trimwhitespace", trimwhitespace)]
 
 (* param_val: (int|float) list
  * Builds a tuple, i.e. a const_t list from a string list given the expected
@@ -83,11 +95,13 @@ let preprocessors : (string * (string -> string list -> string list)) list =
 (* TODO: better hashing function control *)
 let build_tuple param_val =
    let types = Str.split (Str.regexp ",") param_val in
-   let build_fns = List.map (fun t -> match t with
-      | "int" -> (fun x -> CFloat(float(int_of_string x)))
-      | "float" -> (fun x -> CFloat(float_of_string x))
-      | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
-      | _ -> failwith ("invalid const_t type "^t)) types in
+   let build_fns = 
+       List.map (fun t -> match t with
+        | "int" -> (fun x -> try CFloat(float(int_of_string x)) with 
+                    Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
+        | "float" -> (fun x -> CFloat(float_of_string x))
+        | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
+        | _ -> failwith ("invalid const_t type "^t)) types in
    let num_fns = List.length build_fns in
    let extend_fn = List.hd (List.rev build_fns) in
    let rec sub acc l off len =
