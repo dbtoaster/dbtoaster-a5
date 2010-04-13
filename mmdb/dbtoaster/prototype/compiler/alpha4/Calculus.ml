@@ -1013,4 +1013,3 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
     | Some(a,_) -> a
     | None -> raise (TermsNotEquivalent("foo"))
 ;;
-  

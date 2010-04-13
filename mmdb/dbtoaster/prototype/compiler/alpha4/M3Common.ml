@@ -37,7 +37,7 @@ let string_of_type_list (l:var_type_t list) : string =
   (Util.list_to_string string_of_var_type l)
 
 let rec indented_map_access (mapn, inv, outv, init_calc): IndentedPrinting.t =
-  IndentedPrinting.Node(("{ "," := ",""," }"), 
+  IndentedPrinting.Node(("{ "," }"),(" := ",""),
     IndentedPrinting.Leaf(mapn^(vars_to_string inv)^(vars_to_string outv)),
     indented_calc init_calc
   )
@@ -46,7 +46,7 @@ and indented_vtype vt = IndentedPrinting.Leaf(string_of_var_type vt)
 and indented_calc calc : IndentedPrinting.t = 
   let ots op c1 c2 = 
     IndentedPrinting.Node(
-      ("( "," "^op^" ",""," )"),
+      ("( "," )"),(" "^op^" ",""),
       indented_calc c1, indented_calc c2
     )
   in
@@ -60,19 +60,20 @@ and indented_calc calc : IndentedPrinting.t =
  (* | And(c1, c2)        -> ots "AND" c1 c2 *)
     | IfThenElse0(c1,c2) -> 
       IndentedPrinting.Node(
-        ("{ IF ( "," ) ","THEN ( "," )}"),
-        indented_calc c1, indented_calc c2
+        ("{ "," )}"),(" ) ","THEN ( "),
+        IndentedPrinting.Parens(("IF ( ",""), indented_calc c1),
+        indented_calc c2
       )
     | Const(c)           -> indented_const(c)
     | Var(x)             -> IndentedPrinting.Leaf(x)
 and indented_stmt (mapacc, delta_term) =
   IndentedPrinting.Node(
-    (""," +="," ",""),
+    ("",""),(" +="," "),
     (indented_map_access mapacc), (indented_calc delta_term)
   )
 and indented_trig (pm, rel_id, var_id, statements) = 
   IndentedPrinting.Node(
-    ("O",": ","",""),
+    ("O",""),(": ",""),
     IndentedPrinting.Leaf(
       "N "^(match pm with Insert -> "+" | Delete -> "-")^
       rel_id^(vars_to_string var_id)

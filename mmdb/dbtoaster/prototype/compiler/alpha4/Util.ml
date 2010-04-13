@@ -580,15 +580,57 @@ struct
     )
 end
 
+(* IndentedPrinting
+  Module for producing indented/wrapped multiline syntax/code/trees/etc...
+   
+  IndentedPrinting proceeds in two phases:
+  1: Caller generates a tree of IndentedPrinting.t representing the code tree.
+  2: IndentedPrinting.to_lines recursively processes the code tree generating
+     a list of strings (one line per entry) that have been properly indented
+     and wrapped (the wrapping is still approximate).
+  2.a: Alternatively, to_string invokes to_lines and produces a single string.
+  
+  The point of this exercise is to separate the symbolic representation of 
+  the printed data from the exact typesetting requirements.  Each member of the
+  IndentedPrinting.t union has its own typesetting rules, defined as follows.
+  
+  Leaf(block)
+    A block of text to be placed on one line.  No wrapping is performed, 
+    though the block may be merged in with other text on one line if it fits,
+    or indented by its containing expressions.
+  
+  Lines
+    Subexpressions to be placed on multiple lines.  The subexpressions are 
+    evaluated independently and placed on separate lines.
+  
+  Node((lparen,rparen),(op,rop),lhs,rhs)
+    A binary operator: Formatted as follows:
+      {lparen lhs op rop rhs rparen}
+    If necessary a linebreak will be inserted between op and rop.
+    If rhs evaluates to multiple lines, rparen will appear on its own line.
+    If both LHS and RHS span multiple lines, a linebreak will be inserted 
+    between lhs and op (ie, op will appear on its own line)
+    All lines except the ones containing lparen and rparen (the latter, only if 
+    it is on its own line) will be indented by the width of lparen.
+    All lines in rhs will also be indented by the width of rop
+  
+  Parens((lparen,rparen),subexp)
+    Parentheses around subexp: Formatted as follows:
+      {lparen subexp rparen}
+    If subexp evaluates to multiple lines, then rparen will appear on its own 
+    line and all lines of subexp except the first will be indented by the width
+    of lparen
+*)
+
 module IndentedPrinting =
 struct
-                  (* lparen,  op,      rop,     rparen *)
-  type node_defn_t = string * string * string * string
+  type op_defn_t = string * string (* op,rop *)
+  type parens_t = string * string (* lparen, rparen *)
   
   type t = 
-  | Leaf of string               (* block *)
-  | Node of node_defn_t * t * t  (* typesetting, lhs, rhs *)
-  | Parens of node_defn_t * t    (* typesetting, val *)
+  | Leaf of string
+  | Node of parens_t * op_defn_t * t * t
+  | Parens of parens_t * t
   | Lines of t list
   
   let indent_lines indent = 
@@ -597,7 +639,9 @@ struct
   let rec to_lines (width:int) (node:t): string list= 
     match node with
     | Leaf(s) -> [s]
-    | Node((lparen,op,rop,rparen),lhs,rhs) ->
+    
+    | Node((lparen,rparen),(op,rop),lhs,rhs) ->
+      (* Generate line(s) for the subexpressions *)
       let lh_list = 
         to_lines (width - (String.length lparen) - 
                           (String.length op)) lhs
@@ -606,6 +650,9 @@ struct
         to_lines (width - (String.length lparen) - 
                           (String.length rparen)) rhs 
       in
+        (* Check if we have to do any sort of multiline hackery:
+           ie: lhs or rhs contains multiple lines, or we need to split
+           between op and rop *)
         if (List.length lh_list > 1) || (List.length rh_list > 1) ||
            ( (String.length (List.hd lh_list)) + 
              (String.length (List.hd rh_list)) +
@@ -613,14 +660,21 @@ struct
              (String.length rop) + (String.length rparen) > width ) 
         then
           (
+            (* If the lhs is a multiline expression then we need to split
+               off the first line and merge it with lparen, indent the others
+               and put op on its own line *)
             if (List.length lh_list > 1) then
               [ lparen ^ (List.hd lh_list)] @
               (indent_lines (String.length lparen) (List.tl lh_list)) @
               [ "  "^op ]
             else
+            (* If the lhs fits on one line, we can keep it on the current line
+               and leave op there *)
               [ lparen ^ (List.hd lh_list) ^ op ]
           ) @
           (
+            (* If the rhs is a multiline expression then we do something similar
+               to what we do with lhs above *)
             if (List.length rh_list > 1) then
               [ (String.make (String.length lparen) ' ')^
                 rop ^ (List.hd rh_list) ] @
@@ -632,8 +686,10 @@ struct
                 rop ^ (List.hd rh_list) ^ rparen ]
           )
         else
+          (* If the entire expression fits on one line, then good *)
           [ lparen ^ (List.hd lh_list) ^ op ^ rop ^ (List.hd rh_list) ^ rparen ]
-    | Parens((lparen,_,_,rparen),subexp) ->
+
+    | Parens((lparen,rparen),subexp) ->
       let sub_list = 
         to_lines (width - (String.length lparen) - 
                           (String.length rparen)) subexp
@@ -644,6 +700,7 @@ struct
           (indent_lines (String.length lparen) [rparen])
         else 
           [ lparen ^ (List.hd sub_list) ^ rparen ]
+          
     | Lines([])    -> [""]
     | Lines(a::[]) -> to_lines width a
     | Lines(a::l)  -> (to_lines width a)@(to_lines width (Lines(l)))
@@ -653,6 +710,26 @@ struct
     ((String.concat "\n" (to_lines width node))^"\n")
 end
 
+(* Debug
+  Tools for a globally-managed debugging/logging system.  
+  
+  Debug is essentially a glorified StringSet that allows programmers to insert
+  statements into their code to be triggered only if a particular string, or 
+  mode is in the set.  In effect it's like Log4J, etc...
+  
+  Mode management:
+    set_modes:  Declare the set of modes that are active.
+    activate:   Activate a specific mode.
+    deactivate: Deactivate a specific mode.
+    
+  Debugging
+    exec:   Given a mode and a block->unit, execute the block if the mode is 
+            active.
+    print:  Given a mode and a block->string, execute the block and print its
+            return value if the mode is active.  If the mode is not active then
+            the block will not be executed.
+    active: Return whether or not a particular mode is active.
+*)
 module Debug = 
 struct
   
