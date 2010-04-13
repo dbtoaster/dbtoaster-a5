@@ -579,3 +579,104 @@ struct
         app_name^skip_line^indented_app_invocation^"\n\n"^helptext
     )
 end
+
+module IndentedPrinting =
+struct
+                  (* lparen,  op,      rop,     rparen *)
+  type node_defn_t = string * string * string * string
+  
+  type t = 
+  | Leaf of string               (* block *)
+  | Node of node_defn_t * t * t  (* typesetting, lhs, rhs *)
+  | Parens of node_defn_t * t    (* typesetting, val *)
+  | Lines of t list
+  
+  let indent_lines indent = 
+    List.map (fun x->(String.make indent ' ')^x);;
+  
+  let rec to_lines (width:int) (node:t): string list= 
+    match node with
+    | Leaf(s) -> [s]
+    | Node((lparen,op,rop,rparen),lhs,rhs) ->
+      let lh_list = 
+        to_lines (width - (String.length lparen) - 
+                          (String.length op)) lhs
+      in
+      let rh_list = 
+        to_lines (width - (String.length lparen) - 
+                          (String.length rparen)) rhs 
+      in
+        if (List.length lh_list > 1) || (List.length rh_list > 1) ||
+           ( (String.length (List.hd lh_list)) + 
+             (String.length (List.hd rh_list)) +
+             (String.length lparen) + (String.length op) + 
+             (String.length rop) + (String.length rparen) > width ) 
+        then
+          (
+            if (List.length lh_list > 1) then
+              [ lparen ^ (List.hd lh_list)] @
+              (indent_lines (String.length lparen) (List.tl lh_list)) @
+              [ "  "^op ]
+            else
+              [ lparen ^ (List.hd lh_list) ^ op ]
+          ) @
+          (
+            if (List.length rh_list > 1) then
+              [ (String.make (String.length lparen) ' ')^
+                rop ^ (List.hd rh_list) ] @
+              (indent_lines ((String.length rop) + (String.length lparen))
+                            (List.tl rh_list)) @ 
+              [ rparen ]
+            else 
+              [ (String.make (String.length lparen) ' ')^
+                rop ^ (List.hd rh_list) ^ rparen ]
+          )
+        else
+          [ lparen ^ (List.hd lh_list) ^ op ^ rop ^ (List.hd rh_list) ^ rparen ]
+    | Parens((lparen,_,_,rparen),subexp) ->
+      let sub_list = 
+        to_lines (width - (String.length lparen) - 
+                          (String.length rparen)) subexp
+      in
+        if (List.length sub_list > 1) then
+          [ lparen ^ (List.hd sub_list) ] @
+          (indent_lines (String.length lparen) (List.tl sub_list))@
+          (indent_lines (String.length lparen) [rparen])
+        else 
+          [ lparen ^ (List.hd sub_list) ^ rparen ]
+    | Lines([])    -> [""]
+    | Lines(a::[]) -> to_lines width a
+    | Lines(a::l)  -> (to_lines width a)@(to_lines width (Lines(l)))
+  ;;
+  
+  let to_string (width:int) (node:t): string = 
+    ((String.concat "\n" (to_lines width node))^"\n")
+end
+
+module Debug = 
+struct
+  
+  module DebugInternal =
+  struct
+    let debug_modes = ref StringSet.empty;
+  end
+  
+  let set_modes new_modes = DebugInternal.debug_modes := new_modes;;
+  
+  let activate (mode:string): unit = 
+    DebugInternal.debug_modes := 
+      StringSet.add mode !DebugInternal.debug_modes;;
+  let deactivate (mode:string): unit = 
+    DebugInternal.debug_modes := 
+      StringSet.remove mode !DebugInternal.debug_modes;;
+  
+  let exec (mode:string) (f:(unit->'a)): unit =
+    if StringSet.mem mode !DebugInternal.debug_modes 
+      then let _ = f () in () else ();;
+
+  let print (mode:string) (f:(unit->string)): unit =
+    exec mode (fun () -> print_endline (f ()));;
+  
+  let active df = StringSet.mem df !DebugInternal.debug_modes;;
+    
+end

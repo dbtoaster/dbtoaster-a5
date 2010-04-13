@@ -211,8 +211,8 @@ val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
    variables given in the third argument (the parameters). Returns
    pairs consisting of renamed parameters and simplified nested monomials.
 *)
-val simplify: term_t -> (var_t list) -> (var_t list) ->
-                        ((var_t list * term_t) list)
+val simplify: term_t -> (var_t list) -> (var_t list) -> (var_t list) ->
+                        ((var_t list * var_t list * term_t) list)
 
 
 
@@ -284,8 +284,8 @@ val mk_term_mapping: string -> (((var_t list) * term_t) list) -> term_mapping_t
    child terms redundantly.
 *)
 val extract_named_aggregates: string -> (var_t list) ->
-                              (((var_t list) * term_t) list)  ->
-                              ((((var_t list) * term_t) list * term_mapping_t))
+      (((var_t list) * (var_t list) * term_t) list)  ->
+      ((((var_t list) * (var_t list) * term_t) list * term_mapping_t))
 
 
 type bs_rewrite_mode_t = ModeExtractFromCond
@@ -359,19 +359,3 @@ val term_delta: term_mapping_t ->
 *)
 exception TermsNotEquivalent of string
 val equate_terms: term_t -> term_t -> (string Map.Make(String).t)
-
-(* (fold_calc sum_f prod_f neg_f leaf_f c) scans through c and applies leaf_f
-   to all leaves in c, and sum_f, prod_f, and neg_f recursively to the results
-   according to the calculus parse tree, respectively at the union, nat join
-   and negation nodes
-*)
-val fold_calc: ('a list -> 'a) -> ('a list -> 'a) -> ('a -> 'a) -> 
-               (readable_relcalc_lf_t -> 'a) -> (readable_relcalc_t) -> 'a
-
-(* (fold_term sum_f prod_f neg_f leaf_f t) scans through c and applies leaf_f
-   to all leaves in c, and sum_f, prod_f, and neg_f recursively to the results
-   according to the calculus parse tree, respectively at the union, nat join
-   and negation nodes
-*)
-val fold_term: ('a list -> 'a) -> ('a list -> 'a) -> ('a -> 'a) -> 
-               (readable_term_lf_t -> 'a) -> (readable_term_t) -> 'a

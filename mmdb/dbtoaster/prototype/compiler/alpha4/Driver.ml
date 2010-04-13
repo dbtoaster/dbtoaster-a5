@@ -96,18 +96,12 @@ let arguments = ParseArgs.parse flag_descriptors;;
 
 (********* UTILITIES FOR ACCESSING FLAGS *********)
 
+(* Initialize Util.ParseArgs *)
 let (flag_vals, flag_val, flag_val_force, flag_set, flag_bool) = 
   ParseArgs.curry arguments;;
 
-let debug_modes = flag_set "DEBUG";;
-
-let debug (mode:string) (f:(unit->'a)): unit =
-  if StringSet.mem mode debug_modes then let _ = f () in () else ()
-
-let debug_line (mode:string) (f:(unit->string)): unit =
-  debug mode (fun () -> print_line (f ()));;
-
-let debug_flag df = StringSet.mem df debug_modes;;
+(* Initialize Util.Debug *)
+Debug.set_modes (flag_set "DEBUG");
 
 if flag_bool "HELP" then
   (
@@ -142,7 +136,7 @@ let output_file = match flag_val "OUTPUT" with
   | Some("-") -> stdout
   | Some(f)   -> (open_out f);;
 
-debug "ARGS" (fun () -> 
+Debug.exec "ARGS" (fun () -> 
   StringMap.iter (fun k v ->
     print_line (k^":");
     List.iter (fun o -> 
@@ -157,7 +151,7 @@ let sql_file_to_calc f =
   let lexbuff = Lexing.from_channel (if f <> "-" then (open_in f) else stdin) in
   Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff;;
 
-debug "PARSE" (fun () -> Parsing.set_trace true);;
+Debug.exec "PARSE" (fun () -> Parsing.set_trace true);;
 
 let (queries, sources) = 
   let (queries, sources) = 
@@ -172,7 +166,7 @@ let query_list_to_calc_string qlist =
       ) "" query_exprs)
     ) "" qlist;;
 
-debug_line "CALCULUS" (fun () -> (query_list_to_calc_string queries));;
+Debug.print "CALCULUS" (fun () -> (query_list_to_calc_string queries));;
 
 if language == L_CALC then
   (
@@ -224,7 +218,7 @@ let m3_prog =
   in
     CalcToM3.M3InProgress.finalize m3_prog_in_prog;;
 
-debug_line "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
+Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 (********* TRANSLATE M3 TO [language of your choosing] *********)
 
@@ -269,7 +263,7 @@ let compile_ocaml in_file_name =
     Unix.execvp ocaml_cc 
       ( Array.of_list (
         [ ocaml_cc; "-ccopt"; "-O3" ] @
-        (if debug_flag "COMPILE-WITH-GDB" then [ "-g" ] else []) @
+        (if Debug.active "COMPILE-WITH-GDB" then [ "-g" ] else []) @
         (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
         (List.map (fun x -> dbt_lib_path^"/"^x^dbt_lib_ext) dbt_libs) @

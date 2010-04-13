@@ -623,27 +623,35 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
                     (fun _ -> failwith "simplify_roly TODO") leaf_f term
 
 
-
 (* apply roly_poly and simplify by unifying variables.
    returns a list of pairs (dimensions', monomial)
    where monomial is the simplified version of a nested monomial of term
    and dimensions' is dimensions -- a set of variables occurring in term --
    after application of the substitution used to simplify monomial. *)
 let simplify (term: term_t)
-             (bound_vars: var_t list)
-             (params: var_t list) :
-             ((var_t list * term_t) list) =
+             (rel_vars: var_t list)
+             (bsum_vars: var_t list)
+             (loop_vars: var_t list) :
+             ((var_t list * var_t list * term_t) list) =
    let simpl f =
       (* we want to unify params if possible to eliminate for loops, but
          we do not want to use substitutions from aggregates nested in
          atomic constraints. The following strategy of calling simplify_roly
          twice with suitable arguments achieves that. *)
-      let (_, t1) = simplify_roly true  f (bound_vars @ params) in
-      let (b, t2) = simplify_roly false t1 bound_vars
+      let (_, t1) = simplify_roly true  f (rel_vars @ bsum_vars @ loop_vars) in
+        (* bsum_vars should technically not be bound from the outside; if we
+           can eliminate a bigsum var, we should do so for the same reasons we 
+           eliminate loop_vars.  However, simplify_roly handles each term in
+           the monomial separately.  This means we need to do some extra work,
+           making this a TODO *)
+      let (b, t2) = simplify_roly false t1 (rel_vars @ bsum_vars)
       in
-      ((List.map (Util.Vars.apply_mapping b) params), t2)
+      ( (List.map (Util.Vars.apply_mapping b) loop_vars), 
+        (List.map (Util.Vars.apply_mapping b) bsum_vars),
+        t2
+      )
    in
-   List.filter (fun (_, t) -> t <> TermRing.zero)
+   List.filter (fun (_, _, t) -> t <> TermRing.zero)
       (List.map simpl (TermRing.sum_list (roly_poly term)))
 
 
@@ -736,13 +744,16 @@ let apply_term_mapping (mapping: term_mapping_t)
    child terms redundantly.
 *)
 let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
-                  (workload: ((var_t list) * term_t) list):
-                  (((var_t list) * term_t) list *
+                  (workload: ((var_t list) * (var_t list) * term_t) list):
+                  (((var_t list) * (var_t list) * term_t) list *
                    term_mapping_t) =
-   let extract_from_one_term (params, term) =
+   let extract_from_one_term (params, bigsum_vars, term) =
       let prepend_params t =
          let p = (Util.ListAsSet.inter (term_vars t)
-                    (Util.ListAsSet.union params bound_vars))
+                    (Util.ListAsSet.union 
+                      (Util.ListAsSet.union params bound_vars)
+                      bigsum_vars
+                    ))
          in (p, t)
       in
       List.map prepend_params (extract_aggregates_from_term false term)
@@ -756,7 +767,7 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
    in
    (* apply substitutions to input terms. *)
    let terms_after_substition =
-      List.map (fun (p, t) ->  (p, (substitute_in_term theta t)))
+      List.map (fun (p, bv, t) ->  (p, bv, (substitute_in_term theta t)))
                workload
    in
    (terms_after_substition, theta)
@@ -1002,26 +1013,4 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
     | Some(a,_) -> a
     | None -> raise (TermsNotEquivalent("foo"))
 ;;
-
-let fold_calc (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
-              (leaf_f: readable_relcalc_lf_t -> 'a) (calc: readable_relcalc_t): 
-              'a =
-  let rec fold_aux rr = 
-      match rr with
-        | RA_Leaf(x)         -> leaf_f x
-        | RA_Neg(x)          -> neg_f (fold_aux x)
-        | RA_MultiUnion(l)   -> sum_f (List.map fold_aux l)
-        | RA_MultiNatJoin(l) -> prod_f (List.map fold_aux l)
-  in fold_aux calc;;
-
-let fold_term (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) (neg_f: 'a -> 'a)
-              (leaf_f: readable_term_lf_t -> 'a) (term: readable_term_t): 
-              'a =
-  let rec fold_aux rr = 
-      match rr with
-        | RVal(x)  -> leaf_f x
-        | RNeg(x)  -> neg_f (fold_aux x)
-        | RSum(l)  -> sum_f (List.map fold_aux l)
-        | RProd(l) -> prod_f (List.map fold_aux l)
-  in fold_aux term;;
   

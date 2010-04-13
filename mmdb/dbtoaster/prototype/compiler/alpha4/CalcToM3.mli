@@ -145,6 +145,6 @@ module M3InProgress : sig
      an M3ProgInProgress.t  Call finalize on it to get an M3.prog_t
   *) 
   val generate_m3: Compiler.map_ref_t -> 
-                   Compiler.trigger_definition list ->
+                   Compiler.trigger_definition_t list ->
                    t -> t
 end

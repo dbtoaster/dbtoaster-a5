@@ -196,17 +196,17 @@ let rec to_m3
       match lf with
          Calculus.AtomicConstraint(Calculus.Eq,  t1, t2) ->
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t1 inner_bindings) in
+            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
               (M3.Eq (lhs, rhs), ra_map)
        | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t1 inner_bindings) in
+            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
               (M3.Leq(lhs, rhs), ra_map)
        | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t1 inner_bindings) in
+            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
               (M3.Lt (lhs, rhs), ra_map)
          (* AtomicConstraint(Neq, t1, t2) -> ... *)
@@ -329,7 +329,7 @@ let translate_var (calc_var:Calculus.var_t): M3.var_t = (fst calc_var)
 let translate_var_type (calc_var:Calculus.var_t): M3.var_type_t = 
   match (snd calc_var) with
   | Calculus.TInt    -> M3.VT_Int
-  | Calculus.TDouble -> failwith "Double types unsupported (CalcToM3.ml)"
+  | Calculus.TDouble -> M3.VT_Float
   | Calculus.TLong   -> M3.VT_Int
   | Calculus.TString -> M3.VT_String
   
@@ -437,29 +437,37 @@ module M3InProgress = struct
         else result
       ) NoMapping (snd (List.split curr_refs))
     in
-      match mapping with
-      | Mapping(m) -> 
-        (
-          curr_ins, (* an equivalent map exists. don't change anything *)
-          curr_del,
-          StringMap.add map_name m curr_mapping, (* just add a mapping *)
-          curr_refs,
-          curr_ra_map (* no new triggers = no new mappings *)
-        )
-      | NoMapping  -> 
-        let (insert_trigs, delete_trigs) =
-          List.fold_right (fun (pm, rel, vars, stmts) (ins, del) -> 
-            match pm with 
-            | M3.Insert -> ((add_to_trigger_map rel vars stmts ins), del)
-            | M3.Delete -> (ins, (add_to_trigger_map rel vars stmts del))
-          ) triggers (curr_ins, curr_del)
-        in
-        (
-          insert_trigs, delete_trigs, 
-          curr_mapping, 
-          (map_name,descriptor)::curr_refs, 
-          MapAsSet.union_right curr_ra_map ra_map
-        )
+    let on_mapping_found m = 
+      (
+        curr_ins, (* an equivalent map exists. don't change anything *)
+        curr_del,
+        StringMap.add map_name m curr_mapping, (* just add a mapping *)
+        curr_refs,
+        curr_ra_map (* no new triggers = no new mappings *)
+      )
+    in
+    let on_no_mapping () =
+      let (insert_trigs, delete_trigs) =
+        List.fold_right (fun (pm, rel, vars, stmts) (ins, del) -> 
+          match pm with 
+          | M3.Insert -> ((add_to_trigger_map rel vars stmts ins), del)
+          | M3.Delete -> (ins, (add_to_trigger_map rel vars stmts del))
+        ) triggers (curr_ins, curr_del)
+      in
+      (
+        insert_trigs, delete_trigs, 
+        curr_mapping, 
+        (map_name,descriptor)::curr_refs, 
+        MapAsSet.union_right curr_ra_map ra_map
+      )
+    in
+      if Debug.active "IGNORE_DUP_MAPS" then
+        on_no_mapping ()
+      else
+        match mapping with
+      | Mapping(m) -> on_mapping_found m
+      | NoMapping  -> on_no_mapping ()
+        
   
   let get_rel_schema ((ins_trigs,del_trigs,_,_,_):t): 
       (M3.var_t list) StringMap.t =
@@ -548,12 +556,12 @@ module M3InProgress = struct
       
     
   let generate_m3 (map_ref: Compiler.map_ref_t)
-                  (triggers: Compiler.trigger_definition list)
+                  (triggers: Compiler.trigger_definition_t list)
                   (accum: t): t =
     let map_ref_as_m3 = translate_map_ref map_ref in
     let (triggers_as_m3, ra_map) = 
       List.fold_left (fun (tlist,ra_map) 
-                          (delete, reln, relvars, params, expr) -> (********** <- It's here: Use Params ********)
+                          (delete, reln, relvars, (params,bsvars), expr) -> 
         let sub_map_params (map_definition, map_term, map_bindings) params =
           let (map_name, map_vars) = (Calculus.decode_map_term map_term) in
           (
@@ -573,10 +581,20 @@ module M3InProgress = struct
           )
         in
         (
-          if delete then 
-            (tlist, ra_map)
-          else
-            (tlist @ [ update_trigger ], ra_map_ret)
+          (Debug.print "CALCTOM3" (fun () -> 
+              "ON "^(if delete then "-" else "+")^reln^
+              (list_to_string (fun (a,_)->a) relvars)^
+              ": "^(Calculus.term_as_string (snd map_ref))^
+              (list_to_string (fun (a,_)->a) params)^" += "^
+              (Calculus.term_as_string expr)^"\n   ->\n"^
+              (M3Common.pretty_print_calc update)^"\n"
+            ));
+          (
+            if delete then 
+              (tlist, ra_map)
+            else
+              (tlist @ [ update_trigger ], ra_map_ret)
+          )
         )
       ) ([], StringMap.empty) triggers
     in
@@ -586,59 +604,3 @@ module M3InProgress = struct
         ra_map
       )
 end
-
-
-(*
-module SQLToM3 = struct
-  type query_schema = ( 
-    Calculus.readable_term_t list * 
-    (string * Calculus.var_t list) list * 
-    Calculus.var_t list
-  ) list
-  
-  type db_sources = (
-    string * M3.source_t * M3.framing_t * M3.adaptor_t
-  ) list
-  
-  let compile_sql (buff:Lexing.lexbuff) 
-                  (compiler_driver:(query_schema -> db_sources -> unit)) = 
-    while (not buff.lex_eof_reached) do
-      let (database,sources) = 
-        (Sqlparser.dbtoasterSqlList Sqllexer.tokenize buff)
-      in
-        (compiler_driver database sources)
-    done
-  
-  
-  let calc_to_m3_driver (database:query_schema) (sources:db_sources):
-    (M3.prog_t * db_sources) =
-    let (queries, relations, params) = database in
-    let (_, queries_with_terms) = 
-      List.fold_left 
-        (fun (count, queries_with_terms) curr_query ->
-          ( count + 1,
-            let bound_params = 
-              List.fold_right
-                (fun curr_param bound_params ->
-                  if (CalcToM3.find_binding_term curr_param curr_query) then
-                    curr_param::bound_params
-                  else
-                    bound_params
-                ) [] params
-            in
-              (
-                curr_query,
-                Calculus.make_term 
-                  Calculus.RVal(
-                    Calculus.External("q_" ^ (string_of_int count), bound_params)
-                  )
-              )
-          )
-        ) queries []
-    in
-   let m3_prog = List.fold_left
-      (fun full_m3_prog (query_term, map_term) ->
-        let partial_m3_prog = 
-          Compiler.compile_m3 relations map_term query_term
-        in
-          *)

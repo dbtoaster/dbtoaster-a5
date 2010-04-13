@@ -4,6 +4,29 @@
     exception SQLParseError of string
     exception FeatureUnsupported of string
     
+    (* Calculus construction utilitie *)
+    let fold_calc (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) 
+                  (neg_f: 'a -> 'a) (leaf_f: readable_relcalc_lf_t -> 'a) 
+                  (calc: readable_relcalc_t): 'a =
+      let rec fold_aux rr = 
+          match rr with
+            | RA_Leaf(x)         -> leaf_f x
+            | RA_Neg(x)          -> neg_f (fold_aux x)
+            | RA_MultiUnion(l)   -> sum_f (List.map fold_aux l)
+            | RA_MultiNatJoin(l) -> prod_f (List.map fold_aux l)
+      in fold_aux calc;;
+    
+    let fold_term (sum_f: 'a list -> 'a) (prod_f: 'a list -> 'a) 
+                  (neg_f: 'a -> 'a) (leaf_f: readable_term_lf_t -> 'a) 
+                  (term: readable_term_t): 'a =
+      let rec fold_aux rr = 
+          match rr with
+            | RVal(x)  -> leaf_f x
+            | RNeg(x)  -> neg_f (fold_aux x)
+            | RSum(l)  -> sum_f (List.map fold_aux l)
+            | RProd(l) -> prod_f (List.map fold_aux l)
+      in fold_aux term;;
+    
     let parse_error s =
         let lex_pos = symbol_end_pos () in
         let line_pos_str = string_of_int (lex_pos.Lexing.pos_lnum) in
@@ -39,7 +62,8 @@
     let aggregate_functions = Hashtbl.create 4
     let _ = List.iter
         (fun (agg, ast) -> Hashtbl.add aggregate_functions agg ast)
-        [ ("SUM", `Sum); (*("MIN", `Min); ("MAX", `Max)*) ]
+        [ ("SUM", `Sum); ("AVG", `Avg)
+          (*("MIN", `Min); ("MAX", `Max)*) ]
 
 
     (* Table definitions *)

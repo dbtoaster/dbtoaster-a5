@@ -2,6 +2,21 @@
 module StringMap = Map.Make(String)
 module StringSet = Set.Make(String)
 
+
+(*               map_definition,   map_term *)
+type map_ref_t = (Calculus.term_t * Calculus.term_t)
+
+type bound_vars_t = 
+(* params,               bigsum_vars *)
+  (Calculus.var_t list * Calculus.var_t list)
+
+type trigger_definition_t =
+(* delete, rel,    relvars,              var types,     trigger expr *)
+  (bool * string * Calculus.var_t list * bound_vars_t * Calculus.term_t)
+
+type 'a output_translator_t = 
+  map_ref_t -> trigger_definition_t list -> 'a -> 'a
+
 (* making and breaking externals, i.e., map accesses. *)
 
 let mk_external (n: string) (vs: Calculus.var_t list) =
@@ -14,11 +29,11 @@ let compile_delta_for_rel (reln:   string)
                           (relsch: Calculus.var_t list)
                           (delete: bool)
                           (map_term: Calculus.term_t)
-                          (external_bound_vars: Calculus.var_t list)
+                          (bigsum_vars: Calculus.var_t list)
                           (externals_mapping: Calculus.term_mapping_t)
                           (term: Calculus.term_t)
    : ((bool * string * Calculus.var_t list *
-                Calculus.var_t list * Calculus.term_t) list *
+                bound_vars_t * Calculus.term_t) list *
       Calculus.term_mapping_t) =
 (*
    print_endline ("compile_delta_for_rel: reln="^reln
@@ -40,15 +55,14 @@ let compile_delta_for_rel (reln:   string)
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
-   let tuple      = relsch in
-   let bound_vars = tuple @ external_bound_vars (* there must be no overlap *)
-   in
+   (* let tuple      = relsch in *)
+   let tuple      = (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
    let s = Calculus.simplify
           (Calculus.term_delta externals_mapping delete reln tuple term)
-          bound_vars params
+          tuple bigsum_vars params
    in
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
@@ -61,27 +75,17 @@ let compile_delta_for_rel (reln:   string)
       queries.
    *)
    let (terms_after_substitution, todos) =
-      Calculus.extract_named_aggregates (mapn^reln) bound_vars s
+      Calculus.extract_named_aggregates (mapn^reln) tuple s
    in
-   ((List.map (fun (p, t) -> (delete, reln, tuple, p, t))
+   ((List.map (fun (p, bv, t) -> (delete, reln, tuple, (p, bv), t))
               terms_after_substitution),
     todos)
-
-
-(*               map_definition,   map_term *)
-type map_ref_t = (Calculus.term_t * Calculus.term_t)
-
-type trigger_definition =
-(* delete, rel,    relvars,              params,               trigger expr *)
-  (bool * string * Calculus.var_t list * Calculus.var_t list * Calculus.term_t)
-
-type 'a output_translator = map_ref_t -> trigger_definition list -> 'a -> 'a
 
 (* the main compile function. call this one, not the others. *)
 let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (Calculus.var_t list)) list)
                 ((map_definition, map_term): map_ref_t)
-                (generate_code:'a output_translator)
+                (generate_code:'a output_translator_t)
                 (accum:'a): 'a =
   (*print_string ("Compiling: " ^ 
                   (Calculus.term_as_string map_term)^" := "^

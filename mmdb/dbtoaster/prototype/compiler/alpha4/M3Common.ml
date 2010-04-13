@@ -1,6 +1,5 @@
 include M3
-
-module StringMap = Map.Make(String)
+open Util
 
 let vars_to_string vs = Util.list_to_string (fun x->x) vs
 
@@ -22,54 +21,87 @@ let rec calc_vars_aux f calc =
 let calc_schema = calc_vars_aux (fun inv outv -> outv)
 let calc_vars = calc_vars_aux (fun inv outv -> inv@outv)
 
-let rec pretty_print_map_access (mapn, inv, outv, init_calc): string =
-  "{ "^mapn^(vars_to_string inv)^(vars_to_string outv)^" := ("^(pretty_print_calc init_calc)^") }"
-
-and string_of_const v =
+let string_of_const v =
   match v with
       CFloat(f) -> string_of_float f
  (* | CInt(i)   -> string_of_int i *)
  (* | CBool(b)  -> if (b) then "false" else "true" *)
 
-and string_of_var_type v = 
+let string_of_var_type v = 
   match v with
       VT_String -> "STRING"
     | VT_Int    -> "INT"
+    | VT_Float  -> "FLOAT"
 
-and pretty_print_calc calc : string =
-  let ots op c1 c2 = "("^(pretty_print_calc c1)^" "^op^" "^(pretty_print_calc c2)^")" in
+let string_of_type_list (l:var_type_t list) : string = 
+  (Util.list_to_string string_of_var_type l)
+
+let rec indented_map_access (mapn, inv, outv, init_calc): IndentedPrinting.t =
+  IndentedPrinting.Node(("{ "," := ",""," }"), 
+    IndentedPrinting.Leaf(mapn^(vars_to_string inv)^(vars_to_string outv)),
+    indented_calc init_calc
+  )
+and indented_const c = IndentedPrinting.Leaf(string_of_const c)
+and indented_vtype vt = IndentedPrinting.Leaf(string_of_var_type vt)
+and indented_calc calc : IndentedPrinting.t = 
+  let ots op c1 c2 = 
+    IndentedPrinting.Node(
+      ("( "," "^op^" ",""," )"),
+      indented_calc c1, indented_calc c2
+    )
+  in
   match calc with
-      MapAccess(mapacc)  -> pretty_print_map_access(mapacc)
+      MapAccess(mapacc)  -> indented_map_access mapacc
     | Add(c1, c2)        -> ots "+" c1 c2
     | Mult(c1, c2)       -> ots "*" c1 c2
     | Lt(c1, c2)         -> ots "<" c1 c2
     | Leq(c1, c2)        -> ots "<=" c1 c2
     | Eq(c1, c2)         -> ots "==" c1 c2
  (* | And(c1, c2)        -> ots "AND" c1 c2 *)
-    | IfThenElse0(c1,c2) -> "{ IF "^(pretty_print_calc c1)^" THEN "^(pretty_print_calc c2)^" }"
-    | Const(c)           -> string_of_const(c)
-    | Var(x)             -> x
+    | IfThenElse0(c1,c2) -> 
+      IndentedPrinting.Node(
+        ("{ IF ( "," ) ","THEN ( "," )}"),
+        indented_calc c1, indented_calc c2
+      )
+    | Const(c)           -> indented_const(c)
+    | Var(x)             -> IndentedPrinting.Leaf(x)
+and indented_stmt (mapacc, delta_term) =
+  IndentedPrinting.Node(
+    (""," +="," ",""),
+    (indented_map_access mapacc), (indented_calc delta_term)
+  )
+and indented_trig (pm, rel_id, var_id, statements) = 
+  IndentedPrinting.Node(
+    ("O",": ","",""),
+    IndentedPrinting.Leaf(
+      "N "^(match pm with Insert -> "+" | Delete -> "-")^
+      rel_id^(vars_to_string var_id)
+    ),
+    IndentedPrinting.Lines(List.map indented_stmt statements)
+  )
+and indented_map_defn (mapn, input_var_types, output_var_types) = 
+  IndentedPrinting.Leaf(mapn ^ " " ^ (string_of_type_list input_var_types) ^
+                                     (string_of_type_list output_var_types))
+and indented_prog ((maps, trigs):prog_t) =
+  IndentedPrinting.Lines(
+    (List.map indented_map_defn maps)@
+    (List.map indented_trig trigs)
+  )
+      
+let indent_to_string = IndentedPrinting.to_string 120;;(* set width here *)
 
-and pretty_print_stmt (mapacc, delta_term) : string =
-  (pretty_print_map_access mapacc)^" += "^(pretty_print_calc delta_term)
-
-and pretty_print_trig (pm, rel_id, var_id, statements) : string =
-  "ON " ^
-  (match pm with Insert -> "+" | Delete -> "-") ^
-  rel_id ^(vars_to_string var_id)^ ": " ^
-  (List.fold_left (fun oldstr stmt ->
-    oldstr^"\n"^(pretty_print_stmt stmt)
-  ) " " statements)^"\n"
-  
-and pretty_print_type_list (l:var_type_t list) : string = 
-  (Util.list_to_string string_of_var_type l)
-
-and pretty_print_map (mapn, input_var_types, output_var_types) : string =
-  mapn ^ " " ^ (pretty_print_type_list input_var_types) ^(pretty_print_type_list output_var_types)^"\n"
-
-and pretty_print_prog ((maps, trigs):prog_t) = 
-  (List.fold_left (fun oldstr map -> oldstr^(pretty_print_map map)) "" maps)^
-  (List.fold_left (fun oldstr trig -> oldstr^(pretty_print_trig trig)) "" trigs);;
+let pretty_print_map_access (ma:M3.mapacc_t): string = 
+  indent_to_string (indented_map_access ma)
+let pretty_print_calc calc : string =
+  indent_to_string (indented_calc calc)
+let pretty_print_stmt stmt : string =
+  indent_to_string (indented_stmt stmt)
+let pretty_print_trig trig : string =
+  indent_to_string (indented_trig trig)  
+let pretty_print_map map : string =
+  indent_to_string (indented_map_defn map)
+let pretty_print_prog prog = 
+  indent_to_string (indented_prog prog)
 
 let rename_maps (mapping:(M3.map_id_t) StringMap.t)
                 ((stmt_defn, stmt_calc):M3.stmt_t): M3.stmt_t =

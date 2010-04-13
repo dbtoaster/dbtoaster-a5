@@ -3,7 +3,7 @@
 
 type const_t = (* CInt of int | *) CFloat of float (* | CBool of bool *)
 type var_id_t = string
-type var_type_t = VT_String | VT_Int
+type var_type_t = VT_String | VT_Int | VT_Float
 type var_t = var_id_t (*  * var_type_t *)
 type map_id_t = string
 

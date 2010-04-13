@@ -44,7 +44,8 @@ struct
 
    let schema_const schema =
       let string_of_var_type_t vt =
-         match vt with | VT_Int -> "VT_Int" | VT_String -> "VT_String"
+         match vt with | VT_Int -> "VT_Int" | VT_String -> "VT_String" 
+                       | VT_Float -> "VT_Float"
       in list_to_string (fun (mapn, inv_t, outv_t) ->
          "("^(string_const mapn)^", "^
             (list_to_string string_of_var_type_t inv_t)^", "^
