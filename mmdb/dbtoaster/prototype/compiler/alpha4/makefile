@@ -94,8 +94,8 @@ benchmark: native
 vwap: native
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap unix.cmxa $(XOBJ) test/vwap_m3_ex.ml
 
-test/%: test/%.sql dbtoaster
-	./dbtoaster $< -c test/$* -o test/$*.ml -d compile-with-gdb
+test/sql/%: test/sql/%.sql dbtoaster
+	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
 
 test: top
 	./dbtoaster_top test/m3_ex.ml

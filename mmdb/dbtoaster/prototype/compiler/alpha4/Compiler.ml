@@ -60,9 +60,12 @@ let compile_delta_for_rel (reln:   string)
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
-   let s = Calculus.simplify
+   let (s,bigsum_after_subst) = 
+     List.split (
+       Calculus.simplify
           (Calculus.term_delta externals_mapping delete reln tuple term)
           tuple bigsum_vars params
+     )
    in
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
@@ -77,8 +80,8 @@ let compile_delta_for_rel (reln:   string)
    let (terms_after_substitution, todos) =
       Calculus.extract_named_aggregates (mapn^reln) tuple s
    in
-   ((List.map (fun (p, bv, t) -> (delete, reln, tuple, (p, bv), t))
-              terms_after_substitution),
+   ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
+              (List.combine terms_after_substitution bigsum_after_subst)),
     todos)
 
 (* the main compile function. call this one, not the others. *)

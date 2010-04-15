@@ -627,12 +627,38 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
    returns a list of pairs (dimensions', monomial)
    where monomial is the simplified version of a nested monomial of term
    and dimensions' is dimensions -- a set of variables occurring in term --
-   after application of the substitution used to simplify monomial. *)
+   after application of the substitution used to simplify monomial. 
+   
+   This is also where "if-lifting" happens, in a manner of speaking.  The call
+   to roly_poly should leave us with a fully factorized expression that is the
+   product of a list of aggregates.  Even if we can't factorize something up
+   (does this ever happen?) we don't care about it, because it's either 
+    - complex (eg, inequalities), in which case simplify can't do anything
+      about it to begin with.
+    - simple, in which case it either would have gotten factorized already, or 
+      it should have been replaced by a common subexpression at this point.
+   
+   Effectively, the only thing we need to do after that is to unify variables
+   and do some basic cleanup.  Unification is done in simplify_roly, by way of
+   simplify_calc_monomial/extract_substitutions.  
+   
+   We guarantee that no unification happens on nested aggregates by "binding" 
+   all variables we expect to see in the expression when doing recursive 
+   processing, and only "bind" the bigsum and relation variables when we 
+   simplify only the top-level terms.
+   
+   Also note: The top-level terms here, refers to the top level in the 
+   comparison dimension.  Consider the following expression:
+     AggSum(AggSum(b,c), a < 2) 
+   The term 'AggSum(b,c)' is still considered top-level, but the term 'a' is 
+   not.
+   
+*)
 let simplify (term: term_t)
              (rel_vars: var_t list)
              (bsum_vars: var_t list)
              (loop_vars: var_t list) :
-             ((var_t list * var_t list * term_t) list) =
+             (((var_t list * term_t) * var_t list) list) =
    let simpl f =
       (* we want to unify params if possible to eliminate for loops, but
          we do not want to use substitutions from aggregates nested in
@@ -646,12 +672,13 @@ let simplify (term: term_t)
            making this a TODO *)
       let (b, t2) = simplify_roly false t1 (rel_vars @ bsum_vars)
       in
-      ( (List.map (Util.Vars.apply_mapping b) loop_vars), 
-        (List.map (Util.Vars.apply_mapping b) bsum_vars),
-        t2
+      ( ( (List.map (Util.Vars.apply_mapping b) loop_vars),
+           t2
+        ),
+        (List.map (Util.Vars.apply_mapping b) bsum_vars)
       )
    in
-   List.filter (fun (_, _, t) -> t <> TermRing.zero)
+   List.filter (fun ((_, t), _) -> t <> TermRing.zero)
       (List.map simpl (TermRing.sum_list (roly_poly term)))
 
 
@@ -744,16 +771,14 @@ let apply_term_mapping (mapping: term_mapping_t)
    child terms redundantly.
 *)
 let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
-                  (workload: ((var_t list) * (var_t list) * term_t) list):
-                  (((var_t list) * (var_t list) * term_t) list *
+                  (workload: ((var_t list) * term_t) list):
+                  (((var_t list) * term_t) list *
                    term_mapping_t) =
-   let extract_from_one_term (params, bigsum_vars, term) =
+   let extract_from_one_term (params, term) =
       let prepend_params t =
          let p = (Util.ListAsSet.inter (term_vars t)
-                    (Util.ListAsSet.union 
-                      (Util.ListAsSet.union params bound_vars)
-                      bigsum_vars
-                    ))
+                    (Util.ListAsSet.union params bound_vars)
+                 )
          in (p, t)
       in
       List.map prepend_params (extract_aggregates_from_term false term)
@@ -767,7 +792,7 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
    in
    (* apply substitutions to input terms. *)
    let terms_after_substition =
-      List.map (fun (p, bv, t) ->  (p, bv, (substitute_in_term theta t)))
+      List.map (fun (p, t) ->  (p, (substitute_in_term theta t)))
                workload
    in
    (terms_after_substition, theta)

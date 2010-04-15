@@ -78,16 +78,16 @@ let flag_descriptors =
     [ (["-l";"--lang"], 
           ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3",
           "Specify the output language (default: ocaml).");
-      (["-o"],
+      (["-o";"--output-source"],
           ("OUTPUT",  ParseArgs.ARG), "<outfile>",
-          "Output to <outputfile> (default: stdout)." );
-      (["-c"],
-          ("COMPILE", ParseArgs.ARG), "<obj_file>",
-          "Invoke secondary compiler to compile to <obj_file>." );
+          "Output source file to <outputfile> (default: stdout)." );
+      (["-c";"--compile-binary"],
+          ("COMPILE", ParseArgs.ARG), "<binary_file>",
+          "Invoke secondary compiler to compile to a runnable binary." );
       (["-d"],
           ("DEBUG",   ParseArgs.ARG_LIST), "<flag> [-d <flag> [...]]",
           "Enable a debug flag." );
-      (["-?"], 
+      (["-?";"--help"], 
           ("HELP",    ParseArgs.NO_ARG),  "", 
           "Display this help text." );
     ];;

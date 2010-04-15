@@ -212,7 +212,7 @@ val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
    pairs consisting of renamed parameters and simplified nested monomials.
 *)
 val simplify: term_t -> (var_t list) -> (var_t list) -> (var_t list) ->
-                        ((var_t list * var_t list * term_t) list)
+                        (((var_t list * term_t) * var_t list) list)
 
 
 
@@ -284,8 +284,8 @@ val mk_term_mapping: string -> (((var_t list) * term_t) list) -> term_mapping_t
    child terms redundantly.
 *)
 val extract_named_aggregates: string -> (var_t list) ->
-      (((var_t list) * (var_t list) * term_t) list)  ->
-      ((((var_t list) * (var_t list) * term_t) list * term_mapping_t))
+      (((var_t list) * term_t) list)  ->
+      ((((var_t list) * term_t) list * term_mapping_t))
 
 
 type bs_rewrite_mode_t = ModeExtractFromCond
