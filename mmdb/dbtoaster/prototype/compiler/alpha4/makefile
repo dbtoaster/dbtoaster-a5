@@ -3,9 +3,8 @@ SOURCE = \
 	Ring.ml \
 	Calculus.mli \
 	Calculus.ml \
+	M3.mli \
 	M3.ml \
-	M3Common.mli \
-	M3Common.ml \
 	Compiler.mli \
 	Compiler.ml \
 	CalcToM3.mli \
@@ -41,7 +40,6 @@ XOPBJ = $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE)))
 RUNTIME = \
 	Util.ml \
 	M3.ml \
-	M3Common.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/M3OCaml.ml \
@@ -98,7 +96,7 @@ test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
 
 test: top
-	./dbtoaster_top test/m3_ex.ml
+	./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 
 runtime:
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -c $(RUNTIME)

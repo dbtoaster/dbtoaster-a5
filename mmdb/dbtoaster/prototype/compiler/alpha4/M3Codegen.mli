@@ -1,7 +1,6 @@
 open M3
-open M3Common
 open M3.Prepared
-open M3Common.Patterns
+open M3.Patterns
 
 (* Note this interface doesn't distinguish Singleton, UpdateSingleton etc. 
  * types as with the current compiled_code type. Since code_t here is an
@@ -20,7 +19,7 @@ sig
 
    (* Debugging helpers *)
    val debug_sequence: debug_code_t -> code_t -> code_t
-   val debug_expr : pcalc_t -> debug_code_t
+   val debug_expr : ecalc_t -> debug_code_t
 
    (* lhs_outv *)
    val debug_singleton_rhs_expr : var_t list -> debug_code_t

@@ -1,8 +1,9 @@
 
 open Unix
 
-open M3Common
-open M3Common.Patterns
+open M3
+open M3.Patterns
+open Util
 
 open M3Compiler
 open M3OCaml
@@ -11,14 +12,34 @@ open M3Interpreter.CG
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
 
+let print_map name map =
+  string_of_list0 "\n"
+    (fun (in_vars, inner_vals) ->
+      string_of_list0 "\n"
+        (fun (out_vars, value) ->
+          name^(list_to_string string_of_const (in_vars@out_vars))^
+          " = "^(string_of_const value)
+        )
+      inner_vals
+    )
+  map
+
+let print_db db = 
+  string_of_list0 "\n"
+    (fun (name_l, outer_vals) -> 
+      match name_l with [name] -> print_map name outer_vals
+      |_ -> "[[Error: map name list lookup failure]]"
+    )
+  db;;
+
 (* q[y] = Sum(x, R(x,y)) *)
 let prog0: prog_t =
 (
 [ ("q", [], [VT_Int]) ],
-[ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], Const(CFloat(0.0))), Var("a")) ]) ])
+[ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], (mk_c 0.0,())), (mk_v "a",()), ()) ]) ])
 ;;
 
-let prepared_prog0 = prepare_triggers (snd prog0);;
+let prepared_prog0 = prepare_triggers (snd prog0) (fun x -> x);;
 let cblock = List.hd (compile_ptrig prepared_prog0);;
 
 let db = Database.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pats);;
@@ -30,10 +51,11 @@ patterns_to_string (let (_,pats) = prepared_prog0 in pats);;
 (eval_trigger cblock [CFloat(3.0);CFloat(4.0)] db);;
 (eval_trigger cblock [CFloat(1.0);CFloat(1.0)] db);;
 
-Database.show_sorted_db db = [(["q"], [([], [([CFloat(1.0)], CFloat(1.0)); ([CFloat(4.0)], CFloat(8.0));])])] ;;
-
-
-
+Debug.log_unit_test "Sum Aggregate" print_db
+  (Database.show_sorted_db db)
+  (
+    [(["q"], [([], [([CFloat(1.0)], CFloat(1.0)); ([CFloat(4.0)], CFloat(8.0));])])] 
+  );;
 
 
 (* root map q
@@ -57,19 +79,19 @@ let prog1: prog_t =
 [
    (Insert, "R", ["a"; "b"],
       [
-      (("q", [], ["a"],       Const(CFloat(0.0))),
-       MapAccess("q1", [], ["b"], (Const(CFloat(0.0)))));
-      (("q", [], ["x"],       Var("x")),
-       MapAccess("q2", [], ["x"; "a"], (Const(CFloat(0.0)))));
-      (("q", [], ["a"],       Const(CFloat(0.0))),
-              IfThenElse0((Eq(Var("b"), Var("a"))), Const(CFloat(1.0))));
-      (("q1", [], ["a"],      Const(CFloat(0.0))), Const(CFloat(1.0)));
-      (("q2", [], ["a"; "b"], Const(CFloat(0.0))), Const(CFloat(1.0)))
+      (("q", [], ["a"],       (mk_c 0.0,())),
+              (mk_ma ("q1", [], ["b"], (mk_c 0.0, ())),()),());
+      (("q", [], ["x"],       (mk_v "x",())),
+              (mk_ma ("q2", [], ["x"; "a"], (mk_c 0.0, ())),()),());
+      (("q", [], ["a"],       (mk_c 0.0,())),
+              (mk_if (mk_eq (mk_v "b") (mk_v "a")) (mk_c 1.0),()),());
+      (("q1", [], ["a"],      (mk_c 0.0,())), (mk_c 1.0,()),());
+      (("q2", [], ["a"; "b"], (mk_c 0.0,())), (mk_c 1.0,()),())
       ])
 ]);;
 
 (* Code *)
-let prepared_prog1 = prepare_triggers (snd prog1);;
+let prepared_prog1 = prepare_triggers (snd prog1) (fun x->x);;
 let cblock = List.hd (compile_ptrig prepared_prog1);;
 
 let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
@@ -84,8 +106,11 @@ let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 (eval_trigger cblock [CFloat(5.0);CFloat(4.0)] db);;
 
 
-Database.show_sorted_map (Database.get_map "q" db) =
-   [([], [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0)); ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))])] ;;
+Debug.log_unit_test "Selfjoin Sum" (print_map "q")
+  (Database.show_sorted_map (Database.get_map "q" db))
+  (
+    [([], [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0)); ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))])]
+  )
 
 
 
@@ -139,16 +164,16 @@ Database.show_sorted_map (Database.get_map "q" db) =
    ]
 *)
 
-let init_q x w = IfThenElse0( Lt(Var("y"), Var("z")),
-   Mult(MapAccess("q3", [], [x; "y"], Const(CFloat(0.0))),
-        MapAccess("q3", [], ["z"; w], Const(CFloat(0.0))))
-);;
+let init_q x w = mk_if (mk_lt (mk_v "y") (mk_v "z"))
+   (mk_prod (mk_ma ("q3", [], [x; "y"], (mk_c 0.0,())))
+            (mk_ma ("q3", [], ["z"; w], (mk_c 0.0,()))))
+;;
 
-let init_q1 y w = IfThenElse0((Lt(Var(y), Var("z"))),
-                     MapAccess("q3", [], ["z"; w], Const(CFloat(0.0))));;
+let init_q1 y w = mk_if (mk_lt (mk_v y) (mk_v "z"))
+                        (mk_ma ("q3", [], ["z"; w], (mk_c 0.0, ())));;
 
-let init_q2 x z = IfThenElse0((Lt(Var("y"), Var(z))),
-                     MapAccess("q3", [], [x; "y"], Const(CFloat(0.0))));;
+let init_q2 x z = mk_if (mk_lt (mk_v "y") (mk_v z))
+                        (mk_ma ("q3", [], [x; "y"], (mk_c 0.0, ())));;
 
 
 let prog2: prog_t =
@@ -160,26 +185,26 @@ let prog2: prog_t =
 [
    (Insert, "R", ["a"; "b"],
       [
-      (("q", [], ["a"; "w"], (init_q "a" "w")),
-       MapAccess("q1", ["b"], ["w"], (init_q1 "b" "w")));
+      (("q", [], ["a"; "w"], (init_q "a" "w",())),
+         (mk_ma ("q1", ["b"], ["w"], (init_q1 "b" "w",())),()),());
 
-      (("q", [], ["x"; "b"], (init_q "x" "b")),
-       MapAccess("q2", ["a"], ["x"], (init_q2 "x" "a")));
+      (("q", [], ["x"; "b"], (init_q "x" "b",())),
+         (mk_ma ("q2", ["a"], ["x"], (init_q2 "x" "a",())),()),());
 
-      (("q", [], ["a"; "b"], (init_q "a" "b")),
-       IfThenElse0((Lt(Var("b"), Var("a"))), Const(CFloat(1.0))));
+      (("q", [], ["a"; "b"], (init_q "a" "b",())),
+         (mk_if (mk_lt (mk_v "b") (mk_v "a")) (mk_c 1.0),()),());
 
-      (("q1", ["y"], ["b"], (init_q1 "y" "b")),
-       IfThenElse0((Lt(Var("y"), Var("a"))), Const(CFloat(1.0))));
+      (("q1", ["y"], ["b"], (init_q1 "y" "b",())),
+         (mk_if (mk_lt (mk_v "y") (mk_v "a")) (mk_c 1.0),()),());
 
-      (("q2", ["z"], ["a"], (init_q2 "a" "z")),
-       IfThenElse0((Lt(Var("b"), Var("z"))), Const(CFloat(1.0))));
+      (("q2", ["z"], ["a"], (init_q2 "a" "z",())),
+         (mk_if (mk_lt (mk_v "b") (mk_v "z")) (mk_c 1.0),()),());
 
-      (("q3", [], ["a"; "b"], Const(CFloat(0.0))), Const(CFloat(1.0)))
+      (("q3", [], ["a"; "b"], (mk_c 0.0,())), (mk_c 1.0,()),())
       ])
 ]);;
 
-let prepared_prog2 = prepare_triggers (snd prog2);;
+let prepared_prog2 = prepare_triggers (snd prog2) (fun x->x);;
 let cblock = List.hd (compile_ptrig prepared_prog2);;
 
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
@@ -196,13 +221,16 @@ eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db;;
 eval_trigger cblock [CFloat(2.0);CFloat(2.0)] db;;
 eval_trigger cblock [CFloat(1.0);CFloat(2.0)] db;;
 
-Database.show_sorted_map (Database.get_map "q" db) =
-[([],
-  [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
-   ([CFloat(2.0); CFloat(1.0)], CFloat(9.0)); ([CFloat(2.0); CFloat(2.0)], CFloat(8.0)); ([CFloat(2.0); CFloat(3.0)], CFloat(13.0)); ([CFloat(2.0); CFloat(5.0)], CFloat(10.0));
-   ([CFloat(4.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(4.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(4.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(4.0); CFloat(5.0)], CFloat(2.0));
-   ([CFloat(5.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(5.0); CFloat(2.0)], CFloat(2.0)); ([CFloat(5.0); CFloat(3.0)], CFloat(4.0));  ([CFloat(5.0); CFloat(5.0)], CFloat(4.0));
-   ])]
+Debug.log_unit_test "Inequalities" (print_map "q")
+  (Database.show_sorted_map (Database.get_map "q" db))
+  (
+    [([],
+      [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
+       ([CFloat(2.0); CFloat(1.0)], CFloat(9.0)); ([CFloat(2.0); CFloat(2.0)], CFloat(8.0)); ([CFloat(2.0); CFloat(3.0)], CFloat(13.0)); ([CFloat(2.0); CFloat(5.0)], CFloat(10.0));
+       ([CFloat(4.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(4.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(4.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(4.0); CFloat(5.0)], CFloat(2.0));
+       ([CFloat(5.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(5.0); CFloat(2.0)], CFloat(2.0)); ([CFloat(5.0); CFloat(3.0)], CFloat(4.0));  ([CFloat(5.0); CFloat(5.0)], CFloat(4.0));
+       ])]
+  )
 ;;
 (* this is correct according to Postgres *)
 

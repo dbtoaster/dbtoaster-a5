@@ -755,5 +755,15 @@ struct
     exec mode (fun () -> print_endline (f ()));;
   
   let active df = StringSet.mem df !DebugInternal.debug_modes;;
-    
+  
+  let log_unit_test 
+        (title:string) (to_s:'a -> string) (result:'a) (expected:'a) : unit =
+    if result = expected then print_endline (title^": Passed")
+    else 
+      print_string (title^": Failed\n--Expected--\n"^(to_s expected)^
+                                 "\n\n--Result--\n"^(to_s result)^"\n\n");;
+end
+
+module UnitTest =
+struct
 end

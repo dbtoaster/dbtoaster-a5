@@ -1,5 +1,4 @@
 open M3
-open M3Common
 open M3OCaml
 open M3OCaml.Adaptors
 
@@ -107,9 +106,9 @@ let debug_sequence cdebug ccalc =
     | Slice(f) -> Slice (fun theta db -> (* df theta db; *) f theta db)
     | _ -> failwith "invalid expr debug sequence"
 
-let debug_expr incr_calc =
+let debug_expr (incr_calc:Prepared.ecalc_t) =
    EnvDebug (fun theta db ->
-      print_string("\neval_pcalc "^(pcalc_to_string incr_calc)^
+      print_string("\neval_pcalc "^(code_of_calc incr_calc)^
                    " "^(Valuation.to_string theta)^
                    " "^(Database.db_to_string db)^"   "))
 
@@ -287,8 +286,8 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
-       print_endline ("slice_init_lookup: "^mapn^" "^
-                      (vars_to_string inv));
+       (*print_endline ("slice_init_lookup: "^mapn^" "^
+                      (vars_to_string inv));*)
           Database.update mapn inv_img init_slice_w_indexes db;
           init_slice_w_indexes)
 

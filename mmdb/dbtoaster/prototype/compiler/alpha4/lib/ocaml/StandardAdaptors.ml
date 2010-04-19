@@ -1,5 +1,4 @@
 open M3
-open M3Common
 open M3OCaml
 
 exception AbortEventConstruction

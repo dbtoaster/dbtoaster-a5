@@ -1,4 +1,5 @@
-CREATE TABLE bids(price float, volume int);
+CREATE TABLE bids(price float, volume int)
+  FROM POSTGRES dbtoaster.vwap_5(price float, volume int);
 
 SELECT avg(b1.price * b1.volume) 
 FROM   bids b1

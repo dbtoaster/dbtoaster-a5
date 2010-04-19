@@ -1,7 +1,6 @@
 open M3
 open M3.Prepared
-open M3Common
-open M3Common.Patterns
+open M3.Patterns
 open M3OCaml
 
 module CG : M3Codegen.CG =
@@ -534,6 +533,12 @@ struct
        (indent 1 (get_lines db_update_code))@
       ["   in db_f inv_img slice"]@
       (if patv = [] then
+      (* okennedy:
+        This is wrong.  Only some of the values are bound (ie: the contents
+        of patv), but the statement we generate needs to have all the input
+        variables bound and present in the parameter to iifilter.  This means 
+        that we need to loop over all parametrizations that fit the pattern.
+      *)
       ["in iifilter [];"]
        else
       ["in";
@@ -689,7 +694,13 @@ struct
        "    )";
        "   done;";
        "   let finish = Unix.gettimeofday() in";
-       "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)))";
+       "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)));"]@
+       (query_aux (fun q -> [
+       "   print_endline (\""^q^": \"^(";
+       "     Database.dbmap_to_string (";
+       "       Database.get_map \""^q^"\" db";
+       "   )))"
+       ]))@[
        "in main();;"]
       in
       ["open M3;;";

@@ -14,14 +14,15 @@ type m3_condition_or_none =
     EmptyCondition
   | Condition of M3.calc_t
 
+
 let rec to_m3_initializer 
   (map_definition: Calculus.readable_term_t) : 
     (M3.calc_t * relation_set_t) = 
-  let rec cond_to_init phi base_term : 
+  let rec cond_to_init phi (base_term:M3.calc_t) : 
     (M3.calc_t * relation_set_t * m3_condition_or_none) = 
       match phi with
         Calculus.RA_Leaf(Calculus.False) ->
-          (M3.Const(M3.CFloat(0.0)), StringMap.empty, EmptyCondition)
+          (M3.mk_c 0.0, StringMap.empty, EmptyCondition)
       | Calculus.RA_Leaf(Calculus.True) -> 
           (base_term, StringMap.empty, EmptyCondition)
       | Calculus.RA_Leaf(Calculus.AtomicConstraint(c, t1, t2)) -> 
@@ -32,11 +33,11 @@ let rec to_m3_initializer
           in
             (match c with
                 Calculus.Eq  -> 
-                  (base_term, ra_map, Condition(M3.Eq(lh_term, rh_term)))
+                  (base_term, ra_map, Condition(M3.mk_eq lh_term rh_term))
               | Calculus.Lt  -> 
-                  (base_term, ra_map, Condition(M3.Lt(lh_term, rh_term)))
+                  (base_term, ra_map, Condition(M3.mk_lt lh_term rh_term))
               | Calculus.Le  -> 
-                  (base_term, ra_map, Condition(M3.Leq(lh_term, rh_term)))
+                  (base_term, ra_map, Condition(M3.mk_leq lh_term rh_term))
               | Calculus.Neq -> 
                   failwith "TODO: Handle NEQ"
             )
@@ -52,7 +53,7 @@ let rec to_m3_initializer
               (List.map (fun x -> Binding_Present(x)) map_vars)
             )) in
           (
-            M3.Mult(M3.MapAccess(ma_term), base_term), 
+            (M3.mk_prod (M3.mk_ma ma_term) base_term), 
             (MapAsSet.singleton mapn map_vars),
             EmptyCondition
           )
@@ -76,7 +77,7 @@ let rec to_m3_initializer
                 ( match phi3 with
                     EmptyCondition -> (term3, ra_map, phi2)
                   | Condition(phi3_as_m3) ->
-                    (term3, ra_map, Condition(M3.Add(phi3_as_m3, phi2_as_m3)))
+                    (term3, ra_map, Condition(M3.mk_sum phi3_as_m3 phi2_as_m3))
                 )
             )
 
@@ -97,17 +98,17 @@ let rec to_m3_initializer
                 EmptyCondition -> (term, (MapAsSet.union_right ra_map1 ra_map2))
               | Condition(result_phi_as_m3) -> 
                   (
-                    M3.IfThenElse0(result_phi_as_m3, term), 
+                    (M3.mk_if result_phi_as_m3 term), 
                     (MapAsSet.union_right ra_map1 ra_map2)
                   )
             )
             
       | Calculus.Const(Calculus.Int c) ->
-          (M3.Const(M3.CFloat(float_of_int c)), StringMap.empty)
+          (M3.mk_c (float_of_int c), StringMap.empty)
       | Calculus.Const(Calculus.Double d) -> 
-          (M3.Const(M3.CFloat(d)), StringMap.empty)
+          (M3.mk_c d, StringMap.empty)
       | Calculus.Var(vn,vt) -> 
-          (M3.Var(vn), StringMap.empty)
+          (M3.mk_v vn, StringMap.empty)
       | Calculus.Const(_) -> 
           failwith "TODO: Handle String,Long in to_m3_initializer"
       | Calculus.External(s,vs) -> 
@@ -121,7 +122,7 @@ let rec to_m3_initializer
           let (rhs, ra_map) = 
             (to_m3_initializer t) 
           in
-            ((M3.Mult((M3.Const (M3.CFloat (-1.0))), rhs)), ra_map)
+            ((M3.mk_prod (M3.mk_c (-1.0)) rhs), ra_map)
 
     | Calculus.RProd(t1::[]) ->
           (to_m3_initializer t1)
@@ -133,11 +134,11 @@ let rec to_m3_initializer
         let (lhs, ra_map2) = 
           (to_m3_initializer t1) 
         in
-          ((M3.Mult(lhs, rhs)), 
+          ((M3.mk_prod lhs rhs),
           (MapAsSet.union_right ra_map1 ra_map2))
 
     | Calculus.RProd([]) -> 
-        (M3.Const(M3.CFloat(1.0)), StringMap.empty)
+        (M3.mk_c (1.0), StringMap.empty)
 
     | Calculus.RSum(t1::[]) ->
         (to_m3_initializer t1)
@@ -149,11 +150,11 @@ let rec to_m3_initializer
         let (lhs, ra_map2) = 
           (to_m3_initializer t1) 
         in
-          ((M3.Add(lhs, rhs)), 
+          ((M3.mk_sum lhs rhs),
            (MapAsSet.union_right ra_map1 ra_map2))
 
     | Calculus.RSum([]) -> 
-        (M3.Const(M3.CFloat(0.0)), StringMap.empty)
+        (M3.mk_c (0.0), StringMap.empty)
 
 (********************************)
 and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t): 
@@ -177,12 +178,12 @@ and to_m3_map_access
           the presence of input variables *)
     if (List.length input_var_list) > 0
       then (to_m3_initializer (Calculus.readable_term map_definition)) 
-      else (M3.Const(M3.CFloat(0.0)), StringMap.empty)
+      else (M3.mk_c 0.0, StringMap.empty)
   in
   ((mapn, 
     (fst (List.split input_var_list)), 
     (fst (List.split output_var_list)), 
-    init_stmt
+    (init_stmt, ())
   ), ret_ra_map);;
 
 (********************************)
@@ -198,17 +199,17 @@ let rec to_m3
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
             let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.Eq (lhs, rhs), ra_map)
+              (M3.mk_eq lhs rhs, ra_map)
        | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
             let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.Leq(lhs, rhs), ra_map)
+              (M3.mk_leq lhs rhs, ra_map)
        | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
             let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
             let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.Lt (lhs, rhs), ra_map)
+              (M3.mk_lt lhs rhs, ra_map)
          (* AtomicConstraint(Neq, t1, t2) -> ... *)
        | _ -> failwith ("Compiler.to_m3: TODO constraint '"^
                    (Calculus.relcalc_as_string
@@ -227,7 +228,7 @@ let rec to_m3
             let (lhs, ra_map1) = (calc_to_m3 phi) in
             let (rhs, ra_map2) = (to_m3 t inner_bindings) in
             let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              ((M3.IfThenElse0(lhs,rhs)), ra_map)
+              ((M3.mk_if lhs rhs), ra_map)
        | Calculus.External(mapn, map_vars)      -> 
           (
             try
@@ -235,7 +236,7 @@ let rec to_m3
                 (to_m3_map_access 
                   (StringMap.find mapn inner_bindings)) 
               in
-                (M3.MapAccess(access_term), ra_map)
+                (M3.mk_ma access_term, ra_map)
             with Not_found -> 
               failwith ("Unable to find map '"^mapn^"' in {"^
                 (StringMap.fold 
@@ -244,11 +245,11 @@ let rec to_m3
                 )
           )
        | Calculus.Var(vn,vt)                -> 
-            (M3.Var(vn), StringMap.empty)
+            (M3.mk_v vn, StringMap.empty)
        | Calculus.Const(Calculus.Int c)     -> 
-            (M3.Const (M3.CFloat (float_of_int c)), StringMap.empty)
+            (M3.mk_c (float_of_int c), StringMap.empty)
        | Calculus.Const(Calculus.Double c)  -> 
-            (M3.Const (M3.CFloat c), StringMap.empty)
+            (M3.mk_c c, StringMap.empty)
        | Calculus.Const(_)                  ->
             failwith "Compiler.to_m3: TODO String,Long"
 
@@ -257,23 +258,23 @@ let rec to_m3
       Calculus.RVal(lf)      -> lf_to_m3 lf
     | Calculus.RNeg(t1)      -> 
         let (rhs, ra_map) = (to_m3 t1 inner_bindings) in
-        (M3.Mult((M3.Const (M3.CFloat (-1.0))), rhs), ra_map)
+        (M3.mk_prod (M3.mk_c (-1.0)) rhs, ra_map)
     | Calculus.RProd(t1::[]) -> (to_m3 t1 inner_bindings)
     | Calculus.RProd(t1::l)  -> 
         let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
         let (rhs, ra_map2) = (to_m3 (Calculus.RProd l) inner_bindings) in
-        (M3.Mult(lhs, rhs), (MapAsSet.union_right ra_map1 ra_map2))
+        (M3.mk_prod lhs rhs, (MapAsSet.union_right ra_map1 ra_map2))
     | Calculus.RProd([])     -> 
-        (M3.Const (M3.CFloat 1.0), StringMap.empty)
+        (M3.mk_c 1.0, StringMap.empty)
         (* impossible case, though *)
     | Calculus.RSum(t1::[])  -> 
         (to_m3 t1 inner_bindings)
     | Calculus.RSum(t1::l)   -> 
         let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
         let (rhs, ra_map2) = (to_m3 (Calculus.RSum l) inner_bindings) in
-        (M3.Add(lhs, rhs), (MapAsSet.union_right ra_map1 ra_map2))
+        (M3.mk_sum lhs rhs, (MapAsSet.union_right ra_map1 ra_map2))
     | Calculus.RSum([])      -> 
-        (M3.Const (M3.CFloat 0.0), StringMap.empty) 
+        (M3.mk_c 0.0, StringMap.empty) 
         (* impossible case, though *)
 
 let rec find_binding_calc_lf 
@@ -378,7 +379,7 @@ module M3InProgress = struct
            statement order must be preserved *)
         tstmts @ 
           if tvars <> vars then
-            List.map (M3Common.rename_vars vars tvars) stmts
+            List.map (M3.rename_vars vars tvars) stmts
           else
             stmts
       in
@@ -500,10 +501,12 @@ module M3InProgress = struct
                   M3.Insert, relation, (translate_schema schema),
                   [ ( ( "INPUT_MAP_"^relation, [], 
                         (translate_schema schema), 
-                        M3.Const(M3.CFloat(0.0))
+                        (M3.mk_c 0.0, ())
                       ), (
-                        M3.Const(M3.CFloat(1.0))
-                      ) ) ] )
+                        (M3.mk_c 1.0, ())
+                      ),
+                      ()
+                    ) ] )
                   (*
                   M3.Delete, relation, (translate_schema schema),
                   [ ( ( "INPUT_MAP_"^relation, [], 
@@ -533,7 +536,7 @@ module M3InProgress = struct
       List.map (fun (rel_name, (rel_vars, triggers)) ->
         (pm, rel_name, rel_vars, 
           (List.map (fun trigger -> 
-            (M3Common.rename_maps 
+            (M3.rename_maps 
               (StringMap.map (fun (x,_,_)->x) mapping) trigger)
             ) triggers
           )
@@ -577,7 +580,7 @@ module M3InProgress = struct
         let update_trigger = (
             (if delete then M3.Delete else M3.Insert),
             reln, (translate_schema relvars),
-            [(target_access, update)]
+            [(target_access, (update,()), ())]
           )
         in
         (
@@ -587,7 +590,7 @@ module M3InProgress = struct
               ": "^(Calculus.term_as_string (snd map_ref))^
               (list_to_string (fun (a,_)->a) params)^" += "^
               (Calculus.term_as_string expr)^"\n   ->\n"^
-              (M3Common.pretty_print_calc update)^"\n"
+              (M3.pretty_print_calc update)^"\n"
             ));
           (
             if delete then 

@@ -1,5 +1,4 @@
 open M3
-open M3Common
 
 (* (PARTIAL) VARIABLE VALUATIONS *)
 module type ValuationSig =
