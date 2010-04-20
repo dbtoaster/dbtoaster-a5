@@ -106,23 +106,23 @@ let debug_sequence cdebug ccalc =
     | Slice(f) -> Slice (fun theta db -> (* df theta db; *) f theta db)
     | _ -> failwith "invalid expr debug sequence"
 
-let debug_expr (incr_calc:Prepared.ecalc_t) =
+let debug_expr (incr_calc:Prepared.calc_t) =
    EnvDebug (fun theta db ->
-      print_string("\neval_pcalc "^(code_of_calc incr_calc)^
+      print_string("\neval_pcalc "^(M3Common.code_of_calc incr_calc)^
                    " "^(Valuation.to_string theta)^
                    " "^(Database.db_to_string db)^"   "))
 
 let debug_singleton_rhs_expr lhs_outv =
    SingletonDebug (fun theta db k v ->
-      print_endline ("End of PCALC_S; outv="^(vars_to_string lhs_outv)^
-                     " k="^(Util.list_to_string string_of_const k)^
-                     " v="^(string_of_const v)^
+      print_endline ("End of PCALC_S; outv="^(M3Common.vars_to_string lhs_outv)^
+                     " k="^(Util.list_to_string M3Common.string_of_const k)^
+                     " v="^(M3Common.string_of_const v)^
                     (" db="^(Database.db_to_string db))^
                     (" theta="^(Valuation.to_string theta))))
 
 let debug_slice_rhs_expr rhs_outv =
    SliceDebug (fun theta db slice0 ->
-      print_endline ("End of PCALC; outv="^(vars_to_string rhs_outv)^
+      print_endline ("End of PCALC; outv="^(M3Common.vars_to_string rhs_outv)^
                      " slice="^(Database.slice_to_string slice0)^
                     (" db="^(Database.db_to_string db))^
                     (" theta="^(Valuation.to_string theta))))
@@ -130,7 +130,7 @@ let debug_slice_rhs_expr rhs_outv =
 let debug_rhs_init () =
    SingletonDebug (fun theta db k v ->
       print_string ("@PSTMT.init{th="^(Valuation.to_string theta)
-                   ^", key="^(Util.list_to_string string_of_const k)
+                   ^", key="^(Util.list_to_string M3Common.string_of_const k)
                    ^", db="^(Database.db_to_string db)^"\n"))
 
 let debug_stmt lhs_mapn lhs_inv lhs_outv =
@@ -266,9 +266,9 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
        print_endline ("singleton_init_lookup: "^mapn^" "^
-                      (vars_to_string inv)^" "^
-                      (vars_to_string outv)^" "^
-                      (Util.list_to_string string_of_const outv_img));
+                      (M3Common.vars_to_string inv)^" "^
+                      (M3Common.vars_to_string outv)^" "^
+                      (Util.list_to_string M3Common.string_of_const outv_img));
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value

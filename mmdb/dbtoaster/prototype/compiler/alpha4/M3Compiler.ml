@@ -1,11 +1,11 @@
 open M3
-open M3.Patterns
+open M3Common.Patterns
 (* M3 preparation and compilation *)
 module M3P = M3.Prepared
 
 (* TODO: validate x * m[x] *)
 let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
-   : (M3P.ptrig_t list * pattern_map) =
+   : (M3P.trig_t list * pattern_map) =
    let sanitize_vars = List.map sanitize_var in
    let prep_counter = ref [] in
    let add_counter() = prep_counter := 0::(!prep_counter) in
@@ -21,11 +21,11 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
    let save_counter f = add_counter(); let r = f() in remove_counter(); r in
    let rec prepare_calc (update_mapn : string) (lhs_vars: var_t list)
                         (theta_vars : var_t list) (calc : calc_t)
-         : (M3P.ecalc_t * pattern_map) =
+         : (M3P.calc_t * pattern_map) =
       let recur = prepare_calc update_mapn lhs_vars in
       let prepare_aux c propagate defv theta_ext
-            : (M3P.ecalc_t * var_t list * pattern_map) =
-         let outv = calc_schema c in
+            : (M3P.calc_t * var_t list * pattern_map) =
+         let outv = M3Common.calc_schema c in
          let ext = Util.ListAsSet.diff (if propagate then defv else outv)
                       (if propagate then outv else defv) in
          let (pc, pm) = recur (theta_vars@theta_ext) c in 
@@ -35,16 +35,17 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
          let new_pc = (M3P.get_calc pc, new_pc_meta)
          in (new_pc, outv, pm)
       in
-      let prepare_op (f : M3P.ecalc_t -> M3P.ecalc_t -> M3P.pcalc_t)
+      let prepare_op (f : M3P.calc_t -> M3P.calc_t -> M3P.pcalc_t)
                      (c1: calc_t) (c2: calc_t)
-            : (M3P.ecalc_t * pattern_map)
+            : (M3P.calc_t * pattern_map)
       =
          let (e1, c1_outv, p1_patterns) = prepare_aux c1 false theta_vars [] in
          let (e2, _, p2_patterns) =
             prepare_aux c2 true c1_outv (M3P.get_extensions e1) in
          let patterns = merge_pattern_maps p1_patterns p2_patterns in
          let singleton = (M3P.get_singleton e1) && (M3P.get_singleton e2) in
-         let (c1_vars, c2_vars) = (calc_vars c1, calc_vars c2) in
+         let (c1_vars, c2_vars) = (M3Common.calc_vars c1, 
+                                   M3Common.calc_vars c2) in
          let product = (Util.ListAsSet.inter c1_vars c2_vars) = []
          (* Safe to use empty theta extensions, since this will get overriden
           * by recursive calls for binary ops *) 
@@ -97,7 +98,7 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
         
    in
 
-   let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.pstmt_t * pattern_map) =
+   let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.stmt_t * pattern_map) =
 
       let ((lmapn, linv, loutv, init_calc), (incr_calc,_),_) = stmt in
       let (slinv, sloutv) = (sanitize_vars linv,sanitize_vars loutv) in
@@ -115,7 +116,8 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
 
       (* Checking bigsum vars for slices is now done locally by passing down
        * LHS vars through M3 preparation. *)
-      let init_ext = (Util.ListAsSet.diff sloutv (calc_schema (fst init_calc))) in
+      let init_ext = (Util.ListAsSet.diff sloutv 
+                        (M3Common.calc_schema (fst init_calc))) in
       
       (* Set up top-level extensions for an entire incr/init RHS.
        * Incr M3 is extended by bound out variables.
@@ -155,7 +157,7 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
    in
 
    let prepare_block (trig_args : var_t list) (bl : stmt_t list)
-         : (M3P.pstmt_t list * pattern_map) =
+         : (M3P.stmt_t list * pattern_map) =
       let bl_pat_l = List.map (prepare_stmt trig_args) bl in
       let (pbl, patterns_l) = List.split bl_pat_l in
       let patterns = List.fold_left
@@ -163,7 +165,7 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
       in (pbl, patterns)
    in
 
-   let prepare_trig (t : trig_t) : (M3P.ptrig_t * pattern_map) =
+   let prepare_trig (t : trig_t) : (M3P.trig_t * pattern_map) =
       let (ev,rel,args,block) = t in
       let sargs = sanitize_vars args in
       let (pblock, patterns) = prepare_block sargs block in
@@ -181,11 +183,11 @@ open CG
 
 let rec compile_pcalc patterns (incr_ecalc) : code_t = 
    let compile_op ecalc op e1 e2 : code_t =
-      let aux ecalc = (calc_schema ecalc, M3P.get_extensions ecalc,
+      let aux ecalc = (M3Common.calc_schema ecalc, M3P.get_extensions ecalc,
                          compile_pcalc patterns ecalc) in
       let (outv1, theta_ext, ce1) = aux e1 in
       let (outv2, schema_ext, ce2) = aux e2 in
-      let schema = calc_schema ecalc in
+      let schema = M3Common.calc_schema ecalc in
          begin match (M3P.get_singleton ecalc, M3P.get_singleton e1, M3P.get_singleton e2) with
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"
@@ -255,7 +257,7 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
  * -- aggregates blindy over entire slice for fully bound lhs_outv 
  * -- skips aggregating when rhs_outv = lhs_outv *)
 and compile_pcalc2 patterns agg_meta lhs_outv ecalc : code_t =
-   let rhs_outv = calc_schema ecalc in
+   let rhs_outv = M3Common.calc_schema ecalc in
    (* project slice w/ rhs schema to lhs schema, extending by out vars that
     * are bound. *)
    let rhs_ext = M3P.get_extensions ecalc in

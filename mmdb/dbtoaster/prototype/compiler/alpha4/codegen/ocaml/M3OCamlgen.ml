@@ -1,6 +1,6 @@
 open M3
-open M3.Prepared
-open M3.Patterns
+module M3P = M3.Prepared
+open M3Common.Patterns
 open M3OCaml
 
 module CG : M3Codegen.CG =

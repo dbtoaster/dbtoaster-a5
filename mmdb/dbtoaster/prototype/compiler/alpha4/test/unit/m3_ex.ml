@@ -2,7 +2,7 @@
 open Unix
 
 open M3
-open M3.Patterns
+open M3Common.Patterns
 open Util
 
 open M3Compiler
@@ -17,8 +17,8 @@ let print_map name map =
     (fun (in_vars, inner_vals) ->
       string_of_list0 "\n"
         (fun (out_vars, value) ->
-          name^(list_to_string string_of_const (in_vars@out_vars))^
-          " = "^(string_of_const value)
+          name^(list_to_string M3Common.string_of_const (in_vars@out_vars))^
+          " = "^(M3Common.string_of_const value)
         )
       inner_vals
     )

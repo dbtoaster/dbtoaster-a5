@@ -54,13 +54,13 @@ struct
 
    let to_string (theta:t) : string =
       StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else " ")^
-         k^"->"^(string_of_const v)) theta ""
+         k^"->"^(M3Common.string_of_const v)) theta ""
 end
 
 (* Map whose keys are valuations, and values are polymorphic *)
 module ValuationMap = SliceableMap.Make(struct
    type t = const_t
-   let to_string = string_of_const
+   let to_string = M3Common.string_of_const
 end)
 
 (* ValuationMap whose values are aggregates *)
@@ -73,7 +73,7 @@ struct
    type key = VM.key
    type t = agg_t VM.t
 
-   let string_of_aggregate = string_of_const
+   let string_of_aggregate = M3Common.string_of_const
 
    (* Slice methods for calculus evaluation *)
 
@@ -126,7 +126,7 @@ end
 
 module Database =
 struct
-   open Patterns
+   open M3Common.Patterns
 
    module VM  = ValuationMap
    module AM  = AggregateMap
@@ -139,7 +139,7 @@ struct
    let concat_string s t delim =
       (if (String.length s = 0) then "" else delim)^t
 
-   let key_to_string k = Util.list_to_string string_of_const k
+   let key_to_string k = Util.list_to_string M3Common.string_of_const k
 
    let slice_to_string (m: slice_t) =
       VM.to_string key_to_string AM.string_of_aggregate m
@@ -413,7 +413,7 @@ let string_of_evt (action:M3.pm_t)
                   (relation:string) 
                   (tuple:M3.const_t list): string =
   (match action with Insert -> "Inserting" | Delete -> "Deleting")^
-  " "^relation^(Util.list_to_string string_of_const tuple);;
+  " "^relation^(Util.list_to_string M3Common.string_of_const tuple);;
 
 (* TODO: RandomSource *)
 (* TODO: multiplexer of random sources *)

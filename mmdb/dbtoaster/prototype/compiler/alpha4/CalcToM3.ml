@@ -379,7 +379,7 @@ module M3InProgress = struct
            statement order must be preserved *)
         tstmts @ 
           if tvars <> vars then
-            List.map (M3.rename_vars vars tvars) stmts
+            List.map (M3Common.rename_vars vars tvars) stmts
           else
             stmts
       in
@@ -536,7 +536,7 @@ module M3InProgress = struct
       List.map (fun (rel_name, (rel_vars, triggers)) ->
         (pm, rel_name, rel_vars, 
           (List.map (fun trigger -> 
-            (M3.rename_maps 
+            (M3Common.rename_maps 
               (StringMap.map (fun (x,_,_)->x) mapping) trigger)
             ) triggers
           )
@@ -590,7 +590,7 @@ module M3InProgress = struct
               ": "^(Calculus.term_as_string (snd map_ref))^
               (list_to_string (fun (a,_)->a) params)^" += "^
               (Calculus.term_as_string expr)^"\n   ->\n"^
-              (M3.pretty_print_calc update)^"\n"
+              (M3Common.pretty_print_calc update)^"\n"
             ));
           (
             if delete then 

@@ -218,7 +218,7 @@ let m3_prog =
   in
     CalcToM3.M3InProgress.finalize m3_prog_in_prog;;
 
-Debug.print "M3" (fun () -> (M3.pretty_print_prog m3_prog));;
+Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 (********* TRANSLATE M3 TO [language of your choosing] *********)
 
@@ -231,7 +231,7 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
   | L_M3    -> (fun (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
-          output_string fd (M3.pretty_print_prog p)))
+          output_string fd (M3Common.pretty_print_prog p)))
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)
@@ -255,6 +255,7 @@ let compile_ocaml in_file_name =
   let dbt_includes = [ "lib/ocaml" ] in
   let dbt_libs = [ "Util";
                    "M3";
+                   "M3Common";
                    "lib/ocaml/SliceableMap";
                    "lib/ocaml/M3OCaml";
                    "lib/ocaml/StandardAdaptors" ] in
