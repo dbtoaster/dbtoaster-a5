@@ -185,7 +185,7 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
                          compile_pcalc patterns ecalc) in
       let (outv1, theta_ext, ce1) = aux e1 in
       let (outv2, schema_ext, ce2) = aux e2 in
-      let schema = Util.ListAsSet.union outv1 outv2 in
+      let schema = calc_schema ecalc in
          begin match (M3P.get_singleton ecalc, M3P.get_singleton e1, M3P.get_singleton e2) with
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"

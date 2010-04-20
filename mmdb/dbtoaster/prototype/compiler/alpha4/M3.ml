@@ -185,27 +185,11 @@ let c_prod (a : const_t) (b : const_t) : const_t =
  (* | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
 
 (******************* Querying *******************)
-let rec calc_vars_aux f calc =
-   let recur = calc_vars_aux f in
-   let op c1 c2 = Util.ListAsSet.union (recur c1) (recur c2) in
-   match (fst calc) with
-      MapAccess(mapn, inv, outv, init_calc) -> f inv outv
-    | Add (c1, c2)        -> op c1 c2
-    | Mult(c1, c2)        -> op c1 c2
-    | Lt  (c1, c2)        -> op c1 c2
-    | Leq (c1, c2)        -> op c1 c2
-    | Eq  (c1, c2)        -> op c1 c2
-    | IfThenElse0(c1, c2) -> op c2 c1
-    | Const(i)            -> []
-    | Var(x)              -> [x]
-
-(*
 let calc_vars_aux f : ((('c,'a) generic_calc_t) -> var_t list)
   = recurse_calc_lf Util.ListAsSet.union
-       (fun (_, inv, outv, _) -> f inv outv)
-       (fun _ -> [])
-       (fun x -> [x])
-*)
+(*ma*)       (fun (_, inv, outv, _) -> f inv outv)
+(*const*)    (fun _ -> [])
+(*var*)      (fun x -> [x])
 
 let calc_schema (c:(('c,'a) generic_calc_t)) : var_t list
     = calc_vars_aux (fun inv outv -> outv) c

@@ -49,7 +49,7 @@ CLEAN_OBJ = \
 	$(OBJ) $(subst .cmo,.cmi,$(OBJ)) $(XOBJ) $(subst .ml,.cmi,$(OTHER_SOURCE)) \
 	$(subst .ml,.cmo,$(OTHER_SOURCE)) $(subst .ml,.cmx,$(OTHER_SOURCE))\
 	$(GENERATED_SOURCE) $(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME)))\
-	lib/ocaml/*.o *.o dbtoaster dbtoaster_top m3_ex vwap query
+	codegen/ocaml/*.o lib/ocaml/*.o *.o dbtoaster dbtoaster_top m3_ex vwap query
 
 
 INCLUDE_DIR = \
