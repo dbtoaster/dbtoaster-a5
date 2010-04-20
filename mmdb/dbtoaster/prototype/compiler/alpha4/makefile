@@ -43,8 +43,8 @@ OTHER_SOURCE = \
 	test/examples/vwap_m3_ex.ml \
 	query.ml
 
-OBJ_DEPS = $(ML_OBJ) $(MLI_OBJ)
-OPT_DEPS = $(ML_OPT) $(MLI_OPT)
+OBJ_DEPS = $(MLI_OBJ) $(ML_OBJ)
+OPT_DEPS = $(MLI_OPT) $(ML_OPT)
 
 RUNTIME = \
 	Util.ml \
@@ -59,6 +59,8 @@ RUNTIME = \
 
 CLEAN_OBJ = \
 	$(ML_OBJ) $(subst .cmo,.cmi,$(ML_OBJ)) $(ML_OPT) \
+	$(subst .cmi,.cmi,$(HEADER_ONLY_SOURCE))\
+	$(subst .cmi,.cmxi,$(HEADER_ONLY_SOURCE))\
 	$(subst .ml,.cmi,$(OTHER_SOURCE)) $(subst .ml,.cmo,$(OTHER_SOURCE)) \
 	$(subst .ml,.cmx,$(OTHER_SOURCE)) $(GENERATED_SOURCE) \
 	$(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME)))\
@@ -116,8 +118,8 @@ dbtoaster_top: $(OBJ_DEPS)
 	@echo Linking dbtoaster_top
 	@ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(ML_OBJ)
 
-dbtoaster: $(OBJ_DEPS) $(OPT_DEPS) Driver.ml
-	@echo linking dbtoaster
+dbtoaster: $(OBJ_DEPS) Driver.ml
+	@echo Linking dbtoaster
 	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) Driver.ml
 
 benchmark: $(OPT_DEPS)
@@ -130,7 +132,8 @@ test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
 
 test: top
-	./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml
