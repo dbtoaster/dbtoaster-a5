@@ -633,7 +633,6 @@ struct
        | _ -> failwith "Unsupported data source"
 
    (* TODO:
-    * -- standard adaptors
     * -- use integers rather than strings for stream dispatching for efficiency
     *    (requires changing stream_event type, and source creation)
     * -- generate a dummy benchmarker: random source, multiplexed, each w/ fixed # of tuples *)

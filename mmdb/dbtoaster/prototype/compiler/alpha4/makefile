@@ -30,12 +30,12 @@ SOURCE += $(GENERATED_SOURCE)
 # Non-bytecode source that still needs to be cleaned
 OTHER_SOURCE = \
 	Driver.ml \
-	test/m3_ex.ml \
-	test/vwap_m3_ex.ml \
+	test/unit/m3_ex.ml \
+	test/examples/vwap_m3_ex.ml \
 	query.ml
 
 OBJ = $(patsubst %.ml,%.cmo,$(filter %.ml,$(SOURCE)))
-XOPBJ = $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE)))
+XOBJ = $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE)))
 
 RUNTIME = \
 	Util.ml \
@@ -87,10 +87,10 @@ dbtoaster: bytecode runtime
 	ocamlc $(OC_FLAGS) -o dbtoaster $(OBJ) Driver.ml
 
 benchmark: native
-	ocamlopt $(OOPT_FLAGS) -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/m3_ex.ml
+	ocamlopt $(OOPT_FLAGS) -o m3_ex unix.cmxa $(patsubst %.ml,%.cmx,$(filter %.ml,$(SOURCE))) test/unit/m3_ex.ml
 
 vwap: native
-	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap unix.cmxa $(XOBJ) test/vwap_m3_ex.ml
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap unix.cmxa $(XOBJ) test/examples/vwap_m3_ex.ml
 
 test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
