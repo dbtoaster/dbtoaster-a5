@@ -265,10 +265,12 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
+       (*
        print_endline ("singleton_init_lookup: "^mapn^" "^
                       (M3Common.vars_to_string inv)^" "^
                       (M3Common.vars_to_string outv)^" "^
                       (Util.list_to_string M3Common.string_of_const outv_img));
+       *)
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value

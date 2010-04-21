@@ -1,3 +1,4 @@
+open M3
 open M3Common
 open M3Common.Patterns
 
@@ -46,27 +47,28 @@ dq4[a]/dR(a,b) = b
 *)
 let init_q2 cmp_var free_var = 
   try
-    IfThenElse0(
-                 (
-                   Lt(Var(cmp_var), Var(free_var))
-                 ),
-                 MapAccess("q4", [], [free_var], (Const(CFloat(0.0))))
-               )
-  with Not_found -> print_string "Not_found in init_q2\n";(Const(CFloat(0.0)));;
+    mk_if
+       (mk_lt (mk_v(cmp_var)) (mk_v(free_var)))
+       (mk_ma ("q4", [], [free_var], (mk_c 0.0, ())))
+  with Not_found -> print_string "Not_found in init_q2\n"; (mk_c 0.0);;
   
 
 let cmp_q2 free_var cmp_var cmp_op lhs_offset rhs_offset valid_val = 
   try
-    IfThenElse0(
-      (cmp_op
-        (Mult(Const(CFloat(4.0)), Add(MapAccess("q2", [cmp_var], [], (init_q2 cmp_var free_var)), rhs_offset)))
-        (Add(MapAccess("q1", [], [], (Const(CFloat(0.0)))), Mult(Const(CFloat(4.0)), lhs_offset)))
-      ),
-      valid_val
-    )
-  with Not_found -> print_string "Not_found in cmp_q\n2";(Const(CFloat(0.0)));;
+    mk_if
+       (cmp_op
+          (mk_prod
+             (mk_c 4.0)
+             (mk_sum
+                (mk_ma ("q2", [cmp_var], [], (init_q2 cmp_var free_var, ())))
+                (rhs_offset)))
+          (mk_sum
+             (mk_ma ("q1", [], [], (mk_c 0.0, ())))
+             (lhs_offset)))
+       (valid_val)
+  with Not_found -> print_string "Not_found in cmp_q\n2"; (mk_c 0.0);;
 
-
+(*
 let prog_vwap: prog_t = 
   (
   [ ("q",  [],       []       );
@@ -132,7 +134,83 @@ let prog_vwap: prog_t =
         ]
       )
   ]);;
+*)
 
+let prog_vwap: prog_t = 
+  (
+  [ ("q",  [],       []       );
+    ("q1", [],       []       );
+    ("q2", [VT_Int], []       );
+    ("q3", [],       [VT_Int] );
+    ("q4", [],       [VT_Int] ) ],
+  [
+      (Insert, "BID", ["a"; "b"],
+        [
+          (("q", [], [], (mk_c 0.0, ())),
+            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0) (mk_prod (mk_v "a") (mk_v "b"))), ()),
+            ()
+          );
+          (("q", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_v "b") (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
+                (mk_ma ("q3", [], ["d"], (mk_c 0.0, ())))
+              )
+            ), ()),
+            ()
+          );
+          (("q", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_v "b") (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
+                (mk_prod (mk_ma("q3", [], ["d"], (mk_c 0.0, ()))) (mk_c (-1.0)))
+              )
+            ), ()),
+            ()
+          );
+          
+          (("q1", [], [], (mk_c 0.0, ())), ((mk_v "b"), ()), ());
+          
+          (("q2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b")), ()), ());
+          
+          (("q3", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "a") (mk_v "b")), ()), ());
+          
+          (("q4", [], ["a"], (mk_c 0.0, ())), ((mk_v "b"), ()), ())
+        ]
+      );
+
+      (Delete, "BID", ["a"; "b"],
+        [
+          (("q", [], [], (mk_c 0.0, ())),
+            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0) (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))), ()),
+            ()
+          );
+          (("q", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_prod (mk_v "b") (mk_c (-1.0))) (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
+                (mk_ma ("q3", [], ["d"], (mk_c 0.0, ())))
+              )
+            ), ()),
+            ()
+          );
+          (("q", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_prod (mk_v "b") (mk_c (-1.0))) (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
+                (mk_prod (mk_ma ("q3", [], ["d"], (mk_c 0.0, ()))) (mk_c (-1.0)))
+              )
+            ), ()),
+            ()
+          );
+          
+          (("q1", [], [], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ());
+          
+          (("q2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0)))), ()), ());
+          
+          (("q3", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0))), ()), ());
+          
+          (("q4", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ())
+          
+        ]
+      )
+  ]);;
 
 let seed = 12345;;
 Random.init seed;;
@@ -142,7 +220,7 @@ let randl n lb ub = let r = ref [] in
 in
 
 (* Code *)
-let prepared_vwap = prepare_triggers (snd prog_vwap) in
+let prepared_vwap = prepare_triggers (snd prog_vwap) (fun x -> x) in
 let vwap_triggers = compile_ptrig prepared_vwap in
 let insert_trig = List.hd vwap_triggers in
 let delete_trig = List.nth vwap_triggers 1 in

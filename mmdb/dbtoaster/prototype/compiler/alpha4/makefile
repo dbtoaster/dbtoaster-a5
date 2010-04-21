@@ -35,6 +35,8 @@ MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))
 ML_OPT = $(subst .ml,.cmx,$(filter %.ml,$(SOURCE)))
 MLI_OPT = $(subst .mli,.cmxi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))
 
+C_OBJ = $(subst .ml,.o,$(filter %.ml,$(SOURCE)))
+
 # Non-bytecode source that still needs to be cleaned
 OTHER_SOURCE = \
 	Driver.ml \
@@ -57,13 +59,14 @@ RUNTIME = \
 	lib/ocaml/StandardAdaptors.ml
 
 CLEAN_OBJ = \
-	$(ML_OBJ) $(subst .cmo,.cmi,$(ML_OBJ)) $(ML_OPT) \
+	$(ML_OBJ) $(subst .cmo,.cmi,$(ML_OBJ)) $(ML_OPT) $(C_OBJ) \
 	$(subst .mli,.cmi,$(HEADER_ONLY_SOURCE))\
 	$(subst .mli,.cmxi,$(HEADER_ONLY_SOURCE))\
 	$(subst .ml,.cmi,$(OTHER_SOURCE)) $(subst .ml,.cmo,$(OTHER_SOURCE)) \
-	$(subst .ml,.cmx,$(OTHER_SOURCE)) $(GENERATED_SOURCE) \
+	$(subst .ml,.cmx,$(OTHER_SOURCE)) $(subst .ml,.o,$(OTHER_SOURCE)) \
+	$(GENERATED_SOURCE) \
 	$(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME)))\
-	codegen/ocaml/*.o lib/ocaml/*.o *.o dbtoaster dbtoaster_top m3_ex vwap query
+	dbtoaster dbtoaster_top m3_ex vwap query
 
 
 INCLUDE_DIR = \
@@ -122,10 +125,10 @@ dbtoaster: $(OBJ_DEPS) Driver.ml
 	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) Driver.ml
 
 benchmark: $(OPT_DEPS)
-	ocamlopt $(OOPT_FLAGS) -o m3_ex unix.cmxa $(ML_OPT) test/unit/m3_ex.ml
+	ocamlopt $(OOPT_FLAGS) -o m3_ex $(ML_OPT) test/unit/m3_ex.ml
 
 vwap: $(OPT_DEPS)
-	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap unix.cmxa $(ML_OPT) test/examples/vwap_m3_ex.ml
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap $(ML_OPT) test/examples/vwap_m3_ex.ml
 
 test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
@@ -145,7 +148,7 @@ clean:
 M3Compiler.cmo : M3Codegen.cmi
 M3Compiler.cmx : M3Codegen.cmxi
 M3Codegen.cmi : M3Common.cmo
-M3Codegen.cmxi : M3Common.cmxo
+M3Codegen.cmxi : M3Common.cmx
 M3Common.cmo : M3.cmo
 M3Common.cmx : M3.cmx
 M3.cmo : Util.cmo
