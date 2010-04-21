@@ -45,11 +45,70 @@ framingStatement :=
  |  VARSIZE OFFSET offset ADJUSTBY adjustby
 
 adaptorStatement := 
-    CSV[(param1 := val1[, param2 := val2[, ...]])]
+    adaptorType [(param1 := val1[, param2 := val2[, ...]])]
 
 framingStatement specifies how input records are separated: FXEDWITDH, LINE 
 DELIMITED and string DELIMITED are self-explanatory.  For documentation on 
 VARSIZE, see M3.ml
 
-adaptorStatement specifies how fields are to be parsed out of a given record.
-Currently, the only tested adaptor is CSV.  See libs/ocaml/StandardAdaptors.ml
+adaptorStatement specifies how fields are to be parsed out of a given record. 
+(See libs/ocaml/StandardAdaptors.ml and the following documentation) 
+
+--------------------------------------
+
+The StandardAdaptors Package
+
+To facilitate data processing, the StandardAdaptors package includes a range of
+generic, programmable adaptors as part of the processing library.
+
+== CSV ==
+(supported in: OCAML)
+  eg: CSV( fields := '|', schema := 'int,int,float' )
+    ... defines a | delimited list with three fields: Two integers and a float.
+
+Basic record parsing.  Fields are specified as strings in a simple record 
+format.
+
+fields: A regular expression that describes how fields are delimited fields in
+        each record.  (Required unless 'offsets' is provided)
+
+offsets: A comma-separated list of integers indicating how many bytes each field
+         uses.  (Required unless 'fields' is provided)
+
+schema: A comma-separated list of 'int','float', or 'hash'.  Indicates the type
+        of each field.  Hash will convert input strings into an integer by 
+        hashing prior to insertion - this is required, since string columns are
+        currently not supported by DBToaster.  If there are more fields than
+        parameters in the type list, the last type will be used as a default
+        for the remainder of the fields.  If the project parameter is present,
+        the field order is post-projection. (Required)
+
+project: A comma-separated list of integers representing field indices (0-based 
+         indexing).  If this parameter is present, only the indicated fields 
+         will be used, in the same order that they occur in the project 
+         parameter. (default: use the fields in the same order they occur)
+
+case: 'upper' or 'lower'; preprocess to change the case of all text in the 
+      record. (default: no preprocessing)
+
+substring: A comma-separated list of the form fid,off,len,...; Indicate that 
+           field fid should be trimmed (as a string) to the substring 
+           [off,off+len).  Multiple substring directives can be chained together
+           with commas (default: no trimming)
+
+skiplines: An integer n.  Discard the first n records from the file, as 
+           specified by the record delimiter.  Eg: if the record delimiter is
+           newline, skip the first n lines.  (default: 0)
+
+trimwhitespace: An empty string.  If this parameter is present, whitespace 
+                at the front and end of each field is removed prior to parsing.
+                (default: no trimming)
+
+eventtype: 'insert' or 'delete'; Specify that the adaptor generates purely 
+           insert or delete events. (default: insert, see events below)
+
+events: A comma-separated list of 'string:insert' or 'string:delete' entries.  
+        If specified, the leading field of the record will be removed and used
+        as an event type discriminator; It will be compared to all entries in
+        the parameters, and the record will be treated as the corresponding 
+        event.

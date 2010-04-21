@@ -1,5 +1,6 @@
 CREATE TABLE bids(price float, volume int)
-  FROM POSTGRES dbtoaster.vwap_5(price float, volume int);
+  FROM POSTGRES dbtoaster.vwap_5(action string, price float, volume int; 
+                                 events := 'B:insert,D:delete');
 
 SELECT avg(b1.price * b1.volume) 
 FROM   bids b1

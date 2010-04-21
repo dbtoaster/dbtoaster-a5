@@ -139,17 +139,32 @@ let postproject param_val =
 let postprocessors : (string * (string -> const_t list -> const_t list)) list =
    [("postproject", postproject)]
 
-let build_event param_val =
+let constant_event param_val =
   match param_val with
     | "insert" -> (fun fields -> [(Insert, fields)])
     | "delete" -> (fun fields -> [(Delete, fields)])
     | _ -> failwith ("invalid event type "^param_val)
 
+let parametrized_event param_val =
+  let rules = List.map (fun rule ->
+      match (Str.split (Str.regexp ":") rule) with 
+        | [k;"insert"] -> (CFloat(float(Hashtbl.hash k)), Insert)
+        | [k;"delete"] -> (CFloat(float(Hashtbl.hash k)), Delete)
+        | _ -> failwith ("invalid event type field: "^rule)
+    ) (Str.split (Str.regexp ",") param_val)
+  in
+    (fun fields -> 
+      if (List.length fields) <= 0 then raise AbortEventConstruction
+      else try
+        [(List.assoc (List.hd fields) rules, List.tl fields)]
+      with Not_found -> failwith ("No rule for identifying insert/delete")
+    )
+
 (* TODO: think of more complex event construction primitives?
  * -- determining event type from a field, equality, general comparison, etc *)
 
 let event_constructors : (string * (string -> const_t list -> event list)) list =
-   [("event", build_event)]
+   [("eventtype", constant_event); ("events", parametrized_event)]
 
 (* Standard generator, applying above transformations *)
 let standard_generator params =
@@ -174,7 +189,7 @@ let standard_generator params =
    let post_fns = match_keys postprocessors in
    let event_const_fn = 
      match_unique_default event_constructors "event constructor" 
-                          (build_event "insert")
+                          (constant_event "insert")
    in
    (fun tuple ->
       (*print_endline tuple;*)

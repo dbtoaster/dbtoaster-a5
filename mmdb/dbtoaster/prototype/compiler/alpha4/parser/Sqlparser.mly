@@ -550,6 +550,21 @@
                           "Internal error: expected a relation."))
             [] br
 
+    let generate_postgres_source source (names,types) adaptor_params =
+      let db_rel = Str.split (Str.regexp "\\.") source in
+      let (db,rel) = 
+        if List.length db_rel > 1 
+        then (List.nth db_rel 0, List.nth db_rel 1)
+        else ("", List.nth db_rel 0)
+      in
+        (
+          M3.PipeSource("psql "^db^" -A -t -c \"SELECT "^names^
+                        " FROM "^rel^"\""),
+          M3.Delimited("\n"),
+          ("csv", [("fields","|");("schema",types)]@adaptor_params)
+          (* ;("skiplines","2");("trimwhitespace","") *)
+        )
+    
 %}
 
 %token <string> ID STRING
@@ -640,22 +655,10 @@ postgresFieldList:
 
 relationInputStmt:
 |   sourceStmt framingStmt adaptorStmt { ($1,$2,$3) }
-|   POSTGRES ID LPAREN postgresFieldList RPAREN {
-        let (names,types) = $4 in
-        let db_rel = Str.split (Str.regexp "\\.") $2 in
-        let (db,rel) = 
-          if List.length db_rel > 1 
-          then (List.nth db_rel 0, List.nth db_rel 1)
-          else ("", List.nth db_rel 0)
-        in
-          (
-            M3.PipeSource("psql "^db^" -A -t -c \"SELECT "^names^
-                          " FROM "^rel^"\""),
-            M3.Delimited("\n"),
-            ("csv", [("fields","|");("schema",types)])
-            (* ;("skiplines","2");("trimwhitespace","") *)
-          )
-    }
+|   POSTGRES ID LPAREN postgresFieldList RPAREN 
+      { generate_postgres_source $2 $4 [] }
+|   POSTGRES ID LPAREN postgresFieldList EOSTMT adaptorParams RPAREN 
+      { generate_postgres_source $2 $4 $6 }
 
 createTableStmt:
 |   CREATE TABLE ID LPAREN fieldList RPAREN FROM relationInputStmt { 
