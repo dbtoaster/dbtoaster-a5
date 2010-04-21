@@ -1,7 +1,4 @@
-
-module StringMap = Map.Make(String)
-module StringSet = Set.Make(String)
-
+open Util;;
 
 (*               map_definition,   map_term *)
 type map_ref_t = (Calculus.term_t * Calculus.term_t)
@@ -55,7 +52,6 @@ let compile_delta_for_rel (reln:   string)
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
-   (* let tuple      = relsch in *)
    let tuple      = (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
@@ -85,7 +81,8 @@ let compile_delta_for_rel (reln:   string)
     todos)
 
 (* the main compile function. call this one, not the others. *)
-let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
+let rec compile ?(dup_elim = ref StringMap.empty)
+                (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (Calculus.var_t list)) list)
                 ((map_definition, map_term): map_ref_t)
                 (generate_code:'a output_translator_t)
@@ -94,6 +91,15 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                   (Calculus.term_as_string map_term)^" := "^
                   (Calculus.term_as_string map_definition)^"\n")*)
   let (mapn, map_params) = Calculus.decode_map_term map_term in
+  if StringMap.mem mapn !dup_elim then 
+    (try
+      let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) 
+                                    map_definition 
+      in
+        accum
+    with Calculus.TermsNotEquivalent(_) ->
+      failwith "Bug: Compiling two distinct maps with the same name")
+  else
   let (bigsum_vars, bsrw_theta, bsrw_term) = 
     Calculus.bigsum_rewriting
       bs_rewrite_mode (Calculus.roly_poly map_definition) [] (mapn^"__")
@@ -102,15 +108,25 @@ let rec compile (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
      compile_delta_for_rel reln relsch delete map_term bigsum_vars
                            bsrw_theta bsrw_term
   in
-  let insdel (reln, relsch) = [(false, reln, relsch)] in
+  let insdel (reln, relsch) = 
+    (false, reln, relsch) :: 
+    ( if Debug.active "DISABLE-DELETES" then []
+      else [(true, reln, relsch)] )
+  in
   let triggers = List.flatten (List.map insdel db_schema) in
   let (l1, l2) = (List.split (List.map cdfr triggers)) in
-  let todos = ((List.flatten l2) @ bsrw_theta) in
+  dup_elim := 
+    StringMap.add (fst (Calculus.decode_map_term map_term)) 
+                  map_definition
+                  !dup_elim;
+  let todos = ((List.flatten l2) @ bsrw_theta) 
+  in
     generate_code (* We need to do this traversal DEPTH FIRST *)
       (map_definition, map_term)
       (List.flatten l1)
       ( List.fold_left (fun curr_accum curr_map -> 
-          compile bs_rewrite_mode
+          compile ~dup_elim:dup_elim
+                  bs_rewrite_mode
                   db_schema
                   curr_map
                   generate_code

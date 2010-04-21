@@ -143,12 +143,14 @@ query: $(OPT_DEPS) query.ml
 clean:
 	rm -f $(CLEAN_OBJ)
 
-##################### DEPENDENCIES#####################
+##################### DEPENDENCIES #####################
 
 M3Compiler.cmo : M3Codegen.cmi
 M3Compiler.cmx : M3Codegen.cmxi
 M3Codegen.cmi : M3Common.cmo
 M3Codegen.cmxi : M3Common.cmx
+CalcToM3.cmo : Compiler.cmo
+CalcToM3.cmx : Compiler.cmx
 M3Common.cmo : M3.cmo
 M3Common.cmx : M3.cmx
 M3.cmo : Util.cmo

@@ -48,17 +48,6 @@ let vwap = make_term (RVal(AggSum(
       ))
     ]
   )));;
-      
-(****************************************************************************)
-(* Utilities *)
-
-(*let build_trigger_list (map_defn:map_ref_t) (triggers:trigger_definition_list*)
-
-
-(****************************************************************************)
-(* Basic functionality *)
-
-
 
 (****************************************************************************)
 (* Make sure that the compiler is handling input variables properly *)
@@ -76,13 +65,18 @@ let (deltas,todos) =
     (* externals_mapping *)   bsrw_theta
     (* term = *)              bsrw_term;;
 
-print_endline (term_as_string bsrw_term);;
+Debug.log_unit_test "Bigsum Rewriting" (fun x->x)
+  (term_as_string bsrw_term)
+  ("(if REWRITE__2[B1_PRICE]<REWRITE__3[] then REWRITE__1[B1_PRICE] else 0)")
+;;
 
-print_endline "";;
-print_endline "";;
-
-print_endline (
-  string_of_list0 "\n" 
-    (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) 
-    deltas
-)
+Debug.log_unit_test "VWAP Compilation" (string_of_list "\n")
+  (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) deltas)
+  ([
+    "((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0))";
+    "(REWRITE__1[B1_PRICE]*(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) then 1 else 0)*(if REWRITE__3[]<=REWRITE__2[B1_PRICE] then 1 else 0))";
+    "(REWRITE__1[B1_PRICE]*-1*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0)*(if (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then 1 else 0))";
+    "((if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*(if REWRITE__3[]<=REWRITE__2[B1_PRICE] then 1 else 0))";
+    "((if (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*-1*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0))"
+  ])
+;;

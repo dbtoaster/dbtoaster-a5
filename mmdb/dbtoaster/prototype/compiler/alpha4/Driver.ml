@@ -58,6 +58,32 @@
       a temporary file.  Consequently, unless explicitly directed to output to
       stdout "-o -", only the temporary file will be produced (ie, the target
       language output will not be dumped to stdout if "-c" is used).
+
+  ====== DEBUG FLAGS ======
+  The following flags may be passed in as arguments to -d
+  
+  Driver.ml
+    ARGS: Print all arguments received.
+    CALCULUS: Regardless of the language specification, the calculus 
+      representation of the parsed input will be printed.
+    COMPILE-WITH-GDB: Ocaml-generated code is compiled with the -g flag, causing
+      debugging information to be compiled in.  This is required for backtraces
+      and gdb debugging
+    M3: If the language is not 'calc', the M3 delta representation of the parsed 
+      input will be printed.
+    PARSE: If Parsing fails, a parser backtrace will be printed.
+
+  CalcToM3.ml
+    MAP-CALC: Each map's calculus query representation will be printed (along
+      with a note if it has been replaced by an equivalent map)
+    MAP-DELTAS: Print the calculus and M3 representations of each delta.
+    IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
+      maps that happen to represent the same query will not be eliminated.  Note
+      that the compiler will still not produce duplicate instances of the same
+      map.
+  
+  Compiler.ml / CalcToM3.ml
+    DISABLE-DELETES: Do not generate M3 deletion triggers.
 *)
 
 open Util

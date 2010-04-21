@@ -438,31 +438,44 @@ module M3InProgress = struct
         else result
       ) NoMapping (snd (List.split curr_refs))
     in
-    let on_mapping_found m = 
+    let on_mapping_found (m:mapping_params) = 
       (
-        curr_ins, (* an equivalent map exists. don't change anything *)
-        curr_del,
-        StringMap.add map_name m curr_mapping, (* just add a mapping *)
-        curr_refs,
-        curr_ra_map (* no new triggers = no new mappings *)
+        Debug.print "MAP-CALC" (fun () -> 
+          let (sub_name,_,_) = m in
+            (Calculus.term_as_string map_term)^" (replaced by "^sub_name^") "^
+            " := "^(Calculus.term_as_string query_term)
+        );
+        (
+          curr_ins, (* an equivalent map exists. don't change anything *)
+          curr_del,
+          StringMap.add map_name m curr_mapping, (* just add a mapping *)
+          curr_refs,
+          curr_ra_map (* no new triggers = no new mappings *)
+        )
       )
     in
     let on_no_mapping () =
-      let (insert_trigs, delete_trigs) =
-        List.fold_right (fun (pm, rel, vars, stmts) (ins, del) -> 
-          match pm with 
-          | M3.Insert -> ((add_to_trigger_map rel vars stmts ins), del)
-          | M3.Delete -> (ins, (add_to_trigger_map rel vars stmts del))
-        ) triggers (curr_ins, curr_del)
-      in
       (
-        insert_trigs, delete_trigs, 
-        curr_mapping, 
-        (map_name,descriptor)::curr_refs, 
-        MapAsSet.union_right curr_ra_map ra_map
+        Debug.print "MAP-CALC" (fun () -> 
+          (Calculus.term_as_string map_term)^
+          " := "^(Calculus.term_as_string query_term)
+        );
+        let (insert_trigs, delete_trigs) =
+          List.fold_right (fun (pm, rel, vars, stmts) (ins, del) -> 
+            match pm with 
+            | M3.Insert -> ((add_to_trigger_map rel vars stmts ins), del)
+            | M3.Delete -> (ins, (add_to_trigger_map rel vars stmts del))
+          ) triggers (curr_ins, curr_del)
+        in
+        (
+          insert_trigs, delete_trigs, 
+          curr_mapping, 
+          (map_name,descriptor)::curr_refs, 
+          MapAsSet.union_right curr_ra_map ra_map
+        )
       )
     in
-      if Debug.active "IGNORE_DUP_MAPS" then
+      if Debug.active "IGNORE-DUP-MAPS" then
         on_no_mapping ()
       else
         match mapping with
@@ -506,16 +519,20 @@ module M3InProgress = struct
                         (M3.mk_c 1.0, ())
                       ),
                       ()
-                    ) ] )
-                  (*
-                  M3.Delete, relation, (translate_schema schema),
-                  [ ( ( "INPUT_MAP_"^relation, [], 
-                        (translate_schema schema), 
-                        M3.Const(M3.CFloat(0.0))
-                      ), (
-                        M3.Const(M3.CFloat(-1.0))
-                      ) ) ] *)
-                ],
+                    ) ] ) ] @
+                ( if Debug.active "DISABLE-DELETES" then []
+                  else [
+                    (M3.Delete, relation, (translate_schema schema),
+                    [ ( ( "INPUT_MAP_"^relation, [], 
+                          (translate_schema schema), 
+                          (M3.mk_c 0.0, ())
+                        ), (
+                          (M3.mk_c (-1.0), ())
+                        ),
+                        ()
+                      ) ] )
+                  ]
+                ),
                 (* The RA Map; Should technically be negative, but eh *)
                 StringMap.empty
               )
@@ -584,7 +601,7 @@ module M3InProgress = struct
           )
         in
         (
-          (Debug.print "CALCTOM3" (fun () -> 
+          (Debug.print "MAP-DELTAS" (fun () -> 
               "ON "^(if delete then "-" else "+")^reln^
               (list_to_string (fun (a,_)->a) relvars)^
               ": "^(Calculus.term_as_string (snd map_ref))^
@@ -594,7 +611,12 @@ module M3InProgress = struct
             ));
           (
             if delete then 
-              (tlist, ra_map)
+              (
+                if Debug.active "DISABLE-DELETES" then
+                  (tlist, ra_map)
+                else
+                  (tlist @ [update_trigger], ra_map_ret)
+              )
             else
               (tlist @ [ update_trigger ], ra_map_ret)
           )

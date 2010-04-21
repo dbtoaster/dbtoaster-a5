@@ -191,10 +191,13 @@ let string_of_type_list (l:var_type_t list) : string =
 module Printing = functor (MP : M3.Metadata) ->
 struct
   let extend_with_meta meta_fn meta followup =
-    IndentedPrinting.Node(("",""),(" ",""),
-      IndentedPrinting.Leaf(meta_fn meta),
-      followup
-    )
+    let meta_text = meta_fn meta in
+    if meta_text = "" then followup
+    else
+      IndentedPrinting.Node(("",""),(" ",""),
+        IndentedPrinting.Leaf(meta_text),
+        followup
+      )
 
   let rec indented_map_access 
         ((mapn, inv, outv, (init_calc,init_meta)):

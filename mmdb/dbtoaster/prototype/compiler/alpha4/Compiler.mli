@@ -23,7 +23,8 @@ type 'a output_translator_t =
   'a ->                         (* A target-specific accumulator field *)
   'a                            (* The new value of the accumulator *)
 
-val compile: Calculus.bs_rewrite_mode_t ->            (* Bigsum Rewrite Mode *)
+val compile: ?dup_elim:Calculus.term_t Util.StringMap.t ref -> (* Ignore *)
+             Calculus.bs_rewrite_mode_t ->            (* Bigsum Rewrite Mode *)
              (string * (Calculus.var_t list)) list -> (* Schema (Rel*Vars) *)
              map_ref_t ->                             (* Term to compile *)
              'a output_translator_t ->                (* Output Translator *)
