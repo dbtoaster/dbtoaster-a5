@@ -1026,7 +1026,8 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
     | Rel(rel_name, a_vars) -> 
       ( match b with
         | Rel(rel_name, b_vars) -> 
-            List.fold_left2 map_var var_map a_vars b_vars
+            if (List.length a_vars) <> (List.length b_vars) then None
+            else List.fold_left2 map_var var_map a_vars b_vars
         | _ -> None
       )
   and cmp_term a b var_map = TermRing.cmp_exprs cmp_term_lf a b var_map

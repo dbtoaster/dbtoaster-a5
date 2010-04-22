@@ -365,7 +365,9 @@ struct
                      (accum: 'a option): 'a option =
       if accum = None then None
       else
-        let do_recur = List.fold_right2 (cmp_exprs leaf_f)
+        let do_recur ae be accum = 
+          if List.length ae <> List.length be then None
+          else List.fold_right2 (cmp_exprs leaf_f) ae be accum
         in
         match (a,b) with
           (Val  xa, Val  xb) -> leaf_f xa xb accum 

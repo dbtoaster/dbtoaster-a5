@@ -419,7 +419,7 @@
         match op_token with
             | `Sum -> RSum([l;r])
             | `Product -> RProd([l;r])
-            | `Minus -> raise (FeatureUnsupported("Subtraction"))
+            | `Minus -> RSum([l;(RNeg(r))])
             | `Divide -> raise (FeatureUnsupported("Division"))
 
     let create_map_term_list aggregate_list table join_list predicate_opt =
@@ -496,7 +496,7 @@
         in
             fold_term (fun x -> RSum(x))
                 (fun x -> RProd(x)) 
-                (fun x -> x) replace_term_lf t
+                (fun x -> RNeg(x)) replace_term_lf t
 
     let rename_var name fields = 
         let (rel, field_name) = get_field_and_relation name in
@@ -718,6 +718,7 @@ selectStmt:
                       pop_relations base_relations;
 
                       let renamed_t_l = List.map rename_map_term t_l in
+                      
                       let db_schema = get_db_schema renamed_t_l in
                       let params =
                           rename_group_bys valid_group_bys base_relations

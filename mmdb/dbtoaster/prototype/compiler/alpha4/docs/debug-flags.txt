@@ -1,0 +1,31 @@
+The following flags may be passed in as arguments to Util.Debug.activate or
+via dbtoaster's -d argument
+
+ARGS: Print all arguments received. (Driver.ml)
+
+CALCULUS: Regardless of the language specification, the calculus 
+          representation of the parsed input will be printed. (Driver.ml)
+
+COMPILE-WITH-GDB: Ocaml-generated code is compiled with the -g flag, causing
+                  debugging information to be compiled in.  This is required for 
+                  backtraces and gdb debugging (Driver.ml)
+
+DISABLE-DELETES: Do not generate M3 deletion triggers. (Compiler.ml / 
+                 CalcToM3.ml)
+
+IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
+                 maps that happen to represent the same query will not be 
+                 eliminated.  Note that the compiler will still not produce 
+                 duplicate instances of the same map. (CalcToM3.ml)
+
+M3: If the language is not 'calc', the M3 delta representation of the parsed 
+    input will be printed. (Driver.ml)
+
+MAP-CALC: Each map's calculus query representation will be printed (along
+          with a note if it has been replaced by an equivalent map) 
+          (CalcToM3.ml)
+
+MAP-DELTAS: Print the calculus and M3 representations of each delta. 
+            (CalcToM3.ml)
+
+PARSE: If Parsing fails, a parser backtrace will be printed. (Driver.ml)

@@ -147,6 +147,9 @@ query: $(OPT_DEPS) query.ml
 
 clean:
 	rm -f $(CLEAN_OBJ)
+	for i in test/sql/*.sql; do bn=`basename $$i .sql`; \
+		for j in .ml .cmo .cmi .cmx .cmxi .o ""; do rm -f test/sql/$$bn$$j; done;\
+	done
 
 ##################### DEPENDENCIES #####################
 
@@ -160,3 +163,5 @@ M3Common.cmo : M3.cmo
 M3Common.cmx : M3.cmx
 M3.cmo : Util.cmo
 M3.cmx : Util.cmx
+Calculus.cmo : Ring.cmo
+Calculus.cmx : Ring.cmx

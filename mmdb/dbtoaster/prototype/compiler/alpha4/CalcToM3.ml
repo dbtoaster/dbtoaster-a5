@@ -217,10 +217,17 @@ let rec to_m3
                    (Calculus.term_as_string
                      (Calculus.make_term t))^"'")
    in
-   let calc_to_m3 calc =
+   let rec calc_to_m3 calc : M3.calc_t * relation_set_t =
       match calc with
          Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
-       | _                    -> failwith "Compiler.to_m3: TODO calc"
+       | Calculus.RA_MultiNatJoin([lf]) ->  (calc_to_m3 lf) 
+       | Calculus.RA_MultiNatJoin(lf::rest) ->
+          let (lhs, ra_map1) = (calc_to_m3 lf) in
+          let (rhs, ra_map2) = (calc_to_m3 (Calculus.RA_MultiNatJoin(rest))) in
+            ((M3.mk_prod lhs rhs), (MapAsSet.union_right ra_map1 ra_map2))
+       | _                    -> 
+          failwith ("Compiler.to_m3: TODO calc: "^
+            (Calculus.relcalc_as_string (Calculus.make_relcalc calc)))
    in
    let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
       match lf with
@@ -461,11 +468,11 @@ module M3InProgress = struct
           " := "^(Calculus.term_as_string query_term)
         );
         let (insert_trigs, delete_trigs) =
-          List.fold_right (fun (pm, rel, vars, stmts) (ins, del) -> 
+          List.fold_left (fun (ins, del) (pm, rel, vars, stmts)  -> 
             match pm with 
             | M3.Insert -> ((add_to_trigger_map rel vars stmts ins), del)
             | M3.Delete -> (ins, (add_to_trigger_map rel vars stmts del))
-          ) triggers (curr_ins, curr_del)
+          ) (curr_ins, curr_del) triggers 
         in
         (
           insert_trigs, delete_trigs, 
