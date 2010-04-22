@@ -156,11 +156,13 @@ struct
    let make_empty_db schema patterns: db_t =
         let f (mapn, itypes, _) =
            let (in_patterns, out_patterns) = get_patterns patterns mapn in
-            ([mapn], (if(List.length itypes = 0) then
-                VM.from_list [([], VM.from_list [] out_patterns)] in_patterns
-                else
-                   (* We defer adding out var indexes to init value computation *)
-                   VM.empty_map_w_patterns in_patterns))
+           let init_slice =
+              if(List.length itypes = 0) then
+                 VM.from_list [([], VM.from_list [] out_patterns)] in_patterns
+              else
+                 (* We defer adding out var indexes to init value computation *)
+                 VM.empty_map_w_patterns in_patterns 
+           in ([mapn], init_slice)
         in
             DBM.from_list (List.map f schema) []
     
@@ -181,7 +183,7 @@ struct
          let m = DBM.find [mapn] db in
          ignore(DBM.add [mapn] (VM.add inv_imgs slice m) db);
 (*
-         let string_of_img = Util.list_to_string string_of_const in
+         let string_of_img = Util.list_to_string AM.string_of_aggregate in
          print_endline ("Updated the database: "^mapn^
                       " inv="^(string_of_img inv_imgs)^
                       " slice="^(slice_to_string slice)^
@@ -199,11 +201,11 @@ struct
          in
             ignore(DBM.add [mapn] (VM.add inv_img new_slice m) db);
 (*
-            let string_of_img = Util.list_to_string string_of_const in
+            let string_of_img = Util.list_to_string AM.string_of_aggregate in
             print_endline ("Updating a db value: "^mapn^
                            " inv="^(string_of_img inv_img)^
                            " outv="^(string_of_img outv_img)^
-                           " v="^(string_of_const new_value)^
+                           " v="^(AM.string_of_aggregate new_value)^
                            " db="^(db_to_string db));
             VM.validate_indexes (VM.find inv_img (DBM.find [mapn] db))
 *)

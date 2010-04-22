@@ -12,6 +12,7 @@ sig
    val empty_map : unit -> 'a t
    val empty_map_w_patterns : pattern list -> 'a t
 
+   val empty: 'a t -> bool
    val mem  : key -> 'a t -> bool
    val find : key -> 'a t -> 'a
    val add  : key -> 'a -> 'a t -> 'a t
@@ -184,6 +185,11 @@ struct
    let string_of_patterns m = IndexMap.fold (fun k v acc ->
       acc^" "^(String.concat "," (List.map string_of_int k))) (snd m) ""
 
+   (* Use exception handling to break out, rather than checking length,
+    * -- how efficient is exception handling? *)
+   let empty  m     = try Hashtbl.fold (fun x -> failwith "") (fst m) true
+                      with Failure _ -> false 
+
    let mem  k m     = Hashtbl.mem (fst m) k
    let find k m     = Hashtbl.find (fst m) k
    
@@ -337,9 +343,19 @@ struct
          then SecondaryIndex.find pkey index
          else ((*print_endline ("Not found: "^(secondary_to_string index));*) [])
 
+   (* Note semantics of slicing with empty partial keys.
+    * -- the empty list [], may be a valid primary key for maps with no out vars
+    *    thus slicing with [] as a partial key acts as a lookup.
+    * -- the empty list [] is used as a partial key for maps with only bigsum vars
+    *    as out vars, thus slicing with [] acts as a full scan.
+    *)
    let slice pat pkey m =
-      let aux acc k = add k (find k m) acc
-      in List.fold_left aux (empty_map_w_secondaries m) (get_keys (snd m) pat pkey)
+      let aux acc k = add k (find k m) acc in
+         match pkey with
+          | [] -> let r = empty_map_w_secondaries m in
+             if mem pkey m then (add pkey (find pkey m) r)
+             else (if not(empty m) then m else r) 
+          | _ -> List.fold_left aux (empty_map_w_secondaries m) (get_keys (snd m) pat pkey)
 
    let slice_keys pat pkey m = get_keys (snd m) pat pkey
       

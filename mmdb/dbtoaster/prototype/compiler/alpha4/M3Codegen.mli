@@ -17,8 +17,10 @@ sig
    type source_impl_t
 
    (* Debugging helpers *)
-   val debug_sequence: debug_code_t -> code_t -> code_t
+   val debug_sequence: debug_code_t -> debug_code_t -> code_t -> code_t
+   
    val debug_expr : M3.Prepared.calc_t -> debug_code_t
+   val debug_expr_result : M3.Prepared.calc_t -> code_t -> debug_code_t 
 
    (* lhs_outv *)
    val debug_singleton_rhs_expr : M3.var_t list -> debug_code_t

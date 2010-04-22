@@ -107,9 +107,14 @@ struct
 
    (* Debugging helpers *)
    (*
-   let debug_sequence cdebug ccalc = ["(*"]@cdebug@[";*)"]@ccalc
+   let debug_sequence cdebug cresdebug ccalc =
+      ["(*"]@cdebug@[";*)"]@ccalc@["(*]@cresdebug@[*)"]
+
    let debug_expr incr_calc = 
       ["print_string(\"\\neval_pcalc "^(pcalc_to_string incr_calc)^" \"^(Database.db_to_string db)^\"   \")"]
+
+   (* TODO *)
+   let debug_expr_result incr_calc ccalc = []
 
    let debug_singleton_rhs_expr lhs_outv =
       ["(fun k v ->";
@@ -137,8 +142,9 @@ struct
        "            \""^(vars_list lhs_outv)^" _), _))\\n\"))"]
    *)
    
-   let debug_sequence cdebug ccalc = ccalc
+   let debug_sequence cdebug cresdebug ccalc = ccalc
    let debug_expr incr_calc = []
+   let debug_expr_result incr_calc ccalc = []
    let debug_singleton_rhs_expr lhs_outv = []
    let debug_slice_rhs_expr rhs_outv = []
    let debug_rhs_init () = []
@@ -358,8 +364,11 @@ struct
       (lookup_aux mapn inv init_val_code)@
       ["in";
        "let outv_img = "^(vars_list outv)^" in";
-       "   if ValuationMap.mem outv_img slice";
-       "   then [ValuationMap.find outv_img slice] else []"])
+       "let lookup_slice =";
+       "   if ValuationMap.mem outv_img slice then slice";
+       "   else"]@
+       (indent 2 (get_lines init_val_code))@
+      ["in [ValuationMap.find outv_img lookup_slice]"])
 
    let slice_lookup mapn inv pat patv init_val_code = tabify (
       (lookup_aux mapn inv init_val_code)@

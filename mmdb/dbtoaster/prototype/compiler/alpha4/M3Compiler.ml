@@ -23,11 +23,11 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
                         (theta_vars : var_t list) (calc : calc_t)
          : (M3P.calc_t * pattern_map) =
       let recur = prepare_calc update_mapn lhs_vars in
-      let prepare_aux c propagate defv theta_ext
+      let prepare_aux c propagated defv theta_ext
             : (M3P.calc_t * var_t list * pattern_map) =
          let outv = M3Common.calc_schema c in
-         let ext = Util.ListAsSet.diff (if propagate then defv else outv)
-                      (if propagate then outv else defv) in
+         let ext = Util.ListAsSet.diff (if propagated then defv else outv)
+                      (if propagated then outv else defv) in
          let (pc, pm) = recur (theta_vars@theta_ext) c in 
          (* Override metadata, assumes recursive call to prepare_calc has
           * already done this for its children. *)
@@ -71,6 +71,9 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
             * singleton: no in vars, and fully bound out vars. *)
            let bound_outv = Util.ListAsSet.inter soutv theta_vars in
            let full_agg = ((List.length bound_outv) = (List.length soutv)) in
+           
+           (* TODO: this is overly restrictive... we have a singleton as long
+            * as all in vars are bound, i.e. there are no loop in vars *)
            let singleton = (List.length inv = 0) && full_agg in
            
            (* Use map scope for lhs vars during recursive prepare for initial
@@ -249,8 +252,9 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
          if M3P.get_singleton incr_ecalc then (singleton_var x) else slice_var x
       
       in
-      let cdebug = debug_expr incr_ecalc
-      in debug_sequence cdebug ccalc
+      let cdebug = debug_expr incr_ecalc in
+      let cresdebug = debug_expr_result incr_ecalc ccalc
+      in debug_sequence cdebug cresdebug ccalc
 
 
 (* Optimizations:

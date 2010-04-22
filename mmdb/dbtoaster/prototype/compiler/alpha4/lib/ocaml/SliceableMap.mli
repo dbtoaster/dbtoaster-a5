@@ -19,6 +19,9 @@ sig
    (* Empty map, maintaining secondary indexes for the given patterns *)
    val empty_map_w_patterns : pattern list -> 'a t
    
+   (* Tests whether the map is empty *)
+   val empty: 'a t -> bool
+
    (* Tests binding presence in the map *)
    val mem  : key -> 'a t -> bool
    

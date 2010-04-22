@@ -48,11 +48,13 @@ type compiled_code =
 type env_debug_code = (Valuation.t -> Database.db_t -> unit)
 type slice_debug_code = (Valuation.t -> Database.db_t -> AggregateMap.t -> unit)
 type singleton_debug_code = (Valuation.t -> Database.db_t -> AggregateMap.key -> AggregateMap.agg_t -> unit)
+type null_singleton_debug_code = (Valuation.t -> Database.db_t -> AggregateMap.agg_t list -> unit)
 
 type compiled_debug_code = 
      EnvDebug        of env_debug_code 
    | SliceDebug      of slice_debug_code
    | SingletonDebug  of singleton_debug_code
+   | NullSingletonDebug of null_singleton_debug_code
 
 (* External type names *)
 type op_t = const_t -> const_t -> const_t
@@ -97,20 +99,42 @@ let get_slice_debug_code x =
 let get_singleton_debug_code x =
    match x with | SingletonDebug(c) -> c | _ -> failwith "invalid singleton debug code"
 
+let get_null_singleton_debug_code x =
+   match x with | NullSingletonDebug(c) -> c | _ -> failwith "invalid null singleton debug code"
+
 (* Debugging helpers *)
-let debug_sequence cdebug ccalc =
+let debug_sequence cdebug cresdebug ccalc =
    (*let df = get_env_debug_code cdebug in*)
    match ccalc with
     | Singleton(f) ->
-       Singleton (fun theta db -> (* df theta db; *) f theta db)
-    | Slice(f) -> Slice (fun theta db -> (* df theta db; *) f theta db)
+       Singleton (fun theta db -> (*df theta db;*)
+                  let r = f theta db in
+                     (*((get_null_singleton_debug_code cresdebug) theta db r);*) r)
+    | Slice(f) -> Slice (fun theta db -> (*df theta db;*)
+                         let r = f theta db in
+                           (*((get_slice_debug_code cresdebug) theta db r);*) r)
     | _ -> failwith "invalid expr debug sequence"
 
 let debug_expr (incr_calc:Prepared.calc_t) =
    EnvDebug (fun theta db ->
-      print_string("\neval_pcalc "^(M3Common.code_of_calc incr_calc)^
-                   " "^(Valuation.to_string theta)^
-                   " "^(Database.db_to_string db)^"   "))
+      print_endline("eval_pcalc "^(M3Common.code_of_calc incr_calc)^
+                    " "^(Valuation.to_string theta)^
+                    " "^(Database.db_to_string db)))
+
+let debug_expr_result incr_calc ccalc =
+   match ccalc with
+    | Singleton(f) -> NullSingletonDebug(fun theta db v ->
+       let v_str = begin match v with
+           | [] -> "[]"
+           | [v] -> AggregateMap.string_of_aggregate v
+           | _ -> failwith "invalid singleton"
+          end
+       in print_endline ("result ("^(M3Common.code_of_calc incr_calc)^"): S: "^v_str))
+
+    | Slice(f) -> SliceDebug(fun theta db slice ->
+          print_endline ("result ("^(M3Common.code_of_calc incr_calc)^
+                        "): L: "^(Database.slice_to_string slice)))
+    | _ -> failwith "invalid ccalc for result debugging"
 
 let debug_singleton_rhs_expr lhs_outv =
    SingletonDebug (fun theta db k v ->
@@ -129,16 +153,16 @@ let debug_slice_rhs_expr rhs_outv =
 
 let debug_rhs_init () =
    SingletonDebug (fun theta db k v ->
-      print_string ("@PSTMT.init{th="^(Valuation.to_string theta)
+      print_endline ("@PSTMT.init{th="^(Valuation.to_string theta)
                    ^", key="^(Util.list_to_string M3Common.string_of_const k)
-                   ^", db="^(Database.db_to_string db)^"\n"))
+                   ^", db="^(Database.db_to_string db)))
 
 let debug_stmt lhs_mapn lhs_inv lhs_outv =
    EnvDebug (fun theta db ->
-      print_string("\nPSTMT (th="^(Valuation.to_string theta)
-                  ^", db=_, stmt=(("^lhs_mapn^" "^
-                     (Util.list_to_string (fun x->x) lhs_inv)^" "
-                  ^(Util.list_to_string (fun x->x) lhs_outv)^" _), _))\n"))
+      print_endline("PSTMT (th="^(Valuation.to_string theta)^
+                    ", db=_, stmt=(("^lhs_mapn^" "^
+                    (Util.list_to_string (fun x->x) lhs_inv)^" "^
+                    (Util.list_to_string (fun x->x) lhs_outv)^" _), _))"))
 
 let const i = Singleton (fun theta db -> [i])
 let singleton_var x =
@@ -275,7 +299,12 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value
                   mapn out_patterns inv_img outv_img v db;
-                ValuationMap.from_list [(outv_img, v)] out_patterns)
+                let r = ValuationMap.from_list [(outv_img, v)] out_patterns in
+                (*
+                print_endline ("singleton_init_lookup result: "^
+                               (Database.slice_to_string r));
+                *)
+                r)
         | _ -> failwith "MapAccess: invalid singleton"
        end)
    
@@ -288,10 +317,12 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
-       (*print_endline ("slice_init_lookup: "^mapn^" "^
-                      (vars_to_string inv));*)
-          Database.update mapn inv_img init_slice_w_indexes db;
-          init_slice_w_indexes)
+       (*
+       print_endline ("slice_init_lookup: "^mapn^" "^
+                      (M3Common.vars_to_string inv));
+       *)
+       Database.update mapn inv_img init_slice_w_indexes db;
+       init_slice_w_indexes)
 
 (* mapn, inv, outv, init lookup code -> map lookup code *)
 let singleton_lookup mapn inv outv init_val_code =
@@ -304,9 +335,15 @@ let singleton_lookup mapn inv outv init_val_code =
                ValuationMap.find inv_img m
             else ivc_l theta db in
       let outv_img = Valuation.apply theta outv in
-         if ValuationMap.mem outv_img slice then
-            [ValuationMap.find outv_img slice]
-         else [])
+      let lookup_slice =
+         if ValuationMap.mem outv_img slice then slice else ivc_l theta db
+      in
+         (*
+         print_endline ("singleton_lookup: "^
+                        (Util.list_to_string M3Common.string_of_const outv_img)^
+                        " "^(Database.slice_to_string lookup_slice));
+         *)
+         [ValuationMap.find outv_img lookup_slice])
    
 let clean_var_name var = var
 
@@ -325,6 +362,13 @@ let slice_lookup mapn inv pat patv init_val_code =
        * evaluation, since we don't want them propagated around. *)
       let pkey = Valuation.apply theta patv in
       let lookup_slice = ValuationMap.slice pat pkey slice in
+         (*
+         print_endline ("slice_lookup: "^
+                        (Util.list_to_string M3Common.string_of_const pkey)^
+                        " "^(M3Common.vars_to_string patv)^
+                        " "^(Database.slice_to_string slice)^
+                        " "^(Database.slice_to_string lookup_slice));
+         *)
          (ValuationMap.strip_indexes lookup_slice)) 
 
 
