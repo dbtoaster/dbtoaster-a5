@@ -419,7 +419,14 @@
         match op_token with
             | `Sum -> RSum([l;r])
             | `Product -> RProd([l;r])
-            | `Minus -> RSum([l;(RNeg(r))])
+            | `Minus ->   
+              RSum([l;
+                (match r with 
+                  | RVal(Const(Int(x)))    -> RVal(Const(Int(-1 * x)))
+                  | RVal(Const(Double(x))) -> RVal(Const(Double(-1. *. x)))
+                  | _ -> RProd([RVal(Const(Int(-1)));r])
+                )
+              ])
             | `Divide -> raise (FeatureUnsupported("Division"))
 
     let create_map_term_list aggregate_list table join_list predicate_opt =
@@ -906,9 +913,11 @@ arith_op:
 | DIVIDE     { `Divide }
 
 value:
-| INT       { Const(Int($1)) }
-| FLOAT     { Const(Double($1)) }
-| STRING    { Const(String($1)) }
+| INT         { Const(Int($1)) }
+| FLOAT       { Const(Double($1)) }
+| MINUS INT   { Const(Int(-1 * $2)) }
+| MINUS FLOAT { Const(Double(-1. *. $2)) }
+| STRING      { Const(String($1)) }
 | ID       
           {
               (* Note: we use any old type here, since types are replaced

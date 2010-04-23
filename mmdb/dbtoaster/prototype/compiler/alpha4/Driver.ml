@@ -194,15 +194,14 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
         let subq_name = (qname^"_"^(string_of_int sub_id)) in
         (
           toplevel_queries := !toplevel_queries @ [subq_name];
-          Compiler.compile Calculus.ModeOpenDomain
-                           dbschema
-                           (Calculus.make_term q,
-                            Calculus.map_term 
-                              (qname^"_"^(string_of_int sub_id))
-                              qvars
-                           )
-                           CalcToM3.M3InProgress.generate_m3
-                           accum
+          CalcToM3.compile
+             dbschema
+             (Calculus.make_term q,
+              Calculus.map_term 
+                (qname^"_"^(string_of_int sub_id))
+                qvars
+             )
+             accum
         )
       with 
         |Util.Function.NonFunctionalMappingException -> 

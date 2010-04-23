@@ -2,7 +2,7 @@ exception Assert0Exception of string
 
 open Util
 
-type relation_set_t = (Calculus.var_t list) StringMap.t
+type todo_list_t = Compiler.map_ref_t list
 
 type map_key_binding_t = 
     Binding_Present of Calculus.var_t
@@ -15,275 +15,7 @@ type m3_condition_or_none =
   | Condition of M3.calc_t
 
 
-let rec to_m3_initializer 
-  (map_definition: Calculus.readable_term_t) : 
-    (M3.calc_t * relation_set_t) = 
-  let rec cond_to_init phi (base_term:M3.calc_t) : 
-    (M3.calc_t * relation_set_t * m3_condition_or_none) = 
-      match phi with
-        Calculus.RA_Leaf(Calculus.False) ->
-          (M3.mk_c 0.0, StringMap.empty, EmptyCondition)
-      | Calculus.RA_Leaf(Calculus.True) -> 
-          (base_term, StringMap.empty, EmptyCondition)
-      | Calculus.RA_Leaf(Calculus.AtomicConstraint(c, t1, t2)) -> 
-          let (lh_term, ra_map1) = (to_m3_initializer t1) in
-          let (rh_term, ra_map2) = (to_m3_initializer t2) in
-          let ra_map = 
-            (MapAsSet.union_right ra_map1 ra_map2)
-          in
-            (match c with
-                Calculus.Eq  -> 
-                  (base_term, ra_map, Condition(M3.mk_eq lh_term rh_term))
-              | Calculus.Lt  -> 
-                  (base_term, ra_map, Condition(M3.mk_lt lh_term rh_term))
-              | Calculus.Le  -> 
-                  (base_term, ra_map, Condition(M3.mk_leq lh_term rh_term))
-              | Calculus.Neq -> 
-                  failwith "TODO: Handle NEQ"
-            )
-
-      | Calculus.RA_Leaf(Calculus.Rel(mapn,map_vars)) -> 
-          let (ma_term, ra_map) = (to_m3_map_access (
-              (Calculus.make_term 
-                (Calculus.RVal(
-                  Calculus.Const(Calculus.Int(0))))), 
-              (Calculus.make_term 
-                (Calculus.RVal(
-                  Calculus.External("INPUT_MAP_"^mapn, map_vars)))),
-              (List.map (fun x -> Binding_Present(x)) map_vars)
-            )) in
-          (
-            (M3.mk_prod (M3.mk_ma ma_term) base_term), 
-            (MapAsSet.singleton mapn map_vars),
-            EmptyCondition
-          )
-      
-      | Calculus.RA_MultiNatJoin(t::[]) -> 
-          cond_to_init t base_term
-
-      | Calculus.RA_MultiNatJoin(t::l)  -> 
-          let (term2, ra_map1, phi2) = 
-            (cond_to_init (Calculus.RA_MultiNatJoin(l)) base_term) 
-          in 
-          let (term3, ra_map2, phi3) = 
-            cond_to_init t term2
-          in
-          let ra_map = 
-            (MapAsSet.union_right ra_map1 ra_map2)
-          in
-            ( match phi2 with
-                EmptyCondition -> (term3, ra_map, phi3)
-              | Condition(phi2_as_m3) -> 
-                ( match phi3 with
-                    EmptyCondition -> (term3, ra_map, phi2)
-                  | Condition(phi3_as_m3) ->
-                    (term3, ra_map, Condition(M3.mk_sum phi3_as_m3 phi2_as_m3))
-                )
-            )
-
-      | Calculus.RA_MultiNatJoin([]) -> 
-          (base_term, StringMap.empty, EmptyCondition)
-
-      | Calculus.RA_Neg(t)        -> failwith "TODO:Handle RA_Neg"
-      | Calculus.RA_MultiUnion(l) -> failwith "TODO:Handle RA_MultiUnion"
-  in
-  let lf_to_init lf =
-    match lf with 
-        Calculus.AggSum(t,phi)            -> 
-          let (base_term, ra_map1) = (to_m3_initializer t) in
-          let (term, ra_map2, result_phi) = 
-            (cond_to_init phi base_term) in
-            (
-              match result_phi with
-                EmptyCondition -> (term, (MapAsSet.union_right ra_map1 ra_map2))
-              | Condition(result_phi_as_m3) -> 
-                  (
-                    (M3.mk_if result_phi_as_m3 term), 
-                    (MapAsSet.union_right ra_map1 ra_map2)
-                  )
-            )
-            
-      | Calculus.Const(Calculus.Int c) ->
-          (M3.mk_c (float_of_int c), StringMap.empty)
-      | Calculus.Const(Calculus.Double d) -> 
-          (M3.mk_c d, StringMap.empty)
-      | Calculus.Var(vn,vt) -> 
-          (M3.mk_v vn, StringMap.empty)
-      | Calculus.Const(_) -> 
-          failwith "TODO: Handle String,Long in to_m3_initializer"
-      | Calculus.External(s,vs) -> 
-          failwith "Error: Uncompiled calculus expression shouldn't have a map reference"
-  in
-  match map_definition with
-      Calculus.RVal(lf) -> 
-          lf_to_init lf
-
-    | Calculus.RNeg(t)       -> 
-          let (rhs, ra_map) = 
-            (to_m3_initializer t) 
-          in
-            ((M3.mk_prod (M3.mk_c (-1.0)) rhs), ra_map)
-
-    | Calculus.RProd(t1::[]) ->
-          (to_m3_initializer t1)
-
-    | Calculus.RProd(t1::l)  -> 
-        let (rhs, ra_map1) = 
-          (to_m3_initializer (Calculus.RProd(l))) 
-        in
-        let (lhs, ra_map2) = 
-          (to_m3_initializer t1) 
-        in
-          ((M3.mk_prod lhs rhs),
-          (MapAsSet.union_right ra_map1 ra_map2))
-
-    | Calculus.RProd([]) -> 
-        (M3.mk_c (1.0), StringMap.empty)
-
-    | Calculus.RSum(t1::[]) ->
-        (to_m3_initializer t1)
-
-    | Calculus.RSum(t1::l) -> 
-        let (rhs, ra_map1) = 
-          (to_m3_initializer (Calculus.RProd(l))) 
-        in
-        let (lhs, ra_map2) = 
-          (to_m3_initializer t1) 
-        in
-          ((M3.mk_sum lhs rhs),
-           (MapAsSet.union_right ra_map1 ra_map2))
-
-    | Calculus.RSum([]) -> 
-        (M3.mk_c (0.0), StringMap.empty)
-
 (********************************)
-and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t): 
-               'a list = 
-  List.fold_right2 (fun var binding ret_vars ->
-    match binding with
-    | Binding_Present(_)  -> if want_input_vars then ret_vars else var::ret_vars
-    | Binding_Not_Present -> if want_input_vars then var::ret_vars else ret_vars
-  ) vars bindings []
-
-and to_m3_map_access 
-  ((map_definition, map_term, bindings):map_ref_t) : 
-  M3.mapacc_t * relation_set_t =
-  let (mapn, mapvars) = (Calculus.decode_map_term map_term) in
-  let input_var_list = (split_vars true mapvars bindings) in
-  let output_var_list = (split_vars false mapvars bindings) in
-  let (init_stmt, ret_ra_map) = 
-      (*  Doing something smarter with the initializers... in particular, it 
-          might be a good idea to see if any of the initialzers can be further 
-          decompiled or pruned away.  For now, a reasonable heuristic is to use
-          the presence of input variables *)
-    if (List.length input_var_list) > 0
-      then (to_m3_initializer (Calculus.readable_term map_definition)) 
-      else (M3.mk_c 0.0, StringMap.empty)
-  in
-  ((mapn, 
-    (fst (List.split input_var_list)), 
-    (fst (List.split output_var_list)), 
-    (init_stmt, ())
-  ), ret_ra_map);;
-
-(********************************)
-
-let rec to_m3 
-  (t: Calculus.readable_term_t) 
-  (inner_bindings:map_ref_t Map.Make(String).t) : 
-  M3.calc_t * relation_set_t =
-  
-   let calc_lf_to_m3 lf =
-      match lf with
-         Calculus.AtomicConstraint(Calculus.Eq,  t1, t2) ->
-            let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
-            let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.mk_eq lhs rhs, ra_map)
-       | Calculus.AtomicConstraint(Calculus.Le,  t1, t2) ->
-            let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
-            let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.mk_leq lhs rhs, ra_map)
-       | Calculus.AtomicConstraint(Calculus.Lt,  t1, t2) ->
-            let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-            let (rhs, ra_map2) = (to_m3 t2 inner_bindings) in
-            let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              (M3.mk_lt lhs rhs, ra_map)
-         (* AtomicConstraint(Neq, t1, t2) -> ... *)
-       | _ -> failwith ("Compiler.to_m3: TODO constraint '"^
-                   (Calculus.relcalc_as_string
-                     (Calculus.make_relcalc (Calculus.RA_Leaf(lf))))^"' in '"^
-                   (Calculus.term_as_string
-                     (Calculus.make_term t))^"'")
-   in
-   let rec calc_to_m3 calc : M3.calc_t * relation_set_t =
-      match calc with
-         Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
-       | Calculus.RA_MultiNatJoin([lf]) ->  (calc_to_m3 lf) 
-       | Calculus.RA_MultiNatJoin(lf::rest) ->
-          let (lhs, ra_map1) = (calc_to_m3 lf) in
-          let (rhs, ra_map2) = (calc_to_m3 (Calculus.RA_MultiNatJoin(rest))) in
-            ((M3.mk_prod lhs rhs), (MapAsSet.union_right ra_map1 ra_map2))
-       | _                    -> 
-          failwith ("Compiler.to_m3: TODO calc: "^
-            (Calculus.relcalc_as_string (Calculus.make_relcalc calc)))
-   in
-   let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
-      match lf with
-         Calculus.AggSum(t,phi)             -> 
-            let (lhs, ra_map1) = (calc_to_m3 phi) in
-            let (rhs, ra_map2) = (to_m3 t inner_bindings) in
-            let ra_map = (MapAsSet.union_right ra_map1 ra_map2) in
-              ((M3.mk_if lhs rhs), ra_map)
-       | Calculus.External(mapn, map_vars)      -> 
-          (
-            try
-              let (access_term, ra_map) = 
-                (to_m3_map_access 
-                  (StringMap.find mapn inner_bindings)) 
-              in
-                (M3.mk_ma access_term, ra_map)
-            with Not_found -> 
-              failwith ("Unable to find map '"^mapn^"' in {"^
-                (StringMap.fold 
-                  (fun k v accum -> accum^", "^k) 
-                  inner_bindings "")^"}\n"
-                )
-          )
-       | Calculus.Var(vn,vt)                -> 
-            (M3.mk_v vn, StringMap.empty)
-       | Calculus.Const(Calculus.Int c)     -> 
-            (M3.mk_c (float_of_int c), StringMap.empty)
-       | Calculus.Const(Calculus.Double c)  -> 
-            (M3.mk_c c, StringMap.empty)
-       | Calculus.Const(_)                  ->
-            failwith "Compiler.to_m3: TODO String,Long"
-
-   in
-   match t with
-      Calculus.RVal(lf)      -> lf_to_m3 lf
-    | Calculus.RNeg(t1)      -> 
-        let (rhs, ra_map) = (to_m3 t1 inner_bindings) in
-        (M3.mk_prod (M3.mk_c (-1.0)) rhs, ra_map)
-    | Calculus.RProd(t1::[]) -> (to_m3 t1 inner_bindings)
-    | Calculus.RProd(t1::l)  -> 
-        let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-        let (rhs, ra_map2) = (to_m3 (Calculus.RProd l) inner_bindings) in
-        (M3.mk_prod lhs rhs, (MapAsSet.union_right ra_map1 ra_map2))
-    | Calculus.RProd([])     -> 
-        (M3.mk_c 1.0, StringMap.empty)
-        (* impossible case, though *)
-    | Calculus.RSum(t1::[])  -> 
-        (to_m3 t1 inner_bindings)
-    | Calculus.RSum(t1::l)   -> 
-        let (lhs, ra_map1) = (to_m3 t1 inner_bindings) in
-        let (rhs, ra_map2) = (to_m3 (Calculus.RSum l) inner_bindings) in
-        (M3.mk_sum lhs rhs, (MapAsSet.union_right ra_map1 ra_map2))
-    | Calculus.RSum([])      -> 
-        (M3.mk_c 0.0, StringMap.empty) 
-        (* impossible case, though *)
-
 let rec find_binding_calc_lf 
   (var: Calculus.var_t) 
   (calc: Calculus.readable_relcalc_lf_t) =
@@ -298,6 +30,7 @@ let rec find_binding_calc_lf
             fun found curr_var -> (found || (curr_var = var))
           ) false relvars
   )
+(********************************)
 and find_binding_calc 
   (var: Calculus.var_t) 
   (calc: Calculus.readable_relcalc_t) =
@@ -310,6 +43,7 @@ and find_binding_calc
     | Calculus.RA_MultiNatJoin(j)  -> 
           List.fold_left (fun found curr_calc -> (found || (find_binding_calc var curr_calc))) false j
   )
+(********************************)
 
 and find_binding_term 
   (var: Calculus.var_t) 
@@ -332,6 +66,7 @@ and find_binding_term
             fun found curr_t -> (found || (find_binding_term var curr_t))
           ) false inner_ts
   );;
+(********************************)
 
 let translate_var (calc_var:Calculus.var_t): M3.var_t = (fst calc_var)
 let translate_var_type (calc_var:Calculus.var_t): M3.var_type_t = 
@@ -340,10 +75,12 @@ let translate_var_type (calc_var:Calculus.var_t): M3.var_type_t =
   | Calculus.TDouble -> M3.VT_Float
   | Calculus.TLong   -> M3.VT_Int
   | Calculus.TString -> M3.VT_String
+(********************************)
   
 
 let translate_schema (calc_schema:Calculus.var_t list): M3.var_t list = 
   (List.map translate_var calc_schema)
+(********************************)
 
 let translate_map_ref ((t, mt): Compiler.map_ref_t): map_ref_t =
   (t, mt, (
@@ -358,6 +95,198 @@ let translate_map_ref ((t, mt): Compiler.map_ref_t): map_ref_t =
                 ) vs
       | _ -> failwith "LHS of a map definition is not an External()"
   ))
+(********************************)
+
+let rec to_m3_initializer (map_def: Calculus.term_t) (vars: Calculus.var_t list) 
+                          (map_prefix: string): (M3.calc_t * todo_list_t) = 
+  let rec extract_filters phi_and_psi = 
+    match phi_and_psi with 
+      | Calculus.RA_Leaf(Calculus.Rel(_)) -> ([phi_and_psi], [])
+      | Calculus.RA_Leaf(_) -> ([], [phi_and_psi])
+      | Calculus.RA_MultiNatJoin([]) -> ([], [])
+      | Calculus.RA_MultiNatJoin(sub_exp) -> 
+          let (new_phi, new_psi) = List.split (List.map extract_filters sub_exp) 
+          in (List.flatten new_phi, List.flatten new_psi)
+      | Calculus.RA_Neg(_) -> failwith ("TODO: to_m3_initializer: RA_Neg")
+      | Calculus.RA_MultiUnion(_) -> failwith ("TODO: to_m3_initializer: RA_MultiUnion")
+  in
+  (* TODO: invoke simplify here *)
+  match (Calculus.readable_term map_def) with 
+    | Calculus.RVal(Calculus.AggSum(theta, phi_and_psi)) ->
+      let (phi, psi) = extract_filters phi_and_psi in
+      let inner_vars = 
+        ListAsSet.union 
+          (Calculus.term_vars (Calculus.make_term theta))
+          (Calculus.relcalc_vars 
+            (Calculus.make_relcalc 
+              (Calculus.RA_MultiNatJoin(phi))))
+      in
+      let outer_vars =
+        ListAsSet.union vars
+          (Calculus.relcalc_vars 
+            (Calculus.make_relcalc 
+              (Calculus.RA_MultiNatJoin(psi))))
+      in
+      let init_map_name = map_prefix^"_init" in
+      let init_map_term = 
+        Calculus.RVal(Calculus.External(init_map_name, 
+                      ListAsSet.inter inner_vars outer_vars))
+      in
+      let init_map_defn = 
+        Calculus.RVal(Calculus.AggSum(
+          theta,
+          Calculus.RA_MultiNatJoin(phi)
+        ))
+      in
+      let init_map_ref = (
+        Calculus.make_term init_map_defn,
+        Calculus.make_term init_map_term
+      ) in
+      let (translated_init,other_todos) = 
+        (to_m3 
+          (
+            Calculus.RVal(
+              Calculus.AggSum(
+                init_map_term,
+                Calculus.RA_MultiNatJoin(psi)))
+          )
+          (StringMap.add init_map_name 
+                         (translate_map_ref init_map_ref) 
+                         StringMap.empty)
+        )
+      in
+        (
+          translated_init,
+          other_todos@[init_map_ref]
+        )
+    | _ -> failwith ("TODO: to_m3_initializer: "^
+                      (Calculus.term_as_string map_def))
+
+(********************************)
+and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t): 
+               'a list = 
+  List.fold_right2 (fun var binding ret_vars ->
+    match binding with
+    | Binding_Present(_)  -> if want_input_vars then ret_vars else var::ret_vars
+    | Binding_Not_Present -> if want_input_vars then var::ret_vars else ret_vars
+  ) vars bindings []
+  
+(********************************)
+
+and to_m3_map_access 
+  ((map_definition, map_term, bindings):map_ref_t) : 
+  M3.mapacc_t * todo_list_t =
+  let (mapn, mapvars) = (Calculus.decode_map_term map_term) in
+  let input_var_list = (split_vars true mapvars bindings) in
+  let output_var_list = (split_vars false mapvars bindings) in
+  let (init_stmt, todos) = 
+      (*  Doing something smarter with the initializers... in particular, it 
+          might be a good idea to see if any of the initialzers can be further 
+          decompiled or pruned away.  For now, a reasonable heuristic is to use
+          the presence of input variables *)
+    if (List.length input_var_list) > 0
+      then (to_m3_initializer map_definition 
+                              (input_var_list@output_var_list)
+                              mapn) 
+      else (M3.mk_c 0.0, [])
+  in
+    ((mapn, 
+      (fst (List.split input_var_list)), 
+      (fst (List.split output_var_list)), 
+      (init_stmt, ())
+    ), todos)
+
+(********************************)
+
+and to_m3 
+  (t: Calculus.readable_term_t) 
+  (inner_bindings:map_ref_t Map.Make(String).t) : 
+  M3.calc_t * todo_list_t =
+  
+   let calc_lf_to_m3 lf =
+      match lf with
+         Calculus.AtomicConstraint(op,  t1, t2) ->
+            let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
+            let (rhs, rhs_todos) = (to_m3 t2 inner_bindings) in
+              ((match op with 
+                  Calculus.Eq -> M3.mk_eq
+                | Calculus.Le -> M3.mk_leq
+                | Calculus.Lt -> M3.mk_lt
+                | _ -> failwith ("CalcToM3.to_m3: TODO: cmp_op")
+              ) lhs rhs, lhs_todos@rhs_todos)
+       | _ -> failwith ("CalcToM3.to_m3: TODO constraint '"^
+                   (Calculus.relcalc_as_string
+                     (Calculus.make_relcalc (Calculus.RA_Leaf(lf))))^"' in '"^
+                   (Calculus.term_as_string
+                     (Calculus.make_term t))^"'")
+   in
+   let rec calc_to_m3 calc : M3.calc_t * todo_list_t =
+      match calc with
+         Calculus.RA_Leaf(lf) -> calc_lf_to_m3 lf
+       | Calculus.RA_MultiNatJoin([lf]) ->  (calc_to_m3 lf) 
+       | Calculus.RA_MultiNatJoin(lf::rest) ->
+          let (lhs, lhs_todos) = (calc_to_m3 lf) in
+          let (rhs, rhs_todos) = 
+            (calc_to_m3 (Calculus.RA_MultiNatJoin(rest))) 
+          in
+            ((M3.mk_prod lhs rhs), lhs_todos@rhs_todos)
+       | _                    -> 
+          failwith ("Compiler.to_m3: TODO calc: "^
+            (Calculus.relcalc_as_string (Calculus.make_relcalc calc)))
+   in
+   let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
+      match lf with
+         Calculus.AggSum(t,phi)             -> 
+            let (lhs, lhs_todos) = (calc_to_m3 phi) in
+            let (rhs, rhs_todos) = (to_m3 t inner_bindings) in
+              ((M3.mk_if lhs rhs), lhs_todos@rhs_todos)
+       | Calculus.External(mapn, map_vars)      -> 
+          (
+            try
+              let (access_term, todos) = 
+                (to_m3_map_access 
+                  (StringMap.find mapn inner_bindings)) 
+              in
+                (M3.mk_ma access_term, todos)
+            with Not_found -> 
+              failwith ("Unable to find map '"^mapn^"' in {"^
+                (StringMap.fold 
+                  (fun k v accum -> accum^", "^k) 
+                  inner_bindings "")^"}\n"
+                )
+          )
+       | Calculus.Var(vn,vt)                -> 
+            (M3.mk_v vn, [])
+       | Calculus.Const(Calculus.Int c)     -> 
+            (M3.mk_c (float_of_int c), [])
+       | Calculus.Const(Calculus.Double c)  -> 
+            (M3.mk_c c, [])
+       | Calculus.Const(_)                  ->
+            failwith "Compiler.to_m3: TODO String,Long"
+
+   in
+   match t with
+      Calculus.RVal(lf)      -> lf_to_m3 lf
+    | Calculus.RNeg(t1)      -> 
+        let (rhs, todos) = (to_m3 t1 inner_bindings) in
+        (M3.mk_prod (M3.mk_c (-1.0)) rhs, todos)
+    | Calculus.RProd(t1::[]) -> (to_m3 t1 inner_bindings)
+    | Calculus.RProd(t1::l)  -> 
+        let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
+        let (rhs, rhs_todos) = (to_m3 (Calculus.RProd l) inner_bindings) in
+        (M3.mk_prod lhs rhs, lhs_todos@rhs_todos)
+    | Calculus.RProd([])     -> 
+        (M3.mk_c 1.0, [])
+        (* impossible case, though *)
+    | Calculus.RSum(t1::[])  -> 
+        (to_m3 t1 inner_bindings)
+    | Calculus.RSum(t1::l)   -> 
+        let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
+        let (rhs, rhs_todos) = (to_m3 (Calculus.RSum l) inner_bindings) in
+        (M3.mk_sum lhs rhs, lhs_todos@rhs_todos)
+    | Calculus.RSum([])      -> 
+        (M3.mk_c 0.0, []) 
+        (* impossible case, though *)
 
 module M3InProgress = struct
   type mapping_params = (string * int list * int list)
@@ -371,9 +300,9 @@ module M3InProgress = struct
   
   (* insertion triggers * deletion triggers * mappings * map definitions *)
   type t = trigger_map * trigger_map * map_mapping * 
-           (string * map_ref_t) list * relation_set_t
+           (string * map_ref_t) list
   
-  type insertion = (map_ref_t * M3.trig_t list * relation_set_t)
+  type insertion = (map_ref_t * M3.trig_t list)
   
   let add_to_trigger_map rel vars stmts tmap =
     if List.mem_assoc rel tmap then
@@ -394,18 +323,21 @@ module M3InProgress = struct
     else
        (rel, (vars, stmts))::tmap
 
-  let init: t = ([], [], StringMap.empty, [], StringMap.empty)
+  let init: t = ([], [], StringMap.empty, [])
     
-  let build ((curr_ins, curr_del, curr_mapping, curr_refs, curr_ra_map):t)   
-            ((descriptor, triggers, ra_map):insertion): t =
+  let build ((curr_ins, curr_del, curr_mapping, curr_refs):t)   
+            ((descriptor, triggers):insertion): t =
     let (query_term, map_term, map_bindings) = descriptor in
     let (map_name, map_vars) = Calculus.decode_map_term map_term in
     let mapping = 
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
         if result = NoMapping then
           try 
-            let var_mappings = Calculus.equate_terms query_term cmp_term in
             let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
+              if (List.length map_vars) <> (List.length cmp_vars) then
+                raise (Calculus.TermsNotEquivalent("Mismatched parameter list sizes"))
+              else
+            let var_mappings = Calculus.equate_terms query_term cmp_term in
             (* We get 2 different mappings; Check to see they're consistent *)
             if not (List.for_all2 (fun (a,_) (b,_) -> (a = b) ||
                   (* It shouldn't happen that a doesn't have a mapping in b, but
@@ -414,7 +346,7 @@ module M3InProgress = struct
                     (StringMap.mem a var_mappings) || 
                     ((StringMap.find a var_mappings) = b)
                   ) map_vars cmp_vars)
-              then failwith "Inconsistent variable mappings in CalcToM3.build"
+              then raise (Calculus.TermsNotEquivalent("Mismatched parameter list s"))
               else
             let cmp_in_vars = split_vars true cmp_vars cmp_bindings in
             let cmp_out_vars = split_vars false cmp_vars cmp_bindings in
@@ -456,8 +388,7 @@ module M3InProgress = struct
           curr_ins, (* an equivalent map exists. don't change anything *)
           curr_del,
           StringMap.add map_name m curr_mapping, (* just add a mapping *)
-          curr_refs,
-          curr_ra_map (* no new triggers = no new mappings *)
+          curr_refs
         )
       )
     in
@@ -477,8 +408,7 @@ module M3InProgress = struct
         (
           insert_trigs, delete_trigs, 
           curr_mapping, 
-          (map_name,descriptor)::curr_refs, 
-          MapAsSet.union_right curr_ra_map ra_map
+          (map_name,descriptor)::curr_refs
         )
       )
     in
@@ -490,7 +420,7 @@ module M3InProgress = struct
       | NoMapping  -> on_no_mapping ()
         
   
-  let get_rel_schema ((ins_trigs,del_trigs,_,_,_):t): 
+  let get_rel_schema ((ins_trigs,del_trigs,_,_):t): 
       (M3.var_t list) StringMap.t =
     let gather_schema (rel_name, (rel_vars, _)) accum  =
       StringMap.add rel_name rel_vars accum
@@ -500,52 +430,7 @@ module M3InProgress = struct
           StringMap.empty
       )
   
-  let extend_with_ra_maps (base_accum:t): t =
-    let (_,_,_,_,ra_map) = base_accum in
-      StringMap.fold (fun relation schema accum ->
-        build accum 
-              ( (* The Map Definition term: Sum(1, Rel(RelVars)) *)
-                translate_map_ref
-                  ( Calculus.make_term (
-                      Calculus.RVal(
-                        Calculus.AggSum(
-                          Calculus.RVal(Calculus.Const(Calculus.Double(1.0))),
-                          Calculus.RA_Leaf(Calculus.Rel(relation, schema))
-                        )
-                      )
-                    ),
-                    Calculus.map_term ("INPUT_MAP_"^relation) schema
-                  ),
-                (* The triggers: On insert add 1, On delete sub 1 *)
-                [ (
-                  M3.Insert, relation, (translate_schema schema),
-                  [ ( ( "INPUT_MAP_"^relation, [], 
-                        (translate_schema schema), 
-                        (M3.mk_c 0.0, ())
-                      ), (
-                        (M3.mk_c 1.0, ())
-                      ),
-                      ()
-                    ) ] ) ] @
-                ( if Debug.active "DISABLE-DELETES" then []
-                  else [
-                    (M3.Delete, relation, (translate_schema schema),
-                    [ ( ( "INPUT_MAP_"^relation, [], 
-                          (translate_schema schema), 
-                          (M3.mk_c 0.0, ())
-                        ), (
-                          (M3.mk_c (-1.0), ())
-                        ),
-                        ()
-                      ) ] )
-                  ]
-                ),
-                (* The RA Map; Should technically be negative, but eh *)
-                StringMap.empty
-              )
-      ) ra_map base_accum
-  
-  let get_maps ((_, _, mapping, maps, _):t) : M3.map_type_t list =
+  let get_maps ((_, _, mapping, maps):t) : M3.map_type_t list =
     List.map (fun (map_name, (map_defn, map_term, map_bindings)) ->
       let (_, map_vars) = Calculus.decode_map_term map_term in
       (
@@ -555,7 +440,7 @@ module M3InProgress = struct
       )
     ) maps
   
-  let get_triggers ((ins, del, mapping, _, _):t) : M3.trig_t list =
+  let get_triggers ((ins, del, mapping, _):t) : M3.trig_t list =
     let produce_triggers (pm:M3.pm_t) (tmap:trigger_map): M3.trig_t list =
       List.map (fun (rel_name, (rel_vars, triggers)) ->
         (pm, rel_name, rel_vars, 
@@ -570,10 +455,9 @@ module M3InProgress = struct
       (produce_triggers M3.Insert ins) @ (produce_triggers M3.Delete del)
   
   let finalize (program:t) : M3.prog_t = 
-    let prog_w_ra_maps = extend_with_ra_maps program in 
-      (get_maps prog_w_ra_maps, get_triggers prog_w_ra_maps)
+    (get_maps program, get_triggers program)
 
-  let get_map_refs ((_,_,mappings,refs,_):t) : map_ref_t StringMap.t =
+  let get_map_refs ((_,_,mappings,refs):t) : map_ref_t StringMap.t =
     let mapped_map_terms: map_ref_t StringMap.t = 
       StringMap.map (fun (base_map,_,_) -> List.assoc base_map refs) mappings
     in
@@ -581,13 +465,22 @@ module M3InProgress = struct
         StringMap.add map ref ref_map
       ) mapped_map_terms refs
       
+  let rec compile (schema:(string*(Calculus.var_t list)) list)
+              (map_ref:Compiler.map_ref_t)
+              (accum:t) : t =
+    Compiler.compile Calculus.ModeOpenDomain
+                     schema
+                     map_ref
+                     generate_m3
+                     accum
     
-  let generate_m3 (map_ref: Compiler.map_ref_t)
+  and generate_m3 (schema: (string*(Calculus.var_t list)) list)
+                  (map_ref: Compiler.map_ref_t)
                   (triggers: Compiler.trigger_definition_t list)
                   (accum: t): t =
     let map_ref_as_m3 = translate_map_ref map_ref in
-    let (triggers_as_m3, ra_map) = 
-      List.fold_left (fun (tlist,ra_map) 
+    let (triggers_as_m3, todos) = 
+      List.fold_left (fun (tlist,old_todos) 
                           (delete, reln, relvars, (params,bsvars), expr) -> 
         let sub_map_params (map_definition, map_term, map_bindings) params =
           let (map_name, map_vars) = (Calculus.decode_map_term map_term) in
@@ -597,10 +490,10 @@ module M3InProgress = struct
             map_bindings
           )
         in
-        let (target_access, ra_map_access) = (to_m3_map_access (sub_map_params map_ref_as_m3 params)) in
-        let (update,ra_map_update) = (to_m3 (Calculus.readable_term expr) 
+        let (target_access, init_todos) = (to_m3_map_access (sub_map_params map_ref_as_m3 params)) in
+        let (update, update_todos) = (to_m3 (Calculus.readable_term expr) 
                                          (get_map_refs accum)) in
-        let ra_map_ret = MapAsSet.union_right (MapAsSet.union_right ra_map_access ra_map_update) ra_map in
+        let todos = old_todos @ init_todos @ update_todos in
         let update_trigger = (
             (if delete then M3.Delete else M3.Insert),
             reln, (translate_schema relvars),
@@ -620,19 +513,24 @@ module M3InProgress = struct
             if delete then 
               (
                 if Debug.active "DISABLE-DELETES" then
-                  (tlist, ra_map)
+                  (tlist, old_todos)
                 else
-                  (tlist @ [update_trigger], ra_map_ret)
+                  (tlist @ [update_trigger], todos)
               )
             else
-              (tlist @ [ update_trigger ], ra_map_ret)
+              (tlist @ [ update_trigger ], todos)
           )
         )
-      ) ([], StringMap.empty) triggers
+      ) ([], []) triggers
     in
-      build accum (
-        map_ref_as_m3,
-        triggers_as_m3,
-        ra_map
-      )
+      List.fold_left 
+        (fun old_accum todo -> 
+          compile schema
+                  todo
+                  old_accum
+        )
+        (build accum (map_ref_as_m3, triggers_as_m3))
+        todos
 end
+
+let compile = M3InProgress.compile;;

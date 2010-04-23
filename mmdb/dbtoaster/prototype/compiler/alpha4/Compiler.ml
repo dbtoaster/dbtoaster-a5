@@ -12,7 +12,8 @@ type trigger_definition_t =
   (bool * string * Calculus.var_t list * bound_vars_t * Calculus.term_t)
 
 type 'a output_translator_t = 
-  map_ref_t -> trigger_definition_t list -> 'a -> 'a
+  (string * (Calculus.var_t list)) list -> map_ref_t -> 
+  trigger_definition_t list -> 'a -> 'a
 
 (* making and breaking externals, i.e., map accesses. *)
 
@@ -122,6 +123,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
   let todos = ((List.flatten l2) @ bsrw_theta) 
   in
     generate_code (* We need to do this traversal DEPTH FIRST *)
+      db_schema
       (map_definition, map_term)
       (List.flatten l1)
       ( List.fold_left (fun curr_accum curr_map -> 

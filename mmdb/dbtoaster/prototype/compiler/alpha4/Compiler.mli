@@ -5,7 +5,7 @@
    2) term: A Calculus term describing the map as seen by an external trigger.
       Use Calculus.decode_map_term to get it into a reasonable form; 
 *)
-(*               map_definition,   map_term *)
+(*               map_definition,    map_term, *)
 type map_ref_t = (Calculus.term_t * Calculus.term_t)
 
 type bound_vars_t = 
@@ -18,6 +18,7 @@ type trigger_definition_t =
 
 (* Output translator will be called on maps DEPTH FIRST *)
 type 'a output_translator_t = 
+  (string * (Calculus.var_t list)) list ->(* Database Schema *)
   map_ref_t ->                  (* The target map *)
   trigger_definition_t list ->  (* All the triggers for the map *)
   'a ->                         (* A target-specific accumulator field *)

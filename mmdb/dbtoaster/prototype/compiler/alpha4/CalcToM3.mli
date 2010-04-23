@@ -4,22 +4,15 @@
 *)
 
 (* 
-  A set of relations
-  Used throughout to identify which relations are used in initializers.  If this
-  is the case, the contents of those relations will need to be maintained by
-  the management system.  Nearly all operations in CalcToM3 return a 
-  relation_set_t that indicates which additional maps must be pushed into the 
-  list of maintained maps.  Note that these new maps are always parametrized by
-  output variables, and thus need no initializers.
-  
-  For example, if a map represents an expression over a join between A and B,
-  then we need to maintain A and B in their entirity somewhere in the input
-  relation.  These maps will be referred to within the produced M3 expression
-  as INPUT_MAP_[IRname], where [IRname] is replaced by the name of the input
-  relation.  The returned relation_set_t will have [IRname] for each input 
-  relation referenced in this way.
+  A worklist.
+  This should really be done within the compiler, but Calculus doesn't really
+  have a notion of map initialization; we add this after the fact while we build
+  the M3.  Because the only thing we're given to build the initializer is the
+  query defining the map, we can get some speedup by compiling portions (the 
+  non-comparison portions) of the defining query. Consequently, the M3 
+  translation code can produce additional compilation work.
 *)
-type relation_set_t = (Calculus.var_t list) Map.Make(String).t
+type todo_list_t = Compiler.map_ref_t list
 
 (*
   Variable bindings are used to distinguish between Input and Output Variables.
@@ -63,11 +56,10 @@ type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t)
   naively, with no recursive compilation of subexpressions where possible.
   
   In the process of computing this expression, also identify which maps are 
-  referenced inside the expression. (see relation_set_t, above)
+  referenced inside the expression. (see todo_list_t, above)
 *)
-val to_m3_initializer: 
-  Calculus.readable_term_t -> 
-  (M3.calc_t * relation_set_t)
+val to_m3_initializer: Calculus.term_t -> Calculus.var_t list -> string ->
+                       (M3.calc_t * todo_list_t)
 
 (*
   Given a descriptor of a map reference in calculus terms, convert it to an M3
@@ -78,7 +70,7 @@ val to_m3_initializer:
 *)
 val to_m3_map_access:
   map_ref_t ->
-  (M3.mapacc_t * relation_set_t)
+  (M3.mapacc_t * todo_list_t)
 
 (* 
   Given a Calculus expression representing a particular trigger, convert it to
@@ -95,7 +87,7 @@ val to_m3_map_access:
 val to_m3:
   Calculus.readable_term_t ->
   map_ref_t Map.Make(String).t ->
-  (M3.calc_t * relation_set_t)
+  (M3.calc_t * todo_list_t)
 
 (*
   Given a Calculus expression (representing a map's Map Definition) and a 
@@ -132,7 +124,7 @@ val translate_map_ref: Compiler.map_ref_t -> map_ref_t
 *)
 module M3InProgress : sig
   type t
-  type insertion = (map_ref_t * M3.trig_t list * relation_set_t)
+  type insertion = (map_ref_t * M3.trig_t list)
   
   val init: t
   val build: t -> insertion -> t
@@ -144,7 +136,11 @@ module M3InProgress : sig
   (* generate_m3 can be passed in to Compiler.compile to produce 
      an M3ProgInProgress.t  Call finalize on it to get an M3.prog_t
   *) 
-  val generate_m3: Compiler.map_ref_t -> 
+  val generate_m3: (string*(Calculus.var_t list)) list ->
+                   Compiler.map_ref_t -> 
                    Compiler.trigger_definition_t list ->
                    t -> t
 end
+
+val compile : (string*(Calculus.var_t list)) list -> Compiler.map_ref_t ->
+              M3InProgress.t -> M3InProgress.t
