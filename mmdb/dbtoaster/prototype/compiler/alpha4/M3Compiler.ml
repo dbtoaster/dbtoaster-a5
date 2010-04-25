@@ -1,12 +1,133 @@
+(* M3Compiler.
+ * A compilation framework for producing machine code for an M3 program.
+ * This framework involves two parts:
+ * -- preprocessing of an M3 program, computing evaluation contexts (scopes) for
+ *    each M3 statement, and analyzing for optimizations common to the currently
+ *    handled code generators.
+ *    These are singleton, and cross product optimizations, which respectively
+ *    indicate whether (sub-)expression evaluation yields a single value or an
+ *    out tier slice, and whether an operator expression needs to propagate
+ *    variables from its lhs operand to its rhs operand.
+ * -- code generation, via a functorized module taking a language-specific
+ *    code generator with interface given by M3Codegen, to produce source output
+ *    in the given target language.
+*)
+
 open M3
+open M3Common
 open M3Common.Patterns
-(* M3 preparation and compilation *)
+
 module M3P = M3.Prepared
 
-(* TODO: validate x * m[x] *)
-let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
-   : (M3P.trig_t list * pattern_map) =
-   let sanitize_vars = List.map sanitize_var in
+(* Trigger variable normalization.
+ * Currently the compiler adds a prefix to trigger variables of the LHS map
+ * name of each statement being compiled, resulting in different trigger
+ * variable names for the statements belonging in a single trigger. We normalize
+ * these trigger variable names in the output of M3 preparation. *)
+
+(* returns all map names in an M3 trigger *)
+let get_map_names (trigger : M3P.trig_t) : map_id_t list =
+   let get_names_from_stmt (_,(c,_),_) =
+      recurse_calc_lf Util.ListAsSet.union
+         (fun (mapn, _, _, _) -> [mapn]) (fun _ -> []) (fun _ -> []) c
+   in let (_,_,_,stmts) = trigger
+   in Util.ListAsSet.no_duplicates
+      (List.flatten (List.map get_names_from_stmt stmts))
+
+(* returns a prefix and list of suffixes for a list of trigger args
+ * -- an empty prefix result indicates the trigger args are not in the
+ *    expected format (e.g. for hand-coded M3 programs, as in our examples) *)
+let get_trigger_arg_normalization (trigger : M3P.trig_t) =
+   let (_,rel,args,_) = trigger in
+   let get_prefix arg =
+      let rel_start =
+         try Str.search_forward (Str.regexp (Str.quote rel)) arg 0
+         with Not_found -> failwith "Invalid trigger arg format"
+      in String.sub arg 0 rel_start
+   in
+   match args with
+    | [] -> failwith "Invalid trigger, has no arguments"
+    | h::t ->
+       try 
+          let prefix = get_prefix h in
+          let prefix_len = String.length prefix in
+          let suffix s = String.sub s prefix_len ((String.length s) - prefix_len)
+          in (prefix, List.map suffix args)
+       with Failure _ -> ("", args)
+
+(* returns a mapping of: var -> trigger arg
+ * -- given a set of maps, and trigger arg suffixes, and prefix, builds a
+ *    mapping of <map name>^<suffix> -> <prefix>^<suffix> for each map,
+ *    suffix combination.
+ *)
+let get_arg_substitutions prefix suffixes map_names =
+    List.fold_left (fun acc suffix ->
+       let dest = prefix^suffix in acc@(List.fold_left
+          (fun acc mapn -> (mapn^suffix, dest)::acc) [] map_names))
+       [] suffixes
+
+(* for each trigger:
+ * -- get arg substitutions
+ * -- substitute any vars, by check if var has a binding in the mapping
+ *) 
+let normalize_triggers (triggers : M3P.trig_t list) =
+   let normalize trig =
+      let (prefix, suffixes) = get_trigger_arg_normalization trig in
+      if prefix = "" then trig else
+      let map_names = get_map_names trig in
+      let arg_mappings = get_arg_substitutions prefix suffixes map_names in
+      let (pm,rel,args,stmts) = trig in
+      let substitute c = replace_calc_lf
+         (fun x -> MapAccess(x)) (fun c -> Const(c))
+         (fun v -> Var(if List.mem_assoc v arg_mappings
+                       then List.assoc v arg_mappings else v)) c
+      in (pm,rel,args,
+          List.map (fun (m,(c,am),sm) -> (m,(substitute c,am),sm)) stmts)
+   in List.map normalize triggers
+
+(* M3 preparation.
+ * Decorates M3 nodes with the following metadata:
+ * 1. Unique identifier, as an integer based on tree traversal. We use a
+ * stack-based approach to handle initial value computations, where each
+ * initial value expr in a map lookup pushes a new counter onto the stack,
+ * and removes when processed. 
+ *
+ * 2. Extensions:
+ * Extensions are deltas to the environment/scope, indicating new variable
+ * bindings at various points in the control flow. We summarize these
+ * extensions here:
+ * -- lhs in tier: lhs in vars, from accessing an in tier, before evaluating
+ *                 any rhs expr
+ * -- rhs init expr: lhs out vars not defined in the init expr schema
+ * -- rhs incr expr: trigger vars, for computing deltas to an out tier
+ * -- map lookup init expr: bound out vars, to restrict init vals computed
+ * -- op slice expr: propagations from lhs operand to rhs operand, op schema
+ *                   extensions by the rhs operand
+ * -- op lslice expr: same as above
+ * -- op rslice expr: op schema extensions by the rhs operand
+ *
+ * Except for init value computations at map lookups, extensions are computed
+ * for a node by its parent, and computed by prepare_stmt for both entire
+ * incr and init RHS expressions. Thus each AST node simply returns the empty
+ * list as its extension, leaving this to be filled in by the parent following
+ * recursive preparation.
+ *
+ * See documentation for prepare_operand, prepare_op for more info on
+ * extensions+propagation.
+ *
+ * 3. Singleton, i.e. whether the M3 node is statically known to produce a
+ * single value. This applies for subexpressions that use only constants and map
+ * lookups that are singletons. A map lookup is a singleton if there are no loop
+ * variables in either its in or out variable sets, that is all of its in vars
+ * and out vars are bound.
+ *
+ * 4. Product, i.e. whether we can simplify an operator to take a cross product
+ * of its operands, rather than propagating variables. This applies if all
+ * operands use disjoint sets of variables.  
+ *)
+(* TODO: generalize singletons for maps with no loop vars, i.e. no loop in or out vars *)
+let prepare_triggers (triggers : trig_t list)
+      : (M3P.trig_t list * pattern_map) =
    let prep_counter = ref [] in
    let add_counter() = prep_counter := 0::(!prep_counter) in
    let remove_counter() =
@@ -23,40 +144,70 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
                         (theta_vars : var_t list) (calc : calc_t)
          : (M3P.calc_t * pattern_map) =
       let recur = prepare_calc update_mapn lhs_vars in
-      let prepare_aux c propagated defv theta_ext
+      
+      (* Prepares either an LHS or RHS operand by computing its extensions.
+       * Other metadata for the node (i.e. singleton or cross product traits)
+       * is computed recursively. Extensions:
+       * -- lhs: schema vars that are not bound from above
+       *         (i.e. trigger vars/propagated vars)
+       * -- rhs: lhs out vars that are not rhs schema vars, i.e. propagations
+       *)
+      let prepare_operand c propagated defv theta_ext
             : (M3P.calc_t * var_t list * pattern_map) =
-         let outv = M3Common.calc_schema c in
+         let outv = calc_schema c in
          let ext = Util.ListAsSet.diff (if propagated then defv else outv)
                       (if propagated then outv else defv) in
          let (pc, pm) = recur (theta_vars@theta_ext) c in 
-         (* Override metadata, assumes recursive call to prepare_calc has
-          * already done this for its children. *)
-         let new_pc_meta = let (x,_,y,z) = M3P.get_meta pc in (x,ext,y,z) in
-         let new_pc = (M3P.get_calc pc, new_pc_meta)
-         in (new_pc, outv, pm)
+         (* Override extensions for the operand. *)
+         let new_pc_meta = let (x,_,y,z) = M3P.get_meta pc in (x,ext,y,z)
+         in ((M3P.get_calc pc, new_pc_meta), outv, pm)
       in
+      (* Prepares a binary operator, computing propagations from lhs to rhs
+       * as the extensions for the rhs. Propagations for the rhs are those vars
+       * from the lhs schema that also appear in the rhs schema.
+       * We now compute propagations strictly, to avoid unused variables, by
+       * only propagating those variables that are used in the rhs.
+       * Also determines whether the operator is a singleton or suitable for
+       * evaluating via a cross-product. 
+       * TODO: generalize to k-way operator, only the first operand needs to
+       * compare its schema to the globally bound vars.
+       * Every other operand simply needs to compare to the union of schemas
+       * from prior operands and yield an extension for schema vars not in the
+       * union.
+       * -- all prior operands allows transitive propagation... 
+       * -- why only prior operands' output schemas, and not all globally bound
+       *    vars to this point? any vars bound before the first operand is
+       *    defined for all operands, and does not need to be considered after
+       *    the first operand.
+       * -- note to ensure strict propagation, we should only yield extensions
+       *    that are used by at least one successor operand.
+       *) 
       let prepare_op (f : M3P.calc_t -> M3P.calc_t -> M3P.pcalc_t)
                      (c1: calc_t) (c2: calc_t)
             : (M3P.calc_t * pattern_map)
       =
-         let (e1, c1_outv, p1_patterns) = prepare_aux c1 false theta_vars [] in
-         let (e2, _, p2_patterns) =
-            prepare_aux c2 true c1_outv (M3P.get_extensions e1) in
-         let patterns = merge_pattern_maps p1_patterns p2_patterns in
-         let singleton = (M3P.get_singleton e1) && (M3P.get_singleton e2) in
-         let (c1_vars, c2_vars) = (M3Common.calc_vars c1, 
-                                   M3Common.calc_vars c2) in
-         let product = (Util.ListAsSet.inter c1_vars c2_vars) = []
-         (* Safe to use empty theta extensions, since this will get overriden
-          * by recursive calls for binary ops *) 
-         in ((f e1 e2, (prepare(), [], singleton, product)), patterns) 
+         let (e1, c1_outv, p1_pats) = prepare_operand c1 false theta_vars [] in
+         let (e2, _, p2_pats) =
+            prepare_operand c2 true c1_outv (M3P.get_extensions e1) in
+         let strict_e1 =
+            let (new_c1, (id,ext,sing,prod)) = e1 in
+            let strict_ext = Util.ListAsSet.inter ext (calc_vars c2)
+            in (new_c1, (id,strict_ext,sing,prod))
+         in
+         let patterns = merge_pattern_maps p1_pats p2_pats in
+         let singleton = (M3P.get_singleton strict_e1) && (M3P.get_singleton e2) in
+         let product = (Util.ListAsSet.inter
+            (calc_vars c1) (calc_vars c2)) = []
+         in ((f strict_e1 e2, (prepare(), [], singleton, product)), patterns) 
       in
       match (fst calc) with
-        | Const(c)      -> ((Const(c), (prepare(), [], true, false)), empty_pattern_map())
+        | Const(c)      ->
+           ((Const(c), (prepare(), [], true, false)), empty_pattern_map())
+        
         | Var(v)        -> 
-            let sv = sanitize_var v in
-           (* Bigsum vars are not LHS vars, and are slices. *)
-           ((Var(sv), (prepare(), [], List.mem sv lhs_vars, false)), empty_pattern_map())
+           (* Vars are singletons, unless they are bigsum vars. *)
+           let singleton = List.mem v lhs_vars in
+           ((Var(v), (prepare(), [], singleton, false)), empty_pattern_map())
 
         | Add  (c1,c2)  -> prepare_op (fun e1 e2 -> Add  (e1, e2)) c1 c2
         | Mult (c1,c2)  -> prepare_op (fun e1 e2 -> Mult (e1, e2)) c1 c2
@@ -66,37 +217,39 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
         | IfThenElse0 (c1,c2) -> prepare_op (fun e1 e2 -> IfThenElse0 (e2, e1)) c2 c1
         
         | MapAccess (mapn, inv, outv, init_calc) ->
-           let (sinv,soutv) = (sanitize_vars inv,sanitize_vars outv) in
            (* Determine slice or singleton.
             * singleton: no in vars, and fully bound out vars. *)
-           let bound_outv = Util.ListAsSet.inter soutv theta_vars in
-           let full_agg = ((List.length bound_outv) = (List.length soutv)) in
-           
            (* TODO: this is overly restrictive... we have a singleton as long
             * as all in vars are bound, i.e. there are no loop in vars *)
+           let bound_outv = Util.ListAsSet.inter outv theta_vars in
+           let full_agg = ((List.length bound_outv) = (List.length outv)) in
            let singleton = (List.length inv = 0) && full_agg in
            
            (* Use map scope for lhs vars during recursive prepare for initial
             * value calculus. *)
            let init_lhs_vars =
-             Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) soutv in
+             Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) outv in
            
            let (init_ecalc, patterns) =
               save_counter (fun () -> 
                  prepare_calc mapn init_lhs_vars theta_vars (fst init_calc))
            in
+
            let new_patterns = 
-              if (List.length soutv) = (List.length bound_outv) then patterns
+              if full_agg then patterns
               else merge_pattern_maps patterns (singleton_pattern_map
-                      (mapn, make_out_pattern soutv bound_outv)) in
-           let new_init_agg_meta = (update_mapn^"_init_"^mapn, full_agg) in
+                      (mapn, make_out_pattern outv bound_outv)) in
+
+           (* Extend initial val computation for lookups with bound out vars,
+            * to restrict initial values computed *)
            let new_init_meta = let (x,_,y,z) =
               M3P.get_meta init_ecalc in (x,bound_outv,y,z) in
+           let new_init_agg_meta = (update_mapn^"_init_"^mapn, full_agg) in
            let new_init_aggecalc =
               (((M3P.get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
            let new_incr_meta = (prepare(), [], singleton, false) in
-           let r = (MapAccess(mapn, sinv, soutv, new_init_aggecalc), new_incr_meta)
+           let r = (MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
         
    in
@@ -104,27 +257,27 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.stmt_t * pattern_map) =
 
       let ((lmapn, linv, loutv, init_calc), (incr_calc,_),_) = stmt in
-      let (slinv, sloutv) = (sanitize_vars linv,sanitize_vars loutv) in
       let partition v1 v2 =
          (Util.ListAsSet.inter v1 v2, Util.ListAsSet.diff v1 v2) in
-      let (bound_inv, loop_inv) = partition slinv theta_vars in
-      let (bound_outv, loop_outv) = partition sloutv theta_vars in
+      let (bound_inv, loop_inv) = partition linv theta_vars in
+      let (bound_outv, loop_outv) = partition loutv theta_vars in
       
       (* For compile_pstmt_loop, extend with loop in vars *)
       let theta_w_loopinv = Util.ListAsSet.union theta_vars loop_inv in
-      let theta_w_lhs = Util.ListAsSet.union
-         (Util.ListAsSet.union theta_vars slinv) sloutv
-      in
+      let theta_w_lhs = Util.ListAsSet.union theta_w_loopinv loutv in
       let full_agg = (List.length loop_outv) = 0 in 
 
       (* Checking bigsum vars for slices is now done locally by passing down
        * LHS vars through M3 preparation. *)
-      let init_ext = (Util.ListAsSet.diff sloutv 
-                        (M3Common.calc_schema (fst init_calc))) in
+      let init_ext = (Util.ListAsSet.diff loutv 
+                        (calc_schema (fst init_calc))) in
       
       (* Set up top-level extensions for an entire incr/init RHS.
-       * Incr M3 is extended by bound out variables.
-       * Init M3 is extended by LHS out vars that do not appear in the RHS out vars. *)
+       * Incr M3 is extended by bound out variables to compute deltas to an
+       * out tier.
+       * Init M3 is extended by LHS out vars that do not appear in the RHS out
+       * vars (i.e. the schema of the init val expr), essentially bound
+       * LHS out vars *)
       let prepare_stmt_ext name_suffix calc ext ext_theta =
          let calc_theta_vars = Util.ListAsSet.union theta_w_loopinv
             (if ext_theta then ext else []) in
@@ -142,14 +295,14 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
       let (incr_ca, incr_patterns) = prepare_stmt_ext "_incr" incr_calc bound_outv false in
 
       let pstmtmeta = loop_inv in 
-      let pstmt = ((lmapn, slinv, sloutv, init_ca), incr_ca, pstmtmeta) in
+      let pstmt = ((lmapn, linv, loutv, init_ca), incr_ca, pstmtmeta) in
 
       let extra_patterns =
          let extras =
-            (if (List.length bound_inv) = (List.length slinv) then []
-             else [(lmapn, (make_in_pattern slinv bound_inv))])@
-            (if (List.length bound_outv) = (List.length sloutv) then []
-             else [(lmapn, (make_out_pattern sloutv bound_outv))])
+            (if (List.length bound_inv) = (List.length linv) then []
+             else [(lmapn, (make_in_pattern linv bound_inv))])@
+            (if (List.length bound_outv) = (List.length loutv) then []
+             else [(lmapn, (make_out_pattern loutv bound_outv))])
          in List.fold_left add_pattern (empty_pattern_map()) extras
       in
 
@@ -170,13 +323,14 @@ let prepare_triggers (triggers : trig_t list) (sanitize_var : string -> string)
 
    let prepare_trig (t : trig_t) : (M3P.trig_t * pattern_map) =
       let (ev,rel,args,block) = t in
-      let sargs = sanitize_vars args in
-      let (pblock, patterns) = prepare_block sargs block in
-         ((ev, rel, sargs, pblock), patterns)
+      let (pblock, patterns) = prepare_block args block in
+         ((ev, rel, args, pblock), patterns)
    in
    let blocks_maps_l = List.map prepare_trig triggers in
    let (pblocks, pms) = List.split blocks_maps_l in
-      (pblocks, List.fold_left merge_pattern_maps (empty_pattern_map()) pms)
+      (normalize_triggers pblocks,
+       List.fold_left merge_pattern_maps (empty_pattern_map()) pms)
+
 
 (* M3 compiler, functorized by a code generator *)
 module Make = functor(CG : M3Codegen.CG) ->
@@ -186,11 +340,11 @@ open CG
 
 let rec compile_pcalc patterns (incr_ecalc) : code_t = 
    let compile_op ecalc op e1 e2 : code_t =
-      let aux ecalc = (M3Common.calc_schema ecalc, M3P.get_extensions ecalc,
+      let aux ecalc = (calc_schema ecalc, M3P.get_extensions ecalc,
                          compile_pcalc patterns ecalc) in
       let (outv1, theta_ext, ce1) = aux e1 in
       let (outv2, schema_ext, ce2) = aux e2 in
-      let schema = M3Common.calc_schema ecalc in
+      let schema = calc_schema ecalc in
          begin match (M3P.get_singleton ecalc, M3P.get_singleton e1, M3P.get_singleton e2) with
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"
@@ -261,7 +415,7 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
  * -- aggregates blindy over entire slice for fully bound lhs_outv 
  * -- skips aggregating when rhs_outv = lhs_outv *)
 and compile_pcalc2 patterns agg_meta lhs_outv ecalc : code_t =
-   let rhs_outv = M3Common.calc_schema ecalc in
+   let rhs_outv = calc_schema ecalc in
    (* project slice w/ rhs schema to lhs schema, extending by out vars that
     * are bound. *)
    let rhs_ext = M3P.get_extensions ecalc in
@@ -338,10 +492,10 @@ let compile_ptrig (ptrig, patterns) =
    in List.map aux ptrig
 
 let compile_query (((schema,m3prog):M3.prog_t), 
-                   (sources:M3.relation_input_t list)) 
-                  (toplevel_queries:string list)
-                  (out_file_name:Util.GenericIO.out_t) =
-   let prepared_prog = prepare_triggers m3prog clean_var_name in
+                    (sources:M3.relation_input_t list)) 
+                    (toplevel_queries:string list)
+                    (out_file_name:Util.GenericIO.out_t) =
+   let prepared_prog = prepare_triggers m3prog in
    let patterns = snd prepared_prog in
    let ctrigs = compile_ptrig prepared_prog in
    let sources_and_adaptors =

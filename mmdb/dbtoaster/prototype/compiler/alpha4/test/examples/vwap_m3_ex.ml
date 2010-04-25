@@ -338,6 +338,8 @@ let prog_vwap: prog_t =
       )
   ]);;
 
+type output_level = Database | Map | Value;;
+
 let seed = 12345;;
 Random.init seed;;
 
@@ -346,7 +348,7 @@ let randl n lb ub = let r = ref [] in
 in
 
 (* Code *)
-let prepared_vwap = prepare_triggers (snd prog_vwap) (fun x -> x) in
+let prepared_vwap = prepare_triggers (snd prog_vwap) in
 let vwap_triggers = compile_ptrig prepared_vwap in
 let insert_trig = List.hd vwap_triggers in
 let delete_trig = List.nth vwap_triggers 1 in
@@ -437,14 +439,14 @@ let exchange_processor input_file query =
        " in "^(string_of_float (finish -. start)))
 in
 
-let vwap_query result_chan_opt
+let vwap_query validate_mode output_level result_chan_opt
                vwap_on_bids event_type bids_event old_tuple new_tuple
    =
    let output = match event_type with
     | "B" -> begin if vwap_on_bids then insert new_tuple end; vwap_on_bids
     | "S" -> begin if not(vwap_on_bids) then insert new_tuple end; not(vwap_on_bids)
     | "E" ->
-       begin if vwap_on_bids = bids_event then
+       begin if not(validate_mode) && vwap_on_bids = bids_event then
           (delete old_tuple; insert new_tuple)
        end;
        vwap_on_bids = bids_event
@@ -454,18 +456,20 @@ let vwap_query result_chan_opt
     | "X" | "C" | "T" -> (* Do nothing here for now... *) false
     | _ -> failwith "Invalid exchange message"
    in
-      (* TODO: output query results... *)
       (match (output, result_chan_opt) with
        | (false, _) | (_, None) -> ()
        | (true, Some(rc)) ->
-          (* output_string rc ((Database.db_to_string db)^"\n")) *)
-          output_string rc (AggregateMap.string_of_aggregate
-             (ValuationMap.find []
-                (ValuationMap.find [] (Database.get_map "q" db)))^"\n"))
-          (* output_string rc
-                ((Database.dbmap_to_string (Database.get_map "q" db))^"\n")) *)
-in    
-
+          begin match output_level with
+           | Database -> output_string rc ((Database.db_to_string db)^"\n")
+           | Map      ->
+              output_string rc
+                ((Database.dbmap_to_string (Database.get_map "q" db))^"\n")
+           | Value    ->
+              output_string rc (AggregateMap.string_of_aggregate
+                (ValuationMap.find []
+                   (ValuationMap.find [] (Database.get_map "q" db)))^"\n")
+          end)
+in
 
 let random_processor () =
     let num_tuples = 10000 in
@@ -481,15 +485,36 @@ let random_processor () =
 in
 
 let main () =
-   begin if Array.length (Sys.argv) < 2 then
-      random_processor()
-   else
-      let result_chan = if (Array.length Sys.argv) > 2
-         then Some(open_out (Array.get Sys.argv 2)) else None
-      in
-      let query_handler = vwap_query result_chan true in
-         exchange_processor (Array.get Sys.argv 1) query_handler
-   end
+   let validation = ref false in
+   let result_level = ref Value in
+   let input_file = ref "" in
+   let output_file = ref "" in
+   let set_validate () = validation := true in
+   let set_output_level l = match l with
+      | "db"       -> result_level := Database
+      | "map"      -> result_level := Map
+      | "value"    -> result_level := Value
+      | _ -> failwith "invalid output level"
+   in
+   let set_input_output s =
+      match (!input_file, !output_file) with
+       | ("", _) -> input_file := s
+       | (_, "") -> output_file := s
+       | _ -> ()
+   in
+   let usage = "vwap [-validate] [-output <db|map|value>] input [output]" in
+   let arg_spec =
+      [("-validate", Arg.Unit(set_validate), "enables validation mode");
+       ("-output", Arg.Symbol(["db"; "map"; "value"], set_output_level),
+          "sets the output level to one of <db|map|value>")]
+   in
+      Arg.parse arg_spec set_input_output usage;
+      if (!input_file = "") then random_processor()
+      else
+      let result_chan = if !output_file = "" then None 
+                        else Some(open_out !output_file) in
+      let query_handler = vwap_query !validation !result_level result_chan true
+      in exchange_processor !input_file query_handler
 in
 
 main();;

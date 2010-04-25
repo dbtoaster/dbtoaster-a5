@@ -11,6 +11,7 @@ SOURCE = \
 	Compiler.ml \
 	CalcToM3.mli \
 	CalcToM3.ml \
+	M3Compiler.mli \
 	M3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \

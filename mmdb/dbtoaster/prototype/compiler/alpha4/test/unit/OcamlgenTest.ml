@@ -32,7 +32,7 @@ let trig:M3.trig_t = (
 )
 
 let (trigs,_) = 
-  M3Compiler.prepare_triggers [trig] (fun x -> "var_");;
+  M3Compiler.prepare_triggers [trig];;
 
 let stmts = List.flatten (List.map (fun (_,_,_,stmts) -> stmts) trigs);;
 

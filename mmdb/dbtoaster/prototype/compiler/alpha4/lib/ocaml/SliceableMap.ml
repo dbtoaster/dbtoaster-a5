@@ -357,7 +357,11 @@ struct
              else (if not(empty m) then m else r) 
           | _ -> List.fold_left aux (empty_map_w_secondaries m) (get_keys (snd m) pat pkey)
 
-   let slice_keys pat pkey m = get_keys (snd m) pat pkey
+   let slice_keys pat pkey m =
+      match pkey with
+       | [] -> if mem pkey m then []
+               else (if not (empty m) then (dom m) else [])
+       | _ -> get_keys (snd m) pat pkey
       
    let partition_slice pat pkey m = 
       let kd = slice_keys pat pkey m in

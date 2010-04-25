@@ -39,7 +39,7 @@ let prog0: prog_t =
 [ (Insert, "R", ["a"; "b"], [ (("q", [], ["b"], (mk_c 0.0,())), (mk_v "a",()), ()) ]) ])
 ;;
 
-let prepared_prog0 = prepare_triggers (snd prog0) (fun x -> x);;
+let prepared_prog0 = prepare_triggers (snd prog0);;
 let cblock = List.hd (compile_ptrig prepared_prog0);;
 
 let db = Database.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pats);;
@@ -91,7 +91,7 @@ let prog1: prog_t =
 ]);;
 
 (* Code *)
-let prepared_prog1 = prepare_triggers (snd prog1) (fun x->x);;
+let prepared_prog1 = prepare_triggers (snd prog1);;
 let cblock = List.hd (compile_ptrig prepared_prog1);;
 
 let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
@@ -204,7 +204,7 @@ let prog2: prog_t =
       ])
 ]);;
 
-let prepared_prog2 = prepare_triggers (snd prog2) (fun x->x);;
+let prepared_prog2 = prepare_triggers (snd prog2);;
 let cblock = List.hd (compile_ptrig prepared_prog2);;
 
 let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;

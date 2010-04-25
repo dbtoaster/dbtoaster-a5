@@ -1,7 +1,19 @@
+(* M3 OCaml Generator
+ * A backend that produces OCaml source code for M3 programs.
+ * -- no eval_trigger method to interpret resulting source code.
+ * -- uses M3OCaml, an OCaml library with standard data structures for maps,
+ *    valuations (i.e. environments/scopes), sources and multiplexers,
+ *    and databases.
+ *
+ * TODO: architectural overview of source code generated. This is similar to
+ * the structure of the code used for interpreting.
+ *)
+
 open M3
-module M3P = M3.Prepared
 open M3Common.Patterns
 open M3OCaml
+
+module M3P = M3.Prepared
 
 module CG : M3Codegen.CG =
 struct
@@ -30,6 +42,8 @@ struct
    let tabify l        = Lines(List.map tab l)
 
    (* Static code generation *)
+   let gen_var v = "var_"^v
+
    let list_to_string f l = "["^(String.concat ";" (List.map f l))^"]"
 
    let pm_const pm = match pm with | Insert -> "Insert" | Delete -> "Delete" 
@@ -72,7 +86,8 @@ struct
 
    let bind_vars_from_list_indices vi consts_list =
       List.map (fun (v,i) ->
-         "let "^v^" = List.nth "^consts_list^" "^(string_of_int i)^" in ") vi
+         "let "^(gen_var v)^" = List.nth "^
+         consts_list^" "^(string_of_int i)^" in ") vi
 
    let bind_vars_from_list vars consts_list =
       bind_vars_from_list_indices
@@ -87,25 +102,24 @@ struct
       let ext_idx = List.map (index vars) ext_vars in
          bind_vars_from_list_indices (List.combine ext_vars ext_idx) consts_list
 
-   let vars_list vars = "["^(String.concat ";" vars)^"]"
-   
-   
-   (* "var_" prepended to all variables to keep OCAML from thinking
-      that they're modules *)
-   let clean_var_name var = "var_"^var
-   
+   let gen_list el = "["^(String.concat ";" el)^"]"
+   let vars_list vars = gen_list (List.map gen_var vars)
+
    (* bindings: vars * const list  *)
    let inline_vars_list vars bindings =
       (* The last binding overrides others. *)
       let rbindings = List.rev bindings in
       let aux v =
          let valid = List.filter (fun (vl,cl_v) -> List.mem v vl) rbindings in
-         if valid = [] then v else
+         if valid = [] then (gen_var v) else
             let (vl, cl_v) = List.hd valid in
                ("List.nth "^cl_v^" "^(string_of_int (index vl v)))
-      in vars_list (List.map aux vars)
+      in gen_list (List.map aux vars)
 
    (* Debugging helpers *)
+   let annotate_code_schema msg schema =
+     ["(* "^msg^": "^(M3Common.vars_to_string schema)^" *)"]
+
    (*
    let debug_sequence cdebug cresdebug ccalc =
       ["(*"]@cdebug@[";*)"]@ccalc@["(*]@cresdebug@[*)"]
@@ -158,8 +172,9 @@ struct
    let const c = match c with | CFloat(f) ->
       Inline("[CFloat("^(string_of_float f)^")]")
 
-   let singleton_var v = Inline("["^v^"]")
-   let slice_var v = Lines(["ValuationMap.from_list [(["^v^"], "^v^")] []"])
+   let singleton_var v = Inline("["^(gen_var v)^"]")
+   let slice_var v = Lines(["ValuationMap.from_list [(["^
+                              (gen_var v)^"], "^(gen_var v)^")] []"])
    
    let int_op op      = "(fun a b -> if ("^op^" a b) then CFloat(1.0) else CFloat(0.0))"
    let add_op         = "c_sum"
@@ -195,10 +210,13 @@ struct
 
    let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
+      (annotate_code_schema "outv1" outv1)@
+      (annotate_code_schema "theta_ext" theta_ext)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
-       "let f k v1 r =";
-       "   let r2 = "]@ 
+       "let f k v1 r ="]@
+       (indent 1 (annotate_code_schema "outv2" outv2))@
+      ["   let r2 = "]@ 
       (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
       (indent 1 (get_lines ce2))@
       ["   in";
@@ -208,13 +226,10 @@ struct
       (* Bind outv2, and schema_ext. Note schema_ext corresponds to
        * vars in outv1 which can be accessed through const list "k" *)
       (let new_k = inline_vars_list schema [(outv2, "k2"); (schema_ext, "k")] in
+      (indent 2 (annotate_code_schema "schema" schema))@
+      (indent 2 (annotate_code_schema "outv2" outv2))@
+      (indent 2 (annotate_code_schema "schema_ext" schema_ext))@
       ["         ("^new_k^", ("^op^" v1 v2))"])@
-(*      
-      (indent 2 (bind_vars_from_list outv2 "k2"))@
-      (indent 2 (bind_vars_from_list schema_ext "k"))@
-      ["      let new_k = "^(vars_list schema)^" in";
-       "         (new_k, ("^op^" v1 v2))"]@
-*)
       ["      ) r2";
        "   in ValuationMap.union r r3";
        "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
@@ -241,11 +256,6 @@ struct
              "       let nv = ("^op^" v v2) in"]@
             (let nk = inline_vars_list schema [(schema_ext, "k")] in
             ["       let nk = "^nk])@
-(*
-            ["       let nk = "]@
-             (indent 3 (bind_vars_from_list schema_ext "k"))@
-            ["          "^(vars_list schema)]@
-*)
             ["       in ValuationMap.add nk nv r";
              "    | _ -> failwith \"op_lslice_expr: invalid singleton\"";
              "   end"]
@@ -294,12 +304,6 @@ struct
          ["in ValuationMap.mapi (fun k2 v2 ->"]@
          (let nk = inline_vars_list schema [(outv2, "k2")] in
          ["   ("^nk^", ("^op^" "^ce1_v^" v2))) r"])
-(*
-         ["   let new_k = "]@
-          (indent 1 (bind_vars_from_list outv2 "k2"))@
-         ["   "^(vars_list schema);
-          "   in (new_k, ("^op^" "^ce1_v^" v2))) r"]
-*)
       in 
       match ce1 with
        | Lines(ce1_l) ->
@@ -541,21 +545,14 @@ struct
        "   let db_f = "]@
        (indent 1 (get_lines db_update_code))@
       ["   in db_f inv_img slice"]@
-      (if patv = [] then
-      (* okennedy:
-        This is wrong.  Only some of the values are bound (ie: the contents
-        of patv), but the statement we generate needs to have all the input
-        variables bound and present in the parameter to iifilter.  This means 
-        that we need to loop over all parametrizations that fit the pattern.
-      *)
-      ["in iifilter [];"]
-       else
+      (* Note slice_keys does a full scan for an empty pattern, is the map is
+       * non-empty *)
       ["in";
        "let pkey = "^(vars_list patv)^" in";
        "let inv_imgs = "^
           (if direct then "[pkey]"
            else ("ValuationMap.slice_keys "^cpat^" pkey lhs_map"));
-       "in List.iter iifilter inv_imgs;"]))
+       "in List.iter iifilter inv_imgs;"])
    
    let trigger event rel trig_args stmt_block =
       let trigger_name = "on_"^(pm_name event)^"_"^rel in Lines (
@@ -670,13 +667,13 @@ struct
       let main_lines =
       ["let main() = "]@
       ["let arguments = (ParseArgs.parse (ParseArgs.compile";
-       "  [([\"-v\"],(\"VEROBSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\")";
+       "  [([\"-v\"],(\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\")";
        "  ])) in";
-       "let log_evt = if ParseArgs.flag_bool arguments \"VEROBSE\" then";
+       "let log_evt = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
        "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
        "      print_endline (M3OCaml.string_of_evt pm rel t))";
        "  else (fun evt -> ()) in";
-       "let log_results = if ParseArgs.flag_bool arguments \"VEROBSE\" then";
+       "let log_results = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
        "    (fun () -> "]@
        (query_aux (fun q -> [
        "      print_endline (\""^q^": \"^(";

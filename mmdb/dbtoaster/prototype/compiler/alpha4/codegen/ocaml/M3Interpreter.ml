@@ -1,3 +1,13 @@
+(* M3 Interpreter.
+ * A backend that interprets M3 programs.
+ * -- internal code generation functions produce lambdas to perform evaluation.
+ * -- implements eval_trigger, invoking lambda produced for a trigger.
+ * -- no main function to produce source code.
+ * -- uses M3OCaml, an OCaml library with standard data structures for maps,
+ *    valuations (i.e. environments/scopes) and databases.
+ * TODO: describe architectural overview of M3 evaluation here.
+*)
+
 open M3
 open M3OCaml
 open M3OCaml.Adaptors
@@ -19,11 +29,11 @@ type slice_value_function_code =
    (Valuation.t -> Database.db_t -> AggregateMap.t -> AggregateMap.agg_t)
 
 type singleton_update_code =
-   (Valuation.t -> AggregateMap.agg_t list ->
-      Database.db_t -> AggregateMap.agg_t list)
+   (Valuation.t -> Database.db_t ->
+      AggregateMap.agg_t list -> AggregateMap.agg_t list)
 
 type slice_update_code =
-   (Valuation.t -> AggregateMap.t -> Database.db_t -> AggregateMap.t)
+   (Valuation.t -> Database.db_t -> AggregateMap.t -> AggregateMap.t)
 
 type db_update_code =
    (Valuation.t -> Database.db_t -> ValuationMap.key ->
@@ -164,6 +174,33 @@ let debug_stmt lhs_mapn lhs_inv lhs_outv =
                     (Util.list_to_string (fun x->x) lhs_inv)^" "^
                     (Util.list_to_string (fun x->x) lhs_outv)^" _), _))"))
 
+let debug_singleton_init_lookup mapn inv outv outv_img =
+   print_endline ("singleton_init_lookup: "^mapn^" "^
+                  (M3Common.vars_to_string inv)^" "^
+                  (M3Common.vars_to_string outv)^" "^
+                  (Util.list_to_string M3Common.string_of_const outv_img))
+
+let debug_singleton_init_lookup_result r =
+    print_endline ("singleton_init_lookup result: "^
+                   (Database.slice_to_string r))
+
+let debug_singleton_lookup outv_img lookup_slice =
+   print_endline ("singleton_lookup: "^
+                  (Util.list_to_string M3Common.string_of_const outv_img)^
+                  " "^(Database.slice_to_string lookup_slice))
+
+let debug_slice_init_lookup mapn inv =
+    print_endline ("slice_init_lookup: "^mapn^
+                   " "^(M3Common.vars_to_string inv))
+
+let debug_slice_lookup patv pkey slice lookup_slice =
+   print_endline ("slice_lookup: "^
+                  (Util.list_to_string M3Common.string_of_const pkey)^
+                  " "^(M3Common.vars_to_string patv)^
+                  " "^(Database.slice_to_string slice)^
+                  " "^(Database.slice_to_string lookup_slice))
+
+
 let const i = Singleton (fun theta db -> [i])
 let singleton_var x =
    Singleton (fun theta db ->
@@ -281,7 +318,6 @@ let op_rslice_expr op outv2 schema schema_ext ce1 ce2 =
                (ValuationMap.map (fun v2 -> op v v2) r)
        | _ -> failwith "compile_op: invalid singleton")
 
-(* TODO: this always returns a slice *)
 (* mapn, out_patterns, outv, init rhs expr -> init lookup code *)
 let singleton_init_lookup mapn inv out_patterns outv cinit =
    let cinit_i = get_singleton_code cinit in
@@ -289,21 +325,13 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
-       (*
-       print_endline ("singleton_init_lookup: "^mapn^" "^
-                      (M3Common.vars_to_string inv)^" "^
-                      (M3Common.vars_to_string outv)^" "^
-                      (Util.list_to_string M3Common.string_of_const outv_img));
-       *)
+       (* debug_singleton_init_lookup mapn inv outv outv_img; *)
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value
                   mapn out_patterns inv_img outv_img v db;
                 let r = ValuationMap.from_list [(outv_img, v)] out_patterns in
-                (*
-                print_endline ("singleton_init_lookup result: "^
-                               (Database.slice_to_string r));
-                *)
+                (* debug_singleton_init_lookup_result r; *)
                 r)
         | _ -> failwith "MapAccess: invalid singleton"
        end)
@@ -317,10 +345,7 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
-       (*
-       print_endline ("slice_init_lookup: "^mapn^" "^
-                      (M3Common.vars_to_string inv));
-       *)
+       (* debug_slice_init_lookup mapn inv; *)
        Database.update mapn inv_img init_slice_w_indexes db;
        init_slice_w_indexes)
 
@@ -338,15 +363,9 @@ let singleton_lookup mapn inv outv init_val_code =
       let lookup_slice =
          if ValuationMap.mem outv_img slice then slice else ivc_l theta db
       in
-         (*
-         print_endline ("singleton_lookup: "^
-                        (Util.list_to_string M3Common.string_of_const outv_img)^
-                        " "^(Database.slice_to_string lookup_slice));
-         *)
+         (* debug_singleton_lookup outv_img lookup_slice; *)
          [ValuationMap.find outv_img lookup_slice])
    
-let clean_var_name var = var
-
 (* mapn, inv, pat, patv, init lookup code -> map lookup code *)
 let slice_lookup mapn inv pat patv init_val_code =
    let ivc_l = get_slice_code init_val_code in
@@ -362,17 +381,11 @@ let slice_lookup mapn inv pat patv init_val_code =
        * evaluation, since we don't want them propagated around. *)
       let pkey = Valuation.apply theta patv in
       let lookup_slice = ValuationMap.slice pat pkey slice in
-         (*
-         print_endline ("slice_lookup: "^
-                        (Util.list_to_string M3Common.string_of_const pkey)^
-                        " "^(M3Common.vars_to_string patv)^
-                        " "^(Database.slice_to_string slice)^
-                        " "^(Database.slice_to_string lookup_slice));
-         *)
+         (* debug_slice_lookup patv pkey slice lookup_slice; *)
          (ValuationMap.strip_indexes lookup_slice)) 
 
 
-(* m3 expr code -> m3 rhs expr code *)
+(* m3 expr code -> m3 rhs expr code as singleton *)
 let singleton_expr ccalc cdebug =
    let ccalc_i = get_singleton_code ccalc in
    (*let cdebug_i = get_singleton_debug_code cdebug in*)
@@ -383,15 +396,14 @@ let singleton_expr ccalc cdebug =
        | [v] -> (*cdebug_i theta db [] v;*) [v] 
        | _ -> failwith "compile_pcalc2_singleton: invalid singleton")
 
-(* m3 expr code, debug code -> m3 rhs expr code *)
+(* m3 expr code, debug code -> m3 rhs expr code as slice *)
 let direct_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
    (*let cdebug_l = get_slice_debug_code cdebug in*)
       Slice (fun theta db -> let r = ccalc_l theta db
              in (*cdebug_l theta db r;*) r)
 
-(* TODO: this does not capture change from slice to singleton *)
-(* m3 expr code -> m3 rhs expr code *)
+(* m3 expr code -> m3 rhs expr code as singleton *)
 let full_agg_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
    (*let cdebug_l = get_slice_debug_code cdebug in*)
@@ -401,7 +413,11 @@ let full_agg_slice_expr ccalc cdebug =
          [ValuationMap.fold (fun k v acc -> c_sum acc v)
                             (CFloat(0.0)) slice0])
 
-(* rhs_pattern, rhs_projection, lhs_outv, rhs_ext, m3 expr code -> m3 rhs expr code *)
+(* rhs_pattern, rhs_projection, lhs_outv, rhs_ext, m3 expr code -> m3 rhs expr code
+ * rhs_ext are trigger vars for delta computation with top level rhs slice exprs,
+ * and bound out vars for init value computation on map lookups. Both extensions
+ * restrict the computation to those matching the triggering tuple.
+ *)
 let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
    (*let cdebug_l = get_slice_debug_code cdebug in*)
@@ -416,8 +432,11 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
             AggregateMap.project_keys rhs_pattern rhs_projection lhs_outv
                theta rhs_ext slice1)
 
-(* Initial value computation for statements *) 
-(* TODO: these compute a single value, and should be reflected in code_t *)
+(* Initial value computation for statements, evaluating the RHS initial value
+ * expression for a statement, producing the initial value for an out tier.
+ * The generated code produces a single value, and has the following signature:
+ *    theta -> db -> out tier key -> out tier delta value -> out tier initial value
+ *) 
 
 (* init calc code, debug code -> init code *)
 let singleton_init cinit cdebug =
@@ -430,7 +449,11 @@ let singleton_init cinit cdebug =
           | [init_v] -> c_sum v init_v
           | _ -> failwith "invalid init singleton" ))
 
-(* lhs_outv, init_ext, init calc code, debug code -> init code *)
+(* lhs_outv, init_ext, init calc code, debug code -> init code
+ * init_ext are LHS out vars that do not appear in the init expr's schema,
+ * where given loop vars are the same as in the schema, should only be
+ * bound LHS out vars.
+ *)
 let slice_init lhs_outv init_ext cinit cdebug =
    let cinitf = get_slice_code cinit in
    (*let cdebug_i = get_singleton_debug_code cdebug in*)
@@ -444,7 +467,9 @@ let slice_init lhs_outv init_ext cinit cdebug =
             then (ValuationMap.find k init_slice) else CFloat(0.0)
          in c_sum v init_v)
 
-(* Incremental statement evaluation *)
+(* Incremental statement evaluation, computing the RHS delta statement.
+ * The generated code has the following signature:
+ *   theta -> db -> singleton|slice -> singleton|slice *)
    
 (* TODO: the generated code here takes a slice/singleton argument
  * and this is not reflected by the return type *)
@@ -453,7 +478,7 @@ let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
    let cincrf = get_singleton_code cincr in
    let cinitf = f init_value_code in
    (*let cdebug_e = get_env_debug_code cdebug in*)
-   UpdateSingleton (fun theta current_singleton db ->
+   UpdateSingleton (fun theta db current_singleton ->
       (*cdebug_e theta db;*) 
       let delta_slice = cincrf theta db in
          match (current_singleton, delta_slice) with
@@ -471,7 +496,7 @@ let slice_update_aux f cincr init_value_code cdebug =
    let cincrf = get_slice_code cincr in
    let cinitf = f init_value_code in
    (*let cdebug_e = get_env_debug_code cdebug in*)
-   UpdateSlice (fun theta current_slice db ->
+   UpdateSlice (fun theta db current_slice ->
       (*cdebug_e theta db;*)
       let delta_slice = cincrf theta db in
          ValuationMap.merge_rk (fun k v -> v) (cinitf theta db)
@@ -479,9 +504,10 @@ let slice_update_aux f cincr init_value_code cdebug =
 
 let slice_update = slice_update_aux get_singleton_value_function_code
 
-(* Incremental update code generation *)
-(* TODO: the generated code takes a inv_img and an inv slice, and returns unit.
- * This should be reflected in the resulting code type. *)
+(* Incremental update code generation, applying any delta and init values
+ * computed to the given map's in tier.
+ * The generated code has the following signature:
+ *    theta -> db -> in var valuation -> in tier -> unit *)
 
 (* lhs_mapn, lhs_outv, map out patterns, singleton eval code -> db update code*)
 let db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt =
@@ -492,7 +518,7 @@ let db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt =
             if ValuationMap.mem outv_img in_slice then
                [ValuationMap.find outv_img in_slice]
             else [] in
-         let new_value = cstmtf theta singleton db in
+         let new_value = cstmtf theta db singleton in
          match new_value with
           | [] -> ()
           | [v] -> Database.update_value lhs_mapn map_out_patterns
@@ -513,9 +539,9 @@ let db_slice_update lhs_mapn cstmt =
       let (work_slice, unchanged_slice) =
          ValuationMap.partition_slice out_pat out_pkey in_slice in
       let new_slice = ValuationMap.union
-         unchanged_slice (cstmtf theta work_slice db)
+         unchanged_slice (cstmtf theta db work_slice)
       *)
-      let new_slice = cstmtf theta in_slice db
+      let new_slice = cstmtf theta db in_slice
       in Database.update lhs_mapn inv_img new_slice db)
 
 
