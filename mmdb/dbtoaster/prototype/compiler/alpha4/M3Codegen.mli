@@ -43,6 +43,7 @@ sig
    val lt_op   : op_t
    val leq_op  : op_t
    val ifthenelse0_op : op_t
+   val ifthenelse0_bigsum_op : op_t
 
    val op_singleton_expr: op_t -> code_t -> code_t -> code_t 
    

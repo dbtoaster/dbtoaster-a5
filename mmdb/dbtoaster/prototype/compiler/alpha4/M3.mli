@@ -150,7 +150,7 @@ module Prepared : sig
   type pextension_t   = var_t list
    
   (* id, theta extension, singleton, cross product *)
-  type calcmeta_t    = int * pextension_t * bool * bool
+  type calcmeta_t    = int * pextension_t * bool * bool * bool
   
   (* name, full aggregation *)   
   type aggmeta_t     = string * bool
@@ -168,12 +168,13 @@ module Prepared : sig
   type prog_t = (calcmeta_t, aggmeta_t, stmtmeta_t) generic_prog_t
 
   (* Accessors *)
-  val get_calc :        calc_t -> pcalc_t
-  val get_meta :        calc_t -> calcmeta_t
-  val get_extensions :  calc_t -> pextension_t
-  val get_id :          calc_t -> int
-  val get_singleton :   calc_t -> bool
-  val get_product :     calc_t -> bool
+  val get_calc :          calc_t -> pcalc_t
+  val get_meta :          calc_t -> calcmeta_t
+  val get_extensions :    calc_t -> pextension_t
+  val get_id :            calc_t -> int
+  val get_singleton :     calc_t -> bool
+  val get_product :       calc_t -> bool
+  val get_short_circuit : calc_t -> bool
   
   val get_ecalc :       aggecalc_t -> calc_t
   val get_agg_meta :    aggecalc_t -> aggmeta_t

@@ -30,6 +30,10 @@ struct
       List.fold_left (fun acc (k,v) -> StringMap.add k v acc)
          StringMap.empty (List.combine vars values)
 
+   let to_string (theta:t) : string =
+      StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else " ")^
+         k^"->"^(M3Common.string_of_const v)) theta ""
+
    (* Note: ordered result *)
    let to_list m = StringMap.fold (fun s n l -> (s,n)::l) m []
 
@@ -50,11 +54,10 @@ struct
    let extend (m1: t) (m2: t) (ext : var_t list) : t =
       List.fold_left (fun acc k -> StringMap.add k (value k m2) acc) m1 ext
 
-   let apply (m: t) (l: key list) = List.map (fun x -> StringMap.find x m) l
+   let apply (m: t) (l: key list) = List.map (fun x ->
+      try StringMap.find x m
+      with Not_found -> failwith ("No valuation for "^x^" in "^(to_string m))) l
 
-   let to_string (theta:t) : string =
-      StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else " ")^
-         k^"->"^(M3Common.string_of_const v)) theta ""
 end
 
 (* Map whose keys are valuations, and values are polymorphic *)

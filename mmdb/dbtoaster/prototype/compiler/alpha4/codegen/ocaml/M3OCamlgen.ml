@@ -183,7 +183,12 @@ struct
    let eq_op          = int_op "(=)"
    let lt_op          = int_op "(<)"
    let leq_op         = int_op "(<=)"
+
    let ifthenelse0_op =
+      "(fun cond v -> match cond with"^
+      " | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))"
+
+   let ifthenelse0_bigsum_op =
       "(fun v cond -> match cond with"^
       " | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))"
 

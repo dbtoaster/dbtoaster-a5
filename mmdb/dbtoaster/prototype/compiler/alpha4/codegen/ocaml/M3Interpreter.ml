@@ -112,16 +112,21 @@ let get_null_singleton_debug_code x =
    match x with | NullSingletonDebug(c) -> c | _ -> failwith "invalid null singleton debug code"
 
 (* Debugging helpers *)
+let debug = false
+
 let debug_sequence cdebug cresdebug ccalc =
-   (*let df = get_env_debug_code cdebug in*)
+   let df = get_env_debug_code cdebug in
    match ccalc with
-    | Singleton(f) ->
-       Singleton (fun theta db -> (*df theta db;*)
-                  let r = f theta db in
-                     (*((get_null_singleton_debug_code cresdebug) theta db r);*) r)
-    | Slice(f) -> Slice (fun theta db -> (*df theta db;*)
-                         let r = f theta db in
-                           (*((get_slice_debug_code cresdebug) theta db r);*) r)
+    | Singleton(f) -> Singleton
+       (fun theta db ->
+          if debug then df theta db;
+          let r = f theta db in
+          if debug then (get_null_singleton_debug_code cresdebug) theta db r; r)
+    | Slice(f) -> Slice
+       (fun theta db ->
+          if debug then df theta db;
+          let r = f theta db in
+          if debug then ((get_slice_debug_code cresdebug) theta db r); r)
     | _ -> failwith "invalid expr debug sequence"
 
 let debug_expr (incr_calc:Prepared.calc_t) =
@@ -223,7 +228,11 @@ let lt_op   = (int_op (< ))
 let leq_op  = (int_op (<=))
 let eq_op   = (int_op (= ))
 
-let ifthenelse0_op v cond =
+let ifthenelse0_op cond v =
+   (match cond with
+    | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
+
+let ifthenelse0_bigsum_op v cond =
    (match cond with
     | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
    
@@ -326,13 +335,13 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
-       (*debug_singleton_init_lookup mapn inv outv outv_img;*)
+       if debug then debug_singleton_init_lookup mapn inv outv outv_img;
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value
                   mapn out_patterns inv_img outv_img v db;
                 let r = ValuationMap.from_list [(outv_img, v)] out_patterns in
-                (*debug_singleton_init_lookup_result r;*)
+                if debug then debug_singleton_init_lookup_result r;
                 r)
         | _ -> failwith "MapAccess: invalid singleton"
        end)
@@ -346,7 +355,7 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
-       (*debug_slice_init_lookup mapn inv;*)
+       if debug then debug_slice_init_lookup mapn inv;
        Database.update mapn inv_img init_slice_w_indexes db;
        init_slice_w_indexes)
 
@@ -364,7 +373,7 @@ let singleton_lookup mapn inv outv init_val_code =
       let lookup_slice =
          if ValuationMap.mem outv_img slice then slice else ivc_l theta db
       in
-         (*debug_singleton_lookup outv_img lookup_slice;*)
+         if debug then debug_singleton_lookup outv_img lookup_slice;
          [ValuationMap.find outv_img lookup_slice])
    
 (* mapn, inv, pat, patv, init lookup code -> map lookup code *)
@@ -382,35 +391,35 @@ let slice_lookup mapn inv pat patv init_val_code =
        * evaluation, since we don't want them propagated around. *)
       let pkey = Valuation.apply theta patv in
       let lookup_slice = ValuationMap.slice pat pkey slice in
-         (*debug_slice_lookup patv pkey slice lookup_slice;*)
+         if debug then debug_slice_lookup patv pkey slice lookup_slice;
          (ValuationMap.strip_indexes lookup_slice)) 
 
 
 (* m3 expr code -> m3 rhs expr code as singleton *)
 let singleton_expr ccalc cdebug =
    let ccalc_i = get_singleton_code ccalc in
-   (*let cdebug_i = get_singleton_debug_code cdebug in*)
+   let cdebug_i = get_singleton_debug_code cdebug in
    Singleton (fun theta db ->
       let r = ccalc_i theta db in
       match r with
        | [] -> []
-       | [v] -> (*cdebug_i theta db [] v;*) [v] 
+       | [v] -> if debug then cdebug_i theta db [] v; [v] 
        | _ -> failwith "compile_pcalc2_singleton: invalid singleton")
 
 (* m3 expr code, debug code -> m3 rhs expr code as slice *)
 let direct_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   (*let cdebug_l = get_slice_debug_code cdebug in*)
+   let cdebug_l = get_slice_debug_code cdebug in
       Slice (fun theta db -> let r = ccalc_l theta db
-             in (*cdebug_l theta db r;*) r)
+             in if debug then cdebug_l theta db r; r)
 
 (* m3 expr code -> m3 rhs expr code as singleton *)
 let full_agg_slice_expr ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   (*let cdebug_l = get_slice_debug_code cdebug in*)
+   let cdebug_l = get_slice_debug_code cdebug in
       Singleton (fun theta db ->
          let slice0 = ccalc_l theta db in
-         (*cdebug_l theta db slice0;*)
+         if debug then cdebug_l theta db slice0;
          [ValuationMap.fold (fun k v acc -> c_sum acc v)
                             (CFloat(0.0)) slice0])
 
@@ -421,14 +430,14 @@ let full_agg_slice_expr ccalc cdebug =
  *)
 let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
    let ccalc_l = get_slice_code ccalc in
-   (*let cdebug_l = get_slice_debug_code cdebug in*)
+   let cdebug_l = get_slice_debug_code cdebug in
       Slice (fun theta db ->
          let slice0 = ccalc_l theta db in
          (* Note this aggregates bigsum vars present in the RHS map.
           * We use an indexed aggregation, however, since, slice0 will not
           * actually have any secondary indexes (we strip them during calculus
           * evaluation), we build an index with the necessary pattern here. *)
-         (*cdebug_l theta db slice0;*)
+         if debug then cdebug_l theta db slice0;
          let slice1 = ValuationMap.add_secondary_index slice0 rhs_pattern in
             AggregateMap.project_keys rhs_pattern rhs_projection lhs_outv
                theta rhs_ext slice1)
@@ -442,9 +451,9 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
 (* init calc code, debug code -> init code *)
 let singleton_init cinit cdebug =
    let cinitf = get_singleton_code cinit in
-   (*let cdebug_i = get_singleton_debug_code cdebug in*)
+   let cdebug_i = get_singleton_debug_code cdebug in
       SingletonValueFunction (fun theta db _ v ->
-         (*cdebug_i theta db [] v;*)
+         if debug then cdebug_i theta db [] v;
          (match cinitf theta db with
           | [] -> v
           | [init_v] -> c_sum v init_v
@@ -457,11 +466,11 @@ let singleton_init cinit cdebug =
  *)
 let slice_init lhs_outv init_ext cinit cdebug =
    let cinitf = get_slice_code cinit in
-   (*let cdebug_i = get_singleton_debug_code cdebug in*)
+   let cdebug_i = get_singleton_debug_code cdebug in
       SingletonValueFunction (fun theta db k v ->
          let theta2 =
             Valuation.extend theta (Valuation.make lhs_outv k) init_ext in
-         (*cdebug_i theta2 db k v;*)
+         if debug then cdebug_i theta2 db k v;
          let init_slice = cinitf theta2 db in
          let init_v =
             if ValuationMap.mem k init_slice
@@ -478,9 +487,9 @@ let slice_init lhs_outv init_ext cinit cdebug =
 let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
    let cincrf = get_singleton_code cincr in
    let cinitf = f init_value_code in
-   (*let cdebug_e = get_env_debug_code cdebug in*)
+   let cdebug_e = get_env_debug_code cdebug in
    UpdateSingleton (fun theta db current_singleton ->
-      (*cdebug_e theta db;*) 
+      if debug then cdebug_e theta db; 
       let delta_slice = cincrf theta db in
          match (current_singleton, delta_slice) with
           | (s, []) -> s
@@ -496,9 +505,9 @@ let singleton_update = singleton_update_aux get_singleton_value_function_code
 let slice_update_aux f cincr init_value_code cdebug =
    let cincrf = get_slice_code cincr in
    let cinitf = f init_value_code in
-   (*let cdebug_e = get_env_debug_code cdebug in*)
+   let cdebug_e = get_env_debug_code cdebug in
    UpdateSlice (fun theta db current_slice ->
-      (*cdebug_e theta db;*)
+      if debug then cdebug_e theta db;
       let delta_slice = cincrf theta db in
          ValuationMap.merge_rk (fun k v -> v) (cinitf theta db)
             (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)

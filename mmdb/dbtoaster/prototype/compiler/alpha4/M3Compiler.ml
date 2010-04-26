@@ -125,7 +125,14 @@ let normalize_triggers (triggers : M3P.trig_t list) =
  *
  * 4. Product, i.e. whether we can simplify an operator to take a cross product
  * of its operands, rather than propagating variables. This applies if all
- * operands use disjoint sets of variables.  
+ * operands use disjoint sets of variables.
+ *
+ * 5. Short-circuiting, i.e. whether we can avoid evaluating the "then" clause
+ * in if statements, by testing the conditional first.
+ * TODO: to actually implement short-circuiting, we need an operator evaluation
+ * method that filters the condition slice to only those k-vs passing the test
+ * prior to evaluating the "then" clause. Right now, we evaluate both the
+ * test and then clauses.
  *)
 
 let prepare_triggers (triggers : trig_t list)
@@ -161,7 +168,7 @@ let prepare_triggers (triggers : trig_t list)
                       (if propagated then outv else defv) in
          let (pc, pm) = recur (theta_vars@theta_ext) c in 
          (* Override extensions for the operand. *)
-         let new_pc_meta = let (x,_,y,z) = M3P.get_meta pc in (x,ext,y,z)
+         let new_pc_meta = let (w,_,x,y,z) = M3P.get_meta pc in (w,ext,x,y,z)
          in ((M3P.get_calc pc, new_pc_meta), outv, pm)
       in
       (* Prepares a binary operator, computing propagations from lhs to rhs
@@ -192,31 +199,46 @@ let prepare_triggers (triggers : trig_t list)
          let (e2, _, p2_pats) =
             prepare_operand c2 true c1_outv (M3P.get_extensions e1) in
          let strict_e1 =
-            let (new_c1, (id,ext,sing,prod)) = e1 in
+            let (new_c1, (id,ext,sing,prod,sc)) = e1 in
             let strict_ext = Util.ListAsSet.inter ext (calc_vars c2)
-            in (new_c1, (id,strict_ext,sing,prod))
+            in (new_c1, (id,strict_ext,sing,prod,sc))
          in
          let patterns = merge_pattern_maps p1_pats p2_pats in
          let singleton = (M3P.get_singleton strict_e1) && (M3P.get_singleton e2) in
-         let product = (Util.ListAsSet.inter
-            (calc_vars c1) (calc_vars c2)) = []
-         in ((f strict_e1 e2, (prepare(), [], singleton, product)), patterns) 
+         let product = (Util.ListAsSet.inter (calc_vars c1) (calc_vars c2)) = [] in
+         let meta = (prepare(), [], singleton, product, false)
+         in ((f strict_e1 e2, meta), patterns) 
       in
       match (fst calc) with
-        | Const(c)      ->
-           ((Const(c), (prepare(), [], true, false)), empty_pattern_map())
+        | Const(c) ->
+           let meta = (prepare(), [], true, false, false)
+           in ((Const(c), meta), empty_pattern_map())
         
-        | Var(v)        -> 
+        | Var(v) ->
            (* Vars are singletons, unless they are bigsum vars. *)
            let singleton = List.mem v lhs_vars in
-           ((Var(v), (prepare(), [], singleton, false)), empty_pattern_map())
+           let meta = (prepare(), [], singleton, false, false)
+           in ((Var(v), meta), empty_pattern_map())
 
         | Add  (c1,c2)  -> prepare_op (fun e1 e2 -> Add  (e1, e2)) c1 c2
         | Mult (c1,c2)  -> prepare_op (fun e1 e2 -> Mult (e1, e2)) c1 c2
         | Leq  (c1,c2)  -> prepare_op (fun e1 e2 -> Leq  (e1, e2)) c1 c2
         | Eq   (c1,c2)  -> prepare_op (fun e1 e2 -> Eq   (e1, e2)) c1 c2
         | Lt   (c1,c2)  -> prepare_op (fun e1 e2 -> Lt   (e1, e2)) c1 c2
-        | IfThenElse0 (c1,c2) -> prepare_op (fun e1 e2 -> IfThenElse0 (e2, e1)) c2 c1
+        | IfThenElse0 (c1,c2) ->
+           (* if-expressions must explicitly override for short-circuiting *)
+           let c2_bigsums =
+              List.filter (fun v -> not(List.mem v lhs_vars)) (calc_schema c2)
+           in
+           (*
+           print_endline ("bigsums ("^(M3Common.code_of_calc calc)^"): "^
+                          (M3Common.vars_to_string c2_bigsums));
+           *)
+           if c2_bigsums = [] then
+              let ((nc,(id,ext,sing,prod,_)),pat) =
+                 prepare_op (fun e1 e2 -> IfThenElse0 (e1, e2)) c1 c2
+              in ((nc, (id,ext,sing,prod,true)), pat)
+           else prepare_op (fun e1 e2 -> IfThenElse0 (e2, e1)) c2 c1
         
         | MapAccess (mapn, inv, outv, init_calc) ->
            (* Determine slice or singleton.
@@ -245,13 +267,13 @@ let prepare_triggers (triggers : trig_t list)
 
            (* Extend initial val computation for lookups with bound out vars,
             * to restrict initial values computed *)
-           let new_init_meta = let (x,_,y,z) =
-              M3P.get_meta init_ecalc in (x,bound_outv,y,z) in
+           let new_init_meta = let (w,_,x,y,z) =
+              M3P.get_meta init_ecalc in (w,bound_outv,x,y,z) in
            let new_init_agg_meta = (update_mapn^"_init_"^mapn, singleton) in
            let new_init_aggecalc =
               (((M3P.get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
-           let new_incr_meta = (prepare(), [], singleton, false) in
+           let new_incr_meta = (prepare(), [], singleton, false, false) in
            let r = (MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
    in
@@ -286,7 +308,7 @@ let prepare_triggers (triggers : trig_t list)
          let (c, patterns) =
             prepare_calc lmapn theta_w_lhs calc_theta_vars calc in
          let new_c_aggmeta = (lmapn^name_suffix, full_agg) in
-         let new_c_meta = let (x,_,y,z) = M3P.get_meta c in (x,ext,y,z) in
+         let new_c_meta = let (w,_,x,y,z) = M3P.get_meta c in (w,ext,x,y,z) in
          let new_c = ((M3P.get_calc c, new_c_meta), new_c_aggmeta) in
             (*print_endline ("singleton="^(string_of_bool (M3P.get_singleton c))^
                            " calc="^(pcalc_to_string (M3P.get_calc c)));*)
@@ -345,13 +367,11 @@ open CG
 let rec compile_pcalc patterns (incr_ecalc) : code_t = 
    let compile_op ecalc op e1 e2 : code_t =
       let aux ecalc = (calc_schema ecalc, M3P.get_extensions ecalc,
-                         compile_pcalc patterns ecalc) in
-      let (outv1, theta_ext, ce1) = aux e1 in
-      let (outv2, schema_ext, ce2) = aux e2 in
+         compile_pcalc patterns ecalc, M3P.get_singleton ecalc) in
+      let (outv1, theta_ext, ce1, ce1_sing) = aux e1 in
+      let (outv2, schema_ext, ce2, ce2_sing) = aux e2 in
       let schema = calc_schema ecalc in
-         begin match (M3P.get_singleton ecalc,
-                      M3P.get_singleton e1, M3P.get_singleton e2)
-         with
+         begin match (M3P.get_singleton ecalc, ce1_sing, ce2_sing) with
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"
 
@@ -402,7 +422,10 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
       | Eq  (c1, c2) -> compile_op incr_ecalc CG.eq_op   c1 c2
 
       | IfThenElse0(c1, c2) ->
-           compile_op incr_ecalc CG.ifthenelse0_op c2 c1
+           let short_circuit_if = M3P.get_short_circuit incr_ecalc in
+           if short_circuit_if then
+              compile_op incr_ecalc CG.ifthenelse0_op c1 c2
+           else compile_op incr_ecalc CG.ifthenelse0_bigsum_op c2 c1
 
       | Const(i)   ->
          if M3P.get_singleton incr_ecalc then (const i)
