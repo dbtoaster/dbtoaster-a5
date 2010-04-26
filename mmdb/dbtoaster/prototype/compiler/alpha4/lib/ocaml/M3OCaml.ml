@@ -12,6 +12,7 @@ sig
    val value : string -> t -> const_t
    
    val consistent : t -> t -> bool
+   val bind : t -> (var_t * var_t) list -> t
    val extend : t -> t -> var_t list -> t
    val apply : t -> key list -> const_t list
    val to_string : t -> string
@@ -47,6 +48,11 @@ struct
       List.for_all (fun (k,v) ->
         (not(StringMap.mem k m2)) || ((StringMap.find k m2) = v))
         (to_list m1)
+
+   (* extends m with the given bindings, which rename existing valuations *)
+   let bind (m: t) (bindings: (var_t * var_t) list) =
+      List.fold_left (fun acc (decl,def) ->
+         StringMap.add decl (value def acc) acc) m bindings
 
    (* extends m1 by given vars from m2.
     * assumes that m1 and m2 are consistent. *)

@@ -236,14 +236,12 @@ let ifthenelse0_bigsum_op v cond =
    (match cond with
     | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
    
-
 (* Op expressions *)
-let op_singleton_expr op ce1 ce2  =
+let op_singleton_expr bindings op ce1 ce2  =
    let (ce1_i, ce2_i) = (get_singleton_code ce1, get_singleton_code ce2) in
    Singleton (fun theta db ->
-      (* Since there are no bigsum vars, we don't need to evaluate RHS
-       * with an extended theta *)
-      let (r1,r2) = (ce1_i theta db, ce2_i theta db) in
+      let th = Valuation.bind theta bindings in
+      let (r1,r2) = (ce1_i th db, ce2_i th db) in
          match (r1,r2) with
           | ([], _) | (_,[]) -> []
           | ([v1], [v2]) -> [op v1 v2]
@@ -251,23 +249,24 @@ let op_singleton_expr op ce1 ce2  =
    
 (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
  * op expr code *)
-let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+let op_slice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
-      let res1 = ce1_l theta db in
+      let th = Valuation.bind theta bindings in
+      let res1 = ce1_l th db in
       let f k v1 r =
          (* extend with out vars from LHS calc. This is for bigsum vars in
           * IfThenElse0, so that these bigsum vars can be used as in vars
           * for map lookups. *)
-         let th = Valuation.extend theta (Valuation.make outv1 k)
+         let th2 = Valuation.extend th (Valuation.make outv1 k)
             (Util.ListAsSet.union theta_ext schema_ext) in
-         let r2 = ce2_l th db in
+         let r2 = ce2_l th2 db in
          (* perform cross product, extend out vars (slice key) to schema *)
          (* We can exploit schema monotonicity, and uniqueness of
           * map keys, implying this call to extend_keys will never do any
           * aggregation and can be simplified to key concatenation
           * and reindexing. *)
-         let r3 = AggregateMap.concat_keys outv2 schema th schema_ext
+         let r3 = AggregateMap.concat_keys outv2 schema th2 schema_ext
             (ValuationMap.map (fun v2 -> op v1 v2) r2)
          in
             (* r, r3 have no overlap -- safe to union slices.
@@ -276,22 +275,24 @@ let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       in
          ValuationMap.fold f (ValuationMap.empty_map()) res1)
 
-let op_slice_product_expr op ce1 ce2 =
+let op_slice_product_expr bindings op ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
-      let res1 = ce1_l theta db in
-      let res2 = ce2_l theta db
+      let th = Valuation.bind theta bindings in
+      let res1 = ce1_l th db in
+      let res2 = ce2_l th db
       in ValuationMap.product op res1 res2)
 
 (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
  * op expr code *)
-let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+let op_lslice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->
-      let res1 = ce1_l theta db in
-      let th2 = Valuation.make outv2 (Valuation.apply theta outv2) in
+      let th = Valuation.bind theta bindings in
+      let res1 = ce1_l th db in
+      let th2 = Valuation.make outv2 (Valuation.apply th outv2) in
       let f k v r =
-        let th1 = Valuation.extend theta (Valuation.make outv1 k)
+        let th1 = Valuation.extend th (Valuation.make outv1 k)
            (Util.ListAsSet.union theta_ext schema_ext) in
         begin match (ce2_i th1 db) with
          | [] -> r
@@ -305,26 +306,28 @@ let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       in ValuationMap.fold f (ValuationMap.empty_map()) res1) 
 
 (* op, outv2, lhs code, rhs code -> op expr code *)
-let op_lslice_product_expr op outv2 ce1 ce2 =
+let op_lslice_product_expr bindings op outv2 ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->
-      let res1 = ce1_l theta db in
-      let k2 = Valuation.apply theta outv2 in
-         begin match (ce2_i theta db) with
+      let th = Valuation.bind theta bindings in
+      let res1 = ce1_l th db in
+      let k2 = Valuation.apply th outv2 in
+         begin match (ce2_i th db) with
           | [] -> ValuationMap.empty_map()
           | [v2] -> ValuationMap.mapi (fun k v -> (k@k2, op v v2)) res1
           | _ -> failwith "compile_op: invalid singleton"
          end)
 
 (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
-let op_rslice_expr op outv2 schema schema_ext ce1 ce2 =
+let op_rslice_expr bindings op outv2 schema schema_ext ce1 ce2 =
    let (ce1_i, ce2_l) = (get_singleton_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
-      match ce1_i theta db with
+      let th = Valuation.bind theta bindings in
+      match ce1_i th db with
        | [] -> ValuationMap.empty_map()
        | [v] ->
-         let r = ce2_l theta db in
-            AggregateMap.concat_keys outv2 schema theta schema_ext
+         let r = ce2_l th db in
+            AggregateMap.concat_keys outv2 schema th schema_ext
                (ValuationMap.map (fun v2 -> op v v2) r)
        | _ -> failwith "compile_op: invalid singleton")
 

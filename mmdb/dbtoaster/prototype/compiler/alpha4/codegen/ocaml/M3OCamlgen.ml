@@ -192,8 +192,12 @@ struct
       "(fun v cond -> match cond with"^
       " | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))"
 
-   let op_singleton_expr op ce1 ce2 =
+   let bind bindings = List.map (fun (decl,def) ->
+      "let "^(gen_var decl)^" = "^(gen_var def)^" in") bindings
+
+   let op_singleton_expr bindings op ce1 ce2 =
       let aux s in_s = tabify (
+         (bind bindings)@
          ["let r = ";]@s@
          ["in match r with";
           " | [] -> []";
@@ -202,6 +206,7 @@ struct
       in
       match (ce1, ce2) with
        | (Lines(ce1_l), Lines(ce2_l)) -> tabify (
+         (bind bindings)@
          ["let (r1,r2) = ((";]@ce1_l@["),("]@ce2_l@[")) in";
           "match (r1,r2) with";
           " | ([], _) | (_,[]) -> []";
@@ -211,12 +216,16 @@ struct
        | (Inline(ce1_i), Lines(ce2_l)) -> aux ce2_l ce1_i
        | (Lines(ce1_l), Inline(ce2_i)) -> aux ce1_l ce2_i
        | (Inline(ce1_i), Inline(ce2_i)) ->
-          Inline("[("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")]")
+          let inline_bindings =
+             let r = (String.concat "\n" (bind bindings)) in
+             if r = "" then r else r^"\n"
+          in Inline(inline_bindings^"[("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")]")
 
-   let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+   let op_slice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
       (annotate_code_schema "outv1" outv1)@
       (annotate_code_schema "theta_ext" theta_ext)@
+      (bind bindings)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let f k v1 r ="]@
@@ -239,7 +248,8 @@ struct
        "   in ValuationMap.union r r3";
        "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
        
-   let op_slice_product_expr op ce1 ce2 = tabify (
+   let op_slice_product_expr bindings op ce1 ce2 = tabify (
+      (bind bindings)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let res2 = "]@(get_lines ce2)@
@@ -247,7 +257,7 @@ struct
 
    (* Note: no need to bind outv2 anywhere in this code, since in this case
     * outv2 is bound from above *)
-   let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+   let op_lslice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
       let f_body =
          match ce2 with
@@ -269,6 +279,7 @@ struct
             ["   let nk = "^nk])@
             ["    in ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
       in
+         (bind bindings)@
          ["let res1 = "]@(get_lines ce1)@
          ["in";
           "let f k v r = ";]@f_body@
@@ -276,7 +287,7 @@ struct
    
    (* Note: no need to bind any vars from outv2 since these should be bound
     * from above *)
-   let op_lslice_product_expr op outv2 ce1 ce2 = tabify (
+   let op_lslice_product_expr bindings op outv2 ce1 ce2 = tabify (
       let body = match ce2 with
          | Lines(ce2_l) ->
             ["let res2 = "]@ce2_l@
@@ -288,13 +299,14 @@ struct
          | Inline(ce2_i) ->
             ["ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v "^(inline ce2_i)^"))) res1"]
       in
+      (bind bindings)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let k2 = "^(vars_list outv2)^" in"]@body)
 
    (* Note: no need to bind vars schema_ext since these should be bound from
     * above. *)
-   let op_rslice_expr op outv2 schema schema_ext ce1 ce2 = tabify (
+   let op_rslice_expr bindings op outv2 schema schema_ext ce1 ce2 = tabify (
       let body ce1_v =
          ["let r = "]@
           (get_lines ce2)@
@@ -304,6 +316,7 @@ struct
       in 
       match ce1 with
        | Lines(ce1_l) ->
+         (bind bindings)@
          ["let res1 = "]@ce1_l@
          ["in";
           "   match res1 with";
@@ -311,7 +324,7 @@ struct
           "    | [v] ->"]@
          (indent 2 (body "v"))@
          ["   | _ -> failwith \"op_rslice_expr: invalid singleton\""]
-       | Inline(ce1_i) -> (body (inline ce1_i)))
+       | Inline(ce1_i) -> (bind bindings)@(body (inline ce1_i)))
 
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = string_const mapn in
@@ -656,7 +669,7 @@ struct
             "on_"^(pm_name evt)^"_"^r^" t" in
       let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
          List.flatten (List.map (fun (_,r) ->
-            [dispatch_aux Insert r(*; dispatch_aux Delete r*)]) (snd impl))) sources)
+            [dispatch_aux Insert r; dispatch_aux Delete r]) (snd impl))) sources)
       in
       let query_aux (f:(string -> string list)) = 
         List.flatten (List.map f toplevel_queries)

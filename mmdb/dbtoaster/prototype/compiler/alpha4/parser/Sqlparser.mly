@@ -78,9 +78,9 @@
     let add_relation name fields =
         Hashtbl.replace relations (String.uppercase name) fields
 
-    let add_source name source_info =
+    let add_source name (s,f,rel,a) =
         Hashtbl.replace relation_sources
-            (String.uppercase name) (source_info)
+            (String.uppercase name) (s,f,String.uppercase rel,a)
 
     (* Table aliasing in queries *)
 

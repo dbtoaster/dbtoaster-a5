@@ -118,9 +118,14 @@ let c_prod (a : const_t) (b : const_t) : const_t =
 module Prepared = struct
 
   type pextension_t   = var_t list
+  
+  type pbindings_t       = (var_t * var_t) list
+  
+  (* short-circuit, bf-equality bindings *)
+  type pcondition_meta_t = bool * pbindings_t 
    
-  (* id, theta extension, singleton, cross product, short-circuit *)
-  type calcmeta_t    = int * pextension_t * bool * bool * bool
+  (* id, theta extension, singleton, cross product, condition metadata *)
+  type calcmeta_t    = int * pextension_t * bool * bool * (pcondition_meta_t option)  
   
   (* name, full aggregation *)   
   type aggmeta_t     = string * bool
@@ -144,7 +149,12 @@ module Prepared = struct
   let get_id ecalc = let (x,_,_,_,_) = get_meta ecalc in x
   let get_singleton ecalc = let (_,_,x,_,_) = get_meta ecalc in x
   let get_product ecalc = let (_,_,_,x,_) = get_meta ecalc in x
-  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in x
+  
+  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in
+     match x with | Some(y,_) -> y | _ -> failwith "Invalid condition expr"
+
+  let get_bf_bindings ecalc = let (_,_,_,_,x) = get_meta ecalc in
+     match x with | Some(_,y) -> y | _ -> failwith "Invalid condition expr"
   
   let get_ecalc aggecalc = fst aggecalc
   let get_agg_meta aggecalc = snd aggecalc
@@ -153,12 +163,16 @@ module Prepared = struct
   
   let get_inv_extensions stmtmeta = stmtmeta
   
-  let string_of_calcmeta (id, theta, singleton, product, short) = 
+  let string_of_calcmeta (id, theta, singleton, product, cond_meta) = 
     "{"^(string_of_int id)^": theta += "^
     (list_to_string (fun x->x) theta)^
     (if singleton then "; singleton" else "")^
     (if product then "; product" else "")^
-    (if short then "; short-circuit" else "")^
+    (* TODO: output binding expr *)
+    (match cond_meta with
+      | Some(short,bindings) -> (if short then "; short-circuit" else "")^
+         (List.fold_left (fun acc (v,c) -> acc^"; "^v^"->...") "" bindings)
+      | _ -> "")^
     "}"
   
   let string_of_aggmeta  (name,fullagg) = 

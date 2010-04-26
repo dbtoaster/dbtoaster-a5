@@ -149,8 +149,13 @@ val string_of_stmtmeta : stmtmeta_t -> string
 module Prepared : sig
   type pextension_t   = var_t list
    
-  (* id, theta extension, singleton, cross product *)
-  type calcmeta_t    = int * pextension_t * bool * bool * bool
+  type pbindings_t       = (var_t * var_t) list
+  
+  (* short-circuit, bf-equality bindings *)
+  type pcondition_meta_t = bool * pbindings_t 
+   
+  (* id, theta extension, singleton, cross product, condition metadata *)
+  type calcmeta_t    = int * pextension_t * bool * bool * (pcondition_meta_t option)  
   
   (* name, full aggregation *)   
   type aggmeta_t     = string * bool
@@ -175,6 +180,7 @@ module Prepared : sig
   val get_singleton :     calc_t -> bool
   val get_product :       calc_t -> bool
   val get_short_circuit : calc_t -> bool
+  val get_bf_bindings :   calc_t -> pbindings_t
   
   val get_ecalc :       aggecalc_t -> calc_t
   val get_agg_meta :    aggecalc_t -> aggmeta_t

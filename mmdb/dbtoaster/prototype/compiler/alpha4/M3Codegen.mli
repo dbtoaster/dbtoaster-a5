@@ -45,27 +45,30 @@ sig
    val ifthenelse0_op : op_t
    val ifthenelse0_bigsum_op : op_t
 
-   val op_singleton_expr: op_t -> code_t -> code_t -> code_t 
+   val op_singleton_expr:
+      (M3.var_t * M3.var_t) list -> op_t -> code_t -> code_t -> code_t 
    
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_slice_expr: op_t ->
+   val op_slice_expr: (M3.var_t * M3.var_t) list -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
-   val op_slice_product_expr: op_t -> code_t -> code_t -> code_t
+   val op_slice_product_expr:
+      (M3.var_t * M3.var_t) list -> op_t -> code_t -> code_t -> code_t
 
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_lslice_expr: op_t ->
+   val op_lslice_expr: (M3.var_t * M3.var_t) list -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
    (* op, outv2, lhs code, rhs code -> op expr code *)
-   val op_lslice_product_expr: op_t -> M3.var_t list -> code_t -> code_t -> code_t
+   val op_lslice_product_expr: (M3.var_t * M3.var_t) list -> op_t ->
+      M3.var_t list -> code_t -> code_t -> code_t
    
    (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
-   val op_rslice_expr: op_t ->
+   val op_rslice_expr: (M3.var_t * M3.var_t) list -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
 
    (* TODO: this always returns a slice *)
