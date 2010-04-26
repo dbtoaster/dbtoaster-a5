@@ -102,7 +102,9 @@ let normalize_triggers (triggers : M3P.trig_t list) =
  * -- rhs incr expr: trigger vars, for computing deltas to an out tier
  * -- map lookup init expr: bound out vars, to restrict init vals computed
  * -- op slice expr: propagations from lhs operand to rhs operand, op schema
- *                   extensions by the rhs operand
+ *                   extensions by the rhs operand (note these two sets of
+ *                   extensions are disjoint, since the rhs schema already
+ *                   contains the vars used from the lhs operand)
  * -- op lslice expr: same as above
  * -- op rslice expr: op schema extensions by the rhs operand
  *
@@ -125,7 +127,7 @@ let normalize_triggers (triggers : M3P.trig_t list) =
  * of its operands, rather than propagating variables. This applies if all
  * operands use disjoint sets of variables.  
  *)
-(* TODO: generalize singletons for maps with no loop vars, i.e. no loop in or out vars *)
+
 let prepare_triggers (triggers : trig_t list)
       : (M3P.trig_t list * pattern_map) =
    let prep_counter = ref [] in
@@ -218,17 +220,18 @@ let prepare_triggers (triggers : trig_t list)
         
         | MapAccess (mapn, inv, outv, init_calc) ->
            (* Determine slice or singleton.
-            * singleton: no in vars, and fully bound out vars. *)
-           (* TODO: this is overly restrictive... we have a singleton as long
-            * as all in vars are bound, i.e. there are no loop in vars *)
+            * singleton: fully bound out vars, note in vars must always be fully
+            * bound here, since statement evaluation loops over the in tier *)
+           let bound_inv = Util.ListAsSet.inter inv theta_vars in
            let bound_outv = Util.ListAsSet.inter outv theta_vars in
-           let full_agg = ((List.length bound_outv) = (List.length outv)) in
-           let singleton = (List.length inv = 0) && full_agg in
+           let singleton = 
+              (List.length bound_inv) = (List.length inv) &&
+              (List.length bound_outv) = (List.length outv) in 
            
            (* Use map scope for lhs vars during recursive prepare for initial
             * value calculus. *)
            let init_lhs_vars =
-             Util.ListAsSet.union (Util.ListAsSet.union theta_vars inv) outv in
+              List.fold_left Util.ListAsSet.union theta_vars [inv; outv] in
            
            let (init_ecalc, patterns) =
               save_counter (fun () -> 
@@ -236,7 +239,7 @@ let prepare_triggers (triggers : trig_t list)
            in
 
            let new_patterns = 
-              if full_agg then patterns
+              if singleton then patterns
               else merge_pattern_maps patterns (singleton_pattern_map
                       (mapn, make_out_pattern outv bound_outv)) in
 
@@ -244,14 +247,13 @@ let prepare_triggers (triggers : trig_t list)
             * to restrict initial values computed *)
            let new_init_meta = let (x,_,y,z) =
               M3P.get_meta init_ecalc in (x,bound_outv,y,z) in
-           let new_init_agg_meta = (update_mapn^"_init_"^mapn, full_agg) in
+           let new_init_agg_meta = (update_mapn^"_init_"^mapn, singleton) in
            let new_init_aggecalc =
               (((M3P.get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
            let new_incr_meta = (prepare(), [], singleton, false) in
            let r = (MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
            in (r, new_patterns)
-        
    in
 
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.stmt_t * pattern_map) =
@@ -291,8 +293,10 @@ let prepare_triggers (triggers : trig_t list)
             (new_c, patterns) 
       in
 
-      let (init_ca, init_patterns) = prepare_stmt_ext "_init" (fst init_calc) init_ext true in
-      let (incr_ca, incr_patterns) = prepare_stmt_ext "_incr" incr_calc bound_outv false in
+      let (init_ca, init_patterns) =
+         prepare_stmt_ext "_init" (fst init_calc) init_ext true in
+      let (incr_ca, incr_patterns) =
+         prepare_stmt_ext "_incr" incr_calc bound_outv false in
 
       let pstmtmeta = loop_inv in 
       let pstmt = ((lmapn, linv, loutv, init_ca), incr_ca, pstmtmeta) in
@@ -345,7 +349,9 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
       let (outv1, theta_ext, ce1) = aux e1 in
       let (outv2, schema_ext, ce2) = aux e2 in
       let schema = calc_schema ecalc in
-         begin match (M3P.get_singleton ecalc, M3P.get_singleton e1, M3P.get_singleton e2) with
+         begin match (M3P.get_singleton ecalc,
+                      M3P.get_singleton e1, M3P.get_singleton e2)
+         with
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"
 

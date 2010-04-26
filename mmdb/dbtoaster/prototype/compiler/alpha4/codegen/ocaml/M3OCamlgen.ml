@@ -262,14 +262,6 @@ struct
           | Inline(ce2_i) ->
             (let nk = inline_vars_list schema [(schema_ext, "k")] in
             ["   let nk = "^nk])@
-             (* schema_ext will contain superset of theta_ext so we dont
-              * need to extend the scope with both.
-              * TODO: check this *)
-(*              
-             ***(indent 1 (bind_vars_from_extension outv1 "k" theta_ext))@***
-             (indent 1 (bind_vars_from_list schema_ext "k"))@
-            ["    let nk = "^(vars_list schema)]@
-*)
             ["    in ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
       in
          ["let res1 = "]@(get_lines ce1)@

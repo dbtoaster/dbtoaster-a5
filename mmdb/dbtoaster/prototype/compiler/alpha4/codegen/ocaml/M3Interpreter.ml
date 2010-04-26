@@ -53,7 +53,6 @@ type compiled_code =
    | DatabaseUpdate         of db_update_code
    | Statement              of compiled_stmt 
    | Trigger                of compiled_trigger
-   | Toplevel               of (unit -> unit)
 
 type env_debug_code = (Valuation.t -> Database.db_t -> unit)
 type slice_debug_code = (Valuation.t -> Database.db_t -> AggregateMap.t -> unit)
@@ -251,7 +250,8 @@ let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
          (* extend with out vars from LHS calc. This is for bigsum vars in
           * IfThenElse0, so that these bigsum vars can be used as in vars
           * for map lookups. *)
-         let th = Valuation.extend theta (Valuation.make outv1 k) theta_ext in
+         let th = Valuation.extend theta (Valuation.make outv1 k)
+            (Util.ListAsSet.union theta_ext schema_ext) in
          let r2 = ce2_l th db in
          (* perform cross product, extend out vars (slice key) to schema *)
          (* We can exploit schema monotonicity, and uniqueness of
@@ -282,7 +282,8 @@ let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       let res1 = ce1_l theta db in
       let th2 = Valuation.make outv2 (Valuation.apply theta outv2) in
       let f k v r =
-        let th1 = Valuation.extend theta (Valuation.make outv1 k) theta_ext in
+        let th1 = Valuation.extend theta (Valuation.make outv1 k)
+           (Util.ListAsSet.union theta_ext schema_ext) in
         begin match (ce2_i th1 db) with
          | [] -> r
          | [v2] ->
@@ -325,13 +326,13 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
-       (* debug_singleton_init_lookup mapn inv outv outv_img; *)
+       (*debug_singleton_init_lookup mapn inv outv outv_img;*)
        begin match init_val with
         | [] -> ValuationMap.empty_map()
         | [v] -> (Database.update_value
                   mapn out_patterns inv_img outv_img v db;
                 let r = ValuationMap.from_list [(outv_img, v)] out_patterns in
-                (* debug_singleton_init_lookup_result r; *)
+                (*debug_singleton_init_lookup_result r;*)
                 r)
         | _ -> failwith "MapAccess: invalid singleton"
        end)
@@ -345,7 +346,7 @@ let slice_init_lookup mapn inv out_patterns cinit =
        let init_slice_w_indexes = List.fold_left
           ValuationMap.add_secondary_index init_slice out_patterns
        in
-       (* debug_slice_init_lookup mapn inv; *)
+       (*debug_slice_init_lookup mapn inv;*)
        Database.update mapn inv_img init_slice_w_indexes db;
        init_slice_w_indexes)
 
@@ -363,7 +364,7 @@ let singleton_lookup mapn inv outv init_val_code =
       let lookup_slice =
          if ValuationMap.mem outv_img slice then slice else ivc_l theta db
       in
-         (* debug_singleton_lookup outv_img lookup_slice; *)
+         (*debug_singleton_lookup outv_img lookup_slice;*)
          [ValuationMap.find outv_img lookup_slice])
    
 (* mapn, inv, pat, patv, init lookup code -> map lookup code *)
@@ -381,7 +382,7 @@ let slice_lookup mapn inv pat patv init_val_code =
        * evaluation, since we don't want them propagated around. *)
       let pkey = Valuation.apply theta patv in
       let lookup_slice = ValuationMap.slice pat pkey slice in
-         (* debug_slice_lookup patv pkey slice lookup_slice; *)
+         (*debug_slice_lookup patv pkey slice lookup_slice;*)
          (ValuationMap.strip_indexes lookup_slice)) 
 
 
