@@ -313,11 +313,12 @@ module M3InProgress = struct
            is an atomicity guarantee made by M3.  The order with which we store
            relations is irrelevant, but within each relation's trigger, the
            statement order must be preserved *)
-        tstmts @ 
-          if tvars <> vars then
+        (if tvars <> vars then
             List.map (M3Common.rename_vars vars tvars) stmts
           else
             stmts
+        ) @ tstmts
+          
       in
         (rel, (tvars, joint_stmts))::(List.remove_assoc rel tmap)
     else

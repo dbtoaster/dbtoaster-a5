@@ -605,8 +605,8 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
                in
                let f1 = apply_variable_substitution_to_term b f
                in
-               (* the variables that are free in relcalc are bound in term;
-                  that is, values are passed from relcalc to term. *)
+               (* loop variable bindings are passed from relcalc to term. *)
+               (* bigsum variable bindings are passed from term to relcalc. *)
                let (_, f2) = simplify_roly true f1
                   (Util.ListAsSet.multiunion [bound_vars; (relcalc_vars r);
                                               (Util.Function.img b)])
