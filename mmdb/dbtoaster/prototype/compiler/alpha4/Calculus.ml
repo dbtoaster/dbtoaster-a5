@@ -173,6 +173,7 @@ and term_vars term: var_t list =
    let leaf_f x = match x with
       Var(y) -> [y]
     | AggSum(f, r) -> Util.ListAsSet.union (term_vars f) (relcalc_vars r)
+    | External(_,v) -> Util.ListAsSet.no_duplicates v
     | _ -> []
    in
    TermRing.fold Util.ListAsSet.multiunion
@@ -670,7 +671,7 @@ let simplify (term: term_t)
            eliminate loop_vars.  However, simplify_roly handles each term in
            the monomial separately.  This means we need to do some extra work,
            making this a TODO *)
-      let (b, t2) = simplify_roly false t1 (rel_vars @ bsum_vars)
+      let (b, t2) = simplify_roly false t1 (rel_vars)
       in
       ( ( (List.map (Util.Vars.apply_mapping b) loop_vars),
            t2

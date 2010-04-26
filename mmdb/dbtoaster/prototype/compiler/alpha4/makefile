@@ -154,15 +154,23 @@ clean:
 
 ##################### DEPENDENCIES #####################
 
+lib/ocaml/StandardAdaptors.cmo : lib/ocaml/SliceableMap.cmo M3.cmo
+lib/ocaml/StandardAdaptors.cmx : lib/ocaml/SliceableMap.cmx M3.cmx
+parser/Sqlparser.cmo : Calculus.cmo M3.cmo
+parser/Sqlparser.cmx : Calculus.cmx M3.cmx
+parser/Sqllexer.cmo : Calculus.cmo M3.cmo
+parser/Sqllexer.cmx : Calculus.cmx M3.cmx
 M3Compiler.cmo : M3Codegen.cmi
 M3Compiler.cmx : M3Codegen.cmxi
 M3Codegen.cmi : M3Common.cmo
 M3Codegen.cmxi : M3Common.cmx
-CalcToM3.cmo : Compiler.cmo
-CalcToM3.cmx : Compiler.cmx
+CalcToM3.cmo : Compiler.cmo M3.cmo
+CalcToM3.cmx : Compiler.cmx M3.cmx
 M3Common.cmo : M3.cmo
 M3Common.cmx : M3.cmx
 M3.cmo : Util.cmo
 M3.cmx : Util.cmx
+Compiler.cmo : Calculus.cmo
+Compiler.cmx : Calculus.cmx
 Calculus.cmo : Ring.cmo
 Calculus.cmx : Ring.cmx

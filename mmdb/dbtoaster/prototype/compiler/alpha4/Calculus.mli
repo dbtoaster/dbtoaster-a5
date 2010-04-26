@@ -359,3 +359,9 @@ val term_delta: term_mapping_t ->
 *)
 exception TermsNotEquivalent of string
 val equate_terms: term_t -> term_t -> (string Map.Make(String).t)
+
+
+(* THE FOLLOWING INTERNAL FUNCTIONS ARE PRESENT ONLY FOR DEBUGGING PURPOSES *)
+(* DO NOT USE THEM *)
+
+val factorize_aggsum_mm : term_t -> relcalc_t -> term_t 

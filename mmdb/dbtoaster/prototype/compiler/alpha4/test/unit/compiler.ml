@@ -50,10 +50,96 @@ let vwap = make_term (RVal(AggSum(
   )));;
 
 (****************************************************************************)
+(* Tracking down the bigsum factorization glitch *)
+
+let vwap_delta_1 = 
+  (* (if REWRITE__2[B1_PRICE]<REWRITE__3[] 
+      then (if B1_PRICE=QBIDS_PRICE and B1_VOLUME=QBIDS_VOLUME 
+            then (B1_PRICE*B1_VOLUME) 
+            else 0) 
+      else 0) 
+  *)
+  Calculus.make_term (
+    Calculus.RVal(Calculus.AggSum(
+      Calculus.RVal(Calculus.AggSum(
+        Calculus.RProd[
+          Calculus.RVal(Calculus.Var("B1_PRICE",TInt));
+          Calculus.RVal(Calculus.Var("B1_VOLUME",TDouble))
+        ],
+        Calculus.RA_MultiNatJoin[
+          Calculus.RA_Leaf(Calculus.AtomicConstraint(Calculus.Eq,
+            Calculus.RVal(Calculus.Var("B1_PRICE",Calculus.TInt)),
+            Calculus.RVal(Calculus.Var("QBIDS_PRICE",Calculus.TInt))
+          ));
+          Calculus.RA_Leaf(Calculus.AtomicConstraint(Calculus.Eq,
+            Calculus.RVal(Calculus.Var("B1_VOLUME",Calculus.TDouble)),
+            Calculus.RVal(Calculus.Var("QBIDS_VOLUME",Calculus.TDouble))
+          ))
+        ]
+      )),
+      Calculus.RA_Leaf(Calculus.AtomicConstraint(Calculus.Lt,
+        Calculus.RVal(Calculus.External(
+          "REWRITE__2", ["B1_PRICE",Calculus.TInt])),
+        Calculus.RVal(Calculus.External("REWRITE__3", []))
+      ))
+    ))
+  );;
+
+Debug.log_unit_test "make_term Sanity Check" (fun x->x)
+  (Calculus.term_as_string vwap_delta_1)
+  "(if REWRITE__2[B1_PRICE]<REWRITE__3[] then (if B1_PRICE=QBIDS_PRICE and B1_VOLUME=QBIDS_VOLUME then (B1_PRICE*B1_VOLUME) else 0) else 0)";;
+
+
+let vwap_delta_1_t, vwap_delta_1_r =
+  match Calculus.readable_term vwap_delta_1 with
+    | Calculus.RVal(Calculus.AggSum(t,r)) ->
+      ((Calculus.make_term t),(Calculus.make_relcalc r))
+    | _ -> failwith "BUG!";;
+
+Debug.log_unit_test "term_vars Sanity Check" (list_to_string fst)
+  (Calculus.term_vars vwap_delta_1_t)
+  ["B1_PRICE",TInt; 
+   "B1_VOLUME",TDouble; 
+   "QBIDS_PRICE",TInt; 
+   "QBIDS_VOLUME",TDouble];;
+
+Debug.log_unit_test "relcalc_vars Sanity Check" (list_to_string fst)
+  (Calculus.relcalc_vars vwap_delta_1_r)
+  ["B1_PRICE",TInt];;
+
+let vwap_delta_1_factors = 
+  MixedHyperGraph.connected_components
+    Calculus.term_vars Calculus.relcalc_vars
+    (Util.MixedHyperGraph.make
+      [vwap_delta_1_t]
+      [vwap_delta_1_r]
+    );;
+
+Debug.log_unit_test "Hypergraph Factorization" 
+  (string_of_list0 "\n---\n" (fun (t,r) -> 
+    (string_of_list0 "\n" Calculus.term_as_string t)^" && "^
+    (string_of_list0 "\n" Calculus.relcalc_as_string r)))
+  (List.map MixedHyperGraph.extract_atoms vwap_delta_1_factors)
+  [([vwap_delta_1_t],[vwap_delta_1_r])]
+
+
+let vwap_delta_1_factorized =
+  Calculus.factorize_aggsum_mm vwap_delta_1_t vwap_delta_1_r;;
+
+Debug.log_unit_test "Aggsum Factorization" Calculus.term_as_string
+  vwap_delta_1_factorized
+  vwap_delta_1
+
+(****************************************************************************)
 (* Make sure that the compiler is handling input variables properly *)
 
 let (bigsum_vars, bsrw_theta, bsrw_term) = 
-  bigsum_rewriting ModeOpenDomain (roly_poly vwap) [] ("REWRITE__")
+  bigsum_rewriting ModeOpenDomain (roly_poly vwap) [] ("REWRITE__");;
+
+Debug.log_unit_test "Bigsum Rewriting" (fun x->x)
+  (term_as_string bsrw_term)
+  ("(if REWRITE__2[B1_PRICE]<REWRITE__3[] then REWRITE__1[B1_PRICE] else 0)")
+;;
 
 let (deltas,todos) = 
   compile_delta_for_rel 
@@ -61,22 +147,18 @@ let (deltas,todos) =
     (* relsch = *)            ["QBIDS_PRICE",TInt;"QBIDS_VOLUME",TDouble]
     (* delete = *)            false
     (* map_term = *)          (map_term "Q" [])
-    (* external_bound_vars *) bigsum_vars
-    (* externals_mapping *)   bsrw_theta
+    (* bigsum_vars = *)       bigsum_vars
+    (* externals_mapping = *) bsrw_theta
     (* term = *)              bsrw_term;;
 
-Debug.log_unit_test "Bigsum Rewriting" (fun x->x)
-  (term_as_string bsrw_term)
-  ("(if REWRITE__2[B1_PRICE]<REWRITE__3[] then REWRITE__1[B1_PRICE] else 0)")
-;;
-
-Debug.log_unit_test "VWAP Compilation" (string_of_list "\n")
+Debug.log_unit_test "Unified Compilation" (string_of_list "\n")
   (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) deltas)
   ([
-    "((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0))";
-    "(REWRITE__1[B1_PRICE]*(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) then 1 else 0)*(if REWRITE__3[]<=REWRITE__2[B1_PRICE] then 1 else 0))";
-    "(REWRITE__1[B1_PRICE]*-1*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0)*(if (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then 1 else 0))";
-    "((if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*(if REWRITE__3[]<=REWRITE__2[B1_PRICE] then 1 else 0))";
-    "((if (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*-1*(if REWRITE__2[B1_PRICE]<REWRITE__3[] then 1 else 0))"
+    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] then (if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0) else 0)*QBIDS_QBIDS_VOLUME)";
+    "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then REWRITE__1[B1_PRICE] else 0)";
+    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__1[B1_PRICE] else 0)*-1)";
+    "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)";
+    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*-1)"
   ])
 ;;
+

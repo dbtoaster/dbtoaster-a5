@@ -110,7 +110,7 @@ Debug.log_unit_test "Selfjoin Sum" (print_map "q")
   (Database.show_sorted_map (Database.get_map "q" db))
   (
     [([], [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0)); ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))])]
-  )
+  );;
 
 
 
