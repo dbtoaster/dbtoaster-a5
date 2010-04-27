@@ -352,7 +352,7 @@ struct
                 let tok = String.create delim_len in
                 let buf = ref (String.create 1024) in
                 let pos = ref 0 in
-                   while (really_input inc tok 0 delim_len; tok != s) do
+                   while (really_input inc tok 0 delim_len; tok <> s) do
                       if ( (!pos) + delim_len >= (String.length (!buf)) ) then
                          buf := (!buf)^(String.create 1024);
                       for i = 0 to delim_len do (!buf).[(!pos)+i] <- tok.[i] done;
@@ -369,14 +369,13 @@ struct
    (* returns (_, None) at end of file *)
    let next fs : t * (stream_event option) =
       let (ns,ra,buf,name) = fs in
-         if !buf != [] then
+         if !buf <> [] then
             let e = List.hd (!buf)
             in buf := List.tl (!buf); ((ns,ra,buf,name), Some(e))
          else
          begin
-          (
             let (new_ns, tuple) = get_input ns in
-            if tuple != "" then
+            if tuple <> "" then
                let aux r (pm,cl) = (pm,r,cl) in
                let events = List.flatten (List.map
                   (fun (r,f) -> List.map (aux r) (f tuple)) ra) in
@@ -386,7 +385,6 @@ struct
                else
                  ((new_ns,ra,buf,name), None)
             else ((new_ns,ra,buf,name), None)
-           )
          end
 end
 

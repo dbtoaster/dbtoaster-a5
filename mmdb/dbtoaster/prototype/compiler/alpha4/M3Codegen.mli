@@ -146,7 +146,7 @@ sig
    
    (* Data source code generation *)
    
-   (* source type, adaptor type
+   (* source type, framing type, (relation * adaptor type) list 
     * -> source impl type,
     *    source and adaptor declaration code, (optional)
     *    source and adaptor initialization code (optional) *)

@@ -1,6 +1,6 @@
 CREATE TABLE bids(price float, volume int)
-  FROM POSTGRES dbtoaster.vwap_5(action string, price float, volume int; 
-                                 events := 'B:insert,D:delete');
+  FROM FILE '/Users/yanif/workspace/dbtc_alpha4/vwap5k.csv'
+  LINE DELIMITED orderbook (book := 'bids', validate := 'true');
 
 SELECT avg(b1.price * b1.volume) 
 FROM   bids b1

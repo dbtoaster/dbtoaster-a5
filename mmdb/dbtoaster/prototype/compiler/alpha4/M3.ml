@@ -187,13 +187,18 @@ end
 
 type event = pm_t * const_t list
 type stream_event = pm_t * rel_id_t * const_t list
+
 type framing_t = 
     FixedSize of int
   | Delimited of string
   | VarSize of int * int
+
 type source_t =
    FileSource of string
  | PipeSource of string
  | SocketSource of Unix.inet_addr * int
+
+(* adaptor type id, key-val params*)
 type adaptor_t = string * (string * string) list
+
 type relation_input_t = source_t * framing_t * string * adaptor_t

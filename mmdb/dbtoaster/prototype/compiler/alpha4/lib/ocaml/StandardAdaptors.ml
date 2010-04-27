@@ -224,21 +224,40 @@ let orderbook_generator params =
    let get_float_const c =
       match c with | CFloat(x) -> x (*| _ -> failwith "invalid float const"*) in 
    let required = ["book"] in
+   let optional = [("validate", "false")] in
+   
+   (* Get required params *)
    let valid = List.for_all (fun k -> List.mem_assoc k params) required in
    if not(valid) then
       List.iter (fun k -> if not(List.mem_assoc k params) then
          failwith ("Orderbook generator missing required param "^k)) required;
+         
+   (* Get optional params *)
+   let optionals = List.map (fun (k,default) -> 
+      if List.mem_assoc k params
+      then (k, List.assoc k params) else (k,default)) optional in
+   
+   (* Configuration *)
    let book_type = List.assoc "book" params in
+   let validate_mode = try
+      let r = bool_of_string (List.assoc "validate" optionals) in
+      print_endline ("Orderbook adaptor validation: "^(string_of_bool r)); r
+      with Invalid_argument _ -> false in
+   
    let book_orders = Hashtbl.create 1000 in
+   
    (* returns action, order_id, price vol pair *)
    let ff l i = float_of_string (List.nth l i) in
    let get_order_fields tup =
       let t = Str.split (Str.regexp ",") tup in
       (List.nth t 2, int_of_string(List.nth t 1), (ff t 4, ff t 3)) in
+   
    (* helpers for trigger input construction *) 
    let insert pv = (Insert, [fst pv; snd pv]) in
    let delete pv = (Delete, [fst pv; snd pv]) in
    let const_t pv = (CFloat (fst pv), CFloat(snd pv)) in
+   
+   (* Common actions across book types *)
    let adaptor_common action order_id tup_pv =
       let existing_pv = if Hashtbl.mem book_orders order_id
          then Some(Hashtbl.find book_orders order_id) else None
@@ -246,6 +265,7 @@ let orderbook_generator params =
        | (None,_) -> []
        
        | (Some(old_pv), "E") ->
+         if validate_mode then [] else
          let subtract x y = c_sum x (CFloat(-.(get_float_const y))) in 
          let new_pv =
             (subtract (fst old_pv) (fst tup_pv),
@@ -263,12 +283,12 @@ let orderbook_generator params =
    in
    match book_type with
     | "bids" -> (fun tuple ->
-       let (action, order_id, pv) = get_order_fields tuple in
-       match action with
-        | "B" -> let cpv = const_t pv in
-           Hashtbl.replace book_orders order_id cpv; [insert cpv]
-        | "S" -> []
-        | _ -> adaptor_common action order_id (const_t pv))
+      let (action, order_id, pv) = get_order_fields tuple in
+      match action with
+       | "B" -> let cpv = const_t pv in
+          Hashtbl.replace book_orders order_id cpv; [insert cpv]
+       | "S" -> []
+       | _ -> adaptor_common action order_id (const_t pv))
     
     | "asks" -> (fun tuple ->
       let (action, order_id, pv) = get_order_fields tuple in
