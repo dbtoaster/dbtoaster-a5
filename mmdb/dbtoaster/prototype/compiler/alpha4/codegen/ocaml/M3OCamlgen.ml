@@ -668,11 +668,11 @@ struct
         List.flatten (List.map f toplevel_queries)
       in
       let result_db_fn _ =
-      ["      print_endline (\"db: \"^(Database.db_to_string db))"] in
+      ["      output_string chan (\"db: \"^(Database.db_to_string db)^\"\\n\")"] in
       let result_map_fn q =
-      ["      print_endline (\""^q^": \"^(";
+      ["      output_string chan (\""^q^": \"^(";
        "        Database.dbmap_to_string (";
-       "          Database.get_map \""^q^"\" db)))"]
+       "          Database.get_map \""^q^"\" db))^\"\\n\")"]
       in
       let result_val_fn q =
          let qvar = String.lowercase q in 
@@ -681,27 +681,33 @@ struct
        "         (let ot = ValuationMap.find [] "^qvar^"_map in ";
        "         (if ValuationMap.mem [] ot then ValuationMap.find [] ot else (CFloat(0.0)))) ";
        "         else (CFloat(0.0)) in";
-       "      print_endline (AggregateMap.string_of_aggregate r);"]
+       "      output_string chan ((AggregateMap.string_of_aggregate r)^\"\\n\");"]
       in
       let main_lines =
       ["let main() = "]@
       ["let arguments = (ParseArgs.parse (ParseArgs.compile";
-       "  [([\"-v\"],(\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\");";
-       "   ([\"-r\"], (\"RESULT\",ParseArgs.ARG),\"<db|map|val>\",\"Set result type\")";
+       "  [([\"-v\"], (\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\");";
+       "   ([\"-r\"], (\"RESULT\",ParseArgs.ARG),\"<db|map|val>\",\"Set result type\");";
+       "   ([\"-o\"], (\"OUTPUT\",ParseArgs.ARG),\"<output file>\", \"Set output file\")";
        "  ])) in";
        "let log_evt = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
        "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
        "      print_endline (M3OCaml.string_of_evt pm rel t))";
        "  else (fun evt -> ()) in";
+       "let result_chan = match (ParseArgs.flag_val arguments \"OUTPUT\") with";
+       "    | None -> stdout";
+       "    | Some(x) -> try open_out x with Sys_error _ -> ";
+       "       print_endline (\"Failed to open output file: \"^x); stdout";
+       "in";
        "let log_results = ";
        "   match (ParseArgs.flag_val arguments \"RESULT\") with ";
-       "    | None -> (fun () -> ())";
+       "    | None -> (fun chan -> ())";
        "    | Some(x) -> ";
        "       begin match (String.lowercase x) with";
-       "          | \"db\" -> (fun () -> "]@(query_aux result_db_fn)@[")"]@
-      ["          | \"map\" -> (fun () -> "]@(query_aux result_map_fn)@[")"]@
-      ["          | \"value\" -> (fun () -> "]@(query_aux result_val_fn)@[")"]@
-      ["          | _ -> (fun() -> ())";
+       "          | \"db\" -> (fun chan -> "]@(query_aux result_db_fn)@[")"]@
+      ["          | \"map\" -> (fun chan -> "]@(query_aux result_map_fn)@[")"]@
+      ["          | \"value\" -> (fun chan -> "]@(query_aux result_val_fn)@[")"]@
+      ["          | _ -> (fun chan -> ())";
        "       end";
        "   in"]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
@@ -716,7 +722,7 @@ struct
        "      | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
        "      | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
        "      );";
-       "      log_results ()";
+       "      log_results result_chan";
        "    )";
        "   done;";
        "   let finish = Unix.gettimeofday() in";
