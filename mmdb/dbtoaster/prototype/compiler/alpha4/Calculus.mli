@@ -197,13 +197,13 @@ val roly_poly: term_t -> term_t
    much as possible, but does not rename the bound variables.
    The result is a pair of the unifer employed and the resulting term.
 *)
-val simplify_roly: bool -> term_t -> (var_t list) ->
+val simplify_roly: bool -> term_t -> (var_t list) -> (var_t list) ->
                    (((var_t * var_t) list) * term_t)
 
 (* (simplify_calc_monomial recurse phi bound_vars)
    simplifies formula phi by eliminating redundant variable bottom-up
    (recursively through nested terms if the recurse flag is set). *)
-val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) ->
+val simplify_calc_monomial: bool -> relcalc_t -> (var_t list) -> (var_t list) ->
                             (((var_t * var_t) list) * relcalc_t)
 
 (* calls roly_poly. For each union-free term returned by roly_poly,

@@ -140,8 +140,8 @@ test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
 
 test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml

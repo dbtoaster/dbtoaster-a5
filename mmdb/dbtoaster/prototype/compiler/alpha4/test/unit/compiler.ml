@@ -49,9 +49,6 @@ let vwap = make_term (RVal(AggSum(
     ]
   )));;
 
-(****************************************************************************)
-(* Tracking down the bigsum factorization glitch *)
-
 let vwap_delta_1 = 
   (* (if REWRITE__2[B1_PRICE]<REWRITE__3[] 
       then (if B1_PRICE=QBIDS_PRICE and B1_VOLUME=QBIDS_VOLUME 
@@ -84,6 +81,9 @@ let vwap_delta_1 =
       ))
     ))
   );;
+
+(****************************************************************************)
+(* Tracking down the bigsum factorization glitch *)
 
 Debug.log_unit_test "make_term Sanity Check" (fun x->x)
   (Calculus.term_as_string vwap_delta_1)
@@ -131,6 +131,33 @@ Debug.log_unit_test "Aggsum Factorization" Calculus.term_as_string
   vwap_delta_1
 
 (****************************************************************************)
+(* Simplify correctness on bigsum vars *)
+
+let (vwap_delta_1_inner_subs,vwap_delta_1_inner_simplified) =
+  (Calculus.simplify_roly true vwap_delta_1_t
+                          ["QBIDS_PRICE",Calculus.TInt;
+                           "QBIDS_VOLUME",Calculus.TDouble]
+                          ["B1_PRICE",Calculus.TInt;
+                           "B1_VOLUME",Calculus.TDouble]);;
+
+Debug.log_unit_test "simplify_roly Simplified Term" Calculus.term_as_string
+  vwap_delta_1_inner_simplified
+  (Calculus.make_term
+    (Calculus.RProd[
+      Calculus.RVal(Calculus.Var("QBIDS_PRICE",Calculus.TInt));
+      Calculus.RVal(Calculus.Var("QBIDS_VOLUME",Calculus.TDouble))
+    ])
+  );;
+
+Debug.log_unit_test "simplify_roly Term Substitution" 
+  (list_to_string (fun ((x,_),(y,_))->x^"->"^y))
+  vwap_delta_1_inner_subs
+  [("B1_PRICE",Calculus.TInt),("QBIDS_PRICE",Calculus.TInt);
+   ("QBIDS_PRICE",Calculus.TInt),("QBIDS_PRICE",Calculus.TInt);
+   ("B1_VOLUME",Calculus.TDouble),("QBIDS_VOLUME",Calculus.TDouble);
+   ("QBIDS_VOLUME",Calculus.TDouble),("QBIDS_VOLUME",Calculus.TDouble)]
+
+(****************************************************************************)
 (* Make sure that the compiler is handling input variables properly *)
 
 let (bigsum_vars, bsrw_theta, bsrw_term) = 
@@ -154,11 +181,11 @@ let (deltas,todos) =
 Debug.log_unit_test "Unified Compilation" (string_of_list "\n")
   (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) deltas)
   ([
-    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] then (if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0) else 0)*QBIDS_QBIDS_VOLUME)";
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME)";
     "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then REWRITE__1[B1_PRICE] else 0)";
     "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__1[B1_PRICE] else 0)*-1)";
-    "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)";
-    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((if B1_PRICE=QBIDS_QBIDS_PRICE then B1_PRICE else 0)*QBIDS_QBIDS_VOLUME) else 0)*-1)"
+    "(if (REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)";
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)"
   ])
 ;;
 

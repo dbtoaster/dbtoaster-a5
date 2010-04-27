@@ -575,22 +575,25 @@ let roly_poly (term: term_t) : term_t =
 *)
 let rec simplify_calc_monomial (recurse: bool)
                                (relcalc: relcalc_t) (bound_vars: var_t list)
+                               (bigsum_vars: var_t list)
                                : (var_mapping_t * relcalc_t) =
    let leaf_f lf =
       match lf with
          AtomicConstraint(c, t1, t2) ->
-            let t1b = if recurse then (snd (simplify_roly true t1 bound_vars))
-                           else t1 in
-            let t2b = if recurse then (snd (simplify_roly true t2 bound_vars))
-                           else t2 in
+            let t1b = if recurse 
+                    then (snd (simplify_roly true t1 bound_vars bigsum_vars))
+                    else t1 in
+            let t2b = if recurse
+                    then (snd (simplify_roly true t2 bound_vars bigsum_vars))
+                    else t2 in
             CalcRing.mk_val(AtomicConstraint(c, t1b, t2b))
        | _ -> CalcRing.mk_val lf
    in
    extract_substitutions (CalcRing.apply_to_leaves leaf_f relcalc)
                          bound_vars
 
-and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
-                  (var_mapping_t * term_t) =
+and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list)
+                  (bigsum_vars: var_t list) : (var_mapping_t * term_t) =
    let leaf_f lf =
       match lf with
          AggSum(f, r) ->
@@ -601,18 +604,27 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list):
             else if (f = TermRing.zero) then ([], TermRing.zero)
             else
                let ((b:(var_t * var_t) list), non_eq_cons) =
-                  simplify_calc_monomial recurse r bound_vars
+                  simplify_calc_monomial 
+                    recurse r 
+                    bound_vars
+                    bigsum_vars
                in
                let f1 = apply_variable_substitution_to_term b f
                in
                (* loop variable bindings are passed from relcalc to term. *)
                (* bigsum variable bindings are passed from term to relcalc. *)
-               let (_, f2) = simplify_roly true f1
-                  (Util.ListAsSet.multiunion [bound_vars; (relcalc_vars r);
-                                              (Util.Function.img b)])
+               let (f_b, f2) = simplify_roly true f1
+                  (Util.ListAsSet.multiunion 
+                    [bound_vars; 
+                    (ListAsSet.diff (relcalc_vars r) bigsum_vars);
+                    (ListAsSet.diff (Util.Function.img b) bigsum_vars)])
+                  bigsum_vars
                in
-               if (non_eq_cons = relcalc_one) then (b, f2)
-               else (b, TermRing.mk_val(AggSum(f2, non_eq_cons)))
+               let non_eq_cons_subbed = 
+                  apply_variable_substitution_to_relcalc f_b non_eq_cons
+               in
+               if (non_eq_cons_subbed = relcalc_one) then (b, f2)
+               else (b, TermRing.mk_val(AggSum(f2, non_eq_cons_subbed)))
                  (* we represent the if-condition as a calculus
                     expression to use less syntax *)
        | _            -> ([], TermRing.mk_val(lf))
@@ -665,13 +677,14 @@ let simplify (term: term_t)
          we do not want to use substitutions from aggregates nested in
          atomic constraints. The following strategy of calling simplify_roly
          twice with suitable arguments achieves that. *)
-      let (_, t1) = simplify_roly true  f (rel_vars @ bsum_vars @ loop_vars) in
+      let (_, t1) = simplify_roly true  f (rel_vars @ bsum_vars @ loop_vars) 
+                                  bsum_vars in
         (* bsum_vars should technically not be bound from the outside; if we
            can eliminate a bigsum var, we should do so for the same reasons we 
            eliminate loop_vars.  However, simplify_roly handles each term in
            the monomial separately.  This means we need to do some extra work,
            making this a TODO *)
-      let (b, t2) = simplify_roly false t1 (rel_vars)
+      let (b, t2) = simplify_roly false t1 rel_vars bsum_vars
       in
       ( ( (List.map (Util.Vars.apply_mapping b) loop_vars),
            t2
