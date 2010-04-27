@@ -538,14 +538,16 @@ module M3InProgress = struct
         )
       ) ([], []) triggers
     in
-      List.fold_left 
-        (fun old_accum todo -> 
-          compile schema
-                  todo
-                  old_accum
-        )
-        (build accum (map_ref_as_m3, triggers_as_m3))
-        todos
+      (build 
+        (List.fold_left 
+          (fun old_accum todo -> 
+            compile schema
+                    todo
+                    old_accum
+          )
+          accum
+          todos
+        ) (map_ref_as_m3, triggers_as_m3))
 end
 
 let compile = M3InProgress.compile;;
