@@ -667,25 +667,44 @@ struct
       let query_aux (f:(string -> string list)) = 
         List.flatten (List.map f toplevel_queries)
       in
+      let result_db_fn _ =
+      ["      print_endline (\"db: \"^(Database.db_to_string db))"] in
+      let result_map_fn q =
+      ["      print_endline (\""^q^": \"^(";
+       "        Database.dbmap_to_string (";
+       "          Database.get_map \""^q^"\" db)))"]
+      in
+      let result_val_fn q =
+         let qvar = String.lowercase q in 
+      ["      let "^qvar^"_map = (Database.get_map \""^q^"\" db) in";
+       "      let r = if ValuationMap.mem [] "^qvar^"_map then ";
+       "         (let ot = ValuationMap.find [] "^qvar^"_map in ";
+       "         (if ValuationMap.mem [] ot then ValuationMap.find [] ot else (CFloat(0.0)))) ";
+       "         else (CFloat(0.0)) in";
+       "      print_endline (AggregateMap.string_of_aggregate r);"]
+      in
       let main_lines =
       ["let main() = "]@
       ["let arguments = (ParseArgs.parse (ParseArgs.compile";
-       "  [([\"-v\"],(\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\")";
+       "  [([\"-v\"],(\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\");";
+       "   ([\"-r\"], (\"RESULT\",ParseArgs.ARG),\"<db|map|val>\",\"Set result type\")";
        "  ])) in";
        "let log_evt = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
        "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
        "      print_endline (M3OCaml.string_of_evt pm rel t))";
        "  else (fun evt -> ()) in";
        "let log_results = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
-       "    (fun () -> "]@
-       (query_aux (fun q -> [
-       "      print_endline (\""^q^": \"^(";
-       "        Database.dbmap_to_string (";
-       "          Database.get_map \""^q^"\" db";
-       "      )))"
-       ]))@[
-       "    )";
-       "  else (fun () -> ()) in"]@
+       "   begin match (ParseArgs.flag_val arguments \"RESULT\") with ";
+       "    | None -> (fun () -> ())";
+       "    | Some(x) -> ";
+       "       begin match (String.lowercase x) with";
+       "          | \"db\" -> (fun () -> "]@(query_aux result_db_fn)@[")"]@
+      ["          | \"map\" -> (fun () -> "]@(query_aux result_map_fn)@[")"]@
+      ["          | \"value\" -> (fun () -> "]@(query_aux result_val_fn)@[")"]@
+      ["          | _ -> (fun() -> ())";
+       "       end";
+       "   end"; 
+       "   else (fun () -> ()) in"]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
       ["   let start = Unix.gettimeofday() in";
        "   while FileMultiplexer.has_next !mux do";
