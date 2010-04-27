@@ -329,12 +329,6 @@ struct
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = string_const mapn in
       let cout_patterns = patterns_const out_patterns in
-      if inv = [] then
-         let error =
-            "singleton_init_lookup: invalid init value for a "^
-            "lookup with no in vars."
-         in tabify(["failwith \""^error^"\""])
-      else
       let body v = 
          ["(Database.update_value "^cmapn^" "^cout_patterns^" "^(vars_list inv)^" "^(vars_list outv)^" "^v^" db;";
           "   ValuationMap.from_list [("^(vars_list outv)^", "^v^")] "^cout_patterns^")"]
@@ -352,11 +346,6 @@ struct
    let slice_init_lookup mapn inv out_patterns cinit =
       let cmapn = string_const mapn in
       let cout_patterns = patterns_const out_patterns in
-      if inv = [] then
-         let error =
-            "singleton_init_lookup: invalid init value for a lookup with no in vars."
-         in tabify(["failwith \""^error^"\""])
-      else
       tabify (
       ["let init_slice = "]@(get_lines cinit)@
       ["in";
@@ -372,7 +361,11 @@ struct
        "   let inv_img = "^(vars_list inv)^" in";
        "      if ValuationMap.mem inv_img m then ValuationMap.find inv_img m";
        "      else "]@
-       (indent 2 (get_lines init_val_code))
+       (if inv = [] then
+          let error = "map lookup: invalid in tier for a map with no in vars."
+          in (indent 2 (["failwith \""^error^"\""]))
+       else
+       (indent 2 (get_lines init_val_code)))
 
    let singleton_lookup mapn inv outv init_val_code = tabify (
       (lookup_aux mapn inv init_val_code)@
