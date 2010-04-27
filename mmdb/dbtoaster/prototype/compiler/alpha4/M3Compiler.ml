@@ -160,7 +160,7 @@ let prepare_triggers (triggers : trig_t list)
    let save_counter f = add_counter(); let r = f() in remove_counter(); r in
    
    (* Preparation debugging helpers *)
-   let debug_bf_equalities lhs_vars c1 c1_bigsums c2 c2_bigsums =
+   (* let debug_bf_equalities lhs_vars c1 c1_bigsums c2 c2_bigsums =
       print_endline ("lhs_vars: "^(M3Common.vars_to_string lhs_vars));
            
       print_endline ("c1_bigsums ("^(M3Common.code_of_calc c1)^"): "^
@@ -168,7 +168,7 @@ let prepare_triggers (triggers : trig_t list)
            
       print_endline ("c2_bigsums ("^(M3Common.code_of_calc c2)^"): "^
                      (M3Common.vars_to_string c2_bigsums))           
-   in
+   in *)
 
    let rec prepare_calc (update_mapn : string) (lhs_vars: var_t list)
                         (theta_vars : var_t list) (calc : calc_t)

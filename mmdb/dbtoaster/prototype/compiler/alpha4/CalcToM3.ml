@@ -174,9 +174,17 @@ and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t):
 (********************************)
 
 and to_m3_map_access 
-  ((map_definition, map_term, bindings):map_ref_t) : 
-  M3.mapacc_t * todo_list_t =
-  let (mapn, mapvars) = (Calculus.decode_map_term map_term) in
+    ((map_definition, map_term, bindings):map_ref_t)
+    (vars:Calculus.var_t list option) :
+      M3.mapacc_t * todo_list_t =
+  let (mapn, basevars) = (Calculus.decode_map_term map_term) in
+  let mapvars = 
+    match vars with
+      | Some(input_vars) -> 
+          if List.length basevars = List.length input_vars then input_vars
+          else failwith "BUG: CalcToM3: map access with incorrect arity"
+      | None -> basevars
+   in
   let input_var_list = (split_vars true mapvars bindings) in
   let output_var_list = (split_vars false mapvars bindings) in
   let (init_stmt, todos) = 
@@ -185,9 +193,13 @@ and to_m3_map_access
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
     if (List.length input_var_list) > 0
-      then (to_m3_initializer map_definition 
-                              (input_var_list@output_var_list)
-                              mapn) 
+      then (to_m3_initializer 
+              (Calculus.apply_variable_substitution_to_term
+                (List.combine basevars mapvars)
+                map_definition)
+              (input_var_list@output_var_list)
+              mapn
+            ) 
       else (M3.mk_c 0.0, [])
   in
     ((mapn, 
@@ -245,7 +257,8 @@ and to_m3
             try
               let (access_term, todos) = 
                 (to_m3_map_access 
-                  (StringMap.find mapn inner_bindings)) 
+                  (StringMap.find mapn inner_bindings)
+                  (Some(map_vars)))
               in
                 (M3.mk_ma access_term, todos)
             with Not_found -> 
@@ -491,7 +504,8 @@ module M3InProgress = struct
             map_bindings
           )
         in
-        let (target_access, init_todos) = (to_m3_map_access (sub_map_params map_ref_as_m3 params)) in
+        let (target_access, init_todos) = 
+          (to_m3_map_access (sub_map_params map_ref_as_m3 params)) None in
         let (update, update_todos) = (to_m3 (Calculus.readable_term expr) 
                                          (get_map_refs accum)) in
         let todos = old_todos @ init_todos @ update_todos in

@@ -70,6 +70,7 @@ val to_m3_initializer: Calculus.term_t -> Calculus.var_t list -> string ->
 *)
 val to_m3_map_access:
   map_ref_t ->
+  Calculus.var_t list option ->
   (M3.mapacc_t * todo_list_t)
 
 (* 

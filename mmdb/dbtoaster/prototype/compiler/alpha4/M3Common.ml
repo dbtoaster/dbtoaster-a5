@@ -143,7 +143,7 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
   in
   let rec sub_exp ((e,meta):('c,'a) generic_aggcalc_t) = 
     ( replace_calc_lf (fun ma -> MapAccess(sub_ma ma))
-                      (fun x->Const(x)) (fun x->Var(x)) e,
+                      (fun x->Const(x)) (fun x->Var(map_var x)) e,
       meta
     )
   and sub_ma ((name, ivars, ovars, icalc):('c,'a) generic_mapacc_t) : 

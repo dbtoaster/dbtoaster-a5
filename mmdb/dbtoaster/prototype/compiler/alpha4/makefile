@@ -140,6 +140,7 @@ test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
 
 test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/calctom3.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 
