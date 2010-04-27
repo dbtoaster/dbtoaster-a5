@@ -693,8 +693,8 @@ struct
        "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
        "      print_endline (M3OCaml.string_of_evt pm rel t))";
        "  else (fun evt -> ()) in";
-       "let log_results = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
-       "   begin match (ParseArgs.flag_val arguments \"RESULT\") with ";
+       "let log_results = ";
+       "   match (ParseArgs.flag_val arguments \"RESULT\") with ";
        "    | None -> (fun () -> ())";
        "    | Some(x) -> ";
        "       begin match (String.lowercase x) with";
@@ -703,8 +703,7 @@ struct
       ["          | \"value\" -> (fun () -> "]@(query_aux result_val_fn)@[")"]@
       ["          | _ -> (fun() -> ())";
        "       end";
-       "   end"; 
-       "   else (fun () -> ()) in"]@
+       "   in"]@
        (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
       ["   let start = Unix.gettimeofday() in";
        "   while FileMultiplexer.has_next !mux do";
