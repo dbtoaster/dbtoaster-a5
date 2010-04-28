@@ -429,7 +429,7 @@ let main_args () =
   (ParseArgs.parse (ParseArgs.compile
     [
       (["-v"], ("VERBOSE",ParseArgs.NO_ARG),"","Show all updates");
-      (["-r"], ("RESULT",ParseArgs.ARG),"<db|map|val>","Set result type");
+      (["-r"], ("RESULT",ParseArgs.ARG),"<db|map|value>","Set result type");
       (["-o"], ("OUTPUT",ParseArgs.ARG),"<output file>", "Set output file")
     ]));;
 
@@ -451,20 +451,21 @@ let synch_main
       | Some(x) -> try open_out x with Sys_error _ -> 
     print_endline ("Failed to open output file: "^x); stdout
   in
-  let log_results = match (ParseArgs.flag_val arguments "RESULT") with 
+  let log_results = match (ParseArgs.flag_val arguments "RESULT") with
     | None -> (fun chan -> ())
     | Some(x) -> 
+      let output_endline c s = output_string c (s^"\n") in
       begin match (String.lowercase x) with
-        | "db" -> (fun chan -> output_string chan 
-            ("db: "^(Database.db_to_string db)^"\n"))
-        | "map" -> (fun chan -> output_string chan
-            (string_of_list0 "\n" 
-              (fun q -> q^": "^
+        | "db" -> (fun chan -> output_endline chan 
+            ("db: "^(Database.db_to_string db)))
+        | "map" -> (fun chan -> output_endline chan
+            (String.concat "\n" 
+              (List.map (fun q -> q^": "^
                 (Database.dbmap_to_string (Database.get_map q db))) 
-              toplevel_queries))
-        | "value" -> (fun chan -> output_string chan
-            (string_of_list0 "\n"
-              (fun q -> 
+              toplevel_queries)))
+        | "value" -> (fun chan -> output_endline chan
+            (String.concat "\n"
+              (List.map (fun q -> 
                 let q_map = (Database.get_map q db) in
                 let r = 
                   if ValuationMap.mem [] q_map then 
@@ -472,9 +473,8 @@ let synch_main
                       if ValuationMap.mem [] ot then ValuationMap.find [] ot 
                       else CFloat(0.0))
                   else CFloat(0.0)
-                in
-                  AggregateMap.string_of_aggregate r)
-              toplevel_queries))
+                in AggregateMap.string_of_aggregate r)
+              toplevel_queries)))
         | _ -> (fun chan -> ())
       end
   in

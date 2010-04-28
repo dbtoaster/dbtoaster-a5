@@ -1,5 +1,5 @@
 CREATE TABLE bids(price float, volume int)
-  FROM FILE 'vwap5k.csv'
+  FROM FILE 'test/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', validate := 'true');
 
 SELECT avg(b1.price * b1.volume) 

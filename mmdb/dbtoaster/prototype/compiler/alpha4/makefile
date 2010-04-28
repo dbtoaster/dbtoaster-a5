@@ -138,12 +138,7 @@ dbtoaster: $(OBJ_DEPS) Driver.ml
 benchmark: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -o m3_ex $(ML_OPT) test/unit/m3_ex.ml
 
-vwap: $(OPT_DEPS)
-	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap $(ML_OPT) test/examples/vwap_m3_ex.ml
-
-test/sql/%: test/sql/%.sql dbtoaster
-	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
-
+## Unit tests
 test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
@@ -152,8 +147,33 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 
-regression: $(OPT_DEPS)
-	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o test/regression/vwap $(ML_OPT) test/regression/vwap_m3_ex.ml
+## SQL compilation Tests
+test/sql/%: test/sql/%.sql dbtoaster
+	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
+
+## Query execution tests
+vwaptest: $(OPT_DEPS)
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o test/qp/vwap_m3 $(ML_OPT) \
+		test/qp/vwap_m3_ex.ml
+
+qptest: test/sql/vwap vwaptest
+	@echo "Testing VWAP query (M3, SQL)... "
+	@echo "Running VWAP M3..." && test/qp/vwap_m3 -validate \
+		test/data/vwap5k.csv test/qp/output/vwap5k.m3 > /dev/null
+	@echo "Running VWAP SQL..." && \
+		test/sql/vwap -r value -o test/qp/output/vwap5k.dbt > /dev/null
+	@echo "Comparing... "
+	@diff test/qp/output/vwap5k.m3 test/qp/output/vwap5k_valid \
+			>test/qp/output/m3.diff || echo "==> M3 Failed!"
+	@diff test/qp/output/vwap5k.dbt test/qp/output/vwap5k_valid \
+			>test/qp/output/sql.diff || echo "==> SQL Failed!"
+	@test -s test/qp/output/m3.diff -o -s test/qp/output/sql.diff && \
+		echo "==> Failed!" || echo "==> Success!"
+
+## Examples
+vwap: $(OPT_DEPS)
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o vwap $(ML_OPT) \
+		test/examples/vwap_m3_ex.ml
 
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml
@@ -163,6 +183,8 @@ clean:
 	for i in test/sql/*.sql; do bn=`basename $$i .sql`; \
 		for j in .ml .cmo .cmi .cmx .cmxi .o ""; do rm -f test/sql/$$bn$$j; done;\
 	done
+	for j in .cmo .cmi .cmx .cmxi .o; do rm -f test/qp/*$$j; done; \
+		rm -f test/qp/output/vwap5k.* test/qp/output/*.diff test/qp/vwap_m3
 	rm -f makefile.deps
 
 deps: makefile.deps

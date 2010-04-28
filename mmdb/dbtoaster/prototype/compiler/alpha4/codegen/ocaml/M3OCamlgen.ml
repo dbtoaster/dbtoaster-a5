@@ -678,7 +678,7 @@ struct
        "      | Some(Delete,rel,t) -> ";
        "           (print_string (\"Unhandled Delete: \"^rel^\"\\n\"); false)";
        "    )";
-       "  (M3Ocaml.main_args ())";
+       "  (M3OCaml.main_args ())";
        "in main();;"]
       in
       ["open M3;;";

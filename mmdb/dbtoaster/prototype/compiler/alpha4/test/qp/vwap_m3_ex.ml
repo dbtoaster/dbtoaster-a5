@@ -50,7 +50,7 @@ let init_q2 cmp_var free_var =
   try
     mk_if
        (mk_lt (mk_v(cmp_var)) (mk_v(free_var)))
-       (mk_ma ("q4", [], [free_var], (mk_c 0.0, ())))
+       (mk_ma ("QUERY_1_1__2_init", [], [free_var], (mk_c 0.0, ())))
   with Not_found -> print_string "Not_found in init_q2\n"; (mk_c 0.0);;
   
 
@@ -61,139 +61,34 @@ let cmp_q2 free_var cmp_var cmp_op lhs_offset rhs_offset valid_val =
           (mk_prod
              (mk_c 4.0)
              (mk_sum
-                (mk_ma ("q2", [cmp_var], [], (init_q2 cmp_var free_var, ())))
+                (mk_ma ("QUERY_1_1__2", [cmp_var], [], (init_q2 cmp_var free_var, ())))
                 (rhs_offset)))
           (mk_sum
-             (mk_ma ("q1", [], [], (mk_c 0.0, ())))
+             (mk_ma ("QUERY_1_1__3", [], [], (mk_c 0.0, ())))
              (lhs_offset)))
        (valid_val)
   with Not_found -> print_string "Not_found in cmp_q\n2"; (mk_c 0.0);;
 
-(*
 let prog_vwap: prog_t = 
   (
-  [ ("q",  [],       []       );
-    ("q1", [],       []       );
-    ("q2", [VT_Int], []       );
-    ("q3", [],       [VT_Int] );
-    ("q4", [],       [VT_Int] ) ],
+  [ ("QUERY_1_1",         [],       []       );     (* q  *)
+    ("QUERY_1_1__3",      [],       []       );     (* q1 *)
+    ("QUERY_1_1__2",      [VT_Int], []       );     (* q2 *)
+    ("QUERY_1_1__1",      [],       [VT_Int] );     (* q3 *)
+    ("QUERY_1_1__2_init", [],       [VT_Int] ) ],   (* q4 *)
   [
       (Insert, "BID", ["a"; "b"],
         [
-          (("q", [], [], (Const(CFloat(0.0)))),
-            (cmp_q2 "c" "a"
-              (fun x y -> Lt(x, y)) (Const(CFloat(0.0))) (Const(CFloat(0.0)))
-              (Mult(Var("a"), Var("b")))));
-
-          (("q", [], [], (Const(CFloat(0.0)))), 
-            (cmp_q2 "c" "d"
-              (fun x y -> Leq(y, x)) (Const(CFloat(0.0))) (Const(CFloat(0.0)))
-              (cmp_q2 "c" "d" (fun x y -> Lt(x, y))
-                (Var("b")) (IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")))
-                (MapAccess("q3", [], ["d"], (Const(CFloat(0.0)))))
-              )
-            )
-          );
-
-          (("q", [], [], (Const(CFloat(0.0)))), 
-            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(CFloat(0.0))) (Const(CFloat(0.0)))
-              (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Var("b")) (IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")))
-                (Mult((MapAccess("q3", [], ["d"], (Const(CFloat(0.0))))), Const(CFloat(-1.0))))
-              )
-            )
-          );
-          
-          (("q1", [], [], (Const(CFloat(0.0)))), Var("b"));
-          
-          (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Var("b")));
-          
-          (("q3", [], ["a"], (Const(CFloat(0.0)))), Mult(Var("a"), Var("b")));
-          
-          (("q4", [], ["a"], (Const(CFloat(0.0)))), Var("b"))
-        ]
-      );
-
-      (Delete, "BID", ["a"; "b"],
-        [
-          (("q", [], [], (Const(CFloat(0.0)))), (cmp_q2 "c" "a" (fun x y -> Lt(x, y)) (Const(CFloat(0.0))) (Const(CFloat(0.0))) (Mult(Mult(Var("a"), Var("b")), Const(CFloat(-1.0))))));
-          (("q", [], [], (Const(CFloat(0.0)))), 
-            (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Const(CFloat(0.0))) (Const(CFloat(0.0)))
-              (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Mult(Var("b"), Const(CFloat(-1.0)))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CFloat(-1.0)))))
-                (MapAccess("q3", [], ["d"], (Const(CFloat(0.0)))))
-              )
-            )
-          );
-          (("q", [], [], (Const(CFloat(0.0)))), 
-            (cmp_q2 "c" "d" (fun x y -> Lt(x, y)) (Const(CFloat(0.0))) (Const(CFloat(0.0)))
-              (cmp_q2 "c" "d" (fun x y -> Leq(y, x)) (Mult(Var("b"), Const(CFloat(-1.0)))) (IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CFloat(-1.0)))))
-                (Mult(MapAccess("q3", [], ["d"], (Const(CFloat(0.0)))), Const(CFloat(-1.0))))
-              )
-            )
-          );
-          
-          (("q1", [], [], (Const(CFloat(0.0)))), Mult(Var("b"), Const(CFloat(-1.0))));
-          
-          (("q2", ["d"], [], (init_q2 "d" "c")), IfThenElse0((Lt(Var("d"), Var("a"))), Mult(Var("b"), Const(CFloat(-1.0)))));
-          
-          (("q3", [], ["a"], (Const(CFloat(0.0)))), Mult(Mult(Var("a"), Var("b")), Const(CFloat(-1.0))));
-          
-          (("q4", [], ["a"], (Const(CFloat(0.0)))), Mult(Var("b"), Const(CFloat(-1.0))))
-          
-        ]
-      )
-  ]);;
-*)
-
-let prog_vwap: prog_t = 
-  (
-  [ ("q",  [],       []       );
-    ("q1", [],       []       );
-    ("q2", [VT_Int], []       );
-    ("q3", [],       [VT_Int] );
-    ("q4", [],       [VT_Int] ) ],
-  [
-      (Insert, "BID", ["a"; "b"],
-        [
-          (* q[][]   += if 4*q2[a][] < q1[][] then a*b else 0
+          (* q[][] += if 4*q2[a][] < q1[][] then
+                        (if q1[][]+b <= 4*q2[a][] then a*b*-1.0 else 0)
+                      else 0
              q2[a][] := if a < c then q4[][c] else 0
           *)
-          (("q", [], [], (mk_c 0.0, ())),
-            ((cmp_q2 "c" "a"
-              (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (mk_prod (mk_v "a") (mk_v "b"))), ()),
-            ()
-          );
-
-          (* q[][] += if q1[][] <= 4*q2[d][] then
-                        (if 4*(q2[d][]+(if d < a then b else 0)) < q1[][]+b
-                         then q3[][d] else 0)
-                      else 0
-             q2[d][] := if d < c then q4[][c] else 0
-          *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "d"
-              (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_v "b")
-                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
-                (mk_ma ("q3", [], ["d"], (mk_c 0.0, ())))
-              )
-            ), ()),
-            ()
-          );
-          
-          (* q[][] += if 4*q2[d][] < q1[][] then
-                        (if q1[][]+b <= 4*(q2[d][]+(if d < a then b else 0))
-                         then q3[][d]*-1.0 else 0)
-                      else 0
-             q2[d][] := if d < c then q4[][c] else 0
-          *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "d" (fun x y -> mk_leq y x)
-                (mk_v "b") (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
-                (mk_prod
-                  (mk_ma("q3", [], ["d"], (mk_c 0.0, ())))
-                  (mk_c (-1.0)))
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "a" (fun x y -> mk_leq y x)
+                (mk_v "b") (mk_c 0.0)
+                (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))
               )
             ), ()),
             ()
@@ -204,9 +99,8 @@ let prog_vwap: prog_t =
                       else 0
              q2[a][] := if a < c then q4[][c] else 0
           *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "a"
-              (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "a" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
               (cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_v "b") (mk_c 0.0)
                 (mk_prod (mk_v "a") (mk_v "b"))
               )
@@ -214,78 +108,78 @@ let prog_vwap: prog_t =
             ()
           );
 
-          (* q[][] += if 4*q2[a][] < q1[][] then
-                        (if q1[][]+b <= 4*q2[a][] then a*b*-1.0 else 0)
+          (* q[][] += if 4*q2[d][] < q1[][] then
+                        (if q1[][]+b <= 4*(q2[d][]+(if d < a then b else 0))
+                         then q3[][d]*-1.0 else 0)
                       else 0
-             q2[a][] := if a < c then q4[][c] else 0
+             q2[d][] := if d < c then q4[][c] else 0
           *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "a" (fun x y -> mk_leq y x)
-                (mk_v "b") (mk_c 0.0)
-                (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_leq y x)
+                (mk_v "b") (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
+                (mk_prod
+                  (mk_ma("QUERY_1_1__1", [], ["d"], (mk_c 0.0, ())))
+                  (mk_c (-1.0)))
+              )
+            ), ()),
+            ()
+          );
+
+          (* q[][] += if q1[][] <= 4*q2[d][] then
+                        (if 4*(q2[d][]+(if d < a then b else 0)) < q1[][]+b
+                         then q3[][d] else 0)
+                      else 0
+             q2[d][] := if d < c then q4[][c] else 0
+          *)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d"
+              (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_v "b")
+                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b"))
+                (mk_ma ("QUERY_1_1__1", [], ["d"], (mk_c 0.0, ())))
               )
             ), ()),
             ()
           );
           
+          (* q[][]   += if 4*q2[a][] < q1[][] then a*b else 0
+             q2[a][] := if a < c then q4[][c] else 0
+          *)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())),
+            ((cmp_q2 "c" "a"
+              (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (mk_prod (mk_v "a") (mk_v "b"))), ()),
+            ()
+          );
+
           (* q1[][] += b *)
-          (("q1", [], [], (mk_c 0.0, ())), ((mk_v "b"), ()), ());
+          (("QUERY_1_1__3", [], [], (mk_c 0.0, ())), ((mk_v "b"), ()), ());
           
           (* q2[d][] := if d < c then q4[][c] else 0
              q2[d][] += if d < a then b else 0 *)
-          (("q2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b")), ()), ());
+          (("QUERY_1_1__2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_v "b")), ()), ());
+
+          (* q4[][a] += b *)
+          (("QUERY_1_1__2_init", [], ["a"], (mk_c 0.0, ())), ((mk_v "b"), ()), ());
           
           (* q3[][a] += a*b *)
-          (("q3", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "a") (mk_v "b")), ()), ());
-          
-          (* q4[][a] += b *)
-          (("q4", [], ["a"], (mk_c 0.0, ())), ((mk_v "b"), ()), ())
+          (("QUERY_1_1__1", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "a") (mk_v "b")), ()), ());
         ]
       );
 
       (Delete, "BID", ["a"; "b"],
         [
-          (* q[][] += if 4*q2[a][] < q1[][] then a*b*-1.0 else 0
+          (* q[][] += if 4*q2[a][] < q1[][] then
+                        (if q1[][]+(b*-1.0) <= 4*q2[a][] then a*b*-1.0 else 0)
+                      else 0
              q2[a][] := if a < c then q4[][c] else 0
-          *)
-          (("q", [], [], (mk_c 0.0, ())),
+          *)          
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
             ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))), ()),
-            ()
-          );
-          
-          (* q[][] += if q1[][] <= 4*q2[d][] then
-                        (if 4*(q2[d][]+(if d < a then b*-1.0 else 0)) < q1[][]+(b*-1.0)
-                         then q3[][d] else 0)
-                      else 0
-             q2[d][] := if d < c then q4[][c] else 0
-          *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "d" (fun x y -> mk_lt x y)
-                (mk_prod (mk_v "b") (mk_c (-1.0)))
-                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
-                (mk_ma ("q3", [], ["d"], (mk_c 0.0, ())))
-              )
-            ), ()),
-            ()
-          );
-          
-          (* q[][] += if 4*q2[d][] < q1[][] then
-                        (if q1[][]+(b*-1.0) <= 4*(q2[d][]+(if d < a then b*-1.0 else 0))
-                         then q3[][d]*-1.0 else 0)
-                      else 0
-             q2[d][] := if d < c then q4[][c] else 0
-          *)
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "d" (fun x y -> mk_leq y x)
-                (mk_prod (mk_v "b") (mk_c (-1.0)))
-                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
-                (mk_prod
-                  (mk_ma ("q3", [], ["d"], (mk_c 0.0, ())))
-                  (mk_c (-1.0)))
+              (cmp_q2 "c" "a" (fun x y -> mk_leq y x)
+                (mk_prod (mk_v "b") (mk_c (-1.0))) (mk_c 0.0)
+                (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))
               )
             ), ()),
             ()
@@ -296,7 +190,7 @@ let prog_vwap: prog_t =
                       else 0
              q2[a][] := if a < c then q4[][c] else 0
           *)
-          (("q", [], [], (mk_c 0.0, ())), 
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
             ((cmp_q2 "c" "a" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
               (cmp_q2 "c" "a" (fun x y -> mk_lt x y)
                 (mk_prod (mk_v "b") (mk_c (-1.0))) (mk_c 0.0)
@@ -306,33 +200,63 @@ let prog_vwap: prog_t =
             ()
           );
 
-          (* q[][] += if 4*q2[a][] < q1[][] then
-                        (if q1[][]+(b*-1.0) <= 4*q2[a][] then a*b*-1.0 else 0)
+          (* q[][] += if 4*q2[d][] < q1[][] then
+                        (if q1[][]+(b*-1.0) <= 4*(q2[d][]+(if d < a then b*-1.0 else 0))
+                         then q3[][d]*-1.0 else 0)
                       else 0
-             q2[a][] := if a < c then q4[][c] else 0
-          *)          
-          (("q", [], [], (mk_c 0.0, ())), 
-            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
-              (cmp_q2 "c" "a" (fun x y -> mk_leq y x)
-                (mk_prod (mk_v "b") (mk_c (-1.0))) (mk_c 0.0)
-                (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))
+             q2[d][] := if d < c then q4[][c] else 0
+          *)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_leq y x)
+                (mk_prod (mk_v "b") (mk_c (-1.0)))
+                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
+                (mk_prod
+                  (mk_ma ("QUERY_1_1__1", [], ["d"], (mk_c 0.0, ())))
+                  (mk_c (-1.0)))
+              )
+            ), ()),
+            ()
+          );
+
+          (* q[][] += if q1[][] <= 4*q2[d][] then
+                        (if 4*(q2[d][]+(if d < a then b*-1.0 else 0)) < q1[][]+(b*-1.0)
+                         then q3[][d] else 0)
+                      else 0
+             q2[d][] := if d < c then q4[][c] else 0
+          *)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())), 
+            ((cmp_q2 "c" "d" (fun x y -> mk_leq y x) (mk_c 0.0) (mk_c 0.0)
+              (cmp_q2 "c" "d" (fun x y -> mk_lt x y)
+                (mk_prod (mk_v "b") (mk_c (-1.0)))
+                (mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0))))
+                (mk_ma ("QUERY_1_1__1", [], ["d"], (mk_c 0.0, ())))
               )
             ), ()),
             ()
           );
           
+          (* q[][] += if 4*q2[a][] < q1[][] then a*b*-1.0 else 0
+             q2[a][] := if a < c then q4[][c] else 0
+          *)
+          (("QUERY_1_1", [], [], (mk_c 0.0, ())),
+            ((cmp_q2 "c" "a" (fun x y -> mk_lt x y) (mk_c 0.0) (mk_c 0.0)
+              (mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0)))), ()),
+            ()
+          );
+          
           (* q1[][] += b*-1.0 *)
-          (("q1", [], [], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ());
+          (("QUERY_1_1__3", [], [], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ());
           
           (* q2[d][] := if d < c then q4[][c] else 0
              q2[d][] += if d < a then b*-1.0 else 0 *)
-          (("q2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0)))), ()), ());
-          
-          (* q3[][a] += a*b*-1.0 *)
-          (("q3", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0))), ()), ());
-          
+          (("QUERY_1_1__2", ["d"], [], (init_q2 "d" "c", ())), ((mk_if (mk_lt (mk_v "d") (mk_v "a")) (mk_prod (mk_v "b") (mk_c (-1.0)))), ()), ());
+
           (* q4[][a] += b*-1.0 *)
-          (("q4", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ())
+          (("QUERY_1_1__2_init", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_v "b") (mk_c (-1.0))), ()), ());
+
+          (* q3[][a] += a*b*-1.0 *)
+          (("QUERY_1_1__1", [], ["a"], (mk_c 0.0, ())), ((mk_prod (mk_prod (mk_v "a") (mk_v "b")) (mk_c (-1.0))), ()), ());
           
         ]
       )
@@ -463,11 +387,11 @@ let vwap_query validate_mode output_level result_chan_opt
            | Database -> output_string rc ((Database.db_to_string db)^"\n")
            | Map      ->
               output_string rc
-                ((Database.dbmap_to_string (Database.get_map "q" db))^"\n")
+                ((Database.dbmap_to_string (Database.get_map "QUERY_1_1" db))^"\n")
            | Value    ->
               output_string rc (AggregateMap.string_of_aggregate
                 (ValuationMap.find []
-                   (ValuationMap.find [] (Database.get_map "q" db)))^"\n")
+                   (ValuationMap.find [] (Database.get_map "QUERY_1_1" db)))^"\n")
           end)
 in
 
