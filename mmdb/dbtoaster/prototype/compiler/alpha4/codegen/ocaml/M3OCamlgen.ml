@@ -656,7 +656,7 @@ struct
          (List.map (fun (impl,_,_) ->
             let inst_name = get_source_instance impl in
               "    let mux = FileMultiplexer.add_stream mux "^inst_name^" in"
-         ) sources)@["  ref mux";"in"] in
+         ) sources)@["  mux";"in"] in
       let dispatch_aux evt r =
          "| Some("^(pm_const evt)^","^(string_const r)^", t) -> "^
             "on_"^(pm_name evt)^"_"^r^" t" in
@@ -664,75 +664,19 @@ struct
          List.flatten (List.map (fun (_,r) ->
             [dispatch_aux Insert r; dispatch_aux Delete r]) (snd impl))) sources)
       in
-      let query_aux (f:(string -> string list)) = 
-        List.flatten (List.map f toplevel_queries)
-      in
-      let result_db_fn _ =
-      ["      output_string chan (\"db: \"^(Database.db_to_string db)^\"\\n\")"] in
-      let result_map_fn q =
-      ["      output_string chan (\""^q^": \"^(";
-       "        Database.dbmap_to_string (";
-       "          Database.get_map \""^q^"\" db))^\"\\n\")"]
-      in
-      let result_val_fn q =
-         let qvar = String.lowercase q in 
-      ["      let "^qvar^"_map = (Database.get_map \""^q^"\" db) in";
-       "      let r = if ValuationMap.mem [] "^qvar^"_map then ";
-       "         (let ot = ValuationMap.find [] "^qvar^"_map in ";
-       "         (if ValuationMap.mem [] ot then ValuationMap.find [] ot else (CFloat(0.0)))) ";
-       "         else (CFloat(0.0)) in";
-       "      output_string chan ((AggregateMap.string_of_aggregate r)^\"\\n\");"]
-      in
       let main_lines =
-      ["let main() = "]@
-      ["let arguments = (ParseArgs.parse (ParseArgs.compile";
-       "  [([\"-v\"], (\"VERBOSE\",ParseArgs.NO_ARG),\"\",\"Show all updates\");";
-       "   ([\"-r\"], (\"RESULT\",ParseArgs.ARG),\"<db|map|val>\",\"Set result type\");";
-       "   ([\"-o\"], (\"OUTPUT\",ParseArgs.ARG),\"<output file>\", \"Set output file\")";
-       "  ])) in";
-       "let log_evt = if ParseArgs.flag_bool arguments \"VERBOSE\" then";
-       "    (fun evt -> match evt with None -> () | Some(pm,rel,t) -> ";
-       "      print_endline (M3OCaml.string_of_evt pm rel t))";
-       "  else (fun evt -> ()) in";
-       "let result_chan = match (ParseArgs.flag_val arguments \"OUTPUT\") with";
-       "    | None -> stdout";
-       "    | Some(x) -> try open_out x with Sys_error _ -> ";
-       "       print_endline (\"Failed to open output file: \"^x); stdout";
-       "in";
-       "let log_results = ";
-       "   match (ParseArgs.flag_val arguments \"RESULT\") with ";
-       "    | None -> (fun chan -> ())";
-       "    | Some(x) -> ";
-       "       begin match (String.lowercase x) with";
-       "          | \"db\" -> (fun chan -> "]@(query_aux result_db_fn)@[")"]@
-      ["          | \"map\" -> (fun chan -> "]@(query_aux result_map_fn)@[")"]@
-      ["          | \"value\" -> (fun chan -> "]@(query_aux result_val_fn)@[")"]@
-      ["          | _ -> (fun chan -> ())";
-       "       end";
-       "   in"]@
-       (indent 1 sources_lines)@(indent 1 multiplexer_lines)@
-      ["   let start = Unix.gettimeofday() in";
-       "   while FileMultiplexer.has_next !mux do";
-       "   let (new_mux,evt) = FileMultiplexer.next !mux in";
-       "    ( log_evt evt;";
-       "      mux := new_mux;";
-       "      (match evt with "]@
-       (indent 2 dispatch_lines)@
-      ["      | None -> ()";
-       "      | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
-       "      | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
-       "      );";
-       "      log_results result_chan";
-       "    )";
-       "   done;";
-       "   let finish = Unix.gettimeofday() in";
-       "   print_endline (\"Tuples: \"^(string_of_float (finish -. start)));"]@
-       (query_aux (fun q -> [
-       "   print_endline (\""^q^": \"^(";
-       "     Database.dbmap_to_string (";
-       "       Database.get_map \""^q^"\" db";
-       "   )))"
-       ]))@[
+       (indent 0 sources_lines)@(indent 0 multiplexer_lines)@
+      ["let main = M3OCaml.synch_main";
+       "  db";
+       "  mux";
+       "  "^(list_to_string (fun x->"\""^x^"\"") toplevel_queries);
+       "  (fun evt -> match evt with"]@
+       (indent 3 dispatch_lines)@
+      ["    | None -> ()";
+       "    | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
+       "    | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
+       "  )";
+       "  (M3Ocaml.main_args ())";
        "in main();;"]
       in
       ["open M3;;";

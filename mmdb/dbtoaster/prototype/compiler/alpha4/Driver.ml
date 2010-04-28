@@ -76,7 +76,7 @@ type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST
 let flag_descriptors = 
   ParseArgs.compile
     [ (["-l";"--lang"], 
-          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3",
+          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3|run",
           "Specify the output language (default: ocaml).");
       (["-o";"--output-source"],
           ("OUTPUT",  ParseArgs.ARG), "<outfile>",
@@ -84,6 +84,9 @@ let flag_descriptors =
       (["-c";"--compile-binary"],
           ("COMPILE", ParseArgs.ARG), "<binary_file>",
           "Invoke secondary compiler to compile to a runnable binary." );
+      (["-r";"--run";"--interpret"],
+          ("INTERPRETER", ParseArgs.NO_ARG), "",
+          "Run the query in interpreter mode." );
       (["-d"],
           ("DEBUG",   ParseArgs.ARG_LIST), "<flag> [-d <flag> [...]]",
           "Enable a debug flag." );
@@ -106,6 +109,15 @@ Debug.set_modes (flag_set "DEBUG");
 if flag_bool "HELP" then
   (
     print_string (ParseArgs.helptext arguments flag_descriptors);
+    print_endline "\n------------\n";
+    print_endline 
+      ( "Language Support\n\n"^
+        "calc          DBToaster-stlye Relational Calculus\n"^
+        "m3            Map Maintenance Message Code\n"^
+        "ocaml         OcaML source file\n"^
+        "c++           C++ source file (not implemented yet)\n"^
+        "run           Run the query in interpreter mode\n"
+      );
     exit 0
   )
 else ();;
@@ -115,21 +127,26 @@ else ();;
 let input_files = if (flag_bool "FILES") then flag_vals "FILES" 
                   else give_up "No files provided";;
     
-type language_t = L_OCAML | L_CPP | L_SQL | L_CALC | L_M3 | L_NONE;;
+type language_t = 
+  L_OCAML | L_CPP | L_SQL | L_CALC | L_M3 | L_NONE | L_INTERPRETER;;
 
-let language = match flag_val "LANG" with
-  | None -> L_OCAML
-  | Some(a) -> match String.uppercase a with
-    | "OCAML"    -> L_OCAML
-    | "C++"      -> L_CPP
-    | "CPP"      -> L_CPP
-    | "CALCULUS" -> L_CALC
-    | "CALC"     -> L_CALC
-    | "M3"       -> L_M3
-    | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL w/ Inserts *)
-    | "NONE"     -> L_NONE (* Used for getting just debug output *)
-    | "DEBUG"    -> L_NONE
-    | _          -> (give_up ("Unknown output language '"^a^"'"));;
+let language = 
+  if flag_bool "INTERPRETER" then L_INTERPRETER
+  else
+    match flag_val "LANG" with
+    | None -> L_OCAML
+    | Some(a) -> match String.uppercase a with
+      | "OCAML"    -> L_OCAML
+      | "C++"      -> L_CPP
+      | "CPP"      -> L_CPP
+      | "CALCULUS" -> L_CALC
+      | "CALC"     -> L_CALC
+      | "M3"       -> L_M3
+      | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
+      | "RUN"      -> L_INTERPRETER
+      | "NONE"     -> L_NONE (* Used for getting just debug output *)
+      | "DEBUG"    -> L_NONE
+      | _          -> (give_up ("Unknown output language '"^a^"'"));;
 
 let output_file = match flag_val "OUTPUT" with
   | None      -> stdout
@@ -222,6 +239,7 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 (********* TRANSLATE M3 TO [language of your choosing] *********)
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
+module M3OCamlInterpreter = M3Compiler.Make(M3Interpreter.CG);;
 
 let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
@@ -231,6 +249,10 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
   | L_M3    -> (fun (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
+  | L_INTERPRETER ->
+      (fun (p,s) tlq f ->
+        ()
+      )
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)
@@ -248,7 +270,7 @@ else ();;
 let compile_ocaml in_file_name =
   let ocaml_cc = "ocamlc" in
   let ocaml_lib_ext = ".cma" in
-  let dbt_lib_ext = ".ml" in
+  let dbt_lib_ext = ".cmo" in
   let ocaml_libs = [ "unix"; "str" ] in
   let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
   let dbt_includes = [ "lib/ocaml" ] in
@@ -282,5 +304,12 @@ if flag_bool "COMPILE" then
         | Some(a)   -> compile_ocaml a
     )
   | L_CPP   -> give_up "Compilation of C++ not implemented yet"
-  | _       -> give_up "No external compiler available for this language"
+  | _       -> give_up ("No external compiler available for "^
+      ( match language with 
+          | L_SQL -> "sql"
+          | L_CALC -> "calculus"
+          | L_M3 -> "m3"
+          | L_INTERPRETER -> "the interpreter"
+          | _ -> "this language"
+      ))
 else ()

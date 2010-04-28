@@ -1,4 +1,5 @@
 open M3
+open Util
 
 (* (PARTIAL) VARIABLE VALUATIONS *)
 module type ValuationSig =
@@ -423,6 +424,72 @@ let string_of_evt (action:M3.pm_t)
                   (tuple:M3.const_t list): string =
   (match action with Insert -> "Inserting" | Delete -> "Deleting")^
   " "^relation^(Util.list_to_string M3Common.string_of_const tuple);;
+
+let main_args () =
+  (ParseArgs.parse (ParseArgs.compile
+    [
+      (["-v"], ("VERBOSE",ParseArgs.NO_ARG),"","Show all updates");
+      (["-r"], ("RESULT",ParseArgs.ARG),"<db|map|val>","Set result type");
+      (["-o"], ("OUTPUT",ParseArgs.ARG),"<output file>", "Set output file")
+    ]));;
+
+let synch_main 
+      (db:Database.db_t)
+      (initial_mux:FileMultiplexer.t)
+      (toplevel_queries:string list)
+      (dispatcher:((M3.pm_t*M3.rel_id_t*M3.const_t list) option) -> unit)
+      (arguments:ParseArgs.arguments_t)
+      (): unit = 
+  let log_evt = 
+    if ParseArgs.flag_bool arguments "VERBOSE" then
+      (fun evt -> match evt with None -> () | Some(pm,rel,t) ->
+        print_endline (string_of_evt pm rel t))
+    else (fun evt -> ()) 
+  in
+  let result_chan = match (ParseArgs.flag_val arguments "OUTPUT") with
+      | None -> stdout
+      | Some(x) -> try open_out x with Sys_error _ -> 
+    print_endline ("Failed to open output file: "^x); stdout
+  in
+  let log_results = match (ParseArgs.flag_val arguments "RESULT") with 
+    | None -> (fun chan -> ())
+    | Some(x) -> 
+      begin match (String.lowercase x) with
+        | "db" -> (fun chan -> output_string chan 
+            ("db: "^(Database.db_to_string db)^"\n"))
+        | "map" -> (fun chan -> output_string chan
+            (string_of_list0 "\n" 
+              (fun q -> q^": "^
+                (Database.dbmap_to_string (Database.get_map q db))) 
+              toplevel_queries))
+        | "value" -> (fun chan -> output_string chan
+            (string_of_list0 "\n"
+              (fun q -> 
+                let q_map = (Database.get_map q db) in
+                let r = 
+                  if ValuationMap.mem [] q_map then 
+                    (let ot = ValuationMap.find [] q_map in
+                      if ValuationMap.mem [] ot then ValuationMap.find [] ot 
+                      else CFloat(0.0))
+                  else CFloat(0.0)
+                in
+                  AggregateMap.string_of_aggregate r)
+              toplevel_queries))
+        | _ -> (fun chan -> ())
+      end
+  in
+  let mux = ref initial_mux in
+  let start = Unix.gettimeofday() in
+    while FileMultiplexer.has_next !mux do
+      let (new_mux,evt) = FileMultiplexer.next !mux in
+        (log_evt evt;dispatcher evt;log_results result_chan)
+    done;
+  let finish = Unix.gettimeofday () in
+  print_endline ("Typles: "^(string_of_float (finish -. start)));
+  print_endline (string_of_list0 "\n" 
+          (fun q -> q^": "^(Database.dbmap_to_string (Database.get_map q db))) 
+          toplevel_queries)
+;;
 
 (* TODO: RandomSource *)
 (* TODO: multiplexer of random sources *)

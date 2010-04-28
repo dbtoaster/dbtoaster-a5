@@ -11,7 +11,6 @@ SOURCE = \
 	Compiler.ml \
 	CalcToM3.mli \
 	CalcToM3.ml \
-	M3Compiler.mli \
 	M3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
@@ -30,12 +29,17 @@ GENERATED_SOURCE = \
 		$(subst .ml,.mli,$(YACC_SOURCE)) \
 		$(YACC_SOURCE) $(LEX_SOURCE)
 SOURCE += $(GENERATED_SOURCE)
+GENERATED_HEADERS = \
+    $(filter %.mli,$(GENERATED_SOURCE))
 
 # Compiled object code
 ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(SOURCE)))
-MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))
+MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(HEADER_ONLY_SOURCE))) \
+					$(subst .mli,.cmi,$(filter %.mli,$(SOURCE)))
 ML_OPT = $(subst .ml,.cmx,$(filter %.ml,$(SOURCE)))
-MLI_OPT = $(subst .mli,.cmxi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))
+MLI_OPT = $(subst .mli,.cmxi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))\
+					$(subst .mli,.cmxi,$(filter %.mli,$(SOURCE)))
+
 
 C_OBJ = $(subst .ml,.o,$(filter %.ml,$(SOURCE)))
 
@@ -88,9 +92,9 @@ OC_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OBJ) -g
 OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT) \
 						 -ccopt -O3 -nodynlink -unsafe -noassert
 
-.PHONY: all driver top test clean
+.PHONY: all driver top test clean deps
 
-all: dbtoaster_top dbtoaster
+all: deps dbtoaster_top dbtoaster
 
 driver: dbtoaster
 
@@ -98,8 +102,7 @@ top: dbtoaster_top
 
 $(ML_OBJ) : %.cmo : %.ml
 	@echo Compiling $*
-	@if [ -f $*.mli ] ; then ocamlc $(OC_FLAGS) -c $*.mli $<; \
-	else ocamlc $(OC_FLAGS) -c $<; fi
+	@ocamlc $(OC_FLAGS) -c $<
 
 $(MLI_OBJ) : %.cmi : %.mli
 	@echo Compiling Header $*
@@ -107,8 +110,7 @@ $(MLI_OBJ) : %.cmi : %.mli
 
 $(ML_OPT) : %.cmx : %.ml
 	@echo Compiling Optimized $*
-	@if [ -f $*.mli ] ; then ocamlopt $(OOPT_FLAGS) -c $*.mli $<; \
-	else ocamlopt $(OOPT_FLAGS) -c $<; fi
+	@ocamlopt $(OOPT_FLAGS) -c $<
 
 $(MLI_OPT) : %.cmxi : %.mli
 	@echo Compiling Optimized Header $*
@@ -121,6 +123,8 @@ $(YACC_SOURCE) : %.ml : %.mly
 $(LEX_SOURCE) : %.ml : %.mll
 	@echo Building $*
 	@ocamllex $<
+
+$(GENERATED_HEADERS) : %.mli : %.ml
 
 dbtoaster_top: $(OBJ_DEPS)
 	@echo Linking dbtoaster_top
@@ -152,26 +156,14 @@ clean:
 	for i in test/sql/*.sql; do bn=`basename $$i .sql`; \
 		for j in .ml .cmo .cmi .cmx .cmxi .o ""; do rm -f test/sql/$$bn$$j; done;\
 	done
+	rm -f makefile.deps
 
-##################### DEPENDENCIES #####################
+deps: makefile.deps
 
-lib/ocaml/StandardAdaptors.cmo : lib/ocaml/SliceableMap.cmo M3.cmo
-lib/ocaml/StandardAdaptors.cmx : lib/ocaml/SliceableMap.cmx M3.cmx
-parser/Sqlparser.cmo : Calculus.cmo M3.cmo
-parser/Sqlparser.cmx : Calculus.cmx M3.cmx
-parser/Sqllexer.cmo : Calculus.cmo M3.cmo
-parser/Sqllexer.cmx : Calculus.cmx M3.cmx
-M3Compiler.cmo : M3Codegen.cmi
-M3Compiler.cmx : M3Codegen.cmxi
-M3Codegen.cmi : M3Common.cmo
-M3Codegen.cmxi : M3Common.cmx
-CalcToM3.cmo : Compiler.cmo M3.cmo
-CalcToM3.cmx : Compiler.cmx M3.cmx
-M3Common.cmo : M3.cmo
-M3Common.cmx : M3.cmx
-M3.cmo : Util.cmo
-M3.cmx : Util.cmx
-Compiler.cmo : Calculus.cmo
-Compiler.cmx : Calculus.cmx
-Calculus.cmo : Ring.cmo
-Calculus.cmx : Ring.cmx
+makefile.deps: 
+	ocamldep $(filter %.ml,$(SOURCE)) > makefile.deps
+
+include makefile.deps
+# ocamldep doesn't handle header only files properly
+M3Codegen.cmi: M3Common.cmo
+M3Codegen.cmxi: M3Common.cmx
