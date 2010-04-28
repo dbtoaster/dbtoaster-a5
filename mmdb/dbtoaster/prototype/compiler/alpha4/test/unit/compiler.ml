@@ -168,13 +168,6 @@ Debug.log_unit_test "Bigsum Rewriting" (fun x->x)
 ;;
 
 
-(*Debug.log_unit_test "Delta Computation"
-  term_as_string
-  (term_delta bsrw_theta false "BIDS" 
-                       ["QBIDS_PRICE",TInt;"QBIDS_VOLUME",TDouble]
-                       bsrw_term)
-  term_zero*)
-
 let (deltas,todos) = 
   compile_delta_for_rel 
     (* reln = *)              "BIDS"
@@ -197,6 +190,77 @@ Debug.log_unit_test "Bigsum Compilation" (string_of_list "\n")
 ;;
 
 
+(****************************************************************************)
+(* Handling deletions *)
+
+let delete_delta = 
+  term_delta bsrw_theta true "BIDS" 
+             ["QBIDS_PRICE",TInt;"QBIDS_VOLUME",TDouble]
+             bsrw_term;;
+
+Debug.log_unit_test "Bigsum Delete Delta" (fun x -> x)
+  (term_as_string delete_delta)
+  "((if REWRITE__2[B1_PRICE]<REWRITE__3[] then (if -(B1_PRICE=QBIDS_PRICE and B1_VOLUME=QBIDS_VOLUME) then (B1_PRICE*B1_VOLUME) else 0) else 0)+(if ((REWRITE__2[B1_PRICE]+(if -(B2_PRICE=QBIDS_PRICE and B2_VOLUME=QBIDS_VOLUME) and B1_PRICE<B2_PRICE then B2_VOLUME else 0))<(REWRITE__3[]+(if -(B3_PRICE=QBIDS_PRICE and B3_VOLUME=QBIDS_VOLUME) then B3_VOLUME else 0)) and REWRITE__3[]<=REWRITE__2[B1_PRICE] or -(REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+(if -(B3_PRICE=QBIDS_PRICE and B3_VOLUME=QBIDS_VOLUME) then B3_VOLUME else 0))<=(REWRITE__2[B1_PRICE]+(if -(B2_PRICE=QBIDS_PRICE and B2_VOLUME=QBIDS_VOLUME) and B1_PRICE<B2_PRICE then B2_VOLUME else 0)))) then REWRITE__1[B1_PRICE] else 0)+(if ((REWRITE__2[B1_PRICE]+(if -(B2_PRICE=QBIDS_PRICE and B2_VOLUME=QBIDS_VOLUME) and B1_PRICE<B2_PRICE then B2_VOLUME else 0))<(REWRITE__3[]+(if -(B3_PRICE=QBIDS_PRICE and B3_VOLUME=QBIDS_VOLUME) then B3_VOLUME else 0)) and REWRITE__3[]<=REWRITE__2[B1_PRICE] or -(REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+(if -(B3_PRICE=QBIDS_PRICE and B3_VOLUME=QBIDS_VOLUME) then B3_VOLUME else 0))<=(REWRITE__2[B1_PRICE]+(if -(B2_PRICE=QBIDS_PRICE and B2_VOLUME=QBIDS_VOLUME) and B1_PRICE<B2_PRICE then B2_VOLUME else 0)))) then (if -(B1_PRICE=QBIDS_PRICE and B1_VOLUME=QBIDS_VOLUME) then (B1_PRICE*B1_VOLUME) else 0) else 0))";;
+
+let vwap_delta_1_del = 
+  (*(if REWRITE__2[B1_PRICE]<REWRITE__3[] 
+     then (if -(B1_PRICE=QBIDS_PRICE) and -(B1_VOLUME=QBIDS_VOLUME) 
+           then (B1_PRICE*B1_VOLUME) else 0) else 0) *)
+  make_term (
+    RVal(AggSum(
+      RVal(AggSum(
+        RProd[
+          RVal(Var("B1_PRICE",TInt));
+          RVal(Var("B1_VOLUME",TDouble))
+        ],
+        RA_Neg(RA_MultiNatJoin[
+          RA_Leaf(AtomicConstraint(Eq,
+            RVal(Var("B1_PRICE",TInt)),
+            RVal(Var("QBIDS_PRICE",TInt))
+          ));
+          RA_Leaf(AtomicConstraint(Eq,
+            RVal(Var("B1_VOLUME",TDouble)),
+            RVal(Var("QBIDS_VOLUME",TDouble))
+          ))
+        ])
+      )),
+      RA_Leaf(AtomicConstraint(Lt,
+        RVal(External("REWRITE__2",["B1_PRICE",TInt])),
+        RVal(External("REWRITE__3",[]))
+      ))
+    ))
+  );;
+
+Debug.log_unit_test "Bigsum Roly Delete(small)" term_as_string
+  (roly_poly vwap_delta_1_del)
+  (make_term (
+    RProd[
+      RVal(AggSum(
+        RVal(AggSum(
+          RProd[
+            RVal(Var("B1_PRICE",TInt));
+            RVal(Var("B1_VOLUME",TDouble))
+          ],
+          RA_MultiNatJoin[
+            RA_Leaf(AtomicConstraint(Eq,
+              RVal(Var("B1_PRICE",TInt)),
+              RVal(Var("QBIDS_PRICE",TInt))
+            ));
+            RA_Leaf(AtomicConstraint(Eq,
+              RVal(Var("B1_VOLUME",TDouble)),
+              RVal(Var("QBIDS_VOLUME",TDouble))
+            ))
+          ]
+        )),
+        RA_Leaf(AtomicConstraint(Lt,
+          RVal(External("REWRITE__2",["B1_PRICE",TInt])),
+          RVal(External("REWRITE__3",[]))
+        ))
+      ));
+      RVal(Const(Int(-1)))
+    ]
+  ));;
+  
 let (neg_deltas,neg_todos) = 
   compile_delta_for_rel 
     (* reln = *)              "BIDS"
@@ -208,13 +272,13 @@ let (neg_deltas,neg_todos) =
     (* term = *)              bsrw_term;;
 
 Debug.log_unit_test "Bigsum Delete Compilation" (string_of_list "\n")
-  (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) deltas)
+  (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) neg_deltas)
   ([
-    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME)";
-    "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then REWRITE__1[B1_PRICE] else 0)";
-    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__1[B1_PRICE] else 0)*-1)";
-    "(if (REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+QBIDS_QBIDS_VOLUME) and REWRITE__3[]<=REWRITE__2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)";
-    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)"
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)";
+    "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then REWRITE__1[B1_PRICE] else 0)";
+    "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__1[B1_PRICE] else 0)*-1)";
+    "((if (REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__3[]<=REWRITE__2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)";
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME)*-1) else 0)*-1)"
   ])
 ;;
 
