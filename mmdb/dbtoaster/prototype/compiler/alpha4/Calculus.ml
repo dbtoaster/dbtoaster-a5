@@ -927,13 +927,12 @@ let rec relcalc_delta (theta: term_mapping_t) (delete: bool)
        | True  -> CalcRing.zero
        | Rel(r, l) when relname = r ->
             let f (x,y) = 
-               let z = (CalcRing.mk_val(
-                             AtomicConstraint(Eq, TermRing.mk_val(Var(x)),
-                                                  TermRing.mk_val(Var(y)))))
-               in
-               if delete then CalcRing.mk_neg z else z
+               CalcRing.mk_val(
+                       AtomicConstraint(Eq, TermRing.mk_val(Var(x)),
+                                            TermRing.mk_val(Var(y))))
             in
-            CalcRing.mk_prod (List.map f (List.combine l tuple))
+            let z = CalcRing.mk_prod (List.map f (List.combine l tuple)) in
+             if delete then CalcRing.mk_neg z else z
        | Rel(x, l) -> CalcRing.zero
        | AtomicConstraint(comp, t1, t2) ->
             let td1 = term_delta theta delete relname tuple t1 in

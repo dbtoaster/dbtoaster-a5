@@ -365,3 +365,7 @@ val equate_terms: term_t -> term_t -> (string Map.Make(String).t)
 (* DO NOT USE THEM *)
 
 val factorize_aggsum_mm : term_t -> relcalc_t -> term_t 
+val apply_bottom_up : 
+  (term_t -> relcalc_t -> term_t) ->
+  (comp_t -> term_t -> term_t -> relcalc_t) ->
+  (term_t) -> term_t
