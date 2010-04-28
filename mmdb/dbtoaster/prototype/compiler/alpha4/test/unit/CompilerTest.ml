@@ -5,7 +5,7 @@ open Util;;
 let cg = Compiler.generate_unit_test_code;;
 
 let test_query query_str =
-   Debug.log_unit_test query_str (String.concat "\n");;
+   Debug.log_unit_test ("Compile "^query_str) (String.concat "\n");;
 
 let trigger_definitions_as_string defs =
    let strvars vl = String.concat "," (List.map fst vl) in 
@@ -41,7 +41,8 @@ let m = make_term(RVal(
 
 let mt = map_term "m" [];;
 
-Debug.log_unit_test "compile_delta_for_rel 1" cdfr_as_string
+Debug.log_unit_test
+"Compile compile_delta_for_rel 1" cdfr_as_string
 (Compiler.compile_delta_for_rel "R" [("A", TInt); ("B", TInt)] false mt [] [] m)
 ([(false, "R", [("mR_A", TInt); ("mR_B", TInt)], ([],[]),
    make_term(RProd [RVal (Var ("mR_A", TInt));
@@ -52,7 +53,8 @@ Debug.log_unit_test "compile_delta_for_rel 1" cdfr_as_string
   (map_term "mR1" [("mR_B", TInt)]))])
 ;;
 
-Debug.log_unit_test "compile_delta_for_rel 2" trigger_definitions_as_string
+Debug.log_unit_test
+"Compile compile_delta_for_rel 2" trigger_definitions_as_string
 (fst (
 Compiler.compile_delta_for_rel "S" [("B", TInt); ("C", TInt)] false
    (map_term "mR1" [("mR_B", TInt)]) [] []
