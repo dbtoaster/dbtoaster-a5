@@ -34,6 +34,8 @@ val compile: ?dup_elim:Calculus.term_t Util.StringMap.t ref -> (* Ignore *)
 
 (* Auxilliary compilation function. 
    You should not need to call this. *)
+val generate_unit_test_code: (string list) output_translator_t
+
 val compile_delta_for_rel:
   string -> Calculus.var_t list -> bool -> Calculus.term_t ->
   Calculus.var_t list -> Calculus.term_mapping_t -> Calculus.term_t ->

@@ -659,7 +659,7 @@ struct
          ) sources)@["  mux";"in"] in
       let dispatch_aux evt r =
          "| Some("^(pm_const evt)^","^(string_const r)^", t) -> "^
-            "on_"^(pm_name evt)^"_"^r^" t" in
+            "(on_"^(pm_name evt)^"_"^r^" t; true)" in
       let dispatch_lines = List.flatten (List.map (fun (impl,_,_) ->
          List.flatten (List.map (fun (_,r) ->
             [dispatch_aux Insert r; dispatch_aux Delete r]) (snd impl))) sources)
@@ -672,10 +672,12 @@ struct
        "  "^(list_to_string (fun x->"\""^x^"\"") toplevel_queries);
        "  (fun evt -> match evt with"]@
        (indent 3 dispatch_lines)@
-      ["    | None -> ()";
-       "    | Some(Insert,rel,t) -> (print_string (\"Unhandled Insert: \"^rel^\"\\n\"))";
-       "    | Some(Delete,rel,t) -> (print_string (\"Unhandled Delete: \"^rel^\"\\n\"))";
-       "  )";
+      ["      | None -> false";
+       "      | Some(Insert,rel,t) -> ";
+       "           (print_string (\"Unhandled Insert: \"^rel^\"\\n\"); false)";
+       "      | Some(Delete,rel,t) -> ";
+       "           (print_string (\"Unhandled Delete: \"^rel^\"\\n\"); false)";
+       "    )";
        "  (M3Ocaml.main_args ())";
        "in main();;"]
       in

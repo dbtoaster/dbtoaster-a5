@@ -20,6 +20,44 @@ type 'a output_translator_t =
 let mk_external (n: string) (vs: Calculus.var_t list) =
    Calculus.make_term(Calculus.RVal(Calculus.External(n, vs)))
 
+(* Unit test code generation
+   Writes (= generates string for) one increment statement. For example,
+
+   generate_unit_test_code
+      _ (_, External("m",[("x_C", TInt)])
+      false "R" ["x_R_A"; "x_R_B"] (["x_C"],[])
+      (Prod[Val(Var(x_R_A)); Val(External("mR1", ["x_R_B"; "x_C"]))])
+   =
+   "+R(x_R_A, x_R_B): foreach x_C do m[x_C] += (x_R_A*mR1[x_R_B, x_C])"
+*)
+
+let generate_unit_test_code
+      (db_schema : (string * (Calculus.var_t list)) list)
+      ((map_definition, map_term) : map_ref_t)
+      (trigger_defs : trigger_definition_t list)
+      (accum: string list) : string list 
+=
+   let aux acc (delete, reln, relvars, (params, bigsum_vars), new_term) =
+   match (Calculus.readable_term map_term) with
+    | Calculus.RVal(Calculus.External(mapn,_)) ->
+      let vars = List.map fst in
+      let strlist = String.concat in
+      let loop_vars = Util.ListAsSet.diff (vars params) (vars relvars) in
+      let code =
+         (if delete then "-" else "+")^
+         reln^"("^(strlist ", " (vars relvars))^ "): "^
+         (if (loop_vars = []) then ""
+          else "foreach "^(strlist ", " loop_vars)^" do ")^
+         mapn^"["^(strlist ", " (vars params))^"] += "^
+         (if (bigsum_vars = []) then ""
+          else "bigsum_{"^(strlist ", " (vars bigsum_vars))^"} ")^
+         (Calculus.term_as_string new_term)
+      in [code]@acc
+
+    | _ -> failwith "Invalid map term for unit test code generation."
+   in List.fold_left aux accum (List.rev trigger_defs)
+
+
 (* compilation functions *)
 
 (* auxiliary for compile. *)
@@ -49,7 +87,7 @@ let compile_delta_for_rel (reln:   string)
    in
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
       we assume that the input tuple is given by variables
-      x_mR_A1, ..., x_mR_Ak.
+      mR_A1, ..., mR_Ak.
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
@@ -96,8 +134,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     (try
       let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) 
                                     map_definition 
-      in
-        accum
+      in accum
     with Calculus.TermsNotEquivalent(_) ->
       failwith "Bug: Compiling two distinct maps with the same name")
   else

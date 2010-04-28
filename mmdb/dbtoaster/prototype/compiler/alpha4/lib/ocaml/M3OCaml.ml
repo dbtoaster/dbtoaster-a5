@@ -437,7 +437,7 @@ let synch_main
       (db:Database.db_t)
       (initial_mux:FileMultiplexer.t)
       (toplevel_queries:string list)
-      (dispatcher:((M3.pm_t*M3.rel_id_t*M3.const_t list) option) -> unit)
+      (dispatcher:((M3.pm_t*M3.rel_id_t*M3.const_t list) option) -> bool)
       (arguments:ParseArgs.arguments_t)
       (): unit = 
   let log_evt = 
@@ -482,7 +482,9 @@ let synch_main
   let start = Unix.gettimeofday() in
     while FileMultiplexer.has_next !mux do
       let (new_mux,evt) = FileMultiplexer.next !mux in
-        (log_evt evt;dispatcher evt;log_results result_chan)
+        (log_evt evt;
+        let output = dispatcher evt in
+        if output then log_results result_chan)
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Typles: "^(string_of_float (finish -. start)));
