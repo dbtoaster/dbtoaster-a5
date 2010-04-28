@@ -11,6 +11,7 @@ SOURCE = \
 	Compiler.ml \
 	CalcToM3.mli \
 	CalcToM3.ml \
+	M3Compiler.mli \
 	M3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
@@ -147,6 +148,9 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/calctom3.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
+
+regression: $(OPT_DEPS)
+	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o test/regression/vwap $(ML_OPT) test/regression/vwap_m3_ex.ml
 
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml
