@@ -13,6 +13,9 @@ COMPILE-WITH-GDB: Ocaml-generated code is compiled with the -g flag, causing
 DISABLE-DELETES: Do not generate M3 deletion triggers. (Compiler.ml / 
                  CalcToM3.ml)
 
+DISABLE-COMPILER-DUPS: Disable duplicate map detection in the compiler.  
+                       Multiple triggers for the same maps will be created.
+
 IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
                  maps that happen to represent the same query will not be 
                  eliminated.  Note that the compiler will still not produce 

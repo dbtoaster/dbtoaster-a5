@@ -76,7 +76,7 @@ type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST
 let flag_descriptors = 
   ParseArgs.compile
     [ (["-l";"--lang"], 
-          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3|run",
+          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3",
           "Specify the output language (default: ocaml).");
       (["-o";"--output-source"],
           ("OUTPUT",  ParseArgs.ARG), "<outfile>",

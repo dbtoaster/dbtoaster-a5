@@ -193,7 +193,7 @@ and to_m3_map_access
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
     if (List.length input_var_list) > 0
-      then (to_m3_initializer 
+      then (print_endline (list_to_string fst input_var_list);to_m3_initializer 
               (Calculus.apply_variable_substitution_to_term
                 (List.combine basevars mapvars)
                 map_definition)
@@ -242,9 +242,12 @@ and to_m3
             (calc_to_m3 (Calculus.RA_MultiNatJoin(rest))) 
           in
             ((M3.mk_prod lhs rhs), lhs_todos@rhs_todos)
-       | _                    -> 
+       | Calculus.RA_MultiNatJoin([]) -> failwith "This shouldn't happen"
+       | Calculus.RA_MultiUnion(_) -> failwith ("BUG: non-monomial delta term")
+       | Calculus.RA_Neg(_) -> failwith ("BUG: negation in delta term")
+       (*| _                    -> 
           failwith ("Compiler.to_m3: TODO calc: "^
-            (Calculus.relcalc_as_string (Calculus.make_relcalc calc)))
+            (Calculus.relcalc_as_string (Calculus.make_relcalc calc)))*)
    in
    let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
       match lf with

@@ -91,7 +91,10 @@ let compile_delta_for_rel (reln:   string)
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
-   let tuple      = (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
+   let tuple      = 
+     (List.map (fun (v,t) -> 
+       mapn^reln^"_"^v,t)
+     relsch) in
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
@@ -113,7 +116,8 @@ let compile_delta_for_rel (reln:   string)
       queries.
    *)
    let (terms_after_substitution, todos) =
-      Calculus.extract_named_aggregates (mapn^reln) tuple s
+      Calculus.extract_named_aggregates 
+          (mapn^reln^(if delete then "_m" else "_p")) tuple s
    in
    ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
               (List.combine terms_after_substitution bigsum_after_subst)),
@@ -136,7 +140,9 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                                     map_definition 
       in accum
     with Calculus.TermsNotEquivalent(_) ->
-      failwith "Bug: Compiling two distinct maps with the same name")
+      failwith ("Bug: Compiling two distinct maps with the same name: "^mapn^
+                "\n"^(Calculus.term_as_string map_definition)^
+                "\n"^(Calculus.term_as_string (StringMap.find mapn !dup_elim))))
   else
   let (bigsum_vars, bsrw_theta, bsrw_term) = 
     Calculus.bigsum_rewriting
@@ -153,13 +159,14 @@ let rec compile ?(dup_elim = ref StringMap.empty)
   in
   let triggers = List.flatten (List.map insdel db_schema) in
   let (l1, l2) = (List.split (List.map cdfr triggers)) in
-  dup_elim := 
-    StringMap.add (fst (Calculus.decode_map_term map_term)) 
-                  map_definition
-                  !dup_elim;
+  (if Debug.active "DISABLE-COMPILER-DUPS" then
+    dup_elim := 
+      StringMap.add (fst (Calculus.decode_map_term map_term)) 
+                    map_definition
+                    !dup_elim);
   let todos = ((List.flatten l2) @ bsrw_theta) 
   in
-    generate_code (* We need to do this traversal DEPTH FIRST *)
+    (generate_code (* We need to do this traversal DEPTH FIRST *)
       db_schema
       (map_definition, map_term)
       (List.flatten l1)
@@ -170,6 +177,6 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                   curr_map
                   generate_code
                   curr_accum
-        ) accum todos
-      )
+        ) accum todos)
+    )
 ;;

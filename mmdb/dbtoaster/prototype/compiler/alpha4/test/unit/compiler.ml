@@ -274,11 +274,113 @@ let (neg_deltas,neg_todos) =
 Debug.log_unit_test "Bigsum Delete Compilation" (string_of_list "\n")
   (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) neg_deltas)
   ([
-    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)";
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME*-1)";
     "(if (REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__3[]<=REWRITE__2[B1_PRICE] then REWRITE__1[B1_PRICE] else 0)";
     "((if REWRITE__2[B1_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__1[B1_PRICE] else 0)*-1)";
     "((if (REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__3[]<=REWRITE__2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)";
-    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME)*-1) else 0)*-1)"
+    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1*-1)"
+(*    "((if REWRITE__2[QBIDS_QBIDS_PRICE]<REWRITE__3[] and (REWRITE__3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*-1*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then ((QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME)*-1) else 0)*-1)"*)
   ])
 ;;
 
+(****************************************************************************)
+(* Tracking down wierdness in RST generation *)
+
+let (rst_bigsum_vars, rst_bsrw_theta, rst_bsrw_term) = 
+  bigsum_rewriting ModeOpenDomain (roly_poly rst) [] ("REWRITE__");;
+
+Debug.log_unit_test "Unnecessary Bigsum Rewriting" term_as_string
+  rst_bsrw_term
+  (roly_poly rst)
+;;
+Debug.log_unit_test "Unnecessary Bigsum Vars" (list_to_string fst)
+  rst_bigsum_vars
+  []
+;;
+
+let rst_true_delta_r = 
+  (make_term (
+    RVal(AggSum(
+      RProd[RVal(Var("a",TInt));RVal(Var("d",TInt))],
+      RA_MultiNatJoin[
+        RA_Neg(RA_MultiNatJoin[
+          RA_Leaf(AtomicConstraint(Eq,
+            RVal(Var("a",TInt)),RVal(Var("Qr_a",TInt))));
+          RA_Leaf(AtomicConstraint(Eq,
+            RVal(Var("r_b",TInt)),RVal(Var("Qr_r_b",TInt))));
+        ]);
+        RA_Leaf(AtomicConstraint(Eq,
+          RVal(Var("r_b",TInt)),RVal(Var("s_b",TInt))));
+        RA_Leaf(Rel("s",["s_b",TInt;"s_c",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,
+          RVal(Var("s_c",TInt)),RVal(Var("t_c",TInt))));
+        RA_Leaf(Rel("t",["t_c",TInt;"d",TInt]))
+      ]
+    ))
+  ));;
+
+Debug.log_unit_test "RST Delete R term_delta" term_as_string
+  (term_delta rst_bsrw_theta true "r" ["Qr_a",TInt;"Qr_r_b",TInt] rst_bsrw_term)
+  rst_true_delta_r
+;;
+  
+let rst_true_delta_r_simplified =
+  (simplify rst_true_delta_r 
+            ["Qr_a",TInt;"Qr_r_b",TInt] [] 
+            ["a",TInt;"r_b",TInt]);;
+
+Debug.log_unit_test "Simplify RST Delete Delta" 
+  (string_of_list0 "\n" term_as_string)
+  (List.map (fun ((_,x),_) ->  x) rst_true_delta_r_simplified)
+  [make_term (
+    RProd[
+      RVal(Var("Qr_a",TInt));
+      RVal(AggSum(
+        RVal(Var("d",TInt)),
+        RA_MultiNatJoin[
+          RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
+          RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
+        ]
+      ));
+      RVal(Const(Int(-1)))
+    ]
+  )];;
+
+Debug.log_unit_test "RST Extract Aggregates" 
+  (string_of_list0 "\n" term_as_string)
+  (List.map fst 
+    (snd (extract_named_aggregates 
+          "FOO_"
+          ["Qr_a",TInt;"Qr_r_b",TInt]
+          (List.map fst rst_true_delta_r_simplified))))
+  [];;
+    
+
+let (rst_deltas,rst_todos) = 
+  compile_delta_for_rel 
+    (* reln = *)              "r"
+    (* relsch = *)            ["a",TInt;"r_b",TInt]
+    (* delete = *)            true
+    (* map_term = *)          (map_term "Q" [])
+    (* bigsum_vars = *)       rst_bigsum_vars
+    (* externals_mapping = *) rst_bsrw_theta
+    (* term = *)              rst_bsrw_term;;
+
+Debug.log_unit_test "RST Todos" (string_of_list0 "\n" (fun (defn, term) ->
+    (term_as_string term)^" := "^(term_as_string defn)))
+  rst_todos
+  [(
+    make_term (RVal(AggSum(RVal(Var("d",TInt)), RA_MultiNatJoin[
+      RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
+      RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
+    ]))),
+    map_term "Qr_m1" ["Qr_r_b",TInt]
+  )];;
+
+Debug.log_unit_test "RST Deltas" (string_of_list0 "\n" term_as_string)
+  (List.map (fun (_,_,_,_,x) -> x) rst_deltas)
+  [make_term (
+    RProd[RVal(Var("Qr_a",TInt)); RVal(External("Qr_m1",["Qr_r_b",TInt]));
+          RVal(Const(Int(-1)))]
+  )]
+;;

@@ -16,7 +16,7 @@ type trigger_definition_t =
 (* delete, rel,    relvars,              var types,     trigger expr *)
   (bool * string * Calculus.var_t list * bound_vars_t * Calculus.term_t)
 
-(* Output translator will be called on maps DEPTH FIRST *)
+(* Output translator will be called on maps BREADTH FIRST *)
 type 'a output_translator_t = 
   (string * (Calculus.var_t list)) list ->(* Database Schema *)
   map_ref_t ->                  (* The target map *)
