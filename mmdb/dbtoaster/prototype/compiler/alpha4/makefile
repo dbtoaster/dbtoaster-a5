@@ -140,6 +140,7 @@ benchmark: $(OPT_DEPS)
 
 ## Unit tests
 test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/calctom3.ml

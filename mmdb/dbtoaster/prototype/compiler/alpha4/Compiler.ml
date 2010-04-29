@@ -117,7 +117,7 @@ let compile_delta_for_rel (reln:   string)
    *)
    let (terms_after_substitution, todos) =
       Calculus.extract_named_aggregates 
-          (mapn^reln^(if delete then "_m" else "_p")) tuple s
+          (mapn^reln) tuple s (*(if delete then "_m" else "_p")*)
    in
    ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
               (List.combine terms_after_substitution bigsum_after_subst)),
@@ -138,7 +138,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     (try
       let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) 
                                     map_definition 
-      in accum
+      in accum (* If we've compiled this map already, just return accum as is *)
     with Calculus.TermsNotEquivalent(_) ->
       failwith ("Bug: Compiling two distinct maps with the same name: "^mapn^
                 "\n"^(Calculus.term_as_string map_definition)^
@@ -159,7 +159,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
   in
   let triggers = List.flatten (List.map insdel db_schema) in
   let (l1, l2) = (List.split (List.map cdfr triggers)) in
-  (if Debug.active "DISABLE-COMPILER-DUPS" then
+  (if not (Debug.active "DISABLE-COMPILER-DUPS") then
     dup_elim := 
       StringMap.add (fst (Calculus.decode_map_term map_term)) 
                     map_definition

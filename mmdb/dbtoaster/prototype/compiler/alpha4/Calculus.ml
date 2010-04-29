@@ -551,9 +551,9 @@ let roly_poly (term: term_t) : term_t =
       in
       (* move negations from relcalc to term *)
       let aux f2 ((rmult:int), rexpr) =
-         let f3 = TermRing.mk_prod [f2; TermRing.mk_val(Const (Int rmult))]
+         let f3 = factorize_aggsum_mm f2 (CalcRing.monomial_to_expr (1, rexpr))
          in
-         factorize_aggsum_mm f3 (CalcRing.monomial_to_expr (1, rexpr))
+         TermRing.mk_prod [f3; TermRing.mk_val(Const (Int rmult))]         
       in
       (* distribute the sums in r_monomials and f_monomials and factorize. *)
       TermRing.mk_sum (List.flatten (List.map

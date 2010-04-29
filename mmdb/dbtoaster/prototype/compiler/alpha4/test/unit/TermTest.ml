@@ -306,7 +306,7 @@ RVal(AggSum(RVal(Const(Int 1)),
   "(if 0<(AggSum(1, R(A, B))+1) and AggSum(1, R(A, B))<=0 then 1 else 0)"),
    []);
  (([],
-  "(-1*(if 0<AggSum(1, R(A, B)) and (AggSum(1, R(A, B))+1)<=0 then 1 else 0))"),
+  "((if 0<AggSum(1, R(A, B)) and (AggSum(1, R(A, B))+1)<=0 then 1 else 0)*-1)"),
    [])])
 ;;
 

@@ -148,15 +148,15 @@ test_query "select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D"
    sch (m, (map_term "m" [("D", TInt)])) cg [])
 
 (["+R(mR_A, mR_B): foreach D do m[D] += (mR_A*mR1[mR_B, D])";
- "-R(mR_A, mR_B): foreach D do m[D] += (mR_A*-1*mR1[mR_B, D])";
+ "-R(mR_A, mR_B): foreach D do m[D] += (mR_A*mR1[mR_B, D]*-1)";
  "+S(mS_B, mS_C): foreach D do m[D] += (mS1[mS_B]*mS2[mS_C, D])";
- "-S(mS_B, mS_C): foreach D do m[D] += (mS1[mS_B]*-1*mS2[mS_C, D])";
+ "-S(mS_B, mS_C): foreach D do m[D] += (mS1[mS_B]*mS2[mS_C, D]*-1)";
  "+T(mT_C, mT_D): m[mT_D] += mT1[mT_C]";
  "-T(mT_C, mT_D): m[mT_D] += (mT1[mT_C]*-1)";
  "+R(mT1R_A, mT1R_B): foreach mT_C do mT1[mT_C] += "^
     "(mT1R_A*mT1R1[mT1R_B, mT_C])";
  "-R(mT1R_A, mT1R_B): foreach mT_C do mT1[mT_C] += "^
-    "(mT1R_A*-1*mT1R1[mT1R_B, mT_C])";
+    "(mT1R_A*mT1R1[mT1R_B, mT_C]*-1)";
  "+S(mT1S_B, mT1S_C): mT1[mT1S_C] += mT1S1[mT1S_B]";
  "-S(mT1S_B, mT1S_C): mT1[mT1S_C] += (mT1S1[mT1S_B]*-1)";
  "+R(mT1S1R_A, mT1S1R_B): mT1S1[mT1S1R_B] += mT1S1R_A";
@@ -168,10 +168,10 @@ test_query "select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D"
  "+R(mS1R_A, mS1R_B): mS1[mS1R_B] += mS1R_A";
  "-R(mS1R_A, mS1R_B): mS1[mS1R_B] += (mS1R_A*-1)";
  "+S(mR1S_B, mR1S_C): foreach D do mR1[mR1S_B, D] += mR1S1[mR1S_C, D]";
- "-S(mR1S_B, mR1S_C): foreach D do mR1[mR1S_B, D] += (-1*mR1S1[mR1S_C, D])";
+ "-S(mR1S_B, mR1S_C): foreach D do mR1[mR1S_B, D] += (mR1S1[mR1S_C, D]*-1)";
  "+T(mR1T_C, mR1T_D): foreach mR_B do mR1[mR_B, mR1T_D] += mR1T1[mR_B, mR1T_C]";
  "-T(mR1T_C, mR1T_D): foreach mR_B do mR1[mR_B, mR1T_D] += "^
-    "(-1*mR1T1[mR_B, mR1T_C])";
+    "(mR1T1[mR_B, mR1T_C]*-1)";
  "+S(mR1T1S_B, mR1T1S_C): mR1T1[mR1T1S_B, mR1T1S_C] += 1";
  "-S(mR1T1S_B, mR1T1S_C): mR1T1[mR1T1S_B, mR1T1S_C] += -1";
  "+T(mR1S1T_C, mR1S1T_D): mR1S1[mR1S1T_C, mR1S1T_D] += 1";
@@ -198,9 +198,9 @@ test_query "select count( * ) from R, S where R.B=S.B group by C"
 (Compiler.compile Calculus.ModeExtractFromCond
                  sch (m, (map_term "m" [("C", TInt)])) cg [])
 (["+R(mR_A, mR_B): foreach C do m[C] += mR1[mR_B, C]";
-  "-R(mR_A, mR_B): foreach C do m[C] += (-1*mR1[mR_B, C])";
+  "-R(mR_A, mR_B): foreach C do m[C] += (mR1[mR_B, C]*-1)";
   "+S(mS_B, mS_C): m[mS_C] += mS1[mS_B]";
-  "-S(mS_B, mS_C): m[mS_C] += (-1*mS1[mS_B])";
+  "-S(mS_B, mS_C): m[mS_C] += (mS1[mS_B]*-1)";
   "+R(mS1R_A, mS1R_B): mS1[mS1R_B] += 1";
   "-R(mS1R_A, mS1R_B): mS1[mS1R_B] += -1";
   "+S(mR1S_B, mR1S_C): mR1[mR1S_B, mR1S_C] += 1";
@@ -218,9 +218,9 @@ test_query "select count( * ) from R, S where R.B = S.B group by B"
 (Compiler.compile Calculus.ModeExtractFromCond
                  sch (m, (map_term "m" [("B", TInt)])) cg [])
 (["+R(mR_A, mR_B): m[mR_B] += mR1[mR_B]";
-  "-R(mR_A, mR_B): m[mR_B] += (-1*mR1[mR_B])";
+  "-R(mR_A, mR_B): m[mR_B] += (mR1[mR_B]*-1)";
   "+S(mS_B, mS_C): m[mS_B] += mS1[mS_B]";
-  "-S(mS_B, mS_C): m[mS_B] += (-1*mS1[mS_B])";
+  "-S(mS_B, mS_C): m[mS_B] += (mS1[mS_B]*-1)";
   "+R(mS1R_A, mS1R_B): mS1[mS1R_B] += 1";
   "-R(mS1R_A, mS1R_B): mS1[mS1R_B] += -1";
   "+S(mR1S_B, mR1S_C): mR1[mR1S_B] += 1";
@@ -237,9 +237,9 @@ test_query "select count( * ) from R, S where R.B = S.B group by B, C"
 (Compiler.compile Calculus.ModeExtractFromCond
    sch (m, (map_term "m" [("B", TInt); ("C", TInt)])) cg [])
 (["+R(mR_A, mR_B): foreach C do m[mR_B, C] += mR1[mR_B, C]";
-  "-R(mR_A, mR_B): foreach C do m[mR_B, C] += (-1*mR1[mR_B, C])";
+  "-R(mR_A, mR_B): foreach C do m[mR_B, C] += (mR1[mR_B, C]*-1)";
   "+S(mS_B, mS_C): m[mS_B, mS_C] += mS1[mS_B]";
-  "-S(mS_B, mS_C): m[mS_B, mS_C] += (-1*mS1[mS_B])";
+  "-S(mS_B, mS_C): m[mS_B, mS_C] += (mS1[mS_B]*-1)";
   "+R(mS1R_A, mS1R_B): mS1[mS1R_B] += 1";
   "-R(mS1R_A, mS1R_B): mS1[mS1R_B] += -1";
   "+S(mR1S_B, mR1S_C): mR1[mR1S_B, mR1S_C] += 1";
@@ -260,8 +260,8 @@ in test_query "select count( * ) from R r1, R r2 where r1.B = r2.A"
 (["+R(mR_A, mR_B): m[] += mR1[mR_B]";
   "+R(mR_A, mR_B): m[] += mR2[mR_A]";
   "+R(mR_A, mR_B): m[] += (if mR_A=mR_B then 1 else 0)";
-  "-R(mR_A, mR_B): m[] += (-1*mR1[mR_B])";
-  "-R(mR_A, mR_B): m[] += (-1*mR2[mR_A])";
+  "-R(mR_A, mR_B): m[] += (mR1[mR_B]*-1)";
+  "-R(mR_A, mR_B): m[] += (mR2[mR_A]*-1)";
   "-R(mR_A, mR_B): m[] += (if mR_A=mR_B then 1 else 0)";
   "+R(mR2R_A, mR2R_B): mR2[mR2R_B] += 1";
   "-R(mR2R_A, mR2R_B): mR2[mR2R_B] += -1";
@@ -293,9 +293,9 @@ let m = (make_term( RVal(AggSum(RVal(Const (Int 1)),
 in test_query "select count( * ) from R, S where R.A=S.A and R.B=S.B"
 (Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
 (["+R(mR_A, mR_B): m[] += mR1[mR_A, mR_B]";
-  "-R(mR_A, mR_B): m[] += (-1*mR1[mR_A, mR_B])";
+  "-R(mR_A, mR_B): m[] += (mR1[mR_A, mR_B]*-1)";
   "+S(mS_B, mS_C): m[] += mS1[mS_B, mS_C]";
-  "-S(mS_B, mS_C): m[] += (-1*mS1[mS_B, mS_C])";
+  "-S(mS_B, mS_C): m[] += (mS1[mS_B, mS_C]*-1)";
   "+R(mS1R_A, mS1R_B): mS1[mS1R_A, mS1R_B] += 1";
   "-R(mS1R_A, mS1R_B): mS1[mS1R_A, mS1R_B] += -1";
   "+S(mR1S_B, mR1S_C): mR1[mR1S_B, mR1S_C] += 1";
@@ -319,7 +319,7 @@ test_query "select count( * ) from R where R.A < 5 and R.B = 'Bla'"
 (["+R(qR_A, qR_B): q[] += "^
     "((if qR_A<5 then 1 else 0)*(if qR_B='Bla' then 1 else 0))";
   "-R(qR_A, qR_B): q[] += "^
-    "(-1*(if qR_A<5 then 1 else 0)*(if qR_B='Bla' then 1 else 0))"])
+    "((if qR_A<5 then 1 else 0)*(if qR_B='Bla' then 1 else 0)*-1)"])
 ;;
 
 
@@ -335,9 +335,9 @@ test_query "if(0 < AggSum(1, R(A,B))) then 1 else 0"
 (Compiler.compile Calculus.ModeExtractFromCond
    [("R", [("A", TInt); ("B", TInt)])] (m, mt) cg [])
 (["+R(mR_A, mR_B): m[] += (if 0<(mR1[]+1) and mR1[]<=0 then 1 else 0)";
-  "+R(mR_A, mR_B): m[] += (-1*(if 0<mR1[] and (mR1[]+1)<=0 then 1 else 0))";
+  "+R(mR_A, mR_B): m[] += ((if 0<mR1[] and (mR1[]+1)<=0 then 1 else 0)*-1)";
   "-R(mR_A, mR_B): m[] += (if 0<(mR1[]+-1) and mR1[]<=0 then 1 else 0)";
-  "-R(mR_A, mR_B): m[] += (-1*(if 0<mR1[] and (mR1[]+-1)<=0 then 1 else 0))";
+  "-R(mR_A, mR_B): m[] += ((if 0<mR1[] and (mR1[]+-1)<=0 then 1 else 0)*-1)";
   "+R(mR1R_A, mR1R_B): mR1[] += 1";
   "-R(mR1R_A, mR1R_B): mR1[] += -1"])
 ;;
