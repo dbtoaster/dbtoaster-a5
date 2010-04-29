@@ -25,8 +25,8 @@ test "test03" rl_as_string (monomials  (make (RA_Leaf False))) [];;
 
 
 
-(* (R bowtie S) bowtie T *)
-let q_r = RA_MultiNatJoin [RA_MultiNatJoin ([relR; relS]); relT];;
+(* R bowtie S bowtie T *)
+let q_r = RA_MultiNatJoin [ relR; relS; relT];;
 let q = make q_r;;
 
 test "test04" rr_as_string (readable q) q_r;;

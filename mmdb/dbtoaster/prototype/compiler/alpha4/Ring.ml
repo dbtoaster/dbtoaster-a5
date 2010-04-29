@@ -235,6 +235,9 @@ struct
    let zero = Val(T.zero)  (* Sum [] *)
    let one  = Val(T.one)   (* Prod [] *)
 
+   let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
+   let prod_list e = match e with Prod(l) -> l | _ -> [e]
+
    let mk_val a = Val(a)
 
    (* any construction of complex expressions is done with mk_sum and mk_prod,
@@ -244,7 +247,7 @@ struct
       let l2 = (List.filter (fun x -> x <> zero) l) in
       if(l2 = []) then zero
       else if (List.tl l2) = [] then (List.hd l2)
-      else Sum(l2)
+      else Sum(List.flatten (List.map sum_list l2))
 
    let mk_prod l =
       let zeroes = (List.filter (fun x -> x = zero) l) in
@@ -253,7 +256,7 @@ struct
          let l2 = (List.filter (fun x -> x <> one) l) in
          if (l2 = []) then one
          else if ((List.tl l2) = []) then List.hd l2
-         else Prod(l2)
+         else Prod(List.flatten (List.map prod_list l2))
 
    let mk_neg e = match e with Neg(e1) -> e1 | _ -> Neg(e)
 
@@ -262,9 +265,6 @@ struct
       match e with
          Val(x) -> x
        | _ -> raise NotAValException
-
-   let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
-   let prod_list e = match e with Prod(l) -> l | _ -> [e]
 
    let rec fold ( sum_f: 'b list -> 'b)
                 (prod_f: 'b list -> 'b)
