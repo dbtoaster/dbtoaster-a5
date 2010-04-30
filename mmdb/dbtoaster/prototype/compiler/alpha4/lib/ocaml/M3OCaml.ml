@@ -484,7 +484,8 @@ let synch_main
       let (new_mux,evt) = FileMultiplexer.next !mux in
         (log_evt evt;
         let output = dispatcher evt in
-        if output then log_results result_chan)
+        if output then log_results result_chan;
+        mux := new_mux)
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Typles: "^(string_of_float (finish -. start)));

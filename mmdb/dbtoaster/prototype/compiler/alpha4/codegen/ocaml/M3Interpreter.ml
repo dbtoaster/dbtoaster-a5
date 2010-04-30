@@ -8,6 +8,7 @@
  * TODO: describe architectural overview of M3 evaluation here.
 *)
 
+open Util
 open M3
 open M3OCaml
 open M3OCaml.Adaptors
@@ -41,7 +42,8 @@ type db_update_code =
 
 type compiled_stmt = (Valuation.t -> Database.db_t -> unit)
 
-type compiled_trigger = (const_t list -> Database.db_t -> unit)
+type compiled_trigger = 
+    (pm_t * rel_id_t * (const_t list -> Database.db_t -> unit))
 
 type compiled_code =
      Singleton              of singleton_code
@@ -96,7 +98,10 @@ let get_statement x =
    match x with | Statement(c) -> c | _ -> failwith "invalid statement"
 
 let get_trigger x =
-   match x with | Trigger(c) -> c | _ -> failwith "invalid statement"
+   match x with | Trigger(_,_,c) -> c | _ -> failwith "invalid statement"
+
+let get_trigger_with_evt x = 
+   match x with | Trigger(t) -> t | _ -> failwith "invalid statement"
 
 (* Debug code accessors *)
 let get_env_debug_code x = 
@@ -581,9 +586,9 @@ let statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code =
 (* trigger args, statement code block -> trigger code *)
 let trigger event rel trig_args stmt_block =
    let cblock = List.map get_statement stmt_block in
-   Trigger (fun tuple db ->
+   Trigger (event, rel, (fun tuple db ->
       let theta = Valuation.make trig_args tuple in
-         List.iter (fun cstmt -> cstmt theta db) cblock)
+         List.iter (fun cstmt -> cstmt theta db) cblock))
 
 (* No sources for interpreter *)
 type source_impl_t = File of in_channel * adaptor list
@@ -607,5 +612,37 @@ let main schema patterns sources triggers =
 let output out_chan = failwith "interpreter cannot write source code"
 
 let eval_trigger trigger tuple db = (get_trigger trigger) tuple db
+
+type trigger_evaluator = (M3.const_t list -> M3OCaml.Database.db_t -> unit)
+
+let event_evaluator (triggers:code_t list) (db:db_t) = 
+  let ((insert_trigs, delete_trigs):
+        (trigger_evaluator StringMap.t * trigger_evaluator StringMap.t)) = 
+    List.fold_left 
+      (fun ((insert_trig, delete_trig):
+              (trigger_evaluator StringMap.t * trigger_evaluator StringMap.t)) 
+           (trig:compiled_code) ->
+        let create_trigger (map:trigger_evaluator StringMap.t): 
+                           (trigger_evaluator StringMap.t) =
+          let (_, (rel:rel_id_t), (t_code:trigger_evaluator)) = 
+            get_trigger_with_evt trig in
+          StringMap.add rel t_code map 
+        in
+        match get_trigger_with_evt trig with 
+          | (M3.Insert, _, _) -> 
+              (create_trigger insert_trig, delete_trig)
+          | (M3.Delete, _, _) -> 
+              (insert_trig, create_trigger delete_trig)
+          | _ -> failwith "Bug: M3Interpreter.CG compiled invalid trigger"
+    ) (StringMap.empty, StringMap.empty) triggers
+  in
+    (fun evt ->
+      match evt with 
+        | Some(Insert, rel, tuple) -> 
+          ((StringMap.find rel insert_trigs) tuple db; true)
+        | Some(Delete, rel, tuple) -> 
+          ((StringMap.find rel delete_trigs) tuple db; true)
+        | None -> false
+    )
 
 end

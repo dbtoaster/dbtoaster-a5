@@ -165,5 +165,9 @@ sig
 
    (* Interpreter methods *)
    val eval_trigger : code_t -> M3.const_t list -> db_t -> unit
+   
+   val event_evaluator : code_t list -> db_t ->
+                        ((M3.pm_t * M3.rel_id_t * M3.const_t list) option -> 
+                        bool)
 end
 

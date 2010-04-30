@@ -62,8 +62,6 @@
 
 open Util
 
-let print_line x = print_string (x^"\n");;
-
 let valid_langs = 
   List.fold_left (fun accum x -> StringSet.add x accum) StringSet.empty [
     "calculus"; "m3"; "ocaml"; "c++"
@@ -155,9 +153,9 @@ let output_file = match flag_val "OUTPUT" with
 
 Debug.exec "ARGS" (fun () -> 
   StringMap.iter (fun k v ->
-    print_line (k^":");
+    print_endline (k^":");
     List.iter (fun o -> 
-      print_line ("   "^o)
+      print_endline ("   "^o)
     ) v
   ) arguments
 );;
@@ -239,7 +237,7 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 (********* TRANSLATE M3 TO [language of your choosing] *********)
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
-module M3OCamlInterpreter = M3Compiler.Make(M3Interpreter.CG);;
+module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 
 let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
@@ -250,8 +248,65 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
   | L_INTERPRETER ->
-      (fun (p,s) tlq f ->
-        ()
+      (fun ((schema,program),sources) tlq f ->
+        StandardAdaptors.initialize();
+        let prepared_program = M3Compiler.prepare_triggers program in
+        let db:M3OCaml.Database.db_t = 
+          M3OCaml.Database.make_empty_db 
+            schema
+            (snd prepared_program)
+        in
+        let evaluator = 
+          (M3Interpreter.CG.event_evaluator 
+            (M3OCamlInterpreterCompiler.compile_ptrig prepared_program)
+            db)
+        in
+        let (files, pipes) = List.fold_left 
+          (fun (files, pipes) (source,framing,rel,adaptor) ->
+            let append_adaptor map source_info =
+              StringMap.add source_info (
+                if StringMap.mem source_info map then
+                  let old_adaptors = (StringMap.find source_info map) in
+                  if List.mem_assoc framing old_adaptors then
+                    (framing,(rel,adaptor)::
+                      (List.assoc framing old_adaptors))::
+                      (List.remove_assoc framing old_adaptors)
+                  else
+                    (framing,[rel,adaptor])::(StringMap.find source_info map)
+                else
+                  [framing,[rel,adaptor]]
+              ) map
+            in
+            match source with
+              | M3.FileSource(fname) ->
+                (append_adaptor files fname, pipes)
+              | M3.PipeSource(picmd)    ->
+                (files, append_adaptor pipes picmd)
+              | M3.SocketSource(_)   -> 
+                failwith "Sockets are currently unsupported in the interpreter"
+          ) (StringMap.empty,StringMap.empty) sources
+        in
+        let f_source 
+              (source:M3.source_t) 
+              (framings:(M3.framing_t * (string * M3.adaptor_t) list) list)
+              (mux:M3OCaml.FileMultiplexer.t): 
+                M3OCaml.FileMultiplexer.t =
+          List.fold_left (fun mux (framing,adaptors) -> 
+            M3OCaml.FileMultiplexer.add_stream mux
+              (M3OCaml.FileSource.create source framing 
+                (List.map (fun (rel,adaptor) -> 
+                  (rel, (M3OCaml.Adaptors.create_adaptor adaptor))
+                ) adaptors)
+                (list_to_string fst adaptors)
+              )
+          ) mux framings
+        in
+        let mux:M3OCaml.FileMultiplexer.t = 
+          StringMap.fold (fun s f m -> f_source (M3.FileSource(s)) f m) files (
+          StringMap.fold (fun s f m -> f_source (M3.PipeSource(s)) f m) pipes (
+            M3OCaml.FileMultiplexer.create ()))
+        in
+          M3OCaml.synch_main db mux tlq evaluator StringMap.empty ()
       )
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
