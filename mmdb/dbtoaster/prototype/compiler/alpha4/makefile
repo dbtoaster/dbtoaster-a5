@@ -41,7 +41,6 @@ ML_OPT = $(subst .ml,.cmx,$(filter %.ml,$(SOURCE)))
 MLI_OPT = $(subst .mli,.cmxi,$(filter %.mli,$(HEADER_ONLY_SOURCE)))\
 					$(subst .mli,.cmxi,$(filter %.mli,$(SOURCE)))
 
-
 C_OBJ = $(subst .ml,.o,$(filter %.ml,$(SOURCE)))
 
 # Non-bytecode source that still needs to be cleaned
@@ -69,15 +68,29 @@ RUNTIME = \
 	lib/ocaml/M3OCaml.ml \
 	lib/ocaml/StandardAdaptors.ml
 
+RUNTIME_ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(RUNTIME)))
+RUNTIME_MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(RUNTIME)))
+
+RUNTIME_ML_OPT = $(subst .ml,.cmx,$(filter %.ml,$(RUNTIME)))
+RUNTIME_MLI_OPT = $(subst .mli,.cmxi,$(filter %.mli,$(RUNTIME)))
+
+RUNTIME_OBJ_DEPS = $(RUNTIME_MLI_OBJ) $(RUNTIME_ML_OBJ)
+RUNTIME_OPT_DEPS = $(RUNTIME_MLI_OPT) $(RUNTIME_ML_OPT)
+
+ML_OBJ_TARGETS = $(ML_OBJ) $(filter-out $(ML_OBJ), $(RUNTIME_ML_OBJ)) 
+MLI_OBJ_TARGETS = $(MLI_OBJ) $(filter-out $(MLI_OBJ), $(RUNTIME_MLI_OBJ)) 
+ML_OPT_TARGETS = $(ML_OPT) $(filter-out $(ML_OPT), $(RUNTIME_ML_OPT)) 
+MLI_OPT_TARGETS = $(MLI_OPT) $(filter-out $(MLI_OPT), $(RUNTIME_MLI_OPT)) 
+
 # Generated files that need to be cleaned up
 CLEAN_OBJ = \
 	$(ML_OBJ) $(subst .cmo,.cmi,$(ML_OBJ)) $(ML_OPT) $(C_OBJ) \
+	$(RUNTIME_ML_OBJ) $(RUNTIME_MLI_OBJ) $(RUNTIME_ML_OPT) $(RUNTIME_MLI_OPT) \
 	$(subst .mli,.cmi,$(HEADER_ONLY_SOURCE))\
 	$(subst .mli,.cmxi,$(HEADER_ONLY_SOURCE))\
 	$(subst .ml,.cmi,$(OTHER_SOURCE)) $(subst .ml,.cmo,$(OTHER_SOURCE)) \
 	$(subst .ml,.cmx,$(OTHER_SOURCE)) $(subst .ml,.o,$(OTHER_SOURCE)) \
 	$(GENERATED_SOURCE) \
-	$(patsubst %.ml,%.cmx,$(filter %.ml,$(RUNTIME)))\
 	dbtoaster dbtoaster_top m3_ex vwap query
 
 INCLUDE_DIR = \
@@ -101,19 +114,19 @@ driver: dbtoaster
 
 top: dbtoaster_top
 
-$(ML_OBJ) : %.cmo : %.ml
+$(ML_OBJ_TARGETS) : %.cmo : %.ml
 	@echo Compiling $*
 	@ocamlc $(OC_FLAGS) -c $<
 
-$(MLI_OBJ) : %.cmi : %.mli
+$(MLI_OBJ_TARGETS) : %.cmi : %.mli
 	@echo Compiling Header $*
 	@ocamlc $(OC_FLAGS) -c $<
 
-$(ML_OPT) : %.cmx : %.ml
+$(ML_OPT_TARGETS) : %.cmx : %.ml
 	@echo Compiling Optimized $*
 	@ocamlopt $(OOPT_FLAGS) -c $<
 
-$(MLI_OPT) : %.cmxi : %.mli
+$(MLI_OPT_TARGETS) : %.cmxi : %.mli
 	@echo Compiling Optimized Header $*
 	@ocamlc $(OC_FLAGS) -c $<
 
@@ -131,7 +144,7 @@ dbtoaster_top: $(OBJ_DEPS)
 	@echo Linking dbtoaster_top
 	@ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(ML_OBJ)
 
-dbtoaster: $(OBJ_DEPS) Driver.ml
+dbtoaster: $(OBJ_DEPS) Driver.ml $(RUNTIME_OBJ_DEPS) $(RUNTIME_OPT_DEPS)
 	@echo Linking dbtoaster
 	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) Driver.ml
 
@@ -147,6 +160,16 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/CompilerTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/MyTpchTest.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Partner.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Ssb-simple.ml
+#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Ssb.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ12.ml
+#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ18.ml
+#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ22.ml
+#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster

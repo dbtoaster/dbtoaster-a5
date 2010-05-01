@@ -323,9 +323,9 @@ else ();;
 (********* COMPILE [language of your choosing] *********)
 
 let compile_ocaml in_file_name =
-  let ocaml_cc = "ocamlc" in
-  let ocaml_lib_ext = ".cma" in
-  let dbt_lib_ext = ".cmo" in
+  let ocaml_cc = "ocamlopt" in
+  let ocaml_lib_ext = ".cmxa" in
+  let dbt_lib_ext = ".cmx" in
   let ocaml_libs = [ "unix"; "str" ] in
   let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
   let dbt_includes = [ "lib/ocaml" ] in
