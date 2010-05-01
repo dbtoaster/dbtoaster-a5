@@ -34,20 +34,23 @@ group by d.year, c.nation, c.region, s.region, p.mfgr;
 *)
 
 
-open Calculus;;
+open Calculus
+open Util;;
+
+let cg = Compiler.generate_unit_test_code;;
 
 let sch =
 [
-("SSB_DATE", ["datekey"; "year"]);
-("SSB_CUSTOMER", ["custkey"; "name"; "address"; "city";
-        "nation"; "region"; "phone"; "mktsegment"]);
-("SSB_SUPPLIER", ["suppkey"; "name"; "address"; "city";
-        "nation"; "region"; "phone"]);
-("SSB_PART", ["partkey"; "name"; "mfgr"]);
-("SSB_LINEORDER", ["orderkey"; "linenumber";
-        "custkey"; "partkey"; "suppkey";
-        "orderpriority"; "shippriority";
-        "quantity"; "revenue"; "orderdate"; "supplycost"])
+("SSB_DATE", [("datekey", TInt); ("year", TInt)]);
+("SSB_CUSTOMER", [("custkey", TInt); ("name", TInt); ("address", TInt); ("city", TInt);
+        ("nation", TInt); ("region", TInt); ("phone", TInt); ("mktsegment", TInt)]);
+("SSB_SUPPLIER", [("suppkey", TInt); ("name", TInt); ("address", TInt); ("city", TInt);
+        ("nation", TInt); ("region", TInt); ("phone", TInt)]);
+("SSB_PART", [("partkey", TInt); ("name", TInt); ("mfgr", TInt)]);
+("SSB_LINEORDER", [("orderkey", TInt); ("linenumber", TInt);
+        ("custkey", TInt); ("partkey", TInt); ("suppkey", TInt);
+        ("orderpriority", TInt); ("shippriority", TInt);
+        ("quantity", TInt); ("revenue", TInt); ("orderdate", TInt); ("supplycost", TInt)])
 ];;
 
 
@@ -55,70 +58,69 @@ let ssb =
   RVal
     (AggSum
       (RSum
-        [RVal (Var "LO__REVENUE");
+        [RVal (Var ("LO__REVENUE", TInt));
          RProd
           [RVal (Const (Int (-1)));
-           RVal (Var "LO__SUPPLYCOST")]],
+           RVal (Var ("LO__SUPPLYCOST", TInt))]],
        RA_MultiNatJoin
         [RA_MultiNatJoin
           [RA_Leaf
             (Rel ("SSB_DATE",
-              ["D__DATEKEY"; "D__YEAR"]));
+              [("D__DATEKEY", TInt); ("D__YEAR", TInt)]));
            RA_Leaf
             (Rel ("SSB_CUSTOMER",
-              ["C__CUSTKEY"; "C__NAME";
-               "C__ADDRESS"; "C__CITY";
-               "C__NATION";
-               "C__REGION"; "C__PHONE";
-               "C__MKTSEGMENT"]));
+              [("C__CUSTKEY", TInt); ("C__NAME", TInt);
+               ("C__ADDRESS", TInt); ("C__CITY", TInt);
+               ("C__NATION", TInt);
+               ("C__REGION", TInt); ("C__PHONE", TInt);
+               ("C__MKTSEGMENT", TInt)]));
            RA_Leaf
             (Rel ("SSB_SUPPLIER",
-              ["S__SUPPKEY"; "S__NAME";
-               "S__ADDRESS"; "S__CITY";
-               "S__NATION";
-               "S__REGION"; "S__PHONE"]));
+              [("S__SUPPKEY", TInt); ("S__NAME", TInt);
+               ("S__ADDRESS", TInt); ("S__CITY", TInt);
+               ("S__NATION", TInt);
+               ("S__REGION", TInt); ("S__PHONE", TInt)]));
            RA_Leaf
             (Rel ("SSB_PART",
-              ["P__PARTKEY"; "P__NAME";
-               "P__MFGR"]));
+              [("P__PARTKEY", TInt); ("P__NAME", TInt);
+               ("P__MFGR", TInt)]));
            RA_Leaf
             (Rel ("SSB_LINEORDER",
-              ["LO__ORDERKEY";
-               "LO__LINENUMBER";
-               "LO__CUSTKEY";
-               "LO__PARTKEY";
-               "LO__SUPPKEY";
-               "LO__ORDERPRIORITY";
-               "LO__SHIPPRIORITY";
-               "LO__QUANTITY";
-               "LO__REVENUE";
-               "LO__ORDERDATE";
-               "LO__SUPPLYCOST"]))];
+              [("LO__ORDERKEY", TInt);
+               ("LO__LINENUMBER", TInt);
+               ("LO__CUSTKEY", TInt);
+               ("LO__PARTKEY", TInt);
+               ("LO__SUPPKEY", TInt);
+               ("LO__ORDERPRIORITY", TInt);
+               ("LO__SHIPPRIORITY", TInt);
+               ("LO__QUANTITY", TInt);
+               ("LO__REVENUE", TInt);
+               ("LO__ORDERDATE", TInt);
+               ("LO__SUPPLYCOST", TInt)]))];
          RA_MultiNatJoin
           [RA_Leaf
             (AtomicConstraint (Eq,
-              RVal (Var "LO__CUSTKEY"),
-              RVal (Var "C__CUSTKEY")));
+              RVal (Var ("LO__CUSTKEY", TInt)),
+              RVal (Var ("C__CUSTKEY", TInt))));
            RA_MultiNatJoin
             [RA_Leaf
               (AtomicConstraint (Eq,
-                RVal (Var "LO__SUPPKEY"),
-                RVal (Var "S__SUPPKEY")));
+                RVal (Var ("LO__SUPPKEY", TInt)),
+                RVal (Var ("S__SUPPKEY", TInt))));
              RA_MultiNatJoin
               [RA_Leaf
                 (AtomicConstraint (Eq,
-                  RVal (Var "LO__PARTKEY"),
-                  RVal (Var "P__PARTKEY")));
+                  RVal (Var ("LO__PARTKEY", TInt)),
+                  RVal (Var ("P__PARTKEY", TInt))));
                RA_Leaf
                 (AtomicConstraint (Eq,
-                  RVal (Var "LO__ORDERDATE"),
-                  RVal (Var "D__DATEKEY")))]]]]))
+                  RVal (Var ("LO__ORDERDATE", TInt)),
+                  RVal (Var ("D__DATEKEY", TInt))))]]]]))
 ;;
 
-
+(* This is a large piece of code...*)
 Compiler.compile Calculus.ModeExtractFromCond
-                 sch (Compiler.mk_external "m" ["D"])
-                 (make_term ssb)
+                 sch (make_term ssb, (map_term "m" [("D", TInt)])) cg []
 ;;
 
 
