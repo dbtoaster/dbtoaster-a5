@@ -239,6 +239,10 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 
+open Database
+open Sources
+open Runtime
+
 let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
@@ -251,8 +255,8 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
       (fun ((schema,program),sources) tlq f ->
         StandardAdaptors.initialize();
         let prepared_program = M3Compiler.prepare_triggers program in
-        let db:M3OCaml.Database.db_t = 
-          M3OCaml.Database.make_empty_db 
+        let db:Database.db_t = 
+          Database.make_empty_db 
             schema
             (snd prepared_program)
         in
@@ -289,24 +293,23 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
         let f_source 
               (source:M3.source_t) 
               (framings:(M3.framing_t * (string * M3.adaptor_t) list) list)
-              (mux:M3OCaml.FileMultiplexer.t): 
-                M3OCaml.FileMultiplexer.t =
+              (mux:FileMultiplexer.t): FileMultiplexer.t =
           List.fold_left (fun mux (framing,adaptors) -> 
-            M3OCaml.FileMultiplexer.add_stream mux
-              (M3OCaml.FileSource.create source framing 
+            FileMultiplexer.add_stream mux
+              (FileSource.create source framing 
                 (List.map (fun (rel,adaptor) -> 
-                  (rel, (M3OCaml.Adaptors.create_adaptor adaptor))
+                  (rel, (Adaptors.create_adaptor adaptor))
                 ) adaptors)
                 (list_to_string fst adaptors)
               )
           ) mux framings
         in
-        let mux:M3OCaml.FileMultiplexer.t = 
+        let mux:FileMultiplexer.t = 
           StringMap.fold (fun s f m -> f_source (M3.FileSource(s)) f m) files (
           StringMap.fold (fun s f m -> f_source (M3.PipeSource(s)) f m) pipes (
-            M3OCaml.FileMultiplexer.create ()))
+            FileMultiplexer.create ()))
         in
-          M3OCaml.synch_main db mux tlq evaluator StringMap.empty ()
+          synch_main db mux tlq evaluator StringMap.empty ()
       )
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
@@ -333,7 +336,10 @@ let compile_ocaml in_file_name =
                    "M3";
                    "M3Common";
                    "lib/ocaml/SliceableMap";
-                   "lib/ocaml/M3OCaml";
+                   "lib/ocaml/Expression";
+                   "lib/ocaml/Database";
+                   "lib/ocaml/Sources";
+                   "lib/ocaml/Runtime";
                    "lib/ocaml/StandardAdaptors" ] in
     (* would nice to generate args dynamically off the makefile *)
     Unix.execvp ocaml_cc 

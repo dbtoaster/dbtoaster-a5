@@ -46,29 +46,29 @@ sig
    val ifthenelse0_bigsum_op : op_t
 
    val op_singleton_expr:
-      (M3.var_t * M3.var_t) list -> op_t -> code_t -> code_t -> code_t 
+      M3.Prepared.pprebind_t -> op_t -> code_t -> code_t -> code_t 
    
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_slice_expr: (M3.var_t * M3.var_t) list -> op_t ->
+   val op_slice_expr: M3.Prepared.pprebind_t -> M3.Prepared.pinbind_t -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
    val op_slice_product_expr:
-      (M3.var_t * M3.var_t) list -> op_t -> code_t -> code_t -> code_t
+      M3.Prepared.pprebind_t -> op_t -> code_t -> code_t -> code_t
 
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_lslice_expr: (M3.var_t * M3.var_t) list -> op_t ->
+   val op_lslice_expr: M3.Prepared.pprebind_t -> M3.Prepared.pinbind_t -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
    (* op, outv2, lhs code, rhs code -> op expr code *)
-   val op_lslice_product_expr: (M3.var_t * M3.var_t) list -> op_t ->
+   val op_lslice_product_expr: M3.Prepared.pprebind_t -> op_t ->
       M3.var_t list -> code_t -> code_t -> code_t
    
    (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
-   val op_rslice_expr: (M3.var_t * M3.var_t) list -> op_t ->
+   val op_rslice_expr: M3.Prepared.pprebind_t -> op_t ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
 
    (* TODO: this always returns a slice *)
@@ -81,10 +81,20 @@ sig
       string -> M3.var_t list -> int list list -> code_t -> code_t
 
    (* mapn, inv, outv, init lookup code -> map lookup code *)
-   val singleton_lookup: string -> M3.var_t list -> M3.var_t list -> code_t -> code_t
+   val singleton_lookup_and_init:
+      string -> M3.var_t list -> M3.var_t list -> code_t -> code_t
+
+   (* mapn, inv, outv, init lookup code -> map lookup code *)
+   val singleton_lookup:
+      string -> M3.var_t list -> M3.var_t list -> code_t -> code_t
+
+   (*  mapn, inv, outv, pat, patv, init lookup code -> map lookup code *)
+   val slice_lookup_sing_init:
+      string -> M3.var_t list -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
    
    (*  mapn, inv, pat, patv, init lookup code -> map lookup code *)
-   val slice_lookup: string -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
+   val slice_lookup:
+      string -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
    
    (* M3 RHS expr generation *)
  
@@ -136,10 +146,11 @@ sig
    (* Top-level M3 program structure *)
 
    (* TODO: this code returns unit, and should be reflected in resulting code_t *)
-   (* lhs_mapn, lhs_inv, lhs_ext, patv, pat, direct, db update code -> statement code *)
-   val statement :
-      string -> M3.var_t list -> M3.var_t list -> M3.var_t list -> int list -> bool ->
-      code_t -> code_t
+   (* lhs_mapn, lhs_inv, lhs_outv, lhs_ext, patv, pat, direct, db update code
+    *    -> statement code *)
+   val statement : string ->
+      M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
+      int list -> bool -> code_t -> code_t
 
    (* event, rel, trigger args, statement code block -> trigger code *)
    val trigger : M3.pm_t -> M3.rel_id_t -> M3.var_t list -> code_t list -> code_t

@@ -119,10 +119,12 @@ module Prepared = struct
 
   type pextension_t   = var_t list
   
-  type pbindings_t       = (var_t * var_t) list
+  (* dest, src. i.e. results in a binding dest := src *)   
+  type pprebind_t       = (var_t * var_t) list
+  type pinbind_t        = (var_t * int) list
   
   (* short-circuit, bf-equality bindings *)
-  type pcondition_meta_t = bool * pbindings_t 
+  type pcondition_meta_t = bool * pprebind_t * pinbind_t 
    
   (* id, theta extension, singleton, cross product, condition metadata *)
   type calcmeta_t    = int * pextension_t * bool * bool * (pcondition_meta_t option)  
@@ -150,11 +152,16 @@ module Prepared = struct
   let get_singleton ecalc = let (_,_,x,_,_) = get_meta ecalc in x
   let get_product ecalc = let (_,_,_,x,_) = get_meta ecalc in x
   
-  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in
-     match x with | Some(y,_) -> y | _ -> failwith "Invalid condition expr"
+  let get_cond_meta ecalc = let (_,_,_,_,x) = get_meta ecalc in x
 
-  let get_bf_bindings ecalc = let (_,_,_,_,x) = get_meta ecalc in
-     match x with | Some(_,y) -> y | _ -> failwith "Invalid condition expr"
+  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in
+     match x with | Some(y,_,_) -> y | _ -> failwith "Invalid condition expr"
+
+  let get_prebind ecalc = let (_,_,_,_,x) = get_meta ecalc in
+     match x with | Some(_,y,_) -> y | _ -> failwith "Invalid condition expr"
+
+  let get_inbind ecalc = let (_,_,_,_,x) = get_meta ecalc in
+     match x with | Some(_,_,y) -> y | _ -> failwith "Invalid condition expr"
   
   let get_ecalc aggecalc = fst aggecalc
   let get_agg_meta aggecalc = snd aggecalc
@@ -170,7 +177,7 @@ module Prepared = struct
     (if product then "; product" else "")^
     (* TODO: output binding expr *)
     (match cond_meta with
-      | Some(short,bindings) -> (if short then "; short-circuit" else "")^
+      | Some(short,bindings,_) -> (if short then "; short-circuit" else "")^
          (List.fold_left (fun acc (v,c) -> acc^"; "^v^"->...") "" bindings)
       | _ -> "")^
     "}"

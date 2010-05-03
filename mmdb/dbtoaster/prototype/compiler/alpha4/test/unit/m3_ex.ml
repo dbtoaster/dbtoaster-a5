@@ -6,11 +6,14 @@ open M3Common.Patterns
 open Util
 
 open M3Compiler
-open M3OCaml
 open M3Interpreter
 open M3Interpreter.CG
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
+
+open Expression
+open Database
+open Sources;;
 
 let print_map name map =
   string_of_list0 "\n"

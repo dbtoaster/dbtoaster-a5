@@ -4,9 +4,12 @@ open M3Common
 open M3Common.Patterns
 
 open M3Compiler
-open M3OCaml
 open M3OCamlgen
 open M3OCamlgen.CG
+
+open Expression
+open Database
+open Sources
 
 module Compiler = M3Compiler.Make(M3OCamlgen.CG)
 open Compiler;;

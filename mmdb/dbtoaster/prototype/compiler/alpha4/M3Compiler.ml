@@ -173,7 +173,7 @@ let prepare_triggers (triggers : trig_t list)
    let rec prepare_calc (update_mapn : string) (lhs_vars: var_t list)
                         (theta_vars : var_t list) (calc : calc_t)
          : (M3P.calc_t * pattern_map) =
-      let recur = prepare_calc update_mapn lhs_vars in
+      let recur = prepare_calc update_mapn in
       
       (* Prepares either an LHS or RHS operand by computing its extensions.
        * Other metadata for the node (i.e. singleton or cross product traits)
@@ -182,12 +182,12 @@ let prepare_triggers (triggers : trig_t list)
        *         (i.e. trigger vars/propagated vars)
        * -- rhs: lhs out vars that are not rhs schema vars, i.e. propagations
        *)
-      let prepare_operand c propagated defv theta_ext
+      let prepare_operand lhs_vars c propagated defv theta_ext
             : (M3P.calc_t * var_t list * pattern_map) =
          let outv = calc_schema c in
          let ext = Util.ListAsSet.diff (if propagated then defv else outv)
                       (if propagated then outv else defv) in
-         let (pc, pm) = recur (theta_vars@theta_ext) c in 
+         let (pc, pm) = recur lhs_vars (theta_vars@theta_ext) c in 
          (* Override extensions for the operand. *)
          let new_pc_meta = let (w,_,x,y,z) = M3P.get_meta pc in (w,ext,x,y,z)
          in ((M3P.get_calc pc, new_pc_meta), outv, pm)
@@ -212,24 +212,28 @@ let prepare_triggers (triggers : trig_t list)
        * -- note to ensure strict propagation, we should only yield extensions
        *    that are used by at least one successor operand.
        *) 
-      let prepare_op (f : M3P.calc_t -> M3P.calc_t -> M3P.pcalc_t)
-                     (c1: calc_t) (c2: calc_t)
+      let prepare_op_w_lhs (c1_lhs_vars : var_t list) (c2_lhs_vars : var_t list)
+                           (f : M3P.calc_t -> M3P.calc_t -> M3P.pcalc_t)
+                           (c1: calc_t) (c2: calc_t)
             : (M3P.calc_t * pattern_map)
       =
-         let (e1, c1_outv, p1_pats) = prepare_operand c1 false theta_vars [] in
+         let (e1, c1_outv, p1_pats) =
+            prepare_operand c1_lhs_vars c1 false theta_vars [] in
          let (e2, _, p2_pats) =
-            prepare_operand c2 true c1_outv (M3P.get_extensions e1) in
+            prepare_operand c2_lhs_vars c2 true c1_outv (M3P.get_extensions e1)
+         in
          let strict_e1 =
             let (new_c1, (id,ext,sing,prod,cm)) = e1 in
             let strict_ext = Util.ListAsSet.inter ext (calc_vars c2)
             in (new_c1, (id,strict_ext,sing,prod,cm))
          in
          let patterns = merge_pattern_maps p1_pats p2_pats in
-         let singleton = (M3P.get_singleton strict_e1) && (M3P.get_singleton e2) in
-         let product = (Util.ListAsSet.inter (calc_vars c1) (calc_vars c2)) = [] in
-         let meta = (prepare(), [], singleton, product, None)
+         let sing = (M3P.get_singleton strict_e1) && (M3P.get_singleton e2) in
+         let prod = (Util.ListAsSet.inter (calc_vars c1) (calc_vars c2)) = [] in
+         let meta = (prepare(), [], sing, prod, None)
          in ((f strict_e1 e2, meta), patterns) 
       in
+      let prepare_op = prepare_op_w_lhs lhs_vars lhs_vars in
       match (fst calc) with
         | Const(c) ->
            let meta = (prepare(), [], true, false, None)
@@ -255,23 +259,52 @@ let prepare_triggers (triggers : trig_t list)
 
            (* debug_cf_bigsums lhs_vars c1 c1_bigsums c2 c2_bigsums; *)
 
+           (* TODO: test bigsum bindings and whether this replaces bigsum
+            * slice_var construction with singleton_var.
+            * BF-equalities no longer exist in M3, so we need to disable
+            * that optimization for testing. *)
            begin match (fst c1) with
             | Eq((Var(x),_), (Var(y),_)) when
                (xor (List.mem x c1_bigsums) (List.mem y c1_bigsums)) ->
-               let bindings = [if List.mem x c1_bigsums then (x, y) else (y, x)] in
-               let cond_meta = Some(true, bindings) in
+               let prebind = [if List.mem x c1_bigsums
+                              then (x, y) else (y, x)] in
+               let cond_meta = Some(true, prebind, []) in
                let ((nc,(id,ext,sing,prod,_)),pat) =
-                  prepare_op (fun e1 e2 -> IfThenElse0 (e1,e2)) c1 c2
+                  let new_lhs_vars = lhs_vars@[(fst (List.hd prebind))] in
+                  prepare_op_w_lhs new_lhs_vars new_lhs_vars
+                     (fun e1 e2 -> IfThenElse0 (e1,e2)) c1 c2
                in ((nc, (id,ext,sing,prod,cond_meta)), pat)
 
             | _ ->
-               let (((nc,(id,ext,sing,prod,_)),pat), cond_meta) =
-                  let (op_f, l, r, cond_meta) =
-                     if c2_bigsums = [] then
-                        ((fun e1 e2 -> IfThenElse0 (e1, e2)), c1, c2, Some(true, []))
-                     else ((fun e1 e2 -> IfThenElse0 (e2, e1)), c2, c1, Some(false, []))
-                  in (prepare_op op_f l r, cond_meta)
-               in ((nc, (id,ext,sing,prod,cond_meta)), pat)
+               let index el l =
+                  let r = snd( List.fold_left (fun (pos,cur) x ->
+                  if cur >= 0 then (pos,cur) else
+                  if x = el then (pos,pos) else (pos+1,cur)) (0,-1) l) in
+                  if r = -1 then raise Not_found else r 
+               in
+            
+               (* Note: c1_bigsums may be non-empty from nested if-exprs in
+                * the then-expr. Thus we only have bigsums locally to this
+                * if-expr if c2_bigsums is non-empty *)
+               let no_bigsum = c2_bigsums = [] in
+               (* Preparation w/ bigsum vars bound *)
+               let (lbv, rbv, op_f, l, r) =
+                  if no_bigsum then (lhs_vars, lhs_vars,
+                     (fun e1 e2 -> IfThenElse0 (e1, e2)), c1, c2)
+                  else let new_lhs_vars = lhs_vars@c2_bigsums in
+                  (lhs_vars, new_lhs_vars,
+                     (fun e1 e2 -> IfThenElse0 (e2, e1)), c2, c1) in
+               let cond_meta =
+                  let inbind = if no_bigsum then [] else
+                     let c2_schema = calc_schema c2 in
+                     List.map (fun x -> (x, index x c2_schema)) c2_bigsums
+                  in Some(no_bigsum,[],inbind) in
+               let ((nc,(id,ext,sing,prod,_)),pat) =
+                  (prepare_op_w_lhs lbv rbv op_f l r) in
+               
+               (* New prepared calc construction w/ bigsum bindings *)
+               let new_if_meta = (id,ext,sing,prod,cond_meta)
+               in ((nc, new_if_meta), pat)
             end
         
         | MapAccess (mapn, inv, outv, init_calc) ->
@@ -399,7 +432,9 @@ struct
 open CG
 
 let rec compile_pcalc patterns (incr_ecalc) : code_t = 
-   let compile_op ecalc op e1 e2 bindings : code_t =
+   let compile_op ecalc op e1 e2 : code_t =
+      let (prebind,inbind) = match M3P.get_cond_meta ecalc with
+         | None -> ([],[]) | Some(_,x,y) -> (x,y) in
       let aux ecalc = (calc_schema ecalc, M3P.get_extensions ecalc,
          compile_pcalc patterns ecalc, M3P.get_singleton ecalc) in
       let (outv1, theta_ext, ce1, ce1_sing) = aux e1 in
@@ -409,17 +444,17 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
           | (true, false, _) | (true, _, false) | (false, true, true) ->
              failwith "invalid parent singleton"
 
-          | (true, _, _) -> op_singleton_expr bindings op ce1 ce2
+          | (true, _, _) -> op_singleton_expr prebind op ce1 ce2
           
-          | (_, true, false) -> op_rslice_expr bindings op outv2 schema schema_ext ce1 ce2
+          | (_, true, false) -> op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2
           
           | (_, false, true) ->
-             if M3P.get_product ecalc then op_lslice_product_expr bindings op outv2 ce1 ce2
-             else op_lslice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2 
+             if M3P.get_product ecalc then op_lslice_product_expr prebind op outv2 ce1 ce2
+             else op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 
 
           | (_, false, false) ->
-             if M3P.get_product ecalc then op_slice_product_expr bindings op ce1 ce2
-             else op_slice_expr bindings op outv1 outv2 schema theta_ext schema_ext ce1 ce2
+             if M3P.get_product ecalc then op_slice_product_expr prebind op ce1 ce2
+             else op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2
          end
    in
    let ccalc : code_t =
@@ -433,34 +468,46 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
              * bound vars for the partial key here *)
             let patv = M3P.get_extensions (M3P.get_ecalc init_aggecalc) in
             let pat = List.map (index outv) patv in
+            let singleton_init_code = 
+               (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
+               (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
+            in
+            let singleton_lookup_code = M3P.get_singleton incr_ecalc in
             (* code that returns the initial value slice *)
             let init_val_code =
                (*print_endline ("generating init lookup for "^mapn^" "^
                               (vars_to_string inv)^" "^
                               (vars_to_string outv)^" "^
                               (string_of_bool (M3P.get_singleton (get_ecalc init_aggecalc))));*) 
-               if (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
-                  (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
+               if singleton_init_code
                then singleton_init_lookup mapn inv out_patterns outv cinit
                else slice_init_lookup mapn inv out_patterns cinit
             in
-            (* code that does the final stage of the lookup on the slice *)
-            if M3P.get_singleton incr_ecalc then
-               singleton_lookup mapn inv outv init_val_code
-            else slice_lookup mapn inv pat patv init_val_code 
+            begin match (singleton_init_code, singleton_lookup_code) with
+             | (true, true) -> singleton_lookup_and_init mapn inv outv init_val_code
+             | (true, false) -> slice_lookup_sing_init mapn inv outv pat patv init_val_code
+             | (false, true) -> singleton_lookup mapn inv outv init_val_code
+             | (false, false) -> slice_lookup mapn inv pat patv init_val_code
+            end
 
-      | Add (c1, c2) -> compile_op incr_ecalc CG.add_op  c1 c2 []
-      | Mult(c1, c2) -> compile_op incr_ecalc CG.mult_op c1 c2 []
-      | Lt  (c1, c2) -> compile_op incr_ecalc CG.lt_op   c1 c2 []
-      | Leq (c1, c2) -> compile_op incr_ecalc CG.leq_op  c1 c2 []
-      | Eq  (c1, c2) -> compile_op incr_ecalc CG.eq_op   c1 c2 []
+            (* code that does the final stage of the lookup on the slice *)
+            (*
+            if singleton_lookup_code then
+               singleton_lookup mapn inv outv init_val_code
+            else slice_lookup mapn inv pat patv init_val_code
+            *)
+
+      | Add (c1, c2) -> compile_op incr_ecalc CG.add_op  c1 c2
+      | Mult(c1, c2) -> compile_op incr_ecalc CG.mult_op c1 c2
+      | Lt  (c1, c2) -> compile_op incr_ecalc CG.lt_op   c1 c2
+      | Leq (c1, c2) -> compile_op incr_ecalc CG.leq_op  c1 c2
+      | Eq  (c1, c2) -> compile_op incr_ecalc CG.eq_op   c1 c2
 
       | IfThenElse0(c1, c2) ->
            let short_circuit_if = M3P.get_short_circuit incr_ecalc in
-           let bindings = M3P.get_bf_bindings incr_ecalc in
            if short_circuit_if then
-              compile_op incr_ecalc CG.ifthenelse0_op c1 c2 bindings
-           else compile_op incr_ecalc CG.ifthenelse0_bigsum_op c2 c1 bindings
+              compile_op incr_ecalc CG.ifthenelse0_op c1 c2
+           else compile_op incr_ecalc CG.ifthenelse0_bigsum_op c2 c1
 
       | Const(i)   ->
          if M3P.get_singleton incr_ecalc then (const i)
@@ -545,7 +592,7 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
          (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc))
       then db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt
       else db_slice_update lhs_mapn cstmt
-   in statement lhs_mapn lhs_inv lhs_ext patv pat direct db_update_code
+   in statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct db_update_code
 
 let compile_ptrig (ptrig, patterns) =
    let aux ptrig =

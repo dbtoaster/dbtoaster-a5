@@ -1,5 +1,7 @@
 open M3
-open M3OCaml
+open Expression
+open Database
+open Sources
 
 exception AbortEventConstruction
 

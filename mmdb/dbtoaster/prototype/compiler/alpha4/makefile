@@ -15,7 +15,10 @@ SOURCE = \
 	M3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
-	lib/ocaml/M3OCaml.ml \
+	lib/ocaml/Expression.ml \
+	lib/ocaml/Database.ml \
+	lib/ocaml/Sources.ml \
+	lib/ocaml/Runtime.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml
@@ -65,7 +68,10 @@ RUNTIME = \
 	M3Common.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
-	lib/ocaml/M3OCaml.ml \
+	lib/ocaml/Expression.ml \
+	lib/ocaml/Database.ml \
+	lib/ocaml/Sources.ml \
+	lib/ocaml/Runtime.ml \
 	lib/ocaml/StandardAdaptors.ml
 
 RUNTIME_ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(RUNTIME)))
@@ -173,7 +179,7 @@ test: top
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster
-	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml -d compile-with-gdb
+	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml #-d compile-with-gdb
 
 ## Query execution tests
 vwaptest: $(OPT_DEPS)
@@ -182,7 +188,7 @@ vwaptest: $(OPT_DEPS)
 
 qptest: test/sql/vwap vwaptest
 	@echo "Testing VWAP query (M3, SQL)... "
-	@echo "Running VWAP M3..." && test/qp/vwap_m3 -validate \
+	@echo "Running VWAP M3..." && env OCAMLRUNPARAM="b" test/qp/vwap_m3 -validate \
 		test/data/vwap5k.csv test/qp/output/vwap5k.m3 > /dev/null
 	@echo "Running VWAP SQL..." && \
 		test/sql/vwap -r value -o test/qp/output/vwap5k.dbt > /dev/null

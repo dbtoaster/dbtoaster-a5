@@ -3,12 +3,15 @@ open M3Common
 open M3Common.Patterns
 
 open M3Compiler
-open M3OCaml
 open M3Interpreter
 open M3Interpreter.CG
 
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
+
+open Expression
+open Database
+open Sources;;
 
 (* SELECT avg(b2.price * b2.volume) 
 FROM   bids b2
@@ -386,12 +389,15 @@ let vwap_query validate_mode output_level result_chan_opt
           begin match output_level with
            | Database -> output_string rc ((Database.db_to_string db)^"\n")
            | Map      ->
-              output_string rc
-                ((Database.dbmap_to_string (Database.get_map "QUERY_1_1" db))^"\n")
+              let r = match Database.get_value "QUERY_1_1" db with
+                 | Some(x) -> ValuationMap.from_list [([], ValuationMap.from_list [([], x)] [])] []
+                 | None -> ValuationMap.from_list [([], ValuationMap.from_list [([], CFloat(0.0))] [])] []
+              in output_string rc ((Database.map_to_string r)^"\n")
            | Value    ->
-              output_string rc (AggregateMap.string_of_aggregate
-                (ValuationMap.find []
-                   (ValuationMap.find [] (Database.get_map "QUERY_1_1" db)))^"\n")
+              let r = match Database.get_value "QUERY_1_1" db with
+                 | Some(x) -> x
+                 | None -> CFloat(0.0)
+              in output_string rc ((AggregateMap.string_of_aggregate r)^"\n")
           end)
 in
 
