@@ -344,7 +344,7 @@ let compile_ocaml in_file_name =
     (* would nice to generate args dynamically off the makefile *)
     Unix.execvp ocaml_cc 
       ( Array.of_list (
-        [ ocaml_cc; "-ccopt"; "-O3" ] @
+        [ ocaml_cc; "-ccopt"; "-O3"; "-nodynlink" ] @
         (if Debug.active "COMPILE-WITH-GDB" then [ "-g" ] else []) @
         (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @

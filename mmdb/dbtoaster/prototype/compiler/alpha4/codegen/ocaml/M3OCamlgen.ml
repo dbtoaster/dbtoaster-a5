@@ -220,6 +220,7 @@ struct
           in Inline(inline_bindings^"("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")")
 
    let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+      let semijoin = outv2 = schema in
       tabify (
       (annotate_code_schema "outv1" outv1)@
       (annotate_code_schema "theta_ext" theta_ext)@
@@ -233,9 +234,12 @@ struct
       (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
       (indent 1 (get_lines ce2))@
       ["   in";
-       "   let r3 = ";
+       "   let r3 = "]@
+      (if semijoin then
+      (["      Valuation.map (fun v2 -> "^op^" v1 v2) r2"])
+      else
               (* Inlined AggregateMap.concat_keys *) 
-       "      ValuationMap.mapi (fun k2 v2 -> "]@
+      (["      ValuationMap.mapi (fun k2 v2 -> "]@
       (* Bind outv2, and schema_ext. Note schema_ext corresponds to
        * vars in outv1 which can be accessed through const list "k" *)
       (let new_k = inline_vars_list schema [(outv2, "k2"); (schema_ext, "k")] in
@@ -243,8 +247,8 @@ struct
       (indent 2 (annotate_code_schema "outv2" outv2))@
       (indent 2 (annotate_code_schema "schema_ext" schema_ext))@
       ["         ("^new_k^", ("^op^" v1 v2))"])@
-      ["      ) r2";
-       "   in ValuationMap.union r r3";
+      ["      ) r2"]))@
+      ["   in ValuationMap.union r r3";
        "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
        
    let op_slice_product_expr prebind op ce1 ce2 = tabify (
@@ -539,8 +543,7 @@ struct
        "   then [ValuationMap.find outv_img in_slice] else [] in";
        "let new_value = "]@(get_lines cstmt)@
       ["   singleton";
-       "in";
-       "Database.update_value "^cmapn^" "^cpatterns^" inv_img outv_img new_value db)"])
+       "in Database.update_value "^cmapn^" "^cpatterns^" inv_img outv_img new_value db)"])
 
    (* assume cstmt is a function with sig:
     *    val cstmt: AggregateMap.t -> AggregateMap.t *) 

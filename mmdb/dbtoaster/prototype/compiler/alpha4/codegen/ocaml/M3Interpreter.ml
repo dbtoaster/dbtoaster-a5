@@ -249,6 +249,9 @@ let op_singleton_expr prebind op ce1 ce2  =
  * op expr code *)
 let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
+   (* Note non-empty schema_ext is not sufficient for semijoin, as keys may
+    * still require reordering to be done via key refinement *) 
+   let semijoin = outv2 = schema in
    Slice (fun theta db ->
       let th = Valuation.bind theta prebind in
       let res1 = ce1_l th db in
@@ -269,8 +272,10 @@ let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 
           * map keys, implying this call to extend_keys will never do any
           * aggregation and can be simplified to key concatenation
           * and reindexing. *)
-         let r3 = AggregateMap.concat_keys outv2 schema th2 schema_ext
-            (ValuationMap.map (fun v2 -> op v1 v2) r2)
+         let r3 =
+            if semijoin then (ValuationMap.map (fun v2 -> op v1 v2) r2)
+            else AggregateMap.concat_keys outv2 schema th2 schema_ext
+                    (ValuationMap.map (fun v2 -> op v1 v2) r2)
          in
             (* r, r3 have no overlap -- safe to union slices.
              * This will also union any secondary indexes. *)
@@ -289,7 +294,11 @@ let op_slice_product_expr prebind op ce1 ce2 =
       in ValuationMap.product op res1 res2)
 
 (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
- * op expr code *)
+ * op expr code
+ * -- semijoin optimization: nothing to be done here, RHS is a singleton,
+ *    and no schema extension (i.e. semijoin) implies schema is made up
+ *    of bigsum vars, which must be accessed while looping over the bigsum
+ *    slice. *)
 let op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->

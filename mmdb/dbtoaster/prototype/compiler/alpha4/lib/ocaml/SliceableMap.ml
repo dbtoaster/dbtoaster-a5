@@ -221,7 +221,7 @@ struct
     * secondary indexes *)
    let map_rk f m =
       let new_m = Hashtbl.fold (fun k v nm -> Hashtbl.replace nm k (f k v); nm)
-                     (fst m) (Hashtbl.create 100)
+                     (fst m) (Hashtbl.create 10)
       in (new_m, snd m) 
 
    let map f m = map_rk (fun k v -> f v) m

@@ -113,7 +113,8 @@ let normalize_triggers (triggers : M3.trig_t list) =
  * -- op slice expr: propagations from lhs operand to rhs operand, op schema
  *                   extensions by the rhs operand (note these two sets of
  *                   extensions are disjoint, since the rhs schema already
- *                   contains the vars used from the lhs operand)
+ *                   contains the vars used from the lhs operand, except for
+ *                   lhs vars that are only map in vars on the rhs)
  * -- op lslice expr: same as above
  * -- op rslice expr: op schema extensions by the rhs operand
  *
@@ -229,9 +230,19 @@ let prepare_triggers (triggers : trig_t list)
          in
          let patterns = merge_pattern_maps p1_pats p2_pats in
          let sing = (M3P.get_singleton strict_e1) && (M3P.get_singleton e2) in
-         let prod = (Util.ListAsSet.inter (calc_vars c1) (calc_vars c2)) = [] in
+         (* We can use cross products if we don't pass vars sideways... *)
+         let prod = (M3P.get_extensions strict_e1) = [] in
          let meta = (prepare(), [], sing, prod, None)
-         in ((f strict_e1 e2, meta), patterns) 
+         in 
+(*
+         let semijoin = (M3P.get_extensions e2) = [] in
+         print_endline ((M3Common.code_of_calc c1)^" "^
+                        (M3Common.code_of_calc c2)^
+                        " semijoin: "^(string_of_bool semijoin)^
+                        " prodsemi: "^(string_of_bool (semijoin && prod))^
+                        " sing: "^(string_of_bool sing));
+*)
+         ((f strict_e1 e2, meta), patterns) 
       in
       let prepare_op = prepare_op_w_lhs lhs_vars lhs_vars in
       match (fst calc) with
@@ -446,15 +457,20 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
 
           | (true, _, _) -> op_singleton_expr prebind op ce1 ce2
           
-          | (_, true, false) -> op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2
+          | (_, true, false) ->
+             op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2
           
           | (_, false, true) ->
-             if M3P.get_product ecalc then op_lslice_product_expr prebind op outv2 ce1 ce2
-             else op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 
+             if M3P.get_product ecalc then
+                op_lslice_product_expr prebind op outv2 ce1 ce2
+             else op_lslice_expr prebind inbind
+                op outv1 outv2 schema theta_ext schema_ext ce1 ce2 
 
           | (_, false, false) ->
-             if M3P.get_product ecalc then op_slice_product_expr prebind op ce1 ce2
-             else op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2
+             if M3P.get_product ecalc then
+                op_slice_product_expr prebind op ce1 ce2
+             else op_slice_expr prebind inbind
+                op outv1 outv2 schema theta_ext schema_ext ce1 ce2
          end
    in
    let ccalc : code_t =
