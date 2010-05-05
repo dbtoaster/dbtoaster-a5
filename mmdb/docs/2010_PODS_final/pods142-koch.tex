@@ -1,0 +1,2803 @@
+\documentclass{sig-alternate}
+
+\pdfpageheight=11in
+\pdfpagewidth=8.5in
+
+
+\usepackage{latexsym}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{color}
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{algorithmic}
+\usepackage{xspace}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+
+\def\punto{$\hspace*{\fill}\Box$}
+\newcommand{\nop}[1]{}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\def\lBrack{\lbrack\!\lbrack}
+\def\rBrack{\rbrack\!\rbrack}
+\newcommand{\Bracks}[1]{\lBrack#1\rBrack}
+
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{todo}[theorem]{ToDo}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{metatheorem}{Metatheorem}[section]
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{property}[theorem]{Property}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{proviso}[theorem]{Proviso}
+
+%\newenvironment{proof}{\noindent {\bf Proof.}}{\punto\medskip}
+\newenvironment{proofsketch}{\noindent {\bf Proof Sketch.}}{\punto\medskip}
+
+
+
+%\addtolength{\textwidth}{1in}
+%\addtolength{\oddsidemargin}{-0.5in}
+%\addtolength{\evensidemargin}{-0.5in}
+%\addtolength{\textheight}{1.5in}
+%\addtolength{\topmargin}{-1in}
+
+
+%\renewcommand{\baselinestretch}{.9625}
+
+
+\conferenceinfo{PODS}{'10 Indianapolis, IN}
+
+
+\title{Incremental Query Evaluation in a Ring of Databases}
+
+
+%\numberofauthors{1}
+\author{\alignauthor Christoph Koch \\[1ex]
+\affaddr{Dept.\ of Computer Science} \\
+\affaddr{Cornell University} \\
+\affaddr{koch@cs.cornell.edu}
+}
+
+%\toappear{}
+\date{}
+
+
+\begin{document}
+
+
+\conferenceinfo{PODS'10,} {June 6--11, 2010, Indianapolis, Indiana,
+USA.}
+\CopyrightYear{2010}
+\crdata{978-1-4503-0033-9/10/06}
+\clubpenalty=10000
+\widowpenalty = 10000
+
+
+
+\maketitle
+
+
+\abstract{
+This paper approaches the incremental view maintenance problem from an algebraic perspective. We construct a ring of databases and use it as the foundation of the design of a query calculus that allows to express powerful aggregate queries. The query calculus inherits key properties of the ring, such as having a normal form of polynomials and being closed under computing inverses and delta queries. The $k$-th delta of a polynomial query of degree $k$ without nesting is purely a function of the update, not of the database. This gives rise to a method of eliminating expensive query operators such as joins from programs that perform incremental view maintenance. The main result is that, for non-nested queries, each individual aggregate value can be incrementally maintained using a constant amount of work. This is not possible for nonincremental evaluation.
+}
+
+
+\category{F.1.2}{Computation by Abstract Devices}{Modes of Computation -- {\em Parallelism and concurrency}}
+%\category{F.1.3}{Com\-pu\-tation by Abstract Devices}{Complexity Measures and Classes -- {\em Relations among complexity classes}}
+%\category{F.2.2}{Ana\-ly\-sis of Algorithms and Problem Complexity}{Nonnumerical Algorithms and Problems -- {\em Computations on discrete structures}}
+\category{H.2.3}{Da\-ta\-base Management}{Languages -- {\em Query languages}}
+\category{H.2.4}{Database Management}{Systems -- {\em Query processing}}
+\terms{Algorithms, Languages, Theory}
+\keywords{Incremental View Maintenance, Algebra}
+
+
+\section{Introduction}
+
+
+\def\mthree{NC0C\xspace}
+\def\agca{AGCA\xspace}
+
+
+\nop{
+This paper contributes a fundamental and versatile building block for
+enabling new, more lightweight and nimble data processing systems based
+on SQL aggregation que\-ries. We believe that our contribution
+constitutes an important
+step towards achieving the apparent contradiction in terms of
+executing complex aggregation queries on updateable data
+using little more than a key-value store.
+} % nop
+
+
+
+It is widely acknowledged that classical measures of algorithm efficiency
+do not do database query evaluation justice. In most
+cases, databases change only incrementally, in updates small compared to the
+overall database size.
+This fact has been addressed by the research community by a large amount
+of work on the incremental view maintenance problem, which aims at cheaply
+computing an increment to a materialized query result given an update
+\cite{DBLP:journals/tods/BunemanC79,DBLP:conf/sigmod/ShmueliI84,DBLP:conf/sigmod/BlakeleyLT86,roussopoulos-tods:91,DBLP:conf/vldb/CeriW91,DBLP:conf/deductive/GuptaKM92,DBLP:conf/sigmod/GuptaMS93,griffin-sigmod:95,yan-vldb:95,DBLP:journals/iandc/DongS95,GHJ1996,colby-sigmod:96,DBLP:conf/dbpl/LibkinW97a,DBLP:conf/dbpl/LibkinW99,DBLP:journals/jcss/PatnaikI97,kotidis-tods:01}.
+
+
+
+Most work on incremental view maintenance has aimed at expressing the delta
+(=change) to the result of a query $Q$ on a database $D$ as follows.
+Suppose that we denote changes to $D$ by $\Delta D$, which captures both
+insertions and deletions. Let us denote the updated database by
+$D' = D + \Delta D$, where $+$ is a way of combining a database with a
+change to it, made precise later;
+it is a generalisation of the union operation of relational algebra.
+We would like to express the change to the result of $Q$
+as a query $\Delta Q$ that depends on both $D$ and $\Delta D$
+such that $Q(D') = Q(D) + \Delta Q(D, \Delta D)$.
+The intuition is that evaluating $\Delta Q(D, \Delta D)$ and using the
+result to update a materialized representation of $Q(D)$
+will often be faster than recomputing $Q$ on the updated database
+$D'$.
+%
+The practical benefits of incremental view maintenance are real and have
+led to the integration of such techniques into commercial database management
+systems. But can we also make a complexity-theoretic argument that
+state-of-the-art incremental
+query evaluation is more efficient than nonincremental evaluation?
+
+Unfortunately, there is an argument that suggests the answer is no:
+If we consider a query language such as the conjunctive queries or relational
+algebra with or without aggregates,
+the image of the language under taking deltas is the full language:
+Given an arbitrary query $Q$,
+there is another query of the language whose delta is $Q$.
+This suggests that incremental view maintenance
+is not fundamentally easier than nonincremental query evaluation.
+
+%As a consequence, one might in particular expect classical incremental
+%view maintenance
+%to have the same limits to parallelization as nonincremental evaluation.
+
+
+In this paper, we show that this intuition is fortunately incorrect
+if one looks beyond classical delta processing.
+Recall that the circuit complexity classes NC0 $\subseteq$ AC0 $\subsetneq$ TC0
+(cf.\ \cite{Joh90})
+all represent {\em constant-time parallel computation}\/
+using polynomial amounts
+of hardware. The difference lies in the types of gates used.
+While NC0 uses only bounded fan-in gates, both AC0 and TC0 use
+{\em unbounded}\/ fan-in gates, which are unrealistic.
+AC0 and TC0 problems cannot be solved
+in constant parallel time on any amount of bounded fan-in (``real'') hardware.
+%
+This paper shows that,
+for a large class of aggregate queries,
+applying a fixed update to a materialized view
+is in the complexity class NC0, while
+non-incremental evaluation takes TC0 and AC0 for queries with and without
+aggregates, respectively.
+Since NC0 and TC0 have been separated \cite{Smo1987},
+incremental evaluation is indeed easier than nonincremental evaluation.
+
+
+%In particular, since NC0 circuits have constant depth, the input data can be
+%fairly partitioned across the number of available machines, which perform
+%local computations and only need to exchange data with other machines
+%a constant number of times (for instance, such computations can be performed
+%in a fixed number of map-reduce iterations).
+
+This has practical implications:
+While we cannot assume to have sufficiently many machines available to achieve
+con\-stant-time processing for very large inputs, the NC0 result asserts
+{\em embarassing parallelism}\/ beyond the parallelism exhibited in
+nonincremental query evaluation (AC0/TC0).
+Standard schemes such as the Brent scheduling principle \cite{Bre74} can be
+used to create massively parallel implementations of incremental
+query evaluation on commodity computers, which require, as a lower bound,
+only constant time, rather than logarithmic time as for AC0/TC0.
+
+
+\smallskip
+
+
+This paper approaches the incremental view maintenance problem
+from a fresh perspective.
+We start by identifying the essence of delta processing: A query language
+needs to be closed under computing an additive inverse (as a generalization of
+the union operation on relations to support insertions and deletions)
+and the join operation has to be
+distributive over this addition to support normalization, factorization, and
+the taking of deltas of queries. Thus, the algebraic structure
+of a ring of databases is needed.
+The first contribution of this paper is to craft such a ring.
+It is subsequently interconnected with a ring of terms to form an
+expressive aggregate query calculus, \agca,
+which has the algebraic properties needed
+to define delta processing in a compositional way.
+
+\agca is closed under taking deltas.
+%, and queries are infinitely differentiable.
+Moreover,  for an \agca query $Q$ without nested aggregates,
+$\Delta Q$ is structurally strictly simpler than
+$Q$. We formalize this by the notion of the degree of a query,
+which roughly corresponds to the degree of a polynomial bound on its
+worst-case data
+complexity (for a conjunctive query, it is the number of its atoms).
+The $k$-th delta of an \agca query of degree $k$ without nested aggregates
+has degree 0;
+a query of degree $0$ only depends on the update but not on the database.
+
+
+This gives rise to an aggressive {\em recursive}\/
+incremental view maintenance mechanism
+(cf.\ \cite{DBLP:journals/pvldb/AhmadK09}) which is ultimately the key to the
+NC0 result.
+Given a query $Q$ of degree $k$, we incrementally
+maintain a materialized view of $Q$ by adding, on a
+single-tuple update $\pm \vec{t}$,
+the result of $\Delta Q(D, \pm \vec{t})$ to the view $Q(D)$.
+The key idea is now to materialize a map
+$\pm \vec{t} \mapsto \Delta Q(D, \pm \vec{t})$,
+for all possible updates $\pm\vec{t}$.
+This map can be expressed as a single aggregate query with group-by;
+the different updates $\pm \vec{t}$ form the groups.
+We incrementally maintain the $\Delta Q$ map for changes to $D$ as well, using
+a delta to $\Delta Q$, and so on. This leads to a recursive query
+compilation scheme.
+%
+Overall, $Q$ can be incrementally maintained by a hierarchy of
+$k$ layers of materialized views, requiring only a simple form of message
+passing between the views to keep all of them up to date.
+In most traditional database query processors, the basic building blocks of
+delta queries are large-grained operators such as joins.
+We instead compile queries to programs that are not based on
+classical query operators.
+The updating of each value in the views
+only requires a constant number of arithmetic operations on pairs of numbers.
+
+We also show that each bit of the materialized representation
+can be incrementally maintained using an NC0 circuit, which only reads
+from a constant number of input bits, assuming that numbers are kept in
+fixed-size registers.
+
+The ring construction, delta processing
+techniques, and compilation algorithms of this paper
+constitute a streamlined and cleaner
+way of performing and presenting incremental view maintenance.
+These contributions are of independent interest, beyond parallel complexity.
+
+The paper is structured as follows. After providing some
+algebraic foundations in Section~\ref{sec:algebraic_foundations},
+we define a ring of multiset
+relations and discuss some of its properties in Section~\ref{sec:ring}.
+We define the aggregate query language \agca in Section~\ref{sec:calculus}.
+Section~\ref{sec:delta} studies delta processing.
+We give a construction for deltas and show that, for a large class
+of queries, deltas are structurally simpler than the input queries.
+Section~\ref{sec:m3} introduces a low-level language, \mthree,
+to which we later compile queries.
+\mthree admits massively parallel evaluation; we give
+a circuit complexity characterization.
+Section~\ref{sec:compiler} 
+presents algorithms for compiling queries to \mthree,
+starting with a simple algorithm that we subsequently refine.
+Section~\ref{sec:discussion} discusses this and related work.
+
+
+
+\section{Algebraic Foundations}
+\label{sec:algebraic_foundations}
+
+
+\def\sch{\mathrm{sch}}
+\def\dom{\mathrm{dom}}
+\def\relz{{{\mathbb Z}_{\mathrm{Rel}}}}
+%\def\rnatjoin{\stackrel{{\{\}}}{\bowtie}}
+\def\rnatjoin{\bowtie}
+\def\rrmult{*}
+\def\rrplus{+}
+\def\RR{\relz}
+\def\tup{\mathrm{Tup}}
+\def\sng{\mathrm{Sng}}
+\def\J{\sng_\emptyset}
+\def\ZJ{{\mathbb Z}[\J]}
+\def\sing{{\mathbb Z}_{\sng}}
+\def\SS{{\cal S}}
+\def\charfn{\ensuremath{\chi}}
+%\def\cht{\charfn_{\vec{t}}}
+\def\cht{\{\vec{t}\}}
+\def\cha{\{\vec{a}\}}
+\def\chb{\{\vec{b}\}}
+
+
+Let us recall some basic definitions from algebra:
+
+
+% DO NOT EDIT -- THIS HAS EXACTLY THE SAME CONTENTS AS THE COMMENTED OUT
+% VERSION BELOW; THE ONLY DIFFERENCE IS THAT LESS WHITESPACE IS USED.
+\begin{definition}\em
+A {\em semigroup}\/ is a pair $(A, \circ)$ of a base set $A$ and a binary
+total function $\circ: A \times A \rightarrow A$ (``the operation'')
+such that $\circ$ is {\em associative}, that is,
+for all $a,b,c \in A$,
+$(a \circ b) \circ c = a \circ (b \circ c)$.
+%
+A semigroup is called {\em commutative}\/ if
+$a \circ b = b \circ a$ for all $a,b \in A$.
+%
+A {\em monoid}\/ $(A, \circ, e)$
+is a semigroup that  has {\em neutral element}\/ $e \in A$,
+that is,
+$a \circ e = e \circ a = a$ for all $a \in A$.
+%
+A monoid is called a {\em group}\/ if 
+for each $a \in A$ there is an {\em inverse element} $a^{-1} \in A$ such that
+$
+a \circ a^{-1} = a^{-1} \circ a = e.
+$
+
+A {\em ring}\/ over base set $A$ is a tuple $(A, +, *, 0)$
+with two operations $+$ and $*$
+(called addition and multiplication, respectively)
+such that $(A, +, 0)$ is a commutative group, $(A, *)$ is a semigroup,
+and $+$ and $*$ are {\em distributive}\/, that is,
+$a*(b+c)= a*b + a*c$ and $(a+b)*c = a*c + b*c$
+for all $a,b,c \in A$.
+%
+A ring {\em with identity}\/ $(A, +, *, 0, 1)$ is a ring in which
+$(A, *, 1)$ is a monoid.
+A ring is called commutative if $*$ is commutative.
+%\punto
+\end{definition}
+
+
+\nop{
+\begin{definition}\em
+A {\em semigroup}\/ is a pair $(A, \circ)$ of a base set $A$ and a binary
+total function $\circ: A \times A \rightarrow A$ (``the operation'')
+such that $\circ$ is {\em associative},
+\[
+(a \circ b) \circ c = a \circ (b \circ c)
+\quad \mbox{(for all $a,b,c \in A$)}.
+\]
+%
+A semigroup is called {\em commutative}\/ if
+\[
+a \circ b = b \circ a \quad \mbox{(for all $a,b \in A$)}.
+\]
+%
+A {\em monoid}\/ $(A, \circ, e)$
+is a semigroup that  has {\em neutral element}\/ $e \in A$,
+\[
+a \circ e = e \circ a = a  \quad \mbox{(for all $a \in A$)}.
+\]
+%
+A monoid is called a {\em group}\/ if 
+for each $a \in A$ there is an {\em inverse element} $a^{-1} \in A$ such that
+\[
+a \circ a^{-1} = a^{-1} \circ a = e.
+\]
+
+A {\em ring}\/ over base set $A$ is a tuple $(A, +, *, 0)$
+with two operations $+$ and $*$
+(called addition and multiplication, respectively)
+such that $(A, +, 0)$ is a commutative group, $(A, *)$ is a semigroup,
+and $+$ and $*$ are {\em distributive}\/,
+\[
+a*(b+c)= a*b + a*c \quad \mbox{and} \quad (a+b)*c = a*c + b*c
+\]
+for all $a,b,c \in A$.
+%
+A ring {\em with identity}\/ $(A, +, *, 0, 1)$ is a ring in which
+$(A, *, 1)$ is a monoid.
+A ring is called commutative if $*$ is commutative.
+\punto
+\end{definition}
+} % end nop
+
+
+\begin{example}\em
+The integers ${\mathbb Z}$ and the rational numbers ${\mathbb Q}$ form
+commutative rings with identity
+$({\mathbb Z}, +, *, 0, 1)$ and $({\mathbb Q}, +, *, 0, 1)$.
+The natural numbers ${\mathbb N}$
+do not form a ring because there is no additive
+inverse; for example, there is no natural number $x$ such that $1+x = 0$.
+\punto
+\end{example}
+
+
+Neutral elements 0 and 1 are named by analogy and are not necessarily numbers.
+%(although in the example above, they are).
+For a group with an operation $+$, we write $-a$ to denote $a^{-1}$ and
+use the shortcut $a - b$ for $a + (- b)$.
+%
+When the operations $+$ and $*$
+are clear from the context, we will also use the name of
+the base set to denote the ring (e.g., ${\mathbb Z}$ for
+$({\mathbb Z}, +, *, 0, 1)$).
+In a monoid, there is a {\em unique}\/ identity element and in a group
+$(A, \circ, e)$,
+there is a {\em unique}\/ inverse element  $a^{-1}$ for each element $a \in A$
+(cf.\ e.g.\ Proposition~1 in Chapter~1 of \cite{DF2004}).
+Thus, in particular, a ring is uniquely
+determined by its base set and its operations $+$ and $*$, and we do not need
+to explicitly specify $0$, $1$, or the operation $(\cdot)^{-1}$
+(but it will be done for the reader's convenience).
+
+
+\begin{definition}\em
+\label{def:monoid_ring}
+Let A be a commutative ring and let $(G, *^G, 1^G)$ be a monoid.
+Let $A[G]$ be the set of all functions $\alpha: G \rightarrow A$ such that
+$\alpha(x) = 0$ for all but a finite number of $x \in G$.
+We define addition and multiplication in $A[G]$ as
+\begin{eqnarray*}
+\alpha   +   \beta &:& x \mapsto \alpha(x) +^A \beta(x) \\
+\alpha \,*\, \beta &:& x \mapsto \sum_{x=y \,*^G z} \alpha(y) *^A \beta(z).
+\end{eqnarray*}
+Then $A[G]$
+is called the {\em monoid algebra}\/ of $G$ over $A$.
+%
+\punto
+\end{definition}
+
+
+\begin{proposition}[cf.\ p.104f in \cite{Lang2002}]
+A monoid \\
+algebra is a commutative ring with identity.
+\end{proposition}
+
+
+In particular, monoid algebras $A[G]$ are closed under multiplication, i.e.,
+$(\alpha * \beta)(x) = 0$ for all but a finite number of elements $x \in G$.
+The neutral elements are $0: x \mapsto 0$ and
+\[
+1: x \mapsto \left\{ \begin{array}{lll}
+1 & \dots & x = 1^G \\
+0 & \dots & x \neq 1^G. \\
+\end{array} \right.
+\]
+
+
+We say that a monoid $(G, *)$ has a {\em zero}\/ if
+there is an element $0 \in G$ such that
+$0 * g = g * 0 = 0$ for all $g \in G$.
+A {\em ring homomorphism}\/ is a function $\phi: R \rightarrow S$
+between two rings $R$ and $S$ that commutes with
+$+$ and $*$, i.e., $\phi(a \circ^R b) = \phi(a) \circ^S \phi(b)$
+for $\circ \in \{ +, * \}$ and all $a,b \in R$.
+
+%, and where $\phi(0^R) = 0^S$
+%and, for a ring with identity, $\phi(1^R) = 1^S$.
+
+
+\begin{lemma}
+\label{lem:elim_zero}
+Let $G$ be a monoid with $0$ and $A$ be a commutative ring.
+Then the map
+$\phi: \alpha \mapsto \alpha|_{G-\{0\}}$
+is a surjective ring homomorphism from the monoid algebra $A[G]$ 
+to the set of all functions $(G-\{0\}) \rightarrow A$.
+\end{lemma}
+
+
+\begin{proof}
+Let $(G, *^G)$ be a monoid with zero $0^G$. 
+Consider the monoid algebra $A[G]$ of $G$ over commutative ring $A$.
+
+Let $I$ be the subset of $A[G]$ consisting of those elements $\alpha$ of
+$A[G]$ that have $\alpha(x) = 0^A$ for all $x \neq 0^G$.
+Note that $I$ is closed under $+$, $-$, and $*$:
+The mapping $I \rightarrow A$ with $\alpha \mapsto \alpha(0^G)$
+is an isomorphism between $I$ and $A$.
+Since $A$ is a ring, $I$ is a sub-ring of $A[G]$.
+
+$I$ is an {\em ideal}\/ of $A[G]$, that is,
+$(r * i) \in I$ for all $r \in A[G]$ and all $i \in I$:
+Consider an arbitrary $x \in G$. By definition,
+$
+(r * i)(x) = \sum_{x = y *^G z} r(y) *^A i(z).
+$
+Since $i(z) = 0^A$ unless $z=0^G$ and
+$y *^G 0^G = 0^G$, we must have $(r * i)(x) = 0^A$
+unless $x = 0^G$, and
+indeed $(r * i) \in I$.
+
+We use the converse of the first isomorphism theorem for rings
+(cf.\ Theorem~7(2) in Chapter~7 of \cite{DF2004}):
+
+
+\begin{lemma}
+Let $R$ be a commutative ring and $I$ be an ideal of $R$.
+Then there is a surjective ring homomorphism from $R$ to the
+quotient ring $R/I$, the so-called natural projection of $R$ onto $R/I$.
+%
+%and $I$ is the kernel of that homomorphism.
+\end{lemma}
+
+
+The natural projection $\phi: A[G] \rightarrow A[G]/I$ is the map
+$\phi: \alpha \mapsto \alpha|_{G-\{0\}}$.
+The elements of the quotient ring $A[G]/I$ are precisely the functions
+$(G-\{0\}) \rightarrow A$.
+\end{proof}
+
+
+\section{A Ring of Databases}
+\label{sec:ring}
+
+
+The goal of this section is to construct an analogon of
+{\em multiset}\/ relational algebra -- a starting point for building
+aggregate queries -- which has a full {\em additive inverse}\/, and
+so will allow us to compute delta queries in a clean and
+compositional way.
+
+We study a structure
+$
+(\relz, \rrplus, \rrmult, 0, 1)
+$
+(or just $\RR$, for short)
+of generalized multiset relations -- collections of tuples with
+{\em integer}\/ multiplicities and possibly {\em differing}\/ sche\-mas.
+The operations
+$\rrplus$ and $\rrmult$ are generalizations of multiset union and natural join,
+respectively, to {\em total}\/ functions
+(i.e., applicable to any pair of elements of $\relz$).
+The schema polymorphism of tuples in our generalized multiset relations
+just serves the purpose of accommodating such total operator definitions:
+We have to be able to union together relations containing tuples
+of different schema.
+
+
+We use the notations $f: x \mapsto v$, $f(x) := v$,
+and $f := \{ x \mapsto v \mid x \in \dom(f) \}$ interchangeably
+to define functions, with a preference for
+the latter when the domain $\dom(f)$ might otherwise remain unclear.
+We write $f|_D$ to denote the restriction of the domain of $f$ to $D$, i.e.\
+$f|_D := \{ (x \mapsto v) \in f \mid x \in D \}$.
+
+A {\em (typed) tuple}\/ $\vec{t}$ is a partial function from a vocabulary of
+column names $\dom(\vec{t})$
+to data values (that is, $\vec{t}$ is not just a tuple of
+values but has an associated schema of its own).
+Throughout Sections~\ref{sec:algebraic_foundations} to
+\ref{sec:delta}, all tuples are typed, and
+$\tup$ denotes the set of all typed tuples.
+
+For a number of technical reasons, we will also use classical
+singleton relations (without multiplicities) in what follows.
+We write $\{ \vec{t} \}$ to construct a singleton relation with schema
+$\sch(\{\vec{t}\}) = \dom(\vec{t})$
+from $\vec{t}$ and use the classical natural join operator
+$\rnatjoin$ on such singletons. The set of all singletons is denoted by
+$\sng$ (i.e., $\sng := \{ \{\vec{t}\} \mid \vec{t} \in \tup \}$).
+
+
+\begin{definition}\em
+A {\em generalized multiset relation (gmr)}\/ is a function
+$
+R: \tup \rightarrow {\mathbb Z}
+$
+such that $R(\vec{t}) \neq 0$ for at most a finite number of tuples $\vec{t}$.
+The set of all such functions is denoted by $\relz$.
+\punto
+\end{definition}
+
+
+Such a function
+indicates the multiplicity with which each tuple of $\tup$
+occurs in the gmr. Tuples can have negative multiplicities.
+
+The operations $\rrplus$ and $\rrmult$ of $\RR$ are defined as follows.
+
+
+\begin{definition}\em
+\label{def:bagops}
+For $R, S \in \relz$,
+\begin{eqnarray*}
+R \rrplus S&:& \vec{x} \mapsto \big( R(\vec{x}) + S(\vec{x}) \big)
+\\[1.5ex]
+(-R) &:& \vec{x} \mapsto (-R(\vec{x}))
+\\[1.5ex]
+R \rrmult S &:&
+   \vec{x} \mapsto \sum_{\{\vec{x}\}=\{\vec{a}\} \rnatjoin \{\vec{b}\}}
+   R(\vec{a}) * S(\vec{b})
+\\[1.5ex]
+1 &:&
+\vec{x} \mapsto \left\{
+\begin{array}{lll}
+1 & \dots & \vec{x} = \tuple{} \\
+0 & \dots & \vec{x} \neq \tuple{}
+\end{array}
+\right.
+\\
+0 &:& \vec{x} \mapsto 0
+\end{eqnarray*}
+
+\vspace{-5mm}
+
+\punto
+\end{definition}
+
+
+On classical multiset relations
+(where all multiplicities are $\ge 0$ and all tuples with
+multiplicity $>0$ have the same schema), $*$ is exactly the usual multiset
+natural join operation.
+Definition~\ref{def:bagops} is similar to the definition
+of a monoid algebra; this is made
+precise in the proof of Proposition~\ref{prop:ring}.
+
+
+\begin{example}\em
+\label{ex:bagops}
+Consider the three gmrs of $\relz$
+\[
+\begin{array}{@{~}l|l@{~}ll@{~}r@{~}}
+R & A & B \\
+\hline
+  & 1 &   & \mapsto & -1 \\
+  & 2 & 3 & \mapsto &  2
+\end{array}
+\hspace{5mm}
+\begin{array}{@{~}l|ll@{~}r@{~}}
+S & C \\
+\hline
+  & 5         & \mapsto & 2 \\
+  & { } ~ { }
+\end{array}
+\hspace{5mm}
+\begin{array}{@{~}l|l@{~}ll@{~}r@{~}}
+T & B & C \\
+\hline
+  & 3 & 5 & \mapsto &  1 \\
+  & 4 & 6 & \mapsto & -3
+\end{array}
+\]
+over column name vocabulary $\Sigma = \{ A,B,C \}$ and value domain
+${\mathbb N}$.
+For example, in multiset relation
+$R$, two tuples of different schema have a multiplicity other than $0$.
+These two tuples can be specified
+as partial functions $\Sigma \rightarrow {\mathbb N}$:
+$\{ A \mapsto 1 \}$ and $\{ A \mapsto 2; B \mapsto 3\}$.
+
+Then $S \rrplus T$ and $R \rrmult (S \rrplus T)$ are as follows:
+\[
+\begin{array}{@{~}l|l@{~}ll@{~}r@{~}}
+S \rrplus T & B & C \\
+\hline
+  &   & 5 & \mapsto &  2 \\
+  & 3 & 5 & \mapsto &  1 \\
+  & 4 & 6 & \mapsto & -3
+\end{array}
+\hspace{5mm}
+\begin{array}{@{~}l|l@{~}l@{~}ll@{~}r@{~}}
+R \rrmult (S \rrplus T) & A & B & C \\
+\hline
+  & 1 &   & 5 & \mapsto & -2 \\
+  & 1 & 3 & 5 & \mapsto & -1 \\
+  & 1 & 4 & 6 & \mapsto &  3  \\
+  & 2 & 3 & 5 & \mapsto &  6
+\end{array}
+\]
+The missing values should not be taken as SQL null values, and
+$\rrmult$ is not an outer join.
+%
+%\footnote{But there is a connection,
+%as there is to the OPT construct of the SPARQL query language
+%\cite{DBLP:journals/tods/PerezAG09,DBLP:journals/corr/abs-0812-3788}.}
+\punto
+\end{example}
+
+
+
+
+
+\begin{proposition}
+\label{prop:ring}
+$(\relz, \rrplus, \rrmult, 0, 1)$ is a commutative \\
+ring with identity.
+\end{proposition}
+
+
+\begin{proof}
+%An elementary proof by showing that the various ring axioms hold
+%is straightforward but a little lenghty.
+%Instead, a reasonably short but less elementary proof is given here.
+%It provides additional insight into the structure of $\RR$.
+%
+Let $\J = \sng \cup \{ \emptyset \}$
+be the set of singleton relations plus the empty
+relation. Then $\J$ with the natural join $\bowtie$
+forms a monoid with 1-element  $\{\tuple{}\}$ and zero $\emptyset$.
+In particular, $\J$ is closed under $\bowtie$.
+
+Consider the monoid algebra $\ZJ$ of $\J$ over ${\mathbb Z}$.
+%
+\nop{
+The definitions of the operations of $\ZJ$ and $\RR$
+(Definition~\ref{def:monoid_ring} and Definition~\ref{def:bagops},
+respectively) are syntactically similar with $\{\vec{t}\}$ in $\ZJ$ in
+a sense corresponding to $\vec{t}$ in $\relz$, but there is a difference
+in that $\emptyset \in \J$, while there is no corresponding element in
+$\tup$. While there is only one empty gmr (that is, a gmr in which all tuples
+have multiplicity 0) in $\RR$, there are infinitely
+many different elements without tuples in $\ZJ$.
+} % end nop
+%
+By Lemma~\ref{lem:elim_zero}, the map 
+$\phi: \alpha \mapsto \alpha|_{\sng}$
+is a surjective ring homomorphism from $\ZJ$ to the set of all functions
+$\sng \rightarrow {\mathbb Z}$, thus the image $R$ of $\phi$
+is a commutative ring with identity.
+%
+The map
+$
+\theta: \alpha \mapsto \Big( \vec{t} \mapsto \alpha(\{ \vec{t} \}) \Big)
+$
+from $R$ to $\relz$ is a ring isomorphism.
+%Since $R$ is a ring, $\relz$ is a ring as well.
+\end{proof}
+
+
+The ring $\RR$ is not an {\em integral domain}, however.
+It has {\em zero divisors}:
+The result of joining two nonempty relations may be empty.
+
+%Distributivity allows us to turn expressions over a
+%ring with variables into {\em polynomials}\/.
+%-- a normal form that will make further processing simpler.
+%Moreover, by using distributivity in the
+%opposite direction, factorization of polynomials is possible.
+
+
+\subsection*{Discussion and Justification}
+
+
+{\em The ring $\RR$ as a ${\mathbb Z}$-module.}\/
+Let $\sing$ ($\subseteq \relz$) be the set of functions of the form
+\[
+\cht: \vec{x} \mapsto
+\left\{
+\begin{array}{lll}
+1 & \dots & \vec{x} = \vec{t} \\
+0 & \dots & \vec{x} \neq \vec{t}
+\end{array}
+\right.
+\]
+for tuples $\vec{t}$.
+We have just overloaded $\{\vec{t}\}$
+as an element of both $\sng$ and $\sing$. No problems will arise from this.
+%
+Let $k\cht$, for $k \in {\mathbb N}$, denote
+$\underbrace{\cht + \dots + \cht}_{k \; \mathrm{times}}$, and
+let $(-k)\cht$ denote $-(k\cht) = k(-\cht)$.
+
+Each $\alpha \in \relz$ can be written as a finite sum
+\[
+v_\alpha = {\sum_{\vec{t}}} \alpha(\vec{t}) \cht
+\]
+of elements of $\sing$ and their inverses.
+Since $+^\RR$ is associative and commutative, this sum is essentially
+{\em unique}.
+There is a bijection between the
+elements $\alpha \in \relz$ and the elements $v_\alpha$ defined by these sums.
+
+Thus, $\sing$ {\em generates}\/ $\RR$ and
+$\RR$ is a ${\mathbb Z}$-module that is {\em free}\/ on $\sing$;
+$\sing$ is the {\em basis}\/ of $\RR$ (since we will not need the definitions
+of these notions further, they are not introduced here --
+cf.\ e.g.\ \cite{DF2004}, Sections 10.1 and 10.3).
+If we were to replace ${\mathbb Z}$ in $\relz$ by a field such as
+${\mathbb R}$, we
+would have an infinite-dimensional vector space.
+
+Viewing $\relz$ as a ${\mathbb Z}$-module means to ignore its operation
+$*$, and the fact that it is distributive with $+$, however.
+
+We say that an operation $\circ$ is {\em conservative over $\bowtie$}\/
+if $R \circ S = R \bowtie S$
+on all $R, S \in \relz$ that are classical relations
+without duplicates or polymorphic tuples.
+If we accept the definition of $+$ in $\RR$ as natural, then
+the definition of $*$ (which may feel less natural at first)
+is uniquely determined by distributivity, 
+if we want $*$ to be conservative over $\bowtie$.
+
+Let $\circ$ be an arbitrary multiplication operation on
+$\relz$ that is distributive with $+$.
+\begin{eqnarray*}
+v_\alpha \circ v_\beta &:=&
+\Big( {\sum_{\vec{a}}} \alpha(\vec{a}) \cha \Big)
+\circ
+\Big( {\sum_{\vec{b}}} \beta(\vec{b}) \chb \Big)
+\\
+%&=&
+%{\sum_{\vec{a}, \vec{b}}} \big( \alpha(\vec{a}) \cha \big)
+%\circ
+%\big( \beta(\vec{b}) \chb \big)
+%\\
+&=&
+{\sum_{\vec{a}, \vec{b}}}
+   \big( \alpha(\vec{a}) *^{\mathbb Z} \beta(\vec{b}) \big)
+\big( \cha \circ \chb \big)
+\end{eqnarray*}
+%
+This follows from the distributivity of $\circ$ and the fact that
+$\alpha (\vec{a}) \cha$ and $\beta (\vec{b}) \chb$ are actually sums.
+%
+Since $\circ$ is conservative over $\bowtie$ and
+$\cha$ and $\chb$ are classical singleton relations,
+$\cha \circ \chb = \{\vec{a}\} \bowtie \{\vec{b}\}$, and
+\[
+(\alpha \circ \beta)(\vec{x}) =
+{\sum_{\vec{a}, \vec{b}: \{\vec{a}\} \bowtie \{\vec{b}\}=\{\vec{x}\}}}
+\alpha(\vec{a}) * \beta(\vec{b}),
+\]
+as in Definition~\ref{def:bagops}, so $\circ$ is $*$ and
+$v_\alpha * v_\beta = v_{\alpha * \beta}$.
+
+\smallskip
+
+
+{\em Musings.}\/
+It is appealing that our natural choice of $+^{\relz}$
+completely determines $*^\relz$ in any ring, in the way just described,
+and that the structure of a monoid algebra arises necessarily and naturally.
+
+We have come to expect that query algebras are based on
+cylindric algebras \cite{HMT1971},
+on which research is rather isolated from mainstream mathematics.
+%and performed by a small community.
+In future work, it may be worth looking
+into extensions of $\relz$ for applications such as constraint,
+probabilistic, and scientific databases, where a better integration
+of query languages with numerical computation and the now standard framework of
+abstract algebra
+% (that contemporary presentations of mathematics rely on)
+% of the G\"ottingen and Bourbaki schools
+is desirable.
+
+
+\smallskip
+
+
+{\em Relationship to relational algebra.}\/
+$\RR$ is no multiset version of relational algebra.
+Specifically, difference and explicit projection are missing.
+Observe that, throughout this paper,
+$R - S = R \rrplus (-S)$ does not refer to the
+difference operation of relational algebra, but to
+the additive inverse in $\RR$: for instance,
+$\emptyset-R = -R$ in $\RR$, while the syntactically same expression in
+relational algebra results in $\emptyset$.
+%
+It is more appropriate to think of a gmr $-R$ as a deletion, where
+deleting ``too much'' results in a database with {\em negative tuples}.
+For the purposes of incremental view maintenance later in the paper,
+we will use $\RR$ in a way that we never really
+delete too much, but the properties of the ring just defined will still
+be essential.
+
+
+
+\section{Aggregation Calculus}
+\label{sec:calculus}
+
+
+\def\safe{\mathrm{safe}}
+\def\AggSum{\mbox{Sum}}
+
+
+In this section, we introduce the
+query language studied in this paper,
+\agca (which stands for {\em AGgregation CAlculus}).
+%
+\agca defines two forms of query expressions, {\em formulae} and
+{\em terms}.
+Formulae evaluate to elements of the ring $(\relz, +, *, 0, 1)$ of gmrs
+and terms evaluate to elements of the ring of rational numbers
+$({\mathbb Q}, +, *, 0, 1)$.
+We connect terms and formulae mutually recursively, creating
+a powerful language for expressing aggregate queries.
+Both formulae and terms, and thus the overall query language,
+inherit the key properties of polynomial rings in that they have 
+an additive inverse, a normal form
+of polynomial expressions, and admit a form of factorization.
+These properties will be the basis of delta
+processing and incremental query evaluation in subsequent sections.
+
+
+\smallskip
+
+
+{\bf Syntax.}
+\agca consists of {\em formulae} and of {\em terms}.
+Formulae are expressions built from atomic formulae
+using $+$, $-$, and $*$.
+%
+The atomic formulae are {\em true}, {\em false}, relational atoms $R(\vec{x})$
+where $\vec{x}$ is a tuple of variables,
+and atomic conditions of the form $t \;\theta\; 0$ comparing term
+$t$ with $0$ using comparison operations $\theta$ from $=$, $\neq$, $>$, $\ge$,
+$<$, and $\leq$.
+%
+\agca terms are built from variables, built-in function calls
+(constants are functions with zero arguments),
+and aggregate sums ($\AggSum$) using addition, its inverse, and multiplication.
+Built-in functions compute their result entirely based on their input
+terms, not accessing the database.
+
+The abstract syntax of formulae $\phi$ and terms $t$
+(given variables $x$, relation names $R$,
+comparison operators $\theta$,
+and constants/builtin functions $f$) can be given by the EBNF
+\begin{eqnarray*}
+  \phi &\mbox{::-}& \phi * \phi \,
+               \mid \phi + \phi \mid -\phi
+               \mid \mbox{true} \mid \mbox{false}
+               \mid R(\vec{x}) \mid t \;\theta\; 0
+\\
+  t &\mbox{::-}& \,t \,*\, t\, \mid \,t + t\; \mid -t\, \mid \quad\,
+     f(t^*) \quad\, \mid \;\;\;x\;\;\, \mid \AggSum(t, \phi)
+\end{eqnarray*}
+
+The atoms $true$ and $false$ are just syntactic sugar for $0=0$ and
+$0 \neq 0$, respectively.
+%, so we will not explicitly handle them in the remainder of this section.
+
+
+\smallskip
+
+
+\begin{figure}
+\begin{eqnarray*}
+\safe_B(R(x_1, \dots, x_k)) &:=& \{x_1, \dots, x_k \} \cup B \\
+\safe_B(\phi \,*\, \psi) &:=& \safe_B(\phi) \cup
+                              \safe_{\safe_B(\phi)}(\psi) \\
+\safe_B(\phi + \psi)  &:=& \safe_B(\phi) \cap \safe_B(\psi) \\
+\safe_B(-\phi) &:=& \safe_B(\phi) \\
+\safe_B(x = y) &:=&
+\left\{\begin{array}{l@{~}l}
+B \cup \{ x, y \} &\dots
+\mbox{$x$ or $y$ is in $B$} \\[.5ex]
+B &\dots \mbox{otherwise}.
+\end{array} \right.
+\end{eqnarray*}
+
+\vspace{-5mm}
+
+\caption{Safety of \agca formulae.}
+\label{fig:safe}
+\end{figure}
+
+
+{\bf Bound and safe variables.}
+Formulae and terms are evaluated relative to a given set of
+{\em bound variables}. Here {\em bound}\/ is a notion in the spirit of
+binding patterns \cite{DBLP:conf/pods/RajaramanSU95} --
+parameters given from the outside -- rather than that
+of variables bound by quantifiers.
+Given a set of bound variables $B$,
+the {\em safe variables} of a formula are defined as
+shown in Figure~\ref{fig:safe}.
+Observe that $\safe_B(\phi) \supseteq B$ for all $B$ and $\phi$
+and that safety of $-\phi$ differs from safety of $\neg \phi$ in relational
+calculus ($\safe(\neg \phi) = \emptyset$, cf.\ range-restriction in
+\cite{AHV95}). 
+A formula is safe if all its variables are safe.
+%
+Given a term $\AggSum(t, \phi)$ with bound variables $B$,
+the bound variables of $\phi$ are $B$ and the bound variables of $t$ are
+the variables $\safe_B(\phi)$.
+Term $\AggSum(t, \phi)$ is safe if $t$ and $\phi$ are safe.
+The bound variables of a subterm are the bound variables of the term.
+Variables occurring as terms are safe if they are bound.
+A term is safe if all its variables and $\AggSum$ atoms are safe.
+
+
+\begin{example}\em
+\label{ex:safe}
+Given singleton bound variable set $\{ y \}$,
+\[ \AggSum( u * f(z), \underbrace{(\underbrace{(\underbrace{R(x, z)}_{x,y,z} +
+   \underbrace{(y=z)}_{y,z})}_{y,z} * (z = w))}_{y,z,w}) \]
+is unsafe and thus invalid: The safe variables of the formula are
+$\{y,z,w\}$, so $u$ is not bound in the term $u * f(z)$. The overall term
+becomes valid for bound variables $\{u,y\}$.
+\punto
+\end{example}
+
+
+\smallskip
+
+
+\def\db{{\cal{A}}}
+
+
+{\bf Semantics.}
+The formal semantics of \agca is given by mutually recursive functions
+$\Bracks{\cdot}_F(\cdot, \cdot)$ and
+$\Bracks{\cdot}_T(\cdot, \cdot)$ for
+formulae and terms, respectively. We treat variable names as additional column
+names. Given database $\db$ and a bound variable tuple $\vec{b}$ (i.e.,
+a function that maps each bound variable to a value),
+$\Bracks{\phi}_F(\db, \vec{b})$ evaluates to an element of $\relz$ and
+$\Bracks{t}_T(\db, \vec{b})$ evaluates to a value from ${\mathbb Q}$.
+The semantics of \agca formulae is defined as follows.
+%
+\begin{eqnarray*}
+\Bracks{\phi + \psi}_F(\db, \vec{b}) &:=&
+   \Bracks{\phi}_F(\db, \vec{b}) +^{\relz} \Bracks{\psi}_F(\db, \vec{b})
+\\
+\Bracks{-\phi}_F(\db, \vec{b}) &:=& -^\relz \Bracks{\phi}_F(\db, \vec{b})
+\\
+\Bracks{\phi \,*\, \psi}_F(\db, \vec{b}) &:=&
+\vec{x} \mapsto
+\sum_{\{\vec{x}\}=\{\vec{y}\}\bowtie\{\vec{z}\}}
+\Bracks{\phi}_F(\db, \vec{b})(\vec{y}) \\
+&& \quad\quad\;\; *^{\mathbb Z} \;
+\Bracks{\psi}_F(\db, \vec{y}|_{\safe_{\dom(\vec{b})}(\phi)})(\vec{z})
+\end{eqnarray*}
+
+\vspace{-2mm}
+
+\noindent
+$\Bracks{t \,\theta\, 0}_F(\db, \vec{b})$ :=
+
+\vspace{-5mm}
+
+\[
+\vec{x} \mapsto \left\{
+\begin{array}{l@{~}l@{~}l}
+1 & \dots & t = y - z,
+\{ y, z \} \cap \dom(\vec{b}) \neq \emptyset, \\
+&&
+\{ y, z \} \cup \dom(\vec{b}) = \dom(\vec{x}),
+\vec{b} = \vec{x}|_{\dom(\vec{b})}, \\
+&& \mbox{and } \vec{x}(y) = \vec{x}(z)
+\\
+1 & \dots & \mbox{otherwise, if } \vec{x} = \vec{b}
+\mbox{ and } \Bracks{t}_T(\db, \vec{b}) \,\theta\, 0
+\\
+0 & \dots & \mbox{otherwise}
+\end{array}
+\right.
+\]
+
+\vspace{-2mm}
+
+\noindent
+$\Bracks{R(x_1, \dots, x_k)}_F(\db, \vec{b}) :=$
+
+\vspace{-5mm}
+
+\[
+ \vec{x} \mapsto
+\left\{
+\begin{array}{lll}
+R^{\db}(\vec{y}) & \dots & R^{\db} \mbox{ is defined on } \vec{y},
+   \{ \vec{x} \} \bowtie \{ \vec{b} \} \neq \emptyset, \\
+&& \dom(\vec{x}) = \{x_1, \dots, x_k\}, \\
+&& \dom(\vec{y}) = \{A_1, \dots, A_k\}, \mbox{ and} \\
+&& \vec{x}(x_i) = \vec{y}(A_i) \mbox{ for all } 1 \le i \le k \\[.5ex]
+0 & \dots & \mbox{otherwise}.
+\end{array}
+\right.
+\]
+The definitions of $\Bracks{\phi * \psi}_F$ and
+$\Bracks{t \,\theta\, 0}_F$ are somewhat cumbersome because we need to
+pass information from relational atoms into condition atoms, just like
+in the relational calculus.
+Note that if $\phi$ and $\psi$ do not contain condition atoms, we can
+equivalently use the simpler definition 
+$\Bracks{\phi * \psi}_F(\db, \vec{b}) :=
+   \Bracks{\phi}_F(\db, \vec{b}) \,*^{\relz}\, \Bracks{\psi}_F(\db, \vec{b})$.
+
+The definition of $\Bracks{R(x_1, \dots, x_k)}_F$
+supports column renaming, which makes it a little lengthy.
+
+The semantics of \agca terms is defined as
+\begin{eqnarray*}
+\Bracks{x}_T(\db, \vec{b}) &:=& \vec{b}(x) \\
+\Bracks{f(t_1, \dots, t_k)}_T(\db, \vec{b}) &:=&
+f\big(
+   \Bracks{t_1}_T(\db, \vec{b}), \dots, \Bracks{t_k}_T(\db, \vec{b}) \big)
+\\
+\Bracks{\AggSum(t, \phi)}_T(\db, \vec{b}) &:=&
+\hspace{-9mm}
+\sum_{(\vec{c} \mapsto i) \in \Bracks{\phi}_F(\db, \vec{b})}
+\hspace{-7mm}
+i \, *^{\mathbb Q}\,
+   \Bracks{t}_T\big(\db, \vec{c}|_{\safe_{\dom(\vec{b})}(\phi)}\big)
+\end{eqnarray*}
+Take $+$, $-$, and $*$ as built-in functions $f$ ($+^{\mathbb Q}$,
+$-^{\mathbb Q}$, and $*^{\mathbb Q}$) and the definition is complete.
+
+%Thus, a term $\AggSum(t, \phi)$
+%computes the sum of the values $\Bracks{t}_T(\db, \cdot)$
+%over the distinct valuations (with multiplicities)
+%of the safe variables $\vec{a}$ of $\phi$.
+
+
+{\bf From SQL to the calculus}.
+A SQL aggregate query
+\begin{tabbing}
+{\tt SELECT}    $\vec{b}$, {\tt SUM}($t$) 
+{\tt FROM}      $R_1$ $r_{11}$, $R_1$ $r_{12}$, $\dots$, $R_2$ $r_{21}$,
+                $\dots$ \\
+{\tt WHERE}     $\phi$ \; {\tt GROUP BY} $\vec{b}$
+\end{tabbing}
+is expressed in \agca as
+\[
+\AggSum(t, R_1(\vec{x}_{11}) * R_1(\vec{x}_{12}) * \dots
+* R_2(\vec{x}_{21}) * \dots * \phi)
+\]
+with {\em bound variables} $\vec{b}$.
+While $\AggSum(\cdot, \cdot)$ computes exactly one number, we can think of
+an SQL aggregate query with group by clause as a comprehension
+\[
+\{ \tuple{\vec{b}, \Bracks{\AggSum(\cdot, \cdot)}(\db, \vec{b})} \mid
+\vec{b} \in \mbox{Groups} \}.
+\]
+
+%It is undesirable to assume a given finite (active) domain to construct
+%such tuples from.
+%
+Sections~\ref{sec:m3} and \ref{sec:compiler} will answer the question
+of how to obtain Groups, i.e., the
+domain of bound variable tuples, in a practical setting.
+
+
+
+\begin{example}\em
+\label{ex:self-join-start}
+Relation C(\underline{cid}, nation) stores the ids and
+nationalities of customers.
+The SQL query
+\begin{verbatim}
+SELECT   C1.cid, SUM(1)
+FROM     C C1, C C2
+WHERE    C1.nation = C2.nation
+GROUP BY C1.cid;
+\end{verbatim}
+asks, for each cid,
+for the number of customers of the same nation (including the customer
+identified by cid).
+This query translates to \agca as
+\[
+\AggSum \big( 1, C(c_1,n_1) * C(c_2, n_2) * (n_1=n_2) \big)
+\]
+with bound variable $c_1$.
+%We return to this example later.
+\punto
+\end{example}
+
+
+\def\AggC{\mathit{FO2AG}}
+
+{\bf Relational completeness}.
+\agca captures all of first-order logic (FO) and more.
+Consider the following function $\AggC$ that maps FO to
+\agca formulae:
+\begin{eqnarray*}
+\AggC(\phi \land \psi) &:=& \AggC(\phi) \,*\, \AggC(\psi) \\
+\AggC(\phi \lor  \psi) &:=& \AggC(\phi)   +   \AggC(\psi) \\
+\AggC(     \exists x_1 \dots x_k \; \phi) &:=& \AggSum(1, \AggC(\phi)) \neq 0 \\
+\AggC(\neg \exists x_1 \dots x_k \; \phi) &:=& \AggSum(1, \AggC(\phi)) = 0
+\end{eqnarray*}
+$\AggC$ is the identity on atoms.
+Here, $k$ may be $0$ to support general negation.
+The key to simulating existential quantification is that
+$\AggSum$ performs an implicit projection.
+
+Let $\vDash$ be the usual satisfaction relation for FO.
+FO is captured by \agca in the following sense.
+
+
+\begin{theorem}
+For an FO formula $\phi$ with free variables $\dom(\vec{b})$,
+$\;\;
+(\db, \vec{b}) \vDash \phi \;\Leftrightarrow\;
+\Bracks{\AggC(\phi)}_F(\db, \vec{b}) \neq 0^\relz.
+$
+\end{theorem}
+
+
+\begin{example}\em
+A query asking for students $S$ who have taken $T$ all
+required courses $C$ is expressed in FO
+as $S(x) \land \neg \exists y \; C(y) \land \neg T(x,y)$ with free variable
+$x$; $\AggC$ turns this into the \agca query
+\[
+\AggSum\big(1, S(x) * \AggSum\big(1, C(y) * \AggSum(1, T(x,y)) = 0\big) = 0\big)
+\]
+with bound variable $x$. (That is, bound in the sense presented above, not
+in the sense ``not free''.)
+\punto
+\end{example}
+
+
+
+{\bf Recursively monomial terms.}
+Consider a language of expressions constructed from
+values (``constants'') and the operations $+$ and $*$ of a ring $A$,
+plus variables.
+Let these expressions evaluate to elements of a multivariate polynomial
+ring in the natural way. Turning an expression into a polynomial, that is,
+a sum of flat products (the products are also known as {\em monomials}\/),
+just means
+to apply distributivity repeatedly until we end up with a polynomial.
+This can be combined with simplification operations based on the 1 and
+0-elements and the additive inverse, i.e.,
+$\alpha * 1$ maps to $\alpha$, $\alpha*0$ maps to $0$,
+$\alpha+0$ maps to $\alpha$, $\alpha + (- \alpha)$ maps to $0$,
+$-(-\alpha) = \alpha$, and $(-\alpha)*\beta = -(\alpha*\beta)$.
+
+Such an algorithm for computing and simplifying expressions over a ring
+is immediately applicable to \agca formulae and terms.
+In particular, the operation $*$ is distributive with $+$ despite its
+sideways information passing semantics.
+%
+For arbitrary terms $s$ and $t$ and formulae $\phi$ and $\psi$,
+$\AggSum$ terms can be simplified using the following equations (to be
+applied by replacing a left by a right hand side expression):
+\begin{eqnarray*}
+\AggSum(s+t, \phi) &=& \AggSum(s, \phi) + \AggSum(t, \phi) \\
+\AggSum(t, \phi + \psi) &=& \AggSum(t, \phi) + \AggSum(t, \psi) \\
+\AggSum(-t, \phi) &=& -\AggSum(t, \phi) \\
+\AggSum(t, -\phi) &=& -\AggSum(t, \phi) \\
+\AggSum(t, \textit{true})  &=& t \\
+\AggSum(t, \textit{false}) &=& 0 \\
+\AggSum(0, \phi) &=& 0.
+\end{eqnarray*}
+
+%All these algebraic laws can be applied 
+%in a single bottom-up pass of the expression.
+%As an effect of applying distributivity repeatedly,
+%this algorithm runs in exponential time and may produce terms
+%of exponential size. 
+
+
+We call a term that contains neither $+$ nor $-$ anywhere
+% in a subterm or subformula
+{\em recursively monomial}.
+The following result is based on a straightforward algorithm that
+rewrites an input term in a bottom-up pass using the above rules.
+
+
+\begin{proposition}
+\label{prop:recmono}
+Each \agca term is equivalent to a finite sum
+$\pm t_1 \pm t_2 \cdots \pm t_m$ where $t_1, \dots, t_m$
+are recursively monomial terms.
+\end{proposition}
+
+
+\begin{example}\em
+$\AggSum\big(t, (-\phi) * ((-\psi) + \pi)\big)$ simplifies to the
+recursively monomial
+$\AggSum(t, \phi * \psi) - \AggSum(t, \phi * \pi)$.
+\punto
+\end{example}
+
+\section{Delta Computation}
+\label{sec:delta}
+
+
+%\subsection{Deltas in Rings}
+
+\def\thnew{\Theta_{\mathit{new}}}
+
+
+Given a ring $(A, +, *, 0, 1)$,
+let us distinguish between variables $x_1, \dots, x_n$ and constants
+($\in A$) in algebraic expressions over the ring.
+(Thus, we are now talking about a multivariate polynomial
+ring $A[x_1, \dots, x_n]$.)
+A valuation $\Theta: \{ x_1, \dots, x_n \} \rightarrow A$ extends naturally
+to a valuation of expressions with $\Theta$ the
+identity on elements of $A$ and
+$\Theta(\alpha \circ \beta) := \Theta(\alpha) \circ \Theta(\beta)$
+for $\circ \in \{ +, * \}$.
+
+Let us look at a scenario
+where we change the valuation of the variables from $\Theta$ to $\thnew$.
+Then an expression $\Delta \alpha$
+capturing the change to the value of an expression $\alpha$
+can be defined inductively as
+\begin{eqnarray*}
+\Delta (\alpha+\beta) &:=& (\Delta \alpha) + \Delta \beta \\
+\Delta (\alpha \,*\, \beta)  &:=& ((\Delta \alpha) * \beta)
+                       + (\alpha * \Delta \beta)
+                       + ((\Delta \alpha) * \Delta \beta) \;\; \\
+\Delta (-\alpha) &:=& - \Delta \alpha  \\
+\Delta x &:=& \thnew(x) - \Theta(x) \quad (\mbox{$x$ is a variable})
+\\
+\Delta c &:=& 0 \quad (c \in A)
+\end{eqnarray*}
+where $\alpha$ and $\beta$ are expressions.
+
+
+\begin{proposition}
+\label{prop:ringdelta}
+$\thnew(\alpha) = \Theta(\alpha) + \Delta \alpha$.
+\end{proposition}
+
+
+\begin{proofsketch}
+The proof is a straightforward induction: only the two most interesting
+cases are shown.
+
+Case $\alpha * \beta$:
+By the structure-preserving extension of variable valuations to expressions,
+$\thnew(\alpha * \beta) = \thnew(\alpha) * \thnew(\beta)$.
+By the induction hypothesis (the proposition),
+this is
+$(\Theta(\alpha) + \Delta \alpha) * (\Theta(\beta) + \Delta \beta)$.
+The claim follows from distributivity.
+
+Case $-\alpha$:
+It follows immediately from the induction hypothesis that
+$
+-\thnew(\alpha) - (-\Theta(\alpha)) = -\Delta \alpha.
+$
+It holds that
+$-\Theta_{(\mathit{new})}(\alpha) = \Theta_{(\mathit{new})}(-\alpha)$.
+We conclude that
+$\thnew(-\alpha) - \Theta(-\alpha) = -\Delta \alpha = \Delta (-\alpha)$.
+\end{proofsketch}
+
+
+\def\dt{\Delta_{\pm R(\vec{t})}}
+
+
+{\bf Deltas for \agca queries}.
+%
+We now
+consider databa\-ses containing classical multiset relations, i.e., in which
+the tuples have coherent schema.
+Our goal is, given an \agca term or formula $\alpha$,
+to construct a query $\Delta \alpha$
+(which is a term if $\alpha$ is a term and a formula if $\alpha$ is a formula)
+that expresses the change made to the database by the insertion respectively
+deletion of a single tuple.
+We write $\pm R(\vec{t})$ to denote
+the insertion or deletion of a tuple $\vec{t}$ into/from relation $R$.
+We write $\dt \alpha$
+to denote the delta-query for such such an update.
+%
+For atomic terms and formulae,
+\[\begin{array}{lllr}
+\dt \AggSum(t, \phi)
+   &:=& \AggSum((\dt t), & \phi\;\,) \\
+   &+ & \AggSum(\quad\quad\quad\; \,t\;,  & (\dt \phi)) \\
+   &+ & \AggSum((\dt t), & (\dt \phi))
+\end{array}\]
+
+\vspace{-3mm}
+
+\begin{eqnarray*}
+\dt (t \,\theta\, 0) &:=&
+    \big(\big((t + \dt t) \,\theta\,       0\big)
+   * (t \,\bar{\theta}\, 0)\big) \\
+&-& \big(\big((t + \dt t) \,\bar{\theta}\, 0\big)
+   * (t \,\theta\, 0)\big)
+\end{eqnarray*}
+
+\vspace{-5mm}
+
+\begin{eqnarray*}
+\dt \big( R(x_1, \dots, x_{\sch(R)}) \big) &:=&
+\pm \bigwedge_{i=1}^{|\sch(R)|} (x_i = t_i)
+\\
+\dt \big( S(x_1, \dots, x_{\sch(S)}) \big) &:=& \mbox{false}
+\quad\quad\quad (R \neq S)
+\end{eqnarray*}
+where $\bar{\theta}$ is the complement of the relation $\theta$
+(i.e., $\neq$ for $=$, $\ge$ for $<$, etc.) and $\sch(R)$ is the schema
+of $R$ -- the set of its column names.
+For all other atomic terms and formulae $\alpha$, $\dt \alpha$
+is the zero-element
+of their respective rings ($0$ and $\textit{false}$, respectively).
+The delta rules for nonatomic terms and formulae, i.e.,
+for operations in the rings of terms and formulae ($+,-,*$),
+are those provided just above Proposition~\ref{prop:ringdelta}.
+
+
+\begin{proposition}
+\label{prop:delta-correct}
+Given any database $\db$ and values $\vec{b}$ for the bound variables,
+\[
+\Bracks{\alpha}(\db \pm R(\vec{t}), \vec{b}) =
+\Bracks{\alpha}(\db, \vec{b}) \, + \,\Bracks{\dt \alpha}(\db, \vec{b}).
+\]
+\end{proposition}
+
+
+\def\phinew{\phi_{\mathit{new}}}
+
+\begin{proofsketch}
+The proof is by a straightforward bottom-up induction on the syntax tree of
+\agca expressions. Only the two most interesting cases are shown.
+
+Case $\phi = t \,\theta\, 0$.
+Informally, the delta to $\phi$ is $+1$ if the condition was previously
+false and becomes true by the change, $-1$ if the condition was previosly
+true and now becomes false, and 0 otherwise.
+The variables of $\phi$ can be assumed bound
+from the outside, thus the multiplicity of the tuple defined by $\phi$ is
+either $1$ or 0. Consider the following truth table, which shows, for
+all truth values of $\phi$ and
+$\phinew = (t+\dt t) \,\theta\, 0$, the value of
+$\dt \phi$ as given in our definition:
+
+\vspace{-2mm}
+
+\begin{center}
+\begin{small}
+{ }~{ }\hspace{-3mm}
+\begin{tabular}{|c@{~~}c|ccc|}
+\hline
+(1) & (2) & (3) & (4) & (5) \\
+$\phi$ & $\phinew$ &
+$\neg \phi \land      \phinew$ &
+$     \phi \land \neg \phinew$ &
+$\dt \phi = (3) - (4)$ \\
+\hline
+1 & 1 & 0 & 0 &   0  \\
+1 & 0 & 0 & 1 & $-1$ \\
+0 & 1 & 1 & 0 & $+1$ \\
+0 & 0 & 0 & 0 &   0  \\
+\hline
+\end{tabular}
+\end{small}
+\end{center}
+
+\vspace{-2mm}
+
+It is easy to see that for all truth values of
+$\Bracks{\phi}(\db, \vec{b})$ and
+$\Bracks{\phinew}(\db, \vec{b})$,
+$(5) = (2) - (1)$ in the above table, thus
+$\Bracks{\dt \phi}(\db, \vec{b}) =
+\Bracks{\phinew}(\db, \vec{b})
+   - \Bracks{\phi}(\db, \vec{b})$ is always true.
+
+Case $\dt R(\vec{x})$: $\dt R(\vec{x})$
+explicitly constructs the change to $R$: It evaluates to
+\[
+\pm \{\vec{t}\}:
+\vec{y} \mapsto
+\left\{
+\begin{array}{rll}
+\pm 1 & \dots & \vec{t}=\vec{y} \\
+0 & \dots & \mbox{otherwise}.
+\end{array}\right.
+\]
+$\dt S(\vec{x})$ (for $R \neq S$) evaluates to $0^\relz$.
+\end{proofsketch}
+
+
+
+\def\duv{\Delta_{\pm R(u,v)}}
+\def\dc{\Delta_{\pm C(c,n)}}
+
+
+\begin{example}\em
+\label{ex:self-join-delta}
+Consider the \agca query
+\[
+q[c_1] = \AggSum \big( 1, C(c_1,n_1) * C(c_2, n_2) * (n_1=n_2) \big)
+\]
+from Example~\ref{ex:self-join-start}.
+By the notation $q[c_1]$, we mean that the query has bound variable $c_1$
+(for the group-by column) and defines a map that represents the aggregate
+query result for each group $c_1$.
+We abbreviate
+$C(c_2, n_2) * (n_1=n_2)$ as $\phi$ and $C(c_1,n_1) * \phi$ as $\psi$
+to keep the example short.
+
+Let us study the insertion respectively deletion of a single tuple $(c,n)$
+to/from $C$. Since
+\begin{eqnarray*}
+\dc (n_1=n_2) &=& 0 \\
+\dc C(c_i, n_i) &=& \pm ((c_i=c) * (n_i=n)),
+\end{eqnarray*}
+by the delta-rule for $*$,
+\[
+\dc \phi = \pm ((c_2=c) * (n_2=n) * (n_1=n_2)).
+\]
+
+Again using the delta-rule for $*$, we get
+\begin{multline*}
+\dc \psi =
+\big( (\pm((c_1=c) * (n_1=n))) * \phi \big) \;+ \\
+\big( C(c_1,n_1) * \big( \!\pm\!((c_2=c) * (n_2=n) * (n_1=n_2)) \big) \big) \;+ \\
+\big( \!\pm\!((c_1=c) * (n_1=n)) \;* \\
+   (\pm((c_2=c) * (n_2=n) * (n_1=n_2)))
+\big).
+\end{multline*}
+
+By the delta-rule for $\AggSum$, since $\dc 1 = 0$,
+\[
+\dc \AggSum(1, \psi) = \AggSum(1, \dc \psi),
+\]
+which, following Proposition~\ref{prop:recmono},
+we can turn into the sum
+\begin{eqnarray*}
+&\pm& \AggSum(1, (c_1=c) * (n_1=n) * C(c_2, n_2)       * (n_1=n_2)) \\
+&\pm& \AggSum(1, C(c_1,n_1)        * (c_2=c) * (n_2=n) * (n_1=n_2)) \\
+&+&   \AggSum(1, (c_1=c) * (n_1=n) * (c_2=c) \\
+&& \hspace{3.8cm} *\; (n_2=n) * (n_1=n_2)).
+\end{eqnarray*}
+
+\vspace{-3mm}
+
+\punto
+\end{example}
+
+
+\nop{ % fine, but not enough space
+\begin{example}\em
+Consider the same query again, except that we do not group by
+$c_1$: That is, the aggregate term for the query is the same, and the delta does not change, but $c_1$ now is not bound. Then simplifying $\dc q$ yields
+$
+\pm \AggSum(1, C(c_2, n)) \pm \AggSum(1, C(c_1,n)) + 1.
+$
+The query sums the squares of the counts of customers for each nation:
+If there are $f(n) = \AggSum(1, C(c_1,n))$
+customers for nation $n$, then the query result is
+$q = \sum_n f(n)^2$. After adding one customer to nation $n'$, the query result
+is
+\[
+\big( f(n')+1 \big)^2 + \sum_{n \neq n'} f(n)^2 =
+\underbrace{2 f(n') + 1}_{\Delta_{+C(c,n)} q} + q.
+\]
+Thus our derivation is correct.
+\punto
+\end{example}
+} % end nop
+
+
+\agca is closed under taking deltas. Thus we can take deltas as often
+as we like -- our queries are, so to say, {\em infinitely differentiable}.
+%
+Next we define a construction to characterize the structural complexity 
+of \agca expressions and show that for a large class of
+expressions, taking deltas makes the expressions strictly simpler.
+
+
+\def\mo{\mathrm{deg}}
+
+\begin{definition}\em
+\label{def:mo}
+Let the (polynomial) {\em degree}\/ $\mo$ of an \agca
+term respectively formula be defined inductively
+as follows ($\alpha, \beta$ are either terms or formulae):
+\begin{eqnarray*}
+\mo(\alpha \,*\, \beta) &:=& \mo(\alpha) + \mo(\beta) \\
+\mo(\alpha + \beta) &:=& \max(\mo(\alpha), \mo(\beta)) \\
+\mo(-\alpha) &:=& \mo(\alpha) \\
+\mo(\AggSum(t, \phi)) &:=& \mo(t) + \mo(\phi) \\
+\mo(t \,\theta\, 0) &:=& \mo(t) \\
+\mo(R(\vec{x})) &:=& 1.
+\end{eqnarray*}
+For all other kinds of terms and formulae, $\mo(\cdot) := 0$.
+\punto
+\end{definition}
+
+
+The degree of a conjunctive query is the number of relation atoms joined
+together. In absence of further knowledge about the structure of the
+query (e.g., tree-width) or the data, the data complexity \cite{Var82}
+of an \agca query $q$ given values for the bound variables
+(in other words, evaluating the query for one group) is $O(n^{\mo(q)})$.
+
+
+An \agca condition $t \,\theta\, 0$
+is {\em simple}\/ if $\Delta t = 0$ for all update events.
+This is in particular true if $t$ does not contain $\AggSum$ subterms.
+
+
+\begin{theorem}
+\label{theo:mo}
+For any \agca term or formula $\alpha$ with simple conditions only,
+$
+\mo(\Delta \alpha) = \max(0, \mo(\alpha) - 1).
+$
+\end{theorem}
+
+
+The proof is a straightforward induction combining Definition~\ref{def:mo}
+with the definition of $\Delta$.
+
+
+\begin{example}\em
+Consider the query of Example~\ref{ex:self-join-delta}.
+We have $\mo\, q[c_1] = 2$ and $\mo\, \Delta_{+C(c,n)} q[c_1] = 1$.
+Computing $q''[c_1] = \Delta_{+C(c', n')} \Delta_{+C(c,n)} q[c_1]$
+yields $\AggSum(1, (c_1=c) * (c_2=c') * (n_2=n')) +
+\AggSum(1, (c_1=c') * (n=n'))$, so $\mo\, q''[c_1] = 0$.
+The definition of $\Delta$ ensures that the delta of any
+query of degree 0 is 0, so the value as well as the degree of any
+derivative of $q$ higher than $q''$ are 0, too.
+\punto
+\end{example}
+
+
+Theorem~\ref{theo:mo} guarantees that, for any \agca expression with
+simple conditions only and a fixed $k$, the $k$-th delta-derivative has
+degree zero.
+Such an expression does not access the
+database: it only depends on the update. This will be key in the compilation
+result presented in Section~\ref{sec:compiler}.
+
+
+
+
+\section{\mthree Programs}
+\label{sec:m3}
+
+
+
+
+\begin{figure*}[!]
+\begin{center}
+\begin{tabular}{c|c|rc|rc|rc|rc}
+Time & $\Delta$C
+& $\Delta$q[1] & q[1]
+& $\Delta$q[2] & q[2]
+& $\Delta$q[3] & q[3]
+& $\Delta$q[4] & q[4] \\
+\hline
+1&insert (1,US) &        +1 & 1 &             &   &             &   &&   \\
+2&insert (2,UK) &           & 1 &          +1 & 1 &             &   &&   \\
+3&insert (3,UK) &           & 1 &   +q2[2,UK] & 2 & +q1[UK] + 1 & 2 &&   \\
+4&insert (4,US) & +q2[4,US] & 2 &             & 2 &             & 2 & +q1[US] + 1 & 2 \\
+5&delete (3,UK) &           & 2 & $-$q2[3,UK] & 1 & $\underbrace{\mbox{$-$q1[UK]}}_{-2}$ $\underbrace{\mbox{$-$ q2[3,UK]}}_{-1}$ + 1 & 0 && 2 \\
+6&insert (3,US) & +q2[3,US] & 3 &   +q2[3,US] & 3 & +q1[US] + 1 & 3 & +q2[3,US] & 3  \\
+\end{tabular}
+\end{center}
+
+\vspace{-4mm}
+
+\caption{Runtime trace of the \mthree program of Example~\ref{ex:self-join}.}
+\label{fig:trace}
+\end{figure*}
+
+
+This section introduces \mthree, a low-level language for incremental,
+update-event processing that admits massive parallelization.
+In an \mthree program, all state is represented by
+finite map data structures (associative arrays), mapping tuples to numbers.
+\mthree is a restricted imperative language, similar to C both in syntax
+and semantics.
+There are two important
+differences from C. The first is the initialization of undefined map values,
+which uses special syntax to account for the fact that \mthree procedures
+are update triggers for the map data structures.
+The second is looping, which is performed over a set of values that is
+intentionally
+not made explicit in the syntax of \mthree (but is particularly well-behaved
+-- it is a form of constrained structural recursion over the map
+-- and thus admits parallelisation).
+
+In the next section, we will compile \agca queries to \mthree programs
+that perform incremental view maintenance.
+It is worth noting that these compiled programs only use the maps to
+represent the view and auxiliary data; no database beyond these is accessed.
+
+
+\def\tinit{t_{\mathit{init}}}
+
+{\em Syntax}.
+A {\em map (read) access}\/,
+where $m$ is a map name, is written as $m[\vec{x}]$.
+An {\em \mthree term}\/
+is an arithmetic expression built from variables, constants,
+map accesses, functional ifs of the form
+{\tt if $\phi$ then $t$ else $0$}
+or, using C syntax, ($\phi$ ? $t$ : 0), and arithmetic operations $+$ and $*$.
+A condition $\phi$ is a boolean combination of (in)equalities over variables
+and constants.
+
+An \mthree trigger is of the form
+\[
+\mbox{{\tt on $\pm R$($\vec{x}\vec{y}$) \{ $s_1$; $\dots$; $s_k$ \}}}
+\]
+where $\pm$ indicates insertion respectively deletion,
+$R$ is a relation name, $\vec{x}\vec{y}$ are variables (the trigger arguments),
+and $s_1,\dots,s_k$ are {\em \mthree statements}\/ of the form
+%
+\begin{equation}
+\mbox{{\tt foreach $\vec{z}$ do
+   $m[\vec{x}\vec{z}]\tuple{\tinit}$ $\pm$= $t$}}
+\label{eq:foreach}
+\end{equation}
+%
+where $\vec{z}$ are variables distinct from $\vec{x}\vec{y}$,
+$t$ is an \mthree term, and
+$t_{init}$ is an $\mthree$ term without map accesses that uses only
+variables from $\vec{x}\vec{z}$, called the
+{\em initializer}\/ of $m[\vec{x}\vec{z}]$.
+If $\tinit$ is $0$, we may omit it and write
+$m[\vec{x}\vec{z}]$ rather than $m[\vec{x}\vec{z}]\tuple{0}$.
+%
+Let $m_1[\vec{v}_1], \dots, m_k[\vec{v}_k]$ be the map accesses
+in the right-hand side term $t$.
+Then $m$, $m_1$, $\dots$, $m_k$ must be pairwise distinct
+and the variables in $\vec{v}_1, \dots, \vec{v}_k$ must be a nonoverlapping
+subsets of the variables in $\vec{x}\vec{y}\vec{z}$.
+%
+We abbreviate statements of the form (\ref{eq:foreach}) with
+$\vec{z} = \tuple{}$ as
+\[
+m[\vec{x}]\tuple{\tinit} \mbox{ {\tt $\pm$=} } t.
+\]
+An {\em \mthree program}\/ consists of a set of triggers, one
+for each update event $\pm R$.
+
+{\em Semantics}.
+The semantics of \mthree terms is the same as in C.
+A statement of form (\ref{eq:foreach}) performs the following
+for each valuation $\theta$ of the variables
+$\vec{z}$ (extending the valuation of variables $\vec{x}\vec{y}$ passed
+to the trigger via its arguments) such that all map accesses
+in right-hand side $t$ are defined.
+If $m[\vec{x}\vec{z}]$ is undefined,
+initialize it with $\tinit$. Then, unconditionally,
+execute $m[\vec{x}\vec{z}]$ {\tt +=} $t$.
+%
+An ``on $\pm R(\vec{x}\vec{y})$'' trigger fires
+if the update is of the form $\pm R(\vec{x}\vec{y})$
+and executes the statements
+$s_1; \dots; s_k$ of its body sequentially (as in C).
+
+The compilation algorithms of the next section may for convenience 
+create multiple triggers for the same update event. However,
+these \mthree programs do not have cyclic
+dependencies between triggers: there is no trigger that reads one map that
+the other updates {\em and}\/ vice-versa (there is a hierarchy of maps).
+Assuming without loss of generality that the argument variable tuples
+of distinct triggers for the same update event are the same,
+we can perform a suitable topological sort of
+the triggers that assures that no map is read after it is written, 
+and concatenate their bodies according to this sort to obtain a
+single trigger per update event.
+
+
+\begin{example}\em
+\label{ex:self-join}
+Consider the \mthree on-insert trigger
+\begin{verbatim}
+on +C(cid, nation) {
+  q[cid] += q1[nation];
+  foreach cid2 do q[cid2] += q2[cid2, nation];
+  q[cid] += 1;
+  q1[nation] += 1;
+  q2[cid, nation] += 1
+}
+\end{verbatim}
+The initializers are all $0$, and are thus omitted.
+
+The trigger {\tt on -C} is obtained by changing
+{\tt +=} to {\tt -=} everywhere in the above trigger
+except for the third statement
+({\tt q[cid] += 1}), which remains unchanged.
+
+These triggers incrementally maintain the query of
+Example~\ref{ex:self-join-delta} as the map $q[\cdot]$; the other maps
+are auxiliary.
+They are exactly the \mthree triggers that the
+compilation algorithm of Section~\ref{sec:compilation-alg} will produce
+(modulo the merging of multiple triggers for the same update event as
+described above).
+%
+The ordering of statements in the triggers in not arbitrary: no
+map value must be read after it is written. So it is important that the
+first statement precedes the fourth and the second precedes the fifth.
+
+%All values are initialized to zero.
+Figure~\ref{fig:trace} shows a trace of map $q$ as we perform
+a sequence of insertions and deletions. The $\Delta q[x]$ columns
+indicate the changes made to $q[x]$ on each update.
+\punto
+\end{example}
+
+
+\subsection*{Parallelization}
+
+
+In the following, by the {\em atomic values maintained}\/
+by an \mthree program,
+we refer to the image values (numbers) $m[\vec{a}]$ stored in the maps
+maintained by the program.
+%
+Assume a model of computation in which
+additions and multiplications of pairs of numbers
+are performed in unit time.
+
+
+\begin{proposition}
+\label{prop:const_work_per_val}
+Executing \mthree triggers takes
+a constant amount of work per tuple inserted or deleted
+and per atomic value maintained.
+\end{proposition}
+
+
+\begin{proofsketch}
+The syntax of statements of form (\ref{eq:foreach})
+is misleading in that it suggests a loop --
+that a nonconstant amount of work is needed to bring an atomic value
+up to date. Overall, a nonconstant amount of work (evidenced by the loop) is
+only needed because in general there are many atomic values
+to be maintained.
+The loop variables $\vec{z}$ of a statement of form (\ref{eq:foreach})
+all occur in the lvalue $m[\vec{x}\vec{z}]$, so each such value is written only
+once.
+Because a trigger is a
+constant-length sequence of statements and there are no nested loops or
+recursion, each atomic value is only written
+constantly many times in the trigger overall.
+%
+Since the right-hand side of a statement only
+performs a constant number of arithmetic operations and comparisons
+starting from
+numbers readily available in the maps (consider these to be hash-maps with
+constant-time access), the overall work
+done to update each value is a constant number of map accesses, comparisons,
+additions and multiplications.
+\end{proofsketch}
+
+
+Let us formalize this result more rigidly, using circuit complexity.
+A {\em bounded fan-in circuit}\/ is a Boolean circuit (built using
+AND, OR, and NOT GATES) in which
+AND and OR gates have only a bounded number of inputs (w.l.o.g., two).
+The complexity class {\em NC0} denotes the
+{\em LOGSPACE-uniform families} of bounded fan-in Boolean circuits
+of polynomial
+size and constant depth \cite{Joh90,DBLP:journals/jcss/BarringtonIS90}.
+That is, a decision problem $P$ is in NC0
+if there is a LOGSPACE algorithm that, given an input size $N$ in unary,
+outputs a bounded fan-in circuit $C_N$ of polynomial
+size and constant depth such that $C_N$ outputs true for exactly those
+problem instances of $N$-bit length on which $P$ is true.
+
+Obviously, in an NC0 circuit, the output gate only depends on a
+constant number of input gates.
+Thus, bits of the result of arithmetics on variable-length
+integers cannot be computed in NC0. We will consider arithmetics
+modulo $2^k$ for a fixed integer $k$, which covers the real-world case
+of fixed-precision numbers and fixed-size registers.
+
+Consider a single-tuple update and a representation of a materialized view
+and auxiliary data consisting of $k$-bit numbers.
+We will talk of a (LOGSPACE-uniform)
+{\em NC0-inter\-pre\-ta\-tion modulo $2^k$}\/
+of a fixed \mthree update event $\pm R(\vec{t})$
+if there is an NC0 circuit for each bit of the representation
+which, given the old version of the representation, computes
+the new version of that bit.
+
+%We say that {\em incremental view maintenance (modulo $2^k$) is in NC0}\/ if
+%there is are NC0-interpretations (modulo $2^k$) of all trigger programs.
+
+
+\begin{theorem}
+\label{theo:nczero}
+Update events in \mthree programs have NC0 interpretations modulo $2^k$.
+\end{theorem}
+
+
+\def\arity{\mathrm{ar}}
+\def\nst{\mathrm{nst}}
+
+\begin{proofsketch}
+Fix an \mthree update event $\pm R(\vec{t})$.
+%
+Let each map $m$ used in the \mthree
+program have key domain arity $\arity(m)$ -- that is,
+the keys are $\arity(m)$-tuples.
+For each map $m$, let $\nst(m)$ be the number
+of statements with $m$ the left-hand-side map,
+from all the $\pm R$ triggers.
+Let $s^m_1, \dots, s^m_{\nst(m)}$ be 
+the instantiations of these statements
+with $\vec{t}$, obtained by substituting all occurrences of the
+trigger argument variables with their values in $\vec{t}$, in arbitrary order.
+%
+We define an algorithm that, for an active domain size $N$ given in unary,
+constructs a circuit that is an NC0-inter\-pre\-ta\-tion of the update event.
+%
+Denote the value of $m[x_1, \dots, x_{\arity(m)}]$ after
+adding $s^m_1 + \dots + s^m_l$, for $0 \le l \le \nst(m)$, by
+$m^{(l)}[x_1, \dots, x_{\arity(m)}]$.
+We represent the $j$-th bit of $m^{(l)}[x_1, \dots, x_{\arity(m)}]$
+by gate $G^{(l)}_{m[x_1, \dots, x_{\arity(m)}].j}$
+($1 \le j \le k$).
+%
+The circuit will have input gates
+$G^{(0)}_{m[x_1, \dots, x_{\arity(m)}].j}$
+and output gates $G^{(\nst(m))}_{m[x_1, \dots, x_{\arity(m)}].j}$.
+Since each $x_{(\cdot)}$ has $N$ possible values, there are
+$\sum_{m \; \mathrm{a \; map}} k * N^{\arity(m)}$ input gates and
+the same number of output gates.
+
+For each map $m$ and each $1 \le l \le \nst(m)$, we proceed as follows.
+Let $s^m_l$ be statement
+{\tt foreach $\vec{z}$ do $m[\vec{a}\vec{z}]$ $\pm$= $t$}
+such that $\vec{a}$ are constants (a projection of $\vec{t}$).
+The definition of \mthree guarantees that no other variables than those of
+$\vec{z}$ occur in right-hand side $t$.
+Loop over each $\vec{x}\vec{z}$ in $N^{\arity(m)}$.
+If $\vec{x} \neq \vec{a}$, forward the value of
+$m^{(l-1)}[\vec{x}\vec{z}]$ to
+$m^{(l)}[\vec{x}\vec{z}]$ by connecting the gates.
+Otherwise,
+build a circuit for $m^{(l-1)}[\vec{x}\vec{z}] \pm t$
+with the variables in $t$ substituted, connect the inputs to the 
+gates representing $m^{(l-1)}[\vec{x}\vec{z}]$ and
+$m'^{(0)}[\cdot]$ for each of the maps $m'$ accessed in $t$, and
+connect the output to the gates representing
+$m^{(l)}[\vec{x}\vec{z}]$.
+%
+The construction of NC0 circuits for adding and
+multiplying two $k$-bit numbers modulo $2^k$ ($k$ fixed) is straightforward,
+and so is the wiring together of these circuits into circuits that compute
+fixed arithmetic expressions over $k$-bit numbers
+(using $+$, $*$, $k$-bit constants, and comparisons).
+
+The algorithm needs a fixed number ($\max_m \arity(m)$) of registers of
+$\lceil \log_2 N \rceil$ bits (which is logarithmic in the input, which
+was $N$ given in unary) and runs in LOGSPACE.
+\end{proofsketch}
+
+
+The result extends to bulk updates involving a constant number
+of tuples by simple composition of circuits.
+
+By fixing the update events in Theorem~\ref{theo:nczero}, we
+avoid the need to perform lookups of map items by ``address'' (key).
+This would require unbounded fan-in gates to encode in a constant-depth
+circuit.
+But note that this does not defeat our aim:
+Incremental evaluation eliminates the need to compute a
+sum of an unbounded number of terms, which
+is qualitatively different from a map lookup, which on real
+computers can be done in constant time (using a bus, which performs
+lookups but does not compute sums).
+
+
+
+
+
+\section{Query Compilation}
+\label{sec:compiler}
+
+
+This section describes algorithms for compiling \agca queries to \mthree.
+%
+Throughout the section, we will consider \agca $\AggSum$ terms excluding
+nested aggregates and
+inequality join conditions (i.e., involving two variables,
+e.g.\ $x < y$; non-join conditions such as $x>5$ are permitted).
+These terms are called {\em primitive \agca} terms.
+
+The second requirement guarantees that \mthree initializers are constants
+and do not require us to go back to the database to compute.
+We will discuss relaxing this restriction at the end of the section.
+
+
+\subsection{Basic Compilation Algorithm}
+\label{sec:simple_alg}
+
+
+\nop{
+We consider single-tuple insertions and deletions and the
+incremental maintenance of aggregate queries (i.e., $\AggSum$ terms)
+with simple
+conditions only. Technically, we also require that in an aggregate
+term $\AggSum(t, \phi)$, $t$ does not contain $\AggSum$ subterms, but this
+is no restriction of generality because a term of the form
+$\AggSum(\AggSum(t, \psi), \phi)$ can be processed as the equivalent term
+$\AggSum(t, \phi * \psi)$.
+
+%Some of the ideas of this subsection are presented very succinctly, and are
+%elaborated on in more detail in the remainder of Section~\ref{sec:compiler}.
+} % end nop
+
+
+
+The following lemma allows to eliminate unneeded variables --
+variables that are made safe by condition atoms equating them to other
+safe variables -- from $\agca$ queries.
+
+
+\begin{lemma}
+\label{lem:varelim}
+Given a safe term $\AggSum(t, \phi)$
+%, where $\phi$ is a monomial formula,
+and a set of bound variables $B$.
+Then there is an equivalent safe term $\AggSum(t', \psi)$
+such that each variable in $\psi$ either occurs in a relational atom
+$R(\vec{x})$ of $\psi$ or in $B$.
+\end{lemma}
+
+
+An \agca term $t=\AggSum(t_0, \phi)$
+is called {\em constraints-only} if $\phi$ does not
+contain relational atoms $R(\vec{x})$.
+When $\phi$ contains only bound variables,
+we can think of $t$ as a (functional)
+if-statement ``if $\phi$ then $t_0$ else 0''
+or, using C syntax, ``$\phi$ ? $t_0$ : 0''.
+Let MakeC$(t, B)$ be a function that turns $t$ into the corresponding
+functional if-statement after performing variable elimination using
+bound variables $B$.
+
+
+We present a simple compilation algorithm for
+\agca terms $\AggSum(t, \phi)$
+that do not contain nested aggregates,
+i.e., neither $t$ not $\phi$ contain $\AggSum$ terms. 
+
+
+\begin{theorem}
+\label{theo:compile0}
+There is an algorithm that compiles any primitive \agca term
+into an \mthree program that incrementally maintains it.
+\end{theorem}
+
+
+\begin{proofsketch}
+To create on-insert ($+R$) and
+on-delete $(-R)$ triggers that incrementally maintain map $q[\vec{b}]$ of
+$\AggSum$ term $t$,
+we execute the following algorithm as
+Compile0($q$, $\vec{b}$, $t$):
+%
+\begin{tabbing}
+{\bf algorithm} Compile0($q$, $\vec{b}$, $t$) \\
+outputs an \mthree program \\
+{\bf begin} \\
+{\bf for each} relation $R$ in the schema,
+               $\pm$ in $\{+,-\}$ {\bf do} \\
+~~~\=
+  $\vec{a}$ := \=turn $\sch(R)$ into a list of new variable names; \\
+\> $t'$ := $\Delta_{\pm R(\vec{a})} t$; \\
+\>{\bf if} $t'$ is constraints-only {\bf then} $t''$ := MakeC($t'$, $\vec{a}\vec{b}$) \\
+\> {\bf else}
+    $t''$ := $q_{\pm R}[\vec{a}\vec{b}]$;
+    Compile0($q_{\pm R}$, $\vec{a}\vec{b}$, $t'$) {\bf end if}; \\
+\> $\tinit$ := $\Bracks{t}_F(\emptyset,\vec{a}\vec{b})$; \\
+\> {\bf output} {\tt on} $\pm R(\vec{a})$
+     \{{\tt foreach} $\vec{b}$ {\tt do} $q[\vec{b}]\tuple{\tinit}$ += $t''$\} \\
+{\bf end}
+\end{tabbing}
+%
+Here, $q_{\pm R}$ is a new map name for an auxiliary materialized view.
+When $\vec{b}$ is the empty tuple, we can omit
+{\tt foreach} $\vec{b}$ {\tt do} from the \mthree statement created.
+
+The algorithm takes an aggregate query $t = \AggSum(t_0, \phi)$
+with bound variables $\vec{b}$ and defines a map $q[\vec{b}]$ for it,
+representing a materialized view of the query.
+It creates a trigger for each possible
+update event $\pm R$ which specifies how to update $q[\vec{b}]$ when
+this event occurs. To do this, it computes the delta $t'$ of the query, and
+creates a new map $q_{\pm R}$ representing a materialized view of the delta.
+The statement increments $q[\vec{b}]$ by
+$q_{\pm R}[\cdot]$, and uses the result of evaluating term $t$ on the empty
+database as the initializer for $q[\vec{b}]$.
+The function $\Bracks{\cdot}_F$ was defined
+in Section~\ref{sec:calculus}. In particular, on
+$\AggSum$ terms $t$ that are not constraints-only, $\tinit = 0$.
+The new map $q_{\pm R}$
+is incrementally maintained as well. To do this,
+the algorithm recursively calls itself.
+The algorithm terminates because by Theorem~\ref{theo:mo}
+the delta $t'$ eventually reaches degree $0$ (i.e., is
+constraints-only).
+In this case no new map is created for it but $t'$ (turned into an \mthree
+term using MakeC) itself is used
+as the right-hand side of the \mthree statement.
+
+This is precisely the recursive incremental view maintenance mechanism
+sketched in the introduction, using the notation introduced in the
+past sections.
+\end{proofsketch}
+
+
+\begin{example}\em
+\label{ex:RS}
+Let $q[] = \AggSum(1, R(x) * S(x))$. Then
+%
+\begin{eqnarray*}
+\Delta_{\pm R(u)} q &=& \pm \AggSum(1, (x=u) * S(x)) \quad =: q_R[u] \\[-.3ex]
+\Delta_{\pm S(v)} q &=& \pm \AggSum(1, R(x) * (x=v)) \quad =: q_S[v] \\[-.3ex]
+\Delta_{\pm S(v)} q_R[u] &=& \pm \AggSum(1, (x=u) * (x=v)) \\
+\Delta_{\pm R(u)} q_S[v] &=& \pm \AggSum(1, (x=u) * (x=v))
+\end{eqnarray*}
+Moreover,
+MakeC$(\AggSum(1, (x=u) * (x=v)))$ = {\tt if (u=v) then 1 else 0}.
+%
+We will see later that all the initializers for this code are 0.
+Compile0 produces the \mthree insert triggers
+\begin{verbatim}
+on +R(u) { q[] += qR[u] }
+on +R(u) { foreach v do 
+              qS[v] += if (u=v) then 1 else 0 }
+on +S(v) { q[] += qS[v] }
+on +S(v) { foreach u do
+              qR[u] += if (u=v) then 1 else 0 }
+\end{verbatim}
+The delete triggers are obtained from the insert triggers by replacing
+all occurrences of {\tt +} by {\tt -}.
+%\punto
+\end{example}
+
+
+\subsection{Eliminating Loop Variables}
+\label{sec:compilation-alg}
+
+
+We now improve algorithm Compile0
+from the proof of Theorem~\ref{theo:compile0} to loop over fewer variables.
+
+
+\medskip
+
+{\em Extraction of aggregates}.
+For a term $t$ and its set $B$ of bound variables,
+the function Extract($t$, $B$)
+replaces each maximal subterm $s$ of $t$
+that is of the form $\AggSum(\cdot, \cdot)$ but is not constraints-only
+by a map access  $m[\vec{x}]$. Here
+$m$ is a new name and $\vec{x}$ are those variables of $B$
+that occur in $s$, turned into an arbitrarily ordered tuple.
+The result of Extract thus is a pair $(t', \Theta)$ of the remainder
+term $t'$ and a mapping $\Theta$ from map accesses $m[\vec{x}]$ to extracted
+subterms $s$ (which could be used to undo the extraction).
+That is, $t'$ is constraints-only, and $t'$ with its map accesses
+substituted using $\Theta$ is $t$.
+
+\begin{example}\em
+Let $t$ be the term
+$
+\AggSum \big( x*\AggSum( v, R(v, z))$, $y=z \big)
+* \AggSum \big( u, R(x, u) \big).
+$
+Extract($t$, $\{x,y\}$) returns the pair $(t', \theta)$
+consisting of term
+$t'= \AggSum(x*m_1[z]\tuple{\theta(m_1[z])}, y=z) *
+m_2[x]\tuple{\theta(m_2[x])}$
+and the mapping
+\[\theta = \{
+m_1[z] \mapsto \AggSum(v, R(v, z)); \;
+m_2[x] \mapsto \AggSum(u, R(x, u)) \}.
+\]
+%\punto
+\end{example}
+
+
+
+\def\vars{\mbox{vars}}
+
+{\em Factorization of monomial aggregate terms}.
+For $e$ either a formula or a term, let $\vars(e)$
+be the set of all variables occurring in $e$.
+Factorization employs the equivalence
+\[
+\AggSum(s*t, \phi * \psi) = \AggSum(s, \phi) * \AggSum(t, \psi)
+\]
+which is true if
+$(\vars(s) \cup \vars(\phi)) \cap (\vars(t) \cup \vars(\psi)) = \emptyset$.
+
+\begin{proposition}
+\label{prop:factorization}
+A monomial aggregate term can be maximally factorized in linear time in
+its size.
+\end{proposition}
+
+
+%A proof sketch containing a factorization algorithm
+%is provided in the appendix.
+
+
+\begin{example}\em
+%The connected components of 
+The term
+$
+\AggSum(5 * x * \AggSum(1, R(y, z)) * w, R(x,y) * R(v, w))
+$
+%are
+%$\{ \{5\}, \{ x, R(x,y), \AggSum(1, R(y, z)) \}, \{ w, R(v, w) \} \}$
+%and thus the term
+factorizes as
+$\AggSum(5, \textit{true}) *
+\AggSum(x * \AggSum(1$, $R(y, z)), R(x, y)) *
+\AggSum(w, R(v, w))$.
+%
+%$\AggSum(5, \textit{true})$ simplifies to $5$.
+\punto
+\end{example}
+
+
+{\em Recursive factorization}, given term $\AggSum(t, \phi)$, recursively
+-- bottom-up -- factorizes the aggregate terms in $t$ before applying
+factorization as just described to $\AggSum(t, \phi)$ itself.
+
+
+{\em Lifting ifs}.
+Observe that if $\psi$ is a constraints-only term in which
+all variables are bound and $t_0$ is a term in which all variables
+are bound, then
+\begin{eqnarray*}
+\AggSum(t, \phi * \psi) &=& \AggSum(\AggSum(t, \phi), \psi) \\
+t_0 * \AggSum(t, \psi) &=& \AggSum(t_0 * t, \psi)
+\end{eqnarray*}
+Thus, given a recursively monomial term, we can lift $\psi$ to the top. 
+Let function LiftIfs$(\cdot, B)$, given bound variables $B$, do exactly this.
+
+\begin{example}\em
+\label{ex:lift-ifs}
+This will be used in Example~\ref{ex:self-join-compile}:
+\begin{multline*}
+\mbox{LiftIfs}(\AggSum(1, C(c_2, n) * (c_1=c)), \{c_1, c, n\}) = \\
+\AggSum(\AggSum(1, C(c_2, n)), c_1=c).
+\end{multline*}
+\end{example}
+
+
+{\em Further auxiliary functions}.
+Simplify$(t, B)$,
+given an aggregate term $t$ and a set of bound variables $B$,
+(1)
+turns $t$ into an equivalent sum of (inverses of) recursively monomials
+using Proposition~\ref{prop:recmono},
+(2)
+recursively factorizes each of the result monomials,
+(3)
+eliminates all variables other than $B$,
+and finally
+(4)
+performs LiftIfs($\cdot, B$).
+%
+The result $t\pm_1 t_1 \cdots \pm_n t_n$ is equivalent
+to $t$ and
+the $t_i$ are recursively monomials involving only variables in $B$.
+
+ElimLV is a function that takes an \mthree statement
+\[
+\mbox{{\tt foreach $\vec{x}\vec{y}$ do $q[\vec{x}\vec{y}]$ += if
+$\vec{x}=\vec{z}$ then $t$ else $0$}}
+\]
+and simplifies it to the equivalent statement
+{\tt foreach $\vec{y}$ do $q[\vec{z}\vec{y}]$ +=} $t$.
+We lift ifs to be able to apply this optimization.
+
+
+
+\begin{figure}
+\begin{tabbing}
+{\bf algorithm} Compile(\=$m$, $\vec{b}$, $t$) \\
+outputs an \mthree program \\
+{\bf begin} \\
+{\bf for each} relation $R$ in the schema,
+               $\pm_0$ in $\{+,-\}$ {\bf do} \\
+~~~\=
+  $\vec{a}$ := \=turn $\sch(R)$ into a list of new variable names; \\
+\> $t'$ := $\Delta_{\pm_0 R(\vec{a})} t$; \\
+\>($\pm_1 t_1 \cdots \pm_n t_n$, $\Theta$) :=
+    Extract(Simplify($t'$, $\vec{a}\vec{b}$), $\vec{a}\vec{b}$); \\
+\>{\bf for each} $i$ {\bf from $1$ to $n$ do} \\
+\>~~~\= $\tinit$ := $\Bracks{t}_F(\emptyset,\vec{a}\vec{b})$; \\
+\>\> $s_i$ := ({\tt foreach} $\vec{b}$ {\tt do} 
+   $m[\vec{b}]\tuple{\tinit}$ ($\pm_i$)= MakeC($t_i$, $\vec{a}\vec{b}$)); \\
+\>\>{\bf output} {\tt on} $\pm_0 R(\vec{a})$ \{ ElimLV($s_i$)
+    \}; \\
+\>{\bf for each} $(m'[\vec{x}] \mapsto t'')$ in $\Theta$ {\bf do}
+                 Compile($m', \vec{x}, t''$); \\
+{\bf end}
+\end{tabbing}
+
+\vspace{-6mm}
+
+\caption{The algorithm Compile.}
+\label{fig:compilation-algo}
+\end{figure}
+
+
+{\em The algorithm}.
+The algorithm Compile is given in Figure~\ref{fig:compilation-algo}.
+It is invoked like Compile0 and closely follows its structure.
+%, but generalizes
+%it slightly in that $t$ may now be any \agca term with simple conditions only.
+%
+The difference is that we first Simplify the delta of the query and extract
+the non-constraints-only aggregates.
+The result is a sum of constraints-only recursively monomials with
+map accesses. We turn each of the
+recursively monomials into a separate statement. The reason for this
+is that using LiftIfs and
+ElimLV, we remove loop variables, and each of the statements
+(monomials)
+may loop over a different subset of the argument variables of the
+map representing the query (the remaining variables are substituted by
+constants).
+
+
+
+
+\begin{theorem}
+Given a primitive
+term $t$ and bound variables $\vec{x}$ by which results
+are to be grouped,
+the output of Compile($m$, $\vec{x}$, $t$) is an \mthree program that
+correctly maintains query $t$ in map $m[\vec{x}]$ under inserts and deletes.
+\end{theorem}
+
+
+\begin{example}\em
+Algorithm Compile simplifies
+the two for\-each-loop statements of Example~\ref{ex:RS}
+to {\tt qS[u] += 1} and {\tt qR[v] +=1}.
+The resulting triggers for this
+example have no loops and run in {\em constant sequential time}\/.
+%
+%Traditional incremental view maintenance would require linear time to insert
+%or delete a tuple.
+\punto
+\end{example}
+
+
+\def\dcc{\Delta_{\pm C(c',n')}}
+
+
+\begin{example}\em
+\label{ex:self-join-compile}
+Consider the query $q[c_1]$ of
+Example~\ref{ex:self-join-delta} and the sum of (inverses of) recursively
+monomials equivalent to $\dc q[c_1]$ computed there.
+Factorization on this query is the identity.
+Eliminating variables according to Lemma~\ref{lem:varelim}
+with variables $\{c_1,c,n\}$ bound yields
+$
+\pm t_1 \pm t_2 + t_3
+$
+with
+$t_1 = \AggSum(1, (c_1=c) * C(c_2, n))$,
+$t_2 = \AggSum(1, C(c_1,n))$, and
+$t_3 = \AggSum(1, c_1=c)$.
+The result of if-lifting for $t_1$ is shown in Example~\ref{ex:lift-ifs}.
+For $t_2$ and $t_3$ it is the identity.
+\[
+\mbox{Extract}(\mbox{Simplify(}\dc q[c_1], \{c_1,c,n\}), \{c_1,c,n\})
+\]
+yields $(\pm t'_1 \pm t'_2 + t'_3, \Theta)$ where
+$t'_1 = \AggSum(\mbox{q1}[n], c_1=c)$,
+$t'_2 = \mbox{q2}[c_1, n]$,
+$t'_3 = t_3$, and
+\[
+\Theta = \left\{
+\begin{array}{rll}
+\mbox{q1}[n] &\mapsto& \AggSum(1, C(c_2, n)) \\
+\mbox{q2}[c_1, n] &\mapsto& \AggSum(1, C(c_1,n)).
+\end{array}
+\right\}
+\]
+Using ElimLV, we get the three trigger statements
+\[
+q[c] \mbox{ {\tt $\pm$=} q1}[n]; \quad\quad
+\mbox{{\tt foreach $c_1$ do}} \; q[c_1] \mbox{ {\tt $\pm$=} q2}[c_1, n];
+\]
+
+\vspace{-6mm}
+
+\[
+q[c] \mbox{ {\tt +=} } 1.
+\]
+Without ElimLV, the first statement would be
+\[
+\mbox{{\tt foreach $c_1$ do $q[c_1]$ $\pm$= if $c_1=c$ then
+   q1$[n]$ else $0$}}
+\]
+and the third would be more complicated, too.
+We further have to compile q1 and q2. Since
+\[
+\dcc \mbox{q1}[n] = \dcc \mbox{q2}[c,n] = \pm 1,
+\]
+the compiled \mthree program is exactly as shown in Example~\ref{ex:self-join}.
+%\punto
+\end{example}
+
+
+
+\subsection{Initializers}
+
+
+We defined the primitive (=compilable) \agca terms to be those
+without nested aggregates or inequality join conditions.
+The second requirement of that definition can be replaced
+by the requirement to exclude terms that are
+unsafe if the set of bound variables is set to $\emptyset$
+or where this condition can become true for a $k$-th delta.
+
+For example, the query
+$q[] = \AggSum(1, R(x) * S(y) * (x < y))$
+is excluded because its delta
+$m[y] = \AggSum(1, R(x) * (x < y))$
+is safe for bound variable $y$, but unsafe for the empty set of
+bound variables. The problem is that on an insertion into $R$, we do not
+know for which $y$ values the map $m$ should be updated -- the
+query does not provide use with a method of bounding the domain of $y$.
+
+However,
+if we assume a global, immutable active domain given (cf.\ the proof
+of Theorem~\ref{theo:nczero}), we never have to compute initial values,
+and the compilation algorithms are applicable to all $\AggSum$ terms
+with simple conditions only (i.e., for which taking deltas simplifies the
+query structure).
+
+For primitive queries, it is true that for the initialization
+of a map value $m[\vec{a}]\tuple{\tinit}$, we can evaluate $\tinit$ on
+the empty database; any contents of the database are not visible to
+query $\tinit$ or would otherwise have caused initialization of
+$m[\vec{a}]$ earlier. This can be proved by induction.
+
+
+
+\nop{
+Also, we can eliminate
+inequalities involving $\neq$ (but not $>$, $\ge$, $<$ or $\le$) using the rule
+\begin{multline*}
+\AggSum(t, \phi(\vec{x}, y, z) * (y \neq z)) = \\
+\AggSum(t, \phi(\vec{x}, y, z)) -
+\AggSum(t, \phi(\vec{x}, y, z) * (y=z))
+\end{multline*}
+} % end nop
+
+
+
+\section{Related Work}
+\label{sec:discussion}
+
+
+There is a large literature on the incremental view maintenance problem
+(e.g.\ \cite{DBLP:journals/tods/BunemanC79,
+DBLP:conf/sigmod/ShmueliI84,DBLP:conf/sigmod/BlakeleyLT86,
+roussopoulos-tods:91,DBLP:conf/vldb/CeriW91,DBLP:conf/deductive/GuptaKM92,
+DBLP:conf/sigmod/GuptaMS93,griffin-sigmod:95,
+yan-vldb:95,DBLP:journals/iandc/DongS95,GHJ1996,colby-sigmod:96,
+DBLP:conf/dbpl/LibkinW97a,DBLP:conf/dbpl/LibkinW99,kotidis-tods:01}).
+Work in this tradition expresses the
+delta to a query as a query itself, which is evaluated mostly using classical
+operator-based query evaluation techniques.
+The ring $\RR$ of this paper adds
+to the state of the art in this area by simplifying and generalizing
+the machinery for obtaining delta queries. Previous work in this area
+generally does not address aggregates nested into conditions, while
+this paper does.
+The work closest to ours is that of
+\cite{DBLP:conf/deductive/GuptaKM92,DBLP:conf/sigmod/GuptaMS93},
+where a multiset semantics and a counting-based model of incremental
+computation are proposed. None of the previous work,
+however, applies delta processing to deltas recursively as done here.
+
+Treatments of bag semantics based on an algebraic connection to counting
+also appear in \cite{DBLP:conf/dbpl/LibkinW93,GKT,GIT2009}.
+The goals of this paper are different from those of
+\cite{DBLP:conf/dbpl/LibkinW93,GKT,GIT2009}. ${\mathbb Z}$-relations
+\cite{GIT2009} are relations in which the tuples
+have integer (including negative) multiplicities
+and they are used to study the equivalence, rewriting, and
+optimization of certain queries with negation, with an application to
+incremental view maintenance. There is a fundamental
+technical difference between the algebraic modeling of
+\cite{GKT,GIT2009} and the one in this paper, in that
+we consider untyped relations
+which allows us to define union and join as total operations,
+yielding a ring structure.
+
+\nop{
+In the study of query languages for aggregates and multiset semantics,
+the connection between counting and query semirings
+has also been studied \cite{DBLP:conf/dbpl/LibkinW93,GKT}.
+In comparison to the semirings of tuple annotations of \cite{GKT},
+our algebra is a ring of the relations themselves. The semirings
+of \cite{GKT} generalize our choice of the integers as the range of the
+functions $\relz$ that form our ring.
+But our ring operations $\cup$ and $\bowtie$
+are total on the pairs of elements of $\relz$. In comparison, there are
+pairs of relations of inconsistent schema in the semiring of \cite{GKT} that
+just cannot be combined.
+
+${\mathbb Z}$-relations \cite{GIT2009} 
+are relations in which tuples have integer
+% (and thus possibly negative)
+multiplicities. They are introduced in \cite{GIT2009}
+as a foundation for studying the equivalence of certain
+classes of queries with negation. One of the key applications envisaged by
+the authors is query rewriting and optimization in the context of
+incremental view maintenance. The ${\mathbb Z}$-relations are the
+monomorphic fragment of $\relz$, i.e., the ${\mathbb Z}$-relations
+are those elements of $\relz$ in which the tuples with nonzero multiplicity
+have coherent schema.
+Thus, union and join on ${\mathbb Z}$-relations are again not total.
+} % end nop
+
+There is a considerable body of work on incremental
+computation by the programming languages research community
+\cite{DBLP:conf/popl/DemersRT81,DBLP:conf/popl/PughT89,
+DBLP:journals/toplas/AcarBH06}.
+This work is different in
+spirit since it has the objective to speed up Turing-complete programming
+languages, which is substantially harder. The restriction to query languages
+with strong algebraic properties allows for delta processing in a form that
+is not possible for general-purpose programming languages.
+
+Classical complexity classes are not well suited for characterizing the
+complexity of incremental query evaluation in databases.
+In the database theory literature, there is some work on dynamic complexity
+classes such as DynFO \cite{DBLP:journals/jcss/PatnaikI97,
+DBLP:journals/iandc/DongS95,
+DBLP:conf/dbpl/LibkinW97a, DBLP:conf/dbpl/LibkinW99, DBLP:conf/lics/HesseI02,
+DBLP:journals/tcs/Hesse03, DBLP:journals/tcs/MiltersenSVT94},
+which fills this gap. DynFO essentially captures
+the expressive power that relational calculus yields for incremental
+computation (for tuple insertions and deletes).
+DynFO is more powerful than FO used nonincrementally. For
+example, it is well known that graph reachability cannot be expressed in FO;
+however, there are representations of reachability in undirected graphs
+that can be incrementally maintained using first-order interpretations
+(i.e., in DynFO). Graph reachability on {\em directed}\/ graphs can be
+incrementally maintained using TC0 -- in DynTC0
+\cite{DBLP:journals/tcs/Hesse03}.
+In short, this thread of work studies how much additional expressive power one
+obtains by using a classical query language (such as FO) to compute increments.
+In a sense, we do the opposite -- we ask with how much less power (and
+cost) we can make do by incremental computation for the evaluation of
+queries in practical languages.
+The main result of this paper suggests that
+DynFO relates to FO similarly as the complexity class TC0 relates to
+NC0. No claim is made that such a relationship holds strictly, i.e. that
+TC0 = Dyn-NC0, but it is plausible that a result in this spirit could be
+achieved.
+
+
+
+
+
+\section*{Acknowledgments}
+
+This paper creates a foundation for a current project on
+practical query compilation at Cornell, DBToaster.
+A predecessor of the compilation algorithm of
+Figure~\ref{fig:compilation-algo} was
+developed jointly with Yanif Ahmad and is described in
+\cite{DBLP:journals/pvldb/AhmadK09}.
+The author thanks Yanif Ahmad and Oliver Kennedy for many insightful
+discussions and Val Tannen and the anonymous reviewers of PODS for their
+advice.
+
+
+{\small
+\bibliographystyle{abbrv}
+%\bibliography{bibtex}
+
+
+\begin{thebibliography}{10}
+
+\medskip
+
+\bibitem{AHV95}
+S.~Abiteboul, R.~Hull, and V.~Vianu.
+\newblock {\em {Foundations of Databases}}.
+\newblock Addison-Wesley, 1995.
+
+\bibitem{DBLP:journals/toplas/AcarBH06}
+U.~A. Acar, G.~E. Blelloch, and R.~Harper.
+\newblock Adaptive functional programming.
+\newblock {\em ACM Trans. Program. Lang. Syst.}, 28(6):990--1034, 2006.
+
+\bibitem{DBLP:journals/pvldb/AhmadK09}
+Y.~Ahmad and C.~Koch.
+\newblock {DBToaster}: A {SQL} compiler for high-performance delta processing
+  in main-memory databases.
+\newblock {\em PVLDB}, 2(2):1566--1569, 2009.
+
+\bibitem{DBLP:journals/jcss/BarringtonIS90}
+D.~A.~M. Barrington, N.~Immerman, and H.~Straubing.
+\newblock On uniformity within {NC$^1$}.
+\newblock {\em J. Comput. Syst. Sci.}, 41(3):274--306, 1990.
+
+\bibitem{DBLP:conf/sigmod/BlakeleyLT86}
+J.~A. Blakeley, P.-{\AA}. Larson, and F.~W. Tompa.
+\newblock Efficiently updating materialized views.
+\newblock In {\em Proc.\ SIGMOD Conference}, pages 61--71, 1986.
+
+\bibitem{Bre74}
+R.~P. Brent.
+\newblock The parallel evaluation of general arithmetic expressions.
+\newblock {\em J.~ACM}, 21:201--206, 1974.
+
+\bibitem{DBLP:journals/tods/BunemanC79}
+P.~Buneman and E.~K. Clemons.
+\newblock Efficient monitoring relational databases.
+\newblock {\em ACM Trans. Database Syst.}, 4(3):368--382, 1979.
+
+\bibitem{DBLP:conf/vldb/CeriW91}
+S.~Ceri and J.~Widom.
+\newblock Deriving production rules for incremental view maintenance.
+\newblock In {\em Proc.\ VLDB}, pages 577--589, 1991.
+
+\bibitem{colby-sigmod:96}
+L.~S. Colby, T.~Griffin, L.~Libkin, I.~S. Mumick, and H.~Trickey.
+\newblock Algorithms for deferred view maintenance.
+\newblock In {\em Proc.\ SIGMOD}, pages 469--480, 1996.
+
+\bibitem{DBLP:conf/popl/DemersRT81}
+A.~J. Demers, T.~W. Reps, and T.~Teitelbaum.
+\newblock Incremental evaluation for attribute grammars with application to
+  syntax-directed editors.
+\newblock In {\em Proc.\ POPL}, pages 105--116, 1981.
+
+\bibitem{DBLP:journals/iandc/DongS95}
+G.~Dong and J.~Su.
+\newblock Incremental and decremental evaluation of transitive closure by
+  first-order queries.
+\newblock {\em Inf. Comput.}, 120(1):101--106, 1995.
+
+\bibitem{DF2004}
+D.~S. Dummit and R.~M. Foote.
+\newblock {\em {Abstract Algebra}}.
+\newblock John Wiley \& Sons, 3rd edition, 2004.
+
+\bibitem{GHJ1996}
+S.~Ghandeharizadeh, R.~Hull, and D.~Jacobs.
+\newblock Heraclitus: Elevating deltas to be first-class citizens in a database
+  programming language.
+\newblock {\em ACM Transactions on Database Systems}, 21(3):370--426, Sept.
+  1996.
+
+\bibitem{GIT2009}
+T.~J. Green, Z.~Ives, and V.~Tannen.
+\newblock Reconcilable differences.
+\newblock In {\em Proc.\ ICDT}, St.\ Petersburg, Russia, 2009.
+
+\bibitem{GKT}
+T.~J. Green, G.~Karvounarakis, and V.~Tannen.
+\newblock Provenance semirings.
+\newblock In {\em Proc.\ PODS}, pages 31--40, 2007.
+
+\bibitem{griffin-sigmod:95}
+T.~Griffin and L.~Libkin.
+\newblock Incremental maintenance of views with duplicates.
+\newblock In {\em Proc.\ SIGMOD}, 1995.
+
+\bibitem{DBLP:conf/deductive/GuptaKM92}
+A.~Gupta, D.~Katiyar, and I.~S. Mumick.
+\newblock Counting solutions to the view maintenance problem.
+\newblock In {\em Proc.\ Workshop on Deductive Databases, JICSLP}, 1992.
+
+\bibitem{DBLP:conf/sigmod/GuptaMS93}
+A.~Gupta, I.~S. Mumick, and V.~S. Subrahmanian.
+\newblock Maintaining views incrementally.
+\newblock In {\em Proc.\ SIGMOD Conference}, pages 157--166, 1993.
+
+\bibitem{HMT1971}
+L.~Henkin, J.~Monk, and A.~Tarski.
+\newblock {\em Cylindric Algebras, Part I}.
+\newblock North-Holland, 1971.
+
+\bibitem{DBLP:journals/tcs/Hesse03}
+W.~Hesse.
+\newblock The dynamic complexity of transitive closure is in
+  {DynTC$^{\mbox{0}}$}.
+\newblock {\em Theor. Comput. Sci.}, 296(3):473--485, 2003.
+
+\bibitem{DBLP:conf/lics/HesseI02}
+W.~Hesse and N.~Immerman.
+\newblock Complete problems for dynamic complexity classes.
+\newblock In {\em Proc.\ LICS}, 2002.
+
+\bibitem{Joh90}
+D.~S. Johnson.
+\newblock A catalog of complexity classes.
+\newblock In J.~van Leeuwen, editor, {\em Handbook of Theoretical Computer
+  Science}, volume~1, chapter~2, pages 67--161. Elsevier Science Publishers
+  B.V., 1990.
+
+\bibitem{kotidis-tods:01}
+Y.~Kotidis and N.~Roussopoulos.
+\newblock A case for dynamic view management.
+\newblock {\em ACM Transactions on Database Systems}, 26(4):388--423, 2001.
+
+\bibitem{Lang2002}
+S.~Lang.
+\newblock {\em Algebra}.
+\newblock Graduate Texts in Mathematics. Springer-Verlag, revised 3rd edition,
+  2002.
+
+\bibitem{DBLP:conf/dbpl/LibkinW93}
+L.~Libkin and L.~Wong.
+\newblock Some properties of query languages for bags.
+\newblock In {\em Proc.\ DBPL}, pages 97--114, 1993.
+
+\bibitem{DBLP:conf/dbpl/LibkinW97a}
+L.~Libkin and L.~Wong.
+\newblock Incremental recomputation of recursive queries with nested sets and
+  aggregate functions.
+\newblock In {\em Proc.\ DBPL}, pages 222--238, 1997.
+
+\bibitem{DBLP:conf/dbpl/LibkinW99}
+L.~Libkin and L.~Wong.
+\newblock On the power of incremental evaluation in {SQL}-like languages.
+\newblock In {\em Proc.\ DBPL}, pages 17--30, 1999.
+
+\bibitem{DBLP:journals/tcs/MiltersenSVT94}
+P.~B. Miltersen, S.~Subramanian, J.~S. Vitter, and R.~Tamassia.
+\newblock Complexity models for incremental computation.
+\newblock {\em Theor. Comput. Sci.}, 130(1):203--236, 1994.
+
+\bibitem{DBLP:journals/jcss/PatnaikI97}
+S.~Patnaik and N.~Immerman.
+\newblock {Dyn-FO}: A parallel, dynamic complexity class.
+\newblock {\em J. Comput. Syst. Sci.}, 55(2):199--209, 1997.
+
+\bibitem{DBLP:conf/popl/PughT89}
+W.~Pugh and T.~Teitelbaum.
+\newblock Incremental computation via function caching.
+\newblock In {\em Proc.\ POPL}, 1989.
+
+\bibitem{DBLP:conf/pods/RajaramanSU95}
+A.~Rajaraman, Y.~Sagiv, and J.~D. Ullman.
+\newblock Answering queries using templates with binding patterns.
+\newblock In {\em Proc.\ PODS}, pages 105--112, 1995.
+
+\bibitem{roussopoulos-tods:91}
+N.~Roussopoulos.
+\newblock An incremental access method for viewcache: Concept, algorithms, and
+  cost analysis.
+\newblock {\em ACM Transactions on Database Systems}, 16(3):535--563, 1991.
+
+\bibitem{DBLP:conf/sigmod/ShmueliI84}
+O.~Shmueli and A.~Itai.
+\newblock Maintenance of views.
+\newblock In B.~Yormark, editor, {\em Proc.\ SIGMOD}, pages 240--255. ACM
+  Press, 1984.
+
+\bibitem{Smo1987}
+R.~Smolenski.
+\newblock Algebraic methods in the theory of lower bounds for boolean circuit
+  complexity.
+\newblock In {\em Proc.\ STOC}, pages 77--82, 1987.
+
+\bibitem{Var82}
+M.~Y. Vardi.
+\newblock The complexity of relational query languages.
+\newblock In {\em Proc.\ STOC}, pages 137--146, May 1982.
+
+\bibitem{yan-vldb:95}
+W.~P. Yan and P.-{\AA}. Larson.
+\newblock Eager aggregation and lazy aggregation.
+\newblock In {\em Proc.\ VLDB}, pages 345--357, 1995.
+
+\end{thebibliography}
+
+
+}
+
+
+\end{document}  
