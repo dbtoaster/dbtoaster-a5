@@ -193,14 +193,13 @@ and to_m3_map_access
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
     if (List.length input_var_list) > 0
-      then (print_endline (list_to_string fst input_var_list);to_m3_initializer 
-              (Calculus.apply_variable_substitution_to_term
-                (List.combine basevars mapvars)
-                map_definition)
-              (input_var_list@output_var_list)
-              mapn
-            ) 
-      else (M3.mk_c 0.0, [])
+    then to_m3_initializer 
+      (Calculus.apply_variable_substitution_to_term
+        (List.combine basevars mapvars)
+        map_definition)
+      (input_var_list@output_var_list)
+      mapn
+    else (M3.mk_c 0.0, [])
   in
     ((mapn, 
       (fst (List.split input_var_list)), 
@@ -349,11 +348,11 @@ module M3InProgress = struct
     let mapping = 
       List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
         if result = NoMapping then
+          let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
           try 
-            let (cmp_name, cmp_vars) = Calculus.decode_map_term cmp_map_term in
-              if (List.length map_vars) <> (List.length cmp_vars) then
-                raise (Calculus.TermsNotEquivalent("Mismatched parameter list sizes"))
-              else
+            if (List.length map_vars) <> (List.length cmp_vars) then
+              raise (Calculus.TermsNotEquivalent("Mismatched parameter list sizes"))
+            else
             let var_mappings = Calculus.equate_terms query_term cmp_term in
             (* We get 2 different mappings; Check to see they're consistent *)
             if not (List.for_all2 (fun (a,_) (b,_) -> (a = b) ||
@@ -365,8 +364,6 @@ module M3InProgress = struct
                   ) map_vars cmp_vars)
               then raise (Calculus.TermsNotEquivalent("Mismatched parameter list s"))
               else
-            let cmp_in_vars = split_vars true cmp_vars cmp_bindings in
-            let cmp_out_vars = split_vars false cmp_vars cmp_bindings in
             let index_of (needle:Calculus.var_t)
                          (haystack:Calculus.var_t list) = 
               let (index, _) =
@@ -377,20 +374,31 @@ module M3InProgress = struct
                 ) (-1, 1) haystack)
               in
               if index = -1 then 
-                raise (Calculus.TermsNotEquivalent("Variable Not Found"))
+                raise (Calculus.TermsNotEquivalent("Variable Not Found: "^(fst needle)^" in "^(list_to_string fst haystack)))
                                    (*shouldn't happen*)
               else index
             in
+            let compute_mapping map_io_vars cmp_io_vars translation =
+              List.fold_right (fun (var,var_type) mapping ->
+                (index_of (if StringMap.mem var translation 
+                           then (StringMap.find var translation,var_type)
+                           else (var,var_type)) cmp_io_vars)::mapping
+              ) map_io_vars []
+            in
               Mapping(
                 cmp_name,
-                List.fold_right (fun in_var mapping -> 
-                  (index_of in_var cmp_in_vars)::mapping
-                ) (split_vars true map_vars map_bindings) [],
-                List.fold_right (fun out_var mapping -> 
-                  (index_of out_var cmp_out_vars)::mapping
-                ) (split_vars false map_vars map_bindings) []
+                (compute_mapping (split_vars true map_vars map_bindings) 
+                                 (split_vars true cmp_vars cmp_bindings)
+                                 var_mappings),
+                (compute_mapping (split_vars false map_vars map_bindings) 
+                                 (split_vars false cmp_vars cmp_bindings)
+                                 var_mappings)
               )
-          with Calculus.TermsNotEquivalent(a) -> (*print_string (a^"\n");*)NoMapping
+          with Calculus.TermsNotEquivalent(a) -> 
+              Debug.print "TERM-COMPARISON" 
+                (fun () -> "Comparing "^map_name^" to existing "^cmp_name^"; "^a
+                );
+              NoMapping
         else result
       ) NoMapping (snd (List.split curr_refs))
     in

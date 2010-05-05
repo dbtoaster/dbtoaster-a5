@@ -195,8 +195,8 @@ sig
       equivalence.  Among other things, form normalization, double-negation,
       and Product/Sum commutability are not handled properly (yet).
    *)
-   val cmp_exprs: (leaf_t -> leaf_t -> 'a option -> 'a option) ->
-                  expr_t ->  expr_t -> 'a option -> 'a option
+   val cmp_exprs: (leaf_t -> leaf_t -> 'a -> 'a option) ->
+                  expr_t ->  expr_t -> 'a -> 'a option
 end
 
 
@@ -360,21 +360,24 @@ struct
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
     
-   let rec cmp_exprs (leaf_f: leaf_t -> leaf_t -> 'a option -> 'a option)
+   let rec cmp_exprs (leaf_f: leaf_t -> leaf_t -> 'a -> 'a option)
                      (a: expr_t) (b: expr_t) 
-                     (accum: 'a option): 'a option =
-      if accum = None then None
-      else
-        let do_recur ae be accum = 
-          if List.length ae <> List.length be then None
-          else List.fold_right2 (cmp_exprs leaf_f) ae be accum
-        in
-        match (a,b) with
-          (Val  xa, Val  xb) -> leaf_f xa xb accum 
-        | (Neg  ae, Neg  be) -> cmp_exprs leaf_f ae be accum
-        | (Sum  ae, Sum  be) -> do_recur ae be accum
-        | (Prod ae, Prod be) -> do_recur ae be accum
-        | _ -> None
+                     (accum: 'a): 'a option =
+      let do_recur (ae:expr_t list) (be:expr_t list) (accum:'a): 'a option = 
+        if List.length ae <> List.length be then None
+        else List.fold_right2 (fun curr_a curr_b curr_accum_opt ->
+          match curr_accum_opt with 
+            | None -> None
+            | Some(curr_accum) -> 
+                (cmp_exprs leaf_f curr_a curr_b curr_accum)
+        ) ae be (Some(accum))
+      in
+      match (a,b) with
+        (Val  xa, Val  xb) -> leaf_f xa xb accum
+      | (Neg  ae, Neg  be) -> cmp_exprs leaf_f ae be accum
+      | (Sum  ae, Sum  be) -> do_recur ae be accum
+      | (Prod ae, Prod be) -> do_recur ae be accum
+      | _ -> None
    
 end
 

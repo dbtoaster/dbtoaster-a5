@@ -922,73 +922,90 @@ exception TermsNotEquivalent of string
    that we don't set a LHS variable equivalent to a RHS variable we've already
    seen
 *)
-type equiv_state_t = (string StringMap.t * StringSet.t) option
+type equiv_state_t = (string StringMap.t * StringSet.t) 
 
 let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
   let map_var (equiv_state:equiv_state_t)
               ((a_name, a_type):var_t)
               ((b_name, b_type):var_t): equiv_state_t =
-    match equiv_state with
-    | None -> None
-    | Some(l_r_map,r_l_set) ->
-      if a_type <> b_type then None else
+    let (l_r_map,r_l_set) = equiv_state in
+      if a_type <> b_type then 
+        raise (TermsNotEquivalent("Type Mismatch: "^a_name^"->"^b_name))
+      else
       if StringMap.mem a_name l_r_map then
         (* If there's a mapping, it'd better be the case that 
            (A => B) exists in l_r_map
            (B) exists in r_l_set
            The latter is really just a sanity check.
         *)
-        if (StringMap.find a_name l_r_map) <> b_name then None
+        if (StringMap.find a_name l_r_map) <> b_name then 
+          raise (TermsNotEquivalent("Variable Mismatch: "^a_name^"->"^
+                                   (StringMap.find a_name l_r_map)^" and "^
+                                   b_name))
         else if not (StringSet.mem b_name r_l_set) then 
           failwith "Backwards mapping failed in Calculus.equate_terms:mem"
-        else Some(l_r_map,r_l_set)
-      else if StringSet.mem b_name r_l_set then None
-      else Some(StringMap.add a_name b_name l_r_map,
-                StringSet.add b_name r_l_set)
+        else (l_r_map,r_l_set)
+      else if StringSet.mem b_name r_l_set then 
+        raise (TermsNotEquivalent("Variable Mismatch: Adding "^
+                                 a_name^"->"^b_name^
+                                 ", but there's already a reverse mapping"))
+      else (StringMap.add a_name b_name l_r_map,
+            StringSet.add b_name r_l_set)
   in
   let rec cmp_term_lf (a:TermRing.leaf_t) 
                       (b:TermRing.leaf_t)
                       (var_map:equiv_state_t): 
-                      equiv_state_t =
+                      equiv_state_t option =
     match a with
     | AggSum(at,aphi)    -> 
       ( match b with 
-        | AggSum(bt,bphi) -> (cmp_calc aphi bphi (cmp_term at bt var_map))
-        | _               -> None
+        | AggSum(bt,bphi) -> Some(cmp_calc aphi bphi (cmp_term at bt var_map))
+        | _               -> raise (TermsNotEquivalent("Aggsum Mismatch"))
       )
     | Const(ac)          -> 
-      ( if b = Const(ac) then var_map else None )
+      (if b = a then Some(var_map)
+       else raise (TermsNotEquivalent("Const Mismatch")))
     | Var(av)            -> 
-      ( match b with Var(bv) -> map_var var_map av bv | _ -> None )
+      ( match b with Var(bv) -> Some(map_var var_map av bv)
+                   | _ -> raise (TermsNotEquivalent("var Mismatch") ))
     | External(an,avars) -> 
-      ( None (* We don't support post-compiled comparisons (yet) *) )
+      ( raise (TermsNotEquivalent("TODO: EXTERNAL") )
+      (* We don't support post-compiled comparisons (yet) *) )
   and cmp_calc_lf (a:CalcRing.leaf_t) 
                   (b:CalcRing.leaf_t)
                   (var_map:equiv_state_t): 
-                  equiv_state_t =
+                  equiv_state_t option =
     match a with
-    | False -> if b = False then var_map else None
-    | True  -> if b = True then var_map else None
+    | False -> if b = False then Some(var_map) else 
+          raise (TermsNotEquivalent("'False' Mismatch"))
+    | True  -> if b = True then Some(var_map) else 
+          raise (TermsNotEquivalent("'True' Mismatch"))
     | AtomicConstraint(c,al,ar) -> 
       ( match b with 
         (* for now force ac == bc; TODO: comparator-specific equivalencies *)
         | AtomicConstraint(c,bl,br) -> 
-          (cmp_term ar br (cmp_term al bl var_map))
-        | _ -> None
+          Some(cmp_term ar br (cmp_term al bl var_map))
+        | _ -> 
+          raise (TermsNotEquivalent("AtomicConstraint Mismatch"))
       )
     | Rel(rel_name, a_vars) -> 
       ( match b with
         | Rel(rel_name, b_vars) -> 
-            if (List.length a_vars) <> (List.length b_vars) then None
-            else List.fold_left2 map_var var_map a_vars b_vars
-        | _ -> None
+            if (List.length a_vars) <> (List.length b_vars) then 
+              raise (TermsNotEquivalent("Rel Var Mismatch"))
+            else Some(List.fold_left2 map_var var_map a_vars b_vars)
+        | _ -> 
+          raise (TermsNotEquivalent("Rel Mismatch"))
+
       )
-  and cmp_term a b var_map = TermRing.cmp_exprs cmp_term_lf a b var_map
-  and cmp_calc a b var_map = CalcRing.cmp_exprs cmp_calc_lf a b var_map
+  and cmp_term a b var_map = 
+    match (TermRing.cmp_exprs cmp_term_lf a b var_map) with
+    | Some(a) -> a
+    | None -> raise (TermsNotEquivalent("Term structure mismatch"))
+  and cmp_calc a b var_map = 
+    match CalcRing.cmp_exprs cmp_calc_lf a b var_map with
+    | Some(a) -> a
+    | None -> raise (TermsNotEquivalent("Calc structure mismatch"))
   in
-    match (cmp_term term_a term_b 
-                         (Some(StringMap.empty,StringSet.empty))
-          ) with
-    | Some(a,_) -> a
-    | None -> raise (TermsNotEquivalent("foo"))
+    (fst (cmp_term term_a term_b ((StringMap.empty,StringSet.empty))))
 ;;
