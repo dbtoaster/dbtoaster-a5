@@ -13,7 +13,8 @@ sig
    type map_t
    type db_t
    
-   type list_map       = (key_t * (key_t * const_t) list) list
+   type list_smap      = (key_t * const_t) list
+   type list_map       = (key_t * list_smap) list
    type named_list_map = (db_key_t * list_map) list
    
    type dom_t      = const_t list
@@ -53,10 +54,12 @@ sig
    val get_out_map : string -> db_t -> single_map_t
    val get_value   : string -> db_t -> AggregateMap.agg_t option
 
-   val showmap : map_t -> list_map
-   val show_sorted_map : map_t -> list_map
-   val showdb : db_t -> named_list_map
-   val show_sorted_db : db_t -> named_list_map
+   val showsmap         : single_map_t -> list_smap
+   val show_sorted_smap : single_map_t -> list_smap
+   val showmap          : map_t -> list_map
+   val show_sorted_map  : map_t -> list_map
+   val showdb           : db_t -> named_list_map
+   val show_sorted_db   : db_t -> named_list_map
 end
 
 module SimpleDatabase : ToastedDB
@@ -85,7 +88,8 @@ struct
    type map_t        = AM.t VM.t
    type db_t         = map_t DBM.t
 
-   type list_map       = (key_t * (key_t * const_t) list) list
+   type list_smap      = (key_t * const_t) list
+   type list_map       = (key_t * list_smap) list
    type named_list_map = (string list * list_map) list
    
    type dom_t      = const_t list
@@ -208,6 +212,11 @@ struct
          else failwith ("Database.get_out_map "^mapn)
       in if ValuationMap.mem [] slice then Some(ValuationMap.find [] slice) else None
 
+   let showsmap (s: single_map_t) = VM.to_list s
+   
+   let show_sorted_smap (s: single_map_t) =
+      List.sort (fun (k1,_) (k2,_) -> compare k1 k2) (showsmap s)
+
    let showmap (m: map_t) = VM.to_list (VM.map VM.to_list m)
    
    let show_sorted_map (m: map_t) =
@@ -256,7 +265,8 @@ struct
    type map_t        = AM.t VM.t
    type db_t         = (map_t DBM.t) * (single_map_t DBM.t) * (mv_t DBM.t)  
 
-   type list_map       = (key_t * (key_t * const_t) list) list
+   type list_smap      = (key_t * const_t) list
+   type list_map       = (key_t * list_smap) list
    type named_list_map = (string list * list_map) list
    
    type dom_t      = const_t list

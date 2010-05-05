@@ -15,25 +15,25 @@ open Expression
 open Database
 open Sources;;
 
+let print_smap name smap =
+   String.concat "\n"
+      (List.map (fun (key, value) ->
+          name^(list_to_string M3Common.string_of_const key)^
+          " = "^(M3Common.string_of_const value)) smap)
+
 let print_map name map =
-  string_of_list0 "\n"
-    (fun (in_vars, inner_vals) ->
-      string_of_list0 "\n"
-        (fun (out_vars, value) ->
+  String.concat "\n"
+    (List.map (fun (in_vars, inner_vals) ->
+      String.concat "\n"
+        (List.map (fun (out_vars, value) ->
           name^(list_to_string M3Common.string_of_const (in_vars@out_vars))^
-          " = "^(M3Common.string_of_const value)
-        )
-      inner_vals
-    )
-  map
+          " = "^(M3Common.string_of_const value)) inner_vals)) map)
 
 let print_db db = 
-  string_of_list0 "\n"
-    (fun (name_l, outer_vals) -> 
+  String.concat "\n"
+    (List.map (fun (name_l, outer_vals) -> 
       match name_l with [name] -> print_map name outer_vals
-      |_ -> "[[Error: map name list lookup failure]]"
-    )
-  db;;
+      |_ -> "[[Error: map name list lookup failure]]") db);;
 
 (* q[y] = Sum(x, R(x,y)) *)
 let prog0: prog_t =
@@ -109,10 +109,11 @@ let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 (eval_trigger cblock [CFloat(5.0);CFloat(4.0)] db);;
 
 
-Debug.log_unit_test "Selfjoin Sum" (print_map "q")
-  (Database.show_sorted_map (Database.get_map "q" db))
+Debug.log_unit_test "Selfjoin Sum" (print_smap "q")
+  (Database.show_sorted_smap (Database.get_out_map "q" db))
   (
-    [([], [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0)); ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))])]
+    [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0));
+     ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))]
   );;
 
 
@@ -224,15 +225,18 @@ eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db;;
 eval_trigger cblock [CFloat(2.0);CFloat(2.0)] db;;
 eval_trigger cblock [CFloat(1.0);CFloat(2.0)] db;;
 
-Debug.log_unit_test "Inequalities" (print_map "q")
-  (Database.show_sorted_map (Database.get_map "q" db))
+Debug.log_unit_test "Inequalities" (print_smap "q")
+  (Database.show_sorted_smap (Database.get_out_map "q" db))
   (
-    [([],
-      [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
-       ([CFloat(2.0); CFloat(1.0)], CFloat(9.0)); ([CFloat(2.0); CFloat(2.0)], CFloat(8.0)); ([CFloat(2.0); CFloat(3.0)], CFloat(13.0)); ([CFloat(2.0); CFloat(5.0)], CFloat(10.0));
-       ([CFloat(4.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(4.0); CFloat(2.0)], CFloat(1.0)); ([CFloat(4.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(4.0); CFloat(5.0)], CFloat(2.0));
-       ([CFloat(5.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(5.0); CFloat(2.0)], CFloat(2.0)); ([CFloat(5.0); CFloat(3.0)], CFloat(4.0));  ([CFloat(5.0); CFloat(5.0)], CFloat(4.0));
-       ])]
+   [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0));
+    ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
+    ([CFloat(2.0); CFloat(1.0)], CFloat(9.0)); ([CFloat(2.0); CFloat(2.0)], CFloat(8.0));
+    ([CFloat(2.0); CFloat(3.0)], CFloat(13.0)); ([CFloat(2.0); CFloat(5.0)], CFloat(10.0));
+    ([CFloat(4.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(4.0); CFloat(2.0)], CFloat(1.0));
+    ([CFloat(4.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(4.0); CFloat(5.0)], CFloat(2.0));
+    ([CFloat(5.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(5.0); CFloat(2.0)], CFloat(2.0));
+    ([CFloat(5.0); CFloat(3.0)], CFloat(4.0));  ([CFloat(5.0); CFloat(5.0)], CFloat(4.0));
+   ]
   )
 ;;
 (* this is correct according to Postgres *)

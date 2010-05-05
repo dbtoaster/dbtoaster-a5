@@ -465,8 +465,10 @@ let vwap_query validate_mode output_level result_chan_opt
           begin match output_level with
            | Database -> output_string rc ((Database.db_to_string db)^"\n")
            | Map      ->
-              output_string rc
-                ((Database.map_to_string (Database.get_map "q" db))^"\n")
+              let v = Database.get_value "q" db in
+              let s = Valuation.from_list [([], v)] [] in
+              let m = Valuation.from_list [([], s)] [] in
+              output_string rc ((Database.map_to_string m)^"\n")
            | Value    ->
               output_string rc (AggregateMap.string_of_aggregate
                 (ValuationMap.find []
