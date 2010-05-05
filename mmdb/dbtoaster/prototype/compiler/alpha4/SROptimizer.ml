@@ -65,7 +65,7 @@ let rec iron (prog : sr_t) : sr_t =
     | SR_Agg(f, i, SR_Map (SR_Nested_Fun (g, p2), p1)) ->
        let h = iron (SR_Agg(f, 0, SR_Map (SR_Simple_Fun g, p2)))
        in
-       SR_Agg(f, i, SR_Map (SR_Simple_Fun h, p1))
+       iron (SR_Agg(f, i, SR_Map (SR_Simple_Fun h, p1)))
 *)
     | _ -> prog
 ;;
