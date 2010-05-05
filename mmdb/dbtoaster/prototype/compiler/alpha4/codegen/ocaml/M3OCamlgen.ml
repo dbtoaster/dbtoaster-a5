@@ -318,10 +318,18 @@ struct
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = string_const mapn in
       let cout_patterns = patterns_const out_patterns in
-      let body v = 
-         ["(Database.update_value "^cmapn^" "^cout_patterns^" "^
-              (vars_list inv)^" "^(vars_list outv)^" "^v^" db;";
-          "   "^v^")"]
+      let body v =
+         (match (inv, outv) with
+          | ([], []) -> ["(Database.update_value "^cmapn^" "^v^" db;"]
+          | (_, []) ->  ["(Database.update_in_map_value "^
+                           cmapn^" "^(vars_list inv)^" "^v^" db;"]
+          | ([], _) ->  ["(Database.update_out_map_value "^
+                           cmapn^" "^cout_patterns^" "^
+                           (vars_list outv)^" "^v^" db;"]
+          | _ -> 
+            ["(Database.update_map_value "^cmapn^" "^cout_patterns^" "^
+                 (vars_list inv)^" "^(vars_list outv)^" "^v^" db;"])@
+          ["   "^v^")"]
       in
       tabify (match cinit with
          | Lines(cinit_l) ->
@@ -335,9 +343,14 @@ struct
       ["let init_slice = "]@(get_lines cinit)@
       ["in";
        "let init_slice_w_indexes = List.fold_left";
-       "   ValuationMap.add_secondary_index init_slice "^cout_patterns;
-       "in (Database.update "^cmapn^" "^(vars_list inv)^" init_slice_w_indexes db;";
-       "    init_slice_w_indexes)"])
+       "   ValuationMap.add_secondary_index init_slice "^cout_patterns]@
+       (if inv = [] then
+       (["in (Database.update_out_map "^cmapn^" init_slice_w_indexes db;";
+         "   init_slice_w_indexes)"])
+       else
+       (["in (Database.update_map "^
+                 cmapn^" "^(vars_list inv)^" init_slice_w_indexes db;";
+         "    init_slice_w_indexes)"])))
 
    let singleton_lookup_and_init mapn inv outv init_val_code = tabify (
       let cmapn = string_const mapn in
@@ -499,17 +512,15 @@ struct
           "(* "]@cdebug@["; *)";
           "let delta_v = "]@cincr_l@
          ["in match current_singleton with";
-          "   | [] -> "]@(indent 2 (iv_code "delta_v"))@
-         ["   | [current_v] -> c_sum current_v delta_v";
-          "   | _ -> failwith \"singleton_update: invalid singleton\")"]
+          "   | None -> "]@(indent 2 (iv_code "delta_v"))@
+         ["   | Some(current_v) -> c_sum current_v delta_v)"]
        
        | Inline(cincr_i) ->
          ["(fun current_singleton ->";
           "(* "]@cdebug@["; *)";
           "match current_singleton with";
-          " | [] -> "]@(indent 2 (iv_code (inline cincr_i)))@
-         [" | [current_v] -> c_sum current_v "^(inline cincr_i);
-          " | _ -> failwith \"singleton_update: invalid singleton\")"])
+          " | None -> "]@(indent 2 (iv_code (inline cincr_i)))@
+         [" | Some(current_v) -> c_sum current_v "^(inline cincr_i)^")"])
 
    (* assume cinit is a function with sig:
     *   val cinit: AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
@@ -530,70 +541,89 @@ struct
           (indent 1 [cinit_i])@
          ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"])
 
-   (* assume cstmt is a function with sig:
-    *   val cstmt: AggregateMap.agg_t list -> AggregateMap.agg_t list *)
-   let db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt = 
-      let cmapn = string_const lhs_mapn in
-      let cpatterns = patterns_const map_out_patterns in
-      tabify (
-      ["(fun inv_img in_slice ->";
-       "let outv_img = "^(vars_list lhs_outv)^" in";
-       "let singleton =";
-       "   if ValuationMap.mem outv_img in_slice";
-       "   then [ValuationMap.find outv_img in_slice] else [] in";
-       "let new_value = "]@(get_lines cstmt)@
-      ["   singleton";
-       "in Database.update_value "^cmapn^" "^cpatterns^" inv_img outv_img new_value db)"])
 
-   (* assume cstmt is a function with sig:
-    *    val cstmt: AggregateMap.t -> AggregateMap.t *) 
-   let db_slice_update lhs_mapn cstmt = 
-      let cmapn = string_const lhs_mapn in tabify (
-      ["(fun inv_img in_slice ->";
-       "let new_slice = "]@(get_lines cstmt)@
-      ["   in_slice";
-       "in Database.update "^cmapn^" inv_img new_slice db)"])
+   let singleton_statement lhs_mapn lhs_inv lhs_outv map_out_patterns 
+                           lhs_ext patv pat direct update_code
+      =
+     let cmapn = string_const lhs_mapn in
+     let cpatterns = patterns_const map_out_patterns in
+     let cpat = pattern_const pat in
+     let eval img slice =
+        ["let existing_v = if ValuationMap.mem "^img^" "^slice;
+         "   then Some(ValuationMap.find "^img^" "^slice^") else None";
+         "in"]@(get_lines update_code)@
+        ["   existing_v"]
+     in
+     let loop_invs slice =
+        (* Note slice_keys does a full scan for an empty pattern,
+         * if the map is non-empty *)
+        ["let invs = "^
+         (if direct then ("["^(vars_list patv)^"]")
+         else ("ValuationMap.slice_keys "^cpat^" "^(vars_list patv)^" "^slice));
+         "in List.iter iifilter invs;"]
+     in
 
-   let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct db_update_code =
-      tabify( 
-      ["(*** Update "^lhs_mapn^" ***)";]@(
-      let cmapn = string_const lhs_mapn in
-      if lhs_inv = [] && lhs_outv = [] then
-         (["let slice = match Database.get_value "^cmapn^" db with";
-           " | Some(x) -> (ValuationMap.from_list [([], x)] [])";
-           " | _ -> ValuationMap.from_list [] []";
-           "in let db_f ="]@(indent 1 (get_lines db_update_code))@
-          ["in db_f [] slice;"])
-      
-      else if lhs_inv = [] then
-         (["let slice = Database.get_out_map "^cmapn^" db";
-           "in let db_f ="]@(indent 1 (get_lines db_update_code))@ 
-          ["in db_f [] slice;"])
-      
-      else
-         let cpat = pattern_const pat in
-         let aux slice_access_code slice_build_code =
-            ["let lhs_map = "]@slice_access_code@
-            ["in";
+     tabify (
+     ["(*** Update "^lhs_mapn^" ***)"]@(
+     if lhs_inv = [] && lhs_outv = [] then
+        (["let existing_v = Database.get_value "^cmapn^" db in";
+          "let v = "]@(indent 1 (get_lines update_code))@
+         ["   existing_v";
+          "in Database.update_value "^cmapn^" v db;"]) 
+     
+     else if lhs_inv = [] then
+        (["let slice = Database.get_out_map "^cmapn^" db in";
+          "let outv_img = "^(vars_list lhs_outv)^" in";
+          "let v = "]@(eval "outv_img" "slice")@
+         ["in Database.update_out_map_value "^
+                  cmapn^" "^cpatterns^" outv_img v db;"])
+     
+     else
+        if lhs_outv = [] then
+           (["let slice = Database.get_in_map "^cmapn^" db in";
              "let iifilter inv = "]@
             (indent 1 (bind_vars_from_extension lhs_inv "inv" lhs_ext))@
-            ["   let s = ValuationMap.find inv lhs_map in";
-             "   let db_f = "]@
-             (indent 1 (get_lines db_update_code))@
-            ["   in db_f inv "^(slice_build_code "s")]@
-            (* Note slice_keys does a full scan for an empty pattern,
-             * if the map is non-empty *)
-            ["in";
-             "let invs = "^
-             (if direct then "["^(vars_list patv)^"]"
-              else ("ValuationMap.slice_keys "^cpat^" "^(vars_list patv)^" lhs_map"));
-             "in List.iter iifilter invs;"]
-         in
-         if lhs_outv = [] then
-            (aux ["Database.get_in_map "^cmapn^" db"]
-               (fun s -> "(ValuationMap.from_list [([], "^s^")] [])"))
-         else
-            (aux ["Database.get_map "^cmapn^" db"] (fun s -> s))))
+            ["   let v = "]@(eval "inv" "slice")@
+            ["   in Database.update_in_map_value "^cmapn^" inv v db";
+             "in"]@(loop_invs "slice"))
+     
+        else
+           (["let slice = Database.get_map "^cmapn^" db in";
+             "let iifilter inv = "]@
+            (indent 1 (bind_vars_from_extension lhs_inv "inv" lhs_ext))@
+            ["   let s = ValuationMap.find inv slice in";
+             "   let outv = "^(vars_list lhs_outv)^" in"; 
+             "   let v = "]@(eval "outv" "s")@
+            ["   in Database.update_map_value "^
+                     cmapn^" "^cpatterns^" inv outv v db";
+             "in"]@(loop_invs "slice"))))
+
+
+   let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct update_code =
+      let cmapn = string_const lhs_mapn in
+      let cpat = pattern_const pat in
+      tabify( 
+      ["(*** Update "^lhs_mapn^" ***)";]@(
+      if lhs_outv = [] then failwith "invalid slice statement"
+
+      else if lhs_inv = [] then
+         (["let slice = Database.get_out_map "^cmapn^" db in";
+           "let new_slice = "]@(indent 1 (get_lines update_code))@
+          ["in Database.update_out_map "^cmapn^" new_slice db"])
+      
+      else
+         (["let slice = Database.get_map "^cmapn^" db in";
+           "let iifilter inv = ";
+           "   let s = ValuationMap.find inv slice in";
+           "   let new_slice = "]@(indent 1 (get_lines update_code))@
+          ["   in Database.update_map "^cmapn^" inv new_slice db";
+           "in";
+           "let invs = "^
+           (if direct then ("["^(vars_list patv)^"]")
+            else ("ValuationMap.slice_keys "^
+                     cpat^" "^(vars_list patv)^" slice"));
+           "in List.iter iifilter invs;"])))
+
    
    let trigger event rel trig_args stmt_block =
       let trigger_name = "on_"^(pm_name event)^"_"^rel in Lines (

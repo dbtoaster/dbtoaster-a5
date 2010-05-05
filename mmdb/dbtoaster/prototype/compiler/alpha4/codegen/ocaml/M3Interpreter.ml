@@ -32,14 +32,10 @@ type slice_value_function_code =
    (Valuation.t -> Database.db_t -> AggregateMap.t -> AggregateMap.agg_t)
 
 type singleton_update_code =
-   (Valuation.t -> Database.db_t -> AggregateMap.agg_t list -> AggregateMap.agg_t)
+   (Valuation.t -> Database.db_t -> AggregateMap.agg_t option -> AggregateMap.agg_t)
 
 type slice_update_code =
    (Valuation.t -> Database.db_t -> AggregateMap.t -> AggregateMap.t)
-
-type db_update_code =
-   (Valuation.t -> Database.db_t -> ValuationMap.key ->
-      AggregateMap.t -> unit)
 
 type compiled_stmt = (Valuation.t -> Database.db_t -> unit)
 
@@ -53,7 +49,6 @@ type compiled_code =
    | SliceValueFunction     of slice_value_function_code
    | UpdateSingleton        of singleton_update_code
    | UpdateSlice            of slice_update_code
-   | DatabaseUpdate         of db_update_code
    | Statement              of compiled_stmt 
    | Trigger                of compiled_trigger
 
@@ -91,9 +86,6 @@ let get_update_singleton_code x =
 
 let get_update_slice_code x =
    match x with | UpdateSlice(c) -> c | _ -> failwith "invalid slice code"
-
-let get_database_update_code x =
-   match x with | DatabaseUpdate(c) -> c | _ -> failwith "invalid db update code"
 
 let get_statement x =
    match x with | Statement(c) -> c | _ -> failwith "invalid statement"
@@ -340,38 +332,51 @@ let op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2 =
             (ValuationMap.map (fun v2 -> op v v2) r))
 
 (* mapn, out_patterns, outv, init rhs expr -> init lookup code *)
-(* TODO: optimize, can we return a key-val pair here, rather than a slice
- * and differentiate k-v from slice from call points?
- * -- right now we do this so we have a single representation of IVC, 
- *    and this would require handling more cases wherever we use IVC. *)
-(*
+(* TODO: abstract single map cases *)
 let singleton_init_lookup mapn inv out_patterns outv cinit =
    let cinit_i = get_singleton_code cinit in
-      Slice (fun theta db ->
-       let inv_img = Valuation.apply theta inv in
-       let init_val = cinit_i theta db in
-       let outv_img = Valuation.apply theta outv in
-       if debug then debug_singleton_init_lookup mapn inv outv outv_img;
-       Database.update_value mapn out_patterns inv_img outv_img init_val db;
-       let r = 
-          let img = if outv = [] then inv_img else outv_img in
-          ValuationMap.from_list [(img, init_val)] out_patterns in
-       if debug then debug_singleton_init_lookup_result r; r)
-*)
-
-let singleton_init_lookup mapn inv out_patterns outv cinit =
-   let cinit_i = get_singleton_code cinit in
+   if inv = [] && outv = [] then
+      Singleton (fun theta db ->
+         let init_val = cinit_i theta db in
+         if debug then debug_singleton_init_lookup mapn [] [] [];
+         Database.update_value mapn init_val db;
+         init_val)
+   else if inv = [] then
+      Singleton (fun theta db ->
+         let init_val = cinit_i theta db in
+         let outv_img = Valuation.apply theta outv in
+         if debug then debug_singleton_init_lookup mapn [] outv outv_img;
+         Database.update_out_map_value mapn out_patterns outv_img init_val db;
+         init_val)
+   else if outv = [] then
+      Singleton (fun theta db ->
+         let inv_img = Valuation.apply theta inv in
+         let init_val = cinit_i theta db in
+         if debug then debug_singleton_init_lookup mapn inv [] [];
+         Database.update_in_map_value mapn inv_img init_val db;
+         init_val)
+   else 
       Singleton (fun theta db ->
        let inv_img = Valuation.apply theta inv in
        let init_val = cinit_i theta db in
        let outv_img = Valuation.apply theta outv in
        if debug then debug_singleton_init_lookup mapn inv outv outv_img;
-       Database.update_value mapn out_patterns inv_img outv_img init_val db;
+       Database.update_map_value mapn out_patterns inv_img outv_img init_val db;
        init_val)
    
 (* mapn, out_patterns, init rhs expr -> init lookup code *)
 let slice_init_lookup mapn inv out_patterns cinit =
    let cinit_l = get_slice_code cinit in
+   if inv = [] then
+      Slice (fun theta db ->
+       let init_slice = cinit_l theta db in
+       let init_slice_w_indexes = List.fold_left
+          ValuationMap.add_secondary_index init_slice out_patterns
+       in
+       if debug then debug_slice_init_lookup mapn [];
+       Database.update_out_map mapn init_slice_w_indexes db;
+       init_slice_w_indexes)
+   else
       Slice (fun theta db ->
        let inv_img = Valuation.apply theta inv in
        let init_slice = cinit_l theta db in
@@ -379,7 +384,7 @@ let slice_init_lookup mapn inv out_patterns cinit =
           ValuationMap.add_secondary_index init_slice out_patterns
        in
        if debug then debug_slice_init_lookup mapn inv;
-       Database.update mapn inv_img init_slice_w_indexes db;
+       Database.update_map mapn inv_img init_slice_w_indexes db;
        init_slice_w_indexes)
 
 (* mapn, inv, outv, init lookup code -> map lookup code *)
@@ -411,6 +416,7 @@ let singleton_lookup_and_init mapn inv outv init_val_code =
             else let outv_img = Valuation.apply theta outv
             in ValuationMap.from_list [(outv_img, ivc_l theta db)] []) outv)
 
+
 (* mapn, inv, outv, init lookup code -> map lookup code *)
 let singleton_lookup mapn inv outv init_val_code =
    let ivc_l = get_slice_code init_val_code in
@@ -439,6 +445,7 @@ let singleton_lookup mapn inv outv init_val_code =
          let inv_img = Valuation.apply theta inv in
             if ValuationMap.mem inv_img m
             then ValuationMap.find inv_img m else ivc_l theta db) outv)
+
 
 let slice_lookup_aux pat patv slice_f theta db =
    let slice = slice_f theta db in
@@ -568,10 +575,9 @@ let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
       if debug then cdebug_e theta db; 
       let delta_v = cincrf theta db in
          match current_singleton with
-          | [] -> let delta_k = Valuation.apply theta lhs_outv in
+          | None -> let delta_k = Valuation.apply theta lhs_outv in
                   cinitf theta db delta_k delta_v
-          | [current_v] -> c_sum current_v delta_v
-          | _ -> failwith "invalid singleton update")
+          | Some(current_v) -> c_sum current_v delta_v)
 
 let singleton_update = singleton_update_aux get_singleton_value_function_code
 
@@ -588,89 +594,86 @@ let slice_update_aux f cincr init_value_code cdebug =
 
 let slice_update = slice_update_aux get_singleton_value_function_code
 
-(* Incremental update code generation, applying any delta and init values
- * computed to the given map's in tier.
- * The generated code has the following signature:
- *    theta -> db -> in var valuation -> in tier -> unit *)
-
-(* lhs_mapn, lhs_outv, map out patterns, singleton eval code -> db update code*)
-let db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt =
-   let cstmtf = get_update_singleton_code cstmt in
-      DatabaseUpdate (fun theta db inv_img in_slice ->
-         let outv_img = Valuation.apply theta lhs_outv in
-         let singleton = 
-            if ValuationMap.mem outv_img in_slice then
-               [ValuationMap.find outv_img in_slice]
-            else [] in
-         let v = cstmtf theta db singleton in
-         Database.update_value lhs_mapn map_out_patterns inv_img outv_img v db)
-
-(* TODO: partitioning metadata *)
-(* lhs_mapn, slice eval code -> db update code *)
-let db_slice_update lhs_mapn cstmt =
-   let cstmtf = get_update_slice_code cstmt in 
-   DatabaseUpdate (fun theta db inv_img in_slice ->
-      (* Subslice based on bound out vars *)
-      (* Partitioning to work slice is not cheaper for now, since
-       * creating the unchanged partition creates a new slice, which
-       * is essentially the same as in merge *)
-      (*
-      let out_pkey = Valuation.apply theta out_patv in
-      let (work_slice, unchanged_slice) =
-         ValuationMap.partition_slice out_pat out_pkey in_slice in
-      let new_slice = ValuationMap.union
-         unchanged_slice (cstmtf theta db work_slice)
-      *)
-      let new_slice = cstmtf theta db in_slice
-      in Database.update lhs_mapn inv_img new_slice db)
-
-
 (* Top-level M3 program structure *)
-(* TODO: this code returns unit, and should be reflected in resulting code_t *)
-(* lhs_mapn, lhs_ext, patv, pat, direct, db update code -> statement code *)
-let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct db_update_code =
-   let db_f = get_database_update_code db_update_code in
-   (* TODO: remove from_list for singleton, push singleton into update code *)
+(* lhs_mapn, lhs_inv, lhs_outv,
+ * lhs_ext, patv, pat, direct, singleton update code -> statement code *)
+let singleton_statement lhs_mapn lhs_inv lhs_outv map_out_patterns 
+                        lhs_ext patv pat direct update_code
+=
+   let cstmtf = get_update_singleton_code update_code in
+   
+   let extend_theta theta inv_img =
+      let inv_theta = Valuation.make lhs_inv inv_img
+      in Valuation.extend theta inv_theta lhs_ext in
+   let eval theta db img slice =
+      let existing_v = if ValuationMap.mem img slice then
+         Some(ValuationMap.find img slice) else None
+      in cstmtf theta db existing_v in 
+   let loop_invs theta db lhs_map iifilter = 
+      let pkey = Valuation.apply theta patv in
+      let inv_imgs = if direct then [pkey]
+                     else ValuationMap.slice_keys pat pkey lhs_map
+      in List.iter (iifilter db) inv_imgs in
+   
    if lhs_inv = [] && lhs_outv = [] then
    Statement (fun theta db ->
-        let slice = match Database.get_value lhs_mapn db with
-           | Some(x) -> (ValuationMap.from_list [([], x)] [])
-           | _ -> ValuationMap.from_list [] [] 
-        in db_f theta db [] slice)
-   
+        let existing_v = Database.get_value lhs_mapn db in
+        let v = cstmtf theta db existing_v in
+        Database.update_value lhs_mapn v db)
+
    else if lhs_inv = [] then
    Statement (fun theta db ->
-        let slice = Database.get_out_map lhs_mapn db 
-        in db_f theta db [] slice)
-   
-   (* TODO: remove from_list for singleton, push singleton into update code *)
+      let lhs_map = Database.get_out_map lhs_mapn db in
+      let outv_img = Valuation.apply theta lhs_outv in
+      let v = eval theta db outv_img lhs_map
+      in Database.update_out_map_value lhs_mapn map_out_patterns outv_img v db)
+
    else if lhs_outv = [] then
    Statement (fun theta db ->
       let lhs_map = Database.get_in_map lhs_mapn db in
       let iifilter db inv_img =
-        let inv_theta = Valuation.make lhs_inv inv_img in
-        let new_theta = Valuation.extend theta inv_theta lhs_ext in
-        let v = ValuationMap.find inv_img lhs_map
-        in db_f new_theta db inv_img (ValuationMap.from_list [([], v)] [])
-      in
-      let pkey = Valuation.apply theta patv in
-      let inv_imgs = if direct then [pkey]
-                     else ValuationMap.slice_keys pat pkey lhs_map
-      in List.iter (iifilter db) inv_imgs)
-   
+        let v = eval (extend_theta theta inv_img) db inv_img lhs_map
+        in Database.update_in_map_value lhs_mapn inv_img v db
+      in loop_invs theta db lhs_map iifilter)
+
    else
    Statement (fun theta db ->
-      let lhs_map = try Database.get_map lhs_mapn db with Failure x -> failwith ("stmt get_map: "^x) in
+      let lhs_map = Database.get_map lhs_mapn db in
+      let iifilter db inv_img =
+        let slice = ValuationMap.find inv_img lhs_map in
+        let outv_img = Valuation.apply theta lhs_outv in
+        let v = eval (extend_theta theta inv_img) db outv_img slice in
+           Database.update_map_value
+              lhs_mapn map_out_patterns inv_img outv_img v db       
+      in loop_invs theta db lhs_map iifilter)
+
+
+(* lhs_mapn, lhs_ext, patv, pat, direct, slice update code -> statement code *)
+let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct update_code =
+   let cstmtf = get_update_slice_code update_code in
+   if lhs_outv = [] then failwith "invalid slice statement"
+   
+   else if lhs_inv = [] then
+   Statement (fun theta db ->
+        let slice = Database.get_out_map lhs_mapn db in 
+        let new_slice = cstmtf theta db slice
+        in Database.update_out_map lhs_mapn new_slice db)
+
+   else
+   Statement (fun theta db ->
+      let lhs_map = Database.get_map lhs_mapn db in
       let iifilter db inv_img =
         let inv_theta = Valuation.make lhs_inv inv_img in
         let new_theta = Valuation.extend theta inv_theta lhs_ext in
-        let slice = ValuationMap.find inv_img lhs_map
-        in db_f new_theta db inv_img slice       
+        let slice = ValuationMap.find inv_img lhs_map in
+        let new_slice = cstmtf new_theta db slice
+        in Database.update_map lhs_mapn inv_img new_slice db       
       in
       let pkey = Valuation.apply theta patv in
       let inv_imgs = if direct then [pkey]
                      else ValuationMap.slice_keys pat pkey lhs_map
       in List.iter (iifilter db) inv_imgs)
+
 
 (* TODO: this code expects a tuple arg, returns unit, and should be reflected
  * in resulting code_t *)

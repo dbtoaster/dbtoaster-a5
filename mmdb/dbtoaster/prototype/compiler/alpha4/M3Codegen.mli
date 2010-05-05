@@ -132,22 +132,16 @@ sig
    (* incr_m3 code, init value code, debug code -> update code *) 
    val slice_update : code_t -> code_t -> debug_code_t -> code_t
 
-   (* Incremental update code generation *)
-   (* TODO: the generated code takes a inv_img and an inv slice, and returns unit.
-    * This should be reflected in the resulting code type. *)
-
-   (* lhs_mapn, lhs_outv, map out patterns, singleton eval code -> db update code*)
-   val db_singleton_update :
-      string -> M3.var_t list -> int list list -> code_t -> code_t
-
-   (* lhs_mapn, slice eval code -> db update code *)
-   val db_slice_update : string -> code_t -> code_t
-
    (* Top-level M3 program structure *)
 
-   (* TODO: this code returns unit, and should be reflected in resulting code_t *)
-   (* lhs_mapn, lhs_inv, lhs_outv, lhs_ext, patv, pat, direct, db update code
-    *    -> statement code *)
+   (* lhs_mapn, lhs_inv, lhs_outv, map_out_patterns,
+    * lhs_ext, patv, pat, direct, singleton update code -> statement code *)
+   val singleton_statement : string ->
+      M3.var_t list -> M3.var_t list -> int list list ->
+      M3.var_t list -> M3.var_t list -> int list -> bool -> code_t -> code_t
+
+   (* lhs_mapn, lhs_inv, lhs_outv, lhs_ext, patv, pat, direct,
+    * slice update code -> statement code *)
    val statement : string ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       int list -> bool -> code_t -> code_t

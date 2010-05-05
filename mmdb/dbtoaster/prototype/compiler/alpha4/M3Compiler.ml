@@ -603,12 +603,14 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
    let out_patv = Util.ListAsSet.inter lhs_outv trig_args in
    let out_pat = List.map (index lhs_outv) out_patv  in
    *)
-   let db_update_code =
-      if (M3P.get_singleton (M3P.get_ecalc incr_aggecalc)) ||
-         (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc))
-      then db_singleton_update lhs_mapn lhs_outv map_out_patterns cstmt
-      else db_slice_update lhs_mapn cstmt
-   in statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct db_update_code
+   let singleton_update =
+      (M3P.get_singleton (M3P.get_ecalc incr_aggecalc)) ||
+      (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc)) in
+   if singleton_update then
+      singleton_statement lhs_mapn lhs_inv lhs_outv
+         map_out_patterns lhs_ext patv pat direct cstmt
+   else
+      statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct cstmt
 
 let compile_ptrig (ptrig, patterns) =
    let aux ptrig =
