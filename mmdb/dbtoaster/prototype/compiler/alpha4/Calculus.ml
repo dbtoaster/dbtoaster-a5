@@ -227,66 +227,6 @@ type relalg_t =
  | Alg_True
 
 
-(* FIXME: this is only partially implemented.
-   The code demonstrates how to deal with variables bound from the
-   outside and how to extract implicit joins to create selection conditions.
-   For example,
-
-Calculus.relcalc_as_algebra
-(make_relcalc(
-  RA_MultiNatJoin
-     [RA_Leaf (Rel ("C", ["c.custkey"]));
-      RA_Leaf (Rel ("O", ["c.custkey"; "l1.orderkey"]));
-      RA_Leaf (Rel ("L", ["l1.quantity"; "l1.orderkey"]));
-      RA_Leaf (AtomicConstraint (Le, RVal (Const (Int 1)),
-                                 RVal (External ("foo1", ["l1.orderkey"]))))]))
-"X" ["c.custkey"] =
-Alg_Selection
- ([(Eq, "X1.1", "X2.1"); (Eq, "X1.1", "c.custkey"); (Eq, "X2.2", "X3.2")],
-  Alg_MultiProd
-   [Alg_Rel ("C", "X1"); Alg_Rel ("O", "X2"); Alg_Rel ("L", "X3")])
-
-   TODO: We ignore AtomicConstraints, and we do not yet create algebra for
-         terms.
-*)
-let relcalc_as_algebra (r: relcalc_t) (rn_name_prefix: string)
-                       (bound_vars: var_t list): relalg_t =
-   let f lf =
-      match lf with
-         AtomicConstraint(c, t1, t2) -> ([], [(c, t1, t2)])
-       | Rel(n, vs) -> ([(n, vs)], [])
-       | _ -> raise (Assert0Exception "Calculus.relcalc_as_algebra")
-   in
-   let mono            = CalcRing.cast_to_monomial r in
-   let (rels0, cons0)  = List.split (List.map f mono) in
-   let rels            = List.flatten rels0 in
-       (* FIXME:  cons = List.flatten cons0 is currently ignored. *)
-   let (vars, algrels) = List.split
-                (List.map (fun (n, (r, vs)) -> ((n, vs), Alg_Rel(r, n)))
-                          (Util.add_names rn_name_prefix rels))
-   in
-   let g ((n, vs):string * (var_t list)): (var_t * var_t) list = 
-      (List.combine 
-          (Util.add_names (n^".") (snd (List.split vs))) 
-          vs
-      )
-   in
-   let vars2:(var_t*var_t) list = (List.flatten (List.map g vars)) @
-               (List.map (fun x -> (x, x)) bound_vars)
-   in
-   let components: (var_t * var_t) list list =
-      Util.HyperGraph.connected_components (fun (x,y) -> [x;y]) vars2
-   in
-   let h comp =
-      List.map (fun x -> (Eq, fst(List.hd comp), fst x)) (List.tl comp)
-   in
-   let algconds = List.flatten (List.map h components)
-   in
-   Alg_Selection(algconds, Alg_MultiProd(algrels))
-
-
-
-
 
 (* TODO: enforce that the variables occurring in f are among the
    range-restricted variables of r. Otherwise throw exception. *)
@@ -573,17 +513,17 @@ let roly_poly (term: term_t) : term_t =
    expressions, from r into f (but not the other way round), and obviously
    upwards.
 *)
-let rec simplify_calc_monomial (recurse: bool)
+let rec simplify_calc_monomial (recur: bool)
                                (relcalc: relcalc_t) (bound_vars: var_t list)
                                (bigsum_vars: var_t list)
                                : (var_mapping_t * relcalc_t) =
    let leaf_f lf =
       match lf with
          AtomicConstraint(c, t1, t2) ->
-            let t1b = if recurse 
+            let t1b = if recur
                     then (snd (simplify_roly true t1 bound_vars bigsum_vars))
                     else t1 in
-            let t2b = if recurse
+            let t2b = if recur
                     then (snd (simplify_roly true t2 bound_vars bigsum_vars))
                     else t2 in
             CalcRing.mk_val(AtomicConstraint(c, t1b, t2b))
@@ -592,7 +532,7 @@ let rec simplify_calc_monomial (recurse: bool)
    extract_substitutions (CalcRing.apply_to_leaves leaf_f relcalc)
                          bound_vars
 
-and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list)
+and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
                   (bigsum_vars: var_t list) : (var_mapping_t * term_t) =
    let leaf_f lf =
       match lf with
@@ -605,7 +545,7 @@ and simplify_roly (recurse: bool) (term: term_t) (bound_vars: var_t list)
             else
                let ((b:(var_t * var_t) list), non_eq_cons) =
                   simplify_calc_monomial 
-                    recurse r 
+                    recur r 
                     bound_vars
                     bigsum_vars
                in
