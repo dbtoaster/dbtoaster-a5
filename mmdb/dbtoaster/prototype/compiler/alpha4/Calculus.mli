@@ -148,7 +148,7 @@ type relalg_t =
  | Alg_True
 
 (* TODO: explain *)
-val relcalc_as_algebra: relcalc_t -> string -> (var_t list) -> relalg_t
+(* val relcalc_as_algebra: relcalc_t -> string -> (var_t list) -> relalg_t *)
 
 (* output relcalc or term as string. *)
 val relcalc_as_string: relcalc_t -> string
