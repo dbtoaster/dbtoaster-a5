@@ -2,11 +2,38 @@ open M3
 open Util
 open Expression
 
+(* Maps can be accessed by name or unique id in generated code *)
+module type MapName =
+sig
+   type t
+   val to_string : t -> string
+   val of_string : string -> t
+   val compare : t -> t -> int
+end
+
+module NamedMap =
+struct
+   type t = string
+   let to_string x = x
+   let of_string x = x
+   let compare = Pervasives.compare
+end
+
+module RefMap =
+struct
+   type t = int
+   let to_string = string_of_int
+   let of_string = Hashtbl.hash 
+   let compare = Pervasives.compare
+end
+
+(* Databases, i.e. collections of maps *)
 module type ToastedDB =
 sig
    type value_t      = const_t
    type key_t        = const_t list
    
+   type map_name_t
    type db_key_t
    
    type single_map_t
@@ -22,6 +49,8 @@ sig
    type pattern_t  = int list
    type patterns_t = M3Common.Patterns.pattern_map
    
+   val map_name_to_string : map_name_t -> string
+
    val smap_to_string : single_map_t -> string
    val map_to_string : map_t -> string
    val db_to_string : db_t -> string
@@ -29,30 +58,30 @@ sig
    val make_empty_db : schema_t -> patterns_t -> db_t
    (*val make_empty_db_wdom : schema_t -> patterns_t -> dom_t -> db_t*)
 
-   val update_map : string -> key_t -> single_map_t -> db_t -> unit
+   val update_map : map_name_t -> key_t -> single_map_t -> db_t -> unit
    val update_map_value :
-      string -> pattern_t list -> key_t -> key_t -> value_t -> db_t -> unit
+      map_name_t -> pattern_t list -> key_t -> key_t -> value_t -> db_t -> unit
 
-   val update_in_map : string -> single_map_t -> db_t -> unit
-   val update_in_map_value : string -> key_t -> value_t -> db_t -> unit
+   val update_in_map : map_name_t -> single_map_t -> db_t -> unit
+   val update_in_map_value : map_name_t -> key_t -> value_t -> db_t -> unit
    
-   val update_out_map : string -> single_map_t -> db_t -> unit
+   val update_out_map : map_name_t -> single_map_t -> db_t -> unit
    
    (* TODO: remove patterns from this interface if we remove SimpleDatabase.
     * It is only used for initial output tier construction. *)
    val update_out_map_value :
-      string -> pattern_t list -> key_t -> value_t -> db_t -> unit
+      map_name_t -> pattern_t list -> key_t -> value_t -> db_t -> unit
    
-   val update_value: string -> value_t -> db_t -> unit
+   val update_value: map_name_t -> value_t -> db_t -> unit
 
-   val has_map     : string -> db_t -> bool
-   val has_smap    : string -> db_t -> bool
-   val has_value   : string -> db_t -> bool
+   val has_map     : map_name_t -> db_t -> bool
+   val has_smap    : map_name_t -> db_t -> bool
+   val has_value   : map_name_t -> db_t -> bool
 
-   val get_map     : string -> db_t -> map_t
-   val get_in_map  : string -> db_t -> single_map_t 
-   val get_out_map : string -> db_t -> single_map_t
-   val get_value   : string -> db_t -> AggregateMap.agg_t option
+   val get_map     : map_name_t -> db_t -> map_t
+   val get_in_map  : map_name_t -> db_t -> single_map_t 
+   val get_out_map : map_name_t -> db_t -> single_map_t
+   val get_value   : map_name_t -> db_t -> AggregateMap.agg_t option
 
    val showsmap         : single_map_t -> list_smap
    val show_sorted_smap : single_map_t -> list_smap
@@ -62,27 +91,19 @@ sig
    val show_sorted_db   : db_t -> named_list_map
 end
 
-module SimpleDatabase : ToastedDB
-with type single_map_t = AggregateMap.t and
-     type map_t = AggregateMap.t ValuationMap.t and
-     type db_key_t = string list
-=
+module SimpleNameableDatabase = functor (N : MapName) ->
 struct
    open M3Common.Patterns
 
    module VM  = ValuationMap
    module AM  = AggregateMap
-   module Nameable = struct
-      type t = string
-      let to_string x = x
-      let compare = Pervasives.compare
-   end
-   module DBM = SliceableMap.Make(Nameable)
+   module DBM = SliceableMap.Make(N)
    
    type value_t = const_t
    type key_t   = const_t list
    
-   type db_key_t = string list
+   type map_name_t   = N.t
+   type db_key_t     = map_name_t list
       
    type single_map_t = AM.t
    type map_t        = AM.t VM.t
@@ -90,12 +111,14 @@ struct
 
    type list_smap      = (key_t * const_t) list
    type list_map       = (key_t * list_smap) list
-   type named_list_map = (string list * list_map) list
+   type named_list_map = (db_key_t * list_map) list
    
    type dom_t      = const_t list
    type schema_t   = map_type_t list
    type pattern_t  = int list
    type patterns_t = M3Common.Patterns.pattern_map
+
+   let map_name_to_string = N.to_string
 
    let concat_string s t delim =
       (if (String.length s = 0) then "" else delim)^t
@@ -109,7 +132,8 @@ struct
       VM.to_string key_to_string smap_to_string m
 
    let db_to_string (db: db_t) : string =
-      DBM.to_string (fun x -> String.concat "," x) map_to_string db
+      let db_key_to_string db_k = String.concat "," (List.map N.to_string db_k)
+      in DBM.to_string db_key_to_string map_to_string db
 
    let get_patterns patterns mapn =
       (get_in_patterns patterns mapn, get_out_patterns patterns mapn)
@@ -123,7 +147,7 @@ struct
               else
                  (* We defer adding out var indexes to init value computation *)
                  VM.empty_map_w_patterns in_patterns 
-           in ([mapn], init_slice)
+           in ([N.of_string mapn], init_slice)
         in
             DBM.from_list (List.map f schema) []
     
@@ -135,7 +159,7 @@ struct
                         (List.map (fun t -> (t, VM.empty_map_w_patterns out_patterns))
                             (Util.k_tuples (List.length itypes) dom)) in_patterns
             in
-            ([mapn], map)
+            ([N.of_string mapn], map)
         in
             DBM.from_list (List.map f schema) []
 
@@ -145,7 +169,7 @@ struct
          ignore(DBM.add [mapn] (VM.add inv_imgs slice m) db);
 (*
          let string_of_img = Util.list_to_string AM.string_of_aggregate in
-         print_endline ("Updated the database: "^mapn^
+         print_endline ("Updated the database: "^(N.to_string mapn)^
                       " inv="^(string_of_img inv_imgs)^
                       " slice="^(smap_to_string slice)^
                       " db="^(db_to_string db));
@@ -162,7 +186,7 @@ struct
          in ignore(DBM.add [mapn] (VM.add inv_img new_slice m) db);
 (*
             let string_of_img = Util.list_to_string AM.string_of_aggregate in
-            print_endline ("Updating a db value: "^mapn^
+            print_endline ("Updating a db value: "^(N.to_string mapn)^
                            " inv="^(string_of_img inv_img)^
                            " outv="^(string_of_img outv_img)^
                            " v="^(AM.string_of_aggregate new_value)^
@@ -196,20 +220,20 @@ struct
 
    let get_map mapn db = 
        try DBM.find [mapn] db
-       with Not_found -> failwith ("Database.get_map "^mapn)
+       with Not_found -> failwith ("Database.get_map "^(N.to_string mapn))
        
-   let get_in_map mapn db = failwith ("Database.get_in_map "^mapn)
+   let get_in_map mapn db = failwith ("Database.get_in_map "^(N.to_string mapn))
    
    let get_out_map mapn db =
       let m = get_map mapn db in
       if ValuationMap.mem [] m then ValuationMap.find [] m
-      else failwith ("Database.get_out_map "^mapn)
+      else failwith ("Database.get_out_map "^(N.to_string mapn))
       
    let get_value mapn db =
       let m = get_map mapn db in
       let slice =
          if ValuationMap.mem [] m then ValuationMap.find [] m
-         else failwith ("Database.get_out_map "^mapn)
+         else failwith ("Database.get_out_map "^(N.to_string mapn))
       in if ValuationMap.mem [] slice then Some(ValuationMap.find [] slice) else None
 
    let showsmap (s: single_map_t) = VM.to_list s
@@ -237,27 +261,19 @@ struct
 end
 
 
-module Database : ToastedDB
-with type single_map_t = AggregateMap.t and
-     type map_t = AggregateMap.t ValuationMap.t and
-     type db_key_t = string list
-=
+module NameableDatabase = functor (N : MapName) ->
 struct
    open M3Common.Patterns
 
    module VM  = ValuationMap
    module AM  = AggregateMap
-   module Nameable = struct
-      type t = string
-      let to_string x = x
-      let compare = Pervasives.compare
-   end
-   module DBM = SliceableMap.Make(Nameable)
+   module DBM = SliceableMap.Make(N)
    
    type value_t = const_t
    type key_t   = const_t list
-   
-   type db_key_t = string list
+
+   type map_name_t = N.t   
+   type db_key_t   = map_name_t list
       
    type single_map_t = AM.t
    
@@ -267,12 +283,14 @@ struct
 
    type list_smap      = (key_t * const_t) list
    type list_map       = (key_t * list_smap) list
-   type named_list_map = (string list * list_map) list
+   type named_list_map = (db_key_t * list_map) list
    
    type dom_t      = const_t list
    type schema_t   = map_type_t list
    type pattern_t  = int list
    type patterns_t = M3Common.Patterns.pattern_map
+
+   let map_name_to_string = N.to_string
 
    let concat_string s t delim =
       (if (String.length s = 0) then "" else delim)^t
@@ -286,7 +304,7 @@ struct
       VM.to_string key_to_string smap_to_string m
 
    let db_to_string ((mio,ms,mv): db_t) : string =
-      let dbkey_to_s = String.concat "," in
+      let dbkey_to_s db_k = String.concat "," (List.map N.to_string db_k) in
       let aggref_to_s ar = (AM.string_of_aggregate !ar) in 
       (DBM.to_string dbkey_to_s map_to_string mio)^
       (DBM.to_string dbkey_to_s smap_to_string ms)^
@@ -300,15 +318,15 @@ struct
            let (in_patterns, _) = get_patterns patterns mapn in
            (* We defer adding out var indexes to init value computation *)
            let init_slice = VM.empty_map_w_patterns in_patterns 
-           in ([mapn], init_slice)
+           in ([N.of_string mapn], init_slice)
         in
         let s_f (mapn, itypes, otypes) =
            let (in_pat, out_pat) = get_patterns patterns mapn in
            let init_slice =
               VM.empty_map_w_patterns (if itypes = [] then out_pat else in_pat)
-           in ([mapn], init_slice)
+           in ([N.of_string mapn], init_slice)
         in 
-        let val_f (mapn, _, _) = ([mapn], ref(CFloat(0.0))) in
+        let val_f (mapn, _, _) = ([N.of_string mapn], ref(CFloat(0.0))) in
         let io_maps = List.filter (fun (_,i,o) -> i <> [] && o <> []) schema in
         let in_maps = List.filter (fun (_,i,o) -> i = [] && o <> []) schema in 
         let out_maps = List.filter (fun (_,i,o) -> i <> [] && o = []) schema in
@@ -323,7 +341,7 @@ struct
          ignore(DBM.add [mapn] (VM.add inv_imgs slice m) db);
 (*
          let string_of_img = Util.list_to_string AM.string_of_aggregate in
-         print_endline ("Updated the database: "^mapn^
+         print_endline ("Updated the database: "^(N.to_string mapn)^
                       " inv="^(string_of_img inv_imgs)^
                       " slice="^(smap_to_string slice)^
                       " db="^(db_to_string db));
@@ -340,7 +358,7 @@ struct
          in ignore(DBM.add [mapn] (VM.add inv_img new_slice m) db);
 (*
             let string_of_img = Util.list_to_string AM.string_of_aggregate in
-            print_endline ("Updating a db value: "^mapn^
+            print_endline ("Updating a db value: "^(N.to_string mapn)^
                            " inv="^(string_of_img inv_img)^
                            " outv="^(string_of_img outv_img)^
                            " v="^(AM.string_of_aggregate new_value)^
@@ -384,19 +402,19 @@ struct
 
    let get_map mapn (db,_,_) = 
        try DBM.find [mapn] db
-       with Not_found -> failwith ("Database.get_map "^mapn)
+       with Not_found -> failwith ("Database.get_map "^(N.to_string mapn))
        
    let get_in_map mapn (_,db,_) = 
       try DBM.find [mapn] db
-      with Not_found -> failwith ("Database.get_in_map "^mapn) 
+      with Not_found -> failwith ("Database.get_in_map "^(N.to_string mapn)) 
    
    let get_out_map mapn (_,db,_) =
       try DBM.find [mapn] db
-      with Not_found -> failwith ("Database.get_out_map "^mapn)
+      with Not_found -> failwith ("Database.get_out_map "^(N.to_string mapn))
       
    let get_value mapn (_,_,db) =
       try Some(!(DBM.find [mapn] db))
-      with Not_found -> failwith ("Database.get_value "^mapn)
+      with Not_found -> failwith ("Database.get_value "^(N.to_string mapn))
 
    let showval (v : AggregateMap.agg_t ref) = [([], !v)]
 
@@ -425,3 +443,19 @@ struct
        List.sort (fun (n1,_) (n2,_) -> compare n1 n2)
           (showdb_f show_sorted_map show_sorted_smap showval db)
 end
+
+module type NamedToastedDB = ToastedDB
+with type single_map_t = AggregateMap.t and
+     type map_t = AggregateMap.t ValuationMap.t and
+     type map_name_t = string and type db_key_t = string list
+
+module type RefToastedDB = ToastedDB
+with type single_map_t = AggregateMap.t and
+     type map_t = AggregateMap.t ValuationMap.t and
+     type map_name_t = int and type db_key_t = int list
+
+module NamedSimpleDatabase : NamedToastedDB = SimpleNameableDatabase(NamedMap)
+module SimpleDatabase : RefToastedDB = SimpleNameableDatabase(RefMap)
+
+module NamedDatabase : NamedToastedDB = NameableDatabase(NamedMap)     
+module Database : RefToastedDB = NameableDatabase(RefMap)

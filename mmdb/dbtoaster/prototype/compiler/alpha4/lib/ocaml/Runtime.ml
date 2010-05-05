@@ -4,6 +4,8 @@ open Expression
 open Database
 open Sources
 
+module Make = functor(DB : ToastedDB) ->
+struct
 let string_of_evt (action:M3.pm_t) 
                   (relation:string) 
                   (tuple:M3.const_t list): string =
@@ -19,23 +21,24 @@ let main_args () =
     ]));;
 
 let synch_main 
-      (db:Database.db_t)
+      (db:DB.db_t)
       (initial_mux:FileMultiplexer.t)
-      (toplevel_queries:string list)
+      (toplevel_queries:DB.map_name_t list)
       (dispatcher:((M3.pm_t*M3.rel_id_t*M3.const_t list) option) -> bool)
       (arguments:ParseArgs.arguments_t)
       (): unit = 
   let db_access_f = List.map (fun q ->
-     if Database.has_map q db then
-        (q,"map", (fun () -> Database.map_to_string (Database.get_map q db)))
-     (* TODO: no distinction between in/out maps... fix in db if really needed *)
-     else if Database.has_smap q db then
-        (q,"map", (fun () ->
-           q^": "^(Database.smap_to_string (Database.get_in_map q db))))
+     if DB.has_map q db then
+        (q,"map", (fun () -> DB.map_to_string (DB.get_map q db)))
+     
+     (* Note: no distinction between in/out maps... fix in db if really needed *)
+     else if DB.has_smap q db then
+        (q,"map", (fun () -> (DB.map_name_to_string q)^": "^
+           (DB.smap_to_string (DB.get_in_map q db))))
+     
      else (q,"value", (fun () ->
         AggregateMap.string_of_aggregate
-           (match Database.get_value q db with
-             | Some(x) -> x | _ -> (CFloat(0.0)))))
+           (match DB.get_value q db with | Some(x) -> x | _ -> (CFloat(0.0)))))
      ) toplevel_queries
   in
   let log_evt = 
@@ -55,7 +58,7 @@ let synch_main
       let output_endline c s = output_string c (s^"\n") in
       let y = String.lowercase x in
       if y = "db" then
-         (fun chan -> output_endline chan ("db: "^(Database.db_to_string db)))
+         (fun chan -> output_endline chan ("db: "^(DB.db_to_string db)))
       else
          let valid_f = List.filter (fun (_,z,_) -> y = z) db_access_f in
          (fun chan -> output_endline chan
@@ -74,5 +77,6 @@ let synch_main
   let finish = Unix.gettimeofday () in
   print_endline ("Tuples: "^(string_of_float (finish -. start)));
   print_endline (String.concat "\n"
-     (List.map (fun (q,_,f) -> q^": "^(f())) db_access_f))
+     (List.map (fun (q,_,f) -> (DB.map_name_to_string q)^": "^(f())) db_access_f))
+end
 ;;

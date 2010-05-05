@@ -243,6 +243,10 @@ open Database
 open Sources
 open Runtime
 
+module DB = NamedDatabase
+module DBTRuntime  = Runtime.Make(DB)
+open DBTRuntime
+
 let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
@@ -255,10 +259,7 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
       (fun ((schema,program),sources) tlq f ->
         StandardAdaptors.initialize();
         let prepared_program = M3Compiler.prepare_triggers program in
-        let db:Database.db_t = 
-          Database.make_empty_db 
-            schema
-            (snd prepared_program)
+        let db:DB.db_t = DB.make_empty_db schema (snd prepared_program)
         in
         let evaluator = 
           (M3Interpreter.CG.event_evaluator 

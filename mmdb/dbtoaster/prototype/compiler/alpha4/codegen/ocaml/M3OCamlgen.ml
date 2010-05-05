@@ -16,30 +16,34 @@ open Database
 open Sources
 
 module M3P = M3.Prepared
+module DB = Database
 
 module CG : M3Codegen.CG =
 struct
+   (* Implementation modules *)
+   let db_impl = "Database"
+
+   (* We use hashing to ensure consistent generation of unique map ids
+    * based on map names from the DB schema map in RefMap, and here in
+    * map_name_const.
+    * Note schema_const and pattern_map_const below use string_const for map
+    * names with DB initialization, since schemas currently use:
+    * type M3.map_id_t = string. *) 
+   let map_defines = Hashtbl.create 10
+   let map_name_const mapn =
+      let k = String.lowercase mapn in
+      (if not(Hashtbl.mem map_defines k) then
+         Hashtbl.add map_defines k (Hashtbl.hash mapn));
+      k
+
    type op_t         = string
    type code_t       = Lines of string list | Inline of string
    type debug_code_t = string list
 
    let get_lines c = match c with Lines(l) -> l | Inline(c) -> [c]
-   (*let inline s = "(List.hd "^s^")"*)
    let inline s = s
 
    (* Code prettification *)
-   (*
-   let level     = ref 0
-   let nest ()   = incr level
-   let unnest () = decr level
-   let tab s     = "    "^s
-   let indent s  =
-      let rec aux n s = if n = 0 then s else aux (n-1) (tab s)
-      in aux (!level) s
-   let block l   = String.concat "\n" (List.map indent l)
-   let tabify l = nest(); let r = block l; unnest() in r
-   *)
-
    let tab s           = "   "^s
    let rec indent n s  = if n = 0 then s else indent (n-1) (List.map tab s)
    let tabify l        = Lines(List.map tab l)
@@ -57,7 +61,7 @@ struct
    let string_pair_const (x,y) = "("^(string_const x)^","^(string_const y)^")"
    let pattern_const p = list_to_string string_of_int p
    let patterns_const ps = list_to_string pattern_const ps
-
+   
    let schema_const schema =
       let string_of_var_type_t vt =
          match vt with | VT_Int -> "VT_Int" | VT_String -> "VT_String" 
@@ -129,7 +133,7 @@ struct
 
    let debug_expr incr_calc = 
       ["print_string(\"\\neval_pcalc "^(pcalc_to_string incr_calc)^" \"^
-       (Database.db_to_string db)^\"   \")"]
+       ("^db_impl^".db_to_string db)^\"   \")"]
 
    (* TODO *)
    let debug_expr_result incr_calc ccalc = []
@@ -139,23 +143,23 @@ struct
        "print_endline (\"End of PCALC_S; outv=\"^\""^(vars_list lhs_outv)^"\"^";
        "               \" k=\"^(Util.list_to_string string_of_const k)^";
        "               \" v=\"^(string_of_const v)^";
-       "              (\" db=\"^(Database.db_to_string db))))"]
+       "              (\" db=\"^("^db_impl^".db_to_string db))))"]
 
    let debug_slice_rhs_expr rhs_outv =
       ["(fun slice0 ->";
        "print_endline (\"End of PCALC; outv=\"^\""^(vars_list rhs_outv)^"\"^";
-       "               \" slice=\"^(Database.smap_to_string slice0)^";
-       "              (\" db=\"^(Database.db_to_string db))))"]
+       "               \" slice=\"^("^db_impl^".smap_to_string slice0)^";
+       "              (\" db=\"^("^db_impl^".db_to_string db))))"]
 
    let debug_rhs_init () =
       ["(fun k v ->";
        "print_string (\"@PSTMT.init{\"";
        "             ^\"key=\"^(Util.list_to_string string_of_const k)";
-       "             ^\", db=\"^(Database.db_to_string db)))"]
+       "             ^\", db=\"^("^db_impl^".db_to_string db)))"]
 
    let debug_stmt lhs_mapn lhs_inv lhs_outv =
       ["print_string(\"\\nPSTMT (db=_\"^";
-       "            \", stmt=(("^(string_const lhs_mapn)^"\"^";
+       "            \", stmt=(("^(map_name_const lhs_mapn)^"\"^";
        "            \" "^(vars_list lhs_inv)^" \"^";
        "            \""^(vars_list lhs_outv)^" _), _))\\n\"))"]
    *)
@@ -316,18 +320,18 @@ struct
        | Inline(ce1_i) -> (bind prebind)@(body (inline ce1_i)))
 
    let singleton_init_lookup mapn inv out_patterns outv cinit =
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       let cout_patterns = patterns_const out_patterns in
       let body v =
          (match (inv, outv) with
-          | ([], []) -> ["(Database.update_value "^cmapn^" "^v^" db;"]
-          | (_, []) ->  ["(Database.update_in_map_value "^
+          | ([], []) -> ["("^db_impl^".update_value "^cmapn^" "^v^" db;"]
+          | (_, []) ->  ["("^db_impl^".update_in_map_value "^
                            cmapn^" "^(vars_list inv)^" "^v^" db;"]
-          | ([], _) ->  ["(Database.update_out_map_value "^
+          | ([], _) ->  ["("^db_impl^".update_out_map_value "^
                            cmapn^" "^cout_patterns^" "^
                            (vars_list outv)^" "^v^" db;"]
           | _ -> 
-            ["(Database.update_map_value "^cmapn^" "^cout_patterns^" "^
+            ["("^db_impl^".update_map_value "^cmapn^" "^cout_patterns^" "^
                  (vars_list inv)^" "^(vars_list outv)^" "^v^" db;"])@
           ["   "^v^")"]
       in
@@ -337,7 +341,7 @@ struct
          | Inline(cinit_i) -> (body (inline cinit_i)))
        
    let slice_init_lookup mapn inv out_patterns cinit =
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       let cout_patterns = patterns_const out_patterns in
       tabify (
       ["let init_slice = "]@(get_lines cinit)@
@@ -345,15 +349,15 @@ struct
        "let init_slice_w_indexes = List.fold_left";
        "   ValuationMap.add_secondary_index init_slice "^cout_patterns]@
        (if inv = [] then
-       (["in (Database.update_out_map "^cmapn^" init_slice_w_indexes db;";
+       (["in ("^db_impl^".update_out_map "^cmapn^" init_slice_w_indexes db;";
          "   init_slice_w_indexes)"])
        else
-       (["in (Database.update_map "^
+       (["in ("^db_impl^".update_map "^
                  cmapn^" "^(vars_list inv)^" init_slice_w_indexes db;";
          "    init_slice_w_indexes)"])))
 
    let singleton_lookup_and_init mapn inv outv init_val_code = tabify (
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       let aux slice_code vars =
          ["   let s = "]@slice_code@
          ["   in";
@@ -363,14 +367,14 @@ struct
           (indent 2 (get_lines init_val_code))
       in
       if inv = [] && outv = [] then
-         (["match Database.get_value "^cmapn^" db with";
+         (["match "^db_impl^".get_value "^cmapn^" db with";
            " | Some(x) -> x"; " | _ -> "]@
            (indent 2 (get_lines init_val_code)))
-      else if inv = [] then (aux ["Database.get_out_map "^cmapn^" db"] outv)
-      else if outv = [] then (aux ["Database.get_in_map "^cmapn^" db"] inv)
+      else if inv = [] then (aux [db_impl^".get_out_map "^cmapn^" db"] outv)
+      else if outv = [] then (aux [db_impl^".get_in_map "^cmapn^" db"] inv)
       else
          let in_tier_code =
-            ["let m = Database.get_map "^cmapn^" db in";
+            ["let m = "^db_impl^"."^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
              "if ValuationMap.mem inv m then ValuationMap.find inv m";
              "else let init_val = "]@(indent 1 (get_lines init_val_code))@
@@ -378,7 +382,7 @@ struct
          in (aux in_tier_code outv))
 
    let singleton_lookup mapn inv outv init_val_code = tabify (
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       let aux slice_code vars =
          ["   let s = "]@slice_code@
          ["   in";
@@ -388,15 +392,15 @@ struct
          ["   in ValuationMap.find img lookup_slice"]
       in
       if inv = [] && outv = [] then
-         (["match Database.get_value "^cmapn^" db with";
+         (["match "^db_impl^".get_value "^cmapn^" db with";
            " | Some (x) -> x"; " | _ -> let init_slice = "]@
            (indent 2 (get_lines init_val_code))@
            [" in ValuationMap.find [] init_slice"])
-      else if inv = [] then (aux ["Database.get_out_map "^cmapn^" db"] outv)
-      else if outv = [] then (aux ["Database.get_in_map "^cmapn^" db"] inv)
+      else if inv = [] then (aux [db_impl^".get_out_map "^cmapn^" db"] outv)
+      else if outv = [] then (aux [db_impl^".get_in_map "^cmapn^" db"] inv)
       else
       let in_tier_code =
-      ["let m = Database.get_map "^cmapn^" db in";
+      ["let m = "^db_impl^".get_map "^cmapn^" db in";
        "let inv = "^(vars_list inv)^" in";
        "if ValuationMap.mem inv m then ValuationMap.find inv m else"]@
        (indent 1 (get_lines init_val_code))
@@ -412,12 +416,12 @@ struct
        "in ValuationMap.strip_indexes lookup_slice"])
 
    let slice_lookup_sing_init mapn inv outv pat patv init_val_code = tabify(
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       if inv = [] then
-         (slice_lookup_aux pat patv ["Database.get_out_map "^cmapn^" db"])
+         (slice_lookup_aux pat patv [db_impl^".get_out_map "^cmapn^" db"])
       else
          let in_tier_code =
-            ["let m = Database.get_map "^cmapn^" db";
+            ["let m = "^db_impl^".get_map "^cmapn^" db";
              "let inv = "^(vars_list inv)^" in";
              "if ValuationMap.mem inv m then ValuationMap.find inv m else";
              "let init_val ="]@(indent 1 (get_lines init_val_code))@
@@ -425,12 +429,12 @@ struct
          in (slice_lookup_aux pat patv in_tier_code))
 
    let slice_lookup mapn inv pat patv init_val_code = tabify (
-      let cmapn = string_const mapn in
+      let cmapn = map_name_const mapn in
       if inv = [] then
-         (slice_lookup_aux pat patv ["Database.get_out_map "^cmapn^" db"])
+         (slice_lookup_aux pat patv [db_impl^".get_out_map "^cmapn^" db"])
       else
          let in_tier_code =
-            ["let m = Database.get_map "^cmapn^" db";
+            ["let m = "^db_impl^".get_map "^cmapn^" db";
              "let inv = "^(vars_list inv)^" in";
              "if ValuationMap.mem inv m then ValuationMap.find inv m else"]@
              (indent 1 (get_lines init_val_code))
@@ -545,7 +549,7 @@ struct
    let singleton_statement lhs_mapn lhs_inv lhs_outv map_out_patterns 
                            lhs_ext patv pat direct update_code
       =
-     let cmapn = string_const lhs_mapn in
+     let cmapn = map_name_const lhs_mapn in
      let cpatterns = patterns_const map_out_patterns in
      let cpat = pattern_const pat in
      let eval img slice =
@@ -566,57 +570,57 @@ struct
      tabify (
      ["(*** Update "^lhs_mapn^" ***)"]@(
      if lhs_inv = [] && lhs_outv = [] then
-        (["let existing_v = Database.get_value "^cmapn^" db in";
+        (["let existing_v = "^db_impl^".get_value "^cmapn^" db in";
           "let v = "]@(indent 1 (get_lines update_code))@
          ["   existing_v";
-          "in Database.update_value "^cmapn^" v db;"]) 
+          "in "^db_impl^".update_value "^cmapn^" v db;"]) 
      
      else if lhs_inv = [] then
-        (["let slice = Database.get_out_map "^cmapn^" db in";
+        (["let slice = "^db_impl^".get_out_map "^cmapn^" db in";
           "let outv_img = "^(vars_list lhs_outv)^" in";
           "let v = "]@(eval "outv_img" "slice")@
-         ["in Database.update_out_map_value "^
+         ["in "^db_impl^".update_out_map_value "^
                   cmapn^" "^cpatterns^" outv_img v db;"])
      
      else
         if lhs_outv = [] then
-           (["let slice = Database.get_in_map "^cmapn^" db in";
+           (["let slice = "^db_impl^".get_in_map "^cmapn^" db in";
              "let iifilter inv = "]@
             (indent 1 (bind_vars_from_extension lhs_inv "inv" lhs_ext))@
             ["   let v = "]@(eval "inv" "slice")@
-            ["   in Database.update_in_map_value "^cmapn^" inv v db";
+            ["   in "^db_impl^".update_in_map_value "^cmapn^" inv v db";
              "in"]@(loop_invs "slice"))
      
         else
-           (["let slice = Database.get_map "^cmapn^" db in";
+           (["let slice = "^db_impl^".get_map "^cmapn^" db in";
              "let iifilter inv = "]@
             (indent 1 (bind_vars_from_extension lhs_inv "inv" lhs_ext))@
             ["   let s = ValuationMap.find inv slice in";
              "   let outv = "^(vars_list lhs_outv)^" in"; 
              "   let v = "]@(eval "outv" "s")@
-            ["   in Database.update_map_value "^
+            ["   in "^db_impl^".update_map_value "^
                      cmapn^" "^cpatterns^" inv outv v db";
              "in"]@(loop_invs "slice"))))
 
 
    let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct update_code =
-      let cmapn = string_const lhs_mapn in
+      let cmapn = map_name_const lhs_mapn in
       let cpat = pattern_const pat in
       tabify( 
       ["(*** Update "^lhs_mapn^" ***)";]@(
       if lhs_outv = [] then failwith "invalid slice statement"
 
       else if lhs_inv = [] then
-         (["let slice = Database.get_out_map "^cmapn^" db in";
+         (["let slice = "^db_impl^".get_out_map "^cmapn^" db in";
            "let new_slice = "]@(indent 1 (get_lines update_code))@
-          ["in Database.update_out_map "^cmapn^" new_slice db"])
+          ["in "^db_impl^".update_out_map "^cmapn^" new_slice db"])
       
       else
-         (["let slice = Database.get_map "^cmapn^" db in";
+         (["let slice = "^db_impl^".get_map "^cmapn^" db in";
            "let iifilter inv = ";
            "   let s = ValuationMap.find inv slice in";
            "   let new_slice = "]@(indent 1 (get_lines update_code))@
-          ["   in Database.update_map "^cmapn^" inv new_slice db";
+          ["   in "^db_impl^".update_map "^cmapn^" inv new_slice db";
            "in";
            "let invs = "^
            (if direct then ("["^(vars_list patv)^"]")
@@ -714,6 +718,17 @@ struct
     *    (requires changing stream_event type, and source creation)
     * -- generate a dummy benchmarker: random source, multiplexed, each w/ fixed # of tuples *)
    let main schema patterns sources triggers toplevel_queries = Lines (
+   
+      (* Map name declarations, to reference maps by ids *)
+      let map_name_decl_lines =
+         let l = List.sort compare
+            (Hashtbl.fold (fun k v acc -> (k,v)::acc) map_defines [])
+         in (List.map (fun (k,v) ->
+            "let "^k^" = "^(string_of_int v)^";;") l)@["\n"]
+      in
+      let tlq = list_to_string map_name_const toplevel_queries
+      in
+      (* Top-level source loop code: sources, multiplexer, dispatcher, main *)
       let sources_lines = List.flatten (List.map (fun (impl,decl,init) ->
          let aux c = match c with
             | None -> [] | Some(Lines(x)) -> x | Some(Inline(x)) -> [x]
@@ -734,10 +749,10 @@ struct
       in
       let main_lines =
        (indent 0 sources_lines)@(indent 0 multiplexer_lines)@
-      ["let main = Runtime.synch_main";
+      ["let main = synch_main";
        "  db";
        "  mux";
-       "  "^(list_to_string (fun x->"\""^x^"\"") toplevel_queries);
+       "  "^tlq;
        "  (fun evt -> match evt with"]@
        (indent 3 dispatch_lines)@
       ["      | None -> false";
@@ -746,7 +761,7 @@ struct
        "      | Some(Delete,rel,t) -> ";
        "           (print_string (\"Unhandled Delete: \"^rel^\"\\n\"); false)";
        "    )";
-       "  (Runtime.main_args ())";
+       "  (main_args ())";
        "in main();;"]
       in
       ["open M3;;";
@@ -755,11 +770,13 @@ struct
        "open Expression;;";
        "open Database;;";
        "open Sources;;";
-       "open Runtime;;\n";
+       "module DBTRuntime = Runtime.Make("^db_impl^")";
+       "open DBTRuntime;;\n";
        "open StandardAdaptors;;";
        "open Util;;";
-       "StandardAdaptors.initialize();;";
-       "let db = Database.make_empty_db ";
+       "StandardAdaptors.initialize();;"]@
+       map_name_decl_lines@
+      ["let db = "^db_impl^".make_empty_db ";
        "   "^(schema_const schema);
        "   "^(pattern_map_const patterns)^";;\n\n"]@
        (List.flatten (List.map get_lines triggers))@
@@ -770,7 +787,7 @@ struct
       flush out_chan
 
    (* No direct evaluation of OCaml source code. *)
-   type db_t = Database.db_t
+   type db_t = DB.db_t
    let eval_trigger trigger tuple db =
       failwith "Cannot directly evaluate OCaml source"
 

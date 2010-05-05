@@ -13,6 +13,8 @@ open Expression
 open Database
 open Sources;;
 
+module DB = NamedDatabase
+
 (* SELECT avg(b2.price * b2.volume) 
 FROM   bids b2
 WHERE  k * (select sum(volume) from bids) > (select sum(volume) from bids b1 where b1.price > b2.price)
@@ -357,7 +359,7 @@ let insert_trig = List.hd vwap_triggers in
 let delete_trig = List.nth vwap_triggers 1 in
 
 (* Database *)
-let db = Database.make_empty_db (fst prog_vwap) (let (_,pats) = prepared_vwap in pats) in
+let db = DB.make_empty_db (fst prog_vwap) (let (_,pats) = prepared_vwap in pats) in
 
 (* Handlers *)
 let insert t = eval_trigger insert_trig t db in
@@ -463,16 +465,16 @@ let vwap_query validate_mode output_level result_chan_opt
        | (false, _) | (_, None) -> ()
        | (true, Some(rc)) ->
           begin match output_level with
-           | Database -> output_string rc ((Database.db_to_string db)^"\n")
+           | Database -> output_string rc ((DB.db_to_string db)^"\n")
            | Map      ->
-              let v = Database.get_value "q" db in
+              let v = DB.get_value "q" db in
               let s = Valuation.from_list [([], v)] [] in
               let m = Valuation.from_list [([], s)] [] in
-              output_string rc ((Database.map_to_string m)^"\n")
+              output_string rc ((DB.map_to_string m)^"\n")
            | Value    ->
               output_string rc (AggregateMap.string_of_aggregate
                 (ValuationMap.find []
-                   (ValuationMap.find [] (Database.get_map "q" db)))^"\n")
+                   (ValuationMap.find [] (DB.get_map "q" db)))^"\n")
           end)
 in
 
@@ -486,7 +488,7 @@ let random_processor () =
     let finish = Unix.gettimeofday() in
     print_endline ("Tuples: "^(string_of_int num_tuples)^
        " in "^(string_of_float (finish -. start)))
-    (* Database.show_sorted_db db; *)
+    (* DB.show_sorted_db db; *)
 in
 
 let main () =

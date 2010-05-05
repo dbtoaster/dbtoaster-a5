@@ -15,6 +15,8 @@ open Expression
 open Database
 open Sources;;
 
+module DB = NamedDatabase
+
 let print_smap name smap =
    String.concat "\n"
       (List.map (fun (key, value) ->
@@ -45,7 +47,7 @@ let prog0: prog_t =
 let prepared_prog0 = prepare_triggers (snd prog0);;
 let cblock = List.hd (compile_ptrig prepared_prog0);;
 
-let db = Database.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pats);;
+let db = DB.make_empty_db (fst prog0) (let (_,pats) = prepared_prog0 in pats);;
 
 patterns_to_string (let (_,pats) = prepared_prog0 in pats);;
 
@@ -55,7 +57,7 @@ patterns_to_string (let (_,pats) = prepared_prog0 in pats);;
 (eval_trigger cblock [CFloat(1.0);CFloat(1.0)] db);;
 
 Debug.log_unit_test "Sum Aggregate" print_db
-  (Database.show_sorted_db db)
+  (DB.show_sorted_db db)
   (
     [(["q"], [([], [([CFloat(1.0)], CFloat(1.0)); ([CFloat(4.0)], CFloat(8.0));])])] 
   );;
@@ -97,7 +99,7 @@ let prog1: prog_t =
 let prepared_prog1 = prepare_triggers (snd prog1);;
 let cblock = List.hd (compile_ptrig prepared_prog1);;
 
-let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
+let db = DB.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 
 (eval_trigger cblock [CFloat(2.0);CFloat(9.0)] db);;
 (eval_trigger cblock [CFloat(4.0);CFloat(3.0)] db);;
@@ -110,7 +112,7 @@ let db = Database.make_empty_db (fst prog1) (let (_,x) = prepared_prog1 in x);;
 
 
 Debug.log_unit_test "Selfjoin Sum" (print_smap "q")
-  (Database.show_sorted_smap (Database.get_out_map "q" db))
+  (DB.show_sorted_smap (DB.get_out_map "q" db))
   (
     [([CFloat(2.0)], CFloat(0.0)); ([CFloat(3.0)], CFloat(4.0));
      ([CFloat(4.0)], CFloat(2.0)); ([CFloat(5.0)], CFloat(11.0))]
@@ -211,7 +213,7 @@ let prog2: prog_t =
 let prepared_prog2 = prepare_triggers (snd prog2);;
 let cblock = List.hd (compile_ptrig prepared_prog2);;
 
-let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
+let db = DB.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
 eval_trigger cblock [CFloat(5.0);CFloat(5.0)] db;;
 eval_trigger cblock [CFloat(2.0);CFloat(1.0)] db;;
@@ -226,7 +228,7 @@ eval_trigger cblock [CFloat(2.0);CFloat(2.0)] db;;
 eval_trigger cblock [CFloat(1.0);CFloat(2.0)] db;;
 
 Debug.log_unit_test "Inequalities" (print_smap "q")
-  (Database.show_sorted_smap (Database.get_out_map "q" db))
+  (DB.show_sorted_smap (DB.get_out_map "q" db))
   (
    [([CFloat(1.0); CFloat(1.0)], CFloat(0.0)); ([CFloat(1.0); CFloat(2.0)], CFloat(1.0));
     ([CFloat(1.0); CFloat(3.0)], CFloat(2.0));  ([CFloat(1.0); CFloat(5.0)], CFloat(2.0));
@@ -248,7 +250,7 @@ Random.init seed;;
 let randl n lb ub = let r = ref [] in
    for i = 1 to n do r := (CFloat(float(lb + (Random.int (ub-lb))))::!r) done; !r
  
-let db = Database.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
+let db = DB.make_empty_db (fst prog2) (let (_,x) = prepared_prog2 in x);;
 
 let num_tuples = 10000 in
 let start = Unix.gettimeofday() in

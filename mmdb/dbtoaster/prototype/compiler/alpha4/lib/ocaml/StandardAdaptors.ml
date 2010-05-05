@@ -1,6 +1,5 @@
 open M3
 open Expression
-open Database
 open Sources
 
 exception AbortEventConstruction

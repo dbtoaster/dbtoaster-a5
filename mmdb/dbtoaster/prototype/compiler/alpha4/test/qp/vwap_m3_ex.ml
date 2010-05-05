@@ -13,6 +13,8 @@ open Expression
 open Database
 open Sources;;
 
+module DB = NamedDatabase
+
 (* SELECT avg(b2.price * b2.volume) 
 FROM   bids b2
 WHERE  k * (select sum(volume) from bids) > (select sum(volume) from bids b1 where b1.price > b2.price)
@@ -281,7 +283,7 @@ let insert_trig = List.hd vwap_triggers in
 let delete_trig = List.nth vwap_triggers 1 in
 
 (* Database *)
-let db = Database.make_empty_db (fst prog_vwap) (let (_,pats) = prepared_vwap in pats) in
+let db = DB.make_empty_db (fst prog_vwap) (let (_,pats) = prepared_vwap in pats) in
 
 (* Handlers *)
 let insert t = eval_trigger insert_trig t db in
@@ -387,14 +389,14 @@ let vwap_query validate_mode output_level result_chan_opt
        | (false, _) | (_, None) -> ()
        | (true, Some(rc)) ->
           begin match output_level with
-           | Database -> output_string rc ((Database.db_to_string db)^"\n")
+           | Database -> output_string rc ((DB.db_to_string db)^"\n")
            | Map      ->
-              let r = match Database.get_value "QUERY_1_1" db with
+              let r = match DB.get_value "QUERY_1_1" db with
                  | Some(x) -> ValuationMap.from_list [([], ValuationMap.from_list [([], x)] [])] []
                  | None -> ValuationMap.from_list [([], ValuationMap.from_list [([], CFloat(0.0))] [])] []
-              in output_string rc ((Database.map_to_string r)^"\n")
+              in output_string rc ((DB.map_to_string r)^"\n")
            | Value    ->
-              let r = match Database.get_value "QUERY_1_1" db with
+              let r = match DB.get_value "QUERY_1_1" db with
                  | Some(x) -> x
                  | None -> CFloat(0.0)
               in output_string rc ((AggregateMap.string_of_aggregate r)^"\n")
@@ -411,7 +413,7 @@ let random_processor () =
     let finish = Unix.gettimeofday() in
     print_endline ("Tuples: "^(string_of_int num_tuples)^
        " in "^(string_of_float (finish -. start)))
-    (* Database.show_sorted_db db; *)
+    (* DB.show_sorted_db db; *)
 in
 
 let main () =
