@@ -205,7 +205,7 @@ let toplevel_queries = ref []
 let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip = 
   fst
     (List.fold_left (fun (accum,sub_id) q ->
-      (try 
+      ( 
         let subq_name = (qname^"_"^(string_of_int sub_id)) in
         (
           toplevel_queries := !toplevel_queries @ [subq_name];
@@ -218,9 +218,6 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
              )
              accum
         )
-      with 
-        |Util.Function.NonFunctionalMappingException -> 
-            Printexc.print_backtrace stdout; give_up "Error!"
       ), sub_id+1 ) (m3ip,1) qlist
     )
 
