@@ -9,9 +9,9 @@ CREATE TABLE E (a int, b int);
 --   .-----.
 
 SELECT sum(1)
-FROM   E left, E right, E top, E bottom, E nwse, E swne
-WHERE  left.a =top.a     AND left.a =nwse.a
-AND    left.b =bottom.a  AND left.b =swne.a
-AND    right.a=top.b     AND right.a=swne.b
-AND    right.b=bottom.b  AND right.b=nwse.b;
+FROM   E eleft, E eright, E etop, E ebottom, E enwse, E eswne
+WHERE  eleft.a =etop.a     AND eleft.a =enwse.a
+AND    eleft.b =ebottom.a  AND eleft.b =eswne.a
+AND    eright.a=etop.b     AND eright.a=eswne.b
+AND    eright.b=ebottom.b  AND eright.b=enwse.b;
 
