@@ -182,7 +182,10 @@ and to_m3_map_access
     match vars with
       | Some(input_vars) -> 
           if List.length basevars = List.length input_vars then input_vars
-          else failwith "BUG: CalcToM3: map access with incorrect arity"
+          else failwith ("BUG: CalcToM3: map access '"^
+                         (Calculus.term_as_string map_term)^
+                         "' with incorrect arity: "^
+                         (list_to_string fst input_vars))
       | None -> basevars
    in
   let input_var_list = (split_vars true mapvars bindings) in
@@ -193,9 +196,10 @@ and to_m3_map_access
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
     if (List.length input_var_list) > 0
-    then to_m3_initializer 
+    then
+      to_m3_initializer 
       (Calculus.apply_variable_substitution_to_term
-        (List.combine basevars mapvars)
+        (ListAsSet.no_duplicates (List.combine basevars mapvars))
         map_definition)
       (input_var_list@output_var_list)
       mapn
@@ -487,7 +491,19 @@ module M3InProgress = struct
       StringMap.map (fun (base_map,_,_) -> List.assoc base_map refs) mappings
     in
       List.fold_left (fun ref_map (map, ref) ->
-        StringMap.add map ref ref_map
+        if StringMap.mem map ref_map then
+          if ((StringMap.find map ref_map) <> ref) then
+            let string_of_map (defn,term,_) = 
+              (Calculus.term_as_string term)^" := "^
+              (Calculus.term_as_string defn)
+            in
+            failwith ("BUG: duplicate map\n"^
+                      (string_of_map (StringMap.find map ref_map))^"\n"^
+                      (string_of_map ref))
+          else
+            ref_map
+        else
+          StringMap.add map ref ref_map
       ) mapped_map_terms refs
       
   let rec compile (schema:(string*(Calculus.var_t list)) list)

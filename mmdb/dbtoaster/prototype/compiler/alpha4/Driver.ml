@@ -74,7 +74,7 @@ type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST
 let flag_descriptors = 
   ParseArgs.compile
     [ (["-l";"--lang"], 
-          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3",
+          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3|delta",
           "Specify the output language (default: ocaml).");
       (["-o";"--output-source"],
           ("OUTPUT",  ParseArgs.ARG), "<outfile>",
@@ -111,6 +111,7 @@ if flag_bool "HELP" then
     print_endline 
       ( "Language Support\n\n"^
         "calc          DBToaster-stlye Relational Calculus\n"^
+        "delta         DBToaster-style Relational Calculus Deltas\n"^
         "m3            Map Maintenance Message Code\n"^
         "ocaml         OcaML source file\n"^
         "c++           C++ source file (not implemented yet)\n"^
@@ -126,7 +127,7 @@ let input_files = if (flag_bool "FILES") then flag_vals "FILES"
                   else give_up "No files provided";;
     
 type language_t = 
-  L_OCAML | L_CPP | L_SQL | L_CALC | L_M3 | L_NONE | L_INTERPRETER;;
+  L_OCAML | L_CPP | L_SQL | L_CALC | L_DELTA | L_M3 | L_NONE | L_INTERPRETER;;
 
 let language = 
   if flag_bool "INTERPRETER" then L_INTERPRETER
@@ -144,6 +145,8 @@ let language =
       | "RUN"      -> L_INTERPRETER
       | "NONE"     -> L_NONE (* Used for getting just debug output *)
       | "DEBUG"    -> L_NONE
+      | "DELTA"    -> L_DELTA
+      | "DELTAS"   -> L_DELTA
       | _          -> (give_up ("Unknown output language '"^a^"'"));;
 
 let output_file = match flag_val "OUTPUT" with
@@ -195,6 +198,28 @@ else ();;
 if language == L_SQL then
   (
     failwith "Translation to normal SQL unsupported at the moment";
+  )
+else ();;
+
+(********* IF NEEDED, PRODUCE SEMICOMPILED CALC *********)
+
+if language == L_DELTA then
+  (
+    output_string output_file ((
+      string_of_list "\n" (
+        List.fold_left (fun accum (qlist,dbschema,qvars) ->
+          List.fold_left (fun accum q ->
+            (Compiler.compile 
+              Calculus.ModeOpenDomain 
+              dbschema
+              (Calculus.make_term q,
+              Calculus.map_term "QUERY" qvars)
+              Compiler.generate_unit_test_code
+              accum)
+            ) accum qlist
+          ) [] queries
+    ))^"\n");
+    exit 0
   )
 else ();;
 

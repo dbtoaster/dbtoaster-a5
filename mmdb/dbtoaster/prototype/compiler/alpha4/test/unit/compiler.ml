@@ -393,3 +393,258 @@ Debug.log_unit_test "RST Deltas" (string_of_list0 "\n" term_as_string)
           RVal(Const(Int(-1)))]
   )]
 ;;
+
+(****************************************************************************)
+(* Compiling Ladder *)
+
+let ladder_1 = 
+  make_term (
+    RVal(AggSum(
+      RVal(Calculus.Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R", ["T1__A",TInt; "T1__B",TInt]));
+        RA_Leaf(Rel("R", ["V0__A",TInt; "V0__B",TInt]));
+        RA_Leaf(Rel("R", ["V1__A",TInt; "V1__B",TInt]));
+        RA_Leaf(Rel("R", ["B1__A",TInt; "B1__B",TInt]));
+        RA_Leaf(AtomicConstraint(Calculus.Eq, 
+                                 RVal(Calculus.Var("T1__A",TInt)),
+                                 RVal(Calculus.Var("V0__A",TInt))));
+        RA_Leaf(AtomicConstraint(Calculus.Eq, 
+                                 RVal(Calculus.Var("B1__A",TInt)),
+                                 RVal(Calculus.Var("V0__B",TInt))));
+        RA_Leaf(AtomicConstraint(Calculus.Eq, 
+                                 RVal(Calculus.Var("T1__B",TInt)),
+                                 RVal(Calculus.Var("V1__A",TInt))));
+        RA_Leaf(AtomicConstraint(Calculus.Eq, 
+                                 RVal(Calculus.Var("B1__B",TInt)),
+                                 RVal(Calculus.Var("V1__B",TInt))))
+      ]
+    ))
+  );;
+
+let string_of_term_mapping ((d,t):(term_t*term_t)) = 
+  (term_as_string t)^" := "^(term_as_string d) 
+
+let (ladder_1_compiled, ladder_1_todos) =
+  compile_delta_for_rel 
+      "R" 
+      ["A",TInt;"B",TInt]
+      false
+      (map_term "Q" [])
+      []
+      []
+      ladder_1;;
+
+Debug.log_unit_test_list "Quad-Self-Join Stage 1 Term" term_as_string
+  (List.map (fun (_,_,_,_,x) -> x) ladder_1_compiled)
+  [
+    make_term (RVal(External("QR1",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR2",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR3",["QR_B",TInt])));
+    make_term (RVal(External("QR4",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR5",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RProd[RVal(External("QR6",["QR_A",TInt]));
+                     RVal(External("QR7",["QR_B",TInt]))]);
+    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR9",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RProd[RVal(External("QR6",["QR_A",TInt]));
+                     RVal(External("QR7",["QR_B",TInt]))]);
+    make_term (RVal(External("QR10",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR11",["QR_A",TInt])));
+    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+                           RA_Leaf(AtomicConstraint(Eq,
+                             RVal(Var("QR_A",TInt)),
+                             RVal(Var("QR_B",TInt)))))))
+  ];;
+
+Debug.log_unit_test_list "Quad-Self-Join Stage 1 Todos" string_of_term_mapping 
+  ladder_1_todos
+  [
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A", TInt;"B1__A",TInt]));
+        RA_Leaf(Rel("R",["B1__A",TInt;"B1__B",TInt]));
+        RA_Leaf(Rel("R",["QR_B", TInt;"B1__B",TInt]))
+      ]))),
+    map_term "QR1"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A", TInt;"T1__B",TInt]));
+        RA_Leaf(Rel("R",["T1__B",TInt;"B1__B",TInt]));
+        RA_Leaf(Rel("R",["QR_B", TInt;"B1__B",TInt]))
+      ]))),
+    map_term "QR2"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_B",TInt;"B1__B",TInt]));
+        RA_Leaf(Rel("R",["QR_B",TInt;"B1__B",TInt]))
+      ]))),
+    map_term "QR3"  ["QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["T1__A",TInt;"B1__A",TInt]));
+        RA_Leaf(Rel("R",["B1__A",TInt;"QR_B",TInt]))
+      ]))),
+    map_term "QR4"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A",TInt;"B1__A",TInt]));
+        RA_Leaf(Rel("R",["B1__A",TInt;"QR_A",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
+      ]))),
+    map_term "QR5"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_Leaf(Rel("R",["QR_A", TInt;"QR_A",TInt]));
+    ))),
+    map_term "QR6"  ["QR_A",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+        RA_Leaf(Rel("R",["QR_B", TInt;"QR_B",TInt]));
+      ))),
+    map_term "QR7"  ["QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A", TInt;"QR_A",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
+      ]))),
+    map_term "QR8"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["T1__A",TInt;"T1__B",TInt]));
+        RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["T1__B",TInt;"QR_B",TInt]))
+      ]))),
+    map_term "QR9"  ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A",TInt;"T1__B",TInt]));
+        RA_Leaf(Rel("R",["T1__B",TInt;"QR_A",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
+      ]))),
+    map_term "QR10" ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt]));
+      ]))),
+    map_term "QR11" ["QR_A",TInt]
+  ];;
+
+let (ladder_2, ladder_2_term) = List.hd ladder_1_todos;;
+
+
+let tc_test_term = 
+  make_term (
+    RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(AtomicConstraint(Eq, RVal(Var("QR_A",TInt)),
+                                     RVal(Var("QR1R_A",TInt))));
+        RA_Leaf(AtomicConstraint(Eq, RVal(Var("B1__A",TInt)),
+                                     RVal(Var("QR1R_A",TInt))));
+        RA_Leaf(AtomicConstraint(Eq, RVal(Var("B1__A",TInt)),
+                                     RVal(Var("QR1R_B",TInt))));
+        RA_Leaf(AtomicConstraint(Eq, RVal(Var("B1__B",TInt)),
+                                     RVal(Var("QR1R_B",TInt))));
+        RA_Leaf(Rel("R",["QR_B",TInt;"B1__B",TInt]))
+      ]
+    ))
+  );;
+
+Debug.log_unit_test_list "Simplify Transitive Closure" term_as_string
+  (List.map (fun ((_,x),_) -> x)
+    (Calculus.simplify tc_test_term
+      ["QR1R_A",TInt;"QR1R_B",TInt] [] ["QR_A",TInt;"QR_B",TInt])
+  )
+  [
+    make_term (
+      RVal(AggSum(RVal(Const(Int(1))),
+        RA_MultiNatJoin[
+          RA_Leaf(Rel("R",["QR_B",TInt;"QR1R_A",TInt]));
+          RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR1R_A",TInt)),
+                                      RVal(Var("QR1R_B",TInt))))
+        ]
+      ))
+    )
+  ];;
+
+let (ladder_2_compiled, ladder_2_todos) = 
+  compile_delta_for_rel 
+      "R" 
+      ["A",TInt;"B",TInt]
+      false
+      ladder_2_term
+      []
+      []
+      ladder_2;;
+
+Debug.log_unit_test_list "Quad-Self-Join Stage 2 Term" term_as_string
+  (List.map (fun (_,_,_,_,x) -> x) ladder_2_compiled)
+  [
+    make_term (RVal(External("QR1R1",["QR1R_B",TInt;"QR_B",TInt])));
+    make_term (RProd[RVal(External("QR1R2",["QR_A",TInt;"QR1R_A",TInt]));
+                     RVal(External("QR1R3",["QR_B",TInt;"QR1R_B",TInt]))]);
+    make_term (RVal(External("QR1R4",
+                                ["QR_B",TInt;"QR1R_A",TInt;"QR1R_B",TInt])));
+    make_term (RVal(External("QR1R5",["QR_A",TInt;"QR1R_B",TInt])));
+    make_term (RVal(External("QR1R6",["QR1R_B",TInt])));
+    make_term (RVal(External("QR1R2",["QR_A",TInt;"QR1R_A",TInt])));
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+                           RA_Leaf(AtomicConstraint(Eq,
+                             RVal(Var("QR1R_A",TInt)),
+                             RVal(Var("QR1R_B",TInt)))))))
+  ];;
+  
+Debug.log_unit_test_list "Quad-Self-Join Stage 2 Todos" string_of_term_mapping 
+  ladder_2_todos
+  [
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR1R_B",TInt;"B1__B",TInt]));
+        RA_Leaf(Rel("R",["QR_B", TInt;"B1__B",TInt]))
+      ]))),
+    map_term "QR1R1" ["QR1R_B",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_Leaf(Rel("R",["QR_A",TInt;"QR1R_A",TInt]))
+    ))),
+    map_term "QR1R2" ["QR_A",TInt;"QR1R_A",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_Leaf(Rel("R",["QR_B",TInt;"QR1R_B",TInt]))
+    ))),
+    map_term "QR1R3" ["QR_B",TInt;"QR1R_B",TInt]
+    ;
+    (* This one's a little funky, but yeah... it needs to be the way it is *)
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_B",TInt;"QR1R_A",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR1R_A",TInt)),
+                                    RVal(Var("QR1R_B",TInt))))
+      ]))),
+    map_term "QR1R4" ["QR_B",TInt;"QR1R_A",TInt;"QR1R_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A",TInt;"B1__A",TInt]));
+        RA_Leaf(Rel("R",["B1__A",TInt;"QR1R_B",TInt]));
+      ]))),
+    map_term "QR1R5" ["QR_A",TInt;"QR1R_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_Leaf(Rel("R",["QR1R_B",TInt;"QR1R_B",TInt]))
+    ))),
+    map_term "QR1R6" ["QR1R_B",TInt]
+  ]

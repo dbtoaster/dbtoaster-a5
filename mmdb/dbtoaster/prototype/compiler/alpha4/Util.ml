@@ -171,7 +171,8 @@ let string_of_list (sep: string) (l: string list): string =
 let list_to_string (elem_to_string: 'a -> string) (l: 'a list) : string =
    "[ "^(string_of_list0 "; " elem_to_string l)^" ]"
 
-
+let option_default (default:'a) (base:'a option) : 'a =
+  match base with Some(a) -> a | None -> default;;
 
 module Function =
 struct
@@ -763,6 +764,41 @@ struct
       (
         print_string (title^": Failed\n--Expected--\n"^(to_s expected)^
                                    "\n\n--Result--\n"^(to_s result)^"\n\n"); 
+        exit 1
+      );;
+  
+  let log_unit_test_list
+        (title:string) (to_s:'a -> string) 
+        (result:'a list) (expected:'a list) : unit =
+    if result = expected then print_endline (title^": Passed")
+    else 
+      (
+        let rec diff_lists rlist elist = 
+          let recurse rstr estr new_rlist new_elist =
+            let (new_rstr, new_estr) = diff_lists new_rlist new_elist in
+              (rstr^"\n"^new_rstr,estr^"\n"^new_estr)
+          in   
+            if List.length rlist > 0 then
+              if List.length elist > 0 then
+                if (List.hd rlist) <> (List.hd elist) then
+                  recurse (to_s (List.hd rlist)) (to_s (List.hd elist)) 
+                          (List.tl rlist) (List.tl elist)
+                else
+                  diff_lists (List.tl rlist) (List.tl elist)
+              else
+                recurse (to_s (List.hd rlist)) "--empty line--" 
+                        (List.tl rlist) []
+            else
+              if List.length elist > 0 then
+                recurse "--empty line--" (to_s (List.hd elist)) 
+                        [] (List.tl elist)
+              else
+                ("","")
+        in
+        let (result_diffs, expected_diffs) = diff_lists result expected in
+        print_string (title^
+          ": Failed\n--Expected (diffs) --\n"^(expected_diffs)^
+          "\n--Result (diffs) --\n"^(result_diffs)^"\n"); 
         exit 1
       );;
 end
