@@ -412,7 +412,7 @@ struct
       ["in ValuationMap.strip_indexes s"]
       else
       ["in"; "let lookup_slice = ValuationMap.slice "^
-          (pattern_const pat)^" "^(vars_list patv);
+          (pattern_const pat)^" "^(vars_list patv)^" s";
        "in ValuationMap.strip_indexes lookup_slice"])
 
    let slice_lookup_sing_init mapn inv outv pat patv init_val_code = tabify(
@@ -421,7 +421,7 @@ struct
          (slice_lookup_aux pat patv [db_impl^".get_out_map "^cmapn^" db"])
       else
          let in_tier_code =
-            ["let m = "^db_impl^".get_map "^cmapn^" db";
+            ["let m = "^db_impl^".get_map "^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
              "if ValuationMap.mem inv m then ValuationMap.find inv m else";
              "let init_val ="]@(indent 1 (get_lines init_val_code))@
@@ -434,7 +434,7 @@ struct
          (slice_lookup_aux pat patv [db_impl^".get_out_map "^cmapn^" db"])
       else
          let in_tier_code =
-            ["let m = "^db_impl^".get_map "^cmapn^" db";
+            ["let m = "^db_impl^".get_map "^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
              "if ValuationMap.mem inv m then ValuationMap.find inv m else"]@
              (indent 1 (get_lines init_val_code))
@@ -613,14 +613,16 @@ struct
       else if lhs_inv = [] then
          (["let slice = "^db_impl^".get_out_map "^cmapn^" db in";
            "let new_slice = "]@(indent 1 (get_lines update_code))@
-          ["in "^db_impl^".update_out_map "^cmapn^" new_slice db"])
+          ["   slice";
+           "in "^db_impl^".update_out_map "^cmapn^" new_slice db;"])
       
       else
          (["let slice = "^db_impl^".get_map "^cmapn^" db in";
            "let iifilter inv = ";
            "   let s = ValuationMap.find inv slice in";
            "   let new_slice = "]@(indent 1 (get_lines update_code))@
-          ["   in "^db_impl^".update_map "^cmapn^" inv new_slice db";
+          ["      s";
+           "   in "^db_impl^".update_map "^cmapn^" inv new_slice db";
            "in";
            "let invs = "^
            (if direct then ("["^(vars_list patv)^"]")
