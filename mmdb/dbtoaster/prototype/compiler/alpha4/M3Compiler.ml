@@ -328,10 +328,11 @@ let prepare_triggers (triggers : trig_t list)
               (List.length bound_inv) = (List.length inv) &&
               (List.length bound_outv) = (List.length outv) in 
            
-           (* Use map scope for lhs vars during recursive prepare for initial
-            * value calculus. *)
+           (* In vars are bound for recursive preparation for initial
+            * value calculus. Out vars are not, these come from out vars of
+            * base maps in initial value calculus. *)
            let init_lhs_vars =
-              List.fold_left Util.ListAsSet.union theta_vars [inv; outv] in
+              List.fold_left Util.ListAsSet.union theta_vars [inv] in
            
            let (init_ecalc, patterns) =
               save_counter (fun () -> 
@@ -369,21 +370,19 @@ let prepare_triggers (triggers : trig_t list)
       let theta_w_lhs = Util.ListAsSet.union theta_w_loopinv loutv in
       let full_agg = (List.length loop_outv) = 0 in 
 
-      (* Checking bigsum vars for slices is now done locally by passing down
-       * LHS vars through M3 preparation. *)
-      let init_ext = (Util.ListAsSet.diff loutv 
-                        (calc_schema (fst init_calc))) in
-      
       (* Set up top-level extensions for an entire incr/init RHS.
        * Incr M3 is extended by bound out variables to compute deltas to an
        * out tier.
        * Init M3 is extended by LHS out vars that do not appear in the RHS out
        * vars (i.e. the schema of the init val expr), essentially bound
        * LHS out vars *)
+      let init_ext = Util.ListAsSet.diff loutv (calc_schema (fst init_calc)) in
       let prepare_stmt_ext name_suffix calc ext ext_theta =
          let calc_theta_vars = Util.ListAsSet.union theta_w_loopinv
             (if ext_theta then ext else []) in
          let (c, patterns) =
+           (* Checking bigsum vars for slices is now done locally by passing
+            * down LHS vars through M3 preparation. *)
             prepare_calc lmapn theta_w_lhs calc_theta_vars calc in
          let new_c_aggmeta = (lmapn^name_suffix, full_agg) in
          let new_c_meta = let (w,_,x,y,z) = M3P.get_meta c in (w,ext,x,y,z) in
@@ -436,6 +435,7 @@ let prepare_triggers (triggers : trig_t list)
        List.fold_left merge_pattern_maps (empty_pattern_map()) pms)
 
 
+
 (* M3 compiler, functorized by a code generator *)
 module Make = functor(CG : M3Codegen.CG) ->
 struct
@@ -476,42 +476,39 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
    let ccalc : code_t =
       match (M3P.get_calc incr_ecalc) with
         MapAccess(mapn, inv, outv, init_aggecalc) ->
-            let cinit = compile_pcalc2 patterns
-               (M3P.get_agg_meta init_aggecalc) outv (M3P.get_ecalc init_aggecalc) in
+            let cinit = compile_pcalc2
+                patterns (M3P.get_agg_meta init_aggecalc) outv
+                (M3P.get_ecalc init_aggecalc) in
+            (* We build secondary indexes for out tiers as part of initial value
+             * computation, and need to pass along patterns for this. *)
             let out_patterns = get_out_patterns patterns mapn in
+            let singleton_init_code = 
+               (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
+               (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc)) in
+            let singleton_lookup_code = M3P.get_singleton incr_ecalc in
+            (* code that returns the initial value slice *)
+            let init_val_code =
+               (*print_endline ("generating init lookup for "^mapn^" "^
+                                (vars_to_string inv)^" "^
+                                (vars_to_string outv)^" "^
+                                (string_of_bool (M3P.get_singleton
+                                   (get_ecalc init_aggecalc))));*) 
+               if singleton_init_code
+               then singleton_init_lookup mapn inv out_patterns outv cinit
+               else slice_init_lookup mapn inv out_patterns cinit
+            in
+            (* code that does the final stage of the lookup on the slice *)
             (* Note: we extend theta for this map access' init value comp
              * with bound out vars, thus we can use the extension to find
              * bound vars for the partial key here *)
             let patv = M3P.get_extensions (M3P.get_ecalc init_aggecalc) in
             let pat = List.map (index outv) patv in
-            let singleton_init_code = 
-               (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
-               (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
-            in
-            let singleton_lookup_code = M3P.get_singleton incr_ecalc in
-            (* code that returns the initial value slice *)
-            let init_val_code =
-               (*print_endline ("generating init lookup for "^mapn^" "^
-                              (vars_to_string inv)^" "^
-                              (vars_to_string outv)^" "^
-                              (string_of_bool (M3P.get_singleton (get_ecalc init_aggecalc))));*) 
-               if singleton_init_code
-               then singleton_init_lookup mapn inv out_patterns outv cinit
-               else slice_init_lookup mapn inv out_patterns cinit
-            in
             begin match (singleton_init_code, singleton_lookup_code) with
              | (true, true) -> singleton_lookup_and_init mapn inv outv init_val_code
              | (true, false) -> slice_lookup_sing_init mapn inv outv pat patv init_val_code
              | (false, true) -> singleton_lookup mapn inv outv init_val_code
              | (false, false) -> slice_lookup mapn inv pat patv init_val_code
             end
-
-            (* code that does the final stage of the lookup on the slice *)
-            (*
-            if singleton_lookup_code then
-               singleton_lookup mapn inv outv init_val_code
-            else slice_lookup mapn inv pat patv init_val_code
-            *)
 
       | Add (c1, c2) -> compile_op incr_ecalc CG.add_op  c1 c2
       | Mult(c1, c2) -> compile_op incr_ecalc CG.mult_op c1 c2
