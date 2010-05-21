@@ -24,7 +24,7 @@
 \newtheorem{algorithm}[theorem]{Algorithm}
 
 \numberofauthors{3}
-\title{Cumulus : Combining Periodic and Eventual Consistency (in the cloud)}
+\title{Cumulus: Combining Periodic and Eventual Consistency (in the cloud)}
 \author{
 \alignauthor
 Oliver Kennedy\\
@@ -97,7 +97,7 @@ using a system as lightweight as a key-value store.
 
 This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a range of incremental view queries.   We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
 
-At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the  basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
+At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the  basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
 
 These message passing programs keep a hierarchy of map data structures (which may be served out of a key-value store) up to date. They can share computation in the case that multiple aggregation queries (e.g., a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message passing programs can be massively parallelized to the degree that the updating of each single result aggregate value can be done in constant time on normal off-the-shelf computers\footnote{Note that since there are
 usually many more aggregate values to maintain than there are processors,
@@ -110,7 +110,7 @@ Our main technical contributions are as follows:
 \item We present M3, a massively parallizable language for message passing programs that can be used to incrementally maintain SQL aggregation queries.
 \item We present Cumulus, a lightweight realtime exact online aggregation system that integrates seamlessly with generic key-value stores. 
 \item We describe three different approaches to ensuring the consistency of the data: Centralized Target Aggregation, Centralized Source Aggregation, and Eventually and Periodically Consistent Source Aggregation.  We deomonstrate how the last of these techniques simultaneously produces low-latency eventually consistent results as well as periodic consistent snapshots.
-\item We show evidence for the scalability of our approach by examining the performance of Cumulus on examples drawn from the TPC-H benchmark\cite{}
+\item We show evidence for the scalability of our approach by examining the performance of Cumulus on examples drawn from the TPC-H benchmark\cite{tpch2008}
 \end{itemize}
 
 
@@ -154,7 +154,7 @@ For the purposes of this paper, we restrict ourselves to a limited, fully increm
 \item \textit{Terms do not contain conditions.}  Unrestricted M3 supports conditioned non-incremental aggregates.
 \end{itemize}
 
-Distributing unrestricted M3 is beyond the scope of this paper.  As shown in \cite{}, this restricted form of M3 remains powerful enough to express any SQL count or sum aggregate query without inequalities.  
+Distributing unrestricted M3 is beyond the scope of this paper.  As shown in \cite{dbtoaster-pods}, this restricted form of M3 remains powerful enough to express any SQL count or sum aggregate query without inequalities.  
 
 \begin{example}
 Consider the following query over a TPC-H-like schema.
@@ -228,9 +228,7 @@ CMP & := & =\ |\ <\ |\ <=
 
 M3's use of maps and vector-based operations makes it extremely amenable to distribution.  In particular key-value stores are a natural instantiation of the map datatype.  Consequently Cumulus is built over a cluster of nodes, each running a shared-nothing key-value store.  These key-value stores support multi-dimensional keys and iteration over partial-keys; in effect secondary indices.  
 
-The nodes interact with the outside world via one or more coordinator nodes.  Event sources such as ticker feeds, sensors, static files, or even relational databases feed the coordinator(s) events.  A coordinator then appends the event to a persistent, local log before tagging it with a timestamp and dispatching it for processing into the cluster.  Data is horizontally partitioned across nodes by splitting the key-space into multiple disjoint regions.  Each node stores one or more map-segments.  
-
-External applications access the map nodes directly.  Using a partitioning scheme, or \textit{layout} obtained from the coordinator, the application is able to fetch desired map values directly from the node or nodes storing the values.  If appropriate, the node may do some preprocessing on the map values (eg: computing partial sum/count aggregates) before sending the response.  This design is illustrated in Figure \ref{fig:architecture}.
+The nodes interact with the outside world via one or more coordinator nodes.  Event sources such as ticker feeds, sensors, static files, or even relational databases feed the coordinator(s) events.  A coordinator then appends the event to a persistent, local log before tagging it with a timestamp and dispatching it for processing into the cluster.  Data is horizontally partitioned across nodes by splitting the key-space into multiple disjoint regions.  Each node stores one or more map-segments.  This design is illustrated in Figure \ref{fig:architecture}.
 
 \begin{figure}
 \includegraphics[width=3in]{graphics/Architecture.pdf}
@@ -238,7 +236,24 @@ External applications access the map nodes directly.  Using a partitioning schem
 \label{fig:architecture}
 \end{figure}
 
-The layout of the data across the cluster suggests two natural schemes for distributing update processing: co-locating map-update processing with the map being updated - target aggregation, or co-locating data required for a map-update with the processing node - source aggregation.  As we will show, processing distribution is also intricately connected to the primary challenge of distributing M3: ensuring serializably consistent processing of data in M3 programs.  We assume that each node is fully aware of how map segments are distributed across the cluster.  This assumption and the details of data distribution are discussed further in Section \ref{sec:partitioning}.
+External applications access the map nodes directly.  Using a partitioning scheme, or \textit{layout} obtained from the coordinator, the application is able to fetch desired map values directly from the node or nodes storing the values.  Cumulus provides library methods for doing so, described in Figure \ref{fig:architecture}.  If appropriate, the node may do some preprocessing on the map values (eg: computing partial sum/count aggregates) before sending the response.  
+
+\begin{figure}
+\begin{algorithmic}
+\STATE \textbf{READ\_SLICE}(map, $key_1$, $key_2$, \ldots)
+\STATE \COMMENT{  Null keys are treated as wildcards. All matching nonzero entries are returned.  }
+\STATE \textbf{READ\_SUM}(map, $key_1$, $key_2$, \ldots)
+\STATE \textbf{READ\_MIN}(map, $key_1$, $key_2$, \ldots)
+\STATE \textbf{READ\_MAX}(map, $key_1$, $key_2$, \ldots)
+\STATE \COMMENT{  Null keys are treated as wildcards. The sum, min, max, etc\ldots of nonzero matching entries is returned.  }
+\STATE \textbf{READ\_STABLE}(map, $key_1$, $key_2$, \ldots)
+\STATE \COMMENT{  When using eventual consistency (See Section \ref{sec:eventualconsistency}), the most recent consistent snapshot of all matching nonzero entries is returned.  }
+\end{algorithmic}
+\caption{Cumulus' Query API}
+\label{fig:queryapi}
+\end{figure}
+
+The layout of the data across the cluster suggests two natural schemes for distributing update processing: co-locating map-update processing with the map being updated - \textit{target aggregation}, or co-locating data required for a map-update with the processing node - \textit{source aggregation}.  As we will show, processing distribution is also intricately connected to the primary challenge of distributing M3: ensuring serializably consistent processing of data in M3 programs.  We assume that each node is fully aware of how map segments are distributed across the cluster.  This assumption and the details of data distribution are discussed further in Section \ref{sec:partitioning}.
 
 %We now present two mechanisms for serializing execution.  First, we present a naive approach using a centralized coordinator.  Then, we demonstrate how the delta-processing nature of M3 admits a simple eventual consistency processing engine.  Moreover, the garbage collection necessitated by this eventual-consistency engine, as a natural side effect, periodically produces a fully consistent checkpoint of the state.  
 
@@ -318,7 +333,7 @@ Instead of processing updates at the node where the result will be stored, preco
 
 Consistency is maintained in the same way as in Target Aggregation.  When an event occurs, each node identifies which local maps might be updated as a consequence.  As before, writes are deferred until all input maps have been updated.  Also, as before, writes are always sent across the wire, even if no updates actually occur.  
 
-Without loss of generality, when discussing source aggregation, we assume that each node processes updates for exactly one map.  
+When discussing source aggregation, we assume without loss of generality that each node processes updates for exactly one map, and refer to maps and nodes interchangeably.  Where the distinction is relevant, maps are indicated with \texttt{fixed width font}.
 
 \section{Decentralized Evaluation}
 Both target and source aggregation attempt to enforce serializable consistency.  This introduce delays into update processing, and also requires the use of ``empty'' messages.  Worse still, the centralized coordinator creates a single point of failure and a scalability bottleneck.  
@@ -326,6 +341,7 @@ Both target and source aggregation attempt to enforce serializable consistency. 
 The M3 language affords Cumulus a critical benefit: map data is changed only by offset.  Thus, the messaging overhead of an undo operation is equivalent to that of a write.  Cumulus exploits the low undo overhead in order to achieve a processing model that simultaneously generates both low-latency eventual consistency outputs and periodic consistent snapshots.  
 
 \subsection{Eventual Consistency}
+\label{sec:eventualconsistency}
 In the eventual consistency approach, there are multiple coordinators, each with a numeric identifier.  Coordinators maintain a loosely synchronized clock between themselves, and use it to define epoch boundaries.  Synchronized epoch transitions are not required.  However, tighter inter-coordinator epoch transitions result in a more efficient system.  This is discussed further below.
 
 By decentralizing, each coordinator is freed to do additional work to minimize network usage.  Each coordinator maintains a dispatch table, similar to the directive table used by the nodes under centralized consistency.  The table maps  partitions of each event's parameter space to the set of nodes required to process the partition.  When an event occurs, only these nodes are notified.
@@ -368,27 +384,14 @@ ON Push($target$, $\vec X$, $\delta$, $V$)
 ON compute($S$, $\vec X$, $V$)
 \begin{algorithmic}[1]
 \STATE $slice = \{[] \rightarrow 1\}$
-\STATE \COMMENT {We assume there is at least one term.  Terms may be numerics or map accesses.  In the former case, the pseudocode treats it as $\{[]\rightarrow \#\}$}
+\STATE \COMMENT {We assume there is at least one term.  Terms may be numerics (treated as $\{[]\rightarrow \#\}$) or map accesses.}
 \FORALL{Term $T_i[\vec Y] \in $ terms($S$)}
+  \STATE \COMMENT {$\times$ and $\bowtie$ are the cross product and natural join}
   \STATE $term\_slice[\vec Y] = \sum_{\vec Y \bowtie \vec X; V' \leq V} T_i[\vec Y][V']$
-  \STATE\COMMENT {Where $\bowtie$ is equality over shared keys}
   \STATE $slice = slice \times term\_slice$
-  \STATE \COMMENT {This is the relational cross-product: $\{[A] \rightarrow 1, [B] \rightarrow 2\} \times \{[C] \rightarrow 2\} = \{[A,C] \rightarrow 2, [B,C] \rightarrow 4\}$}
 \ENDFOR
 \STATE $\delta =$ project($slice$, keys(target\_map($S$)))
 \STATE \textbf{return} filter(delete $[*]\rightarrow 0$, $\delta$)
-\end{algorithmic}
-\ \\
-ON Cleanup($V$)
-\begin{algorithmic}[1]
-\FORALL{Map $M$}
-  \FORALL{Entry $E \in M$}
-    \STATE $E'[V'] = E[V']$ where $V' > V$
-    \STATE $E'[V] = \sum_{V' \leq V} E[V']$
-    \STATE replace\_entry($E'$, $M$)
-  \ENDFOR
-\ENDFOR
-\STATE $history =$ filter(delete $history[V']$ if $V' < V$, $history$)
 \end{algorithmic}
 \caption{The Simplified Eventual Consistency Update Algorithm.}
 \label{fig:eventualconsistency}
@@ -420,9 +423,45 @@ We can examine the effects of a cascade by considering the dataflow hypergraph o
 \label{fig:dataflow}
 \end{figure}
 
-In \cite{}, we show how to produce an M3 program for computing non-recursive SQL queries.  Such M3 programs always have acyclic dataflow graphs.  However, it is still possible to produce M3 programs with cycles.  If a cycle occurs in the graph, As long as newer events continually arriv at nodes directly ahead of the cascade, it will generate an unbounded number of deltas.  To prevent this, Cumulus buffers and aggregates deltas for a short period of time.  While this does not stop the cascade, it limits the number of messages that a cascade generates.
+In \cite{dbtoaster-pods}, we show how to produce an M3 program for computing non-recursive SQL queries.  Such M3 programs always have acyclic dataflow graphs.  However, it is still possible to produce M3 programs with cycles.  
+
+\begin{example}
+\label{ex:cyclegraph}
+Consider the program
+\begin{verbatim}
+ON R(A): m1[A] += 1
+         m2[A] += m3[A]
+ON S(A): m1[A] += m2[A]
+ON T(A): m3[A] += m1[A]
+\end{verbatim}
+The dataflow graph for this program is presented in Figure \ref{fig:dataflowcycle}.  Though no single event uses or modifies the same maps twice\footnote{Even if one event were to read and write to/from the same map, there is still an explicit order of execution across statements}, it is possible for a poorly timed event arrival order to cause each successive event to generate a progressively larger number of messages.  In this example, consider the ordered event sequence \texttt{T[1],R[1],S[1]}, causing the following messages to be dispatched:
+\begin{enumerate}
+\item Event \texttt{T} arrives at m1.  m1 sends the current value of \texttt{m1[1]} as an delta for \texttt{m3[1]} to m3.
+\item Event \texttt{R} arrives at m1 and m3.  m1 is updated.  m3 sends its current value \texttt{m3[1]} to m2.  
+\item The delta for Event \texttt{T} arrives at m3, changing the value of \texttt{m3[1]}.  m3 must now update its delta to \texttt{m2[1]} and send a correction to m2.
+\item Event \texttt{S} arrives at m2.  m2 sends its current value \texttt{m2[1]} to m1.  
+\item The delta for Event \texttt{R} arrives at m2, changing the value of \texttt{m2[1]}.  m2 must send a correction to m3.
+\item The correction to the delta for Event \texttt{R} arrives at m2, changing the value of \texttt{m2[1]} again.  m2 must send another correction.
+\end{enumerate}
+\end{example}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=2in]{graphics/cycle_graph}
+\end{center}
+\caption{Dataflow graph for an M3 program with a dataflow cycle.}
+\label{fig:dataflowcycle}
+\end{figure}
+
+We refer to such an event as a \textit{cascade}.  If there is no cycle in the graph, the number of messages in a cascade is bounded by 
+$$\frac 12 [max\_path\_length(dataflow\_graph)]^2$$
+Otherwise, this process can continue indefinitely, increasing the number of messages with each event.  
+
+To prevent this, Cumulus buffers and aggregates deltas for a short period of time after the event that causes them.  While this does prevent a cascade, it bounds the number of messages sent by the cascade.
 
 % Possible TODO: intelligent buffering; How we can stagger buffer periods for a dataflow DAG to limit unfulfilled dependencies down the line.
+
+\subsection{Coordinator Favoritism}
 
 Out of order event processing allows Cumulus to employ decentralized coordinators.  Coordinators are effectively assigned a priority order.  Nodes ensure consistency by consistently evaluating events in the order of their issuing coordinators, regardless of the order in which the events arrive.
 
@@ -440,15 +479,50 @@ Thus, it is necessary for the system to be able to discover when all updates hav
 
 %ABOVE: describe how TCP channels should be used in the section on source aggregation??
 
-Garbage collection occurs in two phases: coordinator synchronization, and node synchronization.  Each coordinator maintains a record of all nodes it sends events to since the last garbage collection.  When garbage collecting, each coordinator sends a commit message to all nodes on the list.  It then continues processing as normal.  
+Garbage collection occurs in two phases: coordinator synchronization, and node synchronization.  Each coordinator maintains a record of all nodes it sends events to since the last garbage collection.  When garbage collecting, each coordinator sends an \texttt{epoch commit} message to all nodes on the list.  It then continues processing as normal.  The garbage collection process is also illustrated in Figure \ref{fig:GCflowchart}.
 
-When a node receives a commit message, it responds, confirming that it has received, processed, and inserted into its history all prior events from that coordinator.  Once a coordinator receives confirmation from all nodes it sent a commit to, it broadcasts an epoch complete message to all other coordinators.  Once all coordinators have sent an epoch complete, the coordinators collectively send each node an epoch complete message.
+\begin{figure}
+\begin{center}
+\includegraphics[width=3in]{graphics/GCflowchart}
+\caption{Timeline of Garbage Collection for one Epoch in Cumulus; The program being executed is \texttt{ON R() DO \{m1[] += 1, m2[] += m1[]\}; ON S() DO \{m2[] += 1, m3[] += m1[]\}} }
+\label{fig:GCflowchart}
+\end{center}
 
-Once a node receives an epoch complete message, it will never again receive an event for a prior epoch.  Now, the nodes must ensure that no further map deltas need to be propagated.  The layout fully determines both where a node sends deltas, as well as from where it receives deltas.  This dataflow graph can be used to limit the propagation of deltas.  If the graph is a DAG, delta propagation may be bounded bottom-up; each node sends a map checkpoint message along all of its out edges once it has received an epoch complete message, and once it has received a map checkpoint from all of its in edges.
+%ON R(): m1[] += 1
+%        m2[] += m1[]
+%ON S(): m2[] += 1
+%        m3[] += m1[]
+\end{figure}
 
-If the dataflow graph has cycles, one node in the cycle is designated as the cycle leader.  When this node receives an epoch complete message, it sends out a partial map checkpoint to the next node in the cycle.  This partial checkpoint is forwarded to subsequent nodes in the cycle, and once the message returns to the cycle leader, it is free to send a full checkpoint message.
+\begin{figure}
+ON Cleanup($V$)
+\begin{algorithmic}[1]
+\FORALL{Map $M$}
+  \FORALL{Entry $E \in M$}
+    \STATE $E'[V'] = E[V']$ where $V' > V$
+    \STATE $E'[V] = \sum_{V' \leq V} E[V']$
+    \STATE replace\_entry($E'$, $M$)
+  \ENDFOR
+\ENDFOR
+\STATE $history =$ filter(delete $history[V']$ if $V' < V$, $history$)
+\end{algorithmic}
+\caption{Garbage Collection Algorithms}
+\label{fig:gcalgorithms}
+\end{figure}
 
-The overhead of doing garbage collection is not without benefit.  In addition to limiting the amount of historical data nodes are required to store, aggregating all deltas prior to a particular version creates a version of the map segment that is consistent with other map segments with the same version across the entire cluster.
+When a node receives an \texttt{epoch commit}, it responds, confirming that it has received, processed, and inserted into its history all prior events from that coordinator.  Once a coordinator receives confirmation from all nodes it sent an \texttt{epoch commit} to, it broadcasts an \texttt{epoch end} to all other coordinators.  Once all coordinators have sent an \texttt{epoch end}, the coordinators split the work of broadcasting an \texttt{epoch end} across the cluster.
+
+Once a node receives an \texttt{epoch end} message, it will never again receive an event for a prior epoch.  Now, the nodes must ensure that no further map deltas will need to be propagated.  Using the dataflow graph, a node can determine from where it receives deltas, and to whom it sends deltas.  
+
+If the graph is a DAG, garbage collection is simple.  The node waits until it receives an epoch complete message from its coordinator, and an \texttt{epoch checkpoint} from all in edges.  It then sends an \texttt{epoch checkpoint} to each out edge, and invokes the cleanup process described in Figure \ref{fig:gcalgorithms}.
+
+If the dataflow graph has cycles, as in Example \ref{ex:cyclegraph}, one node in the cycle is designated as the cycle leader.  When this node receives an \texttt{epoch end}, it sends out a \texttt{partial checkpoint} to the next node in the cycle.  The \texttt{partial checkpoint} is forwarded to subsequent nodes in the cycle.  Each node uses the checkpoint message to ensure that it has received an \texttt{epoch end} and \texttt{epoch checkpoint}s from all nodes not in the cycle and that it has processed all pending messages from the prior node before forwarding the \texttt{partial checkpoint}.  
+
+If the cycle leader has not received any deltas from the prior node in the cycle by the time the \texttt{partial checkpoint} completes a full traversal, it sends a \texttt{partial checkpoint complete} to the nodes in the cycle, informing them that the cycle has completed its checkpoint. If it receives a delta in the interim, it begins the process anew.
+
+An additional step may be introduced to deal with a node that belongs to two or more cycles.  One cycle leader is designated as the primary.  Before sending a \texttt{partial checkpoint complete}, the cycle leaders all block on the primary.  Once all cycle leaders are ready, the primary queries all nodes that cross cycles and the nodes respond whether or not they sent a delta after sending at least one \texttt{partial checkpoint} message.  If it did, the primary restarts the partial checkpointing process.  Otherwise, the primary proceeds as normal.
+
+The act of garbage collection has a very useful added benefit.  In addition to limiting the amount of historical data nodes are required to store, aggregating all deltas prior to a particular version creates a version of the map segment that is consistent with other map segments with the same version across the entire cluster.
 
 \section{Partitioning}
 \label{sec:partitioning}
@@ -460,6 +534,11 @@ Buffer size vs latency / max throughput.  Intelligent buffering (ie, buffering f
 
 Eventual+Periodic Consistency.
 Subquery computation
+
+{\small
+\bibliographystyle{abbrv}
+\bibliography{main,ref}
+}
 
 
 \end{document}  
