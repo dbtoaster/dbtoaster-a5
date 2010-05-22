@@ -37,7 +37,7 @@ Yanif Ahmad\\
 \alignauthor
 Christoph Koch\\
   \affaddr{Cornell University}
-  \affaddr{ckoch@cs.cornell.edu}
+  \affaddr{koch@cs.cornell.edu}
 }
 \date{}
 \toappear{}
@@ -211,7 +211,7 @@ To see how loop variables are not required for an incremental join, note the thr
 {\small
 \begin{eqnarray*}
 PROGRAM & := & TRIGGER; TRIGGER; \ldots\\
-TRIGGER & := & \textbf{ON}\ \left <EVENT\right>\ ( evt\_var_1, evt\_var_2, \ldots )\\ & & \textbf{DO}\ \{ STMT, STMT, \ldots\}\\
+TRIGGER & := & \textbf{ON}\ \left <EVENT\right>\ ( evt\_var_1, evt\_var_2, \ldots )\\ & & \textbf{DO}\ \{ STMT; STMT; \ldots\}\\
 STMT & := & map_{target}[VAL_{1}, \ldots]\ \textbf{+=}\ EXPR\\
 EXPR & := & map_{k}[VAL_{a}, \ldots]\ |\ VAL\ |\\&& EXPR\ *\ EXPR\ |\\&& \textbf{IF}\ EXPR\ CMP\ EXPR\\&& \textbf{THEN}\ EXPR\ \textbf{ELSE 0}\\
 VAL & := & evt\_var_{n}\ |\ loop\_var_{m}\ |\ constant\\
@@ -224,11 +224,13 @@ CMP & := & =\ |\ <\ |\ <=
 
 
 
-\section{Centralized Evaluation}
+\section{Centralized Consistency}
 
-M3's use of maps and vector-based operations makes it extremely amenable to distribution.  In particular key-value stores are a natural instantiation of the map datatype.  Consequently Cumulus is built over a cluster of nodes, each running a shared-nothing key-value store.  These key-value stores support multi-dimensional keys and iteration over partial-keys; in effect secondary indices.  
+As all statements in M3 are effectively vector operations over maps, the language is extremely amenable to distribution.  Cumulus distributes both data and processing over a cluster of \textit{nodes}, each using a local BerkleyDB(TODO: Cite??) as a shared-nothing key-value store that is used to store map entries.  Though Cumulus uses the secondary indexing and iteration capabilities of BDB, both features can be built into or atop any key-value store.
 
-The nodes interact with the outside world via one or more coordinator nodes.  Event sources such as ticker feeds, sensors, static files, or even relational databases feed the coordinator(s) events.  A coordinator then appends the event to a persistent, local log before tagging it with a timestamp and dispatching it for processing into the cluster.  Data is horizontally partitioned across nodes by splitting the key-space into multiple disjoint regions.  Each node stores one or more map-segments.  This design is illustrated in Figure \ref{fig:architecture}.
+All data in Cumulus is stored as part of a map - either as the value of map entries, or as one of the entry's keys.  A map is horizontally partitioned into one or more \textit{map segments} along any or all of its keys, and each segment is stored on one or more nodes in the cluster.
+
+Nodes interact with the outside world via one or more \textit{coordinators}.  Event sources (eg., ticker feeds, sensors, static files, relational databases, or even other M3 programs) send events to the coordinator(s).  The coordinator optionally appends the event to a redo log, tags it with a timestamp, and dispatches it to the cluster of nodes for processing.  The overall design of Cumulus is illustrated in Figure \ref{fig:architecture}.
 
 \begin{figure}
 \includegraphics[width=3in]{graphics/Architecture.pdf}
@@ -236,7 +238,7 @@ The nodes interact with the outside world via one or more coordinator nodes.  Ev
 \label{fig:architecture}
 \end{figure}
 
-External applications access the map nodes directly.  Using a partitioning scheme, or \textit{layout} obtained from the coordinator, the application is able to fetch desired map values directly from the node or nodes storing the values.  Cumulus provides library methods for doing so, described in Figure \ref{fig:architecture}.  If appropriate, the node may do some preprocessing on the map values (eg: computing partial sum/count aggregates) before sending the response.  
+External applications access the map nodes directly using a the mapping of map segments to nodes, or \textit{layout} obtained from the coordinator.  With the layout, the application fetches desired map values directly from nodes storing the values.  Cumulus provides library methods for doing so, described in Figure \ref{fig:architecture}.  The API allows the client to indicate that a sum, min, or max aggregate is required, so that nodes can pre-aggregate matching values locally to reduce messaging overhead.
 
 \begin{figure}
 \begin{algorithmic}
@@ -253,28 +255,42 @@ External applications access the map nodes directly.  Using a partitioning schem
 \label{fig:queryapi}
 \end{figure}
 
-The layout of the data across the cluster suggests two natural schemes for distributing update processing: co-locating map-update processing with the map being updated - \textit{target aggregation}, or co-locating data required for a map-update with the processing node - \textit{source aggregation}.  As we will show, processing distribution is also intricately connected to the primary challenge of distributing M3: ensuring serializably consistent processing of data in M3 programs.  We assume that each node is fully aware of how map segments are distributed across the cluster.  This assumption and the details of data distribution are discussed further in Section \ref{sec:partitioning}.
+\subsection{Distributing M3}
+Cumulus distributes both data processing and data storage across nodes in the cluster.  Two approaches to minimizing network communication overhead immediately present themselves.  
+\begin{enumerate}
+\item Co-locate the processing of an M3 statement with the node storing the left-hand side map - that is, the map being updated. We refer to this as \textit{target aggregation}.
+\item Co-locate the right-hand side maps of an M3 statement on the same node that processes the statement.  We refer to this as \textit{source aggregation}.
+\end{enumerate}
+As we will show, these questions are also intricately linked to the promary challenge of distributing M3: ensuring serializably consistent execution. 
 
-%We now present two mechanisms for serializing execution.  First, we present a naive approach using a centralized coordinator.  Then, we demonstrate how the delta-processing nature of M3 admits a simple eventual consistency processing engine.  Moreover, the garbage collection necessitated by this eventual-consistency engine, as a natural side effect, periodically produces a fully consistent checkpoint of the state.  
+Throughout the following sections, we assume that each node is fully aware of the data layout.  The generation and dynamic management of layouts is beyond the scope of this paper.
 
 \subsection{Target Aggregation}
-In target aggregation, data appearing on the right-hand side of a computation is aggregated at the node that will store the corresponding left-hand-side.  For example, consider the following M3 statement with maps m1 and m2, each partitioned only on attribute B.
+In target aggregation, M3 statements are evaluated at the node that will store the results.  Data appearing on the right-hand side of the statement is sent to this node for delta computation.  
+
+\begin{example}
+Consider the following M3 statement with maps m1 and m2, each partitioned only on attribute B.
 \begin{verbatim}
 on R(A) : m1[A,B] += m2[B]
 \end{verbatim}
-When event R(A) occurs, each node storing a segment of m2 will send each value in its segment to the node storing the corresponding segment of m1.  If the partition boundaries of m2 and m1 are identical, each m2 node will send its entire segment to exactly one m1 node.  This process is illustrated in Figure \ref{fig:messagepassing}a.  Note that If the same node stores corresponding partitions of m2 and m1, no actual data transmission occurs.  
+When event R(A) occurs, each node storing a segment of m2 will send each value in its segment to the node storing the corresponding segment of m1.  If the partition boundaries of m2 and m1 are identical, each m2 node will send its entire segment to exactly one m1 node.  This process is illustrated in Figure \ref{fig:messagepassing}a.  Note that If the same node stores each pair of corresponding m1 and m2 partitions, no actual data transmission occurs.  
+\end{example}
 
-Even if m1 is also partitioned over A, each event R(A) updates only one map segment per $B$ value; A node storing a segment of m2 is still only required to send the segment to one m1 node.  However, there are situations where multicast is required.  Consider the following statement:
+Even if m1 is also partitioned over A, each event R(A) updates only one map segment per $B$ value; A node storing a segment of m2 is still only required to send the segment to one m1 node.  However, there are situations where multicast is required.  
+
+\begin{example}
+Consider the following statement:
 \begin{verbatim}
 on R(A) : m1[A,B,C] += m2[B]*m3[C]
 \end{verbatim}
-Let m1 have 10 partitions in a grid pattern, with 2 partitions in the B dimension and 5 in C, and the same partitioning scheme applied to m2 and m3 (with 2 and 5 partitions, respectively).  In this instance, when an event R(A) occurs, each m2 node sends its segment to each of the corresponding 5 m1 nodes, while each m3 node will send its segment to each of the corresponding 2 m1 nodes.  This process is illustrated in Figure \ref{fig:messagepassing}b. 
+Let m1 have 10 partitions in a grid pattern, with the domain of B split in half and C split into 5 parts.  Let m2 and m3 use the same partitioning scheme (with 2 and 5 partitions, respectively).  In this instance, when an event R(A) occurs, each m2 node sends its segment to each of the corresponding 5 m1 nodes, while each m3 node will send its segment to each of the corresponding 2 m1 nodes.  This process is illustrated in Figure \ref{fig:messagepassing}b. 
 
 If a right-hand side map contains an event variable, only a subset, or slice of the map is sent.  For example:
 \begin{verbatim}
 on R(A) : m1[B] += m2[A,B]
 \end{verbatim}
 In this instance, only the slice \texttt{m2'[B] = m2[A,B]} is sent.
+\end{example}
 
 \begin{figure}
 \begin{center}
@@ -284,7 +300,7 @@ In this instance, only the slice \texttt{m2'[B] = m2[A,B]} is sent.
 \end{center}
 \end{figure}
 
-\subsection{Centralized Consistency}
+\subsection{One Coordinator}
 The simplest way to provide M3's serializable execution guarantees is to route all events through a centralized coordinator.  Though centralizing creates a scalability bottleneck, the central coordinator's task is straightforward event serialization and dissemination.  The task of dissemination is further simplified by building a distribution tree over the nodes themselves.
 
 As a query is loaded, each node precomputes a table of directives from the M3 program and the data layout.  This table indicates for each class of event (where class is defined by the partitioning scheme), which of the node's map segments will be modified (ie, those that appear on the left-hand side of a triggered statement), and which segments will be read from (right-hand side).  The construction algorithm is shown in Figure \ref{fig:directiveconstruction}.
@@ -335,7 +351,7 @@ Consistency is maintained in the same way as in Target Aggregation.  When an eve
 
 When discussing source aggregation, we assume without loss of generality that each node processes updates for exactly one map, and refer to maps and nodes interchangeably.  Where the distinction is relevant, maps are indicated with \texttt{fixed width font}.
 
-\section{Decentralized Evaluation}
+\section{Decentralized Consistency}
 Both target and source aggregation attempt to enforce serializable consistency.  This introduce delays into update processing, and also requires the use of ``empty'' messages.  Worse still, the centralized coordinator creates a single point of failure and a scalability bottleneck.  
 
 The M3 language affords Cumulus a critical benefit: map data is changed only by offset.  Thus, the messaging overhead of an undo operation is equivalent to that of a write.  Cumulus exploits the low undo overhead in order to achieve a processing model that simultaneously generates both low-latency eventual consistency outputs and periodic consistent snapshots.  
@@ -484,7 +500,7 @@ Garbage collection occurs in two phases: coordinator synchronization, and node s
 \begin{figure}
 \begin{center}
 \includegraphics[width=3in]{graphics/GCflowchart}
-\caption{Timeline of Garbage Collection for one Epoch in Cumulus; The program being executed is \texttt{ON R() DO \{m1[] += 1, m2[] += m1[]\}; ON S() DO \{m2[] += 1, m3[] += m1[]\}} }
+\caption{Timeline of Garbage Collection for one Epoch in Cumulus; The program being executed is \texttt{ON R() DO \{m1[] += 1; m2[] += m1[]\}; ON S() DO \{m2[] += 1; m3[] += m1[]\}} }
 \label{fig:GCflowchart}
 \end{center}
 
