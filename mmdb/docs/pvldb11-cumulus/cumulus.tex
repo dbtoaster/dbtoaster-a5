@@ -51,51 +51,37 @@ Christoph Koch\\
 
 \section{Introduction}
 
-Recent years have seen the beginning of a paradigm shift in data management
-research from incrementally improving decades-old database technology
-to questioning established architectures 
-and creating fundamentally different, more lightweight systems
-that are often domain-specific
-(e.g.,
+Recent years have seen the beginning of a paradigm shift in data management research from incrementally improving decades-old database technology to questioning established architectures  and creating fundamentally different, more lightweight systems that are often domain-specific (e.g.,
 %\cite{DBLP:conf/cidr/KerstenM05,DBLP:conf/vldb/StonebrakerMAHHH07}
 \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
-Part of the impetus for this change was given by 
-potential users such as scientists and the builders of
-large-scale Web sites and services such as Google, Amazon, and Ebay,
-who have a need for data management systems but have found current databases
-not to scale to their needs.
-One can observe a trend to disregard database contributions
-in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on
-robust technologies mostly pioneered by the operating systems and distributed
-systems communities, such as large scale file systems, key-value stores, and
-map-reduce
-\cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}.
-Further impetus has resulted from the current need to develop data management
-technology for multicore and cloud computing.
-%
-%, and by the example given by a
-%number of innovative recent database startup companies that develop
-%databases based on new architectures.
-%\footnote{Examples are Vertica and Paraccel, who build column stores,
-%and Greenplum, Asterdata, and Netezza, who take databases into the Cloud.}
 
-There is a recent tendency
-among pundits
-outside the database community to
-contest the need for powerful queries, and to
-think of key-value stores -- with only the power to look up data by
-keys -- as (much more efficient) database query engines.
-%
-%It shall not be denied that,
-%with clever engineering, a surprising range of problems can be solved
-%using key-value stores.
-%
-However, expressive query languages such as SQL do not cease to have
-important applications and a substantial user base.
-Alas, we do not know how to process SQL queries on updateable data
-using a system as lightweight as a key-value store.
+Part of the impetus for this change was given by potential users such as scientists and the builders of large-scale Web sites and services such as Google, Amazon, and Ebay, who have a need for data management systems but have found current databases not to scale to their needs. One can observe a trend to disregard database contributions in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on robust technologies mostly pioneered by the operating systems and distributed systems communities, such as large scale file systems, key-value stores, and map-reduce \cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}. Further impetus has resulted from the current need to develop data management technology for multicore and cloud computing.
 
-This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a range of incremental view queries.   We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
+There is a recent tendency among pundits outside the database community to contest the need for powerful queries, and to think of key-value stores -- with only the power to look up data by keys -- as (much more efficient) database query engines.
+
+However, expressive query languages such as SQL do not cease to have important applications and a substantial user base. Alas, we do not know how to process SQL queries on updateable data using a system as lightweight as a key-value store.
+
+This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a range of incremental view queries.  The query results are stored in the key-value store itself, as ordinary data. 
+
+Cumulus is built around a novel hybrid consistency execution framework.  Like most cloud data management systems, Cumulus achieve low latencies by retreating to the realm of eventual consistency.  However, unlike these systems, Cumulus periodically generates a consistent snapshot of its results as a side effect of it's normal data processing operations.  The result is a system that can be employed side-by-side by applications that require low latency operating side by side with applications that require consistency.
+
+
+
+simultaneously employed by 
+
+
+a natural side effect of Cumulus' normal data processing is a perio
+
+ retreats to the realm of eventual consistency in order to maintain low latencies.  
+
+breaking view maintenance down to it's most basic representation, Cumulus is able to generate a low-latency, 
+
+is based around a hybrid consistency model.  
+
+ Using a novel new hybrid consistency evaluation scheme, Cumulus is able 
+
+
+  We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
 
 At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the  basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
 
