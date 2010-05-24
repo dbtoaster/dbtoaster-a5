@@ -63,33 +63,15 @@ However, expressive query languages such as SQL do not cease to have important a
 
 This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a range of incremental view queries.  The query results are stored in the key-value store itself, as ordinary data. 
 
-Cumulus is built around a novel hybrid consistency execution framework.  Like most cloud data management systems, Cumulus achieve low latencies by retreating to the realm of eventual consistency.  However, unlike these systems, Cumulus periodically generates a consistent snapshot of its results as a side effect of it's normal data processing operations.  The result is a system that can be employed side-by-side by applications that require low latency operating side by side with applications that require consistency.
+Cumulus is built around a novel hybrid consistency execution framework.  Like most cloud data management systems, Cumulus achieve low latencies by retreating to the realm of eventual consistency.  However, unlike most eventual consistency systems, Cumulus' runtime periodically generates consistent snapshots of query results as a side effect of its normal operation.  The result is a system that can be employed side-by-side by applications that require low latency and applications that require strong consistency.
 
+We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
 
-
-simultaneously employed by 
-
-
-a natural side effect of Cumulus' normal data processing is a perio
-
- retreats to the realm of eventual consistency in order to maintain low latencies.  
-
-breaking view maintenance down to it's most basic representation, Cumulus is able to generate a low-latency, 
-
-is based around a hybrid consistency model.  
-
- Using a novel new hybrid consistency evaluation scheme, Cumulus is able 
-
-
-  We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
-
-At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the  basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
+At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
 
 These message passing programs keep a hierarchy of map data structures (which may be served out of a key-value store) up to date. They can share computation in the case that multiple aggregation queries (e.g., a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message passing programs can be massively parallelized to the degree that the updating of each single result aggregate value can be done in constant time on normal off-the-shelf computers\footnote{Note that since there are
 usually many more aggregate values to maintain than there are processors,
 this does not mean that each update is processed in constant time.}.
-
-Cumulus parallelizes computation using a novel mixed-consistency runtime.  This runtime is based around an eventual consistency processing model that provides low-latency approximate results.  However, unlike most eventual consistency systems, Cumulus' runtime periodically generates consistent snapshots as a side effect of its normal operation.  Consequently, the same runtime and data may be used simultaneously for applications requiring low-latency as well as applications requiring strong consistency.
 
 Our main technical contributions are as follows:
 \begin{itemize}
@@ -395,8 +377,16 @@ ON compute($S$, $\vec X$, $V$)
 \STATE $\delta =$ project($slice$, keys(target\_map($S$)))
 \STATE \textbf{return} filter(delete $[*]\rightarrow 0$, $\delta$)
 \end{algorithmic}
-\caption{The Simplified Eventual Consistency Update Algorithm.}
+\caption{The Eventual Consistency Update Algorithm (simplified).}
 \label{fig:eventualconsistency}
+\end{figure}
+
+\begin{figure}
+\begin{center}
+\includegraphics[width=3.4in]{graphics/Datastructures}
+\caption{Datastructures used at each node.  The update history stores updates since the last garbage collection together with a cache of precomputed map values at a particular version number.  One key-value store is used for each map.  If the key-value store does not support secondary indices, the same effect may be achieved by using an additional store for each secondary index required.  The key-value store maintains one delta for each version in which a map entry entry was modified.}
+\label{fig:datastructures}
+\end{center}
 \end{figure}
 
 The values stored in a map may not be correct at any given moment.  For example, consider the partial M3 program:
@@ -539,7 +529,7 @@ Subquery computation
 
 {\small
 \bibliographystyle{abbrv}
-\bibliography{main,ref}
+\bibliography{main}
 }
 
 
