@@ -59,15 +59,15 @@ Part of the impetus for this change was given by potential users such as scienti
 
 There is a recent tendency among pundits outside the database community to contest the need for powerful queries, and to think of key-value stores -- with only the power to look up data by keys -- as (much more efficient) database query engines.
 
-However, expressive query languages such as SQL do not cease to have important applications and a substantial user base. Alas, we do not know how to process SQL queries on updateable data using a system as lightweight as a key-value store.
+However, expressive query languages such as SQL continue to act as an important intermediary between users and more complex data-processing tasks.  Alas, we do not know how to process SQL queries on updateable data using a system as lightweight as a key-value store.
 
-This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a range of incremental view queries.  The query results are stored in the key-value store itself, as ordinary data. 
+This paper contributes a fundamental and versatile building block for enabling new, more lightweight and nimble data processing systems based on SQL aggregation queries.  Cumulus is a thin execution layer that lives above generic key-value stores and can efficiently process a wide range of incremental view queries.  The query results are stored in the key-value store itself, as ordinary data. 
 
-Cumulus is built around a novel hybrid consistency execution framework.  Like most cloud data management systems, Cumulus achieve low latencies by retreating to the realm of eventual consistency.  However, unlike most eventual consistency systems, Cumulus' runtime periodically generates consistent snapshots of query results as a side effect of its normal operation.  The result is a system that can be employed side-by-side by applications that require low latency and applications that require strong consistency.
+Cumulus is built around a novel hybrid consistency execution framework.  Like most cloud data management systems, Cumulus achieves low latencies by retreating to the realm of eventual consistency.  However, unlike most eventual consistency systems, Cumulus' runtime periodically generates consistent snapshots as a side effect of its normal operation.  The result is a system that can be employed side-by-side by both applications that require low latency and applications that require strong consistency.
 
 We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using little more than a key-value store.
 
-At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly or produced using DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
+At the heart of our approach is M3, a trigger-based vector processing language.  M3 can either be written directly by hand or translated from SQL with DBToaster\cite{1687592}, an aggressive recursive incremental view maintenence compiler.  In most traditional database query processors, the basic building blocks of queries are large-grained operators such as joins.  Conversely, a large class of SQL aggregation queries can be compiled down to very simple message passing programs that incrementally maintain materialized views of the queries.
 
 These message passing programs keep a hierarchy of map data structures (which may be served out of a key-value store) up to date. They can share computation in the case that multiple aggregation queries (e.g., a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message passing programs can be massively parallelized to the degree that the updating of each single result aggregate value can be done in constant time on normal off-the-shelf computers\footnote{Note that since there are
 usually many more aggregate values to maintain than there are processors,
@@ -77,7 +77,7 @@ Our main technical contributions are as follows:
 \begin{itemize}
 \item We present M3, a massively parallizable language for message passing programs that can be used to incrementally maintain SQL aggregation queries.
 \item We present Cumulus, a lightweight realtime exact online aggregation system that integrates seamlessly with generic key-value stores. 
-\item We describe three different approaches to ensuring the consistency of the data: Centralized Target Aggregation, Centralized Source Aggregation, and Eventually and Periodically Consistent Source Aggregation.  We deomonstrate how the last of these techniques simultaneously produces low-latency eventually consistent results as well as periodic consistent snapshots.
+\item We describe three different approaches to managing the consistency of query results: Centralized Target Aggregation, Centralized Source Aggregation, and Hybrid Consistency Source Aggregation.  We demonstrate how the last of these techniques simultaneously produces low-latency eventually consistent results as well as periodic consistent snapshots.
 \item We show evidence for the scalability of our approach by examining the performance of Cumulus on examples drawn from the TPC-H benchmark\cite{tpch2008}
 \end{itemize}
 
@@ -91,9 +91,9 @@ where {\tt <R>} is an event parametrized by a set of \textit{event variables} $\
 \[
 \mbox{$m[\vec{x}\vec{z}]$ {\tt +=} $t(\vec x \vec y \vec z)$}
 \]
-Statements are comprised of a reference to a map entry on the left-hand side, and a right-hand side consisting of a term: a monomial algebraic expression over constants, variables, and map entry references.  The simplified version of M3 used in this paper is presented in Figure \ref{fig:m3_defn}
+Statements are comprised of a reference to a map entry on the left-hand side, and a right-hand side consisting of a term: a monomial algebraic expression over constants, variables, and map lookups parametrized by variables.  A simplified version of M3 that will be used in this paper is presented in Figure \ref{fig:m3_defn}
 
-Two types of variables appear in M3 statements: event variables as defined above, and \textit{loop variables}.  Loop variables draw their domains from the right-hand side maps that they parametrize.  For example, consider the trigger:
+Two types of variables appear in M3 statements: event variables $\vec x, \vec y$ as defined above, and \textit{loop variables} $\vec z$.  Loop variables draw their domains from the right-hand side maps that they parametrize.  For example, consider the trigger:
 \[
 \mbox{\texttt{ON R(A) \{ m1[B] += m2[A,B] \}}}
 \]
@@ -117,8 +117,8 @@ These guarantees are equivalent to serializable consistency, where each event co
 
 For the purposes of this paper, we restrict ourselves to a limited, fully incremental version of M3.  
 \begin{itemize}
-\item \textit{All loop variables appear on both sides of a statement.}  The natural implication of a loop variable appearing only on the right-hand side is as a sum aggregate over the variable.  In the restricted M3, this aggregate can be computed incrementally by maintaining an additional map with one less key.
-\item \textit{All loop variables appear as a parameter to exactly one right-hand side map.}  A loop variable that appears in two right-hand side maps is effectively a join between the maps.  In the restricted M3, joins are computed incrementally using event variables.
+\item \textit{All loop variables appear on both sides of a statement.}  The natural implication of a loop variable appearing only on the right-hand side is as a sum aggregate over the variable.  In restricted M3, this aggregate can be computed incrementally by maintaining an additional map with one fewer key.
+\item \textit{All loop variables appear as a parameter to exactly one right-hand side map.}  A loop variable that appears in two right-hand side maps is effectively a join between the maps.  In restricted M3, joins are computed incrementally using event variables.  Note that this restriction results in each loop variable's domain being defined by exactly one map.
 \item \textit{Terms do not contain conditions.}  Unrestricted M3 supports conditioned non-incremental aggregates.
 \end{itemize}
 
@@ -127,49 +127,37 @@ Distributing unrestricted M3 is beyond the scope of this paper.  As shown in \ci
 \begin{example}
 Consider the following query over a TPC-H-like schema.
 \begin{verbatim}
-SELECT   c.nation, SUM(o.discount * l.price)
+SELECT   c.nation, l.part
+         SUM(o.discount * l.price)
 FROM     CUSTOMERS c, ORDERS o, LINEITEMS l
 WHERE    c.cid = o.cid AND o.oid = l.oid
-GROUP BY c.nation
+GROUP BY c.nation, l.part
 \end{verbatim}
 
-This query can be implemented in streaming form as the following M3 program
+This query can be implemented in streaming form as the following M3 program\footnote{Only insertion triggers are shown.  Deletion triggers are identical except for a multiplier of -1 applied to each right-hand side.}.
 \begin{verbatim}
-ON Insert_LINEITEMS(OID, PRICE) DO {
- q[NATION] += m1[OID, NATION] * PRICE;
- m2[CID]   += m3[CID, OID] * PRICE;
- m4[OID]   += PRICE }
-ON Insert_ORDERS(CID,OID,DISCOUNT) DO {
- q[NATION]      += DISCOUNT * m4[OID] * m5[CID,NATION];
+ON +LINEITEMS(OID,PRICE,PART) DO {
+ q[PART,NATION] += m1[OID,NATION] * PRICE;
+ m2[CID,PART]   += m3[CID,OID] * PRICE;
+ m4[OID,PART]   += PRICE }
+ON +ORDERS(CID,OID,DISCOUNT) DO {
+ q[PART,NATION] += DISCOUNT * m4[OID,PART] * 
+                     m5[CID,NATION];
  m1[OID,NATION] += DISCOUNT * m5[CID,NATION];
- m2[CID]        += DISCOUNT * m4[OID];
+ m2[CID,PART]   += DISCOUNT * m4[OID,PART];
  m3[CID,OID]    += DISCOUNT }
-ON Insert_CUSTOMERS(CID,NATION) DO {
- q[NATION]      += m2[CID];
+ON +CUSTOMERS(CID,NATION): 
+ q[PART,NATION] += m2[CID,PART];
  m1[OID,NATION] += m3[CID,OID];
- m5[CID,NATION] += 1}
+ m5[CID,NATION] += 1 }
 \end{verbatim}
-%\begin{verbatim}
-%ON Insert_T(C,D) DO {
-% q[]   += m1[C] * D;
-% m2[B] += D * m3[B, C];
-% m4[C] += D }
-%ON Insert_S(B,C) DO {
-% q[]     += m5[B] * m4[C];
-% m1[C]   += m5[B];
-% m2[B]   += m4[C];
-% m3[B,C] += 1 }
-%ON Insert_R(A,B) DO {
-% q[]   += A * m2[B];
-% m1[C] += A * m3[B,C];
-% m5[B] += A }
-%\end{verbatim}
-with deletion triggers that are identical except for a multiplier of -1.  Here, the map \texttt{q} represents the query result, while other maps represent intermediate subqueries.  For example, \texttt{m2} represents 
+Here, the map \texttt{q} represents the query result, while other maps represent intermediate subqueries.  For example, \texttt{m2} represents 
 \begin{verbatim}
-SELECT   o.cid, SUM(o.discount * l.price) 
+SELECT   o.cid, o.priority, 
+         SUM(o.discount * l.price) 
 FROM     ORDERS o, LINEITEMS l
 WHERE    o.oid = l.oid
-GROUP BY o.cid
+GROUP BY o.cid, o.priority
 \end{verbatim}
 To see how loop variables are not required for an incremental join, note the three lines that update the result map \texttt{q}.  Each line incrementally updates the full join result by joining only with the tuple being inserted.
 \end{example}
@@ -194,9 +182,9 @@ CMP & := & =\ |\ <\ |\ <=
 
 \section{Centralized Consistency}
 
-As all statements in M3 are effectively vector operations over maps, the language is extremely amenable to distribution.  Cumulus distributes both data and processing over a cluster of \textit{nodes}, each using a local BerkleyDB(TODO: Cite??) as a shared-nothing key-value store that is used to store map entries.  Though Cumulus uses the secondary indexing and iteration capabilities of BDB, both features can be built into or atop any key-value store.
+As all statements in M3 are effectively vector operations over maps, the language is extremely amenable to distribution.  Cumulus distributes both data and processing over a cluster of \textit{nodes}, each using BerkleyDB(TODO: Cite??) as a local shared-nothing key-value store for map entries\footnote{Though Cumulus uses the secondary indexing and iteration capabilities of BerkleyDB, both features can be built into or atop any key-value store.}.
 
-All data in Cumulus is stored as part of a map - either as the value of map entries, or as one of the entry's keys.  A map is horizontally partitioned into one or more \textit{map segments} along any or all of its keys, and each segment is stored on one or more nodes in the cluster.
+All data in Cumulus is stored as part of a map - either as the value of a map entry, or as one of the entry's keys.  A map is horizontally partitioned into one or more \textit{map segments} along any or all of its keys, and each segment is stored on one or more nodes in the cluster.
 
 Nodes interact with the outside world via one or more \textit{coordinators}.  Event sources (eg., ticker feeds, sensors, static files, relational databases, or even other M3 programs) send events to the coordinator(s).  The coordinator optionally appends the event to a redo log, tags it with a timestamp, and dispatches it to the cluster of nodes for processing.  The overall design of Cumulus is illustrated in Figure \ref{fig:architecture}.
 
@@ -206,7 +194,7 @@ Nodes interact with the outside world via one or more \textit{coordinators}.  Ev
 \label{fig:architecture}
 \end{figure}
 
-External applications access the map nodes directly using a the mapping of map segments to nodes, or \textit{layout} obtained from the coordinator.  With the layout, the application fetches desired map values directly from nodes storing the values.  Cumulus provides library methods for doing so, described in Figure \ref{fig:architecture}.  The API allows the client to indicate that a sum, min, or max aggregate is required, so that nodes can pre-aggregate matching values locally to reduce messaging overhead.
+External applications access map nodes directly, using a mapping of map segments to nodes, or \textit{layout} obtained from the coordinator.  With the layout, the application fetches desired map values directly from nodes storing the values.  Cumulus provides library methods for doing so, described in Figure \ref{fig:queryapi}.  The API allows the client to indicate that a sum, min, or max aggregate is required, so that nodes can pre-aggregate matching values locally to reduce messaging overhead.
 
 \begin{figure}
 \begin{algorithmic}
@@ -228,40 +216,41 @@ External applications access the map nodes directly using a the mapping of map s
 \end{figure}
 
 \subsection{Distributing M3}
-Cumulus distributes both data processing and data storage across nodes in the cluster.  Two approaches to minimizing network communication overhead immediately present themselves.  
+We consider two approaches to distributing data processing and data storage across nodes in the cluster in order to minimize network overheads.  
 \begin{enumerate}
 \item Co-locate the processing of an M3 statement with the node storing the left-hand side map - that is, the map being updated. We refer to this as \textit{target aggregation}.
 \item Co-locate the right-hand side maps of an M3 statement on the same node that processes the statement.  We refer to this as \textit{source aggregation}.
 \end{enumerate}
-As we will show, these questions are also intricately linked to the promary challenge of distributing M3: ensuring serializably consistent execution. 
+As we will show, these questions are also intricately linked to the primary challenge of distributing M3: ensuring serializably consistent execution. 
 
-Throughout the following sections, we assume that each node is fully aware of the data layout.  The generation and dynamic management of layouts is beyond the scope of this paper.
+Throughout the following sections, we will assume that each node is fully aware of the data layout.  The generation and dynamic management of layouts is beyond the scope of this paper.
 
 \subsection{Target Aggregation}
 In target aggregation, M3 statements are evaluated at the node that will store the results.  Data appearing on the right-hand side of the statement is sent to this node for delta computation.  
 
 \begin{example}
-Consider the following M3 statement with maps m1 and m2, each partitioned only on attribute B.
+Consider the following M3 statement with maps \texttt{m1} and \texttt{m5}, each partitioned only on attribute N.
 \begin{verbatim}
-on R(A) : m1[A,B] += m2[B]
+ON +ORDERS(C,O,D) DO { m1[O,N] += D * m5[C,N] }
 \end{verbatim}
-When event R(A) occurs, each node storing a segment of m2 will send each value in its segment to the node storing the corresponding segment of m1.  If the partition boundaries of m2 and m1 are identical, each m2 node will send its entire segment to exactly one m1 node.  This process is illustrated in Figure \ref{fig:messagepassing}a.  Note that If the same node stores each pair of corresponding m1 and m2 partitions, no actual data transmission occurs.  
+When event \texttt{+ORDERS} occurs, each node storing a segment of \texttt{m5} will send each value in its segment to the node storing the corresponding segment of \texttt{m1}.  If the partition boundaries of \texttt{m1} and \texttt{m5} are identical, each \texttt{m5} node will send its entire segment to exactly one \texttt{m1} node.  This process is illustrated in Figure \ref{fig:messagepassing}a.  Note that If the same node stores each pair of corresponding \texttt{m1} and \texttt{m5} partitions, no actual data transmission occurs.  
 \end{example}
 
-Even if m1 is also partitioned over A, each event R(A) updates only one map segment per $B$ value; A node storing a segment of m2 is still only required to send the segment to one m1 node.  However, there are situations where multicast is required.  
+Even if \texttt{m5} is also partitioned over \texttt{O}, each \texttt{+ORDERS} event updates only one map segment per \texttt{B} value; A node storing a segment of \texttt{m5} is still only required to send the segment to one \texttt{m1} node.  However, there are situations where multicast is required.  
 
 \begin{example}
 Consider the following statement:
 \begin{verbatim}
-on R(A) : m1[A,B,C] += m2[B]*m3[C]
+ON +ORDERS(C,O,D) DO { q[P,N] += D * m4[O,P] 
+                                   * m5[C,N] }
 \end{verbatim}
-Let m1 have 10 partitions in a grid pattern, with the domain of B split in half and C split into 5 parts.  Let m2 and m3 use the same partitioning scheme (with 2 and 5 partitions, respectively).  In this instance, when an event R(A) occurs, each m2 node sends its segment to each of the corresponding 5 m1 nodes, while each m3 node will send its segment to each of the corresponding 2 m1 nodes.  This process is illustrated in Figure \ref{fig:messagepassing}b. 
+Let \texttt{q} have 10 partitions in a grid pattern, with the domain of \texttt{P} split in half and \texttt{N} split into 5 parts.  Let \texttt{m4} and \texttt{m5} use the same partitioning scheme (with 2 and 5 partitions, respectively).  In this instance, when an \texttt{ORDERS} event occurs, each \texttt{m4} node sends its segment to each of the corresponding 5 \texttt{q} nodes, while each \texttt{m5} node will send its segment to each of the corresponding 2 \texttt{q} nodes.  This process is illustrated in Figure \ref{fig:messagepassing}b. 
 
 If a right-hand side map contains an event variable, only a subset, or slice of the map is sent.  For example:
 \begin{verbatim}
-on R(A) : m1[B] += m2[A,B]
+ON +ORDERS(C,O,D) DO { m1[O,N] += D * m5[C,N] }
 \end{verbatim}
-In this instance, only the slice \texttt{m2'[B] = m2[A,B]} is sent.
+In this instance, only the slice \texttt{m5'[N] = m5[C,N]} is sent.
 \end{example}
 
 \begin{figure}
@@ -398,7 +387,7 @@ The values stored in a map may not be correct at any given moment.  For example,
 ON R(A,B): m1[] += m2[A]
            m2[A] += m3[B]
 \end{verbatim}
-This fragment of the program is deployed with no map segmentation on a 2 node system.  Node 1 stores m2 and processes updates to m1, while Node 2 stores m3 and processes updates to m2.  
+This fragment of the program is deployed with no segmentation on a 2 node system.  Node 1 stores m2 and processes updates to m1, while Node 2 stores m3 and processes updates to m2.  
 
 In this scenario, two subsequent R events with identical A parameters are dispatched by the same coordinator nearly simultaneously.  Both nodes process the necessary updates to m1 and m2 respectively.  However, while node 1 is processing the second event, it does not have the value of m2 updated by the first event.  The result is a value of m1 that is incorrect.  However, when the updated value of m2 is received, Node 1 can overwrite the corresponding version of m1.  
 
