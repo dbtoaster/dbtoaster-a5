@@ -210,15 +210,19 @@ External applications access the map nodes directly using a the mapping of map s
 
 \begin{figure}
 \begin{algorithmic}
-\STATE \textbf{READ\_SLICE}(map, $key_1$, $key_2$, \ldots)
-\STATE \COMMENT{  Null keys are treated as wildcards. All matching nonzero entries are returned.  }
+\STATE \textbf{READ\_SLICE}(map, $key_1$, $key_2$, \ldots) 
+\end{algorithmic}
+\hspace*{0.2in}\parbox[b]{3in}{Read the current version of a slice of a map; Null keys are treated as wildcards. All matching nonzero entries are returned.}
+\begin{algorithmic}
 \STATE \textbf{READ\_SUM}(map, $key_1$, $key_2$, \ldots)
 \STATE \textbf{READ\_MIN}(map, $key_1$, $key_2$, \ldots)
 \STATE \textbf{READ\_MAX}(map, $key_1$, $key_2$, \ldots)
-\STATE \COMMENT{  Null keys are treated as wildcards. The sum, min, max, etc\ldots of nonzero matching entries is returned.  }
-\STATE \textbf{READ\_STABLE}(map, $key_1$, $key_2$, \ldots)
-\STATE \COMMENT{  When using eventual consistency (See Section \ref{sec:eventualconsistency}), the most recent consistent snapshot of all matching nonzero entries is returned.  }
 \end{algorithmic}
+\hspace*{0.2in}\parbox[b]{3in}{As READ\_SLICE but preaggregate values at the node if possible.  Null keys are treated as wildcards. The sum, min, max, etc\ldots of nonzero matching entries is returned.}
+\begin{algorithmic}
+\STATE \textbf{READ\_STABLE}(map, agg\_type, $key_1$, $key_2$, \ldots)
+\end{algorithmic}
+\hspace*{0.2in}\parbox[b]{3in}{As READ\_SLICE, but guarantees a self-consistent result when using eventual consistency (See Section \ref{sec:eventualconsistency}).  Returns the most recent consistent snapshot of all matching nonzero entries with optional pre-aggregation.}
 \caption{Cumulus' Query API}
 \label{fig:queryapi}
 \end{figure}
