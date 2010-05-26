@@ -120,9 +120,10 @@ For the purposes of this paper, we restrict ourselves to a limited, fully increm
 \item \textit{All loop variables appear on both sides of a statement.}  The natural implication of a loop variable appearing only on the right-hand side is as a sum aggregate over the variable.  In restricted M3, this aggregate can be computed incrementally by maintaining an additional map with one fewer key.
 \item \textit{All loop variables appear as a parameter to exactly one right-hand side map.}  A loop variable that appears in two right-hand side maps is effectively a join between the maps.  In restricted M3, joins are computed incrementally using event variables.  Note that this restriction results in each loop variable's domain being defined by exactly one map.
 \item \textit{Terms do not contain conditions.}  Unrestricted M3 supports conditioned non-incremental aggregates.
+\item \textit{Map data dependencies are acyclic, even across multiple events.} A non-recursive SQL query be represented as an M3 program with no cyclic data dependencies.  Restricted M3 does not attempt to support recursive queries.
 \end{itemize}
 
-Distributing unrestricted M3 is beyond the scope of this paper.  As shown in \cite{dbtoaster-pods}, this restricted form of M3 remains powerful enough to express any SQL count or sum aggregate query without inequalities.  
+Distributing unrestricted M3 is beyond the scope of this paper.  As shown in \cite{dbtoaster-pods}, this restricted form of M3 remains powerful enough to express any non-recursive SQL count or sum aggregate query without inequalities.  
 
 \begin{example}
 Consider the following query over a TPC-H-like schema.
@@ -398,7 +399,7 @@ Event $E_2$ is dependent on event $E_1$ if $E_2$ has a later timestamp, and read
 
 An unfulfilled dependency occurs at a node $N$ if an event $E_2$ depends on event $E_1$, but $E_1$'s deltas do not arrive at node $N$ until after $N$ has sent out the delta it produces for $E_2$.  Unfulfilled dependencies are handled by sending out a corrective delta, as described above.  However, the corrective delta may be the source of another unfulfilled dependency at the target node if the target has already processed an event with a timestamp after $E_2$'s.  We refer to such an event as a cascade.
 
-We can examine the effects of a cascade by considering the dataflow hypergraph of an M3 program, such as the one in Figure \ref{fig:dataflow}.  In a dataflow graph, each node represents one map and each hyperedge represents a statement.  Hyperedges are labeled with the triggering event, and flow out of the source maps of a statement and into the target map.  Cascades are bounded by the maximum path length in the dataflow graph. 
+We can examine the effects of a cascade by considering the dataflow hypergraph of an M3 program, such as the one in Figure \ref{fig:dataflow}.  In a dataflow graph, each node represents one map and each hyperedge represents a statement.  Hyperedges are labeled with the triggering event, and flow out of the source maps of a statement and into the target map.  In restricted M3 dataflow graphs are always DAGs, so cascades are bounded by the maximum path length in the dataflow graph.  Cumulus further limits cascades by buffering deltas for a short period of time after the event that causes them, allowing multiple subsequent deltas to be aggregated together.
 
 \begin{figure}
 \begin{center}
@@ -406,43 +407,7 @@ We can examine the effects of a cascade by considering the dataflow hypergraph o
 \end{center}
 \caption{Dataflow graph for the M3 program representing a streaming TPC-H-style query $\ _{C.cid}G_{SUM(L.price)}(C\ldots \bowtie L\ldots \bowtie O\ldots)$}
 \label{fig:dataflow}
-\end{figure}
-
-In \cite{dbtoaster-pods}, we show how to produce an M3 program for computing non-recursive SQL queries.  Such M3 programs always have acyclic dataflow graphs.  However, it is still possible to produce M3 programs with cycles.  
-
-\begin{example}
-\label{ex:cyclegraph}
-Consider the program
-\begin{verbatim}
-ON R(A): m1[A] += 1
-         m2[A] += m3[A]
-ON S(A): m1[A] += m2[A]
-ON T(A): m3[A] += m1[A]
-\end{verbatim}
-The dataflow graph for this program is presented in Figure \ref{fig:dataflowcycle}.  Though no single event uses or modifies the same maps twice\footnote{Even if one event were to read and write to/from the same map, there is still an explicit order of execution across statements}, it is possible for a poorly timed event arrival order to cause each successive event to generate a progressively larger number of messages.  In this example, consider the ordered event sequence \texttt{T[1],R[1],S[1]}, causing the following messages to be dispatched:
-\begin{enumerate}
-\item Event \texttt{T} arrives at m1.  m1 sends the current value of \texttt{m1[1]} as an delta for \texttt{m3[1]} to m3.
-\item Event \texttt{R} arrives at m1 and m3.  m1 is updated.  m3 sends its current value \texttt{m3[1]} to m2.  
-\item The delta for Event \texttt{T} arrives at m3, changing the value of \texttt{m3[1]}.  m3 must now update its delta to \texttt{m2[1]} and send a correction to m2.
-\item Event \texttt{S} arrives at m2.  m2 sends its current value \texttt{m2[1]} to m1.  
-\item The delta for Event \texttt{R} arrives at m2, changing the value of \texttt{m2[1]}.  m2 must send a correction to m3.
-\item The correction to the delta for Event \texttt{R} arrives at m2, changing the value of \texttt{m2[1]} again.  m2 must send another correction.
-\end{enumerate}
-\end{example}
-
-\begin{figure}
-\begin{center}
-\includegraphics[width=2in]{graphics/cycle_graph}
-\end{center}
-\caption{Dataflow graph for an M3 program with a dataflow cycle.}
-\label{fig:dataflowcycle}
-\end{figure}
-
-We refer to such an event as a \textit{cascade}.  If there is no cycle in the graph, the number of messages in a cascade is bounded by 
-$$\frac 12 [max\_path\_length(dataflow\_graph)]^2$$
-Otherwise, this process can continue indefinitely, increasing the number of messages with each event.  
-
-To prevent this, Cumulus buffers and aggregates deltas for a short period of time after the event that causes them.  While this does prevent a cascade, it bounds the number of messages sent by the cascade.
+\end{figure} 
 
 % Possible TODO: intelligent buffering; How we can stagger buffer periods for a dataflow DAG to limit unfulfilled dependencies down the line.
 
@@ -464,7 +429,9 @@ Thus, it is necessary for the system to be able to discover when all updates hav
 
 %ABOVE: describe how TCP channels should be used in the section on source aggregation??
 
-Garbage collection occurs in two phases: coordinator synchronization, and node synchronization.  Each coordinator maintains a record of all nodes it sends events to since the last garbage collection.  When garbage collecting, each coordinator sends an \texttt{epoch commit} message to all nodes on the list.  It then continues processing as normal.  The garbage collection process is also illustrated in Figure \ref{fig:GCflowchart}.
+Garbage collection occurs in two phases: coordinator synchronization, and node synchronization.  Each coordinator maintains a record of all nodes it sends events to since the last garbage collection.  After a clock-triggered timeout\textit{Coordinators are assumed to have clocks synchronized to within a constant error margin.}, each coordinator begins garbage collecting by sending an \texttt{epoch end} message to all nodes it communicated with.  From this point, the coordinator can begin processing updates for the next epoch.
+
+The following garbage collection process is also illustrated in Figure \ref{fig:GCflowchart}.
 
 \begin{figure}
 \begin{center}
@@ -495,17 +462,11 @@ ON Cleanup($V$)
 \label{fig:gcalgorithms}
 \end{figure}
 
-When a node receives an \texttt{epoch commit}, it responds, confirming that it has received, processed, and inserted into its history all prior events from that coordinator.  Once a coordinator receives confirmation from all nodes it sent an \texttt{epoch commit} to, it broadcasts an \texttt{epoch end} to all other coordinators.  Once all coordinators have sent an \texttt{epoch end}, the coordinators split the work of broadcasting an \texttt{epoch end} across the cluster.
+Assuming a reliable transport with each message processed in order, when an \texttt{epoch end} from a coordinator, it will have processed and inserted into its history all prior events from that coordinator.  A similar effect can achieved with an unreliable transport.  The node responds to the coordinator with a \texttt{end ok}, confirming that it has processed all of the coordinator's prior messages.  
 
-Once a node receives an \texttt{epoch end} message, it will never again receive an event for a prior epoch.  Now, the nodes must ensure that no further map deltas will need to be propagated.  Using the dataflow graph, a node can determine from where it receives deltas, and to whom it sends deltas.  
+Once a coordinator receives confirmation from all nodes that it communicated with, it broadcasts an \texttt{epoch ready} message to all other coordinators.  Once all coordinators have sent an \texttt{epoch ready}, the coordinators split the work of broadcasting an \texttt{epoch commit} across the cluster.
 
-If the graph is a DAG, garbage collection is simple.  The node waits until it receives an epoch complete message from its coordinator, and an \texttt{epoch checkpoint} from all in edges.  It then sends an \texttt{epoch checkpoint} to each out edge, and invokes the cleanup process described in Figure \ref{fig:gcalgorithms}.
-
-If the dataflow graph has cycles, as in Example \ref{ex:cyclegraph}, one node in the cycle is designated as the cycle leader.  When this node receives an \texttt{epoch end}, it sends out a \texttt{partial checkpoint} to the next node in the cycle.  The \texttt{partial checkpoint} is forwarded to subsequent nodes in the cycle.  Each node uses the checkpoint message to ensure that it has received an \texttt{epoch end} and \texttt{epoch checkpoint}s from all nodes not in the cycle and that it has processed all pending messages from the prior node before forwarding the \texttt{partial checkpoint}.  
-
-If the cycle leader has not received any deltas from the prior node in the cycle by the time the \texttt{partial checkpoint} completes a full traversal, it sends a \texttt{partial checkpoint complete} to the nodes in the cycle, informing them that the cycle has completed its checkpoint. If it receives a delta in the interim, it begins the process anew.
-
-An additional step may be introduced to deal with a node that belongs to two or more cycles.  One cycle leader is designated as the primary.  Before sending a \texttt{partial checkpoint complete}, the cycle leaders all block on the primary.  Once all cycle leaders are ready, the primary queries all nodes that cross cycles and the nodes respond whether or not they sent a delta after sending at least one \texttt{partial checkpoint} message.  If it did, the primary restarts the partial checkpointing process.  Otherwise, the primary proceeds as normal.
+Once a node receives an \texttt{epoch commit} message, it will never again receive an event for a prior epoch.  Now, nodes must ensure that no further map deltas will be received.  Using the dataflow graph, a node can determine from where it receives deltas, and to whom it sends deltas.  Because this graph is a DAG in restricted M3, deltas can be flushed along it.  When a node receives an \texttt{epoch commit}, and it sends an \textit{epoch checkpoint} along all of its out edges once after receiving one from all of its in edges.  It then invokes the cleanup process described in Figure \ref{fig:gcalgorithms}.
 
 The act of garbage collection has a very useful added benefit.  In addition to limiting the amount of historical data nodes are required to store, aggregating all deltas prior to a particular version creates a version of the map segment that is consistent with other map segments with the same version across the entire cluster.
 
