@@ -15,6 +15,15 @@
 \def \v#1{\mbox{#1}}
 \def \vv#1{\mbox{{\tiny #1}}}
 
+\begin{itemize}
+  \item Overview of query language presentation: simple language exposing
+  variables, that allows us to briefly present core transformations performed
+  during compilation, followed by an extension to a more complex language that
+  captures aspects of information flow and query evaluation.
+\end{itemize}
+
+\noindent Query language:
+
 \begin{align*} 
 \q \; \mbox{::-} &
   \;    c \;|\; Var(x)
@@ -25,10 +34,30 @@
   \;|\; \calceq(\q,y) \;|\; \calceq(x,y)
 \\
 }
-\qq \; \mbox{::-} & \; \q \;|\; \calcsum(\vec{x}, \q)
+\qq \; \mbox{::-} & \; \q \;|\; \calcsum(\vec{x}, \qq(\vec{x}\vec{y}))
     \;|\; \qqa(\vec{x}) + \qqb(\vec{y}) \;|\; \qqa(\vec{x}) * \qqb({\vec{y}}) \\
-&   \;|\; -(\qq) \;|\; \theta(\qq) \todo{\;|\; \calceq(x,\qq)}
+&   \;|\; -\qq(\vec{x}) \;|\; \theta(\qq) \;|\; \calceq(x,\qq)
 \end{align*}
+
+\begin{itemize}
+  \item Basic terms ($q$) in language: constants, variables (i.e. variable
+  usage), relations which define vars, maps which are keyed by vars, and
+  functions which take vars as arguments.
+  \item Higher-order terms ($Q$): sum aggregates with group-by vars
+  listed (for presentation we drop this first arg if there are no group-bys), s
+  sum and product operations of basic terms and higher-order terms. The
+  variables listed for the subqueries are variables that are free in the
+  subquery. \note{We return to free and bound variables in describing semantics
+  below}. A sum operation corresponds to schema-less union, and a product to
+  natural join. Note in the case of no variables from either $\qqa$ or $\qqb$
+  these operations correspond to arithmetic sum and product. We also have
+  additive inverse and nested queries, and a variable binding which associates
+  (the value of) a variable to a subquery.
+  \item Variable bindings are only introduced as part of our transformations,
+  that is they are not needed to express SQL queries.
+\end{itemize}
+
+\noindent Language semantics:
 
 \begin{align*}
 c                   := & \; \tuple{} \mapsto c\\
@@ -53,8 +82,8 @@ f                   := & \; \vec{x} \mapsto f(\vec{x}) \\
 \end{align*}
 
 \begin{align*}
-\calcsum(\vec{x}, \q) := & \;
-\vec{x} \mapsto \ \sum_{\vec{y}} \q(\vec{x}\vec{y})
+\calcsum(\vec{x}, \qq(\vec{x}\vec{y})) := & \;
+\vec{x} \mapsto \ \sum_{\vec{y}} \qq(\vec{x}\vec{y})
 \\
 \qqa(\vec{y}) + \qqb(\vec{z}) := & \;
 \vec{x} \mapsto 
@@ -65,26 +94,65 @@ f                   := & \; \vec{x} \mapsto f(\vec{x}) \\
 \vec{x} \mapsto \sum_{ \{\vec{x}\} = \{\vec{y}\} \Join \{\vec{z}\} }
 \qqa(\vec{y}) * \qqb(\vec{z})
 \\
--(\qq) := & \; \vec{x} \mapsto -\qq(\vec{x})
+-\qq(\vec{x}) := & \; \vec{x} \mapsto -\qq(\vec{x})
 \\
-\theta(\qq) := & \; \vec{x} \mapsto
+\theta(\qq) := & \; \tuple{} \mapsto
                     \begin{cases}
                     1 \ldots \qq(\vec{x}) \theta 0\\
                     0 \ldots \mbox{otherwise.}
                     \end{cases}
 \\
-\todo{\calceq(x,\qq) :=} & \;
-\todo{\vec{y} \mapsto \qq(\vec{y})}
+\calceq(x,\qq) := & \; \Gamma := \Gamma \cup \{x \mapsto \qq\};
+                  \tuple{} \mapsto 1
 \end{align*}
 
 \begin{itemize}
-  \item Primitive maps
-  \item Higher-order maps
-  \item Explain schema-less union and $ext()$ function
+  \item Based on generalized multiset relations (gmrs) of PODS paper, each
+  expression in our language represents a finite function (ffn), whose
+  arguments correspond to \textit{free} variables in the subquery. The domain
+  of this finite function is the universe of named and typed tuples, the range
+  the set of natural numbers, i.e. $f : \mbox{Tup} \mapsto \mathbb{N}$. Each
+  finite function is non-zero for only a small subset of tuples.
+  \item Semantics of basic terms:
+  \begin{itemize}
+    \item constants and variables are singleton functions, yielding the
+    constant or variable value. Variables are bound in an environment,
+    $\Gamma$, and for readability, we defer the full description of the bound
+    and free variables in an expression to both later in this paper, and more
+    formally in the PODS paper, especially with the definitions of safety in
+    PODS Sec. 4, Fig. 1.
+    \item Relations are ffns yielding cardinalities of tuples (i.e. multiset
+    semantics), maps and functions yield values associated with keys (i.e.
+    tuples), and arguments respectively.
+  \end{itemize} 
+  
+  \item Semantics of higher-order terms:
+  \begin{itemize}
+    \item Sum aggregate is summation of (the values yielded by) an expression
+    over non-group-by variables.
+    \item Sum op is schema-less union, that is (the sum of counts of) all tuples
+    from $\qqa$ and $\qqb$ extended to the combined schema of $\vec{y} \cup
+    \vec{z}$. The $ext$ function performs this schema extension by ``adding''
+    missing values. Note the semantics of missing values are not the same as
+    nulls. In particular, our ffns are simply functions whose arguments must be
+    \textit{consistent} with the values provided, that is variables whose
+    values are missing can be ignored.
+    \item Product op is (the product of counts of) tuples from $\qqa$ and
+    $\qqb$ according to a natural join of said tuples.
+    \item Additive inverse simply negates (the count of tuples in) a gmr.
+    \item Nested aggregates are a singleton tuple (with count) based on a
+    comparison of a subquery with no free variables (and thus a single-row
+    subquery) to 0.
+    \item Variable bindings add a mapping from the variable name $x$ to the
+    ffn $\qq$ in the environment $\Gamma$, and yields an identity gmr. Note the
+    ffn $\qq$ has no free variables.
+  \end{itemize} 
+  
 \end{itemize}
 
 \tinysection{Example queries}
 
+\noindent VWAP:
 \begin{verbatim}
 select sum(price * vol)
 from bids b0
@@ -110,6 +178,7 @@ where 0.25 * (select sum(b1.vol) from bids b1) >
 \end{align*}
 }
 
+\noindent TPCH Q18:
 \begin{verbatim}
 select c.custkey, sum(l1.quantity)
 from customer c, orders o, lineitem l1
@@ -136,8 +205,26 @@ group by c.custkey;
 & \; \calceq(\v{CK} - \v{OCK}) * \calceq(\v{OK} - \v{OK1})
 \end{align*}
 
-\subsection{Delta Queries and Query Compilation}
+\subsection{Query Transformations}
 
+\noindent This subsection presents core query transformations used for query
+compilation, including:
+\begin{itemize}
+  \item Delta computation, the core query transformation needed for incremental
+  processing. Compilation is essentialy computing higher-order deltas, i.e.
+  recursively applying delta transformations, in conjunction with the other
+  transformations below.
+  \item Preaggregation, a transformation used to alter the structure of
+  subqueries in expressions containing nested queries, to facilitate deltas of
+  nested queries.
+  \item Normalization and simplification, transformations used to bring a query
+  to a canonical form, and reduce the query in terms of variables present.
+\end{itemize}
+
+\tinysection{Delta computation}
+We define a function $\Delta$ that accepts a query, and a relation (and its
+variables), for which to compute a delta query. This delta is identical to that
+of the PODS paper (with the addition of a variable binding clause):
 \begin{align*}
 \Delta_{+R(\vec{x} \mapsto \vec{t})} c := & \; 0
 \\
@@ -149,7 +236,7 @@ group by c.custkey;
 \Delta_{+R(\vec{x} \mapsto \vec{t})} S(\vec{y}) := & \; 0
 \\
 \Delta_{+R(\vec{x} \mapsto \vec{t})}
-\calcsum(\vec{x},\q) := & \; \calcsum(\vec{x},\Delta\q)
+\calcsum(\vec{x},\qq) := & \; \calcsum(\vec{x},\Delta\qq)
 \\
 \Delta_{+R(\vec{x} \mapsto \vec{t})} (\qqa + \qqb) := & \;
 (\Delta\qqa + \Delta\qqb)
@@ -160,27 +247,32 @@ group by c.custkey;
 (\Delta \qqa * \Delta \qqb)
 \\
 \Delta_{+R(\vec{x} \mapsto \vec{t})} \theta(\qq) := & \;
-(\theta(\qq + \Delta \qq) * \overline{\theta}(\qq + \Delta \qq)) \; -
+(\theta(\qq + \Delta \qq) * \overline{\theta}(\qq)) \; -
 \\
 & \; (\overline{\theta}(\qq+\Delta \qq) * \theta(\qq))
 \\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} \calceq(x,\qq) := & \;
+    \calceq(x,\Delta \qq)
 \end{align*}
 
 \begin{itemize}
-  \item Ring of databases, refer to PODS paper
-  \item Higher-order deltas, i.e. \textit{k-th} deltas.
+  \item Note every delta form, except deltas of nested queries, results in a
+  simpler query in terms of the \textit{degree} of a query. Loosely speaking,
+  a query's degree is a measure of the number of relations (and thus
+  free variables) present in a query, and formally defined in PODS Sec. 5, Def.
+  5.4.
+  \item The delta for a nested query is not simpler, since we have both
+  $\theta(\qq)$ and $\theta(\qq + \Delta \qq)$ present after applying the
+  transformation. Given our query compilation algorithm is recursive in
+  nature, query compilation has to intelligently determine how to compute
+  higher-order deltas of nested queries to ensure termination.
 \end{itemize}
 
-\tinysection{Deltas of nested queries}
-
-\noindent\todo{Note the equation below relies on iovars, and given our
-generalization of bigsum rewriting as preaggregators, should we defer
-discussion of compilation of nested queries to after annotation?}
-
-\noindent\todo{
-I think we can describe preaggregation without iovars, since our sum construct
-explicitly has outvars. WRONG! since the definition of strictness relies on
-invars! We can explain invars as Var(x) occurring in the expression.}
+\tinysection{Preaggregation}
+Preaggregation is a transformation focusing on the complexity of queries
+containing nested terms that essentially introduces additional aggregation
+operations based on nesting structure and the correlated variables connecting
+outer queries and nested queries.
 
 \comment{
 \begin{align*}
@@ -189,30 +281,21 @@ invars! We can explain invars as Var(x) occurring in the expression.}
 \end{align*}
 }
 
-\noindent General nested query form:
+
+\noindent The general form of a nested query is:
 \begin{align*}
 \calcsum(\vec{x}, \qqa * \theta(\qqb))
 \end{align*}
+
+\noindent where query $\qqb$ contains correlated variables, which are
+free variables in $\qqa$. Preaggregation transforms query $\qqa$ to a group-by
+aggregate, with the correlated variables in $\qqb$ as grouping variables.
 
 \def \pa#1#2{\llbracket #1 \rrbracket_{PA}(#2)}
 
 \noindent Preaggregation (note assumes left-associativity for product):
 
 \begin{align*}
-\pa{\calcsum(\vec{x}, \qq)}{\vec{x}} & :=
-    \calcsum(\vec{x}, \pa{\qq}{\vec{x} \cup vars(\qq)})
-\\
-\pa{\qqa + \qqb}{\vec{x}} & := \pa{\qqa}{\vec{x}} + \pa{\qqb}{\vec{x}}
-\\
-\pa{\qqa * \qqb}{\vec{x}} & :=
-    \pa{\qqa}{\vec{x} \cup vars(\qqb)} * \pa{\qqb}{\vec{x}}
-\\
-\pa{-(\qq)}{\vec{x}} & := -(\pa{\qq}{\vec{x}})
-\\
-\pa{\theta(\qq)}{\vec{x}} & := \theta(\pa{\qq}{vars(\qq)})
-\\
-\pa{\calceq(x,\qq)}{\vec{y}} & := \calceq(x, \pa{\qq}{vars(Q)})
-\\[1.5ex]
 \pa{c}{\vec{x}} & := c
 \\
 \pa{Var(x)}{\vec{y}} & := Var(x)
@@ -222,9 +305,32 @@ invars! We can explain invars as Var(x) occurring in the expression.}
 \pa{m(\vec{x})}{\vec{y}} & := \calcsum(\vec{x} \cap \vec{y}, m(\vec{x}))
 \\
 \pa{f(\vec{x})}{\vec{y}} & := \calcsum(\vec{x} \cap \vec{y}, f(\vec{x}))
-   \mbox{  \todo{// what domain?}}
+\\
+\pa{\calcsum(\vec{x}, \qq(\vec{x}\vec{y}))}{\vec{x}} & :=
+    \calcsum(\vec{x}, \pa{\qq(\vec{x}\vec{y})}{\vec{x}})
+\\
+\pa{\qqa(\vec{y}) + \qqb(\vec{z})}{\vec{x}} & :=
+    \pa{\qqa}{\vec{x}} + \pa{\qqb}{\vec{x}}
+\\
+\pa{\qqa(\vec{y}) * \qqb(\vec{z})}{\vec{x}} & :=
+    \begin{cases}
+    \calcsum(\vec{x}\vec{v}, 
+        \pa{\qqa}{\vec{x}\vec{v}}) * \pa{\qqb}{\vec{x}} \\
+    \; \; \ldots
+        \mbox{ if $\vec{v} \neq \emptyset$},\vec{v} = \vec{y} \cap vars(\qqb)\\
+    \pa{\qqa}{\vec{x}} * \pa{\qqb}{\vec{x}} \\
+    \; \; \ldots \mbox{ otherwise}
+    \end{cases}
+\\
+\pa{-\qq(\vec{y})}{\vec{x}} & := -\pa{\qq(\vec{y})}{\vec{x}}
+\\
+\pa{\theta(\qq)}{\vec{x}} & := \theta(\pa{\qq}{\tuple{})})
+\\
+\pa{\calceq(x,\qq)}{\vec{y}} & := \calceq(x, \pa{\qq}{\tuple{}})
 \end{align*}
 
+\noindent where $vars$ yields all variables used (that is $Var$ expressions)
+in a query.
 
 \noindent Preaggregation example:
 \begin{align*}
@@ -253,9 +359,6 @@ invars! We can explain invars as Var(x) occurring in the expression.}
   of outvars it has. Thus bigsum rewriting does not simplify in terms of
   degree, but does in term of width. With preaggregation, we are creating
   queries of minimal width w.r.t propagation.}
-  \item Equivalent degree of nested constraint delta (i.e. delta not simpler)
-  \item Bigsum rewriting
-  \item Lower degree delta, exemplified by VWAP.
 \end{itemize}
 
 \tinysection{Query normalization and simplification}
