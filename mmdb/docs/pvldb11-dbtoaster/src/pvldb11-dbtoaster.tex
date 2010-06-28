@@ -1,7 +1,19 @@
 \documentclass[preprint]{vldb}
 
 \usepackage{amsmath,amssymb}
+\usepackage{stmaryrd}
 \usepackage{graphicx}
+\usepackage{color}
+\usepackage{trfrac}
+
+\newcommand{\comment}[1]{}
+\newcommand{\compiler}{DBToaster}
+\newcommand{\tinysection}[1]{\noindent{\bf #1.}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\note}[1]{\textcolor{blue}{#1}}
+
+
 
 \begin{document}
 \title{DBToaster: Lightweight Incremental Query Processing for Update-Intensive
@@ -32,6 +44,7 @@ Abstract goes here.
 
 \input{introduction}
 \input{mapcalc}
+\input{compilation}
 \input{queryeval}
 \input{experiments}
 \input{relwork}

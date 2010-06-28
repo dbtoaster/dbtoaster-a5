@@ -1,0 +1,452 @@
+\section{Query Compilation}
+
+\subsection{DBToaster Trigger Language}
+
+\noindent\todo{Bigsum vars are the outvars $\vec{z}$ in the conditional below.}
+
+\noindent\todo{Rethink need for conditionals, and whether it can be expressed
+in a binary op, with maps appropriately positioned left or right based on
+short-circuiting.}
+
+\def\mtins{\mbox{on\_insert}}
+\def\mtdel{\mbox{on\_delete}}
+\begin{align*}
+e \; \mbox{::-} & \;
+  m[\vec{v}][\vec{v}]\tuple{init}
+\comment{
+  c \;|\; v \;|\;
+  \;|\; e[\vec{w}][\vec{x}] * e[\vec{y}][\vec{z}]
+  \;|\; e[\vec{w}][\vec{x}] + e[\vec{y}][\vec{z}]
+\\
+& 
+}
+  \;|\; e[\vec{w}][\vec{x}] \;\theta\; e[\vec{y}][\vec{z}]
+  \;|\; e[\vec{x}][] \neq 0 \; ? \; e[\vec{y}][\vec{z}] :0
+\\
+stmt \; \mbox{::-} & \; m[\vec{x}][\vec{y}]\tuple{init}
+     \; \mbox{{\tt+}=} \; \sum_{\vec{z}} e[\vec{x}][\vec{y}\vec{z}]\\
+init \; \mbox{::-} & \; m[\vec{x}][\vec{y}]\tuple{init}
+     \; := \; \sum_{\vec{z}} e[\vec{x}][\vec{y}\vec{z}]\\
+trig \; \mbox{::-} & \; \mtins(R,\vec{v},\vec{stmt}) \;|\;
+\mtdel(R,\vec{v},\vec{stmt})
+\end{align*}
+
+\begin{itemize}
+  \item Motivate grammar by explaining the above annotated form indicates
+  everything can be represented as maps, thus we can simplify our evaluation
+  framework to one that applies sum/products/conditionals to maps alone.
+  Furthermore during compilation, the delta queries produced are from the same
+  closed language as our input queries. Thus the above grammar can capture
+  queries, but we add a couple of extensions for incremental evaluation, namely
+  the statement and trigger constructions. This is the output of our
+  compilation, and known as M3.
+  \item Triggers + statements anatomy (lhs maps, loop variables, bigsum
+  variables).
+  \item \todo{Explain why we never need to sum slices, and only multiply
+  slices, thus we only have joins and products and never schemaless unions.}
+  \item Statement ordering, update of old values only, atomic execution.
+\end{itemize}
+
+\tinysection{Map Datastructures}
+
+\begin{itemize}
+  \item Two-tiered maps
+  \item API, secondary indexes for loop variables.
+\end{itemize}
+
+\tinysection{Statement Semantics and Evaluation}
+
+\begin{itemize}
+  \item Slice access for loop variables, using secondary indexes.
+  \item Inlining of non-slice expressions to simple arithmetic expressions.
+  Example?
+  \item Note that we never need to evaluate sums on \textit{maps} due to
+  monomialization, which recursively ensures map sums are expanded out into
+  polynomials. Thus any remaining sum operations apply to (sum) aggregates.
+  \item Product evaluation as a core evaluation primitive, can be thought of as
+  join/cross product evaluation based on presence of propagated variables.
+  \item \todo{What is the output schema from product evaluation? How does this
+  depend on transitive propagation? We are strict on propagation, but we could
+  also ``push'' down RHS$\rightarrow$LHS projection+aggregation (subject to
+  vars used in RHS constraints, but not part of the LHS outvars) as part of
+  slice access, rather than at the very end once joins have been computed.}
+  \item Product evaluation to compute conditionals, 0-1 conditional slices.
+  \item Bigsums and product evaluation to loop over the active bigsum variable
+  domain. Short-circuiting in light of bigsums to avoid unnecessary
+  (potentially complex and expensive) then-clause evaluation.
+  \item Projection of rhs expression schema prior to applying update to lhs map.
+  \item LHS map merge and update. 
+  \item Vwap evaluation example.
+  \begin{itemize}
+    \item \todo{Indicate slice accesses, joins, cross products, singleton
+    expressions}
+  \end{itemize}
+  
+  \item We now discuss our trigger evaluation language which is essentially a
+  small fragment of OCaml, but can easily be translated to a pure imperative language. This language
+  fragment is sufficient to implement the statement evaluation described here.
+\end{itemize}
+
+\begin{verbatim}
+// initial values are 0 if omitted
+on_insert_bids(p, v) {
+  // q1     = sum v from bids
+  // q2(p2) = sum v from bids where p > p2
+  // q3     = sum p*v from bids group by p
+  // q4     = sum v from bids group by p
+
+  q[][] += 4*q2[p][]<q2_i1> - q1[][] > 0? p*v : 0
+  
+  q[][] += sum_d
+      if 4*q2[d][]<q2_i2> - q1[][] <= 0 then
+      (if 4*(q2[d][]<q2_i2>+(d < p ? v : 0))
+          - q1[][]+v > 0
+       then q3[][d] else 0) else 0
+  
+  q[][] += sum_d
+      if 4*q2[d][]<q2_i2> - q1[][] > 0 then
+      (if 4*(q2[d][]<q2_i2>+(d < p ? v : 0))
+          - q1[][]+v <= 0
+       then q3[][d]*-1.0 else 0) else 0
+  
+  q[][] += if 4*q2[p][]<q2_i1> - q1[][] <= 0 then
+      (if 4*q2[p][]<q2_i1> - q1[][]+v > 0
+       then p*v else 0) else 0
+  
+  q[][] += if 4*q2[p][]<q2_i1> - q1[][] > 0 then
+      (if 4*q2[p][]<q2_i1> - q1[][]+v <= 0 
+       then p*v*-1.0 else 0) else 0
+
+  q1[][] += v
+  q2[d][]<q2_i2> += p > d ? v : 0 
+  q3[][p] += p*v
+  q4[][p] += v
+  
+  q2_i1: q2[p][] := sum_c c > p ? q4[][c] : 0
+  q2_i2: q2[d][] := sum_c c > d ? q4[][c] : 0
+}
+\end{verbatim}
+
+\subsection{Initial value computation}
+
+\begin{itemize}
+  \item Current approach to constructing initializer for RHS map access:
+  initial value computation with bigsums
+  \begin{itemize}
+    \item Create initializer from ``accessed'' definition: substitute map params in
+    definition with params in RHS expr. 
+    \item Create ``bigsum'' form: separate constraints from relations and vars
+    in definition, creating an aggregate over the non-constraint part, that is
+    ``extracted'' as the initial map. The initializer is then a bigsum of the
+    initial map and the constraints.
+    \item \todo{How does this fit into the preaggregation model, and a more
+    general (and optimized) extraction process for initializers?}
+    \item \note{Differences from standard bigsums: this includes all
+    constraints, not just nested ones. Why can't simple constraints be pushed
+    into the initial maps?}
+  \end{itemize}
+  \item \todo{Recursive compilation for initial maps, extend algorithm}
+  \item Initial value examples, added to above program
+\end{itemize}
+
+\subsection{Compilation Algorithm}
+
+\begin{itemize}
+  \item Duplicate map elimination description
+  \item Algorithm description
+  \item \todo{VWAP compilation example -- how do we present this?}
+\end{itemize}
+
+\def \alg         {{\bf algorithm}}
+\def \algbegin    {{\bf begin}}
+\def \algend      {{\bf end}}
+\def \algforeach  {{\bf for each}}
+\def \algdo       {{\bf do}}
+\def \algdone     {{\bf done}}
+\def \algreturn   {{\bf return}}
+\def \algcomment#1{{\tt //} #1}
+
+\def \codeforeach {{\tt for}}
+\def \codev#1     {\mbox{{\tt #1}}}
+
+\begin{figure}
+\begin{tabular}{c|l}
+Symbol   & Description\\
+\hline
+$\Gamma$ & Map (i.e. view) schemas and defining queries \\
+$\pm$ & Event type (i.e. insert/delete) \\
+$m[\vec{x}]$ & Map $m$ with keys $\vec{x}$\\
+$\vec{t}$ & Trigger arguments \\
+$\vec{b}$ & Bound variables (trigger arguments and map keys)\\
+$\v{s}_i$ & Map update statement\\ 
+triggers[$R$] & Per-relation trigger statement accumulator 
+\end{tabular}
+
+\begin{itemize}
+\item \todo{Preaggregation} 
+\item \todo{Bigsum extraction based on comparing degrees of delta terms}
+\item \todo{Break down Simplify steps}
+\item \todo{Don't show code for MakeStmt, just lhs map, lhs map args, delta expr}
+\item \todo{Change $\Gamma$ as this is used for the variable environment}
+\item \todo{Invoke SR code generation from annotated expression}
+\end{itemize}
+
+\begin{tabbing}
+\alg\ Compile(\q: query, m: map name, $\vec{x}$: map keys) \\
+\algcomment{returns triggers (a set of map update statements)}\\
+\algcomment{for update events to relations in \q} \\
+$\Gamma_{\q} := \Gamma$\\
+\algforeach\ base relation $R$ in \q,
+               $\pm$ in $\{\v{insert},\v{delete}\}$
+\algdo \\
+~~\= $\vec{t}$ := fresh variables for columns of $R$
+     \algcomment{trigger args}\\
+  \> $\vec{b} \; := \; \vec{t} \; \cup \; \vec{x}$
+     $\qquad \qquad \qquad \qquad \qquad$ \algcomment{bound vars}\\
+  \> $\v{\q}_{init}$ := MakeInitializer(\q)\\
+  \> \algforeach\ $\v{q}_{m_i}$ in Monomialize($\Delta\v{q}$) \algdo\\
+\>~~\= ($\partial\v{q}_i$, $\Gamma_i$) :=\=\ ExtractSimplerQuery($\vec{b}$,\\
+  \>\>\> ~~ SimplifyQuery($\partial\v{q}_{m_i}$, $\vec{b}$))\\
+  \>\> $\partial_{init} := $ MakeInitializer($\partial\v{\q} _i$)\\
+  \>\> $\v{s}_i$ := \= EliminateLoops(MakeStmt(\\
+  \>\>\> ~~\{\codeforeach\ $\vec{x} \in \codev{m} [\vec{x}]:$
+  $\codev{m} [\vec{x}]\tuple{\v{\q}_{init}} \pm = $
+  $\partial\codev{q} _{i}\tuple{\partial_{init}}$\}))\\
+  \>\> triggers[$R$] := triggers[$R$] $\cup$ \todo{Annotate($\v{s}_i$)}\\
+  \>\> $\Gamma := \Gamma \bigcup_i \Gamma_i$
+  \ \ \ \ \algcomment{eliminates duplicate maps}\\
+  \>\algdone\\
+\algdone\\
+\algforeach\ $(q, m[\vec{x}]) \in \Gamma - \Gamma_{\q}$ \algdo\\
+  \> triggers := triggers $\bigcup_{R}$ Compile($q, m, \vec{x}$); \\
+\comment{\algdone\\}
+\algreturn\ triggers
+\end{tabbing}
+
+\caption{The compilation algorithm.}
+\label{fig:compilation-algo}
+\end{figure}
+
+\begin{figure*}
+\begin{itemize}
+\item \todo{Annotate operator? \ldots or write w/ annotated calculus?}
+\item \todo{Initializers per RHS map}
+\end{itemize}
+\begin{tabular}{l|l|l}
+Operation & Result & Notes \\
+\hline 
+Initial query, $\v{q}$
+    & $\calcsum(B(\v{P0,V0}) * \v{P0} * \v{V0}$
+    &
+\\
+    & $\quad * \calcgt(0.25 * \calcsum(B(\v{P1,V1}) * \v{V1})$
+    &
+\\
+    & $\quad - \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0})))$
+    &
+\\[1.5ex]
+Preaggregation
+    & $\calcsum(
+       \calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0})$
+    & 
+\\
+    & $* \; \calcgt(0.25 * \calcsum(B(\v{P1,V1}) * \v{V1})$
+    &
+\\
+    & $\qquad - \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0})))$
+    & 
+\\[1.5ex]
+$\Delta_{+B(\v{\tiny{xP}},\v{\tiny{xV}})}$,
+    & $\calcsum($
+      $\calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0}) * $
+      $\calcgt(\v{Q2}) * \calclte(\v{Q1}))$
+    &
+\\
+Monomialize,
+    & $+ \; \calcsum($
+      $\calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calcgt(\v{Q3}) * \calclte(\v{Q1}))$
+    &
+\\
+Simplify
+    & $ - \; \calcsum($
+      $\calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0}) * $
+      $\calclte(\v{Q2}) * \calcgt(\v{Q1}))$
+    &
+\\
+    & $ - \; \calcsum($
+      $\calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calclte(\v{Q3}) * \calcgt(\v{Q1}))$
+    &
+\\
+    & $+ \; \calcsum($
+      $\calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calcgt(\v{Q1}))$
+    &
+\\[1ex]
+    & where Q1 =
+      $0.25 * \calcsum(B(\v{P1,V1}) * \v{V1})$ 
+    &
+\\
+    & $\quad - \; \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))$
+    &
+\\
+    & and Q2 =
+      $0.25 * \calcsum(B(\v{P1,V1}) * \v{V1}) + \v{xV}$ 
+    &
+\\
+    & $\quad - \; (\calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))$
+      $+ (\v{xV} * \calcgt(\v{xP,P0})))$
+    &
+\\
+    & and Q3 =
+      $0.25 * \calcsum(B(\v{P1,V1}) * \v{V1}) + \v{xV}$ 
+    &
+\\
+    & $\quad - \; \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))$
+    &
+\\[1.5ex]
+Extract 
+    & $\v{q1}(\tuple{\v{P0}}) := $
+      $\calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0})$
+    &
+\\
+    & $\v{q2} := \calcsum(B(\v{P1,V1}) * \v{V1})$
+    &
+\\
+    & $\v{q3}(\tuple{\v{P0}}) := $
+      $\calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))$
+    &
+\\[1ex]
+    & $\partial \v{q} = $
+      $\calcsum( \v{q1}(\tuple{\v{P0}}) * $
+      $\calcgt(\v{E2}) * \calclte(\v{E1}))$
+    &
+\\
+    & $+ \; \calcsum( \calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calcgt(\v{E3}) * \calclte(\v{E1}))$
+    &
+\\
+    & $- \; \calcsum( \v{q1}(\tuple{\v{P0}}) * $
+      $\calclte(\v{E2}) * \calcgt(\v{E1}))$
+    &
+\\
+    & $- \; \calcsum( \calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calclte(\v{E2}) * \calcgt(\v{E1}))$ &
+\\
+    & $+ \; \calcsum( \calcsum(\tuple{\v{P0}}, (\v{xP} = \v{P0}) * \v{xV}) * $
+      $\calcgt(\v{E1}))$
+    &    
+\\
+    & where E1 = $0.25 * \v{q2} - \v{q3}(\tuple{\v{P0}})$
+    &
+\\
+    & and E2 = $0.25 * \v{q2} + \v{xV} - (\v{q3}(\tuple{\v{P0}}) $
+      $+ (\v{xV} * \calcgt(\v{xP,P0})))$
+    &
+\\
+    & and E3 = $0.25 * \v{q2} + \v{xV} - \v{q3}(\tuple{\v{P0}})$
+    &
+\\[1.5ex]
+MakeStmt
+    & \texttt{q[][] += sum\_P0 c1 * c2 * (q1[][P0])}
+    & MakeInitializer = 0
+\\
+    & \texttt{q[][] += sum\_P0 c1 * c3 * (xP=P0?xP*xV:0)}
+    &
+\\
+    & \texttt{q[][] += sum\_P0 c1 * c2 * (q1[][P0])}
+    &
+\\
+    & \texttt{q[][] += sum\_P0 c1 * c3 * (xP=P0?xP*xV:0)}
+    &
+\\
+    & \texttt{q[][] += sum\_P0 c1 * (xP=P0?xP*xV:0)}
+    &
+\\
+    & where c1 = \texttt{0.25 * q2[][] - q3[P0][] > 0? 1:0}
+    &
+\\
+    & and c2 = \texttt{0.25 * q2[][]+xV - q3[P0][]+(xP>P0?xV:0) > 0? 1:0}
+    &
+\\
+    & and c3 = \texttt{0.25 * q2[][]+xV - q3[P0][] > 0? 1:0}
+    &
+\\[1.5ex]
+EliminateLoops
+    & \texttt{q[][] += sum\_P0 c1 * c2 * (q1[P0])}
+    & MakeInitializer = 0
+\\
+    & \texttt{q[][] += c1x * c3x * xP * xV}
+    &
+\\
+    & \texttt{q[][] += sum\_P0 c1 * c2 * (q1[P0])}
+    &
+\\
+    & \texttt{q[][] += c1x * c3x * xP * xV}
+    &
+\\
+    & \texttt{q[][] += c1x * xP * xV}
+    &
+\\
+    & where c1x = \texttt{0.25 * q2 - q3[xP] > 0? 1:0}
+    &
+\\
+    & and c3x = \texttt{0.25 * q2+xV - q3[xP] > 0? 1:0}
+    &
+\\[1.5ex]
+Recur, $\v{q1}(\tuple{\v{P0}})$
+    & $\calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0})$
+    &
+\\
+M,
+$\Delta_{+B(\v{\tiny{xP}},\v{\tiny{xV}})}$,
+S
+   & $(\v{xP} = \v{P0}) * \v{xP} * \v{xV}$
+   &
+\\
+MakeStmt
+    & \texttt{for P0: q1[P0]<0> += xP = P0? xP * xV : 0}
+    & MakeInitializer = 0
+\\
+EliminateLoops
+    & \texttt{q1[xP]<0> += xP * xV}
+    &
+\\[1.5ex]
+Recur, $\v{q2}$
+    & $\calcsum(B(\v{P1,V1}) * \v{V1})$
+    & 
+\\
+M,
+$\Delta_{+B(\v{\tiny{xP}},\v{\tiny{xV}})}$,
+S
+   & $\v{xV}$
+   &
+\\
+MakeStmt
+    & \texttt{q2[]<0> += xV}
+    & MakeInitializer = 0, EliminateLoops is no-op
+\\[1.5ex]
+Recur, $\v{q3}(\tuple{\v{P0}})$
+    & $\calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))$
+    &    
+\\
+M,
+$\Delta_{+B(\v{\tiny{xP}},\v{\tiny{xV}})}$,
+S
+   & $\v{xV} * \calcgt(\v{xP,P0})$
+   &
+\\
+MakeInitializer
+    & \texttt{q3i: q3[P0] := sum\_p P0 < p? m4[p] : 0}
+    &
+\\
+MakeStmt
+    & \texttt{for P0: q3[P0]<q3i> += xP-P0 > 0? xV : 0 }
+    & EliminateLoops is no-op
+\end{tabular}
+\caption{Simplified VWAP compilation trace.}
+\label{fig:compilevwap}
+\end{figure*}
+
+USW575189K
