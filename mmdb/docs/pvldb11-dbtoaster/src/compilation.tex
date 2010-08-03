@@ -1,37 +1,240 @@
 \section{Query Compilation}
 
-\subsection{DBToaster Trigger Language}
+\begin{itemize}
+  \item \todo{Need some kind of overview that relates calculus terms to
+  incremental programs, i.e. an overview of how calculus can be evaluated
+  incrementally by materializing intermediates. Should also give intuition
+  about the problems of initial values.}
+\end{itemize}
 
-\noindent\todo{Bigsum vars are the outvars $\vec{z}$ in the conditional below.}
+\subsection{Trigger Programs}
 
-\noindent\todo{Rethink need for conditionals, and whether it can be expressed
-in a binary op, with maps appropriately positioned left or right based on
-short-circuiting.}
+\noindent\todo{IO-vars must be part of the syntax because:}
+\begin{itemize}
+  \item Finite functions will be represented as an argument-enumerated data
+  structure (i.e. maps) for all languages, thus type inferencing has to
+  determine io-tuple schemas for maps.
+  \item For languages lacking type inferencing, map declarations must include
+  io-tuple schemas (i.e. arities) and types, i.e. the target language syntax
+  includes type information.
+  \item For languages with type inferencing, no typed map declarations are
+  required, and the target language compiler will unify types for all data
+  structure accesses.
+  The question is where do we do tuple construction, and do we need to? 
+  Will there always be a lookup into the data structure, or can we always
+  scan/iterate thus accessing tuple directly from the data structure?
+  Note we must perform tuple construction somewhere for the purposes of
+  inserting/loading our data structures (as occurs on the LHS of a statement,
+  when incrementing a map)
+  
+  We have a choice, we can either explicitly perform tuple construction
+  prior to these accesses, in particular specifying schema arities, but not
+  necessarily types (i.e. field/var types).
+  Alternatively we can make our operators, i.e. +,* perform this and simply use
+  a tuple-oriented API for the datastructures. However having the operators do
+  tuple construction implies either operators compiled per instance, or generic
+  operators which do this at runtime based on the map arguments supplied. The
+  latter is inefficient, while the former boils down to syntactically
+  representing schema arities.
+  
+  Note that the current SliceableMap implementation has a tuple-based API,
+  where tuples are lists, and thus the data structure is generic and can be
+  used for any schema. However tuple construction is done explicitly as part of
+  the code, and we do not have the concept of parameterized operators.
+  
+  \item The short version is that given our representation of finite functions
+  as maps, at some point we have to insert or load these maps (for us this
+  primarily occurs while incrementing), and thus have to do tuple construction
+  there, since map keys may be some subset of bound variables in the trigger
+  tuple. Tuple construction requires syntactic schema specification, and we
+  cannot always assume tuples that we need are passed in.
+\end{itemize}
+
+\begin{itemize}
+  \item We first describe the outputs of our compilation process, a simple
+  language for representing trigger programs, where triggers are executed on
+  any tuple insertion or deletion arriving on an input stream. 
+\end{itemize}
 
 \def\mtins{\mbox{on\_insert}}
 \def\mtdel{\mbox{on\_delete}}
 \begin{align*}
 e \; \mbox{::-} & \;
-  m[\vec{v}][\vec{v}]\tuple{init}
+  c \;|\; x \;|\;
+  m[\vec{x}][\vec{y}]\tuple{init}
 \comment{
-  c \;|\; v \;|\;
   \;|\; e[\vec{w}][\vec{x}] * e[\vec{y}][\vec{z}]
   \;|\; e[\vec{w}][\vec{x}] + e[\vec{y}][\vec{z}]
 \\
 & 
 }
-  \;|\; e[\vec{w}][\vec{x}] \;\theta\; e[\vec{y}][\vec{z}]
-  \;|\; e[\vec{x}][] \neq 0 \; ? \; e[\vec{y}][\vec{z}] :0
+\comment{
+  \;|\; e[\vec{w}][\vec{x}] \;\{+,*,-\}\; e[\vec{y}][\vec{z}]
+  \;|\; e[\vec{x}][] \;\theta\; 0 \; ? \; e[\vec{y}][\vec{z}] :0
+}
+  \;|\; e + e \;|\; e * e \;|\; -e
+\\
+& 
+  \;|\; e \;\theta\; 0 \; ? \; e : 0
+  \;|\; \calcsum(\vec{x}, e)
 \\
 stmt \; \mbox{::-} & \; m[\vec{x}][\vec{y}]\tuple{init}
-     \; \mbox{{\tt+}=} \; \sum_{\vec{z}} e[\vec{x}][\vec{y}\vec{z}]\\
-init \; \mbox{::-} & \; m[\vec{x}][\vec{y}]\tuple{init}
-     \; := \; \sum_{\vec{z}} e[\vec{x}][\vec{y}\vec{z}]\\
+     \; \mbox{{\tt+}=} \; e\\
+init \; \mbox{::-} & \; m[\vec{x}][\vec{y}]\comment{\tuple{init}}
+     \; := \; e\\
 trig \; \mbox{::-} & \; \mtins(R,\vec{v},\vec{stmt}) \;|\;
 \mtdel(R,\vec{v},\vec{stmt})
 \end{align*}
 
 \begin{itemize}
+  \item Core components of language: expressions, increment statements,
+  initialization statements, and triggers.
+  
+  \item Statement ordering, update of old values only, atomic execution.
+  
+  \item Here, expressions are essentially calculus terms that we saw in the
+  previous section, with one core difference: the basic atomic element here is
+  a map datastructure, rather than a relation. Maps have input and output
+  variables, corresponding to the first and second arguments of the finite
+  functions we saw in the previous section, that is bound variables, and free
+  variables. Note that a map can represent the materialization of any arbitrary
+  calculus term, and not just relations. These each map atom contains an
+  initializer expression in addition to input and output variables. We return
+  to these initializers below.
+
+  \item That is to say, the aggregate calculus is closed under deltas, that is
+  the delta queries are expressed with the same language fragment as our original
+  queries, especially when considering nested queries, whose deltas are no
+  simpler than the original query. We return to this issue when discussing our
+  compilation algorithm, particularly from the context of ensuring termination
+  of our compilation algorithm.
+  
+  
+  \item Note, not all expressions are technically two-level finite functions,
+  e.g. constants ignore their bound variable arguments, thus is total function
+  w.r.t bound variables, and similarly for variables, constraints, assignments
+  and the operators. In fact, only those calculus expressions involving
+  relations yield two-level finite functions, due to the consistency
+  requirement between bound variables and the gmr.
+  \todo{Actually this requirement is not sufficient for finiteness, since we
+  can have an infinite number of bound variable tuples that are consistent,
+  given consistency does not impose any restrictions on the arity of the tuple.}
+  That is expressions involving only constants, variables and constraints, if
+  they are safe in terms of range restriction, are total functions that can
+  directly be represented as code, without any data structures.
+\end{itemize}
+
+\tinysection{Statement Semantics and Evaluation}
+
+\begin{itemize}
+  \item Map lookup semantics and description of loops: all maps have a defining
+  calculus expression, with the type of the definition being a two-level ffn of
+  bound and free variables. The brackets $m[\vec{x}][\vec{y}]$ represents an
+  evaluation of the map (definition) expression, with arguments $\vec{x},
+  \vec{y}$, however since we have materialized the expression with a map, this
+  corresponds to a map lookup with the given arguments.
+  
+  \item Map evaluation (i.e. lookup) may be \textit{partial} in both its
+  arguments, yielding a two-level ffn itself. That is given a trigger's bound
+  variables $\vec{b}$, there may be map lookup arguments that are not bound, i.e.
+  $\vec{b} \subset \vec{x} \cup \vec{b}$, and
+  $\vec{b} \subset \vec{y} \cup \vec{b}$.
+  Partial evaluation for a map's bound or free variables corresponds to
+  enumerating valuations for the variables from the map's active domain for
+  the variables (the two-level ffn yields zero outside the active domain).
+  
+  \item Partial map evaluation occurs because in vars arise as a result of
+  specializing a calculus expression with a delta. Naturally we must be able to
+  restrict the range of in vars when evaluating delta expressions, however, it is
+  not necessarily the case that each in var will be bound by the trigger, since
+  triggers correspond to updates on a specific relation, thus triggers bind
+  different sets of variables. In cases where in vars are not bound by trigger
+  vars, we perform range restriction based on the active domain of the in var,
+  and we refer to this as partial map evaluation.
+
+  \item We have a few options on how to perform this enumeration, or looping,
+  over maps, given how maps are partially evaluated. \todo{Can the same LHS loop
+  in var appear multiple times on the RHS? This boils down to a question of
+  factorization, and whether bound variables can appear in both factors. Since
+  bound variables are essentially singleton constants, thus should be consistent
+  across both factors, this is safe. However our implementation does not support
+  this currently, factorization takes no consideration of bound/free vars. E.g.
+  the following should be fine, but our compiler yields the first delta
+  expression:
+  \begin{align*}
+  \Delta_{S(XY)} & \calcsum(R(AB) * S(CD) * T(EF) * A * F \\
+  & \qquad * B<C * C<E)\\
+  & := \calcsum( R(AB) * T(EF) * A * F \\
+  & \qquad * B<X * X<E)\\
+  & := \calcsum( R(AB) * A * B<X) \\
+  & \qquad * \calcsum(T(EF) * F * X<E)\\
+  & := m1[X][] * m2[X][]
+  \end{align*}
+  }
+  \note{Let's move forward with the assumption that we can do this kind of
+  factorization, thus in vars can appear in multiple maps. Next part is can
+  this occur for loop in vars? Sure, all LHS vars are loop vars by default,
+  unless there is an equality constraint present against a trigger var, but in
+  queries consisting of only range predicates, this will never happen, as with
+  the above example when updating either of the two factors (i.e. +R or +T).}
+
+  \item Given multiple occurrences, we then have the issue of determining which
+  map to use for enumerating valuations of a loop in var. Note that loop in vars
+  must appear as a map parameter on the LHS, thus for multiple occurrences, we
+  may use the LHS map for valuations, as in our current implementation.
+  Alternatively we can take the intersection of all RHS maps' active domains,
+  however computing this intersection may be more costly than simply looping over
+  the LHS map. Consider $RST$, where $m1=sum(d, S * T * B=S.b * S.c=T.c)$, and
+  $\delta T \rightarrow $\texttt{m1[B][] += d*m2[B,xC][]}. This has a loop in-var
+  of $B$, and currently we would loop over the existing domain of $B$ in $m1$,
+  whereas we could simply use the existing domain in $m2$. In addition to
+  yielding more sparsely populated maps, this would result in fewer failed
+  lookups, and thus IVCs. Thus this is simply an optimization for the case where
+  the RHS contains a single map, which may still be useful since many statements
+  may consist of a single in case we cannot factorize. Ideally though, we would
+  have a cost model of the cardinality of the intersection and subsequently
+  valuation enumeration cost.
+  
+  \item Does this also apply to out vars? We should not be able to have
+  multiple occurrences a var as out vars, since all vars should be unique. Note
+  of course an out var can be propagated, but it's remaining occurrences would
+  be as in vars.
+
+  \item The remaining components are constructs for incremental evaluation.
+  Incremental statements indicate updates applied to maps from the result of an
+  expression. \todo{Given $e$ returns a two-level ffn, what are the semantics
+  of += for incrementing? Is this also schema-less union, and if so, what are
+  the variables $x,y$ appearing with the LHS map, the ``type'' of this
+  expression $e$? Similarly, what are the semantics for assignment in IVC? This
+  is related to what we decide to materialize, since these are always
+  $\calcsum$, there is a single-value interpretation, w/ loops as necessary
+  given the presence of bound group-bys, etc.}
+  
+  \item The {\tt +}= operator in an increment statement is not a
+  schema-less union, since it sums up over (a sequence of) updates, each update
+  resulting in a ffn with the same schema. It is a union, due to the possibility
+  of new values changing the domain of the LHS ffn, although with its current
+  syntax, the focus is on updating the value of the ffn. Furthermore, given
+  what the kinds of expressions we extract (aggregates), the update reflects a
+  new aggregate value (potentially for groups in the case of a group-by
+  aggregate).
+  
+  \item \note{For a statement, the in-vars of the RHS maps may be a superset of
+  the LHS in-vars, with the additional vars being trigger vars, thus bound
+  (otherwise the calculus expression would not be range restricted).}
+  
+  \item \note{The overall inconsistency right now with claiming the RHS as
+  standard calculus terms is that we have a fully defined semantics for two-level
+  ffns, unlike our implementation, which always assumes in vars are bound (by
+  enumerating in vars), and the result of the RHS is a one-level ffn (i.e. an
+  out-slice). I am trying to resolve this inconsistency by determining if we can
+  design a fully two-level implementation, which specifically avoids this step of
+  binding all in-vars prior to evaluating the incremental RHS.}
+
+  \item \note{It would be worthwhile writing down the semantics of {\tt +}= in
+  terms of unseen LHS values and IVC, vs. increments.}
+  
+  \comment{
   \item Motivate grammar by explaining the above annotated form indicates
   everything can be represented as maps, thus we can simplify our evaluation
   framework to one that applies sum/products/conditionals to maps alone.
@@ -42,11 +245,21 @@ trig \; \mbox{::-} & \; \mtins(R,\vec{v},\vec{stmt}) \;|\;
   compilation, and known as M3.
   \item Triggers + statements anatomy (lhs maps, loop variables, bigsum
   variables).
+  }
+  
   \item \todo{Explain why we never need to sum slices, and only multiply
   slices, thus we only have joins and products and never schemaless unions.}
-  \item Statement ordering, update of old values only, atomic execution.
+  
+  \item Propagation, and relationship to hash join build and probe. Lack
+  of propagation as cross product, briefly mention how we return to this when
+  discussing our code generation and calculus expression evaluation in the next
+  section.
+
+  \item Bigsum evaluation, and late projection/aggregation. This too can be
+  optimized as we discuss in the next section.
 \end{itemize}
 
+\comment{
 \tinysection{Map Datastructures}
 
 \begin{itemize}
@@ -75,16 +288,21 @@ trig \; \mbox{::-} & \; \mtins(R,\vec{v},\vec{stmt}) \;|\;
   domain. Short-circuiting in light of bigsums to avoid unnecessary
   (potentially complex and expensive) then-clause evaluation.
   \item Projection of rhs expression schema prior to applying update to lhs map.
-  \item LHS map merge and update. 
+  \item LHS map merge and update.
+}
+
+\tinysection{Trigger program example}
+
+\begin{itemize} 
   \item Vwap evaluation example.
   \begin{itemize}
-    \item \todo{Indicate slice accesses, joins, cross products, singleton
-    expressions}
+    \item \todo{Indicate partial map evaluation (slicing), propagation (joins
+    vs. cross product), singleton expressions (i.e. total functions)}
   \end{itemize}
   
-  \item We now discuss our trigger evaluation language which is essentially a
-  small fragment of OCaml, but can easily be translated to a pure imperative language. This language
-  fragment is sufficient to implement the statement evaluation described here.
+  \item \todo{Give a simpler example of a trigger program, e.g. self-join on
+  customers before this complete example. This could be moved to after the
+  compilation trace.}
 \end{itemize}
 
 \begin{verbatim}
@@ -130,31 +348,330 @@ on_insert_bids(p, v) {
 \subsection{Initial value computation}
 
 \begin{itemize}
-  \item Current approach to constructing initializer for RHS map access:
+  \item Initializers are non-zero only in the presence of input variables in a
+  map definition expression. Initialization is thus computing a new map entry
+  for a bound variable whose value we've not seen before.
+
+  \item In IVC, these in vars must be bound, yielding a specialization of the
+  definition query that we must evaluate.
+    
+  \item This input/bound variable comes from another relation, whose delta
+  we've taken at some prior stage of compilation. This can be from multiple
+  levels above, since LHS in vars can appear on the RHS, e.g.:
+  
+  \begin{align*}
+  & q[][] \; =
+  \calcsum(R(AB)*S(CD)*T(EF)*U(GH) \\
+  & \qquad * A * H * B<C * B<E * F<G  * B<H) \\
+  \Delta_{R} & \; q[][] = xA*\calcsum(S(CD)*T(EF)*U(GH)*H \\
+  & \qquad * xB<C * xB<E * F<G * xB<H)\\
+  & = xA * m1[xB][]\\
+  \Delta_{S} & \; m1[B][] = \calcsum(T(EF)*U(GH)*H \\
+  & \qquad * B<xC * B<E * F<G * B<H)\\
+  & = m2[B,xC][]\\
+  \Delta_{T} \; & m1[B][] = \calcsum(S(CD)*U(GH)*H\\
+  & \qquad * B<C * B<xE * xF<G * B<H)\\
+  & = m2.2[B,xE,xF][]\\
+  \Delta_{U} \; & m1[B][] = \calcsum(S(CD)*T(EF)\\
+  & \qquad * B<C * B<E * F<xG) * B<xH * xH \\
+  & = m2.3[B,xG][] * B<xH * xH \\
+  \Delta_{T} & \; m2[BC][] = \calcsum(U(GH)*H \\
+  & \qquad * B<C * B<xE * xF<G * B<H) \\
+  & = \calcsum(U(GH)*H \\
+  & \qquad * B<C * B<xE * xF<G * B<H)\\
+  & = m3[B,C,xE,xF][]\\
+  \Delta_{U} & \; m3[BCEF][] = \\
+  & xH * B<C * B<E * F<xG * B<xH
+  \end{align*}
+
+  Above, B is an input variable for map $m3$, but is passed through multiple
+  levels of deltas due to the join conditions. \note{(Note this query currently
+  fails in our implementation, and should be debugged since it is perfectly
+  valid.)}
+  
+  \item The above is using our currently implemented factorization technique,
+  which is not quite aggressive enough w.r.t bound variables, otherwise the
+  derivation would be:
+
+  \begin{align*}
+  & q[][] \; =
+  \calcsum(R(AB)*S(CD)*T(EF)*U(GH) \\
+  & \qquad * A * H * B<C * B<E * F<G  * B<H) \\
+  \Delta_{R} & \; q[][] = xA*\calcsum(S(CD)*T(EF)*U(GH)*H \\
+  & \qquad * xB<C * xB<E * F<G * xB<H)\\
+  & = xA * \calcsum(S(CD) * xB<C) * \\
+  & \qquad \calcsum(T(EF)*U(GH)*H\\
+  & \qquad \quad * xB<E * F<G * xB<H)\\
+  & = xA * m1[xB][] * m2[xB][]\\
+  \Delta_{S} & \; m1[B][] = B<xC\\
+  \Delta_{T} & \; m2[B][] \\
+  & = \calcsum(U(GH)*H * xF<G * B<H) * B<xE\\ 
+  & = m3[B,xF][] * B<xE\\
+  \Delta_{U} & \; m2[B][]\\
+  & = \calcsum(T(EF) * B<E * F<xG) * xH * B<xH\\
+  & = m4[B,xG][] * xH * B<xH\\
+  \Delta_{U} & \; m3[BF][] = xH * F<xG * B<xH\\
+  \Delta_{T} & \; m4[BG][] = B<xE * xF<G  
+  \end{align*}
+
+  \item \note{We've observed that we can do initial value computation by
+  exploiting other map entries, i.e. ``neighboring'' in var map entries, but
+  never explicitly formalized this, nor factored it into data structure
+  construction. For example, we could build an extremely compact data structure
+  for neighboring in vars, if the map expression does not change (i.e. no
+  difference in tuples satisfying the map definition between different in var
+  values.)}
+  
+  \item Given a map definition expression, recursive compilation will
+  create delta queries for each relation in the definition, to maintain the map.
+  
+  \item Let's consider lookup-based IVC first, i.e. where initializers are
+  invoked as part of RHS evaluation. IVC is invoked whenever we encounter
+  lookups that use trigger vars as map parameters, and entries corresponding to
+  these trigger vars are not yet present in the map. This applies to map
+  parameters that are either in or out vars. How does one-shot lookup-based IV
+  computation differ in its evaluation plan from maintenance?
+  
+  \item Consider the above example. Suppose we are maintaining $q$ and we
+  invoke IVC for $m1$. Since we are in a trigger for $R$, we have bound
+  variables $xB, xC$. Recursive compilation instantiates maps to maintain $m1$
+  in the event of deltas to the remaining relations, the question then becomes
+  how can we supply the necessary bound variables for these maps to compute an
+  initial value? We should be able to aggregate over the active domains of these
+  maps.
+  
+  \item For example, to compute IVs of $m1$ using $m2$, we need trigger vars for
+  $S$, specifically $xC$, but only have them for $R$. Suppose we have seen the
+  relation $S$:
+  \[S = \{\vec{s_1}, \vec{s_2} \ldots \vec{s_n}\}\]
+  
+  Given $B$ is an in var to the relation $m1$, we can define the current state
+  of $m1$ for any value of $B$ as:
+  
+  \begin{align*}
+  m1[B][] := \; & m2[B,\vec{s_1}(C)][] \\
+  & + m2[B,\vec{s}_2(C)][]\\
+  & + \ldots + m2[B,\vec{s}_n(C)][]
+  \end{align*}
+  
+  Now, we are only interested in the initial value for the bound
+  variable $xB$, yielding:
+  
+  \[m1[xB][] := \sum_C m2[xB,C][]\]
+
+  Thus for IVC, we can simply change the {\tt+}= increment operator into an
+  aggregation over the active domain of the dependent map, and ``flip'' in vars,
+  i.e. binding $m2$'s loop in vars with the current trigger's vars, and looping
+  over the other trigger's vars. Note this will recursively invoke IVC for $m2$,
+  since it too has $B$ as an in var, and we will not have seen $xB$ for $m2$
+  before either.
+
+  The challenge here is then how do we obtain the values of $C$ that we are
+  summing over? We cannot enumerate the active domain from the map $m2$
+  directly, since no entries involving $xB$ are present in the map. Here we
+  have two options, we can keep an auxiliary map for initialization maintaining
+  the domain of $C$, or we can use the domain for a neighboring entry. The
+  latter option requires that the active domain for $C$ is complete for a
+  neighboring value to $xB$, thus we prefer the former option rather than
+  enforcing this requirement for dense maps.
+  
+  This auxiliary map is essentially a preaggregated map, as we witnessed above
+  when considering minimal width calculus expressions. That is rather than
+  maintaining the base relation $S$, we can simply keep a count of $C$ values:
+  
+  \begin{align*}
+  m1[xB][] :&= \calcsum(\tuple{C}, S(CD)) * m2[xB,C][]\\
+  & = init1[][C] * m2[xB,C][]
+  \end{align*}
+
+  In addition to map accesses, the delta expression may contain residual
+  constraints involving either input or trigger variables. We impose one
+  restriction on the calculus expression defining the preaggregated map due to
+  the fact we are performing initialization, namely we omit any terms containing
+  input variables, otherwise this auxiliary map itself would require initial
+  value computation. Overall, this approach both reuses maps from delta
+  computation, in addition to restricting further creating initializers for the
+  auxiliary maps (which otherwise could potentially never terminate due to the
+  presence of input variables). For example consider the initializer for
+  $m2[B][]$ based on the $\Delta_T$ expression. We create an initializer:
+  
+  \begin{align*}
+  m2[xB][] :&= \calcsum(\tuple{EF}, T(EF)) * m3[xB,F][] * xB < E\\
+  & = init2[][EF] * m3[xB,F] * xB < E 
+  \end{align*}
+  
+  rather than
+  
+  \begin{align*}
+  m2[xB][] :&= \calcsum(\tuple{EF}, T(EF) * xB<E) * m3[xB,F][]\\
+  & = init'[xB][EF] * m3[xB,F]
+  \end{align*}
+  
+  since the second would require initialization itself due to the presence of
+  $B$ as an input variable.
+  
+  We can simply repeat this approach for $m2$, again bearing in mind the trigger
+  (and thus bound vars) in which the initializer is invoked:
+  
+  \[m2[xB,C][] := \sum_{E,F} m3[xB,C,E,F][]\]
+  
+  
+  Notice that here $C$ is bound from the lookup for $m2$ in computing the
+  initial value for $m1[xB][]$. Further note we could compute the IV for $m1$
+  as:
+  
+  \[m1[xB][] := \sum_{C,E,F} m3[xB,C,E,F][]\]
+  
+  but for consistency, we need to physically instantiate the initial value for
+  $m2[xB,C]$. This is valid because $BC$ are loop in vars to $m3$, and thus their
+  active domains are kept consistent with the active domains of the vars as they
+  appear in $m2$. This illustrates another tradeoff in terms of performing
+  initial value computation, where just as with incremental maintenance, we can
+  trade off materialization overhead and computation time by using higher-order
+  deltas and their maps.
+  
+  \note{Note that pure aggregations corresponding to marginalization, i.e.:
+  $m1[A,B] \mbox{{\tt +}=} m2[A,B,C]$
+  are very obvious candidates for avoiding materialization to reduce space
+  overhead.}
+  
+  \item \note{It may be worthwhile pointing out this property of consistent
+  active domains for loop in vars in the semantics section for the {\tt+}=
+  operator.}
+  
+  \todo{The above technique only works if the map $m2, \ldots$ is maintained for
+  the entire active domain of its loop in var $B$. This ensures a dense set of
+  $B,C$ entry pairs. Interestingly this conflicts with the suggested loop
+  optimization in the previous section. If we apply that, then we must explicitly
+  enumerate the complete $C$ domain here as part of IVC.}
+
+  \item Current implementation of constructing initializer for RHS map access:
   initial value computation with bigsums
   \begin{itemize}
     \item Create initializer from ``accessed'' definition: substitute map params in
-    definition with params in RHS expr. 
-    \item Create ``bigsum'' form: separate constraints from relations and vars
-    in definition, creating an aggregate over the non-constraint part, that is
-    ``extracted'' as the initial map. The initializer is then a bigsum of the
-    initial map and the constraints.
-    \item \todo{How does this fit into the preaggregation model, and a more
-    general (and optimized) extraction process for initializers?}
-    \item \note{Differences from standard bigsums: this includes all
+    definition with params in RHS expr. \note{Note, this is the same as
+    considering the context in which the initializer is invoked, as described
+    above.}
+    \item Create initial maps and ``bigsum'' expression: separate constraints
+    from relations and vars in definition, creating an aggregate over the
+    relations and vars as the initial map. This is essentially
+    preaggregation, to create a minimal width expression of the base
+    relation, as needed for the rest of the initialization expression.
+    \item \note{This differs from standard extraction and recursive compilation
+    applied in our algorithm, the extraction for initialization omits all
     constraints, not just nested ones. Why can't simple constraints be pushed
-    into the initial maps?}
+    into the initial maps? They can, and we do this with the revised approach for
+    those terms without in vars (to ensure initial maps don't need complex
+    initializers themselves). I believe this a bug with the current
+    implementation.}
   \end{itemize}
-  \item \todo{Recursive compilation for initial maps, extend algorithm}
-  \item Initial value examples, added to above program
+  
+  Constrast the above approach to our current implementation. The key
+  difference is that we are constructing initializers that explicity reuse
+  deltas, and do not need to perform additional recursive compilation to
+  determine initialization expressions. The auxiliary data structure is a
+  preaggregated map guaranteed to apply over a single relation, and can
+  incorporate residual constraints that do not contain input variables.
+
+  \item We have multiple options/plans for computing initial values
+  recursively, based on the order of deltas available. Which one do we choose?
+  
+  \item \note{IVC and delta order: look at the maintenance of $m1$ for all
+  deltas. The statement for $\Delta_{U}$ is the most interesting, it identifies the
+  remainder expression that is not kept in a delta map with $B<xH*xH$. We could
+  explicitly keep this in a map and then combine with $m2.3$ to compute initial
+  values.}
+  
+  \todo{Why is this a good idea, given we'll have to keep one data structure
+  anyway for $m2.3$? If we do IVC with $\Delta_{S}$ or $\Delta_{T}$ we don't
+  need any additional datastructures \textit{at this stage}.}
+  \note{If we keep the same map anyway for bottoming out, there may be a
+  performance argument. The other plan may perform many more iterations since
+  it applies to a higher dimensional map, whereas this one has already applied
+  some aggregation. I think that in general there is a cost-based optimization
+  to be done in terms of which delta expression to be used for initial value
+  computation, but the cost model and the optimization algorithm lie outside
+  the scope of this work.}
+  
+  \note{Putting aside the question of ordering and picking the optimal order,
+  this indicates that the map we instantiate for bottoming out will be used
+  multiple times, for different initializers. This is fairly straightforward,
+  since we need initialization expressions for all maps, and through recursive
+  initialization, whichever order we use for a high-level map will also use the
+  same initialization expressions as the lower-level maps present in the order.
+  For example, the remainder expression for initializing $m1$ with $\Delta_U$
+  is the same as the map needed when bottoming out from the $\Delta_{S,T,U}$
+  order.}
+
+  \comment{
+  \item \note{Idea: stitching: using recursive initialization, we must keep one
+  additional map for each initializer when bottoming out. This will typically
+  be because we do not have active domains for the last set of trigger vars.
+  The idea of stitching is to use the active domain of another map, where the
+  trigger vars are either input or output vars to supply valuations, avoiding
+  the need to instantiate any additional data structures. Note this final
+  expression contains no further maps, thus we can simply use the variable's
+  domain from the map, and don't actually need the map value.}
+  \todo{Which map do we take the domain from, and whether in the presence of
+  other variables, is this domain a complete active domain for the variable?
+  See the above comment about loop in var optimizations.}
+  \note{Stitching sounds a little bit like view matching and determining
+  calculus expression containment. I think we should defer this, since this
+  could equally be applied at any stage of duplicate map detection and
+  extraction, where we could attempt to match any extracted term to existing
+  map terms, and perform any compensating computation.}
+  }
+
+  \item The following is a simpler example that can be used to illustrate
+  initializers and residual expressions, but does not have the example of
+  an input variable bound through multiple levels of compilation:
+  
+  \begin{align*}
+  & q[][] = \calcsum(R(AB) * S(CD) * A * D * B<C)\\
+  \Delta_{R} & q[][] = \calcsum(S(CD) * D * xB<C) * xA\\
+  & = m1[xB][] * xA\\
+  \Delta_{S} & q[][] = \calcsum(R(AB) * A * B<xC) * xD\\
+  & = m2[xC][] * xD\\
+  \Delta_{S} & m1[B][] = B<xC * xD\\
+  \Delta_{R} & m2[C][] = xB<C * xA
+  \end{align*}
+
+  \note{Do we want to use this instead of the above example for readability?}
+
+  \item The following is a variant of the above query that interestingly
+  causes our current implementation to break, that I believe is due to
+  propagated errors relating to factorization:
+  \begin{align*}
+  & q[][] = \calcsum(R(AB) * S(CD) * A * C * B<C)\\
+  \Delta_{R} & q[][] = \calcsum(S(CD) * C * xB<C) * xA\\
+  & = m1[xB][] * xA\\
+  \Delta_{S} & q[][] = \calcsum(R(AB) * A * B<xC * xC)\\
+  & = m2[xC][]\\
+  \Delta_{S} & m1[B][] = B<xC * xC\\
+  \Delta_{R} & m2[C][] = xB<C * C * xA
+  \end{align*}
+
+
 \end{itemize}
 
 \subsection{Compilation Algorithm}
 
 \begin{itemize}
+  \item We now piece together all of the transformations presented in the
+  previous sections into our query compilation algorithm.
+
+  \item Algorithm overview: recursive compilation, involves taking deltas,
+  simplifying and specializing based on deltas, and then extracting the next
+  calculus expression for recursion. Additional aspects: initial value
+  expressions, map deduplication, code generation, including map typing and map
+  evaluation (potentially partial).
+  \item \todo{Initializer expression construction}
   \item Duplicate map elimination description
+  \item Extraction as selection of next compilation target. Should elaborate on
+  this in a bit of depth, i.e. what are the range of options when considering
+  extraction? How could we build up a cost-based/heuristic/extensible approach
+  to extraction, beyond this outermost aggregate approach?
   \item Algorithm description
-  \item \todo{VWAP compilation example -- how do we present this?}
 \end{itemize}
 
 \def \alg         {{\bf algorithm}}
@@ -448,5 +965,3 @@ MakeStmt
 \caption{Simplified VWAP compilation trace.}
 \label{fig:compilevwap}
 \end{figure*}
-
-USW575189K

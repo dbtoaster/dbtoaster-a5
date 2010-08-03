@@ -1,6 +1,6 @@
 \section{Incremental Queries}
 
-\subsection{Map Calculus}
+\subsection{Aggregate Calculus}
 
 \def\calcsum{\mbox{Sum}}
 \def\calceq{\mbox{{\tt =}}}
@@ -15,14 +15,18 @@
 \def \v#1{\mbox{#1}}
 \def \vv#1{\mbox{{\tiny #1}}}
 
-\begin{itemize}
-  \item Overview of query language presentation: simple language exposing
-  variables, that allows us to briefly present core transformations performed
-  during compilation, followed by an extension to a more complex language that
-  captures aspects of information flow and query evaluation.
-\end{itemize}
+In this section, we describe the \textit{aggregate calculus}, a query language
+capturing the semantics of SQL queries posed on multisets, that can represent
+updates and their impact on query results with delta queries, binding patterns
+and propagation, and the subsequent transformation and simplification of such
+delta queries. The consideration of variable bindings is intrinsically coupled
+with data structures materialized, especially in the presence of nested
+subqueries using correlated variables. Furthermore, variable propagation
+clearly demarcates indepedent subparts of queries, facilitating a novel query
+evaluation framework based on functional programming primitives seen in the
+next section.
 
-\noindent Query language:
+\noindent Our query language is described by the following EBNF:
 
 \begin{align*} 
 \q \; \mbox{::-} &
@@ -111,7 +115,7 @@ f                   := & \; \vec{x} \mapsto f(\vec{x}) \\
   expression in our language represents a finite function (ffn), whose
   arguments correspond to \textit{free} variables in the subquery. The domain
   of this finite function is the universe of named and typed tuples, the range
-  the set of natural numbers, i.e. $f : \mbox{Tup} \mapsto \mathbb{N}$. Each
+  the set of real numbers, i.e. $f : \mbox{Tup} \mapsto \mathbb{R}$. Each
   finite function is non-zero for only a small subset of tuples.
   \item Semantics of basic terms:
   \begin{itemize}
@@ -347,6 +351,34 @@ in a query.
 \end{align*}
 
 \begin{itemize}
+  \item Preaggregation starts with either an empty tuple, or the group-by
+  variables of an aggregation query.
+  \item In the above example, the effect of preaggregation is to make the
+  subexpression $B(\v{P0,V0}) * \v{P0} * \v{V0}$ strict in terms of its
+  \textit{width} with respect to the nested query. That is since the nested
+  query only uses the variable $\v{P0}$ as a correlated variable, the
+  subexpression need only maintain the outer sum aggregate, grouped by the
+  correlated variable.
+  \item The width of an expression is the number of free variables present in
+  that expression, i.e.:
+  
+  \begin{align*}
+  width(R(\vec{x})) & := |x|\\
+  width(\calcsum(\vec{x}, R(\vec{x}\vec{y}))) & := |\vec{x}|\\
+  width(\qqa(\vec{x}) + \qqb(\vec{y})) & := |\vec{x} \cup \vec{y}|\\
+  width(\qqa(\vec{x}) * \qqb(\vec{y})) & := |\vec{x} \cup \vec{y}|\\
+  width(\theta(\qq)) & := 0\\ 
+  width(\calceq(x,\qq)) & := 1\\ 
+  \end{align*}
+  
+  
+  \item The goal of preaggregation is to transform a query into one that has a
+  minimal width locally, that is not only should a query have minimal width, all
+  subqueries should also have minimal width. \note{i.e. using terminology of
+  next section, eliminate unused outvars of a query, minimizing the number of
+  variables made available for propagation.}
+
+  \comment{  
   \item Apply preaggregation step. This ensures strictness of subqueries for
   correlated variables. Note preaggregation can be useful beyond nested
   queries, it essentially preaggregates relations to only those variables that
@@ -359,6 +391,7 @@ in a query.
   of outvars it has. Thus bigsum rewriting does not simplify in terms of
   degree, but does in term of width. With preaggregation, we are creating
   queries of minimal width w.r.t propagation.}
+  }
 \end{itemize}
 
 \tinysection{Query normalization and simplification}
@@ -375,7 +408,10 @@ in a query.
 
 
 
-\subsection{Query Evaluation Annotations}
+\subsection{Variable Bindings and Calculus Typing}
+
+%%\begin{align*}
+%%\end{align*}
 
 \begin{itemize}
   \item Input/output variables, cf. binding patterns, datalog.
@@ -409,9 +445,8 @@ m[\vec{x}][\vec{y}]\;|\; f[\vec{x}][]
 & \;|\;
 (\qqa[\vec{u}][\vec{vv'}] * \qqb[\vec{v'w}][\vec{x}])[\vec{y}][\vec{z}]
 \\
-& \;|\; \theta(\qq[\vec{x}][])[\vec{x}][]
-\\
-& \todo{\;|\; \calceq(\qq[\vec{x}][\vec{y}])}
+& \;|\; \theta(\qq[\vec{x}][])[\vec{x}][] \\
+& \;|\; \calceq(x,\qq[\vec{y}][])[\vec{y}][x]
 \end{align*}
 
 \begin{itemize}
@@ -435,6 +470,7 @@ bf-equality
 \noindent\todo{Punt annotated semantics to appendix/omit entirely. Should
 explain two-level maps though.}
 
+\noindent\todo{Fix semantics of schema-less union (and product?)}
 \begin{align*}
 R[][\vec{x}]          := & \; \tuple{} \mapsto \vec{x} \mapsto R(\vec{x})\\
 c[][]                 := & \; \tuple{} \mapsto \tuple{} \mapsto c\\
@@ -442,6 +478,7 @@ Var[x][]              := & \; \tuple{x} \mapsto \tuple{} \mapsto x\\
 m[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto
 m(\vec{x})(\vec{y})
 \\
+\comment{
 \theta[x,y][]         := & \; \tuple{x,y} \mapsto \tuple{} \mapsto
                            \begin{cases}
                            1 \ldots x \; \theta \; y \\
@@ -457,6 +494,7 @@ m(\vec{x})(\vec{y})
 \\
 \calceq[x][y]         := & \; \tuple{x} \mapsto \tuple{y} \mapsto x
 \\
+}
 f[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto f(\vec{x})
 \\ 
 \\
@@ -475,7 +513,13 @@ f[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto f(\vec{x})
 \vec{z} \mapsto \\
 & \qquad \;\;\;
 \sum_{ \{\vec{z}\} = \{\vec{v_1}\vec{v_2}\} \Join \{\vec{x}\} }
-\qqa(\vec{u})(\vec{v_1}\vec{v_2}) * \qqb(\vec{v_2}\vec{w})(\vec{x}) 
+\qqa(\vec{u})(\vec{v_1}\vec{v_2}) * \qqb(\vec{v_2}\vec{w})(\vec{x})
+\\
+-\qq :=
+\\
+\theta(\qq[\vec{x}][])[\vec{x}][] :=
+\\
+\calceq(x,\qq[\vec{y}][])[\vec{y}][] 
 \end{align*}
 
 
