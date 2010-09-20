@@ -1,0 +1,124 @@
+\documentclass{sig-alternate}
+
+\usepackage{amsmath,amssymb}
+\usepackage{stmaryrd}
+\usepackage{graphicx}
+\usepackage{color}
+
+\newcommand{\comment}[1]{}
+\newcommand{\tinysection}[1]{\noindent{\bf #1.}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\note}[1]{\textcolor{blue}{#1}}
+
+
+\begin{document}
+\title{A Dynamic Data Management System}
+\numberofauthors{3}
+\author{
+\alignauthor
+Yanif Ahmad\\
+    \affaddr{Johns Hopkins University}
+    \affaddr{Baltimore, MD}
+    \email{yanif@cs.jhu.edu}
+\alignauthor
+Oliver Kennedy\\
+    \affaddr{EPFL}
+    \affaddr{Lausanne, Switzerland}
+    \email{okennedy@epfl.ch}
+\alignauthor
+Christoph Koch\\
+    \affaddr{EPFL}
+    \affaddr{Lausanne, Switzerland}
+    \email{christoph.koch@epfl.ch}
+}
+\maketitle
+
+\begin{abstract}
+Abstract goes here.
+\end{abstract}
+
+\input{introduction}
+
+\section{Data Management By State Machines}
+
+
+Conceptually: DDMS = dynamic data structures + views.
+
+
+
+A DDMS can be naturally modeled as a state machine in which the current repository is the current state of the state machine that undergoes a transition whenever an update is performed to it.
+
+Definitions.
+
+states = the database at different points in time. A state is a relational database.
+
+transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
+
+schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
+
+
+
+
+Why use the state machine abstraction:
+
+* The state machine abstraction makes the modes of API access to the DDMS (monitoring state, notification for events that are properties of the state) that we see in our killer apps look natural and intuitive.
+
+* The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+
+
+
+
+Give an example of a schema and view specification in DBToaster -- e.g., the VWAP example.
+
+
+
+
+
+
+\section{Compiling the state transition function; Incremental View Maintenance in DBToaster}
+
+
+
+\section{Managing Storage in DBToaster}
+\begin{itemize}
+\item Motivation:
+  \begin{itemize}
+  \item we've talked about incremental evaluation, from a main mem perspective
+  \item classical dbms maintains db schema in terms of processing queries over the entire data set, i.e. scans of whole tables and indexes built on whole tables
+  \item a ddms should configure the storage layer to best service updates
+  \item we look at this in terms of the auxiliary structures, and their relationship
+  \item one idea here is how to cocluster the auxiliary structures, which exploits locality
+    \begin{itemize}
+    \item in particular an update only touches a few entries in the auxiliary structure, coclustering places these entries together for efficient access to storage
+    \item another is to stripe the data to yield high aggregate bandwidth
+    \end{itemize}
+  \end{itemize}
+
+\item Disk layout
+  \begin{itemize}
+  \item Single Disk - Cluster within disk
+  \item Multi-Disk - Stripe across disks
+  \item Distributed - Network-bound
+  \end{itemize}
+
+\item Challenges to Partitioning
+Number of edges in dataflow graph created by a single split (ie: splitting along a particular axis with a particular program creates one-one edges, one-many edges, many-many edges) (partitioning on an output variable on right, both, or neither)
+
+\item Indexing
+  \begin{itemize}
+  \item incrementally computing the sort order
+  \item partial indexing
+  \item update chunks (separate area that is cheap to update, i.e. no split/rebalancing of index, lazily pushed into index)
+  \end{itemize}
+\end{itemize}
+
+
+\section{Discussion and Conclusions}
+
+
+
+
+
+
+\end{document}
