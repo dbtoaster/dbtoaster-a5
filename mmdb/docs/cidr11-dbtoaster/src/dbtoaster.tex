@@ -21,14 +21,16 @@ Given a database state, existing view maintenance techniques will incrementally
 handle transitions to another state for a given update. We can informally
 represent this with a triple $\tuple{q,m,q'}$, corresponding to the view query,
 the materialization of that query, and the delta query responsible for
-maintaining the materialization. On an update, view maintenance performs the
-work: $m_{new} = m_{old} + q'(u)$, and this is guaranteed to
-ensure $m_{new} = q(db_{new})$. That is, a materialized view can be updated with
-the result of a delta query taking an update $u$ as an argument, and the view
-maintenance technique must ensure the updated view is equivalent to the query
-result on the modified database. Here, the delta query can be thought of as a
-parameterized SQL query, with parameters corresponding to attributes in the
-update.
+maintaining the materialization.
+\note{Should talk more about delta queries if you're going to make this the
+first mention of it, i.e. with an example}
+On an update, view maintenance performs the work: $m_{new} = m_{old} + q'(u)$,
+and this is guaranteed to ensure $m_{new} = q(db_{new})$. That is, a
+materialized view can be updated with the result of a delta query taking an
+update $u$ as an argument, and the view maintenance technique must ensure the
+updated view is equivalent to the query result on the modified database. Here,
+the delta query can be thought of as a parameterized SQL query, with parameters
+corresponding to attributes in the update.
 
 With our conceptual model, we are able to make the
 following key insight when taking a holistic approach with the state machine
@@ -39,11 +41,13 @@ update, it is not incremental with respect to the remainder of the database. The
 transition evalutes delta queries from scratch on the remainder of the database,
 rather than leveraging the fact that this remnant has not changed, and any work
 done previously on that portion of the database can be reused.
-\note{Diagram here: states containing base relations and a query, transitions
-for all base relations, each leading to another state. For one of these
+\note{Diagram here:
+\comment{states containing base relations and a query,
+transitions for all base relations, each leading to another state. For one of these
 neighboring states, we'll repeatedly apply the same transition, highlighting
 that the remainder of the base tables do not change, yet the delta queries are
 still evaluated from scratch.}
+}
 
 To facilitate reuse, we materialize the delta query over the remainder tables,
 making it part of the auxiliary state of the database. We refer to this as the
@@ -73,14 +77,159 @@ update being of a different order.
 
 \vspace{1mm}
 \subsection{Query Compilation and Transition Programs}
-To present our algorithm, we first describe our query representation, tailored
-for incremental processing, and a simple and powerful set of transformations
+\noindent To present our algorithm, we first describe our query representation,
+tailored for incremental processing, and a simple and powerful set of transformations
 that we use to simplify and optimize queries.
 
 \tinysection{Query Language}
+\noindent Our query language is described by the following EBNF:
+
+\def\calcsum{\mbox{Sum}}
+\def\calceq{\mbox{{\tt =}}}
+\def\calcgt{\mbox{{\tt >}}}
+\def\calcgte{\mbox{{\tt >=}}}
+\def\calclte{\mbox{{\tt <=}}}
+
+\def \q{q}
+\def \qa{q_1}
+\def \qb{q_2}
+\def \v#1{\mbox{#1}}
+\def \vv#1{\mbox{{\tiny #1}}}
+\def \z{\mathbb{Z}}
+
+\begin{align*} 
+\q \; \mbox{::-} &
+  \;    c \;|\; x
+  \;|\; R(\vec{x}) \;|\; m(\vec{x},\vec{y})
+\\
+| & \; \calcsum(\vec{x}, \q)
+  \;|\; \q + \q \;|\; \q * \q  \;|\; -\q
+  \;|\; \q \; \theta \; 0 \;|\; x := \q
+\end{align*}
+
+The grammar represents basic terms of queries such as constants, variables, and
+relations $R$ (with attributes $\vec{x}$). We represent materialized views, $m$,
+and refer to them as \textit{maps} since these are the underlying in-memory data
+structures. Materialized views, or maps, are parameterized SQL queries that
+accept parameters $\vec{x}$, and yield schema $\vec{y}$. The intuition behind
+the representation of views as parameterized SQL comes from our
+need to materialize delta queries, which have parameters according to the update
+they handle.
+
+For complex terms, the grammar captures sum aggregates
+$Sum(\vec{x},q)$ with group-by attributes $\vec{x}$, three generalized
+arithmetic operators, addition, multiplication and additive inverse, a
+comparison operator ($\theta$), and variable assignment ($:=$). The semantics of
+these operators are below.
+
+
+
+We briefly mentioned maps above. Strictly speaking, \textit{all of our queries
+represent maps}, and maps associate keys to values. Recall our analogy between
+maps $m(\vec{x},\vec{y})$ and parameterized SQL queries. Map $m$ has a key
+$\tuple{\vec{x},\vec{y}}$, namely the parameters (bound variables, which must be
+provided when evaluating a parameterized query) and schema attributes (free
+variables, returned by the query). For readability, we a doubly-indexed map
+notation, $m[\vec{x}][\vec{y}]$, instead of writing in pair notation throughout
+$m[\tuple{\vec{x}, \vec{y}}]$. We define map values with a generalized
+multiset relation [PODS REF] model of a database, where a
+relation $R$ is a map whose value yields the cardinality of that tuple in a
+multiset. We write these semantics as
+$R := \tuple{} \mapsto \vec{x} \mapsto R(\vec{x})$, indicating the map has a key
+with no parameters, schema $\vec{x}$, and value given by the cardinality $R(x)$
+of the multiset $R$. The \textit{type} of the map is
+$R : \tuple{} \mapsto \vec{x} \mapsto \z$, thus the semantics indicates the
+result key, and the map value.
+
+The semantics of constants and variables are: $c := \tuple{} \mapsto
+\tuple{} \mapsto c$ and $Var(x) := \vec{b} \mapsto \tuple{} \mapsto \vec{b}(x)$.
+The latter states that variables get their value from query parameters.
+Due to space constraints, we briefly present the semantics of complex terms.
+
+
+\vspace{-4mm}
+\begin{align*}
+\calcsum(\vec{y}, \q[\vec{x}][\vec{y}\vec{z}]) := & \;
+\vec{x} \mapsto \vec{y} \mapsto \sum_{\vec{z}} \q
+\\
+\qa[\vec{u}][\vec{v}] + \qb[\vec{w}][\vec{x}] := & \;
+\vec{y} \mapsto \vec{z} \mapsto
+\qa[\vec{y}][\vec{z}] + \qb[\vec{y}][\vec{z}]
+\\
+& \mbox{ where $\vec{y} = \vec{u} \cup \vec{w}, \vec{z} = \vec{v} \cup \vec{x}$}
+\\
+-\q[\vec{x}][\vec{y}] := & \; \vec{x} \mapsto \vec{y} \mapsto -(\q)
+\\
+\q[\vec{x}][] \; \theta \; 0 := & \; \vec{x} \mapsto \tuple{} \mapsto
+                    \begin{cases}
+                    1 \ldots \q \; \theta \; 0\\
+                    0 \ldots \mbox{otherwise.}
+                    \end{cases}
+\\
+(x := \q[\vec{b}][]) := & \; \vec{b} \mapsto \tuple{x=q} \mapsto 1
+\end{align*}
+
+Above, we write typing constraints of subexpressions on the left-hand
+side of semantics definitions. Thus a sum aggregate with group-by $\vec{y}$
+over a map $q[\vec{x}][\vec{yz}]$ adds up values of $\vec{z}$. 
+\note{Talk about consistency.}
+The addition operator ($+$) is a schemaless union over both parameters and
+result schema of its inputs. Additive inverse simply negates the map value,
+preserving its type. Predicates yield maps with 0-1 values, and are constrained
+to have no output schema. They are singletons, just like constants and
+variables, and in this way, our language supports nested scalar queries such as
+nested sum aggregates. Finally variable assignment $x := q$ yields a singleton
+map with schema $x$, and key (of value) $q$. This leaves the multiplication
+operator, which in our langauge is capable of propagating parameters, much like
+datalog. Suppose we have: $\qa[\vec{u}][\vec{v}] * \qb[\vec{w}][\vec{x}] :=$
+
+\vspace{-4mm}
+\begin{align*}
+& \vec{y} \mapsto
+\sum_{\{y\} = \{u\} \Join \{w\}} 
+\vec{z} \mapsto
+  \sum_{\{z\} = \{v\} \Join \{x\}}
+  \qa[\vec{y}][\vec{z}] * \qb[\vec{y}][\vec{z}]
+\\
+& \ldots \mbox{when $\vec{v} \cap \vec{w} = \emptyset$}
+\\
+& \vec{y} \mapsto
+\sum_{\{y\} = \{u\} \Join \{b\}} 
+\vec{z} \mapsto
+  \sum_{\{z\} = \{v\} \Join \{ax\}}
+  \qa[\vec{y}][\vec{z}] * \qb[\vec{y}][\vec{z}]
+\\
+& \ldots \mbox{otherwise, where $\vec{v} \cap \vec{w} = \vec{a}, 
+\vec{w} - \vec{v} = \vec{b}$}
+\end{align*}
+
+Above, the first case describes when no propagation occurs. The result map has
+parameters and schema according to the join of the operands' keys. In the second
+case we have propagation of the LHS query's result schema being bound as
+parameters in the RHS query. Thus the result map does not consider propagated
+attributes as parameters itself.
+
+With this framework, we would represent the SQL query:
+
+\begin{verbatim}
+select sum(price * vol)
+from bids b0
+where 0.25 * (select sum(b1.vol) from bids b1) >
+     (select sum(b2.vol) from bids b2
+      where b2.price > b0.price)
+\end{verbatim}
+
+\noindent as the following expression in our grammar:
+
+\begin{align*}
+\calcsum(\tuple{},
+& B[][\v{P0,V0}] * \v{P0} * \v{V0} *\\
+& \calcgt(0.25 * \calcsum(B[][\v{P1,V1}] * \v{V1}) \\
+& \qquad \; \; - \calcsum(B[][\v{P2,V2}] * \v{V2} * \calcgt(\v{P2-P0})))
+\end{align*}
+
+\tinysection{Query Transformations}
 \begin{itemize}
-  \item Query language
-  \item SQL to our query language
   \item Transformations and optimizations in our language
 \end{itemize}
 
@@ -89,6 +238,36 @@ that we use to simplify and optimize queries.
   \item Incremental processing
   \item Deltas, deltas as parameterized queries
 \end{itemize}
+
+\begin{align*}
+\Delta_{+R(\vec{x} \mapsto \vec{t})} c := & \; 0
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} Var(y) := & \; 0
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} R(\vec{x}) := & \;
+\prod_i^{sch(\vec{x})} \calceq(t_i,x_i)
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} S(\vec{y}) := & \; 0
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})}
+\calcsum(\vec{x},\q) := & \; \calcsum(\vec{x},\Delta\q)
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} (\qa + \qb) := & \;
+(\Delta\qa + \Delta\qb)
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} (\qa * \qb) := & \;
+(\Delta \qa * \qb) +
+(\qa * \Delta \qb) +
+(\Delta \qa * \Delta \qb)
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} \theta(\q) := & \;
+(\theta(\q + \Delta \q) * \overline{\theta}(\q)) \; -
+\\
+& \; (\overline{\theta}(\q+\Delta \q) * \theta(\q))
+\\
+\Delta_{+R(\vec{x} \mapsto \vec{t})} \calceq(x,\q) := & \;
+    \calceq(x,\Delta \q)
+\end{align*}
 
 \tinysection{Compiling Transition Programs}
 \begin{itemize}
