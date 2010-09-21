@@ -1,0 +1,27 @@
+A DDMS is created with knowledge of the workload it will be used for; though the set of transition functions may be infinite, there is a finite set of classes of transition function that we can analyze, not only to simplify incremental computation, but also to streamline the storage mechanisms underpinning the database.
+
+As in a traditional DBMS, the highest level storage abstraction in a DDMS is the table, containing zero or more rows.  Note however, that the storage implementation need not be related to the table structure; rows from different tables may be interleaved, co-clustered, stored in hierarchical index structures, or kept in whichever form is most efficient for the DDMS' specific workload.  
+
+For example, consider a DDMS constructed to maintain a view of the base relations as well as the query\texttt{\\
+SELECT prof, COUNT(DISTINCT e.student)\\
+FROM professors p, classes c, enrollment e\\
+WHERE p.id = c.teacher AND c.id = e.class\\
+GROUP BY prof
+}
+Here, \texttt{c.teacher} and \texttt{e.class} are foreign keys mapped to \texttt{p.id} and \texttt{c.id} respectively.  We can implement this query in the DDMS by using two tables: one of students for each professor, and another containing the count of students for each professor.  Though the data is drawn from two distinct logical tables, the most efficient storage mechanism would place the student list on the same page as the student count.
+
+In keeping with the DDMS' update-centric view of the world, we view each transition function as a series of write operations, each of which may require one or more read operations.  Both read and write operations may operate on a single row, or iterate over a range of values keys from one or more columns.  We can construct a directed hypergraph out of the write operations, with each node representing a table, each out-edge representing a read, and each in-edge representing a write.  We refer to this hypergraph as the transition function's data-flow graph.
+
+This data-flow graph provides a useful mechanism for analyzing the storage, processing, and IO requirements of a query.  In particular it simplifies the analysis of schemes that partition data across multiple physical units, be they disk blocks, disks, or storage servers.
+
+\begin{itemize}
+\item Overview of read, write, and message costs
+
+\item Partitioning across multiple axis, expanding the dataflow graph into a messaging graph.  
+
+\item Messaging and computational (memory) resources, separability of subgraphs.
+
+\item Basic instantiation - 1 disk or cluster
+
+\item Extensions to the multi-disk case
+\end{itemize}

@@ -81,37 +81,39 @@ Give an example of a schema and view specification in DBToaster -- e.g., the VWA
 
 
 \section{Managing Storage in DBToaster}
-\begin{itemize}
-\item Motivation:
-  \begin{itemize}
-  \item we've talked about incremental evaluation, from a main mem perspective
-  \item classical dbms maintains db schema in terms of processing queries over the entire data set, i.e. scans of whole tables and indexes built on whole tables
-  \item a ddms should configure the storage layer to best service updates
-  \item we look at this in terms of the auxiliary structures, and their relationship
-  \item one idea here is how to cocluster the auxiliary structures, which exploits locality
-    \begin{itemize}
-    \item in particular an update only touches a few entries in the auxiliary structure, coclustering places these entries together for efficient access to storage
-    \item another is to stripe the data to yield high aggregate bandwidth
-    \end{itemize}
-  \end{itemize}
+\input{storage}
 
-\item Disk layout
-  \begin{itemize}
-  \item Single Disk - Cluster within disk
-  \item Multi-Disk - Stripe across disks
-  \item Distributed - Network-bound
-  \end{itemize}
-
-\item Challenges to Partitioning
-Number of edges in dataflow graph created by a single split (ie: splitting along a particular axis with a particular program creates one-one edges, one-many edges, many-many edges) (partitioning on an output variable on right, both, or neither)
-
-\item Indexing
-  \begin{itemize}
-  \item incrementally computing the sort order
-  \item partial indexing
-  \item update chunks (separate area that is cheap to update, i.e. no split/rebalancing of index, lazily pushed into index)
-  \end{itemize}
-\end{itemize}
+% \begin{itemize}
+% \item Motivation:
+%   \begin{itemize}
+%   \item we've talked about incremental evaluation, from a main mem perspective
+%   \item classical dbms maintains db schema in terms of processing queries over the entire data set, i.e. scans of whole tables and indexes built on whole tables
+%   \item a ddms should configure the storage layer to best service updates
+%   \item we look at this in terms of the auxiliary structures, and their relationship
+%   \item one idea here is how to cocluster the auxiliary structures, which exploits locality
+%     \begin{itemize}
+%     \item in particular an update only touches a few entries in the auxiliary structure, coclustering places these entries together for efficient access to storage
+%     \item another is to stripe the data to yield high aggregate bandwidth
+%     \end{itemize}
+%   \end{itemize}
+% 
+% \item Disk layout
+%   \begin{itemize}
+%   \item Single Disk - Cluster within disk
+%   \item Multi-Disk - Stripe across disks
+%   \item Distributed - Network-bound
+%   \end{itemize}
+% 
+% \item Challenges to Partitioning
+% Number of edges in dataflow graph created by a single split (ie: splitting along a particular axis with a particular program creates one-one edges, one-many edges, many-many edges) (partitioning on an output variable on right, both, or neither)
+% 
+% \item Indexing
+%   \begin{itemize}
+%   \item incrementally computing the sort order
+%   \item partial indexing
+%   \item update chunks (separate area that is cheap to update, i.e. no split/rebalancing of index, lazily pushed into index)
+%   \end{itemize}
+% \end{itemize}
 
 
 \section{Discussion and Conclusions}
