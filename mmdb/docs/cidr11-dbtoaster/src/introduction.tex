@@ -1,1 +1,101 @@
+
+
 \section{Introduction}
+
+
+An increasing number of data-intensive computing tasks have the following set of properties:
+
+
+\begin{enumerate}
+\item The stored dataset is large and changes frequently.
+
+\item The computation of standing queries through the incremental maintenance of materialized views dominates ad-hoc querying.
+
+\item Access to the data is primarily by monitoring the views; i.e., by reading out the views or by performing very simple queries on top of the views which can be evaluated in a small fraction of the time it would take to evaluate the view from scratch. Views may be structured (tables) or booleans (flags, events). Thus, some updates cause events, observable in the views, that trigger subsequent computations, but it is rare that humans or asynchronous computations pose queries. The data management system primarily interacts with applications by triggering application code, rather than by invocations from the applications.
+
+\item Updates happen primarily through an UPDATE STREAM. Computations triggered by view events usually do not cause updates: There is usually no feedback loop through views.
+\end{enumerate}
+
+We call a data management system optimized for these four criteria a Dynamic Data Management System (DDMS).
+
+
+
+Let us compare DDMS with existing classes of data management systems.
+
+\begin{itemize}
+\item
+Compared to a classical DBMS, a DDMS differs in its immediate reaction to updates, which may happen in bulk but will sometimes happen on individual small updates to minimize response time. This characterizes the programming model: compared to DBMS, control flow is reversed, and the DDMS primarily invokes application code, rather than the other way around. An (active) DBMS could simulate a DDMS through triggers, but is not optimized for such workloads and would, even if support for state-of-the-art incremental view maintenance is present, perform very poorly. Thus, dynamic data management systems differ from active database systems in their being optimized for different workloads; DDMS are optimized for event processing and monitoring tasks, while active database systems are optimized for more traditional DBMS workloads. DDMS will not necessarily support typical (active) DBMS functionality such as transactions.
+
+\item
+Compared to a data stream processing system and particularly and event processing system (such as Cayuga, [cite others]),
+   \begin{itemize}
+   \item DDMS have much larger states, so secondary storage or at least intelligent mgmt of storage is key. Event processors are a breed of stream processors and consider the query and small auxiliary state to answer it static, while data streams through.
+    \item Event processors have queries that are a bit like regular expressions, and usually lack the power of joins and non-windowed aggregates. Views of DDMS are often rather complex and expensive, including large non-windowed joins and aggregation.
+    \end{itemize}
+
+A DDMS can be thought of as an *update stream* processing system in which query workloads look more like those of classical DBMS (no constructs such as windows to bound the size of state to be maintained by the system). The query processing techniques that seem most readily suitable for such workloads come from DBMS research -- incremental view maintenance in particular -- but do not scale to high-frequency view maintenance (explain what that means or find better term).
+\end{itemize}
+
+
+\begin{figure}
+(a) DDMS: show state machine, with databases as states and updates as transitions.
+
+(b) DBMS: database sits and waits for queries to arrive; answers them.
+
+(c) Data stream processor: Set of sitting queries; a stream of data passes by.
+
+\caption{Data management systems architectures: DDMS vs. DBMS vs. data stream processors.}
+\end{figure}
+
+
+\begin{table}
+\begin{verbatim}
+          state size |     small          large
+                     |
+event processing     |
+---------------------+--------------------------
+                     |
+    no               |                     DBMS
+                     |
+    yes              |  stream proc.      *DDMS*
+\end{verbatim}
+\caption{Quad chart.}
+\end{table}
+
+
+Now let us convince ourselves that there are indeed applications that justify the development of DDMS.
+
+\begin{itemize}
+\item
+Algorithmic trading with order books: explain that separation of algos into views + buying/selling logic increases productivity substantially; emphasize that neither DBMS nor stream processors scale to providing frequent snapshots of the views.
+
+\item
+Large-scale web apps with interactive updates.
+Google, Facebook, etc. There is a need and a trend for more interactive updates -- clearly in applications such as social networking and Web mail they are key, and for an increasing number of other applications such as Google FusionTables, search with feedback, etc., they become more and more important and there is a trend to support them. Map-reduce based implementations suck at this.
+
+\item
+Data warehousing with real-time updates. As data warehouses become increasingly mission-critical to companies as well as scientific enterprises, the importance of up-to-date analyses increases. Traditionally, OLAP systems are not optimized for frequent updating, and may be considerably out-of-date. DDMS could dramatically improve freshness of warehouse data. The are ideally suited for supporting OLAP -- in fact, the four desiderata for DDMS outlined above perfectly well describe an ideal OLAP system, just that current OLAP systems to not achieve the desired fast response view maintenance behavior.
+
+To justify the claim that the DDMS desiderata are appropriate for OLAP,
+(explain: materialized views = data cube; queries on top are simple compared to data cube materialization and are not in contradiction with DDMS desiderata).
+\end{itemize}
+
+
+
+
+There are many technical challenges that have to be solved to make DDMS a reality. This paper initiates a study of DDMS and presents DBToaster, a prototype DDMS developed by the authors. The contributions of this paper are as follows:
+
+\begin{itemize}
+\item 
+In Section 2, we further define and characterize the notion of Dynamic Data Management Systems, discuss the state machine abstraction, and describe the schema and view definition formalisms of the DBToaster prototype.
+
+\item
+Section 3 presents the DBToaster view maintenance technique. It demonstrates how the state machine abstraction, which calls for the optimization / minimization / compilation of the state transition function leads, to new algorithms.
+
+\item
+Section 4 discusses storage management in DBToaster.
+
+\item
+Section 5 might discuss scaling up through parallelization -- Cumulus?
+\end{itemize}
+

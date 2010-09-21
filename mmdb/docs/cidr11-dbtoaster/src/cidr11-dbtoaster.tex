@@ -17,10 +17,11 @@
 \numberofauthors{3}
 \author{
 \alignauthor
-Oliver Kennedy\\
-    \affaddr{EPFL}
+Oliver Kennedy\thanks{Also Dept.\ of Computer Science, Cornell University.}\\
+%    \affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
+    \affaddr{EPFL} \\
     \affaddr{Lausanne, Switzerland}
-    \email{okennedy@epfl.ch}
+    \email{oliver.kennedy@epfl.ch}
 \alignauthor
 Yanif Ahmad\\
     \affaddr{Johns Hopkins University}
@@ -28,7 +29,8 @@ Yanif Ahmad\\
     \email{yanif@cs.jhu.edu}
 \alignauthor
 Christoph Koch\\
-    \affaddr{EPFL}
+    \affaddr{EPFL} \\
+    % \affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
     \affaddr{Lausanne, Switzerland}
     \email{christoph.koch@epfl.ch}
 }
@@ -61,13 +63,13 @@ schema: visible schema (e.g. materialized views of interest) plus auxiliary sche
 
 
 Why use the state machine abstraction:
+\begin{itemize}
+\item
+The state machine abstraction makes the modes of API access to the DDMS (monitoring state, notification for events that are properties of the state) that we see in our killer apps look natural and intuitive.
 
-* The state machine abstraction makes the modes of API access to the DDMS (monitoring state, notification for events that are properties of the state) that we see in our killer apps look natural and intuitive.
-
-* The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
-
-
-
+\item
+The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+\end{itemize}
 
 Give an example of a schema and view specification in DBToaster -- e.g., the VWAP example.
 
