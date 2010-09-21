@@ -1,0 +1,98 @@
+We present an example of designing a transition function between database
+states, in this case focusing on dynamic data driving view maintenance of
+standing queries comprising the visible schema. The underlying conceptual model
+of a database management system as a state machine has driven our prior work on
+this topic in the DBToaster project [REFS], and here we discuss how the concept
+of transitioning entire database states has led to a novel view maintenance
+algorithm. Furthermore the need to apply this transition with high frequency
+motivates precomputing and compiling the transition function into extremely
+efficient code.
+
+This section is intended to convey that our database-as-state model can lead to
+significant rethinking of existing methods throughout a data management system,
+and novelty in algorithmically and architecturally in designing a system to
+handle dynamic data. Throughout this section, we use the term transition to
+refer to both the update itself, and the work required to evolve the database
+following the application of the update to base tables.
+
+\vspace{1mm}
+\subsection{View Maintenance}
+
+This section describes our view maintenance framework for a DDMS, including a
+query representation tailored for incremental processing, and a simple, yet
+powerful set of transformations that we use to simplify and optimize queries.
+
+\tinysection{Query Language}
+\begin{itemize}
+  \item Query language
+  \item SQL to our query language
+  \item Transformations and optimizations in our language
+\end{itemize}
+
+\tinysection{Incremental Processing}
+\begin{itemize}
+  \item Incremental processing
+  \item Deltas, deltas as parameterized queries
+\end{itemize}
+
+\subsection{View States and Transitions}
+
+Given a database state, existing view maintenance techniques will incrementally
+handle transitions to another state for a given update. We can informally
+represent this with a triple $\tuple{q,m,q'}$, corresponding to the view query,
+the materialization of that query, and the delta query responsible for
+maintaining the materialization. On an update, view maintenance performs the
+work: $m_{new} = m_{old} + q'(u)$, and this is guaranteed to ensure
+$m_{new} = q(db_{new})$. 
+
+With our conceptual model however, we are able to make the
+following key insight when taking a holistic approach with the state machine
+model, namely that repeatedly applying the same transition with current
+techniques results in significantly redundant work. While a transition results
+in incremental processing in terms of the part of the database affected by the
+update, it is not incremental with respect to the remainder of the database. The
+transition evalutes delta queries from scratch on the remainder of the database,
+rather than leveraging the fact that this remnant has not changed, and any work
+done previously on that portion of the database can be reused.
+\note{Diagram here: states containing base relations and a query, transitions
+for all base relations, each leading to another state. For one of these
+neighboring states, we'll repeatedly apply the same transition, highlighting
+that the remainder of the base tables do not change, yet the delta queries are
+still evaluated from scratch.}
+
+To facilitate reuse, we materialize the delta query over the remainder tables,
+making it part of the auxiliary state of the database. We refer to this as the
+view state, and it is used in our view maintenance approach. Subsequently our
+transitions must maintain the view state, leading to the concept of higher-order
+delta queries. Higher-order deltas are determined through a recursive processing
+of materializing a delta query, and then incrementally maintaining the
+materialized result (which would involve further materialization, and delta
+queries and so on). That is we can define further triples,
+$\tuple{q', m', q''}$, corresponding to the delta query, its materilization,
+and a second-order delta query, and so on with $\tuple{q'',m'',q'''}$.
+\note{Diagram here.}
+
+This process does not continue forever and terminates given one important
+property of computing delta queries: \textit{a delta query is often simpler than
+its parent query}. In particular \textit{k}-th order delta query, $q^k$ has
+fewer input relations than a \textit{k-1} order query $q^{k-1}$, but additional
+parameters corresponding to attributes that are present in $q^{k-1}$. This
+provides an informal overview of our view maintenance approach, and we present
+an algorithm below to compute both the view state being materialized and the
+higher-order delta queries that maintains the view state. The algorithm yields a
+\textit{transition program}, essentially trigger function that efficiently
+executes a transition from one database to another, including both the visible
+and auxiliary state. For the view maintenance problem, the transition program is
+simply a sequences of updates to materialized views by delta queries, each
+update being of a different order.
+
+\vspace{1mm}
+\tinysection{Determining View Maintenance State}
+\begin{itemize}
+  \item 
+\end{itemize}
+
+\tinysection{Generating Transition Programs}
+\begin{itemize}
+  \item 
+\end{itemize}
