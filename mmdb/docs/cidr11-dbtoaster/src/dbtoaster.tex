@@ -10,42 +10,27 @@ efficient code.
 
 This section is intended to convey that our database-as-state model can lead to
 significant rethinking of existing methods throughout a data management system,
-and novelty in algorithmically and architecturally in designing a system to
+and novelty, algorithmically and architecturally, in designing a system to
 handle dynamic data. Throughout this section, we use the term transition to
 refer to both the update itself, and the work required to evolve the database
 following the application of the update to base tables.
 
 \vspace{1mm}
-\subsection{View Maintenance}
-
-This section describes our view maintenance framework for a DDMS, including a
-query representation tailored for incremental processing, and a simple, yet
-powerful set of transformations that we use to simplify and optimize queries.
-
-\tinysection{Query Language}
-\begin{itemize}
-  \item Query language
-  \item SQL to our query language
-  \item Transformations and optimizations in our language
-\end{itemize}
-
-\tinysection{Incremental Processing}
-\begin{itemize}
-  \item Incremental processing
-  \item Deltas, deltas as parameterized queries
-\end{itemize}
-
-\subsection{View States and Transitions}
-
+\subsection{View Maintenance in DBToaster}
 Given a database state, existing view maintenance techniques will incrementally
 handle transitions to another state for a given update. We can informally
 represent this with a triple $\tuple{q,m,q'}$, corresponding to the view query,
 the materialization of that query, and the delta query responsible for
 maintaining the materialization. On an update, view maintenance performs the
-work: $m_{new} = m_{old} + q'(u)$, and this is guaranteed to ensure
-$m_{new} = q(db_{new})$. 
+work: $m_{new} = m_{old} + q'(u)$, and this is guaranteed to
+ensure $m_{new} = q(db_{new})$. That is, a materialized view can be updated with
+the result of a delta query taking an update $u$ as an argument, and the view
+maintenance technique must ensure the updated view is equivalent to the query
+result on the modified database. Here, the delta query can be thought of as a
+parameterized SQL query, with parameters corresponding to attributes in the
+update.
 
-With our conceptual model however, we are able to make the
+With our conceptual model, we are able to make the
 following key insight when taking a holistic approach with the state machine
 model, namely that repeatedly applying the same transition with current
 techniques results in significantly redundant work. While a transition results
@@ -87,12 +72,25 @@ simply a sequences of updates to materialized views by delta queries, each
 update being of a different order.
 
 \vspace{1mm}
-\tinysection{Determining View Maintenance State}
+\subsection{Query Compilation and Transition Programs}
+To present our algorithm, we first describe our query representation, tailored
+for incremental processing, and a simple and powerful set of transformations
+that we use to simplify and optimize queries.
+
+\tinysection{Query Language}
 \begin{itemize}
-  \item 
+  \item Query language
+  \item SQL to our query language
+  \item Transformations and optimizations in our language
 \end{itemize}
 
-\tinysection{Generating Transition Programs}
+\tinysection{Incremental Processing}
+\begin{itemize}
+  \item Incremental processing
+  \item Deltas, deltas as parameterized queries
+\end{itemize}
+
+\tinysection{Compiling Transition Programs}
 \begin{itemize}
   \item 
 \end{itemize}
