@@ -1,0 +1,43 @@
+
+
+\section{Data Management By State Machines}
+
+
+\begin{figure}
+(a) DDMS: show state machine, with databases as states and updates as transitions.
+
+(b) DBMS: database sits and waits for queries to arrive; answers them.
+
+(c) Data stream processor: Set of sitting queries; a stream of data passes by.
+
+\caption{Data management systems architectures: DDMS vs. DBMS vs. data stream processors.}
+\end{figure}
+
+
+Conceptually: DDMS = dynamic data structures + views.
+
+
+
+A DDMS can be naturally modeled as a state machine in which the current repository is the current state of the state machine that undergoes a transition whenever an update is performed to it.
+
+Definitions.
+
+states = the database at different points in time. A state is a relational database.
+
+transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
+
+schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
+
+
+
+
+Why use the state machine abstraction:
+\begin{itemize}
+\item
+The state machine abstraction makes the modes of API access to the DDMS (monitoring state, notification for events that are properties of the state) that we see in our killer apps look natural and intuitive.
+
+\item
+The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+\end{itemize}
+
+Give an example of a schema and view specification in DBToaster -- e.g., the VWAP example.
