@@ -28,9 +28,11 @@ Every time a portion of the database is split into multiple components, nodes on
 
 For example, in the Professor/... query above....  Example based on the fact that we need scan of each professor's students, can access professor directly, 
 
-1-par implementation of secondary storage optimization: minimize # of unbound edge reads (ie, find me whether or not students are present)
+1-par implementation of secondary storage optimization: minimize \# of unbound
+edge reads (ie, find me whether or not students are present)
 
-1-par implementation of distributed optimization: minimize # of cross-partition edges
+1-par implementation of distributed optimization: minimize \# of cross-partition
+edges
 
 %In keeping with the DDMS' update-centric view of the world, we view each transition function as a series of write operations, each of which may require one or more read operations.  Both read and write operations may operate on a single row, or iterate over all rows in the table matching a selection predicate.  We can construct a directed hypergraph out of the write operations, with each node representing a table, each out-edge representing a read, and each in-edge representing a write.  We refer to this hypergraph as the transition function's data-flow graph.
 %
