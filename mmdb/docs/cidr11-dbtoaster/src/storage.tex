@@ -13,27 +13,36 @@ Compared to stream processing systems, DDMSes have much more state, necessitatin
 
 The notion of transition functions presents us with a clean mechanism for quantifying the cost (or benefit) of applying a particular partitioning scheme.  Given a specific transition - a parametrized transition function that is - we can quantify not just the cost of a partitioning scheme, but also the cost of further sub-partitioning techniques.  Integrating over the transition function's parameters and all transition functions, we obtain the cost (or benefit) of a partitioning scheme for the entire DDMS.  
 
-For example, in the DDMS example above...
-%%%%%%%%%%%% 
-
-\subsection{Datastructures}
-Knowing the query allows us to separate data into key columns (ie, columns used in conditionals), and value columns (ie, columns used to compute things).  Ideal datastructure for this approach is a multikey map
-
-multikey map optimizations - iterator indices, simplicity of (horizontal) partitioning.
+For example, in the DDMS example above, we have three tables.  Transitions triggered by insertions into the Professors and Classes tables involve only writes (due to the foreign key constraints).  Conversely, transitions triggered by an insertion into the Enrollment table, first require a read (to validate the DISTINCT keyword), and two subsequent updates: one for the professor statistics and one for the student list.
 
 \subsection{Secondary Storage}
 We can subdivide each transition function into a series of subtasks and produce a bipartite directed hypergraph representing the flow of data caused by the transition function.  For the example above, the insertion of a row into the Enrollment table might result in a read on a single entry in the Classes table, and read/writes on an intermediate table representing the students taught by each professor and the Professor's statistics.  This includes three nodes on the left (the tables being read from), two node on the right (the tables being written to), and one edge.
 
-Every time a portion of the database is split into multiple components, nodes on either side of the graph are split into multiple components.  Depending on the workload, zero or more additional edges will also be created, depending on the query.  More importantly, the mechanism by which additional edges are created can be used to inform the partition allocation scheme.  
+Every time a portion of the database is split into multiple components, nodes on either side of the graph are likewise split into multiple components.  More importantly, depending on the workload, zero or more additional edges will also be created, depending on the query.  More importantly, the mechanism by which additional edges are created can be used to inform the partition allocation scheme.  
 
 For example, in the Professor/... query above....  Example based on the fact that we need scan of each professor's students, can access professor directly, 
+%%%%%%%%%%%%%
 
 1-par implementation of secondary storage optimization: minimize \# of unbound
 edge reads (ie, find me whether or not students are present)
+%%%%%%%%%%%%%
 
 1-par implementation of distributed optimization: minimize \# of cross-partition
 edges
+%%%%%%%%%%%%%
 
+\subsection{Datastructures}
+Not only does advance knowledge of the query workload streamline persistent data storage, it also enables the use of more effective in-memory datastructures.  For instance, input data can be categorized based on whether it is used in a conditional expression, or purely arithmetically.  In the running example, the number of distinct students a professor teaches is an example of the latter, while the student, course, and professor keys are all examples of the former.
+
+This categorization into key and data columns, respectively, can make very effective use of multi-key hashtable.  Rather than storing tables as a series of rows, they are stored as a series of nested hash-maps, where each layer of nesting represents an additional key-column.  Sometimes iteration is necessary, as in the following query:
+%%%%%%%%%%%%%
+%%%%% expand on how iteration occurs, define static in this context.
+
+For such transitions, keys columns with static values are are kept at outer layers of the nested hash-table.  If necessary, secondary indices enable iteration with arbitrary sets of static keys.  Moreover, the existence of a straightforward hierarchy, with the built-in load balancing functionality of a hash-table makes multikey maps ideal for use with horizontal partitioning schemes.
+
+%%%%%% should we make any comments here about the relationship between the presence of secondary indices and partitioning schemes?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %In keeping with the DDMS' update-centric view of the world, we view each transition function as a series of write operations, each of which may require one or more read operations.  Both read and write operations may operate on a single row, or iterate over all rows in the table matching a selection predicate.  We can construct a directed hypergraph out of the write operations, with each node representing a table, each out-edge representing a read, and each in-edge representing a write.  We refer to this hypergraph as the transition function's data-flow graph.
 %
 %This data-flow graph provides a useful mechanism for analyzing the storage, processing, and IO requirements of a query.  In particular it simplifies the analysis of schemes that partition data across multiple physical units, be they disk blocks, disks, or storage servers.  
