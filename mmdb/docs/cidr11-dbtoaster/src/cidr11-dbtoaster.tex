@@ -13,7 +13,8 @@
 
 
 \begin{document}
-\title{A Dynamic Data Management System}
+%\title{DBToaster: A Dynamic Data Management System}
+\title{Dynamic Data Management Systems}
 \numberofauthors{3}
 \author{
 \alignauthor
@@ -37,7 +38,22 @@ Christoph Koch\\
 \maketitle
 
 \begin{abstract}
-Abstract goes here.
+This paper calls for a new breed of systems which
+we call dynamic data management systems (DDMS). In a nutshell,
+a DDMS manages (very large) dynamic data structures with 
+agile, frequently fresh views, and a facility for monitoring
+these views and triggering application-level events.
+%
+We motivate DDMS with applications in large-scale data analytics
+including data warehousing and high-frequency algorithmic trading
+and compare them to more traditional systems such as DBMS and
+data stream processors.
+%
+We describe the DBToaster project, which is an ongoing effort to
+develop a prototype DDMS system. We describe the main architecture
+design, techniques for high-frequency incremental view maintenance,
+query optimization, storage, scaling up by parallelization, and
+the various key challenges to overcome to make DDMS a reality.
 \end{abstract}
 
 \input{introduction}
