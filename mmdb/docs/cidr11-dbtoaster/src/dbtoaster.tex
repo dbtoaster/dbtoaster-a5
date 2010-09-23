@@ -76,7 +76,7 @@ simply a sequences of updates to materialized views by delta queries, each
 update being of a different order.
 
 \vspace{1mm}
-\subsection{Query Compilation and Transition Programs}
+\subsection{Compiling Queries to Transition Programs}
 \noindent To present our algorithm, we first describe our query representation,
 tailored for incremental processing, and a simple and powerful set of transformations
 that we use to simplify and optimize queries.
@@ -84,11 +84,12 @@ that we use to simplify and optimize queries.
 \tinysection{Query Language}
 \noindent Our query language is described by the following EBNF:
 
-\def\calcsum{\mbox{Sum}}
+\def \calcsum{\mbox{Sum}}
 \def\calceq{\mbox{{\tt =}}}
 \def\calcgt{\mbox{{\tt >}}}
 \def\calcgte{\mbox{{\tt >=}}}
 \def\calclte{\mbox{{\tt <=}}}
+\def\calclt{\mbox{{\tt <}}}
 
 \def \q{q}
 \def \qa{q_1}
@@ -97,6 +98,7 @@ that we use to simplify and optimize queries.
 \def \vv#1{\mbox{{\tiny #1}}}
 \def \z{\mathbb{Z}}
 
+\vspace{-3mm}
 \begin{align*} 
 \q \; \mbox{::-} &
   \;    c \;|\; x
@@ -111,30 +113,182 @@ The grammar represents basic terms of queries such as constants, variables, and
 relations $R$ (with attributes $\vec{x}$). We represent materialized views, $m$,
 and refer to them as \textit{maps} since these are the underlying in-memory data
 structures. Materialized views, or maps, are parameterized SQL queries that
-accept parameters $\vec{x}$, and yield schema $\vec{y}$. The intuition behind
-the representation of views as parameterized SQL comes from our
-need to materialize delta queries, which have parameters according to the update
-they handle.
+accept parameters $\vec{x}$, and yield schema $\vec{y}$.
+Specifically, a map is a \textit{materialized} parameterized query,
+where we materialize for all parameter values seen during continuous query
+execution (the \textit{active domain} of the parameter).
+The intuition behind the representation of views as parameterized SQL comes from
+our need to materialize delta queries, which have parameters according to the
+update they handle.
 
 For complex terms, the grammar captures sum aggregates
 $Sum(\vec{x},q)$ with group-by attributes $\vec{x}$, three generalized
 arithmetic operators, addition, multiplication and additive inverse, a
-comparison operator ($\theta$), and variable assignment ($:=$). The semantics of
-these operators are below.
+comparison operator ($\theta \in \{=,\neq,<,\leq,>,\geq\}$), and variable
+assignment ($:=$). For readability, we write $\calcsum(\q)$ if an aggregate
+has no group-bys, and simplify the syntax of comparison as $\theta(\q)$ since
+the RHS is 0. 
+Our language is quite rich, for example it can represent nested scalar
+queries such as the VWAP query in Section [REF]:
 
+\comment{
+\begin{verbatim}
+select sum(price * vol) from bids b0
+where 0.25 * (select sum(b1.vol) from bids b1) >
+     (select sum(b2.vol) from bids b2
+      where b2.price > b0.price)
+\end{verbatim}
+}
 
+\vspace{-3mm}
+\begin{align*}
+\calcsum(
+& B(\v{P0,V0}) * \v{P0} * \v{V0} *\\
+& \calcgt(0.25 * \calcsum(B(\v{P1,V1}) * \v{V1}) \\
+& \qquad \; \; - \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0}))))
+\end{align*}
 
-We briefly mentioned maps above. Strictly speaking, \textit{all of our queries
-represent maps}, and maps associate keys to values. Recall our analogy between
-maps $m(\vec{x},\vec{y})$ and parameterized SQL queries. Map $m$ has a key
+We briefly discuss expression semantics, starting with maps. Strictly speaking,
+\textit{all of the expressions in our grammar (i.e. queries) represent maps},
+and maps associate keys to values. Recall our analogy between maps
+$m(\vec{x},\vec{y})$ and parameterized SQL queries. Map $m$ has a key
 $\tuple{\vec{x},\vec{y}}$, namely the parameters (bound variables, which must be
 provided when evaluating a parameterized query) and schema attributes (free
-variables, returned by the query). For readability, we a doubly-indexed map
+variables, returned by the query). For readability, we use a doubly-indexed map
 notation, $m[\vec{x}][\vec{y}]$, instead of writing in pair notation throughout
-$m[\tuple{\vec{x}, \vec{y}}]$. We define map values with a generalized
-multiset relation [PODS REF] model of a database, where a
-relation $R$ is a map whose value yields the cardinality of that tuple in a
-multiset. We write these semantics as
+$m[\tuple{\vec{x}, \vec{y}}]$. We define map values with a generalized multiset
+relation [PODS REF] model of a database, where a relation $R$ is a map whose
+value yields the cardinality of that tuple in a multiset.
+
+We assume that the user queries provided as input to compilation contain no
+maps, only relations and other terms as is standard in SQL. Our compilation
+algorithm rewrites queries to include maps. Due to space constraints, we focus
+on two arithmetic operations, addition and multiplication. First, we present an
+example of addition:
+
+\vspace{-7mm}
+\begin{figure}[h]
+\begin{minipage}{1in}
+\[
+\begin{array}{ll|ll|l}
+\multicolumn{5}{c}{m1}\\
+ a & c & b & d & \\
+\hline
+ 1 & 1 & 2 & 1 & 3 \\
+\comment{
+ 1 & 2 & 4 & 2 & 1 \\
+ 1 & 2 & 3 & 3 & 4 \\
+}
+ 1 & 2 &   & 4 & 2
+\end{array}
+\]
+\end{minipage}
++
+\begin{minipage}{0.85in}
+\[
+\begin{array}{ll|l|l}
+\multicolumn{4}{c}{m2}\\
+ a & c & d & \\
+\hline
+ 1 & 1 & 1 & 1 \\
+ 1 & 2 & 4 & 2 \\
+\end{array}
+\]
+\end{minipage}
+=
+\begin{minipage}{1in}
+\[
+\begin{array}{ll|ll|l}
+\multicolumn{5}{c}{m1 + m2}\\
+ a & c & b & d & \\
+\hline
+ 1 & 1 & 2 & 1 & 3 \\
+ 1 & 1 &   & 1 & 1 \\
+\comment{
+ 1 & 2 & 4 & 2 & 1 \\
+ 1 & 2 & 3 & 3 & 4 \\
+}
+ 1 & 2 &   & 4 & 4
+\end{array}
+\]
+\end{minipage}
+\end{figure}
+
+\vspace{-3mm}
+\noindent Above, we have two maps $m1, m2$, where blanks in columns represent
+\textit{holes}. Holes are not the same as nulls, they determine when attributes
+can be ignored for consistency across tuples.
+\note{Explain consistency.}
+Addition is a schemaless union where the result contains the union of
+operand maps' parameters and result schemas, and adds the values of map entries.
+
+Next, we discuss multiplication. Multiplication is the key
+connective in our language since it performs binding propagation, similarly to
+datalog, where one map's result schema contains attributes used for
+another map's parameters, as seen in $m1[a][b1,b2] * m2[b2,c][d]$.
+Here, $b2$ is propagated from map $m1$ to $m2$. The result of this
+operation ensures consistency of $b2$ between maps $m1, m2$ (inconsistent
+tuples are not included in the output), for example:
+
+\vspace{-4mm}
+\begin{figure}[h]
+\begin{minipage}{1in}
+\[
+\begin{array}{l|ll|l}
+\multicolumn{4}{c}{m1}\\
+ a & b_1 & b_2 & \\
+\hline
+ 1 & 2 & 4 & 3 \\
+ 2 & 4 & 1 & 1 \\
+ 2 & 3 & 2 & 4
+\end{array}
+\]
+\end{minipage}
+*
+\begin{minipage}{0.85in}
+\[
+\begin{array}{ll|l|l}
+\multicolumn{4}{c}{m2}\\
+ b_2 & c & d & \\
+\hline
+ 1 & 1 & 1 & 1 \\
+ 2 & 2 & 4 & 2 \\
+\end{array}
+\]
+\end{minipage}
+=
+\begin{minipage}{1in}
+\[
+\begin{array}{ll|ll|l}
+\multicolumn{5}{c}{m1 * m2}\\
+ a & c & b_1 & d & \\
+\hline
+ 2 & 1 & 4 & 1 & 1 \\
+ 2 & 2 & 3 & 4 & 8 \\
+\end{array}
+\]
+\end{minipage}
+\end{figure}
+
+\vspace{-3mm}
+\noindent Above, $b2$ is excluded from the result key since it is a propagated
+attribute. The tuple $\tuple{a=1,b1=2,b2=4 \mapsto 3}$ in $m1$ does not
+contribute to the result since there is no consistent value of $b2$ in $m2$.
+Multiplication is a generalized equi-join, and in the absence of any
+propagation, a generalized Cartesian product that operates on both levels of
+maps.
+\todo{Explain variables, i.e. we don't materialize attributes but these are
+bound from the left.}
+Binding propagation is critical for a few reasons: i) for
+multiplication with variables, it allows a map's values to be combined with the
+variable's value; ii) for multiplication with constraints, it yields maps
+with 0-1 values indicating whether entries pass the constraint; iii) for
+multiplication with other maps, where it facilitiates equi-joins and correlated
+attributes in nested queries.
+
+
+\comment{
+We write these semantics as
 $R := \tuple{} \mapsto \vec{x} \mapsto R(\vec{x})$, indicating the map has a key
 with no parameters, schema $\vec{x}$, and value given by the cardinality $R(x)$
 of the multiset $R$. The \textit{type} of the map is
@@ -204,30 +358,14 @@ datalog. Suppose we have: $\qa[\vec{u}][\vec{v}] * \qb[\vec{w}][\vec{x}] :=$
 \end{align*}
 
 Above, the first case describes when no propagation occurs. The result map has
-parameters and schema according to the join of the operands' keys. In the second
-case we have propagation of the LHS query's result schema being bound as
-parameters in the RHS query. Thus the result map does not consider propagated
-attributes as parameters itself.
+parameters and schema according to the join of the operands' keys and value as a
+product of operand values. In the second case we have propagation of the LHS
+query's result schema being bound as parameters in the RHS query. Thus the
+result map does not consider propagated attributes as parameters itself.
+}
 
-With this framework, we would represent the SQL query:
 
-\begin{verbatim}
-select sum(price * vol)
-from bids b0
-where 0.25 * (select sum(b1.vol) from bids b1) >
-     (select sum(b2.vol) from bids b2
-      where b2.price > b0.price)
-\end{verbatim}
-
-\noindent as the following expression in our grammar:
-
-\begin{align*}
-\calcsum(\tuple{},
-& B[][\v{P0,V0}] * \v{P0} * \v{V0} *\\
-& \calcgt(0.25 * \calcsum(B[][\v{P1,V1}] * \v{V1}) \\
-& \qquad \; \; - \calcsum(B[][\v{P2,V2}] * \v{V2} * \calcgt(\v{P2-P0})))
-\end{align*}
-
+\vspace{0.5mm}
 \tinysection{Query Transformations}
 \begin{itemize}
   \item Transformations and optimizations in our language
