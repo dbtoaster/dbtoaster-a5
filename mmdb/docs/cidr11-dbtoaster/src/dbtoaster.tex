@@ -368,11 +368,13 @@ result map does not consider propagated attributes as parameters itself.
 \vspace{0.5mm}
 \tinysection{Query Transformations}
 We present a set of query transformations, through examples for brevity, that
-can be used by our algorithm to simplify and optimize queries. The first is a
-canonicalization of queries into a \textit{recursively polynomial} form. A
-polynomial query is a query represented as a sum of \textit{monomials}, where
-monomials are products of any other type of query (constraints, aggregates, etc.
-but not sums or products). This is a polynomial:
+can be used by our algorithm to simplify and optimize queries.
+\comment{
+The first is a canonicalization of queries into a \textit{recursively
+polynomial} form. A polynomial query is a query represented as a sum of
+\textit{monomials}, where monomials are products of any other type of query
+(constraints, aggregates, etc. but not sums or products). This is a polynomial
+with two monomials:
 \begin{align*}
 \calcsum( & R(\v{A,B}) * S(\v{C,D}) * \calcgt(\v{B}-\v{C}) *
 \calceq(\v{A}-\v{D})) * \\
@@ -383,24 +385,38 @@ The following query is not a polynomial:
 $\calcsum(R(\v{A,B}) + (S(\v{C,D}) * \v{C})) *
  \calcsum(T(\v{E,F}) * \calceq(\v{E}-10))$
 
-\noindent because of the addition inside the first sum aggregate. Our normal
-form is recursively defined due to the existence of nested queries. That is each
-nested query must also be in polynomial form. We require this normal form to
-easily apply the transformations described next.
+\noindent because of the addition inside the first sum aggregate. Due to nested
+queries, we define our normal form recursively, where each nested
+query is also in polynomial form. We require this normal form to easily apply
+the following simplifications.
+}
 
 To simplify queries, we apply unification, which facilitates variable
 elimination, and then factorization, which separates a complex monomial into a
 product of simpler monomials. First we give an example of unification and
-variable elimination:
+variable elimination: \todo{xxx}
 
-Now, we demonstrate factorization:
+Now, we demonstrate factorization: \todo{xxx}
 
-Above, \ldots
+Above, \todo{description}
 
 Finally, we present a transformation related to binding propagation, called
 preaggregation. This ensures that our product operation propagates the minimal
 number of variables, when considering a left-associative multiplication.
+The VWAP query [REF in this section] would result in the following after
+preaggregation:
 
+\vspace{-3mm}
+\begin{align*}
+\calcsum(
+& \calcsum(\tuple{\v{P0}}, B(\v{P0,V0}) * \v{P0} * \v{V0}) *\\
+& \calcgt(0.25 * \calcsum(B(\v{P1,V1}) * \v{V1}) \\
+& \qquad \; \; - \calcsum(B(\v{P2,V2}) * \v{V2} * \calcgt(\v{P2-P0})))
+\end{align*}
+
+\noindent In contrast to the original VWAP query, the subexpression
+$B(\v{P0,V0}) * \v{P0} * \v{V0}$ is preaggregated by an enclosing sum aggregate
+to only propagate $\v{P0}$ to the nested query, and not $\v{P0,V0}$.
 
 \tinysection{Incremental Processing}
 So far, we have described queries, with no mention of incremental processing. We
@@ -454,14 +470,13 @@ of constants and variables yield 0, and the delta of a relation other than the
 one being updated also yields 0 (i.e. the rule: $\Delta_{+R(\vec{x} \mapsto
 \vec{t})} S(\vec{y}) := \; 0$). Also note, we have no rule for maps, since maps
 do not appear in user queries. All of these transformations are applied before
-our algorithm introduces maps. These rules are similar to those found in
+our algorithm introduces maps. These rules are similar to those from
 incremental view maintenance, with the exception of our rule for constraints,
 which can handle nested queries. To the best of our knowledge, we have not seen
-this addressed before. We wrap up this transformation with two insights: i)
-delta queries are nearly always \textit{simpler} than their parent queries, with
-the exception of nested queries; ii) queries are closed under taking deltas,
-that is our delta queries are in the same language fragment, they too are SQL
-queries.
+this addressed before. We wrap up deltas with two insights: i) delta queries are
+nearly always \textit{simpler} than their parent queries, with the exception of
+nested queries; ii) queries are closed under taking deltas, that is our delta
+queries are in the same language fragment, they too are SQL queries.
 We will need to build a main-memory SQL engine, and we talk about novel
 approaches with code generation in our algorithm.
 
@@ -470,18 +485,122 @@ We can now piece together the various transformations above, to perform
 \textit{recursive query compilation}. Our algorithm produces transition
 programs, which have the following grammar:
 
+\vspace{-3mm}
+\begin{align*}
+M3    & \; \mbox{::= on (insert$|$delete$|$update) }
+           R(\vec{x}\vec{y}) \; \{ stmt^* \}\\
+\comment{event & \; \mbox{::= insert $|$ delete}\\}
+stmt  & \; \mbox{::= } m[\vec{x}\vec{i}][\vec{y}\vec{j}] \;
+                       \mbox{{\tt $\pm$=}} \; \q\\
+\end{align*}
+
+\noindent Transition programs as simple sequences of map updates.
+Here $\q$ refers to our query representation, resulting from the fact that
+queries are closed under deltas. Above, the function has arguments
+$\vec{x}\vec{y}$, referring to the transition parameters which will be used in
+both the LHS map of the statement as can be seen, as well as in the RHS delta
+query.
+The transition program for VWAP is:
+
+\begin{verbatim}
+on_insert_bids(p, v) {
+  // aliases due to limited presentation space.
+  // these are inlined in our code.
+  c1 = 4*q2[p][] - q1[][];
+  c2 = 4*q2[p][] - q1[][]+v;
+  c3(d) = fun d -> 4*q2[d][] - q1[][];
+  c4(d) = fun d -> 4*(q2[d][]+(v*<(d-p)))-q1[][]+v);
+
+  // q1     = sum v from bids
+  // q2(p2) = sum v from bids where p > p2
+  // q3     = sum p*v from bids group by p
+  // q4     = sum v from bids group by p
+  q[][]   += p * v * >(c1);  
+  q[][]   += sum(d, q3[][d] * <=(c3(d)) * >(c4(d));
+  q[][]   -= sum(d, q3[][d] * >(c3(d)) * <=(c4(d));
+  q[][]   += p * v * <=(c1) * >(c2);
+  q[][]   -= p * v * >(c1) * <=(c2);
+  q1[][]  += v; q2[d][] += v * >(p-d); 
+  q3[][p] += p * v; q4[][p] += v;
+}
+\end{verbatim}
+
+In our implementation, the RHS queries in these statements are compiled down to
+C code (omitted for space).
+\todo{Talk about higher-order deltas here.}
+One issue that arises is on the arrival of new parameter values which we have
+not seen previously, for both map lookups (map accesses in the RHS queries) and
+map updates (map accesses on the LHS of statements). This requires
+\textit{initial value computation}, which for queries with only simple equality
+constraints has value 0, but in general requires evaluation of a parent query
+instead of its delta. The above program omits initializers.
+
+\def \alg         {{\bf algorithm}}
+\def \algbegin    {{\bf begin}}
+\def \algend      {{\bf end}}
+\def \algforeach  {{\bf for each}}
+\def \algdo       {{\bf do}}
+\def \algdone     {{\bf done}}
+\def \algreturn   {{\bf return}}
+\def \algcomment#1{{\tt //} #1}
+
+\def \codeforeach {{\tt for}}
+\def \codev#1     {\mbox{{\tt #1}}}
+
+A simplified algorithm for producing the above is:
+
+\vspace{-1mm}
+\begin{tabbing}
+\alg\ Compile(\q: query, m: map name, $\vec{x}$: map keys) \\
+\algcomment{returns triggers (a set of map update statements)}\\
+\algcomment{for update events to relations in \q} \\
+$\Gamma_{\q} := \Gamma$\\
+\algforeach\ base relation $R$ in \q,
+               $\pm$ in $\{\v{insert},\v{delete}\}$
+\algdo \\
+~~\= $\vec{t}$ := fresh variables for columns of $R$
+     \algcomment{trigger args}\\
+  \> $\vec{b} \; := \; \vec{t} \; \cup \; \vec{x}$
+     $\qquad \qquad \qquad \qquad \qquad$ \algcomment{bound vars}\\
+  \> $\v{\q}_{init}$ := MakeInitializer(\q)\\
+  \> \algforeach\ $\v{q}_{m_i}$ in Monomialize($\Delta\v{q}$) \algdo\\
+\>~~\= ($\partial\v{q}_i$, $\Gamma_i$) :=\=\ ExtractSimplerQuery($\vec{b}$,\\
+  \>\>\> ~~ SimplifyQuery($\partial\v{q}_{m_i}$, $\vec{b}$))\\
+  \>\> $\partial_{init} := $ MakeInitializer($\partial\v{\q} _i$)\\
+  \>\> $\v{s}_i$ := \= EliminateLoops(MakeStmt(\\
+  \>\>\> ~~\{\codeforeach\ $\vec{x} \in \codev{m} [\vec{x}]:$
+  $\codev{m} [\vec{x}]\tuple{\v{\q}_{init}} \pm = $
+  $\partial\codev{q} _{i}\tuple{\partial_{init}}$\}))\\
+  \>\> triggers[$R$] := triggers[$R$] $\cup$ \todo{Annotate($\v{s}_i$)}\\
+  \>\> $\Gamma := \Gamma \bigcup_i \Gamma_i$
+  \ \ \ \ \algcomment{eliminates duplicate maps}\\
+  \>\algdone\\
+\algdone\\
+\algforeach\ $(q, m[\vec{x}]) \in \Gamma - \Gamma_{\q}$ \algdo\\
+  \> triggers := triggers $\bigcup_{R}$ Compile($q, m, \vec{x}$); \\
+\comment{\algdone\\}
+\algreturn\ triggers
+\end{tabbing}
+
+\todo{
 \begin{itemize}
-  \item Recall that queries are closed under taking deltas. Thus the RHS of our
-  map updates are SQL queries, which we'll represent in our form as described
-  above.
-  \item Initial values
-  \item Simplified compilation algorithm
+  \item Simplify compilation algorithm
+  \item Describe additional steps beyond sequentially applying transformations
     \begin{itemize}
-    \item Additional steps beyond sequentially applying transformations
-    above:
     \item loop var simplification
     \item initializer expression computation
     \end{itemize}
+\end{itemize}
+}
+
+Our implementation of delta queries appearing on the RHS of statements uses an
+intermediate restricted functional programming language, where we can apply
+techniques from structural recursion [REF]. 
+
+
+
+\begin{itemize}
+  \item Simplified compilation algorithm
   \item Code generation: structural recursion to generate main-memory engines
     \begin{itemize}
       \item \note{Can't go into details of full functional language
