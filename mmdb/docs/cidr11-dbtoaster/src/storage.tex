@@ -1,10 +1,10 @@
 A DDMS is created with knowledge of the workload it will be used for; though the set of transition functions may be infinite, there is a finite set of classes of transition function that we can analyze, not only to simplify incremental computation, but also to streamline the storage mechanisms underpinning the database.
 
 For example, consider a DDMS constructed to maintain a view of the base relations as well as the query\texttt{\\
-SELECT prof, COUNT(DISTINCT e.student)\\
+SELECT p.id, COUNT(DISTINCT e.student)\\
 FROM Professors p, Classes c, Enrollment e\\
 WHERE p.id = c.teacher AND c.id = e.class\\
-GROUP BY prof\\
+GROUP BY p.id\\
 }
 Here, \texttt{c.teacher} and \texttt{e.class} are foreign keys mapped to \texttt{p.id} and \texttt{c.id} respectively.  We can implement this query in the DDMS by using two views: one of students for each professor, and another containing the count of students for each professor.  Though the data is drawn from two distinct logical views, the most efficient storage mechanism would place the student list on the same page as the student count.
 
@@ -16,14 +16,23 @@ The notion of transition functions presents us with a clean mechanism for quanti
 For example, in the DDMS example above, we have three views.  Transitions triggered by insertions into the Professors and Classes tables involve only writes (due to the foreign key constraints).  Conversely, transitions triggered by an insertion into the Enrollment table, first require a read (to validate the DISTINCT keyword), and two subsequent updates: one for the professor statistics and one for the student list.
 
 \subsection{Secondary Storage}
-Each transition function can be represented as a bipartite directed hypergraph; each node on the left representing a segment of the database being read from, each node on the right representing a segment being written to, and each edge representing an independent subtask of the transition function.
+Each transition function can be represented as a bipartite directed hypergraph; each node on the left represents a segment of the database being read from, each node on the right represents a segment being written to, and each hyperedge represents an independent subtask of the transition function.
 
 For the running example above, inserting a row into the Enrollment table might result in a read on a single entry in the Classes table, and read/writes on an intermediate view representing the students taught by each professor and the Professor's statistics.  This includes three nodes on the left (the views being read from), two node on the right (the views being written to), and one edge.
 
-Every time a portion of the database is split into multiple components, nodes on either side of the graph are likewise split into multiple components.  More importantly, depending on the workload, zero or more additional edges will also be created, depending on the query.  More importantly, the mechanism by which additional edges are created can be used to inform the partition allocation scheme.  
+Every time a portion of the database is split into multiple components, nodes on either side of the graph are likewise split into multiple components.  More importantly, depending on the workload, zero or more additional edges will also be created, depending on the query.  The mechanism by which additional edges are created follows one of a very small number of patterns that can be used to inform the partition allocation scheme.  
 
-For example, in the Professor/... query above....  Example based on the fact that we need scan of each professor's students, can access professor directly, 
-%%%%%%%%%%%%%
+For example consider the following variation on the previous query:\texttt{\\
+SELECT p.school, COUNT(DISTINCT e.student)\\
+FROM Professors p, Classes c, Enrollment e\\
+WHERE p.id = c.teacher AND c.id = e.class\\
+GROUP BY p.school\\
+}
+The DBToaster algorithm will create an intermediate view containing a slightly extended version of the Classes table.  In the absence of a key/foreign key constraint, each insertion into the Enrollment table must iterate over all classes and professors with matching identifiers.  This is done by using an intermediate view containing the results of a join on the Professors and Classes tables.  
+
+We could, for instance, partition the Professors\_Classes view into 4 components by horizontally splitting the c.teacher and c.id columns in half.  However, every subsequent insertion into Enrollment must read from each of the two partitions with a matching c.id, and every insertion into Professors must update each of the the two partitions with a matching c.teacher.  
+
+Conversely, if we split the view into four components based on the professor id, updates to Professors could be done instantly, but updates to Enrollment must now read from four components.  By establishing a clear hierarchy of foreign key relationships, we limit the explosion of reads required to one single partition.
 
 1-par implementation of secondary storage optimization: minimize \# of unbound
 edge reads (ie, find me whether or not students are present)
