@@ -14,30 +14,54 @@
 \end{figure}
 
 
-Conceptually: DDMS = dynamic data structures + views.
 
-
-
-A DDMS can be naturally modeled as a state machine in which the current repository is the current state of the state machine that undergoes a transition whenever an update is performed to it.
+A DDMS can be abstractly modeled as a(n infinite) state machine in which the current repository is the current state of the state machine that undergoes a transition whenever an update is performed to it.
 
 Definitions.
-
-states = the database at different points in time. A state is a relational database.
-
-transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
-
-schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
-
-
-
-
-Why use the state machine abstraction:
 \begin{itemize}
 \item
-The state machine abstraction makes the modes of API access to the DDMS (monitoring state, notification for events that are properties of the state) that we see in our killer apps look natural and intuitive.
+states = the database at different points in time. A state is a relational database.
 
 \item
-The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
+
+\item
+schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
 \end{itemize}
 
-Give an example of a schema and view specification in DBToaster -- e.g., the VWAP example.
+
+The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+
+
+Structure of this section:
+\begin{itemize}
+\item
+State machine abstraction
+
+\item
+Programming model: Boolean views are events, which trigger application code
+
+\item
+Architecture diagram:
+Compiler/Optimizer: produces low-level view maintenance code.
+Update stream.
+Event notification facility.
+Event notification by invocation by the view maintenance code?
+Ad-hoc querying in client-side library?
+
+\item
+System description.
+This really cannot be understood if taken out of context and should be moved to the following sections.
+\begin{itemize}
+\item
+Query optimization: The next section describes a method of incremental view maintenance that relies on materializing multiple layers of auxiliary views. This trades off view maintenance time cost against space cost. The optimizer will exploit the potential to save space by  deciding which auxiliary view layers to materialize and which to leave implicit. It will also perform
+multi-view optimization, deciding which auxiliary views from different visible views can be merged.
+
+What do we say about the structural recursion optimization, and where do we say it?
+
+\item
+Low-level data structures: we will describe the multi-level hash table data structure in section 4. Work on parallelization will be required. Our data structures are a bit unusual since they represent exclusively aggregates and their values are exclusively numerical. It is a conseqence of our approach that loops in query processing are always over a set of complete dimensions of the multi-dimensional table data structures we use; thus all our loops are naturally implemented as full scans over these dimensions. However, many fields in these tables will be zero and indexing or compression could be employed to omit scanning over all-zero areas.
+\end{itemize}
+\end{itemize}
+
+
