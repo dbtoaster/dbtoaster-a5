@@ -593,33 +593,42 @@ $\Gamma_{\q} := \Gamma$\\
 \end{itemize}
 }
 
+\tinysection{Towards a Framework for Optimizing Physical Engine Properties}
 Our implementation of delta queries appearing on the RHS of statements uses an
-intermediate restricted functional programming language, where we can apply
-techniques from structural recursion [REF]. 
+restricted functional programming language, where we can apply
+techniques from structural recursion [REF], prior to generating low-level code. 
+Structural recursion enables optimizations of arbitrarily nested structures such
+as sets, bags and lists, and while it might not immediately be clear how this
+pertains to delta queries on maps, we provide the following insight:
+\textit{structural recursion enables programmatic representation and
+manipulation of numerous physical-level properties, such as tuple
+construction and pipelining}.
 
+Our delta queries consist of many maps used as inputs to cross products and
+joins based on the presence of binding propagation in multiplications. In a
+traditional DBMS engine treats, cross products and join operators work on
+relations, to produce relations, ``flattening'' intermediate results into rows.
+Column-stores have argued for the late materialization of tuples [REF: Abadi
+ICDE 2007]. We produce intermediate results in a general nested form (think of
+nested relations) which may include multiple levels of nesting after combining
+several maps. Then, we can exploit structural recursion which critically makes
+use of function composition and inlining, to programmatically control where, and
+how much tuple construction we perform.
 
+We show a structural recursion example for another physical-level transformation
+on the following query: \todo{3-way join as binary join-tree w/ maps.}
+
+We can transform this to: \todo{3 way join as 3 level nested loops w/ no
+intermediates.} \todo{Describe benefits.}
+
+To summarize, to the best of our knowledge, DBToaster incorporates the first
+query representation (in functional form) for programmatic manipulation of
+physical aspects of plans and operators. We can do this because we are reasoning
+about query evaluation from a data structure perspective, not an operator
+abstraction (which encapsulates and hides data structures).
 
 \begin{itemize}
-  \item Simplified compilation algorithm
-  \item Code generation: structural recursion to generate main-memory engines
-    \begin{itemize}
-      \item \note{Can't go into details of full functional language
-      representation}
-      \item Convey high-level goals of functional language representation:
-        \begin{itemize}
-        \item Function composition and inlining
-        \end{itemize} 
-      \item Give two simplified examples of programs, one showing join tree,
-      one showing multiway join.
-      \item Mention tradeoffs in two programs.
-      \item Mention no known programmatic representation of physical level
-      details of operators. We can do this because we're reasoning about data
-      structures, not operators!
-      \item Give listing of physical properties we can play with:
-      \begin{itemize}
-        \item production of intermediate results
-        \item pipelining
-        \item 
-      \end{itemize}
-    \end{itemize}
+  \item Give two simplified examples of programs, one showing join tree,
+  one showing multiway join.
+  \item Mention tradeoffs in two programs.
 \end{itemize}
