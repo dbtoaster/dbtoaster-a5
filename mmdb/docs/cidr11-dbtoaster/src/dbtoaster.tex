@@ -166,7 +166,6 @@ algorithm rewrites queries to include maps. Due to space constraints, we focus
 on two arithmetic operations, addition and multiplication. First, we present an
 example of addition:
 
-\vspace{-7mm}
 \begin{figure}[h]
 \begin{minipage}{1in}
 \[
@@ -214,9 +213,8 @@ example of addition:
 \end{minipage}
 \end{figure}
 
-\vspace{-3mm}
-\noindent Above, we have two maps $m1, m2$, where blanks in columns represent
-\textit{holes}. Holes are not the same as nulls, they determine when attributes
+\noindent \note{Above/below}, we have two maps $m1, m2$, where blanks in columns
+represent \textit{holes}. Holes are not the same as nulls, they determine when attributes
 can be ignored for consistency across tuples.
 \note{Explain consistency.}
 Addition is a schemaless union where the result contains the union of
@@ -625,7 +623,9 @@ To summarize, to the best of our knowledge, DBToaster incorporates the first
 query representation (in functional form) for programmatic manipulation of
 physical aspects of plans and operators. We can do this because we are reasoning
 about query evaluation from a data structure perspective, not an operator
-abstraction (which encapsulates and hides data structures).
+abstraction (which encapsulates and hides data structures). The techniques we
+are developing will be relevant to general main-memory query processing beyond
+dynamic data, since our delta queries are the same as standard SQL queries.
 
 \begin{itemize}
   \item Give two simplified examples of programs, one showing join tree,
