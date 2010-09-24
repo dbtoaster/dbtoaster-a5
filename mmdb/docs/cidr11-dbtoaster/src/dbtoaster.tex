@@ -1,3 +1,209 @@
+Given a database, existing view maintenance techniques incrementally handle
+transitions to another state for a given update. We can informally represent
+this with a triple $\tuple{q,m,q'}$, corresponding to the view query, the
+materialization of that query, and the delta query responsible for maintaining
+the materialization respectively. The delta query $q'$ can be thought of as a
+parameterized SQL query, with parameters corresponding to attributes of an
+update to a delta table. On an update $u$, incremental view maintenance (IVM)
+performs the work: $m_{new} = m_{old} + q'(u)$, where $m_{old}, m_{new}$ refer
+to the materialized view before and after maintenance respectively. That is a
+materialized view can be updated with the result of a delta query taking
+parameters from $u$, and this must ensure $m_{new} = q(db_{new})$, where
+$db_{new}$ is the result of applying the update to the database.
+
+By taking a state machine approach, we can make the following key insight
+regarding the transitions performed by IVM. While current IVM techniques are
+incremental in terms of the update, they are not incremental with respect to the
+rest of the database state, rather they perform significant redundant work. That
+is, a delta query $q'$ repeatedly scans all base tables except for the delta
+table, and processes these tuples from scratch, \textit{even if there is no
+change to any of these other base tables}. Thus we can materialize the result of
+the delta query and reuse it upon repeated updates to the delta table. The
+materialized delta query would also be added to the database state, and we can
+write this as a triple $\tuple{q',m',q''}$. This leads to the concept of
+higher-order deltas, such as $q''$ which is a second-order delta query. This
+process can \textit{recur}, we can materialize $q''$ as $m''$, maintain with
+$q'''$ and so forth.
+
+Recursive delta query materialization does not continue forever and terminates
+given one important property of computing delta queries: \textit{a delta query
+is often simpler than its parent query}. In particular \textit{k}-th order delta
+query, $q^k$ has fewer input relations than a \textit{k-1} order query
+$q^{k-1}$, but additional parameters corresponding to attributes that are
+present in $q^{k-1}$.
+
+\tinysection{Compilation example}
+We present an example of this recursive materialization or \textit{delta query
+compilation} approach on a query similar to TPC-H Query 3:
+
+\def \ql#1{{\tt #1}}
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q =$ & \ql{select\ \ \ l.orderkey, o.spriority, sum(l.extprice)}\\
+      & \ql{from\ \ \ \ \ customer c, orders o, lineitem l}\\
+      & \ql{where\ \ \ \ c.custkey = o.custkey}\\
+      & \ql{and\ \ \ \ \ \ l.orderkey = o.orderkey}\\
+      & \ql{group by l.orderkey, o.spriority;}
+\end{tabular}
+
+
+\noindent Let us denote this query as $q$, and its materialization $m$.
+Technically $m$ has result schema {\tt orderkey, spriority} and an unnamed
+aggregate value. We represent our materialized views as map datastructures, and
+denote this by \linebreak $m[orderkey, spriority]$. In this case the map's key
+corresponds to group-by attributes and the map's value is the unnamed aggregate
+value. We can answer the query by iterating over all entries in $m$, and
+yielding aggregate values.
+
+\comment{
+We represent our materialized views as map datastructures, and
+denote this by a two-level map $m[][orderkey, spriority]$. Since we materialize
+delta queries, which are parameterized SQL queries, the first level of our maps
+corresponds to parameters, while the second level to the query's result schema.
+In this case the map's second level key corresponds to group-by attributes and
+the map's value is the unnamed aggregate value. Thus we can answer the query by
+iterating over all entries (group-by values) in map $m$, and yielding each
+aggregate value.
+}
+
+We can take the delta (as defined in existing IVM literature
+[REFs]) of an insertion, {\tt +c(ck,nm,nk,bal)} to the {\tt customer} relation,
+to produce a first-order delta query:
+
+
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q' =$  & \ql{select\ \ \ l.orderkey, o.spriority,sum(l.extprice)}\\
+        & \ql{from\ \ \ \ \ orders o, lineitem l}\\
+        & \ql{where\ \ \ \ @ck = o.custkey}\\
+        & \ql{and\ \ \ \ \ \ l.orderkey = o.orderkey}\\
+        & \ql{group by l.orderkey, o.spriority;}
+\end{tabular}
+
+\noindent The above is a parameterized SQL statement with {\tt @ck} a parameter
+that is filled in by the update {\tt +c(ck,nm,nk,bal)}. We write its
+materialization as $m'[ck,orderkey,spriority]$, where $m'$ has an additional
+attribute in its key for parameter $ck$. To maintain $m$ on insertion {\tt
++c(ck,nm,nk,bal)}, we must evaluate $q'(\mbox{{\tt ck}})$, the delta query $q'$
+with parameter {\tt ck}. We do this via a map lookup of
+$m'[\mbox{{\tt ck}},orderkey,spriority]$. Now, the astute reader may ask where
+do the values of $orderkey$, $spriority$ come from in this lookup? Recall that
+to answer $q$, map $m$ maintains aggregates for every $orderkey$, $spriority$
+combination in the update stream. Thus $m'$ also maintains every
+$orderkey$, $spriority$ combination, and we iterate over every entry to maintain
+$m$ from $m'$. The maintenance statement in the transition
+program for {\tt customer} is:
+
+\comment{
+\noindent The above is a parameterized SQL statement with {\tt @ck} a
+parameter that is filled in by the update {\tt +c(ck,nm,nk,bal)}. We write its
+materialization as $m'[ck][orderkey,spriority]$, where $m'$ is a map
+datastructure with first level key of parameter $ck$. To maintain $m$ on
+insertion {\tt +c(ck,nm,nk,bal)}, we must evaluate $q'(\mbox{{\tt ck}})$, the
+delta query $q'$ with parameter {\tt ck}. We do this via a map lookup of
+$m'[\mbox{{\tt ck}}][orderkey,spriority]$. Now, the astute reader may ask where
+do the values of $orderkey$, $spriority$ come from in this lookup? Recall that
+to answer $q$, map $m$ maintains aggregates for every $orderkey$, $spriority$
+combination in the update stream. Thus $m'$ also maintains every
+$orderkey$, $spriority$ combination, and we iterate over every entry to maintain
+$m$ from $m'$. We can now write a maintenance statement in the transition
+program for {\tt customer}:
+}
+
+\begin{verbatim}
+on_insert_customer(ck,nm,nk,bal):
+  for each orderkey,spriority in m:
+    m[][orderkey,spriority] += m'[ck,orderkey,spriority];
+\end{verbatim}
+
+\noindent Alternatively, we could have started with insertions to {\tt order} or
+{\tt lineitem} as well, but for space limitations omit their compilation.
+Indeed we must be able to handle any transition, thus for full incremental
+maintenance we consider delta queries for these insertions and materialize
+such deltas. We show the full transition program at the end of the example.
+
+We now incrementally maintain $m'$, say on insertion {\tt +l(ok,ep)} with a
+second-order delta query:
+
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q'' =$  & \ql{select\ \ \ @ok, o.spriority,sum(@ep)}\\
+         & \ql{from\ \ \ \ \ orders o}\\
+         & \ql{where\ \ \ \ $ck$ = o.custkey and @ok = o.orderkey}\\
+         & \ql{group by o.spriority;}
+\end{tabular}
+
+\noindent This delta removes {\tt l.orderkey} as a group-by attribute,
+since the update only affects a single group, given by the value of parameter
+{\tt @ok}. Furthermore, since we are summing up a parameter {\tt @ep}, we can
+apply distributivity laws of sum aggregates and rewrite this to:
+
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q'' =$  & \ql{select\ \ \ @ok, o.spriority,@ep*count()}\\
+         & \ql{from\ \ \ \ \ orders o}\\
+         & \ql{where\ \ \ \ $ck$ = o.custkey and @ok = o.orderkey}\\
+         & \ql{group by o.spriority;}
+\end{tabular}
+
+\noindent Above, we use $ck$ to distinguish parameters that are part of some map
+key, and parameters that are part of the update such as {\tt @ok}. The parameter
+$ck$ originates from {\tt c.custkey} in $q$, so map key components can be
+passed through multiple levels of compilation. We materialize $q''$ as
+$m''[ck,ok,spriority]$ and produce the maintenance statement:
+
+\begin{verbatim}
+on_insert_lineitem(ok,ep):
+  for each ck,spriority in m':
+    m'[ck,ok,spriority] += ep*m''[ck,ok,spriority];
+\end{verbatim}
+
+\noindent Finally, we can take the delta of an insertion {\tt +o(ck,ok,sp)} to
+maintain $m''$:
+
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q''' =$  & \ql{select\ \ \ @sp,count()}\\
+          & \ql{where\ \ \ \ $ck$ = @ck and $ok$ = @ok}\\
+          & \ql{group by @sp;}
+\end{tabular}
+
+\noindent This delta query is the terminal point of recursive compilation, since
+we have replaced all relations with updates. This query yields a scalar value of
+0-1 based on whether the parameters in {\tt +o(ck,ok,sp)} satisfy the predicate,
+as we loop over the entries of the map to be maintained, namely $m''$. The
+maintenance statement is:
+
+\begin{verbatim}
+on_insert_order(ck,ok,sp):
+  for each ck',ok' in m'':
+    m''[ck',ok',sp] +=
+      if ck'==ck and ok'==ok then 1 else 0
+\end{verbatim}
+
+\noindent This can be simplified by exploiting that only a single entry is
+updated, while the rest are incremented by a value of 0, yielding:
+
+\begin{verbatim}
+on_insert_order(ck,ok,sp): m''[ck,ok,sp] += 1
+\end{verbatim}
+
+\noindent Our compilation algorithm considers all possible update orders, and
+materializes each delta query encountered. Our algorithm detects and reuses
+duplicate maps based on equivalent delta queries. The full transition program
+is:
+
+\begin{verbatim}
+on_insert_customer() :
+on_insert_lineitem() :
+on_insert_order() :
+\end{verbatim}
+
+\tinysection{Transition Program Properties}
+
+\tinysection{Discussion}
+
+\comment{
 We present an example of designing a transition function between database
 states, in this case focusing on dynamic data driving view maintenance of
 standing queries comprising the visible schema. The underlying conceptual model
@@ -626,9 +832,4 @@ about query evaluation from a data structure perspective, not an operator
 abstraction (which encapsulates and hides data structures). The techniques we
 are developing will be relevant to general main-memory query processing beyond
 dynamic data, since our delta queries are the same as standard SQL queries.
-
-\begin{itemize}
-  \item Give two simplified examples of programs, one showing join tree,
-  one showing multiway join.
-  \item Mention tradeoffs in two programs.
-\end{itemize}
+}
