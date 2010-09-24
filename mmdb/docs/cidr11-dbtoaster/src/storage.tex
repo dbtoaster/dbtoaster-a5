@@ -18,8 +18,10 @@ Note that the ability to lookup by partial keys is critical.  Updates to the Pro
 For this purpose, the nested hash-table must be supplemented with (or even replaced by) a series of secondary indices.  Because the query workload is known in advance, the exact set of secondary indices required can be computed at compile time.  An example of this datastructure is shown in Figure \ref{fig:diag:nestedHash}
 
 \begin{figure}
-\includegraphics[width=3in]{graphics/MultikeyMap}
-\caption{Expressing a multi-key iterable hash-table as a nested hash-table with secondary indices.}
+\begin{center}
+\includegraphics[width=2.5in]{graphics/MultikeyMap}
+\end{center}
+\caption{Expressing a multi-key iterable hash-table as a nested hash-table with secondary indices.  Secondary indices are optional, and only maintained for access patterns used by one of the DDMS' queries.}
 \label{fig:diag:nestedHash}
 \end{figure}
 
