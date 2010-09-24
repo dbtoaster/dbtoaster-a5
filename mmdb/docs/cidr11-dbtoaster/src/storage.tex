@@ -15,7 +15,13 @@ This categorization into key and data columns, respectively, can make very effec
 
 Note that the ability to lookup by partial keys is critical.  Updates to the Product table (like changing the price of a handwoven basket) will read from the example view using only \texttt{p.key} (\texttt{i.product}) and iterating over all matching keys.  This suggests that a series of nested hash-tables would be sufficient, but there is not always a total ordering over the keys.  For example, updates to the Warehouse owner (i.e., the warehouse changes owners) must iterate over all values in the view matching \texttt{w.key}.  
 
-For this purpose, the nested hash-table must be supplemented with (or even replaced by) a series of secondary indices.  Because the query workload is known in advance, the exact set of secondary indices required can be computed at compile time.  
+For this purpose, the nested hash-table must be supplemented with (or even replaced by) a series of secondary indices.  Because the query workload is known in advance, the exact set of secondary indices required can be computed at compile time.  An example of this datastructure is shown in Figure \ref{fig:diag:nestedHash}
+
+\begin{figure}
+\includegraphics[width=3in]{graphics/MultikeyMap}
+\caption{Expressing a multi-key iterable hash-table as a nested hash-table with secondary indices.}
+\label{fig:diag:nestedHash}
+\end{figure}
 
 %%%%%% should we make any comments here about the relationship between the presence of secondary indices and partitioning schemes?  Otherwise, I'm not sure we have anything to say about maps and datastructures other than (like tables) they're very amenable to horizontal partitioning.
 
