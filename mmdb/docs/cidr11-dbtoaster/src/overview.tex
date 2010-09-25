@@ -1,0 +1,68 @@
+\begin{figure}
+(a) DDMS: show state machine, with databases as states and updates as transitions.
+
+(b) DBMS: database sits and waits for queries to arrive; answers them.
+
+(c) Data stream processor: Set of sitting queries; a stream of data passes by.
+
+\caption{Data management systems architectures: DDMS vs. DBMS vs. data stream processors.}
+\end{figure}
+
+In contrast to a traditional DBMS that acts as a data store and interpreter, a DDMS is a fully fledged, compiled program.  Thus, when constructing a abstraction to use for describing a DDMS, we start with the same principles: a(n infinite) state machine with the machine's state representing an entire relational database at one point in time.
+
+Thus, transitions in this model correspond to table operations in a traditional DBMS: insertions, deletions, and updates.  This is an important distinction between the DDMS state machine and more traditional interpretations of a state machine; transition functions do not correspond to individual memory operations or CPU instructions, but rather to changes in the inputs of queries that the DDMS is constructed out of.
+
+
+
+
+
+Definitions.
+\begin{itemize}
+\item
+states = the database at different points in time. A state is a relational database.
+
+\item
+transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
+
+\item
+schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
+\end{itemize}
+
+
+The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
+
+
+Structure of this section:
+\begin{itemize}
+\item
+State machine abstraction
+
+\item
+Programming model: Boolean views are events, which trigger application code
+
+\item
+Architecture diagram:
+Compiler/Optimizer: produces low-level view maintenance code.
+Update stream.
+Event notification facility.
+Event notification by invocation by the view maintenance code?
+Ad-hoc querying in client-side library?
+
+\item updates can potentially modify many viees
+
+\item
+System description.
+This really cannot be understood if taken out of context and should be moved to the following sections.
+\begin{itemize}
+\item
+Query optimization: The next section describes a method of incremental view maintenance that relies on materializing multiple layers of auxiliary views. This trades off view maintenance time cost against space cost. The optimizer will exploit the potential to save space by  deciding which auxiliary view layers to materialize and which to leave implicit. It will also perform
+multi-view optimization, deciding which auxiliary views from different visible views can be merged.
+
+What do we say about the structural recursion optimization, and where do we say it?
+
+\item
+Low-level data structures: we will describe the multi-level hash table data structure in section 4. Work on parallelization will be required. Our data structures are a bit unusual since they represent exclusively aggregates and their values are exclusively numerical. It is a conseqence of our approach that loops in query processing are always over a set of complete dimensions of the multi-dimensional table data structures we use; thus all our loops are naturally implemented as full scans over these dimensions. However, many fields in these tables will be zero and indexing or compression could be employed to omit scanning over all-zero areas.
+\end{itemize}
+\end{itemize}
+
+
