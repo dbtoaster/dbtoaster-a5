@@ -5,6 +5,7 @@
 \usepackage{graphicx}
 \usepackage{color}
 
+\newcommand{\longversion}[1]{}
 \newcommand{\comment}[1]{}
 \newcommand{\tinysection}[1]{\vspace{0.5mm}\noindent{\bf #1.}}
 \newcommand{\tuple}[1]{{\langle#1\rangle}}
@@ -37,19 +38,21 @@ Christoph Koch\\
 \maketitle
 
 \begin{abstract}
-This paper calls for a new breed of systems which
-we call dynamic data management systems (DDMS). In a nutshell,
-a DDMS manages (very large) dynamic data structures with 
-agile, frequently fresh views, and a facility for monitoring
+This paper calls for a new breed of lightweight systems which
+we call {\em dynamic data management systems (DDMS)}\/.
+In a nutshell,
+a DDMS manages (very large) {\em dynamic data structures}\/ with 
+{\em agile, frequently fresh views}\/, and a facility for monitoring
 these views and triggering application-level events.
 %
 We motivate DDMS with applications in large-scale data analytics
 including data warehousing and high-frequency algorithmic trading
-and compare them to more traditional systems such as DBMS and
-data stream processors.
+and compare them to more traditional data management systems 
+architectures.
+%such as DBMS and data stream processors.
 %
 We describe the DBToaster project, which is an ongoing effort to
-develop a prototype DDMS system. We describe the main architecture
+develop a prototype DDMS system. We describe its architecture
 design, techniques for high-frequency incremental view maintenance,
 query optimization, storage, scaling up by parallelization, and
 the various key challenges to overcome to make DDMS a reality.
