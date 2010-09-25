@@ -8,11 +8,15 @@
 \caption{Data management systems architectures: DDMS vs. DBMS vs. data stream processors.}
 \end{figure}
 
-In contrast to a traditional DBMS that acts as a data store and interpreter, a DDMS is a fully fledged, compiled program.  Thus, when constructing a abstraction to use for describing a DDMS, we start with the same principles: a(n infinite) state machine with the machine's state representing an entire relational database at one point in time.
+% Should we have an even higher-level overview here, giving a high-level picture of the  DDMS API
+
+DDMSes are built around a set of views of interest.  Rather than performing ad-hoc queries, users specify triggers that the DDMS will invoke when the views change.  The DDMS is built to process updates and apply them efficiently to those views.  This mentality is starkly in contrast to a traditional DBMS, which acts solely as a datastore and an interpreter.  Thus, when analyzing DDMSes, we use a process-centric abstraction: The DDMS represented as a(n infinite) state machine with the machine's state representing an entire relational database at one point in time.
 
 Thus, transitions in this model correspond to table operations in a traditional DBMS: insertions, deletions, and updates.  This is an important distinction between the DDMS state machine and more traditional interpretations of a state machine; transition functions do not correspond to individual memory operations or CPU instructions, but rather to changes in the inputs of queries that the DDMS is constructed out of.
 
+Correspondingly, the state of the state machine is organized into a schema of base relations, materialized views, and other auxiliary datastructures.  We partition the schema into two components: a \textit{visible schema} containing materialized representations of the views of interest, and a \textit{auxiliary schema} containing all of the DDMS' internal machinery (ie, base relations, or auxiliary materialized views).
 
+An natural outcome of the DDMS state machine is that we can reduce the 
 
 
 
