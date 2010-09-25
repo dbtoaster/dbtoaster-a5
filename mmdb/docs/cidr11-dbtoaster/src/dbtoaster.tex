@@ -64,8 +64,8 @@ aggregate value.
 }
 
 We can take the delta (as defined in existing IVM literature
-[REFs]) of an insertion, {\tt +c(ck,nm,nk,bal)} to the {\tt customer} relation,
-to produce a first-order delta query:
+\todo{[REFs]}) of an insertion, {\tt +c(ck,nm,nk,bal)} to the {\tt customer}
+relation, to produce a first-order delta query:
 
 
 \hspace{-6mm}
@@ -208,11 +208,11 @@ on_insert_order(ck,ok,sp) :
 \tinysection{Transition Program Properties}
 For many queries, compilation to transitions yields \textit{simple} code, that
 has no join trees, and at most single-level for loops (no nested loops), that
-are essentially performing probing as found in hash joins. The transition
-program is also exploiting distributivity to push down aggregates through joins,
-yielding small map sizes since maps maintain group-by (partial) aggregates. We
-believe simple code is beneficial for analysis and optimizations as part of
-low-level compilation and code generation.
+perform probing as found in hash joins. The transition program is also
+exploiting distributivity to push down aggregates through joins, yielding small
+map sizes since maps maintain group-by (partial) aggregates. We believe simple
+code is beneficial for analysis and optimizations as part of low-level
+compilation and code generation.
 
 Transition programs lean on the side of trading off space for time. They
 construct and maintain auxiliary state, requiring more space. These space
@@ -235,8 +235,7 @@ several iterations of designing the algorithm. Compiling the transition function
 for view maintenance is advantageous and feasible (in that it terminates) due to
 the property that higher order delta queries successively get simpler and
 simpler. The terminal delta consists of parameters alone, and does not depend on
-the database. Materializing higher order deltas yields continuous query
-evaluation that is \textit{as incremental as possible}.
+the database.
 
 Queries are closed under taking deltas, that is a delta query is of the same
 language as the parent query. In the above example, we have materialized all
@@ -248,24 +247,32 @@ processors and briefly touch on this following section.
 
 Finally, our concept of higher-order deltas draws novel, natural analogies to
 concepts in mathematics. We have a rich formal framework, partially described in
-[PODS REF], where queries are represented as polynomials, admit transformations
-compactly represented by an algebraic structure, namely rings, and demonstrates
+\todo{[PODS REF]}, where queries are represented as polynomials, admit
+transformations compactly represented by an algebraic structure, namely rings, and demonstrates
 that the degree of the polynomial is reduced under taking deltas, much like
 derivatives in calculus.
 
 \tinysection{Discussion}
-\begin{itemize}
-  \item \todo{Nowhere do you mention that this applies to aggregate queries
-  alone. We can do non-aggregation queries but then main-memory becomes an
-  issue. We don't see an as much of an advantage, the really strong case is for
-  queries with aggregates.}
-  \item Comparison to today's IVM
-  \item Relationship to GDL
-  \item Eddies
-\end{itemize}
+To summarize, in contrast to today's IVM, DBToaster uses materialization of
+higher order deltas for continuous query evaluation that is \textit{as
+incremental as possible}. DBToaster is capable of handling a wide range of
+queries, including, as we discuss in the next section, nested queries. This has
+not been addressed previously in the IVM literature, and lets our technique
+cover more complex, composed queries, where being incremental as possible is of
+extremely important. Our framework has many applications, even when considering
+the simple class of equi-join with sum aggregations as shown above. This class
+of queries, when viewed through the lens of a semiring or ring, can be
+considered an application of the generalized distributive law (GDL) \todo{[REF
+Aji, McEliece]} to query processing. GDL enables a large class of fast
+algorithms for a variety of applications including belief propagation and other
+message passing algorithms, Viterbi's algorithm, FFTs and so forth. Drawing this
+analogy to GDL, we can begin to consider extremely efficient large-scale
+evaluation of these applications using query processing techniques based on
+DBToaster. \todo{Eddies?}
+
 
 \subsection{Compilation Enhancements}
-\noindent We presented our compilation above using a fairly simple query example
+\noindent We presented compilation above using a fairly simple query example
 consisting of only equi-joins, illustrating compilation for insertions.
 Now, we briefly discuss further compilation issues and optimizations.
 
@@ -304,8 +311,8 @@ We can write this as a product of two separate, simpler, aggregates:
 frequently possible when considering star schemas in analytics applications, and
 generalizes to structural decompositions, such as hypertree decomposition
 \todo{[REF Gottlob]}. While there has been much work in decomposing join
-hypergraphs, applying similar techniques to aggregates is an interesting
-direction of future work.
+hypergraphs, structurally decomposing aggregate queries would be interesting
+future work.
 
 \tinysection{Nested Queries}
 We can compile transitions for nested queries, which to the best of our
