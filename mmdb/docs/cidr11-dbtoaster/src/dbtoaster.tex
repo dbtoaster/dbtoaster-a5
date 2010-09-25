@@ -12,17 +12,15 @@ the result of applying the update to the database.
 
 \subsection{View Maintenance in DBToaster}
 DBToaster makes the following key insight regarding the transitions performed by
-IVM: current IVM techniques are incremental only in terms of the update, but not
-the database, meaning they perform much redundant work. Specifically, for each
-transition, a delta query $q'$ will access all base tables except for the delta
-table, and processes these tuples from scratch, \textit{even if there is no
-change to any of these other base tables}. DBToaster materializes the result of
-the delta query and reuses it upon repeated updates to the delta table. The
-materialized delta query is be added to the database state, and we can write
-this as $\tuple{q',m',q''}$. This leads to the concept of higher-order deltas,
-such as $q''$ which is a second-order delta query. This process can
-\textit{recur}, we can materialize $q''$ as $m''$, maintain with $q'''$ and so
-forth.
+IVM: current IVM performs much redundant work, since for each transition a delta
+query $q'$ will access all base tables except for the delta table, and processes
+these tuples from scratch, \textit{even if there is no change to any of these
+other base tables}. DBToaster materializes the result of the delta query and
+reuses it upon repeated updates to the delta table. The materialized delta query
+is be added to the database state, and we can write this as $\tuple{q',m',q''}$.
+This leads to the concept of higher-order deltas, such as $q''$ which is a
+second-order delta query. This process can \textit{recur}, we can materialize
+$q''$ as $m''$, maintain with $q'''$ and so forth.
 
 Recursive delta query materialization does not continue forever and terminates
 given one important property of computing delta queries: \textit{a delta query
@@ -93,22 +91,6 @@ $ordkey$, $sprior$ combination. We iterate over every entry to maintain
 $m$ from $m'$. The maintenance statement in the transition
 program for {\tt customer} is:
 
-\comment{
-\noindent The above is a parameterized SQL statement with {\tt @ck} a
-parameter that is filled in by the update {\tt +c(ck,nm,nk,bal)}. We write its
-materialization as $m'[ck][ordkey,sprior]$, where $m'$ is a map
-datastructure with first level key of parameter $ck$. To maintain $m$ on
-insertion {\tt +c(ck,nm,nk,bal)}, we must evaluate $q'(\mbox{{\tt ck}})$, the
-delta query $q'$ with parameter {\tt ck}. We do this via a map lookup of
-$m'[\mbox{{\tt ck}}][ordkey,sprior]$. Now, the astute reader may ask where
-do the values of $ordkey$, $sprior$ come from in this lookup? Recall that
-to answer $q$, map $m$ maintains aggregates for every $ordkey$, $sprior$
-combination in the update stream. Thus $m'$ also maintains every
-$ordkey$, $sprior$ combination, and we iterate over every entry to maintain
-$m$ from $m'$. We can now write a maintenance statement in the transition
-program for {\tt customer}:
-}
-
 \begin{verbatim}
 on_insert_customer(ck,nm,nk,bal):
   for each ordkey,sprior in m:
@@ -131,7 +113,7 @@ to {\tt order} or {\tt lineitem}. Due to space limitations, we omit their
 compilation. Indeed, we must be able to handle any transition, thus
 for full, correct, incremental maintenance, we compile for all 
 possible combinations of insertions and deletions. We show the full transition
-program (for insertions) at the end of the example.
+program for insertions at the end of the example.
 
 We now incrementally maintain $m'$, say on insertion {\tt +l(ok,ep)} with a
 second-order delta query:
@@ -224,62 +206,196 @@ on_insert_order(ck,ok,sp) :
 \end{verbatim}
 
 \tinysection{Transition Program Properties}
+For many queries, compilation to transitions yields \textit{simple} code, that
+has no join trees, and at most single-level for loops (no nested loops), that
+are essentially performing probing as found in hash joins. The transition
+program is also exploiting distributivity to push down aggregates through joins,
+yielding small map sizes since maps maintain group-by (partial) aggregates. We
+believe simple code is beneficial for analysis and optimizations as part of
+low-level compilation and code generation.
 
-\tinysection{Discussion: Comparison to Today's IVM}
+Transition programs lean on the side of trading off space for time. They
+construct and maintain auxiliary state, requiring more space. These space
+requirements are dependent on the active domain sizes of attributes, and often
+attributes do not have many distinct values, for example stock identifiers in
+order books, where there are approximately 2,800 listings in NASDAQ, NYSE.
+Furthermore checking for duplicate maps finds many opportunities to reuse
+materialization given compilation with all permutations of deltas. Finally,
+there are numerous design choices and optimizations available to vary space-time
+requirements for transitions. We need not materialize all higher-order deltas.
+For example we could maintain $q$ with $m^i$, a materialized $i$-th order delta
+and perform more work during the update to evaluate $q^{i-1}, \ldots, q^1$. We
+could further amortize space by exploiting commonality across multiple queries,
+merging maps to service multiple delta queries.
 
-\subsection{Compilation Enhancements}
 
-\tinysection{Deletions}
 
-\tinysection{Simplifying Delta Queries}
+\tinysection{Insights} We highlight a few insights drawn from our experience in
+several iterations of designing the algorithm. Compiling the transition function
+for view maintenance is advantageous and feasible (in that it terminates) due to
+the property that higher order delta queries successively get simpler and
+simpler. The terminal delta consists of parameters alone, and does not depend on
+the database. Materializing higher order deltas yields continuous query
+evaluation that is \textit{as incremental as possible}.
 
-\tinysection{Nested Queries}
+Queries are closed under taking deltas, that is a delta query is of the same
+language as the parent query. In the above example, we have materialized all
+deltas, thus the transition program consists of simple arithmetics on parameters
+and map lookups. In general, closed deltas mean that evaluating delta queries
+requires a relational query engine. This could be done with an existing DBMS
+kernel, but we believe we can innovate in the design of main-memory query
+processors and briefly touch on this following section.
 
-\tinysection{Windows, Constraints, Other Aggregates}
-
-\tinysection{Towards Optimizing Engine Physicality}
-Our implementation of delta queries appearing on the RHS of statements uses an
-restricted functional programming language, where we can apply
-techniques from structural recursion [REF], prior to generating low-level code. 
-Structural recursion enables optimizations of arbitrarily nested structures such
-as sets, bags and lists, and while it might not immediately be clear how this
-pertains to delta queries on maps, we provide the following insight:
-\textit{structural recursion enables programmatic representation and
-manipulation of numerous physical-level properties, such as tuple
-construction and pipelining}.
-
-Our delta queries consist of many maps used as inputs to cross products and
-joins based on the presence of binding propagation in multiplications. In a
-traditional DBMS engine treats, cross products and join operators work on
-relations, to produce relations, ``flattening'' intermediate results into rows.
-Column-stores have argued for the late materialization of tuples [REF: Abadi
-ICDE 2007]. We produce intermediate results in a general nested form (think of
-nested relations) which may include multiple levels of nesting after combining
-several maps. Then, we can exploit structural recursion which critically makes
-use of function composition and inlining, to programmatically control where, and
-how much tuple construction we perform.
-
-We show a structural recursion example for another physical-level transformation
-on the following query: \todo{3-way join as binary join-tree w/ maps.}
-
-We can transform this to: \todo{3 way join as 3 level nested loops w/ no
-intermediates.} \todo{Describe benefits.}
-
-To summarize, to the best of our knowledge, DBToaster incorporates the first
-query representation (in functional form) for programmatic manipulation of
-physical aspects of plans and operators. We can do this because we are reasoning
-about query evaluation from a data structure perspective, not an operator
-abstraction (which encapsulates and hides data structures). The techniques we
-are developing will be relevant to general main-memory query processing beyond
-dynamic data, since our delta queries are the same as standard SQL queries.
-
+Finally, our concept of higher-order deltas draws novel, natural analogies to
+concepts in mathematics. We have a rich formal framework, partially described in
+[PODS REF], where queries are represented as polynomials, admit transformations
+compactly represented by an algebraic structure, namely rings, and demonstrates
+that the degree of the polynomial is reduced under taking deltas, much like
+derivatives in calculus.
 
 \tinysection{Discussion}
 \begin{itemize}
+  \item \todo{Nowhere do you mention that this applies to aggregate queries
+  alone. We can do non-aggregation queries but then main-memory becomes an
+  issue. We don't see an as much of an advantage, the really strong case is for
+  queries with aggregates.}
+  \item Comparison to today's IVM
   \item Relationship to GDL
   \item Eddies
 \end{itemize}
 
+\subsection{Compilation Enhancements}
+\noindent We presented our compilation above using a fairly simple query example
+consisting of only equi-joins, illustrating compilation for insertions.
+Now, we briefly discuss further compilation issues and optimizations.
+
+\tinysection{Deletions}
+Our example above only mentions inserts, but handling deletions turns out to be
+straightforward. Our framework represents both the database and queries entirely
+as maps\footnote{We have toyed with calling our system a MapStore, but prefer a
+name with mystique, DBToaster.}, including base relations. Base relations are
+multisets, or, maps with keys according to the relation's schema and values from
+tuple's cardinalities, e.g. a tuple $\tuple{a=3,b=5}$ occurring three times in
+relation $R(a,b)$ is a map entry $m[3,5] \mapsto 3$. Deletions are simply tuples
+with negative multiplicities, and are implemented in their own transition
+function.
+
+\tinysection{Simplifying Delta Queries}
+Transition compilation internally uses several techniques to simplify queries
+as we are taking deltas. We present two of these here, starting with
+unification leading to variable elimination. Consider the SQL query:
+\begin{verbatim}
+select sum(l.extendedprice) from partsupp ps, lineitem l
+where @pk = ps.partkey and ps.partkey = l.partkey
+      and ps.suppkey = l.suppkey and l.quantity < 10
+\end{verbatim}
+By unifying the parameter {\tt @pk}, \todo{finish, needs a better example\ldots} 
+
+The second simplification is factorization. Consider the query:
+\texttt{select sum(c.acctbal*(l.extprice-l.discount))
+from customer c, lineitem l}.
+We can write this as a product of two separate, simpler, aggregates:
+\begin{verbatim}
+(select sum(c.acctbal) from customer c) * 
+(select sum(l.extprice-l.discount) from lineitem l)
+\end{verbatim}
+
+\noindent and independently compute deltas for each aggregate. Factorization is
+frequently possible when considering star schemas in analytics applications, and
+generalizes to structural decompositions, such as hypertree decomposition
+\todo{[REF Gottlob]}. While there has been much work in decomposing join
+hypergraphs, applying similar techniques to aggregates is an interesting
+direction of future work.
+
+\tinysection{Nested Queries}
+We can compile transitions for nested queries, which to the best of our
+knowledge, has not been feasible in existing IVM techniques. In particular
+nested scalar subqueries used in predicates are difficult, because taking deltas
+of such predicates does not result in simpler expressions (and thus our
+algorithm would not terminate if we did not explicitly handle this). The
+\todo{Q-VWAP} query in Section \todo{[REF]} is an example of a nested query.
+
+Nested subqueries contain correlated attributes (e.g. \todo{price in Q-VWAP})
+defined from a query in an outer scope. We can treat these correlated attributes
+as parameters. While we've presented this discussion in terms of parameterized
+queries for ease of understanding through familiarity, our framework internally
+treats parameters through binding patterns (indicating bound and free variables)
+for queries. In particular, nested queries induce \textit{binding propagation},
+similar to sideways information passing in datalog. That is, we support the
+results of one query being used (or \textit{propagated}) to the parameters of a
+correlated subquery, indicating an ordered evaluation of queries.
+
+As an optimization, compilation transforms queries to use minimal propagation of
+variables, which performs additional aggregation of maps, over the dimension of
+the map key that is not propagate. For example a map $m[x,y,z]$ would be
+aggregated to $m'[x,y]$ if $x,y$ were the only correlated attributes.
+Furthermore during compilation, because the delta for a predicate is not simpler
+than the predicate, to ensure compilation terminates, we explicitly find simpler
+terms and recur on them. This only happens for nested queries in constraints,
+the remainder of the language is handled as in our example.
+
+
+
+\comment{
+\tinysection{Initial values}
+
+\tinysection{Windows, Constraints, Other Aggregates}
+\begin{itemize}
+  \item Do you really want to include this section? What do you have to say
+  that's strong here \note{i.e. what can you say about compiling to specific
+  datastructures beyond maps?}
+  \item Our model of transitions generally addresses the issues of incremental
+  processing and can handle stream processing features such as windows.
+  \item In fact we can exploit additional schema information such as
+  key/foreign-key relationsips, integrity constraints and so forth to further
+  simplify our programs. \note{Give simple example with an integrity
+  constraint, i.e. we can avoid generating a statement if we know an entry
+  cannot exist in another relation due to integrity.}
+  \item Min/max handling. The hard case is deletion, since we have to recompute
+  from scratch. Our compilation framework uses a query representation where
+  everything is a map, including base tables. Thus we can easily express
+  materializing relations in addition to group-by aggregates, requiring no
+  change to handle other aggregates. This also applies to queries without
+  aggregation, for example a SPJ query. \footnote{We have toyed with calling our
+  system a MapStore, but prefer a name with mystique, DBToaster.}
+\end{itemize}
+}
+
+
+
+\tinysection{Towards Optimizing Engine Physicality}
+Our implementation of delta queries uses a functional programming approach,
+where we can apply techniques from structural recursion \todo{[REF Kleisli]},
+prior to generating low-level code. Structural recursion enables optimizations
+of arbitrarily nested collections such as sets, bags and lists, and is our basis
+for enabling programmatic representation and manipulation of numerous
+\textit{physical-level plan properties}, such as tuple construction and
+pipelining.
+
+Delta queries consist of cross products and joins of many maps, due to
+factorization of, and binding propagation in queries. In a traditional DBMS
+engine treats, cross products and join operators work on relations, to produce
+relations, ``flattening'' intermediate results into rows. Column-stores have
+argued for the late materialization of tuples \todo{[REF: Abadi ICDE 2007]}. We
+produce intermediate results in a general nested form (cf. nested relations and
+objects) which may include multiple levels of nesting after combining several
+maps. Then, we can exploit structural recursion which critically makes use of
+function composition and inlining, to programmatically control where, and how
+much tuple construction we perform.
+
+Function composition and inlining also lets us entirely avoid constructing
+\textit{any} intermediate results, let alone worry about flattening
+intermediates. This enables \textit{automatic} transformation of a join-tree
+into an n-way multijoin, which, for example, for a series of cross products
+would yield an n-level pipelined nested loops implementation that avoids
+expensive intermediates. Furthermore we can explore a much richer space of join
+plans by enabling varying operator in-degrees. To the best of our knowledge,
+DBToaster would be the first query processor to incorporate automated,
+programmatic manipulation of physical aspects of plans, since we reason about
+query processing from a data structure perspective, not an operator abstraction
+that hides and encapsulates data structures. Our techniques will be equally
+applicable to main-memory query processing beyond a DDMS, since our delta
+queries are the same as standard SQL queries.
 
 
 
