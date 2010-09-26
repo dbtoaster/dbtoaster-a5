@@ -7,9 +7,11 @@ Regardless of whether data is stored in memory, on disk, or across an entire clu
 
 For example, consider example query $q$ from Section \ref{sec:dbtoaster}.  The column \texttt{extprice} is a data columns, while \texttt{sprior} and \texttt{ordkey} are examples of a key column.  
 
-This clean categorization into key and data columns, suggests the use of key-value lookup datastructures, such as a hash-table.  However, to make life more difficult, some lookups may be performed with only partial keys; the datastructure should be able to provide an iterator over all matching values (with their corresponding keys).  Worse still, there is no strict subset ordering over the missing elements of partial keys.
+This clean categorization into key and data columns, suggests the use of key-value lookup datastructures, such as a hash-table.  However, to make life more difficult, the DDMS may perform lookups without specific values for all key columns; the datastructure should be able to provide an iterator over all key/value pairs that match a partially specified key.  Our primary concern is to provide lookup functionality for arbitrary subsets of the key columns, but one could extend the idea to employ range, nearest neighbor, and similar specialized indices.  
 
-For example, Section \ref{sec:dbtoaster}'s $q'$ would be stored in memory not as a series of rows, but rather as a hash table indexed by \texttt{ordkey} and \texttt{custkey}.  Insertions into the \texttt{customer} table iterate over all values with \texttt{@ck = custkey}, so we can implement the hash-table as a two-level nested structure - the outer level is indexed by \texttt{custkey} and the inner by \texttt{ordkey}.  However, an insertion into \texttt{lineitem} matches on \texttt{@ok = orderkey}.  Thus, a secondary index must be used, as in Figure \ref{fig:diag:nestedHash}.
+Our first take on this key-value lookup structure, or \textit{map}, is a series of nested hash-tables, as shown in Figure \ref{fig:diag:nestedHash}.  Each level of nesting corresponds to a different key column.  Since there is typically no prefix ordering on keys used in the partial keys, we use secondary indices to support different orderings.
+
+For example, Section \ref{sec:dbtoaster}'s $q'$ would be stored not as a series of rows, but rather as a hash table indexed by \texttt{ordkey} and \texttt{custkey}.  Insertions into the \texttt{customer} table iterate over all values with \texttt{@ck = custkey}, so we can implement the hash-table as a two-level nested structure - the outer level is indexed by \texttt{custkey} and the inner by \texttt{ordkey}.  However, an insertion into \texttt{lineitem} matches on \texttt{@ok = orderkey} and requires a secondary index.  
 
 \begin{figure}
 \begin{center}
@@ -19,7 +21,7 @@ For example, Section \ref{sec:dbtoaster}'s $q'$ would be stored in memory not as
 \label{fig:diag:nestedHash}
 \end{figure}
 
-This is not a novel problem.  Systems like BerkleyDB\cite{bdb} provide exactly the sort of functionality this datastructure requires.  More complex indexing schemes have been developed (cite???) to address a range of different selection predicates such as range queries, nearest neighbor searches, approximate string matching, and so forth.  The critical insight however, is that the entire query workload is known in advance.  \textit{The DBToaster compiler can identify the full set of required secondary indices at compile time}.  The DDMS requires no learning machinery, adaptive index, or other online process to obtain the same benefits.
+This is not a novel problem.  Systems like BerkeleyDB\cite{berkeleydb} provide exactly the sort of functionality this datastructure requires.  More complex indexing schemes have been developed (cite???) to address a range of different selection predicates such as range queries, nearest neighbor searches, approximate string matching, and so forth.  The critical insight however, is that the entire query workload is known in advance.  \textit{The DBToaster compiler can identify the full set of required secondary indices at compile time}.  The DDMS requires no learning machinery, adaptive index, or other online process to obtain the same benefits.
 
 %%%%%% should we make any comments here about the relationship between the presence of secondary indices and partitioning schemes?  Otherwise, I'm not sure we have anything to say about maps and datastructures other than (like tables) they're very amenable to horizontal partitioning.
 
@@ -32,7 +34,7 @@ Each transition function can be represented as a bipartite directed hypergraph; 
 \begin{center}
 \includegraphics[width=2.5in]{graphics/MessagingGraph}
 \end{center}
-\caption{An example of a messaging graph based on Section \ref{sec:dbtoaster}'s example query.  (a) The messaging graph for the \texttt{on\_customer\_insert} event.  View $m\_co$ is unused by the transition.  (b) The effects of splitting view $m\_c$ on \texttt{ordkey}.  (c) The effects of splitting $m\_c$ on \texttt{custkey}.  Only one of the partitions is used by the transition.}
+\caption{An example of a messaging graph based on Section \ref{sec:dbtoaster}'s example query.  (a) The messaging graph for the \texttt{on\_insert\_customer} event.  View $m\_co$ is unused by the transition.  (b) The effects of splitting view $m\_c$ on \texttt{ordkey}.  (c) The effects of splitting $m\_c$ on \texttt{custkey}.  Only one of the partitions is used by the transition.}
 \label{fig:diag:messagingGraph}
 \end{figure}
 

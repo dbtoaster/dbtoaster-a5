@@ -16,28 +16,13 @@ Thus, transitions in this model correspond to table operations in a traditional 
 
 Correspondingly, the state of the state machine is organized into a schema of base relations, materialized views, and other auxiliary datastructures.  We partition the schema into two components: a \textit{visible schema} containing materialized representations of the views of interest, and a \textit{auxiliary schema} containing all of the DDMS' internal machinery (ie, base relations, or auxiliary materialized views).
 
-An natural outcome of the DDMS state machine is that we can reduce the 
-
-
-
-Definitions.
-\begin{itemize}
-\item
-states = the database at different points in time. A state is a relational database.
-
-\item
-transitions/updates = single-tuple or bulk updates to base relations, but not single CPU instructions or individual writes to memory. A single-tuple update (to a base relation) may well require many changes to the visible relations/data objects of the database state
-
-\item
-schema: visible schema (e.g. materialized views of interest) plus auxiliary schema (e.g. base relations that we do not want to monitor plus auxiliary data structures such as auxiliary materialized views/lower levels of a DBToaster hierarchy and indexes)
-\end{itemize}
-
-
-The state machine abstraction leads to new algorithmic ideas. DBToaster is an example. Also, when the idea is to precompute the state transition function of the state machine, to make it as efficient as possible at runtime, compilation is a natural way to go that will not look like a disconnected idea.
-
+Naturally, viewing the database engine as a state machine suggests that we can precompute each state transition function to make it as efficient as possible.  Moreover, when ``compiling'' the DDMS, there is no prior state\footnote{This is not strictly true, we assume that DDMS recompiles are infrequent enough to make post-compile ``upgrades'' of database state a reasonable requirement} and latency is not a consideration.  Thus, we are free to use a variety of compilation tricks unavailable to DBMS optimizers.
 
 Structure of this section:
 \begin{itemize}
+\item
+Mention that viewing the problem in a slightly different way can produce a dramatically different implementation.
+
 \item
 State machine abstraction
 
