@@ -1,27 +1,33 @@
-Given a database, existing view maintenance techniques incrementally handle
-transitions to another state for a given update. We can informally represent the
-database state as a triple $\tuple{q,m,q'}$, corresponding to the view query,
-the materialization of that query, and the delta query responsible for
-maintaining the materialization respectively. The delta query $q'$ can be
-thought of as a parameterized SQL query, with parameters corresponding to
-attributes of an update to a delta table. On an update $u$, incremental view
-maintenance (IVM) performs the work: $m \mbox{ {\tt+}= } q'(u)$. That is a
-materialized view can be updated with the result of a delta query taking
+We provide an overview of transition function compilation for view maintenance.
+Current incremental view maintenance (IVM) techniques start with a query $q$,
+and produces a pair $\tuple{m,q'}$ corresponding to the materialization of $q$,
+and the delta query responsible for maintaining the materialization
+respectively. The delta query $q'$ can be thought of as a parameterized SQL
+query, with parameters corresponding to attributes of an update to a delta
+table. On an update $u$, IVM performs the work: $m \mbox{ {\tt+}= } q'(u)$.
+Here, a materialized view is updated with the result of a delta query taking
 parameters from $u$, and this must ensure $m = q(db_{new})$, where $db_{new}$ is
 the result of applying the update to the database.
 
 \subsection{View Maintenance in DBToaster}
-DBToaster makes the following key insight regarding the transitions performed by
-IVM: current IVM performs much redundant work, since for each transition a delta
-query $q'$ will access all base tables except for the delta table, and processes
-these tuples from scratch, \textit{even if there is no change to any of these
-other base tables}. DBToaster materializes the result of the delta query and
-reuses it upon repeated updates to the delta table. The materialized delta query
-is be added to the database state, and we can write this as $\tuple{q',m',q''}$.
-This leads to the concept of higher-order deltas, such as $q''$ which is a
-second-order delta query. This process can \textit{recur}, we can materialize
-$q''$ as $m''$, maintain with $q'''$ and so forth.
+DBToaster makes the following key insight regarding IVM: current IVM techniques
+evaluate delta queries from scratch, performing much redundant work. Each delta
+query $q'$ incurs the cost of accessing and processing all tuples in the base
+tables for the view, except for the delta table. DBMS suffer this cost
+\textit{even if there is no change to any of the aforementioned base tables}.
+DBToaster materializes the result of the delta query, adds it to the database
+schema and maintains it at runtime.
+That is, IVM takes $q$, produces $\tuple{m,q'}$ and performs
+$m \; \mbox{{\tt +}=} \; q'(u)$ at runtime. We call this one step of
+\textit{compilation}. DBToaster starts with $q$, produces
+$\tuple{m,q'}$, then \textit{recurs}, taking $q'$ to produce $\tuple{m', q''}$
+and repeating. Here $m'$ is maintained as $m' \; \mbox{{\tt +}=} \; q''(u)$.
+We can again recur with $q''$, materializing it as as $m''$, maintaining with
+$q'''$, a third-order delta, and so forth.
 
+DBToaster performs \textit{recursive query compilation} by successively
+computing and materializing delta queries. This leads to the concept of
+higher-order deltas, such as $q''$, which is a second-order delta query.
 Recursive delta query materialization does not continue forever and terminates
 given one important property of computing delta queries: \textit{a delta query
 is often simpler than its parent query}. In particular \textit{k}-th order delta
@@ -29,10 +35,115 @@ query, $q^k$ has fewer input relations than a \textit{k-1} order query
 $q^{k-1}$, but additional parameters corresponding to attributes that are
 present in $q^{k-1}$.
 
-\tinysection{Compilation example}
-We present an example of this recursive materialization or \textit{delta query
-compilation} approach on a query similar to TPC-H Query 3:
+\def \sql#1{{\scriptsize {\tt #1}}}
+\begin{figure*}[htbp]
+\begin{tabular}{ll|l|l|ll}
+\multicolumn{2}{l}{Input (parent query)}
+& Update 
+& \multicolumn{3}{l}{Outputs: materialized map, delta query}
+\\
+\hline
+$q =$
+& \sql{select l.ordkey, o.sprior,}
+& \texttt{+customer()}
+& $m[ordkey,sprior]$
+& $q' =$
+& \sql{select l.ordkey, o.sprior,}
+\\
+& \sql{\ \ \ \ \ \ \ sum(l.extprice) from}
+& & & & \sql{sum(l.extprice)}
+\\
+& \sql{customer c, orders o, lineitem l}
+& & & & \sql{from orders o, lineitem l}
+\\
+& \sql{where c.custkey = o.custkey}
+& & & & \sql{where @ck = o.custkey} 
+\\
+& \sql{and l.ordkey = o.ordkey}
+& & & & \sql{and l.ordkey = o.ordkey}
+\\
+& \sql{group by l.ordkey, o.sprior;}
+& & & & \sql{group by l.ordkey, o.sprior;}
+\\
+\hline
+$q'$:
+& Recursive call,
+& \texttt{+lineitem()} 
+& $m'[custkey,ordkey,sprior]$
+& $q'' =$ & \sql{select @ok, o.sprior,@ep*sum(1)}
+\\
+& see previous output
+& & & & \sql{from orders o where}
+\\
+& & & & & \sql{$ck$ = o.custkey and @ok = o.ordkey}
+\\
+\hline
+$q''$:
+& Recursive call,
+& \texttt{+order()} 
+& $m''[custkey,ordkey,sprior]$
+& $q'''=$ & \sql{select @sp,count()}
+\\
+& see previous output
+& & & & \sql{where $ck$ = @ck and $ok$ = @ok;}
+\end{tabular}
+\caption{Recursive query compilation example. Given a query $q$, we determine a
+sequence of materializations, and delta queries for maintenance:
+$\tuple{m,q'}, \tuple{m',q''}, \tuple{m'',q'''}$. This is a partial compilation
+trace, our algorithm considers all permutations of updates.}
+\label{fig:compex}
+\end{figure*}
 
+
+\tinysection{Compilation example}
+Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
+similar to TPH-C Query 3. We represent our materialized views as map
+datastructures in main memory, and the map produced by the first step of
+compilation on $q$ is $m[ordkey,sprior]$. The map's key corresponds to group-by
+attributes and the map's value is the unnamed aggregate value. We can answer $q$
+by yielding the key-value entries in $m$. The first-order delta query $q'$
+includes a parameter {\tt @ck}, that is to be filled in by the values present in
+the tuple inserted to the customer table.
+
+In the second step of compilation, we materialize $q'$ with its parameter {\tt
+@ck} as $m'[custkey,ordkey,sprior]$ . When maintaining $m$ on insertions {\tt
++customer(ck,nm,nk,bal)}, we can now use a map lookup $m'[\mbox{{\tt
+ck}},ordkey,sprior]$, instead of evaluating $q'(\mbox{{\tt ck}})$. In this
+lookup, the values of $ordkey$, $sprior$ come from $m$. Map $m$ maintains
+aggregates for every $ordkey$, $sprior$ seen in the update stream, as does
+$m'$. We iterate over every entry in $m$, to maintain $m$ from $m'$, leading to
+the maintenance statement:
+
+{\footnotesize
+\begin{verbatim}
+on_insert_customer(ck,nm,nk,bal):
+  for each ordkey,sprior in m:
+    m[ordkey,sprior] += m'[ck,ordkey,sprior];
+\end{verbatim}
+}
+
+\noindent In describing pseudocode, we omit for loops in update statements.
+They are implicit based on the function arguments -- above $ordkey$,$sprior$ are not
+arguments, and are retrieved via a loop over the map being updated. The above
+statement corresponds to line 2 in the full program below.
+
+Figure~\ref{fig:compex} shows the recursive nature of the algorithm by
+describing the compilation of $q'$ to $m',q''$ on insertion {\tt +lineitem},
+and then $q''$ to $m'',q'''$ on insertion {\tt +order}. The delta query $q'''$
+is the terminal step since the query does not depend on the database (we have
+replaced all relations with parameters). Our compilation algorithm considers all
+permutatiosn of updates, for example we also take deltas of $q$ for insertions
+to {\tt order} or {\tt lineitem}. We omit a full compilation trace due to
+limited space. We do however show the full transition program for insertions,
+with $m',m''$ renamed $m\_c,m\_cl$:
+
+
+\comment{
+\tinysection{Compilation example}
+We present an example of recursive compilation on a query similar to
+TPC-H Query 3:
+
+\comment{
 \def \ql#1{{\tt #1}}
 \hspace{-6mm}
 \begin{tabular}{ll}
@@ -42,15 +153,15 @@ $q =$ & \ql{select\ \ \ l.ordkey, o.sprior, sum(l.extprice)}\\
       & \ql{and\ \ \ \ \ \ l.ordkey = o.ordkey}\\
       & \ql{group by l.ordkey, o.sprior;}
 \end{tabular}
+}
 
 
 \noindent Let us denote this query as $q$, and its materialization $m$.
 Technically $m$ has result schema {\tt ordkey, sprior} and an unnamed
-aggregate value. We represent our materialized views as map datastructures, and
-denote this by \linebreak $m[ordkey, sprior]$. In this case the map's key
-corresponds to group-by attributes and the map's value is the unnamed aggregate
-value. We can answer the query by iterating over all entries in $m$, and
-yielding aggregate values.
+aggregate value. We represent our materialized views as map datastructures,
+writing this as $m[ordkey, sprior]$. In this case the map's
+key corresponds to group-by attributes and the map's value is the unnamed aggregate
+value. We can answer $q$ by yielding the key-value entries in $m$.
 
 \comment{
 We represent our materialized views as map datastructures, and
@@ -67,7 +178,7 @@ We can take the delta (as defined in existing IVM literature
 \todo{[REFs]}) of an insertion, {\tt +c(ck,nm,nk,bal)} to the {\tt customer}
 relation, to produce a first-order delta query:
 
-
+\comment{
 \hspace{-6mm}
 \begin{tabular}{ll}
 $q' =$  & \ql{select\ \ \ l.ordkey, o.sprior,sum(l.extprice)}\\
@@ -76,20 +187,17 @@ $q' =$  & \ql{select\ \ \ l.ordkey, o.sprior,sum(l.extprice)}\\
         & \ql{and\ \ \ \ \ \ l.ordkey = o.ordkey}\\
         & \ql{group by l.ordkey, o.sprior;}
 \end{tabular}
+}
 
-\noindent The above is a parameterized SQL statement with {\tt @ck} a parameter
-that is filled in by the update {\tt +c(ck,nm,nk,bal)}. We write its
-materialization as $m'[ck,ordkey,sprior]$, where $m'$ has an additional
-attribute in its key for parameter $ck$. To maintain $m$ on insertion {\tt
-+c(ck,nm,nk,bal)}, we must evaluate $q'(\mbox{{\tt ck}})$, the delta query $q'$
-with parameter {\tt ck}. We do this via a map lookup of
-$m'[\mbox{{\tt ck}},ordkey,sprior]$. Now, the astute reader may ask where
-do the values of $ordkey$, $sprior$ come from in this lookup? Recall that
-to answer $q$, map $m$ maintains aggregates for every $ordkey$, $sprior$
-combination in the update stream. Thus $m'$ also maintains every
-$ordkey$, $sprior$ combination. We iterate over every entry to maintain
-$m$ from $m'$. The maintenance statement in the transition
-program for {\tt customer} is:
+\noindent Above, {\tt @ck} is a parameter that is filled in by the update {\tt
++c(ck,nm,nk,bal)}. We materialize $q'$ as $m'[ck,ordkey,sprior]$, where $m'$ has
+an additional attribute in its key for parameter $ck$. When maintaining $m$ on
+insertion {\tt +c(ck,nm,nk,bal)}, instead of evaluating $q'(\mbox{{\tt ck}})$,
+with {\tt ck} from the update, we can use a map lookup of $m'[\mbox{{\tt
+ck}},ordkey,sprior]$. In this lookup, the values of $ordkey$, $sprior$ come from
+$m$. Map $m$ maintains aggregates for every $ordkey$, $sprior$ seen in the
+update stream, thus, so does $m'$. We iterate over every entry in $m$, to
+maintain $m$ from $m'$, leading to the maintenance statement:
 
 \begin{verbatim}
 on_insert_customer(ck,nm,nk,bal):
@@ -97,27 +205,38 @@ on_insert_customer(ck,nm,nk,bal):
     m[ordkey,sprior] += m'[ck,ordkey,sprior];
 \end{verbatim}
 
+\noindent In this document, we omit for loops in update statements. They are
+implicit based on the function arguments -- above $ordkey$,$sprior$ are not
+arguments, thus require a loop over the map being updated.
+\comment{
 \noindent We need not explicitly represent the for loop above. Observe that
-neither $ordkey$ nor $sprior$ are part of the function's arguments. We
-consider variables not occuring in arguments to implicitly require loops over
-the map appearing on the left hand side of a map update statement. The above
-becomes:
+neither $ordkey$ nor $sprior$ are part of the function's arguments. We consider
+variables not occuring in arguments to implicitly require loops over the map
+appearing on the left hand side of a map update statement. The above becomes:
 
 \begin{verbatim}
 on_insert_customer(ck,nm,nk,bal):
   m[ordkey,sprior] += m'[ck,ordkey,sprior];
 \end{verbatim}
-
-\noindent Alternatively, we could have started with delta queries for insertions
-to {\tt order} or {\tt lineitem}. Due to space limitations, we omit their
-compilation. Indeed, we must be able to handle any transition, thus
-for full, correct, incremental maintenance, we compile for all 
-possible combinations of insertions and deletions. We show the full transition
-program for insertions at the end of the example.
+}
+The algorithm also computes deltas to $q$ for insertions to {\tt order} or {\tt
+lineitem}, however we omit these due to limited space. We show the full
+transition program for all insertions at the end of the example.
 
 We now incrementally maintain $m'$, say on insertion {\tt +l(ok,ep)} with a
 second-order delta query:
 
+\comment{
+\hspace{-6mm}
+\begin{tabular}{ll}
+$q'' =$  & \ql{select\ \ \ @ok, o.sprior,@ep*count()}\\
+         & \ql{from\ \ \ \ \ orders o}\\
+         & \ql{where\ \ \ \ $ck$ = o.custkey and @ok = o.ordkey}\\
+         & \ql{group by o.sprior;}
+\end{tabular}
+}
+
+\comment{
 \hspace{-6mm}
 \begin{tabular}{ll}
 $q'' =$  & \ql{select\ \ \ @ok, o.sprior,sum(@ep)}\\
@@ -125,10 +244,14 @@ $q'' =$  & \ql{select\ \ \ @ok, o.sprior,sum(@ep)}\\
          & \ql{where\ \ \ \ $ck$ = o.custkey and @ok = o.ordkey}\\
          & \ql{group by o.sprior;}
 \end{tabular}
+}
 
 \noindent This delta removes {\tt l.ordkey} as a group-by attribute,
 since the update only affects a single group given by the value of parameter
-{\tt @ok}. Furthermore, since we are summing up a parameter {\tt @ep}, we can
+{\tt @ok}.
+
+\comment{
+Furthermore, since we are summing up a parameter {\tt @ep}, we can
 apply distributivity laws of sum aggregates and rewrite this to:
 
 \hspace{-6mm}
@@ -138,33 +261,37 @@ $q'' =$  & \ql{select\ \ \ @ok, o.sprior,@ep*count()}\\
          & \ql{where\ \ \ \ $ck$ = o.custkey and @ok = o.ordkey}\\
          & \ql{group by o.sprior;}
 \end{tabular}
+}
 
 \noindent Above, we use $ck$ to distinguish parameters that are part of some map
 key, and parameters that are part of the update such as {\tt @ok}. The parameter
 $ck$ originates from {\tt c.custkey} in $q$, so map key components can be
 passed through multiple levels of compilation. We materialize $q''$ as
-$m''[ck,ok,sprior]$ and produce the maintenance statement:
+$m''[ck,ok,sprior]$ and produce the maintenance statement on line 8 below.
 
+\comment{
 \begin{verbatim}
 on_insert_lineitem(ok,ep):
   m'[ck,ok,sprior] += ep * m''[ck,ok,sprior];
 \end{verbatim}
+}
 
 \noindent Finally, we can take the delta of an insertion {\tt +o(ck,ok,sp)} to
 maintain $m''$:
 
+\comment{
 \hspace{-6mm}
 \begin{tabular}{ll}
 $q''' =$  & \ql{select\ \ \ @sp,count()}\\
           & \ql{where\ \ \ \ $ck$ = @ck and $ok$ = @ok;}
 \end{tabular}
+}
 
-\noindent Again we remove the group-by clause since we only update the group
-{\tt @sp}. This delta query is the terminal point of recursive compilation,
-since we have replaced all relations with updates. This query yields a scalar
-value of 0-1 based on whether the parameters in {\tt +o(ck,ok,sp)} satisfy the
-predicate, as we loop over the entries of the map to be maintained, namely
-$m''$. The maintenance statement is:
+\noindent This delta query is the terminal point of recursive compilation, since
+we have replaced all relations with updates. This query yields a scalar value of
+0-1 based on whether the parameters in {\tt +o(ck,ok,sp)} satisfy the predicate,
+as we loop over the entries of the map to be maintained, namely $m''$. The
+maintenance statement is shown on line 16 below.
 
 \comment{
 \begin{verbatim}
@@ -175,82 +302,85 @@ on_insert_order(ck,ok,sp):
 
 \noindent This can be simplified by noting that only a single entry is
 incremented by a non-zero value, yielding:
-}
 
 \begin{verbatim}
 on_insert_order(ck,ok,sp): m''[ck,ok,sp] += 1
 \end{verbatim}
+}
 
 \noindent Our compilation algorithm considers all possible update orders, and
 materializes each delta query encountered. We detect and reuse duplicate maps
 based on equivalent delta queries. The full transition program, with $m' =
 m\_c$, and $m''=m\_cl$ is:
+}
 
+{\footnotesize
 \begin{verbatim}
-on_insert_customer(ck,nm,nk,bal) :
-  m[ordkey, sprior] += m_c[ck, ordkey, sprior];
-  m_l[ordkey, sprior] += m_cl[ck, ordkey, sprior];
-  m_o[ck] += 1;
-
-on_insert_lineitem(ok,ep) :
-  m[ok, sprior] += ep *  m_l[ok, sprior];
-  m_c[custkey, ok, sprior] +=
-    ep *  m_cl[custkey, ok, sprior];
-  m_co[ok] += ep;
-
-on_insert_order(ck,ok,sp) :
-  m[ok, sp] += m_co[ok] * m_o[ck]; 
-  m_l[ok, sp] += m_o[ck];
-  m_c[ck, ok, sp] += m_co[ok];
-  m_cl[ck, ok, sp] += 1;
+1.  on_insert_customer(ck,nm,nk,bal) :
+2.    m[ordkey, sprior] += m_c[ck, ordkey, sprior];
+3.    m_l[ordkey, sprior] += m_cl[ck, ordkey, sprior];
+4.    m_o[ck] += 1;
+5. 
+6.  on_insert_lineitem(ok,ep) :
+7.    m[ok, sprior] += ep *  m_l[ok, sprior];
+8.    m_c[custkey, ok, sprior] +=
+9.      ep *  m_cl[custkey, ok, sprior];
+10.   m_co[ok] += ep;
+11.
+12. on_insert_order(ck,ok,sp) :
+13.   m[ok, sp] += m_co[ok] * m_o[ck]; 
+14.   m_l[ok, sp] += m_o[ck];
+15.   m_c[ck, ok, sp] += m_co[ok];
+16.   m_cl[ck, ok, sp] += 1;
 \end{verbatim}
+}
 
 \tinysection{Transition Program Properties}
 For many queries, compilation to transitions yields \textit{simple} code, that
 has no join trees, and at most single-level for loops (no nested loops), that
-perform probing as found in hash joins. The transition program is also
-exploiting distributivity to push down aggregates through joins, yielding small
+perform probing as found in hash joins. The transition program also
+exploits distributivity to push down aggregates through joins, yielding small
 map sizes since maps maintain group-by (partial) aggregates. We believe simple
 code is beneficial for analysis and optimizations as part of low-level
 compilation and code generation.
 
-Transition programs lean on the side of trading off space for time. They
-construct and maintain auxiliary state, requiring more space. These space
-requirements are dependent on the active domain sizes of attributes, and often
-attributes do not have many distinct values, for example stock identifiers in
-order books, where there are approximately 2,800 listings in NASDAQ, NYSE.
-Furthermore checking for duplicate maps finds many opportunities to reuse
-materialization given compilation with all permutations of deltas. Finally,
-there are numerous design choices and optimizations available to vary space-time
-requirements for transitions. We need not materialize all higher-order deltas.
-For example we could maintain $q$ with $m^i$, a materialized $i$-th order delta
-and perform more work during the update to evaluate $q^{i-1}, \ldots, q^1$. We
-could further amortize space by exploiting commonality across multiple queries,
-merging maps to service multiple delta queries.
+Transition programs leverage more space to trade off time, by maintaining
+auxiliary state. These space requirements are dependent on the active domain
+sizes of attributes, and often attributes do not have many distinct values, for
+example stock identifiers in order books, where there are approximately 2,800
+listings in NASDAQ, NYSE. Additionally checking for duplicate maps finds many
+opportunities to reuse maps given compilation with all permutations of deltas.
+Finally, there are numerous design choices and optimizations available to vary
+space-time requirements for transitions. We need not materialize all
+higher-order deltas. For example we could maintain $q$ with $m^i$, a
+materialized $i$-th order delta and perform more work during the update to
+evaluate $q^{i-1}, \ldots, q^1$. We could further amortize space by exploiting
+commonality across multiple queries, merging maps to service multiple delta
+queries.
 
 
 
 \tinysection{Insights} We highlight a few insights drawn from our experience in
-several iterations of designing the algorithm. Compiling the transition function
-for view maintenance is advantageous and feasible (in that it terminates) due to
-the property that higher order delta queries successively get simpler and
-simpler. The terminal delta consists of parameters alone, and does not depend on
-the database.
+several iterations of algorithm design. Compiling the transition function for
+view maintenance is advantageous and feasible (in that it terminates) due to the
+property that higher order delta queries successively get simpler and simpler.
+The terminal delta consists of parameters alone, and does not depend on the
+database.
 
 Queries are closed under taking deltas, that is a delta query is of the same
 language as the parent query. In the above example, we have materialized all
 deltas, thus the transition program consists of simple arithmetics on parameters
-and map lookups. In general, closed deltas mean that evaluating delta queries
-requires a relational query engine. This could be done with an existing DBMS
-kernel, but we believe we can innovate in the design of main-memory query
-processors and briefly touch on this following section.
+and map lookups. In general, closed deltas mean that query evaluation requires a
+relational engine. We could an existing DBMS kernel, but we believe we can
+innovate in the design of main-memory query processors and briefly touch on this
+following section.
 
 Finally, our concept of higher-order deltas draws novel, natural analogies to
-concepts in mathematics. We have a rich formal framework, partially described in
-\todo{[PODS REF]}, where queries are represented as polynomials, admit
-transformations compactly represented by an algebraic structure, namely rings, and demonstrates
-that the degree of the polynomial is reduced under taking deltas, much like
-derivatives in calculus.
+mathematics. We have a rich formal framework, partially described
+in~\cite{koch-pods:10}, where queries are polynomials, which admit
+transformations compactly represented by an algebraic structure, namely rings,
+and we demonstrate that the degree of the polynomial is reduced under taking
+deltas, much like derivatives in calculus.
 
 \tinysection{Discussion}
 To summarize, in contrast to today's IVM, DBToaster uses materialization of
@@ -259,16 +389,14 @@ incremental as possible}. DBToaster is capable of handling a wide range of
 queries, including, as we discuss in the next section, nested queries. This has
 not been addressed previously in the IVM literature, and lets our technique
 cover more complex, composed queries, where being incremental as possible is of
-extremely important. Our framework has many applications, even when considering
-the simple class of equi-join with sum aggregations as shown above. This class
-of queries, when viewed through the lens of a semiring or ring, can be
-considered an application of the generalized distributive law (GDL) \todo{[REF
-Aji, McEliece]} to query processing. GDL enables a large class of fast
-algorithms for a variety of applications including belief propagation and other
-message passing algorithms, Viterbi's algorithm, FFTs and so forth. Drawing this
-analogy to GDL, we can begin to consider extremely efficient large-scale
-evaluation of these applications using query processing techniques based on
-DBToaster. \todo{Eddies?}
+extremely important.
+
+We note that the use of rings on queries with equi-joins and sum aggregations
+can be considered as the generalized distributive law (GDL)~\cite{aji-toit:00}
+applied to query processing. GDL facilitates fast algorithms for many
+applications including belief propagation and other message passing algorithms,
+Viterbi's algorithm, and FFTs. With this analogy, we can begin to leverage other
+techniques from this domain, for example approximation techniques.
 
 
 \subsection{Compilation Enhancements}
@@ -276,6 +404,8 @@ DBToaster. \todo{Eddies?}
 consisting of only equi-joins, illustrating compilation for insertions.
 Now, we briefly discuss further compilation issues and optimizations.
 
+
+\comment{
 \tinysection{Deletions}
 Our example above only mentions inserts, but handling deletions turns out to be
 straightforward. Our framework represents both the database and queries entirely
@@ -313,33 +443,31 @@ generalizes to structural decompositions, such as hypertree decomposition
 \todo{[REF Gottlob]}. While there has been much work in decomposing join
 hypergraphs, structurally decomposing aggregate queries would be interesting
 future work.
+}
 
 \tinysection{Nested Queries}
 We can compile transitions for nested queries, which to the best of our
 knowledge, has not been feasible in existing IVM techniques. In particular
 nested scalar subqueries used in predicates are difficult, because taking deltas
 of such predicates does not result in simpler expressions (and thus our
-algorithm would not terminate if we did not explicitly handle this). The
-\todo{Q-VWAP} query in Section \todo{[REF]} is an example of a nested query.
+algorithm would not terminate if we did not explicitly handle this). During
+compilation, to ensure compilation terminates, we explicitly find simpler terms
+and recur on them. The \todo{Q-VWAP} query in Section \todo{[REF]} is an example
+of a nested query.
 
 Nested subqueries contain correlated attributes (e.g. \todo{price in Q-VWAP})
-defined from a query in an outer scope. We can treat these correlated attributes
-as parameters. While we've presented this discussion in terms of parameterized
-queries for ease of understanding through familiarity, our framework internally
-treats parameters through binding patterns (indicating bound and free variables)
-for queries. In particular, nested queries induce \textit{binding propagation},
-similar to sideways information passing in datalog. That is, we support the
-results of one query being used (or \textit{propagated}) to the parameters of a
-correlated subquery, indicating an ordered evaluation of queries.
-
-As an optimization, compilation transforms queries to use minimal propagation of
-variables, which performs additional aggregation of maps, over the dimension of
-the map key that is not propagate. For example a map $m[x,y,z]$ would be
-aggregated to $m'[x,y]$ if $x,y$ were the only correlated attributes.
-Furthermore during compilation, because the delta for a predicate is not simpler
-than the predicate, to ensure compilation terminates, we explicitly find simpler
-terms and recur on them. This only happens for nested queries in constraints,
-the remainder of the language is handled as in our example.
+defined in an outer scope. We consider these correlated attributes as
+parameters, or as we do internally in our compilation framework, as binding
+patterns, seen in data integration. In particular, nested queries induce
+\textit{binding propagation}, similar to sideways information passing in
+datalog. That is, we support the results of one query being used (or
+\textit{propagated}) to the parameters of a correlated subquery, indicating an
+ordered evaluation of queries.
+Compilation transforms queries to use minimal propagation of variables, which
+performs additional aggregation of maps, over the dimension of the map key that
+is not propagated. For example a map $m[x,y,z]$ would be aggregated
+(\textit{marginalized}) to $m'[x,y]$ if $x,y$ were the only correlated
+attributes.
 
 
 
@@ -372,37 +500,34 @@ the remainder of the language is handled as in our example.
 
 \tinysection{Towards Optimizing Engine Physicality}
 Our implementation of delta queries uses a functional programming approach,
-where we can apply techniques from structural recursion \todo{[REF Kleisli]},
-prior to generating low-level code. Structural recursion enables optimizations
-of arbitrarily nested collections such as sets, bags and lists, and is our basis
-for enabling programmatic representation and manipulation of numerous
-\textit{physical-level plan properties}, such as tuple construction and
-pipelining.
+where we can apply techniques from structural
+recursion~\cite{buneman-kleisli:95}, prior to generating low-level code.
+Structural recursion enables optimizations of arbitrarily nested collections
+such as sets, bags and lists, and is our basis for enabling programmatic
+representation and manipulation of numerous \textit{physical-level plan
+properties}, such as tuple construction and pipelining.
 
 Delta queries consist of cross products and joins of many maps, due to
 factorization of, and binding propagation in queries. In a traditional DBMS
-engine treats, cross products and join operators work on relations, to produce
+engine, cross products and join operators work on relations to produce
 relations, ``flattening'' intermediate results into rows. Column-stores have
-argued for the late materialization of tuples \todo{[REF: Abadi ICDE 2007]}. We
-produce intermediate results in a general nested form (cf. nested relations and
-objects) which may include multiple levels of nesting after combining several
-maps. Then, we can exploit structural recursion which critically makes use of
-function composition and inlining, to programmatically control where, and how
-much tuple construction we perform.
+argued for late tuple construction~\cite{abadi-icde:07}. We produce
+intermediate results in nested form (cf. nested relations and objects) which may
+be deeply nested after combining several maps. With structural recursion,
+function composition and inlining, we can programmatically control where, and
+how much tuple construction we perform.
 
 Function composition and inlining also lets us entirely avoid constructing
-\textit{any} intermediate results, let alone worry about flattening
-intermediates. This enables \textit{automatic} transformation of a join-tree
-into an n-way multijoin, which, for example, for a series of cross products
-would yield an n-level pipelined nested loops implementation that avoids
-expensive intermediates. Furthermore we can explore a much richer space of join
-plans by enabling varying operator in-degrees. To the best of our knowledge,
-DBToaster would be the first query processor to incorporate automated,
-programmatic manipulation of physical aspects of plans, since we reason about
-query processing from a data structure perspective, not an operator abstraction
-that hides and encapsulates data structures. Our techniques will be equally
-applicable to main-memory query processing beyond a DDMS, since our delta
-queries are the same as standard SQL queries.
+\textit{any} intermediate results, let alone flattening intermediates. This
+enables \textit{automatic} transformation of a join-tree into an n-way join,
+which, for example on a series of cross products, yields an n-level pipelined
+nested loops implementation that avoids expensive intermediates, leading to a
+much richer space of join plans. To the best of our knowledge, DBToaster would
+be the first engine to incorporate automated, programmatic manipulation of
+physical aspects of plans, since we reason about processing with data
+structures, not an operator abstraction that hides and encapsulates data
+structures. Our techniques will be equally applicable to main-memory DBMS, since
+our delta queries are the same as standard SQL queries.
 
 
 
