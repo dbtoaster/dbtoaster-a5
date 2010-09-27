@@ -52,20 +52,18 @@ compilation tricks unavailable to DBMS optimizers.
 
 
 \tinysection{DDMS architecture}
-Figure~\ref{fig:ddmsarch} provides an architectural design for a DDMS, including
-application aspects such as programmability and interaction with a DDMS, and
-DDMS internals. Here the de facto mode of query processing is with standing
-queries, specified as views or stream queries such as embedded SQL or StreamSQL
+Figure~\ref{fig:ddmsarch} provides an architectural design for a DDMS. View
+queries and stream queries are specified with embedded SQL or StreamSQL
 statements. The application must also state how the DDMS can invoke application
 logic on dynamic results. Unlike existing JDBC or ODBC interfaces, the key
 requirement here is asynchronous result handling, through callbacks, futures and
 promises, or via registration on a DDMS event loop and queue. We will also
-support ad-hoc queries that can apply traditional query processing techniques on
-top of the views in a DDMS.
+support ad-hoc queries that can apply traditional processing techniques on top
+of DDMS views. This can be done side-by-side with an existing DBMS, with the
+DDMS the layer for handling udpates.
 
 Internally, a DDMS is built around the concept of transitioning database state,
-and this is realized first and foremost in compiling queries to
-incrementally execute on large states, through a transition compiler (discussed
+and this is realized first and foremost through a transition compiler (discussed
 in more detail in the next section). Compilation results in transition programs,
 that modify the database state upon update events, comprising the core runtime
 engine of a DDMS. The visible and auxiliary views that are part of the state
