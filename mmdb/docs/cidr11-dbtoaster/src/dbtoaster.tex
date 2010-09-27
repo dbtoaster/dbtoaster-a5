@@ -95,24 +95,25 @@ trace, our algorithm considers all permutations of updates.}
 \end{figure*}
 
 
-\tinysection{Compilation example}
+\tinysection{Materialized views as maps}
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
 similar to TPH-C Query 3. We represent our materialized views as map
 datastructures in main memory, and the map produced by the first step of
 compilation on $q$ is $m[ordkey,sprior]$. The map's key corresponds to group-by
 attributes and the map's value is the unnamed aggregate value. We can answer $q$
 by yielding the key-value entries in $m$. The first-order delta query $q'$
-includes a parameter {\tt @ck}, that is to be filled in by the values present in
+includes a parameter {\tt @ck}, that is to be filled in by the values in
 the tuple inserted to the customer table.
 
+\tinysection{Map lookups}
 In the second step of compilation, we materialize $q'$ with its parameter {\tt
 @ck} as $m'[custkey,ordkey,sprior]$ . When maintaining $m$ on insertions {\tt
 +customer(ck,nm,nk,bal)}, we can now use a map lookup $m'[\mbox{{\tt
 ck}},ordkey,sprior]$, instead of evaluating $q'(\mbox{{\tt ck}})$. In this
 lookup, the values of $ordkey$, $sprior$ come from $m$. Map $m$ maintains
-aggregates for every $ordkey$, $sprior$ seen in the update stream, as does
-$m'$. We iterate over every entry in $m$, to maintain $m$ from $m'$, leading to
-the maintenance statement:
+aggregates for every $ordkey$, $sprior$ seen in the update stream, as does $m'$.
+We iterate over every entry in $m$, to maintain $m$ from $m'$, leading to the
+maintenance statement:
 
 {\footnotesize
 \begin{verbatim}

@@ -10,18 +10,50 @@
 
 % Should we have an even higher-level overview here, giving a high-level picture of the  DDMS API
 
-DDMSes are built around a set of views of interest.  Rather than performing ad-hoc queries, users specify triggers that the DDMS will invoke when the views change.  The DDMS is built to process updates and apply them efficiently to those views.  This mentality is starkly in contrast to a traditional DBMS, which acts solely as a datastore and an interpreter.  Thus, when analyzing DDMSes, we use a process-centric abstraction: The DDMS represented as a(n infinite) state machine with the machine's state representing an entire relational database at one point in time.
+DDMSes are built around a set of views of interest.  Rather than performing
+ad-hoc queries, users specify triggers that the DDMS will invoke when the views
+change.  The DDMS is built to process updates and apply them efficiently to
+those views.  This mentality is starkly in contrast to a traditional DBMS, which
+acts solely as a datastore and an interpreter.  Thus, when analyzing DDMSes, we
+use a process-centric abstraction: The DDMS represented as a(n infinite) state
+machine with the machine's state representing an entire relational database at
+one point in time.
 
-Thus, transitions in this model correspond to table operations in a traditional DBMS: insertions, deletions, and updates.  This is an important distinction between the DDMS state machine and more traditional interpretations of a state machine; transition functions do not correspond to individual memory operations or CPU instructions, but rather to changes in the inputs of queries that the DDMS is constructed out of.
+Thus, transitions in this model correspond to table operations in a traditional
+DBMS: insertions, deletions, and updates.  This is an important distinction
+between the DDMS state machine and more traditional interpretations of a state
+machine; transition functions do not correspond to individual memory operations
+or CPU instructions, but rather to changes in the inputs of queries that the
+DDMS is constructed out of.
 
-Correspondingly, the state of the state machine is organized into a schema of base relations, materialized views, and other auxiliary datastructures.  We partition the schema into two components: a \textit{visible schema} containing materialized representations of the views of interest, and a \textit{auxiliary schema} containing all of the DDMS' internal machinery (ie, base relations, or auxiliary materialized views).
+Correspondingly, the state of the state machine is organized into a schema of
+base relations, materialized views, and other auxiliary datastructures.  We
+partition the schema into two components: a \textit{visible schema} containing
+materialized representations of the views of interest, and a \textit{auxiliary
+schema} containing all of the DDMS' internal machinery (ie, base relations, or
+auxiliary materialized views).
 
-Naturally, viewing the database engine as a state machine suggests that we can precompute each state transition function to make it as efficient as possible.  Moreover, when ``compiling'' the DDMS, there is no prior state\footnote{This is not strictly true, we assume that DDMS recompiles are infrequent enough to make post-compile ``upgrades'' of database state a reasonable requirement} and latency is not a consideration.  Thus, we are free to use a variety of compilation tricks unavailable to DBMS optimizers.
+Naturally, viewing the database engine as a state machine suggests that we can
+precompute each state transition function to make it as efficient as possible. 
+Moreover, when ``compiling'' the DDMS, there is no prior state\footnote{This is
+not strictly true, we assume that DDMS recompiles are infrequent enough to make
+post-compile ``upgrades'' of database state a reasonable requirement} and
+latency is not a consideration.  Thus, we are free to use a variety of
+compilation tricks unavailable to DBMS optimizers.
+
+\begin{figure}
+\begin{center}
+\includegraphics[scale=0.35]{graphics/CIDRarch.pdf}
+\end{center}
+\caption{Architecture of a Dynamic Data Management System (DDMS)}
+\label{fig:ddmsarch}
+\end{figure}
 
 Structure of this section:
 \begin{itemize}
 \item
-Mention that viewing the problem in a slightly different way can produce a dramatically different implementation.
+Mention that viewing the problem in a slightly different way can produce a
+dramatically different implementation.
 
 \item
 State machine abstraction
@@ -39,19 +71,35 @@ Ad-hoc querying in client-side library?
 
 \item updates can potentially modify many viees
 
+\comment{
 \item
 System description.
-This really cannot be understood if taken out of context and should be moved to the following sections.
+This really cannot be understood if taken out of context and should be moved to
+the following sections.
 \begin{itemize}
 \item
-Query optimization: The next section describes a method of incremental view maintenance that relies on materializing multiple layers of auxiliary views. This trades off view maintenance time cost against space cost. The optimizer will exploit the potential to save space by  deciding which auxiliary view layers to materialize and which to leave implicit. It will also perform
-multi-view optimization, deciding which auxiliary views from different visible views can be merged.
+Query optimization: The next section describes a method of incremental view
+maintenance that relies on materializing multiple layers of auxiliary views.
+This trades off view maintenance time cost against space cost. The optimizer
+will exploit the potential to save space by  deciding which auxiliary view
+layers to materialize and which to leave implicit. It will also perform
+multi-view optimization, deciding which auxiliary views from different visible
+views can be merged.
 
 What do we say about the structural recursion optimization, and where do we say it?
 
 \item
-Low-level data structures: we will describe the multi-level hash table data structure in section 4. Work on parallelization will be required. Our data structures are a bit unusual since they represent exclusively aggregates and their values are exclusively numerical. It is a conseqence of our approach that loops in query processing are always over a set of complete dimensions of the multi-dimensional table data structures we use; thus all our loops are naturally implemented as full scans over these dimensions. However, many fields in these tables will be zero and indexing or compression could be employed to omit scanning over all-zero areas.
+Low-level data structures: we will describe the multi-level hash table data
+structure in section 4. Work on parallelization will be required. Our data
+structures are a bit unusual since they represent exclusively aggregates and
+their values are exclusively numerical. It is a conseqence of our approach that
+loops in query processing are always over a set of complete dimensions of the
+multi-dimensional table data structures we use; thus all our loops are naturally
+implemented as full scans over these dimensions. However, many fields in these
+tables will be zero and indexing or compression could be employed to omit
+scanning over all-zero areas.
 \end{itemize}
+}
 \end{itemize}
 
 
