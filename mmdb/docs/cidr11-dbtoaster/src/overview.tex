@@ -24,7 +24,7 @@ DBMS: insertions, deletions, and updates.  This is an important distinction
 between the DDMS state machine and more traditional interpretations of a state
 machine; transition functions do not correspond to individual memory operations
 or CPU instructions, but rather to changes in the inputs of queries that the
-DDMS is constructed out of.
+DDMS is constructed out of.
 
 Correspondingly, the state of the state machine is organized into a schema of
 base relations, materialized views, and other auxiliary datastructures.  We
@@ -39,7 +39,8 @@ Moreover, when ``compiling'' the DDMS, there is no prior state\footnote{This is
 not strictly true, we assume that DDMS recompiles are infrequent enough to make
 post-compile ``upgrades'' of database state a reasonable requirement} and
 latency is not a consideration.  Thus, we are free to use a variety of
-compilation tricks unavailable to DBMS optimizers.
+compilation tricks unavailable to DBMS optimizers.
+
 
 \begin{figure}
 \begin{center}
@@ -49,6 +50,33 @@ compilation tricks unavailable to DBMS optimizers.
 \label{fig:ddmsarch}
 \end{figure}
 
+
+\tinysection{DDMS architecture}
+Figure~\ref{fig:ddmsarch} provides an architectural design for a DDMS, including
+application aspects such as programmability and interaction with a DDMS, and
+DDMS internals. Here the de facto mode of query processing is with standing
+queries, specified as views or stream queries such as embedded SQL or StreamSQL
+statements. The application must also state how the DDMS can invoke application
+logic on dynamic results. Unlike existing JDBC or ODBC interfaces, the key
+requirement here is asynchronous result handling, through callbacks, futures and
+promises, or via registration on a DDMS event loop and queue. We will also
+support ad-hoc queries that can apply traditional query processing techniques on
+top of the views in a DDMS.
+
+Internally, a DDMS is built around the concept of transitioning database state,
+and this is realized first and foremost in compiling queries to
+incrementally execute on large states, through a transition compiler (discussed
+in more detail in the next section). Compilation results in transition programs,
+that modify the database state upon update events, comprising the core runtime
+engine of a DDMS. The visible and auxiliary views that are part of the state
+rely on a storage manager to aid in physical aspects of handling large states,
+including implementing a variety of layouts and indexes to facilitate
+processing. The runtime includes a continuous query optimizer that guides the
+decisions to be made across the database schema, state and storage, in terms of
+the cost of applying transitions on updates.
+
+
+\comment{
 Structure of this section:
 \begin{itemize}
 \item
@@ -71,7 +99,6 @@ Ad-hoc querying in client-side library?
 
 \item updates can potentially modify many viees
 
-\comment{
 \item
 System description.
 This really cannot be understood if taken out of context and should be moved to
@@ -99,7 +126,7 @@ implemented as full scans over these dimensions. However, many fields in these
 tables will be zero and indexing or compression could be employed to omit
 scanning over all-zero areas.
 \end{itemize}
-}
 \end{itemize}
+}
 
 
