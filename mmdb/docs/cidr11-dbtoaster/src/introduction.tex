@@ -13,8 +13,9 @@ think of a DDMS as (very large) {\em dynamic data structures}\/ with {\em agile,
 \section{Motivation}
 
 
-To justify DDMS, we will provide, first, one very large and well-known class of use cases, which we only need to coarsely describe and,
-second, a more narrow field of application for which DDMS would be a true silver bullet. 
+To justify DDMS, first we will provide one very large and well-known class of
+use cases, which we only need to coarsely describe and, second, a more narrow
+field of application for which DDMS would be a true silver bullet.
 
 % After that we will flesh out DDMS in more detail.
 
@@ -24,60 +25,128 @@ second, a more narrow field of application for which DDMS would be a true silver
 {\bf Large-scale data analytics, but not as a batch job}\/.
 % with an interactive or soft real-time aspect
 %
-Large-scale data analytics in the cloud -- using systems such as map/reduce -- make it painfully obvious that the data management research community has almost missed a great opportunity for impact.
-While some aspects of such systems have certainly been previously explored by the data management community, such systems are not databases, as some strata of the systems, scientific computing, and large-scale Web applications communities find important to emphasize. Nevertheless, our research community can certainly make important contributions towards making such systems more useful and effective. Clearly, the last word on supporting {\em queries}\/ in such systems has not been said.
+Large-scale data analytics in the cloud -- using systems such as map/reduce --
+make it painfully obvious that the data management research community has almost
+missed a great opportunity for impact. While some aspects of such systems have
+certainly been previously explored by the data management community, such
+systems are not databases, as some strata of the systems, scientific computing,
+and large-scale Web applications communities find important to emphasize.
+Nevertheless, our research community can certainly make important contributions
+towards making such systems more useful and effective. Clearly, the last word on
+supporting {\em queries}\/ in such systems has not been said.
 
-Map/reduce like systems achieve scalability at the cost of response time and interactivity.
+Map/reduce-like systems achieve scalability at the cost of response time and
+interactivity.
 %
 %For various reasons having to do with their programming model,
 %the method of parallelizing, and of dealing with failures,
 %such systems tend to be sluggish in producing their results. 
 %
-However, there is an increasing number of important applications of large-scale analytics that call for more interactivity or better response times that allow for online use. Among large Web applications, examples include (social or other) network monitoring and statistics, search with interactive feedback, interactive recommendations, keeping personalized Web pages at social networking sites up to date, and so forth.
+However, there is an increasing number of important applications of large-scale
+analytics that call for more interactivity or better response times that allow
+for online use. Among large Web applications, examples include (social or other)
+network monitoring and statistics, search with interactive feedback, interactive
+recommendations, keeping personalized Web pages at social networking sites up to
+date, and so forth.
 %
 \longversion{
-Many of these applications are not yet mission-critical to Web applications companies, but they are increasingly of competitive advantage.
+Many of these applications are not yet mission-critical to Web applications
+companies, but they are increasingly of competitive advantage.
 }
 
-The DDMS take is to provide large dynamic data structures with a facility for supporting declaratively defined views, increasing programmer productivity. A DDMS is a lightweight system, not necessarily providing additional DBMS functionality such as persistency, transactions, recoverability, or ad-hoc queries. This choice is likely to render DDMS more acceptable for many large-scale analytics applications, barring the NoSQL crowd, of course. The second defining criterion of DDMS, agile views that are continually kept fresh, at first seems at odds with the bulk update processing dogma of DBMS, but it enables important applications that require interactivity or event processing. It is also key to programming with dynamic data structures (managed by a DDMS) in a way programmers are familiar with.
+The DDMS take is to provide large dynamic data structures with a facility for
+supporting declaratively defined views, increasing programmer productivity. A
+DDMS is a lightweight system, not necessarily providing additional DBMS
+functionality such as persistency, transactions, recoverability, or ad-hoc
+queries. This choice is likely to render DDMS more acceptable for many
+large-scale analytics applications, barring the NoSQL crowd, of course. The
+second defining criterion of DDMS, agile views that are continually kept fresh,
+at first seems at odds with the bulk update processing dogma of DBMS, but it
+enables important applications that require interactivity or event processing.
+It is also key to programming with dynamic data structures (managed by a DDMS)
+in a way programmers are familiar with.
 
-Large-scale data analytics is equally present in more classical business applications such as data warehousing and in scientific applications. Take the case of data warehousing with real-time updates:
-As data warehouses become increasingly mission-critical to commercial and scientific enterprises, the importance of up-to-date analyses increases. Traditionally, OLAP systems are not optimized for frequent updating, and may be considerably out-of-date. DDMS could dramatically improve freshness of warehouse data.
+Large-scale data analytics is equally present in more classical business
+applications such as data warehousing and scientific applications. Take the
+case of data warehousing with real-time updates: as data warehouses become
+increasingly mission-critical to commercial and scientific enterprises, the
+importance of up-to-date analyses increases. Traditionally, OLAP systems are not
+optimized for frequent updating, and may be considerably out-of-date. DDMS could
+dramatically improve the freshness of warehoused data.
 
 \medskip
 
 
 {\bf Algorithmic trading.}\/
-In recent years, algorithmic trading systems have come to account for a majority of volume traded at the major US and European financial markets (for instance, for 73\% of all US equity trading volume in the first quarter of 2009 \cite{Iati2009}). The success of automated trading systems depends critically on the speed at which the programmed strategies process the data: Trading systems that react faster to market events tend to make money at the cost of slower systems.
-Unsurprisingly, algorithmic trading has become a substantial source of business for the IT industry; for instance, it is the leading vertical among the customer bases of companies manufacturing high-speed switches for data centers
-(e.g., Arista \cite{Becht2010}) and data stream processing.
+In recent years, algorithmic trading systems have come to account for a majority
+of volume traded at the major US and European financial markets (for instance,
+for 73\% of all US equity trading volume in the first quarter of 2009
+\cite{Iati2009}). The success of automated trading systems depends critically on
+strategy processing speeds: trading systems that react faster to market events
+tend to make money at the cost of slower systems. Unsurprisingly, algorithmic
+trading has become a substantial source of business for the IT industry; for
+instance, it is the leading vertical among the customer bases for high-speed
+switch manufacturers (e.g., Arista \cite{Becht2010}) and data stream processing.
 
-A typical algorithmic trading system is run by mathematicians who develop trading strategies and by programmers and systems experts who implement these strategies to perform fast enough, using mainly low-level programming languages such as C. Developing trading strategies requires a feedback loop of simulation, back-testing with historical data, and strategy refinement based on the insights gained. This loop, and the considerable amount of low-level programming that has to happen in it, is the root of a very costly {\em productivity bottleneck}\/: In fact, the number of programmers frequently exceeds the number of strategy designers by an order of magnitude.
-
-Trading algorithms often perform a considerable amount of data crunching and statistical processing that could in principle be implemented using SQL views, plus some relatively straightforward control and trading logic on top of it. 
+A typical algorithmic trading system is run by mathematicians who develop
+trading strategies and by programmers and systems experts who implement these
+strategies to perform fast enough, using mainly low-level programming languages
+such as C. Developing trading strategies requires a feedback loop of simulation,
+back-testing with historical data, and strategy refinement based on the insights
+gained. This loop, and the considerable amount of low-level programming that has
+to happen in it, is the root of a very costly {\em productivity bottleneck}\/:
+in fact, the number of programmers frequently exceeds the number of strategy
+designers by an order of magnitude.
+\comment{
+Trading algorithms often perform a considerable amount of data crunching
+and statistical processing that could in principle be implemented using SQL
+views, coupled with some relatively straightforward control and trading logic.
 %
 \longversion{
 Differently from other areas of finance such as technical analysis,
 where stream processing engines
 \cite{abadi-vldbj:03,motwani-cidr:03} can be applied,
 }
-Data processing in trading algorithms using views
-cannot be performed by DBMS or data stream processing systems today: The former are not able to (1) {\em update their views at the required rates}\/ (for popular stocks, hundreds of orders per second may be executed, even outside burst times)
-and the latter are not able to (2) {\em maintain large enough data state}\/ and support suitable query languages (non-windowed SQL aggregates) on this state.
+Data processing in trading algorithms using views cannot be performed by DBMS or
+data stream processing systems today: the former are not able to (1) {\em update
+their views at the required rates}\/ (for popular stocks, hundreds of orders per
+second may be executed, even outside burst times) and the latter are not able to
+(2) {\em maintain large enough data state}\/ and support suitable query
+languages (non-windowed SQL aggregates) on this state.
 %
-A data management system that could handle these two requirements would cause a very substantial productivity increase that can be directly monetized -- the holy grail of algorithmic trading.
+A data management system that could handle these two requirements would yield a
+very substantial productivity increase that can be directly monetized -- the
+holy grail of algorithmic trading.
+}
+Trading algorithms often perform a considerable amount of data crunching that
+could in principle be implemented as SQL views, but cannot be achieved by DBMS
+or data stream processing systems today: DBMS are not able to (1) {\em update
+their views at the required rates}\/ (for popular stocks, hundreds of orders per
+second may be executed, even outside burst times) and stream engines are not
+able to (2) {\em maintain large enough data state}\/ and support suitable query
+languages (non-windowed SQL aggregates) on this state.A data management system fulfilling these two requirements would yield a very
+substantial productivity increase that can be directly monetized -- the holy
+grail of algorithmic trading.
+
 
 To understand the need to (2) maintain and query a large data state, note that
-many stock exchanges nowadays provide sophisticated investors with complete bid and ask {\em limit order books}\/, enabling a detailed view of the market microstructure for use in trading algorithms. The bid order book is a table of not yet executed buy orders with their prices and volumes, and correspondingly the ask order book indicates investors' selling
-orders. Exchanges execute trades by matching the tops of the bid and bottoms of the ask order
-books, were the entries of order books are ordered by decreasing price and timestamp. Investors continually add, modify or withdraw limit orders, thus one may view order books as relational tables subject to high update volumes.
-The availability of order book data has yielded substantial opportunities for automatic, algorithmic trading approaches. 
+many stock exchanges provide a detailed view of the market microstructure
+through complete bid and ask {\em limit order books}. The bid order book is a
+table of purchase offers with their prices and volumes, and correspondingly the
+ask order book indicates investors' selling orders. Exchanges execute trades by
+matching bids and asks by price and favoring earlier timestamps. Investors
+continually add, modify or withdraw limit orders, thus one may view order books
+as relational tables subject to high update volumes. The availability of order
+book data has provided substantial opportunities for automatic algorithmic
+trading.
 
-To illustrate this, we provide a simple example query used in the popular Static
-Order Book Imbalance (SOBI) trading strategy. SOBI computes a volume-weighted
-average price (VWAP) over those orders whose volume makes up a fixed upper
-$k$-fraction of the total stock volume in each of the bid and ask order books. SOBI
-then compares the two VWAPs and, based on this, predicts a future price drift (if, say, the bid VWAP is larger than the ask VWAP, demand exceeds supply and the price can be expected to rise). For simplicity, we present the VWAP for the bids only:
+To illustrate this, we describe the Static Order Book Imbalance (SOBI) trading
+strategy. SOBI computes a volume-weighted average price (VWAP) over those orders
+whose volume makes up a fixed upper $k$-fraction of the total stock volume in
+both bid and ask order books. SOBI then compares the two VWAPs and, based on
+this, predicts a future price drift (for example a bid VWAP larger than an ask
+VWAP indicates demand exceeds supply, and prices may rise). For simplicity, we
+present the VWAP for the bids only:
 \begin{verbatim}
 select avg(b2.price * b2.volume) as bid_vwap
 from   bids b2
@@ -85,19 +154,26 @@ where  k * (select sum(volume) from bids)
          > (select sum(volume) from bids b1
             where b1.price > b2.price);
 \end{verbatim}
-Focusing on the $k$-fraction of the order book closest to the current price makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large tactical orders far from the current price that will thus not be executed but may confuse competing algos).
+\comment{
+Focusing on the $k$-fraction of the order book closest to the current price
+makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
+tactical orders far from the current price that will thus not be executed but
+may confuse competing algos).
+}
 
-Coming back to our two desiderata,
-for trading algos to be successful, (1) views such as VWAP need to be maintained and monitored by the algos at or close to the trading rate. However, (2) the views are not of the form that admit the use of time-, row- or punctuation-based
-window semantics. This calls for a new breed of {\em large-state update stream processing systems}.
+Coming back to our two desiderata, for trading algos to be successful, (1) views
+such as VWAP need to be maintained and monitored by the algos at or close to the
+trading rate. However, (2) the views cannot be expressed through time-, row- or
+punctuation-based window semantics. This calls for a new breed of {\em
+large-state update stream processing systems}.
 
 
 
 \section{Key Characteristics of DDMS}
 
 
-A Dynamic Data Management System (DDMS) is a
-data management system optimized for these four criteria:\begin{enumerate}
+\noindent DDMS are optimized for these four criteria:
+\begin{enumerate}
 \item
 The stored dataset is large and changes frequently.
 
@@ -107,39 +183,69 @@ The
 maintenance of materialized views dominates ad-hoc querying.
 
 \item
-Access to the data is primarily by monitoring the views and performing inexpensive computations on top of them.
+Access to the data is primarily by monitoring the views and performing
+simple computations on top of them.
 %
 %; i.e., by reading out the views or by performing very simple queries %on top of the views which can be evaluated in a small fraction of the %time it would take to evaluate the view from scratch.
 %
-Views may be structured (tables) or booleans (flags, events). Thus, some updates cause events, observable in the views, that trigger subsequent computations, but it is rare that the data store is accessed asynchronously by humans or applications. The data management system primarily interacts with applications by triggering application code, rather than by invocations from the applications.
+Views may be structured (tables) or booleans (flags, events). Thus, some updates
+cause events, observable in the views, that trigger subsequent computations, but
+it is rare that the data store is accessed asynchronously by humans or
+applications. A DDMS primarily interacts by triggering application code, rather
+than by invocations from the applications.
 
 \item
-Updates happen primarily through an {\em update stream}\/. Computations triggered by view events usually do not cause updates: There is usually no feedback loop through views.
+Updates happen primarily through an {\em update stream}\/. Computations
+triggered by view events usually do not cause updates: there is usually no
+feedback loop.
 \end{enumerate}
 
 
 
 
-Let us compare DDMS with existing classes of data management systems.
+\noindent We compare DDMS to existing data management systems.
 
-{\em Compared to a classical DBMS}\/, a DDMS differs in its reaction to updates, which will frequently have to be performed immediately when they arrive to minimize response time, precluding bulk processing. This determines the programming model: compared to DBMS, control flow is reversed, and the DDMS primarily invokes application code, rather than the other way around.
+{\em Compared to a classical DBMS}\/, a DDMS differs in its reaction to updates,
+which will frequently have to be performed immediately when they arrive to
+minimize response time, precluding bulk processing. This determines the
+programming model: compared to DBMS, control flow is reversed, and the DDMSinvokes application code, not vice versa. 
 
-An (active) DBMS could simulate a DDMS through triggers, but is not optimized for such workloads and would, even if support for state-of-the-art incremental view maintenance is present, perform very poorly. Thus, DDMS differ from active database systems in their being optimized for different workloads; DDMS are optimized for event processing and monitoring tasks, while active database systems are optimized for more traditional DBMS workloads. DDMS will not necessarily support typical (active) DBMS functionality such as transactions.
+An (active) DBMS could simulate a DDMS through triggers, but is not optimized
+for such workloads, and even if support for state-of-the-art incremental
+view maintenance is present, performs very poorly. Thus, DDMS differ from active
+databases in their being optimized for different workloads; DDMS are
+optimized for event processing and monitoring tasks, while active database
+systems are optimized for more traditional DBMS workloads. DDMS will not
+necessarily support typical functionality such as transactions.
 
 {\em Compared to a data stream processing system}\/
 and particularly an event processing system (such as Cayuga, [cite others]),
 %
-DDMS have much larger states, which will usually have to be maintained in secondary storage, and require drastically different query processing techniques.
-In a stream processor, the queries reside in the system while the data streams by. In a DDMS on the other hand, the data state is maintained in the system while a stream of updates passes through (much more like an OLTP system).
+DDMS have much larger states, which will usually have to be maintained in
+secondary storage, and require drastically different query processing
+techniques. In a stream processor, the queries reside in the system while the
+data streams by. In a DDMS on the other hand, the data state is maintained in
+the system while a stream of updates passes through (much more like an OLTP
+system).
 %
-Moreover, Event and stream processors support drastically different query languages which are designed to ensure that only very small state has to be maintained, using windows or constructs from formal language theory [Cayuga].  Views of DDMS are often rather complex and expensive, including large non-windowed joins and aggregation. In general, we expect DDMS st support standard SQL.
+Moreover, event and stream processors support drastically different query
+languages which are designed to ensure that only very small state has to be
+maintained, using windows or constructs from formal language theory [Cayuga]. 
+DDMS views are often rather complex and expensive, including large
+non-windowed joins and aggregation. In general, we expect DDMS st support
+standard SQL.
 
-A DDMS can be thought of as an {\em update stream}\/ processing system in which query workloads look more like those of classical DBMS (no constructs such as windows to bound the size of state to be maintained by the system). The query processing techniques that seem most readily suitable for such workloads come from DBMS research -- incremental view maintenance in particular -- but do not scale to high-frequency view maintenance (explain what that means or find better term).
-
+A DDMS can be thought of as an {\em update stream}\/ processing system in which
+query workloads look more like those of classical DBMS (i.e., no constructs such
+as windows). The query processing techniques that seem most readily suitable for
+such workloads come from DBMS research -- incremental view maintenance in
+particular -- but do not scale to high-frequency view maintenance.
+\comment{
 \smallskip
 
-The sweet spots of DBMS, data stream processing systems, and DDMS with
-respect to data state size and programming model (event processing vs. ad-hoc querying and updating) are illustrated in Table~\ref{tab:quad_chart}.
+The sweet spots of DBMS, data stream processing systems, and DDMS with respect
+to data state size and programming model (event processing vs. ad-hoc querying
+and updating) are illustrated in Table~\ref{tab:quad_chart}.
 
 
 \begin{table}
@@ -156,11 +262,18 @@ event processing     |
 \caption{Quad chart.}
 \label{tab:quad_chart}
 \end{table}
+}
 
 
-There are many technical challenges that have to be overcome to make DDMS a reality. This paper initiates a study of DDMS and presents DBToaster, a prototype DDMS developed by the authors. The contributions of this paper are as follows:
-In Section 2, we further define and characterize the notion of Dynamic Data Management Systems, discuss the state machine abstraction, and describe the schema and view definition formalisms of the DBToaster prototype.
-Section 3 presents the DBToaster view maintenance technique. It demonstrates how the state machine abstraction, which calls for the optimization / minimization / compilation of the state transition function leads, to new algorithms.
-Section 4 discusses storage management in DBToaster.
-Section 5 discusses scaling up through parallelization.
+There are many technical challenges in making a DDMS a reality. This paper
+initiates a study of DDMS and presents DBToaster, a prototype developed by
+the authors. The contributions of this paper are as follows:
+In Section 3, we further characterize the notion of Dynamic Data
+Management Systems, discuss the state machine abstraction, and describe
+schema and view definition formalisms.
+Section 4 presents the DBToaster view maintenance technique. It demonstrates how
+the state machine abstraction, which calls for the minimization or compilation
+of the state transition function leads, to new algorithms.
+Section 5 discusses storage management in DBToaster.
+Section 6 discusses scaling up through parallelization.
 

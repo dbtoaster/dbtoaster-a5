@@ -1,3 +1,4 @@
+\comment{
 \begin{figure}
 (a) DDMS: show state machine, with databases as states and updates as transitions.
 
@@ -7,6 +8,7 @@
 
 \caption{Data management systems architectures: DDMS vs. DBMS vs. data stream processors.}
 \end{figure}
+}
 
 % Should we have an even higher-level overview here, giving a high-level picture of the  DDMS API
 
@@ -15,7 +17,7 @@ ad-hoc queries, users specify triggers that the DDMS will invoke when the views
 change.  The DDMS is built to process updates and apply them efficiently to
 those views.  This mentality is starkly in contrast to a traditional DBMS, which
 acts solely as a datastore and an interpreter.  Thus, when analyzing DDMSes, we
-use a process-centric abstraction: The DDMS represented as a(n infinite) state
+use a process-centric abstraction: the DDMS represented as a(n infinite) state
 machine with the machine's state representing an entire relational database at
 one point in time.
 
@@ -54,13 +56,12 @@ compilation tricks unavailable to DBMS optimizers.
 \tinysection{DDMS architecture}
 Figure~\ref{fig:ddmsarch} provides an architectural design for a DDMS. View
 queries and stream queries are specified with embedded SQL or StreamSQL
-statements. The application must also state how the DDMS can invoke application
-logic on dynamic results. Unlike existing JDBC or ODBC interfaces, the key
+statements. The application must also specify how the DDMS can invoke
+application logic on dynamic results. Unlike JDBC or ODBC interfaces, the key
 requirement here is asynchronous result handling, through callbacks, futures and
 promises, or via registration on a DDMS event loop and queue. We will also
-support ad-hoc queries that can apply traditional processing techniques on top
-of DDMS views. This can be done side-by-side with an existing DBMS, with the
-DDMS the layer for handling udpates.
+support ad-hoc queries that can apply standard processing on top of DDMS views,
+through an existing DBMS side-by-side with the DDMS handling updates.
 
 Internally, a DDMS is built around the concept of transitioning database state,
 and this is realized first and foremost through a transition compiler (discussed

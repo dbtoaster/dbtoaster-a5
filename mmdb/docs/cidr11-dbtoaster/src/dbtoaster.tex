@@ -1,6 +1,6 @@
 \label{sec:compilation}
 
-We provide an overview of transition function compilation for view maintenance.
+View maintenance is at the heart of a DDMS and its transitions.
 Current incremental view maintenance (IVM) techniques start with a query $q$,
 and produces a pair $\tuple{m,q'}$ corresponding to the materialization of $q$,
 and the delta query responsible for maintaining the materialization
@@ -24,7 +24,7 @@ $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime. We call this one step of
 \textit{compilation}. DBToaster starts with $q$, produces
 $\tuple{m,q'}$, then \textit{recurs}, taking $q'$ to produce $\tuple{m', q''}$
 and repeating. Here $m'$ is maintained as $m' \; \mbox{{\tt +}=} \; q''(u)$.
-We can again recur with $q''$, materializing it as as $m''$, maintaining with
+We can again recur with $q''$, materializing as $m''$, maintaining with
 $q'''$, a third-order delta, and so forth.
 
 DBToaster performs \textit{recursive query compilation} by successively
@@ -89,10 +89,10 @@ $q''$:
 & see previous output
 & & & & \sql{where $ck$ = @ck and $ok$ = @ok;}
 \end{tabular}
-\caption{Recursive query compilation example. Given a query $q$, we determine a
-sequence of materializations, and delta queries for maintenance:
-$\tuple{m,q'}, \tuple{m',q''}, \tuple{m'',q'''}$. This is a partial compilation
-trace, our algorithm considers all permutations of updates.}
+\caption{Recursive query compilation in DBToaster. For query $q$, we produce a
+sequence of materializations and delta queries for maintenance: $\tuple{m,q'},
+\tuple{m',q''}, \tuple{m'',q'''}$. This is a partial compilation trace, our
+algorithm considers all permutations of updates.}
 \label{fig:compex}
 \end{figure*}
 
@@ -100,22 +100,20 @@ trace, our algorithm considers all permutations of updates.}
 \tinysection{Materialized views as maps}
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
 similar to TPH-C Query 3. We represent our materialized views as map
-datastructures in main memory, and the map produced by the first step of
-compilation on $q$ is $m[ordkey,sprior]$. The map's key corresponds to group-by
-attributes and the map's value is the unnamed aggregate value. We can answer $q$
-by yielding the key-value entries in $m$. The first-order delta query $q'$
-includes a parameter {\tt @ck}, that is to be filled in by the values in
-the tuple inserted to the customer table.
+datastructures in main memory, and the map produced as the view for $q$ is
+$m[ordkey,sprior]$. The map's key corresponds to group-by attributes and the
+map's value is the unnamed aggregate value. We can answer $q$ from the
+key-value entries in $m$. The first-order delta query $q'$ includes a parameter
+{\tt @ck}, supplied by the insertion to the customer table.
 
 \tinysection{Map lookups}
 In the second step of compilation, we materialize $q'$ with its parameter {\tt
-@ck} as $m'[custkey,ordkey,sprior]$ . When maintaining $m$ on insertions {\tt
+@ck} as $m'[custkey,ordkey,sprior]$. When maintaining $m$ on insertions {\tt
 +customer(ck,nm,nk,bal)}, we can now use a map lookup $m'[\mbox{{\tt
 ck}},ordkey,sprior]$, instead of evaluating $q'(\mbox{{\tt ck}})$. In this
 lookup, the values of $ordkey$, $sprior$ come from $m$. Map $m$ maintains
 aggregates for every $ordkey$, $sprior$ seen in the update stream, as does $m'$.
-We iterate over every entry in $m$, to maintain $m$ from $m'$, leading to the
-maintenance statement:
+The maintenance statement to keep $m$ up to date from $m'$ is:
 
 {\footnotesize
 \begin{verbatim}
@@ -125,20 +123,18 @@ on_insert_customer(ck,nm,nk,bal):
 \end{verbatim}
 }
 
-\noindent In describing pseudocode, we omit for loops in update statements.
-They are implicit based on the function arguments -- above $ordkey$,$sprior$ are not
-arguments, and are retrieved via a loop over the map being updated. The above
-statement corresponds to line 2 in the full program below.
+\noindent We omit for loops in our pseudocode, they are implicit based on
+function arguments (see line 2 for the above statement). Note $ordkey$,$sprior$
+are not arguments, indicating a loop.
 
-Figure~\ref{fig:compex} shows the recursive nature of the algorithm by
-describing the compilation of $q'$ to $m',q''$ on insertion {\tt +lineitem},
-and then $q''$ to $m'',q'''$ on insertion {\tt +order}. The delta query $q'''$
-is the terminal step since the query does not depend on the database (we have
-replaced all relations with parameters). Our compilation algorithm considers all
-permutatiosn of updates, for example we also take deltas of $q$ for insertions
-to {\tt order} or {\tt lineitem}. We omit a full compilation trace due to
-limited space. We do however show the full transition program for insertions,
-with $m',m''$ renamed $m\_c,m\_cl$:
+Figure~\ref{fig:compex} shows the recursive nature of the algorithm: we compile
+$q'$ to $m',q''$ on insertion {\tt +lineitem}, and then $q''$ to $m'',q'''$ on
+insertion {\tt +order}. The delta query $q'''$ is the terminal step since the
+query does not depend on the database (we have replaced all relations with
+parameters). Our algorithm considers all permutations of updates, for example
+deltas of $q$ for insertions and deletions to {\tt order} or {\tt lineitem}. Due
+to space limitations, we only show instead the transition program for
+insertions, with $m',m''$ renamed $m\_c,m\_cl$:
 
 
 \comment{
@@ -339,22 +335,21 @@ m\_c$, and $m''=m\_cl$ is:
 }
 
 \tinysection{Transition Program Properties}
-For many queries, compilation to transitions yields \textit{simple} code, that
-has no join trees, and at most single-level for loops (no nested loops), that
-perform probing as found in hash joins. The transition program also
-exploits distributivity to push down aggregates through joins, yielding small
-map sizes since maps maintain group-by (partial) aggregates. We believe simple
-code is beneficial for analysis and optimizations as part of low-level
-compilation and code generation.
+For many queries, compilation yields \textit{simple} code, that has no join
+trees, and only single-level for loops (no nested loops), that perform
+probing as found in hash joins. The transition program also exploits
+distributivity to push down aggregates through joins, yielding small map sizes
+since maps maintain group-by aggregates. We believe simple code is
+beneficial for analysis and optimizations in low-level compilation and
+code generation.
 
-Transition programs leverage more space to trade off time, by maintaining
-auxiliary state. These space requirements are dependent on the active domain
-sizes of attributes, and often attributes do not have many distinct values, for
-example stock identifiers in order books, where there are approximately 2,800
-listings in NASDAQ, NYSE. Additionally checking for duplicate maps finds many
-opportunities to reuse maps given compilation with all permutations of deltas.
-Finally, there are numerous design choices and optimizations available to vary
-space-time requirements for transitions. We need not materialize all
+Transition programs leverage more space to trade off time by materializing delta
+queries. These space requirements are dependent on the active domain sizes of
+attributes, and often attributes do not have many distinct values, for example
+there are roughly 2800 unique stock ids on NASDAQ and NYSE. Additionally pruning
+duplicate maps during compilation facilitates much reuse maps given recursion
+through all permutations of updates. Finally, there are numerous opportunities
+to vary space-time requirements for transitions. We need not materialize all
 higher-order deltas. For example we could maintain $q$ with $m^i$, a
 materialized $i$-th order delta and perform more work during the update to
 evaluate $q^{i-1}, \ldots, q^1$. We could further amortize space by exploiting
@@ -392,7 +387,7 @@ incremental as possible}. DBToaster is capable of handling a wide range of
 queries, including, as we discuss in the next section, nested queries. This has
 not been addressed previously in the IVM literature, and lets our technique
 cover more complex, composed queries, where being incremental as possible is of
-extremely important.
+great importance.
 
 We note that the use of rings on queries with equi-joins and sum aggregations
 can be considered as the generalized distributive law (GDL)~\cite{aji-toit:00}
@@ -507,18 +502,17 @@ where we can apply techniques from structural
 recursion~\cite{buneman-kleisli:95}, prior to generating low-level code.
 Structural recursion enables optimizations of arbitrarily nested collections
 such as sets, bags and lists, and is our basis for enabling programmatic
-representation and manipulation of numerous \textit{physical-level plan
-properties}, such as tuple construction and pipelining.
+representation and manipulation of \textit{physical-level properties}, such
+as tuple construction and pipelining.
 
 Delta queries consist of cross products and joins of many maps, due to
-factorization of, and binding propagation in queries. In a traditional DBMS
-engine, cross products and join operators work on relations to produce
-relations, ``flattening'' intermediate results into rows. Column-stores have
-argued for late tuple construction~\cite{abadi-icde:07}. We produce
-intermediate results in nested form (cf. nested relations and objects) which may
-be deeply nested after combining several maps. With structural recursion,
-function composition and inlining, we can programmatically control where, and
-how much tuple construction we perform.
+factorization of, and binding propagation in queries. In a traditional DBMS,
+cross products and join operators work on relations to produce relations,
+``flattening'' intermediate results into rows. Column-stores have argued for
+late tuple construction~\cite{abadi-icde:07}. We produce intermediate results in
+nested form (cf. nested relations and objects) which may be deeply nested after
+combining several maps. With structural recursion, and function composition, we
+can programmatically control where, and how much tuple construction we perform.
 
 Function composition and inlining also lets us entirely avoid constructing
 \textit{any} intermediate results, let alone flattening intermediates. This
