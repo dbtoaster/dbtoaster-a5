@@ -28,14 +28,13 @@ We can again recur with $q''$, materializing as $m''$, maintaining with
 $q'''$, a third-order delta, and so forth.
 
 DBToaster performs \textit{recursive query compilation} by successively
-computing and materializing delta queries. This leads to the concept of
-higher-order deltas, such as $q''$, which is a second-order delta query.
-Recursive delta query materialization does not continue forever and terminates
-given one important property of computing delta queries: \textit{a delta query
-is often simpler than its parent query}. In particular \textit{k}-th order delta
-query, $q^k$ has fewer input relations than a \textit{k-1} order query
-$q^{k-1}$, but additional parameters corresponding to attributes that are
-present in $q^{k-1}$.
+computing and materializing delta queries for higher-order deltas, such as
+$q''$, which is a second-order delta query. Recursive delta query
+materialization terminates given one critical property of delta queries:
+\textit{a delta query is often simpler than its parent query}. In particular
+\textit{k}-th order delta query, $q^k$ has fewer input relations than a
+\textit{k-1} order query $q^{k-1}$, but additional parameters corresponding to
+attributes that are present in $q^{k-1}$.
 
 \def \sql#1{{\scriptsize {\tt #1}}}
 \begin{figure*}[htbp]
@@ -47,13 +46,14 @@ present in $q^{k-1}$.
 \hline
 $q =$
 & \sql{select l.ordkey, o.sprior,}
-& \texttt{+customer()}
+& \texttt{+customer}
 & $m[ordkey,sprior]$
 & $q' =$
 & \sql{select l.ordkey, o.sprior,}
 \\
 & \sql{\ \ \ \ \ \ \ sum(l.extprice) from}
-& & & & \sql{sum(l.extprice)}
+& \texttt{(ck,nm,nk,bal)}
+& & & \sql{sum(l.extprice)}
 \\
 & \sql{customer c, orders o, lineitem l}
 & & & & \sql{from orders o, lineitem l}
@@ -70,24 +70,25 @@ $q =$
 \hline
 $q'$:
 & Recursive call,
-& \texttt{+lineitem()} 
+& \texttt{+lineitem} 
 & $m'[custkey,ordkey,sprior]$
 & $q'' =$ & \sql{select @ok, o.sprior,@ep*sum(1)}
 \\
 & see previous output
-& & & & \sql{from orders o where}
+& \texttt{(ok,ep)} & & & \sql{from orders o where}
 \\
 & & & & & \sql{$ck$ = o.custkey and @ok = o.ordkey}
 \\
 \hline
 $q''$:
 & Recursive call,
-& \texttt{+order()} 
+& \texttt{+order} 
 & $m''[custkey,ordkey,sprior]$
 & $q'''=$ & \sql{select @sp,count()}
 \\
 & see previous output
-& & & & \sql{where $ck$ = @ck and $ok$ = @ok;}
+& \texttt{(ck,ok,sp)}
+& & & \sql{where $ck$ = @ck and $ok$ = @ok;}
 \end{tabular}
 \caption{Recursive query compilation in DBToaster. For query $q$, we produce a
 sequence of materializations and delta queries for maintenance: $\tuple{m,q'},
@@ -365,13 +366,15 @@ property that higher order delta queries successively get simpler and simpler.
 The terminal delta consists of parameters alone, and does not depend on the
 database.
 
-Queries are closed under taking deltas, that is a delta query is of the same
-language as the parent query. In the above example, we have materialized all
+\comment{
+Queries are closed under taking deltas, that is a delta query is of the
+same language as the parent query. In the above example, we have materialized all
 deltas, thus the transition program consists of simple arithmetics on parameters
 and map lookups. In general, closed deltas mean that query evaluation requires a
 relational engine. We could an existing DBMS kernel, but we believe we can
 innovate in the design of main-memory query processors and briefly touch on this
 following section.
+}
 
 Finally, our concept of higher-order deltas draws novel, natural analogies to
 mathematics. We have a rich formal framework, partially described
@@ -385,9 +388,9 @@ To summarize, in contrast to today's IVM, DBToaster uses materialization of
 higher order deltas for continuous query evaluation that is \textit{as
 incremental as possible}. DBToaster is capable of handling a wide range of
 queries, including, as we discuss in the next section, nested queries. This has
-not been addressed previously in the IVM literature, and lets our technique
-cover more complex, composed queries, where being incremental as possible is of
-great importance.
+not been addressed in the IVM literature, and lets our technique
+cover complex, composed queries, where being incremental as possible is
+extremely important.
 
 We note that the use of rings on queries with equi-joins and sum aggregations
 can be considered as the generalized distributive law (GDL)~\cite{aji-toit:00}
@@ -454,16 +457,15 @@ and recur on them. The \todo{Q-VWAP} query in Section \todo{[REF]} is an example
 of a nested query.
 
 Nested subqueries contain correlated attributes (e.g. \todo{price in Q-VWAP})
-defined in an outer scope. We consider these correlated attributes as
-parameters, or as we do internally in our compilation framework, as binding
-patterns, seen in data integration. In particular, nested queries induce
-\textit{binding propagation}, similar to sideways information passing in
-datalog. That is, we support the results of one query being used (or
-\textit{propagated}) to the parameters of a correlated subquery, indicating an
-ordered evaluation of queries.
-Compilation transforms queries to use minimal propagation of variables, which
-performs additional aggregation of maps, over the dimension of the map key that
-is not propagated. For example a map $m[x,y,z]$ would be aggregated
+defined in an outer scope. We consider correlated attributes as parameters, or,
+internally in our framework, as binding patterns, seen in data integration.
+Nested queries induce \textit{binding propagation}, similar to sideways
+information passing in datalog. That is, we support the results of one query
+being used (or \textit{propagated}) to the parameters of a correlated subquery,
+indicating an evaluation ordering.
+We transform queries to use minimal propagation of variables, which
+performs additional aggregation of maps, over dimensions of the map key that
+are not propagated. For example a map $m[x,y,z]$ would be aggregated
 (\textit{marginalized}) to $m'[x,y]$ if $x,y$ were the only correlated
 attributes.
 
@@ -499,32 +501,32 @@ attributes.
 \tinysection{Towards Optimizing Engine Physicality}
 Our implementation of delta queries uses a functional programming approach,
 where we can apply techniques from structural
-recursion~\cite{buneman-kleisli:95}, prior to generating low-level code.
-Structural recursion enables optimizations of arbitrarily nested collections
+recursion (SR)~\cite{buneman-kleisli:95}, prior to generating low-level code.
+These techniques enable optimizations of arbitrarily nested collections
 such as sets, bags and lists, and is our basis for enabling programmatic
 representation and manipulation of \textit{physical-level properties}, such
 as tuple construction and pipelining.
 
 Delta queries consist of cross products and joins of many maps, due to
 factorization of, and binding propagation in queries. In a traditional DBMS,
-cross products and join operators work on relations to produce relations,
-``flattening'' intermediate results into rows. Column-stores have argued for
-late tuple construction~\cite{abadi-icde:07}. We produce intermediate results in
-nested form (cf. nested relations and objects) which may be deeply nested after
-combining several maps. With structural recursion, and function composition, we
-can programmatically control where, and how much tuple construction we perform.
+cross products and joins consume and produce relations, ``flattening''
+intermediate results into rows. Column-stores have argued for late tuple
+construction~\cite{abadi-icde:07}. We produce intermediate results in nested
+form (cf. nested relations and objects), potentially deeply after combining
+several maps. With SR and function composition, we can programmatically control
+where, and how much tuple construction we perform.
 
-Function composition and inlining also lets us entirely avoid constructing
-\textit{any} intermediate results, let alone flattening intermediates. This
-enables \textit{automatic} transformation of a join-tree into an n-way join,
-which, for example on a series of cross products, yields an n-level pipelined
-nested loops implementation that avoids expensive intermediates, leading to a
-much richer space of join plans. To the best of our knowledge, DBToaster would
-be the first engine to incorporate automated, programmatic manipulation of
-physical aspects of plans, since we reason about processing with data
-structures, not an operator abstraction that hides and encapsulates data
-structures. Our techniques will be equally applicable to main-memory DBMS, since
-our delta queries are the same as standard SQL queries.
+We can also entirely avoid constructing \textit{any} intermediate results, let
+alone flattening intermediates. This enables \textit{automatic} transformation
+of a join-tree into an n-way join, which, for example on a series of cross
+products yields an n-level pipelined nested loops implementation that avoids
+expensive intermediates, leading to a much richer space of join plans. To the
+best of our knowledge, DBToaster would be the first engine to incorporate
+automated, programmatic manipulation of physical aspects of plans, since we
+reason about processing with data structures, not an operator abstraction that
+hides and encapsulates data structures. Our techniques will be equally
+applicable to main-memory DBMS, since our delta queries are the same as standard
+SQL queries.
 
 
 
