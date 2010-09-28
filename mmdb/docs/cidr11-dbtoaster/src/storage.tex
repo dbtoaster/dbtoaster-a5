@@ -23,7 +23,7 @@ For example, Section \ref{sec:dbtoaster}'s $q'$ would be stored not as a series 
 \end{figure}
 }
 
-This is not a novel problem.  Systems like BerkeleyDB\cite{berkeleydb} provide exactly the sort of functionality this datastructure requires.  More complex indexing schemes have been developed (cite???) to address a range of different selection predicates such as range queries, nearest neighbor searches, approximate string matching, and so forth.  The critical insight however, is that the entire query workload is known in advance.  \textit{The DBToaster compiler can identify the full set of required secondary indices at compile time}.  The DDMS requires no learning machinery, adaptive index, or other online process to obtain the same benefits.
+This is not a novel problem.  While the datastructure described above is one implementation, systems with this sort of functionality\cite{berkeleydb} have long since matured.  The critical insight however, is that the entire query workload is known in advance.  The DBToaster compiler can identify the \textit{complete} set of useful secondary indices \textit{at compile time}, including the potential benefits of more intricate indexing strategies like range queries\cite{rangequeries}.  A DDMS requires no adaptive tuning\cite{ChaudhuriN07}, workload tracking\cite{colt}, or any other online or human-directed process to obtain many of the same benefits.
 
 %%%%%% should we make any comments here about the relationship between the presence of secondary indices and partitioning schemes?  Otherwise, I'm not sure we have anything to say about maps and datastructures other than (like tables) they're very amenable to horizontal partitioning.
 
