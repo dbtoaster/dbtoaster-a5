@@ -13,9 +13,8 @@ think of a DDMS as (very large) {\em dynamic data structures}\/ with {\em agile,
 \section{Motivation}
 
 
-To justify DDMS, first we will provide one very large and well-known class of
-use cases, which we only need to coarsely describe and, second, a more narrow
-field of application for which DDMS would be a true silver bullet.
+DDMS are lightweight systems that are optimized to {\em keep views fresh}\/ at the greatest rates feasible given base data volumes, which may range from moderate to extremely large, depending on application.
+In this section, we discuss two quite different fields of application that justify DDMS.
 
 
 
@@ -30,7 +29,7 @@ field of application for which DDMS would be a true silver bullet.
 Large-scale data analytics in the cloud -- using systems such as map/reduce --
 make it painfully obvious that the data management research community has almost
 missed a great opportunity for impact. While some aspects of such systems have
-certainly been previously explored by the data management community, such
+certainly been previously explored by the data management community, these
 systems are not databases, as some strata of the systems, scientific computing,
 and large-scale Web applications communities find important to emphasize.
 Nevertheless, our research community can certainly make important contributions
@@ -50,7 +49,7 @@ analytics that call for more interactivity or better response times that allow
 for online use. Among large Web applications, examples include (social or other)
 network monitoring and statistics, search with interactive feedback, interactive
 recommendations, keeping personalized Web pages at social networking sites up to
-date, and so forth.
+date, and so forth (cf. e.g. [Olston, CIDR 2009]).
 
 %
 \longversion{
@@ -59,17 +58,11 @@ companies, but they are increasingly of competitive advantage.
 
 }
 
-The DDMS take is to provide large dynamic data structures with a facility for
-supporting declaratively defined views, increasing programmer productivity. A
-DDMS is a lightweight system, not necessarily providing additional DBMS
-functionality such as persistency, transactions, recoverability, or ad-hoc
-queries. This choice is likely to render DDMS more acceptable for many
-large-scale analytics applications, barring the NoSQL crowd, of course. The
-second defining criterion of DDMS, agile views that are continually kept fresh,
-at first seems at odds with the bulk update processing dogma of DBMS, but it
-enables important applications that require interactivity or event processing.
-It is also key to programming with dynamic data structures (managed by a DDMS)
-in a way programmers are familiar with.
+The DDMS take on supporting large-scale data analytics is to provide large {\em dynamic data structures}\/ and to support declaratively defined views on them that, compared to key-value stores, increase programmer productivity.
+DDMS views are {\em agile}\/ in that they are continually kept fresh.
+
+A DDMS is a lightweight system, not necessarily providing additional DBMS functionality such as persistency, transactions, recoverability, or ad-hoc queries. This choice is likely to render DDMS more acceptable for many large-scale analytics applications. Continually fresh DDMS views
+at first seem at odds with the bulk update processing dogma of DBMS, but enable important applications that require interactivity or event processing.
 
 
 Large-scale data analytics is equally present in more classical business
@@ -84,7 +77,7 @@ dramatically improve the freshness of warehoused data.
 \medskip
 
 
-{\bf Algorithmic trading.}\/
+{\bf Algorithmic trading with order books.}\/
 In recent years, algorithmic trading systems have come to account for a majority
 of volume traded at the major US and European financial markets (for instance,
 for 73\% of all US equity trading volume in the first quarter of 2009
@@ -103,8 +96,7 @@ trading strategies and by programmers and systems experts who implement these
 strategies to perform fast enough, using mainly low-level programming languages
 such as C. Developing trading strategies requires a feedback loop of simulation,
 back-testing with historical data, and strategy refinement based on the insights
-gained. This loop, and the considerable amount of low-level programming that has
-to happen in it, is the root of a very costly {\em productivity bottleneck}\/:
+gained. This loop, and the considerable amount of low-level programming that it causes, is the root of a very costly {\em productivity bottleneck}\/:
 in fact, the number of programmers frequently exceeds the number of strategy
 designers by an order of magnitude.
 
