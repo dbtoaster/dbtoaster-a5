@@ -16,29 +16,15 @@ DDMSes are update processors.  Data enters the DDMS via its update stream, is
 processed, incorporated into its persistent state, and the results are passed to
 the end-user.  Thus the logical abstraction for discussing DDMSes is
 process-centric: The DDMS represented as a(n infinite) state machine with the
-machine's state representing an entire relational database at one point in time.
+machine's state representing an entire relational database at one point in time.
 
-Transitions in this model correspond to modifications of a traditional DBMS'
-base relations.  This is an important distinction between the DDMS state machine
-and more traditional interpretations of a state machine; transition functions do
-not correspond to individual memory operations or CPU instructions, but rather
-to changes to the inputs of one or more view queries.
-
-Correspondingly, the state of the state machine is organized into a schema of
+The state of the state machine is organized into a schema of
 base relations, materialized views, and other auxiliary datastructures.  We
-partition the schema into two components: a \textit{visible schema} containing
-materialized representations of the views of interest, and a \textit{auxiliary
-schema} containing all of the DDMS' internal machinery (ie, base relations, or
-auxiliary materialized views).
+refer to the parts of the schema representing the user's views of interest as the \textit{visible schema}.
 
-Naturally, viewing the database engine as a state machine suggests that we can
-precompute each state transition function to make it as efficient as possible. 
-Moreover, when ``compiling'' the DDMS, there is no prior state\footnote{This is
-not strictly true, we assume that DDMS recompiles are infrequent enough to make
-post-compile ``upgrades'' of database state a reasonable requirement} and
-latency is not a consideration.  Thus, we are free to use a variety of
-compilation tricks unavailable to DBMS optimizers.
+At the highest level, transitions in this model correspond to modifications of a traditional DBMS' base relations.  However, these transitions can be complex, data-dependent beasts; The transition's effect (eg., on a view constructed from a three table join) can depend on the results of a subquery (joining the other two tables).  If only we had some way to precompute the subquery\ldots
 
+Viewing the database as a state machine suggests that we can precompute each state transition function to make it as efficient as possible.  While ``compiling'' the DDMS, we can identify subqueries present in each transition function and construct an \textit{auxiliary schema}.  These views, not visible to the user, substantially reduce the overall work required to compute each transition.
 
 \begin{figure}
 \begin{center}
@@ -60,7 +46,8 @@ promises (objects enabling proxies of values to be computed, that are bound
 following delayed evaluation), or via registration on a DDMS event loop and
 queue. We will also support ad-hoc queries that can apply standard processing on
 top of DDMS views, through an existing DBMS side-by-side with the DDMS handling
-updates.
+updates.
+
 
 
 Internally, a DDMS is built around the concept of transitioning database state,
