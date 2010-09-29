@@ -80,6 +80,10 @@ the various key challenges to overcome to make DDMS a reality.
 \input{distribution}
 
 \section{Discussion and Conclusions}
+We proposed a model for a Dynamic Data Management System based on the DBToaster
+project, that argues for the need to revisit how large data management systems
+handle high-volume updates. The project argues for several design choices: the
+use of views as the primary entity in the system, the treatment ofviews as data structures, maintenance of these views through precompiled,\textit{parameterized} transitions, and simple application interactionthrough data structures. This project was initiated while the authors were inthe Cornell Database Group~\cite{ahmad-vldb:09}.
 \tinysection{Implementation plan}
 We are building an open-source DDMS as a collaboration between EPFL and Johns
 Hopkins. We plan to construct a \textit{database generator}, a compilation tool
