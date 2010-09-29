@@ -1,15 +1,16 @@
 \label{sec:compilation}
 
-View maintenance is at the heart of a DDMS and its state transitions.
-Current incremental view maintenance (IVM) techniques start with a query $q$,
-and produces a pair $\tuple{m,q'}$ corresponding to the materialization of $q$,
-and the delta query responsible for maintaining the materialization
-respectively. The delta query $q'$ can be thought of as a parameterized SQL
-query, with parameters corresponding to attributes of an update to a delta
-table. On an update $u$, IVM performs the work: $m \mbox{ {\tt+}= } q'(u)$.
-Here, a materialized view is updated with the result of a delta query taking
-parameters from $u$, and this must ensure $m = q(db_{new})$, where $db_{new}$ is
-the result of applying the update to the database.
+View maintenance is at the heart of a DDMS and its state transitions. Current
+incremental view maintenance (IVM)
+techniques~\cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07}
+start with a query $q$, and produces a pair $\tuple{m,q'}$ corresponding to the
+materialization of $q$, and the delta query responsible for maintaining the
+materialization respectively. The delta query $q'$ can be thought of as a
+parameterized SQL query, with parameters corresponding to attributes of an
+update to a delta table. On an update $u$, IVM performs the work: $m \mbox{
+{\tt+}= } q'(u)$. Here, a materialized view is updated with the result of a
+delta query taking parameters from $u$, and this must ensure $m = q(db_{new})$,
+where $db_{new}$ is the result of applying the update to the database.
 
 \subsection{View Maintenance in DBToaster}
 DBToaster makes the following key insight regarding IVM: current IVM techniques

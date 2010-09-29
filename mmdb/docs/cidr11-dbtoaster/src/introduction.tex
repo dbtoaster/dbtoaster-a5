@@ -4,17 +4,23 @@
 
 
 \longversion{
-This paper calls for a new breed of systems which
-we call {\em dynamic data management systems (DDMS)}. In a nutshell,
-think of a DDMS as (very large) {\em dynamic data structures}\/ with {\em agile, frequently fresh views}\/, and {\em a facility for monitoring these views and triggering applica\-tion-level events}\/. DDMS could be relatively lightweight systems, or could be functionality that eventually finds its way into more traditional DBMS or data stream processors.
+This paper calls for a new breed of systems which we call {\em dynamic data
+management systems (DDMS)}. In a nutshell, think of a DDMS as (very large) {\em
+dynamic data structures}\/ with {\em agile, frequently fresh views}\/, and {\em
+a facility for monitoring these views and triggering applica\-tion-level
+events}\/. DDMS could be relatively lightweight systems, or could be
+functionality that eventually finds its way into more traditional DBMS or data
+stream processors.
 }
 
 
 \section{Motivation}
 
 
-DDMS are lightweight systems that are optimized to {\em keep views fresh}\/ at the greatest rates feasible given base data volumes, which may range from moderate to extremely large, depending on application.
-In this section, we discuss two quite different fields of application that justify DDMS.
+DDMS are lightweight systems that are optimized to {\em keep views fresh}\/ at
+the greatest rates feasible given base data volumes, which may range from
+moderate to extremely large, depending on application. In this section, we
+discuss two quite different fields of application that justify DDMS.
 
 
 
@@ -49,7 +55,7 @@ analytics that call for more interactivity or better response times that allow
 for online use. Among large Web applications, examples include (social or other)
 network monitoring and statistics, search with interactive feedback, interactive
 recommendations, keeping personalized Web pages at social networking sites up to
-date, and so forth (cf. e.g. [Olston, CIDR 2009]).
+date, and so forth (cf. e.g. \cite{olston-cidr:09,bast-cidr:07}).
 
 %
 \longversion{
@@ -58,11 +64,17 @@ companies, but they are increasingly of competitive advantage.
 
 }
 
-The DDMS take on supporting large-scale data analytics is to provide large {\em dynamic data structures}\/ and to support declaratively defined views on them that, compared to key-value stores, increase programmer productivity.
-DDMS views are {\em agile}\/ in that they are continually kept fresh.
+The DDMS take on supporting large-scale data analytics is to provide large {\em
+dynamic data structures}\/ and to support declaratively defined views on them
+that, compared to key-value stores, increase programmer productivity. DDMS views
+are {\em agile}\/ in that they are continually kept fresh.
 
-A DDMS is a lightweight system, not necessarily providing additional DBMS functionality such as persistency, transactions, recoverability, or ad-hoc queries. This choice is likely to render DDMS more acceptable for many large-scale analytics applications. Continually fresh DDMS views
-at first seem at odds with the bulk update processing dogma of DBMS, but enable important applications that require interactivity or event processing.
+A DDMS is a lightweight system, not necessarily providing additional DBMS
+functionality such as persistency, transactions, recoverability, or ad-hoc
+queries. This choice is likely to render DDMS more acceptable for many
+large-scale analytics applications. Continually fresh DDMS views at first seem
+at odds with the bulk update processing dogma of DBMS, but enable important
+applications that require interactivity or event processing.
 
 
 Large-scale data analytics is equally present in more classical business
@@ -96,9 +108,10 @@ trading strategies and by programmers and systems experts who implement these
 strategies to perform fast enough, using mainly low-level programming languages
 such as C. Developing trading strategies requires a feedback loop of simulation,
 back-testing with historical data, and strategy refinement based on the insights
-gained. This loop, and the considerable amount of low-level programming that it causes, is the root of a very costly {\em productivity bottleneck}\/:
-in fact, the number of programmers frequently exceeds the number of strategy
-designers by an order of magnitude.
+gained. This loop, and the considerable amount of low-level programming that it
+causes, is the root of a very costly {\em productivity bottleneck}\/: in fact,
+the number of programmers frequently exceeds the number of strategy designers by
+an order of magnitude.
 
 \comment{
 Trading algorithms often perform a considerable amount of data crunching
@@ -236,17 +249,18 @@ programming model: compared to DBMS, control flow is reversed, and the DDMS
 invokes application code, not vice versa. 
 
 
-An (active) DBMS could simulate a DDMS through triggers, but is not optimized
-for such workloads, and even if support for state-of-the-art incremental
-view maintenance is present, performs very poorly. Thus, DDMS differ from active
-databases in their being optimized for different workloads; DDMS are
+An (active) DBMS~\cite{ceri-vldb:00} could simulate a DDMS through triggers, but
+is not optimized for such workloads, and even if support for state-of-the-art
+incremental view maintenance is present, performs very poorly. Thus, DDMS differ
+from active databases in their being optimized for different workloads; DDMS are
 optimized for event processing and monitoring tasks, while active database
 systems are optimized for more traditional DBMS workloads. DDMS will not
-necessarily support typical functionality such as transactions.
+necessarily support typical functionality such as transactions.
 
 
 {\em Compared to a data stream processing system}\/
-and particularly an event processing system (such as Cayuga, [cite others]),
+and particularly an event processing system (such as
+Cayuga~\cite{demers-sigmod:07}, SASE+~\cite{agrawal-sigmod:08}),
 %
 DDMS have much larger states, which will usually have to be maintained in
 secondary storage, and require drastically different query processing
@@ -256,12 +270,12 @@ the system while a stream of updates passes through (much more like an OLTP
 system).
 
 %
-Moreover, event and stream processors support drastically different query
-languages which are designed to ensure that only very small state has to be
-maintained, using windows or constructs from formal language theory [Cayuga]. 
-DDMS views are often rather complex and expensive, including large
-non-windowed joins and aggregation. In general, we expect DDMS st support
-standard SQL.
+Moreover, event and stream processors~\cite{abadi-vldbj:03, motwani-cidr:03,
+chandrasekaran-cidr:03} support drastically different query languages which are
+designed to ensure that only very small state has to be maintained, using
+windows or constructs from formal language theory~\cite{white-pods:07}. DDMS
+views are often rather complex and expensive, including large non-windowed joins
+and aggregation. In general, we expect DDMS st support standard SQL.
 
 
 A DDMS can be thought of as an {\em update stream}\/ processing system in which
