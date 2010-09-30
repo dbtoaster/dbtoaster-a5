@@ -4,19 +4,19 @@ View maintenance is at the heart of a DDMS and its state transitions. Current
 incremental view maintenance (IVM)
 techniques~\cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07}
 start with a query $q$, and produce a pair $\tuple{m,q'}$ corresponding to the
-materialization of $q$, and the delta query responsible for maintaining the
-materialization respectively. The delta query $q'$ can be thought of as a
-parameterized SQL query, with parameters corresponding to attributes of an
-update to a delta table. On an update $u$, IVM performs the work: $m \mbox{
+materialization $m$ of $q$, and the delta query $q'$ responsible for maintaining the
+materialization respectively. The delta query can be thought of as an
+SQL query over the current database, parameterized by the update.
+On an update $u$, IVM performs the work: $m \mbox{
 {\tt+}= } q'(u)$. Here, a materialized view is updated with the result of a
 delta query taking parameters from $u$, and this must ensure $m = q(db_{new})$,
 where $db_{new}$ is the result of applying the update to the database.
 
 \subsection{View Maintenance in DBToaster}
 DBToaster makes the following key insight regarding IVM: current IVM techniques
-evaluate delta queries from scratch, performing much redundant work. Each delta
+evaluate delta queries from scratch, performing much redundant work. Evaluating the delta
 query $q'$ incurs the cost of accessing and processing all tuples in the base
-tables for the view, except for the delta table. DBMS suffer this cost
+tables $q$, excepting the one table being updated in the case of self-joins. DBMS suffer this cost
 \textit{even if there is no change to any of the aforementioned base tables}.
 DBToaster materializes the result of the delta query, adds it to the database
 schema and maintains it at runtime.
@@ -31,6 +31,9 @@ $q'''$, a third-order delta, and so forth.
 
 \def \sql#1{{\scriptsize {\tt #1}}}
 \begin{figure*}[htbp]
+
+\vspace{-8mm}
+
 \begin{tabular}{ll|l|l|ll}
 \multicolumn{2}{l}{Input (parent query)}
 & Update 
@@ -77,7 +80,7 @@ $q''$:
 & Recursive call,
 & \texttt{+order} 
 & $m''[custkey,ordkey,sprior]$
-& $q'''=$ & \sql{select @sp,count()}
+& $q'''=$ & \sql{select @sp, count()}
 \\
 & see previous output
 & \texttt{(ck,ok,sp)}
@@ -93,21 +96,23 @@ algorithm considers all permutations of updates.}
 DBToaster performs \textit{recursive query compilation} by successively
 computing and materializing delta queries for higher-order deltas, such as
 $q''$, a second-order delta query. DBToaster terminates given one critical
-property of delta queries: \textit{a delta query is often simpler than its
-parent query}. In particular \textit{k}-th order delta query, $q^k$ has fewer
-input relations than a \textit{k-1} order query $q^{k-1}$, but additional
-parameters corresponding to attributes that are present in $q^{k-1}$.
+property of delta queries: \textit{a delta query is structurally simpler than its
+parent query} \cite{koch-pods:10}. In particular \textit{k}-th order delta query, $q^{(k)}$ has fewer
+input relations than a \textit{k-1}-th order query $q^{(k-1)}$, but additional
+parameters corresponding to attributes that are present in $q^{(k-1)}$.
 DBToaster represents materialized views in main memory as map datastructures.
 Maps are group-by aggregates, with keys of group-by attributes, and values as
 the aggregate itself.
 
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
 similar to TPC-H Query 3. 
-The map produced as the view for $q$ is $m[ordkey,sprior]$. We can answer $q$
-from the key-value entries in $m$. The first-order delta query $q'$ includes a
+The map produced as the materialized view for $q$ is $m$; the
+aggregate value stored for group $[ordkey,sprior]$ can be accessed as
+$m[ordkey,sprior]$.
+The first-order delta query $q'$ includes a
 parameter {\tt @ck}, supplied by the insertion to the customer table.
 We materialize $q'$ with its parameter {\tt @ck} as $m'[custkey,ordkey,sprior]$.
-When maintaining $m$ on insertions {\tt +customer(ck,nm,nk,bal)}, we can now use
+To maintain $m$ on insertions {\tt +customer(ck,nm,nk,bal)}, we use
 a map lookup $m'[\mbox{{\tt ck}},ordkey,sprior]$, instead of evaluating
 $q'(\mbox{{\tt ck}})$. In this lookup, the values of $ordkey$, $sprior$ come
 from $m$. Map $m$ maintains aggregates for every $ordkey$, $sprior$ seen in the
@@ -137,16 +142,17 @@ from $m'$ is:
 {\footnotesize
 \begin{verbatim}
 on_insert_customer(ck,nm,nk,bal):
-  for each ordkey,sprior in m:
-    m[ordkey,sprior] += m'[ck,ordkey,sprior];
+  m[ordkey,sprior] += m'[ck,ordkey,sprior];
 \end{verbatim}
 }
 
-\noindent We omit \texttt{for} loops in pseudocode, they are implicit based
-on function arguments (see line 2 for the above statement). Note
-$ordkey$,$sprior$ are not arguments, indicating a loop. Furthermore, the order
-of entries updated does not matter, enabling embarrassing update
-parallelization, as we discuss in Section~\ref{sec:distribution}.
+\noindent
+Note that $ordkey$ and $sprior$ do not occur as arguments of the
+{\tt on\_insert\_customer} trigger: Conceptually, map $m$ is updated by
+looping over all $(ordkey, sprior)$ pairs in its domain.
+Read and write locations are (for a large class of queries, always) in one-to-one correspondence, allowing for
+an embarrassingly parallel implementation
+(see Section~\ref{sec:distribution}).
 
 Figure~\ref{fig:compex} shows the recursive nature of the algorithm: we compile
 $q'$ to $m',q''$ on insertion {\tt +lineitem}, and then $q''$ to
@@ -356,8 +362,8 @@ m\_c$, and $m''=m\_cl$ is:
 }
 
 \tinysection{Transition Program Properties}
-For many queries, compilation yields \textit{simple} code, that has no join
-trees, and no nested loops, only single-level loops that perform probing as
+For many queries, compilation yields \textit{simple} code that has no joins
+and no nested loops, only single-level loops that perform probing as
 in hash joins.
 \comment{
 The transition program also exploits distributivity to push down aggregates
