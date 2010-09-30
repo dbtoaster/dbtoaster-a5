@@ -83,18 +83,19 @@ the various key challenges to overcome to make DDMS a reality.
 We proposed a model for a Dynamic Data Management System based on the DBToaster
 project, that argues for the need to revisit how large data management systems
 handle high-volume updates. The project argues for several design choices: the
-use of views as the primary entity in the system, the treatment ofviews as data structures, maintenance of these views through precompiled,\textit{parameterized} transitions, and simple application interactionthrough data structures. This project was initiated while the authors were inthe Cornell Database Group~\cite{ahmad-vldb:09}.
+use of views as the primary entity in the system, the treatment ofviews as data structures, maintenance of these views through precompiled,\textit{parameterized} transitions, and simple application interactionthrough data structures. 
 \tinysection{Implementation plan}
 We are building an open-source DDMS as a collaboration between EPFL and Johns
-Hopkins. We plan to construct a \textit{database generator}, a compilation tool
-that builds specialized continuous query engines on top of our own open-source
-main-memory query processing library. We have found there are surprisingly few
-modern, modular, main-memory implementations available, with the exception of
-Java-based engines such as HSQLDB, H2, etc. We perceive many opportunities for
-innovation in main-memory engines by tapping into functional programming
-techniques as briefly described in Section~\ref{sec:compilation}. We also hope
-that such a library will valuable in an educational context, and will make extensive use
-of the framework in our courses.
+Hopkins.
+DBToaster was initiated while the authors were in the Cornell Database
+Group~\cite{ahmad-vldb:09}, producing an initial version of a
+transition compiler. Current ongoing directions include: i) leveraging
+structural recursion to build a main-memory query processing library based on
+functional programming techniques (see Section~\ref{sec:compilation}); ii)
+parallelization, deployment and experimentation of a continuous analytics engine
+in a cloud environment; iii) analysing the benefits of our execution model in a
+batch operating mode on top of map-reduce.
+
 
 \scriptsize{
 \bibliographystyle{abbrv}

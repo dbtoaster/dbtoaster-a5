@@ -3,7 +3,7 @@
 View maintenance is at the heart of a DDMS and its state transitions. Current
 incremental view maintenance (IVM)
 techniques~\cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07}
-start with a query $q$, and produces a pair $\tuple{m,q'}$ corresponding to the
+start with a query $q$, and produce a pair $\tuple{m,q'}$ corresponding to the
 materialization of $q$, and the delta query responsible for maintaining the
 materialization respectively. The delta query $q'$ can be thought of as a
 parameterized SQL query, with parameters corresponding to attributes of an
@@ -102,7 +102,7 @@ Maps are group-by aggregates, with keys of group-by attributes, and values as
 the aggregate itself.
 
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
-similar to TPH-C Query 3. 
+similar to TPC-H Query 3. 
 The map produced as the view for $q$ is $m[ordkey,sprior]$. We can answer $q$
 from the key-value entries in $m$. The first-order delta query $q'$ includes a
 parameter {\tt @ck}, supplied by the insertion to the customer table.
@@ -144,16 +144,18 @@ on_insert_customer(ck,nm,nk,bal):
 
 \noindent We omit \texttt{for} loops in pseudocode, they are implicit based
 on function arguments (see line 2 for the above statement). Note
-$ordkey$,$sprior$ are not arguments, indicating a loop.
+$ordkey$,$sprior$ are not arguments, indicating a loop. Furthermore, the order
+of entries updated does not matter, enabling embarrassing update
+parallelization, as we discuss in Section~\ref{sec:distribution}.
 
 Figure~\ref{fig:compex} shows the recursive nature of the algorithm: we compile
-$q'$ to $m',q''$ on insertion {\tt +lineitem}, and then $q''$ to $m'',q'''$ on
-insertion {\tt +order}. The delta query $q'''$ is the terminal step since the
-query does not depend on the database (there are no relations, only parameters).
-Our algorithm considers all permutations of updates, for example deltas of $q$
-for insertions and deletions to {\tt order} or {\tt lineitem}. Due to limited
-space, we only show the transition program for insertions, with $m',m''$ renamed
-$m\_c,m\_cl$:
+$q'$ to $m',q''$ on insertion {\tt +lineitem}, and then $q''$ to
+$\tuple{m'',q'''}$ on insertion {\tt +order}. The delta query $q'''$ is the
+terminal step since the query does not depend on the database (there are no
+relations, only parameters). Our algorithm considers all permutations of
+updates, for example deltas of $q$ for insertions and deletions to {\tt order}
+or {\tt lineitem}. Due to limited space, we only show the transition program for
+insertions, with $m',m''$ renamed $m\_c,m\_cl$:
 
 
 \comment{
@@ -388,35 +390,35 @@ property that higher order delta queries successively get simpler and simpler.
 The terminal delta consists of parameters alone, and does not depend on the
 database.
 }
-Queries are closed under taking deltas, that is a delta query is of the same
+Queries are closed under taking deltas, that is, a delta query is of the same
 language as the parent query. In the above example, we have materialized all
 deltas, thus the transition program consists of simple arithmetics on parameters
 and map lookups. In general, closed deltas mean evaluation using a relational
 engine, such as an existing DBMS kernel. However, we believe we can innovate in
-the design of main-memory query processors and touch on this below.
+the design of main-memory query processors. We touch on this below.
 
 Finally, our concept of higher-order deltas draws novel, natural analogies to
 mathematics. We have a rich formal framework, partially described
-in~\cite{koch-pods:10}, where queries are polynomials, which admit
-transformations compactly represented by an algebraic structure, namely rings,
-and we demonstrate that the degree of the polynomial is reduced under taking
-deltas, much like derivatives in calculus.
+in~\cite{koch-pods:10}, where the techniques sketched here are proven correct.
+In our framework, queries are polynomials, queries admit transformations
+compactly represented by a \textit{ring} algebraic structure, and we demonstrate
+polynomial degrees are reduced under taking deltas, much like derivatives in
+calculus.
 
 \tinysection{Discussion}
 To summarize, in contrast to today's IVM, DBToaster uses materialization of
 higher order deltas for continuous query evaluation that is \textit{as
 incremental as possible}. DBToaster is capable of handling a wide range of
-queries, including, as we discuss in the next section, nested queries. This has
-not been addressed in the IVM literature, and lets our technique
-cover complex, composed queries, where being incremental as possible is
-highly advantageous.
+queries, including, as discussed next, nested queries. This has not been
+addressed in the IVM literature, and lets our technique cover complex, composed
+queries, where being as incremental as possible is highly advantageous.
 
 The use of rings on queries with equi-joins and sum aggregations can be cast as
 the generalized distributive law (GDL)~\cite{aji-toit:00} applied to query
 processing. GDL facilitates fast algorithms for many applications including
-belief propagation and message passing algorithms, Viterbi's algorithm, and
-FFTs. With this analogy, we can leverage other techniques from this field, for
-example approximation techniques.
+belief propagation and message passing algorithms, and Viterbi's algorithm. With
+this analogy, we hope to leverage other techniques from this field, for example
+approximation techniques.
 
 
 \subsection{Compilation Enhancements}
@@ -514,27 +516,27 @@ $m'[x,y]$ if $x,y$ were the only correlated attributes.
 
 
 \tinysection{Towards Optimizing Engine Physicality}
-Our implementation of delta queries uses a functional programming approach,
-where we can apply techniques from structural
-recursion (SR)~\cite{buneman-kleisli:95}, prior to generating low-level code.
-These techniques enable optimizations of arbitrarily nested collections
-such as sets, bags and lists, and is our basis for enabling programmatic
-representation and manipulation of \textit{physical-level properties}, such
-as tuple construction and pipelining.
+We are adopting a functional programming (FP) approach to compilation to better
+capture the need for binding patterns in delta queries, and to apply
+optimizations from FP, such as exploiting structural recursion
+(SR)~\cite{buneman-kleisli:95}. SR enable optimizations of arbitrarily nested
+collections such as sets, bags and lists. We can use SR optimizations to
+manipulate \textit{physical-level properties}, such as tuple construction and
+pipelining.
 
 Delta queries consist of cross products and joins of many maps, due to
 factorization of, and binding propagation in queries. In a traditional DBMS,
 cross products and joins consume and produce relations, ``flattening''
 intermediate results into rows. Column-stores have argued for late tuple
 construction~\cite{abadi-icde:07}. We produce intermediate results in nested
-form (cf. nested relations and objects), potentially deeply after combining
-several maps. With SR and function composition, we can programmatically control
-where, and how much tuple construction we perform.
+form (cf. nested relations and objects), potentially nested deeply after
+combining several maps. With SR and function composition, we can
+programmatically control where, and how much tuple construction we perform.
 
 We can also entirely avoid constructing \textit{any} intermediate results, let
 alone flattening intermediates. This enables \textit{automatic} transformation
 of a join-tree into an n-way join, which, for example on a series of cross
-products yields an n-level pipelined nested loops implementation that avoids
+products, yields an n-level pipelined nested loops implementation that avoids
 expensive intermediates, leading to a much richer space of join plans. DBToaster
 would be the first engine to incorporate automated, programmatic manipulation of
 physical aspects of plans, since we reason about processing with data
