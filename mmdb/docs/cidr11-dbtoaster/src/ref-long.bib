@@ -1,60 +1,41 @@
-@string{sigmodxxx = "ACM SIGMOD International Conference on Management of Data"}
-@string{sigmod = {SIGMOD}}
+@string{sigmod = "ACM SIGMOD International Conference on Management of Data"}
+@string{sigmod_short = {SIGMOD}}
 
-@string{vldbxxx = "International Conference on Very Large Data Bases"}
-@string{vldb = {VLDB}}
+@string{vldb = "International Conference on Very Large Data Bases"}
+@string{vldb_short = {VLDB}}
 
-@string{icdexxx = "International Conference on Data Engineering"}
-@string{icde = {ICDE}}
+@string{icde = "International Conference on Data Engineering"}
+@string{icde_short = {ICDE}}
 
-@string{cidrxxx = "Conference on Innovative Data Systems Research"}
-@string{cidr = {CIDR}}
+@string{cidr = "Conference on Innovative Data Systems Research"}
+@string{cidr_short = {CIDR}}
 
-@string{icdt = {ICDT}}
-
-@string{podsxxx = "ACM Symposium on Principles of Database Systems"}
-@string{pods = {PODS}}
+@string{pods = "ACM Symposium on Principles of Database Systems"}
 
 @string{tods = "ACM Transactions on Database Systems"}
-@string{tods = {ACM TODS}}
+@string{vldbj = "The VLDB Journal: The International Journal on Very Large Data Bases"}
 
-@string{vldbjxxx = "The VLDB Journal: The International Journal on Very Large Data Bases"}
-@string{vldbj = "VLDB Journal"}
+@string{icde94   = "Proc. of the 10th " # icde # " (ICDE'94)"}
+@string{icde96   = "Proc. of the 12th " # icde # " (ICDE'96)"}
+@string{icde05   = "Proc. of the 21st " # icde # " (ICDE'05)"}
+@string{icde07   = "Proc. of the 23rd " # icde # " (ICDE'07)"}
 
-@string{icde94   = icde}
-@string{icde96   = icde}
-@string{icde05   = icde}
-@string{icde07   = icde}
+@string{sigmod95 = "Proc. of the 1995 " # sigmod}
+@string{sigmod96 = "Proc. of the 1996 " # sigmod}
+@string{sigmod97 = "Proc. of the 1997 " # sigmod}
+@string{sigmod99 = "Proc. of the 1999 " # sigmod}
+@string{sigmod06 = "Proc. of the 2006 " # sigmod}
+@string{sigmod07 = "Proc. of the 2007 " # sigmod}
+@string{sigmod08 = "Proc. of the 2008 " # sigmod}
 
-@string{sigmod95 = sigmod}
-@string{sigmod96 = sigmod}
-@string{sigmod97 = sigmod}
-@string{sigmod99 = sigmod}
-@string{sigmod06 = sigmod}
-@string{sigmod07 = sigmod}
-@string{sigmod08 = sigmod}
+@string{vldb95   = "Proc. of the 21st " # vldb # " (VLDB'95)"}
+@string{vldb98   = "Proc. of the 24th " # vldb # " (VLDB'98)"}
+@string{vldb02   = "Proc. of the 28th " # vldb # " (VLDB'02)"}
+@string{vldb07   = "Proc. of the 33rd " # vldb # " (VLDB'07)"}
 
-@string{vldb95   = vldb}
-@string{vldb98   = vldb}
-@string{vldb98   = vldb}
-@string{vldb00   = vldb}
-@string{vldb02   = vldb}
-@string{vldb07   = vldb}
-
-@string{cidr03   = cidr}
-@string{cidr05   = cidr}
-@string{cidr07   = cidr}
-@string{cidr09   = cidr}
-
-@string{icdt97   = icdt}
-
-@string{pods07   = pods}
-@string{pods10   = pods}
-
-@string{sospxxx  = "ACM symposium on Operating systems principles"}
-@string{sosp     = {SOSP}}
-
-@string{sosp95   = sosp}
+@string{cidr03   = "Proc. of the First Biennial " # cidr # " (CIDR'03)"}
+@string{cidr05   = "Proc. of the Second Biennial " # cidr # " (CIDR'05)"}
+@string{pods07   = "Proc. of the 26th " # pods # " (PODS'07)"}
 
 @inproceedings{yan-icde:94,
   author    = {Weipeng P. Yan and
@@ -62,23 +43,26 @@
   title     = {Performing Group-By before Join},
   booktitle = icde94,
   year      = {1994},
+  pages     = {89-100},
   location  = {Houston, USA},
 }
 
 @inproceedings{berkeleydb,
-  author    = {Michael A. Olson and Keith Bostic and Margo Seltzer},
-  title     = {Berkeley DB},
-  booktitle = {USENIX},
+  author = {Michael A. Olson and Keith Bostic and Margo Seltzer},
+  title = {Berkeley DB},
+  booktitle = {Proc. of the 1999 USENIX Annual Technical Conference},
   year      = {1999},
+  pages     = {183-192},
   location  = {Monterey, CA}
 }
 
 @inproceedings{colt,
-  author    = {Karl Schnaitter and Serge Abiteboul and Tova Milo and Neoklis Polyzotis},
-  title     = {COLT: Continuous On-Line Database Tuning},
+  author = {Karl Schnaitter and Serge Abiteboul and Tova Milo and Neoklis Polyzotis},
+  title = {COLT: Continuous On-Line Database Tuning},
   booktitle = sigmod06,
-  year      = 2006,
-  location  = {Chicago, IL}
+  year = 2006,
+  pages = {793-795},
+  location = {Chicago, IL}
 }
 
 @inproceedings{ChaudhuriN07,
@@ -87,48 +71,59 @@
   title     = {Self-Tuning Database Systems: A Decade of Progress},
   booktitle = vldb07,
   year      = {2007},
+  pages     = {3-14},
+  ee        = {http://www.vldb.org/conf/2007/papers/special/p3-chaudhuri.pdf},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
 @inproceedings{rangequeries,
-  author    = {Ho, Ching-Tien and Agrawal, Rakesh and Megiddo, Nimrod and Srikant, Ramakrishnan},
-  title     = {Range queries in OLAP data cubes},
-  booktitle = sigmod97,
-  year      = 1997,
-  location  = {Tucson, Arizona, United States},
+  author = {Ho, Ching-Tien and Agrawal, Rakesh and Megiddo, Nimrod and Srikant, Ramakrishnan},
+  title = {Range queries in OLAP data cubes},
+  booktitle = {SIGMOD '97: Proceedings of the 1997 ACM SIGMOD international conference on Management of data},
+  year = {1997},
+  isbn = {0-89791-911-4},
+  pages = {73--88},
+  location = {Tucson, Arizona, United States},
+  doi = {http://doi.acm.org/10.1145/253260.253274},
+  publisher = {ACM},
+  address = {New York, NY, USA},
 }
 
-@book{AHV95,
+@book(AHV95,
    author    = {Serge Abiteboul and Richard Hull and Victor Vianu},
-   title     = {Foundations of Databases},
+   title     = "{Foundations of Databases}",
    year      = 1995,
    publisher = "Addison-Wesley"
-}
+)
 
-@inproceedings{Yan81,
-   author    = {Mihalis Yannakakis},
-   title     = {Algorithms for Acyclic Database Schemes},
+@inproceedings(Yan81,
+   author = {Mihalis Yannakakis},
+   title = "{``Algorithms for Acyclic Database Schemes''}",
    booktitle = vldb81,
-   year      = 1981,
+   year = 1981,
+   pages = {82--94},
    address = {Cannes, France}
-}
+)
 
 
-@article{GLS2002,
+@article(GLS2002,
    author    = {Georg Gottlob and Nicola Leone and Francesco Scarcello},
-   title     = {Hypertree Decompositions and Tractable Queries},
+   title     = "{``Hypertree Decompositions and Tractable Queries''}",
    journal   = jcss,
-   volume    = 64,
+   volume    = {{\bf 64}},
    number    = 3,
+   pages     = {579--627},
    year      = 2002
-}
+)
 
-@inproceedings{CR1997,
+@inproceedings(CR1997,
    author    = {Chandra Chekuri and Anand Rajaraman},
-   title     = {Conjunctive Query Containment Revisited},
+   title     = "{Conjunctive Query Containment Revisited''}",
    booktitle = icdt97,
+   pages     = {56--70},
    year      = 1997,
    address   = {Delphi, Greece}
-}
+)
 
 
 
@@ -139,6 +134,7 @@
   title     = {Incremental Maintenance of Views with Duplicates},
   booktitle = sigmod95,
   year      = {1995},
+  pages     = {328-339},
   location  = {San Jose, USA},
 }
 
@@ -148,6 +144,7 @@
   title     = {Eager Aggregation and Lazy Aggregation},
   booktitle = vldb95,
   year      = {1995},
+  pages     = {345-357},
   location  = {Zurich, Switzerland},
 }
 
@@ -160,6 +157,7 @@
                Group-By, Cross-Tab, and Sub-Total},
   booktitle = icde96,
   year      = {1996},
+  pages     = {152-159},
 }
 
 @inproceedings{colby-sigmod:96,
@@ -171,6 +169,7 @@
   title     = {Algorithms for Deferred View Maintenance},
   booktitle = sigmod96,
   year      = {1996},
+  pages     = {469-480},
   location  = {Montreal, Canada},
 }
 
@@ -181,6 +180,7 @@
   title     = {Maintenance of Data Cubes and Summary Tables in a Warehouse},
   booktitle = sigmod97,
   year      = {1997},
+  pages     = {100-111},
   location  = {Tucson, USA}
 }
 
@@ -191,6 +191,7 @@
                scalable solution},
   booktitle = sigmod01,
   year      = {2001},
+  pages     = {331-342},
   location  = {Santa Barbara, USA},
 }
 
@@ -202,6 +203,7 @@
   title     = {Incremental Maintenance for Non-Distributive Aggregate Functions},
   booktitle = vldb02,
   year      = {2002},
+  pages     = {802-813},
   location  = {Hong Kong, China},
 }
 
@@ -213,6 +215,7 @@
   title     = {Asymmetric Batch Incremental View Maintenance},
   booktitle = icde05,
   year      = {2005},
+  pages     = {106-117},
 }
 
 @inproceedings{zhou-icde:07,
@@ -223,6 +226,7 @@
   title     = {Dynamic Materialized Views},
   booktitle = icde07,
   year      = {2007},
+  pages     = {526-535},
   location  = {Istanbul, Turkey},
 }
 
@@ -233,6 +237,7 @@
   title     = {Lazy Maintenance of Materialized Views},
   booktitle = vldb07,
   year      = {2007},
+  pages     = {231-242},
   location  = {Vienna, Austria},
 }
 
@@ -244,6 +249,7 @@
   volume    = {16},
   number    = {3},
   year      = {1991},
+  pages     = {535-563},
 }
 
 @article{kotidis-tods:01,
@@ -254,6 +260,7 @@
   volume    = {26},
   number    = {4},
   year      = {2001},
+  pages     = {388-423},
 }
 
 @inproceedings{adelberg-sigmod:97,
@@ -264,6 +271,7 @@
                Data},
   booktitle = sigmod97,
   year      = {1997},
+  pages     = {147-158},
   location  = {Tucson, USA},
 }
 
@@ -277,6 +285,7 @@
                programs},
   booktitle = {LCTES},
   year      = {2008},
+  pages     = {131-140},
   location  = {Tucson, USA}
 }
 
@@ -286,6 +295,7 @@
   title     = {Query Processing in Embedded Control Programs},
   booktitle = {Databases in Telecommunications},
   year      = {2001},
+  pages     = {68-87},
   location  = {Rome, Italy}
 }
 
@@ -301,6 +311,7 @@
   title     = {Constant-Time Query Processing},
   booktitle = {ICDE},
   year      = {2008},
+  pages     = {60-69},
   location  = {Cancun, Mexico}
 }
 
@@ -323,6 +334,7 @@
   volume    = {1},
   number    = {2},
   year      = {2008},
+  pages     = {1496-1499},
 }
 
 @inproceedings{wu-sigmod:06,
@@ -332,6 +344,7 @@
   title     = {High-performance complex event processing over streams},
   booktitle = sigmod06,
   year      = {2006},
+  pages     = {407-418},
   location  = {Chicago, USA},
 }
 
@@ -343,6 +356,7 @@
   title     = {Efficient pattern matching over event streams},
   booktitle = sigmod08,
   year      = {2008},
+  pages     = {147-160},
   location  = {Vancouver, Canada},
 }
 
@@ -355,22 +369,35 @@
   title     = {What is "next" in event processing?},
   booktitle = pods07,
   year      = {2007},
+  pages     = {263-272},
   location  = {Beijing, China},
 }
 
 @inproceedings{demers-sigmod:07,
-  author    = {{L. Brenna et al.}},
+  author    = {Lars Brenna and
+               Alan J. Demers and
+               Johannes Gehrke and
+               Mingsheng Hong and
+               Joel Ossher and
+               Biswanath Panda and
+               Mirek Riedewald and
+               Mohit Thatte and
+               Walker M. White},
   title     = {Cayuga: a high-performance event processing engine},
   booktitle = sigmod07,
   year      = {2007},
+  pages     = {1100-1102},
   location  = {Beijing, China},
 }
 
 @article{abadi-vldbj:03,
-    author  = {{D. Abadi et al.}},
-    title   = {Aurora: A New Model and Architecture for Data Stream Management},
+    author = {Daniel J. Abadi and Don Carney and
+              U\u{g}ur \c{C}etintemel and Mitch Cherniack and
+              Christian Convey and Sangdon Lee and Michael Stonebraker and
+              Nesime Tatbul and Stan Zdonik},
+    title = {Aurora: A New Model and Architecture for Data Stream Management},
     journal = vldbj,
-    year    = {2003},
+    year = {2003},
 }
 
 @inproceedings{boncz-cidr:05,
@@ -380,6 +407,7 @@
   title     = {MonetDB/X100: Hyper-Pipelining Query Execution},
   booktitle = cidr05,
   year      = {2005},
+  pages     = {225-237},
   location  = {Asilomar, USA}
 }
 
@@ -404,6 +432,7 @@
   title     = {DataBlitz: A High Performance Main-Memory Storage Manager},
   booktitle = vldb98,
   year      = {1998},
+  pages     = {701},
   location  = {New York, USA},
 }
 
@@ -412,6 +441,7 @@
  title     = {DataBlitz storage manager: main-memory database performance for critical applications},
  booktitle = sigmod99,
  year      = {1999},
+ pages     = {519--520},
  location  = {Philadelphia, USA},
 }
 
@@ -441,6 +471,7 @@
   title     = {Linear Road: A Stream Data Management Benchmark},
   booktitle = vldb04,
   year      = {2004},
+  pages     = {480-491},
   location  = {Toronto, Canada}
 }
 
@@ -453,6 +484,7 @@
   title     = {{SPADE}: the {System S} declarative stream processing engine},
   booktitle = sigmod08,
   year      = {2008},
+  pages     = {1123--1134},
   location  = {Vancouver, Canada},
 }
 
@@ -468,6 +500,7 @@
   volume    = {30},
   number    = {4},
   year      = {2005},
+  pages     = {1056-1101},
 }
 
 @misc {mssql-viewrestrict,
@@ -492,16 +525,16 @@
     date      = {Dec 22, 2006}
 }
 
-@misc{Becht2010,
+@misc(Becht2010,
    author={Andreas von Bechtoldsheim},
-   title = {Invited talk, {EPFL, Sept. 21, 2010}}
-}
+   title = {Invited talk, {EPFL}, Sept.\ 21, 2010}
+)
 
-@misc{Iati2009,
+@misc(Iati2009,
    author = {Rob Iati},
    title = "{The Real Story of Trading Software Espionage,
-            AdvancedTrading.com, July 10, 2009}"
-}
+            AdvancedTrading.com},July 10, 2009"
+)
 
 
 @article{buneman-kleisli:95,
@@ -515,6 +548,8 @@
   volume    = {149},
   number    = {1},
   year      = {1995},
+  pages     = {3-48},
+  ee        = {http://dx.doi.org/10.1016/0304-3975(95)00024-Q},
 }
 
 @article{aji-toit:00,
@@ -525,6 +560,7 @@
   volume    = {46},
   number    = {2},
   year      = {2000},
+  pages     = {325-343},
 }
 
 @inproceedings{abadi-icde:07,
@@ -533,15 +569,19 @@
                David J. DeWitt and
                Samuel Madden},
   title     = {Materialization Strategies in a Column-Oriented DBMS},
-  booktitle = icde07,
+  booktitle = {ICDE},
   year      = {2007},
+  pages     = {466-475},
+  ee        = {http://dx.doi.org/10.1109/ICDE.2007.367892},
 }
 
 @inproceedings{koch-pods:10,
   author    = {Christoph Koch},
   title     = {Incremental query evaluation in a ring of databases},
-  booktitle = pods10,
+  booktitle = {PODS},
   year      = {2010},
+  pages     = {87-98},
+  ee        = {http://doi.acm.org/10.1145/1807085.1807100},
 }
 
 @inproceedings{olston-cidr:09,
@@ -551,17 +591,21 @@
                Flavio Junqueira and
                Benjamin Reed},
   title     = {Interactive Analysis of Web-Scale Data},
-  booktitle = cidr09,
+  booktitle = {CIDR},
   year      = {2009},
+  ee        = {http://www-db.cs.wisc.edu/cidr/cidr2009/Paper_21.pdf},
+
 }
 
 @inproceedings{bast-cidr:07,
   author    = {Holger Bast and
                Ingmar Weber},
   title     = {The CompleteSearch Engine: Interactive, Efficient, and Towards
-               {IR\&DB} Integration},
-  booktitle = cidr07,
+               IR{\&} DB Integration},
+  booktitle = {CIDR},
   year      = {2007},
+  pages     = {88-95},
+  ee        = {http://www.cidrdb.org/cidr2007/papers/cidr07p09.pdf},
 }
 
 @inproceedings{ceri-vldb:00,
@@ -569,66 +613,112 @@
                Roberta Cochrane and
                Jennifer Widom},
   title     = {Practical Applications of Triggers and Constraints: Success
-               and Lingering Issues},
-  booktitle = vldb00,
+               and Lingering Issues (10-Year Award)},
+  booktitle = {VLDB},
   year      = {2000},
+  pages     = {254-262},
+  ee        = {db/conf/vldb/CeriCW00.html},
 }
 
 @inproceedings{motwani-cidr:03,
-  author    = {{R. Motwani et al.}},
+  author    = {Rajeev Motwani and
+               Jennifer Widom and
+               Arvind Arasu and
+               Brian Babcock and
+               Shivnath Babu and
+               Mayur Datar and
+               Gurmeet Singh Manku and
+               Chris Olston and
+               Justin Rosenstein and
+               Rohit Varma},
   title     = {Query Processing, Approximation, and Resource Management
                in a Data Stream Management System},
-  booktitle = cidr03,
+  booktitle = {CIDR},
   year      = {2003},
+  ee        = {http://www-db.cs.wisc.edu/cidr/cidr2003/program/p22.pdf},
 }
 
 @inproceedings{chandrasekaran-cidr:03,
-  author    = {{S. Chandrasekaran et al.}},
-  title     = {{TelegraphCQ}: Continuous Dataflow Processing for an Uncertain
+  author    = {Sirish Chandrasekaran and
+               Owen Cooper and
+               Amol Deshpande and
+               Michael J. Franklin and
+               Joseph M. Hellerstein and
+               Wei Hong and
+               Sailesh Krishnamurthy and
+               Samuel Madden and
+               Vijayshankar Raman and
+               Frederick Reiss and
+               Mehul A. Shah},
+  title     = {TelegraphCQ: Continuous Dataflow Processing for an Uncertain
                World},
-  booktitle = cidr03,
+  booktitle = {CIDR},
   year      = {2003},
+  ee        = {http://www-db.cs.wisc.edu/cidr/cidr2003/program/p24.pdf},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
 @article{ahmad-vldb:09,
   author    = {Yanif Ahmad and
                Christoph Koch},
-  title     = {{DBToaster}: A SQL Compiler for High-Performance Delta Processing
+  title     = {DBToaster: A SQL Compiler for High-Performance Delta Processing
                in Main-Memory Databases},
   journal   = {PVLDB},
   volume    = {2},
   number    = {2},
   year      = {2009},
+  pages     = {1566-1569},
 }
 
 @article{rstartree,
- author    = {Beckmann, Norbert and Kriegel, Hans-Peter and Schneider, Ralf and Seeger, Bernhard},
- title     = {The R*-tree: an efficient and robust access method for points and rectangles},
- journal   = {SIGMOD Rec.},
- volume    = {19},
- number    = {2},
- year      = {1990},
+ author = {Beckmann, Norbert and Kriegel, Hans-Peter and Schneider, Ralf and Seeger, Bernhard},
+ title = {The R*-tree: an efficient and robust access method for points and rectangles},
+ journal = {SIGMOD Rec.},
+ volume = {19},
+ number = {2},
+ year = {1990},
+ issn = {0163-5808},
+ pages = {322--331},
+ doi = {http://doi.acm.org/10.1145/93605.98741},
+ publisher = {ACM},
+ address = {New York, NY, USA},
 }
 
 @inproceedings{sstree,
- author    = {White, David A. and Jain, Ramesh},
- title     = {Similarity Indexing with the SS-tree},
- booktitle = icde96,
- year      = {1996},
+ author = {White, David A. and Jain, Ramesh},
+ title = {Similarity Indexing with the SS-tree},
+ booktitle = {ICDE '96: Proceedings of the Twelfth International Conference on Data Engineering},
+ year = {1996},
+ isbn = {0-8186-7240-4},
+ pages = {516--523},
+ publisher = {IEEE Computer Society},
+ address = {Washington, DC, USA},
 }
 
 @inproceedings{srtree,
  author = {Katayama, Norio and Satoh, Shin'ichi},
  title = {The SR-tree: an index structure for high-dimensional nearest neighbor queries},
- booktitle = sigmod97,
+ booktitle = {SIGMOD '97: Proceedings of the 1997 ACM SIGMOD international conference on Management of data},
  year = {1997},
+ isbn = {0-89791-911-4},
+ pages = {369--380},
+ location = {Tucson, Arizona, United States},
+ doi = {http://doi.acm.org/10.1145/253260.253347},
+ publisher = {ACM},
+ address = {New York, NY, USA},
 }
 
 @inproceedings{bayou,
- author     = {{D.B. Terry et al.}},
- title      = {Managing update conflicts in {Bayou}, a weakly connected replicated storage system},
- booktitle  = sosp95,
- year       = {1995},
+ author = {Terry, D. B. and Theimer, M. M. and Petersen, Karin and Demers, A. J. and Spreitzer, M. J. and Hauser, C. H.},
+ title = {Managing update conflicts in Bayou, a weakly connected replicated storage system},
+ booktitle = {SOSP '95: Proceedings of the fifteenth ACM symposium on Operating systems principles},
+ year = {1995},
+ isbn = {0-89791-715-4},
+ pages = {172--182},
+ location = {Copper Mountain, Colorado, United States},
+ doi = {http://doi.acm.org/10.1145/224056.224070},
+ publisher = {ACM},
+ address = {New York, NY, USA},
 }
 
 @article{stonebreaker-sigrec:89,
@@ -638,4 +728,7 @@
   volume    = {18},
   number    = {4},
   year      = {1989},
+  pages     = {4-11},
+  ee        = {http://doi.acm.org/10.1145/74120.74121, db/journals/sigmod/Stonebraker89.html},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
 }
