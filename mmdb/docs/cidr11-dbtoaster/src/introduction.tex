@@ -222,7 +222,7 @@ simple computations on top of them.
 %
 %; i.e., by reading out the views or by performing very simple queries %on top of the views which can be evaluated in a small fraction of the %time it would take to evaluate the view from scratch.
 %
-Views may be structured (tables) or booleans (flags, events). Thus, some updates
+Views may be structured (tables) or booleans (flags, events). Thus some updates
 cause events, observable in the views, that trigger subsequent computations, but
 it is rare that the data store is accessed asynchronously by humans or
 applications. A DDMS primarily interacts by triggering application code, rather
@@ -275,7 +275,7 @@ chandrasekaran-cidr:03} support drastically different query languages which are
 designed to ensure that only very small state has to be maintained, using
 windows or constructs from formal language theory~\cite{white-pods:07}. DDMS
 views are often rather complex and expensive, including large non-windowed joins
-and aggregation. In general, we expect DDMS st support standard SQL.
+and aggregation. In general, we expect DDMS to support standard SQL.
 
 
 A DDMS can be thought of as an {\em update stream}\/ processing system in which
