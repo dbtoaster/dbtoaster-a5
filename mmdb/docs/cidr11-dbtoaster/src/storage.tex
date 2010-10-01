@@ -7,13 +7,13 @@ information to use when constructing a task-specific storage solution.
 
 
 We now examine two components of DBToaster's solution to storage in a DDMS: (1)
-The DBToaster compiler produces datastructures designed specifically for the
+The DBToaster compiler produces data structures designed specifically for the
 compiled DDMS' target query workload. (2) By analyzing the patterns with which
 data is accessed, DBToaster constructs a data layout strategy (for pages on a
 disk, servers in a cluster, etc...) that limits IO overhead.
 
 \noindent
-{\bf Datastructures}.
+{\bf Data Structures}.
 %
 As seen in Section~\ref{sec:compilation},
 DBToaster uses multi-key (i.e., multi-dimensional) maps to represent materialized views.
@@ -83,12 +83,12 @@ operations such as incremental and partial
 indexing~\cite{stonebreaker-sigrec:89}. The key challenge to be addressed is how
 to provide data structures with a low practical update cost (avoiding expensive
 index rebalancing and hash-table rebucketing) while gradually ensuring the
-lookup requirements of our datastructures are ensured over time, amortizing data
+lookup requirements of our data structures are ensured over time, amortizing data
 structure construction with continuous query execution.
 
 
 \noindent
-{\bf Partitioning and Co-clustering by data flow analysis}.
+{\bf Partitioning and Co-clustering by Data Flow Analysis}.
 %
 Database partitioning and co-clustering decisions
 are traditionally made based on a combination of
@@ -102,26 +102,24 @@ data management systems, this is however too difficult to be practical.
 
 Fortunately, data flow analysis turns out to be
 feasible for compiled DDMS transition programs: in fact, it is rather easy.
-A transition program statement reads one map and writes another,
-prescribing a dependency between
-pairs of locations in the right-hand side (reading) and the left-hand side
-(writing) map.
+A transition program statement reads from several maps and writes to one,
+prescribing dependencies between those maps occurring on the right-hand side of the statement (reading), and the one on the left-hand side (writing).
 As pointed out in the previous section, transition program statements
 admit a perfectly data-parallel implementation: Consequently,
 a statement never imposes a dependency between two items of the same map
-and any horizontal partitioning of the pair of a reading and a writing
+and any horizontal partitioning across the involved maps
 map keeps updates strictly local.
 %
 Using these data flow dependencies, partitioning and co-clustering
 decisions can be made by
 % assigning a data statistics-dependent cost to placing dependent data
 %in different partitions and
-solving a straightforward optimization problem.
+solving a straightforward min-cut style optimization problem.
 
 
 
 \comment{
-Even with good datastructures, haphazard data placement leads to poor
+Even with good data structures, haphazard data placement leads to poor
 performance.  Though precise workload data may not be available at compile time,
 DBToaster optimizes the way it lays out its database across memory, a disk, or
 even a server cluster, based on the query workload it is constructed with.
