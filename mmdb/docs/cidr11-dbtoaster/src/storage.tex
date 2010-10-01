@@ -1,6 +1,10 @@
-Typical DDMS workloads require large state, necessitating the use of more
-intelligent storage techniques. Compared to traditional DBMS, DDMS have more
+\comment{
+Typical DDMS workloads require large state, necessitating the use of
+suitable storage techniques. Compared to traditional DBMS with
+primarily ad-hoc query workloads, DDMS have more
 information to use when constructing a task-specific storage solution.
+} % end comment
+
 
 We now examine two components of DBToaster's solution to storage in a DDMS: (1)
 The DBToaster compiler produces datastructures designed specifically for the
@@ -8,15 +12,19 @@ compiled DDMS' target query workload. (2) By analyzing the patterns with which
 data is accessed, DBToaster constructs a data layout strategy (for pages on a
 disk, servers in a cluster, etc...) that limits IO overhead.
 
-\subsection{Datastructures}
-DBToaster uses multi-key maps to represent materialized views, as seen in
-Section~\ref{sec:compilation}. Furthermore, we discussed the need for iterating
-over, that is performing \textit{partial lookups} of map entries while applying
-updates. Recall line 2 in the code listing in Section~\ref{sec:compilation}.
-This is a partial lookup on map $m_c$ with only {\tt ck} present from function
-arguments. In addition to exact and partial lookups, we require maps to provide
-range lookups due to inequality predicates in queries, while ensuring map
-values correspond to aggregates.
+\noindent
+{\bf Datastructures}.
+%
+As seen in Section~\ref{sec:compilation},
+DBToaster uses multi-key (i.e., multi-dimensional) maps to represent materialized views.
+The generated view maintenance code performs lookups of slices of the maps,
+using partial keys, fixing some dimensions and iterating over the others.
+Recall the right-hand side of line 2 in the code listing in Section~\ref{sec:compilation}.
+This is a partial lookup on map $m_c$ with only {\tt ck} a trigger
+argument.
+%
+In addition to exact and partial lookups, DBToaster maps support
+range lookups by inequality predicates.
 
 \comment{
 Regardless of whether data is stored in memory, on disk, or across an entire
@@ -49,14 +57,14 @@ This functional view of maps paves the way for a range of entirely different
 data representations: 
 }
 
-In their simplest form, out-of-core maps can be implemented by a simple
+In their simplest form, out-of-core maps are implemented by a simple
 relational-style key-value store with secondary indices\cite{berkeleydb}.
 \comment{
 However, the map could simply act as an incrementally maintained cache.
 Recently computed values are not only available for re-use, they are dynamically
 updated as the underlying function gets new inputs.
 }
-Inequality predicates, and aggregations including such predicates, can be
+Inequality predicates, and aggregations including such predicates, are
 implemented efficiently using maps that store cumulative
 sums\cite{rangequeries}.  Maps can apply compression techniques to address
 frequently repeating data.
@@ -64,7 +72,7 @@ frequently repeating data.
 As another example, a probabilistic database built on top of a DDMS might use
 maps representing regressions, a markov random field, a bayes nets, etc\ldots
 }
-DBToaster can customize the data structures backing each materialized view based
+DBToaster customizes the data structures backing each materialized view based
 on statement-level information on accesses, applying static compile-time
 techniques to construct specialized data structures.
 
@@ -79,14 +87,49 @@ lookup requirements of our datastructures are ensured over time, amortizing data
 structure construction with continuous query execution.
 
 
-\subsection{Messaging, Storage and Partitioning}
+\noindent
+{\bf Partitioning and Co-clustering by data flow analysis}.
+%
+Database partitioning and co-clustering decisions
+are traditionally made based on a combination of
+(a) workload statistics, (b) information on schema and integrity constraints
+(such as key-foreign key constraints, a popular basis for co-clustering
+decisions), and (c) a body of expert insights into how databases execute
+queries. Ideally, such decisions should be based on a combination
+of (a), (b), and a {\em data flow analysis}\/ of the system's query execution code,
+instantiated with the query plan, or view maintenance code. In classical
+data management systems, this is however too difficult to be practical.
+
+Fortunately, data flow analysis turns out to be
+feasible for compiled DDMS transition programs: in fact, it is rather easy.
+A transition program statement reads one map and writes another,
+prescribing a dependency between
+pairs of locations in the right-hand side (reading) and the left-hand side
+(writing) map.
+As pointed out in the previous section, transition program statements
+admit a perfectly data-parallel implementation: Consequently,
+a statement never imposes a dependency between two items of the same map
+and any horizontal partitioning of the pair of a reading and a writing
+map keeps updates strictly local.
+%
+Using these data flow dependencies, partitioning and co-clustering
+decisions can be made by
+% assigning a data statistics-dependent cost to placing dependent data
+%in different partitions and
+solving a straightforward optimization problem.
+
+
+
+\comment{
 Even with good datastructures, haphazard data placement leads to poor
 performance.  Though precise workload data may not be available at compile time,
 DBToaster optimizes the way it lays out its database across memory, a disk, or
-even a server cluster, based on the query workload it is constructed with.  An
-elegant abstraction for doing this is the \textit{messaging graph}.
+even a server cluster, based on the query workload it is constructed with.
 
-Each transition function can be represented as a bipartite directed hypergraph;
+
+The following notion of a \textit{messaging graph} is an abstraction for
+doing this:
+A transition function is represented as a bipartite directed hypergraph;
 nodes on the left represent portions of the database being read from, nodes on
 the right represent a portions being written to, and each hyperedge represents
 an independent subtask of the transition function.  An example is shown in
@@ -96,6 +139,9 @@ Figure \ref{fig:diag:messagingGraph}a.
 \begin{center}
 \includegraphics[width=2.5in]{graphics/MessagingGraph}
 \end{center}
+
+\vspace{-6mm}
+
 \caption{An example of a messaging graph based on Section \ref{sec:dbtoaster}'s example query.  (a) The messaging graph for the \texttt{on\_insert\_customer} event.  (b) The effects of splitting view $m_c$ on \texttt{ordkey}.  (c) The effects of splitting $m_c$ on \texttt{custkey}.}
 \label{fig:diag:messagingGraph}
 \vspace*{-0.2in}
@@ -131,11 +177,13 @@ false) assumption that both insert events occur with identical frequency,
 DBToaster can partition on both keys to minimize the number of connected nodes.
 
 Additional knowledge about the dataset enhances the messaging graph produced by
-DBToaster.  For instance, the E-R diagram can be integrated into the messaging
+DBToaster.  For instance, the ER diagram can be integrated into the messaging
 graph; the chain of foreign key dependencies in $q$ is strictly hierarchical. 
 DBToaster uses this information and creates partitions along a single axis with
 a secondary index to bound the number of partitions accessed by each update
 subtask, with respect to the total number of partitions generated.  Similarly,
 this information is used by DBToaster to select a partitioning scheme that
 places nodes typically connected by a subtask into a single partition; this is
-analagous to co-clustering in a traditional DBMS.
+analogous to co-clustering in a traditional DBMS.
+
+} % end comment
