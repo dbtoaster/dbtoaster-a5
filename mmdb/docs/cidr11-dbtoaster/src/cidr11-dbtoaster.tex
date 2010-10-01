@@ -60,7 +60,7 @@ the various key challenges to overcome to make DDMS a reality.
 
 \input{introduction}
 
-\section{Dynamic Data Management By\\State Machines}
+\section{DDMS Architecture}
 \input{overview}
 \label{sec:overview}
 
@@ -83,7 +83,11 @@ the various key challenges to overcome to make DDMS a reality.
 We proposed a model for a Dynamic Data Management System based on the DBToaster
 project, that argues for the need to revisit how large data management systems
 handle high-volume updates. The project argues for several design choices: the
-use of views as the primary entity in the system, the treatment ofviews as data structures, maintenance of these views through precompiled,\textit{parameterized} transitions, and simple application interactionthrough data structures. 
+use of views as the primary entity in the system, the treatment of
+views as data structures, maintenance of these views through precompiled,
+\textit{parameterized} transitions, and simple application interaction
+through data structures. 
+
 \tinysection{Implementation plan}
 We are building an open-source DDMS as a collaboration between EPFL and Johns
 Hopkins.
@@ -94,7 +98,8 @@ structural recursion to build a main-memory query processing library based on
 functional programming techniques (see Section~\ref{sec:compilation}); ii)
 parallelization, deployment and experimentation of a continuous analytics engine
 in a cloud environment; iii) analysing the benefits of our execution model in a
-batch operating mode on top of map-reduce.
+batch operating mode on top of map-reduce.
+
 
 
 \scriptsize{
