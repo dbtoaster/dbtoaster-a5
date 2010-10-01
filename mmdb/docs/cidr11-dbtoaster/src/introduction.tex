@@ -16,18 +16,18 @@ stream processors.
 
 \section{Introduction}
 
-Data is often of interest because it changes, forcing rethinking in prior
+Data is often of interest because it changes, forcing reevaluation of prior
 questions and answers, and allowing new conclusions to be drawn. Dynamic,
 continuously evolving sets of records are a staple in a wide variety of today's
-data management applications, ranging from large social, content-driven Internet
-applications, to highly focused data processing verticals such as data intensive
+data management applications, ranging from large, social, content-driven
+Internet applications, to highly focused data processing verticals such as data intensive
 science, telecommunications and intelligence applications. There is no one brush
 with which we can paint a picture of all dynamic data applications, they face a
 broad spectrum of update volumes, of update impact on the body of data present,
 and data freshness requirements. However, modern data management systems lean
-almost exclusively towards treating updates and their impact on datasets
-and queries as an afterthought in DBMS, through triggers and heavyweight views,
-or to only handle small, recent sets of records in stream processing.
+exclusively towards treating updates and their impact on datasets and queries as
+an afterthought in DBMS, through triggers and heavyweight views, or to only
+handle small, recent sets of records in data stream processing.
 We propose dynamic data management systems that are capable of handling
 arbitrary, high-frequency or high-impact updates on a general dataset,
 and any standing queries (views) posed on the dataset by long-running
@@ -120,15 +120,15 @@ A DDMS can be thought of as an {\em update stream}\/ processing system in which
 query workloads look more like those of classical DBMS (i.e., no constructs such
 as windows).}
 The query processing techniques most suitable for such workloads come from DBMS
-research -- incremental view maintenance in particular -- but do not scale to
-high-frequency view maintenance.
+research -- incremental view maintenance in particular -- and update stream
+research~\cite{ghanem-tods:10} but do not scale to high-frequency viewmaintenance.
 
 % After that we will flesh out DDMS in more detail.
 
 \medskip
 
-We present two examples of applications reinforcing the desiderata and design
-choices of a DDMS.
+We present two examples of application classes motivating the desiderata and
+design choices of a DDMS.
 
 {\bf Interactive large-scale data analytics}\/.
 % with an interactive or soft real-time aspect
@@ -144,13 +144,13 @@ Nevertheless, our research community can certainly make important contributions
 towards making such systems more useful and effective. Clearly, the last word on
 supporting {\em queries}\/ in such systems has not been said.
 }
-Large-scale data analytics in the cloud are often performed on massively
-parallel processing engines such as map/reduce. These systems are not
-databases, as some strata of the systems, scientific computing, and large-scale
-Web applications communities find important to emphasize. Nevertheless, our
-research community can certainly make important contributions towards making
-such systems more useful and effective. Clearly, the last word on supporting
-{\em queries}\/ in such systems has not been said.
+Large-scale data analytics in the cloud are mostly performed on massively
+parallel processing engines such as map/reduce. These systems are not databases,
+as some strata of the systems, scientific computing, and large-scale Web
+applications communities find important to emphasize. Nevertheless, our research
+community can play an important role in making such systems more useful and
+effective. Clearly, the last word on supporting {\em queries}\/ in such systems
+has not been said.
 
 Map/reduce-like systems achieve scalability at the cost of response time and
 interactivity.
