@@ -20,7 +20,7 @@ DBToaster uses multi-key (i.e., multi-dimensional) maps to represent materialize
 The generated view maintenance code performs lookups of slices of the maps,
 using partial keys, fixing some dimensions and iterating over the others.
 Recall the right-hand side of line 2 in the code listing in Section~\ref{sec:compilation}.
-This is a partial lookup on map $m_c$ with only {\tt ck} a trigger
+This is a partial lookup on map $m\_c$ with only {\tt ck} a trigger
 argument.
 %
 In addition to exact and partial lookups, DBToaster maps support
@@ -37,7 +37,7 @@ Fundamentally, a multi-key map is a simple key-value store with structured
 However, generated statements do not typically iterate over the entire
 datastructure.  In the common case, statements iterate over keys matching a
 selection predicate.  For example, when updating Section \ref{sec:dbtoaster}'s
-$m_c$ after an insertion into \texttt{lineitem}, we iterate over all values
+$m\_c$ after an insertion into \texttt{lineitem}, we iterate over all values
 matching the predicate \texttt{@ok = orderkey}.
 
 Though similar to relational tables in this respect, there are two subtle, but
@@ -140,13 +140,13 @@ Figure \ref{fig:diag:messagingGraph}a.
 
 \vspace{-6mm}
 
-\caption{An example of a messaging graph based on Section \ref{sec:dbtoaster}'s example query.  (a) The messaging graph for the \texttt{on\_insert\_customer} event.  (b) The effects of splitting view $m_c$ on \texttt{ordkey}.  (c) The effects of splitting $m_c$ on \texttt{custkey}.}
+\caption{An example of a messaging graph based on Section \ref{sec:dbtoaster}'s example query.  (a) The messaging graph for the \texttt{on\_insert\_customer} event.  (b) The effects of splitting view $m\_c$ on \texttt{ordkey}.  (c) The effects of splitting $m\_c$ on \texttt{custkey}.}
 \label{fig:diag:messagingGraph}
 \vspace*{-0.2in}
 \end{figure}
 
 For example, consider the transition function that results from an update to the
-customer table.  One specific subtask of this transition reads $m_c$ and writes
+customer table.  One specific subtask of this transition reads $m\_c$ and writes
 to $m$.  Treating each view as a node, this task has one edge with one read node
 and one write node.
 
@@ -154,7 +154,7 @@ DBToaster considers database layout in terms of how it partitions data across a
 physical medium (i.e., memory, disk pages, or a cluster).  Viewed through the
 messaging graph, a partitioning is an assignment of all nodes in the graph to
 one (or more, in the case of replication) partition.  For example, if they were
-small enough, $m$ and $m_c$ might be placed on one disk page each.  Thus, the
+small enough, $m$ and $m\_c$ might be placed on one disk page each.  Thus, the
 subtask requires a read on one page, and an update to a second.
 
 Subdivision of individual views is represented in the messaging graph by
@@ -165,7 +165,7 @@ in some cases, only one node will remain connected (see Figure
 \ref{fig:diag:messagingGraph}b,c).  DBToaster can exploit the limited range of
 node split/hyperedge interactions to select an effective partitioning scheme.
 
-For example, when partitioning $m_c$, horizontal partitioning on the value of
+For example, when partitioning $m\_c$, horizontal partitioning on the value of
 \texttt{ordkey} increases the number of nodes connected to the
 \texttt{on\_insert\_customer} task edge, while using \texttt{custkey} does not
 provoke an increase.  If the data represented by these nodes is split across
