@@ -27,7 +27,10 @@ broad spectrum of update volumes, of update impact on the body of data present,
 and data freshness requirements. However, modern data management systems lean
 exclusively towards treating updates and their impact on datasets and queries as
 an afterthought in DBMS, through triggers and heavyweight views, or to only
-handle small, recent sets of records in data stream processing.
+handle small, recent sets of records in data stream processing.
+
+
+
 We propose dynamic data management systems that are capable of handling
 arbitrary, high-frequency or high-impact updates on a general dataset,
 and any standing queries (views) posed on the dataset by long-running
@@ -55,12 +58,16 @@ simple computations on top of them.
 Views may be structured (tables) or booleans (flags, events). Thus some updates
 cause events, observable in the views, that trigger subsequent computations, but
 it is rare that the data store is accessed asynchronously by humans or
-applications.}
+applications.
+}
 
 Some updates cause events, observable in the views, that trigger subsequent
-computations, but it is rare that the data store is accessed asynchronously by
-humans or applications.
+computations, but it is rare that the raw update data is accessed directly by
+humans or applications.
 
+%Some updates cause events, observable in the views, that trigger subsequent
+%computations, but it is rare that the data store is accessed asynchronously by
+%humans or applications.
 
 \item
 Updates happen primarily through an {\em update stream}\/. Computations
@@ -71,15 +78,18 @@ feedback loop.
 
 \noindent A DDMS is a lightweight system that provides large dynamic data
 structures to support declarative views of data. A DDMS is \textit{agile},
-keeping views fresh in the face of dynamic data. A DDMS primarily interacts by
-triggering application code, rather than by invocations from applications.A DDMS does not necessarily provide additional DBMS functionality such as
-persistency, transactions, or recoverability.
+internally keeping views fresh in the face of dynamic data. A DDMS primarily interacts by
+triggering application code when views change, rather than by invocations from applications.
+A DDMS does not necessarily provide additional DBMS functionality such as
+persistency, transactions, or recoverability.
+
 
 \comment{
 DDMS are lightweight systems that are optimized to {\em keep views fresh}\/ at
 the greatest rates feasible given base data volumes, which may range from
 moderate to extremely large, depending on application. In this section, we
-discuss two quite different fields of application that justify DDMS.}
+discuss two quite different fields of application that justify DDMS.
+}
 
 
 Compared to a classical DBMS, a DDMS differs in its reaction to updates,
@@ -121,7 +131,9 @@ query workloads look more like those of classical DBMS (i.e., no constructs such
 as windows).}
 The query processing techniques most suitable for such workloads come from DBMS
 research -- incremental view maintenance in particular -- and update stream
-research~\cite{ghanem-tods:10} but do not scale to high-frequency viewmaintenance.
+research~\cite{ghanem-tods:10} but do not scale to high-frequency view
+maintenance.
+
 
 % After that we will flesh out DDMS in more detail.
 
@@ -142,7 +154,8 @@ systems are not databases, as some strata of the systems, scientific computing,
 and large-scale Web applications communities find important to emphasize.
 Nevertheless, our research community can certainly make important contributions
 towards making such systems more useful and effective. Clearly, the last word on
-supporting {\em queries}\/ in such systems has not been said.
+supporting {\em queries}\/ in such systems has not been said.
+
 }
 Large-scale data analytics in the cloud are mostly performed on massively
 parallel processing engines such as map/reduce. These systems are not databases,
@@ -150,7 +163,10 @@ as some strata of the systems, scientific computing, and large-scale Web
 applications communities find important to emphasize. Nevertheless, our research
 community can play an important role in making such systems more useful and
 effective. Clearly, the last word on supporting {\em queries}\/ in such systems
-has not been said.
+has not been said.
+
+
+
 
 Map/reduce-like systems achieve scalability at the cost of response time and
 interactivity.
@@ -177,13 +193,19 @@ companies, but they are increasingly of competitive advantage.
 The DDMS take on supporting large-scale data analytics is to provide large {\em
 dynamic data structures}\/ and to support declaratively defined views on them
 that, compared to key-value stores, increase programmer productivity. DDMS views
-are {\em agile}\/ in that they are continually kept fresh.}
+are {\em agile}\/ in that they are continually kept fresh.
+}
 A DDMS is well-suited to large-scale data analytics through its provision of
 large dynamic data structures as views, leading to increased programmer
 productivity, and its emphasis on simple lightweight systems. Continually fresh
 DDMS views at first seem at odds with the bulk update processing dogma of DBMS,
 but enable important applications that require interactivity or event
-processing.
+processing.
+
+
+
+
+
 
 
 Large-scale data analytics is equally present in more classical business
@@ -220,7 +242,8 @@ back-testing with historical data, and strategy refinement based on the insights
 gained. This loop, and the considerable amount of low-level programming that it
 causes, is the root of a very costly {\em productivity bottleneck}\/: in fact,
 the number of programmers often exceeds the number of strategy designers by
-an order of magnitude.
+an order of magnitude.
+
 
 \comment{
 Trading algorithms often perform a considerable amount of data crunching
@@ -368,7 +391,8 @@ incremental view maintenance is present, performs very poorly. Thus, DDMS differ
 from active databases in their being optimized for different workloads; DDMS are
 optimized for event processing and monitoring tasks, while active database
 systems are optimized for more traditional DBMS workloads. DDMS will not
-necessarily support typical functionality such as transactions.
+necessarily support typical functionality such as transactions.
+
 
 
 {\em Compared to a data stream processing system}\/
