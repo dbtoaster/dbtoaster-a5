@@ -80,26 +80,46 @@ the various key challenges to overcome to make DDMS a reality.
 \input{distribution}
 
 \section{Discussion and Conclusions}
-We proposed a model for a Dynamic Data Management System based on the DBToaster
-project, that argues for the need to revisit how large data management systems
-handle high-volume updates. The project argues for several design choices: the
-use of views as the primary entity in the system, the treatment of
-views as data structures, maintenance of these views through precompiled,
-\textit{parameterized} transitions, and simple application interaction
-through data structures. 
+We have proposed Dynamic Data Management Systems,
+arguing for the need for a class of systems optimized
+for keeping SQL aggregate views highly available and fresh under
+high update rates.
+We have sketched some of the main research challenges in
+making DDMS a reality, and have outlined key design decisions
+and first results and insights that make us confident that
+the vision of DDMS can be realized.
 
-\tinysection{Implementation plan}
-We are building an open-source DDMS as a collaboration between EPFL and Johns
-Hopkins.
-DBToaster was initiated while the authors were in the Cornell Database
-Group~\cite{ahmad-vldb:09}, producing an initial version of a
-transition compiler. Current ongoing directions include: i) leveraging
+We are currently developing a DDMS, DBToaster, in a collaboration
+between EPFL and Johns Hopkins, which was started while the
+authors worked at Cornell.
+%
+So far, we have developed an initial version of a
+transition compiler which implements the recursive IVM technique
+sketched in Section~\ref{sec:compilation}. The feasibility of
+keeping views fresh through hundreds of updates per second using
+this approach in the context of algorithmic trading
+was recently demonstrated using an early DBToaster prototype
+\cite{ahmad-vldb:09}. An initial account of the foundations and
+theory of recursive IVM was given in \cite{koch-pods:10}.
+We are now working on the actual DBToaster DDMS. We follow the
+strategy of developing two branches, one a main-memory, moderate
+state-size, single-core ultra-high view refresh rate system for
+applications such as algorithmic trading and the other
+a cloud-based, persistent, eventual-consistency system for
+very large scale interactive data analysis. We will
+merge these two branches once the individual technical
+problems have been solved.
+
+
+\comment{
+Current ongoing research and development directions in
+the DBToaster project include: i) leveraging
 structural recursion to build a main-memory query processing library based on
 functional programming techniques (see Section~\ref{sec:compilation}); ii)
 parallelization, deployment and experimentation of a continuous analytics engine
 in a cloud environment; iii) analysing the benefits of our execution model in a
 batch operating mode on top of map-reduce.
-
+} % 
 
 
 \scriptsize{
