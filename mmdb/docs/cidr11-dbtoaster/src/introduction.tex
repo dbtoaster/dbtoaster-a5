@@ -16,19 +16,24 @@ stream processors.
 
 \section{Introduction}
 
+\comment{
 Often, the current state of a data point is not as interesting as how the data
 changes over time.  Changes force reevaluation of prior questions and answers
-and allow new conclusions to be drawn. Dynamic, continuously evolving sets of
-records are a staple in a wide variety of today's data management applications,
-ranging from large, social, content-driven Internet applications, to highly
-focused data processing verticals such as data intensive science,
-telecommunications and intelligence applications. There is no one brush with
-which we can paint a picture of all dynamic data applications, they face a broad
-spectrum of update volumes, of update impact on the body of data present, and
-data freshness requirements. However, modern data management systems lean
-exclusively towards treating updates and their impact on datasets and queries as
-an afterthought in a DBMS through triggers and heavyweight views, or to only
-handle small, recent sets of records in data stream processing.
+and allow new conclusions to be drawn.
+}
+Dynamic, continuously evolving sets of records are a staple in a wide variety of
+today's data management applications, ranging from large, social, content-driven
+Internet applications, to highly focused data processing verticals such as data
+intensive science, telecommunications and intelligence applications. There is no
+one brush with which we can paint a picture of all dynamic data applications,
+they face a broad spectrum of update volumes, of update impact on the body of
+data present, and data freshness requirements. However, modern data management
+systems lean exclusively towards treating updates and their impact on datasets
+and queries as an afterthought in a DBMS through triggers and heavyweight
+views~\cite{griffin-sigmod:95,bello-vldb:98,zhou-icde:07,zhou-vldb:07}, or to
+only handle small, recent sets of records in data stream
+processing~\cite{abadi-vldbj:03, motwani-cidr:03, chandrasekaran-cidr:03,
+demers-sigmod:07}.
 
 We propose dynamic data management systems that are capable of handling
 arbitrary, high-frequency or high-impact updates on a general dataset,
@@ -173,9 +178,10 @@ interactivity.
 However, there is an increasing number of important applications of large-scale
 analytics that call for more interactivity or better response times that allow
 for online use. Among large Web applications, examples include (social or other)
-network monitoring and statistics, search with interactive feedback, interactive
-recommendations, keeping personalized Web pages at social networking sites up to
-date, and so forth (e.g. \cite{olston-cidr:09,bast-cidr:07}).
+network monitoring and statistics~\cite{olston-cidr:09}, search with interactive
+feedback~\cite{bast-cidr:07}, interactive recommendations, keeping personalized
+Web pages at social networking sites up to date~\cite{fu-sigmod:10}, and so
+forth.
 
 %
 \longversion{
@@ -204,9 +210,7 @@ large dynamic data structures as views instead of key-value stores, leading to
 increased programmer productivity, and its emphasis on simple lightweight
 systems as opposed to the use of monolithic DBMS. Continually fresh DDMS views
 at first seem at odds with the bulk update processing dogma of DBMS, but enable
-important applications that require interactivity or event 
-
-processing.
+important applications that require interactivity or event processing.
 
 \medskip
 
