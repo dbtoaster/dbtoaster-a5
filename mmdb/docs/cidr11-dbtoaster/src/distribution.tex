@@ -16,12 +16,9 @@ Instead, DBToaster imposes a logical total ordering by combining rough clock syn
 {\bf Hybrid Consistency}\/.
 DBToaster's out-of-order mechanism implements an eventual consistency model that may not be sufficient for all data processing tasks.  DBToaster uses a background task to periodically identify the furthest point in the update stream that has been fully propagated, and produces a consistent snapshot from the data at that point.  Interestingly, this background task is already necessary for garbage collection purposes.  Thus, the same system can simultaneously produce a low-latency eventual consistency view of the database as well as a periodic consistent snapshot of the same data, an interface similar that provided by\cite{bayou}.
 
-\comment{
 \medspace
 
 {\bf Availability}\/.
 One other interesting point in the distributed design space is that of availability and recovery.  
 %Traditional stream processors dwell entirely in-memory for efficiency reasons, and rely on replication-based strategies to provide high availability.  Conversely, t
 The large state found in a DDMS necessitates the use of out-of-core storage.  Instead of over-provisioning replicas and consuming precious network bandwidth maintaining them, DBToaster can ensure recoverability by maintaining data in a persistent store.  Tuning the tradeoffs between these various options, however, remains an open issue.
-
-}
