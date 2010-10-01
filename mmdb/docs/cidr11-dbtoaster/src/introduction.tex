@@ -16,25 +16,24 @@ stream processors.
 
 \section{Introduction}
 
-Data is often of interest because it changes, forcing reevaluation of prior
-questions and answers, and allowing new conclusions to be drawn. Dynamic,
-continuously evolving sets of records are a staple in a wide variety of today's
-data management applications, ranging from large, social, content-driven
-Internet applications, to highly focused data processing verticals such as data intensive
-science, telecommunications and intelligence applications. There is no one brush
-with which we can paint a picture of all dynamic data applications, they face a
-broad spectrum of update volumes, of update impact on the body of data present,
-and data freshness requirements. However, modern data management systems lean
+Often, the current state of a data point is not as interesting as how the data
+changes over time.  Changes force reevaluation of prior questions and answers
+and allow new conclusions to be drawn. Dynamic, continuously evolving sets of
+records are a staple in a wide variety of today's data management applications,
+ranging from large, social, content-driven Internet applications, to highly
+focused data processing verticals such as data intensive science,
+telecommunications and intelligence applications. There is no one brush with
+which we can paint a picture of all dynamic data applications, they face a broad
+spectrum of update volumes, of update impact on the body of data present, and
+data freshness requirements. However, modern data management systems lean
 exclusively towards treating updates and their impact on datasets and queries as
-an afterthought in DBMS, through triggers and heavyweight views, or to only
+an afterthought in a DBMS through triggers and heavyweight views, or to only
 handle small, recent sets of records in data stream processing.
-
-
 
 We propose dynamic data management systems that are capable of handling
 arbitrary, high-frequency or high-impact updates on a general dataset,
 and any standing queries (views) posed on the dataset by long-running
-applications and services. We design a DDMS around four criteria:
+applications and services. We base the design of DDMS around four criteria:
 
 \begin{enumerate}
 \item
@@ -62,12 +61,8 @@ applications.
 }
 
 Some updates cause events, observable in the views, that trigger subsequent
-computations, but it is rare that the raw update data is accessed directly by
+computations, but it is rare that the data store is accessed asynchronously by
 humans or applications.
-
-%Some updates cause events, observable in the views, that trigger subsequent
-%computations, but it is rare that the data store is accessed asynchronously by
-%humans or applications.
 
 \item
 Updates happen primarily through an {\em update stream}\/. Computations
@@ -195,27 +190,23 @@ dynamic data structures}\/ and to support declaratively defined views on them
 that, compared to key-value stores, increase programmer productivity. DDMS views
 are {\em agile}\/ in that they are continually kept fresh.
 }
-A DDMS is well-suited to large-scale data analytics through its provision of
-large dynamic data structures as views, leading to increased programmer
-productivity, and its emphasis on simple lightweight systems. Continually fresh
-DDMS views at first seem at odds with the bulk update processing dogma of DBMS,
-but enable important applications that require interactivity or event
-processing.
-
-
-
-
-
-
 
 Large-scale data analytics is equally present in more classical business
 applications such as data warehousing and scientific applications. Take the
 case of data warehousing with real-time updates: as data warehouses become
 increasingly mission-critical to commercial and scientific enterprises, the
 importance of up-to-date analyses increases. Traditionally, OLAP systems are not
-optimized for frequent updating, and may be considerably out-of-date. DDMS could
-dramatically improve the freshness of warehoused data.
+optimized for frequent updating, and may be considerably out-of-date. A DDMS 
+could dramatically improve the freshness of warehoused data.
 
+A DDMS is well-suited to large-scale data analytics through its provision of
+large dynamic data structures as views instead of key-value stores, leading to
+increased programmer productivity, and its emphasis on simple lightweight
+systems as opposed to the use of monolithic DBMS. Continually fresh DDMS views
+at first seem at odds with the bulk update processing dogma of DBMS, but enable
+important applications that require interactivity or event 
+
+processing.
 
 \medskip
 
@@ -283,7 +274,7 @@ grail of algorithmic trading.
 
 
 
-To understand the need to (2) maintain and query a large data state, note that
+To understand the need to maintain and query a large data state, note that
 many stock exchanges provide a detailed view of the market microstructure
 through complete bid and ask {\em limit order books}. The bid order book is a
 table of purchase offers with their prices and volumes, and correspondingly the
@@ -319,12 +310,12 @@ where  k * (select sum(volume) from bids)
 Focusing on the $k$-fraction of the order book closest to the current price
 makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
 tactical orders far from the current price that will thus not be executed but
-may confuse competing algos).
+may confuse competing algorithms).
 }
 
 
-Coming back to our two desiderata, for trading algos to be successful, (1) views
-such as VWAP need to be maintained and monitored by the algos at or close to the
+Coming back to our two desiderata, for trading algorithms to be successful, (1) views
+such as VWAP need to be maintained and monitored by the algorithms at or close to the
 trading rate. However, (2) the views cannot be expressed through time-, row- or
 punctuation-based window semantics.
 \comment{
@@ -447,7 +438,9 @@ event processing     |
 \end{table}
 }
 
+\medskip
 
+{\bf Structure of the Paper}\/.
 There are many technical challenges in making a DDMS a reality. This paper
 initiates a study of DDMS and presents DBToaster, a prototype developed by
 the authors. The contributions of this paper are as follows:
@@ -458,5 +451,5 @@ Section \ref{sec:dbtoaster} presents the DBToaster view maintenance technique. I
 the state machine abstraction, which calls for the minimization or compilation
 of the state transition function leads, to new algorithms.
 Section \ref{sec:storage} discusses storage management in DBToaster.
-Section \ref{sec:distribution} discusses scaling up through parallelization.
+Finally, Section \ref{sec:distribution} discusses scaling up through parallelization.
 
