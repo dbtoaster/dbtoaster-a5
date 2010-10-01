@@ -20,8 +20,7 @@ DBToaster uses multi-key (i.e., multi-dimensional) maps to represent materialize
 The generated view maintenance code performs lookups of slices of the maps,
 using partial keys, fixing some dimensions and iterating over the others.
 Recall the right-hand side of line 2 in the code listing in Section~\ref{sec:compilation}.
-This is a partial lookup on map $m\_c$ with only {\tt ck} a trigger
-argument.
+This is a partial lookup on map $m\_c$ with only {\tt ck} defined by the a trigger arguments.
 %
 In addition to exact and partial lookups, DBToaster maps support
 range lookups by inequality predicates.
@@ -83,7 +82,7 @@ operations such as incremental and partial
 indexing~\cite{stonebreaker-sigrec:89}. The key challenge to be addressed is how
 to provide data structures with a low practical update cost (avoiding expensive
 index rebalancing and hash-table rebucketing) while gradually ensuring the
-lookup requirements of our data structures are ensured over time, amortizing data
+lookup requirements of our data structures are retained over time, amortizing data
 structure construction with continuous query execution.
 
 
@@ -104,7 +103,7 @@ Fortunately, data flow analysis turns out to be
 feasible for compiled DDMS transition programs: in fact, it is rather easy.
 A transition program statement reads from several maps and writes to one,
 prescribing dependencies between those maps occurring on the right-hand side of the statement (reading), and the one on the left-hand side (writing).
-As pointed out in the previous section, transition program statements
+As pointed out in Section \ref{sec:dbtoaster}, transition program statements
 admit a perfectly data-parallel implementation: Consequently,
 a statement never imposes a dependency between two items of the same map
 and any horizontal partitioning across the involved maps
