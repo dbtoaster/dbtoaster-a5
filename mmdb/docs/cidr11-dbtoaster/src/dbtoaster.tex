@@ -14,12 +14,12 @@ where $db_{new}$ is the result of applying the update to the database.
 
 \subsection{View Maintenance in DBToaster}
 DBToaster makes the following key insight regarding IVM: current IVM techniques
-evaluate delta queries from scratch, performing much redundant work. Evaluating the delta
-query $q'$ incurs the cost of accessing and processing all tuples in the base
-tables $q$, excepting the one table being updated in the case of self-joins. DBMS suffer this cost
-\textit{even if there is no change to any of the aforementioned base tables}.
-DBToaster materializes the result of the delta query, adds it to the database
-schema and maintains it at runtime.
+evaluate delta queries from scratch, performing much redundant work. Evaluating
+the delta query $q'$ incurs the cost of accessing and processing all tuples in
+the base tables $q$, excepting the one table being updated in the case of
+self-joins. DBMS suffer this cost \textit{even if there is no change to any of
+the aforementioned base tables}. DBToaster materializes the result of the delta
+query, adds it to the database schema and maintains it at runtime.
 That is, IVM takes $q$, produces $\tuple{m,q'}$ and performs
 $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime. We call this one step of
 \textit{compilation}. DBToaster starts with $q$, produces
@@ -97,28 +97,33 @@ algorithm considers all permutations of updates.}
 DBToaster performs \textit{recursive query compilation} by successively
 computing and materializing delta queries for higher-order deltas, such as
 $q''$, a second-order delta query. DBToaster terminates given one critical
-property of delta queries: \textit{a delta query is structurally simpler than its
-parent query} \cite{koch-pods:10}. In particular \textit{k}-th order delta query, $q^{(k)}$ has fewer
-input relations than a \textit{k-1}-th order query $q^{(k-1)}$, but additional
-parameters corresponding to attributes that are present in $q^{(k-1)}$.
-DBToaster represents materialized views in main memory as map data structures.
-Maps are group-by aggregates, with keys of group-by attributes, and values as
-the aggregate.
+property of delta queries: \textit{a delta query is structurally simpler than
+its parent query} \cite{koch-pods:10}. In particular \textit{k}-th order delta
+query, $q^{(k)}$ has fewer input relations than a \textit{k-1}-th order query
+$q^{(k-1)}$, but additional parameters corresponding to attributes that are
+present in $q^{(k-1)}$. DBToaster represents materialized views in main memory
+as map data structures. Maps are group-by aggregates, with keys of group-by
+attributes, and values as the aggregate.
 
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
-similar to TPC-H Query 3. 
-The map produced as the materialized view for $q$ is $m$; the
+similar to TPC-H Query 3, with a simplified schema:
+
+\texttt{Customer(custkey,name,nationkey,acctbal)}
+
+\texttt{Lineitem(ordkey,extprice)}
+
+\texttt{Order(custkey,ordkey,sprior)}
+
+\noindent The map produced as the materialized view for $q$ is $m$; the
 aggregate value stored for group $[ordkey,sprior]$ can be accessed as
-$m[ordkey,sprior]$.
-The first-order delta query $q'$ includes a
-parameter {\tt @ck}, supplied by the insertion to the customer table.
-We materialize $q'$ with its parameter {\tt @ck} as $m'[custkey,ordkey,sprior]$.
-To maintain $m$ on insertions {\tt +customer(ck,nm,nk,bal)}, we use
-a map lookup $m'[\mbox{{\tt ck}},ordkey,sprior]$, instead of evaluating
-$q'(\mbox{{\tt ck}})$. In this lookup, the values of $ordkey$, $sprior$ come
-from $m$. Map $m$ maintains aggregates for every $ordkey$, $sprior$ seen in the
-update stream, as does $m'$. The maintenance statement to keep $m$ up to date
-from $m'$ is:
+$m[ordkey,sprior]$. The first-order delta query $q'$ includes a parameter {\tt
+@ck}, supplied by the insertion to the customer table. We materialize $q'$ with
+its parameter {\tt @ck} as $m'[custkey,ordkey,sprior]$. To maintain $m$ on
+insertions {\tt +customer(ck,nm,nk,bal)}, we use a map lookup $m'[\mbox{{\tt
+ck}},ordkey,sprior]$, instead of evaluating $q'(\mbox{{\tt ck}})$. In this
+lookup, the values of $ordkey$, $sprior$ come from $m$. Map $m$ maintains
+aggregates for every $ordkey$, $sprior$ seen in the update stream, as does $m'$.
+The maintenance statement to keep $m$ up to date from $m'$ is:
 
 \comment{
 \tinysection{Materialized views as maps}
@@ -381,8 +386,8 @@ to vary space-time requirements for transitions: we need not materialize all
 higher-order deltas. For example we could maintain $q$ with $m^i$, a
 materialized $i$-th order delta and perform more work during the update to
 evaluate $q^{(i-1)}, \ldots, q^{(1)}$. We could further amortize space by
-exploiting commonality across multiple queries, merging maps to service multiple delta
-queries.
+exploiting commonality across multiple queries, merging maps to service multiple
+delta queries.
 
 
 

@@ -5,11 +5,11 @@ cluster.  We have implemented a cluster-based runtime as part of DBToaster.
 
 \comment{Unlike ad-hoc query systems [MapReduce,HDFS], a distributed DDMS can use advance knowledge of the data usage patterns to better coordinate the distribution of processing with its data placement scheme}
 
-DBToaster considers two general techniques for distributing data and
+DBToaster considers two techniques for distributing data and
 computation: (1) compute the data where it will be stored, or (2) store the data
 where it will be used.  The latter approach necessitates potentially extensive
 replication of data across the cluster, but enables the use of optimistic
-computation techniques that substantially reduce computational latency.
+computation methods that greatly reduce processing latency.
 
 \medspace 
 
