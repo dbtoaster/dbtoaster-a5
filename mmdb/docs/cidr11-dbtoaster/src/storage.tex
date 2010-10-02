@@ -15,8 +15,8 @@ disk, servers in a cluster, etc...) that limits IO overhead.
 \noindent
 {\bf Data structures}.
 %
-As seen in Section~\ref{sec:compilation}, DBToaster uses multi-key (i.e.,
-multi-dimensional) maps to represent materialized views. The code generated
+DBToaster uses multi-key (i.e.,
+multi-dimensional) maps to represent materialized views. The generated code
 performs lookups of slices of the maps, using partial keys, fixing some
 dimensions and iterating over the others. Recall the right-hand side of line 2
 in the code listing in Section~\ref{sec:compilation}. This is a partial lookup
