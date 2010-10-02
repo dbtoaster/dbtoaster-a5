@@ -91,6 +91,7 @@ sequence of materializations and delta queries for maintenance: $\tuple{m,q'},
 \tuple{m',q''}, \tuple{m'',q'''}$. This is a partial compilation trace, our
 algorithm considers all permutations of updates.}
 \label{fig:compex}
+\vspace{-4mm}
 \end{figure*}
 
 DBToaster performs \textit{recursive query compilation} by successively
@@ -102,7 +103,7 @@ input relations than a \textit{k-1}-th order query $q^{(k-1)}$, but additional
 parameters corresponding to attributes that are present in $q^{(k-1)}$.
 DBToaster represents materialized views in main memory as map datastructures.
 Maps are group-by aggregates, with keys of group-by attributes, and values as
-the aggregate itself.
+the aggregate.
 
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
 similar to TPC-H Query 3. 
@@ -147,18 +148,21 @@ on_insert_customer(ck,nm,nk,bal):
 }
 
 \noindent
-Note that $ordkey$ and $sprior$ do not occur as arguments of the
-{\tt on\_insert\_customer} trigger: Conceptually, map $m$ is updated by
-looping over all $(ordkey, sprior)$ pairs in its domain.
-Read and write locations are (for a large class of queries, always) in one-to-one correspondence, allowing for
-an embarrassingly parallel implementation
-(see Section~\ref{sec:distribution}).
+Note that $ordkey$ and $sprior$ do not occur as arguments of the {\tt
+on\_insert\_customer} trigger: Conceptually, map $m$ is updated by looping over
+all $(ordkey, sprior)$ pairs in its domain. Read and write locations are (for a
+large class of queries, always) in one-to-one correspondence, allowing for an
+embarrassingly parallel implementation (see Section~\ref{sec:distribution}).
 
 Figure~\ref{fig:compex} shows the recursive nature of the algorithm: we compile
 $q'$ to $m',q''$ on insertion {\tt +lineitem}, and then $q''$ to
 $\tuple{m'',q'''}$ on insertion {\tt +order}. The delta query $q'''$ is the
 terminal step since the query does not depend on the database (there are no
-relations, only parameters). Our compilation algorithm considers all possible update orderings, for example deltas of $q$ for insertions and deletions to {\tt order} and then {\tt lineitem}.  We express the path taken as part of the map name: $m'$ and $m''$ are $m\_c$ and $m\_cl$ respectively.  Due to limited space, we only show the transition program for insertions.
+relations, only parameters). Our algorithm considers all possible update
+orderings, for example deltas of $q$ for insertions and deletions to {\tt order}
+and then {\tt lineitem}.  We express the path taken as part of the map name:
+$m'$ and $m''$ are $m\_c$ and $m\_cl$ respectively.  Due to limited space, we
+only show the transition program for insertions.
 
 
 \comment{
