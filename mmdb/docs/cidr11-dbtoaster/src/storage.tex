@@ -10,7 +10,7 @@ We now examine two components of DBToaster's solution to storage in a DDMS: (1)
 The DBToaster compiler produces data structures designed specifically for the
 compiled DDMS' target query workload. (2) By analyzing the patterns with which
 data is accessed, DBToaster constructs a data layout strategy (for pages on a
-disk, servers in a cluster, etc...) that limits IO overhead.
+disk, servers in a cluster, etc.) that limits IO overhead.
 
 \noindent
 {\bf Data structures}.
@@ -105,7 +105,7 @@ reads from several maps and writes to one, prescribing dependencies between
 those maps occurring on the right-hand side of the statement (reading), and the
 one on the left-hand side (writing). As pointed out in Section
 \ref{sec:dbtoaster}, transition program statements admit a perfectly
-data-parallel implementation: Consequently, a statement never imposes a
+data-parallel implementation: consequently, a statement never imposes a
 dependency between two items of the same map and any horizontal partitioning
 across the involved maps map keeps updates strictly local.
 %

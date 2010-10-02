@@ -29,7 +29,7 @@ applications. There is no one brush with which we can paint a picture of all
 dynamic data applications -- they face a broad spectrum of update volumes, of
 update impact on the body of data present, and data freshness requirements.
 However, modern data management systems either treat updates and their impact on
-datasets and queries as an afterthought by extending DBMS with triggers and
+datasets and queries as an afterthought, by extending DBMS with triggers and
 heavyweight views~\cite{griffin-sigmod:95, bello-vldb:98, zhou-vldb:07,
 zhou-icde:07}, or only handle small, recent sets of records in data stream
 processing~\cite{abadi-vldbj:03, demers-sigmod:07, motwani-cidr:03,
@@ -102,17 +102,17 @@ discuss two quite different fields of application that justify DDMS.
 Compared to a classical DBMS, a DDMS differs in its reaction to updates.  To
 minimize response times, updates must be performed immediately upon arrival,
 precluding bulk processing. This determines the programming model: compared to
-DBMS, control flow is reversed, and the DDMS invokes application code, not vice
-versa.
+a DBMS, control flow is reversed, and the DDMS invokes application code, not
+vice versa.
 
 
 
-An (active) DBMS~\cite{ceri-vldb:00} could simulate a DDMS through triggers, but
+An active DBMS~\cite{ceri-vldb:00} could simulate a DDMS through triggers, but
 is not optimized for such workloads, and even if support for state-of-the-art
 incremental view maintenance is present, performs very poorly. Thus, DDMS differ
 from active databases in their being optimized for different workloads; DDMS are
 optimized for event processing and monitoring tasks, while active database
-systems are optimized to support traditional DBMS functionality not present in a
+systems are optimized to support traditional DBMS functionality not present in
 DDMS, such as transactions.
 
 

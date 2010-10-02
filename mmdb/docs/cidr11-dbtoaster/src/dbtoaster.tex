@@ -101,7 +101,7 @@ property of delta queries: \textit{a delta query is structurally simpler than it
 parent query} \cite{koch-pods:10}. In particular \textit{k}-th order delta query, $q^{(k)}$ has fewer
 input relations than a \textit{k-1}-th order query $q^{(k-1)}$, but additional
 parameters corresponding to attributes that are present in $q^{(k-1)}$.
-DBToaster represents materialized views in main memory as map datastructures.
+DBToaster represents materialized views in main memory as map data structures.
 Maps are group-by aggregates, with keys of group-by attributes, and values as
 the aggregate.
 
@@ -124,7 +124,7 @@ from $m'$ is:
 \tinysection{Materialized views as maps}
 Figure~\ref{fig:compex} provides a concrete example of compiling a query $q$,
 similar to TPH-C Query 3. We represent our materialized views as map
-datastructures in main memory, and the map produced as the view for $q$ is
+data structures in main memory, and the map produced as the view for $q$ is
 $m[ordkey,sprior]$. The map's key corresponds to group-by attributes and the
 map's value is the unnamed aggregate value. We can answer $q$ from the
 key-value entries in $m$. The first-order delta query $q'$ includes a parameter
@@ -185,13 +185,13 @@ $q =$ & \ql{select\ \ \ l.ordkey, o.sprior, sum(l.extprice)}\\
 
 \noindent Let us denote this query as $q$, and its materialization $m$.
 Technically $m$ has result schema {\tt ordkey, sprior} and an unnamed
-aggregate value. We represent our materialized views as map datastructures,
+aggregate value. We represent our materialized views as map data structures,
 writing this as $m[ordkey, sprior]$. In this case the map's
 key corresponds to group-by attributes and the map's value is the unnamed aggregate
 value. We can answer $q$ by yielding the key-value entries in $m$.
 
 \comment{
-We represent our materialized views as map datastructures, and
+We represent our materialized views as map data structures, and
 denote this by a two-level map $m[][ordkey, sprior]$. Since we materialize
 delta queries, which are parameterized SQL queries, the first level of our maps
 corresponds to parameters, while the second level to the query's result schema.
@@ -380,8 +380,8 @@ through all permutations of updates. Finally, there are numerous opportunities
 to vary space-time requirements for transitions: we need not materialize all
 higher-order deltas. For example we could maintain $q$ with $m^i$, a
 materialized $i$-th order delta and perform more work during the update to
-evaluate $q^{i-1}, \ldots, q^1$. We could further amortize space by exploiting
-commonality across multiple queries, merging maps to service multiple delta
+evaluate $q^{(i-1)}, \ldots, q^{(1)}$. We could further amortize space by
+exploiting commonality across multiple queries, merging maps to service multiple delta
 queries.
 
 
@@ -500,7 +500,7 @@ $m'[x,y]$ if $x,y$ were the only correlated attributes.
 \begin{itemize}
   \item Do you really want to include this section? What do you have to say
   that's strong here \note{i.e. what can you say about compiling to specific
-  datastructures beyond maps?}
+  data structures beyond maps?}
   \item Our model of transitions generally addresses the issues of incremental
   processing and can handle stream processing features such as windows.
   \item In fact we can exploit additional schema information such as
