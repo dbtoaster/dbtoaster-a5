@@ -13,7 +13,7 @@ computation techniques that substantially reduce computational latency.
 
 \medspace 
 
-{\bf Creating a Total Order}\/.
+{\bf Creating a total order}\/.
 The total ordering of transitions between database steps provides DBToaster with
 a clean synchronization abstraction; Each transition is conditioned on the prior
 state of the database and potential inter-transition conflicts are known at
@@ -32,7 +32,7 @@ ordering.
 
 \medspace
 
-{\bf Hybrid Consistency}\/.
+{\bf Hybrid consistency}\/.
 DBToaster's out-of-order mechanism implements an eventual consistency model that
 may not be sufficient for all data processing tasks.  DBToaster uses a
 background task to periodically identify the furthest point in the update stream

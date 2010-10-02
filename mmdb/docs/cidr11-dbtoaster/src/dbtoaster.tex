@@ -360,7 +360,7 @@ materializes each delta query encountered.  For each update order, there are dif
 \end{verbatim}
 }
 
-\tinysection{Transition Program Properties}
+\tinysection{Transition program properties}
 For many queries, compilation yields \textit{simple} code that has no joins
 and no nested loops, only single-level loops that perform probing as
 in hash joins.
@@ -471,7 +471,7 @@ hypergraphs, structurally decomposing aggregate queries would be interesting
 future work.
 }
 
-\tinysection{Nested Queries}
+\tinysection{Nested queries}
 We can compile transitions for nested queries, which has not been feasible in
 existing IVM techniques. In particular nested scalar subqueries used in
 predicates are problematic because taking deltas of such predicates does not
@@ -520,7 +520,7 @@ $m'[x,y]$ if $x,y$ were the only correlated attributes.
 
 
 
-\tinysection{Towards Optimizing Engine Physicality}
+\tinysection{Towards optimizing engine physicality}
 We are adopting a functional programming (FP) approach to compilation to better
 capture the need for binding patterns in delta queries, and to apply
 optimizations from FP, such as exploiting structural recursion
