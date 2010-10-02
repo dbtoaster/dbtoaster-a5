@@ -36,7 +36,17 @@ revisions.  Updates are processed, and changes in the views are propagated
 into the client.  If necessary, a DDMS runtime can also be instantiated with
 support for ad-hoc queries.
 
-The set of agile views requested by clients - the \textit{visible schema} - forms the primary read interface between client programs and the DDMS runtime.  This interface comes in three flavors: (1) a push interface that invokes client callbacks or schedules event handlers when a view in the visible schema changes, (2) futures/promises representing queries over the visible schema that have not yet been computed, or (3) read-only \textit{dynamic data structures} representing each view in the \textit{visible schema}.  As an aside, an interesting consequence of limiting visibility into the database to the visible schema is that we are free to represent a DDMS runtime's internal state in ways that are dramatically different from a traditional DBMS.  We return to this observation later in the paper.
+The set of agile views requested by clients, the \textit{visible schema}, forms
+the primary read interface between client programs and the DDMS runtime. This
+interface comes in three flavors: (1) a push interface that invokes client
+callbacks or schedules event handlers when a view in the visible schema changes,
+(2) futures/promises representing queries over the visible schema that have not
+yet been computed, or (3) read-only \textit{dynamic data structures}
+representing each view in the \textit{visible schema}.  One consequence of
+limiting visibility into the database to the visible schema is that we are free
+to represent a DDMS runtime's internal state in ways that are dramatically
+different from a traditional DBMS.  We return to this observation later in the
+paper.
 
 
 
@@ -56,13 +66,13 @@ Each transition causes maintenance work for our agile views, and just as
 with incremental view maintenance, this work can be expressed as queries.
 Maintenance can be aided by dynamic data structures, that is, additional agile
 views making up the \textit{auxiliary schema}.
-A DDMS is a long-running system, operating on a finite number of update streams,
-and this combination of characteristics naturally suggests \textit{compiling}
-and specializing the runtime for each transition and associated maintenance
-performed by a DDMS. The transition compiler generates simple, lightweight
-transition programs that can be invoked with minimal overhead on the arrival of
-events by runtime engine. We describe the compiler in further detail in Section
-\ref{sec:dbtoaster}.
+A DDMS is a long-running system, operating on a finite number of update streams.
+This combination of characteristics naturally suggests \textit{compiling} and
+specializing the runtime for each transition and associated maintenance
+performed by a DDMS. The transition compiler generates lightweight transition
+programs that can be invoked by the runtime engine with minimal overhead on the
+arrival of events. We describe the compiler in further detail in Section
+\ref{sec:dbtoaster}.
 
 
 

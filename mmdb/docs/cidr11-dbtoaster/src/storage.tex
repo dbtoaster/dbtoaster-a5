@@ -15,12 +15,12 @@ disk, servers in a cluster, etc...) that limits IO overhead.
 \noindent
 {\bf Data Structures}.
 %
-As seen in Section~\ref{sec:compilation},
-DBToaster uses multi-key (i.e., multi-dimensional) maps to represent materialized views.
-The generated view maintenance code performs lookups of slices of the maps,
-using partial keys, fixing some dimensions and iterating over the others.
-Recall the right-hand side of line 2 in the code listing in Section~\ref{sec:compilation}.
-This is a partial lookup on map $m\_c$ with only {\tt ck} defined by the a trigger arguments.
+As seen in Section~\ref{sec:compilation}, DBToaster uses multi-key (i.e.,
+multi-dimensional) maps to represent materialized views. The code generated
+performs lookups of slices of the maps, using partial keys, fixing some
+dimensions and iterating over the others. Recall the right-hand side of line 2
+in the code listing in Section~\ref{sec:compilation}. This is a partial lookup
+on map $m\_c$ with only {\tt ck} defined by the trigger arguments.
 %
 In addition to exact and partial lookups, DBToaster maps support
 range lookups by inequality predicates.
@@ -57,7 +57,7 @@ data representations:
 }
 
 In their simplest form, out-of-core maps are implemented by a simple
-relational-style key-value store with secondary indices\cite{berkeleydb}.
+relational-style key-value store with secondary indices~\cite{berkeleydb}.
 \comment{
 However, the map could simply act as an incrementally maintained cache.
 Recently computed values are not only available for re-use, they are dynamically
@@ -65,7 +65,7 @@ updated as the underlying function gets new inputs.
 }
 Inequality predicates, and aggregations including such predicates, are
 implemented efficiently using maps that store cumulative
-sums\cite{rangequeries}.  Maps can apply compression techniques to address
+sums~\cite{rangequeries}.  Maps can apply compression techniques to address
 frequently repeating data.
 \comment{
 As another example, a probabilistic database built on top of a DDMS might use
@@ -82,8 +82,8 @@ operations such as incremental and partial
 indexing~\cite{stonebreaker-sigrec:89}. The key challenge to be addressed is how
 to provide data structures with a low practical update cost (avoiding expensive
 index rebalancing and hash-table rebucketing) while gradually ensuring the
-lookup requirements of our data structures are retained over time, amortizing data
-structure construction with continuous query execution.
+lookup requirements of our data structures are retained over time, amortizing
+data structure construction with continuous query execution.
 
 
 \noindent
@@ -97,17 +97,17 @@ decisions), and (c) a body of expert insights into how databases execute
 queries. Ideally, such decisions should be based on a combination
 of (a), (b), and a {\em data flow analysis}\/ of the system's query execution code,
 instantiated with the query plan, or view maintenance code. In classical
-data management systems, this is however too difficult to be practical.
+DBMS however, this is too difficult to be practical.
 
-Fortunately, data flow analysis turns out to be
-feasible for compiled DDMS transition programs: in fact, it is rather easy.
-A transition program statement reads from several maps and writes to one,
-prescribing dependencies between those maps occurring on the right-hand side of the statement (reading), and the one on the left-hand side (writing).
-As pointed out in Section \ref{sec:dbtoaster}, transition program statements
-admit a perfectly data-parallel implementation: Consequently,
-a statement never imposes a dependency between two items of the same map
-and any horizontal partitioning across the involved maps
-map keeps updates strictly local.
+Fortunately, data flow analysis turns out to be feasible for compiled DDMS
+transition programs: in fact, it is rather easy. A transition program statement
+reads from several maps and writes to one, prescribing dependencies between
+those maps occurring on the right-hand side of the statement (reading), and the
+one on the left-hand side (writing). As pointed out in Section
+\ref{sec:dbtoaster}, transition program statements admit a perfectly
+data-parallel implementation: Consequently, a statement never imposes a
+dependency between two items of the same map and any horizontal partitioning
+across the involved maps map keeps updates strictly local.
 %
 Using these data flow dependencies, partitioning and co-clustering
 decisions can be made by
