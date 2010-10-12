@@ -43,7 +43,8 @@ let mt = map_term "m" [];;
 
 Debug.log_unit_test
 "Compile compile_delta_for_rel 1" cdfr_as_string
-(Compiler.compile_delta_for_rel "R" [("A", TInt); ("B", TInt)] false mt [] [] m)
+(Compiler.compile_delta_for_rel true "R" [("A", TInt); ("B", TInt)] 
+                                false mt [] [] sch m)
 ([(false, "R", [("mR_A", TInt); ("mR_B", TInt)], ([],[]),
    make_term(RProd [RVal (Var ("mR_A", TInt));
                     RVal (External("mR1", [("mR_B", TInt)]))]))],
@@ -56,8 +57,8 @@ Debug.log_unit_test
 Debug.log_unit_test
 "Compile compile_delta_for_rel 2" trigger_definitions_as_string
 (fst (
-Compiler.compile_delta_for_rel "S" [("B", TInt); ("C", TInt)] false
-   (map_term "mR1" [("mR_B", TInt)]) [] []
+Compiler.compile_delta_for_rel true "S" [("B", TInt); ("C", TInt)] false
+   (map_term "mR1" [("mR_B", TInt)]) [] [] sch
    (make_term(RVal
       (AggSum (RVal (Var ("C", TInt)),
                RA_Leaf (Rel ("S", [("mR_B", TInt); ("C", TInt)]))))))))

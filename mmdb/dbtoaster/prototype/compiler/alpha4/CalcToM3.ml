@@ -506,10 +506,13 @@ module M3InProgress = struct
           StringMap.add map ref ref_map
       ) mapped_map_terms refs
       
-  let rec compile (schema:(string*(Calculus.var_t list)) list)
+  let rec compile 
+              ?(top_down_depth = None)
+              (schema:(string*(Calculus.var_t list)) list)
               (map_ref:Compiler.map_ref_t)
               (accum:t) : t =
-    Compiler.compile Calculus.ModeOpenDomain
+    Compiler.compile ~top_down_depth:top_down_depth
+                     Calculus.ModeOpenDomain
                      schema
                      map_ref
                      generate_m3

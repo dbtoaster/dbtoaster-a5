@@ -61,12 +61,14 @@ let generate_unit_test_code
 (* compilation functions *)
 
 (* auxiliary for compile. *)
-let compile_delta_for_rel (reln:   string)
+let compile_delta_for_rel (produce_child_maps: bool)
+                          (reln:   string)
                           (relsch: Calculus.var_t list)
                           (delete: bool)
                           (map_term: Calculus.term_t)
                           (bigsum_vars: Calculus.var_t list)
                           (externals_mapping: Calculus.term_mapping_t)
+                          (db_schema: (string * (Calculus.var_t list)) list)
                           (term: Calculus.term_t)
    : ((bool * string * Calculus.var_t list *
                 bound_vars_t * Calculus.term_t) list *
@@ -115,24 +117,39 @@ let compile_delta_for_rel (reln:   string)
       subterms to be extracted. This will only happen in very complicated
       queries.
    *)
-   let (terms_after_substitution, todos) =
-      Calculus.extract_named_aggregates 
-          (mapn^reln) tuple s (*(if delete then "_m" else "_p")*)
-   in
-   ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
-              (List.combine terms_after_substitution bigsum_after_subst)),
-    todos)
+   if produce_child_maps then
+     let (terms_after_substitution, todos) =
+        Calculus.extract_named_aggregates 
+            (mapn^reln) tuple s (*(if delete then "_m" else "_p")*)
+     in
+     ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
+                (List.combine terms_after_substitution bigsum_after_subst)),
+      todos)
+   else
+     let (base_relations, terms_after_substitution) = 
+       Calculus.extract_base_relations s
+     in
+       ( List.map (fun (p,t) -> (delete, reln, tuple, (p, []), t)) 
+           terms_after_substitution,
+         List.map (fun (reln) -> 
+           let rel_schema = List.assoc reln db_schema in
+             ( Calculus.base_relation_expr (reln, rel_schema),
+               Calculus.map_term reln rel_schema
+             )
+         ) base_relations
+       )
 
 (* the main compile function. call this one, not the others. *)
 let rec compile ?(dup_elim = ref StringMap.empty)
+                ?(top_down_depth = None)
                 (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (Calculus.var_t list)) list)
                 ((map_definition, map_term): map_ref_t)
                 (generate_code:'a output_translator_t)
                 (accum:'a): 'a =
-  (*print_string ("Compiling: " ^ 
+  Debug.print "LOG-COMPILES" (fun () -> "Compiling: " ^ 
                   (Calculus.term_as_string map_term)^" := "^
-                  (Calculus.term_as_string map_definition)^"\n")*)
+                  (Calculus.term_as_string map_definition));
   let (mapn, map_params) = Calculus.decode_map_term map_term in
   if StringMap.mem mapn !dup_elim then 
     (try
@@ -148,9 +165,15 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     Calculus.bigsum_rewriting
       bs_rewrite_mode (Calculus.roly_poly map_definition) [] (mapn^"__")
   in
+  let (next_top_down_depth, go_deeper) = 
+    match top_down_depth with 
+    | None -> (None, true)
+    | Some(i) -> if i <= 1 then (None, false) else ((Some(i-1)),true)
+  in
   let cdfr (delete, reln, relsch) =
-     compile_delta_for_rel reln relsch delete map_term bigsum_vars
-                           bsrw_theta bsrw_term
+     compile_delta_for_rel go_deeper
+                           reln relsch delete map_term bigsum_vars
+                           bsrw_theta db_schema bsrw_term
   in
   let insdel (reln, relsch) = 
     (false, reln, relsch) :: 
@@ -170,13 +193,14 @@ let rec compile ?(dup_elim = ref StringMap.empty)
       db_schema
       (map_definition, map_term)
       (List.flatten l1)
-      ( List.fold_left (fun curr_accum curr_map -> 
-          compile ~dup_elim:dup_elim
-                  bs_rewrite_mode
-                  db_schema
-                  curr_map
-                  generate_code
-                  curr_accum
-        ) accum todos)
+        ( List.fold_left (fun curr_accum curr_map -> 
+            compile ~dup_elim:dup_elim
+                    ~top_down_depth:next_top_down_depth
+                    bs_rewrite_mode
+                    db_schema
+                    curr_map
+                    generate_code
+                    curr_accum
+          ) accum todos)
     )
 ;;

@@ -751,9 +751,63 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
    in
    (terms_after_substition, theta)
 
+let extract_base_relations (workload: (var_t list * term_t) list):
+                           (string list * (var_t list * term_t) list) =
+  let union_all l = List.fold_left ListAsSet.union [] l in
+  let rec extract_from_one_term term:
+      (string list * term_t) = 
+    TermRing.extract union_all union_all (fun x -> x)
+      (fun term -> 
+        match term with 
+        | AggSum(subterm, cond) -> 
+          let ((cond_rels, onehop_cond_rels), subbed_cond) = 
+              extract_from_one_cond cond in
+          let (term_rels, subbed_term) = 
+              extract_from_one_term subterm in
+          let unified_term = 
+            TermRing.mk_prod (subbed_term :: 
+              (List.map (fun rel -> TermRing.mk_val (External(rel)))
+                        onehop_cond_rels))
+          in
+            (ListAsSet.union cond_rels term_rels, 
+             if CalcRing.prod_list subbed_cond = [CalcRing.one] then
+               unified_term
+             else
+               TermRing.mk_val (AggSum(unified_term, subbed_cond)))
+        | _ -> ([], TermRing.mk_val term)
+      ) term
+  and extract_from_one_cond cond: 
+        ((string list * (string * var_t list) list) * relcalc_t) =
+    let union_all_pairs (l:(string list * (string * var_t list) list) list): 
+                        (string list * (string * var_t list) list) = 
+      let ((l1, l2):(string list list * (string * var_t list) list list)) = 
+        List.split l in 
+          (union_all l1, union_all l2)
+    in
+    CalcRing.extract (fun x -> failwith "TODO: extract base rels from unions") 
+                     union_all_pairs 
+                     (fun x -> x)
+      (fun term ->
+        match term with
+        | Rel(reln, relvars) -> 
+          (([reln], [(reln, relvars)]), CalcRing.one)
+        | AtomicConstraint(c, t1, t2) ->
+          let (t1_rels, subbed_t1) = extract_from_one_term t1 in
+          let (t2_rels, subbed_t2) = extract_from_one_term t2 in
+            ( (ListAsSet.union t1_rels t2_rels, []), 
+              CalcRing.mk_val (AtomicConstraint(c, subbed_t1, subbed_t2)))
+        | _ -> (([], []), CalcRing.mk_val term)
+      ) cond
+  in
+    List.fold_left (fun (old_rels, subbed_terms) (p, term) ->
+      let (rels, subbed_term) = extract_from_one_term term in
+        (ListAsSet.union rels old_rels, 
+         subbed_terms @ [p, subbed_term])
+    ) ([], []) workload
 
-
-
+let base_relation_expr ((reln:string), (relvars:var_t list)): term_t = 
+  TermRing.mk_val (AggSum(TermRing.one, 
+                          CalcRing.mk_val (Rel(reln, relvars))))
 
 type bs_rewrite_mode_t = ModeExtractFromCond
                        | ModeGroupCond

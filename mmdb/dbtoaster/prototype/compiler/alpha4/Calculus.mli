@@ -284,6 +284,12 @@ val extract_named_aggregates: string -> (var_t list) ->
       (((var_t list) * term_t) list)  ->
       ((((var_t list) * term_t) list * term_mapping_t))
 
+(* given a  list of terms and their parameters, this function extracts
+   all the base relations appearing in the term. *)
+val extract_base_relations:  (var_t list * term_t) list -> 
+                             (string list * (var_t list * term_t) list)
+
+val base_relation_expr: (string * var_t list) -> term_t
 
 type bs_rewrite_mode_t = ModeExtractFromCond
                        | ModeGroupCond
@@ -351,7 +357,7 @@ val term_delta: term_mapping_t ->
     - Negated comparators: eg: - (A = B) =/= (A <> B)
     - Type Escalation: We might be able to salvage something if we have two
       maps, one of which uses Ints as inputs and the other Floats.
-    - MapNames: Not necessarilly a shortcoming, but equate_terms assumes that
+    - MapNames: Not necessarily a shortcoming, but equate_terms assumes that
       there are no External references (ie, the terms are pre-compilation)
 *)
 exception TermsNotEquivalent of string

@@ -143,5 +143,6 @@ module M3InProgress : sig
                    t -> t
 end
 
-val compile : (string*(Calculus.var_t list)) list -> Compiler.map_ref_t ->
-              M3InProgress.t -> M3InProgress.t
+val compile : ?top_down_depth:(int option) -> 
+              (string*(Calculus.var_t list)) list ->
+              Compiler.map_ref_t -> M3InProgress.t -> M3InProgress.t

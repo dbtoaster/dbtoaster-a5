@@ -85,6 +85,9 @@ let flag_descriptors =
       (["-r";"--run";"--interpret"],
           ("INTERPRETER", ParseArgs.NO_ARG), "",
           "Run the query in interpreter mode." );
+      (["--depth"],
+          ("COMPILE_DEPTH", ParseArgs.ARG), "<depth> | -",
+          "Limit the compile depth; 1 = standard view maint, - = no limit");
       (["-d"],
           ("DEBUG",   ParseArgs.ARG_LIST), "<flag> [-d <flag> [...]]",
           "Enable a debug flag." );
@@ -163,6 +166,11 @@ Debug.exec "ARGS" (fun () ->
   ) arguments
 );;
 
+let compile_depth = 
+  match flag_val "COMPILE_DEPTH" with
+  | None -> None
+  | Some(i) -> Some(int_of_string i);;
+
 (********* TRANSLATE SQL TO RELCALC *********)
 
 let sql_file_to_calc f =
@@ -210,6 +218,7 @@ if language == L_DELTA then
         List.fold_left (fun accum (qlist,dbschema,qvars) ->
           List.fold_left (fun accum q ->
             (Compiler.compile 
+             ~top_down_depth:compile_depth
               Calculus.ModeOpenDomain 
               dbschema
               (Calculus.make_term q,
@@ -235,6 +244,7 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
         (
           toplevel_queries := !toplevel_queries @ [subq_name];
           CalcToM3.compile
+             ~top_down_depth:compile_depth
              dbschema
              (Calculus.make_term q,
               Calculus.map_term 

@@ -170,12 +170,14 @@ Debug.log_unit_test "Bigsum Rewriting" (fun x->x)
 
 let (deltas,todos) = 
   compile_delta_for_rel 
+    (* generate child maps *) true
     (* reln = *)              "BIDS"
     (* relsch = *)            ["QBIDS_PRICE",TInt;"QBIDS_VOLUME",TDouble]
     (* delete = *)            false
     (* map_term = *)          (map_term "Q" [])
     (* bigsum_vars = *)       bigsum_vars
     (* externals_mapping = *) bsrw_theta
+    (* db_schema (ignored) *) []
     (* term = *)              bsrw_term;;
 
 Debug.log_unit_test "Bigsum Compilation" (string_of_list "\n")
@@ -261,12 +263,14 @@ Debug.log_unit_test "Bigsum Roly Delete(small)" term_as_string
   
 let (neg_deltas,neg_todos) = 
   compile_delta_for_rel 
+    (* generate child maps *) true
     (* reln = *)              "BIDS"
     (* relsch = *)            ["QBIDS_PRICE",TInt;"QBIDS_VOLUME",TDouble]
     (* delete = *)            true
     (* map_term = *)          (map_term "Q" [])
     (* bigsum_vars = *)       bigsum_vars
     (* externals_mapping = *) bsrw_theta
+    (* db_schema (ignored) *) []
     (* term = *)              bsrw_term;;
 
 Debug.log_unit_test "Bigsum Delete Compilation" (string_of_list "\n")
@@ -367,12 +371,14 @@ Debug.log_unit_test "RST Extract Aggregates"
 
 let (rst_deltas,rst_todos) = 
   compile_delta_for_rel 
+    (* generate child maps *) true
     (* reln = *)              "r"
     (* relsch = *)            ["a",TInt;"r_b",TInt]
     (* delete = *)            true
     (* map_term = *)          (map_term "Q" [])
     (* bigsum_vars = *)       rst_bigsum_vars
     (* externals_mapping = *) rst_bsrw_theta
+    (* db_schema (ignored) *) []
     (* term = *)              rst_bsrw_term;;
 
 Debug.log_unit_test "RST Todos" (string_of_list0 "\n" (fun (defn, term) ->
@@ -427,10 +433,12 @@ let string_of_term_mapping ((d,t):(term_t*term_t)) =
 
 let (ladder_1_compiled, ladder_1_todos) =
   compile_delta_for_rel 
+      true
       "R" 
       ["A",TInt;"B",TInt]
       false
       (map_term "Q" [])
+      []
       []
       []
       ladder_1;;
@@ -582,10 +590,12 @@ Debug.log_unit_test_list "Simplify Transitive Closure" term_as_string
 
 let (ladder_2_compiled, ladder_2_todos) = 
   compile_delta_for_rel 
+      true
       "R" 
       ["A",TInt;"B",TInt]
       false
       ladder_2_term
+      []
       []
       []
       ladder_2;;

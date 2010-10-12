@@ -16,7 +16,7 @@ type trigger_definition_t =
 (* delete, rel,    relvars,              var types,     trigger expr *)
   (bool * string * Calculus.var_t list * bound_vars_t * Calculus.term_t)
 
-(* Output translator will be called on maps BREADTH FIRST *)
+(* Output translator will be called on maps DEPTH FIRST *)
 type 'a output_translator_t = 
   (string * (Calculus.var_t list)) list ->(* Database Schema *)
   map_ref_t ->                  (* The target map *)
@@ -25,6 +25,7 @@ type 'a output_translator_t =
   'a                            (* The new value of the accumulator *)
 
 val compile: ?dup_elim:Calculus.term_t Util.StringMap.t ref -> (* Ignore *)
+             ?top_down_depth:int option ->            (* Max compile depth *)
              Calculus.bs_rewrite_mode_t ->            (* Bigsum Rewrite Mode *)
              (string * (Calculus.var_t list)) list -> (* Schema (Rel*Vars) *)
              map_ref_t ->                             (* Term to compile *)
@@ -37,7 +38,8 @@ val compile: ?dup_elim:Calculus.term_t Util.StringMap.t ref -> (* Ignore *)
 val generate_unit_test_code: (string list) output_translator_t
 
 val compile_delta_for_rel:
-  string -> Calculus.var_t list -> bool -> Calculus.term_t ->
-  Calculus.var_t list -> Calculus.term_mapping_t -> Calculus.term_t ->
+  bool -> string -> Calculus.var_t list -> bool -> Calculus.term_t ->
+  Calculus.var_t list -> Calculus.term_mapping_t -> 
+  (string * (Calculus.var_t list)) list -> Calculus.term_t ->
   ((bool * string * Calculus.var_t list * bound_vars_t * 
     Calculus.term_t) list * Calculus.term_mapping_t)
