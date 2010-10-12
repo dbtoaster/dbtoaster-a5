@@ -673,7 +673,7 @@ struct
    let get_source_instance impl = fst impl
    let get_source_adaptor_instances impl = List.map fst (snd impl)
 
-   (* Source geneation:
+   (* Source generation:
     * -- code to declare sources:
     *    ++ adaptor creation, naming adaptors according to relations
     *       adaptors will be embedded into the main method

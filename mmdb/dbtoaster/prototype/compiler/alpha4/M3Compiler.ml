@@ -621,15 +621,27 @@ let compile_query (((schema,m3prog):M3.prog_t),
                     (sources:M3.relation_input_t list)) 
                     (toplevel_queries:string list)
                     (out_file_name:Util.GenericIO.out_t) =
+   let trig_rels = Util.ListAsSet.no_duplicates
+     (List.map (fun (pm,rel,_,_) -> rel) m3prog) in
    let prepared_prog = prepare_triggers m3prog in
    let patterns = snd prepared_prog in
    let ctrigs = compile_ptrig prepared_prog in
+   (* Group inputs by source and framing, filtering to only those relations
+    * for which we have triggers. This allows sources to provide
+    * content for multiple relations, with an adaptor per source x relation.
+    * Note: there is no duplicate elimination here, for example if a
+    * relation/adaptor pair is specified multiple times per source. It is
+    * left to the parser to raise errors on multiply specified relations in
+    * query inputs. *)
    let sources_and_adaptors =
       List.fold_left (fun acc (s,f,rel,a) ->
-         if List.mem_assoc (s,f) acc then
-            let existing = List.assoc (s,f) acc
-            in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc)
-         else ((s,f),[rel,a])::acc) [] sources in
+         match (List.mem rel trig_rels, List.mem_assoc (s,f) acc) with
+           | (false,_) -> acc
+           | (_,false) -> ((s,f),[rel,a])::acc
+           | (_, true) ->
+           	let existing = List.assoc (s,f) acc
+            in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc))
+     	[] sources in
    let csource =
       List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors in
    Util.GenericIO.write out_file_name 

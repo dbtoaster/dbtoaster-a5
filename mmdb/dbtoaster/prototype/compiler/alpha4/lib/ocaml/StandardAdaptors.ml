@@ -1,3 +1,20 @@
+(*
+ * Terminology:
+ * -- adaptor: a function to create structured tuples from raw input data
+ * -- generator: a function to create an adaptor, in essence compiling
+ *    adaptors since adaptors should be efficient as they see each packet
+ *    coming off the network.
+ *
+ * Standard adaptors.
+ * -- defines a set of parameters and transformations for use in all adaptors,
+ *     i.e. a library of adaptor functions.
+ * -- defines two generators to build adaptors:
+ *   ++ csv generator
+ *   ++ orderbook generator
+ *
+ *)
+
+
 open M3
 open Expression
 open Sources
@@ -214,7 +231,12 @@ let csv_params delim schema event =
 let insert_csv delim = csv_params delim "" ""
 let delete_csv delim = csv_params delim "" "delete"
 
+(* CSV generator, and generator wrapper for generator customization *)
 let csv_generator = standard_generator
+let csv_generator_wrapper default_params extra_params =
+  let p = (List.filter (fun (k,v) ->
+    not(List.mem_assoc k extra_params)) default_params)@extra_params
+  in csv_generator p
 
 (* Order books *)
 (* TODO: generalize usage of fixed order book schema through field bindings *)
@@ -312,9 +334,15 @@ let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
 let customer_params = csv_params "|" "int,hash,hash,int,hash,float,hash,hash" "insert"
 let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert"
 
+let tpch_generators = List.map (fun (n,(_,p)) -> (n, csv_generator_wrapper p))
+  ([("lineitem", lineitem_params); ("orders", order_params);
+    ("part", part_params);         ("partsupp", partsupp_params);
+    ("customer", customer_params); ("supplier", supplier_params)])
+
 let generators =
    [("csv", standard_generator);
-    ("orderbook", orderbook_generator)]
+    ("orderbook", orderbook_generator)]@
+   tpch_generators
 
 (* TODO: unit tests for generators *)
 
