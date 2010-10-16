@@ -9,47 +9,6 @@
 
 \subsection{Trigger Programs}
 
-\noindent\todo{IO-vars must be part of the syntax because:}
-\begin{itemize}
-  \item Finite functions will be represented as an argument-enumerated data
-  structure (i.e. maps) for all languages, thus type inferencing has to
-  determine io-tuple schemas for maps.
-  \item For languages lacking type inferencing, map declarations must include
-  io-tuple schemas (i.e. arities) and types, i.e. the target language syntax
-  includes type information.
-  \item For languages with type inferencing, no typed map declarations are
-  required, and the target language compiler will unify types for all data
-  structure accesses.
-  The question is where do we do tuple construction, and do we need to? 
-  Will there always be a lookup into the data structure, or can we always
-  scan/iterate thus accessing tuple directly from the data structure?
-  Note we must perform tuple construction somewhere for the purposes of
-  inserting/loading our data structures (as occurs on the LHS of a statement,
-  when incrementing a map)
-  
-  We have a choice, we can either explicitly perform tuple construction
-  prior to these accesses, in particular specifying schema arities, but not
-  necessarily types (i.e. field/var types).
-  Alternatively we can make our operators, i.e. +,* perform this and simply use
-  a tuple-oriented API for the datastructures. However having the operators do
-  tuple construction implies either operators compiled per instance, or generic
-  operators which do this at runtime based on the map arguments supplied. The
-  latter is inefficient, while the former boils down to syntactically
-  representing schema arities.
-  
-  Note that the current SliceableMap implementation has a tuple-based API,
-  where tuples are lists, and thus the data structure is generic and can be
-  used for any schema. However tuple construction is done explicitly as part of
-  the code, and we do not have the concept of parameterized operators.
-  
-  \item The short version is that given our representation of finite functions
-  as maps, at some point we have to insert or load these maps (for us this
-  primarily occurs while incrementing), and thus have to do tuple construction
-  there, since map keys may be some subset of bound variables in the trigger
-  tuple. Tuple construction requires syntactic schema specification, and we
-  cannot always assume tuples that we need are passed in.
-\end{itemize}
-
 \begin{itemize}
   \item We first describe the outputs of our compilation process, a simple
   language for representing trigger programs, where triggers are executed on

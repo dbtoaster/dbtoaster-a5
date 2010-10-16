@@ -15,6 +15,10 @@
 \def \v#1{\mbox{#1}}
 \def \vv#1{\mbox{{\tiny #1}}}
 
+\noindent\todo{Update to CK's query language+semantics, although I don't like
+his limited description/definition of bound variables. Change this to the
+concept of minimal width bound variables as seen in preaggregation.}
+
 In this section, we describe the \textit{aggregate calculus}, a query language
 capturing the semantics of SQL queries posed on multisets, that can represent
 updates and their impact on query results with delta queries, binding patterns
@@ -153,6 +157,115 @@ f                   := & \; \vec{x} \mapsto f(\vec{x}) \\
   \end{itemize} 
   
 \end{itemize}
+
+\noindent \todo{Incorporate previous section on annotations with semantics of
+two-level finite functions, especially in terms of restrictions of input or
+output vars, and propagation. See old content below.}
+
+\begin{itemize}
+  \item Typed grammar, see below. Explain constraints on io-vars for
+        base elements, e.g. relmaps.
+  \item Top down propagation, left to right propagation.
+  \item Propagation diagram generic + for one of the annotated calculus
+        examples.  
+\end{itemize}
+ 
+\comment{
+\begin{align*} 
+\q \; \mbox{::-} & \; R[][\vec{x}] \;|\; c[][] \;|\; Var[x][] \;|\;
+m[\vec{x}][\vec{y}]\;|\; f[\vec{x}][]
+\\
+\comment{
+& \;|\; \theta[x,y][] \;|\; \theta_c[x][] \;|\;
+\calceq_\q[][y] \;|\; \calceq[x][y]
+\\
+}
+\qq \; \mbox{::-} & \; \q[\vec{x}][\vec{y}] \;|\;
+\calcsum(\q[\vec{x}][\vec{y}\vec{z}])[\vec{x}][\vec{z}] \\ & \;|\;
+(\qqa[\vec{u}][\vec{v}] + \qqb[\vec{w}][\vec{x}])[\vec{y}][\vec{z}]
+\\
+& \;|\;
+(\qqa[\vec{u}][\vec{vv'}] * \qqb[\vec{v'w}][\vec{x}])[\vec{y}][\vec{z}]
+\\
+& \;|\; \theta(\qq[\vec{x}][])[\vec{x}][] \\
+& \;|\; \calceq(x,\qq[\vec{y}][])[\vec{y}][x]
+\end{align*}
+}
+
+\begin{itemize}
+\item Comment on lack of output vars in $\theta$, use of $y$ to
+represent free var of bf-equality, which was previously an argument to
+bf-equality
+
+\item Propagation diagram:
+    \begin{itemize}
+      \item VWAP AST
+      \item Transitive/multistep LR propagation
+      \item Top-down bound var propagation, delta essentially binds a relation's
+      variables from the very top
+      \item No outvars on inequality constraints and nested queries, outvars only
+      on bf-equalities
+      \item Sum projection as explicit outvar restriction
+    \end{itemize}
+
+\end{itemize}
+
+\comment{
+\noindent\todo{Punt annotated semantics to appendix/omit entirely. Should
+explain two-level maps though.}
+
+\noindent\todo{Fix semantics of schema-less union (and product?)}
+\begin{align*}
+R[][\vec{x}]          := & \; \tuple{} \mapsto \vec{x} \mapsto R(\vec{x})\\
+c[][]                 := & \; \tuple{} \mapsto \tuple{} \mapsto c\\
+Var[x][]              := & \; \tuple{x} \mapsto \tuple{} \mapsto x\\
+m[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto
+m(\vec{x})(\vec{y})
+\\
+\comment{
+\theta[x,y][]         := & \; \tuple{x,y} \mapsto \tuple{} \mapsto
+                           \begin{cases}
+                           1 \ldots x \; \theta \; y \\
+                           0 \ldots \mbox{otherwise.}
+                           \end{cases}\\
+\theta_c[x][]         := & \; \tuple{x} \mapsto \tuple{} \mapsto
+                           \begin{cases}
+                           1 \ldots x \; \theta \; c \\
+                           0 \ldots \mbox{otherwise.}
+                           \end{cases}\\
+\calceq_\q[][y]       := & \; \tuple{} \mapsto \tuple{y} \mapsto
+                              \q(\tuple{})(\tuple{})
+\\
+\calceq[x][y]         := & \; \tuple{x} \mapsto \tuple{y} \mapsto x
+\\
+}
+f[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto f(\vec{x})
+\\ 
+\\
+\calcsum(\q[\vec{x}] & [\vec{y}\vec{z}])[\vec{x}][\vec{y}] := \;
+\vec{x} \mapsto \vec{y} \mapsto \ \sum_{\vec{z}} \q(\vec{x})(\vec{y}\vec{z})
+\\
+(\qqa[\vec{u}][\vec{v}] & + \qqb[\vec{w}][\vec{x}])[\vec{y}][\vec{z}] :=  \\
+& \vec{y} \mapsto \sum_{ \{\vec{y}\} = \{\vec{u}\} \Join \{\vec{w}\} }
+\vec{z} \mapsto  \sum_{ \{\vec{z}\} = \{\vec{v}\} \Join \{\vec{x}\} }
+\qqa(\vec{u})(\vec{v}) + \qqb(\vec{w})(\vec{x})
+\\
+\\
+(\qqa[\vec{u}][\vec{v_1}\vec{v_2}] & * \qqb[\vec{v_2}\vec{w}][\vec{x}])
+[\vec{y}][\vec{z}] :=  \\
+& \vec{y} \mapsto \sum_{ \{\vec{y}\} = \{\vec{u}\} \Join \{\vec{w}\} }
+\vec{z} \mapsto \\
+& \qquad \;\;\;
+\sum_{ \{\vec{z}\} = \{\vec{v_1}\vec{v_2}\} \Join \{\vec{x}\} }
+\qqa(\vec{u})(\vec{v_1}\vec{v_2}) * \qqb(\vec{v_2}\vec{w})(\vec{x})
+\\
+-\qq :=
+\\
+\theta(\qq[\vec{x}][])[\vec{x}][] :=
+\\
+\calceq(x,\qq[\vec{y}][])[\vec{y}][] := 
+\end{align*}
+}
 
 \tinysection{Example queries}
 
@@ -410,120 +523,56 @@ in a query.
 
 \subsection{Variable Bindings and Calculus Typing}
 
-%%\begin{align*}
-%%\end{align*}
+\noindent We need a mechanism to determine names and types of the two argument
+tuples for our finite functions for code generation. Reasons as follows:
 
 \begin{itemize}
-  \item Input/output variables, cf. binding patterns, datalog.
-  \item Provides a compact representation of the core data flow occuring during
-        query evaluation, enabling a principled framework to perform all kinds
-        of interesting optimizations.
-  \item Annotated grammar, see below. Explain constraints on io-vars for
-        base elements, e.g. relmaps. 
-  \item Top down propagation, left to right propagation.
-  \item Propagation diagram generic + for one of the annotated calculus
-        examples.
-  \item Determining input/output variables. Should occur as part of the
-       compilation algorithm. \todo{Presentation: algorithm described before
-       this, need to punt explanation of annotation to here.}
-  \item \todo{Annotation rules for annotation algorithm?} 
+  \item Finite functions will be represented as an argument-enumerated data
+  structure (i.e. maps) for all languages, thus type inferencing has to
+  determine io-tuple schemas for maps.
+  \item For languages lacking type inferencing, map declarations must include
+  io-tuple schemas (i.e. arities) and types, i.e. the target language syntax
+  includes type information.
+  \item For languages with type inferencing, no typed map declarations are
+  required, and the target language compiler will unify types for all data
+  structure accesses.
+  The question is where do we do tuple construction, and do we need to? 
+  Will there always be a lookup into the data structure, or can we always
+  scan/iterate thus accessing tuple directly from the data structure?
+  Note we must perform tuple construction somewhere for the purposes of
+  inserting/loading our data structures (as occurs on the LHS of a statement,
+  when incrementing a map)
+  
+  We have a choice, we can either explicitly perform tuple construction
+  prior to these accesses, in particular specifying schema arities, but not
+  necessarily types (i.e. field/var types).
+  Alternatively we can make our operators, i.e. +,* perform this and simply use
+  a tuple-oriented API for the datastructures. However having the operators do
+  tuple construction implies either operators compiled per instance, or generic
+  operators which do this at runtime based on the map arguments supplied. The
+  latter is inefficient, while the former boils down to syntactically
+  representing schema arities.
+  
+  Note that the current SliceableMap implementation has a tuple-based API,
+  where tuples are lists, and thus the data structure is generic and can be
+  used for any schema. However tuple construction is done explicitly as part of
+  the code, and we do not have the concept of parameterized operators.
+  
+  \item The short version is that given our representation of finite functions
+  as maps, at some point we have to insert or load these maps (for us this
+  primarily occurs while incrementing), and thus have to do tuple construction
+  there, since map keys may be some subset of bound variables in the trigger
+  tuple. Tuple construction requires syntactic schema specification, and we
+  cannot always assume tuples that we need are passed in.
 \end{itemize}
-
-\begin{align*} 
-\q \; \mbox{::-} & \; R[][\vec{x}] \;|\; c[][] \;|\; Var[x][] \;|\;
-m[\vec{x}][\vec{y}]\;|\; f[\vec{x}][]
-\\
-\comment{
-& \;|\; \theta[x,y][] \;|\; \theta_c[x][] \;|\;
-\calceq_\q[][y] \;|\; \calceq[x][y]
-\\
-}
-\qq \; \mbox{::-} & \; \q[\vec{x}][\vec{y}] \;|\;
-\calcsum(\q[\vec{x}][\vec{y}\vec{z}])[\vec{x}][\vec{z}] \\ & \;|\;
-(\qqa[\vec{u}][\vec{v}] + \qqb[\vec{w}][\vec{x}])[\vec{y}][\vec{z}]
-\\
-& \;|\;
-(\qqa[\vec{u}][\vec{vv'}] * \qqb[\vec{v'w}][\vec{x}])[\vec{y}][\vec{z}]
-\\
-& \;|\; \theta(\qq[\vec{x}][])[\vec{x}][] \\
-& \;|\; \calceq(x,\qq[\vec{y}][])[\vec{y}][x]
-\end{align*}
 
 \begin{itemize}
-\item Comment on lack of output vars in $\theta$, use of $y$ to
-represent free var of bf-equality, which was previously an argument to
-bf-equality
-
-\item Propagation diagram:
-    \begin{itemize}
-      \item VWAP AST
-      \item Transitive/multistep LR propagation
-      \item Top-down bound var propagation, delta essentially binds a relation's
-      variables from the very top
-      \item No outvars on inequality constraints and nested queries, outvars only
-      on bf-equalities
-      \item Sum projection as explicit outvar restriction
-    \end{itemize}
-
+  \item \todo{Typing rules for typing algorithm? Should determine io-vars, and
+  also which of the io-vars are bound by trigger vars.}  
 \end{itemize}
 
-\noindent\todo{Punt annotated semantics to appendix/omit entirely. Should
-explain two-level maps though.}
 
-\noindent\todo{Fix semantics of schema-less union (and product?)}
-\begin{align*}
-R[][\vec{x}]          := & \; \tuple{} \mapsto \vec{x} \mapsto R(\vec{x})\\
-c[][]                 := & \; \tuple{} \mapsto \tuple{} \mapsto c\\
-Var[x][]              := & \; \tuple{x} \mapsto \tuple{} \mapsto x\\
-m[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto
-m(\vec{x})(\vec{y})
-\\
-\comment{
-\theta[x,y][]         := & \; \tuple{x,y} \mapsto \tuple{} \mapsto
-                           \begin{cases}
-                           1 \ldots x \; \theta \; y \\
-                           0 \ldots \mbox{otherwise.}
-                           \end{cases}\\
-\theta_c[x][]         := & \; \tuple{x} \mapsto \tuple{} \mapsto
-                           \begin{cases}
-                           1 \ldots x \; \theta \; c \\
-                           0 \ldots \mbox{otherwise.}
-                           \end{cases}\\
-\calceq_\q[][y]       := & \; \tuple{} \mapsto \tuple{y} \mapsto
-                              \q(\tuple{})(\tuple{})
-\\
-\calceq[x][y]         := & \; \tuple{x} \mapsto \tuple{y} \mapsto x
-\\
-}
-f[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto f(\vec{x})
-\\ 
-\\
-\calcsum(\q[\vec{x}] & [\vec{y}\vec{z}])[\vec{x}][\vec{y}] := \;
-\vec{x} \mapsto \vec{y} \mapsto \ \sum_{\vec{z}} \q(\vec{x})(\vec{y}\vec{z})
-\\
-(\qqa[\vec{u}][\vec{v}] & + \qqb[\vec{w}][\vec{x}])[\vec{y}][\vec{z}] :=  \\
-& \vec{y} \mapsto \sum_{ \{\vec{y}\} = \{\vec{u}\} \Join \{\vec{w}\} }
-\vec{z} \mapsto  \sum_{ \{\vec{z}\} = \{\vec{v}\} \Join \{\vec{x}\} }
-\qqa(\vec{u})(\vec{v}) + \qqb(\vec{w})(\vec{x})
-\\
-\\
-(\qqa[\vec{u}][\vec{v_1}\vec{v_2}] & * \qqb[\vec{v_2}\vec{w}][\vec{x}])
-[\vec{y}][\vec{z}] :=  \\
-& \vec{y} \mapsto \sum_{ \{\vec{y}\} = \{\vec{u}\} \Join \{\vec{w}\} }
-\vec{z} \mapsto \\
-& \qquad \;\;\;
-\sum_{ \{\vec{z}\} = \{\vec{v_1}\vec{v_2}\} \Join \{\vec{x}\} }
-\qqa(\vec{u})(\vec{v_1}\vec{v_2}) * \qqb(\vec{v_2}\vec{w})(\vec{x})
-\\
--\qq :=
-\\
-\theta(\qq[\vec{x}][])[\vec{x}][] :=
-\\
-\calceq(x,\qq[\vec{y}][])[\vec{y}][] 
-\end{align*}
-
-
-\tinysection{Annotated calculus examples}
+\tinysection{Typed calculus examples}
 
 \begin{itemize}
   \item TODO: what about io-vars inside new $\theta$ expression? Since
@@ -596,6 +645,7 @@ f[\vec{x}][\vec{y}]   := & \; \vec{x} \mapsto \vec{y} \mapsto f(\vec{x})
 \end{figure*}
 }
 
+\comment{
 \noindent\todo{Punt/omit delta rules for annotated grammar}
 %% Delta rules for annotated grammar
 %%
@@ -737,3 +787,4 @@ variables w.r.t to deltas? Can a delta violate propagation and safety?}
 \end{tralign}
 }
 \]
+}
