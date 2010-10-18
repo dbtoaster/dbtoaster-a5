@@ -92,9 +92,9 @@ sig
    val slice_lookup_sing_init:
       string -> M3.var_t list -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
    
-   (*  mapn, inv, pat, patv, init lookup code -> map lookup code *)
+   (*  mapn, inv, outv, pat, patv, init lookup code -> map lookup code *)
    val slice_lookup:
-      string -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
+      string -> M3.var_t list -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
    
    (* M3 RHS expr generation *)
  
@@ -119,8 +119,8 @@ sig
    (* init calc code, debug code -> init code *)
    val singleton_init : code_t -> debug_code_t -> code_t
 
-   (* lhs_outv, init_ext, init calc code, debug code -> init code *)
-   val slice_init : M3.var_t list -> M3.var_t list -> code_t -> debug_code_t -> code_t
+   (* lhs_inv, lhs_outv, init_ext, init calc code, debug code -> init code *)
+   val slice_init : M3.var_t list -> M3.var_t list -> M3.var_t list -> code_t -> debug_code_t -> code_t
 
    (* Incremental statement evaluation *)
    
@@ -129,8 +129,8 @@ sig
    (* lhs_outv, incr_m3 code, init value code, debug code -> update code *)
    val singleton_update : M3.var_t list -> code_t -> code_t -> debug_code_t -> code_t  
    
-   (* incr_m3 code, init value code, debug code -> update code *) 
-   val slice_update : code_t -> code_t -> debug_code_t -> code_t
+   (* lhs_inv, lhs_outv, incr_m3 code, init value code, debug code -> update code *) 
+   val slice_update : M3.var_t list -> M3.var_t list -> code_t -> code_t -> debug_code_t -> code_t
 
    (* Top-level M3 program structure *)
 

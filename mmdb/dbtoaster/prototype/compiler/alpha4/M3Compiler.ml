@@ -507,7 +507,7 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
              | (true, true) -> singleton_lookup_and_init mapn inv outv init_val_code
              | (true, false) -> slice_lookup_sing_init mapn inv outv pat patv init_val_code
              | (false, true) -> singleton_lookup mapn inv outv init_val_code
-             | (false, false) -> slice_lookup mapn inv pat patv init_val_code
+             | (false, false) -> slice_lookup mapn inv outv pat patv init_val_code
             end
 
       | Add (c1, c2) -> compile_op incr_ecalc CG.add_op  c1 c2
@@ -578,13 +578,13 @@ let compile_pstmt patterns
       if (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
          (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
       then singleton_init cinit cinit_debug
-      else slice_init lhs_outv init_ext cinit cinit_debug
+      else slice_init lhs_inv lhs_outv init_ext cinit cinit_debug
    in
    let cdebug = debug_stmt lhs_mapn lhs_inv lhs_outv in
       if (M3P.get_singleton (M3P.get_ecalc incr_aggecalc)) ||
          (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc))
       then singleton_update lhs_outv cincr init_value_code cdebug
-      else slice_update cincr init_value_code cdebug
+      else slice_update lhs_inv lhs_outv cincr init_value_code cdebug
 
 
 let compile_pstmt_loop patterns trig_args pstmt : code_t =

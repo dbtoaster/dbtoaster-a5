@@ -319,6 +319,11 @@ struct
          (bind prebind)@["let res1 = "]@ce1_l@["in"]@(indent 2 (body "res1"))
        | Inline(ce1_i) -> (bind prebind)@(body (inline ce1_i)))
 
+
+   (*
+    * Map lookup code generation
+    *)
+
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = map_name_const mapn in
       let cout_patterns = patterns_const out_patterns in
@@ -428,7 +433,7 @@ struct
             ["in ValuationMap.from_list [("^(vars_list outv)^", init_val)] []"]
          in (slice_lookup_aux pat patv in_tier_code))
 
-   let slice_lookup mapn inv pat patv init_val_code = tabify (
+   let slice_lookup mapn inv outv pat patv init_val_code = tabify (
       let cmapn = map_name_const mapn in
       if inv = [] then
          (slice_lookup_aux pat patv [db_impl^".get_out_map "^cmapn^" db"])
@@ -486,7 +491,7 @@ struct
 
    (* returns a function with sig:
     *   AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
-   let slice_init lhs_outv init_ext cinit cdebug = tabify (
+   let slice_init lhs_inv lhs_outv init_ext cinit cdebug = tabify (
       ["(fun k v ->";
        "(* "]@cdebug@[" k v; *)";
        "let init_slice = "]@
@@ -528,7 +533,7 @@ struct
 
    (* assume cinit is a function with sig:
     *   val cinit: AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
-   let slice_update cincr cinit cdebug = tabify (
+   let slice_update lhs_inv lhs_outv cincr cinit cdebug = tabify (
       match cinit with
        | Lines(cinit_l) ->
          ["(fun current_slice ->";

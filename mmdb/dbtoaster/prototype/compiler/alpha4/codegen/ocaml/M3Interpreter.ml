@@ -474,7 +474,7 @@ let slice_lookup_sing_init mapn inv outv pat patv init_val_code =
          ValuationMap.from_list [(outv_img, ivc_l theta db)] [] )) 
 
 (* mapn, inv, pat, patv, init lookup code -> map lookup code *)
-let slice_lookup mapn inv pat patv init_val_code =
+let slice_lookup mapn inv outv pat patv init_val_code =
    let ivc_l = get_slice_code init_val_code in
    if inv = [] then
    Slice (slice_lookup_aux pat patv (fun th db -> DB.get_out_map mapn db))
@@ -549,7 +549,7 @@ let singleton_init cinit cdebug =
  * where given loop vars are the same as in the schema, should only be
  * bound LHS out vars.
  *)
-let slice_init lhs_outv init_ext cinit cdebug =
+let slice_init lhs_inv lhs_outv init_ext cinit cdebug =
    let cinitf = get_slice_code cinit in
    let cdebug_i = get_singleton_debug_code cdebug in
       SingletonValueFunction (fun theta db k v ->
@@ -584,7 +584,7 @@ let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
 let singleton_update = singleton_update_aux get_singleton_value_function_code
 
 (* incr_m3 code, init value code, debug code -> update code *) 
-let slice_update_aux f cincr init_value_code cdebug =
+let slice_update_aux f lhs_inv lhs_outv cincr init_value_code cdebug =
    let cincrf = get_slice_code cincr in
    let cinitf = f init_value_code in
    let cdebug_e = get_env_debug_code cdebug in
