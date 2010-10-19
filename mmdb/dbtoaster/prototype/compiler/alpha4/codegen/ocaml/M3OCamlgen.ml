@@ -345,7 +345,7 @@ struct
             ["let init_val = "]@cinit_l@["in"]@(indent 2 (body "init_val"))
          | Inline(cinit_i) -> (body (inline cinit_i)))
        
-   let slice_init_lookup mapn inv out_patterns cinit =
+   let slice_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = map_name_const mapn in
       let cout_patterns = patterns_const out_patterns in
       tabify (

@@ -79,7 +79,7 @@ sig
    
    (* mapn, inv, out_patterns, init rhs expr -> init lookup code *)
    val slice_init_lookup:
-      string -> M3.var_t list -> int list list -> code_t -> code_t
+      string -> M3.var_t list -> int list list -> M3.var_t list -> code_t -> code_t
 
    (* mapn, inv, outv, init lookup code -> map lookup code *)
    val singleton_lookup_and_init:

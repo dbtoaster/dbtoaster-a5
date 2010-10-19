@@ -495,7 +495,7 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
                                    (get_ecalc init_aggecalc))));*) 
                if singleton_init_code
                then singleton_init_lookup mapn inv out_patterns outv cinit
-               else slice_init_lookup mapn inv out_patterns cinit
+               else slice_init_lookup mapn inv out_patterns outv cinit
             in
             (* code that does the final stage of the lookup on the slice *)
             (* Note: we extend theta for this map access' init value comp

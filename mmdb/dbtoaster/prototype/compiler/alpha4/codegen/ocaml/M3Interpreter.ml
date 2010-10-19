@@ -366,8 +366,8 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
        DB.update_map_value mapn out_patterns inv_img outv_img init_val db;
        init_val)
    
-(* mapn, out_patterns, init rhs expr -> init lookup code *)
-let slice_init_lookup mapn inv out_patterns cinit =
+(* mapn, inv, out_patterns, outv, init rhs expr -> init lookup code *)
+let slice_init_lookup mapn inv out_patterns outv cinit =
    let cinit_l = get_slice_code cinit in
    if inv = [] then
       Slice (fun theta db ->

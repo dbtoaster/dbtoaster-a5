@@ -12,7 +12,6 @@
  *)
 
 (*
- * TODO: map lookup ivc condition
  * TODO: functional map op naming
  * TODO: prebind, inbind
  *
@@ -205,7 +204,6 @@ let const_code c = match c with
 
 let const = const_code
 
-(* TODO *)
 let singleton_var v = F(inl v)
 let slice_var v = F(inl v)
 
@@ -214,8 +212,9 @@ let mult_op = "*"
 let eq_op   = "="
 let lt_op   = "<"
 let leq_op  = "<="
-  
-(* TODO *)
+
+(* These are just symbols for operator comparison, and not to be
+ * used in stringification *)  
 let ifthenelse0_op = "ifte"
 let ifthenelse0_bigsum_op = "ifte_bigsum"
 
@@ -226,6 +225,7 @@ let functional op =
 (* Additional operators for stringification *)
 let and_op = "and"
 let or_op  = "or"
+let neg_op = "not"
 let neq_op = "<>"
 
 let ws_start_re = Str.regexp ("^"^(Str.quote " ")^"*")
@@ -241,6 +241,9 @@ let sequence ?(delim=stmt_delimiter) cl =
 
 let assign lv rv = inl(lv^" := "^(sbc rv))
 
+let ucond p t : basic_code_t = cbcl
+  ([Lines ["if "^(sbc p)^" then {"]; indent t; Lines["}"]])
+
 let cond p t e : basic_code_t = cbcl
   ([Lines ["if "^(sbc p)^" then {"]; indent t; Lines["}"];]@
   (if ebc e then [e] else [Lines ["else {"]; indent e; Lines["}"]]))
@@ -254,6 +257,8 @@ let iterate_cl fields collection body = cbcl
 let bind l v = (sequence (List.map (fun x -> assign x v) l))
 
 let rebind l c = List.fold_left (fun rbc b -> B(b,rbc)) c (List.rev l)
+
+let apply_uop op c = inl(op^" "^(sbc c))
 
 let apply_op op l r = inl((sbc l)^" "^op^" "^(sbc r))
 
@@ -310,13 +315,15 @@ let make_fields mapn n =
     if i = n then acc@[f i] else aux (acc@[f i]) (i+1)
   in aux [] 1
 
+let get_map_key = String.concat ","
+
 let get_map_fields_l mapn num_in num_out =
   let num_fields = num_in + num_out in
   add_map_dim mapn num_in num_out;
   (make_fields mapn num_fields)
 
 let get_map_fields mapn num_in num_out =
-  String.concat "," (get_map_fields_l mapn num_in num_out)
+  get_map_key (get_map_fields_l mapn num_in num_out)
   
 let get_num_outv outv out_patterns =
   if outv = [] && out_patterns = [] then 0
@@ -354,7 +361,7 @@ let bind_map_pattern ins mapn inv outv pat patv =
     else (mf_inv@mf_pat,inv@patv,mf_outv,outv) in
   let cond = bind_map_vars cmv cv in
   let renames = List.map (fun (mf,v) -> mf^" as "^v) (List.combine rmv rv)
-  in renames,cond
+  in renames,rv,cond
 
 (* Map primitives *)  
 let create_map n f = inl("create temporary table "^n^" as "^(sbc f))
@@ -362,7 +369,18 @@ let copy_map o n =
   inl("create temporary table "^n^" as select * from "^(sbc o))
 
 (* Getters *)
-let get_map_sing v mapn inv outv =
+(* This query must return a single map entry, otherwise a runtime exception
+ * will be thrown. The code must assign the entry's value to <rv> and
+ * set <rv>_valid if successful. *)
+(* TODO: make FOUND independent *)
+let get_map_sing_val mapn inv outv rv =
+  let pred = bind_map_fields mapn inv outv in
+  let where_c = if ebc pred then pred else inl (" where "^(sbc pred)) in
+  sequence [ inl("select "^mapn^"_val into strict "^rv^
+                 " from "^mapn^(sbc where_c));
+             assign (rv^"_valid") (inl "FOUND")]
+
+let get_map_sing mapn inv outv v =
   let where_c =
     let x = bind_map_fields mapn inv outv in
     if ebc x then x else inl(" where "^(sbc x))
@@ -377,7 +395,7 @@ let get_map_sing v mapn inv outv =
  * -- if map is given an empty partial key, but has in/out vars this is
  *    a full scan. *)
 let get_map_slice_aux ins mapn inv outv pat patv =
-  let rename,cond = bind_map_pattern ins mapn inv outv pat patv in
+  let rename,rfields,cond = bind_map_pattern ins mapn inv outv pat patv in
   let fields = rename@(if ins then [] else [mapn^"_val"]) in
   let where_c = if ebc cond then cond else inl(" where "^(sbc cond)) in
   let rc =
@@ -385,20 +403,11 @@ let get_map_slice_aux ins mapn inv outv pat patv =
     let select_list = String.concat "," fields in
     cbc (inl("select "^(if ins then "distinct " else "")^
              select_list^" from "^mapn)) where_c
-  in fields, rc
+  in rfields, rc
     
 
 let get_map_out_slice = get_map_slice_aux false 
 let get_map_in_slice = get_map_slice_aux true 
-
-(* This query must return a single map entry, otherwise a runtime exception
- * will be thrown. The code must assign the entry's value to <rv> and
- * set <rv>_valid if successful. *)
-(* TODO: make FOUND independent *)
-let get_map_sing_val mapn inv outv rv =
-  Lines(["select "^mapn^"_val into strict "^rv^" from "^mapn^
-         " where "^(sbc (bind_map_fields mapn inv outv));
-        rv^"_valid := FOUND"])
 
 (* Accesses a memoized slice value *)
 let get_slice_val x = inl("select * from "^x)
@@ -424,12 +433,13 @@ let full_aggregate_v v rv =
   inl("select sum(v) into "^v^" from "^(sbc rv))
 
 let gb_aggregate_f fc gb =
-  inl("select "^gb^",sum(v) as v from ("^(sbc fc)^") as R group by "^gb)
+  inl("select "^gb^(if gb = "" then "" else ",")^"sum(v) as v "^
+      "from ("^(sbc fc)^") as R"^(if gb = "" then "" else " group by ")^gb)
 
 let gb_aggregate_v in_v out_v gb =
   inl("create temporary table "^(sbc out_v)^
-      " as select "^gb^",sum(v) as v"^
-      "from "^(sbc in_v)^" group by "^gb)
+      " as select "^gb^(if gb = "" then "" else ",")^"sum(v) as v"^
+      "from "^(sbc in_v)^(if gb = "" then "" else " group by ")^gb)
 
 (* For procedural ops, memoize and eval *) 
 let op_sing_func op c1 c2 =
@@ -539,7 +549,7 @@ let bind_sing_code c bindings =
 
 (* Memoize slice code to the given bindings
  * -- passes through unit code if no bindings are requested *)
-let bind_all_loop_fields bindings = (String.concat "," bindings, "")
+let bind_all_loop_fields bindings = (iter_fields bindings, "")
     
 let bind_value_loop_field fields bindings =
   match bindings with 
@@ -604,7 +614,19 @@ let slice_val fields vc rv = loop_slice (loop_code fields vc (get_slice_val rv))
 let sing_func_val f = let sym = gen_sym() in (assign sym f, sym)
 let slice_func_val f = let sym = gen_sym() in (create_map sym f, sym)
 
+(* Bind conditionals: attempt to bind, and branch based on success
+ * This is useful for map lookups. *)
+(* TODO: make FOUND independent *)
+let bind_sing_cond_f f v t e =
+  let v_valid = v^"_valid" in
+  let condc = cond (inl v_valid) t e in
+  sequence [assign v f; assign v_valid (inl "FOUND"); condc]
 
+let bind_slice_cond_f fields f v body e =
+    let v_valid = v^"_valid" in
+    let condc = ucond (apply_uop neg_op (inl v_valid)) e in
+    sequence [iterate_cl fields f body; assign v_valid (inl "FOUND"); condc]
+    
 
 (* DBToaster-specific code generators that distinguish singletons/slices *)
 
@@ -635,11 +657,10 @@ let wrap_op op lic ric =
 
 
 (* Map access CG auxiliaries *)
-
-(* TODO: fix map keys in insert for sing/slice map init *)  
+  
 let sing_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
   let v = mapn^"_val" in
-  let fields = get_map_fields mapn (List.length inv) (get_num_outv outv out_patterns) in
+  let fields = get_map_key (inv@outv) in
   let addc = add_map mapn fields v in
   let ic = try get_unit_code ivbc
            with Failure(s) -> failwith ("invalid map singleton ivbc: "^s)
@@ -648,9 +669,9 @@ let sing_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
 let sing_val_init_code mapn inv out_patterns outv ivbc bindings =
   use_vc_as_nc (sing_init_code mapn inv out_patterns outv ivbc bindings)
 
-let slice_init_code mapn inv out_patterns ivbc bindings (nc, pc) =
+let slice_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
   let v = mapn^"_val" in
-  let fields = get_map_fields mapn (List.length inv) (get_num_outv [] out_patterns) in
+  let fields = get_map_key (inv@outv) in
   let addc = add_map mapn fields v in
   begin match ivbc with
     | U _ | V _ ->
@@ -662,16 +683,15 @@ let slice_init_code mapn inv out_patterns ivbc bindings (nc, pc) =
     | _ -> failwith "invalid slice ivbc"
   end
 
-let slice_val_init_code mapn inv out_patterns ivbc bindings =
-  use_vc_as_nc (slice_init_code mapn inv out_patterns ivbc bindings)
+let slice_val_init_code mapn inv out_patterns outv ivbc bindings =
+  use_vc_as_nc (slice_init_code mapn inv out_patterns outv ivbc bindings)
 
-(* TODO: needs_init condition *)
 let sing_lookup_code mapn inv outv bindings init_code (nc, pc) =
   let v = mapn^"_val" in
-  let lookup_val = get_map_sing v mapn inv outv in
-  let lookupc = cond (inl "needs_init") init_code
-    (add_nested_code bindings v lookup_val nc)
-  in (add_post_code lookupc pc)
+  let lookupf = get_map_sing mapn inv outv v in
+  let lookup_and_init_c = bind_sing_cond_f lookupf v
+    (sequence [bind bindings (inl v); nc]) init_code
+  in (add_post_code lookup_and_init_c pc)
 
 let sing_val_lookup_code mapn inv outv bindings init_code =
   use_vc_as_nc (sing_lookup_code mapn inv outv bindings init_code)
@@ -679,10 +699,10 @@ let sing_val_lookup_code mapn inv outv bindings init_code =
 let slice_lookup_code mapn inv outv pat patv bindings init_code (nc, pc) =
   let out_fields, lookup_slice = get_map_out_slice mapn inv outv pat patv in
   let v = mapn^"_val" in
-  let lookupc = cond (inl "needs_init") init_code
-    (iterate_cl (iter_fields (out_fields@[v])) lookup_slice
-      (sequence [bind bindings (inl v); nc]))
-  in (add_post_code lookupc pc)
+  let lookup_and_init_c = bind_slice_cond_f
+    (iter_fields (out_fields@[v])) lookup_slice v
+    (sequence [bind bindings (inl v); nc]) init_code
+  in (add_post_code lookup_and_init_c pc)
 
 let slice_val_lookup_code mapn inv outv pat patv bindings init_code =
   use_vc_as_nc (slice_lookup_code mapn inv outv pat patv bindings init_code)
@@ -909,11 +929,12 @@ let singleton_init_lookup mapn inv out_patterns outv cinit =
   (sing_val_init_code mapn inv out_patterns outv)
   mapn cinit
 
-let slice_init_lookup mapn inv out_patterns cinit =
+let slice_init_lookup mapn inv out_patterns outv cinit =
   let fields =
     get_map_fields_l mapn (List.length inv) (get_num_outv [] out_patterns)
-  in init_expr (bind_slice_code fields) (slice_init_code mapn inv out_patterns)
-    (slice_val_init_code mapn inv out_patterns) mapn cinit 
+  in init_expr (bind_slice_code fields)
+    (slice_init_code mapn inv out_patterns outv)
+    (slice_val_init_code mapn inv out_patterns outv) mapn cinit 
 
 
 (* Map lookups *)
@@ -1133,17 +1154,25 @@ let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct cupdate =
     
 
 (* Triggers *)
-let pm_const pm = match pm with | Insert -> "Insert" | Delete -> "Delete" 
+let pm_const pm = match pm with | Insert -> "insert" | Delete -> "delete" 
 let pm_name pm  = match pm with | Insert -> "ins" | Delete -> "del" 
 
+(* TODO: make language independent *)
 let trigger event rel trig_args stmt_block =
-  let trig_name = "on_"^(pm_name event)^"_"^rel in
+  let trig_name = (pm_name event)^"_"^rel in
+  let trig_aux_def =
+    "create trigger on_"^trig_name^
+    " after "^(pm_const event)^" on "^rel^
+    " for each row execute procedure "^trig_name^";"
+  in
   let tc =
-    (Lines ["create trigger "^trig_name^"{"])::
+    let trig_params = String.concat ", "
+      (List.map (fun x -> x^" int") trig_args) in
+    (Lines ["create function "^trig_name^" ("^trig_params^") as $$"])::
     (List.map (fun x -> match x with
       | U(uc) -> ibc "    " (get_unit_code x)  
       | _ -> failwith "invalid statement code") stmt_block)@
-    [(Lines ["}"])]
+    [(Lines ["$$ language plpgsql;"; ""; trig_aux_def; ""])]
   in U(List.fold_left cbc (List.hd tc) (List.tl tc), inl "")
 
 let source src fr rel_adaptors = ("<sources>", None, None)
@@ -1152,10 +1181,13 @@ let main schema patterns sources triggers toplevel_queries =
   let maps = Lines (List.map (fun (id,ins,outs) ->
       let f (i,t) = id^"_a"^(string_of_int i)^" int" in
       let add_counter l = snd(
-        List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (0,[]) l) in
-      let ivl = String.concat "," (List.map f (add_counter ins)) in
-      let ovl = String.concat "," (List.map f (add_counter outs)) in
-      "create table "^id^" ("^ivl^","^ovl^");")
+        List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (1,[]) l) in
+      let ivl = String.concat ", " (List.map f (add_counter ins)) in
+      let ovl = String.concat ", " (List.map f (add_counter outs)) in
+      let v = id^"_val int" in
+      let tbl_params = String.concat ","
+        (List.filter (fun x -> x <> "") [ivl; ovl; v])
+      in "create table "^id^" ("^(tbl_params)^");")
     schema)
   in
   let script = cbcl (maps::(List.map (fun x -> match x with
