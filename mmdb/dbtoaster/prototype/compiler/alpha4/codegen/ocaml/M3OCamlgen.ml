@@ -255,7 +255,7 @@ struct
       ["   in ValuationMap.union r r3";
        "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
        
-   let op_slice_product_expr prebind op ce1 ce2 = tabify (
+   let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 = tabify (
       (bind prebind)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
@@ -291,7 +291,7 @@ struct
    
    (* Note: no need to bind any vars from outv2 since these should be bound
     * from above *)
-   let op_lslice_product_expr prebind op outv2 ce1 ce2 = tabify (
+   let op_lslice_product_expr prebind op outv1 outv2 ce1 ce2 = tabify (
       let body = match ce2 with
          | Lines(ce2_l) ->
             ["let res2 = "]@ce2_l@
@@ -533,7 +533,7 @@ struct
 
    (* assume cinit is a function with sig:
     *   val cinit: AggregateMap.key -> AggregateMap.agg_t -> AggregateMap.agg_t *)
-   let slice_update lhs_inv lhs_outv cincr cinit cdebug = tabify (
+   let slice_update lhs_mapn lhs_inv lhs_outv cincr cinit cdebug = tabify (
       match cinit with
        | Lines(cinit_l) ->
          ["(fun current_slice ->";

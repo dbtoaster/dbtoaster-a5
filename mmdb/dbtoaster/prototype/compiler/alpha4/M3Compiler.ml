@@ -462,13 +462,13 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
           
           | (_, false, true) ->
              if M3P.get_product ecalc then
-                op_lslice_product_expr prebind op outv2 ce1 ce2
+                op_lslice_product_expr prebind op outv1 outv2 ce1 ce2
              else op_lslice_expr prebind inbind
                 op outv1 outv2 schema theta_ext schema_ext ce1 ce2 
 
           | (_, false, false) ->
              if M3P.get_product ecalc then
-                op_slice_product_expr prebind op ce1 ce2
+                op_slice_product_expr prebind op outv1 outv2 ce1 ce2
              else op_slice_expr prebind inbind
                 op outv1 outv2 schema theta_ext schema_ext ce1 ce2
          end
@@ -584,12 +584,11 @@ let compile_pstmt patterns
       if (M3P.get_singleton (M3P.get_ecalc incr_aggecalc)) ||
          (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc))
       then singleton_update lhs_outv cincr init_value_code cdebug
-      else slice_update lhs_inv lhs_outv cincr init_value_code cdebug
+      else slice_update lhs_mapn lhs_inv lhs_outv cincr init_value_code cdebug
 
 
 let compile_pstmt_loop patterns trig_args pstmt : code_t =
    let ((lhs_mapn, lhs_inv, lhs_outv, _), incr_aggecalc, stmt_meta) = pstmt in
-   let cstmt = compile_pstmt patterns pstmt in
    let patv = Util.ListAsSet.inter lhs_inv trig_args in
    let pat = List.map (index lhs_inv) patv in
    let direct = (List.length patv) = (List.length lhs_inv) in 
@@ -600,6 +599,7 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
    let out_patv = Util.ListAsSet.inter lhs_outv trig_args in
    let out_pat = List.map (index lhs_outv) out_patv  in
    *)
+   let cstmt = compile_pstmt patterns pstmt in
    let singleton_update =
       (M3P.get_singleton (M3P.get_ecalc incr_aggecalc)) ||
       (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc)) in

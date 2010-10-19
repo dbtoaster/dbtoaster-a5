@@ -54,8 +54,9 @@ sig
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
-   val op_slice_product_expr:
-      M3.Prepared.pprebind_t -> op_t -> code_t -> code_t -> code_t
+   (* op, outv1, outv2, lhs code, rhs code -> op expr code *)
+   val op_slice_product_expr: M3.Prepared.pprebind_t -> op_t ->
+      M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
 
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
@@ -63,9 +64,9 @@ sig
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
-   (* op, outv2, lhs code, rhs code -> op expr code *)
+   (* op, outv1, outv2, lhs code, rhs code -> op expr code *)
    val op_lslice_product_expr: M3.Prepared.pprebind_t -> op_t ->
-      M3.var_t list -> code_t -> code_t -> code_t
+      M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
    
    (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
    val op_rslice_expr: M3.Prepared.pprebind_t -> op_t ->
@@ -129,8 +130,8 @@ sig
    (* lhs_outv, incr_m3 code, init value code, debug code -> update code *)
    val singleton_update : M3.var_t list -> code_t -> code_t -> debug_code_t -> code_t  
    
-   (* lhs_inv, lhs_outv, incr_m3 code, init value code, debug code -> update code *) 
-   val slice_update : M3.var_t list -> M3.var_t list -> code_t -> code_t -> debug_code_t -> code_t
+   (* lhs_mapn, lhs_inv, lhs_outv, incr_m3 code, init value code, debug code -> update code *) 
+   val slice_update : string -> M3.var_t list -> M3.var_t list -> code_t -> code_t -> debug_code_t -> code_t
 
    (* Top-level M3 program structure *)
 

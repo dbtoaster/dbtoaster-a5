@@ -130,7 +130,7 @@ let input_files = if (flag_bool "FILES") then flag_vals "FILES"
                   else give_up "No files provided";;
     
 type language_t = 
-  L_OCAML | L_CPP | L_SQL | L_CALC | L_DELTA | L_M3 | L_NONE | L_INTERPRETER;;
+  L_OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA | L_M3 | L_NONE | L_INTERPRETER;;
 
 let language = 
   if flag_bool "INTERPRETER" then L_INTERPRETER
@@ -145,6 +145,7 @@ let language =
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3
       | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
+      | "PLSQL"    -> L_PLSQL 
       | "RUN"      -> L_INTERPRETER
       | "NONE"     -> L_NONE (* Used for getting just debug output *)
       | "DEBUG"    -> L_NONE
@@ -271,6 +272,8 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 
+module M3PLSQLCompiler = M3Compiler.Make(M3Plsql.CG);;
+
 open Database
 open Sources
 open Runtime
@@ -283,6 +286,7 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
                        Util.GenericIO.out_t -> unit) = 
   match language with
   | L_OCAML -> M3OCamlCompiler.compile_query
+  | L_PLSQL -> M3PLSQLCompiler.compile_query 
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
   | L_M3    -> (fun (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
@@ -397,6 +401,7 @@ if flag_bool "COMPILE" then
         | Some("-") -> compile_ocaml_via_tmp ()
         | Some(a)   -> compile_ocaml a
     )
+  | L_PLSQL -> give_up "Compilation of PLSQL not implemented yet"
   | L_CPP   -> give_up "Compilation of C++ not implemented yet"
   | _       -> give_up ("No external compiler available for "^
       ( match language with 

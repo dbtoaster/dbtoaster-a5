@@ -21,7 +21,8 @@ SOURCE = \
 	lib/ocaml/Runtime.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	codegen/ocaml/M3Interpreter.ml \
-	codegen/ocaml/M3OCamlgen.ml
+	codegen/ocaml/M3OCamlgen.ml \
+	codegen/plsql/M3Plsql.ml
 
 HEADER_ONLY_SOURCE = \
 	M3Codegen.mli
@@ -101,6 +102,7 @@ CLEAN_OBJ = \
 
 INCLUDE_DIR = \
 	-I codegen/ocaml/ \
+	-I codegen/plsql/ \
 	-I parser/ \
 	-I lib/ocaml
 INCLUDE_OBJ = \

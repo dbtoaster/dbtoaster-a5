@@ -279,7 +279,7 @@ let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 
 
 (* Cross-product op
  * -- safe to bind w/ var bindings only, no bigsums in cross-products *)
-let op_slice_product_expr prebind op ce1 ce2 =
+let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
       let th = Valuation.bind theta prebind in
@@ -314,7 +314,7 @@ let op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1
       in ValuationMap.fold f (ValuationMap.empty_map()) res1) 
 
 (* op, outv2, lhs code, rhs code -> op expr code *)
-let op_lslice_product_expr prebind op outv2 ce1 ce2 =
+let op_lslice_product_expr prebind op outv1 outv2 ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->
       let th = Valuation.bind theta prebind in
@@ -584,7 +584,7 @@ let singleton_update_aux f lhs_outv cincr init_value_code cdebug =
 let singleton_update = singleton_update_aux get_singleton_value_function_code
 
 (* incr_m3 code, init value code, debug code -> update code *) 
-let slice_update_aux f lhs_inv lhs_outv cincr init_value_code cdebug =
+let slice_update_aux f lhs_mapn lhs_inv lhs_outv cincr init_value_code cdebug =
    let cincrf = get_slice_code cincr in
    let cinitf = f init_value_code in
    let cdebug_e = get_env_debug_code cdebug in
