@@ -15,9 +15,15 @@
  * TODO: functional map op naming
  * TODO: prebind, inbind
  *
- * TODO: var declarations
+ * TODO: check correct sequencing CG
+ * TODO: plpgsql trigger args
  *
- * TODO: test map naming
+ * TODO: var, slice declarations
+ *
+ * TODO: generalize rvs as functions, or add VF to simplify code produced.
+ * TODO: use function rvs to eliminate temp table for gb aggs in slice_expr
+ *       that are immediately accessed in a loop.
+ *
  * TODO: statement naming (dv, init_v, current_v, etc.)
  * 
  * TODO: modularize stringification
@@ -62,6 +68,9 @@ open M3
 open M3Common.Patterns
 open Util
 
+(* Use sources to get standard adaptor parameters *)
+open Sources
+
 module M3P = M3.Prepared
 
 module CG : M3Codegen.CG = 
@@ -80,9 +89,10 @@ type code_t =
   | V of basic_code_t * string (* code, return value *)
   | B of string * code_t (* var to be bound before code *)
 
+type source_impl_t = basic_code_t
+
 type debug_code_t = code_t
 type db_t = string
-type source_impl_t = string
     
 (* Basic code helpers *)
 let indent_width = 4
@@ -199,13 +209,17 @@ let debug_stmt lhs_mapn lhs_inv lhs_outv = U(inl "", inl "")
 (* Language-specific stringification *)
 
 (* Primitives *)
+let sql_string_of_float f =
+  let r = string_of_float f in
+  if r.[(String.length r)-1] = '.' then r^"0" else r
+
 let const_code c = match c with
-  | CFloat(f) -> F(inl("select "^(string_of_float f)^" as v"))
+  | CFloat(f) -> V(inl "", sql_string_of_float f)
 
 let const = const_code
 
-let singleton_var v = F(inl v)
-let slice_var v = F(inl v)
+let singleton_var v = V(inl "", v)
+let slice_var v = V(inl "", v)
 
 let add_op  = "+"
 let mult_op = "*"
@@ -236,23 +250,24 @@ let rec indent ?(n=1) s = match n with | 0 -> s
 let single_comment c = "-- "^c
 let multi_comment c = "/*\n"^c^"*/"
 
-let sequence ?(delim=stmt_delimiter) cl =
-  cbcl ~delim:delim (List.filter (fun x -> not(ebc x)) cl)
+let sequence ?(final=false) ?(delim=stmt_delimiter) cl =
+  cbcl ~final:final ~delim:delim (List.filter (fun x -> not(ebc x)) cl)
 
 let assign lv rv = inl(lv^" := "^(sbc rv))
 
 let ucond p t : basic_code_t = cbcl
-  ([Lines ["if "^(sbc p)^" then {"]; indent t; Lines["}"]])
+  ([Lines ["if "^(sbc p)^" then"]; indent t; Lines["end if"]])
 
 let cond p t e : basic_code_t = cbcl
-  ([Lines ["if "^(sbc p)^" then {"]; indent t; Lines["}"];]@
-  (if ebc e then [e] else [Lines ["else {"]; indent e; Lines["}"]]))
+  ([Lines ["if "^(sbc p)^" then"]; indent t;]@
+  (if ebc e then [Lines ["end if"]]
+   else [Lines ["else "]; indent e; Lines["end if"]]))
 
 let iter_fields l = String.concat "," l
 
 let iterate_cl fields collection body = cbcl
-  [Lines ["foreach "^fields;"    in ("^(sbc collection)^") {"];
-   indent body; Lines ["}"]] 
+  [Lines ["for "^fields^" in "^(sbc collection)^" loop"];
+   indent body; Lines ["end loop"]] 
     
 let bind l v = (sequence (List.map (fun x -> assign x v) l))
 
@@ -434,12 +449,12 @@ let full_aggregate_v v rv =
 
 let gb_aggregate_f fc gb =
   inl("select "^gb^(if gb = "" then "" else ",")^"sum(v) as v "^
-      "from ("^(sbc fc)^") as R"^(if gb = "" then "" else " group by ")^gb)
+      " from ("^(sbc fc)^") as R"^(if gb = "" then "" else " group by ")^gb)
 
 let gb_aggregate_v in_v out_v gb =
   inl("create temporary table "^(sbc out_v)^
       " as select "^gb^(if gb = "" then "" else ",")^"sum(v) as v"^
-      "from "^(sbc in_v)^(if gb = "" then "" else " group by ")^gb)
+      " from "^(sbc in_v)^(if gb = "" then "" else " group by ")^gb)
 
 (* For procedural ops, memoize and eval *) 
 let op_sing_func op c1 c2 =
@@ -457,7 +472,7 @@ let op_slice_func op c1 c2 =
            "from ("^(sbc c1)^") as R natjoin ("^(sbc c2)^") as S")
   
   | "<" | "<=" | "=" ->
-    inl("select R.*,S.*,(case when R.v"^op^"S.v then 1 else 0 end) as v"^
+    inl("select R.*,S.*,(case when R.v"^op^"S.v then 1 else 0 end) as v "^
            "from ("^(sbc c1)^") as R natjoin ("^(sbc c2)^") as S")
   
   | x when x = ifthenelse0_op ->
@@ -491,6 +506,14 @@ let op_slice_val op c1 c2 rv1 rv2 =
 (* Wrapper helpers
  * TODO: use these generally throughout CG *)
 let build_wrapper wrap_f = I(fun c -> apply_wrapper wrap_f c [])
+
+let wrap_code u_f v_f f_f =
+  let aux c bindings = match c with
+    | U(uc) -> U(u_f bindings uc)
+    | V(vc,rv) -> let x,y = v_f bindings vc rv in V(x,y)
+    | F(fc) -> F(f_f bindings fc)
+    | _ -> failwith "invalid remainder for binding"
+  in (fun restc -> apply_wrapper aux restc [])
 
 let sequence_wrapper pre post c bindings =
   match (c, bindings) with
@@ -532,9 +555,13 @@ let bind_val_val var vc1 rv1 bindings =
 let bind_sing_code c bindings =
   let aux v c = match bindings with
     | [] -> failwith "no bindings specified for value"
-    | [x] -> (assign x (if v = "" then c else inl v), x)
-    | _ -> if v = "" then let memo = gen_sym() in
-             (sequence [assign memo c; bind bindings (inl memo)], memo)
+    | [x] ->
+      if v = "" then (assign x c,x)
+      else (sequence [c; assign x (inl v)], x)
+    | _ -> if v = "" then
+             let v,rb = if bindings = [] then (gen_sym(),[])
+                        else (List.hd bindings, List.tl bindings)
+             in (sequence [assign v c; bind rb (inl v)], v)
            else (sequence [c; bind bindings (inl v)], v)
   in
   match c with
@@ -564,7 +591,7 @@ let bind_slice_code fields c bindings =
     in build_wrapper (iterate_wrapper fbb (inl "") fc)
   | V(vc,rv) ->
     let fbb = bind_value_loop_field fields bindings
-    in build_wrapper (iterate_wrapper fbb vc (inl rv)) 
+    in build_wrapper (iterate_wrapper fbb vc (get_slice_val rv)) 
   | U(uc) ->
     if bindings = [] then
       build_wrapper (sequence_wrapper (fst uc) (snd uc))
@@ -576,18 +603,19 @@ let bind_slice_code fields c bindings =
 (* Binding code transformations *)
 
 (* Transform singletons to a bound var in unit code *)
-let bind_sing bind_u bind_v =
-  let aux c bindings = match c with
-    | U(uc) -> U(bind_u bindings uc)
-    | V(vc,rv) -> let x,y = bind_v bindings vc rv in V(x,y)
-    | _ -> failwith "invalid remainder for binding"
-  in (fun restc -> apply_wrapper aux restc [])
-
 let sing_func fc =
-  let s = gen_sym() in bind_sing (bind_fun s fc) (bind_fun_val s fc)
+  let s = gen_sym() in wrap_code (bind_fun s fc) (bind_fun_val s fc)
+    (fun _ -> failwith "cannot bind for functions")
 
 let sing_val vc rv =
-  let s = gen_sym() in bind_sing (bind_val s vc rv) (bind_val_val s vc rv)
+(*
+  let s = gen_sym() in wrap_code (bind_val s vc rv) (bind_val_val s vc rv)
+    (fun _ -> failwith "cannot bind for functions")
+*)
+  wrap_code
+    (bind_aux rv vc)
+    (fun bindings -> use_vc_as_nc (bind_aux rv vc bindings))
+    (fun _ -> failwith "cannot bind for functions")
 
 (* Iterate over a fun/val expression *)
 let loop_code fields prec fc bindings (nested_code, post_code) =
@@ -612,7 +640,7 @@ let slice_val fields vc rv = loop_slice (loop_code fields vc (get_slice_val rv))
 
 (* Bind/memoize the function into a value *)
 let sing_func_val f = let sym = gen_sym() in (assign sym f, sym)
-let slice_func_val f = let sym = gen_sym() in (create_map sym f, sym)
+let slice_func_val f = let sym = gen_slice_sym() in (create_map sym f, sym)
 
 (* Bind conditionals: attempt to bind, and branch based on success
  * This is useful for map lookups. *)
@@ -623,9 +651,9 @@ let bind_sing_cond_f f v t e =
   sequence [assign v f; assign v_valid (inl "FOUND"); condc]
 
 let bind_slice_cond_f fields f v body e =
-    let v_valid = v^"_valid" in
-    let condc = ucond (apply_uop neg_op (inl v_valid)) e in
-    sequence [iterate_cl fields f body; assign v_valid (inl "FOUND"); condc]
+  let v_valid = v^"_valid" in
+  let condc = ucond (apply_uop neg_op (inl v_valid)) e in
+  sequence [iterate_cl fields f body; assign v_valid (inl "FOUND"); condc]
     
 
 (* DBToaster-specific code generators that distinguish singletons/slices *)
@@ -637,22 +665,25 @@ let bind_slice_cond_f fields f v body e =
  * in a postfix order. Thus leftmost leaves are first in the nesting chain, and
  * the tree root is the last node in the chain.  
  *)
-let wrap_op op lic ric =
+let wrap_op op (lic,lb,ls) (ric,rb,rs) =
   let aux_op c bindings =
-    let r, ls, rs = gen_sym(), gen_sym(), gen_sym() in
+    let r, remb = if bindings = [] then gen_sym(),[]
+                  else List.hd bindings, List.tl bindings
+    in
     let (op_restc, op_postc) =
       let op_c = 
         if functional op then
             assign r (apply_op op (inl ls) (inl rs))
-        else apply_procedural_op op r (inl ls) (inl rs)
-      in
-      match c with
-      | U(uc) -> U(add_nested_code bindings r op_c (fst uc), inl ""), snd uc
-      | V(vc,rv) -> V(add_nested_code bindings r op_c vc, rv), inl ""
+        else apply_procedural_op op r (inl ls) (inl rs) in
+      begin match c with
+      | U(uc) -> U(add_nested_code remb r op_c (fst uc), inl ""), snd uc
+      | V(vc,rv) -> V(add_nested_code remb r op_c vc, rv), inl ""
       | _ -> failwith "invalid remainder for op"
+      end
     in
-    let rc = lic (B(ls, (ric (B(rs, op_restc)))))
-    in add_binary_post_code rc op_postc 
+    let ric_in = if rb then B(rs, op_restc) else op_restc in
+    let lic_in = if lb then B(ls, ric (ric_in)) else ric ric_in
+    in add_binary_post_code (lic lic_in) op_postc 
   in build_wrapper aux_op
 
 
@@ -713,27 +744,29 @@ let slice_val_lookup_code mapn inv outv pat patv bindings init_code =
 
 (* Statement IVC expects "d<lhs_outv>", "dv", "init_v" to be bound. *)
 let stmt_sing_init_code ivbc bindings (nc, pc) =
-  let v = gen_sym() in
+  let v, rb = if bindings = [] then (gen_sym(), [])
+              else (List.hd bindings, List.tl bindings) in
   let c = assign v (apply_op add_op (inl "dv") (inl "init_v")) in
   let ic = try get_unit_code ivbc
            with Failure(s) -> failwith ("invalid stmt singleton ivbc: "^s)
-  in add_post_code (add_nested_code bindings v (sequence [ic; c]) nc) pc
+  in add_post_code (add_nested_code rb v (sequence [ic; c]) nc) pc
 
 let stmt_sing_val_init_code ivbc bindings =
   use_vc_as_nc (stmt_sing_init_code ivbc bindings)
 
 let stmt_slice_init_code lhs_outv ivbc bindings (nc,pc) =
-  let v = gen_sym() in
+  let v, rb = if bindings = [] then (gen_sym(), [])
+              else (List.hd bindings, List.tl bindings) in
   let slice_cond =
     bind_map_vars (List.map (fun x -> "d"^x) lhs_outv) lhs_outv in
   let ic = assign v (apply_op add_op (inl "dv") (inl "init_v")) in
   begin match ivbc with
     | U _ | V _ -> 
       let lc =
-        add_nested_code bindings v (sequence [get_unit_code ivbc; ic]) nc in
+        add_nested_code rb v (sequence [get_unit_code ivbc; ic]) nc in
       let c = cond slice_cond lc (inl "") in add_post_code c pc
     | I(ivc) ->
-      let lc = (add_nested_code bindings v ic nc) in 
+      let lc = (add_nested_code rb v ic nc) in 
       let c = cond slice_cond lc (inl "")
       in add_post_code (get_unit_code (ivc (U(c, inl "")))) pc
     | _ -> failwith "invalid stmt slice ivbc"
@@ -830,36 +863,27 @@ let slice_update_code mapn inv outv pat patv direct update_code =
 let op_expr lf_i rf_i lv_i rv_i lf_v rf_v compose_f compose_v
             prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2
 =
-  let aux_val c1 c2 v1 v2 =
-    let x,y = compose_v op c1 c2 v1 v2 in V(x,y) 
+  let auxv c1 c2 v1 v2 =
+    let x,y = compose_v op c1 c2 v1 v2 in V(x,y) in
+  let prep_op f v c = match c with
+    | I(ic) -> ic, true, gen_sym()
+    | V(vc,rv) -> (v vc rv), false, rv
+    | F(fc) -> (f fc), true, gen_sym()
+    | _ -> failwith "invalid argument for binary operator"
   in
-  match (ce1,ce2) with
-  | I(lic),   I(ric)   -> wrap_op op lic ric
-  | I(lic),   F(fc)    -> wrap_op op lic (rf_i fc)
-  | F(fc),    I(ric)   -> wrap_op op (lf_i fc) ric
-  | I(lic),   V(vc,rv) -> wrap_op op lic (rv_i vc rv)
-  | V(vc,rv), I(ric)   -> wrap_op op (lv_i vc rv) ric
+  let lc,rc = (prep_op lf_i lv_i ce1), (prep_op rf_i rv_i ce2) in
+  match (functional op, ce1,ce2) with
+  | false,_,_
+  | _, I _, I _ | _, I _, F _ | _, F _, I _
+  | _, I _, V _ | _, V _, I _ -> wrap_op op lc rc
 
-  | F(fc),    V(vc,rv) -> 
-    if functional op then
-    let vcf,rvf = lf_v fc in aux_val vcf vc rvf rv
-    else wrap_op op (lf_i fc) (rv_i vc rv) 
+  | true, F(fc), V(vc,rv) -> let vcf,rvf = lf_v fc in auxv vcf vc rvf rv
+  | true, V(vc,rv), F(fc) -> let vcf,rvf = rf_v fc in auxv vc vcf rv rvf
+  | true, V(c1,r1), V(c2,r2) -> auxv c1 c2 r1 r2
+  | true, F(c1), F(c2) -> F(compose_f op c1 c2)
 
-  | V(vc,rv), F(fc)    ->
-    if functional op then
-    let vcf,rvf = rf_v fc in aux_val vc vcf rv rvf
-    else wrap_op op (lv_i vc rv) (lf_i fc)
-
-  | V(c1,r1), V(c2,r2) ->
-    if functional op then aux_val c1 c2 r1 r2
-    else wrap_op op (lv_i c1 r1) (rv_i c2 r2)
-
-  | F(c1),    F(c2)    ->
-    if functional op then F(compose_f op c1 c2)
-    else wrap_op op (lf_i c1) (lf_i c2)
-
-  | U(_), _  | _, U(_) -> failwith "invalid unit operands"
-  | B(_,_),_ | _,B(_,_) -> failwith "Op binding NYI" 
+  | _, U(_), _  | _, _, U(_) -> failwith "invalid unit operands"
+  | _, B(_,_),_ | _, _,B(_,_) -> failwith "Op binding NYI" 
 
 let op_singleton_expr prebind op ce1 ce2 = op_expr
     sing_func sing_func sing_val sing_val
@@ -1020,6 +1044,9 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
   | V(vc,rv) ->
     let agg_v = gen_agg_sym()
     in V(sequence [vc; gb_aggregate_v (inl rv) (inl agg_v) gb], agg_v)
+    (* TODO: queries on rv here, i.e.
+    F(gb_aggregate_f rv gb)
+    *)
   
   (* Can't handle unit since we don't know what to aggregate *)
   | _ -> failwith "invalid slice rhs"
@@ -1076,21 +1103,23 @@ let slice_init lhs_inv lhs_outv init_ext =
 
 
 (* Statement increments
- * -- ensures both branches populate "newv" variable with the incremented value
+ * -- ensures both branches populate "newv" or variable from bindings with
+ *    the incremented value
  * -- computes delta sing/slice first
  * -- branches on ivc if needed
  * -- performs merging for slices
  *)
 let stmt_incr_expr bindt_f bindr_f stmt_u stmt_v
                    lhs_inv lhs_outv cincr cinit cdebug =
-  let v = "newv" in
   let aux initb incrb c bindings =
+    let v, rb = if bindings = [] then "newv", []
+                else List.hd bindings, List.tl bindings in
     match c with
-    | U(uc) -> U(stmt_u v initb incrb bindings uc)
-    | V(vc,rv) -> let x,y = stmt_v v initb incrb bindings vc rv in V(x,y) 
+    | U(uc) -> U(stmt_u v (initb v) incrb rb uc)
+    | V(vc,rv) -> let x,y = stmt_v v (initb v) incrb rb vc rv in V(x,y) 
     | _ -> failwith "invalid unit code"
   in
-  let initb = match cinit with
+  let initb v = match cinit with
     | I(initc) ->
         initc (B(v, U(inl (single_comment "end of incr stmt init"), inl "")))
     | _ -> bindt_f cinit [v]
@@ -1132,7 +1161,7 @@ let stmt_update_expr update_f update_v stmt_f
     | F(fc) -> update_f fc
     | V(vc,rv) -> update_v vc rv
     | _ -> failwith "invalid statement"
-  in U(stmt_f (aux_update (updc)))
+  in U(stmt_f (aux_update updc))
 
 let singleton_statement lhs_mapn lhs_inv lhs_outv map_out_patterns
                         lhs_ext patv pat direct cupdate =
@@ -1167,32 +1196,64 @@ let trigger event rel trig_args stmt_block =
   in
   let tc =
     let trig_params = String.concat ", "
-      (List.map (fun x -> x^" int") trig_args) in
-    (Lines ["create function "^trig_name^" ("^trig_params^") as $$"])::
+      (List.map (fun x -> x^" real") trig_args) in
+    (Lines ["create function "^trig_name^" () returns trigger as $$"])::
     (List.map (fun x -> match x with
       | U(uc) -> ibc "    " (get_unit_code x)  
       | _ -> failwith "invalid statement code") stmt_block)@
     [(Lines ["$$ language plpgsql;"; ""; trig_aux_def; ""])]
   in U(List.fold_left cbc (List.hd tc) (List.tl tc), inl "")
 
-let source src fr rel_adaptors = ("<sources>", None, None)
+let valid_adaptors =
+  ["csv"; "orderbook"; 
+   "lineitem"; "orders"; "part"; "partsupp";
+   "customer"; "supplier"]
+
+let make_file_source filename rel_adaptors =
+  let va = List.filter (fun (_,(aname,_)) ->
+    List.mem aname valid_adaptors) rel_adaptors
+  in
+  let aux (r,(aname,aparams)) =
+    let delim =
+      if List.mem_assoc "fields" aparams then
+        List.assoc "fields" aparams
+      else failwith "No delimiter found for adaptor"
+    in inl("copy "^r^" from '"^filename^"' with delimiter '"^delim^"'")
+  in sequence ~final:true (List.map aux va)
+
+
+(* We only support line delimited csv file sources for now *)
+let source src fr rel_adaptors = 
+  let source_stmts =
+    match src,fr with
+    | FileSource fn, Delimited "\n" -> make_file_source fn rel_adaptors
+    | _ -> failwith "Unsupported data source" 
+  in (source_stmts, None, None)
 
 let main schema patterns sources triggers toplevel_queries =
-  let maps = Lines (List.map (fun (id,ins,outs) ->
-      let f (i,t) = id^"_a"^(string_of_int i)^" int" in
+  let maps = sequence ~final:true (List.flatten (List.map
+    (fun (id,ins,outs) ->
+      let f (i,t) = id^"_a"^(string_of_int i)^" real" in
       let add_counter l = snd(
         List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (1,[]) l) in
       let ivl = String.concat ", " (List.map f (add_counter ins)) in
       let ovl = String.concat ", " (List.map f (add_counter outs)) in
-      let v = id^"_val int" in
-      let tbl_params = String.concat ","
+      let v = id^"_val real" in
+      let tbl_params = String.concat ", "
         (List.filter (fun x -> x <> "") [ivl; ovl; v])
-      in "create table "^id^" ("^(tbl_params)^");")
-    schema)
-  in
-  let script = cbcl (maps::(List.map (fun x -> match x with
+      in [inl ("drop table if exists "^id);
+          inl ("create table "^id^" ("^(tbl_params)^")")])
+    schema)) in
+  let body = List.map (fun x -> match x with
     | U(uc) -> fst uc
-    | _ -> failwith "invalid trigger") triggers))
+    | _ -> failwith "invalid trigger") triggers
+  in
+  let footer = sequence ~final:true
+    (List.map (fun (id,_,_) -> inl("drop table "^id)) schema) in
+  let script = cbcl
+    ([maps; inl ""]@body@
+    (List.map (fun (x,y,z) -> x) sources)@
+    [inl ""; footer])
   in U(script, inl "")
 
 let output code out_chan =
