@@ -91,7 +91,7 @@ type bindings = string list
 type basic_code_t = Lines of string list | Inline of string
 
 type code_t =
-    I of (code_t -> code_t) (* nesting wrapper code *)
+    W of (code_t -> code_t) (* nesting wrapper code *)
   | F of basic_code_t
   | U of (basic_code_t * basic_code_t) (* nested code, post code *)
   | V of basic_code_t * string (* code, return value *)
@@ -161,7 +161,7 @@ let ibc = indent_basic_code
 let ivl = inline_var_list
 
 let rec string_of_code c = match c with
-    | I(ic) -> "I(...)"
+    | W(ic) -> "W(...)"
     | F(fc) -> "F("^(sbc fc)^")"
     | U(nc,pc) -> "U{"^(sbc nc)^"}{"^(sbc pc)^"}"
     | V(c,r) -> "V("^(sbc c)^","^r^")"
@@ -170,7 +170,7 @@ let rec string_of_code c = match c with
 (* Code wrapping, invokes a wrapper around the given code *)
 let rec apply_wrapper wrap_f =
   fun c bindings -> match c with
-    | I(rcf) -> I(fun xc -> wrap_f (rcf xc) bindings)
+    | W(rcf) -> W(fun xc -> wrap_f (rcf xc) bindings)
     | U(_) -> wrap_f c bindings
     | F(_) -> wrap_f c bindings
     | V(_,_) -> wrap_f c bindings
@@ -542,7 +542,7 @@ let op_slice_val op c1 c2 rv1 rv2 =
 
 (* Wrapper helpers
  * TODO: use these generally throughout CG *)
-let build_wrapper wrap_f = I(fun c -> apply_wrapper wrap_f c [])
+let build_wrapper wrap_f = W(fun c -> apply_wrapper wrap_f c [])
 
 let wrap_code u_f v_f f_f : (code_t -> code_t) =
   let aux c bindings = match c with
@@ -636,7 +636,7 @@ let bind_sing_code c bindings =
     else failwith "cannot add bindings for unit code" 
   | F(fc) -> let x,y = aux "" fc in V(x,y)
   | V(vc,rv) -> let x,y = aux rv vc in V(x,y)
-  | I _ -> failwith "unable to bind to unwrapped code"
+  | W _ -> failwith "unable to bind to unwrapped code"
   | B (_,_) -> failwith "invalid code for binding, expects binding from wrapper"
 
 (* Auxiliaries for collection binding, defining how inner bindings are to be 
@@ -670,14 +670,14 @@ let bind_slice_code fields c bindings =
     if bindings = [] then
       build_wrapper (sequence_wrapper (fst uc) (snd uc))
     else failwith "unable to bind a slice from unit code"
-  | I _ -> failwith "unable to bind to unwrapped code"
+  | W _ -> failwith "unable to bind to unwrapped code"
   | B (_,_) -> failwith "invalid code for binding, expects binding from wrapper"
 
 
 (* Binding code transformations, performing memoization/binding necessary
  * to evaluate functional code procedurally in impure languages.
  * TODO: these helpers return pseudo-wrappers, do we want to change?
- *        i.e. f : code -> code, rather than I(f)
+ *        i.e. f : code -> code, rather than W(f)
  *)
 
 (* Binds singleton functions to a fresh var, wrapping for use in other code *)
@@ -799,7 +799,7 @@ let slice_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
     | U _ | V _ ->
       let c = sequence [get_procedural_code ivbc; addc]
       in add_post_code (add_nested_code bindings v c nc) pc       
-    | I(ic) ->
+    | W(ic) ->
       let c = add_nested_code bindings v addc nc
       in add_post_code (get_procedural_code (ic (U(c,inl "")))) pc
     | _ -> failwith "invalid slice ivbc"
@@ -819,7 +819,7 @@ let slice_val_init_code mapn inv out_patterns outv ivbc bindings =
 let lookup_code_init_aux v ivbc bindings nc =
   begin match ivbc with
     | U _ | V _ -> add_nested_code bindings v (get_procedural_code ivbc) nc
-    | I(ic) ->
+    | W(ic) ->
         let initc = sequence [bind bindings (inl v); nc]
         in get_procedural_code (ic (U(initc, inl "")))
     | _ -> failwith "invalid init binding code during lookup"
@@ -878,7 +878,7 @@ let stmt_slice_init_code lhs_outv ivbc bindings (nc,pc) =
       let lc = add_nested_code rb v
         (sequence [get_procedural_code ivbc; ic]) nc in
       let c = cond slice_cond lc (inl "") in add_post_code c pc
-    | I(ivc) ->
+    | W(ivc) ->
       let lc = (add_nested_code rb v ic nc) in 
       let c = cond slice_cond lc (inl "")
       in add_post_code (get_procedural_code (ivc (U(c, inl "")))) pc
@@ -928,7 +928,7 @@ let slice_incr_code mapn inv outv v initb incrb bindings (nc, pc) =
         let merge_c = iterate_cl rvf (inl rv) sc in
         let c = sequence [get_procedural_code incrb; merge_c]
         in add_post_code c pc
-    | I(ic) -> add_post_code (get_procedural_code (ic (U(sc, inl "")))) pc
+    | W(ic) -> add_post_code (get_procedural_code (ic (U(sc, inl "")))) pc
     | _ -> failwith "invalid slice incr stmt incr code"
   end
 
@@ -977,7 +977,7 @@ let op_expr lf_i rf_i lv_i rv_i lf_v rf_v compose_f compose_v
   let auxv c1 c2 v1 v2 =
     let x,y = compose_v op c1 c2 v1 v2 in V(x,y) in
   let prep_op f v c = match c with
-    | I(ic) -> ic, true, gen_sym()
+    | W(ic) -> ic, true, gen_sym()
     | V(vc,rv) -> (v vc rv), false, rv
     | F(fc) -> (f fc), true, gen_sym()
     | _ -> failwith "invalid argument for binary operator"
@@ -985,8 +985,8 @@ let op_expr lf_i rf_i lv_i rv_i lf_v rf_v compose_f compose_v
   let lc,rc = (prep_op lf_i lv_i ce1), (prep_op rf_i rv_i ce2) in
   match (prebind, inbind, functional op, ce1,ce2) with
   | _,_,false,_,_
-  | _,_,_,I _,I _ | _,_,_,I _,F _ | _,_,_,F _,I _
-  | _,_,_,I _,V _ | _,_,_,V _,I _ -> wrap_op op lc rc
+  | _,_,_,W _,W _ | _,_,_,W _,F _ | _,_,_,F _,W _
+  | _,_,_,W _,V _ | _,_,_,V _,W _ -> wrap_op op lc rc
 
   | _, _, true, F(fc), V(vc,rv) -> let vcf,rvf = lf_v fc in auxv vcf vc rvf rv
   | _, _, true, V(vc,rv), F(fc) -> let vcf,rvf = rf_v fc in auxv vc vcf rv rvf
@@ -1056,7 +1056,7 @@ let init_expr bind_f init_u init_v mapn cinit =
   in 
   let ivbc =
     match cinit with
-    | I(ic) -> ic (B(v, U(inl (single_comment "end of stmt init"), inl "")))
+    | W(ic) -> ic (B(v, U(inl (single_comment "end of stmt init"), inl "")))
     | _ -> bind_f cinit [v]
   in build_wrapper (aux ivbc)
 
@@ -1108,7 +1108,7 @@ let direct_slice_expr ccalc cdebug = ccalc
 
 let full_agg_slice_expr ccalc cdebug =
   match ccalc with
-  | I(ic) ->
+  | W(ic) ->
     let agg_v,v = gen_agg_sym(), gen_sym() in 
     let aggc = dbc stmt_delimiter (aggregate agg_v (inl v)) in
     V(get_procedural_code (ic (B(v,(U(aggc, inl ""))))), agg_v)
@@ -1124,7 +1124,7 @@ let full_agg_slice_expr ccalc cdebug =
 let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
   let gb = String.concat "," lhs_outv in
   match ccalc with
-  | I(ic) ->
+  | W(ic) ->
     let v, slice_v = gen_sym(), gen_slice_sym() in
     let addc = dbc stmt_delimiter (add_map slice_v gb v) in
     let gbc = gb_aggregate_v (inl slice_v) gb
@@ -1173,7 +1173,7 @@ let stmt_init_expr bind_f stmt_u stmt_v cinit cdebug =
     | _ -> failwith "invalid map initialization code"
   in
   let ivbc = match cinit with
-    | I(ic) ->
+    | W(ic) ->
         ic (B("init_v", U(inl (single_comment "end of stmt init"), inl "")))
     | _ -> bind_f cinit ["init_v"]
   in build_wrapper (aux ivbc)
@@ -1205,12 +1205,12 @@ let stmt_incr_expr bindt_f bindr_f stmt_u stmt_v
     | _ -> failwith "invalid unit code"
   in
   let initb v = match cinit with
-    | I(initc) ->
+    | W(initc) ->
         initc (B(v, U(inl (single_comment "end of incr stmt init"), inl "")))
     | _ -> bindt_f cinit [v]
   in
   let incrb = match cincr with
-    | I(incrc) ->
+    | W(incrc) ->
         incrc (B("dv", U(inl (single_comment "end of incr stmt"), inl "")))
     | _ -> bindr_f cincr ["dv"]
   in build_wrapper (aux initb incrb)
@@ -1242,7 +1242,7 @@ let stmt_update_expr update_f update_v stmt_f
   let aux_update uc = get_procedural_code (uc (B(v, (U(wq, inl ""))))) in
   let updc =
     match cupdate with
-    | I(ic) -> ic
+    | W(ic) -> ic
     | F(fc) -> update_f fc
     | V(vc,rv) -> update_v vc rv
     | _ -> failwith "invalid statement"
@@ -1374,7 +1374,7 @@ let print_code c = match c with
   | U(c,pc) -> print_endline (sbc (fst (add_post_code c pc)))
   | F(fc) -> print_endline (sbc fc)
   | V(vc,v) -> print_endline (v^" ::= "); print_endline (sbc vc)
-  | I(_) -> failwith "cannot print, unfinished code generation."
+  | W(_) -> failwith "cannot print, unfinished code generation."
   | _ -> failwith "invalid unit code"
 ;;
 
@@ -1410,7 +1410,7 @@ Debug.log_unit_test "stringify iterate_cl" (fun x -> x)
 (*
 let q = singleton_init_lookup "m1" ["x"; "y"] [] ["a"; "b"] (const (CFloat 0.0)) in 
 let c = match q with
-  | I(qf) -> qf (U(inl "<update/insert code>;", inl "<agg, merge code>;"))
+  | W(qf) -> qf (U(inl "<update/insert code>;", inl "<agg, merge code>;"))
   | _ -> failwith "invalid query"
 in print_code c
 *)
@@ -1420,7 +1420,7 @@ let q = slice_lookup "m1" ["x"; "y"] ["a";"b";"c"] [1] ["b"]
   (singleton_init_lookup "m1" ["x";"y"] [] ["a";"b";"c"] (const (CFloat 0.0)))
 in 
   match q with
-  | I(qf) ->
+  | W(qf) ->
     print_code (qf (U(inl "<update/insert code>;", inl "<agg, merge code>;")))
   | _ -> failwith "invalid query"
 *)
@@ -1432,7 +1432,7 @@ let q = op_slice_expr "*"
           (slice_lookup "m2" (singleton_init_lookup "m2" (const (CFloat 0.0))))
 in
   match q with
-  | I(qf) ->
+  | W(qf) ->
     print_code (qf (U(inl "<update/insert code>;", inl "<agg, merge code>;")))
   | _ -> failwith "invalid query"
 *)
