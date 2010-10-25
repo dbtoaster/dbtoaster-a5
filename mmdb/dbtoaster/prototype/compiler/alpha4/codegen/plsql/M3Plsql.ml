@@ -1,9 +1,20 @@
 (*
- * A language independence layer, for functional and imperative languages
+ * PL/PGSQL code generator.
+ * -- attempted to be a language independence layer, for functional and
+ *    imperative languages, but insufficient to express global backtracking in
+ *    cg to one mode or the other, thus unable to generate arbitrary
+ *    combinations of fp/imp code.
+ * -- while carrying around alternatives are one way of implementing
+ *    backtracking, the code generation I want for plpgsql still requires
+ *    knowledge of conditionals, and potentially loops, leading to a cg 
+ *    representation similar to that of k3, thus I'm deprecating this in 
+ *    favour of pursuing k3, while applying lessons learned for general
+ *    merges and statement increments from here within.
+ *    
  *
  * Code can be one of:
- * 1. functions: purely functional values
- * 2. values: a block and a purely functional return value
+ * 1. unnamed values: purely functional values (similar to r-values)
+ * 2. values: a block that binds values and a purely functional return value
  * 3. a code wrapper
  * 4. nested/post code block
  * 5. future binding request
@@ -12,15 +23,9 @@
  *)
 
 (*
- * TODO: finish handling purely functional rvs, specifically, avoid
- * multiple reevaluations of such rvs.
- *
- * TODO: forward-backward CG, by enabling wrappers to handle alternatives 
- *
- * TODO: integer comparisons
- *
- * TODO: slice declarations, with schemas
- *
+ * Current status: code and method types are set up to handle alternatives,
+ * which would facilitate global backtracking, but handlers are yet to be written.
+ * 
  * TODO: functional map op naming
  * TODO: prebind, inbind
  * -- needs more general model for B, i.e. decl, val rather than just decl
@@ -28,10 +33,8 @@
  * TODO: unify map and statement initialization return types
  * (currently nc/pc pair and code respectively)
  *
- * TODO: check correct sequencing CG
+ * TODO: parallel/alternatives cg, with duplicate elimination 
  *
- * TODO: statement naming (dv, init_v, current_v, etc.)
- * 
  * TODO: modularize stringification
  *
  * TODO: typing
@@ -59,16 +62,6 @@
  *   ++ to easily implement null semantics, I think we should use top-down
  *      until we have good examples of non-null pc'
  *
- * TODO: language-independent abstraction
- * TODO: do we need full aggregation around ivc to ensure it's not wrapped code?
- *       -- ivc uses bigsums, which we must make sure are fully aggregated
- *       -- check what the M3 compiler does, it may put invoke this aggregation
- *          around the ivc
- *
- * TODO: do we want to support bindings when unrolling remainders, given we
- *       already build a list of bindings when wrapping?
- *       e.g. see init_expr, lookup_and_init_expr
- *
  * TODO: support functional conditionals, enabling functional map lookups
  *)
 
@@ -91,11 +84,11 @@ type bindings = string list
 type basic_code_t = Lines of string list | Inline of string
 
 type code_t =
-    W of (code_t -> code_t) (* nesting wrapper code *)
+    W of (code_t list -> code_t list) (* nesting wrapper code *)
   | F of basic_code_t
   | U of (basic_code_t * basic_code_t) (* nested code, post code *)
   | V of basic_code_t * string (* code, return value *)
-  | B of string * code_t (* var to be bound before code *)
+  | B of string * code_t list (* var to be bound before code *)
 
 type source_impl_t = basic_code_t
 
@@ -165,16 +158,8 @@ let rec string_of_code c = match c with
     | F(fc) -> "F("^(sbc fc)^")"
     | U(nc,pc) -> "U{"^(sbc nc)^"}{"^(sbc pc)^"}"
     | V(c,r) -> "V("^(sbc c)^","^r^")"
-    | B(v,c) -> "B("^v^","^(string_of_code c)^")"
+    | B(v,c) -> "B("^v^",["^(String.concat "/" (List.map string_of_code c))^"])"
 
-(* Code wrapping, invokes a wrapper around the given code *)
-let rec apply_wrapper wrap_f =
-  fun c bindings -> match c with
-    | W(rcf) -> W(fun xc -> wrap_f (rcf xc) bindings)
-    | U(_) -> wrap_f c bindings
-    | F(_) -> wrap_f c bindings
-    | V(_,_) -> wrap_f c bindings
-    | B(b, c2) -> apply_wrapper wrap_f c2 (bindings@[b])
 
 (* Basic code generation helpers *)
 let counters = Hashtbl.create 0
@@ -251,7 +236,8 @@ let ifthenelse0_bigsum_op = "ifte_bigsum"
 
 (* returns whether the given op can be evaluated functionally *)
 let functional op =
-  not(op = ifthenelse0_op || op = ifthenelse0_bigsum_op)
+  not(op = eq_op || op = lt_op || op = leq_op ||
+      op = ifthenelse0_op || op = ifthenelse0_bigsum_op)
 
 (* Additional operators for stringification *)
 let and_op = "and"
@@ -267,6 +253,8 @@ let rec indent ?(n=1) s = match n with | 0 -> s
 let single_comment c = "-- "^c
 let multi_comment c = "/*\n"^c^"*/"
 
+let delimit c = dbc stmt_delimiter c
+
 let sequence ?(final=false) ?(delim=stmt_delimiter) cl =
   cbcl ~final:final ~delim:delim (List.filter (fun x -> not(ebc x)) cl)
 
@@ -274,6 +262,10 @@ let assign lv rv = inl(lv^" := "^(sbc rv))
 
 let ucond p t : basic_code_t = cbcl
   ([Lines ["if "^(sbc p)^" then"]; indent t; Lines["end if"]])
+
+let scond p t e : basic_code_t =
+  inl ("if "^(sbc p)^" then "^(sbc t)^
+      (if ebc e then " end if" else " else "^(sbc e)^" end if"))
 
 let cond p t e : basic_code_t = cbcl
   ([Lines ["if "^(sbc p)^" then"]; indent t;]@
@@ -288,8 +280,6 @@ let iterate_cl fields collection body = cbcl
     
 let bind l v = (sequence (List.map (fun x -> assign x v) l))
 
-let rebind l c = List.fold_left (fun rbc b -> B(b,rbc)) c (List.rev l)
-
 let apply_uop op c = inl(op^" "^(sbc c))
 
 let apply_op op l r = inl((sbc l)^" "^op^" "^(sbc r))
@@ -297,9 +287,14 @@ let apply_op op l r = inl((sbc l)^" "^op^" "^(sbc r))
 let apply_procedural_op op rv l r =
   if functional op then
     failwith ("op ("^op^") should be evaluated functionally")
+  else if op = eq_op || op = lt_op || op = leq_op then
+    scond (apply_op op l r)
+      (delimit (assign rv (inl "1"))) (delimit (assign rv (inl "0")))
   else if op = ifthenelse0_op then
-    cond (apply_op neq_op l (inl "0")) (assign rv r) (assign rv (inl "0"))
-  else cond (apply_op neq_op r (inl "0")) (assign rv l) (assign rv (inl "0"))
+    scond (apply_op neq_op l (inl "0"))
+      (delimit (assign rv r)) (delimit (assign rv (inl "0")))
+  else scond (apply_op neq_op r (inl "0"))
+         (delimit (assign rv l)) (delimit (assign rv (inl "0")))
 
 (* Code access helpers *)
 let get_procedural_code c = match c with
@@ -316,9 +311,22 @@ let get_nested_code c = match c with
 let add_post_code c pc =
   if ebc pc then (c,inl "") else (cbc c pc, inl "")
 
+let substitute sub by c =
+  let sub_re = List.flatten (List.map (fun x ->
+    [Str.regexp_string (x^" "), by^" ";
+     Str.regexp_string (x^";"), by^";"]) sub)
+  in
+  let aux s =
+    List.fold_left (fun acc (x,y) -> Str.global_replace x y acc) s sub_re
+  in begin match c with
+  | Lines(sl) -> Lines(List.map aux sl)
+  | Inline(s) -> Inline(aux s)
+  end
+
 let add_nested_code bindings v c nc =
   if ebc nc then c
-  else sequence [c; bind bindings (inl v); nc]
+  else (*sequence [c; bind bindings (inl v); nc]*)
+  sequence [c; substitute bindings v nc]
 
 let add_binary_post_code c pc = match c with
   | U(c2,p2) -> let x = add_post_code c2 pc in U(fst x, p2)
@@ -395,7 +403,10 @@ let bind_map_pattern ins mapn inv outv pat patv =
   let renames = List.map (fun (mf,v) -> mf^" as "^v) (List.combine rmv rv)
   in renames,rv,cond
 
-(* Map primitives *)  
+(* Map primitives *)
+let declare_map n f = inl("create temporary table "^n^" ("^
+  (String.concat "," (List.map (fun x -> x^" real") (f@["v"])))^")")
+  
 let create_map n f = inl("create temporary table "^n^" as "^(sbc f))
 let copy_map o n =
   inl("create temporary table "^n^" as select * from "^(sbc o))
@@ -517,24 +528,12 @@ let op_slice_func op c1 c2 =
 let op_sing_val op c1 c2 rv1 rv2 =
   if not(functional op) then
     failwith "cannot eval procedural ops functionally"
-  else
-  (*
-  let r = gen_sym() in
-  let op_c = assign r (apply_op op (inl rv1) (inl rv2))
-  in (sequence [c1; c2; op_c], r)
-  *)
-  sequence [c1; c2], sbc (apply_op op (inl rv1) (inl rv2))
+  else sequence [c1; c2], sbc (apply_op op (inl rv1) (inl rv2))
 
 let op_slice_val op c1 c2 rv1 rv2 =
   if not(functional op) then
     failwith "cannot eval procedural ops functionally"
-  else
-  (*
-  let sym = gen_slice_sym() in
-  let op_c = create_map sym (op_slice_func op (inl rv1) (inl rv2))
-  in (sequence [c1; c2; op_c], sym)
-  *)
-  sequence [c1; c2], sbc (op_slice_func op (inl rv1) (inl rv2))
+  else sequence [c1; c2], sbc (op_slice_func op (inl rv1) (inl rv2))
 
 
 (* From here on use strings for names only.
@@ -542,29 +541,42 @@ let op_slice_val op c1 c2 rv1 rv2 =
 
 (* Wrapper helpers
  * TODO: use these generally throughout CG *)
-let build_wrapper wrap_f = W(fun c -> apply_wrapper wrap_f c [])
 
-let wrap_code u_f v_f f_f : (code_t -> code_t) =
-  let aux c bindings = match c with
+(* Code wrapping, invokes a wrapper around the given code, supplying bindings *)
+let rec apply_wrapper (wrap_f : code_t -> bindings -> code_t list) cl bindings =
+  List.fold_left
+  (fun alt c ->
+    alt@(begin match c with
+      | W(rcf) -> [W(fun xcl -> apply_wrapper wrap_f (rcf xcl) bindings)]
+      | U(_) -> wrap_f c bindings
+      | F(_) -> wrap_f c bindings
+      | V(_,_) -> wrap_f c bindings
+      | B(b, c2l) -> apply_wrapper wrap_f c2l (bindings@[b])
+    end)) [] cl
+
+let build_wrapper wrap_f = W(fun cl -> apply_wrapper wrap_f cl [])
+
+let wrap_code u_f v_f f_f : (code_t list -> code_t list) =
+  let aux c bindings = [match c with
     | U(uc) -> U(u_f bindings uc)
     | V(vc,rv) -> let x,y = v_f bindings vc rv in V(x,y)
     | F(fc) -> F(f_f bindings fc)
-    | _ -> failwith "invalid remainder for binding"
-  in (fun restc -> apply_wrapper aux restc [])
+    | _ -> failwith "invalid remainder for binding"]
+  in (fun restcl -> apply_wrapper aux restcl [])
 
 let sequence_wrapper pre post c bindings =
-  match (c, bindings) with
+  [match (c, bindings) with
   | U(uc),[] -> U(sequence [pre; fst uc; snd uc; post], inl "")
   | U(_), b -> failwith "unable to bind from unit return type"
-  | _,x -> failwith "invalid code for imperative sequence"
+  | _,x -> failwith "invalid code for imperative sequence"]
 
 let iterate_wrapper (fields,bodyb) collection_c collection c bindings =
   let aux body = 
     let l = iterate_cl fields collection (sequence [bodyb; body])
     in sequence [collection_c; l] in
-  match c with
+  [match c with
   | U(uc) -> U(sequence [aux (fst uc); snd uc], inl "")  
-  | _ -> failwith "invalid body for iteration"
+  | _ -> failwith "invalid body for iteration"]
 
 
 (*************************************
@@ -572,7 +584,10 @@ let iterate_wrapper (fields,bodyb) collection_c collection c bindings =
  *************************************)
 
 (* Helper to treat value as a block *)
-let use_vc_as_nc f vc rv = let x,y = f (vc, inl "") in sequence [x;y], rv
+let use_vc_as_nc f vc rv = let x,y = f (vc, inl "") in sequence [x;y], rv 
+
+let use_vc_as_nc_l f vc rv =
+  let xyl = f (vc, inl "") in List.map (fun (x,y) -> sequence [x;y], rv) xyl 
 
 (* returns a value to bind from a list of bindings *)
 let get_var_to_bind bindings =
@@ -710,11 +725,11 @@ let loop_code fields prec fc bindings (nested_code, post_code) =
   in (add_post_code (sequence sc) post_code)
 
 (* Transform a slice function to an iterator *)
-let loop_slice loop_f : (code_t -> code_t) =
-  let aux c bindings = match c with
+let loop_slice loop_f : (code_t list -> code_t list) =
+  let aux c bindings = [match c with
     | U(uc) -> U(loop_f bindings uc)
-    | _ -> failwith "invalid unit value"
-  in (fun restc -> apply_wrapper aux restc [])
+    | _ -> failwith "invalid unit value"]
+  in (fun restcl -> apply_wrapper aux restcl [])
 
 
 (* Wrapped slice binding code transformation methods.   *)
@@ -741,7 +756,9 @@ let bind_slice_cond_f fields f v body e =
   sequence [iterate_cl fields f body; assign v_valid (inl "FOUND"); condc]
     
 
-(* DBToaster-specific code generators that distinguish singletons/slices *)
+(************************************************************************
+ * DBToaster-specific code generators that distinguish singletons/slices
+ *************************************************************************)
 
 (* Operator helpers *)
 (* TODO: check post code *)
@@ -750,6 +767,7 @@ let bind_slice_cond_f fields f v body e =
  * in a postfix order. Thus leftmost leaves are first in the nesting chain, and
  * the tree root is the last node in the chain.  
  *)
+(* lic,ric : code_t list -> code_t list *)
 let wrap_op op (lic,lb,ls) (ric,rb,rs) =
   let aux_op c bindings =
     let r, remb = get_var_to_bind bindings in
@@ -763,9 +781,9 @@ let wrap_op op (lic,lb,ls) (ric,rb,rs) =
       | V(vc,rv) -> V(add_nested_code remb r op_c vc, rv), inl ""
       | _ -> failwith "invalid remainder for op"
       end in
-    let ric_in = if rb then B(rs, op_restc) else op_restc in
-    let lic_in = if lb then B(ls, ric (ric_in)) else ric ric_in
-    in add_binary_post_code (lic lic_in) op_postc 
+    let ric_in = if rb then [B(rs, [op_restc])] else [op_restc] in
+    let lic_in = if lb then [B(ls, ric ric_in)] else ric ric_in in
+    List.map (fun lic_out -> add_binary_post_code lic_out op_postc) (lic lic_in) 
   in build_wrapper aux_op
 
 
@@ -784,29 +802,34 @@ let sing_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
   let v = mapn^"_val" in
   let fields = get_map_key (inv@outv) in
   let addc = add_map mapn fields v in
+  List.map (fun ivbc ->
   let ic = try get_procedural_code ivbc
            with Failure(s) -> failwith ("invalid map singleton ivbc: "^s)
-  in add_post_code (add_nested_code bindings v (sequence [ic; addc]) nc) pc 
+  in add_post_code (add_nested_code bindings v (sequence [ic; addc]) nc) pc) ivbc 
 
 let sing_val_init_code mapn inv out_patterns outv ivbc bindings =
-  use_vc_as_nc (sing_init_code mapn inv out_patterns outv ivbc bindings)
+  use_vc_as_nc_l (sing_init_code mapn inv out_patterns outv ivbc bindings)
 
+(* TODO: this should really add a slice to the database in the case
+ * where ivbc is not a wrapper. In general we need a fixed semantics to what
+ * the ivbc binds, i.e. singletons for wrappers, and slices for U/V *)
 let slice_init_code mapn inv out_patterns outv ivbc bindings (nc, pc) =
   let v = mapn^"_val" in
   let fields = get_map_key (inv@outv) in
   let addc = add_map mapn fields v in
-  begin match ivbc with
+  List.flatten (List.map (fun ivbc -> begin match ivbc with
     | U _ | V _ ->
       let c = sequence [get_procedural_code ivbc; addc]
-      in add_post_code (add_nested_code bindings v c nc) pc       
+      in [add_post_code (add_nested_code bindings v c nc) pc]       
     | W(ic) ->
-      let c = add_nested_code bindings v addc nc
-      in add_post_code (get_procedural_code (ic (U(c,inl "")))) pc
+      let c = add_nested_code bindings v addc nc in
+      List.map (fun ic -> add_post_code (get_procedural_code ic) pc)
+        (ic [U(c,inl "")])
     | _ -> failwith "invalid slice ivbc"
-  end
+  end) ivbc)
 
 let slice_val_init_code mapn inv out_patterns outv ivbc bindings =
-  use_vc_as_nc (slice_init_code mapn inv out_patterns outv ivbc bindings)
+  use_vc_as_nc_l (slice_init_code mapn inv out_patterns outv ivbc bindings)
 
 (* Singleton/slice map lookup CG.
  * -- uses binding conditionals, i.e. attempt to bind to existing value,
@@ -817,36 +840,47 @@ let slice_val_init_code mapn inv out_patterns outv ivbc bindings =
  *)
 
 let lookup_code_init_aux v ivbc bindings nc =
-  begin match ivbc with
-    | U _ | V _ -> add_nested_code bindings v (get_procedural_code ivbc) nc
+  List.flatten (List.map (fun ivbc -> begin match ivbc with
+    | U _ | V _ -> [add_nested_code bindings v (get_procedural_code ivbc) nc]
     | W(ic) ->
-        let initc = sequence [bind bindings (inl v); nc]
-        in get_procedural_code (ic (U(initc, inl "")))
+        let initc = (*sequence ~final:true [bind bindings (inl v); nc]*)
+          substitute bindings v nc
+        in
+        List.map (fun ic -> get_procedural_code ic) (ic [U(initc, inl "")])
     | _ -> failwith "invalid init binding code during lookup"
-  end
+  end) ivbc)
 
 let sing_lookup_code mapn inv outv bindings ivbc (nc, pc) =
   let v = mapn^"_val" in
   let lookupf = get_map_sing mapn inv outv v in
-  let init_code = lookup_code_init_aux v ivbc bindings nc in
-  let lookup_and_init_c = bind_sing_cond_f lookupf v
-    (sequence [bind bindings (inl v); nc]) init_code
-  in (add_post_code lookup_and_init_c pc)
+  let init_code_l = lookup_code_init_aux v ivbc bindings nc in
+  List.map (fun init_code ->
+    let lookup_and_init_c = bind_sing_cond_f lookupf v
+      (*(sequence ~final:true [bind bindings (inl v); nc])*)
+      (substitute bindings v nc)
+      init_code
+    in (add_post_code lookup_and_init_c pc)) init_code_l
 
 let sing_val_lookup_code mapn inv outv bindings init_code =
-  use_vc_as_nc (sing_lookup_code mapn inv outv bindings init_code)
+  use_vc_as_nc_l (sing_lookup_code mapn inv outv bindings init_code)
 
 let slice_lookup_code mapn inv outv pat patv bindings ivbc (nc, pc) =
   let out_fields, lookup_slice = get_map_out_slice mapn inv outv pat patv in
   let v = mapn^"_val" in
-  let init_code = lookup_code_init_aux v ivbc bindings nc in
-  let lookup_and_init_c = bind_slice_cond_f
-    (iter_fields (out_fields@[v])) lookup_slice v
-    (sequence [bind bindings (inl v); nc]) init_code
-  in (add_post_code lookup_and_init_c pc)
+  let init_code_l = lookup_code_init_aux v ivbc bindings nc in
+  List.map (fun init_code ->
+    let lfields = iter_fields (out_fields@[v]) in
+    let lbody =
+      (*(sequence ~final:true [bind bindings (inl v); nc])*)
+      (substitute bindings v nc)
+    in
+    let lookup_c = 
+      if inv = [] then iterate_cl lfields lookup_slice lbody
+      else bind_slice_cond_f lfields lookup_slice v lbody init_code
+    in (add_post_code lookup_c pc)) init_code_l
 
 let slice_val_lookup_code mapn inv outv pat patv bindings ivbc =
-  use_vc_as_nc (slice_lookup_code mapn inv outv pat patv bindings ivbc)
+  use_vc_as_nc_l (slice_lookup_code mapn inv outv pat patv bindings ivbc)
 
 (* Statement initializer, increment and update helpers.
  * Much like map initialization:
@@ -861,32 +895,34 @@ let slice_val_lookup_code mapn inv outv pat patv bindings ivbc =
 let stmt_sing_init_code ivbc bindings (nc, pc) =
   let v, rb = get_var_to_bind bindings in
   let c = assign v (apply_op add_op (inl "dv") (inl "init_v")) in
-  let ic = try get_procedural_code ivbc
-           with Failure(s) -> failwith ("invalid stmt singleton ivbc: "^s)
-  in add_post_code (add_nested_code rb v (sequence [ic; c]) nc) pc
+  List.map (fun ivbc ->
+    let ic = try get_procedural_code ivbc
+             with Failure(s) -> failwith ("invalid stmt singleton ivbc: "^s)
+    in add_post_code (add_nested_code rb v (sequence [ic; c]) nc) pc) ivbc
 
 let stmt_sing_val_init_code ivbc bindings =
-  use_vc_as_nc (stmt_sing_init_code ivbc bindings)
+  use_vc_as_nc_l (stmt_sing_init_code ivbc bindings)
 
 let stmt_slice_init_code lhs_outv ivbc bindings (nc,pc) =
   let v, rb = get_var_to_bind bindings in
   let slice_cond =
     bind_map_vars (List.map (fun x -> "d"^x) lhs_outv) lhs_outv in
   let ic = assign v (apply_op add_op (inl "dv") (inl "init_v")) in
-  begin match ivbc with
+  List.flatten (List.map (fun ivbc -> begin match ivbc with
     | U _ | V _ -> 
       let lc = add_nested_code rb v
         (sequence [get_procedural_code ivbc; ic]) nc in
-      let c = cond slice_cond lc (inl "") in add_post_code c pc
+      let c = cond slice_cond lc (inl "") in [add_post_code c pc]
     | W(ivc) ->
       let lc = (add_nested_code rb v ic nc) in 
-      let c = cond slice_cond lc (inl "")
-      in add_post_code (get_procedural_code (ivc (U(c, inl "")))) pc
+      let c = cond slice_cond lc (inl "") in 
+      List.map (fun ic -> add_post_code (get_procedural_code ic) pc)
+        (ivc [U(c, inl "")])
     | _ -> failwith "invalid stmt slice ivbc"
-  end
+  end) ivbc)
 
 let stmt_slice_val_init_code lhs_outv ivbc bindings =
-  use_vc_as_nc (stmt_slice_init_code lhs_outv ivbc bindings)
+  use_vc_as_nc_l (stmt_slice_init_code lhs_outv ivbc bindings)
 
 
 (* Statement increment helpers
@@ -897,17 +933,22 @@ let stmt_slice_val_init_code lhs_outv ivbc bindings =
 (* Singleton stmt increments expect "current_v","current_v_valid" to be bound *)
 let incr_code_aux v initb bindings nc =
   let sum_c = assign v (apply_op add_op (inl "current_v") (inl "dv")) in
-  let initc = add_nested_code bindings v (get_procedural_code initb) nc in
-  let upd_cond = inl "current_v_valid"
-  in cond upd_cond (add_nested_code bindings v sum_c nc) initc
+  let initc_l = List.map (fun ivbc ->
+    add_nested_code bindings v (get_procedural_code ivbc) nc) initb
+  in
+  let upd_cond = inl "current_v_valid" in
+  List.map (fun initc ->
+    cond upd_cond (add_nested_code bindings v sum_c nc) initc) initc_l
 
 let sing_incr_code v initb incrb bindings (nc, pc) =
-  let upd_c = incr_code_aux v initb bindings nc in
-  let incrc = get_procedural_code incrb
-  in add_post_code (sequence [incrc; upd_c]) pc
+  let upd_cl = incr_code_aux v initb bindings nc in
+  let incrc_l = List.map (fun incrb -> get_procedural_code incrb) incrb
+  in List.flatten (List.map (fun incrc ->
+    List.map (fun upd_c ->
+      add_post_code (sequence [incrc; upd_c]) pc) upd_cl) incrc_l)
 
 let sing_val_incr_code v initb incrb bindings =
-  use_vc_as_nc (sing_incr_code v initb incrb bindings)
+  use_vc_as_nc_l (sing_incr_code v initb incrb bindings)
 
 (* Slice stmt increments perform a merge that includes map lookups to bind
  * "current_v", "current_v_valid". This is currently inefficient, since the
@@ -918,22 +959,28 @@ let sing_val_incr_code v initb incrb bindings =
  * existing map.
  *)
 let slice_incr_code mapn inv outv v initb incrb bindings (nc, pc) =
-  let entry_c = incr_code_aux v initb bindings nc in
+  let entry_cl = incr_code_aux v initb bindings nc in
   let rvf = iter_fields ((List.map (fun x -> "d"^x) outv)@["dv"]) in
   let current_c = get_map_sing_val mapn inv outv "current_v" in
-  let sc = sequence [current_c; entry_c] in
-  begin match incrb with
+  List.flatten (List.map (fun incrb -> begin match incrb with
     | U(_) -> failwith "cannot handle unit code for delta slice" 
     | V(vc,rv) ->
+      let scl = List.map (fun entry_c ->
+        sequence ~final:true [current_c; entry_c]) entry_cl
+      in
+      List.map (fun sc -> 
         let merge_c = iterate_cl rvf (inl rv) sc in
         let c = sequence [get_procedural_code incrb; merge_c]
-        in add_post_code c pc
-    | W(ic) -> add_post_code (get_procedural_code (ic (U(sc, inl "")))) pc
+        in add_post_code c pc) scl
+    | W(ic) ->
+      let scl = List.map (fun entry_c -> sequence [current_c; entry_c]) entry_cl in
+      List.map (fun ic -> add_post_code (get_procedural_code ic) pc)
+        (List.flatten (List.map (fun sc -> ic [U(sc, inl "")]) scl))
     | _ -> failwith "invalid slice incr stmt incr code"
-  end
+  end) incrb)
 
 let slice_val_incr_code mapn inv outv v initb incrb bindings =
-  use_vc_as_nc (slice_incr_code mapn inv outv v initb incrb bindings)
+  use_vc_as_nc_l (slice_incr_code mapn inv outv v initb incrb bindings)
 
 (* Statement update helpers *)
 
@@ -959,9 +1006,11 @@ let slice_update_code mapn inv outv pat patv direct update_code =
 
 
 
-(* High-level dispatchers to low-level code generator methods.
+(*************************************************************************
+ * High-level dispatchers to low-level code generator methods.
  * These are based on DBToaster's incremental statements, and are language
- * independent, thus do not need to be reimplemented for different backends.*)
+ * independent, thus do not need to be reimplemented for different backends.
+ *************************************************************************)
 
 (* Operators
  * -- nesting wrapper semantics: operators combine branches, thus
@@ -1050,14 +1099,14 @@ let op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2 =
 let init_expr bind_f init_u init_v mapn cinit =
   let v = mapn^"_val" in
   let aux ivbc c bindings = match c with
-    | U(uc) -> U(init_u ivbc bindings uc)
-    | V(vc,rv) -> let x,y = init_v ivbc bindings vc rv in V(x,y)
+    | U(uc) -> List.map (fun (x,y) -> U(x,y)) (init_u ivbc bindings uc)
+    | V(vc,rv) -> List.map (fun (x,y) -> V(x,y)) (init_v ivbc bindings vc rv)
     | _ -> failwith "invalid map initialization code"
   in 
   let ivbc =
     match cinit with
-    | W(ic) -> ic (B(v, U(inl (single_comment "end of stmt init"), inl "")))
-    | _ -> bind_f cinit [v]
+    | W(ic) -> ic [B(v, [U(inl (single_comment "end of stmt init"), inl "")])]
+    | _ -> [bind_f cinit [v]]
   in build_wrapper (aux ivbc)
 
 let singleton_init_lookup mapn inv out_patterns outv cinit =
@@ -1078,10 +1127,10 @@ let slice_init_lookup mapn inv out_patterns outv cinit =
 let lookup_and_init_expr lookup_u lookup_v cinit =
   let aux_lookup ic c bindings =
     match c with
-    | U(uc) -> U(lookup_u bindings ic uc)
-    | V(vc,rv) -> let x,y = lookup_v bindings ic vc rv in V(x,y)
+    | U(uc) -> List.map (fun (x,y) -> U(x,y)) (lookup_u bindings ic uc)
+    | V(vc,rv) -> List.map (fun (x,y) -> V(x,y)) (lookup_v bindings ic vc rv)
     | _ -> failwith "invalid unit value"
-  in build_wrapper (aux_lookup cinit)
+  in build_wrapper (aux_lookup [cinit])
 
 let singleton_lookup_and_init mapn inv outv =
   let aux f = f mapn inv outv in 
@@ -1109,9 +1158,10 @@ let direct_slice_expr ccalc cdebug = ccalc
 let full_agg_slice_expr ccalc cdebug =
   match ccalc with
   | W(ic) ->
+    (* TODO: pick best code *)
     let agg_v,v = gen_agg_sym(), gen_sym() in 
-    let aggc = dbc stmt_delimiter (aggregate agg_v (inl v)) in
-    V(get_procedural_code (ic (B(v,(U(aggc, inl ""))))), agg_v)
+    let aggc = aggregate agg_v (inl v) in
+    V(get_procedural_code (List.hd (ic [B(v,[U(aggc, inl "")])])), agg_v)
 
   | F(fc) -> F(full_aggregate_f fc)
   | V(vc,rv) ->
@@ -1125,10 +1175,13 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
   let gb = String.concat "," lhs_outv in
   match ccalc with
   | W(ic) ->
+    (* TODO: pick best code *)
     let v, slice_v = gen_sym(), gen_slice_sym() in
-    let addc = dbc stmt_delimiter (add_map slice_v gb v) in
-    let gbc = gb_aggregate_v (inl slice_v) gb
-    in V(get_procedural_code (ic (B(v,(U(addc, inl ""))))), sbc gbc)
+    let slice_decl_c = declare_map slice_v lhs_outv in
+    let addc = add_map slice_v gb v in
+    let gbc = gb_aggregate_v (inl slice_v) gb in
+    let rc = get_procedural_code (List.hd (ic [B(v,[U(addc, inl "")])])) in 
+    V(sequence [slice_decl_c; rc], sbc gbc)
 
   | F(fc) -> F(gb_aggregate_f fc gb)
   | V(vc,rv) -> V(vc, sbc (gb_aggregate_v (inl rv) gb))
@@ -1168,14 +1221,14 @@ let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
  *)
 let stmt_init_expr bind_f stmt_u stmt_v cinit cdebug =
   let aux ivbc c bindings = match c with
-    | U(uc) -> U(stmt_u ivbc bindings uc)
-    | V(vc,rv) -> let x,y = stmt_v ivbc bindings vc rv in V(x,y)
+    | U(uc) -> List.map (fun (x,y) -> U(x,y)) (stmt_u ivbc bindings uc)
+    | V(vc,rv) -> List.map (fun (x,y) -> V(x,y)) (stmt_v ivbc bindings vc rv)
     | _ -> failwith "invalid map initialization code"
   in
   let ivbc = match cinit with
     | W(ic) ->
-        ic (B("init_v", U(inl (single_comment "end of stmt init"), inl "")))
-    | _ -> bind_f cinit ["init_v"]
+        ic [B("init_v", [U(inl (single_comment "end of stmt init"), inl "")])]
+    | _ -> [bind_f cinit ["init_v"]]
   in build_wrapper (aux ivbc)
 
 let singleton_init = stmt_init_expr bind_sing_code
@@ -1200,19 +1253,19 @@ let stmt_incr_expr bindt_f bindr_f stmt_u stmt_v
     let v, rb = if bindings = [] then "newv", []
                 else List.hd bindings, List.tl bindings in
     match c with
-    | U(uc) -> U(stmt_u v (initb v) incrb rb uc)
-    | V(vc,rv) -> let x,y = stmt_v v (initb v) incrb rb vc rv in V(x,y) 
+    | U(uc) -> List.map (fun (x,y) -> U(x,y)) (stmt_u v (initb v) incrb rb uc)
+    | V(vc,rv) -> List.map (fun (x,y) -> V(x,y)) (stmt_v v (initb v) incrb rb vc rv) 
     | _ -> failwith "invalid unit code"
   in
   let initb v = match cinit with
     | W(initc) ->
-        initc (B(v, U(inl (single_comment "end of incr stmt init"), inl "")))
-    | _ -> bindt_f cinit [v]
+        initc [B(v, [U(inl (single_comment "end of incr stmt init"), inl "")])]
+    | _ -> [bindt_f cinit [v]]
   in
   let incrb = match cincr with
     | W(incrc) ->
-        incrc (B("dv", U(inl (single_comment "end of incr stmt"), inl "")))
-    | _ -> bindr_f cincr ["dv"]
+        incrc [B("dv", [U(inl (single_comment "end of incr stmt"), inl "")])]
+    | _ -> [bindr_f cincr ["dv"]]
   in build_wrapper (aux initb incrb)
 
 let singleton_update lhs_outv cincr cinit cdebug = stmt_incr_expr
@@ -1238,15 +1291,17 @@ let stmt_update_expr update_f update_v stmt_f
                      lhs_mapn lhs_inv lhs_outv cupdate =
   let v = "updated_v" in
   let outv = List.map (fun v -> "d"^v) lhs_outv in
-  let wq = dbc stmt_delimiter (update_map_sing lhs_mapn lhs_inv outv (inl v)) in 
-  let aux_update uc = get_procedural_code (uc (B(v, (U(wq, inl ""))))) in
+  let wq = dbc stmt_delimiter (update_map_sing lhs_mapn lhs_inv outv (inl v)) in
   let updc =
     match cupdate with
     | W(ic) -> ic
     | F(fc) -> update_f fc
     | V(vc,rv) -> update_v vc rv
     | _ -> failwith "invalid statement"
-  in U(stmt_f (aux_update updc))
+  in
+  (* TODO: pick the best code *)
+  List.hd (List.map (fun uc ->
+    U(stmt_f (get_procedural_code uc))) (updc [B(v, [U(wq, inl "")])]))
 
 let singleton_statement lhs_mapn lhs_inv lhs_outv map_out_patterns
                         lhs_ext patv pat direct cupdate =
@@ -1271,7 +1326,6 @@ let statement lhs_mapn lhs_inv lhs_outv lhs_ext patv pat direct cupdate =
 let pm_const pm = match pm with | Insert -> "insert" | Delete -> "delete" 
 let pm_name pm  = match pm with | Insert -> "ins" | Delete -> "del" 
 
-(* TODO: make language independent *)
 let trigger event rel trig_args stmt_block =
   let trig_name = (pm_name event)^"_"^rel in
   let trig_aux_def =
@@ -1282,19 +1336,34 @@ let trigger event rel trig_args stmt_block =
   let trig_params = ibc tab (sequence ~final:true
     (List.map (fun x -> assign x (inl ("NEW."^x))) trig_args))
   in
+  let tc_stmts = List.map (fun x -> match x with
+    | U(uc) -> ibc tab (get_procedural_code x)
+    | _ -> failwith "invalid statement code") stmt_block
+  in
   let var_decls =
     let num_vars = get_counter var_c in
     let rec decl_var i acc =
         if i > num_vars then acc
-        else decl_var (i+1) (acc@[inl("var"^(string_of_int i)^" real")])
+        else
+          let x =
+            let var_name = "var"^(string_of_int i) in
+            let var_used = List.exists (fun stmt_c ->
+                let sc = sbc stmt_c in
+                List.exists (fun re ->
+                    try (Str.search_forward re sc 0) >= 0
+                    with Not_found -> false)
+                  [Str.regexp_string (var_name^" ");
+                   Str.regexp_string (var_name^";")])
+              tc_stmts in
+            if var_used then acc@[inl(var_name^" real")] else acc
+          in decl_var (i+1) x
+    in
+    let vl = (decl_var 0 [])@(List.map (fun v -> inl(v^" real"))
+      ["current_v"; "dv"; "init_v"; "newv"; "updated_v"])
     in ibc tab (cbc (cbc (inl "declare")
-         (ibc tab (sequence ~final:true (decl_var 0 [])))) (inl "begin"))
+         (ibc tab (sequence ~final:true vl))) (inl "begin"))
   in
   let tc =
-    let tc_stmts = List.map (fun x -> match x with
-      | U(uc) -> ibc tab (get_procedural_code x)
-      | _ -> failwith "invalid statement code") stmt_block
-    in
     (Lines ["create function "^trig_name^" () returns trigger as $$"])::
     var_decls::
     trig_params::
