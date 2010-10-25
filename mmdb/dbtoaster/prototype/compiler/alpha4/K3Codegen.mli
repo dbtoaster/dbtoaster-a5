@@ -34,6 +34,9 @@ sig
 
     (* statements -> block *)    
     val block : code_t list -> code_t
+
+    (* iter fn, collection -> iterate *)
+    val iterate : code_t -> code_t -> code_t
  
     (* Functions *)
     (* arg, schema app, body -> fn *)
@@ -120,6 +123,7 @@ sig
     (* fn id -> code
      * -- code generator should be able to hooks to implementations of
      *    external functions, e.g. invoke function call *)
+    (*
     val ext_fn :  K3.SR.fn_id_t -> code_t
 
     (* outv, incr, init, init_singleton -> update, sing init *)
@@ -139,4 +143,6 @@ sig
     val statement : K3.SR.coll_id_t ->
         M3.var_t list -> M3.var_t list -> M3.var_t list -> int list ->
             code_t -> code_t -> code_t
+    *)
+
 end

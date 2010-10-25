@@ -6,7 +6,6 @@ module type SRSig =
 sig
     type id_t = M3.var_id_t
     type coll_id_t = M3.map_id_t
-    type fn_id_t = string
     
     type prebind   = M3.Prepared.pprebind_t
     type inbind    = M3.Prepared.pinbind_t
@@ -14,9 +13,11 @@ sig
     type extension = M3.var_t list
     type pattern   = int list
 
+    (*
+    type fn_id_t = string
     type iap_meta  = pattern * m3schema * m3schema * extension
-
     type ext_fn_id = IndexAndProject of iap_meta | Symbol of fn_id_t
+    *)
 
     type type_t =
           Unit | Float | Int
@@ -49,9 +50,11 @@ sig
        | Leq           of expr_t      * expr_t
        | IfThenElse0   of expr_t      * expr_t
 
-       (* Control flow: conditionals, sequences *)
+       (* Control flow: conditionals, sequences, side-effecting
+        * iteration over collections *)
        | IfThenElse    of expr_t      * expr_t   * expr_t
-       | Block         of expr_t list 
+       | Block         of expr_t list
+       | Iterate       of expr_t      * expr_t
     
        (* Functions *)
        | Lambda        of id_t        * type_t   * expr_t
@@ -78,7 +81,7 @@ sig
        | PCUpdate      of expr_t      * expr_t list * expr_t
        | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
     
-       | External      of ext_fn_id
+       (*| External      of ext_fn_id*)
 
     (* Construction from M3 *)
     val calc_to_singleton_expr : M3.Prepared.calc_t -> expr_t
@@ -97,7 +100,7 @@ sig
     val collection_of_float_list : float list -> expr_t
     
     (* Incremental section *)
-    type statement = expr_t * expr_t * expr_t
+    type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
     type program = M3.map_type_t list * trigger list
 

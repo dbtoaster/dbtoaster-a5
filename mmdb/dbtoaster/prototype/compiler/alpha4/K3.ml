@@ -7,7 +7,6 @@ module type SRSig =
 sig
     type id_t = M3.var_id_t
     type coll_id_t = M3.map_id_t
-    type fn_id_t = string
     
     type prebind   = M3.Prepared.pprebind_t
     type inbind    = M3.Prepared.pinbind_t
@@ -15,9 +14,11 @@ sig
     type extension = M3.var_t list
     type pattern   = int list
 
+    (*
+    type fn_id_t = string
     type iap_meta  = pattern * m3schema * m3schema * extension
-
     type ext_fn_id = IndexAndProject of iap_meta | Symbol of fn_id_t
+    *)
 
     type type_t =
 	      Unit | Float | Int
@@ -50,9 +51,10 @@ sig
 	   | Leq           of expr_t      * expr_t
 	   | IfThenElse0   of expr_t      * expr_t
 
-       (* Control flow: conditionals, sequences *)
+       (* Control flow: conditionals, sequences, side-effecting iterations *)
 	   | IfThenElse    of expr_t      * expr_t   * expr_t
 	   | Block         of expr_t list 
+       | Iterate       of expr_t      * expr_t  
 	
 	   (* Functions *)
 	   | Lambda        of id_t        * type_t   * expr_t
@@ -79,7 +81,7 @@ sig
 	   | PCUpdate      of expr_t      * expr_t list * expr_t
 	   | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
     
-	   | External      of ext_fn_id
+	   (*| External      of ext_fn_id*)
 
     (* Construction from M3 *)
     val calc_to_singleton_expr : M3.Prepared.calc_t -> expr_t
@@ -98,7 +100,7 @@ sig
     val collection_of_float_list : float list -> expr_t
     
     (* Incremental section *)
-    type statement = expr_t * expr_t * expr_t
+    type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
     type program = M3.map_type_t list * trigger list
 
@@ -134,8 +136,9 @@ type expr_meta =
    prebind * inbind * m3schema * m3schema * m3schema * extension * extension
 
 (* index pattern, pattern schema, output schema, rhs->output extension *)
+(*
 type iap_meta = pattern * m3schema * m3schema * extension
-
+*)
 
 (*------------------------------------------------------------------------------
  *
@@ -157,6 +160,7 @@ type type_t =
     | Fn of type_t * type_t (* arg * body *)
 
 (* External functions *)
+(*
 type ext_fn_type_t = type_t list * type_t   (* arg, ret type *)
 
 type fn_id_t = string
@@ -165,6 +169,7 @@ type symbol_table = (fn_id_t, ext_fn_type_t) Hashtbl.t
 type ext_fn_id = IndexAndProject of iap_meta | Symbol of fn_id_t
 
 let ext_fn_symbols : symbol_table = Hashtbl.create 100
+*)
 
 (* Collections *)
 type schema = (id_t * type_t) list
@@ -204,10 +209,11 @@ type expr_t =
    | Leq           of expr_t      * expr_t
    | IfThenElse0   of expr_t      * expr_t
 
-   (* Control flow: conditionals, sequences *)
+   (* Control flow: conditionals, sequences, side-effecting iterations *)
    | IfThenElse    of expr_t      * expr_t   * expr_t
    | Block         of expr_t list 
-
+   | Iterate       of expr_t      * expr_t  
+     
    (* Functions *)
    | Lambda        of id_t        * type_t   * expr_t
    | AssocLambda   of id_t        * type_t   * id_t      * type_t * expr_t
@@ -259,7 +265,7 @@ type expr_t =
    (* map, in key (optional), out key, value *)   
    | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
 
-   | External      of ext_fn_id
+   (*| External      of ext_fn_id*)
 
 
 (* Helpers *)
@@ -286,6 +292,7 @@ let rec fold_leaves f acc e =
     | IfThenElse0      (ce1,ce2)            -> fold_op [ce1; ce2]
     | IfThenElse       (pe,te,ee)           -> fold_op [pe;te;ee]
     | Block            e_l                  -> fold_op e_l
+    | Iterate          (fn_e, ce)           -> fold_op [fn_e; ce]
     | Lambda           (v,v_t,ce)           -> fold_leaves f acc ce
     | AssocLambda      (v1,v1_t,v2,v2_t,be) -> fold_leaves f acc be
     | Apply            (fn_e,arg_e)         -> fold_op [fn_e; arg_e]
@@ -297,12 +304,12 @@ let rec fold_leaves f acc e =
     | OutPC            (id,outs,t)          -> f e acc
     | InPC             (id,ins,t,ie)        -> f e acc
     | PC               (id,ins,outs,t,ie)   -> f e acc
-    | Member         (me,ke)              -> fold_op (me::ke)  
-    | Lookup         (me,ke)              -> fold_op (me::ke)
-    | Slice          (me,sch,pat_ve)      -> fold_op (me::(List.map snd pat_ve))
+    | Member           (me,ke)              -> fold_op (me::ke)  
+    | Lookup           (me,ke)              -> fold_op (me::ke)
+    | Slice            (me,sch,pat_ve)      -> fold_op (me::(List.map snd pat_ve))
     | PCUpdate         (me,ke,te)           -> fold_op ([me]@ke@[te])
     | PCValueUpdate    (me,ine,oute,ve)     -> fold_op ([me]@ine@oute@[ve])
-    | External         efn_id               -> f e acc
+    (*| External         efn_id               -> f e acc*)
     end
     
 let find_vars v e =
@@ -314,7 +321,7 @@ let find_vars v e =
         | InPC(id,ins,t,ie) -> acc
         | OutPC(id,outs,t) -> (List.filter (fun (x,t) -> v=x) outs)@acc
         | PC(id,ins,outs,t,ie)  -> (List.filter (fun (x,t) -> v=x) outs)@acc
-        | External efn_id -> acc
+        (*| External efn_id -> acc*)
         | _ -> failwith "invalid leaf" 
     in fold_leaves aux [] e
 
@@ -861,6 +868,24 @@ let rec typecheck_expr e : type_t =
     | Block        (e_l) ->
         let t_l = List.map recur e_l in List.nth t_l ((List.length t_l)-1)  
 
+    | Iterate      (fn_e, ce) ->
+        (* TODO: almost the same as map typechecking... lift *)
+        let (fn_t, c_t) = recur fn_e, recur ce in
+        let fn_tl = linearize_mvf fn_t in
+        let coll_fn c_ret_t fn_ret_t = match c_ret_t, fn_ret_t with
+          | (Unit, _) -> failwith "invalid iterate collection"
+          | (Collection _, Unit) -> Unit
+          | (_,_) -> failwith "invalid iteration"
+        in
+        if List.length fn_tl < 2 then failwith "invalid iterate function"
+        else
+            begin match c_t with
+            | Unit -> failwith "invalid iterate collection"
+            | Fn _ -> lift_schema_app coll_fn fn_tl c_t
+            | _ -> apply_suffix (coll_fn c_t) fn_tl c_t
+            end
+        
+
     | Lambda       (v,v_t,ce)    ->
         (* assumes v : Int if v is not used in ce *)
         (* TODO: type inference for v *)
@@ -892,17 +917,17 @@ let rec typecheck_expr e : type_t =
         let (fn_t, c_t) = (recur fn_e, recur ce) in
         let fn_tl = linearize_mvf fn_t in
         let coll_fn c_ret_t fn_ret_t = match c_ret_t, fn_ret_t with
-            | (Unit,_) -> failwith "invalid map type"
+            | (Unit,_) -> failwith "invalid map collection type"
             | (_,Unit) -> Unit
             | (Collection(_), _) -> Collection(fn_ret_t)
             | (_,_) -> fn_ret_t
         in
         if List.length fn_tl < 2 then failwith "invalid map function"
         else
-	        begin match (fn_tl, fn_t, c_t) with
-            | (_,_,Unit) -> failwith "invalid map collection"
-	        | (_, _, Fn _) -> lift_schema_app coll_fn fn_tl c_t
-	        | (_,_,_) -> apply_suffix (coll_fn c_t) fn_tl c_t
+	        begin match c_t with
+            | Unit -> failwith "invalid map collection"
+	        | Fn _ -> lift_schema_app coll_fn fn_tl c_t
+	        | _ -> apply_suffix (coll_fn c_t) fn_tl c_t
 	        end
 
     | Aggregate    (fn_e,i_e,ce) ->
@@ -997,7 +1022,7 @@ let rec typecheck_expr e : type_t =
         | _ -> failwith "invalid target for map value update"
         end
 
-    | External     efn_id ->
+    (*| External     efn_id ->
         begin match efn_id with
         | Symbol(id) ->
             begin try let (arg_t, ret_t) = Hashtbl.find ext_fn_symbols id
@@ -1006,6 +1031,7 @@ let rec typecheck_expr e : type_t =
             end 
         | _ -> failwith "externals not yet supported"
         end
+    *)
 
 (* TODO:
  * -- lifting simplifications
@@ -1017,18 +1043,11 @@ let rec typecheck_expr e : type_t =
 (* Incremental evaluation types *)
  
 (* Top-level statement.
- * Evaluates incremental RHS, computing initial RHS for previously unseen
- * delta RHS values.
+ * computes and applies (i.e. persists) increments for a map.
  *
- * Code generated for an update statement should accept the existing container
- * or singleton as an argument. 
- *
- * collection, incr expr, init expr
- * -- incr expr may be a singleton.
- * -- collection will include init val expr (always a singleton) if it is
- *    an external collection.
+ * collection, increment statement
  *)
-type statement = expr_t * expr_t * expr_t
+type statement = expr_t * expr_t
 
 (* Trigger functions *) 
 type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
@@ -1073,13 +1092,11 @@ let m3rhs_to_expr lhs_outv paggcalc : expr_t =
 let collection_stmt trig_args m3stmt : statement =
     (* Helpers *)
     let schema vars = List.map (fun v -> (v,Float)) vars in
-    (*
     let vars_expr vars = List.map (fun v -> Var(v,Float)) vars in
     let fn_arg_expr v t = v,t,Var(v,t) in
     let build_lambda vars body =
         List.fold_left (fun acc v -> Lambda(v,Float,acc)) body (List.rev vars)
     in
-    *)
 
     let ((mapn, lhs_inv, lhs_outv, init_aggcalc), incr_aggcalc, sm) = m3stmt in
 	let ((incr_expr, incr_single),(init_expr,init_single)) =
@@ -1097,25 +1114,22 @@ let collection_stmt trig_args m3stmt : statement =
     in
     
     let (ins,outs) = (schema lhs_inv, schema lhs_outv) in
-    (*
     let (in_el, out_el) = (vars_expr lhs_inv, vars_expr lhs_outv) in 
 
     (* TODO: use typechecker to compute types here *)
     let out_tier_t = Collection(TTuple(List.map snd outs@[Float])) in
-    *)
 
     let collection = map_to_expr mapn ins outs init_expr in
 
-    (* Note: disabling update expressions, since this relies on in-place
-     * updates of a temporary datastructure to implement merging of the
-     * existing slice and a delta slice *)
     (* Update expression, singleton initializer expression
      * -- update expression: increments the current var/slice by computing
-     *    a delta. For slices, merges the delta slice w/ the current. 
+     *    a delta. For slices, merges the delta slice w/ the current.
+     * -- NOTE: returns the increment for the delta slice only, not the
+     *    entire current slice. Thus each incremented entry must be updated
+     *    in the persistent store, and not the slice as a whole. 
      * -- singleton initializer: for singleton deltas, directly computes
      *    the new value by combining (inline) the initial value and delta
      *)
-    (*
     let (update_expr, sing_init_expr) =
         let zero_init = Const(CFloat(0.0)) in
         let singleton_aux init_e =
@@ -1133,7 +1147,6 @@ let collection_stmt trig_args m3stmt : statement =
                     Add(Lookup(ce, out_el), me), (init_f me)) in
             let merge_fn = build_lambda lhs_outv (Lambda(mv,mt,merge_body)) in
             (* slice update: merge current slice with delta slice *)
-            (* TODO: this only generates the delta slice as a result!!! *)
             let merge_expr = Map(merge_fn, incr_expr)
             in (Lambda(cv,ct,merge_expr), zero_init)
         in
@@ -1158,15 +1171,11 @@ let collection_stmt trig_args m3stmt : statement =
              * making loop lhs_outv available to the init expr. *)
             slice_aux (fun me -> Add(Lookup(init_expr, out_el), me))
     in
-    *)
     
-    (* Note: disabling statement expressions, since this uses a Map to
-     * apply side effects. However, Maps must return collections, thus we
-     * cannot use Map to implement Iter *)
     (* Statement expression:
      * -- statement_expr is a side-effecting expression that updates a
      *    persistent collection, thus has type Unit *)
-    (*
+
     let loop_in_aux (lv,lt,le) loop_fn_body =
         let patv = Util.ListAsSet.inter lhs_inv trig_args in
         let pat_ve = List.map (fun v -> (v,Var(v,Float))) patv in
@@ -1174,7 +1183,13 @@ let collection_stmt trig_args m3stmt : statement =
             then Singleton(Lookup(collection, List.map snd pat_ve))
             else Slice(collection, ins, pat_ve) in
         let loop_fn = build_lambda lhs_inv (Lambda(lv,lt,loop_fn_body))
-        in Map(loop_fn, in_coll)
+        in Iterate(loop_fn, in_coll)
+    in
+    let loop_update_aux ins outs delta_slice =
+        let uv,ut,ue = fn_arg_expr "updated_v" Float in
+        let update_body = map_value_update_expr collection ins outs ue in
+        let loop_update_fn = build_lambda lhs_outv (Lambda(uv,ut,update_body))
+        in Iterate(loop_update_fn, delta_slice)
     in
     let statement_expr =
         begin match lhs_inv, lhs_outv, incr_single with
@@ -1193,8 +1208,12 @@ let collection_stmt trig_args m3stmt : statement =
                 (map_value_update_expr collection in_el [] rhs_expr) 
 
         | ([],x,false) ->
+            (* We explicitly loop, updating each incremented value in the rhs slice,
+             * since the rhs_expr is only the delta slice and not a full merge with
+             * the current slice.
+             *)
             let rhs_expr = Apply(update_expr, collection)
-            in map_update_expr collection out_el rhs_expr
+            in loop_update_aux [] out_el rhs_expr
 
         | ([],x,_) ->
             let rhs_expr = 
@@ -1203,9 +1222,11 @@ let collection_stmt trig_args m3stmt : statement =
             in map_value_update_expr collection [] out_el rhs_expr
 
         | (x,y,false) ->
+            (* Use a value update loop to persist the delta slice *)
             let lv,lt,le = fn_arg_expr "existing_slice" out_tier_t in
-            let rhs_expr = Apply(update_expr, le)
-            in loop_in_aux (lv,lt,le) (map_update_expr collection in_el rhs_expr)
+            let rhs_expr = Apply(update_expr, le) in
+            let update_body = loop_update_aux in_el out_el rhs_expr in
+            loop_in_aux (lv,lt,le) update_body
 
         | (x,y,_) ->
             let lv,lt,le = fn_arg_expr "existing_slice" out_tier_t in
@@ -1214,9 +1235,8 @@ let collection_stmt trig_args m3stmt : statement =
             in loop_in_aux (lv,lt,le)
                 (map_value_update_expr collection in_el out_el rhs_expr)
         end
-        *)
-
-    (collection, incr_expr, init_expr)
+    in
+    (collection, statement_expr)
 
 
 let collection_trig m3trig : trigger =
@@ -1226,6 +1246,5 @@ let collection_trig m3trig : trigger =
 let collection_prog m3prog : program =
     let (schema, triggers) = m3prog
     in (schema, List.map collection_trig triggers)
-
 
 end
