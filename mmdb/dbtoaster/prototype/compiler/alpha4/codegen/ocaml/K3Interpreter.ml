@@ -596,6 +596,30 @@ struct
         let idx = List.length stmts - 1 in
         (fun th db -> let rvs = apply_fn_list th db stmts in List.nth rvs idx)
  
+    (* iter fn, collection -> iteration *)
+    let iterate iter_fn collection = fun th db ->
+        let aux fn v_f =
+            List.iter (fun v -> match (apply_mv_map_fn_lc fn (v_f v)) with
+                | Unit -> ()
+                | _ -> failwith "runtime exception: invalid iteration")
+        in begin match iter_fn th db, collection th db with
+        | (Fun (f,sa), List l) ->
+            (aux (Fun(f,sa)) value_of_float l; Unit)
+        
+        | (Fun (f,sa), TupleList l) ->
+            (aux (Fun(f,sa)) tuple_of_kv l; Unit)
+
+        (*
+        | (Fun (f,sa), SingleMapList l) ->
+            (List.iter (fun (k_v,m) -> 
+                apply_mv_map_fn_smlc (Fun(f,sa)) (Tuple k_v) (SingleMap m)) l;
+             Unit)
+        *)
+
+        | (Fun _, _) -> failwith "invalid iterate collection"
+        | (_,_) -> failwith "invalid iterate function"
+        end
+
     (* Functions *)
     (* arg, schema application, body -> fn *)
     let lambda v schema_app body = fun th db ->
@@ -802,7 +826,7 @@ struct
     let ext_fn fn_id = failwith "External functions not yet supported"
     
     (* Statement code generation *)
-
+    (*
     let singleton_update outv incr init init_singleton =
         let out_l = List.map var outv in
         let update = lambda "current_v" false
@@ -885,5 +909,5 @@ struct
             let body = update_map
                 mapn in_l (apply update (lookup (get_map mapn) in_l))
             in stmt_loop (DB.get_map mapn) inv patv pat body 
-
+    *)
 end
