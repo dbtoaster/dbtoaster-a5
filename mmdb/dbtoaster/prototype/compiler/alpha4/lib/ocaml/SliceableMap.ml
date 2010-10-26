@@ -1,9 +1,10 @@
 module type MapKey = sig type t val to_string: t -> string end
 
-module type S = functor (M: MapKey) ->
+module type S =
 sig
-   type key         = M.t list
-   type partial_key = M.t list
+   type key_elt
+   type key         = key_elt list
+   type partial_key = key_elt list
    type pattern     = int list
 
    type 'a t
@@ -66,14 +67,17 @@ sig
    val validate_indexes : 'a t -> unit 
 end
 
-module Make : S = functor (M: MapKey) ->
+module Make(M : MapKey) : S with type key_elt = M.t =
 struct
-   type key            = M.t list
-   type partial_key    = M.t list
+   type key_elt        = M.t
+   type key            = key_elt list
+   type partial_key    = key_elt list
    type pattern        = int list
    
-   module SecondaryIndex  = Map.Make(struct type t = partial_key let compare = Pervasives.compare end)
-   module IndexMap        = Map.Make(struct type t = pattern let compare = Pervasives.compare end)
+   module PK  = struct type t = partial_key let compare = Pervasives.compare end
+   module Pat = struct type t = pattern let compare = Pervasives.compare end
+   module SecondaryIndex  = Map.Make(PK)
+   module IndexMap        = Map.Make(Pat)
 
    type 'a primary_t    = (key, 'a) Hashtbl.t
    type secondary_index = (key list) SecondaryIndex.t

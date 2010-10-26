@@ -16,7 +16,7 @@
 
 
 open M3
-open Expression
+open Values
 open Sources
 
 exception AbortEventConstruction
@@ -231,7 +231,6 @@ let csv_params delim schema event =
 let insert_csv delim = csv_params delim "" ""
 let delete_csv delim = csv_params delim "" "delete"
 
-(* CSV generator, and generator wrapper for generator customization *)
 let csv_generator = standard_generator
 let csv_generator_wrapper default_params extra_params =
   let p = (List.filter (fun (k,v) ->

@@ -1,10 +1,10 @@
 open M3
 open Util
-open Expression
+open Values
 open Database
 open Sources
 
-module Make = functor(DB : ToastedDB) ->
+module Make = functor(DB : M3DB) ->
 struct
 let string_of_evt (action:M3.pm_t) 
                   (relation:string) 
@@ -37,8 +37,8 @@ let synch_main
            (DB.smap_to_string (DB.get_in_map q db))))
      
      else (q,"value", (fun () ->
-        AggregateMap.string_of_aggregate
-           (match DB.get_value q db with | Some(x) -> x | _ -> (CFloat(0.0)))))
+        DB.value_to_string
+           (match DB.get_value q db with | Some(x) -> x | _ -> DB.zero)))
      ) toplevel_queries
   in
   let log_evt = 

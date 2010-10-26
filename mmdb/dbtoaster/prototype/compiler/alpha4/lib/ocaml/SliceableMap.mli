@@ -3,10 +3,11 @@ module type MapKey = sig
    val to_string: t -> string
 end
 
-module type S = functor (M: MapKey) ->
+module type S =
 sig
-   type key         = M.t list
-   type partial_key = M.t list
+   type key_elt
+   type key         = key_elt list
+   type partial_key = key_elt list
    type pattern     = int list
 
    type 'a t
@@ -29,7 +30,7 @@ sig
    val find : key -> 'a t -> 'a
    
    (* Adds the binding via an in-place modification of the map.
-    * Hides any previous bindings (see Hashtbl.add) *)
+    * Replaces any previous bindings (see Hashtbl.replace) *)
    val add  : key -> 'a -> 'a t -> 'a t
    
    (* Same as add, except this ensures a different binding does not exist.
@@ -131,4 +132,4 @@ sig
    val validate_indexes : 'a t -> unit 
 end
 
-module Make : S 
+module Make (M : MapKey) : S with type key_elt = M.t 
