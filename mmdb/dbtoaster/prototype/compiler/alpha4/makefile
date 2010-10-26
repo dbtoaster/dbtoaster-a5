@@ -17,14 +17,15 @@ SOURCE = \
 	K3.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
-	lib/ocaml/Expression.ml \
+	lib/ocaml/Values.ml \
 	lib/ocaml/Database.ml \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/Runtime.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
-	codegen/plsql/M3Plsql.ml
+	codegen/plsql/M3Plsql.ml \
+	codegen/ocaml/K3Interpreter.ml
 
 HEADER_ONLY_SOURCE = \
 	M3Codegen.mli \
@@ -72,7 +73,7 @@ RUNTIME = \
 	M3Common.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
-	lib/ocaml/Expression.ml \
+	lib/ocaml/Values.ml \
 	lib/ocaml/Database.ml \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/Runtime.ml \

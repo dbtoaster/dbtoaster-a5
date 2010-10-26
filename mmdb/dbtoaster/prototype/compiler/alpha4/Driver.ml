@@ -278,8 +278,8 @@ open Database
 open Sources
 open Runtime
 
-module DB = NamedDatabase
-module DBTRuntime  = Runtime.Make(DB)
+module DB         = NamedM3Database
+module DBTRuntime = Runtime.Make(DB)
 open DBTRuntime
 
 let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
@@ -346,7 +346,8 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
           StringMap.fold (fun s f m -> f_source (M3.PipeSource(s)) f m) pipes (
             FileMultiplexer.create ()))
         in
-          synch_main db mux tlq evaluator StringMap.empty ()
+        let db_tlq = List.map DB.string_to_map_name tlq in
+          synch_main db mux db_tlq evaluator StringMap.empty ()
       )
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
@@ -373,7 +374,7 @@ let compile_ocaml in_file_name =
                    "M3";
                    "M3Common";
                    "lib/ocaml/SliceableMap";
-                   "lib/ocaml/Expression";
+                   "lib/ocaml/Values";
                    "lib/ocaml/Database";
                    "lib/ocaml/Sources";
                    "lib/ocaml/Runtime";

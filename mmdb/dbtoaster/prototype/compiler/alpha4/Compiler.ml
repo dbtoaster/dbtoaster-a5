@@ -94,9 +94,7 @@ let compile_delta_for_rel (produce_child_maps: bool)
       params is the list of parameters to the map.
    *)
    let tuple      = 
-     (List.map (fun (v,t) -> 
-       mapn^reln^"_"^v,t)
-     relsch) in
+     (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
