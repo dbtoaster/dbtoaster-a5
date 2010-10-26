@@ -11,17 +11,17 @@
 
 open M3
 open M3Common.Patterns
-open Expression
+open Values
 open Database
 open Sources
 
 module M3P = M3.Prepared
-module DB = Database
+module DB = M3Database
 
 module CG : M3Codegen.CG =
 struct
    (* Implementation modules *)
-   let db_impl = "Database"
+   let db_impl = "M3Database"
 
    (* We use hashing to ensure consistent generation of unique map ids
     * based on map names from the DB schema map in RefMap, and here in
@@ -181,7 +181,7 @@ struct
       Inline("(CFloat("^(string_of_float f)^"))")
 
    let singleton_var v = Inline((gen_var v))
-   let slice_var v = Lines(["ValuationMap.from_list [(["^
+   let slice_var v = Lines(["M3ValuationMap.from_list [(["^
                               (gen_var v)^"], "^(gen_var v)^")] []"])
    
    let int_op op      = "(fun a b -> if ("^op^" a b) then CFloat(1.0) else CFloat(0.0))"
@@ -240,10 +240,10 @@ struct
       ["   in";
        "   let r3 = "]@
       (if semijoin then
-      (["      Valuation.map (fun v2 -> "^op^" v1 v2) r2"])
+      (["      M3ValuationMap.map (fun v2 -> "^op^" v1 v2) r2"])
       else
               (* Inlined AggregateMap.concat_keys *) 
-      (["      ValuationMap.mapi (fun k2 v2 -> "]@
+      (["      M3ValuationMap.mapi (fun k2 v2 -> "]@
       (* Bind outv2, and schema_ext. Note schema_ext corresponds to
        * vars in outv1 which can be accessed through const list "k" *)
       (let new_k = inline_vars_list schema [(outv2, "k2"); (schema_ext, "k")] in
@@ -252,15 +252,15 @@ struct
       (indent 2 (annotate_code_schema "schema_ext" schema_ext))@
       ["         ("^new_k^", ("^op^" v1 v2))"])@
       ["      ) r2"]))@
-      ["   in ValuationMap.union r r3";
-       "in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
+      ["   in M3ValuationMap.union r r3";
+       "in M3ValuationMap.fold f (M3ValuationMap.empty_map()) res1"])
        
    let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 = tabify (
       (bind prebind)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let res2 = "]@(get_lines ce2)@
-      ["in ValuationMap.product "^op^" res1 res2"])
+      ["in M3ValuationMap.product "^op^" res1 res2"])
 
    (* Note: no need to bind outv2 anywhere in this code, since in this case
     * outv2 is bound from above *)
@@ -276,18 +276,18 @@ struct
              "   let nv = ("^op^" v res2) in"]@
             (let nk = inline_vars_list schema [(schema_ext, "k")] in
             ["   let nk = "^nk])@
-            ["   in ValuationMap.add nk nv r";]
+            ["   in M3ValuationMap.add nk nv r";]
 
           | Inline(ce2_i) ->
             (let nk = inline_vars_list schema [(schema_ext, "k")] in
             ["   let nk = "^nk])@
-            ["   in ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
+            ["   in M3ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
       in
          (bind prebind)@
          ["let res1 = "]@(get_lines ce1)@
          ["in";
           "let f k v r = ";]@(list_bind "k" inbind)@f_body@
-         ["in ValuationMap.fold f (ValuationMap.empty_map()) res1"])
+         ["in M3ValuationMap.fold f (M3ValuationMap.empty_map()) res1"])
    
    (* Note: no need to bind any vars from outv2 since these should be bound
     * from above *)
@@ -295,9 +295,9 @@ struct
       let body = match ce2 with
          | Lines(ce2_l) ->
             ["let res2 = "]@ce2_l@
-            ["in ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v res2))) res1"]
+            ["in M3ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v res2))) res1"]
          | Inline(ce2_i) ->
-            ["ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v "^(inline ce2_i)^"))) res1"]
+            ["M3ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v "^(inline ce2_i)^"))) res1"]
       in
       (bind prebind)@
       ["let res1 = "]@(get_lines ce1)@
@@ -310,7 +310,7 @@ struct
       let body ce1_v =
          ["let r = "]@
           (get_lines ce2)@
-         ["in ValuationMap.mapi (fun k2 v2 ->"]@
+         ["in M3ValuationMap.mapi (fun k2 v2 ->"]@
          (let nk = inline_vars_list schema [(outv2, "k2")] in
          ["   ("^nk^", ("^op^" "^ce1_v^" v2))) r"])
       in 
@@ -333,10 +333,9 @@ struct
           | (_, []) ->  ["("^db_impl^".update_in_map_value "^
                            cmapn^" "^(vars_list inv)^" "^v^" db;"]
           | ([], _) ->  ["("^db_impl^".update_out_map_value "^
-                           cmapn^" "^cout_patterns^" "^
-                           (vars_list outv)^" "^v^" db;"]
+                           cmapn^" "^(vars_list outv)^" "^v^" db;"]
           | _ -> 
-            ["("^db_impl^".update_map_value "^cmapn^" "^cout_patterns^" "^
+            ["("^db_impl^".update_map_value "^cmapn^" "^
                  (vars_list inv)^" "^(vars_list outv)^" "^v^" db;"])@
           ["   "^v^")"]
       in
@@ -352,7 +351,7 @@ struct
       ["let init_slice = "]@(get_lines cinit)@
       ["in";
        "let init_slice_w_indexes = List.fold_left";
-       "   ValuationMap.add_secondary_index init_slice "^cout_patterns]@
+       "   M3ValuationMap.add_secondary_index init_slice "^cout_patterns]@
        (if inv = [] then
        (["in ("^db_impl^".update_out_map "^cmapn^" init_slice_w_indexes db;";
          "   init_slice_w_indexes)"])
@@ -367,7 +366,7 @@ struct
          ["   let s = "]@slice_code@
          ["   in";
           "   let img = "^(vars_list vars)^" in";
-          "   if ValuationMap.mem img s then ValuationMap.find img s";
+          "   if M3ValuationMap.mem img s then M3ValuationMap.find img s";
           "   else "]@
           (indent 2 (get_lines init_val_code))
       in
@@ -381,9 +380,9 @@ struct
          let in_tier_code =
             ["let m = "^db_impl^"."^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
-             "if ValuationMap.mem inv m then ValuationMap.find inv m";
+             "if M3ValuationMap.mem inv m then M3ValuationMap.find inv m";
              "else let init_val = "]@(indent 1 (get_lines init_val_code))@
-            ["in ValuationMap.from_list [("^(vars_list outv)^", init_val)] []"] 
+            ["in M3ValuationMap.from_list [("^(vars_list outv)^", init_val)] []"] 
          in (aux in_tier_code outv))
 
    let singleton_lookup mapn inv outv init_val_code = tabify (
@@ -392,33 +391,33 @@ struct
          ["   let s = "]@slice_code@
          ["   in";
           "   let img = "^(vars_list vars)^" in";
-          "   let lookup_slice = if ValuationMap.mem img s then s else";]@
+          "   let lookup_slice = if M3ValuationMap.mem img s then s else";]@
           (indent 2 (get_lines init_val_code))@
-         ["   in ValuationMap.find img lookup_slice"]
+         ["   in M3ValuationMap.find img lookup_slice"]
       in
       if inv = [] && outv = [] then
          (["match "^db_impl^".get_value "^cmapn^" db with";
            " | Some (x) -> x"; " | _ -> let init_slice = "]@
            (indent 2 (get_lines init_val_code))@
-           [" in ValuationMap.find [] init_slice"])
+           [" in M3ValuationMap.find [] init_slice"])
       else if inv = [] then (aux [db_impl^".get_out_map "^cmapn^" db"] outv)
       else if outv = [] then (aux [db_impl^".get_in_map "^cmapn^" db"] inv)
       else
       let in_tier_code =
       ["let m = "^db_impl^".get_map "^cmapn^" db in";
        "let inv = "^(vars_list inv)^" in";
-       "if ValuationMap.mem inv m then ValuationMap.find inv m else"]@
+       "if M3ValuationMap.mem inv m then M3ValuationMap.find inv m else"]@
        (indent 1 (get_lines init_val_code))
       in (aux in_tier_code outv))
 
    let slice_lookup_aux pat patv slice_code =
       ["let s = "]@slice_code@
       (if patv = [] then
-      ["in ValuationMap.strip_indexes s"]
+      ["in M3ValuationMap.strip_indexes s"]
       else
-      ["in"; "let lookup_slice = ValuationMap.slice "^
+      ["in"; "let lookup_slice = M3ValuationMap.slice "^
           (pattern_const pat)^" "^(vars_list patv)^" s";
-       "in ValuationMap.strip_indexes lookup_slice"])
+       "in M3ValuationMap.strip_indexes lookup_slice"])
 
    let slice_lookup_sing_init mapn inv outv pat patv init_val_code = tabify(
       let cmapn = map_name_const mapn in
@@ -428,9 +427,9 @@ struct
          let in_tier_code =
             ["let m = "^db_impl^".get_map "^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
-             "if ValuationMap.mem inv m then ValuationMap.find inv m else";
+             "if M3ValuationMap.mem inv m then M3ValuationMap.find inv m else";
              "let init_val ="]@(indent 1 (get_lines init_val_code))@
-            ["in ValuationMap.from_list [("^(vars_list outv)^", init_val)] []"]
+            ["in M3ValuationMap.from_list [("^(vars_list outv)^", init_val)] []"]
          in (slice_lookup_aux pat patv in_tier_code))
 
    let slice_lookup mapn inv outv pat patv init_val_code = tabify (
@@ -441,7 +440,7 @@ struct
          let in_tier_code =
             ["let m = "^db_impl^".get_map "^cmapn^" db in";
              "let inv = "^(vars_list inv)^" in";
-             "if ValuationMap.mem inv m then ValuationMap.find inv m else"]@
+             "if M3ValuationMap.mem inv m then M3ValuationMap.find inv m else"]@
              (indent 1 (get_lines init_val_code))
          in (slice_lookup_aux pat patv in_tier_code))
 
@@ -459,7 +458,7 @@ struct
    let full_agg_slice_expr ccalc cdebug = tabify (
       ["let slice0 = "]@(get_lines ccalc)@
       ["in"; "(* "]@cdebug@[" slice0; *)";
-       "(ValuationMap.fold (fun k v acc -> c_sum v acc) (CFloat(0.0)) slice0)"])
+       "(M3ValuationMap.fold (fun k v acc -> c_sum v acc) (CFloat(0.0)) slice0)"])
 
    (* Note: no need to bind vars in rhs_ext, these come from above. *)
    let slice_expr rhs_pattern rhs_projection lhs_outv rhs_ext ccalc cdebug =
@@ -467,15 +466,15 @@ struct
       tabify (
       ["let slice0 = "]@(get_lines ccalc)@
       ["in"; "(* "]@cdebug@[" slice0; *)";
-       "let slice1 = ValuationMap.add_secondary_index slice0 "^cpat^" in";
+       "let slice1 = M3ValuationMap.add_secondary_index slice0 "^cpat^" in";
           (* Inlined version of AggregateMap.project_keys *)
-       "   ValuationMap.fold_index (fun pk kv nm ->";
+       "   M3ValuationMap.fold_index (fun pk kv nm ->";
        "      let (nk,nv) ="; 
        "         let aggv = List.fold_left (fun x (y,z) -> c_sum x z) (CFloat(0.0)) kv in "]@
       (indent 3 (bind_vars_from_list rhs_projection "pk"))@
       ["         let new_k = "^(vars_list lhs_outv)^" in (new_k, aggv)";
-       "      in ValuationMap.add nk nv nm)"; 
-       "   "^cpat^" slice1 (ValuationMap.empty_map())"])
+       "      in M3ValuationMap.add nk nv nm)"; 
+       "   "^cpat^" slice1 (M3ValuationMap.empty_map())"])
 
    (* TODO: add debugging to inlined code *)
    (* returns a function with sig:
@@ -499,8 +498,8 @@ struct
        (get_lines cinit)@
       ["in";
        "let init_v =";
-       "   if ValuationMap.mem k init_slice";
-       "   then (ValuationMap.find k init_slice) else CFloat(0.0)";
+       "   if M3ValuationMap.mem k init_slice";
+       "   then (M3ValuationMap.find k init_slice) else CFloat(0.0)";
        "in c_sum v init_v)"])
 
    (* assume cinit is a function with sig:
@@ -539,14 +538,14 @@ struct
          ["(fun current_slice ->";
           "(* "]@cdebug@["; *)";
           "let delta_slice = "]@(get_lines cincr)@[" in";
-          "   ValuationMap.merge_rk (fun k v -> v)"]@
+          "   M3ValuationMap.merge_rk (fun k v -> v)"]@
           (indent 1 cinit_l)@
          ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"]
        | Inline(cinit_i) ->
          ["(fun current_slice ->";
           "(* "]@cdebug@["; *)";
           "let delta_slice = "]@(get_lines cincr)@[" in";
-          "   ValuationMap.merge_rk (fun k v -> v)"]@
+          "   M3ValuationMap.merge_rk (fun k v -> v)"]@
           (indent 1 [cinit_i])@
          ["      (fun k v1 v2 -> c_sum v1 v2) current_slice delta_slice)"])
 
@@ -558,8 +557,8 @@ struct
      let cpatterns = patterns_const map_out_patterns in
      let cpat = pattern_const pat in
      let eval img slice =
-        ["let existing_v = if ValuationMap.mem "^img^" "^slice;
-         "   then Some(ValuationMap.find "^img^" "^slice^") else None";
+        ["let existing_v = if M3ValuationMap.mem "^img^" "^slice;
+         "   then Some(M3ValuationMap.find "^img^" "^slice^") else None";
          "in"]@(get_lines update_code)@
         ["   existing_v"]
      in
@@ -568,7 +567,7 @@ struct
          * if the map is non-empty *)
         ["let invs = "^
          (if direct then ("["^(vars_list patv)^"]")
-         else ("ValuationMap.slice_keys "^cpat^" "^(vars_list patv)^" "^slice));
+         else ("M3ValuationMap.slice_keys "^cpat^" "^(vars_list patv)^" "^slice));
          "in List.iter iifilter invs;"]
      in
 
@@ -584,8 +583,7 @@ struct
         (["let slice = "^db_impl^".get_out_map "^cmapn^" db in";
           "let outv_img = "^(vars_list lhs_outv)^" in";
           "let v = "]@(eval "outv_img" "slice")@
-         ["in "^db_impl^".update_out_map_value "^
-                  cmapn^" "^cpatterns^" outv_img v db;"])
+         ["in "^db_impl^".update_out_map_value "^cmapn^" outv_img v db;"])
      
      else
         if lhs_outv = [] then
@@ -600,11 +598,10 @@ struct
            (["let slice = "^db_impl^".get_map "^cmapn^" db in";
              "let iifilter inv = "]@
             (indent 1 (bind_vars_from_extension lhs_inv "inv" lhs_ext))@
-            ["   let s = ValuationMap.find inv slice in";
+            ["   let s = M3ValuationMap.find inv slice in";
              "   let outv = "^(vars_list lhs_outv)^" in"; 
              "   let v = "]@(eval "outv" "s")@
-            ["   in "^db_impl^".update_map_value "^
-                     cmapn^" "^cpatterns^" inv outv v db";
+            ["   in "^db_impl^".update_map_value "^cmapn^" inv outv v db";
              "in"]@(loop_invs "slice"))))
 
 
@@ -624,14 +621,14 @@ struct
       else
          (["let slice = "^db_impl^".get_map "^cmapn^" db in";
            "let iifilter inv = ";
-           "   let s = ValuationMap.find inv slice in";
+           "   let s = M3ValuationMap.find inv slice in";
            "   let new_slice = "]@(indent 1 (get_lines update_code))@
           ["      s";
            "   in "^db_impl^".update_map "^cmapn^" inv new_slice db";
            "in";
            "let invs = "^
            (if direct then ("["^(vars_list patv)^"]")
-            else ("ValuationMap.slice_keys "^
+            else ("M3ValuationMap.slice_keys "^
                      cpat^" "^(vars_list patv)^" slice"));
            "in List.iter iifilter invs;"])))
 
@@ -774,7 +771,7 @@ struct
       ["open M3;;";
        "open M3Common;;";
        "open M3Common.Patterns;;";
-       "open Expression;;";
+       "open Values;;";
        "open Database;;";
        "open Sources;;";
        "module DBTRuntime = Runtime.Make("^db_impl^")";
