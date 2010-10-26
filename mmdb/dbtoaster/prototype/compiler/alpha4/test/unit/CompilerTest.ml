@@ -28,12 +28,14 @@ let cdfr_as_string (trigger_def_l, term_mapping_l) =
 
 (* the schema *)
 let sch = [("R", [("A", TInt); ("B", TInt)]); ("S", [("B", TInt); ("C", TInt)]);
-           ("T", [("C", TInt); ("D", TInt)]); ("U", [("A", TInt); ("D", TInt)])]
+           ("T", [("C", TInt); ("D", TInt)]); ("U", [("A", TInt); ("D", TInt)]);
+           ("V", [("D", TInt); ("E", TInt)])]
 
 let relR = RA_Leaf(Rel("R", [("A", TInt); ("B", TInt)]));;
 let relS = RA_Leaf(Rel("S", [("B", TInt); ("C", TInt)]));;
 let relT = RA_Leaf(Rel("T", [("C", TInt); ("D", TInt)]));;
 let relU = RA_Leaf(Rel("U", [("A", TInt); ("C", TInt)]));;
+let relV = RA_Leaf(Rel("V", [("D", TInt); ("E", TInt)]));;
 
 let m = make_term(RVal(
    AggSum(RProd[RVal (Var("A", TInt)); RVal (Var("C", TInt))],
@@ -307,11 +309,11 @@ in test_query "select count( * ) from R, S where R.A=S.A and R.B=S.B"
 (* select count( * ) from R where R.A < 5 and R.B = 'Bla' *)
 let m = (make_term(RVal(AggSum(RVal(Const (Int 1)),
    RA_MultiNatJoin([
-      RA_Leaf(Rel("R", [("x", TInt); ("y", TInt)]));
+      RA_Leaf(Rel("R", [("A", TInt); ("B", TInt)]));
       RA_Leaf(AtomicConstraint(Lt,
-                 RVal(Var(("x", TInt))), RVal(Const(Int 5))));
+                 RVal(Var(("A", TInt))), RVal(Const(Int 5))));
       RA_Leaf(AtomicConstraint(Eq,
-                 RVal(Var(("y", TInt))), RVal(Const(String "Bla"))));
+                 RVal(Var(("B", TInt))), RVal(Const(String "Bla"))));
    ])))))
 in
 test_query "select count( * ) from R where R.A < 5 and R.B = 'Bla'"
@@ -351,7 +353,14 @@ test_query "if(0 < AggSum(1, R(A,B))) then 1 else 0"
 ;;
 *)
 
-
+let m = make_term(RVal(AggSum(
+    RSum[RVal (Var("A", TInt)); RVal (Var ("C", TInt));],
+    RA_MultiNatJoin([relR; relS])))) 
+in
+test_query "factorized query compilation test: select sum(a) from R,U"
+(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
+([])
+;;
 
 
 

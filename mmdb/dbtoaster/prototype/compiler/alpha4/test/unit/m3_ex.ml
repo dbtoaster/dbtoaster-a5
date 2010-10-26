@@ -11,11 +11,11 @@ open M3Interpreter.CG
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
 
-open Expression
+open Values
 open Database
 open Sources;;
 
-module DB = NamedDatabase
+module DB = NamedM3Database
 
 let print_smap name smap =
    String.concat "\n"
