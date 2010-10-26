@@ -9,11 +9,11 @@ open M3Interpreter.CG
 module Compiler = M3Compiler.Make(M3Interpreter.CG)
 open Compiler;;
 
-open Expression
+open Values
 open Database
 open Sources;;
 
-module DB = NamedDatabase
+module DB = NamedM3Database
 
 (* SELECT avg(b2.price * b2.volume) 
 FROM   bids b2
@@ -468,13 +468,13 @@ let vwap_query validate_mode output_level result_chan_opt
            | Database -> output_string rc ((DB.db_to_string db)^"\n")
            | Map      ->
               let v = DB.get_value "q" db in
-              let s = Valuation.from_list [([], v)] [] in
-              let m = Valuation.from_list [([], s)] [] in
+              let s = M3Valuation.from_list [([], v)] [] in
+              let m = M3Valuation.from_list [([], s)] [] in
               output_string rc ((DB.map_to_string m)^"\n")
            | Value    ->
               output_string rc (AggregateMap.string_of_aggregate
-                (ValuationMap.find []
-                   (ValuationMap.find [] (DB.get_map "q" db)))^"\n")
+                (M3ValuationMap.find []
+                   (M3ValuationMap.find [] (DB.get_map "q" db)))^"\n")
           end)
 in
 
