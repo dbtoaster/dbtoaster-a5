@@ -1,13 +1,19 @@
+open M3Common.Patterns
+
 module type CG =
 sig
     type code_t
     type op_t
     type db_t
-    
+
+    (* Data sources *)
+    type source_impl_t
+
     (* Operators *)
     val add_op         : op_t
     val mult_op        : op_t
     val eq_op          : op_t
+    val neq_op         : op_t
     val lt_op          : op_t
     val leq_op         : op_t   
     val ifthenelse0_op : op_t
@@ -145,4 +151,24 @@ sig
             code_t -> code_t -> code_t
     *)
 
+    (* Toplevel: sources and main *)
+    (* event, rel, trigger args, statement code block -> trigger code *)
+    val trigger : M3.pm_t -> M3.rel_id_t -> M3.var_t list -> code_t list -> code_t
+
+    (* source type, framing type, (relation * adaptor type) list 
+     * -> source impl type,
+     *    source and adaptor declaration code, (optional)
+     *    source and adaptor initialization code (optional) *)
+    val source: M3.source_t -> M3.framing_t -> (string * M3.adaptor_t) list ->
+                source_impl_t * code_t option * code_t option
+
+    (* schema, patterns, source decls and inits, triggers, toplevel queries
+       -> top level code *)
+    val main : M3.map_type_t list -> pattern_map ->
+               (source_impl_t * code_t option * code_t option) list ->
+               code_t list -> string list -> code_t
+
+    val output : code_t -> out_channel -> unit
+
+    (* TODO: interepreter methods *)
 end

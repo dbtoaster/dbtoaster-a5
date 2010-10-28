@@ -57,7 +57,7 @@ sig
        | Iterate       of expr_t      * expr_t
     
        (* Functions *)
-       | Lambda        of id_t        * type_t   * expr_t
+       | Lambda        of id_t        * type_t   * expr_t * bool
        | AssocLambda   of id_t        * type_t   * id_t   * type_t * expr_t
        | Apply         of expr_t      * expr_t
     
@@ -102,7 +102,7 @@ sig
     (* Incremental section *)
     type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
-    type program = M3.map_type_t list * trigger list
+    type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
 
     val m3rhs_to_expr : M3.var_t list -> M3.Prepared.aggecalc_t -> expr_t
 
@@ -110,7 +110,8 @@ sig
     
     val collection_trig : M3.Prepared.trig_t -> trigger
     
-    val collection_prog : M3.Prepared.prog_t -> program
+    val collection_prog :
+        M3.Prepared.prog_t -> M3Common.Patterns.pattern_map -> program
     
 end
 

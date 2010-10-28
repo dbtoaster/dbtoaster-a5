@@ -1432,10 +1432,8 @@ let output code out_chan =
   flush out_chan
 
 let eval_trigger trigger tuple db =
-  failwith "Cannot directly evaluate OCaml source"
+  failwith "Cannot directly evaluate PLSQL source"
 
-let event_evaluator triggers db evt =
-  failwith "Cannot directly evaluate OCaml source"
 
 (* Unit tests *)
 (*

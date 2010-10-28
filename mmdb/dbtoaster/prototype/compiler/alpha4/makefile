@@ -15,6 +15,7 @@ SOURCE = \
 	M3Compiler.ml \
 	K3.mli \
 	K3.ml \
+	K3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/Values.ml \

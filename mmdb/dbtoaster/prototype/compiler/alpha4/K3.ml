@@ -57,7 +57,7 @@ sig
        | Iterate       of expr_t      * expr_t  
 	
 	   (* Functions *)
-	   | Lambda        of id_t        * type_t   * expr_t
+	   | Lambda        of id_t        * type_t   * expr_t * bool
 	   | AssocLambda   of id_t        * type_t   * id_t   * type_t * expr_t
 	   | Apply         of expr_t      * expr_t
 	
@@ -102,7 +102,7 @@ sig
     (* Incremental section *)
     type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
-    type program = M3.map_type_t list * trigger list
+    type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
 
     val m3rhs_to_expr : M3.var_t list -> M3.Prepared.aggecalc_t -> expr_t
 
@@ -110,7 +110,8 @@ sig
     
     val collection_trig : M3.Prepared.trig_t -> trigger
     
-    val collection_prog : M3.Prepared.prog_t -> program
+    val collection_prog :
+        M3.Prepared.prog_t -> M3Common.Patterns.pattern_map -> program
 
 end
 
@@ -215,7 +216,7 @@ type expr_t =
    | Iterate       of expr_t      * expr_t  
      
    (* Functions *)
-   | Lambda        of id_t        * type_t   * expr_t
+   | Lambda        of id_t        * type_t   * expr_t    * bool
    | AssocLambda   of id_t        * type_t   * id_t      * type_t * expr_t
    | Apply         of expr_t      * expr_t
 
@@ -272,7 +273,7 @@ type expr_t =
 
 (* TODO: types *)
 let schema_to_expr e vars =
-    List.fold_left (fun acc v -> Lambda(v,Float,acc)) e vars
+    List.fold_left (fun acc v -> Lambda(v,Float,acc,true)) e vars
 
 let rec fold_leaves f acc e =
     let fold_op e_l = List.fold_left (fun a e -> fold_leaves f a e) acc e_l in
@@ -293,7 +294,7 @@ let rec fold_leaves f acc e =
     | IfThenElse       (pe,te,ee)           -> fold_op [pe;te;ee]
     | Block            e_l                  -> fold_op e_l
     | Iterate          (fn_e, ce)           -> fold_op [fn_e; ce]
-    | Lambda           (v,v_t,ce)           -> fold_leaves f acc ce
+    | Lambda           (v,v_t,ce,_)         -> fold_leaves f acc ce
     | AssocLambda      (v1,v1_t,v2,v2_t,be) -> fold_leaves f acc be
     | Apply            (fn_e,arg_e)         -> fold_op [fn_e; arg_e]
     | Map              (fn_e,ce)            -> fold_op [fn_e; ce]
@@ -378,7 +379,7 @@ let map_access_to_expr map_expr singleton init_singleton out_patv =
                     let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
                  in Slice(map_var,sch,p_ve)
         in Lambda(map_v, map_t,
-            IfThenElse(Member(map_var,ke), access_expr, init_expr))
+            IfThenElse(Member(map_var,ke), access_expr, init_expr), false)
     in
     let init_aux map_expr ins outs ie =
         let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
@@ -397,7 +398,7 @@ let map_access_to_expr map_expr singleton init_singleton out_patv =
         let update_singleton_aux rv_f =
             let update_expr = 
                 map_value_update_expr map_expr ine_l oute_l iv_e
-            in Apply(Lambda(iv_v, iv_t, Block([update_expr; rv_f iv_e])), ie)
+            in Apply(Lambda(iv_v, iv_t, Block([update_expr; rv_f iv_e]),false), ie)
         in
         (* Helper to build an index on a init val slice, and update the db *)
         let index_slice_aux rv_f =
@@ -423,11 +424,11 @@ let map_access_to_expr map_expr singleton init_singleton out_patv =
                 | InPC _ -> ine_l | OutPC _ -> oute_l  | PC _ -> oute_l
                 | _ -> failwith "invalid map type for initial values" in
             let lookup_expr_f rv_e = Lookup(rv_e, ke)
-            in Apply(Lambda(iv_v, iv_t, index_slice_aux lookup_expr_f), ie)
+            in Apply(Lambda(iv_v, iv_t, index_slice_aux lookup_expr_f, false), ie)
         
         else
             (* ivc eval + slice update + slice rv *)
-            Apply(Lambda(iv_v, iv_t, index_slice_aux (fun x -> x)), ie)
+            Apply(Lambda(iv_v, iv_t, index_slice_aux (fun x -> x), false), ie)
     in
     begin match map_expr with
     | SingletonPC(id,t) -> map_expr
@@ -451,7 +452,7 @@ let map_access_to_expr map_expr singleton init_singleton out_patv =
         let map_v,map_var = "m",Var("m", nested_t) in
         let out_access_fn = Apply(aux outs t init_expr, Lookup(map_var,in_el)) in
         let access_fn = Lambda(map_v, nested_t,
-            IfThenElse(Member(map_var,in_el), out_access_fn, init_expr))
+            IfThenElse(Member(map_var,in_el), out_access_fn, init_expr), false)
         in Apply(access_fn, map_expr)
         
     | _ -> failwith "invalid map for map access"
@@ -504,16 +505,16 @@ and op_to_expr op c c1 c2 : expr_t =
             let (v,v_t,l,r,schema) =
                 if c1_sing then "v2",Float,inline,Var("v2",Float),outv2
                 else "v1",Float,Var("v1",Float),inline,outv1 in
-            let fn = schema_to_expr (Lambda(v,v_t,op schema l r)) schema
+            let fn = schema_to_expr (Lambda(v,v_t,op schema l r,false)) schema
             in Map(fn, calc_to_expr (if c1_sing then c2 else c1))
         
         | (_, false, false) ->
             (* TODO: types *)
             let (l,r) = (Var("v1",Float), Var("v2",Float)) in
             let nested =
-                schema_to_expr (Lambda("v2",Float,op schema l r)) outv2 in
+                schema_to_expr (Lambda("v2",Float,op schema l r,false)) outv2 in
             let outer = schema_to_expr
-                (Lambda("v1",Float,Map(nested, calc_to_expr c2))) outv1
+                (Lambda("v1",Float,Map(nested, calc_to_expr c2),false)) outv1
             in Map(outer, calc_to_expr c1)
 
 and calc_to_expr calc : expr_t =
@@ -886,7 +887,7 @@ let rec typecheck_expr e : type_t =
             end
         
 
-    | Lambda       (v,v_t,ce)    ->
+    | Lambda       (v,v_t,ce,_)    ->
         (* assumes v : Int if v is not used in ce *)
         (* TODO: type inference for v *)
         Fn(tc_fnarg v v_t ce, recur ce)
@@ -1052,7 +1053,7 @@ type statement = expr_t * expr_t
 (* Trigger functions *) 
 type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
 
-type program = M3.map_type_t list * trigger list
+type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
 
 let m3rhs_to_expr lhs_outv paggcalc : expr_t =
    (* invokes calc_to_structure on calculus part of paggcalc.
@@ -1072,8 +1073,8 @@ let m3rhs_to_expr lhs_outv paggcalc : expr_t =
                     Add(Var("v1", Float), Var("v2", Float))) in
     let gb_fn =
         let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv) in
-        List.fold_left (fun acc v -> Lambda(v, Float, acc))
-            (Lambda("v",Float, lhs_tuple)) (List.rev rhs_outv)
+        List.fold_left (fun acc v -> Lambda(v, Float, acc, true))
+            (Lambda("v",Float, lhs_tuple,false)) (List.rev rhs_outv)
     in
     if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
@@ -1094,8 +1095,8 @@ let collection_stmt trig_args m3stmt : statement =
     let schema vars = List.map (fun v -> (v,Float)) vars in
     let vars_expr vars = List.map (fun v -> Var(v,Float)) vars in
     let fn_arg_expr v t = v,t,Var(v,t) in
-    let build_lambda vars body =
-        List.fold_left (fun acc v -> Lambda(v,Float,acc)) body (List.rev vars)
+    let build_lambda vars body = List.fold_left (fun acc v ->
+        Lambda(v,Float,acc, true)) body (List.rev vars)
     in
 
     let ((mapn, lhs_inv, lhs_outv, init_aggcalc), incr_aggcalc, sm) = m3stmt in
@@ -1134,7 +1135,7 @@ let collection_stmt trig_args m3stmt : statement =
         let zero_init = Const(CFloat(0.0)) in
         let singleton_aux init_e =
             let cv,ct,ce = fn_arg_expr "current_v" Float in
-            (Lambda(cv,ct,Add(ce,incr_expr)), init_e)
+            (Lambda(cv,ct,Add(ce,incr_expr),false), init_e)
         in
         let slice_t = Collection(TTuple((List.map snd outs)@[Float])) in
         let slice_aux init_f =
@@ -1145,10 +1146,10 @@ let collection_stmt trig_args m3stmt : statement =
             let merge_body =
                 IfThenElse(Member(ce,out_el),
                     Add(Lookup(ce, out_el), me), (init_f me)) in
-            let merge_fn = build_lambda lhs_outv (Lambda(mv,mt,merge_body)) in
+            let merge_fn = build_lambda lhs_outv (Lambda(mv,mt,merge_body,false)) in
             (* slice update: merge current slice with delta slice *)
             let merge_expr = Map(merge_fn, incr_expr)
-            in (Lambda(cv,ct,merge_expr), zero_init)
+            in (Lambda(cv,ct,merge_expr,false), zero_init)
         in
         match (incr_single, init_single) with
 	    | (true,true) -> singleton_aux (Add(incr_expr,init_expr))
@@ -1182,13 +1183,13 @@ let collection_stmt trig_args m3stmt : statement =
         let in_coll = if (List.length patv) = (List.length lhs_inv)
             then Singleton(Lookup(collection, List.map snd pat_ve))
             else Slice(collection, ins, pat_ve) in
-        let loop_fn = build_lambda lhs_inv (Lambda(lv,lt,loop_fn_body))
+        let loop_fn = build_lambda lhs_inv (Lambda(lv,lt,loop_fn_body,false))
         in Iterate(loop_fn, in_coll)
     in
     let loop_update_aux ins outs delta_slice =
         let uv,ut,ue = fn_arg_expr "updated_v" Float in
         let update_body = map_value_update_expr collection ins outs ue in
-        let loop_update_fn = build_lambda lhs_outv (Lambda(uv,ut,update_body))
+        let loop_update_fn = build_lambda lhs_outv (Lambda(uv,ut,update_body,false))
         in Iterate(loop_update_fn, delta_slice)
     in
     let statement_expr =
@@ -1243,8 +1244,8 @@ let collection_trig m3trig : trigger =
     let (evt, rel, args, stmts) = m3trig
     in (evt, rel, args, List.map (collection_stmt args) stmts)
 
-let collection_prog m3prog : program =
+let collection_prog m3prog patterns : program =
     let (schema, triggers) = m3prog
-    in (schema, List.map collection_trig triggers)
+    in (schema, patterns, List.map collection_trig triggers)
 
 end

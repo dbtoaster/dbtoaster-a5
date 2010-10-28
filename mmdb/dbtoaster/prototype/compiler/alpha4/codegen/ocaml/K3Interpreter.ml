@@ -393,6 +393,9 @@ struct
     module Env = M3Valuation
     module MC  = M3ValuationMap
     module DB  = NamedM3Database
+    module RT  = Runtime.Make(DB)
+    
+    open RT
 
     type single_map_t = DB.single_map_t
     type map_t        = DB.map_t
@@ -417,7 +420,12 @@ struct
     type env_t       = M3Valuation.t * slice_env_t 
     type db_t        = DB.db_t
 
-    type code_t      = env_t -> db_t -> value_t 
+    type eval_t      = env_t -> db_t -> value_t
+    type code_t      =
+          Eval of eval_t
+        | Trigger of M3.pm_t * M3.rel_id_t * (const_t list -> db_t -> unit)
+        | Main of (unit -> unit) 
+
     type op_t        = value_t -> value_t -> value_t
 
     (* Slice environment *)
@@ -425,6 +433,14 @@ struct
     let get_map_var v (_,th) = List.assoc v th
 
     (* Helpers *)
+    let get_eval e = match e with
+        | Eval(e) -> e
+        | _ -> failwith "unable to eval expr"
+
+    let get_trigger e = match e with
+        | Trigger(x,y,z) -> (x,y,z)
+        | _ -> failwith "unable to eval trigger"
+
     let value_of_float x = Float(x)
     let value_of_const_t x = match x with CFloat(y) -> Float(y)
     
@@ -491,7 +507,7 @@ struct
         | Fun _, _, _ -> failwith "invalid single map argument" 
         | _ -> failwith "invalid map function"
 
-    let apply_fn_list th db l = List.map (fun f -> f th db) l
+    let apply_fn_list th db l = List.map (fun f -> (get_eval f) th db) l
 
     let mc_to_tlc m = MC.fold (fun k v acc ->
         let t_v = (List.map float_of_const_t k, float_of_const_t v)
@@ -537,6 +553,7 @@ struct
     let lt_op   = (int_op (< ))
     let leq_op  = (int_op (<=))
     let eq_op   = (int_op (= ))
+    let neq_op  = (int_op (<>))
     
     let ifthenelse0_op cond v = 
         let aux v = match v with
@@ -549,82 +566,79 @@ struct
 
 
     (* Terminals *)
-    let const k = fun th db -> value_of_const_t k
-    let var v = fun th db -> 
+    let const k = Eval(fun th db -> value_of_const_t k)
+    let var v = Eval(fun th db -> 
         if (Env.bound v (fst th)) then value_of_const_t (Env.value v (fst th))
         else if has_map_var v th then get_map_var v th 
-        else failwith ("Var("^v^"): theta="^(Env.to_string (fst th)))
+        else failwith ("Var("^v^"): theta="^(Env.to_string (fst th))))
 
     (* Tuples *)
-    let tuple field_l = fun th db ->
-        Tuple(List.map float_of_value (apply_fn_list th db field_l))
+    let tuple field_l = Eval(fun th db ->
+        Tuple(List.map float_of_value (apply_fn_list th db field_l)))
 
-    let project tuple idx = fun th db -> match tuple th db with
+    let project tuple idx = Eval(fun th db -> match (get_eval tuple) th db with
         | Tuple(t_v) -> Tuple(tuple_fields t_v idx)
-        | _ -> failwith "invalid tuple for projection"
+        | _ -> failwith "invalid tuple for projection")
 
     (* Native collections *)
     
     (* assumes numeric element *)
-    let singleton el = fun th db -> match el th db with
+    let singleton el = Eval(fun th db -> match (get_eval el) th db with
         | Tuple(t_v) -> TupleList([kv_of_tuple (Tuple t_v)])
-        | x -> List([float_of_value x])
+        | x -> List([float_of_value x]))
     
     (* combines two collections.
      * -- applies only to lists and tuple lists, requiring map conversion *)
-    let combine c1 c2 = fun th db ->
-        begin match (c1 th db, c2 th db) with
+    let combine c1 c2 = Eval(fun th db ->
+        begin match ((get_eval c1) th db, (get_eval c2) th db) with
         | (List(c1), List(c2)) -> List(c1@c2)
         | (TupleList(c1), TupleList(c2)) -> TupleList(c1@c2)
         | _,_ -> failwith "invalid collections to combine"
-        end
+        end)
 
     (* Arithmetic, comparision operators *)
     (* op type, lhs, rhs -> op *)
-    let op op_fn l r = fun th db -> op_fn (l th db) (r th db)
+    let op op_fn l r = Eval(fun th db ->
+        op_fn ((get_eval l) th db) ((get_eval r) th db))
 
     (* Control flow *)
     (* predicate, then clause, else clause -> condition *) 
-    let ifthenelse pred t e = fun th db ->
-        let valid = match (pred th db) with
+    let ifthenelse pred t e = Eval(fun th db ->
+        let valid = match ((get_eval pred) th db) with
             | Float x -> x <> 0.0 | Int x -> x <> 0
             | _ -> failwith "invalid predicate value"
-        in if valid then t th db else e th db
+        in if valid then (get_eval t) th db else (get_eval e) th db)
 
     (* statements -> block *)    
     let block stmts =
         let idx = List.length stmts - 1 in
-        (fun th db -> let rvs = apply_fn_list th db stmts in List.nth rvs idx)
+        Eval(fun th db ->
+          let rvs = apply_fn_list th db stmts in List.nth rvs idx)
  
     (* iter fn, collection -> iteration *)
-    let iterate iter_fn collection = fun th db ->
+    let iterate iter_fn collection = Eval(fun th db ->
         let aux fn v_f =
             List.iter (fun v -> match (apply_mv_map_fn_lc fn (v_f v)) with
                 | Unit -> ()
                 | _ -> failwith "runtime exception: invalid iteration")
-        in begin match iter_fn th db, collection th db with
-        | (Fun (f,sa), List l) ->
-            (aux (Fun(f,sa)) value_of_float l; Unit)
-        
-        | (Fun (f,sa), TupleList l) ->
-            (aux (Fun(f,sa)) tuple_of_kv l; Unit)
-
+        in begin match (get_eval iter_fn) th db, (get_eval collection) th db with
+        | (Fun (f,sa), List l) -> (aux (Fun(f,sa)) value_of_float l; Unit)
+        | (Fun (f,sa), TupleList l) -> (aux (Fun(f,sa)) tuple_of_kv l; Unit)
         (*
         | (Fun (f,sa), SingleMapList l) ->
             (List.iter (fun (k_v,m) -> 
                 apply_mv_map_fn_smlc (Fun(f,sa)) (Tuple k_v) (SingleMap m)) l;
              Unit)
         *)
-
         | (Fun _, _) -> failwith "invalid iterate collection"
         | (_,_) -> failwith "invalid iterate function"
-        end
+        end)
 
     (* Functions *)
     (* arg, schema application, body -> fn *)
-    let lambda v schema_app body = fun th db ->
-        let f_aux f = body (Env.add (fst th) v (CFloat f), snd th) db in
-        let map_aux m = body (fst th, (v,m)::(snd th)) db in
+    let lambda v schema_app body = Eval(fun th db ->
+        let f_aux f = (get_eval body) (Env.add (fst th) v (CFloat f), snd th) db in
+        let map_aux m = (get_eval body) (fst th, (v,m)::(snd th)) db in
         let fn v = match v with
             | Float(x) -> f_aux x
             | Int(x) -> f_aux (float_of_int x)
@@ -633,30 +647,30 @@ struct
             | SingleMap(m) -> map_aux v
             | DoubleMap(m) -> map_aux v
             | _ -> failwith "invalid function argument"
-        in Fun(fn, schema_app)
+        in Fun(fn, schema_app))
     
     (* arg1, type, arg2, type, body -> assoc fn *)
     (* M3 assoc functions should never need to use slices *)
-    let assoc_lambda v1 v2 body = fun th db ->
+    let assoc_lambda v1 v2 body = Eval(fun th db ->
         let aux vl1 vl2 =
             let new_th = (Env.add (Env.add (fst th)
                 v1 (const_t_of_value vl1)) v2 (const_t_of_value vl2), snd th)
-            in body new_th db
+            in (get_eval body) new_th db
         in
         let fn1 vl1 = Fun((fun vl2 -> aux vl1 vl2), false)
-        in Fun(fn1, false)
+        in Fun(fn1, false))
 
     (* fn, arg -> evaluated fn *)
-    let apply fn arg = fun th db -> match fn th db  with
-        | Fun (f,false) -> f (arg th db)
-        | _ -> failwith "invalid function for function application"
+    let apply fn arg = Eval(fun th db -> match (get_eval fn) th db  with
+        | Fun (f,false) -> f ((get_eval arg) th db)
+        | _ -> failwith "invalid function for function application")
     
     (* Structural recursion operations *)
     (* map fn, collection -> map *)
-    let map map_fn collection = fun th db ->
+    let map map_fn collection = Eval(fun th db ->
         let aux fn v_f rv_f =
             List.map (fun v -> rv_f (apply_mv_map_fn_lc fn (v_f v))) in
-        match map_fn th db, collection th db with
+        match (get_eval map_fn) th db, (get_eval collection) th db with
         | (Fun (f,sa), List l) ->
             List(aux (Fun(f,sa)) value_of_float float_of_value l)
         
@@ -670,19 +684,19 @@ struct
         *)
 
         | (Fun _, _) -> failwith "invalid map collection"
-        | (_,_) -> failwith "invalid map function"
+        | (_,_) -> failwith "invalid map function")
     
     (* agg fn, initial agg, collection -> agg *)
     (* Note: accumulator is the last arg to agg_fn *)
-    let aggregate agg_fn init_agg collection = fun th db ->
+    let aggregate agg_fn init_agg collection = Eval(fun th db ->
         let aux fn v_f l = List.fold_left
-            (fun acc v -> apply_mv_agg_fn_lc fn acc (v_f v)) (init_agg th db) l
+            (fun acc v -> apply_mv_agg_fn_lc fn acc (v_f v)) ((get_eval init_agg) th db) l
         in
-        match agg_fn th db, collection th db with
+        match (get_eval agg_fn) th db, (get_eval collection) th db with
         | (Fun (f,sa), List l) -> aux (Fun(f,sa)) value_of_float l
         | (Fun (f,sa), TupleList l) -> aux (Fun(f,sa)) tuple_of_kv l
         | (Fun _, _) -> failwith "invalid agg collection"        
-        | (_,_) -> failwith "invalid agg function"
+        | (_,_) -> failwith "invalid agg function")
 
     (* agg fn, initial agg, grouping fn, collection -> agg *)
     (* Perform group-by aggregation by using a temporary MapCollection,
@@ -700,9 +714,11 @@ struct
 	                | Tuple(t_v) -> t_v | x -> [float_of_value x])
             in gb init_v mc (fun a -> f a (tuple_of_kv kv)) gb_key
         in
-        (fun th db ->
-        let init_v = init_agg th db in
-        match agg_fn th db, gb_fn th db, collection th db with
+        Eval(fun th db ->
+        let init_v = (get_eval init_agg) th db in
+        match (get_eval agg_fn) th db, (get_eval gb_fn) th db,
+              (get_eval collection) th db
+        with
         | Fun (f,fsa), Fun (g,gsa), TupleList l -> TupleList(mc_to_tlc
             (List.fold_left (lc_gb init_v
                 (apply_mv_agg_fn_lc (Fun(f,fsa)))
@@ -713,19 +729,20 @@ struct
         | _,_,_ -> failwith "invalid group by aggregation function")
     
     (* nested collection -> flatten *)
+    (* TODO *)
     let flatten nested_collection =
-        failwith "flattening should not be needed for M3"
+        failwith "flattening should not be needed for K3"
 
     (* Tuple collection operators *)
     (* TODO: write documentation on datatypes + implementation requirements
      * for these methods *)
-    let tcollection_op lc_f smc_f dmc_f tcollection key_l = fun th db ->
+    let tcollection_op lc_f smc_f dmc_f tcollection key_l = Eval(fun th db ->
         let k_v = apply_fn_list th db key_l in
-        match tcollection th db with
+        match (get_eval tcollection) th db with
         | TupleList l -> lc_f l (List.map float_of_value k_v)
         | SingleMap m -> smc_f m (List.map const_t_of_value k_v)
         | DoubleMap m -> dmc_f m (List.map const_t_of_value k_v)
-        | _ -> failwith "invalid tuple collection"
+        | _ -> failwith "invalid tuple collection")
 
     (* map, key -> bool/float *)
     let exists tcollection key_l =
@@ -760,17 +777,17 @@ struct
 
 
     (* Database retrieval methods *)
-    let get_value id = fun th db -> match DB.get_value id db with
-        Some(x) -> value_of_const_t x | None -> Float(0.0)
+    let get_value id = Eval(fun th db -> match DB.get_value id db with
+        Some(x) -> value_of_const_t x | None -> Float(0.0))
 
-    let get_in_map id  = fun th db -> SingleMap(DB.get_in_map id db)
-    let get_out_map id = fun th db -> SingleMap(DB.get_out_map id db)
-    let get_map id     = fun th db -> DoubleMap(DB.get_map id db)
+    let get_in_map id  = Eval(fun th db -> SingleMap(DB.get_in_map id db))
+    let get_out_map id = Eval(fun th db -> SingleMap(DB.get_out_map id db))
+    let get_map id     = Eval(fun th db -> DoubleMap(DB.get_map id db))
 
     (* Database udpate methods *)
     let const_t_kv (k,v) = (List.map const_t_of_float k, const_t_of_float v)
 
-    let get_update_value th db v = const_t_of_value (v th db)
+    let get_update_value th db v = const_t_of_value ((get_eval v) th db)
     let get_update_key th db kl =
         List.map const_t_of_value (apply_fn_list th db kl)
 
@@ -780,51 +797,114 @@ struct
         | _ -> failwith "invalid single_map_t" 
 
     (* persistent collection id, value -> update *)
-    let update_value id value = fun th db ->
-        DB.update_value id (get_update_value th db value) db; Unit
+    let update_value id value = Eval(fun th db ->
+        DB.update_value id (get_update_value th db value) db; Unit)
     
     (* persistent collection id, in key, value -> update *)
-    let update_in_map_value id in_kl value = fun th db ->
+    let update_in_map_value id in_kl value = Eval(fun th db ->
         DB.update_in_map_value id
             (get_update_key th db in_kl)
             (get_update_value th db value) db;
-        Unit
+        Unit)
     
     (* persistent collection id, out key, value -> update *)
-    let update_out_map_value id out_kl value = fun th db ->
+    let update_out_map_value id out_kl value = Eval(fun th db ->
         DB.update_out_map_value id
             (get_update_key th db out_kl)
             (get_update_value th db value) db;
-        Unit
+        Unit)
     
     (* persistent collection id, in key, out key, value -> update *)
-    let update_map_value id in_kl out_kl value = fun th db ->
+    let update_map_value id in_kl out_kl value = Eval(fun th db ->
         DB.update_map_value id
             (get_update_key th db in_kl)
             (get_update_key th db out_kl)
             (get_update_value th db value) db;
-        Unit
+        Unit)
 
     (* persistent collection id, update collection -> update *)
-    let update_in_map id collection = fun th db ->
+    let update_in_map id collection = Eval(fun th db ->
         let in_pats = DB.get_in_patterns id db
-        in DB.update_in_map id (get_update_map (collection th db) in_pats) db;
-        Unit
+        in DB.update_in_map id
+             (get_update_map ((get_eval collection) th db) in_pats) db;
+        Unit)
     
-    let update_out_map id collection = fun th db ->
+    let update_out_map id collection = Eval(fun th db ->
         let out_pats = DB.get_out_patterns id db
-        in DB.update_out_map id (get_update_map (collection th db) out_pats) db;
-        Unit
+        in DB.update_out_map id
+             (get_update_map ((get_eval collection) th db) out_pats) db;
+        Unit)
 
     (* persistent collection id, key, update collection -> update *)
-    let update_map id in_kl collection = fun th db ->
+    let update_map id in_kl collection = Eval(fun th db ->
         let out_pats = DB.get_out_patterns id db in
         DB.update_map id (get_update_key th db in_kl)
-           (get_update_map (collection th db) out_pats) db;
-        Unit    
+           (get_update_map ((get_eval collection) th db) out_pats) db;
+        Unit)
     
+    (*
     let ext_fn fn_id = failwith "External functions not yet supported"
+    *)
     
+    (* Top level code generation *)
+    let trigger event rel trig_args stmt_block =
+      Trigger (event, rel, (fun tuple db ->
+        let theta = Env.make trig_args tuple, [] in
+          List.iter (fun cstmt -> match (get_eval cstmt) theta db with
+            | Unit -> ()
+            | _ -> failwith "trigger returned non-unit") stmt_block))
+
+    (* Sources, for now files only. *)
+    type source_impl_t = FileSource.t
+
+    let source src framing (rel_adaptors : (string * adaptor_t) list) =
+       let src_impl = match src with
+           | FileSource(fn) ->
+               FileSource.create src framing 
+               (List.map (fun (rel,adaptor) -> 
+                   (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
+               (list_to_string fst rel_adaptors)
+           | SocketSource(_) -> failwith "Sockets not yet implemented."
+           | PipeSource(_)   -> failwith "Pipes not yet implemented."
+       in (src_impl, None, None)
+
+    let main schema patterns sources triggers toplevel_queries =
+      Main (fun () ->
+        let db = DB.make_empty_db schema patterns in
+        let (insert_trigs, delete_trigs) = 
+          List.fold_left 
+            (fun (insert_acc, delete_acc) trig ->
+              let add_trigger acc =
+                let (_, rel, t_code) = get_trigger trig
+                in (rel, t_code)::acc
+              in match get_trigger trig with 
+              | (M3.Insert, _, _) -> (add_trigger insert_acc, delete_acc)
+              | (M3.Delete, _, _) -> (insert_acc, add_trigger delete_acc))
+          ([], []) triggers in
+        let dispatcher =
+          (fun evt ->
+            match evt with 
+            | Some(Insert, rel, tuple) when List.mem_assoc rel insert_trigs -> 
+              ((List.assoc rel insert_trigs) tuple db; true)
+            | Some(Delete, rel, tuple) when List.mem_assoc rel delete_trigs -> 
+              ((List.assoc rel delete_trigs) tuple db; true)
+            | Some _  | None -> false)
+        in
+        let mux = List.fold_left
+          (fun m (source,_,_) -> FileMultiplexer.add_stream m source)
+          (FileMultiplexer.create ()) sources
+        in
+        let db_tlq = List.map DB.string_to_map_name toplevel_queries in
+          synch_main db mux db_tlq dispatcher StringMap.empty ())
+
+    (* For the interpreter, output evaluates the main function and redirects
+     * stdout to the desired channel. *)
+    let output main out_chan = match main with
+      | Main(main_f) ->
+          Unix.dup2 Unix.stdout (Unix.descr_of_out_channel out_chan); main_f ()
+      | _ -> failwith "invalid M3 interpreter main code"
+
+
     (* Statement code generation *)
     (*
     let singleton_update outv incr init init_singleton =
