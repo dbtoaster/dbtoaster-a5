@@ -125,7 +125,7 @@ OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT) \
 						 -ccopt -O3 -nodynlink -unsafe -noassert
 ODEP_FLAGS = $(INCLUDE_DIR)
 
-.PHONY: all driver top test clean deps
+.PHONY: all driver top test runtop clean deps
 
 all: deps dbtoaster_top dbtoaster
 
@@ -221,6 +221,11 @@ vwap: $(OPT_DEPS)
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml
 
+## Top-level
+runtop: top
+	./dbtoaster_top $(INCLUDE_DIR)
+
+## Cleanup
 clean:
 	rm -f $(CLEAN_OBJ)
 	for i in test/sql/*.sql; do bn=`basename $$i .sql`; \
