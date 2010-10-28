@@ -8,7 +8,7 @@ sig
 
     (* Data sources *)
     type source_impl_t
-
+      
     (* Operators *)
     val add_op         : op_t
     val mult_op        : op_t
@@ -170,5 +170,22 @@ sig
 
     val output : code_t -> out_channel -> unit
 
-    (* TODO: interepreter methods *)
+    (* Interepreter methods *)
+    type single_map_t
+    type map_t
+    
+    type value_t = 
+        | Unit
+        | Float          of float
+        | Int            of int
+        | Tuple          of float list
+        | Fun            of (value_t -> value_t) * bool 
+        | List           of float list
+        | TupleList      of (float list * float) list
+        | SingleMap      of single_map_t
+        | DoubleMap      of map_t
+
+    val string_of_value : value_t -> string
+
+    val eval : code_t -> M3.var_t list -> M3.const_t list -> db_t -> value_t
 end

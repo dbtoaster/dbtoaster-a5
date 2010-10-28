@@ -130,7 +130,8 @@ let input_files = if (flag_bool "FILES") then flag_vals "FILES"
                   else give_up "No files provided";;
     
 type language_t = 
-  L_OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA | L_M3 | L_NONE | L_INTERPRETER;;
+  L_OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
+| L_M3 | L_NONE | L_INTERPRETER | L_K3INTERPRETER;;
 
 let language = 
   if flag_bool "INTERPRETER" then L_INTERPRETER
@@ -147,6 +148,7 @@ let language =
       | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
       | "PLSQL"    -> L_PLSQL 
       | "RUN"      -> L_INTERPRETER
+      | "RK3"      -> L_K3INTERPRETER
       | "NONE"     -> L_NONE (* Used for getting just debug output *)
       | "DEBUG"    -> L_NONE
       | "DELTA"    -> L_DELTA
@@ -271,8 +273,8 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
-
 module M3PLSQLCompiler = M3Compiler.Make(M3Plsql.CG);;
+module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.MK3CG);;
 
 open Database
 open Sources
@@ -295,7 +297,10 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
       (fun q tlq f ->
         StandardAdaptors.initialize();
         M3OCamlInterpreterCompiler.compile_query q tlq f)
-    
+  | L_K3INTERPRETER ->
+      (fun q tlq f ->
+        StandardAdaptors.initialize();
+        K3InterpreterCompiler.compile_query q tlq f)
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)

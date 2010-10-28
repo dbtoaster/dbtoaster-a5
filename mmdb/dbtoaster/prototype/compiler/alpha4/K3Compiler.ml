@@ -1,9 +1,8 @@
-open K3.SR
-
 module Make = functor (CG : K3Codegen.CG) ->
 struct
 
 open CG
+open K3.SR
 
 let rec compile_k3_expr e =
     let compile_op o l r = op o (compile_k3_expr l) (compile_k3_expr r) in
@@ -97,10 +96,12 @@ let compile_triggers trigs : code_t list =
     let _,stmts = List.split cs in
     List.map compile_k3_expr stmts) trigs)
 
-let compile_query ((schema,patterns,trigs) : K3.SR.program)
-                  (sources: M3.relation_input_t list)
+let compile_query (((schema,m3prog) : M3.prog_t),
+                    (sources: M3.relation_input_t list))
                   (toplevel_queries : string list)
                   (out_file_name : Util.GenericIO.out_t) =
+  let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
+  let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
   let trig_rels = Util.ListAsSet.no_duplicates
      (List.map (fun (_,rel,_,_) -> rel) trigs) in
   let ctrigs = compile_triggers trigs in

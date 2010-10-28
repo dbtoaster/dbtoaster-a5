@@ -433,6 +433,18 @@ struct
     let get_map_var v (_,th) = List.assoc v th
 
     (* Helpers *)
+    let rec string_of_value v = match v with
+      | Unit -> "unit"
+      | Float(f) -> string_of_float f
+      | Int(i) -> string_of_int i
+      | Tuple(fl) -> "("^(String.concat "," (List.map string_of_float fl))^")"
+      | Fun(f,sa) -> "<fun,"^(string_of_bool sa)^">"
+      | List(fl) -> "["^(String.concat ";" (List.map string_of_float fl))^"]"
+      | TupleList(kvl) -> "["^(String.concat ";"
+           (List.map (fun (fl,v) -> string_of_value (Tuple(fl@[v]))) kvl))^"]"
+      | SingleMap(sm) -> "<singlemap>"
+      | DoubleMap(dm) -> "<doublemap>"
+
     let get_eval e = match e with
         | Eval(e) -> e
         | _ -> failwith "unable to eval expr"
@@ -461,7 +473,7 @@ struct
     let pop_back l =
         let x,y = List.fold_left
 	        (fun (acc,rem) v -> match rem with 
-	            | [] -> (acc, [v]) | _ -> (acc@[v], List.tl l)) 
+	            | [] -> (acc, [v]) | _ -> (acc@[v], List.tl rem)) 
 	        ([], List.tl l) l
         in x, List.hd y
 
@@ -582,9 +594,9 @@ struct
 
     (* Native collections *)
     
-    (* assumes numeric element *)
+    (* assumes numeric non-tuple element *)
     let singleton el = Eval(fun th db -> match (get_eval el) th db with
-        | Tuple(t_v) -> TupleList([kv_of_tuple (Tuple t_v)])
+        | (Tuple(t_v)) as t -> TupleList([kv_of_tuple t])
         | x -> List([float_of_value x]))
     
     (* combines two collections.
@@ -661,8 +673,10 @@ struct
         in Fun(fn1, false))
 
     (* fn, arg -> evaluated fn *)
-    let apply fn arg = Eval(fun th db -> match (get_eval fn) th db  with
-        | Fun (f,false) -> f ((get_eval arg) th db)
+    let apply fn arg = Eval(fun th db ->
+        match (get_eval fn) th db, (get_eval arg) th db with
+        | Fun (f,false), x -> f x
+        | (Fun (_,true)) as f, Tuple(t_v) -> apply_list f (List.map value_of_float t_v)
         | _ -> failwith "invalid function for function application")
     
     (* Structural recursion operations *)
@@ -730,19 +744,21 @@ struct
     
     (* nested collection -> flatten *)
     (* TODO *)
-    let flatten nested_collection =
-        failwith "flattening should not be needed for K3"
+    let flatten nested_collection = failwith "flatten not yet implemented"
+        
 
     (* Tuple collection operators *)
     (* TODO: write documentation on datatypes + implementation requirements
      * for these methods *)
-    let tcollection_op lc_f smc_f dmc_f tcollection key_l = Eval(fun th db ->
+    let tcollection_op ex_s lc_f smc_f dmc_f tcollection key_l = Eval(fun th db ->
         let k_v = apply_fn_list th db key_l in
-        match (get_eval tcollection) th db with
-        | TupleList l -> lc_f l (List.map float_of_value k_v)
-        | SingleMap m -> smc_f m (List.map const_t_of_value k_v)
-        | DoubleMap m -> dmc_f m (List.map const_t_of_value k_v)
-        | _ -> failwith "invalid tuple collection")
+        try begin match (get_eval tcollection) th db with
+            | TupleList l -> lc_f l (List.map float_of_value k_v)
+            | SingleMap m -> smc_f m (List.map const_t_of_value k_v)
+            | DoubleMap m -> dmc_f m (List.map const_t_of_value k_v)
+            | _ -> failwith "invalid tuple collection"
+            end
+        with Not_found -> failwith ("collection operation failed: "^ex_s))
 
     (* map, key -> bool/float *)
     let exists tcollection key_l =
@@ -751,16 +767,16 @@ struct
             in if r then Int(1) else Int(0)
         in
         let mc_f m k_v = if MC.mem k_v m then Int(1) else Int(0)
-        in tcollection_op lc_f mc_f mc_f tcollection key_l
+        in tcollection_op "exists" lc_f mc_f mc_f tcollection key_l
 
     (* map, key -> map value *)
     let lookup tcollection key_l =
         (* returns the (unnamed) value from the first tuple with a matching key *)
-        let lc_f l k = value_of_float (snd
+        let lc_f l k =  value_of_float (snd
             (List.find (fun (tk,tv) -> match_key_prefix k tk) l)) in
         let smc_f m k_v = value_of_const_t (MC.find k_v m) in
-        let dmc_f m k_v = SingleMap(MC.find k_v m)
-        in tcollection_op lc_f smc_f dmc_f tcollection key_l
+        let dmc_f m k_v = SingleMap(MC.find k_v m) in
+        tcollection_op "lookup" lc_f smc_f dmc_f tcollection key_l
     
     (* map, partial key, pattern -> slice *)
     (* Note: converts slices to lists, to ensure expression evaluation is
@@ -773,7 +789,7 @@ struct
         let dmc_f m pk =
             (*SingleMapList(mc_to_smlc (MC.slice pattern pk m))*)
             failwith "slicing not supported for double maps"
-        in tcollection_op lc_f smc_f dmc_f tcollection pkey_l
+        in tcollection_op "slice" lc_f smc_f dmc_f tcollection pkey_l
 
 
     (* Database retrieval methods *)
@@ -904,90 +920,9 @@ struct
           Unix.dup2 Unix.stdout (Unix.descr_of_out_channel out_chan); main_f ()
       | _ -> failwith "invalid M3 interpreter main code"
 
-
-    (* Statement code generation *)
-    (*
-    let singleton_update outv incr init init_singleton =
-        let out_l = List.map var outv in
-        let update = lambda "current_v" false
-            (op add_op (var "current_v") incr) in
-        let sing_init =
-            if init_singleton then op add_op incr init
-            else op add_op incr (lookup init out_l)
-        in (update, sing_init)
-    
-    let slice_update outv incr init init_singleton =
-        let get_tlc v = match v with
-            | TupleList(l) -> l | _ -> failwith "invalid out tier" in
-        let out_l = List.map var outv in
-        let init_v th db =
-            if init_singleton then float_of_value (init th db)
-            else float_of_value ((lookup init out_l) th db)
-        in
-        let update = lambda "current_slice" false
-            (fun th db ->
-                let c_s = get_tlc ((var "current_slice") th db) in
-                let d_s = get_tlc (incr th db) in
-                let aux acc (dk,dv) =
-                    if List.mem_assoc dk acc then
-                        (dk, (List.assoc dk acc)+.dv)::(List.remove_assoc dk acc)
-                    else (dk, (init_v th db)+.dv)::acc
-                in TupleList(List.fold_left aux c_s d_s)) 
-        in (update, const (CFloat(0.0)))
-    
-    let stmt_loop db_f inv patv pat body =
-        let direct = (List.length patv) = (List.length inv) in
-        let var_list th db vl =
-            List.map (fun v -> const_t_of_value ((var v) th db)) vl in 
-        let coll_f th db =         
-            if direct then [var_list th db inv]
-            else MC.slice_keys pat (var_list th db patv) (db_f db)
-        in
-        let loop_f th db img =
-            let new_th = List.fold_left (fun acc (v,k) -> Env.add acc v k)
-                (fst th) (List.combine inv img)
-            in ignore(body (new_th, snd th) db)
-        in fun th db -> List.iter (loop_f th db) (coll_f th db); Unit 
-
-    let singleton_statement mapn inv outv patv pat update sing_init =
-        let in_l = List.map var inv in
-        let out_l = List.map var outv in
-        match inv, outv with
-        | [],[] -> update_value mapn (apply update (get_value mapn)) 
-
-        | x,[] ->
-            let body = update_in_map_value mapn in_l
-                (apply update (lookup (get_in_map mapn) in_l))
-            in stmt_loop (DB.get_in_map mapn) inv patv pat body
-
-        | [],x ->
-            let m = get_out_map mapn in
-            let update_code =
-                ifthenelse (exists m out_l)
-                    (apply update (lookup m out_l)) sing_init
-            in update_out_map_value mapn out_l update_code
-
-        | x,y ->
-            let body =
-                let m = lookup (get_map mapn) in_l in
-                let update_code =
-	                (ifthenelse (exists m out_l)
-	                    (apply update (lookup m out_l)) sing_init)
-                in update_map_value mapn in_l out_l update_code
-            in stmt_loop (DB.get_map mapn) inv patv pat body
-
-    
-    let statement mapn inv outv patv pat update sing_init =
-        let in_l = List.map var inv in
-        match inv, outv with
-        | [],[] -> failwith "invalid slice update on a singleton map"
-        | x,[] -> failwith "invalid slice update on a singleton out tier"
-        
-        | [],x -> update_out_map mapn (apply update (get_out_map mapn))
-
-        | x,y ->
-            let body = update_map
-                mapn in_l (apply update (lookup (get_map mapn) in_l))
-            in stmt_loop (DB.get_map mapn) inv patv pat body 
-    *)
+ 
+    let rec eval c vars vals db = match c with
+      | Eval(f) -> f (Env.make vars vals, []) db
+      | Trigger(evt,rel,trig_fn) -> trig_fn vals db; Unit
+      | Main(f) -> f(); Unit
 end

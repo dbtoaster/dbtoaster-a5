@@ -1,3 +1,8 @@
+(*
+ * TODO: add flattens where appropriate for joins/products
+ * TODO: add lambda argument variant for variable, and tuple of vars
+ *)
+
 module M3P = M3.Prepared
 open M3
 open M3Common
@@ -272,8 +277,9 @@ type expr_t =
 (* Helpers *)
 
 (* TODO: types *)
-let schema_to_expr e vars =
-    List.fold_left (fun acc v -> Lambda(v,Float,acc,true)) e vars
+(* Reverse vars to preserve bind order *)
+let schema_to_expr e vars = List.fold_left (fun acc v ->
+    Lambda(v,Float,acc,true)) e (List.rev vars)
 
 let rec fold_leaves f acc e =
     let fold_op e_l = List.fold_left (fun a e -> fold_leaves f a e) acc e_l in
@@ -1073,8 +1079,7 @@ let m3rhs_to_expr lhs_outv paggcalc : expr_t =
                     Add(Var("v1", Float), Var("v2", Float))) in
     let gb_fn =
         let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv) in
-        List.fold_left (fun acc v -> Lambda(v, Float, acc, true))
-            (Lambda("v",Float, lhs_tuple,false)) (List.rev rhs_outv)
+        schema_to_expr (Lambda("v",Float, lhs_tuple,false)) rhs_outv
     in
     if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
@@ -1095,9 +1100,6 @@ let collection_stmt trig_args m3stmt : statement =
     let schema vars = List.map (fun v -> (v,Float)) vars in
     let vars_expr vars = List.map (fun v -> Var(v,Float)) vars in
     let fn_arg_expr v t = v,t,Var(v,t) in
-    let build_lambda vars body = List.fold_left (fun acc v ->
-        Lambda(v,Float,acc, true)) body (List.rev vars)
-    in
 
     let ((mapn, lhs_inv, lhs_outv, init_aggcalc), incr_aggcalc, sm) = m3stmt in
 	let ((incr_expr, incr_single),(init_expr,init_single)) =
@@ -1146,7 +1148,7 @@ let collection_stmt trig_args m3stmt : statement =
             let merge_body =
                 IfThenElse(Member(ce,out_el),
                     Add(Lookup(ce, out_el), me), (init_f me)) in
-            let merge_fn = build_lambda lhs_outv (Lambda(mv,mt,merge_body,false)) in
+            let merge_fn = schema_to_expr (Lambda(mv,mt,merge_body,false)) lhs_outv in
             (* slice update: merge current slice with delta slice *)
             let merge_expr = Map(merge_fn, incr_expr)
             in (Lambda(cv,ct,merge_expr,false), zero_init)
@@ -1183,13 +1185,13 @@ let collection_stmt trig_args m3stmt : statement =
         let in_coll = if (List.length patv) = (List.length lhs_inv)
             then Singleton(Lookup(collection, List.map snd pat_ve))
             else Slice(collection, ins, pat_ve) in
-        let loop_fn = build_lambda lhs_inv (Lambda(lv,lt,loop_fn_body,false))
+        let loop_fn = schema_to_expr (Lambda(lv,lt,loop_fn_body,false)) lhs_inv
         in Iterate(loop_fn, in_coll)
     in
     let loop_update_aux ins outs delta_slice =
         let uv,ut,ue = fn_arg_expr "updated_v" Float in
         let update_body = map_value_update_expr collection ins outs ue in
-        let loop_update_fn = build_lambda lhs_outv (Lambda(uv,ut,update_body,false))
+        let loop_update_fn = schema_to_expr (Lambda(uv,ut,update_body,false)) lhs_outv
         in Iterate(loop_update_fn, delta_slice)
     in
     let statement_expr =
