@@ -292,63 +292,10 @@ let compile_function: (M3.prog_t * M3.relation_input_t list -> string list ->
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
   | L_INTERPRETER ->
-      (fun ((schema,program),sources) tlq f ->
+      (fun q tlq f ->
         StandardAdaptors.initialize();
-        let prepared_program = M3Compiler.prepare_triggers program in
-        let db:DB.db_t = DB.make_empty_db schema (snd prepared_program)
-        in
-        let evaluator = 
-          (M3Interpreter.CG.event_evaluator 
-            (M3OCamlInterpreterCompiler.compile_ptrig prepared_program)
-            db)
-        in
-        let (files, pipes) = List.fold_left 
-          (fun (files, pipes) (source,framing,rel,adaptor) ->
-            let append_adaptor map source_info =
-              StringMap.add source_info (
-                if StringMap.mem source_info map then
-                  let old_adaptors = (StringMap.find source_info map) in
-                  if List.mem_assoc framing old_adaptors then
-                    (framing,(rel,adaptor)::
-                      (List.assoc framing old_adaptors))::
-                      (List.remove_assoc framing old_adaptors)
-                  else
-                    (framing,[rel,adaptor])::(StringMap.find source_info map)
-                else
-                  [framing,[rel,adaptor]]
-              ) map
-            in
-            match source with
-              | M3.FileSource(fname) ->
-                (append_adaptor files fname, pipes)
-              | M3.PipeSource(picmd)    ->
-                (files, append_adaptor pipes picmd)
-              | M3.SocketSource(_)   -> 
-                failwith "Sockets are currently unsupported in the interpreter"
-          ) (StringMap.empty,StringMap.empty) sources
-        in
-        let f_source 
-              (source:M3.source_t) 
-              (framings:(M3.framing_t * (string * M3.adaptor_t) list) list)
-              (mux:FileMultiplexer.t): FileMultiplexer.t =
-          List.fold_left (fun mux (framing,adaptors) -> 
-            FileMultiplexer.add_stream mux
-              (FileSource.create source framing 
-                (List.map (fun (rel,adaptor) -> 
-                  (rel, (Adaptors.create_adaptor adaptor))
-                ) adaptors)
-                (list_to_string fst adaptors)
-              )
-          ) mux framings
-        in
-        let mux:FileMultiplexer.t = 
-          StringMap.fold (fun s f m -> f_source (M3.FileSource(s)) f m) files (
-          StringMap.fold (fun s f m -> f_source (M3.PipeSource(s)) f m) pipes (
-            FileMultiplexer.create ()))
-        in
-        let db_tlq = List.map DB.string_to_map_name tlq in
-          synch_main db mux db_tlq evaluator StringMap.empty ()
-      )
+        M3OCamlInterpreterCompiler.compile_query q tlq f)
+    
   | L_NONE  -> (fun q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)

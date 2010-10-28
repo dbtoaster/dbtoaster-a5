@@ -795,6 +795,4 @@ struct
    let eval_trigger trigger tuple db =
       failwith "Cannot directly evaluate OCaml source"
 
-   let event_evaluator triggers db evt =
-      failwith "Cannot directly evaluate OCaml source"
 end

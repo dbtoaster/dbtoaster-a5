@@ -17,6 +17,9 @@ open Sources.Adaptors
 
 module DB = NamedM3Database
 
+module M3IRuntime = Runtime.Make(DB)
+open M3IRuntime
+
 (* Simple OCaml interpreter generator *)
 module CG : M3Codegen.CG with type db_t = DB.db_t =
 struct
@@ -43,6 +46,8 @@ type compiled_stmt = (M3Valuation.t -> DB.db_t -> unit)
 type compiled_trigger = 
     (pm_t * rel_id_t * (const_t list -> DB.db_t -> unit))
 
+type compiled_program = unit -> unit
+
 type compiled_code =
      Singleton              of singleton_code
    | Slice                  of slice_code
@@ -52,6 +57,7 @@ type compiled_code =
    | UpdateSlice            of slice_update_code
    | Statement              of compiled_stmt 
    | Trigger                of compiled_trigger
+   | Main                   of compiled_program 
 
 type env_debug_code = (M3Valuation.t -> DB.db_t -> unit)
 type slice_debug_code = (M3Valuation.t -> DB.db_t -> DB.single_map_t -> unit)
@@ -700,58 +706,57 @@ let trigger event rel trig_args stmt_block =
       let theta = M3Valuation.make trig_args tuple in
          List.iter (fun cstmt -> cstmt theta db) cblock))
 
-(* No sources for interpreter *)
-type source_impl_t = File of in_channel * adaptor list
-   | Socket of Unix.file_descr * adaptor list
+(* Sources, for now files only. *)
+type source_impl_t = FileSource.t
 
 let source src framing (rel_adaptors : (string * adaptor_t) list) =
    let src_impl = match src with
     | FileSource(fn) ->
-       let adaptor_impls = List.map (fun (r,a) -> create_adaptor a) rel_adaptors
-       in File(open_in fn, adaptor_impls)
-       
+       FileSource.create src framing 
+          (List.map (fun (rel,adaptor) -> 
+              (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
+          (list_to_string fst rel_adaptors)
     | SocketSource(_) -> failwith "Sockets not yet implemented."
     | PipeSource(_)   -> failwith "Pipes not yet implemented."
    in (src_impl, None, None)
 
-(* No top level code generated for the interpreter *)
-let main schema patterns sources triggers =
-   failwith "interpreter should be directly invoked"
+(* Top level code evaluates the triggers over the given sources *)
+let main schema patterns sources triggers toplevel_queries =
+  Main (fun () ->
+    let db = DB.make_empty_db schema patterns in
+    let (insert_trigs, delete_trigs) = 
+      List.fold_left 
+        (fun (insert_acc, delete_acc) trig ->
+          let add_trigger acc =
+            let (_, rel, t_code) = get_trigger_with_evt trig
+            in (rel, t_code)::acc
+          in match get_trigger_with_evt trig with 
+          | (M3.Insert, _, _) -> (add_trigger insert_acc, delete_acc)
+          | (M3.Delete, _, _) -> (insert_acc, add_trigger delete_acc))
+      ([], []) triggers in
+    let dispatcher =
+      (fun evt ->
+        match evt with 
+        | Some(Insert, rel, tuple) when List.mem_assoc rel insert_trigs -> 
+          ((List.assoc rel insert_trigs) tuple db; true)
+        | Some(Delete, rel, tuple) when List.mem_assoc rel delete_trigs -> 
+          ((List.assoc rel delete_trigs) tuple db; true)
+        | Some _  | None -> false)
+    in
+    let mux = List.fold_left
+      (fun m (source,_,_) -> FileMultiplexer.add_stream m source)
+      (FileMultiplexer.create ()) sources
+    in
+    let db_tlq = List.map DB.string_to_map_name toplevel_queries in
+      synch_main db mux db_tlq dispatcher StringMap.empty ())
 
-(* No file output for interpreter *)
-let output out_chan = failwith "interpreter cannot write source code"
+(* For the interpreter, output evaluates the main function and redirects
+ * stdout to the desired channel. *)
+let output main out_chan = match main with
+    | Main(main_f) ->
+        Unix.dup2 Unix.stdout (Unix.descr_of_out_channel out_chan); main_f ()
+    | _ -> failwith "invalid M3 interpreter main code"
 
 let eval_trigger trigger tuple db = (get_trigger trigger) tuple db
-
-type trigger_evaluator = (M3.const_t list -> DB.db_t -> unit)
-
-let event_evaluator (triggers:code_t list) (db:db_t) = 
-  let ((insert_trigs, delete_trigs):
-        (trigger_evaluator StringMap.t * trigger_evaluator StringMap.t)) = 
-    List.fold_left 
-      (fun ((insert_trig, delete_trig):
-              (trigger_evaluator StringMap.t * trigger_evaluator StringMap.t)) 
-           (trig:compiled_code) ->
-        let create_trigger (map:trigger_evaluator StringMap.t): 
-                           (trigger_evaluator StringMap.t) =
-          let (_, (rel:rel_id_t), (t_code:trigger_evaluator)) = 
-            get_trigger_with_evt trig in
-          StringMap.add rel t_code map 
-        in
-        match get_trigger_with_evt trig with 
-          | (M3.Insert, _, _) -> 
-              (create_trigger insert_trig, delete_trig)
-          | (M3.Delete, _, _) -> 
-              (insert_trig, create_trigger delete_trig)
-    ) (StringMap.empty, StringMap.empty) triggers
-  in
-    (fun evt ->
-      match evt with 
-        | Some(Insert, rel, tuple) -> 
-          ((StringMap.find rel insert_trigs) tuple db; true)
-        | Some(Delete, rel, tuple) -> 
-          ((StringMap.find rel delete_trigs) tuple db; true)
-        | None -> false
-    )
 
 end
