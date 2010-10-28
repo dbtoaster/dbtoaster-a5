@@ -321,10 +321,10 @@ let compile_ocaml in_file_name =
   let dbt_lib_ext = ".cmx" in
   let ocaml_libs = [ "unix"; "str" ] in
   let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
-  let dbt_includes = [ "lib/ocaml" ] in
-  let dbt_libs = [ "Util";
-                   "M3";
-                   "M3Common";
+  let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/ocaml" ] in
+  let dbt_libs = [ "util/Util";
+                   "stages/maps/M3";
+                   "stages/maps/M3Common";
                    "lib/ocaml/SliceableMap";
                    "lib/ocaml/Values";
                    "lib/ocaml/Database";

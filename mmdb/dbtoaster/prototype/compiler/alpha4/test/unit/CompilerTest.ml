@@ -353,6 +353,8 @@ test_query "if(0 < AggSum(1, R(A,B))) then 1 else 0"
 ;;
 *)
 
+
+(*
 let m = make_term(RVal(AggSum(
     RSum[RVal (Var("A", TInt)); RVal (Var ("C", TInt));],
     RA_MultiNatJoin([relR; relS])))) 
@@ -361,6 +363,6 @@ test_query "factorized query compilation test: select sum(a) from R,U"
 (Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
 ([])
 ;;
-
+*)
 
 
