@@ -458,13 +458,13 @@ struct
     
     let float_of_value x = match x with
         | Float f -> f | Int i -> float_of_int i
-        | _ -> failwith "invalid float"
+        | _ -> failwith ("invalid float: "^(string_of_value x))
 
     let float_of_const_t x = match x with CFloat(f) -> f 
     
     let const_t_of_value x = match x with
         | Float f -> CFloat f | Int i -> CFloat (float_of_int i)
-        | _ -> failwith "invalid const_t"
+        | _ -> failwith ("invalid const_t: "^(string_of_value x))
 
     let const_t_of_float x = CFloat(x)
 
@@ -479,7 +479,7 @@ struct
 
     let kv_of_tuple t = match t with
         | Tuple(t_v) -> pop_back t_v 
-        | _ -> failwith "invalid tuple"
+        | _ -> failwith ("invalid tuple: "^(string_of_value t))
 
     let rec apply_list fv l =
         match fv,l with
@@ -697,7 +697,8 @@ struct
                 apply_mv_map_fn_smlc (Fun(f,sa)) (Tuple k_v) (SingleMap m)) l
         *)
 
-        | (Fun _, _) -> failwith "invalid map collection"
+        | (Fun _, x) ->
+          failwith ("invalid map collection, found: "^(string_of_value x))
         | (_,_) -> failwith "invalid map function")
     
     (* agg fn, initial agg, collection -> agg *)

@@ -380,12 +380,13 @@ let map_access_to_expr map_expr singleton init_singleton out_patv =
         let ke = List.map (fun (v,t) -> Var(v,t)) sch in 
         let map_t = Collection(TTuple((List.map snd sch)@[t])) in
         let map_v,map_var = "slice",Var("slice", map_t) in
-        let access_expr = if singleton then Lookup(map_var,ke)
+        let access_expr =
+            if singleton then 
+                IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
             else let p_ve = List.map (fun v -> 
                     let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
                  in Slice(map_var,sch,p_ve)
-        in Lambda(map_v, map_t,
-            IfThenElse(Member(map_var,ke), access_expr, init_expr), false)
+        in Lambda(map_v, map_t, access_expr, false)
     in
     let init_aux map_expr ins outs ie =
         let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
@@ -494,7 +495,7 @@ let rec calc_to_singleton_expr calc : expr_t =
     end
 
 and op_to_expr op c c1 c2 : expr_t =
-    let aux ecalc = (calc_schema c, M3P.get_singleton c) in
+    let aux ecalc = (calc_schema ecalc, M3P.get_singleton ecalc) in
     let (outv1, c1_sing) = aux c1 in
     let (outv2, c2_sing) = aux c2 in
     let (schema, c_sing, c_prod) =
@@ -508,10 +509,10 @@ and op_to_expr op c c1 c2 : expr_t =
         | (_, true, false) | (_, false, true) ->
             (* TODO: types *)
             let inline = calc_to_singleton_expr (if c1_sing then c1 else c2) in
-            let (v,v_t,l,r,schema) =
+            let (v,v_t,l,r,cschema) =
                 if c1_sing then "v2",Float,inline,Var("v2",Float),outv2
                 else "v1",Float,Var("v1",Float),inline,outv1 in
-            let fn = schema_to_expr (Lambda(v,v_t,op schema l r,false)) schema
+            let fn = schema_to_expr (Lambda(v,v_t,op schema l r,false)) cschema
             in Map(fn, calc_to_expr (if c1_sing then c2 else c1))
         
         | (_, false, false) ->
@@ -1062,7 +1063,7 @@ type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
 type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
 
 let m3rhs_to_expr lhs_outv paggcalc : expr_t =
-   (* invokes calc_to_structure on calculus part of paggcalc.
+   (* invokes calc_to_expr on calculus part of paggcalc.
     * based on aggregate metadata:
     * -- simply uses the collection
     * -- applies bigsums to collection.
@@ -1070,24 +1071,27 @@ let m3rhs_to_expr lhs_outv paggcalc : expr_t =
     * -- projects to lhs vars 
     *)
     let ecalc = M3P.get_ecalc paggcalc in
+    
+    (* TODO: fix bug, rhs_outv is wrong here since it includes all vars
+     * used in rhs, see rsgb.sql example *)
     let rhs_outv = calc_schema ecalc in
     
     (* TODO: simplify rhs, e.g. lift lambdas *)
     let rhs_expr = calc_to_expr ecalc in
     let init_val = Const(CFloat(0.0)) in
-    let agg_fn = AssocLambda("v1", Float, "v2", Float,
-                    Add(Var("v1", Float), Var("v2", Float))) in
-    let gb_fn =
-        let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv) in
-        schema_to_expr (Lambda("v",Float, lhs_tuple,false)) rhs_outv
-    in
+    let agg_fn = schema_to_expr 
+        (AssocLambda("v1", Float, "v2", Float,
+            Add(Var("v1", Float), Var("v2", Float)))) rhs_outv in
     if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
         (* TODO: simplify aggregate w/ struct rec *)
         Aggregate (agg_fn, init_val, rhs_expr) 
     else
         (* projection to lhs vars + aggregation *)
-        GroupByAggregate(agg_fn, init_val, gb_fn, rhs_expr)
+        let gb_fn =
+            let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv)
+            in schema_to_expr (Lambda("v",Float, lhs_tuple,false)) rhs_outv
+        in GroupByAggregate(agg_fn, init_val, gb_fn, rhs_expr)
 
 (* Statement expression construction:
  * -- creates structural representations of the the incr and init value exprs,
@@ -1146,8 +1150,11 @@ let collection_stmt trig_args m3stmt : statement =
             (* merge fn: check if the delta exists in the current slice and
              * increment, otherwise compute an initial value and increment  *)
             let merge_body =
+                let build_entry e = Tuple(out_el@[e]) in 
                 IfThenElse(Member(ce,out_el),
-                    Add(Lookup(ce, out_el), me), (init_f me)) in
+                    build_entry (Add(Lookup(ce, out_el), me)),
+                    build_entry (init_f me))
+            in
             let merge_fn = schema_to_expr (Lambda(mv,mt,merge_body,false)) lhs_outv in
             (* slice update: merge current slice with delta slice *)
             let merge_expr = Map(merge_fn, incr_expr)

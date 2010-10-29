@@ -92,9 +92,10 @@ let rec compile_k3_expr e =
     end
 
 let compile_triggers trigs : code_t list =
-  List.flatten (List.map (fun (event, rel, args, cs) ->
-    let _,stmts = List.split cs in
-    List.map compile_k3_expr stmts) trigs)
+  List.map (fun (event, rel, args, cs) ->
+      let stmts = List.map compile_k3_expr (snd (List.split cs))
+      in trigger event rel args stmts)
+    trigs
 
 let compile_query (((schema,m3prog) : M3.prog_t),
                     (sources: M3.relation_input_t list))

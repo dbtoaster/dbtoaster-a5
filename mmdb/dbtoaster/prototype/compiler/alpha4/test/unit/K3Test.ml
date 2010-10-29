@@ -109,14 +109,12 @@ let pma n i o = mk_ma (n,i,o, (mk_c 0.0,()))
 let sumr_schema = [ "q",[],[] ];;
 
 let sumr_trigs =
-    [(Insert, "R", ["a";"b"],
-      [ (uma "q" [] [], (mk_v "a", ()), ()) ]);
-     (Delete, "R", ["a"; "b"],
-      [ (uma "q" [] [], ((mk_prod (mk_v "a") (mk_c (-1.0))), ()), ()) ])]
-in
+  [(Insert, "R", ["a";"b"],
+    [ (uma "q" [] [], (mk_v "a", ()), ()) ]);
+   (Delete, "R", ["a"; "b"],
+    [ (uma "q" [] [], ((mk_prod (mk_v "a") (mk_c (-1.0))), ()), ()) ])];;
 let sumr_prog = prepare_triggers sumr_trigs
-in collection_prog (sumr_schema, fst sumr_prog) []
-;;
+in collection_prog (sumr_schema, fst sumr_prog) [];;
 
 (* select b,sum(a) from R group by b *)
 let sumr_byb_schema = [ "q",[],[VT_Int] ];;
@@ -126,11 +124,10 @@ let sumr_byb_trigs =
     [(Insert, "R", ["a";"b"],
       [ (uma "q" [] ["b"], (mk_v "a", ()), ()) ]);
      (Delete, "R", ["a"; "b"],
-      [ (uma "q" [] ["b"], ((mk_prod (mk_v "a") (mk_c (-1.0))), ()), ()) ])]
-in
+      [ (uma "q" [] ["b"], ((mk_prod (mk_v "a") (mk_c (-1.0))), ()), ()) ])];;
+
 let sumr_byb_prog = prepare_triggers sumr_byb_trigs
-in collection_prog (sumr_byb_schema, fst sumr_byb_prog) sumr_byb_patterns
-;;
+in collection_prog (sumr_byb_schema, fst sumr_byb_prog) sumr_byb_patterns;;
 
 
 (**************************
@@ -292,6 +289,26 @@ test_interpreter "slice (get_out_map q) [] []"
   (eval slice_q [] [] db2)
   (TupleList [[4.0], 1.0; [10.0], 5.0; [3.0], 7.0; [1.0], 2.0]);;
 
+(* insert trigger for sum (a) from R *)
+let fcv = lambda "current_v" false (op add_op (var "current_v") (var "a")) in
+let stmt = update_value "q" (apply fcv (get_value "q")) in
+test_interpreter "update_value q ((lambda cv. cv + a) get_value q)"
+  (eval stmt ["a"; "b"] [CFloat(1.0); CFloat(1.0)] db) (Unit);;
+
+test_interpreter "(get_value q) = 2.0"
+  (eval get_q_value [] [] db) (Float(2.0));;
+
+(* delete trigger for sum (a) from R *)
+let fcv = lambda "current_v" false (op add_op (var "current_v")
+  (op mult_op (var "a") (const (CFloat(-1.0)))))
+in
+let stmt = update_value "q" (apply fcv (get_value "q")) in
+test_interpreter "update_value q ((lambda cv. cv + -1 * a) get_value q)"
+  (eval stmt ["a"; "b"] [CFloat(1.0); CFloat(1.0)] db) (Unit);;
+
+test_interpreter "(get_value q) = 1.0"
+  (eval get_q_value [] [] db) (Float(1.0));;
+
 (* TODO: double map tests *)
 
 (* Control flow tests
@@ -303,3 +320,96 @@ test_interpreter "slice (get_out_map q) [] []"
 (******************
  * Compiler tests
  ******************)
+
+module K3C = K3Compiler.Make(K3Interpreter.MK3CG);;
+
+let test_prog (schema,trigs) tuples trigs_to_run tests =
+  let prog_db = DB.make_empty_db schema [] in
+  let ptrigs,patterns = M3Compiler.prepare_triggers trigs in
+  let (_,_,trigs) = collection_prog (schema,ptrigs) patterns in
+  let ctrigs = K3C.compile_triggers trigs in
+  let inputs = List.map (fun l -> List.map (fun x -> CFloat(x)) l) tuples in
+  List.iter (fun ((idx, trig_args),test) ->
+      let trig_fn = List.nth ctrigs idx in
+      List.iter (fun t -> ignore(eval trig_fn trig_args t prog_db)) inputs;
+      test prog_db)
+    (List.combine trigs_to_run tests);;
+
+let tuples =
+   [[1.0;4.0];
+    [2.0;1.0];
+    [1.0;2.0];
+    [4.0;1.0];
+    [3.0;3.0]];;
+
+(* select sum(a) from R *)
+test_prog (sumr_schema,sumr_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]]
+[(fun db -> test_interpreter "insert; (get_value q) = 11.0"
+              (eval (get_value "q") [] [] db) (Float(11.0)));
+ (fun db -> test_interpreter "delete; (get_value q) = 0.0"
+              (eval (get_value "q") [] [] db) (Float(0.0)))];;
+
+(* select b,sum(a) from R group by b *)
+test_prog (sumr_byb_schema, sumr_byb_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]]
+[(fun db ->
+    test_interpreter "insert; (get_out_map q) = [4,1; 3,3; 2,1; 1,6]"
+      (eval (slice (get_out_map "q") [] []) [] [] db)
+      (TupleList [[4.0], 1.0; [3.0], 3.0; [2.0], 1.0; [1.0], 6.0]));
+ (fun db ->
+    test_interpreter "delete; (get_out_map q) = [4,0; 3,0; 2,0; 1,0]"
+      (eval (slice (get_out_map "q") [] []) [] [] db)
+      (TupleList [[4.0], 0.0; [3.0], 0.0; [2.0], 0.0; [1.0], 0.0]))];;
+    
+
+(****************************
+ * SQL file toplevel helpers
+ ****************************)
+
+let compile_sql_file_to_m3 fname =
+  let compile_depth = None in
+  let input_files = [fname] in
+  let sql_file_to_calc f =
+    let lexbuff = Lexing.from_channel (open_in f) in
+    Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff
+  in
+  Debug.exec "PARSE" (fun () -> Parsing.set_trace true);
+  let (queries, sources) = 
+    let (ql, sl) = 
+      List.split (List.map sql_file_to_calc input_files)
+    in (List.flatten ql, List.flatten sl)
+  in
+  let toplevel_queries = ref [] in
+  let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip = 
+    fst (List.fold_left (fun (accum,sub_id) q ->
+        let tm =
+          Calculus.make_term q,
+          Calculus.map_term (qname^"_"^(string_of_int sub_id)) qvars
+        in
+        let subq_name = (qname^"_"^(string_of_int sub_id)) in
+        toplevel_queries := !toplevel_queries @ [subq_name];
+        let r = CalcToM3.compile ~top_down_depth:compile_depth dbschema tm accum 
+        in (r, sub_id+1))
+      (m3ip,1) qlist)
+  in
+  let m3_prog = 
+    let (m3_prog_in_prog,_) = 
+      List.fold_left (fun (accum,id) q ->
+        let qn = "QUERY_"^(string_of_int id) in
+        (calc_into_m3_inprogress qn q accum, id + 1)) 
+      (CalcToM3.M3InProgress.init, 1) queries
+    in CalcToM3.M3InProgress.finalize m3_prog_in_prog
+  in (m3_prog, sources)
+;;
+
+let compile_to_k3 fname =
+  let (schema, m3prog) = (fst (compile_sql_file_to_m3 fname)) in
+  let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
+  let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns
+  in
+  trigs
+  (*
+  m3ptrigs
+  *)
+;;
+
+compile_to_k3 "test/sql/rsgb.sql";;
