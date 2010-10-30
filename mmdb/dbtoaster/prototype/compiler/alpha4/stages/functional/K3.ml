@@ -97,7 +97,8 @@ sig
     val calc_to_expr : M3.Prepared.calc_t -> expr_t
 
     (* K3 methods *)
-    val type_as_string : type_t -> string
+    val string_of_type : type_t -> string
+    val string_of_expr : expr_t -> string
     val typecheck_expr : expr_t -> type_t
     
     (* Helpers *)
@@ -281,56 +282,109 @@ type expr_t =
 let schema_to_expr e vars = List.fold_left (fun acc v ->
     Lambda(v,Float,acc,true)) e (List.rev vars)
 
-let rec fold_leaves f acc e =
-    let fold_op e_l = List.fold_left (fun a e -> fold_leaves f a e) acc e_l in
+let rec fold_expr (f : 'a -> expr_t -> 'a)
+                  (g : 'a list -> 'a)
+                  (init: 'a)
+                  (e: expr_t) : 'a =
+    let recur = fold_expr f g init in
+    let sub l = g (List.map recur l) in
     begin match e with
-      Const            c                    -> f e acc
-    | Var              (id,t)               -> f e acc
-    | Tuple            e_l                  -> fold_op e_l
-    | Project          (ce, idx)            -> fold_leaves f acc ce
-    | Singleton        ce                   -> f e (fold_leaves f acc ce)
-    | Combine          (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Add              (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Mult             (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Eq               (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Neq              (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Lt               (ce1,ce2)            -> fold_op [ce1; ce2]
-    | Leq              (ce1,ce2)            -> fold_op [ce1; ce2]
-    | IfThenElse0      (ce1,ce2)            -> fold_op [ce1; ce2]
-    | IfThenElse       (pe,te,ee)           -> fold_op [pe;te;ee]
-    | Block            e_l                  -> fold_op e_l
-    | Iterate          (fn_e, ce)           -> fold_op [fn_e; ce]
-    | Lambda           (v,v_t,ce,_)         -> fold_leaves f acc ce
-    | AssocLambda      (v1,v1_t,v2,v2_t,be) -> fold_leaves f acc be
-    | Apply            (fn_e,arg_e)         -> fold_op [fn_e; arg_e]
-    | Map              (fn_e,ce)            -> fold_op [fn_e; ce]
-    | Flatten          ce                   -> fold_leaves f acc ce
-    | Aggregate        (fn_e,i_e,ce)        -> fold_op [fn_e; i_e; ce]
-    | GroupByAggregate (fn_e,i_e,ge,ce)     -> fold_op [fn_e; i_e; ge; ce]
-    | SingletonPC      (id,t)               -> f e acc
-    | OutPC            (id,outs,t)          -> f e acc
-    | InPC             (id,ins,t,ie)        -> f e acc
-    | PC               (id,ins,outs,t,ie)   -> f e acc
-    | Member           (me,ke)              -> fold_op (me::ke)  
-    | Lookup           (me,ke)              -> fold_op (me::ke)
-    | Slice            (me,sch,pat_ve)      -> fold_op (me::(List.map snd pat_ve))
-    | PCUpdate         (me,ke,te)           -> fold_op ([me]@ke@[te])
-    | PCValueUpdate    (me,ine,oute,ve)     -> fold_op ([me]@ine@oute@[ve])
-    (*| External         efn_id               -> f e acc*)
+    | Const            c                    -> f init e
+    | Var              (id,t)               -> f init e
+    | Tuple            e_l                  -> f (sub e_l) e
+    | Project          (ce, idx)            -> f (recur ce) e
+    | Singleton        ce                   -> f (recur ce) e
+    | Combine          (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Add              (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Mult             (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Eq               (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Neq              (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Lt               (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | Leq              (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | IfThenElse0      (ce1,ce2)            -> f (sub [ce1;ce2]) e
+    | IfThenElse       (pe,te,ee)           -> f (sub [pe;te;ee]) e
+    | Block            e_l                  -> f (sub e_l) e
+    | Iterate          (fn_e, ce)           -> f (sub [fn_e; ce]) e
+    | Lambda           (v,v_t,ce,_)         -> f (recur ce) e
+    | AssocLambda      (v1,v1_t,v2,v2_t,be) -> f (recur be) e
+    | Apply            (fn_e,arg_e)         -> f (sub [fn_e;arg_e]) e
+    | Map              (fn_e,ce)            -> f (sub [fn_e;ce]) e
+    | Flatten          ce                   -> f (recur ce) e
+    | Aggregate        (fn_e,i_e,ce)        -> f (sub [fn_e; i_e; ce]) e
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> f (sub [fn_e; i_e; ge; ce]) e
+    | SingletonPC      (id,t)               -> f init e
+    | OutPC            (id,outs,t)          -> f init e
+    | InPC             (id,ins,t,ie)        -> f init e
+    | PC               (id,ins,outs,t,ie)   -> f init e
+    | Member           (me,ke)              -> f (sub (me::ke)) e  
+    | Lookup           (me,ke)              -> f (sub (me::ke)) e
+    | Slice            (me,sch,pat_ve)      -> f (sub (me::(List.map snd pat_ve))) e
+    | PCUpdate         (me,ke,te)           -> f (sub ([me]@ke@[te])) e
+    | PCValueUpdate    (me,ine,oute,ve)     -> f (sub ([me]@ine@oute@[ve])) e
+    (*| External         efn_id               -> f init e *)
     end
+
+let rec string_of_type t =
+    match t with
+      Unit -> "Unit" | Float -> "Float" | Int -> "Int"
+    | TTuple(t_l) -> "Tuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
+    | Collection(c_t) -> "Collection("^(string_of_type c_t)^")"
+    | Fn(a,b) -> "( "^(string_of_type a)^" -> "^(string_of_type b)^" )"
+
+let string_of_expr e =
+    let aux sub e = match e with
+    | Const c -> "Const("^(string_of_const c)^")"
+    | Var (id,t) -> "Var("^id^")"
+    | Tuple e_l -> "Tuple("^sub^")"
+    
+    | Project (ce, idx) -> "Project("^sub^
+        ",["^(String.concat "," (List.map string_of_int idx))^"])"
+    
+    | Singleton ce      -> "Singleton("^sub^")"
+    | Combine (ce1,ce2) -> "Combine("^sub^")"
+    | Add  (ce1,ce2)    -> "Add("^sub^")"
+    | Mult (ce1,ce2)    -> "Mult("^sub^")"
+    | Eq   (ce1,ce2)    -> "Eq("^sub^")"
+    | Neq  (ce1,ce2)    -> "Neq("^sub^")"
+    | Lt   (ce1,ce2)    -> "Lt("^sub^")"
+    | Leq  (ce1,ce2)    -> "Leq("^sub^")"
+
+    | IfThenElse0      (ce1,ce2)            -> "IfThenElse0("^sub^")"
+    | IfThenElse       (pe,te,ee)           -> "IfThenElse("^sub^")"
+    | Block            e_l                  -> "Block("^sub^")"
+    | Iterate          (fn_e, ce)           -> "Iterate("^sub^")"
+    | Lambda           (v,v_t,ce,sa)        ->
+        "Lambda("^(string_of_bool sa)^","^v^","^(string_of_type v_t)^","^sub^")"
+
+    | AssocLambda      (v1,v1_t,v2,v2_t,be) ->
+        let x = String.concat ","
+          [v1; (string_of_type v1_t); v2; (string_of_type v2_t)]
+        in "AssocLambda("^x^","^sub^")"
+
+    | Apply            (fn_e,arg_e)         -> "Apply("^sub^")"
+    | Map              (fn_e,ce)            -> "Map("^sub^")"
+    | Flatten          ce                   -> "Flatten("^sub^")"
+    | Aggregate        (fn_e,i_e,ce)        -> "Aggregate("^sub^")"
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> "GroupByAggregate("^sub^")"
+    | SingletonPC      (id,t)               -> "SingletonPC("^id^")"
+    | OutPC            (id,outs,t)          -> "OutPC("^id^")"
+    | InPC             (id,ins,t,ie)        -> "InPC("^id^")"
+    | PC               (id,ins,outs,t,ie)   -> "PC("^id^")"
+    | Member           (me,ke)              -> "Member("^sub^")"  
+    | Lookup           (me,ke)              -> "Lookup("^sub^")"
+    | Slice            (me,sch,pat_ve)      -> "Slice("^sub^")"
+    | PCUpdate         (me,ke,te)           -> "PCUpdate("^sub^")"
+    | PCValueUpdate    (me,ine,oute,ve)     -> "PCValueUpdate("^sub^")"
+    (*| External         efn_id               -> "External(...)" *)
+    in fold_expr aux (String.concat ",") "" e
     
 let find_vars v e =
-    let aux e acc = match e with
-        | Var (id,t) -> if v = id then (id,t)::acc else acc
-        | Const c  -> acc
-        | Singleton (ce) -> acc
-        | SingletonPC _ -> acc
-        | InPC(id,ins,t,ie) -> acc
-        | OutPC(id,outs,t) -> (List.filter (fun (x,t) -> v=x) outs)@acc
-        | PC(id,ins,outs,t,ie)  -> (List.filter (fun (x,t) -> v=x) outs)@acc
-        (*| External efn_id -> acc*)
-        | _ -> failwith "invalid leaf" 
-    in fold_leaves aux [] e
+    let aux acc e = match e with
+    | Var (id,t) -> if v = id then (id,t)::acc else acc
+    | OutPC(id,outs,t) -> (List.filter (fun (x,t) -> v=x) outs)@acc
+    | PC(id,ins,outs,t,ie)  -> (List.filter (fun (x,t) -> v=x) outs)@acc
+    | _ -> acc 
+    in fold_expr aux List.flatten [] e
 
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =
@@ -482,7 +536,7 @@ let rec calc_to_singleton_expr calc : expr_t =
                (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
                (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
             in
-            let ie = calc_to_expr (M3P.get_ecalc init_aggecalc) in
+            let ie = m3rhs_to_expr outv init_aggecalc in
             let map_expr = map_to_expr mapn ins outs ie
             in map_access_to_expr map_expr true singleton_init_code []
 
@@ -537,7 +591,7 @@ and calc_to_expr calc : expr_t =
             (* TODO: schema, value types *)
             let s_l = List.map (List.map (fun v -> (v,Float))) [inv; outv] in
             let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
-            let ie = calc_to_expr (M3P.get_ecalc init_aggecalc) in
+            let ie = m3rhs_to_expr outv init_aggecalc in
             let map_expr = map_to_expr mapn ins outs ie in
             let singleton_init_code = 
                (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
@@ -558,16 +612,41 @@ and calc_to_expr calc : expr_t =
             else op_to_expr (tuple (fun c2 c1 -> IfThenElse0(c1,c2))) calc c2 c1
     end 
 
+and m3rhs_to_expr lhs_outv paggcalc : expr_t =
+   (* invokes calc_to_expr on calculus part of paggcalc.
+    * based on aggregate metadata:
+    * -- simply uses the collection
+    * -- applies bigsums to collection.
+    *    we want to apply structural recursion optimizations in this case.
+    * -- projects to lhs vars 
+    *)
+    let ecalc = M3P.get_ecalc paggcalc in
+    
+    (* TODO: fix bug, rhs_outv is wrong here since it includes all vars
+     * used in rhs, see rsgb.sql example *)
+    let rhs_outv = calc_schema ecalc in
+    
+    (* TODO: simplify rhs, e.g. lift lambdas *)
+    let rhs_expr = calc_to_expr ecalc in
+    let init_val = Const(CFloat(0.0)) in
+    let agg_fn = schema_to_expr 
+        (AssocLambda("v1", Float, "v2", Float,
+            Add(Var("v1", Float), Var("v2", Float)))) rhs_outv in
+    if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
+    else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
+        (* TODO: simplify aggregate w/ struct rec *)
+        Aggregate (agg_fn, init_val, rhs_expr) 
+    else
+        (* projection to lhs vars + aggregation *)
+        let gb_fn =
+            let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv)
+            in schema_to_expr (Lambda("v",Float, lhs_tuple,false)) rhs_outv
+        in GroupByAggregate(agg_fn, init_val, gb_fn, rhs_expr)
+        
+
 (*******************************************************************************
  * Structural recursion methods
  *******************************************************************************)
-
-let rec type_as_string t =
-    match t with
-      Unit -> "Unit" | Float -> "Float" | Int -> "Int"
-    | TTuple(t_l) -> "Tuple("^(String.concat " ; " (List.map type_as_string t_l))^")"
-    | Collection(c_t) -> "Collection("^(type_as_string c_t)^")"
-    | Fn(a,b) -> "( "^(type_as_string a)^" -> "^(type_as_string b)^" )"
 
 (* Typechecking:
  * -- value types are assumed to be floats
@@ -1048,10 +1127,13 @@ let rec typecheck_expr e : type_t =
  *)
 
 
+(**********************************
+ * Incremental section
+ **********************************)
+
 (* Incremental evaluation types *)
  
-(* Top-level statement.
- * computes and applies (i.e. persists) increments for a map.
+(* Top-level statement, computes and applies (i.e. persists) map deltas.
  *
  * collection, increment statement
  *)
@@ -1061,37 +1143,6 @@ type statement = expr_t * expr_t
 type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
 
 type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
-
-let m3rhs_to_expr lhs_outv paggcalc : expr_t =
-   (* invokes calc_to_expr on calculus part of paggcalc.
-    * based on aggregate metadata:
-    * -- simply uses the collection
-    * -- applies bigsums to collection.
-    *    we want to apply structural recursion optimizations in this case.
-    * -- projects to lhs vars 
-    *)
-    let ecalc = M3P.get_ecalc paggcalc in
-    
-    (* TODO: fix bug, rhs_outv is wrong here since it includes all vars
-     * used in rhs, see rsgb.sql example *)
-    let rhs_outv = calc_schema ecalc in
-    
-    (* TODO: simplify rhs, e.g. lift lambdas *)
-    let rhs_expr = calc_to_expr ecalc in
-    let init_val = Const(CFloat(0.0)) in
-    let agg_fn = schema_to_expr 
-        (AssocLambda("v1", Float, "v2", Float,
-            Add(Var("v1", Float), Var("v2", Float)))) rhs_outv in
-    if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
-    else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
-        (* TODO: simplify aggregate w/ struct rec *)
-        Aggregate (agg_fn, init_val, rhs_expr) 
-    else
-        (* projection to lhs vars + aggregation *)
-        let gb_fn =
-            let lhs_tuple = Tuple(List.map (fun v -> Var(v,Float)) lhs_outv)
-            in schema_to_expr (Lambda("v",Float, lhs_tuple,false)) rhs_outv
-        in GroupByAggregate(agg_fn, init_val, gb_fn, rhs_expr)
 
 (* Statement expression construction:
  * -- creates structural representations of the the incr and init value exprs,

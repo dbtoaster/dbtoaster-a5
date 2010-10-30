@@ -4,7 +4,22 @@ open M3Compiler
 open K3
 open K3.SR;;
 
-let test_typechecker s = Debug.log_unit_test s type_as_string;;
+(* K3 Helpers *)
+let test_string_of_expr s e =
+    Debug.log_unit_test ("string_of_expr: "^s) (fun x -> x) e s;;
+
+test_string_of_expr "Var(a)" (string_of_expr (Var ("a", Float)));;
+
+test_string_of_expr "Tuple(Var(a),Var(b))"
+  (string_of_expr (Tuple[Var ("a", Float); Var ("b", Float)]));;
+
+test_string_of_expr "Tuple(Tuple(Var(a),Var(b)),Tuple(Var(c),Var(d)))"
+  (string_of_expr (Tuple [Tuple[Var ("a", Float); Var ("b", Float)];
+                          Tuple[Var ("c", Float); Var ("d", Float)]]));;
+
+
+(* K3 Typechecker *)
+let test_typechecker s = Debug.log_unit_test s string_of_type;;
 
 (* Tuples *)
 let tup = List.map (fun c -> Const(CFloat(c))) [1.0;2.0;3.0] in
@@ -208,7 +223,6 @@ in test_interpreter "(lambda x,y,z,a. tuple x,y,z,a) (tuple 1,2,3,4)"
 (*************************
  * Collection tests
  *************************)
-
 let build_val_list l = List.fold_left (fun acc e ->
     combine acc (singleton (const (CFloat(e)))))
   (singleton (const (CFloat(List.hd l)))) (List.tl l);;
@@ -251,7 +265,6 @@ test_interpreter
 (* TODO: group-by aggregate tests *)
 
 (* TODO: nested map tests -- needs arbitrarily nested collections, not just List/TupleList *)
-
 
 (*************************
  * Database tests
@@ -320,7 +333,6 @@ test_interpreter "(get_value q) = 1.0"
 (******************
  * Compiler tests
  ******************)
-
 module K3C = K3Compiler.Make(K3Interpreter.MK3CG);;
 
 let test_prog (schema,trigs) tuples trigs_to_run tests =
@@ -361,10 +373,10 @@ test_prog (sumr_byb_schema, sumr_byb_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]
       (TupleList [[4.0], 0.0; [3.0], 0.0; [2.0], 0.0; [1.0], 0.0]))];;
     
 
+
 (****************************
  * SQL file toplevel helpers
  ****************************)
-
 let compile_sql_file_to_m3 fname =
   let compile_depth = None in
   let input_files = [fname] in
@@ -412,4 +424,4 @@ let compile_to_k3 fname =
   *)
 ;;
 
-compile_to_k3 "test/sql/rsgb.sql";;
+compile_to_k3 "test/sql/vwap.sql";;

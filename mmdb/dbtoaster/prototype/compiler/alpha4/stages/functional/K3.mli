@@ -92,7 +92,8 @@ sig
     val calc_to_expr : M3.Prepared.calc_t -> expr_t
 
     (* K3 methods *)
-    val type_as_string : type_t -> string
+    val string_of_type : type_t -> string
+    val string_of_expr : expr_t -> string
     val typecheck_expr : expr_t -> type_t
     
     (* Helpers *)

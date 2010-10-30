@@ -45,7 +45,7 @@ let synch_main
     if ParseArgs.flag_bool arguments "VERBOSE" then
       (fun evt -> match evt with None -> () | Some(pm,rel,t) ->
         print_endline (string_of_evt pm rel t))
-    else (fun evt -> ()) 
+    else (fun evt -> ())
   in
   let result_chan = match (ParseArgs.flag_val arguments "OUTPUT") with
       | None -> stdout

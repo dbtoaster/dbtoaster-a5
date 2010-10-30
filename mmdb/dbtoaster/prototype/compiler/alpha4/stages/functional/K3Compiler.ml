@@ -5,14 +5,16 @@ open CG
 open K3.SR
 
 let rec compile_k3_expr e =
-    let compile_op o l r = op o (compile_k3_expr l) (compile_k3_expr r) in
+    let rcr = compile_k3_expr in
+    let debug e = Some(e) in
+    let compile_op o l r = op ~expr:(debug e) o (rcr l) (rcr r) in
     begin match e with
-    | Const (c) -> const c
-    | Var(v,t) -> var v
-    | Tuple(field_l) -> tuple (List.map compile_k3_expr field_l)
-    | Project(e,fields) -> project (compile_k3_expr e) fields
-    | Singleton(e) -> singleton (compile_k3_expr e)
-    | Combine(l,r) -> combine (compile_k3_expr l) (compile_k3_expr r) 
+    | Const (c) -> const ~expr:(debug e) c
+    | Var(v,t) -> var ~expr:(debug e) v
+    | Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
+    | Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
+    | Singleton(e) -> singleton ~expr:(debug e) (rcr e)
+    | Combine(l,r) -> combine ~expr:(debug e) (rcr l) (rcr r) 
     | Add(l,r)  -> compile_op add_op l r
     | Mult(l,r) -> compile_op mult_op l r
     | Eq(l,r)   -> compile_op eq_op l r
@@ -22,32 +24,35 @@ let rec compile_k3_expr e =
 
     | IfThenElse0(cond,v) -> compile_op ifthenelse0_op cond v
 
-    | IfThenElse(p,t,e) -> ifthenelse
-        (compile_k3_expr p) (compile_k3_expr t) (compile_k3_expr e)
+    | IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
 
-    | Block(e_l) -> block (List.map compile_k3_expr e_l)
-    | Iterate(fn_e, c_e) -> iterate (compile_k3_expr fn_e) (compile_k3_expr c_e)
+    | Block(e_l) -> block ~expr:(debug e) (List.map rcr e_l)
+    | Iterate(fn_e, c_e) -> iterate ~expr:(debug e) (rcr fn_e) (rcr c_e)
     
-    | Lambda(arg_id, arg_t, b_e,sa) -> lambda arg_id sa (compile_k3_expr b_e)
-    | AssocLambda(arg1_id,arg1_t,arg2_id,arg2_t,b_e) -> assoc_lambda arg1_id arg2_id (compile_k3_expr b_e)
-    | Apply(fn_e, arg_e) -> apply (compile_k3_expr fn_e) (compile_k3_expr arg_e)
+    | Lambda(arg_id, arg_t, b_e,sa) ->
+        lambda ~expr:(debug e) arg_id sa (rcr b_e)
     
-    | Map(fn_e, c_e) -> map (compile_k3_expr fn_e) (compile_k3_expr c_e) 
-    | Flatten(c_e) -> flatten (compile_k3_expr c_e) 
+    | AssocLambda(arg1_id,arg1_t,arg2_id,arg2_t,b_e) ->
+        assoc_lambda ~expr:(debug e) arg1_id arg2_id (rcr b_e)
+    
+    | Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
+    
+    | Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (rcr c_e) 
+    | Flatten(c_e) -> flatten ~expr:(debug e) (rcr c_e) 
     | Aggregate(fn_e, init_e, c_e) ->
-        begin match List.map compile_k3_expr [fn_e;init_e;c_e] with
-        | [x;y;z] -> aggregate x y z
+        begin match List.map rcr [fn_e;init_e;c_e] with
+        | [x;y;z] -> aggregate ~expr:(debug e) x y z
         | _ -> failwith "invalid aggregate compilation"
         end
 
     | GroupByAggregate(fn_e, init_e, gb_e, c_e) -> 
-        begin match List.map compile_k3_expr [fn_e;init_e;gb_e;c_e] with
-        | [w;x;y;z] -> group_by_aggregate w x y z
+        begin match List.map rcr [fn_e;init_e;gb_e;c_e] with
+        | [w;x;y;z] -> group_by_aggregate ~expr:(debug e) w x y z
         | _ -> failwith "invalid group-by aggregate compilation"
         end
 
-    | Member(m_e, ke_l) -> exists (compile_k3_expr m_e) (List.map compile_k3_expr ke_l)  
-    | Lookup(m_e, ke_l) -> lookup (compile_k3_expr m_e) (List.map compile_k3_expr ke_l)
+    | Member(m_e, ke_l) -> exists ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)  
+    | Lookup(m_e, ke_l) -> lookup ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)
     | Slice(m_e, sch, idk_l) ->
         let index l e =
           let (pos,found) = List.fold_left (fun (c,f) x ->
@@ -57,36 +62,36 @@ let rec compile_k3_expr e =
         in
         let v_l, k_l = List.split idk_l in
         let idx_l = List.map (index (List.map fst sch)) v_l in
-        slice (compile_k3_expr m_e) (List.map compile_k3_expr k_l) idx_l
+        slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
 
-    | SingletonPC(id,t)      -> get_value id
-    | OutPC(id,outs,t)       -> get_out_map id
-    | InPC(id,ins,t,init_e)  -> get_in_map id
-    | PC(id,ins,outs,t,init_e) -> get_map id
+    | SingletonPC(id,t)      -> get_value ~expr:(debug e) id
+    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) id
+    | InPC(id,ins,t,init_e)  -> get_in_map ~expr:(debug e) id
+    | PC(id,ins,outs,t,init_e) -> get_map ~expr:(debug e) id
 
     | PCUpdate(m_e, ke_l, u_e) ->
         begin match m_e with
         | SingletonPC _ -> failwith "invalid bulk update of value"
-        | OutPC(id,outs,t) -> update_out_map id (compile_k3_expr u_e)
-        | InPC(id,ins,t,init_e) -> update_in_map id (compile_k3_expr u_e)
-        | PC(id,ins,outs,t,init_e) -> update_map id
-            (List.map compile_k3_expr ke_l) (compile_k3_expr u_e)
+        | OutPC(id,outs,t) -> update_out_map ~expr:(debug e) id (rcr u_e)
+        | InPC(id,ins,t,init_e) -> update_in_map ~expr:(debug e) id (rcr u_e)
+        | PC(id,ins,outs,t,init_e) -> update_map ~expr:(debug e) id
+            (List.map rcr ke_l) (rcr u_e)
         | _ -> failwith "invalid map to bulk update"
         end
 
     | PCValueUpdate(m_e, ine_l, oute_l, u_e) ->
         begin match (m_e, ine_l, oute_l) with
-        | (SingletonPC(id,_),[],[]) -> update_value id (compile_k3_expr u_e)
+        | (SingletonPC(id,_),[],[]) -> update_value ~expr:(debug e) id (rcr u_e)
         
-        | (OutPC(id,_,_), [], e_l) -> update_out_map_value id
-            (List.map compile_k3_expr e_l) (compile_k3_expr u_e) 
+        | (OutPC(id,_,_), [], e_l) -> update_out_map_value ~expr:(debug e) id
+            (List.map rcr e_l) (rcr u_e) 
         
-        | (InPC(id,_,_,_), e_l, []) -> update_in_map_value id
-            (List.map compile_k3_expr e_l) (compile_k3_expr u_e)
+        | (InPC(id,_,_,_), e_l, []) -> update_in_map_value ~expr:(debug e) id
+            (List.map rcr e_l) (rcr u_e)
         
-        | (PC(id,_,_,_,_), ie_l, oe_l) -> update_map_value id
-            (List.map compile_k3_expr ie_l) (List.map compile_k3_expr oe_l)
-            (compile_k3_expr u_e)
+        | (PC(id,_,_,_,_), ie_l, oe_l) -> update_map_value ~expr:(debug e) id
+            (List.map rcr ie_l) (List.map rcr oe_l)
+            (rcr u_e)
         | _ -> failwith "invalid map value to update"
         end
     end
