@@ -15,17 +15,18 @@ sig
 
     (*
     type fn_id_t = string
-    type iap_meta  = pattern * m3schema * m3schema * extension
-    type ext_fn_id = IndexAndProject of iap_meta | Symbol of fn_id_t
+    type ext_fn_id = Symbol of fn_id_t
     *)
 
     type type_t =
-          Unit | Float | Int
-        | TTuple     of type_t list     (* unnamed records *)
-        | Collection of type_t          (* collections *)
-        | Fn         of type_t * type_t (* arg * body *)
+          TUnit | TFloat | TInt
+        | TTuple     of type_t list          (* unnamed records *)
+        | Collection of type_t               (* collections *)
+        | Fn         of type_t list * type_t (* args * body *)
 
     type schema = (id_t * type_t) list
+
+    type arg_t = AVar of id_t * type_t | ATuple of (id_t * type_t) list
 
     type expr_t =
    
@@ -57,8 +58,8 @@ sig
        | Iterate       of expr_t      * expr_t
     
        (* Functions *)
-       | Lambda        of id_t        * type_t   * expr_t * bool
-       | AssocLambda   of id_t        * type_t   * id_t   * type_t * expr_t
+       | Lambda        of arg_t       * expr_t
+       | AssocLambda   of arg_t       * arg_t    * expr_t
        | Apply         of expr_t      * expr_t
     
        (* Structural recursion operators *)
@@ -75,45 +76,30 @@ sig
        (* Persistent collections *)
        | SingletonPC   of coll_id_t   * type_t
        | OutPC         of coll_id_t   * schema   * type_t
-       | InPC          of coll_id_t   * schema   * type_t    * expr_t
-       | PC            of coll_id_t   * schema   * schema    * type_t * expr_t
+       | InPC          of coll_id_t   * schema   * type_t
+       | PC            of coll_id_t   * schema   * schema    * type_t
 
        | PCUpdate      of expr_t      * expr_t list * expr_t
        | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
     
        (*| External      of ext_fn_id*)
 
-    (* Construction from M3 *)
-    val calc_to_singleton_expr : M3.Prepared.calc_t -> expr_t
-    
-    val op_to_expr : (M3.var_t list -> expr_t -> expr_t -> expr_t) ->
-        M3.Prepared.calc_t -> M3.Prepared.calc_t -> M3.Prepared.calc_t -> expr_t
-    
-    val calc_to_expr : M3.Prepared.calc_t -> expr_t
-
     (* K3 methods *)
+    val fold_expr :
+        ('a -> expr_t -> 'a) -> ('a list -> 'a) -> 'a -> expr_t -> 'a
+
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string
-    val typecheck_expr : expr_t -> type_t
     
     (* Helpers *)
     val collection_of_list : expr_t list -> expr_t
     val collection_of_float_list : float list -> expr_t
-    
+
     (* Incremental section *)
     type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
-    type program = M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
-
-    val m3rhs_to_expr : M3.var_t list -> M3.Prepared.aggecalc_t -> expr_t
-
-    val collection_stmt : M3.var_t list -> M3.Prepared.stmt_t -> statement
-    
-    val collection_trig : M3.Prepared.trig_t -> trigger
-    
-    val collection_prog :
-        M3.Prepared.prog_t -> M3Common.Patterns.pattern_map -> program
-    
+    type program =
+        M3.map_type_t list * M3Common.Patterns.pattern_map * trigger list
 end
 
 module SR : SRSig

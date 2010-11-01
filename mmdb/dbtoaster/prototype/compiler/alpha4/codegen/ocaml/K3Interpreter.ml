@@ -405,16 +405,26 @@ struct
         | Unit
         | Float          of float
         | Int            of int
-        | Tuple          of float list
-        | Fun            of (value_t -> value_t) * bool 
-        | List           of float list
-        | TupleList      of (float list * float) list
-        (* Note: removing single map list, this is no longer needed since we
-         * no longer perform in-tier loops in K3.
-        | SingleMapList  of (float list * single_map_t) list
-         *)    
+        | Tuple          of value_t list
+        | Fun            of (value_t -> value_t) 
+
+        (* Persistent collection values, these are yielded on accessing
+         * the persistent store. *)
         | SingleMap      of single_map_t
         | DoubleMap      of map_t
+
+        (* Core internal collections used during processing.
+         * -- these are flat collections, i.e. value_t is expected to
+         *    be a base type, such as float/int for lists, and
+         *    tuple(float/int) for tuplelists
+         * -- SingleMaps and DoubleMaps are converted to these internal types
+         *    by tuple collection accessors (mem/lookup/slice) *)
+        | List           of value_t list
+        | TupleList      of value_t list
+         
+        (* slicing a double map yields a SingleMapList of key * smap entries *)
+        | SingleMapList  of (value_t list * single_map_t) list
+          
 
     type slice_env_t = (string * value_t) list
     
@@ -430,21 +440,30 @@ struct
     type op_t        = value_t -> value_t -> value_t
 
     (* Slice environment *)
-    let has_map_var v (_,th) = List.mem_assoc v th
-    let get_map_var v (_,th) = List.assoc v th
+    let is_env_value v (_,th) = List.mem_assoc v th
+    let get_env_value v (_,th) = List.assoc v th
 
     (* Helpers *)
     let rec string_of_value v = match v with
       | Unit -> "unit"
       | Float(f) -> string_of_float f
       | Int(i) -> string_of_int i
-      | Tuple(fl) -> "("^(String.concat "," (List.map string_of_float fl))^")"
-      | Fun(f,sa) -> "<fun,"^(string_of_bool sa)^">"
-      | List(fl) -> "["^(String.concat ";" (List.map string_of_float fl))^"]"
-      | TupleList(kvl) -> "["^(String.concat ";"
-           (List.map (fun (fl,v) -> string_of_value (Tuple(fl@[v]))) kvl))^"]"
-      | SingleMap(sm) -> "<singlemap>"
-      | DoubleMap(dm) -> "<doublemap>"
+      | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
+      | Fun(f) -> "<fun>"
+      | List(fl) ->
+          "["^(String.concat ";" (List.map string_of_value fl))^"]"
+      
+      | TupleList(kvl) ->
+          "["^(String.concat ";" (List.map string_of_value kvl))^"]"
+
+      | SingleMap(sm) -> "SingleMap("^(DB.smap_to_string sm)^")"
+      | DoubleMap(dm) -> "DoubleMap("^(DB.map_to_string dm)^")"
+      | SingleMapList(sml) ->
+          ("["^(List.fold_left (fun acc (k,m) ->
+                (if acc = "" then "" else acc^";")^
+                (string_of_value (Tuple k))^","^
+                (string_of_value (SingleMap m)))
+               "" sml)^"]") 
 
     let get_expr expr_opt = match expr_opt with
         | None -> ""
@@ -473,24 +492,40 @@ struct
 
     let const_t_of_float x = CFloat(x)
 
-    let tuple_of_kv (k,v) = Tuple(k@[v])
-    
+    let value_of_tuple x = Tuple(x)
+    let tuple_of_value x = match x with
+        | Tuple(y) -> y
+        | _ -> failwith ("invalid tuple: "^(string_of_value x))
+
     let pop_back l =
         let x,y = List.fold_left
-	        (fun (acc,rem) v -> match rem with 
-	            | [] -> (acc, [v]) | _ -> (acc@[v], List.tl rem)) 
-	        ([], List.tl l) l
+            (fun (acc,rem) v -> match rem with 
+                | [] -> (acc, [v]) | _ -> (acc@[v], List.tl rem)) 
+            ([], List.tl l) l
         in x, List.hd y
+
+    (*
+    let tuple_of_kv (k,v) = Tuple(k@[v])
 
     let kv_of_tuple t = match t with
         | Tuple(t_v) -> pop_back t_v 
         | _ -> failwith ("invalid tuple: "^(string_of_value t))
+    *)
 
+    (*
     let rec apply_list fv l =
         match fv,l with
         | (Fun _, []) -> fv
         | (v, []) -> v
         | (Fun (f,_), h::t) -> apply_list (f h) t
+        | (_,_) -> failwith "invalid schema application"
+    *)
+
+    let rec apply_list fv l =
+        match fv,l with
+        | (Fun _, []) -> fv
+        | (v, []) -> v
+        | (Fun f, h::t) -> apply_list (f h) t
         | (_,_) -> failwith "invalid schema application"
 
     (* Map/aggregate tuple+multivariate function evaluation helpers.
@@ -499,16 +534,19 @@ struct
      *)
     
     (* returns the value yielded by the mvf. *)
+    (*
     let apply_mv_map_fn_lc fn v =
         match fn, v with
         | Fun (f,true), Tuple(t_v) ->
             apply_list fn (List.map value_of_float t_v)
         | Fun (f,false), _ -> f v
         | Fun _ , _ -> failwith "invalid map fn argument"
-        | _ -> failwith "invalid map function" 
+        | _ -> failwith "invalid map function"
+    *) 
 
     (* assumes the accumulator is the last argument, preceded by the tuple.
      * returns the value yielded by the mvf. *)
+    (*
     let apply_mv_agg_fn_lc fn acc v =
         match fn, v with
         | Fun (f,true), Tuple(t_v) ->
@@ -516,22 +554,23 @@ struct
         | Fun (f,false), _ -> apply_list fn [v;acc]
         | _,_ -> failwith "invalid aggregation function"
 
-    let apply_mv_map_fn_smlc fn v mv =
+    let apply_mv_map_fn_smlc fn (v,mv) =
         match fn, v, mv with
         | Fun (f,true), Tuple(t_v), SingleMap(m) ->
             apply_list fn ((List.map value_of_float t_v)@[mv])
         | Fun (f,false), _, SingleMap(m) -> apply_list fn [v;mv]
         | Fun _, _, _ -> failwith "invalid single map argument" 
         | _ -> failwith "invalid map function"
+    *)
 
     let apply_fn_list th db l = List.map (fun f -> (get_eval f) th db) l
 
     let mc_to_tlc m = MC.fold (fun k v acc ->
-        let t_v = (List.map float_of_const_t k, float_of_const_t v)
-        in t_v::acc) [] m
+        let t_v = List.map value_of_const_t (k@[v])
+        in (value_of_tuple t_v)::acc) [] m
         
     let mc_to_smlc m = MC.fold (fun k v acc ->
-        (List.map float_of_const_t k, v)::acc) [] m
+        (List.map value_of_const_t k, v)::acc) [] m
 
     let match_key_prefix prefix k =
         try fst (List.fold_left (fun (run,rem) v -> match run, rem with
@@ -586,26 +625,33 @@ struct
     let const ?(expr = None) k = Eval(fun th db -> value_of_const_t k)
     let var ?(expr = None) v = Eval(fun th db -> 
         if (Env.bound v (fst th)) then value_of_const_t (Env.value v (fst th))
-        else if has_map_var v th then get_map_var v th 
+        else if is_env_value v th then get_env_value v th 
         else failwith ("Var("^v^"): theta="^(Env.to_string (fst th))))
 
     (* Tuples *)
     let tuple ?(expr = None) field_l = Eval(fun th db ->
-        Tuple(List.map float_of_value (apply_fn_list th db field_l)))
+        Tuple(apply_fn_list th db field_l))
 
-    let project ?(expr = None) tuple idx = Eval(fun th db -> match (get_eval tuple) th db with
+    let project ?(expr = None) tuple idx = Eval(fun th db ->
+        match (get_eval tuple) th db with
         | Tuple(t_v) -> Tuple(tuple_fields t_v idx)
         | _ -> failwith ("invalid tuple for projection"^(get_expr expr)))
 
     (* Native collections *)
     
-    (* assumes numeric non-tuple element *)
-    let singleton ?(expr = None) el = Eval(fun th db -> match (get_eval el) th db with
-        | (Tuple(t_v)) as t -> TupleList([kv_of_tuple t])
-        | x -> List([float_of_value x]))
+    (* assumes numeric non-tuple element
+     * -- note no nested collections for now. *)
+    let singleton ?(expr = None) el = Eval(fun th db ->
+        match (get_eval el) th db with
+        | Tuple(t_v) as t -> TupleList([t])
+        | Float _ as x -> List([x])
+        | Int _ as x -> List([x])
+        | v -> failwith ("invalid singleton value: "^
+                         (string_of_value v)^(get_expr expr)))
     
     (* combines two collections.
-     * -- applies only to lists and tuple lists, requiring map conversion *)
+     * -- applies only to lists and tuple lists, requiring map conversion
+     * -- no nested collections for now *)
     let combine ?(expr = None) c1 c2 = Eval(fun th db ->
         begin match ((get_eval c1) th db, (get_eval c2) th db) with
         | (List(c1), List(c2)) -> List(c1@c2)
@@ -634,95 +680,111 @@ struct
  
     (* iter fn, collection -> iteration *)
     let iterate ?(expr = None) iter_fn collection = Eval(fun th db ->
-        let aux fn v_f =
-            List.iter (fun v -> match (apply_mv_map_fn_lc fn (v_f v)) with
+        let rv c = (c; Unit) in
+        let aux fn vf_opt =
+            List.iter (fun v -> match fn v with
                 | Unit -> ()
                 | _ -> failwith ("invalid iteration"^(get_expr expr)))
-        in begin match (get_eval iter_fn) th db, (get_eval collection) th db with
-        | (Fun (f,sa), List l) -> (aux (Fun(f,sa)) value_of_float l; Unit)
-        | (Fun (f,sa), TupleList l) -> (aux (Fun(f,sa)) tuple_of_kv l; Unit)
-        (*
-        | (Fun (f,sa), SingleMapList l) ->
-            (List.iter (fun (k_v,m) -> 
-                apply_mv_map_fn_smlc (Fun(f,sa)) (Tuple k_v) (SingleMap m)) l;
-             Unit)
-        *)
+        in
+        begin match (get_eval iter_fn) th db, (get_eval collection) th db with
+        | (Fun f, List l) -> rv (aux f None l)
+        | (Fun f, TupleList l) -> rv (aux f None l)
+        | (Fun f, SingleMapList l) -> rv (List.iter (fun (k,m) ->
+            match apply_list (Fun f) [Tuple k; SingleMap m] with
+            | Unit -> ()
+            | _ -> failwith ("invalid iteration"^(get_expr expr))))
         | (Fun _, _) -> failwith ("invalid iterate collection"^(get_expr expr))
-        | (_,_) -> failwith ("invalid iterate function"^(get_expr expr))
+        | _ -> failwith ("invalid iterate function"^(get_expr expr))
         end)
 
     (* Functions *)
+    let bind_float expr arg th f = match arg with
+        | AVar(var,_) -> Env.add (fst th) var (CFloat f), snd th
+        | ATuple(vt_l) -> 
+            failwith ("cannot bind a float to a tuple"^(get_expr expr))
+
+    let bind_tuple expr arg th t = match arg with
+        | AVar(v,vt) ->
+            begin match vt with
+            | TTuple(_) -> fst th, (v,value_of_tuple t)::(snd th)
+            | _ -> failwith ("cannot bind tuple to "^v^(get_expr expr))
+            end
+        | ATuple(vt_l) ->
+            begin try 
+            (List.fold_left2 (fun acc (v,_) tf ->
+                Env.add acc v (CFloat (float_of_value tf)))
+                (fst th) vt_l t, snd th)
+            with Invalid_argument _ ->
+                failwith ("could not bind tuple arg to value: "^
+                          (string_of_value (value_of_tuple t))^(get_expr expr))
+            end
+
+    let bind_map expr arg th m = match arg with
+        | AVar(var,_) -> fst th, (var,m)::(snd th)
+        | ATuple(vt_l) ->
+            failwith ("cannot bind a map to a tuple"^(get_expr expr))
+
+    (* no binding to functions, and non-persistent collections for now *)
+    let bind_value expr arg th v = match v with
+        | Float x -> bind_float expr arg th x
+        | Int x -> bind_float expr arg th (float_of_int x)
+        | Tuple t -> bind_tuple expr arg th t
+        (* We bind map vars during map accesses, so need to
+         * support adding single/double maps to environments *)
+        | SingleMap(m) -> bind_map expr arg th v
+        | DoubleMap(m) -> bind_map expr arg th v
+        | _ -> failwith ("invalid fn arg: "^(string_of_value v)^(get_expr expr))
+
     (* arg, schema application, body -> fn *)
-    let lambda ?(expr = None) v schema_app body = Eval(fun th db ->
-        let f_aux f = (get_eval body) (Env.add (fst th) v (CFloat f), snd th) db in
-        let map_aux m = (get_eval body) (fst th, (v,m)::(snd th)) db in
-        let fn v = match v with
-            | Float(x) -> f_aux x
-            | Int(x) -> f_aux (float_of_int x)
-            (* We still bind map vars during map accesses, so still need
-             * support for adding single/double maps to environments *)
-            | SingleMap(m) -> map_aux v
-            | DoubleMap(m) -> map_aux v
-            | _ -> failwith ("invalid function argument: "^
-                             (string_of_value v)^(get_expr expr))
-        in Fun(fn, schema_app))
+    let lambda ?(expr = None) arg body = Eval(fun th db ->
+        let fn v = (get_eval body) (bind_value expr arg th v) db
+        in Fun fn)
     
     (* arg1, type, arg2, type, body -> assoc fn *)
     (* M3 assoc functions should never need to use slices *)
-    let assoc_lambda ?(expr = None) v1 v2 body = Eval(fun th db ->
+    let assoc_lambda ?(expr = None) arg1 arg2 body = Eval(fun th db ->
         let aux vl1 vl2 =
-            let new_th = (Env.add (Env.add (fst th)
-                v1 (const_t_of_value vl1)) v2 (const_t_of_value vl2), snd th)
+            let new_th = bind_value expr arg2
+                (bind_value expr arg1 th vl1) vl2 
             in (get_eval body) new_th db
-        in
-        let fn1 vl1 = Fun((fun vl2 -> aux vl1 vl2), false)
-        in Fun(fn1, false))
+        in let fn1 vl1 = Fun(fun vl2 -> aux vl1 vl2)
+        in Fun fn1)
 
     (* fn, arg -> evaluated fn *)
     let apply ?(expr = None) fn arg = Eval(fun th db ->
         match (get_eval fn) th db, (get_eval arg) th db with
-        | Fun (f,false), x -> f x
-        | (Fun (_,true)) as f, Tuple(t_v) ->
-            apply_list f (List.map value_of_float t_v)
-        | (Fun (_,true)), v ->
-            failwith ("invalid schema app: "^
-                      (string_of_value v)^(get_expr expr))
+        | Fun f, x -> f x
         | _ -> failwith ("invalid function for fn app"^(get_expr expr)))
     
-    (* Structural recursion operations *)
+    (* Collection operations *)
+    
     (* map fn, collection -> map *)
+    (* TODO: fix typechecker inconsistency:
+     * -- this is a very restricted map, yielding the same type of output
+     *    as input. The return collection should be based on the map fn rv type
+     *)
     let map ?(expr = None) map_fn collection = Eval(fun th db ->
-        let aux fn v_f rv_f =
-            List.map (fun v -> rv_f (apply_mv_map_fn_lc fn (v_f v))) in
+        let aux fn  = List.map (fun v -> fn v) in
         match (get_eval map_fn) th db, (get_eval collection) th db with
-        | (Fun (f,sa), List l) ->
-            List(aux (Fun(f,sa)) value_of_float float_of_value l)
-        
-        | (Fun (f,sa), TupleList l) ->
-            TupleList(aux (Fun(f,sa)) tuple_of_kv kv_of_tuple l)
-
-        (*
-        | (Fun (f,sa), SingleMapList l) ->
-            List.map (fun (k_v,m) -> 
-                apply_mv_map_fn_smlc (Fun(f,sa)) (Tuple k_v) (SingleMap m)) l
-        *)
-
+        | (Fun f, List l) -> List(aux f l)
+        | (Fun f, TupleList l) -> TupleList(aux f l)
         | (Fun _, x) -> failwith ("invalid map collection: "^
                                   (string_of_value x)^(get_expr expr))
-        | (_,_) -> failwith ("invalid map function"^(get_expr expr)))
+        | _ -> failwith ("invalid map function"^(get_expr expr)))
     
     (* agg fn, initial agg, collection -> agg *)
     (* Note: accumulator is the last arg to agg_fn *)
     let aggregate ?(expr = None) agg_fn init_agg collection = Eval(fun th db ->
-        let aux fn v_f l = List.fold_left
-            (fun acc v -> apply_mv_agg_fn_lc fn acc (v_f v)) ((get_eval init_agg) th db) l
+        let aux fn l = List.fold_left
+            (fun acc v -> apply_list fn [v;acc]) 
+            ((get_eval init_agg) th db) l
         in
         match (get_eval agg_fn) th db, (get_eval collection) th db with
-        | (Fun (f,sa), List l) -> aux (Fun(f,sa)) value_of_float l
-        | (Fun (f,sa), TupleList l) -> aux (Fun(f,sa)) tuple_of_kv l
+        | (Fun f, List l) -> aux (Fun f) l
+        | (Fun f, TupleList l) -> aux (Fun f) l
         | (Fun _, v) -> failwith ("invalid agg collection: "^
                                   (string_of_value v)^(get_expr expr))        
-        | (_,_) -> failwith ("invalid agg function"^(get_expr expr)))
+        | _ -> failwith ("invalid agg function"^(get_expr expr)))
 
     (* agg fn, initial agg, grouping fn, collection -> agg *)
     (* Perform group-by aggregation by using a temporary MapCollection,
@@ -734,27 +796,29 @@ struct
             let new_gb_agg = agg_f gb_agg
             in MC.add gb_key (const_t_of_value new_gb_agg) gb_acc
         in
-        let lc_gb init_v f g mc kv =
-            let gb_key = List.map const_t_of_float
-	            (match g (tuple_of_kv kv) with
-	                | Tuple(t_v) -> t_v | x -> [float_of_value x])
-            in gb init_v mc (fun a -> f a (tuple_of_kv kv)) gb_key
+        let lc_gb init_v f g mc t =
+            let gb_key = List.map const_t_of_value
+	            (match g t with | Tuple(t_v) -> t_v | x -> [x])
+            in gb init_v mc (fun a -> f [t; a]) gb_key
         in
         Eval(fun th db ->
         let init_v = (get_eval init_agg) th db in
-        match (get_eval agg_fn) th db, (get_eval gb_fn) th db,
+        match (get_eval agg_fn) th db,
+              (get_eval gb_fn) th db,
               (get_eval collection) th db
         with
-        | Fun (f,fsa), Fun (g,gsa), TupleList l -> TupleList(mc_to_tlc
-            (List.fold_left (lc_gb init_v
-                (apply_mv_agg_fn_lc (Fun(f,fsa)))
-                (apply_mv_map_fn_lc (Fun(g,gsa)))) (MC.empty_map()) l))
+        | Fun f, Fun g, TupleList l -> TupleList(mc_to_tlc
+            (List.fold_left (lc_gb
+                init_v (apply_list (Fun f)) g) (MC.empty_map()) l))
 
         | Fun _, Fun _, v -> failwith ("invalid gb-agg collection: "^
-                                       (string_of_value v)^(get_expr expr))
-        | Fun _, _, _ -> failwith ("invalid group-by function"^(get_expr expr))
-        | _,_,_ ->
-            failwith ("invalid group by aggregation function"^(get_expr expr)))
+            (string_of_value v)^(get_expr expr))
+        
+        | Fun _, gb, _ -> failwith ("invalid group-by function: "^
+            (string_of_value gb)^(get_expr expr))
+        
+        | f,_,_ -> failwith ("invalid group by agg fn: "^
+            (string_of_value f)^(get_expr expr)))
     
     (* nested collection -> flatten *)
     (* TODO *)
@@ -765,12 +829,13 @@ struct
     (* Tuple collection operators *)
     (* TODO: write documentation on datatypes + implementation requirements
      * for these methods *)
-    let tcollection_op expr ex_s lc_f smc_f dmc_f tcollection key_l = Eval(fun th db ->
-        let k_v = apply_fn_list th db key_l in
+    let tcollection_op expr ex_s lc_f smc_f dmc_f tcollection key_l =
+        Eval(fun th db ->
+        let k = apply_fn_list th db key_l in
         try begin match (get_eval tcollection) th db with
-            | TupleList l -> lc_f l (List.map float_of_value k_v)
-            | SingleMap m -> smc_f m (List.map const_t_of_value k_v)
-            | DoubleMap m -> dmc_f m (List.map const_t_of_value k_v)
+            | TupleList l -> lc_f l k
+            | SingleMap m -> smc_f m (List.map const_t_of_value k)
+            | DoubleMap m -> dmc_f m (List.map const_t_of_value k)
             | v -> failwith ("invalid tuple collection: "^(string_of_value v))
             end
         with Not_found ->
@@ -779,7 +844,8 @@ struct
     (* map, key -> bool/float *)
     let exists ?(expr = None) tcollection key_l =
         let lc_f l k =
-            let r = List.exists (fun (tk,tv) -> match_key_prefix k tk) l
+            let r = List.exists (fun t ->
+                match_key_prefix k (tuple_of_value t)) l
             in if r then Int(1) else Int(0)
         in
         let mc_f m k_v = if MC.mem k_v m then Int(1) else Int(0)
@@ -788,8 +854,13 @@ struct
     (* map, key -> map value *)
     let lookup ?(expr = None) tcollection key_l =
         (* returns the (unnamed) value from the first tuple with a matching key *)
-        let lc_f l k =  value_of_float (snd
-            (List.find (fun (tk,tv) -> match_key_prefix k tk) l)) in
+        let lc_f l k =
+            let r = List.find (fun t ->
+                match_key_prefix k (tuple_of_value t)) l in
+            let r_t = tuple_of_value r in
+            let r_len = List.length r_t 
+            in List.nth r_t (r_len-1)
+        in
         let smc_f m k_v = value_of_const_t (MC.find k_v m) in
         let dmc_f m k_v = SingleMap(MC.find k_v m) in
         tcollection_op expr "lookup" lc_f smc_f dmc_f tcollection key_l
@@ -798,19 +869,18 @@ struct
     (* Note: converts slices to lists, to ensure expression evaluation is
      * done on list collections. *)
     let slice ?(expr = None) tcollection pkey_l pattern =
-        let lc_f l pk = TupleList(List.filter
-            (fun (tk,tv) -> match_key_prefix pk (tuple_fields tk pattern)) l)
+        let lc_f l pk = TupleList(List.filter (fun t ->
+            match_key_prefix pk (tuple_fields (tuple_of_value t) pattern)) l)
         in
         let smc_f m pk = TupleList(mc_to_tlc (MC.slice pattern pk m)) in
-        let dmc_f m pk =
-            (*SingleMapList(mc_to_smlc (MC.slice pattern pk m))*)
-            failwith "slicing not supported for double maps"
+        let dmc_f m pk = SingleMapList(mc_to_smlc (MC.slice pattern pk m))
         in tcollection_op expr "slice" lc_f smc_f dmc_f tcollection pkey_l
 
 
     (* Database retrieval methods *)
-    let get_value ?(expr = None) id = Eval(fun th db -> match DB.get_value id db with
-        Some(x) -> value_of_const_t x | None -> Float(0.0))
+    let get_value ?(expr = None) id = Eval(fun th db ->
+        match DB.get_value id db with
+        | Some(x) -> value_of_const_t x | None -> Float(0.0))
 
     let get_in_map ?(expr = None) id =
         Eval(fun th db -> SingleMap(DB.get_in_map id db))
@@ -822,14 +892,15 @@ struct
         Eval(fun th db -> DoubleMap(DB.get_map id db))
 
     (* Database udpate methods *)
-    let const_t_kv (k,v) = (List.map const_t_of_float k, const_t_of_float v)
+    let const_t_kv_of_tuple t =
+        pop_back (List.map const_t_of_value (tuple_of_value t))
 
     let get_update_value th db v = const_t_of_value ((get_eval v) th db)
     let get_update_key th db kl =
         List.map const_t_of_value (apply_fn_list th db kl)
 
     let get_update_map c pats = match c with
-        | TupleList(l) -> MC.from_list (List.map const_t_kv l) pats
+        | TupleList(l) -> MC.from_list (List.map const_t_kv_of_tuple l) pats
         | SingleMap(m) -> List.fold_left MC.add_secondary_index m pats
         | _ -> failwith "invalid single_map_t" 
 

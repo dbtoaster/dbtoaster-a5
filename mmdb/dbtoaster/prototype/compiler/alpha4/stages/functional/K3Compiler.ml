@@ -3,6 +3,7 @@ struct
 
 open CG
 open K3.SR
+open K3Builder
 
 let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
@@ -29,11 +30,10 @@ let rec compile_k3_expr e =
     | Block(e_l) -> block ~expr:(debug e) (List.map rcr e_l)
     | Iterate(fn_e, c_e) -> iterate ~expr:(debug e) (rcr fn_e) (rcr c_e)
     
-    | Lambda(arg_id, arg_t, b_e,sa) ->
-        lambda ~expr:(debug e) arg_id sa (rcr b_e)
+    | Lambda(arg_e, b_e) -> lambda ~expr:(debug e) arg_e (rcr b_e)
     
-    | AssocLambda(arg1_id,arg1_t,arg2_id,arg2_t,b_e) ->
-        assoc_lambda ~expr:(debug e) arg1_id arg2_id (rcr b_e)
+    | AssocLambda(arg1_e,arg2_e,b_e) ->
+        assoc_lambda ~expr:(debug e) arg1_e arg2_e (rcr b_e)
     
     | Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
     
@@ -66,15 +66,15 @@ let rec compile_k3_expr e =
 
     | SingletonPC(id,t)      -> get_value ~expr:(debug e) id
     | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) id
-    | InPC(id,ins,t,init_e)  -> get_in_map ~expr:(debug e) id
-    | PC(id,ins,outs,t,init_e) -> get_map ~expr:(debug e) id
+    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) id
+    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) id
 
     | PCUpdate(m_e, ke_l, u_e) ->
         begin match m_e with
-        | SingletonPC _ -> failwith "invalid bulk update of value"
-        | OutPC(id,outs,t) -> update_out_map ~expr:(debug e) id (rcr u_e)
-        | InPC(id,ins,t,init_e) -> update_in_map ~expr:(debug e) id (rcr u_e)
-        | PC(id,ins,outs,t,init_e) -> update_map ~expr:(debug e) id
+        | SingletonPC _     -> failwith "invalid bulk update of value"
+        | OutPC(id,outs,t)  -> update_out_map ~expr:(debug e) id (rcr u_e)
+        | InPC(id,ins,t)    -> update_in_map ~expr:(debug e) id (rcr u_e)
+        | PC(id,ins,outs,t) -> update_map ~expr:(debug e) id
             (List.map rcr ke_l) (rcr u_e)
         | _ -> failwith "invalid map to bulk update"
         end
@@ -86,10 +86,10 @@ let rec compile_k3_expr e =
         | (OutPC(id,_,_), [], e_l) -> update_out_map_value ~expr:(debug e) id
             (List.map rcr e_l) (rcr u_e) 
         
-        | (InPC(id,_,_,_), e_l, []) -> update_in_map_value ~expr:(debug e) id
+        | (InPC(id,_,_), e_l, []) -> update_in_map_value ~expr:(debug e) id
             (List.map rcr e_l) (rcr u_e)
         
-        | (PC(id,_,_,_,_), ie_l, oe_l) -> update_map_value ~expr:(debug e) id
+        | (PC(id,_,_,_), ie_l, oe_l) -> update_map_value ~expr:(debug e) id
             (List.map rcr ie_l) (List.map rcr oe_l)
             (rcr u_e)
         | _ -> failwith "invalid map value to update"

@@ -45,11 +45,12 @@ sig
     val iterate : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t
  
     (* Functions *)
-    (* arg, schema app, body -> fn *)
-    val lambda : ?expr:K3.SR.expr_t option -> K3.SR.id_t -> bool -> code_t -> code_t
+    (* arg, body -> fn *)
+    val lambda : ?expr:K3.SR.expr_t option -> K3.SR.arg_t -> code_t -> code_t
     
     (* arg1, type, arg2, type, body -> assoc fn *)
-    val assoc_lambda : ?expr:K3.SR.expr_t option -> K3.SR.id_t -> K3.SR.id_t -> code_t -> code_t
+    val assoc_lambda : ?expr:K3.SR.expr_t option ->
+        K3.SR.arg_t -> K3.SR.arg_t -> code_t -> code_t
 
     (* fn, arg -> evaluated fn *)
     val apply : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t
@@ -158,7 +159,7 @@ sig
 
     val output : code_t -> out_channel -> unit
 
-    (* Interepreter methods *)
+    (* Interpreter methods *)
     type single_map_t
     type map_t
     
@@ -166,12 +167,15 @@ sig
         | Unit
         | Float          of float
         | Int            of int
-        | Tuple          of float list
-        | Fun            of (value_t -> value_t) * bool 
-        | List           of float list
-        | TupleList      of (float list * float) list
+        | Tuple          of value_t list
+        | Fun            of (value_t -> value_t) 
+
         | SingleMap      of single_map_t
         | DoubleMap      of map_t
+        
+        | List           of value_t list
+        | TupleList      of value_t list
+        | SingleMapList  of (value_t list * single_map_t) list
 
     val string_of_value : value_t -> string
 
