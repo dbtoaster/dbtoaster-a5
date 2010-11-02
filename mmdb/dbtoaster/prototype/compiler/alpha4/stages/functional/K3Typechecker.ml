@@ -13,6 +13,10 @@ open K3.SR
  *      C([x,y]) : C([x,y,Float])
  * -- currying is suffix-based, e.g.
  *       ((fun x y z -> x+y+z) a b) = (fun x -> x+a+b)
+ *
+ *
+ * TODO: make two variants of typechecking, for M3, and less-restricted K3
+ *
  *****************************)
 
 (* TODO: Lifting

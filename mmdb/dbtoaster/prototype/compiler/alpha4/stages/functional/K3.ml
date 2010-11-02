@@ -1,8 +1,3 @@
-(*
- * TODO: make two variants of typechecking, for M3, and less-restricted K3
- * TODO: add flattens where appropriate for joins/products
- *)
-
 (***********************************************
  * K3, a simple collection language
  * admitting structural recursion optimizations
