@@ -57,7 +57,8 @@ sig
     
     (* Structural recursion operations *)
     (* map fn, collection -> map *)
-    val map : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t
+    val map : ?expr:K3.SR.expr_t option ->
+        code_t -> K3.SR.type_t -> code_t -> code_t
     
     (* agg fn, initial agg, collection -> agg *)
     val aggregate : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t -> code_t
@@ -120,17 +121,24 @@ sig
     val update_map_value     : ?expr:K3.SR.expr_t option -> 
         K3.SR.coll_id_t -> code_t list -> code_t list -> code_t -> code_t
 
-    (* persistent collection id, update collection -> update *)
+    (* persistent collection id, updated collection -> update *)
     val update_in_map  : ?expr:K3.SR.expr_t option ->  
         K3.SR.coll_id_t -> code_t -> code_t
     
     val update_out_map : ?expr:K3.SR.expr_t option -> 
         K3.SR.coll_id_t -> code_t -> code_t
 
-    (* persistent collection id, key, update collection -> update *)
+    (* persistent collection id, key, updated collection -> update *)
     val update_map : ?expr:K3.SR.expr_t option ->  
         K3.SR.coll_id_t -> code_t list -> code_t -> code_t
 
+    (* TODO: add update to n-th level in, as given by the key list
+     * this should be typechecked to ensure updated collection has
+     * same type as exsiting (n+1)-th level
+     * persistent collection id, key list, updated collection -> update
+    val update_nested_map : ?expr:K3.SR.expr_t option ->
+        K3.SR.coll_id -> code_t list list -> code_t -> code_t
+    *)
 
     (* fn id -> code
      * -- code generator should be able to hooks to implementations of
@@ -158,26 +166,13 @@ sig
                code_t list -> string list -> code_t
 
     val output : code_t -> out_channel -> unit
+end
 
-    (* Interpreter methods *)
-    type single_map_t
-    type map_t
-    
-    type value_t = 
-        | Unit
-        | Float          of float
-        | Int            of int
-        | Tuple          of value_t list
-        | Fun            of (value_t -> value_t) 
+module type CGI =
+sig
+    include CG
 
-        | SingleMap      of single_map_t
-        | DoubleMap      of map_t
-        
-        | List           of value_t list
-        | TupleList      of value_t list
-        | SingleMapList  of (value_t list * single_map_t) list
-
-    val string_of_value : value_t -> string
+    type value_t
 
     val eval : code_t -> M3.var_t list -> M3.const_t list -> db_t -> value_t
 end

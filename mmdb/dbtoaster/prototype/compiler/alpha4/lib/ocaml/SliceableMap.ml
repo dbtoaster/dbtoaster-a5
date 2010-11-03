@@ -355,11 +355,12 @@ struct
     *)
    let slice pat pkey m =
       let aux acc k = add k (find k m) acc in
-         match pkey with
-          | [] -> let r = empty_map_w_secondaries m in
-             if mem pkey m then (add pkey (find pkey m) r)
-             else (if not(empty m) then m else r) 
-          | _ -> List.fold_left aux (empty_map_w_secondaries m) (get_keys (snd m) pat pkey)
+      match pkey with
+      | [] -> let r = empty_map_w_secondaries m in
+         if mem pkey m then (add pkey (find pkey m) r)
+         else (if not(empty m) then m else r) 
+      | _ -> List.fold_left aux
+                (empty_map_w_secondaries m) (get_keys (snd m) pat pkey)
 
    let slice_keys pat pkey m =
       match pkey with

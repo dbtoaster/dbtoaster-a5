@@ -170,7 +170,7 @@ let test_interpreter s = Debug.log_unit_test s string_of_value;;
 let ftuple l = List.map (fun x -> const(CFloat(x))) l;;
 let vfloat x = Float x;;
 let vtuple l = Tuple(List.map vfloat l);;
-let vlist l = List(List.map vfloat l);;
+let vlist l = FloatList(List.map vfloat l);;
 let tlist l = TupleList(List.map vtuple l);;
 
 (* Binop tests *)
@@ -265,7 +265,7 @@ test_interpreter
 
 (* TODO: group-by aggregate tests *)
 
-(* TODO: nested map tests -- needs arbitrarily nested collections, not just List/TupleList *)
+(* TODO: nested map tests -- needs arbitrarily nested collections, not just FloatList/TupleList *)
 
 (*************************
  * Database tests

@@ -32,9 +32,13 @@ let synch_main
         (q,"map", (fun () -> DB.map_to_string (DB.get_map q db)))
      
      (* Note: no distinction between in/out maps... fix in db if really needed *)
-     else if DB.has_smap q db then
+     else if (DB.has_in_map q db) then
         (q,"map", (fun () -> (DB.map_name_to_string q)^": "^
            (DB.smap_to_string (DB.get_in_map q db))))
+
+     else if DB.has_out_map q db then
+        (q,"map", (fun () -> (DB.map_name_to_string q)^": "^
+           (DB.smap_to_string (DB.get_out_map q db))))
      
      else (q,"value", (fun () ->
         DB.value_to_string

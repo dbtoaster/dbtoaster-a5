@@ -120,7 +120,8 @@ module M3Valuation = AbstractValuation(ConstTValue)
 
 (* M3 map.
  * Keys are const_t, and values are parameterized within the map. *)
-module M3ValuationMap = SliceableMap.Make(ConstTValue)
+module M3ValuationMap : SliceableMap.S with type key_elt = const_t 
+   = SliceableMap.Make(ConstTValue)
 
 (* M3ValuationMap whose values are const_t (i.e. an implementation of a single-tier map.
  * -- we do not need this for K3, since all of these functions are
@@ -187,53 +188,121 @@ struct
 
 end
 
-(* K3 values, includes base types, unit, tuples and two types of collections,
- * list collections for computation and structural recursion, map
- * collections for persistent collections, that are collections of records.
- * Note, map collections can be used for any collection of records, not
- * just persistent collections, indeed it should be up to the
- * compiler/code generator to figure out which type to use, for example based
- * on the use of member/lookup/slice operations on the record collection. *)
-module rec K3Value : 
+(* K3 values, includes base types, unit, tuples and several types of collections,
+ * including named simple lists, such as FloatList and TupleList, whose contents
+ * are always flat elements, 1- and 2-level persistent collections
+ * (SingleMap, DoubleMap), as well as arbitrarily nested collections, namely
+ * ListCollection and an indexed MapCollection.
+ *
+ * Note explictly defined type, which is a subtype of both Value above, and
+ * Database.SliceableInOutMap. This is necessary since values include variants
+ * that are single and double maps. *)
+module rec K3Value :
 sig
-    type t =
-        | Unit
-        | Float          of float
-        | Int            of int
-        | Tuple          of t list
-        | ListCollection of t list
-        | MapCollection  of t K3ValuationMap.t
-        | Fun            of (t -> t) * bool (* schema application *)
+    type single_map_t = t K3ValuationMap.t
+    and map_t = single_map_t K3ValuationMap.t
+    and t = 
+    | Unit
+    | Float          of float
+    | Int            of int
+    | Tuple          of t list
+    | Fun            of (t -> t) 
+
+    (* Persistent collection values, these are yielded on accessing
+     * the persistent store. *)
+    | SingleMap      of single_map_t
+    | DoubleMap      of map_t
+
+    (* Core internal collections used during processing.
+     * -- these are flat collections, i.e. value_t is expected to
+     *    be a base type, such as float/int for FloatLists, and
+     *    tuple(float/int) for TupleLists
+     * -- SingleMaps and DoubleMaps are converted to these internal types
+     *    by tuple collection accessors (mem/lookup/slice) *)
+    | FloatList      of t list
+    | TupleList      of t list
+     
+    (* slicing a double map yields a SingleMapList of key * smap entries *)
+    | SingleMapList  of (t list * single_map_t) list
+
+    (* Arbitrarily nested collection based on lists *)
+    | ListCollection     of t list
+
+    (* Arbitrarily nested collections of tuples *)
+    | MapCollection      of t K3ValuationMap.t
+
+    module Map : SliceableMap.S
+       with type key_elt = t and
+            type 'a t = 'a K3ValuationMap.t
 
     val zero : t
     val compare : t -> t -> int
+    val string_of_value : t -> string
+    val string_of_smap : single_map_t -> string
+    val string_of_map : map_t -> string
     val to_string : t -> string
 end =
 struct
-    type t =
-        | Unit
-        | Float          of float
-        | Int            of int
-        | Tuple          of t list
-        | ListCollection of t list
-        | MapCollection  of t K3ValuationMap.t
-        | Fun            of (t -> t) * bool (* schema application *)
+    module Map = K3ValuationMap
+    type single_map_t = t K3ValuationMap.t
+    and map_t = single_map_t K3ValuationMap.t
+    and t = 
+    | Unit
+    | Float          of float
+    | Int            of int
+    | Tuple          of t list
+    | Fun            of (t -> t) 
+    | SingleMap      of single_map_t
+    | DoubleMap      of map_t
+    | FloatList      of t list
+    | TupleList      of t list
+    | SingleMapList  of (t list * single_map_t) list
+    | ListCollection of t list
+    | MapCollection  of t K3ValuationMap.t
 
     let zero = Float(0.0)
     let compare = Pervasives.compare
-    let rec to_string a = match a with
-        | Unit -> "unit"
-        | Float(x) -> string_of_float x
-        | Int(x) -> string_of_int x
-        | Tuple(v_t) ->
-            "<"^(String.concat "," (List.map to_string v_t))^">"
-        | ListCollection(v_l) ->
-            "["^(String.concat ";" (List.map to_string v_l))^"]"
-        | MapCollection(v_m) -> ""
-        | Fun(fn,_) -> "<fun>"
+
+    let rec key_to_string k = Util.list_to_string string_of_value k
+    and string_of_vmap sm   = K3ValuationMap.to_string key_to_string string_of_value sm
+    and string_of_smap sm   = string_of_vmap sm 
+    and string_of_map m     = K3ValuationMap.to_string key_to_string string_of_smap m 
+
+    and string_of_value v =
+      begin match v with
+      | Unit -> "unit"
+      | Float(f) -> string_of_float f
+      | Int(i) -> string_of_int i
+      | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
+      | Fun(f) -> "<fun>"
+
+      | SingleMap(sm) -> "SingleMap("^(string_of_smap sm)^")"
+      | DoubleMap(dm) -> "DoubleMap("^(string_of_map dm)^")"
+
+      | FloatList(fl) ->
+          "["^(String.concat ";" (List.map string_of_value fl))^"]"
+      
+      | TupleList(kvl) ->
+          "["^(String.concat ";" (List.map string_of_value kvl))^"]"
+
+      | SingleMapList(sml) ->
+          ("["^(List.fold_left (fun acc (k,m) ->
+                (if acc = "" then "" else acc^";")^
+                (string_of_value (Tuple k))^","^
+                (string_of_value (SingleMap m)))
+               "" sml)^"]")
+            
+      | ListCollection(vl) -> "ListCollection("^(String.concat ","
+                            (List.map string_of_value vl))^")"
+
+      | MapCollection(m) -> "MapCollection("^(string_of_vmap m)^")"
+      end
+
+    let to_string = string_of_value
 end
 and K3ValuationMap : SliceableMap.S with type key_elt = K3Value.t
     = SliceableMap.Make(K3Value)
+
 
 (* K3 Valuations allow variables to be bound to any K3 value, e.g.
  * collections, tuples, etc. *)

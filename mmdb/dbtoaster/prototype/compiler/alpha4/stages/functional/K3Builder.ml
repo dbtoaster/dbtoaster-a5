@@ -1,11 +1,5 @@
 (**************************
  * K3 construction from M3
- *
- * TODO: add flattens where appropriate for joins/products
- * -- where are flattens appropriate in current K3 generation?
- *   ++ we only need this for binops that are products of two slices,
- *      since this is the only place where we should create nested map ops
- *
  ***************************)
 
 module M3P = M3.Prepared
@@ -17,6 +11,9 @@ open K3.SR
 
 (* TODO: types *)
 let args_of_vars vars = List.map (fun v -> v,TFloat) vars
+
+(* TODO: check each bind_for to change nested fun app on a slice to be part of
+ * the parent tuple binding *)
 let bind_for_apply_each vt e = Lambda(ATuple(vt), e)
 let bind_for_aggregate vt (iv,it) e = AssocLambda(ATuple(vt),AVar(iv,it),e)
 
@@ -197,7 +194,7 @@ and op_to_expr op c c1 c2 : expr_t =
                 ((args_of_vars outv2)@["v2",TFloat]) (op schema l r) in 
             let inner = bind_for_apply_each ((args_of_vars outv1)@["v1",TFloat])
                 (Map(nested, calc_to_expr c2)) 
-            in Map(inner, calc_to_expr c1)
+            in Flatten(Map(inner, calc_to_expr c1))
 
 and calc_to_expr calc : expr_t =
     let tuple op schema c1 c2 =

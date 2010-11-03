@@ -15,6 +15,11 @@ SOURCE = \
 	stages/maps/M3Compiler.ml \
 	stages/functional/K3.mli \
 	stages/functional/K3.ml \
+	stages/functional/K3Builder.mli \
+	stages/functional/K3Builder.ml \
+	stages/functional/K3Typechecker.mli \
+	stages/functional/K3Typechecker.ml \
+	stages/functional/K3Compiler.mli \
 	stages/functional/K3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \

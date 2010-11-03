@@ -4,9 +4,15 @@ struct
 open CG
 open K3.SR
 open K3Builder
+open K3Typechecker
 
 let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
+    let tc_fn_rt e = 
+        let r = typecheck_expr e in match r with
+            | Fn(_,rt) -> rt
+            | _ -> failwith "invalid function"
+    in
     let debug e = Some(e) in
     let compile_op o l r = op ~expr:(debug e) o (rcr l) (rcr r) in
     begin match e with
@@ -37,7 +43,7 @@ let rec compile_k3_expr e =
     
     | Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
     
-    | Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (rcr c_e) 
+    | Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (tc_fn_rt fn_e) (rcr c_e) 
     | Flatten(c_e) -> flatten ~expr:(debug e) (rcr c_e) 
     | Aggregate(fn_e, init_e, c_e) ->
         begin match List.map rcr [fn_e;init_e;c_e] with
