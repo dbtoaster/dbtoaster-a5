@@ -188,6 +188,53 @@ struct
 
 end
 
+(* Simplified K3 value *)
+module rec SimpleK3Value :
+sig
+  type t =
+    | Unit
+    | Float          of float
+    | Int            of int
+    | Tuple          of t list
+    | Fun            of (t -> t) 
+    | ListCollection of t list
+
+    val zero : t
+    val compare : t -> t -> int
+    val to_string : t -> string
+end =
+struct
+  type t =
+    | Unit
+    | Float          of float
+    | Int            of int
+    | Tuple          of t list
+    | Fun            of (t -> t) 
+    | ListCollection of t list
+  
+  let zero = Float(0.0)
+  let compare = Pervasives.compare
+
+  let rec string_of_value v =
+    begin match v with
+    | Unit -> "unit"
+    | Float(f) -> string_of_float f
+    | Int(i) -> string_of_int i
+    | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
+    | Fun(f) -> "<fun>"
+    | ListCollection(vl) ->
+      "ListCollection("^(String.concat ","
+        (List.map string_of_value vl))^")"
+    end
+    
+  let to_string = string_of_value
+end
+and K3SValuationMap : SliceableMap.S with type key_elt = SimpleK3Value.t
+    = SliceableMap.Make(SimpleK3Value)
+
+module K3SValuation = AbstractValuation(SimpleK3Value)
+
+
 (* K3 values, includes base types, unit, tuples and several types of collections,
  * including named simple lists, such as FloatList and TupleList, whose contents
  * are always flat elements, 1- and 2-level persistent collections
@@ -219,8 +266,8 @@ sig
      *    tuple(float/int) for TupleLists
      * -- SingleMaps and DoubleMaps are converted to these internal types
      *    by tuple collection accessors (mem/lookup/slice) *)
-    | FloatList      of t list
-    | TupleList      of t list
+    | FloatList      of t list (* float list *)
+    | TupleList      of t list (* float list list *)
      
     (* slicing a double map yields a SingleMapList of key * smap entries *)
     | SingleMapList  of (t list * single_map_t) list
