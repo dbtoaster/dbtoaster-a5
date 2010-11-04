@@ -27,7 +27,7 @@ sig
     val project : ?expr:K3.SR.expr_t option -> code_t -> int list -> code_t
 
     (* Native collections *)
-    val singleton : ?expr:K3.SR.expr_t option -> code_t -> code_t
+    val singleton : ?expr:K3.SR.expr_t option -> code_t -> K3.SR.type_t -> code_t
     val combine   : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t
 
     (* Arithmetic, comparision operators *)

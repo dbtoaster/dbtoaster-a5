@@ -93,12 +93,14 @@ open K3.SR
 
 (* Helpers *)
 let find_vars v e =
-    let aux acc e = match e with
-    | Var (id,t) -> if v = id then (id,t)::acc else acc
-    | OutPC(id,outs,t) -> (List.filter (fun (x,t) -> v=x) outs)@acc
-    | PC(id,ins,outs,t)  -> (List.filter (fun (x,t) -> v=x) outs)@acc
-    | _ -> acc 
-    in fold_expr aux List.flatten [] e
+    let aux _ accll e =
+      let acc = List.flatten (List.flatten accll) in
+      match e with
+      | Var (id,t) -> if v = id then (id,t)::acc else acc
+      | OutPC(id,outs,t) -> (List.filter (fun (x,t) -> v=x) outs)@acc
+      | PC(id,ins,outs,t)  -> (List.filter (fun (x,t) -> v=x) outs)@acc
+      | _ -> acc 
+    in fold_expr aux (fun x e -> x) None [] e
 
 (* computes a sub list from start to fin,
  * including element at start, but not fin *)

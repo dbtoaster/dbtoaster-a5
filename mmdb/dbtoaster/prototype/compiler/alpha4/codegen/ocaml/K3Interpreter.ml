@@ -55,6 +55,11 @@ struct
         | Trigger(x,y,z) -> (x,y,z)
         | _ -> failwith "unable to eval trigger"
 
+    let rec is_flat t = match t with
+        | TFloat | TInt -> true
+        | TTuple t -> List.for_all is_flat t
+        | _ -> false
+
     let value_of_float x = Float(x)
     let value_of_const_t x = match x with CFloat(y) -> Float(y)
     
@@ -184,16 +189,26 @@ struct
 
     (* Native collections *)
     
-    let singleton ?(expr = None) el = Eval(fun th db ->
+    let singleton ?(expr = None) el el_t =
+        let rv_f v = match el_t with
+            | TTuple t ->
+                if List.for_all is_flat t then TupleList([v])
+                else ListCollection([v])
+            | TFloat -> FloatList([v])
+            | TInt -> FloatList([Float(float_of_value v)])
+            | Collection _ -> ListCollection([v])
+            | Fn (args_t,body_t) ->
+                (* TODO: ListCollection(v) ? *)
+                failwith "first class functions not supported yet"
+            | TUnit -> failwith "cannot create singleton of unit expression"
+        in Eval(fun th db ->
         begin match (get_eval el) th db with
-        | Tuple(t_v) as t -> TupleList([t])
-        | Float _ as x -> FloatList([x])
-        | Int _ as x -> FloatList([x])
+        | Tuple _ | Float _ | Int _
         | FloatList _ | TupleList _
-        | ListCollection _ | MapCollection _ as v -> ListCollection([v])
-        | SingleMapList l -> ListCollection([ListCollection(smlc_to_c l)])
-        | SingleMap m -> ListCollection([TupleList(smc_to_tlc m)])
-        | DoubleMap m -> ListCollection([ListCollection(dmc_to_c m)])
+        | ListCollection _ | MapCollection _ as v -> rv_f v
+        | SingleMapList l -> rv_f (ListCollection(smlc_to_c l))
+        | SingleMap m -> rv_f (TupleList(smc_to_tlc m))
+        | DoubleMap m -> rv_f (ListCollection(dmc_to_c m))
         | v -> failwith ("invalid singleton value: "^
                          (string_of_value v)^(get_expr expr))
         end)
@@ -329,11 +344,6 @@ struct
     (* picks the return collection implementation based on the return type
      * of the map function *)
     let map ?(expr = None) map_fn map_rt collection =
-        let rec is_flat t = match t with
-            | TFloat | TInt -> true
-            | TTuple t -> List.for_all is_flat t
-            | _ -> false
-        in 
         let rv_f v = match map_rt with
             | TFloat -> FloatList(v) 
             | TInt -> FloatList(List.map (fun x -> Float(float_of_value x)) v)

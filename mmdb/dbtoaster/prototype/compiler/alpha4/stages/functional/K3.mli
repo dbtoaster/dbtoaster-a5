@@ -86,7 +86,10 @@ sig
 
     (* K3 methods *)
     val fold_expr :
-        ('a -> expr_t -> 'a) -> ('a list -> 'a) -> 'a -> expr_t -> 'a
+      ('b -> 'a list list -> expr_t -> 'a) ->
+      ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
+
+    val rebuild_expr : expr_t -> expr_t list list -> expr_t
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string

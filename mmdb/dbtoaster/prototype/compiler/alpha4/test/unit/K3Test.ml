@@ -3,7 +3,8 @@ open Util
 open M3Compiler
 open K3.SR
 open K3Builder
-open K3Typechecker;;
+open K3Typechecker
+open K3Optimizer;;
 
 (* K3 Helpers *)
 let test_string_of_expr s e =
@@ -151,20 +152,129 @@ in collection_prog (sumr_byb_schema, fst sumr_byb_prog) sumr_byb_patterns;;
 
 
 (**************************
+ * Optimizer tests
+ **************************)
+
+let test_optimizer s = Debug.log_unit_test s string_of_expr;;
+
+(* Expression construction helpers *)
+let pop_back l =
+    let r = List.rev l in List.rev (List.tl r), List.hd r
+
+let build_schema_tuple sch = List.map (fun (id,t) -> Var(id,t)) sch;;
+
+let add_n n sch =
+    let x,y = pop_back sch in
+    let m_tup = build_schema_tuple x in
+    Lambda(ATuple(sch),
+      Tuple(m_tup@[Add(Var(fst y,snd y), Const(CFloat(n)))]));; 
+
+let add_v vl sch =
+    let x,y = pop_back sch in
+    let m_tup = build_schema_tuple x in
+    let add_expr = List.fold_left (fun acc v -> Add(acc, Var(v,TFloat)))
+      (Var(List.hd vl, TFloat)) (List.tl vl)
+    in Lambda(ATuple(sch), Tuple(m_tup@[add_expr]));; 
+
+let build_chain le (re,rsch) = Map(Lambda(ATuple(rsch), le), re);;
+
+let build_binary_join e_sch_l =
+    List.fold_left build_chain (fst (List.hd e_sch_l)) (List.tl e_sch_l);;
+
+let build_cross le (re,rsch) =
+    let rf, rc = get_map_parts re in
+    Map(compose (Lambda(ATuple(rsch), le)) rf, rc);;
+
+let build_nway_cross e_sch_l =
+    List.fold_left build_cross (fst (List.hd e_sch_l)) (List.tl e_sch_l);;
+
+(* Example expressions *)
+let sch1 = ["a", TFloat; "b", TFloat];;
+let m1_sch = sch1@["v1",TFloat];;
+
+let sch2 = ["c", TFloat; "d", TFloat];;
+let m2_sch = sch2@["v2",TFloat];;
+
+let sch3 = ["e", TFloat; "f", TFloat];;
+let m3_sch = sch3@["v3",TFloat];;
+
+let c1 = OutPC("m1", sch1, TFloat);;
+let c2 = OutPC("m2", sch2, TFloat);;
+let c3 = OutPC("m3", sch3, TFloat);;
+
+(* Test 1
+ * map(f=lambda x.x+2,map(g=lambda y.y+1,c)) => map(lambda y.(y+1)+2, c)
+ *)
+let map_2_chain =
+  Map(Lambda(ATuple(["x",TFloat; "y", TFloat; "v1", TFloat]),
+             Add(Var("v1",TFloat), Const(CFloat(2.0)))),
+    Map(add_n 1.0 m1_sch, OutPC("m1", sch1, TFloat)));;
+
+let composed_map =
+  Map(Lambda(ATuple(m1_sch),
+             Add(Add(Var("v1", TFloat), Const(CFloat(1.0))),
+                 Const(CFloat(2.0)))),
+      OutPC("m1", sch1, TFloat))
+in
+test_optimizer "simplify map chain"
+  (simplify_collections map_2_chain) composed_map;; 
+
+
+(* Test 2
+ * map(map(f,c1), map(g,c2)) => map(map(f \circ g, c2), c1)
+ *)
+let add_to_m1 = add_n 2.0 m1_sch in
+let cross_mult =
+    Lambda(ATuple(m2_sch), Mult(Var("v1", TFloat), Var("d", TFloat)))
+in
+let map_cross = build_chain
+    (Map(cross_mult, c2)) ((Map(add_to_m1, c1)), m1_sch)
+in
+let composed_cross_mult = 
+    Lambda(ATuple(m2_sch),
+      Mult(Add(Var("v1", TFloat), Const(CFloat(2.0))), Var("d",TFloat)))
+in
+let simple_map_cross =
+    build_chain (Map(composed_cross_mult, c2)) (c1, m1_sch)
+in
+test_optimizer "simplify 2-way cross product"
+  (simplify_collections map_cross) simple_map_cross;;
+
+
+(* Test 3
+ * map(map(map(f,c1), map(g,c2)), map(h,c3))
+ *  => map(map(map(f \circ g \circ h, c1), c2), c3)
+ *)
+let scans = [
+    (Map(add_v ["v1"; "v2"; "v3"] (sch3@sch2@m1_sch), c1), m1_sch);
+    (Map(add_n 2.0 m2_sch, c2), m2_sch);
+    (Map(add_n 3.0 m3_sch, c3), m3_sch)];;
+
+let join3 = build_binary_join scans in 
+let cross3 = build_nway_cross scans in
+test_optimizer "simplify 3-way join = 3-way cross product"
+  (simplify_collections join3) cross3;;
+
+
+(* TODO: aggregation simplification tests *)
+
+(*
+(**************************
  * K3 Interpreter tests
  **************************)
 open Database
 open Values
-open K3Interpreter.MK3CG;;
+open Values.K3Value
+open K3Interpreter.K3CG;;
 
-module Env = M3Valuation;;
-module DB  = NamedM3Database;;
+module Env = K3Valuation;;
+module DB  = NamedK3Database;;
 
 let th = Env.make [] [], [];;
 let db = DB.make_empty_db sumr_schema [];;
 let db2 = DB.make_empty_db sumr_byb_schema sumr_byb_patterns;;
 
-let test_interpreter s = Debug.log_unit_test s string_of_value;;
+let test_interpreter s = Debug.log_unit_test s Values.K3Value.string_of_value;;
 
 (* Value constructor helpers *)
 let ftuple l = List.map (fun x -> const(CFloat(x))) l;;
@@ -172,6 +282,11 @@ let vfloat x = Float x;;
 let vtuple l = Tuple(List.map vfloat l);;
 let vlist l = FloatList(List.map vfloat l);;
 let tlist l = TupleList(List.map vtuple l);;
+let cross xyz =
+  let zyx = List.rev xyz in
+  List.fold_left (fun acc v ->
+    ListCollection(List.map (fun x -> Tuple([x;acc])) (List.map vtuple v)))
+    (tlist (List.hd zyx)) (List.tl zyx);;
 
 (* Binop tests *)
 let addf = op add_op (const (CFloat(1.0))) (const (CFloat(1.0))) in
@@ -224,26 +339,43 @@ in test_interpreter "(lambda x,y,z,a. tuple x,y,z,a) (tuple 1,2,3,4)"
  *************************)
 
 let build_val_list l = List.fold_left (fun acc e ->
-    combine acc (singleton (const (CFloat(e)))))
-  (singleton (const (CFloat(List.hd l)))) (List.tl l);;
+    combine acc (singleton (const (CFloat(e))) TFloat))
+  (singleton (const (CFloat(List.hd l))) TFloat) (List.tl l);;
 
-let build_tuple_list l = List.fold_left (fun acc t ->
-    combine acc (singleton (tuple (ftuple t))))
-  (singleton (tuple (ftuple (List.hd l)))) (List.tl l);;
+let build_tuple_list l =
+    let t_f _ = TFloat in
+    let ht = TTuple(List.map t_f (List.hd l)) in
+    let r =
+      List.fold_left (fun acc t ->
+        let tt = TTuple(List.map t_f t) in
+        combine acc (singleton (tuple (ftuple t)) tt))
+      (singleton (tuple (ftuple (List.hd l))) ht) (List.tl l)
+    in r, Collection(ht);;
+
+let crossc xyz =
+  let t_f _ = TFloat in
+  let zyx = List.rev xyz in
+  List.fold_left (fun (acc,acc_t) v -> 
+      let el_t = TTuple([TTuple(List.map t_f (List.hd v)); acc_t]) in
+      let vt = List.map (fun l -> singleton (tuple [tuple (ftuple l);acc]) el_t) v in
+      let r = List.fold_left combine (List.hd vt) (List.tl vt)
+      in r,Collection(el_t))
+    (build_tuple_list (List.hd zyx)) (List.tl zyx);;
 
 (* singleton 1.0 *)
-let s = singleton (const (CFloat(1.0))) in
+let s = singleton (const (CFloat(1.0))) TFloat in
 test_interpreter "singleton 1.0" (eval s [] [] db) (vlist [1.0]);;
 
 (* singleton (tuple 1.0, 2.0, 3.0) *)
 let t = tuple (ftuple [1.0; 2.0; 3.0]) in
 test_interpreter "singleton (tuple 1.0, 2.0, 3.0)"
-  (eval (singleton t) [] [] db) (tlist [[1.0;2.0;3.0]]);;
+  (eval (singleton t (TTuple([TFloat; TFloat; TFloat]))) [] [] db)
+  (tlist [[1.0;2.0;3.0]]);;
 
 (* (lambda y. map(lambda x. x+y, [1.0; 2.0])) 5.0 *)
 let fx = lambda (AVar("x",TFloat)) (op add_op (var "x") (var "y")) in
 let cx = build_val_list [1.0; 2.0] in
-let mapx = lambda (AVar("y",TFloat)) (map fx cx) in
+let mapx = lambda (AVar("y",TFloat)) (map fx TFloat cx) in
 let app_fmx = apply mapx (const (CFloat(5.0))) in
 test_interpreter "(lambda y. map(lambda x. x+y, [1.0; 2.0])) 5.0"
   (eval app_fmx [] [] db) (vlist [6.0; 7.0]);;
@@ -258,14 +390,45 @@ test_interpreter "aggregate(lambda x.lambda acc. x + acc, 0.0, [1.0; 2.0. 3.0])"
 (* map(lambda x,y,z. tuple (x,y+z), [1.0,2.0,3.0; 4.0,5.0,6.0; 7.0,8.0,9.0;]) *)
 let fxyz = build_lambda
   (tuple [var "x"; op add_op (var "y") (var "z")]) ["x"; "y"; "z"] in
-let c = build_tuple_list [[1.0;2.0;3.0]; [4.0;5.0;6.0]; [7.0;8.0;9.0]] in
+let c = fst (build_tuple_list [[1.0;2.0;3.0]; [4.0;5.0;6.0]; [7.0;8.0;9.0]]) in
 test_interpreter
   "map(lambda x,y,z. tuple (x,y+z), [1.0,2.0,3.0; 4.0,5.0,6.0; 7.0,8.0,9.0;])"
-  (eval (map fxyz c) [] [] db) (tlist [[1.0;5.0]; [4.0;11.0]; [7.0;17.0]]);;
+  (eval (map fxyz (TTuple([TFloat;TFloat])) c) [] [] db) (tlist [[1.0;5.0]; [4.0;11.0]; [7.0;17.0]]);;
 
 (* TODO: group-by aggregate tests *)
 
-(* TODO: nested map tests -- needs arbitrarily nested collections, not just FloatList/TupleList *)
+(* flatten(Coll [Coll TL(rx) ; Coll TL(ry) ; Coll TL(rz) ]) *)
+let rx = [[1.0;2.0;3.0]; [4.0;5.0;6.0]; [7.0;8.0;9.0]];;
+let ry = [[10.0;20.0;30.0]; [40.0;50.0;60.0]; [70.0;80.0;90.0]];;
+let rz = [[100.0;200.0;300.0]; [400.0;500.0;600.0]; [700.0;800.0;900.0]];;
+let xc,x_t = build_tuple_list rx;;
+let yc,y_t = build_tuple_list ry;;
+let zc,z_t = build_tuple_list rz;;
+
+
+let xyzc =
+  let ss = List.map (fun (c,t) ->
+    singleton (singleton c t) (Collection(t))) [xc,x_t;yc,y_t;zc,z_t]
+  in List.fold_left combine (List.hd ss) (List.tl ss);; 
+
+let xyz = ListCollection(
+    List.map (fun v -> ListCollection([tlist v])) [rx;ry;rz])
+in test_interpreter "build nested collection" (eval xyzc [] [] db) (xyz);;
+
+let flat_xyzc = flatten xyzc in
+let flat_xyz = ListCollection(List.map (fun v -> tlist v) [rx;ry;rz])
+in test_interpreter "flatten 3-way cross" (eval flat_xyzc [] [] db) (flat_xyz);;
+
+(* TODO: pairwith *)
+(*
+let rels =     
+     [( [[100.0;200.0]; [300.0;400.0]; [500.0;600.0]]); 
+      ( [[10.0;20.0];[30.0;40.0];[50.0;60.0]]);
+      ( [[1.0;2.0]; [3.0;4.0]; [5.0;6.0]])]
+in
+let xyz = cross rels in
+xyz;;
+*)
 
 (*************************
  * Database tests
@@ -334,7 +497,7 @@ test_interpreter "(get_value q) = 1.0"
 (******************
  * Compiler tests
  ******************)
-module K3C = K3Compiler.Make(K3Interpreter.MK3CG);;
+module K3C = K3Compiler.Make(K3Interpreter.K3CG);;
 
 let test_prog (schema,trigs) tuples trigs_to_run tests =
   let prog_db = DB.make_empty_db schema [] in
@@ -417,11 +580,12 @@ let compile_to_k3 fname =
   let (schema, m3prog) = (fst (compile_sql_file_to_m3 fname)) in
   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
   let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns
-  in
-  trigs
+  in List.map (fun (_,_,_,stmtl) ->
+       List.map (fun (_,e) -> simplify_collections e) stmtl) trigs
   (*
   m3ptrigs
   *)
 ;;
 
 compile_to_k3 "test/sql/vwap.sql";;
+*)

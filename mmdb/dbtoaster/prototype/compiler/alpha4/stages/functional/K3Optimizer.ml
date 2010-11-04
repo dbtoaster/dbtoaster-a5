@@ -353,7 +353,7 @@
  *
  *     -- agg(f=aclambda v,w.fb,i,map(g=lambda x.map(h=lambda y.hb,c2),c1))
  *        => agg(f=aclambda v,w.fb,i,
- *             map(g=lambda x.(agg(f=aclambda v',w.fb,0,map(h=lambda y.hb,c2))),c1))
+ *             map(g=lambda x.(agg(f=aclambda v,w.fb,0,map(h=lambda y.hb,c2))),c1))
  *        => agg(f=aclambda v,w.fb,i,
  *             map(g=lambda x.(agg(f'=aclambda y,w.sub[v->hb](fb),0,c2)),c1))
  *        => agg(f''=aclambda x,w.sub[v->mc2](fb),i,c1)
@@ -387,12 +387,23 @@
  *        subbing as in the 3-way join.
  *)
 
-(* accessors
+
+open M3
+open K3.SR
+
+(* accessors *)
 let get_fun_parts e = match e with
     | Lambda(x,b) -> x,b | _ -> failwith "invalid function"
 
 let get_assoc_fun_parts e = match e with
-    | AssocLambda(x,y,b) -> xxx
+    | AssocLambda(x,y,b) -> x,y,b
+    | _ -> failwith "invalid assoc function"
+
+let get_arg_vars a = match a with
+    | AVar(v,_) -> [v]
+    | ATuple(vt_l) -> List.map fst vt_l
+
+let get_fun_vars e = get_arg_vars (fst (get_fun_parts e))
 
 (* TODO: for all these collection accessors, extract an rhs collection if it's
  * masked by an IfThenElse yet the underlying collection beneath both branches
@@ -411,11 +422,11 @@ let get_gb_agg_parts e = match e with
     | GroupByAggregate(agg_f, init, gb_f, agg_c) ->
         agg_f, init, gb_f, (unmask agg_c)
     | _ -> failwith "invalid group by aggregation"
-*)
 
-(* substitute pseudocode:
+
+(* substitute *)
 let substitute (arg_to_sub, sub_expr) expr =
-    let substitutions = match arg_to_sub with
+    let vars_to_sub = match arg_to_sub with
         | AVar(v,_) -> [v,sub_expr]
         | ATuple(vt_l) ->
             begin match sub_expr with
@@ -423,85 +434,171 @@ let substitute (arg_to_sub, sub_expr) expr =
             | _ -> failwith "invalid tuple binding"
             end
     in
-    let rec aux e = 
-        (* Remove vars from substitutions when descending through lambdas
-         * binding the same variable. Don't descend further if there are no
-         * substitutions left. *)
-        match e with | xxx -> xxx
-    in aux substitutions expr
-*)
+    (* Remove vars from substitutions when descending through lambdas
+     * binding the same variable. Don't descend further if there are no
+     * substitutions left. *)
+    let remove_var subs e =
+        let avl = match e with
+        | Lambda(arg,body) -> get_arg_vars arg
+        | AssocLambda(arg1,arg2,body) -> (get_arg_vars arg1)@(get_arg_vars arg2)
+        | _ -> []
+        in if avl = [] then subs
+           else List.filter (fun (v,_) -> not(List.mem v avl)) subs
+    in
+    let sub_aux subs parts e = match e with
+        | Var(id,t) ->
+            (* sub if possible *)
+            if List.mem_assoc id subs then List.assoc id subs else e
+        | _ -> rebuild_expr e parts
+    in fold_expr sub_aux remove_var vars_to_sub (Const (CFloat(0.0))) expr
 
-(* compose pseudocode:
+(* Lambda and assoc lambda composition *)
 let compose f g =
     let f_args, f_body = get_fun_parts f in
     let g_args, g_body = get_fun_parts g
     in Lambda(g_args, substitute (f_args, g_body) f_body)
     
-let compose_assoc assoc_f g = xxx
-*)
+let compose_assoc assoc_f g =
+    let f_arg1, f_arg2, f_body = get_assoc_fun_parts assoc_f in
+    let g_args, g_body = get_fun_parts g in
+    let new_body = substitute (f_arg1, g_body) f_body
+    in AssocLambda(g_args, f_arg2, new_body)
 
-(*
- * -- return if expr is an aggregate, or a map with a selective lambda (i.e. a
+(* selective_expr:
+ * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
  *    lambda contains a predicate dependent on the function argument)
- * -- TODO: navigate around all types of expressions 
-let rec selective_expr expr = match expr with
-    | Aggregate _ -> true
-    | GroupByAggregate _ -> true
-    | Map(map_f,_) ->
-        (* we dont recur down the RHS, since we only care if this map_f is
-         * selective. If the RHS is not, then transformation of this Map
-         * will perform optimization *)
-        selective map_f 
-*)
+ *)
+let selective_expr expr =
+    let vars = match expr with Map(f,_) -> get_fun_vars f | _ -> [] in
+    let aux _ part_selvars e =
+        let rv = 
+           let selvars = List.flatten part_selvars in
+           (List.mem true (List.map fst selvars),
+            List.flatten (List.map snd selvars))
+        in 
+        match e with
+        | Var(id,_) -> (false, [id])
+        | Aggregate _ -> (true, [])
+        | GroupByAggregate _ -> (true, [])
+        (* For Maps we only care if this map_f is selective. If the collection
+         * is not, then transformation of this Map will perform optimization *)
+        | Map _ -> List.hd (List.hd part_selvars) 
+        | IfThenElse0 _ ->
+	        let (subsel,subvars) = rv in
+	        let sel = (Util.ListAsSet.inter subvars vars) <> []
+	        in if subsel || sel then (true, []) else (false, subvars)  
+	    | _ -> rv
+    in fst (fold_expr aux (fun x _ -> x) None (false,[]) expr)
 
-(*
- * -- think about top-down local fixpoint
+(* TODO: better nested map detection *)
+let nested_map map_f = match map_f with
+    | Lambda(_,Map _) -> true
+    | _ -> false
+
+
+(* TODO: flattens! *)
 let rec simplify_collections expr =
-    match expr with
-    | non-collections -> recursively simplify
-
-    | map rhs chain ->
-        let map_f, rhs_map = get_map_parts expr in
-        if not selective rhs_map then
-          let rhs_map_f, rhs_coll = get_map_parts rhs_map in
-          let new_map_f = compose map_f rhs_map_f
-          in recur (Map(new_map_f, rhs_coll))
+    let recur = simplify_collections in
+    let fixpoint new_expr = if new_expr = expr then expr else recur new_expr in
+    begin match expr with
+    | Map(map_f, (Map(_,_) as rmap)) ->
+        if not(selective_expr rmap) then
+          let rmap_f, rmap_c = get_map_parts rmap in
+          let new_map_f = compose map_f rmap_f
+          in recur (Map(new_map_f, rmap_c))
         else
             (* recur, and if no change, finish, i.e. top-down fixpoint. *)
-            let new_rhs_map = recur rhs_map in
+            let new_rmap = recur rmap in
             let new_map_f = recur map_f in
-            if new_rhs_map = rhs_map && new_map_f = map_f then expr
-            else recur (Map(new_map_f, new_rhs_map))
+            if new_rmap = rmap && new_map_f = map_f then expr
+            else recur (Map(new_map_f, new_rmap))
 
-    | agg rhs chain ->
-        let agg_f, init, rmap = get_agg_parts expr in
-        let rmap_f, rmap_c = get_map_parts expr in
-        if nested rmap_f then
-            (* duplicate aggregate for nested colln *)
-            let nested_map_f, nested_map_c = get_map_parts rmap_f in
+    | Map(map_f, rmap) ->
+        let new_map = Map(recur map_f, recur rmap)
+        in fixpoint new_map
+
+    | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
+
+        (* v,w,fb *)
+        let aggf_arg1, aggf_arg2, aggf_body = get_assoc_fun_parts agg_f in
+
+        (* g,c1 *)
+        let rmap_f, rmap_c = get_map_parts rmap in
+        if nested_map rmap_f then
+            
+            (* create duplicate aggregate for nested colln *)
+            (* TODO: handle decomposition errors, or move retrieval into 
+             * nested_map function. *)
+            (* x, map(h,c2) *)
+            let rmapf_args, rmapf_body = get_fun_parts rmap_f in
+            
+            (* h,c2 *)
+            let nmap_f, nmap_body = get_map_parts rmapf_body in
+            
+            (* y, hb *)
+            let nmapf_args, nmapf_body = get_fun_parts nmap_f in
+            
             let dup_agg_f =
-                (* -- arg1: TODO: decide whether to make this a partially eval
-                 *          fn or a tuple with type of nested_map_c
-                 * -- arg2: agg_f arg2
-                 * -- body: agg_f body, w/ substitutions for arg1 *)
-                AssocLambda(arg1,arg2,body) in
+                let dup_body = substitute (aggf_arg1, nmapf_body) aggf_body in
+                AssocLambda(nmapf_args,aggf_arg2,dup_body) in
             let dup_init = Const(CFloat(0.0)) in
-            let new_nested_map_f =
-                recur Aggregate(dup_agg_f, dup_init, nested_map_c)
+
+            (* mc2 *)
+            let new_rmapf_body =
+                recur (Aggregate(dup_agg_f, dup_init, nmap_body))
             in
-            let new_agg_f = compose_assoc agg_f new_nested_map_f
+            let new_rmapf = Lambda(rmapf_args, new_rmapf_body) in
+            let new_agg_f = compose_assoc agg_f new_rmapf
             in recur (Aggregate(new_agg_f, init, rmap_c))
         else
             let new_agg_f = compose_assoc agg_f rmap_f in
-            recur (Aggregate(new_agg_f, init, rmap_c)
+            recur (Aggregate(new_agg_f, init, rmap_c))
 
-    | gb agg rhs chain ->
+    | Aggregate(agg_f,init,rmap) ->
+        let new_agg = Aggregate(recur agg_f, recur init, recur rmap)
+        in fixpoint new_agg
+
+    | GroupByAggregate(agg_f,i,gb_f, (Map _ as rmap)) ->
         (* TODO: group by function optimizations *)
         (* For now, simply compose rhs map fn with group-by fn. Presumably
          * there are some nested optimizations of such group-bys we can perform
          * just as with aggregates above. *)
-        let agg_f,i,gb_f,rmap = get_gb_agg_parts expr in
-        let rmap_f, rmap_c = get_map_parts expr in
+        let rmap_f, rmap_c = get_map_parts rmap in
         let new_gb_f = compose gb_f rmap_f
         in recur (GroupByAggregate(agg_f,i,new_gb_f,rmap_c)) 
- *)
+
+    | GroupByAggregate(agg_f,i,gb_f,rmap) ->
+        let new_gb_agg =
+            GroupByAggregate(recur agg_f, recur i, recur gb_f, recur rmap)
+        in fixpoint new_gb_agg
+
+    | Tuple e_l         -> Tuple(List.map recur e_l)
+    | Project (ce, idx) -> Project(recur ce, idx)
+    | Singleton ce      -> Singleton (recur ce)
+    | Combine (ce1,ce2) -> Combine(recur ce1, recur ce2)
+    | Add (ce1,ce2)     -> Add(recur ce1, recur ce2)
+    | Mult (ce1,ce2)    -> Mult(recur ce1, recur ce2)
+    | Eq (ce1,ce2)      -> Eq(recur ce1, recur ce2)
+    | Neq (ce1,ce2)     -> Neq(recur ce1, recur ce2)
+    | Lt (ce1,ce2)      -> Lt(recur ce1, recur ce2)
+    | Leq (ce1,ce2)     -> Leq(recur ce1, recur ce2)
+    | IfThenElse0 (ce1,ce2) -> IfThenElse0(recur ce1, recur ce2)
+    | IfThenElse (pe,te,ee) -> IfThenElse(recur pe, recur te, recur ee)
+    | Block e_l             -> Block(List.map recur e_l)
+    | Iterate (fn_e, ce)    -> Iterate(recur fn_e, recur ce)
+    | Lambda (arg_e,ce)     -> Lambda (arg_e,recur ce)
+    | AssocLambda (arg1_e,arg2_e,be)   -> AssocLambda(arg1_e,arg2_e,recur be)
+    
+    | Apply (fn_e,arg_e)    -> Apply(recur fn_e, recur arg_e)
+    | Member (me,ke)        -> Member(recur me, List.map recur ke)  
+    | Lookup (me,ke)        -> Lookup(recur me, List.map recur ke)
+    | Slice (me,sch,pat_ve) ->
+        Slice(recur me,sch,List.map (fun (id,e) -> id,recur e) pat_ve)
+    
+    | PCUpdate (me,ke,te) -> PCUpdate(recur me, List.map recur ke, recur te)
+    | PCValueUpdate (me,ine,oute,ve) ->
+        PCValueUpdate(recur me,
+          List.map recur ine, List.map recur oute, recur ve)
+
+    | _ -> expr
+    end

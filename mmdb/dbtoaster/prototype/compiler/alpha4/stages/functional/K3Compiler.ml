@@ -5,6 +5,7 @@ open CG
 open K3.SR
 open K3Builder
 open K3Typechecker
+open K3Optimizer
 
 let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
@@ -20,7 +21,7 @@ let rec compile_k3_expr e =
     | Var(v,t) -> var ~expr:(debug e) v
     | Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
     | Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
-    | Singleton(e) -> singleton ~expr:(debug e) (rcr e)
+    | Singleton(e) -> singleton ~expr:(debug e) (rcr e) (typecheck_expr e)
     | Combine(l,r) -> combine ~expr:(debug e) (rcr l) (rcr r) 
     | Add(l,r)  -> compile_op add_op l r
     | Mult(l,r) -> compile_op mult_op l r
@@ -104,7 +105,8 @@ let rec compile_k3_expr e =
 
 let compile_triggers trigs : code_t list =
   List.map (fun (event, rel, args, cs) ->
-      let stmts = List.map compile_k3_expr (snd (List.split cs))
+      let stmts = List.map compile_k3_expr
+        (List.map (fun (_,e) -> simplify_collections e) cs) 
       in trigger event rel args stmts)
     trigs
 

@@ -12,8 +12,6 @@ open K3.SR
 (* TODO: types *)
 let args_of_vars vars = List.map (fun v -> v,TFloat) vars
 
-(* TODO: check each bind_for to change nested fun app on a slice to be part of
- * the parent tuple binding *)
 let bind_for_apply_each vt e = Lambda(ATuple(vt), e)
 let bind_for_aggregate vt (iv,it) e = AssocLambda(ATuple(vt),AVar(iv,it),e)
 
@@ -374,17 +372,14 @@ let collection_stmt trig_args m3stmt : statement =
      * -- statement_expr is a side-effecting expression that updates a
      *    persistent collection, thus has type Unit *)
 
-    let loop_in_aux (map_la,la,le) loop_fn_body =
+    let loop_in_aux (la,le) loop_fn_body =
         let patv = Util.ListAsSet.inter lhs_inv trig_args in
         let pat_ve = List.map (fun v -> (v,Var(v,TFloat))) patv in
         let in_coll = if (List.length patv) = (List.length lhs_inv)
             then Singleton(Lookup(collection, List.map snd pat_ve))
             else Slice(collection, ins, pat_ve) in
         let loop_fn =
-            if map_la then
-                bind_for_apply_each (args_of_vars lhs_inv)
-                    (Lambda(AVar(fst la, snd la),loop_fn_body))
-            else bind_for_apply_each ((args_of_vars lhs_inv)@[la]) loop_fn_body
+            bind_for_apply_each ((args_of_vars lhs_inv)@[la]) loop_fn_body
         in Iterate(loop_fn, in_coll)
     in
     let loop_update_aux ins outs delta_slice =
@@ -407,7 +402,7 @@ let collection_stmt trig_args m3stmt : statement =
         | (x,[],_) ->
             let la,le = fn_arg_expr "existing_v" TFloat in
             let rhs_expr = Apply(update_expr, le) 
-            in loop_in_aux (false,la,le)
+            in loop_in_aux (la,le)
                  (map_value_update_expr collection in_el [] rhs_expr) 
 
         | ([],x,false) ->
@@ -429,13 +424,13 @@ let collection_stmt trig_args m3stmt : statement =
             let la,le = fn_arg_expr "existing_slice" out_tier_t in
             let rhs_expr = Apply(update_expr, le) in
             let update_body = loop_update_aux in_el out_el rhs_expr
-            in loop_in_aux (true,la,le) update_body
+            in loop_in_aux (la,le) update_body
 
         | (x,y,_) ->
             let la,le = fn_arg_expr "existing_slice" out_tier_t in
             let rhs_expr = IfThenElse(Member(le, out_el),
                 Apply(update_expr, Lookup(le, out_el)), sing_init_expr)
-            in loop_in_aux (true,la,le)
+            in loop_in_aux (la,le)
                 (map_value_update_expr collection in_el out_el rhs_expr)
         end
     in
