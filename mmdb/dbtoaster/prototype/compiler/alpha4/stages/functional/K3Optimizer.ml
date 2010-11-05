@@ -391,6 +391,9 @@
 open M3
 open K3.SR
 
+let var_counter = ref 0
+let gen_var_sym() = incr var_counter; "var"^(string_of_int (!var_counter))
+
 (* accessors *)
 let get_fun_parts e = match e with
     | Lambda(x,b) -> x,b | _ -> failwith "invalid function"
@@ -402,6 +405,10 @@ let get_assoc_fun_parts e = match e with
 let get_arg_vars a = match a with
     | AVar(v,_) -> [v]
     | ATuple(vt_l) -> List.map fst vt_l
+
+let get_arg_vars_w_types a = match a with
+    | AVar(v,t) -> [v,t]
+    | ATuple(vt_l) -> vt_l
 
 let get_fun_vars e = get_arg_vars (fst (get_fun_parts e))
 
@@ -425,6 +432,16 @@ let get_gb_agg_parts e = match e with
 
 
 (* substitute *)
+let substitute_args renamings arg =
+    let sub_aux (v,t) =
+        if List.mem_assoc v renamings
+        then (snd(List.assoc v renamings),t) else (v,t)
+    in
+    begin match arg with
+    | AVar(v,t) -> let x,y = sub_aux (v,t) in AVar(x,y)
+    | ATuple(vt_l) -> ATuple(List.map sub_aux vt_l)
+    end
+
 let substitute (arg_to_sub, sub_expr) expr =
     let vars_to_sub = match arg_to_sub with
         | AVar(v,_) -> [v,sub_expr]
@@ -461,8 +478,18 @@ let compose f g =
 let compose_assoc assoc_f g =
     let f_arg1, f_arg2, f_body = get_assoc_fun_parts assoc_f in
     let g_args, g_body = get_fun_parts g in
-    let new_body = substitute (f_arg1, g_body) f_body
-    in AssocLambda(g_args, f_arg2, new_body)
+    let collisions =
+       let f2_vars = get_arg_vars_w_types f_arg2 in
+       let g_vars = get_arg_vars_w_types g_args in
+       List.filter (fun (v,t) -> List.mem_assoc v f2_vars) g_vars
+    in
+    let renamings =
+        List.map (fun (v,t) -> (v,(t,gen_var_sym()))) collisions in
+    let new_args = substitute_args renamings g_args in
+    let new_g_body = List.fold_left (fun acc (v,(t,nv)) ->
+        substitute (AVar(v,t), Var(nv,t)) acc) g_body renamings in 
+    let new_body = substitute (f_arg1, new_g_body) f_body
+    in AssocLambda(new_args, f_arg2, new_body)
 
 (* selective_expr:
  * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
@@ -496,11 +523,22 @@ let nested_map map_f = match map_f with
     | _ -> false
 
 
-(* TODO: flattens! *)
+(* TODO: pairwith2, deep flattens *)
 let rec simplify_collections expr =
     let recur = simplify_collections in
     let fixpoint new_expr = if new_expr = expr then expr else recur new_expr in
     begin match expr with
+    | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
+    | Flatten(Singleton(c)) -> c
+    | Map(map_f, Flatten c) ->
+        let mapf_arg, _ = get_map_parts map_f in
+        let mapf_arg_t = match fst (get_fun_parts mapf_arg) with
+            | AVar(_,t) -> t
+            | ATuple(vt_l) -> TTuple(List.map snd vt_l)
+        in
+        let v,v_t = gen_var_sym(), Collection(Collection(mapf_arg_t))
+        in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
+
     | Map(map_f, (Map(_,_) as rmap)) ->
         if not(selective_expr rmap) then
           let rmap_f, rmap_c = get_map_parts rmap in
@@ -558,19 +596,22 @@ let rec simplify_collections expr =
         let new_agg = Aggregate(recur agg_f, recur init, recur rmap)
         in fixpoint new_agg
 
-    | GroupByAggregate(agg_f,i,gb_f, (Map _ as rmap)) ->
+    | GroupByAggregate((AssocLambda _ as agg_f),i,gb_f, (Map _ as rmap)) ->
         (* TODO: group by function optimizations *)
         (* For now, simply compose rhs map fn with group-by fn. Presumably
          * there are some nested optimizations of such group-bys we can perform
          * just as with aggregates above. *)
         let rmap_f, rmap_c = get_map_parts rmap in
+        let new_agg_f = compose_assoc agg_f rmap_f in
         let new_gb_f = compose gb_f rmap_f
-        in recur (GroupByAggregate(agg_f,i,new_gb_f,rmap_c)) 
+        in recur (GroupByAggregate(new_agg_f,i,new_gb_f,rmap_c)) 
+
 
     | GroupByAggregate(agg_f,i,gb_f,rmap) ->
         let new_gb_agg =
             GroupByAggregate(recur agg_f, recur i, recur gb_f, recur rmap)
         in fixpoint new_gb_agg
+
 
     | Tuple e_l         -> Tuple(List.map recur e_l)
     | Project (ce, idx) -> Project(recur ce, idx)
