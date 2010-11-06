@@ -85,11 +85,19 @@ sig
        (*| External      of ext_fn_id*)
 
     (* K3 methods *)
+    
+    (* Traversal helpers *)
+    val get_branches : expr_t -> expr_t list list
+    val rebuild_expr : expr_t -> expr_t list list -> expr_t
+    val descend_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    
+    (* Tree traversal *)
+    val pre_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    val post_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+
     val fold_expr :
       ('b -> 'a list list -> expr_t -> 'a) ->
       ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
-
-    val rebuild_expr : expr_t -> expr_t list list -> expr_t
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string

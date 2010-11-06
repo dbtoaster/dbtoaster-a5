@@ -116,6 +116,20 @@ sig
 
     (* K3 methods *)
 
+
+    (* Traversal helpers *)
+    val get_branches : expr_t -> expr_t list list
+    val rebuild_expr : expr_t -> expr_t list list -> expr_t
+    val descend_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    
+    (* Tree traversal *)
+
+    (* map: pre- and post-order traversal of an expression tree, applying the
+     * map function at every node
+     *)
+    val pre_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    val post_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+
     (* fold f pre acc init e
      * applies f to each subexpr of e, with both a top-down and bottom-up
      * accumulator (acc, return value respectively), using init as the
@@ -128,8 +142,6 @@ sig
     val fold_expr :
       ('b -> 'a list list -> expr_t -> 'a) ->
       ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
-
-    val rebuild_expr : expr_t -> expr_t list list -> expr_t
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string
@@ -250,118 +262,49 @@ type expr_t =
 
    (*| External      of ext_fn_id*)
 
-let rec map_expr (f : expr_t -> expr_t) (e : expr_t) : expr_t =
-    let rcr = map_expr f in
+
+(* Expression traversal helpers *)
+
+let get_branches (e : expr_t) : expr_t list list =
     begin match e with
-    | Const            c                    -> f e
-    | Var              (id,t)               -> f e
-    | Tuple            e_l                  -> f (Tuple (List.map rcr e_l))
-    | Project          (ce, idx)            -> f (Project (rcr ce, idx))
-    | Singleton        ce                   -> f (Singleton (rcr ce))
-    | Combine          (ce1,ce2)            -> f (Combine (rcr ce1, rcr ce2))
-    | Add              (ce1,ce2)            -> f (Add (rcr ce1, ce2))
-    | Mult             (ce1,ce2)            -> f (Mult (rcr ce1, ce2))
-    | Eq               (ce1,ce2)            -> f (Eq (rcr ce1, ce2))
-    | Neq              (ce1,ce2)            -> f (Neq (rcr ce1, ce2))
-    | Lt               (ce1,ce2)            -> f (Lt (rcr ce1, ce2))
-    | Leq              (ce1,ce2)            -> f (Leq (rcr ce1, ce2))
-    | IfThenElse0      (ce1,ce2)            -> f (IfThenElse0 (rcr ce1, ce2))
-    | IfThenElse       (pe,te,ee)           ->
-        f (IfThenElse (rcr pe, rcr te, rcr ee))
-
-    | Block            e_l                  -> f (Block (List.map rcr e_l))
-    | Iterate          (fn_e, ce)           -> f (Iterate (rcr fn_e, rcr ce))
-    | Lambda           (arg_e,ce)           -> f (Lambda (arg_e, rcr ce))
-    | AssocLambda      (arg1_e,arg2_e,be)   ->
-        f (AssocLambda (arg1_e, arg2_e, rcr be))
-
-    | Apply            (fn_e,arg_e)         -> f (Apply (rcr fn_e, rcr arg_e))
-    | Map              (fn_e,ce)            -> f (Map (rcr fn_e, rcr ce))
-    | Flatten          ce                   -> f (Flatten (rcr ce))
-    | Aggregate        (fn_e,i_e,ce)        ->
-        f (Aggregate (rcr fn_e, rcr i_e, rcr ce))
-    
-    | GroupByAggregate (fn_e,i_e,ge,ce)     ->
-        f (GroupByAggregate (rcr fn_e, rcr i_e, rcr ge, rcr ce))
-
-    | SingletonPC      (id,t)               -> f e
-    | OutPC            (id,outs,t)          -> f e
-    | InPC             (id,ins,t)           -> f e
-    | PC               (id,ins,outs,t)      -> f e
-    
-    | Member           (me,ke)              ->
-        f (Member(rcr me, List.map rcr ke))  
-
-    | Lookup           (me,ke)              ->
-        f (Lookup(rcr me, List.map rcr ke))
-    
-    | Slice            (me,sch,pat_ve)      ->
-        f (Slice(rcr me, sch, List.map (fun (id,e) -> id, rcr e) pat_ve))
-    
-    | PCUpdate         (me,ke,te)           ->
-        f (PCUpdate(rcr me, List.map rcr ke, rcr te))
-    
-    | PCValueUpdate    (me,ine,oute,ve)     ->
-        f (PCValueUpdate(rcr me, List.map rcr ine, List.map rcr oute, rcr ve))
-    (*| External         efn_id               -> f e *)
+    | Const            c                    -> []
+    | Var              (id,t)               -> []
+    | Tuple            e_l                  -> [e_l]
+    | Project          (ce, idx)            -> [[ce]]
+    | Singleton        ce                   -> [[ce]]
+    | Combine          (ce1,ce2)            -> [[ce1];[ce2]]
+    | Add              (ce1,ce2)            -> [[ce1];[ce2]]
+    | Mult             (ce1,ce2)            -> [[ce1];[ce2]]
+    | Eq               (ce1,ce2)            -> [[ce1];[ce2]]
+    | Neq              (ce1,ce2)            -> [[ce1];[ce2]]
+    | Lt               (ce1,ce2)            -> [[ce1];[ce2]]
+    | Leq              (ce1,ce2)            -> [[ce1];[ce2]]
+    | IfThenElse0      (ce1,ce2)            -> [[ce1];[ce2]]
+    | IfThenElse       (pe,te,ee)           -> [[pe];[te];[ee]]
+    | Block            e_l                  -> [e_l]
+    | Iterate          (fn_e, ce)           -> [[fn_e];[ce]]
+    | Lambda           (arg_e,ce)           -> [[ce]]
+    | AssocLambda      (arg1_e,arg2_e,be)   -> [[be]]
+    | Apply            (fn_e,arg_e)         -> [[fn_e];[arg_e]]
+    | Map              (fn_e,ce)            -> [[fn_e];[ce]]
+    | Flatten          ce                   -> [[ce]]
+    | Aggregate        (fn_e,i_e,ce)        -> [[fn_e];[i_e];[ce]]
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> [[fn_e];[i_e];[ge];[ce]]
+    | SingletonPC      (id,t)               -> []
+    | OutPC            (id,outs,t)          -> []
+    | InPC             (id,ins,t)           -> []
+    | PC               (id,ins,outs,t)      -> []
+    | Member           (me,ke)              -> [[me];ke]  
+    | Lookup           (me,ke)              -> [[me];ke]
+    | Slice            (me,sch,pat_ve)      -> [[me];List.map snd pat_ve]
+    | PCUpdate         (me,ke,te)           -> [[me];ke;[te]]
+    | PCValueUpdate    (me,ine,oute,ve)     -> [[me];ine;oute;[ve]]
+    (*| External         efn_id               -> [] *)
     end
 
-(* Arguments:
- * -- f, a folding function to be applied at every AST node
- * -- g, a combiner for states accumulated at an internal node
- * -- init, initial state at every leaf node
- * Notes: given a fold function f, this fold does not thread the accumulator
- * through every AST node. Rather it applies f with initial value at the leaves
- * and uses a second function g to combine accumulated state at internal nodes
- *)
-let rec fold_expr (f : 'b -> 'a list list -> expr_t -> 'a)
-                  (pre : 'b -> expr_t -> 'b)
-                  (acc : 'b)
-                  (init : 'a)
-                  (e: expr_t) : 'a =
-    let nacc = pre acc e in
-    let app_f = f nacc in
-    let recur = fold_expr f pre nacc init in
-    let sub ll = List.map (fun l -> List.map recur l) ll in
-    begin match e with
-    | Const            c                    -> app_f [[init]] e
-    | Var              (id,t)               -> app_f [[init]] e
-    | Tuple            e_l                  -> app_f (sub [e_l]) e
-    | Project          (ce, idx)            -> app_f [[(recur ce)]] e
-    | Singleton        ce                   -> app_f [[(recur ce)]] e
-    | Combine          (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Add              (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Mult             (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Eq               (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Neq              (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Lt               (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | Leq              (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | IfThenElse0      (ce1,ce2)            -> app_f (sub [[ce1];[ce2]]) e
-    | IfThenElse       (pe,te,ee)           -> app_f (sub [[pe];[te];[ee]]) e
-    | Block            e_l                  -> app_f (sub [e_l]) e
-    | Iterate          (fn_e, ce)           -> app_f (sub [[fn_e]; [ce]]) e
-    | Lambda           (arg_e,ce)           -> app_f [[(recur ce)]] e
-    | AssocLambda      (arg1_e,arg2_e,be)   -> app_f [[(recur be)]] e
-    | Apply            (fn_e,arg_e)         -> app_f (sub [[fn_e];[arg_e]]) e
-    | Map              (fn_e,ce)            -> app_f (sub [[fn_e];[ce]]) e
-    | Flatten          ce                   -> app_f [[(recur ce)]] e
-    | Aggregate        (fn_e,i_e,ce)        -> app_f (sub [[fn_e]; [i_e]; [ce]]) e
-    | GroupByAggregate (fn_e,i_e,ge,ce)     -> app_f (sub [[fn_e]; [i_e]; [ge]; [ce]]) e
-    | SingletonPC      (id,t)               -> app_f [[init]] e
-    | OutPC            (id,outs,t)          -> app_f [[init]] e
-    | InPC             (id,ins,t)           -> app_f [[init]] e
-    | PC               (id,ins,outs,t)      -> app_f [[init]] e
-    | Member           (me,ke)              -> app_f (sub ([me]::[ke])) e  
-    | Lookup           (me,ke)              -> app_f (sub ([me]::[ke])) e
-    | Slice            (me,sch,pat_ve)      -> app_f (sub ([me]::[(List.map snd pat_ve)])) e
-    | PCUpdate         (me,ke,te)           -> app_f (sub ([[me];ke;[te]])) e
-    | PCValueUpdate    (me,ine,oute,ve)     -> app_f (sub ([[me];ine;oute;[ve]])) e
-    (*| External         efn_id               -> app_f init e *)
-    end
-
-(* Helper for fold to reconstruct the tree when the bottom accumulator are
- * K3 expressions themselves. This enables implementing stateful expression
- * mappings as folds
+(* Tree reconstruction, given a list of branches.
+ * This can be used with fold_expr above with the bottom-up accumulator
+ * as expressions, to enable stateful expression mappings.
  * Note we ignore the parts for base terms: here parts is assumed to be
  * some dummy value. *)
 let rebuild_expr e (parts : expr_t list list) =
@@ -373,7 +316,7 @@ let rebuild_expr e (parts : expr_t list list) =
     let ssnd () = List.hd (snd()) in
     let sthd () = List.hd (thd()) in
     let sfth () = List.hd (fth()) in
-    match e with
+    begin match e with
     | Const            c                    -> e
     | Var              (id,t)               -> e
     | Tuple            e_l                  -> Tuple(fst())
@@ -408,6 +351,83 @@ let rebuild_expr e (parts : expr_t list list) =
     | PCUpdate         (me,ke,te)           -> PCUpdate(sfst(), snd(), sthd())
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(sfst(),snd(),thd(),sfth())
     (*| External         efn_id               -> sfst() *)
+    end
+
+(* Apply a function to all its children *)
+let descend_expr (f : expr_t -> expr_t) e =
+    begin match e with
+    | Const            c                    -> e
+    | Var              (id,t)               -> e
+    | Tuple            e_l                  -> Tuple (List.map f e_l)
+    | Project          (ce, idx)            -> Project (f ce, idx)
+    | Singleton        ce                   -> Singleton (f ce)
+    | Combine          (ce1,ce2)            -> Combine (f ce1, f ce2)
+    | Add              (ce1,ce2)            -> Add (f ce1, f ce2)
+    | Mult             (ce1,ce2)            -> Mult (f ce1, f ce2)
+    | Eq               (ce1,ce2)            -> Eq (f ce1, f ce2)
+    | Neq              (ce1,ce2)            -> Neq (f ce1, f ce2)
+    | Lt               (ce1,ce2)            -> Lt (f ce1, f ce2)
+    | Leq              (ce1,ce2)            -> Leq (f ce1, f ce2)
+    | IfThenElse0      (ce1,ce2)            -> IfThenElse0 (f ce1, f ce2)
+    | IfThenElse       (pe,te,ee)           -> IfThenElse (f pe, f te, f ee)
+    | Block            e_l                  -> Block (List.map f e_l)
+    | Iterate          (fn_e, ce)           -> Iterate (f fn_e, f ce)
+    | Lambda           (arg_e,ce)           -> Lambda (arg_e, f ce)
+    | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda (arg1_e, arg2_e, f be)
+    | Apply            (fn_e,arg_e)         -> Apply (f fn_e, f arg_e)
+    | Map              (fn_e,ce)            -> Map (f fn_e, f ce)
+    | Flatten          ce                   -> Flatten (f ce)
+    | Aggregate        (fn_e,i_e,ce)        -> Aggregate (f fn_e, f i_e, f ce)    
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> GroupByAggregate (f fn_e, f i_e, f ge, f ce)
+    | SingletonPC      (id,t)               -> e
+    | OutPC            (id,outs,t)          -> e
+    | InPC             (id,ins,t)           -> e
+    | PC               (id,ins,outs,t)      -> e
+    | Member           (me,ke)              -> Member(f me, List.map f ke)  
+    | Lookup           (me,ke)              -> Lookup(f me, List.map f ke)
+    | Slice            (me,sch,pat_ve)      -> Slice(f me, sch, List.map (fun (id,e) -> id, f e) pat_ve)
+    | PCUpdate         (me,ke,te)           -> PCUpdate(f me, List.map f ke, f te)
+    | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, List.map f ine, List.map f oute, f ve)
+    (*| External         efn_id               -> e *)
+    end
+
+
+(* Map: pre- and post-order traversal of an expression tree, applying the
+ * map function at every node *)
+let rec pre_map_expr (f : expr_t -> expr_t) (e : expr_t) : expr_t =
+    descend_expr (pre_map_expr f) (f e)
+
+let rec post_map_expr (f : expr_t -> expr_t) (e : expr_t) : expr_t =
+    f (descend_expr (post_map_expr f) e)
+
+(* A fold function that supports both bottom-up and top-down accumulation.
+ * Arguments:
+ * -- f, a folding function to be applied at every AST node. This function
+ *    should accept top-down accumulations, a branch-based list of bottom-up
+ *    accumulations and an expression. It should yield a bottom-up accumulation
+ *    for this expression.
+ * -- pre, a function that computes top-down state to pass to a recursive
+ *    invocation of fold on a child. It accepts a parent expression.
+ * -- acc, accumulated state from parents
+ * -- init, initial bottom-up state at every leaf node
+ *)
+let rec fold_expr (f : 'b -> 'a list list -> expr_t -> 'a)
+                  (pre : 'b -> expr_t -> 'b)
+                  (acc : 'b) (init : 'a) (e: expr_t) : 'a =
+    let nacc = pre acc e in
+    let app_f = f nacc in
+    let recur = fold_expr f pre nacc init in
+    let sub ll = List.map (fun l -> List.map recur l) ll in
+    begin match e with
+    | Const            c                    -> app_f [[init]] e
+    | Var              (id,t)               -> app_f [[init]] e
+    | SingletonPC      (id,t)               -> app_f [[init]] e
+    | OutPC            (id,outs,t)          -> app_f [[init]] e
+    | InPC             (id,ins,t)           -> app_f [[init]] e
+    | PC               (id,ins,outs,t)      -> app_f [[init]] e
+    (*| External         efn_id               -> app_f [[init]] e *)
+    | _ -> app_f (sub (get_branches e)) e
+    end
 
 
 (* Stringification *)

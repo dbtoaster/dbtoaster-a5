@@ -188,6 +188,47 @@ let build_cross le (re,rsch) =
 let build_nway_cross e_sch_l =
     List.fold_left build_cross (fst (List.hd e_sch_l)) (List.tl e_sch_l);;
 
+(************************
+ * Lifting ifs
+ ************************)
+let zero = Const (CFloat 0.0);;
+let one = Const (CFloat 1.0);;
+let n f = Const (CFloat f);;
+let c_01_if = IfThenElse(Leq(zero, one), zero, one);;
+let c_23_if = IfThenElse(Leq(n 2.0, n 3.0), n 2.0, n 3.0);;
+ 
+test_optimizer "lift-ifs 1.0" (lift_ifs [] zero) zero;;
+
+test_optimizer "lift-ifs (if 0 < 1 then 0 else 1)" (lift_ifs [] c_01_if) c_01_if;;
+
+let if_tuple = Tuple([c_01_if]) in
+let r = IfThenElse(Leq(zero,one), Tuple([zero]), Tuple([one])) in
+test_optimizer "lift-ifs Tuple(01-if)" (lift_ifs [] if_tuple) r;;
+
+let if_tuple = Tuple([c_01_if; c_23_if]) in
+let inner v =
+    IfThenElse(Leq(n 2.0, n 3.0), Tuple([v;n 2.0]), Tuple([v; n 3.0])) in
+let r = IfThenElse(Leq(zero,one), inner zero, inner one) in
+test_optimizer "lift-ifs Tuple(01-if, 23-if)" (lift_ifs [] if_tuple) r;;
+
+
+let lambda_if = Lambda(AVar("x",TFloat), c_01_if) in
+let r = IfThenElse(Leq(zero,one),
+    Lambda(AVar("x", TFloat), zero), Lambda(AVar("x", TFloat), one))
+in
+test_optimizer "lift-ifs independent: lambda x.c_01_if"
+  (lift_ifs [] lambda_if) r;;
+
+let lambda_if = Lambda(AVar("x",TFloat),
+    IfThenElse(Leq(Var("x",TFloat),n 100.0), Var("x",TFloat), one)) in
+test_optimizer "lift-ifs dependent: lambda x. x<100 ? x:1"
+  (lift_ifs [] lambda_if) lambda_if;;
+
+
+(***********************
+ * SR optimizations
+ ***********************)
+
 (* Example expressions *)
 let sch1 = ["a", TFloat; "b", TFloat];;
 let m1_sch = sch1@["v1",TFloat];;
@@ -258,7 +299,7 @@ test_optimizer "simplify 3-way join = 3-way cross product"
 
 (* TODO: aggregation simplification tests *)
 
-(*
+
 (**************************
  * K3 Interpreter tests
  **************************)
@@ -580,12 +621,12 @@ let compile_to_k3 fname =
   let (schema, m3prog) = (fst (compile_sql_file_to_m3 fname)) in
   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
   let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns
-  in List.map (fun (_,_,_,stmtl) ->
-       List.map (fun (_,e) -> simplify_collections e) stmtl) trigs
+  in List.map (fun (_,_,trig_args,stmtl) ->
+       List.map (fun (_,e) -> simplify_collections (lift_ifs trig_args e))
+         stmtl) trigs
   (*
   m3ptrigs
   *)
 ;;
 
-compile_to_k3 "test/sql/vwap.sql";;
-*)
+compile_to_k3 "test/sql/rst.sql";;

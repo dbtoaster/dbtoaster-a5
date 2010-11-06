@@ -412,6 +412,15 @@ let get_arg_vars_w_types a = match a with
 
 let get_fun_vars e = get_arg_vars (fst (get_fun_parts e))
 
+let get_bindings e = match e with
+    | Lambda(x,_) -> get_arg_vars x
+    | AssocLambda(x,y,_) -> (get_arg_vars x)@(get_arg_vars y)
+    | _ -> []
+
+let get_if_parts e = match e with
+    | IfThenElse(pe,te,ee) -> pe,te,ee
+    | _ -> failwith "invalid IfThenElse"
+
 (* TODO: for all these collection accessors, extract an rhs collection if it's
  * masked by an IfThenElse yet the underlying collection beneath both branches
  * is the same. *)
@@ -430,6 +439,18 @@ let get_gb_agg_parts e = match e with
         agg_f, init, gb_f, (unmask agg_c)
     | _ -> failwith "invalid group by aggregation"
 
+
+let get_free_vars e bindings =
+    let add_binding bindings e = match e with
+        | Lambda(arg_e,_) -> bindings@(get_arg_vars arg_e)
+        | AssocLambda(arg1_e,arg2_e,_) ->
+            bindings@(get_arg_vars arg1_e)@(get_arg_vars arg2_e)
+        | _ -> bindings
+    in
+    let is_free_var bindings bu_acc e = match e with
+        | Var(id,_) -> if not(List.mem id bindings) then [id] else []
+        | _ -> List.flatten (List.flatten bu_acc)
+    in fold_expr is_free_var add_binding bindings [] e
 
 (* substitute *)
 let substitute_args renamings arg =
@@ -522,11 +543,108 @@ let nested_map map_f = match map_f with
     | Lambda(_,Map _) -> true
     | _ -> false
 
+(* Performs dependency tests at lambda-if boundaries *)
+(* Avoids spinning on reordering at if-chains
+ * -- if-reordering-spinning can be an arbitrarily deep problem, thus
+ *    no pattern can match it (i.e. if we prevent an n-level reorder spin,
+ *    we can still spin on a n+1-level if-chain)
+ * -- the correct way to detect this is based on dependency sets of
+ *    if-stmts, and only lift nested ifs when they have a strictly simpler
+ *    dependency set.
+ * -- a dependency set is the intersection of the bound variables, and
+ *    variables used in the if's predicate. Thus we need to pass along
+ *    bound variables, i.e. trigger vars and variables bound by lambdas.
+ *)
+let rec lift_ifs bindings expr =
+    let lift_branches e =
+        let rec expand_children acc_branches rem_branches
+                                (branch : expr_t list) acc_branch : expr_t =
+            let recex = expand_children acc_branches rem_branches in
+            begin match branch with
+            | [] -> expand_branch (acc_branches@[acc_branch]) rem_branches
+            | h::t ->
+                begin match h with
+                | IfThenElse(pe,te,ee) ->  
+	                let pe,te,ee = get_if_parts h in
+	                let tev = recex t (acc_branch@[te]) in
+	                let eev = recex t (acc_branch@[ee])
+	                in IfThenElse(pe,tev,eev)
+                | _ -> recex t (acc_branch@[h])
+                end
+            end
+        and expand_branch (acc_branches : expr_t list list)
+                          (rem_branches : expr_t list list) : expr_t =
+            match rem_branches with
+            | [] -> rebuild_expr e acc_branches
+            | h::t -> expand_children acc_branches t h []
+        in expand_branch [] (get_branches e) 
+    in
+    (* returns existing bindings (i.e. those passed to lift-ifs) used by e *)
+    let get_dependencies e = 
+        let vars = get_free_vars e [] in Util.ListAsSet.inter vars bindings
+    in
+    (* returns if d1 is a strict subset of d2 *)  
+    let simpler_dependencies pe pe2 =
+        let d1 = get_dependencies pe in
+        let d2 = get_dependencies pe2 in
+        (Util.ListAsSet.subset d1 d2) && not(Util.ListAsSet.subset d2 d1)
+    in
+    (* if expression is dependent on arg, returns new bindings, otherwise nothing *)
+    let arg_uses arg_l e =
+        let vars = get_free_vars e [] in
+        let bindings = List.flatten (List.map get_arg_vars arg_l) in
+        if Util.ListAsSet.inter bindings vars = []
+        then Util.ListAsSet.no_duplicates bindings else [] 
+    in
+    (* returns expression * new bindings *)
+    let simplify e =
+        begin match e with
+        | Lambda(arg_e, IfThenElse(pe,te,ee)) ->
+            (* if pe is not dependent on arg_e, lift, otherwise nop *)
+            let new_bindings = arg_uses [arg_e] pe in
+            let new_e =
+                if new_bindings = [] then e
+                else IfThenElse(pe, Lambda(arg_e, te), Lambda(arg_e, ee))
+            in (new_e, new_bindings)
+
+        | AssocLambda(arg1_e,arg2_e,IfThenElse(pe,te,ee)) ->
+            let new_bindings = arg_uses [arg1_e; arg2_e] pe in
+            let new_e =
+                if new_bindings = [] then e
+                else IfThenElse(pe, AssocLambda(arg1_e,arg2_e,te),
+                                    AssocLambda(arg1_e,arg2_e,te))
+            in (new_e, new_bindings)
+
+        (* For if-chains, we just want the next level to have the same
+         * predicate. *)
+        | IfThenElse(pe,te,ee) ->
+            begin match (te,ee) with
+            | IfThenElse(pe2,te2,ee2), IfThenElse(pe3,te3,ee3) when pe2=pe3 ->
+                if simpler_dependencies pe2 pe then
+                    let new_sub_e2 = IfThenElse(pe, te2, ee2) in
+                    let new_sub_e3 = IfThenElse(pe, te3, ee3) 
+                    in (IfThenElse(pe2, new_sub_e2, new_sub_e3), [])
+                else (descend_expr (lift_ifs bindings) e,[])
+            | _ -> (descend_expr (lift_ifs bindings) e,[])
+            end
+        | _ ->
+            let new_bindings = get_bindings e in
+            let r = lift_branches expr in
+            (* if children have no ifs, descend and try w/ grandchildren *)
+            if r <> expr then (r, [])
+            else (descend_expr (lift_ifs (bindings@new_bindings)) expr, new_bindings) 
+        end
+    in
+    let fixpoint old_expr (new_expr, new_bindings) =
+        if old_expr = new_expr then new_expr
+        else lift_ifs (bindings@new_bindings) new_expr
+    in fixpoint expr (simplify expr)     
+
 
 (* TODO: pairwith2, deep flattens *)
 let rec simplify_collections expr =
     let recur = simplify_collections in
-    let fixpoint new_expr = if new_expr = expr then expr else recur new_expr in
+    let simplify expr =
     begin match expr with
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
@@ -539,21 +657,10 @@ let rec simplify_collections expr =
         let v,v_t = gen_var_sym(), Collection(Collection(mapf_arg_t))
         in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
 
-    | Map(map_f, (Map(_,_) as rmap)) ->
-        if not(selective_expr rmap) then
-          let rmap_f, rmap_c = get_map_parts rmap in
-          let new_map_f = compose map_f rmap_f
-          in recur (Map(new_map_f, rmap_c))
-        else
-            (* recur, and if no change, finish, i.e. top-down fixpoint. *)
-            let new_rmap = recur rmap in
-            let new_map_f = recur map_f in
-            if new_rmap = rmap && new_map_f = map_f then expr
-            else recur (Map(new_map_f, new_rmap))
-
-    | Map(map_f, rmap) ->
-        let new_map = Map(recur map_f, recur rmap)
-        in fixpoint new_map
+    | Map(map_f, (Map(_,_) as rmap)) when not(selective_expr rmap) ->
+        let rmap_f, rmap_c = get_map_parts rmap in
+        let new_map_f = compose map_f rmap_f
+        in Map(new_map_f, rmap_c)
 
     | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
 
@@ -587,14 +694,10 @@ let rec simplify_collections expr =
             in
             let new_rmapf = Lambda(rmapf_args, new_rmapf_body) in
             let new_agg_f = compose_assoc agg_f new_rmapf
-            in recur (Aggregate(new_agg_f, init, rmap_c))
+            in Aggregate(new_agg_f, init, rmap_c)
         else
-            let new_agg_f = compose_assoc agg_f rmap_f in
-            recur (Aggregate(new_agg_f, init, rmap_c))
-
-    | Aggregate(agg_f,init,rmap) ->
-        let new_agg = Aggregate(recur agg_f, recur init, recur rmap)
-        in fixpoint new_agg
+            let new_agg_f = compose_assoc agg_f rmap_f
+            in Aggregate(new_agg_f, init, rmap_c)
 
     | GroupByAggregate((AssocLambda _ as agg_f),i,gb_f, (Map _ as rmap)) ->
         (* TODO: group by function optimizations *)
@@ -604,42 +707,13 @@ let rec simplify_collections expr =
         let rmap_f, rmap_c = get_map_parts rmap in
         let new_agg_f = compose_assoc agg_f rmap_f in
         let new_gb_f = compose gb_f rmap_f
-        in recur (GroupByAggregate(new_agg_f,i,new_gb_f,rmap_c)) 
+        in GroupByAggregate(new_agg_f,i,new_gb_f,rmap_c) 
 
+    | _ -> descend_expr recur expr
 
-    | GroupByAggregate(agg_f,i,gb_f,rmap) ->
-        let new_gb_agg =
-            GroupByAggregate(recur agg_f, recur i, recur gb_f, recur rmap)
-        in fixpoint new_gb_agg
-
-
-    | Tuple e_l         -> Tuple(List.map recur e_l)
-    | Project (ce, idx) -> Project(recur ce, idx)
-    | Singleton ce      -> Singleton (recur ce)
-    | Combine (ce1,ce2) -> Combine(recur ce1, recur ce2)
-    | Add (ce1,ce2)     -> Add(recur ce1, recur ce2)
-    | Mult (ce1,ce2)    -> Mult(recur ce1, recur ce2)
-    | Eq (ce1,ce2)      -> Eq(recur ce1, recur ce2)
-    | Neq (ce1,ce2)     -> Neq(recur ce1, recur ce2)
-    | Lt (ce1,ce2)      -> Lt(recur ce1, recur ce2)
-    | Leq (ce1,ce2)     -> Leq(recur ce1, recur ce2)
-    | IfThenElse0 (ce1,ce2) -> IfThenElse0(recur ce1, recur ce2)
-    | IfThenElse (pe,te,ee) -> IfThenElse(recur pe, recur te, recur ee)
-    | Block e_l             -> Block(List.map recur e_l)
-    | Iterate (fn_e, ce)    -> Iterate(recur fn_e, recur ce)
-    | Lambda (arg_e,ce)     -> Lambda (arg_e,recur ce)
-    | AssocLambda (arg1_e,arg2_e,be)   -> AssocLambda(arg1_e,arg2_e,recur be)
-    
-    | Apply (fn_e,arg_e)    -> Apply(recur fn_e, recur arg_e)
-    | Member (me,ke)        -> Member(recur me, List.map recur ke)  
-    | Lookup (me,ke)        -> Lookup(recur me, List.map recur ke)
-    | Slice (me,sch,pat_ve) ->
-        Slice(recur me,sch,List.map (fun (id,e) -> id,recur e) pat_ve)
-    
-    | PCUpdate (me,ke,te) -> PCUpdate(recur me, List.map recur ke, recur te)
-    | PCValueUpdate (me,ine,oute,ve) ->
-        PCValueUpdate(recur me,
-          List.map recur ine, List.map recur oute, recur ve)
-
-    | _ -> expr
     end
+    in 
+    (* Fixpoint *)
+    let fixpoint expr new_expr =
+        if new_expr = expr then expr else recur new_expr
+    in fixpoint expr (simplify expr)
