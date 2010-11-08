@@ -2,7 +2,6 @@
 require 'getoptlong';
 require 'logger';
 require 'thread';
-require 'pty';
 require 'util/ok_mixins';
 require 'slicer/remotemanager';
 
@@ -54,7 +53,7 @@ class SlicerNodeHandler
     Thread.new(cmd, @monitor_intake) do |cmd, output|
       begin
         debug { "Spawning: #{cmd}" }
-        PTY.spawn(cmd) do |stdin, stdout, pid|
+        posix_spawn(cmd) do |stdin, stdout, pid|
           debug { "Starting process pid #{pid}" }
           at_exit { debug { "Killing #{cmd}" }; Process.kill("KILL", pid) };
           stdin.each { |line| output.push([:data, line]); }
