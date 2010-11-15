@@ -469,7 +469,10 @@ let substitute (arg_to_sub, sub_expr) expr =
         | ATuple(vt_l) ->
             begin match sub_expr with
             | Tuple(t) -> List.map2 (fun (v,_) e -> v,e) vt_l t
-            | _ -> failwith "invalid tuple binding"
+            | IfThenElse(p,Tuple(tt),Tuple(et)) ->
+                let tef = List.combine tt et in
+                List.map2 (fun (v,_) (t,e) -> v,IfThenElse(p,t,e)) vt_l tef
+            | _ -> failwith ("invalid tuple binding: "^(string_of_expr sub_expr)) 
             end
     in
     (* Remove vars from substitutions when descending through lambdas
@@ -506,11 +509,19 @@ let compose_assoc assoc_f g =
     in
     let renamings =
         List.map (fun (v,t) -> (v,(t,gen_var_sym()))) collisions in
+    let new_args = substitute_args renamings f_arg2 in
+    let new_f_body =
+        let non_coll_f_body = List.fold_left (fun acc (v,(t,nv)) ->
+          substitute (AVar(v,t), Var(nv,t)) acc) f_body renamings
+        in substitute (f_arg1, g_body) non_coll_f_body
+    in AssocLambda(g_args, new_args, new_f_body)
+(*
     let new_args = substitute_args renamings g_args in
     let new_g_body = List.fold_left (fun acc (v,(t,nv)) ->
         substitute (AVar(v,t), Var(nv,t)) acc) g_body renamings in 
     let new_body = substitute (f_arg1, new_g_body) f_body
     in AssocLambda(new_args, f_arg2, new_body)
+*)
 
 (* selective_expr:
  * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
@@ -542,6 +553,20 @@ let selective_expr expr =
 let nested_map map_f = match map_f with
     | Lambda(_,Map _) -> true
     | _ -> false
+
+let rec inline_collection_functions substitutions expr =
+  let recur = inline_collection_functions in
+  let rebind subs vt arg =
+    let ns = if List.mem_assoc vt subs then List.remove_assoc vt subs else subs
+    in (vt,arg)::ns
+  in
+  begin match expr with
+  | Apply(Lambda(AVar(v, ((Collection _) as t)), body), arg) ->
+    descend_expr (recur (rebind substitutions (v,t) arg)) body
+  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
+                then List.assoc (v,t) substitutions else expr
+  | _ -> descend_expr (recur substitutions) expr
+  end
 
 (* Performs dependency tests at lambda-if boundaries *)
 (* Avoids spinning on reordering at if-chains
@@ -620,7 +645,8 @@ let rec lift_ifs bindings expr =
         | IfThenElse(pe,te,ee) ->
             begin match (te,ee) with
             | IfThenElse(pe2,te2,ee2), IfThenElse(pe3,te3,ee3) when pe2=pe3 ->
-                if simpler_dependencies pe2 pe then
+                if pe = pe2 then (IfThenElse(pe,te2,ee3), [])
+                else if simpler_dependencies pe2 pe then
                     let new_sub_e2 = IfThenElse(pe, te2, ee2) in
                     let new_sub_e3 = IfThenElse(pe, te3, ee3) 
                     in (IfThenElse(pe2, new_sub_e2, new_sub_e3), [])

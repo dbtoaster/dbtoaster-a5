@@ -107,7 +107,12 @@ let compile_triggers trigs : code_t list =
   List.map (fun (event, rel, args, cs) ->
       let stmts = List.map compile_k3_expr
         (List.map (fun (_,e) ->
-            simplify_collections (lift_ifs args e)) cs) 
+            let optimize e = simplify_collections 
+                (lift_ifs args (inline_collection_functions [] e)) in
+            let rec fixpoint e =
+                let new_e = optimize e in
+                if e = new_e then e else fixpoint new_e    
+            in fixpoint e) cs) 
       in trigger event rel args stmts)
     trigs
 

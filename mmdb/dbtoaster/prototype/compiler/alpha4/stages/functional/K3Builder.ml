@@ -246,8 +246,8 @@ and m3rhs_to_expr lhs_outv paggcalc : expr_t =
     let rhs_expr = calc_to_expr ecalc in
     let init_val = Const(CFloat(0.0)) in
     let agg_fn = bind_for_aggregate
-        ((args_of_vars rhs_outv)@["v1",TFloat]) ("v2",TFloat)
-        (Add(Var("v1", TFloat), Var("v2", TFloat)))
+        ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
+        (Add(Var("v", TFloat), Var("accv", TFloat)))
     in
     if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then

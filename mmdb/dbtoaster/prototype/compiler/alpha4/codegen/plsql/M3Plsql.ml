@@ -65,9 +65,11 @@
  * TODO: support functional conditionals, enabling functional map lookups
  *)
 
+open Util
+open SourceCode
+
 open M3
 open M3Common.Patterns
-open Util
 
 (* Use sources to get standard adaptor parameters *)
 open Sources
@@ -81,76 +83,29 @@ type op_t = string
 
 type bindings = string list
 
-type basic_code_t = Lines of string list | Inline of string
-
 type code_t =
     W of (code_t list -> code_t list) (* nesting wrapper code *)
-  | F of basic_code_t
-  | U of (basic_code_t * basic_code_t) (* nested code, post code *)
-  | V of basic_code_t * string (* code, return value *)
+  | F of source_code_t
+  | U of (source_code_t * source_code_t) (* nested code, post code *)
+  | V of source_code_t * string (* code, return value *)
   | B of string * code_t list (* var to be bound before code *)
 
-type source_impl_t = basic_code_t
+type source_impl_t = source_code_t
 
 type debug_code_t = code_t
 type db_t = string
     
-(* Basic code helpers *)
-let indent_width = 4
-let stmt_delimiter = ";"
-let tab = String.make indent_width ' '
-
+(* Source code stringification aliases *)
 let inl x = Inline x
-
-let string_of_basic_code bc =
-  begin match bc with
-  | Lines l -> String.concat "\n" l
-  | Inline i -> i
-  end
-
-let concat_basic_code a b =
-  begin match a,b with
-  | Lines l, Lines l2 -> Lines(l@l2)
-  | Lines l, Inline i -> Lines(l@[i])
-  | Inline i, Lines l -> Lines(i::l)
-  | Inline i, Inline i2 -> Inline(i^i2)  
-  end
-
-let empty_basic_code bc = bc = Lines([]) || bc = Inline("")
-
-let delim_basic_code delim bc =
-  begin match bc with
-    | Lines (l) ->
-      let x = List.rev l in
-      Lines(List.rev (((List.hd x)^delim)::(List.tl x)))
-    | Inline (i) ->
-      if delim = stmt_delimiter then Lines [i^delim]
-      else Inline(i^delim)
-  end
-
-let concat_and_delim_basic_code delim a b =
-  concat_basic_code (delim_basic_code delim a) b
-
-let concat_and_delim_basic_code_list ?(final=false) ?(delim="") bcl =
-  if bcl = [] then inl("") else
-    let r = List.fold_left (concat_and_delim_basic_code delim)
-                 (List.hd bcl) (List.tl bcl)
-    in if final then delim_basic_code delim r else r
-
-let indent_basic_code s bc = begin match bc with
-  | Lines l -> Lines(List.map (fun a -> s^a) l)
-  | Inline i -> inl(s^i)
-  end
-
 let inline_var_list sl = List.map (fun x -> inl x) sl
  
-let sbc = string_of_basic_code
-let cbc = concat_basic_code
-let ebc = empty_basic_code
-let dbc = delim_basic_code
-let cdbc = concat_and_delim_basic_code
-let cbcl = concat_and_delim_basic_code_list
-let ibc = indent_basic_code
+let sbc = string_of_source_code
+let cbc = concat_source_code
+let ebc = empty_source_code
+let dbc = delim_source_code
+let cdbc = concat_and_delim_source_code
+let cbcl = concat_and_delim_source_code_list
+let ibc = indent_source_code
 let ivl = inline_var_list
 
 let rec string_of_code c = match c with
@@ -260,14 +215,14 @@ let sequence ?(final=false) ?(delim=stmt_delimiter) cl =
 
 let assign lv rv = inl(lv^" := "^(sbc rv))
 
-let ucond p t : basic_code_t = cbcl
+let ucond p t : source_code_t = cbcl
   ([Lines ["if "^(sbc p)^" then"]; indent t; Lines["end if"]])
 
-let scond p t e : basic_code_t =
+let scond p t e : source_code_t =
   inl ("if "^(sbc p)^" then "^(sbc t)^
       (if ebc e then " end if" else " else "^(sbc e)^" end if"))
 
-let cond p t e : basic_code_t = cbcl
+let cond p t e : source_code_t = cbcl
   ([Lines ["if "^(sbc p)^" then"]; indent t;]@
   (if ebc e then [Lines ["end if"]]
    else [Lines ["else "]; indent e; Lines["end if"]]))

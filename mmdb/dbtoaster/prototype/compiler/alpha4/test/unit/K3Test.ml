@@ -617,16 +617,44 @@ let compile_sql_file_to_m3 fname =
   in (m3_prog, sources)
 ;;
 
-let compile_to_k3 fname =
+let compile_aux aux_f fname =
   let (schema, m3prog) = (fst (compile_sql_file_to_m3 fname)) in
   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
   let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns
   in List.map (fun (_,_,trig_args,stmtl) ->
-       List.map (fun (_,e) -> simplify_collections (lift_ifs trig_args e))
+       List.map (fun (_,e) -> aux_f trig_args e)
          stmtl) trigs
   (*
   m3ptrigs
   *)
 ;;
 
-compile_to_k3 "test/sql/rst.sql";;
+let compile_to_k3 = compile_aux (fun _ e -> e);;
+
+let compile_to_k3_opt = compile_aux
+  (fun trig_args e ->
+    (*simplify_collections (lift_ifs trig_args e)*)
+    (*lift_ifs trig_args (inline_collection_functions [] e)*)
+    let optimize e =
+      simplify_collections 
+        (lift_ifs trig_args (inline_collection_functions [] e)) 
+    in
+    let rec fixpoint e =
+      let new_e = optimize e in
+      if e = new_e then e else fixpoint new_e    
+    in fixpoint e);;
+
+
+module K3S = K3Compiler.Make(K3Plsql.CG);;
+open K3Plsql.CG;;
+
+let compile_to_k3sql fname = 
+  List.map (fun stmtl ->
+      List.map (fun e -> ssc (source_code_of_code (linearize_code (K3S.compile_k3_expr e)))) stmtl)
+    (compile_to_k3_opt fname);;
+
+compile_to_k3sql "test/sql/vwap.sql";;
+(*
+compile_to_k3_opt "test/sql/vwap.sql";;
+*)
+

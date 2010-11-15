@@ -31,8 +31,10 @@ SOURCE = \
 	lib/ocaml/StandardAdaptors.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
+	codegen/SourceCode.ml \
 	codegen/plsql/M3Plsql.ml \
-	codegen/ocaml/K3Interpreter.ml
+	codegen/ocaml/K3Interpreter.ml \
+	codegen/plsql/K3Plsql.ml \
 
 HEADER_ONLY_SOURCE = \
 	stages/maps/M3Codegen.mli \
@@ -118,6 +120,7 @@ INCLUDE_DIR = \
 	-I stages/maps/ \
 	-I stages/functional/ \
 	-I codegen/ocaml/ \
+	-I codegen/ \
 	-I codegen/plsql/ \
 	-I parser/ \
 	-I lib/ocaml
