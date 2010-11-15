@@ -116,7 +116,8 @@ let compile_triggers trigs : code_t list =
       in trigger event rel args stmts)
     trigs
 
-let compile_query (((schema,m3prog) : M3.prog_t),
+let compile_query (dbschema:(string * Calculus.var_t list) list)
+                  (((schema,m3prog) : M3.prog_t),
                     (sources: M3.relation_input_t list))
                   (toplevel_queries : string list)
                   (out_file_name : Util.GenericIO.out_t) =
@@ -138,7 +139,7 @@ let compile_query (((schema,m3prog) : M3.prog_t),
    let csource =
       List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors
    in Util.GenericIO.write out_file_name 
-     (fun out_file -> output (main schema patterns csource ctrigs
+     (fun out_file -> output (main dbschema schema patterns csource ctrigs
                               toplevel_queries) out_file; 
                       output_string out_file "\n")
 

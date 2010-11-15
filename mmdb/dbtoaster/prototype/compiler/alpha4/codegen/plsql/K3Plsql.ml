@@ -10,8 +10,11 @@ module CG (*: K3Codegen.CG*) =
 struct
 type op_t = source_code_op_t
 
+(* Declaration counters: vars, aggs, tuples, relations *)
+type counters_t = int * int * int * int
+
 type schema_t   = string list 
-type relation_t = code_t * schema_t
+type relation_t = code_t * string * schema_t
 and  where_t    = source_code_t
 and  group_by_t = code_t
 and  select_t = code_t list * relation_t list * where_t list * group_by_t list
@@ -34,7 +37,7 @@ and code_t =
     | Assign        of string * code_t
     | Insert        of string * code_t
     | Update        of string * update_t
-    | Trigger       of M3.pm_t * M3.rel_id_t * M3.var_t list * code_t list
+    | Trigger       of M3.pm_t * M3.rel_id_t * M3.var_t list * code_t list * counters_t
     | Main          of source_code_t (* stringify in main cg *)
 
 (* These are not used, but we still need valid types here *)    
@@ -88,9 +91,9 @@ let get_vars arg = match arg with
 
 let rec concats delim sl = String.concat delim (List.map string_of_select_t sl)
 and concatc delim cl = String.concat delim (List.map string_of_code_t cl)
-and concatr rl = String.concat "," (List.map (fun (r,sch) ->
+and concatr rl = String.concat "," (List.map (fun (r,id,sch) ->
     (string_of_code_t r)^
-    (if sch = [] then "" else " as ("^(String.concat "," sch)^")")) rl)
+    (if sch = [] then "" else " as "^id^"("^(String.concat "," sch)^")")) rl)
 and concatw wl = String.concat " and " (List.map ssc wl)
 and concata args = String.concat "," (List.flatten (List.map get_vars args))
 and string_of_select_t (sl,r,c,g) =
@@ -121,14 +124,24 @@ and string_of_code_t c =
     | Insert (id,c) -> "Insert("^id^","^(rcr c)^")"
     | Update (id,(c,w)) -> "Update("^id^","^(rcr c)^
                             (if w = [] then "" else ","^(concatw w))^")"
-    | Trigger(evt,rel,args,cl) -> "Trigger(_,"^rel^",_,"^(String.concat ";\n" (List.map rcr cl))^")"
+    | Trigger(evt,rel,args,cl,_) ->
+        "Trigger(_,"^rel^",_,"^(String.concat ";\n" (List.map rcr cl))^")"
     | Main (sc) -> ssc sc
 
 (* Recursively lifts nested stacks into a single one, while respecting 
  * dependencies.  *)
 let rec linearize_code c =
   let rcr = linearize_code in
-  let fixpoint new_c = if new_c = c then c else rcr new_c in
+  let unique_memo c = match c with
+    | Memo(bl,c) ->
+        let uniq_bl = List.fold_left (fun acc b ->
+          if List.mem b acc then acc else acc@[b]) [] bl
+        in Memo(uniq_bl,c)
+    | _ -> c
+  in
+  let fixpoint new_c =
+    (* TODO: this duplication should be handled upstream, but do it here for now *)
+    if new_c = c then unique_memo c else rcr new_c in
   let flatten_bl bl = List.fold_left (fun blacc b -> match b with
       | Memo(x,y) -> blacc@x@[y] | _ -> blacc@[b]) [] bl
   in match c with
@@ -151,8 +164,9 @@ let rec linearize_code c =
  * construction. Note that unlike previous code generator backends, this one
  * keeps its internal form until the very end, to facilitiate internal late-stage 
  * optimizations such as linearize_code and memoize *)
-let rec append_sch sch =
-  if sch = [] then "" else " as ("^(String.concat "," sch)^")"
+let rec append_rel_id id = if id = "" then id else " as "^id 
+and append_sch sch =
+  if sch = [] then "" else "("^(String.concat "," sch)^")"
 and untab s =
   if String.length s < indent_width then s
   else if (String.sub s 0 indent_width) = tab
@@ -170,11 +184,12 @@ and source_code_of_select (sl,r,c,g) =
   let lines l sc = if l = [] then inl "" else csc (Lines[]) sc in
   let auxcl cl = List.map source_code_of_code cl in
   let subqueries rl =
-    let auxsq c sch = match c,sch with
-      | Relation _,[] | ValueRelation _,[] -> isq (source_code_of_code c)
+    let auxsq c id sch = match c,id,sch with
+      | Relation _,x,[] | ValueRelation _,x,[] ->
+          csc (isq (source_code_of_code c)) (inl (append_rel_id x))
       | _ ->  csc (csc (inl "(") (isq (source_code_of_code c)))
-                  (inl (")"^(append_sch sch)))
-    in cscl ~delim:"," (List.map (fun (c,sch) -> auxsq c sch) rl)
+                  (inl (")"^(append_rel_id id)^(append_sch sch)))
+    in cscl ~delim:"," (List.map (fun (c,id,sch) -> auxsq c id sch) rl)
   in
   flatten_sc (cscl ~delim:" " 
     [cscl ~delim:" "
@@ -201,6 +216,9 @@ and source_code_of_code c =
         | x when x = ifthenelse0_op ->
             inl ("(case when "^(ssc (rcr l))^" <> 0 "^
                   "then "^(ssc (rcr r))^" else 0 end)")
+        | x when x = eq_op || x = neq_op || x = lt_op || x = leq_op ->
+            inl ("(case when "^(ssc (rcr l))^op^(ssc (rcr r))^
+                   " then 1 else 0 end)")
         | _ -> cdsc op (rcr l) (rcr r)
         end
     | Aggregate(op,c) -> inl (op^"("^(ssc (rcr c))^")")
@@ -222,12 +240,35 @@ and source_code_of_code c =
     | Assign(v,c) -> flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr c)))
     | Insert(id,c) -> cdsc " " (inl ("insert into "^id)) (rcr c)
     | Update(id,u) -> source_code_of_update (id,u) 
-    | Trigger (evt,rel,args,stmtl) ->
-        let pm_const pm = match pm with | M3.Insert -> "insert" | M3.Delete -> "delete" in
-        let pm_name pm  = match pm with | M3.Insert -> "ins" | M3.Delete -> "del" in 
+    | Trigger (evt,rel,args,stmtl,counters) ->
+        let pm_const pm = match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
+        let pm_name pm  = match pm with M3.Insert -> "ins" | M3.Delete -> "del" in
+        let pm_tuple pm = match pm with M3.Insert -> "NEW" | M3.Delete -> "OLD" in 
         let trig_name = (pm_name evt)^"_"^rel in
+        let trig_params = sequence
+          (List.map (fun x -> inl(x^" ALIAS FOR "^(pm_tuple evt)^"."^x)) args)
+        in
+
+        (* TODO: relation declarations w/ schemas *)
+        let var_decls =
+          let (vc,ac,tc,rc) = counters in 
+          let rec declare prefix sql_type n i acc =
+            if i >= n then acc
+            else let nacc = acc@[inl(prefix^(string_of_int i)^" "^sql_type)]
+                 in declare prefix sql_type n (i+1) nacc
+          in 
+            trig_params::
+            (declare "var" "real" vc 0 [])@
+            (declare "agg" "real" ac 0 [])@
+            (declare "tup" "record" tc 0 [])@
+            [inl("has_key integer"); inl("current_v real");
+             inl("init_val real"); inl("accv real")]
+        in
         cscl
           [Lines["\ncreate function "^trig_name^" () returns trigger as $$"];
+           inl("declare");
+           isc tab (sequence ~final:true var_decls);
+           inl("begin");
            isc tab (sequence ~final:true (List.map rcr stmtl));
            inl("$$ language plpgsql;");
            inl("create trigger on_"^trig_name^" after "^(pm_const evt)^
@@ -283,11 +324,15 @@ let record_prefix = "tup"
 let rel_c = "relations"
 let rel_prefix = "rel"
 
+let rel_alias = "ralias"
+let rel_alias_prefix = "R"
+
 let init_counters =
   Hashtbl.add counters var_c 0;
   Hashtbl.add counters record_c 0;
   Hashtbl.add counters agg_c 0;
-  Hashtbl.add counters rel_c 0
+  Hashtbl.add counters rel_c 0;
+  Hashtbl.add counters rel_alias 0
 
 let incr_counter n =
   let v = try Hashtbl.find counters n with Not_found -> 0
@@ -295,7 +340,6 @@ let incr_counter n =
 
 let get_counter n = try Hashtbl.find counters n with Not_found -> 0
 
-let init_test_decl = "has_key integer"
 let gen_init_sym() = "has_key"
 
 let gen_var_sym () =
@@ -313,6 +357,10 @@ let gen_agg_sym() =
 let gen_rel_sym() =
   let r = get_counter rel_c in incr_counter rel_c;
   rel_prefix^(string_of_int r)
+
+let gen_rel_alias() =
+  let r = get_counter rel_alias in incr_counter rel_alias;
+  rel_alias_prefix^(string_of_int r)
 
 let reset_syms() = Hashtbl.clear counters
 
@@ -343,18 +391,21 @@ let sql_string_of_float f =
   if r.[(String.length r)-1] = '.' then r^"0" else r
 
 let select_star c = match c with
-  | Relation _ -> QueryC([([], [c, []], [], [])])   
+  | Relation _ -> QueryC([([], [c, "", []], [], [])])   
   | _ -> failwith "invalid relation for select *" 
 
-let select_query_value fn_arg v q = QueryC([[v], [q, get_vars fn_arg], [], []])
+let select_query_value fn_arg v q =
+  QueryC([[v], [q, gen_rel_alias(), get_vars fn_arg], [], []])
 
 let select_query_tuple fn_arg t q = match t with
-  | QueryT(sl,r,[],[]) -> QueryC([sl, [q, get_vars fn_arg]@r, [], []])
+  | QueryT(sl,r,[],[]) ->
+    QueryC([sl, [q, gen_rel_alias(), get_vars fn_arg]@r, [], []])
   | _ -> failwith "invalid tuple in select" 
 
 (* TODO: define operator symbols specifically for aggregates *)
 let aggregate_query fn_arg agg_c c = match c with
-  | QueryC(ql) -> QueryV([Aggregate("sum", agg_c)], [c, get_vars fn_arg], [], [])
+  | QueryC(ql) ->
+    QueryV([Aggregate("sum", agg_c)], [c, "R", get_vars fn_arg], [], [])
   | _ -> failwith "invalid collection in aggregate query" 
 
 let get_group_by_fields fn_arg c = match c with
@@ -369,7 +420,7 @@ let get_group_by_fields fn_arg c = match c with
 let group_by_aggregate_query fn_arg agg_c gb_fields c = match c with
   | QueryC(ql) -> 
     let agg_v = Aggregate("sum", agg_c)
-    in QueryC([[agg_v], [c, get_vars fn_arg], [], gb_fields])
+    in QueryC([[agg_v], [c, "R", get_vars fn_arg], [], gb_fields])
   | _ -> failwith "invalid collection in group by aggregate query"  
 
 
@@ -429,10 +480,10 @@ let rec combine ?(expr = None) c1 c2 =
 let apply_op op c1 c2 =
   begin match c1, c2 with
   | QueryV([x],_,_,_), QueryV([y],_,_,_) ->
-    let gen_var v x =
-      if is_var x then x,[get_var x] else Var(v),[v] in
-    let (lv,lsch),(rv,rsch) = gen_var "v1" x, gen_var "v2" y
-    in QueryV([Op(op,lv,rv)], [(c1,lsch); (c2,rsch)], [], [])
+    let gen_var v x = Var(v),[v] in
+    let (lv,lsch),(rv,rsch) = gen_var "v1" x, gen_var "v2" y in
+    let subq = [(c1,gen_rel_alias(),lsch); (c2,gen_rel_alias(),rsch)]
+    in QueryV([Op(op,lv,rv)], subq, [], [])
   
   | x,QueryV([y],r,c,g) when is_const x || is_var x || is_op x ->
     QueryV([Op(op,x,y)],r,c,g)
@@ -441,8 +492,8 @@ let apply_op op c1 c2 =
     QueryV([Op(op,x,y)],r,c,g)
   
   | x,y when (is_const x || is_var x || is_op x)
-             && (is_const y || is_var y || is_op y)
-    -> Op(op,c1,c2)
+             && (is_const y || is_var y || is_op y) -> Op(op,c1,c2)
+
   | _,_ -> failwith ("invalid apply op to non-value operands "^
                      (string_of_code_t c1)^" / "^(string_of_code_t c2)) 
   end
@@ -564,15 +615,17 @@ let assoc_lambda ?(expr = None) arg1 arg2 b = Bind([arg1;arg2],b)
 
 (* Binding *)
 let bind_query_value v vq = match vq with
-  | Const c -> QueryV([Var(v)], [vq, [v]], [], [])
-  | Var v2 -> QueryV([Var(v)], [vq, [v]], [], [])
-  | QueryV (sl,r,c,g) -> QueryV([Var(v)], [vq, [v]], [], [])
-  | Op _ -> QueryV([Var(v)], [vq, [v]], [], []) 
-  | ValueRelation _ -> QueryV([Var(v)], [vq, [v]], [], [])
+  | Const c -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
+  | Var v2 -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
+  | QueryV (sl,r,c,g) -> QueryV([Var(v)], [vq, gen_rel_alias(),[v]], [], [])
+  | Op _ -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], []) 
+  | ValueRelation _ -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
   | _ -> failwith ("invalid value for binding "^(string_of_code_t vq))
 
 let bind_query_tuple vl tq = match tq with
-  | QueryT _ -> QueryT(List.map (fun v -> Var(v)) vl, [tq,vl], [], [])
+  | QueryT _ ->
+    let nvl = List.map (fun v -> Var(v)) vl
+    in QueryT(nvl, [tq,gen_rel_alias(),vl], [], [])
   | _ -> failwith ("invalid tuple for binding "^(string_of_code_t tq))  
 
 let bind_query_args x y b =
@@ -582,13 +635,13 @@ let bind_query_args x y b =
     | _,_ -> failwith ("invalid arg binding as query "^(string_of_code_t y))
   in begin match b with
     | Const _ -> b
-    | Var v -> QueryV([b], [q,[]], [], [])
-    | Op _ -> QueryV([b], [q,[]], [], [])
-    | ValueRelation _ -> QueryV([], [b,[]], [], [])
-    | QueryV(sl,r,c,g) -> QueryV(sl,r@[q,[]], c, g)
-    | QueryT(sl,r,c,g) -> QueryT(sl,r@[q,[]], c, g)
+    | Var v -> QueryV([b], [q,"",[]], [], [])
+    | Op _ -> QueryV([b], [q,"",[]], [], [])
+    | ValueRelation _ -> QueryV([], [b,"",[]], [], [])
+    | QueryV(sl,r,c,g) -> QueryV(sl,r@[q,"",[]], c, g)
+    | QueryT(sl,r,c,g) -> QueryT(sl,r@[q,"",[]], c, g)
     | QueryC(ql) ->
-        let rql = List.map (fun (sl,r,c,g) -> (sl,r@[q,[]],c,g)) ql
+        let rql = List.map (fun (sl,r,c,g) -> (sl,r@[q,"",[]],c,g)) ql
         in QueryC(rql)
     | _ -> failwith ("invalid function body for query arg binding: "^
                       (string_of_code_t b))
@@ -709,7 +762,7 @@ let singleton_join q1 q2 =
   begin match q1, q2 with
   | a,b when (is_query_value a || is_tuple a) 
              && (is_query_value b || is_tuple b) ->
-    QueryT([], [a,[]; b,[]], [], [])
+    QueryT([], [a,"",[]; b,"",[]], [], [])
     
   | QueryV(sl,r,c,g), b | QueryT(sl,r,c,g), b when is_value b
     -> QueryT(sl@[b],r,c,g)
@@ -774,12 +827,12 @@ let build_key_condition key_l =
   snd (List.fold_left (fun (cnt,acc) c -> match c with
     | Const c -> cnt+1, acc@[inl("a"^(string_of_int cnt)^"="^c)]
     | Var v -> cnt+1, acc@[inl("a"^(string_of_int cnt)^"="^v)]
-    | _ -> failwith "invalid key") (0,[]) key_l)
+    | _ -> failwith "invalid key") (1,[]) key_l)
 
 let build_slice_condition pk pat =
   List.map2 (fun c id -> match c with 
-    | Const c -> inl("a"^(string_of_int id)^"="^c)
-    | Var v -> inl("a"^(string_of_int id)^"="^v)
+    | Const c -> inl("a"^(string_of_int (id+1))^"="^c)
+    | Var v -> inl("a"^(string_of_int (id+1))^"="^v)
     | _ -> failwith "invalid partial key") pk pat
 
 (* Note: exists should only be used inside ifthenelse *)
@@ -791,7 +844,7 @@ let exists ?(expr = None) map key_l =
         let test_v = gen_init_sym() in
         let test_agg_v = Aggregate("count", Const("*")) in 
         let bl = [Assign(test_v,
-          QueryV([test_agg_v], [map,[]], build_key_condition key_l, []))]
+          QueryV([test_agg_v], [map,"",[]], build_key_condition key_l, []))]
         in Memo(bl, Op(leq_op, Const("1"), Var(test_v)))
     | _ -> failwith ("invalid map in exists "^(string_of_code_t map))
   end
@@ -799,21 +852,22 @@ let exists ?(expr = None) map key_l =
 let lookup ?(expr = None) map key_l =
   if not(valid_keys key_l) then failwith "invalid keys in lookup"
   else begin match map with
-    | Relation _ -> QueryV([Var("av")], [map,[]], build_key_condition key_l, [])
+    | Relation _ -> QueryV([Var("av")], [map,"",[]], build_key_condition key_l, [])
     | _ -> failwith ("invalid map in lookup "^(string_of_code_t map))
   end
 
 let slice ?(expr = None) map pk pat =
   if not(valid_keys pk) then failwith "invalid keys in lookup"
   else begin match map with
-    | Relation _ -> QueryC([([],[map,[]],build_slice_condition pk pat, [])])
+    | Relation _ -> QueryC([([],[map,"",[]],build_slice_condition pk pat, [])])
     | _ -> failwith ("invalid map in slice "^(string_of_code_t map))
   end
 
 (* M3 DB API *)
 
 (* Database retrieval methods *)
-let get_value   ?(expr = None) id = QueryV([Var("av")], [ValueRelation(id),[]],[],[])
+let get_value   ?(expr = None) id =
+  QueryV([Var("av")], [ValueRelation(id),"",[]],[],[])
 let get_in_map  ?(expr = None) id = Relation(id,[])
 let get_out_map ?(expr = None) id = Relation(id,[])
 let get_map     ?(expr = None) id = Relation(id,[])
@@ -853,8 +907,11 @@ let update_out_map ?(expr = None) id cc = failwith "NYI"
 let update_map ?(expr = None) id keys cc = failwith "NYI"
 
 let trigger event rel trig_args stmt_block =
-  reset_syms();
-  Trigger(event,rel,trig_args, List.map linearize_code stmt_block)
+  let vc,ac,tc,rc = get_counter var_c, get_counter agg_c,
+                    get_counter record_c, get_counter rel_c
+  in reset_syms();
+     Trigger(event,rel,trig_args,
+             List.map linearize_code stmt_block,(vc,ac,tc,rc))
 
 (* Sources *)
 let valid_adaptors =
@@ -887,16 +944,29 @@ let source src fr rel_adaptors =
   in (source_stmts, None, None)
 
 
-let main schema patterns sources triggers toplevel_queries =
+let sql_type_of_calc_type_t t = match t with
+  | Calculus.TInt -> "integer"
+  | Calculus.TLong -> "bigint"
+  | Calculus.TDouble -> "double precision"
+  | Calculus.TString -> "text"
+ 
+let main dbschema schema patterns sources triggers toplevel_queries =
   let nl = Lines[""] in
+  let base_rels = sequence ~final:true (List.flatten (List.map (fun (id, sch) ->
+    let tbl_params = String.concat ","
+      (List.map (fun (v,t) -> v^" "^(sql_type_of_calc_type_t t)) sch)
+    in [inl ("drop table if exists "^id);
+        inl ("create table "^id^" ("^tbl_params^")")]) dbschema))
+  in
   let maps = sequence ~final:true (List.flatten (List.map
     (fun (id,ins,outs) ->
-      let f (i,t) = id^"_a"^(string_of_int i)^" real" in
-      let add_counter l = snd(
-        List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (1,[]) l) in
-      let ivl = String.concat ", " (List.map f (add_counter ins)) in
-      let ovl = String.concat ", " (List.map f (add_counter outs)) in
-      let v = id^"_val real" in
+      let f (i,t) = "a"^(string_of_int i)^" real" in
+      let add_counter st l = snd(
+        List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (st,[]) l) in
+      let ivl = String.concat ", " (List.map f (add_counter 1 ins)) in
+      let ovl = String.concat ", "
+        (List.map f (add_counter (1+(List.length ins)) outs)) in
+      let v = "av real" in
       let tbl_params = String.concat ", "
         (List.filter (fun x -> x <> "") [ivl; ovl; v])
       in [inl ("drop table if exists "^id);
@@ -905,8 +975,9 @@ let main schema patterns sources triggers toplevel_queries =
   let body = sequence ~final:true (List.map source_code_of_code triggers) in
   let source_scl = List.map (fun (x,y,z) -> x) sources in
   let footer = sequence ~final:true
-    (List.map (fun (id,_,_) -> inl("drop table "^id)) schema)
-  in Main(cscl ([maps; nl; body; nl]@source_scl@[nl; footer]))
+    ((List.map (fun (id,_,_) -> inl("--drop table "^id)) schema)@
+     (List.map (fun (id,_) -> inl("--drop table "^id)) dbschema))
+  in Main(cscl ([base_rels; maps; nl; body; nl]@source_scl@[nl; footer]))
 
 let output code out_chan = match code with
   | Main sc -> (output_string out_chan (ssc sc); flush out_chan)

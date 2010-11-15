@@ -117,6 +117,7 @@ if flag_bool "HELP" then
         "delta         DBToaster-style Relational Calculus Deltas\n"^
         "m3            Map Maintenance Message Code\n"^
         "ocaml         OcaML source file\n"^
+        "plsql         Postgres PLSQL source file\n"^
         "c++           C++ source file (not implemented yet)\n"^
         "run           Run the query in interpreter mode\n"
       );
@@ -275,6 +276,7 @@ module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 module M3PLSQLCompiler = M3Compiler.Make(M3Plsql.CG);;
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
+module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
 
 open Database
 open Sources
@@ -284,29 +286,31 @@ module DB         = NamedM3Database
 module DBTRuntime = Runtime.Make(DB)
 open DBTRuntime
 
-let compile_function: (M3.prog_t * M3.relation_input_t list -> string list -> 
+let compile_function: ((string * Calculus.var_t list) list ->
+                       M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
   | L_OCAML -> M3OCamlCompiler.compile_query
-  | L_PLSQL -> M3PLSQLCompiler.compile_query 
+  | L_PLSQL -> K3PLSQLCompiler.compile_query 
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
-  | L_M3    -> (fun (p, s) tlq f -> 
+  | L_M3    -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
   | L_INTERPRETER ->
-      (fun q tlq f ->
+      (fun dbschema q tlq f ->
         StandardAdaptors.initialize();
-        M3OCamlInterpreterCompiler.compile_query q tlq f)
+        M3OCamlInterpreterCompiler.compile_query dbschema q tlq f)
   | L_K3INTERPRETER ->
-      (fun q tlq f ->
+      (fun dbschema q tlq f ->
         StandardAdaptors.initialize();
-        K3InterpreterCompiler.compile_query q tlq f)
-  | L_NONE  -> (fun q tlq f -> ())
+        K3InterpreterCompiler.compile_query dbschema q tlq f)
+  | L_NONE  -> (fun dbschema q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)
 ;;
 
-let compile = compile_function (m3_prog, sources) !toplevel_queries;;
+let dbschema = List.flatten (List.map (fun (_,x,_) -> x) queries);;
+let compile = compile_function dbschema (m3_prog, sources) !toplevel_queries;;
 
 if (not (flag_bool "COMPILE")) || (flag_bool "OUTPUT") then
   (* If we've gotten a -c but no -o, don't output the intermediaries *)

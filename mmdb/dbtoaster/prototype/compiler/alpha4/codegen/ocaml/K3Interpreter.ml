@@ -614,7 +614,7 @@ struct
            | PipeSource(_)   -> failwith "Pipes not yet implemented."
        in (src_impl, None, None)
 
-    let main schema patterns sources triggers toplevel_queries =
+    let main dbschema schema patterns sources triggers toplevel_queries =
       Main (fun () ->
         let db = DB.make_empty_db schema patterns in
         let (insert_trigs, delete_trigs) = 

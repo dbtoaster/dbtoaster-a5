@@ -19,10 +19,12 @@ sig
    val compile_ptrig : M3.Prepared.trig_t list * M3Common.Patterns.pattern_map
       -> CG.code_t list
       
-   (* M3 compilation, requiring an M3 program, a list of inputs for the program
-    * (i.e. sources,adaptors, etc.), a list of toplevel query names, and an
-    * output file.
+   (* M3 compilation, requiring an DB schema, M3 program,
+    * a list of inputs for the program (i.e. sources,adaptors, etc.),
+    * a list of toplevel query names, and an output file.
     * Writes source code to the output file.  *)
-   val compile_query : M3.prog_t * M3.relation_input_t list
+   val compile_query :
+      (string * Calculus.var_t list) list
+      -> M3.prog_t * M3.relation_input_t list
       -> string list -> Util.GenericIO.out_t -> unit
 end

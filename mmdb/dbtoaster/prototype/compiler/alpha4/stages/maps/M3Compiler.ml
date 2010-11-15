@@ -617,7 +617,8 @@ let compile_ptrig (ptrig, patterns) =
       trigger event rel trig_args cblock
    in List.map aux ptrig
 
-let compile_query (((schema,m3prog):M3.prog_t), 
+let compile_query (dbschema:(string * Calculus.var_t list) list)
+                  (((schema,m3prog):M3.prog_t), 
                     (sources:M3.relation_input_t list)) 
                     (toplevel_queries:string list)
                     (out_file_name:Util.GenericIO.out_t) =

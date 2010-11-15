@@ -159,9 +159,10 @@ sig
     val source: M3.source_t -> M3.framing_t -> (string * M3.adaptor_t) list ->
                 source_impl_t * code_t option * code_t option
 
-    (* schema, patterns, source decls and inits, triggers, toplevel queries
+    (* db schema, map schema, patterns, source decls and inits, triggers, toplevel queries
        -> top level code *)
-    val main : M3.map_type_t list -> pattern_map ->
+    val main : (string * Calculus.var_t list) list ->
+               M3.map_type_t list -> pattern_map ->
                (source_impl_t * code_t option * code_t option) list ->
                code_t list -> string list -> code_t
 

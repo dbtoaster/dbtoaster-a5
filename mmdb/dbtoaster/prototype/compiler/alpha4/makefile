@@ -253,5 +253,5 @@ include makefile.deps
 # ocamldep doesn't handle header only files properly
 stages/maps/M3Codegen.cmi: stages/maps/M3Common.cmo
 stages/maps/M3Codegen.cmxi: stages/maps/M3Common.cmx
-stages/functional/K3Codegen.cmi: stages/functional/K3.cmo
-stages/functional/K3Codegen.cmxi: stages/functional/K3.cmx
+stages/functional/K3Codegen.cmi: stages/ring/Calculus.cmo stages/functional/K3.cmo
+stages/functional/K3Codegen.cmxi: stages/ring/Calculus.cmx stages/functional/K3.cmx
