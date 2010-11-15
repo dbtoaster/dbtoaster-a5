@@ -65,6 +65,8 @@ let dsc = delim_source_code
 let cdsc = concat_and_delim_source_code
 let cscl = concat_and_delim_source_code_list
 let isc = indent_source_code
+let rec iscn ?(n=1) delim bc =
+  if n = 0 then bc else iscn ~n:(n-1) delim (isc delim bc) 
 let ivl = inline_var_list
 
 let sequence ?(final=false) ?(delim=stmt_delimiter) cl =
@@ -122,6 +124,8 @@ and string_of_code_t c =
     | Trigger(evt,rel,args,cl) -> "Trigger(_,"^rel^",_,"^(String.concat ";\n" (List.map rcr cl))^")"
     | Main (sc) -> ssc sc
 
+(* Recursively lifts nested stacks into a single one, while respecting 
+ * dependencies.  *)
 let rec linearize_code c =
   let rcr = linearize_code in
   let fixpoint new_c = if new_c = c then c else rcr new_c in
@@ -143,22 +147,48 @@ let rec linearize_code c =
   | Update(r,(c,w))            -> fixpoint (Update(r,(rcr c,w)))      
   | _ -> c
  
-
+(* Source code generation, for pretty stringification during main function
+ * construction. Note that unlike previous code generator backends, this one
+ * keeps its internal form until the very end, to facilitiate internal late-stage 
+ * optimizations such as linearize_code and memoize *)
 let rec append_sch sch =
   if sch = [] then "" else " as ("^(String.concat "," sch)^")"
+and untab s =
+  if String.length s < indent_width then s
+  else if (String.sub s 0 indent_width) = tab
+    then (" "^(String.sub s indent_width ((String.length s)-indent_width)))
+  else s
+and isq sc = match sc with Inline _ -> sc | _ -> isc tab sc
+and flatten_sc sc = match sc with
+  | Lines(l) ->
+    let linelen = List.fold_left (+) 0 (List.map String.length l) in
+      if linelen < 100 then
+        inl(String.concat "" ((List.hd l)::(List.map untab (List.tl l))))
+      else sc
+  | Inline _ -> sc
 and source_code_of_select (sl,r,c,g) =
+  let lines l sc = if l = [] then inl "" else csc (Lines[]) sc in
   let auxcl cl = List.map source_code_of_code cl in
-  let auxr rl =
-    cscl ~delim:"," (List.map (fun (c,sch) ->
-      cdsc " " (source_code_of_code c) (inl (append_sch sch))) rl)
+  let subqueries rl =
+    let auxsq c sch = match c,sch with
+      | Relation _,[] | ValueRelation _,[] -> isq (source_code_of_code c)
+      | _ ->  csc (csc (inl "(") (isq (source_code_of_code c)))
+                  (inl (")"^(append_sch sch)))
+    in cscl ~delim:"," (List.map (fun (c,sch) -> auxsq c sch) rl)
   in
-  cscl ~delim:" " 
-    ([cscl ~delim:" "
+  flatten_sc (cscl ~delim:" " 
+    [cscl ~delim:" "
       [inl("select");
-        (if sl = [] then inl("*") else (cscl ~delim:"," (auxcl sl)))]]@
-    (if r = [] then [] else [cdsc " " (inl ("from")) (auxr r)])@
-    (if c = [] then [] else [cdsc " " (inl("where")) (cscl ~delim:" and " c)])@
-    (if g = [] then [] else [cdsc " " (inl("group by")) (cscl ~delim:"," (auxcl g))]))
+        (if sl = [] then inl("*") else (cscl ~delim:"," (auxcl sl)))];
+     (lines r (cdsc " " (inl ("from")) (subqueries r)));
+     (lines c (cdsc " " (inl ("where")) (cscl ~delim:" and " c)));
+     (lines g (cdsc " " (inl ("group by")) (cscl ~delim:"," (auxcl g))))])
+and source_code_of_update (id,(c,w)) =
+  let vsc = source_code_of_code c in
+  let wsc = csc (if w = [] then inl "" else inl "where ")
+                (cscl ~delim:" and " w)
+  in flatten_sc (cscl
+       [Lines["update "^id^" set av ="]; isc tab vsc; isc tab wsc])
 and source_code_of_code c =
   let rcr = source_code_of_code in
   begin match c with
@@ -169,8 +199,8 @@ and source_code_of_code c =
     | Op(op,l,r) ->
         begin match op with
         | x when x = ifthenelse0_op ->
-            inl ("case when "^(ssc (rcr l))^" <> 0 "^
-                 "then "^(ssc (rcr r))^" else 0 end")
+            inl ("(case when "^(ssc (rcr l))^" <> 0 "^
+                  "then "^(ssc (rcr r))^" else 0 end)")
         | _ -> cdsc op (rcr l) (rcr r)
         end
     | Aggregate(op,c) -> inl (op^"("^(ssc (rcr c))^")")
@@ -179,25 +209,29 @@ and source_code_of_code c =
     | Memo(bl,c) -> cscl ~delim:";" ((List.map rcr bl)@[rcr c])
     | Bind(args,b) -> failwith "unevaluated function in code"
     | For(sch,c,b) ->
-       cscl ~delim:"\n" [inl("for "^(String.concat "," sch)^" in ");
-                         (rcr c); isc tab (rcr b); inl("end")]
+       cscl [cscl ~delim:" "
+              [(inl("for "^(String.concat "," sch)^" in")); (rcr c); inl("loop")];
+             isc tab (sequence ~final:true [rcr b]); Lines["end loop"]]
     | IfThenElse(p,t,e) ->
-       cscl ~delim:"\n" [cscl ~delim:" " [inl("if"); (rcr p); inl("then")];
-                  isc tab (rcr t); inl("else"); isc tab (rcr e)]
-    | Assign(v,c) -> cdsc " " (inl(v^" :=")) (rcr c)
+       sequence
+         [csc (cscl ~delim:" " [inl("if"); (rcr p); inl("then")])
+              (csc (Lines[]) (isc tab (rcr t)));
+          (csc (Lines["else"]) (isc tab (rcr e)));
+          Lines["end if"]]
+
+    | Assign(v,c) -> flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr c)))
     | Insert(id,c) -> cdsc " " (inl ("insert into "^id)) (rcr c)
-    | Update(id,(c,w)) -> cdsc " " (inl("update "^id^" set av = "))
-                            (cdsc "\n" (rcr c) (cscl ~delim:" and " w))
+    | Update(id,u) -> source_code_of_update (id,u) 
     | Trigger (evt,rel,args,stmtl) ->
         let pm_const pm = match pm with | M3.Insert -> "insert" | M3.Delete -> "delete" in
         let pm_name pm  = match pm with | M3.Insert -> "ins" | M3.Delete -> "del" in 
         let trig_name = (pm_name evt)^"_"^rel in
-        cscl ~delim:"\n"
-          [inl("create function "^trig_name^" () returns trigger as $$");
+        cscl
+          [Lines["\ncreate function "^trig_name^" () returns trigger as $$"];
            isc tab (sequence ~final:true (List.map rcr stmtl));
-           inl("$$ language plpgsql");
+           inl("$$ language plpgsql;");
            inl("create trigger on_"^trig_name^" after "^(pm_const evt)^
-               " on "^rel^" for each row execute procedure "^trig_name^";")]
+               " on "^rel^" for each row execute procedure "^trig_name)]
     | Main sc -> sc
   end 
 
@@ -260,6 +294,9 @@ let incr_counter n =
   in Hashtbl.replace counters n (v+1)
 
 let get_counter n = try Hashtbl.find counters n with Not_found -> 0
+
+let init_test_decl = "has_key integer"
+let gen_init_sym() = "has_key"
 
 let gen_var_sym () =
   let r = get_counter var_c in incr_counter var_c;
@@ -751,7 +788,7 @@ let exists ?(expr = None) map key_l =
   else begin match map with
     | Relation _ ->
         (* TODO: return val of Op *)
-        let test_v = gen_var_sym() in
+        let test_v = gen_init_sym() in
         let test_agg_v = Aggregate("count", Const("*")) in 
         let bl = [Assign(test_v,
           QueryV([test_agg_v], [map,[]], build_key_condition key_l, []))]
@@ -851,8 +888,25 @@ let source src fr rel_adaptors =
 
 
 let main schema patterns sources triggers toplevel_queries =
-  let body = sequence ~final:true (List.map source_code_of_code triggers)
-  in Main(body)
+  let nl = Lines[""] in
+  let maps = sequence ~final:true (List.flatten (List.map
+    (fun (id,ins,outs) ->
+      let f (i,t) = id^"_a"^(string_of_int i)^" real" in
+      let add_counter l = snd(
+        List.fold_left (fun (i,acc) x -> (i+1,acc@[(i,x)])) (1,[]) l) in
+      let ivl = String.concat ", " (List.map f (add_counter ins)) in
+      let ovl = String.concat ", " (List.map f (add_counter outs)) in
+      let v = id^"_val real" in
+      let tbl_params = String.concat ", "
+        (List.filter (fun x -> x <> "") [ivl; ovl; v])
+      in [inl ("drop table if exists "^id);
+          inl ("create table "^id^" ("^(tbl_params)^")")])
+    schema)) in
+  let body = sequence ~final:true (List.map source_code_of_code triggers) in
+  let source_scl = List.map (fun (x,y,z) -> x) sources in
+  let footer = sequence ~final:true
+    (List.map (fun (id,_,_) -> inl("drop table "^id)) schema)
+  in Main(cscl ([maps; nl; body; nl]@source_scl@[nl; footer]))
 
 let output code out_chan = match code with
   | Main sc -> (output_string out_chan (ssc sc); flush out_chan)
