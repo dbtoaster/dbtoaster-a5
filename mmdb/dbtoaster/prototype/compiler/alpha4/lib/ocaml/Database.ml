@@ -216,9 +216,9 @@ sig
    type pattern_t      = int list
    type patterns_t     = M3Common.Patterns.pattern_map
 
-   type list_smap
-   type list_map
-   type named_list_map
+   type list_smap      = (key_t * value_t) list
+   type list_map       = (key_t * list_smap) list
+   type named_list_map = (db_key_t * list_map) list
 
    type single_map_t
    type map_t

@@ -15,3 +15,5 @@ val collection_stmt : M3.var_t list -> M3.Prepared.stmt_t -> statement
 val collection_trig : M3.Prepared.trig_t -> trigger
 val collection_prog :
     M3.Prepared.prog_t -> M3Common.Patterns.pattern_map -> program
+
+val m3_to_k3_opt : M3.prog_t -> (K3.SR.trigger list)

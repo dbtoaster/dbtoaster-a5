@@ -84,3 +84,5 @@ let synch_main
      (List.map (fun (q,_,f) -> (DB.map_name_to_string q)^": "^(f())) db_access_f))
 end
 ;;
+
+

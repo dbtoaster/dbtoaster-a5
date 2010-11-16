@@ -173,7 +173,7 @@ struct
 
     (* Terminals *)
     let const ?(expr = None) k = Eval(fun th db -> value_of_const_t k)
-    let var ?(expr = None) v = Eval(fun th db -> 
+    let var ?(expr = None) v _ = Eval(fun th db -> 
         if (Env.bound v (fst th)) then Env.value v (fst th)
         else if is_env_value v th then get_env_value v th 
         else failwith ("Var("^v^"): theta="^(Env.to_string (fst th))))
@@ -524,13 +524,13 @@ struct
     let get_value ?(expr = None) id = Eval(fun th db ->
         match DB.get_value id db with | Some(x) -> x | None -> Float(0.0))
 
-    let get_in_map ?(expr = None) id =
+    let get_in_map ?(expr = None) (_) id =
         Eval(fun th db -> SingleMap(DB.get_in_map id db))
     
-    let get_out_map ?(expr = None) id =
+    let get_out_map ?(expr = None) (_) id =
         Eval(fun th db -> SingleMap(DB.get_out_map id db))
     
-    let get_map ?(expr = None) id =
+    let get_map ?(expr = None) (_) id =
         Eval(fun th db -> DoubleMap(DB.get_map id db))
 
     (* Database udpate methods *)
@@ -649,7 +649,12 @@ struct
       | Main(main_f) ->
           Unix.dup2 Unix.stdout (Unix.descr_of_out_channel out_chan); main_f ()
       | _ -> failwith "invalid M3 interpreter main code"
+      
+   let to_string (code:code_t): string =
+      failwith "Interpreter can't output a string"
 
+   let debug_string (code:code_t): string =
+      failwith "Interpreter can't output a string"
  
     let rec eval c vars vals db = match c with
       | Eval(f) -> f (Env.make vars (List.map value_of_const_t vals), []) db

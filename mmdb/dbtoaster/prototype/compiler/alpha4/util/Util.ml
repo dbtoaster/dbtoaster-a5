@@ -10,7 +10,7 @@ struct
    let diff l1 l2 =
       let eq x y = x = y in
       let f x = if List.exists (eq x) l2 then [] else [x] in
-      List.flatten(List.map f l1)
+      List.flatten (List.map f l1)
 
    let subset l1 l2 = ((diff l1 l2) = [])     (* is l1 a subset of l2 ? *)
    let inter l1 l2 = diff l1 (diff l1 l2)               (* intersection *)
@@ -604,6 +604,13 @@ end
     Subexpressions to be placed on multiple lines.  The subexpressions are 
     evaluated independently and placed on separate lines.
   
+  TList((lparen,rparen),(lelemparen,relemparen) option,sep,exp list)
+    An encoded list; Will be formatted as
+    lparen lelemparen exp1 relemparen sep lelemparen exp2 relemparen ... rparen
+    If a term in exp is multi-line, a newline will be placed after lelemparen
+    and before relemparen.  If sep falls off the end of the line, a newline will
+    be placed after sep. 
+  
   Node((lparen,rparen),(op,rop),lhs,rhs)
     A binary operator: Formatted as follows:
       {lparen lhs op rop rhs rparen}
@@ -633,9 +640,26 @@ struct
   | Node of parens_t * op_defn_t * t * t
   | Parens of parens_t * t
   | Lines of t list
+  | TList of parens_t * parens_t option * string * t list
   
   let indent_lines indent = 
     List.map (fun x->(String.make indent ' ')^x);;
+  
+  let rec to_debug_line (node:t): string =
+    match node with
+    | Leaf(s) -> s
+    | Node((lparen,rparen),(op,rop),lhs,rhs) ->
+      lparen^(to_debug_line lhs)^op^rop^(to_debug_line rhs)^rparen
+    | Parens((lparen,rparen),subexp) -> 
+      lparen^(to_debug_line subexp)^rparen
+    | Lines(exps) ->
+      (string_of_list " " (List.map to_debug_line exps))
+    | TList(parens,None,sep,exps) ->
+      to_debug_line (TList(parens,Some("",""),sep,exps))
+    | TList((lparen,rparen),(Some(lelemparen,relemparen)),sep,exps) ->
+      lparen^(string_of_list sep 
+               (List.map (fun x -> lelemparen^(to_debug_line x)^relemparen)
+                         exps))^rparen
   
   let rec to_lines (width:int) (node:t): string list= 
     match node with
@@ -701,7 +725,42 @@ struct
           (indent_lines (String.length lparen) [rparen])
         else 
           [ lparen ^ (List.hd sub_list) ^ rparen ]
-          
+
+    | TList((lparen,rparen),None,sep,exps) ->
+      to_lines width (TList((lparen,rparen),Some("",""),sep,exps))
+    | TList((lparen,rparen),Some(lelemparen,relemparen),sep,[]) ->
+      [lparen^rparen]
+    | TList((lparen,rparen),Some(lelemparen,relemparen),sep,exp::[]) ->
+      (match (to_lines (width-(String.length lparen)
+                             -(String.length lelemparen)) exp)
+         with
+         | [] -> [lparen^rparen]
+         | [a] -> [lparen^lelemparen^a^relemparen^rparen]
+         | a::sublist -> [lparen^lelemparen^a]@(indent_lines 2 sublist)@
+                         [relemparen^rparen]
+      )
+    | TList((lparen,rparen),Some(lelemparen,relemparen),sep,exp::rest) ->
+      let exp_lines = (to_lines (width-(String.length lparen)
+                                      -(String.length lelemparen)) exp) in
+      let rest_lines = 
+         (to_lines width 
+                   (TList(("",rparen),Some(lelemparen,relemparen),sep,rest))) in
+      (match (exp_lines,rest_lines) with
+         | (_,[]) -> failwith "TList generation error: recursion fail!"
+         | ([],[b]) -> [lparen^lelemparen^relemparen^sep^b];
+         | ([],b)   -> [lparen^lelemparen^relemparen^sep]@b;
+         | ([a],[b]) -> 
+            if (String.length a) + (String.length b) > width
+            then [lparen^lelemparen^a^relemparen^sep;"  "^b]
+            else [lparen^lelemparen^a^relemparen^sep^b]
+         | ([a],b) -> 
+            (lparen^lelemparen^a^relemparen^sep)::b
+         | (a::ra,b) ->
+            [lparen^lelemparen^a]@
+            (indent_lines 2 (List.rev (List.tl (List.rev ra))))@
+            [(List.hd (List.rev ra))^relemparen^sep]@b
+      )
+
     | Lines([])    -> [""]
     | Lines(a::[]) -> to_lines width a
     | Lines(a::l)  -> (to_lines width a)@(to_lines width (Lines(l)))

@@ -6,7 +6,7 @@ open K3.SR
 open Values
 open Database
 
-module CG (*: K3Codegen.CG*) =
+module CG (*: K3Codegen.CG *) =
 struct
 type op_t = source_code_op_t
 
@@ -438,7 +438,7 @@ let group_by_aggregate_query fn_arg agg_c gb_fields c = match c with
 let const ?(expr = None) c = match c with
   | CFloat x -> Const(sql_string_of_float x)
 
-let var ?(expr = None) id = Var(id)
+let var ?(expr = None) id _ = Var(id)
 
 (* Tuples *)
 let tuple ?(expr=None) fields =
@@ -904,9 +904,9 @@ let slice ?(expr = None) map pk pat =
 (* Database retrieval methods *)
 let get_value   ?(expr = None) id =
   QueryV([Var("av")], [ValueRelation(id),"",[]],[],[])
-let get_in_map  ?(expr = None) id = Relation(id,[])
-let get_out_map ?(expr = None) id = Relation(id,[])
-let get_map     ?(expr = None) id = Relation(id,[])
+let get_in_map  ?(expr = None) _ id = Relation(id,[])
+let get_out_map ?(expr = None) _ id = Relation(id,[])
+let get_map     ?(expr = None) (_,_) id = Relation(id,[])
 
 
 (* persistent collection id, value -> update *)
@@ -1047,5 +1047,10 @@ let main dbschema schema patterns sources triggers toplevel_queries =
 let output code out_chan = match code with
   | Main sc -> (output_string out_chan (ssc sc); flush out_chan)
   | _ -> failwith "invalid code"
+
+let to_string code = 
+  failwith "Can't stringify plsql for now"
+let debug_string code = 
+  failwith "Can't stringify plsql for now"
 
 end

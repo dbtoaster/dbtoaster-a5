@@ -18,7 +18,7 @@ let rec compile_k3_expr e =
     let compile_op o l r = op ~expr:(debug e) o (rcr l) (rcr r) in
     begin match e with
     | Const (c) -> const ~expr:(debug e) c
-    | Var(v,t) -> var ~expr:(debug e) v
+    | Var(v,t) -> var ~expr:(debug e) v t
     | Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
     | Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
     | Singleton(e) -> singleton ~expr:(debug e) (rcr e) (typecheck_expr e)
@@ -72,9 +72,9 @@ let rec compile_k3_expr e =
         slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
 
     | SingletonPC(id,t)      -> get_value ~expr:(debug e) id
-    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) id
-    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) id
-    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) id
+    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs id
+    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins id
+    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) (ins,outs) id
 
     | PCUpdate(m_e, ke_l, u_e) ->
         begin match m_e with

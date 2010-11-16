@@ -20,7 +20,7 @@ sig
 
     (* Terminals *)
     val const : ?expr:K3.SR.expr_t option -> M3.const_t -> code_t
-    val var   : ?expr:K3.SR.expr_t option -> M3.var_t -> code_t
+    val var   : ?expr:K3.SR.expr_t option -> M3.var_t -> K3.SR.type_t -> code_t
 
     (* Tuples *)
     val tuple   : ?expr:K3.SR.expr_t option -> code_t list -> code_t
@@ -98,10 +98,15 @@ sig
     (* M3 API *)
 
     (* Database retrieval methods *)
-    val get_value   : ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
-    val get_in_map  : ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
-    val get_out_map : ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
-    val get_map     : ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
+    val get_value   : 
+      ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
+    val get_in_map  : 
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.coll_id_t -> code_t
+    val get_out_map : 
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.coll_id_t -> code_t
+    val get_map     : 
+      ?expr:K3.SR.expr_t option -> (K3.SR.schema * K3.SR.schema) -> 
+      K3.SR.coll_id_t -> code_t
     
     
     (* Database udpate methods *)
@@ -167,6 +172,10 @@ sig
                code_t list -> string list -> code_t
 
     val output : code_t -> out_channel -> unit
+
+    val to_string : code_t -> string
+    
+    val debug_string : code_t -> string
 end
 
 module type CGI =

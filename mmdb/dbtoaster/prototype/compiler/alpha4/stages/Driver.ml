@@ -131,8 +131,8 @@ let input_files = if (flag_bool "FILES") then flag_vals "FILES"
                   else give_up "No files provided";;
     
 type language_t = 
-  L_OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
-| L_M3 | L_NONE | L_INTERPRETER | L_K3INTERPRETER;;
+  L_OCAML | L_K3OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
+| L_M3 | L_K3 | L_NONE | L_INTERPRETER | L_K3INTERPRETER;;
 
 let language = 
   if flag_bool "INTERPRETER" then L_INTERPRETER
@@ -146,6 +146,9 @@ let language =
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3
+      | "K3"       -> L_K3
+      | "K3O"      -> L_K3OCAML
+      | "K3OCAML"  -> L_K3OCAML
       | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
       | "PLSQL"    -> L_PLSQL 
       | "RUN"      -> L_INTERPRETER
@@ -276,6 +279,7 @@ module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 module M3PLSQLCompiler = M3Compiler.Make(M3Plsql.CG);;
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
+module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
 
 open Database
@@ -292,10 +296,24 @@ let compile_function: ((string * Calculus.var_t list) list ->
   match language with
   | L_OCAML -> M3OCamlCompiler.compile_query
   | L_PLSQL -> K3PLSQLCompiler.compile_query 
+  | L_K3OCAML -> K3OCamlCompiler.compile_query
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
   | L_M3    -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
+  | L_K3    -> (fun dbschema (p, s) tlq f -> 
+      let triggers = (K3Builder.m3_to_k3_opt p) in
+      GenericIO.write f (fun fd -> 
+         List.iter (fun (pm, rel, args, stmts) ->
+            output_string fd
+               ("\nON_"^(match pm with M3.Insert -> "insert"
+                                     | M3.Delete -> "delete")^
+                "_"^rel^"("^(Util.string_of_list "," args)^")\n");
+            List.iter (fun (_,e) -> 
+               output_string fd ((K3.SR.code_of_expr e)^"\n")
+            ) stmts
+         ) triggers
+      ))
   | L_INTERPRETER ->
       (fun dbschema q tlq f ->
         StandardAdaptors.initialize();
@@ -333,6 +351,7 @@ let compile_ocaml in_file_name =
                    "lib/ocaml/Values";
                    "lib/ocaml/Database";
                    "lib/ocaml/Sources";
+                   "lib/ocaml/K3Support";
                    "lib/ocaml/Runtime";
                    "lib/ocaml/StandardAdaptors" ] in
     (* would nice to generate args dynamically off the makefile *)
@@ -349,15 +368,17 @@ let compile_ocaml in_file_name =
 let compile_ocaml_via_tmp () =
   compile (GenericIO.O_TempFile("dbtoaster_", ".ml", compile_ocaml));;
 
+let compile_ocaml_from_output () =
+   match (flag_val "OUTPUT") with
+     | None      -> compile_ocaml_via_tmp ()
+     | Some("-") -> compile_ocaml_via_tmp ()
+     | Some(a)   -> compile_ocaml a
+;;   
+
 if flag_bool "COMPILE" then
   match language with
-  | L_OCAML ->  
-    (
-      match (flag_val "OUTPUT") with
-        | None      -> compile_ocaml_via_tmp ()
-        | Some("-") -> compile_ocaml_via_tmp ()
-        | Some(a)   -> compile_ocaml a
-    )
+  | L_OCAML -> compile_ocaml_from_output ()
+  | L_K3    -> compile_ocaml_from_output ()
   | L_PLSQL -> give_up "Compilation of PLSQL not implemented yet"
   | L_CPP   -> give_up "Compilation of C++ not implemented yet"
   | _       -> give_up ("No external compiler available for "^

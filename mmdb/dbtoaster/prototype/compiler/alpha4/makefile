@@ -15,11 +15,11 @@ SOURCE = \
 	stages/maps/M3Compiler.ml \
 	stages/functional/K3.mli \
 	stages/functional/K3.ml \
+	stages/functional/K3Optimizer.ml \
 	stages/functional/K3Builder.mli \
 	stages/functional/K3Builder.ml \
 	stages/functional/K3Typechecker.mli \
 	stages/functional/K3Typechecker.ml \
-	stages/functional/K3Optimizer.ml \
 	stages/functional/K3Compiler.mli \
 	stages/functional/K3Compiler.ml \
 	lib/ocaml/SliceableMap.mli \
@@ -35,6 +35,7 @@ SOURCE = \
 	codegen/plsql/M3Plsql.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
+	codegen/ocaml/K3OCamlgen.ml 
 
 HEADER_ONLY_SOURCE = \
 	stages/maps/M3Codegen.mli \
@@ -86,7 +87,7 @@ RUNTIME = \
 	lib/ocaml/Database.ml \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/Runtime.ml \
-	lib/ocaml/StandardAdaptors.ml
+	lib/ocaml/StandardAdaptors.ml 
 
 RUNTIME_ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(RUNTIME)))
 RUNTIME_MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(RUNTIME)))
@@ -137,7 +138,7 @@ ODEP_FLAGS = $(INCLUDE_DIR)
 .PHONY: all driver top test runtop clean deps
 
 all: deps dbtoaster_top dbtoaster
-
+	
 driver: dbtoaster
 
 top: dbtoaster_top
@@ -181,6 +182,8 @@ benchmark: $(OPT_DEPS)
 
 ## Unit tests
 test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
@@ -250,8 +253,14 @@ makefile.deps:
 	ocamldep $(ODEP_FLAGS) $(filter %.ml,$(SOURCE)) > makefile.deps
 
 include makefile.deps
-# ocamldep doesn't handle header only files properly
+# ocamldep doesn't handle a bunch of deps properly
 stages/maps/M3Codegen.cmi: stages/maps/M3Common.cmo
 stages/maps/M3Codegen.cmxi: stages/maps/M3Common.cmx
+stages/functional/K3Codegen.cmi: stages/functional/K3.cmo
+stages/functional/K3Codegen.cmxi: stages/functional/K3.cmx
+stages/maps/M3Common.cmo: util/Util.cmo stages/maps/M3.cmo 
+stages/maps/M3Common.cmx: util/Util.cmx stages/maps/M3.cmx
+stages/functional/K3Builder.cmo: stages/functional/K3Optimizer.cmo 
+stages/functional/K3Builder.cmx: stages/functional/K3Optimizer.cmx
 stages/functional/K3Codegen.cmi: stages/ring/Calculus.cmo stages/functional/K3.cmo
 stages/functional/K3Codegen.cmxi: stages/ring/Calculus.cmx stages/functional/K3.cmx

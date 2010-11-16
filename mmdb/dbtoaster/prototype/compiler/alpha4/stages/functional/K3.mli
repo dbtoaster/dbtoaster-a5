@@ -101,11 +101,12 @@ sig
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string
+    val code_of_expr   : expr_t -> string
     
     (* Helpers *)
     val collection_of_list : expr_t list -> expr_t
     val collection_of_float_list : float list -> expr_t
-
+    
     (* Incremental section *)
     type statement = expr_t * expr_t
     type trigger = M3.pm_t * M3.rel_id_t * M3.var_t list * statement list
