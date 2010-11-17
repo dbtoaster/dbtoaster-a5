@@ -353,6 +353,18 @@ let rec k_tuples k (src: 'a list) : 'a list list =
    else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
                                (k_tuples (k-1) src))
 
+(* no such thing as read everything in Ocaml *)
+let complete_read in_c =
+   let buffer = ref "" in
+   (
+      try
+         while true do
+            buffer := (!buffer)^(input_line in_c)^"\n"
+         done
+      with End_of_file -> ()
+   );
+   !buffer
+
 (* IO Operation abstraction - one level up from streams.  Mostly there to
    support file/close blocks, but has some useful temporary file functionality
    and eases simultaneous use of both channels and raw filenames (and 

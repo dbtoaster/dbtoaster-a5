@@ -35,7 +35,7 @@ SOURCE = \
 	codegen/plsql/M3Plsql.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
-	codegen/ocaml/K3OCamlgen.ml 
+	codegen/ocaml/K3OCamlgen.ml
 
 HEADER_ONLY_SOURCE = \
 	stages/maps/M3Codegen.mli \
@@ -50,6 +50,9 @@ GENERATED_SOURCE = \
 SOURCE += $(GENERATED_SOURCE)
 GENERATED_HEADERS = \
     $(filter %.mli,$(GENERATED_SOURCE))
+
+SOURCE += \
+	util/DBTDebug.ml
 
 # Compiled object code
 ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(SOURCE)))
@@ -169,11 +172,11 @@ $(LEX_SOURCE) : %.ml : %.mll
 
 $(GENERATED_HEADERS) : %.mli : %.ml
 
-dbtoaster_top: $(OBJ_DEPS)
+dbtoaster_top: $(OBJ_DEPS) $(RUNTIME_OBJ_DEPS)
 	@echo Linking dbtoaster_top
 	@ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(ML_OBJ)
 
-dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OBJ_DEPS) $(RUNTIME_OPT_DEPS)
+dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 	@echo Linking dbtoaster
 	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) stages/Driver.ml
 
@@ -182,8 +185,6 @@ benchmark: $(OPT_DEPS)
 
 ## Unit tests
 test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
@@ -191,6 +192,9 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/CompilerTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/MyTpchTest.ml

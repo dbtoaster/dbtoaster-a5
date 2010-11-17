@@ -6,6 +6,16 @@ sig
   val compile_triggers : K3.SR.trigger list -> CG.code_t list
 
   (* Same interface as M3Compiler.compile_query *)
+  val compile_query_to_code:
+    (string * Calculus.var_t list) list
+    -> M3.prog_t * M3.relation_input_t list
+    -> string list -> CG.code_t
+   
+  val compile_query_to_string:
+    (string * Calculus.var_t list) list
+    -> M3.prog_t * M3.relation_input_t list
+    -> string list -> string
+   
   val compile_query :
     (string * Calculus.var_t list) list
     -> M3.prog_t * M3.relation_input_t list

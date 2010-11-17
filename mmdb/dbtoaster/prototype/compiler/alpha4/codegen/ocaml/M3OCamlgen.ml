@@ -326,7 +326,7 @@ struct
 
    let singleton_init_lookup mapn inv out_patterns outv cinit =
       let cmapn = map_name_const mapn in
-      let cout_patterns = patterns_const out_patterns in
+      (*let cout_patterns = patterns_const out_patterns in*)
       let body v =
          (match (inv, outv) with
           | ([], []) -> ["("^db_impl^".update_value "^cmapn^" "^v^" db;"]
@@ -554,7 +554,7 @@ struct
                            lhs_ext patv pat direct update_code
       =
      let cmapn = map_name_const lhs_mapn in
-     let cpatterns = patterns_const map_out_patterns in
+     (*let cpatterns = patterns_const map_out_patterns in*)
      let cpat = pattern_const pat in
      let eval img slice =
         ["let existing_v = if M3ValuationMap.mem "^img^" "^slice;

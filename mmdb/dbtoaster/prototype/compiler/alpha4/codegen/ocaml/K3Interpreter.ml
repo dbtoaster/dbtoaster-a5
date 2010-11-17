@@ -521,16 +521,16 @@ struct
 
 
     (* Database retrieval methods *)
-    let get_value ?(expr = None) id = Eval(fun th db ->
+    let get_value ?(expr = None) (_) id = Eval(fun th db ->
         match DB.get_value id db with | Some(x) -> x | None -> Float(0.0))
 
-    let get_in_map ?(expr = None) (_) id =
+    let get_in_map ?(expr = None) (_) (_) id =
         Eval(fun th db -> SingleMap(DB.get_in_map id db))
     
-    let get_out_map ?(expr = None) (_) id =
+    let get_out_map ?(expr = None) (_) (_) id =
         Eval(fun th db -> SingleMap(DB.get_out_map id db))
     
-    let get_map ?(expr = None) (_) id =
+    let get_map ?(expr = None) (_) (_) id =
         Eval(fun th db -> DoubleMap(DB.get_map id db))
 
     (* Database udpate methods *)

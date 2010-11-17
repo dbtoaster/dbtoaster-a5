@@ -99,14 +99,16 @@ sig
 
     (* Database retrieval methods *)
     val get_value   : 
-      ?expr:K3.SR.expr_t option -> K3.SR.coll_id_t -> code_t
+      ?expr:K3.SR.expr_t option -> K3.SR.type_t -> K3.SR.coll_id_t -> code_t
     val get_in_map  : 
-      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.coll_id_t -> code_t
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.type_t ->
+      K3.SR.coll_id_t -> code_t
     val get_out_map : 
-      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.coll_id_t -> code_t
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.type_t ->
+      K3.SR.coll_id_t -> code_t
     val get_map     : 
       ?expr:K3.SR.expr_t option -> (K3.SR.schema * K3.SR.schema) -> 
-      K3.SR.coll_id_t -> code_t
+      K3.SR.type_t -> K3.SR.coll_id_t -> code_t
     
     
     (* Database udpate methods *)

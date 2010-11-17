@@ -71,10 +71,10 @@ let rec compile_k3_expr e =
         let idx_l = List.map (index (List.map fst sch)) v_l in
         slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
 
-    | SingletonPC(id,t)      -> get_value ~expr:(debug e) id
-    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs id
-    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins id
-    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) (ins,outs) id
+    | SingletonPC(id,t)      -> get_value ~expr:(debug e) t id
+    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs t id
+    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins t id
+    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) (ins,outs) t id
 
     | PCUpdate(m_e, ke_l, u_e) ->
         begin match m_e with
@@ -116,17 +116,16 @@ let compile_triggers trigs : code_t list =
       in trigger event rel args stmts)
     trigs
 
-let compile_query (dbschema:(string * Calculus.var_t list) list)
-                  (((schema,m3prog) : M3.prog_t),
-                    (sources: M3.relation_input_t list))
-                  (toplevel_queries : string list)
-                  (out_file_name : Util.GenericIO.out_t) =
-  let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
-  let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
-  let trig_rels = Util.ListAsSet.no_duplicates
-     (List.map (fun (_,rel,_,_) -> rel) trigs) in
-  let ctrigs = compile_triggers trigs in
-  let sources_and_adaptors =
+let compile_query_to_code (dbschema:(string * Calculus.var_t list) list)
+                          (((schema,m3prog) : M3.prog_t),
+                             (sources: M3.relation_input_t list))
+                          (toplevel_queries : string list): code_t =
+   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
+   let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
+   let trig_rels = Util.ListAsSet.no_duplicates
+      (List.map (fun (_,rel,_,_) -> rel) trigs) in
+   let ctrigs = compile_triggers trigs in
+   let sources_and_adaptors =
       List.fold_left (fun acc (s,f,rel,a) ->
          match (List.mem rel trig_rels, List.mem_assoc (s,f) acc) with
            | (false,_) -> acc
@@ -135,12 +134,21 @@ let compile_query (dbschema:(string * Calculus.var_t list) list)
            	let existing = List.assoc (s,f) acc
             in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc))
      	[] sources
-  in
+   in
    let csource =
-      List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors
-   in Util.GenericIO.write out_file_name 
-     (fun out_file -> output (main dbschema schema patterns csource ctrigs
-                              toplevel_queries) out_file; 
-                      output_string out_file "\n")
+     List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors
+   in
+      (main dbschema schema patterns csource ctrigs toplevel_queries)
+
+let compile_query_to_string schema prog tlqs: string =
+   to_string (compile_query_to_code schema prog tlqs)
+
+let compile_query schema prog tlqs (out : Util.GenericIO.out_t): unit =
+    Util.GenericIO.write out 
+      (fun out_file -> 
+         output (compile_query_to_code schema prog tlqs) out_file; 
+         output_string out_file "\n"
+      )
+
 
 end

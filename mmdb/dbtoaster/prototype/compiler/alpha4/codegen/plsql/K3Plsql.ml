@@ -902,11 +902,11 @@ let slice ?(expr = None) map pk pat =
 (* M3 DB API *)
 
 (* Database retrieval methods *)
-let get_value   ?(expr = None) id =
+let get_value   ?(expr = None) _ id =
   QueryV([Var("av")], [ValueRelation(id),"",[]],[],[])
-let get_in_map  ?(expr = None) _ id = Relation(id,[])
-let get_out_map ?(expr = None) _ id = Relation(id,[])
-let get_map     ?(expr = None) (_,_) id = Relation(id,[])
+let get_in_map  ?(expr = None) _ _ id = Relation(id,[])
+let get_out_map ?(expr = None) _ _ id = Relation(id,[])
+let get_map     ?(expr = None) (_,_) _ id = Relation(id,[])
 
 
 (* persistent collection id, value -> update *)
