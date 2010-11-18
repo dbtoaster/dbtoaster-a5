@@ -100,8 +100,8 @@ List.iter (fun (op_str, op, rtype) ->
 ;;
 run_test "simple op(if)"
          (K3O.op K3O.ifthenelse0_op (tcode ~t:K3O.Bool "a") (tcode "b"))
-         K3O.Bool
-         "if (<<a>>) then (match (<<b>>) with K3Value.Float(f) -> f | _ -> failwith \"boom\") else 0"
+         K3O.Float
+         "K3Value.Float(if (<<a>>) then (match (<<b>>) with K3Value.Float(f) -> f | _ -> failwith \"boom\") else 0.)"
 ;;
 run_test "simple ifthenelse"
          (K3O.ifthenelse (tcode ~t:K3O.Bool "a") (tcode "b") (tcode "c"))
@@ -151,7 +151,7 @@ run_test "apply"
          "(<<a>>) (<<b>>)"
 ;;
 run_test "map (i)"
-         (K3O.map (tcode ~t:(K3O.Fn([K3O.Float;K3O.Float],
+         (K3O.map (tcode ~t:(K3O.Fn([K3O.Tuple[K3O.Float;K3O.Float]],
                                     (K3O.Tuple[K3O.Float;K3O.Float]))) "a")
                   (K3.SR.TFloat)
                   (tcode ~t:(K3O.Collection(K3O.Inline,[K3O.Float],
@@ -160,7 +160,7 @@ run_test "map (i)"
          "List.map ((fun key_0,key_1 -> ((<<a>>) (key_0) key_1))) (<<b>>)"
 ;;
 run_test "map (s)"
-         (K3O.map (tcode ~t:(K3O.Fn([K3O.Float;K3O.Float],
+         (K3O.map (tcode ~t:(K3O.Fn([K3O.Tuple[K3O.Float;K3O.Float]],
                                     (K3O.Tuple[K3O.Float;K3O.Float]))) "a")
                   (K3.SR.TFloat)
                   (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],
@@ -170,25 +170,25 @@ run_test "map (s)"
 ;;
 run_test "aggregate (i)"
          (K3O.aggregate (tcode ~t:(K3O.Fn([K3O.Tuple([K3O.Float;
-                                                      K3O.Float;
-                                                      K3O.Float])],
+                                                      K3O.Float]);
+                                                      K3O.Float],
                                           K3O.Float)) "a")
                         (tcode "b")
                         (tcode ~t:(K3O.Collection(K3O.Inline,[K3O.Float],
                                                   K3O.Float)) "c"))
          (K3O.Float)
-         "List.fold_left ((fun accum (key_0,key_1) -> ((<<a>>) (key_0,key_1,accum)))) (<<b>>) (<<c>>)"
+         "List.fold_left ((fun accum (key_0,key_1) -> ((<<a>>) (key_0,key_1) accum))) (<<b>>) (<<c>>)"
 ;;
 run_test "aggregate (s)"
          (K3O.aggregate (tcode ~t:(K3O.Fn([K3O.Tuple([K3O.Float;
-                                                      K3O.Float;
-                                                      K3O.Float])],
+                                                      K3O.Float]);
+                                                      K3O.Float],
                                           K3O.Float)) "a")
                         (tcode "b")
                         (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],
                                                   K3O.Float)) "c"))
          (K3O.Float)
-         "MC.fold ((fun (key_0) key_1 accum -> ((<<a>>) (key_0,key_1,accum)))) (<<b>>) (match (<<c>>) with K3Value.SingleMap(f) -> f | _ -> failwith \"boom\")"
+         "MC.fold ((fun wrapped_key key_1 accum -> let key_0 = match wrapped_key with [key_0] -> (key_0) | _ -> failwith \"boom\" in  ((<<a>>) (key_0,key_1) accum))) (<<b>>) (match (<<c>>) with K3Value.SingleMap(f) -> f | _ -> failwith \"boom\")"
 ;;
 run_test "group_by_aggregate (i)"
          (K3O.group_by_aggregate
