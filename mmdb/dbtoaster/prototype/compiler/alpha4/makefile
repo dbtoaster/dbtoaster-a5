@@ -260,8 +260,6 @@ include makefile.deps
 # ocamldep doesn't handle a bunch of deps properly
 stages/maps/M3Codegen.cmi: stages/maps/M3Common.cmo
 stages/maps/M3Codegen.cmxi: stages/maps/M3Common.cmx
-stages/functional/K3Codegen.cmi: stages/functional/K3.cmo
-stages/functional/K3Codegen.cmxi: stages/functional/K3.cmx
 stages/maps/M3Common.cmo: util/Util.cmo stages/maps/M3.cmo 
 stages/maps/M3Common.cmx: util/Util.cmx stages/maps/M3.cmx
 stages/functional/K3Builder.cmo: stages/functional/K3Optimizer.cmo 
