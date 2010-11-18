@@ -194,6 +194,7 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_vwap.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
@@ -205,6 +206,10 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ18.ml
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ22.ml
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
+
+ok_test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
+
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster

@@ -116,10 +116,14 @@ if flag_bool "HELP" then
         "calc          DBToaster-stlye Relational Calculus\n"^
         "delta         DBToaster-style Relational Calculus Deltas\n"^
         "m3            Map Maintenance Message Code\n"^
-        "ocaml         OcaML source file\n"^
+        "ocaml         OcaML source file (via K3)\n"^
+        "ocaml:m3      OcaML source file (via M3)\n"^
+        "ocaml:k3      OcaML source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
         "c++           C++ source file (not implemented yet)\n"^
-        "run           Run the query in interpreter mode\n"
+        "run           Run the query with the default interpreter (K3)\n"^
+        "run:m3        Run the query with the M3 interpreter\n"^
+        "run:k3        Run the query with the K3 interpreter (default run)\n"
       );
     exit 0
   )
@@ -131,27 +135,29 @@ let input_files = if (flag_bool "FILES") then flag_vals "FILES"
                   else give_up "No files provided";;
     
 type language_t = 
-  L_OCAML | L_K3OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
-| L_M3 | L_K3 | L_NONE | L_INTERPRETER | L_K3INTERPRETER;;
+  L_M3OCAML | L_K3OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
+| L_M3 | L_K3 | L_NONE | L_M3INTERPRETER | L_K3INTERPRETER;;
 
 let language = 
-  if flag_bool "INTERPRETER" then L_INTERPRETER
+  if flag_bool "INTERPRETER" then L_K3INTERPRETER
   else
     match flag_val "LANG" with
-    | None -> L_OCAML
+    | None -> L_K3OCAML
     | Some(a) -> match String.uppercase a with
-      | "OCAML"    -> L_OCAML
+      | "OCAML"    -> L_K3OCAML
+      | "OCAML:K3" -> L_K3OCAML
+      | "OCAML:M3" -> L_M3OCAML
       | "C++"      -> L_CPP
       | "CPP"      -> L_CPP
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3
       | "K3"       -> L_K3
-      | "K3O"      -> L_K3OCAML
-      | "K3OCAML"  -> L_K3OCAML
       | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
       | "PLSQL"    -> L_PLSQL 
-      | "RUN"      -> L_INTERPRETER
+      | "RUN"      -> L_K3INTERPRETER
+      | "RUN:M3"   -> L_M3INTERPRETER
+      | "RUN:K3"   -> L_K3INTERPRETER
       | "RK3"      -> L_K3INTERPRETER
       | "NONE"     -> L_NONE (* Used for getting just debug output *)
       | "DEBUG"    -> L_NONE
@@ -294,7 +300,7 @@ let compile_function: ((string * Calculus.var_t list) list ->
                        M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
-  | L_OCAML -> M3OCamlCompiler.compile_query
+  | L_M3OCAML -> M3OCamlCompiler.compile_query
   | L_PLSQL -> K3PLSQLCompiler.compile_query 
   | L_K3OCAML -> K3OCamlCompiler.compile_query
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
@@ -314,7 +320,7 @@ let compile_function: ((string * Calculus.var_t list) list ->
             ) stmts
          ) triggers
       ))
-  | L_INTERPRETER ->
+  | L_M3INTERPRETER ->
       (fun dbschema q tlq f ->
         StandardAdaptors.initialize();
         M3OCamlInterpreterCompiler.compile_query dbschema q tlq f)
@@ -343,7 +349,8 @@ let compile_ocaml in_file_name =
   let dbt_lib_ext = ".cmx" in
   let ocaml_libs = [ "unix"; "str" ] in
   let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
-  let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/ocaml" ] in
+  let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/ocaml";
+                       "stages/functional" ] in
   let dbt_libs = [ "util/Util";
                    "stages/maps/M3";
                    "stages/maps/M3Common";
@@ -351,7 +358,6 @@ let compile_ocaml in_file_name =
                    "lib/ocaml/Values";
                    "lib/ocaml/Database";
                    "lib/ocaml/Sources";
-                   "lib/ocaml/K3Support";
                    "lib/ocaml/Runtime";
                    "lib/ocaml/StandardAdaptors" ] in
     (* would nice to generate args dynamically off the makefile *)
@@ -377,8 +383,8 @@ let compile_ocaml_from_output () =
 
 if flag_bool "COMPILE" then
   match language with
-  | L_OCAML -> compile_ocaml_from_output ()
-  | L_K3    -> compile_ocaml_from_output ()
+  | L_M3OCAML -> compile_ocaml_from_output ()
+  | L_K3OCAML -> compile_ocaml_from_output ()
   | L_PLSQL -> give_up "Compilation of PLSQL not implemented yet"
   | L_CPP   -> give_up "Compilation of C++ not implemented yet"
   | _       -> give_up ("No external compiler available for "^
@@ -386,7 +392,7 @@ if flag_bool "COMPILE" then
           | L_SQL -> "sql"
           | L_CALC -> "calculus"
           | L_M3 -> "m3"
-          | L_INTERPRETER -> "the interpreter"
+          | L_M3INTERPRETER -> "the interpreter"
           | _ -> "this language"
       ))
 else ()

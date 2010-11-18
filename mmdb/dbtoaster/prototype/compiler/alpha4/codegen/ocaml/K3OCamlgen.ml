@@ -8,7 +8,10 @@ open K3
 open Database
 
 module IP = IndentedPrinting
- 
+;;
+exception K3OException of string
+;;
+
 module K3O =
 struct
    type collection_type_t = Inline | DBEntry
@@ -21,10 +24,11 @@ struct
       | Collection of collection_type_t * type_t list * type_t
       | Trigger of M3.pm_t * M3.rel_id_t * M3.var_t list
    
-   type code_t   = IP.t * type_t
-   type op_t     = ((IP.t -> IP.t -> IP.t) * type_t * type_t * type_t)
+   type code_t = IP.t * type_t
+   type op_t   = (type_t -> type_t -> (IP.t -> IP.t -> IP.t) * type_t * 
+                                      string option)
    
-   type db_t              = unit
+   type db_t   = unit
    
    type source_impl_t = IP.t
    
@@ -50,17 +54,15 @@ struct
       (string_of_type t)^": "^(IndentedPrinting.to_debug_line x)
    
    let debugfail (expr:(K3.SR.expr_t option)) (msg:string) =
-      failwith ("K3OCamlgen Internal Error ["^msg^"]; Expression: "^
+      raise (K3OException("K3OCamlgen Internal Error ["^msg^"]; Expression: "^
          (match expr with | None -> "{Not Available}"
-            | Some(s) -> K3.SR.code_of_expr s))
+            | Some(s) -> K3.SR.code_of_expr s)))
             
    
    (********************** Utility **********************)
    
    let parens = ("(",")")
    let brackets = ("[","]")
-   let num_op opcode = (fun a b -> 
-      IP.Node(parens,(") "^opcode," ("),a,b))
    let mk_list (elems:code_t list): IP.t =
       IP.TList(brackets,Some(parens),";",(List.map fst elems)) 
    let mk_tuple (elems:code_t list): IP.t =
@@ -114,7 +116,10 @@ struct
       match fnt with 
          | Fn(fnargt::[],fnrett) -> fnrett
          | Fn(fnargt::otherargt,fnrett) -> Fn(otherargt,fnrett)
-         | _ -> debugfail None "invalid apply, applying to non-function"
+         | _ -> 
+            debugfail 
+               None 
+               ("invalid apply, applying to non-function:"^(string_of_type fnt))
    
    let mapkey_of_codekey (t:code_t list) =
       IP.TList(brackets,Some(parens),";",(List.map fst t))
@@ -208,18 +213,34 @@ struct
    (********************** Algebra **********************)
    
    (* Generic Constructors *)
-   let f_op op = ((num_op op),Float,Float,Float)
-   let c_op op = ((num_op op),Float,Float,Bool)
-   
-   let add_op         : op_t = (f_op "+.")
-   let mult_op        : op_t = (f_op "*.")
+   let num_op opcode = (fun a b -> 
+      IP.Node(parens,(") "^opcode," ("),a,b))
+   let f_op op_f op_b = 
+      (fun a b -> 
+         match (a,b) with
+         | (Float,Float) -> ((num_op op_f), Float, None)
+         | (Bool,Bool)   -> ((num_op op_b), Bool, None)
+         | (_,_) -> 
+            ((num_op op_f), Unit, 
+               Some((string_of_type a)^" ["^op_f^"||"^op_b^"] "^
+                    (string_of_type b)))
+      )
+   let fixed_op (t1:type_t) (t2:type_t) (rett:type_t) (op:IP.t->IP.t->IP.t) =
+      (fun a b -> if (a = t1) && (b = t2) 
+         then (op, rett, None)  
+         else (op, Unit, Some((string_of_type a)^" [cmp] "^
+                              (string_of_type b))))
+   let c_op op = (fixed_op Float Float Bool (num_op op))
+      
+   let add_op         : op_t = (f_op "+." "||")
+   let mult_op        : op_t = (f_op "*." "&&")
    let eq_op          : op_t = (c_op "=")
    let neq_op         : op_t = (c_op "<>")
    let lt_op          : op_t = (c_op "<")
    let leq_op         : op_t = (c_op "<=")
-   let ifthenelse0_op : op_t = ((fun a b -> 
-      IP.Node(("if (",") else 0"),(") ", "then ("), a, b)),
-      Bool,Float,Bool)
+   let ifthenelse0_op : op_t = (fixed_op Bool Float Float (fun a b ->
+      IP.Node(("if (",") else 0."),(") ", "then ("), a, b)
+   ))
 
    (********************** Implementation **********************)
 
@@ -277,18 +298,15 @@ struct
    
    (* Arithmetic, comparision operators *)
    (* op type, lhs, rhs -> op *)
-   let op ?(expr = None) ((op,lt,rt,ot):op_t) ((a,at):code_t) ((b,bt):code_t): 
-          code_t =
-      if at <> lt then 
-         debugfail expr ("Type mismatch in arithmetic lvalue: "^
-                         (string_of_type at)^" != "^(string_of_type lt)) else
-      if bt <> rt then 
-         debugfail expr ("Type mismatch in arithmetic rvalue: "^
-                         (string_of_type bt)^" != "^(string_of_type rt)) else
+   let op ?(expr = None) ((mk_op):op_t) 
+          ((a,at):code_t) ((b,bt):code_t): code_t =
+      let (op_f,rt,err) = (mk_op at bt) in
+      (match err with None -> () | Some(err_msg) -> 
+         debugfail expr ("Type mismatch in arithmetic: "^err_msg));
       let a_wrapped = (if at = Float then unwrap_float a else a) in
       let b_wrapped = (if bt = Float then unwrap_float b else b) in
-      let ret = (op a_wrapped b_wrapped) in
-         ((if ot = Float then wrap_float ret else ret), ot)
+      let ret = (op_f a_wrapped b_wrapped) in
+         ((if rt = Float then wrap_float ret else ret), rt)
    
    (* Control flow *)
    (* predicate, then clause, else clause -> condition *) 
@@ -363,7 +381,8 @@ struct
             then debugfail expr "Mapping function with empty ret"
             else ((List.rev (List.tl (List.rev retlist))),
                   (List.hd (List.rev retlist)))
-         |  _ -> debugfail expr "Mapping function with invalid ret value"
+         |  _ -> debugfail expr ("Mapping function with invalid ret value: "^
+                                 (string_of_type fnt))
       in
       match collt with
          | Collection(Inline,k,t) ->
@@ -407,20 +426,28 @@ struct
             ((apply_many "List.fold_left" [
                (wrap_function ("accum ("^(key_tuple (k@[t]))^")")
                               None
-                              ("("^(key_tuple (k@[t]))^",accum)") 
+                              ("("^(key_tuple (k@[t]))^") accum") 
                               fn);
                init;
                coll
-            ]),(fn_ret_type fnt))
+            ]),(fn_ret_type (fn_ret_type fnt)))
          | Collection(DBEntry,k,t) ->
             ((apply_many "MC.fold" [
-               (wrap_function ((kv_pair_to_keytuple_vars k " ")^" accum")
-                              None
-                              ("("^(key_tuple (k@[t]))^",accum)") 
+               (wrap_function ("wrapped_key "^
+                               (key_tuple ~init_id:(List.length k) [t])^
+                               " accum")
+                              (Some(fun x -> 
+                                 IP.Lines[
+                                    (mk_let (key_tuple k)
+                                            (unwrap_key k "wrapped_key"));
+                                    x
+                                 ]
+                              ))
+                              ("("^(key_tuple (k@[t]))^") accum") 
                               fn);
                init;
                (unwrap_map coll)
-            ]),(fn_ret_type fnt))
+            ]),(fn_ret_type (fn_ret_type fnt)))
          | _ -> debugfail expr ("Aggregating a non-collection")
    
    (* agg fn, initial agg, grouping fn, collection -> agg *)
@@ -483,6 +510,7 @@ struct
                (unwrap_map coll)
             ])),gb_ret)
          | _ -> debugfail expr ("(GB)Aggregating a non-collection")
+         
    
    (* nested collection -> flatten *)
    let flatten ?(expr = None) ((coll,collt):code_t): code_t =

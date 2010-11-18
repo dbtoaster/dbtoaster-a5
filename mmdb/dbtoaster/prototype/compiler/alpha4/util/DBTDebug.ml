@@ -53,24 +53,40 @@ let ocaml_compile_unit_test ?(libs=[])
    let std_output = post_out (Util.complete_read in_c) in
    let err_output = post_err (Util.complete_read err_c) in
    let _ = Unix.close_process_full (in_c,pout_c,err_c) in
-      (if expected_out <> "" then
-       if expected_err <> "" then
-         Debug.log_unit_test
-            name
-            (fun (out,err) -> "--Output--\n"^out^"\n--Error--\n"^err)
+      (match (expected_out,expected_err) with
+      | ((Some(eo)),(Some(ee))) -> 
+         Debug.log_unit_test 
+            name 
+            (fun (out,err) -> "....Output....\n"^out^"\n....Error....\n"^err)
             (std_output,err_output)
-            (expected_out,expected_err)
-      else
-         Debug.log_unit_test
-            name
-            (fun x->x)
-            std_output
-            expected_out
-      else 
-         Debug.log_unit_test
-            name
-            (fun x -> x)
-            err_output
-            expected_err
+            (eo,ee)
+      | (None,(Some(ee))) ->
+         Debug.log_unit_test name (fun x->x) err_output ee
+      | ((Some(eo)),None) -> 
+         Debug.log_unit_test 
+            name 
+            (fun (out,err) -> if err <> "" then err else out) 
+            (std_output,err_output) 
+            (eo,"")
+      | (None,None) ->
+         print_string ("Skipping unnecessary test: "^name)
       );
-      Unix.unlink("tmp.ml");
+      Unix.unlink("tmp.ml")
+
+;;
+
+let k3_test_compile ?(expected = "") name args program =
+   let code = K3OC.compile_k3_expr program in
+   let text = 
+      "module MC = K3ValuationMap\n"^"module DB = NamedK3Database\n"^
+      "let "^name^" dbtoaster_db "^
+      (Util.string_of_list " " (List.map (fun x -> "var_"^x) args))^" = "^
+      (K3OCamlgen.K3CG.to_string code) 
+   in
+      ocaml_compile_unit_test
+         ~libs:["Database";"Values"]
+         ("K3 Ocaml RST "^name)
+         text
+         None (Some(expected))
+
+;;

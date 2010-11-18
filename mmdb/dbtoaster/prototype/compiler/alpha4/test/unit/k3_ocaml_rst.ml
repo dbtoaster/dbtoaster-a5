@@ -13,19 +13,8 @@ module K3OC = K3Compiler.Make(K3OCamlgen.K3CG)
 
 ;;
 
-let test_compile ?(expected = "") name args program =
-   let code = K3OC.compile_k3_expr program in
-   let text = 
-      "module MC = K3ValuationMap\n"^"module DB = NamedK3Database\n"^
-      "let "^name^" dbtoaster_db "^
-      (Util.string_of_list " " (List.map (fun x -> "var_"^x) args))^" = "^
-      (K3CG.to_string code) 
-   in
-      DBTDebug.ocaml_compile_unit_test
-         ~libs:["Database";"Values"]
-         ("K3 Ocaml RST "^name)
-         text
-         "" expected
+let test_compile = DBTDebug.k3_test_compile
+
 ;;
 
 let run_test ?(extractor = (fun x -> x)) (name:string) (test:K3.SR.expr_t) 
@@ -65,12 +54,49 @@ in
 
 ;;
 
+let step_2 = (K3.SR.AssocLambda(K3.SR.ATuple([ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat); "v2",(K3.SR.TFloat) ]),K3.SR.AVar("accv",(K3.SR.TFloat)),(K3.SR.Add((K3.SR.Mult((K3.SR.Var("QUERY_1_1R1S1T_D",(K3.SR.TFloat))),(K3.SR.Var("v2",(K3.SR.TFloat))))),(K3.SR.Var("accv",(K3.SR.TFloat)))))))
+in
+   run_test_type
+      "on_insert_t_assoc_lambda"
+      step_2
+      "fn([float, float, float], float -> float)"
+
+;;
+
+let step_2 = (K3.SR.Lambda(K3.SR.ATuple([ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat); "v2",(K3.SR.TFloat) ]),(K3.SR.Tuple([ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))) ]))))
+in
+   run_test_type
+      "on_insert_t_lambda"
+      step_2
+      "fn([float, float, float] -> [float])"
+
+;;
+
+let step_2 = (K3.SR.Slice((K3.SR.OutPC("QUERY_1_1R1T1",[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],(K3.SR.TFloat))),[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],([ "QUERY_1_1R1S1T_T__C",(K3.SR.Var("QUERY_1_1R1S1T_T__C",(K3.SR.TFloat))) ])))
+in
+   run_test_type
+      "on_insert_t_slice"
+      step_2
+      "dbentry_map( [float, float] -> float)"
+
+;;
+
 let step_2 = (K3.SR.GroupByAggregate((K3.SR.AssocLambda(K3.SR.ATuple([ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat); "v2",(K3.SR.TFloat) ]),K3.SR.AVar("accv",(K3.SR.TFloat)),(K3.SR.Add((K3.SR.Mult((K3.SR.Var("QUERY_1_1R1S1T_D",(K3.SR.TFloat))),(K3.SR.Var("v2",(K3.SR.TFloat))))),(K3.SR.Var("accv",(K3.SR.TFloat))))))),(K3.SR.Const(M3.CFloat(0.))),(K3.SR.Lambda(K3.SR.ATuple([ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat); "v2",(K3.SR.TFloat) ]),(K3.SR.Tuple([ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))) ])))),(K3.SR.Slice((K3.SR.OutPC("QUERY_1_1R1T1",[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],(K3.SR.TFloat))),[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],([ "QUERY_1_1R1S1T_T__C",(K3.SR.Var("QUERY_1_1R1S1T_T__C",(K3.SR.TFloat))) ])))))
 in
    run_test_type
       "on_insert_t_step_2_gather_1"
       step_2
       "dbentry_map( [float] -> float)"
+
+;;
+
+let step_2 = (K3.SR.Lambda(K3.SR.ATuple([ "QUERY_1_1R_R__B",(K3.SR.TFloat); "dv",(K3.SR.TFloat) ]),(K3.SR.IfThenElse((K3.SR.Member((K3.SR.OutPC("QUERY_1_1R1",[ "QUERY_1_1R_R__B",(K3.SR.TFloat) ],(K3.SR.TFloat))),[ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))) ])),(K3.SR.Tuple([ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))); (K3.SR.Add((K3.SR.Lookup((K3.SR.OutPC("QUERY_1_1R1",[ "QUERY_1_1R_R__B",(K3.SR.TFloat) ],(K3.SR.TFloat))),[ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))) ])),(K3.SR.Var("dv",(K3.SR.TFloat))))) ])),(K3.SR.Tuple([ (K3.SR.Var("QUERY_1_1R_R__B",(K3.SR.TFloat))); (K3.SR.Add((K3.SR.Const(M3.CFloat(0.))),(K3.SR.Var("dv",(K3.SR.TFloat))))) ]))))))
+in
+   run_test_type
+      "on_insert_t_step_2_map_lambda"
+      step_2
+      "fn([float, float] -> [float, float])"
+      
 
 ;;
 
@@ -164,5 +190,3 @@ in
       on_delete_r
 
 ;;
-
-exit (-1)
