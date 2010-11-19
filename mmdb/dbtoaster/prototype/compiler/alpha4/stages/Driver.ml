@@ -116,6 +116,8 @@ if flag_bool "HELP" then
         "calc          DBToaster-stlye Relational Calculus\n"^
         "delta         DBToaster-style Relational Calculus Deltas\n"^
         "m3            Map Maintenance Message Code\n"^
+        "k3            Functional update triggers\n"^
+        "k3:noopt      Functional update triggers without optimizations\n"^
         "ocaml         OcaML source file (via K3)\n"^
         "ocaml:m3      OcaML source file (via M3)\n"^
         "ocaml:k3      OcaML source file (via K3)\n"^
@@ -134,31 +136,42 @@ else ();;
 let input_files = if (flag_bool "FILES") then flag_vals "FILES" 
                   else give_up "No files provided";;
     
+type ocaml_codegen_t = OCG_M3 | OCG_K3
+type sql_language_t = SL_SQL | SL_PLSQL
+
 type language_t = 
-  L_M3OCAML | L_K3OCAML | L_CPP | L_PLSQL | L_SQL | L_CALC | L_DELTA
-| L_M3 | L_K3 | L_NONE | L_M3INTERPRETER | L_K3INTERPRETER;;
+   | L_CALC
+   | L_DELTA
+   | L_M3
+   | L_K3 of bool (* optimized? *)
+   | L_INTERPRETER of ocaml_codegen_t
+   | L_OCAML of ocaml_codegen_t
+   | L_CPP 
+   | L_SQL of sql_language_t
+   | L_NONE
 
 let language = 
-  if flag_bool "INTERPRETER" then L_K3INTERPRETER
+  if flag_bool "INTERPRETER" then L_INTERPRETER(OCG_K3)
   else
     match flag_val "LANG" with
-    | None -> L_K3OCAML
+    | None -> L_OCAML(OCG_K3)
     | Some(a) -> match String.uppercase a with
-      | "OCAML"    -> L_K3OCAML
-      | "OCAML:K3" -> L_K3OCAML
-      | "OCAML:M3" -> L_M3OCAML
+      | "OCAML"    -> L_OCAML(OCG_K3)
+      | "OCAML:K3" -> L_OCAML(OCG_K3)
+      | "OCAML:M3" -> L_OCAML(OCG_M3)
       | "C++"      -> L_CPP
       | "CPP"      -> L_CPP
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3
-      | "K3"       -> L_K3
-      | "SQL"      -> L_SQL  (* Translates DBT-SQL + sources -> SQL  *)
-      | "PLSQL"    -> L_PLSQL 
-      | "RUN"      -> L_K3INTERPRETER
-      | "RUN:M3"   -> L_M3INTERPRETER
-      | "RUN:K3"   -> L_K3INTERPRETER
-      | "RK3"      -> L_K3INTERPRETER
+      | "K3"       -> L_K3(true)
+      | "K3:NOOPT" -> L_K3(false)
+      | "SQL"      -> L_SQL(SL_SQL) (* Translates DBT-SQL + sources -> SQL  *)
+      | "PLSQL"    -> L_SQL(SL_PLSQL)
+      | "RUN"      -> L_INTERPRETER(OCG_K3)
+      | "RUN:M3"   -> L_INTERPRETER(OCG_M3)
+      | "RUN:K3"   -> L_INTERPRETER(OCG_K3)
+      | "RK3"      -> L_INTERPRETER(OCG_K3)
       | "NONE"     -> L_NONE (* Used for getting just debug output *)
       | "DEBUG"    -> L_NONE
       | "DELTA"    -> L_DELTA
@@ -216,7 +229,7 @@ else ();;
 
 (********* PRODUCE SQL FOR COMPARISON *********)
 
-if language == L_SQL then
+if language == L_SQL(SL_SQL) then
   (
     failwith "Translation to normal SQL unsupported at the moment";
   )
@@ -300,34 +313,36 @@ let compile_function: ((string * Calculus.var_t list) list ->
                        M3.prog_t * M3.relation_input_t list -> string list -> 
                        Util.GenericIO.out_t -> unit) = 
   match language with
-  | L_M3OCAML -> M3OCamlCompiler.compile_query
-  | L_PLSQL -> K3PLSQLCompiler.compile_query 
-  | L_K3OCAML -> K3OCamlCompiler.compile_query
+  | L_OCAML(OCG_M3) -> M3OCamlCompiler.compile_query
+  | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
+  | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
   | L_M3    -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd (M3Common.pretty_print_prog p)))
-  | L_K3    -> (fun dbschema (p, s) tlq f -> 
-      let triggers = (K3Builder.m3_to_k3_opt p) in
-      GenericIO.write f (fun fd -> 
-         List.iter (fun (pm, rel, args, stmts) ->
-            output_string fd
-               ("\nON_"^(match pm with M3.Insert -> "insert"
-                                     | M3.Delete -> "delete")^
-                "_"^rel^"("^(Util.string_of_list "," args)^")\n");
-            List.iter (fun (_,e) -> 
-               output_string fd ((K3.SR.code_of_expr e)^"\n")
-            ) stmts
-         ) triggers
-      ))
-  | L_M3INTERPRETER ->
-      (fun dbschema q tlq f ->
-        StandardAdaptors.initialize();
-        M3OCamlInterpreterCompiler.compile_query dbschema q tlq f)
-  | L_K3INTERPRETER ->
-      (fun dbschema q tlq f ->
-        StandardAdaptors.initialize();
-        K3InterpreterCompiler.compile_query dbschema q tlq f)
+  | L_K3(opt)    -> (fun dbschema (p, s) tlq f -> 
+      let triggers = if opt then (K3Builder.m3_to_k3_opt p) 
+                            else (K3Builder.m3_to_k3     p)
+      in
+         GenericIO.write f (fun fd -> 
+            List.iter (fun (pm, rel, args, stmts) ->
+               output_string fd
+                  ("\nON_"^(match pm with M3.Insert -> "insert"
+                                        | M3.Delete -> "delete")^
+                   "_"^rel^"("^(Util.string_of_list "," args)^")\n");
+               List.iter (fun (_,e) -> 
+                  output_string fd ((K3.SR.code_of_expr e)^"\n")
+               ) stmts
+            ) triggers
+         ))
+  | L_INTERPRETER(mode) ->
+      let interpreter = (match mode with
+         | OCG_M3 -> M3OCamlInterpreterCompiler.compile_query
+         | OCG_K3 -> K3InterpreterCompiler.compile_query
+      ) in
+         (fun dbschema q tlq f ->
+           StandardAdaptors.initialize();
+           (interpreter dbschema q tlq f))
   | L_NONE  -> (fun dbschema q tlq f -> ())
   | _       -> failwith "Error: Asked to output unknown language"
     (* Calc should have been outputted before M3 generation *)
@@ -383,16 +398,15 @@ let compile_ocaml_from_output () =
 
 if flag_bool "COMPILE" then
   match language with
-  | L_M3OCAML -> compile_ocaml_from_output ()
-  | L_K3OCAML -> compile_ocaml_from_output ()
-  | L_PLSQL -> give_up "Compilation of PLSQL not implemented yet"
+  | L_OCAML(_) -> compile_ocaml_from_output ()
+  | L_SQL(SL_PLSQL) -> give_up "Compilation of PLSQL not implemented yet"
   | L_CPP   -> give_up "Compilation of C++ not implemented yet"
   | _       -> give_up ("No external compiler available for "^
       ( match language with 
-          | L_SQL -> "sql"
+          | L_SQL(SL_SQL) -> "sql"
           | L_CALC -> "calculus"
           | L_M3 -> "m3"
-          | L_M3INTERPRETER -> "the interpreter"
+          | L_INTERPRETER(_) -> "the interpreter"
           | _ -> "this language"
       ))
 else ()

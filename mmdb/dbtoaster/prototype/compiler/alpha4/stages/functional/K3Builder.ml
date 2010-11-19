@@ -445,9 +445,12 @@ let collection_prog m3prog patterns : program =
     let (schema, triggers) = m3prog
     in (schema, patterns, List.map collection_trig triggers)
 
-let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
+let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
    let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
    let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
+      trigs
+
+let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
    let optimize e trig_args = 
       (K3Optimizer.simplify_collections 
          (K3Optimizer.lift_ifs trig_args 
@@ -460,4 +463,4 @@ let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
       List.map (fun (pm,rel,trig_args,stmtl) ->
          (pm, rel, trig_args, (
             (List.map (fun (lhs,rhs) -> (lhs, (fixpoint rhs trig_args))) stmtl)
-         ))) trigs
+         ))) (m3_to_k3 (schema,m3prog))

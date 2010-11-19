@@ -1,4 +1,10 @@
-CREATE TABLE E (x int, y int, player int);
+CREATE TABLE E (x float, y float, player int)
+  FROM FILE 'test/data/sgl.dat'
+  LINE DELIMITED csv (
+    fields := ',', 
+    schema := 'float,float,int', 
+    events := '+:insert,-:delete'
+  );
 
 SELECT E2.player, sum(1)
 FROM E E1, E E2

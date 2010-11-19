@@ -195,6 +195,7 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_vwap.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_sgl.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
@@ -208,6 +209,8 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ok_test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_sgl.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
 
 

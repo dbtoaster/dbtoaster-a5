@@ -93,8 +93,16 @@ struct
       |  SR.TFloat ->Float
       |  SR.TInt -> Float
       |  SR.TTuple(tlist) -> Tuple(List.map map_type tlist)
-         (* blech! This type should have the key arity at least *)
-      |  SR.Collection(t) -> Collection(Inline,[],map_type t) 
+      |  SR.Collection(ctype) -> 
+         (* Collections are specified as a singleton value OR as
+            a tuple([key1;key2;...;value]) *)
+         (match (map_type ctype) with 
+            | Tuple([]) -> Collection(Inline,[],Unit)
+            | Tuple(klist) -> 
+               Collection(Inline,(List.rev (List.tl (List.rev klist))),
+                                 (List.hd (List.rev klist)))
+            | vtype -> Collection(Inline,[],vtype)
+         )
       |  SR.Fn(argtlist,rett) -> 
             Fn(List.map map_type argtlist, map_type rett)
    
@@ -189,7 +197,7 @@ struct
        ") = "^kv_pair^" in ("^(key_tuple (t_list@[Unit]))^")")
    
    let inline_map map t_list =
-      (fold_map (unwrap_map map) t_list (merge_key_value t_list "(k,v)"))
+      (fold_map ((*unwrap_map*) map) t_list (merge_key_value t_list "(k,v)"))
    
    let map_to_update ((map,mapt):code_t) (patterns:IP.t): IP.t =
       match mapt with 
@@ -205,7 +213,7 @@ struct
       | Collection(DBEntry,kt,vt) -> 
          (apply_many "List.fold_left" [
             IP.Leaf("MC.add_secondary_index");
-            (unwrap_map map);
+            ((*unwrap_map*) map);
             patterns
          ])
       | _ -> debugfail None "Using a non-collection to update a map"
@@ -387,15 +395,15 @@ struct
       match collt with
          | Collection(Inline,k,t) ->
             ((apply_many "List.map" [
-               (wrap_function (key_tuple (k@[t]))
+               (wrap_function ("("^(key_tuple (k@[t]))^")")
                               None
-                              ("("^(key_tuple k)^") "^
-                                 (key_tuple ~init_id:(List.length k) [t]))
+                              ("("^(key_tuple k)^","^
+                                 (key_tuple ~init_id:(List.length k) [t])^")")
                               fn);
                coll]),
              Collection(Inline,keyt,valt))
          | Collection(DBEntry,k,t) ->
-            ((wrap_map (
+            (((*wrap_map*) (
                apply_many "MC.mapi" [
                   (wrap_function "wrapped_key map_value"
                                  (Some((fun x -> IP.Lines[
@@ -412,7 +420,7 @@ struct
                                  ])))
                                  ("("^(key_tuple k)^",map_value)") 
                                  fn);
-                  (unwrap_map coll)
+                  ((*unwrap_map*) coll)
                 ])),
              Collection(DBEntry,keyt,valt))
          | _ -> debugfail expr ("Mapping a non-collection")
@@ -446,7 +454,7 @@ struct
                               ("("^(key_tuple (k@[t]))^") accum") 
                               fn);
                init;
-               (unwrap_map coll)
+               ((*unwrap_map*) coll)
             ]),(fn_ret_type (fn_ret_type fnt)))
          | _ -> debugfail expr ("Aggregating a non-collection")
    
@@ -484,7 +492,7 @@ struct
       in
       match collt with
          | Collection(Inline,k,t) ->
-            ((wrap_map (apply_many "List.fold_left" [
+            (((*wrap_map*) (apply_many "List.fold_left" [
                (wrap_function ("accum ("^(key_tuple (k@[t]))^")")
                               (Some((gb_aux k t)))
                               ("("^(key_tuple (k@[t]))^") old_value")
@@ -493,7 +501,7 @@ struct
                coll
             ])),gb_ret)
          | Collection(DBEntry,k,t) ->
-            ((wrap_map (apply_many "MC.fold" [
+            (((*wrap_map*) (apply_many "MC.fold" [
                (wrap_function ("enc_key value accum")
                               (Some(fun x -> 
                                  IP.Lines[
@@ -507,7 +515,7 @@ struct
                               ("("^(key_tuple (k@[t]))^") old_value") 
                               agg);
                IP.Leaf("K3ValuationMap.empty_map ()");
-               (unwrap_map coll)
+               ((*unwrap_map*) coll)
             ])),gb_ret)
          | _ -> debugfail expr ("(GB)Aggregating a non-collection")
          
@@ -547,7 +555,7 @@ struct
                   IP.Leaf(") @ accum")
                ]);
                IP.Leaf("[]");
-               (unwrap_map coll)
+               ((*unwrap_map*) coll)
             ]),Collection(Inline,ki@ko,t))
       |  Collection(Inline,ko,Collection(DBEntry,ki,t)) ->
             ((apply_many "List.fold_left" [
@@ -561,7 +569,7 @@ struct
                         IP.Leaf("("^(key_tuple (ko@ki@[t]))^")::inner_accum")
                      ]);
                      IP.Leaf("[]");
-                     (unwrap_map (IP.Leaf("inner_map")))
+                     ((*unwrap_map*) (IP.Leaf("inner_map")))
                   ]);
                   IP.Leaf(") @ accum")
                ]);
@@ -580,12 +588,12 @@ struct
                         IP.Leaf("("^(key_tuple (ko@ki@[t]))^")::inner_accum")
                      ]);
                      IP.Leaf("[]");
-                     (unwrap_map (IP.Leaf("inner_map")))
+                     ((*unwrap_map*) (IP.Leaf("inner_map")))
                   ]);
                   IP.Leaf(") @ accum")
                ]);
                IP.Leaf("[]");
-               (unwrap_map coll)
+               ((*unwrap_map*) coll)
             ]),Collection(Inline,ki@ko,t))
       |  _ -> debugfail expr "Trying to flatten a non-nested collection"
    
@@ -603,11 +611,11 @@ struct
                IP.TList(parens,Some(parens),",",(List.map fst key));
                IP.Leaf(") in");
                IP.Leaf("(fun ("^(key_tuple kt)^",_) -> ("^
-                       (key_tuple kt)^") = cmp)")
+                       (key_tuple kt)^") = comparison)")
             ]);
             map]),Bool)
       |  Collection(DBEntry,kt,vt) ->
-         ((apply_many "MC.mem" [(mapkey_of_codekey key);(unwrap_map map)]),Bool)
+         ((apply_many "MC.mem" [(mapkey_of_codekey key);((*unwrap_map*) map)]),Bool)
       | _ -> debugfail expr "Existence check on a non-collection"
    
    (* map, key -> map value *)
@@ -620,17 +628,22 @@ struct
                IP.TList(parens,Some(parens),",",(List.map fst key));
                IP.Leaf(") in");
                IP.Leaf("(fun ("^(key_tuple kt)^",_) -> ("^
-                       (key_tuple kt)^") = cmp)")
+                       (key_tuple kt)^") = comparison)")
             ]);
             map]),vt)
       | Collection(DBEntry,kt,vt) ->
-         ((apply_many "MC.find" [(mapkey_of_codekey key);(unwrap_map map)]),vt)
+         ((apply_many "MC.find" [(mapkey_of_codekey key);((*unwrap_map*) map)]),vt)
       | _ -> debugfail expr "Lookup on a non-collection"
       
    (* map, partial key, pattern -> slice *)
    (* TODO: see notes on datatype conversions/secondary indexes *)
    let slice ?(expr = None) ((map,mapt):code_t) (pkey:code_t list) 
              (pattern:int list): code_t =
+      if List.length pattern <> List.length pkey then
+         debugfail expr ("Error: slice pattern and key length mismatch")
+      else
+      if List.length pattern = 0 then (map,mapt)
+      else
       match mapt with 
       | Collection(Inline,kt,vt) ->
          ((IP.Lines([
@@ -647,10 +660,10 @@ struct
             ])
          ])),Collection(Inline,kt,vt))
       | Collection(DBEntry,kt,vt) ->
-         ((wrap_map (apply_many "MC.slice" [
+         (((*wrap_map*) (apply_many "MC.slice" [
             IP.Leaf(Util.list_to_string string_of_int pattern);
             IP.TList(brackets,Some(parens),";",(List.map fst pkey));
-            (unwrap_map map)
+            ((*unwrap_map*) map)
          ])),Collection(DBEntry,kt,vt))
       | _ -> debugfail expr "Slice on a non-collection"
    
@@ -666,17 +679,17 @@ struct
 
    let get_in_map  ?(expr = None) (schema:K3.SR.schema) (t:K3.SR.type_t)   
                    (map:K3.SR.coll_id_t): code_t =
-      ((wrap_map (IP.Leaf("DB.get_in_map \""^map^"\" dbtoaster_db"))), 
+      (((*wrap_map*) (IP.Leaf("DB.get_in_map \""^map^"\" dbtoaster_db"))), 
        Collection(DBEntry,(List.map (fun (_,x) -> map_type x) schema),Float))
 
    let get_out_map ?(expr = None) (schema:K3.SR.schema) (t:K3.SR.type_t)
                    (map:K3.SR.coll_id_t): code_t =
-      ((wrap_map (IP.Leaf("DB.get_out_map \""^map^"\" dbtoaster_db"))), 
+      (((*wrap_map*) (IP.Leaf("DB.get_out_map \""^map^"\" dbtoaster_db"))), 
        Collection(DBEntry,(List.map (fun (_,x) -> map_type x) schema),Float))
 
    let get_map ?(expr = None) ((ins,outs):(K3.SR.schema*K3.SR.schema))  
                (t:K3.SR.type_t) (map:K3.SR.coll_id_t): code_t =
-      ((wrap_map (IP.Leaf("DB.get_map \""^map^"\" dbtoaster_db"))), 
+      (((*wrap_map*) (IP.Leaf("DB.get_map \""^map^"\" dbtoaster_db"))), 
        Collection(DBEntry,(List.map (fun (_,x) -> map_type x) ins),
                   Collection(DBEntry,(List.map (fun (_,x) -> map_type x) outs),
                              Float)))

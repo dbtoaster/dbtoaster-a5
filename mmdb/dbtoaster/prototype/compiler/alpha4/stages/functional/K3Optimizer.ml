@@ -562,7 +562,9 @@ let rec inline_collection_functions substitutions expr =
   in
   begin match expr with
   | Apply(Lambda(AVar(v, ((Collection _) as t)), body), arg) ->
-    descend_expr (recur (rebind substitutions (v,t) arg)) body
+    descend_expr (recur (rebind substitutions (v,t) 
+                           (descend_expr (recur substitutions) arg))
+                 ) body
   | Var(v,t) -> if List.mem_assoc (v,t) substitutions
                 then List.assoc (v,t) substitutions else expr
   | _ -> descend_expr (recur substitutions) expr

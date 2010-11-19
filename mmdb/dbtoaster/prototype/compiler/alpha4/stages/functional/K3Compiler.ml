@@ -103,6 +103,12 @@ let rec compile_k3_expr e =
         end
     end
 
+let compile_triggers_noopt trigs : code_t list =
+   List.map (fun (event, rel, args, cs) ->
+      let stmts = List.map compile_k3_expr (List.map fst cs) in
+         trigger event rel args stmts
+   ) trigs
+
 let compile_triggers trigs : code_t list =
   List.map (fun (event, rel, args, cs) ->
       let stmts = List.map compile_k3_expr
@@ -116,15 +122,19 @@ let compile_triggers trigs : code_t list =
       in trigger event rel args stmts)
     trigs
 
-let compile_query_to_code (dbschema:(string * Calculus.var_t list) list)
+let compile_query_to_code ?(disable_opt = false)
+                          (dbschema:(string * Calculus.var_t list) list)
                           (((schema,m3prog) : M3.prog_t),
                              (sources: M3.relation_input_t list))
                           (toplevel_queries : string list): code_t =
+   let compile = 
+      if disable_opt then compile_triggers_noopt else compile_triggers
+   in
    let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
    let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
    let trig_rels = Util.ListAsSet.no_duplicates
       (List.map (fun (_,rel,_,_) -> rel) trigs) in
-   let ctrigs = compile_triggers trigs in
+   let ctrigs = compile trigs in
    let sources_and_adaptors =
       List.fold_left (fun acc (s,f,rel,a) ->
          match (List.mem rel trig_rels, List.mem_assoc (s,f) acc) with

@@ -20,7 +20,7 @@ let test_compile = DBTDebug.k3_test_compile
 let run_test ?(extractor = (fun x -> x)) (name:string) (test:K3.SR.expr_t) 
              (result:string) =
    Debug.log_unit_test
-      ("K3 Ocaml RST "^name) 
+      ("K3 Ocaml VWAP "^name) 
       (fun x -> x)
       (extractor (K3CG.debug_string (K3OC.compile_k3_expr test)))
       result

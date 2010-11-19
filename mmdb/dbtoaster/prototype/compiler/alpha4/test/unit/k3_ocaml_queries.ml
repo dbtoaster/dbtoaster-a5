@@ -22,15 +22,16 @@ let test_compile script result =
             print_string ("Run time "^script^": "^
                           (String.sub x (timer + 8) (index - timer - 8)));
             String.sub x index ((String.length x) - index)
-         with Not_found -> "fff"
+         with Not_found -> ""
       )
       ("K3 Ocaml Compile "^script)
       (DBTDebug.compiled_k3_for_script script)
-      (Some("QUERY: "^result^"\n")) (Some(""))
+      (Some("QUERY: "^result^"\n")) (None)
    )
    
 ;;
 
 
-test_compile "test/sql/vwap.sql" "31230008700.";;
+test_compile "test/sql/sgl.sql" "";;
 test_compile "test/sql/rst.sql" "1.87533670489e+13";;
+test_compile "test/sql/vwap.sql" "31230008700.";;

@@ -35,7 +35,7 @@ let run_test_type =
 let slice_t = (K3.SR.Slice((K3.SR.OutPC("QUERY_1_1R1T1",[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],(K3.SR.TFloat))),[ "QUERY_1_1R_R__B",(K3.SR.TFloat); "QUERY_1_1R1S1T_T__C",(K3.SR.TFloat) ],([ "QUERY_1_1R1S1T_T__C",(K3.SR.Var("QUERY_1_1R1S1T_T__C",(K3.SR.TFloat))) ])))
 in
    run_test "on_insert_t_slice" slice_t 
-      "dbentry_map( [float, float] -> float): K3Value.SingleMap(MC.slice ([ 1 ]) ([(var_QUERY_1_1R1S1T_T__C)]) (match (K3Value.SingleMap(DB.get_out_map \"QUERY_1_1R1T1\" dbtoaster_db)) with K3Value.SingleMap(f) -> f | _ -> failwith \"boom\"))"
+      "dbentry_map( [float, float] -> float): MC.slice ([ 1 ]) ([(var_QUERY_1_1R1S1T_T__C)]) (DB.get_out_map \"QUERY_1_1R1T1\" dbtoaster_db)"
 
 ;;
 
