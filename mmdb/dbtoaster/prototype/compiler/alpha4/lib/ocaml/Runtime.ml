@@ -86,7 +86,6 @@ let synch_main
 
 end
 ;;
-<<<<<<< .mine
 
 let run_adaptors output_dir sources =
   StandardAdaptors.initialize();
