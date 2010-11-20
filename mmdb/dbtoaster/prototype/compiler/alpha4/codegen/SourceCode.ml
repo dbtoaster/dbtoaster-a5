@@ -38,10 +38,13 @@ let concat_and_delim_source_code delim a b =
 let concat_and_delim_source_code_list ?(final=false) ?(delim="") bcl =
   if bcl = [] then Inline("") else
     let r = List.fold_left (concat_and_delim_source_code delim)
-                 (List.hd bcl) (List.tl bcl)
+      (List.hd bcl)
+      (List.filter (fun x -> not(empty_source_code x)) (List.tl bcl))
     in if final then delim_source_code delim r else r
 
-let indent_source_code s bc = begin match bc with
+let indent_source_code s bc =
+  if empty_source_code bc then bc 
+  else begin match bc with
   | Lines l -> Lines(List.map (fun a -> s^a) l)
   | Inline i -> Inline(s^i)
   end

@@ -6,7 +6,12 @@ open K3.SR
 open Values
 open Database
 
-module CG (*: K3Codegen.CG *) =
+(* Postgres-specific settings:
+ * #variable_conflict use_column, in trigger source code generation.
+ * found, in source_code_of_update
+ *)
+
+module CG (*: K3Codegen.CG*) =
 struct
 type op_t = source_code_op_t
 
@@ -16,8 +21,7 @@ type counters_t = int * int * int * int
 type schema_t   = string list 
 type relation_t = code_t * string * schema_t
 and  where_t    = source_code_t
-and  group_by_t = code_t
-and  select_t = code_t list * relation_t list * where_t list * group_by_t list
+and  select_t = code_t list * relation_t list * where_t list * code_t list
 and  update_t = code_t * where_t list * code_t list
  
 and code_t =
@@ -37,12 +41,51 @@ and code_t =
     | Assign        of string * code_t
     | Insert        of string * code_t
     | Update        of string * update_t
-    | Trigger       of M3.pm_t * M3.rel_id_t * M3.var_t list * code_t list * counters_t
+    | Trigger       of M3.pm_t * M3.rel_id_t * M3.var_t list * code_t list
+                       * counters_t * M3.var_t list
     | Main          of source_code_t (* stringify in main cg *)
 
 (* These are not used, but we still need valid types here *)    
 type db_t = NamedK3Database.db_t
 type source_impl_t = source_code_t
+
+(* value assignments can be used for single attributes, and records *)
+type assign_t = NoAssign | SkipSelect | Fields of schema_t | Value of string
+
+(* Accessors *)
+let is_const c = match c with Const _ -> true | _ -> false
+let is_var c = match c with Var _ -> true | _ -> false
+let is_query_value c = match c with QueryV _ -> true | _ -> false
+let is_relation c = match c with Relation _ -> true | _ -> false
+let is_op c = match c with Op _ -> true | _ -> false
+
+let is_value c = match c with
+  | Const _ | Var _ | QueryV _ | ValueRelation _ | Op _ -> true
+  | _ -> false
+
+let is_tuple c = match c with QueryT _ -> true | _ -> false
+let is_collection c = match c with Relation _ | QueryC _ -> true | _ -> false
+
+let is_memo c = match c with Memo _ -> true | _ -> false
+let is_memo_value c = match c with Memo(_,c) -> is_value c | _ -> false
+let is_memo_tuple c = match c with Memo(_,c) -> is_tuple c | _ -> false
+let is_memo_collection c = match c with Memo(_,c) -> is_collection c | _ -> false
+
+let is_condition c = match c with IfThenElse _ -> true | _ -> false
+let is_query c = match c with QueryV _ | QueryT _ | QueryC _ -> true | _ -> false 
+
+let get_var c = match c with
+  | Var(x) -> x
+  | _ -> failwith "invalid variable"
+  
+let get_memo_value c = match c with
+  | Memo(_,v) -> v
+  | _ -> failwith "invalid memo" 
+ 
+let get_memo_binder v = match v with
+  | Memo(b,_) -> b
+  | _ -> failwith "invalid memo"
+
 
 (* Operators *)
 let add_op  = "+"
@@ -100,7 +143,7 @@ and concatr rl = String.concat " natural join " (List.map (fun (r,id,sch) ->
 and concatw wl = String.concat " and " (List.map ssc wl)
 and concata args = String.concat "," (List.flatten (List.map get_vars args))
 and string_of_select_t (sl,r,c,g) =
-    "select "^(if sl = [] then "*" else (concatc "," sl))^
+    "select "^(if sl = [] then "*" else (concatc "," (g@sl)))^
     (if r = [] then "" else " from "^(concatr r))^
     (if c = [] then "" else " where "^(concatw c))^
     (if g = [] then "" else " group by "^(concatc "," g))
@@ -127,7 +170,7 @@ and string_of_code_t c =
     | Insert (id,c) -> "Insert("^id^","^(rcr c)^")"
     | Update (id,(c,w,_)) -> "Update("^id^","^(rcr c)^
                             (if w = [] then "" else ","^(concatw w))^")"
-    | Trigger(evt,rel,args,cl,_) ->
+    | Trigger(evt,rel,args,cl,_,_) ->
         "Trigger(_,"^rel^",_,"^(String.concat ";\n" (List.map rcr cl))^")"
     | Main (sc) -> ssc sc
 
@@ -183,26 +226,56 @@ and flatten_sc sc = match sc with
         inl(String.concat "" ((List.hd l)::(List.map untab (List.tl l))))
       else sc
   | Inline _ -> sc
-and source_code_of_select (sl,r,c,g) =
+
+and source_code_of_assign_relation c = match c with
+  | Relation(id,fields) ->
+    (* TODO: types *)
+    let f = String.concat "," (List.map (fun v -> v^" real") fields)
+    in Lines["create temporary table "^id^"("^f^")"]
+  | _ -> failwith ("invalid relation :"^(string_of_code_t c))
+
+and source_code_of_select ?(assign = NoAssign) (sl,r,c,g) =
   let lines l sc = if l = [] then inl "" else csc (Lines[]) sc in
-  let auxcl cl = List.map source_code_of_code cl in
+  let auxcl cl = List.map (fun c -> 
+    let r = source_code_of_code ~assign:NoAssign c in
+    if is_query c then csc (csc (inl "(") r) (inl ")") else r) cl in
+  let assignments sc = match assign with
+    | Fields sch -> csc sc (inl (" into "^(String.concat "," sch)))
+    | Value v -> csc sc (inl (" into "^v))
+    | _ -> sc
+  in
   let subqueries rl =
     let auxsq c id sch = match c,id,sch with
       | Relation _,x,[] | ValueRelation _,x,[] ->
           csc (isq (source_code_of_code c)) (inl (append_rel_id x))
-      | _ ->  csc (csc (inl "(") (isq (source_code_of_code c)))
-                  (inl (")"^(append_rel_id id)^(append_sch sch)))
+      | _ -> let alias = (append_rel_id id)^(append_sch sch)
+             in csc (csc (inl "(") (isq (source_code_of_code c)))
+                         (inl (")"^(if alias = "" then " as R" else alias)))
     in cscl ~delim:" natural join " (List.map (fun (c,id,sch) -> auxsq c id sch) rl)
   in
-  flatten_sc (cscl ~delim:" " 
+  let r = flatten_sc (cscl ~delim:" " 
     [cscl ~delim:" "
-      [inl("select");
-        (if sl = [] then inl("*") else (cscl ~delim:"," (auxcl sl)))];
+      [(if assign = SkipSelect then inl "" else inl("select"));
+         assignments
+           (if sl = [] then inl("*") else (cscl ~delim:"," (auxcl (g@sl))))];
      (lines r (cdsc " " (inl ("from")) (subqueries r)));
      (lines c (cdsc " " (inl ("where")) (cscl ~delim:" and " c)));
      (lines g (cdsc " " (inl ("group by")) (cscl ~delim:"," (auxcl g))))])
+  in 
+  let has_sum_aggregate cl = List.exists (fun c -> match c with
+    | Aggregate("sum",_) -> true | _ -> false) sl 
+  in if not(has_sum_aggregate sl) then r
+     else csc (inl ((if assign = SkipSelect then "" else "select ")^
+                     "case when r is null then 0 else r end from ("))
+              (csc (if assign = SkipSelect then csc (inl "select") r else r)
+                   (inl ") as R(r)"))
+
 and source_code_of_update (id,(c,w,k)) =
-  let vsc = source_code_of_code c in
+  let vsc =
+    let assign_param =
+      if (is_value c || is_memo_value c) then SkipSelect
+      else failwith "invalid assignment"
+    in source_code_of_code ~assign:assign_param c in
   let wsc = csc (if w = [] then inl "" else inl "where ")
                 (cscl ~delim:" and " w) in
   let t = cscl ~delim:"," ((List.map source_code_of_code k)@[inl "update_v"]) in
@@ -213,34 +286,43 @@ and source_code_of_update (id,(c,w,k)) =
   let insert = flatten_sc (cscl
     ([Lines["insert into "^id^" values("];t;Lines[");"]])) in
   let insert_on_update_fail =
-    [Lines["if found = 0 then"]]@[(isc tab insert)]@[Lines["endif" ]]
+    [Lines["if not found then"]]@[(isc tab insert)]@[Lines["end if" ]]
   in flatten_sc (cscl ([update_memo]@update@insert_on_update_fail))
-and source_code_of_code c =
+and source_code_of_code ?(assign = NoAssign) c =
   let rcr = source_code_of_code in
   begin match c with
     | Const c -> inl c
     | Var v -> inl v
     | ValueRelation v -> inl v
-    | Relation(id,sch) -> inl (id^(append_sch sch))
+    | Relation(id,sch) -> inl (id)
     | Op(op,l,r) ->
         begin match op with
         | x when x = ifthenelse0_op ->
-            inl ("(case when "^(ssc (rcr l))^" <> 0 "^
+            inl ("(case when ("^(ssc (rcr l))^") <> 0 "^
                   "then "^(ssc (rcr r))^" else 0 end)")
         | x when x = eq_op || x = neq_op || x = lt_op || x = leq_op ->
-            inl ("(case when "^(ssc (rcr l))^op^(ssc (rcr r))^
+            inl ("(case when ("^(ssc (rcr l))^") "^op^" ("^(ssc (rcr r))^")"^
                    " then 1 else 0 end)")
         | _ -> cdsc op (rcr l) (rcr r)
         end
+
     | Aggregate(op,c) -> inl (op^"("^(ssc (rcr c))^")")
-    | QueryV s  | QueryT s -> source_code_of_select s
-    | QueryC sl -> cscl ~delim:" union " (List.map source_code_of_select sl)
+
+    | QueryV s  | QueryT s -> source_code_of_select ~assign:assign s
+    | QueryC sl -> cscl ~delim:" union "
+                     (List.map (source_code_of_select ~assign:assign) sl)
     | Memo(bl,c) -> cscl ~delim:";" ((List.map rcr bl)@[rcr c])
     | Bind(args,b) -> failwith "unevaluated function in code"
-    | For(sch,c,b) ->
-       cscl [cscl ~delim:" "
-              [(inl("for "^(String.concat "," sch)^" in")); (rcr c); inl("loop")];
-             isc tab (sequence ~final:true [rcr b]); Lines["end loop"]]
+    | For(sch,c,b) -> 
+       let decl = [inl("declare");
+         (sequence ~final:true (List.map (fun x -> isc tab (inl(x^" real"))) sch));
+         inl("begin")]
+       in cscl (decl@(List.map (isc tab) [cscl [cscl ~delim:" "
+              [(inl("for "^(String.concat "," sch)^" in"));
+                       (rcr c); inl("loop")];
+             isc tab (sequence ~final:true [rcr b]); Lines["end loop;"]]]@
+       [inl("end")]))
+
     | IfThenElse(p,t,e) ->
        sequence
          [csc (cscl ~delim:" " [inl("if"); (rcr p); inl("then")])
@@ -248,74 +330,56 @@ and source_code_of_code c =
           (csc (Lines["else"]) (isc tab (rcr e)));
           Lines["end if"]]
 
-    | Assign(v,c) -> flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr c)))
+    | Assign(v,c) -> 
+      if is_tuple c || is_memo_tuple c then rcr ~assign:(Value(v)) c
+      else if is_relation c then source_code_of_assign_relation c
+      else flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr ~assign:SkipSelect c)))
+
     | Insert(id,c) -> cdsc " " (inl ("insert into "^id)) (rcr c)
     | Update(id,u) -> source_code_of_update (id,u) 
-    | Trigger (evt,rel,args,stmtl,counters) ->
+    | Trigger (evt,rel,args,stmtl,counters,relargs) ->
         let trig_name = (pm_name evt)^"_"^rel in
-        let trig_params = sequence
-          (List.map (fun x -> inl(x^" ALIAS FOR "^(pm_tuple evt)^"."^x)) args)
+        let trig_params = sequence (List.map2 (fun x y ->
+            inl(x^" real := "^(pm_tuple evt)^"."^y)) args relargs)
         in
-
-        (* TODO: relation declarations w/ schemas *)
+        let (vc,ac,tc,rc) = counters in
         let var_decls =
-          let (vc,ac,tc,rc) = counters in 
-          let rec declare prefix sql_type n i acc =
+          let rec declare prefix sql_type init n i acc =
             if i >= n then acc
-            else let nacc = acc@[inl(prefix^(string_of_int i)^" "^sql_type)]
-                 in declare prefix sql_type n (i+1) nacc
+            else let nacc = acc@[inl(prefix^(string_of_int i)^" "^sql_type^
+                                 (if init = "" then "" else " := "^init))]
+                 in declare prefix sql_type init n (i+1) nacc
           in 
             trig_params::
-            (declare "var" "real" vc 0 [])@
-            (declare "agg" "real" ac 0 [])@
-            (declare "tup" "record" tc 0 [])@
+            (declare "var" "real" "0.0" vc 0 [])@
+            (declare "agg" "real" "0.0" ac 0 [])@
+            (declare "tup" "record" "" tc 0 [])@
             [inl("has_key integer"); inl("current_v real"); inl("update_v real");
              inl("init_val real"); inl("accv real")]
         in
+        let drop_tmp_collections =
+          let rec aux acc i =
+            if i < 0 then acc
+            else aux (csc (Lines
+                   ["drop table rel"^(string_of_int i)^";"]) acc) (i-1) 
+          in aux (Lines[]) (rc-1)
+        in
         cscl
           [Lines["\ncreate function "^trig_name^" () returns trigger as $$"];
+           inl("#variable_conflict use_column");
            inl("declare");
            isc tab (sequence ~final:true var_decls);
            inl("begin");
            isc tab (sequence ~final:true (List.map rcr stmtl));
+           isc tab drop_tmp_collections;
+           isc tab (inl "return null;");
+           inl("end;");
            inl("$$ language plpgsql;");
            inl("create trigger on_"^trig_name^" after "^(pm_const evt)^
-               " on "^rel^" for each row execute procedure "^trig_name)]
+               " on "^rel^" for each row execute procedure "^trig_name^"()")]
     | Main sc -> sc
   end 
 
-
-let is_const c = match c with Const _ -> true | _ -> false
-let is_var c = match c with Var _ -> true | _ -> false
-let is_query_value c = match c with QueryV _ -> true | _ -> false
-let is_relation c = match c with Relation _ -> true | _ -> false
-let is_op c = match c with Op _ -> true | _ -> false
-
-let is_value c = match c with
-  | Const _ | Var _ | QueryV _ | ValueRelation _ | Op _ -> true
-  | _ -> false
-
-let is_tuple c = match c with QueryT _ -> true | _ -> false
-let is_collection c = match c with Relation _ | QueryC _ -> true | _ -> false
-
-let is_memo c = match c with Memo _ -> true | _ -> false
-let is_memo_value c = match c with Memo(_,c) -> is_value c | _ -> false
-let is_memo_tuple c = match c with Memo(_,c) -> is_tuple c | _ -> false
-let is_memo_collection c = match c with Memo(_,c) -> is_collection c | _ -> false
-
-let is_condition c = match c with IfThenElse _ -> true | _ -> false
-
-let get_var c = match c with
-  | Var(x) -> x
-  | _ -> failwith "invalid variable"
-  
-let get_memo_value c = match c with
-  | Memo(_,v) -> v
-  | _ -> failwith "invalid memo" 
- 
-let get_memo_binder v = match v with
-  | Memo(b,_) -> b
-  | _ -> failwith "invalid memo"
 
 (* Symbol generation *)
 let counters = Hashtbl.create 0
@@ -389,7 +453,7 @@ let build_tuple_schema r tuple =
 
 let get_schema c =  match c with
   | Memo(_,QueryC(c)) | QueryC(c) ->
-    let sl,_,_,_ = List.hd c in build_fields "column" sl
+    let sl,_,_,g = List.hd c in build_fields "column" (g@sl)
   | _ -> failwith "invalid collection for retrieving fields"
 
 
@@ -489,7 +553,7 @@ let apply_op op c1 c2 =
   begin match c1, c2 with
   | QueryV([x],_,_,_), QueryV([y],_,_,_) ->
     let gen_var v x = Var(v),[v] in
-    let (lv,lsch),(rv,rsch) = gen_var "v1" x, gen_var "v2" y in
+    let (lv,lsch),(rv,rsch) = gen_var "__v1" x, gen_var "__v2" y in
     let subq = [(c1,gen_rel_alias(),lsch); (c2,gen_rel_alias(),rsch)]
     in QueryV([Op(op,lv,rv)], subq, [], [])
   
@@ -563,14 +627,22 @@ let ifthenelse ?(expr = None) p t e =
   | x,y when (is_tuple x || is_memo_tuple x)
              && (is_tuple y || is_memo_tuple y)
     ->
-    let new_record, new_fields =
+    let x_tuple = if is_memo_tuple x then get_memo_value x else x in
+    let new_record, sch, vars =
       let r = gen_record_sym() in
-      r, (build_tuple_schema r
-           (if is_memo_tuple x then get_memo_value x else x))
+      let s = build_temporary_schema x_tuple in
+      let v = vars_of_schema (List.map (fun v -> r^"."^v) s)
+      in r,s,v
     in
-    let new_t = Assign(new_record,t) in
-    let new_e = Assign(new_record,e) in
-    let new_tuple = QueryT(new_fields,[],[],[]) in
+    let rename t = match t with
+      | QueryT _ -> QueryT([],[t,gen_rel_alias(),sch],[],[])
+      | Memo(bl,((QueryT _) as q)) ->
+        Memo(bl, QueryT([],[q,gen_rel_alias(),sch],[],[]))
+      | _ -> failwith ("invalid tuple: "^(string_of_code_t t)) 
+    in
+    let new_t = Assign(new_record, rename t) in
+    let new_e = Assign(new_record, rename e) in
+    let new_tuple = QueryT(vars,[],[],[]) in
     Memo([IfThenElse(p,new_t,new_e)],new_tuple)
   
   | x,y when (is_collection x || is_memo_collection x)
@@ -586,7 +658,8 @@ let ifthenelse ?(expr = None) p t e =
       id, Relation(id,fields) in
     let new_t = For(x_sch, x, Insert(new_cid,x_tuple)) in
     let new_e = For(y_sch, y, Insert(new_cid,y_tuple))
-    in Memo([IfThenElse(p,new_t,new_e)],new_c)
+    in Memo([Assign(new_cid,new_c);IfThenElse(p,new_t,new_e)],
+             QueryC([[], [new_c, "", []], [], []]))
   
   | Bind _, Bind _ 
   | For _, For _ | IfThenElse _, IfThenElse _ 
@@ -623,10 +696,10 @@ let assoc_lambda ?(expr = None) arg1 arg2 b = Bind([arg1;arg2],b)
 
 (* Binding *)
 let bind_query_value v vq = match vq with
-  | Const c -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
-  | Var v2 -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
+  | Const _ | Var _ | Op _ ->
+    let subq = QueryV([vq], [], [], [])
+    in QueryV([Var(v)], [subq, gen_rel_alias(), [v]], [], []) 
   | QueryV (sl,r,c,g) -> QueryV([Var(v)], [vq, gen_rel_alias(),[v]], [], [])
-  | Op _ -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], []) 
   | ValueRelation _ -> QueryV([Var(v)], [vq, gen_rel_alias(), [v]], [], [])
   | _ -> failwith ("invalid value for binding "^(string_of_code_t vq))
 
@@ -725,7 +798,9 @@ let map ?(expr = None) fn fn_rv_t c =
       let id = gen_rel_sym() in
       let fields = build_fields "a" (get_schema z)  
       in id, Relation(id,fields)
-    in Memo([For(get_vars x, c, Insert(new_cid,y))], new_c)
+    in Memo([Assign(new_cid,new_c);
+             For(get_vars x, c, Insert(new_cid,y))],
+            QueryC([[], [new_c, "", []], [], []]))
 
   | Bind([x], y), z when (is_collection z || is_memo_collection z)
                          && is_memo_collection y ->
@@ -738,7 +813,8 @@ let map ?(expr = None) fn fn_rv_t c =
     let bl_z,v_z = if is_memo z
       then get_memo_binder z, get_memo_value z else [], z in
     let nl_body = For(y_sch,y,Insert(new_cid,y_tuple)) 
-    in Memo(bl_z@[For(get_vars x, v_z, nl_body)], new_c)
+    in Memo(bl_z@[Assign(new_cid,new_c); For(get_vars x, v_z, nl_body)],
+            QueryC([[], [new_c, "", []], [], []]))
   
   | _,_ -> failwith ("invalid map function/collection"^
                      (string_of_code_t fn)^" / "^(string_of_code_t c))
@@ -843,7 +919,9 @@ let group_by_aggregate ?(expr = None) fn init gbfn c =
         Memo(get_memo_binder b, singleton_join (get_memo_value b) a)
       | _,_ -> failwith ("invalid group-by aggregate functions "^
                           (string_of_code_t y))
-    in Memo([For(get_vars x, z_c, Insert(new_cid,gbt))], new_c)
+    in Memo([Assign(new_cid,new_c);
+             For(get_vars x, z_c, Insert(new_cid,gbt))],
+            QueryC([[], [new_c, "", []], [], []]))
   
   | _,_,_ -> failwith ("invalid group-by aggregate "^
                        (string_of_code_t fn)^" / "^
@@ -903,7 +981,7 @@ let slice ?(expr = None) map pk pat =
 
 (* Database retrieval methods *)
 let get_value   ?(expr = None) _ id =
-  QueryV([Var("av")], [ValueRelation(id),"",[]],[],[])
+  QueryV([Const("av")], [ValueRelation(id),"",[]],[],[])
 let get_in_map  ?(expr = None) _ _ id = Relation(id,[])
 let get_out_map ?(expr = None) _ _ id = Relation(id,[])
 let get_map     ?(expr = None) (_,_) _ id = Relation(id,[])
@@ -948,7 +1026,7 @@ let trigger event rel trig_args stmt_block =
                     get_counter record_c, get_counter rel_c
   in reset_syms();
      Trigger(event,rel,trig_args,
-             List.map linearize_code stmt_block,(vc,ac,tc,rc))
+             List.map linearize_code stmt_block,(vc,ac,tc,rc),[])
 
 (* Sources *)
 let valid_adaptors =
@@ -966,7 +1044,7 @@ let make_file_source filename rel_adaptors =
       if List.mem_assoc "fields" aparams then
         List.assoc "fields" aparams
       else List.assoc aname valid_adaptors
-    in inl("copy "^r^" from '"^filename^"' with delimiter '"^delim^"'")
+    in inl("--copy "^r^" from '"^filename^"' with delimiter '"^delim^"'")
   in sequence ~final:true (List.map aux va)
 
 (* source type, framing type, (relation * adaptor type) list 
@@ -1025,23 +1103,35 @@ let main dbschema schema patterns sources triggers toplevel_queries =
             | M3Common.Patterns.Out(x,y) ->
                 aux (idxname y) (col (1+(List.length ins)) y)) pats
       in
+      let singleton_init = if ins = [] && outs = []
+        then [inl("insert into "^id^" values(0)")] else []
+      in
         [inl ("drop table if exists "^id);
          inl ("create table "^id^" ("^tbl_params^
                 (if key_params = "" then ""
-                 else ", primary key "^key_params)^")")]@
-         secondaries)
+                 else ", primary key ("^key_params^")")^")")]@
+         secondaries@singleton_init)
     schema)) in
-  let body = sequence ~final:true (List.map source_code_of_code triggers) in
+  let triggers_w_relargs = List.map (fun c -> match c with
+    | Trigger(e,r,a,sl,cnt,_) ->
+        let rel_args =
+          if List.mem_assoc r dbschema then
+            List.map fst (List.assoc r dbschema)
+          else failwith ("relation "^r^" not found in db schema")
+        in Trigger(e,r,a,sl,cnt,rel_args)
+    | _ -> failwith "invalid trigger") triggers in
+  let body = sequence ~final:true
+    (List.map source_code_of_code triggers_w_relargs) in
   let source_scl = List.map (fun (x,y,z) -> x) sources in
   let footer = sequence ~final:true
     ((List.flatten (List.map (fun c -> match c with
-        | Trigger(evt,rel,_,_,_) ->
+        | Trigger(evt,rel,_,_,_,_) ->
             let trig_name = (pm_name evt)^"_"^rel in
-            [inl("drop trigger on_"^trig_name);
-             inl("drop function "^trig_name)]
+            [inl("drop trigger on_"^trig_name^" on "^rel);
+             inl("drop function "^trig_name^"()")]
         | _ -> failwith "invalid trigger code") triggers))@
-     (List.map (fun (id,_,_) -> inl("--drop table "^id)) schema)@
-     (List.map (fun (id,_) -> inl("--drop table "^id)) dbschema))
+     (List.map (fun (id,_,_) -> inl("drop table "^id)) schema)@
+     (List.map (fun (id,_) -> inl("drop table "^id)) dbschema))
   in Main(cscl ([base_rels; maps; nl; body; nl]@source_scl@[nl; footer]))
 
 let output code out_chan = match code with

@@ -3,6 +3,7 @@ open Util
 open Values
 open Database
 open Sources
+open StandardAdaptors
 
 module Make = functor(DB : M3DB) ->
 struct
@@ -79,10 +80,68 @@ let synch_main
         mux := new_mux)
     done;
   let finish = Unix.gettimeofday () in
-  print_endline ("Tuples: "^(string_of_float (finish -. start)));
+  print_endline ("Processing time: "^(string_of_float (finish -. start)));
   print_endline (String.concat "\n"
      (List.map (fun (q,_,f) -> (DB.map_name_to_string q)^": "^(f())) db_access_f))
+
 end
 ;;
+<<<<<<< .mine
 
-
+let run_adaptors output_dir sources =
+  StandardAdaptors.initialize();
+  let sql_string_of_float f =
+    let r = string_of_float f in
+    if r.[(String.length r)-1] = '.' then r^"0" else r in
+  let rel_outputs = Hashtbl.create 10 in
+  let add_rel_output r = 
+    if Hashtbl.mem rel_outputs r then ()
+    else Hashtbl.replace rel_outputs r
+           (open_out (Filename.concat output_dir (r^".dbtdat")))
+  in
+  let sources_and_adaptors = List.fold_left (fun acc (s,f,rel,a) ->
+      add_rel_output rel;
+      if List.mem_assoc (s,f) acc then
+          let existing = List.assoc (s,f) acc
+        in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc)
+      else ((s,f),[rel,a])::acc)
+    [] sources
+  in
+  let sources_t = List.map (fun ((src,framing),rel_adaptors) ->
+    let src_impl = match src with
+      | FileSource(fn) ->
+        FileSource.create src framing 
+          (List.map (fun (rel,adaptor) -> 
+             (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
+          (list_to_string fst rel_adaptors)
+      | SocketSource(_) -> failwith "Sockets not yet implemented."
+      | PipeSource(_)   -> failwith "Pipes not yet implemented."
+    in src_impl) sources_and_adaptors
+  in
+  let mux = ref (List.fold_left
+      (fun m source -> FileMultiplexer.add_stream m source)
+      (FileMultiplexer.create ()) sources_t) in
+  let string_of_event pm t =
+    (pm = Insert,
+      (String.concat "," (List.map (fun c ->
+        match c with CFloat(f) -> sql_string_of_float f) t)))
+  in
+  let output_event evt =  match evt with
+    | None -> ()
+    | Some(pm,rel,t) -> 
+        let rel_chan =
+          try Hashtbl.find rel_outputs rel
+          with Not_found ->
+            failwith ("no output file initialized for "^rel)
+        in let out, s = string_of_event pm t
+        in if out then output_string rel_chan (s^"\n") else ()
+  in
+  let start = Unix.gettimeofday() in
+    while FileMultiplexer.has_next !mux do
+      let (new_mux,evt) = FileMultiplexer.next !mux in
+        output_event evt;
+        mux := new_mux
+    done;
+  let finish = Unix.gettimeofday () in
+  print_endline ("Processing time: "^(string_of_float (finish -. start)));
+  Hashtbl.iter (fun rel chan -> close_out chan) rel_outputs

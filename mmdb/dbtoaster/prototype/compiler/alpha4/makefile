@@ -27,8 +27,8 @@ SOURCE = \
 	lib/ocaml/Values.ml \
 	lib/ocaml/Database.ml \
 	lib/ocaml/Sources.ml \
-	lib/ocaml/Runtime.ml \
 	lib/ocaml/StandardAdaptors.ml \
+	lib/ocaml/Runtime.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
 	codegen/SourceCode.ml \
