@@ -9,6 +9,44 @@ open Database
 (* Postgres-specific settings:
  * #variable_conflict use_column, in trigger source code generation.
  * found, in source_code_of_update
+ * other potential non-standard terms, based on changes needed for Oracle:
+ * -- anonymous records, that are bound at query issue time by postgres. see
+ *    http://www.postgresql.org/docs/9.0/static/plpgsql-declarations.html#PLPGSQL-DECLARATION-RECORDS
+ *
+ * -- select-only statements (i.e. no from clause), i.e. "select 1", which can
+ *    be used as a subquery to define a singleton relation. Used for pure-query
+ *    implementation of K3 function applications to constant/var/expression
+ *    arguments.
+ *)
+
+(* Oracle notes:
+ * -- select stmt must have a from clause, thus cannot create singleton tables
+ *    as a select-only subquery (as done in query binding for applying functions
+ *    to singleton arguments)
+ *  ++ no values expression as in postgres
+ *  ++ cannot use collection expressions w/o defining collection types
+ *  ++ fix: options:
+ *    i. use subsitution to lift subqueries into a query with a from-clause
+ *       (this works since the subquery is known to be a singleton). This will
+ *       cause duplicate expression evaluation at the expense of preserving a
+ *       pure-query implementation. Oracle may have a cheaper context switch
+ *       between plsql engine that postgres (we need to benchmark postgres as
+ *       well here).
+ *    ii. memoize maximal single-use singleton subqueries, and implement
+ *        in procedural form
+ *
+ * -- found variable: SQL%FOUND / SQL%NOTFOUND / SQL%ROWCOUNT etc. see
+ *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/static.htm#i46192
+ *
+ * -- no anonymous record types as in postgres, i.e. record fields must be
+ *    defined up front
+ *  ++ fix: in the CG, record variables have their schemas computed at the
+ *     same point as declaration. Change gen_record_sym to take the schema as
+ *     an argument, and track this with the record variable symbol.
+ *
+ * -- we could replace temporary tables with Oracle collections... we should
+ *    develop a simple benchmark to differentiate temp table vs. collection
+ *    performance prior to pursuing this path. 
  *)
 
 module CG (*: K3Codegen.CG*) =
