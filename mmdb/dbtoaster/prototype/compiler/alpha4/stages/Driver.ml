@@ -85,6 +85,9 @@ let flag_descriptors =
       (["-r";"--run";"--interpret"],
           ("INTERPRETER", ParseArgs.NO_ARG), "",
           "Run the query in interpreter mode." );
+      (["-a";"--adaptors"],
+          ("RUN ADAPTORS", ParseArgs.ARG), "<output dir>",
+          "Run the adaptors to prepare input data files.");
       (["--depth"],
           ("COMPILE_DEPTH", ParseArgs.ARG), "<depth> | -",
           "Limit the compile depth; 1 = standard view maint, - = no limit");
@@ -183,6 +186,8 @@ let output_file = match flag_val "OUTPUT" with
   | Some("-") -> stdout
   | Some(f)   -> (open_out f);;
 
+let adaptor_dir = flag_val "RUN ADAPTORS";;
+
 Debug.exec "ARGS" (fun () -> 
   StringMap.iter (fun k v ->
     print_endline (k^":");
@@ -258,6 +263,26 @@ if language == L_DELTA then
   )
 else ();;
 
+(********* RUN ADAPTORS ONLY IF REQUESTED ********************)
+
+open Sources
+open Runtime;;
+
+begin match adaptor_dir with
+  | None -> ()
+  | Some(f) ->
+    let mkd f =
+      try if not((Unix.stat f).Unix.st_kind = Unix.S_DIR) then
+            failwith ("cannot output adaptor data to non-directory: "^f);
+      with Unix.Unix_error _ -> Unix.mkdir f 0o755
+    in
+      try mkd f;
+          run_adaptors f sources;
+          exit 0
+      with Unix.Unix_error (_,_,_) ->
+        failwith ("failed to create adaptor data output dir"^f)
+end;;
+
 (********* TRANSLATE RELCALC TO M3 *********)
 
 let toplevel_queries = ref []
@@ -302,8 +327,6 @@ module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
 
 open Database
-open Sources
-open Runtime
 
 module DB         = NamedM3Database
 module DBTRuntime = Runtime.Make(DB)
@@ -373,8 +396,8 @@ let compile_ocaml in_file_name =
                    "lib/ocaml/Values";
                    "lib/ocaml/Database";
                    "lib/ocaml/Sources";
-                   "lib/ocaml/Runtime";
-                   "lib/ocaml/StandardAdaptors" ] in
+                   "lib/ocaml/StandardAdaptors";
+                   "lib/ocaml/Runtime" ] in
     (* would nice to generate args dynamically off the makefile *)
     Unix.execvp ocaml_cc 
       ( Array.of_list (
