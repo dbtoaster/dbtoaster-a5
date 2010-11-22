@@ -20,8 +20,8 @@ end
 
 players = Array.new;
 
-step_count = 1000000
-player_count = 1000
+step_count = 500
+player_count = 20
 departure_rate = 0.0005
 player_id = 0;
 

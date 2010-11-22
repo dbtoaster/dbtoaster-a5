@@ -116,7 +116,8 @@ let build_tuple param_val =
        List.map (fun t -> match t with
         | "int" -> (fun x -> try CFloat(float(int_of_string x)) with 
                     Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
-        | "float" -> (fun x -> CFloat(float_of_string x))
+        | "float" -> (fun x -> try CFloat(float_of_string x) with
+                    Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
         | _ -> failwith ("invalid const_t type "^t)) types in
    let num_fns = List.length build_fns in

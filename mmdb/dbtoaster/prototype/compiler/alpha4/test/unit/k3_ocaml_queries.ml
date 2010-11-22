@@ -17,12 +17,12 @@ let test_compile script result =
    (DBTDebug.ocaml_compile_unit_test
       ~post_out:(fun x -> 
          try 
-         let timer = (Str.search_forward (Str.regexp("Tuples: ")) x 0) in
-         let index = (Str.search_forward (Str.regexp("QUERY: ")) x timer) in
+         let timer = (Str.search_forward (Str.regexp("Processing time: ")) x 0) in
+         let index = (Str.search_forward (Str.regexp("QUERY: ")) x 0) in
             print_string ("Run time "^script^": "^
                           (String.sub x (timer + 8) (index - timer - 8)));
             String.sub x index ((String.length x) - index)
-         with Not_found -> ""
+         with Not_found -> "[[malformed runtime output]]\n"^x
       )
       ("K3 Ocaml Compile "^script)
       (DBTDebug.compiled_k3_for_script script)

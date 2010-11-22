@@ -70,14 +70,26 @@ let synch_main
          (String.concat "\n"
             (List.map (fun (q,_,f) -> f()) valid_f)))
   in
+  let string_of_evt evt = match evt with
+    | None -> "[null]"
+    | Some(Insert,rel,t) -> 
+      "Insert_"^rel^" "^(Util.list_to_string M3Common.string_of_const t)
+    | Some(Delete,rel,t) -> 
+      "Delete_"^rel^" "^(Util.list_to_string M3Common.string_of_const t)
+  in
   let mux = ref initial_mux in
   let start = Unix.gettimeofday() in
     while FileMultiplexer.has_next !mux do
-      let (new_mux,evt) = FileMultiplexer.next !mux in
-        (log_evt evt;
-        let output = dispatcher evt in
-        if output then log_results result_chan;
-        mux := new_mux)
+      try 
+         let (new_mux,evt) = FileMultiplexer.next !mux in
+           (  log_evt evt;
+              try 
+                 let output = dispatcher evt in
+                 if output then log_results result_chan;
+                 mux := new_mux
+              with Failure(x) -> failwith ("Parse Error ["^x^"]: "^(string_of_evt evt))
+           )
+      with Failure(x) -> failwith ("Parse Error ["^x^"]")
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
@@ -98,15 +110,16 @@ let run_adaptors output_dir sources =
     else Hashtbl.replace rel_outputs r
            (open_out (Filename.concat output_dir (r^".dbtdat")))
   in
-  let sources_and_adaptors = List.fold_left (fun acc (s,f,rel,a) ->
+  let sources_and_adaptors = try List.fold_left (fun acc (s,f,rel,a) ->
       add_rel_output rel;
       if List.mem_assoc (s,f) acc then
           let existing = List.assoc (s,f) acc
         in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc)
       else ((s,f),[rel,a])::acc)
     [] sources
+    with Failure(x) -> failwith "Parse error extracting adaptor"
   in
-  let sources_t = List.map (fun ((src,framing),rel_adaptors) ->
+  let sources_t = try List.map (fun ((src,framing),rel_adaptors) ->
     let src_impl = match src with
       | FileSource(fn) ->
         FileSource.create src framing 
@@ -116,30 +129,40 @@ let run_adaptors output_dir sources =
       | SocketSource(_) -> failwith "Sockets not yet implemented."
       | PipeSource(_)   -> failwith "Pipes not yet implemented."
     in src_impl) sources_and_adaptors
+    with Failure(x) -> failwith "Parse error in adaptor"
   in
   let mux = ref (List.fold_left
       (fun m source -> FileMultiplexer.add_stream m source)
       (FileMultiplexer.create ()) sources_t) in
-  let string_of_event pm t =
-    (pm = Insert,
-      (String.concat "," (List.map (fun c ->
-        match c with CFloat(f) -> sql_string_of_float f) t)))
+  let string_of_evt evt = match evt with
+    | None -> "[null]"
+    | Some(Insert,rel,t) -> 
+      "Insert_"^rel^" "^(Util.list_to_string M3Common.string_of_const t)
+    | Some(Delete,rel,t) -> 
+      "Delete_"^rel^" "^(Util.list_to_string M3Common.string_of_const t)
   in
-  let output_event evt =  match evt with
-    | None -> ()
-    | Some(pm,rel,t) -> 
-        let rel_chan =
-          try Hashtbl.find rel_outputs rel
-          with Not_found ->
-            failwith ("no output file initialized for "^rel)
-        in let out, s = string_of_event pm t
-        in if out then output_string rel_chan (s^"\n") else ()
+  let output_event evt = 
+    try 
+       match evt with
+       | None -> ()
+       | Some(pm,rel,t) -> 
+           let rel_chan =
+             try Hashtbl.find rel_outputs rel
+             with Not_found -> failwith ("no output file initialized for "^rel)
+           in let s = (String.concat "," (List.map (fun c ->
+                          match c with CFloat(f) -> sql_string_of_float f) t))
+           in if pm = Insert then output_string rel_chan (s^"\n") else ()
+    with Failure(x) -> 
+      failwith ("Parse Error ("^x^"): '"^(string_of_evt evt)^"'")
   in
   let start = Unix.gettimeofday() in
     while FileMultiplexer.has_next !mux do
-      let (new_mux,evt) = FileMultiplexer.next !mux in
-        output_event evt;
-        mux := new_mux
+       try 
+         let (new_mux,evt) = FileMultiplexer.next !mux in
+           output_event evt;
+           mux := new_mux
+       with Failure(x) -> 
+         failwith ("Parse Error ("^x^")")
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));

@@ -57,15 +57,16 @@ let ocaml_compile_unit_test ?(libs=[])
       | ((Some(eo)),(Some(ee))) -> 
          Debug.log_unit_test 
             name 
-            (fun (out,err) -> "....Output....\n"^out^"\n....Error....\n"^err)
+            (fun (out,err) -> cmd^"\n....Output....\n"^out^
+                                  "\n....Error....\n"^err)
             (std_output,err_output)
             (eo,ee)
       | (None,(Some(ee))) ->
-         Debug.log_unit_test name (fun x->x) err_output ee
+         Debug.log_unit_test name (fun x->cmd^"\n"^x) err_output ee
       | ((Some(eo)),None) -> 
          Debug.log_unit_test 
             name 
-            (fun (out,err) -> if err <> "" then err else out) 
+            (fun (out,err) -> cmd^"\n"^(if err <> "" then "'"^err^"'" else out))
             (std_output,err_output) 
             (eo,"")
       | (None,None) ->

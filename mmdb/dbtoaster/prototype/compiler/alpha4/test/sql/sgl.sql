@@ -2,7 +2,7 @@ CREATE TABLE E (x float, y float, player int)
   FROM FILE 'test/data/sgl.dat'
   LINE DELIMITED csv (
     fields := ',', 
-    schema := 'float,float,int', 
+    schema := 'hash,float,float,int', 
     events := '+:insert,-:delete'
   );
 
