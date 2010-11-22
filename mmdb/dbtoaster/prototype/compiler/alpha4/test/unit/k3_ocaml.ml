@@ -121,9 +121,9 @@ run_test "iterate (i)"
 ;;
 run_test "iterate (s)"
          (K3O.iterate (tcode ~t:(K3O.Fn([K3O.Float],K3O.Float)) "a") 
-                      (tcode ~t:(K3O.Collection(K3O.DBEntry,[],K3O.Float)) "b"))
+                      (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],K3O.Float)) "b"))
          K3O.Unit
-         "List.iter (<<a>>) (MC.fold ((fun k_wrapped v acc -> let k =  match k_wrapped with [] -> () | _ -> failwith \"boom\"  in  let (_,key_0) = (k,v) in (key_0)::acc)) ([]) (<<b>>))"
+         "List.iter (<<a>>) (MC.fold (fun k inner_map acc -> match k with  [key_0] ->  (key_0,( inner_map ))::acc | _ -> failwith \"boom\") ([]) (<<b>>))"
 ;;
 run_test "lambda (var)"
          (K3O.lambda (K3.SR.AVar("<<x>>",K3.SR.TFloat)) (tcode "a"))
@@ -166,7 +166,7 @@ run_test "map (s)"
                   (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],
                                             K3O.Float)) "b"))
          (K3O.Collection(K3O.DBEntry,[K3O.Float],K3O.Float))
-         "MC.mapi ((fun wrapped_key map_value -> let key_0 = match wrapped_key with [key_0] -> (key_0) | _ -> failwith \"boom\" in  let key_0,key_1 = ((<<a>>) (key_0,map_value)) in  (([ key_0 ]),key_1))) (<<b>>)"
+         "MC.mapi ((fun wrapped_key map_value -> let key_0 = match wrapped_key with [key_0] -> (key_0) | _ -> failwith \"boom\" in  let (key_0,key_1) = ((<<a>>) (key_0,map_value)) in  (([ key_0 ]),key_1))) (<<b>>)"
 ;;
 run_test "aggregate (i)"
          (K3O.aggregate (tcode ~t:(K3O.Fn([K3O.Tuple([K3O.Float;
@@ -261,7 +261,7 @@ run_test "lookup (i)"
             [(tcode "b");(tcode "c")]
          )
          (K3O.Float)
-         "List.find (let comparison = ( ((<<b>>),(<<c>>)) ) in (fun (key_0,key_1,_) -> (key_0,key_1) = comparison)) (<<a>>)"
+         "let (_,_,value) = List.find (let comparison = ( ((<<b>>),(<<c>>)) ) in (fun (key_0,key_1,_) -> (key_0,key_1) = comparison)) (<<a>>) in  value"
 ;;
 run_test "lookup (s)"
          (K3O.lookup
