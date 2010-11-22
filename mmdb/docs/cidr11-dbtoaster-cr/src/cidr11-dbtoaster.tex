@@ -1,0 +1,133 @@
+\documentclass{sig-alternate}
+
+\usepackage{amsmath,amssymb}
+\usepackage{stmaryrd}
+\usepackage{graphicx}
+\usepackage{color}
+
+\newcommand{\longversion}[1]{}
+\newcommand{\comment}[1]{}
+\newcommand{\tinysection}[1]{\vspace{0.5mm}\noindent{\bf #1.}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\note}[1]{\textcolor{blue}{#1}}
+
+
+\begin{document}
+\title{DBToaster: Agile Views in a\\Dynamic Data Management System}
+\numberofauthors{3}
+\author{
+\alignauthor
+Oliver Kennedy\thanks{Also Dept.\ of Computer Science, Cornell University.}\\
+%    \affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
+    \affaddr{EPFL}
+%    \affaddr{Lausanne, Switzerland}
+    \email{oliver.kennedy@epfl.ch}
+\alignauthor
+Yanif Ahmad\\
+    \affaddr{Johns Hopkins University}
+%    \affaddr{Baltimore, MD}
+    \email{yanif@cs.jhu.edu}
+\alignauthor
+Christoph Koch\\
+    \affaddr{EPFL}
+    % \affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
+    %\affaddr{Lausanne, Switzerland}
+    \email{christoph.koch@epfl.ch}
+}
+\maketitle
+
+\begin{abstract}
+This paper calls for a new breed of lightweight systems --
+{\em dynamic data management systems (DDMS)}\/.
+In a nutshell,
+a DDMS manages large {\em dynamic data structures}\/ with 
+{\em agile, frequently fresh views}\/, and provides a facility for monitoring
+these views and triggering application-level events.
+%
+We motivate DDMS with applications in large-scale data analytics
+including data warehousing, and high-frequency algorithmic trading,
+and compare them to more traditional data management systems 
+architectures.
+%such as DBMS and data stream processors.
+%
+We describe the DBToaster project, which is an ongoing effort to
+develop a prototype DDMS system. We describe its architecture
+design, techniques for high-frequency incremental view maintenance,
+storage, scaling up by parallelization, and
+the various key challenges to overcome to make DDMS a reality.
+\end{abstract}
+
+\input{introduction}
+
+\section{DDMS Architecture}
+\input{overview}
+\label{sec:overview}
+
+
+\section{Realizing Agile Views}
+\label{sec:dbtoaster}
+\input{dbtoaster}
+
+
+\section{Managing Storage in DBToaster}
+\label{sec:storage}
+\input{storage}
+
+
+\section{DBToaster in the Cloud}
+\label{sec:distribution}
+\input{distribution}
+
+\section{Discussion and Conclusions}
+We have proposed Dynamic Data Management Systems,
+arguing for the need for a class of systems optimized
+for keeping SQL aggregate views highly available and fresh under
+high update rates.
+We have sketched some of the main research challenges in
+making DDMS a reality, and have outlined key design decisions
+and first results and insights that make us confident that
+the vision of DDMS can be realized.
+
+We are currently developing a DDMS, DBToaster, in a collaboration
+between EPFL and Johns Hopkins, which was started while the
+authors worked at Cornell.
+%
+So far, we have developed an initial version of a
+transition compiler which implements the recursive IVM technique
+sketched in Section~\ref{sec:compilation}. The feasibility of
+keeping views fresh through hundreds of updates per second using
+this approach in the context of algorithmic trading
+was recently demonstrated using an early DBToaster prototype
+\cite{ahmad-vldb:09}. An initial account of the foundations and
+theory of recursive IVM was given in \cite{koch-pods:10}.
+Apart from substantially improving the compiler,
+we are now working on the actual DBToaster DDMS. We follow the
+strategy of developing two branches, one a main-memory, moderate
+state-size, single-core ultra-high view refresh rate system for
+applications such as algorithmic trading and the other
+a cloud-based, persistent, eventual-consistency system for
+very large scale interactive data analysis. We will
+merge these two branches once the individual technical
+problems have been solved.
+
+
+\comment{
+Current ongoing research and development directions in
+the DBToaster project include: i) leveraging
+structural recursion to build a main-memory query processing library based on
+functional programming techniques (see Section~\ref{sec:compilation}); ii)
+parallelization, deployment and experimentation of a continuous analytics engine
+in a cloud environment; iii) analysing the benefits of our execution model in a
+batch operating mode on top of map-reduce.
+} % 
+
+
+\scriptsize{
+\bibliographystyle{abbrv}
+\bibliography{ref}
+}
+
+
+
+\end{document}
