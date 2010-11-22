@@ -14,7 +14,7 @@ exception K3OException of string
 
 module K3O =
 struct
-   type collection_type_t = Inline | DBEntry
+   type collection_type_t = Inline | DBEntry | DBWrapped
    type type_t   = 
       | Float
       | Bool
@@ -43,7 +43,8 @@ struct
             "["^(Util.string_of_list ", " (List.map string_of_type elems))^"]"
          | Collection(ctype,k,v) ->
             (match ctype with Inline -> "inline"
-                            | DBEntry -> "dbentry")^
+                            | DBEntry -> "dbentry"
+                            | DBWrapped -> "dbwrapped")^
             "_map( ["^(Util.string_of_list ", " (List.map string_of_type k))^
             "] -> "^(string_of_type v)^")"
          | Trigger(pm,rel,vars) ->
@@ -119,6 +120,15 @@ struct
    let unwrap_map v =
       IP.Parens(("match (",
          ") with K3Value.SingleMap(f) -> f | _ -> failwith \"boom\""), v)
+   
+   let unwrapped_map (m,mt) = 
+      match mt with
+      | Collection(DBWrapped,kt,vt) -> 
+         (unwrap_map m, (Collection(DBEntry,kt,vt)))
+      | Collection(_,_,_) -> (m,mt)
+      | _ -> 
+         debugfail None 
+            ("Collection access on a non-collection ["^(string_of_type mt)^"]")
    
    let fn_ret_type fnt =
       match fnt with 
@@ -199,14 +209,57 @@ struct
    let inline_map map t_list =
       (fold_map ((*unwrap_map*) map) t_list (merge_key_value t_list "(k,v)"))
    
-   let map_to_update ((map,mapt):code_t) (patterns:IP.t): IP.t =
+   let recursive_inline (wmap:code_t): code_t = 
+      let rec rec_push (recursing:bool) ((map,mapt):code_t): code_t option = (
+         let rec_pop = if recursing then None else Some(map,mapt) in
+         match mapt with
+         | Collection(Inline,kt,vt) -> 
+            (match (rec_push true (IP.Leaf("inner_map"),vt)) with
+               |  None             -> rec_pop
+               |  Some(imap,imapt) -> 
+                  Some((apply_many "List.map" [
+                     IP.Lines[
+                        IP.Leaf("fun ("^(key_tuple kt)^",inner_map) -> ");
+                        IP.Leaf("("^(key_tuple kt)^",(");
+                        imap;
+                        IP.Leaf("))")
+                     ];
+                     map
+                  ]),(Collection(Inline,kt,imapt)))
+            )
+         | Collection(DBEntry,kt,vt) ->
+            let (imap,imapt) = (match 
+                     (rec_push true (IP.Leaf("inner_map"),vt)) with
+               | None             -> (IP.Leaf("inner_map"),vt)
+               | Some(imap,imapt) -> (imap,imapt)
+            ) in
+            Some((apply_many "MC.fold" [
+               IP.Lines[
+                  IP.Leaf("fun k inner_map acc -> match k with ");
+                  IP.Leaf((unwrap_key_matcher kt)^" -> ");
+                  IP.Leaf("("^(key_tuple kt)^",(");
+                  imap;
+                  IP.Leaf("))::acc | _ -> failwith \"boom\"")
+               ];
+               IP.Leaf("[]");
+               map
+            ]),(Collection(Inline,kt,imapt)))
+         | Collection(DBWrapped,kt,vt) ->
+            rec_push recursing (unwrapped_map (map,mapt))
+         | _ -> rec_pop
+      ) in
+         match (rec_push false wmap) with 
+            | None -> failwith "error in recursive_inline"
+            | Some(a,b) -> (a,b)
+   
+   let map_to_update (wmap:code_t) (patterns:IP.t): IP.t =
+      let (map,mapt) = (unwrapped_map wmap) in
       match mapt with 
       | Collection(Inline,kt,vt) -> 
          (apply_one "MC.from_list"
             (apply_many "List.map" [
                IP.Leaf("(fun ("^(key_tuple (kt@[vt]))^") -> "^
-                        (key_tuple ~tuplizer:(Util.list_to_string 
-                                                         (fun (x,_)->x)) 
+                        (key_tuple ~tuplizer:(Util.list_to_string fst) 
                                    (kt@[vt]))^")");
                map
             ]))
@@ -337,15 +390,19 @@ struct
          ))
    
    (* iter fn, collection -> iterate *)
-   let iterate ?(expr = None) ((fn,fnt):code_t) ((c,ct):code_t): code_t =
+   let iterate ?(expr = None) ((fn,fnt):code_t) (wmap:code_t): code_t =
+      let (c,ct) = (recursive_inline wmap) in
       match ct with 
       | Collection(Inline,k,t) -> 
          ((apply_many "List.iter" [fn;c]),Unit)
          
         (* Currently we convert to a list since SliceableMap doesn't implement
-         * an 'iter' function. TODO: we could easily add this. *)
-      | Collection(DBEntry,k,t) -> 
-         ((apply_many "List.iter" [fn;(inline_map c k)]),Unit)
+         * an 'iter' function.  
+         * This inlining has to be done recursively, since K3 doesn't give
+         * us sufficient information when creating the function to identify
+         * what sort of collection we're getting passed.
+         * TODO: we could easily add this. *)
+         
       | _ -> debugfail expr ("Iterating over a non-collection")
    
    (* Functions *)
@@ -376,12 +433,13 @@ struct
    
    (* fn, arg -> evaluated fn *)
    let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t): code_t =
+      
       ((IP.Node(("(",")"),(") ","("),fn,arg)),(fn_ret_type fnt))
    
    (* Structural recursion operations *)
    (* map fn, collection -> map *)
    let map ?(expr = None) ((fn,fnt):code_t) (exprt:K3.SR.type_t) 
-           ((coll,collt):code_t): code_t =
+           (wmap:code_t): code_t =
       let (keyt,valt) = 
          match (fn_ret_type fnt) with
          |  Tuple(retlist) ->
@@ -391,6 +449,11 @@ struct
                   (List.hd (List.rev retlist)))
          |  _ -> debugfail expr ("Mapping function with invalid ret value: "^
                                  (string_of_type fnt))
+      in
+      let (coll,collt) = 
+         match (snd wmap) with 
+         | Collection(_,_,(Collection(_,_,_))) -> (recursive_inline wmap)
+         | _                                   -> (unwrapped_map wmap)
       in
       match collt with
          | Collection(Inline,k,t) ->
@@ -409,7 +472,7 @@ struct
                                  (Some((fun x -> IP.Lines[
                                     (mk_let (key_tuple k)
                                             (unwrap_key k "wrapped_key"));
-                                    (mk_let (key_tuple (k@[t]))
+                                    (mk_let ("("^(key_tuple (k@[t]))^")")
                                             x);
                                     IP.Leaf(
                                        "(("^(wrap_key_tuple k)^"),"^
@@ -418,7 +481,13 @@ struct
                                        )^")"
                                     )
                                  ])))
-                                 ("("^(key_tuple k)^",map_value)") 
+                                 ("("^(key_tuple k)^","^
+                                  (match t with 
+                                    | Collection(Inline,k,t) -> "map_value"
+                                    | Collection(_,_,_)
+                                    | _ -> "map_value"
+                                  )^
+                                  ")") 
                                  fn);
                   ((*unwrap_map*) coll)
                 ])),
@@ -428,7 +497,12 @@ struct
    (* agg fn, initial agg, collection -> agg *)
    (* Note: accumulator is the last arg to agg_fn *)
    let aggregate ?(expr = None) ((fn,fnt):code_t) ((init,initt):code_t) 
-                 ((coll,collt):code_t): code_t =
+                 (wmap:code_t): code_t =
+      let (coll,collt) = 
+         match (snd wmap) with 
+         | Collection(_,_,(Collection(_,_,_))) -> (recursive_inline wmap)
+         | _                                   -> (unwrapped_map wmap)
+      in
       match collt with
          | Collection(Inline,k,t) ->
             ((apply_many "List.fold_left" [
@@ -461,7 +535,7 @@ struct
    (* agg fn, initial agg, grouping fn, collection -> agg *)
    let group_by_aggregate ?(expr = None) ((agg,aggt):code_t) 
                           ((init,initt):code_t) ((group,groupt):code_t) 
-                          ((coll,collt):code_t): code_t =
+                          (wmap:code_t): code_t =
       let key_type = 
          match (fn_ret_type groupt) with 
          | Tuple(tlist) -> tlist
@@ -490,6 +564,7 @@ struct
       let gb_ret = 
          Collection(DBEntry,key_type,(fn_ret_type (fn_ret_type aggt)))
       in
+      let (coll,collt) = (unwrapped_map wmap) in
       match collt with
          | Collection(Inline,k,t) ->
             (((*wrap_map*) (apply_many "List.fold_left" [
@@ -521,7 +596,8 @@ struct
          
    
    (* nested collection -> flatten *)
-   let flatten ?(expr = None) ((coll,collt):code_t): code_t =
+   let flatten ?(expr = None) (wmap:code_t): code_t =
+      let (coll,collt) = (unwrapped_map wmap) in
       match collt with
       |  Collection(Inline,ko,Collection(Inline,ki,t)) ->
             ((apply_one "List.flatten" 
@@ -595,14 +671,34 @@ struct
                IP.Leaf("[]");
                ((*unwrap_map*) coll)
             ]),Collection(Inline,ki@ko,t))
+      |  Collection(DBEntry,ko,Collection(DBWrapped,ki,t)) ->
+            ((apply_many "MC.fold" [
+               IP.Lines([
+                  IP.Leaf("fun ("^(key_tuple ko)^") inner_map accum -> (");
+                  (apply_many "MC.fold" [
+                     IP.Lines([
+                        IP.Leaf("fun "^(kv_pair_to_keytuple_vars 
+                                                   ~init_id:(List.length ko)
+                                                   ki " ")^" inner_accum -> ");
+                        IP.Leaf("("^(key_tuple (ko@ki@[t]))^")::inner_accum")
+                     ]);
+                     IP.Leaf("[]");
+                     (unwrap_map (IP.Leaf("inner_map")))
+                  ]);
+                  IP.Leaf(") @ accum")
+               ]);
+               IP.Leaf("[]");
+               ((*unwrap_map*) coll)
+            ]),Collection(Inline,ki@ko,t))
       |  _ -> debugfail expr "Trying to flatten a non-nested collection"
    
    (* Tuple collection operators *)
    (* TODO: write documentation on datatypes + implementation requirements
    * for these methods *)
    (* map, key -> bool/float *)
-   let exists ?(expr = None) ((map,mapt):code_t) (key:code_t list): 
+   let exists ?(expr = None) (wmap:code_t) (key:code_t list): 
               code_t =
+      let (map,mapt) = (unwrapped_map wmap) in
       match mapt with 
       |  Collection(Inline,kt,vt) ->
          ((apply_many "List.exists" [
@@ -619,26 +715,34 @@ struct
       | _ -> debugfail expr "Existence check on a non-collection"
    
    (* map, key -> map value *)
-   let lookup ?(expr = None) ((map,mapt):code_t) (key:code_t list): code_t =
+   let lookup ?(expr = None) (wmap:code_t) (key:code_t list): code_t =
+      let (map,mapt) = (unwrapped_map wmap) in
       match mapt with 
       | Collection(Inline,kt,vt) ->
-         ((apply_many "List.find" [
-            IP.Lines([
-               IP.Leaf("let comparison = (");
-               IP.TList(parens,Some(parens),",",(List.map fst key));
-               IP.Leaf(") in");
-               IP.Leaf("(fun ("^(key_tuple kt)^",_) -> ("^
-                       (key_tuple kt)^") = comparison)")
-            ]);
-            map]),vt)
+         ((IP.Lines([
+            (mk_let  ("("^(Util.string_of_list0 "," (fun _ -> "_") kt)^
+                        ",value)")
+                     (apply_many "List.find" [
+                        IP.Lines([
+                           IP.Leaf("let comparison = (");
+                           IP.TList(parens,Some(parens),",",(List.map fst key));
+                           IP.Leaf(") in");
+                           IP.Leaf("(fun ("^(key_tuple kt)^",_) -> ("^
+                                   (key_tuple kt)^") = comparison)")
+                        ]);
+                        map])
+            );
+            (IP.Leaf("value"))
+         ])),vt)
       | Collection(DBEntry,kt,vt) ->
          ((apply_many "MC.find" [(mapkey_of_codekey key);((*unwrap_map*) map)]),vt)
       | _ -> debugfail expr "Lookup on a non-collection"
       
    (* map, partial key, pattern -> slice *)
    (* TODO: see notes on datatype conversions/secondary indexes *)
-   let slice ?(expr = None) ((map,mapt):code_t) (pkey:code_t list) 
+   let slice ?(expr = None) (wmap:code_t) (pkey:code_t list) 
              (pattern:int list): code_t =
+      let (map,mapt) = (unwrapped_map wmap) in
       if List.length pattern <> List.length pkey then
          debugfail expr ("Error: slice pattern and key length mismatch")
       else
@@ -691,8 +795,8 @@ struct
                (t:K3.SR.type_t) (map:K3.SR.coll_id_t): code_t =
       (((*wrap_map*) (IP.Leaf("DB.get_map \""^map^"\" dbtoaster_db"))), 
        Collection(DBEntry,(List.map (fun (_,x) -> map_type x) ins),
-                  Collection(DBEntry,(List.map (fun (_,x) -> map_type x) outs),
-                             Float)))
+               Collection(DBEntry,(List.map (fun (_,x) -> map_type x) outs),
+                          Float)))
    
    
    (* Database udpate methods *)
