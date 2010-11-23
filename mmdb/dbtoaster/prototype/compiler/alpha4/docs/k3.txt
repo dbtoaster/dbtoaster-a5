@@ -1,0 +1,296 @@
+This document describes the K3 metaprogramming language.  K3 is a construct that 
+exists purely in Ocaml, and is there primarilly to make functional style 
+optimizations simpler.  K3 is optimized for dealing with collections, sets of 
+values, and specifically collections indexed by one or more key values.  Most of K3 is side-effect free; Data persistence is achieved through a set of global collections.  Global collections come in four forms: 
+  Singletons -> A collection with a single value and no keys
+  Out_Map    -> A collection optimized for slicing and iteration over all key 
+                values
+  In_Map     -> A collection optimized for single accesses
+  Full_Map   -> An In_Map of Out_Maps
+
+Lists are expressed using comma-delimited brackets.
+  eg: [1,2,...]
+
+List concatenation is expressed using @
+  eg: [1,2,...]@[7,8,...]
+
+Expressions are specified with the type that they evaluate to. 
+  eg: SR.Const(x) -> [SR.TFloat or SR.TInt or SR.TUnit]
+
+'typeof' is used to denote the type of an expression.  'rettype' is used as 
+shorthand for the return type of a function.  If typeof fn == SR.Fn([...],ret) 
+then rettype fn == ret
+
+
+============= Types (SR.type_t) =============
+SR.TUnit 
+  Nothing; A zero content value.
+
+SR.TFloat
+  A floating point number
+
+SR.TInt
+  An integer; Also used as a boolean - nonzero values are true.
+
+SR.TTuple([t1,t2,...])
+  A value structure.  A tuple consists of multiple indexed values, with types
+  defined as part of tuple's type.  Though a tuple is not a collection in and 
+  of itself, it may be used as the value of a collection.  When used in this
+  way, the first 'n-1' values of the tuple are defined to be the key, and the 
+  last value is the value.
+
+SR.TCollection(t)
+  A list of values; Distinct from a tuple in that each entry in the collection
+  has the same type.  Collections are typically accessed as multikey maps where
+  each value is referenced and accessed with zero or more key values.  If the 
+  collection's type is a non-tuple, it has zero keys and contains at most one 
+  value.  If the collection's type is a tuple, the first 'n-1' indexes in the 
+  tuple act as keys, while the last index is the value.
+
+SR.Fn([arg1,arg2,...], ret)
+  A function evaluated on one or more arguments, returning a specific value. 
+  As is typical in a functional language:
+    SR.Fn([arg1,arg2,...], ret) == SR.Fn([arg1],SR.Fn([arg2,...],ret))
+
+
+============= Expressions (SR.expr_t) =============
+-- Constant Value --
+SR.Const(v) -> [SR.TFloat or SR.TInt or SR.TUnit]
+A polymorphic constant value, wrapped as an M3 constant.  The type is based on
+the wrapper type of 'v'.  Currently, M3 only supports floating point constants.
+  v: M3.const_t (eg: M3.CFloat(0.))
+    A constant value wrapped in an M3 Type
+
+-- Variable --
+SR.Var(n,t) -> [t]
+A typed, named variable.  All variables are bound externally (ie, as trigger 
+variables), or as part of a Lambda/AssocLambda expression
+  n: SR.id_t = string (eg: "RS_A")
+    The variable name
+  t: SR.type_t (eg: SR.TFloat)
+
+-- Tuples --
+SR.Tuple([v1,v2,...]) -> [SR.TTuple([typeof v1; typeof v2; ...])]
+A multivalued structure.  Not a collection in and of itself, but may be used as
+the value of a collection.  When used in this context, the first 'n-1' values 
+of the 'n' valued tuple will be the collection's key, and the remaining value is
+the collection's value.
+  vN: SR.expr_t[any]
+    A list of expressions evaluating to the value of the tuple.
+
+SR.Project(x,[i1,i2,...]) -> [SR.TTuple([typeof x[i1]; typeof x[i2]; ...])]
+Construct a tuple by extracting the indicated tuple values.
+  x: SR.expr_t[TTuple]
+    An expression that evaluates to a tuple.
+  iN: int
+    A list of indexes to project into the result.
+
+-- Arithmetic --
+SR.Add(a,b) -> [typeof a (== typeof b)]
+Produces the sum of a and b.  Also used as an OR operation: assuming nonzero 
+values are treated as true booleans, normal addition may be used.  
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.Mult(a,b) -> [typeof a (== typeof b)]
+Produces the product of a and b.  Also used as an AND operation: assuming 
+nonzero values are treated as true booleans, normal multiplication may be used.  
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.Eq(a,b) -> [SR.TInt]
+Returns 1 if a and b are equal and 0 otherwise.
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.Neq(a,b) -> [SR.TInt]
+Returns 1 if a and b are NOT equal and 0 otherwise.
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.Lt(a,b) -> [SR.TInt]
+Returns 1 if a is strictly lower than b and 0 otherwise.
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.Leq(a,b) -> [SR.TInt]
+Returns 1 if a is lower than or equal to b and 0 otherwise.
+  a: SR.expr_t[SR.TFloat or SR.TInt]
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+SR.IfThenElse0(a,b) -> [typeof b]
+Returns b if a is nonzero and 0 otherwise.  May execute b even if a is nonzero.
+  a: SR.expr_t[SR.TInt]
+    The condition
+  b: SR.expr_t[SR.TFloat or SR.TInt]
+
+-- Control Flow --
+SR.IfThenElse(i,t,e) -> [typeof t (== typeof e)]
+Returns/executes t if i evaluates to nonzero, and returns/executes e otherwise.
+  i: SR.expr_t[SR.TInt]
+    The condition
+  t: SR.expr_t[any]
+    On true
+  e: SR.expr_t[any]
+    On false
+
+SR.Block([i1,i2,...,iN]) -> [typeof iN]
+Executes all the indicated expressions, returning the value of the last 
+instruction in the list.
+  iN: SR.expr_t[any]
+
+-- Functions --
+SR.Lambda(SR.AVar(i1,t1) or [SR.ATuple([(i1,t1),(i2,t2),...]), expr)] ->
+  [SR.Fn([t1], typeof expr) or SR.Fn([SR.Tuple([t1,t2,...])], typeof expr)]
+Creates a function with 'expr' as the body.  Within 'exp', variables named 'iN'
+may be used to refer to the function's parameters.  For convenience, individual
+values within a tuple may be assingned specific names.
+Note: variables use dynamic scoping and are not guaranteed to have unique names.
+If a function with an argument named FOO is defined in a context where variable 
+FOO already evaluates to a value, the function's value takes precedence.  This
+is the traditional dynamic scoping process used by most languages.
+  iN: SR.id_t = string
+  tN: SR.type_t
+  exp: SR.expr_t[any]
+  
+
+SR.AssocLambda(params1,params2,expr) -> [SR.Fn([params1,params2],expr)]
+  As lambda, but create a function with 2 parameters.
+
+SR.Apply(fn, expr) -> [z or SR.Fn(y,z) (== rettype fn)]
+Evaluate 'fn' with 'expr' as a parameter.
+  fn:   SR.expr_t[SR.Fn([(_,x)],z) or SR.Fn([(_,x)]@y,z)]
+  expr: SR.expr_t[x]
+
+-- Inline Collection Construction --
+SR.Singleton(expr) -> [SR.Collection(typeof expr)]
+Creates a collection with a single value.
+  expr: SR.expr_t[any]
+
+SR.Combine(a,b) -> [typeof a (== typeof b)]
+Merges the values of two collections.  The keys of both collections must be 
+nonoverlapping.
+  a: SR.expr_t[SR.Collection(_)]
+  b: SR.expr_t[SR.Collection(_)]
+
+-- Collection Operations: Generic --
+SR.Map(fn, expr) -> [SR.Collection(y)]
+Maps each element of one collection onto another collection.
+  fn:   SR.expr_t[SR.Fn([x],y)]
+  expr: SR.expr_t[x]
+
+SR.Flatten(expr) -> [SR.Collection(SR.Tuple(y@x)) or SR.Collection(y)]
+Unnest a collection of collections.  If either collection has a 
+  expr: SR.expr_t[SR.Collection(SR.Tuple(x@[SR.Collection(y)])
+                             or SR.Collection(y))]
+
+SR.Aggregate(fn, init, expr) -> [y]
+Apply a function to each element of the collection, maintaining a progressively
+updated aggregate.  'fn' is a function which must accept TWO parameters.  The 
+first parameter is the collection entry currently being examined.  The second 
+parameter is set to 'init' on the first invocation and every subsequent 
+invocation uses the return value of the previous invocation.  Aggregate 
+evaluates to the return value of the last function invocation.
+  fn:   SR.expr_t[SR.Fn([x,y], y)]
+  init: SR.expr_t[y]
+  expr: SR.expr_t[SR.Collection(x)]
+
+SR.GroupByAggregate(fn, init, group, expr) -> 
+  [SR.Collection(SR.Tuple(k@[z]))]
+Apply a function to each element of the collection, maintaining multiple progressively updated aggregate values.  The function 'group' is invoked with ONE parameter: the collection entry being examined.  It must return a Tuple, which will be used as the key for the output collection.  The function 'fn' is invoked with TWO parameters: the collection entry being examined and the current value of the aggregate.  The first time 'group' returns a specific key value, 'fn' is invoked with 'init' as its second parameter.  Every subsequent invocation of 'fn' on a value mapped to the same key uses the prior value of the aggregate for a value mapped to that key
+  fn:    SR.expr_t[SR.Fn([x,y],z)]
+  init:  SR.expr_t[y]
+  group: SR.expr_t[SR.Fn([x],k)]
+
+-- Collection Operations: Tuple Specific --
+The following operators all operate on collections of tuples.  For each entry in 
+the collection, the first 'n-1' entries of the n-entry tuple are considered to 
+be the 'key' of the tuple while the remaining entry is considered to be the 
+tuple's value.  Elements of the collection are accessed by key.
+
+SR.Member(expr,[k1,k2,...]) -> [SR.TInt]
+Membership test for the collection that 'expr' evaluates to.  Returns 1 if the collection contains a tuple with key [k1,k2,...], and 0 if not.  The size of the
+collection's key must be equal to the number of key expressions provided.
+  expr: SR.expr_t[SR.Collection(SR.Tuple([typeof k1,typeof k2,...,typeof v]))]
+  kN:   SR.expr_t[any]
+
+SR.Lookup(expr,[k1,k2,...]) -> [typeof v]
+Lookup by key for the collection that 'expr' evaluates to.  Returns the value of 
+the tuple in the collection with key [k1,k2,...].  If no tuple has the specified 
+key, an exception will be thrown (i.e., a membership test MUST be performed 
+first).
+  expr: SR.expr_t[SR.Collection(SR.Tuple([typeof k1,typeof k2,...,typeof v]))]
+  kN:   SR.expr_t[any]
+
+SR.Slice(expr,schema,keys) -> [typeof expr]
+Extract a subset, or "slice" of the specified collection.  The slice is defined by a subset of the collection's keys; not necesarilly all of them.  The slice operator is provided with the map's schema information: the types of each of the collection's keys, and a string name for each.  Each key is specified using the name in the schema and the value.  Keys not specified are treated as wildcards; all values are matched.
+  expr:   SR.expr_t[SR.Collection(SR.Tuple([ktype1,ktype2,...,typeof v]))]
+  schema: [(sname1,ktype1),(sname2,ktype2),...]
+    snameN: string
+    ktypeN: SR.type_t
+  keys:   [(kname1,kexpr1),(kname2,kexpr2),...]
+    knameN: string
+    kexprN: SR.expr_t[ktypeM where snameM == knameN]
+
+-- Persistent Collection Accessors --
+K3 handles data persistence by allowing users to define multiple named 
+persistent collections (PCs).  Each accessor function produces a reference to 
+one of the named collections.  When used with regular collection operators 
+(i.e., Map, Aggregate, Flatten, Member, Lookup, Slice), they have no side 
+effects.  Note however, that these collections are the only ones that can be 
+affected by side effects in K3.
+
+SR.SingletonPC(id,type)
+Evaluates to a singleton persistent collection: a collection with exactly one 
+value and no keys.
+  id: string
+    The singleton's name.
+  type: SR.type_t
+    The type of the collection's value
+
+SR.OutPC(id,schema,type)
+Evaluates to an out persistent collection: a collection optimized for slicing and iteration over all of its keys.
+  id: string
+    The out collection's name
+  schema: [(sname1,ktype1),(sname2,ktype2),...]
+    Types (SR.type_t) and names (string) for each of the collection's keys
+  type: SR.type_t
+    The type of the collection's values
+
+SR.InPC(id,schema,type)
+Evaluates to an in persistent collection: a collection optimized for single 
+value accesses.
+  id: string
+    The in collection's name
+  schema: [(sname1,ktype1),(sname2,ktype2),...]
+    Types (SR.type_t) and names (string) for each of the collection's keys
+  type: SR.type_t
+    The type of the collection's values
+
+SR.PC(id,inschema,outschema,type)
+Evaluates to a full persistent collection: an Out collection nested inside an In 
+collection.
+  id: string
+    The full collection's name
+  inschema: [(isname1,iktype1),(isname2,iktype2),...]
+    Types (SR.type_t) and names (string) for each of the In collection's keys
+  outschema: [(osname1,oktype1),(osname2,oktype2),...]
+    Types (SR.type_t) and names (string) for each of the Out collection's keys
+  type: SR.type_t
+    The type of the collection's values
+
+-- Persistent Collection Updates --
+Values in a persistent collection are updated using one of the following operators.  These operators are the only source of side effects in K3.
+
+SR.PCUpdate(pc,keys,expr)
+Bulk update of multiple collection values.  If 'pc' is an Out collection or an In collection, 'keys' must be an empty list, and the collection that 'expr' evaluates to will replace the entire persistent collection.  If 'pc' is a Full collection, the values in 'keys' are used to index into the Full collection's In component.  The matching out collection will be entirely replaced by the collection that 'expr' evaluates to.
+  pc: SR.expr_t[SR.OutPC or SR.InPC or SR.PC]
+  keys: [] or [k1,k2,...]
+  expr: SR.expr_t[SR.Collection]
+
+SR.PCUpdateValue(pc,inkeys,outkeys,expr)
+Update a single value in a persistent collection.  If 'pc' is a Singleton collection, 'inkeys' and 'outkeys' must be empty lists, and the collection's value will be replaced by the value that 'expr' evaluates to.  If 'pc' is an Out collection, 'inkeys' must be an empty list and 'outkeys' is an index into the collection for the value to be updated by 'expr'.  If 'pc' is an In collection, 'outkeys' must be an empty list and 'inkeys' is an index into the collection for the value to be updated by 'expr'.  If 'pc' is a Full collection, 'inkeys' and 'outkeys' are used to index into the respective components of the collection.
+  pc: SR.expr_t[SR.SingletonPC or SR.OutPC or SR.InPC or SR.PC
+  inkeys: [] or [k1,k2,...]
+  outkeys: [] or [k1,k2,...]
+  expr: SR.expr_t[any]
