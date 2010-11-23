@@ -153,9 +153,10 @@ is the traditional dynamic scoping process used by most languages.
   tN: SR.type_t
   exp: SR.expr_t[any]
   
-
 SR.AssocLambda(params1,params2,expr) -> [SR.Fn([params1,params2],expr)]
-  As lambda, but create a function with 2 parameters.
+As lambda, but create a function with 2 parameters and an added restriction of associativity for the parameters.  That is to say, it MUST be the case that:
+  SR.AssocLambda(SR.AssocLambda(A, B, E), C, E) = 
+    SR.AssocLambda(A, SR.AssocLambda(B, C, E), E)
 
 SR.Apply(fn, expr) -> [z or SR.Fn(y,z) (== rettype fn)]
 Evaluate 'fn' with 'expr' as a parameter.
