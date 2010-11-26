@@ -467,13 +467,20 @@ let substitute (arg_to_sub, sub_expr) expr =
     let vars_to_sub = match arg_to_sub with
         | AVar(v,_) -> [v,sub_expr]
         | ATuple(vt_l) ->
-            begin match sub_expr with
-            | Tuple(t) -> List.map2 (fun (v,_) e -> v,e) vt_l t
-            | IfThenElse(p,Tuple(tt),Tuple(et)) ->
-                let tef = List.combine tt et in
-                List.map2 (fun (v,_) (t,e) -> v,IfThenElse(p,t,e)) vt_l tef
-            | _ -> failwith ("invalid tuple binding: "^(string_of_expr sub_expr)) 
-            end
+            let rec push_down_ifs tup_expr = 
+            (
+               match tup_expr with
+               | Tuple(t) -> t
+               | IfThenElse(p,tt_expr,et_expr) ->
+                  List.map2 (fun t e ->
+                     IfThenElse(p,t,e)
+                  ) (push_down_ifs tt_expr) 
+                    (push_down_ifs et_expr)
+               | _ -> failwith ("invalid tuple binding: "^
+                                (string_of_expr sub_expr))
+            )
+            in
+               List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
     in
     (* Remove vars from substitutions when descending through lambdas
      * binding the same variable. Don't descend further if there are no
