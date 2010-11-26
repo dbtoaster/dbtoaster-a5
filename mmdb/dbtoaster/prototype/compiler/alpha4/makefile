@@ -209,7 +209,7 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ok_test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_clusteravail.ml
 
 
 ## SQL compilation Tests
