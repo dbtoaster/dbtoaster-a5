@@ -677,12 +677,11 @@ let rec simplify_collections expr =
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
     | Map(map_f, Flatten c) ->
-        let mapf_arg, _ = get_map_parts map_f in
-        let mapf_arg_t = match fst (get_fun_parts mapf_arg) with
+        let mapf_arg_t = match fst (get_fun_parts map_f) with
             | AVar(_,t) -> t
             | ATuple(vt_l) -> TTuple(List.map snd vt_l)
         in
-        let v,v_t = gen_var_sym(), Collection(Collection(mapf_arg_t))
+        let v,v_t = gen_var_sym(), Collection(mapf_arg_t)
         in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
 
     | Map(map_f, (Map(_,_) as rmap)) when not(selective_expr rmap) ->
