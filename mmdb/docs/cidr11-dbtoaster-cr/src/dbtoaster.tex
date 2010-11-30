@@ -256,8 +256,16 @@ on_insert_customer(ck,nm,nk,bal):
     m[][ordkey,sprior] += m_c[][ck,ordkey,sprior];
 \end{verbatim}
 
-\noindent Throughout this document we use the implicit loop form. \todo{Talk
-about above statement as an example of marginalization over the entire stream.}
+\noindent Throughout this document we use the implicit loop form.
+Furthermore, this statement is never implemented as a loop, but relies on a map
+data structure supporting partial key access, or \textit{slicing}. This is
+trivially implemented with secondary indexes for each partial access present in
+any maintenance statement, in this case a secondary index yielding all
+$\tuple{ordkey,sprior}$ pairs for a given \texttt{ck}.
+This form of maintenance statement is similar in structure to the concept of
+\textit{marginalization} in probability distributions, essentially the map $m$
+is a marginalization of map $m_c$ over the attribute \texttt{ck}, for each
+\texttt{ck} seen on the update stream.
 
 Returning to the delta $q_{cl}$ produced by the second step of compilation, we
 show its derivation and simplification below: 
@@ -310,7 +318,8 @@ on_insert_lineitem(ok,ep) :
 }
 
 Above, we iterate over each $\tuple{custkey,sprior}$ pair in the map $m_c$, for
-the given value of the trigger argument {\tt ok}. \todo{Talk about slices here.}
+the given value of the trigger argument {\tt ok}. Note we have another slice
+access of $m_{cl}$, of $\tuple{custkey,sprior}$ pairs for a given \texttt{ok}.
 The third step of recursion on insertion to {\tt Order} is the terminal step, as
 can be seen on inspection of the delta query $q_{clo}$:
 
@@ -391,21 +400,23 @@ are symmetric to insertions except that they decrement counts.
 {\footnotesize
 \begin{verbatim}
 1.  on_insert_customer(ck,nm,nk,bal) :
-2.    m[ordkey, sprior] += m_c[ck, ordkey, sprior];
-3.    m_l[ordkey, sprior] += m_cl[ck, ordkey, sprior];
-4.    m_o[ck] += 1;
-5. 
-6.  on_insert_lineitem(ok,ep) :
-7.    m[ok, sprior] += ep *  m_l[ok, sprior];
-8.    m_c[custkey, ok, sprior] +=
-9.      ep *  m_cl[custkey, ok, sprior];
-10.   m_co[ok] += ep;
-11.
-12. on_insert_order(ck,ok,sp) :
-13.   m[ok, sp] += m_co[ok] * m_o[ck]; 
-14.   m_l[ok, sp] += m_o[ck];
-15.   m_c[ck, ok, sp] += m_co[ok];
-16.   m_cl[ck, ok, sp] += 1;
+2.    m[][ordkey, sprior] +=
+3.                     m_c[][ck, ordkey, sprior];
+4.    m_l[][ordkey, sprior] +=
+5.                    m_cl[][ck, ordkey, sprior];
+6.    m_o[][ck] += 1;
+7. 
+8.  on_insert_lineitem(ok,ep) :
+9.    m[][ok, sprior] += ep *  m_l[][ok, sprior];
+10.   m_c[][custkey, ok, sprior] +=
+11.            ep *  m_cl[][custkey, ok, sprior];
+12.   m_co[][ok] += ep;
+13.
+14. on_insert_order(ck,ok,sp) :
+15.   m[][ok, sp]        += m_co[][ok] * m_o[][ck]; 
+16.   m_l[][ok, sp]      +=  m_o[][ck];
+17.   m_c[][ck, ok, sp]  += m_co[][ok];
+18.   m_cl[][ck, ok, sp] += 1;
 \end{verbatim}
 }
 
@@ -567,6 +578,85 @@ $m'[x,y]$ if $x,y$ were the only correlated attributes.
 \end{itemize}
 }
 
+\comment{
+\tinysection{Towards a main-memory query engine}
+To better capture the evaluation of queries with parameters, binding patterns
+and propagation, we are designing a main-memory query processor based
+on functional programming (FP) primitives and optimizations. Specifically, we
+have developed a small functional programming language as our abstraction of a
+physical query plan, unlike the operator-centric low-level physical plans found
+in modern database engines (e.g. specific join implementations, scans, sorting
+operators that make up LOLEPOPs in IBM's Starburst and
+DB2~\cite{mcpherson-debull:87}, and similar concepts in Oracle, MS SQL
+Server amongst others).
+
+Modern relational engines, and their operator and Volcano-style iterator
+abstractions, lack a clear, flexible representation of many aspects of query
+processor design choices, particularly those relating to entire query plans
+resulting from composing operators, for example the degree of pipelining to use
+(or alternatively blocking and materializing intermediates), and its impact on
+end-to-end performance metrics such as query processing throughput and latency.
+This has tended to result in query engine codebases that are rigid, and
+ultimately require significant re-engineering whenever architectural changes are
+desired (as evidenced in ground-up stream and column-store engine construction).
+
+We believe that employing an expressive low-level plan representation will let
+us capture, and critically programmtically manipulate, many of these whole-query
+(whole-program) evaluation decisions, which are currently deeply embedded into
+query engines. We hope to leverage the significant body of work on program
+analyses and optimization in the programming languages and compiler communities
+to aggressively optimize a rich physical plan representation. To this end, we
+briefly discuss two aspects of whole-query evaluation below, where our FP
+framework is capable of representing non-traditional evaluation strategies:
+i) pipelining and intermediate result materialization, that is the issue of
+tuple- vs. set-at-a-time processing and its role in the space of join-tree
+plans; ii) the use of non-first normal-form datastructures, as seen with nested
+relational algebras, and its relevance to vectorized processing.
+
+The primary features of our FP language are its use of
+nested collections (such as sets, bags and lists) during query processing, its
+ability to perform structural recursion (SR)~\cite{buneman-kleisli:95}
+optimizations on such nested collections, and its support for long-lived
+persistent collections.
+Structural recursion optimizations enable the elimination of temporaries and
+intermediates when manipulating collections, and when combined with primitive
+operations on functions, such as function composition, yields the ability to
+transform the granularity of data processing. Consider a join tree
+$(R \bowtie S) \bowtie T$, and for simplicity assume there are no indexes and
+that the joins are implemented in nested loops form. The functional
+representation is:
+
+\begin{verbatim}
+flatten(map(f <a,b>. map(f c.<a,b,c>, T),
+  flatten(map(f x. map(f y.<x,y>, S), R))))
+\end{verbatim}
+
+The classical implementation of joins as binary operations forces the
+materialization of the intermediate result $R \bowtie S$. There are numerous
+scenarios where such materialization is undesirable, and has led to the
+development of multiway join algorithms such as XJoin and MJoin. With a few
+simple transformation steps, we can rewrite the above program to avoid this
+intermediate materialization as:
+
+\begin{verbatim}
+flatten(flatten(
+  map(f x. map(f y. map(f z.<x,y,z>, T), S), R)))
+\end{verbatim}
+
+This is essentially a three-way nested loops join $\bowtie_3(R,S,T)$ with no
+intermediate materialization of a two-way join. When combined with a
+non-blocking (i.e. lazy) functional map operation, and data structures such as
+tree-based indexes and hash tables, we can apply these transformations to create
+and optimize over a general space of join plans, which critically vary in both
+the arity (and thus materialization), pipelining and ordering of join
+operations. This fine grained control over the granularity of an operator, as
+provided by alternative techniques such as operator fusion and superboxes as
+found in stream engines, can be jointly manipulated with scheduling strategies,
+provided the scheduler is implemented in the same framework.
+
+Notice the reordering of {\tt flatten} operations indicating an internal
+result form consisting of nested collections.
+}
 
 
 \tinysection{Towards optimizing engine physicality}
@@ -597,5 +687,4 @@ physical aspects of plans, since we reason about processing with data
 structures, not an operator abstraction that hides and encapsulates data
 structures. Our techniques will be equally applicable to main-memory DBMS due to
 closed delta queries.
-
 
