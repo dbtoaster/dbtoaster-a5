@@ -334,15 +334,15 @@ let addf = op add_op (const (CFloat(1.0))) (const (CFloat(1.0))) in
 test_interpreter "1.0 + 1.0"
   (eval addf [] [] db) (Float(2.0));;
 
-let addf = op add_op (const (CFloat(1.0))) (var "x") in
+let addf = op add_op (const (CFloat(1.0))) (var "x" TFloat) in
 test_interpreter "1.0 + x where x = 2.0"
   (eval addf ["x"] [CFloat(2.0)] db) (Float(3.0));;
 
-let ltf = op lt_op (const (CFloat(1.0))) (var "x") in
+let ltf = op lt_op (const (CFloat(1.0))) (var "x" TFloat) in
 test_interpreter "1.0 < x where x = 2.0"
   (eval ltf ["x"] [CFloat(2.0)] db) (Int(1));;
 
-let ltf = op lt_op (const (CFloat(1.0))) (var "x") in
+let ltf = op lt_op (const (CFloat(1.0))) (var "x" TFloat) in
 test_interpreter "1.0 < x where x = 0.0"
   (eval ltf ["x"] [CFloat(0.0)] db) (Int(0));;
 
@@ -356,7 +356,7 @@ test_interpreter "tuple 1.0, 2.0, 3.0"
 (* Function tests *)
 (* ((lambda x. lambda y. x+y) 1) 2 *)
 let fxy = lambda (AVar("x",TFloat))
-    (lambda (AVar("y",TFloat)) (op add_op (var "x") (var "y"))) in
+    (lambda (AVar("y",TFloat)) (op add_op (var "x" TFloat) (var "y" TFloat))) in
 let app_fxy =
   (apply (apply fxy (const (CFloat(1.0)))) (const (CFloat(2.0))))
 in test_interpreter "((lambda x. lambda y. x+y) 1) 2"
@@ -366,7 +366,7 @@ in test_interpreter "((lambda x. lambda y. x+y) 1) 2"
 let build_lambda e vl =
     lambda (ATuple(List.map (fun v -> v,TFloat) vl)) e;;
 
-let tuple_xyza = tuple [var "x"; var "y"; var "z"; var "a"] in
+let tuple_xyza = tuple (List.map (fun x -> var x TFloat) ["x";"y";"z";"a"]) in
 let fxyz = build_lambda tuple_xyza ["x"; "y"; "z"; "a"] in
 let schema_app = apply fxyz (tuple (ftuple [1.0; 2.0; 3.0; 4.0]))
 in test_interpreter "(lambda x,y,z,a. tuple x,y,z,a) (tuple 1,2,3,4)"
@@ -414,7 +414,7 @@ test_interpreter "singleton (tuple 1.0, 2.0, 3.0)"
   (tlist [[1.0;2.0;3.0]]);;
 
 (* (lambda y. map(lambda x. x+y, [1.0; 2.0])) 5.0 *)
-let fx = lambda (AVar("x",TFloat)) (op add_op (var "x") (var "y")) in
+let fx = lambda (AVar("x",TFloat)) (op add_op (var "x" TFloat) (var "y" TFloat)) in
 let cx = build_val_list [1.0; 2.0] in
 let mapx = lambda (AVar("y",TFloat)) (map fx TFloat cx) in
 let app_fmx = apply mapx (const (CFloat(5.0))) in
@@ -423,14 +423,17 @@ test_interpreter "(lambda y. map(lambda x. x+y, [1.0; 2.0])) 5.0"
 
 (* aggregate(lambda x.lambda acc. x + acc, 0.0, [1.0; 2.0. 3.0]) *)
 let aggf = lambda (AVar("x",TFloat))
-    (lambda (AVar("acc",TFloat)) (op add_op (var "x") (var "acc"))) in
+  (lambda (AVar("acc",TFloat)) (op add_op (var "x" TFloat) (var "acc" TFloat)))
+in
 let aggc = aggregate aggf (const(CFloat 0.0)) (build_val_list [1.0;2.0;3.0]) in
 test_interpreter "aggregate(lambda x.lambda acc. x + acc, 0.0, [1.0; 2.0. 3.0])"
     (eval aggc [] [] db) (Float(6.0));;
 
 (* map(lambda x,y,z. tuple (x,y+z), [1.0,2.0,3.0; 4.0,5.0,6.0; 7.0,8.0,9.0;]) *)
 let fxyz = build_lambda
-  (tuple [var "x"; op add_op (var "y") (var "z")]) ["x"; "y"; "z"] in
+  (tuple [var "x" TFloat; op add_op (var "y" TFloat) (var "z" TFloat)])
+  ["x"; "y"; "z"]
+in
 let c = fst (build_tuple_list [[1.0;2.0;3.0]; [4.0;5.0;6.0]; [7.0;8.0;9.0]]) in
 test_interpreter
   "map(lambda x,y,z. tuple (x,y+z), [1.0,2.0,3.0; 4.0,5.0,6.0; 7.0,8.0,9.0;])"
@@ -476,7 +479,7 @@ xyz;;
  *************************)
 
 (* Value reads *)
-let get_q_value = get_value "q";;
+let get_q_value = get_value TFloat "q";;
 test_interpreter "get_value q" (eval get_q_value [] [] db) (Float(0.0));;
 
 (* Value writes *)
@@ -490,7 +493,8 @@ test_interpreter "(get_value q) = 1.0"
 let wc = update_out_map_value "q" [const(CFloat(4.0))] (const (CFloat(1.0))) in
 test_interpreter "update_out_map_value q [4.0] 1.0" (eval wc [] [] db2) (Unit);;
 
-let lookup_q = lookup (get_out_map "q") [const (CFloat(4.0))] in
+let lookup_q = lookup
+  (get_out_map ["x", TFloat] TFloat "q") [const (CFloat(4.0))] in
 test_interpreter "(lookup (get_out_map q) [4.0]) = 1.0"
   (eval lookup_q [] [] db2) (Float(1.0));;
 
@@ -502,14 +506,15 @@ in
 test_interpreter "update_out_map_value q [1.0;2.0; 10.0,5.0; 3.0,7.0]"
   (List.iter (fun wc -> ignore(eval wc [] [] db2)) updates; Unit) (Unit);; 
 
-let slice_q = slice (get_out_map "q") [] [] in
+let slice_q = slice (get_out_map ["x", TFloat] TFloat "q") [] [] in
 test_interpreter "slice (get_out_map q) [] []"
   (eval slice_q [] [] db2)
   (tlist [[4.0; 1.0]; [10.0; 5.0]; [3.0; 7.0]; [1.0; 2.0]]);;
 
 (* insert trigger for sum (a) from R *)
-let fcv = lambda (AVar("current_v",TFloat)) (op add_op (var "current_v") (var "a")) in
-let stmt = update_value "q" (apply fcv (get_value "q")) in
+let fcv = lambda (AVar("current_v",TFloat))
+  (op add_op (var "current_v" TFloat) (var "a" TFloat)) in
+let stmt = update_value "q" (apply fcv (get_value TFloat "q")) in
 test_interpreter "update_value q ((lambda cv. cv + a) get_value q)"
   (eval stmt ["a"; "b"] [CFloat(1.0); CFloat(1.0)] db) (Unit);;
 
@@ -517,10 +522,10 @@ test_interpreter "(get_value q) = 2.0"
   (eval get_q_value [] [] db) (Float(2.0));;
 
 (* delete trigger for sum (a) from R *)
-let fcv = lambda (AVar("current_v",TFloat)) (op add_op (var "current_v")
-  (op mult_op (var "a") (const (CFloat(-1.0)))))
+let fcv = lambda (AVar("current_v",TFloat)) (op add_op (var "current_v" TFloat)
+  (op mult_op (var "a" TFloat) (const (CFloat(-1.0)))))
 in
-let stmt = update_value "q" (apply fcv (get_value "q")) in
+let stmt = update_value "q" (apply fcv (get_value TFloat "q")) in
 test_interpreter "update_value q ((lambda cv. cv + -1 * a) get_value q)"
   (eval stmt ["a"; "b"] [CFloat(1.0); CFloat(1.0)] db) (Unit);;
 
@@ -562,19 +567,19 @@ let tuples =
 (* select sum(a) from R *)
 test_prog (sumr_schema,sumr_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]]
 [(fun db -> test_interpreter "insert; (get_value q) = 11.0"
-              (eval (get_value "q") [] [] db) (Float(11.0)));
+              (eval (get_value TFloat "q") [] [] db) (Float(11.0)));
  (fun db -> test_interpreter "delete; (get_value q) = 0.0"
-              (eval (get_value "q") [] [] db) (Float(0.0)))];;
+              (eval (get_value TFloat "q") [] [] db) (Float(0.0)))];;
 
 (* select b,sum(a) from R group by b *)
 test_prog (sumr_byb_schema, sumr_byb_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]]
 [(fun db ->
     test_interpreter "insert; (get_out_map q) = [4,1; 3,3; 2,1; 1,6]"
-      (eval (slice (get_out_map "q") [] []) [] [] db)
+      (eval (slice (get_out_map ["x", TFloat] TFloat "q") [] []) [] [] db)
       (tlist [[4.0; 1.0]; [3.0; 3.0]; [2.0; 1.0]; [1.0; 6.0]]));
  (fun db ->
     test_interpreter "delete; (get_out_map q) = [4,0; 3,0; 2,0; 1,0]"
-      (eval (slice (get_out_map "q") [] []) [] [] db)
+      (eval (slice (get_out_map ["x", TFloat] TFloat "q") [] []) [] [] db)
       (tlist [[4.0; 0.0]; [3.0; 0.0]; [2.0; 0.0]; [1.0; 0.0]]))];;
     
 
@@ -650,11 +655,11 @@ open K3Plsql.CG;;
 
 let compile_to_k3sql fname = 
   List.map (fun stmtl ->
-      List.map (fun e -> ssc (source_code_of_code (linearize_code (K3S.compile_k3_expr e)))) stmtl)
+      List.map (fun e -> (linearize_code (K3S.compile_k3_expr e))) stmtl)
     (compile_to_k3_opt fname);;
 
-compile_to_k3sql "test/sql/vwap.sql";;
 (*
-compile_to_k3_opt "test/sql/vwap.sql";;
+compile_to_k3sql "test/sql/vwap.sql";;
 *)
+compile_to_k3_opt "test/sql/sum.sql";;
 
