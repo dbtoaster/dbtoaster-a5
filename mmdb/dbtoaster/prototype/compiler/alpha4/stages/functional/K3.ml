@@ -31,6 +31,7 @@
 module M3P = M3.Prepared
 open M3
 open M3Common
+open Format
 
 (* Signatures *)
 module type SRSig =
@@ -270,7 +271,7 @@ let get_branches (e : expr_t) : expr_t list list =
     begin match e with
     | Const            c                    -> []
     | Var              (id,t)               -> []
-    | Tuple            e_l                  -> [e_l]
+    | Tuple            e_l                  -> List.map (fun e -> [e]) e_l
     | Project          (ce, idx)            -> [[ce]]
     | Singleton        ce                   -> [[ce]]
     | Combine          (ce1,ce2)            -> [[ce1];[ce2]]
@@ -320,7 +321,7 @@ let rebuild_expr e (parts : expr_t list list) =
     begin match e with
     | Const            c                    -> e
     | Var              (id,t)               -> e
-    | Tuple            e_l                  -> Tuple(fst())
+    | Tuple            e_l                  -> Tuple(List.flatten parts)
     | Project          (ce, idx)            -> Project(sfst(), idx)
     | Singleton        ce                   -> Singleton (sfst())
     | Combine          (ce1,ce2)            -> Combine(sfst(),ssnd())
@@ -446,52 +447,69 @@ let string_of_arg a = match a with
         (List.map (fun (x,y) -> x^","^(string_of_type y)) args)
 
 let string_of_expr e =
-    let aux _ subll e =
-    let sub = String.concat "," (List.flatten subll) in
+  let ob () = pp_open_hovbox str_formatter 2 in
+  let cb () = pp_close_box str_formatter () in
+  let pc () = pp_print_cut str_formatter () in
+  let ps s = pp_print_string str_formatter s in
+  let rec aux e =
+    let recur () = 
+      let br = (get_branches e) in
+        ignore(List.fold_left
+           (fun cnt l -> pc(); List.iter aux l; if cnt > 1 then ps "," else (); cnt-1)
+           (List.length br) br)
+    in
+    let pop s = ob(); ps s; ps "("; recur(); ps ")"; cb() in   
+    let pid s id = ob(); ps s; ps "("; ps id; ps ")"; cb() in
     match e with
-    | Const c -> "Const("^(string_of_const c)^")"
-    | Var (id,t) -> "Var("^id^")"
-    | Tuple e_l -> "Tuple("^sub^")"
-    
-    | Project (ce, idx) -> "Project("^sub^
-        ",["^(String.concat "," (List.map string_of_int idx))^"])"
-    
-    | Singleton ce      -> "Singleton("^sub^")"
-    | Combine (ce1,ce2) -> "Combine("^sub^")"
-    | Add  (ce1,ce2)    -> "Add("^sub^")"
-    | Mult (ce1,ce2)    -> "Mult("^sub^")"
-    | Eq   (ce1,ce2)    -> "Eq("^sub^")"
-    | Neq  (ce1,ce2)    -> "Neq("^sub^")"
-    | Lt   (ce1,ce2)    -> "Lt("^sub^")"
-    | Leq  (ce1,ce2)    -> "Leq("^sub^")"
+    | Const c -> ob(); ps ("Const("^(string_of_const c)^")"); cb()
+    | Var (id,t) -> ob(); ps ("Var("^id^")"); cb()
 
-    | IfThenElse0      (ce1,ce2)            -> "IfThenElse0("^sub^")"
-    | IfThenElse       (pe,te,ee)           -> "IfThenElse("^sub^")"
-    | Block            e_l                  -> "Block("^sub^")"
-    | Iterate          (fn_e, ce)           -> "Iterate("^sub^")"
+    | SingletonPC      (id,t)               -> pid "SingletonPC" id
+    | OutPC            (id,outs,t)          -> pid "OutPC" id
+    | InPC             (id,ins,t)           -> pid "InPC" id
+    | PC               (id,ins,outs,t)      -> pid "PC" id
+
+    | Project (_, idx) ->
+        ob(); ps "Project("; recur(); ps ",";
+        ps ("["^(String.concat "," (List.map string_of_int idx))^"]");
+        ps")"; cb()
+
     | Lambda           (arg_e,ce)           ->
-        "Lambda("^(string_of_arg arg_e)^","^sub^")"
+        ob(); ps "Lambda(";
+        ps (string_of_arg arg_e); ps ","; recur();
+        ps ")"; cb()
 
     | AssocLambda      (arg1_e,arg2_e,be)   ->
-        let x = String.concat "," [string_of_arg arg1_e; string_of_arg arg2_e]
-        in "AssocLambda("^x^","^sub^")"
+        ob(); ps "AssocLambda(";
+        ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
+        ps ","; recur(); ps ")"; cb()
+    
+    | Tuple _             -> pop "Tuple"
+    | Singleton _         -> pop "Singleton"
+    | Combine _           -> pop "Combine"
+    | Add  _              -> pop "Add"
+    | Mult _              -> pop "Mult"
+    | Eq   _              -> pop "Eq"
+    | Neq  _              -> pop "Neq"
+    | Lt   _              -> pop "Lt"
+    | Leq  _              -> pop "Leq"
+    | IfThenElse0 _       -> pop "IfThenElse0"
+    | IfThenElse _        -> pop "IfThenElse"
+    | Block _             -> pop "Block"
+    | Iterate _           -> pop "Iterate"
+    | Apply _             -> pop "Apply"
+    | Map _               -> pop "Map"
+    | Flatten _           -> pop "Flatten"
+    | Aggregate _         -> pop "Aggregate"
+    | GroupByAggregate _  -> pop "GroupByAggregate"
+    | Member _            -> pop "Member"  
+    | Lookup _            -> pop "Lookup"
+    | Slice _             -> pop "Slice"
+    | PCUpdate _          -> pop "PCUpdate"
+    | PCValueUpdate   _   -> pop "PCValueUpdate"
+    (*| External         efn_id               -> pop "External" *)
+    in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
-    | Apply            (fn_e,arg_e)         -> "Apply("^sub^")"
-    | Map              (fn_e,ce)            -> "Map("^sub^")"
-    | Flatten          ce                   -> "Flatten("^sub^")"
-    | Aggregate        (fn_e,i_e,ce)        -> "Aggregate("^sub^")"
-    | GroupByAggregate (fn_e,i_e,ge,ce)     -> "GroupByAggregate("^sub^")"
-    | SingletonPC      (id,t)               -> "SingletonPC("^id^")"
-    | OutPC            (id,outs,t)          -> "OutPC("^id^")"
-    | InPC             (id,ins,t)           -> "InPC("^id^")"
-    | PC               (id,ins,outs,t)      -> "PC("^id^")"
-    | Member           (me,ke)              -> "Member("^sub^")"  
-    | Lookup           (me,ke)              -> "Lookup("^sub^")"
-    | Slice            (me,sch,pat_ve)      -> "Slice("^sub^")"
-    | PCUpdate         (me,ke,te)           -> "PCUpdate("^sub^")"
-    | PCValueUpdate    (me,ine,oute,ve)     -> "PCValueUpdate("^sub^")"
-    (*| External         efn_id               -> "External(...)" *)
-    in fold_expr aux (fun x e -> None) None "" e
 
 let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in

@@ -638,8 +638,6 @@ let compile_to_k3 = compile_aux (fun _ e -> e);;
 
 let compile_to_k3_opt = compile_aux
   (fun trig_args e ->
-    (*simplify_collections (lift_ifs trig_args e)*)
-    (*lift_ifs trig_args (inline_collection_functions [] e)*)
     let optimize e =
       simplify_collections 
         (lift_ifs trig_args (inline_collection_functions [] e)) 
@@ -648,6 +646,7 @@ let compile_to_k3_opt = compile_aux
       let new_e = optimize e in
       if e = new_e then e else fixpoint new_e    
     in fixpoint e);;
+
 
 
 module K3S = K3Compiler.Make(K3Plsql.CG);;
@@ -661,5 +660,6 @@ let compile_to_k3sql fname =
 (*
 compile_to_k3sql "test/sql/vwap.sql";;
 *)
-compile_to_k3_opt "test/sql/sum.sql";;
+
+compile_to_k3_opt "test/sql/rst.sql";;
 
