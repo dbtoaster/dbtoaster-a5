@@ -55,9 +55,11 @@ struct
       (string_of_type t)^": "^(IndentedPrinting.to_debug_line x)
    
    let debugfail (expr:(K3.SR.expr_t option)) (msg:string) =
-      raise (K3OException("K3OCamlgen Internal Error ["^msg^"]; Expression: "^
-         (match expr with | None -> "{Not Available}"
-            | Some(s) -> K3.SR.code_of_expr s)))
+      print_string
+         ("Error: "^msg^"\nExpression: "^
+            (match expr with | None -> "{Not Available}"
+               | Some(s) -> K3.SR.code_of_expr s));
+      raise (K3OException("K3OCamlgen Internal Error ["^msg^"]"))
             
    
    (********************** Utility **********************)
@@ -299,9 +301,21 @@ struct
    let neq_op         : op_t = (c_op "<>")
    let lt_op          : op_t = (c_op "<")
    let leq_op         : op_t = (c_op "<=")
-   let ifthenelse0_op : op_t = (fixed_op Bool Float Float (fun a b ->
-      IP.Node(("if (",") else 0."),(") ", "then ("), a, b)
-   ))
+   let ifthenelse0_op : op_t = 
+      (fun at bt -> 
+         match at with 
+         | Bool -> 
+            ((fun a b -> 
+               (IP.Node(("if (",") else 0."),(") ", "then ("), a, b))
+            ), bt, None)
+         | Float -> 
+            ((fun a b -> 
+               (IP.Node(("if (",") else 0."),(") <> 0.", "then ("), a, b))
+            ), bt, None)
+         | _ -> 
+            ((fun a b -> IP.Leaf("()")), Unit, 
+             Some("ifthenelse("^(string_of_type at)^")"))
+      )
 
    (********************** Implementation **********************)
 
