@@ -435,16 +435,18 @@ let rec fold_expr (f : 'b -> 'a list list -> expr_t -> 'a)
 (* Stringification *)
 let rec string_of_type t =
     match t with
-      TUnit -> "Unit" | TFloat -> "Float" | TInt -> "Int"
-    | TTuple(t_l) -> "Tuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
+      TUnit -> "TUnit" | TFloat -> "TFloat" | TInt -> "TInt"
+    | TTuple(t_l) -> "TTuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
     | Collection(c_t) -> "Collection("^(string_of_type c_t)^")"
-    | Fn(a,b) -> "( "^(String.concat " * " (List.map string_of_type a))^
-                    " -> "^(string_of_type b)^" )"
+    | Fn(a,b) -> "Fn("^(String.concat "," (List.map string_of_type a))^
+                    ","^(string_of_type b)^")"
 
 let string_of_arg a = match a with
-    | AVar(v,v_t) -> v^","^(string_of_type v_t)
-    | ATuple(args) -> String.concat ","
-        (List.map (fun (x,y) -> x^","^(string_of_type y)) args)
+    | AVar(v,v_t) -> "AVar(\""^v^"\","^(string_of_type v_t)^")"
+    | ATuple(args) -> 
+        let f = String.concat ";"
+          (List.map (fun (x,y) -> "\""^x^"\","^(string_of_type y)) args)
+        in "ATuple(["^f^"])"
 
 let string_of_expr e =
   let ob () = pp_open_hovbox str_formatter 2 in
@@ -452,37 +454,44 @@ let string_of_expr e =
   let pc () = pp_print_cut str_formatter () in
   let ps s = pp_print_string str_formatter s in
   let rec aux e =
-    let recur () = 
+    let recur list_branches = 
       let br = (get_branches e) in
+      let nb = List.length br in
         ignore(List.fold_left
-           (fun cnt l -> pc(); List.iter aux l; if cnt > 1 then ps "," else (); cnt-1)
-           (List.length br) br)
+           (fun cnt l -> pc();
+             if l = [] then ps "[]"
+             else if List.mem cnt list_branches then
+                (ps "["; List.iter aux l; ps "]") 
+             else List.iter aux l;
+             if cnt < (nb-1) then ps "," else (); cnt+1)
+           0 br)
     in
-    let pop s = ob(); ps s; ps "("; recur(); ps ")"; cb() in   
-    let pid s id = ob(); ps s; ps "("; ps id; ps ")"; cb() in
+    let pid id = ps ("\""^id^"\"") in
+    let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in   
+    let pmap s id = ob(); ps s; ps "("; pid id; ps ")"; cb() in
     match e with
-    | Const c -> ob(); ps ("Const("^(string_of_const c)^")"); cb()
-    | Var (id,t) -> ob(); ps ("Var("^id^")"); cb()
+    | Const c -> ob(); ps ("Const(CFloat("^(string_of_const c)^"))"); cb()
+    | Var (id,t) -> ob(); ps "Var("; pid id; ps ")"; cb()
 
-    | SingletonPC      (id,t)               -> pid "SingletonPC" id
-    | OutPC            (id,outs,t)          -> pid "OutPC" id
-    | InPC             (id,ins,t)           -> pid "InPC" id
-    | PC               (id,ins,outs,t)      -> pid "PC" id
+    | SingletonPC      (id,t)               -> pmap "SingletonPC" id
+    | OutPC            (id,outs,t)          -> pmap "OutPC" id
+    | InPC             (id,ins,t)           -> pmap "InPC" id
+    | PC               (id,ins,outs,t)      -> pmap "PC" id
 
     | Project (_, idx) ->
-        ob(); ps "Project("; recur(); ps ",";
+        ob(); ps "Project("; recur []; ps ",";
         ps ("["^(String.concat "," (List.map string_of_int idx))^"]");
         ps")"; cb()
 
     | Lambda           (arg_e,ce)           ->
         ob(); ps "Lambda(";
-        ps (string_of_arg arg_e); ps ","; recur();
+        ps (string_of_arg arg_e); ps ","; recur [];
         ps ")"; cb()
 
     | AssocLambda      (arg1_e,arg2_e,be)   ->
         ob(); ps "AssocLambda(";
         ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
-        ps ","; recur(); ps ")"; cb()
+        ps ","; recur []; ps ")"; cb()
     
     | Tuple _             -> pop "Tuple"
     | Singleton _         -> pop "Singleton"
@@ -495,18 +504,20 @@ let string_of_expr e =
     | Leq  _              -> pop "Leq"
     | IfThenElse0 _       -> pop "IfThenElse0"
     | IfThenElse _        -> pop "IfThenElse"
-    | Block _             -> pop "Block"
     | Iterate _           -> pop "Iterate"
     | Apply _             -> pop "Apply"
     | Map _               -> pop "Map"
     | Flatten _           -> pop "Flatten"
     | Aggregate _         -> pop "Aggregate"
     | GroupByAggregate _  -> pop "GroupByAggregate"
-    | Member _            -> pop "Member"  
-    | Lookup _            -> pop "Lookup"
-    | Slice _             -> pop "Slice"
-    | PCUpdate _          -> pop "PCUpdate"
-    | PCValueUpdate   _   -> pop "PCValueUpdate"
+
+    (* Pretty-print with list branches *)
+    | Block _             -> pop ~lb:[0] "Block"
+    | Member _            -> pop ~lb:[1] "Member"  
+    | Lookup _            -> pop ~lb:[1] "Lookup"
+    | Slice _             -> pop ~lb:[1] "Slice"
+    | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
+    | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
     (*| External         efn_id               -> pop "External" *)
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 

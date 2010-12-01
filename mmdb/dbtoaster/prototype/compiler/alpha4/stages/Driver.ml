@@ -354,7 +354,7 @@ let compile_function: ((string * Calculus.var_t list) list ->
                                         | M3.Delete -> "delete")^
                    "_"^rel^"("^(Util.string_of_list "," args)^")\n");
                List.iter (fun (_,e) -> 
-                  output_string fd ((K3.SR.code_of_expr e)^"\n")
+                  output_string fd ((K3.SR.string_of_expr e)^"\n")
                ) stmts
             ) triggers
          ))
