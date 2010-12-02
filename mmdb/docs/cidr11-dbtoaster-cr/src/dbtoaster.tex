@@ -623,18 +623,18 @@ Structural recursion optimizations enable the elimination of temporaries and
 intermediates when manipulating collections, and when combined with primitive
 operations on functions, such as function composition, yields the ability to
 transform the granularity of data processing. Consider a join-aggregate query
-$aggregate((R \bowtie_{\theta} S) \bowtie_{\theta} T)$ with schema
+$\sum_{a*f}((R \bowtie_{\theta} S) \bowtie_{\theta} T)$ with schema
 $R(a,b)$, $S(c,d)$, $T(e,f)$. That is the natural joins result in Cartesian
 products. The functional representation is:
 
 \begin{verbatim}
-aggregate(f <a,b>. a+b, 0,
+aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
   flatten(
-    map(f <w,x,y,z>.
-          map(f <d,e>.<w,x,y,z,d,e>, T),
+    map(fun <w,x,y,z>.
+          map(fun <e,f>.<w,x,y,z,e,f>, T),
         flatten(
-          map(f <a,b>.
-                map(f <c,d>.<a,b,c,d>, S),
+          map(fun <a,b>.
+                map(fun <c,d>.<a,b,c,d>, S),
               R)))))
 \end{verbatim}
 
@@ -647,9 +647,9 @@ simple transformation steps, we can rewrite the above program to avoid this
 intermediate materialization as:
 
 \begin{verbatim}
-aggregate(f <a,b>. a+b, 0,
+aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
   flatten(flatten(
-    map(f <a,b>. map(f <c,d>. map(f <e,f>.
+    map(fun <a,b>. map(fun <c,d>. map(fun <e,f>.
       <a,b,c,d,e,f>, T), S), R))))
 \end{verbatim}
 
