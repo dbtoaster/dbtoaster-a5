@@ -111,14 +111,15 @@ if flag_bool "HELP" then
     print_endline "\n------------\n";
     print_endline 
       ( "Language Support\n\n"^
-        "calc          DBToaster-stlye Relational Calculus\n"^
+        "calc          DBToaster-style Relational Calculus\n"^
         "delta         DBToaster-style Relational Calculus Deltas\n"^
         "m3            Map Maintenance Message Code\n"^
+        "m3:prep       Map Maintenance Message Code (prepared)\n"^
         "k3            Functional update triggers\n"^
         "k3:noopt      Functional update triggers without optimizations\n"^
-        "ocaml         OcaML source file (via K3)\n"^
-        "ocaml:m3      OcaML source file (via M3)\n"^
-        "ocaml:k3      OcaML source file (via K3)\n"^
+        "ocaml         OCaml source file (via K3)\n"^
+        "ocaml:m3      OCaml source file (via M3)\n"^
+        "ocaml:k3      OCaml source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
         "c++           C++ source file (not implemented yet)\n"^
         "run           Run the query with the default interpreter (K3)\n"^
@@ -140,7 +141,7 @@ type sql_language_t = SL_SQL | SL_PLSQL
 type language_t = 
    | L_CALC
    | L_DELTA
-   | L_M3
+   | L_M3 of bool (* prepared? *)
    | L_K3 of bool (* optimized? *)
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
@@ -161,7 +162,8 @@ let language =
       | "CPP"      -> L_CPP
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
-      | "M3"       -> L_M3
+      | "M3"       -> L_M3(false)
+      | "M3:PREP"  -> L_M3(true) 
       | "K3"       -> L_K3(true)
       | "K3:NOOPT" -> L_K3(false)
       | "SQL"      -> L_SQL(SL_SQL) (* Translates DBT-SQL + sources -> SQL  *)
@@ -335,9 +337,16 @@ let compile_function: ((string * Calculus.var_t list) list ->
   | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
   | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
   | L_CPP   -> give_up "Compilation to C++ not implemented yet"
-  | L_M3    -> (fun dbschema (p, s) tlq f -> 
+
+  | L_M3(prepared)  -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
-          output_string fd (M3Common.pretty_print_prog p)))
+          output_string fd
+            (if prepared then
+              let sch,trigs = p in
+              let ptrigs,pats = M3Compiler.prepare_triggers (snd p)
+              in M3Common.PreparedPrinting.pretty_print_prog (sch,ptrigs)
+            else M3Common.pretty_print_prog p)))
+
   | L_K3(opt)    -> (fun dbschema (p, s) tlq f -> 
       let triggers = if opt then (K3Builder.m3_to_k3_opt p) 
                             else (K3Builder.m3_to_k3     p)
@@ -353,6 +362,7 @@ let compile_function: ((string * Calculus.var_t list) list ->
                ) stmts
             ) triggers
          ))
+ 
   | L_INTERPRETER(mode) ->
       let interpreter = (match mode with
          | OCG_M3 -> M3OCamlInterpreterCompiler.compile_query
@@ -423,7 +433,7 @@ if flag_bool "COMPILE" then
       ( match language with 
           | L_SQL(SL_SQL) -> "sql"
           | L_CALC -> "calculus"
-          | L_M3 -> "m3"
+          | L_M3(_) -> "m3"
           | L_INTERPRETER(_) -> "the interpreter"
           | _ -> "this language"
       ))
