@@ -10,12 +10,12 @@ open K3Optimizer;;
 let test_string_of_expr s e =
     Debug.log_unit_test ("string_of_expr: "^s) (fun x -> x) e s;;
 
-test_string_of_expr "Var(a)" (string_of_expr (Var ("a", TFloat)));;
+test_string_of_expr "Var(\"a\")" (string_of_expr (Var ("a", TFloat)));;
 
-test_string_of_expr "Tuple(Var(a),Var(b))"
+test_string_of_expr "Tuple(Var(\"a\"),Var(\"b\"))"
   (string_of_expr (Tuple[Var ("a", TFloat); Var ("b", TFloat)]));;
 
-test_string_of_expr "Tuple(Tuple(Var(a),Var(b)),Tuple(Var(c),Var(d)))"
+test_string_of_expr "Tuple(Tuple(Var(\"a\"),Var(\"b\")),Tuple(Var(\"c\"),Var(\"d\")))"
   (string_of_expr (Tuple [Tuple[Var ("a", TFloat); Var ("b", TFloat)];
                           Tuple[Var ("c", TFloat); Var ("d", TFloat)]]));;
 
