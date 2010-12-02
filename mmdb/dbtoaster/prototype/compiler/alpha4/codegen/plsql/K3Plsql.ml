@@ -34,6 +34,11 @@ open Database
  *       well here).
  *    ii. memoize maximal single-use singleton subqueries, and implement
  *        in procedural form
+ *  ++ solved: use the "dual" table, i.e. 'select ... from dual'. see
+ *    http://download.oracle.com/docs/cd/E11882_01/server.112/e17118/queries009.htm#i2054159
+ *
+ * -- all variable assignments from queries must be "select ... into ..."
+ *    since singleton queries are not expressions in Oracle.
  *
  * -- found variable: SQL%FOUND / SQL%NOTFOUND / SQL%ROWCOUNT etc. see
  *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/static.htm#i46192
@@ -44,6 +49,20 @@ open Database
  *     same point as declaration. Change gen_record_sym to take the schema as
  *     an argument, and track this with the record variable symbol.
  *
+ * -- Oracle resolves ambiguous identifiers for variables and columns with
+ *    column precedence (which is exactly what we want). see:
+ *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/nameresolution.htm#CHDGABGF
+ *
+ * -- Oracle has different (simpler+cleaner) trigger declaration syntax that Postgres. See:
+ *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/triggers.htm#g1043102
+ *
+ * Potential optimizations:
+ * -- exploit FORALL loops, which sends pl/sql statements in bulk to the QP. see:
+ *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/tuning.htm#BABFHGHI
+ *
+ * -- use native compilation of triggers. see:
+ *    http://download.oracle.com/docs/cd/E11882_01/appdev.112/e17126/tuning.htm#i48528
+ *
  * -- we could replace temporary tables with Oracle collections... we should
  *    develop a simple benchmark to differentiate temp table vs. collection
  *    performance prior to pursuing this path. 
@@ -51,10 +70,14 @@ open Database
 
 module CG (*: K3Codegen.CG*) =
 struct
+
+let cg_oracle = true
+
 type op_t = source_code_op_t
 
-(* Declaration counters: vars, aggs, tuples, relations *)
-type counters_t = int * int * int * int
+(* Declaration counters: vars, aggs, tuples, relations, record types *)
+type record_type_t = (string * (string list)) list
+type counters_t = int * int * int * int * record_type_t
 
 type schema_t   = string list 
 type relation_t = code_t * string * schema_t
@@ -159,8 +182,69 @@ let sequence ?(final=false) ?(delim=stmt_delimiter) cl =
 (* Helpers *)
 let pm_const pm = match pm with M3.Insert -> "insert" | M3.Delete -> "delete"
 let pm_name pm  = match pm with M3.Insert -> "ins" | M3.Delete -> "del"
-let pm_tuple pm = match pm with M3.Insert -> "NEW" | M3.Delete -> "OLD" 
+let pm_tuple pm = match pm with
+    | M3.Insert -> (if cg_oracle then ":" else "")^"NEW"
+    | M3.Delete -> (if cg_oracle then ":" else "")^"OLD" 
 
+(* Symbol generation *)
+let counters = Hashtbl.create 0
+let record_types = Hashtbl.create 0
+
+let var_c = "vars"
+let var_prefix = "var"
+
+let agg_c = "aggs"
+let agg_prefix = "agg"
+
+let record_c = "records"
+let record_prefix = "tup"
+
+let rel_c = "relations"
+let rel_prefix = "rel"
+
+let rel_alias = "ralias"
+let rel_alias_prefix = "R"
+
+let init_counters =
+  Hashtbl.add counters var_c 0;
+  Hashtbl.add counters record_c 0;
+  Hashtbl.add counters agg_c 0;
+  Hashtbl.add counters rel_c 0;
+  Hashtbl.add counters rel_alias 0
+
+let incr_counter n =
+  let v = try Hashtbl.find counters n with Not_found -> 0
+  in Hashtbl.replace counters n (v+1)
+
+let get_counter n = try Hashtbl.find counters n with Not_found -> 0
+
+let gen_init_sym() = "has_key"
+
+let gen_var_sym () =
+  let r = get_counter var_c in incr_counter var_c;
+  var_prefix^(string_of_int r)
+
+let gen_record_sym schema =
+  let r = get_counter record_c in incr_counter record_c;
+  let sym = record_prefix^(string_of_int r) in
+    Hashtbl.replace record_types sym schema;
+    sym
+
+let gen_agg_sym() =
+  let r = get_counter agg_c in incr_counter agg_c;
+  agg_prefix^(string_of_int r)
+
+let gen_rel_sym() =
+  let r = get_counter rel_c in incr_counter rel_c;
+  rel_prefix^(string_of_int r)
+
+let gen_rel_alias() =
+  let r = get_counter rel_alias in incr_counter rel_alias;
+  rel_alias_prefix^(string_of_int r)
+
+let reset_syms() = Hashtbl.clear counters; Hashtbl.clear record_types
+
+(* Misc *)
 let pop_back l =
   let x,y = List.fold_left
     (fun (acc,rem) v -> match rem with 
@@ -172,6 +256,27 @@ let get_vars arg = match arg with
   | AVar(v,_) -> [v]
   | ATuple(vt_l) -> List.map fst vt_l
 
+let get_tuple_fields t = match t with
+  | QueryT(sl,_,_,_) -> sl
+  | _ -> failwith "invalid tuple for retrieving fields" 
+
+let vars_of_schema sch = List.map (fun v -> Var(v)) sch 
+
+let build_fields prefix l =
+  snd(List.fold_left (fun (cnt,acc) _ ->
+        cnt+1, acc@[prefix^(string_of_int cnt)]) (1,[]) l)
+    
+let build_temporary_schema tuple = build_fields "a" (get_tuple_fields tuple)
+
+let build_tuple_schema r tuple =
+  vars_of_schema (build_fields (r^".column") (get_tuple_fields tuple))
+
+let get_schema c =  match c with
+  | Memo(_,QueryC(c)) | QueryC(c) ->
+    let sl,_,_,g = List.hd c in build_fields "column" (g@sl)
+  | _ -> failwith "invalid collection for retrieving fields"
+
+(* Stringification *)
 
 let rec concats delim sl = String.concat delim (List.map string_of_select_t sl)
 and concatc delim cl = String.concat delim (List.map string_of_code_t cl)
@@ -247,7 +352,7 @@ let rec linearize_code c =
 (* Source code generation, for pretty stringification during main function
  * construction. Note that unlike previous code generator backends, this one
  * keeps its internal form until the very end, to facilitiate internal late-stage 
- * optimizations such as linearize_code and memoize *)
+ * optimizations such as linearize_code and memoize *) 
 let rec append_rel_id id = if id = "" then id else " as "^id 
 and append_sch sch =
   if sch = [] then "" else "("^(String.concat "," sch)^")"
@@ -273,8 +378,13 @@ and source_code_of_assign_relation c = match c with
   | _ -> failwith ("invalid relation :"^(string_of_code_t c))
 
 and source_code_of_select ?(assign = NoAssign) (sl,r,c,g) =
-  let lines l sc = if l = [] then inl "" else csc (Lines[]) sc in
-  let auxcl cl = List.map (fun c -> 
+  let from_clause l sc =
+    if l = [] then 
+      if cg_oracle then inl "from dual" else inl ""
+    else csc (Lines[]) sc
+  in
+  let clause l sc = if l = [] then inl "" else csc (Lines[]) sc in
+  let rcrl cl = List.map (fun c -> 
     let r = source_code_of_code ~assign:NoAssign c in
     if is_query c then csc (csc (inl "(") r) (inl ")") else r) cl in
   let assignments sc = match assign with
@@ -295,10 +405,10 @@ and source_code_of_select ?(assign = NoAssign) (sl,r,c,g) =
     [cscl ~delim:" "
       [(if assign = SkipSelect then inl "" else inl("select"));
          assignments
-           (if sl = [] then inl("*") else (cscl ~delim:"," (auxcl (g@sl))))];
-     (lines r (cdsc " " (inl ("from")) (subqueries r)));
-     (lines c (cdsc " " (inl ("where")) (cscl ~delim:" and " c)));
-     (lines g (cdsc " " (inl ("group by")) (cscl ~delim:"," (auxcl g))))])
+           (if sl = [] then inl("*") else (cscl ~delim:"," (rcrl (g@sl))))];
+     (from_clause r (cdsc " " (inl ("from")) (subqueries r)));
+     (clause c (cdsc " " (inl ("where")) (cscl ~delim:" and " c)));
+     (clause g (cdsc " " (inl ("group by")) (cscl ~delim:"," (rcrl g))))])
   in 
   let has_sum_aggregate cl = List.exists (fun c -> match c with
     | Aggregate("sum",_) -> true | _ -> false) sl 
@@ -311,21 +421,26 @@ and source_code_of_select ?(assign = NoAssign) (sl,r,c,g) =
 and source_code_of_update (id,(c,w,k)) =
   let vsc =
     let assign_param =
-      if (is_value c || is_memo_value c) then SkipSelect
+      if (is_value c || is_memo_value c) then
+        if cg_oracle then Value("update_v") else SkipSelect
       else failwith "invalid assignment"
     in source_code_of_code ~assign:assign_param c in
   let wsc = csc (if w = [] then inl "" else inl "where ")
                 (cscl ~delim:" and " w) in
   let t = cscl ~delim:"," ((List.map source_code_of_code k)@[inl "update_v"]) in
   let update_memo =
-    flatten_sc (cscl [Lines["update_v :="]; dsc ";" (isc tab vsc)]) in
+    if cg_oracle then flatten_sc (dsc ";" vsc)
+    else flatten_sc (cscl [Lines["update_v :="]; dsc ";" (isc tab vsc)])
+  in
   let update =
     [dsc ";" (cscl [Lines["update "^id^" set av = update_v"]; isc tab wsc])] in
   let insert = flatten_sc (cscl
     ([Lines["insert into "^id^" values("];t;Lines[");"]])) in
   let insert_on_update_fail =
-    [Lines["if not found then"]]@[(isc tab insert)]@[Lines["end if" ]]
+    let fail_pred = if cg_oracle then "SQL%NOTFOUND" else "not found"
+    in [Lines["if "^fail_pred^" then"]]@[(isc tab insert)]@[Lines["end if" ]]
   in flatten_sc (cscl ([update_memo]@update@insert_on_update_fail))
+
 and source_code_of_code ?(assign = NoAssign) c =
   let rcr = source_code_of_code in
   begin match c with
@@ -371,7 +486,9 @@ and source_code_of_code ?(assign = NoAssign) c =
     | Assign(v,c) -> 
       if is_tuple c || is_memo_tuple c then rcr ~assign:(Value(v)) c
       else if is_relation c then source_code_of_assign_relation c
-      else flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr ~assign:SkipSelect c)))
+      else 
+        if cg_oracle then rcr ~assign:(Value(v)) c
+        else flatten_sc (cdsc " " (inl(v^" :=")) (isq (rcr ~assign:SkipSelect c)))
 
     | Insert(id,c) -> cdsc " " (inl ("insert into "^id)) (rcr c)
     | Update(id,u) -> source_code_of_update (id,u) 
@@ -380,18 +497,37 @@ and source_code_of_code ?(assign = NoAssign) c =
         let trig_params = sequence (List.map2 (fun x y ->
             inl(x^" real := "^(pm_tuple evt)^"."^y)) args relargs)
         in
-        let (vc,ac,tc,rc) = counters in
+        let (vc,ac,tc,rc,tup_types) = counters in
         let var_decls =
-          let rec declare prefix sql_type init n i acc =
+          let record_type_decls =
+            let rec aux n i acc =
+              if i >= n then acc
+              else
+                let rn = record_prefix^(string_of_int i) in
+                let type_name = rn^"_type" in
+                let sch =
+                  if List.mem_assoc rn tup_types then List.assoc rn tup_types
+                  else failwith ("could not find record type for "^rn)
+                in
+                let sch_decl = String.concat "," (List.map (fun v -> v^" real") sch)
+                in aux n (i+1) (acc@[Lines["type "^type_name^" is record ("^sch_decl^")"]]) 
+            in if cg_oracle then aux tc 0 [] else []
+          in
+          let rec declare prefix sql_type_f init n i acc =
+            let rcr = declare prefix sql_type_f init n in
             if i >= n then acc
-            else let nacc = acc@[inl(prefix^(string_of_int i)^" "^sql_type^
+            else let nacc = acc@[inl(prefix^(string_of_int i)^" "^(sql_type_f i)^
                                  (if init = "" then "" else " := "^init))]
-                 in declare prefix sql_type init n (i+1) nacc
+                 in rcr (i+1) nacc
           in 
             trig_params::
-            (declare "var" "real" "0.0" vc 0 [])@
-            (declare "agg" "real" "0.0" ac 0 [])@
-            (declare "tup" "record" "" tc 0 [])@
+            (declare var_prefix (fun _ -> "real") "0.0" vc 0 [])@
+            (declare agg_prefix (fun _ -> "real") "0.0" ac 0 [])@
+            record_type_decls@
+            (declare record_prefix
+              (fun i ->
+                if cg_oracle then (record_prefix^(string_of_int i)^"_type")
+                else "record")  "" tc 0 [])@
             [inl("has_key integer"); inl("current_v real"); inl("update_v real");
              inl("init_val real"); inl("accv real")]
         in
@@ -402,97 +538,34 @@ and source_code_of_code ?(assign = NoAssign) c =
                    ["drop table rel"^(string_of_int i)^";"]) acc) (i-1) 
           in aux (Lines[]) (rc-1)
         in
-        cscl
+        let trigger_header =
+          if cg_oracle then
+          [Lines["\ncreate or replace trigger on_"^trig_name];
+           isc tab (inl("after "^(pm_const evt)^" on "^rel^" for each row"))]
+          else
           [Lines["\ncreate function "^trig_name^" () returns trigger as $$"];
-           inl("#variable_conflict use_column");
-           inl("declare");
+           inl("#variable_conflict use_column")] 
+        in
+        let trigger_footer =
+          if cg_oracle then []
+          else
+          [inl("$$ language plpgsql;");
+           inl("create trigger on_"^trig_name^" after "^(pm_const evt)^
+               " on "^rel^" for each row execute procedure "^trig_name^"()")]
+        in
+        cscl
+          (trigger_header@
+          [inl("declare");
            isc tab (sequence ~final:true var_decls);
            inl("begin");
            isc tab (sequence ~final:true (List.map rcr stmtl));
            isc tab drop_tmp_collections;
            isc tab (inl "return null;");
-           inl("end;");
-           inl("$$ language plpgsql;");
-           inl("create trigger on_"^trig_name^" after "^(pm_const evt)^
-               " on "^rel^" for each row execute procedure "^trig_name^"()")]
+           (let r = inl("end") in if cg_oracle then r else dsc ";" r)]@
+           trigger_footer)
     | Main sc -> sc
   end 
 
-
-(* Symbol generation *)
-let counters = Hashtbl.create 0
-
-let var_c = "vars"
-let var_prefix = "var"
-
-let agg_c = "aggs"
-let agg_prefix = "agg"
-
-let record_c = "records"
-let record_prefix = "tup"
-
-let rel_c = "relations"
-let rel_prefix = "rel"
-
-let rel_alias = "ralias"
-let rel_alias_prefix = "R"
-
-let init_counters =
-  Hashtbl.add counters var_c 0;
-  Hashtbl.add counters record_c 0;
-  Hashtbl.add counters agg_c 0;
-  Hashtbl.add counters rel_c 0;
-  Hashtbl.add counters rel_alias 0
-
-let incr_counter n =
-  let v = try Hashtbl.find counters n with Not_found -> 0
-  in Hashtbl.replace counters n (v+1)
-
-let get_counter n = try Hashtbl.find counters n with Not_found -> 0
-
-let gen_init_sym() = "has_key"
-
-let gen_var_sym () =
-  let r = get_counter var_c in incr_counter var_c;
-  var_prefix^(string_of_int r)
-
-let gen_record_sym () =
-  let r = get_counter record_c in incr_counter record_c;
-  record_prefix^(string_of_int r)
-
-let gen_agg_sym() =
-  let r = get_counter agg_c in incr_counter agg_c;
-  agg_prefix^(string_of_int r)
-
-let gen_rel_sym() =
-  let r = get_counter rel_c in incr_counter rel_c;
-  rel_prefix^(string_of_int r)
-
-let gen_rel_alias() =
-  let r = get_counter rel_alias in incr_counter rel_alias;
-  rel_alias_prefix^(string_of_int r)
-
-let reset_syms() = Hashtbl.clear counters
-
-let get_tuple_fields t = match t with
-  | QueryT(sl,_,_,_) -> sl
-  | _ -> failwith "invalid tuple for retrieving fields" 
-
-let vars_of_schema sch = List.map (fun v -> Var(v)) sch 
-
-let build_fields prefix l =
-  snd(List.fold_left (fun (cnt,acc) _ ->
-        cnt+1, acc@[prefix^(string_of_int cnt)]) (1,[]) l)
-    
-let build_temporary_schema tuple = build_fields "a" (get_tuple_fields tuple)
-
-let build_tuple_schema r tuple =
-  vars_of_schema (build_fields (r^".column") (get_tuple_fields tuple))
-
-let get_schema c =  match c with
-  | Memo(_,QueryC(c)) | QueryC(c) ->
-    let sl,_,_,g = List.hd c in build_fields "column" (g@sl)
-  | _ -> failwith "invalid collection for retrieving fields"
 
 
 (* SQL helpers *)
@@ -667,8 +740,8 @@ let ifthenelse ?(expr = None) p t e =
     ->
     let x_tuple = if is_memo_tuple x then get_memo_value x else x in
     let new_record, sch, vars =
-      let r = gen_record_sym() in
       let s = build_temporary_schema x_tuple in
+      let r = gen_record_sym s in
       let v = vars_of_schema (List.map (fun v -> r^"."^v) s)
       in r,s,v
     in
@@ -775,7 +848,7 @@ let bind_memo_args x y =
   | AVar(av,_),_ ->
     failwith ("plsql only binds variables to values "^(string_of_code_t v_y))
   | ATuple(avl), QueryT(sl,r,c,g) ->
-    let r = gen_record_sym() in
+    let r = gen_record_sym (build_fields "column" sl) in
     let sch = build_tuple_schema r v_y in
     (bl_y, ([Assign(r, v_y)]@
       (List.map2 (fun (v,_) vc -> Assign(v,vc)) avl sch)))
@@ -1061,10 +1134,12 @@ let update_map ?(expr = None) id keys cc = failwith "NYI"
 
 let trigger event rel trig_args stmt_block =
   let vc,ac,tc,rc = get_counter var_c, get_counter agg_c,
-                    get_counter record_c, get_counter rel_c
+                    get_counter record_c, get_counter rel_c in
+  let tup_types =
+    Hashtbl.fold (fun sym sch acc -> acc@[sym, sch]) record_types []
   in reset_syms();
      Trigger(event,rel,trig_args,
-             List.map linearize_code stmt_block,(vc,ac,tc,rc),[])
+             List.map linearize_code stmt_block,(vc,ac,tc,rc,tup_types),[])
 
 (* Sources *)
 let valid_adaptors =
@@ -1108,8 +1183,12 @@ let main dbschema schema patterns sources triggers toplevel_queries =
   let base_rels = sequence ~final:true (List.flatten (List.map (fun (id, sch) ->
     let tbl_params = String.concat ","
       (List.map (fun (v,t) -> v^" "^(sql_type_of_calc_type_t t)) sch)
-    in [inl ("drop table if exists "^id);
-        inl ("create table "^id^" ("^tbl_params^")")]) dbschema))
+    in 
+    (if cg_oracle then
+        [inl ("begin execute immediate 'drop table "^id^"'; "^
+              "exception when others then null; end")]
+     else [inl ("drop table if exists "^id)])@
+    [inl ("create table "^id^" ("^tbl_params^")")]) dbschema))
   in
   let maps = sequence ~final:true (List.flatten (List.map
     (fun (id,ins,outs) ->
@@ -1135,7 +1214,8 @@ let main dbschema schema patterns sources triggers toplevel_queries =
           (List.map (fun i -> "a"^(string_of_int (i+off))) l)
         in let aux name columns =
           if columns = "" then inl "" else
-          inl("create index "^name^" on "^id^" using hash ("^columns^")") 
+          let idxtype = if cg_oracle then "" else " using hash "
+          in inl("create index "^name^" on "^id^idxtype^"("^columns^")") 
         in List.map (fun p -> match p with 
             | M3Common.Patterns.In(x,y) -> aux (idxname y) (col 1 y) 
             | M3Common.Patterns.Out(x,y) ->
@@ -1144,8 +1224,11 @@ let main dbschema schema patterns sources triggers toplevel_queries =
       let singleton_init = if ins = [] && outs = []
         then [inl("insert into "^id^" values(0)")] else []
       in
-        [inl ("drop table if exists "^id);
-         inl ("create table "^id^" ("^tbl_params^
+        (if cg_oracle then
+          [inl ("begin execute immediate 'drop table "^id^"'; "^
+                "exception when others then null; end")]
+         else [inl ("drop table if exists "^id)])@
+        [inl ("create table "^id^" ("^tbl_params^
                 (if key_params = "" then ""
                  else ", primary key ("^key_params^")")^")")]@
          secondaries@singleton_init)
@@ -1165,12 +1248,13 @@ let main dbschema schema patterns sources triggers toplevel_queries =
     ((List.flatten (List.map (fun c -> match c with
         | Trigger(evt,rel,_,_,_,_) ->
             let trig_name = (pm_name evt)^"_"^rel in
-            [inl("drop trigger on_"^trig_name^" on "^rel);
-             inl("drop function "^trig_name^"()")]
+            [inl("drop trigger on_"^trig_name^" on "^rel)]@
+            (if cg_oracle then [] else [inl("drop function "^trig_name^"()")])
         | _ -> failwith "invalid trigger code") triggers))@
      (List.map (fun (id,_,_) -> inl("drop table "^id)) schema)@
      (List.map (fun (id,_) -> inl("drop table "^id)) dbschema))
-  in Main(cscl ([base_rels; maps; nl; body; nl]@source_scl@[nl; footer]))
+  in Main(cscl ([base_rels; maps; nl; body; nl]@source_scl@[nl]@
+                (if cg_oracle then [] else [footer])))
 
 let output code out_chan = match code with
   | Main sc -> (output_string out_chan (ssc sc); flush out_chan)
