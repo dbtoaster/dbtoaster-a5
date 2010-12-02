@@ -578,7 +578,7 @@ $m'[x,y]$ if $x,y$ were the only correlated attributes.
 \end{itemize}
 }
 
-\comment{
+
 \tinysection{Towards a main-memory query engine}
 To better capture the evaluation of queries with parameters, binding patterns
 and propagation, we are designing a main-memory query processor based
@@ -590,8 +590,9 @@ operators that make up LOLEPOPs in IBM's Starburst and
 DB2~\cite{mcpherson-debull:87}, and similar concepts in Oracle, MS SQL
 Server amongst others).
 
-Modern relational engines, and their operator and Volcano-style iterator
-abstractions, lack a clear, flexible representation of many aspects of query
+\comment{
+Modern relational engines, and their operator and Volcano-style
+iterator abstractions, lack a clear, flexible representation of many aspects of query
 processor design choices, particularly those relating to entire query plans
 resulting from composing operators, for example the degree of pipelining to use
 (or alternatively blocking and materializing intermediates), and its impact on
@@ -612,53 +613,69 @@ i) pipelining and intermediate result materialization, that is the issue of
 tuple- vs. set-at-a-time processing and its role in the space of join-tree
 plans; ii) the use of non-first normal-form datastructures, as seen with nested
 relational algebras, and its relevance to vectorized processing.
+}
 
-The primary features of our FP language are its use of
-nested collections (such as sets, bags and lists) during query processing, its
-ability to perform structural recursion (SR)~\cite{buneman-kleisli:95}
-optimizations on such nested collections, and its support for long-lived
-persistent collections.
+The primary features of our FP language are its use of nested collections (such
+as sets, bags and lists) during query processing, its ability to perform
+structural recursion (SR)~\cite{buneman-kleisli:95} optimizations on such nested
+collections, and its support for long-lived persistent collections.
 Structural recursion optimizations enable the elimination of temporaries and
 intermediates when manipulating collections, and when combined with primitive
 operations on functions, such as function composition, yields the ability to
-transform the granularity of data processing. Consider a join tree
-$(R \bowtie S) \bowtie T$, and for simplicity assume there are no indexes and
-that the joins are implemented in nested loops form. The functional
-representation is:
+transform the granularity of data processing. Consider a join-aggregate query
+$aggregate((R \bowtie_{\theta} S) \bowtie_{\theta} T)$ with schema
+$R(a,b)$, $S(c,d)$, $T(e,f)$. That is the natural joins result in Cartesian
+products. The functional representation is:
 
 \begin{verbatim}
-flatten(map(f <a,b>. map(f c.<a,b,c>, T),
-  flatten(map(f x. map(f y.<x,y>, S), R))))
+aggregate(f <a,b>. a+b, 0,
+  flatten(
+    map(f <w,x,y,z>.
+          map(f <d,e>.<w,x,y,z,d,e>, T),
+        flatten(
+          map(f <a,b>.
+                map(f <c,d>.<a,b,c,d>, S),
+              R)))))
 \end{verbatim}
 
-The classical implementation of joins as binary operations forces the
-materialization of the intermediate result $R \bowtie S$. There are numerous
-scenarios where such materialization is undesirable, and has led to the
+\todo{Description of this program.}
+A standard implementation of a join as a binary operation forces the
+materialization of the intermediate result $R \bowtie_{\theta} S$. There are
+numerous scenarios where such materialization is undesirable, and has led to the
 development of multiway join algorithms such as XJoin and MJoin. With a few
 simple transformation steps, we can rewrite the above program to avoid this
 intermediate materialization as:
 
 \begin{verbatim}
-flatten(flatten(
-  map(f x. map(f y. map(f z.<x,y,z>, T), S), R)))
+aggregate(f <a,b>. a+b, 0,
+  flatten(flatten(
+    map(f <a,b>. map(f <c,d>. map(f <e,f>.
+      <a,b,c,d,e,f>, T), S), R))))
 \end{verbatim}
 
 This is essentially a three-way nested loops join $\bowtie_3(R,S,T)$ with no
-intermediate materialization of a two-way join. When combined with a
-non-blocking (i.e. lazy) functional map operation, and data structures such as
-tree-based indexes and hash tables, we can apply these transformations to create
-and optimize over a general space of join plans, which critically vary in both
-the arity (and thus materialization), pipelining and ordering of join
-operations. This fine grained control over the granularity of an operator, as
-provided by alternative techniques such as operator fusion and superboxes as
-found in stream engines, can be jointly manipulated with scheduling strategies,
-provided the scheduler is implemented in the same framework.
+intermediate materialization of a two-way join, that can also be pipelined into
+the aggregation. In general, we can apply well-established folding,
+defunctionalization and deforestation techniques from functional programming,
+which when combined with data structures such as tree-based indexes and hash
+tables, can yield a rich space of evaluation strategies that vary in ther
+pipelining and materialization, ordering, nesting strucure and vectorization
+characteristics.
 
-Notice the reordering of {\tt flatten} operations indicating an internal
-result form consisting of nested collections.
-}
+The last item, nesting structure and vectorization, refers to concepts from
+nested relational algebra, whereby query processing need not occur in terms of
+first normal form relations. Our programs can use non-first normal forms
+internally, and can apply compression and vectorized processing over the nested
+relation attributes, much in the vein of column-oriented processing.
+Furthermore, we can directly represent the aforementioned data structures, such
+as indexes and DBToaster maps, in our language, yielding a unified approach to
+representing both query processing and storage layout. We know of no existing
+framework capable of such a rich representation, and are excited by the
+potential to apply program transformations to jointly optimize query processing
+and storage.
 
 
+\comment{
 \tinysection{Towards optimizing engine physicality}
 We are adopting a functional programming (FP) approach to compilation to better
 capture the need for binding patterns in delta queries, and to apply
@@ -687,4 +704,4 @@ physical aspects of plans, since we reason about processing with data
 structures, not an operator abstraction that hides and encapsulates data
 structures. Our techniques will be equally applicable to main-memory DBMS due to
 closed delta queries.
-
+}
