@@ -480,7 +480,14 @@ struct
             | v -> failwith ("invalid tuple collection: "^(string_of_value v))
             end
         with Not_found ->
-            failwith ("collection operation failed: "^ex_s^(get_expr expr)))
+            print_string
+               ("Collection operation failed: "^
+                (Util.list_to_string string_of_value k)^" in "^
+                (string_of_value ((get_eval tcollection) th db))^
+                "\n"^(get_expr expr)^"\n");
+            failwith "Collection Operation Failed"
+        )
+            (* failwith ("collection operation failed: "^ex_s^(get_expr expr)))*)
 
     (* map, key -> bool/float *)
     let exists ?(expr = None) tcollection key_l =

@@ -3,10 +3,15 @@ open CalcToM3
 
 module K3OC = K3Compiler.Make(K3OCamlgen.K3CG)
 
-let compiled_k3_for_script script_file = 
+let parse_script script_file = 
    let f = open_in script_file in 
    let lexbuff = Lexing.from_channel f in
-   let (calc,sources) = Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff in
+      Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff
+
+;;
+
+let compiled_m3_for_script script_file =
+   let (calc,sources) = parse_script script_file in
    let dbschema = List.flatten (List.map (fun (_,x,_) -> x) calc) in
    let program = CalcToM3.M3InProgress.finalize
       (List.fold_left 
@@ -27,6 +32,11 @@ let compiled_k3_for_script script_file =
          calc
       )
    in
+      (program, dbschema, sources)
+;;
+
+let compiled_k3_for_script script_file = 
+   let (program,dbschema,sources) = compiled_m3_for_script script_file in
       K3OC.compile_query_to_string dbschema (program,sources) ["QUERY"]
 
 ;;

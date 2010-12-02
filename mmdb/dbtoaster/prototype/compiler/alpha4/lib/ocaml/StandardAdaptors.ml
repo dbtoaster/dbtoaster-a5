@@ -103,7 +103,7 @@ let preprocessors : (string * (string -> string list -> string list)) list =
    [("project", preproject); ("case", change_case); ("substring", substring);
     ("skiplines", skiplines); ("trimwhitespace", trimwhitespace)]
 
-(* param_val: (int|float) list
+(* param_val: (int|float|date|hash) list
  * Builds a tuple, i.e. a const_t list from a string list given the expected
  * types of fields.
  * -- if there are more fields than types, we use the last type to construct
@@ -118,6 +118,24 @@ let build_tuple param_val =
                     Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
         | "float" -> (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
+        | "date" -> (fun x -> 
+            if (Str.string_match 
+                  (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") x 0)
+            then (
+               let y = (int_of_string (Str.matched_group 1 x)) in
+               let m = (int_of_string (Str.matched_group 2 x)) in
+               let d = (int_of_string (Str.matched_group 3 x)) in
+                  if (m > 12) then failwith (
+                        "Invalid month ("^(string_of_int m)^
+                        ") in date: "^x
+                     );
+                  if (d > 31) then failwith (
+                        "Invalid day ("^(string_of_int d)^
+                        ") in date: "^x
+                     );
+                  CFloat(float((y * 10000) + (m * 100) + (d * 1)))
+            ) else failwith ("Invalid date string: "^x)
+         )
         | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
         | _ -> failwith ("invalid const_t type "^t)) types in
    let num_fns = List.length build_fns in

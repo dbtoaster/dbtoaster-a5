@@ -62,11 +62,6 @@
 
 open Util
 
-let valid_langs = 
-  List.fold_left (fun accum x -> StringSet.add x accum) StringSet.empty [
-    "calculus"; "m3"; "ocaml"; "c++"
-  ]
-
 (********* PARSE ARGUMENTS *********)
 
 type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST

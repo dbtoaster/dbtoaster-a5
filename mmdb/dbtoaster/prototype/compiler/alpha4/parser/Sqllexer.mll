@@ -62,7 +62,8 @@ let keywords =
         "OFFSET", OFFSET;
         "ADJUSTBY", ADJUSTBY;
         "POSTGRES", POSTGRES;
-        "RELATION", RELATION
+        "RELATION", RELATION;
+        "DATE", DATE
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

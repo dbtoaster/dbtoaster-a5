@@ -577,6 +577,7 @@
 %token <string> ID STRING
 %token <int> INT   
 %token <float> FLOAT
+%token DATE
 %token SUM MINUS PRODUCT DIVIDE
 %token EQ NE LT LE GT GE
 %token AND OR NOT BETWEEN
@@ -918,6 +919,29 @@ value:
 | MINUS INT   { Const(Int(-1 * $2)) }
 | MINUS FLOAT { Const(Double(-1. *. $2)) }
 | STRING      { Const(String($1)) }
+| DATE LPAREN STRING RPAREN
+          { 
+               if (Str.string_match 
+                     (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") $3 0)
+               then (
+                  let y = (int_of_string (Str.matched_group 1 $3)) in
+                  let m = (int_of_string (Str.matched_group 2 $3)) in
+                  let d = (int_of_string (Str.matched_group 3 $3)) in
+                     if (m > 12) then raise (SQLParseError(
+                        "Invalid month ("^(string_of_int m)^
+                        ") in date: "^$3
+                     ));
+                     if (d > 31) then raise (SQLParseError(
+                        "Invalid day ("^(string_of_int d)^
+                        ") in date: "^$3
+                     ));
+                     Const(Int((y * 10000) + (m * 100) + (d * 1)))
+               ) else
+                  raise (SQLParseError("Improperly formatted date: "^$3))
+          }
+| DATE LPAREN INT MINUS INT MINUS INT
+          { Const(Int(($3 * 10000) + ($5 * 100) + ($7 * 1))) }
+
 | ID       
           {
               (* Note: we use any old type here, since types are replaced

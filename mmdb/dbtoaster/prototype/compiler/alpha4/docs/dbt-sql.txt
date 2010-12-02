@@ -5,12 +5,30 @@ DBToaster.
 
 --------------------------------------
 
-SELECT sum(expression) [, sum(expression2)[, ...]] 
+SELECT sum(expression) [, sum(expression2)[, ...]] [, gb_term1 [, ...]] 
   FROM r1[, r2[, ...]] 
   WHERE condition
+  [GROUP BY gb_term1 [, ...]]
 
 The select statement is unchanged, although the target expression can only have
-aggregate terms in it.  Currently, only sum is supported.
+aggregate and group by terms in it (i.e. Non-aggregate queries are unsupported 
+but may be emulated by making all target terms group by terms and adding a 
+SUM(1) term).  Currently, only sum is supported.  Count may be emulated by using
+SUM(1), and average may be emulated by obtaining a count and a sum and post-
+processing to obtain the average.
+
+expression := 
+  |  integer
+  |  float
+  |  string                   # Where string is quoted with 'single quotes'
+  |  DATE(date)               # Where date is expressed as YYYY-MM-DD; date may 
+                                optionally be 'single quoted'
+  |  expression + expression
+  |  expression - expression
+  |  - expression
+  |  expression * expression  # Note that division is NOT supported.
+  |  colname
+  |  tablename.colname
 
 --------------------------------------
 
@@ -75,13 +93,16 @@ fields: A regular expression that describes how fields are delimited fields in
 offsets: A comma-separated list of integers indicating how many bytes each field
          uses.  (Required unless 'fields' is provided)
 
-schema: A comma-separated list of 'int','float', or 'hash'.  Indicates the type
-        of each field.  Hash will convert input strings into an integer by 
-        hashing prior to insertion - this is required, since string columns are
-        currently not supported by DBToaster.  If there are more fields than
-        parameters in the type list, the last type will be used as a default
-        for the remainder of the fields.  If the project parameter is present,
-        the field order is post-projection. (Required)
+schema: A comma-separated list of 'int','float','date' or 'hash'.  Indicates the 
+        type of each field in the input
+        'int'   : The input is parsed as an integer, and represented as a float.
+        'float' : The input is parsed as a float.
+        'date'  : The input is parsed using SQL date syntax 'YYYY-MM-DD'
+        'hash'  : The input is parsed as a string, and hashed into an integer
+        If there are more fields than parameters in the type list, the last type 
+        will be used as a default for the remainder of the fields.  If the 
+        project parameter is present, the field order is post-projection. 
+        (Required)
 
 project: A comma-separated list of integers representing field indices (0-based 
          indexing).  If this parameter is present, only the indicated fields 

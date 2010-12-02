@@ -280,8 +280,10 @@ and to_m3
             (M3.mk_c (float_of_int c), [])
        | Calculus.Const(Calculus.Double c)  -> 
             (M3.mk_c c, [])
-       | Calculus.Const(_)                  ->
-            failwith "Compiler.to_m3: TODO String,Long"
+       | Calculus.Const(Calculus.Long _)    ->
+            failwith "Compiler.to_m3: TODO Long"
+       | Calculus.Const(Calculus.String c)    ->
+            (M3.mk_c (float_of_int (Hashtbl.hash c)), [])
 
    in
    match t with
