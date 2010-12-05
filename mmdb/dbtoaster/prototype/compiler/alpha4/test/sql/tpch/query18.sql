@@ -1,0 +1,58 @@
+CREATE TABLE LINEITEM (
+        orderkey       int,
+        partkey        int,
+        suppkey        int,
+        linenumber     int,
+        quantity       double,
+        extendedprice  double,
+        discount       double,
+        tax            double,
+        returnflag     double, -- text(1)
+        linestatus     double, -- text(1)
+        shipdate       double, -- date
+        commitdate     double, -- date
+        receiptdate    double, -- date
+        shipinstruct   double,
+        shipmode       double,
+        comment        double
+    )
+  FROM FILE 'test/data/lineitem.csv'
+  LINE DELIMITED lineitem;
+
+CREATE TABLE ORDERS (
+        orderkey       int,
+        custkey        int,
+        orderstatus    double, -- text
+        totalprice     double,
+        orderdate      double, -- date
+        orderpriority  double,
+        clerk          double,
+        shippriority   int,
+        comment        double  -- text
+    )
+  FROM FILE 'test/data/orders.csv'
+  LINE DELIMITED orders;
+
+CREATE TABLE CUSTOMER (
+        custkey      int,
+        name         double, -- text
+        address      double, -- text
+        nationkey    int,
+        phone        double, -- text
+        acctbal      double,
+        mktsegment   double, -- text
+        comment      double  -- text
+    )
+  FROM FILE 'test/data/customer.csv'
+  LINE DELIMITED customer;
+
+select c.custkey, sum(l1.quantity)
+from customer c, orders o, lineitem l1
+where 1 <=
+      (select sum(1) from lineitem l2
+       where l1.orderkey = l2.orderkey
+       and 100 < (select sum(l3.quantity) from lineitem l3
+                  where l2.orderkey = l3.orderkey))
+and c.custkey = o.custkey
+and o.orderkey = l1.orderkey
+group by c.custkey;
