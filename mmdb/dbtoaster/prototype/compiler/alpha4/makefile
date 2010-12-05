@@ -220,12 +220,12 @@ vwaptest: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o test/qp/vwap_m3 $(ML_OPT) \
 		test/qp/vwap_m3_ex.ml
 
-qptest: test/sql/vwap vwaptest
+qptest: test/sql/finance/vwap vwaptest
 	@echo "Testing VWAP query (M3, SQL)... "
 	@echo "Running VWAP M3..." && env OCAMLRUNPARAM="b" test/qp/vwap_m3 -validate \
 		test/data/vwap5k.csv test/qp/output/vwap5k.m3 > /dev/null
 	@echo "Running VWAP SQL..." && \
-		test/sql/vwap -r value -o test/qp/output/vwap5k.dbt > /dev/null
+		test/sql/finance/vwap -r value -o test/qp/output/vwap5k.dbt > /dev/null
 	@echo "Comparing... "
 	@diff test/qp/output/vwap5k.m3 test/qp/output/vwap5k_valid \
 			>test/qp/output/m3.diff || echo "==> M3 Failed!"
@@ -249,8 +249,10 @@ runtop: top
 ## Cleanup
 clean:
 	rm -f $(CLEAN_OBJ)
-	for i in test/sql/*.sql; do bn=`basename $$i .sql`; \
-		for j in .ml .cmo .cmi .cmx .cmxi .o ""; do rm -f test/sql/$$bn$$j; done;\
+	for d in test/sql test/sql/finance test/sql/tpch test/sql/simple; do \
+		for i in $$d/*.sql; do bn=`basename $$i .sql`; \
+			for j in .ml .cmo .cmi .cmx .cmxi .o ""; do rm -f $$d/$$bn$$j; done;\
+		done \
 	done
 	for j in .cmo .cmi .cmx .cmxi .o; do rm -f test/qp/*$$j; done; \
 		rm -f test/qp/output/vwap5k.* test/qp/output/*.diff test/qp/vwap_m3

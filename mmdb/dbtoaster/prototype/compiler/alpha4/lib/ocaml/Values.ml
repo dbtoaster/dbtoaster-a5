@@ -169,8 +169,7 @@ struct
         (extensions: var_t list) (m: t) =
       let aux pk kv =
          let aggv = List.fold_left (fun x (y,z) -> c_sum x z) (CFloat(0.0)) kv in
-         let ext_theta =
-            Env.extend (Env.make pat_outv pk) theta extensions in
+         let ext_theta = Env.extend (Env.make pat_outv pk) theta extensions in
          (* Normalizes the key orderings to that of the variable ordering desired_outv.
           * This only performs reordering, that is we assume pat_outv has the
           * same set of variables as desired_outv. *)

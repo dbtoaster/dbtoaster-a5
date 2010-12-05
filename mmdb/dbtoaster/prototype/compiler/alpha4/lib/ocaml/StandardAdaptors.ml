@@ -343,19 +343,22 @@ let orderbook_generator params =
 
 (* TPC-H *)
 let li_schema =
-   "int,int,int,int,float,float,float,float,hash,hash,hash,hash,hash,hash,hash,hash"
+   "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash"
 
 let lineitem_params = csv_params "|" li_schema "insert"
-let order_params    = csv_params "|" "int,int,hash,float,hash,hash,hash,int,hash" "insert"
+let order_params    = csv_params "|" "int,int,hash,float,date,hash,hash,int,hash" "insert"
 let part_params     = csv_params "|" "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
 let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
 let customer_params = csv_params "|" "int,hash,hash,int,hash,float,hash,hash" "insert"
 let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert"
+let nation_params   = csv_params "|" "int,hash,int,hash" "insert"
+let region_params   = csv_params "|" "int,hash,hash" "insert"
 
 let tpch_generators = List.map (fun (n,(_,p)) -> (n, csv_generator_wrapper p))
   ([("lineitem", lineitem_params); ("orders", order_params);
     ("part", part_params);         ("partsupp", partsupp_params);
-    ("customer", customer_params); ("supplier", supplier_params)])
+    ("customer", customer_params); ("supplier", supplier_params);
+    ("nation", nation_params);     ("region", region_params)])
 
 let generators =
    [("csv", standard_generator);
