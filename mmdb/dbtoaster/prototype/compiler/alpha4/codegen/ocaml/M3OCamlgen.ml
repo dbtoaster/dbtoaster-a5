@@ -180,9 +180,7 @@ struct
    let const c = match c with | CFloat(f) ->
       Inline("(CFloat("^(string_of_float f)^"))")
 
-   let singleton_var v = Inline((gen_var v))
-   let slice_var v = Lines(["M3ValuationMap.from_list [(["^
-                              (gen_var v)^"], "^(gen_var v)^")] []"])
+   let var v = Inline((gen_var v))
    
    let int_op op      = "(fun a b -> if ("^op^" a b) then CFloat(1.0) else CFloat(0.0))"
    let add_op         = "c_sum"
@@ -207,33 +205,27 @@ struct
        "let "^(gen_var decl)^" = "^
            "List.nth "^(list_id)^" "^(string_of_int idx)^" in") bindings
 
-   let op_singleton_expr prebind op ce1 ce2 =
+   let op_singleton_expr op ce1 ce2 =
       let aux s in_s = tabify (
-         (bind prebind)@["let v = ";]@s@["in ("^op^" v "^(inline in_s)^")"])
+         ["let v = ";]@s@["in ("^op^" v "^(inline in_s)^")"])
       in
       match (ce1, ce2) with
        | (Lines(ce1_l), Lines(ce2_l)) -> tabify (
-         (bind prebind)@
          ["let (v1,v2) = ((";]@ce1_l@["),("]@ce2_l@[")) in";"("^op^" v1 v2)"])
        | (Inline(ce1_i), Lines(ce2_l)) -> aux ce2_l ce1_i
        | (Lines(ce1_l), Inline(ce2_i)) -> aux ce1_l ce2_i
        | (Inline(ce1_i), Inline(ce2_i)) ->
-          let inline_bindings =
-             let r = (String.concat "\n" (bind prebind)) in
-             if r = "" then r else r^"\n\t"
-          in Inline(inline_bindings^"("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")")
+         Inline("("^op^" "^(inline ce1_i)^" "^(inline ce2_i)^")")
 
-   let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+   let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       let semijoin = outv2 = schema in
       tabify (
       (annotate_code_schema "outv1" outv1)@
       (annotate_code_schema "theta_ext" theta_ext)@
-      (bind prebind)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let f k v1 r ="]@
        (indent 1 (annotate_code_schema "outv2" outv2))@
-       (list_bind "k" inbind)@
       ["   let r2 = "]@ 
       (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
       (indent 1 (get_lines ce2))@
@@ -255,8 +247,7 @@ struct
       ["   in M3ValuationMap.union r r3";
        "in M3ValuationMap.fold f (M3ValuationMap.empty_map()) res1"])
        
-   let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 = tabify (
-      (bind prebind)@
+   let op_slice_product_expr op outv1 outv2 ce1 ce2 = tabify (
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let res2 = "]@(get_lines ce2)@
@@ -264,14 +255,12 @@ struct
 
    (* Note: no need to bind outv2 anywhere in this code, since in this case
     * outv2 is bound from above *)
-   let op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+   let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
       tabify (
       let f_body =
          match ce2 with
           | Lines(ce2_l) ->
-            ["   let res2 = "]@
-             (indent 2 (bind_vars_from_extension outv1 "k" theta_ext))@
-             (indent 1 ce2_l)@
+            ["   let res2 = "]@(indent 1 ce2_l)@
             ["   in";
              "   let nv = ("^op^" v res2) in"]@
             (let nk = inline_vars_list schema [(schema_ext, "k")] in
@@ -283,15 +272,16 @@ struct
             ["   let nk = "^nk])@
             ["   in M3ValuationMap.add nk ("^op^" v "^(inline ce2_i)^") r"]
       in
-         (bind prebind)@
          ["let res1 = "]@(get_lines ce1)@
          ["in";
-          "let f k v r = ";]@(list_bind "k" inbind)@f_body@
+          "let f k v r = ";]@
+          (indent 1 (bind_vars_from_extension outv1 "k" theta_ext))@
+          f_body@
          ["in M3ValuationMap.fold f (M3ValuationMap.empty_map()) res1"])
    
    (* Note: no need to bind any vars from outv2 since these should be bound
     * from above *)
-   let op_lslice_product_expr prebind op outv1 outv2 ce1 ce2 = tabify (
+   let op_lslice_product_expr op outv1 outv2 ce1 ce2 = tabify (
       let body = match ce2 with
          | Lines(ce2_l) ->
             ["let res2 = "]@ce2_l@
@@ -299,14 +289,13 @@ struct
          | Inline(ce2_i) ->
             ["M3ValuationMap.mapi (fun k v -> (k@k2, ("^op^" v "^(inline ce2_i)^"))) res1"]
       in
-      (bind prebind)@
       ["let res1 = "]@(get_lines ce1)@
       ["in";
        "let k2 = "^(vars_list outv2)^" in"]@body)
 
    (* Note: no need to bind vars schema_ext since these should be bound from
     * above. *)
-   let op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2 = tabify (
+   let op_rslice_expr op outv2 schema schema_ext ce1 ce2 = tabify (
       let body ce1_v =
          ["let r = "]@
           (get_lines ce2)@
@@ -316,8 +305,8 @@ struct
       in 
       match ce1 with
        | Lines(ce1_l) ->
-         (bind prebind)@["let res1 = "]@ce1_l@["in"]@(indent 2 (body "res1"))
-       | Inline(ce1_i) -> (bind prebind)@(body (inline ce1_i)))
+         ["let res1 = "]@ce1_l@["in"]@(indent 2 (body "res1"))
+       | Inline(ce1_i) -> (body (inline ce1_i)))
 
 
    (*
@@ -494,7 +483,7 @@ struct
       ["(fun k v ->";
        "(* "]@cdebug@[" k v; *)";
        "let init_slice = "]@
-       (indent 1 (bind_vars_from_list lhs_outv "k"))@
+       (indent 1 (bind_vars_from_extension lhs_outv "k" init_ext))@
        (get_lines cinit)@
       ["in";
        "let init_v =";

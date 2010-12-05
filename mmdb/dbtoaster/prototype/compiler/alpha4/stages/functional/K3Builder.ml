@@ -236,22 +236,15 @@ and m3rhs_to_expr lhs_outv paggcalc : expr_t =
     *    we want to apply structural recursion optimizations in this case.
     * -- projects to lhs vars 
     *)
-    let ecalc = M3P.get_ecalc paggcalc in
-    
-    (* TODO: fix bug, rhs_outv is wrong here since it includes all vars
-     * used in rhs, see rsgb.sql example *)
-    let rhs_outv = calc_schema ecalc in
-    
-    (* TODO: simplify rhs, e.g. lift lambdas *)
-    let rhs_expr = calc_to_expr ecalc in
     let init_val = Const(CFloat(0.0)) in
+    let ecalc = M3P.get_ecalc paggcalc in
+    let rhs_outv, rhs_expr = calc_schema ecalc, calc_to_expr ecalc in
     let agg_fn = bind_for_aggregate
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))
     in
     if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
-        (* TODO: simplify aggregate w/ struct rec *)
         Aggregate (agg_fn, init_val, rhs_expr) 
     else
         (* projection to lhs vars + aggregation *)

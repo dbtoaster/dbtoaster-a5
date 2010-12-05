@@ -34,8 +34,7 @@ sig
    val debug_stmt : string -> M3.var_t list -> M3.var_t list -> debug_code_t
 
    val const: M3.const_t -> code_t
-   val singleton_var: M3.var_t -> code_t
-   val slice_var: M3.var_t -> code_t
+   val var: M3.var_t -> code_t
 
    val add_op  : op_t
    val mult_op : op_t
@@ -45,41 +44,43 @@ sig
    val ifthenelse0_op : op_t
    val ifthenelse0_bigsum_op : op_t
 
-   val op_singleton_expr:
-      M3.Prepared.pprebind_t -> op_t -> code_t -> code_t -> code_t 
+   val op_singleton_expr: op_t -> code_t -> code_t -> code_t 
    
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_slice_expr: M3.Prepared.pprebind_t -> M3.Prepared.pinbind_t -> op_t ->
-      M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
+   val op_slice_expr: op_t ->
+      M3.var_t list -> M3.var_t list -> M3.var_t list ->
+      M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
    (* op, outv1, outv2, lhs code, rhs code -> op expr code *)
-   val op_slice_product_expr: M3.Prepared.pprebind_t -> op_t ->
-      M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
+   val op_slice_product_expr:
+      op_t -> M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
 
    (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
     * op expr code *)
-   val op_lslice_expr: M3.Prepared.pprebind_t -> M3.Prepared.pinbind_t -> op_t ->
-      M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
+   val op_lslice_expr: op_t ->
+      M3.var_t list -> M3.var_t list -> M3.var_t list ->
+      M3.var_t list -> M3.var_t list ->
       code_t -> code_t -> code_t
 
    (* op, outv1, outv2, lhs code, rhs code -> op expr code *)
-   val op_lslice_product_expr: M3.Prepared.pprebind_t -> op_t ->
+   val op_lslice_product_expr: op_t ->
       M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
    
    (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
-   val op_rslice_expr: M3.Prepared.pprebind_t -> op_t ->
-      M3.var_t list -> M3.var_t list -> M3.var_t list -> code_t -> code_t -> code_t
+   val op_rslice_expr: op_t ->
+      M3.var_t list -> M3.var_t list ->
+      M3.var_t list -> code_t -> code_t -> code_t
 
    (* TODO: this always returns a slice *)
    (* mapn, inv, out_patterns, outv, init rhs expr -> init lookup code *)
-   val singleton_init_lookup:
-      string -> M3.var_t list -> int list list -> M3.var_t list -> code_t -> code_t
+   val singleton_init_lookup: string ->
+      M3.var_t list -> int list list -> M3.var_t list -> code_t -> code_t
    
    (* mapn, inv, out_patterns, init rhs expr -> init lookup code *)
-   val slice_init_lookup:
-      string -> M3.var_t list -> int list list -> M3.var_t list -> code_t -> code_t
+   val slice_init_lookup: string ->
+      M3.var_t list -> int list list -> M3.var_t list -> code_t -> code_t
 
    (* mapn, inv, outv, init lookup code -> map lookup code *)
    val singleton_lookup_and_init:
@@ -90,12 +91,14 @@ sig
       string -> M3.var_t list -> M3.var_t list -> code_t -> code_t
 
    (*  mapn, inv, outv, pat, patv, init lookup code -> map lookup code *)
-   val slice_lookup_sing_init:
-      string -> M3.var_t list -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
+   val slice_lookup_sing_init: string ->
+      M3.var_t list -> M3.var_t list ->
+      int list -> M3.var_t list -> code_t -> code_t 
    
    (*  mapn, inv, outv, pat, patv, init lookup code -> map lookup code *)
-   val slice_lookup:
-      string -> M3.var_t list -> M3.var_t list -> int list -> M3.var_t list -> code_t -> code_t 
+   val slice_lookup: string ->
+      M3.var_t list -> M3.var_t list ->
+      int list -> M3.var_t list -> code_t -> code_t 
    
    (* M3 RHS expr generation *)
  
@@ -111,7 +114,8 @@ sig
 
    (* rhs_pattern, rhs_projection, lhs_outv, rhs_ext,
     * m3 expr code, debug code -> m3 rhs expr code *)
-   val slice_expr : int list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
+   val slice_expr :
+      int list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
       code_t -> debug_code_t -> code_t
 
    (* Initial value computation for statements *) 

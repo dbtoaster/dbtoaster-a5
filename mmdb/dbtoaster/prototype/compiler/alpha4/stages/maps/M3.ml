@@ -123,17 +123,14 @@ module Prepared = struct
   type pprebind_t       = (var_t * var_t) list
   type pinbind_t        = (var_t * int) list
   
-  (* short-circuit, bf-equality bindings *)
-  type pcondition_meta_t = bool * pprebind_t * pinbind_t 
-   
-  (* id, theta extension, singleton, cross product, condition metadata *)
-  type calcmeta_t    = int * pextension_t * bool * bool * (pcondition_meta_t option)  
+  (* id, theta extension, singleton, cross product, short-circuit *)
+  type calcmeta_t    = int * pextension_t * bool * bool * bool  
   
   (* name, full aggregation *)   
   type aggmeta_t     = string * bool
   
-  (* loop in vars extension *)
-  type stmtmeta_t    = pextension_t
+  (* loop in vars extension, init slice restriction extension *)
+  type stmtmeta_t    = pextension_t * pextension_t
   
   type pcalc_t = (calcmeta_t, aggmeta_t) generic_calc_contents_t
   type calc_t = (calcmeta_t, aggmeta_t) generic_calc_t
@@ -151,42 +148,31 @@ module Prepared = struct
   let get_id ecalc = let (x,_,_,_,_) = get_meta ecalc in x
   let get_singleton ecalc = let (_,_,x,_,_) = get_meta ecalc in x
   let get_product ecalc = let (_,_,_,x,_) = get_meta ecalc in x
-  
-  let get_cond_meta ecalc = let (_,_,_,_,x) = get_meta ecalc in x
+  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in x
 
-  let get_short_circuit ecalc = let (_,_,_,_,x) = get_meta ecalc in
-     match x with | Some(y,_,_) -> y | _ -> failwith "Invalid condition expr"
-
-  let get_prebind ecalc = let (_,_,_,_,x) = get_meta ecalc in
-     match x with | Some(_,y,_) -> y | _ -> failwith "Invalid condition expr"
-
-  let get_inbind ecalc = let (_,_,_,_,x) = get_meta ecalc in
-     match x with | Some(_,_,y) -> y | _ -> failwith "Invalid condition expr"
-  
   let get_ecalc aggecalc = fst aggecalc
   let get_agg_meta aggecalc = snd aggecalc
   let get_agg_name aggmeta = fst aggmeta
   let get_full_agg aggmeta = snd aggmeta
   
-  let get_inv_extensions stmtmeta = stmtmeta
+  let get_inv_extensions stmtmeta = fst stmtmeta
+  let get_init_slice_extensions stmtmeta = snd stmtmeta
   
-  let string_of_calcmeta (id, theta, singleton, product, cond_meta) = 
-    "{"^(string_of_int id)^": theta += "^
+  let string_of_calcmeta (id, theta, singleton, product, short) = 
+    "{cm:"^(string_of_int id)^": theta += "^
     (list_to_string (fun x->x) theta)^
     (if singleton then "; singleton" else "")^
     (if product then "; product" else "")^
-    (* TODO: output binding expr *)
-    (match cond_meta with
-      | Some(short,bindings,_) -> (if short then "; short-circuit" else "")^
-         (List.fold_left (fun acc (v,c) -> acc^"; "^v^"->...") "" bindings)
-      | _ -> "")^
+    (if short then "; short-circuit" else "")^
     "}"
   
   let string_of_aggmeta  (name,fullagg) = 
-    "{"^name^(if fullagg then "; fullagg" else "")^"}"
+    "{am:"^name^(if fullagg then "; fullagg" else "")^"}"
     
-  let string_of_stmtmeta (theta) = 
-    "{"^(list_to_string (fun x->x) theta)^"}"
+  let string_of_stmtmeta (inv_ext,init_ext) =
+    if inv_ext = [] && init_ext = [] then ""
+    else ("{sm: linv="^(list_to_string (fun x->x) inv_ext)^
+          "; init="^(list_to_string (fun x->x) init_ext)^"}")
   
 end
 

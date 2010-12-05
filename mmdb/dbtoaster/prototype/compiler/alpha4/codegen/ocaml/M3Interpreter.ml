@@ -215,18 +215,11 @@ let debug_slice_lookup patv pkey slice lookup_slice =
                   " "^(DB.smap_to_string lookup_slice))
 
 let const i = Singleton (fun theta db -> i)
-let singleton_var x =
+let var x =
    Singleton (fun theta db ->
       if (not (M3Valuation.bound x theta)) then
          failwith ("CALC/case Var("^x^"): theta="^(M3Valuation.to_string theta))
       else let v = M3Valuation.value x theta in v)
-      
-let slice_var x =
-   Slice (fun theta db ->
-      if (not (M3Valuation.bound x theta)) then
-         failwith ("CALC/case Var("^x^"): theta="^(M3Valuation.to_string theta))
-      else let v = M3Valuation.value x theta in
-         M3ValuationMap.from_list [([v], v)] [])
 
 (* Operators *)
 let int_op op x y = if (op x y) then M3.CFloat(1.0) else M3.CFloat(0.0)
@@ -246,34 +239,26 @@ let ifthenelse0_bigsum_op v cond =
     | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
    
 (* Op expressions *)
-let op_singleton_expr prebind op ce1 ce2  =
+let op_singleton_expr op ce1 ce2  =
    let (ce1_i, ce2_i) = (get_singleton_code ce1, get_singleton_code ce2) in
    Singleton (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let (r1,r2) = (ce1_i th db, ce2_i th db)
-      in op r1 r2)
+      let (r1,r2) = (ce1_i theta db, ce2_i theta db) in op r1 r2)
    
 (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
  * op expr code *)
-let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+let op_slice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
    (* Note non-empty schema_ext is not sufficient for semijoin, as keys may
     * still require reordering to be done via key refinement *) 
    let semijoin = outv2 = schema in
    Slice (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let res1 = ce1_l th db in
+      let res1 = ce1_l theta db in
       let f k v1 r =
          (* extend with out vars from LHS calc. This is for bigsum vars in
           * IfThenElse0, so that these bigsum vars can be used as in vars
           * for map lookups. *)
-         let th2 =
-            let tmp_th = M3Valuation.extend th (M3Valuation.make outv1 k)
-               (Util.ListAsSet.union theta_ext schema_ext) in
-            let (bvars,bvals) = 
-               List.split (List.map (fun (v,idx) -> (v, List.nth k idx)) inbind)
-            in M3Valuation.extend tmp_th (M3Valuation.make bvars bvals) bvars
-         in
+         let th2 = M3Valuation.extend theta (M3Valuation.make outv1 k)
+           (Util.ListAsSet.union theta_ext schema_ext) in
          let r2 = try ce2_l th2 db with Failure x -> failwith ("op_slice: "^x) in
          (* perform cross product, extend out vars (slice key) to schema *)
          (* We can exploit schema monotonicity, and uniqueness of
@@ -293,12 +278,10 @@ let op_slice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 
 
 (* Cross-product op
  * -- safe to bind w/ var bindings only, no bigsums in cross-products *)
-let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 =
+let op_slice_product_expr op outv1 outv2 ce1 ce2 =
    let (ce1_l, ce2_l) = (get_slice_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let res1 = ce1_l th db in
-      let res2 = ce2_l th db
+      let (res1,res2) = ce1_l theta db, ce2_l theta db
       in M3ValuationMap.product op res1 res2)
 
 (* op, outv1, outv2, schema, theta_ext, schema_ext, lhs code, rhs code ->
@@ -307,44 +290,33 @@ let op_slice_product_expr prebind op outv1 outv2 ce1 ce2 =
  *    and no schema extension (i.e. semijoin) implies schema is made up
  *    of bigsum vars, which must be accessed while looping over the bigsum
  *    slice. *)
-let op_lslice_expr prebind inbind op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
+let op_lslice_expr op outv1 outv2 schema theta_ext schema_ext ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let res1 = ce1_l th db in
+      let res1 = ce1_l theta db in
       let f k v r =
-        let (bvars,bvals) = 
-           List.split (List.map (fun (v,idx) -> (v, List.nth k idx)) inbind) in
-        let th1 = 
-           let tmp_th = M3Valuation.extend th (M3Valuation.make outv1 k)
-              (Util.ListAsSet.union theta_ext schema_ext) in
-           M3Valuation.extend tmp_th (M3Valuation.make bvars bvals) bvars in
-        let th2 =
-           let tmp_th = M3Valuation.extend th (M3Valuation.make bvars bvals) bvars
-           in M3Valuation.make outv2 (M3Valuation.apply tmp_th outv2) in
+        let th1 = M3Valuation.extend theta (M3Valuation.make outv1 k)
+            (Util.ListAsSet.union theta_ext schema_ext) in
+        let th2 = M3Valuation.make outv2 (M3Valuation.apply th1 outv2) in
         let nv = op v (ce2_i th1 db) in
         let nk = M3Valuation.apply (M3Valuation.extend th2 th1 schema_ext) schema
         in M3ValuationMap.add nk nv r
       in M3ValuationMap.fold f (M3ValuationMap.empty_map()) res1) 
 
 (* op, outv2, lhs code, rhs code -> op expr code *)
-let op_lslice_product_expr prebind op outv1 outv2 ce1 ce2 =
+let op_lslice_product_expr op outv1 outv2 ce1 ce2 =
    let (ce1_l, ce2_i) = (get_slice_code ce1, get_singleton_code ce2) in
    Slice (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let res1 = ce1_l th db in
-      let v2 = ce2_i th db in
-      let k2 = M3Valuation.apply th outv2
+      let (res1,v2) = ce1_l theta db, ce2_i theta db in
+      let k2 = M3Valuation.apply theta outv2
       in M3ValuationMap.mapi (fun k v -> (k@k2, op v v2)) res1)
 
 (* op, outv2, schema, schema_ext, lhs code, rhs code -> op expr code *)
-let op_rslice_expr prebind op outv2 schema schema_ext ce1 ce2 =
+let op_rslice_expr op outv2 schema schema_ext ce1 ce2 =
    let (ce1_i, ce2_l) = (get_singleton_code ce1, get_slice_code ce2) in
    Slice (fun theta db ->
-      let th = M3Valuation.bind theta prebind in
-      let v = ce1_i th db in
-      let r = ce2_l th db in
-         AggregateMap.concat_keys outv2 schema th schema_ext
+      let (v,r) = ce1_i theta db, ce2_l theta db
+      in AggregateMap.concat_keys outv2 schema theta schema_ext
             (M3ValuationMap.map (fun v2 -> op v v2) r))
 
 (* mapn, out_patterns, outv, init rhs expr -> init lookup code *)
@@ -572,15 +544,15 @@ let singleton_init cinit cdebug =
 let slice_init lhs_inv lhs_outv init_ext cinit cdebug =
    let cinitf = get_slice_code cinit in
    let cdebug_i = get_singleton_debug_code cdebug in
-      SingletonValueFunction (fun theta db k v ->
+      SingletonValueFunction (fun theta db dk dv ->
          let theta2 =
-            M3Valuation.extend theta (M3Valuation.make lhs_outv k) init_ext in
-         if debug then cdebug_i theta2 db k v;
+            M3Valuation.extend theta (M3Valuation.make lhs_outv dk) init_ext in
+         if debug then cdebug_i theta2 db dk dv;
          let init_slice = cinitf theta2 db in
          let init_v =
-            if M3ValuationMap.mem k init_slice
-            then (M3ValuationMap.find k init_slice) else CFloat(0.0)
-         in c_sum v init_v)
+            if M3ValuationMap.mem dk init_slice
+            then (M3ValuationMap.find dk init_slice) else CFloat(0.0)
+         in c_sum dv init_v)
 
 (* Incremental statement evaluation, computing the RHS delta statement.
  * The generated code has the following signature:

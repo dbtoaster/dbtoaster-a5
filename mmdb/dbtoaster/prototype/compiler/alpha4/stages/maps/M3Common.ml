@@ -154,17 +154,17 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
     (sub_ma stmt_defn, sub_exp stmt_calc, stmt_meta)
 
 (******************* Querying *******************)
-let calc_vars_aux f : ((('c,'a) generic_calc_t) -> var_t list)
+let calc_vars_aux mf vf : ((('c,'a) generic_calc_t) -> var_t list)
   = recurse_calc_lf Util.ListAsSet.union
-(*ma*)       (fun (_, inv, outv, _) -> f inv outv)
+(*ma*)       (fun (_, inv, outv, _) -> mf inv outv)
 (*const*)    (fun _ -> [])
-(*var*)      (fun x -> [x])
+(*var*)      (fun x -> vf x)
 
 let calc_schema (c:(('c,'a) generic_calc_t)) : var_t list
-    = calc_vars_aux (fun inv outv -> outv) c
+    = calc_vars_aux (fun inv outv -> outv) (fun v -> []) c
 
 let calc_vars (c:(('c,'a) generic_calc_t)) : var_t list
-    = calc_vars_aux (fun inv outv -> inv@outv) c
+    = calc_vars_aux (fun inv outv -> inv@outv) (fun v -> [v]) c
 
 
 (******************* String Output *******************)

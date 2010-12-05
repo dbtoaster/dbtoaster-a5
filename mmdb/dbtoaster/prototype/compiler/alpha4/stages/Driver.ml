@@ -318,7 +318,6 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
-module M3PLSQLCompiler = M3Compiler.Make(M3Plsql.CG);;
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;

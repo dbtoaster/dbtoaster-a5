@@ -152,17 +152,14 @@ module Prepared : sig
   type pprebind_t        = (var_t * var_t) list
   type pinbind_t         = (var_t * int) list
   
-  (* short-circuit, bf-equality bindings *)
-  type pcondition_meta_t = bool * pprebind_t * pinbind_t 
-   
-  (* id, theta extension, singleton, cross product, condition metadata *)
-  type calcmeta_t    = int * pextension_t * bool * bool * (pcondition_meta_t option)  
+  (* id, theta extension, singleton, cross product, short-circuit *)
+  type calcmeta_t    = int * pextension_t * bool * bool * bool  
   
   (* name, full aggregation *)   
   type aggmeta_t     = string * bool
   
-  (* loop in vars extension *)
-  type stmtmeta_t    = pextension_t
+  (* loop in vars extension, init slice restriction extension *)
+  type stmtmeta_t    = pextension_t * pextension_t
   
   type pcalc_t = (calcmeta_t, aggmeta_t) generic_calc_contents_t
   type calc_t = (calcmeta_t, aggmeta_t) generic_calc_t
@@ -180,10 +177,7 @@ module Prepared : sig
   val get_id :            calc_t -> int
   val get_singleton :     calc_t -> bool
   val get_product :       calc_t -> bool
-  val get_cond_meta :     calc_t -> pcondition_meta_t option
   val get_short_circuit : calc_t -> bool
-  val get_prebind :       calc_t -> pprebind_t
-  val get_inbind :        calc_t -> pinbind_t
   
   val get_ecalc :       aggecalc_t -> calc_t
   val get_agg_meta :    aggecalc_t -> aggmeta_t
@@ -191,7 +185,8 @@ module Prepared : sig
   val get_full_agg :    aggmeta_t -> bool
   
   val get_inv_extensions : stmtmeta_t -> pextension_t
-  
+  val get_init_slice_extensions : stmtmeta_t -> pextension_t
+
   val string_of_calcmeta : calcmeta_t -> string
   val string_of_aggmeta  : aggmeta_t  -> string
   val string_of_stmtmeta : stmtmeta_t -> string
