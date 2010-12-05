@@ -110,10 +110,49 @@ let rec to_m3_initializer (map_def: Calculus.term_t) (vars: Calculus.var_t list)
       | Calculus.RA_Neg(_) -> failwith ("TODO: to_m3_initializer: RA_Neg")
       | Calculus.RA_MultiUnion(_) -> failwith ("TODO: to_m3_initializer: RA_MultiUnion")
   in
+  let merge_terms a b = 
+    match (a,b) with
+      | ((Calculus.RVal(Calculus.Const(Calculus.Int(1)))),_) -> b
+      | (_,(Calculus.RVal(Calculus.Const(Calculus.Int(1))))) -> a
+      | (Calculus.RProd(at),Calculus.RProd(bt)) -> (Calculus.RProd(at@bt))
+      | (Calculus.RProd(at),_) -> (Calculus.RProd(b::at))
+      | (_,Calculus.RProd(bt)) -> (Calculus.RProd(a::bt))
+      | (_,_) -> Calculus.RProd([a;b])
+  in
+  let rec extract_expression tau_and_theta =
+    match tau_and_theta with
+      | Calculus.RVal(Calculus.AggSum(t,p)) ->
+         failwith "CalcToM3: Map definition contains nested aggsum"
+      | Calculus.RVal(Calculus.Const(c)) -> 
+         (Calculus.RVal(Calculus.Const(c)), 
+          Calculus.RVal(Calculus.Const(Calculus.Int(1))))
+      | Calculus.RVal(Calculus.Var(v)) -> 
+         if (find_binding_term v (Calculus.readable_term map_def)) then 
+            (Calculus.RVal(Calculus.Const(Calculus.Int(1))), 
+             Calculus.RVal(Calculus.Var(v)))
+         else
+            (Calculus.RVal(Calculus.Var(v)), 
+             Calculus.RVal(Calculus.Const(Calculus.Int(1))))
+      | Calculus.RVal(Calculus.External(_,_)) -> 
+         failwith "CalcToM3: Map definition contains map reference";
+      | Calculus.RNeg(sub) ->
+         let (tau,theta) = extract_expression sub in
+            (Calculus.RNeg(tau), theta)
+      | Calculus.RProd(sub::rest) ->
+         let (stau,stheta) = extract_expression sub in
+         let (rtau,rtheta) = extract_expression (Calculus.RProd(rest)) in
+            (merge_terms stau rtau, merge_terms stheta rtheta)
+      | Calculus.RProd([]) ->
+         (Calculus.RVal(Calculus.Const(Calculus.Int(1))), 
+          Calculus.RVal(Calculus.Const(Calculus.Int(1))))
+      | Calculus.RSum(list) ->
+         failwith "CalcToM3: Map definition contains sum";
+  in
   (* TODO: invoke simplify here *)
   match (Calculus.readable_term map_def) with 
-    | Calculus.RVal(Calculus.AggSum(theta, phi_and_psi)) ->
+    | Calculus.RVal(Calculus.AggSum(tau_and_theta, phi_and_psi)) ->
       let (phi, psi) = extract_filters phi_and_psi in
+      let (tau, theta) = extract_expression tau_and_theta in
       let inner_vars = 
         ListAsSet.union 
           (Calculus.term_vars (Calculus.make_term theta))
@@ -143,12 +182,25 @@ let rec to_m3_initializer (map_def: Calculus.term_t) (vars: Calculus.var_t list)
         Calculus.make_term init_map_term
       ) in
       let (translated_init,other_todos) = 
+        Debug.print "DUMP-INITIALIZERS" (fun () -> 
+            "Cond: "^(Util.list_to_string (fun x -> 
+                  (Calculus.relcalc_as_string (Calculus.make_relcalc x))) psi)^
+            " AND "^(Util.list_to_string (fun x -> 
+                  (Calculus.relcalc_as_string (Calculus.make_relcalc x))) phi)^
+            "\n  Init: "^(Calculus.term_as_string 
+                  (Calculus.make_term init_map_term))^
+            "\n  Defn: "^(Calculus.term_as_string 
+                  (Calculus.make_term theta))
+        );
         (to_m3 
           (
-            Calculus.RVal(
-              Calculus.AggSum(
-                init_map_term,
-                Calculus.RA_MultiNatJoin(psi)))
+            if (psi = []) then 
+               failwith "Conditionless map initializer."
+            else
+               Calculus.RVal(
+                 Calculus.AggSum(
+                   (merge_terms init_map_term tau),
+                   Calculus.RA_MultiNatJoin(psi)))
           )
           (StringMap.add init_map_name 
                          (translate_map_ref init_map_ref) 
@@ -254,7 +306,9 @@ and to_m3
    in
    let lf_to_m3 (lf: Calculus.readable_term_lf_t) =
       match lf with
-         Calculus.AggSum(t,phi)             -> 
+       | Calculus.AggSum(t,Calculus.RA_MultiNatJoin([])) -> (*if true*)
+            (to_m3 t inner_bindings)
+       | Calculus.AggSum(t,phi)             -> 
             let (lhs, lhs_todos) = (calc_to_m3 phi) in
             let (rhs, rhs_todos) = (to_m3 t inner_bindings) in
               ((M3.mk_if lhs rhs), lhs_todos@rhs_todos)

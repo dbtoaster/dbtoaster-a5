@@ -69,7 +69,7 @@ type flag_type_t = NO_ARG | OPT_ARG | ARG | ARG_LIST
 let flag_descriptors = 
   ParseArgs.compile
     [ (["-l";"--lang"], 
-          ("LANG",    ParseArgs.ARG), "ocaml|cpp|calc|m3|delta",
+          ("LANG",    ParseArgs.ARG), "<language>",
           "Specify the output language (default: ocaml).");
       (["-o";"--output-source"],
           ("OUTPUT",  ParseArgs.ARG), "<outfile>",
@@ -79,7 +79,7 @@ let flag_descriptors =
           "Invoke secondary compiler to compile to a runnable binary." );
       (["-r";"--run";"--interpret"],
           ("INTERPRETER", ParseArgs.NO_ARG), "",
-          "Run the query in interpreter mode." );
+          "Run the query in interpreter mode (equivalent to -l run)." );
       (["-a";"--adaptors"],
           ("RUN ADAPTORS", ParseArgs.ARG), "<output dir>",
           "Run the adaptors to prepare input data files.");
