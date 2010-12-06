@@ -190,6 +190,11 @@ test/sql/tpch/postgres/%: test/sql/tpch/postgres/%.sql
 	psql -f psqltmp.sql
 	rm psqltmp.sql
 
+test/sql/finance/postgres/%: test/sql/finance/postgres/%.sql 
+	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/finance/postgres/$*.sql > psqltmp.sql
+	psql -f psqltmp.sql
+	rm psqltmp.sql
+
 ## Unit tests
 test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml

@@ -265,7 +265,7 @@ let orderbook_generator params =
    let get_float_const c =
       match c with | CFloat(x) -> x (*| _ -> failwith "invalid float const"*) in 
    let required = ["book"] in
-   let optional = [("validate", "false")] in
+   let optional = [("validate", "false"); ("brokers", "0")] in
    
    (* Get required params *)
    let valid = List.for_all (fun k -> List.mem_assoc k params) required in
@@ -280,23 +280,48 @@ let orderbook_generator params =
    
    (* Configuration *)
    let book_type = List.assoc "book" params in
+
    let validate_mode = try
       let r = bool_of_string (List.assoc "validate" optionals) in
       print_endline ("Orderbook adaptor validation: "^(string_of_bool r)); r
       with Invalid_argument _ -> false in
+
+   (* Only add broker ids if # brokers > 0 *)
+   let num_brokers = try
+      let r = int_of_string (List.assoc "brokers" optionals) in
+      print_endline ("Orderbook # brokers: "^(string_of_int r)); r
+      with Invalid_argument _ -> 0 in
    
    let book_orders = Hashtbl.create 1000 in
    
-   (* returns action, order_id, price vol pair *)
+   (* Seed broker id generation *)
+   Random.init (12345);
+
+   (* returns action, order_id, price vol pair if # brokers <= 0
+    * otherwise action, order_id, broker_id-price-volume triple *)
    let ff l i = float_of_string (List.nth l i) in
    let get_order_fields tup =
       let t = Str.split (Str.regexp ",") tup in
-      (List.nth t 2, int_of_string(List.nth t 1), (ff t 4, ff t 3)) in
+      let t,o,(p,v) =
+        (List.nth t 2, int_of_string(List.nth t 1), (ff t 4, ff t 3))
+      in if num_brokers > 0 then
+           let broker_id = float_of_int(Random.int(num_brokers))
+           in (t,o,[broker_id;p;v])
+         else t,o,[p;v]
+   in
    
-   (* helpers for trigger input construction *) 
-   let insert pv = (Insert, [fst pv; snd pv]) in
-   let delete pv = (Delete, [fst pv; snd pv]) in
-   let const_t pv = (CFloat (fst pv), CFloat(snd pv)) in
+   (* helpers for trigger input construction *)
+   let p_idx = if num_brokers > 0 then 1 else 0 in
+   let v_idx = if num_brokers > 0 then 2 else 1 in
+   let getbid pv =
+      if num_brokers > 0 then List.hd pv
+      else failwith "no broker field found" in
+   let getp pv = List.nth pv p_idx in
+   let getv pv = List.nth pv v_idx in
+
+   let insert pv = (Insert, pv) in
+   let delete pv = (Delete, pv) in
+   let const_t pv = List.map (fun x -> CFloat(x)) pv in
    
    (* Common actions across book types *)
    let adaptor_common action order_id tup_pv =
@@ -309,10 +334,12 @@ let orderbook_generator params =
          if validate_mode then [] else
          let subtract x y = c_sum x (CFloat(-.(get_float_const y))) in 
          let new_pv =
-            (subtract (fst old_pv) (fst tup_pv),
-             subtract (snd old_pv) (snd tup_pv))
+            let npv =
+               [subtract (getp old_pv) (getp tup_pv);
+                subtract (getv old_pv) (getv tup_pv)]
+            in (if num_brokers > 0 then [getbid old_pv] else [])@npv
          in
-         if (fst new_pv) = CFloat(0.0) then Hashtbl.remove book_orders order_id;
+         if (getv new_pv) = CFloat(0.0) then Hashtbl.remove book_orders order_id;
          [delete old_pv; insert new_pv]
 
        | (Some(old_pv), "F") | (Some(old_pv), "D") ->
@@ -322,12 +349,15 @@ let orderbook_generator params =
        | (_,"X") | (_,"C") | (_,"T") -> []
        | (_,_) -> failwith ("invalid orderbook message type "^action)
    in
+   let add_to_book order_id pv =
+      let cpv = const_t pv
+      in Hashtbl.replace book_orders order_id cpv; [insert cpv] 
+   in
    match book_type with
     | "bids" -> (fun tuple ->
       let (action, order_id, pv) = get_order_fields tuple in
       match action with
-       | "B" -> let cpv = const_t pv in
-          Hashtbl.replace book_orders order_id cpv; [insert cpv]
+       | "B" -> add_to_book order_id pv
        | "S" -> []
        | _ -> adaptor_common action order_id (const_t pv))
     
@@ -335,8 +365,7 @@ let orderbook_generator params =
       let (action, order_id, pv) = get_order_fields tuple in
       match action with
        | "B" -> []
-       | "S" -> let cpv = const_t pv in
-          Hashtbl.replace book_orders order_id cpv; [insert cpv]
+       | "S" -> add_to_book order_id pv
        | _ -> adaptor_common action order_id (const_t pv))
     
     | _ -> failwith ("invalid orderbook type: "^book_type)

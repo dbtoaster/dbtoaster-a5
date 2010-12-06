@@ -1,5 +1,10 @@
-CREATE TABLE bids(broker_id int, v float, p float);
-CREATE TABLE asks(broker_id int, v float, p float);
+CREATE TABLE bids(broker_id float, v float, p float)
+  FROM FILE 'test/data/vwap5k.csv'
+  LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');
+
+CREATE TABLE asks(broker_id float, v float, p float)
+  FROM FILE 'test/data/vwap5k.csv'
+  LINE DELIMITED orderbook (book := 'asks', validate := 'true', brokers := '10');
 
 SELECT   b.broker_id, sum(a.v + ((-1) * b.v))
 FROM     bids b, asks a
