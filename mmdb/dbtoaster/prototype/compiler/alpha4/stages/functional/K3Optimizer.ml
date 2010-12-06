@@ -656,8 +656,8 @@ let rec lift_ifs bindings expr =
             | IfThenElse(pe2,te2,ee2), IfThenElse(pe3,te3,ee3) when pe2=pe3 ->
                 if pe = pe2 then (IfThenElse(pe,te2,ee3), [])
                 else if simpler_dependencies pe2 pe then
-                    let new_sub_e2 = IfThenElse(pe, te2, ee2) in
-                    let new_sub_e3 = IfThenElse(pe, te3, ee3) 
+                    let new_sub_e2 = IfThenElse(pe, te2, te3) in
+                    let new_sub_e3 = IfThenElse(pe, ee2, ee3) 
                     in (IfThenElse(pe2, new_sub_e2, new_sub_e3), [])
                 else (descend_expr (lift_ifs bindings) e,[])
             | _ -> (descend_expr (lift_ifs bindings) e,[])

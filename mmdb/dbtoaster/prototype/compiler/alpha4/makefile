@@ -137,7 +137,7 @@ OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT) \
 						 -ccopt -O3 -nodynlink -unsafe -noassert
 ODEP_FLAGS = $(INCLUDE_DIR)
 
-.PHONY: all driver top test runtop clean deps
+.PHONY: all driver top test runtop clean deps 
 
 all: deps dbtoaster_top dbtoaster
 	
@@ -181,6 +181,14 @@ dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 
 benchmark: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -o m3_ex $(ML_OPT) test/unit/m3_ex.ml
+
+##############
+
+# TPC-H Postgres execution (assumes passwordless postgres access)
+test/sql/tpch/postgres/%: test/sql/tpch/postgres/%.sql 
+	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/tpch/postgres/$*.sql > psqltmp.sql
+	psql -f psqltmp.sql
+	rm psqltmp.sql
 
 ## Unit tests
 test: top
@@ -241,6 +249,7 @@ vwap: $(OPT_DEPS)
 
 query: $(OPT_DEPS) query.ml
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -nodynlink -unsafe -noassert -o query str.cmxa unix.cmxa $(ML_OPT) query.ml
+
 
 ## Top-level
 runtop: top
