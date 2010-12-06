@@ -19,7 +19,7 @@ CREATE TABLE LINEITEM (
         shipmode       float,
         comment        int
     )
-  FROM FILE 'test/data/lineitem.tbl'
+  FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -33,7 +33,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- text
     )
-  FROM FILE 'test/data/orders.tbl'
+  FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -46,7 +46,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- text
         comment      int  -- text
     )
-  FROM FILE 'test/data/customer.tbl'
+  FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
 SELECT ORDERS.orderkey, 

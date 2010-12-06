@@ -5,7 +5,7 @@ CREATE TABLE PARTSUPP (
         supplycost   double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/partsupp.csv'
+  FROM FILE 'test/data/tpch/partsupp.tbl'
   LINE DELIMITED partsupp;
 
 CREATE TABLE SUPPLIER (
@@ -17,7 +17,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/supplier.csv'
+  FROM FILE 'test/data/tpch/supplier.tbl'
   LINE DELIMITED supplier;
 
 select ps.partkey, sum(ps.supplycost * ps.availqty)

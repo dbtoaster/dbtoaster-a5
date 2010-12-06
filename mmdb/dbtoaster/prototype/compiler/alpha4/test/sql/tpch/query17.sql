@@ -16,7 +16,7 @@ CREATE TABLE LINEITEM (
         shipmode       double,
         comment        double
     )
-  FROM FILE 'test/data/lineitem.csv'
+  FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE PART (
@@ -30,7 +30,7 @@ CREATE TABLE PART (
         retailprice  double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/part.csv'
+  FROM FILE 'test/data/tpch/part.tbl'
   LINE DELIMITED part;
 
 select sum(l.extendedprice)

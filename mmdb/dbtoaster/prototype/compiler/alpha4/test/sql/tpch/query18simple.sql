@@ -16,7 +16,7 @@ CREATE TABLE LINEITEM (
         shipmode       double,
         comment        double
     )
-  FROM FILE 'test/data/lineitem.csv'
+  FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -30,7 +30,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        double  -- text
     )
-  FROM FILE 'test/data/orders.csv'
+  FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -43,7 +43,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   double, -- text
         comment      double  -- text
     )
-  FROM FILE 'test/data/customer.csv'
+  FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
 select sum(1)
