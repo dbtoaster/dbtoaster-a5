@@ -1,10 +1,16 @@
 \label{sec:compilation}
 
-View maintenance is at the heart of a DDMS and its state transitions.
-Conceptually, current incremental view maintenance (IVM) techniques
+The adjective \textit{agile} is defined as ``marked by ready ability to move
+with quick easy grace'' [REF-MW/OED]. In the context of view maintenance, we use
+the term agile to describe a view that is maintained as incrementally as
+possible. Surprisingly, despite more than two or three decades of research into
+incremental view maintenance (IVM) techniques, this goal has not been realised
+and we provide insight into further opportunities for incremental computation.
+
+Conceptually, current IVM techniques
 \cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07} start
-with a view definition query $q$ that operates on a set of base
-relations $\{R_1, \ldots, R_n\}$. Using a functional notation of queries, we
+with a view definition query $q$ that operates on a set of base relations
+$\{R_1, \ldots, R_n\}$. Using a functional notation of queries, we
 write this as $q(\{R_1 \ldots R_n\})$. View maintenance results in a pair
 $\tuple{m,\{q'_i\}}$, where $m$ is the materialization of $q$, and $\{q'_i\}$ is
 a set of delta queries responsible for maintaining the materialization. Each
@@ -19,12 +25,18 @@ yield the same result as the view definition query on a modified database.
 
 
 \subsection{View Maintenance in DBToaster}
-DBToaster makes the following key insight regarding IVM: current IVM techniques
-evaluate delta queries entirely from scratch on every update, performing much
-redundant work. That is, the delta query $q'_i$ accesses and processes all
-tuples in the base relations $\{R_j | j \neq i\}$ on an update to $R_i$.
-A modern DBMS suffers this cost \textit{even if there is no change to any of the
-base tables $R_j$}.
+DBToaster makes the following key insight regarding IVM: current IVM algorithms
+evaluate delta queries entirely from scratch on every update, using standard
+query processing techniques. On an update to $R_i$, the delta query $q'_i$
+accesses and processes all tuples in the base relations $\{R_j | j \neq i\}$.
+That is, while the delta query is incremental with respect to $R_i$, it is not
+incremental in terms of $\{R_j | j \neq i\}$.
+
+Consider the scenario where we have an update to $R_i$, and there have been no
+changes to any of the relations $\{R_j | j \neq i\}$ since a prior update to
+$R_i$. The result of delta query $q'_i$ for the latest update to $R_i$ will be
+the same as for the prior update. We can incrementally process $q'_i$ instead of
+evaluating it with standard query processing.
 DBToaster materializes the result of the delta query $q'_i$, adds it to the
 database schema and maintains it at runtime. Thus on a subsequent update $v$ to
 the same relation $R_i$, DBToaster can simply use the materialized form of
