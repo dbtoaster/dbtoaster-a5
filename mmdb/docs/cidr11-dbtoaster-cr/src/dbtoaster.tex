@@ -1,12 +1,20 @@
 \label{sec:compilation}
 
-The adjective \textit{agile} is defined as ``marked by ready ability to move
-with quick easy grace'' [REF-MW/OED]. In the context of database views, we use
-the term agile to describe a view that is maintained as incrementally as
-possible. Surprisingly, despite more than two or three decades of research into
-incremental view maintenance (IVM) techniques, this goal has not been realised
-and we provide insight into further opportunities for incremental computation.
+Agile views are database views that are maintained as incrementally as possible.
+Surprisingly, despite more than three decades of research into incremental view
+maintenance (IVM)
+techniques~\cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07},
+this goal has not been realised, and one of our key contributions in handling
+large dynamic datasets is to exploit further opportunities for incremental
+computation during maintenance.
+Conceptually, current IVM techniques use delta queries for maintenance. Our
+observation is that the delta query is itself a relational query that is
+amenable to incremental computation. We can materialize delta queries as
+auxiliary views, and recursively determine deltas of delta queries
+(essentially higher-order delta queries) to maintain these auxiliary views.
+Furthermore repeated delta transformations successively simplify queries.
 
+\comment{
 Conceptually, current IVM techniques
 \cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07} start
 with a view definition query $q$ that operates on a set of base relations
@@ -22,42 +30,37 @@ IVM performs the work: $m \mbox{{\tt+}= } q'_i(\vec{u}, \{R_j | j \neq i\})$.
 The delta query $q'_i$ must ensure
 $m \equiv q(R_1, \ldots, \{R_i \pm {u}\}, \ldots, R_n)$ after any update to
 yield the same result as the view definition query on a modified database.
-
+\todo{Reconsider $R_i$ terminology/symbols, in favour of explaining ``simpler''
+in terms of polynomials of unions of joins, where joins are getting simpler.}
+}
 
 \subsection{View Maintenance in DBToaster}
-DBToaster makes the following key insight regarding IVM: current IVM algorithms
-evaluate delta queries entirely from scratch on every update, using standard
-query processing techniques. On an update to $R_i$, the delta query $q'_i$
-accesses and processes all tuples in the base relations $\{R_j | j \neq i\}$.
-That is, while the delta query is incremental with respect to $R_i$, it is not
-incremental in terms of $\{R_j | j \neq i\}$.
+We present our observation in more detail and with an example. Given a query $q$
+defining a view, IVM yields a pair $\tuple{m,\{q'\}}$, where $m$ is the
+materialization of $q$, and $\{q'\}$ is a set of delta queries responsible for
+maintaining $m$ (one for each relation used in $q$ that may be updated).
+DBToaster makes the following insight regarding IVM: current IVM algorithms
+evaluates a delta query entirely from scratch on every update to any relation
+in $q$, using standard query processing techniques. DBToaster exploits that a
+delta query $q'$ can be incrementally computed using the same principles as for
+the view query $q$, rather than evaluated in full.
 
-Consider the scenario where we have an update to $R_i$, and there have been no
-changes to any of the relations $\{R_j | j \neq i\}$ since a prior update to
-$R_i$. The result of delta query $q'_i$ for the latest update to $R_i$ will be
-the same as for the prior update. We can incrementally process $q'_i$ instead of
-evaluating it with standard query processing.
-DBToaster materializes the result of the delta query $q'_i$, adds it to the
-database schema and maintains it at runtime. Thus on a subsequent update $v$ to
-the same relation $R_i$, DBToaster can simply use the materialized form of
-$q'_i$ to update $m$, rather than processing $q'_i$ over the
-relatively unchanged $\{R_j\}$.
+To convey the essence of the concept, IVM takes $q$, produces $\tuple{m,\{q'\}}$
+and performs $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime, where $u$ is an update
+to a relation in $q$. We call this one step of \textit{delta (query)
+compilation}. This is the extent of query transformations applied by IVM for
+incremental processing of updates. DBToaster applies this concept
+\textit{recursively}, transforming queries to \textit{higher-order deltas}.
+DBToaster starts with $q$, produces $\tuple{m,\{q'\}}$ and then recurs, taking
+each $q'$ to produce $\tuple{m', \{q''\}}$ and repeating. Here, each $m'$ is
+maintained as $m' \; \mbox{{\tt +}=} \; q''(v)$, where $v$ is also an update,
+different to $u$ above. We refer to $q'$ and $q''$ as first- and second-order
+delta queries respectively. We can again recur with each $q''$, materializing as
+$m''$, maintaining with $q'''$, a third-order delta, and so forth.
 
-To clarify the essence of the concept, IVM takes $q$, produces
-$\tuple{m,\{q'\}}$ and performs $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime
-(omitting relation subscripts for simplicity). We call this one step of
-\textit{delta (query) compilation}. This is the extent of the transformations
-applied by IVM for incremental processing of updates. DBToaster applies this
-concept \textit{recursively}, transforming queries to \textit{higher-order
-deltas}. DBToaster starts with $q$, produces $\tuple{m,\{q'\}}$ and then recurs,
-taking each $q'$ to produce $\tuple{m', \{q''\}}$ and repeating. Here, each $m'$
-is maintained as $m' \; \mbox{{\tt +}=} \; q''(u)$. We refer to $q'$ and $q''$
-as first- and second-order delta queries respectively. We can again recur with
-each $q''$, materializing as $m''$, maintaining with $q'''$, a third-order
-delta, and so forth.
-
-DBToaster performs recursive delta compilation to compute and materialize
-higher-order delta queries. Let us consider higher-order deltas in
+\comment{
+DBToaster performs recursive delta compilation to compute and
+materialize higher-order delta queries. Let us consider higher-order deltas in
 terms of the base relations they process by adding relation subscripts. The
 delta compilation of $q$ yields $\tuple{m,\{q'_i\}}$, where as above each delta
 query is $q'_i(\vec{x}, \{R_j | j \neq i\})$ for $i \in [1,n]$. Notice this
@@ -71,22 +74,98 @@ $R_j$), and operates on all base relations except $R_i$ and
 $R_j$.~\footnote{Strictly speaking, $q''_{ij}$ may also contain additional
 parameters based on the update $u$ from the previous compilation step, as we
 will see in our compilation example.}
+}
+
+While delta queries are relational queries, they have certain characteristics
+that facilitate recursive delta compilation. First DBToaster delta queries are
+parameterized SQL queries, with parameter values taken from updates. We can see
+this when applying one step of delta compilation on the following query $q$ over
+a schema {\tt R(a int, b int), S(b int, c int)}:
+
+$q = \mbox{\tt select sum(a*c) from R natural join S}$
+
+\vspace{1mm}
+\noindent For an update $u = \tuple{a,b}$ on relation $R$, the delta for $q$ is:
+
+\vspace{-6mm}
+\begin{align*}
+q_R =
+\Delta_{u}(q) =
+      & \ \mbox{\tt select sum(@a*c) from values(@a,@b), S}\\ 
+      & \ \mbox{\tt \ \ where S.b = @b}\\
+    = & \ \mbox{\tt @a*(select sum(c) from S where S.b=@b)}
+\end{align*}
+
+\vspace{-2mm}
+\noindent The {\tt values} clause is PostgreSQL syntax for a singleton relation.
+Transforming a query into its delta form for an update $u$ on $R$ introduces
+parameters in place of $R$'s attributes. We also apply a rewrite
+exploiting distributivity of addition and multiplication to factor out parameter
+{\tt @a} from the query.
+
+The second property is that delta queries have a normalized form, where we
+transform queries to be aggregates over unions of joins (all selections,
+projections appear intermixed with joins). This is written in relational algebra
+as: $\sum [ Q_1 \cup Q_2 \cup \ldots \cup Q_n ]$, where each $Q_i$ is a
+relational algebra expression that does not contain a union, for example
+$Q_1 = \sigma_{c}(\pi_a(R_1) \bowtie_{\theta} R_2)$. This is similar to a
+disjunctive normal form in boolean logic, and a sum-product form when
+considering databases queries in terms of rings~\cite{koch-pods:10}.
+We refer to the subqueries $Q_i$ in such a normal form as \textit{conjuncts}.
+
+This normal form is important when considering termination of recursive
+compilation. DBToaster terminates given one critical property of delta queries:
+\textit{a delta query is structurally simpler than its parent query}. A natural
+measure of delta query complexity is that of \textit{degree}, which we define as
+the maximal number of relations in any conjunct $Q_i$ in a query. For example
+$degree(\sigma_c(\pi_a(R_1) \bowtie_{\theta} R_2)) = 2$.
+DBToaster guarantees that a \textit{k}-th order delta query $q^{(k)}$ has lower
+degree than a \textit{k-1}-th order query $q^{(k-1)}$.
+Recursive compilation terminates when all conjuncts have degree 0.
+
+Consider the delta query $q_R$ above. This query is simpler than $q$ since it
+does not contain the relation $R$. We can further illustrate the point by
+looking at a recursive compilation step on $q_R$. The second compilation step
+materializes $q_R$ as:
+
+\vspace{1mm}
+$m_R = \mbox{{\tt select sum(c) from S where S.b=@b}}$
+
+\vspace{1mm}
+\noindent omitting the parameter {\tt @a} since it is independent of the above
+view definition query. DBToaster is capable of incrementally maintaining $m_R$,
+with the following delta query on update $v = \tuple{c,d}$ to relation $S$:
+
+\vspace{1mm}
+$q_{RS} = \Delta_v(q_R) = \mbox{\tt select @c from values(@c,@d)}$
+
+\vspace{1mm}
+\noindent The delta query $q_{RS}$ above has degree 0 since its conjuncts
+contain no relations, indeed the query only consists of parameters. Thus
+recursive delta compilation terminates after two rounds on query $q$.
+In this compilation trace, we have not discussed the maintenance code for views
+$m$, $m_R$, and $m_{RS}$ to allow the reader to focus on the core recursive
+compilation and termination concepts. We now discuss the data structures used to
+represent auxiliary materialized views, and then provide an in-depth example of
+delta query compilation including all auxiliary views created and the code
+needed to maintain these views.
+
 
 \def \sql#1{{\scriptsize {\tt #1}}}
 \begin{figure*}[htbp]
 
 \vspace{-8mm}
 
-\begin{tabular}{ll|l|l|ll}
+\hspace{-3mm}\begin{tabular}{ll|l|l|ll}
 \multicolumn{2}{l}{Input (parent query)}
 & Update 
-& \multicolumn{3}{l}{Outputs: materialized map, delta query}
+& \multicolumn{3}{l}{Output: auxiliary map, delta query}
 \\
 \hline
 $q =$
 & \sql{select l.ordkey, o.sprior,}
 & \texttt{+Customer}
-& $m[ordkey,sprior]$
+& $m[][ordkey,sprior]$
 & $q_c =$
 & \sql{select l.ordkey, o.sprior,}
 \\
@@ -110,7 +189,7 @@ $q =$
 $q_c$:
 & Recursive call,
 & \texttt{+Lineitem} 
-& $m_c[custkey,ordkey,sprior]$
+& $m_c[][custkey,ordkey,sprior]$
 & $q_{cl} =$ & \sql{select @ok, o.sprior,@ep*sum(1)}
 \\
 & see previous output
@@ -122,7 +201,7 @@ $q_c$:
 $q_{cl}$:
 & Recursive call,
 & \texttt{+Order} 
-& $m_{cl}[custkey,ordkey,sprior]$
+& $m_{cl}[][custkey,ordkey,sprior]$
 & $q_{clo}=$ & \sql{select @sp, count()}
 \\
 & see previous output
@@ -136,12 +215,6 @@ algorithm considers all permutations of updates.}
 \label{fig:compex}
 \vspace{-4mm}
 \end{figure*}
-
-DBToaster terminates given one critical property of delta queries: \textit{a
-delta query is structurally simpler than its parent query} \cite{koch-pods:10}.
-In particular a \textit{k}-th order delta query $q^{(k)}$ has fewer input
-relations than a \textit{k-1}-th order query $q^{(k-1)}$, but additional
-parameters corresponding to attributes that are present in $q^{(k-1)}$.
 
 \tinysection{Agile Views}
 DBToaster materializes higher-order deltas as agile views for high-frequency
@@ -555,7 +628,7 @@ Nested subqueries contain correlated attributes (e.g. price in VWAP)
 defined in an outer scope. We consider correlated attributes as parameters, or,
 internally in our framework, as binding patterns, seen in data integration.
 Nested queries induce \textit{binding propagation}, similar to sideways
-information passing in datalog. That is, we support the results of one query
+information passing in Datalog. That is, we support the results of one query
 being used (or \textit{propagated}) to the parameters of a correlated subquery,
 indicating an evaluation ordering.
 We transform queries to use minimal propagation, which performs additional
@@ -654,9 +727,9 @@ aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
 A standard implementation of a join as a binary operation forces the
 materialization of the intermediate result $R \bowtie_{\theta} S$. There are
 numerous scenarios where such materialization is undesirable, and has led to the
-development of multiway join algorithms such as XJoin and MJoin. With a few
-simple transformation steps, we can rewrite the above program to avoid this
-intermediate materialization as:
+development of multiway join algorithms such as XJoin and MJoin \todo{[REFS]}.
+With a few simple transformation steps, we can rewrite the above program to
+avoid this intermediate materialization as:
 
 \begin{verbatim}
 aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
