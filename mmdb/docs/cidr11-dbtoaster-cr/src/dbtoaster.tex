@@ -121,7 +121,7 @@ the maximal number of relations in any conjunct $Q_i$ in a query. For example
 $degree(\sigma_c(\pi_a(R_1) \bowtie_{\theta} R_2)) = 2$.
 DBToaster guarantees that a \textit{k}-th order delta query $q^{(k)}$ has lower
 degree than a \textit{k-1}-th order query $q^{(k-1)}$.
-Recursive compilation terminates when all conjuncts have degree 0.
+Recursive compilation terminates when all conjuncts have degree zero.
 
 Consider the delta query $q_R$ above. This query is simpler than $q$ since it
 does not contain the relation $R$. We can further illustrate the point by
@@ -140,11 +140,11 @@ with the following delta query on update $v = \tuple{c,d}$ to relation $S$:
 $q_{RS} = \Delta_v(q_R) = \mbox{\tt select @c from values(@c,@d)}$
 
 \vspace{1mm}
-\noindent The delta query $q_{RS}$ above has degree 0 since its conjuncts
+\noindent The delta query $q_{RS}$ above has degree zero since its conjuncts
 contain no relations, indeed the query only consists of parameters. Thus
 recursive delta compilation terminates after two rounds on query $q$.
-In this compilation trace, we have not discussed the maintenance code for views
-$m$, $m_R$, and $m_{RS}$ to allow the reader to focus on the core recursive
+In this compilation overview, we have not discussed the maintenance code for
+views $m$, $m_R$, and $m_{RS}$ to allow the reader to focus on the core recursive
 compilation and termination concepts. We now discuss the data structures used to
 represent auxiliary materialized views, and then provide an in-depth example of
 delta query compilation including all auxiliary views created and the code
