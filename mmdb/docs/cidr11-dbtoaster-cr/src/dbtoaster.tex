@@ -702,14 +702,14 @@ relational algebras, and its relevance to vectorized processing.
 
 The primary features of our FP language are its use of nested collections (such
 as sets, bags and lists) during query processing, its ability to perform
-structural recursion (SR)~\cite{buneman-kleisli:95} optimizations on such nested
-collections, and its support for long-lived persistent collections.
-Structural recursion optimizations enable the elimination of temporaries and
-intermediates when manipulating collections, and when combined with primitive
-operations on functions, such as function composition, yields the ability to
-transform the granularity of data processing. Consider a join-aggregate query
+structural recursion (SR)~\cite{buneman-kleisli:95} optimizations on nested
+collections, and its support for long-lived persistent collections. Structural
+recursion transformations enable the elimination of intermediates when
+manipulating collections, and when combined with primitive operations on
+functions, such as function composition, yields the ability to adapt the
+granularity of data processing. Consider a join-aggregate query
 $\sum_{a*f}((R \bowtie_{\theta} S) \bowtie_{\theta} T)$ with schema
-$R(a,b)$, $S(c,d)$, $T(e,f)$. That is the natural joins result in Cartesian
+$R(a,b)$, $S(c,d)$, $T(e,f)$, where the natural joins are Cartesian
 products. The functional representation is:
 
 \begin{verbatim}
@@ -723,13 +723,21 @@ aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
               R)))))
 \end{verbatim}
 
-\todo{Description of this program.}
+Above, {\tt map}, and {\tt aggregate} are the standard functional programming
+primitives that apply a function to each member of a collection, and fold or
+reduce a collection respectively. The {\tt flatten} primitive applies to a
+collection of collections (i.e. a nested collection), yielding a single-level
+collection. Finally {\tt fun} is a lambda form. The code first joins relations R
+and S, before passing the temporary relation created to be joined with T, again
+yielding an intermediate, that is finally aggregated. Notice the intermediate
+flatten operations to yield a first normal form.
+
 A standard implementation of a join as a binary operation forces the
 materialization of the intermediate result $R \bowtie_{\theta} S$. There are
 numerous scenarios where such materialization is undesirable, and has led to the
-development of multiway join algorithms such as XJoin and MJoin \todo{[REFS]}.
-With a few simple transformation steps, we can rewrite the above program to
-avoid this intermediate materialization as:
+development of multiway join algorithms such as XJoin~\cite{urhan-debull:00} and
+MJoin~\cite{viglas-vldb:03}. With a few simple transformation steps, we can
+rewrite the above program to avoid this intermediate materialization as:
 
 \begin{verbatim}
 aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
@@ -738,14 +746,14 @@ aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
       <a,b,c,d,e,f>, T), S), R))))
 \end{verbatim}
 
-This is essentially a three-way nested loops join $\bowtie_3(R,S,T)$ with no
-intermediate materialization of a two-way join, that can also be pipelined into
-the aggregation. In general, we can apply well-established folding,
-defunctionalization and deforestation techniques from functional programming,
-which when combined with data structures such as tree-based indexes and hash
-tables, can yield a rich space of evaluation strategies that vary in ther
-pipelining and materialization, ordering, nesting strucure and vectorization
-characteristics.
+This is a three-way nested loops join $\bowtie_3(R,S,T)$ with no intermediate
+materialization of a two-way join, that can also be pipelined into the
+aggregation. In general, we can apply well-established folding,
+defunctionalization~\cite{danvy-ppdp:01} and deforestation~\cite{marlow-fp:92}
+techniques from functional programming, which when combined with data structures
+such as tree-based indexes and hash tables, can yield a rich space of evaluation
+strategies that vary in ther pipelining and materialization, ordering, nesting
+strucure and vectorization characteristics.
 
 The last item, nesting structure and vectorization, refers to concepts from
 nested relational algebra, whereby query processing need not occur in terms of
