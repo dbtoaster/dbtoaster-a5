@@ -8,6 +8,7 @@ let parse_script script_file =
    let lexbuff = Lexing.from_channel f in
       Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff
 
+
 ;;
 
 let compiled_m3_for_script script_file =
@@ -33,6 +34,17 @@ let compiled_m3_for_script script_file =
       )
    in
       (program, dbschema, sources)
+;;
+
+let k3_for_script script_file = 
+   let ((schema,prog),dbschema,sources) = compiled_m3_for_script script_file in
+   let (m3ptrigs,patterns) = M3Compiler.prepare_triggers prog in
+   let (_,_,trigs) = K3Builder.collection_prog (schema,m3ptrigs) patterns in
+      List.map (fun (event, rel, args, cs) ->
+         let stmts = List.map K3OC.compile_k3_expr (List.map fst cs) in
+            (event, rel, args, stmts)
+         ) trigs
+
 ;;
 
 let compiled_k3_for_script script_file = 

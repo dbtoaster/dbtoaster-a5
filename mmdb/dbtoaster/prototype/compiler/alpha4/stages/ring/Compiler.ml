@@ -98,6 +98,17 @@ let compile_delta_for_rel (produce_child_maps: bool)
    (* compute the delta and simplify.
       The result is a list of pairs (new_params, new_term).
    *)
+   Debug.print "LOG-COMPILE-STEPS" (fun () -> "Compiling " ^
+                  (if delete then "-" else "+")^reln^
+                  (Util.list_to_string fst tuple)^" of "^ 
+                  (Calculus.term_as_string map_term)^" := "^
+                  (Calculus.term_as_string term)^"\n  with "^
+                  (Util.list_to_string fst bigsum_vars)^"\n"^
+                  (Util.string_of_list "" 
+                     (List.map (fun (x,y)-> "    "^
+                        (Calculus.term_as_string y)^" := "^
+                        (Calculus.term_as_string x)^"\n")
+                        externals_mapping)));
    let (s,bigsum_after_subst) = 
      List.split (
        Calculus.simplify
@@ -178,7 +189,13 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     ( if Debug.active "DISABLE-DELETES" then []
       else [(true, reln, relsch)] )
   in
+  (* Create a list of triggers by crossing [Relations] x [insert | delete]  *)
   let triggers = List.flatten (List.map insdel db_schema) in
+  (* CDFR returns 2 lists (for a specific RELATION & insert|delete trigger): 
+      l1: A list of compiled update triggers for immediate insertion
+      l2: A list of maps (subexpressions) that need to be compiled (todos) 
+          (note that Calculus.bigsum_rewriting also returns a list of todos)
+  *)
   let (l1, l2) = (List.split (List.map cdfr triggers)) in
   (if not (Debug.active "DISABLE-COMPILER-DUPS") then
     dup_elim := 

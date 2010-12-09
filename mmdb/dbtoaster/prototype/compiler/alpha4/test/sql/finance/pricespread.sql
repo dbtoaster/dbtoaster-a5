@@ -1,5 +1,12 @@
-CREATE TABLE BIDS (t double, id int, broker_id int, p double, v double);
-CREATE TABLE ASKS (t double, id int, broker_id int, p double, v double);
+--CREATE TABLE BIDS (t double, id int, broker_id int, p double, v double);
+--CREATE TABLE ASKS (t double, id int, broker_id int, p double, v double);
+CREATE TABLE bids(broker_id float, v float, p float)
+  FROM FILE 'test/data/vwap5k.csv'
+  LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');
+
+CREATE TABLE asks(broker_id float, v float, p float)
+  FROM FILE 'test/data/vwap5k.csv'
+  LINE DELIMITED orderbook (book := 'asks', validate := 'true', brokers := '10');
 
 
 -- look at spread between significant orders

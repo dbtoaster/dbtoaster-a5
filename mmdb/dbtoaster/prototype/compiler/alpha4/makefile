@@ -29,7 +29,7 @@ SOURCE = \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	lib/ocaml/Runtime.ml \
-	codegen/ocaml/M3Interpreter.ml \
+ttt	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
 	codegen/SourceCode.ml \
 	codegen/ocaml/K3Interpreter.ml \
@@ -221,7 +221,7 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ok_test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/tpch_parsing.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/tpch_compilation.ml
 
 
 ## SQL compilation Tests

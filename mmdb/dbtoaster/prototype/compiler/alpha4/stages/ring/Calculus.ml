@@ -819,6 +819,7 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                      (bound_vars: var_t list)
                      (map_name_prefix: string):
                      ((var_t list) * term_mapping_t * term_t) =
+   let bs_submap_id = ref 0 in
    let leaf_f lf =
       match lf with
          AggSum(t, r) when ((not (constraints_only r)) &&
@@ -895,7 +896,9 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
             let aggs = (List.map agg_plus_vars
                (extract_sub_aggregates_from_term new_term))
             in
-            let theta = mk_term_mapping map_name_prefix aggs
+            bs_submap_id := (!bs_submap_id) + 1;
+            let theta = mk_term_mapping (map_name_prefix^"BS"^
+                                         (string_of_int !bs_submap_id)^"_") aggs
             in
             ([(bigsum_vars, theta)], substitute_in_term theta new_term)
        | _ -> ([([], [])], TermRing.mk_val(lf))

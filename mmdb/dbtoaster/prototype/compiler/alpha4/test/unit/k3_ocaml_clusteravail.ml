@@ -88,3 +88,66 @@ in
    )
 
 ;;
+
+(*
+   AggSum(1, TASK(TTID, PRIORITY) and 
+      AggSum(STATUS, ASSIGNMENT(ASID, ATID) and 
+                     SERVER(SSID, STATUS) and 
+                     TTID=ATID and ASID=SSID and STATUS=1)
+      <
+      (AggSum(STATUS, ASSIGNMENT(ASID, ATID) and 
+                      SERVER(SSID, STATUS) and TTID=ATID and ASID=SSID
+      )*0.5)
+   )
+
+   which gets bigsumrewritten into : 
+  
+   (if QUERY__2[TTID]<(QUERY__3[TTID]*0.5) then QUERY__1[TTID] else 0) 
+
+*)
+let (input,_) = DBTDebug.parse_script "test/sql/clusteravailable.sql" in
+let (calc,schema,vars) =
+   match input with
+      ((t::rest_a),schema,vars)::rest_b -> ((Calculus.make_term t),schema,vars)
+      | _ -> failwith 
+  "k3_ocaml_clusteravail: unexpected parsing of test/sql/clusteravailable.sql"
+in
+let (bigsum_vars, bsrw_theta, bsrw_term) = 
+    Calculus.bigsum_rewriting
+       Calculus.ModeOpenDomain (Calculus.roly_poly calc) [] ("QUERY__")
+in
+let tuple_vars = ["QUERY__1TASK_TTID", Calculus.TDouble; 
+                  "QUERY__1TASK_PRIORITY",Calculus.TDouble] in
+let term_delta =
+   Calculus.term_delta 
+      bsrw_theta 
+      false 
+      "TASK"
+      tuple_vars
+      bsrw_term
+in
+let (simplified_terms, new_bigsum_vars) =
+   List.split (
+      Calculus.simplify 
+         term_delta
+         tuple_vars
+         bigsum_vars
+         ["TTID", Calculus.TDouble]
+   )
+in
+(* only one term is generated *)
+let (simplified_vars,simplified_term) = List.hd simplified_terms in
+   (Debug.log_unit_test 
+         "Cluster Availability toplevel bigsum vars"
+         (Util.list_to_string fst)
+         bigsum_vars
+         [ ]);
+   (Debug.log_unit_test 
+      "Cluster Availability simplified vars after bigsum rewriting"
+      (Util.list_to_string fst)
+      simplified_vars
+      [ "QUERY__1TASK_TTID", Calculus.TDouble ])
+   
+   
+   
+   

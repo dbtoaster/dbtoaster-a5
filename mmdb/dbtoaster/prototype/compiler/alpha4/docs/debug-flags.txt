@@ -16,10 +16,16 @@ DISABLE-DELETES: Do not generate M3 deletion triggers. (Compiler.ml /
 DISABLE-COMPILER-DUPS: Disable duplicate map detection in the compiler.  
                        Multiple triggers for the same maps will be created.
 
+DUMP-INITIALIZERS: Display the calc representation of all map initializers
+
 IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
                  maps that happen to represent the same query will not be 
                  eliminated.  Note that the compiler will still not produce 
                  duplicate instances of the same map. (CalcToM3.ml)
+
+LOG-COMPILES: Print out every map as it is compiled.
+
+LOG-COMPILE-STEPS: Print out every map/relation pair as it is compiled.
 
 M3: If the language is not 'calc', the M3 delta representation of the parsed 
     input will be printed. (Driver.ml)
