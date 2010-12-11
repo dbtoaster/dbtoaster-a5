@@ -752,20 +752,20 @@ aggregation. In general, we can apply well-established folding,
 defunctionalization~\cite{danvy-ppdp:01} and deforestation~\cite{marlow-fp:92}
 techniques from functional programming, which when combined with data structures
 such as tree-based indexes and hash tables, can yield a rich space of evaluation
-strategies that vary in ther pipelining and materialization, ordering, nesting
+strategies that vary in their pipelining, materialization, ordering, nesting
 strucure and vectorization characteristics.
 
 The last item, nesting structure and vectorization, refers to concepts from
-nested relational algebra, whereby query processing need not occur in terms of
-first normal form relations. Our programs can use non-first normal forms
-internally, and can apply compression and vectorized processing over the nested
-relation attributes, much in the vein of column-oriented processing.
-Furthermore, we can directly represent the aforementioned data structures, such
-as indexes and DBToaster maps, in our language, yielding a unified approach to
-representing both query processing and storage layout. We know of no existing
-framework capable of such a rich representation, and are excited by the
-potential to apply program transformations to jointly optimize query processing
-and storage.
+nested relational algebra~\cite{schek-infsys:86}, whereby query processing need
+not occur in terms of first normal form relations. Our programs can use
+non-first normal forms internally, and can apply compression and vectorized
+processing over the nested relation attributes, much in the vein of
+column-oriented processing. Furthermore, we can directly represent the
+aforementioned data structures, such as indexes and DBToaster maps, in our
+language, yielding a unified approach to representing both query processing and
+storage layout. We know of no existing framework capable of such a rich
+representation, and are excited by the potential to apply program
+transformations to jointly optimize query processing and storage.
 
 
 \comment{
