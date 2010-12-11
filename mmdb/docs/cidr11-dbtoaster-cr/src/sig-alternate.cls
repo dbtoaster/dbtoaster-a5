@@ -842,7 +842,7 @@
 \@float{copyrightbox}[b]
 \begin{center}
 \setlength{\unitlength}{1pc}
-\begin{picture}(20,6) %Space for copyright notice
+\begin{picture}(20,4) %Space for copyright notice
 \put(0,-0.95){\crnotice{\@toappear}}
 \end{picture}
 \end{center}
@@ -1428,9 +1428,22 @@
 \def\crdata#1{\global\acmcopyr{#1}}
 \def\permission#1{\global\boilerplate{#1}}
 %
-\global\boilerplate={Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.  To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.}
+\global\boilerplate={This article is published under a Creative Commons
+Attribution License (http://creativecommons.org/licenses/by/3.0/), which permits
+distribution and reproduction in any medium as well allowing derivative works,
+provided that you attribute the original work to the author(s) and CIDR 2011.\\}
+%\global\boilerplate={Permission to make digital or hard copies of all or part
+%of this work for personal or classroom use is granted without fee provided that
+%copies are not made or distributed for profit or commercial advantage and that
+%copies bear this notice and the full citation on the first page.  To copy
+%otherwise, to republish, to post on servers or to redistribute to lists,
+%requires prior specific permission and/or a fee.}
 \newtoks\copyrightetc
-\global\copyrightetc{Copyright \the\copyrtyr\ ACM \the\acmcopyr\ ...\$10.00}
+%\global\copyrightetc{Copyright \the\copyrtyr\ ACM \the\acmcopyr\ ...\$10.00}
+\global\copyrightetc{
+5th Biennial Conference on Innovative Data Systems Research (CIDR '11) January
+9-12, 2011, Asilomar, California, USA.
+}
 \toappear{\the\boilerplate\par
 {\confname{\the\conf}} \the\confinfo\par \the\copyrightetc.}
 %\DeclareFixedFont{\altcrnotice}{OT1}{tmr}{m}{n}{8}  % << patch needed for accenting e.g. Montreal - Gerry, May 2007
