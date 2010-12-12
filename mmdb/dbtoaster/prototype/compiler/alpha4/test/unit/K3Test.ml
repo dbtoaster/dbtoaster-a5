@@ -188,6 +188,175 @@ let build_cross le (re,rsch) =
 let build_nway_cross e_sch_l =
     List.fold_left build_cross (fst (List.hd e_sch_l)) (List.tl e_sch_l);;
 
+(***************************
+ * Collection var inlining
+ ***************************)
+
+let e = 
+  Apply
+   (Lambda
+     (AVar ("slice",
+       Collection (TTuple [TFloat; TFloat; TFloat])),
+     Slice
+      (Var ("slice",
+        Collection (TTuple [TFloat; TFloat; TFloat])),
+      [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+       ("A__P", TFloat)],
+      [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+        Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+         TFloat))])),
+   OutPC ("QUERY_1_1BIDS2_init",
+    [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+     ("A__P", TFloat)], TFloat))
+in
+let r_e =
+  Slice
+   (OutPC ("QUERY_1_1BIDS2_init",
+     [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+      ("A__P", TFloat)], TFloat),
+   [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+    ("A__P", TFloat)],
+   [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+     Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat))])
+in test_optimizer "inline_collection_functions 1"
+     (inline_collection_functions [] e) r_e;;
+
+let e =
+Apply
+  (Lambda (AVar ("slice", Collection (TTuple [TFloat; TFloat])),
+    IfThenElse
+     (Member
+       (Var ("slice", Collection (TTuple [TFloat; TFloat])),
+       [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+         TFloat)]),
+     Lookup
+      (Var ("slice", Collection (TTuple [TFloat; TFloat])),
+      [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat)]),
+     Apply
+      (Lambda (AVar ("init_val", TFloat),
+        Block
+         [PCValueUpdate
+           (PC ("QUERY_1_1BIDS4",
+             [("QUERY_1_1BIDS1_initASKS_A__P", TFloat)],
+             [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat)],
+             TFloat),
+           [Var ("QUERY_1_1BIDS1_initASKS_A__P", TFloat)],
+           [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+             TFloat)],
+           Var ("init_val", TFloat));
+          Var ("init_val", TFloat)]),
+      Aggregate
+       (AssocLambda
+         (ATuple
+           [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+            ("A__P", TFloat); ("v", TFloat)],
+         AVar ("accv", TFloat),
+         Add (Var ("v", TFloat),
+          Var ("accv", TFloat))),
+       Const (M3.CFloat 0.),
+       Map
+        (Lambda
+          (ATuple
+            [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+             ("A__P", TFloat); ("v1", TFloat)],
+          Tuple
+           [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+             TFloat);
+            Var ("A__P", TFloat);
+            IfThenElse0
+             (Lt (Const (M3.CFloat 1000.),
+               Add
+                (Var ("QUERY_1_1BIDS1_initASKS_A__P",
+                  TFloat),
+                Mult (Const (M3.CFloat (-1.)),
+                 Var ("A__P", TFloat)))),
+             Var ("v1", TFloat))]),
+        Apply
+         (Lambda
+           (AVar ("slice",
+             Collection (TTuple [TFloat; TFloat; TFloat])),
+           Slice
+            (Var ("slice",
+              Collection (TTuple [TFloat; TFloat; TFloat])),
+            [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+             ("A__P", TFloat)],
+            [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+              Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+               TFloat))])),
+         OutPC ("QUERY_1_1BIDS2_init",
+          [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+           ("A__P", TFloat)],
+          TFloat))))))),
+  Lookup
+   (Var ("m",
+     Collection
+      (TTuple [TFloat; Collection (TTuple [TFloat; TFloat])])),
+   [Var ("QUERY_1_1BIDS1_initASKS_A__P", TFloat)]))
+in
+let r_e =
+IfThenElse
+ (Member
+   (Lookup
+     (Var ("m",
+       Collection(TTuple [TFloat; Collection (TTuple [TFloat; TFloat])])),
+     [Var ("QUERY_1_1BIDS1_initASKS_A__P", TFloat)]),
+   [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat)]),
+ Lookup
+   (Lookup
+     (Var ("m", Collection
+       (TTuple [TFloat; Collection (TTuple [TFloat; TFloat])])),
+     [Var ("QUERY_1_1BIDS1_initASKS_A__P", TFloat)]),
+  [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat)]),
+ Apply
+  (Lambda (AVar ("init_val", TFloat),
+    Block
+     [PCValueUpdate
+       (PC ("QUERY_1_1BIDS4",
+         [("QUERY_1_1BIDS1_initASKS_A__P", TFloat)],
+         [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat)],
+         TFloat),
+       [Var ("QUERY_1_1BIDS1_initASKS_A__P", TFloat)],
+       [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+         TFloat)],
+       Var ("init_val", TFloat));
+      Var ("init_val", TFloat)]),
+  Aggregate
+   (AssocLambda
+     (ATuple
+       [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+        ("A__P", TFloat); ("v", TFloat)],
+     AVar ("accv", TFloat),
+     Add (Var ("v", TFloat),
+      Var ("accv", TFloat))),
+   Const (M3.CFloat 0.),
+   Map
+    (Lambda
+      (ATuple
+        [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+         ("A__P", TFloat); ("v1", TFloat)],
+      Tuple
+       [Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+         TFloat);
+        Var ("A__P", TFloat);
+        IfThenElse0
+         (Lt (Const (M3.CFloat 1000.),
+           Add
+            (Var ("QUERY_1_1BIDS1_initASKS_A__P",
+              TFloat),
+            Mult (Const (M3.CFloat (-1.)),
+             Var ("A__P", TFloat)))),
+         Var ("v1", TFloat))]),
+     Slice
+       (OutPC ("QUERY_1_1BIDS2_init",
+         [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+           ("A__P", TFloat)], TFloat),
+         [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat);
+          ("A__P", TFloat)],
+         [("QUERY_1_1BIDS1_initASKS_A__BROKER_ID",
+           Var ("QUERY_1_1BIDS1_initASKS_A__BROKER_ID", TFloat))])))))
+in test_optimizer "inline_collection_functions 2"
+     (inline_collection_functions [] e) r_e
+
 (************************
  * Lifting ifs
  ************************)
@@ -581,7 +750,7 @@ test_prog (sumr_byb_schema, sumr_byb_trigs) tuples [0, ["a"; "b"]; 1, ["a"; "b"]
     test_interpreter "delete; (get_out_map q) = [4,0; 3,0; 2,0; 1,0]"
       (eval (slice (get_out_map ["x", TFloat] TFloat "q") [] []) [] [] db)
       (tlist [[4.0; 0.0]; [3.0; 0.0]; [2.0; 0.0]; [1.0; 0.0]]))];;
-    
+
 
 (****************************
  * SQL file toplevel helpers
@@ -625,16 +794,18 @@ let compile_sql_file_to_m3 fname =
 let compile_aux aux_f fname =
   let (schema, m3prog) = (fst (compile_sql_file_to_m3 fname)) in
   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
-  let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns
-  in List.map (fun (_,_,trig_args,stmtl) ->
+  let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
+  let ctrigs = 
+    List.map (fun (_,_,trig_args,stmtl) ->
        List.map (fun (_,e) -> aux_f trig_args e)
          stmtl) trigs
+  in (schema, ctrigs)
   (*
   m3ptrigs
   *)
 ;;
 
-let compile_to_k3 = compile_aux (fun _ e -> e);;
+let compile_to_k3 = compile_aux (fun ta e -> ta,e);;
 
 let compile_to_k3_opt = compile_aux
   (fun trig_args e ->
@@ -652,14 +823,15 @@ let compile_to_k3_opt = compile_aux
 module K3S = K3Compiler.Make(K3Plsql.CG);;
 open K3Plsql.CG;;
 
-let compile_to_k3sql fname = 
+let compile_to_k3sql fname =
+  let (schema,ctrigs) = compile_to_k3_opt fname in  
   List.map (fun stmtl ->
       List.map (fun e -> (linearize_code (K3S.compile_k3_expr e))) stmtl)
-    (compile_to_k3_opt fname);;
+    ctrigs;;
 
 (*
 compile_to_k3sql "test/sql/vwap.sql";;
-*)
 
-compile_to_k3_opt "test/sql/rst.sql";;
+compile_to_k3 "test/sql/finance/axfinder.sql";;
+*)
 
