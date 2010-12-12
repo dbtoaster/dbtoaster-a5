@@ -408,13 +408,17 @@ event processing     |
 There are many technical challenges in making a DDMS a reality. This paper
 initiates a study of DDMS and presents DBToaster, a prototype developed by the
 authors. The contributions of this paper are as follows: In Section
-\ref{sec:overview}, we further characterize the notion of a DDMS, discuss the
-state machine abstraction, and describe schema and view definition formalisms.
+\ref{sec:overview}, we further characterize the notion of a DDMS and discuss a
+state machine abstraction of DDMS that further clarifies the programming
+model and abstractions relevant to users of such systems.
 Section \ref{sec:dbtoaster} presents the DBToaster view maintenance technique.
 It demonstrates how the state machine abstraction, which calls for the
-minimization or compilation of the state transition function, leads to new
-algorithms. Section \ref{sec:storage} discusses storage management in DBToaster.
-Finally, Section \ref{sec:distribution} discusses scaling up through
-parallelization.
+compilation and aggressive pre-computation
+of the state transition function (viewed differently, this is the set of update triggers that cause views to be refreshed), leads to new incremental
+query evaluation techniques.
+Section \ref{sec:storage} discusses storage management in DBToaster.
+Section \ref{sec:distribution} discusses scaling up through
+parallelization.
+We conclude in Section~\ref{sec:conclusion}.
 
 
