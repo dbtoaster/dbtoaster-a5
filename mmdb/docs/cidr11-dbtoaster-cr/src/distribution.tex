@@ -103,15 +103,12 @@ standard usage of speculative execution, any work done speculatively need not be
 thrown away entirely, rather any work done can be revised through increments or
 deltas, to the final desired outcome.
 
-In particular, a node can optimistically perform reads immediately without
-blocking (or at least, blocking only on pending write operations which the node
+In particular, a node can optimistically perform reads immediately (or at least,
+blocking only on pending write operations which the node
 is already aware of, and not the vague possibility of potential future write
 operations).  Although avoiding blocking on potential future writes eliminates
 significant synchronization overheads, out-of-order updates can cause the
 atomicity and desired ordering properties of trigger execution to be lost.
-\comment{
-\todo{it negates the assumption of atomicity that transition programs are
-constructed with}.}
 We favor this point in the design space since out-of-order events are expected
 to occur infrequently. Furthermore, such events are likely to interfere with
 only a handful of prior updates, for example a write on one map entry followed
@@ -143,7 +140,8 @@ mechanism for composing out-of-order write operations.
 \comment{
 Error correction in the speculative execution model requires the ability to
 }
-We handle two types of out-of-order operations: write-before-read, and
+Two types of out-of-order operations can occur in the speculative execution 
+model: write-before-read, and
 read-before-write.  We supplement maps with two additional data structures
 capturing timestamp information for operations, as illustrated in Figure
 \ref{fig:speculativeStorage}: (1) Source nodes maintain a log of all read
@@ -156,19 +154,19 @@ In the case of an out-of-order read operation (i.e., one that arrives after a
 write operation that logically precedes it), the write log makes it possible to
 reconstruct the state of the map at an earlier point in time.
 For example, given the initial state in Figure \ref{fig:speculativeStorage}, an
-update that requires a read on entry \texttt{Map[2]} arrives with timestamp
+update that requires a read on entry \texttt{m$_C$[2]} arrives with timestamp
 \texttt{<3>}.  The value sent to the computation nodes is not the latest value
-of the entry ({\tt Map[2]} $ = 6$ for all timestamps after {\tt <6>}), but
-rather the sum of all values with lower timestamps ({\tt Map[2]} $ = 2$ for
+of the entry ({\tt m$_C$[2]} $ = 6$ for all timestamps after {\tt <6>}), but
+rather the sum of all values with lower timestamps ({\tt m$_C$[2]} $ = 2$ for
 timestamps {\tt <3>},{\tt <4>}, and {\tt <5>}).
 
 %\tinysection{Out-of-order Writes}
 In the case of an out-of-order write operation, the read log allows us to send a
 \textit{revising update} to each computation node affected by the write.
 For example, given the initial state in Figure \ref{fig:speculativeStorage}, an
-update that requires a write on entry \texttt{Map[6]} arrives with timestamp
+update that requires a write on entry \texttt{m$_R$[6]} arrives with timestamp
 \texttt{<3>}.  The value will be written as normal (i.e., inserted into the
-write log for \texttt{Map[6]}, in sorted timestamp order).  Additionally,
+write log for \texttt{m$_R$[6]}, in sorted timestamp order).  Additionally,
 because the read log shows a read on the same entry with a later timestamp, a
 corrective update will be sent to the computation node(s) to which the entries
 were originally sent to.
@@ -176,12 +174,12 @@ were originally sent to.
 %\tinysection{Bounding Memory Usage}
 Both data structures grow over time.  To prevent unbounded memory usage,
 it is necessary to periodically truncate, or garbage collect the entries in each. 
-This in turn, requires the runtime to periodically identify a cutoff point; the
+This in turn, requires the runtime to periodically identify a cutoff point, the
 ``last" update for which there are no operations pending within the cluster. 
 The read history is truncated at this point, and all writes before this point
 are coalesced into a single entry.  Though this process is slow, it does not
-interfere with any node's normal operations, and can be performed infrequently;
-once every few seconds is reasonable.
+interfere with any node's normal operations, and can be performed infrequently.
+Once every few seconds is a reasonable interval.
 
 \tinysection{Hybrid Consistency}
 \comment{
