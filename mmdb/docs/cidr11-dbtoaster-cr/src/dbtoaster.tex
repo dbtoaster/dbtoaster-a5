@@ -272,11 +272,11 @@ delta transformations as defined in existing IVM literature
 summary, these approaches substitute a base relation in a query with the
 contents of an update, and rewrite the query. For example, on an insertion to
 the {\tt Customer} relation, we can substitute this relation
-with an update tuple $\tuple{\mbox{{\tt ck,nm,nk,bal}}}$:
+with an update tuple $\tuple{\mbox{{\tt @ck,@nm,@nk,@bal}}}$:
 
 \begin{verbatim}
 select l.ordkey, o.sprior, sum(l.extprice)
-from   {<@ck,@nm,@nk,@bal>}
+from   values (@ck,@nm,@nk,@bal)
          as c(custkey,name,nationkey,acctbal),
        Orders o, Lineitem l
 where  c.custkey = o.custkey and l.ordkey = o.ordkey
@@ -370,8 +370,8 @@ show its derivation and simplification below:
 \begin{verbatim}
 select l.ordkey, o.sprior,
        sum(l.extprice)
-from  Orders o,
-      {<@ok,@ep>} as
+from  Orders o, values
+      (@ok,@ep) as
       l(ordkey,extprice)
 where @ck = o.custkey
 and   l.ordkey = o.ordkey
@@ -422,8 +422,8 @@ can be seen on inspection of the delta query $q_{clo}$:
 \begin{minipage}{1.68in}
 \begin{verbatim}
 select o.sprior, count()
-from  {<@ck2,@ok2,@sp>} as
-  o(custkey,ordkey,sprior)
+from values (@ck2,@ok2,@sp)
+as o(custkey,ordkey,sprior)
 where @ck = o.custkey
 and   @ok = o.ordkey
 \end{verbatim}
@@ -549,19 +549,27 @@ The terminal delta consists of parameters alone, and does not depend on the
 database.
 }
 Queries are closed under taking deltas, that is, a delta query is of the same
-language as the parent query. In the above example, we have materialized all
+language as the parent query. This allows for processing delta queries using
+classical relational engines in IVM.
+However, the aggressive compilation scheme presented above allows to innovate in
+the design of main-memory query processors.
+In the above example, we have materialized all
 deltas, thus the transition program consists of simple arithmetics on parameters
-and map lookups. In general, closed deltas mean evaluation using a relational
-engine, such as an existing DBMS kernel. However, we believe we can innovate in
-the design of main-memory query processors. We touch on this below.
+and map lookups.
 
-Finally, our concept of higher-level deltas draws novel, natural analogies to
-mathematics. We have a rich formal framework, partially described
-in~\cite{koch-pods:10}, where the techniques sketched here are proven correct.
-In our framework, queries are polynomials, queries admit transformations
-compactly represented by a \textit{ring} algebraic structure, and we demonstrate
-polynomial degrees are reduced under taking deltas, much like derivatives in
-calculus.
+Our concept of higher-level deltas draws natural analogies to
+mathematics. Our framework, and the compilation algorithm described here
+-- but restricted to a smaller class of queries without nested aggregates
+-- was described and proven correct in~\cite{koch-pods:10}.
+In this framework, queries are based on polynomials in an
+algebraic structure -- a {\em polynomial ring} --
+of generalized relational databases.
+This quite directly yields the two main properties that make recursive compilation feasible -- that the query language is closed under taking deltas and that
+taking the delta of a query reduces its degree, assuring termination of
+recursive compilation.
+Unfortunately, the second property is not preserved if one extends the
+framework of \cite{koch-pods:10} by nested aggregates. We describe below
+how DBToaster handles this generalized scenario.
 
 \tinysection{Discussion}
 To summarize, in contrast to today's IVM, DBToaster uses materialization of
