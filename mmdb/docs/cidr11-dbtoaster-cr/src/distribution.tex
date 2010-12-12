@@ -29,11 +29,11 @@ Nodes across the cluster must agree on the relative ordering of updates:
 Also necessary is a mechanism for ensuring consistent delivery of updates from separate input sources; Before completing a read, source nodes must not only ensure that all prior pending writes have been completed, but also that all notifications for prior updates have been received.  A simple solution is to channel all updates through a single server -- this has the advantage of also providing a global ordering over all updates.  However this solution creates a scalability bottleneck.  Alternative solutions like broadcasting updates or periodic commits are possible, but introduce considerable synchronization overheads.
 
 \parheading{Speculative Execution}
-As an alternative, we can optimistically perform reads immediately, without blocking -- at least without blocking on the possibility that a write could potentially occur.  Though doing so avoids significant synchronization overheads, it introduces the possibility of inter-update conflicts and the corresponding need for corrective mechanisms.  
+As an alternative, a node can optimistically perform reads immediately without blocking (or at least, blocking only on pending write operations which the node is already aware of, and not the vague possibility of potential future write operations).  Though not blocking on the potential of writes avoids significant synchronization overheads, it negates the assumption of atomicity that transition programs are constructed with.  
 
-Fortunately, the points of conflict in a transition program are easily identified.  Furthermore, because write operations are limited to additive deltas, there is a clear mechanism for composing writes, even when applied out of order.
+We begin to restore the assumption of atomicity by using a timestamping mechanism (one of the several options described above) to establish a ``correct" order of operations between the updates.  However, without synchronization measures, it is possible for updates to arrive out of order.  Frequently, this will not be an issue -- a write on one map entry followed by an out-of-order read on a different entry in the same map do not cause a problem.  Furthermore, because write operations are limited to additive deltas, there is a clear mechanism for composing out-of-order write operations.  
 
-We supplement maps with two additional data structures, as illustrated in Figure \ref{fig:speculativeStorage}.  (1) Source nodes maintain a log of all read operations.  (2) Destination nodes record each write operation independently; map entries are stored as logs rather than single values.  Each operation is tagged with and sorted by a timestamp \texttt{<t>} representing the operation's position in the global order of updates.
+Error correction in the speculative execution model requires the ability to handle two types of out-of-order operations: write before read, and read before write.  We supplement maps with two additional data structures, as illustrated in Figure \ref{fig:speculativeStorage}:  (1) Source nodes maintain a log of all read operations.  (2) Destination nodes save all write operations independently; map entries are saved as logs rather than summed values.  Each operation is tagged with and sorted by the effecting update's timestamp \texttt{<t>}.
 
 \begin{figure}
 \begin{center}
@@ -46,7 +46,7 @@ We supplement maps with two additional data structures, as illustrated in Figure
 \parheading{Out-of-order Reads}
 In the case of an out-of-order read operation (i.e., one that arrives after a write operation that logically precedes it), the write log makes it possible to reconstruct the state of the map at an earlier point in time.  
 
-For example, given the initial state in Figure \ref{fig:speculativeStorage}, an update that requires a read on entry \texttt{Map[1]} arrives with timestamp \texttt{<6>}.  The value sent to the computation nodes is not be the latest value of the entry ($1$), but rather the value excluding the effects of all updates with later timestamps ($2$).
+For example, given the initial state in Figure \ref{fig:speculativeStorage}, an update that requires a read on entry \texttt{Map[2]} arrives with timestamp \texttt{<3>}.  The value sent to the computation nodes is not the latest value of the entry ({\tt Map[2]} $ = 6$ for all timestamps after {\tt <6>}), but rather the sum of all values with lower timestamps ({\tt Map[2]} $ = 2$ for timestamps {\tt <3>},{\tt <4>}, and {\tt <5>}).
 
 \parheading{Out-of-order Writes}
 In the case of an out-of-order write operation, the read log allows us to send a \textit{corrective update} to each computation node affected by the write.  
