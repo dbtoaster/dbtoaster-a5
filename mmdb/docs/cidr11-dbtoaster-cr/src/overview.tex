@@ -61,7 +61,7 @@ for stream processing.
 
 Given these modes of issuing queries to the DDMS, our client interface supports
 four methods of receiving results:
-(1) callbacks, that can be specified as handlers as part of the continuous query
+(1) callbacks, which can be specified as handlers as part of the continuous query
 API. Callbacks receive a stream of query results, and are the simplest form of
 result handlers that run to completion on query result events.  
 (2) a DDMS event loop, which multiplexes result streams for multiple queries.
@@ -139,7 +139,7 @@ arrival of events. We describe the compiler in further detail in Section
 
 \tinysection{Storage management and ad-hoc query processing}
 Given the instantiation of an auxiliary schema and agile views, a DDMS must
-intelligently manage memory utilization, and memory-disk boundary as needed. The
+intelligently manage memory utilization, and the memory-disk boundary as needed. The
 storage manager of a DDMS is responsible for the efficient representation of
 both the agile views, and any index structures required on these views.
 Section~\ref{sec:storage} discusses the issue of indexing, as well as how views
