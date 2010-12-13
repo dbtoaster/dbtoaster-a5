@@ -515,6 +515,72 @@ are symmetric to insertions except that they decrement counts.
 \end{verbatim}
 }
 
+\noindent We briefly comment on one powerful transformation that is worth
+emphasizing in the above program, as seen on line 15. Notice that the
+right-hand side of the statement consists of two maps -- all other statements
+are dependent on a single map. This line is an example of {\em factorization}
+applied as part of simplification. This statement is derived from the query $q$
+given at the start of the example, when considering an insertion to the {\tt
+Order} relation with tuple $\tuple{\mbox{{\tt @ck,@ok,@sp}}}$:
+
+\vspace{1mm}
+\begin{tabular}{ll}
+$q_o =$  & \ql{select\ \ \ @ok,@sp,sum(l.extprice)}\\
+         & \ql{from\ \ \ \ \ Customers c, Lineitem l}\\
+         & \ql{where\ \ \ \ c.custkey = @ck}\\
+         & \ql{and\ \ \ \ \ \ l.ordkey = @ok;}
+\end{tabular}
+
+\vspace{1mm}
+\noindent The group-by clause of $q$ can be eliminated since all group-by
+attributes are parameters. Note that the two relations {\tt Customer}, and {\tt
+Lineitem} have no join predicate, thus the query uses a cross product. By
+applying distributivity of the sum aggregate, we can separate (factorize) the
+above query into two scalar subqueries:
+
+\vspace{1.5mm}
+\hspace{-5mm}
+\begin{tabular}{lcl}
+\begin{minipage}{1.2in}
+\begin{verbatim}
+select @ok,@sp,
+  sum(l.extprice)
+from
+  Customers c,
+  Lineitem l
+where c.custkey = @ck
+and l.ordkey = @ok;
+\end{verbatim}
+\end{minipage}
+&
+{\tt =>}
+&
+\hspace{-2mm}
+\begin{minipage}{1.3in}
+\begin{verbatim}
+select @ok,@sp,
+((select sum(l.extprice)
+  from   Lineitem l
+  where  l.ordkey = @ok)
+ *
+ (select sum(1)
+  from   Customers c
+  where  c.custkey = @ck));
+\end{verbatim}
+\end{minipage}
+\end{tabular}
+
+\vspace{1.5mm}
+DBToaster materializes the scalar subqueries above as $m_co$ and $m_o$ in its
+program, and in particular note that prior to factorization we had a single
+delta query of degree 2, and after factorization we have two delta queries of 1.
+The latter is clearly simpler and more efficient to maintain.
+Factorization can be cast as the generalized distributive law
+(GDL)~\cite{aji-toit:00} applied to query processing. GDL facilitates fast
+algorithms for many applications including belief propagation and message
+passing algorithms, and Viterbi's algorithm. With this analogy, we hope to
+leverage other techniques from this field, for example approximation techniques.
+
 \tinysection{Transition program properties}
 For many queries, compilation yields \textit{simple} code that has no joins
 and no nested loops, only single-level loops that perform probing as
@@ -582,12 +648,6 @@ queries, including, as discussed next, nested queries. This has not been
 addressed in the IVM literature, and lets our technique cover complex, composed
 queries, where being as incremental as possible is highly advantageous.
 
-The use of rings on queries with equi-joins and sum aggregations can be cast as
-the generalized distributive law (GDL)~\cite{aji-toit:00} applied to query
-processing. GDL facilitates fast algorithms for many applications including
-belief propagation and message passing algorithms, and Viterbi's algorithm. With
-this analogy, we hope to leverage other techniques from this field, for example
-approximation techniques.
 
 
 \subsection{Compilation Enhancements}
@@ -645,10 +705,10 @@ in Section 1 exemplifies a nested query.
 
 Nested subqueries contain correlated attributes (e.g. price in VWAP)
 defined in an outer scope. We consider correlated attributes as parameters, or,
-internally in our framework, as binding patterns, seen in data integration.
+internally in our framework, as binding patterns as seen in data integration.
 Nested queries induce \textit{binding propagation}, similar to sideways
 information passing in Datalog. That is, we support the results of one query
-being used (or \textit{propagated}) to the parameters of a correlated subquery,
+being used (or \textit{propagated}) as the parameters of a correlated subquery,
 indicating an evaluation ordering.
 We transform queries to use minimal propagation, which performs additional
 aggregation of maps, over dimensions of the map key that are not propagated. For
@@ -796,6 +856,7 @@ collection. For example:
 flatten([[1;2]; [3]; [4;5;6]]) = [1;2;3;4;5;6]
 \end{verbatim}
 
+\vspace{-1mm}
 \noindent Our functional representation first joins relations R and S, before
 passing the temporary relation created to be joined with T, again yielding an
 intermediate, that is finally aggregated. Notice the intermediate flatten
