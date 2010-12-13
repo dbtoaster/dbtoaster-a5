@@ -3,7 +3,7 @@
 Agile views are database views that are maintained as incrementally as possible.
 Despite more than three decades of research into incremental view
 maintenance (IVM)
-techniques~\cite{roussopoulos-tods:91,griffin-sigmod:95,zhou-icde:07,zhou-vldb:07},
+techniques~\cite{griffin-sigmod:95,roussopoulos-tods:91,zhou-vldb:07,zhou-icde:07},
 agile views have not been realised, and one of our key contributions in handling
 large dynamic datasets is to exploit further opportunities for incremental
 computation during maintenance.
@@ -46,18 +46,20 @@ delta query $q'$ from set $Q'$
 can be incrementally computed using the same principles as for
 the view query $q$, rather than evaluated in full.
 
-To convey the essence of the concept, IVM takes $q$, produces $\tuple{m,Q'}$
-and performs $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime, where $u$ is an update
-to a relation $R$ and $q'$ is the delta query for updates to $R$ in $Q'$. We call this one step of \textit{delta (query)
-compilation}. This is the extent of query transformations applied by IVM for
-incremental processing of updates. DBToaster applies this concept
-\textit{recursively}, transforming queries to \textit{higher-level deltas}.
-DBToaster starts with $q$, produces $\tuple{m,Q'}$ and then recurs, taking
-each $q'$ to produce $\tuple{m', Q''}$ and repeating. Here, each $m'$ is
-maintained as $m' \; \mbox{{\tt +}=} \; q''(v)$, where $v$ is also an update,
-(possibly) different from $u$ above, and $q''$ is the delta query from $Q''$ for the relation being updated. We refer to $q'$ and $q''$ as first- and second-level
-delta queries respectively. We again recur for each $q''$, materialize it as
-$m''$, maintain it using third-level queries $Q'''$, and so forth.
+To convey the essence of the concept, IVM takes $q$, produces $\tuple{m,Q'}$ and
+performs $m \; \mbox{{\tt +}=} \; q'(u)$ at runtime, where $u$ is an update to a
+relation $R$ and $q'$ is the delta query for updates to $R$ in $Q'$. We call
+this one step of \textit{delta (query) compilation}. This is the extent of query
+transformations applied by IVM for incremental processing of updates. DBToaster
+applies this concept \textit{recursively}, transforming queries to
+\textit{higher-level deltas}. DBToaster starts with $q$, produces $\tuple{m,Q'}$
+and then recurs, taking each $q'$ to produce $\tuple{m', Q''}$ and repeating.
+Here, each $m'$ is maintained as $m' \; \mbox{{\tt +}=} \; q''(v)$, where $v$ is
+also an update, (possibly) different from $u$ above, and $q''$ is the delta
+query from $Q''$ for the relation being updated. We refer to $q'$ and $q''$ as
+first- and second-level delta queries respectively. We again recur for each
+$q''$, materialize it as $m''$, maintain it using third-level queries $Q'''$,
+and so forth.
 
 \comment{
 DBToaster performs recursive delta compilation to compute and
@@ -142,9 +144,9 @@ $m_R = \mbox{{\tt select sum(c) from S where S.b=@b}}$
 
 \vspace{1mm}
 \noindent omitting the parameter {\tt @a} since it is independent of the above
-view definition query. DBToaster is capable of incrementally maintaining $m_R$,
-with the following delta query on update
-$v$ that is an insertion of tuple $\tuple{\mbox{{\tt @c}},\mbox{{\tt @d}}}$ into relation $S$:
+view definition query. DBToaster can incrementally maintain $m_R$
+with the following delta query on an update $v$ that is an insertion of tuple
+$\tuple{\mbox{{\tt @c}},\mbox{{\tt @d}}}$ into relation $S$:
 
 \vspace{1mm}
 $q_{RS} = \Delta_v(q_R) = \mbox{\tt select @c from values(@c,@d)}$
@@ -167,7 +169,7 @@ needed to maintain these views.
 \vspace{-8mm}
 
 \hspace{-3mm}\begin{tabular}{ll|l|l|ll}
-\multicolumn{2}{l}{Input (parent query)}
+\multicolumn{2}{l|}{Input (parent query)}
 & Update 
 & \multicolumn{3}{l}{Output: auxiliary map, delta query}
 \\
@@ -270,12 +272,13 @@ can answer query $q$ by iterating over all entries (groups) in map $m$, and
 yielding the associated aggregate value.
 The first step also computes a delta query $q_{c}$ by applying standard
 delta transformations as defined in existing IVM literature
-\cite{griffin-sigmod:95,roussopoulos-tods:91,zhou-icde:07,zhou-vldb:07}. In
+\cite{griffin-sigmod:95,roussopoulos-tods:91,zhou-vldb:07,zhou-icde:07}. In
 summary, these approaches substitute a base relation in a query with the
 contents of an update, and rewrite the query. For example, on an insertion to
 the {\tt Customer} relation, we can substitute this relation
 with an update tuple $\tuple{\mbox{{\tt @ck,@nm,@nk,@bal}}}$:
 
+\pagebreak
 \begin{verbatim}
 select l.ordkey, o.sprior, sum(l.extprice)
 from   values (@ck,@nm,@nk,@bal)
@@ -343,7 +346,7 @@ entries in its domain, invoking lookups on $m_c$ for each entry and the trigger
 argument {\tt ck}. Map read and write locations are often (and for a large class
 of queries, always) in one-to-one correspondence, allowing for an embarrassingly
 parallel implementation (see Section~\ref{sec:distribution}). For clarity, the
-verbose form of such statement is:
+verbose form of the statement is:
 
 \begin{verbatim}
 on_insert_customer(ck,nm,nk,bal):
@@ -878,12 +881,12 @@ aggregate(fun < <t,u,v,w,x,y>, z>. (t*y)+z, 0,
 
 This is a three-way nested loops join $\bowtie_3(R,S,T)$ with no intermediate
 materialization of a two-way join, that can also be pipelined into the
-aggregation. In general, we can apply well-established folding,
-defunctionalization~\cite{danvy-ppdp:01} and deforestation~\cite{marlow-fp:92}
-techniques from functional programming, which when combined with data structures
-such as tree-based indexes and hash tables, can yield a rich space of evaluation
-strategies that vary in their pipelining, materialization, ordering, nesting
-strucure and vectorization characteristics.
+aggregation. In general, we can apply well-established
+folding~\cite{bacon-acms:94}, defunctionalization~\cite{danvy-ppdp:01} and
+deforestation~\cite{marlow-fp:92} techniques from functional programming, which
+when combined with data structures such as indexes and hash tables,
+can yield a rich space of evaluation strategies that vary in their pipelining,
+materialization, ordering, nesting structure and vectorization characteristics.
 
 The last item, nesting structure and vectorization, refers to concepts from
 nested relational algebra~\cite{schek-infsys:86}, whereby query processing need

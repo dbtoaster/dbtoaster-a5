@@ -40,24 +40,25 @@ In DBToaster, the set of agile views requested by clients, the \textit{visible
 schema}, forms the primary read interface between client programs and the DDMS
 runtime. Clients can submit queries for which the DDMS materializes an agile
 view through three methods:
-(1) a continuous query client API, as done with existing stream client
+(1) an embedded language, whose syntax and data model are natural fits to the
+host language in which the client application is written. Examples include
+embedded SQL, and collection comprehension oriented approaches such as LINQ,
+Links, and Ferry~\cite{cooper-fmco:06,grust-sigmod:09,meijer-sigmod:06}.
+One interesting challenge with the embedded language approach is that of
+enabling asynchronous event-driven programming. Whereas language embeddings
+are natural for ad-hoc querying, we have yet to see these approaches
+for stream processing. This is the main mode of specifying queries that we
+focus on in this paper.
+(2) a continuous query client API, as done with existing stream client
 libraries, which sends a query string to the DDMS server for parsing,
 compilation, and agile view construction. The query string may be specified in a
 standard streaming language such as StreamSQL or CCL~\cite{jain-pvldb:08}. The
 client may specify several ways to receive results, as seen below.
-(2) an ad-hoc query client API, which issues a one-time query to the
+(3) an ad-hoc query client API, which issues a one-time query to the
 DDMS, and returns the agile view as a datastructure to be used by the remainder
 of the client program. This API may be used in both synchronous and
 asynchronous modes, as indicated by the type of result requested. The query is
 specified in standard SQL.
-(3) an embedded language, whose syntax and data model are natural fits to the
-host language in which the client application is written. Examples include
-embedded SQL, and collection comprehension oriented approaches such as LINQ,
-Links, and Ferry~\cite{meijer-sigmod:06,cooper-fmco:06,grust-sigmod:09}.
-One interesting challenge with the embedded language approach is that of
-enabling asynchronous event-driven programming. Whereas language embeddings
-are natural for ad-hoc querying, we have yet to see these approaches
-for stream processing.
 
 Given these modes of issuing queries to the DDMS, our client interface supports
 four methods of receiving results:
@@ -145,7 +146,7 @@ both the agile views and any index structures required on these views.
 Section~\ref{sec:storage} discusses the issue of indexing, as well as how views
 are laid out onto disk. Supporting ad-hoc query processing turns out to be
 relatively straightforward given that the core of a DDMS continuously maintains 
-agile views. Ad-hoc queries can be rewritten to use agile views much in a 
+agile views. Ad-hoc queries can be rewritten to use agile views in a 
 similar fashion to the materialized view usage problem in standard query 
 optimization. A key challenge here is how to ensure consistency, such that ad-
 hoc queries do not use inconsistent agile views as updates stream in and the 
@@ -155,7 +156,7 @@ continuous queries.
 One option here is to maintain a list of undo actions for each ad-hoc query with
 respect to agile view maintenance. This design is motivated by the fact that
 continuous queries are the dominant mode of usage, and ad-hoc queries are
-expected to occur less frequently, thus we bias the concurrency control burden
+expected to occur infrequently, thus we bias the concurrency control burden
 towards ad-hoc queries.
 
 

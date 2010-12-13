@@ -27,7 +27,7 @@ we could apply standard serializable order concurrency control here to
 simultaneously process updates that do not interact with each other. The
 underlying goal is to develop simple techniques that avoid heavyweight locking
 and synchronization of entries in massively horizontally partitioned maps. 
-We start with a conservative goal to focus on simple lightweight protocols.
+We start with a conservative goal to focus on lightweight protocols.
 Ensuring this atomicity property is the first of the two core challenges that we
 encountered while constructing a distributed DDMS runtime.
 
@@ -114,7 +114,7 @@ to occur infrequently. Furthermore, such events are likely to interfere with
 only a handful of prior updates, for example a write on one map entry followed
 by an out-of-order read on a different entry in the same map do not cause a
 problem. Finally, because write operations are limited to additive deltas,
-there is a clear mechanism for composing out-of-order write operations.
+there is a clear mechanism for composing out-of-order writes.
 
 \comment{
 \todo{We begin to restore the assumption of atomicity} by using a timestamping
@@ -178,8 +178,8 @@ This in turn, requires the runtime to periodically identify a cutoff point, the
 ``last" update for which there are no operations pending within the cluster. 
 The read history is truncated at this point, and all writes before this point
 are coalesced into a single entry.  Though this process is slow, it does not
-interfere with any node's normal operations, and can be performed infrequently.
-Once every few seconds is a reasonable interval.
+interfere with any node's normal operations, and can be performed
+infrequently, for example once every few seconds.
 
 \tinysection{Hybrid Consistency}
 \comment{
@@ -219,7 +219,7 @@ nodes, the simplest partitioning scheme is to perform computations where the
 data will be stored -- that is, the destination and computation nodes are
 co-located.  As part of update evaluation, each source node transmits all
 relevant map entries to the destination node.  Upon arrival, the destination
-node evaluates the statement and stores the relevant results.
+node evaluates the statement and stores the result.
 
 \tinysection{Source-Computation}
 Though simple, transmitting every relevant map entry with every update can be
