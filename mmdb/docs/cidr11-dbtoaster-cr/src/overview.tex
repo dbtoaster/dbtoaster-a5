@@ -25,7 +25,8 @@ tuples that have already been seen at some arbitrary prior point on the stream.
 Updates are fully processed on-the-fly, and their effects on agile views are
 realised in atomic fashion, prior to working on any subsequent update. Depending
 on the type of results requested by queries, any results arising from updates
-will be directly forwarded to application code as agile views are maintained.
+will be directly forwarded to application code as agile views are maintained.
+
 DBToaster provides a wide variety of client interfaces to issue queries and
 obtain results from the DDMS, to reflect the diverse needs of applications built
 on top of our tool. Today's stream processors tend to be black-box systems that
@@ -34,14 +35,16 @@ stream processors through remote procedure call abstractions, issuing queries
 and new data through function calls, and either polling or being notified
 whenever results appear on a queue that is associated with a TCP socket
 connected to the stream processor.
-In DBToaster, the set of agile views requested by clients, the \textit{visible
+
+In DBToaster, the set of agile views requested by clients, the \textit{visible
 schema}, forms the primary read interface between client programs and the DDMS
-runtime. Clients can submit queries for which the DDMS materializes an agileview through three methods:
+runtime. Clients can submit queries for which the DDMS materializes an agile
+view through three methods:
 (1) a continuous query client API, as done with existing stream client
 libraries, which sends a query string to the DDMS server for parsing,
 compilation, and agile view construction. The query string may be specified in a
 standard streaming language such as StreamSQL or CCL~\cite{jain-pvldb:08}. The
-client may specify several ways to receive results, we return to this below.
+client may specify several ways to receive results, as seen below.
 (2) an ad-hoc query client API, which issues a one-time query to the
 DDMS, and returns the agile view as a datastructure to be used by the remainder
 of the client program. This API may be used in both synchronous and
@@ -54,7 +57,8 @@ Links, and Ferry~\cite{meijer-sigmod:06,cooper-fmco:06,grust-sigmod:09}.
 One interesting challenge with the embedded language approach is that of
 enabling asynchronous event-driven programming. Whereas language embeddings
 are natural for ad-hoc querying, we have yet to see these approaches
-for stream processing.
+for stream processing.
+
 Given these modes of issuing queries to the DDMS, our client interface supports
 four methods of receiving results:
 (1) callbacks, that can be specified as handlers as part of the continuous query
@@ -70,14 +74,16 @@ language, facilitating natural access for the remainder of the program. Ad-hoc
 queries use this method for results by default. Continuous queries may also use
 this method in which case the datastructure acts as a proxy with accessors that
 pull in any updates from the DDMS when invoked.
-(4) promises and futures, which provide a push-based proxy datastructure for the
+(4) promises and futures~\cite{Liskov:1988:PLS:53990.54016}, which provide a
+push-based proxy datastructure for the
 result. A future is an object whose value is not initially know and is provided
 at a later time. A program using a query returning a future can use the future
 as a native datatype, in essence constructing a client-side dataflow to be
 executed whenever the future's value is bound. In our case, this occurs whenever
-query results arrive from the DDMS. Language embedded stream processing can besupported by futures, or program transformations to construct client sidedataflow, such as continuous passing style as found in the programming languagesliterature~\cite{sussman-hsc:98}.
-
-
+query results arrive from the DDMS. Language embedded stream processing can be
+supported by futures, or program transformations to construct client side
+dataflow, such as continuous passing style as found in the programming languages
+literature~\cite{sussman-hsc:98}.
 
 
 \comment{
@@ -126,7 +132,9 @@ specializing the runtime for each transition and associated maintenance
 performed by a DDMS. The transition compiler generates lightweight transition
 programs that can be invoked by the runtime engine with minimal overhead on the
 arrival of events. We describe the compiler in further detail in Section
-\ref{sec:dbtoaster}.
+\ref{sec:dbtoaster}.
+
+
 
 
 \tinysection{Storage management and ad-hoc query processing}
@@ -142,7 +150,13 @@ fashion to the materialized view usage problem in standard query optimization. A
 key challenge here is how to ensure consistency, such that ad-hoc queries do not
 use inconsistent agile views as update stream in and the DDMS performs
 maintenance. On the other hand, we do not want ad-hoc queries to block the DDMS'
-maintenance process and incur result delivery latency for continuous queries.One option here is to maintain a list of undo actions for each ad-hoc query withrespect to agile view maintenance. This design is motivated by the fact thatcontinuous queries are the dominant mode of usage, and ad-hoc queries areexpected to occur less frequently, thus we bias the concurrency control burdentowards ad-hoc queries.
+maintenance process and incur result delivery latency for continuous queries.
+One option here is to maintain a list of undo actions for each ad-hoc query with
+respect to agile view maintenance. This design is motivated by the fact that
+continuous queries are the dominant mode of usage, and ad-hoc queries are
+expected to occur less frequently, thus we bias the concurrency control burden
+towards ad-hoc queries.
+
 
 
 
