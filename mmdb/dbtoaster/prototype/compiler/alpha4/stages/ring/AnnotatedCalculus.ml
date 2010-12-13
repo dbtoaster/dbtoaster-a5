@@ -61,13 +61,13 @@ module PipedCalculus = struct
       (ListAsSet.diff (get_vars pterm) (get_ivars pterm))
    let get_map_name ((map_name,_,_,_,_,_):piped_term_t):string =
       map_name
+   
+   ;;
+   
    let get_subterms ((_,_,_,_,subterms,_):piped_term_t):string =
       subterms
    let get_subterm (pterm:piped_term_t) (t:string):piped_term_t =
       List.find (fun (map_name,_,_,_,_,_) -> map_name = t) (get_subterms pterm)
-   
-   ;;
-      
    let get_internals ((_,_,_,_,_,idata):piped_term_t):piped_term_data_t =
       idata
    let get_subterm_mappings (pterm:piped_term_t): term_mapping_t =
@@ -87,13 +87,55 @@ module PipedCalculus = struct
    
    ;;
    
+   let bigsum_rewrite ?(rewrite_mode = Calculus.ModeOpenDomain) 
+                      (pterm:piped_term_t): piped_term_t =
+      (if (get_internals pterm) <> Expression then 
+         failwith "Attempt to bigsum rewrite a bigsum");
+      let (bigsum_vars, bsrw_theta, bsrw_term) = 
+         Calculus.bigsum_rewriting 
+            rewrite_mode 
+            (Calculus.roly_poly (get_definition pterm))
+            [] ((get_map_name pterm)^"_")
+      in
+         convert_bigsum 
+            (get_map_term pterm)
+            bsrw_term
+            (get_ivars pterm)
+            bsrw_theta
+            bigsum_vars
+   
+   ;;
+   
+   let simplified_delta_terms =
+      let ((delta_calc:term_t list),(new_bs_vars:var_t list)) = 
+         List.split 
+            (Calculus.simplify 
+               (Calculus.term_delta 
+                  (get_subterm_mappings pterm)
+                  delete
+                  relname
+                  tuple
+                  (get_definition pterm)
+               )
+               tuple
+               (match (get_internals pterm) with 
+                  External -> [] | Bigsum(v) -> v)
+               (get_vars pterm)
+            )
+      in
+         (List.map
+
+   
+   ;;
+   
    let fold (op_neg:(var_t list -> 'a -> 'a))
             (op_prod:(var_t list -> 'a list -> 'a))
             (op_tsum:(var_t list -> 'a list -> 'a))
             (op_asum:(var_t list -> 'a -> 'a))
             (op_const:(var_t list -> const_t -> 'a))
             (op_var:(var_t list -> var_t -> 'a))
-            (op_ext:(var_t list -> string * var_t list * var_t list -> 'a))
+            (op_ext:(var_t list -> piped_term_t * var_t list * var_t list -> 
+                     'a))
             (op_rel:(var_t list -> string * var_t list -> 'a))
             (op_cmp:(var_t list -> comp_t -> 'a -> 'a -> 'a))
             (pterm:piped_term_t): 'a =
@@ -132,10 +174,11 @@ module PipedCalculus = struct
                      (op_asum ivars (op_prod ivars [cret;tret]))
                   )
             |  RVal(External(ename,evars)) ->
+               let subterm = (get_subterm pterm ename) in
                let (ext_ivars, ext_ovars) = 
-                  (rename_io_vars evars (get_subterm pterm ename)) 
+                  (rename_io_vars evars subterm) 
                in
-                  (ext_ovars,(op_ext ivars (ename,ext_ivars,ext_ovars)))
+                  (ext_ovars,(op_ext ivars (subterm,ext_ivars,ext_ovars)))
             |  RVal(Const(c))    -> ([], (op_const ivars c))
             |  RVal(Var(v))      -> ([], (op_var   ivars v))
             |  RNeg(t)           -> 
@@ -194,23 +237,4 @@ module PipedCalculus = struct
    ;;
    
 end
-(*
-   let simplified_delta_terms (delete:bool) (relname:string) (tuple:var_t list)
-                              (pterm:piped_term_t): (delta_term_t list) =
-      let ((delta_calc:term_t list),(new_bs_vars:var_t list)) = 
-         List.split 
-            (Calculus.simplify 
-               (Calculus.term_delta 
-                  (get_subterm_mappings pterm)
-                  delete
-                  relname
-                  tuple
-                  (get_definition pterm)
-               )
-               tuple
-               (match (get_internals pterm) with | External -> [] | Bigsum(v) -> v)
-               (get_vars pterm)
-            )
-      in
-         (List.map
-*)
+
