@@ -172,7 +172,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
   else
   let (bigsum_vars, bsrw_theta, bsrw_term) = 
     Calculus.bigsum_rewriting
-      bs_rewrite_mode (Calculus.roly_poly map_definition) [] (mapn^"__")
+      bs_rewrite_mode (Calculus.roly_poly map_definition) [] (mapn^"_")
   in
   let (next_top_down_depth, go_deeper) = 
     match top_down_depth with 

@@ -1,3 +1,5 @@
+-- Correct answer: 3663277605
+
 CREATE TABLE bids(broker_id float, v float, p float)
   FROM FILE 'test/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');

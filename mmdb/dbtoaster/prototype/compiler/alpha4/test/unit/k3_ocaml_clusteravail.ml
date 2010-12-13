@@ -112,9 +112,12 @@ let (calc,schema,vars) =
       | _ -> failwith 
   "k3_ocaml_clusteravail: unexpected parsing of test/sql/clusteravailable.sql"
 in
-let (bigsum_vars, bsrw_theta, bsrw_term) = 
+let (potential_bigsum_vars, bsrw_theta, bsrw_term) = 
     Calculus.bigsum_rewriting
        Calculus.ModeOpenDomain (Calculus.roly_poly calc) [] ("QUERY__")
+in
+let bigsum_vars = 
+ ListAsSet.diff potential_bigsum_vars ["TTID", Calculus.TInt]
 in
 let tuple_vars = ["QUERY__1TASK_TTID", Calculus.TDouble; 
                   "QUERY__1TASK_PRIORITY",Calculus.TDouble] in
@@ -137,16 +140,23 @@ let (simplified_terms, new_bigsum_vars) =
 in
 (* only one term is generated *)
 let (simplified_vars,simplified_term) = List.hd simplified_terms in
+let print_varlist =
+      (Util.list_to_string (fun (x,y) -> x^(match y with 
+           Calculus.TDouble -> ":double"
+         | Calculus.TLong -> ":long"
+         | Calculus.TInt -> ":int"
+         | Calculus.TString -> ":string")))
+in
    (Debug.log_unit_test 
          "Cluster Availability toplevel bigsum vars"
-         (Util.list_to_string fst)
+         print_varlist
          bigsum_vars
          [ ]);
    (Debug.log_unit_test 
       "Cluster Availability simplified vars after bigsum rewriting"
-      (Util.list_to_string fst)
+      print_varlist
       simplified_vars
-      [ "QUERY__1TASK_TTID", Calculus.TDouble ])
+      [ "TTID", Calculus.TDouble ])
    
    
    

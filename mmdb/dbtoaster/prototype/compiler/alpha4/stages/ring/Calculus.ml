@@ -8,6 +8,7 @@ type const_t = Int    of int                  (* typed constant terms *)
              | Double of float
              | Long   of int64
              | String of string
+             | Boolean of bool
 
 
 type 'term_t generic_relcalc_lf_t =
@@ -367,6 +368,8 @@ and term_as_string (m: term_t): string =
           | Double(d) -> string_of_float d
           | Long(l)   -> "(int64 output not implemented)" (* TODO *)
           | String(s) -> "'" ^ s ^ "'"
+          | Boolean(true)  -> "true"
+          | Boolean(false) -> "false"
          )
     | Var(x)             -> (fst x)
     | External(n,params) -> 

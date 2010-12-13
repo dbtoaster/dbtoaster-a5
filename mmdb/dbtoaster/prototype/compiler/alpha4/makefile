@@ -29,7 +29,7 @@ SOURCE = \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	lib/ocaml/Runtime.ml \
-ttt	codegen/ocaml/M3Interpreter.ml \
+	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
 	codegen/SourceCode.ml \
 	codegen/ocaml/K3Interpreter.ml \
@@ -209,6 +209,7 @@ test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_vwap.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_sgl.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/tpch_compilation.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/examples/MyTpchTest.ml
@@ -221,7 +222,7 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ok_test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/tpch_compilation.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_clusteravail.ml
 
 
 ## SQL compilation Tests

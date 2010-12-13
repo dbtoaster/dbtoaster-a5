@@ -68,6 +68,7 @@ type const_t = Int    of int                  (* typed constant terms *)
              | Double of float
              | Long   of int64
              | String of string
+             | Boolean of bool
 
 (* leaves (=atoms) of the calculus *)
 type 'term_t generic_relcalc_lf_t =

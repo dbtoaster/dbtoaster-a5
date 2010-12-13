@@ -29,12 +29,38 @@ module PipedCalculus : sig
    val get_subterms:   piped_term_t -> piped_term_t list
    val get_subterm:    piped_term_t -> string -> piped_term_t
    
-   (* Operators *)
+   (* Compilation Operators *)
    val bigsum_rewrite:
    
    val extract_submaps:
    
    val extract_base_relations:
+   
+   val simplified_delta_terms: 
+      bool ->             (* operation == delete *)
+      string ->           (* Relation name *)
+      var_t list ->       (* Relation variables (== tuple) *)
+      piped_term_t ->     (* Term to be deltaed *)
+      (delta_term_t list) (* Delta terms *)
+   
+   
+   (* Accessors *)
+   val fold: (* Each operator has a var_t list, the set of input variables at 
+                that point in the expression *)
+      (var_t list -> 'a -> 'a)       -> (* Negation of term *)
+      (var_t list -> 'a list -> 'a)  -> (* Product of terms *)
+      (var_t list -> 'a list -> 'a)  -> (* Sum of terms *)
+      (var_t list -> 'a -> 'a)       -> (* Sum of values (aggsum, bigsum) *)
+      (var_t list -> const_t -> 'a)  -> (* Datum constant *)
+      (var_t list -> var_t -> 'a)    -> (* Variable *)
+      (var_t list -> string * var_t list * var_t list -> 'a)
+                                     -> (* External map *)
+      (var_t list -> string * var_t list -> 'a)
+                                     -> (* Relation *)
+      (var_t list -> comp_t -> 'a -> 'a -> 'a)
+                                     -> (* Comparison *)
+      piped_term_t -> 
+      'a      
 
 end
 
@@ -42,11 +68,5 @@ module DeltaCalulus : sig
    
    type delta_term_t
       
-   val simplified_delta_terms: 
-      bool ->             (* operation == delete *)
-      string ->           (* Relation name *)
-      var_t list ->       (* Relation variables (== tuple) *)
-      piped_term_t ->     (* Term to be deltaed *)
-      (delta_term_t list) (* Delta terms *)
    
 end
