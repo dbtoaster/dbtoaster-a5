@@ -5,7 +5,7 @@
 \label{sec:intro}
 
 
-Dynamic, continuously evolving sets of records are a staple in a wide variety of
+Dynamic, continuously evolving sets of records are a staple of a wide variety of
 today's data management applications. Such applications range from large,
 social, content-driven Internet applications, to highly focused data processing
 verticals like data intensive science, telecommunications and intelligence
@@ -22,7 +22,7 @@ chandrasekaran-cidr:03}.
 We propose dynamic data management systems (DDMS) that are capable of handling
 arbitrary, high-frequency or high-impact updates on a general dataset,
 and any standing queries (views) posed on the dataset by long-running
-applications and services. We base the design of DDMS around four criteria:
+applications and services. We base the design of DDMS on four criteria:
 
 \begin{enumerate}
 \item
@@ -143,7 +143,7 @@ importance of up-to-date analyses increases. Traditionally, OLAP systems are not
 optimized for frequent updating, and may be considerably out-of-date. A DDMS 
 could dramatically improve the freshness of warehoused data.
 
-A DDMS is well-suited to large-scale data analytics through its provision of
+A DDMS is well-suited for use in large-scale data analytics through its provision of
 large dynamic data structures as views, instead of forcing programmers to
 re-implement view computations manually on top of key-value stores, and its
 emphasis on simple lightweight systems as opposed to the use of monolithic DBMS.
@@ -167,7 +167,20 @@ update stream, and cannot be handled by data stream processing systems.
 Examples include policy monitoring (e.g., to comply with regulatory requirements to monitor databases of financial institutions,
 say to detect money laundering schemes) \cite{BKM2010},
 network security monitoring, aiming to detect sophisticated attacks
-that span extended time periods, or certain forms of automated trading.
+that span extended time periods, and data-driven simulations such as
+Markov-Chain Monte Carlo (MCMC). MCMC is an extremely
+powerful paradigm for probabilistic databases \cite{DKM2010}.
+MCMC for query processing means to make a walk between databases
+by iteratively making local alterations to the database.
+Each database state encountered while doing this is considered a sample;
+a view is re-evaluated and statistics on its results are collected.
+The key technical database
+problem is thus to compute the view for as many samples as
+possible, as quickly as possible \cite{WMM2010}. This is precisely
+the kind of workload that DDMS are designed for.
+%
+Further examples of database monitoring can be found in
+certain forms of automated trading.
 In the following, we discuss one form of data-driven automated trading which may well prove to
 be a killer application for DDMS.
 
