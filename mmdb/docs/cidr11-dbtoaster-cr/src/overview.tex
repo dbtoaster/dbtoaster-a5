@@ -76,13 +76,13 @@ this method in which case the datastructure acts as a proxy with accessors that
 pull in any updates from the DDMS when invoked.
 (4) promises and futures~\cite{Liskov:1988:PLS:53990.54016}, which provide a
 push-based proxy datastructure for the
-result. A future is an object whose value is not initially know and is provided
+result. A future is an object whose value is not initially known and is provided
 at a later time. A program using a query returning a future can use the future
 as a native datatype, in essence constructing a client-side dataflow to be
 executed whenever the future's value is bound. In our case, this occurs whenever
 query results arrive from the DDMS. Language embedded stream processing can be
 supported by futures, or program transformations to construct client side
-dataflow, such as continuous passing style as found in the programming languages
+dataflow, such as continuation passing style as found in the programming languages
 literature~\cite{sussman-hsc:98}.
 
 
@@ -144,13 +144,14 @@ storage manager of a DDMS is responsible for the efficient representation of
 both the agile views and any index structures required on these views.
 Section~\ref{sec:storage} discusses the issue of indexing, as well as how views
 are laid out onto disk. Supporting ad-hoc query processing turns out to be
-relatively straightforward given the core of a DDMS continuously maintains agile
-views. Ad-hoc queries can be rewritten to use agile views much in a similar
-fashion to the materialized view usage problem in standard query optimization. A
-key challenge here is how to ensure consistency, such that ad-hoc queries do not
-use inconsistent agile views as update stream in and the DDMS performs
-maintenance. On the other hand, we do not want ad-hoc queries to block the DDMS'
-maintenance process and incur result delivery latency for continuous queries.
+relatively straightforward given that the core of a DDMS continuously maintains 
+agile views. Ad-hoc queries can be rewritten to use agile views much in a 
+similar fashion to the materialized view usage problem in standard query 
+optimization. A key challenge here is how to ensure consistency, such that ad-
+hoc queries do not use inconsistent agile views as updates stream in and the 
+DDMS performs maintenance. On the other hand, we do not want ad-hoc queries to 
+block the DDMS' maintenance process and incur result delivery latency for 
+continuous queries.
 One option here is to maintain a list of undo actions for each ad-hoc query with
 respect to agile view maintenance. This design is motivated by the fact that
 continuous queries are the dominant mode of usage, and ad-hoc queries are
