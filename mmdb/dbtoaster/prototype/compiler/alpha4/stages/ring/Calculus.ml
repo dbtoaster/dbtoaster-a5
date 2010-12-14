@@ -728,14 +728,12 @@ let apply_term_mapping (mapping: term_mapping_t)
    child terms redundantly.
 *)
 let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
-                  (workload: ((var_t list) * term_t) list):
-                  (((var_t list) * term_t) list *
-                   term_mapping_t) =
+                  (workload: ((var_t list) * term_t) list) :
+                  (((var_t list) * term_t) list * term_mapping_t) =
    let extract_from_one_term (params, term) =
       let prepend_params t =
          let p = (Util.ListAsSet.inter (term_vars t)
-                    (Util.ListAsSet.union params bound_vars)
-                 )
+                    (Util.ListAsSet.union params bound_vars))
          in (p, t)
       in
       List.map prepend_params (extract_aggregates_from_term false term)
@@ -748,13 +746,12 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
    let theta = mk_term_mapping name_prefix extracted_terms
    in
    (* apply substitutions to input terms. *)
-   let terms_after_substition =
-      List.map (fun (p, t) ->  (p, (substitute_in_term theta t)))
-               workload
+   let terms_after_substitution =
+      List.map (fun (p, t) ->  (p, (substitute_in_term theta t))) workload
    in
-   (terms_after_substition, theta)
+   (terms_after_substitution, theta)
 
-let extract_base_relations (workload: (var_t list * term_t) list):
+let extract_base_relations (workload: (var_t list * term_t) list) :
                            (string list * (var_t list * term_t) list) =
   let union_all l = List.fold_left ListAsSet.union [] l in
   let rec extract_from_one_term term:
@@ -1050,7 +1047,7 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
       )
     | Rel(rel_name, a_vars) -> 
       ( match b with
-        | Rel(rel_name, b_vars) -> 
+        | Rel(rel_name2, b_vars) when rel_name2 = rel_name -> 
             if (List.length a_vars) <> (List.length b_vars) then 
               raise (TermsNotEquivalent("Rel Var Mismatch"))
             else Some(List.fold_left2 map_var var_map a_vars b_vars)
