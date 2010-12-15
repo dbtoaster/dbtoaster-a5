@@ -613,6 +613,8 @@ struct
    let flatten ?(expr = None) (wmap:code_t): code_t =
       let (coll,collt) = (unwrapped_map wmap) in
       match collt with
+      |  Collection(Inline,[],Collection(Inline,ki,t)) ->
+            ((apply_one "List.flatten" coll),(Collection(Inline,ko,t)))
       |  Collection(Inline,ko,Collection(Inline,ki,t)) ->
             ((apply_one "List.flatten" 
                (apply_many "List.map" [
