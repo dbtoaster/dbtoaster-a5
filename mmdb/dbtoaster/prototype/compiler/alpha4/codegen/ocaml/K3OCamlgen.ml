@@ -468,7 +468,7 @@ struct
                   (mk_let ("("^(key_tuple (keyt@[valt]))^")") x);
                   IP.Leaf("(("^(wrap_key_tuple keyt)^"),"^
                     (key_tuple ~init_id:(List.length keyt) [valt])^")")])))
-               ("("^(key_tuple k)^","^mv^")") fn);
+               ("("^(key_tuple k)^",map_value)") fn);
              ((*unwrap_map*) coll)])),
           Collection(DBEntry,keyt,valt))
       
