@@ -35,24 +35,27 @@ val get_subterm:    piped_term_t -> string -> piped_term_t
 val bigsum_rewrite: 
    ?rewrite_mode:bs_rewrite_mode_t   -> (* Rewrite Mode *)
    piped_term_t                      -> (* Term to be rewritten *)
-   piped_term_t                         (* RETURN: rewritten term *)
+   unit
 
 val build_deltas: 
    ?compile_deletes:bool        -> (* Set to false to compile only inserts *)
    ((string * var_t list) list) -> (* Schema *)
    piped_term_t ->                 (* Base term (with unbuilt deltas) *)
-   piped_term_t                    (* RETURN: Base term with deltas built *)
+   unit
 
 val build_subterms_for_delta: 
    bool ->                       (* Insert or Delete *)
    string ->                     (* Relation name *)
    var_t list ->                 (* Relation variables *)
    piped_term_t ->               (* Base term *)
-   piped_term_t                  (* RETURN: Base term with subterms *)
+   unit
+
+val build_subterms_for_deltas:
+   piped_term_t -> unit
 
 (* Accessors *)
-val fold: (* Each operator has a var_t list, the set of input variables at 
-             that point in the expression *)
+val fold_pcalc: (* Each operator has a var_t list, the set of input variables at 
+                   that point in the expression *)
    (var_t list -> 'a -> 'a)       -> (* Negation of term *)
    (var_t list -> 'a list -> 'a)  -> (* Product of terms *)
    (var_t list -> 'a list -> 'a)  -> (* Sum of terms *)
@@ -67,3 +70,5 @@ val fold: (* Each operator has a var_t list, the set of input variables at
                                   -> (* Comparison *)
    piped_term_t -> 
    'a
+
+val string_of_piped_term: piped_term_t -> string

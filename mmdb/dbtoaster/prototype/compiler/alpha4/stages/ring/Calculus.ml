@@ -336,8 +336,17 @@ let monomials (q: relcalc_t): (relcalc_t list) =
 
 let polynomial (q: relcalc_t): relcalc_t = CalcRing.mk_sum (monomials q)
 
+let string_of_const c = 
+   match c with
+     Int(i)    -> string_of_int i
+   | Double(d) -> string_of_float d
+   | Long(l)   -> "(int64 output not implemented)" (* TODO *)
+   | String(s) -> "'" ^ s ^ "'"
+   | Boolean(true)  -> "true"
+   | Boolean(false) -> "false"
 
-
+let string_of_var = fst
+;;
 (* pseudocode output of relcalc expressions and terms. *)
 let rec relcalc_as_string (relcalc: relcalc_t): string =
    let sum_f  l = "(" ^ (Util.string_of_list " or " l) ^ ")" in
@@ -362,16 +371,8 @@ let rec relcalc_as_string (relcalc: relcalc_t): string =
 and term_as_string (m: term_t): string =
    let leaf_f (lf: term_lf_t) =
    (match lf with
-      Const(c)           ->
-         (match c with
-            Int(i)    -> string_of_int i
-          | Double(d) -> string_of_float d
-          | Long(l)   -> "(int64 output not implemented)" (* TODO *)
-          | String(s) -> "'" ^ s ^ "'"
-          | Boolean(true)  -> "true"
-          | Boolean(false) -> "false"
-         )
-    | Var(x)             -> (fst x)
+      Const(c)           -> string_of_const c
+    | Var(x)             -> (string_of_var x)
     | External(n,params) -> 
           n^"["^(Util.string_of_list ", " (fst (List.split params)))^"]"
     | AggSum(f,r)        ->
@@ -387,8 +388,10 @@ and term_as_string (m: term_t): string =
                      leaf_f m)
 ;;
 
+let string_of_relcalc = relcalc_as_string
+let string_of_term    = term_as_string
 
-
+;;
 
 (* given a relcalc monomial, returns a pair (eqs, rest), where
    eqs is the list of equalities occurring in the input

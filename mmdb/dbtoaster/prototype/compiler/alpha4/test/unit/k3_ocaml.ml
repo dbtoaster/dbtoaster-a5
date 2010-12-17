@@ -157,7 +157,7 @@ run_test "map (i)"
                   (tcode ~t:(K3O.Collection(K3O.Inline,[K3O.Float],
                                             K3O.Float)) "b"))
          (K3O.Collection(K3O.Inline,[K3O.Float],K3O.Float))
-         "List.map ((fun (key_0,key_1) -> ((<<a>>) (key_0,key_1)))) (<<b>>)"
+         "List.map ((fun (key_0,key_1) -> ((<<a>>) key_0,key_1))) (<<b>>)"
 ;;
 run_test "map (s)"
          (K3O.map (tcode ~t:(K3O.Fn([K3O.Tuple[K3O.Float;K3O.Float]],
@@ -210,31 +210,17 @@ run_test "group_by_aggregate (i)"
 ;;
 run_test "flatten (i-i)"
          (K3O.flatten
-            (tcode ~t:(K3O.Collection(K3O.Inline,[K3O.Float],
+            (tcode ~t:(K3O.Collection(K3O.Inline,[],
                       (K3O.Collection(K3O.Inline,[K3O.Float],K3O.Float)))) "a"))
-         (K3O.Collection(K3O.Inline,[K3O.Float;K3O.Float],K3O.Float))
-         "List.flatten (List.map (fun (key_0,inner_map) ->  List.map (fun (key_1,key_2) ->  (key_0,key_1,key_2)) (inner_map)) (<<a>>))"
-;;
-run_test "flatten (s-i)"
-         (K3O.flatten
-            (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],
-                      (K3O.Collection(K3O.Inline,[K3O.Float],K3O.Float)))) "a"))
-         (K3O.Collection(K3O.Inline,[K3O.Float;K3O.Float],K3O.Float))
-         "MC.fold (fun (key_0) inner_map accum -> ( List.map (fun (key_1,key_2) ->  (key_0,key_1,key_2)) (inner_map) ) @ accum) ([]) (<<a>>)"
+         (K3O.Collection(K3O.Inline,[K3O.Float],K3O.Float))
+         "List.flatten (<<a>>)"
 ;;
 run_test "flatten (i-s)"
          (K3O.flatten
-            (tcode ~t:(K3O.Collection(K3O.Inline,[K3O.Float],
+            (tcode ~t:(K3O.Collection(K3O.Inline,[],
                       (K3O.Collection(K3O.DBEntry,[K3O.Float],K3O.Float)))) "a"))
-         (K3O.Collection(K3O.Inline,[K3O.Float;K3O.Float],K3O.Float))
-         "List.fold_left (fun (key_0,inner_map) accum -> ( MC.fold (fun (key_1) key_2 inner_accum ->  (key_0,key_1,key_2)::inner_accum) ([]) (inner_map) ) @ accum) ([]) (<<a>>)"
-;;
-run_test "flatten (s-s)"
-         (K3O.flatten
-            (tcode ~t:(K3O.Collection(K3O.DBEntry,[K3O.Float],
-                      (K3O.Collection(K3O.DBEntry,[K3O.Float],K3O.Float)))) "a"))
-         (K3O.Collection(K3O.Inline,[K3O.Float;K3O.Float],K3O.Float))
-         "MC.fold (fun (key_0) inner_map accum -> ( MC.fold (fun (key_1) key_2 inner_accum ->  (key_0,key_1,key_2)::inner_accum) ([]) (inner_map) ) @ accum) ([]) (<<a>>)"
+         (K3O.Collection(K3O.Inline,[K3O.Float],K3O.Float))
+         "List.fold_left (fun accum inner_map ->  accum @ ( MC.fold (fun wrapped_key key_1 inner_accum ->  let key_0 = match wrapped_key with [key_0] -> (key_0) | _ -> failwith \"boom\" in  inner_accum @ [key_0,key_1]) ([]) (inner_map) )) ([]) (<<a>>)"
 ;;
 run_test "exists (i)"
          (K3O.exists

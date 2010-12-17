@@ -168,7 +168,7 @@ let rename_io_vars (new_p:var_t list) (pterm:piped_term_t):
 ;;
 
 let bigsum_rewrite ?(rewrite_mode = Calculus.ModeOpenDomain) 
-                   (pterm:piped_term_t): piped_term_t =
+                   (pterm:piped_term_t): unit =
    (if (get_internals pterm) <> Expression then 
       failwith "Attempt to bigsum rewrite a bigsum");
    let (bigsum_vars, bsrw_theta, bsrw_term) = 
@@ -194,16 +194,16 @@ let bigsum_rewrite ?(rewrite_mode = Calculus.ModeOpenDomain)
          (  (replace_definition bsrw_term pterm);
             (replace_subterms   ((get_subterms pterm) @ (converted_thetas)) 
                                 pterm);
-            (replace_internals  (BigSum(bigsum_vars)) pterm);
-            pterm)
+            (replace_internals  (BigSum(bigsum_vars)) pterm)
+         )
       else 
-         pterm
+         () (* do nothing if there are no bigsum components *)
 
 ;;
 
 let build_deltas ?(compile_deletes = true)
                  (schema:(string * var_t list) list)
-                 (pterm:piped_term_t): piped_term_t = 
+                 (pterm:piped_term_t): unit = 
    let compile_one_delta (rel:string) (tuple:var_t list) (delete:bool):
                          delta_t =
       let (monomial_terms, subbed_bs_vars) =
@@ -265,13 +265,13 @@ let build_deltas ?(compile_deletes = true)
                         (if compile_deletes then [true;false] else [false])
             ) schema
          ))
-      )) pterm);
-      pterm
+      )) pterm)
+      
 
 ;;
 
 let build_subterms_for_delta (delete:bool) (rel:string) (tuple:var_t list)
-                             (pterm:piped_term_t): piped_term_t =
+                             (pterm:piped_term_t): unit =
    let (terms_after_substitution, subterms) = 
       Calculus.extract_named_aggregates 
          ((get_map_name pterm)^(if delete then "_m" else "_p")^rel)
@@ -286,8 +286,19 @@ let build_subterms_for_delta (delete:bool) (rel:string) (tuple:var_t list)
       (replace_definition defn pterm);
       (replace_subterms ((get_subterms pterm) @ 
                          (convert_term_mapping (get_ivars pterm) subterms))
-                        pterm);
-      pterm
+                        pterm)
+
+;;
+
+let build_subterms_for_deltas (pterm:piped_term_t): unit =
+   (List.iter
+      (fun ((delete,rel),(tuple,delta_terms)) ->
+         List.iter (fun delta_term -> 
+            build_subterms_for_delta delete rel tuple delta_term
+         ) delta_terms
+      )
+      (get_deltas pterm)
+   )
 
 ;;
 
@@ -324,16 +335,17 @@ let build_sum (op_tsum:(var_t list -> 'a list -> 'a))
 
 ;;
 
-let fold (op_neg:(var_t list -> 'a -> 'a))
-         (op_prod:(var_t list -> 'a list -> 'a))
-         (op_tsum:(var_t list -> 'a list -> 'a))
-         (op_asum:(var_t list -> 'a -> 'a))
-         (op_const:(var_t list -> const_t -> 'a))
-         (op_var:(var_t list -> var_t -> 'a))
-         (op_ext:(var_t list -> piped_term_t * var_t list * var_t list -> 'a))
-         (op_rel:(var_t list -> string * var_t list -> 'a))
-         (op_cmp:(var_t list -> comp_t -> 'a -> 'a -> 'a))
-         (pterm:piped_term_t): 'a =
+let fold_pcalc
+      (op_neg:(var_t list -> 'a -> 'a))
+      (op_prod:(var_t list -> 'a list -> 'a))
+      (op_tsum:(var_t list -> 'a list -> 'a))
+      (op_asum:(var_t list -> 'a -> 'a))
+      (op_const:(var_t list -> const_t -> 'a))
+      (op_var:(var_t list -> var_t -> 'a))
+      (op_ext:(var_t list -> piped_term_t * var_t list * var_t list -> 'a))
+      (op_rel:(var_t list -> string * var_t list -> 'a))
+      (op_cmp:(var_t list -> comp_t -> 'a -> 'a -> 'a))
+      (pterm:piped_term_t): 'a =
    let 
    rec rcr_term (ivars:var_t list) (term:readable_term_t): 
                 (var_t list * 'a) =
@@ -410,3 +422,47 @@ let fold (op_neg:(var_t list -> 'a -> 'a))
          )
    in 
       ret
+
+;;
+
+open SourceCode
+
+let rec source_code_of_piped_term (pterm:piped_term_t): source_code_t =
+   let mk_parens = parenthesize_source_code "(" ")" in
+   let mk_op_list null_val op exprs = 
+      if exprs = [] then Inline(null_val)
+      else List.fold_left (binary_op_source_code (" "^op^" ")) 
+                          (mk_parens (List.hd exprs))
+                          (List.map mk_parens (List.tl exprs))
+   in
+   fold_pcalc
+      (fun ivars expr  -> unary_op_source_code "-" (mk_parens expr))
+      (fun ivars exprs -> mk_op_list "1" "*" exprs)
+      (fun ivars exprs -> mk_op_list "0" "+" exprs)
+      (fun ivars expr  -> parenthesize_source_code "Sum{" "}" expr)
+      (fun ivars c     -> Inline(string_of_const c))
+      (fun ivars v     -> Inline(string_of_var v))
+      (fun ivars (pt,iv,ov) -> 
+         concat_source_code 
+            (Inline((get_map_name pt)^(Util.list_to_string string_of_var iv)^
+                                      (Util.list_to_string string_of_var ov)))
+            (parenthesize_source_code "{" "}" (source_code_of_piped_term pt))
+      )
+      (fun ivars (rel,tuple) -> 
+         Inline(rel^(Util.list_to_string string_of_var tuple))
+      )
+      (fun ivars cmp lhs rhs -> 
+         (binary_op_source_code 
+            (" "^(match cmp with Eq->"=" | Lt->"<" | Le->"<=" | Neq->"<>")^" ")
+            lhs rhs
+         ))
+      pterm
+
+let string_of_piped_term (pcalc:piped_term_t): string = 
+   string_of_source_code (
+      concat_source_code 
+         (Inline((get_map_name pcalc)^
+                 (Util.list_to_string string_of_var (get_ivars pcalc))^
+                 (Util.list_to_string string_of_var (get_ovars pcalc))))
+         (parenthesize_source_code "{" "}" (source_code_of_piped_term pcalc))
+   )

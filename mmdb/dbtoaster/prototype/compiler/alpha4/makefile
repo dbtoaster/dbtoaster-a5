@@ -1,5 +1,6 @@
 SOURCE = \
 	util/Util.ml \
+	codegen/SourceCode.ml \
 	stages/ring/Ring.ml \
 	stages/ring/Calculus.mli \
 	stages/ring/Calculus.ml \
@@ -11,6 +12,8 @@ SOURCE = \
 	stages/maps/M3Common.ml \
 	stages/ring/Compiler.mli \
 	stages/ring/Compiler.ml \
+	stages/ring/PipedCompiler.mli \
+	stages/ring/PipedCompiler.ml \
 	stages/ring/CalcToM3.mli \
 	stages/ring/CalcToM3.ml \
 	stages/maps/M3Compiler.mli \
@@ -33,7 +36,6 @@ SOURCE = \
 	lib/ocaml/Runtime.ml \
 	codegen/ocaml/M3Interpreter.ml \
 	codegen/ocaml/M3OCamlgen.ml \
-	codegen/SourceCode.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
 	codegen/ocaml/K3OCamlgen.ml

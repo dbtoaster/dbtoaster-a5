@@ -151,6 +151,11 @@ type relalg_t =
 (* output relcalc or term as string. *)
 val relcalc_as_string: relcalc_t -> string
 val term_as_string:    term_t    -> string
+(* output following Ocaml naming conventions >.< *)
+val string_of_const:   const_t   -> string
+val string_of_var:     var_t     -> string
+val string_of_relcalc: relcalc_t -> string
+val string_of_term:    term_t    -> string
 
 
 
