@@ -414,7 +414,13 @@
         in
             RA_Leaf(c)
 
-
+    let negate_map_term t =
+        match t with
+            | RVal(Const(Int(x))) -> RVal(Const(Int(-x)))
+            | RVal(Const(Long(x))) -> RVal(Const(Long(Int64.neg x)))
+            | RVal(Const(Double(x))) -> RVal(Const(Double(-.x)))
+            | _ -> raise (SQLParseError("Invalid unary minus")) 
+    
     let create_binary_map_term op_token l r =
         match op_token with
             | `Sum -> RSum([l;r])
@@ -578,8 +584,9 @@
 %token <int> INT   
 %token <float> FLOAT
 %token DATE
-%token SUM MINUS PRODUCT DIVIDE
 %token EQ NE LT LE GT GE
+%token SUM MINUS
+%token PRODUCT DIVIDE
 %token AND OR NOT BETWEEN
 %token COMMA LPAREN RPAREN PERIOD
 %token AS
@@ -591,6 +598,12 @@
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS
 %token EOSTMT
 %token EOF
+
+%left AND OR NOT BETWEEN
+%left EQ NE LT LE GT GE
+%left SUM MINUS
+%left PRODUCT DIVIDE
+%nonassoc UMINUS
 
 // start   
 %start dbtoasterSqlList
@@ -860,6 +873,12 @@ whereClause:
 |                         { None }   
 | WHERE constraintList    { Some($2) }
 
+//
+// Expressions
+
+// Note we use polymorphic variants for operators to defer 
+// construction of actual map algebra expressions
+
 // Join, where clause constraints
 // Note: these are constraint-only relational algebra expressions, thus can
 // be safely complemented.
@@ -871,12 +890,14 @@ constraintList:
 | LPAREN constraintList RPAREN          { $2 }
 
 atomicConstraint:
-| mapTerm cmp_op mapTerm               { create_constraint $2 $1 $3 }
+| mapTerm EQ mapTerm                   { create_constraint `EQ $1 $3 }
+| mapTerm NE mapTerm                   { create_constraint `NE $1 $3 }
+| mapTerm LT mapTerm                   { create_constraint `LT $1 $3 }
+| mapTerm LE mapTerm                   { create_constraint `LE $1 $3 }
+| mapTerm GT mapTerm                   { create_constraint `GT $1 $3 }
+| mapTerm GE mapTerm                   { create_constraint `GE $1 $3 }
 | mapTerm BETWEEN mapTerm AND mapTerm  { raise (FeatureUnsupported("BETWEEN")) }
 | LPAREN atomicConstraint RPAREN       { $2 }
-
-//
-// Expressions
 
 mapTermList:
 | mapTerm                      { [$1] }
@@ -893,31 +914,22 @@ mapTerm:
         with Failure("hd") -> 
           raise (SQLParseError("Looking up schema for empty term list"))
     }
+| mapTerm SUM mapTerm         { create_binary_map_term `Sum     $1 $3 }
+| mapTerm MINUS mapTerm       { create_binary_map_term `Minus   $1 $3 }
+| mapTerm PRODUCT mapTerm     { create_binary_map_term `Product $1 $3 }
+| mapTerm DIVIDE mapTerm      { create_binary_map_term `Divide  $1 $3 }
+| MINUS mapTerm %prec UMINUS  { negate_map_term $2 }
 | LPAREN mapTerm RPAREN       { $2 }
-| mapTerm arith_op mapTerm    { create_binary_map_term $2 $1 $3 }
 
 
 //
 // Terminals
 
-// Note we use polymorphic variants for operators to defer 
-// construction of actual map algebra expressions
-cmp_op:
-| EQ { `EQ } | NE { `NE }
-| LT { `LT } | LE { `LE }
-| GT { `GT } | GE { `GE }   
-
-arith_op:
-| SUM        { `Sum }
-| MINUS      { `Minus }
-| PRODUCT    { `Product }
-| DIVIDE     { `Divide }
-
 value:
 | INT         { Const(Int($1)) }
 | FLOAT       { Const(Double($1)) }
-| MINUS INT   { Const(Int(-1 * $2)) }
-| MINUS FLOAT { Const(Double(-1. *. $2)) }
+//| MINUS INT   { Const(Int(-1 * $2)) }
+//| MINUS FLOAT { Const(Double(-1. *. $2)) }
 | STRING      { Const(String($1)) }
 | DATE LPAREN STRING RPAREN
           { 
