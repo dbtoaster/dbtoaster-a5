@@ -13,6 +13,8 @@ CREATE TABLE bids(broker_id float, price float, volume float)
 --       > (select sum(b2.volume) from bids b2 where b2.price > b1.price)
 --group by broker_id;
 
+-- b1.broker_id is an example of upward propagation only
+-- b1.price is propagated sideways and marginalized (bigsum)
 SELECT b1.broker_id, sum(b1.price * b1.volume) 
 FROM   bids b1
 WHERE  0.25 * (select sum(b3.volume) from bids b3)
