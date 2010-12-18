@@ -1,3 +1,10 @@
+/* Result
+ sum  
+------
+ 6005
+(1 row)
+ */
+
 CREATE TABLE LINEITEM (
         orderkey       int,
         partkey        int,

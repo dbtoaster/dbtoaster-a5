@@ -1,3 +1,10 @@
+/* Result:
+    sum    
+-----------
+ 898778.73
+(1 row)
+ */
+
 CREATE TABLE LINEITEM (
         orderkey       int,
         partkey        int,
