@@ -1,3 +1,12 @@
+/* Oliver's answers below are wrong. The result Postgres yields is:
+ ttid | sum 
+------+-----
+(0 rows)
+ 
+ * Yanif.
+ */
+
+/* IGNORE
 -- Correct answer for test data
 -- Task.ttid, Assigned, Available
 -- 45,10,3
@@ -24,6 +33,7 @@
 -- 961,10,4
 -- 993,10,4
 -- 997,10,4
+*/
 
 CREATE TABLE Server(ssid int, status int)
   FROM FILE 'test/data/ca_servers.dat'
