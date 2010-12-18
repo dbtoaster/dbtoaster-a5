@@ -1,3 +1,19 @@
+/* Result on vwap5k:
+ broker_id |    sum     
+-----------+------------
+         0 | 3272944500
+         6 | 3177815000
+         5 | 3726588200
+         1 | 1762549100
+         2 | 1971296500
+         3 | 3687987500
+         7 | 4095129000
+         9 | 3560192200
+         8 | 2037308000
+         4 | 3938198700
+(10 rows)
+ */
+
 CREATE TABLE bids(broker_id float, price float, volume float)
   FROM FILE 'test/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');

@@ -1,3 +1,10 @@
+/* Result on vwap5:
+     sum     
+-------------
+ 31230008700
+(1 row)
+ */
+
 CREATE TABLE bids(price float, volume int)
   FROM FILE 'test/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', validate := 'true');

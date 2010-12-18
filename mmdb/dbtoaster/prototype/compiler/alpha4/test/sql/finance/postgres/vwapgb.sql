@@ -1,7 +1,14 @@
-DROP TABLE IF EXISTS bids;
-CREATE TABLE bids(broker_id float, price float, volume float);
+DROP TABLE IF EXISTS InsertBids;
+CREATE TABLE InsertBids(broker_id float, price float, volume float);
 
-COPY BIDS FROM '@@PATH@@/testdata/BIDS.dbtdat' WITH DELIMITER ',';
+DROP TABLE IF EXISTS DeleteBids;
+CREATE TABLE DeleteBids(broker_id float, price float, volume float);
+
+COPY InsertBids FROM '@@PATH@@/testdata/InsertBIDS.dbtdat' WITH DELIMITER ',';
+COPY DeleteBids FROM '@@PATH@@/testdata/DeleteBIDS.dbtdat' WITH DELIMITER ',';
+
+SELECT broker_id, price, volume INTO TABLE Bids FROM InsertBids
+EXCEPT ALL SELECT broker_id, price, volume FROM DeleteBids;
 
 SELECT b1.broker_id, sum(b1.price * b1.volume) 
 FROM   bids b1
@@ -11,4 +18,6 @@ WHERE  0.25 * (select sum(b3.volume) from bids b3)
                 from bids b2 where b2.price > b1.price) as R)
 GROUP BY b1.broker_id;
 
-DROP TABLE bids;
+DROP TABLE InsertBids;
+DROP TABLE DeleteBids;
+DROP TABLE Bids;
