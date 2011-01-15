@@ -1,0 +1,230 @@
+\documentclass[11pt]{amsart}
+\usepackage{geometry}                % See geometry.pdf to learn the layout options. There are lots.
+\geometry{letterpaper}                   % ... or a4paper or a5paper or ... 
+%\geometry{landscape}                % Activate for for rotated page geometry
+%\usepackage[parfill]{parskip}    % Activate to begin paragraphs with an empty line rather than an indent
+\usepackage{graphicx}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+\usepackage{color}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\title{The DBToaster Compilation Algorithm}
+\author{Yanif Ahmad, Oliver Kennedy, Christoph Koch}
+
+\newcommand{\todo}[1]{\textcolor{red}{[#1]}}
+\newcommand{\note}[1]{\textcolor{blue}{[#1]}}
+\newcommand{\tuple}[1]{\left<{#1}\right>}
+\newcommand{\parsection}[1]{\smallskip\noindent{\bf #1.}}
+
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+The DBToaster system provides a powerful model for optimizing database queries and providing them with an efficient incremental maintenance runtime.  However, DBToaster fails to produce efficient runtimes when presented with a query containing inequalities.  This is because DBToaster's currently restricts itself to a single datastructure: key-value style multi-key maps.  However, when dealing with inequalities, use of specialized datastructures like sorted lists, range trees, and spatial indices is typically requied for optimal efficiency.
+
+The goal of this internal document is threefold.  First, we document the language that DBToaster operates over.  This language provides a simple mechanism for stating and restructuring the evaluation of database queries. 
+
+Second, we analyze and describe the DBToaster compilation process.  We break the compilation process into individual stages and provide a detailed description of each component's goals and methods.  The goal of the first section is to streamline the process of implementing the DBToaster compiler in an efficient and clean manner, and to provide documentation for future developers.
+
+Finally, we delve into a specific component of the compilation process - the task of subexpression extraction.  This component forms the core of DBToaster's recursive compilation process, by identifying and extracting expressions which may be individually maintained as discrete datastructures.  We develop a classification system for expressions that can be extracted in this stage and develop a set of datastructures suited to each class.
+
+\section{Representing Queries}
+Queries are expressed in DBToaster using a language modeled after relational calculus.  We now present a simplified version of this language.
+
+Expressions in the language are characterized by bags (i.e., sets using bag semantics).  In this context, a bag consists of a schema (i.e., a list of variable names and types) and a set of key-value pairs, where each key contains a tuple conforming to the schema, and the value corresponds roughly to the arity of the tuple in the bag.  It should, however, be noted that the value may be negative, or a non-integer value (e.g., it is possible for an element of the bag to have an arity of -0.5, for example).  Each expression defines its own {\it available schema}\footnote{Note that not all elements of the projected schema are, strictly speakng, neccessary.  Te {\it projected schema} may be computed top-down based on the usage.  Doing so is beyond the scope of this document.}.  The top-level expression's projected schema consists of the group-by variables in the represented query.  The projected schema of a subexpression is defined through rules specific to each subexpression.  It is an error if the projected schema of an expression is not a subset of or equal to the available schema. 
+
+Each expression in the language is associated with a surrounding environment, a set of tuples with a schema (like the value of the expression, but without an arity).  The top-level expression's environment is typically empty\footnote{The exception to this rule occurs when the expression represents a functional, or parameterized query. In this case, each tuple in the environment represents one set of parameter/value pairs currently being used in the query}.  The environment is built top down, using rules specific to each type of sub-expression\footnote{Like the schema of an expression, the environment may encompass more information than is necessary.  The projected environment may be built bottom-up.  The process for doing so is described below.}.
+
+It should also be noted that there is a distinction between tuples of arity zero which are present in the bag, and tuples which are not present in the bag.  This distinction makes it possible to extract a finite domain for the bag (given an environment, as described below) and iterate over it.  Particularly where comparison operations are concerned, zero is a valid arity.  However, the finite domain of the relational tables, and the limitation of aggregates exclusively to sums, the top-level query is guaranteed to be drawn from this finite domain, even if intermediate stages are not\todo{This sounds all manner of sketchy.  Clean it up.}
+
+\subsection{Language Specification}
+The language contains three types of leaf values: 
+\begin{itemize}
+\item Constants: A bag containing only one tuple with arity equal to the constant.  The available schema of this expression is the empty set.  
+
+\item Variables: A bag defined by the current environment.  The bag's schema contains only one column: the variable named in the leaf expression.  The tuples appearing in the bag are the set-projection of the corresponding column of the environment.  Each tuple in the bag has arity equal to the tuple's value (which need not be a positive integer).  
+
+\item Relations: These leaves correspond to the relations on which the query is based.  A relation leaf corresponds to a bag containing all of the tuples in relation, paired with their arity.  The available schema consists of the columns in the relation, with names specified in the Relation leaf. 
+\end{itemize}
+
+The language includes one simple unary operator:
+\begin{itemize}
+\item Negation: This unary operator changes only the arity of tuples in its resultant bag, negating them.
+\end{itemize}
+
+The language includes three types of binary operators:
+\begin{itemize}
+\item Addition: Represents a bag union between the two sub-expressions. The available schema of this expression is the intersection of the available schemas of the two sub-expressons.  The environment presented to each sub-expression is identical to that presented to the outer expression.  Addition is commutative and associative.
+\item Multiplication: Represents a natural join between elements of the two sub expressions.  The available schema of this expression is the union of the available schemas of the two sub-expressions.  The environment passed to the left-hand sub-expression is the same as the environment passed to the outer expression.  The environment passed to the right-hand sub-expression is the set-natural join of the outer environment and the tuples present in the left-hand subexpression.  The arity of each tuple in the output is the product of the corresponding left and right hand side tuples.  Multiplication is not associative\footnote{Though multiplication may be associative in certain (identifiable) expressions, this is not the general case.  In particular, note that the environment is built up left-associatively; references to environment variables are always preceeded by a sub-expression where the environment variable is "defined."  For right-hand-side expressions where an environment variable is used, the variable's defining sub-expression and all sub-expressions in between are non-associative.}, nor commutative\footnote{Again in certain cases, multiplication is commutative, depending on how the environment is constructed.  A variable's "defining" sub-expression does not commute with a sub-expression where the variable is used.}.  Addition is distributive over multiplication.
+\item Comparison(eq, neq, lt, lte, gt, gte): Represents an comparison test between the sub-expressions.  Identical to the multiplication binary operator, except that the arity of the result tuple depends on the resut of a comparison between the arities of the left- and right-hand side tuples that produced it.  The resultant arity is 1 if the comparison between the input arities holds (e.g., if the comparison is eq and the input arities are the same), and 0 otherwise.  It is also relevant to note that it may be possible to rewrite an eq comparison operator into a  definition operator, as described below.  Comparison is neither associative, nor commutative.
+\end{itemize}
+
+The language also includes two special unary operators:
+\begin{itemize}
+\item Definition: This operator is expressed with a variable and a sub-expression.  The sub-expression is evaluated and a column is added to the result, named according to the provided variable.  The value of this column is the arity of the subexpression.  The arity of all resultant tuples is 1.  The available schema of the output is equivalent to the output schema of the sub-expression.  It is an error if the variable is present in the local environment.\footnote{Though this operator is functionally different from the equality comparison, the latter is often as shorthand for the former.  If it is possible to re-express the equality comparison as $v = e$, and $v$ is not in the local environment, it may be taken as a definition.  If $v$ is in the environment, it may be possible to re-write the expression to replace the variable elsewhere.  The procedure for doing so is described in depth in the core DBToaster paper.}
+\item Sum: A project-and-aggregate operator.  Each Sum operator takes a sub-expression and a set of column names-the group-by columns appearing in the sub-expression's available schema.  The Sum operator projects out all non-group-by columns in the sub-expression, and for each unique result tuple, generates an arity equal to the sum of the arities of each matching input tuple.  The output schema is defined by the group-by columns.  
+\end{itemize}
+
+\begin{figure}
+$$ e := e * e | e + e | -e | const | v | Sum_{\vec v}(e) | Rel(\vec v) | v := e | e \otimes e$$
+$$ \otimes := = | \neq | < | \leq | > | \geq$$
+\caption{The languge schema used by DBToaster}
+\end{figure}
+
+\subsection{Environment Usage}
+It is relevant to note that the full environment passed to an expression is not used in its entirity.  Environment variables appear in two forms: (1) Variable leaves, and (2) Relation leaves.  If a variable does not appear in either form in the leaves of an expression, it may be marked as unused and functionally eliminated from the environment.  Moreover, the use of environment variables to pre-prune the bag tuples produced by the relation can be viewed as an optimization; these variables need not be used in this way.  Thus, for the purpose of this document, we concern ourselves only with environment variables that appear in the Variable leaves.  From this point on, when we refer to the environment of an expression, we include only those variable that appear in as Variable leaves of the subexpression; Note that this causes the environment to be defined bottom-up.  Though the value of each environment variable is  drawn from outside the expression, the minimal schema for the environment is defined by the expression itself.
+
+\section{The DBToaster Compiler}
+
+\subsection{Externals}
+The fundamental idea of the DBToaster compiler is that we can construct datastructures capable of cleanly and efficiently evaluating queries of interest.  In particular, these datastructures can be maintained incrementally.  Rather than evaluating the entire query repeatedly, we can store a representation of the query results that is live-updated as the underlying data changes.  
+
+We refer to these datastructures as Externals.  An External can be used to replace any subexpression (or, indeed the entirity) of an expression in DBToaster's processing language.  We formalize this notion by introducing a new leaf type to the language, representing a pointer to, and parametrization of an External.  
+
+An External datastructure instance is representative of a {\it defining} expression and consists of four components: (1) An expected environmental context: a list of environment variables that are used by the defining expression. (2) An output schema: a list of columns that appear in the output of the defining expression.  (3) An accessor function: A function that takes an environment (conforming to the expected environmental context) and produces an output identical to that produced by the defining expression.  (4) A set of update triggers, as defined below.
+
+Update triggers are the mechanism by which the External datastructure is modified.  Whenever one of the base relations in the External's expression is modified (i.e., inserted into or deleted), a corresponding update trigger is invoked.  The External datastructure includes one update trigger for each base relation appearing in its defining expression.  Each update trigger includes a query, and a piece of code which applies the result of the trigger query to the datastructure.  The trigger query accepts an environment from the base relation being updated\footnote{Though not strictly speaking necessary, we have found it convenient to also include a mapping from the schema of the base relation (which does not have a named schema in the DBToaster language) to the corresponding variable names that appear in the trigger expression}.
+
+An External leaf appearing in an (outer) expression consists of three components: (1) A pointer to the datastructure representing the external (e.g., a human-readable name or identifier).  (2) A mapping from variable names in the outer expression to Environment variables used by the External's accessor function.  (3) A mapping from columns appearing in the External's output to the column names expected by the outer expression.
+
+We return to Externals in Section \ref{sec:externals}.  For the remainder of this section, it is sufficient to understand that we have a mechanism for subdividing arbitrary expressions into their External representation(s), and that each External includes a set of update triggers, each of which may require the evaluation of a query expression.
+
+\subsection{Compilation Overview}
+The DBToaster compilation process operates on a queue of  Externals.  The first step in the compilation process is to identify the External (or Externals) which can most efficiently maintain the goal query \todo{Though this is similar to the Extract phase of the compilation process, I can't shake the feeling that there's a subtle difference.  We should discuss this further.}.  These Externals form the initial contents of the compiler's work queue.
+
+The compiler loops over thr following four phases as long as any Externals remain on its work queue.
+\begin{enumerate} 
+\item Delta: Identify the set of expressions required to maintain the External at the head of the queue.  This list is dependent on the type of External being maintained (see below).  Then, for each of these expressions...
+\item Simplify: Reduce the expression to its simplest form (i.e., defined variables resolved where possible, terms eliminated, variables pulled out of subexpressions where possible, etc...).  Each expression is further simplified into a set of monomial terms, for each of which...
+\item Extract: If the expression being evaluated is a constant, do nothing.  Otherwise, subdivide the expression into components, each of which can be efficiently maintained by an External.  Rewrite the expression in terms of these Externals, and enqueue each for further processing. 
+\end{enumerate}
+
+The result of the compilation process is a bimodal tree.  The root (depth zero) and every even-depth node represents a datastructure.  Every odd-depth node represents a delta query.  Correspondingly, each loop through the compilation process adds two levels below the (datastructure) node being processed.
+
+Note that the compiler work queue operates on Externals, not expressions.  Consequently, the first step of the compilation process is to identify the type of External datastructure capable of most efficiently incrementally maintaining the overall expression.  This phase is identical to the Extract phase of the compilation process, save that we first perform a Simplify on the entire expression.  We do not discuss this phase further.
+
+We now discuss the three phases of the compilation process in depth.
+\subsection{The Delta Phase}
+This is the most complex phase, as each different class of External has its own approach to generating update triggers.  However, there are commonalities between the methods used by the different classes of Externals.  What we now describe is the most general form of this process, originally described (in much greater depth) in~\cite{dbt-pods}.  
+
+Given an expression $e$, we can recursively define its delta $d[e]/d\pm R(\vec x)$ with respect to a specific base relation $R$\footnote{Though the delta can be taken with respect to any base relation, deltas with respect to a base relation that does not occur in the expression are equivalent to zero.  Thus, when discussing the set of deltas for an expression, it is implicitly assumed that the set is limited to those base relations occurring in the expression}, being inserted into or deleted from (for now, we treat updates as a deletion followed by an insertion)  Each delta is parameterized by an environment containing a set of variables $\vec x$, which obtain their values from the tuple being inserted into or deleted from the relation.  These variables are collectively referred to as the delta tuple.
+
+\parsection{Constant, Variable}  The delta of a constant or variable is the constant zero.
+
+$$d[v|const]/d\pm R(\vec x) = 0$$
+
+\parsection{Negation}  The delta of a negation of subexpression is the negation of the subexpression's delta.
+
+$$d[-e]/d\pm R(\vec x) = -(d[e]/d\pm R(\vec x))$$
+
+\parsection{Sum}  The delta of a sum aggregate is the sum of the delta.
+
+$$d[Sum_{\vec y}(e)]/d\pm R(\vec x) = Sum_{\vec y}(d[e]/d\pm R(\vec x))$$
+
+\parsection{Definition}  The delta of a definition term is undefined, as definition terms should be removed in a prior simplify phase.  If necessary, however, definition terms may be treated as equality terms.
+
+$$d[v := e]/d\pm R(\vec x) = d[v = e]/d\pm R(\vec x)$$
+
+\parsection{Base Relations}  The delta of any base relation other than the base relation with respect to which the delta is being taken is zero.  The delta of the base relation with respect to which the delta is being taken is $\pm 1$ (depending on whether the operation is an insertion or a deletion) times a series of definitions mapping the delta tuple to the variables appering in the relation term.
+
+$$d[R'(\vec y)]/d\pm R(\vec x) \{s.t.\ R \neq R'\} = 0$$
+$$d[R(\vec y)]/d+R(\vec x) = \prod_i y_i := x_i$$
+$$d[R(\vec y)]/d-R(\vec x) = -\prod_i y_i := x_i$$
+
+\parsection{Addition}  The delta of the sum of two expressions is the sum of the delta of each expression.
+
+$$d[e_1 + e_2]/d\pm R(\vec x) = d[e_1]/d\pm R(\vec x) + d[e_2]/d\pm R(\vec x)$$
+
+\parsection{Multiplication}  The delta of the product of two expressions is best understood as the distributive law applied to the post-delta version of the expressions $e+d[e]/d\pm R(\vec x)$, minus the original value of the expression.
+
+$$d[e_1 * e_2]/d\pm R(\vec x) = 
+	e_1 * d[e_2]/d\pm R(\vec x) +
+	e_2 * d[e_1]/d\pm R(\vec x) +
+	d[e_1]/d\pm R(\vec x) * d[e_2]/d\pm R(\vec x)$$
+
+\parsection{Comparison}  The delta of a comparison expression is the effect of transitioning from the expression's pre-delta state to its post-delta state.  
+
+$$d[e_1 \otimes e_2]/d\pm R(\vec x) = 
+	(d[e_1]/d\pm R(\vec x) + e_1) \otimes (d[e_2]/d\pm R(\vec x) + e_2) - (e_1 \otimes e_2)$$
+
+Note that all of these rules except the comparison delta rule result in a simpler expression.  We examine this characteristic in depth when we examine the different classes of datastructure in Section \ref{sec:externals}.
+
+\subsection{The Simplify Phase}
+The goal of this phase is to reduce an expression to a simplified form.  The resultant expression has the following characteristics:
+\begin{enumerate}
+
+\item A sum of monomial sum aggregates: Addition terms in the expression are pulled up to the top where possible; The distributive law allows addition to be pulled through multiplications, and the sum aggregate of the sum of two terms is the sum of the sum aggregate over each individual term.  Addition terms may still remain, nested under a comparison term.  
+
+\item No definition terms: The mappings described by each definition term in an expression have been applied where possible (i.e., variable leaves are replaced), or turned into equality comparisons (if the defined variable appears in a Relation term)
+
+\item Each monomial has a single constant at it's root level, located in front of the term
+
+\item Monomial terms are nonzero.
+
+\item Variables are pulled as far to the left-hand side of the expression as possible. \todo{is this necessary?}
+\end{enumerate}
+
+The simplify phase involves finding the fixed point of the repeated application of the following set of simplifications, in the following order.
+
+\parsection{Monomialization} (i.e. RolyPoly)
+Find the fixed point of the following three substitutions.
+$$(e_1 * (e_2 + e_3)) = (e_1 * e_2) + (e_1 * e_3)$$
+$$Sum(e_1 + e_2) = Sum(e_1) + Sum(e_2)$$
+$$-(e_1 + e_2) = (-e_1) + (-e_2)$$
+
+Recurse through the entire expression, even going into comparison terms.
+
+\parsection{Constant Extraction and Zero Removal}
+
+\parsection{Definition Expansion}
+
+\subsection{The Extract Phase}
+In the final phase of compilation, we identify patterns in the expression that suggest which datastructure is best suited to maintaining the expression.
+
+ be replaced by a map expression.
+
+
+
+\section{Externals}
+\label{sec:externals}
+
+\subsection{Current DBToaster}
+A range of different datastructures may be employed to implement External leaves.  The simplest, a nullary external simply evaluates the subquery inline, rather than performing any incremental maintenance.  DBToaster employs two additional external datastructures: (1) The incremental-map external, and (2) The incremental-cache external.  We now discuss the two existing external datastructures in depth.
+
+\parsection{Incremental Map Externals}
+A incremental map external is one who's represented expression contains no comparison terms, and has an empty environment (i.e., no variables in the represented expression are parametrerized by the environment.  In effect, this datastructure is simply a dynamically maintained bag (with indexed lookups, if environment variables are pushed down into relations).  Consequently read operations are fast.  Incremental maintenance operations require the evaluation of one of the delta terms; typically these are themselves expressed as incremental map externals and thus efficient.
+
+Note that the limitations on expressions that may be implemented as incremental maps are weaker than they appear.  Even relatively complex equality terms can be rewritten into definition terms.  Sums may be pulled up to the root by using the disributive property over multiplication, resulting in (in the absence of any remaining comparison terms) a simple polynomial expression.  Each sub-expression in the top-level sum may be expressed as a separate incremental map, simplifying matters further.  Variable leaves referencing external environment variables may be commuted out of the external leaf.  A thorough treatment of these rewrite rules is provided in \cite{dbt-pods}.
+
+\parsection{Incremental Cache}
+Even if the expression requires one or more environment variables (or more generally, if the environment variables can not be effectively integrated into the underlying incremental datastructure), DBToaster can still employ a limited form of incremental maintenance by caching.  
+
+The most general approach to caching environment-requiring expressions is to create multiple instantiations of the underlying datastructure; We create one instance for each environment encountered thus far.  When the instance is first creeated, the expression must be evaluated in its entirity.  However, from this point, we can maintain the expression incrementally.  
+
+Note that this approach is situational and heavily data-dependent; caching works only if the domain of the environment is small or at least infrequently changing.  By caching entire datastructures, DBToaster is effectively producing additional incremental maintenence work for itself, work which may never be put to use.  Thus, as with all caching mechanisms, the selection of an invalidation strategy is critical not just to alleviate memory requirements, but also to alleviate processing requirements.  
+
+A potential extension to this model would be to keep a record of operations that may affect the underlying datastructure (i.e., changes to the input relations) rather than updating all of the cached copies of the datastructure.  When a particular instance of the datastructure is read from, rather than evaluating the expression to generate the entire bag,  we simply compute the delta-bag since the expression was last accessed.  In general this is likely to require far less work.
+
+\parsection{Bigsum Rewriting}
+
+\subsection{New Externals} 
+
+\parsection{Incremental Equimap}
+This datastructure is designed to incrementally maintain expressions of the form $e := (a = b)$ (or, almost equivalently $a \neq b$) where there is an empty environment (or where the environment may be easily extracted); in particular those that can not be rewritten into definition terms.  Hence the delta rewriting:
+$$de := (da+a = db+b)*(a \neq b) - (da+a \neq db+b)*(a = b)$$
+This rewriting essentially identifies transitions between states where a pair of subexpressions $a, b$ either starts or stops being equal.  Specifically, we are concerned with identifying matching tuples in the generated bags with equal arities.
+
+The solution to this problem is to simply index the arity as well as the other relevant datapoints.  The datastructure in question is composed of two component maps, one for each subexpression.  Both maps operate much like a normal incremental map.  The only difference is that the arity of each tuple becomes another member of the tuple (i.e., we can index it).  In effect, instead of maintaining maps for the expressions $a$ and $b$, we maintain $arity := a$ and $arity := b$, and we transform the equality predicate itself into a simple natural join (i.e., product).  
+
+\parsection{Incremental Inequimap}
+The same principle as the equimap applies, but the necessary lhs and rhs datastructures can't be expressed as ordinary maps.  Instead of treating the additional "arity column" as an extra key for the map, we need to build a cumulative index.  For each key value for the lhs subexpression, we store the count of all tuples with arity less than (or equal, if appropriate) to the key.  A number of datastructures exist to solve this sort of task.  The simplest would be something akin to a merkle tree, where the "hash" is the sum of all contained values.  Updates each modify log(n) nodes in the tree.  Each lookup then requires at most two top-to-bottom traversals down the log(n)-deep tree.
+
+\parsection{Incremental Range Tree}
+A slight variant of this example occurs when one side of the expression is guaranteed to result in a singleton bag (i.e., a bag containing a single tuple, albeit with an arbitrary arity), like when the subexpression contains no relations, but just variables and constants.  In this case, the singleton half can contain a non-empty environment, since the lookup is always a traversal of the other side. 
+
+\parsection{Parametrized Incremental Inequimap}
+
+
+\end{document}  
