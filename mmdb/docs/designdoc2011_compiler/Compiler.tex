@@ -43,20 +43,21 @@ type const_value_t =
 type var_t = string * calc_type_t
 
 type value_t = 
-  Variable of var_t
-| Constant of const_value_t
+  Var   of var_t
+| Const of const_value_t
 
 type cmp_t = Lt | Gt | Lte | Gte | Eq | Neq
 
 type calc_t =
-  Sum         of calc_t list
-  Prod        of calc_t list
-  Neg         of calc_t
-  AggSum      of var_t list * calc_t
-  Value       of value_t
-  Relation    of string * var_t list
-  Comparison  of value_t * cmp_t * value_t
-  Definition  of var_t * calc_t
+  Sum        of calc_t list           (* c1 + c2 + ... *)
+| Prod       of calc_t list           (* c1 * c2 * ... *)
+| Neg        of calc_t                (* -c *)
+| AggSum     of var_t list * calc_t   (* Sum([v1,v2,...], c) *)
+| Value      of value_t               (* Var(v) | Const(#) *)
+| Relation   of string * var_t list   (* R(v1, v2, ...) *)
+| External   of string * var_t list  
+              * calc_t option         (* {M1(v1, v2, ...) := c} *)
+| Definition of var_t * calc_t        (* v <- c *)
 
 \end{verbatim}
 
@@ -69,31 +70,30 @@ type calc_t =
 type schema_t = var_t list
 
 type memo_t = 
-    string                (* Name *)
-    schema_t              (* Schema *)
-  * calc_t                (* Defining calculus expression (the calculus 
-                             expression that the memo is designed to 
-                             maintain/compute *)
-  * (   pm_t * string     (* Insert/Delete + Base Relation Name *)
-      * map_op_t list     (* Update operations *)
+    string                    (* Name *)
+    schema_t                  (* Schema *)
+  * calc_t                    (* Defining calculus expression (the calculus 
+                                 expression that the memo is designed to 
+                                 maintain/compute *)
+  * (   pm_t * string         (* Insert/Delete + Base Relation Name *)
+      * invocation_t option   (* LHS initializer *)
+      * invocation_t list     (* Update operations *)
     ) list
 
-and map_op_t =            (* := or += *)
-    schema_t              (* target schema mappings *)
-  * invocation_t          (* operation *)
-
 and invocation_t =
+  * schema_t              (* Invocation schema mappings *)
   * calc_t                (* Calculus expression that the statement invokes *)
   * (                     (* Alternative ways of partitioning the invoked 
                              expression into different memos.  The head of this
                              list is the default approach. *)
-        calc_t            (* An expression over zero or more memos that is 
+      * calc_t            (* An expression over zero or more memos that is 
                              semantically equivalent to the invoked expression*)
       * list of memo_t    (* References to memos used by the above expression *)
     ) list
 
 \end{verbatim}
 
+\subsection{Assertions}
 Assertions about the above memo and invocation types (the hypergraph):
 \begin{itemize}
 \item Initializers initialize the entire Memo, and therefore have no externally bound variables other than the invoked expression's input variables, and the variables which appear in the corresponding initializer.  If an input variable is not bound, it is a loop variable.
@@ -107,46 +107,69 @@ Assertions about the above memo and invocation types (the hypergraph):
 The following image shows the incremental plan for the query:
 $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 
-\includegraphics[width=5.5in]{IPExample}
+\includegraphics[width=5.0in]{IPExample}
 \end{example}
 
 \section{Compilation}
 
-\begin{algorithm}
-\caption{compile\_memo (Standard Map)}
+\subsection{compile\_memo (Standard Map)}
 \begin{algorithmic}
 \REQUIRE{calc\_t $definition$, schema\_t $schema$}
 \ENSURE{A memo\_t $memo$}
 \STATE Generate a unique name for $memo$
 \STATE {\bf calc\_simplify}($definition$)
+\STATE $memo.definition \gets definition$
 \FORALL{(Reln,Delta) $(rel, d\_defn) \in$ compute\_deltas($definition$)}
   \STATE {\bf calc\_simplify}($d\_defn$)
-  \FORALL{calc\_t $monomial \in d\_defn$}
-    \STATE Gather {\bf compile\_invocation}($monomial$)
+  \STATE $memo.deltas[rel].update \gets$ {\bf compile\_invocation}($d\_defn$)
+\ENDFOR
+\FORALL{Reln $rel \in$ $definition$}
+  \STATE $relinit \gets$ {\bf initializer\_for\_memo}($memo$)
+  \STATE Substituting $rel$'s variables into $relinit$ (or all of them)
+  \STATE {\bf calc\_simplify}($relinit$)
+  \STATE $memo.deltas[rel].init \gets$ {\bf compile\_invocation}($relinit$)
+\ENDFOR
+\end{algorithmic}
+
+\subsection{compile\_invocation}
+\begin{algorithmic}
+\REQUIRE{A calc\_t $expression$}
+\ENSURE{An invocation\_t $invocation$}
+\STATE Separate the monomial into independent monomial components (i.e., monomials with no overlapping internally-bound variables)
+\FORALL{Independent calc\_t component $c \in expression$}
+  \STATE Pull out all remaining definition terms and create a memo for their RHS.  Then, if any of the remaining terms contain a relation term...
+  \STATE (Optimization Choice B1: More read work): Pull out all comparison terms with an input variable and create a memo for the remaining terms.
+  \STATE (Optimization Choice B2: More write work + Bigger memos): Create a memo for all the remaining terms.
+  \FORALL{Memo expression $m\_expr \in c$}
+    \STATE $memo \gets$ {\bf compile\_memo}($m\_expr$)
+    \STATE $init \gets$ {\bf initializer\_for\_memo($memo$)}
+    \STATE {\bf calc\_simplify}($init$)
+    \STATE {\bf compile\_invocation}($init$)
+    \STATE Replace the corresponding terms in $c$ with $External(memo, \ldots, init)$
   \ENDFOR
 \ENDFOR
+\STATE Rejoin the components into a polynomial expression.
 \end{algorithmic}
-\end{algorithm}
 
-\begin{algorithm}
-\caption{compile\_invocation}
+\subsection{initializer\_for\_memo}
 \begin{algorithmic}
-\REQUIRE{A monomial calc\_t $expression$}
-\ENSURE{An invocation\_t $invocation$}
-\STATE Separate the monomial into independent components (i.e., no overlapping internally-bound variables)
-\FORALL{Independent calc\_t component $c \in expression$}
-  \STATE Pull out all remaining definition terms and create a memo for their RHS.  Then for the remaining terms in the component...
-  \STATE (Case 1): Pull out all comparison terms involving input variables and extract a memo for the remaining terms.
-  \STATE (Case 2): Create a memo for all the remaining terms
-\ENDFOR
+\REQUIRE{A memo\_t $memo$ with compiled triggers}
+\ENSURE{An calc\_t to initialize $memo$ if necessary}
+\IF{$definition$ has unbound variables}
+  \STATE (Optimization Choice A1: Bottom Up): Generate an initialization expression $init$ by taking a delta invocation (pick one, or generate them all), multiplying it by the delta relation.
+  \STATE (Optimization Choice A2: Top Down): Generate an initialization expression $init$ by taking $definition$.  Note that when calling {\bf compile\_invocation}, this option will go into an infinite loop with optimization choice B2.
+  \STATE (Optimization Choice A3: No opt): Generate an initialization invocation by replacing relations in $definition$ with memos.  Requires a special {\bf compile\_invocation}.
+  \STATE Replace variables in the initializer with the corresponding variables in $schema$.
+  \RETURN $init$
+\ELSE
+  \RETURN $none$
+\ENDIF
 \end{algorithmic}
-\end{algorithm}
 
-\begin{algorithm}
-\caption{calc\_simplify}
+\subsection{calc\_simplify}
 \begin{algorithmic}
 \REQUIRE{calc\_t $expression$}
-\ENSURE{A calc\_t list $monomials$}
+\ENSURE{A calc\_t Sum() of $monomials$}
 \STATE Pull sums in $expression$ up to the top, generating a list of $monomials$
 \FORALL{$m \in monomials$}
   \REPEAT
@@ -163,10 +186,8 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 \ENDFOR
 \STATE 
 \end{algorithmic}
-\end{algorithm}
 
-\begin{algorithm}
-\caption{calc\_unify\_vars}
+\subsection{calc\_unify\_vars}
 \begin{algorithmic}
 \REQUIRE{a monomial calc\_t $expression$}
 \ENSURE{$expression$ with variables unified}
@@ -189,13 +210,17 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
   \STATE remove the comparison ($v_1 = v_2$) from $expression$
 \ENDFOR
 \end{algorithmic}
-\end{algorithm}
+
+\subsection{compute\_deltas}
+\begin{algorithmic}
+\REQUIRE{A calc\_t $expression$}
+\ENSURE{An associative list of relation to calc\_t pairs}
+\end{algorithmic}
 
 \section{Trigger Generation}
 
 The triggers\_for\_X functions translate an Incremental Plan into a set of triggers.  Each trigger is of the form: (1) The Event/Relation name (Variables appearing in the event/relation are drawn from the database schema).  (2) The set of initializers that need to be invoked if necessary (with variables bound as per the schema).  (3) The set of update operations that need to be invoked (with variables bound as per the schema).
 
-\pagebreak
 \begin{verbatim}
 let trigger_t = 
     string * var_t list                 (* Relation Schema *)
@@ -205,8 +230,7 @@ let trigger_t =
   * (string * var_t list * calc_t) list (* Updates *)
 \end{verbatim}
 
-\begin{algorithm}
-\caption{triggers\_for\_memo}
+\subsection{triggers\_for\_memo}
 \begin{algorithmic}
 \REQUIRE{memo\_t $memo$}
 \ENSURE{A set of gathered initializers and triggers}
@@ -218,10 +242,8 @@ let trigger_t =
 \ENDFOR
 \STATE \textbf{return} gathered triggers
 \end{algorithmic}
-\end{algorithm}
 
-\begin{algorithm}
-\caption{triggers\_for\_invocation}
+\subsection{triggers\_for\_invocation}
 \begin{algorithmic}
 \REQUIRE{invocation\_t $invoc$, (string * var\_t list) $(event, in\_vars)$}
 \ENSURE{A set of gathered initializers and triggers}
@@ -232,7 +254,6 @@ let trigger_t =
 \STATE Add $impl$ to gathered triggers for $event$
 \STATE \textbf{return} gathered triggers
 \end{algorithmic}
-\end{algorithm}
 
 We refer to triggers\_for\_invocation's second parameter as its context.  Context is a way of passing variable bindings through multiple layers of triggers\_for\_invocation, and can contain two types of bindings: (1) Input variables can be bound from above (i.e., as event variables), and (2) Input variables can be bound from the side (i.e., from another map).  
 
