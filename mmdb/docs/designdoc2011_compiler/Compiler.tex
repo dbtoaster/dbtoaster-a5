@@ -71,19 +71,22 @@ type calc_t =
 type schema_t = var_t list
 
 type memo_t = 
-    string                    (* Name *)
-    schema_t                  (* Schema *)
-  * calc_t                    (* Defining calculus expression (the calculus 
-                                 expression that the memo is designed to 
-                                 maintain/compute *)
-  * (   pm_t * string         (* Insert/Delete + Base Relation Name *)
-      * invocation_t option   (* LHS initializer *)
-      * invocation_t list     (* Update operations *)
+    string                (* Name *)
+    schema_t              (* Schema *)
+  * calc_t                (* Defining calculus expression (the calculus 
+                             expression that the memo is designed to 
+                             maintain/compute *)
+  * (   pm_t * string     (* Insert/Delete + Base Relation Name *)
+      * map_op_t option   (* LHS initializer *)
+      * map_op_t list     (* Update operations *)
     ) list
 
+and map_op_t = (* += or := *)
+    schema_t              (* LHS slice being updated/set *)
+  * invocation_t          (* Invocation generating the slice *)
+
 and invocation_t =
-  * schema_t              (* Invocation schema mappings *)
-  * calc_t                (* Calculus expression that the statement invokes *)
+    calc_t                (* Calculus expression that the statement invokes *)
   * (                     (* Alternative ways of partitioning the invoked 
                              expression into different memos.  The head of this
                              list is the default approach. *)
