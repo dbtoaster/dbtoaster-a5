@@ -52,7 +52,8 @@ type calc_t =
   Sum        of calc_t list           (* c1 + c2 + ... *)
 | Prod       of calc_t list           (* c1 * c2 * ... *)
 | Neg        of calc_t                (* -c *)
-| AggSum     of var_t list * calc_t   (* Sum([v1,v2,...], c) *)
+| Cmp        of value_t * value_t     
+| AggSum     of var_t list * calc_t   (* AggSum([v1,v2,...], c) *)
 | Value      of value_t               (* Var(v) | Const(#) *)
 | Relation   of string * var_t list   (* R(v1, v2, ...) *)
 | External   of string * var_t list  
@@ -174,6 +175,7 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 \FORALL{$m \in monomials$}
   \REPEAT
     \STATE {\bf calc\_unify\_vars}($m$)
+    \STATE Flatten products
     \STATE Pull AggSums up and merge where possible
     \STATE Push negation down and merge where possible
     \STATE Move constants left and merge where possible
@@ -215,6 +217,39 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 \begin{algorithmic}
 \REQUIRE{A calc\_t $expression$}
 \ENSURE{An associative list of relation to calc\_t pairs}
+\STATE {\bf calc\_simplify}($expression$)
+\FORALL{Monomial calc\_t $m \in expression$}
+  \FORALL{Relation $r \in m$}
+    \STATE Gather $(r \rightarrow {\bf calc\_simplify}({\bf generate\_delta}(m, r)))$
+  \ENDFOR
+\ENDFOR
+\end{algorithmic}
+
+\subsection{generate\_delta}
+\begin{algorithmic}
+\REQUIRE{A simplified calc\_t $expression$, A relation $r(r_1,r_2,\ldots)$}
+\ENSURE{A calc\_t delta expression}
+\IF{$m$ is a {\tt Prod[$m_1$]}}
+  \RETURN{${\bf generate\_delta}(m_1)$}
+\ELSIF{$m$ is a {\tt Prod[$m_1, m_2, \ldots$]}}
+  \RETURN{\tt Sum[Prod[{\bf generate\_delta}($m_1$),$m_2,\ldots$], \\
+  \hspace*{1in}Prod[$m_1$,{\bf generate\_delta}(Prod[$m_2,\ldots$])], \\
+  \hspace*{1in}Prod[{\bf generate\_delta}($m_1$), {\bf generate\_delta}(Prod[$m_2,\ldots$])]]}
+\ELSIF{$m$ is a {\tt Neg($m_1$)}}
+  \RETURN{\tt Neg({\bf generate\_delta}($m_1$))}
+\ELSIF{$m$ is a {\tt AggSum($\ldots, m_1$)}}
+  \RETURN{\tt AggSum($\ldots, m_1$)}
+\ELSIF{$m$ is a {\tt Value($\ldots$)}}
+  \RETURN{\tt 0}
+\ELSIF{$m$ is a Relation($r$, $v_1,v_2,\ldots$)}
+  \RETURN{\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
+\ELSIF{$m$ is a Relation(\ldots)}
+  \RETURN{\tt 0}
+\ELSIF{$m$ is an External}
+  \STATE {\bf ERROR}
+\ELSIF{
+\ENDIF
+
 \end{algorithmic}
 
 \section{Trigger Generation}
