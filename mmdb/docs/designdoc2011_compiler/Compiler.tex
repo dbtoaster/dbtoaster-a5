@@ -48,20 +48,23 @@ type value_t =
 
 type cmp_t = Lt | Gt | Lte | Gte | Eq | Neq
 
-type calc_t =
-  Sum        of calc_t list           (* c1 + c2 + ... *)
-| Prod       of calc_t list           (* c1 * c2 * ... *)
-| Neg        of calc_t                (* -c *)
-| Cmp        of value_t * value_t     
-| AggSum     of var_t list * calc_t   (* AggSum([v1,v2,...], c) *)
-| Value      of value_t               (* Var(v) | Const(#) *)
-| Relation   of string * var_t list   (* R(v1, v2, ...) *)
-| External   of string * var_t list  
-              * calc_t option         (* {M1(v1, v2, ...) := c} *)
-| Definition of var_t * calc_t        (* v <- c *)
+type 'a calc_t =
+  Sum        of calc_t list              (* c1 + c2 + ... *)
+| Prod       of calc_t list              (* c1 * c2 * ... *)
+| Neg        of calc_t                   (* -c *)
+| Cmp        of value_t * value_t        
+| AggSum     of var_t list * calc_t      (* AggSum([v1,v2,...], c) *)
+| Value      of value_t                  (* Var(v) | Const(#) *)
+| Relation   of string * var_t list      (* R(v1, v2, ...) *)
+| External   of string * var_t list * 'a (* {M1(v1, v2, ...) := 'a} *)
+| Definition of var_t * calc_t           (* v <- c *)
 
+type calculus_t = unit calc_t
 \end{verbatim}
 
+Most of the above is straightforward.  We parameterize the calc\_t type, because  the External type is, by definition outside of Calculus.  It is a reference to something outside, and we don't want Calculus to have to care about anything other than the API (a name and a set of parameters).  
+
+Components using Calculus, conversely, need to be able to associate metadata with the External (i.e., initializers, etc...).  In particular, we would like to be able to associate invocations with the External, and we don't want Calculus to have any idea what an invocation is.  Parameterizing calc\_t is the cleanest way to accomplish this.
 
 \section{Incremental Plan (IP)}
 
@@ -249,8 +252,9 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 \ELSIF{$m$ is a Relation(\ldots)}
   \RETURN{\tt 0}
 \ELSIF{$m$ is an External}
-  \STATE {\bf ERROR}
-\ELSIF{
+  \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
+\ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
+  \STATE {\tt Definition($v,{\bf generate\_delta}(m_1)$)}
 \ENDIF
 
 \end{algorithmic}
@@ -293,6 +297,7 @@ let trigger_t =
 \STATE \textbf{return} gathered triggers
 \end{algorithmic}
 
+\subsection{Commentary}
 We refer to triggers\_for\_invocation's second parameter as its context.  Context is a way of passing variable bindings through multiple layers of triggers\_for\_invocation, and can contain two types of bindings: (1) Input variables can be bound from above (i.e., as event variables), and (2) Input variables can be bound from the side (i.e., from another map).  
 
 Case 2 only occurs if we have multi-level initializers (i.e., if the initializer for a map reads from a map with an initializer).  In our current design, this is not possible.  Consequently, the algorithm above only handles Case 1.  In order to support Case 2, the following would need to happen:
