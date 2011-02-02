@@ -49,15 +49,15 @@ type value_t =
 type cmp_t = Lt | Gt | Lte | Gte | Eq | Neq
 
 type 'a calc_t =
-  Sum        of calc_t list              (* c1 + c2 + ... *)
-| Prod       of calc_t list              (* c1 * c2 * ... *)
-| Neg        of calc_t                   (* -c *)
-| Cmp        of value_t * value_t        
-| AggSum     of var_t list * calc_t      (* AggSum([v1,v2,...], c) *)
-| Value      of value_t                  (* Var(v) | Const(#) *)
-| Relation   of string * var_t list      (* R(v1, v2, ...) *)
-| External   of string * var_t list * 'a (* {M1(v1, v2, ...) := 'a} *)
-| Definition of var_t * calc_t           (* v <- c *)
+  Sum        of calc_t list               (* c1 + c2 + ... *)
+| Prod       of calc_t list               (* c1 * c2 * ... *)
+| Neg        of calc_t                    (* -c *)
+| Cmp        of value_t * cmp_t * value_t (* c1 [cmp] c2 *)
+| AggSum     of var_t list * calc_t       (* AggSum([v1,v2,...], c) *)
+| Value      of value_t                   (* Var(v) | Const(#) *)
+| Relation   of string * var_t list       (* R(v1, v2, ...) *)
+| External   of string * var_t list * 'a  (* {M1(v1, v2, ...) := 'a} *)
+| Definition of var_t * calc_t            (* v <- c *)
 
 type calculus_t = unit calc_t
 \end{verbatim}
@@ -108,6 +108,9 @@ Assertions about the above memo and invocation types (the hypergraph):
 \item The access patterns that a Memo is required to support are defined by the set of bound variables in all of its incoming edges.
 
 \item Initializers for memos on the RHS of an expression are stored as part of the calculus expression (External leaves) \footnote{Storing the whole initializer will make working with nonstandard maps (e.g., future work on range trees) difficult.  In effect, the External needs to store a reference to the entire process required to initialize a memo.  On the other hand, this initializer can and should be simplified/compiled given that the set of bound input variables will change.  A reasonable compromise might be to store a list of expressions that the initializer will need to evaluate}.  The LHS memo does not need to be initialized, since the output portion of the memo is guaranteed to be initialized and we'll never see a new input variable in a delta statement.
+
+\item The root of an IP can be either a Memo or an Invocation.  The former corresponds to compiling a datastructure which continually maintains the exact query result.  The latter corresponds to compiling an executable which can efficiently (using incrementally maintained views) answer the posed query.
+
 \end{itemize}
 
 \begin{example}
@@ -119,7 +122,40 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 
 \section{Compilation}
 
+The goal of the compilation phase is to translate an arbitrary calculus expression into an Incremental Plan, as described above.  At an extremely high level, this process breaks down into a recursive loop over three steps: (1) {\bf Simplify} the expression, (2) {\bf Extract} portions of the expression for incremental maintenance, (3) Compute the {\bf delta} terms, and recurse for each.
+
+To mirror the structure of the IP, make it possible to compile queries into both Memos and Invocations, and because step 1 in the above process produces a semantically equivalent query, the compiler is divided into two parts - {\bf compile\_memo} and {\bf compile\_invocation}.
+
+\subsection{Calculus and Code}
+
+Ultimately the goal of DBToaster is to produce code.  The structure of a calculus expression translates directly into how that expression will be evaluated.  Correspondingly, the compiler phase must be designed to ensure efficient code evaluation.  We now make several meaningful observations about calculus expressions and how they translate to the generated code.
+
+\parsection{Input and Output Variables}
+Variables appearing in a calculus expression take one of two forms: Input and Output.  Output variables appear on the LHS of definition terms or as part of a Relation term.  Given an expression, we can always identify its Output variables.  Output variables can be thought of as the {\it domain} of the set of result tuples produced by the expression.
+
+Input variables appear in the expression as values, but are not bound within the expression (i.e., they are not Output variables).  Given an expression, we can always identify its Input variables.  Input variables can be thought of as {\it parameters} to the expression.
+
+\parsection{Arities and Domains}
+
+\parsection{Loops} 
+As a data parallel language, the fundamental datatype in calculus is a set of tuples.  Our current infrastructure focuses on single-threaded operation, so it is important to recognize that all calculus expressions represent an implicit loop over elements of the set of values produced by the expression.
+
+If an expression appears nested inside a calculus operator, the calculus operator explicitly performs an operation over each element in the set (e.g., negation negates every element of the set).  
+
+Even the top level expression can (and should) be interpreted as a loop; Whatever is evaluating the expression loops over each of its elements.  For example, the {\tt :=} and {\tt +=} operators loop over the entire domain, setting or incrementing the corresponding LHS map entry.
+
+Note that there is a key difference between the traditional imperative notion of loops and the more set-oriented approach taken by calculus: the loop domain comes from within the loop block itself.  In terms of implementation each non-leaf, or operator term in calculus applies an operation to every element of the domain of its child expressions.  For unary operators (i.e., {\tt Neg} and {\tt AggSum}), the desired operation and imperative interpretation is clear.  For binary (i.e., {\tt Prod} and {\tt Sum}), and the special {\tt Definition} operator, more subtle interactions with the loop occur.
+
+\parsection{Product Interpretation}
+
+\parsection{Commutativity of {\tt Prod}}
+
+
+
 \subsection{compile\_memo (Standard Map)}
+
+This is the first of two mutually recursive steps in (and entry points into) the compilation process.  
+
 \begin{algorithmic}
 \REQUIRE{calc\_t $definition$, schema\_t $schema$}
 \ENSURE{A memo\_t $memo$}
@@ -137,6 +173,9 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
   \STATE $memo.deltas[rel].init \gets$ {\bf compile\_invocation}($relinit$)
 \ENDFOR
 \end{algorithmic}
+
+
+
 
 \subsection{compile\_invocation}
 \begin{algorithmic}
@@ -254,7 +293,9 @@ $$Q = Sum([], R(a,b) * S(b,c) * T(c,d) * a * d)$$
 \ELSIF{$m$ is an External}
   \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
 \ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
-  \STATE {\tt Definition($v,{\bf generate\_delta}(m_1)$)}
+  \RETURN {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
+\ELSIF{$m$ is a {\tt Cmp(\ldots)}}
+  \RETURN {\tt 0}
 \ENDIF
 
 \end{algorithmic}
@@ -275,26 +316,29 @@ let trigger_t =
 \subsection{triggers\_for\_memo}
 \begin{algorithmic}
 \REQUIRE{memo\_t $memo$}
-\ENSURE{A set of gathered initializers and triggers}
-\FORALL{Event(Vars) $e(vars) \in memo$}
-  \STATE Gather \textbf{triggers\_for\_invocation}($e.initializer$, $e(vars)$)
+\ENSURE{A trigger\_t of initializers and triggers, and a list of memos}
+\FORALL{Event $e \in memo$}
+  \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($e.initializer.expression$)
+  \STATE Gather $statements$ and $prog$
+  \STATE Add initiailzer ($memo.name$, $e.initializer.vars$, $impl$)
   \FORALL{Invocation $i \in e.updates$}
-    \STATE Gather \textbf{triggers\_for\_invocation}($i$, $e(vars)$)
+    \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($i.expression$)
+    \STATE Gather $statements$ and $prog$
+    \STATE Add update ($memo.name$, $i.vars$, $impl$)
   \ENDFOR
 \ENDFOR
-\STATE \textbf{return} gathered triggers
+\STATE \textbf{return} The gathered trigger\_ts and memo\_t list
 \end{algorithmic}
 
 \subsection{triggers\_for\_invocation}
 \begin{algorithmic}
-\REQUIRE{invocation\_t $invoc$, (string * var\_t list) $(event, in\_vars)$}
-\ENSURE{A set of gathered initializers and triggers}
+\REQUIRE{invocation\_t $invoc$}
+\ENSURE{A calc\_t and a trigger\_t and prog\_t}
 \STATE Select an implementation $impl \in invoc$
 \FORALL{Memo $m \in impl$}
   \STATE Gather \textbf{triggers\_for\_memo}(m)
 \ENDFOR
-\STATE Add $impl$ to gathered triggers for $event$
-\STATE \textbf{return} gathered triggers
+\RETURN $impl$ and the gathered trigger\_t and memo\_t list
 \end{algorithmic}
 
 \subsection{Commentary}
