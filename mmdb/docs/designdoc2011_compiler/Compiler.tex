@@ -131,26 +131,57 @@ To mirror the structure of the IP, make it possible to compile queries into both
 Ultimately the goal of DBToaster is to produce code.  The structure of a calculus expression translates directly into how that expression will be evaluated.  Correspondingly, the compiler phase must be designed to ensure efficient code evaluation.  We now make several meaningful observations about calculus expressions and how they translate to the generated code.
 
 \parsection{Input and Output Variables}
-Variables appearing in a calculus expression take one of two forms: Input and Output.  Output variables appear on the LHS of definition terms or as part of a Relation term.  Given an expression, we can always identify its Output variables.  Output variables can be thought of as the {\it domain} of the set of result tuples produced by the expression.
+Variables appearing in a calculus expression take one of two forms: Input and Output.  Output variables appear on the LHS of definition terms or as part of a Relation term.  Given an expression, we can always identify its Output variables.  
 
 Input variables appear in the expression as values, but are not bound within the expression (i.e., they are not Output variables).  Given an expression, we can always identify its Input variables.  Input variables can be thought of as {\it parameters} to the expression.
 
-\parsection{Arities and Domains}
+\parsection{Bags and Arities}
+As a data parallel language, the fundamental datatype in calculus is the set (of tuples), or more precisely a bag.  Like a traditional bag, each tuple is associated with an arity, or number of times that the tuple appears in the bag.  Unlike traditional bags however, a tuple's arity can be negative, or even non-integral.  In this sense, the set is a map, the tuple is a key, and the arity is the corresponding value.  These two interpretations are mostly interchangeable.  
+
+It is important to understand them both to understand how Calculus interacts with both the relational and aggregation aspects of SQL, and how to correctly interpret the {\tt Sum} and {\tt Prod} operators (discussed below).  The use of arity also explains why {\tt AggSum} acts as both a projection and an aggregation operator, since post-projection duplicates have their arities merged.
+
+An important consequence is that in calculus, there is no distinction between $\{(\left<\ldots\right> = 0)\}$ and $\emptyset$.  That is, a tuple with arity 0 is not at all distinct from a tuple not present in a result set; Thus typically, when referring to the domain of an expression, we will consider only the elements of the set with arity $\neq 0$ \footnote{It should also be noted that while calculus does not make this distinction, later stages do; When storing a partially materialized result set, a zero arity indicates a tuple not present in the complete result set, while absence from the set indicates that the tuple's arity has not yet been computed.}
+
+\parsection{Schemas and Singletons}
+An expression's output variables correspond to the schema of all of its result tuples\footnote{{\tt Sum} can potentially be viewed as generating hybrid schemas, but like SQL's UNION we require that it operate only over subexpressions with identical schemas}.  The behavior of the {\tt Prod} operator in particular relates very closely to the schemas of its subexpressions -- in particular those with no output variables, termed {\it singletons}.  These are particularly important, because they have a finite domain at compile time (i.e., they do not require looping).  More on this later.
 
 \parsection{Loops} 
-As a data parallel language, the fundamental datatype in calculus is a set of tuples.  Our current infrastructure focuses on single-threaded operation, so it is important to recognize that all calculus expressions represent an implicit loop over elements of the set of values produced by the expression.
+Our current infrastructure focuses on single-threaded operation, so it is important to recognize that all calculus expressions represent an implicit loop over elements of the set of values produced by the expression.
 
 If an expression appears nested inside a calculus operator, the calculus operator explicitly performs an operation over each element in the set (e.g., negation negates every element of the set).  
 
 Even the top level expression can (and should) be interpreted as a loop; Whatever is evaluating the expression loops over each of its elements.  For example, the {\tt :=} and {\tt +=} operators loop over the entire domain, setting or incrementing the corresponding LHS map entry.
 
-Note that there is a key difference between the traditional imperative notion of loops and the more set-oriented approach taken by calculus: the loop domain comes from within the loop block itself.  In terms of implementation each non-leaf, or operator term in calculus applies an operation to every element of the domain of its child expressions.  For unary operators (i.e., {\tt Neg} and {\tt AggSum}), the desired operation and imperative interpretation is clear.  For binary (i.e., {\tt Prod} and {\tt Sum}), and the special {\tt Definition} operator, more subtle interactions with the loop occur.
+Note that there is a key difference between the traditional imperative notion of loops and the more set-oriented approach taken by calculus: the loop domain comes from within the loop block itself.  In terms of implementation each non-leaf, or operator term in calculus applies an operation to every element of the domain of its child expressions.  For unary operators (i.e., {\tt Neg} and {\tt AggSum}), the desired operation and imperative interpretation is clear; {\tt AggSum} for example, can be thought of as an inner loop.  The operator asserts that a particular subset of the loop domain is meaningful only within a specific subtree of the code.
 
-\parsection{Product Interpretation}
+N-ary operators (i.e., {\tt Prod} and {\tt Sum}) have a slightly different implementation interpretation.  Though Calculus is a primarily functional language, {\tt Sum} can be thought of as an imperative ``step," or operation in the loop.  From a set-loop-oriented perspective, one can think of this (roughly) as first iterating over the values on the left-hand side, and subsequently the right-hand.  Formally, the sum operator must merge duplicate values.  However, when converting a calculus expression to an imperative execution plan, it helps to think of each expression in the sum as an independent step in the loop.
 
-\parsection{Commutativity of {\tt Prod}}
+\parsection{{\tt Prod} (and Singletons and Single-entry tables)}
+If {\tt Sum} is an imperative step, then {\tt Prod} is more closely related to a continuation.  The intuition is that a calculus expression is parameterized (by input variables), and can influence control flow by returning a carefully selected set of results (e.g., a zero arity singleton to terminate the current loop iteration).  
 
+A common instantiation of this behavior is via singleton expressions, which can affect the arity of tuples in the result set without affecting the domain: (1) {\tt Value} terms, (2) {\tt Cmp} terms, and (3) {\tt AggSum} terms with no group-by variables.
 
+\begin{example}
+Consider the following expression:
+$$expr * (a \theta b)$$
+This expression represents a simple filtering predicate: $(a \theta b)$.  More complex incremental predicates can be applied by using definition terms.  For example:
+$${\tt AggSum}(expr_{in}.schema, expr_{in} * (a \gets expr_a) * (b \gets expr_b) * (a \theta b))$$
+\end{example}
+
+\parsection{{\tt Definition}}
+Consider what happens if $expr_a$ and $expr_b$ are both singletons themselves.  Definition terms with singletons on the RHS do not affect the arity (they always evaluate to 1), nor do they affect the size of the tuple set (they always have a single value).  They do, however, extend the domain with additional variables (that can be used for filtering or further computation).  One way to think about this sort of behavior is as a continuation.
+
+\parsection{Commutativity (and Associativity) of {\tt Prod}}
+{\tt Prod} has some non-straightforward commutativity properties: Product is commutative {\bf unless} an Input variable appearing on the right hand side (i.e., a parameter) is present as an Output variable on the LHS \footnote{An exception to this rule occurs when there is a triple product with the variable in question being used as a parameter to the third subterm.  If the first and second subterms both output the variable in question, the third and second subterms commute, assuming no other conflicts occur.}.  In effect, a product term has a binding pattern, where variables are declared by their presence as output variables on the left, and used as input variables on the right.  As in programming languages, a variable's declaration must always precede its use.  
+
+On a similar note, though {\tt Prod} is associative, the order of operations can impact the efficiency of evaluating the expression.  
+
+\begin{example}
+For example, consider the expression:
+$${\tt AggSum}([c], f_1[][a] * f_2[][b] * f_3[a,b][c])$$
+\end{example}
+
+It is important to note that the variable $a$ does not affect evaluation of $f_2$.  Consequently, it might be more efficient to evaluate this expression as a right-associative expression (especially if $f_3$ is definition with a singleton on the RHS).  
 
 \subsection{compile\_memo (Standard Map)}
 
@@ -285,17 +316,17 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \ELSIF{$m$ is a {\tt AggSum($\ldots, m_1$)}}
   \RETURN{\tt AggSum($\ldots, m_1$)}
 \ELSIF{$m$ is a {\tt Value($\ldots$)}}
-  \RETURN{\tt 0}
+  \RETURN $\emptyset$
 \ELSIF{$m$ is a Relation($r$, $v_1,v_2,\ldots$)}
   \RETURN{\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
 \ELSIF{$m$ is a Relation(\ldots)}
-  \RETURN{\tt 0}
+  \RETURN $\emptyset$
 \ELSIF{$m$ is an External}
   \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
 \ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
   \RETURN {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
 \ELSIF{$m$ is a {\tt Cmp(\ldots)}}
-  \RETURN {\tt 0}
+  \RETURN $\emptyset$
 \ENDIF
 
 \end{algorithmic}
