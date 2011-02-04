@@ -235,7 +235,7 @@ let prepare_triggers (triggers : trig_t list)
            [c1,stmt_lhs_vars,false; c2,c2_stmt_lhs_vars,true]
          in
          (* This is a minor optimization to reduce the # of vars that get bound
-          * for the rhs. It does not eliminate vars being roduced as the
+          * for the rhs. It does not eliminate vars being produced as the
           * output schema for the op, by the rhs (that requires preaggregation,
           * i.e. sums explicitly carrying around their out vars and pushing this
           * down through the expression). We assume preaggregation has already
@@ -281,17 +281,29 @@ let prepare_triggers (triggers : trig_t list)
         
         | IfThenElse0 (c1,c2) ->
            (* if-expressions must explicitly override short-circuiting flag *)
-           let get_bigsums l =
-             List.filter (fun v -> not(List.mem v stmt_lhs_vars)) l in
-           let c1_bigsums = get_bigsums (calc_vars c1) in
-           let c2_bigsums = get_bigsums (calc_vars c2) in
-           let op_bigsums = Util.ListAsSet.inter c1_bigsums c2_bigsums in
-           let short_circuit = op_bigsums = [] in
+           let c1_inv = Util.ListAsSet.diff (calc_vars c1) (calc_schema c1) in
+           let c2_outv = calc_schema c2 in
+           
+           (* up-and-left propagations are out vars on the rhs m3 expr, and in
+            * vars on the lhs m3 expr, except bound vars. This also suffices as
+            * a superset of bigsum vars, bigsum vars additionally do not appear
+            * as lhs vars of the stmt.
+            * Note propagations can also appear as out vars of both the lhs and
+            * rhs m3 exprs. In this case we don't need to propagate
+            * right-to-left and can short-circuit with standard out var
+            * restrictions.
+            *)
+           let upl_prop = Util.ListAsSet.diff
+             (Util.ListAsSet.inter c1_inv c2_outv) theta_vars in
+
+           let short_circuit = (upl_prop = []) in
            let (op_f,l,r) = if short_circuit
              then ((fun e1 e2 -> IfThenElse0(e1,e2)), c1, c2)
              else ((fun e1 e2 -> IfThenElse0(e2,e1)), c2, c1) in
            let ((nc,(id,ext,sing,prod,_)),pat) =
-             prepare_op_w_lhs (stmt_lhs_vars@op_bigsums) op_f l r in
+             prepare_op_w_lhs
+               (Util.ListAsSet.union stmt_lhs_vars upl_prop)
+               op_f l r in
            let new_if_meta = (id,ext,sing,prod,short_circuit)
            in ((nc, new_if_meta), pat)
         
@@ -410,10 +422,13 @@ let prepare_triggers (triggers : trig_t list)
       let (pblock, patterns) = prepare_block args block in
          ((ev, rel, args, pblock), patterns)
    in
-   let blocks_maps_l = List.map prepare_trig (normalize_triggers triggers) in
+   let blocks_maps_l =
+     (* Disable trigger normalization now that this is done in CalcToM3 *)
+     let trigs_to_prep = (*(normalize_triggers triggers)*) triggers
+     in List.map prepare_trig trigs_to_prep
+   in
    let (pblocks, pms) = List.split blocks_maps_l in
-      (pblocks,
-       List.fold_left merge_pattern_maps (empty_pattern_map()) pms)
+      (pblocks, List.fold_left merge_pattern_maps (empty_pattern_map()) pms)
 
 
 
