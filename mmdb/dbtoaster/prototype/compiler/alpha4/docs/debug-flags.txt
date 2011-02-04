@@ -18,6 +18,9 @@ DISABLE-COMPILER-DUPS: Disable duplicate map detection in the compiler.
 
 DUMP-INITIALIZERS: Display the calc representation of all map initializers
 
+EXTRACT-SUBS: Print out the monomial, equalities and substitution table
+              during unification.
+              
 IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
                  maps that happen to represent the same query will not be 
                  eliminated.  Note that the compiler will still not produce 
@@ -26,6 +29,12 @@ IGNORE-DUP-MAPS: Disable postprocessor duplicate map detection.  Distinct
 LOG-COMPILES: Print out every map as it is compiled.
 
 LOG-COMPILE-STEPS: Print out every map/relation pair as it is compiled.
+
+LOG-COMPILE-TRIGGERS: Print out the map parameters, including the bound map
+                      parameters that let us avoid loops, and the simplified
+                      delta calculus expression.
+
+LOG-COMPLEX-DELTA: Print out the unsimplified delta term during compilation.
 
 M3: If the language is not 'calc', the M3 delta representation of the parsed 
     input will be printed. (Driver.ml)
