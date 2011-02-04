@@ -111,7 +111,8 @@ let run_adaptors output_dir sources =
            (open_out (Filename.concat output_dir (r^".dbtdat")))
   in
   let sources_and_adaptors = try List.fold_left (fun acc (s,f,rel,a) ->
-      add_rel_output rel;
+      add_rel_output ("Insert"^rel);
+      add_rel_output ("Delete"^rel);
       if List.mem_assoc (s,f) acc then
           let existing = List.assoc (s,f) acc
         in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc)
@@ -145,13 +146,20 @@ let run_adaptors output_dir sources =
     try 
        match evt with
        | None -> ()
-       | Some(pm,rel,t) -> 
+       | Some(pm,rel,t) ->
+         let aux r = 
            let rel_chan =
-             try Hashtbl.find rel_outputs rel
-             with Not_found -> failwith ("no output file initialized for "^rel)
+             try Hashtbl.find rel_outputs r
+             with Not_found -> failwith ("no output file initialized for "^r)
            in let s = (String.concat "," (List.map (fun c ->
                           match c with CFloat(f) -> sql_string_of_float f) t))
-           in if pm = Insert then output_string rel_chan (s^"\n") else ()
+           in output_string rel_chan (s^"\n")
+         in
+         begin match pm with
+         | Insert -> aux ("Insert"^rel)
+         | Delete -> aux ("Delete"^rel)
+         end  
+           
     with Failure(x) -> 
       failwith ("Parse Error ("^x^"): '"^(string_of_evt evt)^"'")
   in
@@ -161,8 +169,7 @@ let run_adaptors output_dir sources =
          let (new_mux,evt) = FileMultiplexer.next !mux in
            output_event evt;
            mux := new_mux
-       with Failure(x) -> 
-         failwith ("Parse Error ("^x^")")
+       with Failure(x) -> failwith ("Parse Error ("^x^")")
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
