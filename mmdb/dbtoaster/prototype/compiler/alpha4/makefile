@@ -4,16 +4,12 @@ SOURCE = \
 	stages/ring/Ring.ml \
 	stages/ring/Calculus.mli \
 	stages/ring/Calculus.ml \
-	stages/ring/PipedCalculus.mli\
-	stages/ring/PipedCalculus.ml\
 	stages/maps/M3.mli \
 	stages/maps/M3.ml \
 	stages/maps/M3Common.mli \
 	stages/maps/M3Common.ml \
 	stages/ring/Compiler.mli \
 	stages/ring/Compiler.ml \
-	stages/ring/PipedCompiler.mli \
-	stages/ring/PipedCompiler.ml \
 	stages/ring/CalcToM3.mli \
 	stages/ring/CalcToM3.ml \
 	stages/maps/M3Compiler.mli \
@@ -188,6 +184,11 @@ benchmark: $(OPT_DEPS)
 
 ##############
 
+test/sql/postgres/%: test/sql/postgres/%.sql 
+	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/postgres/$*.sql > psqltmp.sql
+	psql -f psqltmp.sql
+	rm psqltmp.sql
+
 # TPC-H Postgres execution (assumes passwordless postgres access)
 test/sql/tpch/postgres/%: test/sql/tpch/postgres/%.sql 
 	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/tpch/postgres/$*.sql > psqltmp.sql
@@ -196,6 +197,11 @@ test/sql/tpch/postgres/%: test/sql/tpch/postgres/%.sql
 
 test/sql/finance/postgres/%: test/sql/finance/postgres/%.sql 
 	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/finance/postgres/$*.sql > psqltmp.sql
+	psql -f psqltmp.sql
+	rm psqltmp.sql
+
+test/sql/simple/postgres/%: test/sql/simple/postgres/%.sql 
+	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/simple/postgres/$*.sql > psqltmp.sql
 	psql -f psqltmp.sql
 	rm psqltmp.sql
 
