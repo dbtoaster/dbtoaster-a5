@@ -445,9 +445,10 @@ let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
 
 let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
    let optimize e trig_args = 
-      (K3Optimizer.simplify_collections 
-         (K3Optimizer.lift_ifs trig_args 
-            (K3Optimizer.inline_collection_functions [] e)))
+      K3Optimizer.simplify_if_chains []
+        (K3Optimizer.simplify_collections 
+           (K3Optimizer.lift_ifs trig_args 
+              (K3Optimizer.inline_collection_functions [] e)))
    in
    let rec fixpoint e trig_args =
       let new_e = optimize e trig_args in

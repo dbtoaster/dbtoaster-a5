@@ -461,7 +461,7 @@ let string_of_expr e =
            (fun cnt l -> pc();
              if l = [] then ps "[]"
              else if List.mem cnt list_branches then
-                (ps "["; List.iter aux l; ps "]") 
+                (ps "["; List.iter (fun x -> aux x; ps ";") l; ps "]") 
              else List.iter aux l;
              if cnt < (nb-1) then ps "," else (); cnt+1)
            0 br)

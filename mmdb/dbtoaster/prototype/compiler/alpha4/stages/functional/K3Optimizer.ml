@@ -468,19 +468,14 @@ let substitute (arg_to_sub, sub_expr) expr =
         | AVar(v,_) -> [v,sub_expr]
         | ATuple(vt_l) ->
             let rec push_down_ifs tup_expr = 
-            (
                match tup_expr with
                | Tuple(t) -> t
                | IfThenElse(p,tt_expr,et_expr) ->
-                  List.map2 (fun t e ->
-                     IfThenElse(p,t,e)
-                  ) (push_down_ifs tt_expr) 
-                    (push_down_ifs et_expr)
-               | _ -> failwith ("invalid tuple binding: "^
-                                (string_of_expr sub_expr))
-            )
-            in
-               List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
+                  List.map2 (fun t e -> if t = e then t else IfThenElse(p,t,e))
+                    (push_down_ifs tt_expr) (push_down_ifs et_expr)
+               | _ -> failwith
+                        ("invalid tuple binding: "^(string_of_expr sub_expr))
+            in List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
     in
     (* Remove vars from substitutions when descending through lambdas
      * binding the same variable. Don't descend further if there are no
@@ -500,35 +495,69 @@ let substitute (arg_to_sub, sub_expr) expr =
         | _ -> rebuild_expr e parts
     in fold_expr sub_aux remove_var vars_to_sub (Const (CFloat(0.0))) expr
 
+
 (* Lambda and assoc lambda composition *)
+
+(* returns a new version of g's arguments and body if they collide with any
+ * nested variables used in f's body *)
+let replace_nesting_collisions f_argvars f_body g_args g_body =
+    let collisions =
+      (* f_body can use vars that are not g's results due to nested functions.
+         thus collisions are vars in f_body that are not part of f_args, and
+         overlap with g_args.
+         In the presence of collisions, we want a function with new g_args,
+         with the colliding variable in g_args, g_body replaced by a new symbol.
+         In general, we cannot use f_args because this function may have
+         different arity than g_args. *)
+      Util.ListAsSet.inter
+        (get_free_vars f_body f_argvars) (get_arg_vars g_args)
+    in
+    if collisions = [] then g_args, g_body
+    else
+      let gat = get_arg_vars_w_types g_args in
+      let nargl, renamings = List.fold_left
+        (fun (arg_acc, ren_acc) (v,t) ->
+          if List.mem v collisions then
+            let nv = gen_var_sym() in (arg_acc@[nv,t], ren_acc@[v,nv,t])
+          else (arg_acc@[v,t],ren_acc))
+        ([],[]) gat
+      in
+      let new_args = match g_args, nargl with
+        | (AVar _, [x,y]) -> AVar(x,y)
+        | (ATuple _, vt_l) -> ATuple(vt_l)
+        | _ -> failwith "invalid number of args"
+      in
+      let new_body = List.fold_left (fun e (v,nv,t) ->
+        substitute (AVar(v,t), Var(nv,t)) e) g_body renamings
+      in new_args,new_body 
+
 let compose f g =
     let f_args, f_body = get_fun_parts f in
-    let g_args, g_body = get_fun_parts g
-    in Lambda(g_args, substitute (f_args, g_body) f_body)
+    let g_args, g_body = get_fun_parts g in
+    let ng_args, ng_body =
+      replace_nesting_collisions (get_arg_vars f_args) f_body g_args g_body
+    in Lambda(ng_args, substitute (f_args, ng_body) f_body)
     
 let compose_assoc assoc_f g =
     let f_arg1, f_arg2, f_body = get_assoc_fun_parts assoc_f in
-    let g_args, g_body = get_fun_parts g in
-    let collisions =
+    let g_args, g_body =
+      let ga, gb = get_fun_parts g
+      in replace_nesting_collisions
+           ((get_arg_vars f_arg1)@(get_arg_vars f_arg2)) f_body ga gb
+    in
+    let arg_collisions =
        let f2_vars = get_arg_vars_w_types f_arg2 in
        let g_vars = get_arg_vars_w_types g_args in
        List.filter (fun (v,t) -> List.mem_assoc v f2_vars) g_vars
     in
     let renamings =
-        List.map (fun (v,t) -> (v,(t,gen_var_sym()))) collisions in
+        List.map (fun (v,t) -> (v,(t,gen_var_sym()))) arg_collisions in
     let new_args = substitute_args renamings f_arg2 in
     let new_f_body =
-        let non_coll_f_body = List.fold_left (fun acc (v,(t,nv)) ->
-          substitute (AVar(v,t), Var(nv,t)) acc) f_body renamings
+        let non_coll_f_body = List.fold_left (fun e (v,(t,nv)) ->
+          substitute (AVar(v,t), Var(nv,t)) e) f_body renamings
         in substitute (f_arg1, g_body) non_coll_f_body
     in AssocLambda(g_args, new_args, new_f_body)
-(*
-    let new_args = substitute_args renamings g_args in
-    let new_g_body = List.fold_left (fun acc (v,(t,nv)) ->
-        substitute (AVar(v,t), Var(nv,t)) acc) g_body renamings in 
-    let new_body = substitute (f_arg1, new_g_body) f_body
-    in AssocLambda(new_args, f_arg2, new_body)
-*)
 
 (* selective_expr:
  * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
@@ -630,51 +659,53 @@ let rec lift_ifs bindings expr =
         if Util.ListAsSet.inter bindings vars = []
         then Util.ListAsSet.no_duplicates bindings else [] 
     in
-    (* returns expression * new bindings *)
     let simplify e =
         begin match e with
         | Lambda(arg_e, IfThenElse(pe,te,ee)) ->
             (* if pe is not dependent on arg_e, lift, otherwise nop *)
-            let new_bindings = arg_uses [arg_e] pe in
-            let new_e =
-                if new_bindings = [] then e
-                else IfThenElse(pe, Lambda(arg_e, te), Lambda(arg_e, ee))
-            in (new_e, new_bindings)
+            if (arg_uses [arg_e] pe) = [] then e
+            else IfThenElse(pe, Lambda(arg_e, te), Lambda(arg_e, ee))
 
         | AssocLambda(arg1_e,arg2_e,IfThenElse(pe,te,ee)) ->
-            let new_bindings = arg_uses [arg1_e; arg2_e] pe in
-            let new_e =
-                if new_bindings = [] then e
-                else IfThenElse(pe, AssocLambda(arg1_e,arg2_e,te),
-                                    AssocLambda(arg1_e,arg2_e,te))
-            in (new_e, new_bindings)
+            if (arg_uses [arg1_e; arg2_e] pe) = [] then e
+            else IfThenElse(pe, AssocLambda(arg1_e,arg2_e,te),
+                                AssocLambda(arg1_e,arg2_e,te))
 
         (* For if-chains, we just want the next level to have the same
          * predicate. *)
         | IfThenElse(pe,te,ee) ->
             begin match (te,ee) with
             | IfThenElse(pe2,te2,ee2), IfThenElse(pe3,te3,ee3) when pe2=pe3 ->
-                if pe = pe2 then (IfThenElse(pe,te2,ee3), [])
+                if pe = pe2 then IfThenElse(pe,te2,ee3)
                 else if simpler_dependencies pe2 pe then
                     let new_sub_e2 = IfThenElse(pe, te2, te3) in
                     let new_sub_e3 = IfThenElse(pe, ee2, ee3) 
-                    in (IfThenElse(pe2, new_sub_e2, new_sub_e3), [])
-                else (descend_expr (lift_ifs bindings) e,[])
-            | _ -> (descend_expr (lift_ifs bindings) e,[])
+                    in IfThenElse(pe2, new_sub_e2, new_sub_e3)
+                else descend_expr (lift_ifs bindings) e
+            | _ -> descend_expr (lift_ifs bindings) e
             end
         | _ ->
             let new_bindings = get_bindings e in
-            let r = lift_branches expr in
+            let r = lift_branches e in
             (* if children have no ifs, descend and try w/ grandchildren *)
-            if r <> expr then (r, [])
-            else (descend_expr (lift_ifs (bindings@new_bindings)) expr, new_bindings) 
+            if r <> e then r
+            else descend_expr (lift_ifs (bindings@new_bindings)) e 
         end
     in
-    let fixpoint old_expr (new_expr, new_bindings) =
-        if old_expr = new_expr then new_expr
-        else lift_ifs (bindings@new_bindings) new_expr
-    in fixpoint expr (simplify expr)     
+    let fixpoint old_expr new_expr =
+      if old_expr = new_expr then new_expr else lift_ifs bindings new_expr
+    in fixpoint expr (simplify expr)
 
+(* predicates: list of upstream predicates and whether this expr is a
+ * descendant of the "then" branch for each upstream predicate *)
+let rec simplify_if_chains predicates expr =
+    let rcr new_branch = simplify_if_chains (predicates@new_branch) in
+    match expr with
+    | IfThenElse(pe,te,ee) ->
+        if List.mem_assoc pe predicates then
+            rcr [] (if List.assoc pe predicates then te else ee)
+        else IfThenElse(pe, rcr [pe,true] te, rcr [pe,false] ee)
+    | _ -> descend_expr (simplify_if_chains []) expr 
 
 (* TODO: pairwith2, deep flattens *)
 let rec simplify_collections expr =
