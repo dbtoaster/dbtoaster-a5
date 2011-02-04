@@ -43,14 +43,18 @@ let generate_unit_test_code
       let vars = List.map fst in
       let strlist = String.concat in
       let loop_vars = Util.ListAsSet.diff (vars params) (vars relvars) in
+      let prop_vars = Util.ListAsSet.inter (vars bigsum_vars) loop_vars in
+      let bs_vars = Util.ListAsSet.diff (vars bigsum_vars) loop_vars in
       let code =
          (if delete then "-" else "+")^
          reln^"("^(strlist ", " (vars relvars))^ "): "^
          (if (loop_vars = []) then ""
           else "foreach "^(strlist ", " loop_vars)^" do ")^
          mapn^"["^(strlist ", " (vars params))^"] += "^
-         (if (bigsum_vars = []) then ""
-          else "bigsum_{"^(strlist ", " (vars bigsum_vars))^"} ")^
+         (if prop_vars = [] then ""
+          else "up_and_left_{"^(strlist ", " prop_vars)^"} ")^
+         (if (bs_vars = []) then ""
+          else "bigsum_{"^(strlist ", " bs_vars)^"} ")^
          (Calculus.term_as_string new_term)
       in [code]@acc
 
@@ -73,18 +77,7 @@ let compile_delta_for_rel (produce_child_maps: bool)
    : ((bool * string * Calculus.var_t list *
                 bound_vars_t * Calculus.term_t) list *
       Calculus.term_mapping_t) =
-(*
-   print_endline ("compile_delta_for_rel: reln="^reln
-      ^"  relsch=["^(Util.string_of_list ", " relsch)^"]"
-      ^"  map_term="^(Calculus.term_as_string map_term)
-      ^"  external_bound_vars=["
-              ^(Util.string_of_list ", " external_bound_vars)^"]"
-      ^"  externals_mapping=["^(Util.string_of_list "; "
-                (List.map (fun (x,y) -> ("<"^(Calculus.term_as_string x)^", "
-                                            ^(Calculus.term_as_string y)^">"))
-                          externals_mapping))^"]"
-      ^"  term="^(Calculus.term_as_string term));
-*)
+
    let (mapn, params) = Calculus.decode_map_term map_term
    in
    (* on insert into a relation R with schema A1, ..., Ak, to update map m,
@@ -93,11 +86,8 @@ let compile_delta_for_rel (produce_child_maps: bool)
       This is the list of parameters to the trigger, while
       params is the list of parameters to the map.
    *)
-   let tuple      = 
-     (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
-   (* compute the delta and simplify.
-      The result is a list of pairs (new_params, new_term).
-   *)
+   let tuple = (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
+
    Debug.print "LOG-COMPILE-STEPS" (fun () -> "Compiling " ^
                   (if delete then "-" else "+")^reln^
                   (Util.list_to_string fst tuple)^" of "^ 
@@ -109,13 +99,26 @@ let compile_delta_for_rel (produce_child_maps: bool)
                         (Calculus.term_as_string y)^" := "^
                         (Calculus.term_as_string x)^"\n")
                         externals_mapping)));
+   
+   Debug.print "LOG-COMPLEX-DELTA" (fun () ->
+     "Unsimplified delta: "^(Calculus.term_as_string
+       (Calculus.term_delta externals_mapping delete reln tuple term))^"\n");
+   
+   (* compute the delta and simplify.
+      The result is a list of pairs (new_params, new_term). *)
    let (s,bigsum_after_subst) = 
      List.split (
        Calculus.simplify
           (Calculus.term_delta externals_mapping delete reln tuple term)
-          tuple bigsum_vars params
-     )
+          tuple bigsum_vars params)
    in
+
+   Debug.print "LOG-COMPILE-TRIGGERS" (fun () ->
+     String.concat "\n" (List.map (fun (p, t) ->
+         "Trigger params: "^(Util.list_to_string fst p)^"\n"^
+         "Trigger delta: "^(Calculus.term_as_string t)^"\n")
+       s));
+
    (* create the child maps still to be compiled, i.e., the subterms
       that are aggregates with a relational algebra part that is not
       constraints_only.  Also substitute extracted terms by externals.
@@ -128,9 +131,20 @@ let compile_delta_for_rel (produce_child_maps: bool)
    *)
    if produce_child_maps then
      let (terms_after_substitution, todos) =
-        Calculus.extract_named_aggregates 
-            (mapn^reln) tuple s (*(if delete then "_m" else "_p")*)
+       (* pass down bigsum vars as well so they are preserved as
+        * output vars of maps for deltas that do not involve the bigsum var,
+        * e.g. in the case of joins in the flat part of the bigsum rewrite. *)
+       let extract_vars =
+         Util.ListAsSet.union tuple (List.flatten bigsum_after_subst)
+       in Calculus.extract_named_aggregates 
+            (mapn^reln) extract_vars s (*(if delete then "_m" else "_p")*)
      in
+     Debug.print "LOG-COMPILE-TRIGGERS" (fun () ->
+        String.concat "\n" (List.map (fun (p,t) ->
+            "Trigger simplified params: "^(Util.list_to_string fst p)^"\n"^
+            "Trigger delta w/ maps: "^(Calculus.term_as_string t)^"\n") 
+          terms_after_substitution));
+
      ((List.map (fun ((p, t), bs) -> (delete, reln, tuple, (p, bs), t))
                 (List.combine terms_after_substitution bigsum_after_subst)),
       todos)
@@ -138,15 +152,14 @@ let compile_delta_for_rel (produce_child_maps: bool)
      let (base_relations, terms_after_substitution) = 
        Calculus.extract_base_relations s
      in
-       ( List.map (fun (p,t) -> (delete, reln, tuple, (p, []), t)) 
-           terms_after_substitution,
-         List.map (fun (reln) -> 
-           let rel_schema = List.assoc reln db_schema in
-             ( Calculus.base_relation_expr (reln, rel_schema),
-               Calculus.map_term reln rel_schema
-             )
-         ) base_relations
-       )
+       (List.map (fun (p,t) -> (delete, reln, tuple, (p, []), t)) 
+          terms_after_substitution,
+        List.map (fun (reln) -> 
+          let rel_schema = List.assoc reln db_schema in
+            (Calculus.base_relation_expr (reln, rel_schema),
+             Calculus.map_term reln rel_schema))
+          base_relations)
+
 
 (* the main compile function. call this one, not the others. *)
 let rec compile ?(dup_elim = ref StringMap.empty)
@@ -156,24 +169,54 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                 ((map_definition, map_term): map_ref_t)
                 (generate_code:'a output_translator_t)
                 (accum:'a): 'a =
+
   Debug.print "LOG-COMPILES" (fun () -> "Compiling: " ^ 
                   (Calculus.term_as_string map_term)^" := "^
                   (Calculus.term_as_string map_definition));
+  
   let (mapn, map_params) = Calculus.decode_map_term map_term in
   if StringMap.mem mapn !dup_elim then 
     (try
-      let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) 
-                                    map_definition 
+      let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) map_definition 
       in accum (* If we've compiled this map already, just return accum as is *)
     with Calculus.TermsNotEquivalent(_) ->
+      print_endline ("Bug: Compiling two distinct maps with the same name: "^mapn^
+                "\n"^(Calculus.term_as_string map_definition)^
+                "\n"^(Calculus.term_as_string (StringMap.find mapn !dup_elim)));
       failwith ("Bug: Compiling two distinct maps with the same name: "^mapn^
                 "\n"^(Calculus.term_as_string map_definition)^
                 "\n"^(Calculus.term_as_string (StringMap.find mapn !dup_elim))))
   else
-  let (bigsum_vars, bsrw_theta, bsrw_term) = 
-    Calculus.bigsum_rewriting
-      bs_rewrite_mode (Calculus.roly_poly map_definition) [] (mapn^"_")
+  let (preagg_vars, preagg_theta, preagg_term) =
+    Calculus.preaggregate
+      bs_rewrite_mode (Calculus.roly_poly map_definition) map_params (mapn^"_")
   in
+
+  let (bigsum_vars, bsrw_theta, bsrw_term) =
+    (* 
+    Calculus.bigsum_rewriting
+      bs_rewrite_mode (Calculus.roly_poly map_definition) map_params (mapn^"_")
+    *)
+    Calculus.preaggregate
+      bs_rewrite_mode (Calculus.roly_poly map_definition) map_params (mapn^"_")
+  in
+
+  Debug.print "LOG-PREAGG" (fun () ->
+    "Preaggregation:\n"^
+    (Calculus.term_as_string (Calculus.roly_poly map_definition))^
+    "\n    =>\n    "^(Calculus.term_as_string preagg_term)^
+    "\n   with:\n"^
+    (String.concat "\n    "
+      (List.map (fun (defn,t) ->
+        (Calculus.term_as_string t)^" := "^(Calculus.term_as_string defn))
+        preagg_theta))^
+    "\nPropagated vars:\n    "^(String.concat "," (List.map fst preagg_vars)));
+
+  Debug.print "LOG-PREAGG" (fun () ->
+    "Bigsum rewrite:\n"^
+    (Calculus.term_as_string (Calculus.roly_poly map_definition))^
+    "\n    =>\n    "^(Calculus.term_as_string bsrw_term));
+
   let (next_top_down_depth, go_deeper) = 
     match top_down_depth with 
     | None -> (None, true)
@@ -208,14 +251,12 @@ let rec compile ?(dup_elim = ref StringMap.empty)
       db_schema
       (map_definition, map_term)
       (List.flatten l1)
-        ( List.fold_left (fun curr_accum curr_map -> 
-            compile ~dup_elim:dup_elim
-                    ~top_down_depth:next_top_down_depth
-                    bs_rewrite_mode
-                    db_schema
-                    curr_map
-                    generate_code
-                    curr_accum
-          ) accum todos)
-    )
-;;
+        (List.fold_left (fun curr_accum curr_map -> 
+             compile ~dup_elim:dup_elim
+                     ~top_down_depth:next_top_down_depth
+                     bs_rewrite_mode
+                     db_schema
+                     curr_map
+                     generate_code
+                     curr_accum)
+           accum todos))

@@ -274,26 +274,22 @@ let complement relcalc =
 *)
 let split_nested (monomial: relcalc_t) 
                  : relcalc_t * relcalc_t =
+   let is_nested_term t_lf = match t_lf with
+       External(_,_) | AggSum(_,_) -> true
+     | _ -> false
+   in
    let is_nesting_atom lf: bool =
-      match lf with
-         CalcRing.Val(AtomicConstraint(c, t1, t2)) ->
-            let is_nested_term t_lf =
-               (match t_lf with
-                  External(_,_) -> true
-                | AggSum(_,_) -> true
-                | _ -> false
-               )
-            in
-            ([] != (List.filter is_nested_term
-                     ((TermRing.leaves t1) @ (TermRing.leaves t2))))
-       | _ -> false
+     match lf with
+       CalcRing.Val(AtomicConstraint(c, t1, t2)) ->
+       ([] != (List.filter is_nested_term
+                ((TermRing.leaves t1) @ (TermRing.leaves t2))))
+     | _ -> false
    in
    let atoms           = List.map CalcRing.mk_val
                                   (CalcRing.cast_to_monomial monomial) in
    let nesting_atoms   = List.filter is_nesting_atom atoms in
    let flat_atoms      = Util.ListAsSet.diff atoms nesting_atoms in
-   (CalcRing.mk_prod flat_atoms,
-    CalcRing.mk_prod nesting_atoms)
+   (CalcRing.mk_prod flat_atoms, CalcRing.mk_prod nesting_atoms)
 
 
 
@@ -344,6 +340,16 @@ let string_of_const c =
    | String(s) -> "'" ^ s ^ "'"
    | Boolean(true)  -> "true"
    | Boolean(false) -> "false"
+let string_of_const c = 
+   match c with
+     Int(i)    -> string_of_int i
+   | Double(d) -> string_of_float d
+   | Long(l)   -> "(int64 output not implemented)" (* TODO *)
+   | String(s) -> "'" ^ s ^ "'"
+   | Boolean(true)  -> "true"
+   | Boolean(false) -> "false"
+
+let string_of_var = fst
 
 let string_of_var = fst
 ;;
@@ -386,8 +392,8 @@ and term_as_string (m: term_t): string =
                      (fun l -> "("^(Util.string_of_list "*" l)^")")
                      (fun x -> "-("^x^")")
                      leaf_f m)
-;;
-
+let string_of_relcalc = relcalc_as_string
+let string_of_term    = term_as_string
 let string_of_relcalc = relcalc_as_string
 let string_of_term    = term_as_string
 
@@ -414,19 +420,31 @@ let split_off_equalities (monomial: relcalc_t) :
       leaf_f monomial
 
 
+(* returns a set of substitutions, as applied to the given monomial.
+ * the substitutions are extracted from equalities in the input monomial,
+ * except for those equalities comparing two bound vars. Bound vars are not
+ * replaced in the resulting monomial, only free vars are replaced.
+ *)
 let extract_substitutions (monomial: relcalc_t)
                           (bound_vars: var_t list) :
                           (var_mapping_t * relcalc_t) =
-   let (eqs, rest) = split_off_equalities monomial
-   in
- (*print_string ("substitutions for: "^(relcalc_as_string monomial)^"\n")*)
- (*print_string ("eqs: "^(Util.Function.string_of_table_fn eqs fst fst)^"\n")*)
+   let (eqs, rest) = split_off_equalities monomial in
+   
+   Debug.print "EXTRACT-SUBS" (fun () ->
+     ("substitutions for: "^(relcalc_as_string monomial)^"\n")^
+     ("eqs: "^(Util.Function.string_of_table_fn eqs fst fst)^"\n"));
+   
    (* an equation will be in eqs_to_keep if it tries to set two bound vars
       equal, where we are not allowed to replace either. We have to keep
       these equalities. *)
-   let (theta, eqs_to_keep) = Util.Vars.unifier eqs bound_vars
-   in
- (*print_string ("t: "^(Util.Function.string_of_table_fn theta fst fst)^"\n")*)
+   let (theta, eqs_to_keep) = Util.Vars.unifier eqs bound_vars in
+   
+   Debug.print "EXTRACT-SUBS" (fun () ->
+     ("theta: "^(Util.Function.string_of_table_fn theta fst fst)^"\n"));
+
+   Debug.print "EXTRACT-SUBS" (fun () ->
+     ("eqs_to_keep: "^(Util.Function.string_of_table_fn eqs_to_keep fst fst)^"\n"));
+   
    let f (x,y) = CalcRing.mk_val (AtomicConstraint(Eq,
                     TermRing.mk_val(Var(x)), TermRing.mk_val(Var(y))))
    in
@@ -434,12 +452,7 @@ let extract_substitutions (monomial: relcalc_t)
    let rest2 = CalcRing.mk_prod(
       [(apply_variable_substitution_to_relcalc theta rest)]
       @ (List.map f eqs_to_keep))
-   in
-   (theta, rest2)
-
-
-
-
+   in (theta, rest2)
 
 
 (* factorize an AggSum(f, r) where f and r are monomials *)
@@ -526,17 +539,16 @@ let rec simplify_calc_monomial (recur: bool)
    let leaf_f lf =
       match lf with
          AtomicConstraint(c, t1, t2) ->
-            let t1b = if recur
-                    then (snd (simplify_roly true t1 bound_vars bigsum_vars))
-                    else t1 in
-            let t2b = if recur
-                    then (snd (simplify_roly true t2 bound_vars bigsum_vars))
-                    else t2 in
+            let aux t =
+              if not recur then t else
+              (* nested bindings are dropped here, thus cannot be used to 
+                 eliminate upper-level loop variables. *)
+              snd (simplify_roly true t bound_vars bigsum_vars) in 
+            let t1b, t2b = aux t1, aux t2 in
             CalcRing.mk_val(AtomicConstraint(c, t1b, t2b))
        | _ -> CalcRing.mk_val lf
    in
-   extract_substitutions (CalcRing.apply_to_leaves leaf_f relcalc)
-                         bound_vars
+   extract_substitutions (CalcRing.apply_to_leaves leaf_f relcalc) bound_vars
 
 and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
                   (bigsum_vars: var_t list) : (var_mapping_t * term_t) =
@@ -550,10 +562,7 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
             else if (f = TermRing.zero) then ([], TermRing.zero)
             else
                let ((b:(var_t * var_t) list), non_eq_cons) =
-                  simplify_calc_monomial 
-                    recur r 
-                    bound_vars
-                    bigsum_vars
+                  simplify_calc_monomial recur r bound_vars bigsum_vars
                in
                let f1 = apply_variable_substitution_to_term b f
                in
@@ -566,14 +575,42 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
                     (ListAsSet.diff (Util.Function.img b) bigsum_vars)])
                   bigsum_vars
                in
-               let non_eq_cons_subbed = 
-                  apply_variable_substitution_to_relcalc f_b non_eq_cons
+
+               Debug.print "LOG-SIMPLIFY-ROLY" (fun () ->
+                 "BS VAR subst: "^(String.concat ","
+                    (List.map (fun (x,y) -> (fst x)^"->"^(fst y)) f_b)));
+
+               let (_, non_eq_cons_subbed) = 
+                 simplify_calc_monomial recur
+                   (apply_variable_substitution_to_relcalc f_b non_eq_cons)
+                   bound_vars bigsum_vars
                in
-               if (non_eq_cons_subbed = relcalc_one) then (b, f2)
-               else (b, TermRing.mk_val(AggSum(f2, non_eq_cons_subbed)))
-                 (* we represent the if-condition as a calculus
-                    expression to use less syntax *)
-       | _            -> ([], TermRing.mk_val(lf))
+               (* Pass propagated var bindings up, where propagated vars are
+                * bigsums or group-bys appearing in nested expressions.
+                * This assumes bigsums contain both true bigsums, and 
+                * propagated group-bys (see notes in bigsum_rewriting) *)
+               let b_and_bprop =
+                 let bprop =
+                   List.filter (fun (x,y) -> (List.mem x bigsum_vars)) f_b
+                 in List.fold_left (fun acc (x,y) ->
+                        if List.mem_assoc x acc then acc else (x,y)::acc)
+                      b bprop
+               in
+               if (non_eq_cons_subbed = relcalc_one) then
+                 (b_and_bprop, f2)
+               else
+                 begin
+                 Debug.print "LOG-SIMPLIFY-ROLY" (fun() ->
+                    "Simplified: "^(term_as_string (TermRing.mk_val lf))^
+                    "\n    =>\n"^(term_as_string
+                      (TermRing.mk_val(AggSum(f2, non_eq_cons_subbed)))));
+                 (b_and_bprop,
+                      TermRing.mk_val(AggSum(f2, non_eq_cons_subbed)))
+                    (* we represent the if-condition as a calculus
+                       expression to use less syntax *)
+                 end
+       
+    | _            -> ([], TermRing.mk_val(lf))
    in
    (* Note: in general, this can lead to an inconsistent substitution,
       which only hurts if a param variable occurs in more than
@@ -603,8 +640,17 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
    
    We guarantee that no unification happens on nested aggregates by "binding" 
    all variables we expect to see in the expression when doing recursive 
-   processing, and only "bind" the bigsum and relation variables when we 
-   simplify only the top-level terms.
+   processing, and only "bind" the relation variables when we simplify only the
+   top-level terms.
+   -- Yanif: it is safe to recursively process in the second pass with only
+      relation variables, since bigsum bindings are only used for substitution
+      within the same level as the equality constraints defining the binding.
+      This level is the enclosing bigsum Aggsum,
+      (i.e. bindings in AggSum(AggSum(..., bindings), constraint-only) are
+      limited upwards to the outer AggSum).
+      Recursive processing here ensures bigsum var elimination for deeply
+      nested aggregates as created by the preaggregation (i.e. recursive
+      bigsum) rewrite.  
    
    Also note: The top-level terms here, refers to the top level in the 
    comparison dimension.  Consider the following expression:
@@ -630,13 +676,20 @@ let simplify (term: term_t)
            eliminate loop_vars.  However, simplify_roly handles each term in
            the monomial separately.  This means we need to do some extra work,
            making this a TODO *)
-      let (b, t2) = simplify_roly false t1 rel_vars bsum_vars
+        (* It is fine to invoke the second simplify_roly recursively, since
+           nested aggregate bindings do not propagate upwards. Bindings are
+           only used within a single AggSum (not even across products as
+           mentioned above), and are applied to terms at the same level as the
+           equalities from which bindings are extracted.
+           However, we still have to deal with inconsistent substitutions
+           across products.
+        *)
+      let (b, t2) = simplify_roly (*false*) true t1 rel_vars bsum_vars
       in
-      ( ( (List.map (Util.Vars.apply_mapping b) loop_vars),
-           t2
-        ),
-        (List.map (Util.Vars.apply_mapping b) bsum_vars)
-      )
+        (* Filter propagated vars (i.e. up-and-left and bigsums) to only
+         * those that are not unified *)
+      (((List.map (Util.Vars.apply_mapping b) loop_vars), t2),
+       List.filter (fun x -> not(List.mem_assoc x b)) bsum_vars)
    in
    List.filter (fun ((_, t), _) -> t <> TermRing.zero)
       (List.map simpl (TermRing.sum_list (roly_poly term)))
@@ -658,7 +711,12 @@ and extract_aggregates_from_term (aggressive: bool) (term: term_t) =
       match x with
          AggSum(f, r) ->
             (* if r is constraints_only, take the aggregates from the
-               atoms of r; otherwise, return x monolithically. *)
+               atoms of r; otherwise, return x monolithically.
+               also, flip aggressive in the recursive call to handle deeply
+               nested terms, otherwise this yields only the very
+               bottom-most aggregates. For deeply nested terms, we only
+               want to skip the first constraints_only.
+            *)
             if ((constraints_only r) && (not aggressive)) then
                ((extract_aggregates_from_term aggressive f) @
                 (extract_aggregates_from_calc aggressive r))
@@ -739,9 +797,13 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
                     (Util.ListAsSet.union params bound_vars))
          in (p, t)
       in
-      List.map prepend_params (extract_aggregates_from_term false term)
+      let r = extract_aggregates_from_term false term in
+      Debug.print "LOG-EXTRACTIONS" (fun () ->
+        "Extracting from term:\n"^(term_as_string term)^" ->\n"^
+        (String.concat "\n" (List.map term_as_string r))^"\n");
+      List.map prepend_params r
    in
-   (* the central duplicate elimination step. *)
+   (* eliminate duplicate maps across monomials for this workload alone *)
    let extracted_terms = Util.ListAsSet.no_duplicates
                 (List.flatten (List.map extract_from_one_term workload))
    in
@@ -752,6 +814,10 @@ let extract_named_aggregates (name_prefix: string) (bound_vars: var_t list)
    let terms_after_substitution =
       List.map (fun (p, t) ->  (p, (substitute_in_term theta t))) workload
    in
+      Debug.print "LOG-EXTRACTIONS" (fun () ->
+        "Extractions:\n"^
+        String.concat "\n" (List.map (fun (defn,t) ->
+        (term_as_string t)^" := "^(term_as_string defn)^"\n") theta));
    (terms_after_substitution, theta)
 
 let extract_base_relations (workload: (var_t list * term_t) list) :
@@ -819,8 +885,8 @@ type bs_rewrite_mode_t = ModeExtractFromCond
 
 let bigsum_rewriting (mode: bs_rewrite_mode_t)
                      (term: term_t)
-                     (bound_vars: var_t list)
-                     (map_name_prefix: string):
+                     (params: var_t list)
+                     (map_name_prefix: string) :
                      ((var_t list) * term_mapping_t * term_t) =
    let bs_submap_id = ref 0 in
    let leaf_f lf =
@@ -830,8 +896,21 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
             (* only do it if not constraints only and there are nested aggs. *)
             let (flat, nested) = split_nested r (* must be a monomial *)
             in
-            let bs_vars = Util.ListAsSet.inter (relcalc_vars nested)
-               (Util.ListAsSet.diff (safe_vars flat bound_vars) bound_vars)
+            (* We treat propagated group-by attributes as bigsum vars,
+               so that any elimination of these vars are also handled by
+               simplify_roly. Later, we can separate bigsum and propagated
+               group-bys by checking against map parameters.
+               Note that nested aggregates do not have propagated group-bys,
+               this only occurs with the outermost bigsum rewrite.
+               -- Out vars are locally safe vars that are map params
+               -- In vars are free vars that are not range-restricted.
+               -- Propagated vars are all vars used in the nested part except
+                  in vars (which come from outside)
+            *)
+            let out_vars = Util.ListAsSet.inter (safe_vars flat []) params in
+            let in_vars = Util.ListAsSet.diff params (safe_vars flat []) in
+            let prop_vars = Util.ListAsSet.inter (relcalc_vars nested)
+               (Util.ListAsSet.diff (safe_vars flat params) in_vars)
             in
             let (bigsum_vars, new_term) =
                (match mode with
@@ -866,11 +945,11 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                      the domain relation. *)
                   ([], (TermRing.mk_val(AggSum(
                        TermRing.mk_val(AggSum(t, flat)),
-                       CalcRing.mk_prod([CalcRing.mk_val(Rel(
-                          "Dom_{"^(Util.string_of_list ", " 
-                            (fst (List.split bs_vars))
-                          )^"}",
-                          bs_vars)); nested])))))
+                       CalcRing.mk_prod(
+                         [CalcRing.mk_val(Rel(
+                           "Dom_{"^(Util.string_of_list ", " 
+                            (fst (List.split prop_vars)))^"}", prop_vars));
+                          nested])))))
                           (* TODO: we should also collect the information
                              needed to maintain the domain relation here. *)
                 | ModeOpenDomain ->
@@ -879,20 +958,29 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                      over the relevant valuations of these variables has to
                      be worried about elsewhere. The advantage is that
                      delta applied to this term is guaranteed to be simpler,
-                     so we can do recursive delta computation. *)
-                  (bs_vars, TermRing.mk_val(AggSum(
-                               TermRing.mk_val(AggSum(t, flat)), nested)))
+                     so we can do recursive delta computation.
+                  *)
+                  (Util.ListAsSet.union prop_vars out_vars,
+                    TermRing.mk_val(
+                      AggSum(TermRing.mk_val(AggSum(t, flat)), nested)))
                )
             in
             (* now extract ALL nested aggregates *)
-            let agg_plus_vars agg =
-               (Util.ListAsSet.inter (term_vars agg) bs_vars, agg)
+            let agg_plus_vars (params, agg) =
+               (Util.ListAsSet.inter (term_vars agg) params, agg)
+            in
+            let (t_params, r_params) = match mode with
+              | ModeExtractFromCond | ModeGroupCond -> (in_vars, params)
+              | _ -> (Util.ListAsSet.union prop_vars out_vars, prop_vars)
             in
             let extract_sub_aggregates_from_term t =
                match t with
-                  TermRing.Val(AggSum(t, r)) ->
-                     (extract_aggregates_from_term false t) @
-                     (extract_aggregates_from_calc false r)
+                | TermRing.Val(AggSum(t, r)) ->
+                    (List.map (fun x -> (t_params,x))
+                      (extract_aggregates_from_term false t)) @
+                    (List.map (fun x -> (r_params,x))
+                      (extract_aggregates_from_calc false r))
+
                 | _ -> raise (Assert0Exception
                   "Calculus.bigsum_rewriting.extract_sub_aggregates_from_term")
             in
@@ -900,8 +988,8 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
                (extract_sub_aggregates_from_term new_term))
             in
             bs_submap_id := (!bs_submap_id) + 1;
-            let theta = mk_term_mapping (map_name_prefix^"BS"^
-                                         (string_of_int !bs_submap_id)^"_") aggs
+            let theta = mk_term_mapping
+              (map_name_prefix^"BS"^(string_of_int !bs_submap_id)^"_") aggs
             in
             ([(bigsum_vars, theta)], substitute_in_term theta new_term)
        | _ -> ([([], [])], TermRing.mk_val(lf))
@@ -909,9 +997,186 @@ let bigsum_rewriting (mode: bs_rewrite_mode_t)
    let (a,  b)  = TermRing.extract List.flatten List.flatten (fun x->x)
                                    leaf_f term in
    let (a1, a2) = List.split a in
-   (List.flatten a1, List.flatten a2, b)
+   (Util.ListAsSet.no_duplicates (List.flatten a1), List.flatten a2, b)
 
 
+(* assumes term has already had roly_poly applied *)
+let preaggregate (mode: bs_rewrite_mode_t)
+                 (term : term_t)
+                 (params: var_t list)
+                 (map_name_prefix: string) =
+  let submap_id = ref 0 in
+  let rec rewrite_aux t params : ((var_t list * term_mapping_t) list) * term_t =
+    let calc_leaf_f propagated_vars leaf_c =
+      match leaf_c with
+      | AtomicConstraint(op,t1,t2) ->
+        (* Restrict propagations to those used by nested terms.
+           Thus params are only in params, these nested aggregates *must* have
+           no out params.
+        *)
+        let aux t =
+          let params = Util.ListAsSet.inter propagated_vars (term_vars t) in
+          let t_props_substs, new_t = rewrite_aux t params in
+          let prop_vars, theta = List.split t_props_substs in
+          (Util.ListAsSet.no_duplicates (List.flatten prop_vars),
+           List.flatten theta, new_t) 
+        in
+        let t1_prop_vars, t1_theta, new_t1 = aux t1 in
+        let t2_prop_vars, t2_theta, new_t2 = aux t2 in
+        ([Util.ListAsSet.union t1_prop_vars t2_prop_vars, t1_theta@t2_theta],
+          CalcRing.mk_val(AtomicConstraint(op, new_t1, new_t2)))
+      | _ -> ([([],[])], CalcRing.mk_val(leaf_c))
+    in
+    let term_leaf_f leaf_t =
+      match leaf_t with
+      | AggSum(f,r) when ((not (constraints_only r)) &&
+                         ((snd (split_nested r)) <> relcalc_one)) ->
+        (* only do it if not constraints only and there are nested aggs. *)
+        let (flat, nested) = split_nested r (* must be a monomial *) in
+        
+        (* We treat propagated group-by attributes as bigsum vars,
+           so that any elimination of these vars are also handled by
+           simplify_roly. Later, we can separate bigsum and propagated
+           group-bys by checking against map parameters.
+           Note that nested aggregates do not have propagated group-bys,
+           this only occurs with the outermost bigsum rewrite.
+           -- Out vars are locally safe vars that are map params
+           -- In vars are free vars that are not range-restricted.
+           -- Propagated vars are all vars used in the nested part except
+              in vars (which come from outside)
+        *)
+        let rr_vars = safe_vars flat [] in
+        let out_vars = Util.ListAsSet.inter rr_vars params in
+        let in_vars = Util.ListAsSet.diff params rr_vars in
+        let prop_vars = Util.ListAsSet.inter (relcalc_vars nested)
+           (Util.ListAsSet.diff (safe_vars flat params) in_vars)
+        in
+        
+        Debug.print "LOG-PREAGG" (fun() ->
+          "Nested term:\n"^(term_as_string (TermRing.mk_val leaf_t))^
+          "\nrr_vars: "^(String.concat "," (List.map fst rr_vars))^
+          "\nout_vars: "^(String.concat "," (List.map fst out_vars))^
+          "\nin_vars: "^(String.concat "," (List.map fst in_vars))^
+          "\nprop_vars: "^(String.concat "," (List.map fst prop_vars)));
+        
+        (* recur on nested part and use in the rewrite of this level *)
+        let (nested_props_substs, new_nested) =
+          CalcRing.extract List.flatten List.flatten (fun x->x)
+            (calc_leaf_f prop_vars) nested
+        in
+        let (bigsum_vars, new_term) =
+          (* For deeply nested queries, preaggregation must be designed with
+             the map materialization method in mind. Currently, map
+             materialization is done with extract_named_aggregates, and this
+             only works with ModeOpenDomain. ModeOpenDomain has the property
+             that the rewritten term is a constraint-only form, and any deltas
+             of the rewritten term is also in constraint-only form.
+             Constraint-only form simplifies the materialization choice: the
+             flat part is always materialized, while the nested part is not.
+             For all other modes, the nested and flat parts are mixed after a
+             delta transform.
+             Thus this function should always be invoked with ModeOpenDomain
+             on deeply nested queries, however we leave the other modes here
+             for illustration on alternative nesting evaluation strategies,
+             that could potentially be utilized with a more complex
+             materialization function.
+             Note that however even with ModeOpenDomain, there can still be
+             issues regarding extraction and substitution of the newly created
+             external, given the bottom up substitution with the first match
+             found. See substitute_in_term for details.
+           *)
+          match mode with
+          | ModeExtractFromCond ->
+            (* just extract nested aggregates from conditions. The extraction
+               happens below, for all modes. We must execute such a term as is:
+               the delta rewriting creates a term that is not simpler.
+               (The same is true for ModeGroupCond and ModeIntroduceDomain.) *)
+            ([], leaf_t)
+          
+          | ModeGroupCond ->
+            (* extract all the conditions with a nested aggregate, "nested",
+               into a single condition AggSum(1, nested) = 1. The advantage of
+               this over ModeExtractFromCond is that there is less work to do
+               at runtime iterating over all the tuples of flat. *)
+            let grouped_conds = TermRing.mk_val(AggSum(term_one, new_nested)) in
+              ([],
+               (AggSum(t, CalcRing.mk_prod([flat;
+                  CalcRing.mk_val(AtomicConstraint(Eq, term_one,
+                    grouped_conds))]))))
+              (* TODO: the whole point of this mode is that grouped_conds
+                 is made external, but this is not happening yet. *)
+
+          | ModeIntroduceDomain ->
+            (* introduce explicit domain relations. Like ModeExtractFromCond
+               but with duplicate elimination of the values we iterate over,
+               so there are fewer iteration steps, but there is the additional
+               cost of maintaining the domain relation. *)
+            ([],
+              (AggSum(
+                 TermRing.mk_val(AggSum(f, flat)),
+                   CalcRing.mk_prod(
+                     [CalcRing.mk_val(Rel(
+                       "Dom_{"^(Util.string_of_list ", " 
+                         (fst (List.split prop_vars)))^"}", prop_vars));
+                      new_nested]))))
+            (* TODO: we should also collect the information needed to maintain
+               the domain relation here. *)
+
+          | ModeOpenDomain ->
+            (* like ModeIntroduceDomain, but the domain is implicit.
+               There are free bigsum variables, and the loop to iterate
+               over the relevant valuations of these variables has to
+               be worried about elsewhere. The advantage is that
+               delta applied to this term is guaranteed to be simpler,
+               so we can do recursive delta computation. *)
+            (Util.ListAsSet.union prop_vars out_vars,
+             (AggSum(TermRing.mk_val(AggSum(f, flat)), new_nested)))
+
+        in
+        (* now extract ALL nested aggregates *)
+        let agg_plus_vars (params, agg) =
+           (Util.ListAsSet.inter (term_vars agg) params, agg)
+        in
+        let (t_params, r_params) = match mode with
+          | ModeExtractFromCond | ModeGroupCond -> (in_vars, params)
+          | _ -> (Util.ListAsSet.union prop_vars out_vars, prop_vars)
+        in
+        let extract_sub_aggregates_from_term t =
+           match t with
+            | TermRing.Val(AggSum(t, r)) ->
+              (List.map (fun x -> (t_params,x))
+                (extract_aggregates_from_term false t)) @
+              (List.map (fun x -> (r_params,x))
+                (extract_aggregates_from_calc false r))
+            | _ -> raise (Assert0Exception
+              "Calculus.bigsum_rewriting.extract_sub_aggregates_from_term")
+        in
+        let aggs = (List.map agg_plus_vars
+                     (extract_sub_aggregates_from_term (TermRing.mk_val new_term)))
+        in
+        submap_id := (!submap_id) + 1;
+        let theta = mk_term_mapping
+          (map_name_prefix^"BS"^(string_of_int !submap_id)^"_") aggs
+        in
+        let nested_props, nested_substs = List.split nested_props_substs in
+        ([(Util.ListAsSet.union bigsum_vars
+            (Util.ListAsSet.no_duplicates (List.flatten nested_props)),
+          (List.flatten nested_substs)@theta)],
+         substitute_in_term theta (TermRing.mk_val new_term))
+
+      | _ -> ([([], [])], TermRing.mk_val(leaf_t))  
+    in
+    let simplified_t = TermRing.mk_sum
+      (List.map (fun x ->
+          snd (simplify_roly true x params [] (* no bigsum vars yet... *)))
+        (TermRing.sum_list t))
+    in TermRing.extract
+         List.flatten List.flatten (fun x->x) term_leaf_f simplified_t
+  in
+  let (props_and_substs, new_term) = rewrite_aux term params in
+  let propagations, substitutions = List.split props_and_substs 
+  in (Util.ListAsSet.no_duplicates (List.flatten propagations),
+      List.flatten substitutions, new_term)
 
 
 

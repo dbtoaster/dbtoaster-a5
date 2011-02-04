@@ -302,8 +302,8 @@ type bs_rewrite_mode_t = ModeExtractFromCond
                        | ModeIntroduceDomain
                        | ModeOpenDomain
 
-(* given a term t, a set of bound variables, and a name prefix for maps
-   to be generated,
+(* given a term t, a set of (map) parameters associated with the term to be
+   rewritten, and a name prefix for maps to be generated,
 
    (bigsum_rewriting t bound_vars map_name_prefix)
 
@@ -321,6 +321,9 @@ type bs_rewrite_mode_t = ModeExtractFromCond
 val bigsum_rewriting: bs_rewrite_mode_t -> term_t -> (var_t list) -> string ->
                       ((var_t list) * term_mapping_t * term_t)
 
+
+val preaggregate: bs_rewrite_mode_t -> term_t -> var_t list -> string ->
+                  var_t list * term_mapping_t * term_t
 
 (* (delta f n "R" t e) returns the delta on insertion (n=false) or
    deletion (n=true) of tuple t into relation R, for relcalc expression e,
