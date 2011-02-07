@@ -34,7 +34,8 @@ SOURCE = \
 	codegen/ocaml/M3OCamlgen.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
-	codegen/ocaml/K3OCamlgen.ml
+	codegen/ocaml/K3OCamlgen.ml \
+	codegen/c++/K3Cppgen.ml
 
 HEADER_ONLY_SOURCE = \
 	stages/maps/M3Codegen.mli \
@@ -88,8 +89,9 @@ RUNTIME = \
 	lib/ocaml/Values.ml \
 	lib/ocaml/Database.ml \
 	lib/ocaml/Sources.ml \
-	lib/ocaml/Runtime.ml \
-	lib/ocaml/StandardAdaptors.ml 
+	lib/ocaml/StandardAdaptors.ml \
+	lib/ocaml/Runtime.ml
+
 
 RUNTIME_ML_OBJ = $(subst .ml,.cmo,$(filter %.ml,$(RUNTIME)))
 RUNTIME_MLI_OBJ = $(subst .mli,.cmi,$(filter %.mli,$(RUNTIME)))
@@ -125,6 +127,7 @@ INCLUDE_DIR = \
 	-I codegen/ocaml/ \
 	-I codegen/ \
 	-I codegen/plsql/ \
+	-I codegen/c++/ \
 	-I parser/ \
 	-I lib/ocaml
 INCLUDE_OBJ = \

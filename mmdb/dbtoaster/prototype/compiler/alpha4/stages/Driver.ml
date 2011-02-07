@@ -121,7 +121,7 @@ if flag_bool "HELP" then
         "ocaml:m3      OCaml source file (via M3)\n"^
         "ocaml:k3      OCaml source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
-        "c++           C++ source file (not implemented yet)\n"^
+        "c++           C++ source file (Experimental)\n"^
         "run           Run the query with the default interpreter (K3)\n"^
         "run:m3        Run the query with the M3 interpreter\n"^
         "run:k3        Run the query with the K3 interpreter (default run)\n"
@@ -322,6 +322,7 @@ module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
+module K3CppCompiler = K3Compiler.Make(K3Cppgen.K3CG);;
 
 open Database
 
@@ -336,7 +337,7 @@ let compile_function: ((string * Calculus.var_t list) list ->
   | L_OCAML(OCG_M3) -> M3OCamlCompiler.compile_query
   | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
   | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
-  | L_CPP   -> give_up "Compilation to C++ not implemented yet"
+  | L_CPP   -> K3CppCompiler.compile_query
 
   | L_M3(prepared)  -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
@@ -422,13 +423,33 @@ let compile_ocaml_from_output () =
      | None      -> compile_ocaml_via_tmp ()
      | Some("-") -> compile_ocaml_via_tmp ()
      | Some(a)   -> compile_ocaml a
+;;
+
+let compile_cpp in_file_name =
+  let cpp_cc = "g++" in
+    Unix.execvp cpp_cc 
+      ( Array.of_list (
+        [ cpp_cc; 
+          "-I"; "lib/c++" ;
+          in_file_name ;"-O3"; "-o" ; (flag_val_force "COMPILE")]
+      ));;
+
+let compile_cpp_via_tmp () =
+  compile (GenericIO.O_TempFile("dbtoaster_", ".cpp", compile_cpp));;
+
+let compile_cpp_from_output () =
+   match (flag_val "OUTPUT") with
+     | None      -> compile_cpp_via_tmp ()
+     | Some("-") -> compile_cpp_via_tmp ()
+     | Some(a)   -> compile_cpp a
 ;;   
+
 
 if flag_bool "COMPILE" then
   match language with
   | L_OCAML(_) -> compile_ocaml_from_output ()
   | L_SQL(SL_PLSQL) -> give_up "Compilation of PLSQL not implemented yet"
-  | L_CPP   -> give_up "Compilation of C++ not implemented yet"
+  | L_CPP   -> compile_cpp_from_output ()
   | _       -> give_up ("No external compiler available for "^
       ( match language with 
           | L_SQL(SL_SQL) -> "sql"
