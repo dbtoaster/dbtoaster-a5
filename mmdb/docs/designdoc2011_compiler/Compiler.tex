@@ -181,7 +181,24 @@ For example, consider the expression:
 $${\tt AggSum}([c], f_1[][a] * f_2[][b] * f_3[a,b][c])$$
 \end{example}
 
-It is important to note that the variable $a$ does not affect evaluation of $f_2$.  Consequently, it might be more efficient to evaluate this expression as a right-associative expression (especially if $f_3$ is definition with a singleton on the RHS).  
+It is important to note that the variable $a$ does not affect evaluation of $f_2$.  Consequently, it might be more efficient to evaluate this expression as right-associative (especially if it is possible to curry $f_3$).  This process is analogous to join ordering.
+
+\parsection{The (ir)relevance of {\tt AggSum}s}
+Though it might appear otherwise, the role of {\tt AggSum}s is purely as a convenient annotation tool.  Without them, evaluating a calculus expression would require a repeated loop through the entire domain of the result set.  {\tt AggSum}s are based around the observation that the typical usage pattern of a calculus expression involves aggregating over subsets of the result domain.  Furthermore, certain variables only appear in parts of the expression and are not required as part of the output domain (i.e., we aggregate over them).  By wrapping the portions of the expression that use a particular variable in {\tt AggSum}s, we indicate that this subset of the overall loop domain is isolated to within the {AggSum} (and doing so, simplify code generation).
+
+\subsection{Compiler Challenges}
+
+\parsection{Extraction}
+Given an arbitrary calculus expression, we can create a memo to persist and incrementally maintain its result set.  However, it is often inefficient to do so for the entire calculus expression.  
+
+\begin{itemize}
+\item The expression may consist of two or more independent sub-queries.  For example, the expression computes the numerical product of two (potentially group-by) aggregate queries.  Storing the full cross-product of all group-by terms involved is unnecessary. as the expression must iterate over each of them; its time complexity is the same regardless of whether the cross-product is materialized or generated at run-time.  Conversely, materializing the cross product generates unnecessary storage (and consequently maintenance) overhead.
+
+\item Portions of the expression may involve constants.  Applying the constant at read time does not increase time complexity, and makes it easier to share memos.  
+
+\item Similarly, portions of the expression may involve parameters.  Depending on whether or not the parameters are treated as constants, we can perform filtering at read time or at write time.
+\end{itemize}
+
 
 \subsection{compile\_memo (Standard Map)}
 
@@ -245,7 +262,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 
 \subsection{calc\_simplify}
 \begin{algorithmic}
-\REQUIRE{calc\_t $expression$}
+\REQUIRE{calc\_t $expression$, a set of externally bound var\_t $ivars$}
 \ENSURE{A calc\_t Sum() of $monomials$}
 \STATE Pull sums in $expression$ up to the top, generating a list of $monomials$
 \FORALL{$m \in monomials$}
