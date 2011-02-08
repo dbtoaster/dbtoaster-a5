@@ -1,5 +1,5 @@
 --persist
---slice source ~/tpch/100m
+--slice source ~/Documents/tpch/100MB
 --switch localhost
 --node Node01@localhost:52982
 --node Node02@localhost:52983
