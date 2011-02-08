@@ -8,6 +8,7 @@
 \usepackage{graphicx}
 \usepackage{amssymb}
 \usepackage{epstopdf}
+\usepackage{color}
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
 \title{The DBToaster Compilation Algorithm}
@@ -192,13 +193,30 @@ Though it might appear otherwise, the role of {\tt AggSum}s is purely as a conve
 Given an arbitrary calculus expression, we can create a memo to persist and incrementally maintain its result set.  However, it is often inefficient to do so for the entire calculus expression.  
 
 \begin{itemize}
-\item The expression may consist of two or more independent sub-queries.  For example, the expression computes the numerical product of two (potentially group-by) aggregate queries.  Storing the full cross-product of all group-by terms involved is unnecessary. as the expression must iterate over each of them; its time complexity is the same regardless of whether the cross-product is materialized or generated at run-time.  Conversely, materializing the cross product generates unnecessary storage (and consequently maintenance) overhead.
+\item The expression may consist of two or more independent sub-queries.  For example, the expression computes the numerical product of two (potentially group-by) aggregate queries.  Storing the full cross-product of all group-by terms involved is unnecessary. as the expression must iterate over each of them; its time complexity is the same regardless of whether the cross-product is materialized or generated at run-time.  Conversely, materializing the cross product generates unnecessary storage (and consequently maintenance) overhead. 
+ 
+\item Portions of the expression may involve constants.  Applying the constant when the overall expression is evaluated does not increase the time complexity of doing so.  Moreover, the resultant memo is simpler and easier to re-use across multiple evaluations.
 
-\item Portions of the expression may involve constants.  Applying the constant at read time does not increase time complexity, and makes it easier to share memos.  
+\item Similarly, the expression may contain parameters (i.e., Input Variables), either loose or within inequalities.  We can treat the parameters as constants (and perform any necessary filtering when the expression is evaluated), or fold them into the memo expression and create a caching memo.
 
-\item Similarly, portions of the expression may involve parameters.  Depending on whether or not the parameters are treated as constants, we can perform filtering at read time or at write time.
+\item Definition terms do not get simpler when their delta is taken.  Thus, for definitions that can not be eliminated (e.g., by variable unification), it is necessary to perform the definition computation at evaluation time.  
 \end{itemize}
 
+As a consequence, the compiler must include an extraction step, where it identifies portions of the expression that are to be represented as memos.  There are three components to this process (assuming that the expression has already been separated into monomials):
+
+\begin{algorithmic}[1]
+\STATE Constant and (if applicable) expressions involving input variables\todo{There are countless ways of defining ``expressions involving input variables''.  We should pick which (and how many) the compiler should use.} are pulled out of the expression and used solely in the invocation.
+\STATE Definition terms are pulled out and ignored for the next step.
+\STATE The expression is factorized into separate cross-product subexpressions. Each subexpression is replaced by a memo.
+\STATE Definition terms are used in the memo, and we recurse over the expression that appears on the RHS of the definition term
+\end{algorithmic}
+
+\begin{itemize}
+\item 
+\item The remaining terms in the expression are factorized
+\end{itemize}
+
+This is done first, by factorizing the expression to eliminate cross-products.  
 
 \subsection{compile\_memo (Standard Map)}
 
