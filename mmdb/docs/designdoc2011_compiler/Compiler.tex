@@ -211,7 +211,16 @@ As a consequence, the compiler must include an extraction step, where it identif
 \STATE Definition terms are used in the memo, and we recurse over the expression that appears on the RHS of the definition term
 \end{algorithmic}
 
-\subsection{compile\_memo (Standard Map)}
+\parsection{Input/Output Variables}
+The input and output variables (both input and output, as well as their types) of a calculus expression can always be computed from the expression; external metadata is not required.  
+
+Variable unification has an impact on an expression, since input variables can be unified with output variables.  The input variables can not be removed, but if unified with an output variable, they become output variables themselves.  
+
+Note however, that this does not apply to the LHS of an update expression.  An input loop variable in an update expression can not be unified away \todo{is this correct?}
+
+\subsection{Algorithms}
+
+\parsection{compile\_memo (Standard Map)}
 
 This is the first of two mutually recursive steps in (and entry points into) the compilation process.  
 
@@ -236,7 +245,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 
 
 
-\subsection{compile\_invocation}
+\parsection{compile\_invocation}
 \begin{algorithmic}
 \REQUIRE{A calc\_t $expression$}
 \ENSURE{An invocation\_t $invocation$}
@@ -256,7 +265,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \STATE Rejoin the components into a polynomial expression.
 \end{algorithmic}
 
-\subsection{initializer\_for\_memo}
+\parsection{initializer\_for\_memo}
 \begin{algorithmic}
 \REQUIRE{A memo\_t $memo$ with compiled triggers}
 \ENSURE{An calc\_t to initialize $memo$ if necessary}
@@ -271,7 +280,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \ENDIF
 \end{algorithmic}
 
-\subsection{calc\_simplify}
+\parsection{calc\_simplify}
 \begin{algorithmic}
 \REQUIRE{calc\_t $expression$, a set of externally bound var\_t $ivars$}
 \ENSURE{A calc\_t Sum() of $monomials$}
@@ -293,7 +302,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \STATE 
 \end{algorithmic}
 
-\subsection{calc\_unify\_vars}
+\parsection{calc\_unify\_vars}
 \begin{algorithmic}
 \REQUIRE{a monomial calc\_t $expression$}
 \ENSURE{$expression$ with variables unified}
@@ -317,7 +326,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \ENDFOR
 \end{algorithmic}
 
-\subsection{compute\_deltas}
+\parsection{compute\_deltas}
 \begin{algorithmic}
 \REQUIRE{A calc\_t $expression$}
 \ENSURE{An associative list of relation to calc\_t pairs}
@@ -329,7 +338,7 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \ENDFOR
 \end{algorithmic}
 
-\subsection{generate\_delta}
+\parsection{generate\_delta}
 \begin{algorithmic}
 \REQUIRE{A simplified calc\_t $expression$, A relation $r(r_1,r_2,\ldots)$}
 \ENSURE{A calc\_t delta expression}
@@ -372,7 +381,7 @@ let trigger_t =
   * (string * var_t list * calc_t) list (* Updates *)
 \end{verbatim}
 
-\subsection{triggers\_for\_memo}
+\parsection{triggers\_for\_memo}
 \begin{algorithmic}
 \REQUIRE{memo\_t $memo$}
 \ENSURE{A trigger\_t of initializers and triggers, and a list of memos}
@@ -389,7 +398,7 @@ let trigger_t =
 \STATE \textbf{return} The gathered trigger\_ts and memo\_t list
 \end{algorithmic}
 
-\subsection{triggers\_for\_invocation}
+\parsection{triggers\_for\_invocation}
 \begin{algorithmic}
 \REQUIRE{invocation\_t $invoc$}
 \ENSURE{A calc\_t and a trigger\_t and prog\_t}
