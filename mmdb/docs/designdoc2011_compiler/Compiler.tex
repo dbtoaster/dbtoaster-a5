@@ -211,12 +211,33 @@ As a consequence, the compiler must include an extraction step, where it identif
 \STATE Definition terms are used in the memo, and we recurse over the expression that appears on the RHS of the definition term
 \end{algorithmic}
 
-\parsection{Input/Output Variables}
+\parsection{Variable Unification}
 The input and output variables (both input and output, as well as their types) of a calculus expression can always be computed from the expression; external metadata is not required.  
 
-Variable unification has an impact on an expression, since input variables can be unified with output variables.  The input variables can not be removed, but if unified with an output variable, they become output variables themselves.  
+Variable unification has an impact on the schema of an expression.  Not only can it potentially remove input and output variables, but it can turn input variables into output variables (i.e., if an input variable is unified with an output variable) \footnote{Of course, this poses some limitations with respect to extracted expressions.  The schema of a memo can not be changed after the fact.  Even if it is possible to perform further unification on a delta expression, the schema must be further adjusted to match the memo being updated.}
 
-Note however, that this does not apply to the LHS of an update expression.  An input loop variable in an update expression can not be unified away \todo{is this correct?}
+Variable unification itself takes two forms: (1) downward, and (2) upward.  
+
+Upward unification is the harder of the two, because it requires knowledge of input variables.  A comparison between two variables $x = y$ can be unified upwards using one of the following two rules:
+\begin{itemize}
+\item $e := f(x) * (x = y)$ becomes $(x \gets y) * f(x)$ iff $x$ is not already defined in the evaluation environment \footnote{note that it is not just an assertion that $x$ is not an input variable; $x$ can not be bound anywhere to the left of $e$, even if it is present as an output variable in $f(x)$.}.
+\item $e := f(y) * (x = y)$ becomes $(y \gets x) * f(y)$ iff $y$ is not already defined in the evaluation environment.
+\end{itemize}
+
+Simpler, is downward unification.  An expression of the form:
+$${\tt AggSum}\left([dom(f(x)) - \{x\}], (x \gets y) * f(x)\right)$$
+can be unified down to $f(y)$.  Critically, note that this process is reversible.  Given a variable $x$ with a name not defined in the environment or domain of expression $e$ (and just to be safe, not used in the expression either), we can transform $g()$ into
+$${\tt AggSum}\left([dom(g())], (x \gets \{anything\}) * g()\right)$$
+Here, $\{anything\}$ can in fact be replaced by anything with an empty input and output domain.
+
+In particular, this allows us to perform factorization over variable definitions.  For example
+$${\tt AggSum}\left([dom(f(x)) - x], (x \gets y) * f(x)\right) + g()$$
+$${\tt AggSum}\left([dom(f(x)) - x], (x \gets y) * f(x)\right) + {\tt AggSum}\left([dom(g())], (x \gets y) * g()\right)$$
+$${\tt AggSum}\left([dom(f(x)) - x], ((x \gets y) * f(x)) + ((x \gets y) * g()) \right)$$
+$${\tt AggSum}\left([dom(f(x)) - x], (x \gets y) * (f(x) + g()) \right)$$
+
+In other words, we can lift definition terms as far up through summation terms as we like, as long as there are no variable naming conflicts in the terms we distribute across.  Once a definition term is at the very top, we can perform downward unification as desired.
+
 
 \subsection{Algorithms}
 
