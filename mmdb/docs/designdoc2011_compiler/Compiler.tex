@@ -295,9 +295,9 @@ This is the first of two mutually recursive steps in (and entry points into) the
   \STATE (Optimization Choice A2: Top Down): Generate an initialization expression $init$ by taking $definition$.  Note that when calling {\bf compile\_invocation}, this option will go into an infinite loop with optimization choice B2.
   \STATE (Optimization Choice A3: No opt): Generate an initialization invocation by replacing relations in $definition$ with memos.  Requires a special {\bf compile\_invocation}.
   \STATE Replace variables in the initializer with the corresponding variables in $schema$.
-  \RETURN $init$
+  \STATE {\bf return} $init$
 \ELSE
-  \RETURN $none$
+  \STATE {\bf return} $none$
 \ENDIF
 \end{algorithmic}
 
@@ -364,27 +364,27 @@ This is the first of two mutually recursive steps in (and entry points into) the
 \REQUIRE{A simplified calc\_t $expression$, A relation $r(r_1,r_2,\ldots)$}
 \ENSURE{A calc\_t delta expression}
 \IF{$m$ is a {\tt Prod[$m_1$]}}
-  \RETURN{${\bf generate\_delta}(m_1)$}
+  \STATE {\bf return} {${\bf generate\_delta}(m_1)$}
 \ELSIF{$m$ is a {\tt Prod[$m_1, m_2, \ldots$]}}
-  \RETURN{\tt Sum[Prod[{\bf generate\_delta}($m_1$),$m_2,\ldots$], \\
+  \STATE {\bf return} {\tt Sum[Prod[{\bf generate\_delta}($m_1$),$m_2,\ldots$], \\
   \hspace*{1in}Prod[$m_1$,{\bf generate\_delta}(Prod[$m_2,\ldots$])], \\
   \hspace*{1in}Prod[{\bf generate\_delta}($m_1$), {\bf generate\_delta}(Prod[$m_2,\ldots$])]]}
 \ELSIF{$m$ is a {\tt Neg($m_1$)}}
-  \RETURN{\tt Neg({\bf generate\_delta}($m_1$))}
+  \STATE {\bf return} {\tt Neg({\bf generate\_delta}($m_1$))}
 \ELSIF{$m$ is a {\tt AggSum($\ldots, m_1$)}}
-  \RETURN{\tt AggSum($\ldots, m_1$)}
+  \STATE {\bf return} {\tt AggSum($\ldots, m_1$)}
 \ELSIF{$m$ is a {\tt Value($\ldots$)}}
-  \RETURN $\emptyset$
+  \STATE {\bf return} $\emptyset$
 \ELSIF{$m$ is a Relation($r$, $v_1,v_2,\ldots$)}
-  \RETURN{\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
+  \STATE {\bf return} {\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
 \ELSIF{$m$ is a Relation(\ldots)}
-  \RETURN $\emptyset$
+  \STATE {\bf return} $\emptyset$
 \ELSIF{$m$ is an External}
   \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
 \ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
-  \RETURN {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
+  \STATE {\bf return} {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
 \ELSIF{$m$ is a {\tt Cmp(\ldots)}}
-  \RETURN $\emptyset$
+  \STATE {\bf return} $\emptyset$
 \ENDIF
 
 \end{algorithmic}
@@ -427,7 +427,7 @@ let trigger_t =
 \FORALL{Memo $m \in impl$}
   \STATE Gather \textbf{triggers\_for\_memo}(m)
 \ENDFOR
-\RETURN $impl$ and the gathered trigger\_t and memo\_t list
+\STATE {\bf return} $impl$ and the gathered trigger\_t and memo\_t list
 \end{algorithmic}
 
 \subsection{Commentary}
