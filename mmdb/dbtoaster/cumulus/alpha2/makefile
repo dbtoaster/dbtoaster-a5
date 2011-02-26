@@ -69,8 +69,11 @@ dbtoaster: build
 build:
 	mkdir build
 
-test:
-	#./cumulus_top $(INCLUDE_DIR) test/testUpdateApply.ml
+test: cumulus_top
+	./cumulus_top $(INCLUDE_DIR) test/testCombinations.ml
+	./cumulus_top $(INCLUDE_DIR) test/testPartitions.ml
+	./cumulus_top $(INCLUDE_DIR) test/testStmtToMapAccessList.ml
 	./cumulus_top $(INCLUDE_DIR) test/testEnumerateMessages.ml
+	./cumulus_top $(INCLUDE_DIR) test/testUpdateApply.ml
 
 .PHONY: dbtoaster test

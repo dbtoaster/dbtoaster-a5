@@ -6,15 +6,23 @@ open EnumerateMessages;;
 
 (* Setting partition info. 
    Divide mod for all tests *)
-let q1 = ("q1", [12; 20])
-let q2 = ("q2", [10]);;
+let q1 = ("q1", [32; 64])
+let q2 = ("q2", [16]);;
 let q3 = ("q3", [4]);;
 let q4 = ("q4", [2]);;
 let test_map_sizes = [q1; q2; q3; q4];;
 
 Partitions.map_sizes_pointers := test_map_sizes;;
 
-(* get_index_array *)
+(* check powers of 2 *)
+let number = 5 in
+  let is_power = EnumerateMessages.is_power_2 number in
+    Debug.log_unit_test "Is 5 power of 2 : no" string_of_bool 
+      (is_power)
+      (false)      
+;;
+
+
 let out_var = "a" in
   let max_trigger_args = [|("b", 2)|] in
     let index = EnumerateMessages.get_index_array out_var max_trigger_args in
@@ -68,7 +76,7 @@ let ma = ("q2", [], ["a"], (mk_c 0.0, ())) in
 
 Debug.log_unit_test "Third insert a in ma" EnumerateMessages.string_of_max_trigs
       (!arr)
-      ([|("a", 10)|])
+      ([|("a", 16)|])
 ;; 
 
 let ma = ("q1", [], ["b"; "a"], (mk_c 0.0, ())) in
@@ -79,7 +87,7 @@ let ma = ("q1", [], ["b"; "a"], (mk_c 0.0, ())) in
 (* a is in arr before b is added *)
 Debug.log_unit_test "Insert of two args in ma" EnumerateMessages.string_of_max_trigs
       (!arr)
-      ([|("a", 20); ("b", 12)|])
+      ([|("a", 64); ("b", 32)|])
 ;;      
 
 (* process statement *)
@@ -105,7 +113,7 @@ Debug.log_unit_test "Test simple statement" EnumerateMessages.string_of_max_trig
 
 (* print_combinations *)
 let trigger_args = ["a"; "b"] in
-  let combinations = set_max_trigger_args trigger_args (!arr) in
+  let combinations = possible_trig_args trigger_args (!arr) in
     Debug.log_unit_test "Print combinations" Combinations.string_of_int_combinations 
       (combinations)
       ([
@@ -125,7 +133,7 @@ let stmt1 =
   ()) in
   let trig0 = (Insert, "R", ["a"; "b"], [stmt1]) in
   let trigger_args = ["a"; "b"] in
-  let combinations = set_max_trigger_args trigger_args (!arr) in
+  let combinations = possible_trig_args trigger_args (!arr) in
   let messages = run_enumerated trig0 combinations in
   print_string (messages)
 ;;
@@ -148,7 +156,7 @@ let stmt1 =
 
 Debug.log_unit_test "Test two out_vars statement" EnumerateMessages.string_of_max_trigs
       (!arr)
-      ([|("a", 20); ("b", 12)|])
+      ([|("a", 64); ("b", 32)|])
 ;;     
 
 (* process trigger *)
@@ -182,7 +190,7 @@ let stmt0 =
   let trig0 = (Insert, "R", ["a"; "b"], [stmt0]) in
   let trigger_args = UpdateApply.extract_trig_args trig0 in
   let result_array = enumerate_trigger [||] trig0 in
-  let combinations = set_max_trigger_args trigger_args result_array in
+  let combinations = possible_trig_args trigger_args result_array in
   let messages = run_enumerated trig0 combinations in
   print_string (messages)
 ;;

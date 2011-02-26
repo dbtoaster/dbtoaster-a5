@@ -35,7 +35,7 @@ let get_index_array
   (!index)
 ;;
 
-1(* return index of out_var in out_vars list *)
+(* return index of out_var in out_vars list *)
 let rec get_index_list
   (out_var : var_t)
   (out_vars : var_t list) : int =
@@ -48,6 +48,34 @@ let rec get_index_list
           1 + get_index_list out_var tail
 ;;
 
+let rec is_power_2
+  ?(pow : int = 1)
+  (number : int) : bool = 
+   if number <= 0 then
+     false
+   else if pow = number then
+     true
+   else if pow > number then
+     false
+   else
+     is_power_2 ~pow:(2*pow) number
+;;
+
+(* Returns Lowest Common Multiple of first and second
+   It will be greater of them if they are powers of 2 *)
+let lcm 
+  (first : int)
+  (second : int) : int =
+  let is_power_first = is_power_2 first in
+  let is_power_second = is_power_2 second in
+  if (is_power_first && is_power_second) then
+    if first > second then
+      first
+    else 
+      second
+  else
+    failwith ("Partition sizes are not powers of 2!")
+;;
 
 (*********************** ENUMERATING ***********************)
 
@@ -66,6 +94,8 @@ let rec get_index_list
    
    out_vars is sent in order to get dimension of out_var in out_vars
      not possible to do automatically in List.fold_left method
+
+   TODO: rewrite it using Lists, since arrays have limitations of 4MB in size.
 *)
 let enumerate_out_var
   (mapn : string)
@@ -78,13 +108,15 @@ let enumerate_out_var
     (fun trigger_arg -> trigger_arg = out_var) trigger_args then
       let value = Partitions.get_dimension_size mapn dimension in
       let index_array = get_index_array out_var max_trigger_args in
+      let current_val = ref 0 in
       let arr = ref [||] in
       if index_array = invalid then begin
         arr := Array.append max_trigger_args [|(out_var, value)|];
         (!arr)
       end else begin
-        if (snd(max_trigger_args.(index_array)) < value) then
-          max_trigger_args.(index_array) <- (out_var, value);
+        current_val := (snd(max_trigger_args.(index_array)));
+        if (!current_val < value) then
+          max_trigger_args.(index_array) <- (out_var, (lcm value !current_val));
         (max_trigger_args)
       end
    else
@@ -121,12 +153,12 @@ let enumerate_trigger
 
 
 (* max_trigger_args has to be filled before call to this method *)
-let set_max_trigger_args
+let possible_trig_args
   (trigger_args : var_t list) 
   (max_trigger_args : (var_t * int) array) : int list list =
   let generate_partitions (variable : var_t) : int list =
     let index = get_index_array variable max_trigger_args in
-    if index=invalid then
+    if index = invalid then
       (* could be any value, since this variable is not used in any map access *) 
       [0]
     else
@@ -149,10 +181,7 @@ let run_enumerated
     List.map args_to_string update_args_list in
   let run_list = List.map (update_trigger trig) update_args_list in
   let text_list = List.map2 
-    (fun argument result -> "\nFor tuple " ^ argument ^ " messages are:\n" ^ result) 
+    (fun argument result -> "\nFor tuple " ^ argument ^ " messages are:\n" ^ string_of_msg_list result) 
     args_text_list run_list in
   String.concat "" text_list
-;; 
-
-  
-
+;;
