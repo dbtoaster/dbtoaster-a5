@@ -13,7 +13,8 @@ let q4 = ("q4", [8; 32]);;
 let q5 = ("q5", [16; 4]);;
 let q6 = ("q6", []);;
 let q7 = ("q7", [4; 2; 8; 3]);;
-let test_map_sizes = [q3; q4; q5; q6; q7];;
+let q8 = ("q8", [2; 4]);;
+let test_map_sizes = [q3; q4; q5; q6; q7; q8];;
 
 Partitions.map_sizes_pointers := test_map_sizes;;
 
@@ -68,9 +69,18 @@ let stmt5 =
   ())
 ;;
 
+let stmt6 =
+  (("q5", [], ["b"; "c"], (mk_c 0.0, ())), 
+    ((mk_prod (mk_ma ("q8", [], ["a"; "a"], (mk_c 0.0, ()))) 
+              (mk_ma ("q8", [], ["c"; "d"], (mk_c 0.0, ())))), 
+    ()),
+  ())
+;;
+
 
 let trig0 = (Insert, "R", ["a"; "b"], [stmt0]);;
 let trig1 = (Delete, "R", ["a"; "b"], [stmt1]);;
+let trig2 = (Insert, "R", ["a"; "b"], [stmt6]);;
 
 let prog0 : prog_t =
   (
@@ -78,6 +88,14 @@ let prog0 : prog_t =
     [trig0; trig1]
   )
 ;;
+
+let prog2 : prog_t =
+  (
+    [],
+    [trig2]
+  )
+;;
+
 
 (* Actual testings *)
 let update_var_values = extract_update_var_values trig0 [3; 4] in
@@ -422,3 +440,9 @@ let right_poss = ("qr", [
 (* Printings 
 print_string(stmt_to_string stmt0);;*)
 print_string(update prog0 M3.Insert "R" [3; 4]);;
+
+(* Test for duplicate names and bigsums: 
+print_string(update prog2 M3.Insert "R" [0; 1]);;
+*)
+
+

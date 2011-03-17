@@ -244,14 +244,28 @@ let filter_loops
   List.rev (add_if_loop [] var_poss_list)
 ;;
 
-(* Find element (in_name, value) from var_part_list and return its value *)
-let find_val 
+(* Find element (in_name, value) from var_part_list and return its value 
+   Error is emited if non-existing *)
+let find_val_error 
   (in_name : string)
   (var_part_list : var_part list) : int =
   let elem_comb = 
     try
       List.find (fun (name, value) -> name = in_name) var_part_list
     with Not_found -> failwith ("Unexpected error : element not found in the collection.")
+  in
+  (snd(elem_comb))
+;;
+
+(* Find element (in_name, value) from var_part_list and return its value 
+   One is returned if not existing *)
+let find_val1
+  (in_name : string)
+  (var_part_list : var_part list) : int =
+  let elem_comb = 
+    try
+      List.find (fun (name, value) -> name = in_name) var_part_list
+    with Not_found -> ("", 1)
   in
   (snd(elem_comb))
 ;;
@@ -271,7 +285,7 @@ let create_loop_params
   let add_loop
     ((rname, rvalue) : var_part) : loop_params =
     (rname,
-    (find_val rname left_out_var_loops), 
+    (find_val1 rname left_out_var_loops), 
     rvalue) in
   let rev_result = List.rev_map add_loop right_out_var_loops in
   List.rev rev_result
@@ -287,7 +301,7 @@ let extract_loop_var
   (loop_params_list : loop_params list) : var_part list =
   let add_value
     ((name, lvalue, rvalue) : loop_params) : var_part =
-    (name, (find_val name var_part_list)) in
+    (name, (find_val_error name var_part_list)) in
   let rev_result = List.rev_map add_value loop_params_list in
   List.rev rev_result
 ;;
@@ -322,10 +336,10 @@ let lhs_compute_loops
   with Invalid_argument _ -> failwith ("Unexpected : Lists are not equal lenght.")
 ;;
 
-(* Creates mapn_combination list
+(* Creates mapn_combination list for lhs
    -if out_var is loop
      - if out_var name is in computed its possibilities are adopted - (int list)
-     - otherwise loop is present only on the lhs, full range has to be produces
+     - otherwise loop is present only on the lhs, full range has to be produced
    -else
      - single value is adopted.
    mapn_possibility is lhs,
@@ -483,11 +497,11 @@ let stmt_to_messages
   let left_ma, right_ma_list = StmtToMapAccessList.maps_of_stmt statement in
   let left_mapn_poss = process_ma update_var_values left_ma in
   let left_mapn_comb = mapn_comb_of_poss left_mapn_poss in
-  let fetches = generate_switch_message FETCH left_mapn_comb in
+  let fetches = generate_switch_message PUT left_mapn_comb in
   let right_mapn_poss_list = 
     process_right_ma_list update_var_values right_ma_list in
   let right_mapn_comb_list = List.map mapn_comb_of_poss right_mapn_poss_list in
-  let puts_list = List.map (generate_switch_message PUT) right_mapn_comb_list in
+  let puts_list = List.map (generate_switch_message FETCH) right_mapn_comb_list in
   let pushes_list = List.map 
     (fun right_mapn_poss -> generate_push_message right_mapn_poss left_mapn_poss) 
     right_mapn_poss_list
