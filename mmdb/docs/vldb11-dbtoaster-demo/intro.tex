@@ -40,12 +40,12 @@ languages (non-windowed SQL aggregates) on this state.
 
 %
 A data management system that could handle these two requirements would yield a
-very substantial productivity increase that can be directly monetized -- the
-holy grail of algorithmic trading.
+very substantial productivity increase that can be directly monetized --
+a silver bullet for algorithmic trading.
 
 
 
-To understand the need to maintain and query a large data state, note that
+To understand the need to maintain and query a data that may contain relatively old items, which renders stream windows unsuitable, note that
 many stock exchanges provide a detailed view of the market microstructure
 through complete bid and ask {\em limit order books}. The bid order book is a
 table of purchase offers with their prices and volumes, and correspondingly the
@@ -106,7 +106,6 @@ outlier orders. This ratio is an indicator of a future price drift (upwards if
 the volume in the buy order book exceeds the volume in the sell order book,
 and downwards if the opposite is the case). This can be exploited by preempting
 the drift by trading at the current price and later reversing the trade after the price move has materialized.
-
 \punto
 \end{example}
 
