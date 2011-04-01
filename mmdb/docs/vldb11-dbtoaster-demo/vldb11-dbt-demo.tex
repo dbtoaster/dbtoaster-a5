@@ -7,7 +7,7 @@
 \usepackage{hyperref}
 
 \newcommand{\comment}[1]{}
-\newcommand{\tinysection}[1]{\noindent{\bf #1.}}
+\newcommand{\tinysection}[1]{\vspace{1mm}\noindent{\bf #1.}}
 \newcommand{\tuple}[1]{{\langle#1\rangle}}
 \newcommand{\todo}[1]{\textcolor{red}{#1}}
 \newcommand{\note}[1]{\textcolor{blue}{#1}}
@@ -34,8 +34,8 @@
 
 
 \begin{document}
-\title{Algorithmic Trading on Order Books with Embedded Queries and Synthesized
-Stream Engines}
+\title{Algorithmic Trading on Order Books with\\Embedded Queries on the
+\compiler\ Platform}
 \numberofauthors{3}
 \author{
 \alignauthor
@@ -53,33 +53,28 @@ Christoph Koch\\
 \maketitle
 
 \begin{abstract}
-Algorithmic trading is an exiting area where computer science
-meets economics and finance. Algorithmic
-trading has gained substantial traction in recent years and is now
-responsible
-for a majority of the volume traded on key financial exchanges such as
-NASDAQ and the London Stock Exchange.
-It is an innovation engine for IT since it creates substantial
-networking, data management, and computation challenges and
-the players in this space have large budgets for IT infrastructure.
-High-frequency algorithmic trading companies have
-become a key market for high-speed switches, fast computing hardware, and data
-management software -- particularly stream processors.
+Algorithmic trading is an exciting area where computer science meets economics
+and finance. Algorithmic trading has gained substantial traction in recent years
+and is now responsible for a majority of the volume traded on key financial
+exchanges such as NASDAQ and the London Stock Exchange. It is an innovation
+engine for IT since it creates substantial networking, data management, and
+computation challenges and the players in this space have large budgets for IT
+infrastructure. High-frequency algorithmic trading companies have become a key
+market for high-speed switches, fast computing hardware, and data management
+software -- particularly stream processors.
 
-In this demo, we showcase a new platform for algorithmic trading.
-It is based on a newly developed stream processing engine
-as well as a finanical exchange simulator, a subsystem for replaying
-historical data streams of buy and sell orders,
-and implementations of various trading strategies.
-We also demonstrate our trading strategy design and development environment.
-It allows to express the data analysis portions of strategies
-declaratively, using SQL on top of representations of the current
-market microstructure, such as order books.
-It compiles these declarative specifications down into highly efficient
-code using our DBToaster compiler for {\em agile views} \cite{KAK2011},
-aggressively incremental view maintenance programs that are able to
-keep complex materialized SQL aggregate views continuously fresh through
-updates to the base data at very high rates.
+In this demo, we showcase a new platform for algorithmic trading. It is based on
+a newly developed stream processing engine as well as a finanical exchange
+simulator, a subsystem for replaying historical data streams of buy and sell
+orders, and implementations of various trading strategies. We also demonstrate
+our trading strategy design and development environment. It allows to express
+the data analysis portions of strategies declaratively, using SQL on top of
+representations of the current market microstructure, such as order books. It
+compiles these declarative specifications down into highly efficient code using
+our DBToaster compiler for {\em agile views} \cite{KAK2011}, aggressively
+incremental view maintenance programs that are able to keep complex materialized
+SQL aggregate views continuously fresh through updates to the base data at very
+high rates.
 \end{abstract}
 
 \section{Introduction}
@@ -97,13 +92,12 @@ updates to the base data at very high rates.
 
 \section{Demo Scenario}
 
-\todo{Demo screenshots}
+\input{demosetup}
 
-\tinysection{Audience Participation}
-
-
+\footnotesize{
 \bibliographystyle{abbrv}
 \bibliography{ref}
+}
 
 
 \end{document}

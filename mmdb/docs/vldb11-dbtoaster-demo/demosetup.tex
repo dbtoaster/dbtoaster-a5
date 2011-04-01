@@ -1,0 +1,37 @@
+The demonstration setup will involve our algorithmic trading platform replaying
+a historical order book data stream as discussed with the stock exchange
+simulator in Section~\ref{sec:trading}. The demonstration will include a large
+number of predefined algos, categorized by their trading methodology and scope
+of operation (i.e. the exchanges and brokers they act on), to provide some
+flexibility in the demo's execution. Given replayed inputs, we will
+support simple pause, and seeking on the order book stream to support ad-hoc,
+in-depth analysis of a snapshot of the market microstructure and algo states.
+
+The audience will further be able to participate in the demo primarily at the
+application level through the trading workstation, while still being exposed to
+the technical details of query processing within the trading platform runtime.
+The audience will be able to inspect the efficacy and behavior of individual
+algos based on their active set of orders, add and remove algos, and manipulate
+their parameters and thresholds to see the effects on trades executed. The
+advantages of the programming model and embedded queries will be exhibited by
+flexible, live, editing and compilation of algos. In addition to
+application-level interaction, system performance and scalability is a key
+metric for our platform, with measurements such as throughput, load and latency
+all present in the trading workstation visualizer alongside order book charts.
+
+\tinysection{Comparison to VLDB'09 demo}
+The goal of this demonstration beyond our previous in~\cite{ahmad-vldb:09} is
+threefold. First, we provide a more comprehensive look at the \compiler\
+platform, and the suitability of the tools developed to a practical application
+in algorithmic trading. This includes two usage modes: i) embedded queries, and
+the subsequent in-process query engine as opposed to a heavyweight backend
+server, and ii) direct compilation and loading into a black-box distributed
+stream engine for coarse-grained scaling. Second, while many works on streams
+and databases have referred to algorithmic trading as a source of
+queries, we have yet to see an end-to-end demonstration of a trading platform.
+A significant portion of this demonstration will be devoted to describing the
+specifics of trading algorithms and their common practices (to the best of our
+knowledge). Third, \compiler\ has significantly advanced in terms of the
+internal representations, transformations and optimization heuristics used since
+the demonstration in~\cite{ahmad-vldb:09}. This forms the foundations of the
+technical material we will present.
