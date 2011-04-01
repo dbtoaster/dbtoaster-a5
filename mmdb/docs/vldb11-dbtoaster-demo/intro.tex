@@ -78,7 +78,7 @@ from   bids b2
 where (select sum(volume) from bids b1
        where b1.price > b2.price)  <=  k * bid_vol
 \end{verbatim}
-Overall, a the strategy could be
+Overall, the strategy could be
 \begin{verbatim}
 imbal  := bid_vwap + ask_vwap - 2 * lprice;
 volume := exposure * funds / lprice;
@@ -99,6 +99,14 @@ Focusing on the $k$-fraction of the order book closest to the last price
 makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
 tactical orders far from the last price that will thus not be executed but
 may confuse competing algorithms).
+
+Another class of SOBI strategies would use the ratio
+of total volumes in the two order books, again avoiding axes by cutting off
+outlier orders, which is an indicator of a future price drift (upwards if
+the volume in the buy order book exceed the volume in the sell order book,
+and downwards if the opposite is the case). This can be exploited by preempting
+the drift by trading at the current price and later reversing the trade after the price move has materialized.
+
 \punto
 \end{example}
 
