@@ -1,10 +1,10 @@
 
 
-In recent years, algorithmic trading systems have come to account for a majority
+In recent years, high-frequency algorithmic trading systems have come to account for a majority
 of volume traded at the major US and European financial markets (for instance,
 for 73\% of all US equity trading volume in the first quarter of 2009
 \cite{Iati2009}). The success of automated trading systems depends critically on
-strategy processing speeds: trading systems that react faster to market events
+the speeds at which trading strategies are processed: trading systems that react faster to market events
 tend to make money at the cost of slower systems. Unsurprisingly, algorithmic
 trading has become a substantial source of business for the IT industry; for
 instance, it is the leading vertical among the customer bases for high-speed
@@ -43,17 +43,6 @@ A data management system that could handle these two requirements would yield a
 very substantial productivity increase that can be directly monetized -- the
 holy grail of algorithmic trading.
 
-Trading algorithms often perform a considerable amount of data crunching that
-could in principle be implemented as SQL views, but cannot be achieved by DBMS
-or data stream processing systems today: DBMS are not able to (1) {\em update
-their views at the required rates}\/ (for popular stocks, hundreds of orders per
-second may be executed, even outside burst times) and stream engines are not
-able to (2) {\em maintain large enough data state}\/ and support suitable query
-languages (non-windowed SQL aggregates) on this state.
-A data management system fulfilling these two requirements would yield a very
-substantial productivity increase that can be directly monetized -- the holy
-grail of algorithmic trading.
-
 
 
 To understand the need to maintain and query a large data state, note that
@@ -69,37 +58,59 @@ trading.
 
 
 
-
-
+\begin{example}\em
 To illustrate this, we describe the Static Order Book Imbalance (SOBI) trading
 strategy. SOBI computes a volume-weighted average price (VWAP) over those orders
-whose volume makes up a fixed upper $k$-fraction of the total stock volume in
+whose volume makes up the fixed 
+$k$-fraction of the total stock volume with strike prices closest to the current price in
 both bid and ask order books. SOBI then compares the two VWAPs and, based on
 this, predicts a future price drift (for example a bid VWAP larger than an ask
-VWAP indicates demand exceeds supply, and prices may rise). For simplicity, we
-present the VWAP for the bids only:
-
-
-
+VWAP indicates demand exceeds supply, and prices are likely to rise).
+For simplicity, we present the VWAP for the bids only:
 \begin{verbatim}
 select avg(b2.price * b2.volume) as bid_vwap
 from   bids b2
-where  k * (select sum(volume) from bids)
-         > (select sum(volume) from bids b1
-            where b1.price > b2.price);
+where (select sum(volume) from bids b1
+       where b1.price > b2.price)
+ <= k*(select sum(volume) from bids)
 \end{verbatim}
-\comment{
+Overall, a SOBI strategy could be
+\begin{verbatim}
+imbal  := bid_vwap / ask_vwap;
+volume := exposure * funds / price;
+if      imbal > threshold   then  buy(price, volume);
+else if imbal < 1/threshold then sell(price, volume)
+\end{verbatim}
+where ``price'' is the current price and
+ask\_vwap is the VWAP query analogous to bid\_vwap on the ask
+order book.
+Buying and selling at the current price will allow to preempt the
+anticipated price move and later reverse the trade once the
+move has happened.
+
 Focusing on the $k$-fraction of the order book closest to the current price
 makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
 tactical orders far from the current price that will thus not be executed but
 may confuse competing algorithms).
-}
+\punto
+\end{example}
 
 
 Coming back to our two desiderata, for trading algorithms to be successful, (1)
 views such as VWAP need to be maintained and monitored by the algorithms at or
 close to the trading rate. However, (2) the views cannot be expressed through
 time-, row- or punctuation-based window semantics.
+This scenario is, however, exactly the sweet spot for agile views
+\cite{KAK2011}, which combine (update) stream processing with aggressive
+incremental view maintenance.
 
+In the following, we describe our approach to creating algorithmic
+trading platforms based on an update stream processors we have developed and
+{\em agile views}\/ \cite{KAK2011}, which are materialized views
+that are continuously maintained by aggressively incremental code generated
+by our DBToaster compiler \cite{ahmad-vldb:09,koch-pods:10,KAK2011}.
+It is this platform and the
+associated declarative trading strategy definition and development environment
+that we propose to demonstrate at VLDB 2011.
 
 
