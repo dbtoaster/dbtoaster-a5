@@ -88,7 +88,7 @@ else if -imbal > threshold then sell(lprice, volume)
 where lprice is the last price and
 ask\_vwap is the query analogous to bid\_vwap
 on the ask order book.
-For the imbalance measure, note that if e.g. the last price was 100 and
+For the imbalance measure, note that if e.g.\ the last price was 100 and
 the volume-weighted average bid and ask prices are 95 and 110, respectively,
 then imbal is +5.
 Buying and selling at the last price will allow to preempt the
@@ -96,11 +96,11 @@ anticipated price move and later reverse the trade once the
 move has happened.
 
 Focusing on the $k$-fraction of the order book closest to the last price
-makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
+renders the SOBI strategy less prone to attacks known as {\em axes}\/ (large
 tactical orders far from the last price that will thus not be executed but
 may confuse competing algorithms).
 
-Another class of SOBI strategies would use the ratio
+Another class of SOBI strategies uses the ratio
 among the total volumes of the two order books, again avoiding axes by cutting off
 outlier orders. This ratio is an indicator of a future price drift (upwards if
 the volume in the buy order book exceeds the volume in the sell order book,
@@ -110,7 +110,8 @@ the drift by trading at the current price and later reversing the trade after th
 \end{example}
 
 
-Coming back to our two desiderata, for trading algorithms to be successful, (1)
+Returning to the two requirements mentioned above,
+for trading algorithms to be successful, (1)
 views such as VWAP need to be maintained and monitored by the algorithms at or
 close to the trading rate. However, (2) the views cannot be expressed through
 time-, row- or punctuation-based window semantics.
