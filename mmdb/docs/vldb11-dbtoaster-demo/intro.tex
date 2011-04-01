@@ -1,0 +1,105 @@
+
+
+In recent years, algorithmic trading systems have come to account for a majority
+of volume traded at the major US and European financial markets (for instance,
+for 73\% of all US equity trading volume in the first quarter of 2009
+\cite{Iati2009}). The success of automated trading systems depends critically on
+strategy processing speeds: trading systems that react faster to market events
+tend to make money at the cost of slower systems. Unsurprisingly, algorithmic
+trading has become a substantial source of business for the IT industry; for
+instance, it is the leading vertical among the customer bases for high-speed
+switch manufacturers (e.g., Arista \cite{Becht2010}) and data stream processing.
+
+
+
+
+A typical algorithmic trading system is run by mathematicians who develop
+trading strategies and by programmers and systems experts who implement these
+strategies to perform fast enough, using mainly low-level programming languages
+such as C. Developing trading strategies requires a feedback loop of simulation,
+back-testing with historical data, and strategy refinement based on the insights
+gained. This loop, and the considerable amount of low-level programming that it
+causes, is the root of a very costly {\em productivity bottleneck}\/: in fact,
+the number of programmers often exceeds the number of strategy designers by
+an order of magnitude.
+
+
+Trading algorithms often perform a considerable amount of data crunching
+and statistical processing that could in principle be implemented using SQL
+views, coupled with some relatively straightforward control and trading logic.
+%
+Differently from other areas of finance such as technical analysis,
+where stream processing engines
+\cite{abadi-vldbj:03,motwani-cidr:03} can be applied,
+data processing in trading algorithms using views cannot be performed by DBMS or
+data stream processing systems today: the former are not able to (1) {\em update
+their views at the required rates}\/ (for popular stocks, hundreds of orders per
+second may be executed, even outside burst times) and the latter are not able to
+(2) {\em maintain large enough data state}\/ and support suitable query
+languages (non-windowed SQL aggregates) on this state.
+
+%
+A data management system that could handle these two requirements would yield a
+very substantial productivity increase that can be directly monetized -- the
+holy grail of algorithmic trading.
+
+Trading algorithms often perform a considerable amount of data crunching that
+could in principle be implemented as SQL views, but cannot be achieved by DBMS
+or data stream processing systems today: DBMS are not able to (1) {\em update
+their views at the required rates}\/ (for popular stocks, hundreds of orders per
+second may be executed, even outside burst times) and stream engines are not
+able to (2) {\em maintain large enough data state}\/ and support suitable query
+languages (non-windowed SQL aggregates) on this state.
+A data management system fulfilling these two requirements would yield a very
+substantial productivity increase that can be directly monetized -- the holy
+grail of algorithmic trading.
+
+
+
+To understand the need to maintain and query a large data state, note that
+many stock exchanges provide a detailed view of the market microstructure
+through complete bid and ask {\em limit order books}. The bid order book is a
+table of purchase offers with their prices and volumes, and correspondingly the
+ask order book indicates investors' selling orders. Exchanges execute trades by
+matching bids and asks by price and favoring earlier timestamps. Investors
+continually add, modify or withdraw limit orders, thus one may view order books
+as relational tables subject to high update volumes. The availability of order
+book data has provided substantial opportunities for automatic algorithmic
+trading.
+
+
+
+
+
+To illustrate this, we describe the Static Order Book Imbalance (SOBI) trading
+strategy. SOBI computes a volume-weighted average price (VWAP) over those orders
+whose volume makes up a fixed upper $k$-fraction of the total stock volume in
+both bid and ask order books. SOBI then compares the two VWAPs and, based on
+this, predicts a future price drift (for example a bid VWAP larger than an ask
+VWAP indicates demand exceeds supply, and prices may rise). For simplicity, we
+present the VWAP for the bids only:
+
+
+
+\begin{verbatim}
+select avg(b2.price * b2.volume) as bid_vwap
+from   bids b2
+where  k * (select sum(volume) from bids)
+         > (select sum(volume) from bids b1
+            where b1.price > b2.price);
+\end{verbatim}
+\comment{
+Focusing on the $k$-fraction of the order book closest to the current price
+makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
+tactical orders far from the current price that will thus not be executed but
+may confuse competing algorithms).
+}
+
+
+Coming back to our two desiderata, for trading algorithms to be successful, (1)
+views such as VWAP need to be maintained and monitored by the algorithms at or
+close to the trading rate. However, (2) the views cannot be expressed through
+time-, row- or punctuation-based window semantics.
+
+
+
