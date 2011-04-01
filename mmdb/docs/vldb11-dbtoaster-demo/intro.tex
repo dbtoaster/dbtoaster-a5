@@ -87,7 +87,8 @@ else if -imbal > threshold then sell(lprice, volume)
 \end{verbatim}
 where lprice is the last price and
 ask\_vwap is the query analogous to bid\_vwap
-on the ask order book.
+on the ask order book. The buy() and sell() operations are of course
+with respect to a particular (here, implicit) stock.
 For the imbalance measure, note that if e.g.\ the last price was 100 and
 the volume-weighted average bid and ask prices are 95 and 110, respectively,
 then imbal is +5.
