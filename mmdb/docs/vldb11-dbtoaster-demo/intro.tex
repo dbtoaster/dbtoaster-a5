@@ -59,38 +59,45 @@ trading.
 
 
 \begin{example}\em
-To illustrate this, we describe the Static Order Book Imbalance (SOBI) trading
-strategy. SOBI computes a volume-weighted average price (VWAP) over those orders
-whose volume makes up the fixed 
-$k$-fraction of the total stock volume with strike prices closest to the current price in
-both bid and ask order books. SOBI then compares the two VWAPs and, based on
-this, predicts a future price drift (for example a bid VWAP larger than an ask
-VWAP indicates demand exceeds supply, and prices are likely to rise).
-For simplicity, we present the VWAP for the bids only:
+To illustrate this, we discuss Static Order Book Imbalance (SOBI) trading
+strategies. These act if the shapes of the distributions of bid and ask
+order books -- say, captured by moments expressible as aggregate queries --
+differ significantly. A simple example SOBI strategy
+computes a volume-weighted average price (VWAP) over those
+orders whose volume makes up the fixed $k$-fraction of the total stock volume
+with strike prices closest to the last price, for both
+bid and ask order books. It then compares the two VWAPs and, based on
+this, predicts a future price drift.
+For simplicity, we present the queries relevant for computing
+VWAP for the bids only:
 \begin{verbatim}
-select avg(b2.price * b2.volume) as bid_vwap
+select sum(volume) as bid_vol from bids;
+
+select sum(b2.price * b2.volume / bid_vol) as bid_vwap
 from   bids b2
 where (select sum(volume) from bids b1
-       where b1.price > b2.price)
- <= k*(select sum(volume) from bids)
+       where b1.price > b2.price)  <=  k * bid_vol
 \end{verbatim}
-Overall, a SOBI strategy could be
+Overall, a the strategy could be
 \begin{verbatim}
-imbal  := bid_vwap / ask_vwap;
-volume := exposure * funds / price;
-if      imbal > threshold   then  buy(price, volume);
-else if imbal < 1/threshold then sell(price, volume)
+imbal  := bid_vwap + ask_vwap - 2 * lprice;
+volume := exposure * funds / lprice;
+if       imbal > threshold then  buy(lprice, volume);
+else if -imbal > threshold then sell(lprice, volume)
 \end{verbatim}
-where ``price'' is the current price and
-ask\_vwap is the VWAP query analogous to bid\_vwap on the ask
-order book.
-Buying and selling at the current price will allow to preempt the
+where lprice is the last price and
+ask\_vwap is the query analogous to bid\_vwap
+on the ask order book.
+For the imbalance measure, note that if e.g. the last price was 100 and
+the volume-weighted average bid and ask prices are 95 and 110, respectively,
+then imbal is +5.
+Buying and selling at the last price will allow to preempt the
 anticipated price move and later reverse the trade once the
 move has happened.
 
-Focusing on the $k$-fraction of the order book closest to the current price
+Focusing on the $k$-fraction of the order book closest to the last price
 makes the SOBI strategy less prone to attacks known as {\em axes}\/ (large
-tactical orders far from the current price that will thus not be executed but
+tactical orders far from the last price that will thus not be executed but
 may confuse competing algorithms).
 \punto
 \end{example}
