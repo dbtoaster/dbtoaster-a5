@@ -48,26 +48,27 @@ Christoph Koch\\
 \maketitle
 
 \begin{abstract}
-Algorithmic trading is an exiting area in which computer science on a
-high level of sophistication meets economics and finance. Algorithmic
-trading has gained substantial traction in recent years and now accounts
+Algorithmic trading is an exiting area where computer science
+meets economics and finance. Algorithmic
+trading has gained substantial traction in recent years and is now
+responsible
 for a majority of the volume traded on key financial exchanges such as
-NASDAQ and the London Stock Exchange. It is also an important innovation
-engine for IT since algorithmic trading creates substantial
+NASDAQ and the London Stock Exchange.
+It is an innovation engine for IT since it creates substantial
 networking, data management, and computation challenges and
-the players in this
-space have substantial budgets for IT infrastructure.
-As a consequence, algorithmic trading companies such as major hedge funds have
+the players in this space have large budgets for IT infrastructure.
+High-frequency algorithmic trading companies have
 become a key market for high-speed switches, fast computing hardware, and data
 management software -- particularly stream processors.
 
 In this demo, we showcase a new platform for algorithmic trading.
 It is based on a newly developed stream processing engine
 as well as a finanical exchange simulator, a subsystem for replaying
-historical order streams, and implementations of various trading strategies.
+historical data streams of buy and sell orders,
+and implementations of various trading strategies.
 We also demonstrate out trading strategy design and development environment.
-It allows to express large portions of strategies declaratively, using SQL on
-top of representations of the current
+It allows to express the data analysis portions of strategies
+declaratively, using SQL on top of representations of the current
 market microstructure, such as order books.
 It compiles these declarative specifications down into highly efficient
 code using our DBToaster compiler for {\em agile views} \cite{KAK2011},
