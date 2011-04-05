@@ -1,0 +1,4 @@
+1. In newer versions of GCC instead of 
+		unordered_map<const string&, int> allMaps;
+	it may be appropriate:
+		unordered_map<string, int> allMaps;
