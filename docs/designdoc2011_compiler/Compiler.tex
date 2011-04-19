@@ -306,206 +306,333 @@ $${\tt Apply}(\lambda x.f(x), A) ; {\tt Apply}(\lambda x.g(x), A) \rightarrow {\
 
 
 \subsection{Algorithms}
+\ \\
 
-\parsection{compile\_memo (Standard Map)}
+\begin{algorithm}
+\caption{compile\_invocation($definition$, $schema$}
 
 This is the first of two mutually recursive steps in (and entry points into) the compilation process.  
 
+The utility function {\tt make\_memo} constructs a memo by invoking {\tt compile\_memo}, assigns it a unique name, appends it to the returned list of memo $references$, and returns an {\tt External} reference to the memo.  
+
+{\tt Neg}-ated terms are omitted below; Negations are assumed to be pushed to the bottom by simplify.  However
+
 \begin{algorithmic}
 \REQUIRE{calc\_t $definition$, schema\_t $schema$}
-\ENSURE{A memo\_t $memo$}
-\STATE Generate a unique name for $memo$
-\STATE {\bf calc\_simplify}($definition$)
-\STATE $memo.definition \gets definition$
-\FORALL{(Reln,Delta) $(rel, d\_defn) \in$ compute\_deltas($definition$)}
-  \STATE {\bf calc\_simplify}($d\_defn$)
-  \STATE $memo.deltas[rel].update \gets$ {\bf compile\_invocation}($d\_defn$)
-\ENDFOR
-\FORALL{Reln $rel \in$ $definition$}
-  \STATE $relinit \gets$ {\bf initializer\_for\_memo}($memo$)
-  \STATE Substituting $rel$'s variables into $relinit$ (or all of them)
-  \STATE {\bf calc\_simplify}($relinit$)
-  \STATE $memo.deltas[rel].init \gets$ {\bf compile\_invocation}($relinit$)
-\ENDFOR
-\end{algorithmic}
-
-
-
-
-\parsection{compile\_invocation}
-\begin{algorithmic}
-\REQUIRE{A calc\_t $expression$}
-\ENSURE{An invocation\_t $invocation$}
-\STATE Separate the monomial into independent monomial components (i.e., monomials with no overlapping internally-bound variables)
-\FORALL{Independent calc\_t component $c \in expression$}
-  \STATE Pull out all remaining definition terms and create a memo for their RHS.  Then, if any of the remaining terms contain a relation term...
-  \STATE (Optimization Choice B1: More read work): Pull out all comparison terms with an input variable and create a memo for the remaining terms.
-  \STATE (Optimization Choice B2: More write work + Bigger memos): Create a memo for all the remaining terms.
-  \FORALL{Memo expression $m\_expr \in c$}
-    \STATE $memo \gets$ {\bf compile\_memo}($m\_expr$)
-    \STATE $init \gets$ {\bf initializer\_for\_memo($memo$)}
-    \STATE {\bf calc\_simplify}($init$)
-    \STATE {\bf compile\_invocation}($init$)
-    \STATE Replace the corresponding terms in $c$ with $External(memo, \ldots, init)$
+\ENSURE{calc\_t $implementation$, list of memo\_t $references$}
+\STATE $monomials \gets {\bf monomialize}({\bf simplify}(definition))$
+\STATE $impl \gets {\tt Const(0)}$
+\FORALL{$m\_term \in monomials$}
+  \STATE $factors \gets {\bf match}\ m\_term {\bf with} Prod[factors]$
+  \STATE $groups \gets \emptyset$
+  \STATE $consts \gets {\tt Const(1)}$
+  \STATE $comparisons \gets {\tt Const(1)}$
+  \FORALL{$factor \in factors$}
+    \STATE Find a set $\{g_i\} \subseteq groups$ s.t. $\{g_i\}$ contains all elements of $groups$ that produce an output variable $v \not \in schema$ that appears (as an input or output variable) in $factor$.
+    \IF{$|\{g_i\}| = 0$}
+      \IF{$\left(factor\ {\bf matches}\ (i \gets f)\right)\ {\bf and}\ \left(f\ {\bf includes}\ {\tt Rel(*)}\right)$}
+        \STATE $consts \gets consts * (i \gets {\tt make\_memo}(f))$
+      \ELSIF{$factor\ {\bf matches}\ (i \gets f)\ {\bf or}\ {\tt Value(*)}\ {\bf or}\ {\tt Cmp(*,*,*)}$}
+        \STATE $consts \gets consts * factor$
+      \ELSE
+        \STATE $groups \gets groups {\bf @} factor$
+      \ENDIF
+    \ELSE
+      \IF{$\left(factor\ {\bf matches}\ {\tt Cmp(v_1, *, v_2)}\right) {\bf and}$\\ $\left(v_1\ {\bf or}\ v_2\ {\bf matches}\ {\tt Value(Const(*))}\ {\bf or}\ {\tt Value(Var(k))}\right.$ s.t. $\left.k\in schema\right)$}
+        \STATE $comparisons \gets comparisons * factor$
+      \ELSE
+        \STATE $groups \gets (groups - \{g_i\}) {\bf @} (g_0 * \ldots * g_n * factor)$
+      \ENDIF
+    \ENDIF
   \ENDFOR
+  \STATE $impl \gets impl {\bf +} \left(consts * \left(\prod_{g_i \in groups} {\tt make\_memo}(g_i)\right) * comparisons\right)$
 \ENDFOR
-\STATE Rejoin the components into a polynomial expression.
 \end{algorithmic}
+\end{algorithm}
 
-\parsection{initializer\_for\_memo}
+
+\begin{algorithm}
+\caption{compile\_memo($definition$, $schema$}
+
+This is the second of two mutually recursive steps in (and entry points into) the compilation process
+
 \begin{algorithmic}
-\REQUIRE{A memo\_t $memo$ with compiled triggers}
-\ENSURE{An calc\_t to initialize $memo$ if necessary}
-\IF{$definition$ has unbound variables}
-  \STATE (Optimization Choice A1: Bottom Up): Generate an initialization expression $init$ by taking a delta invocation (pick one, or generate them all), multiplying it by the delta relation.
-  \STATE (Optimization Choice A2: Top Down): Generate an initialization expression $init$ by taking $definition$.  Note that when calling {\bf compile\_invocation}, this option will go into an infinite loop with optimization choice B2.
-  \STATE (Optimization Choice A3: No opt): Generate an initialization invocation by replacing relations in $definition$ with memos.  Requires a special {\bf compile\_invocation}.
-  \STATE Replace variables in the initializer with the corresponding variables in $schema$.
-  \STATE {\bf return} $init$
-\ELSE
-  \STATE {\bf return} $none$
-\ENDIF
+\REQUIRE{calc\_t $definition$, schema\_t $schema$}
+\ENSURE{memo\_t $memo$, memo\_t list $supplements$}
+\FORALL{$R \in $ relations appearing in $definition$}
+  \STATE $(memo.deltas[R], supplements_i) \gets {\tt compute\_delta}(R, definition)$
+\ENDFOR
+\STATE {\bf return} ($memo$, {\bf concat}($supplements_i$))
 \end{algorithmic}
+\end{algorithm}
 
-\parsection{calc\_simplify}
-\begin{algorithmic}
-\REQUIRE{calc\_t $expression$, a set of externally bound var\_t $ivars$}
-\ENSURE{A calc\_t Sum() of $monomials$}
-\STATE Pull sums in $expression$ up to the top, generating a list of $monomials$
+\begin{algorithm}
+\caption{compute\_delta($R$, $term$}
+A self-recursive process that computes the delta of a calculus expression.  In order to guarantee that the generated expression is simpler, the delta construction process may create additional memos which represent nested definition terms.  
+
+\begin{algorithmic}[1]
+\REQUIRE{relation $R(var_i)$, calc\_t $term$}
+\ENSURE{calc\_t $delta\_term$, memo\_t list $supplements$}
+\STATE ${\bf match}\ term\ {\bf with}$
+\STATE $|\ {\tt Sum}[x_i] \rightarrow Sum[{\tt compute\_delta}(x_i)]$
+\STATE $|\ {\tt Prod}[x_0, x_i] \rightarrow$\\ \hspace*{0.5in} $(d_0,supp_0) \gets {\tt compute\_delta}(x_0)$\\ \hspace*{0.5in} $(d_{rest},supp_{rest}) \gets {\tt compute\_delta}({\tt Prod}[x_i])$\\ \hspace*{0.5in} $delta\_term \gets x_0 * d_{rest} + d_0 * {\tt Prod}[x_i] + d_0 * d_{rest}$\\ \hspace*{0.5in} $supplements \gets supp_0 {\bf @} supp_{rest}$
+\STATE $|\ {\tt Neg}(x) \rightarrow {\tt Neg}({\tt compute\_delta}(x))$
+\STATE $|\ {\tt Cmp}(\_,\_,\_) \rightarrow (delta\_term,supplements)\gets (0, \emptyset)$
+\STATE $|\ {\tt AggSum}(x) \rightarrow {\tt AggSum}({\tt compute\_delta}(x))$
+\STATE $|\ {\tt Rel}(name,termvar_i) \rightarrow $\\ \hspace*{0.5in} $supplements \gets \emptyset$\\ \hspace*{0.5in} $delta\_term \gets{\bf if}\ name = R\ {\bf then}\ \prod_i (termvar_i \gets var_i)\ {\bf else}\ 0$
+\STATE $|\ {\tt External}(\_) \rightarrow {\bf fail}$
+\STATE $|\ {\tt Definition}(v \gets x) \rightarrow $\\ \hspace*{0.5in} $(x',supplements) \gets {\tt make\_memo}(x)$\\ \hspace*{0.5in} $delta\_term \gets ((v \gets (x' + {\tt compute\_delta(x)})) - (v \gets x'))$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}
+\caption{factorize($monomials$)}
+Factorize terms from several monomial expressions back into a single term.  Works by a greedy heuristic (though it is possible to substitute something more complex in) -- the goal is to merge terms as extensively as possible, shifting plusses as deep in the factor tree as possible.  An intermediate {\tt factor\_tree} representation of the single term is used: 
+{\tt \noindent factor\_tree = (term:calc\_t) * (children:factor\_tree list)}
+\noindent Every node in this tree represents a single calc\_t.  A forest of such trees represents a sum of terms.  Thus, the calc\_t defined by the node is the product of the {\tt term} and the (parenthesized) sum of all of the children.  The {\tt term} {\bf must} be a monomial.
+\begin{algorithmic}[1]
+\REQUIRE{A calc\_t (as above) list $monomials$}
+\ENSURE{A factor\_tree list $forest$, which can be converted into a single polynomial with the following {\tt merge\_forest} function}
+\STATE $count_{*} \gets 0$
+  \COMMENT{Greedy heuristic: find the most common term}
 \FORALL{$m \in monomials$}
-  \REPEAT
-    \STATE {\bf calc\_unify\_vars}($m$)
-    \STATE Flatten products
-    \STATE Pull AggSums up and merge where possible
-    \STATE Push negation down and merge where possible
-    \STATE Move constants left and merge where possible
-    \STATE Move comparisons right
-    \STATE Eliminate $m$ if it has a 0 or a contradiction (e.g., $(a \theta b) * (a \bar \theta b)$, $(a \neq a)$, $(a < a)$, \ldots)
-    \STATE \COMMENT{Some sort of ``lexical" sort might be appropriate}
-  \UNTIL{fixedpoint($m$)}
-  \STATE Cancel negated sums (e.g., $a + (- a)$)
-  \STATE Recurse over subterms of definition terms
-\ENDFOR
-\STATE 
-\end{algorithmic}
-
-\parsection{calc\_unify\_vars}
-\begin{algorithmic}
-\REQUIRE{a monomial calc\_t $expression$}
-\ENSURE{$expression$ with variables unified}
-\FORALL{Definition $(v \leftarrow c) \in$ the root level of $expression$}
-  \IF{$c$ is a variable bound earlier in the expression, or a constant}
-    \STATE replace all occurrences of $v$ in $expression$ with $c$
-    \STATE remove the definition ($v \leftarrow c$) from $expression$
-  \ENDIF
-  \STATE replace all loose (i.e., not in comparison, external, or relation terms) occurrences of $v$ with $c$.
-  \IF{$v$ no longer appears in $expression$, or in its parent $AggSum$}
-    \STATE remove the definition ($v \leftarrow c$) from $expression$
-  \ENDIF
-\ENDFOR
-\FORALL{Equality Comparison w/ Const $(v = c) \in expression$}
-  \STATE Replace $v$ in the expression with $c$
-  \STATE remove the comparison ($v = c$) from $expression$
-\ENDFOR
-\FORALL{Equality Comparison w/ Var $(v_1 = v_2) \in expression$}
-  \STATE If possible, replace $v_1$ in the expression with $v_2$ or visa versa
-  \STATE remove the comparison ($v_1 = v_2$) from $expression$
-\ENDFOR
-\end{algorithmic}
-
-\parsection{compute\_deltas}
-\begin{algorithmic}
-\REQUIRE{A calc\_t $expression$}
-\ENSURE{An associative list of relation to calc\_t pairs}
-\STATE {\bf calc\_simplify}($expression$)
-\FORALL{Monomial calc\_t $m \in expression$}
-  \FORALL{Relation $r \in m$}
-    \STATE Gather $(r \rightarrow {\bf calc\_simplify}({\bf generate\_delta}(m, r)))$
+  \FORALL{unique $term \in m$}
+    \STATE{$count_{term} \gets count_{term} + 1$}
   \ENDFOR
 \ENDFOR
-\end{algorithmic}
-
-\parsection{generate\_delta}
-\begin{algorithmic}
-\REQUIRE{A simplified calc\_t $expression$, A relation $r(r_1,r_2,\ldots)$}
-\ENSURE{A calc\_t delta expression}
-\IF{$m$ is a {\tt Prod[$m_1$]}}
-  \STATE {\bf return} {${\bf generate\_delta}(m_1)$}
-\ELSIF{$m$ is a {\tt Prod[$m_1, m_2, \ldots$]}}
-  \STATE {\bf return} {\tt Sum[Prod[{\bf generate\_delta}($m_1$),$m_2,\ldots$], \\
-  \hspace*{1in}Prod[$m_1$,{\bf generate\_delta}(Prod[$m_2,\ldots$])], \\
-  \hspace*{1in}Prod[{\bf generate\_delta}($m_1$), {\bf generate\_delta}(Prod[$m_2,\ldots$])]]}
-\ELSIF{$m$ is a {\tt Neg($m_1$)}}
-  \STATE {\bf return} {\tt Neg({\bf generate\_delta}($m_1$))}
-\ELSIF{$m$ is a {\tt AggSum($\ldots, m_1$)}}
-  \STATE {\bf return} {\tt AggSum($\ldots, m_1$)}
-\ELSIF{$m$ is a {\tt Value($\ldots$)}}
-  \STATE {\bf return} $\emptyset$
-\ELSIF{$m$ is a Relation($r$, $v_1,v_2,\ldots$)}
-  \STATE {\bf return} {\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
-\ELSIF{$m$ is a Relation(\ldots)}
-  \STATE {\bf return} $\emptyset$
-\ELSIF{$m$ is an External}
-  \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
-\ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
-  \STATE {\bf return} {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
-\ELSIF{$m$ is a {\tt Cmp(\ldots)}}
-  \STATE {\bf return} $\emptyset$
+\STATE $common\_term \gets {\tt argmax}_{term}(count_{term})$
+\IF{$count_{common\_term} \leq 1$}
+  \STATE $forest \gets \emptyset$
+    \COMMENT{No commonality between monomials -- return what we have}
+  \FORALL{$m \in monomials$}
+    \STATE $forest \gets forest \cap \{({\tt term}:m, {\tt children}:\emptyset)\}$
+  \ENDFOR
+\ELSE
+  \STATE $in\_terms \gets \emptyset$; $out\_terms \gets \emptyset$
+    \COMMENT{Split the monomials by presence of common term}
+  \FORALL{$m \in monomial$}
+    \IF{$common\_term \in m$}
+      \STATE $in\_terms \gets m$ {\bf else} $out\_terms \gets \frac{m}{common\_term}$
+    \ENDIF
+  \ENDFOR
+  \STATE $new\_tree \gets ({\tt term}:common\_term, {\tt children}:{\tt factorize}(in\_terms))$
+  \STATE $forest \gets {\tt factorize}(out\_terms) \cap \{new\_tree\}$
 \ENDIF
-
+%\REPEAT
+%  \STATE $derive\_candidates$
+%\UNTIL{}
 \end{algorithmic}
+\end{algorithm}
 
-\section{Trigger Generation}
-
-The triggers\_for\_X functions translate an Incremental Plan into a set of triggers.  Each trigger is of the form: (1) The Event/Relation name (Variables appearing in the event/relation are drawn from the database schema).  (2) The set of initializers that need to be invoked if necessary (with variables bound as per the schema).  (3) The set of update operations that need to be invoked (with variables bound as per the schema).
-
-\begin{verbatim}
-let trigger_t = 
-    string * var_t list                 (* Relation Schema *)
-                                        (* Maybe make it a (string * (...))
-                                           to make it into an assoc list *)
-  * (string * var_t list * calc_t)      (* LHS Initializer *)
-  * (string * var_t list * calc_t) list (* Updates *)
-\end{verbatim}
-
-\parsection{triggers\_for\_memo}
+\begin{algorithm}
+\caption{merge\_forest($forest$)}
+\label{alg:dbtoaster:mergeForest}
 \begin{algorithmic}
-\REQUIRE{memo\_t $memo$}
-\ENSURE{A trigger\_t of initializers and triggers, and a list of memos}
-\FORALL{Event $e \in memo$}
-  \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($e.initializer.expression$)
-  \STATE Gather $statements$ and $prog$
-  \STATE Add initiailzer ($memo.name$, $e.initializer.vars$, $impl$)
-  \FORALL{Invocation $i \in e.updates$}
-    \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($i.expression$)
-    \STATE Gather $statements$ and $prog$
-    \STATE Add update ($memo.name$, $i.vars$, $impl$)
-  \ENDFOR
-\ENDFOR
-\STATE \textbf{return} The gathered trigger\_ts and memo\_t list
+\REQUIRE{A factor\_tree list $forest = {term_i, children_i}$}
+\ENSURE{$polynomial$, the calc\_t representation of $forest$}
+\STATE $polynomial \gets \sum_i term_i * {\tt merge\_forest}(children_i)$
 \end{algorithmic}
+\end{algorithm}
 
-\parsection{triggers\_for\_invocation}
-\begin{algorithmic}
-\REQUIRE{invocation\_t $invoc$}
-\ENSURE{A calc\_t and a trigger\_t and prog\_t}
-\STATE Select an implementation $impl \in invoc$
-\FORALL{Memo $m \in impl$}
-  \STATE Gather \textbf{triggers\_for\_memo}(m)
-\ENDFOR
-\STATE {\bf return} $impl$ and the gathered trigger\_t and memo\_t list
-\end{algorithmic}
-
-\subsection{Commentary}
-We refer to triggers\_for\_invocation's second parameter as its context.  Context is a way of passing variable bindings through multiple layers of triggers\_for\_invocation, and can contain two types of bindings: (1) Input variables can be bound from above (i.e., as event variables), and (2) Input variables can be bound from the side (i.e., from another map).  
-
-Case 2 only occurs if we have multi-level initializers (i.e., if the initializer for a map reads from a map with an initializer).  In our current design, this is not possible.  Consequently, the algorithm above only handles Case 1.  In order to support Case 2, the following would need to happen:
-\begin{itemize}
-\item The context needs to be extended to be able to express actual domains (e.g., It needs to be able to express "variables $b$ and $c$ in $M_1[][a,b,c]$").
-\item The generated initializer needs to have a way of iterating over the corresponding domain.  This can either be done by applying the above extensions to the datastructure, or by adding in a domain loop like 
-$$M_1[a,b][] :=  (dummy \leftarrow M_2[a]) * TheRestOfTheInitializer$$
-The former would be preferable, as the latter produces a calculus expression where the input variable is bound from below.
-\end{itemize}
+%\parsection{compile\_memo (Standard Map)}
+%
+%This is the first of two mutually recursive steps in (and entry points into) the compilation process.  
+%
+%\begin{algorithmic}
+%\REQUIRE{calc\_t $definition$, schema\_t $schema$}
+%\ENSURE{A memo\_t $memo$}
+%\STATE Generate a unique name for $memo$
+%\STATE {\bf calc\_simplify}($definition$)
+%\STATE $memo.definition \gets definition$
+%\FORALL{(Reln,Delta) $(rel, d\_defn) \in$ compute\_deltas($definition$)}
+%  \STATE {\bf calc\_simplify}($d\_defn$)
+%  \STATE $memo.deltas[rel].update \gets$ {\bf compile\_invocation}($d\_defn$)
+%\ENDFOR
+%\FORALL{Reln $rel \in$ $definition$}
+%  \STATE $relinit \gets$ {\bf initializer\_for\_memo}($memo$)
+%  \STATE Substituting $rel$'s variables into $relinit$ (or all of them)
+%  \STATE {\bf calc\_simplify}($relinit$)
+%  \STATE $memo.deltas[rel].init \gets$ {\bf compile\_invocation}($relinit$)
+%\ENDFOR
+%\end{algorithmic}
+%
+%
+%
+%
+%\parsection{compile\_invocation}
+%\begin{algorithmic}
+%\REQUIRE{A calc\_t $expression$}
+%\ENSURE{An invocation\_t $invocation$}
+%\STATE Separate the monomial into independent monomial components (i.e., monomials with no overlapping internally-bound variables)
+%\FORALL{Independent calc\_t component $c \in expression$}
+%  \STATE Pull out all remaining definition terms and create a memo for their RHS.  Then, if any of the remaining terms contain a relation term...
+%  \STATE (Optimization Choice B1: More read work): Pull out all comparison terms with an input variable and create a memo for the remaining terms.
+%  \STATE (Optimization Choice B2: More write work + Bigger memos): Create a memo for all the remaining terms.
+%  \FORALL{Memo expression $m\_expr \in c$}
+%    \STATE $memo \gets$ {\bf compile\_memo}($m\_expr$)
+%    \STATE $init \gets$ {\bf initializer\_for\_memo($memo$)}
+%    \STATE {\bf calc\_simplify}($init$)
+%    \STATE {\bf compile\_invocation}($init$)
+%    \STATE Replace the corresponding terms in $c$ with $External(memo, \ldots, init)$
+%  \ENDFOR
+%\ENDFOR
+%\STATE Rejoin the components into a polynomial expression.
+%\end{algorithmic}
+%
+%\parsection{initializer\_for\_memo}
+%\begin{algorithmic}
+%\REQUIRE{A memo\_t $memo$ with compiled triggers}
+%\ENSURE{An calc\_t to initialize $memo$ if necessary}
+%\IF{$definition$ has unbound variables}
+%  \STATE (Optimization Choice A1: Bottom Up): Generate an initialization expression $init$ by taking a delta invocation (pick one, or generate them all), multiplying it by the delta relation.
+%  \STATE (Optimization Choice A2: Top Down): Generate an initialization expression $init$ by taking $definition$.  Note that when calling {\bf compile\_invocation}, this option will go into an infinite loop with optimization choice B2.
+%  \STATE (Optimization Choice A3: No opt): Generate an initialization invocation by replacing relations in $definition$ with memos.  Requires a special {\bf compile\_invocation}.
+%  \STATE Replace variables in the initializer with the corresponding variables in $schema$.
+%  \STATE {\bf return} $init$
+%\ELSE
+%  \STATE {\bf return} $none$
+%\ENDIF
+%\end{algorithmic}
+%
+%\parsection{calc\_simplify}
+%\begin{algorithmic}
+%\REQUIRE{calc\_t $expression$, a set of externally bound var\_t $ivars$}
+%\ENSURE{A calc\_t Sum() of $monomials$}
+%\STATE Pull sums in $expression$ up to the top, generating a list of $monomials$
+%\FORALL{$m \in monomials$}
+%  \REPEAT
+%    \STATE {\bf calc\_unify\_vars}($m$)
+%    \STATE Flatten products
+%    \STATE Pull AggSums up and merge where possible
+%    \STATE Push negation down and merge where possible
+%    \STATE Move constants left and merge where possible
+%    \STATE Move comparisons right
+%    \STATE Eliminate $m$ if it has a 0 or a contradiction (e.g., $(a \theta b) * (a \bar \theta b)$, $(a \neq a)$, $(a < a)$, \ldots)
+%    \STATE \COMMENT{Some sort of ``lexical" sort might be appropriate}
+%  \UNTIL{fixedpoint($m$)}
+%  \STATE Cancel negated sums (e.g., $a + (- a)$)
+%  \STATE Recurse over subterms of definition terms
+%\ENDFOR
+%\STATE 
+%\end{algorithmic}
+%
+%\parsection{calc\_unify\_vars}
+%\begin{algorithmic}
+%\REQUIRE{a monomial calc\_t $expression$}
+%\ENSURE{$expression$ with variables unified}
+%\FORALL{Definition $(v \leftarrow c) \in$ the root level of $expression$}
+%  \IF{$c$ is a variable bound earlier in the expression, or a constant}
+%    \STATE replace all occurrences of $v$ in $expression$ with $c$
+%    \STATE remove the definition ($v \leftarrow c$) from $expression$
+%  \ENDIF
+%  \STATE replace all loose (i.e., not in comparison, external, or relation terms) occurrences of $v$ with $c$.
+%  \IF{$v$ no longer appears in $expression$, or in its parent $AggSum$}
+%    \STATE remove the definition ($v \leftarrow c$) from $expression$
+%  \ENDIF
+%\ENDFOR
+%\FORALL{Equality Comparison w/ Const $(v = c) \in expression$}
+%  \STATE Replace $v$ in the expression with $c$
+%  \STATE remove the comparison ($v = c$) from $expression$
+%\ENDFOR
+%\FORALL{Equality Comparison w/ Var $(v_1 = v_2) \in expression$}
+%  \STATE If possible, replace $v_1$ in the expression with $v_2$ or visa versa
+%  \STATE remove the comparison ($v_1 = v_2$) from $expression$
+%\ENDFOR
+%\end{algorithmic}
+%
+%\parsection{compute\_deltas}
+%\begin{algorithmic}
+%\REQUIRE{A calc\_t $expression$}
+%\ENSURE{An associative list of relation to calc\_t pairs}
+%\STATE {\bf calc\_simplify}($expression$)
+%\FORALL{Monomial calc\_t $m \in expression$}
+%  \FORALL{Relation $r \in m$}
+%    \STATE Gather $(r \rightarrow {\bf calc\_simplify}({\bf generate\_delta}(m, r)))$
+%  \ENDFOR
+%\ENDFOR
+%\end{algorithmic}
+%
+%\parsection{generate\_delta}
+%\begin{algorithmic}
+%\REQUIRE{A simplified calc\_t $expression$, A relation $r(r_1,r_2,\ldots)$}
+%\ENSURE{A calc\_t delta expression}
+%\IF{$m$ is a {\tt Prod[$m_1$]}}
+%  \STATE {\bf return} {${\bf generate\_delta}(m_1)$}
+%\ELSIF{$m$ is a {\tt Prod[$m_1, m_2, \ldots$]}}
+%  \STATE {\bf return} {\tt Sum[Prod[{\bf generate\_delta}($m_1$),$m_2,\ldots$], \\
+%  \hspace*{1in}Prod[$m_1$,{\bf generate\_delta}(Prod[$m_2,\ldots$])], \\
+%  \hspace*{1in}Prod[{\bf generate\_delta}($m_1$), {\bf generate\_delta}(Prod[$m_2,\ldots$])]]}
+%\ELSIF{$m$ is a {\tt Neg($m_1$)}}
+%  \STATE {\bf return} {\tt Neg({\bf generate\_delta}($m_1$))}
+%\ELSIF{$m$ is a {\tt AggSum($\ldots, m_1$)}}
+%  \STATE {\bf return} {\tt AggSum($\ldots, m_1$)}
+%\ELSIF{$m$ is a {\tt Value($\ldots$)}}
+%  \STATE {\bf return} $\emptyset$
+%\ELSIF{$m$ is a Relation($r$, $v_1,v_2,\ldots$)}
+%  \STATE {\bf return} {\tt Prod[($v_1 \leftarrow r_1$), ($v_2 \leftarrow r_2$), \ldots]}
+%\ELSIF{$m$ is a Relation(\ldots)}
+%  \STATE {\bf return} $\emptyset$
+%\ELSIF{$m$ is an External}
+%  \STATE {\bf ERROR} \COMMENT{or work off of the external initializer}
+%\ELSIF{$m$ is a {\tt Definition($v,m_1$)}}
+%  \STATE {\bf return} {\tt Definition($v,m_1+{\bf generate\_delta}(m_1)$) - Definition($v,m_1$)}
+%\ELSIF{$m$ is a {\tt Cmp(\ldots)}}
+%  \STATE {\bf return} $\emptyset$
+%\ENDIF
+%
+%\end{algorithmic}
+%
+%\section{Trigger Generation}
+%
+%The triggers\_for\_X functions translate an Incremental Plan into a set of triggers.  Each trigger is of the form: (1) The Event/Relation name (Variables appearing in the event/relation are drawn from the database schema).  (2) The set of initializers that need to be invoked if necessary (with variables bound as per the schema).  (3) The set of update operations that need to be invoked (with variables bound as per the schema).
+%
+%\begin{verbatim}
+%let trigger_t = 
+%    string * var_t list                 (* Relation Schema *)
+%                                        (* Maybe make it a (string * (...))
+%                                           to make it into an assoc list *)
+%  * (string * var_t list * calc_t)      (* LHS Initializer *)
+%  * (string * var_t list * calc_t) list (* Updates *)
+%\end{verbatim}
+%
+%\parsection{triggers\_for\_memo}
+%\begin{algorithmic}
+%\REQUIRE{memo\_t $memo$}
+%\ENSURE{A trigger\_t of initializers and triggers, and a list of memos}
+%\FORALL{Event $e \in memo$}
+%  \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($e.initializer.expression$)
+%  \STATE Gather $statements$ and $prog$
+%  \STATE Add initiailzer ($memo.name$, $e.initializer.vars$, $impl$)
+%  \FORALL{Invocation $i \in e.updates$}
+%    \STATE $(impl,statements,prog) \gets$ \textbf{triggers\_for\_invocation}($i.expression$)
+%    \STATE Gather $statements$ and $prog$
+%    \STATE Add update ($memo.name$, $i.vars$, $impl$)
+%  \ENDFOR
+%\ENDFOR
+%\STATE \textbf{return} The gathered trigger\_ts and memo\_t list
+%\end{algorithmic}
+%
+%\parsection{triggers\_for\_invocation}
+%\begin{algorithmic}
+%\REQUIRE{invocation\_t $invoc$}
+%\ENSURE{A calc\_t and a trigger\_t and prog\_t}
+%\STATE Select an implementation $impl \in invoc$
+%\FORALL{Memo $m \in impl$}
+%  \STATE Gather \textbf{triggers\_for\_memo}(m)
+%\ENDFOR
+%\STATE {\bf return} $impl$ and the gathered trigger\_t and memo\_t list
+%\end{algorithmic}
+%
+%\subsection{Commentary}
+%We refer to triggers\_for\_invocation's second parameter as its context.  Context is a way of passing variable bindings through multiple layers of triggers\_for\_invocation, and can contain two types of bindings: (1) Input variables can be bound from above (i.e., as event variables), and (2) Input variables can be bound from the side (i.e., from another map).  
+%
+%Case 2 only occurs if we have multi-level initializers (i.e., if the initializer for a map reads from a map with an initializer).  In our current design, this is not possible.  Consequently, the algorithm above only handles Case 1.  In order to support Case 2, the following would need to happen:
+%\begin{itemize}
+%\item The context needs to be extended to be able to express actual domains (e.g., It needs to be able to express "variables $b$ and $c$ in $M_1[][a,b,c]$").
+%\item The generated initializer needs to have a way of iterating over the corresponding domain.  This can either be done by applying the above extensions to the datastructure, or by adding in a domain loop like 
+%$$M_1[a,b][] :=  (dummy \leftarrow M_2[a]) * TheRestOfTheInitializer$$
+%The former would be preferable, as the latter produces a calculus expression where the input variable is bound from below.
+%\end{itemize}
 
 
 \end{document}  

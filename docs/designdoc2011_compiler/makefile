@@ -1,5 +1,5 @@
 Compiler.pdf: Compiler.tex
-	pdflatex Compiler;
+	pdflatex -halt-on-error Compiler;
 	pdflatex Compiler;
 
 clean:
