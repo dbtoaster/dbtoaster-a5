@@ -1,0 +1,175 @@
+require 'rake/clean'
+require 'rake/loaders/makefile'
+
+############ Global Build Settings ############
+
+RakeFileUtils.verbose_flag = false;
+
+$files = [
+  "util/Util",
+  ["stages/sql/Sql", :has_header],
+  ["stages/ring/Calculus", :has_header],
+];
+$lex_files  = ["stages/sql/Sqllexer"]
+$yacc_files = ["stages/sql/Sqlparser"]
+
+$search_paths = [
+  "util",
+  "stages",
+  "stages/sql",
+  "stages/ring",
+].map { |d| "-I #{d}" }
+
+$unit_tests = [ # "test/unit/[...].ml"
+  "sqlparser",
+  "calc_translation",
+]
+
+$bindir = "bin"
+
+$libs = ["str", "unix"];
+$std_flags = $search_paths + $libs.map { |l| "#{l}.cma" } + [
+              "-g"
+             ]
+$opt_flags = $search_paths + $libs.map { |l| "#{l}.cmxa" } + [
+              "-ccopt", 
+              "-O3", 
+              "-nodynlink", 
+              "-unsafe",
+              "-noassert"
+             ]
+
+############ Generated File Rules ############
+
+$files += 
+  $yacc_files.map do |f|
+    file "#{f}.ml" => ["#{f}.mly"] do
+      puts "Building Parser #{f}"
+      sh "ocamlyacc #{f}.mly"
+    end;
+    file "#{f}.mli" => ["#{f}.ml"];
+    CLEAN.include ["#{f}.ml","#{f}.mli"]
+    ["#{f}", :has_header]
+  end
+
+$files += 
+  $lex_files.map do |f|
+    file "#{f}.ml" => ["#{f}.mll"] do
+      puts "Building Lexer #{f}"
+      sh "ocamllex #{f}.mll"
+    end;
+    CLEAN.include "#{f}.ml"
+    "#{f}"
+  end
+
+############ Dependencies ############
+
+$files.each do |f|
+  f = f[0] if f.is_a? Array;
+  unless $search_paths.include? "-I #{File.dirname f}" then
+    puts "Warning: '#{f}' is not in the search path"
+  end
+end
+
+$files.each do |f|
+  f = f[0] if f.is_a? Array;
+  dep_f = "#{File.dirname f}/.#{File.basename f}.dep.mf"
+  file dep_f => ["#{f}.ml"] do
+    sh "ocamldep #{$search_paths.join(" ")} #{f}.ml >"+dep_f
+  end
+  # Don't bother importing (and thus also creating) the deps file if it's a 
+  # generated file.
+  import dep_f if File.exists? "#{f}.ml"
+  CLOBBER.include dep_f
+end
+
+############ Compilation ############
+$obj_files = []
+$opt_files = []
+
+def ocamlc(params)
+  sh "ocamlc #{$std_flags.join(" ")} #{params}"
+end
+def ocamlopt(params)
+  sh "ocamlc #{$opt_flags.join(" ")} #{params}"
+end
+def ocamlmktop(params)
+  sh "ocamlmktop #{$std_flags.join(" ")} #{params}"
+end
+def ocaml_clean(f)
+  CLEAN.include ["#{f}.cmo","#{f}.cmi","#{f}.cmx","#{f}.cmxi"]
+end
+
+$files.each do |directives|
+  if directives.is_a? Array then directives = directives.clone
+                            else directives = [directives] end
+  f = directives.shift;
+
+  $obj_files.push("#{f}.cmo"); 
+  file "#{f}.cmo" => ["#{f}.ml"] do
+    puts "Compiling #{f}"
+    ocamlc "-c #{f}.ml"
+  end
+  $opt_files.push("#{f}.cmx"); 
+  file "#{f}.cmx" => ["#{f}.ml"] do
+    puts "Compiling Optimized #{f}"
+    ocamlopt "-c #{f}.ml"
+  end
+
+  if directives.include? :has_header then
+    # If there's an explicit header, then make the compiled source depend
+    # on its corresponding header
+    file "#{f}.cmo" => ["#{f}.cmi"]
+    file "#{f}.cmx" => ["#{f}.cmxi"]
+
+    file "#{f}.cmi" => ["#{f}.mli"] do
+      puts "Compiling Header #{f}"
+      ocamlc "-c #{f}.mli"
+    end
+    file "#{f}.cmxi" => ["#{f}.mli"] do
+      puts "Compiling Optimized Header #{f}"
+      ocamlopt "-c #{f}.mli"
+    end
+  else
+    # If there's no explicit header, then compiling the source will generate
+    # a compiled header file automatically.
+    file "#{f}.cmi" => ["#{f}.cmo"]
+    file "#{f}.cmi" => ["#{f}.cmx"]
+  end 
+  
+  ocaml_clean f
+end
+
+############ Binaries ############
+
+ocaml_clean "stages/Driver"
+CLEAN.include ["#{$bindir}/dbtoaster","#{$bindir}/dbtoaster_top"]
+
+task :dbtoaster => "#{$bindir}/dbtoaster"
+file "#{$bindir}/dbtoaster" => ($obj_files + ["stages/Driver.ml"]) do
+  puts "Compiling DBToaster"
+  ocamlc "-o #{$bindir}/dbtoaster #{$obj_files.join(" ")} stages/Driver.ml"
+end
+
+task :dbtoaster_top => "#{$bindir}/dbtoaster_top"
+file "#{$bindir}/dbtoaster_top" => $obj_files do
+  puts "Compiling DBToaster Top"
+  ocamlmktop "-o #{$bindir}/dbtoaster_top #{$obj_files.join(" ")}"
+end
+
+task :default => [:dbtoaster, :dbtoaster_top];
+
+############ Unit Tests ############
+
+def dbt_top(file)
+  sh "#{$bindir}/dbtoaster_top #{$search_paths.join(" ")} #{file}"
+end
+
+task :test => [:dbtoaster_top]+($unit_tests.map { |t| "unit-#{t}" })
+task :unit => :test
+$unit_tests.each do |t|
+  task "unit-#{t}" => :dbtoaster_top do
+    dbt_top "test/unit/#{t}.ml"
+  end
+end
+
