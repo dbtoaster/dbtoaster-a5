@@ -9,19 +9,21 @@ type value_t =
     | Const of const_t
 type cmp_t = Sql.cmp_t
 
-type ('i) calc_t =
-    | Sum        of 'i calc_t list                      (* c1+c2+... *)
-    | Prod       of 'i calc_t list                      (* c1*c2*... *)
-    | Neg        of 'i calc_t                           (* -c *)
-    | Leaf       of 'i leaf_t
-    
-and ('init_expr) leaf_t =
+type ('init_expr) external_t = 
+  string *               (* name *)
+  (var_t * bool) list *  (* variable * is_input_var *)
+  type_t *               (* external's content type *)
+  'init_expr             (* customizable external metadata *)
+
+type ('init_expr) calc_t =
+    | Sum        of 'init_expr calc_t list         (* c1+c2+... *)
+    | Prod       of 'init_expr calc_t list         (* c1*c2*... *)
+    | Neg        of 'init_expr calc_t              (* -c *)
     | Cmp        of value_t * cmp_t * value_t      (* v1 [cmp] v2 *)
     | AggSum     of var_t list * 'init_expr calc_t (* AggSum([v1,v2,...],c) *)
     | Value      of value_t                        (* Var(v) | Const(#) *)
     | Relation   of string * var_t list            (* R(v1,v2,...) *)
-    | External   of string * var_t list * type_t * (* {M1(v1[i],v2[o],...) *)
-                    bool list * 'init_expr         (*    := 'a} (true = in) *)
+    | External   of 'init_expr external_t
     | Definition of var_t * 'init_expr calc_t      (* v <- c *)
 
 exception TypecheckError of string * unit calc_t * unit calc_t option
@@ -45,17 +47,17 @@ let mk_sum (terms:'i calc_t list): 'i calc_t =
          List.map sum_list (
             List.filter (fun v -> 
                match v with 
-                  | Leaf(Value(Const(Integer(0)))) -> false 
-                  | Leaf(Value(Const(Double(0.)))) -> false 
-                  | Neg(Leaf(Value(Const(Integer(0))))) -> false 
-                  | Neg(Leaf(Value(Const(Double(0.))))) -> false 
+                  | Value(Const(Integer(0))) -> false 
+                  | Value(Const(Double(0.))) -> false 
+                  | Neg(Value(Const(Integer(0)))) -> false 
+                  | Neg(Value(Const(Double(0.)))) -> false 
                   | _ -> true
                ) terms
             )
          )
    in
    match terms with
-      | [] -> Leaf(Value(Const(Integer(0))))
+      | [] -> Value(Const(Integer(0)))
       | [v] -> v
       | _ -> Sum(terms)
 ;;
@@ -65,37 +67,52 @@ let mk_prod (terms:'i calc_t list): 'i calc_t =
          List.map prod_list (
             List.filter (fun v -> 
                match v with 
-                  | Leaf(Value(Const(Integer(1)))) -> false 
-                  | Leaf(Value(Const(Double(1.)))) -> false 
+                  | Value(Const(Integer(1))) -> false 
+                  | Value(Const(Double(1.))) -> false 
                   | _ -> true
                ) terms
             ) 
          )
    in
    match terms with
-      | [] -> Leaf(Value(Const(Integer(1))))
+      | [] -> Value(Const(Integer(1)))
       | [v] -> v
       | _ -> Prod(terms)
 ;;
 (*** Basic Operations ***)    
 
 let rec fold_calc (sum_op:('ret list -> 'ret)) (prod_op:('ret list -> 'ret))
-                  (neg_op:('ret -> 'ret)) (leaf_op:('a leaf_t -> 'ret))
+                  (neg_op:('ret -> 'ret)) 
+                  (cmp_op:(value_t * cmp_t * value_t -> 'ret))
+                  (aggsum_op:(var_t list * 'ret -> 'ret))
+                  (value_op:(value_t -> 'ret))
+                  (rel_op:(string * var_t list -> 'ret))
+                  (ext_op:('a external_t -> 'ret))
+                  (def_op:(var_t * 'ret -> 'ret))
                   (expr:'a calc_t): 'ret =
-   let rcr = fold_calc sum_op prod_op neg_op leaf_op in
+   let rcr = fold_calc sum_op prod_op neg_op cmp_op aggsum_op value_op rel_op
+                       ext_op def_op in
    match expr with 
-    | Sum(elems) -> sum_op (List.map rcr elems)
-    | Prod(elems) -> prod_op (List.map rcr elems)
-    | Neg(child) -> neg_op (rcr child)
-    | Leaf(leaf) -> leaf_op leaf
+    | Sum(elems)      -> sum_op (List.map rcr elems)
+    | Prod(elems)     -> prod_op (List.map rcr elems)
+    | Neg(child)      -> neg_op (rcr child)
+    | Cmp(a,op,b)     -> cmp_op (a,op,b)
+    | AggSum(v,e)     -> aggsum_op (v, rcr e)
+    | Value(l)        -> value_op l
+    | Relation(rn,rv) -> rel_op (rn,rv)
+    | External(l)     -> ext_op l
+    | Definition(v,d) -> def_op (v,rcr d)
 ;;
 
-let rewrite_leaves (leaf_op:('a leaf_t -> 'b calc_t)) (expr:'a calc_t): 
-                   ('b calc_t) =
-   fold_calc (fun x -> Sum(x))
-             (fun x -> Prod(x))
-             (fun x -> Neg(x))
-             leaf_op
+let rewrite_leaves (cmp_op:(value_t * cmp_t * value_t -> 'b calc_t))
+                   (aggsum_op:(var_t list * 'b calc_t -> 'b calc_t))
+                   (value_op:(value_t -> 'b calc_t))
+                   (rel_op:(string * var_t list -> 'b calc_t))
+                   (ext_op:('a external_t -> 'b calc_t))
+                   (def_op:(var_t * 'b calc_t -> 'b calc_t))
+                   (expr:'a calc_t): 'b calc_t =
+   fold_calc mk_sum mk_prod mk_neg 
+             cmp_op aggsum_op value_op rel_op ext_op def_op 
              expr
 ;;
 
@@ -105,32 +122,27 @@ let rec replace_vars (repl:(var_t * var_t) list)
                                         then (List.assoc x repl)
                                         else x)
    in
-   let rec leaf lf =
-      let rcr = rewrite_leaves leaf in
-      match lf with
-       | Cmp(_,_,_)          -> Leaf(lf)
-       | AggSum(vars,subexp) -> Leaf(AggSum(List.map sub vars, rcr subexp))
-       | Value(Var(v))       -> Leaf(Value(Var(sub v)))
-       | Value(Const(_))     -> Leaf(lf)
-       | Relation(reln,relv) -> Leaf(Relation(reln, List.map sub relv))
-       | External(extn,extv,t,bound,ini) -> 
-              Leaf(External(extn, List.map sub extv, t, bound, ini))
-       | Definition(v,defn)  -> Leaf(Definition(sub v, rcr defn))
-   in rewrite_leaves leaf expr
+   rewrite_leaves 
+      (fun (a,op,b) -> Cmp(a,op,b))
+      (fun (v,e)   -> AggSum(List.map sub v, e))
+      (fun v       -> Value(match v with Var(var) -> Var(sub var) 
+                                       | Const(_) -> v))
+      (fun (rn,rv) -> Relation(rn, List.map sub rv))
+      (fun (en,ev,et,ei) 
+                   -> External(en, List.map (fun (v,t) -> (sub v, t)) ev,et,ei))
+      (fun (d,e)   -> Definition(sub d, e))
+      expr
 ;;
 
-let rec strip_init (e:'a calc_t): (unit calc_t) = 
-   rewrite_leaves (fun (x:'a leaf_t) -> 
-      let (ret:unit leaf_t) =
-         match x with
-            | External(en,ev,et,iv,_) -> External(en,ev,et,iv,())
-            | Cmp(a,op,b)       -> Cmp(a,op,b)
-            | AggSum(gb,sub)    -> AggSum(gb, strip_init sub)
-            | Value(v)          -> Value(v)
-            | Relation(rn,rv)   -> Relation(rn,rv)
-            | Definition(dv,dd) -> Definition(dv, strip_init dd)
-      in Leaf(ret)
-   ) e
+let rec strip_init (expr:'a calc_t): (unit calc_t) = 
+   rewrite_leaves 
+      (fun (a,op,b) -> Cmp(a,op,b))
+      (fun (gb,sub) -> AggSum(gb,sub))
+      (fun x -> Value(x))
+      (fun (rn,rv) -> Relation(rn,rv))
+      (fun (en,ev,et,_) -> External(en,ev,et,()))
+      (fun (dv,dd) -> Definition(dv,dd))
+      expr
 ;;
 
 (*** Printing ***)
@@ -148,91 +160,87 @@ let string_of_value (v:value_t): string =
    
 let string_of_cmp = Sql.string_of_cmp_op
 
-let rec string_of_leaf ?(string_of_meta=None) (lf:'a leaf_t): string =
-   let rcr subexp = 
-      match string_of_meta with
-       | None -> string_of_calc subexp
-       | Some(som) -> string_of_enhanced_calc som subexp
+let rec string_of_any_calc (string_of_meta:(('a -> string) option)) 
+                                (expr:'a calc_t): string =
+   let rcr e = string_of_any_calc string_of_meta e in
+   let rcrl subs sep = 
+      string_of_list sep (List.map (fun x -> "("^(rcr x)^")") subs)
    in
    let string_of_var_list gbv = (list_to_string string_of_var gbv) in
-   match lf with
+   match expr with
+    | Sum(subexps)  -> rcrl subexps " + "
+    | Prod(subexps) -> rcrl subexps " * "
+    | Neg(subexp)   -> "-("^(rcr subexp)^")"
     | Cmp(l,c,r) -> 
       (string_of_value l)^" "^(string_of_cmp c)^" "^(string_of_value r)
     | AggSum(gbv,exp) ->
       "AggSum("^(string_of_var_list gbv)^": "^(rcr exp)^")"
     | Value(v) -> (string_of_value v)
     | Relation(rn,rv) -> rn^(string_of_var_list rv)
-    | External(en,ev,et,iv,meta) -> 
+    | External(en,ev,et,ei) -> 
       "{"^en^(list_to_string (fun ((vn,vt),i) ->
          "["^vn^(if i then " <-:" else " ->:")^(string_of_type vt)^"]"
-      ) (List.combine ev iv))^":"^(string_of_type et)^
+      ) ev)^":"^(string_of_type et)^
       (match string_of_meta with
        | None -> ""
-       | Some(som) -> " <- "^(som meta)
+       | Some(som) -> " <- "^(som ei)
       )^"}"
     | Definition(dv,dd) -> "("^(string_of_var dv)^" <- ("^(rcr dd)^"))"
-and string_of_calc (expr:'a calc_t): string =
-   let rcr = string_of_calc in
-   let rcrl subs sep = 
-      string_of_list sep (List.map (fun x -> "("^(rcr x)^")") subs)
-   in
-   match expr with
-    | Sum(subexps)  -> rcrl subexps " + "
-    | Prod(subexps) -> rcrl subexps " * "
-    | Neg(subexp)   -> "-("^(rcr subexp)^")"
-    | Leaf(lf)      -> (string_of_leaf lf)
-and string_of_enhanced_calc (string_of_meta:('a -> string)) 
-                                (expr:'a calc_t): string =
-   let rcr e = string_of_enhanced_calc string_of_meta e in
-   let rcrl subs sep = 
-      string_of_list sep (List.map (fun x -> "("^(rcr x)^")") subs)
-   in
-   match expr with
-    | Sum(subexps)  -> rcrl subexps " + "
-    | Prod(subexps) -> rcrl subexps " * "
-    | Neg(subexp)   -> "-("^(rcr subexp)^")"
-    | Leaf(lf)      -> (string_of_leaf ~string_of_meta:(Some(string_of_meta)) 
-                                       lf)
+
+let string_of_enhanced_calc (string_of_meta:('a -> string)) (expr:'a calc_t):
+                            string =
+   string_of_any_calc (Some(string_of_meta)) expr
+   
+let string_of_calc (expr:'a calc_t): string =
+   string_of_any_calc None expr
 
 
 (*** Basic Queries ***)
 
 (* Returns true if the specified variable is bound in the expression *)
 let rec is_bound (expr:'a calc_t) (var:var_t): bool =
-   fold_calc (List.exists (fun x->x)) (List.exists (fun x->x))
-             (fun x -> x) (fun leaf ->
-         match leaf with
-          | Cmp(_,_,_)         -> false
-          | AggSum(gbvars,_)   -> List.mem var gbvars
-          | Value(Var(var2))   -> var2 = var
-          | Value(_)           -> false
-          | Relation(_,relv)   -> List.mem var relv
-          | External(_,relv,_,bound,_) -> 
-               List.exists2 (fun x b -> b && (x = var)) relv bound
-          | Definition(v,defn) -> (v = var) || (is_bound defn var)
-      ) expr
+   fold_calc (List.exists (fun x->x))              (* Sum *)
+             (List.exists (fun x->x))              (* Prod *)
+             (fun x -> x)                          (* Neg *)
+             (fun _ -> false)                      (* Cmp *)
+             (fun (gb,_) -> List.mem var gb)       (* AggSum *)
+             (fun v -> match v with Var(var2) -> var = var2 | _ -> false)
+                                                   (* Value *)
+             (fun (_,relv) -> List.mem var relv)   (* Relation *)
+             (fun (_,extv,_,_) -> List.exists (fun (var2,b) -> b && var=var2) 
+                                              extv)
+                                                   (* External *)
+             (fun (v,sub) -> sub || v == var)      (* Definition *)
+             expr
 ;;
 
 let is_not_bound expr var: bool = not (is_bound expr var)
 ;;
 
 (* Returns all variables, bound and unbound involved in the expression *)
-let rec get_schema (expr:'a calc_t): var_t list =
-   let merge_op = List.fold_left ListAsSet.union [] in
-   fold_calc merge_op merge_op (fun x->x) (fun leaf ->
-      match leaf with 
-       | Cmp(_,_,_) -> []
-       | AggSum(gb_vars, subexp) ->
-         let input_vars = 
-            List.filter (is_not_bound subexp) (get_schema subexp)
-         in 
-            input_vars @ gb_vars
-       | Value(Var(var)) -> [var]
-       | Value(Const(_)) -> []
-       | Relation(_,rel_vars) -> rel_vars
-       | External(_,ext_vars,_,_,_) -> ext_vars
-       | Definition(var,subexp) -> var :: (get_schema subexp)
-   ) expr
+let rec get_schema (expr:'a calc_t): (var_t * bool) list =
+   let value_set v = match v with Var(v) -> [v,false] | Const(_) -> [] in
+   fold_calc 
+      (* The sum merge is a bit of a hack... it's not quite typesafe *)
+      (List.fold_left ListAsSet.union [])
+      (fun terms -> List.fold_left (fun old_vars term_vars -> 
+            ListAsSet.union (List.filter (fun (v,is_bound) -> 
+               (* Product eliminates all input variables that appear as 
+                  output variables on the LHS *)
+               is_bound || (not (List.mem_assoc v old_vars))
+            ) term_vars) old_vars
+         ) [] terms)
+      (fun x -> x)
+      (fun (a,_,b) -> (value_set a) @ (value_set b))
+      (fun (gb,sub) -> List.filter (fun (v, is_bound) -> 
+         (* Keep input variables and variables in the group by list only *)
+         if is_bound then List.mem v gb else true
+      ) sub)
+      value_set
+      (fun (_,rv) -> List.map (fun v -> (v,true)) rv)
+      (fun (_,ev,_,_) -> ev)
+      (fun (v,d) -> (v,true) :: d)
+      expr
 ;;
 
 (* Returns Some() and a schema mapping that will make the two expressions 
@@ -278,67 +286,70 @@ let rec get_mapping (expr1:'a calc_t) (expr2:'a calc_t):
     | (Sum(t1), Sum(t2))   -> rcrl (t1,t2)
     | (Prod(t1), Prod(t2)) -> rcrl (t1,t2)
     | (Neg(t1), Neg(t2))   -> rcr t1 t2
-    | (Leaf(l1), Leaf(l2))  -> (
-      match (l1,l2) with
-       | (Cmp(cl1,c1,cr1), Cmp(cl2,c2,cr2)) -> 
-         if c1 = c2 then (
-            merge_translations (merge_values cl1 cl2) (merge_values cr1 cr2)
-         ) else None
-       | (AggSum(vl1, t1), AggSum(vl2, t2)) -> (
-            match (rcr t1 t2) with 
-               | None -> None
-               | Some(trn) ->
-                  if (ListAsSet.seteq 
-                     (List.map (Function.apply_strict trn) vl1) vl2)
-                  then None (* The GroupBy terms are different *)
-                  else Some(trn)
-         )
-       | (Value(v1), Value(v2)) -> merge_values v1 v2
-       | (Relation(rn1,rv1), Relation(rn2,rv2)) -> 
-         if rn1 = rn2 then Some(List.combine rv1 rv2) else None
-       | (External(en1,ev1,_,_,_), External(en2,ev2,_,_,_)) -> 
-         if en1 = en2 then Some(List.combine ev1 ev2) else None
-       | (Definition(dv1,dd1), Definition(dv2,dd2)) -> (
-            match (rcr dd1 dd2) with 
-             | Some(trn) -> merge_translations (Some[(dv1,dv2)]) (Some(trn))
-             | None -> None
-         )
-       | (Cmp(_,_,_),_)          -> None
-       | (AggSum(_,_),_)         -> None
-       | (Value(v1),_)           -> None
-       | (Relation(_,_),_)       -> None
-       | (External(_,_,_,_,_),_) -> None
-       | (Definition(_,_),_)     -> None
-    )
+    | (Cmp(cl1,c1,cr1), Cmp(cl2,c2,cr2)) -> 
+      if c1 = c2 then (
+         merge_translations (merge_values cl1 cl2) (merge_values cr1 cr2)
+      ) else None
+    | (AggSum(vl1, t1), AggSum(vl2, t2)) -> (
+         match (rcr t1 t2) with 
+            | None -> None
+            | Some(trn) ->
+               if (ListAsSet.seteq 
+                  (List.map (Function.apply_strict trn) vl1) vl2)
+               then None (* The GroupBy terms are different *)
+               else Some(trn)
+      )
+    | (Value(v1), Value(v2)) -> merge_values v1 v2
+    | (Relation(rn1,rv1), Relation(rn2,rv2)) -> 
+      if rn1 = rn2 then Some(List.combine rv1 rv2) else None
+    | (External(en1,ev1,_,_), External(en2,ev2,_,_)) -> 
+      if en1 = en2 then Some(List.combine (List.map fst ev1) 
+                                          (List.map fst ev2)) else None
+    | (Definition(dv1,dd1), Definition(dv2,dd2)) -> (
+         match (rcr dd1 dd2) with 
+          | Some(trn) -> merge_translations (Some[(dv1,dv2)]) (Some(trn))
+          | None -> None
+      )
+    | (Cmp(_,_,_),_)          -> None
+    | (AggSum(_,_),_)         -> None
+    | (Value(v1),_)           -> None
+    | (Relation(_,_),_)       -> None
+    | (External(_,_,_,_),_)   -> None
+    | (Definition(_,_),_)     -> None
     | (Sum(_), _)  -> None
     | (Prod(_), _) -> None
     | (Neg(_), _)  -> None
-    | (Leaf(_), _) -> None
 
 (* Returns a list of all Relations appearing in the expression *)
 let rec get_relations (expr:('a calc_t)): string list =
    let merge_op = List.fold_left ListAsSet.union [] in
-   let rcr = get_relations in
-   fold_calc merge_op merge_op (fun x -> x) (fun x ->
-      match x with
-       | Relation(rn,_)       -> [rn]
-       | AggSum(_,subexp)     -> rcr subexp
-       | Definition(_,subexp) -> rcr subexp
-       | _                    -> []
-   ) expr
+   fold_calc 
+      merge_op 
+      merge_op 
+      (fun x -> x)
+      (fun _ -> [])
+      (fun (_,subexp) -> subexp)
+      (fun _ -> [])
+      (fun (rn,_) -> [rn])
+      (fun _ -> [])
+      (fun (_,subexp) -> subexp)
+      expr
 
 (* Returns a list of all Externals (and related metadata) appearing in the 
    expression *)
-let rec get_externals (expr:('a calc_t)): (string * 'a) list =
+let rec get_externals (expr:('a calc_t)): ('a external_t) list =
    let merge_op = List.fold_left ListAsSet.union [] in
-   let rcr = get_externals in
-   fold_calc merge_op merge_op (fun x -> x) (fun x ->
-      match x with
-       | External(en,_,_,_,meta)  -> [en,meta]
-       | AggSum(_,subexp)     -> rcr subexp
-       | Definition(_,subexp) -> rcr subexp
-       | _                    -> []
-   ) expr
+   fold_calc 
+      merge_op 
+      merge_op 
+      (fun x -> x)
+      (fun _ -> [])
+      (fun (_,subexp) -> subexp)
+      (fun _ -> [])
+      (fun _ -> [])
+      (fun e -> [e])
+      (fun (_,subexp) -> subexp)
+      expr
 
 let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
    let fail1 msg (e1:'a calc_t) = 
@@ -373,9 +384,9 @@ let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
     | Sum(subexprs)  -> arith_list_op subexprs "Sum" (fun x -> Sum(x))
     | Prod(subexprs) -> arith_list_op subexprs "Product" (fun x -> Prod(x))
     | Neg(subexp)    -> check_for_numeric_type "Negation" (rcr subexp) subexp
-    | Leaf(Cmp(l,c,r)) -> (* Always '1' or '0' *)
-      let lht = rcr (Leaf(Value(l))) in
-      let rht = rcr (Leaf(Value(r))) in
+    | Cmp(l,c,r) -> (* Always '1' or '0' *)
+      let lht = rcr (Value(l)) in
+      let rht = rcr (Value(r)) in
       if c = Eq || c = Neq then (
          match (lht,rht) with
           | (AnyT,_) -> 
@@ -400,15 +411,15 @@ let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
             if strict && (lht != rht) then
                fail1 "Comparison of Integer and Double" expr
             else IntegerT
-    | Leaf(AggSum(_,subexp)) -> 
+    | AggSum(_,subexp) -> 
             check_for_numeric_type "AggSum" (rcr subexp) subexp
-    | Leaf(Value(Const(Integer(_)))) -> IntegerT
-    | Leaf(Value(Const(Double(_))))  -> DoubleT
-    | Leaf(Value(Const(String(_))))  -> StringT
-    | Leaf(Value(Var(_,vt)))         -> vt
-    | Leaf(Relation(_,_))            -> IntegerT (* Arity *)
-    | Leaf(External(_,_,et,_,_))      -> et
-    | Leaf(Definition((dvn,dvt),dd)) -> 
+    | Value(Const(Integer(_))) -> IntegerT
+    | Value(Const(Double(_)))  -> DoubleT
+    | Value(Const(String(_)))  -> StringT
+    | Value(Var(_,vt))         -> vt
+    | Relation(_,_)            -> IntegerT (* Arity *)
+    | External(_,_,et,_)      -> et
+    | Definition((dvn,dvt),dd) -> 
       match (
          match (dvt,(rcr dd)) with
             | (AnyT,_) -> None
@@ -423,7 +434,7 @@ let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
        | None -> IntegerT (* Always '1' *)
        | Some(lhs,rhs) -> 
          fail ("Definition type mismatch ("^(string_of_type lhs)^" := "^
-               (string_of_type rhs)^")") (Leaf(Value(Var(dvn,dvt)))) dd
+               (string_of_type rhs)^")") (Value(Var(dvn,dvt))) dd
                
 ;;
 
@@ -443,14 +454,14 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
    let mk_cmp (lhs:unit calc_t) (op:cmp_t) (rhs:unit calc_t): unit calc_t =
       let extract_value expr =
          match expr with
-            | Leaf(Value(v)) -> ([], v)
+            | Value(v) -> ([], v)
             | _              -> 
                let var = (tmp_var(), calc_type expr) in
-                  ([Leaf(Definition(var, expr))], Var(var))
+                  ([Definition(var, expr)], Var(var))
       in
       let (lhs_term, lhs_value) = extract_value lhs in
       let (rhs_term, rhs_value) = extract_value rhs in
-         mk_prod (lhs_term @ rhs_term @ [Leaf(Cmp(lhs_value, op, rhs_value))])   
+         mk_prod (lhs_term @ rhs_term @ [Cmp(lhs_value, op, rhs_value)])   
    in
    let var_to_c (s,v,t) = 
       let (_,sources,_,_) = stmt in
@@ -462,8 +473,8 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
    let 
       rec rcr_e (expr:Sql.expr_t): unit calc_t = 
          match expr with
-            | Sql.Const(c) -> Leaf(Value(Const(c)))
-            | Sql.Var(v)   -> Leaf(Value(Var(var_to_c v)))
+            | Sql.Const(c) -> Value(Const(c))
+            | Sql.Var(v)   -> Value(Var(var_to_c v))
             | Sql.Arithmetic(a,Sql.Sum,b) -> mk_sum [rcr_e a; rcr_e b]
             | Sql.Arithmetic(a,Sql.Prod,b) -> 
                (* a little dancing here.  If b is an aggregate (and a isn't),
@@ -489,14 +500,14 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
                   match agg with
                      | Sql.SumAgg ->
                         let (_,sources,condition,gb) = stmt in
-                           Leaf(AggSum(
+                           AggSum(
                               List.map var_to_c gb, 
                               mk_prod ((List.map rcr_src sources) @
-                                       [rcr_c condition; rcr_e subexp])))
+                                       [rcr_c condition; rcr_e subexp]))
       and rcr_c (cond:Sql.cond_t): unit calc_t =
          match cond with
-            | Sql.ConstB(true) -> (Leaf(Value(Const(Integer(1)))))
-            | Sql.ConstB(false) -> (Leaf(Value(Const(Integer(0)))))
+            | Sql.ConstB(true) -> (Value(Const(Integer(1))))
+            | Sql.ConstB(false) -> (Value(Const(Integer(0))))
             | Sql.Comparison(a,op,b) -> mk_cmp (rcr_e a) op (rcr_e b)
             | Sql.And(a,b) -> mk_prod [rcr_c a; rcr_c b]
             | Sql.Or(a,b) -> 
@@ -505,11 +516,11 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
                let a_calc = rcr_c a and b_calc = rcr_c b in
                   mk_sum [a_calc; b_calc; mk_neg (mk_prod [a_calc; b_calc])]
             | Sql.Not(Sql.Exists(q)) -> mk_cmp (rcr_q q) Eq 
-                                               (Leaf(Value(Const(Integer(0)))))
+                                               (Value(Const(Integer(0))))
             | Sql.Not(c) -> mk_cmp (rcr_c c) Neq 
-                                   (Leaf(Value(Const(Integer(0)))))
+                                   (Value(Const(Integer(0))))
             | Sql.Exists(q) -> mk_cmp (rcr_q q) Neq 
-                                      (Leaf(Value(Const(Integer(0)))))
+                                      (Value(Const(Integer(0))))
       and rcr_q (q:Sql.select_t): unit calc_t =
          let qcalc = calc_of_sql ~tmp_var_id:tmp_var_id tables q in
             if List.length qcalc != 1 then
@@ -520,13 +531,13 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
          match sd with 
             | Sql.Table(t) -> 
                let (_,sch,_) = Sql.find_table t tables in
-                  Leaf(Relation(t, List.map (fun (_,v,vt) -> 
-                                                 (sn^"_"^v, vt)) sch))
+                  Relation(t, List.map (fun (_,v,vt) -> 
+                                                 (sn^"_"^v, vt)) sch)
             | Sql.SubQ(q) ->
                mk_prod (
                   List.map (fun (term,termcalc) ->
-                     Leaf(Definition((sn^"_"^term, calc_type termcalc),
-                                     termcalc))
+                     Definition((sn^"_"^term, calc_type termcalc),
+                                     termcalc)
                   ) (calc_of_sql ~tmp_var_id:tmp_var_id tables q)
                ) 
    in
@@ -550,15 +561,15 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
          let target_rewrite = 
             (List.map (fun (tname,target) -> (tname,rcr_e target)) targets) in
          [  tmp_var(), 
-            (Leaf(AggSum(
+            (AggSum(
                List.map (fun (tname,t)->(tname, calc_type t)) target_rewrite,
                mk_prod (
                   (List.map rcr_src sources) @
                   [rcr_c condition] @
                   (List.map (fun (tname,target) -> 
-                     Leaf(Definition((tname,calc_type target),
-                                     target))
+                     Definition((tname,calc_type target),
+                                     target)
                   ) target_rewrite)
                )
-            )))
+            ))
          ]               
