@@ -62,22 +62,29 @@ let mk_sum (terms:'i calc_t list): 'i calc_t =
       | _ -> Sum(terms)
 ;;
 let mk_prod (terms:'i calc_t list): 'i calc_t =
-   let terms = 
-      List.flatten (
-         List.map prod_list (
-            List.filter (fun v -> 
-               match v with 
-                  | Value(Const(Integer(1))) -> false 
-                  | Value(Const(Double(1.))) -> false 
-                  | _ -> true
-               ) terms
-            ) 
-         )
-   in
-   match terms with
-      | [] -> Value(Const(Integer(1)))
-      | [v] -> v
-      | _ -> Prod(terms)
+   if (List.exists (fun v -> 
+      match v with 
+         | Value(Const(Integer(0))) -> true
+         | Value(Const(Double(0.))) -> true
+         | _ -> false
+   ) terms) then Value(Const(Integer(0)))
+   else
+      let terms = 
+         List.flatten (
+            List.map prod_list (
+               List.filter (fun v -> 
+                  match v with 
+                     | Value(Const(Integer(1))) -> false 
+                     | Value(Const(Double(1.))) -> false 
+                     | _ -> true
+                  ) terms
+               ) 
+            )
+      in
+      match terms with
+         | [] -> Value(Const(Integer(1)))
+         | [v] -> v
+         | _ -> Prod(terms)
 ;;
 (*** Basic Operations ***)    
 

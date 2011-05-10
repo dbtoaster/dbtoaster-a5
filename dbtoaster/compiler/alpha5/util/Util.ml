@@ -205,6 +205,9 @@ struct
         ) None theta) with
       | Some(a) -> "[ "^a^" ]"
       | None -> "[]"
+   
+   let apply_partial (theta: ('a, 'a) table_fn_t) (x: 'a): 'a =
+      apply theta x x
 
    let apply_strict (theta: ('a, 'b) table_fn_t) (x: 'a): 'b =
       let g (y, z) = if(x = y) then [z] else []
