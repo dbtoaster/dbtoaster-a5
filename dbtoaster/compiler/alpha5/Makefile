@@ -3,11 +3,14 @@ all: dbtoaster dbtoaster_top
 
 SOURCE = \
 	util/Util.ml \
+	stages/Common.ml \
 	stages/sql/Sql.mli \
 	stages/sql/Sql.ml \
 	stages/ring/Calculus.mli \
 	stages/ring/Calculus.ml \
 	stages/ring/Compiler.ml \
+	stages/plan/IncrementalPlan.mli \
+	stages/plan/IncrementalPlan.ml \
 
 HEADERS =
 
@@ -19,6 +22,7 @@ SEARCH_PATHS = $(patsubst %,-I %,\
 	stages \
 	stages/sql \
 	stages/ring \
+	stages/plan \
 )
 
 LIBS = str unix
@@ -124,6 +128,8 @@ clean:
 	rm -f $(GENERATED_SOURCE) \
 			  $(STD_OBJ) $(STD_HDR) \
 			  $(OPT_OBJ) $(OPT_HDR) \
+			  $(patsubst %.ml,%.cmi,$(filter %.ml,$(SOURCE))) \
+			  $(patsubst %.cmx,%.o,$(OPT_OBJ)) \
 			  bin/dbtoaster bin/dbtoaster_top \
 				Makefile.deps
 

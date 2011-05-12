@@ -1,6 +1,6 @@
 type type_t  = Sql.type_t
 type const_t = Sql.const_t
-type var_t = string * type_t
+type var_t = Common.Types.var_t
 type value_t = 
     | Var   of var_t
     | Const of const_t
@@ -26,6 +26,9 @@ type ('init_expr) calc_t =
 exception TypecheckError of string * unit calc_t * unit calc_t option
 
 (*** Constructors ***)
+val calc_zero: 'i calc_t
+val calc_one:  'i calc_t
+
 val sum_list: 'i calc_t -> 'i calc_t list
 val prod_list: 'i calc_t -> 'i calc_t list
 
@@ -63,6 +66,8 @@ val rewrite_leaves:
    'a calc_t ->
    'b calc_t
 
+val convert_calc: ('a external_t -> 'b external_t) -> 'a calc_t -> 'b calc_t
+
 val replace_vars: (var_t * var_t) list -> 'a calc_t -> 'a calc_t
 
 
@@ -75,6 +80,14 @@ val is_not_bound  : 'a calc_t -> var_t -> bool
 (* Returns all variables, bound and unbound involved in the expression *)
 val get_schema    : 'a calc_t -> (var_t * bool) list
 
+(* Returns true if (A * B) can be rewritten as (B * A) 
+   Include an optional external schema (the output variables of C) to test
+   whether (C * (A * B)) can be rewritten as (C * (B * A))
+   
+   For example, in general S(A) * A <> A * S(A) because A is bound by S(A).
+   However, R(A) * S(A) * A = R(A) * A * S(A) because R(A) binds A even earlier 
+   in the expression. *)
+val commutes_with : ?external_sch:var_t list -> 'a calc_t -> 'b calc_t -> bool
 
 (* Returns Some() and a schema mapping that will make the two expressions 
    equivalent, or none if no such mapping can be found.  Note that false

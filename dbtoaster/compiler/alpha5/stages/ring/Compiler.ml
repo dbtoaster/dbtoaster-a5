@@ -1,6 +1,6 @@
 open Util
 open Calculus
-open Sql.Types
+open Common.Types
 
 let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
                       (delta_name:string) (delta_vars:var_t list) 
@@ -47,7 +47,7 @@ let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
             rewritten. *)
          let defn_ext = (match mk_external with 
                | None -> defn
-               | Some(mk_ext) -> External(mk_ext defn)
+               | Some(mk_ext) -> mk_ext defn
             ) in
                mk_sum [
                   Definition(var, mk_sum [defn_ext; rcr defn]);
@@ -249,3 +249,157 @@ let rec propagate_backwards (in_schema:var_t list) (expr:'a calc_t):
       | Definition(dv, subexpr) -> Definition(dv, rcr subexpr)
       | _ -> expr
 ;;
+let simplify (in_sch:(var_t list)) (base:'a calc_t): 
+             ((var_t*var_t) list * 'a calc_t) =
+   let rec fixed_point (expr:'a calc_t) 
+                       (mapping:(var_t * var_t) list) =
+      let step1 = push_down_negs false expr in
+      let (v,e) = pull_up_aggsums step1 in let step2 = AggSum(v,e) in
+      let step3 = propagate_backwards in_sch step2 in
+      let (new_mapping,new_expr) = propagate_forward mapping step3 in
+         if new_expr = expr then (new_mapping,new_expr)
+                            else fixed_point new_expr new_mapping
+   in fixed_point base []
+;;
+
+(* Simplify a list of monomials (returned earlier in the compilation process
+   by roly_poly) by factorizing the expression (i.e. rewriting A * B + A * C 
+   into A * (B + C).
+
+   Factorization proceeds one term at a time:
+   1 - Generate a list of candidate terms for factorization
+   2 - Pick a 'best' term based on a heuristic cost metric
+   3 - If no such term exists (All terms are not viable, or appear in
+       only one monomial), ** terminate early ** by returning a sum of the input
+       monomials.
+   4 - Split the list of monomials into two: one for which 'best' can be 
+       factorized out (with), and the other for which it can't (without).
+   5 - Factorize term out of the 'with' sublist
+   6 - Recursively factorize each sublist
+   7 - Return factorize('without'); 'best' * factorize('with')
+
+   Things to note: 
+   - While A * B + A * C = A * (B + C) is valid, B * A + C * A *may* not be 
+     rewritable to A * (B + C) (it is rewritable to (B + C) * A, but this is 
+     going to make the factorization process even hairier, quite likely for no
+     useful purpose).  The Calculus.commutes_with method is used to test for
+     product commutativity.  This is relevant both for generating the list of
+     candidate terms, as well as identifying which lists 'contains' the best
+     candidate term.
+   - The use of mk_sum and mk_prod ensures that we don't introduce any redundant 
+     Sum or Prod nodes into the resulting calc_t tree.
+   - This is not a complete factorization process.  Eventually we will want to
+     replace this with a proper heuristic optimizer like A*.  
+
+   The heuristic we currently use (defined in factorize_cost_metric):
+   - Maximize the number of subexpressions the candidate term appears in
+   - Do not factorize out terms that contain subsequent filtering predicates 
+     (e.g. R(a) * (a > 5) * B + R(a) * C should NOT get factorized to 
+     R(a) * (((a > 5) * B) + C)).  This is because the current code generation 
+     process will actually end up materializing far more than it needs to in the 
+     latter case.
+ *)
+let rec factorize_impl 
+     (cost_metric:('a calc_t ->            (* prod of the terms to the left *)
+                   'a calc_t ->            (* the candidate term *)
+                   'a calc_t list ->       (* list of the terms to the right *)
+                   'b))                    (* return: a cost metric *) 
+     (aggregate_costs:'b ->                (* the cost metric being folded in *)
+                      'b ->                (* the prior cost metric *)
+                      'b)                  (* the merged (new) cost metric *)
+     (sort_costs:'b ->                     (* Sort costs as per 'compare' *)
+                 'b ->                     (* s.t. 'smaller' cost = better *)
+                 int)                      
+     (viable_candidate:('a calc_t ->       (* prod of the terms to the left *)
+                        'a calc_t ->       (* the candidate term *)
+                        'a calc_t list ->  (* list of the terms to the right *)
+                        bool))             (* return: false if the term is not
+                                              a valid candidate for 
+                                              factorization *)
+     (monomials: 'a calc_t list): 'a calc_t =
+   let rcr = 
+      factorize_impl cost_metric aggregate_costs sort_costs viable_candidate
+   in
+   let monomial_terms = List.map prod_list monomials in
+   (* Step 1 and 2.1:Compute the costs *)
+   let rec generate_candidates (prev:'a calc_t) (t_rest:'a calc_t list): 
+      (('a calc_t * 'b) list) = 
+      if t_rest = [] then [] else
+         let t = List.hd t_rest in 
+         let rest = List.tl t_rest in
+            (  if viable_candidate prev t rest 
+               then [t, cost_metric prev t rest] 
+               else []
+            ) @ (generate_candidates (mk_prod [prev; t]) rest)
+   in
+   let (costs:('a calc_t * 'b) list list) = 
+      List.map (generate_candidates calc_one) monomial_terms in
+   (* Step 2.2: Aggregate the costs together *)
+   let candidates = List.sort (fun (_,(a,_)) (_,(b,_)) -> sort_costs a b) (
+      (* Don't bother factoring out terms that only appear in one monomial *)
+      List.filter (fun (_,(_,cnt)) -> cnt > 1) (
+         (* Aggregate the costs from each monomial's candidate terms *)
+         List.fold_left (fun agg candidates ->
+            (* Filter out duplicate terms from a given monomial *)
+            fst (List.fold_left (fun (agg, visited) (t, cost) ->
+               if List.mem t visited then (agg, visited)
+               else ((
+                  if List.mem_assoc t agg then 
+                     let (old_cost, old_cnt) = List.assoc t agg in
+                     (t, (aggregate_costs cost old_cost, old_cnt + 1)) :: 
+                        (List.remove_assoc t agg)
+                  else
+                     (t, (cost, 1)) :: agg
+               ), t :: visited)
+            ) (agg, []) candidates)
+         ) [] costs
+      )
+   ) in
+   (* Step 3: Recursion bottoms out here *)
+   if candidates = [] then mk_sum monomials
+   (* Finish up Step 2: Pick the *best* candidate out of the now sorted list *)
+   else let (best, _) = List.hd candidates in
+   (* Steps 4 and 5 *)
+   let rec factor_out prev t_rest =
+      if t_rest = [] then None else
+      let t = List.hd t_rest in let rest = List.tl t_rest in
+      if (t = best) && (viable_candidate prev t rest) then
+         Some(mk_prod (prev :: rest))
+      else factor_out (mk_prod [prev; t]) rest
+   in
+   let (with_term, without_term) = 
+      List.fold_right (fun m (with_term, without_term) ->
+         match factor_out calc_one m with
+          | None    -> (with_term, (mk_prod m) :: without_term)
+          | Some(f) -> (f :: with_term, without_term)
+      ) monomial_terms ([],[])
+   in
+   (* Steps 6 and 7 *)
+      mk_sum [rcr without_term; mk_prod [best; rcr with_term]]
+;;
+let factorize (monomials:'a calc_t list): 'a calc_t =
+   let cost_metric _ _ _ = 
+      -1
+   in
+   let aggregate_costs c old = 
+      c + old
+   in
+   let viable_candidate prev t rest =
+      if not (commutes_with prev t) then false
+      else let sch = List.map fst (List.filter snd (get_schema t)) in
+      let check_value a = 
+         match a with Const(_) -> false | Var(v) -> List.mem v sch
+      in
+      (* We don't factorize out terms that define variables which are 
+         subsequently filtered by a comparison predicate *)
+         not (List.exists (fun rt ->
+            match rt with 
+               Cmp(a,_,b) -> (check_value a) || (check_value b)
+               | _ -> false
+         ) rest)
+   in
+      factorize_impl cost_metric
+                     aggregate_costs
+                     compare
+                     viable_candidate 
+                     monomials

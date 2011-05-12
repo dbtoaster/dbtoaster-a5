@@ -182,6 +182,7 @@ if language = L_SQL then
 (********* TRANSLATE SQL TO CALC *********)
 let calc_queries = 
    let temp_var = ref (-1) in
+   (* TODO: We should provide a different name for each select statement *)
    List.flatten (
       List.map 
          (Calculus.calc_of_sql ~tmp_var_id:temp_var sources)
@@ -196,3 +197,20 @@ if language = L_CALC then
       exit 0
    )
 ;;
+
+(********* COMPILE CALC TO AN INCREMENTAL PLAN *********)
+let incremental_plans = 
+   List.map (fun (qn,q) -> 
+      IncrementalPlan.compile_map qn (IncrementalPlan.convert_calc q) 
+   ) calc_queries
+
+(********* OPTIMIZE INCREMENTAL PLAN *********)
+
+
+(********* TRANSLATE INCREMENTAL PLAN TO INCREMENTAL PROGRAM *********)
+
+
+(********* TRANSLATE INCREMENTAL PROGRAM TO K3 *********)
+
+
+(********* TRANSLATE K3 TO TARGET LANGUAGE *********)

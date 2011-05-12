@@ -1,5 +1,5 @@
 %{
-open Sql.Types
+open Common.Types
 
 exception SQLParseError of string
 exception FeatureUnsupported of string
@@ -105,9 +105,9 @@ dbtoasterSqlStmt:
 // Create table statements
 
 framingStmt:
-|   FIXEDWIDTH INT                  { Sql.Input.Fixed($2) }
-|   LINE DELIMITED                  { Sql.Input.Delimited("\n") }
-|   STRING DELIMITED                { Sql.Input.Delimited($1) }
+|   FIXEDWIDTH INT                  { Common.Input.Fixed($2) }
+|   LINE DELIMITED                  { Common.Input.Delimited("\n") }
+|   STRING DELIMITED                { Common.Input.Delimited($1) }
 
 adaptorParams:
 |   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
@@ -123,11 +123,11 @@ bytestreamParams:
 
 sourceStmt:
 |   FILE STRING bytestreamParams 
-                     { Sql.Input.File($2, $3) }
+                    { Common.Input.File($2, $3) }
 |   SOCKET STRING INT bytestreamParams
-                     { Sql.Input.Socket(Unix.inet_addr_of_string $2, $3, $4) }
+                    { Common.Input.Socket(Unix.inet_addr_of_string $2, $3, $4) }
 |   SOCKET INT bytestreamParams
-                     { Sql.Input.Socket(Unix.inet_addr_any, $2, $3) }
+                    { Common.Input.Socket(Unix.inet_addr_any, $2, $3) }
 
 typeDefn:
 | TYPE                   { $1 }
@@ -139,7 +139,7 @@ fieldList:
 
 createTableStmt:
 |   CREATE TABLE ID LPAREN fieldList RPAREN { 
-      mk_tbl (String.uppercase $3, $5, Sql.Input.Manual)
+      mk_tbl (String.uppercase $3, $5, Common.Input.Manual)
     }
 |   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt { 
       mk_tbl (String.uppercase $3, $5, $8)

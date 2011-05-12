@@ -1,9 +1,10 @@
 open Util
-open Sql.Types
+open Common
+open Common.Types
 
 type type_t  = Sql.type_t
 type const_t = Sql.const_t
-type var_t = string * type_t
+type var_t = Types.var_t
 type value_t = 
     | Var   of var_t
     | Const of const_t
@@ -29,6 +30,8 @@ type ('init_expr) calc_t =
 exception TypecheckError of string * unit calc_t * unit calc_t option
 
 (*** Constructors ***)
+let calc_zero = Value(Const(Integer(0)));;
+let calc_one  = Value(Const(Integer(1)));;
 
 let sum_list (c:'i calc_t): 'i calc_t list =
    match c with Sum(sl) -> sl | _ -> [c]
@@ -57,7 +60,7 @@ let mk_sum (terms:'i calc_t list): 'i calc_t =
          )
    in
    match terms with
-      | [] -> Value(Const(Integer(0)))
+      | [] -> calc_zero
       | [v] -> v
       | _ -> Sum(terms)
 ;;
@@ -82,7 +85,7 @@ let mk_prod (terms:'i calc_t list): 'i calc_t =
             )
       in
       match terms with
-         | [] -> Value(Const(Integer(1)))
+         | [] -> calc_one
          | [v] -> v
          | _ -> Prod(terms)
 ;;
@@ -122,7 +125,14 @@ let rewrite_leaves (cmp_op:(value_t * cmp_t * value_t -> 'b calc_t))
              cmp_op aggsum_op value_op rel_op ext_op def_op 
              expr
 ;;
-
+let convert_calc (convert_op:('a external_t -> 'b external_t)) =
+   rewrite_leaves (fun (l,o,r) -> Cmp(l,o,r)) 
+                  (fun (v,e) -> AggSum(v,e)) 
+                  (fun v -> Value(v))
+                  (fun (rn,rv) -> Relation(rn,rv))
+                  (fun e -> External(convert_op e))
+                  (fun (dv,dd) -> Definition(dv,dd))
+;;
 let rec replace_vars (repl:(var_t * var_t) list)
                      (expr:'a calc_t): 'a calc_t =
    let sub:(var_t -> var_t) = (fun x -> if (List.mem_assoc x repl) 
@@ -248,6 +258,16 @@ let rec get_schema (expr:'a calc_t): (var_t * bool) list =
       (fun (_,ev,_,_) -> ev)
       (fun (v,d) -> (v,true) :: d)
       expr
+;;
+
+(* Returns true if (A * B) = (B * A) *)
+let commutes_with ?(external_sch = []) (a:'a calc_t) (b:'b calc_t): bool =
+   let a_out = List.map fst (List.filter snd (get_schema a)) in
+   let b_in  = List.map fst (List.filter (fun (_,x) -> not x) 
+                                         (get_schema b)) in
+      not (List.exists (fun v -> (List.mem v b_in) && 
+                                 (not (List.mem v external_sch))) a_out)
+
 ;;
 
 (* Returns Some() and a schema mapping that will make the two expressions 

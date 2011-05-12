@@ -11,54 +11,27 @@
 
 open Util
 
-module Input = struct
-
-   type frame_t = 
-    | Fixed       of int
-    | Delimited   of string
-      
-   type adaptor_t = string * (string * string) list
-   
-   type bytestream_options_t = frame_t * adaptor_t
-   
-   type source_t = 
-    | Manual 
-    | File   of string (*path*)               * bytestream_options_t
-    | Socket of Unix.inet_addr * int (*port*) * bytestream_options_t
-   
-end
-
-module Types = struct
-   type type_t = IntegerT | DoubleT | StringT | AnyT
-   
-   type const_t = 
-    | Integer of int 
-    | Double  of float
-    | String  of string
-
-   type cmp_t = Lt | Gt | Lte | Gte | Eq | Neq
-end
-
-open Types
+open Common.Types
+open Common.Input
 
 exception SqlException of string
 exception Variable_binding_err of string * int
 
 let error msg = raise (SqlException(msg))
 
-type type_t = Types.type_t
+type type_t = Common.Types.type_t
 
-type const_t = Types.const_t
+type const_t = Common.Types.const_t
 
 type var_t = string option * string * type_t
 
 type schema_t = var_t list
 
-type table_t = string * schema_t * Input.source_t
+type table_t = string * schema_t * Common.Input.source_t
 
 type arith_t = Sum | Prod | Sub | Div
 
-type cmp_t = Types.cmp_t
+type cmp_t = Common.Types.cmp_t
 
 type agg_t = SumAgg
 
