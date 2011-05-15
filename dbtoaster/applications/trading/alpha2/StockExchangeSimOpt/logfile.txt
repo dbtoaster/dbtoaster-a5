@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE log SYSTEM "logger.dtd">
+<log>
+<record>
+  <date>2011-05-15T11:07:40</date>
+  <millis>1305450460748</millis>
+  <sequence>0</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>10</thread>
+  <message>---Matching new entry: bid Stock: 10101, Qty: 100, Price: 100, TimeStamp: 1305450460740</message>
+</record>
+<record>
+  <date>2011-05-15T11:07:40</date>
+  <millis>1305450460757</millis>
+  <sequence>1</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>10</thread>
+  <message>No match found---</message>
+</record>
+<record>
+  <date>2011-05-15T11:07:41</date>
+  <millis>1305450461730</millis>
+  <sequence>2</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>10</thread>
+  <message>---Matching new entry: ask Stock: 10102, Qty: 150, Price: 640, TimeStamp: 1305450461730</message>
+</record>
+<record>
+  <date>2011-05-15T11:07:41</date>
+  <millis>1305450461731</millis>
+  <sequence>3</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>10</thread>
+  <message>No match found---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:25</date>
+  <millis>1305450505572</millis>
+  <sequence>4</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: ask Stock: 10101, Qty: 50, Price: marketorder, TimeStamp: 1305450505571</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:25</date>
+  <millis>1305450505574</millis>
+  <sequence>5</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>Matched an entry: Stock: 10101, Qty: 100, Price: 100, TimeStamp: 1305450460740---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:26</date>
+  <millis>1305450506570</millis>
+  <sequence>6</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: ask Stock: 10101, Qty: 50, Price: marketorder, TimeStamp: 1305450506570</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:26</date>
+  <millis>1305450506571</millis>
+  <sequence>7</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>Matched an entry: Stock: 10101, Qty: 50, Price: 100, TimeStamp: 1305450460740---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:27</date>
+  <millis>1305450507571</millis>
+  <sequence>8</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: bid Stock: 10102, Qty: 100, Price: marketorder, TimeStamp: 1305450507571</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:27</date>
+  <millis>1305450507572</millis>
+  <sequence>9</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>Matched an entry: Stock: 10102, Qty: 150, Price: 640, TimeStamp: 1305450461730---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:28</date>
+  <millis>1305450508572</millis>
+  <sequence>10</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: bid Stock: 10102, Qty: 100, Price: marketorder, TimeStamp: 1305450508571</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:28</date>
+  <millis>1305450508573</millis>
+  <sequence>11</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>Matched an entry: Stock: 10102, Qty: 50, Price: 640, TimeStamp: 1305450461730---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:28</date>
+  <millis>1305450508574</millis>
+  <sequence>12</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: bid Stock: 10102, Qty: 50, Price: marketorder, TimeStamp: 1305450508571</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:28</date>
+  <millis>1305450508574</millis>
+  <sequence>13</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>No match found---</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:29</date>
+  <millis>1305450509572</millis>
+  <sequence>14</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>---Matching new entry: ask Stock: 10102, Qty: 50, Price: marketorder, TimeStamp: 1305450509571</message>
+</record>
+<record>
+  <date>2011-05-15T11:08:29</date>
+  <millis>1305450509572</millis>
+  <sequence>15</sequence>
+  <logger>match_results</logger>
+  <level>INFO</level>
+  <class>rules.MatchRules</class>
+  <method>match</method>
+  <thread>11</thread>
+  <message>Matched an entry: Stock: 10102, Qty: 50, Price: marketorder, TimeStamp: 1305450508571---</message>
+</record>
+</log>

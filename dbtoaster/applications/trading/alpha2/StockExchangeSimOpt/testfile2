@@ -1,0 +1,5 @@
+ask;stock_id:10101 volume:50 price:1073741823
+ask;stock_id:10101 volume:50 price:1073741823
+bid;stock_id:10102 volume:100 price:1073741823
+bid;stock_id:10102 volume:100 price:1073741823
+ask;stock_id:10102 volume:50 price:1073741823
