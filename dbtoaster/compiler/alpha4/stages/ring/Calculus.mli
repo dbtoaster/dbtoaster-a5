@@ -372,6 +372,7 @@ val term_delta: term_mapping_t ->
 exception TermsNotEquivalent of string
 val equate_terms: term_t -> term_t -> (string Map.Make(String).t)
 
+val un_roly_poly: term_t list -> term_t
 
 (* THE FOLLOWING INTERNAL FUNCTIONS ARE PRESENT ONLY FOR DEBUGGING PURPOSES *)
 (* DO NOT USE THEM *)
@@ -381,3 +382,5 @@ val apply_bottom_up :
   (term_t -> relcalc_t -> term_t) ->
   (comp_t -> term_t -> term_t -> relcalc_t) ->
   (term_t) -> term_t
+
+val roly_poly_plural: term_t -> term_t list

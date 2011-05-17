@@ -210,6 +210,7 @@ test/sql/simple/postgres/%: test/sql/simple/postgres/%.sql
 
 ## Unit tests
 test: top
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/unroly.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
@@ -235,7 +236,7 @@ test: top
 #	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
 
 ok_test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_clusteravail.ml
+	@./dbtoaster_top $(INCLUDE_DIR) test/unit/unroly.ml
 
 
 ## SQL compilation Tests

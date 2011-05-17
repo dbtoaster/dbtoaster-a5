@@ -520,7 +520,7 @@ let roly_poly (term: term_t) : term_t =
    in
    TermRing.polynomial_expr (apply_bottom_up aggsum_f aconstraint_f term)
 
-
+let roly_poly_plural term = TermRing.sum_list (roly_poly term)
 
 (* the input formula must be or-free.  Call roly_poly first to ensure this.
 
@@ -1334,3 +1334,111 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
   in
     (fst (cmp_term term_a term_b ((StringMap.empty,StringSet.empty))))
 ;;
+
+type roly_factor = RFCalc of relcalc_t | RFTerm of term_t
+
+let rec un_roly_poly (monomials:term_t list): term_t = 
+   let extract_candidates (m:term_t): 
+                          ((roly_factor * var_t list) * term_t) list = 
+      let extract_var (vt:term_t) = match vt with
+         TermRing.Val(Var(v)) -> [v] | _ -> [] 
+      in
+      let rec candidates_from_calc calc = match calc with
+         | CalcRing.Prod(p) ->
+            let (candidates, cmps) =
+               List.split (ListExtras.scan (fun prev curr next -> 
+                  let (candidates,cmps) = candidates_from_calc curr in
+                  (  List.map (fun (candidate,expr) ->
+                        (candidate, CalcRing.mk_prod (prev@[expr]@next))
+                     ) candidates,
+                     cmps
+                  )
+               ) p)
+            in 
+               (List.flatten candidates, List.flatten cmps)
+         | CalcRing.Sum(_) -> 
+            failwith "UnRolyPoly got a non-monomial expression as input"
+         | CalcRing.Neg(n) ->
+            let (candidates, cmps) = candidates_from_calc n in
+               (  List.map 
+                     (fun (candidate, expr) -> 
+                        (candidate, CalcRing.mk_neg expr))
+                     candidates,
+                   cmps)
+         | CalcRing.Val(Rel(rn, rv)) -> 
+            ([((RFCalc(calc)),rv), CalcRing.one], [])
+         | CalcRing.Val(AtomicConstraint(_, a, b)) -> 
+            ([], (extract_var a)@(extract_var b))
+         | CalcRing.Val(_) -> ([],[])
+      in
+      let rec candidates_from_term term = 
+      match term with 
+         | TermRing.Val(AggSum(t,c)) -> 
+            let (all_candidates,cmps) = (candidates_from_calc c) in
+            let candidates = List.filter (fun ((rc,rv),_) ->
+                        not (List.exists (fun x -> List.mem x rv) cmps)
+               ) all_candidates
+            in
+               List.map (fun (candidate,expr) ->
+                  (candidate, if (expr = CalcRing.one) then t 
+                              else (TermRing.Val(AggSum(t, expr))))
+               ) candidates
+         | TermRing.Sum(_) -> 
+            failwith "UnRolyPoly got a non-monomial expression as input"
+         | TermRing.Prod(p) -> 
+            List.flatten (ListExtras.scan (fun prev curr next ->
+               List.map (fun (candidate,expr) ->
+                  (candidate, TermRing.mk_prod (prev@[expr]@next))
+               ) (candidates_from_term curr)
+            ) p)
+         | TermRing.Neg(n) -> List.map (fun (candidate,expr) ->
+               (candidate, (TermRing.mk_neg expr))
+            ) (candidates_from_term n)
+         | TermRing.Val(Const(_)) -> [(((RFTerm(term)), []), TermRing.one)]
+         | TermRing.Val(Var(_))   -> [(((RFTerm(term)), []), TermRing.one)]
+         | TermRing.Val(External(_,_)) -> []
+      in
+         candidates_from_term m
+   in
+   let per_m_candidates:((roly_factor * var_t list) * term_t) list list =
+      List.map extract_candidates monomials 
+   in
+   let candidates = 
+      List.fold_left ListAsSet.union 
+                     []
+                     (List.map (fun (x,_)->[x])
+                               (List.flatten per_m_candidates))
+   in
+   let candidate_counts =
+      List.map (fun c -> 
+         c, List.fold_left (fun cnt m -> if (List.mem_assoc c m) then cnt+1
+                                                                 else cnt)
+                           0 per_m_candidates
+      ) candidates
+   in
+   if (candidates = []) || 
+      (not (List.exists (fun (_,c) -> c>1) candidate_counts)) 
+      then TermRing.mk_sum monomials else
+   let (best, _) =
+      List.hd (List.sort (fun (_,a) (_,b) -> compare b a) candidate_counts)
+   in
+   let (with_term,without_term) = 
+      List.partition (fun (_,candidates) ->
+         List.mem_assoc best candidates
+      ) (List.combine monomials per_m_candidates)
+   in
+   let with_term_monomials = 
+      List.map (fun (_,candidates) -> List.assoc best candidates) with_term
+   in
+   let without_term_monomials =
+      List.map (fun (m,_) -> m) without_term
+   in 
+      TermRing.mk_sum [
+         un_roly_poly without_term_monomials;
+         (  match (fst best) with
+            | RFCalc(c) -> 
+               TermRing.mk_val(AggSum(un_roly_poly with_term_monomials, c))
+            | RFTerm(t) -> 
+               TermRing.mk_prod[t;un_roly_poly with_term_monomials]
+         )
+      ]
