@@ -4,9 +4,10 @@
  */
 package stockexchangesim;
 
-import connections.OrderBook;
+import state.StockState;
+import state.OrderBook;
 import java.io.IOException;
-import rules.MatchRules;
+import rules.impl.BasicMatcher;
 import java.util.concurrent.Semaphore;
 
 
@@ -17,10 +18,11 @@ import java.util.concurrent.Semaphore;
 public class Terminal {
     public StockState stockState;
     public OrderBook orderBook;
-    public MatchRules matchmaker;
+    public BasicMatcher matchmaker;
     public Semaphore dbLock;
+    public Semaphore sLock;
     
-    Terminal() throws IOException{
+    public Terminal() throws IOException{
         //Initialise the stock market
         stockState = new StockState();
         stockState.init();
@@ -29,10 +31,11 @@ public class Terminal {
         orderBook = new OrderBook();
         
         //Create the rules object
-        matchmaker = new MatchRules(orderBook);
+        matchmaker = new BasicMatcher(orderBook, stockState);
         
-        //Create the Semaphore
+        //Create the Semaphores
         dbLock = new Semaphore(1);
+        sLock = new Semaphore(1);
     }
     
     

@@ -2,7 +2,7 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package connections;
+package state;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -87,12 +87,14 @@ public class OrderBook {
         schemaKeys.add("price");
         schemaKeys.add("volume");
         schemaKeys.add("timestamp");
+        schemaKeys.add("trader");
         
         schema = new HashMap<String, String>();
         schema.put("timestamp", "int");
         schema.put("price", "int");
         schema.put("volume", "int");
         schema.put("stock_id", "int");
+        schema.put("trader", "int");
     }
     
     public static List<String> getSchemaKeys(){        

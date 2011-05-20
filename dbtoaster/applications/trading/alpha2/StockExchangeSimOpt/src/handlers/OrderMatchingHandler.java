@@ -4,10 +4,11 @@
  */
 package handlers;
 
-import rules.MatchRules;
+import state.StockState;
+import rules.impl.BasicMatcher;
 import codecs.TupleDecoder;
-import connections.OrderBook;
-import connections.OrderBook.OrderBookEntry;
+import state.OrderBook;
+import state.OrderBook.OrderBookEntry;
 
 import java.net.SocketAddress;
 import java.sql.Time;
@@ -20,12 +21,12 @@ import java.util.concurrent.Semaphore;
 import java.util.logging.Logger;
 
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
-import stockexchangesim.StockState;
 
 /**
  *
@@ -38,15 +39,17 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
 
     OrderBook orderBook;
     Semaphore orderBookLock;
+    Semaphore streamLock;
     TupleDecoder parser;
     List<String> schema;
-    MatchRules matchMaker;
+    BasicMatcher matchMaker;
     StockState stockState;
     static final Logger logger = Logger.getLogger("handler_log");
 
-    public OrderMatchingHandler(OrderBook conn, Semaphore lock, TupleDecoder t, MatchRules m, StockState stockState) {
+    public OrderMatchingHandler(OrderBook conn, Semaphore obLock,Semaphore sLock,  TupleDecoder t, BasicMatcher m, StockState stockState) {
         orderBook = conn;
-        orderBookLock = lock;
+        orderBookLock = obLock;
+        streamLock = sLock;
         parser = t;
         schema = OrderBook.getSchemaKeys();
         matchMaker = m;
@@ -59,7 +62,7 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
         String[] payloads = buffer.split("\n");
         try {
             for (String payload : payloads) {
-
+                //String retMsg = payload;
                 String[] contents = payload.split(";");
                 //System.out.println("Order received: " + contents[1]);
                 Map<String, Object> decodedLoad = parser.createTuples(contents[1]);
@@ -82,12 +85,19 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
                     orderBookLock.acquireUninterruptibly();
                     matchMaker.match(contents[0], newEntry);
                     orderBookLock.release();
+                    
+                    streamLock.acquireUninterruptibly();
+                    for(Channel ch : stockState.getSubscribers()){
+                        ChannelFuture c = ch.write(payload+"\n");
+                        //c.await();
+                    }
+                    streamLock.release();
                 }
             }
             //Send update on all existing streams
-            for (Channel c : stockState.getSubscribers()) {
-                c.write(e.getMessage());
-            }
+//            for (Channel c : stockState.getSubscribers()) {
+//                c.write(e.getMessage());
+//            }
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
         }

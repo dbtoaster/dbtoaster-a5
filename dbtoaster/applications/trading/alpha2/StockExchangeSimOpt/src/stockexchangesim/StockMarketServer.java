@@ -4,15 +4,15 @@
  */
 package stockexchangesim;
 
+import state.StockState;
 import codecs.TupleDecoder;
-import connections.OrderBook;
+import state.OrderBook;
 import java.io.IOException;
-import rules.MatchRules;
+import rules.impl.BasicMatcher;
 import handlers.OrderMatchingHandler;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
-import java.util.logging.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -28,14 +28,15 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 public class StockMarketServer {
     
     OrderBook orderBook;
-    Semaphore lock;
-    MatchRules m;
+    Semaphore obLock,sLock;
+    BasicMatcher m;
     StockState stockState;
     
     public StockMarketServer() throws IOException{
         Terminal t = new Terminal();
         this.orderBook = t.orderBook;
-        this.lock = t.dbLock;
+        this.obLock = t.dbLock;
+        this.sLock = t.sLock;
         this.m = t.matchmaker;
         this.stockState = t.stockState;
         //logger = LoggerFactory.getLogger("stream_logger");
@@ -47,7 +48,7 @@ public class StockMarketServer {
         public ChannelPipeline getPipeline() throws Exception {
             return Channels.pipeline(
                     new StringDecoder(), new StringEncoder(),
-                    new OrderMatchingHandler(orderBook, lock, new TupleDecoder(OrderBook.getSchema()), m, stockState));
+                    new OrderMatchingHandler(orderBook, obLock, sLock, new TupleDecoder(OrderBook.getSchema()), m, stockState));
         }
         
     }

@@ -2,8 +2,11 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package stockexchangesim;
+package state;
 
+import algotraders.utils.WatchList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.group.ChannelGroup;
@@ -16,13 +19,13 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 public class StockState{
         Map<Integer, Integer> stockPriceState;
         ChannelGroup subscribers;
-        
+         
         public Integer getStockPrice(Integer stockId){
             return stockPriceState.get(stockId);
         }
         
-        public void setStockPrice(Integer stockId, Integer price){
-            stockPriceState.put(stockId, price);
+        public Integer setStockPrice(Integer stockId, Integer price){
+            return stockPriceState.put(stockId, price);
         }
         
         public void addSubscriber(Channel ch){
@@ -40,5 +43,10 @@ public class StockState{
         public void init(){
             //TODO: complete this to initialise stock market state
             subscribers = new DefaultChannelGroup();
+            this.stockPriceState = new HashMap<Integer, Integer>();
+            List<Integer> stockList = WatchList.createDefaultList().getList();
+            for(Integer i : stockList){
+                this.stockPriceState.put(i, 0);
+            }
         }
     }

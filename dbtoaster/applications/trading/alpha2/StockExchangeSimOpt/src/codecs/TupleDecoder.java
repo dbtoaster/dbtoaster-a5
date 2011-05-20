@@ -33,8 +33,11 @@ public class TupleDecoder{
             }
 
             Object o;
-
-            if (schema.get(keyValPair[0]).equals("int")) {
+            if(schema.get(keyValPair[0])==null){
+                //Unidentified information in the string. Ignore
+                continue;
+            }
+            else if (schema.get(keyValPair[0]).equals("int")) {
                 o = (Object) Integer.parseInt(keyValPair[1]);
 
             } else if (schema.get(keyValPair[0]).equals("string")) {
