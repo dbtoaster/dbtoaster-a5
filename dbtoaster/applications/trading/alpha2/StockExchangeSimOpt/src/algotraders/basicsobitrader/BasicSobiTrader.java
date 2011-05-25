@@ -48,10 +48,11 @@ public class BasicSobiTrader {
     WatchList watchList;
     Map<Integer, GeneralStockPropts> stockInfo;
     StockState stockState;
-    Integer theta, volToTrade, margin;
+    Double theta, margin;
+    Integer volToTrade;
     Channel ch;
 
-    public BasicSobiTrader(Integer param, Integer volToTrade, Integer margin) throws IOException {
+    public BasicSobiTrader(Double param, Integer volToTrade, Double margin) throws IOException {
         SobiTerminal t = new SobiTerminal();
         this.matchMaker = t.matchmaker;
         this.stockState = t.stockState;
@@ -66,7 +67,7 @@ public class BasicSobiTrader {
 
     }
 
-    public BasicSobiTrader(List<Integer> watchList, Integer param, Integer volToTrade, Integer margin) throws IOException {
+    public BasicSobiTrader(List<Integer> watchList, Double param, Integer volToTrade, Double margin) throws IOException {
         SobiTerminal t = new SobiTerminal();
         this.matchMaker = t.matchmaker;
         this.stockState = t.stockState;
@@ -113,7 +114,7 @@ public class BasicSobiTrader {
     }
     
     public static void main(String args[]) throws IOException{
-        BasicSobiTrader b= new BasicSobiTrader(10, 100, 1);
+        BasicSobiTrader b= new BasicSobiTrader(10., 100, 1.);
         System.out.println("Sobi trader up");
     }
 }

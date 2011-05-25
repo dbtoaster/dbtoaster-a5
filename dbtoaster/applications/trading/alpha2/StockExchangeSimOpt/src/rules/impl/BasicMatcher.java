@@ -62,8 +62,8 @@ public class BasicMatcher implements Matcher {
 
     @Override
     public void match(String action, OrderBookEntry a) {
-        List<OrderBookEntry> targetOrderBook = (action.equals("bid")) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
-        List<OrderBookEntry> tupleOrderBook = (action.equals("ask")) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
+        List<OrderBookEntry> targetOrderBook = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
+        List<OrderBookEntry> tupleOrderBook = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         logger.info(String.format("---Matching new entry: %s Stock: %s, Qty: %s, Price: %s, TimeStamp: %s", action,
                 a.stockId, a.volume, (a.price == OrderBook.MARKETORDER) ? "marketorder" : a.price, a.timestamp));
         //Step 1: Get the highest entries in the order book to match
@@ -97,12 +97,12 @@ public class BasicMatcher implements Matcher {
             status = status && OrderBook.delete(tupleOrderBook, a);
         } else if (match.volume < a.volume) {
             status = status && OrderBook.delete(targetOrderBook, match);
-            OrderBookEntry newEntry = orderBook.createEntry(a.stockId, a.price, a.volume - match.volume, a.timestamp, a.traderId);
+            OrderBookEntry newEntry = orderBook.createEntry(a.stockId, a.price, a.volume - match.volume, a.order_id, a.timestamp, a.traderId);
             status = status && OrderBook.update(tupleOrderBook, a, newEntry);
             //New incoming entry is incompletely matched. Recurse.
             match(action, newEntry);
         } else {
-            OrderBookEntry newEntry = orderBook.createEntry(match.stockId, match.price, match.volume - a.volume, match.timestamp, match.traderId);
+            OrderBookEntry newEntry = orderBook.createEntry(match.stockId, match.price, match.volume - a.volume, match.order_id, match.timestamp, match.traderId);
             status = status && OrderBook.update(targetOrderBook, match, newEntry);
             status = status && OrderBook.delete(tupleOrderBook, a);
         }
@@ -112,11 +112,11 @@ public class BasicMatcher implements Matcher {
         }
     }
 
-    private List<OrderBookEntry> getTopMatch(String action, List<OrderBookEntry> targetOrderBook, int stockId, int price) {
+    private List<OrderBookEntry> getTopMatch(String action, List<OrderBookEntry> targetOrderBook, int stockId, double price) {
         List<OrderBookEntry> matchTargets = new ArrayList<OrderBookEntry>();
-        int limit;
+        double limit;
         boolean betterMatchExists = false;
-        if (action.equals("bid")) {
+        if (action.equals(OrderBook.BIDCOMMANDSYMBOL)) {
             limit = Integer.MAX_VALUE;
             for (OrderBookEntry e : targetOrderBook) {
                 if (e.price < limit && e.stockId == stockId) {
@@ -148,7 +148,7 @@ public class BasicMatcher implements Matcher {
         return matchTargets;
     }
 
-    private List<OrderBookEntry> getMarketOrders(List<OrderBookEntry> targetOrderBook, int stockId, int price) {
+    private List<OrderBookEntry> getMarketOrders(List<OrderBookEntry> targetOrderBook, int stockId, double price) {
         List<OrderBookEntry> toReturn = new ArrayList<OrderBookEntry>();
         for (OrderBookEntry e : targetOrderBook) {
             if (e.stockId == stockId && (e.price == OrderBook.MARKETORDER || e.price == price)) {
@@ -158,7 +158,7 @@ public class BasicMatcher implements Matcher {
         return toReturn;
     }
 
-    private void updatePrice(int stockId, int newPrice, int matchPrice) {
+    private void updatePrice(int stockId, double newPrice, double matchPrice) {
         if (newPrice != OrderBook.MARKETORDER) {
             this.stockState.setStockPrice(stockId, newPrice);
         } else if (matchPrice != OrderBook.MARKETORDER) {

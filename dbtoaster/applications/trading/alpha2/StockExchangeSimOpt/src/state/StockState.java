@@ -17,14 +17,14 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
  * @author kunal
  */
 public class StockState{
-        Map<Integer, Integer> stockPriceState;
+        Map<Integer, Double> stockPriceState;
         ChannelGroup subscribers;
          
-        public Integer getStockPrice(Integer stockId){
+        public Double getStockPrice(Integer stockId){
             return stockPriceState.get(stockId);
         }
         
-        public Integer setStockPrice(Integer stockId, Integer price){
+        public Double setStockPrice(Integer stockId, Double price){
             return stockPriceState.put(stockId, price);
         }
         
@@ -43,10 +43,10 @@ public class StockState{
         public void init(){
             //TODO: complete this to initialise stock market state
             subscribers = new DefaultChannelGroup();
-            this.stockPriceState = new HashMap<Integer, Integer>();
+            this.stockPriceState = new HashMap<Integer, Double>();
             List<Integer> stockList = WatchList.createDefaultList().getList();
             for(Integer i : stockList){
-                this.stockPriceState.put(i, 0);
+                this.stockPriceState.put(i, 0.);
             }
         }
     }

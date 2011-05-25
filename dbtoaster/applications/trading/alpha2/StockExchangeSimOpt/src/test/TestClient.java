@@ -70,6 +70,7 @@ public class TestClient {
 
     private static void writelines(Channel ch) throws InterruptedException {
         try {
+            System.out.println(Double.parseDouble("0.0"));
             System.out.println("Enter test file name");
             BufferedReader b = new BufferedReader(new InputStreamReader(System.in));
             String filename = b.readLine();

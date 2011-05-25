@@ -1,5 +1,6 @@
-bid;stock_id:10101 volume:100 price:100
-ask;stock_id:10101 volume:100 price:100
-ask;stock_id:10101 volume:100 price:120
-bid;stock_id:10101 volume:100 price:90
-bid;stock_id:10101 volume:200 price:130
+bid;stock_id:10101 volume:100 price:100.1 order_id:1 trader:-1
+ask;stock_id:10101 volume:100 price:100.1 order_id:2 trader:-1
+ask;stock_id:10101 volume:100 price:120.3 order_id:3 trader:-1
+bid;stock_id:10101 volume:100 price:90.5 order_id:4 trader:-1
+bid;stock_id:10101 volume:200 price:130.12 order_id:5 trader:-1
+delete;stock_id:10101 volume:0 price:0 order_id:5 trader:-1

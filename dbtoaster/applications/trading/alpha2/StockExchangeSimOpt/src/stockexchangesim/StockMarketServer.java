@@ -4,6 +4,7 @@
  */
 package stockexchangesim;
 
+import codecs.ModStringDecoder;
 import state.StockState;
 import codecs.TupleDecoder;
 import state.OrderBook;
@@ -19,6 +20,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 /**
@@ -47,6 +50,7 @@ public class StockMarketServer {
         @Override
         public ChannelPipeline getPipeline() throws Exception {
             return Channels.pipeline(
+                    new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()),
                     new StringDecoder(), new StringEncoder(),
                     new OrderMatchingHandler(orderBook, obLock, sLock, new TupleDecoder(OrderBook.getSchema()), m, stockState));
         }

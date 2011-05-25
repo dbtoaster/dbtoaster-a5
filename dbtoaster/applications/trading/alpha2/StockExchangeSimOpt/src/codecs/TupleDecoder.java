@@ -11,7 +11,7 @@ import java.util.Map;
  *
  * @author kunal
  */
-public class TupleDecoder{
+public class TupleDecoder {
 
     Map<String, String> schema;
 
@@ -33,25 +33,24 @@ public class TupleDecoder{
             }
 
             Object o;
-            if(schema.get(keyValPair[0])==null){
+            if (schema.get(keyValPair[0]) == null) {
                 //Unidentified information in the string. Ignore
                 continue;
-            }
-            else if (schema.get(keyValPair[0]).equals("int")) {
+            } else if (schema.get(keyValPair[0]).equals("int")) {
                 o = (Object) Integer.parseInt(keyValPair[1]);
 
             } else if (schema.get(keyValPair[0]).equals("string")) {
                 o = (Object) keyValPair[1];
+            } else if (schema.get(keyValPair[0]).equals("double")) {
+                o = (Object) Double.parseDouble(keyValPair[1]);
             } else {
                 System.out.println("Unidentified data type for schema");
                 return null;
             }
-            
+
             createdTuple.put(keyValPair[0], o);
         }
 
         return createdTuple;
     }
-
-    
 }

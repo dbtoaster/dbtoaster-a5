@@ -28,15 +28,15 @@ public abstract class GeneralStockPropts {
     
     public void generalProptsInit(){
         //General parameters for every stock, which must be maintained for every algorithm
-        addPropt("pendingBids", new HashMap<Integer, Integer>());
-        addPropt("pendingAsks", new HashMap<Integer, Integer>());
-        addPropt("price", new Integer(0));
+        addPropt("pendingBids", new HashMap<Double, Integer>());
+        addPropt("pendingAsks", new HashMap<Double, Integer>());
+        addPropt("price", new Double(0));
         addPropt("totBidVolume", new Integer(0));
         addPropt("totAskVolume", new Integer(0));
     }
     
     public void updateGeneralBids(List<OrderBookEntry> bidOrderBook) {
-        Map<Integer, Integer> bidPropts = new HashMap<Integer, Integer>();
+        Map<Double, Integer> bidPropts = new HashMap<Double, Integer>();
         Integer totBidVolume = 0;
         for (OrderBookEntry e : bidOrderBook) {
             totBidVolume += e.volume;
@@ -51,7 +51,7 @@ public abstract class GeneralStockPropts {
     }
 
     public void updateGeneralAsks(List<OrderBookEntry> askOrderBook) {
-        Map<Integer, Integer> askPropts = new HashMap<Integer, Integer>();
+        Map<Double, Integer> askPropts = new HashMap<Double, Integer>();
         Integer totAskVolume = 0;
 
         for (OrderBookEntry e : askOrderBook) {
@@ -89,8 +89,8 @@ public abstract class GeneralStockPropts {
         updateSpecificAsks();
     }
 
-    public void updatePrice(Integer stockPrice) {
-        setPropt("price", new Integer(stockPrice));
+    public void updatePrice(Double stockPrice) {
+        setPropt("price", new Double(stockPrice));
     }
 
 
