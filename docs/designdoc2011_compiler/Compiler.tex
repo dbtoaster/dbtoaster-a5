@@ -391,7 +391,7 @@ A self-recursive process that computes the delta of a calculus expression.  In o
 Factorize terms from several monomial expressions back into a single term.
 Works by a greedy heuristic, minimizing the number of sum terms between where a variable is defined and where it's used. 
 \begin{algorithmic}[1]
-\REQUIRE A list of $calc\_t$ $monomials$
+\REQUIRE A list of $calc\_t$ $monomials$, each with an AggSum at the top with an equivalent schema (e.g., for the list ${\tt AggSum}(v_1, \ldots); {\tt AggSum}(v_2, \ldots)$, it must be true that $v_1 = v_2$)
 \ENSURE A factorized $calc\_t$ expression equivalent to the sum of $monomials$
 \STATE $candidates \gets \{\}$
 \FORALL{$m \in monomials$}
@@ -418,7 +418,7 @@ Works by a greedy heuristic, minimizing the number of sum terms between where a 
   \RETURN $\sum monomials$
 \ELSE
   \STATE $best \gets {\bf argmax}_{count}({\bf argmin}_{cost}(candidates))$
-  \STATE $(withTerm,withoutTerm) \gets {\bf split}(({\bf contains}\ best),monomials)$
+  \STATE $(withTerm,withoutTerm) \gets {\bf split}((m \rightarrow \frac{m}{best}\ {\bf is\ valid}),monomials)$
   \STATE $withTermRemoved \gets {\bf map}(({\bf removeTerm}\ best), withTerm)$
   \RETURN $(\sum {\bf factorize}(withoutTerm)) + (best * ({\bf factorize}(withTermRemoved)))$
 \ENDIF
@@ -444,55 +444,6 @@ This is an {\em example} cost metric that blocks any attempt at factorizing a re
 \RETURN $0$
 \end{algorithmic}
 \end{algorithm}
-
-%\begin{algorithm}
-%\caption{factorize($monomials$)}
-%Factorize terms from several monomial expressions back into a single term.  Works by a greedy heuristic (though it is possible to substitute something more complex in) -- the goal is to merge terms as extensively as possible, shifting plusses as deep in the factor tree as possible.  An intermediate {\tt factor\_tree} representation of the single term is used: 
-%{\tt \noindent factor\_tree = (term:calc\_t) * (children:factor\_tree list)}
-%\noindent Every node in this tree represents a single calc\_t.  A forest of such trees represents a sum of terms.  Thus, the calc\_t defined by the node is the product of the {\tt term} and the (parenthesized) sum of all of the children.  The {\tt term} {\bf must} be a monomial.
-%\begin{algorithmic}[1]
-%\REQUIRE{A calc\_t (as above) list $monomials$}
-%\ENSURE{A factor\_tree list $forest$, which can be converted into a single polynomial with the following {\tt merge\_forest} function}
-%\STATE $count_{*} \gets 0$
-%  \COMMENT{Greedy heuristic: find the most common term}
-%\FORALL{$m \in monomials$}
-%  \FORALL{unique $term \in m$}
-%    \STATE{$count_{term} \gets count_{term} + 1$}
-%  \ENDFOR
-%\ENDFOR
-%\STATE $common\_term \gets {\tt argmax}_{term}(count_{term})$
-%\IF{$count_{common\_term} \leq 1$}
-%  \STATE $forest \gets \emptyset$
-%    \COMMENT{No commonality between monomials -- return what we have}
-%  \FORALL{$m \in monomials$}
-%    \STATE $forest \gets forest \cap \{({\tt term}:m, {\tt children}:\emptyset)\}$
-%  \ENDFOR
-%\ELSE
-%  \STATE $in\_terms \gets \emptyset$; $out\_terms \gets \emptyset$
-%    \COMMENT{Split the monomials by presence of common term}
-%  \FORALL{$m \in monomial$}
-%    \IF{$common\_term \in m$}
-%      \STATE $in\_terms \gets m$ {\bf else} $out\_terms \gets \frac{m}{common\_term}$
-%    \ENDIF
-%  \ENDFOR
-%  \STATE $new\_tree \gets ({\tt term}:common\_term, {\tt children}:{\tt factorize}(in\_terms))$
-%  \STATE $forest \gets {\tt factorize}(out\_terms) \cap \{new\_tree\}$
-%\ENDIF
-%%\REPEAT
-%%  \STATE $derive\_candidates$
-%%\UNTIL{}
-%\end{algorithmic}
-%\end{algorithm}
-%
-%\begin{algorithm}
-%\caption{merge\_forest($forest$)}
-%\label{alg:dbtoaster:mergeForest}
-%\begin{algorithmic}
-%\REQUIRE{A factor\_tree list $forest = {term_i, children_i}$}
-%\ENSURE{$polynomial$, the calc\_t representation of $forest$}
-%\STATE $polynomial \gets \sum_i term_i * {\tt merge\_forest}(children_i)$
-%\end{algorithmic}
-%\end{algorithm}
 
 
 \end{document}  

@@ -1,5 +1,5 @@
-PDFLATEX=/usr/texbin/pdflatex
-BIBTEX=/usr/texbin/bibtex
+PDFLATEX=pdflatex
+BIBTEX=bibtex
 
 all:
 	$(PDFLATEX) -output-directory=doc/ src/designdoc.tex
