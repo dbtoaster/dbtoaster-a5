@@ -4,7 +4,7 @@
  */
 package algotraders.basicsobitrader;
 
-import algotraders.utils.GeneralStockPropts;
+import algotraders.framework.GeneralStockPropts;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,18 +85,17 @@ public class BasicSobiPropts extends GeneralStockPropts {
         
         if(price==0 || bidVolWt==0 || askVolWt==0 || bidVol==0 || askVol==0){
             //Insufficient market data. Wait
-            System.out.println("Insufficient Information to trade---");
+            //System.out.println("Insufficient Information to trade---");
         }else{
             
             double stat = (bidVolWt + askVolWt - (2*price));
-            System.out.println("_____"+bidVolWt+" "+askVolWt+" "+price+" "+stat+" "+theta+" "+"_____");
             if(stat >= theta){
                 //Market in bull phase. Try to get in at slightly lower costs.
-                action = String.format("bid;price:%s volume:%s", price-margin, volToTrade);
+                action = String.format("%s;price:%s volume:%s",OrderBook.BIDCOMMANDSYMBOL, price-margin, volToTrade);
             }
             else if(stat <= -theta){
                 //Market in bear phase. Try to get out at slightly higher costs.
-                action = String.format("ask;price:%s volume:%s", price+margin, volToTrade);
+                action = String.format("%s;price:%s volume:%s",OrderBook.ASKCOMMANDSYMBOL, price+margin, volToTrade);
             }
             else{
                 //No indication to buy or sell. Stay put

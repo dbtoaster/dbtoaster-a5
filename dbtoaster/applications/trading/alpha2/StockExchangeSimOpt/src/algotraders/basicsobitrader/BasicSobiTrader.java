@@ -4,9 +4,11 @@
  */
 package algotraders.basicsobitrader;
 
-import algotraders.utils.SobiTerminal;
-import algotraders.utils.GeneralStockPropts;
-import algotraders.utils.WatchList;
+import algotraders.framework.SobiTerminal;
+import algotraders.framework.GeneralStockPropts;
+import algotraders.framework.GeneralTrader;
+import algotraders.framework.WatchList;
+import codecs.ModStringDecoder;
 import codecs.TupleDecoder;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -22,6 +24,8 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
+import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
 import rules.Matcher;
@@ -41,56 +45,46 @@ import state.StockState;
  * @author kunal
  * 
  */
-public class BasicSobiTrader {
+public class BasicSobiTrader extends GeneralTrader{
 
-    OrderBook simOrderBook;
-    Matcher matchMaker;
-    WatchList watchList;
-    Map<Integer, GeneralStockPropts> stockInfo;
-    StockState stockState;
+    
     Double theta, margin;
     Integer volToTrade;
-    Channel ch;
+    
 
     public BasicSobiTrader(Double param, Integer volToTrade, Double margin) throws IOException {
-        SobiTerminal t = new SobiTerminal();
-        this.matchMaker = t.matchmaker;
-        this.stockState = t.stockState;
-        simOrderBook = t.orderBook;
+        generalInit();
+        
+        //Local variables init
         this.theta = param;
         this.margin = margin;
         this.volToTrade = volToTrade;
-
-        this.watchList = WatchList.createDefaultList();
-        this.stockInfo = new HashMap<Integer, GeneralStockPropts>();
         this.init();
 
     }
 
     public BasicSobiTrader(List<Integer> watchList, Double param, Integer volToTrade, Double margin) throws IOException {
-        SobiTerminal t = new SobiTerminal();
-        this.matchMaker = t.matchmaker;
-        this.stockState = t.stockState;
-        simOrderBook = t.orderBook;
+        generalInit(watchList);
+        
+        //Local vairables init
         this.theta = param;
         this.margin = margin;
         this.volToTrade = volToTrade;
-
-        this.watchList = new WatchList(watchList);
-        this.stockInfo = new HashMap<Integer, GeneralStockPropts>();
         this.init();
 
     }
 
-    public class SobiTraderChannelPipelineFactory implements ChannelPipelineFactory {
+    private class SobiTraderChannelPipelineFactory implements ChannelPipelineFactory {
 
         @Override
         public ChannelPipeline getPipeline() throws Exception {
-            return Channels.pipeline(new StringDecoder(), new StringEncoder(), new BasicSobiTraderHandler(simOrderBook, watchList, stockInfo,(BasicMatcher) matchMaker, stockState,
+            return Channels.pipeline(new DelimiterBasedFrameDecoder(4096, Delimiters.lineDelimiter()),
+                    new StringDecoder(), new StringEncoder(),
+                    new BasicSobiTraderHandler(simOrderBook, watchList, stockInfo,(BasicMatcher) matchMaker, stockState,
                     new TupleDecoder(OrderBook.getSchema())));
         }
     }
-
+    
     private void init() {
         for (Integer i : watchList.getList()) {
             BasicSobiPropts newPropts = new BasicSobiPropts(this.theta, this.volToTrade, this.margin);
