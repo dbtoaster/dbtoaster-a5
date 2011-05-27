@@ -108,7 +108,7 @@ public class OrderBook {
         schemaKeys.add("trader");
         
         schema = new HashMap<String, String>();
-        schema.put("timestamp", "int");
+        schema.put("timestamp", "long");
         schema.put("price", "double");
         schema.put("volume", "int");
         schema.put("order_id", "int");

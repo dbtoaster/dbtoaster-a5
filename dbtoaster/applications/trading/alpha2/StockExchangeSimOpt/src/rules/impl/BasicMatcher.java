@@ -64,8 +64,8 @@ public class BasicMatcher implements Matcher {
     public void match(String action, OrderBookEntry a) {
         List<OrderBookEntry> targetOrderBook = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         List<OrderBookEntry> tupleOrderBook = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
-        logger.info(String.format("---Matching new entry: %s Stock: %s, Qty: %s, Price: %s, TimeStamp: %s", action,
-                a.stockId, a.volume, (a.price == OrderBook.MARKETORDER) ? "marketorder" : a.price, a.timestamp));
+        /*logger.info(String.format("---Matching new entry: %s Stock: %s, Qty: %s, Price: %s, TimeStamp: %s", action,
+                a.stockId, a.volume, (a.price == OrderBook.MARKETORDER) ? "marketorder" : a.price, a.timestamp));*/
         //Step 1: Get the highest entries in the order book to match
         List<OrderBookEntry> getTopMatches = getTopMatch(action, targetOrderBook, a.stockId, a.price);
 
@@ -82,14 +82,14 @@ public class BasicMatcher implements Matcher {
         }
         //Step 3: If there is match complete a trade
         if (!matched) {
-            logger.info("No match found---");
+            //logger.info("No match found---");
             return;
         }
 
         Collections.sort(getTopMatches, new TimestampComparator());
         OrderBookEntry match = getTopMatches.get(0);
-        logger.info(String.format("Matched an entry: Stock: %s, Qty: %s, Price: %s, TimeStamp: %s---",
-                match.stockId, match.volume, (match.price == OrderBook.MARKETORDER) ? "marketorder" : match.price, match.timestamp));
+        //logger.info(String.format("Matched an entry: Stock: %s, Qty: %s, Price: %s, TimeStamp: %s---",
+        //        match.stockId, match.volume, (match.price == OrderBook.MARKETORDER) ? "marketorder" : match.price, match.timestamp));
         boolean status = true;
         updatePrice(a.stockId, a.price, match.price);
         if (match.volume == a.volume) {

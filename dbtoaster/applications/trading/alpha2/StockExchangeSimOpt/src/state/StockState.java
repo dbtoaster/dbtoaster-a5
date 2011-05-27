@@ -4,7 +4,7 @@
  */
 package state;
 
-import algotraders.utils.WatchList;
+import algotraders.framework.WatchList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;

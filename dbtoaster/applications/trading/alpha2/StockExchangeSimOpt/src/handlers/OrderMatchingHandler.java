@@ -88,8 +88,8 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
                             newEntry.volume,
                             newEntry.order_id,
                             newEntry.timestamp,
-                            (newEntry.traderId == OrderBook.HISTORICTRADERID) ? "historic" : newEntry.traderId);
-                    handlerLog.write(msg);
+                            newEntry.traderId);
+                    //handlerLog.write(msg);
                     System.out.println(msg);
                     orderBookLock.acquireUninterruptibly();
                     orderBook.executeCommand(contents[0], newEntry);
