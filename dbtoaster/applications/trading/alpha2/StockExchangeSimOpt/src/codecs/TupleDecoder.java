@@ -43,7 +43,10 @@ public class TupleDecoder {
                 o = (Object) keyValPair[1];
             } else if (schema.get(keyValPair[0]).equals("double")) {
                 o = (Object) Double.parseDouble(keyValPair[1]);
-            } else {
+            } else if (schema.get(keyValPair[0]).equals("long")) {
+                o = (Object) Long.parseLong(keyValPair[1]);
+            }
+            else {
                 System.out.println("Unidentified data type for schema");
                 return null;
             }
