@@ -9,6 +9,8 @@ import state.OrderBook;
 import java.io.IOException;
 import rules.impl.BasicMatcher;
 import java.util.concurrent.Semaphore;
+import rules.Matcher;
+import rules.impl.UpdateMessageMatcher;
 
 
 /**
@@ -18,7 +20,7 @@ import java.util.concurrent.Semaphore;
 public class Terminal {
     public StockState stockState;
     public OrderBook orderBook;
-    public BasicMatcher matchmaker;
+    public Matcher matchmaker;
     public Semaphore dbLock;
     public Semaphore sLock;
     
@@ -31,7 +33,7 @@ public class Terminal {
         orderBook = new OrderBook();
         
         //Create the rules object
-        matchmaker = new BasicMatcher(orderBook, stockState);
+        matchmaker = new UpdateMessageMatcher(orderBook, stockState);
         
         //Create the Semaphores
         dbLock = new Semaphore(1);

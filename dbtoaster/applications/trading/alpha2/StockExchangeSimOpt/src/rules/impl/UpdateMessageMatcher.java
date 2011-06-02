@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jboss.netty.channel.Channel;
 import rules.Matcher;
 import rules.Rule;
 import state.StockState;
@@ -22,7 +23,7 @@ import state.StockState;
  *
  * @author kunal
  */
-public class BasicMatcher implements Matcher {
+public class UpdateMessageMatcher implements Matcher {
 
     OrderBook orderBook;
     List<Rule> bidMatchRules; //The rules to match a new bid
@@ -47,7 +48,7 @@ public class BasicMatcher implements Matcher {
         }
     }
 
-    public BasicMatcher(OrderBook dbconn, StockState stockState) throws IOException {
+    public UpdateMessageMatcher(OrderBook dbconn, StockState stockState) throws IOException {
 
         orderBook = dbconn;
         bidMatchRules = new ArrayList<Rule>();
@@ -64,8 +65,10 @@ public class BasicMatcher implements Matcher {
     public List<OrderBookEntry> match(String action, OrderBookEntry a) {
         List<OrderBookEntry> targetOrderBook = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         List<OrderBookEntry> tupleOrderBook = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
+
+        String oppAction = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? OrderBook.BIDCOMMANDSYMBOL : OrderBook.ASKCOMMANDSYMBOL;
         /*logger.info(String.format("---Matching new entry: %s Stock: %s, Qty: %s, Price: %s, TimeStamp: %s", action,
-                a.stockId, a.volume, (a.price == OrderBook.MARKETORDER) ? "marketorder" : a.price, a.timestamp));*/
+        a.stockId, a.volume, (a.price == OrderBook.MARKETORDER) ? "marketorder" : a.price, a.timestamp));*/
         //Step 1: Get the highest entries in the order book to match
         List<OrderBookEntry> getTopMatches = getTopMatch(action, targetOrderBook, a.stockId, a.price);
 
@@ -91,26 +94,98 @@ public class BasicMatcher implements Matcher {
         //logger.info(String.format("Matched an entry: Stock: %s, Qty: %s, Price: %s, TimeStamp: %s---",
         //        match.stockId, match.volume, (match.price == OrderBook.MARKETORDER) ? "marketorder" : match.price, match.timestamp));
         boolean status = true;
-        updatePrice(a.stockId, a.price, match.price);
+
+        Channel actionChannel = this.stockState.getChannel(this.stockState.getFromMap(a.traderId));
+        Channel matchChannel = this.stockState.getChannel(this.stockState.getFromMap(match.traderId));
+
+        Double newPrice = updatePrice(a.stockId, a.price, match.price);
         if (match.volume == a.volume) {
             status = status && OrderBook.delete(targetOrderBook, match);
             status = status && OrderBook.delete(tupleOrderBook, a);
+            //Send updates to relevant traders
+            String currentTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    action + "_update",
+                    a.stockId,
+                    newPrice,
+                    a.volume,
+                    a.order_id,
+                    a.timestamp,
+                    a.traderId);
+
+            String matchTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    oppAction + "_update",
+                    match.stockId,
+                    newPrice,
+                    match.volume,
+                    match.order_id,
+                    match.timestamp,
+                    match.traderId);
+            System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
+            actionChannel.write(currentTraderMessage);
+            matchChannel.write(matchTraderMessage);
+
         } else if (match.volume < a.volume) {
             status = status && OrderBook.delete(targetOrderBook, match);
             OrderBookEntry newEntry = orderBook.createEntry(a.stockId, a.price, a.volume - match.volume, a.order_id, a.timestamp, a.traderId);
             status = status && OrderBook.update(tupleOrderBook, a, newEntry);
+            //Send updates to relevant traders
+            String currentTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    action + "_update",
+                    a.stockId,
+                    newPrice,
+                    a.volume - match.volume,
+                    a.order_id,
+                    a.timestamp,
+                    a.traderId);
+
+            String matchTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    oppAction + "_update",
+                    match.stockId,
+                    newPrice,
+                    match.volume,
+                    match.order_id,
+                    match.timestamp,
+                    match.traderId);
+            System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
+
+            actionChannel.write(currentTraderMessage);
+            matchChannel.write(matchTraderMessage);
+
             //New incoming entry is incompletely matched. Recurse.
             match(action, newEntry);
         } else {
             OrderBookEntry newEntry = orderBook.createEntry(match.stockId, match.price, match.volume - a.volume, match.order_id, match.timestamp, match.traderId);
             status = status && OrderBook.update(targetOrderBook, match, newEntry);
             status = status && OrderBook.delete(tupleOrderBook, a);
+            //Send updates to relevant traders
+            String currentTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    action + "_update",
+                    a.stockId,
+                    newPrice,
+                    a.volume,
+                    a.order_id,
+                    a.timestamp,
+                    a.traderId);
+
+            String matchTraderMessage = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+                    oppAction + "_update",
+                    match.stockId,
+                    newPrice,
+                    match.volume - a.volume,
+                    match.order_id,
+                    match.timestamp,
+                    match.traderId);
+
+            System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
+
+            actionChannel.write(currentTraderMessage);
+            matchChannel.write(matchTraderMessage);
         }
 
         if (!status) {
             logger.warning("Deletion or updation from order book failed during matching");
         }
-        
+
         return null;
     }
 
@@ -160,13 +235,15 @@ public class BasicMatcher implements Matcher {
         return toReturn;
     }
 
-    private void updatePrice(int stockId, double newPrice, double matchPrice) {
+    private Double updatePrice(int stockId, double newPrice, double matchPrice) {
         if (newPrice != OrderBook.MARKETORDER) {
             this.stockState.setStockPrice(stockId, newPrice);
+            return newPrice;
         } else if (matchPrice != OrderBook.MARKETORDER) {
             this.stockState.setStockPrice(stockId, matchPrice);
+            return matchPrice;
         }
+        return this.stockState.getStockPrice(stockId);
 
     }
-    
 }

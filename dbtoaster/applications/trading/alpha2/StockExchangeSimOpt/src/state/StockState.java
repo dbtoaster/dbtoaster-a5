@@ -19,7 +19,9 @@ import org.jboss.netty.channel.group.DefaultChannelGroup;
 public class StockState{
         Map<Integer, Double> stockPriceState;
         ChannelGroup subscribers;
-         
+        Map<Integer, Integer> traderToChannelIdMap;
+        Map<Integer, Channel> channelIdToChannelMap;
+        
         public Double getStockPrice(Integer stockId){
             return stockPriceState.get(stockId);
         }
@@ -30,10 +32,23 @@ public class StockState{
         
         public void addSubscriber(Channel ch){
             subscribers.add(ch);
+            channelIdToChannelMap.put(ch.hashCode(), ch);
         }
         
         public void removeSubscriber(Channel ch){
             subscribers.remove(ch);
+        }
+        
+        public void addToMap(Integer traderId, Integer channelId){
+            traderToChannelIdMap.put(traderId, channelId);
+        }
+        
+        public Integer getFromMap(Integer traderId){
+            return traderToChannelIdMap.get(traderId);
+        }
+        
+        public Channel getChannel(Integer channelId){
+            return channelIdToChannelMap.get(channelId);
         }
         
         public ChannelGroup getSubscribers(){
@@ -43,6 +58,8 @@ public class StockState{
         public void init(){
             //TODO: complete this to initialise stock market state
             subscribers = new DefaultChannelGroup();
+            channelIdToChannelMap = new HashMap<Integer, Channel>();
+            traderToChannelIdMap = new HashMap<Integer, Integer>();
             this.stockPriceState = new HashMap<Integer, Double>();
             List<Integer> stockList = WatchList.createDefaultList().getList();
             for(Integer i : stockList){

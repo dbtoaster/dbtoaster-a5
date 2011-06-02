@@ -12,5 +12,5 @@ import state.OrderBook.OrderBookEntry;
  * @author kunal
  */
 public interface Matcher {
-    public void match(String action, OrderBookEntry a);
+    public List<OrderBookEntry> match(String action, OrderBookEntry a);
 }

@@ -24,6 +24,7 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import rules.Matcher;
 /**
  *
  * @author kunal
@@ -32,7 +33,7 @@ public class StockMarketServer {
     
     OrderBook orderBook;
     Semaphore obLock,sLock;
-    BasicMatcher m;
+    Matcher m;
     StockState stockState;
     
     public StockMarketServer() throws IOException{

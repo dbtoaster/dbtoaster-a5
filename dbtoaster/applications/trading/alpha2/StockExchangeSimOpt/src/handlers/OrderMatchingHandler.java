@@ -13,15 +13,11 @@ import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
 
 import java.net.SocketAddress;
-import java.sql.Time;
-import java.sql.Timestamp;
-import java.util.Date;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
 
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
@@ -30,6 +26,7 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import rules.Matcher;
 
 /**
  *
@@ -45,13 +42,13 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
     Semaphore streamLock;
     TupleDecoder parser;
     List<String> schema;
-    BasicMatcher matchMaker;
+    Matcher matchMaker;
     StockState stockState;
     static final Logger logger = Logger.getLogger("handler_log");
     FileWriter handlerLog;
     String pending = "";
 
-    public OrderMatchingHandler(OrderBook conn, Semaphore obLock, Semaphore sLock, TupleDecoder t, BasicMatcher m, StockState stockState) throws IOException {
+    public OrderMatchingHandler(OrderBook conn, Semaphore obLock, Semaphore sLock, TupleDecoder t, Matcher m, StockState stockState) throws IOException {
         orderBook = conn;
         orderBookLock = obLock;
         streamLock = sLock;
@@ -94,6 +91,8 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
                     orderBookLock.acquireUninterruptibly();
                     orderBook.executeCommand(contents[0], newEntry);
                     orderBookLock.release();
+                    
+                    stockState.addToMap(newEntry.traderId, e.getChannel().hashCode());
 
                     if (!contents[0].equals(OrderBook.DELETECOMMANDSYMBOL)) {
                         orderBookLock.acquireUninterruptibly();

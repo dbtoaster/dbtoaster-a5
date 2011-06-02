@@ -20,6 +20,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import rules.Matcher;
 import rules.impl.BasicMatcher;
 import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
@@ -35,7 +36,7 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
     Map<Integer, Long> pendingOrders;
     
     BasicSobiTraderHandler(OrderBook simOrderBook, WatchList watchList, Map<Integer, GeneralStockPropts> stockInfo, 
-            BasicMatcher matchMaker, StockState stockState, TupleDecoder t) throws IOException {
+            Matcher matchMaker, StockState stockState, TupleDecoder t) throws IOException {
         
         //General initialisation
         generalInit(simOrderBook, watchList, stockInfo, matchMaker, stockState, t);
@@ -48,7 +49,10 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
     @Override
     public void runSim(String payload, Channel ch) throws IOException {
         String[] contents = payload.split(";");
+        
+        //Parse the tuple
         Map<String, Object> decodedLoad = parser.createTuples(contents[1]);
+        
         
         if (decodedLoad != null) {
             Object a[] = new Object[schema.size()];
@@ -56,6 +60,7 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
                 a[i] = decodedLoad.get(schema.get(i));
             }
 
+            //Create a new order book entry
             OrderBookEntry newEntry = null;            
             try {
                 newEntry = orderBook.createEntry(a);
@@ -69,15 +74,18 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
                 
                 orderBook.executeCommand(contents[0], newEntry);
             } catch (IOException ex) {
-                handlerLog.write(("The order format had an error. Skipping\n"));
+                System.err.println(ex.getMessage());
+                return;
             }
             
+            //Run matching algorithm
             matchMaker.match(contents[0], newEntry);
             
+            
+            //Code for generation of new trade
             BasicSobiPropts oldPropts = (BasicSobiPropts) stockInfo.get(newEntry.stockId);
             oldPropts.updatePrice(stockState.getStockPrice(newEntry.stockId));
             oldPropts.updatePending(orderBook);
-
             
             String trade = null;
             Integer trader = 0;

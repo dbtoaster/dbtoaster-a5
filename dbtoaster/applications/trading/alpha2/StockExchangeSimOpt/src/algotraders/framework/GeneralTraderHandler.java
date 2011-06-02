@@ -14,6 +14,7 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import rules.Matcher;
 import rules.impl.BasicMatcher;
 import state.OrderBook;
 import state.StockState;
@@ -27,7 +28,7 @@ public abstract class GeneralTraderHandler extends SimpleChannelHandler{
     public OrderBook orderBook;
     public TupleDecoder parser;
     public List<String> schema;
-    public BasicMatcher matchMaker;
+    public Matcher matchMaker;
     public StockState stockState;
     public Map<Integer, GeneralStockPropts> stockInfo;
     public WatchList watchList;
@@ -36,7 +37,7 @@ public abstract class GeneralTraderHandler extends SimpleChannelHandler{
     public static final Logger logger = Logger.getLogger("handler_log");
     
     public void generalInit(OrderBook simOrderBook, WatchList watchList, Map<Integer, GeneralStockPropts> stockInfo, 
-            BasicMatcher matchMaker, StockState stockState, TupleDecoder t) throws IOException{
+            Matcher matchMaker, StockState stockState, TupleDecoder t) throws IOException{
         //General initialisation
         this.matchMaker = matchMaker;
         this.orderBook = simOrderBook;
