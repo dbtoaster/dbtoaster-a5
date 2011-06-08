@@ -130,7 +130,7 @@ public class OrderBook {
     
     public OrderBookEntry createEntry(Object[] a){
         int stock_id = (Integer)a[0];
-        double price = (Double)a[1];
+        double price = a[1]==null?0.:(Double)a[1];
         int volume = (Integer)a[2];
         int order_id = (Integer)a[3];
         long timestamp = new Date().getTime();

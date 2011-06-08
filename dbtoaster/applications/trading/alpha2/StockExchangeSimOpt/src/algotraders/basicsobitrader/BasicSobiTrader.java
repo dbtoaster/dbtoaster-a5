@@ -4,20 +4,13 @@
  */
 package algotraders.basicsobitrader;
 
-import algotraders.framework.SobiTerminal;
-import algotraders.framework.GeneralStockPropts;
 import algotraders.framework.GeneralTrader;
-import algotraders.framework.WatchList;
-import codecs.ModStringDecoder;
 import codecs.TupleDecoder;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -28,10 +21,8 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
-import rules.Matcher;
 import rules.impl.BasicMatcher;
 import state.OrderBook;
-import state.StockState;
 
 /**
  *

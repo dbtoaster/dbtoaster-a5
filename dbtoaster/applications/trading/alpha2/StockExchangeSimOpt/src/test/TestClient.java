@@ -62,33 +62,43 @@ public class TestClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
-        ChannelFuture cf = bootstrap.connect(new InetSocketAddress("localhost", 8080));
+        ChannelFuture cf = bootstrap.connect(new InetSocketAddress("localhost", 8081));
 
         Channel ch = cf.awaitUninterruptibly().getChannel();
         writelines(ch);
     }
 
     private static void writelines(Channel ch) throws InterruptedException {
+//        try {
+//            System.out.println(Double.parseDouble("0.0"));
+//            System.out.println("Enter test file name");
+//            BufferedReader b = new BufferedReader(new InputStreamReader(System.in));
+//            String filename = b.readLine();
+//            BufferedReader br = new BufferedReader(new FileReader("./" + filename.trim()));
+//            int count = 0;
+//            while (br.ready()) {
+//                String line = br.readLine();
+//                count++;
+//                System.out.println(count + ":" + line);
+//                ChannelFuture cf = ch.write(line + "\n");
+//                Thread.currentThread().sleep(1000);
+//                //cf.awaitUninterruptibly();
+//                while (!cf.isDone()) {
+//                }
+//            }
+//        } catch (IOException ex) {
+//            ex.printStackTrace();
+//        }
+
         try {
-            System.out.println(Double.parseDouble("0.0"));
-            System.out.println("Enter test file name");
-            BufferedReader b = new BufferedReader(new InputStreamReader(System.in));
-            String filename = b.readLine();
-            BufferedReader br = new BufferedReader(new FileReader("./" + filename.trim()));
-            int count = 0;
-            while (br.ready()) {
-                String line = br.readLine();
-                count++;
-                System.out.println(count + ":" + line);
-                ChannelFuture cf = ch.write(line + "\n");
-                Thread.currentThread().sleep(1000);
-                //cf.awaitUninterruptibly();
-                while (!cf.isDone()) {
-                }
+            String str;
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            while( (str = br.readLine())!=null) {
+                ChannelFuture cf = ch.write(str+"\n");
+                cf.awaitUninterruptibly();
             }
-        } catch (IOException ex) {
-            ex.printStackTrace();
+        } catch (Exception e) {
         }
-        
+
     }
 }
