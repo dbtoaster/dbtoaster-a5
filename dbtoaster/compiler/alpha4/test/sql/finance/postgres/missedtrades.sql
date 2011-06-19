@@ -1,14 +1,14 @@
 DROP TABLE IF EXISTS InsertBids;
-CREATE TABLE InsertBids(broker_id float, p float, v float);
+CREATE TABLE InsertBids(t float, order_id float, broker_id float, v float, p float);
 
 DROP TABLE IF EXISTS InsertAsks;
-CREATE TABLE InsertAsks(broker_id float, p float, v float);
+CREATE TABLE InsertAsks(t float, order_id float, broker_id float, v float, p float);
 
 DROP TABLE IF EXISTS DeleteBids;
-CREATE TABLE DeleteBids(broker_id float, p float, v float);
+CREATE TABLE DeleteBids(t float, order_id float, broker_id float, v float, p float);
 
 DROP TABLE IF EXISTS DeleteAsks;
-CREATE TABLE DeleteAsks(broker_id float, p float, v float);
+CREATE TABLE DeleteAsks(t float, order_id float, broker_id float, v float, p float);
 
 COPY InsertBids FROM '@@PATH@@/testdata/InsertBIDS.dbtdat' WITH DELIMITER ',';
 COPY InsertAsks FROM '@@PATH@@/testdata/InsertASKS.dbtdat' WITH DELIMITER ',';

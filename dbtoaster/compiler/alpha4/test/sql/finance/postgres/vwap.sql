@@ -1,9 +1,9 @@
-
 DROP TABLE IF EXISTS InsertBids;
-CREATE TABLE InsertBids(price float, volume float);
+CREATE TABLE InsertBids(t float, order_id float, broker_id float, volume float, price float);
 
 DROP TABLE IF EXISTS DeleteBids;
-CREATE TABLE DeleteBids(price float, volume float);
+CREATE TABLE DeleteBids(t float, order_id float, broker_id float, volume float, price float);
+
 
 COPY InsertBids FROM '@@PATH@@/testdata/InsertBIDS.dbtdat' WITH DELIMITER ',';
 COPY DeleteBids FROM '@@PATH@@/testdata/DeleteBIDS.dbtdat' WITH DELIMITER ',';

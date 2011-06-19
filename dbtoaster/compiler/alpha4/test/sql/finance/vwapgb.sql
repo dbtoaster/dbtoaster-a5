@@ -1,22 +1,22 @@
 /* Result on vwap5k:
  broker_id |    sum     
 -----------+------------
-         0 | 3272944500
-         6 | 3177815000
-         5 | 3726588200
-         1 | 1762549100
-         2 | 1971296500
-         3 | 3687987500
-         7 | 4095129000
-         9 | 3560192200
-         8 | 2037308000
-         4 | 3938198700
+         0 | 2755113900
+         6 | 3044952000
+         5 | 4201776000
+         1 | 3380797500
+         2 | 1464450000
+         3 | 1969294000
+         7 | 4846981400
+         9 | 3622932600
+         8 | 2610100000
+         4 | 1019620500
 (10 rows)
  */
 
-CREATE TABLE bids(broker_id float, price float, volume float)
+CREATE TABLE bids(t float, id int, broker_id int, volume float, price float)
   FROM FILE 'test/data/vwap5k.csv'
-  LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');
+  LINE DELIMITED orderbook (book := 'bids', brokers := '10');
 
 -- The following version causes a parser failure:
 --   Fatal error: exception Sqlparser.SQLParseError

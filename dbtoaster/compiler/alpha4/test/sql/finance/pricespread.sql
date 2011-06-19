@@ -1,20 +1,20 @@
 /* Result on vwap5k: 
       sum       
 ----------------
- 81581643916710
+ 76452380068302
 (1 row)
  */
 
-CREATE TABLE bids(broker_id float, p float, v float)
+CREATE TABLE bids(t float, id int, broker_id int, volume float, price float)
   FROM FILE 'test/data/vwap5k.csv'
-  LINE DELIMITED orderbook (book := 'bids', validate := 'true', brokers := '10');
+  LINE DELIMITED orderbook (book := 'bids', brokers := '10');
 
-CREATE TABLE asks(broker_id float, p float, v float)
+CREATE TABLE asks(t float, id int, broker_id int, volume float, price float)
   FROM FILE 'test/data/vwap5k.csv'
-  LINE DELIMITED orderbook (book := 'asks', validate := 'true', brokers := '10');
+  LINE DELIMITED orderbook (book := 'asks', brokers := '10');
 
 
 -- look at spread between significant orders
-select sum(a.p+-1*b.p) from bids b, asks a
-where ( b.v>0.0001*(select sum(b1.v) from bids b1) )
-and ( a.v>0.0001*(select sum(a1.v) from asks a1) );
+select sum(a.price+-1*b.price) from bids b, asks a
+where ( b.volume>0.0001*(select sum(b1.volume) from bids b1) )
+and ( a.volume>0.0001*(select sum(a1.volume) from asks a1) );
