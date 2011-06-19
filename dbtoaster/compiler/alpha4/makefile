@@ -134,7 +134,6 @@ INCLUDE_DIR = \
 	-I codegen/ocaml/ \
 	-I codegen/ \
 	-I codegen/plsql/ \
-	-I codegen/c++/ \
 	-I parser/ \
 	-I lib/ocaml
 INCLUDE_OBJ = \
