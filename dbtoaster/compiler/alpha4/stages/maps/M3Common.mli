@@ -97,9 +97,12 @@ val code_of_stmt       : ('c,'a,'s) M3.generic_stmt_t -> string;;
 
 (******************* Patterns *******************)
 module Patterns : sig
+  (* positive patterns: vars that are bound (i.e. not wildcarded) *)
   type pattern =
      In of (M3.var_t list * int list)
    | Out of (M3.var_t list * int list)
+
+  (* associative list of map name -> in/out patterns *)
   type pattern_map = (string * pattern list) list
   
   val index: M3.var_t list -> M3.var_t -> int

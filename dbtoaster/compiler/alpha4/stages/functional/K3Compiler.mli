@@ -22,3 +22,9 @@ sig
     -> M3.prog_t * M3.relation_input_t list
     -> string list -> Util.GenericIO.out_t -> unit
 end
+
+(* K3 staging *)
+
+(* Compile to a K3 program *)
+val compile_query_to_program : ?disable_opt : bool -> M3.prog_t -> K3.SR.program
+

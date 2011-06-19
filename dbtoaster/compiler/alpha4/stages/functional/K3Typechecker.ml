@@ -452,16 +452,30 @@ let rec typecheck_expr e : type_t =
         end
         
 
+    (* a : x  c : y
+     *   forall { z | (b : z) in c, a=b }. unify(x,z) and promote(x->z)
+     * ----------------------------------------------------------------------
+     * lambda a.c : fn ([x], y) 
+     *)
     | Lambda       (ae,ce)    ->
         (* TODO: type inference for args *)
         Fn(tc_fn_arg ae ce, recur ce)
     
+    (* a1 : x, a2 : y,  c : z
+     *   forall { v | (d : z) in c, a1=b }. unify(x,v) and promote(x->v)
+     *   forall { v | (d : z) in c, a2=b }. unify(y,v) and promote(y->v)
+     * ----------------------------------------------------------------------
+     * lambda a,b.c : fn ([x], fn([y], z)) 
+     *)
     | AssocLambda  (arg1_e,arg2_e,be) ->
         (* assumes v1,v2 : Int if v1/v2 is not used in be *)
         (* TODO: type inference for v1, v2 *)
-        Fn(tc_fn_arg arg1_e be,
-            Fn(tc_fn_arg arg2_e be, recur be))
+        Fn(tc_fn_arg arg1_e be, Fn(tc_fn_arg arg2_e be, recur be))
     
+    (* f : fn ([x],y)  arg : x    f : fn([x;y],z)    arg : tuple(x,y)
+     * -----------------------    -----------------------------------
+     * apply(f, arg) : y            apply(f, arg) : y
+     *)
     | Apply        (fn_e,arg_e) ->
         let arg_t = recur arg_e in
         let fn_t = recur fn_e in
@@ -474,7 +488,10 @@ let rec typecheck_expr e : type_t =
         | _ -> failwith "invalid function application"
         end
 
-
+    (* f : fn(x,y),  c :           f : fn(x,y),  c : fn() 
+     * ----------------------      -----------------------
+     *   map(f,c)                    map(f,c)
+     *)
     | Map          (fn_e,ce) ->
         let (fn_t, c_t) = (recur fn_e, recur ce) in
         let fn_tll = linearize_mvf fn_t in
@@ -508,7 +525,7 @@ let rec typecheck_expr e : type_t =
             | (Collection _, _, _) -> failwith "invalid aggregate type"
             | _ -> failwith "invalid gb aggregate collection"  
             end
-        in tc_agg (recur fn_e) (recur i_e) (recur ce) gb_tc_f 
+        in tc_agg (recur fn_e) (recur i_e) c_t gb_tc_f 
 
     | Flatten      ce ->
         let c_t = recur ce in

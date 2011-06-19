@@ -121,7 +121,8 @@ if flag_bool "HELP" then
         "ocaml:m3      OCaml source file (via M3)\n"^
         "ocaml:k3      OCaml source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
-        "c++           C++ source file (Experimental)\n"^
+        "imp           Imperative update triggers\n"^
+        "c++           C++ source file\n"^
         "run           Run the query with the default interpreter (K3)\n"^
         "run:m3        Run the query with the M3 interpreter\n"^
         "run:k3        Run the query with the K3 interpreter (default run)\n"
@@ -145,6 +146,7 @@ type language_t =
    | L_K3 of bool (* optimized? *)
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
+   | L_IMP
    | L_CPP 
    | L_SQL of sql_language_t
    | L_NONE
@@ -166,6 +168,7 @@ let language =
       | "M3:PREP"  -> L_M3(true) 
       | "K3"       -> L_K3(true)
       | "K3:NOOPT" -> L_K3(false)
+      | "IMP"      -> L_IMP
       | "SQL"      -> L_SQL(SL_SQL) (* Translates DBT-SQL + sources -> SQL  *)
       | "PLSQL"    -> L_SQL(SL_PLSQL)
       | "RUN"      -> L_INTERPRETER(OCG_K3)
@@ -188,9 +191,7 @@ let adaptor_dir = flag_val "RUN ADAPTORS";;
 Debug.exec "ARGS" (fun () -> 
   StringMap.iter (fun k v ->
     print_endline (k^":");
-    List.iter (fun o -> 
-      print_endline ("   "^o)
-    ) v
+    List.iter (fun o -> print_endline ("   "^o)) v
   ) arguments
 );;
 
@@ -322,7 +323,6 @@ module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
-module K3CppCompiler = K3Compiler.Make(K3Cppgen.K3CG);;
 
 open Database
 
@@ -337,8 +337,17 @@ let compile_function: ((string * Calculus.var_t list) list ->
   | L_OCAML(OCG_M3) -> M3OCamlCompiler.compile_query
   | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
   | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
-  | L_CPP   -> K3CppCompiler.compile_query
+  | L_CPP   ->
+      (fun dbschema (p, s) tlq f ->
+        let k3prog = K3Compiler.compile_query_to_program p in
+        ImpCompiler.Compiler.compile_query dbschema k3prog s tlq f)
 
+  | L_IMP   ->
+      (fun dbschema (p, s) tlq f ->
+        let k3prog = K3Compiler.compile_query_to_program p in
+        (print_endline
+          (ImpCompiler.Compiler.compile_query_to_string dbschema k3prog s tlq)))
+  
   | L_M3(prepared)  -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
           output_string fd

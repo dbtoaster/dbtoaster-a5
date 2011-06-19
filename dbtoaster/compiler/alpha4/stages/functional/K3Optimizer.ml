@@ -606,6 +606,62 @@ let rec inline_collection_functions substitutions expr =
   | _ -> descend_expr (recur substitutions) expr
   end
 
+
+(* Perform beta reduction for applications of base type arguments, and for
+ * complex arguments that are used at most once.
+ * For now, we'll also add some simple constant folding in here *)
+let rec conservative_beta_reduction substitutions expr =
+  let recur = conservative_beta_reduction in
+  (* recursive identity fn, i.e. recur with same set of substitutions *)
+  let recid = descend_expr (recur substitutions) in  
+  let rebind subs vt arg =
+    let ns = if List.mem_assoc vt subs then List.remove_assoc vt subs else subs
+    in (vt,arg)::ns
+  in
+  let beta_reduce free_vars (rem_acc, subs_acc, expr_acc) ((v,t), arg) =
+    let reduce () =
+      let new_subs = rebind substitutions (v,t) (recid arg)
+      in rem_acc, new_subs, descend_expr (recur new_subs) expr_acc
+    in
+    begin match t with
+    | TInt | TFloat -> reduce ()
+    | _ ->
+      let occurrences = List.filter ((=) v) free_vars in
+       (* first case preserves the variable even if it is not used, since the
+        * argument may have side-effects, such as persistent collection updates. *)
+       begin match occurrences with
+       | [] -> (rem_acc@[(v,t), (recid arg)]), subs_acc, expr_acc
+       | [x] -> reduce()
+       | _ -> (rem_acc@[(v,t), (recid arg)]), subs_acc, expr_acc
+       end
+    end
+  in
+  begin match expr with
+  | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
+  | Add(Const(x), Const(y)) -> Const(c_sum x y)
+
+  | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
+  | Mult(Const(x), Const(y)) -> Const(c_prod x y)
+
+  | Apply(Lambda(AVar(v,t), body), arg) ->
+    let free_vars = get_free_vars body [] in
+    let remaining, _, new_e =
+      beta_reduce free_vars ([], substitutions, body) ((v,t), arg) in
+    if remaining <> [] then descend_expr (recur substitutions) expr else new_e
+
+  | Apply(Lambda(ATuple(vt_l), body), Tuple(fields)) ->
+    let free_vars = get_free_vars body [] in
+    let reml, _, new_e = List.fold_left (beta_reduce free_vars)
+        ([], substitutions, body) (List.combine vt_l fields) in
+    let rem_vt_l, rem_fields = List.split reml in
+    if rem_fields = fields then descend_expr (recur substitutions) expr
+    else Apply(Lambda(ATuple(rem_vt_l), new_e), Tuple(rem_fields))
+ 
+  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
+                then List.assoc (v,t) substitutions else expr
+  | _ -> descend_expr (recur substitutions) expr
+  end
+
 (* Performs dependency tests at lambda-if boundaries *)
 (* Avoids spinning on reordering at if-chains
  * -- if-reordering-spinning can be an arbitrarily deep problem, thus
@@ -774,6 +830,11 @@ let rec simplify_collections expr =
         let new_gb_f = compose gb_f rmap_f
         in GroupByAggregate(new_agg_f,i,new_gb_f,rmap_c) 
 
+    | Iterate(iter_f, (Map _ as rmap)) ->
+        let rmap_f, rmap_c = get_map_parts rmap in
+        let new_iter_f = compose iter_f rmap_f
+        in Iterate(new_iter_f, rmap_c)
+        
     | _ -> descend_expr recur expr
 
     end
@@ -782,3 +843,167 @@ let rec simplify_collections expr =
     let fixpoint expr new_expr =
         if new_expr = expr then expr else recur new_expr
     in fixpoint expr (simplify expr)
+
+
+let common_subexpression_elim expr =
+  let symref = ref 0 in
+  let gensym () = incr symref; "__cse"^(string_of_int !symref) in
+  let rec substitute_expr substitutions expr =
+    if List.mem_assoc expr substitutions then List.assoc expr substitutions
+    else descend_expr (substitute_expr substitutions) expr
+  in
+  let mk_cse expr cses subs = List.fold_left (fun acc_expr (cse,_) ->
+      let cse_id = gensym() in
+      let cse_ty = K3Typechecker.typecheck_expr cse in
+      let cse_var = Var(cse_id, cse_ty) in
+        Apply(Lambda(AVar(cse_id, cse_ty),
+          substitute_expr [cse, cse_var] acc_expr), cse))
+    (substitute_expr subs expr) cses
+  in
+  
+  let build_candidates branch_candidates expr_l =
+    List.fold_left (fun cand_acc expr ->
+        let get_cnt l =
+          if List.mem_assoc expr l then List.assoc expr l else 0 in
+        let total_cnt = List.fold_left
+          (fun acc l -> acc+(get_cnt l)) 0 branch_candidates
+        in cand_acc@[expr, total_cnt])
+      [] expr_l
+  in
+
+  let fold_f pre acc expr : (expr_t * int) list * expr_t =
+    let parts = List.map (fun x -> List.map snd x) acc in
+    let sub_parts = List.map (fun x -> List.map fst x) acc in
+    let rebuilt_expr = rebuild_expr expr parts in
+    
+
+    let lambda_common body f = 
+      let r_expr =
+        let body = List.hd (List.hd parts) in
+        let cses = List.filter
+          (fun (_,cnt) -> cnt > 1) (List.hd (List.hd sub_parts))
+        in f (mk_cse body cses [])
+      in [], r_expr
+    in
+
+    let aggregate_common sub_part_idx =
+      let branch_candidates = List.map
+        (fun i -> List.flatten (List.nth sub_parts i)) sub_part_idx in
+      let branch_cand_exprs = List.map (List.map fst) branch_candidates in
+      let common_cand_exprs = Util.ListAsSet.multiunion branch_cand_exprs in
+      let new_candidates =
+        build_candidates branch_candidates common_cand_exprs 
+      in ((rebuilt_expr, 1)::new_candidates), rebuilt_expr
+    in
+
+    let new_candidates, r_expr =
+      match rebuilt_expr with
+        | Const _ | Var _ 
+        | SingletonPC _ | InPC _ | OutPC _ | PC _ ->
+          [], rebuilt_expr (* no work to do here *)
+
+        | IfThenElse _ (* carry up candidates common to both branches only *)
+          -> 
+          
+          (* Note: flattening is fine for IfThenElse since this has singleton
+           * lists per branches, guaranteeing unique candidates per branch.
+           * In general this does not apply, e.g. for updates with key expr
+           * lists considered a branch *)
+          let branch_candidates = List.map
+            (fun i -> List.flatten (List.nth sub_parts i)) [0; 1; 2] in
+          let branch_cand_exprs =
+            List.map (fun x -> List.map fst x) branch_candidates in
+          let p_cand_exprs, t_cand_exprs, e_cand_exprs =
+            List.nth branch_cand_exprs 0,
+            List.nth branch_cand_exprs 1, List.nth branch_cand_exprs 2 in
+            
+          (* Carry up candidates that are present in both then and else branches.
+           * Everything else must be separated into candidates materialized at this
+           * expression, or pushed back into the expression built here. *) 
+          let common_cand_exprs =
+            Util.ListAsSet.inter t_cand_exprs e_cand_exprs in
+          let rest_exprs = Util.ListAsSet.diff
+            (Util.ListAsSet.multiunion branch_cand_exprs) common_cand_exprs in
+
+          let rest_candidates = build_candidates branch_candidates rest_exprs in
+
+          (* Find intersection of CSEs in then and else branches *)
+          let new_candidates = build_candidates branch_candidates common_cand_exprs in
+          
+          (* Resubs are those subexprs that are no longer common, and used at
+           * most once, CSEs are subexprs that are used more than once. *)
+          let cses_here = List.filter (fun (_,cnt) -> cnt > 1) rest_candidates in
+          let p_cses, branch_cses =
+            List.partition (fun (e,_) -> List.mem e p_cand_exprs) cses_here in
+          let t_cses, e_cses =
+            List.partition (fun (e,_) -> List.mem e t_cand_exprs) branch_cses
+          in begin match rebuilt_expr with
+            | IfThenElse(rp, rt, re) ->
+              (* For the predicate, build funapps around the condition, to
+               * enable sharing of predicate CSEs with branches *) 
+              let r_expr =
+                let cse_id_tys, np = List.fold_left
+                  (fun (sub_acc, acc_expr) (cse,_) ->
+                    let cse_id = gensym() in
+                    let cse_ty = K3Typechecker.typecheck_expr cse in
+                    (sub_acc@[cse,cse_id,cse_ty]),
+                      substitute_expr [cse, (Var(cse_id,cse_ty))] acc_expr)
+                  ([],rp) p_cses
+                in
+                let nt = mk_cse rt t_cses [] in
+                let ne = mk_cse re e_cses []
+                in List.fold_left (fun acc_expr (cse,id,ty) -> 
+                    Apply(Lambda(AVar(id,ty), acc_expr), cse))
+                  (IfThenElse(np, nt, ne)) cse_id_tys
+              in new_candidates, r_expr
+            | _ -> failwith "invaild rebuild of if-then-else expr"
+          end
+
+        (* keep common subexpressions inside functions, and do not carry
+         * upwards. This could be generalized to handle commonalities that do
+         * not depend on the vars bound by the lambda, and thus remain valid
+         * outside the lambda. *)
+        | Lambda (arg, _) ->
+          lambda_common (List.hd (List.hd parts)) (fun x -> Lambda(arg, x))
+
+        | AssocLambda (arg1, arg2, _) ->
+          lambda_common (List.hd (List.hd parts)) (fun x -> AssocLambda(arg1, arg2, x))
+
+        (* there will be no CSEs inside lambdas, leaving only the argument cses
+         * to carry up. *)
+        | Apply _ ->
+          let arg_candidates = List.hd (List.nth sub_parts 1)
+          in arg_candidates, rebuilt_expr
+
+        | Iterate _ ->
+          let coll_candidates = List.hd (List.nth sub_parts 1)
+          in coll_candidates, rebuilt_expr 
+        
+        (* Keep common subexpressions inside functions, carry only collection
+         * arg CSEs upwards. Add this expression as a potential CSE, building
+         * up substitutions in larger -> smaller order. This tests matches of
+         * larger exprs before smaller ones. *)
+        | Map _ ->
+          let coll_candidates = List.hd (List.nth sub_parts 1)
+          in ((rebuilt_expr, 1)::coll_candidates), rebuilt_expr
+
+        | Aggregate _ -> aggregate_common [1;2]
+        | GroupByAggregate _ -> aggregate_common [1;3]
+            
+
+        (* Everything else carries up CSE candidates. *)
+        | _ ->
+          let new_candidates =
+            List.fold_left (fun acc cll -> List.fold_left (fun acc cl ->
+                List.fold_left (fun acc (e,cnt) ->
+                  if List.mem_assoc e acc then
+                    (List.remove_assoc e acc)@[e, (List.assoc e acc)+cnt]
+                  else acc@[e,cnt]) acc cl)
+              acc cll) [] sub_parts
+          in new_candidates, rebuilt_expr
+    in
+    new_candidates, r_expr
+  in
+  let global_cses, r_expr =
+    fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
+  in mk_cse r_expr global_cses []

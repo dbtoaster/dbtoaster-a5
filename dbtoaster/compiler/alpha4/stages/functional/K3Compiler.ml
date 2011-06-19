@@ -114,9 +114,10 @@ let compile_triggers trigs : code_t list =
       let stmts = List.map compile_k3_expr
         (List.map (fun (_,e) ->
             let optimize e = 
-              simplify_if_chains []
-                (simplify_collections 
-                  (lift_ifs args (inline_collection_functions [] e))) in
+              common_subexpression_elim (conservative_beta_reduction []
+                (simplify_if_chains []
+                  (simplify_collections 
+                    (lift_ifs args (inline_collection_functions [] e))))) in
             let rec fixpoint e =
                 let new_e = optimize e in
                 if e = new_e then e else fixpoint new_e    
@@ -162,5 +163,30 @@ let compile_query schema prog tlqs (out : Util.GenericIO.out_t): unit =
          output_string out_file "\n"
       )
 
-
 end
+
+open K3.SR
+open K3Builder
+open K3Optimizer
+
+let optimize_prog (schema, patterns, trigs) =
+  let opt_trigs = List.map (fun (event, rel, args, cs) ->
+    let opt_cs = List.map (fun (i,e) ->
+      let optimize e = 
+       common_subexpression_elim (conservative_beta_reduction []
+          (simplify_if_chains []
+	        (simplify_collections 
+	          (lift_ifs args (inline_collection_functions [] e))))) in
+	  let rec fixpoint e =
+	    let new_e = optimize e in
+	      if e = new_e then e else fixpoint new_e    
+	  in i, fixpoint e) cs
+    in (event,rel,args,opt_cs)) trigs
+  in (schema, patterns, opt_trigs)
+
+let compile_query_to_program ?(disable_opt = false)
+                             ((schema,m3prog) : M3.prog_t) : program 
+  =
+   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
+   let p = collection_prog (schema,m3ptrigs) patterns in
+   if disable_opt then p else optimize_prog p

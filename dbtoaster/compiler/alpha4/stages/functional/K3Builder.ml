@@ -370,7 +370,10 @@ let collection_stmt trig_args m3stmt : statement =
         let pat_ve = List.map (fun v -> (v,Var(v,TFloat))) patv in
         let in_coll = if (List.length patv) = (List.length lhs_inv)
             then Singleton(Lookup(collection, List.map snd pat_ve))
-            else Slice(collection, ins, pat_ve) in
+            else
+                (*(print_endline ("looping over slices with trig args "^
+                  (String.concat "," lhs_inv)^" / "^(String.concat "," trig_args));*)
+                 Slice(collection, ins, pat_ve) in
         let loop_fn =
             bind_for_apply_each ((args_of_vars lhs_inv)@[la]) loop_fn_body
         in Iterate(loop_fn, in_coll)
@@ -445,10 +448,12 @@ let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
 
 let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
    let optimize e trig_args = 
-      K3Optimizer.simplify_if_chains []
-        (K3Optimizer.simplify_collections 
-           (K3Optimizer.lift_ifs trig_args 
-              (K3Optimizer.inline_collection_functions [] e)))
+     K3Optimizer.common_subexpression_elim
+      (K3Optimizer.conservative_beta_reduction []
+        (K3Optimizer.simplify_if_chains []
+          (K3Optimizer.simplify_collections 
+             (K3Optimizer.lift_ifs trig_args 
+                (K3Optimizer.inline_collection_functions [] e)))))
    in
    let rec fixpoint e trig_args =
       let new_e = optimize e trig_args in
