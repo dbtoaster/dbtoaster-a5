@@ -25,13 +25,13 @@ let concat_many_source_code =
 
 let empty_source_code bc = bc = Lines([]) || bc = Inline("")
 
-let delim_source_code delim bc =
+let delim_source_code ?(preserve=false) delim bc =
   begin match bc with
     | Lines (l) ->
       let x = List.rev l in
       Lines(List.rev (((List.hd x)^delim)::(List.tl x)))
     | Inline (i) ->
-      if delim = stmt_delimiter then Lines [i^delim]
+      if delim = stmt_delimiter && (not preserve) then Lines [i^delim]
       else Inline(i^delim)
   end
 
@@ -40,9 +40,11 @@ let concat_and_delim_source_code delim a b =
 
 let concat_and_delim_source_code_list ?(final=false) ?(delim="") bcl =
   if bcl = [] then Inline("") else
-    let r = List.fold_left (concat_and_delim_source_code delim)
-      (List.hd bcl)
-      (List.filter (fun x -> not(empty_source_code x)) (List.tl bcl))
+    let r =
+      let ne = List.filter (fun x -> not(empty_source_code x)) bcl in
+      match ne with
+      | [] -> Inline("") | [x] -> x
+      | h::t -> List.fold_left (concat_and_delim_source_code delim) h t
     in if final then delim_source_code delim r else r
 
 let indent_source_code s bc =
