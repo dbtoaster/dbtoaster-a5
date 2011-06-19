@@ -1,5 +1,6 @@
 SOURCE = \
 	util/Util.ml \
+	codegen/SourceCode.mli \
 	codegen/SourceCode.ml \
 	stages/ring/Ring.ml \
 	stages/ring/Calculus.mli \
@@ -16,13 +17,18 @@ SOURCE = \
 	stages/maps/M3Compiler.ml \
 	stages/functional/K3.mli \
 	stages/functional/K3.ml \
+	stages/functional/K3Typechecker.mli \
+	stages/functional/K3Typechecker.ml \
 	stages/functional/K3Optimizer.ml \
 	stages/functional/K3Builder.mli \
 	stages/functional/K3Builder.ml \
-	stages/functional/K3Typechecker.mli \
-	stages/functional/K3Typechecker.ml \
 	stages/functional/K3Compiler.mli \
 	stages/functional/K3Compiler.ml \
+	stages/imperative/Imperative.mli \
+	stages/imperative/Imperative.ml \
+	stages/imperative/ImpBuilder.ml \
+	stages/imperative/ImpCompiler.mli \
+	stages/imperative/ImpCompiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/Values.ml \
@@ -34,8 +40,8 @@ SOURCE = \
 	codegen/ocaml/M3OCamlgen.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
-	codegen/ocaml/K3OCamlgen.ml \
-	codegen/c++/K3Cppgen.ml
+	codegen/ocaml/K3OCamlgen.ml
+
 
 HEADER_ONLY_SOURCE = \
 	stages/maps/M3Codegen.mli \
@@ -124,6 +130,7 @@ INCLUDE_DIR = \
 	-I stages/ring/ \
 	-I stages/maps/ \
 	-I stages/functional/ \
+	-I stages/imperative/ \
 	-I codegen/ocaml/ \
 	-I codegen/ \
 	-I codegen/plsql/ \
