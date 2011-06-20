@@ -391,6 +391,8 @@
 open M3
 open K3.SR
 
+type optimization_t = CSE | Beta 
+
 let var_counter = ref 0
 let gen_var_sym() = incr var_counter; "var"^(string_of_int (!var_counter))
 
@@ -1007,3 +1009,20 @@ let common_subexpression_elim expr =
   let global_cses, r_expr =
     fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
   in mk_cse r_expr global_cses []
+
+
+let optimize ?(optimizations=[]) trigger_vars expr =
+  let apply_opts e =
+    let r =
+      simplify_if_chains []
+        (simplify_collections 
+          (lift_ifs trigger_vars (inline_collection_functions [] e)))
+    in 
+    let r1 = if List.mem Beta optimizations
+             then conservative_beta_reduction [] r else r
+    in if List.mem CSE optimizations then common_subexpression_elim r1 else r1
+  in
+  let rec fixpoint e =
+    let new_e = apply_opts e in
+      if e = new_e then e else fixpoint new_e    
+  in fixpoint expr

@@ -26,5 +26,7 @@ end
 (* K3 staging *)
 
 (* Compile to a K3 program *)
-val compile_query_to_program : ?disable_opt : bool -> M3.prog_t -> K3.SR.program
+val compile_query_to_program :
+  ?disable_opt : bool -> ?optimizations : K3Optimizer.optimization_t list
+  -> M3.prog_t -> K3.SR.program
 

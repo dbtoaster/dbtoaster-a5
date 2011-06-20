@@ -447,19 +447,8 @@ let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
       trigs
 
 let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
-   let optimize e trig_args = 
-     K3Optimizer.common_subexpression_elim
-      (K3Optimizer.conservative_beta_reduction []
-        (K3Optimizer.simplify_if_chains []
-          (K3Optimizer.simplify_collections 
-             (K3Optimizer.lift_ifs trig_args 
-                (K3Optimizer.inline_collection_functions [] e)))))
-   in
-   let rec fixpoint e trig_args =
-      let new_e = optimize e trig_args in
-         if e = new_e then e else fixpoint new_e trig_args 
-   in
-      List.map (fun (pm,rel,trig_args,stmtl) ->
-         (pm, rel, trig_args, (
-            (List.map (fun (lhs,rhs) -> (lhs, (fixpoint rhs trig_args))) stmtl)
-         ))) (m3_to_k3 (schema,m3prog))
+  List.map (fun (pm,rel,trig_args,stmtl) ->
+    (pm, rel, trig_args,
+      (List.map (fun (lhs,rhs) ->
+         (lhs, (K3Optimizer.optimize trig_args rhs))) stmtl)))
+    (m3_to_k3 (schema,m3prog))
