@@ -207,17 +207,19 @@ namespace dbtoaster {
           if ( !(*it)->has_inputs() ) inputs.erase(it);
           else {
             current = *it;
-            remaining = (int) (step * (rand() / (RAND_MAX + 1.0)));
+            remaining = (int) (step > 0? step : (rand() / (RAND_MAX + 1.0)));
           }
         }
 
         r = current->next_inputs();
-        if ( r ) --remaining;
+        if ( r ) remaining -= r->size();
 
         // remove the stream if its done.
         if ( !current->has_inputs() ) {
           remove_source(current);
           current = shared_ptr<source>();
+          remaining = 0;
+          cout << "done with stream, " << inputs.size() << " remain" << endl;
         }
 
         return r;
@@ -398,8 +400,11 @@ namespace dbtoaster {
         split_iterator<string::const_iterator> it =
            make_split_iterator(opts, first_finder(",", is_equal()));
 
-        for (; it != split_iterator<string::const_iterator>(); ++it) {
+        split_iterator<string::const_iterator> end;
+
+        for (; it != end; ++it) {
           string param = copy_range<std::string>(*it);
+          cout << "tracing map " << param << endl;
           traced_maps.insert(param);
         }
         traced = true;

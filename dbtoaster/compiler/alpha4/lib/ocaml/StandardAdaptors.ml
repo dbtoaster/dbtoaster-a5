@@ -289,9 +289,6 @@ let orderbook_generator params =
    
    let book_orders = Hashtbl.create 1000 in
    
-   (* Seed broker id generation *)
-   Random.init (12345);
-
    (* returns action, order_id, price vol pair if # brokers <= 0
     * otherwise action, order_id, broker_id-price-volume triple *)
    let ff l i = float_of_string (List.nth l i) in
