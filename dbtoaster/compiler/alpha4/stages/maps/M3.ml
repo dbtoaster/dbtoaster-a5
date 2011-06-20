@@ -72,6 +72,12 @@ let mk_if l r = (IfThenElse0(l,r), ())
 let mk_ma ma = (MapAccess(ma), ())
 let mk_c c = (Const(CFloat(c)), ())
 let mk_v v = (Var(v), ())
+let mk_sum_list l = 
+   if List.length l > 0 then List.fold_left mk_sum (List.hd l) (List.tl l)
+                        else mk_c 0.
+let mk_prod_list l = 
+   if List.length l > 0 then List.fold_left mk_prod (List.hd l) (List.tl l)
+                        else mk_c 1.
 
 let string_of_calcmeta _ = ""
 let string_of_aggmeta  _ = ""

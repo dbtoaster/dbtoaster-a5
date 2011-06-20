@@ -8,6 +8,16 @@ let test_reverse name readable_query =
       string_of_term
       (un_roly_poly (roly_poly_plural query))
       query
+;;
+let test_unrolly name r_mlist r_factored = 
+   let mlist = List.map make_term r_mlist
+   and factored = make_term r_factored
+   in Debug.log_unit_test 
+      ("Unrolly: "^name)
+      string_of_term
+      (un_roly_poly mlist)
+      factored
+;;
 
 let vt v = (v, TInt);;
 let var v = RVal(Var(vt v));;

@@ -183,11 +183,8 @@ let (deltas,todos) =
 Debug.log_unit_test "Bigsum Compilation" (string_of_list "\n")
   (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) deltas)
   ([
-    "((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME)";
-    "(if (REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME) and REWRITE__BS1_3[]<=REWRITE__BS1_2[B1_PRICE] then REWRITE__BS1_1[B1_PRICE] else 0)";
-    "((if REWRITE__BS1_2[B1_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__BS1_1[B1_PRICE] else 0)*-1)";
-    "(if (REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME) and REWRITE__BS1_3[]<=REWRITE__BS1_2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)";
-    "((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)"
+      "(((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME)+(if (REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME) and REWRITE__BS1_3[]<=REWRITE__BS1_2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)+((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1))";
+      "((if (REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)))<(REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME) and REWRITE__BS1_3[]<=REWRITE__BS1_2[B1_PRICE] then REWRITE__BS1_1[B1_PRICE] else 0)+((if REWRITE__BS1_2[B1_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+QBIDS_QBIDS_VOLUME)<=(REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0))) then REWRITE__BS1_1[B1_PRICE] else 0)*-1))"
   ])
 ;;
 
@@ -276,11 +273,9 @@ let (neg_deltas,neg_todos) =
 Debug.log_unit_test "Bigsum Delete Compilation" (string_of_list "\n")
   (List.map (fun (pm,rel,invars,params,rhs) -> term_as_string rhs) neg_deltas)
   ([
-    "((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME*-1)";
-    "(if (REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1))<(REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__BS1_3[]<=REWRITE__BS1_2[B1_PRICE] then REWRITE__BS1_1[B1_PRICE] else 0)";
-    "((if REWRITE__BS1_2[B1_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1)) then REWRITE__BS1_1[B1_PRICE] else 0)*-1)";
-    "((if (REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1))<(REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__BS1_3[]<=REWRITE__BS1_2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)";
-    "((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1)) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1*-1)"
+      "(-1*(((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] then QBIDS_QBIDS_PRICE else 0)*QBIDS_QBIDS_VOLUME)+(if (REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1))<(REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__BS1_3[]<=REWRITE__BS1_2[QBIDS_QBIDS_PRICE] then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)+((if REWRITE__BS1_2[QBIDS_QBIDS_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__BS1_2[QBIDS_QBIDS_PRICE]+(QBIDS_QBIDS_VOLUME*(if QBIDS_QBIDS_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1)) then (QBIDS_QBIDS_PRICE*QBIDS_QBIDS_VOLUME) else 0)*-1)))";
+      "((if (REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1))<(REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1)) and REWRITE__BS1_3[]<=REWRITE__BS1_2[B1_PRICE] then REWRITE__BS1_1[B1_PRICE] else 0)+((if REWRITE__BS1_2[B1_PRICE]<REWRITE__BS1_3[] and (REWRITE__BS1_3[]+(QBIDS_QBIDS_VOLUME*-1))<=(REWRITE__BS1_2[B1_PRICE]+(QBIDS_QBIDS_VOLUME*(if B1_PRICE<QBIDS_QBIDS_PRICE then 1 else 0)*-1)) then REWRITE__BS1_1[B1_PRICE] else 0)*-1))"
+
   ])
   (*
   ([
@@ -389,13 +384,13 @@ Debug.log_unit_test "RST Todos" (string_of_list0 "\n" (fun (defn, term) ->
       RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
       RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
     ]))),
-    map_term "Qr1" ["Qr_r_b",TInt]
+    map_term "Q_mr1" ["Qr_r_b",TInt]
   )];;
 
 Debug.log_unit_test "RST Deltas" (string_of_list0 "\n" term_as_string)
   (List.map (fun (_,_,_,_,x) -> x) rst_deltas)
   [make_term (
-    RProd[RVal(Var("Qr_a",TInt)); RVal(External("Qr1",["Qr_r_b",TInt]));
+    RProd[RVal(Var("Qr_a",TInt)); RVal(External("Q_mr1",["Qr_r_b",TInt]));
           RVal(Const(Int(-1)))]
   )]
 ;;
@@ -446,26 +441,21 @@ let (ladder_1_compiled, ladder_1_todos) =
 Debug.log_unit_test_list "Quad-Self-Join Stage 1 Term" term_as_string
   (List.map (fun (_,_,_,_,x) -> x) ladder_1_compiled)
   [
-    make_term (RVal(External("QR1",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR2",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR3",["QR_B",TInt])));
-    make_term (RVal(External("QR4",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR5",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RProd[RVal(External("QR6",["QR_A",TInt]));
-                     RVal(External("QR7",["QR_B",TInt]))]);
-    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR9",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RProd[RVal(External("QR6",["QR_A",TInt]));
-                     RVal(External("QR7",["QR_B",TInt]))]);
-    make_term (RVal(External("QR10",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR11",["QR_A",TInt])));
-    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(External("QR8",["QR_A",TInt;"QR_B",TInt])));
-    make_term (RVal(AggSum(RVal(Const(Int(1))),
-                           RA_Leaf(AtomicConstraint(Eq,
-                             RVal(Var("QR_A",TInt)),
-                             RVal(Var("QR_B",TInt)))))))
+    make_term (RSum[
+      (RVal(External("Q_pR1",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR3",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(AggSum(RVal(Const(Int(1))),
+                   RA_Leaf(AtomicConstraint(Eq,
+                     RVal(Var("QR_A",TInt)),
+                     RVal(Var("QR_B",TInt)))))));
+      (RVal(External("Q_pR4",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR5",["QR_B",TInt;"QR_A",TInt])));
+      (RVal(External("Q_pR6",["QR_A",TInt;"QR_B",TInt])));
+    ])
   ];;
 
 Debug.log_unit_test_list "Quad-Self-Join Stage 1 Todos" string_of_term_mapping 
@@ -477,7 +467,7 @@ Debug.log_unit_test_list "Quad-Self-Join Stage 1 Todos" string_of_term_mapping
         RA_Leaf(Rel("R",["B1__A",TInt;"B1__B",TInt]));
         RA_Leaf(Rel("R",["QR_B", TInt;"B1__B",TInt]))
       ]))),
-    map_term "QR1"  ["QR_A",TInt;"QR_B",TInt]
+    map_term "Q_pR1"  ["QR_A",TInt;"QR_B",TInt]
     ;
     make_term (RVal(AggSum(RVal(Const(Int(1))),
       RA_MultiNatJoin[

@@ -3,7 +3,7 @@ exception Assert0Exception of string
 open Util
 open Calculus
 
-type todo_list_t = Compiler.map_ref_t list
+type todo_list_t = Compiler.map_ref_t list * string list
 
 type map_key_binding_t = 
     Binding_Present of var_t
@@ -82,7 +82,8 @@ let translate_map_ref ((t, mt): Compiler.map_ref_t) : map_ref_t =
     | _ -> failwith "LHS of a map definition is not an External()"))
 
 
-let rec to_m3_initializer (map_def: term_t) (vars: var_t list) 
+let rec to_m3_initializer (sch:(string * (var_t list))list) 
+                          (map_def: term_t) (vars: var_t list) 
                           (map_prefix: string): (M3.calc_t * todo_list_t) =
   let nested_counter = ref(-1) in
   let rec map_of_nested t =
@@ -139,74 +140,199 @@ let rec to_m3_initializer (map_def: term_t) (vars: var_t list)
       | (_,RProd(bt)) -> RProd(a::bt)
       | (_,_) -> RProd([a;b])
   in
-  let rec extract_expression tau_and_theta =
+  let rec extract_expression (tau_and_theta:readable_term_t):
+                          ((readable_term_t * readable_term_t) * 
+                           (string * (term_t * term_t)) list) =
     match tau_and_theta with
       | RVal(AggSum(t,p)) ->
-         failwith "CalcToM3: Map definition contains nested aggsum"
-      | RVal(Const(c)) -> (RVal(Const c), RVal(Const(Int 1)))
+         let mk_aggsum term calc =
+            if calc = [] then term
+            else RVal(AggSum(term,(RA_MultiNatJoin(calc))))
+         in
+         let ((phi, psi),filter_todos) = extract_filters p in
+         let ((tau,theta),expr_todos) = extract_expression t in
+            (((mk_aggsum tau psi),(mk_aggsum theta phi)),
+             filter_todos @ expr_todos)
+      | RVal(Const(c)) -> ((RVal(Const c), RVal(Const(Int 1))), [])
       | RVal(Var(v)) -> 
          if (find_binding_term v (readable_term map_def)) then 
-            (RVal(Const(Int 1)), RVal(Var v))
-         else (RVal(Var v), RVal(Const(Int 1)))
+            ((RVal(Const(Int 1)), RVal(Var v)), [])
+         else 
+            ((RVal(Var v), RVal(Const(Int 1))), [])
       | RVal(External(_,_)) -> 
          failwith "CalcToM3: Map definition contains map reference";
       | RNeg(sub) ->
-         let (tau,theta) = extract_expression sub in (RNeg(tau), theta)
+         let ((tau,theta),todos) = extract_expression sub in 
+            ((RNeg(tau), theta), todos)
       | RProd(sub::rest) ->
-         let (stau,stheta) = extract_expression sub in
-         let (rtau,rtheta) = extract_expression (RProd(rest)) in
-            (merge_terms stau rtau, merge_terms stheta rtheta)
-      | RProd([]) -> (RVal(Const(Int 1)), RVal(Const(Int 1)))
+         let ((stau,stheta),stodos) = extract_expression sub in
+         let ((rtau,rtheta),rtodos) = extract_expression (RProd(rest)) in
+            ((merge_terms stau rtau, merge_terms stheta rtheta), 
+             (stodos @ rtodos))
+      | RProd([]) -> ((RVal(Const(Int 1)), RVal(Const(Int 1))), [])
       | RSum(list) ->
-         failwith "CalcToM3: Map definition contains sum";
+         let (subexps,todos) = List.split (List.map extract_expression list) in 
+         let (tau,theta) = List.split subexps in
+            if List.exists 
+               (fun x -> match x with (RVal(Const(_))) -> false | _ -> true)
+               tau
+            then (((RSum(list)), (RVal(Const(Int 1)))), [])
+            else (((RVal(Const(Int 1))), (RSum(list))), [])
   in
   (* TODO: invoke simplify here *)
-  match (readable_term map_def) with 
-    | RVal(AggSum(tau_and_theta, phi_and_psi)) ->
-      let ((phi, psi), nested_todos) = extract_filters phi_and_psi in
-      let (tau, theta) = extract_expression tau_and_theta in
-      let inner_vars = 
-        ListAsSet.union 
-          (term_vars (make_term theta))
-          (relcalc_vars (make_relcalc (RA_MultiNatJoin(phi))))
-      in
-      let outer_vars =
-        ListAsSet.union vars
-          (relcalc_vars (make_relcalc (RA_MultiNatJoin(psi))))
-      in
-      let init_map_name = map_prefix^"_init" in
-      let init_map_term = 
-        RVal(External(init_map_name, 
-                      ListAsSet.inter inner_vars outer_vars))
-      in
-      let init_map_defn = RVal(AggSum(theta,RA_MultiNatJoin(phi))) in
-      let init_map_ref = (make_term init_map_defn, make_term init_map_term) in
-      let (translated_init,other_todos) =
-        begin 
-          Debug.print "DUMP-INITIALIZERS" (fun () -> 
-            "Cond: "^(Util.list_to_string (fun x -> 
-                  (relcalc_as_string (make_relcalc x))) psi)^
-            " AND "^(Util.list_to_string (fun x -> 
-                  (relcalc_as_string (make_relcalc x))) phi)^
-            "\n  Init: "^(term_as_string 
-                  (make_term init_map_term))^
-            "\n  Defn: "^(term_as_string 
-                  (make_term theta)));
-          (to_m3 
-            (if psi = [] then failwith "Conditionless map initializer." else
-              RVal(AggSum((merge_terms init_map_term tau), RA_MultiNatJoin(psi))))
-            (List.fold_left
-              (fun acc (nested_mapn, nested_map_ref) ->
-                StringMap.add nested_mapn (translate_map_ref nested_map_ref) acc)
-              (StringMap.add init_map_name 
-                (translate_map_ref init_map_ref) StringMap.empty)
-              nested_todos))
-        end
-      in
-        (translated_init, (List.map snd nested_todos)@other_todos@[init_map_ref])
+  let rec init_for_expr (expr:readable_term_t): (M3.calc_t * todo_list_t) = 
+     let auxl f l default: (M3.calc_t * todo_list_t) = 
+       let (terms, todos) = 
+         List.split (List.map init_for_expr l) 
+       in
+       let (todo_maps,todo_rels) = List.split todos in
+         if terms = [] then (M3.mk_c default, ([],[])) else
+            (  List.fold_left f (List.hd terms) (List.tl terms), 
+               (List.flatten todo_maps, List.flatten todo_rels)
+            )
+     in
+     match expr with 
+       | RSum(l) ->  auxl M3.mk_sum l (0.)
+       | RProd(l) -> auxl M3.mk_prod l (1.)
+       | RNeg(t) -> 
+         let (term,todos) = init_for_expr t in 
+            ((M3.mk_prod (M3.mk_c (-1.)) term), todos)
+       | RVal(Const(Int(c)))    -> (M3.mk_c (float_of_int c), ([], []))
+       | RVal(Const(Double(c))) -> (M3.mk_c c, ([], []))
+       | RVal(Const(_)) -> failwith "M3 unsupported type"
+       | RVal(Var(v)) -> (M3.mk_v (fst v), ([], []))
+       | RVal(AggSum(tau_and_theta, phi_and_psi)) ->
+         let ((phi, psi), nested_todos) = extract_filters phi_and_psi in
+         let ((tau, theta), expr_todos) = extract_expression tau_and_theta in
+         let inner_vars = 
+           ListAsSet.union 
+             (term_vars (make_term theta))
+             (relcalc_vars (make_relcalc (RA_MultiNatJoin(phi))))
+         in
+         let outer_vars =
+           ListAsSet.union vars
+             (relcalc_vars (make_relcalc (RA_MultiNatJoin(psi))))
+         in
+         let init_map_name = map_prefix^"_init" in
+         let init_map_term = 
+           RVal(External(init_map_name, 
+                         ListAsSet.inter inner_vars outer_vars))
+         in
+         let init_map_defn = RVal(AggSum(theta,RA_MultiNatJoin(phi))) in
+         let init_map_ref = (make_term init_map_defn, make_term init_map_term) in
+         let (translated_init,other_todos) =
+           begin 
+             Debug.print "DUMP-INITIALIZERS" (fun () -> 
+               "Cond: "^(Util.list_to_string (fun x -> 
+                     (relcalc_as_string (make_relcalc x))) psi)^
+               " AND "^(Util.list_to_string (fun x -> 
+                     (relcalc_as_string (make_relcalc x))) phi)^
+               "\n  Init: "^(term_as_string 
+                     (make_term init_map_term))^
+               "\n  Defn: "^(term_as_string 
+                     (make_term theta)));
+             (to_m3 sch 
+               (if psi = [] 
+                  then (merge_terms init_map_term tau)
+                  else
+                    RVal(AggSum((merge_terms init_map_term tau), 
+                                RA_MultiNatJoin(psi)))
+               )
+               (List.fold_left
+                 (fun acc (nested_mapn, nested_map_ref) ->
+                   StringMap.add nested_mapn (translate_map_ref nested_map_ref) acc)
+                 (StringMap.add init_map_name 
+                   (translate_map_ref init_map_ref) StringMap.empty)
+                 (nested_todos @ expr_todos)))
+           end
+         in
+           (translated_init, 
+            ListExtras.flatten_list_pair [
+               ((List.map snd nested_todos), []); 
+               other_todos; 
+               ([init_map_ref], [])
+            ])
+   
+       | _ -> failwith ("TODO: to_m3_initializer: "^
+                         (term_as_string (make_term expr)))
+   in
+      init_for_expr (readable_term map_def)
 
-    | _ -> failwith ("TODO: to_m3_initializer: "^
-                      (term_as_string map_def))
+(********************************)
+
+and to_naive_m3_initializer (sch:(string * (var_t list))list) 
+                            (map_def: term_t) (vars: var_t list) 
+                            (map_prefix: string): (M3.calc_t * todo_list_t) =
+
+   let rec rewrite_calc (c:readable_relcalc_t): 
+         (M3.calc_t * (Compiler.map_ref_t list * 
+                       (string * var_t list option) list)) = 
+      let merge_calc mk_elem list = 
+         let (elems, todos) = List.split (List.map rewrite_calc list) in
+         (mk_elem elems, ListExtras.flatten_list_pair todos)
+      in
+      match c with 
+      | RA_Leaf(AtomicConstraint(cmp,lhs,rhs)) -> 
+         let (new_lhs, (lhs_todos,lhs_rels)) = rewrite_term lhs in
+         let (new_rhs, (rhs_todos,rhs_rels)) = rewrite_term rhs in
+            (  (match cmp with 
+                  | Eq -> M3.mk_eq
+                  | Le -> M3.mk_leq
+                  | Lt -> M3.mk_lt
+                  | Neq -> (fun a b -> M3.mk_prod (M3.mk_lt a b) (M3.mk_lt b a))
+               ) new_lhs new_rhs, 
+               (  lhs_todos @ rhs_todos, 
+                  (List.map (fun x -> (x, None)) (lhs_rels @ rhs_rels)) )
+            )
+      | RA_Leaf(Rel(r,rv)) -> ((M3.mk_c 1.), ([], [r,(Some(rv))]))
+      | RA_Leaf(True) -> ((M3.mk_c 1.), ([], []))
+      | RA_Leaf(False) -> ((M3.mk_c 0.), ([], []))
+      | RA_Neg(n)  -> 
+         let (new_n, todos) = rewrite_calc n in
+            ((M3.mk_eq (M3.mk_c 0.) new_n), todos)
+      | RA_MultiNatJoin(plist) -> merge_calc M3.mk_prod_list plist
+      | RA_MultiUnion(slist)   -> merge_calc M3.mk_sum_list slist
+   and rewrite_term (t:readable_term_t): (M3.calc_t * todo_list_t) =
+      let merge_term mk_elem list = 
+         let (elems, todos) = List.split (List.map rewrite_term list) in
+         (mk_elem elems, ListExtras.flatten_list_pair todos)
+      in
+      match t with
+         | RVal(AggSum(subt,subc)) -> 
+            let (new_subt, (subt_todos, trels)) = rewrite_term subt in
+            let (new_subc, (subc_todos, crels)) = rewrite_calc subc in
+            let ret_term = (
+               if new_subc = M3.mk_c 1.
+               then new_subt
+               else M3.mk_if new_subc new_subt
+            ) in
+               (  (List.fold_left (fun term (reln, relv_opt) -> 
+                        match relv_opt with 
+                        | Some(relv) -> 
+                           M3.mk_prod
+                              (M3.mk_ma (
+                                 reln, 
+                                 [], 
+                                 (List.map translate_var relv), 
+                                 ((M3.mk_c 0.), ())
+                              ))
+                              term
+                        | None -> term
+                     ) ret_term crels), 
+                  (subt_todos @ subc_todos, 
+                   trels @ (ListAsSet.no_duplicates (List.map fst crels)))
+               )
+         | RVal(_) -> to_m3 sch t StringMap.empty
+         | RNeg(n) -> 
+            let (new_n, todos) = rewrite_term n in
+               (M3.mk_prod (M3.mk_c (-1.)) new_n, todos)
+         | RProd(plist) -> 
+            merge_term M3.mk_prod_list plist
+         | RSum(slist) -> 
+            merge_term M3.mk_sum_list slist
+            
+   in
+      rewrite_term (readable_term map_def)
 
 (********************************)
 and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t): 
@@ -220,6 +346,7 @@ and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t):
 (********************************)
 
 and to_m3_map_access 
+    (sch:(string * (var_t list)) list)
     ((map_definition, map_term, bindings):map_ref_t)
     (vars:var_t list option) :
       M3.mapacc_t * todo_list_t =
@@ -243,13 +370,14 @@ and to_m3_map_access
           the presence of input variables *)
     if (List.length input_var_list) > 0
     then
-      to_m3_initializer 
-      (apply_variable_substitution_to_term
-        (ListAsSet.no_duplicates (List.combine basevars mapvars))
-        map_definition)
-      (input_var_list@output_var_list)
-      mapn
-    else (M3.mk_c 0.0, [])
+      to_naive_m3_initializer 
+         sch
+         (apply_variable_substitution_to_term
+           (ListAsSet.no_duplicates (List.combine basevars mapvars))
+           map_definition)
+         (input_var_list@output_var_list)
+         mapn
+    else (M3.mk_c 0.0, ([], []))
   in
     ((mapn, 
       (fst (List.split input_var_list)), 
@@ -260,21 +388,24 @@ and to_m3_map_access
 (********************************)
 
 and to_m3 
+  (sch: (string * var_t list) list)
   (t: readable_term_t) 
   (inner_bindings:map_ref_t Map.Make(String).t) : 
   M3.calc_t * todo_list_t =
-  
+   let rcr subt subb = to_m3 sch subt subb in
    let calc_lf_to_m3 lf =
       match lf with
          AtomicConstraint(op,  t1, t2) ->
-            let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
-            let (rhs, rhs_todos) = (to_m3 t2 inner_bindings) in
+            let (lhs, lhs_todos) = (rcr t1 inner_bindings) in
+            let (rhs, rhs_todos) = (rcr t2 inner_bindings) in
               ((match op with 
                   Eq -> M3.mk_eq
                 | Le -> M3.mk_leq
                 | Lt -> M3.mk_lt
                 | _ -> failwith ("CalcToM3.to_m3: TODO: cmp_op")
-              ) lhs rhs, lhs_todos@rhs_todos)
+                (* This should work here: 
+                  (fun a b -> M3.mk_mult (M3.mk_lt a b) (M3.mk_lt b a)) *)
+              ) lhs rhs, ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
        | _ -> failwith ("CalcToM3.to_m3: TODO constraint '"^
                    (relcalc_as_string
                      (make_relcalc (RA_Leaf(lf))))^"' in '"^
@@ -290,7 +421,8 @@ and to_m3
           let (rhs, rhs_todos) = 
             (calc_to_m3 (RA_MultiNatJoin(rest))) 
           in
-            ((M3.mk_prod lhs rhs), lhs_todos@rhs_todos)
+            ((M3.mk_prod lhs rhs), 
+             ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
        | RA_MultiNatJoin([]) -> failwith "This shouldn't happen"
        | RA_MultiUnion(_) -> failwith ("BUG: non-monomial delta term")
        | RA_Neg(_) -> failwith ("BUG: negation in delta term")
@@ -301,15 +433,17 @@ and to_m3
    let lf_to_m3 (lf: readable_term_lf_t) =
       match lf with
        | AggSum(t,RA_MultiNatJoin([])) -> (*if true*)
-            (to_m3 t inner_bindings)
+            (rcr t inner_bindings)
        | AggSum(t,phi)             -> 
             let (lhs, lhs_todos) = (calc_to_m3 phi) in
-            let (rhs, rhs_todos) = (to_m3 t inner_bindings) in
-              ((M3.mk_if lhs rhs), lhs_todos@rhs_todos)
+            let (rhs, rhs_todos) = (rcr t inner_bindings) in
+              ((M3.mk_if lhs rhs), 
+               ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
        | External(mapn, map_vars)      -> 
           begin try
               let (access_term, todos) = 
                 (to_m3_map_access 
+                  sch
                   (StringMap.find mapn inner_bindings)
                   (Some(map_vars)))
               in
@@ -321,36 +455,37 @@ and to_m3
                   inner_bindings "")^"}\n")
           end
 
-       | Var(vn,vt)            -> (M3.mk_v vn, [])
-       | Const(Int c)          -> (M3.mk_c (float_of_int c), [])
-       | Const(Double c)       -> (M3.mk_c c, [])
+       | Var(vn,vt)            -> (M3.mk_v vn, ([], []))
+       | Const(Int c)          -> (M3.mk_c (float_of_int c), ([], []))
+       | Const(Double c)       -> (M3.mk_c c, ([], []))
        | Const(Long _)         -> failwith "Compiler.to_m3: TODO Long"
-       | Const(String c)       -> (M3.mk_c (float_of_int (Hashtbl.hash c)), [])
-       | Const(Boolean(false)) -> (M3.mk_c 0., [])
-       | Const(Boolean(true))  -> (M3.mk_c 1., [])
+       | Const(String c)       -> (M3.mk_c (float_of_int (Hashtbl.hash c)), 
+                                   ([], []))
+       | Const(Boolean(false)) -> (M3.mk_c 0., ([], []))
+       | Const(Boolean(true))  -> (M3.mk_c 1., ([], []))
 
    in
    match t with
       RVal(lf)      -> lf_to_m3 lf
     | RNeg(t1)      -> 
-        let (rhs, todos) = (to_m3 t1 inner_bindings) in
+        let (rhs, todos) = (rcr t1 inner_bindings) in
         (M3.mk_prod (M3.mk_c (-1.0)) rhs, todos)
-    | RProd(t1::[]) -> (to_m3 t1 inner_bindings)
+    | RProd(t1::[]) -> (rcr t1 inner_bindings)
     | RProd(t1::l)  -> 
-        let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
-        let (rhs, rhs_todos) = (to_m3 (RProd l) inner_bindings) in
-        (M3.mk_prod lhs rhs, lhs_todos@rhs_todos)
+        let (lhs, lhs_todos) = (rcr t1 inner_bindings) in
+        let (rhs, rhs_todos) = (rcr (RProd l) inner_bindings) in
+        (M3.mk_prod lhs rhs, ListExtras.flatten_list_pair [lhs_todos;rhs_todos])
     | RProd([])     -> 
-        (M3.mk_c 1.0, [])
+        (M3.mk_c 1.0, ([], []))
         (* impossible case, though *)
     | RSum(t1::[])  -> 
-        (to_m3 t1 inner_bindings)
+        (rcr t1 inner_bindings)
     | RSum(t1::l)   -> 
-        let (lhs, lhs_todos) = (to_m3 t1 inner_bindings) in
-        let (rhs, rhs_todos) = (to_m3 (RSum l) inner_bindings) in
-        (M3.mk_sum lhs rhs, lhs_todos@rhs_todos)
+        let (lhs, lhs_todos) = (rcr t1 inner_bindings) in
+        let (rhs, rhs_todos) = (rcr (RSum l) inner_bindings) in
+        (M3.mk_sum lhs rhs, ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
     | RSum([])      -> 
-        (M3.mk_c 0.0, []) 
+        (M3.mk_c 0.0, ([], [])) 
         (* impossible case, though *)
 
 module M3InProgress = struct
@@ -534,19 +669,22 @@ module M3InProgress = struct
               (schema:(string*(var_t list)) list)
               (map_ref:Compiler.map_ref_t)
               (accum:t) : t =
-    Compiler.compile ~top_down_depth:top_down_depth
-                     ModeOpenDomain
-                     schema
-                     map_ref
-                     generate_m3
-                     accum
+    let (_,_,_,maps) = accum in
+    if List.mem_assoc (fst (decode_map_term (snd map_ref))) maps
+       then  accum
+       else  Compiler.compile ~top_down_depth:top_down_depth
+                              ModeOpenDomain
+                              schema
+                              map_ref
+                              generate_m3
+                              accum
     
   and generate_m3 (schema: (string*(var_t list)) list)
                   (map_ref: Compiler.map_ref_t)
                   (triggers: Compiler.trigger_definition_t list)
                   (accum: t): t =
     let map_ref_as_m3 = translate_map_ref map_ref in
-    let (triggers_as_m3, todos) = 
+    let (triggers_as_m3, (std_todos, rel_todos)) = 
       List.fold_left (fun (tlist,old_todos) 
                           (delete, reln, relvars, (params,bsvars), expr) ->
         
@@ -559,10 +697,12 @@ module M3InProgress = struct
             map_bindings)
         in
         let (target_access, init_todos) = 
-          (to_m3_map_access (sub_map_params map_ref_as_m3 params)) None in
+          (to_m3_map_access schema 
+                            (sub_map_params map_ref_as_m3 params)) None in
         let (update, update_todos) =
-          to_m3 (readable_term expr) (get_map_refs accum) in
-        let todos = old_todos @ init_todos @ update_todos in
+          to_m3 schema (readable_term expr) (get_map_refs accum) in
+        let todos = 
+          ListExtras.flatten_list_pair [old_todos; init_todos; update_todos] in
         let update_trigger =
           ((if delete then M3.Delete else M3.Insert),
             reln, (translate_schema relvars),
@@ -579,7 +719,14 @@ module M3InProgress = struct
           
           if delete && Debug.active "DISABLE-DELETES" then (tlist, old_todos) 
           else (tlist @ [ update_trigger ], todos))
-      ([], []) triggers
+      ([], ([], [])) triggers
+    in
+    let todos = std_todos @ (ListAsSet.no_duplicates (List.map (fun reln ->
+      (  make_term (RVal(AggSum((RVal(Const(Int(1)))), 
+                                (RA_Leaf(Rel(reln, List.assoc reln schema)))))),
+         (map_term reln (List.assoc reln schema))
+      )
+    ) rel_todos))
     in
       (build 
         (List.fold_left 

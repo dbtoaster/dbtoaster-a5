@@ -12,7 +12,7 @@
   non-comparison portions) of the defining query. Consequently, the M3 
   translation code can produce additional compilation work.
 *)
-type todo_list_t = Compiler.map_ref_t list
+type todo_list_t = Compiler.map_ref_t list * string list
 
 (*
   Variable bindings are used to distinguish between Input and Output Variables.
@@ -58,7 +58,8 @@ type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t)
   In the process of computing this expression, also identify which maps are 
   referenced inside the expression. (see todo_list_t, above)
 *)
-val to_m3_initializer: Calculus.term_t -> Calculus.var_t list -> string ->
+val to_m3_initializer: (string * Calculus.var_t list) list -> 
+                       Calculus.term_t -> Calculus.var_t list -> string ->
                        (M3.calc_t * todo_list_t)
 
 (*
@@ -69,6 +70,7 @@ val to_m3_initializer: Calculus.term_t -> Calculus.var_t list -> string ->
   referenced inside the expression. (see relation_set_t, above)
 *)
 val to_m3_map_access:
+  (string * Calculus.var_t list) list ->
   map_ref_t ->
   Calculus.var_t list option ->
   (M3.mapacc_t * todo_list_t)
@@ -86,6 +88,7 @@ val to_m3_map_access:
   referenced inside the expression. (see relation_set_t, above)
 *)
 val to_m3:
+  (string * Calculus.var_t list) list ->
   Calculus.readable_term_t ->
   map_ref_t Map.Make(String).t ->
   (M3.calc_t * todo_list_t)

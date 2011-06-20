@@ -92,6 +92,12 @@ let flag_descriptors =
       (["-?";"--help"], 
           ("HELP",    ParseArgs.NO_ARG),  "", 
           "Display this help text." );
+      (["-I"],
+          ("INCLUDE_HDR", ParseArgs.ARG_LIST), "<path> [<path> [...]]",
+          "Add a header include path for C++ compilation (equivalent to the DBT_HDR environment variable)");
+      (["-L"],
+          ("INCLUDE_LIB", ParseArgs.ARG_LIST), "<path> [<path> [...]]",
+          "Add a library include path for C++ compilation (equivalent to the DBT_LIB environment variable)");
     ];;
 
 let arguments = ParseArgs.parse flag_descriptors;;
@@ -434,13 +440,30 @@ let compile_ocaml_from_output () =
      | Some(a)   -> compile_ocaml a
 ;;
 
+let cpp_compile_flags flag_switch flag_name env_name =
+   List.flatten (List.map (fun x -> [flag_switch; x]) (
+      (flag_vals flag_name) @
+      ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
+        with Not_found -> [] )
+   ))
+;;
+
 let compile_cpp in_file_name =
   let cpp_cc = "g++" in
     Unix.execvp cpp_cc 
       ( Array.of_list (
-        [ cpp_cc; 
-          "-I"; "lib/c++" ;
-          in_file_name ;"-O3"; "-o" ; (flag_val_force "COMPILE")]
+         cpp_cc ::
+         (cpp_compile_flags "-I" "INCLUDE_HDR" "DBT_HDR") @
+         (cpp_compile_flags "-L" "INCLUDE_LIB" "DBT_LIB") @
+         [ "-I"; "." ;
+           "-lboost_program_options";
+           "-lboost_serialization";
+           "-lboost_system";
+           "-lboost_filesystem";
+           "-O3";
+           in_file_name ;
+           "-o"; (flag_val_force "COMPILE")
+         ]
       ));;
 
 let compile_cpp_via_tmp () =

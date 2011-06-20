@@ -146,9 +146,11 @@ OOPT_FLAGS = $(INCLUDE_DIR) $(INCLUDE_OPT) \
 						 -ccopt -O3 -nodynlink -unsafe -noassert
 ODEP_FLAGS = $(INCLUDE_DIR)
 
-.PHONY: all driver top test runtop clean deps 
+DEBUG_APP=sh -c 'echo ==== $$1 ====; ./dbtoaster_top $(INCLUDE_DIR) $$1' --
 
 all: deps dbtoaster_top dbtoaster
+
+.PHONY: all driver top test runtop clean deps 
 	
 driver: dbtoaster
 
@@ -216,30 +218,30 @@ test/sql/simple/postgres/%: test/sql/simple/postgres/%.sql
 
 ## Unit tests
 test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/unroly.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/roly.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/FormulaTest.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/TermTest.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/calctom3.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/CompilerTest.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/compiler.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/m3_ex.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_rst.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_vwap.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_sgl.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/k3_ocaml_queries.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/tpch_compilation.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/AxFinder.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/CustSupp.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/MyTpchTest.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Partner.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Ssb-simple.ml
-#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/Ssb.ml
-	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ12.ml
-#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ18.ml
-#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/TpchQ22.ml
-#	@./dbtoaster_top $(INCLUDE_DIR) test/examples/VwapTest.ml
+	@$(DEBUG_APP) test/unit/unroly.ml
+	@$(DEBUG_APP) test/unit/roly.ml
+	@$(DEBUG_APP) test/unit/FormulaTest.ml
+	@$(DEBUG_APP) test/unit/TermTest.ml
+	@$(DEBUG_APP) test/unit/calctom3.ml
+	@$(DEBUG_APP) test/unit/CompilerTest.ml
+	@$(DEBUG_APP) test/unit/compiler.ml
+	@$(DEBUG_APP) test/unit/m3_ex.ml
+	@$(DEBUG_APP) test/unit/k3_ocaml.ml
+	@$(DEBUG_APP) test/unit/k3_ocaml_rst.ml
+	@$(DEBUG_APP) test/unit/k3_ocaml_vwap.ml
+	@$(DEBUG_APP) test/unit/k3_ocaml_sgl.ml
+	@$(DEBUG_APP) test/unit/k3_ocaml_queries.ml
+	@$(DEBUG_APP) test/unit/tpch_compilation.ml
+	@$(DEBUG_APP) test/examples/AxFinder.ml
+	@$(DEBUG_APP) test/examples/CustSupp.ml
+	@$(DEBUG_APP) test/examples/MyTpchTest.ml
+	@$(DEBUG_APP) test/examples/Partner.ml
+	@$(DEBUG_APP) test/examples/Ssb-simple.ml
+#	@$(DEBUG_APP) test/examples/Ssb.ml
+	@$(DEBUG_APP) test/examples/TpchQ12.ml
+#	@$(DEBUG_APP) test/examples/TpchQ18.ml
+#	@$(DEBUG_APP) test/examples/TpchQ22.ml
+#	@$(DEBUG_APP) test/examples/VwapTest.ml
 
 ok_test: top
 	@./dbtoaster_top $(INCLUDE_DIR) test/unit/unroly.ml

@@ -126,7 +126,9 @@ type prog_t =   (calcmeta_t, aggmeta_t, stmtmeta_t) generic_prog_t;;
 
 (* Construction *)
 val mk_sum : calc_t -> calc_t -> calc_t 
+val mk_sum_list : calc_t list -> calc_t
 val mk_prod : calc_t -> calc_t -> calc_t 
+val mk_prod_list : calc_t list -> calc_t
 val mk_lt : calc_t -> calc_t -> calc_t
 val mk_leq : calc_t -> calc_t -> calc_t 
 val mk_eq : calc_t -> calc_t -> calc_t 

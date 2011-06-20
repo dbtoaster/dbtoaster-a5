@@ -162,6 +162,8 @@ val string_of_term:    term_t    -> string
 (* all the variables that occur in the formula resp. term. *)
 val relcalc_vars: relcalc_t -> var_t list
 val term_vars:       term_t -> var_t list
+val relcalc_relations: relcalc_t -> string list
+val term_relations:       term_t -> string list
 
 (* set of safe variables of a formula; a formula phi is range-restricted
    given a set of bound variables (which are treated like constants, i.e.,

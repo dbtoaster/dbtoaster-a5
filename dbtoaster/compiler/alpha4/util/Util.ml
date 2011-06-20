@@ -75,6 +75,17 @@ struct
             | curr::next -> (f prev curr next) :: (iterate (prev@[curr]) next)
       in iterate [] l
 
+   let reduce_assoc (l:('a * 'b) list): (('a * ('b list)) list) =
+      List.fold_right (fun (a,b) ret ->
+         if List.mem_assoc a ret
+         then (a, b :: (List.assoc a ret)) :: (List.remove_assoc a ret)
+         else (a, [b]) :: ret
+      ) l []
+
+   let flatten_list_pair (l:('a list * 'b list) list): ('a list * 'b list) =
+      let (a, b) = List.split l in
+         (List.flatten a, List.flatten b)
+
    let outer_join_assoc (a:(('c * 'a) list)) (b:(('c * 'b) list)):
                         ('c * ('a option * 'b option)) list =
       let (outer_b, join) = 
@@ -852,13 +863,32 @@ struct
   
   let active df = StringSet.mem df !DebugInternal.debug_modes;;
   
+  let os () =
+    let fdes = (Unix.open_process_in "uname") in
+    let ostr = try input_line fdes with End_of_file -> "???" in
+    let _ = (Unix.close_process_in fdes) in
+      ostr
+  
+  let showdiff exp_str fnd_str = 
+     print_string ("--Expected--\n"^exp_str^
+               "\n\n--Result--\n"^fnd_str^"\n\n"); 
+     match (os ()) with
+       | "Darwin" -> (
+            GenericIO.write (GenericIO.O_TempFile("exp", ".diff", (fun exp_f -> 
+            GenericIO.write (GenericIO.O_TempFile("fnd", ".diff", (fun fnd_f ->
+               let _ = Unix.system("opendiff "^exp_f^" "^fnd_f) in ()
+            ))) (fun fd -> output_string fd (fnd_str^"\n"))
+            ))) (fun fd -> output_string fd (exp_str^"\n"))
+         )
+       | _ -> ()
+  
   let log_unit_test 
         (title:string) (to_s:'a -> string) (result:'a) (expected:'a) : unit =
     if result = expected then print_endline (title^": Passed")
     else 
       (
-        print_string (title^": Failed\n--Expected--\n"^(to_s expected)^
-                                   "\n\n--Result--\n"^(to_s result)^"\n\n"); 
+        print_endline (title^": Failed");
+        showdiff (to_s expected) (to_s result);
         exit 1
       );;
   
@@ -891,9 +921,8 @@ struct
                 ("","")
         in
         let (result_diffs, expected_diffs) = diff_lists result expected in
-        print_string (title^
-          ": Failed\n--Expected (diffs) --\n"^(expected_diffs)^
-          "\n--Result (diffs) --\n"^(result_diffs)^"\n"); 
+        print_endline (title^": Failed");
+        showdiff (expected_diffs) (result_diffs);
         exit 1
       );;
 end

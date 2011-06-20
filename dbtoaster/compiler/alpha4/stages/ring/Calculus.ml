@@ -181,7 +181,31 @@ and term_vars term: var_t list =
                  Util.ListAsSet.multiunion
                  (fun x->x) leaf_f term
 
+;;
 
+let rec relcalc_relations (calc:relcalc_t): string list =
+   CalcRing.fold ListAsSet.multiunion ListAsSet.multiunion (fun x->x) 
+                  (  fun x -> match x with 
+                        | Rel(s,_) -> [s]
+                        | AtomicConstraint(_,t1,t2) -> 
+                           ListAsSet.union (term_relations t1)
+                                           (term_relations t2)
+                        | False -> [] | True -> []
+                  )
+                  calc
+
+and term_relations (term:term_t): string list =
+   TermRing.fold ListAsSet.multiunion ListAsSet.multiunion (fun x->x) 
+                  (  fun x -> match x with
+                        | AggSum(t,c) -> 
+                           ListAsSet.union (term_relations t)
+                                           (relcalc_relations c)
+                        | External(_,_) -> []
+                        | Const(_) -> [] | Var(_) -> []
+                  )
+                  term
+
+;;
 
 type rr_ret_t = (var_t list) * ((var_t * var_t) list)
 
@@ -758,7 +782,7 @@ let decode_map_term (map_term: term_t):
                     (string * (var_t list)) =
    match (readable_term map_term) with
       RVal(External(n, vs)) -> (n, vs)
-    | _ -> failwith "Calculus.decode_map_term";;
+    | _ -> failwith ("Calculus.decode_map_term:"^(string_of_term map_term));;
 
 let map_term (map_name:string) (map_vars:var_t list): term_t =
   make_term (RVal(External(map_name, map_vars)))
@@ -1338,6 +1362,10 @@ let equate_terms (term_a:term_t) (term_b:term_t): (string StringMap.t) =
 type roly_factor = RFCalc of relcalc_t | RFTerm of term_t
 
 let rec un_roly_poly (monomials:term_t list): term_t = 
+   Debug.print "LOG-UN-ROLY" (fun () ->
+      "Un-Roly Of : \n   " ^
+         (string_of_list0 "\n   " string_of_term monomials)
+   );
    let extract_candidates (m:term_t): 
                           ((roly_factor * var_t list) * term_t) list = 
       let extract_var (vt:term_t) = match vt with
@@ -1422,6 +1450,15 @@ let rec un_roly_poly (monomials:term_t list): term_t =
    let (best, _) =
       List.hd (List.sort (fun (_,a) (_,b) -> compare b a) candidate_counts)
    in
+   if (fst best) = (RFTerm(TermRing.one)) then 
+      TermRing.mk_sum monomials else (
+   Debug.print "LOG-UN-ROLY" (fun () ->
+      " --> Extracting : "^(
+         match (fst best) with 
+            | RFCalc(c) -> string_of_relcalc c
+            | RFTerm(t) -> string_of_term t
+      )
+   );
    let (with_term,without_term) = 
       List.partition (fun (_,candidates) ->
          List.mem_assoc best candidates
@@ -1436,9 +1473,18 @@ let rec un_roly_poly (monomials:term_t list): term_t =
       TermRing.mk_sum [
          un_roly_poly without_term_monomials;
          (  match (fst best) with
-            | RFCalc(c) -> 
-               TermRing.mk_val(AggSum(un_roly_poly with_term_monomials, c))
+            | RFCalc(c) ->
+               let with_un_roly = (un_roly_poly with_term_monomials) in
+                  (  match with_un_roly with
+                     | TermRing.Val(AggSum(subt,subc)) -> 
+                        TermRing.mk_val(AggSum(
+                           subt,
+                           (CalcRing.mk_prod [c; subc])
+                        ))
+                     | _ -> TermRing.mk_val(AggSum(with_un_roly, c))
+                  )
             | RFTerm(t) -> 
                TermRing.mk_prod[t;un_roly_poly with_term_monomials]
          )
       ]
+   )
