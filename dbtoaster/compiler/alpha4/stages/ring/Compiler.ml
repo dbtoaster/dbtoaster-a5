@@ -87,7 +87,7 @@ let compile_delta_for_rel (produce_child_maps: bool)
       params is the list of parameters to the map.
    *)
    let tuple = (List.map (fun (v,t) -> mapn^reln^"_"^v,t) relsch) in
-
+   
    Debug.print "LOG-COMPILE-STEPS" (fun () -> "Compiling " ^
                   (if delete then "-" else "+")^reln^
                   (Util.list_to_string fst tuple)^" of "^ 
@@ -191,6 +191,9 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                 (accum:'a): 'a =
 
   let (mapn, map_params) = Calculus.decode_map_term map_term in
+
+  Debug.print "LOG-MAP-NAMES" (fun () -> "Compiling "^mapn);
+
   if StringMap.mem mapn !dup_elim then 
     (try
       let _ = Calculus.equate_terms (StringMap.find mapn !dup_elim) map_definition 

@@ -451,22 +451,23 @@ let cpp_compile_flags flag_switch flag_name env_name =
 
 let compile_cpp in_file_name =
   let cpp_cc = "g++" in
-    Unix.execvp cpp_cc 
-      ( Array.of_list (
-         cpp_cc ::
-         (cpp_compile_flags "-I" "INCLUDE_HDR" "DBT_HDR") @
-         (cpp_compile_flags "-L" "INCLUDE_LIB" "DBT_LIB") @
-         [ "-I"; "." ;
-           "-lboost_program_options";
-           "-lboost_serialization";
-           "-lboost_system";
-           "-lboost_filesystem";
-           "-O3";
-           in_file_name ;
-           "-o"; (flag_val_force "COMPILE")
-         ]
-      ));;
-
+  let cpp_args = (
+      cpp_cc ::
+      (cpp_compile_flags "-I" "INCLUDE_HDR" "DBT_HDR") @
+      (cpp_compile_flags "-L" "INCLUDE_LIB" "DBT_LIB") @
+      [ "-I"; "." ;
+        "-lboost_program_options";
+        "-lboost_serialization";
+        "-lboost_system";
+        "-lboost_filesystem";
+        "-O3";
+        in_file_name ;
+        "-o"; (flag_val_force "COMPILE")
+      ]
+   ) in
+      Debug.print "LOG-COMPILE" (fun () -> (string_of_list " " cpp_args));
+      Unix.execvp cpp_cc (Array.of_list cpp_args)
+;;
 let compile_cpp_via_tmp () =
   compile (GenericIO.O_TempFile("dbtoaster_", ".cpp", compile_cpp));;
 
