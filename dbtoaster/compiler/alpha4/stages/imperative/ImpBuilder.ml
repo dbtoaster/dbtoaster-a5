@@ -500,8 +500,12 @@ struct
         let assoc_arg_f = meta_of_assoc_arg in
         match t with
         
-        (* Lambdas push down their symbol to the function body *)
-        | Lambda _ | AssocLambda _ -> [pushi 0], [], [None]
+        (* Lambdas push down their symbol to the function body. The lambda's
+         * body may use declarations that need to be defined at the lambda's
+         * scope, such as for nested maps, where the inner map's body appends
+         * to the declaration. *)
+        | Lambda _ | AssocLambda _ ->
+          let x = pushi 0 in [x], [], [decl_f false x]
         
         (* Apply always pushes down the return symbol to the function, and
          * in the case of single args, push down the arg symbol *)
@@ -524,7 +528,7 @@ struct
          * the return type is unit. Maps yield the new collection as the symbol
          * thus do not pass it on to any children. *)
         | Iterate | Map ->
-            cmeta, [arg_of_lambda (ctag 0)], [None; decl_f false (cmetai 1)]
+          cmeta, [arg_of_lambda (ctag 0)], [None; decl_f false (cmetai 1)]
 
         | Aggregate ->
             let arg1, arg2 = arg_of_assoc_lambda (ctag 0) in
@@ -707,10 +711,8 @@ struct
               let t = Host(K.TTuple(List.map snd it_l)) in 
               let x = gensym() in x, t, false, bind_arg arg (Var(None,(x,t)))
         in
-        let fn_body = match cimpo 0, cexpro 0 with
-          | Some(i), None -> i
-          | _,_ -> failwith "invalid iterate function" 
-        in
+        let fn_body = match_ie 0 "invalid iterate function"
+          (fun i -> i) (fun e -> failwith "invalid iterate function") in
         let loop_body = imp_of_list (decls@fn_body) in
           Some(match_ie 1 "invalid iterate collection"
             (fun i -> i@[For(None, ((elem, elem_ty), elem_f), cdecli 1, loop_body)])
@@ -728,7 +730,21 @@ struct
         let mk_body e = Expr(None,
           Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); e])) in
         let fn_body = match_ie 0 "invalid map function"
-          (fun i -> i@[mk_body (cdecli 0)]) (fun e -> [mk_body e])
+          (fun i ->
+            let mk_var id ty = Var(None, (id,ty)) in
+            let rv = begin match meta_ty, cdecli 0 with
+              | Host(Collection(x)), Var(_,(id,_)) -> mk_var id (Host x)
+              | _, Var(_,(id,ty)) ->
+                begin match ty with
+                | Host(K3.SR.Fn(_,x)) -> mk_var id (Host x)
+                | _ -> mk_var id ty
+                end
+              | _,_ -> failwith "invalid map function"
+              end
+            in
+            let nb = [mk_body rv] in
+            match i with | [Block(m,l)] -> [Block(m,l@nb)] | _ -> i@nb)
+          (fun e -> [mk_body e])
         in
         let loop_body = imp_of_list (decls@fn_body) in
         let mk_loop e = For(None, ((elem, elem_ty), elem_f), e, loop_body) in
@@ -805,10 +821,32 @@ struct
             (fun i -> i, (cdecli 3)) (fun e -> [], e) 
         in Some(pre@[For(None, ((elem, elem_ty), elem_f), ce, loop_body)]), true
       
-      | Flatten -> failwith "flatten not yet supported"
-        (* get all child collections *)
-        (* traverse children to get all grandchild collections *)
-        (* for each grandchild collection element, append into sym. *)
+      | Flatten -> 
+        let outer_elem, outer_ty = gensym(), meta_ty in
+        let outer_pre,outer_src = match_ie 0 "invalid flatten nested collection"
+          (fun i -> i,cdecli 0) (fun e -> [],e) in
+        let inner_elem, inner_ty = match meta_ty with
+          | Host(Collection(x)) -> gensym(), Host x
+          | _ -> failwith "invalid flatten collection" 
+        in
+        (* HACK: explicitly use a declared value to ensure correct substitution
+         * in loops. This can be fixed by performing general substitution of
+         * the loop element in the loop body, rather than just in the body's
+         * declarations.
+         *)
+        let inner_var_id, inner_var_ty, inner_var =
+          let x = gensym() in x, inner_ty, Var(None, (x,inner_ty)) in 
+        let inner_decl =
+          Decl(None, (inner_var_id, inner_var_ty),
+            Some(Var (None, (inner_elem, inner_ty)))) in
+        let inner_body = Expr(None,
+          Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); inner_var])) in 
+        let inner = 
+          For(None, ((inner_elem, inner_ty), false),
+            Var(None, (outer_elem, outer_ty)), Block(None, [inner_decl; inner_body]))
+        in Some(outer_pre@
+             [For(None, ((outer_elem, outer_ty), false), outer_src, inner)]),
+           true
 
       | AK.PCUpdate ->
         let pre = List.map unwrap (List.filter (fun i -> i <> None) cimps) in
@@ -826,7 +864,7 @@ struct
       begin match imp, expr with
         | None, Some(e) -> 
           let pre = List.map unwrap (List.filter (fun i -> i <> None) cimps) in
-          let b = (List.flatten pre)@
+          let b = child_decls@(List.flatten pre)@
             [Expr(None, BinOp(None, Assign, Var (None, (meta_sym, meta_ty)), e))]
           in
           if List.length b = 1 then (false, None, Some(e))

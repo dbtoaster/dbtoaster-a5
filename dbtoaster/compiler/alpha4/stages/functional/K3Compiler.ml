@@ -160,7 +160,8 @@ open K3Builder
 
 let optimize_prog ?(optimizations=[]) (schema, patterns, trigs) =
   let opt_trigs = List.map (fun (event, rel, args, cs) ->
-    let opt_cs = List.map (fun (i,e) -> i, K3Optimizer.optimize args e) cs
+    let opt_cs = List.map (fun (i,e) ->
+      i, K3Optimizer.optimize ~optimizations:optimizations args e) cs
     in (event,rel,args,opt_cs)) trigs
   in (schema, patterns, opt_trigs)
 

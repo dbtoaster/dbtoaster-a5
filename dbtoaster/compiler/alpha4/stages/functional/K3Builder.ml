@@ -55,7 +55,7 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
                  in Slice(map_var,sch,p_ve)
         in Lambda(AVar(map_v, map_t), access_expr)
     in
-    let init_aux map_expr ins outs ie =
+    let map_init_expr map_expr ins outs ie =
         let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
         let oute_l = List.map (fun (v,t) -> Var(v,t)) outs in
         let (iv_a, iv_e) =
@@ -75,7 +75,7 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
             in Apply(Lambda(iv_a, Block([update_expr; rv_f iv_e])), ie)
         in
         (* Helper to build an index on a init val slice, and update the db *)
-        let index_slice_aux rv_f =
+        let update_slice rv_f =
             (* Note: assume CG will do indexing as necessary for PCUpdates *)
             let update_expr = map_update_expr map_expr ine_l iv_e
             in Block([update_expr; rv_f iv_e])
@@ -98,24 +98,24 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
                 | InPC _ -> ine_l | OutPC _ -> oute_l  | PC _ -> oute_l
                 | _ -> failwith "invalid map type for initial values" in
             let lookup_expr_f rv_e = Lookup(rv_e, ke)
-            in Apply(Lambda(iv_a, index_slice_aux lookup_expr_f), ie)
+            in Apply(Lambda(iv_a, update_slice lookup_expr_f), ie)
         
         else
             (* ivc eval + slice update + slice rv *)
-            Apply(Lambda(iv_a, index_slice_aux (fun x -> x)), ie)
+            Apply(Lambda(iv_a, update_slice (fun x -> x)), ie)
     in
     begin match map_expr with
     | SingletonPC(id,t) -> map_expr
     | OutPC(id,outs,t) ->
-        let init_expr = init_aux map_expr [] outs (Const(CFloat(0.0)))
+        let init_expr = map_init_expr map_expr [] outs (Const(CFloat(0.0)))
         in Apply(aux outs t init_expr, map_expr)
 
     | InPC(id,ins,t) ->
-        let init_expr = init_aux map_expr ins [] init_expr
+        let init_expr = map_init_expr map_expr ins [] init_expr
         in Apply(aux ins t init_expr, map_expr)
 
     | PC(id,ins,outs,t) ->
-        let init_expr = init_aux map_expr ins outs init_expr in
+        let init_expr = map_init_expr map_expr ins outs init_expr in
         let nested_t =
             (* TODO: use typechecker to compute type *)
             let ins_t = List.map snd ins in
@@ -446,9 +446,10 @@ let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
    let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
       trigs
 
-let m3_to_k3_opt (schema,m3prog):(K3.SR.trigger list) =
+let m3_to_k3_opt ?(optimizations=[]) (schema,m3prog):(K3.SR.trigger list) =
   List.map (fun (pm,rel,trig_args,stmtl) ->
     (pm, rel, trig_args,
       (List.map (fun (lhs,rhs) ->
-         (lhs, (K3Optimizer.optimize trig_args rhs))) stmtl)))
+         (lhs, (K3Optimizer.optimize ~optimizations:optimizations trig_args rhs)))
+        stmtl)))
     (m3_to_k3 (schema,m3prog))

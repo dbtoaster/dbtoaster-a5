@@ -854,9 +854,15 @@ let common_subexpression_elim expr =
     if List.mem_assoc expr substitutions then List.assoc expr substitutions
     else descend_expr (substitute_expr substitutions) expr
   in
-  let mk_cse expr cses subs = List.fold_left (fun acc_expr (cse,_) ->
+  let mk_cse expr_id expr cses subs = List.fold_left (fun acc_expr (cse,_) ->
       let cse_id = gensym() in
-      let cse_ty = K3Typechecker.typecheck_expr cse in
+      let cse_ty =
+        try K3Typechecker.typecheck_expr cse
+        with Failure msg ->
+          (print_endline ("invalid cse: "^msg);
+           print_endline ("cse: "^(string_of_expr cse));
+           failwith ("invalid cse: "^msg))
+      in
       let cse_var = Var(cse_id, cse_ty) in
         Apply(Lambda(AVar(cse_id, cse_ty),
           substitute_expr [cse, cse_var] acc_expr), cse))
@@ -884,7 +890,7 @@ let common_subexpression_elim expr =
         let body = List.hd (List.hd parts) in
         let cses = List.filter
           (fun (_,cnt) -> cnt > 1) (List.hd (List.hd sub_parts))
-        in f (mk_cse body cses [])
+        in f (mk_cse "lambda" body cses [])
       in [], r_expr
     in
 
@@ -932,8 +938,7 @@ let common_subexpression_elim expr =
           (* Find intersection of CSEs in then and else branches *)
           let new_candidates = build_candidates branch_candidates common_cand_exprs in
           
-          (* Resubs are those subexprs that are no longer common, and used at
-           * most once, CSEs are subexprs that are used more than once. *)
+          (* Make CSEs for subexprs that are used more than once, but not passed up. *)
           let cses_here = List.filter (fun (_,cnt) -> cnt > 1) rest_candidates in
           let p_cses, branch_cses =
             List.partition (fun (e,_) -> List.mem e p_cand_exprs) cses_here in
@@ -952,8 +957,8 @@ let common_subexpression_elim expr =
                       substitute_expr [cse, (Var(cse_id,cse_ty))] acc_expr)
                   ([],rp) p_cses
                 in
-                let nt = mk_cse rt t_cses [] in
-                let ne = mk_cse re e_cses []
+                let nt = mk_cse "ite-then" rt t_cses [] in
+                let ne = mk_cse "ite-else" re e_cses []
                 in List.fold_left (fun acc_expr (cse,id,ty) -> 
                     Apply(Lambda(AVar(id,ty), acc_expr), cse))
                   (IfThenElse(np, nt, ne)) cse_id_tys
@@ -1008,21 +1013,20 @@ let common_subexpression_elim expr =
   in
   let global_cses, r_expr =
     fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
-  in mk_cse r_expr global_cses []
+  in mk_cse "global" r_expr global_cses []
 
 
 let optimize ?(optimizations=[]) trigger_vars expr =
   let apply_opts e =
-    let r =
-      simplify_if_chains []
-        (simplify_collections 
-          (lift_ifs trigger_vars (inline_collection_functions [] e)))
-    in 
-    let r1 = if List.mem Beta optimizations
-             then conservative_beta_reduction [] r else r
-    in if List.mem CSE optimizations then common_subexpression_elim r1 else r1
+    simplify_if_chains []
+      (simplify_collections 
+        (lift_ifs trigger_vars (inline_collection_functions [] e)))
   in
   let rec fixpoint e =
     let new_e = apply_opts e in
-      if e = new_e then e else fixpoint new_e    
-  in fixpoint expr
+    if e = new_e then e else fixpoint new_e    
+  in 
+  let r = fixpoint expr in
+  let r1 = if List.mem Beta optimizations
+             then conservative_beta_reduction [] r else r
+  in if List.mem CSE optimizations then common_subexpression_elim r1 else r1

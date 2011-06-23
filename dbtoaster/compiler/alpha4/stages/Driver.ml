@@ -351,7 +351,9 @@ let compile_function: ((string * Calculus.var_t list) list ->
 
   | L_IMP   ->
       (fun dbschema (p, s) tlq f ->
-        let k3prog = K3Compiler.compile_query_to_program p in
+        let k3prog = K3Compiler.compile_query_to_program
+          ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
+        in
         (print_endline
           (ImpCompiler.Compiler.compile_query_to_string dbschema k3prog s tlq)))
   
