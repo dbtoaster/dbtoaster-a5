@@ -43,30 +43,34 @@ namespace dbtoaster {
           if ( k == "fields" ) {
             delimiter = v;
           } else if ( k == "schema" ) {
-            schema = "";
-            split_iterator<string::iterator> end;
-            for (split_iterator<string::iterator> it =
-                  make_split_iterator(v, first_finder(",", is_equal()));
-                 it != end; ++it)
-            {
-              string ty = copy_range<std::string>(*it);
-              if ( ty == "int" ) schema += "i";
-              else if ( ty == "float" ) schema += "f";
-              else if ( ty == "date" ) schema += "d";
-              else if ( ty == "hash" ) schema += "h";
-              else {
-                cerr << "invalid csv schema type " << ty << endl;
-                schema = "";
-              }
-            }
+            schema = parse_schema(v);
           } else if ( k == "eventtype" ) {
             type = v == "insert"? insert_tuple : delete_tuple;
           } else {
             cerr << "invalid csv adaptor parameter " << k << endl;
           }
         }
-
         validate_schema();
+      }
+
+      string parse_schema(string s) {
+        string r = "";
+        split_iterator<string::iterator> end;
+        for (split_iterator<string::iterator> it =
+             make_split_iterator(s, first_finder(",", is_equal()));
+             it != end; ++it)
+        {
+          string ty = copy_range<std::string>(*it);
+          if ( ty == "int" ) r += "i";
+          else if ( ty == "float" ) r += "f";
+          else if ( ty == "date" ) r += "d";
+          else if ( ty == "hash" ) r += "h";
+          else {
+            cerr << "invalid csv schema type " << ty << endl;
+            r = "";
+          }
+        }
+        return r;
       }
 
       void validate_schema() {
@@ -102,13 +106,13 @@ namespace dbtoaster {
           {
             string field = copy_range<std::string>(*field_it);
             istringstream iss(field);
-            bool ins; int i,y,m,d; float f;
+            bool ins; int i,y,m,d; double f;
             vector<string> date_fields;
             switch (*schema_it) {
               case 'e': iss >> ins; insert = ins; break;
               case 'i': iss >> i; tuple.push_back(i); break;
               case 'f': iss >> f; tuple.push_back(f); break;
-              case 'h': tuple.push_back(field_hash(field)); break;
+              case 'h': tuple.push_back(static_cast<int>(field_hash(field))); break;
               case 'd':
                 split(date_fields, field, is_any_of("-"));
                 valid = false;
@@ -178,6 +182,7 @@ namespace dbtoaster {
           order_book_tuple& operator=(order_book_tuple& other) {
             t = other.t;
             id = other.id;
+            broker_id = other.broker_id;
             volume = other.volume;
             price = other.price;
             return *this;
@@ -407,377 +412,52 @@ namespace dbtoaster {
 
     namespace tpch
     {
-      typedef long long int identifier;
-      typedef string date;
-
-      struct lineitem
-      {
-        identifier orderkey;
-        identifier partkey;
-        identifier suppkey;
-        int linenumber;
-        double quantity;
-        double extendedprice;
-        double discount;
-        double tax;
-        string returnflag;
-        string linestatus;
-        date shipdate;
-        date commitdate;
-        date receiptdate;
-        string shipinstruct;
-        string shipmode;
-        string comment;
-
-        string as_string() {
-          ostringstream r;
-          r << orderkey << ", " << partkey << ", " << suppkey << ", "
-            << linenumber << ", " << quantity << ", " << extendedprice
-            << ", " << discount << ", " << tax << ", " << returnflag
-            << ", " << linestatus << ", " << shipdate << ", " << commitdate
-            << ", " << receiptdate << ", " << shipinstruct << ", "
-            << shipmode << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct order
-      {
-        identifier orderkey;
-        identifier custkey;
-        string orderstatus;
-        double totalprice;
-        date orderdate;
-        string orderpriority;
-        string clerk;
-        int shippriority;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << orderkey << ", " << custkey << ", " << orderstatus << ", "
-                    << totalprice << ", " << orderdate << ", " << orderpriority
-                    << ", " << clerk << ", " << shippriority << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct part
-      {
-        identifier partkey;
-        string name;
-        string mfgr;
-        string brand;
-        string type;
-        int size;
-        string container;
-        double retailprice;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << partkey << ", " << name << ", " << mfgr << ", " << brand << ", "
-                    << type << ", " << size << ", " << container << ", "
-                    << retailprice << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct customer
-      {
-        identifier custkey;
-        string name;
-        string address;
-        identifier nationkey;
-        string phone;
-        double acctbal;
-        string mktsegment;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << custkey << ", " << name << ", " << address << ", " << nationkey
-                    << ", " << phone << ", " << acctbal << ", " << mktsegment
-                    << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct supplier
-      {
-        identifier suppkey;
-        string name;
-        string address;
-        identifier nationkey;
-        string phone;
-        double acctbal;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << suppkey << ", " << name << ", " << address << ", " << nationkey
-                    << ", " << phone << ", " << acctbal << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct partsupp
-      {
-        identifier partkey;
-        identifier suppkey;
-        int availqty;
-        double supplycost;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << partkey << ", " << suppkey << ", " << availqty << ", "
-                << supplycost << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct nation
-      {
-        identifier nationkey;
-        string name;
-        identifier regionkey;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << nationkey << ", " << name << ", " << regionkey << ", " << comment;
-            return r.str();
-        }
-      };
-
-      struct region
-      {
-        identifier regionkey;
-        string name;
-        string comment;
-
-        string as_string()
-        {
-            ostringstream r;
-            r << regionkey << ", " << name << ", " << comment;
-            return r.str();
-        }
-      };
-
-
-      //
-      // Field parsers
-
-      inline void parseLineitemField(int field, lineitem& r, char* data)
-      {
-          switch(field) {
-          case 0: r.orderkey = atoll(data); break;
-          case 1: r.partkey = atoll(data); break;
-          case 2: r.suppkey = atoll(data); break;
-          case 3: r.linenumber = atoi(data); break;
-          case 4: r.quantity = atof(data); break;
-          case 5: r.extendedprice = atof(data); break;
-          case 6: r.discount = atof(data); break;
-          case 7: r.tax = atof(data); break;
-          case 8: r.returnflag = string(data); break;
-          case 9: r.linestatus = string(data); break;
-          case 10: r.shipdate = date(data); break;
-          case 11: r.commitdate = date(data); break;
-          case 12: r.receiptdate = date(data); break;
-          case 13: r.shipinstruct = string(data); break;
-          case 14: r.shipmode = string(data); break;
-          case 15: r.comment = string(data); break;
-          default:
-              cerr << "Invalid lineitem field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parseOrderField(int field, order& r, char* data)
-      {
-          switch(field) {
-          case 0: r.orderkey = atoll(data); break;
-          case 1: r.custkey = atoll(data); break;
-          case 2: r.orderstatus = string(data); break;
-          case 3: r.totalprice = atof(data); break;
-          case 4: r.orderdate = date(data); break;
-          case 5: r.orderpriority = string(data); break;
-          case 6: r.clerk = string(data); break;
-          case 7: r.shippriority = atoi(data); break;
-          case 8: r.comment = string(data); break;
-          default:
-              cerr << "Invalid order field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parsePartField(int field, part& r, char* data)
-      {
-          switch(field) {
-          case 0: r.partkey = atoll(data); break;
-          case 1: r.name = string(data); break;
-          case 2: r.mfgr = string(data); break;
-          case 3: r.brand= string(data); break;
-          case 4: r.type = string(data); break;
-          case 5: r.size = atoi(data); break;
-          case 6: r.container = string(data); break;
-          case 7: r.retailprice = atof(data); break;
-          case 8: r.comment = string(data); break;
-          default:
-              cerr << "Invalid part field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parseCustomerField(int field, customer& r, char* data)
-      {
-          switch(field) {
-          case 0: r.custkey = atoll(data); break;
-          case 1: r.name = string(data); break;
-          case 2: r.address = string(data); break;
-          case 3: r.nationkey = atoll(data); break;
-          case 4: r.phone = string(data); break;
-          case 5: r.acctbal = atof(data); break;
-          case 6: r.mktsegment = string(data); break;
-          case 7: r.comment = string(data); break;
-          default:
-              cerr << "Invalid customer field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parseSupplierField(int field, supplier& r, char* data)
-      {
-          switch(field) {
-          case 0: r.suppkey = atoll(data); break;
-          case 1: r.name = string(data); break;
-          case 2: r.address = string(data); break;
-          case 3: r.nationkey = atoll(data); break;
-          case 4: r.phone = string(data); break;
-          case 5: r.acctbal = atof(data); break;
-          case 6: r.comment = string(data); break;
-          default:
-              cerr << "Invalid supplier field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parsePartSuppField(int field, partsupp& r, char* data)
-      {
-          switch(field) {
-          case 0: r.partkey = atoll(data); break;
-          case 1: r.suppkey = atoll(data); break;
-          case 2: r.availqty = atoi(data); break;
-          case 3: r.supplycost = atof(data); break;
-          case 4: r.comment = string(data); break;
-          default:
-              cerr << "Invalid partsupp field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parseNationField(int field, nation& r, char* data)
-      {
-          switch(field) {
-          case 0: r.nationkey = atoll(data); break;
-          case 1: r.name = string(data); break;
-          case 2: r.regionkey = atoll(data); break;
-          case 3: r.comment = string(data); break;
-          default:
-              cerr << "Invalid nation field id " << field << endl;
-              break;
-          }
-      }
-
-      inline void parseRegionField(int field, region& r, char* data)
-      {
-          switch(field) {
-          case 0: r.regionkey = atoll(data); break;
-          case 1: r.name = string(data); break;
-          case 2: r.comment = string(data); break;
-          default:
-              cerr << "Invalid region field id " << field << endl;
-              break;
-          }
-      }
-
-      template<typename T>
       struct tpch_adaptor : public csv_adaptor {
-        typedef boost::function<void (int, T&, char*)> field_parser;
-        field_parser parser;
         int num_fields;
 
         tpch_adaptor(stream_id i, string tpch_rel) : csv_adaptor(i) {
-            parser = get_parser(tpch_rel);
+          schema = parse_schema(get_schema(tpch_rel));
+          if ( delimiter == "" ) delimiter = "|";
         }
 
         tpch_adaptor(stream_id i, string tpch_rel, int num_params,
                      const pair<string, string> params[])
           : csv_adaptor(i,num_params,params)
         {
-            parser = get_parser(tpch_rel);
+          schema = parse_schema(get_schema(tpch_rel));
+          if ( delimiter == "" ) delimiter = "|";
         }
 
-        field_parser get_parser(string tpch_rel) {
-          field_parser p;
+        string get_schema(string tpch_rel) {
+          string r = "";
           if ( tpch_rel == "lineitem" ) {
-              p = &parseLineitemField; num_fields = 16;
+            r = "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash";
+            num_fields = 16;
           } else if ( tpch_rel == "orders" ) {
-              p = &parseOrderField; num_fields = 9;
+            r = "int,int,hash,float,date,hash,hash,int,hash";
+            num_fields = 9;
           } else if ( tpch_rel == "customer" ) {
-              p = &parseCustomerField; num_fields = 8;
+            r = "int,hash,hash,int,hash,float,hash,hash";
+            num_fields = 8;
           } else if ( tpch_rel == "supplier") {
-              p = &parseSupplierField; num_fields = 7;
+            r = "int,hash,hash,int,hash,float,hash";
+            num_fields = 7;
           } else if ( tpch_rel == "part") {
-              p = &parsePartField; num_fields = 9;
+            r = "int,hash,hash,hash,hash,int,hash,float,hash";
+            num_fields = 9;
           } else if ( tpch_rel == "partsupp") {
-              p = &parsePartSuppField; num_fields = 5;
+            r = "int,int,int,float,hash";
+            num_fields = 5;
           } else if ( tpch_rel == "nation") {
-              p = &parseNationField; num_fields = 4;
+            r = "int,hash,int,hash";
+            num_fields = 4;
           } else if ( tpch_rel == "region") {
-              p = &parseRegionField; num_fields = 3;
+            r = "int,hash,hash";
+            num_fields = 3;
           } else {
             cerr << "Invalid TPCH relation " << tpch_rel << endl;
           }
-
-          return p;
-        }
-
-        bool parse_error(const string& data, int field) {
-          cerr << "Invalid field " << field << ": " << data << endl;
-          return false;
-        }
-
-        bool parse_record(const string& data, T& r) {
-          string msg = data;
-          char* start = &(msg[0]);
-          char* end = start;
-          for (int i = 0; i < num_fields; ++i) {
-            while ( *end && *end != delimiter ) ++end;
-            if ( start == end ) return parse_error(data, i);
-            if ( *end == '\0' && i != (num_fields - 1) ) return parse_error(data, i);
-            *end = '\0';
-
-            parser(i, r, start);
-            start = ++end;
-          }
-          return true;
-        }
-
-        void process(const string& data, shared_ptr<list<stream_event> > dest)
-        {
-          T r;
-          if ( parse_record(data, r) ) {
-            stream_event e(id, insert_tuple, r);
-            dest->push_back(e);
-          }
+          return r;
         }
       };
     }
