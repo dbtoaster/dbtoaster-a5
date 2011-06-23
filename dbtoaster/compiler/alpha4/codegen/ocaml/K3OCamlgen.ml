@@ -854,6 +854,7 @@ struct
          ]))
          ]@(List.map fst triggers)@[
          IP.Lines([
+            IP.Leaf("(* RNG seed *) Random.init (12345);");
             IP.Leaf("StandardAdaptors.initialize ();");
             (mk_let "schema" (IP.TList(brackets,Some(parens),";",
                (List.map (fun (id,ivars,ovars) ->

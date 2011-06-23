@@ -623,6 +623,7 @@ struct
 
     let main dbschema schema patterns sources triggers toplevel_queries =
       Main (fun () ->
+        Random.init(12345);
         let db = DB.make_empty_db schema patterns in
         let (insert_trigs, delete_trigs) = 
           List.fold_left 
