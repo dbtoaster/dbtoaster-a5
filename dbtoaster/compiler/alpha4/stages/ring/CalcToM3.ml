@@ -49,12 +49,17 @@ and find_binding_term (var: var_t) (term: readable_term_t) =
 
 (* TODO: think about this definition more ... *)
 let rec safe_term (term: readable_term_t) =
+  Debug.print "LOG-SAFETY-COMPUTATION" 
+   (fun () -> "Computing safety of "^(string_of_term (make_term term))^"\n");
   match term with
-  | RVal(AggSum(inner_t,phi))  -> safe_vars (make_relcalc phi) []
+  | RVal(AggSum(inner_t,phi))  -> 
+      Util.ListAsSet.union (safe_term inner_t) (safe_vars (make_relcalc phi) [])
+  | RVal(External(mapn, vars)) -> vars
+  | RVal(Const(_)) -> []
+  | RVal(Var(_)) -> []
   | RNeg(inner_t)  -> safe_term inner_t
   | RProd(inner_ts) -> Util.ListAsSet.multiunion (List.map safe_term inner_ts) 
-  | RSum(inner_ts) -> Util.ListAsSet.multiunion (List.map safe_term inner_ts)
-  | _ -> []
+  | RSum(inner_ts) -> Util.ListAsSet.multiinter (List.map safe_term inner_ts)
 
 let translate_var (calc_var:var_t): M3.var_t = (fst calc_var)
 
@@ -73,7 +78,9 @@ let translate_map_ref ((t, mt): Compiler.map_ref_t) : map_ref_t =
     let outer_term = (readable_term t) in 
     match (readable_term mt) with
     | RVal(External(n, vs)) -> 
-      List.map (fun var ->  
+      List.map (fun var -> 
+          Debug.print "LOG-SAFETY-COMPUTATION"
+            (fun () -> "--- Safety of map "^n^" ---"); 
           if List.mem var (safe_term outer_term)
           (*if (find_binding_term var outer_term)*)
           then Binding_Present(var)
