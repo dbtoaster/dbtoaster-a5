@@ -98,6 +98,9 @@ let flag_descriptors =
       (["-L"],
           ("INCLUDE_LIB", ParseArgs.ARG_LIST), "<path> [<path> [...]]",
           "Add a library include path for C++ compilation (equivalent to the DBT_LIB environment variable)");
+      (["-f";"--enable-optimization"],
+          ("OPTFLAGS", ParseArgs.ARG_LIST), "<optimization flag> [<flag> [...]]", 
+          "Enable K3 optimizations")
     ];;
 
 let arguments = ParseArgs.parse flag_descriptors;;
@@ -366,9 +369,18 @@ let compile_function: ((string * Calculus.var_t list) list ->
               in M3Common.PreparedPrinting.pretty_print_prog (sch,ptrigs)
             else M3Common.pretty_print_prog p)))
 
-  | L_K3(opt)    -> (fun dbschema (p, s) tlq f -> 
-      let triggers = if opt then (K3Builder.m3_to_k3_opt p) 
-                            else (K3Builder.m3_to_k3     p)
+  | L_K3(opt)    -> (fun dbschema (p, s) tlq f ->
+      let parse_opt_flag s = match s with
+        | "CSE" | "cse" -> K3Optimizer.CSE
+        | "BREDUCE" | "breduce" -> K3Optimizer.Beta
+        | _ -> give_up ("invalid K3 optimization flag: "^s)
+      in
+      let extra_opts =
+        if opt then List.map parse_opt_flag (flag_vals "OPTFLAGS") else []
+      in 
+      let triggers =
+        if opt then (K3Builder.m3_to_k3_opt ~optimizations:extra_opts p) 
+        else (K3Builder.m3_to_k3 p)
       in
          GenericIO.write f (fun fd -> 
             List.iter (fun (pm, rel, args, stmts) ->

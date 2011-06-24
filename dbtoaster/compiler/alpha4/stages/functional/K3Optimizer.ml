@@ -561,6 +561,14 @@ let compose_assoc assoc_f g =
         in substitute (f_arg1, g_body) non_coll_f_body
     in AssocLambda(g_args, new_args, new_f_body)
 
+(* collection_expr:
+ * -- returns if expr is a collection type *)
+let collection_expr expr = 
+    begin match K3Typechecker.typecheck_expr expr with
+        | Collection _ | Fn(_,Collection _) -> true
+        | _ -> false
+    end
+
 (* selective_expr:
  * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
  *    lambda contains a predicate dependent on the function argument)
@@ -780,7 +788,8 @@ let rec simplify_collections expr =
         let v,v_t = gen_var_sym(), Collection(mapf_arg_t)
         in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
 
-    | Map(map_f, (Map(_,_) as rmap)) when not(selective_expr rmap) ->
+    | Map(map_f, (Map(_,_) as rmap))
+      when not(collection_expr map_f && selective_expr rmap) ->
         let rmap_f, rmap_c = get_map_parts rmap in
         let new_map_f = compose map_f rmap_f
         in Map(new_map_f, rmap_c)
@@ -847,6 +856,27 @@ let rec simplify_collections expr =
     in fixpoint expr (simplify expr)
 
 
+
+(* Common subexpression elimination, based on alpha equivalence of expressions. 
+ * This method folds over a K3 expression, building up candidates to test for
+ * equivalence in a bottom-up fashion. Currently, only collection operations
+ * are considered as candidates (that is maps,aggregates,group-bys,flattens).
+ * This CSE is conservative, candidates are materialized at:
+ * i) lambdas, as a simple way to ensure variables do not escape their
+ *    definition. This could be refined by allowing candidates to propagate up
+ *    provided they do not use the variable bound by the lambda.
+ * ii) if-then-elses, where only candidates common to both then- and else-branches
+ *     are carried up. Candidates that appear in any combination of the predicate
+ *     and one of the branches are materialized then and there.
+ * 
+ * Specifically, the fold method accumulates a set of equivalence classes,
+ * represented as a nested list of expressions (each inner list represents
+ * alpha equivalent expressions). This allows for easy substitution once we
+ * decide to materialize candidates. Each equivalence class is kept as a list
+ * rather than a set, to keep track of its usage count. Candidates that are
+ * used at most once are not materialized.  
+ *)
+
 let common_subexpression_elim expr =
   let symref = ref 0 in
   let gensym () = incr symref; "__cse"^(string_of_int !symref) in
@@ -854,54 +884,98 @@ let common_subexpression_elim expr =
     if List.mem_assoc expr substitutions then List.assoc expr substitutions
     else descend_expr (substitute_expr substitutions) expr
   in
-  let mk_cse expr_id expr cses subs = List.fold_left (fun acc_expr (cse,_) ->
+  let sub_cse expr cse_var cl =
+    List.fold_left (fun acc cse -> substitute_expr [cse, cse_var] acc) expr cl
+  in
+  let mk_cse expr_id expr eqv subs = List.fold_left (fun acc_expr cl ->
       let cse_id = gensym() in
+      let arg = List.hd cl in
       let cse_ty =
-        try K3Typechecker.typecheck_expr cse
+        try K3Typechecker.typecheck_expr arg
         with Failure msg ->
           (print_endline ("invalid cse: "^msg);
-           print_endline ("cse: "^(string_of_expr cse));
+           print_endline ("cse: "^(string_of_expr arg));
            failwith ("invalid cse: "^msg))
       in
       let cse_var = Var(cse_id, cse_ty) in
-        Apply(Lambda(AVar(cse_id, cse_ty),
-          substitute_expr [cse, cse_var] acc_expr), cse))
-    (substitute_expr subs expr) cses
+        Apply(Lambda(AVar(cse_id, cse_ty), sub_cse acc_expr cse_var cl), arg))
+    (substitute_expr subs expr) eqv
   in
   
-  let build_candidates branch_candidates expr_l =
-    List.fold_left (fun cand_acc expr ->
-        let get_cnt l =
-          if List.mem_assoc expr l then List.assoc expr l else 0 in
-        let total_cnt = List.fold_left
-          (fun acc l -> acc+(get_cnt l)) 0 branch_candidates
-        in cand_acc@[expr, total_cnt])
-      [] expr_l
+  (* Alpha renaming based equivalence, and equivalence class helpers *)
+  let alpha_rename expr =
+    let sym = ref 0 in
+    let renamed_var () = incr sym; "__alpha"^(string_of_int !sym) in
+    let add_subs subs src dest =
+      (if List.mem_assoc src subs then List.remove_assoc src subs else subs)@
+      [src, dest] in
+    let sub_of_id subs id =
+      if List.mem_assoc id subs then List.assoc id subs else id in
+    let subs_of_args subs a_l = List.fold_left (fun acc v ->
+        add_subs acc v (renamed_var())) subs
+      (List.flatten (List.map get_arg_vars a_l)) in
+    let rebuild_arg subs arg = 
+      let nv = List.map (sub_of_id subs) (get_arg_vars arg) in
+      match arg,nv with
+        | AVar(_,ty),[x] -> AVar(x,ty)
+        | ATuple(vt_l), nvl -> ATuple(List.map2 (fun (_,ty) id -> id,ty) vt_l nvl)
+        | _,_ -> failwith "invalid arg to rebuild"
+    in
+    let modify_subs subs expr = match expr with
+      | Lambda(arg,_) -> subs_of_args subs [arg]
+      | AssocLambda(arg1, arg2, _) -> subs_of_args subs [arg1; arg2]
+      | _ -> subs
+    in
+    let apply_subs subs parts expr = match expr with
+      | Var(id,ty) -> Var(sub_of_id subs id, ty)
+      | Lambda(arg,_) -> Lambda(rebuild_arg subs arg, List.hd (List.hd parts))
+      | AssocLambda(arg1,arg2,_) ->
+        AssocLambda(rebuild_arg subs arg1,
+          rebuild_arg subs arg2, List.hd (List.hd parts))
+      | _ -> rebuild_expr expr parts
+    in
+    fold_expr apply_subs modify_subs [] (Const(CFloat(0.0))) expr
+  in
+  let alpha_eq eq1 eq2 =
+    (alpha_rename (List.hd eq1)) = (alpha_rename (List.hd eq2)) in
+  let union_eqv cl1 cl2 = List.fold_left (fun acc c ->
+    if acc = [] then [c] else
+    let eq,rest = List.partition (alpha_eq c) acc in
+      match eq with
+        | [] -> rest@[c]
+        | [x] -> rest@[x@c]
+        | _ -> failwith "multiple equivalences found")
+    cl1 cl2  
+  in
+  let union_eqvl acc l = List.fold_left union_eqv acc l in 
+  let union_eqv_parts eqvll = List.fold_left union_eqvl [] eqvll in
+  let diff_eqv cl1 cl2 = List.fold_left (fun acc cl -> 
+    if List.exists (alpha_eq cl) cl2 then acc else acc@[cl]) [] cl1 in
+  let inter_eqv cl1 cl2 = List.fold_left (fun acc cl ->
+      let eqs = List.filter (alpha_eq cl) cl2 in
+      if eqs = [] then acc
+      else acc@[cl@(List.flatten eqs)])
+    [] cl1
   in
 
-  let fold_f pre acc expr : (expr_t * int) list * expr_t =
+  let fold_f pre acc expr : expr_t list list * expr_t =
     let parts = List.map (fun x -> List.map snd x) acc in
     let sub_parts = List.map (fun x -> List.map fst x) acc in
     let rebuilt_expr = rebuild_expr expr parts in
-    
-
     let lambda_common body f = 
       let r_expr =
         let body = List.hd (List.hd parts) in
         let cses = List.filter
-          (fun (_,cnt) -> cnt > 1) (List.hd (List.hd sub_parts))
+          (fun cl -> List.length cl > 1) (List.hd (List.hd sub_parts))
         in f (mk_cse "lambda" body cses [])
       in [], r_expr
     in
 
     let aggregate_common sub_part_idx =
-      let branch_candidates = List.map
-        (fun i -> List.flatten (List.nth sub_parts i)) sub_part_idx in
-      let branch_cand_exprs = List.map (List.map fst) branch_candidates in
-      let common_cand_exprs = Util.ListAsSet.multiunion branch_cand_exprs in
-      let new_candidates =
-        build_candidates branch_candidates common_cand_exprs 
-      in ((rebuilt_expr, 1)::new_candidates), rebuilt_expr
+      let agg_candidate = [[[[rebuilt_expr]]]] in
+      let new_candidates = union_eqv_parts
+        (agg_candidate@(List.map (List.nth sub_parts) sub_part_idx))
+      in new_candidates, rebuilt_expr
     in
 
     let new_candidates, r_expr =
@@ -912,49 +986,45 @@ let common_subexpression_elim expr =
 
         | IfThenElse _ (* carry up candidates common to both branches only *)
           -> 
-          
+            
+          (* Get then, else branch equivalences, and carry up intersection *)
           (* Note: flattening is fine for IfThenElse since this has singleton
            * lists per branches, guaranteeing unique candidates per branch.
            * In general this does not apply, e.g. for updates with key expr
            * lists considered a branch *)
           let branch_candidates = List.map
             (fun i -> List.flatten (List.nth sub_parts i)) [0; 1; 2] in
-          let branch_cand_exprs =
-            List.map (fun x -> List.map fst x) branch_candidates in
           let p_cand_exprs, t_cand_exprs, e_cand_exprs =
-            List.nth branch_cand_exprs 0,
-            List.nth branch_cand_exprs 1, List.nth branch_cand_exprs 2 in
-            
-          (* Carry up candidates that are present in both then and else branches.
-           * Everything else must be separated into candidates materialized at this
-           * expression, or pushed back into the expression built here. *) 
-          let common_cand_exprs =
-            Util.ListAsSet.inter t_cand_exprs e_cand_exprs in
-          let rest_exprs = Util.ListAsSet.diff
-            (Util.ListAsSet.multiunion branch_cand_exprs) common_cand_exprs in
-
-          let rest_candidates = build_candidates branch_candidates rest_exprs in
+            List.nth branch_candidates 0,
+            List.nth branch_candidates 1, List.nth branch_candidates 2 in
 
           (* Find intersection of CSEs in then and else branches *)
-          let new_candidates = build_candidates branch_candidates common_cand_exprs in
-          
+          let common = inter_eqv t_cand_exprs e_cand_exprs in
+          let rest = diff_eqv (union_eqvl [] branch_candidates) common in
+
           (* Make CSEs for subexprs that are used more than once, but not passed up. *)
-          let cses_here = List.filter (fun (_,cnt) -> cnt > 1) rest_candidates in
+          let cses_here = List.filter (fun cl -> List.length cl > 1) rest in
           let p_cses, branch_cses =
-            List.partition (fun (e,_) -> List.mem e p_cand_exprs) cses_here in
+            List.partition (fun cl -> List.exists (fun cl2 ->
+              Util.ListAsSet.inter cl cl2 <> []) p_cand_exprs) cses_here in
           let t_cses, e_cses =
-            List.partition (fun (e,_) -> List.mem e t_cand_exprs) branch_cses
+            List.partition (fun cl -> List.exists (fun cl2 ->
+              Util.ListAsSet.inter cl cl2 <> []) t_cand_exprs) branch_cses
           in begin match rebuilt_expr with
             | IfThenElse(rp, rt, re) ->
               (* For the predicate, build funapps around the condition, to
                * enable sharing of predicate CSEs with branches *) 
               let r_expr =
                 let cse_id_tys, np = List.fold_left
-                  (fun (sub_acc, acc_expr) (cse,_) ->
+                  (fun (sub_acc, acc_expr) cl ->
                     let cse_id = gensym() in
-                    let cse_ty = K3Typechecker.typecheck_expr cse in
-                    (sub_acc@[cse,cse_id,cse_ty]),
-                      substitute_expr [cse, (Var(cse_id,cse_ty))] acc_expr)
+                    let arg = List.hd cl in
+                    let cse_t = K3Typechecker.typecheck_expr arg in
+                    let cse_var = Var(cse_id,cse_t) in
+                      List.fold_left (fun (sub_acc, acc_expr) cse ->
+                          (sub_acc@[cse,cse_id,cse_t]),
+                          substitute_expr [cse, cse_var] acc_expr)
+                        (sub_acc, acc_expr) cl)
                   ([],rp) p_cses
                 in
                 let nt = mk_cse "ite-then" rt t_cses [] in
@@ -962,7 +1032,7 @@ let common_subexpression_elim expr =
                 in List.fold_left (fun acc_expr (cse,id,ty) -> 
                     Apply(Lambda(AVar(id,ty), acc_expr), cse))
                   (IfThenElse(np, nt, ne)) cse_id_tys
-              in new_candidates, r_expr
+              in common, r_expr
             | _ -> failwith "invaild rebuild of if-then-else expr"
           end
 
@@ -992,28 +1062,21 @@ let common_subexpression_elim expr =
          * larger exprs before smaller ones. *)
         | Map _ ->
           let coll_candidates = List.hd (List.nth sub_parts 1)
-          in ((rebuilt_expr, 1)::coll_candidates), rebuilt_expr
+          in ([rebuilt_expr]::coll_candidates), rebuilt_expr
 
         | Aggregate _ -> aggregate_common [1;2]
         | GroupByAggregate _ -> aggregate_common [1;3]
             
 
         (* Everything else carries up CSE candidates. *)
-        | _ ->
-          let new_candidates =
-            List.fold_left (fun acc cll -> List.fold_left (fun acc cl ->
-                List.fold_left (fun acc (e,cnt) ->
-                  if List.mem_assoc e acc then
-                    (List.remove_assoc e acc)@[e, (List.assoc e acc)+cnt]
-                  else acc@[e,cnt]) acc cl)
-              acc cll) [] sub_parts
-          in new_candidates, rebuilt_expr
+        | _ -> (union_eqv_parts sub_parts), rebuilt_expr
     in
     new_candidates, r_expr
   in
   let global_cses, r_expr =
     fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
   in mk_cse "global" r_expr global_cses []
+
 
 
 let optimize ?(optimizations=[]) trigger_vars expr =
