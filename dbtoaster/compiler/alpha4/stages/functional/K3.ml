@@ -467,16 +467,25 @@ let string_of_expr e =
            0 br)
     in
     let pid id = ps ("\""^id^"\"") in
-    let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in   
-    let pmap s id = ob(); ps s; ps "("; pid id; ps ")"; cb() in
+    let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
+    let schema args = 
+      "[" ^
+      (String.concat ";"
+        (List.map (fun (x,y) -> "\""^x^"\","^(string_of_type y)) args)) ^
+      "]"
+    in
+    let pmap s id sch t = 
+      ob(); ps s; ps "("; pid id; ps sch; 
+                          ps (","^(string_of_type t)); ps ")"; cb() in
     match e with
     | Const c -> ob(); ps ("Const(CFloat("^(string_of_const c)^"))"); cb()
-    | Var (id,t) -> ob(); ps "Var("; pid id; ps ")"; cb()
+    | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
+                                     ps (string_of_type t); ps ")"; cb()
 
-    | SingletonPC      (id,t)               -> pmap "SingletonPC" id
-    | OutPC            (id,outs,t)          -> pmap "OutPC" id
-    | InPC             (id,ins,t)           -> pmap "InPC" id
-    | PC               (id,ins,outs,t)      -> pmap "PC" id
+    | SingletonPC(id,t) -> pmap "SingletonPC" id "" t
+    | OutPC(id,outs,t)  -> pmap "OutPC" id (","^(schema outs)) t
+    | InPC(id,ins,t)    -> pmap "InPC" id (","^(schema ins)) t
+    | PC(id,ins,outs,t) -> pmap "PC" id (","^(schema ins)^","^(schema outs)) t
 
     | Project (_, idx) ->
         ob(); ps "Project("; recur []; ps ",";
@@ -492,6 +501,11 @@ let string_of_expr e =
         ob(); ps "AssocLambda(";
         ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
         ps ","; recur []; ps ")"; cb()
+    
+    | Slice(pc, sch, vars) ->
+        ob(); ps "Slice("; aux pc; ps ","; ps (schema sch); ps ",["; 
+        (List.iter (fun (x,v) -> pid x; ps ",("; aux v; ps ");") vars); 
+        ps "])"; cb()
     
     | Tuple _             -> pop "Tuple"
     | Singleton _         -> pop "Singleton"
@@ -515,7 +529,6 @@ let string_of_expr e =
     | Block _             -> pop ~lb:[0] "Block"
     | Member _            -> pop ~lb:[1] "Member"  
     | Lookup _            -> pop ~lb:[1] "Lookup"
-    | Slice _             -> pop ~lb:[1] "Slice"
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
     | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
     (*| External         efn_id               -> pop "External" *)
