@@ -499,13 +499,7 @@ struct
         let arg_f = meta_of_arg in
         let assoc_arg_f = meta_of_assoc_arg in
         match t with
-        
-        (* Lambdas push down their symbol to the function body. The lambda's
-         * body may use declarations that need to be defined at the lambda's
-         * scope, such as for nested maps, where the inner map's body appends
-         * to the declaration. *)
-        | Lambda _ | AssocLambda _ ->
-          let x = pushi 0 in [x], [], [decl_f false x]
+        | Lambda _ | AssocLambda _ -> [pushi 0], [], [None]
         
         (* Apply always pushes down the return symbol to the function, and
          * in the case of single args, push down the arg symbol *)
@@ -727,6 +721,19 @@ struct
               let t = Host(K.TTuple(List.map snd it_l)) in 
               let x = gensym() in x, t, false, bind_arg arg (Var (None,(x,t)))
         in
+        (* Loops must define any declarations used by the map lambda, such as
+         * nested map temporary collection declarations, inside the loop body.
+         * This is not achieved by a child declaration, which
+         * is always defined prior to the expression's code. Thus we handle
+         * map lambda declarations as a special case here *)
+        let body_decls =
+          let gcmeta = snd (ciri 0) in
+          if not(cused 0) || gcmeta = [] then [] else
+            let fmeta = List.hd gcmeta in
+            let pfmeta = push_meta (cmetai 0) fmeta in 
+            let d = sym_of_meta pfmeta, type_of_meta pfmeta
+            in [Decl(None, d, None)]
+        in
         let mk_body e = Expr(None,
           Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); e])) in
         let fn_body = match_ie 0 "invalid map function"
@@ -746,7 +753,7 @@ struct
             match i with | [Block(m,l)] -> [Block(m,l@nb)] | _ -> i@nb)
           (fun e -> [mk_body e])
         in
-        let loop_body = imp_of_list (decls@fn_body) in
+        let loop_body = imp_of_list (decls@body_decls@fn_body) in
         let mk_loop e = For(None, ((elem, elem_ty), elem_f), e, loop_body) in
           Some(match_ie 1 "invalid map collection"
              (fun i -> i@[mk_loop (cdecli 1)]) (fun e -> [mk_loop e])),

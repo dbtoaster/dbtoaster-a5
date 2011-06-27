@@ -206,16 +206,17 @@ namespace dbtoaster {
         shared_ptr<order_book> bids;
         shared_ptr<order_book> asks;
 
-        order_book_adaptor(stream_id i, int nb, order_book_type t)
-          : id(i), num_brokers(nb), type(t)
+        order_book_adaptor(stream_id sid, int nb, order_book_type t)
+          : id(sid), num_brokers(nb), type(t)
         {
           bids = shared_ptr<order_book>(new order_book());
           asks = shared_ptr<order_book>(new order_book());
         }
 
-        order_book_adaptor(stream_id id, int num_params,
+        order_book_adaptor(stream_id sid, int num_params,
                            pair<string, string> params[])
         {
+          id = sid;
           bids = shared_ptr<order_book>(new order_book());
           asks = shared_ptr<order_book>(new order_book());
 
