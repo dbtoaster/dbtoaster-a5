@@ -273,9 +273,6 @@ else ();;
 
 (********* RUN ADAPTORS ONLY IF REQUESTED ********************)
 
-open Sources
-open Runtime;;
-
 begin match adaptor_dir with
   | None -> ()
   | Some(f) ->
@@ -285,7 +282,7 @@ begin match adaptor_dir with
       with Unix.Unix_error _ -> Unix.mkdir f 0o755
     in
       try mkd f;
-          run_adaptors f sources;
+          Runtime.run_adaptors f sources;
           exit 0
       with Unix.Unix_error (_,_,_) ->
         failwith ("failed to create adaptor data output dir"^f)
