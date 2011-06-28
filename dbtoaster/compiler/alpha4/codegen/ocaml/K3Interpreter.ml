@@ -636,7 +636,17 @@ struct
               | (M3.Delete, _, _) -> (insert_acc, add_trigger delete_acc))
           ([], []) triggers in
         let dispatcher =
-          (fun evt ->
+          (fun evt -> 
+            Debug.exec "STEP-INTERPRETER" (fun () ->
+               match evt with None -> ()
+               | Some(pm, rel, tuple) -> 
+                  print_endline ((DB.db_to_string db)^"\n\n");
+                  print_string ((match pm with Insert -> "+" | Delete -> "-")^
+                                rel^"["^(String.concat "; " 
+                                       (List.map M3Common.string_of_const tuple)
+                                       )^"]");
+                  ignore (read_line ());
+            );
             match evt with 
             | Some(Insert, rel, tuple) when List.mem_assoc rel insert_trigs -> 
               ((List.assoc rel insert_trigs) tuple db; true)
