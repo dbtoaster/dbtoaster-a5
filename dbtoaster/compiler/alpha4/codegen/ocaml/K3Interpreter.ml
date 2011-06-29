@@ -256,20 +256,32 @@ struct
  
     (* iter fn, collection -> iteration *)
     let iterate ?(expr = None) iter_fn collection = Eval(fun th db ->
-        let rv c = (c; Unit) in
-        let aux fn l = rv (List.iter (fun v -> match fn v with
+        let function_value = (get_eval iter_fn) th db in
+        let collection_value = (get_eval collection) th db in
+        Debug.print "LOG-INTERPRETER-ITERATE" (fun () ->
+          "Iterating over "^(K3Value.to_string collection_value)
+        );
+        let aux fn l = ((List.iter (fun v -> 
+          Debug.print "LOG-INTERPRETER-ITERATE" (fun () ->
+            "   ["^(K3Value.to_string v)^"]"
+          );
+          match fn v with
             | Unit -> ()
-            | _ -> failwith ("invalid iteration"^(get_expr expr))) l)
+            | _ -> failwith ("invalid iteration"^(get_expr expr))) l); Unit)
         in
-        begin match (get_eval iter_fn) th db, (get_eval collection) th db with
+        begin match function_value, collection_value with
         | (Fun f, FloatList l) -> aux f l
         | (Fun f, TupleList l) -> aux f l
         | (Fun f, ListCollection l) -> aux f l
 
-        | (Fun f, SingleMapList l) ->  rv (List.iter (fun (k,m) ->
+        | (Fun f, SingleMapList l) ->  (List.iter (fun (k,m) ->
+             Debug.print "LOG-INTERPRETER-ITERATE" (fun () ->
+               "   ["^(String.concat ";" (List.map K3Value.to_string k))^
+               "] -> "^(K3Value.to_string (SingleMap(m)))
+             );
             match f (Tuple(k@[SingleMap m])) with
             | Unit -> ()
-            | _ -> failwith ("invalid iteration"^(get_expr expr))))
+            | _ -> failwith ("invalid iteration"^(get_expr expr))) l); Unit
 
         (* Currently we convert to a list since SliceableMap doesn't implement
          * an 'iter' function. TODO: we could easily add this. *)
@@ -551,29 +563,48 @@ struct
 
     (* persistent collection id, value -> update *)
     let update_value ?(expr = None) id value = Eval(fun th db ->
-        DB.update_value id (get_update_value th db value) db; Unit)
+      let v = (get_update_value th db value) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nUPDATE '"^id^"'[-][-] := "^(K3Value.to_string v)
+        );
+        DB.update_value id v db; Unit)
     
     (* persistent collection id, in key, value -> update *)
     let update_in_map_value ?(expr = None) id in_kl value = Eval(fun th db ->
-        DB.update_in_map_value id
-            (get_update_key th db in_kl)
-            (get_update_value th db value) db;
-        Unit)
+      let key = (get_update_key th db in_kl) in
+      let v = (get_update_value th db value) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nUPDATE '"^id^"'["^
+            (String.concat "; " (List.map K3Value.to_string key))^
+            "][-] := "^(K3Value.to_string v)
+        );
+        DB.update_in_map_value id key v db; Unit)
     
     (* persistent collection id, out key, value -> update *)
     let update_out_map_value ?(expr = None) id out_kl value = Eval(fun th db ->
-        DB.update_out_map_value id
-            (get_update_key th db out_kl)
-            (get_update_value th db value) db;
-        Unit)
+      let key = (get_update_key th db out_kl) in
+      let v = (get_update_value th db value) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nUPDATE '"^id^"'[-]["^
+           (String.concat "; " (List.map K3Value.to_string key))^
+           "] := "^(K3Value.to_string v)
+        );
+        DB.update_out_map_value id key v db; Unit)
     
     (* persistent collection id, in key, out key, value -> update *)
-    let update_map_value ?(expr = None) id in_kl out_kl value = Eval(fun th db ->
-        DB.update_map_value id
-            (get_update_key th db in_kl)
-            (get_update_key th db out_kl)
-            (get_update_value th db value) db;
-        Unit)
+    let update_map_value ?(expr = None) id in_kl out_kl value = 
+      Eval(fun th db ->
+      let in_key = (get_update_key th db in_kl) in
+      let out_key = (get_update_key th db out_kl) in
+      let v = (get_update_value th db value) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nUPDATE '"^id^"'["^
+           (String.concat "; " (List.map K3Value.to_string in_key))^
+           "]["^
+           (String.concat "; " (List.map K3Value.to_string out_key))^
+           "] := "^(K3Value.to_string v)
+        );
+        DB.update_map_value id in_key out_key v db; Unit)
 
     (* persistent collection id, update collection -> update *)
     let update_in_map ?(expr = None) id collection = Eval(fun th db ->
@@ -601,7 +632,7 @@ struct
     
     (* Top level code generation *)
     let trigger event rel trig_args stmt_block =
-      Trigger (event, rel, (fun tuple db ->
+      Trigger (event, rel, (fun tuple db -> 
         let theta = Env.make trig_args (List.map value_of_const_t tuple), [] in
           List.iter (fun cstmt -> match (get_eval cstmt) theta db with
             | Unit -> ()
@@ -649,9 +680,15 @@ struct
             );
             match evt with 
             | Some(Insert, rel, tuple) when List.mem_assoc rel insert_trigs -> 
-              ((List.assoc rel insert_trigs) tuple db; true)
+               List.fold_left (fun ret (trel,trig) -> 
+                  if trel = rel then (trig tuple db; ret || true) else ret
+               ) false insert_trigs
+(*              ((List.assoc rel insert_trigs) tuple db; true)*)
             | Some(Delete, rel, tuple) when List.mem_assoc rel delete_trigs -> 
-              ((List.assoc rel delete_trigs) tuple db; true)
+               List.fold_left (fun ret (trel,trig) -> 
+                  if trel = rel then (trig tuple db; ret || true) else ret
+               ) false delete_trigs
+(*              ((List.assoc rel delete_trigs) tuple db; true)*)
             | Some _  | None -> false)
         in
         let mux = List.fold_left
