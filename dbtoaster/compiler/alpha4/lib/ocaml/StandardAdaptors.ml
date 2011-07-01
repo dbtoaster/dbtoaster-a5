@@ -298,7 +298,10 @@ let orderbook_generator params =
       let ts,i,a,v,p =
         (ff t 0, fi t 1, List.nth t 2, ff t 3, ff t 4)
       in if num_brokers > 0 then
-           let broker_id = float_of_int(Random.int(num_brokers))
+           let broker_id = 
+             if Util.Debug.active "DETERMINISTIC-BROKER" 
+             then float_of_int (i mod num_brokers)
+             else float_of_int(Random.int(num_brokers))
            in (a,i,[ts;float_of_int i;broker_id;v;p])
          else a,i,[ts;float_of_int i;v;p]
    in

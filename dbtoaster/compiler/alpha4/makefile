@@ -19,6 +19,7 @@ SOURCE = \
 	stages/functional/K3.ml \
 	stages/functional/K3Typechecker.mli \
 	stages/functional/K3Typechecker.ml \
+	stages/functional/K3Optimizer.mli \
 	stages/functional/K3Optimizer.ml \
 	stages/functional/K3Builder.mli \
 	stages/functional/K3Builder.ml \
@@ -226,12 +227,11 @@ test: top
 	@$(DEBUG_APP) test/unit/CompilerTest.ml
 	@$(DEBUG_APP) test/unit/compiler.ml
 	@$(DEBUG_APP) test/unit/m3_ex.ml
-	@$(DEBUG_APP) test/unit/k3_ocaml.ml
-	@$(DEBUG_APP) test/unit/k3_ocaml_rst.ml
-	@$(DEBUG_APP) test/unit/k3_ocaml_vwap.ml
-	@$(DEBUG_APP) test/unit/k3_ocaml_sgl.ml
-	@$(DEBUG_APP) test/unit/k3_ocaml_queries.ml
-	@$(DEBUG_APP) test/unit/tpch_compilation.ml
+#	@$(DEBUG_APP) test/unit/k3_ocaml.ml
+#	@$(DEBUG_APP) test/unit/k3_ocaml_rst.ml
+#	@$(DEBUG_APP) test/unit/k3_ocaml_vwap.ml
+#	@$(DEBUG_APP) test/unit/k3_ocaml_sgl.ml
+#	@$(DEBUG_APP) test/unit/k3_ocaml_queries.ml
 	@$(DEBUG_APP) test/examples/AxFinder.ml
 	@$(DEBUG_APP) test/examples/CustSupp.ml
 	@$(DEBUG_APP) test/examples/MyTpchTest.ml
@@ -244,7 +244,7 @@ test: top
 #	@$(DEBUG_APP) test/examples/VwapTest.ml
 
 ok_test: top
-	@./dbtoaster_top $(INCLUDE_DIR) test/unit/unroly.ml
+	@$(DEBUG_APP) test/unit/compiler.ml
 
 
 ## SQL compilation Tests
@@ -306,7 +306,5 @@ stages/maps/M3Codegen.cmi: stages/maps/M3Common.cmo
 stages/maps/M3Codegen.cmxi: stages/maps/M3Common.cmx
 stages/maps/M3Common.cmo: util/Util.cmo stages/maps/M3.cmo 
 stages/maps/M3Common.cmx: util/Util.cmx stages/maps/M3.cmx
-stages/functional/K3Builder.cmo: stages/functional/K3Optimizer.cmo 
-stages/functional/K3Builder.cmx: stages/functional/K3Optimizer.cmx
 stages/functional/K3Codegen.cmi: stages/ring/Calculus.cmo stages/functional/K3.cmo
 stages/functional/K3Codegen.cmxi: stages/ring/Calculus.cmx stages/functional/K3.cmx

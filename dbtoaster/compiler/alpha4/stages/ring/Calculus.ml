@@ -483,7 +483,7 @@ let extract_substitutions (monomial: relcalc_t)
 let factorize_aggsum_mm (f_monomial: term_t)
                         (r_monomial: relcalc_t) : term_t =
    if (r_monomial = relcalc_zero) then TermRing.zero
-   else
+   else 
       let factors = Util.MixedHyperGraph.connected_components
                        term_vars relcalc_vars
                        (Util.MixedHyperGraph.make
@@ -495,8 +495,6 @@ let factorize_aggsum_mm (f_monomial: term_t)
          (mk_aggsum (TermRing.mk_prod f) (CalcRing.mk_prod r))
       in
       TermRing.mk_prod (List.map mk_aggsum2 factors)
-
-
 
 
 let rec apply_bottom_up (aggsum_f: term_t -> relcalc_t -> term_t)

@@ -603,3 +603,115 @@ Debug.log_unit_test_list "Quad-Self-Join Stage 2 Todos" string_of_term_mapping
       ))),
     map_term "Q_pR1_pR1" ["Q_pR1R_B",TInt;"Q_pR1R_A",TInt]
   ]
+;;
+let axfinder_query_term inner outer = 
+   (RProd[
+      outer;
+      (RSum[
+         RVal(AggSum(
+            inner,
+            (RA_Leaf(AtomicConstraint(
+               Lt,
+               (RVal(Const(Int(1000)))),
+               (RSum[
+                  RVal(Var("QUERYASKS_A__PRICE", TDouble));
+                  (RProd[
+                     RVal(Const(Int(-1)));
+                     RVal(Var("B__PRICE", TDouble))
+         ]) ]) ))) ));
+         RVal(AggSum(
+            inner,
+            (RA_Leaf(AtomicConstraint(
+               Lt,
+               (RVal(Const(Int(1000)))),
+               (RSum[
+                  RVal(Var("B__PRICE", TDouble));
+                  (RProd[
+                     RVal(Const(Int(-1)));
+                     RVal(Var("QUERYASKS_A__PRICE", TDouble))
+   ]) ]) ))) )) ]) ])
+;;
+let (problem_axfinder_aggsum_f, problem_axfinder_aggsum_r) = 
+   (  (RProd[
+         RVal(Const(Int(-1)));
+         (RSum[(axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
+                                    (RVal(Const(Int(-1))))) ]) ]),
+      (RA_Leaf(Rel("BIDS", ["B__T", TDouble; 
+                            "B__ID", TDouble;
+                            "QUERYASKS_A__BROKER_ID", TDouble;
+                            "B__VOLUME", TDouble;
+                            "B__PRICE", TDouble])))
+   )
+;;
+Debug.log_unit_test "Axfinder d(-ASK)d(+BID) Hypergraph Factors"
+   (fun x -> (String.concat "*\n" (List.map string_of_term x)))
+   (List.map (fun component ->
+         let (f, r) = Util.MixedHyperGraph.extract_atoms component in
+            (Calculus.mk_aggsum
+               (make_term (RProd (List.map readable_term f)))
+               (make_relcalc (RA_MultiNatJoin (List.map readable_relcalc r)))
+            )
+      )
+      (Util.MixedHyperGraph.connected_components
+         Calculus.term_vars Calculus.relcalc_vars
+         (Util.MixedHyperGraph.make
+            [  (make_term (RVal(Const(Int(-1)))));
+               (make_term (RSum[
+                  (axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
+                                       (RVal(Const(Int(-1))))) ])) ]
+            [  make_relcalc problem_axfinder_aggsum_r ])
+      )
+   )
+   [
+      (make_term (RVal(Const(Int(-1)))));
+      (make_term
+         (RVal(AggSum(
+            (RSum[(axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
+                                       (RVal(Const(Int(-1))))) ]),
+            (problem_axfinder_aggsum_r)
+         )))
+      )
+   ]
+;;
+Debug.log_unit_test "Hypergraph Factors of (-1)*(-1)"
+   (fun x -> String.concat "*" (List.flatten x))
+   (HyperGraph.connected_components (fun x -> []) ["-1";"-1"])
+   [ [ "-1" ]; [ "-1" ] ]
+            
+;;
+Debug.log_unit_test "Axfinder d(-ASK)d(+BID) Factorize_AggSum_MM"
+   string_of_term
+   (Calculus.factorize_aggsum_mm (make_term problem_axfinder_aggsum_f)
+                                 (make_relcalc problem_axfinder_aggsum_r))
+   (make_term(
+      RProd[ 
+         RVal(Const(Int(-1)));
+         RVal(Const(Int(-1)));
+         RVal(AggSum(
+            (axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
+                                 (RVal(Const(Int(1))))),
+            problem_axfinder_aggsum_r
+         ))
+      ]
+   ))
+                  
+;;
+let axfinder_query = 
+   (make_term (
+      RVal(AggSum(
+         (RProd[
+            RVal(Const(Int(-1)));
+            (RSum[
+               (axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
+                                    (RVal(Const(Int(-1)))));
+               (axfinder_query_term (RVal(Const(Int(1)))))
+                                    (RVal(Var("QUERYASKS_A__VOLUME", TDouble)))
+
+         ]) ]),
+         RA_Leaf(Rel("BIDS", ["B__T", TDouble; 
+                              "B__ID", TDouble;
+                              "QUERYASKS_A__BROKER_ID", TDouble;
+                              "B__VOLUME", TDouble;
+                              "B__PRICE", TDouble]))
+   ))))
+;;

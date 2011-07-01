@@ -141,22 +141,35 @@ struct
 
    The top-level result list thus conceptually is a MultiProduct.
 *)
-let rec connected_components (get_nodes: 'edge_t -> 'node_t list)
-                             (hypergraph: 'edge_t list): ('edge_t list list)
-   =
-   let rec complete_component c g =
-      if (g = []) then c
-      else if (c = []) then c
+   let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
+                                       (hypergraph: 'edge_t list): 
+                                          ('edge_t list list) =
+      let rec complete_component c g =
+         if (g = []) then c
+         else if (c = []) then c
+         else
+            let relevant_set = (List.flatten (List.map get_nodes c)) in
+            let neighbor e = ((ListAsSet.inter relevant_set (get_nodes e)) !=[])
+            in
+            let newset = (List.filter neighbor g) in
+            c @ (complete_component newset (ListAsSet.diff g newset)) in
+      if hypergraph = [] then []
       else
-         let relevant_set = (List.flatten (List.map get_nodes c)) in
-         let neighbor e = ((ListAsSet.inter relevant_set (get_nodes e)) != [])
-         in
-         let newset = (List.filter neighbor g) in
-         c @ (complete_component newset (ListAsSet.diff g newset)) in
-   if hypergraph = [] then []
-   else
-      let c = complete_component [List.hd hypergraph] (List.tl hypergraph) in
-      [c] @ (connected_components get_nodes (ListAsSet.diff hypergraph c))
+         let c = complete_component [List.hd hypergraph] (List.tl hypergraph) in
+         [c] @ (connected_unique_components get_nodes
+                                            (ListAsSet.diff hypergraph c))
+
+   let connected_components (get_nodes: 'edge_t -> 'node_t list)
+                            (hypergraph: 'edge_t list): 
+                               ('edge_t list list) =
+      List.map (fun factor -> List.map snd factor)
+         (connected_unique_components
+            (fun (_,x) -> get_nodes x)
+            (snd (List.fold_right 
+               (fun x (i,old) -> (i+1, (i, x)::old)) hypergraph (0,[])))
+         )
+   
+
 end
 
 

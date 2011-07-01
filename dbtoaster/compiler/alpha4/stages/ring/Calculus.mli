@@ -386,3 +386,4 @@ val apply_bottom_up :
   (term_t) -> term_t
 
 val roly_poly_plural: term_t -> term_t list
+val mk_aggsum: term_t -> relcalc_t -> term_t

@@ -2,6 +2,7 @@ open Util
 open CalcToM3
 
 module K3OC = K3Compiler.Make(K3OCamlgen.K3CG)
+module K3OI = K3Compiler.Make(K3Interpreter.K3CG)
 
 let parse_script script_file = 
    let f = open_in script_file in 
