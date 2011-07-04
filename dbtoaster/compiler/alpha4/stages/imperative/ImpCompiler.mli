@@ -50,7 +50,8 @@ sig
   val declare_main :
     (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
-    -> (string * string * string) list -> source_code_t
+    -> (string * string * string) list 
+    -> string list -> source_code_t
 end
 
 (* Imperative stage: supports compilation from a K3 program *)

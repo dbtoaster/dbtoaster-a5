@@ -322,7 +322,6 @@ namespace dbtoaster {
 
       vector<string> output_maps;
       vector<string> logged_streams;
-      bool all_maps_traced;
 
       // Tracing
       string trace_opts;
@@ -330,8 +329,7 @@ namespace dbtoaster {
       int trace_counter, trace_step;
       unordered_set<string> traced_maps;
 
-      runtime_options() { traced = false; trace_step = trace_counter = 0;
-                          all_maps_traced = false; }
+      runtime_options() { traced = false; trace_step = trace_counter = 0; }
 
       runtime_options(int argc, char* argv[]) { init(argc, argv); }
 
@@ -344,7 +342,7 @@ namespace dbtoaster {
           ("log-triggers,l", value<vector<string> >(&logged_streams), "log stream triggers")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
-          ("allmaps,a", value<bool>(&all_maps_traced), "output all maps")
+          ("query,q", "output query results")
           ("trace-dir", value<string>(), "trace output dir")
           ("trace,t", value<string>(&trace_opts), "trace query execution")
           ("trace-step,s", value(&trace_step), "trace step size");
@@ -353,12 +351,18 @@ namespace dbtoaster {
         store(command_line_parser(argc,argv).
           options(*opt_desc).positional(pos_options).run(), opt_map);
         notify(opt_map);
-
+        
         trace_counter = 0;
         if ( trace_step <= 0 ) trace_step = 1000;
         cout << "tracing: " << trace_opts << endl;
         if ( trace_opts != "" ) parse_tracing(trace_opts);
         else traced = false;
+      }
+      
+      void add_toplevel_query(string map_name){
+        if(opt_map.count("query") || (opt_map.count("q"))){
+          output_maps.push_back(map_name);
+        }
       }
 
       bool help() {
@@ -376,7 +380,6 @@ namespace dbtoaster {
       }
 
       bool is_output_map(string map_name) {
-        if(all_maps_traced) { return true; }
         return find(output_maps.begin(), output_maps.end(), map_name)
                 != output_maps.end();
       }

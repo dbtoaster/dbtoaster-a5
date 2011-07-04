@@ -83,7 +83,8 @@ sig
   val declare_main :
     (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
-    -> (string * string * string) list -> source_code_t
+    -> (string * string * string) list
+    -> string list -> source_code_t
 end
 
 
@@ -1737,7 +1738,7 @@ end (* Typing *)
       (0,([], [Lines ["map<string, int> stream_identifiers;"]])) dbschema)
     in x, cscl y
   
-  let declare_main stream_ids map_schema source_vars trig_meta =
+  let declare_main stream_ids map_schema source_vars trig_meta tlqs =
     let mt = Target(Type("stream_multiplexer")) in
     let dt = Target(Type("stream_dispatcher")) in
     let rot = Target(Type("runtime_options")) in
@@ -1770,13 +1771,16 @@ end (* Typing *)
           "    "^archive_id^"<<BOOST_SERIALIZATION_NVP("^map_id^");"])
         map_schema)
       in
+      let register_toplevel_queries = List.map (fun q -> 
+         "run_opts.add_toplevel_query(\""^q^"\");"
+      ) tlqs in
       let stepper = ["";
          "void trace(std::ostream &ofs, bool debug) {";
          "  boost::archive::xml_oarchive oa(ofs, 0);"]
         @(map_outputs "run_opts" "oa")@
         ["}";
-         "void trace(const string& trace_file, bool debug) {";
-         "  if(trace_file.compare("-")){"
+         "void trace(const path& trace_file, bool debug) {";
+         "  if(strcmp(trace_file.c_str(), \"-\")){";
          "    std::ofstream ofs(trace_file.c_str());";
          "    trace(ofs, debug);";
          "  } else {";
@@ -1797,6 +1801,7 @@ end (* Typing *)
              ["int main(int argc, char* argv[]) {"]
              @register_streams@[
               "  run_opts.init(argc, argv);";
+             ]@register_toplevel_queries@[
               "  if ( run_opts.help() ) { exit(1); };" ]
              @register_src        (* Add all sources to multiplexer *)
              @register_triggers@  (* Add unwrappers to dispatcher *)
@@ -1808,7 +1813,7 @@ end (* Typing *)
               "        bind(&process_event, _1));";
               "    }";
               "  }";
-              "  trace(run_opts.get_output_file(), debug);";
+              "  trace(run_opts.get_output_file(), false);";
               "}"])
     in cscl ((List.map source_code_of_imp globals)@[main_fn])
      
@@ -1883,7 +1888,7 @@ struct
             match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
           let trig_name = (pm_name evt)^"_"^rel
           in ((rel^"id"), ((pm_name evt)^"_tuple"), ("unwrap_"^trig_name))) trigs
-        in declare_main stream_ids schema source_vars unwrap_fn_ids
+        in declare_main stream_ids schema source_vars unwrap_fn_ids tlqs
     in     
     let body = cscl (List.flatten
       (List.map (source_code_of_trigger dbschema)
