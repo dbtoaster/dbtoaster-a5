@@ -16,18 +16,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jboss.netty.channel.Channel;
 import rules.Matcher;
-import rules.Rule;
+
+import state.StockPrice;
 import state.StockState;
 
 /**
  *
+ * Same as {@link BasicMatcher} except it sends an update to the all the users involved in the match about the trade.
  * @author kunal
  */
 public class UpdateMessageMatcher implements Matcher {
 
     OrderBook orderBook;
-    List<Rule> bidMatchRules; //The rules to match a new bid
-    List<Rule> askMatchRules; //The rules to match a new ask
+
     StockState stockState;
     public final static Logger logger = Logger.getLogger("match_results");
 
@@ -51,8 +52,7 @@ public class UpdateMessageMatcher implements Matcher {
     public UpdateMessageMatcher(OrderBook dbconn, StockState stockState) throws IOException {
 
         orderBook = dbconn;
-        bidMatchRules = new ArrayList<Rule>();
-        askMatchRules = new ArrayList<Rule>();
+
         this.stockState = stockState;
 
         logger.setLevel(Level.ALL);
@@ -62,7 +62,7 @@ public class UpdateMessageMatcher implements Matcher {
     }
 
     @Override
-    public List<OrderBookEntry> match(String action, OrderBookEntry a) {
+    public synchronized List<OrderBookEntry> match(String action, OrderBookEntry a) {
         List<OrderBookEntry> targetOrderBook = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         List<OrderBookEntry> tupleOrderBook = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
 
@@ -97,8 +97,9 @@ public class UpdateMessageMatcher implements Matcher {
 
         Channel actionChannel = this.stockState.getChannel(this.stockState.getFromMap(a.traderId));
         Channel matchChannel = this.stockState.getChannel(this.stockState.getFromMap(match.traderId));
-
+        Integer currentTradedVolume = StockPrice.getStockVolume(a.stockId);
         Double newPrice = updatePrice(a.stockId, a.price, match.price);
+        System.err.println("New price is "+StockPrice.getStockPrice(a.stockId));
         if (match.volume == a.volume) {
             status = status && OrderBook.delete(targetOrderBook, match);
             status = status && OrderBook.delete(tupleOrderBook, a);
@@ -121,6 +122,7 @@ public class UpdateMessageMatcher implements Matcher {
                     match.timestamp,
                     match.traderId);
             System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
+            currentTradedVolume+=a.volume;
             actionChannel.write(currentTraderMessage);
             matchChannel.write(matchTraderMessage);
 
@@ -147,7 +149,7 @@ public class UpdateMessageMatcher implements Matcher {
                     match.timestamp,
                     match.traderId);
             System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
-
+            currentTradedVolume+=match.volume;
             actionChannel.write(currentTraderMessage);
             matchChannel.write(matchTraderMessage);
 
@@ -177,11 +179,13 @@ public class UpdateMessageMatcher implements Matcher {
                     match.traderId);
 
             System.err.println("Sending updates for match: \n" + currentTraderMessage + "\n" + matchTraderMessage);
-
+            currentTradedVolume+=a.volume;
             actionChannel.write(currentTraderMessage);
             matchChannel.write(matchTraderMessage);
         }
-
+        
+        StockPrice.setStockVolume(a.stockId, currentTradedVolume);
+        
         if (!status) {
             logger.warning("Deletion or updation from order book failed during matching");
         }
@@ -237,13 +241,13 @@ public class UpdateMessageMatcher implements Matcher {
 
     private Double updatePrice(int stockId, double newPrice, double matchPrice) {
         if (newPrice != OrderBook.MARKETORDER) {
-            this.stockState.setStockPrice(stockId, newPrice);
+            StockPrice.setStockPrice(stockId, newPrice);
             return newPrice;
         } else if (matchPrice != OrderBook.MARKETORDER) {
-            this.stockState.setStockPrice(stockId, matchPrice);
+            StockPrice.setStockPrice(stockId, matchPrice);
             return matchPrice;
         }
-        return this.stockState.getStockPrice(stockId);
+        return StockPrice.getStockPrice(stockId);
 
     }
 }

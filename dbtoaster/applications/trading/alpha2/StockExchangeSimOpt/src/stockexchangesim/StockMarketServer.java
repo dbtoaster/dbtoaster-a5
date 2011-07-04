@@ -4,12 +4,10 @@
  */
 package stockexchangesim;
 
-import codecs.ModStringDecoder;
 import state.StockState;
 import codecs.TupleDecoder;
 import state.OrderBook;
 import java.io.IOException;
-import rules.impl.BasicMatcher;
 import handlers.OrderMatchingHandler;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Executors;
@@ -27,6 +25,7 @@ import org.jboss.netty.handler.codec.string.StringEncoder;
 import rules.Matcher;
 /**
  *
+ * The stock market server.
  * @author kunal
  */
 public class StockMarketServer {
@@ -44,6 +43,20 @@ public class StockMarketServer {
         this.m = t.matchmaker;
         this.stockState = t.stockState;
         //logger = LoggerFactory.getLogger("stream_logger");
+        
+        //Initialise the market
+        ChannelFactory factory =
+                new NioServerSocketChannelFactory(
+                Executors.newCachedThreadPool(),
+                Executors.newCachedThreadPool());
+
+        ServerBootstrap bootstrap = new ServerBootstrap(factory);
+
+        bootstrap.setPipelineFactory(new StockMarketChannelFactory());
+        bootstrap.setOption("child.tcpNoDelay", true);
+        bootstrap.setOption("child.keepAlive", true);
+
+        bootstrap.bind(new InetSocketAddress(8080));
     }
     
     public class StockMarketChannelFactory implements ChannelPipelineFactory{
@@ -56,21 +69,5 @@ public class StockMarketServer {
                     new OrderMatchingHandler(orderBook, obLock, sLock, new TupleDecoder(OrderBook.getSchema()), m, stockState));
         }
         
-    }
-    
-    public static void main(String[] args) throws Exception {
-        StockMarketServer s = new StockMarketServer();
-        ChannelFactory factory =
-                new NioServerSocketChannelFactory(
-                Executors.newCachedThreadPool(),
-                Executors.newCachedThreadPool());
-
-        ServerBootstrap bootstrap = new ServerBootstrap(factory);
-
-        bootstrap.setPipelineFactory(s.new StockMarketChannelFactory());
-        bootstrap.setOption("child.tcpNoDelay", true);
-        bootstrap.setOption("child.keepAlive", true);
-
-        bootstrap.bind(new InetSocketAddress(8080));
     }
 }

@@ -6,6 +6,7 @@ package nasdaq.utils;
 
 /**
  *
+ * Window based properties of the market that one may want to study or keep an eye on. Like the portfolio changes in a particular time window.
  * @author kunal
  */
 public class WindowPropts {

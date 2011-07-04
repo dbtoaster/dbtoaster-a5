@@ -8,26 +8,21 @@ import algotraders.framework.GeneralStockPropts;
 import algotraders.framework.GeneralTraderHandler;
 import algotraders.framework.WatchList;
 import codecs.TupleDecoder;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelHandler;
 import rules.Matcher;
-import rules.impl.BasicMatcher;
 import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
+import state.StockPrice;
 import state.StockState;
 
 /**
  *
+ * The handler for the BasicSobi trader channel to the market
  * @author kunal
  */
 public class BasicSobiTraderHandler extends GeneralTraderHandler {
@@ -45,7 +40,13 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
         pendingOrders = new HashMap<Integer, Long>();
     }
     
-    
+    /**
+     * Implemented method from parent class {@link GeneralTraderHandler}
+     * 
+     * @param payload
+     * @param ch
+     * @throws IOException 
+     */
     @Override
     public void runSim(String payload, Channel ch) throws IOException {
         String[] contents = payload.split(";");
@@ -84,8 +85,8 @@ public class BasicSobiTraderHandler extends GeneralTraderHandler {
             
             //Code for generation of new trade
             BasicSobiPropts oldPropts = (BasicSobiPropts) stockInfo.get(newEntry.stockId);
-            oldPropts.updatePrice(stockState.getStockPrice(newEntry.stockId));
-            oldPropts.updatePending(orderBook);
+            oldPropts.updatePrice(StockPrice.getStockPrice(newEntry.stockId));
+            oldPropts.updatePending();
             
             String trade = null;
             Integer trader = 0;

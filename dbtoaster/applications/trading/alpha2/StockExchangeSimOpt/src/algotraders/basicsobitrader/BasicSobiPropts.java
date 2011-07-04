@@ -6,19 +6,28 @@ package algotraders.basicsobitrader;
 
 import algotraders.framework.GeneralStockPropts;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import state.OrderBook;
-import state.OrderBook.OrderBookEntry;
 
 /**
- *
+ * This is an extension of {@link GeneralStockPropts}. This class contains 
+ * the fields in {@link GeneralStockPropts} plus a few additional fields that 
+ * may be needed by a BasicSobiTrader. 
+ * 
  * @author kunal
  */
 public class BasicSobiPropts extends GeneralStockPropts {
 
-    public BasicSobiPropts(Double theta, Integer volToTrade, Double margin) {
+    /**
+     * Constructor call. 
+     * 
+     * @param theta A parameter to decide what gap in the vol weighted prices and market prices is sufficient to decide trend for this stock.
+     * @param volToTrade A parameter to decide how much volume to trade in this stock.
+     * @param margin A parameter to decide how much higher or lower than market price to set the limit order.
+     * @param orderBook The orderbook these properties depend on.
+     */
+    public BasicSobiPropts(Double theta, Integer volToTrade, Double margin, OrderBook orderBook) {
         this.stockPropts = new HashMap<String, Object>();
         
         //General propts for every algorithm
@@ -26,8 +35,18 @@ public class BasicSobiPropts extends GeneralStockPropts {
         
         //Propts specific to current algorithm
         specificProptsInit(theta, volToTrade, margin);
+        
+        this.orderBook = orderBook;
     }
     
+    /**
+     * This function is to initiate the properties of the stock that the trader wants to track besides the general ones included in 
+     * {@link GeneralStockPropts}. 
+     * 
+     * @param theta Same meaning as the constructor
+     * @param volToTrade
+     * @param margin 
+     */
     private void specificProptsInit(Double theta, Integer volToTrade, Double margin){
         addPropt("bidVolWeightAvg", new Double(0));
         addPropt("askVolWeightAvg", new Double(0));
@@ -37,6 +56,10 @@ public class BasicSobiPropts extends GeneralStockPropts {
         addPropt("margin", margin);
     }
     
+    /**
+     * 
+     * function used to update bid related specific properties added above {@link GeneralStockPropts} in this class.
+     */
     @Override
     public void updateSpecificBids() {
         double volWt = 0;
@@ -54,6 +77,10 @@ public class BasicSobiPropts extends GeneralStockPropts {
         }
     }
 
+    /**
+     * 
+     * function used to update ask related specific properties added above {@link GeneralStockPropts} in this class.
+     */
     @Override
     public void updateSpecificAsks() {
         double volWt = 0;
@@ -69,6 +96,12 @@ public class BasicSobiPropts extends GeneralStockPropts {
         }
     }
 
+    /**
+     * Generates a trade after considering current properties of the stock.
+     * 
+     * @return String with the price and volume of the trade. The remaining details need to be appended to this string by the 
+     * function to generate an actual trade string.
+     */
     @Override
     public String getTrade() {
         double price = (Double) getPropt("price");
@@ -106,6 +139,12 @@ public class BasicSobiPropts extends GeneralStockPropts {
     }
 
 
+    /**
+     * Currently redundant. Used to update the volume property which represents current volume held in the stock.
+     * 
+     * @param volTraded 
+     */
+    @Deprecated
     public void updateVolHeld(Integer volTraded) {
         setPropt("volHeld", (Integer) getPropt("volHeld") + volTraded);
     }

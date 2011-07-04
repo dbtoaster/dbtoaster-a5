@@ -16,7 +16,7 @@ import state.OrderBook;
  */
 public class ProfitTraderPropts extends GeneralStockPropts {
 
-    public ProfitTraderPropts(Double theta, Integer volToTrade, Double margin, Double portfolio) {
+    public ProfitTraderPropts(Double theta, Integer volToTrade, Double margin, Double portfolio, OrderBook orderBook) {
         this.stockPropts = new HashMap<String, Object>();
 
         //General propts for every algorithm
@@ -24,6 +24,8 @@ public class ProfitTraderPropts extends GeneralStockPropts {
 
         //Propts specific to current algorithm
         specificProptsInit(theta, volToTrade, margin, portfolio);
+        
+        this.orderBook = orderBook;
     }
 
     private void specificProptsInit(Double theta, Integer volToTrade, Double margin, Double portfolio){

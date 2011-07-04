@@ -4,6 +4,7 @@
  */
 package algotraders.profitbasedtrader;
 
+import algotraders.basicsobitrader.BasicSobiTrader;
 import algotraders.framework.GeneralTrader;
 import codecs.TupleDecoder;
 import java.io.BufferedReader;
@@ -27,6 +28,7 @@ import state.OrderBook;
 
 /**
  *
+ * Everything in this class is almost same as {@link BasicSobiTrader} except this includes the concept of a portfolio and profit/loss.
  * @author kunal
  */
 public class ProfitTrader extends GeneralTrader {
@@ -71,7 +73,7 @@ public class ProfitTrader extends GeneralTrader {
 
     private void init() {
         for (Integer i : watchList.getList()) {
-            ProfitTraderPropts newPropts = new ProfitTraderPropts(this.theta, this.volToTrade, this.margin, this.portfolio);
+            ProfitTraderPropts newPropts = new ProfitTraderPropts(this.theta, this.volToTrade, this.margin, this.portfolio, this.simOrderBook);
             stockInfo.put(i, newPropts);
         }
 

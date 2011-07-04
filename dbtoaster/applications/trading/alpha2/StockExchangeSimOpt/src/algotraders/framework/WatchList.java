@@ -9,6 +9,7 @@ import java.util.List;
 
 /**
  *
+ * Class to represent a stockList that needs to worked on or kept an eye by a trader.
  * @author kunal
  */
 public class WatchList {

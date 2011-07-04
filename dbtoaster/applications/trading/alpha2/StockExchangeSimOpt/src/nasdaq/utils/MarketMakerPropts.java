@@ -4,13 +4,16 @@
  */
 package nasdaq.utils;
 
+import algotraders.basicsobitrader.BasicSobiPropts;
 import org.jboss.netty.channel.Channel;
 import rules.Matcher;
 import state.OrderBook;
+import state.OrderBook.OrderBookEntry;
 import state.StockState;
 
 /**
  *
+ * Information that the market maker uses to make decisions.
  * @author kunal
  */
 public class MarketMakerPropts {
@@ -29,8 +32,9 @@ public class MarketMakerPropts {
     public StockState stockState;
     public Matcher matchMaker;
     public Channel ch;
+    public OrderBookEntry pendingOrder;
     //Window based Properties here
     public WindowPropts curWindowPropts;
-    
+    public BasicSobiPropts stockPropts;
     
 }

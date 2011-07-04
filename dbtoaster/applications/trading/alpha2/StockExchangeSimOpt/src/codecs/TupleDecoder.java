@@ -6,19 +6,33 @@ package codecs;
 
 import java.util.HashMap;
 import java.util.Map;
+import state.OrderBook.OrderBookEntry;
 
 /**
  *
+ * The parser for order Strings. Has a method to convert an order string into a Map based on a Schema map given to it.
+ * 
  * @author kunal
  */
 public class TupleDecoder {
 
     Map<String, String> schema;
 
+    /**
+     * Constructor
+     * 
+     * @param schema The schema map
+     */
     public TupleDecoder(Map<String, String> schema) {
         this.schema = schema;
     }
 
+    /**
+     * Returns a decoded map given a order string.
+     * 
+     * @param payload The string with the order details.
+     * @return Map which contains the decoded details according to schema provided.
+     */
     public synchronized Map<String, Object> createTuples(String payload) {
         payload = payload.trim();
         String[] fields = payload.split(" ");

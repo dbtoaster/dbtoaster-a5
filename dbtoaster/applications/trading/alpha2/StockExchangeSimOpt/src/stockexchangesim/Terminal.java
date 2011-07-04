@@ -7,7 +7,6 @@ package stockexchangesim;
 import state.StockState;
 import state.OrderBook;
 import java.io.IOException;
-import rules.impl.BasicMatcher;
 import java.util.concurrent.Semaphore;
 import rules.Matcher;
 import rules.impl.UpdateMessageMatcher;

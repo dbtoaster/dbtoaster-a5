@@ -8,7 +8,6 @@ import codecs.TupleDecoder;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
@@ -16,7 +15,8 @@ import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
 
 /**
- *
+ * 
+ * Handles connections of clients to the market maker who want to trade in the market through this market maker. 
  * @author kunal
  */
 public class MarketMakerServerHandler extends SimpleChannelHandler {
@@ -66,19 +66,19 @@ public class MarketMakerServerHandler extends SimpleChannelHandler {
                     }
                     //New order received, supporting only buy and sell commands at match maker right now
                     String action = contents[0];
-                    String oppAction = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? OrderBook.ASKCOMMANDSYMBOL : OrderBook.BIDCOMMANDSYMBOL;
-
-                    String mmTrade = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
-                            oppAction,
-                            newEntry.stockId,
-                            OrderBook.MARKETORDER,
-                            newEntry.volume,
-                            order_id++,
-                            newEntry.timestamp,
-                            this.marketPropts.hashCode());
+//                    String oppAction = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? OrderBook.ASKCOMMANDSYMBOL : OrderBook.BIDCOMMANDSYMBOL;
+//
+//                    String mmTrade = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
+//                            oppAction,
+//                            newEntry.stockId,
+//                            OrderBook.MARKETORDER,
+//                            newEntry.volume,
+//                            order_id++,
+//                            newEntry.timestamp,
+//                            this.marketPropts.hashCode());
 
                     //Send opposite order to the market.
-                    ChannelFuture cf = marketPropts.ch.write(mmTrade);
+                    //ChannelFuture cf = marketPropts.ch.write(mmTrade);
 
                     //Confirm the trade 
                     if (action.equals(OrderBook.ASKCOMMANDSYMBOL)) {

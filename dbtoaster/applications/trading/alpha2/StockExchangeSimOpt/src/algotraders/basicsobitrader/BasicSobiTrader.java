@@ -26,6 +26,7 @@ import state.OrderBook;
 
 /**
  *
+ * Generates trades according to an algorithm.
  * Algorithm: 
  * 1) If the volume weighted price for bids or asks is 0, then dont put in any trades. The market is building up.
  * 2) If the volume weighted price for bids is farther from market price than the volume weighted price for asks, then it means the market is going bullish,
@@ -42,7 +43,14 @@ public class BasicSobiTrader extends GeneralTrader{
     Double theta, margin;
     Integer volToTrade;
     
-
+    /**
+     * Constructor
+     * 
+     * @param param Parameter for deviation of volume weighted prices that trigger trade. |(bidvolwt+askvolwt-2*mp)|>param
+     * @param volToTrade Vol to trade on trigger
+     * @param margin Margin for limit order when trade is triggered.
+     * @throws IOException 
+     */
     public BasicSobiTrader(Double param, Integer volToTrade, Double margin) throws IOException {
         generalInit();
         
@@ -54,6 +62,15 @@ public class BasicSobiTrader extends GeneralTrader{
 
     }
 
+    /**
+     * Constructor
+     * 
+     * @param watchList List of stocks this trader will trade in.
+     * @param param Same as above
+     * @param volToTrade
+     * @param margin
+     * @throws IOException 
+     */
     public BasicSobiTrader(List<Integer> watchList, Double param, Integer volToTrade, Double margin) throws IOException {
         generalInit(watchList);
         
@@ -65,6 +82,9 @@ public class BasicSobiTrader extends GeneralTrader{
 
     }
 
+    /**
+     * Pipeline factory for connection to market.
+     */
     private class SobiTraderChannelPipelineFactory implements ChannelPipelineFactory {
 
         @Override
@@ -76,9 +96,13 @@ public class BasicSobiTrader extends GeneralTrader{
         }
     }
     
+    /**
+     * 
+     * Initialization of local variables
+     */
     private void init() {
         for (Integer i : watchList.getList()) {
-            BasicSobiPropts newPropts = new BasicSobiPropts(this.theta, this.volToTrade, this.margin);
+            BasicSobiPropts newPropts = new BasicSobiPropts(this.theta, this.volToTrade, this.margin, this.simOrderBook);
             stockInfo.put(i, newPropts);
         }
 

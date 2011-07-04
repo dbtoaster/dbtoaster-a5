@@ -30,6 +30,8 @@ import rules.Matcher;
 
 /**
  *
+ * This handler is used for the market ONLY. This is a connection handler that does a variety of actions including broadcasting all received messages to connected users to provide 
+ * orderBook information. 
  * Form of input tuples assumed is buy/sell;key:value key:value key:value....
  * Also if price field is 0 in the input then order is assumed to be a market order
  * 
@@ -68,7 +70,7 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
             for (String payload : payloads) {
                 //String retMsg = payload;
                 String[] contents = payload.split(";");
-                System.out.println("Order received: " + payload);
+                //System.out.println("Order received: " + payload);
                 Map<String, Object> decodedLoad = parser.createTuples(contents[1]);
 
                 if (decodedLoad != null) {
@@ -87,7 +89,7 @@ public class OrderMatchingHandler extends SimpleChannelHandler {
                             newEntry.timestamp,
                             newEntry.traderId);
                     //handlerLog.write(msg);
-                    System.out.println(msg);
+                    //System.out.println(msg);
                     orderBookLock.acquireUninterruptibly();
                     orderBook.executeCommand(contents[0], newEntry);
                     orderBookLock.release();

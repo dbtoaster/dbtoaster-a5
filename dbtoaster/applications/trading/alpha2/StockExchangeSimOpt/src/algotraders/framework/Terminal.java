@@ -11,14 +11,15 @@ import state.StockState;
 
 /**
  *
+ * Class to create singleton objects for a particular trader. 
  * @author kunal
  */
-public class SobiTerminal{
+public class Terminal{
     public StockState stockState;
     public OrderBook orderBook;
     public BasicMatcher matchmaker;
     
-    public SobiTerminal() throws IOException{
+    public Terminal() throws IOException{
         //Initialise the stock market
         this.stockState = new StockState();
         this.stockState.init();

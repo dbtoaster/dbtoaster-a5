@@ -2,8 +2,9 @@
  * To change this template, choose Tools | Templates
  * and open the template in the editor.
  */
-package nasdaq.utils;
+package handlers;
 
+import algotraders.framework.GeneralStockPropts;
 import codecs.TupleDecoder;
 import java.io.IOException;
 import java.util.List;
@@ -11,25 +12,38 @@ import java.util.Map;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
+import rules.Matcher;
 import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
 import state.StockPrice;
 
 /**
- *
- * Handles market feeds for the market maker. 
- * @author kunal
+ * A default handler for a connection to the market. Handles all kinds of market updates. This handler ignores order confirmation updates.
+ * 
+ * @author Kunal Shah
  */
-public class MarketMakerClientHandler extends SimpleChannelHandler {
+public class DefaultHandler extends SimpleChannelHandler {
 
     TupleDecoder parser;
     List<String> schema;
-    MarketMakerPropts marketPropts;
+    OrderBook orderBook;
+    Matcher matcher;
+    GeneralStockPropts stockPropts;
 
-    public MarketMakerClientHandler(MarketMakerPropts marketMakerPropts, TupleDecoder t) {
-        parser = t;
-        schema = OrderBook.getSchemaKeys();
-        this.marketPropts = marketMakerPropts;
+    /**
+     * 
+     * Constructor
+     * @param matcher The matching rules to be used.
+     * @param parser The parser to be used,
+     * @param orderBook The orderBook to work on.
+     * @param stockPropts If any kind of property maintenance is to be done the pass a {@link GeneralStockPropt} instance to this, else pass null
+     */
+    public DefaultHandler(Matcher matcher, TupleDecoder parser, OrderBook orderBook, GeneralStockPropts stockPropts) {
+        this.matcher = matcher;
+        this.parser = parser;
+        this.orderBook = orderBook;
+        this.schema = OrderBook.getSchemaKeys();
+        this.stockPropts = stockPropts;
     }
 
     @Override
@@ -50,28 +64,22 @@ public class MarketMakerClientHandler extends SimpleChannelHandler {
                         a[i] = decodedLoad.get(schema.get(i));
                     }
                     //a[4] = e.getChannel().hashCode();
-                    OrderBookEntry newEntry = marketPropts.simOrderBook.createEntry(a);
+                    OrderBookEntry newEntry = orderBook.createEntry(a);
                     if (contents[0].equals("B_update")) {
-                        marketPropts.portfolioValue = marketPropts.portfolioValue - (newEntry.volume * newEntry.price);
-                        marketPropts.stockHeld += newEntry.volume;
-                        if(marketPropts.pendingOrder.order_id == newEntry.order_id){
-                            marketPropts.pendingOrder.volume -=newEntry.volume;
-                        }
+
                         return;
                     }
                     if (contents[0].equals("S_update")) {
-                        marketPropts.portfolioValue = marketPropts.portfolioValue + (newEntry.volume * newEntry.price);
-                        marketPropts.stockHeld -= newEntry.volume;
-                        if(marketPropts.pendingOrder.order_id == newEntry.order_id){
-                            marketPropts.pendingOrder.volume -=newEntry.volume;
-                        }
+
                         return;
                     }
-                    marketPropts.simOrderBook.executeCommand(contents[0], newEntry);
+                    orderBook.executeCommand(contents[0], newEntry);
 
-                    marketPropts.matchMaker.match(contents[0], newEntry);
-                    marketPropts.stockPropts.updatePrice(StockPrice.getStockPrice(marketPropts.marketMakerStock));
-                    marketPropts.stockPropts.updatePending();
+                    matcher.match(contents[0], newEntry);
+                    if (stockPropts != null) {
+                        stockPropts.updatePrice(StockPrice.getStockPrice(newEntry.stockId));
+                        stockPropts.updatePending();
+                    }
                 }
             }
         } catch (Exception ex) {

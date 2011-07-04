@@ -15,18 +15,18 @@ import java.util.logging.FileHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import rules.Matcher;
-import rules.Rule;
+import state.StockPrice;
 import state.StockState;
 
 /**
  *
+ * A basic matching function. When an OrderBookEntry and action is received it exhaustively and recursively matches everything that can match the new order with the existing orders.
  * @author kunal
  */
 public class BasicMatcher implements Matcher {
 
     OrderBook orderBook;
-    List<Rule> bidMatchRules; //The rules to match a new bid
-    List<Rule> askMatchRules; //The rules to match a new ask
+
     StockState stockState;
     public final static Logger logger = Logger.getLogger("match_results");
 
@@ -50,8 +50,7 @@ public class BasicMatcher implements Matcher {
     public BasicMatcher(OrderBook dbconn, StockState stockState) throws IOException {
 
         orderBook = dbconn;
-        bidMatchRules = new ArrayList<Rule>();
-        askMatchRules = new ArrayList<Rule>();
+        
         this.stockState = stockState;
 
         logger.setLevel(Level.ALL);
@@ -61,7 +60,7 @@ public class BasicMatcher implements Matcher {
     }
 
     @Override
-    public List<OrderBookEntry> match(String action, OrderBookEntry a) {
+    public synchronized List<OrderBookEntry> match(String action, OrderBookEntry a) {
         List<OrderBookEntry> targetOrderBook = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         List<OrderBookEntry> tupleOrderBook = (action.equals(OrderBook.ASKCOMMANDSYMBOL)) ? orderBook.getAskOrderBook() : orderBook.getBidOrderBook();
         /*logger.info(String.format("---Matching new entry: %s Stock: %s, Qty: %s, Price: %s, TimeStamp: %s", action,
@@ -82,14 +81,11 @@ public class BasicMatcher implements Matcher {
         }
         //Step 3: If there is match complete a trade
         if (!matched) {
-            //logger.info("No match found---");
             return null;
         }
 
         Collections.sort(getTopMatches, new TimestampComparator());
         OrderBookEntry match = getTopMatches.get(0);
-        //logger.info(String.format("Matched an entry: Stock: %s, Qty: %s, Price: %s, TimeStamp: %s---",
-        //        match.stockId, match.volume, (match.price == OrderBook.MARKETORDER) ? "marketorder" : match.price, match.timestamp));
         boolean status = true;
         updatePrice(a.stockId, a.price, match.price);
         if (match.volume == a.volume) {
@@ -162,9 +158,9 @@ public class BasicMatcher implements Matcher {
 
     private void updatePrice(int stockId, double newPrice, double matchPrice) {
         if (newPrice != OrderBook.MARKETORDER) {
-            this.stockState.setStockPrice(stockId, newPrice);
+            StockPrice.setStockPrice(stockId, newPrice);
         } else if (matchPrice != OrderBook.MARKETORDER) {
-            this.stockState.setStockPrice(stockId, matchPrice);
+            StockPrice.setStockPrice(stockId, matchPrice);
         }
 
     }

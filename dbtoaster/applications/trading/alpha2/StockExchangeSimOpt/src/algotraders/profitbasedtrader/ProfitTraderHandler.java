@@ -15,6 +15,7 @@ import org.jboss.netty.channel.ChannelFuture;
 import rules.Matcher;
 import state.OrderBook;
 import state.OrderBook.OrderBookEntry;
+import state.StockPrice;
 import state.StockState;
 
 /**
@@ -83,8 +84,8 @@ public class ProfitTraderHandler extends GeneralTraderHandler {
             matchMaker.match(contents[0], newEntry);
 
             ProfitTraderPropts oldPropts = (ProfitTraderPropts) stockInfo.get(newEntry.stockId);
-            oldPropts.updatePrice(stockState.getStockPrice(newEntry.stockId));
-            oldPropts.updatePending(orderBook);
+            oldPropts.updatePrice(StockPrice.getStockPrice(newEntry.stockId));
+            oldPropts.updatePending();
 
             
         }

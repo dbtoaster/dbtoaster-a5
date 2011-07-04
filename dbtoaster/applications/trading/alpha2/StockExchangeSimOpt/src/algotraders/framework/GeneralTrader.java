@@ -15,6 +15,7 @@ import state.StockState;
 
 /**
  *
+ * General model for algorithmic trader. Implement to complete a trader.
  * @author kunal
  */
 public abstract class GeneralTrader {
@@ -26,8 +27,12 @@ public abstract class GeneralTrader {
     public StockState stockState;
     public Channel ch;
     
+    /**
+     * Initialize standard global variables.
+     * @throws IOException 
+     */
     public void generalInit() throws IOException{
-        SobiTerminal t = new SobiTerminal();
+        Terminal t = new Terminal();
         this.matchMaker = t.matchmaker;
         this.stockState = t.stockState;
         simOrderBook = t.orderBook;
@@ -36,7 +41,7 @@ public abstract class GeneralTrader {
     }
     
     public void generalInit(List<Integer> watchList) throws IOException{
-        SobiTerminal t = new SobiTerminal();
+        Terminal t = new Terminal();
         this.matchMaker = t.matchmaker;
         this.stockState = t.stockState;
         simOrderBook = t.orderBook;

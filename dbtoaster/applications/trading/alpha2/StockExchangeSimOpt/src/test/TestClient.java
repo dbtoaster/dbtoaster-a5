@@ -26,6 +26,7 @@ import org.jboss.netty.handler.codec.frame.DelimiterBasedFrameDecoder;
 import org.jboss.netty.handler.codec.frame.Delimiters;
 import org.jboss.netty.handler.codec.string.StringDecoder;
 import org.jboss.netty.handler.codec.string.StringEncoder;
+import state.StockPrice;
 
 /**
  *
@@ -39,7 +40,7 @@ public class TestClient {
 
         @Override
         public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
-            System.out.println("Market update: " + e.getMessage());
+            System.out.println("Market update: Price is " + StockPrice.getStockPrice(10101));
         }
     }
 
@@ -62,7 +63,7 @@ public class TestClient {
         bootstrap.setOption("tcpNoDelay", true);
         bootstrap.setOption("keepAlive", true);
 
-        ChannelFuture cf = bootstrap.connect(new InetSocketAddress("localhost", 8081));
+        ChannelFuture cf = bootstrap.connect(new InetSocketAddress("localhost", 8080));
 
         Channel ch = cf.awaitUninterruptibly().getChannel();
         writelines(ch);

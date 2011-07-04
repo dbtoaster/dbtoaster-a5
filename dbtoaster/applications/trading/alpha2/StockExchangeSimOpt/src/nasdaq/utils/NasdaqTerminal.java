@@ -11,7 +11,7 @@ import state.OrderBook;
 import state.StockState;
 
 /**
- *
+ * Same function as any of the terminals defined throughout this project. Create singleton instances of orderbook and matchmaker objects.
  * @author kunal
  */
 public class NasdaqTerminal{

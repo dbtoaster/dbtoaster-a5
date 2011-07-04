@@ -13,7 +13,7 @@ import java.util.Map;
 
 /**
  *
- * This class stores the accessor functions for database connections
+ * This class stores the accessor and mutator functions for an orderBook implementation.
  * 
  * Entries of the order book(NOTE: Sequence is very important):
  * ->int stock_id;
@@ -43,6 +43,7 @@ public class OrderBook {
     public static final String ASKCOMMANDSYMBOL = "S";
     public static final String DELETECOMMANDSYMBOL = "D";
     public static final int HISTORICTRADERID = -1;
+    public static final String ORDERFORMAT = "%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n";
 
     public class OrderBookEntry {
 
@@ -67,11 +68,9 @@ public class OrderBook {
         @Override
         public boolean equals(Object a){
             OrderBookEntry e = (OrderBookEntry)a;
-            if(e.price==this.price &&
-                    e.stockId==this.stockId &&
-                    e.timestamp==this.timestamp &&
+            if(e.stockId==this.stockId &&
                     e.traderId==this.traderId &&
-                    e.volume==this.volume)
+                    e.order_id==this.order_id)
                 return true;
             else return false;
         }
@@ -138,7 +137,7 @@ public class OrderBook {
         return createEntry(stock_id, price, volume, order_id, timestamp, traderId);
     }
 
-    public void executeCommand(String action, OrderBookEntry args) throws IOException {
+    public synchronized void executeCommand(String action, OrderBookEntry args) throws IOException {
         OrderBookEntry newEntry = createEntry(args.stockId, args.price, args.volume, args.order_id, args.timestamp, args.traderId);
         args.equals(args);
         if (action.equals(OrderBook.BIDCOMMANDSYMBOL)) {
@@ -157,6 +156,7 @@ public class OrderBook {
             for(OrderBookEntry e: askOrderBook){
                 if(e.order_id==args.order_id && e.traderId==args.traderId){
                     OrderBook.delete(askOrderBook, e);
+                    return;
                 }
             }
         }
