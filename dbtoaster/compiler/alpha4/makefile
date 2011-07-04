@@ -250,6 +250,14 @@ ok_test: top
 test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.cpp #-d compile-with-gdb
 
+bin/%: test/sql/%.sql dbtoaster
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+bin/%: test/sql/simple/%.sql dbtoaster
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+bin/%: test/sql/finance/%.sql dbtoaster
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+
+
 ## Query execution tests
 vwaptest: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -ccopt -O3 -o test/qp/vwap_m3 $(ML_OPT) \
