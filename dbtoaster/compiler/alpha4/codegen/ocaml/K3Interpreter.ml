@@ -454,8 +454,11 @@ struct
         | SingleMap _ ->
             failwith ("cannot flatten a SingleMap"^(get_expr expr))
 
-        | ListCollection l -> List.fold_left
-            (combine_impl ~expr:expr) (List.hd l) (List.tl l)
+        | ListCollection l -> 
+            if (List.length l) > 0 then
+              List.fold_left (combine_impl ~expr:expr) (List.hd l) (List.tl l)
+            else failwith ("Grumble.  I've just been asked to flatten an empty list, but since I learn about what the nested list's type is from the list contents, I have no way whatsoever to figure out what that type is.  Thanks a lot.");
+            
 
         (* Note: for now we don't flatten tuples with collection fields,
          * such as SingleMapList, DoubleMap or MapCollections.

@@ -886,7 +886,9 @@ constraintList:
 | atomicConstraint                      { $1 }
 | NOT atomicConstraint                  { RA_Neg($2) }
 | atomicConstraint AND constraintList   { RA_MultiNatJoin([$1; $3]) }   
-| atomicConstraint OR  constraintList   { RA_MultiUnion([$1; $3]) }
+| atomicConstraint OR  constraintList   { 
+                           RA_MultiUnion([$1; $3; RA_MultiNatJoin([$1; $3])]) 
+                                        }
 | LPAREN constraintList RPAREN          { $2 }
 
 atomicConstraint:

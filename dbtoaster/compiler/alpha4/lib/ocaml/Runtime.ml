@@ -80,16 +80,19 @@ let synch_main
   let mux = ref initial_mux in
   let start = Unix.gettimeofday() in
     while FileMultiplexer.has_next !mux do
-      try 
-         let (new_mux,evt) = FileMultiplexer.next !mux in
-           (  log_evt evt;
-              try 
-                 let output = dispatcher evt in
-                 if output then log_results result_chan;
-                 mux := new_mux
-              with Failure(x) -> failwith ("Parse Error ["^x^"]: "^(string_of_evt evt))
-           )
-      with Failure(x) -> failwith ("Parse Error ["^x^"]")
+      let (new_mux,evt) = 
+         try 
+            FileMultiplexer.next !mux 
+         with Failure(x) -> failwith ("Parse Error ["^x^"]")
+      in
+        (  log_evt evt;
+           let output = dispatcher evt in
+           try 
+              if output then log_results result_chan;
+              mux := new_mux
+           with Failure(x) -> failwith ("Dispatch Error ["^x^"]: "^
+                                        (string_of_evt evt))
+        )
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
