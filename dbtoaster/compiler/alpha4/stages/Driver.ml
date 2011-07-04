@@ -164,7 +164,7 @@ let language =
   if flag_bool "INTERPRETER" then L_INTERPRETER(OCG_K3)
   else
     match flag_val "LANG" with
-    | None -> L_OCAML(OCG_K3)
+    | None -> L_CPP
     | Some(a) -> match String.uppercase a with
       | "OCAML"    -> L_OCAML(OCG_K3)
       | "OCAML:K3" -> L_OCAML(OCG_K3)

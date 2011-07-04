@@ -1,4 +1,4 @@
-/* Result on vwap5k (with -d deterministic-broker):
+/* Result on vwap5k (with deterministic := 'yes'):
  
  broker_id |   sum    
 -----------+----------
@@ -15,19 +15,21 @@
 (10 rows)
 */
 
-CREATE TABLE bids(t float, id float, broker_id float, volume float, price float)
+CREATE TABLE bids(t float, id int, broker_id int, volume float, price float)
 --  FROM FILE '/Users/xthemage/Desktop/testdata/InsertBIDS.dbtdat' 
 --  LINE DELIMITED 
 --  CSV (fields := ',', schema := 'float,float,float,float,float', eventtype := 'insert');
   FROM FILE 'test/data/vwap5k.csv'
-  LINE DELIMITED orderbook (book := 'bids', brokers := '10');
+  LINE DELIMITED orderbook (book := 'bids', brokers := '10', 
+                            deterministic := 'yes');
 
-CREATE TABLE asks(t float, id float, broker_id float, volume float, price float)
+CREATE TABLE asks(t float, id int, broker_id int, volume float, price float)
 --  FROM FILE 'ASKS.dbtdat' 
 --  LINE DELIMITED 
 --  CSV (fields := ',', schema := 'float,float,float,float,float', eventtype := 'insert');
   FROM FILE 'test/data/vwap5k.csv'
-  LINE DELIMITED orderbook (book := 'asks', brokers := '10');
+  LINE DELIMITED orderbook (book := 'asks', brokers := '10', 
+                            deterministic := 'yes');
 
 --SELECT b.broker_id, sum(b.volume) FROM bids b GROUP BY b.broker_id;
 

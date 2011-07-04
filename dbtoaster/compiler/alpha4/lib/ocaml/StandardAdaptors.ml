@@ -287,6 +287,12 @@ let orderbook_generator params =
       print_endline ("Orderbook # brokers: "^(string_of_int r)); r
       with Invalid_argument _ -> 0 in
    
+   let deterministic_broker = 
+      if List.mem_assoc "deterministic" params then
+         (String.lowercase (List.assoc "deterministic" params)) = "yes"
+      else false
+   in
+   
    let book_orders = Hashtbl.create 1000 in
    
    (* returns action, order_id, price vol pair if # brokers <= 0
@@ -299,7 +305,7 @@ let orderbook_generator params =
         (ff t 0, fi t 1, List.nth t 2, ff t 3, ff t 4)
       in if num_brokers > 0 then
            let broker_id = 
-             if Util.Debug.active "DETERMINISTIC-BROKER" 
+             if deterministic_broker 
              then float_of_int (i mod num_brokers)
              else float_of_int(Random.int(num_brokers))
            in (a,i,[ts;float_of_int i;broker_id;v;p])

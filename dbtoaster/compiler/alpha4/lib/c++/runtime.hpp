@@ -322,6 +322,7 @@ namespace dbtoaster {
 
       vector<string> output_maps;
       vector<string> logged_streams;
+      bool all_maps_traced;
 
       // Tracing
       string trace_opts;
@@ -329,7 +330,8 @@ namespace dbtoaster {
       int trace_counter, trace_step;
       unordered_set<string> traced_maps;
 
-      runtime_options() { traced = false; trace_step = trace_counter = 0; }
+      runtime_options() { traced = false; trace_step = trace_counter = 0;
+                          all_maps_traced = false; }
 
       runtime_options(int argc, char* argv[]) { init(argc, argv); }
 
@@ -342,6 +344,7 @@ namespace dbtoaster {
           ("log-triggers,l", value<vector<string> >(&logged_streams), "log stream triggers")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
+          ("allmaps,a", value<bool>(&all_maps_traced), "output all maps")
           ("trace-dir", value<string>(), "trace output dir")
           ("trace,t", value<string>(&trace_opts), "trace query execution")
           ("trace-step,s", value(&trace_step), "trace step size");
@@ -365,13 +368,15 @@ namespace dbtoaster {
 
       // Result output.
       string get_output_file() {
-        string r = "maps.txt";
-        if ( opt_map.count("output-file") )
-            r = opt_map["output-file"].as<string>();
-        return r;
+        if(opt_map.count("output-file")) {
+          return opt_map["output-file"].as<string>();
+        } else {
+          return string("-");
+        }
       }
 
       bool is_output_map(string map_name) {
+        if(all_maps_traced) { return true; }
         return find(output_maps.begin(), output_maps.end(), map_name)
                 != output_maps.end();
       }

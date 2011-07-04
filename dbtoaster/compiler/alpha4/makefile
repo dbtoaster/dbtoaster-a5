@@ -246,10 +246,9 @@ test: top
 ok_test: top
 	@$(DEBUG_APP) test/unit/compiler.ml
 
-
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster
-	./dbtoaster $< -c test/sql/$* -o test/sql/$*.ml #-d compile-with-gdb
+	./dbtoaster $< -c test/sql/$* -o test/sql/$*.cpp #-d compile-with-gdb
 
 ## Query execution tests
 vwaptest: $(OPT_DEPS)

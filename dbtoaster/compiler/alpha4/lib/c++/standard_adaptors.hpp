@@ -205,12 +205,16 @@ namespace dbtoaster {
         order_book_type type;
         shared_ptr<order_book> bids;
         shared_ptr<order_book> asks;
+        bool deterministic;
+
 
         order_book_adaptor(stream_id sid, int nb, order_book_type t)
           : id(sid), num_brokers(nb), type(t)
         {
           bids = shared_ptr<order_book>(new order_book());
           asks = shared_ptr<order_book>(new order_book());
+          deterministic = false;
+          num_brokers = 10;
         }
 
         order_book_adaptor(stream_id sid, int num_params,
@@ -219,6 +223,8 @@ namespace dbtoaster {
           id = sid;
           bids = shared_ptr<order_book>(new order_book());
           asks = shared_ptr<order_book>(new order_book());
+          deterministic = false;
+          num_brokers = 10;
 
           for (int i = 0; i < num_params; ++i) {
             string k = params[i].first;
@@ -231,6 +237,8 @@ namespace dbtoaster {
             } else if ( k == "brokers" ) {
               num_brokers = atoi(v.c_str());
             } else if ( k == "validate" ) { // Ignore.
+            } else if ( k == "deterministic" ) {
+              deterministic = (v == "yes");
             } else {
               cerr << "Invalid order book param " << k << ", " << v << endl;
             }
@@ -291,14 +299,16 @@ namespace dbtoaster {
 
             if ( msg.action == "B" ) {
               if (type == tbids || type == both) {
-                r.broker_id = ((int) rand()) % 9 + 1;
+                r.broker_id = 
+                  (deterministic ? msg.id : ((int) rand())) % num_brokers;
                 (*bids)[msg.id] = r;
                 t = insert_tuple;
               } else valid = false;
             }
             else if ( msg.action == "S" ) {
               if (type == tasks || type == both) {
-                r.broker_id = ((int) rand()) % 9 + 1;
+                r.broker_id = 
+                  (deterministic ? msg.id : ((int) rand())) % num_brokers;
                 (*asks)[msg.id] = r;
                 t = insert_tuple;
               } else valid = false;

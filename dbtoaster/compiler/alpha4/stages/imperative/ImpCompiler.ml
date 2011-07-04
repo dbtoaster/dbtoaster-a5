@@ -1771,11 +1771,18 @@ end (* Typing *)
         map_schema)
       in
       let stepper = ["";
-         "void trace(const path& trace_file, bool debug) {";
-         "  std::ofstream ofs(trace_file.c_str());";
-         "  boost::archive::xml_oarchive oa(ofs);"]
+         "void trace(std::ostream &ofs, bool debug) {";
+         "  boost::archive::xml_oarchive oa(ofs, 0);"]
         @(map_outputs "run_opts" "oa")@
         ["}";
+         "void trace(const string& trace_file, bool debug) {";
+         "  if(trace_file.compare("-")){"
+         "    std::ofstream ofs(trace_file.c_str());";
+         "    trace(ofs, debug);";
+         "  } else {";
+         "    trace(cout, debug);";
+         "  }";
+         "}";
          "";
          "void process_event(stream_event& evt) {";
          "  if ( run_opts.is_traced() ) {";
@@ -1801,7 +1808,7 @@ end (* Typing *)
               "        bind(&process_event, _1));";
               "    }";
               "  }";
-              "  trace(run_opts.get_output_file(), false);";
+              "  trace(run_opts.get_output_file(), debug);";
               "}"])
     in cscl ((List.map source_code_of_imp globals)@[main_fn])
      
