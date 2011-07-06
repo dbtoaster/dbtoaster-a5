@@ -14,13 +14,14 @@ $pg_script =
     sub(/\/\*.*\*\//, "").
     split(/ *; */).
     map do |cmd| 
-      case cmd 
+      case cmd.upcase 
         when /CREATE TABLE ([^(]+)\(([^)]*)/ then 
-          $tables[$1.downcase];
-          "CREATE TEMPORARY TABLE #{$1.downcase}(#{$2});\n"+
-          "COPY #{$1} FROM '@@#{$1.downcase}@@' DELIMITER ',';"
+          table = $1.downcase; schema = $2.gsub(/ INT/," float");
+          $tables[table];
+          "CREATE TEMPORARY TABLE #{table}(#{schema});\n"+
+          "COPY #{table} FROM '@@#{table.downcase}@@' DELIMITER ',';"
         when /SELECT */ then "#{cmd};"
-        else "xxx"
+        else raise "Error: Unexpected statement in SQL file \n#{cmd}"
       end
     end.
     join("\n");
@@ -47,10 +48,10 @@ def compare_results(dbtoaster, postgres = correct_results)
       puts "--- STATE ---";
       p $tables;
       puts "--- Key/EXPECTED/DBToaster ---";
-      puts (
+      puts(
         (dbtoaster.keys + postgres.keys).uniq.map do |k| 
           "[#{k.join(", ")}] / #{postgres[k]} / #{dbtoaster[k]}"
-        end.join("\n");
+        end.join("\n")
       );
       exit -1;
     end

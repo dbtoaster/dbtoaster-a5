@@ -267,6 +267,13 @@ sig
      *    by tuple collection accessors (mem/lookup/slice) *)
     | FloatList      of t list (* float list *)
     | TupleList      of t list (* float list list *)
+    
+   (* In some cases, we'll have empty lists.  Due to the lack of strict typing, 
+      it's sometimes possible for the code to be unable to figure out what the
+      list's type is if it has no content.  Thus, we have an empty list type.
+      This type is happy to merge/connect with/do anything with any other type
+      of list, since it's empty *)
+    | EmptyList
      
     (* slicing a double map yields a SingleMapList of key * smap entries *)
     | SingleMapList  of (t list * single_map_t) list
@@ -302,6 +309,7 @@ struct
     | DoubleMap      of map_t
     | FloatList      of t list
     | TupleList      of t list
+    | EmptyList
     | SingleMapList  of (t list * single_map_t) list
     | ListCollection of t list
     | MapCollection  of t K3ValuationMap.t
@@ -337,7 +345,7 @@ struct
                 (string_of_value (Tuple k))^","^
                 (string_of_value (SingleMap m)))
                "" sml)^"]")
-            
+      | EmptyList -> "EmptyList[]"
       | ListCollection(vl) -> "ListCollection("^(String.concat ","
                             (List.map string_of_value vl))^")"
 

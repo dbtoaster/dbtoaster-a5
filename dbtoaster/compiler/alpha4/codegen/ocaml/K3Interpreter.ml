@@ -204,7 +204,7 @@ struct
         in Eval(fun th db ->
         begin match (get_eval el) th db with
         | Tuple _ | Float _ | Int _
-        | FloatList _ | TupleList _
+        | FloatList _ | TupleList _ | EmptyList
         | ListCollection _ | MapCollection _ as v -> rv_f v
         | SingleMapList l -> rv_f (ListCollection(smlc_to_c l))
         | SingleMap m -> rv_f (TupleList(smc_to_tlc m))
@@ -215,6 +215,8 @@ struct
     
     let combine_impl ?(expr = None) c1 c2 =
         begin match c1, c2 with
+        | EmptyList, _ -> c2
+        | _, EmptyList -> c1
         | FloatList(c1), FloatList(c2) -> FloatList(c1@c2)
         | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
         | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
@@ -270,6 +272,7 @@ struct
             | _ -> failwith ("invalid iteration"^(get_expr expr))) l); Unit)
         in
         begin match function_value, collection_value with
+        | (_, EmptyList) -> Unit
         | (Fun f, FloatList l) -> aux f l
         | (Fun f, TupleList l) -> aux f l
         | (Fun f, ListCollection l) -> aux f l
@@ -371,6 +374,7 @@ struct
         Eval(fun th db ->
         let aux fn  = List.map (fun v -> fn v) in
         match (get_eval map_fn) th db, (get_eval collection) th db with
+        | _, EmptyList       -> rv_f []
         | Fun f, FloatList l -> rv_f (aux f l)
         | Fun f, TupleList l -> rv_f (aux f l)
         | Fun f, SingleMap m -> rv_f (aux f (smc_to_tlc m))
@@ -390,6 +394,7 @@ struct
             ((get_eval init_agg) th db) l
         in
         match (get_eval agg_fn) th db, (get_eval collection) th db with
+        | _, EmptyList            -> ((get_eval init_agg) th db)
         | Fun _ as f, FloatList l -> aux f (fun x -> x) l
         | Fun _ as f, TupleList l -> aux f (fun x -> x) l
         | Fun _ as f, ListCollection l -> aux f (fun x -> x) l
@@ -425,6 +430,8 @@ struct
         | Fun f, Fun g, TupleList l -> TupleList(smc_to_tlc
             (List.fold_left (apply_gb
                 init_v (apply_list (Fun f)) g) (MC.empty_map()) l))
+        
+        | Fun f, Fun g, EmptyList -> TupleList([])
 
         | Fun _, Fun _, v -> failwith ("invalid gb-agg collection: "^
             (string_of_value v)^(get_expr expr))
@@ -457,8 +464,9 @@ struct
         | ListCollection l -> 
             if (List.length l) > 0 then
               List.fold_left (combine_impl ~expr:expr) (List.hd l) (List.tl l)
-            else failwith ("Grumble.  I've just been asked to flatten an empty list, but since I learn about what the nested list's type is from the list contents, I have no way whatsoever to figure out what that type is.  Thanks a lot.");
-            
+            else EmptyList
+        
+        | EmptyList -> EmptyList            
 
         (* Note: for now we don't flatten tuples with collection fields,
          * such as SingleMapList, DoubleMap or MapCollections.
