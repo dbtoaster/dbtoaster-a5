@@ -23,6 +23,10 @@ class Tokenizer
       else nil; end
   end
   
+  def clear_whitespace
+    @tokens.delete_if { |t| t.chomp == "" };
+  end
+  
   def last
     @last;
   end
@@ -58,6 +62,39 @@ class Tokenizer
   end
 end
 
+class TreeBuilder
+  def initialize
+    @stack = [[]]
+  end
+  
+  def insert(v)
+    @stack[-1].push(v); v;
+  end
+  
+  def push
+    v = Array.new;
+    insert(v)
+    @stack.push(v);
+  end
+  
+  def pop
+    @stack.pop;
+  end
+  
+  def to_a
+    @stack[0].clone;
+  end
+end
+
+class String
+  def pad(padlen,str=" ")
+    if self.length >= padlen then self
+    else
+      self + (str * ((padlen - self.length) / str.length).to_i)
+    end
+  end
+end
+
 class Array
   def to_h
     ret = Hash.new;
@@ -76,10 +113,17 @@ class Array
     return ret;
   end
 
+  def fold(i)
+    each { |x| i = yield(i,x); }
+    i;
+  end
+  
   def sum
-    ret = 0;
-    each { |item| ret += item }
-    return ret;
+    fold(0) { |i,x| i+x }
+  end
+  
+  def max(&cmp)
+    fold(nil) { |i,x| (i.nil? || (cmp.nil? ? (i < x) : cmp(i,x))) ? x : i; }
   end
 
   def avg
@@ -102,6 +146,17 @@ class Array
         reducer.call(y, vs)
       end.to_h
     end
+  end
+  
+  def tabulate
+    widths = 
+      unzip.map { |col| col.map { |v| v.to_s.length }.max }
+    head_foot = "+" + ("-" * (2 + widths.sum + (widths.length-1) * 3)) + "+";
+    head_foot + "\n" +
+      map do |row| 
+        "| " + (widths.zip(row).map { |w, v| v.to_s.pad(w) }.join(" | ")) + " |"
+      end.join("\n") +
+      "\n" + head_foot;
   end
 end
 

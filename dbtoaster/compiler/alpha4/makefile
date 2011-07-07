@@ -256,6 +256,8 @@ bin/%: test/sql/simple/%.sql dbtoaster
 	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
 bin/%: test/sql/finance/%.sql dbtoaster
 	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+bin/%: test/sql/tpch/%.sql dbtoaster
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
 
 
 ## Query execution tests

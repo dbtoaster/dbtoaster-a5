@@ -1,11 +1,11 @@
 #!/usr/bin/env ruby
-require 'test/scripts/util.rb'
+require "#{File.dirname($0)}/util.rb"
 require 'tempfile'
 
 script = ARGV[0];
 script_data = File.open(script).readlines;
 
-$tables = Hash.new { |h,k| h[k] = Hash.new(0) };
+$tables = Hash.new { |h,k|p k; h[k] = Hash.new(0) };
 
 $pg_script =
   script_data.
@@ -14,9 +14,10 @@ $pg_script =
     sub(/\/\*.*\*\//, "").
     split(/ *; */).
     map do |cmd| 
+      p cmd
       case cmd.upcase 
         when /CREATE TABLE ([^(]+)\(([^)]*)/ then 
-          table = $1.downcase; schema = $2.gsub(/ INT/," float");
+          table = $1.downcase.chomp(" "); schema = $2.gsub(/ INT/," float");
           $tables[table];
           "CREATE TEMPORARY TABLE #{table}(#{schema});\n"+
           "COPY #{table} FROM '@@#{table.downcase}@@' DELIMITER ',';"

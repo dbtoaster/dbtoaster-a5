@@ -1638,11 +1638,21 @@ end (* Typing *)
                           "orderbook", "order_books::order_book_adaptor";
                           "lineitem" , "tpch::tpch_adaptor";
                           "orders"   , "tpch::tpch_adaptor";
-                          "customer" , "tpch::tpch_adaptor"]
+                          "customer" , "tpch::tpch_adaptor";
+                          "part"     , "tpch::tpch_adaptor";
+                          "supplier" , "tpch::tpch_adaptor";
+                          "partsupp" , "tpch::tpch_adaptor";
+                          "nation"   , "tpch::tpch_adaptor";
+                          "region"   , "tpch::tpch_adaptor"]
     in
     let adaptor_ctor_args = ["lineitem", quote "lineitem";
                              "orders"  , quote "orders";
-                             "customer", quote "customer"] in
+                             "customer", quote "customer";
+                             "part"    , quote "part";
+                             "supplier", quote "supplier";
+                             "partsupp", quote "partsupp";
+                             "nation"  , quote "nation";
+                             "region"  , quote "region"] in
     let array_of_id id = id^"[]" in
     let array_of_type t = match t with
         | Target(Type(x)) -> Target(Type(x^"[]"))

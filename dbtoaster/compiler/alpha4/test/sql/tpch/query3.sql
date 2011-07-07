@@ -34,14 +34,14 @@ CREATE TABLE LINEITEM (
         -- the fields below should be text, but since dbtoaster
         -- does not handle strings, we make them floats for now
         -- by hashing in the adaptor
-        returnflag     float,
-        linestatus     float,
+        returnflag     int, -- hash
+        linestatus     int, -- hash
         shipdate       int, -- date
         commitdate     int, -- date
         receiptdate    int, -- date
-        shipinstruct   float,
-        shipmode       float,
-        comment        int
+        shipinstruct   int, -- hash
+        shipmode       int, -- hash
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
@@ -49,26 +49,26 @@ CREATE TABLE LINEITEM (
 CREATE TABLE ORDERS (
         orderkey       int,
         custkey        int,
-        orderstatus    int, -- text
+        orderstatus    int, -- hash
         totalprice     float,
         orderdate      int, -- date
-        orderpriority  float,
-        clerk          float,
+        orderpriority  int, -- hash
+        clerk          int, -- hash
         shippriority   int,
-        comment        int  -- text
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
         custkey      int,
-        name         int, -- text
-        address      int, -- text
+        name         int, -- hash
+        address      int, -- hash
         nationkey    int,
-        phone        int, -- text
+        phone        int, -- hash
         acctbal      float,
-        mktsegment   int, -- text
-        comment      int  -- text
+        mktsegment   int, -- hash
+        comment      int  -- hash
     )
   FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;
