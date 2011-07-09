@@ -66,19 +66,7 @@ public class MarketMakerServerHandler extends SimpleChannelHandler {
                     }
                     //New order received, supporting only buy and sell commands at match maker right now
                     String action = contents[0];
-//                    String oppAction = (action.equals(OrderBook.BIDCOMMANDSYMBOL)) ? OrderBook.ASKCOMMANDSYMBOL : OrderBook.BIDCOMMANDSYMBOL;
-//
-//                    String mmTrade = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s timestamp:%s trader:%s\n",
-//                            oppAction,
-//                            newEntry.stockId,
-//                            OrderBook.MARKETORDER,
-//                            newEntry.volume,
-//                            order_id++,
-//                            newEntry.timestamp,
-//                            this.marketPropts.hashCode());
 
-                    //Send opposite order to the market.
-                    //ChannelFuture cf = marketPropts.ch.write(mmTrade);
 
                     //Confirm the trade 
                     if (action.equals(OrderBook.ASKCOMMANDSYMBOL)) {
@@ -97,7 +85,6 @@ public class MarketMakerServerHandler extends SimpleChannelHandler {
         } catch (Exception ex) {
             ex.printStackTrace();
             System.exit(1);
-            //System.out.println("The order format had an error. Skipping\n");
         }
     }
 }
