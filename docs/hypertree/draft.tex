@@ -178,7 +178,7 @@ Suppose we want to compute $\Delta_{\pm R}{JT_{Q}}$. As shown in \ref{subsection
 \STATE $join\gets J_{1}$
 \ELSE
 \STATE $rest\gets ComputeChain(J\setminus J_{1})$
-\STATE $join\gets join\bowtie rest.join$
+\STATE $join\gets J_{1}\bowtie rest.join$
 \STATE $expr\gets rest.expr\bowtie \Delta(J_{1})+\Delta(J_{1})\bowtie rest.join+J_{1}\bowtie rest.expr$
 \ENDIF
 \RETURN $(exp,join)$
