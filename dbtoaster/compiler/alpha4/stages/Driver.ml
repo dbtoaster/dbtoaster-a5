@@ -227,7 +227,7 @@ let query_list_to_calc_string qlist =
     (fun accum (query_exprs,_,qvars) ->
       accum^(List.fold_left (fun in_accum calc_term ->
         in_accum^"["^(String.concat "," (List.map fst qvars))^"]"^
-        (Calculus.term_as_string (Calculus.make_term calc_term))^"\n"
+        (Calculus.code_of_term (Calculus.make_term calc_term))^"\n"
       ) "" query_exprs)
     ) "" qlist;;
 

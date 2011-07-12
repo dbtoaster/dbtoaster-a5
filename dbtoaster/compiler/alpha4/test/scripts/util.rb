@@ -55,20 +55,46 @@ class Tokenizer
   
   def tokens_up_to(token)
     ret = Array.new;
-    while (more? && (self.next != token))
-      ret.push(last);
+    match = if token.is_a? String 
+              then proc { |t| token == t } 
+              else proc { |t| token =~ t } 
+            end
+    while (more? && (not match.call(self.next)))
+      ret.push(last)
     end
     ret;
   end
 end
 
 class TreeBuilder
-  def initialize
+  def initialize(tokenizer = nil, &parser)
     @stack = [[]]
+    @tok = tokenizer;
+    @parser = parser;
+    if(@parser and @tok) then
+      next_leaf(false);
+    end
+  end
+  
+  def next_leaf(should_backtrack = true)
+    start_depth = depth;
+    while @tok.more?
+      @parser.call(self, @tok.next);
+      break if depth == start_depth;
+    end
+    backtrack if should_backtrack;
+  end
+  
+  def depth
+    @stack.length-1;
   end
   
   def insert(v)
     @stack[-1].push(v); v;
+  end
+  
+  def append(v)
+    @stack[-1][-1] += v;
   end
   
   def push
@@ -79,6 +105,10 @@ class TreeBuilder
   
   def pop
     @stack.pop;
+  end
+  
+  def backtrack
+    @stack[-1].pop;
   end
   
   def to_a

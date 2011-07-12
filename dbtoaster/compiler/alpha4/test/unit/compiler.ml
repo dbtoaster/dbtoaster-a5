@@ -696,22 +696,114 @@ Debug.log_unit_test "Axfinder d(-ASK)d(+BID) Factorize_AggSum_MM"
    ))
                   
 ;;
-let axfinder_query = 
-   (make_term (
-      RVal(AggSum(
-         (RProd[
-            RVal(Const(Int(-1)));
-            (RSum[
-               (axfinder_query_term (RVal(Var("B__VOLUME", TDouble)))
-                                    (RVal(Const(Int(-1)))));
-               (axfinder_query_term (RVal(Const(Int(1)))))
-                                    (RVal(Var("QUERYASKS_A__VOLUME", TDouble)))
 
-         ]) ]),
-         RA_Leaf(Rel("BIDS", ["B__T", TDouble; 
-                              "B__ID", TDouble;
-                              "QUERYASKS_A__BROKER_ID", TDouble;
-                              "B__VOLUME", TDouble;
-                              "B__PRICE", TDouble]))
+let tpch_17 = make_term (RVal(AggSum((RVal(Var(("L__EXTENDEDPRICE", TDouble)))), (RA_MultiNatJoin[(RA_Leaf(Rel("LINEITEM", [("L__ORDERKEY", TInt); ("L__PARTKEY", TInt); ("L__SUPPKEY", TInt); ("L__LINENUMBER", TInt); ("L__QUANTITY", TInt); ("L__EXTENDEDPRICE", TDouble); ("L__DISCOUNT", TDouble); ("L__TAX", TDouble); ("L__RETURNFLAG", TInt); ("L__LINESTATUS", TInt); ("L__SHIPDATE", TInt); ("L__COMMITDATE", TInt); ("L__RECEIPTDATE", TInt); ("L__SHIPINSTRUCT", TInt); ("L__SHIPMODE", TInt); ("L__COMMENT", TInt)]))); (RA_Leaf(Rel("PART", [("P__PARTKEY", TInt); ("P__NAME", TInt); ("P__MFGR", TInt); ("P__BRAND", TInt); ("P__TYPE", TInt); ("P__SIZE", TInt); ("P__CONTAINER", TInt); ("P__RETAILPRICE", TDouble); ("P__COMMENT", TInt)]))); (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("P__PARTKEY", TInt)))), (RVal(Var(("L__PARTKEY", TInt))))))); (RA_Leaf(AtomicConstraint(Lt, (RVal(Var(("L__QUANTITY", TInt)))), (RProd[(RVal(Const(Double(0.005)))); (RVal(AggSum((RVal(Var(("L2__QUANTITY", TInt)))), (RA_MultiNatJoin[(RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("L2__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)]))); (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__PARTKEY", TInt)))), (RVal(Var(("P__PARTKEY", TInt)))))))]))))]))))]))))
+;;
+let (tpch17_bsvars, tpch17_bsmaps, tpch17_bs) = 
+   (Calculus.preaggregate Calculus.ModeOpenDomain
+                          (roly_poly tpch_17)
+                          []
+                          "QUERY")   
+;;
+Debug.log_unit_test "TPCH 17 Bigsum Maps"
+   (string_of_list0 "\n" (fun ((n,v),m) -> n^"["^(string_of_list0 "," fst v)^
+                                           "]: "^(string_of_term m)))
+   (List.map (fun (m,n) -> ((decode_map_term n), m)) tpch17_bsmaps)
+   [  ("QUERYBS1_1",["P__PARTKEY",TInt; "L__QUANTITY",TInt]), 
+      make_term (
+         RVal(AggSum((RVal(Var("L__EXTENDEDPRICE", TDouble))),
+            (RA_MultiNatJoin[
+               RA_Leaf(Rel("LINEITEM", [("L__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L__SUPPKEY", TInt); ("L__LINENUMBER", TInt); ("L__QUANTITY", TInt); ("L__EXTENDEDPRICE", TDouble); ("L__DISCOUNT", TDouble); ("L__TAX", TDouble); ("L__RETURNFLAG", TInt); ("L__LINESTATUS", TInt); ("L__SHIPDATE", TInt); ("L__COMMITDATE", TInt); ("L__RECEIPTDATE", TInt); ("L__SHIPINSTRUCT", TInt); ("L__SHIPMODE", TInt); ("L__COMMENT", TInt)]));
+               RA_Leaf(Rel("PART", [("P__PARTKEY", TInt); ("P__NAME", TInt); ("P__MFGR", TInt); ("P__BRAND", TInt); ("P__TYPE", TInt); ("P__SIZE", TInt); ("P__CONTAINER", TInt); ("P__RETAILPRICE", TDouble); ("P__COMMENT", TInt)]))
+            ]))));
+      ("QUERYBS1_2",["P__PARTKEY",TInt]),
+      make_term (
+         RVal(AggSum((RVal(Var("L2__QUANTITY", TInt))),
+            (RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)])))
+         )))
+   ]
+;;
+
+let (tpch17_subst, tpch17_rest) =
+   simplify_calc_monomial 
+      true 
+      (make_relcalc (RA_MultiNatJoin[(RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("L2__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)]))); (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__PARTKEY", TInt)))), (RVal(Var(("P__PARTKEY", TInt)))))))]))
+      ["P__PARTKEY", TInt] []
+;;
+Debug.log_unit_test "TPCH 17 Simplify Monomial (as in Preagg)"
+   code_of_relcalc
+   tpch17_rest
+   (make_relcalc (RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)]))))
+;;
+Debug.log_unit_test "TPCH 17 Simplify Monomial (as in Preagg)"
+   (string_of_list0 "\n" (fun ((x,_),(y,_)) -> x^" -> "^y))
+   tpch17_subst
+   [  ("L2__PARTKEY",TInt),("P__PARTKEY",TInt);
+      ("P__PARTKEY",TInt),("P__PARTKEY",TInt) ]
+;;
+Debug.log_unit_test "TPCH 17 Simplify_Roly (as in Preagg)"
+   code_of_term
+   (term_list_sum (
+      List.map (fun x -> 
+         snd (simplify_roly true x [] [])
+      ) (term_sum_list (roly_poly tpch_17))
+   ))
+   (make_term (RVal(AggSum(
+      (RVal(Var(("L__EXTENDEDPRICE", TDouble)))), 
+      (RA_MultiNatJoin[
+         (RA_Leaf(Rel("LINEITEM", [ ("L__ORDERKEY", TInt); 
+                                    ("P__PARTKEY", TInt); 
+                                    ("L__SUPPKEY", TInt); 
+                                    ("L__LINENUMBER", TInt); 
+                                    ("L__QUANTITY", TInt); 
+                                    ("L__EXTENDEDPRICE", TDouble); 
+                                    ("L__DISCOUNT", TDouble); 
+                                    ("L__TAX", TDouble); 
+                                    ("L__RETURNFLAG", TInt); 
+                                    ("L__LINESTATUS", TInt); 
+                                    ("L__SHIPDATE", TInt); 
+                                    ("L__COMMITDATE", TInt); 
+                                    ("L__RECEIPTDATE", TInt); 
+                                    ("L__SHIPINSTRUCT", TInt); 
+                                    ("L__SHIPMODE", TInt); 
+                                    ("L__COMMENT", TInt)
+                                 ])));
+         (RA_Leaf(AtomicConstraint(Lt, 
+            (RVal(Var(("L__QUANTITY", TInt)))), 
+            (RProd[
+               (RVal(Const(Double(0.005)))); 
+               (RVal(AggSum(
+                  (RVal(Var(("L2__QUANTITY", TInt)))), 
+                  (RA_Leaf(Rel("LINEITEM", [ ("L2__ORDERKEY", TInt); 
+                                             ("P__PARTKEY", TInt); 
+                                             ("L2__SUPPKEY", TInt); 
+                                             ("L2__LINENUMBER", TInt); 
+                                             ("L2__QUANTITY", TInt); 
+                                             ("L2__EXTENDEDPRICE", TDouble); 
+                                             ("L2__DISCOUNT", TDouble); 
+                                             ("L2__TAX", TDouble); 
+                                             ("L2__RETURNFLAG", TInt); 
+                                             ("L2__LINESTATUS", TInt); 
+                                             ("L2__SHIPDATE", TInt); 
+                                             ("L2__COMMITDATE", TInt); 
+                                             ("L2__RECEIPTDATE", TInt); 
+                                             ("L2__SHIPINSTRUCT", TInt); 
+                                             ("L2__SHIPMODE", TInt); 
+                                             ("L2__COMMENT", TInt)
+                                          ])))
+               )))
+            ])
+         ))); 
+         (RA_Leaf(Rel("PART", [  ("P__PARTKEY", TInt); 
+                                 ("P__NAME", TInt); 
+                                 ("P__MFGR", TInt); 
+                                 ("P__BRAND", TInt); 
+                                 ("P__TYPE", TInt); 
+                                 ("P__SIZE", TInt); 
+                                 ("P__CONTAINER", TInt); 
+                                 ("P__RETAILPRICE", TDouble); 
+                                 ("P__COMMENT", TInt)
+                              ])))
+      ])
    ))))
 ;;

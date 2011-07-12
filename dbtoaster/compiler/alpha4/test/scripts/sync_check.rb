@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 require "#{File.dirname($0)}/util.rb"
+require "#{File.dirname($0)}/db_parser.rb"
 require 'tempfile'
 
 script = ARGV[0];
@@ -14,7 +15,6 @@ $pg_script =
     sub(/\/\*.*\*\//, "").
     split(/ *; */).
     map do |cmd| 
-      p cmd
       case cmd.upcase 
         when /CREATE TABLE ([^(]+)\(([^)]*)/ then 
           table = $1.downcase.chomp(" "); schema = $2.gsub(/ INT/," float");
@@ -98,18 +98,9 @@ IO.popen(dbt_cmd, "r+") do |f|
       when /^(\+|-)([a-zA-Z]+)\[([\-0-9.; ]*)\]/ then 
         update_rel($1, $2, $3.split(/; */).map {|i| i.to_f});
         
-      when /^\[QUERY_1_1->(\[?[^<]*)<pat=/ then
-        results = 
-          $1.split(/; *\[/).map do |entry| 
-            if (/([\-0-9.; ]*)\]->(-?[0-9.]+)/ =~ entry) then
-              [ $1, $2 ]
-            else
-              nil
-            end
-          end.
-            delete_if { |i| i.nil? }.
-            map {|k,v| [k.split(/; */).map {|i| i.to_f}, v.to_f]}.
-            to_h
+      when /QUERY_1_1->/ then
+        results = OcamlDB.new(line)["QUERY_1_1"];
+        results = {[] => results} unless results.is_a? Array;
         compare_results(results)
         f.puts "\n";
     end

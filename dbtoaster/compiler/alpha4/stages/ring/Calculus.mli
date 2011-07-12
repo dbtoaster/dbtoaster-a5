@@ -156,7 +156,8 @@ val string_of_const:   const_t   -> string
 val string_of_var:     var_t     -> string
 val string_of_relcalc: relcalc_t -> string
 val string_of_term:    term_t    -> string
-
+val code_of_relcalc:   relcalc_t -> string
+val code_of_term:      term_t    -> string
 
 
 (* all the variables that occur in the formula resp. term. *)
@@ -387,3 +388,5 @@ val apply_bottom_up :
 
 val roly_poly_plural: term_t -> term_t list
 val mk_aggsum: term_t -> relcalc_t -> term_t
+val term_sum_list: term_t -> term_t list
+val term_list_sum: term_t list -> term_t

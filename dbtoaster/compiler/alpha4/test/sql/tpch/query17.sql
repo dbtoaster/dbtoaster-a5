@@ -10,32 +10,35 @@ CREATE TABLE LINEITEM (
         partkey        int,
         suppkey        int,
         linenumber     int,
-        quantity       double,
-        extendedprice  double,
-        discount       double,
-        tax            double,
-        returnflag     double, -- text(1)
-        linestatus     double, -- text(1)
-        shipdate       double, -- date
-        commitdate     double, -- date
-        receiptdate    double, -- date
-        shipinstruct   double,
-        shipmode       double,
-        comment        double
+        quantity       int,
+        extendedprice  float,
+        discount       float,
+        tax            float,
+        -- the fields below should be text, but since dbtoaster
+        -- does not handle strings, we make them floats for now
+        -- by hashing in the adaptor
+        returnflag     int, -- hash
+        linestatus     int, -- hash
+        shipdate       int, -- date
+        commitdate     int, -- date
+        receiptdate    int, -- date
+        shipinstruct   int, -- hash
+        shipmode       int, -- hash
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE PART (
         partkey      int,
-        name         double, -- text
-        mfgr         double, -- text
-        brand        double, -- text
-        type         double, -- text
+        name         int, -- hash
+        mfgr         int, -- hash
+        brand        int, -- hash
+        type         int, -- hash
         size         int,
-        container    double, -- text
-        retailprice  double,
-        comment      double  -- text
+        container    int, -- hash
+        retailprice  float,
+        comment      int  -- hash
     )
   FROM FILE 'test/data/tpch/part.tbl'
   LINE DELIMITED part;

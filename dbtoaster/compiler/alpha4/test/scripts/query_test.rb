@@ -62,41 +62,20 @@ $queries = {
       [ 0.0, 19941223.0, 742.0  ] => 43728.048
     }
   },
-  "tpch5" => {
-    :path => "test/sql/tpch/query5.sql",
-    :type => :onelevel,
-    :answer => {
-      [  0.0 ] => 28366643.0299,
-      [  1.0 ] => 30290494.7397,
-      [  2.0 ] => 36264557.6322,
-      [  3.0 ] => 32340731.7701,
-      [  4.0 ] => 35544694.5274,
-      [  5.0 ] => 29447094.8207,
-      [  6.0 ] => 26667158.8531,
-      [  7.0 ] =>  42265166.775,
-      [  8.0 ] => 36272867.5184,
-      [  9.0 ] => 39286503.8203,
-      [ 10.0 ] => 35771030.7947,
-      [ 11.0 ] => 36349295.3331,
-      [ 12.0 ] => 35727093.6313,
-      [ 13.0 ] =>  22096426.003,
-      [ 14.0 ] => 26955523.7857,
-      [ 15.0 ] => 32725068.8962,
-      [ 16.0 ] => 26366356.1375,
-      [ 17.0 ] => 31904733.9555,
-      [ 18.0 ] => 44678593.9358,
-      [ 19.0 ] => 27350345.8278,
-      [ 20.0 ] =>  35827832.436,
-      [ 21.0 ] =>  31834053.855,
-      [ 22.0 ] => 36508031.0309,
-      [ 23.0 ] => 28454682.1614,
-      [ 24.0 ] => 26840654.3967
-    }
-  },
+#  "tpch5" => {
+#    :path => "test/sql/tpch/query5.sql",
+#    :type => :onelevel,
+#    :answer => results_file("test/results/tpch/query11.csv")
+#  },
   "tpch11" => {
     :path => "test/sql/tpch/query11a.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query11.csv")
+  },
+  "tpch17" => {
+    :path => "test/sql/tpch/query17.sql",
+    :type => :singleton,
+    :answer => 898778.73
   }
 };
 
@@ -118,18 +97,35 @@ class GenericUnitTest
       when :singleton then @result == @expected
       when :onelevel then
         not (@expected.keys + @result.keys).uniq.find do |k|
-          @expected[k] != @result[k]
+          return false if not ((@expected.has_key? k) && (@result.has_key? k));
+          ((@expected[k] - @result[k]) / 
+            (@expected[k] + @result[k])).abs > $precision
         end
       else raise "Unknown query type '#{@qtype}'"
     end
   end
   
+  def diff(e, r)
+    if (e == r)                            then "Same"
+    elsif e == nil                         then "Different"
+    elsif r == nil                         then "Different"
+    elsif ((e-r) / (e+r)).abs < $precision then "Close"
+    else                                        "Different"
+    end
+  end
+  
   def results
     case @qtype
-      when :singleton then [["*", @expected, @result]]
+      when :singleton then [["*", @expected, @result, diff(@expected, @result)]]
       when :onelevel then      
-        (@expected.keys + @result.keys).uniq.
-          map { |k| [k.join("/"), @expected[k], @result[k]] }
+        (@expected.keys + @result.keys).uniq.sort.
+          map do |k| 
+            [ k.join("/"), 
+              @expected[k], 
+              @result[k], 
+              diff(@expected[k], @result[k])
+            ]
+          end
       else raise "Unknown query type '#{@qtype}'"
     end
   end
@@ -157,8 +153,8 @@ class CppUnitTest < GenericUnitTest
             tok = Tokenizer.new(output, /<\/?[^>]+>|[^<]+/);
             @result = Hash.new;
             loop do
-              tok.tokens_up_to("<item>");
-              break if tok.last != "<item>";
+              tok.tokens_up_to(/<item[^>]*>/);
+              break unless /<item[^>]*>/ =~ tok.last;
               fields = Hash.new("");
               curr_field = nil;
               tok.tokens_up_to("</item>").each do |t|
@@ -203,7 +199,7 @@ class InterpreterUnitTest < GenericUnitTest
         when :onelevel then
           tok = Tokenizer.new(
             output, 
-            /->|\[|\]|;|[0-9]+\.?[0-9]*|<pat=[^>]*>/
+            /->|\[|\]|;|-?[0-9]+\.?[0-9]*|<pat=[^>]*>/
           );
           tok.clear_whitespace;
           tree = TreeBuilder.new;
@@ -238,19 +234,23 @@ end
 tests = [];
 queries = nil;
 $skip_compile = false;
+$precision = 1e-12;
 
 GetoptLong.new(
   [ '-a', '--all',  GetoptLong::NO_ARGUMENT],
   [ '-t', '--test', GetoptLong::REQUIRED_ARGUMENT],
-  [ '--skip-compile', GetoptLong::NO_ARGUMENT]
+  [ '--skip-compile', GetoptLong::NO_ARGUMENT],
+  [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-a', '--all' then queries = $queries.keys
     when '--skip-compile' then $skip_compile = true;
+    when '-p', '--precision' then $precision = 10 ** (-1 * arg.to_i);
     when '-t', '--test' then 
       case arg
         when 'cpp'         then tests.push CppUnitTest
         when 'interpreter' then tests.push InterpreterUnitTest
+        when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
       end
   end
 end
@@ -261,23 +261,27 @@ tests = [CppUnitTest] if tests.empty?;
 queries = ARGV if queries.nil?
 
 queries.each do |tquery| 
-  tests.each do |test_class|
-    t = test_class.new
-    print "Testing query '#{tquery}' on the #{t.to_s}: "; STDOUT.flush;
-    t.query = tquery
-    begin t.run
-      rescue Exception => e
-        puts "Failure: #{e}";
+  if $queries.has_key? tquery then
+    tests.each do |test_class|
+      t = test_class.new
+      print "Testing query '#{tquery}' on the #{t.to_s}: "; STDOUT.flush;
+      t.query = tquery
+      begin t.run
+        rescue Exception => e
+          puts "Failure: #{e}";
+          exit -1;
+      end
+      if t.correct? then
+        puts "Success."
+      else
+        puts "Failure: Result Mismatch"
+        puts(([["Key", "Expected", "Result", "Different?"], 
+               ["", "", ""]] + t.results).tabulate);
         exit -1;
+      end
     end
-    if t.correct? then
-      puts "Success."
-    else
-      puts "Failure: Result Mismatch"
-      puts(([["Key", "Expected", "Result"], 
-             ["", "", ""]] + t.results).tabulate);
-      exit -1;
-    end
+  else
+    puts "Unknown query #{tquery}"
   end
 end
 

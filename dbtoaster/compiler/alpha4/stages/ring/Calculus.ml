@@ -416,11 +416,60 @@ and term_as_string (m: term_t): string =
                      (fun l -> "("^(Util.string_of_list "*" l)^")")
                      (fun x -> "-("^x^")")
                      leaf_f m)
-let string_of_relcalc = relcalc_as_string
-let string_of_term    = term_as_string
+
 let string_of_relcalc = relcalc_as_string
 let string_of_term    = term_as_string
 
+let code_of_var (vn,vt) = 
+   "(\""^vn^"\", "^(match vt with 
+      TInt -> "TInt" | TDouble -> "TDouble" | 
+      TLong -> "TLong" | TString -> "TString"
+   )^")"
+
+let rec code_of_relcalc (relcalc:relcalc_t): string =
+   CalcRing.fold
+      (fun l    -> "(RA_MultiUnion["^(Util.string_of_list "; " l)^"])")
+      (fun l    -> "(RA_MultiNatJoin["^(Util.string_of_list "; " l)^"])")
+      (fun c    -> "(RA_Neg"^c^")")
+      (fun leaf -> "(RA_Leaf("^
+         (match leaf with
+            | AtomicConstraint(c, l, r) -> "AtomicConstraint("^
+               (match c with
+                  Eq -> "Eq" | Lt -> "Lt" | Le -> "Le" | Neq -> "Neq"
+               )^", "^(code_of_term l)^", "^(code_of_term r)^")"
+            | False -> "False"
+            | True -> "True"
+            | Rel(rn, rv) -> 
+               "Rel(\""^rn^"\", ["^
+               (Util.string_of_list0 "; " code_of_var rv)^
+               "])"
+         )^"))"
+      )
+      relcalc
+
+and code_of_term (m:term_t): string =
+   TermRing.fold 
+      (fun l      -> "(RSum["^(Util.string_of_list "; " l)^"])")
+      (fun l      -> "(RProd["^(Util.string_of_list "; " l)^"])")
+      (fun c      -> "(RNeg"^c^")")
+      (fun leaf   -> "(RVal("^
+         (match leaf with
+            | AggSum(subt, subc) ->
+               "AggSum("^(code_of_term subt)^", "^(code_of_relcalc subc)^")"
+            | Const(Int(i))    -> "Const(Int("^(string_of_int i)^"))"
+            | Const(Double(i)) -> "Const(Double("^(string_of_float i)^"))"
+            | Const(Long(i))   -> "Const(Long("^(Int64.to_string i)^"))"
+            | Const(String(i)) -> "Const(String(\""^i^"\"))"
+            | Const(Boolean(true))  -> "Const(Boolean(true))"
+            | Const(Boolean(false)) -> "Const(Boolean(false))"
+            | Var(vn,vt) -> "Var("^(code_of_var (vn,vt))^")"
+            | External(rn, rv) ->
+               "External(\""^rn^"\", ["^
+               (Util.string_of_list0 "; " code_of_var rv)^
+               "])"
+         )^"))"
+      )
+      m
 ;;
 
 (* given a relcalc monomial, returns a pair (eqs, rest), where
@@ -558,6 +607,21 @@ let rec simplify_calc_monomial (recur: bool)
                                (relcalc: relcalc_t) (bound_vars: var_t list)
                                (bigsum_vars: var_t list)
                                : (var_mapping_t * relcalc_t) =
+   let local_bindings = fst
+      (CalcRing.extract 
+         (fun _ -> failwith "Union in monomial")
+         (List.flatten) (fun x -> x)
+         (fun lf -> ([lf, safe_vars (CalcRing.mk_val lf) bound_vars], 
+                     CalcRing.mk_val lf))
+         relcalc
+      )
+   in
+   let nonlocal_bindings lf =
+      ListAsSet.multiunion
+         (List.map snd 
+            (List.remove_assoc lf local_bindings)
+         )
+   in
    let leaf_f lf =
       match lf with
          AtomicConstraint(c, t1, t2) ->
@@ -565,7 +629,13 @@ let rec simplify_calc_monomial (recur: bool)
               if not recur then t else
               (* nested bindings are dropped here, thus cannot be used to 
                  eliminate upper-level loop variables. *)
-              snd (simplify_roly true t bound_vars bigsum_vars) in 
+              snd (simplify_roly 
+                     true 
+                     t
+                     (ListAsSet.union
+                        bound_vars 
+                        (ListAsSet.diff (nonlocal_bindings lf) bigsum_vars))
+                     bigsum_vars) in 
             let t1b, t2b = aux t1, aux t2 in
             CalcRing.mk_val(AtomicConstraint(c, t1b, t2b))
        | _ -> CalcRing.mk_val lf
@@ -1486,3 +1556,6 @@ let rec un_roly_poly (monomials:term_t list): term_t =
          )
       ]
    )
+;;
+let term_sum_list = TermRing.sum_list
+let term_list_sum = TermRing.mk_sum
