@@ -10,6 +10,7 @@
 \usepackage{enumerate} 
 \usepackage{amsthm,amssymb,amsmath}
 \usepackage{indentfirst}
+\usepackage{listings}
 
 \begin{document}
 
@@ -198,6 +199,17 @@ For each nested query we need a map and an assignment operator. So all of these 
 \\
 
 This model is compatible with HyperTree Decomposition as we had in the previous sections. For that we need to have a node which contains the left hand and the right hand of the comparison operator which joins the nested queries. If the hypertree decomposition follow this condition then we can consider the hypertree as an ordinary one and use the previous algorithms on it for computation of delta queries. In the other words we have to split on the comparison operator during the tree decomposition process.
+A sample query:
+\lstset{language=SQL}
+\begin{lstlisting}
+select count(*) from R,S where R.b=S.b and (
+(select count(*) from T where T.a=R.a)
+<(select count(*) from U where U.c=S.c))
+\end{lstlisting}
+
+And its representation in alpha5 notation: 
+$\sum(R\cdot S\cdot(R.b=S.b)\cdot(t_{1}\gets\sum(T\cdot(T.a=R.a)))\cdot(t_{2}\gets\sum(U\cdot(U.c=S.c)))\cdot(t_{1}<t_{2}))$\\
+
 \begin{figure}[htbp]
 \begin{center}
 \usetikzlibrary{fit}
@@ -241,7 +253,7 @@ This model is compatible with HyperTree Decomposition as we had in the previous 
     ;
 \end{tikzpicture}
 \end{center}
-\caption{Nested query sample, ??? what was the example of this one??}
+\caption{A sample of hyper tree decomposition of the query}
 \label{fig4}
 \end{figure}
 
