@@ -187,4 +187,65 @@ Suppose we want to compute $\Delta_{\pm R}{JT_{Q}}$. As shown in \ref{subsection
 
 Obviously this algorithm needs to compute the delta of each element just one time. If we want to compute the $\Delta$ of a node with branching factor $j$ it needs $2^{j}-1$ different joint operation($\bowtie$) which is exponential in the worst case. But we can use a simple trick here. For the node we can first consider $\Delta$ of $j-1$ children and store it somewhere then with this value we can merge the $j$th one. With Algorithm. \ref{alg2} we can compute the $\Delta$ in $O(n)$.
 
+\section{Nested queries}
+Suppose we have a nested query with 2 layers. Lets call the first layer as $Q_{1}$ and the second as $Q_{2}$. In alpha5 model we have the assignment operator with which we can make an temporary map as $t_{1}$ and compute the $Q_{2}$ as $t_{1}$ and then join it with $Q_{1}$ and other relations. For example we are given this query:
+\begin{align*}
+Q: \text{SELECT COUNT(*)} &\text{  FROM r WHERE r.b}\\
+<\text{(SELECT SUM(s.c) } & \text{FROM s WHERE s.a=r.a)}
+\end{align*}
+For this query we can write it with alpha5 notations like: $\sum(r\cdot(t_{1}\gets \sum[(s(a)=r(a))\cdot s(c))]\cdot(r(b)<t1))$ 
+For each nested query we need a map and an assignment operator. So all of these queries can be expressed in alpha5 language. 
+\\
+
+This model is compatible with HyperTree Decomposition as we had in the previous sections. For that we need to have a node which contains the left hand and the right hand of the comparison operator which joins the nested queries. If the hypertree decomposition follow this condition then we can consider the hypertree as an ordinary one and use the previous algorithms on it for computation of delta queries. In the other words we have to split on the comparison operator during the tree decomposition process.
+\begin{figure}[htbp]
+\begin{center}
+\usetikzlibrary{fit}
+\begin{tikzpicture}%[level/.style={sibling distance=40mm,level distance=15mm}]
+[
+    %
+    level 1/.style={scale=1.0, fill=red,
+    level distance=30pt, sibling distance=150pt},
+    level 2/.style={ scale=1.0,
+    level distance=30pt, sibling distance=70pt},
+    level 3/.style={ scale=0.7,
+    level distance=60pt, sibling distance=120pt}]
+    level 4/.style={ scale=0.7,
+    level distance=60pt, sibling distance=120pt}]  
+    \tikzstyle{every node}=[rectangle,draw,fill=red!20]
+    \node [rectangle,draw,fill=red!20]{$t_{1},c$}
+        child { 
+            	node[rectangle,draw,fill=red!20] {$t_{1},t_{2},c$}
+        		child { 
+        			node[rectangle,draw,fill=red!20] {$t_{1},t_{2}$}
+		}
+		child{
+      			node[rectangle,draw,fill=red!20] {$t_{2},c$}
+		}
+	}
+	child {
+	node[rectangle,draw,fill=red!20] {$t_{1},c,a$}
+		child{
+			node[rectangle,draw,fill=red!20] {$t_{1},a$}
+		}
+		child{
+					node[rectangle,draw,fill=red!20] {$a,b,c$}
+					child{
+				node[rectangle,draw,fill=red!20] {$a,b$}
+					}
+					child{
+			node[rectangle,draw,fill=red!20] {$b,c$}
+					}
+		}
+	}
+    ;
+\end{tikzpicture}
+\end{center}
+\caption{Nested query sample, ??? what was the example of this one??}
+\label{fig4}
+\end{figure}
+
+Consider we are given the hyper graph model of a query. Each comparison operator is a hyper edge consisting just 2 nodes. So if we split the hyper graph through these comparisons hyper edges(in fact contracting them since they are simple links), an introduce a new variable as the join of two endpoints, we can use the resulting hyper graph as the one we had in the previous section. But the cost of this splitting may affect the hyper tree width. In the worst case we may increase the hyper tree width by the number of nested levels. (??? can we make it better?)\\
+
+In this way we just join the two variables of the comparisons edges, of somehow we have a node in the hyper tree which contains all of these new joined nodes we increased the hyper tree width by the number of these nodes(number of nested levels in the query). 
 \end{document}
