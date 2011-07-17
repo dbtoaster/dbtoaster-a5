@@ -123,7 +123,12 @@ public class BasicSobiTrader extends GeneralTrader{
     }
     
     public static void main(String args[]) throws IOException{
-        BasicSobiTrader b= new BasicSobiTrader(10., 100, 1.);
+        BasicSobiTrader b;
+        if(args.length==0)
+            b= new BasicSobiTrader(10., 100, 1.);
+        else
+            b=new BasicSobiTrader(Double.parseDouble(args[0]), Integer.parseInt(args[1]), Double.parseDouble(args[2]));
+        
         System.out.println("Sobi trader up");
     }
 }

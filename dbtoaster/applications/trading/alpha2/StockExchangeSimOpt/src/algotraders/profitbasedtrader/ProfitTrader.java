@@ -94,7 +94,11 @@ public class ProfitTrader extends GeneralTrader {
     }
 
     public static void main(String args[]) throws IOException{
-        ProfitTrader  b= new ProfitTrader(10., 100, 1., 100000.);
+        ProfitTrader  b;
+        if(args.length==0)
+            b = new ProfitTrader(10., 100, 1., 100000.);
+        else
+            b = new ProfitTrader(Double.parseDouble(args[0]), Integer.parseInt(args[1]), Double.parseDouble(args[2]), Double.parseDouble(args[3]));
         System.out.println("Profit trader up");
         BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
         while(true){

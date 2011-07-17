@@ -63,7 +63,7 @@ public class HistoricTrader {
     public void run() throws IOException {
 
         System.out.println("Enter test file name");
-        String filename = "cleanedData4.csv";
+        String filename = "/home/kunal/cornell_db_maybms/cornell_db_maybms/dbtoaster/applications/trading/alpha2/StockExchangeSimOpt/cleanedData4.csv";
         reader = new BufferedReader(new FileReader(filename));
 
         //Establish connection
@@ -113,16 +113,21 @@ public class HistoricTrader {
                 continue;
             }
             String message = String.format("%s;stock_id:%s price:%s volume:%s order_id:%s trader:%s\n", action, stock_id, price, volume, order_id++, traderId);
-            //Synchronization loop
-            while((new Date().getTime()-startSimTimestamp) < (timestamp - startHistoricTimestamp)){
-            }
+            //Synchronization loop. Uncomment to synchronize
+            //while((new Date().getTime()-startSimTimestamp) < (timestamp - startHistoricTimestamp)){
+            //}
             
             cf = ch.write(message);
-
+            
             cf.awaitUninterruptibly();
-        } while ((order = reader.readLine()) != null);
+        } while ((order = reader.readLine()) != null && order_id<5000);
         long endSimTimestamp = new Date().getTime();
         System.out.println("Sent at rate = "+ order_id*1000 / (endSimTimestamp-startSimTimestamp));
         System.out.println("Loop ended");
+    }
+    
+    public static void main(String args[]) throws IOException{
+        HistoricTrader ht = new HistoricTrader();
+        ht.run();
     }
 }

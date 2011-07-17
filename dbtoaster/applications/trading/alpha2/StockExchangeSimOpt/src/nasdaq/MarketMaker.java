@@ -231,4 +231,22 @@ public class MarketMaker {
     public Channel getNasdaqChannel() {
         return this.marketPropts.ch;
     }
+    
+    public static void main(String args[]){
+        if(args.length!=4){
+            System.out.println("Usage: java MarketMaker spread maxVolTradeable windowLength stock");
+        }
+        else{
+            try{
+                MarketMaker mm = new MarketMaker(Double.parseDouble(args[0]),
+                        Integer.parseInt(args[1]),
+                        Integer.parseInt(args[2]),
+                        Integer.parseInt(args[3]));
+            }
+            catch(Exception e){
+                System.out.println("Error with input: "+e.getMessage());
+            }
+        }
+        
+    }
 }

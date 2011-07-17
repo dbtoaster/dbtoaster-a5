@@ -34,6 +34,7 @@ public class StockMarketServer {
     Semaphore obLock,sLock;
     Matcher m;
     StockState stockState;
+    static Integer port=8080;
     
     public StockMarketServer() throws IOException{
         Terminal t = new Terminal();
@@ -56,7 +57,8 @@ public class StockMarketServer {
         bootstrap.setOption("child.tcpNoDelay", true);
         bootstrap.setOption("child.keepAlive", true);
 
-        bootstrap.bind(new InetSocketAddress(8080));
+        bootstrap.bind(new InetSocketAddress(port));
+        System.out.println("Hosting server on port "+port);
     }
     
     public class StockMarketChannelFactory implements ChannelPipelineFactory{
@@ -69,5 +71,13 @@ public class StockMarketServer {
                     new OrderMatchingHandler(orderBook, obLock, sLock, new TupleDecoder(OrderBook.getSchema()), m, stockState));
         }
         
+    }
+    
+    public static void main(String args[]) throws IOException{
+        if(args.length!=0){
+            port = Integer.parseInt(args[0]);
+        }
+        
+        StockMarketServer s = new StockMarketServer();
     }
 }
