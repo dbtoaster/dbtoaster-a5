@@ -232,8 +232,12 @@ public class MarketMaker {
         return this.marketPropts.ch;
     }
     
-    public static void main(String args[]){
-        if(args.length!=4){
+    public static void main(String args[]) throws IOException{
+        if(args.length == 0){
+            MarketMaker mm = new MarketMaker(0.1, 1000, 1000, 10101);
+            mm.execute();
+        }
+        else if(args.length!=4){
             System.out.println("Usage: java MarketMaker spread maxVolTradeable windowLength stock");
         }
         else{
@@ -242,10 +246,12 @@ public class MarketMaker {
                         Integer.parseInt(args[1]),
                         Integer.parseInt(args[2]),
                         Integer.parseInt(args[3]));
+                mm.execute();
             }
             catch(Exception e){
                 System.out.println("Error with input: "+e.getMessage());
             }
+            
         }
         
     }
