@@ -433,8 +433,17 @@
   <section|Extras>
 
   There are the extra classes that were defined as a part of the testing and
-  running phase. These classes are pretty straightforward. Please let me know
-  if I should include documention on the same.\ 
+  running phase. These classes are pretty straightforward. I am just
+  including some extra documentation for the chart drawing GUI.
+
+  I have basically use JFreeChart, and tweaked the code to produce a dynamic
+  price cum volume chart which moves with time. The code for creating the
+  chart is in GUI.PriceChart and GUI.PriceVolumeChart. This chart must be
+  created as a thread as it should run as a non-blocking background method.
+  Hence I have created a thread which can be attached to any process( the
+  market, the client, the trader, the market maker, etc) in
+  threads.PriceThread. This thread looks up the StockPrice object associated
+  with its calling process to display a dynamic price and volume flow.\ 
 
   \;
 </body>
@@ -512,6 +521,10 @@
       <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|6.<space|2spc>Broker
       Framework> <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
       <no-break><pageref|auto-13><vspace|0.5fn>
+
+      <vspace*|1fn><with|font-series|<quote|bold>|math-font-series|<quote|bold>|7.<space|2spc>Extras>
+      <datoms|<macro|x|<repeat|<arg|x>|<with|font-series|medium|<with|font-size|1|<space|0.2fn>.<space|0.2fn>>>>>|<htab|5mm>>
+      <no-break><pageref|auto-14><vspace|0.5fn>
     </associate>
   </collection>
 </auxiliary>
