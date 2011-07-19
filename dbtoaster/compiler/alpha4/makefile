@@ -5,6 +5,7 @@ SOURCE = \
 	stages/ring/Ring.ml \
 	stages/ring/Calculus.mli \
 	stages/ring/Calculus.ml \
+	stages/ring/PipedCalculus.ml \
 	stages/maps/M3.mli \
 	stages/maps/M3.ml \
 	stages/maps/M3Common.mli \
@@ -232,13 +233,13 @@ test: top
 #	@$(DEBUG_APP) test/unit/k3_ocaml_vwap.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml_sgl.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml_queries.ml
-	@$(DEBUG_APP) test/examples/AxFinder.ml
-	@$(DEBUG_APP) test/examples/CustSupp.ml
-	@$(DEBUG_APP) test/examples/MyTpchTest.ml
-	@$(DEBUG_APP) test/examples/Partner.ml
-	@$(DEBUG_APP) test/examples/Ssb-simple.ml
+# @$(DEBUG_APP) test/examples/AxFinder.ml
+# @$(DEBUG_APP) test/examples/CustSupp.ml
+# @$(DEBUG_APP) test/examples/MyTpchTest.ml
+# @$(DEBUG_APP) test/examples/Partner.ml
+# @$(DEBUG_APP) test/examples/Ssb-simple.ml
 #	@$(DEBUG_APP) test/examples/Ssb.ml
-	@$(DEBUG_APP) test/examples/TpchQ12.ml
+# @$(DEBUG_APP) test/examples/TpchQ12.ml
 #	@$(DEBUG_APP) test/examples/TpchQ18.ml
 #	@$(DEBUG_APP) test/examples/TpchQ22.ml
 #	@$(DEBUG_APP) test/examples/VwapTest.ml

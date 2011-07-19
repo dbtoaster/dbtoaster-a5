@@ -113,8 +113,9 @@ let compile_delta_for_rel (produce_child_maps: bool)
    in
 
    Debug.print "LOG-COMPILE-TRIGGERS" (fun () ->
-     String.concat "\n" (List.map (fun ((p, t), _) ->
-         "Trigger params: "^(Util.list_to_string fst p)^"\n"^
+     String.concat "\n" (List.map (fun ((p, t), bs) ->
+         "Map params: "^(Util.list_to_string fst p)^"\n"^
+         "Bigsum vars: "^(Util.list_to_string fst bs)^"\n"^
          "Trigger delta: "^(Calculus.term_as_string t)^"\n")
        delta_terms));
 

@@ -116,7 +116,7 @@ test "test16" rt_as_string (readable_term q2)
 ;;
 
 test "test17" s_as_string
-   (simplify q2 [] [] []) ([(([], term_one), [])]);;
+   (simplify q2 ["x", TInt; "y", TInt] [] []) ([(([], term_one), [])]);;
 
 test "test19" s_as_string (simplify
     (term_delta [] false "R" [("x", TInt); ("y", TInt)]
@@ -226,14 +226,16 @@ test "test27" sr_as_string
                    RA_MultiNatJoin([
  RA_Leaf(Rel("R", [("x", TInt); ("y", TInt)]));
  RA_Leaf(Rel("R", [("y", TInt); ("z", TInt)]))]))))))
-[] [] [("x", TInt)]))
-([(([("x", TInt)], RVal (AggSum (RVal (Const (Int 1)),
-      RA_Leaf (Rel ("R", [("y", TInt); ("z", TInt)]))))),[]);
+["A", TInt; "B", TInt] [] [("x", TInt)]))
+([(([("A", TInt)], RVal (AggSum (RVal (Const (Int 1)),
+      RA_Leaf (Rel ("R", [("B", TInt); ("z", TInt)]))))),[]);
   (([("x", TInt)], RVal (AggSum (RVal (Const (Int 1)),
-      RA_Leaf (Rel ("R", [("x", TInt); ("y", TInt)]))))),[]);
-  (([("x", TInt)], RVal (Const (Int 1))),[])])
+      RA_Leaf (Rel ("R", [("x", TInt); ("A", TInt)]))))),[]);
+  (([("A", TInt)], RVal (AggSum (RVal (Const (Int 1)),
+      RA_Leaf (AtomicConstraint(Eq, (RVal(Var("A", TInt))), 
+                                    (RVal(Var("B", TInt)))))))), [])
+])
 ;;
-
 
 
 test "test28" sr_as_string 
@@ -389,7 +391,7 @@ with _ -> true);;
 
 
 test "test35" (fun (x,y) -> term_as_string y)
-(Calculus.simplify_roly true (make_term
+(Calculus.simplify_roly (make_term
   (RVal (AggSum (RVal (Const (Int 1)),
     RA_Leaf
       (AtomicConstraint (Eq, RVal (Const (Int 0)),
@@ -401,7 +403,7 @@ test "test35" (fun (x,y) -> term_as_string y)
            (AggSum (RVal (Const (Int 1)),
                RA_Leaf(AtomicConstraint(Eq, RVal(Var ("z", TInt)), RVal(Var ("x", TInt))))))
 ]))))
-)) [("x", TInt); ("y", TInt)] [])
+)) [] [("x", TInt); ("y", TInt)] [])
 ([], make_term (RVal (AggSum (RVal (Const (Int 1)),
     RA_Leaf (AtomicConstraint (Eq, RVal (Const (Int 0)),
        RSum [RVal (Const (Int 1)); RVal (Const (Int 1))]))))))
@@ -410,7 +412,7 @@ test "test35" (fun (x,y) -> term_as_string y)
 
 
 test "test36" (fun (x,y) -> term_as_string y)
-(Calculus.simplify_roly true (make_term (
+(Calculus.simplify_roly (make_term (
   RVal (AggSum (RVal (Const (Int 1)),
     RA_Leaf
       (AtomicConstraint (Eq,
@@ -420,7 +422,7 @@ test "test36" (fun (x,y) -> term_as_string y)
          RVal
            (AggSum (RVal (Const (Int 1)),
                RA_Leaf(AtomicConstraint(Eq, RVal(Var ("z", TInt)), RVal(Var ("x", TInt))))))
-)))))) [("x", TInt); ("y", TInt)] [])
+)))))) [] [("x", TInt); ("y", TInt)] [])
 ([], make_term( RVal (AggSum (RVal (Const (Int 1)),
   RA_Leaf (AtomicConstraint (Eq, RVal (Const (Int 1)), RVal (Const (Int 1))))))
 ))

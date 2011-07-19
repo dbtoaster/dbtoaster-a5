@@ -133,11 +133,12 @@ Debug.log_unit_test "Aggsum Factorization" term_as_string
 (* Simplify correctness on bigsum vars *)
 
 let (vwap_delta_1_inner_subs,vwap_delta_1_inner_simplified) =
-  (simplify_roly true vwap_delta_1_t
-                          ["QBIDS_PRICE",TInt;
-                           "QBIDS_VOLUME",TDouble]
-                          ["B1_PRICE",TInt;
-                           "B1_VOLUME",TDouble]);;
+  (simplify_roly vwap_delta_1_t 
+                 []
+                 ["QBIDS_PRICE",TInt;
+                  "QBIDS_VOLUME",TDouble]
+                 ["B1_PRICE",TInt;
+                  "B1_VOLUME",TDouble]);;
 
 Debug.log_unit_test "Bigsum Simplification" term_as_string
   vwap_delta_1_inner_simplified
@@ -152,9 +153,7 @@ Debug.log_unit_test "Bigsum Term Substitutions"
   (list_to_string (fun ((x,_),(y,_))->x^"->"^y))
   vwap_delta_1_inner_subs
   [("B1_PRICE",TInt),("QBIDS_PRICE",TInt);
-   ("QBIDS_PRICE",TInt),("QBIDS_PRICE",TInt);
-   ("B1_VOLUME",TDouble),("QBIDS_VOLUME",TDouble);
-   ("QBIDS_VOLUME",TDouble),("QBIDS_VOLUME",TDouble)]
+   ("B1_VOLUME",TDouble),("QBIDS_VOLUME",TDouble)]
 
 (****************************************************************************)
 (* Make sure that the compiler is handling input variables properly *)
@@ -342,8 +341,8 @@ Debug.log_unit_test "Simplify RST Delete Delta"
       RVal(AggSum(
         RVal(Var("d",TInt)),
         RA_MultiNatJoin[
-          RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
-          RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
+          RA_Leaf(Rel("t",["t_c",TInt;"d",TInt]));
+          RA_Leaf(Rel("s",["Qr_r_b",TInt;"t_c",TInt]))
         ]
       ));
       RVal(Const(Int(-1)))
@@ -359,8 +358,8 @@ Debug.log_unit_test "RST Extract Aggregates"
           (List.map fst rst_true_delta_r_simplified))))
   [make_term (
     RVal(AggSum(RVal(Var("d",TInt)),
-                RA_MultiNatJoin[RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
-                                RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
+                RA_MultiNatJoin[RA_Leaf(Rel("t",["t_c",TInt;"d",TInt]));
+                                RA_Leaf(Rel("s",["Qr_r_b",TInt;"t_c",TInt]))
                                ])))];;
     
 
@@ -381,8 +380,8 @@ Debug.log_unit_test "RST Todos" (string_of_list0 "\n" (fun (defn, term) ->
   rst_todos
   [(
     make_term (RVal(AggSum(RVal(Var("d",TInt)), RA_MultiNatJoin[
-      RA_Leaf(Rel("t",["s_c",TInt;"d",TInt]));
-      RA_Leaf(Rel("s",["Qr_r_b",TInt;"s_c",TInt]))
+      RA_Leaf(Rel("t",["t_c",TInt;"d",TInt]));
+      RA_Leaf(Rel("s",["Qr_r_b",TInt;"t_c",TInt]))
     ]))),
     map_term "Q_mr1" ["Qr_r_b",TInt]
   )];;
@@ -443,18 +442,18 @@ Debug.log_unit_test_list "Quad-Self-Join Stage 1 Term" term_as_string
   [
     make_term (RSum[
       (RVal(External("Q_pR1",["QR_A",TInt;"QR_B",TInt])));
-      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_B",TInt;"QR_A",TInt])));
       (RVal(External("Q_pR3",["QR_A",TInt;"QR_B",TInt])));
-      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
-      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
-      (RVal(External("Q_pR2",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR2",["QR_B",TInt;"QR_A",TInt])));
+      (RVal(External("Q_pR4",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR4",["QR_A",TInt;"QR_B",TInt])));
       (RVal(AggSum(RVal(Const(Int(1))),
                    RA_Leaf(AtomicConstraint(Eq,
                      RVal(Var("QR_A",TInt)),
                      RVal(Var("QR_B",TInt)))))));
-      (RVal(External("Q_pR4",["QR_A",TInt;"QR_B",TInt])));
-      (RVal(External("Q_pR5",["QR_B",TInt;"QR_A",TInt])));
-      (RVal(External("Q_pR6",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR5",["QR_A",TInt;"QR_B",TInt])));
+      (RVal(External("Q_pR6",["QR_B",TInt;"QR_A",TInt])));
+      (RVal(External("Q_pR7",["QR_A",TInt;"QR_B",TInt])));
     ])
   ];;
 
@@ -463,26 +462,33 @@ Debug.log_unit_test_list "Quad-Self-Join Stage 1 Todos" string_of_term_mapping
   [
     make_term (RVal(AggSum(RVal(Const(Int(1))),
       RA_MultiNatJoin[
-        RA_Leaf(Rel("R",["QR_A",TInt;"B1__A",TInt]));
-        RA_Leaf(Rel("R",["B1__A",TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["QR_A",TInt;"V0__B",TInt]));
+        RA_Leaf(Rel("R",["V0__B",TInt;"QR_B",TInt]));
         RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
       ]))),
     map_term "Q_pR1"  ["QR_A",TInt;"QR_B",TInt]
     ;
     make_term (RVal(AggSum(RVal(Const(Int(1))),
       RA_MultiNatJoin[
-        RA_Leaf(Rel("R",["QR_A", TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["QR_B", TInt;"QR_B",TInt]));
         RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
       ]))),
-    map_term "Q_pR2"  ["QR_A",TInt;"QR_B",TInt]
+    map_term "Q_pR2"  ["QR_B",TInt;"QR_A",TInt]
     ;
     make_term (RVal(AggSum(RVal(Const(Int(1))),
       RA_MultiNatJoin[
-        RA_Leaf(Rel("R",["QR_A",TInt;"T1__B",TInt]));
-        RA_Leaf(Rel("R",["T1__B",TInt;"QR_A",TInt]));
+        RA_Leaf(Rel("R",["QR_A",TInt;"V1__A",TInt]));
+        RA_Leaf(Rel("R",["V1__A",TInt;"QR_B",TInt]));
         RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
       ]))),
     map_term "Q_pR3" ["QR_A",TInt;"QR_B",TInt]
+    ;
+    make_term (RVal(AggSum(RVal(Const(Int(1))),
+      RA_MultiNatJoin[
+        RA_Leaf(Rel("R",["QR_A", TInt;"QR_A",TInt]));
+        RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR_A",TInt)),RVal(Var("QR_B",TInt))))
+      ]))),
+    map_term "Q_pR4"  ["QR_A",TInt;"QR_B",TInt]
     ;
     make_term (RVal(AggSum(RSum[RVal(Const(Int(1)));RVal(Const(Int(1)))],
       (RA_MultiNatJoin[
@@ -490,47 +496,47 @@ Debug.log_unit_test_list "Quad-Self-Join Stage 1 Todos" string_of_term_mapping
          RA_Leaf(Rel("R",["QR_B", TInt;"QR_B",TInt]))
       ])
     ))),
-    map_term "Q_pR4"  ["QR_A",TInt; "QR_B",TInt]
+    map_term "Q_pR5"  ["QR_A",TInt; "QR_B",TInt]
     ;
     make_term (RVal(AggSum(
        (RSum[
           RVal(AggSum(RVal(Const(Int(1))),
             RA_MultiNatJoin[
-              RA_Leaf(Rel("R",["T1__A",TInt;"B1__A",TInt]));
-              RA_Leaf(Rel("R",["B1__A",TInt;"QR_B",TInt]))
+              RA_Leaf(Rel("R",["V0__A",TInt;"V0__B",TInt]));
+              RA_Leaf(Rel("R",["V0__B",TInt;"QR_B",TInt]))
             ]));
           RVal(AggSum(RVal(Const(Int(1))),
             RA_MultiNatJoin[
-              RA_Leaf(Rel("R",["T1__A",TInt;"T1__B",TInt]));
-              RA_Leaf(Rel("R",["T1__B",TInt;"QR_B",TInt]))
+              RA_Leaf(Rel("R",["V0__A",TInt;"V1__A",TInt]));
+              RA_Leaf(Rel("R",["V1__A",TInt;"QR_B",TInt]))
             ]));
           RVal(AggSum(RVal(Const(Int(1))),
-            (RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt])))
+            (RA_Leaf(Rel("R",["V0__A",TInt;"QR_A",TInt])))
             ))
        ]),
-       (RA_Leaf(Rel("R",["T1__A",TInt;"QR_A",TInt])))
+       (RA_Leaf(Rel("R",["V0__A",TInt;"QR_A",TInt])))
      ))),
-    map_term "Q_pR5"  ["QR_B",TInt;"QR_A",TInt]
+    map_term "Q_pR6"  ["QR_B",TInt;"QR_A",TInt]
     ;
     make_term (RVal(AggSum(
        (RSum[
           RVal(AggSum(RVal(Const(Int(1))),
             RA_MultiNatJoin[
-              RA_Leaf(Rel("R",["QR_A", TInt;"B1__A",TInt]));
-              RA_Leaf(Rel("R",["B1__A",TInt;"B1__B",TInt]));
+              RA_Leaf(Rel("R",["QR_A", TInt;"V0__B",TInt]));
+              RA_Leaf(Rel("R",["V0__B",TInt;"V1__B",TInt]));
             ]));
           RVal(AggSum(RVal(Const(Int(1))),
              RA_MultiNatJoin[
-               RA_Leaf(Rel("R",["QR_A", TInt;"T1__B",TInt]));
-               RA_Leaf(Rel("R",["T1__B",TInt;"B1__B",TInt]));
+               RA_Leaf(Rel("R",["QR_A", TInt;"V1__A",TInt]));
+               RA_Leaf(Rel("R",["V1__A",TInt;"V1__B",TInt]));
             ]));
           RVal(AggSum(RVal(Const(Int(1))),
-             (RA_Leaf(Rel("R",["QR_B",TInt;"B1__B",TInt])))
+             (RA_Leaf(Rel("R",["QR_B",TInt;"V1__B",TInt])))
             ))
          ]),
-         (RA_Leaf(Rel("R",["QR_B", TInt;"B1__B",TInt])))
+         (RA_Leaf(Rel("R",["QR_B", TInt;"V1__B",TInt])))
       ))),
-    map_term "Q_pR6"  ["QR_A",TInt;"QR_B",TInt]
+    map_term "Q_pR7"  ["QR_A",TInt;"QR_B",TInt]
   ];;
 
 let (ladder_2, ladder_2_term) = List.hd ladder_1_todos;;
@@ -562,7 +568,7 @@ Debug.log_unit_test_list "Simplify Transitive Closure" term_as_string
     make_term (
       RVal(AggSum(RVal(Const(Int(1))),
         RA_MultiNatJoin[
-          RA_Leaf(Rel("R",["QR_B",TInt;"QR1R_A",TInt]));
+          RA_Leaf(Rel("R",["QR_B",TInt;"QR1R_B",TInt]));
           RA_Leaf(AtomicConstraint(Eq,RVal(Var("QR1R_A",TInt)),
                                       RVal(Var("QR1R_B",TInt))))
         ]
@@ -585,14 +591,11 @@ let (ladder_2_compiled, ladder_2_todos) =
 Debug.log_unit_test_list "Quad-Self-Join Stage 2 Term" term_as_string
   (List.map (fun (_,_,_,_,x) -> x) ladder_2_compiled)
   [
-    make_term 
-      (RSum[
-         (RVal(External("Q_pR1_pR1",["Q_pR1R_B",TInt;"Q_pR1R_A",TInt])));
-         (RVal(AggSum((RVal(Const(Int(1)))),
-             RA_Leaf(AtomicConstraint(Eq,RVal(Var("Q_pR1R_A",TInt)),
-                                         RVal(Var("Q_pR1R_B",TInt)))))))
-      ]);
-    make_term (RVal(External("Q_pR1_pR1",["Q_pR1R_B",TInt;"Q_pR1R_A",TInt])))
+    make_term (RVal(External("Q_pR1_pR1",["Q_pR1R_B",TInt;"Q_pR1R_A",TInt])));
+    make_term (RVal(External("Q_pR1_pR1",["Q_pR1R_B",TInt;"Q_pR1R_A",TInt])));
+    make_term (RVal(AggSum((RVal(Const(Int(1)))),
+                RA_Leaf(AtomicConstraint(Eq,RVal(Var("Q_pR1R_A",TInt)),
+                                            RVal(Var("Q_pR1R_B",TInt)))))));
   ];;
   
 Debug.log_unit_test_list "Quad-Self-Join Stage 2 Todos" string_of_term_mapping 
@@ -709,17 +712,17 @@ Debug.log_unit_test "TPCH 17 Bigsum Maps"
    (string_of_list0 "\n" (fun ((n,v),m) -> n^"["^(string_of_list0 "," fst v)^
                                            "]: "^(string_of_term m)))
    (List.map (fun (m,n) -> ((decode_map_term n), m)) tpch17_bsmaps)
-   [  ("QUERYBS1_1",["P__PARTKEY",TInt; "L__QUANTITY",TInt]), 
+   [  ("QUERYBS1_1",["L__PARTKEY",TInt; "L__QUANTITY",TInt]), 
       make_term (
          RVal(AggSum((RVal(Var("L__EXTENDEDPRICE", TDouble))),
             (RA_MultiNatJoin[
-               RA_Leaf(Rel("LINEITEM", [("L__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L__SUPPKEY", TInt); ("L__LINENUMBER", TInt); ("L__QUANTITY", TInt); ("L__EXTENDEDPRICE", TDouble); ("L__DISCOUNT", TDouble); ("L__TAX", TDouble); ("L__RETURNFLAG", TInt); ("L__LINESTATUS", TInt); ("L__SHIPDATE", TInt); ("L__COMMITDATE", TInt); ("L__RECEIPTDATE", TInt); ("L__SHIPINSTRUCT", TInt); ("L__SHIPMODE", TInt); ("L__COMMENT", TInt)]));
-               RA_Leaf(Rel("PART", [("P__PARTKEY", TInt); ("P__NAME", TInt); ("P__MFGR", TInt); ("P__BRAND", TInt); ("P__TYPE", TInt); ("P__SIZE", TInt); ("P__CONTAINER", TInt); ("P__RETAILPRICE", TDouble); ("P__COMMENT", TInt)]))
+               RA_Leaf(Rel("LINEITEM", [("L__ORDERKEY", TInt); ("L__PARTKEY", TInt); ("L__SUPPKEY", TInt); ("L__LINENUMBER", TInt); ("L__QUANTITY", TInt); ("L__EXTENDEDPRICE", TDouble); ("L__DISCOUNT", TDouble); ("L__TAX", TDouble); ("L__RETURNFLAG", TInt); ("L__LINESTATUS", TInt); ("L__SHIPDATE", TInt); ("L__COMMITDATE", TInt); ("L__RECEIPTDATE", TInt); ("L__SHIPINSTRUCT", TInt); ("L__SHIPMODE", TInt); ("L__COMMENT", TInt)]));
+               RA_Leaf(Rel("PART", [("L__PARTKEY", TInt); ("P__NAME", TInt); ("P__MFGR", TInt); ("P__BRAND", TInt); ("P__TYPE", TInt); ("P__SIZE", TInt); ("P__CONTAINER", TInt); ("P__RETAILPRICE", TDouble); ("P__COMMENT", TInt)]))
             ]))));
-      ("QUERYBS1_2",["P__PARTKEY",TInt]),
+      ("QUERYBS1_2",["L__PARTKEY",TInt]),
       make_term (
          RVal(AggSum((RVal(Var("L2__QUANTITY", TInt))),
-            (RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)])))
+            (RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("L__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)])))
          )))
    ]
 ;;
@@ -735,7 +738,7 @@ Debug.log_unit_test "TPCH 17 Simplify Monomial (as in Preagg)"
    tpch17_rest
    (make_relcalc (RA_Leaf(Rel("LINEITEM", [("L2__ORDERKEY", TInt); ("P__PARTKEY", TInt); ("L2__SUPPKEY", TInt); ("L2__LINENUMBER", TInt); ("L2__QUANTITY", TInt); ("L2__EXTENDEDPRICE", TDouble); ("L2__DISCOUNT", TDouble); ("L2__TAX", TDouble); ("L2__RETURNFLAG", TInt); ("L2__LINESTATUS", TInt); ("L2__SHIPDATE", TInt); ("L2__COMMITDATE", TInt); ("L2__RECEIPTDATE", TInt); ("L2__SHIPINSTRUCT", TInt); ("L2__SHIPMODE", TInt); ("L2__COMMENT", TInt)]))))
 ;;
-Debug.log_unit_test "TPCH 17 Simplify Monomial (as in Preagg)"
+Debug.log_unit_test "TPCH 17 Simplify Monomial (as in Preagg) Substitutions"
    (string_of_list0 "\n" (fun ((x,_),(y,_)) -> x^" -> "^y))
    tpch17_subst
    [  ("L2__PARTKEY",TInt),("P__PARTKEY",TInt);
@@ -745,14 +748,14 @@ Debug.log_unit_test "TPCH 17 Simplify_Roly (as in Preagg)"
    code_of_term
    (term_list_sum (
       List.map (fun x -> 
-         snd (simplify_roly true x [] [])
+         snd (simplify_roly x [] [] [])
       ) (term_sum_list (roly_poly tpch_17))
    ))
    (make_term (RVal(AggSum(
       (RVal(Var(("L__EXTENDEDPRICE", TDouble)))), 
       (RA_MultiNatJoin[
          (RA_Leaf(Rel("LINEITEM", [ ("L__ORDERKEY", TInt); 
-                                    ("P__PARTKEY", TInt); 
+                                    ("L__PARTKEY", TInt); 
                                     ("L__SUPPKEY", TInt); 
                                     ("L__LINENUMBER", TInt); 
                                     ("L__QUANTITY", TInt); 
@@ -775,7 +778,7 @@ Debug.log_unit_test "TPCH 17 Simplify_Roly (as in Preagg)"
                (RVal(AggSum(
                   (RVal(Var(("L2__QUANTITY", TInt)))), 
                   (RA_Leaf(Rel("LINEITEM", [ ("L2__ORDERKEY", TInt); 
-                                             ("P__PARTKEY", TInt); 
+                                             ("L__PARTKEY", TInt); 
                                              ("L2__SUPPKEY", TInt); 
                                              ("L2__LINENUMBER", TInt); 
                                              ("L2__QUANTITY", TInt); 
@@ -794,7 +797,7 @@ Debug.log_unit_test "TPCH 17 Simplify_Roly (as in Preagg)"
                )))
             ])
          ))); 
-         (RA_Leaf(Rel("PART", [  ("P__PARTKEY", TInt); 
+         (RA_Leaf(Rel("PART", [  ("L__PARTKEY", TInt); 
                                  ("P__NAME", TInt); 
                                  ("P__MFGR", TInt); 
                                  ("P__BRAND", TInt); 

@@ -13,6 +13,7 @@ struct
       List.flatten (List.map f l1)
 
    let subset l1 l2 = ((diff l1 l2) = [])     (* is l1 a subset of l2 ? *)
+   let seteq l1 l2 = ((subset l1 l2) && (subset l2 l1))
    let inter l1 l2 = diff l1 (diff l1 l2)               (* intersection *)
    let union l1 l2 = l1 @ (diff l2 l1)
 (* alternative impl
@@ -26,6 +27,8 @@ struct
 
    (* not the most intelligent of implementations. quadratic time *)
    let no_duplicates l = multiunion (List.map (fun x -> [x]) l)
+   
+   let uniq = no_duplicates
 
    let member a l = (subset [a] l)         (* is "a" a member of set l? *)
 
@@ -239,7 +242,10 @@ struct
       if (List.length x2) = 0 then default
       else if (List.length x2) = 1 then (List.hd x2)
       else raise NonFunctionalMappingException
-    
+   
+   let apply_if_present (theta: ('a,'a) table_fn_t) (x: 'a): 'b =
+      apply theta x x
+   
    let string_of_table_fn (theta:('a,'b) table_fn_t)
                           (left_to_s:('a -> string))
                           (right_to_s:('b -> string)): string =
@@ -918,11 +924,8 @@ struct
           in   
             if List.length rlist > 0 then
               if List.length elist > 0 then
-                if (List.hd rlist) <> (List.hd elist) then
-                  recurse (to_s (List.hd rlist)) (to_s (List.hd elist)) 
-                          (List.tl rlist) (List.tl elist)
-                else
-                  diff_lists (List.tl rlist) (List.tl elist)
+                recurse (to_s (List.hd rlist)) (to_s (List.hd elist)) 
+                        (List.tl rlist) (List.tl elist)
               else
                 recurse (to_s (List.hd rlist)) "--empty line--" 
                         (List.tl rlist) []

@@ -239,8 +239,27 @@ let safe_vars (phi: relcalc_t) (param_vars: var_t list) : (var_t list) =
    in
    (Util.ListAsSet.union x param_vars)
 
+let rec bound_vars_of_term (t: term_t) : var_t list =
+   TermRing.fold ListAsSet.multiinter ListAsSet.multiunion (fun x->x)
+      (fun lf ->
+         match lf with
+            | Const(_)       -> []
+            | Var(v)         -> [v]
+            | External(_,ev) -> ev
+            | AggSum(t,r)    -> 
+               ListAsSet.union (bound_vars_of_term t) (bound_vars_of_relcalc r)
+      ) t
 
-
+and     bound_vars_of_relcalc (r: relcalc_t) : var_t list =
+   CalcRing.fold ListAsSet.multiinter ListAsSet.multiunion (fun x->x)
+      (fun lf ->
+         match lf with
+            | False -> [] | True -> []
+             (* Constraints can propagate bindings, but this method returns
+                only those variables that are explicitly bound *)
+            | AtomicConstraint(_,_,_) -> []
+            | Rel(_,rv) -> rv
+      ) r
 
 exception Assert0Exception of string (* should never be reached *)
 
@@ -364,16 +383,6 @@ let string_of_const c =
    | String(s) -> "'" ^ s ^ "'"
    | Boolean(true)  -> "true"
    | Boolean(false) -> "false"
-let string_of_const c = 
-   match c with
-     Int(i)    -> string_of_int i
-   | Double(d) -> string_of_float d
-   | Long(l)   -> "(int64 output not implemented)" (* TODO *)
-   | String(s) -> "'" ^ s ^ "'"
-   | Boolean(true)  -> "true"
-   | Boolean(false) -> "false"
-
-let string_of_var = fst
 
 let string_of_var = fst
 ;;
@@ -629,7 +638,7 @@ let rec simplify_calc_monomial (recur: bool)
               if not recur then t else
               (* nested bindings are dropped here, thus cannot be used to 
                  eliminate upper-level loop variables. *)
-              snd (simplify_roly 
+              snd (simplify_roly_old 
                      true 
                      t
                      (ListAsSet.union
@@ -642,8 +651,8 @@ let rec simplify_calc_monomial (recur: bool)
    in
    extract_substitutions (CalcRing.apply_to_leaves leaf_f relcalc) bound_vars
 
-and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
-                  (bigsum_vars: var_t list) : (var_mapping_t * term_t) =
+and simplify_roly_old (recur: bool) (term: term_t) (bound_vars: var_t list)
+                      (bigsum_vars: var_t list) : (var_mapping_t * term_t) =
    let leaf_f lf =
       match lf with
          AggSum(f, r) ->
@@ -660,7 +669,7 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
                in
                (* loop variable bindings are passed from relcalc to term. *)
                (* bigsum variable bindings are passed from term to relcalc. *)
-               let (f_b, f2) = simplify_roly true f1
+               let (f_b, f2) = simplify_roly_old true f1
                   (Util.ListAsSet.multiunion 
                     [bound_vars; 
                     (ListAsSet.diff (relcalc_vars r) bigsum_vars);
@@ -709,8 +718,254 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
       one AggSum term. *)
    TermRing.extract List.flatten List.flatten
                     (fun _ -> failwith "simplify_roly TODO") leaf_f term
-
-
+;;
+let rec simplify_roly  (term: term_t)
+                       (input_subs: var_mapping_t)
+                       (input_vars: var_t list)
+                       (param_vars: var_t list): 
+                       (var_mapping_t * term_t) =
+   Debug.print "LOG-SIMPLIFY-ROLY" 
+               (fun () -> "Simplify: "^(string_of_term term)^" <- ["^
+                          (string_of_list0 "; " (fun ((a,_),(b,_)) -> a^"->"^b)
+                                           input_subs)^"]");
+   let rcr t subs iv = simplify_roly t subs iv param_vars in
+   let unbound_vars = ListAsSet.diff
+      (ListAsSet.diff (term_vars term) (bound_vars_of_term term)) input_vars in
+   TermRing.extract (ListAsSet.multiunion) (ListAsSet.multiunion)
+      (fun _ -> failwith "Simplifying a nonroly")
+      (fun lf -> 
+         match lf with
+         | AggSum(t, r) ->
+            (* First we need to do some classification -- variables
+               are classified into four categories : 
+                  1- input variables -- variables bound outside of this 
+                     expression.
+                  2- loop variables -- variables bound in the relcalc.
+                  3- bigsum variables -- variables defined in the term, but
+                     not in the relcalc.  Note that some variables might
+                     be defined in the term and simply not used in the relcalc.
+                     Although, strictly speaking these are not bigsum variables,
+                     it doesn't matter, since they don't actually appear in the
+                     relcalc. 
+                  
+               Note that by this definition, it is possible for a variable
+               to be both a bigsum or loop variable and an input variable.  
+               Input takes precedence.
+               *)
+            let loop_vars   = bound_vars_of_relcalc r in
+            let bigsum_vars = ListAsSet.diff (bound_vars_of_term t) 
+                                             loop_vars in
+            let classify v = 
+               if List.mem v input_vars then `Input_Var
+               else if List.mem v loop_vars then `Loop_Var
+               else if List.mem v bigsum_vars then `Bigsum_Var
+               else if List.mem v unbound_vars then `Unbound_Var
+               else failwith "Simplify_Roly: BUG: Unclassifiable Variable"
+            in
+            let var_to_s v = (fst v)^":"^(match classify v with 
+               |`Input_Var  -> "input"  | `Unbound_Var -> "unbound"
+               |`Bigsum_Var -> "bigsum" | `Loop_Var    -> "loop") in
+            (* Next, we extract all of the equality predicates.  r_eq contains
+               all of the (a,b) terms where a = b is a term in the relcalc, and
+               r_rest contains a list of all remaining terms.  Note that since
+               we're operating on a roly, prod_list is guaranteed to return
+               a list of *all* terms.  Otherwise, we'd have to use 
+               CalcRing.extract, or an equivalent operation. *)
+            let (r_eq,r_rest) = List.fold_left (fun (r_eq,r_rest) x -> 
+               match x with 
+               | (CalcRing.Val(AtomicConstraint(Eq,
+                     TermRing.Val(Var(a)),TermRing.Val(Var(b))))) ->
+                  (r_eq@[a,b], r_rest)
+               | _ -> (r_eq, r_rest @ [x])) ([],[]) (CalcRing.prod_list r) in
+            (* Now we use the classifications to figure out what we need to
+               return.  The full matrix is enumerated on the simplify_roly
+               wiki page.  The high level bits are:
+                  1- Two parameters will never be unified -- This sort of 
+                     unification could be used to simplify the parameter list,
+                     but would end up necessitating an IF statement regardless.
+                     We may as well include the constraint in the calculus and
+                     keep the schema unchanged.
+                  2- Note that parameters and input variables are not the same.
+                     Parameters are externally bound variables (which we have 
+                     only limited play with).  Input variables are variables 
+                     who's original bindings come from outside of the 
+                     expression. -- this means that a parameter will always
+                     be an input variable, but not visa versa. *)
+            let compute_substitution (subs,nonsubbed_eqs) (a, b) = 
+               Debug.print "LOG-SIMPLIFY-ROLY" (fun () ->
+                  "Potential Equivalence: "^(var_to_s a)^" = "^
+                                            (var_to_s b));
+               let return_none = 
+                  if a = b then (subs, nonsubbed_eqs)
+                  else let nonsub =
+                           (CalcRing.Val(AtomicConstraint(Eq,
+                              TermRing.Val(Var(a)),TermRing.Val(Var(b)))))
+                       in (subs, nonsubbed_eqs @ [nonsub])
+               in
+               let return_sub sub = 
+                  (subs @ [sub], nonsubbed_eqs) in
+               let return_either = 
+                  if List.mem a param_vars then 
+                  if List.mem b param_vars then return_none
+                                           else return_sub (b,a)
+                                           else return_sub (a,b)
+               in match (classify a, classify b) with
+                   | (`Input_Var, `Input_Var)     -> return_none
+                   | (`Input_Var, _)              -> return_sub (b,a)
+                   | (_, `Input_Var)              -> return_sub (a,b)
+                   | (`Loop_Var, `Loop_Var)       -> return_either
+                   | (`Loop_Var, _)               -> return_sub (b,a)
+                   | (_, `Loop_Var)               -> return_sub (a,b)
+                   | (`Bigsum_Var, `Bigsum_Var)   -> return_none
+                   | (`Bigsum_Var, _)             -> return_sub (b,a)
+                   | (_, `Bigsum_Var)             -> return_sub (a,b)
+                   | (`Unbound_Var, `Unbound_Var) -> return_either
+(* It should be safe to return a mapping of one unbound variable to another --
+   there's nothing inherently invalid about this (as long as the overall 
+   calculus expression is valid).  It just means that there's another binding
+   elsewhere (and the subsequent transitive closure should find it) *)
+(*                 failwith ("ERROR: Equijoin between two unsafe variables"^
+                             ": "^(fst a)^" and "^(fst b)^" in "^
+                             (string_of_term term)) *)
+            in
+            let (subs,nonsubbed_eqs) = List.fold_left compute_substitution
+                                                      ([],[]) r_eq in
+            (* Some of the substitutions may overlap.  We now need to compute
+               their transitive closure to ensure that the substitutions don't 
+               conflict.  There's a Util method that does this, but it doesn't
+               preserve ordering, or some of the nice properties we want. 
+               
+               In addition to the transitive closure of the directed 
+               substitution graph, we also want to do a little backtracking:
+               The substitution [a -> b; a -> c] should be replaced by either 
+               [ a -> c; b -> c ], [ a -> b; b -> c ], or possibly just 
+               [ a -> b ], and the return of an equality predicate to the main
+               expression
+               *)
+            let rec close_step (s:var_mapping_t): 
+                               (var_mapping_t * relcalc_t list) = 
+               Debug.print "LOG-SIMPLIFY-ROLY" (fun () -> "Closing ["^
+                  (string_of_list0 "; " (fun ((a,_),(b,_)) -> a^"->"^b) s)^
+                  "]"); 
+               let overlap = 
+                  (ListAsSet.inter (Function.dom s) (Function.img s)) in
+               if overlap = [] then
+                  (* If all the directed closures have been exhausted, we can 
+                     start handling undirected closure *)
+                  try 
+                     let (a, b1::b2::_) = List.find (fun (a, bl) -> 
+                        (List.length bl > 1))
+                        (ListExtras.reduce_assoc s)
+                     in
+                     let rest = List.filter (fun (a_f,b_f) ->
+                           not ((a = a_f) && ((b1 = b_f) || (b2 = b_f)))
+                        ) s in
+                     let (sub,nonsub) = 
+                        compute_substitution ([],[]) (b1, b2) in
+                     let (rcr_sub, rcr_nonsub) = close_step (rest @ (
+                        if List.length sub > 0 
+                        then (sub @ [a, (snd (List.hd sub))])
+                        else [a, b1]
+                     )) in (rcr_sub, rcr_nonsub @ nonsub)
+                  with Not_found -> (s, [])
+               else
+                  (* Otherwise, we still have directed closures to clean up *)
+               let next = List.hd overlap in
+               try 
+                  let parent = snd (List.find (fun (x,_) -> x = next) s) in
+                     Debug.print "LOG-SIMPLIFY-ROLY" 
+                                 (fun () -> "Closing with "^(fst next)^"->"^
+                                            (fst parent));
+                     close_step (List.map (fun (a,b) -> 
+                        if b = next then (a,parent) else (a,b)
+                     ) s)
+               with Not_found -> 
+                  failwith ("Bug in simplify_roly::close_step.  Can't close ["^
+                            (string_of_list0 "; " (fun ((a,_),(b,_)) -> 
+                                                    a^"->"^b) s)^"]; "^
+                            "closing on "^(fst next))
+            in
+            let (closed_subs, nonsubbed_eqs_from_closure) = 
+               close_step (subs @ input_subs) in
+            (* We next recur on the term -- this is primarilly to apply the 
+               substitution to all of the terms in 't', but at the same time
+               we can identify any substitutions that may occur in nested 
+               aggsums (which technically shouldn't exist at this point, thanks 
+               to roly).  Either way, we won't be getting any more substitutions 
+               from the relcalc, so we don't need to recur twice. 
+               
+               The input variables for this recursion are the input variables
+               at the current level of recursion (things that are bound outside)
+               unioned with the loop variables (things that are bound at this
+               level of recursion).
+               *)
+            let (subs_with_term_subs, t_subbed) = 
+               rcr t closed_subs 
+                   (ListAsSet.union input_vars loop_vars)
+            in
+            Debug.print "LOG-SIMPLIFY-ROLY" (fun () -> 
+               "Emerging with subs: ["^
+               (string_of_list0 "; " (fun ((a,_),(b,_)) -> a^" -> "^b) 
+                                subs_with_term_subs)^"]");
+            (* Finally, we recur on each node of the relcalc.  We only need to 
+               recur on inequalities and equalities with non-variables in them, 
+               but we use this opportunity to apply transformations to variables 
+               appearing in input relations.  We also take this opportunity to
+               concatenate the nonsubbed equality constraints back in and 
+               transform the list back into a product.
+               *)
+            let r_subbed = CalcRing.mk_prod ((List.map (fun x -> 
+               match CalcRing.get_val x with 
+                  | False -> x | True -> x
+                  | Rel(rn, rv) -> 
+                     CalcRing.mk_val (Rel(rn, 
+                        List.map (Function.apply_if_present subs_with_term_subs)
+                                 rv))
+                  | AtomicConstraint(op, t1, t2) ->
+                     (* No bindings are propagated through atomic constraints,
+                        so we obtain the subterm's input variables from
+                        all of the input, bigsum, and loop variables -- that is,
+                        all of the variables bound outside of the expression.
+                        
+                        Also, because no bindings are propagated through
+                        atomic constraints, we discard the updated substitution
+                        list produced by each recurrance.
+                        *)
+                     let (_, t1_subbed) = 
+                        rcr   t1 subs_with_term_subs
+                              (ListAsSet.multiunion [
+                                 input_vars;
+                                 loop_vars;
+                                 bigsum_vars]) in
+                     let (_, t2_subbed) = 
+                        rcr   t2 subs_with_term_subs
+                              (ListAsSet.multiunion [
+                                 input_vars;
+                                 loop_vars;
+                                 bigsum_vars]) in
+                        CalcRing.mk_val 
+                           (AtomicConstraint(op, t1_subbed, t2_subbed))
+               ) r_rest) @ 
+               (ListAsSet.uniq (nonsubbed_eqs @ nonsubbed_eqs_from_closure)))
+            in
+               (  subs_with_term_subs, 
+                  if r_subbed == CalcRing.one then 
+                     t_subbed
+                  else if r_subbed == CalcRing.zero then
+                     TermRing.zero
+                  else
+                     TermRing.mk_val (AggSum(t_subbed, r_subbed)))
+         | Var(v) ->  
+            (  input_subs,
+               TermRing.mk_val (Var(Function.apply_if_present input_subs v))) 
+         | External(rn, rv) ->
+            (  input_subs, 
+               TermRing.mk_val (External(rn, 
+                  List.map (Function.apply_if_present input_subs) rv)))
+         | _ -> (input_subs, TermRing.mk_val lf)
+      )
+      term
+;;
 (* apply roly_poly and simplify by unifying variables.
    returns a list of pairs (dimensions', monomial)
    where monomial is the simplified version of a nested monomial of term
@@ -754,35 +1009,24 @@ and simplify_roly (recur: bool) (term: term_t) (bound_vars: var_t list)
 let simplify (term: term_t)
              (rel_vars: var_t list)
              (bsum_vars: var_t list)
-             (loop_vars: var_t list) :
+             (map_params: var_t list) :
              (((var_t list * term_t) * var_t list) list) =
-   let simpl f =
-      (* we want to unify params if possible to eliminate for loops, but
-         we do not want to use substitutions from aggregates nested in
-         atomic constraints. The following strategy of calling simplify_roly
-         twice with suitable arguments achieves that. *)
-      let (_, t1) = simplify_roly true  f (rel_vars @ bsum_vars @ loop_vars) 
-                                  bsum_vars in
-        (* bsum_vars should technically not be bound from the outside; if we
-           can eliminate a bigsum var, we should do so for the same reasons we 
-           eliminate loop_vars.  However, simplify_roly handles each term in
-           the monomial separately.  This means we need to do some extra work,
-           making this a TODO *)
-        (* It is fine to invoke the second simplify_roly recursively, since
-           nested aggregate bindings do not propagate upwards. Bindings are
-           only used within a single AggSum (not even across products as
-           mentioned above), and are applied to terms at the same level as the
-           equalities from which bindings are extracted.
-           However, we still have to deal with inconsistent substitutions
-           across products.
-        *)
-      let (b, t2) = simplify_roly (*false*) true t1 rel_vars bsum_vars
+   let simpl f = 
+      Debug.print "LOG-SIMPLIFY" (fun () -> 
+         "Simplify Root: "^(string_of_term f) ); 
+      let (mapping, new_term) =
+         simplify_roly f [] rel_vars rel_vars
       in
-        (* Filter propagated vars (i.e. up-and-left and bigsums) to only
-         * those that are not unified *)
-      (((List.map (Util.Vars.apply_mapping b) loop_vars), t2),
-       List.filter (fun x -> not(List.mem_assoc x b)) bsum_vars)
-   in
+         Debug.print "LOG-SIMPLIFY" (fun () -> 
+            "Simplify Mappings: "^
+            (list_to_string (fun ((a,_),(b,_)) -> a^" -> "^b) mapping)); 
+         (  (List.map (Vars.apply_mapping mapping) map_params, new_term),
+            (* We never replace bigsum variables with other bigsum variables --
+               if a bigsum variable has been replaced, that means it is now
+               properly bound in the relcalc portion of the AggSum *)
+            List.filter (fun x -> List.mem_assoc x mapping) bsum_vars
+         )
+   in                     
    List.filter (fun ((_, t), _) -> t <> TermRing.zero)
       (List.map simpl (TermRing.sum_list (roly_poly term)))
 
@@ -1260,7 +1504,11 @@ let preaggregate (mode: bs_rewrite_mode_t)
     in
     let simplified_t = TermRing.mk_sum
       (List.map (fun x ->
-          snd (simplify_roly true x params [] (* no bigsum vars yet... *)))
+(*          snd (simplify_roly true x params []))*)
+            snd (simplify_roly x [] 
+                               (ListAsSet.diff params
+                                               (bound_vars_of_term term))
+                               params))
         (TermRing.sum_list t))
     in TermRing.extract
          List.flatten List.flatten (fun x->x) term_leaf_f simplified_t
