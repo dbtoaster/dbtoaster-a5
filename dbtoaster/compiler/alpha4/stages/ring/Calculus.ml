@@ -731,7 +731,47 @@ let rec simplify_roly  (term: term_t)
    let rcr t subs iv = simplify_roly t subs iv param_vars in
    let unbound_vars = ListAsSet.diff
       (ListAsSet.diff (term_vars term) (bound_vars_of_term term)) input_vars in
-   TermRing.extract (ListAsSet.multiunion) (ListAsSet.multiunion)
+   (* 
+      Sums occur in a roly at the root level and at the root of each term 
+      nested in an inequality.  Variable bindings never cross a sum, and 
+      although variables might be bound outside of the term, we can never 
+      unify two such terms, since doing so would require the unification to
+      be lifted above the inequality.
+
+      Products occur in two capacities -- 
+       * At the root level (and the root of each nested term), product terms
+         are the result of graph factorization performed in roly_poly.  As a
+         consequence, variable bindings never need to be passed between these
+         terms.
+       * Elsewhere, products occur exclusively between non-aggsum leaf nodes.  
+         Without aggsums, these terms will never introduce new unifications, so
+         the bindings between these terms are irrelevant to simplify_roly.
+      
+      Relcalc expressions are always flattened and union-free (roly_poly 
+      converts all unions into sums).  This means that a relcalc term can
+       * Be a variable = variable term, which unifies (if possible) the two 
+         variables.
+       * Be an expression = expression term, to which we must apply our 
+         mappings and process recursively, but which can not export new 
+         mappings.
+       * Be a constant leaf term, which we can ignore.
+       * Be a relation leaf, to which we must apply our mappings, but which
+         can not export new mappings.
+      
+      The simplify_roly algorithm takes the following steps
+         1. Identify each individual aggsum in the expression.  Variable 
+            mappings can be exported up through products, but not horizontally.
+            Consequently, each aggsum is processed independently.  Mappings 
+            received from the parent must also be applied to non-aggsum leaves.
+         2. Identify all unifications in each aggsum's relcalc.  These must
+            all be present at the root.
+         3. Apply the unifications and identify any unifications in the term
+            by recurring into the term.
+         4. Apply the newly identified set of unifications to the remaining 
+            relcalc expressions.
+   *)
+   let (mapping, result) = 
+    TermRing.extract (fun _ -> []) (ListAsSet.multiunion)
       (fun _ -> failwith "Simplifying a nonroly")
       (fun lf -> 
          match lf with
@@ -810,7 +850,16 @@ let rec simplify_roly  (term: term_t)
                                            else return_sub (b,a)
                                            else return_sub (a,b)
                in match (classify a, classify b) with
-                   | (`Input_Var, `Input_Var)     -> return_none
+                   | (`Input_Var, `Input_Var)     -> 
+                     (* There are two possibilities here: Either the variables
+                        have already been unified, or they haven't.  If they 
+                        haven't, then we can't unify them -- we need to test
+                        for equality explicitly.  If they have, then we can
+                        simply drop this test. *)
+                     if((Function.apply_if_present input_subs a) = 
+                        (Function.apply_if_present input_subs b))
+                     then (subs,nonsubbed_eqs)
+                     else return_none
                    | (`Input_Var, _)              -> return_sub (b,a)
                    | (_, `Input_Var)              -> return_sub (a,b)
                    | (`Loop_Var, `Loop_Var)       -> return_either
@@ -842,8 +891,9 @@ let rec simplify_roly  (term: term_t)
                [ a -> b ], and the return of an equality predicate to the main
                expression
                *)
-            let rec close_step (s:var_mapping_t): 
+            let rec close_step (s_nonuniq:var_mapping_t): 
                                (var_mapping_t * relcalc_t list) = 
+               let s = ListAsSet.uniq s_nonuniq in
                Debug.print "LOG-SIMPLIFY-ROLY" (fun () -> "Closing ["^
                   (string_of_list0 "; " (fun ((a,_),(b,_)) -> a^"->"^b) s)^
                   "]"); 
@@ -965,6 +1015,11 @@ let rec simplify_roly  (term: term_t)
          | _ -> (input_subs, TermRing.mk_val lf)
       )
       term
+   in
+      Debug.print "LOG-SIMPLIFY-ROLY" (fun () -> 
+         "Simplify Result: "^(string_of_term term)^
+                    "  ->  "^(string_of_term result)
+      ); (mapping, result)
 ;;
 (* apply roly_poly and simplify by unifying variables.
    returns a list of pairs (dimensions', monomial)
@@ -1013,7 +1068,7 @@ let simplify (term: term_t)
              (((var_t list * term_t) * var_t list) list) =
    let simpl f = 
       Debug.print "LOG-SIMPLIFY" (fun () -> 
-         "Simplify Root: "^(string_of_term f) ); 
+         "Simplify Root: "^(code_of_term f) ); 
       let (mapping, new_term) =
          simplify_roly f [] rel_vars rel_vars
       in
@@ -1024,7 +1079,7 @@ let simplify (term: term_t)
             (* We never replace bigsum variables with other bigsum variables --
                if a bigsum variable has been replaced, that means it is now
                properly bound in the relcalc portion of the AggSum *)
-            List.filter (fun x -> List.mem_assoc x mapping) bsum_vars
+            List.filter (fun x -> not (List.mem_assoc x mapping)) bsum_vars
          )
    in                     
    List.filter (fun ((_, t), _) -> t <> TermRing.zero)

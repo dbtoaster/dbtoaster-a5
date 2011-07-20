@@ -5,7 +5,6 @@ SOURCE = \
 	stages/ring/Ring.ml \
 	stages/ring/Calculus.mli \
 	stages/ring/Calculus.ml \
-	stages/ring/PipedCalculus.ml \
 	stages/maps/M3.mli \
 	stages/maps/M3.ml \
 	stages/maps/M3Common.mli \

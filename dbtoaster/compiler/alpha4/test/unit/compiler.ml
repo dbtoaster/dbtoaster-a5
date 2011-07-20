@@ -810,3 +810,81 @@ Debug.log_unit_test "TPCH 17 Simplify_Roly (as in Preagg)"
       ])
    ))))
 ;;
+let nested_nonbigsum = make_term (RVal(AggSum((RProd[(RVal(AggSum((RVal(Var(("L__EXTENDEDPRICE", TDouble)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__EXTENDEDPRICE", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__EXTENDEDPRICE", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__ORDERKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__ORDERKEY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_MultiNatJoin[(RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__PARTKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__PARTKEY", TInt))))))); (RA_Leaf(Rel("PART", [("L__PARTKEY", TInt); ("P__NAME", TInt); ("P__MFGR", TInt); ("P__BRAND", TInt); ("P__TYPE", TInt); ("P__SIZE", TInt); ("P__CONTAINER", TInt); ("P__RETAILPRICE", TDouble); ("P__COMMENT", TInt)])))])))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__SUPPKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SUPPKEY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__LINENUMBER", TInt)))), (RVal(Var(("QUERYLINEITEM_L__LINENUMBER", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__QUANTITY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__QUANTITY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__DISCOUNT", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__DISCOUNT", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__TAX", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__TAX", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__RETURNFLAG", TInt)))), (RVal(Var(("QUERYLINEITEM_L__RETURNFLAG", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__LINESTATUS", TInt)))), (RVal(Var(("QUERYLINEITEM_L__LINESTATUS", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__SHIPDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__COMMITDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__COMMITDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__RECEIPTDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__RECEIPTDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__SHIPINSTRUCT", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPINSTRUCT", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__SHIPMODE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPMODE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__COMMENT", TInt)))), (RVal(Var(("QUERYLINEITEM_L__COMMENT", TInt))))))))))]), (RA_MultiNatJoin[(RA_Leaf(AtomicConstraint(Lt, (RVal(Var(("L__QUANTITY", TInt)))), (RSum[(RProd[(RVal(Const(Double(0.005)))); (RVal(External("QUERY_BS1_2", [("L__PARTKEY", TInt)])))]); (RProd[(RVal(Const(Double(0.005)))); (RVal(AggSum((RVal(Var(("L2__QUANTITY", TInt)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__QUANTITY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__QUANTITY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__ORDERKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__ORDERKEY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L__PARTKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__PARTKEY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__SUPPKEY", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SUPPKEY", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__LINENUMBER", TInt)))), (RVal(Var(("QUERYLINEITEM_L__LINENUMBER", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__EXTENDEDPRICE", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__EXTENDEDPRICE", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__DISCOUNT", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__DISCOUNT", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__TAX", TDouble)))), (RVal(Var(("QUERYLINEITEM_L__TAX", TDouble)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__RETURNFLAG", TInt)))), (RVal(Var(("QUERYLINEITEM_L__RETURNFLAG", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__LINESTATUS", TInt)))), (RVal(Var(("QUERYLINEITEM_L__LINESTATUS", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__SHIPDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__COMMITDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__COMMITDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__RECEIPTDATE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__RECEIPTDATE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__SHIPINSTRUCT", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPINSTRUCT", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__SHIPMODE", TInt)))), (RVal(Var(("QUERYLINEITEM_L__SHIPMODE", TInt)))))))))); (RVal(AggSum((RVal(Const(Int(1)))), (RA_Leaf(AtomicConstraint(Eq, (RVal(Var(("L2__COMMENT", TInt)))), (RVal(Var(("QUERYLINEITEM_L__COMMENT", TInt))))))))))])])))); (RA_Leaf(AtomicConstraint(Le, (RProd[(RVal(Const(Double(0.005)))); (RVal(External("QUERY_BS1_2", [("L__PARTKEY", TInt)])))]), (RVal(Var(("L__QUANTITY", TInt)))))))]))))
+;;
+
+let nested_nonbigsum_deltaparams = 
+   [  ("QUERYLINEITEM_L__ORDERKEY", TInt); 
+      ("QUERYLINEITEM_L__PARTKEY", TInt); 
+      ("QUERYLINEITEM_L__SUPPKEY", TInt); 
+      ("QUERYLINEITEM_L__LINENUMBER", TInt); 
+      ("QUERYLINEITEM_L__QUANTITY", TInt); 
+      ("QUERYLINEITEM_L__EXTENDEDPRICE", TDouble); 
+      ("QUERYLINEITEM_L__DISCOUNT", TDouble); 
+      ("QUERYLINEITEM_L__TAX", TDouble); 
+      ("QUERYLINEITEM_L__RETURNFLAG", TInt); 
+      ("QUERYLINEITEM_L__LINESTATUS", TInt); 
+      ("QUERYLINEITEM_L__SHIPDATE", TInt); 
+      ("QUERYLINEITEM_L__COMMITDATE", TInt); 
+      ("QUERYLINEITEM_L__RECEIPTDATE", TInt); 
+      ("QUERYLINEITEM_L__SHIPINSTRUCT", TInt); 
+      ("QUERYLINEITEM_L__SHIPMODE", TInt); 
+      ("QUERYLINEITEM_L__COMMENT", TInt)] ;;
+
+let (nested_nonbigsum_mapping, nested_nonbigsum_rewrite) = 
+   simplify_roly nested_nonbigsum 
+      [] 
+      nested_nonbigsum_deltaparams
+      nested_nonbigsum_deltaparams
+;;
+Debug.log_unit_test "Nested non-bigsum Simplify"
+   code_of_term
+   nested_nonbigsum_rewrite
+   (make_term (RVal(AggSum(
+      (RProd[
+         (RVal(Var(("QUERYLINEITEM_L__EXTENDEDPRICE", TDouble)))); 
+         (RVal(AggSum(
+            (RVal(Const(Int(1)))), 
+            (RA_Leaf(Rel("PART", [
+               ("QUERYLINEITEM_L__PARTKEY", TInt); 
+               ("P__NAME", TInt); 
+               ("P__MFGR", TInt); 
+               ("P__BRAND", TInt); 
+               ("P__TYPE", TInt);
+               ("P__SIZE", TInt); 
+               ("P__CONTAINER", TInt); 
+               ("P__RETAILPRICE", TDouble); 
+               ("P__COMMENT", TInt)
+            ])))
+         )))
+      ]), 
+      (RA_MultiNatJoin[
+         (RA_Leaf(AtomicConstraint(Lt, 
+            (RVal(Var(("QUERYLINEITEM_L__QUANTITY", TInt)))), 
+            (RSum[
+               (RProd[
+                  (RVal(Const(Double(0.005)))); 
+                  (RVal(External("QUERY_BS1_2", [
+                     ("QUERYLINEITEM_L__PARTKEY", TInt)
+                  ])))
+               ]); 
+               (RProd[
+                  (RVal(Const(Double(0.005)))); 
+                  (RVal(Var(("QUERYLINEITEM_L__QUANTITY", TInt))))
+                  (* <- buggy partkey comparison happens here *)
+               ])
+            ])
+         ))); 
+         (RA_Leaf(AtomicConstraint(Le, 
+            (RProd[
+               (RVal(Const(Double(0.005)))); 
+               (RVal(External("QUERY_BS1_2", [
+                  ("QUERYLINEITEM_L__PARTKEY", TInt)
+               ])))
+            ]), 
+            (RVal(Var(("QUERYLINEITEM_L__QUANTITY", TInt))))
+         )))
+      ])
+   ))))
+;;
+   
