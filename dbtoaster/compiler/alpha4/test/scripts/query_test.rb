@@ -32,6 +32,11 @@ $queries = {
     :type => :singleton,
     :answer => 76452380068302.0
   },
+  "missedtrades" => {
+    :path => "test/sql/finance/missedtrades.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/missedtrades.csv")
+  },
   "axfinder" => {
     :path => "test/sql/finance/axfinder.sql",
     :type => :onelevel,
