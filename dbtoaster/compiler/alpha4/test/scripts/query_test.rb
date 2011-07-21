@@ -76,6 +76,26 @@ $queries = {
     :path => "test/sql/tpch/query17.sql",
     :type => :singleton,
     :answer => 898778.73
+  },
+  "tpch18" => {
+    :path => "test/sql/tpch/query18.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/tpch/query18.csv")
+  },
+  "tpch18simple" => {
+    :path => "test/sql/tpch/query18simple.sql",
+    :type => :singleton,
+    :answer => 6005.0
+  },
+  "tpch22" => {
+    :path => "test/sql/tpch/query22.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/tpch/query22.csv")
+  },
+  "clusteravailable" => {
+    :path => "test/sql/clusteravailable.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/clusteravailable.csv")
   }
 };
 

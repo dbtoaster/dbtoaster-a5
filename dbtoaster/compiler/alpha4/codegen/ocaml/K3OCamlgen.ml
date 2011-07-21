@@ -303,7 +303,10 @@ struct
 
    (* Terminals *)
    let const ?(expr = None) (c:M3.const_t) : code_t =
-      match c with CFloat(y) -> (wrap_float (IP.Leaf(string_of_float y)), Float)
+      match c with 
+         | CFloat(y) -> (wrap_float (IP.Leaf(string_of_float y)), Float)
+         | CString(y) -> (wrap_float (IP.Leaf(string_of_float 
+                                       (float_of_int (Hashtbl.hash c)))), Float)
    
    let var ?(expr = None) (v:M3.var_t) (t:K3.SR.type_t) : code_t =
       let var = IP.Leaf("var_"^v) in (var, map_type t)

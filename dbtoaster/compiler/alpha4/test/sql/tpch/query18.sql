@@ -3,18 +3,21 @@ CREATE TABLE LINEITEM (
         partkey        int,
         suppkey        int,
         linenumber     int,
-        quantity       double,
-        extendedprice  double,
-        discount       double,
-        tax            double,
-        returnflag     double, -- text(1)
-        linestatus     double, -- text(1)
-        shipdate       double, -- date
-        commitdate     double, -- date
-        receiptdate    double, -- date
-        shipinstruct   double,
-        shipmode       double,
-        comment        double
+        quantity       int,
+        extendedprice  float,
+        discount       float,
+        tax            float,
+        -- the fields below should be text, but since dbtoaster
+        -- does not handle strings, we make them floats for now
+        -- by hashing in the adaptor
+        returnflag     int, -- hash
+        linestatus     int, -- hash
+        shipdate       int, -- date
+        commitdate     int, -- date
+        receiptdate    int, -- date
+        shipinstruct   int, -- hash
+        shipmode       int, -- hash
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
@@ -22,26 +25,26 @@ CREATE TABLE LINEITEM (
 CREATE TABLE ORDERS (
         orderkey       int,
         custkey        int,
-        orderstatus    double, -- text
-        totalprice     double,
-        orderdate      double, -- date
-        orderpriority  double,
-        clerk          double,
+        orderstatus    int, -- hash
+        totalprice     float,
+        orderdate      int, -- date
+        orderpriority  int, -- hash
+        clerk          int, -- hash
         shippriority   int,
-        comment        double  -- text
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
         custkey      int,
-        name         double, -- text
-        address      double, -- text
+        name         int, -- hash
+        address      int, -- hash
         nationkey    int,
-        phone        double, -- text
-        acctbal      double,
-        mktsegment   double, -- text
-        comment      double  -- text
+        phone        int, -- hash
+        acctbal      float,
+        mktsegment   int, -- hash
+        comment      int  -- hash
     )
   FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;

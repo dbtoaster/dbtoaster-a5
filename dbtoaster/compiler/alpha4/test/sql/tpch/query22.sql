@@ -1,26 +1,26 @@
 CREATE TABLE ORDERS (
         orderkey       int,
         custkey        int,
-        orderstatus    double, -- text
-        totalprice     double,
-        orderdate      double, -- date
-        orderpriority  double,
-        clerk          double,
+        orderstatus    int, -- hash
+        totalprice     float,
+        orderdate      int, -- date
+        orderpriority  int, -- hash
+        clerk          int, -- hash
         shippriority   int,
-        comment        double  -- text
+        comment        int  -- hash
     )
   FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
         custkey      int,
-        name         double, -- text
-        address      double, -- text
+        name         int, -- hash
+        address      int, -- hash
         nationkey    int,
-        phone        double, -- text
-        acctbal      double,
-        mktsegment   double, -- text
-        comment      double  -- text
+        phone        int, -- hash
+        acctbal      float,
+        mktsegment   int, -- hash
+        comment      int  -- hash
     )
   FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;

@@ -689,7 +689,10 @@ struct
       let ctypes() = List.map type_of_expr_t (cexprs()) in
       match untyped_e with
       | Const (_,c) ->
-        let t = match c with CFloat _ -> Host TFloat in None, Some(Const(t,c))
+        let t = match c with 
+          | CFloat _ -> Host TFloat
+          | CString _ -> Host TInt
+        in None, Some(Const(t,c))
 
       | Var (_,(v,t)) ->
         begin match t with
@@ -870,6 +873,8 @@ end (* Typing *)
            (if neg then "(" else "")^
            (if r.[(String.length r)-1] = '.' then r^"0" else r)^
            (if neg then ")" else "")
+         | CString s ->
+           "static_cast<int>(field_hash(\""^(String.escaped s)^"\"))"
        end)
  
     | Var (_,(v,_)) -> inl(v)

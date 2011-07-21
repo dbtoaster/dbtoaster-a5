@@ -61,13 +61,17 @@ struct
         | _ -> false
 
     let value_of_float x = Float(x)
-    let value_of_const_t x = match x with CFloat(y) -> Float(y)
+    let value_of_const_t x = 
+      match x with CFloat(y) -> Float(y) 
+                 | CString(s) -> Float((float_of_int (Hashtbl.hash s)))
     
     let float_of_value x = match x with
         | Float f -> f | Int i -> float_of_int i
         | _ -> failwith ("invalid float: "^(string_of_value x))
 
-    let float_of_const_t x = match x with CFloat(f) -> f 
+    let float_of_const_t x = 
+      match x with CFloat(f) -> f 
+                 | CString(s) -> (float_of_int (Hashtbl.hash s))
 
     let const_t_of_value x = match x with
         | Float f -> CFloat f | Int i -> CFloat (float_of_int i)

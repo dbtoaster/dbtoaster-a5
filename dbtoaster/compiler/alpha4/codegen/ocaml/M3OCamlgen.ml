@@ -177,8 +177,9 @@ struct
 
    (* TODO: potential loss of precision with OCaml's string_of_float
     * without formatting. *)
-   let const c = match c with | CFloat(f) ->
-      Inline("(CFloat("^(string_of_float f)^"))")
+   let const c = match c with 
+      | CFloat(f) -> Inline("(CFloat("^(string_of_float f)^"))")
+      | CString(s) -> Inline("(CString(\""^s^"\"))")
 
    let var v = Inline((gen_var v))
    

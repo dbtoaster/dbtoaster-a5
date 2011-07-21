@@ -612,6 +612,7 @@ let group_by_aggregate_query fn_arg agg_c gb_fields c = match c with
 (* Terminals *)
 let const ?(expr = None) c = match c with
   | CFloat x -> Const(sql_string_of_float x)
+  | CString s -> Const("'"^s^"'")
 
 let var ?(expr = None) id _ = Var(id)
 

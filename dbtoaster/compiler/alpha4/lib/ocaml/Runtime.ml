@@ -155,7 +155,9 @@ let run_adaptors output_dir sources =
              try Hashtbl.find rel_outputs r
              with Not_found -> failwith ("no output file initialized for "^r)
            in let s = (String.concat "," (List.map (fun c ->
-                          match c with CFloat(f) -> sql_string_of_float f) t))
+                          match c with 
+                            | CFloat(f) -> sql_string_of_float f
+                            | CString(s) -> "\""^s^"\"") t))
            in output_string rel_chan (s^"\n")
          in
          begin match pm with

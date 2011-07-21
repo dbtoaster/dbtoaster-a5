@@ -409,7 +409,7 @@ and to_m3
                   Eq -> M3.mk_eq
                 | Le -> M3.mk_leq
                 | Lt -> M3.mk_lt
-                | _ -> failwith ("CalcToM3.to_m3: TODO: cmp_op")
+                | Neq -> (fun a b -> M3.mk_eq (M3.mk_eq a b) (M3.mk_c 0.0))
                 (* This should work here: 
                   (fun a b -> M3.mk_mult (M3.mk_lt a b) (M3.mk_lt b a)) *)
               ) lhs rhs, ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
@@ -466,8 +466,7 @@ and to_m3
        | Const(Int c)          -> (M3.mk_c (float_of_int c), ([], []))
        | Const(Double c)       -> (M3.mk_c c, ([], []))
        | Const(Long _)         -> failwith "Compiler.to_m3: TODO Long"
-       | Const(String c)       -> (M3.mk_c (float_of_int (Hashtbl.hash c)), 
-                                   ([], []))
+       | Const(String c)       -> (M3.mk_s c, ([], []))
        | Const(Boolean(false)) -> (M3.mk_c 0., ([], []))
        | Const(Boolean(true))  -> (M3.mk_c 1., ([], []))
 

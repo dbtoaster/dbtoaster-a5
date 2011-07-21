@@ -337,7 +337,7 @@ let rec typecheck_expr e : type_t =
     let recur = typecheck_expr in
     match e with
     | Const        c ->
-        begin match c with | CFloat _ -> TFloat (*| CInt _ -> TInt *) end
+        begin match c with | CFloat _ -> TFloat | CString _ -> TInt end
 
     | Var          (id,t)     -> t
 

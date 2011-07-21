@@ -21,6 +21,7 @@
 #include <boost/shared_ptr.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "streams.hpp"
 
@@ -34,7 +35,8 @@ namespace dbtoaster {
     using namespace boost::iostreams;
     using namespace boost::lambda;
     using namespace boost::program_options;
-
+    
+    boost::hash<std::string> field_hash;
 
     // Adaptor and stream interfaces.
     struct stream_adaptor

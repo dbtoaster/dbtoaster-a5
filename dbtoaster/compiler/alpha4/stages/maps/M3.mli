@@ -1,6 +1,6 @@
 (* m3 interface module *)
 
-type const_t = (* CInt of int | *) CFloat of float (* | CBool of bool *)
+type const_t = CFloat of float | CString of string
 type var_id_t = string
 type var_type_t = VT_String | VT_Int | VT_Float
 type var_t = var_id_t (*  * var_type_t *)
@@ -135,6 +135,7 @@ val mk_eq : calc_t -> calc_t -> calc_t
 val mk_if : calc_t -> calc_t -> calc_t 
 val mk_ma : mapacc_t -> calc_t 
 val mk_c : float -> calc_t
+val mk_s : string -> calc_t
 val mk_v : string -> calc_t
 
 (* Math *)

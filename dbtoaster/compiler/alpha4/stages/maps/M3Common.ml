@@ -174,6 +174,7 @@ let vars_to_string vs = Util.list_to_string (fun x->x) vs
 let string_of_const v =
   match v with
       CFloat(f) -> string_of_float f
+    | CString(s) -> "\""^s^"\""
  (* | CInt(i)   -> string_of_int i *)
  (* | CBool(b)  -> if (b) then "false" else "true" *)
 
@@ -291,7 +292,11 @@ and code_of_calc (calc:('c,'a) generic_calc_t): string =
     (fun op l r -> "("^(name_of_op op)^"("^l^", "^r^"))")
     (fun l r -> "(IfThenElse0("^l^", "^r^"))")
     (fun ma -> "(MapAccess"^(code_of_map_access ma)^")")
-    (fun c -> "(Const(CFloat("^(string_of_const c)^")))")
+    (fun c -> 
+      match c with
+      | CFloat(f) -> "(Const(CFloat("^(string_of_float f)^")))"
+      | CString(s) -> "(Const(CString(\""^s^"\")))"
+    )
     (fun v -> "(Var("^v^"))")
     calc
 let code_of_stmt ((mapacc,(calc,_),_):('c,'a,'sm) generic_stmt_t) : string =

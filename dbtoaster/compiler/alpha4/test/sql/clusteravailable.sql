@@ -1,38 +1,30 @@
-/* Oliver's answers below are wrong. The result Postgres yields is:
- ttid | sum 
-------+-----
-(0 rows)
- 
- * Yanif.
- */
-
-/* IGNORE
--- Correct answer for test data
--- Task.ttid, Assigned, Available
--- 45,10,3
--- 93,10,3
--- 120,10,4
--- 167,10,4
--- 188,10,3
--- 262,10,4
--- 268,10,4
--- 357,10,4
--- 364,10,4
--- 424,10,4
--- 449,10,3
--- 554,10,3
--- 637,10,4
--- 649,10,4
--- 690,10,4
--- 696,10,4
--- 732,10,4
--- 884,10,3
--- 885,10,4
--- 919,10,4
--- 959,10,4
--- 961,10,4
--- 993,10,4
--- 997,10,4
+/*
+ task | available 
+------+-----------
+  120 |         4
+  959 |         4
+  732 |         4
+  262 |         4
+  268 |         4
+  449 |         3
+   93 |         3
+  961 |         4
+  554 |         3
+  357 |         4
+  424 |         4
+  167 |         4
+  696 |         4
+  993 |         4
+  919 |         4
+  885 |         4
+  997 |         4
+  364 |         4
+   45 |         3
+  690 |         4
+  884 |         3
+  649 |         4
+  188 |         3
+  637 |         4
 */
 
 CREATE TABLE Server(ssid int, status int)
@@ -53,10 +45,12 @@ CREATE TABLE Assignment(asid int, atid int)
     fields := ',', schema := 'int,int', eventtype := 'insert'
   );
 
-SELECT ttid, SUM(1)
-FROM   Task
-WHERE  (SELECT SUM(status) FROM Assignment,Server 
-        WHERE ttid = atid AND asid = ssid) * 0.5 > 
-       (SELECT SUM(status) FROM Assignment,Server
-        WHERE ttid = atid AND asid = ssid AND status = 1)
-GROUP BY ttid
+SELECT ttid, SUM(s1.status)
+FROM   Task, Assignment a1, Server s1
+WHERE  (SELECT SUM(1) FROM Assignment a2,Server s2
+        WHERE ttid = a2.atid AND a2.asid = s2.ssid) * 0.5 > 
+       (SELECT SUM(1) FROM Assignment a3,Server s3
+        WHERE ttid = a3.atid AND a3.asid = s3.ssid AND s3.status = 1)
+  AND  ttid = a1.atid 
+  AND  a1.asid = s1.ssid
+GROUP BY ttid;

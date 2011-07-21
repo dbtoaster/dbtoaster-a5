@@ -232,11 +232,13 @@ let eq_op   = (int_op (= ))
 
 let ifthenelse0_op cond v =
    (match cond with
-    | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
+    | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0)
+    | CString(bcond) -> failwith "invalid condition: string")
 
 let ifthenelse0_bigsum_op v cond =
    (match cond with
-    | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0))
+    | CFloat(bcond) -> if bcond <> 0.0 then v else CFloat(0.0)
+    | CString(bcond) -> failwith "invalid condition: string")
    
 (* Op expressions *)
 let op_singleton_expr op ce1 ce2  =

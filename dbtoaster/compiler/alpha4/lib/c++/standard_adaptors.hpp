@@ -25,7 +25,7 @@ namespace dbtoaster {
       stream_event_type type;
       string schema;
       string delimiter;
-      boost::hash<std::string> field_hash;
+//      boost::hash<std::string> field_hash;
 
       csv_adaptor(stream_id i) : id(i) {}
 

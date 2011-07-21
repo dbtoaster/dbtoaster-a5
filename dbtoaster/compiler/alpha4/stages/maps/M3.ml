@@ -1,7 +1,7 @@
 (* m3 interface module *)
 open Util
 
-type const_t = (* CInt of int | *) CFloat of float (* | CBool of bool *)
+type const_t = CFloat of float | CString of string
 type var_id_t = string
 type var_type_t = VT_String | VT_Int | VT_Float
 type var_t = var_id_t (*  * var_type_t *)
@@ -71,6 +71,7 @@ let mk_eq l r = (Eq(l,r), ())
 let mk_if l r = (IfThenElse0(l,r), ())
 let mk_ma ma = (MapAccess(ma), ())
 let mk_c c = (Const(CFloat(c)), ())
+let mk_s s = (Const(CString(s)), ())
 let mk_v v = (Var(v), ())
 let mk_sum_list l = 
    if List.length l > 0 then List.fold_left mk_sum (List.hd l) (List.tl l)
@@ -97,9 +98,9 @@ let c_sum (a : const_t) (b : const_t) : const_t =
         match b with
  (*         CInt(i2) -> CFloat(f1 +. (float_of_int i2)) *)
           | CFloat(f2) -> CFloat(f1 +. f2)
- (*       | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+          | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
       )
- (* | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+    | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
 ;; 
 
 let c_prod (a : const_t) (b : const_t) : const_t =
@@ -115,9 +116,9 @@ let c_prod (a : const_t) (b : const_t) : const_t =
         match b with
  (*         CInt(i2) -> CFloat(f1 *. (float_of_int i2)) *)
           | CFloat(f2) -> CFloat(f1 *. f2)
- (*       | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+          | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)"
       )
- (* | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" *)
+    | _ -> failwith "Unhandled Arithmetic Operation (M3.ml)" 
 
 
 (******************* M3 Prepared *******************)

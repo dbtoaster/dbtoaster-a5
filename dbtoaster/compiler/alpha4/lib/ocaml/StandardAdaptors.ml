@@ -263,7 +263,8 @@ let asks_params = [("book", "asks")]
 
 let orderbook_generator params =
    let get_float_const c =
-      match c with | CFloat(x) -> x (*| _ -> failwith "invalid float const"*) in 
+      match c with 
+         | CFloat(x) -> x | _ -> failwith "invalid float const" in 
    let required = ["book"] in
    let optional = [("brokers", "0")] in
    
