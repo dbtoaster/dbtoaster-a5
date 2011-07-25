@@ -1,0 +1,40 @@
+\documentclass[12pt]{article}
+\usepackage{algorithm}
+\usepackage{algorithmic}%\usepackage[pagebackref=true,colorlinks,linkcolor=blue,citecolor=magenta]{hyperref}
+\usepackage{graphicx} 
+\usepackage{fancybox}
+\usepackage{setspace}  
+\usepackage[colorlinks,linkcolor=blue,citecolor=magenta]{hyperref}
+\usepackage{enumerate} 
+%\usepackage{auto-pst-pdf} 
+\usepackage{amsthm,amssymb,amsmath}
+\usepackage{indentfirst}
+\usepackage{listings}
+
+\begin{document}
+
+\title{IVC}
+\author{}
+\date{\today}
+\maketitle
+\newcommand{\dom}{\textsf{dom}}
+\section{Definitions}
+In this section we explain the domain which is represented here by \dom. The \dom of a variable is a set of values that the variable can take. The \dom of a map is defined by the all values of its input variables(which is a vector). 
+\begin{equation*}
+\text{\dom}_{i}=  \big\{x\in map_{i}[\vec{x}][\vec{y}]| (x\in \vec{x})\lor(x\in \vec{y})\big\}
+\end{equation*}
+We need to compute the dependences between the domains of maps input variables. Without loose of generality  we always need to work with two maps when we want to compute their \dom s. For this we define function $F$ recursively as follow:
+\begin{equation*}
+F=\text{\dom}|F\cap F|F\cup F
+\end{equation*}
+So we can compute the dependencies between the \dom s like this:
+\begin{equation*}
+\text{\dom}(x\in m_{i}[\vec{x}][\vec{y}])\gets F(\text{\dom}(x'\gets m_{j}[\vec{x'}][\vec{y'}]))
+\end{equation*}
+Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right. \par
+We call the arity of a \dom as the number of its input variables. We need to maintain the maps as long as their arities are greater that zero. If the arity of any domain drops to zero it means that we don't need to store it as a map since it doesn't contain any elements. The arity of a domain can be increased of decreased. It may be increased by adding more elements into some relation, also it may be decreased by deletions from some relations too. \\
+\par
+We need to store the arities inside each map. We need a way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the maps without input variables as some relations. Also a map with input variables can be seen as a relation with a group-by clause. Input variable of a map bind some variables. Thus if we compute the map values by all different combinations of these variables, we will look up into these values and return the appropriate value according to the input variables.  
+\section{Computing the arities of the AGCA expression}
+We can compute the arities recursively. Suppose we have an expression which is consist of two parts joining together as $e=e_{1}\,op\, e_{2}$ which $op\in\{+,*\}$. Let $I_{i}$ and $O_{1}$ to be the set of all input and output variables to $e_{i}$ respectively. The arity of $e$ is $|I_{1}\cup I_{2}-O_{1}|$, according to the information flow rule. 
+\end{document}
