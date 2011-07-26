@@ -3,7 +3,7 @@ require "#{File.dirname($0)}/util.rb"
 require "#{File.dirname($0)}/db_parser.rb"
 require 'tempfile'
 
-script = ARGV[0];
+script = ARGV.shift;
 script_data = File.open(script).readlines;
 
 $tables = Hash.new { |h,k|p k; h[k] = Hash.new(0) };
@@ -28,7 +28,7 @@ $pg_script =
     join("\n");
 
 dbt_cmd = 
-  "./dbtoaster -r -d step-interpreter -d log-interpreter-updates #{script}";
+  "./dbtoaster -r -d step-interpreter -d log-interpreter-updates #{ARGV.join(" ")} #{script}";
 
 def update_rel(op, rel, key)
   rel = rel.downcase;

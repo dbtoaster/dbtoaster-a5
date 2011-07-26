@@ -50,12 +50,6 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
         let map_v,map_var = "slice",Var("slice", map_t) in
         let access_expr =
             if singleton then 
-              if Debug.active "RUNTIME-BIGSUMS" then
-                (* If we're being asked to compute bigsums at runtime, then
-                   we don't need to test for membership -- this is always 
-                   false *)
-                init_expr
-              else
                 IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
             else let p_ve = List.map (fun v -> 
                     let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
@@ -125,10 +119,22 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
         in Apply(aux outs t init_expr, map_expr)
 
     | InPC(id,ins,t) ->
-        let init_expr = map_init_expr map_expr ins [] init_expr
-        in Apply(aux ins t init_expr, map_expr)
+        if Debug.active "RUNTIME-BIGSUMS" then
+          (* If we're being asked to compute bigsums at runtime, then
+             we don't need to test for membership -- this is always 
+             false *)
+          init_expr
+        else 
+        let init_expr = map_init_expr map_expr ins [] init_expr 
+          in Apply(aux ins t init_expr, map_expr)
 
     | PC(id,ins,outs,t) ->
+        if Debug.active "RUNTIME-BIGSUMS" then
+          (* If we're being asked to compute bigsums at runtime, then
+             we don't need to test for membership -- this is always 
+             false *)
+          init_expr
+        else
         let init_expr = map_init_expr map_expr ins outs init_expr in
         let nested_t =
             (* TODO: use typechecker to compute type *)
