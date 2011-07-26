@@ -6,6 +6,7 @@ module M3P = M3.Prepared
 open M3
 open M3Common
 open K3.SR
+open Util
 
 (* Helpers *)
 
@@ -49,6 +50,12 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
         let map_v,map_var = "slice",Var("slice", map_t) in
         let access_expr =
             if singleton then 
+              if Debug.active "RUNTIME-BIGSUMS" then
+                (* If we're being asked to compute bigsums at runtime, then
+                   we don't need to test for membership -- this is always 
+                   false *)
+                init_expr
+              else
                 IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
             else let p_ve = List.map (fun v -> 
                     let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
@@ -56,6 +63,13 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
         in Lambda(AVar(map_v, map_t), access_expr)
     in
     let map_init_expr map_expr ins outs ie =
+      if Debug.active "RUNTIME-BIGSUMS" then
+        (* Being asked to compute bigsums at runtime means that we never need
+           to initialize a map -- the initialization expression is always used
+           to compute the value that the map would otherwise return. 
+           Consequently, we never update the map with the computed value. *)
+        ie
+      else
         let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
         let oute_l = List.map (fun (v,t) -> Var(v,t)) outs in
         let (iv_a, iv_e) =
@@ -305,7 +319,7 @@ let collection_stmt trig_args m3stmt : statement =
     let out_tier_t = Collection(TTuple(List.map snd outs@[TFloat])) in
 
     let collection = map_to_expr mapn ins outs in
-
+    
     (* Update expression, singleton initializer expression
      * -- update expression: increments the current var/slice by computing
      *    a delta. For slices, merges the delta slice w/ the current.
@@ -434,12 +448,22 @@ let collection_stmt trig_args m3stmt : statement =
 
 
 let collection_trig m3trig : trigger =
-    let (evt, rel, args, stmts) = m3trig
-    in (evt, rel, args, List.map (collection_stmt args) stmts)
+    let (evt, rel, args, stmts) = m3trig in
+    let k3_stmts = List.map (collection_stmt args) stmts in
+      (evt, rel, args, 
+         (  if (Debug.active "RUNTIME-BIGSUMS") then
+               List.filter 
+                  (fun (c,_) -> match c with 
+                     PC(_,_,_,_) -> false | InPC(_,_,_) -> false | _ -> true 
+                  ) k3_stmts
+            else
+               k3_stmts
+         )
+      )
 
 let collection_prog m3prog patterns : program =
-    let (schema, triggers) = m3prog
-    in (schema, patterns, List.map collection_trig triggers)
+    let (schema, triggers) = m3prog in
+      (  schema, patterns, List.map collection_trig triggers )
 
 let m3_to_k3 (schema,m3prog):(K3.SR.trigger list) =
    let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in

@@ -105,6 +105,8 @@ $queries = {
 };
 
 class GenericUnitTest
+  attr_reader :runtime;
+
   def query=(q, qdat = $queries[q])
     @qname = q;
     @qtype = qdat[:type];
@@ -119,12 +121,12 @@ class GenericUnitTest
   
   def correct?
     case @qtype
-      when :singleton then @result == @expected
+      when :singleton then (diff(@expected, @result) != "Different")
       when :onelevel then
         not (@expected.keys + @result.keys).uniq.find do |k|
-          return false if not ((@expected.has_key? k) && (@result.has_key? k));
-          ((@expected[k] - @result[k]) / 
-            (@expected[k] + @result[k])).abs > $precision
+          (@expected.has_key? k) && 
+          (@result.has_key? k) && 
+          (diff(@expected[k], @result[k]) == "Different")
         end
       else raise "Unknown query type '#{@qtype}'"
     end
@@ -159,17 +161,21 @@ end
 class CppUnitTest < GenericUnitTest
   def run
     unless $skip_compile then
-      compile_cmd = [
+      compile_cmd = ([
         $dbt, 
         "-l","cpp",
         "-o","#{$dbt_path}/bin/#{@qname}.cpp",
-        "-c","#{$dbt_path}/bin/#{@qname}",
+        "-c","#{$dbt_path}/bin/#{@qname}"
+      ] + ($debug_flags.map { |f| ["-d", f]}.flatten(1)) + [
         @qpath
-      ].join(" ");
+      ]).join(" ");
       system(compile_cmd) or raise "Compilation Error";
     end
+    starttime = Time.now;
     IO.popen("#{$dbt_path}/bin/#{@qname} -q", "r") do |qin|
       output = qin.readlines.map { |l| l.chomp }.join("")
+      endtime = Time.now;
+      @runtime = (endtime - starttime).to_f;
       if(/<QUERY_1_1[^>]*>(.*)<\/QUERY_1_1>/ =~ output) then
         output = $1;
         case @qtype
@@ -215,8 +221,13 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
-    IO.popen("#{$dbt} -r #{@qpath} 2>&1", "r") do |qin|
+    IO.popen("#{$dbt} -r #{@qpath} 2>&1"+
+             ($debug_flags.map {|f|" -d #{f}"}.join("")), "r") do |qin|
       output = qin.readlines.join("")
+      if /Processing time: ([0-9]+\.?[0-9]*)/ =~ output
+        then @runtime = $1.to_f
+        else @runtime = "unknown"
+      end
       raise "Runtime Error" unless (/QUERY_1_1: (.*)$/ =~ output);
       output = $1
       case @qtype
@@ -257,15 +268,17 @@ class InterpreterUnitTest < GenericUnitTest
 end
 
 tests = [];
+$debug_flags = [];
 queries = nil;
 $skip_compile = false;
 $precision = 1e-12;
 
 GetoptLong.new(
-  [ '-a', '--all',  GetoptLong::NO_ARGUMENT],
-  [ '-t', '--test', GetoptLong::REQUIRED_ARGUMENT],
-  [ '--skip-compile', GetoptLong::NO_ARGUMENT],
-  [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT]
+  [ '-a', '--all',       GetoptLong::NO_ARGUMENT],
+  [ '-t', '--test',      GetoptLong::REQUIRED_ARGUMENT],
+  [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
+  [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
+  [ '-d',                GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-a', '--all' then queries = $queries.keys
@@ -277,6 +290,7 @@ GetoptLong.new(
         when 'interpreter' then tests.push InterpreterUnitTest
         when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
       end
+    when '-d' then $debug_flags.push(arg)
   end
 end
 
@@ -297,7 +311,7 @@ queries.each do |tquery|
           exit -1;
       end
       if t.correct? then
-        puts "Success."
+        puts "Success (#{t.runtime} seconds)."
       else
         puts "Failure: Result Mismatch"
         puts(([["Key", "Expected", "Result", "Different?"], 

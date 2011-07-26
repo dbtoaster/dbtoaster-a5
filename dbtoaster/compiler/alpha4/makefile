@@ -244,7 +244,7 @@ test: top
 #	@$(DEBUG_APP) test/examples/VwapTest.ml
 
 ok_test: top
-	@$(DEBUG_APP) test/unit/compiler.ml
+	@$(DEBUG_APP) test/unit/PreaggregateModes.ml
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster
