@@ -18,23 +18,77 @@
 \date{\today}
 \maketitle
 \newcommand{\dom}{\textsf{dom}}
+
 \section{Definitions}
-In this section we explain the domain which is represented here by \dom. The \dom of a variable is a set of values that the variable can take. The \dom of a map is defined by the all values of its input variables(which is a vector). 
+In this section we explain the domain which is represented here by \dom. The \dom{}   of a variable is a set of values that the variable can take. The \dom{} of a map is defined by all the values of both the input and output variables(which are represented as vectors). 
 \begin{equation*}
 \text{\dom}_{i}=  \big\{x\in map_{i}[\vec{x}][\vec{y}]| (x\in \vec{x})\lor(x\in \vec{y})\big\}
 \end{equation*}
-We need to compute the dependences between the domains of maps input variables. Without loose of generality  we always need to work with two maps when we want to compute their \dom s. For this we define function $F$ recursively as follow:
+We need to compute the dependences between the domains of maps.The domains of input variables will always depend on the domains of output variables from maps that are on the left side of the map with input variables. Without loose of generality  we always need to work with two maps when we want to compute their \dom s. For this we define function $F$ recursively as follow:
 \begin{equation*}
-F=\text{\dom}|F\cap F|F\cup F
+F=\text{\dom}_{i}|F\cap F|F\cup F
 \end{equation*}
+Function $F$ takes two sets(two \dom s) and returns their unions or intersections. We can apply this function recursively to compute any set of unions or intersections between the \dom s. Also we can achieve this by giving a set of sets to $F$ to compute the desirable set.
 So we can compute the dependencies between the \dom s like this:
 \begin{equation*}
-\text{\dom}(x\in m_{i}[\vec{x}][\vec{y}])\gets F(\text{\dom}(x'\gets m_{j}[\vec{x'}][\vec{y'}]))
+\text{\dom}_{i}(x\in m_{i}[\vec{x}][\vec{y}])\gets F(\text{\dom}_{i}(x'\gets m_{j}[\vec{x'}][\vec{y'}]))
 \end{equation*}
-Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right. \par
-We call the arity of a \dom as the number of its input variables. We need to maintain the maps as long as their arities are greater that zero. If the arity of any domain drops to zero it means that we don't need to store it as a map since it doesn't contain any elements. The arity of a domain can be increased of decreased. It may be increased by adding more elements into some relation, also it may be decreased by deletions from some relations too. \\
+Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right.\\ 
+\par
+We call the arity of a schema as the number of its input variables. 
+For example we will have the relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$ The arity of a tuple will be the number of occurrences in the relation, in other words the order of multiplicity of that tuple. The arity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation.
+
+For example:
+
+Relation $R$:
+\begin{table}[ht]
+\centering
+\begin{tabular}{c c c c}
+	R & a & b & arity\\ [0.2ex]
+	%heading
+	\hline
+	  & $<$1 & 2$>$ & 1 \\
+	  & $<$1 & 3$>$ & 2 \\
+	  & $<$3 & 4$>$ & 1 \\
+\end{tabular}
+\end{table}
+
+Relation $S$:
+\begin{table}[ht]
+\centering
+\begin{tabular}{c c c c}
+	S & b & c & arity\\ [0.2ex]
+	%heading
+	\hline
+	  & $<$1 & 1$>$ & 1 \\
+	  & $<$2 & 2$>$ & 2 \\
+	  & $<$3 & 5$>$ & 2 \\
+\end{tabular}
+\end{table}
+
+Relation $R\cdot S$:
+\begin{table}[ht]
+\centering
+\begin{tabular}{c c c c c}
+	$R\cdot S$ & a & b & c & arity\\ [0.2ex]
+	%heading
+	\hline
+	  & $<$1 & 2 & 2$>$ & 2 \\
+	  & $<$1 & 3 & 5$>$ & 4 \\
+	  & $<$3 & 4 & $*>$ & 0 \\
+	  & $<*$ & 1 & 1$>$ & 0 \\
+\end{tabular}
+\end{table}
+The arity of a tuple is the number of its multiplicity. In the other words with insertion and deletion of tuples we increase and decrease the arity of the tuple respectively. \\
+\par
+We need to maintain the maps for certain values as long as they have a tuple with non-zero arity. If the arity of the tuple drops to zero it means that this tuple does not present in the map anymore. 
+%The arity of a domain can be increased of decreased. It may be increased by adding more elements into some relation, also it may be decreased by deletions from some relations too. \\
 \par
 We need to store the arities inside each map. We need a way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the maps without input variables as some relations. Also a map with input variables can be seen as a relation with a group-by clause. Input variable of a map bind some variables. Thus if we compute the map values by all different combinations of these variables, we will look up into these values and return the appropriate value according to the input variables.  
 \section{Computing the arities of the AGCA expression}
-We can compute the arities recursively. Suppose we have an expression which is consist of two parts joining together as $e=e_{1}\,op\, e_{2}$ which $op\in\{+,*\}$. Let $I_{i}$ and $O_{1}$ to be the set of all input and output variables to $e_{i}$ respectively. The arity of $e$ is $|I_{1}\cup I_{2}-O_{1}|$, according to the information flow rule. 
+We can compute the arities recursively. Suppose we have an expression which is consist of two parts joining together as:
+\begin{equation*}
+e=e_{1}+e_{2}|e_{1}\cdot e_{2}|v\gets e_{1}|e_{1}\Theta e_{2}|R(.)
+\end{equation*}
+Having the arities of $e_{1},e_{2}$, we can compute the arity of $e$ easily. For example the arity of comparison operator $\Theta$ is either 0 or 1. The arity of $e_{1}+e_{2}$ is the sum of the arity of $e_{1},e_{2}$. The arity of product is also computable from the join operator. For assignment the arity is always 1. Thus, with the above argument we can compute the arity of all AGCA expression easily. 
 \end{document}
