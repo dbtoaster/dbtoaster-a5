@@ -57,13 +57,6 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
         in Lambda(AVar(map_v, map_t), access_expr)
     in
     let map_init_expr map_expr ins outs ie =
-      if Debug.active "RUNTIME-BIGSUMS" then
-        (* Being asked to compute bigsums at runtime means that we never need
-           to initialize a map -- the initialization expression is always used
-           to compute the value that the map would otherwise return. 
-           Consequently, we never update the map with the computed value. *)
-        ie
-      else
         let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
         let oute_l = List.map (fun (v,t) -> Var(v,t)) outs in
         let (iv_a, iv_e) =
@@ -123,7 +116,9 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
           (* If we're being asked to compute bigsums at runtime, then
              we don't need to test for membership -- this is always 
              false *)
-          init_expr
+          if (singleton && not init_singleton)
+          then Lookup(init_expr, (List.map (fun (v,t) -> Var(v,t)) ins))
+          else init_expr
         else 
         let init_expr = map_init_expr map_expr ins [] init_expr 
           in Apply(aux ins t init_expr, map_expr)
@@ -133,7 +128,12 @@ let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
           (* If we're being asked to compute bigsums at runtime, then
              we don't need to test for membership -- this is always 
              false *)
-          init_expr
+          let rv_f = match (singleton, init_singleton) with
+            | (true,true)   -> (fun x -> x)
+            | (false,true)  -> (fun x -> Singleton(Tuple((List.map (fun (v,t) -> Var(v,t)) outs)@[x])))
+            | (true,false)  -> (fun x -> Lookup(x, (List.map (fun (v,t) -> Var(v,t)) outs)))
+            | (false,false) -> (fun x -> x)
+          in rv_f init_expr
         else
         let init_expr = map_init_expr map_expr ins outs init_expr in
         let nested_t =
