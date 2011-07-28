@@ -20,27 +20,48 @@
 \newcommand{\dom}{\textsf{dom}}
 
 \section{Definitions}
-In this section we explain the domain which is represented here by \dom. The \dom{}   of a variable is a set of values that the variable can take. The \dom{} of a map is defined by all the values of both the input and output variables(which are represented as vectors). 
+In this draft we want to explain the notion of domain. The domain of a variable is the set of values that a variable can take. The domain of all the variables in a query expression can easily be created recursively if some rules will be respected. We will use through out the entire paper the notation of $\text{\dom{}}_{\vec x}(q)$ for the domain of a set of variables, where $\vec x$ is a vector representing the variables present in the expression $q$. Taking into account the expressions from the AGCA (Aggregate Calculus\cite{1}) the definition of an expression will be: 
+$$q\text{ ::- }q\cdot q | q + q|v \gets q |v_{1}\theta v_{2}|R(\vec{y})|c|v$$
+
+We will start with the definition of $\dom{}_{\vec x}(R(\vec y))$:
+$$\dom{}_{\vec x}(R(\vec y))=\bigg\{\vec c\,|\,(\prod\limits_{\forall i:x_{i}\in \vec y}^{}(x_{i}\gets c_{i})\cdot R(\vec y))\not= 0\bigg\} $$where $\vec x=<x_1,x_2,x_3,\cdots,x_i,\cdots>$, $\vec c=<c_1,c_2,c_3,\cdots,c_i,\cdots>$,  will be a vector of constants and the schema of $\vec x$ will match the schema of $\vec c$. \par
+
+For the comparison operator($v_{1}\theta v_{2}$), where $v_1$ and $v_2$ are variables, we can compute the domain as follows:
 \begin{equation*}
-\text{\dom}_{i}=  \big\{x\in map_{i}[\vec{x}][\vec{y}]| (x\in \vec{x})\lor(x\in \vec{y})\big\}
+\text{\dom{}}_{\vec{x}}(v_{1}\theta v_{2})=\bigg\{\vec{c}\,|\,\forall i:(x_{i}=v_{1}\lor x_{i}=v_{2})\Rightarrow ((\prod_{i}(x_{i}\gets c_{i}))(v_{1}\theta v_{2}))\not= 0\bigg\}
 \end{equation*}
-We need to compute the dependences between the domains of maps.The domains of input variables will always depend on the domains of output variables from maps that are on the left side of the map with input variables. Without loose of generality  we always need to work with two maps when we want to compute their \dom s. For this we define function $F$ recursively as follow:
+In fact using implication operator in the above definition allows us to extend the $\vec{x}$ to whatever vector we want. It is not necessary that $\vec{x}$  has the same schema as the given expression. Thus, we can evaluate $\text{\dom}_{\vec{x}}$ for a broader range of $\vec{x}$ and it is not delimited by the schema of the expression. 
+For the join operator we can write:
 \begin{equation*}
-F=\text{\dom}_{i}|F\cap F|F\cup F
+\text{\dom{}}_{\vec{x}}(q_{1}\cdot q_{2})=\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{2})\}
 \end{equation*}
-Function $F$ takes two sets(two \dom s) and returns their unions or intersections. We can apply this function recursively to compute any set of unions or intersections between the \dom s. Also we can achieve this by giving a set of sets to $F$ to compute the desirable set.
-So we can compute the dependencies between the \dom s like this:
+while for the union operator the domain definition is very similar:
 \begin{equation*}
-\text{\dom}_{i}(x\in m_{i}[\vec{x}][\vec{y}])\gets F(\text{\dom}_{i}(x'\gets m_{j}[\vec{x'}][\vec{y'}]))
+\text{\dom{}}_{\vec{x}}(q_{1}+ q_{2})=\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\lor\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{2})\}
 \end{equation*}
-Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right.\\ 
 \par
-We call the arity of a schema as the number of its input variables. 
-For example we will have the relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$ The arity of a tuple will be the number of occurrences in the relation, in other words the order of multiplicity of that tuple. The arity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation.
-
-For example:
-
-Relation $R$:
+The \dom{} of constants is infinite. The \dom{} of an expression, that is represented by a variable ($q$ ::- $var$), will be bound to other expressions in which that variable will appear.
+. Finally, we can give a formalism for expressing the domain of a variable that will participate in an assignment operation:
+\begin{equation*}
+\text{\dom{}}_{\vec{x}}(v\gets q_{1})=\Big\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land \forall i:\big((x_{i}=v)\Rightarrow(q_{1}\cdot\prod_{j: x_{j}\neq v} (x_{j}=c_{j}))=c_{i}\big)\Big\}
+\end{equation*}
+%The \dom{} of a map is defined by all the values of both the input and output variables(which are represented as vectors). 
+%\begin{equation*}
+%\text{\dom}_{i}=  \big\{x\in map_{i}[\vec{x}][\vec{y}]| (x\in \vec{x})\lor(x\in \vec{y})\big\}
+%\end{equation*}
+%We need to compute the dependences between the domains of maps.The domains of input variables will always depend on the domains of output variables from maps that are on the left side of the map with input variables. Without loose of generality  we always need to work with two maps when we want to compute their \dom s. For this we define function $F$ recursively as follow:
+%\begin{equation*}
+%F=\text{\dom}_{i}|F\cap F|F\cup F
+%\end{equation*}
+%Function $F$ takes two sets(two \dom s) and returns their unions or intersections. We can apply this function recursively to compute any set of unions or intersections between the \dom s. Also we can achieve this by giving a set of sets to $F$ to compute the desirable set.
+%So we can compute the dependencies between the \dom s like this:
+%\begin{equation*}
+%\text{\dom}_{i}(x\in m_{i}[\vec{x}][\vec{y}])\gets F(\text{\dom}_{i}(x'\gets m_{j}[\vec{x'}][\vec{y'}]))
+%\end{equation*}
+%Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right.\\ 
+%\par
+%We call the arity of a schema as the number of its input variables. 
+Having the definitions for the domains, we will try to give some insight regarding to the notion of arity. We will start with an example relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$ The arity of a tuple will be the number of occurrences in the relation, in other words the order of multiplicity of that tuple. The arity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation. For example:
 \begin{table}[ht]
 \centering
 \begin{tabular}{c c c c}
@@ -51,9 +72,8 @@ Relation $R$:
 	  & $<$1 & 3$>$ & 2 \\
 	  & $<$3 & 4$>$ & 1 \\
 \end{tabular}
+\caption{Relation $R$}
 \end{table}
-
-Relation $S$:
 \begin{table}[ht]
 \centering
 \begin{tabular}{c c c c}
@@ -64,9 +84,8 @@ Relation $S$:
 	  & $<$2 & 2$>$ & 2 \\
 	  & $<$3 & 5$>$ & 2 \\
 \end{tabular}
+\caption{Relation $S$}
 \end{table}
-
-Relation $R\cdot S$:
 \begin{table}[ht]
 \centering
 \begin{tabular}{c c c c c}
@@ -78,17 +97,18 @@ Relation $R\cdot S$:
 	  & $<$3 & 4 & $*>$ & 0 \\
 	  & $<*$ & 1 & 1$>$ & 0 \\
 \end{tabular}
+\caption{Relation $R\cdot S$}
 \end{table}
-The arity of a tuple is the number of its multiplicity. In the other words with insertion and deletion of tuples we increase and decrease the arity of the tuple respectively. \\
-\par
-We need to maintain the maps for certain values as long as they have a tuple with non-zero arity. If the arity of the tuple drops to zero it means that this tuple does not present in the map anymore. 
-%The arity of a domain can be increased of decreased. It may be increased by adding more elements into some relation, also it may be decreased by deletions from some relations too. \\
-\par
-We need to store the arities inside each map. We need a way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the maps without input variables as some relations. Also a map with input variables can be seen as a relation with a group-by clause. Input variable of a map bind some variables. Thus if we compute the map values by all different combinations of these variables, we will look up into these values and return the appropriate value according to the input variables.  
-\section{Computing the arities of the AGCA expression}
-We can compute the arities recursively. Suppose we have an expression which is consist of two parts joining together as:
-\begin{equation*}
-e=e_{1}+e_{2}|e_{1}\cdot e_{2}|v\gets e_{1}|e_{1}\Theta e_{2}|R(.)
-\end{equation*}
-Having the arities of $e_{1},e_{2}$, we can compute the arity of $e$ easily. For example the arity of comparison operator $\Theta$ is either 0 or 1. The arity of $e_{1}+e_{2}$ is the sum of the arity of $e_{1},e_{2}$. The arity of product is also computable from the join operator. For assignment the arity is always 1. Thus, with the above argument we can compute the arity of all AGCA expression easily. 
+
+We need to maintain the maps for certain values as long as the arity of a tuple is greater then 0. If the arity  of the tuple drops to 0 then the tuple will not be taken into consideration and therefore it can be eliminated from the domains of the maps.
+
+We need to store the arities inside each map. We need a way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the maps without input variables as some relations. Also a map with input variables can be seen as a relation with a group-by clause. Input variables of a map bind some variables.  
+ 
+\section{Computing the arities of the AGCA expressions}
+We define the function arity which will be used to compute the arity of a tuple in a certain relation. The function will be defined on the relation and the tuple for which the multiplicity order is desired to be computed. $$arity(Relation\text{ q},Tuple\text{ t})=\text{multiplicity order of tuple }t\text{ in the relation } q$$ $$arity(q,t)=\prod\limits_{t}^{}(q)$$ where $\prod\limits_{t}^{}(q)$ means the projection of relation $q$ for the tuple $t$. This function can be used for the computation of the arity of the expressions from the AGCA: $q\text{ ::- }q\cdot q\text{ }|\text{ }q+q\text{ }|\text{ }q \theta t\text{ }|\text{ }t\gets q\text{ }|\text{ }constant\text{ }|\text{ }variable$, however constants and variables can be eliminated from the computation because relations are of interest.
+
+$$arity(q1\cdot q2,t)=\sum\limits_{\{t1\}\triangleright \triangleleft \{t2\}={t}}^{}arity(q1,t1)*arity(q2,t2)$$
+$$arity(q1 + q2,t)=arity(q1,t)+arity(q2,t)\text{, where Sch(q1)=Sch(q2)} $$
+$$arity(t1\text{ } \theta \text{ } t2)=\begin{cases}0,& \mbox{if } t1\theta t2 \mbox{ is false}\\ 1,& \mbox{if } t1\theta t2 \mbox{ is false} \end{cases}$$
+$$arity(t\gets q)=1$$
 \end{document}
