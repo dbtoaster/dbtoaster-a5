@@ -129,12 +129,16 @@ let compile_delta_for_rel (produce_child_maps: bool)
       subterms to be extracted. This will only happen in very complicated
       queries.
    *)
-
+   
+   let poly_factorize = 
+      if (Debug.active "FACTOR-POSTPROCESS") then Calculus.poly_factorize
+                                             else Calculus.un_roly_poly
+   in
    let ((factorized_terms:(Calculus.var_t list * Calculus.term_t) list),
         (bigsum_after_subst:Calculus.var_t list list)) = 
      List.split (
        if Debug.active "NO-POLY-FACTOR" then delta_terms else
-         List.map (fun ((p,bs),t) -> ((p,Calculus.un_roly_poly t),bs))
+         List.map (fun ((p,bs),t) -> ((p,poly_factorize t),bs))
            (ListExtras.reduce_assoc
              (List.map (fun ((p,t),bs) -> ((p,bs),t)) delta_terms)
            )

@@ -1860,5 +1860,106 @@ let rec un_roly_poly (monomials:term_t list): term_t =
       ]
    )
 ;;
+
+let rec const_prod (x:const_t) (y:const_t): const_t = 
+   match (x,y) with
+      | ((String _),_)                -> failwith "Product of a string"
+      | (_,(String _))                -> failwith "Product of a string"
+      | ((Int(c1)),(Int(c2)))         -> Int(c1*c2)
+      | ((Int(c1)),_)                 -> const_prod y x
+      | ((Double(c1)),(Int(c2)))      -> Double(c1 *. (float_of_int c2))
+      | ((Double(c1)),(Double(c2)))   -> Double(c1 *. c2)
+      | ((Double _),_)                -> const_prod y x
+      | ((Long(c1)),(Int(c2)))        -> Long(Int64.mul c1 (Int64.of_int c2))
+      | ((Long(c1)),(Double(c2)))     -> Double((Int64.to_float c1) *. c2)
+      | ((Long(c1)),(Long(c2)))       -> Long(Int64.mul c1 c2)
+      | ((Long _),_)                  -> const_prod y x
+      | ((Boolean(c1)),(Boolean(c2))) -> Boolean(c1 && c2)
+      | ((Boolean _),_)               -> failwith "Non-and product of boolean"
+;;
+
+let rec const_sum (x:const_t) (y:const_t): const_t = 
+   match (x,y) with
+      | ((String _),_)                -> failwith "Sum of a string"
+      | (_,(String _))                -> failwith "Sum of a string"
+      | ((Int(c1)),(Int(c2)))         -> Int(c1+c2)
+      | ((Int(c1)),_)                 -> const_sum y x
+      | ((Double(c1)),(Int(c2)))      -> Double(c1 +. (float_of_int c2))
+      | ((Double(c1)),(Double(c2)))   -> Double(c1 +. c2)
+      | ((Double _),_)                -> const_prod y x
+      | ((Long(c1)),(Int(c2)))        -> Long(Int64.add c1 (Int64.of_int c2))
+      | ((Long(c1)),(Double(c2)))     -> Double((Int64.to_float c1) +. c2)
+      | ((Long(c1)),(Long(c2)))       -> Long(Int64.add c1 c2)
+      | ((Long _),_)                  -> const_prod y x
+      | ((Boolean(c1)),(Boolean(c2))) -> Boolean(c1 || c2)
+      | ((Boolean _),_)               -> failwith "Non-or sum of boolean"
+
+;;
+
+let un_roly_postprocess (input_term:term_t): term_t = 
+   let rec coalesce_flattened_term ((c, t), r) =
+      factorize_aggsum_mm (TermRing.mk_prod [TermRing.mk_val (Const(c)); t]) r
+
+   and flatten_calc (calc:relcalc_t): (bool * relcalc_t) =
+      CalcRing.fold
+         (fun sum_list -> (false, CalcRing.mk_sum
+            (List.map 
+               (fun (n,c) -> if n then CalcRing.mk_neg c else c) 
+               sum_list)))
+         (fun prod_list ->
+            let (n,c) = List.split prod_list in
+               (  List.fold_left (fun x y -> x <> y) false n, 
+                  CalcRing.mk_prod c))
+         (fun (n,c) -> (not n, c))
+         (fun leaf -> 
+            match leaf with 
+               | False -> (true, CalcRing.one)
+               | AtomicConstraint(op, lhs, rhs) ->
+                  (false, CalcRing.mk_val (AtomicConstraint(op,
+                     coalesce_flattened_term (flatten_term lhs),
+                     coalesce_flattened_term (flatten_term rhs))))
+               | _ -> (false, CalcRing.mk_val leaf))
+         calc
+         
+   and flatten_term (term:term_t): ((const_t * term_t) * relcalc_t) = 
+      TermRing.fold 
+         (fun sum_list -> ((Int(1), TermRing.mk_sum 
+            (List.map coalesce_flattened_term sum_list)), CalcRing.one))
+         (fun prod_list ->
+            let (ct,r) = List.split prod_list in
+            let (cl,t) = List.split ct in
+            let c = List.fold_left const_prod (Int(1)) cl in
+               ((c, TermRing.mk_prod t), CalcRing.mk_prod r))
+         (fun ((c,t),r) -> ((const_prod c (Int(-1)), t), r))
+         (fun leaf -> 
+            match leaf with
+               | Const(c) -> ((c, TermRing.one), CalcRing.one)
+               | AggSum(t,r) -> 
+                  let ((t_const,t_term),t_relcalc) = flatten_term t in
+                  let (r_const,r_relcalc) = flatten_calc r in
+                     (  (  (  if r_const 
+                              then const_prod t_const (Int(-1)) 
+                              else t_const),
+                           t_term),
+                        CalcRing.mk_prod [t_relcalc; r_relcalc] )
+               | _ -> (((Int(1)), TermRing.mk_val leaf), CalcRing.one))
+         term
+   
+   in
+      coalesce_flattened_term (flatten_term input_term)
+
+;;
+
+let poly_factorize (terms:term_t list): term_t =
+   let factorized_term = un_roly_poly terms in
+   let flattened_term = un_roly_postprocess factorized_term in
+   (Debug.print "LOG-POLY-FACTORIZE" (fun () ->
+      "------------POLY-FACTOR------------\n    From: " ^
+      (string_of_term factorized_term)^"\n    To: "^
+      (string_of_term flattened_term)
+   )); flattened_term
+
+;;
+
 let term_sum_list = TermRing.sum_list
 let term_list_sum = TermRing.mk_sum
