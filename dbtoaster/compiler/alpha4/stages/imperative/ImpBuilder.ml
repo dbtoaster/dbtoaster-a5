@@ -51,6 +51,7 @@ struct
   let gensym () = incr sym_counter; "__v"^(string_of_int (!sym_counter))
   let tag_of_ir ir = match ir with | Leaf(_,t) -> t | Node (_,t,_) -> t 
   let meta_of_ir ir = match ir with | Leaf(m,_) -> m | Node (m,_,_) -> m
+  let children_of_ir ir = match ir with | Leaf _ -> [] | Node (_,_,c) -> c
 end
 
 module Common =
@@ -418,12 +419,11 @@ struct
       end
 
   let linearize_ir c =
-    let get_meta = function Leaf(meta,_) -> meta | Node(meta,_,_) -> meta in
     let rec aux acc c = match c with
       | Leaf(meta, l) -> [meta, (l,[])]@acc
       | Node(meta, tag, children) ->
         (List.fold_left aux acc children)@
-        [meta, (tag, List.map get_meta children)] 
+        [meta, (tag, List.map meta_of_ir children)]
     in aux [] c
 
   let imp_of_ir (map_typing_f : K3.SR.expr_t -> 'ext_type type_t)
@@ -483,7 +483,7 @@ struct
 
       let cmetai i = List.nth cmeta i in
       let ciri i = List.assoc (cmetai i) flat_ir in
-      let ctag i = fst (ciri i) in
+      let ctagi i = fst (ciri i) in
       
       (* Symbol pushdown/reuse semantics *)
       (* possible_decl : force * id * type option
@@ -505,7 +505,7 @@ struct
          * in the case of single args, push down the arg symbol *)
         (* TODO: multi-arg pushdown/binding *)
         | Apply ->
-          let arg = arg_of_lambda (ctag 0) in
+          let arg = arg_of_lambda (ctagi 0) in
           let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1)
           in [pushi 0; arg_meta], rem_bindings, [None; arg_decl]
         
@@ -522,10 +522,10 @@ struct
          * the return type is unit. Maps yield the new collection as the symbol
          * thus do not pass it on to any children. *)
         | Iterate | Map ->
-          cmeta, [arg_of_lambda (ctag 0)], [None; decl_f false (cmetai 1)]
+          cmeta, [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
 
         | Aggregate ->
-            let arg1, arg2 = arg_of_assoc_lambda (ctag 0) in
+            let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
             let coll_meta = cmetai 2 in
             let assoc_arg_meta, rem_bindings, arg_decls =
                 assoc_arg_f arg1 arg2 (cmetai 1)
@@ -551,8 +551,8 @@ struct
          *      sym in cg body), otherwise use new sym. skip binding if pushed.
          *) 
         | GroupByAggregate ->
-            let arg1, arg2 = arg_of_assoc_lambda (ctag 0) in
-            let arg3 = arg_of_lambda (ctag 2) in
+            let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
+            let arg3 = arg_of_lambda (ctagi 2) in
             let arg2_binding, init_meta = match arg2 with
               | AVar(id,ty) -> [], mk_meta id (Host ty)
               | _ -> let m = cmetai 1 in [arg2], m 
@@ -727,12 +727,14 @@ struct
          * is always defined prior to the expression's code. Thus we handle
          * map lambda declarations as a special case here *)
         let body_decls =
-          let gcmeta = snd (ciri 0) in
+          let (ctag, gcmeta) = ciri 0 in
           if not(cused 0) || gcmeta = [] then [] else
-            let fmeta = List.hd gcmeta in
-            let pfmeta = push_meta (cmetai 0) fmeta in 
-            let d = sym_of_meta pfmeta, type_of_meta pfmeta
-            in [Decl(None, d, None)]
+            let d_t = match type_of_meta (cmetai 0) with
+              | Host (K.Fn(_,rt)) -> Host(rt)
+              | _ -> failwith "invalid map lambda type while building imp"
+            in   
+            let d = sym_of_meta (cmetai 0), d_t in
+            [Decl(None, d, None)]
         in
         let mk_body e = Expr(None,
           Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); e])) in
