@@ -1,4 +1,7 @@
 \documentclass[12pt]{article}
+\usepackage{tikz}
+\usetikzlibrary{shapes,snakes}
+\usetikzlibrary{arrows,automata}
 \usepackage{algorithm}
 \usepackage{algorithmic}%\usepackage[pagebackref=true,colorlinks,linkcolor=blue,citecolor=magenta]{hyperref}
 \usepackage{graphicx} 
@@ -10,10 +13,11 @@
 \usepackage{amsthm,amssymb,amsmath}
 \usepackage{indentfirst}
 \usepackage{listings}
+\usepackage{alltt}
 
 \begin{document}
 
-\title{IVC}
+\title{Initial Value Computation}
 \author{}
 \date{\today}
 \maketitle
@@ -113,4 +117,104 @@ $$arity(q_{1}\cdot q_{2},t)=\sum\limits_{\{t_{1}\}\Join \{t_{2}\}={t}}^{}arity(q
 $$arity(q_{1} + q_{2},t)=arity(q_{1},t)+arity(q_{2},t)\text{, where Schema}(q_{1})=\text{Schema}(q_{2}) $$
 $$arity(v_1\text{ } \theta \text{ } v_2,t=<\cdots,v_1,\cdots,v_2,\cdots>)=\begin{cases}0,& \mbox{if } v_1\theta v_2 \mbox{ is false}\\ 1,& \mbox{if } v_1\theta v_2 \mbox{ is true} \end{cases}$$
 $$arity(v\gets q,t)=\begin{cases}0, \mbox{ if $\forall \vec{x}: \text{\dom}_{\vec{x}}(q)$ is empty}\\ 1, \mbox{ otherwise} \end{cases}$$
+
+\section{Graph representation of maps}
+For computing the domains of input variables of maps we can use graph modeling. In such a way that, given the expression we can compute the domain of each expression with this modeling in $O(m\cdot p)$ where $m$ is the number of occurrences of all input variables and $p$ is the cost of evaluating the domains according to the mentioned rules. \\
+\par
+In this section firstly we talk about the the graph modeling(dependency graph), then we will give an algorithm for computing this dependency graph from the parse tree of expressions. 
+From the parse tree of an expression we can construct a directed graph $G(V,E)$. For each map $m[.][.]$ there is a vertex in $V$ and edges represent the variable. We have an edge between $m_{1}$ and $m_{2}$ with label $a$, if and only if $a$ is in the input variables of $m_{2}$ and output variables of $m_{1}$ and there is an information flow from $m_{1}$ to $m_{2}$. \\
+\par
+Obviously this graph does not have any cycle. To prove it, suppose it has a cycle with at least two vertices, call the first two vertices as $m_{1},m_{2}$. In the cycle there is an edge between $m_{1}$ and $m_{2}$. Since this is a cycle then there is a path between $m_{2}$ and $m_{1}$ also. But it is not possible because having an edge between $m_{1}$ and $m_{2}$ means that $m_{2}$ occurs after $m_{1}$ and according to information flow rule we can not have a path again between $m_{2}$ and $m_{1}$. \\
+\par
+In this graph vertices without any incoming edge are always the relations. If we evaluate the nodes with a topological traversal we can guarantee that the input variables of each maps is computed in order. The cost of domain computations is $O(m\cdot p)$, where $m$ is the number of edges in the graph and $p$ is the cost of using any of mentioned rules for computing the domain of subexpressions as we had in the aforementioned way. \\
+\par
+We can construct the graph from the given parse tree in $O(m)$ where $m$ is the number of edges. We start from the root of the parse tree and recursively compute the subgraph of the left child and right child, then we add the edges between the maps with some input variables on the right child to the appropriate vertices on the left child's graph. Since we consider each edge just one time in the algorithm, the overall order is $O(m)$. 
+\section{Domain computation}
+
+We are trying to compute the domains for each variable that appears in a query. This computation will be performed on the query decomposition tree. We can traverse the tree in post order, first visiting the leaves that are represented by some relations and afterwards visiting the parent nodes and combining the relations of the children nodes. Using this technique we are trying to compute the domains, but also the vector $\vec x$ of all the variables defined in that query. 
+
+The algorithm will need as inputs the root of the tree and a structure that must be previously defined and will return a structure that will contain the vector of variables and the domains for each variable defined in the vector. The structure will look like:
+
+\begin{alltt}
+struct\{
+x: the vector of all the variables 
+dom: the domain of all the variables
+\}
+\end{alltt}
+
+\begin{algorithm}[H]
+\caption{Computing the domains} 
+\label{alg}
+\textbf{Input:} the root of the tree \textbf{node}, a structure \textbf{s} that will be null \\
+\textbf{Output:} a structure \textbf{s1} that will contain the vector of variables \textbf{$\vec x$} and the domains of each variable \textbf{$\dom{}_{\vec x}(query)$}
+\begin{algorithmic}[1]
+\IF{$node$ has children}
+\IF{+ is between node.Left and node.Right}
+\STATE struct $s1\gets$ computeDomain(node.Left,struct s)
+\STATE struct $s2\gets$ computeDomain(node.Right,sturct s)
+\STATE struct $s3.\vec{x}\gets s1.\vec{x} \cup s2.\vec{x}$ \COMMENT{this will compute the vector for all the variables, both from the right and left node}
+\STATE struct $s3.dom\gets \dom{}_{s3.\vec x}(node.Left + node.Right)$
+\STATE return s3
+\ELSE
+\STATE struct $s1 \gets$ computeDomain(node.Left,struct s)
+\STATE struct $s2 \gets$ computeDomain(node.Right,struct s1)
+\STATE return $s2$
+\ENDIF
+\ELSE
+\IF{struct s=null}
+\STATE $s1.\vec{x} \gets \text{all the variables of the leaf}$
+\STATE $s1.dom \gets \dom{}_{s1.\vec{x}}(\text{relation from the leaf})$
+\ELSE
+\STATE $s1.\vec{x}\gets s.\vec{x} \cup \text{all the variables of the leaf}$
+\STATE $s1.dom$ will be the new domain, computing the domain of the leaf relation, but also taking into account the structure $s$
+\STATE return $s1$
+\ENDIF
+\STATE return $s1$
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\begin{figure}[htbp]
+\begin{center}
+\begin{tikzpicture}%[level/.style={sibling distance=40mm,level distance=15mm}]
+[level 1/.style={circle, draw,scale=1.0, fill=red,
+    level distance=30pt, sibling distance=100pt},
+    level 2/.style={circle, draw, scale=1.0,
+    level distance=50pt, sibling distance=60pt}]
+    \tikzstyle{every node}=[circle,draw,fill=red]
+    \node[] (a){}
+        child { 
+            node [](b){}
+            child{node(d){}}
+            child{node(e){}} 
+        }
+        child { 
+        		node[] (c){}
+		child{node[](f){}}
+		child{node(g){}}
+	};
+	\draw[->] (a) to [bend right=25](b);
+	\draw[->] (b) to [bend right=25](a);
+	
+	\draw[->] (a) to [bend right=25](c);
+	\draw[->] (c) to [bend right=25](a);
+	
+	\draw[->] (b) to [bend right=25](d);
+	\draw[->] (d) to [bend right=25](b);
+	\draw[->] (b) to [bend right=25](e);
+	\draw[->] (e) to [bend right=25](b);
+	\draw[->] (c) to [bend right=25](f);
+	\draw[->] (f) to [bend right=25](c);
+	\draw[->] (c) to [bend right=25](g);
+	\draw[->] (g) to [bend right=25](c);
+	
+\end{tikzpicture}
+\end{center}
+\caption{Tree traversal}
+\label{fig1}
+\end{figure}
 \end{document}
+
+
+
+
