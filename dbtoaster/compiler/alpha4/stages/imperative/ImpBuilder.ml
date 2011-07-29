@@ -1,6 +1,49 @@
+(* Imperative expression construction.
+ *
+ * This module builds imperative expressions (i.e. Imperative.imp_t) from K3
+ * expressions.
+ * We use an internal intermediate representation based on annotated K3
+ * expressions to flatten and linearize the K3 tree structure into procedural
+ * code.
+ *
+ * Submodules include:
+ *   AnnotatedK3: a tree structure for annotating K3 expressions.
+ *
+ *   DirectIRBuilder: an implementation of annotated K3 expressions (IR), where
+ *     annotations are unique symbols associated with K3 expressions that
+ *     cannot be inlined (i.e. implemented as a right-hand value) in C++.
+ *     This includes any expression resulting in a collection. 
+ *
+ *   Imp: the main construction module which turns an IR tree into imperative
+ *     expressions. This first linearizes the IR tree, with the result yielded
+ *     at the end of the resulting sequence of IR nodes. Imperative expression
+ *     construction works backwards from results, pushing result symbols upwards
+ *     to eliminate temporary symbols and unnecessary assignments,
+ *     particularly for lambdas and their arguments and return values.
+ *
+ *)
+
 open M3
 open K3.SR
 
+(* An annotated K3 module.
+ *
+ * This module defines a type 'a ir_t that represents a tagged
+ * K3 expression tree.
+ *
+ * 'a ir_t is a tree datastructure that captures aggregated K3 expressions.
+ * That is an arbitrary portion of a K3 expression tree may be represented by
+ * a single ir_t node. Each ir_t node includes metadata, whose type is given
+ * by the parameter 'a. When combined with the tree compression achieved by
+ * ir_t nodes, we can thus assign metadata to arbitrary parts of K3 expressions.
+ *
+ * Nodes in the ir_t tree are of type ir_tag_t, which are of two variants:
+ *   Decorated: an ir_t node representing a tagged K3 node.
+ *   Undecorated: an ir_t node representing a K3 expression tree, where the
+ *     entire tree has one piece of metadata associated with it. The semantics
+ *     of the association is user-defined, e.g. the metadata may associate with
+ *     every node of the K3 expression or only the root (or any other part).
+ *)
 module AnnotatedK3 =
 struct
   open Imperative
@@ -53,6 +96,7 @@ struct
   let meta_of_ir ir = match ir with | Leaf(m,_) -> m | Node (m,_,_) -> m
   let children_of_ir ir = match ir with | Leaf _ -> [] | Node (_,_,c) -> c
 end
+
 
 module Common =
 struct
@@ -306,6 +350,11 @@ struct
   open Imperative
   open AnnotatedK3
 
+  (* IR (i.e., annotated K3 construction) from a K3 expression.
+   * Implemented as a fold over K3 expression nodes, with no top-down
+   * accumulator, and a bottom-up accumulator of IR nodes, with type:
+   *   (sym * 'ext_type Imperative.type_t) ir_t 
+   *)
   let ir_of_expr e : ('exp_type imp_metadata) ir_t =
     let dummy_init =
       Leaf(mk_meta "" (Host TInt), Undecorated(K.Const(CFloat(0.0)))) in
@@ -418,6 +467,8 @@ struct
       | _ -> failwith "invalid tuple apply" 
       end
 
+  (* IR tree linearization, returning a list of:
+   *    (node metadata * (tag * child node metadata))     *)
   let linearize_ir c =
     let rec aux acc c = match c with
       | Leaf(meta, l) -> [meta, (l,[])]@acc
@@ -426,6 +477,7 @@ struct
         [meta, (tag, List.map meta_of_ir children)]
     in aux [] c
 
+  (* Imperative expression construction, from an IR tree. *)
   let imp_of_ir (map_typing_f : K3.SR.expr_t -> 'ext_type type_t)
                  ir : ('a option, 'ext_type, 'ext_fn) imp_t list =
     let flat_ir = linearize_ir ir in
@@ -912,7 +964,8 @@ struct
             in true, Some(cimp@r), None
         end 
     in
-    (* Top-down code generation *)
+    (* Top-down code generation (i.e. from top of K3 expression, which is the
+     * bottom of the linearized list)  *)
     let root_meta, root_tc = List.nth flat_ir ((List.length flat_ir)-1) in
     let root_decl =
       let decl_meta = None in
