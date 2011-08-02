@@ -452,26 +452,26 @@ let compile_ocaml_from_output () =
      | Some(a)   -> compile_ocaml a
 ;;
 
-let cpp_compile_flags flag_switch flag_name env_name =
-   List.flatten (List.map (fun x -> [flag_switch; x]) (
-      (flag_vals flag_name) @
-      ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
-        with Not_found -> [] )
-   ))
+let compile_flags  flag_name env_name =
+   (flag_vals flag_name) @
+   ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
+     with Not_found -> [] )
 ;;
 
 let compile_cpp in_file_name =
   let cpp_cc = "g++" in
   let cpp_args = (
       cpp_cc ::
-      (cpp_compile_flags "-I" "INCLUDE_HDR" "DBT_HDR") @
-      (cpp_compile_flags "-L" "INCLUDE_LIB" "DBT_LIB") @
+      (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
+      (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
+      (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
+      (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
+      (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
       [ "-I"; "." ;
         "-lboost_program_options";
         "-lboost_serialization";
         "-lboost_system";
         "-lboost_filesystem";
-        "-O3";
         in_file_name ;
         "-o"; (flag_val_force "COMPILE")
       ]
