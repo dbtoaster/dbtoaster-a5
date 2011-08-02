@@ -1,7 +1,8 @@
 open Util
 open Calculus
 
-let test_reverse ?((f,fn) = (poly_factorize,"post")) name readable_query =
+let test_reverse ?(test_fn = (poly_factorize,"post")) name readable_query =
+   let (f,fn) = test_fn in
    let query = make_term readable_query in
    Debug.log_unit_test 
       ("Roly Reversibility ("^fn^"): "^name)
@@ -10,9 +11,9 @@ let test_reverse ?((f,fn) = (poly_factorize,"post")) name readable_query =
       query;
 
 ;;
-let test_all_reverse name readable_query
-   test_reverse ~f:(un_roly_poly,"basic") name readable_query;
-   test_reverse ~f:(poly_factorize,"post") name readable_query
+let test_all_reverse name readable_query =
+   test_reverse ~test_fn:(un_roly_poly,"basic") name readable_query;
+   test_reverse ~test_fn:(poly_factorize,"post") name readable_query
 
 ;;
 let test_unrolly name r_mlist r_factored = 

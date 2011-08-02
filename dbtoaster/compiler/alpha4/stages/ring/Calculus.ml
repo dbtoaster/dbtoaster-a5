@@ -846,9 +846,12 @@ let rec simplify_roly  (term: term_t)
                   (subs @ [sub], nonsubbed_eqs) in
                let return_either = 
                   if List.mem a param_vars then 
-                  if List.mem b param_vars then return_none
-                                           else return_sub (b,a)
-                                           else return_sub (a,b)
+                     if List.mem b param_vars  then return_none
+                                               else return_sub (b,a)
+                  else 
+                     if String.compare (fst a) (fst b) >= 0 
+                        then return_sub (a,b)
+                        else return_sub (b,a)
                in match (classify a, classify b) with
                    | (`Input_Var, `Input_Var)     -> 
                      (* There are two possibilities here: Either the variables
