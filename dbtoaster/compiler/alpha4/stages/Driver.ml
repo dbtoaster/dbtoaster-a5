@@ -463,7 +463,7 @@ let compile_cpp in_file_name =
   let cpp_args = (
       cpp_cc ::
       (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
-      (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
+      (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
       (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
       (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
       (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
@@ -476,7 +476,7 @@ let compile_cpp in_file_name =
         "-o"; (flag_val_force "COMPILE")
       ]
    ) in
-      Debug.print "LOG-COMPILE" (fun () -> (string_of_list " " cpp_args));
+      Debug.print "LOG-GCC" (fun () -> (string_of_list " " cpp_args));
       Unix.execvp cpp_cc (Array.of_list cpp_args)
 ;;
 let compile_cpp_via_tmp () =
