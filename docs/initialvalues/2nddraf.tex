@@ -14,7 +14,9 @@
 \usepackage{indentfirst}
 \usepackage{listings}
 \usepackage{alltt}
-
+\usepackage{clrscode}
+\renewcommand{\algorithmiccomment}[1]{// #1}
+\newtheorem{theorem}{Theorem}
 \begin{document}
 
 \title{Initial Value Computation}
@@ -24,19 +26,17 @@
 \newcommand{\dom}{\textsf{dom}}
 
 \section{Definitions}
-In this draft we want to explain the notion of domain. The domain of a variable is the set of values that a variable can take. The domain of all the variables in a query expression can easily be created recursively if some rules will be respected. We will use through out the entire paper the notation of $\text{\dom{}}_{\vec x}(q)$ for the domain of a set of variables, where $\vec x$ is a vector representing the variables present in the expression $q$. Taking into account the expressions from the AGCA (Aggregate Calculus\cite{1}) the definition of an expression will be: 
+In this draft we want to explain the notion of domains. The domain of a variable is the set of values that it can take. The domain of all the variables in a query expression can easily be computed recursively if some rules are respected. We will use through out the entire paper the notation of $\text{\dom{}}_{\vec x}(q)$ for the domain of a set of variables, where $q$ is the given query and $\vec x$ is a vector representing the variables(not necessarily present in the expression $q$). Taking into account the expressions from the AGCA (Aggregate Calculus\cite{1}) the definition of an expression will be: 
 $$q\text{ ::- }q\cdot q | q + q|v \gets q |v_{1}\theta v_{2}|R(\vec{y})|\text{constant}|\text{variable}$$
 
-We will start with the definition of $\dom{}_{\vec x}(R(\vec y))$:
-$$\dom{}_{\vec x}(R(\vec y))=\bigg\{\vec c\,|\,(\pi_{\forall i:x_{i}\in \vec y}^{}(x_{i}\gets c_{i})\cdot R(\vec y))\not= 0\bigg\} $$where $\vec x=<x_1,x_2,x_3,\cdots,x_i,\cdots>$, $\vec c=<c_1,c_2,c_3,\cdots,c_i,\cdots>$.  $\vec{x}$ defines the schema of $\vec{c}$, Specifically, $\vec{x}$ is the vector of names of each element of the tuple $\vec{c}$. \par
-
+We start with the definition of $\dom{}_{\vec x}(R(\vec y))$:
+$$\dom{}_{\vec x}(R(\vec y))=\bigg\{\vec c\,\Big|\,(\prod_{i:x_{i}\in \vec y}^{}(x_{i}\gets c_{i})\cdot R(\vec y))\not= 0\bigg\} $$where $\vec x=<x_1,x_2,x_3,\cdots,x_i,\cdots>$, $\vec c=<c_1,c_2,c_3,\cdots,c_i,\cdots>$.  $\vec{x}$ defines the schema of $\vec{c}$, specifically, $\vec{x}$ is a vector of names of each element of the tuple $\vec{c}$. It is not necessary that $\vec{x}$  has the same schema as the given expression. Thus, we can evaluate $\text{\dom}_{\vec{x}}$ for a broader range of $\vec{x}$ and it is not restricted by the schema of the input query expression. In such cases the \dom{} is infinite as the not presenting variables in the query can take any value.\\
+\par
 For the comparison operator ($v_{1}\theta v_{2}$), where $v_1$ and $v_2$ are variables, we can compute the domain as follows:
 \begin{equation*}
-\text{\dom{}}_{\vec{x}}(v_{1}\theta v_{2})=\bigg\{\vec{c}\,|\,\forall i:((\pi_{i}(x_{i}\gets c_{i}))(v_{1}\theta v_{2}))\not= 0\bigg\}
+\text{\dom{}}_{\vec{x}}(v_{1}\theta v_{2})=\bigg\{\vec{c}\,\Big|\,\Big(\big(\prod_{i}(x_{i}\gets c_{i})\big)(v_{1}\theta v_{2})\Big)\not= 0\bigg\}
 \end{equation*}
-The domain of a comparison is infinite. 
-In fact using implication operator in the above definition allows us to extend the $\vec{x}$ to whatever vector we want. It is not necessary that $\vec{x}$  has the same schema as the given expression. Thus, we can evaluate $\text{\dom}_{\vec{x}}$ for a broader range of $\vec{x}$ and it is not delimited by the schema of the expression. In such cases the \dom{} is infinite as the other variables can take any value.
-For the join operator we can write:
+The domain of a comparison may be infinite. For the join operator we can write:
 \begin{equation*}
 \text{\dom{}}_{\vec{x}}(q_{1}\cdot q_{2})=\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{2})\}
 \end{equation*}
@@ -49,8 +49,9 @@ $$\dom{}_{\vec x}(variable)=\Big\{\vec c\Big\}$$
 
 Finally, we can give a formalism for expressing the domain of a variable that will participate in an assignment operation:
 \begin{equation*}
-\text{\dom{}}_{\vec{x}}(v\gets q_{1})=\bigg\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land \big(\forall i:(x_{i}=v)\Rightarrow(q_{1}\cdot\prod_{j:x_{j}\neq v } (x_{j}=c_{j})=c_{i})\big)\bigg\}
+\text{\dom{}}_{\vec{x}}(v\gets q_{1})=\bigg\{\vec{c}\,\Big|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land \bigg(\forall i:(x_{i}=v)\Rightarrow\Big(\big(q_{1}\cdot\prod_{j:x_{j}\neq v } (x_{j}=c_{j})\big)=c_{i}\Big)\bigg)\bigg\}
 \end{equation*}
+In fact using implication operator in the above definition allows us to extend the $\vec{x}$ to whatever vector we want, as we already said the schema of $\vec{x}$ is not necessarily the same as the schema of $q$. \\
 %The \dom{} of a map is defined by all the values of both the input and output variables(which are represented as vectors). 
 %\begin{equation*}
 %\text{\dom}_{i}=  \big\{x\in map_{i}[\vec{x}][\vec{y}]| (x\in \vec{x})\lor(x\in \vec{y})\big\}
@@ -67,7 +68,8 @@ Finally, we can give a formalism for expressing the domain of a variable that wi
 %Where $j$ is all the maps which occurs on the left hand of phrase for computing $m_{i}$ as we have in \ref{fig1} since the information can only be passed from left to right.\\ 
 %\par
 %We call the arity of a schema as the number of its input variables. 
-Having the definitions for the domains, we will try to give some insight regarding to the notion of arity. We will start with an example relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$ The arity of a tuple will be the number of occurrences in the relation, in other words the order of multiplicity of that tuple. The arity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation. For example:
+\par
+Having the definitions for the domains, we will try to give some insight regarding to the notion of arity. We will start with an example relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$. The arity of a tuple is the number of its occurrences in the relation, in other words the order of multiplicity of that tuple. The arity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation. For example:
 \begin{table}[ht]
 \centering
 \begin{tabular}{c c c c}
@@ -108,72 +110,80 @@ Having the definitions for the domains, we will try to give some insight regardi
 
 We need to maintain the maps for certain values as long as the arity of a tuple is greater then 0. If the arity  of the tuple drops to 0 then the tuple will not be taken into consideration and therefore it can be eliminated from the domains of the maps.
 
-We need to store the arities inside each map. We need a way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the maps without input variables as some relations. Also a map with input variables can be seen as a relation with a group-by clause. Input variable of a map bind some variables. Thus if we compute the map values by all different combinations of these variables, we will look up into these values and return the appropriate value according to the input variables.  
-\section{Computing the arities of the AGCA expression}
-
-We define the function arity which will be used to compute the arity of a tuple in a certain relation. The function will be defined on the relation and the tuple for which the multiplicity order is desired to be computed. $$arity(Relation\text{ q},Tuple\text{ t})=\text{multiplicity order of tuple }t\text{ in the relation } q$$ $$arity(q,t)=\pi_{t}(q)$$ where $\pi_{t}(q)$ means the projection of relation $q$ for the tuple $t$. This function can be used for the computation of the arity of the expressions from the AGCA: $q\text{ ::- }q\cdot q\text{ }|\text{ }q+q\text{ }|\text{ }q \theta t\text{ }|\text{ }t\gets q\text{ }|\text{ }constant\text{ }|\text{ }variable$. However constants and variables can be eliminated from the computation because relations are of interest.
+We need to store the arities inside each map and also way to compute the arity of an AGCA expression. Since we substitute the subexpressions with maps, we can easily consider the relations as the maps without input variables. Also a map with input variables can be seen as a relation with a group-by clause. Input variable of a map bind some variables. Thus if we compute the map values by all different combinations of these variables, we will look up into these values and return the appropriate value according to the input variables.  
+\section{Computing the arities of the AGCA expressions}
+We define the function \emph{arity} which will be used to compute the arity of a tuple in a certain relation. The function will be defined on the relation and the tuple for which the multiplicity order is desired to be computed. $$arity(\text{Relation } q,\text{Tuple } t)=\text{multiplicity order of tuple }t\text{ in the relation } q$$ $$arity(q,t)=\pi_{t}(q)$$ where $\pi_{t}(q)$ means the projection of relation $q$ for the tuple $t$. This function can be used for the computation of the arity of the expressions from the AGCA: $q\text{ ::- }q\cdot q\text{ }|\text{ }q+q\text{ }|\text{ }q \theta t\text{ }|\text{ }t\gets q\text{ }|\text{ constant}\text{ }|\text{ variable}$. However constants and variables can be eliminated from the computation because relations are of interest.
 
 $$arity(q_{1}\cdot q_{2},t)=\sum\limits_{\{t_{1}\}\Join \{t_{2}\}={t}}^{}arity(q_{1},t_{1})*arity(q_{2},t_{2})$$
 $$arity(q_{1} + q_{2},t)=arity(q_{1},t)+arity(q_{2},t)\text{, where Schema}(q_{1})=\text{Schema}(q_{2}) $$
-$$arity(v_1\text{ } \theta \text{ } v_2,t=<\cdots,v_1,\cdots,v_2,\cdots>)=\begin{cases}0,& \mbox{if } v_1\theta v_2 \mbox{ is false}\\ 1,& \mbox{if } v_1\theta v_2 \mbox{ is true} \end{cases}$$
-$$arity(v\gets q,t)=\begin{cases}0, \mbox{ if $\forall \vec{x}: \text{\dom}_{\vec{x}}(q)$ is empty}\\ 1, \mbox{ otherwise} \end{cases}$$
+$$arity(v_1\text{ } \theta \text{ } v_2,t)=\begin{cases}1,& \mbox{if } v_1\theta v_2 \mbox{ is true and }v_{1}\in t \land v_{2}\in t\\
+0,& \text{otherwise} \mbox{ is false} 
+\end{cases}$$
+$$arity(v\gets q,t)=\begin{cases}0, \mbox{ if $t\setminus\{v\}\not\in \text{\dom}_{Schema(t)}(q)$}\\ 1, \mbox{ otherwise} \end{cases}$$
 
-\section{Graph representation of maps}
-For computing the domains of input variables of maps we can use graph modeling. In such a way that, given the expression we can compute the domain of each expression with this modeling in $O(m\cdot p)$ where $m$ is the number of occurrences of all input variables and $p$ is the cost of evaluating the domains according to the mentioned rules. \\
-\par
-In this section firstly we talk about the the graph modeling(dependency graph), then we will give an algorithm for computing this dependency graph from the parse tree of expressions. 
-From the parse tree of an expression we can construct a directed graph $G(V,E)$. For each map $m[.][.]$ there is a vertex in $V$ and edges represent the variable. We have an edge between $m_{1}$ and $m_{2}$ with label $a$, if and only if $a$ is in the input variables of $m_{2}$ and output variables of $m_{1}$ and there is an information flow from $m_{1}$ to $m_{2}$. \\
-\par
-Obviously this graph does not have any cycle. To prove it, suppose it has a cycle with at least two vertices, call the first two vertices as $m_{1},m_{2}$. In the cycle there is an edge between $m_{1}$ and $m_{2}$. Since this is a cycle then there is a path between $m_{2}$ and $m_{1}$ also. But it is not possible because having an edge between $m_{1}$ and $m_{2}$ means that $m_{2}$ occurs after $m_{1}$ and according to information flow rule we can not have a path again between $m_{2}$ and $m_{1}$. \\
-\par
-In this graph vertices without any incoming edge are always the relations. If we evaluate the nodes with a topological traversal we can guarantee that the input variables of each maps is computed in order. The cost of domain computations is $O(m\cdot p)$, where $m$ is the number of edges in the graph and $p$ is the cost of using any of mentioned rules for computing the domain of subexpressions as we had in the aforementioned way. \\
-\par
-We can construct the graph from the given parse tree in $O(m)$ where $m$ is the number of edges. We start from the root of the parse tree and recursively compute the subgraph of the left child and right child, then we add the edges between the maps with some input variables on the right child to the appropriate vertices on the left child's graph. Since we consider each edge just one time in the algorithm, the overall order is $O(m)$. 
+%\section{Graph representation of maps}
+%For computing the domains of input variables of maps we can use graph modeling. In such a way that, given the expression we can compute the domain of each expression with this modeling in $O(m\cdot p)$ where $m$ is the number of occurrences of all input variables and $p$ is the cost of evaluating the domains according to the mentioned rules. \\
+%\par
+%In this section firstly we talk about the the graph modeling(dependency graph), then we will give an algorithm for computing this dependency graph from the parse tree of expressions. 
+%From the parse tree of an expression we can construct a directed graph $G(V,E)$. For each map $m[.][.]$ there is a vertex in $V$ and edges represent the variable. We have an edge between $m_{1}$ and $m_{2}$ with label $a$, if and only if $a$ is in the input variables of $m_{2}$ and output variables of $m_{1}$ and there is an information flow from $m_{1}$ to $m_{2}$. \\
+%\par
+%Obviously this graph does not have any cycle. To prove it, suppose it has a cycle with at least two vertices, call the first two vertices as $m_{1},m_{2}$. In the cycle there is an edge between $m_{1}$ and $m_{2}$. Since this is a cycle then there is a path between $m_{2}$ and $m_{1}$ also. But it is not possible because having an edge between $m_{1}$ and $m_{2}$ means that $m_{2}$ occurs after $m_{1}$ and according to information flow rule we can not have a path again between $m_{2}$ and $m_{1}$. \\
+%\par
+%In this graph vertices without any incoming edge are always the relations. If we evaluate the nodes with a topological traversal we can guarantee that the input variables of each maps is computed in order. The cost of domain computations is $O(m\cdot p)$, where $m$ is the number of edges in the graph and $p$ is the cost of using any of mentioned rules for computing the domain of subexpressions as we had in the aforementioned way. \\
+%\par
+%We can construct the graph from the given parse tree in $O(m)$ where $m$ is the number of edges. We start from the root of the parse tree and recursively compute the subgraph of the left child and right child, then we add the edges between the maps with some input variables on the right child to the appropriate vertices on the left child's graph. Since we consider each edge just one time in the algorithm, the overall order is $O(m)$. 
 \section{Domain computation}
 
-We are trying to compute the domains for each variable that appears in a query. This computation will be performed on the query decomposition tree. We can traverse the tree in post order, first visiting the leaves that are represented by some relations and afterwards visiting the parent nodes and combining the relations of the children nodes. Using this technique we are trying to compute the domains, but also the vector $\vec x$ of all the variables defined in that query. 
+We are trying to compute the domains for each variable that appears in queries. This computation is performed on the query decomposition tree. We can traverse the tree in post order, first visiting the leaves that are represented by some relations and afterwards visiting the parent nodes and combining the relations of the children nodes. Using this technique we are trying to compute the domains, but also the vector $\vec x$ of all the variables defined in that query.\\
+\par
+The intuition is simple. MMM ...
 
-The algorithm will need as inputs the root of the tree and a structure that must be previously defined and will return a structure that will contain the vector of variables and the domains for each variable defined in the vector. The structure will look like:
+The algorithm will need as inputs the root of the tree and a structure that must be previously defined and will return a structure that contains the vector of variables($x$) and the domains for each variable defined in the vector(\dom). The structure will look like:
 
 \begin{alltt}
 struct\{
 x: the vector of all the variables 
-dom: the domain of all the variables
+dom: the domains of all the variables
 \}
 \end{alltt}
-
+In \ref{alg1} we gave the function which compute this structure for the whole tree. We call it on the root and with an empty structure for $s$, computeDomain$(root,\const{nil})$. 
 \begin{algorithm}[H]
-\caption{Computing the domains} 
-\label{alg}
-\textbf{Input:} the root of the tree \textbf{node}, a structure \textbf{s} that will be null \\
-\textbf{Output:} a structure \textbf{s1} that will contain the vector of variables \textbf{$\vec x$} and the domains of each variable \textbf{$\dom{}_{\vec x}(query)$}
+\caption{computeDomains($node$,$s$)} 
+\label{alg1}
+\textbf{Input:} $node$ as the root of the tree to be traversed, and $s$ as the structure \\
+\textbf{Output:} a structure $result$ that will contain the vector of variables $\vec x$ and the domains of each variable $\dom{}_{\vec x}(query)$
 \begin{algorithmic}[1]
-\IF{$node$ has children}
-\IF{+ is between node.Left and node.Right}
-\STATE struct $s1\gets$ computeDomain(node.Left,struct s)
-\STATE struct $s2\gets$ computeDomain(node.Right,sturct s)
-\STATE struct $s3.\vec{x}\gets s1.\vec{x} \cup s2.\vec{x}$ \COMMENT{this will compute the vector for all the variables, both from the right and left node}
-\STATE struct $s3.dom\gets \dom{}_{s3.\vec x}(node.Left + node.Right)$
-\STATE return s3
+%\IF{$node.left\neq \const{nil}$}	%\COMMENT{A node has either 2 children or no childern}
+\IF{$node.type=$``+''}
+\STATE  $s_{1}\gets$ computeDomain($node$.$left, s$)
+\STATE  $s_{2}\gets$ computeDomain($node.right, s$)
+\STATE  $s_{3}.\vec{x}\gets s_{1}.\vec{x} \cup s_{2}.\vec{x}$ \COMMENT{this will compute the vector for all the variables, both from the right and left node}
+\STATE  $s_{3}.dom\gets \text{\dom}_{s_{3}.\vec x}(node.left + node.right)$
+\RETURN  $s_{3}$
+\ELSIF{$node.type=$``*''}
+\STATE  $s_{1} \gets \text{computeDomain}(node.left, s)$
+\RETURN  computeDomain$(node.right, s_{1})$
+\ELSE 
+\label{line10}
+\IF{$s= \const{nil}$}\label{line11}
+\STATE $s_{1}.\vec{x} \gets \text{all the variables of the }node$
+\STATE $s_{1}.dom \gets \dom{}_{s_{1}.\vec{x}}(node)$
 \ELSE
-\STATE struct $s1 \gets$ computeDomain(node.Left,struct s)
-\STATE struct $s2 \gets$ computeDomain(node.Right,struct s1)
-\STATE return $s2$
+\STATE $s_{1}.\vec{x}\gets s.\vec{x} \cup \{\text{all the variables of the $node$}\}$
+\STATE $s_{1}.dom\gets \text{\dom}_{s_{1}.\vec{x}}(s.dom*\text{\dom}_{s_{1}.\vec{x}}(node))$
 \ENDIF
-\ELSE
-\IF{struct s=null}
-\STATE $s1.\vec{x} \gets \text{all the variables of the leaf}$
-\STATE $s1.dom \gets \dom{}_{s1.\vec{x}}(\text{relation from the leaf})$
-\ELSE
-\STATE $s1.\vec{x}\gets s.\vec{x} \cup \text{all the variables of the leaf}$
-\STATE $s1.dom$ will be the new domain, computing the domain of the leaf relation, but also taking into account the structure $s$
-\STATE return $s1$
-\ENDIF
-\STATE return $s1$
+\RETURN  $s_{1}$
 \ENDIF
 \end{algorithmic}
 \end{algorithm}
-
+The order of Algorithm \ref{alg1} is $O(n\cdot P)$ where $n$ is the number of nodes in the query decomposition tree and $P$ is the time needed for any rule of \dom{}'s computation, according to previous section.\\ 
+\par In Algorithm \ref{alg1} we suppose that there are three types of nodes. Union nodes, join nodes and null nodes. Null nodes do not have any children. A union node or a join node always has two children so line \ref{line10} will be executed when the node is a leaf. Type field refers to the type of nodes. Also, since any node represents a query expression then we can obtain its domain with \dom{} operator as was mentioned in the previous section.\par
+The ``if'' in line \ref{line11} is used to initialize structure $s$ for the first time(happens in the leftmost node of the tree).
+\begin{theorem}
+Algorithm \ref{alg1} compute the domains and the variables list of the given tree in $O(n\cdot P)$ correctly.  
+\end{theorem}
+\begin{proof}
+\end{proof}
 \begin{figure}[htbp]
 \begin{center}
 \begin{tikzpicture}%[level/.style={sibling distance=40mm,level distance=15mm}]
@@ -182,16 +192,16 @@ dom: the domain of all the variables
     level 2/.style={circle, draw, scale=1.0,
     level distance=50pt, sibling distance=60pt}]
     \tikzstyle{every node}=[circle,draw,fill=red]
-    \node[] (a){}
+    \node[] (a){1}
         child { 
-            node [](b){}
-            child{node(d){}}
-            child{node(e){}} 
+            node [](b){2}
+            child{node(d){4}}
+            child{node(e){5}} 
         }
         child { 
-        		node[] (c){}
-		child{node[](f){}}
-		child{node(g){}}
+        		node[] (c){3}
+		child{node[](f){6}}
+		child{node(g){7}}
 	};
 	\draw[->] (a) to [bend right=25](b);
 	\draw[->] (b) to [bend right=25](a);
