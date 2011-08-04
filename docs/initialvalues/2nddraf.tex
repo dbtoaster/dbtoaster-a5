@@ -195,7 +195,7 @@ For representing the maps we need another global structure for storing the prope
 \STATE $result\gets$ computeDomain$(node.right, s_{1})$
 \ELSE 
 \label{line10}
-\STATE $result.\vec{x}\gets s.\vec{x} \cup \{\text{all the variables of the $node$}\}$
+\STATE $result.\vec{x}\gets s.\vec{x} \cup \{\text{Var$(node)$}\}$
 \STATE $result.dom\gets \text{\dom}_{result.\vec{x}}(s.dom)\cap\text{\dom}_{result.\vec{x}}(node)$\label{line2}
 \ENDIF
 \IF{$node.isMap=$ \TRUE}
@@ -209,7 +209,13 @@ The order of Algorithm \ref{alg1} is $O(n\cdot P)$ where $n$ is the number of no
 
 In Algorithm \ref{alg1} we suppose that there are three types of nodes: union nodes that represent $q+q$ expressions, join nodes that represent $q*q$ expressions and the other remaining node types. If a node represents a map we show it like $M[\vec x][\vec y]$. In addition to nodes, we have three types of leaves: simple relations $R(\vec y)$, inequalities $v_{1}\theta v_{2}$ and assignment relations $v \gets q$. A union node or a join node will always have two children, therefore the line \ref{line10} will be executed when a leaf is visited. When a node that is represented by a map, is encountered then the algorithm should produce a set of variables and respectively the domains of each variable. Also in line \ref{line2} we use the definition of \dom{} to extend its schema to a broader range according to what was said in the previous section, definition \eqref{def:relation}. \\\par
 
-In line~\ref{line2} we take the domain of a domain. We use this for extending the domain regarding to a new schema vector $\vec x$. In other words we add some other variables to the vector and therefore compute the domain for each variable within that vector. Without loss of generality, we can consider a domain as a set with schema or a relation. So we can easily extend the domain of a set to a broader set of variables with the definition of the domain or a relation in \eqref{def:relation}. 
+In line~\ref{line2} we take the domain of a domain. We use this for extending the domain regarding to a new schema vector $\vec x$. In other words we add some other variables to the vector and therefore compute the domain for each variable within that vector. Without loss of generality, we can consider a domain as a set with schema or a relation. So we can easily extend the domain of a set to a broader set of variables with the definition of the domain or a relation in \eqref{def:relation}. \\\par
+In line~\ref{line10} we want to compute the set of variables in the node, which is a leaf. Since the node here is a leaf, it can represents a relation, an assignment or a comparison. We can compute the set of variables in a leaf with the following rules:
+\begin{align}
+\text{Var}(R(\vec{y}))&=\{y_{1},\cdots,y_{n}\}\\
+\text{Var}(v_{1}\theta v_{2})&=\{v_{1},v_{2}\}\\
+\text{Var}(v\gets q_{1})&=\{v\}\cup\text{Var}(q_{1})
+\end{align}
 
 \begin{figure}[htbp]
 \begin{center}
