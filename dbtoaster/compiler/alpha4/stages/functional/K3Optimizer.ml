@@ -880,6 +880,19 @@ let rec simplify_collections expr =
 let common_subexpression_elim expr =
   let symref = ref 0 in
   let gensym () = incr symref; "__cse"^(string_of_int !symref) in
+  let filter_contained eqv =
+    List.fold_left (fun acc cl ->
+      (* Remove any equiv. classes in the accumulator contained by cl *)
+      let nacc = List.filter (fun cl2 -> List.for_all
+        (fun x -> not (List.exists (fun y -> contains_expr y x) cl)) cl2) acc
+      in
+      (* Only add cl if it is not contained within any equiv. classes in
+       * the accumulator *)
+      let prune = List.exists (List.exists
+        (fun x -> List.exists (fun y -> contains_expr x y) cl)) nacc
+      in if prune then nacc else nacc@[cl])
+      [] eqv
+  in
   let rec substitute_expr substitutions expr =
     if List.mem_assoc expr substitutions then List.assoc expr substitutions
     else descend_expr (substitute_expr substitutions) expr
@@ -899,7 +912,7 @@ let common_subexpression_elim expr =
       in
       let cse_var = Var(cse_id, cse_ty) in
         Apply(Lambda(AVar(cse_id, cse_ty), sub_cse acc_expr cse_var cl), arg))
-    (substitute_expr subs expr) eqv
+    (substitute_expr subs expr) (filter_contained eqv)
   in
   
   (* Alpha renaming based equivalence, and equivalence class helpers *)
@@ -1066,7 +1079,11 @@ let common_subexpression_elim expr =
 
         | Aggregate _ -> aggregate_common [1;2]
         | GroupByAggregate _ -> aggregate_common [1;3]
-            
+
+        (* Add the flatten expression as a potential CSE, carrying up existing
+         * candidates. *)
+        | Flatten _ ->
+          ([rebuilt_expr]::(List.hd (List.hd sub_parts))), rebuilt_expr
 
         (* Everything else carries up CSE candidates. *)
         | _ -> (union_eqv_parts sub_parts), rebuilt_expr

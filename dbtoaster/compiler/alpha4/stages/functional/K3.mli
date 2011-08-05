@@ -98,6 +98,9 @@ sig
     val fold_expr :
       ('b -> 'a list list -> expr_t -> 'a) ->
       ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
+    
+    (* Returns whether second expression is a subexpression of the first *)
+    val contains_expr : expr_t -> expr_t -> bool
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string

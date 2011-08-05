@@ -131,7 +131,8 @@ if flag_bool "HELP" then
         "ocaml:k3      OCaml source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
         "imp           Imperative update triggers\n"^
-        "c++           C++ source file\n"^
+        "c++ | cpp     C++ source file\n"^
+        "cpp:prof      C++ profiled source file\n"^
         "run           Run the query with the default interpreter (K3)\n"^
         "run:m3        Run the query with the M3 interpreter\n"^
         "run:k3        Run the query with the K3 interpreter (default run)\n"
@@ -156,7 +157,7 @@ type language_t =
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
    | L_IMP
-   | L_CPP 
+   | L_CPP of bool (* profiled *) 
    | L_SQL of sql_language_t
    | L_NONE
 
@@ -164,13 +165,15 @@ let language =
   if flag_bool "INTERPRETER" then L_INTERPRETER(OCG_K3)
   else
     match flag_val "LANG" with
-    | None -> L_CPP
+    | None -> L_CPP(false)
     | Some(a) -> match String.uppercase a with
       | "OCAML"    -> L_OCAML(OCG_K3)
       | "OCAML:K3" -> L_OCAML(OCG_K3)
       | "OCAML:M3" -> L_OCAML(OCG_M3)
-      | "C++"      -> L_CPP
-      | "CPP"      -> L_CPP
+      | "C++"      -> L_CPP(false)
+      | "CPP"      -> L_CPP(false)
+      | "C++:prof" -> L_CPP(true)
+      | "CPP:prof" -> L_CPP(true)
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3(false)
@@ -330,6 +333,8 @@ module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
 
+module IC = ImpCompiler;;
+
 open Database
 
 module DB         = NamedM3Database
@@ -343,19 +348,22 @@ let compile_function: ((string * Calculus.var_t list) list ->
   | L_OCAML(OCG_M3) -> M3OCamlCompiler.compile_query
   | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
   | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
-  | L_CPP   ->
+  | L_CPP(profiled)   ->
       (fun dbschema (p, s) tlq f ->
         let k3prog = K3Compiler.compile_query_to_program
           ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
-        in ImpCompiler.Compiler.compile_query dbschema k3prog s tlq f)
+        in
+        let opts = {IC.desugar = true; IC.profile = profiled} in
+        IC.Compiler.compile_query opts dbschema k3prog s tlq f)
 
   | L_IMP   ->
       (fun dbschema (p, s) tlq f ->
         let k3prog = K3Compiler.compile_query_to_program
           ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
         in
+        let opts = {IC.desugar = true; IC.profile = true} in
         (print_endline
-          (ImpCompiler.Compiler.compile_query_to_string dbschema k3prog s tlq)))
+          (IC.Compiler.compile_query_to_string opts dbschema k3prog s tlq)))
   
   | L_M3(prepared)  -> (fun dbschema (p, s) tlq f -> 
       GenericIO.write f (fun fd -> 
@@ -494,7 +502,7 @@ if flag_bool "COMPILE" then
   match language with
   | L_OCAML(_) -> compile_ocaml_from_output ()
   | L_SQL(SL_PLSQL) -> give_up "Compilation of PLSQL not implemented yet"
-  | L_CPP   -> compile_cpp_from_output ()
+  | L_CPP _ -> compile_cpp_from_output ()
   | _       -> give_up ("No external compiler available for "^
       ( match language with 
           | L_SQL(SL_SQL) -> "sql"

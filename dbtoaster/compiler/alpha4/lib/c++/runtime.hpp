@@ -338,27 +338,52 @@ namespace dbtoaster {
       void init(int argc, char* argv[]) {
         opt_desc = shared_ptr<options_description>(
             new options_description("dbtoaster query options"));
+
         opt_desc->add_options()
           ("help", "list available options")
           ("log-dir", value<string>(), "logging directory")
-          ("log-triggers,l", value<vector<string> >(&logged_streams), "log stream triggers")
+          ("log-triggers,l",
+            value<vector<string> >(&logged_streams), "log stream triggers")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
           ("query,q", "output query results")
+
+          // Statistics profiling parameters
+          ("samplesize", value<unsigned int>(),
+               "sample window size for trigger profiles")
+
+          ("sampleperiod", value<unsigned int>(),
+               "period length, as number of trigger events")
+
+          ("statsfile", value<string>(),
+               "output file for trigger profile statistics")
+
+          // Tracing parameters
           ("trace-dir", value<string>(), "trace output dir")
           ("trace,t", value<string>(&trace_opts), "trace query execution")
           ("trace-step,s", value(&trace_step), "trace step size");
+
         pos_options.add("maps", -1);
 
-        store(command_line_parser(argc,argv).
-          options(*opt_desc).positional(pos_options).run(), opt_map);
-        notify(opt_map);
-        
-        trace_counter = 0;
-        if ( trace_step <= 0 ) trace_step = 1000;
-        cout << "tracing: " << trace_opts << endl;
-        if ( trace_opts != "" ) parse_tracing(trace_opts);
-        else traced = false;
+        try {
+          store(command_line_parser(argc,argv).
+            options(*opt_desc).positional(pos_options).run(), opt_map);
+          notify(opt_map);
+
+          trace_counter = 0;
+          if ( trace_step <= 0 ) trace_step = 1000;
+          cout << "tracing: " << trace_opts << endl;
+          if ( trace_opts != "" ) parse_tracing(trace_opts);
+          else traced = false;
+        } catch (unknown_option& o) {
+            cout << "unknown option: \"" << o.get_option_name() << "\"" << endl;
+            cout << *opt_desc << endl;
+            exit(1);
+        } catch (error& e) {
+            cout << "error parsing command line options" << endl;
+            cout << *opt_desc << endl;
+            exit(1);
+        }
       }
       
       void add_toplevel_query(string map_name){
@@ -403,6 +428,33 @@ namespace dbtoaster {
             d.add_logger(stream_ids[*it], delete_tuple, get_log_file(*it, delete_tuple));
           }
         }
+      }
+
+      // Statistics
+      // Number of samples to collect per statitics period.
+      unsigned int get_stats_window_size() {
+        unsigned int r = 10000;
+        if ( opt_map.count("samplesize") ) {
+          r = opt_map["samplesize"].as<unsigned int>();
+        }
+        return r;
+      }
+
+      // Period size, in terms of the number of trigger invocations.
+      unsigned int get_stats_period() {
+        unsigned int r = 10000;
+        if ( opt_map.count("sampleperiod") ) {
+          r = opt_map["sampleperiod"].as<unsigned int>();
+        }
+        return r;
+      }
+
+      string get_stats_file() {
+        string r = "stats";
+        if ( opt_map.count("statsfile") ) {
+          r = opt_map["statsfile"].as<string>();
+        }
+        return r;
       }
 
       // Tracing.

@@ -16,7 +16,8 @@ type 'ext_fn fn_id_t =
   | Member
   | Lookup
   | Slice of int list
-  | MapAppend
+  | Concat
+  | ConcatElement
   | MapUpdate
   | MapValueUpdate
   | Ext of 'ext_fn
@@ -148,7 +149,8 @@ let string_of_fn ext_fn_f fn_id =
   | Member -> "Member"
   | Lookup -> "Lookup"
   | Slice (idx) -> "Slice("^(list_of_int_list idx)^")"
-  | MapAppend -> "MapAppend"
+  | Concat -> "Concat"
+  | ConcatElement -> "ConcatElement"
   | MapUpdate -> "MapUpdate"
   | MapValueUpdate -> "MapValueUpdate"
   | Ext fn -> "Ext("^(ext_fn_f fn)^")"

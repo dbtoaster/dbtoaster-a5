@@ -15,7 +15,8 @@ type 'ext_fn fn_id_t =
   | Member
   | Lookup
   | Slice of int list
-  | MapAppend
+  | Concat        (* Collection concatentation *)
+  | ConcatElement (* Singleton collection concatenation *) 
   | MapUpdate
   | MapValueUpdate
   | Ext of 'ext_fn
@@ -82,7 +83,7 @@ val string_of_typed_imp :
 
 module type ProgramType =
 sig
-  type source_code_t = SourceCode.source_code_t
+  type source_code_t = SourceCode.source_code_t 
 
   type ('a, 'ext_type, 'ext_fn) trigger_t =
     M3.pm_t * M3.rel_id_t * M3.var_t list * ('a, 'ext_type, 'ext_fn) imp_t

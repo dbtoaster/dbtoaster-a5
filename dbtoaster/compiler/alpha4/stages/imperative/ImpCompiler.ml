@@ -1,6 +1,8 @@
 open M3
 open K3.SR
 
+type compiler_options = { desugar : bool; profile : bool }
+
 module Common =
 struct
   include SourceCode
@@ -45,6 +47,18 @@ sig
   val string_of_ext_fn : ext_fn -> string
   val string_of_imp : (ext_type, ext_fn) typed_imp_t -> string
 
+  (* Serialization code generation *)
+  
+  (* Generate source code that resides within an entry definition
+   * for serialization *)
+  val serialization_source_code_of_entry :
+    K3.SR.id_t -> (K3.SR.id_t * ext_type type_t) list -> source_code_t
+    
+  (* Map serialization invocation *)
+  val source_code_of_map_serialization :
+    K3.SR.id_t -> K3.SR.id_t -> source_code_t
+
+  (* Source code generation *)
   val source_code_of_imp : (ext_type, ext_fn) typed_imp_t -> source_code_t
   val source_code_of_trigger :
     (string * Calculus.var_t list) list ->
@@ -52,13 +66,13 @@ sig
     -> source_code_t list
     
   val desugar_expr :
-    type_env_t
+    compiler_options -> type_env_t
     -> (ext_type, ext_fn)  typed_expr_t 
     -> ((ext_type, ext_fn) typed_imp_t list) option * 
        ((ext_type, ext_fn) typed_expr_t) option
 
   val desugar_imp :
-    type_env_t
+    compiler_options -> type_env_t
     -> (ext_type, ext_fn) typed_imp_t -> (ext_type, ext_fn) typed_imp_t
 
   (* Typing interface *)
@@ -70,7 +84,18 @@ sig
     M3.map_type_t list -> M3Common.Patterns.pattern_map ->
     ('a option, ext_type, ext_fn) imp_t -> (ext_type, ext_fn) typed_imp_t
 
+  (* Profiler code generation *)
+  val declare_profiling : M3.map_type_t list -> source_code_t
+  val profile_trigger :
+    int -> (string * Calculus.var_t list) list ->
+    (ext_type type_t, ext_type, ext_fn) Program.trigger_t
+    -> source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t 
+
   (* Toplevel code generation *)
+
+  (* TODO: all of these should accept a compiler options record as input *)
+  val preamble : unit -> source_code_t
+
   val declare_maps_of_schema :
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> source_code_t
 
@@ -83,8 +108,9 @@ sig
   val declare_main :
     (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
-    -> (string * string * string) list
-    -> string list -> source_code_t
+       (* Trigger registration metadata *)
+    -> (string * string * string * (string * string) list) list
+    -> string list -> source_code_t * source_code_t
 end
 
 
@@ -94,14 +120,16 @@ module type CompilerSig =
 sig
   (* Similar interface to (M3|K3)Compiler.compile_query *)
   val compile_query_to_string :
+    compiler_options ->
     (string * Calculus.var_t list) list (* dbschema *)
     -> K3.SR.program                    (* K3 program *)
     -> M3.relation_input_t list         (* sources *)
     -> string list -> string
 
   val compile_query :
+    compiler_options ->
     (string * Calculus.var_t list) list (* dbschema *)
-    -> K3.SR.program                       (* K3 program *)
+    -> K3.SR.program                    (* K3 program *)
     -> M3.relation_input_t list         (* sources *)
     -> string list -> Util.GenericIO.out_t -> unit
 end
@@ -132,22 +160,23 @@ struct
     | EntryStructDef of id_t * fields_t
 
   type ext_fn = 
+    | Apply of string (* Function all *)
     | Constructor of ext_type type_t
     | MemberAccess of string
-    | ConstCast of ext_type type_t
-    | DerefIterator
-    | SliceCopy of ext_type decl_t
+    | IteratorElement
     | PairFirst
     | PairSecond
     | BeginCollection
     | EndCollection
-    | FindCollection
-    | ModifyCollection
     | InsertCollection
-    | RangeCollection
     | EraseCollection
+    | ModifyCollection
+    | FindCollection
+    | RangeCollection
     | ClearCollection
-    | MultiIndex of ext_type type_t
+    | CopyCollection of ext_type decl_t
+    | SecondaryIndex of ext_type type_t
+    | ConstCast of ext_type type_t
     | BoostLambda of string
     | Inline of string
 
@@ -174,11 +203,11 @@ struct
     let sty = Imperative.string_of_type string_of_ext_type in
     let quote s = "\""^s^"\"" in
     match fn_id with
+    | Apply(s) -> "Apply("^(quote s)^")"
     | Constructor(ty) -> "Constructor("^(sty ty)^")"
     | MemberAccess(field) -> "MemberAccess("^(quote field)^")"
     | ConstCast(t) -> "ConstCast("^(sty t)^")" 
-    | DerefIterator -> "DerefIterator"
-    | SliceCopy (id,ty) -> "SliceCopy("^(quote id)^","^(sty ty)^")"
+    | IteratorElement -> "IteratorElement"
     | PairFirst -> "PairFirst"
     | PairSecond -> "PairSecond"
     | BeginCollection -> "BeginCollection"
@@ -189,11 +218,23 @@ struct
     | RangeCollection -> "RangeCollection"
     | EraseCollection -> "EraseCollection"
     | ClearCollection -> "ClearCollection"
-    | MultiIndex(pat) -> "MultiIndex("^(sty pat)^")"
+    | CopyCollection (id,ty) -> "CopyCollection("^(quote id)^","^(sty ty)^")"
+    | SecondaryIndex(pat) -> "SecondaryIndex("^(sty pat)^")"
     | BoostLambda(fn) -> "BoostLambda("^(quote fn)^")"
     | Inline(s) -> "Inline("^(quote s)^")"
 
   let string_of_imp = string_of_typed_imp string_of_ext_type string_of_ext_fn
+
+  (* Serialization code generation *)
+  let serialization_source_code_of_entry id fields =
+    let serialize_members =
+      List.map (fun (m,ty) -> "  ar & BOOST_SERIALIZATION_NVP("^m^");") fields
+    in Lines (["template<class Archive>";
+               "void serialize(Archive& ar, const unsigned int version)";
+               "{"]@serialize_members@["}"])
+
+  let source_code_of_map_serialization archive_id map_id =
+    inl(archive_id^"<<BOOST_SERIALIZATION_NVP("^map_id^")")
 
   (* Misc helpers *)
   let back l = let x = List.rev l in List.rev (List.tl x), List.hd x
@@ -214,6 +255,13 @@ struct
   let mk_tuple_ty l =
     if List.length l = 1 then List.hd l
     else "boost::tuple<"^(String.concat "," l)^">"
+
+
+  let imp_type_of_calc_type t = match t with
+    | Calculus.TInt -> Host K.TInt
+    | Calculus.TLong -> failwith "Unsupport K3/Imp type: long"
+    | Calculus.TDouble -> Host K.TFloat
+    | Calculus.TString -> failwith "Unsupport K3/Imp type: string"
 
   (* Stringification *)
   let string_of_calc_type t = match t with
@@ -273,17 +321,10 @@ struct
           let k_t,v_t = back field_types
           in "std::pair<"^(String.concat "," [mk_tuple_ty k_t; v_t])^"> "^pair_id  
         in
-        let serialize =
-          let serialize_members =
-            List.map (fun (m,ty) -> "  ar & BOOST_SERIALIZATION_NVP("^m^");") fields
-          in
-            ["template<class Archive>";
-             "void serialize(Archive& ar, const unsigned int version)";
-             "{"]@serialize_members@["}"]
-        in
-        Lines([id^"("^direct_ctor^") { "^direct_assign^" }";
-               id^"("^pair_ctor^") { "^pair_assign^" }"]
-              @serialize)
+        let serialize = serialization_source_code_of_entry id fields in
+        csc (Lines([id^"("^direct_ctor^") { "^direct_assign^" }";
+                    id^"("^pair_ctor^") { "^pair_assign^" }"]))
+            serialize
       in cscl [(inl ("struct "^id^" {")); isc tab (csc (inl str_fields)
                (if str_fields = "" then inl "" else ctor)); inl("};")]
     in
@@ -320,7 +361,7 @@ struct
     | Host K.TInt -> "int"
     | Host(K.TTuple(tl)) -> 
         if List.length tl = 1 then of_host_list tl
-        else "tuple<"^(of_host_list tl)^">"
+        else mk_tuple_ty (List.map string_of_type (types_of_host_list tl))
     | Host(K.Collection et) ->
         begin match et with
         | K.TTuple(fields) ->
@@ -648,7 +689,8 @@ struct
         | _ -> error()
         end
 
-      | MapAppend -> unit
+      | ConcatElement -> unit
+      | Concat -> unit
       | MapUpdate -> unit
       | MapValueUpdate -> unit
       | Ext _ -> failwith "external function appeared in untyped imp"
@@ -787,7 +829,7 @@ end (* Typing *)
 
       (* TODO: implement for unoptimized K3, except with C++ tuple lists rather
        * than maps *)
-    | MapAppend ->
+    | ConcatElement ->
         begin match argti 0 with
           | Host (Collection(TTuple(_))) ->
             let k,v = match List.nth arg_exprs 1 with
@@ -812,7 +854,17 @@ end (* Typing *)
           | Host (Collection _) ->
             inl((argi 0)^".push_back("^(mk_tuple (List.tl args))^")")
             
-          | _ -> failwith ("invalid append to return type "^(string_of_type return_type))
+          | _ -> failwith ("invalid element concatenation to return type "^
+                            (string_of_type return_type))
+        end
+
+    | Concat ->
+        begin match argti 0, argti 1 with
+          | Host (Collection _), Host (Collection _) ->
+            inl((argi 0)^".insert("^(argi 1)^".begin(), "^(argi 1)^".end())")
+
+          | _ -> failwith ("invalid concatenation to return type "^
+                            (string_of_type return_type))
         end
 
     | MapUpdate ->
@@ -838,15 +890,16 @@ end (* Typing *)
 
     | Ext(ext_fn) -> inl(
         begin match ext_fn with
+          | Apply(fn) -> fn^"("^a^")"
           | Constructor(t) -> (string_of_type t)^"("^a^")"
           | MemberAccess(field) -> (argi 0)^"."^field 
-          | DerefIterator -> "(*"^(argi 0)^")"
+          | IteratorElement -> "(*"^(argi 0)^")"
           | ConstCast(t) ->
             let ts = string_of_type t in
             let sep = if ts.[String.length ts - 1] = '>' then " " else ""
             in "const_cast<"^(ts^sep)^">("^(argi 0)^")"
 
-          | SliceCopy((v,_)) -> v^".copy("^a^")" 
+          | CopyCollection((v,_)) -> v^".copy("^a^")" 
           | PairFirst -> (argi 0)^".first"
           | PairSecond -> (argi 0)^".second"
           | BeginCollection -> (argi 0)^".begin()"
@@ -857,7 +910,7 @@ end (* Typing *)
           | RangeCollection -> (argi 0)^".equal_range("^(mk_tuple (List.tl args))^")"
           | EraseCollection -> (argi 0)^".erase("^(of_list (List.tl args))^")"
           | ClearCollection -> (argi 0)^".clear()"  
-          | MultiIndex(pat) -> (argi 0)^".get<"^(string_of_type pat)^">()" 
+          | SecondaryIndex(pat) -> (argi 0)^".get<"^(string_of_type pat)^">()" 
           | BoostLambda(fn) -> fn
           | Inline(s) -> s 
         end)
@@ -1015,23 +1068,44 @@ end (* Typing *)
       | None, None -> []) i_l e_l)
 
 
-  (* TODO: optimize out map construction vs. in-place modification.
+  (* TODO: cleanly handle direct vs indirect updates (i.e. whether type of
+   * slice is persistent, or temporary). See profiling code.
+   *
+   * TODO: optimize out map construction vs. in-place modification.
    * if fields = [] then
    *   code(#map# = #slice#;)
    * else
-   *   code(#out map# m;
-   *        for ( *slice_it) { #map#_entry e( *slice_it); m.insert(e); })
+   *   code(
+   *     // We construct an out map since the slice may be a temporary type,
+   *     // i.e. an STL map rather than a multiindex.
+   *     it = #map#.find(#keys#);
+   *     #out map type# om;  
+   *     hint = om.end(); 
+   *     slice_it = #slice#.begin();
+   *     slice_end = #slice#.end();
+   *     for ( ; slice_it != slice_end; ++slice_it) {
+   *       #out map entry type# e( *slice_it); hint = om.insert(hint, e);
+   *     }
+   *     #map#.modify(it, bind(#map entry#.__av, _1) = om);
+   *   )
    *)
   let desugar_map_update env nargs c_t =
     let mk_it_t t = Target(Iterator(t)) in
     let mk_var id t = Var(t, (id, t)) in  
     let c_var = List.hd nargs in
-    let id, entry_t = type_id_of_type c_t, entry_type_of_collection env c_t in
+    let id, entry_t_id, entry_t =
+      let x = entry_type_of_collection env c_t in
+      type_id_of_type c_t, type_id_of_type x, x in
     let c_it_id, c_it_t, c_it_var =
       let x,y = gensym(), mk_it_t c_t in x, y, Var(y, (x,y)) in
     let k,v = back (List.tl nargs) in
     if k = [] then [Expr(unit, BinOp(unit, Assign, c_var, v))]
     else
+      (* Out map *)
+      let it_decl = Decl(unit, (c_it_id, c_it_t),
+                      Some(Fn(c_it_t, Ext(FindCollection), [c_var]@k))) in
+
+      (* Update slice iterators *)
       let slice_id, slice_t = gensym(), type_of_expr_t v in
       let slice_elem_t = match slice_t with
         | Host(Collection(x)) -> Host x
@@ -1043,27 +1117,17 @@ end (* Typing *)
         gensym(), gensym(), mk_it_t slice_t in
       let slice_it_var = mk_var slice_it_id slice_it_t in
       let slice_end_var = mk_var slice_end_id slice_it_t in
-      let it_decl = Decl(unit, (c_it_id, c_it_t),
-                      Some(Fn(c_it_t, Ext(FindCollection), [c_var]@k))) in
+      
       let target_id, target_t, target_ref_t =
         let _,t = back (field_types_of_type (type_decl_of_env env entry_t))
         in gensym(), t, Target(Ref(t)) in
-      (*
-      let target_var = mk_var target_id target_ref_t in
-      let target_decl = Decl(unit, (target_id, target_ref_t),
-        Some(Fn(target_ref_t, Ext(ConstCast(target_ref_t)),
-               [Fn(target_t, Ext(MemberAccess "__av"),
-                 [Fn(entry_t, Ext(DerefIterator), [c_it_var])])]))) in
-      let clear_expr = Expr(unit, Fn(unit, Ext(ClearCollection), [target_var]))
-      in
-      *)
       let target_var = mk_var target_id target_t in
       let target_decl = Decl(unit, (target_id, target_t), None) in
       let target_entry_t = entry_type_of_collection env target_t in
       let target_entry_id, target_entry_decl, target_entry_var =
         let x = gensym() in x, (x,target_entry_t), mk_var x target_entry_t in
       let ctor =
-        let init_args = [Fn(slice_elem_t, Ext(DerefIterator), [slice_it_var])]
+        let init_args = [Fn(slice_elem_t, Ext(IteratorElement), [slice_it_var])]
         in Decl(unit, target_entry_decl,
              Some(Fn(target_entry_t, Ext(Constructor(target_entry_t)), init_args)))
       in
@@ -1087,13 +1151,20 @@ end (* Typing *)
                Expr(unit, BinOp(unit, Assign, hint_var,
                  Fn(target_it_t, Ext(InsertCollection),
                    [target_var; hint_var; target_entry_var])))]))
-      in [it_decl; target_decl; (*clear_expr*)]@loop_decls@[update_loop]
+      in
+      let modify_lambda = "bind(&"^entry_t_id^"::__av, _1) = "^target_id in
+      let map_update =
+        Expr(unit, Fn(unit, Ext(ModifyCollection),
+          [c_var; c_it_var; Fn(Host TUnit, Ext(BoostLambda(modify_lambda)), [])])) 
+      in [it_decl; target_decl]@loop_decls@[update_loop; map_update]
 
 
   (* map value update rewrites:
-   *      #it# = #map#.find();
-   *      if ( #it# != end() ) { #map#.modify(#it#, _1.__av=#value#); }
-   *      else { #entry# e(#fields#, #value#); #map.insert(e); }
+   *    it = #map#.find(#key#);
+   *    if ( it != #map#.end() ) {
+   *      #map#.modify(it, bind(#map entry#.__av, _1)=#value#);
+   *    }
+   *    else { #map entry# e(#key#, #value#); #map#.insert(e); }
    *)
   let desugar_map_value_update env nargs c_t =
     let k,v = back (List.tl nargs) in
@@ -1108,7 +1179,8 @@ end (* Typing *)
      * extensible, thus cannot use external type arguments *)
     let op_t, mod_t = Host TInt, unit in
     let modify_lambda =
-      "bind(&"^entry_t_id^"::__av, _1) ="^(ssc (source_code_of_expr v)) in
+      "bind(&"^entry_t_id^"::__av, _1) = "^(ssc (source_code_of_expr v))
+    in
     [Decl(unit, (it_id, c_it_t), Some(Fn(c_it_t, Ext(FindCollection), [c_var]@k)));
      IfThenElse(unit,
        BinOp(op_t, Neq, it_var, Fn(c_it_t, Ext(EndCollection), [c_var])),
@@ -1120,6 +1192,7 @@ end (* Typing *)
          Expr(unit, (* ignore iterator return *)
            Fn(c_it_t, Ext(InsertCollection),
                [c_var; Var(entry_t, (entry_id, entry_t))]))]))]
+
 
   (* Updates out tier if in tier exists using above single-level code,
    * otherwise builds new out tier entry and adds to the in tier *)
@@ -1150,7 +1223,7 @@ end (* Typing *)
         Decl(t, (x,t), Some(
           Fn(t, Ext(ConstCast(t)),
             [Fn(out_map_t, Ext(MemberAccess("__av")),
-               [Fn(c_entry_t, Ext(DerefIterator), [c_it_var])])]))),
+               [Fn(c_entry_t, Ext(IteratorElement), [c_it_var])])]))),
         Var(t, (x,t))
     in
     let out_args = out_update_map_var::out_exprs in
@@ -1178,8 +1251,10 @@ end (* Typing *)
          Block(unit, [out_update_decl]@out_update_imp),
          Block(unit, out_entry_ctor_and_insert@in_entry_ctor_and_insert))]
 
-  let rec desugar_expr env e =
-    let recur l = flatten_desugaring (List.map (desugar_expr env) l) in
+
+  (* Expression desugaring *)
+  let rec desugar_expr opts env e =
+    let recur l = flatten_desugaring (List.map (desugar_expr opts env) l) in
     let result x y = (if x = [] then None else Some(x)), Some(y) in
     let member_common args =
       let ci, nargs = recur args in
@@ -1206,7 +1281,7 @@ end (* Typing *)
         | _ -> failwith "invalid lookup on non-collection"
       in
       result ci (Fn(elem_t, access_f, [Fn(c_elem_t,
-        Ext(DerefIterator), [Fn(c_it_t, Ext(FindCollection), nargs)])]))
+        Ext(IteratorElement), [Fn(c_it_t, Ext(FindCollection), nargs)])]))
     in
     match e with
     | Tuple (meta,el) ->
@@ -1246,7 +1321,7 @@ end (* Typing *)
         Some(ci@
          [Decl(unit, (pair_id,pair_ty), Some(Fn(slice_ty, Slice(idx), nmke)));
           Decl(unit, slice_decl, None);
-          Expr(unit, Fn(unit, Ext(SliceCopy(slice_decl)),
+          Expr(unit, Fn(unit, Ext(CopyCollection(slice_decl)),
             [Fn(it_ty, Ext(PairFirst), [pair_var]);
              Fn(it_ty, Ext(PairSecond), [pair_var])]))]),
         Some(Var(slice_ty, slice_decl))
@@ -1260,10 +1335,21 @@ end (* Typing *)
         else
         begin match type_of_expr_t (List.hd nargs) with
         | Target(Type(_)) as c_t ->
+          if opts.profile then
+            let id = ssc (source_code_of_expr (List.hd nargs)) in
+            let _,v = back (List.tl nargs) in
+            let update_f = match type_of_expr_t v with
+              | Target(_) -> id^"_update_direct"
+              | _ -> id^"_update"
+            in result ci (Fn(ty, Ext(Apply(update_f)), nargs))
+          else
             let insert_loop = desugar_map_update env nargs c_t
             in Some(ci@insert_loop), None
-        | _ -> (if ci = [] then None else Some(ci)),
-               Some(Fn(ty, MapUpdate, nargs))
+        | _ ->
+          if opts.profile then
+            let id = ssc (source_code_of_expr (List.hd nargs))
+            in result ci (Fn(ty, Ext(Apply(id^"_update")), nargs))
+          else result ci (Fn(ty, MapUpdate, nargs))
         end
 
     | Fn(ty, MapValueUpdate, args) ->
@@ -1279,18 +1365,21 @@ end (* Typing *)
           let fields_t = match ext_collection_of_type env x with
             | Some(c_t) -> field_types_of_collection env c_t
             | _ -> error()
-          in begin match snd (back fields_t) with
-          | Host TInt | Host TFloat ->
-            let r = desugar_map_value_update env nargs x
-            in Some(ci@r), None
-          | Target(_) ->
-            let r = desugar_nested_map_value_update env nargs x
-            in Some(ci@r), None
-          | _ -> error()
-          end
+          in
+          let desugar_f = match snd (back fields_t) with
+            | Host TInt | Host TFloat -> desugar_map_value_update
+            | Target(_) -> desugar_nested_map_value_update
+            | _ -> error()
+          in 
+          (* Only profile external types, i.e. multi-indexes, not native types
+           * such as STL maps, and scalars. *)
+          if opts.profile then
+            let id = ssc (source_code_of_expr (List.hd nargs))
+            in result ci (Fn(ty, Ext(Apply(id^"_value_update")), nargs))
+          else
+            let r = desugar_f env nargs x in Some(ci@r), None
 
-        | _ -> (if ci = [] then None else Some(ci)),
-               Some(Fn(ty, MapValueUpdate, nargs))
+        | _ -> result ci (Fn(ty, MapValueUpdate, nargs))
         end
 
     | Fn (meta,fn_id,args) ->
@@ -1425,7 +1514,7 @@ end (* Typing *)
                 (iter_id, iter_end, iter_decls, source_ty) body =
     let iter_t = Target(Iterator(source_ty)) in
     let subbed_elem =
-      Fn(elem_ty, Ext(DerefIterator), [Var (iter_t, (iter_id, iter_t))]) in
+      Fn(elem_ty, Ext(IteratorElement), [Var (iter_t, (iter_id, iter_t))]) in
     let elem_decls =
       if not elem_f then []
       else [Decl(unit, (elem, elem_ty), Some(subbed_elem))] in
@@ -1453,20 +1542,23 @@ end (* Typing *)
     let loop_t = type_of_imp_t subbed_body
     in iter_decls@[For(loop_t, ((iter_id, iter_t), false), loop_cond, subbed_body)]
 
-  let rec desugar_imp_aux env imp =
-    let flatten_external e = match desugar_expr env e with
+
+  (* Imperative statement desugaring *)
+  let rec desugar_imp_aux opts env imp =
+    let rcr = desugar_imp opts env in
+    let rcr_aux = desugar_imp_aux opts env in
+    let flatten_external e = match desugar_expr opts env e with
         | Some(i), None -> i
         | None, Some(e) -> [Expr(type_of_expr_t e, e)] 
         | Some(i), Some(e) -> i@[Expr(type_of_expr_t e, e)]
         | _, _ -> failwith "invalid externalization"
     in
-    (*print_endline ("Desugaring "^(string_of_imp imp));*)
     match imp with
       Expr (_,e) -> flatten_external e 
-    | Block (m,il) -> [Block(m, List.flatten (List.map (desugar_imp_aux env) il))]
+    | Block (m,il) -> [Block(m, List.flatten (List.map rcr_aux il))]
     | Decl (unit,d,None) -> [imp]
     | Decl (unit, d, Some(init)) ->
-        begin match desugar_expr env init with
+        begin match desugar_expr opts env init with
           | Some(i), Some(e) -> i@[Decl(unit, d, Some(e))]
           | None, Some(e) -> [Decl(unit, d, Some(e))]
           | _, _ -> failwith "invalid declaration externalization" 
@@ -1486,7 +1578,7 @@ end (* Typing *)
     | For(_,((id,((Host (TTuple id_tl)) as id_t)),f), Fn(c_ty, Slice(idx), args), body)
       ->
         let nprel, nargsl = List.split (List.map (fun a ->
-            match desugar_expr env a with
+            match desugar_expr opts env a with
             | Some(i), Some(e) -> i, [e] 
             | None, Some(e) -> [], [e]
             | _, _ -> failwith "invalid collection externalization") args)
@@ -1510,7 +1602,7 @@ end (* Typing *)
               | Some(x) ->
                 let pat_t, idx_t = index_of_collection env x idx
                 in idx_t, (entry_type_of_collection env c_t),
-                          Fn(idx_t, Ext(MultiIndex(pat_t)), [c_expr])
+                          Fn(idx_t, Ext(SecondaryIndex(pat_t)), [c_expr])
               | _ -> failwith ("invalid collection type "^(string_of_type c_t))
               end
             in
@@ -1542,11 +1634,11 @@ end (* Typing *)
             in access_subs@var_subs
           in fixpoint_sub_imp env subs body 
         in
-        pre@(sub_iters ((id,elem_ty),f) iter_meta (desugar_imp env new_body))
+        pre@(sub_iters ((id,elem_ty),f) iter_meta (rcr new_body))
 
     (* Handle loops over temporaries *)
     | For (_, elem, source, body) ->
-        let pre, new_source = match desugar_expr env source with
+        let pre, new_source = match desugar_expr opts env source with
           | Some(i), Some(e) -> i, e 
           | None, Some(e) -> [], e
           | _, _ -> failwith "invalid collection externalization"
@@ -1604,16 +1696,16 @@ end (* Typing *)
             failwith ("invalid for loop collection type "^(string_of_type t)^
                       ": "^(ssc (source_code_of_expr new_source))) 
         in
-        pre@(sub_iters new_elem iter_meta (desugar_imp env subbed_body))  
+        pre@(sub_iters new_elem iter_meta (rcr subbed_body))  
 
     | IfThenElse (condm,p,t,e) ->
-        let r np = IfThenElse(condm, np, desugar_imp env t, desugar_imp env e) in
-        begin match desugar_expr env p with
+        let r np = IfThenElse(condm, np, rcr t, rcr e) in
+        begin match desugar_expr opts env p with
           | Some(i), Some(e) -> i@[r e]
           | None, Some(e) -> [r e]
           | _, _ -> failwith "invalid condition externalization"
         end 
-  and desugar_imp env imp = match desugar_imp_aux env imp with
+  and desugar_imp opts env imp = match desugar_imp_aux opts env imp with
     | [x] -> x
     | x -> let _,last = back x in Block(type_of_imp_t last, x)
 
@@ -1626,16 +1718,234 @@ end (* Typing *)
 
   let infer_types = Typing.infer_types
 
+  (* Profiling code generation *)
+  let string_of_m3_type t = match t with
+    | VT_String -> "string" | VT_Int -> "int" | VT_Float -> "double"
+
+  let profile_map_value_update c_id t_l =
+    let c_t, c_entry_t = (c_id^"_map"), (c_id^"_entry") in 
+    let (k_decl,k) = snd (List.fold_left
+        (fun (id,(dacc,vacc)) t ->
+          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+                 vacc@["k"^(string_of_int id)])))
+      (0,([],[])) t_l)
+    in
+    Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
+            (String.concat ", " k_decl)^", double v)"^
+            " __attribute__((noinline));";
+           "void "^c_id^"_value_update("^c_t^"& m, "^
+            (String.concat ", " k_decl)^", double v)";
+           "{";
+           "  "^c_t^"::iterator it = m.find("^(mk_tuple k)^");";
+           "  if (it != m.end()) {";
+           "    m.modify(it, bind(&"^c_entry_t^"::__av, _1) = v);";
+           "  } else {";
+           "    "^c_entry_t^" e("^(String.concat "," k)^",v);";
+           "    m.insert(e);";
+           "  }";
+           "}"])
+
+  let profile_nested_map_value_update c_id in_tl out_tl =
+    let c_out_id = c_id^"_out" in
+    let c_t, c_entry_t, c_out_t, c_out_entry_t =
+      c_id^"_map", c_id^"_entry", c_id^"_out_map", c_id^"_out_entry" in
+    let get_decl_and_val i t_l = snd (List.fold_left
+        (fun (id,(dacc,vacc)) t ->
+          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+                 vacc@["k"^(string_of_int id)])))
+      (i,([],[])) t_l)
+    in
+    let in_k_decl, in_k = get_decl_and_val 0 in_tl in
+    let out_k_decl, out_k = get_decl_and_val (List.length in_tl) out_tl in
+    Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
+             (String.concat ", " (in_k_decl@out_k_decl))^", double v)"^
+             " __attribute__((noinline));";
+           "void "^c_id^"_value_update("^c_t^"& m, "^
+             (String.concat ", " (in_k_decl@out_k_decl))^", double v)";
+           "{";
+           "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
+           "  if (it != m.end()) {";
+           "    "^c_out_t^"& om = const_cast<"^c_out_t^"&>(it->__av);";
+           "    "^c_out_id^"_value_update(om,"^(String.concat "," out_k)^",v);";
+           "  } else {";
+           "    "^c_out_t^" om;";
+           "    "^c_out_entry_t^" oute("^(String.concat "," out_k)^",v);";
+           "    om.insert(oute);";
+           "    "^c_entry_t^" ine("^(String.concat "," in_k)^", om);";
+           "    m.insert(ine);";
+           "  }";
+           "}"])
+
+  let profile_map_update c_id in_tl out_tl =
+    let in_k_decl, in_k = snd (List.fold_left
+        (fun (id,(dacc,vacc)) t ->
+          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+                 vacc@["k"^(string_of_int id)])))
+      (0,([],[])) in_tl)
+    in
+    let c_t, c_entry_t, c_out_t, c_out_entry_t =
+      c_id^"_map", c_id^"_entry", c_id^"_out_map", c_id^"_out_entry"
+    in
+    let c_update_t =
+      let t_l = if out_tl = [] then in_tl else out_tl in
+      let update_k_t = mk_tuple_ty (List.map string_of_m3_type t_l)
+      in "map<"^update_k_t^",double>"
+    in
+    let indirect_sc =
+      let target_var, target_t, target_entry_t =
+        if in_tl = [] || out_tl = [] then "m", c_t, c_entry_t
+        else "om", c_out_t, c_out_entry_t in
+      let update_loop =
+        ["  "^target_t^"::iterator hint = "^target_var^".end();";
+         "  "^c_update_t^"::iterator slice_it = u.begin();";
+         "  "^c_update_t^"::iterator slice_end = u.end();";
+         "  for (; slice_it != slice_end; ++slice_it) {";
+         "    "^target_entry_t^" e(*slice_it);";
+         "    hint = "^target_var^".insert(hint, e);";
+         "  }"]
+      in
+      if in_tl = [] || out_tl = [] then
+        ["void "^c_id^"_update("^c_t^"& m, "^c_update_t^"& u)"^
+           " __attribute__((noinline));";
+         "void "^c_id^"_update("^c_t^"& m, "^c_update_t^"& u)";
+         "{";"  m.clear();"]@update_loop@["}"]
+      else
+        ["void "^c_id^"_update("^c_t^"& m, "^
+           (String.concat ", " in_k_decl)^", "^c_update_t^"& u)"^
+           " __attribute__((noinline));";
+         "void "^c_id^"_update("^c_t^"& m, "^
+           (String.concat ", " in_k_decl)^", "^c_update_t^"& u)";
+         "{";
+         "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
+         "  "^target_t^" om;"]@
+            update_loop@
+        ["  m.modify(it, bind(&"^c_entry_t^".__av, _1) = om);";
+         "}"]
+    in
+    let direct_sc =
+      let c_direct_t = if in_tl = [] || out_tl = [] then c_t else c_out_t in
+      if in_tl = [] || out_tl = [] then
+      ["void "^c_id^"_update_direct("^c_t^"& m, "^c_direct_t^"& u)"^
+         " __attribute__((noinline));";
+       "void "^c_id^"_update_direct("^c_t^"& m, "^c_direct_t^"& u)";
+       "{"; "  m = u;"; "}"]
+      else
+      ["void "^c_id^"_update_direct("^c_t^"& m, "^
+         (String.concat ", " in_k_decl)^", "^c_direct_t^"& u)"^
+         " __attribute__((noinline));";
+       "void "^c_id^"_update_direct("^c_t^"& m, "^
+         (String.concat ", " in_k_decl)^", "^c_direct_t^"& u)";
+       "{";
+       "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
+       "  m.modify(it, bind(&"^c_entry_t^".__av, _1) = u);"; 
+       "}"]
+    in Lines(indirect_sc@direct_sc)
+
+
+  let declare_profiling schema =
+    cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl) ->
+      match in_tl, out_tl with
+        | [],[] -> []
+        | (x as i),([] as o) | ([] as i),(x as o) ->
+          [profile_map_value_update id x;
+           profile_map_update id i o] 
+        | x,y ->
+          [profile_map_value_update (id^"_out") y;
+           profile_nested_map_value_update id x y;
+           profile_map_update id x y])
+     schema))
+  
+  let profile_trigger sid_offset dbschema (evt,rel,args,imp) =
+    let pm_name pm =
+      match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
+    let trig_name = (pm_name evt)^"_"^rel in
+    let arg_types = List.map snd (List.assoc rel dbschema) in
+    let iarg_decls, iargs = List.split (List.map
+        (fun (a,ty) ->
+          let i_t = imp_type_of_calc_type ty in
+          (string_of_calc_type ty)^" "^a, Var(i_t, (a, i_t)))
+      (List.combine args arg_types))
+    in
+    let imp_stmts = match imp with
+      | Block(_,s) -> s
+      | _ -> failwith "invalid non-block trigger"
+    in
+    let decls, new_stmts = 
+      snd (List.fold_left (fun (stmt_id,(dacc,sacc)) imp ->
+          let sid = string_of_int stmt_id in
+          let prof_begin = Expr(unit, Fn(unit, Ext(Inline(
+            "exec_stats->begin_probe("^
+              (string_of_int (sid_offset+stmt_id))^")")), []))
+          in
+          let prof_end =
+            Expr(unit, Fn(unit, Ext(Inline(
+              "exec_stats->end_probe("^
+                (string_of_int (sid_offset+stmt_id))^")")), []))
+          in
+          let stmt_name = trig_name^"_s"^sid in
+          let new_decl =
+            let bimp = match imp with | Block _ -> imp | _ -> Block(unit, [imp]) in
+            [Lines (["void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"^
+                     " __attribute__((noinline));";
+                     "void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"])]@
+            [source_code_of_imp bimp]@[Lines ([""])]
+          in
+          let new_imp =
+            [prof_begin; 
+             Expr(unit, Fn(unit, Ext(Apply(stmt_name)), iargs)); 
+             prof_end]
+          in stmt_id+1,(dacc@new_decl,sacc@new_imp))
+        (0,([],[])) imp_stmts)
+    in let profiled_trig =
+      [Expr(unit, Fn(unit,
+         Ext(Inline("exec_stats->begin_trigger(\""^trig_name^"\")")), []))]@
+      new_stmts@
+      [Expr(unit, Fn(unit,
+         Ext(Inline("exec_stats->end_trigger(\""^trig_name^"\")")), []))]
+    in decls, (evt,rel,args, Block(unit, profiled_trig)) 
+  
+  (* Top-level code generation *)
+  let preamble () = Lines [
+        "#include <fstream>";
+        "#include <map>";
+        "#include <utility>";
+        "#include <boost/archive/xml_oarchive.hpp>";
+        "#include <boost/array.hpp>";
+        "#include <boost/chrono.hpp>";
+        "#include <boost/filesystem.hpp>";
+        "#include <boost/lambda/lambda.hpp>";
+        "#include <boost/lambda/bind.hpp>";
+        "#include <boost/multi_index_container.hpp>";
+        "#include <boost/multi_index/hashed_index.hpp>";
+        "#include <boost/multi_index/composite_key.hpp>";
+        "#include <boost/multi_index/member.hpp>";
+        "#include <boost/tuple/tuple_comparison.hpp>";
+        "#include <lib/c++/streams.hpp>";
+        "#include <lib/c++/runtime.hpp>";
+        "#include <lib/c++/standard_adaptors.hpp>";
+        "#include <lib/c++/statistics.hpp>";
+        "using namespace ::std;";
+        "using namespace ::boost;";
+        "using namespace ::boost::chrono;";
+        "using namespace ::boost::filesystem;";
+        "using namespace ::boost::lambda;";
+        "using namespace ::boost::multi_index;";
+        "using namespace ::dbtoaster;";
+        "using namespace ::dbtoaster::runtime;";
+        "using namespace ::dbtoaster::statistics;";
+        ] 
+
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
   let declare_maps_of_schema schema patterns =
-    cscl ~delim:"\n" (List.flatten (List.map (fun (id,t,t_decls) -> 
+    cscl ~delim:"\n" (List.flatten (List.map (fun (id,in_tl,out_tl) ->
+        let (_,t,t_decls) = type_of_map_schema patterns (id, in_tl, out_tl) in 
         let imp_decl = match t with 
           | Host TFloat -> Decl(unit, (id,t), Some(Const(unit, CFloat(0.0)))) 
           | _ -> Decl(unit, (id,t), None)
         in [Lines (List.map string_of_type t_decls)]@
            [source_code_of_imp imp_decl])
-      (List.map (type_of_map_schema patterns) schema)))
+      schema))
 
   let declare_sources_and_adaptors sources =
     let quote s = "\""^(String.escaped s)^"\"" in
@@ -1746,6 +2056,7 @@ end (* Typing *)
         cscl (List.map source_code_of_imp sd)) (List.map snd decls))
     in (List.map fst decls), rsc
 
+  (* Stream identifier generation *)
   let declare_streams dbschema = 
     let x,y = snd (List.fold_left
       (fun (i,(id_acc,sc_acc)) (rel,_) -> (i+1,(id_acc@[rel,i], sc_acc@
@@ -1753,10 +2064,15 @@ end (* Typing *)
       (0,([], [Lines ["map<string, int> stream_identifiers;"]])) dbschema)
     in x, cscl y
   
-  let declare_main stream_ids map_schema source_vars trig_meta tlqs =
+  (* Main function generation *)
+  let declare_main stream_ids map_schema source_vars trig_reg_info tlqs =
     let mt = Target(Type("stream_multiplexer")) in
     let dt = Target(Type("stream_dispatcher")) in
     let rot = Target(Type("runtime_options")) in
+    let exec_ts, exect =
+      let x = "trigger_exec_stats" in x,Target(Type("shared_ptr<"^x^">")) in
+    let delta_sz_ts, delta_sz_t =
+      let x = "delta_size_stats" in x, Target(Type("shared_ptr<"^x^">")) in
     let globals =
       (* Multiplexer constructor: seed and stream batch size *)
       [Decl(mt, ("multiplexer", mt),
@@ -1764,7 +2080,9 @@ end (* Typing *)
           [Fn(Host TInt, Ext(Inline("12345")), []);
            Fn(Host TInt, Ext(Inline("10")), [])])));
        Decl(dt, ("dispatcher", dt), None);
-       Decl(rot, ("run_opts", rot), None)] in
+       Decl(rot, ("run_opts", rot), None);
+       Decl(exect, ("exec_stats", exect), None);
+       Decl(delta_sz_t, ("delta_stats", delta_sz_t), None)] in
     let main_fn =
       let register_streams = List.map (fun (rel,id) ->
         "  stream_identifiers[\""^(String.escaped rel)^"\"] "^
@@ -1773,9 +2091,9 @@ end (* Typing *)
         | Var(_,(id,_)) -> "  multiplexer.add_source("^id^");"
         | _ -> failwith "invalid source") source_vars
       in
-      let register_triggers = List.map (fun (sid, evt_type, unwrap_fn_id) ->
+      let register_triggers = List.map (fun (sid, evt_type, unwrap_fn_id,_) ->
         let args = String.concat ", " [sid; evt_type; ("&"^unwrap_fn_id)] in
-        "  dispatcher.add_trigger("^args^");") trig_meta
+        "  dispatcher.add_trigger("^args^");") trig_reg_info
       in
       let map_outputs opts_id archive_id =
         List.flatten (List.map (fun (map_id,_,_) ->
@@ -1783,17 +2101,18 @@ end (* Typing *)
                                             (String.escaped map_id)^"\" )) "^
                   " || (debug && "^opts_id^".is_traced_map( \""^
                                             (String.escaped map_id)^"\" )) )";
-          "    "^archive_id^"<<BOOST_SERIALIZATION_NVP("^map_id^");"])
+           "    "^(ssc (source_code_of_map_serialization archive_id map_id))^";"])
         map_schema)
       in
       let register_toplevel_queries = List.map (fun q -> 
-         "run_opts.add_toplevel_query(\""^q^"\");"
-      ) tlqs in
+         "  run_opts.add_toplevel_query(\""^q^"\");") tlqs
+      in
       let stepper = ["";
          "void trace(std::ostream &ofs, bool debug) {";
          "  boost::archive::xml_oarchive oa(ofs, 0);"]
         @(map_outputs "run_opts" "oa")@
         ["}";
+         "";
          "void trace(const path& trace_file, bool debug) {";
          "  if(strcmp(trace_file.c_str(), \"-\")){";
          "    std::ofstream ofs(trace_file.c_str());";
@@ -1812,6 +2131,23 @@ end (* Typing *)
          "}";
          ""] 
       in
+      let init_stats =
+        let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
+            List.map (fun (i,n) ->
+              "  exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");")
+            sids)
+          trig_reg_info)
+        in
+         ["  exec_stats = shared_ptr<"^exec_ts^" >("^
+            "new "^exec_ts^"(\"exec\", "^
+              "run_opts.get_stats_window_size(), run_opts.get_stats_period(), "^
+              "run_opts.get_stats_file()));";
+          "  delta_stats = shared_ptr<"^delta_sz_ts^">("^
+            "new "^delta_sz_ts^"(\"delta_sz\", "^
+              "run_opts.get_stats_window_size(), run_opts.get_stats_period(), "^
+              "run_opts.get_stats_file()));"]
+         @stmt_ids
+      in
       Lines (stepper@
              ["int main(int argc, char* argv[]) {"]
              @register_streams@[
@@ -1819,7 +2155,8 @@ end (* Typing *)
              ]@register_toplevel_queries@[
               "  if ( run_opts.help() ) { exit(1); };" ]
              @register_src        (* Add all sources to multiplexer *)
-             @register_triggers@  (* Add unwrappers to dispatcher *)
+             @register_triggers   (* Add unwrappers to dispatcher *)
+             @init_stats@
              ["  run_opts.log_dispatcher(dispatcher,stream_identifiers);";
               "  while ( multiplexer.has_inputs() ) {";
               "    shared_ptr<list<stream_event> > events = multiplexer.next_inputs();";
@@ -1829,8 +2166,9 @@ end (* Typing *)
               "    }";
               "  }";
               "  trace(run_opts.get_output_file(), false);";
+              "  exec_stats->save_now();";
               "}"])
-    in cscl ((List.map source_code_of_imp globals)@[main_fn])
+    in cscl (List.map source_code_of_imp globals), main_fn
      
             
 end (* CPPTarget *)
@@ -1848,69 +2186,59 @@ struct
   module IBK = ImpBuilder.AnnotatedK3
   module IBC = ImpBuilder.Common
   
-  let compile_triggers ?(desugar=true) (schema,patterns,trigs) :
-      (ext_type type_t, ext_type, ext_fn) Program.trigger_t list =
+  (* TODO: replace profile with compiler options as record type, and
+   * merge in desugar as compiler option *)
+  let compile_triggers opts dbschema (schema,patterns,trigs) :
+    (source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t) list
+  =
     let type_env = type_env_of_declarations schema patterns in
+    let stmt_cnt = ref 0 in
     List.map (fun (evt,rel,args,k3stmts) ->
-        let i = infer_types schema patterns
-          (Imperative.Block (None, List.flatten
-            (List.map (fun s ->
-             imp_of_ir ext_type_of_k3_collection (ir_of_expr (snd s))) k3stmts)))
-        in
-        let dsi = if desugar then desugar_imp type_env i else i
-        in (evt,rel,args, dsi))
+        let dsi i = if opts.desugar then desugar_imp opts type_env i else i in
+        let si_l = List.map (fun s ->
+          let imp = imp_of_ir ext_type_of_k3_collection (ir_of_expr (snd s)) in
+          let bimp = match imp with
+            | [x] -> x
+            | _ -> Imperative.Block (None, imp)
+          in infer_types schema patterns bimp) k3stmts
+        in 
+        let dsimp = Imperative.Block (Host TUnit, List.map dsi si_l) in
+        let t = (evt,rel,args, dsimp) in
+        let r =  if not opts.profile then [],t
+                 else profile_trigger !stmt_cnt dbschema t
+        in stmt_cnt := !stmt_cnt + (List.length k3stmts); r)
       trigs
 
-  let compile_query_to_string dbschema k3prog sources tlqs =
+  let compile_query_to_string opts dbschema k3prog sources tlqs =
     String.concat "\n\n"
-      (List.map (fun (_,_,_,imp) -> string_of_imp imp)
-        (compile_triggers ~desugar:true k3prog))
+      (List.map (fun (_,(_,_,_,imp)) -> string_of_imp imp)
+        (compile_triggers opts dbschema k3prog))
 
-  let compile_query dbschema (schema,patterns,trigs) sources tlqs chan =
-    let headers = Lines [
-        "#include <fstream>";
-        "#include <map>";
-        "#include <utility>";
-        "#include <boost/archive/xml_oarchive.hpp>";
-        "#include <boost/array.hpp>";
-        "#include <boost/filesystem.hpp>";
-        "#include <boost/lambda/lambda.hpp>";
-        "#include <boost/lambda/bind.hpp>";
-        "#include <boost/multi_index_container.hpp>";
-        "#include <boost/multi_index/hashed_index.hpp>";
-        "#include <boost/multi_index/composite_key.hpp>";
-        "#include <boost/multi_index/member.hpp>";
-        "#include <boost/tuple/tuple_comparison.hpp>";
-        "#include <lib/c++/streams.hpp>";
-        "#include <lib/c++/runtime.hpp>";
-        "#include <lib/c++/standard_adaptors.hpp>";
-        "using namespace ::std;";
-        "using namespace ::boost;";
-        "using namespace ::boost::filesystem;";
-        "using namespace ::boost::lambda;";
-        "using namespace ::boost::multi_index;";
-        "using namespace ::dbtoaster;";
-        "using namespace ::dbtoaster::runtime;";
-        ]
+  let compile_query opts dbschema (schema,patterns,trigs) sources tlqs chan =
+    let pm_name pm = match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
+    let map_decls = declare_maps_of_schema schema patterns in
+    let profiling = declare_profiling schema in
+    let triggers = cscl (List.flatten
+      (List.map (fun (t_decls,t) -> t_decls@(source_code_of_trigger dbschema t))
+        (compile_triggers opts dbschema (schema,patterns,trigs))))
     in
-    let global_decls = declare_maps_of_schema schema patterns in
     let stream_ids, stream_id_decls = declare_streams dbschema in
     let source_vars, source_and_adaptor_decls =
       declare_sources_and_adaptors sources in 
-    let main_fn =
-        let unwrap_fn_ids = List.map (fun (evt,rel,_,_) ->
-          let pm_name pm =
-            match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
-          let trig_name = (pm_name evt)^"_"^rel
-          in ((rel^"id"), ((pm_name evt)^"_tuple"), ("unwrap_"^trig_name))) trigs
-        in declare_main stream_ids schema source_vars unwrap_fn_ids tlqs
-    in     
-    let body = cscl (List.flatten
-      (List.map (source_code_of_trigger dbschema)
-        (compile_triggers (schema,patterns,trigs))))
+    let global_decls, main_fn =
+      let cnt = ref(-1) in
+      let trig_reg_info = List.map (fun (evt,rel,_,stmts) ->
+          let trig_name = (pm_name evt)^"_"^rel in
+          let exec_ids = snd (List.fold_left (fun (i,acc) _ -> incr cnt;
+            let x = string_of_int !cnt
+            in i+1,acc@[x, trig_name^"_s"^(string_of_int i)]) (0,[]) stmts)
+          in ((rel^"id"), ((pm_name evt)^"_tuple"), ("unwrap_"^trig_name),
+              exec_ids))
+        trigs
+      in declare_main stream_ids schema source_vars trig_reg_info tlqs
     in
     let program = ssc (cscl ~delim:"\n"
-      ([headers; global_decls; body;
+      ([preamble(); global_decls; map_decls; profiling; triggers;
         stream_id_decls; source_and_adaptor_decls; main_fn;]))
     in
       Util.GenericIO.write chan 

@@ -74,6 +74,7 @@ struct
    | Aggregate
    | GroupByAggregate
    | Flatten
+   | Ext (* = Flatten(Map) *) 
 
    | Member
    | Lookup
@@ -295,8 +296,9 @@ struct
   let gb_aggregate_ir metadata sub_ir =
     Node(metadata, Decorated(GroupByAggregate), sub_ir)
 
-  let flatten_ir metadata sub_ir =
-    Node(metadata, Decorated(Flatten), sub_ir)
+  let flatten_ir metadata sub_ir = Node(metadata, Decorated(Flatten), sub_ir)
+
+  let ext_ir metadata sub_ir = Node(metadata, Decorated(Ext), sub_ir)
 
   let member_ir metadata sub_ir =
     build_code sub_ir
@@ -399,7 +401,13 @@ struct
 
       | K.GroupByAggregate _ ->
         gb_aggregate_ir metadata [sfst();ssnd();sthd();sfth()] 
-      
+
+      | K.Flatten(K.Map _) ->
+        begin match sfst() with
+          | Node(m,t,c) -> ext_ir metadata c
+          | _ -> failwith "invalid map IR node"
+        end
+
       | K.Flatten _ -> flatten_ir metadata [sfst()]
 
       | K.Member _ -> member_ir metadata ([sfst()]@snd())  
@@ -572,9 +580,15 @@ struct
 
         (* Iterate needs a child symbol, but this should not be used since
          * the return type is unit. Maps yield the new collection as the symbol
-         * thus do not pass it on to any children. *)
+         * thus does not pass it on to any children. *)
         | Iterate | Map ->
           cmeta, [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
+
+        (* Ext passes on its symbol to children to perform direct concatenation
+         * of the collection resulting from each ext lambda invocation to the
+         * return value *)
+        | AK.Ext ->
+          [pushi 0; (cmetai 1)], [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
 
         | Aggregate ->
             let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
@@ -764,54 +778,63 @@ struct
             (fun i -> i@[For(None, ((elem, elem_ty), elem_f), cdecli 1, loop_body)])
             (fun e -> [For(None, ((elem, elem_ty), elem_f), e, loop_body)])), false
 
-      | Map ->
+      | Map | AK.Ext ->
         (* TODO: in-loop multi-var bindings from collections of tuples *)
+        let is_ext = match t with | AK.Ext -> true | _ -> false in 
         let arg = List.hd args_to_bind in
-        let elem, elem_ty, elem_f, decls = match arg with
+        let elem, elem_ty, elem_f, elem_decls = match arg with
             | AVar(id,ty) -> id, Host(ty), true, []
             | ATuple(it_l) ->
               let t = Host(K.TTuple(List.map snd it_l)) in 
               let x = gensym() in x, t, false, bind_arg arg (Var (None,(x,t)))
         in
-        (* Loops must define any declarations used by the map lambda, such as
+        (* Loops must define any declarations used by the map/ext lambda, such as
          * nested map temporary collection declarations, inside the loop body.
          * This is not achieved by a child declaration, which
          * is always defined prior to the expression's code. Thus we handle
          * map lambda declarations as a special case here *)
         let body_decls =
           let (ctag, gcmeta) = ciri 0 in
-          if not(cused 0) || gcmeta = [] then [] else
-            let d_t = match type_of_meta (cmetai 0) with
+          if is_ext || not(cused 0) || gcmeta = [] then [] else
+            let d_t =
+              match type_of_meta (cmetai 0) with
+              (*| true, Host (K.Fn(_,Collection(x))) -> Host(Collection(x))*)
               | Host (K.Fn(_,rt)) -> Host(rt)
-              | _ -> failwith "invalid map lambda type while building imp"
+              | _ -> failwith "invalid map/ext lambda type while building imp"
             in   
-            let d = sym_of_meta (cmetai 0), d_t in
-            [Decl(None, d, None)]
+            let d = sym_of_meta (cmetai 0), d_t
+            in [Decl(None, d, None)]
         in
-        let mk_body e = Expr(None,
-          Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); e])) in
-        let fn_body = match_ie 0 "invalid map function"
+        let mk_body e =
+          let op = if is_ext then Concat else ConcatElement in
+          if is_ext && not(cused 0) then
+            [Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e]))]
+          else if not(is_ext) then
+            [Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e]))]
+          else []
+        in
+        let fn_body = match_ie 0 "invalid map/ext function"
           (fun i ->
             let mk_var id ty = Var(None, (id,ty)) in
-            let rv = begin match meta_ty, cdecli 0 with
-              | Host(Collection(x)), Var(_,(id,_)) -> mk_var id (Host x)
-              | _, Var(_,(id,ty)) ->
+            let rv = begin match cdecli 0 with
+              | Var(_,(id,ty)) ->
                 begin match ty with
                 | Host(K3.SR.Fn(_,x)) -> mk_var id (Host x)
                 | _ -> mk_var id ty
                 end
-              | _,_ -> failwith "invalid map function"
+              | _ -> failwith "invalid map/ext function"
               end
             in
-            let nb = [mk_body rv] in
+            let nb = mk_body rv in
             match i with | [Block(m,l)] -> [Block(m,l@nb)] | _ -> i@nb)
-          (fun e -> [mk_body e])
+          (fun e -> if not(is_ext) || not(cused 0) then mk_body e
+                    else failwith "invalid ext expression body")
         in
-        let loop_body = imp_of_list (decls@body_decls@fn_body) in
+        let loop_body = imp_of_list (elem_decls@body_decls@fn_body) in
         let mk_loop e = For(None, ((elem, elem_ty), elem_f), e, loop_body) in
-          Some(match_ie 1 "invalid map collection"
+          Some(match_ie 1 "invalid map/ext collection"
              (fun i -> i@[mk_loop (cdecli 1)]) (fun e -> [mk_loop e])),
-          true
+          (if is_ext then (cused 0) else true)
 
       | Aggregate -> 
         let elem, elem_ty, elem_f, decls = match args_to_bind with
@@ -901,7 +924,7 @@ struct
           Decl(None, (inner_var_id, inner_var_ty),
             Some(Var (None, (inner_elem, inner_ty)))) in
         let inner_body = Expr(None,
-          Fn(None, MapAppend, [Var (None, (meta_sym, meta_ty)); inner_var])) in 
+          Fn(None, ConcatElement, [Var (None, (meta_sym, meta_ty)); inner_var])) in 
         let inner = 
           For(None, ((inner_elem, inner_ty), false),
             Var(None, (outer_elem, outer_ty)), Block(None, [inner_decl; inner_body]))

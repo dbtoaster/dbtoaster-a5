@@ -52,7 +52,7 @@ sig
 
     type type_t =
 	      TUnit | TFloat | TInt
-        | TTuple     of type_t list          (* unnamed records *)
+      | TTuple     of type_t list          (* unnamed records *)
 	    | Collection of type_t               (* collections *)
 	    | Fn         of type_t list * type_t (* args * body *)
 
@@ -143,6 +143,9 @@ sig
     val fold_expr :
       ('b -> 'a list list -> expr_t -> 'a) ->
       ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
+
+    (* Returns whether second expression is a subexpression of the first *)
+    val contains_expr : expr_t -> expr_t -> bool
 
     val string_of_type : type_t -> string
     val string_of_expr : expr_t -> string
@@ -431,6 +434,11 @@ let rec fold_expr (f : 'b -> 'a list list -> expr_t -> 'a)
     | _ -> app_f (sub (get_branches e)) e
     end
 
+(* Containment *)
+let contains_expr e1 e2 =
+  let contains_aux _ parts_contained e =
+    (List.exists (fun x -> x) (List.flatten parts_contained)) || (e = e2)
+  in fold_expr contains_aux (fun x _ -> x) None false e1
 
 (* Stringification *)
 let rec string_of_type t =
