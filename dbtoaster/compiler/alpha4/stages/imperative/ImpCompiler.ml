@@ -1086,7 +1086,7 @@ end (* Typing *)
    *     for ( ; slice_it != slice_end; ++slice_it) {
    *       #out map entry type# e( *slice_it); hint = om.insert(hint, e);
    *     }
-   *     #map#.modify(it, bind(#map entry#.__av, _1) = om);
+   *     #map#.modify(it, bind(#map entry#::__av, _1) = om);
    *   )
    *)
   let desugar_map_update env nargs c_t =
@@ -1162,7 +1162,7 @@ end (* Typing *)
   (* map value update rewrites:
    *    it = #map#.find(#key#);
    *    if ( it != #map#.end() ) {
-   *      #map#.modify(it, bind(#map entry#.__av, _1)=#value#);
+   *      #map#.modify(it, bind(#map entry#::__av, _1)=#value#);
    *    }
    *    else { #map entry# e(#key#, #value#); #map#.insert(e); }
    *)
@@ -1763,7 +1763,7 @@ end (* Typing *)
            "void "^c_id^"_value_update("^c_t^"& m, "^
              (String.concat ", " (in_k_decl@out_k_decl))^", double v)";
            "{";
-           "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
+           "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
            "  if (it != m.end()) {";
            "    "^c_out_t^"& om = const_cast<"^c_out_t^"&>(it->__av);";
            "    "^c_out_id^"_value_update(om,"^(String.concat "," out_k)^",v);";
@@ -1816,10 +1816,10 @@ end (* Typing *)
          "void "^c_id^"_update("^c_t^"& m, "^
            (String.concat ", " in_k_decl)^", "^c_update_t^"& u)";
          "{";
-         "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
+         "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
          "  "^target_t^" om;"]@
             update_loop@
-        ["  m.modify(it, bind(&"^c_entry_t^".__av, _1) = om);";
+        ["  m.modify(it, bind(&"^c_entry_t^"::__av, _1) = om);";
          "}"]
     in
     let direct_sc =
@@ -1836,8 +1836,8 @@ end (* Typing *)
        "void "^c_id^"_update_direct("^c_t^"& m, "^
          (String.concat ", " in_k_decl)^", "^c_direct_t^"& u)";
        "{";
-       "  "^c_t^"::iterator it = m.find("^(String.concat "," in_k)^");";
-       "  m.modify(it, bind(&"^c_entry_t^".__av, _1) = u);"; 
+       "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
+       "  m.modify(it, bind(&"^c_entry_t^"::__av, _1) = u);"; 
        "}"]
     in Lines(indirect_sc@direct_sc)
 
@@ -2217,7 +2217,7 @@ struct
   let compile_query opts dbschema (schema,patterns,trigs) sources tlqs chan =
     let pm_name pm = match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
     let map_decls = declare_maps_of_schema schema patterns in
-    let profiling = declare_profiling schema in
+    let profiling = if opts.profile then declare_profiling schema else Lines([]) in
     let triggers = cscl (List.flatten
       (List.map (fun (t_decls,t) -> t_decls@(source_code_of_trigger dbschema t))
         (compile_triggers opts dbschema (schema,patterns,trigs))))
