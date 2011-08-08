@@ -243,6 +243,9 @@ test: top
 #	@$(DEBUG_APP) test/examples/TpchQ22.ml
 #	@$(DEBUG_APP) test/examples/VwapTest.ml
 
+cpp_test: dbtoaster
+	test/scripts/query_test.rb -a -t cpp
+
 ok_test: top
 	@$(DEBUG_APP) test/unit/unroly.ml
 
@@ -251,13 +254,13 @@ test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.cpp #-d compile-with-gdb
 
 bin/%: test/sql/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
 bin/%: test/sql/simple/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
 bin/%: test/sql/finance/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
 bin/%: test/sql/tpch/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp #-d compile-with-gdb
+	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
 
 
 ## Query execution tests

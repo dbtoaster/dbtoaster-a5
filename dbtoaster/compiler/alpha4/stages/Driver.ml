@@ -210,6 +210,7 @@ Debug.exec "ARGS" (fun () ->
 let compile_depth = 
   match flag_val "COMPILE_DEPTH" with
   | None -> None
+  | Some("-") -> None
   | Some(i) -> Some(int_of_string i);;
 
 (********* TRANSLATE SQL TO RELCALC *********)

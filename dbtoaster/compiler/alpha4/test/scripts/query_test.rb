@@ -169,7 +169,10 @@ class CppUnitTest < GenericUnitTest
       ] + ($debug_flags.map { |f| ["-d", f]}.flatten(1)) + [
         @qpath
       ]).join(" ");
+      starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
+      print "(Compile: #{(Time.now - starttime).to_i}s) "
+      $stdout.flush;
     end
     starttime = Time.now;
     IO.popen("#{$dbt_path}/bin/#{@qname} -q", "r") do |qin|
@@ -272,13 +275,16 @@ $debug_flags = [];
 queries = nil;
 $skip_compile = false;
 $precision = 1e-12;
+$strict = false;
+$ret = 0;
 
 GetoptLong.new(
   [ '-a', '--all',       GetoptLong::NO_ARGUMENT],
   [ '-t', '--test',      GetoptLong::REQUIRED_ARGUMENT],
   [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
   [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
-  [ '-d',                GetoptLong::REQUIRED_ARGUMENT]
+  [ '-d',                GetoptLong::REQUIRED_ARGUMENT],
+  [ '--strict',          GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-a', '--all' then queries = $queries.keys
@@ -291,6 +297,7 @@ GetoptLong.new(
         when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
       end
     when '-d' then $debug_flags.push(arg)
+    when '--strict' then $strict = true;
   end
 end
 
@@ -305,18 +312,21 @@ queries.each do |tquery|
       t = test_class.new
       print "Testing query '#{tquery}' on the #{t.to_s}: "; STDOUT.flush;
       t.query = tquery
-      begin t.run
-        rescue Exception => e
-          puts "Failure: #{e}";
-          exit -1;
-      end
-      if t.correct? then
-        puts "Success (#{t.runtime} seconds)."
-      else
-        puts "Failure: Result Mismatch"
-        puts(([["Key", "Expected", "Result", "Different?"], 
-               ["", "", ""]] + t.results).tabulate);
-        exit -1;
+      begin 
+        t.run
+        if t.correct? then
+          puts "Success (#{t.runtime}s)."
+        else
+          puts "Failure: Result Mismatch"
+          puts(([["Key", "Expected", "Result", "Different?"], 
+                 ["", "", ""]] + t.results).tabulate);
+          $ret = -1;
+          exit -1 if $strict;
+        end
+      rescue Exception => e
+        puts "Failure: #{e}";
+        $ret = -1;
+        exit -1 if $strict;
       end
     end
   else
@@ -324,4 +334,4 @@ queries.each do |tquery|
   end
 end
 
-
+exit $ret;
