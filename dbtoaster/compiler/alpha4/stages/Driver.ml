@@ -325,10 +325,19 @@ let m3_prog =
 
 Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
+(********* M3 OPTIMIZATIONS *********)
+
 (********* TRANSLATE M3 TO [language of your choosing] *********)
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
+
+(* Oliver: The following compilers should really be 2 or 3 separate steps.
+   The driver should translate M3 -> K3, then invoke the K3 optimizer, and
+   finally as a separate step, invoke the appropriate K3 code generator.
+   Lumping it all into a single function creates a confusing flow that breaks
+   the usefulness of Driver as a roadmap to the compile process *)
+
 module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
@@ -480,6 +489,7 @@ let compile_cpp in_file_name =
         "-lboost_serialization";
         "-lboost_system";
         "-lboost_filesystem";
+        "-lboost_chrono";
         in_file_name ;
         "-o"; (flag_val_force "COMPILE")
       ]
