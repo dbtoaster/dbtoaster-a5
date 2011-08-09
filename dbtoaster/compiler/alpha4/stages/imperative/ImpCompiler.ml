@@ -94,7 +94,7 @@ sig
   (* Toplevel code generation *)
 
   (* TODO: all of these should accept a compiler options record as input *)
-  val preamble : unit -> source_code_t
+  val preamble : compiler_options -> source_code_t
 
   val declare_maps_of_schema :
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> source_code_t
@@ -106,7 +106,8 @@ sig
     M3.relation_input_t list -> (ext_type, ext_fn) typed_expr_t list * source_code_t
 
   val declare_main :
-    (string * int) list -> M3.map_type_t list
+    compiler_options
+    -> (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
        (* Trigger registration metadata *)
     -> (string * string * string * (string * string) list) list
@@ -1905,8 +1906,8 @@ end (* Typing *)
     in decls, (evt,rel,args, Block(unit, profiled_trig)) 
   
   (* Top-level code generation *)
-  let preamble () = Lines [
-        "#include <fstream>";
+  let preamble opts = Lines
+      (["#include <fstream>";
         "#include <map>";
         "#include <utility>";
         "#include <boost/archive/xml_oarchive.hpp>";
@@ -1922,18 +1923,19 @@ end (* Typing *)
         "#include <boost/tuple/tuple_comparison.hpp>";
         "#include <lib/c++/streams.hpp>";
         "#include <lib/c++/runtime.hpp>";
-        "#include <lib/c++/standard_adaptors.hpp>";
-        "#include <lib/c++/statistics.hpp>";
-        "using namespace ::std;";
+        "#include <lib/c++/standard_adaptors.hpp>"]@
+       (if not opts.profile then [] else
+       ["#include <lib/c++/statistics.hpp>"])@
+       ["using namespace ::std;";
         "using namespace ::boost;";
         "using namespace ::boost::chrono;";
         "using namespace ::boost::filesystem;";
         "using namespace ::boost::lambda;";
         "using namespace ::boost::multi_index;";
         "using namespace ::dbtoaster;";
-        "using namespace ::dbtoaster::runtime;";
-        "using namespace ::dbtoaster::statistics;";
-        ] 
+        "using namespace ::dbtoaster::runtime;"]@
+       (if not opts.profile then [] else
+       ["using namespace ::dbtoaster::statistics;"])) 
 
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
@@ -2065,7 +2067,7 @@ end (* Typing *)
     in x, cscl y
   
   (* Main function generation *)
-  let declare_main stream_ids map_schema source_vars trig_reg_info tlqs =
+  let declare_main opts stream_ids map_schema source_vars trig_reg_info tlqs =
     let mt = Target(Type("stream_multiplexer")) in
     let dt = Target(Type("stream_dispatcher")) in
     let rot = Target(Type("runtime_options")) in
@@ -2080,9 +2082,12 @@ end (* Typing *)
           [Fn(Host TInt, Ext(Inline("12345")), []);
            Fn(Host TInt, Ext(Inline("10")), [])])));
        Decl(dt, ("dispatcher", dt), None);
-       Decl(rot, ("run_opts", rot), None);
-       Decl(exect, ("exec_stats", exect), None);
-       Decl(delta_sz_t, ("delta_stats", delta_sz_t), None)] in
+       Decl(rot, ("run_opts", rot), None)]@
+      (if opts.profile then 
+        [Decl(exect, ("exec_stats", exect), None);
+         Decl(delta_sz_t, ("delta_stats", delta_sz_t), None)]
+       else [])
+    in
     let main_fn =
       let register_streams = List.map (fun (rel,id) ->
         "  stream_identifiers[\""^(String.escaped rel)^"\"] "^
@@ -2156,7 +2161,7 @@ end (* Typing *)
               "  if ( run_opts.help() ) { exit(1); };" ]
              @register_src        (* Add all sources to multiplexer *)
              @register_triggers   (* Add unwrappers to dispatcher *)
-             @init_stats@
+             @(if opts.profile then init_stats else [])@
              ["  run_opts.log_dispatcher(dispatcher,stream_identifiers);";
               "  while ( multiplexer.has_inputs() ) {";
               "    shared_ptr<list<stream_event> > events = multiplexer.next_inputs();";
@@ -2165,9 +2170,10 @@ end (* Typing *)
               "        bind(&process_event, _1));";
               "    }";
               "  }";
-              "  trace(run_opts.get_output_file(), false);";
-              "  exec_stats->save_now();";
-              "}"])
+              "  trace(run_opts.get_output_file(), false);"]@
+             (if not opts.profile then [] else
+             ["  exec_stats->save_now();"])@
+             ["}"])
     in cscl (List.map source_code_of_imp globals), main_fn
      
             
@@ -2235,10 +2241,10 @@ struct
           in ((rel^"id"), ((pm_name evt)^"_tuple"), ("unwrap_"^trig_name),
               exec_ids))
         trigs
-      in declare_main stream_ids schema source_vars trig_reg_info tlqs
+      in declare_main opts stream_ids schema source_vars trig_reg_info tlqs
     in
     let program = ssc (cscl ~delim:"\n"
-      ([preamble(); global_decls; map_decls; profiling; triggers;
+      ([preamble opts; global_decls; map_decls; profiling; triggers;
         stream_id_decls; source_and_adaptor_decls; main_fn;]))
     in
       Util.GenericIO.write chan 

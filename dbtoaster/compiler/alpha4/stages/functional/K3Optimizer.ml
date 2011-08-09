@@ -949,8 +949,14 @@ let common_subexpression_elim expr =
     in
     fold_expr apply_subs modify_subs [] (Const(CFloat(0.0))) expr
   in
+
+  (* Test if two equivalence classes are the same by alpha equivalence of any
+   * two members of the classes *)
   let alpha_eq eq1 eq2 =
-    (alpha_rename (List.hd eq1)) = (alpha_rename (List.hd eq2)) in
+    (alpha_rename (List.hd eq1)) = (alpha_rename (List.hd eq2))
+  in
+  
+  (* Union, difference and intersection of two lists of equivalence classes *)  
   let union_eqv cl1 cl2 = List.fold_left (fun acc c ->
     if acc = [] then [c] else
     let eq,rest = List.partition (alpha_eq c) acc in
@@ -960,15 +966,30 @@ let common_subexpression_elim expr =
         | _ -> failwith "multiple equivalences found")
     cl1 cl2  
   in
-  let union_eqvl acc l = List.fold_left union_eqv acc l in 
-  let union_eqv_parts eqvll = List.fold_left union_eqvl [] eqvll in
   let diff_eqv cl1 cl2 = List.fold_left (fun acc cl -> 
-    if List.exists (alpha_eq cl) cl2 then acc else acc@[cl]) [] cl1 in
+    if List.exists (alpha_eq cl) cl2 then acc else acc@[cl]) [] cl1
+  in
   let inter_eqv cl1 cl2 = List.fold_left (fun acc cl ->
       let eqs = List.filter (alpha_eq cl) cl2 in
-      if eqs = [] then acc
-      else acc@[cl@(List.flatten eqs)])
+      if eqs = [] then acc else acc@[cl@(List.flatten eqs)])
     [] cl1
+  in
+
+  (* Misc helpers *)
+  let union_eqvl acc l = List.fold_left union_eqv acc l in 
+  let union_eqv_parts eqvll = List.fold_left union_eqvl [] eqvll in
+  
+  let name_of_map expr = match expr with
+    | SingletonPC(id,_) | InPC(id,_,_) | OutPC(id,_,_) | PC(id,_,_,_) -> id
+    | _ -> failwith "invalid map"
+  in 
+  let filter_maps expr =
+    let filter_f pre acc expr =
+      let r = List.flatten (List.flatten acc) in
+      r@(match expr with
+         | SingletonPC _ | InPC _ | OutPC _ | PC _ -> [expr]
+         | _ -> [])
+    in fold_expr filter_f (fun x _ -> x) None [] expr
   in
 
   let fold_f pre acc expr : expr_t list list * expr_t =
@@ -997,9 +1018,15 @@ let common_subexpression_elim expr =
         | SingletonPC _ | InPC _ | OutPC _ | PC _ ->
           [], rebuilt_expr (* no work to do here *)
 
-        | IfThenElse _ (* carry up candidates common to both branches only *)
-          -> 
-            
+        (* carry up candidates common to both branches only *)
+        | IfThenElse (p,t,e) -> 
+           
+          (* Get maps tested in the predicate *)
+          let map_names = match p with
+            | Member(x,_) -> List.map name_of_map (filter_maps x)
+            | _ -> []
+          in
+
           (* Get then, else branch equivalences, and carry up intersection *)
           (* Note: flattening is fine for IfThenElse since this has singleton
            * lists per branches, guaranteeing unique candidates per branch.
@@ -1011,8 +1038,12 @@ let common_subexpression_elim expr =
             List.nth branch_candidates 0,
             List.nth branch_candidates 1, List.nth branch_candidates 2 in
 
-          (* Find intersection of CSEs in then and else branches *)
-          let common = inter_eqv t_cand_exprs e_cand_exprs in
+          (* Find intersection of CSEs in then and else branches, excluding
+           * expressions containing any maps tested in the predicate. *)
+          let common = List.filter (fun eqv ->
+              let names = List.map name_of_map (filter_maps (List.hd eqv))
+              in (Util.ListAsSet.inter map_names names) = [])
+            (inter_eqv t_cand_exprs e_cand_exprs) in
           let rest = diff_eqv (union_eqvl [] branch_candidates) common in
 
           (* Make CSEs for subexprs that are used more than once, but not passed up. *)
@@ -1084,6 +1115,9 @@ let common_subexpression_elim expr =
          * candidates. *)
         | Flatten _ ->
           ([rebuilt_expr]::(List.hd (List.hd sub_parts))), rebuilt_expr
+
+        | Member _ | Lookup _ ->
+          (union_eqv_parts ([[[[rebuilt_expr]]]]@sub_parts)), rebuilt_expr
 
         (* Everything else carries up CSE candidates. *)
         | _ -> (union_eqv_parts sub_parts), rebuilt_expr

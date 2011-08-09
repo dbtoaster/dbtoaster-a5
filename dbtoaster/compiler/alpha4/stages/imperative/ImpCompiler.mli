@@ -61,7 +61,7 @@ sig
   (* Toplevel code generation *)
 
   (* TODO: all of these should accept a compiler options record as input *)
-  val preamble : unit -> source_code_t
+  val preamble : compiler_options -> source_code_t
 
   val declare_maps_of_schema :
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> source_code_t
@@ -73,7 +73,8 @@ sig
     M3.relation_input_t list -> (ext_type, ext_fn) typed_expr_t list * source_code_t
 
   val declare_main :
-    (string * int) list -> M3.map_type_t list
+    compiler_options
+    -> (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
        (* Trigger registration metadata *)
     -> (string * string * string * (string * string) list) list

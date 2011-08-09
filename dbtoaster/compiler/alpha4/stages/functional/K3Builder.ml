@@ -8,6 +8,8 @@ open M3Common
 open K3.SR
 open Util
 
+type map_sig_t = M3.map_id_t * M3.var_id_t list * M3.var_id_t list
+
 (* Helpers *)
 
 (* TODO: types *)
@@ -17,236 +19,256 @@ let bind_for_apply_each vt e = Lambda(ATuple(vt), e)
 let bind_for_aggregate vt (iv,it) e = AssocLambda(ATuple(vt),AVar(iv,it),e)
 
 let map_to_expr mapn ins outs =
-    (* TODO: value types *)
-    begin match ins, outs with
-    | ([],[]) -> SingletonPC(mapn,TFloat)
-    | ([], x) -> OutPC(mapn,outs,TFloat)
-    | (x, []) -> InPC(mapn,ins,TFloat)
-    | (x,y)   -> PC(mapn,ins,outs,TFloat)
-    end
+  (* TODO: value types *)
+  begin match ins, outs with
+  | ([],[]) -> SingletonPC(mapn,TFloat)
+  | ([], x) -> OutPC(mapn,outs,TFloat)
+  | (x, []) -> InPC(mapn,ins,TFloat)
+  | (x,y)   -> PC(mapn,ins,outs,TFloat)
+  end
 
 let map_value_update_expr map_expr ine_l oute_l ve =
-    begin match map_expr with
-    | SingletonPC _ -> PCValueUpdate(map_expr, [], [], ve)
-    | OutPC _ -> PCValueUpdate(map_expr, [], oute_l, ve)
-    | InPC _ -> PCValueUpdate(map_expr, ine_l, [], ve)
-    | PC _ -> PCValueUpdate(map_expr, ine_l, oute_l, ve)
-    | _ -> failwith "invalid map expression for value update" 
-    end
+  begin match map_expr with
+  | SingletonPC _ -> PCValueUpdate(map_expr, [], [], ve)
+  | OutPC _ -> PCValueUpdate(map_expr, [], oute_l, ve)
+  | InPC _ -> PCValueUpdate(map_expr, ine_l, [], ve)
+  | PC _ -> PCValueUpdate(map_expr, ine_l, oute_l, ve)
+  | _ -> failwith "invalid map expression for value update" 
+  end
 
 let map_update_expr map_expr e_l te =
-    begin match map_expr with
-    | OutPC _ -> PCUpdate(map_expr, [], te)
-    | InPC _ -> PCUpdate(map_expr, [], te)
-    | PC _ -> PCUpdate(map_expr, e_l, te)
-    | _ -> failwith "invalid map expression for update"
-    end
+  begin match map_expr with
+  | OutPC _ -> PCUpdate(map_expr, [], te)
+  | InPC _ -> PCUpdate(map_expr, [], te)
+  | PC _ -> PCUpdate(map_expr, e_l, te)
+  | _ -> failwith "invalid map expression for update"
+  end
 
-let map_access_to_expr map_expr init_expr singleton init_singleton out_patv =
-    let aux sch t init_expr =
+let map_access_to_expr
+    skip_init map_expr init_expr singleton init_singleton out_patv
+  =
+  let aux sch t init_expr =
+    (* TODO: use typechecker to compute type *)
+    let ke = List.map (fun (v,t) -> Var(v,t)) sch in 
+    let map_t = Collection(TTuple((List.map snd sch)@[t])) in
+    let map_v,map_var = "slice",Var("slice", map_t) in
+    let access_expr =
+      if skip_init && singleton then Lookup(map_var,ke)
+      else if singleton then 
+        IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
+      else let p_ve = List.map (fun v -> 
+           let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
+           in Slice(map_var,sch,p_ve)
+    in Lambda(AVar(map_v, map_t), access_expr)
+  in
+  let map_init_expr map_expr ins outs ie =
+    let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
+    let oute_l = List.map (fun (v,t) -> Var(v,t)) outs in
+    let (iv_a, iv_e) =
+      (* TODO: use typechecker to compute type *)
+      let t = if init_singleton then TFloat else
+        begin match map_expr with
+        | InPC _ -> Collection(TTuple((List.map snd ins)@[TFloat]))
+        | OutPC  _| PC _ -> Collection(TTuple((List.map snd outs)@[TFloat]))
+        | _ -> failwith "invalid map type for initial values"
+        end
+      in AVar("init_val", t), Var("init_val", t)
+    in
+    (* Helper to update the db w/ a singleton init val *)
+    let update_singleton_aux rv_f =
+      let update_expr = map_value_update_expr map_expr ine_l oute_l iv_e
+      in Apply(Lambda(iv_a, Block([update_expr; rv_f iv_e])), ie)
+    in
+    (* Helper to build an index on a init val slice, and update the db *)
+    let update_slice rv_f =
+      (* Note: assume CG will do indexing as necessary for PCUpdates *)
+      let update_expr = map_update_expr map_expr ine_l iv_e
+      in Block([update_expr; rv_f iv_e])
+    in
+    if singleton && init_singleton then
+      (* ivc eval + value update + value rv *)
+      update_singleton_aux (fun x -> x)
+
+    else if init_singleton then
+      (* ivc eval + value update + slice construction + slice rv *)
+      update_singleton_aux (fun iv_e ->
+        match map_expr with
+        | OutPC _ | PC _ -> Singleton(Tuple(oute_l@[iv_e])) 
+        | _ -> failwith "invalid map type for slice lookup")
+
+    else if singleton then
+      (* ivc eval + slice update + value lookup rv *)
+      let ke = match map_expr with
+        | InPC _ -> ine_l | OutPC _ -> oute_l  | PC _ -> oute_l
+        | _ -> failwith "invalid map type for initial values" in
+      let lookup_expr_f rv_e = Lookup(rv_e, ke)
+      in Apply(Lambda(iv_a, update_slice lookup_expr_f), ie)
+        
+    else
+      (* ivc eval + slice update + slice rv *)
+      Apply(Lambda(iv_a, update_slice (fun x -> x)), ie)
+  in
+  begin match map_expr with
+  | SingletonPC(id,t) -> map_expr
+  | OutPC(id,outs,t) ->
+    let init_expr = map_init_expr map_expr [] outs (Const(CFloat(0.0)))
+    in Apply(aux outs t init_expr, map_expr)
+
+  | InPC(id,ins,t) ->
+    if Debug.active "RUNTIME-BIGSUMS" then
+      (* If we're being asked to compute bigsums at runtime, then
+         we don't need to test for membership -- this is always 
+         false *)
+      if (singleton && not init_singleton)
+      then Lookup(init_expr, (List.map (fun (v,t) -> Var(v,t)) ins))
+      else init_expr
+    else 
+      let init_expr = map_init_expr map_expr ins [] init_expr 
+      in Apply(aux ins t init_expr, map_expr)
+
+  | PC(id,ins,outs,t) ->
+    if Debug.active "RUNTIME-BIGSUMS" then
+      (* If we're being asked to compute bigsums at runtime, then
+         we don't need to test for membership -- this is always false *)
+      let rv_f = match (singleton, init_singleton) with
+        | (true,true)   -> (fun x -> x)
+        
+        | (false,true)  -> (fun x ->
+            Singleton(Tuple((List.map (fun (v,t) -> Var(v,t)) outs)@[x])))
+        
+        | (true,false)  ->
+          (fun x -> Lookup(x, (List.map (fun (v,t) -> Var(v,t)) outs)))
+        
+        | (false,false) -> (fun x -> x)
+      in rv_f init_expr
+    else
+      let init_expr = map_init_expr map_expr ins outs init_expr in
+      let nested_t =
         (* TODO: use typechecker to compute type *)
-        let ke = List.map (fun (v,t) -> Var(v,t)) sch in 
-        let map_t = Collection(TTuple((List.map snd sch)@[t])) in
-        let map_v,map_var = "slice",Var("slice", map_t) in
-        let access_expr =
-            if singleton then 
-                IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
-            else let p_ve = List.map (fun v -> 
-                    let t = List.assoc v sch in (v,(Var(v,t)))) out_patv 
-                 in Slice(map_var,sch,p_ve)
-        in Lambda(AVar(map_v, map_t), access_expr)
-    in
-    let map_init_expr map_expr ins outs ie =
-        let ine_l = List.map (fun (v,t) -> Var(v,t)) ins in
-        let oute_l = List.map (fun (v,t) -> Var(v,t)) outs in
-        let (iv_a, iv_e) =
-            (* TODO: use typechecker to compute type *)
-            let t = if init_singleton then TFloat else
-                begin match map_expr with
-                | InPC _ -> Collection(TTuple((List.map snd ins)@[TFloat]))
-                | OutPC  _| PC _ -> Collection(TTuple((List.map snd outs)@[TFloat]))
-                | _ -> failwith "invalid map type for initial values"
-                end
-            in AVar("init_val", t), Var("init_val", t)
-        in
-        (* Helper to update the db w/ a singleton init val *)
-        let update_singleton_aux rv_f =
-            let update_expr = 
-                map_value_update_expr map_expr ine_l oute_l iv_e
-            in Apply(Lambda(iv_a, Block([update_expr; rv_f iv_e])), ie)
-        in
-        (* Helper to build an index on a init val slice, and update the db *)
-        let update_slice rv_f =
-            (* Note: assume CG will do indexing as necessary for PCUpdates *)
-            let update_expr = map_update_expr map_expr ine_l iv_e
-            in Block([update_expr; rv_f iv_e])
-        in
-        if singleton && init_singleton then
-            (* ivc eval + value update + value rv *)
-            update_singleton_aux (fun x -> x)
-
-        else if init_singleton then
-            (* ivc eval + value update + slice construction + slice rv *)
-            update_singleton_aux (fun iv_e ->
-                begin match map_expr with
-                | OutPC _ | PC _ -> Singleton(Tuple(oute_l@[iv_e])) 
-                | _ -> failwith "invalid map type for slice lookup"
-                end)
-
-        else if singleton then
-            (* ivc eval + slice update + value lookup rv *)
-            let ke = match map_expr with
-                | InPC _ -> ine_l | OutPC _ -> oute_l  | PC _ -> oute_l
-                | _ -> failwith "invalid map type for initial values" in
-            let lookup_expr_f rv_e = Lookup(rv_e, ke)
-            in Apply(Lambda(iv_a, update_slice lookup_expr_f), ie)
+        let ins_t = List.map snd ins in
+        let outs_t = List.map snd outs
+        in Collection(TTuple(ins_t@[Collection(TTuple(outs_t@[t]))]))
+      in
+      let in_el = List.map (fun (v,t) -> Var(v,t)) ins in
+      let map_v,map_var = "m",Var("m", nested_t) in
+      let out_access_fn = Apply(aux outs t init_expr, Lookup(map_var,in_el)) in
+      let access_fn = Lambda(AVar(map_v, nested_t),
+          IfThenElse(Member(map_var,in_el), out_access_fn, init_expr))
+      in Apply(access_fn, map_expr)
         
-        else
-            (* ivc eval + slice update + slice rv *)
-            Apply(Lambda(iv_a, update_slice (fun x -> x)), ie)
-    in
-    begin match map_expr with
-    | SingletonPC(id,t) -> map_expr
-    | OutPC(id,outs,t) ->
-        let init_expr = map_init_expr map_expr [] outs (Const(CFloat(0.0)))
-        in Apply(aux outs t init_expr, map_expr)
+  | _ -> failwith "invalid map for map access"
+  end
 
-    | InPC(id,ins,t) ->
-        if Debug.active "RUNTIME-BIGSUMS" then
-          (* If we're being asked to compute bigsums at runtime, then
-             we don't need to test for membership -- this is always 
-             false *)
-          if (singleton && not init_singleton)
-          then Lookup(init_expr, (List.map (fun (v,t) -> Var(v,t)) ins))
-          else init_expr
-        else 
-        let init_expr = map_init_expr map_expr ins [] init_expr 
-          in Apply(aux ins t init_expr, map_expr)
+let rec calc_to_singleton_expr metadata calc =
+  let rcr = calc_to_singleton_expr metadata in
+  let bin_op f c1 c2 =
+    let nm,c1r = rcr c1 in
+    let nm2, c2r = calc_to_singleton_expr nm c2
+    in nm2, f c1r c2r
+  in 
+  begin match (M3P.get_calc calc) with
+    | M3.Const(i)   -> metadata, Const(i)
+    | M3.Var(x)     -> metadata, Var(x, TFloat) (* TODO: var type *)
 
-    | PC(id,ins,outs,t) ->
-        if Debug.active "RUNTIME-BIGSUMS" then
-          (* If we're being asked to compute bigsums at runtime, then
-             we don't need to test for membership -- this is always 
-             false *)
-          let rv_f = match (singleton, init_singleton) with
-            | (true,true)   -> (fun x -> x)
-            | (false,true)  -> (fun x -> Singleton(Tuple((List.map (fun (v,t) -> Var(v,t)) outs)@[x])))
-            | (true,false)  -> (fun x -> Lookup(x, (List.map (fun (v,t) -> Var(v,t)) outs)))
-            | (false,false) -> (fun x -> x)
-          in rv_f init_expr
-        else
-        let init_expr = map_init_expr map_expr ins outs init_expr in
-        let nested_t =
-            (* TODO: use typechecker to compute type *)
-            let ins_t = List.map snd ins in
-            let outs_t = List.map snd outs
-            in Collection(TTuple(ins_t@[Collection(TTuple(outs_t@[t]))]))
-        in
-        let in_el = List.map (fun (v,t) -> Var(v,t)) ins in
-        let map_v,map_var = "m",Var("m", nested_t) in
-        let out_access_fn = Apply(aux outs t init_expr, Lookup(map_var,in_el)) in
-        let access_fn = Lambda(AVar(map_v, nested_t),
-            IfThenElse(Member(map_var,in_el), out_access_fn, init_expr))
-        in Apply(access_fn, map_expr)
-        
-    | _ -> failwith "invalid map for map access"
-    end
+    | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
+      (* Note: no need for lambda construction since all in vars are bound. *)
+      (* TODO: schema+value types *)
+      let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
+      let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
+      let singleton_init_code = 
+        (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
+        (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
+      in
+      let init_expr = m3rhs_to_expr outv init_aggecalc in
+      let map_expr = map_to_expr mapn ins outs in
+      let new_metadata = metadata@[mapn, inv, outv] in
+      let r =
+        let skip = List.mem (mapn, inv, outv) metadata in
+        map_access_to_expr skip map_expr init_expr true singleton_init_code []
+      in new_metadata, r
 
-let rec calc_to_singleton_expr calc : expr_t =
-    let recur f c1 c2 =
-        f (calc_to_singleton_expr c1) (calc_to_singleton_expr c2) in 
-    begin match (M3P.get_calc calc) with
-        | M3.Const(i)   -> Const(i)
-        | M3.Var(x)     -> Var(x, TFloat) (* TODO: var type *)
+    | M3.Add (c1, c2) -> bin_op (fun x y -> Add(x,y))  c1 c2 
+    | M3.Mult(c1, c2) -> bin_op (fun x y -> Mult(x,y)) c1 c2
+    | M3.Lt  (c1, c2) -> bin_op (fun x y -> Lt(x,y))   c1 c2
+    | M3.Leq (c1, c2) -> bin_op (fun x y -> Leq(x,y))  c1 c2
+    | M3.Eq  (c1, c2) -> bin_op (fun x y -> Eq(x,y))   c1 c2
+    | M3.IfThenElse0(c1, c2) -> bin_op (fun x y -> IfThenElse0(x,y)) c1 c2
+  end
 
-        | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
-            (* Note: no need for lambda construction since all in vars are
-             * bound. *)
-            (* TODO: schema+value types *)
-            let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
-            let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
-            let singleton_init_code = 
-               (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
-               (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
-            in
-            let init_expr = m3rhs_to_expr outv init_aggecalc in
-            let map_expr = map_to_expr mapn ins outs in
-            map_access_to_expr map_expr init_expr true singleton_init_code []
-
-        | M3.Add (c1, c2) -> recur (fun x y -> Add(x,y))  c1 c2 
-        | M3.Mult(c1, c2) -> recur (fun x y -> Mult(x,y)) c1 c2
-        | M3.Lt  (c1, c2) -> recur (fun x y -> Lt(x,y))   c1 c2
-        | M3.Leq (c1, c2) -> recur (fun x y -> Leq(x,y))  c1 c2
-        | M3.Eq  (c1, c2) -> recur (fun x y -> Eq(x,y))   c1 c2
-        | M3.IfThenElse0(c1, c2) -> recur (fun x y -> IfThenElse0(x,y)) c1 c2
-    end
-
-and op_to_expr op c c1 c2 : expr_t =
-    let aux ecalc = (calc_schema ecalc, M3P.get_singleton ecalc) in
-    let (outv1, c1_sing) = aux c1 in
-    let (outv2, c2_sing) = aux c2 in
-    let (schema, c_sing, c_prod) =
-        calc_schema c, M3P.get_singleton c, M3P.get_product c
-    in match (c_sing, c1_sing, c2_sing) with
-        | (true, false, _) | (true, _, false) | (false, true, true) ->
+and op_to_expr metadata op c c1 c2 =
+  let aux ecalc = (calc_schema ecalc, M3P.get_singleton ecalc) in
+  let (outv1, c1_sing) = aux c1 in
+  let (outv2, c2_sing) = aux c2 in
+  let (schema, c_sing, c_prod) =
+    calc_schema c, M3P.get_singleton c, M3P.get_product c
+  in match (c_sing, c1_sing, c2_sing) with
+    | (true, false, _) | (true, _, false) | (false, true, true) ->
             failwith "invalid parent singleton"
         
-        | (true, _, _) -> calc_to_singleton_expr c
+    | (true, _, _) -> calc_to_singleton_expr metadata c
 
-        | (_, true, false) | (_, false, true) ->
-            (* TODO: types *)
-            let inline = calc_to_singleton_expr (if c1_sing then c1 else c2) in
-            let (v,v_t,l,r,cschema) =
-                if c1_sing then "v2",TFloat,inline,Var("v2",TFloat),outv2
-                else "v1",TFloat,Var("v1",TFloat),inline,outv1 in
-            let fn = bind_for_apply_each
-                ((args_of_vars cschema)@[v,v_t]) (op schema l r)
-            in Map(fn, calc_to_expr (if c1_sing then c2 else c1))
+    | (_, true, false) | (_, false, true) ->
+      (* TODO: types *)
+      let meta, ce = calc_to_expr metadata (if c1_sing then c2 else c1) in
+      let meta2, inline = calc_to_singleton_expr meta (if c1_sing then c1 else c2) in
+      let (v,v_t,l,r,cschema) =
+        if c1_sing then "v2",TFloat,inline,Var("v2",TFloat),outv2
+        else "v1",TFloat,Var("v1",TFloat),inline,outv1 in
+      let fn = bind_for_apply_each
+        ((args_of_vars cschema)@[v,v_t]) (op schema l r)
+      in meta2, Map(fn, ce)
         
-        | (_, false, false) ->
-            (* TODO: types *)
-            (* Note: there is no difference to the nesting whether this op
-             * is a product or a join *)
-            let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
-            let nested = bind_for_apply_each
-                ((args_of_vars outv2)@["v2",TFloat]) (op schema l r) in 
-            let inner = bind_for_apply_each ((args_of_vars outv1)@["v1",TFloat])
-                (Map(nested, calc_to_expr c2)) 
-            in Flatten(Map(inner, calc_to_expr c1))
+    | (_, false, false) ->
+      (* TODO: types *)
+      (* Note: there is no difference to the nesting whether this op
+       * is a product or a join *)
+      let meta, ine = calc_to_expr metadata c2 in
+      let meta2, oute = calc_to_expr meta c1 in
+      let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
+      let nested = bind_for_apply_each
+        ((args_of_vars outv2)@["v2",TFloat]) (op schema l r) in 
+      let inner = bind_for_apply_each
+        ((args_of_vars outv1)@["v1",TFloat]) (Map(nested, ine)) 
+      in meta2, Flatten(Map(inner, oute))
 
-and calc_to_expr calc : expr_t =
-    let tuple op schema c1 c2 =
-        (* TODO: schema types *)
-        Tuple((List.map (fun v -> (Var (v, TFloat))) schema)@[op c1 c2])
-    in  
-    begin match (M3P.get_calc calc) with
-        | M3.Const(i)   -> Const(i)
-        | M3.Var(x)     -> Var(x, TFloat) (* TODO: var type *)
+and calc_to_expr metadata calc =
+  let tuple op schema c1 c2 =
+    (* TODO: schema types *)
+    Tuple((List.map (fun v -> (Var (v, TFloat))) schema)@[op c1 c2])
+  in  
+  let bin_op f c1 c2 = op_to_expr metadata (tuple f) calc c1 c2 in 
+  begin match (M3P.get_calc calc) with
+    | M3.Const(i)   -> metadata, Const(i)
+    | M3.Var(x)     -> metadata, Var(x, TFloat) (* TODO: var type *)
 
-        | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
-            (* TODO: schema, value types *)
-            let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
-            let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
-            let init_expr = m3rhs_to_expr outv init_aggecalc in
-            let map_expr = map_to_expr mapn ins outs in
-            let singleton_init_code = 
-               (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
-               (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc)) in
-            let patv = M3P.get_extensions (M3P.get_ecalc init_aggecalc)
-            in map_access_to_expr map_expr init_expr
-                (M3P.get_singleton calc) singleton_init_code patv
+    | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
+      (* TODO: schema, value types *)
+      let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
+      let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
+      let init_expr = m3rhs_to_expr outv init_aggecalc in
+      let map_expr = map_to_expr mapn ins outs in
+      let singleton_init_code = 
+        (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
+        (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
+      in
+      let patv = M3P.get_extensions (M3P.get_ecalc init_aggecalc) in
+      let r =
+        let skip = List.mem (mapn, inv, outv) metadata
+        in map_access_to_expr skip map_expr init_expr
+             (M3P.get_singleton calc) singleton_init_code patv
+      in metadata@[mapn,inv,outv], r
 
-        | M3.Add (c1, c2) -> op_to_expr (tuple (fun c1 c2 -> Add (c1,c2))) calc c1 c2 
-        | M3.Mult(c1, c2) -> op_to_expr (tuple (fun c1 c2 -> Mult(c1,c2))) calc c1 c2
-        | M3.Eq  (c1, c2) -> op_to_expr (tuple (fun c1 c2 -> Eq  (c1,c2))) calc c1 c2
-        | M3.Lt  (c1, c2) -> op_to_expr (tuple (fun c1 c2 -> Lt  (c1,c2))) calc c1 c2
-        | M3.Leq (c1, c2) -> op_to_expr (tuple (fun c1 c2 -> Leq (c1,c2))) calc c1 c2
-        | M3.IfThenElse0(c1, c2) ->
-            let short_circuit_if = M3P.get_short_circuit calc in
-            if short_circuit_if then
-                 op_to_expr (tuple (fun c1 c2 -> IfThenElse0(c1,c2))) calc c1 c2
-            else op_to_expr (tuple (fun c2 c1 -> IfThenElse0(c1,c2))) calc c2 c1
-    end 
+    | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) c1 c2 
+    | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) c1 c2
+    | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) c1 c2
+    | M3.Lt  (c1, c2) -> bin_op (fun c1 c2 -> Lt  (c1,c2)) c1 c2
+    | M3.Leq (c1, c2) -> bin_op (fun c1 c2 -> Leq (c1,c2)) c1 c2
+    | M3.IfThenElse0(c1, c2) ->
+      let short_circuit_if = M3P.get_short_circuit calc in
+      if short_circuit_if then
+        bin_op (fun c1 c2 -> IfThenElse0(c1,c2)) c1 c2
+      else bin_op (fun c2 c1 -> IfThenElse0(c1,c2)) c2 c1
+  end 
 
 and m3rhs_to_expr lhs_outv paggcalc : expr_t =
    (* invokes calc_to_expr on calculus part of paggcalc.
@@ -258,7 +280,7 @@ and m3rhs_to_expr lhs_outv paggcalc : expr_t =
     *)
     let init_val = Const(CFloat(0.0)) in
     let ecalc = M3P.get_ecalc paggcalc in
-    let rhs_outv, rhs_expr = calc_schema ecalc, calc_to_expr ecalc in
+    let rhs_outv, rhs_expr = calc_schema ecalc, snd (calc_to_expr [] ecalc) in
     let agg_fn = bind_for_aggregate
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))
@@ -312,7 +334,7 @@ let collection_stmt trig_args m3stmt : statement =
             in
             (* Note: we can only use calc_to_singleton_expr if there are
              * no loop or bigsum vars in calc *) 
-            ((if M3P.get_singleton calc then calc_to_singleton_expr calc
+            ((if M3P.get_singleton calc then snd (calc_to_singleton_expr [] calc)
               else m3rhs_to_expr lhs_outv aggcalc),s))
             [incr_aggcalc; init_aggcalc]
         in (List.hd expr_l, List.hd (List.tl expr_l))
