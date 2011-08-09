@@ -906,9 +906,14 @@ let rec simplify_roly  (term: term_t)
                   (* If all the directed closures have been exhausted, we can 
                      start handling undirected closure *)
                   try 
-                     let (a, b1::b2::_) = List.find (fun (a, bl) -> 
-                        (List.length bl > 1))
-                        (ListExtras.reduce_assoc s)
+                     let (a, b1, b2) = 
+                        match List.find (fun (a, bl) -> 
+                           (List.length bl > 1))
+                           (ListExtras.reduce_assoc s) with
+                        | (a, b1::b2::_) -> (a, b1, b2)
+                        | _ -> failwith 
+                           ("bug in simplify_roly: "^
+                            "List has fewer elements than advertised")
                      in
                      let rest = List.filter (fun (a_f,b_f) ->
                            not ((a = a_f) && ((b1 = b_f) || (b2 = b_f)))
@@ -1564,8 +1569,7 @@ let preaggregate (mode: bs_rewrite_mode_t)
       (List.map (fun x ->
 (*          snd (simplify_roly true x params []))*)
             snd (simplify_roly x [] 
-                               (ListAsSet.diff params
-                                               (bound_vars_of_term term))
+                               params
                                params))
         (TermRing.sum_list t))
     in TermRing.extract
