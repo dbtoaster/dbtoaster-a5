@@ -274,7 +274,7 @@ tests = [];
 $debug_flags = [];
 queries = nil;
 $skip_compile = false;
-$precision = 1e-12;
+$precision = 1e-4;
 $strict = false;
 $ret = 0;
 
