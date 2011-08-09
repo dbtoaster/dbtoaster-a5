@@ -222,8 +222,8 @@ and op_to_expr metadata op c c1 c2 =
       (* TODO: types *)
       (* Note: there is no difference to the nesting whether this op
        * is a product or a join *)
-      let meta, ine = calc_to_expr metadata c2 in
-      let meta2, oute = calc_to_expr meta c1 in
+      let meta, oute = calc_to_expr metadata c1 in
+      let meta2, ine = calc_to_expr meta c2 in
       let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
       let nested = bind_for_apply_each
         ((args_of_vars outv2)@["v2",TFloat]) (op schema l r) in 

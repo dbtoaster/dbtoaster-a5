@@ -900,7 +900,7 @@ let common_subexpression_elim expr =
   let sub_cse expr cse_var cl =
     List.fold_left (fun acc cse -> substitute_expr [cse, cse_var] acc) expr cl
   in
-  let mk_cse expr_id expr eqv subs = List.fold_left (fun acc_expr cl ->
+  let mk_cse expr_id expr eqv = List.fold_left (fun acc_expr cl ->
       let cse_id = gensym() in
       let arg = List.hd cl in
       let cse_ty =
@@ -912,7 +912,7 @@ let common_subexpression_elim expr =
       in
       let cse_var = Var(cse_id, cse_ty) in
         Apply(Lambda(AVar(cse_id, cse_ty), sub_cse acc_expr cse_var cl), arg))
-    (substitute_expr subs expr) (filter_contained eqv)
+    expr (List.rev (filter_contained eqv))
   in
   
   (* Alpha renaming based equivalence, and equivalence class helpers *)
@@ -962,7 +962,7 @@ let common_subexpression_elim expr =
     let eq,rest = List.partition (alpha_eq c) acc in
       match eq with
         | [] -> rest@[c]
-        | [x] -> rest@[x@c]
+        | [x] -> rest@[c@x]
         | _ -> failwith "multiple equivalences found")
     cl1 cl2  
   in
@@ -1001,7 +1001,7 @@ let common_subexpression_elim expr =
         let body = List.hd (List.hd parts) in
         let cses = List.filter
           (fun cl -> List.length cl > 1) (List.hd (List.hd sub_parts))
-        in f (mk_cse "lambda" body cses [])
+        in f (mk_cse "lambda" body cses)
       in [], r_expr
     in
 
@@ -1071,8 +1071,8 @@ let common_subexpression_elim expr =
                         (sub_acc, acc_expr) cl)
                   ([],rp) p_cses
                 in
-                let nt = mk_cse "ite-then" rt t_cses [] in
-                let ne = mk_cse "ite-else" re e_cses []
+                let nt = mk_cse "ite-then" rt t_cses in
+                let ne = mk_cse "ite-else" re e_cses
                 in List.fold_left (fun acc_expr (cse,id,ty) -> 
                     Apply(Lambda(AVar(id,ty), acc_expr), cse))
                   (IfThenElse(np, nt, ne)) cse_id_tys
@@ -1116,6 +1116,14 @@ let common_subexpression_elim expr =
         | Flatten _ ->
           ([rebuilt_expr]::(List.hd (List.hd sub_parts))), rebuilt_expr
 
+        (* Carry up the block, which contains inlined collection updates, to
+         * preserve evaluation order w.r.t map operations, as well as the
+         * map operations themselves. *) 
+        | Block _ ->
+          let candidate = mk_cse "block" rebuilt_expr
+            (List.flatten (List.flatten sub_parts)) 
+          in (union_eqv_parts ([[[[candidate]]]]@sub_parts)), candidate
+
         | Member _ | Lookup _ ->
           (union_eqv_parts ([[[[rebuilt_expr]]]]@sub_parts)), rebuilt_expr
 
@@ -1126,7 +1134,7 @@ let common_subexpression_elim expr =
   in
   let global_cses, r_expr =
     fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
-  in mk_cse "global" r_expr global_cses []
+  in mk_cse "global" r_expr global_cses
 
 
 
