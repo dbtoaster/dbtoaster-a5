@@ -168,7 +168,7 @@ class CppUnitTest < GenericUnitTest
         "-c","#{$dbt_path}/bin/#{@qname}"
       ] + ($debug_flags.map { |f| ["-d", f]}.flatten(1)) + [
         @qpath
-      ]).join(" ");
+      ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
       print "(Compile: #{(Time.now - starttime).to_i}s) "
