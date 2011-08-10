@@ -43,7 +43,7 @@ CREATE TABLE LINEITEM (
         shipmode       int, -- hash
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/lineitem.tbl'
+  FROM FILE 'test/data/tpch_100M/lineitem.csv'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -57,7 +57,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/orders.tbl'
+  FROM FILE 'test/data/tpch_100M/orders.csv'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -70,7 +70,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- hash
         comment      int  -- hash
     )
-  FROM FILE 'test/data/tpch/customer.tbl'
+  FROM FILE 'test/data/tpch_100M/customer.csv'
   LINE DELIMITED customer;
 
 SELECT ORDERS.orderkey, 
