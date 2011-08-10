@@ -198,7 +198,7 @@ class Array
   end
   
   def power_set
-    if empty? then []
+    if empty? then [[]]
     elsif self.length == 1 then
       [[], [self[0]]];
     else
