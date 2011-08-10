@@ -77,6 +77,11 @@ sig
 
   (* Typing interface *)
   val ext_type_of_k3_collection : K3.SR.expr_t -> ext_type type_t
+  
+  val type_of_map_schema : 
+    M3Common.Patterns.pattern_map -> M3.map_type_t
+    -> (K3.SR.id_t * ext_type type_t * ext_type type_t list)
+
   val type_env_of_declarations :
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> type_env_t
 
@@ -712,7 +717,7 @@ struct
       | Decl (_,((id,ty) as d),init) ->
         if init = None then Some(Decl(ty, d, None)), None
         else let t = type_of_expr_t (cexpri 0)
-             in Some(Decl(t, d, Some(cexpri 0))), None
+             in Some(Decl(t, (id,t), Some(cexpri 0))), None
 
       | For (_,elem,_,_) ->
         let t = type_of_imp_t (cimpi 1)
@@ -1558,9 +1563,23 @@ end (* Typing *)
       Expr (_,e) -> flatten_external e 
     | Block (m,il) -> [Block(m, List.flatten (List.map rcr_aux il))]
     | Decl (unit,d,None) -> [imp]
+
     | Decl (unit, d, Some(init)) ->
         begin match desugar_expr opts env init with
           | Some(i), Some(e) -> i@[Decl(unit, d, Some(e))]
+
+          (* Avoid copying external types with equality operator, taking
+           * a reference instead *)
+          | None, Some(Var(Target(Type(x)),v) as e) ->
+            let t, ref_t = let a = Target(Type(x)) in a, Target(Ref(a)) in
+            [Decl(unit, (fst d, ref_t), Some(e))]
+
+          (* TODO: revisit capturing reference/address for nested external types.
+          | None, Some(Fn(Target(Type(x)),Ext(MemberAccess _),args) as e) ->
+            let t, ref_t = let a = Target(Type(x)) in a, Target(Ref(a)) in
+            [Decl(unit, (fst d, ref_t), Some(Fn(t, Ext(ConstCast(t)), [e])))]
+          *)
+
           | None, Some(e) -> [Decl(unit, d, Some(e))]
           | _, _ -> failwith "invalid declaration externalization" 
         end
@@ -1714,6 +1733,7 @@ end (* Typing *)
   (* External typing interface *)
   type type_env_t = Typing.type_env_t
   let ext_type_of_k3_collection = Typing.ext_type_of_k3_collection
+  let type_of_map_schema = Typing.type_of_map_schema
   let type_env_of_declarations schema patterns =
     ([], Typing.type_env_of_declarations schema patterns)
 
@@ -2197,12 +2217,25 @@ struct
   let compile_triggers opts dbschema (schema,patterns,trigs) :
     (source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t) list
   =
+    let imp_type_of_calc_type t = match t with
+      | Calculus.TInt -> Host K.TInt
+      | Calculus.TLong -> failwith "Unsupport K3/Imp type: long"
+      | Calculus.TDouble -> Host K.TFloat
+      | Calculus.TString -> failwith "Unsupport K3/Imp type: string"
+    in
     let type_env = type_env_of_declarations schema patterns in
+    let map_env =
+      List.map (fun (id,t,_) -> id,t) 
+        (List.map (type_of_map_schema patterns) schema)
+    in
     let stmt_cnt = ref 0 in
     List.map (fun (evt,rel,args,k3stmts) ->
+        let env = map_env@(List.map2 (fun v1 v2 ->
+            v1, imp_type_of_calc_type (snd v2)) args (List.assoc rel dbschema))
+        in
         let dsi i = if opts.desugar then desugar_imp opts type_env i else i in
         let si_l = List.map (fun s ->
-          let imp = imp_of_ir ext_type_of_k3_collection (ir_of_expr (snd s)) in
+          let imp = imp_of_ir ext_type_of_k3_collection env (ir_of_expr (snd s)) in
           let bimp = match imp with
             | [x] -> x
             | _ -> Imperative.Block (None, imp)

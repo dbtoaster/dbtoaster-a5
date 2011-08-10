@@ -44,6 +44,11 @@ sig
 
   (* Typing interface *)
   val ext_type_of_k3_collection : K3.SR.expr_t -> ext_type type_t
+
+  val type_of_map_schema : 
+    M3Common.Patterns.pattern_map -> M3.map_type_t
+    -> (K3.SR.id_t * ext_type type_t * ext_type type_t list)
+
   val type_env_of_declarations :
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> type_env_t
 

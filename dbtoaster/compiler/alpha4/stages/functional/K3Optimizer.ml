@@ -880,7 +880,10 @@ let rec simplify_collections expr =
 let common_subexpression_elim expr =
   let symref = ref 0 in
   let gensym () = incr symref; "__cse"^(string_of_int !symref) in
-  let filter_contained eqv =
+  let unique l = List.fold_left (fun acc e ->
+    if List.mem e acc then acc else acc@[e]) [] l
+  in
+  let filter_contained eqvl =
     List.fold_left (fun acc cl ->
       (* Remove any equiv. classes in the accumulator contained by cl *)
       let nacc = List.filter (fun cl2 -> List.for_all
@@ -891,7 +894,7 @@ let common_subexpression_elim expr =
       let prune = List.exists (List.exists
         (fun x -> List.exists (fun y -> contains_expr x y) cl)) nacc
       in if prune then nacc else nacc@[cl])
-      [] eqv
+      [] eqvl
   in
   let rec substitute_expr substitutions expr =
     if List.mem_assoc expr substitutions then List.assoc expr substitutions
@@ -911,7 +914,8 @@ let common_subexpression_elim expr =
            failwith ("invalid cse: "^msg))
       in
       let cse_var = Var(cse_id, cse_ty) in
-        Apply(Lambda(AVar(cse_id, cse_ty), sub_cse acc_expr cse_var cl), arg))
+        Apply(Lambda(AVar(cse_id, cse_ty),
+              sub_cse acc_expr cse_var (unique cl)), arg))
     expr (List.rev (filter_contained eqv))
   in
   
@@ -1068,7 +1072,7 @@ let common_subexpression_elim expr =
                       List.fold_left (fun (sub_acc, acc_expr) cse ->
                           (sub_acc@[cse,cse_id,cse_t]),
                           substitute_expr [cse, cse_var] acc_expr)
-                        (sub_acc, acc_expr) cl)
+                        (sub_acc, acc_expr) (unique cl))
                   ([],rp) p_cses
                 in
                 let nt = mk_cse "ite-then" rt t_cses in
@@ -1123,6 +1127,10 @@ let common_subexpression_elim expr =
           let candidate = mk_cse "block" rebuilt_expr
             (List.flatten (List.flatten sub_parts)) 
           in (union_eqv_parts ([[[[candidate]]]]@sub_parts)), candidate
+
+        (* HACK: don't treat nested map lookups as CSEs *)
+        | Member(PC _, _) | Lookup(PC _, _) ->
+          (union_eqv_parts sub_parts), rebuilt_expr
 
         | Member _ | Lookup _ ->
           (union_eqv_parts ([[[[rebuilt_expr]]]]@sub_parts)), rebuilt_expr

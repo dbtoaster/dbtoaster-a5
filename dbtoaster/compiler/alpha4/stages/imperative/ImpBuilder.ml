@@ -25,6 +25,7 @@
 
 open M3
 open K3.SR
+open Format
 
 (* An annotated K3 module.
  *
@@ -124,7 +125,7 @@ struct
   let meta_of_arg arg meta =
     begin match arg with
     | AVar(arg_sym, ty) ->
-        (mk_meta arg_sym (Host ty)), [], Some(true, arg_sym, (Host ty))
+      (mk_meta arg_sym (Host ty)), [], Some(true, arg_sym, (Host ty))
     | _ -> meta, [arg], (decl_of_meta true meta)
     end
 
@@ -485,8 +486,53 @@ struct
         [meta, (tag, List.map meta_of_ir children)]
     in aux [] c
 
+  (* Declaration initialization *)
+  let vars_of_expr expr =
+    let fold_f top parts e = match e with
+      | Var (_,v) -> [v]
+      | _ -> List.flatten parts
+    in fold_expr fold_f (fun x _ -> x) None [] expr
+
+  let inline_decls env imp =
+    let rec aux envacc dacc eacc i = match i with
+      | Expr(None, BinOp(None, Assign, Var(None, ((id,_) as d)), e)) ->
+        if not (List.mem_assoc d dacc) then envacc, dacc, eacc, [i]
+        else 
+          let denv = List.map fst (List.assoc d dacc) in
+          if List.for_all (fun v ->
+               List.mem (fst v) denv  && not(List.mem_assoc v dacc))
+             (vars_of_expr e)
+          then
+            envacc, List.remove_assoc d dacc, eacc@[Decl(None, d, Some(e))], []
+          else envacc, dacc, eacc, [i]
+
+      | Block (None,l) ->
+        let w,x,y,z = List.fold_left (fun (envacc,dacc,eacc,iacc) li ->
+          let a,b,c,d = aux envacc dacc eacc li
+          in a,b,c,(iacc@d)) (envacc,dacc,eacc,[]) l
+        in envacc, x, y, if z = [] then [] else [Block(None,z)]
+
+      | Decl(None, d, None) -> envacc@[d], dacc@[d, envacc], eacc, []
+      | _ -> envacc, dacc, eacc, [i]
+    in
+    let _, unbound_decls, init_decls, rest = aux env [] [] imp in
+    let decls = List.map (fun (d,_) -> Decl(None, d, None)) unbound_decls in
+      begin match rest with
+       | [] -> List.hd (decls@init_decls)
+       | [Block(None, l)] -> Block(None, decls@init_decls@l)
+       | [x] -> Block(None, decls@init_decls@[x])
+       | _ -> failwith "invalid declaration initialization"  
+      end
+
+  let inline_decls_of_imp_list env il =
+    begin match inline_decls env (Block(None, il)) with
+    | Block(None, l) -> l
+    | _ -> failwith "invalid declaration initialization"
+    end    
+
   (* Imperative expression construction, from an IR tree. *)
   let imp_of_ir (map_typing_f : K3.SR.expr_t -> 'ext_type type_t)
+                (env : 'ext_type_t var_t list)
                  ir : ('a option, 'ext_type, 'ext_fn) imp_t list =
     let flat_ir = linearize_ir ir in
     let gc_op op = match op with
@@ -952,11 +998,12 @@ struct
             [Expr(None, BinOp(None, Assign, Var (None, (meta_sym, meta_ty)), e))]
           in
           if List.length b = 1 then (false, None, Some(e))
-          else (true, Some(b), None)
+          else (true, Some(inline_decls_of_imp_list env b), None)
         
         | Some(i), None -> 
             let ro = Some(
-              if child_decls = [] then i else [Block(None, child_decls@i)]) 
+              if child_decls = [] then i
+              else [(Block(None, inline_decls_of_imp_list env (child_decls@i)))]) 
             in imp_meta_used, ro, expr
         | _, _ -> failwith "invalid tag compilation"
       end
@@ -984,7 +1031,7 @@ struct
             in
             let r = [Expr(None, BinOp(None, Assign,
                      Var (None, (sym_of_meta meta, type_of_meta meta)), gc_expr e))]
-            in true, Some(cimp@r), None
+            in true, Some(inline_decls_of_imp_list env (cimp@r)), None
         end 
     in
     (* Top-down code generation (i.e. from top of K3 expression, which is the
@@ -993,13 +1040,13 @@ struct
     let root_decl =
       let decl_meta = None in
       Decl(decl_meta, (sym_of_meta root_meta, type_of_meta root_meta), None) in
-    begin match gc_meta (root_meta, root_tc) with
+    let r = match gc_meta (root_meta, root_tc) with
       | meta_used, Some(i), None ->
         (if meta_used then [root_decl] else [])@i
       | _, None, Some(e) ->
         [root_decl; Expr(None, BinOp(None, Assign,
             Var (None, (sym_of_meta root_meta, type_of_meta root_meta)), e))]
       | _, _, _ -> failwith "invalid code"   
-    end
+    in inline_decls_of_imp_list env r
 
 end
