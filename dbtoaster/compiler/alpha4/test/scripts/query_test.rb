@@ -35,12 +35,14 @@ $queries = {
   "pricespread" => {
     :path => "test/sql/finance/pricespread.sql",
     :type => :singleton,
-    :answer => 76452380068302.0
+    :answer => 76452380068302.0,
+    :valid_opts => ["dup-ivc"]
   },
   "missedtrades" => {
     :path => "test/sql/finance/missedtrades.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/missedtrades.csv")
+    :answer => results_file("test/results/missedtrades.csv"),
+    :valid_opts => ["dup-ivc"]
   },
   "axfinder" => {
     :path => "test/sql/finance/axfinder.sql",
@@ -317,9 +319,11 @@ queries.each do |tquery|
       $queries[tquery].
         fetch(:valid_opts, []).
         intersect(test_optimizations).
-        each_power_set do |test_opts|
+        power_set.each do |test_opts|
           t = test_class.new
-          print "Testing query '#{tquery}'#{test_opts.empty? ? "" : " with optimization#{test_opts.length > 1 ? "s" : ""} #{test_opts.join(", ")}"} on the #{t.to_s}: "; 
+          opt_string = test_opts.empty? ? "" : 
+            " with optimization#{test_opts.s?} #{test_opts.join(", ")}"
+          print "Testing query '#{tquery}'#{opt_string} on the #{t.to_s}: "; 
           STDOUT.flush;
           t.query = tquery
           t.opts = test_opts.

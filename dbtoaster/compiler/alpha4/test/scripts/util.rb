@@ -189,20 +189,21 @@ class Array
       "\n" + head_foot;
   end
   
+  def s?
+    if self.length > 1 then "s" else "";
+  end
+  
   def intersect(other)
     self.clone.delete_if { |e| not other.include? e };
   end
   
-  def each_power_set
-    if empty? then yield []
+  def power_set
+    if empty? then []
     elsif self.length == 1 then
-      yield [];
-      yield [self[0]];
+      [[], [self[0]]];
     else
-      self[1..-1].each_power_set do |ret|
-        yield ret;
-        yield [self[0]] + ret;
-      end
+      child = self[1..-1].power_set;
+      child + child.map { |c| self[0] + c };
     end
   end
 end
