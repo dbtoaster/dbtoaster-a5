@@ -190,7 +190,7 @@ class Array
   end
   
   def s?
-    if self.length > 1 then "s" else "";
+    if self.length > 1 then "s" else "" end;
   end
   
   def intersect(other)
@@ -203,7 +203,7 @@ class Array
       [[], [self[0]]];
     else
       child = self[1..-1].power_set;
-      child + child.map { |c| self[0] + c };
+      child + child.map { |c| [self[0]] + c };
     end
   end
 end
