@@ -188,6 +188,23 @@ class Array
       end.join("\n") +
       "\n" + head_foot;
   end
+  
+  def intersect(other)
+    self.clone.delete_if { |e| not other.include? e };
+  end
+  
+  def each_power_set
+    if empty? then yield []
+    elsif self.length == 1 then
+      yield [];
+      yield [self[0]];
+    else
+      self[1..-1].each_power_set do |ret|
+        yield ret;
+        yield [self[0]] + ret;
+      end
+    end
+  end
 end
 
 class Hash

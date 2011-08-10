@@ -16,6 +16,11 @@ def results_file(path, delim = /,/)
     end.to_h
 end
 
+$optimizations = {
+  "runtime-bigsums"   => "-d runtime-bigsums",
+  "dup-ivc"           => "-d dup-ivc"
+}
+
 $queries = {
   "rst" => {
     :path => "test/sql/simple/rst.sql",
@@ -40,18 +45,8 @@ $queries = {
   "axfinder" => {
     :path => "test/sql/finance/axfinder.sql",
     :type => :onelevel,
-    :answer => { 
-      [0.0] =>  2446668.0,
-      [1.0] =>  -648039.0,
-      [2.0] => -5363809.0,
-      [3.0] =>   864240.0,
-      [4.0] =>  8384852.0,
-      [5.0] =>  3288320.0,
-      [6.0] => -2605617.0,
-      [7.0] =>   243551.0,
-      [8.0] =>  1565128.0,
-      [9.0] =>   995180.0
-    }
+    :answer => results_file("test/results/axfinder.csv"),
+    :valid_opts => ["runtime-bigsums", "dup-ivc"]
   },
   "tpch3" => {
     :path => "test/sql/tpch/query3.sql",
@@ -105,7 +100,8 @@ $queries = {
 };
 
 class GenericUnitTest
-  attr_reader :runtime;
+  attr_reader :runtime, :opts;
+  attr_writer :opts;
 
   def query=(q, qdat = $queries[q])
     @qname = q;
@@ -168,7 +164,7 @@ class CppUnitTest < GenericUnitTest
         "-c","#{$dbt_path}/bin/#{@qname}"
       ] + ($debug_flags.map { |f| ["-d", f]}.flatten(1)) + [
         @qpath
-      ]).join(" ") + "  2>&1";
+      ]).join(" ") + " " + @opts + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
       print "(Compile: #{(Time.now - starttime).to_i}s) "
@@ -224,7 +220,7 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
-    IO.popen("#{$dbt} -r #{@qpath} 2>&1"+
+    IO.popen("#{$dbt} -r #{@qpath} #{@opts} 2>&1"+
              ($debug_flags.map {|f|" -d #{f}"}.join("")), "r") do |qin|
       output = qin.readlines.join("")
       if /Processing time: ([0-9]+\.?[0-9]*)/ =~ output
@@ -277,9 +273,13 @@ $skip_compile = false;
 $precision = 1e-4;
 $strict = false;
 $ret = 0;
+test_optimizations = []
 
 GetoptLong.new(
   [ '-a', '--all',       GetoptLong::NO_ARGUMENT],
+  [ '-o',                GetoptLong::REQUIRED_ARGUMENT],
+  [ '--all-queries',     GetoptLong::NO_ARGUMENT],
+  [ '--all-opts',        GetoptLong::NO_ARGUMENT],
   [ '-t', '--test',      GetoptLong::REQUIRED_ARGUMENT],
   [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
   [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
@@ -287,7 +287,12 @@ GetoptLong.new(
   [ '--strict',          GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
-    when '-a', '--all' then queries = $queries.keys
+    when '-a', '--all' then 
+      queries = $queries.keys
+      test_optimizations = $optimizations.keys
+    when '--all-queries' then queries = $queries.keys
+    when '--all-opts' then test_optimizations = $optimizations.keys
+    when '-o' then test_optimizations.push arg;
     when '--skip-compile' then $skip_compile = true;
     when '-p', '--precision' then $precision = 10 ** (-1 * arg.to_i);
     when '-t', '--test' then 
@@ -309,24 +314,33 @@ queries = ARGV if queries.nil?
 queries.each do |tquery| 
   if $queries.has_key? tquery then
     tests.each do |test_class|
-      t = test_class.new
-      print "Testing query '#{tquery}' on the #{t.to_s}: "; STDOUT.flush;
-      t.query = tquery
-      begin 
-        t.run
-        if t.correct? then
-          puts "Success (#{t.runtime}s)."
-        else
-          puts "Failure: Result Mismatch"
-          puts(([["Key", "Expected", "Result", "Different?"], 
-                 ["", "", ""]] + t.results).tabulate);
-          $ret = -1;
-          exit -1 if $strict;
-        end
-      rescue Exception => e
-        puts "Failure: #{e}";
-        $ret = -1;
-        exit -1 if $strict;
+      $queries[tquery].
+        fetch(:valid_opts, []).
+        intersect(test_optimizations).
+        each_power_set do |test_opts|
+          t = test_class.new
+          print "Testing query '#{tquery}'#{test_opts.empty? ? "" : " with optimization#{test_opts.length > 1 ? "s" : ""} #{test_opts.join(", ")}"} on the #{t.to_s}: "; 
+          STDOUT.flush;
+          t.query = tquery
+          t.opts = test_opts.
+            map { |opt| $optimizations.fetch(opt, "") }.
+            join(" ")
+          begin 
+            t.run
+            if t.correct? then
+              puts "Success (#{t.runtime}s)."
+            else
+              puts "Failure: Result Mismatch"
+              puts(([["Key", "Expected", "Result", "Different?"], 
+                     ["", "", ""]] + t.results).tabulate);
+              $ret = -1;
+              exit -1 if $strict;
+            end
+          rescue Exception => e
+            puts "Failure: #{e}";
+            $ret = -1;
+            exit -1 if $strict;
+          end
       end
     end
   else
