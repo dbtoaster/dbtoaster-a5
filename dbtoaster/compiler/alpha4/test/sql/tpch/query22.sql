@@ -9,7 +9,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/orders.tbl'
+  FROM FILE 'test/data/tpch_100M/orders.csv'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -22,7 +22,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- hash
         comment      int  -- hash
     )
-  FROM FILE 'test/data/tpch/customer.tbl'
+  FROM FILE 'test/data/tpch_100M/customer.csv'
   LINE DELIMITED customer;
 
 select c1.nationkey, sum(c1.acctbal) from customer c1

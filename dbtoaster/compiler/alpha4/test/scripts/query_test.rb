@@ -17,8 +17,9 @@ def results_file(path, delim = /,/)
 end
 
 $optimizations = {
-  "runtime-bigsums"   => "-d runtime-bigsums",
-  "dup-ivc"           => "-d dup-ivc"
+  "runtime-bigsums"    => "-d runtime-bigsums",
+  "dup-ivc"            => "-d dup-ivc",
+  "factor-postprocess" => "-d factor-postprocess"
 }
 
 $queries = {
@@ -54,16 +55,6 @@ $queries = {
     :path => "test/sql/tpch/query3.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query3_100M.csv")   
-#    {
-#      [ 0.0, 19941212.0, 3430.0 ] => 4726.6775,
-#      [ 0.0, 19950217.0, 4423.0 ] => 3055.9365,
-#      [ 0.0, 19950123.0, 2883.0 ] => 36666.9612,
-#      [ 0.0, 19941124.0, 3492.0 ] => 43716.0724,
-#      [ 0.0, 19941126.0, 998.0  ] => 11785.5486,
-#      [ 0.0, 19950208.0, 1637.0 ] => 164224.9253,
-#      [ 0.0, 19941211.0, 5191.0 ] => 49378.3094,
-#      [ 0.0, 19941223.0, 742.0  ] => 43728.048
-#    }
   },
 #  "tpch5" => {
 #    :path => "test/sql/tpch/query5.sql",
@@ -73,7 +64,7 @@ $queries = {
   "tpch11" => {
     :path => "test/sql/tpch/query11a.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query11.csv")
+    :answer => results_file("test/results/tpch/query11_100M.csv")
   },
   "tpch17" => {
     :path => "test/sql/tpch/query17.sql",
@@ -93,7 +84,7 @@ $queries = {
   "tpch22" => {
     :path => "test/sql/tpch/query22.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query22.csv")
+    :answer => results_file("test/results/tpch/query22_100M.csv")
   },
   "clusteravailable" => {
     :path => "test/sql/clusteravailable.sql",
@@ -123,12 +114,16 @@ class GenericUnitTest
       when :singleton then (diff(@expected, @result) != "Different")
       when :onelevel then
         not (@expected.keys + @result.keys).uniq.find do |k|
-          (@expected.has_key? k) && 
-          (@result.has_key? k) && 
+          (not ((@expected.has_key? k) && (@result.has_key? k))) ||
           (diff(@expected[k], @result[k]) == "Different")
         end
       else raise "Unknown query type '#{@qtype}'"
     end
+  end
+  
+  def dbt_base_cmd
+    [ $dbt, @qpath, "--depth", $depth ] + @opts +
+      ($debug_flags.map { |f| ["-d", f]}.flatten(1))
   end
   
   def diff(e, r)
@@ -160,14 +155,11 @@ end
 class CppUnitTest < GenericUnitTest
   def run
     unless $skip_compile then
-      compile_cmd = ([
-        $dbt, 
+      compile_cmd = (dbt_base_cmd + [
         "-l","cpp",
         "-o","#{$dbt_path}/bin/#{@qname}.cpp",
         "-c","#{$dbt_path}/bin/#{@qname}"
-      ] + ($debug_flags.map { |f| ["-d", f]}.flatten(1)) + [
-        @qpath
-      ]).join(" ") + " " + @opts + "  2>&1";
+      ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
       print "(Compile: #{(Time.now - starttime).to_i}s) "
@@ -223,8 +215,7 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
-    IO.popen("#{$dbt} -r #{@qpath} #{@opts} 2>&1"+
-             ($debug_flags.map {|f|" -d #{f}"}.join("")), "r") do |qin|
+    IO.popen("#{dbt_base_cmd.join(" ")} -r 2>&1", "r") do |qin|
       output = qin.readlines.join("")
       if /Processing time: ([0-9]+\.?[0-9]*)/ =~ output
         then @runtime = $1.to_f
@@ -276,6 +267,8 @@ $skip_compile = false;
 $precision = 1e-4;
 $strict = false;
 $ret = 0;
+$depth = "-";
+$verbose = false;
 test_optimizations = []
 
 GetoptLong.new(
@@ -287,6 +280,8 @@ GetoptLong.new(
   [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
   [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
   [ '-d',                GetoptLong::REQUIRED_ARGUMENT],
+  [ '--depth',           GetoptLong::REQUIRED_ARGUMENT],
+  [ '-v', '--verbose',   GetoptLong::NO_ARGUMENT],
   [ '--strict',          GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
@@ -305,7 +300,9 @@ GetoptLong.new(
         when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
       end
     when '-d' then $debug_flags.push(arg)
+    when '--depth' then $depth = arg
     when '--strict' then $strict = true;
+    when '-v', '--verbose' then $verbose = true;
   end
 end
 
@@ -326,14 +323,14 @@ queries.each do |tquery|
             " with optimization#{test_opts.s?} #{test_opts.join(", ")}"
           print "Testing query '#{tquery}'#{opt_string} on the #{t.to_s}: "; 
           STDOUT.flush;
-          t.query = tquery
-          t.opts = test_opts.
-            map { |opt| $optimizations.fetch(opt, "") }.
-            join(" ")
+          t.query = tquery;
+          t.opts = test_opts.map { |opt| $optimizations.fetch(opt, "") };
           begin 
             t.run
             if t.correct? then
               puts "Success (#{t.runtime}s)."
+              puts(([["Key", "Expected", "Result", "Different?"], 
+                     ["", "", ""]] + t.results).tabulate) if $verbose;
             else
               puts "Failure: Result Mismatch"
               puts(([["Key", "Expected", "Result", "Different?"], 

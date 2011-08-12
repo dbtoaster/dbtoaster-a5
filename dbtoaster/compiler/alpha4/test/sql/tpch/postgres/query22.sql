@@ -24,10 +24,10 @@ CREATE TABLE CUSTOMER (
     );
 
 COPY ORDERS
-FROM '@@PATH@@/test/data/tpch/orders.csv' WITH DELIMITER '|';
+FROM '@@PATH@@/test/data/tpch_100M/orders.csv' WITH DELIMITER '|';
 
 COPY CUSTOMER
-FROM '@@PATH@@/test/data/tpch/customer.csv' WITH DELIMITER '|';
+FROM '@@PATH@@/test/data/tpch_100M/customer.csv' WITH DELIMITER '|';
 
 select c1.nationkey, sum(c1.acctbal) from customer c1
 where c1.acctbal <
