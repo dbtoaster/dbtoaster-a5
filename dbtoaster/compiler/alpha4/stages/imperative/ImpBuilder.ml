@@ -97,6 +97,44 @@ struct
   let tag_of_ir ir = match ir with | Leaf(_,t) -> t | Node (_,t,_) -> t 
   let meta_of_ir ir = match ir with | Leaf(m,_) -> m | Node (m,_,_) -> m
   let children_of_ir ir = match ir with | Leaf _ -> [] | Node (_,_,c) -> c
+  
+  let string_of_op op = match op with
+    | Add -> "Add" | Mult -> "Mult"
+    | Eq -> "Eq" | Neq -> "Neq" | Lt -> "Lt" | Leq -> "Leq" | If0 -> "If0"
+
+  let string_of_ir_tag t = match t with
+   | Op(op) -> string_of_op op
+   | Tuple -> "Tuple"
+   | Projection(idx) ->
+     "Projection("^(String.concat "," (List.map string_of_int idx))^")"
+
+   | Singleton -> "Singleton"
+   | Combine -> "Combine"
+   | Lambda(_) -> "Lambda(...)"
+   | AssocLambda(_,_) -> "AssocLambda(_,_)" 
+   | Apply -> "Apply"
+
+   | Block -> "Block"
+   | Iterate -> "Iterate"
+   | IfThenElse -> "IfThenElse"
+
+   | Map -> "Map"
+   | Aggregate -> "Aggregate"
+   | GroupByAggregate -> "GroupByAggregate"
+   | Flatten -> "Flatten"
+   | Ext -> "Ext" 
+
+   | Member -> "Member"
+   | Lookup -> "Lookup"
+   | Slice(idx) -> 
+     "Slice("^(String.concat "," (List.map string_of_int idx))^")"
+
+   | PCUpdate -> "Update"
+   | PCValueUpdate -> "ValueUpdate"
+  
+  let string_of_tag t = match t with
+    | Undecorated e -> K.string_of_expr e
+    | Decorated ir_tag -> string_of_ir_tag ir_tag
 end
 
 
@@ -107,6 +145,25 @@ struct
 
   type 'ext_type decl_t = id_t * 'ext_type type_t
   type 'ext_type imp_metadata = TypedSym of 'ext_type decl_t
+
+  (* K3/IR helpers *)
+  let arg_of_lambda leaf_tag = match leaf_tag with
+    | Decorated(Lambda(x)) -> x
+    | Undecorated(K.Lambda(x,_)) -> x
+    | _ -> failwith "invalid lambda"
+
+  let arg_of_assoc_lambda leaf_tag = match leaf_tag with
+    | Decorated(AssocLambda(x,y)) -> (x,y)
+    | Undecorated(K.AssocLambda(x,y,_)) -> (x,y)
+    | _ -> failwith "invalid assoc lambda"
+
+  let return_type_of_lambda t = match t with
+    | Host(K.Fn(_,b_t)) -> Host(b_t)
+    | _ -> failwith "invalid lambda type"
+
+  let return_type_of_assoc_lambda t = match t with
+    | Host(K.Fn(_,K.Fn(_,b_t))) -> Host(b_t)
+    | _ -> failwith "invalid assoc lambda type"
 
   (* Metadata helpers *)
   let mk_meta sym ty = TypedSym (sym, ty)
@@ -119,6 +176,12 @@ struct
   let push_meta meta cmeta = match meta, cmeta with
     | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,t)
 
+  let push_lambda_meta meta cmeta = match meta, cmeta with
+    | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,return_type_of_lambda t)
+
+  let push_assoc_lambda_meta meta cmeta = match meta, cmeta with
+    | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,return_type_of_assoc_lambda t)
+ 
   let decl_of_meta force meta =
     Some(force, sym_of_meta meta, type_of_meta meta)
 
@@ -448,16 +511,6 @@ struct
 
   (* Helpers *)
 
-  let arg_of_lambda leaf_tag = match leaf_tag with
-    | Decorated(Lambda(x)) -> x
-    | Undecorated(K.Lambda(x,_)) -> x
-    | _ -> failwith "invalid lambda"
-
-  let arg_of_assoc_lambda leaf_tag = match leaf_tag with
-    | Decorated(AssocLambda(x,y)) -> (x,y)
-    | Undecorated(K.AssocLambda(x,y,_)) -> (x,y)
-    | _ -> failwith "invalid assoc lambda"
-
   let bind_arg arg expr =
     match arg with
     | AVar(id,ty) -> [Decl(None, (id, (Host ty)), Some(expr))]
@@ -531,8 +584,7 @@ struct
     end    
 
   (* Imperative expression construction, from an IR tree. *)
-  let imp_of_ir (map_typing_f : K3.SR.expr_t -> 'ext_type type_t)
-                (env : 'ext_type_t var_t list)
+  let imp_of_ir (env : 'ext_type_t var_t list)
                  ir : ('a option, 'ext_type, 'ext_fn) imp_t list =
     let flat_ir = linearize_ir ir in
     let gc_op op = match op with
@@ -541,7 +593,7 @@ struct
     in
     let rec gc_binop meta op l r = BinOp(meta, op, gc_expr l, gc_expr r)
     and gc_expr e : ('a option, 'ext_type, 'ext_fn) expr_t =
-      let meta = (*Host(KT.typecheck_expr e)*) None in
+      let meta = None in
       match e with
       | K.Const c          -> Const (meta, c)
       | K.Var (v,t)        -> Var (meta,(v,Host t))
@@ -574,7 +626,7 @@ struct
 
       | K.SingletonPC(id,_) 
       | K.OutPC(id,_,_) | K3.SR.InPC(id,_,_) | K3.SR.PC(id,_,_,_) ->
-        Var(meta, (id, map_typing_f e))
+        Var(meta, (id, Host(KT.typecheck_expr e)))
 
       (* Lambdas assume caller has performed arg binding *)
       | K.Lambda(arg, body) -> gc_expr body
@@ -601,6 +653,7 @@ struct
       let child_meta, args_to_bind, possible_decls =
         let last = (List.length cmeta) - 1 in
         let pushi i = push_meta meta (cmetai i) in
+        let pushli i = push_lambda_meta meta (cmetai i) in
         let decl_f = decl_of_meta in 
         let arg_f = meta_of_arg in
         let assoc_arg_f = meta_of_assoc_arg in
@@ -612,8 +665,8 @@ struct
         (* TODO: multi-arg pushdown/binding *)
         | Apply ->
           let arg = arg_of_lambda (ctagi 0) in
-          let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1)
-          in [pushi 0; arg_meta], rem_bindings, [None; arg_decl]
+          let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1) in
+          [pushli 0; arg_meta], rem_bindings, [None; arg_decl]
         
         (* Blocks push down the symbol to the last element *)    
         | AK.Block ->

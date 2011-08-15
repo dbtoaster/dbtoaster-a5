@@ -157,21 +157,20 @@ let string_of_fn ext_fn_f fn_id =
 
 let string_of_decl ext_type_f (id,ty) = id^","^(string_of_type ext_type_f ty)
 
-let string_of_typed_imp ext_type_f ext_fn_f i =
+let string_of_imp string_of_meta string_of_ext_type string_of_ext_fn i =
   let ob () = pp_open_hovbox str_formatter 2 in
   let cb () = pp_close_box str_formatter () in
   let pc () = pp_print_cut str_formatter () in
   let ps s = pp_print_string str_formatter s in
   let psp = pp_print_space str_formatter in 
-  let pid id = ps ("\""^id^"\"") in
-  let pt t = ps (string_of_type ext_type_f t) in
-  let pop_pre tag ty = pc(); ob(); ps tag; ps "("; pt ty; ps ","; pc() in
+  let pm m = let x = string_of_meta m in if x <> "" then (ps x; ps ",") in
+  let pop_pre tag meta = pc(); ob(); ps tag; ps "("; pm meta; pc() in
   let pop_post (sep,lref,_) =
     if !lref = 0 then ps "]"; ps ")";
     if sep <> "" then (ps sep; psp()); cb(); pc()
   in
-  let sdecl = string_of_decl ext_type_f in
-  let sfn = string_of_fn ext_fn_f in   
+  let sdecl = string_of_decl string_of_ext_type in
+  let sfn = string_of_fn string_of_ext_fn in   
   let aux i : int option =
     let xrf = ref (-1) in  (* a don't care sublist counter, i.e. no sublist *)
     let post_imp_f td_acc _ _ = pop_post td_acc; None in
@@ -181,18 +180,17 @@ let string_of_typed_imp ext_type_f ext_fn_f i =
         decr lref; decr nref;
         if !lref > 0 then ";" else if !nref > 0 then "," else "" in
       let c_lref, c_nref = match i with
-        | Expr (ty,e) -> pop_pre "Expr" ty; xrf, xrf
-        | Block (ty,l) -> pop_pre "Block" ty; ps "["; (ref (List.length l)), xrf
+        | Expr (m,e) -> pop_pre "Expr" m; xrf, xrf
+        | Block (m,l) -> pop_pre "Block" m; ps "["; (ref (List.length l)), xrf
 
-        | Decl(ty,(id,ty2),init) -> pop_pre "Decl" ty;
-          ps ("("^(sdecl (id,ty2))^")"^
-            (if init = None then ",None" else ","));
+        | Decl(m,(id,ty2),init) -> pop_pre "Decl" m;
+          ps ("("^(sdecl (id,ty2))^")"^(if init = None then ",None" else ","));
           xrf, xrf
  
-        | For(ty,((id,ty2),f),s,b) -> pop_pre "For" ty;
+        | For(m,((id,ty2),f),s,b) -> pop_pre "For" m;
           ps ("("^(sdecl (id,ty2))^","^(string_of_bool f)^"),"); xrf, (ref 2)
 
-        | IfThenElse(ty,p,t,e) -> pop_pre "IfThenElse" ty; xrf, (ref 3)
+        | IfThenElse(m,p,t,e) -> pop_pre "IfThenElse" m; xrf, (ref 3)
       in (post_sep, c_lref, c_nref)
     in
     let pre_expr_f (_,lref,nref) e =
@@ -200,17 +198,17 @@ let string_of_typed_imp ext_type_f ext_fn_f i =
         decr lref; decr nref; 
         if !lref > 0 then ";" else if !nref > 0 then "," else "" in 
       let c_lref, c_nref = match e with
-      | Const (ty,c)   -> pop_pre "Const" ty;
+      | Const (m,c)   -> pop_pre "Const" m;
         ps ("CFloat("^(M3Common.string_of_const c)^")"); xrf, xrf
-      | Var (ty,(v,_)) -> pop_pre "Var" ty; pid v; xrf, xrf
-      | Tuple(ty,el)   -> pop_pre "Tuple" ty; xrf, (ref (List.length el))
-      | Op(ty,op,ce)   -> pop_pre "Op" ty; ps ((string_of_op op)^","); xrf, xrf 
+      | Var (m,(v,t)) -> pop_pre "Var" m; ps (sdecl (v,t)); xrf, xrf
+      | Tuple(m,el)   -> pop_pre "Tuple" m; xrf, (ref (List.length el))
+      | Op(m,op,ce)   -> pop_pre "Op" m; ps ((string_of_op op)^","); xrf, xrf 
       
-      | BinOp(ty,op,le,re) ->
-        pop_pre "BinOp" ty; ps ((string_of_op op)^","); xrf, (ref 2) 
+      | BinOp(m,op,le,re) ->
+        pop_pre "BinOp" m; ps ((string_of_op op)^","); xrf, (ref 2) 
       
-      | Fn(ty,fn_id,args) ->
-        pop_pre "Fn" ty; ps ((sfn fn_id)^","); ps "[";
+      | Fn(m,fn_id,args) ->
+        pop_pre "Fn" m; ps ((sfn fn_id)^","); ps "[";
         (ref (List.length args)), xrf
 
       in (post_sep, c_lref, c_nref)
@@ -220,6 +218,15 @@ let string_of_typed_imp ext_type_f ext_fn_f i =
   in pp_set_margin str_formatter 80;
      (*pp_set_max_indent str_formatter 40;*)
      flush_str_formatter (ignore (aux i))
+    
+
+let string_of_imp_noext (i : ('a, 'ext_type, 'ext_fn) imp_t) : string =
+  string_of_imp
+    (fun _ -> "") (fun _ -> failwith "invalid host type") (fun _ -> "") i
+
+let string_of_typed_imp ext_type_f ext_fn_f i =
+  string_of_imp (string_of_type ext_type_f) ext_type_f ext_fn_f i
+
 
 module type ProgramType =
 sig

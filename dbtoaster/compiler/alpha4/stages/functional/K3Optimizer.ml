@@ -1128,7 +1128,9 @@ let common_subexpression_elim expr =
             (List.flatten (List.flatten sub_parts)) 
           in (union_eqv_parts ([[[[candidate]]]]@sub_parts)), candidate
 
-        (* HACK: don't treat nested map lookups as CSEs *)
+        (* TODO/HACK: don't treat nested map lookups as CSEs for efficiency for now,
+         * since nested map CSEs result in copying. This can be fixed by using
+         * pointers in map entries for nested maps. *)
         | Member(PC _, _) | Lookup(PC _, _) ->
           (union_eqv_parts sub_parts), rebuilt_expr
 

@@ -416,7 +416,7 @@ namespace dbtoaster {
         path r;
         if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
         else r = current_path();
-        r /= stream_name + (t == insert_tuple? "inserts" : "deletes") + ".txt";
+        r /= (t == insert_tuple? "Insert" : "Delete") + stream_name + ".dbtdat";
         return r.make_preferred();
       }
 

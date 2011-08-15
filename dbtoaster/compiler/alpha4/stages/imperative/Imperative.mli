@@ -74,7 +74,14 @@ val fold_imp : ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c) ->
                ('b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b) ->
                 'b -> 'c -> ('a, 'ext_type, 'ext_fn) imp_t -> 'c
 
+
 (* AST stringification *)
+val string_of_imp :
+  ('a -> string) -> ('ext_type type_t -> string) -> ('ext_fn -> string)
+  -> ('a, 'ext_type, 'ext_fn) imp_t -> string
+
+val string_of_imp_noext : ('a, 'ext_type, 'ext_fn) imp_t -> string
+
 val string_of_type : ('ext_type type_t -> string) -> 'ext_type type_t -> string
 
 val string_of_typed_imp :

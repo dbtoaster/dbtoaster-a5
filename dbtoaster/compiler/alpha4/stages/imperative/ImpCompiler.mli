@@ -12,7 +12,7 @@ sig
 
   val string_of_ext_type : ext_type type_t -> string
   val string_of_ext_fn : ext_fn -> string
-  val string_of_imp : (ext_type, ext_fn) typed_imp_t -> string
+  val string_of_ext_imp : (ext_type, ext_fn) typed_imp_t -> string
 
   (* Serialization code generation *)
   
@@ -43,18 +43,15 @@ sig
     -> (ext_type, ext_fn) typed_imp_t -> (ext_type, ext_fn) typed_imp_t
 
   (* Typing interface *)
-  val ext_type_of_k3_collection : K3.SR.expr_t -> ext_type type_t
-
-  val type_of_map_schema : 
-    M3Common.Patterns.pattern_map -> M3.map_type_t
-    -> (K3.SR.id_t * ext_type type_t * ext_type type_t list)
+  val var_type_env : type_env_t -> (K3.SR.id_t * ext_type type_t) list
 
   val type_env_of_declarations :
+    (K3.SR.id_t * ext_type type_t) list ->
     M3.map_type_t list -> M3Common.Patterns.pattern_map -> type_env_t
 
   val infer_types :
-    M3.map_type_t list -> M3Common.Patterns.pattern_map ->
-    ('a option, ext_type, ext_fn) imp_t -> (ext_type, ext_fn) typed_imp_t
+    type_env_t -> ('a option, ext_type, ext_fn) imp_t
+    -> (ext_type, ext_fn) typed_imp_t
 
   (* Profiler code generation *)
   val declare_profiling : M3.map_type_t list -> source_code_t

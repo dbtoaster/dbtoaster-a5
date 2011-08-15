@@ -131,6 +131,7 @@ if flag_bool "HELP" then
         "ocaml:k3      OCaml source file (via K3)\n"^
         "plsql         Postgres PLSQL source file\n"^
         "imp           Imperative update triggers\n"^
+        "imp:desugar   Imperative update triggers (desugared for C++)\n"^
         "c++ | cpp     C++ source file\n"^
         "cpp:prof      C++ profiled source file\n"^
         "run           Run the query with the default interpreter (K3)\n"^
@@ -156,7 +157,7 @@ type language_t =
    | L_K3 of bool (* optimized? *)
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
-   | L_IMP
+   | L_IMP of bool (* desugar *)
    | L_CPP of bool (* profiled *) 
    | L_SQL of sql_language_t
    | L_NONE
@@ -180,7 +181,8 @@ let language =
       | "M3:PREP"  -> L_M3(true) 
       | "K3"       -> L_K3(true)
       | "K3:NOOPT" -> L_K3(false)
-      | "IMP"      -> L_IMP
+      | "IMP"      -> L_IMP(false)
+      | "IMP:DESUGAR" -> L_IMP(true)
       | "SQL"      -> L_SQL(SL_SQL) (* Translates DBT-SQL + sources -> SQL  *)
       | "PLSQL"    -> L_SQL(SL_PLSQL)
       | "RUN"      -> L_INTERPRETER(OCG_K3)
@@ -366,12 +368,12 @@ let compile_function: ((string * Calculus.var_t list) list ->
         let opts = {IC.desugar = true; IC.profile = profiled} in
         IC.Compiler.compile_query opts dbschema k3prog s tlq f)
 
-  | L_IMP   ->
+  | L_IMP(desugar)  ->
       (fun dbschema (p, s) tlq f ->
         let k3prog = K3Compiler.compile_query_to_program
           ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
         in
-        let opts = {IC.desugar = true; IC.profile = true} in
+        let opts = {IC.desugar = desugar; IC.profile = false} in
         (print_endline
           (IC.Compiler.compile_query_to_string opts dbschema k3prog s tlq)))
   
