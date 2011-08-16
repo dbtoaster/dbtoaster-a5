@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+
+records = Hash.new;
+
+keys = ARGV.shift.split(/,/).map { |k| k.to_i };
+ARGV.each do |f|
+  puts "-------#{f}-------"
+  File.new(f).readlines.each do |l|
+    record = l.split(/\|/);
+    key = keys.map { |k| record[k].to_i }; 
+    puts "delete|#{records[key]}" if records.has_key? key;
+    puts "insert|#{l}";
+    records[key] = l;
+  end
+end

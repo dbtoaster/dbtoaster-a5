@@ -201,7 +201,7 @@ let parametrized_event param_val =
  * -- determining event type from a field, equality, general comparison, etc *)
 
 let event_constructors : (string * (string -> const_t list -> event list)) list =
-   [("eventtype", constant_event); ("events", parametrized_event)]
+   [("event", constant_event); ("triggers", parametrized_event)]
 
 (* Standard generator, applying above transformations *)
 let standard_generator params =
