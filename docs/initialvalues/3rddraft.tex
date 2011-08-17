@@ -50,7 +50,7 @@ The compilation algorithm will take this query and replaces it with a map $q[][]
 &m_R[][b]+=c\\
 \end{align*}
 In \cite{1} a map is defined by as function which takes input values and produces output values. With this definition, we can consider the initialization as a process of computing the function's output values for some new input values without computing the function body.
-The main goal of this section is to study how two maps $m_R[][b]$ and $m_S[][b]$ will be initialized when an insertion is triggered either from $+onR(a,b)$ and also $+onS(b,c)$. \\\par
+
 \section{Definitions}
 DBToaster uses query language AGCA(which is stands for AGgregation CAlculus). 
 AGCA expressions are built from constants, variables, relational atoms, aggregate sums (Sum), conditions, and variable assignments ($\gets$) using ``+''  and ``$\cdot$''. The abstract syntax can be given by the EBNF:
@@ -118,32 +118,36 @@ We can define the domain of a map(for map's definition refer to \cite{1}, \cite{
 \text{\dom}_{\vec{w}}(map[\vec{x}][\vec{y}])=\{\vec{c}|\vec{c}\in\text{\dom}_{\vec{w}}(\vec{x}\cup\vec{y})\}
 \end{equation}
 
-We can say that domains can be grouped into two categories, Complete and Incomplete.These definitions form the complete domains.
- %Having these two notions we should offer a definition for each, and some notions that might help us when demonstrating the initialization of maps. 
+As presented in the papers \cite{1} and \cite{2}, maps are functions that are defined on a set of values and that will produce a result for each value of that set. The set of values will represent the domains, which were computed using the definitions presented so far. We can make a distinction between a complete map and an incomplete map. A complete map will be characterized by the fact that each value of its domain will have assigned a result, whilst an incomplete map will be a map that will not have all the values of the domain and therefore neither the result for those values, on each insertion the incomplete map must compute the exact value of the tuple added to the domain.\\ \par
+In other words we can consider a complete map as a total function and an incomplete one as a partial function. A total function is a function that assigns a value to every element of its domain. But a partial function has some elements in its domain which have not been assigned to any value in its codomain. \par
 
-We show the incomplete domains with $D_{incomplete}$ and complete domains by $D_{complete}$ and we can say that every time a value is added to a complete domain, it will remain complete. Incomplete domains are subsets of complete domains. In other words some elements are not covered in the incomplete domains. If we modify the relations, the domains of all expressions will be changed. If we follow the definitions as we had in this section we will have the complete domains again. Thus, the complete domains are closed under the modifications of the relations. Complete domains will always have a straight forward connection with the underlying relations.
+According to \ref{def:agca} we can express every expression of AGCA in a parse tree. The root of parse tree represents the whole expression and its leaves are relations or comparisons. Each node can be regarded as a map and thus it has a domain. Any modification to the relations, the leaves are modified and this modification should be propagated upward through the parse tree. During the propagation process the domains of intermediate nodes may be changed. In Theorem~\ref{theorem:completemap} we prove that if all maps in the parse tree are complete, then with any modification the maps will remain complete as well. 
 
 \begin{theorem}
-If we have a complete domain of a map it will remain complete with any modifications of its underlying relations.
+\label{theorem:completemap}
+A complete map will remain complete, after provoking a modification to the underlying expression of the map.
 \end{theorem}
 
 \begin{proof}
-Suppose we have a map $m$ and its complete domain as $D$. If we modify a relation, there are two cases:
-\begin{enumerate}
-\item This modification does not modify the domain of $m$. So The domain of $m$ remains complete after the modification.
-\item The modification does change the domain of the relation and it will propagate upward on the parse tree, therefore provoking a change to the domain of the map. The change done to a relation will update all the other relations before reaching the domain of the map and therefore maintaining the completeness of each domain.
-\end{enumerate}
-\end{proof}
-When talking about incomplete domains, the theorem presented for the complete domains will not hold. Incomplete domains will not have a direct mapping to all the values from the relations. We will not want to use the entire domain, we want to create it as we go. This will imply that every time a new value is added to an incomplete domain, then that value should be tested if it appears in the complete domain, that we did not want to compute. We will have the following relation between complete and incomplete domains of the same variable: $$D_{incomplete}\subset D_{complete}$$
-Every time a new variable $x$ is added to the incomplete domain we are going to have three situations: 
-\begin{enumerate}
-\item $x\in D_{incomplete}$
-\item $(x\notin D_{incomplete})\land(x\in D_{complete})$
-\item $(x\notin D_{incomplete})\land(x\notin D_{complete})$
-\end{enumerate}
-The first case is exactly as with complete domains, therefore the new value is in the domain and nothing will be changed, the second case means that the new value is not in the incomplete domain however there is such a value in its underlaying relations, and therefore computation is necessary for determining the correct value for the newly added one, and in the third case the new value is quit new and therefore all the initialization for that one should be zero because nothing is dependent on it.
+We will give a proof based on induction.
 
-After giving these definitions, we can say that we can easily construct a complete domain starting from an incomplete domain, by adding values to the incomplete one. 
+In the first step we presume that the map will be defined over a simple relation: $$m[][\vec{y}]::R(\vec{y})$$ The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore there will be a direct connection between the domain of the map and the values offered by the relation. Therefore we will have: 
+$$\dom{}_{\vec{x}}(m[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$$ 
+
+If we add tuple $\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have to situations:
+\begin{enumerate}
+\item $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the map remains complete
+\item $\textless y_1,y_2,\cdots,y_n\textgreater\notin\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the tuple should be added to domain of the relation, however due to the fact that there is a direct connection between the domain of the relation and the domain of the map, the domain of the map will change and the map will remain complete
+\end{enumerate}
+
+Secondly if we have a map defined on a join expression: $$m[][\vec{y1}]::R(\vec{y2})\cdot q$$ The domain of the map will be determined by the domain of the join expression: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})\cdot q)$$ and therefore using the definition for the join expression the map will be a complete map. 
+
+When adding a new tuple into relation $R$ we will have exactly the same possibilities as in the previous case, however in the second case there must be added something: the domain of the map will be influenced by the join operator, therefore taking only the common tuples between $R(\vec{y})$ and $q$. If the tuple that we are adding is also in the domain of expression $q$, then it will be added to the maps domain, otherwise no. However in both cases the map completion will stand.
+
+Thirdly if we have a map defined on a union expression: $$m[][\vec{y1}]::R(\vec{y2})+ q$$ Exactly like in the previous case the domain of the map will be given by the union relation: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})+ q)$$ When talking about union expressions,we will not have communication over between this operator, furthermore the domain of a such expression will be the union of the two domains. Therefore if we change add a tuple $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ to relation $R$, the cases from the first step will remain, regardless if the tuple is or not in the expression $q$. 
+
+Finally if we have a map defined on a join or union expression $$m[][\vec{y1}]::q1\alpha q$$ where $\alpha=\{\cdot,+\}$, the relation will hold for q1 and for q2 due to the induction steps and  therefore it will also hold for the $q1\alpha q2$.
+\end{proof}
 
 \section{Equijoins}
 
