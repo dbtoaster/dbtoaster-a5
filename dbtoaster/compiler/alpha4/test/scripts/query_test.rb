@@ -20,13 +20,16 @@ $optimizations = {
   "runtime-bigsums"    => "-d runtime-bigsums",
   "dup-ivc"            => "-d dup-ivc",
   "factor-postprocess" => "-d factor-postprocess"
+  "depth-1"            => "--depth 1"
+  "depth-2"            => "--depth 2"
 }
 
 $queries = {
   "rst" => {
     :path => "test/sql/simple/rst.sql",
     :type => :singleton,
-    :answer => 18753367048934.0
+    :answer => 18753367048934.0,
+    :valid_opts => ["depth-1"]
   },
   "vwap" => {
     :path => "test/sql/finance/vwap.sql",
@@ -54,7 +57,8 @@ $queries = {
   "tpch3" => {
     :path => "test/sql/tpch/query3.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query3_100M.csv")   
+    :answer => results_file("test/results/tpch/query3_100M.csv"),
+    :valid_opts => ["depth-1"]
   },
 #  "tpch5" => {
 #    :path => "test/sql/tpch/query5.sql",
@@ -64,17 +68,20 @@ $queries = {
   "tpch11" => {
     :path => "test/sql/tpch/query11a.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query11_100M.csv")
+    :answer => results_file("test/results/tpch/query11_100M.csv"),
+    :valid_opts => ["depth-1"]
   },
   "tpch17" => {
     :path => "test/sql/tpch/query17.sql",
     :type => :singleton,
-    :answer => 898778.73
+    :answer => 898778.73,
+    :valid_opts => ["depth-1"]
   },
   "tpch18" => {
     :path => "test/sql/tpch/query18.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query18.csv")
+    :answer => results_file("test/results/tpch/query18.csv"),
+    :valid_opts => ["depth-1"]
   },
   "tpch18simple" => {
     :path => "test/sql/tpch/query18simple.sql",
@@ -84,7 +91,8 @@ $queries = {
   "tpch22" => {
     :path => "test/sql/tpch/query22.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/tpch/query22_100M.csv")
+    :answer => results_file("test/results/tpch/query22_100M.csv"),
+    :valid_opts => ["depth-1"]
   },
   "clusteravailable" => {
     :path => "test/sql/clusteravailable.sql",

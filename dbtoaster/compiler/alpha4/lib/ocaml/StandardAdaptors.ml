@@ -201,7 +201,7 @@ let parametrized_event param_val =
  * -- determining event type from a field, equality, general comparison, etc *)
 
 let event_constructors : (string * (string -> const_t list -> event list)) list =
-   [("event", constant_event); ("triggers", parametrized_event)]
+   [("eventtype", constant_event); ("triggers", parametrized_event)]
 
 (* Standard generator, applying above transformations *)
 let standard_generator params =
@@ -245,7 +245,7 @@ let standard_generator params =
 let csv_params delim schema event =
    let schema_val = if schema = "" then "float" else schema in
    let event_val = if event = "" then "insert" else event in
-   ("csv", [("fields", delim); ("schema", schema_val); ("event", event_val) ])
+   ("csv", [("fields", delim); ("schema", schema_val); ("eventtype", event_val) ])
 
 let insert_csv delim = csv_params delim "" ""
 let delete_csv delim = csv_params delim "" "delete"
