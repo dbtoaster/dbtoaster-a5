@@ -121,33 +121,34 @@ We can define the domain of a map(for map's definition refer to \cite{1}, \cite{
 As presented in the papers \cite{1} and \cite{2}, maps are functions that are defined on a set of values and that will produce a result for each value of that set. The set of values will represent the domains, which were computed using the definitions presented so far. We can make a distinction between a complete map and an incomplete map. A complete map will be characterized by the fact that each value of its domain will have assigned a result, whilst an incomplete map will be a map that will not have all the values of the domain and therefore neither the result for those values, on each insertion the incomplete map must compute the exact value of the tuple added to the domain.\\ \par
 In other words we can consider a complete map as a total function and an incomplete one as a partial function. A total function is a function that assigns a value to every element of its domain. But a partial function has some elements in its domain which have not been assigned to any value in its codomain. \par
 
-According to \ref{def:agca} we can express every expression of AGCA in a parse tree. The root of parse tree represents the whole expression and its leaves are relations or comparisons. Each node can be regarded as a map and thus it has a domain. Any modification to the relations, the leaves are modified and this modification should be propagated upward through the parse tree. During the propagation process the domains of intermediate nodes may be changed. In Theorem~\ref{theorem:completemap} we prove that if all maps in the parse tree are complete, then with any modification the maps will remain complete as well. 
+ We can express every expression of AGCA in a parse tree with EBNF~\ref{def:agca}. The root of parse tree represents the whole expression and its leaves are relations or comparisons. Each node can be regarded as a map and thus it has a domain. Any modification to the relations, the leaves are modified and this modification should be propagated upward through the parse tree. During the propagation process the domains of intermediate nodes may be changed. 
+%In Theorem~\ref{theorem:completemap} we prove that if all maps in the parse tree are complete, then with any modification the maps will remain complete as well. 
 
-\begin{theorem}
-\label{theorem:completemap}
-A complete map will remain complete, after provoking a modification to the underlying expression of the map.
-\end{theorem}
-
-\begin{proof}
-We will give a proof based on induction.
-
-In the first step we presume that the map will be defined over a simple relation: $$m[][\vec{y}]::R(\vec{y})$$ The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore there will be a direct connection between the domain of the map and the values offered by the relation. Therefore we will have: 
-$$\dom{}_{\vec{x}}(m[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$$ 
-
-If we add tuple $\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have to situations:
-\begin{enumerate}
-\item $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the map remains complete
-\item $\textless y_1,y_2,\cdots,y_n\textgreater\notin\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the tuple should be added to domain of the relation, however due to the fact that there is a direct connection between the domain of the relation and the domain of the map, the domain of the map will change and the map will remain complete
-\end{enumerate}
-
-Secondly if we have a map defined on a join expression: $$m[][\vec{y1}]::R(\vec{y2})\cdot q$$ The domain of the map will be determined by the domain of the join expression: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})\cdot q)$$ and therefore using the definition for the join expression the map will be a complete map. 
-
-When adding a new tuple into relation $R$ we will have exactly the same possibilities as in the previous case, however in the second case there must be added something: the domain of the map will be influenced by the join operator, therefore taking only the common tuples between $R(\vec{y})$ and $q$. If the tuple that we are adding is also in the domain of expression $q$, then it will be added to the maps domain, otherwise no. However in both cases the map completion will stand.
-
-Thirdly if we have a map defined on a union expression: $$m[][\vec{y1}]::R(\vec{y2})+ q$$ Exactly like in the previous case the domain of the map will be given by the union relation: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})+ q)$$ When talking about union expressions,we will not have communication over between this operator, furthermore the domain of a such expression will be the union of the two domains. Therefore if we change add a tuple $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ to relation $R$, the cases from the first step will remain, regardless if the tuple is or not in the expression $q$. 
-
-Finally if we have a map defined on a join or union expression $$m[][\vec{y1}]::q1\alpha q$$ where $\alpha=\{\cdot,+\}$, the relation will hold for q1 and for q2 due to the induction steps and  therefore it will also hold for the $q1\alpha q2$.
-\end{proof}
+%\begin{theorem}
+%\label{theorem:completemap}
+%A complete map will remain complete, after provoking a modification to the underlying expression of the map.
+%\end{theorem}
+%
+%\begin{proof}
+%We will give a proof based on induction.
+%
+%In the first step we presume that the map will be defined over a simple relation: $$m[][\vec{y}]::R(\vec{y})$$ The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore there will be a direct connection between the domain of the map and the values offered by the relation. Therefore we will have: 
+%$$\dom{}_{\vec{x}}(m[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$$ 
+%
+%If we add tuple $\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have to situations:
+%\begin{enumerate}
+%\item $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the map remains complete
+%\item $\textless y_1,y_2,\cdots,y_n\textgreater\notin\dom{}_{\vec{x}}(R(\vec{y}))$ and therefore the tuple should be added to domain of the relation, however due to the fact that there is a direct connection between the domain of the relation and the domain of the map, the domain of the map will change and the map will remain complete
+%\end{enumerate}
+%
+%Secondly if we have a map defined on a join expression: $$m[][\vec{y1}]::R(\vec{y2})\cdot q$$ The domain of the map will be determined by the domain of the join expression: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})\cdot q)$$ and therefore using the definition for the join expression the map will be a complete map. 
+%
+%When adding a new tuple into relation $R$ we will have exactly the same possibilities as in the previous case, however in the second case there must be added something: the domain of the map will be influenced by the join operator, therefore taking only the common tuples between $R(\vec{y})$ and $q$. If the tuple that we are adding is also in the domain of expression $q$, then it will be added to the maps domain, otherwise no. However in both cases the map completion will stand.
+%
+%Thirdly if we have a map defined on a union expression: $$m[][\vec{y1}]::R(\vec{y2})+ q$$ Exactly like in the previous case the domain of the map will be given by the union relation: $$\dom{}_{\vec{x}}(m[][\vec{y1}])=\dom{}_{\vec{x}}(R(\vec{y2})+ q)$$ When talking about union expressions,we will not have communication over between this operator, furthermore the domain of a such expression will be the union of the two domains. Therefore if we change add a tuple $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$ to relation $R$, the cases from the first step will remain, regardless if the tuple is or not in the expression $q$. 
+%
+%Finally if we have a map defined on a join or union expression $$m[][\vec{y1}]::q1\alpha q$$ where $\alpha=\{\cdot,+\}$, the relation will hold for q1 and for q2 due to the induction steps and  therefore it will also hold for the $q1\alpha q2$.
+%\end{proof}
 
 \section{Equijoins}
 
@@ -202,6 +203,39 @@ The initial value of a map for a specific tuple, which is not in the domain of t
 The theorem will stand only if we are talking about having a complete domain. Otherwise, if the domain is incomplete, then for every tuple that we add with a trigger, we would have to check if that tuple exists in the table (the complete domain). If the domain is incomplete, then we could have a different value for the initial value of a map, this value would be produced from the tables performing a query, even a simpler one.
 
 Another problem of initial value computation, besides the problem of with which value should a map be initialized, is the problem of how fast to do the initialization. We have two different sort of initializations: an eager one and a lazy one. The eager one will initialize the right side of a trigger expression, when the left side of the expression will be initialized. The right side will be initialized if and only if it needs initialization. And the lazy one is based on the fact that only the left side will be initialized, and the right side no, leaving the rest side of the initialization to be done when the appropriate trigger is called.
+
+\section{Simple inequalities}
+
+Joins between relations can be easily made also by using inequalities between the variables of those relations. For example, if we have the following query:
+\begin{align*}
+\mbox{SELECT }sum(a*d)\\
+\mbox{FROM } R(a,b),S(c,d)\\
+\mbox{WHERE } b\textless c 
+\end{align*}
+the result will depend on the evaluation of the inequality $b\textless c$, where $b$ comes from relation $R$ and $c$ comes from relation $S$.
+
+The delta regarding to the relation $R$ will be: 
+\begin{align*}
+a*\mbox{SELECT }sum(d)\\
+\mbox{FROM }S(c,d)\\
+\mbox{WHERE } b\textless c 
+\end{align*}
+where the new query will be replaced by a map which will have an input variable $m_R[b][]$. The domain of the map be will given by the values offered by relation R, however the result of the map will be influenced by the value of $c$ from the relation $S$.
+
+The initial value of the map $m_R[b][]$ will be influenced by the relation $S$. Therefore we will have the following situations:
+\begin{enumerate}
+\item the relation $S$ is empty and therefore no value of $c$ can be produced and thus the initialization of the map $m_R[b][]$ will always be 0, because b cannot be compared with any value of $c$
+\item if relation $S$ is not empty then every update to relation $R$ will need a check with every value c from $S$. Therefore we can say that the initial value of map $m_R[b][]=\sum_{\forall c>b} S(c,d)*d$
+\end{enumerate}
+
+When relation $S$ is not empty, the initialization of map $m_R[b][]$ can easily be maintained incrementally, because knowing a value of the map for a specific $b$, the other one can be easily deduced. We will have $sum=m_R[b_{1}][]$, where $b_{1}$ is a value that we had to compute the result of the map from scratch. When adding a value $b_{2}$ to the relation $R$, we will have the following cases:
+
+\begin{enumerate}
+\item $b_{1}>b_{2}$ then $m_R[b_{2}][]=sum + \sum_{\forall\mbox{c where }b_{2}<c\leq b_{1}} S(c,d)*d$
+\item $b_{1}<b_{2}$ then $m_R[b_{2}][]=sum - \sum_{\forall\mbox{c where }b_{1}\leq c<b_{2}} S(c,d)*d$
+\end{enumerate}
+
+Starting from this example we will offer a generalization and a proof that the initial value of maps, when talking about joins done by inequalities, are going to be exactly like in the example.
 
 \begin{thebibliography}{9}
 \bibitem{1} C. Koch, \emph{Incremental Query Evaluation in a Ring of Databases},  preprint (2011).
