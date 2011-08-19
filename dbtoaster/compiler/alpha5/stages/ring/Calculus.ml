@@ -19,7 +19,6 @@ type ('init_expr) external_t =
 type ('init_expr) calc_t =
     | Sum        of 'init_expr calc_t list         (* c1+c2+... *)
     | Prod       of 'init_expr calc_t list         (* c1*c2*... *)
-    | Neg        of 'init_expr calc_t              (* -c *)
     | Cmp        of value_t * cmp_t * value_t      (* v1 [cmp] v2 *)
     | AggSum     of var_t list * 'init_expr calc_t (* AggSum([v1,v2,...],c) *)
     | Value      of value_t                        (* Var(v) | Const(#) *)
@@ -32,17 +31,13 @@ exception TypecheckError of string * unit calc_t * unit calc_t option
 (*** Constructors ***)
 let calc_zero = Value(Const(Integer(0)));;
 let calc_one  = Value(Const(Integer(1)));;
+let calc_neg  = Value(Const(Integer(-1)));;
 
 let sum_list (c:'i calc_t): 'i calc_t list =
    match c with Sum(sl) -> sl | _ -> [c]
 ;;
 let prod_list (c:'i calc_t): 'i calc_t list =
    match c with Prod(pl) -> pl | _ -> [c]
-;;
-let mk_neg (term:'i calc_t): 'i calc_t =
-   match term with
-      | Neg(subt) -> subt
-      | _         -> Neg(term)
 ;;
 let mk_sum (terms:'i calc_t list): 'i calc_t =
    let terms = 
@@ -52,8 +47,6 @@ let mk_sum (terms:'i calc_t list): 'i calc_t =
                match v with 
                   | Value(Const(Integer(0))) -> false 
                   | Value(Const(Double(0.))) -> false 
-                  | Neg(Value(Const(Integer(0)))) -> false 
-                  | Neg(Value(Const(Double(0.)))) -> false 
                   | _ -> true
                ) terms
             )
@@ -92,7 +85,6 @@ let mk_prod (terms:'i calc_t list): 'i calc_t =
 (*** Basic Operations ***)    
 
 let rec fold_calc (sum_op:('ret list -> 'ret)) (prod_op:('ret list -> 'ret))
-                  (neg_op:('ret -> 'ret)) 
                   (cmp_op:(value_t * cmp_t * value_t -> 'ret))
                   (aggsum_op:(var_t list * 'ret -> 'ret))
                   (value_op:(value_t -> 'ret))
@@ -100,12 +92,11 @@ let rec fold_calc (sum_op:('ret list -> 'ret)) (prod_op:('ret list -> 'ret))
                   (ext_op:('a external_t -> 'ret))
                   (def_op:(var_t * 'ret -> 'ret))
                   (expr:'a calc_t): 'ret =
-   let rcr = fold_calc sum_op prod_op neg_op cmp_op aggsum_op value_op rel_op
+   let rcr = fold_calc sum_op prod_op cmp_op aggsum_op value_op rel_op
                        ext_op def_op in
    match expr with 
     | Sum(elems)      -> sum_op (List.map rcr elems)
     | Prod(elems)     -> prod_op (List.map rcr elems)
-    | Neg(child)      -> neg_op (rcr child)
     | Cmp(a,op,b)     -> cmp_op (a,op,b)
     | AggSum(v,e)     -> aggsum_op (v, rcr e)
     | Value(l)        -> value_op l
@@ -121,7 +112,7 @@ let rewrite_leaves (cmp_op:(value_t * cmp_t * value_t -> 'b calc_t))
                    (ext_op:('a external_t -> 'b calc_t))
                    (def_op:(var_t * 'b calc_t -> 'b calc_t))
                    (expr:'a calc_t): 'b calc_t =
-   fold_calc mk_sum mk_prod mk_neg 
+   fold_calc mk_sum mk_prod 
              cmp_op aggsum_op value_op rel_op ext_op def_op 
              expr
 ;;
@@ -187,7 +178,6 @@ let rec string_of_any_calc (string_of_meta:(('a -> string) option))
    match expr with
     | Sum(subexps)  -> rcrl subexps " + "
     | Prod(subexps) -> rcrl subexps " * "
-    | Neg(subexp)   -> "-("^(rcr subexp)^")"
     | Cmp(l,c,r) -> 
       (string_of_value l)^" "^(string_of_cmp c)^" "^(string_of_value r)
     | AggSum(gbv,exp) ->
@@ -218,7 +208,6 @@ let string_of_calc (expr:'a calc_t): string =
 let rec is_bound (expr:'a calc_t) (var:var_t): bool =
    fold_calc (List.exists (fun x->x))              (* Sum *)
              (List.exists (fun x->x))              (* Prod *)
-             (fun x -> x)                          (* Neg *)
              (fun _ -> false)                      (* Cmp *)
              (fun (gb,_) -> List.mem var gb)       (* AggSum *)
              (fun v -> match v with Var(var2) -> var = var2 | _ -> false)
@@ -247,7 +236,6 @@ let rec get_schema (expr:'a calc_t): (var_t * bool) list =
                is_bound || (not (List.mem_assoc v old_vars))
             ) term_vars) old_vars
          ) [] terms)
-      (fun x -> x)
       (fun (a,_,b) -> (value_set a) @ (value_set b))
       (fun (gb,sub) -> List.filter (fun (v, is_bound) -> 
          (* Keep input variables and variables in the group by list only *)
@@ -259,14 +247,25 @@ let rec get_schema (expr:'a calc_t): (var_t * bool) list =
       (fun (v,d) -> (v,true) :: d)
       expr
 ;;
+let rec get_bound_schema (expr:'a calc_t): var_t list = 
+   List.map fst (List.filter snd (get_schema expr))
+;;
+let rec get_unbound_schema (expr:'a calc_t): var_t list = 
+   List.map fst (List.filter (fun (_,x)->not x) (get_schema expr))
+;;
+let mk_aggsum (gb:var_t list) (expr:'i calc_t): 'i calc_t =
+   if ListAsSet.seteq gb (get_bound_schema expr) then expr
+   else AggSum(gb, expr)
+;;
+
 
 (* Returns true if (A * B) = (B * A) *)
-let commutes_with ?(external_sch = []) (a:'a calc_t) (b:'b calc_t): bool =
+let commutes_with ?(ivars = []) (a:'a calc_t) (b:'b calc_t): bool =
    let a_out = List.map fst (List.filter snd (get_schema a)) in
    let b_in  = List.map fst (List.filter (fun (_,x) -> not x) 
                                          (get_schema b)) in
       not (List.exists (fun v -> (List.mem v b_in) && 
-                                 (not (List.mem v external_sch))) a_out)
+                                 (not (List.mem v ivars))) a_out)
 
 ;;
 
@@ -312,7 +311,6 @@ let rec get_mapping (expr1:'a calc_t) (expr2:'a calc_t):
    match (expr1,expr2) with
     | (Sum(t1), Sum(t2))   -> rcrl (t1,t2)
     | (Prod(t1), Prod(t2)) -> rcrl (t1,t2)
-    | (Neg(t1), Neg(t2))   -> rcr t1 t2
     | (Cmp(cl1,c1,cr1), Cmp(cl2,c2,cr2)) -> 
       if c1 = c2 then (
          merge_translations (merge_values cl1 cl2) (merge_values cr1 cr2)
@@ -345,7 +343,6 @@ let rec get_mapping (expr1:'a calc_t) (expr2:'a calc_t):
     | (Definition(_,_),_)     -> None
     | (Sum(_), _)  -> None
     | (Prod(_), _) -> None
-    | (Neg(_), _)  -> None
 
 (* Returns a list of all Relations appearing in the expression *)
 let rec get_relations (expr:('a calc_t)): string list =
@@ -353,7 +350,6 @@ let rec get_relations (expr:('a calc_t)): string list =
    fold_calc 
       merge_op 
       merge_op 
-      (fun x -> x)
       (fun _ -> [])
       (fun (_,subexp) -> subexp)
       (fun _ -> [])
@@ -369,7 +365,6 @@ let rec get_externals (expr:('a calc_t)): ('a external_t) list =
    fold_calc 
       merge_op 
       merge_op 
-      (fun x -> x)
       (fun _ -> [])
       (fun (_,subexp) -> subexp)
       (fun _ -> [])
@@ -410,7 +405,6 @@ let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
    match expr with
     | Sum(subexprs)  -> arith_list_op subexprs "Sum" (fun x -> Sum(x))
     | Prod(subexprs) -> arith_list_op subexprs "Product" (fun x -> Prod(x))
-    | Neg(subexp)    -> check_for_numeric_type "Negation" (rcr subexp) subexp
     | Cmp(l,c,r) -> (* Always '1' or '0' *)
       let lht = rcr (Value(l)) in
       let rht = rcr (Value(r)) in
@@ -465,6 +459,7 @@ let rec calc_type ?(strict = false) (expr:('a calc_t)): type_t =
                
 ;;
 
+
 (*** Translation Operations ***)
 
 exception Translation_error of string * Sql.select_t
@@ -515,10 +510,10 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
                   mk_prod [rcr_e b; rcr_e a]
                else
                   mk_prod [rcr_e a; rcr_e b]
-            | Sql.Arithmetic(a,Sql.Sub,b) -> mk_sum [rcr_e a; 
-                                                     mk_neg (rcr_e b)]
+            | Sql.Arithmetic(a,Sql.Sub,b) -> 
+               mk_sum [rcr_e a; mk_prod [calc_neg; (rcr_e b)]]
             | Sql.Arithmetic(_,Sql.Div,_) -> bail "Division unsupported"
-            | Sql.Negation(e) -> mk_neg (rcr_e e)
+            | Sql.Negation(e) -> mk_prod [calc_neg; rcr_e e]
             | Sql.NestedQ(q) -> rcr_q q
             | Sql.Aggregate(agg,subexp) -> 
                if Sql.is_agg_expr subexp then
@@ -541,7 +536,7 @@ let rec calc_of_sql ?(tmp_var_id=(ref (-1))) (tables:Sql.table_t list)
                (* Need to subtract out the union of the two to prevent double
                   counting *)
                let a_calc = rcr_c a and b_calc = rcr_c b in
-                  mk_sum [a_calc; b_calc; mk_neg (mk_prod [a_calc; b_calc])]
+                  mk_sum [a_calc; b_calc; (mk_prod [calc_neg; a_calc; b_calc])]
             | Sql.Not(Sql.Exists(q)) -> mk_cmp (rcr_q q) Eq 
                                                (Value(Const(Integer(0))))
             | Sql.Not(c) -> mk_cmp (rcr_c c) Neq 

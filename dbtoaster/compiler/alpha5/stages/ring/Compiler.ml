@@ -1,6 +1,9 @@
 open Util
 open Calculus
+open Common
 open Common.Types
+
+type 'a roly_t = 'a calc_t list
 
 let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
                       (delta_name:string) (delta_vars:var_t list) 
@@ -8,10 +11,9 @@ let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
    let rcr = compute_delta ~mk_external:mk_external 
                            ~calc_for_external:calc_for_external
                            delta_name delta_vars in
-   let c i = Value(Const(Integer(i))) in
    match expr with
       | Sum(sl)            -> mk_sum (List.map rcr sl)
-      | Prod([])           -> c 0
+      | Prod([])           -> calc_zero (* d(const) = 0 *)
       | Prod(lhs :: rhs)   -> 
          let dlhs = rcr lhs and drhs = prod_list (rcr (Prod(rhs))) in
             mk_sum [
@@ -19,10 +21,9 @@ let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
                mk_prod (dlhs :: rhs);
                mk_prod (dlhs :: drhs)
             ]
-      | Neg(subexpr)       -> mk_neg (rcr subexpr)
-      | Cmp(_,_,_)         -> c 0
+      | Cmp(_,_,_)         -> calc_zero
       | AggSum(gb,subexpr) -> AggSum(gb,rcr subexpr)
-      | Value(v)           -> c 0
+      | Value(v)           -> calc_zero 
       | Relation(rel_name, rel_vars)    -> 
          if rel_name = delta_name then
             mk_prod (
@@ -30,7 +31,7 @@ let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
                   Definition(rv, (Value(Var(dv))))
                ) (List.combine rel_vars delta_vars)
             )
-         else c 0
+         else calc_zero
       | External(en,ev,et,ei) -> (
             match calc_for_external with
                | None -> 
@@ -51,12 +52,10 @@ let rec compute_delta ?(mk_external = None) ?(calc_for_external = None)
             ) in
                mk_sum [
                   Definition(var, mk_sum [defn_ext; rcr defn]);
-                  mk_neg (Definition(var, defn_ext))
+                  mk_prod [ calc_neg; (Definition(var, defn_ext)) ]
                ]
-
 ;;
-
-let rec roly_poly (expr:'a calc_t): ('a calc_t list) =
+let rec roly_poly (expr:'a calc_t): ('a roly_t) =
    match expr with
       | Sum(sl) -> List.flatten (List.map roly_poly sl)
       | Prod([]) -> [Value(Const(Integer(1)))]
@@ -67,199 +66,10 @@ let rec roly_poly (expr:'a calc_t): ('a calc_t list) =
                List.map (fun r -> List.map (fun t -> mk_prod [t;r]) roly_term)
                         roly_rest
             )
-      | Neg(n) -> List.map mk_neg (roly_poly n)
       | AggSum(gb,subexp) -> List.map (fun x -> AggSum(gb, x)) 
                                       (roly_poly subexp)
       | Definition(v,subexp) -> [Definition(v, mk_sum (roly_poly subexp))]
       | _ -> [expr]
-
-;;
-
-let rec push_down_negs (neg:bool) (expr:'a calc_t) =
-   match expr with 
-      | Sum(sl) -> mk_sum (List.map (push_down_negs neg) sl)
-      | Prod(pl) -> mk_prod (List.map (push_down_negs neg) pl)
-      | Neg(n) -> push_down_negs (not neg) n
-      | AggSum(gb,subexp) -> AggSum(gb, push_down_negs neg subexp)
-      | Definition(dv, dd) -> 
-         let new_expr = Definition(dv, push_down_negs false dd)
-         in if neg then Neg(new_expr) else new_expr
-      | _ -> if neg then Neg(expr) else expr
-
-;;
-
-let rec pull_up_aggsums (expr:'a calc_t): (var_t list * 'a calc_t) =
-   let merge_list merge_op list = 
-      let (v,c) = List.fold_left (fun (old_v, old_c) (new_v, new_c) ->
-         (ListAsSet.union old_v new_v, old_c @ [new_c])
-      ) ([], []) (List.map pull_up_aggsums list) in
-         (v, merge_op c)
-   in
-   match expr with
-      | Sum(sl) -> merge_list mk_sum sl
-      | Prod(pl) -> merge_list mk_prod pl
-      | Neg(n) -> let (vars, calc) = pull_up_aggsums n in (vars, (Neg(calc)))
-      | Cmp(_,_,_) -> ([], expr)
-      | AggSum(gb,subexp) -> (gb, snd (pull_up_aggsums subexp))
-      | Value(_) -> ([], expr)
-      | Relation(_,rv) -> (rv, expr)
-      | External(_,ev,_,_) -> (List.map fst (List.filter snd ev), expr)
-      | Definition(dv,dd) -> 
-         let (agg_vars,dd_pulled) = pull_up_aggsums dd in
-            (* See if we need to create a root level aggsum -- this is the
-               case if the native schema of the AggSum-free (i.e., pulled) 
-               expression contains at least one variable not in the group-by
-               schema defined by the pulling *)
-            let dd_wrapped =
-               if not (List.exists (fun (var,_) ->
-                     List.mem var agg_vars
-                  ) (List.filter snd (Calculus.get_schema dd_pulled)))
-               then AggSum(agg_vars, dd_pulled)
-               else dd_pulled
-            in (dv :: agg_vars, (Definition(dv, dd_wrapped)))
-
-;;
-
-let rec propagate_forward (mapping:(var_t * var_t) list) (expr:'a calc_t):
-                          ((var_t * var_t) list * 'a calc_t) =
-   let sub (x:var_t): var_t = Function.apply mapping x x in
-   let sub_val (x:value_t): value_t = match x with | Const(_) -> x
-                                                   | Var(v) -> Var(sub v) in
-   let merge_mappings a b = 
-      let new_a = List.map (fun (aov, anv) ->
-         if List.mem_assoc anv b then (aov, List.assoc anv b)
-                                 else (aov, anv)) a in
-      let new_b = List.filter (fun (bv,_) -> not (List.mem_assoc bv a)) b in
-         new_a @ new_b
-   in
-   match expr with
-      | Sum(sl) -> 
-         (* We can't really do much here without breaking things... simplify 
-            should really only be used on monomials.  Still, we don't need
-            to fail entirely.  We just tack on some definition terms to remap
-            the removed elements of the schema back to their original values 
-            so that the schema of each sum element matches correctly. *)
-         ([], mk_sum (List.map (fun term ->
-            let (mapping, new_term) = propagate_forward mapping term in
-               if mapping = [] then new_term
-               else mk_prod (
-                  new_term :: (List.map (fun (old_var,new_value) -> 
-                     Definition(old_var, Value(Var(new_value)))) mapping)
-               )
-            ) sl
-         ))
-      | Prod(pl) ->
-         List.fold_left (fun (new_mapping, new_expr) (term) -> 
-            let (term_mapping, new_term) = 
-               propagate_forward (merge_mappings mapping new_mapping) term
-            in (
-                  (merge_mappings new_mapping term_mapping),
-                  mk_prod [new_expr; term]
-               )
-         ) ([], (Value(Const(Integer(1))))) pl
-      | Neg(term) -> 
-         let (new_mapping, new_term) = propagate_forward mapping term
-            in (new_mapping, (Neg(new_term)))
-      | Cmp(a,op,b) -> ([], Cmp(sub_val a, op, sub_val b))
-      | AggSum(gb,subexp) -> 
-         let (mapping, new_term) = propagate_forward mapping subexp
-            in (
-               (* Don't propagate mappings filtered out by the aggsum *)
-               List.filter (fun (v,_) -> List.mem v gb) mapping,
-               (AggSum(List.map sub gb, new_term))
-            )
-      | Value(Const(_)) -> ([], expr)
-      | Value(Var(v)) -> ([], (Value(Var(sub v))))
-      | Relation(rn,rv) -> ([], (Relation(rn, List.map sub rv)))
-      | External(en,ev,et,ei) ->
-         ([], (External(en,List.map (fun (v,bound) -> (sub v,bound)) ev,et,ei)))
-      | Definition(dv,(Value(Var(v)))) -> 
-         ([dv, v], (Value(Const(Integer(1)))))
-      | Definition(dv, dd) -> 
-         let (new_mapping, new_term) = propagate_forward mapping dd
-            in (new_mapping, (Definition(dv, new_term)))
-
-;;
-
-let rec propagate_backwards (in_schema:var_t list) (expr:'a calc_t): 
-                            ('a calc_t) =
-   let rcr = propagate_backwards in_schema in
-   match expr with
-      | Sum(sl) -> mk_sum (List.map rcr sl)
-      | Prod(pl) -> 
-         let (eq_terms, basic_terms) = 
-            List.partition (fun t -> match t with | Cmp(_,Eq,_) -> true
-                                                  | _ -> false) pl
-         in
-            mk_prod (List.map snd (List.fold_left 
-               (fun (new_prod:(var_t list * 'a calc_t) list) 
-                    (eq_term:'a calc_t) ->
-               let find_bindpoint (v:value_t): int = 
-                  match v with | Const(_) -> 0
-                               | Var(var) -> 
-                     if List.mem var in_schema then 0
-                     else fst (List.fold_left (fun (i,found) (t_sch, t) ->
-                        if found then (i, true)
-                        else if (List.mem var t_sch)
-                             then (i, true)
-                             else (i+1, false)
-                     ) (1,false) new_prod)
-               in
-               let inject_defn (dv:var_t) (dd:value_t) (index:int) =
-                  if index = 0 
-                  then 
-                     [[dv],
-                      (Definition(dv, (Value(dd))))] @ new_prod
-                  else
-                     snd (List.fold_left (fun (i, new_prod2) t ->
-                        (i - 1, new_prod2 @ [t] @ 
-                           (if i = 0 then
-                              [[dv], 
-                               (Definition(dv, (Value(dd))))]
-                           else [])
-                        )
-                     ) (index-1, []) new_prod)
-               in
-               let (a,b) = match eq_term with Cmp(a,Eq,b) -> (a,b) 
-                             | _ -> failwith "Bug in propagate_backwards (1)"
-               in
-                  let bp_a = find_bindpoint a and bp_b = find_bindpoint b in
-                  if ((bp_a = 0) && (bp_b = 0)) || (bp_a = bp_b)
-                  then new_prod @ [[],
-                                   (Cmp(a, Eq, b))
-                                  ]
-                  else
-                     if bp_a < bp_b 
-                        then match b with Var(v) -> inject_defn v a bp_a
-                        | Const(_) -> failwith "Bug in propagate_backwards (2)" 
-                        else match a with Var(v) -> inject_defn v b bp_b
-                        | Const(_) -> failwith "Bug in propagate_backwards (3)" 
-            ) (snd (List.fold_left (fun (sch, terms) t ->
-               let new_sch = 
-                  (List.map fst (List.filter snd (Calculus.get_schema t))) 
-               in
-                  ( sch @ new_sch, 
-                    terms @ [new_sch, propagate_backwards sch t]
-                  )
-               ) (in_schema, []) basic_terms))
-              eq_terms
-         ))
-      | Neg(subexpr) -> Neg(rcr subexpr)
-      | AggSum(gb, subexpr) -> AggSum(gb, rcr subexpr)
-      | Definition(dv, subexpr) -> Definition(dv, rcr subexpr)
-      | _ -> expr
-;;
-let simplify (in_sch:(var_t list)) (base:'a calc_t): 
-             ((var_t*var_t) list * 'a calc_t) =
-   let rec fixed_point (expr:'a calc_t) 
-                       (mapping:(var_t * var_t) list) =
-      let step1 = push_down_negs false expr in
-      let (v,e) = pull_up_aggsums step1 in let step2 = AggSum(v,e) in
-      let step3 = propagate_backwards in_sch step2 in
-      let (new_mapping,new_expr) = propagate_forward mapping step3 in
-         if new_expr = expr then (new_mapping,new_expr)
-                            else fixed_point new_expr new_mapping
-   in fixed_point base []
 ;;
 
 (* Simplify a list of monomials (returned earlier in the compilation process
@@ -403,3 +213,392 @@ let factorize (monomials:'a calc_t list): 'a calc_t =
                      compare
                      viable_candidate 
                      monomials
+
+
+module Opt = struct
+   (* As a general rule, Calculus is simpler if all the AggSum()s are as
+      close to the root as possible.  This essentially allows us to decide where
+      the best place to run an aggregation loop is, potentially unnesting a 
+      number of nested loops, or doing some other optimization across an aggsum
+      boundary.
+      
+      lift_aggsums lifts all AggSums as high in the parse tree as possible and
+      returns an accordingly modified version of its input.  *)
+   let lift_aggsums (top_expr:'a calc_t): 'a calc_t =
+      let merge_list merge_op list = 
+         let (v,c) = List.fold_left (fun (old_v, old_c) (new_v, new_c) ->
+            (ListAsSet.union old_v new_v, old_c @ [new_c])
+         ) ([], []) list in
+            (v, merge_op c)
+      in
+      let var_list_matches_schema vars expr = 
+         ListAsSet.seteq 
+            vars
+            (fst (List.split (List.filter snd (get_schema expr))))
+      in
+      let rec rcr (expr:'a calc_t): (var_t list * 'a calc_t) =
+         
+         match expr with
+            (* The list of variables returned is the schema of the 
+               subexpression.  This list is restricted by aggsums, and 
+               expanded by relations (the rel vars), externals (the bound vars),
+               and definitions (the variable being defined).  
+               
+               Notes: 
+                  Sum is correct, because the entire set of things being summed
+                  must, by definition have the same schema.
+            *)               
+            | Sum(sl) ->  merge_list mk_sum  (List.map rcr sl)
+            | Prod(pl) -> merge_list mk_prod (List.map rcr pl)
+            | Cmp(_,_,_) -> ([], expr)
+            | AggSum(gb,subexp) -> (gb, snd (rcr subexp))
+            | Value(_) -> ([], expr)
+            | Relation(_,rv) -> (rv, expr)
+            | External(_,ev,_,_) -> (List.map fst (List.filter snd ev), expr)
+            | Definition(dv,dd) -> 
+               let (agg_vars,dd_pulled) = rcr dd in
+                  (* See if we need to create a root level aggsum -- this is the
+                     case if the native schema of the AggSum-free (i.e., pulled) 
+                     expression contains at least one variable not in the group-
+                     by schema defined by the pulling *)
+                  let dd_wrapped =
+                     if var_list_matches_schema agg_vars dd_pulled
+                     then dd_pulled
+                     else AggSum(agg_vars, dd_pulled)
+                  in (dv :: agg_vars, (Definition(dv, dd_wrapped)))
+      in 
+      let (top_vars, simplified) = rcr top_expr in
+         if var_list_matches_schema top_vars simplified
+         then simplified
+         else AggSum(top_vars, simplified)
+   
+   (* The second step of variable unification is to take definition terms that
+      map one variable to another directly (e.g., (foo <- bar)) and apply the
+      mapping directly (e.g., in the above case, replace all instances of foo
+      with bar) to all the remaining terms in the expression.
+      
+      propagate_forward extracts the relevant definition terms, performs the
+      replacements and returns a list of the mappings which it has discovered.
+      (since the schema of the expression has now changed)
+   *)
+   let propagate_forward (top_expr:'a calc_t): (var_t * var_t) list * 'a calc_t=
+      let sub (m:(var_t*var_t) list) (x:var_t): var_t = Function.apply m x x in
+      let sub_val (m:(var_t*var_t) list) (x:value_t): value_t = match x with 
+         | Const(_) -> x | Var(v) -> Var(sub m v) in
+      let merge_mappings (a_list:(var_t*var_t) list)
+                         (b_list:(var_t*var_t) list):(var_t*var_t) list =
+         (* sanity check: b always occurs on the RHS of a; thus, we should
+            never find a transitive closure from b to a, only visa versa *)
+         if (ListAsSet.inter (List.map snd a_list)
+                             (List.map fst b_list)) <> []
+         then failwith "BUG: propagate_forward: closure from RHS to LHS"
+         else ListAsSet.inter a_list
+            (List.map (fun (o,n) -> (o, (Function.apply a_list n n))) b_list)
+      in   
+      let rec rcr (mapping:(var_t*var_t) list) 
+                  (expr:'a calc_t): ((var_t*var_t) list * 'a calc_t) =
+         match expr with
+            | Sum(sl) -> 
+               (* Sums are a bit delicate, since we need to preserve the
+                  schema of everything inside.  We can apply mappings we've 
+                  obtained outside the expression since those get applied to
+                  the entire sum.  We can also apply new mappings nested inside
+                  an AggSum (as long as they're not for group-by variables).
+                  All the other nested mappings however, need to be reversed --
+                  we need to re-instantiate the variables that we've gotten rid
+                  of in order to preserve the schema of the expression.  In 
+                  other words, we never export any new mappings. 
+                  Either way, we make sure that we're not introducing new 
+                  variables by wrapping each term in an aggsum to project away
+                  any variables not in the original expression's schema.  
+                  mk_aggsum is smart enough to figure out whether the AggSum is 
+                  redundant.
+                  *)
+               ([], mk_sum (List.map (fun term ->
+                  let (new_mapping, new_term) = rcr mapping term in
+                     mk_aggsum (get_bound_schema term) (
+                        mk_prod (new_term :: (List.map (fun (old_var,new_var) ->
+                           Definition(old_var, Value(Var(new_var)))
+                        ) new_mapping))
+                     )
+               ) sl))
+            | Prod(pl) ->
+               List.fold_left (fun (old_mapping, new_expr) (term) ->
+                  let (new_mapping, new_term) = 
+                     rcr (merge_mappings mapping old_mapping) term 
+                  in
+                     ((merge_mappings old_mapping new_mapping),
+                      mk_prod [new_expr; new_term])
+               ) (mapping, calc_one) pl
+            | Cmp(a, op, b) -> 
+               ([], Cmp(sub_val mapping a, op, sub_val mapping b))
+            | AggSum(gb, subexp) -> 
+               let (new_mapping, new_term) = rcr mapping expr in
+               let merged_mapping = merge_mappings mapping new_mapping in
+               (* Apply substitutions to the group by terms ... this includes
+                  any new mappings we've discovered inside. *)
+               let new_gb = List.map (sub merged_mapping) gb in
+                  (
+                     (* Don't propagate mappings filtered out by the aggsum *)
+                     List.filter (fun (v,_) -> List.mem v new_gb) 
+                                 merged_mapping,
+                     (AggSum(new_gb, new_term))
+                  )
+            | Value(v) -> ([], Value(sub_val mapping v))
+            | Relation(rn, rv) -> 
+               ([], (Relation(rn, List.map (sub mapping) rv)))
+            | External(en,ev,et,ei) ->
+               ([], (External(en,
+                              List.map (fun (v,bound) -> (sub mapping v,bound)) 
+                                       ev,
+                              et,ei)))
+            | Definition(dv,(Value(Var(v)))) -> ([dv, v], calc_one)
+            | Definition(dv, dd) ->
+               let (new_mapping, new_term) = rcr mapping dd in
+                  (new_mapping, Definition(dv, new_term))
+      in (rcr [] top_expr)
+
+   (* The first step in variable unification is replacement of equality 
+      constraints with an equivalent definition term (if such a replacement is
+      actually possible).  For example 
+         (R(a) * S(b) * (a = b))
+      becomes
+         (R(a) * (b <- a) * S(b))
+      This is a careful process -- We need to keep shifting the equality left
+      until only one of the variables is bound.  Note that this may not always
+      be possible, so at some point we might need to give up and put the 
+      equality back into the expression 
+      
+      propagate_backward takes an expression and a set of input variables (which
+      are never allowed to be unified), and returns a new expression with as 
+      many of the equalities replaced by definition terms.
+      *)
+   let propagate_backwards (top_in_sch:var_t list) (top_expr:'a calc_t): 
+                           'a calc_t =
+      let rec rcr (in_sch:var_t list) (expr:'a calc_t): 'a calc_t =
+         match expr with
+            (* We could be a little more aggressive here and factorize common
+               equalities out of the sum.  This seems like a job for an explicit 
+               factorize_poly optimization though *)
+         | Sum(sl) -> mk_sum (List.map (rcr in_sch) sl)
+            (* Could also be a bit more aggressive here...  *)
+         | AggSum(gb, subexp) -> AggSum(gb, rcr in_sch subexp)
+         | Definition(dv, subexp) -> Definition(dv, rcr in_sch subexp)
+         | Value(_) -> expr
+         | Relation(_,_) -> expr
+         | External(_,_,_,_) -> expr
+         | Cmp(_,_,_) -> expr
+         | Prod(pl) -> 
+            mk_prod (List.fold_left (fun new_pl prod_term ->
+               let try_sub a b =
+                  if List.mem a in_sch then None
+                  else let (ret,found) = 
+                     (* iterate over the LHS terms until we find one where 
+                        b is defined, but a isn't.  We tack a calc_one onto the
+                        end of the list so that we can check for insertion at
+                        the very end as well.  This is ok, because mk_prod will
+                        eliminate the calc_one terms. *)
+                     List.fold_left (fun (ret,found) term ->
+                        if found then (ret @ [term],true) else
+                        let sch = 
+                           ListAsSet.union in_sch 
+                                           (get_bound_schema (mk_prod ret))
+                        in
+                           if (List.mem b sch) && not (List.mem a sch) then
+                              (  ret @ [Definition(a, Value(Var(b)));
+                                        term],
+                                 true)
+                           else (ret @ [term], false)
+                     ) ([calc_one], false) (new_pl@[calc_one])
+                  in if found then Some(ret) else None
+               in
+               match prod_term with
+               | Cmp(Var(a),Eq,Var(b)) -> (
+                  (* Try to find a way to insert a <- b *)
+                  match try_sub a b with 
+                     | Some(ret) -> ret
+                     | _ -> (
+                        (* if that fails, try to insert b <- a *)
+                        match try_sub b a with
+                           Some(ret) -> ret
+                           (* if that fails, just insert the equality back *)
+                           | _ -> new_pl @ [prod_term]
+                     )
+                  )
+               | _ -> new_pl @ [prod_term]
+            ) [] pl) 
+      in (rcr top_in_sch top_expr)
+
+   (* merge_constants combines constants in sums/products.  Additionally, 
+      multipliers in front of structurally equivalent terms in a sum are 
+      combined (e.g., (X + 2X + Y) is turned into (3X+Y)).  merge_constants is
+      not particularly intelligent about how it matches terms, and uses '='.
+      Through the magic of mk_sum/mk_prod, this also happens to eliminate all 
+      terms that cancel out (e.g., (X + (-1)*X) => 0) *)
+   let merge_constants (top_expr: 'a calc_t): 'a calc_t =
+      let one = Integer(1) in
+      let rec rcr (expr: 'a calc_t): ('a calc_t * const_t) =
+         match expr with
+          | Sum(sl) -> 
+            (  mk_sum (
+                  List.map (fun (term, consts) ->
+                     mk_prod [Value(Const(Arithmetic.add_list consts)); term]
+                  ) (ListExtras.reduce_assoc (List.map rcr sl))
+               ),
+               one
+            )
+          | Prod(pl) ->
+            let (terms, consts) = List.split (List.map rcr pl) in
+               (  mk_prod terms,
+                  Arithmetic.mult_list consts
+               )
+          | AggSum(gb,subexp) -> 
+            let (simpler_subexp, const) = rcr subexp in
+               (  (AggSum(gb, simpler_subexp)),
+                  const
+               )
+          | Value(Const(c))     -> (calc_one, c)
+          | Value(Var(v))       -> (expr, one)
+          | Cmp(_,_,_)          -> (expr, one)
+          | Relation(_,_)       -> (expr, one)
+          | External(_,_,_,_)   -> (expr, one)
+          | Definition(v, subexp) -> 
+            let (simpler_subexp, const) = rcr subexp in
+               (  (Definition(v, mk_prod [Value(Const(const)); 
+                                          simpler_subexp])),
+                  one
+               )
+      in 
+      let (simpler_expr, const) = rcr top_expr in
+         mk_prod [Value(Const(const)); simpler_expr]
+   
+   let lift_definitions (top_ivars: var_t list) (top_expr: 'a calc_t): 
+                        'a calc_t =
+      let inject_defns ((expr:'a calc_t),(defns:(var_t*'a calc_t) list)) =
+         mk_prod ((List.map (fun (dv,dd) -> Definition(dv,dd)) defns) @ [expr])
+      in
+      let rec rcr (ivars:var_t list) (expr:'a calc_t): 
+              ('a calc_t *((var_t*'a calc_t) list)) =
+         match expr with
+         | Sum(sl) -> 
+            (mk_sum (List.map (fun x -> inject_defns (rcr ivars x)) sl), [])
+         | Prod(term :: rest) ->
+            (* Start with the leftmost term.  We might be able to extract some
+               bindings out of it... those get propagated directly up (since
+               there's nothing left for them to commute with).  *)
+            let (term_exp, term_defns) = rcr ivars term in
+            (* Now compute the input variables to anything left of the term.
+               This includes the overall input variables, as well as any 
+               bindings introduced by the definition terms extracted from the
+               leftmost term *)
+            let lhs_bindings = List.fold_left (fun old (dv,dd) ->
+                  ListAsSet.multiunion [[dv];(get_bound_schema dd);old]
+               ) ivars term_defns in
+            (* Recur on anything else.  We can cheat and just use the overall
+               schema of the term, since that should be the same as the union of
+               the term_exp, and term_defn bindings *)
+            let (sub_exp, sub_defns) = 
+               rcr (ListAsSet.union (get_bound_schema term) ivars)
+                   (mk_prod rest)
+            in
+            (* Now, repeatedly check to see if we can commute each definition
+               term in our list with the new term *)
+            let (ret_term, ret_defns, _) = 
+               List.fold_left (fun (ret_term,ret_defns,lhs_bindings) (dv,dd) ->
+                  if commutes_with ~ivars:ivars 
+                                   ret_term 
+                                   (Definition(dv,dd))
+                  (* If it's commutable, then we can tack it onto our list of
+                     definitions to lift up. *)
+                  then (   ret_term, 
+                           ret_defns @ [dv, dd],
+                           ListAsSet.multiunion [[dv];(get_bound_schema dd);
+                                                 lhs_bindings] )
+                  (* Otherwise, we tack it back onto the main term *)
+                  else (   mk_prod [ret_term;Definition(dv,dd)],
+                           ret_defns,
+                           lhs_bindings )
+               ) (term_exp, term_defns, lhs_bindings) sub_defns
+            in (mk_prod [ret_term; sub_exp], ret_defns)
+         | Prod(pl) -> (mk_prod pl, [])
+         | Cmp _ -> (expr, [])
+         | Value _ -> (expr, [])
+         | Relation _ -> (expr, [])
+         | External _ -> (expr, [])
+         | Definition(dv, dd) -> 
+            (* Two things we need to do here.  First, it's possible to unnest
+               definition terms: 
+               e.g., 
+                  A <- ((B <- foo) * bar)
+               is the same as
+                  (B <- foo) * (A <- bar)
+               Note that this is not true for
+                  A <- (bar * (B <- foo))
+               but this case is handled by explicitly Prod() above *)
+            let (dd_expr, dd_defns) = rcr (ListAsSet.union [dv] ivars) dd in
+            (* Second, the definition term itself gets put onto the list. *)
+               (calc_one, dd_defns @ [dv, dd_expr])
+         | AggSum(gb, subexp) ->
+            (* We can lift any definition terms who's bound variables are a 
+               subset of the group by terms in the aggsum.  Note that there's
+               a small gotcha... the definition term list is in order, so we 
+               also need to make sure that the definition term can commute to
+               the head of the list of terms that can't be lifted. *)
+            let (sub_term, sub_defns) = rcr ivars subexp in
+            let (lifted_defns, head_exp, _) = 
+               List.fold_left (fun (lifted_defns, head_exp, bindings) (dv,dd) ->
+                  let (defn_bindings) = 
+                     (ListAsSet.union [dv] (get_bound_schema dd)) in
+                  if (commutes_with ~ivars:bindings
+                                    head_exp
+                                    (Definition(dv,dd))) &&
+                     (ListAsSet.subset defn_bindings gb)
+                  then (   lifted_defns @ [dv,dd],
+                           head_exp,
+                           ListAsSet.union defn_bindings 
+                                           bindings )
+                  else (   lifted_defns, 
+                           mk_prod [head_exp;Definition(dv,dd)],
+                           bindings )
+               ) ([], calc_one, ivars) sub_defns
+            in
+            let new_exp = mk_prod [head_exp; sub_term] in
+               ((AggSum(
+                  (* We might be able to eliminate some group by terms *)
+                  ListAsSet.inter gb (get_bound_schema new_exp),
+                  new_exp
+                )), lifted_defns)
+      in inject_defns (rcr top_ivars top_expr)
+         
+   
+   type opt_t = LiftAggSums | PropagateFwd | PropagateBkwd | MergeConstants |
+                LiftDefinitions
+
+   let all_opts = [ 
+      LiftAggSums ; PropagateBkwd ; PropagateFwd ; MergeConstants ;
+      LiftDefinitions
+   ]
+   
+   let rec optimize ?(opts = all_opts) 
+                    ((ivars:var_t list),
+                     (top_sch:var_t list),
+                     (top_expr:'a calc_t)):
+                    (var_t list * 'a calc_t) =
+      let (opt_sch, opt_expr) = 
+         List.fold_left (fun (sch,expr) opt ->
+            match opt with 
+               | LiftAggSums  -> (sch, lift_aggsums expr)
+               | PropagateFwd -> (
+                     let (subs,opt_expr) = propagate_forward expr in
+                        (  (List.map (Function.apply_if_present subs) sch),
+                           opt_expr
+                        )
+                  )
+               | PropagateBkwd -> (sch, propagate_backwards ivars expr)
+               | MergeConstants -> (sch, merge_constants expr)
+               | LiftDefinitions -> (sch, lift_definitions ivars expr)
+         ) (top_sch, top_expr) opts
+      in if top_expr <> opt_expr 
+         then optimize ~opts:opts (ivars, opt_sch, opt_expr)
+         else (opt_sch, opt_expr)
+end

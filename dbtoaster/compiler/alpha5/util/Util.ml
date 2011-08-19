@@ -27,6 +27,8 @@ struct
 
    (* not the most intelligent of implementations. quadratic time *)
    let no_duplicates l = multiunion (List.map (fun x -> [x]) l)
+   
+   let uniq = no_duplicates
 
    let member a l = (subset [a] l)         (* is "a" a member of set l? *)
 
@@ -66,6 +68,41 @@ struct
          List.flatten (List.map f (distribute (List.tl l)));;
     
 end;;
+
+module ListExtras = 
+struct
+   let scan (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) = 
+      let rec iterate prev curr_next =
+         match curr_next with 
+            | []         -> []
+            | curr::next -> (f prev curr next) :: (iterate (prev@[curr]) next)
+      in iterate [] l
+
+   let reduce_assoc (l:('a * 'b) list): (('a * ('b list)) list) =
+      List.fold_right (fun (a,b) ret ->
+         if List.mem_assoc a ret
+         then (a, b :: (List.assoc a ret)) :: (List.remove_assoc a ret)
+         else (a, [b]) :: ret
+      ) l []
+
+   let flatten_list_pair (l:('a list * 'b list) list): ('a list * 'b list) =
+      let (a, b) = List.split l in
+         (List.flatten a, List.flatten b)
+
+   let outer_join_assoc (a:(('c * 'a) list)) (b:(('c * 'b) list)):
+                        ('c * ('a option * 'b option)) list =
+      let (outer_b, join) = 
+         List.fold_left (fun (b, join) (c, a_v) ->
+            (  List.remove_assoc c b,
+               join @ 
+                  [  c, ((Some(a_v)),
+                     (if List.mem_assoc c b then Some(List.assoc c b) 
+                                            else None))
+                  ])
+         ) (b, []) a
+      in
+         join @ (List.map (fun (c, b_v) -> (c, ((None), (Some(b_v))))) outer_b)
+end
 
 module MapAsSet =
 struct
@@ -107,22 +144,35 @@ struct
 
    The top-level result list thus conceptually is a MultiProduct.
 *)
-let rec connected_components (get_nodes: 'edge_t -> 'node_t list)
-                             (hypergraph: 'edge_t list): ('edge_t list list)
-   =
-   let rec complete_component c g =
-      if (g = []) then c
-      else if (c = []) then c
+   let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
+                                       (hypergraph: 'edge_t list): 
+                                          ('edge_t list list) =
+      let rec complete_component c g =
+         if (g = []) then c
+         else if (c = []) then c
+         else
+            let relevant_set = (List.flatten (List.map get_nodes c)) in
+            let neighbor e = ((ListAsSet.inter relevant_set (get_nodes e)) !=[])
+            in
+            let newset = (List.filter neighbor g) in
+            c @ (complete_component newset (ListAsSet.diff g newset)) in
+      if hypergraph = [] then []
       else
-         let relevant_set = (List.flatten (List.map get_nodes c)) in
-         let neighbor e = ((ListAsSet.inter relevant_set (get_nodes e)) != [])
-         in
-         let newset = (List.filter neighbor g) in
-         c @ (complete_component newset (ListAsSet.diff g newset)) in
-   if hypergraph = [] then []
-   else
-      let c = complete_component [List.hd hypergraph] (List.tl hypergraph) in
-      [c] @ (connected_components get_nodes (ListAsSet.diff hypergraph c))
+         let c = complete_component [List.hd hypergraph] (List.tl hypergraph) in
+         [c] @ (connected_unique_components get_nodes
+                                            (ListAsSet.diff hypergraph c))
+
+   let connected_components (get_nodes: 'edge_t -> 'node_t list)
+                            (hypergraph: 'edge_t list): 
+                               ('edge_t list list) =
+      List.map (fun factor -> List.map snd factor)
+         (connected_unique_components
+            (fun (_,x) -> get_nodes x)
+            (snd (List.fold_right 
+               (fun x (i,old) -> (i+1, (i, x)::old)) hypergraph (0,[])))
+         )
+   
+
 end
 
 
@@ -192,7 +242,10 @@ struct
       if (List.length x2) = 0 then default
       else if (List.length x2) = 1 then (List.hd x2)
       else raise NonFunctionalMappingException
-    
+   
+   let apply_if_present (theta: ('a,'a) table_fn_t) (x: 'a): 'b =
+      apply theta x x
+   
    let string_of_table_fn (theta:('a,'b) table_fn_t)
                           (left_to_s:('a -> string))
                           (right_to_s:('b -> string)): string =
@@ -205,9 +258,6 @@ struct
         ) None theta) with
       | Some(a) -> "[ "^a^" ]"
       | None -> "[]"
-   
-   let apply_partial (theta: ('a, 'a) table_fn_t) (x: 'a): 'a =
-      apply theta x x
 
    let apply_strict (theta: ('a, 'b) table_fn_t) (x: 'a): 'b =
       let g (y, z) = if(x = y) then [z] else []
@@ -832,13 +882,32 @@ struct
   
   let active df = StringSet.mem df !DebugInternal.debug_modes;;
   
+  let os () =
+    let fdes = (Unix.open_process_in "uname") in
+    let ostr = try input_line fdes with End_of_file -> "???" in
+    let _ = (Unix.close_process_in fdes) in
+      ostr
+  
+  let showdiff exp_str fnd_str = 
+     print_string ("--Expected--\n"^exp_str^
+               "\n\n--Result--\n"^fnd_str^"\n\n"); 
+     match (os ()) with
+       | "Darwin" -> (
+            GenericIO.write (GenericIO.O_TempFile("exp", ".diff", (fun exp_f -> 
+            GenericIO.write (GenericIO.O_TempFile("fnd", ".diff", (fun fnd_f ->
+               let _ = Unix.system("opendiff "^exp_f^" "^fnd_f) in ()
+            ))) (fun fd -> output_string fd (fnd_str^"\n"))
+            ))) (fun fd -> output_string fd (exp_str^"\n"))
+         )
+       | _ -> ()
+  
   let log_unit_test 
         (title:string) (to_s:'a -> string) (result:'a) (expected:'a) : unit =
     if result = expected then print_endline (title^": Passed")
     else 
       (
-        print_string (title^": Failed\n--Expected--\n"^(to_s expected)^
-                                   "\n\n--Result--\n"^(to_s result)^"\n\n"); 
+        print_endline (title^": Failed");
+        showdiff (to_s expected) (to_s result);
         exit 1
       );;
   
@@ -855,11 +924,8 @@ struct
           in   
             if List.length rlist > 0 then
               if List.length elist > 0 then
-                if (List.hd rlist) <> (List.hd elist) then
-                  recurse (to_s (List.hd rlist)) (to_s (List.hd elist)) 
-                          (List.tl rlist) (List.tl elist)
-                else
-                  diff_lists (List.tl rlist) (List.tl elist)
+                recurse (to_s (List.hd rlist)) (to_s (List.hd elist)) 
+                        (List.tl rlist) (List.tl elist)
               else
                 recurse (to_s (List.hd rlist)) "--empty line--" 
                         (List.tl rlist) []
@@ -871,9 +937,8 @@ struct
                 ("","")
         in
         let (result_diffs, expected_diffs) = diff_lists result expected in
-        print_string (title^
-          ": Failed\n--Expected (diffs) --\n"^(expected_diffs)^
-          "\n--Result (diffs) --\n"^(result_diffs)^"\n"); 
+        print_endline (title^": Failed");
+        showdiff (expected_diffs) (result_diffs);
         exit 1
       );;
 end
