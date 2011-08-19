@@ -140,35 +140,39 @@ $$m_{R_k}[][x_i,\cdots,x_j]\not= 0$$
 If this is true then the query that can be generated for the map $m_{R_k}$, exactly like \ref{querygen},
 will produce a table, that will have a record with the specified tuple, therefore the tuple will be in the domain of the map, $\{x_i,\cdots,x_j\in domain(m_{R_k}) \}$. This contradicts the sentence we assumed at first. Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the domain will only provoke a zero initialization of the map for that tuple.
 
+Taking into account the definitions of the AGCA expressions in \ref{def:agca}, the following theorem will work with a subset of those definitions, namely with:
+$$q\text{ ::- }q\cdot q | q + q|R(\vec{y})|(M[\vec{x}][\vec{y}]\text{::-}q)$$
+
 \begin{theorem}
 The value of a map for a specific tuple, which is not in the domain of the map, will always be 0.
 \end{theorem}
 $$\vec{y}\notin\dom{}_{\vec{x}}(q)\Rightarrow m_q[][\vec{y}]=0$$
 
-Taking into account the definitions of the AGCA expressions \ref{def:agca}, the theorem will work with a subset of those definitions, mainly with:
-$$q\text{ ::- }q\cdot q | q + q|R(\vec{y})|(M[\vec{x}][\vec{y}]\text{::-}q)$$
-
 \begin{proof}
 We will give a proof based on induction on the parse tree.
 
-We presume that the map will be defined over a simple relation: $$m[][\vec{y}]::R(\vec{y})$$ The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore there will be a direct connection between the domain of the map and the values offered by the relation. Therefore we will have: 
-$$\dom{}_{\vec{x}}(m[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$$ 
+We presume that the map will be defined over a simple relation: $m_R[][\vec{y}]::R(\vec{y})$. The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore the following statement is true: $\dom{}_{\vec{x}}(m_R[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$.
 
-If we add tuple $\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have to situations:
+If we add tuple $\vec{y_1}=\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have two situations:
 \begin{enumerate}
-\item $\textless y_1,y_2,\cdots,y_n\textgreater\in\dom{}_{\vec{x}}(R(\vec{y}))$, therefore the domain of the relation will remain the same and the map will have been already instantiated
-\item $\textless y_1,y_2,\cdots,y_n\textgreater\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the domain then: $\dom{}_{\vec x}(R(\vec y))\cup=\textless y_1,y_2,\cdots,y_n\textgreater$ and the map defined over the relation has the initial value 0, because the order of multiplicity of that tuple in the relation will be zero and therefore any operation (sum, count) will produce a NULL result.
+\item $\vec{y_1}\in\dom{}_{\vec{x}}(R(\vec{y}))$, therefore the domain of the relation will remain the same and the map is already instantiated
+\item $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the domain then: $$\dom{}_{\vec x}(R(\vec y))\cup=\vec{y_1}\mbox{ and }m_{R}[][\vec{y_1}]=0$$ because the order of multiplicity of that tuple in $R$ will be zero and thus any operation (sum, count) will produce a NULL result.
 \end{enumerate}
 
-$\vec{y}\notin\dom{}_{\vec{x}}(R(\vec{y}))\Rightarrow m_R[][\vec{y}]=0$ stands for the base case.
+$\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))\Rightarrow m_R[][\vec{y_1}]=0$ and therefore the base case is true.
 
-First we will prove that for any join relations the statement is true. We will consider the map defined over a join of expressions: $m[][\vec{y}]::q_1\cdot q_2$. Taking into consideration the definition of the domain of join expressions \ref{def:join}, if we have $\vec{y}\notin\dom{}_{\vec{x}}(q_1\cdot q_2)$ then we will have two cases for the sub expressions of the join:
+First we will talk about join relations and maps defined over a join of expressions: $m_q[][\vec{y}]::q_1\cdot q_2$. Definition \ref{def:join} says that the domain of a join expression is the intersection between the domains of $q_1$ and $q_2$. If $\vec{y_1}\notin\dom{}_{\vec{x}}(q_1\cdot q_2)$ then we will have the following cases:
 \begin{enumerate}
-\item $\vec{y}\notin\dom{}_{\vec{x}}(q_1)$ the tuple that we are adding is not in expression $q_1$, but it will be in the expression $q_2$. In this case the tuple may not be in the domain of $q_2$ as well, however that will not produce any change to the domain of the join relation (see definitions section \ref{defin}). The map defined over $q_1$ will be initialized with 0, because the tuple is not present in the domain of $q_1$. Therefore the map defined over the join expression $m_q[][\vec{y}]:: q_1\cdot q_2$ will be initialized with 0 too, because the map will be the product of the maps defined over $q_1$ and $q_2$ and $q_1=0$. 
+\item $\vec{y_1}\notin\dom{}_{\vec{x}}(q_1)$ which means that the map defined over the relation $q_1$ will be 0 for that tuple.
+$$m_{q_1}[][\vec{y_1}]=0\land m_q[][\vec{y_1}]: m_{q_1}[][\vec{y_1}]*m_{q_2}[][\vec{y_1}]\Rightarrow m_{q}[][\vec{y_1}]=0*m_{q_2}[][\vec{y_1}]=0$$
+where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
 \item $\vec{y}\notin\dom{}_{\vec{x}}(q_2)$ the same proof as in the first case, but now for the expression $q_2$.
 \end{enumerate}
 
-Secondly we will talk about union expressions and maps defined over union expressions: $m[][\vec{y}]::q_1+q_2$. Taking into account the definition of the domain of union expressions \ref{def:plus}, if a tuple is not in the domain of a union expression $\vec{y}\notin\dom{}_{\vec{x}}(q_1+q_2)$ then the tuple will not appear in either of the expressions: $\vec{y}\notin\dom{}_{\vec{x}}(q_1)\land \vec{y}\notin\dom{}_{\vec{x}}(q_1)$. Therefore the maps defined over $q_1$ and $q_2$ will produce 0 for the given tuple. The map defined over the union will be the sum of the two other maps, and therefore it will remain 0.
+Secondly we will talk about union expressions and maps defined over union expressions: $m_q[][\vec{y}]::q_1+q_2$. Definition \ref{def:plus} says that the domain of a union expression is the union between the domains of $q_1$ and $q_2$. Therefore, if $\vec{y}\notin\dom{}_{\vec{x}}(q_1+q_2)$ then: $\vec{y}\notin\dom{}_{\vec{x}}(q_1)\land \vec{y}\notin\dom{}_{\vec{x}}(q_2)$.
+
+$$m_{q_1}[][\vec{y_1}]=0\land m_{q_2}[][\vec{y_1}]=0\land m_q[][\vec{y_1}]: m_{q_1}[][\vec{y_1}]+m_{q_2}[][\vec{y_1}]\Rightarrow m_q[][\vec{y_1}]=0$$
+where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
 \end{proof}
 
 Another problem of initial value computation, besides the problem of with which value should a map be initialized, is the problem of how fast to do the initialization. We have two different sort of initializations: an eager one and a lazy one. The eager one will initialize the right side of a trigger expression, when the left side of the expression will be initialized. The right side will be initialized if and only if it needs initialization. And the lazy one is based on the fact that only the left side will be initialized, and the right side no, leaving the rest side of the initialization to be done when the appropriate trigger is called.
