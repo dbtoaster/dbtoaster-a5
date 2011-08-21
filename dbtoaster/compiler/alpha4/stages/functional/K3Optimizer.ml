@@ -396,6 +396,9 @@ type optimization_t = CSE | Beta
 let var_counter = ref 0
 let gen_var_sym() = incr var_counter; "var"^(string_of_int (!var_counter))
 
+let mk_var (id,ty) = Var(id,ty)
+let mk_block l = match l with [x] -> x | _ -> Block(l)
+
 (* accessors *)
 let get_fun_parts e = match e with
     | Lambda(x,b) -> x,b | _ -> failwith "invalid function"
@@ -442,13 +445,8 @@ let get_gb_agg_parts e = match e with
     | _ -> failwith "invalid group by aggregation"
 
 
-let get_free_vars e bindings =
-    let add_binding bindings e = match e with
-        | Lambda(arg_e,_) -> bindings@(get_arg_vars arg_e)
-        | AssocLambda(arg1_e,arg2_e,_) ->
-            bindings@(get_arg_vars arg1_e)@(get_arg_vars arg2_e)
-        | _ -> bindings
-    in
+let get_free_vars bindings e =
+    let add_binding bindings e = bindings@(get_bindings e) in
     let is_free_var bindings bu_acc e = match e with
         | Var(id,_) -> if not(List.mem id bindings) then [id] else []
         | _ -> List.flatten (List.flatten bu_acc)
@@ -466,6 +464,7 @@ let substitute_args renamings arg =
     end
 
 let substitute (arg_to_sub, sub_expr) expr =
+    let back l = let x = List.rev l in List.rev (List.tl x), List.hd x in 
     let vars_to_sub = match arg_to_sub with
         | AVar(v,_) -> [v,sub_expr]
         | ATuple(vt_l) ->
@@ -475,6 +474,10 @@ let substitute (arg_to_sub, sub_expr) expr =
                | IfThenElse(p,tt_expr,et_expr) ->
                   List.map2 (fun t e -> if t = e then t else IfThenElse(p,t,e))
                     (push_down_ifs tt_expr) (push_down_ifs et_expr)
+               | Block l ->
+                let h,b = back l in
+                let fields = push_down_ifs b
+                in (Block(h@[List.hd fields]))::(List.tl fields)
                | _ -> failwith
                         ("invalid tuple binding: "^(string_of_expr sub_expr))
             in List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
@@ -512,7 +515,7 @@ let replace_nesting_collisions f_argvars f_body g_args g_body =
          In general, we cannot use f_args because this function may have
          different arity than g_args. *)
       Util.ListAsSet.inter
-        (get_free_vars f_body f_argvars) (get_arg_vars g_args)
+        (get_free_vars f_argvars f_body) (get_arg_vars g_args)
     in
     if collisions = [] then g_args, g_body
     else
@@ -533,6 +536,7 @@ let replace_nesting_collisions f_argvars f_body g_args g_body =
         substitute (AVar(v,t), Var(nv,t)) e) g_body renamings
       in new_args,new_body 
 
+(* Compose f and g, i.e. f(g(x)) -> f \circ g *)
 let compose f g =
     let f_args, f_body = get_fun_parts f in
     let g_args, g_body = get_fun_parts g in
@@ -592,7 +596,7 @@ let selective_expr expr =
 	        let (subsel,subvars) = rv in
 	        let sel = (Util.ListAsSet.inter subvars vars) <> []
 	        in if subsel || sel then (true, []) else (false, subvars)  
-	    | _ -> rv
+	      | _ -> rv
     in fst (fold_expr aux (fun x _ -> x) None (false,[]) expr)
 
 (* TODO: better nested map detection *)
@@ -654,13 +658,13 @@ let rec conservative_beta_reduction substitutions expr =
   | Mult(Const(x), Const(y)) -> Const(c_prod x y)
 
   | Apply(Lambda(AVar(v,t), body), arg) ->
-    let free_vars = get_free_vars body [] in
+    let free_vars = get_free_vars [] body in
     let remaining, _, new_e =
       beta_reduce free_vars ([], substitutions, body) ((v,t), arg) in
     if remaining <> [] then descend_expr (recur substitutions) expr else new_e
 
   | Apply(Lambda(ATuple(vt_l), body), Tuple(fields)) ->
-    let free_vars = get_free_vars body [] in
+    let free_vars = get_free_vars [] body in
     let reml, _, new_e = List.fold_left (beta_reduce free_vars)
         ([], substitutions, body) (List.combine vt_l fields) in
     let rem_vt_l, rem_fields = List.split reml in
@@ -710,7 +714,7 @@ let rec lift_ifs bindings expr =
     in
     (* returns existing bindings (i.e. those passed to lift-ifs) used by e *)
     let get_dependencies e = 
-        let vars = get_free_vars e [] in Util.ListAsSet.inter vars bindings
+        let vars = get_free_vars [] e in Util.ListAsSet.inter vars bindings
     in
     (* returns if d1 is a strict subset of d2 *)  
     let simpler_dependencies pe pe2 =
@@ -720,7 +724,7 @@ let rec lift_ifs bindings expr =
     in
     (* if expression is dependent on arg, returns new bindings, otherwise nothing *)
     let arg_uses arg_l e =
-        let vars = get_free_vars e [] in
+        let vars = get_free_vars [] e in
         let bindings = List.flatten (List.map get_arg_vars arg_l) in
         if Util.ListAsSet.inter bindings vars = []
         then Util.ListAsSet.no_duplicates bindings else [] 
@@ -775,9 +779,10 @@ let rec simplify_if_chains predicates expr =
 
 (* TODO: pairwith2, deep flattens *)
 let rec simplify_collections expr =
-    let recur = simplify_collections in
-    let simplify expr =
-    begin match expr with
+  let recur = simplify_collections in
+  let simplify expr =
+    let ne = descend_expr recur expr in
+    begin match ne with
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
     | Map(map_f, Flatten c) ->
@@ -795,7 +800,6 @@ let rec simplify_collections expr =
         in Map(new_map_f, rmap_c)
 
     | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
-
         (* v,w,fb *)
         let aggf_arg1, aggf_arg2, aggf_body = get_assoc_fun_parts agg_f in
 
@@ -846,7 +850,7 @@ let rec simplify_collections expr =
         let new_iter_f = compose iter_f rmap_f
         in Iterate(new_iter_f, rmap_c)
         
-    | _ -> descend_expr recur expr
+    | _ -> ne
 
     end
     in 
@@ -1146,19 +1150,215 @@ let common_subexpression_elim expr =
     fold_expr fold_f (fun x _ -> x) None ([], Const(CFloat(0.0))) expr
   in mk_cse "global" r_expr global_cses
 
+(* Pruning optimizations *)
+
+(* Lift-updates: moves updates up and sideways to their "defining" collection *)
+let partition_updates l = List.partition
+  (fun ce -> match ce with | PCValueUpdate _ -> true | _ -> false) l
+
+let separate_updates e =
+  let s,t = List.split (List.map (fun br ->
+    let x,y = List.split (List.map (fun e -> match e with
+      | Block(l) ->
+        let updates, rest = partition_updates l
+        in begin match rest with
+           | [] -> failwith "invalid functional block"
+           | [x] -> updates, x
+           | y -> updates, Block(y)
+           end
+      | _ -> [], e) br)
+    in List.flatten x, y) (get_branches e))
+  in List.flatten s, (rebuild_expr e t)
+
+let lift_updates bindings expr =
+  let mk_arg_value a = match a with
+    | AVar(i,t) -> mk_var (i,t)
+    | ATuple vt_l -> Tuple(List.map mk_var vt_l)
+  in
+  let get_map_ids expr =
+    let fold_f _ parts e = match e with
+      | SingletonPC (id,t)               -> [id]
+      | OutPC       (id,outs,t)          -> [id]
+      | InPC        (id,ins,t)           -> [id]
+      | PC          (id,ins,outs,t)      -> [id]
+      | _ -> List.flatten (List.flatten parts)
+    in fold_expr fold_f (fun x _ -> x) None [] expr
+  in
+  let lambda_common args lambda_e body_e =
+    let arg_vars = List.flatten (List.map get_arg_vars args) in
+    let updates, re = separate_updates lambda_e in
+    let to_lift, rest = List.partition (fun ue -> 
+      let u_vars = get_free_vars [] ue
+      in Util.ListAsSet.inter arg_vars u_vars = []) updates
+    in match to_lift with
+       | [] -> lambda_e
+       | _ ->
+        let new_lambda_e = 
+          if rest = [] then re else
+          let nbe = match re with
+            | Lambda(_,b) -> b | AssocLambda(_,_,b) -> b
+            | _ -> failwith "invalid lambda"
+          in rebuild_expr lambda_e [[Block(rest@[nbe])]]
+        in Block(to_lift@[new_lambda_e])
+  in
+  let flatten_common arg1 p else_updates fe =
+    let pass = mk_arg_value arg1 in
+    Map(Lambda(arg1,
+      IfThenElse(p,pass,mk_block (else_updates@[pass]))), Flatten(fe))
+  in
+  let dependent_depth binding_depths e =
+    let e_vars = get_free_vars [] e in
+    let r = List.fold_left (fun d v ->
+      if not (List.mem_assoc v binding_depths) then
+        (print_endline ("dependent depth failure: "^(string_of_expr expr));
+        failwith ("invalid dependent depth for "^v))
+      else max d (List.assoc v binding_depths)) 0 e_vars
+    in e, r
+  in
+  let rec lift_updates_aux binding_depths expr =
+    let rcr b = descend_expr (lift_updates_aux b) in
+    let add_bindings l arg_l =
+      let current_max = List.fold_left max 0 (List.map snd l) in
+      l@(List.fold_left (fun acc arg -> acc@
+          (List.map (fun id -> (id,current_max+1)) (get_arg_vars arg))) [] arg_l)
+    in
+    let new_binding_depths = match expr with
+      | Lambda(arg,_) -> add_bindings binding_depths [arg]
+      | AssocLambda(arg1,arg2,_) -> add_bindings binding_depths [arg1; arg2]
+      | _ -> binding_depths
+    in
+    let ne = rcr new_binding_depths expr in
+    begin match ne with
+    | Add _ | Mult _ | Eq _ | Neq _ | Lt _ | Leq _ | IfThenElse0 _
+    | Tuple _->
+      let updates, re = separate_updates ne in
+      if updates = [] then re else Block(updates@[re])
+      
+    | Lambda(arg, be) -> lambda_common [arg] ne be
+    | AssocLambda(arg1,arg2,be) -> lambda_common [arg1; arg2] ne be
+    | Apply _ -> 
+      let updates, re = separate_updates ne in
+      if updates = [] then re else Block(updates@[re])
+
+    | IfThenElse(p, Block(tb), Block(eb)) ->
+      let tb_updates, tb_rest = partition_updates tb in
+      let eb_updates, eb_rest = partition_updates eb in
+      let common_updates = Util.ListAsSet.inter tb_updates eb_updates in
+      let ind_updates =
+        let p_map_ids = get_map_ids p in
+        List.filter (fun u ->
+          Util.ListAsSet.inter p_map_ids (get_map_ids u) = []) common_updates
+      in
+      let tbu_rest, ebu_rest = 
+        let x = List.map2 Util.ListAsSet.diff
+                  [tb_updates; eb_updates] [ind_updates; ind_updates]
+        in List.hd x, List.nth x 1 
+      in
+      if ind_updates = [] then ne else 
+        Block(ind_updates@[
+          IfThenElse(p, mk_block (tbu_rest@tb_rest),
+                        mk_block (ebu_rest@eb_rest))])
+
+    | IfThenElse(p, IfThenElse(p2,t2,e2), Block(l)) ->
+      let l_updates, l_rest = partition_updates l in
+      begin match l_rest with
+        | [IfThenElse(p3,t3,e3)] when p2 = p3 ->
+          begin match e2,e3 with
+            | Block(l2), Block(l3) ->
+              let e2_updates, e2_rest = partition_updates l2 in
+              let e3_updates, e3_rest = partition_updates l3 in
+              let common_updates = Util.ListAsSet.inter e2_updates e3_updates in
+              let lift_updates =
+                let threshold_l_rank =
+                  List.fold_left (fun acc (_,r) -> min acc r) max_int
+                    (List.map (dependent_depth binding_depths) l_updates)
+                in List.map fst 
+                     (List.filter (fun (u,rnk) -> rnk < threshold_l_rank)
+                       (List.map (dependent_depth binding_depths) common_updates))
+              in
+              if lift_updates = [] then ne else 
+              let new_then = IfThenElse(p, t2, mk_block (l_updates@[t3])) in
+              let new_else =
+                let nested_then =
+                  ((Util.ListAsSet.diff e2_updates lift_updates)@e2_rest) in
+                let nested_else =
+                  ((Util.ListAsSet.diff e3_updates lift_updates)@l_updates@e3_rest) 
+                in lift_updates@[
+                  IfThenElse(p, mk_block nested_then, mk_block nested_else)]
+              in IfThenElse(p2, new_then, mk_block new_else)
+            | _,_ -> ne
+          end
+        | _ -> ne
+      end
+
+    | Map(Block(l),c) ->
+      let l_updates, l_rest = partition_updates l in
+      mk_block (l_updates@[Map(mk_block l_rest, c)])
+
+    | Aggregate(Block(l),i,c) ->
+      let l_updates, l_rest = partition_updates l in
+      mk_block (l_updates@[Aggregate(mk_block l_rest, i, c)])
+
+    | GroupByAggregate(Block(l),i,g,c) ->
+      let l_updates, l_rest = partition_updates l in
+      mk_block (l_updates@[GroupByAggregate(mk_block l_rest, i, g, c)])
+
+    | Map(Lambda(arg1, IfThenElse(p,t,Block(eb))), Map(fe,ce)) ->
+      let eb_updates, eb_rest = partition_updates eb in
+      let pass = mk_arg_value arg1 in
+      let new_fe = compose
+        (Lambda(arg1,IfThenElse(p,pass,mk_block (eb_updates@[pass])))) fe
+      in Map(Lambda(arg1, IfThenElse(p, t, mk_block eb_rest)), Map (new_fe, ce))
+
+    | Aggregate(AssocLambda(arg1,arg2,IfThenElse(p,t,Block(eb))),
+        init_e, Flatten fe) ->
+      let eb_updates, eb_rest = partition_updates eb in
+      Aggregate(AssocLambda(arg1,arg2,IfThenElse(p,t,mk_block eb_rest)),
+        init_e, flatten_common arg1 p eb_updates fe)
+
+    | GroupByAggregate(AssocLambda(arg1,arg2,IfThenElse(p,t,Block(eb))),
+        init_e, group_e, Flatten fe) ->
+      let eb_updates, eb_rest = partition_updates eb in
+      GroupByAggregate(AssocLambda(arg1,arg2,IfThenElse(p,t,mk_block eb_rest)),
+        init_e, group_e, flatten_common arg1 p eb_updates fe)
+
+    | e -> e
+    end
+  in lift_updates_aux (List.map (fun id -> id,0) bindings) expr
+
+(* Lift-if0s *)
+let rec lift_if0s expr =
+  let rcr = descend_expr lift_if0s in
+  let ne = rcr expr in
+  begin match ne with
+    | Mult(IfThenElse0(p1,t1), IfThenElse0(p2,t2)) ->
+      rcr (IfThenElse0(Mult(p1, p2), Mult(t1, t2)))
+
+    | Mult(IfThenElse0(p,t), o) -> rcr (IfThenElse0(p, Mult(t, o)))
+    | Mult(o, IfThenElse0(p,t)) -> rcr (IfThenElse0(p, Mult(o, t))) 
+    
+    | IfThenElse0(p1,IfThenElse0(p2,t)) -> rcr (IfThenElse0(Mult(p1, p2), t))
+
+    | IfThenElse(p1,IfThenElse0(p2,t2),IfThenElse0(p3,t3)) when p2 = p3 ->
+      IfThenElse(Mult(p1,p2), t2, t3)
+
+    | e -> e
+  end
 
 
 let optimize ?(optimizations=[]) trigger_vars expr =
   let apply_opts e =
-    simplify_if_chains []
-      (simplify_collections 
-        (lift_ifs trigger_vars (inline_collection_functions [] e)))
+    lift_updates trigger_vars
+      (simplify_if_chains []
+        (simplify_collections (lift_ifs trigger_vars e)))
   in
   let rec fixpoint e =
     let new_e = apply_opts e in
     if e = new_e then e else fixpoint new_e    
   in 
-  let r = fixpoint expr in
+  let r = fixpoint (inline_collection_functions [] expr) in
   let r1 = if List.mem Beta optimizations
              then conservative_beta_reduction [] r else r
-  in if List.mem CSE optimizations then common_subexpression_elim r1 else r1
+  in if not(List.mem CSE optimizations)  then r1
+     else (lift_if0s
+            (fixpoint (lift_ifs trigger_vars (common_subexpression_elim r1))))

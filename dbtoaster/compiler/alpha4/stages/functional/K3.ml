@@ -288,7 +288,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | IfThenElse       (pe,te,ee)           -> [[pe];[te];[ee]]
     | Block            e_l                  -> [e_l]
     | Iterate          (fn_e, ce)           -> [[fn_e];[ce]]
-    | Lambda           (arg_e,ce)           -> [[ce]]
+    | Lambda           (arg_e,be)           -> [[be]]
     | AssocLambda      (arg1_e,arg2_e,be)   -> [[be]]
     | Apply            (fn_e,arg_e)         -> [[fn_e];[arg_e]]
     | Map              (fn_e,ce)            -> [[fn_e];[ce]]
@@ -469,7 +469,7 @@ let string_of_expr e =
            (fun cnt l -> pc();
              if l = [] then ps "[]"
              else if List.mem cnt list_branches then
-                (ps "["; List.iter (fun x -> aux x; ps ";") l; ps "]") 
+                (ps "["; List.iter (fun x -> aux x; ps ";"; pc()) l; ps "]") 
              else List.iter aux l;
              if cnt < (nb-1) then ps "," else (); cnt+1)
            0 br)

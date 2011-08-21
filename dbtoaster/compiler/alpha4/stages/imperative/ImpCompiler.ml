@@ -712,12 +712,13 @@ struct
         t1
       | Host(TFloat), Host(TInt) | Host(TInt), Host(TFloat) -> Host(TFloat)
       | _, _ when t1 = t2 -> t1
-      | _, _ -> failwith ("incompatble types "^(sot t1)^" "^(sot t2))
+      | _, _ -> failwith ("incompatible types "^(sot t1)^" "^(sot t2))
     in
     let promote_types_op op t1 t2 = match t1, t2 with
       | Host(TFloat), Host(TInt) | Host(TInt), Host(TFloat) -> Host(TFloat)
       | _, _ when t1 = t2 -> t1
-      | _, _ -> failwith ("incompatble types "^(sot t1)^" "^(sot t2))
+      | _, _ -> failwith ("incompatible types for op "^
+                           (string_of_op op)^" "^(sot t1)^" "^(sot t2))
     in
     let add_env_var type_env id ty = 
       let (vars,tys) = !type_env in
@@ -843,6 +844,7 @@ struct
       | BinOp(_,op,le,re) ->
         let t = match op with
           | Assign -> unit
+          | If0 -> ctypei 1
           | _ -> promote_types_op op (ctypei 0) (ctypei 1)    
         in None, Some(BinOp(t, op, cexpri 0, cexpri 1))
 
@@ -857,6 +859,8 @@ struct
       | Expr _ ->
         let t = type_of_expr_t (cexpri 0)
         in Some(Expr(t, (cexpri 0))), None
+
+      | Block (_, []) -> Some(Block(unit, [])), None
 
       | Block _ ->
         let _,r = back c_opts in
@@ -1060,10 +1064,8 @@ end (* Typing *)
     | Op(_,op,e) -> inl ((string_of_op op)^"("^(ssc (source_code_of_expr e))^")")
     | BinOp(_,op,l,r) ->
         let binop op = parensc "(" ")"
-          (binopsc " ? " (parensc "(" ")"
-                         (binopsc op (source_code_of_expr l)
-                                     (source_code_of_expr r)))
-                       (binopsc " : " (inl "1") (inl "0")))
+          (parensc "(" ")"
+            (binopsc op (source_code_of_expr l) (source_code_of_expr r)))
         in
         begin match op with
           | Assign ->
@@ -1581,7 +1583,7 @@ end (* Typing *)
         
     | IfThenElse(meta,p,t,e) ->
         let n_ty,n_p = rcr_e p in
-        if n_ty <> Host TInt then
+        if not((n_ty = Host TInt) || (n_ty = Host TFloat)) then
           failwith "invalid predicate after substitution"
         else
           let t_subs, n_t = rcr t in
@@ -1616,10 +1618,12 @@ end (* Typing *)
           let fields_t = field_types_of_collection env (type_decl_of_env env nty)
           in (struct_member_sub (Var(ty,(id,ty))) l fields_t)@
              [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
+        
         | Host(TTuple l), Target(_) ->
           let fields_t = field_types_of_type (type_decl_of_env env nty)
           in (struct_member_sub (Var(ty,(id,ty))) l fields_t)@
              [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
+        
         | _, _ -> []) nsubs
       in
       fixpoint_sub_imp env (List.flatten next_subs) nimp 

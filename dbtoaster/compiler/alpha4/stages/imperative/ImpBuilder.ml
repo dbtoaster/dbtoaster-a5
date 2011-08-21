@@ -75,7 +75,7 @@ struct
    | Aggregate
    | GroupByAggregate
    | Flatten
-   | Ext (* = Flatten(Map) *) 
+   | Ext (* = Flatten(Map) *)
 
    | Member
    | Lookup
@@ -144,7 +144,9 @@ struct
   open AnnotatedK3
 
   type 'ext_type decl_t = id_t * 'ext_type type_t
-  type 'ext_type imp_metadata = TypedSym of 'ext_type decl_t
+  type 'ext_type imp_metadata =
+    (* valid sym option * return value sym *)
+    TypedSym of id_t option * 'ext_type decl_t
 
   (* K3/IR helpers *)
   let arg_of_lambda leaf_tag = match leaf_tag with
@@ -166,21 +168,27 @@ struct
     | _ -> failwith "invalid assoc lambda type"
 
   (* Metadata helpers *)
-  let mk_meta sym ty = TypedSym (sym, ty)
-  let sym_of_meta meta = match meta with | TypedSym s -> fst s
-  let type_of_meta meta = match meta with | TypedSym (_,t) -> t 
+  let mk_meta ?(valid=None) sym ty = TypedSym (valid, (sym, ty))
+  let valid_sym_of_meta meta = match meta with | TypedSym(v,_) -> v
+  let sym_of_meta meta = match meta with | TypedSym (_,s) -> fst s
+  let type_of_meta meta = match meta with | TypedSym (_,(_,t)) -> t 
 
   let k3_var_of_meta meta =
     K.Var(sym_of_meta meta, host_type (type_of_meta meta))
 
+  let push_meta_valid meta cmeta = match meta, cmeta with
+    | TypedSym(v,_), TypedSym(_,st) -> TypedSym(v,st)
+
   let push_meta meta cmeta = match meta, cmeta with
-    | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,t)
+    | TypedSym (v,(s,_)), TypedSym (_,(_,t)) -> TypedSym (v, (s,t))
 
   let push_lambda_meta meta cmeta = match meta, cmeta with
-    | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,return_type_of_lambda t)
+    | TypedSym (v, (s,_)), TypedSym (_, (_,t)) ->
+      TypedSym (v, (s,return_type_of_lambda t))
 
   let push_assoc_lambda_meta meta cmeta = match meta, cmeta with
-    | TypedSym (s,_), TypedSym (_,t) -> TypedSym(s,return_type_of_assoc_lambda t)
+    | TypedSym (v, (s,_)), TypedSym (_, (_,t)) ->
+      TypedSym (v, (s,return_type_of_assoc_lambda t))
  
   let decl_of_meta force meta =
     Some(force, sym_of_meta meta, type_of_meta meta)
@@ -303,7 +311,8 @@ struct
           in Node(metadata, Undecorated(e), cir)
         | _ -> failwith "invalid combine expressions")
 
-  let op_ir metadata o sub_ir =
+  let op_ir ?(decorated=false) metadata o sub_ir =
+    if decorated then Node(metadata, Decorated(Op(o)), sub_ir) else
     build_code sub_ir
       (fun lru cir -> match lru with
         | [(sym1, le); (_, re)] ->
@@ -353,7 +362,7 @@ struct
   let apply_ir metadata sub_ir = Node(metadata, Decorated(Apply), sub_ir)
 
   let map_ir metadata sub_ir = Node(metadata, Decorated(Map), sub_ir)
-
+  
   let aggregate_ir metadata sub_ir =
     Node(metadata, Decorated(Aggregate), sub_ir)
 
@@ -416,6 +425,19 @@ struct
   open Imperative
   open AnnotatedK3
 
+  let rec get_value_expr expr = match expr with
+    | K.Lambda(_,be) -> get_value_expr be
+    | K.Apply(fn_e,_) -> get_value_expr fn_e
+    | K.IfThenElse(p,t,e) -> (get_value_expr t)@(get_value_expr e)
+    | K.Block(l) -> get_value_expr (List.nth l (List.length l - 1))
+    | _ -> [expr]
+
+  let is_filter_map expr = match expr with
+    | K.Map(K.Lambda(_,map_e),_) ->
+      let v_e = get_value_expr map_e in
+      List.for_all (fun e -> match e with | IfThenElse0 _ -> true | _ -> false) v_e
+    | _ -> false
+
   (* IR (i.e., annotated K3 construction) from a K3 expression.
    * Implemented as a fold over K3 expression nodes, with no top-down
    * accumulator, and a bottom-up accumulator of IR nodes, with type:
@@ -425,7 +447,14 @@ struct
     let dummy_init =
       Leaf(mk_meta "" (Host TInt), Undecorated(K.Const(CFloat(0.0)))) in
     let fold_f _ parts e =
-      let metadata = mk_meta (gensym()) (Host (T.typecheck_expr e)) in
+      let meta e =
+        try mk_meta (gensym()) (Host (T.typecheck_expr e))
+        with Failure _ ->
+          (print_endline ("could not typecheck:");
+           print_endline (string_of_expr e);
+           failwith "failed to build imperative IR")
+      in
+      let metadata =  meta e in
       let fst () = List.hd parts in
       let snd () = List.nth parts 1 in
       let thd () = List.nth parts 2 in
@@ -448,7 +477,11 @@ struct
       | K.Neq _       -> op_ir metadata Neq [sfst(); ssnd()]
       | K.Lt _        -> op_ir metadata Lt [sfst(); ssnd()]
       | K.Leq _       -> op_ir metadata Leq [sfst(); ssnd()]
-      | K.IfThenElse0 _ -> op_ir metadata If0 [sfst(); ssnd()]
+      | K.IfThenElse0 _ ->
+        let decorated = match (type_of_meta metadata) with
+          | Host TFloat | Host TInt -> false
+          | _ -> true
+        in op_ir ~decorated:decorated metadata If0 [sfst(); ssnd()] 
 
       | K.Block l      -> block_ir metadata (fst())
 
@@ -459,13 +492,20 @@ struct
       | K.AssocLambda (arg1,arg2,_) -> assoc_lambda_ir metadata arg1 arg2 [sfst()]
 
       | K.Apply _  -> apply_ir metadata [sfst();ssnd()]
-      | K.Map _ -> map_ir metadata [sfst();ssnd()]
+
+      (* Null filtering. *)
+      | K.Map _ ->
+        let map_meta =
+          if not(is_filter_map e) then metadata
+          else mk_meta ~valid:(Some(gensym())) (sym_of_meta metadata) (type_of_meta metadata)
+        in map_ir map_meta [sfst();ssnd()]
 
       | K.Aggregate _ -> aggregate_ir metadata [sfst(); ssnd(); sthd()]
 
       | K.GroupByAggregate _ ->
         gb_aggregate_ir metadata [sfst();ssnd();sthd();sfth()] 
 
+      (* Ext = Flat(Map) *)
       | K.Flatten(K.Map _) ->
         begin match sfst() with
           | Node(m,t,c) -> ext_ir metadata c
@@ -593,24 +633,24 @@ struct
     in
     let rec gc_binop meta op l r = BinOp(meta, op, gc_expr l, gc_expr r)
     and gc_expr e : ('a option, 'ext_type, 'ext_fn) expr_t =
-      let meta = None in
+      let imp_meta = None in
       match e with
-      | K.Const c          -> Const (meta, c)
-      | K.Var (v,t)        -> Var (meta,(v,Host t))
-      | K.Tuple fields     -> Tuple(meta, List.map gc_expr fields)
-      | K.Add(l,r)         -> gc_binop meta Add  l r
-      | K.Mult(l,r)        -> gc_binop meta Mult l r
-      | K.Eq(l,r)          -> gc_binop meta Eq   l r
-      | K.Neq(l,r)         -> gc_binop meta Neq  l r
-      | K.Lt(l,r)          -> gc_binop meta Lt   l r
-      | K.Leq(l,r)         -> gc_binop meta Leq  l r
-      | K.IfThenElse0(l,r) -> gc_binop meta If0  l r
-      | K.Project(e,idx)   -> Fn (meta, Projection(idx), [gc_expr e])
-      | K.Singleton(e)     -> Fn (meta, Singleton, [gc_expr e])
-      | K.Combine(l,r)     -> Fn (meta, Combine, List.map gc_expr [l;r])
+      | K.Const c          -> Const (imp_meta, c)
+      | K.Var (v,t)        -> Var (imp_meta,(v,Host t))
+      | K.Tuple fields     -> Tuple(imp_meta, List.map gc_expr fields)
+      | K.Add(l,r)         -> gc_binop imp_meta Add  l r
+      | K.Mult(l,r)        -> gc_binop imp_meta Mult l r
+      | K.Eq(l,r)          -> gc_binop imp_meta Eq   l r
+      | K.Neq(l,r)         -> gc_binop imp_meta Neq  l r
+      | K.Lt(l,r)          -> gc_binop imp_meta Lt   l r
+      | K.Leq(l,r)         -> gc_binop imp_meta Leq  l r
+      | K.IfThenElse0(l,r) -> gc_binop imp_meta If0  l r
+      | K.Project(e,idx)   -> Fn (imp_meta, Projection(idx), [gc_expr e])
+      | K.Singleton(e)     -> Fn (imp_meta, Singleton, [gc_expr e])
+      | K.Combine(l,r)     -> Fn (imp_meta, Combine, List.map gc_expr [l;r])
       
-      | K.Member(m,k)      -> Fn (meta, Member, List.map gc_expr (m::k))
-      | K.Lookup(m,k)      -> Fn (meta, Lookup, List.map gc_expr (m::k))
+      | K.Member(m,k)      -> Fn (imp_meta, Member, List.map gc_expr (m::k))
+      | K.Lookup(m,k)      -> Fn (imp_meta, Lookup, List.map gc_expr (m::k))
       | K.Slice(m,sch,fe)  ->
          let pos l e =
             let idx = ref (-1) in
@@ -622,11 +662,11 @@ struct
             in try aux l with Not_found -> !idx
          in
          let idx = List.map (pos (List.map fst sch)) (List.map fst fe)
-         in Fn (meta, Slice(idx), List.map gc_expr (m::(List.map snd fe)))
+         in Fn (imp_meta, Slice(idx), List.map gc_expr (m::(List.map snd fe)))
 
       | K.SingletonPC(id,_) 
       | K.OutPC(id,_,_) | K3.SR.InPC(id,_,_) | K3.SR.PC(id,_,_,_) ->
-        Var(meta, (id, Host(KT.typecheck_expr e)))
+        Var(imp_meta, (id, Host(KT.typecheck_expr e)))
 
       (* Lambdas assume caller has performed arg binding *)
       | K.Lambda(arg, body) -> gc_expr body
@@ -681,13 +721,22 @@ struct
          * the return type is unit. Maps yield the new collection as the symbol
          * thus does not pass it on to any children. *)
         | Iterate | Map ->
-          cmeta, [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
+          let fn_meta = match valid_sym_of_meta meta with
+            | None -> cmetai 0
+            | Some _ -> push_meta_valid meta (cmetai 0)
+          in (fn_meta::(List.tl cmeta)),
+             [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
 
         (* Ext passes on its symbol to children to perform direct concatenation
          * of the collection resulting from each ext lambda invocation to the
          * return value *)
         | AK.Ext ->
           [pushi 0; (cmetai 1)], [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
+         
+        (* 
+        | FilterMap arg ->
+          cmeta, [arg], [None; None; decl_f false (cmetai 2)]
+        *)
 
         | Aggregate ->
             let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
@@ -793,22 +842,48 @@ struct
 
       let meta_sym, meta_ty = sym_of_meta meta, type_of_meta meta in
 
+      let crv i =
+        let mk_var id ty = Var(None, (id,ty)) in
+        begin match cdecli i with
+        | Var(_,(id,ty)) ->
+          begin match ty with
+          | Host(K3.SR.Fn(_,x)) -> mk_var id (Host x)
+          | _ -> mk_var id ty
+          end
+        | _ -> failwith "invalid child value"
+        end
+      in
+
       let expr =
+        let m = None in
         match t with
-        | AK.Op(op)    -> Some(BinOp(None, gc_op op, cexpri 0, cexpri 1))
+        | AK.Op(op)    ->
+          if op = AK.If0 && (valid_sym_of_meta meta) <> None then None
+          else Some(BinOp(m, gc_op op, cexpri 0, cexpri 1))
 
-        | AK.Tuple           -> Some(Tuple(None, cvals))
-        | AK.Projection(idx) -> Some(Fn(None, Projection(idx), [cexpri 0]))
+        | AK.Tuple           -> Some(Tuple(m, cvals))
+        | AK.Projection(idx) -> Some(Fn(m, Projection(idx), [cexpri 0]))
 
-        | AK.Singleton  -> Some(Fn(None, Singleton, [cexpri 0]))
-        | AK.Combine    -> Some(Fn(None, Combine, [cexpri 0; cexpri 1]))     
-        | AK.Member     -> Some(Fn(None, Member, cvals))
-        | AK.Lookup     -> Some(Fn(None, Lookup, cvals))
-        | AK.Slice(idx) -> Some(Fn(None, Slice(idx), cvals))
+        | AK.Singleton  -> Some(Fn(m, Singleton, [cexpri 0]))
+        | AK.Combine    -> Some(Fn(m, Combine, [cexpri 0; cexpri 1]))     
+        | AK.Member     -> Some(Fn(m, Member, cvals))
+        | AK.Lookup     -> Some(Fn(m, Lookup, cvals))
+        | AK.Slice(idx) -> Some(Fn(m, Slice(idx), cvals))
         | _ -> None
       in
 
-      let imp, imp_meta_used = match t with 
+      let imp, imp_meta_used = match t with
+      | AK.Op(AK.If0) when (valid_sym_of_meta meta) <> None ->
+        let valid_var = Var(None, (unwrap (valid_sym_of_meta meta), Host TFloat)) in
+        let meta_var = Var(None, (sym_of_meta meta, type_of_meta meta)) in
+        Some([IfThenElse(None,
+          BinOp(None, Neq, cexpri 0, Const(None, CFloat(0.0))),
+          Block(None,
+            [Expr(None, BinOp(None, Assign, valid_var, Const(None, CFloat(1.0))));
+             Expr(None, BinOp(None, Assign, meta_var, cexpri 1))]),
+          Block(None, []))]),
+        true
+         
       | Lambda _ | AssocLambda _ ->
         (* lambdas have no expression form, they must use their arg bindings
            and assign result value to their indicated symbol *)
@@ -879,7 +954,8 @@ struct
 
       | Map | AK.Ext ->
         (* TODO: in-loop multi-var bindings from collections of tuples *)
-        let is_ext = match t with | AK.Ext -> true | _ -> false in 
+        let is_ext = match t with | AK.Ext -> true | _ -> false in
+        let is_filter = valid_sym_of_meta meta <> None in
         let arg = List.hd args_to_bind in
         let elem, elem_ty, elem_f, elem_decls = match arg with
             | AVar(id,ty) -> id, Host(ty), true, []
@@ -897,34 +973,32 @@ struct
           if is_ext || not(cused 0) || gcmeta = [] then [] else
             let d_t =
               match type_of_meta (cmetai 0) with
-              (*| true, Host (K.Fn(_,Collection(x))) -> Host(Collection(x))*)
               | Host (K.Fn(_,rt)) -> Host(rt)
               | _ -> failwith "invalid map/ext lambda type while building imp"
             in   
-            let d = sym_of_meta (cmetai 0), d_t
-            in [Decl(None, d, None)]
+            let fn_rv_decl =
+              let d = sym_of_meta (cmetai 0), d_t in [Decl(None, d, None)] in
+            let valid_decl = match valid_sym_of_meta meta with
+              | None -> []
+              | Some(vsym) -> [Decl(None, (vsym, Host TFloat), None)] 
+            in valid_decl@fn_rv_decl
         in
         let mk_body e =
           let op = if is_ext then Concat else ConcatElement in
-          if is_ext && not(cused 0) then
-            [Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e]))]
-          else if not(is_ext) then
-            [Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e]))]
+          let append_imp =
+            Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e])) in
+          if is_filter then
+            let valid_var =
+              Var(None, (unwrap (valid_sym_of_meta meta), Host TFloat))
+            in [IfThenElse(None,
+                  BinOp(None, Neq, valid_var, Const(None, CFloat(0.0))),
+                  append_imp, Block(None,[]))]
+          else if (is_ext && not(cused 0)) || not(is_ext) then [append_imp]
           else []
         in
         let fn_body = match_ie 0 "invalid map/ext function"
           (fun i ->
-            let mk_var id ty = Var(None, (id,ty)) in
-            let rv = begin match cdecli 0 with
-              | Var(_,(id,ty)) ->
-                begin match ty with
-                | Host(K3.SR.Fn(_,x)) -> mk_var id (Host x)
-                | _ -> mk_var id ty
-                end
-              | _ -> failwith "invalid map/ext function"
-              end
-            in
-            let nb = mk_body rv in
+            let nb = mk_body (crv 0) in
             match i with | [Block(m,l)] -> [Block(m,l@nb)] | _ -> i@nb)
           (fun e -> if not(is_ext) || not(cused 0) then mk_body e
                     else failwith "invalid ext expression body")
@@ -1032,12 +1106,12 @@ struct
            true
 
       | AK.PCUpdate ->
-        let pre = List.map unwrap (List.filter (fun i -> i <> None) cimps) in
+        let pre = List.map unwrap (List.filter ((<>) None) cimps) in
           Some((List.flatten pre)@
             [Expr(None, Fn(None, MapUpdate, cvals))]), false
       
       | AK.PCValueUpdate ->
-        let pre = List.map unwrap (List.filter (fun i -> i <> None) cimps) in
+        let pre = List.map unwrap (List.filter ((<>) None) cimps) in
           Some((List.flatten pre)@
            [Expr(None, Fn(None, MapValueUpdate, cvals))]), false
 
@@ -1046,7 +1120,7 @@ struct
       in 
       begin match imp, expr with
         | None, Some(e) -> 
-          let pre = List.map unwrap (List.filter (fun i -> i <> None) cimps) in
+          let pre = List.map unwrap (List.filter ((<>) None) cimps) in
           let b = child_decls@(List.flatten pre)@
             [Expr(None, BinOp(None, Assign, Var (None, (meta_sym, meta_ty)), e))]
           in

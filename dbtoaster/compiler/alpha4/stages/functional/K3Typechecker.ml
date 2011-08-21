@@ -401,13 +401,13 @@ let rec typecheck_expr e : type_t =
     | Leq          (ce1,ce2) -> tc_op (recur ce1) (recur ce2)
 
     (*  e1 : t1     e2 : t2 
-     *  t1 <> Unit, t2 <> Unit, flat(t1), flat(t2)
+     *  t1 <> Unit, t2 <> Unit, flat(t1)
      * --------------------------------------------
      *  op(e1,e2) : t2
      *)
     | IfThenElse0  (ce1,ce2) ->
-        (* Check ce1, ce2 are compatible singletons, return 'then' type *)
-        ignore(tc_op (recur ce1) (recur ce2)); recur ce2
+        (* Check ce1 is a singleton, return 'then' type *)
+        ignore(flat (recur ce1)); recur ce2
 
     (* TODO: it is unsafe to lift functions above a condition,
      * how do we ensure expressions above this condition don't do it?
