@@ -18,7 +18,8 @@
 \usepackage{float}
 \renewcommand{\algorithmiccomment}[1]{// #1}
 \floatstyle{plain}
-\newtheorem{theorem}{Theorem}[section]
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
 \newfloat{program}{h}{lop}[section]
 \floatname{program}{}
 
@@ -142,8 +143,22 @@ will produce a table, that will have a record with the specified tuple, therefor
 
 Taking into account the definitions of the AGCA expressions in \ref{def:agca}, the following theorem will work with a subset of those definitions, namely with:
 $$q\text{ ::- }q\cdot q | q + q|R(\vec{y})|(M[\vec{x}][\vec{y}]\text{::-}q)$$
+	
+Relation $R_k$ will have the following schema: $Sch(R_k)={x_1,x_2,x_3,\cdots,x_n}$, but only some variables are going to be used for the communication with the other relations: $x_i,\cdots,x_j$. We will have the trigger $+onR_k(x_1,\cdots,x_n)$, and when such an event appears we will test if the variables $x_i,\cdots,x_j$ from the arguments of $+onR$ are in the domain of the map or not. 
+	
+We assume that the tuple is not in the domain of the map $m_{R_k}$ and the initial value for the map regarding to that tuple will be different from 0.
+$$m_{R_k}[][x_i,\cdots,x_j]\not= 0$$
+If this is true then the query that can be generated for the map $m_{R_k}$:
+\begin{align*}
+\mbox{SELECT}\cdots&\mbox{ FROM }R_1,R_2,\cdots,R_{k-1},R_{k+1},\cdots,R_n\\
+&\mbox{ WHERE }R_l.a=R_m.a\\
+&(\forall l,m\in\{1\cdots n\}-\{k\}\land l\not=m)\\
+&\mbox{GROUP BY } x_i,\cdots,x_j
+\end{align*}
+will produce a table, that will have a record with the specified tuple, therefore the tuple will be in the domain of the map, $\{x_i,\cdots,x_j\in domain(m_{R_k}) \}$. This contradicts the sentence we assumed at first. Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the domain will only provoke a zero initialization of the map for that tuple.
 
 \begin{theorem}
+\label{thm:1}
 The value of a map for a specific tuple, which is not in the domain of the map, will always be 0.
 \end{theorem}
 $$\vec{y}\notin\dom{}_{\vec{x}}(q)\Rightarrow m_q[][\vec{y}]=0$$
@@ -156,7 +171,7 @@ We presume that the map will be defined over a simple relation: $m_R[][\vec{y}]:
 If we add tuple $\vec{y_1}=\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have two situations:
 \begin{enumerate}
 \item $\vec{y_1}\in\dom{}_{\vec{x}}(R(\vec{y}))$, therefore the domain of the relation will remain the same and the map is already instantiated
-\item $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the domain then: $$\dom{}_{\vec x}(R(\vec y))\cup=\vec{y_1}\mbox{ and }m_{R}[][\vec{y_1}]=0$$ because the order of multiplicity of that tuple in $R$ will be zero and thus any operation (sum, count) will produce a NULL result.
+\item $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the domain then: $$\dom{}_{\vec x}(R(\vec y))\cup=\vec{y_1}\mbox{ and }m_{R}[][\vec{y_1}]=0$$ because the order of multiplicity of that tuple in $R$ was zero and thus any operation (sum, count) will produce a NULL result.
 \end{enumerate}
 
 $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))\Rightarrow m_R[][\vec{y_1}]=0$ and therefore the base case is true.
@@ -209,9 +224,76 @@ When relation $S$ is not empty, the initialization of map $m_R[b][]$ can easily 
 \end{enumerate}
 
 Starting from this example we will offer a generalization and a proof that the initial value of maps, when talking about joins done by inequalities, are going to be exactly like in the example.
+\section{A method for inequalities}
+In this section we are going to propose an algorithm for computing the initial value of a map for an input value which is not present in the domain. What we have presented in Theorem~\ref{thm:1} is not true any more for queries with inequalities. As an example XXX
+
+We will introduce the notion of graph dependency between the variables and afterwards present the algorithm for the value computation. Suppose we are given a map $m[\cdot][\cdot]$ and for it we want to know the value of $m[\vec{x'}][\cdot]$. In other words, we want to know the initial value of a new input value $\vec{x'}$ for the specified map. In any expression which is represented by a map we will have 3 types of variables: input variables(IV), output variables(OV) and intermediate variables(ITO). The intermediate variables are the variables which are not input nor output variables. 
+We will not have any comparisons between input and output variables, except for equality. Thus, in this section we don't consider the equality operator as a comparison operator. 
+We use $x_{i}, y_{j}$ to show the input and intermediate variables. Now, suppose we have a comparison operator $v_{1}\theta v_{2}$. There are 3 cases for $v_{1},v_{2}$: 
+\begin{itemize}
+\item $v_{1}=x_{i}, v_{2}=x_{j}$, in other words, both of the variables in the comparison are from input variables. We don't need to worry about this case and we can easily ignore it, since we can enforce it by applying it to the input value.
+\item $v_{1}=y_{i}, v_{2}=y_{j}$, in other words, both of variables in the comparison are from intermediate variables. We don't need to consider this case either. 
+\item $v_{1}=x_{i}, v_{2}=y_{j}$. When we have a comparison operator between an input and intermediate variable. This is the only case which we need to consider. 
+\end{itemize}
+
+We can model the comparisons with bipartite graph $G(\mathcal{A}\cup \mathcal{B}, E)$ as follows. $\mathcal{A}$ is the set of all input variables and $\mathcal{B}$ is the set of all intermediate variables. For each comparison which contains an input variable and an intermediate variable, we add an edge between the corresponding vertices. This bipartite graph may contain some cycles.
+
+\subsection{Method}
+Before starting this subsection we have to stipulate that the following arguments and paragraphs are true as long as we don't have any ``$\neq$'' operators.
+In this section we are going to propose an efficient way to evaluate the initial value of a map for a new input value.
+
+We build a Range Tree(or Kd-Tree) data structure (DS) over the intermediate variables. Let $\vec{x'}$ to be the new input value for which we want to initialize the map. Since the comparison operators contain the input variables and the value of input variables are fixed, thus, these values($\vec{x'}$) define a volume in the search space of the intermediate variables, in other words, the search space of the DS.
+
+We just need to consider all the tuples in this space for answering the query which initialize $m$ for $\vec{x'}$. This space may drastically reduce the search space, specially for the initial value of zero when there is no tuple in the search space.
+
+\begin{lemma}
+\label{lemma1}
+We can compute the initial value of a map for a new value in $O(\log^{d-1}{n} +k)$ where $n$ is the number of tuples in the whole search space and $k$ is the number of tuples induced by the input variables. $d$ is the number of intermediate variables.
+\end{lemma}
+\begin{proof}
+As be said before, we build a Rang Tree on the intermediate variables. Any region on this data structure can be identify in $O(\log^{d-1}{n}+k)$. 
+\end{proof}
+We can also use KD-tree data structure whose order is $O(n^{(1-s/d)}+k)$ where $s<d$  is the number of input variables. 
+\subsection{Another Method}
+In this part we propose another method which in some situations is more efficient that the previous one. The previous method is based on building a data structure on the intermediate variables and with which we bind the search space. But this method is based on the fact that all queries are aggregates and the results of all of them are integers. \par
+
+The core idea behind this method is exploiting the fact that the queries are aggregate. Suppose we want to evaluate a query over a set of tuples. We can incrementally introduce the tuples one by one and then verify the query over it. Here we can use a memoization method to reduce the cost of reevaluating the tuples. \par
+
+We build a range tree(or again a Kd-tree) over the input variables. In the other words the DS is defined over the input of the map.
+Suppose we want to know the initial value of $\vec{x'}$. $\vec{x'}$ represents a point in the space of DS. In order to evaluate the map with the new point we can use the fact that each point in this space is evaluated over a volume of space and if we find another point which has already evaluated, we just need to evaluate the difference between the volumes.
+\section{Map initialization}
+
+The maps used for the materialized view of the delta queries, are functions which have two types of arguments: input variables and output variables. Input variables are those variables that have the domain dependent on the relations that are not present in the underlying expression of the map. Whereas, output variables are variables that are bounded to the relations that appear in the underlying expression of the map.
+
+For example:
+$$m[\vec{x}][\vec{y}]::q$$
+is a map defined over the expression q. Expression $q$ is defined by AGCA expressions in \ref{def:agca}. Vector $\vec{x}$ will represent the vector of input variables of map $m$, and these variables will depend on the domains of other relations. Vector $\vec{y}$ will represent the vector of output variables of map $m$, an these variables will depend on the domains of the relations inside expression $q$.
+
+We will start by giving a short example. If we have the following query and $\Delta$ regarding to $R$, written in DBToaster Calculus \cite{1}:
+$$q[][]=R(a,b)\cdot S(b,c)\cdot T(c,d)\cdot (a<d)$$
+$$\Delta_R(a',b') = S(b',c)\cdot T(c,d)\cdot (a'<d)$$
+then $\Delta_R(a',b')$ will be replaced by a map which will have variable $a$ as an input variables and variable $b$ as an output variable: $m_R[a][b]$. This map will appear in the trigger of $onR$ regarding to an update which is done to relation $R$
+
+When an insertion is made to relation $R$, the map should be initialized with a value. However if the value for variable $b$ is not in the domain $\dom{}_{b}(m[a][b])$, the map will be initialized by 0, regardless of the fact that the map has an input variable.
+
+\begin{theorem}
+A map with output variables will always be initialized with 0, when adding a tuple to the underlying expression of the map and the subtuple of the added tuple coresponding to the output variables is not in the domain of the map's output variables. 
+\end{theorem}
+$$m[\vec{x}][\vec{y}]::q$$
+$$\vec{z1}=<\vec{x1},\vec{y1}>\mbox{ the tuple that will be added to the map's expression } q$$
+where $\vec{x1}$ corresponds to the input variables of the map $m$ and $\vec{y1}$ corresponds to the output variables of the map $m$
+
+$$\vec{y1}\notin\dom{}_{\vec{y}}(m[\vec{x}][\vec{y}])\Rightarrow m[\vec{x1}][\vec{y1}]=0$$
+
+\begin{proof}
+The proof is based on the theorem \ref{thm:1}, because equijoins will have only output variables. The property from the equijoins will be kept to maps with input and output variables.
+
+Domains of output variables will always depend on relation that appear in the map's underlying expression $q$ and therefore the domain can be easily computed. Exactly as we said in theorem \ref{thm:1}, if the tuple is not in the domain then the initial value of the map will always be 0.
+\end{proof}
 
 \begin{thebibliography}{9}
 \bibitem{1} C. Koch, \emph{Incremental Query Evaluation in a Ring of Databases},  preprint (2011).
 \bibitem{2} O. Kennedy, Y. Ahmad, C. Koch. \emph{DBToaster: Agile views for a dynamic data management system}. In CIDR, 2011.
+\bibitem{3} Mark de Burg, Otfrid Cheong, \emph{Computational Geometry Algorithms and Applications, 3rd Edition} Springer, 2008.
 \end{thebibliography}
 \end{document}
