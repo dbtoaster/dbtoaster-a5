@@ -20,8 +20,8 @@ $optimizations = {
   "runtime-bigsums"    => "-d runtime-bigsums",
   "dup-ivc"            => "-d dup-ivc",
   "factor-postprocess" => "-d factor-postprocess",
-  "depth-1"            => "--depth 1",
-  "depth-2"            => "--depth 2"
+#  "depth-1"            => "--depth 1",
+#  "depth-2"            => "--depth 2"
 }
 
 $queries = {
