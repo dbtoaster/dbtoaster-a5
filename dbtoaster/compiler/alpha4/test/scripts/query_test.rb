@@ -31,6 +31,11 @@ $queries = {
     :answer => 18753367048934.0,
     :valid_opts => ["depth-1"]
   },
+  "rstar" => {
+    :path => "test/sql/simple/rstar.sql",
+    :type => :singleton,
+    :answer => 0
+  },
   "vwap" => {
     :path => "test/sql/finance/vwap.sql",
     :type => :singleton,
