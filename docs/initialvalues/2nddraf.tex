@@ -18,7 +18,9 @@
 \usepackage{float}
 \renewcommand{\algorithmiccomment}[1]{// #1}
 \floatstyle{plain}
+
 \newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[section]
 \newfloat{program}{h}{lop}[section]
 \floatname{program}{}
 \begin{document}
@@ -96,7 +98,7 @@ We define function \Ext{}  to extend(shrink) the schema of a DBT-domain, $a$ as 
 In \eqref{def:ext} we can consider $a$ as relation since it is a set and using the relational algebra on it. 
 It is clear that if $\vec{x}\cap\vec{y}\neq\vec{x}$ it produces an infinite DBT-domain. 
 
-\section{DBT-domain computation}
+\section{DBT-domain computation}\label{DBT-domain}
 
 We are trying to compute the DBT-domain of variables that appear in queries. This computation is performed on the parse tree. We can traverse the tree in post order, first visiting the leaves that are represented by some relations and afterwards visiting the parent nodes and combining the relations of the children nodes. Using this technique we are trying to compute the DBT-domains, but also the vector $\vec x$ of all the variables defined in that query.
 
@@ -203,7 +205,7 @@ In line~\ref{lst:setofallvar} we want to compute the set of variables in the nod
 
 The algorithm starts with node 1, which represents the root of the parse tree. It recursively goes through each of the leaves, therefore constructs the variable vector and also the DBT-domain for each variable.
 	
-We have mentioned that besides map nodes, there are two more types of intermediate nodes: the union node and the join node. When a union node is met, then it is known that DBT-domains of variables will not pass over this operator and for that the variables and their DBT-domains, which were obtained in the parent, will be passed to each of this node's children. Thus it applies the distribution rule of the join operator over the union operator. For example if we have $ q1 * (q2 * q3 + q4 * q5) \equiv q1 * q2 * q3 + q1 * q4 * q5$, the variables and DBT-domain obtained for $q1$ will be passed both to $q2*q3$ and $q3*q4$, without modifying any of the DBT-domains, regarding that some DBT-domains may change on one branch, for example $q2*q3$. For the other type of node, the join node, the passing of DBT-domains is allowed, and therefore a DBT-domain can be refined by the relation on the right side of the parent node.
+We have mentioned that besides map nodes, there are two more types of intermediate nodes: the union node and the join node. When a union node is met, then it is known that DBT-domains of variables will not pass over this operator and for that the variables and their DBT-domains, which were obtained in the parent, will be passed to each of this node's children. Thus it applies the distribution rule of the join operator over the union operator. For example if we have $ q_{1} * (q_{2} * q_{3} + q_{4} * q_{5}) \equiv q_{1} * q_{2} * q_{3} + q_{1} * q_{4} * q_{5}$, the variables and DBT-domain obtained for $q1$ will be passed both to $q_{2}*q_{3}$ and $q_{3}*q_{4}$, without modifying any of the DBT-domains, regarding that some DBT-domains may change on one branch, for example $q2*q3$. For the other type of node, the join node, the passing of DBT-domains is allowed, and therefore a DBT-domain can be refined by the relation on the right side of the parent node.
 	
 Every time the algorithm encounters a map then it will create the DBT-domain for that specific map. Here we can make a difference between input and output variables, because the DBT-domain of input variables is dependent on the DBT-domains of output variables from the left side of the map's parent node, and the DBT-domain of the output variables are going to be produced by the children of the map's node. %All this information will be stored in a global variable which can be easily accessed.
 
@@ -219,10 +221,14 @@ Now suppose that the Algorithm \ref{alg1} works for all the trees of a height le
 the root should have two children. The height of both of these children should be less than $k$. So we have correctly compute the DBT-domain of the left child and its input variable. Now we have two cases, if the root node is a union node or a join node. If this is a union node then we can compute the DBT-domain of the right child independently, since no information is passed over the ``+'' in DBToaster\cite{1}. We compute the DBT-domain of the root according to definition \eqref{def:plus}. But if the root node is a join node, we have to pass the information from left child to the right child, since the right child may have some input variables which are defined in the left child. This is done in lines \ref{line:join1},\ref{line:join2}.\par
 Thus in either of two cases we compute the DBT-domain of the root correctly and the theorem follows.
 \end{proof}
-
+With the above theorem we have the following corollary which helps us in section~\ref{sec:MaintainingDomainswithmultiplicity} for giving some efficient algorithm for maintaining the \dom{}s. 
+\begin{corollary}
+\label{col:arity0}
+The multiplicity order of a tuple in the DBT-domain of a simple relation will always be greater than 0.
+\end{corollary}
 \section{Defining the multiplicity order of a tuple}
 
-\subsection{Definitions}
+\subsection{Definitions}\label{Multip-def}
 
 Having the definitions for the DBT-domains, we will try to give some insight regarding to the notion of multiplicity order of a tuple. We will start with an example relation: $$q=R(a,b)\cdot S(b,c)$$ the schema for q will have three variables $(a,b,c)$. The multiplicity of a tuple is the number of its occurrences in the relation, in other words the order of multiplicity of that tuple. The multiplicity of a tuple will increase or decrease if insertions or respectively deletions will be made to a relation. For example:
 \begin{table}[ht]
@@ -277,7 +283,7 @@ arit(v_1\text{ } \theta \text{ } v_2,t)&=\begin{cases}1,& \mbox{if } v_1\theta v
 arit(v\gets q,t)&=\begin{cases}0, \mbox{ if $t\setminus\{v\}\not\in \text{\dom}_{Schema(t)}(q)$}\\ 1, \mbox{ otherwise} \end{cases}
 \end{align}
 
-\subsection{Extending the notion of DBT-domains to multiplicity order}
+\subsection{Extending the notion of DBT-domains to multiplicity order}\label{DBT-multip}
 
 In the first part of the document we have talked about the definition of DBT-domains. Now we are going to talk about a combination between DBT-domains of tuples and the multiplicity order of those tuples. We can define something like the following:
 
@@ -367,6 +373,10 @@ DBT-multip: the DBT-domain and multiplicity order of all the variables
 
 Algorithm~\ref{alg3} is similar to the Algorithm~\ref{alg1}. The steps are the same, we traverse the parse tree, seeking all the nodes and test them to find out the type. The basic mechanism is the same when talking about reaching a node that will be a union node or a join node or even a map node. The difference will appear at the results presented, because in  Algorithm~\ref{alg1} we will compute only DBT-domains of each tuple, whilst in Algorithm~\ref{alg3} we will compute the combination between the DBT-domains and the multiplicity order of each tuple inside the DBT-domains.
 
+Instead of using the definitions that we have written in Section~\ref{sec:definingdomains}, we will use the definitions presented in Subsection~\ref{DBT-multip}. These definitions are just an extension of the definitions from the DBT-domains, however they will also make use of the functions for computing the multiplicity order presented in Subsection~\ref{Multip-def}.
+
+The rules for join expressions and union expression will remain the same. In the case of join expressions we will take only the common tuples, and in the case for union expressions we will take all the tuples. The difference here will be that for each tuple we will have the multiplicity order. As shown in Subsection~\ref{Multip-def}, if we have join expressions then a tuple that is common to those expression will have the multiplicity order equal with the product of the multiplicity orders from the two expression. If we have a union expression, the tuples will maintain their multiplicity order only if the tuples are not common. If the tuples are common between $q_1$ and $q_2$ the multiplicity order of the tuple will be the sum of them.
+
 \begin{algorithm}[H]
 \caption{computeMultipOrder($node$,$s$)} 
 \label{alg3}
@@ -397,12 +407,9 @@ Algorithm~\ref{alg3} is similar to the Algorithm~\ref{alg1}. The steps are the s
 \end{algorithm}
 
 \section{Maintaining the DBT-domains using the multiplicity order of a tuple}
-
+\label{sec:MaintainingDomainswithmultiplicity}
 The main goal is to maintain the DBT-domains of the variables of each map that are presented in query expression. We give a solution of maintaining these DBT-domains, see how the DBT-domains will increase or decrease if tuples are being added or deleted from the relations.
 \subsection{Algorithm 1}
-\begin{theorem}
-The multiplicity order of a tuple in the DBT-domain of a simple relation will always be greater than 0.
-\end{theorem}
 
 The algorithm traverses the parse tree until it reaches the leaf that represents the relation that needs an update. Therefore a Depth First Algorithm can be used. First we shall talk about inserting a new tuple to an existing relation. When a leaf with the specified relation is encountered, we check if the tuple already exists in the set of multiplicity order. If the tuple exists, then we will retrieve the multiplicity order, and just for the fact that it exists in the DBT-domain of a relation the multiplicity order of a tuple will be greater than 0. We increment the multiplicity order and repack everything and put it back in the set. If the tuple is not found in the DBT-domain of the relation that means that we will have a transition of the multiplicity order from $0 \rightarrow 1$, because we have to add the tuple to the existing DBT-domain, and therefore we have to recompute the DBT-domains for each and every map starting from that leaf.
 
@@ -412,35 +419,36 @@ To conclude the small description of the algorithm, we are interested only in tr
 A sketch of the algorithm would look like as follows:
 
 \begin{algorithm}[H]
-\caption{$maintain_{DBTdomains}$($node$,$tuple$,$R$)} 
+\caption{$maintain_{DBTdomains}$($node$,$tuple$,$R$,$op$)} 
 \label{alg2}
-\textbf{Input:} $node$ as the root of the parse tree, $tuple$ as the tuple that needs to be added and $R$ the name of the relation \\
+\textbf{Input:} $node$ - root of parse tree, $tuple$ - the new tuple, $R$ - name of the relation, $op$ - operation: add or delete \\
 \textbf{Output:} it returns a list of tuples with their appropriate multiplicity order\\
 \begin{algorithmic}[1]
 \IF{$node.type=$``Map''}
-\STATE $list\gets maintain_{DBTdomains}(node.child,tuple,R)$
+\STATE $list\gets maintain_{DBTdomains}(node.child,tuple,R,op)$
 \IF{$list\not=NULL$}
 \FORALL{$elem\in list$}
-\IF{$elem\in node.\vec{y}$}
-\STATE update($node.\vec{y}$,$elem$)
-\ELSE
-\STATE $node.\vec{y}=node.\vec{y} \cup elem$
-\ENDIF
+\STATE $(list_{new},node)=updateNode(elem,node,op)$
 \ENDFOR
-\RETURN  $list$
+\RETURN  $list_{new}$
 \ENDIF
 \RETURN  $NULL$
 \ELSIF{$node.type=$''Relation''}
-\IF{has($R$)}
-\RETURN  $(tuple,1)$
+\IF{the name of the relation is $R$}
+\RETURN  $\{(tuple,op)\}$
 \ENDIF
 \RETURN $NULL$
 \ELSIF{$node.type\neq$``$\theta$'' \AND $node.type\neq$``$\gets$''}
-\STATE $s_{1}\gets maintain_{DBTdomains}(node.left,tuple,R)$
-\STATE $s_{2}\gets maintain_{DBTdomains}(node.right,tuple,R)$
-\IF{$node.type=$``*''}
+\STATE $s_{1}\gets maintain_{DBTdomains}(node.left,tuple,R,op)$
+\STATE $s_{2}\gets maintain_{DBTdomains}(node.right,tuple,R,op)$
+\IF{$op=1$}
+\IF{$node.type=$''*''}
 \STATE $s_{1}\gets computeCommon(s_{1},node.right)$
 \STATE $s_{2}\gets computeCommon(s_{2},node.left)$
+\ENDIF
+\ELSIF{$node.type=$''+''}
+\STATE $s_{1}\gets computeDifference(s_{1},node.right)$
+\STATE $s_{2}\gets computeDifference(s_{2},node.left)$
 \ENDIF
 \RETURN  $s_{1}\cup s_{2}$
 \ENDIF
@@ -451,21 +459,81 @@ A sketch of the algorithm would look like as follows:
 \begin{algorithm}[H]
 \caption{computeCommon($list$,$node_{map}$)}
 \label{alg4}
-\textbf{Input:} a list of tuples with their multiplicity order, and the node of a map\\
-\textbf{Output:} a list of common tuples from the node map\\
+\textbf{Input:} $list$ - a list of tuples with their multiplicity order, $node_{map}$ - as the node map\\
+\textbf{Output:} a list of common tuples from the $node_{map}$\\
 \begin{algorithmic}[1]
-\STATE $s=NULL$
+\STATE $s\gets NULL$
 \IF{$list\not=NULL$}
 \FORALL{$elem\in list$}
 \IF{$(elem\in node.\vec{y})\lor(elem\in node.\vec{x})$}
 \STATE recompute multiplicity order of $elem.tuple$
-\STATE $s\cup=elem$
+\STATE $s\gets s \cup elem$
 \ENDIF
 \ENDFOR
 \ENDIF
-\STATE return $s$
+\RETURN  $s$
 \end{algorithmic}
 \end{algorithm}
+
+\begin{algorithm}[H]
+\caption{computeDifference($list$,$node_{map}$)}
+\label{alg5}
+\textbf{Input:} $list$ - a list of tuples with their multiplicity order, $node_{map}$ - as the node map\\
+\textbf{Output:} a list of common tuples from the $node_{map}$\\
+\begin{algorithmic}[1]
+\STATE $s\gets NULL$
+\IF{$list\not=NULL$}
+\FORALL{$elem\in list$}
+\IF{$(elem\notin node.\vec{y})\land(elem\notin node.\vec{x})$}
+\STATE $s\gets s \cup elem$
+\ENDIF
+\ENDFOR
+\ENDIF
+\RETURN $s$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{updateNode($elem$,$node$,$op$)}
+\label{alg6}
+\textbf{Input:} $elem$ - the tuple that needs to be checked,$node$ - the map node, $op$ - operation\\
+\textbf{Output:} (list of tuples,the new domain)\\
+\begin{algorithmic}[1]
+\IF{op=1}
+\IF{$elem\notin node.\vec{y}$}
+\STATE $node.\vec{y}\gets node.\vec{y} \cup elem$
+\STATE $list_{new}\gets list_{new}\cup elem$
+\ENDIF
+\ELSE
+\IF{$elem\in node.\vec{y}$}
+\STATE $update(node.\vec{y},elem)$
+\IF{elem.ord=0} 
+\STATE delete it from $node.\vec{y}$
+\STATE $list_{new}\gets list_{new}\cup elem$
+\ENDIF
+\ENDIF
+\ENDIF
+\RETURN ($list_{new}$,$node$)
+\end{algorithmic}
+\end{algorithm}\textbf{}
+
+Algorithm~\ref{alg2} maintains the domains of each map. It traverses the tree structure that we have introduced in Section~\ref{DBT-domain}. For each expression it computes the tuples that are being produced due to an insertion/deletion in to/from a specified relation.
+
+We will have two cases:
+\begin{enumerate}
+\item adding a tuple to a relation($op=1$)
+
+When adding a tuple to a relation we have to see if the tuple is in the \dom{} of that relation or not. If it is we do not make any changes. Otherwise, we have to make the necessary changes to the \dom{} of the relation. We produce a list of tuples that were modified by the added tuple and pass it to the higher expressions.
+
+When we have union expressions like $q_1+q_2$, all the tuples produced by the insertion, both from $q_1$ and $q_2$, will be taken to the \dom{} of the union expression. However in join expressions like $q_1\cdot q_2$, we take only the common tuples between the two expressions, therefore using the function~\ref{alg4}, which will compute only those tuples that are common, and of course will also compute the new multiplicity order of those tuples.
+\item deleting a tuple from a relation($op=-1$)
+
+When deleting a tuple from a relation, we need to know if the multiplicity order of the specific tuple changes in the \dom{}. If the multiplicity order drops to zero, this will mean that the tuple is not anymore in the relation and therefore it will need to be deleted. We create a list with those tuples that have the multiplicity order equal with 0 and pass the list to the higher expression.
+
+When we have join expressions $q_1\cdot q_2$, the deletion will be without any kind of problems. If a tuple disappears from one expression $q_1$ or $q_2$, it will disappear from $q_1\cdot q_2$, because the tuple won't be any more a common tuple. A difficulty appears when talking about union expressions $q_1+q_2$. If we will delete a tuple from $q_1$, that does not mean that the tuple will be deleted from the union expression. If the deleted tuple from $q_1$ also appears in the \dom{} of $q_2$, then the tuple won't be deleted from $q_1+q_2$, only the order of multiplicity changes. Therefore, we have to compute the difference between the list of tuples produced from an expression and the \dom{} of the other expression. This is done by the function~\ref{alg5}.
+\end{enumerate}
+
+The function~\ref{alg6} helps us in refreshing the \dom{}s of each node and produces the list of tuples that needs to be passed to the higher expression for their update as well. When adding a tuple, we test only if the tuple that was added is not in the \dom{}, and only then we add it to the list. When deleting a tuple, the tuple must be in the \dom{}, therefore the multiplicity order will change, and we have to test only if that multiplicity order has dropped to 0. Only then we add the tuple to the list.
 
 \subsection{Algorithm 2}
 In this section we give an algorithm for computing the DBT-domains incrementally after each deletion or insertion. Let $T$ be the parse tree as we had in the previous sections. We want to know how the DBT-domain of each node changes with any insertion or deletion from any relations. If the DBT-domain of any leaves of $T$ changes, in the worst case we need to re-evaluate DBT-domains of all the nodes in $T$. For an example, suppose the leftmost leaf changes and all other leaves depends on it, like $R(\vec{y})\cdot\prod_{i}{(y_{i}>a_{i})}$ where $a_{i}$ are constants.
@@ -540,8 +608,10 @@ and the second element is the \dom($node$)
 \RETURN $(v_{1}\lor\,v_{2}\lor m,result)$
 \end{algorithmic}
 \end{algorithm}
-The intuition of Algorithm~\ref{alg:MD} is simple. Suppose we want to modify relation $R$ (insertion or deletion). In each node we have recompute the domain of the left child in two cases. First if the left subtree of the node contains $R$, in the other words $R\in$\Rel(node.left), Or, the left subtree has some input variables whose domains are changed already during the execution of algorithm. If so, we continue recursively in the left subtree(lines \ref{lst:ml1}-\ref{lst:ml2}). We run the algorithm on the right subtree if and only if it contains $R$ or some domains have changed due to the modification and the right subtree has some input variables which depend them. Deciding whether or not to run the algorithm on the right subtree is preformed by Algorithm~\ref{alg:sub}.
-According to the type of nodes, as we had in Algorithm~\ref{alg1}, we compute the DBT-domain of $node$. Here we suppose that each node has a left and right child as before and structure $s$ as defined in \ref{struct}. We suppose that before any executions of Algorithm~\ref{lst:ml2}, Algorithm~\ref{alg1} has been executed at least one time. So for each $node$ we have associated a structure $s$. Thus with $s$ we can access to the DBT-domain($dom$) of each node and the set of its variables($\vec{x}$). 
+ As a consequence of Corollary~\ref{col:arity0}, we need to run Algorithm~\ref{alg:MD} if and only if the modification to relation $R$ makes a transition from 0 to 1(for insertion) or from 1 to 0(for deletion). \par 
+ The intuition of Algorithm~\ref{alg:MD} is simple. Suppose we want to modify relation $R$ (insertion or deletion).
+In each node we have compute the domain of the left child in two cases. First if the left subtree of the node contains $R$, in the other words $R\in$\Rel(node.left), Or the left subtree has some input variables whose domains are changed already during the execution of the algorithm. If so, we continue recursively in the left subtree(lines \ref{lst:ml1}-\ref{lst:ml2}). We run the algorithm on the right subtree if and only if it contains $R$ or some domains have changed due to the modification and the right subtree has some input variables which depend on them. Deciding whether or not to run the algorithm on the right subtree is preformed by Algorithm~\ref{alg:sub}.
+According to the type of nodes, as we had in Algorithm~\ref{alg1}, we compute the \dom{} of $node$. Here we suppose that each node has a left and right child as before and structure $s$ as defined in \ref{struct}. We suppose that before any executions of Algorithm~\ref{lst:ml2}, Algorithm~\ref{alg1} has been executed at least one time to initialize . So for each $node$ we have associated a structure $s$. Thus with $s$ we can access to the \dom($dom$) of each node and the set of its variables($\vec{x}$). 
 
 \begin{thebibliography}{9}
 \bibitem{1} C. Koch, \emph{Incremental Query Evaluation in a Ring of Databases},  preprint (2011).

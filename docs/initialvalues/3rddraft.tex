@@ -14,8 +14,10 @@
 \usepackage{indentfirst}
 \usepackage{listings}
 \usepackage{alltt}
+\usepackage{mathtools}
 \usepackage{clrscode}
 \usepackage{float}
+\usepackage{stmaryrd}
 \renewcommand{\algorithmiccomment}[1]{// #1}
 \floatstyle{plain}
 \newtheorem{theorem}{Theorem}
@@ -23,8 +25,8 @@
 \newfloat{program}{h}{lop}[section]
 \floatname{program}{}
 
-\newcommand{\dom}{\textsf{dom}}
-\newcommand{\arity}{\textsf{arity}}
+\newcommand{\dom}{\textsf{DBT-dom}}
+\newcommand{\arity}{\textsf{multip}}
 \newcommand{\InputVars}{\textsf{InputVars}}
 \newcommand{\OutputVars}{\textsf{OutputVars}}
 \newcommand{\Rel}{\textsf{Rel}}
@@ -35,11 +37,11 @@
 \begin{document}
 \maketitle
 \section{Introduction}
-In this section we would want to discuss the matter of map initialization. From $\cite{1}$ we know that the compilation algorithm takes an aggregate query and defines a map for it, which represents the materialized view of the query. The algorithm creates a trigger for each possible update on an event, that will specify how to update the main query. To this operation, the algorithm computes the delta query, and creates a new map that will represent the materialized view of the delta. For example, if we have the following query q:
+In this section we discuss the matter of map initialization. From $\cite{1}$ we know that the compilation algorithm takes an aggregate query and defines a map for it, which represents the materialized view of the query. The algorithm creates a trigger for each possible update on an event, which will specify how to update the main query. To this operation, the algorithm computes the delta query, and creates a new map that will represent the materialized view of the delta. For example, if we have the following query q:
 \begin{equation}
 \mbox{SELECT sum(}a\cdot c\mbox{) FROM R(a,b), S(b,c) WHERE } R.b=S.b
 \end{equation}
-The compilation algorithm will take this query and replaces it with a map $q[][]$ and computes its deltas. We will have two events: $onR$, $onS$. For simplicity we will take for now only the inserting operation, the trigger code will look like, :
+The compilation algorithm takes this query, replaces it with a map $q[][]$, and computes its deltas. We will have two events: $onR$, $onS$. For simplicity we take for now only the inserting operation. The trigger code will look as follows:
 \begin{align*}
 +onR(a,b)&:\\
 &q[][]+=a*m_R[][b]\\
@@ -57,35 +59,36 @@ DBToaster uses query language AGCA(which is stands for AGgregation CAlculus).
 AGCA expressions are built from constants, variables, relational atoms, aggregate sums (Sum), conditions, and variable assignments ($\gets$) using ``+''  and ``$\cdot$''. The abstract syntax can be given by the EBNF:
 \begin{equation}
 \label{def:agca}
-q\text{ ::- }q\cdot q | q + q|v \gets q |v_{1}\theta v_{2}|R(\vec{y})|\text{c}|\text{v}|(M[\vec{x}][\vec{y}]\text{::-}q)
+q\text{:=}q\cdot q | q + q|v \gets q |v_{1}\theta v_{2}|R(\vec{y})|\text{c}|\text{v}|(M[\vec{x}][\vec{y}]\text{::-}q)
 \end{equation}
-The above definition can express all SQL statements. Here $v$ denotes variables, $\vec{x},\vec{y}$ tuples of variables, $R$ relation names, $c$ constants, and $\theta$ denotes comparison operations $(=,\neq, >, \geq, <, \text{ and }\leq)$.
- ``+'' represents unions and ``$\cdot$'' represents joins. Assignment operator($\gets$) takes an query and assigns its result to a variable($v$). A map $M[\vec{x}][\vec{y}]$ is a subquery with some input($\vec{x}$) and output($\vec{y}$) variables. It can be seen as a nested query that for the arguments $\vec{x}$ produces the output $\vec{y}$, it is not defined in \cite{1} but we added here for the purpose of this work.
+The above definition can express all SQL statements. Here $v$ denotes variables, $\vec{x},\vec{y}$ tuples of variables, $R$ relation names, $c$ constants, and $\theta$ denotes comparison operators $(=,\neq, >, \geq, <, \text{ and }\leq)$.
+ ``+'' represents unions and ``$\cdot$'' represents joins. Assignment operator($\gets$) takes an query and assigns its result to a variable($v$). A map $M[\vec{x}][\vec{y}]$ is a subquery with some input($\vec{x}$) and output($\vec{y}$) variables. It can be seen as a nested query that for the arguments $\vec{x}$ produces the output $\vec{y}$. It is not defined in \cite{1} but we add it here for the purpose of this work.\par
+ In \cite{2} there is operator $\llbracket q\rrbracket(\mathcal{A})$ which evaluates a query regarding to database $\mathcal{A}$. With $\llbracket q\rrbracket(\mathcal{A})$, we mean the value of query $q$ over database $\mathcal{A}$ instead of the query $q$ itself. For example by writing $q\coloneqq 0$ we mean that the query $q$ is constant number zero, but if we write $\llbracket q\rrbracket(\mathcal{A})= 0$ it means that the evaluation of query $q$ is zero on database $\mathcal{A}$. 
 
-The domain of a variable is the set of values that it can take. The domain of all the variables in a query expression can easily be computed recursively if some rules are respected. We will use through out the entire paper the notation of $\text{\dom{}}_{\vec x}(q)$ for the domain of a set of variables, where $q$ is the given query and $\vec x$ is a vector representing the variables(not necessarily present in the expression $q$). We will start by saying the $\vec x=\textless x_1,x_2,x_3,\cdots,x_n\textgreater$ will be the schema of all the variables 
-and that $\vec c=\textless c_1,c_2,c_3,\cdots,c_n\textgreater$ will be the vector of all constants, that will match the schema presented by $\vec x$. It is not necessary that $\vec{x}$  has the same schema as the given expression. We will give the definition of $\dom{}_{\vec x}(R(\vec y))$:
+The DBT domain(DBToaster Domain) of a variable is the set of values that it can take. The DBT domain of all the variables in a query expression can easily be computed recursively if some rules are respected. We will use throughout the entire paper the notation of $\text{\dom{}}_{\vec x}(q)$ for the DBT domain of a set of variables, where $q$ is the given query and $\vec x$ is a vector representing the variables(not necessarily present in the expression $q$). We will start by saying that the $\vec x=\langle x_1,x_2,x_3,\cdots,x_n\rangle$ will be the schema of all the variables 
+and that $\vec c=\langle c_1,c_2,c_3,\cdots,c_n\rangle$ will be the vector of all constants, that will match the schema presented by $\vec x$. It is not necessary that $\vec{x}$  has the same schema as the given expression. We will give the definition of $\dom{}_{\vec x}(R(\vec y))$:
 
 \begin{equation}
 \label{def:relation}
 \dom{}_{\vec x}(R(\vec y))=\bigg\{\vec c\,\Big|\,\sigma_{\forall x_i\in(\vec{y}): x_{i}=c_{i}}R(\vec y)\not= \const{NULL}\bigg\}
 \end{equation}
 
-Thus, we can evaluate $\text{\dom}_{\vec{x}}$ for a broader range of $\vec{x}$ and it is not restricted by the schema of the input query expression. In such cases the \dom{} is infinite as the not presenting variables in the query can take any value.
+Thus, we can evaluate $\text{\dom}_{\vec{x}}$ for a broader range of $\vec{x}$ and it is not restricted by the schema of the input query expression. In such cases \dom{} is infinite as the not presenting variables in the query can take any value.
 
-For the comparison operator ($v_{1}\theta v_{2}$), where $v_1$ and $v_2$ are variables, we can compute the domain as follows:
+For the comparison operator ($v_{1}\theta v_{2}$), where $v_1$ and $v_2$ are variables, we can compute the \dom{} as follows:
 
 \begin{equation}
 \text{\dom{}}_{\vec{x}}(v_{1}\theta v_{2})=\bigg\{\vec{c}\,\Big|\,\forall i,j:(v_{1}=x_{i}\land v_{2}=x_{j})\Rightarrow c_{i}\theta c_{j}\bigg\}
 \end{equation}
 
-The domain of a comparison is infinite.
+The \dom{} of a comparison is infinite.
 
 For the join operator we can write:
 \begin{equation}
 \label{def:join}
 \text{\dom{}}_{\vec{x}}(q_{1}\cdot q_{2})=\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{2})\}
 \end{equation}
-while for the union operator the domain definition is very similar:
+while for the union operator the \dom{} definition is very similar:
 \begin{equation}
 \label{def:plus}
 \text{\dom{}}_{\vec{x}}(q_{1}+ q_{2})=\{\vec{c}\,|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\lor\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{2})\}
@@ -94,38 +97,38 @@ while for the union operator the domain definition is very similar:
 \dom{}_{\vec x}(constant)=\Big\{\vec c\Big\}\label{def:const}\\
 \dom{}_{\vec x}(variable)=\Big\{\vec c\Big\}\label{def:var}
 \end{eqnarray}
-In \eqref{def:const} and \eqref{def:var}  $\vec{c}$ stands for all possible tuples match schema of $\vec{x}$, so the domains in these two cases are infinite. 
-Finally, we can give a formalism for expressing the domain of a variable that will participate in an assignment operation:
+In \eqref{def:const} and \eqref{def:var}  $\vec{c}$ stands for all possible tuples match schema of $\vec{x}$, so the \dom{}s in these two cases are infinite. 
+Finally, we can give a formalism for expressing the \dom{} of a variable that will participate in an assignment operation:
 
 \begin{equation}
 \label{assign2}
-\text{\dom{}}_{\vec{x}}(v\gets q_{1})=\Big\{\vec{c}\Big|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land \big(\forall i,j: (x_{i}=v=x_{j})\Rightarrow(c_{i}=c_{j}=q_{1})\big)\Big\}
+\text{\dom{}}_{\vec{x}}(v\gets q_{1})=\Big\{\vec{c}\Big|\vec{c}\in\text{\dom{}}_{\vec{x}}(q_{1})\land \big(\forall i: (x_{i}=v)\Rightarrow(c_{i}=q_{1})\big)\Big\}
 \end{equation}
-In fact using implication operator in the above definition allows us to extend the $\vec{x}$ to whatever vector we want, as we already said the schema of $\vec{x}$ is not necessarily the same as the schema of $q$. %Here is a mathematical reformulation of \eqref{assign1}:
-We can define the domain of a map(for map's definition refer to \cite{1}, \cite{2}) as follow:
+In fact, using the implication operator in the above definition allows us to extend the $\vec{x}$ to whatever vector we want, as we already said the schema of $\vec{x}$ is not necessarily the same as the schema of $q$. %Here is a mathematical reformulation of \eqref{assign1}:
+We can define the \dom{} of a map(for map's definition refer to \cite{1}, \cite{2}) as follows:
 \begin{equation}
 \label{def:map}
 \text{\dom}_{\vec{w}}(map[\vec{x}][\vec{y}])=\{\vec{c}|\vec{c}\in\text{\dom}_{\vec{w}}(\vec{x}\cup\vec{y})\}
 \end{equation}
 
-As presented in the papers \cite{1} and \cite{2}, maps are functions that are defined on a set of values and that will produce a result for each value of that set. The set of values will represent the domains, which were computed using the definitions presented so far. We can make a distinction between a complete map and an incomplete map. A complete map will be characterized by the fact that each value of its domain will have assigned a result, whilst an incomplete map will be a map that will not have all the values of the domain and therefore neither the result for those values, on each insertion the incomplete map must compute the exact value of the tuple added to the domain.
+As presented in the papers \cite{1} and \cite{2}, maps are functions that are defined on a set of values and that will produce a result for each value of that set. The set of values will represent the \dom{}, which were computed using the definitions presented so far. We can make a distinction between a complete map and an incomplete map. A complete map is characterized by the fact that each value of its \dom{} have assigned a result, whilst an incomplete map is a map that will not have all the values of the \dom{} and therefore neither the result for those values, on each insertion the incomplete map must compute the exact value of the tuple added to the \dom{}.
 
 In other words we can consider a complete map as a total function and an incomplete one as a partial function. A total function is a function that assigns a value to every element of its domain. But a partial function has some elements in its domain which have not been assigned to any value in its codomain. \par
 
-We can express every expression of AGCA in a parse tree with EBNF~\ref{def:agca}. The root of parse tree represents the whole expression and its leaves are relations or comparisons. Each node can be regarded as a map and thus it has a domain. Any modification to the relations, the leaves are modified and this modification should be propagated upward through the parse tree. During the propagation process the domains of intermediate nodes may be changed. 
+We can express every expression of AGCA in a parse tree with EBNF~\ref{def:agca}. The root of parse tree represents the whole expression and its leaves are relations or comparisons. Each node can be regarded as a map and thus it has a \dom{}. Any modification to the relations, the leaves are modified and this modification should be propagated upward through the parse tree. During the propagation process the \dom{}s of intermediate nodes may be changed. 
 
 \section{Equijoins}
 
-We will start talking about map initialization in the simplest of cases: queries represented by relations that are joined only by equalities.
+We start talking about map initialization in the simplest of cases: queries represented by relations that are joined only by equalities.
 \begin{align}
 \mbox{SELECT sum(}\cdots\mbox{) FROM }&R_1,R_2,\cdots,R_n\mbox{ WHERE }R_i.x_{ik}=R_j.x_{jt} \label{query1}\\
 &(\forall i,j\in\{1..n\}\land i\not=j\land (x_{ik}\in Sch(R_i))\nonumber\\
 &\land(x_{jt}\in Sch(R_j))\nonumber
 \end{align}
 
-When having only equality joins, then the maps defined over expressions consisting of simple relations will have only output variables. Every variable will be bounded to the relations and therefore their domains will depend on the values provided by these relations.
+When having only equality joins, the maps defined over expressions consisting of simple relations will have only output variables. Every variable will be bounded to the relations and therefore their \dom{}s will depend on the values provided by these relations.
 
-For a the given query \ref{query1}, the compilation algorithm will replace it with a map $q[][]$. When computing the delta regarding to a relation $R_k$, $\Delta_{R_k}$, we are going to have a map assigned to the delta. $m_{R_k}[][x_i,\cdots,x_j]$, where $x_i,\cdots,x_j$ will be exactly as mentioned up, the variables that will have to be replaced by values when an event $onR_k$ will appear. The map can easily be compared with a query, which will be simpler and will also have a group by clause.
+For query \eqref{query1}, the compilation algorithm will replace it with a map $q[][]$. When computing the delta regarding to a relation $R_k$, $\Delta_{R_k}$, we have a map assigned to the delta. $m_{R_k}[][x_i,\cdots,x_j]$, where $x_i,\cdots,x_j$ are exactly as mentioned up, the variables that have to be replaced by values when an event $onR_k$ will appear. The map can easily be compared with a query, which is simpler and also have a group by clause.
 
 \begin{align}
 \text{SELECT}\cdots&\text{ FROM }R_1,R_2,\cdots,R_{k-1},R_{k+1},\cdots,R_n\label{querygen}\\
@@ -134,19 +137,19 @@ For a the given query \ref{query1}, the compilation algorithm will replace it wi
 &\text{GROUP BY } x_i,\cdots,x_j\nonumber
 \end{align}
 	
-Relation $R_k$ will have the following schema: $Sch(R_k)={x_1,x_2,x_3,\cdots,x_n}$, but only some variables are going to be used for the communication with the other relations: $x_i,\cdots,x_j$. We will have the trigger $+onR_k(x_1,\cdots,x_n)$, and when such an event appears we will test if the variables $x_i,\cdots,x_j$ from the arguments of $+onR$ are in the domain of the map or not. 
+Relation $R_k$ have the following schema: $Sch(R_k)={x_1,x_2,x_3,\cdots,x_n}$, but only some variables are going to be used for the communication with the other relations: $x_i,\cdots,x_j$. We  have the trigger $+onR_k(x_1,\cdots,x_n)$, and when such an event appears we  test if the variables $x_i,\cdots,x_j$ from the arguments of $+onR$ are in the \dom{} of the map or not. 
 	
-We assume that the tuple is not in the domain of the map $m_{R_k}$ and the initial value for the map regarding to that tuple will be different from 0.
+We assume that the tuple is not in the \dom{} of the map $m_{R_k}$ and the initial value for the map regarding to that tuple will be different from 0.
 $$m_{R_k}[][x_i,\cdots,x_j]\not= 0$$
-If this is true then the query that can be generated for the map $m_{R_k}$, exactly like \ref{querygen},
-will produce a table, that will have a record with the specified tuple, therefore the tuple will be in the domain of the map, $\{x_i,\cdots,x_j\in domain(m_{R_k}) \}$. This contradicts the sentence we assumed at first. Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the domain will only provoke a zero initialization of the map for that tuple.
+If this is true then the query that can be generated for the map $m_{R_k}$, exactly like \eqref{querygen},
+ produce a table, that have a record with the specified tuple, therefore the tuple is in the \dom{} of the map, $\{x_i,\cdots,x_j\in \dom(m_{R_k}) \}$. This contradicts the sentence we assumed at first. Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the \dom{} only provoke a zero initialization of the map for that tuple.
 
-Taking into account the definitions of the AGCA expressions in \ref{def:agca}, the following theorem will work with a subset of those definitions, namely with:
-$$q\text{ ::- }q\cdot q | q + q|R(\vec{y})|(M[\vec{x}][\vec{y}]\text{::-}q)$$
+Taking into account the definitions of the AGCA expressions in \eqref{def:agca}, the following theorem works with a subset of those definitions, namely with:
+$$q\coloneqq q\cdot q | q + q|R(\vec{y})|(M[\vec{x}][\vec{y}]\text{::-}q)$$
 	
-Relation $R_k$ will have the following schema: $Sch(R_k)={x_1,x_2,x_3,\cdots,x_n}$, but only some variables are going to be used for the communication with the other relations: $x_i,\cdots,x_j$. We will have the trigger $+onR_k(x_1,\cdots,x_n)$, and when such an event appears we will test if the variables $x_i,\cdots,x_j$ from the arguments of $+onR$ are in the domain of the map or not. 
+Relation $R_k$ has the following schema: $Sch(R_k)={x_1,x_2,x_3,\cdots,x_n}$, but only some variables are going to be used for the communication with the other relations: $x_i,\cdots,x_j$. We have the trigger $+onR_k(x_1,\cdots,x_n)$, and when such an event appears we will test if the variables $x_i,\cdots,x_j$ from the arguments of $+onR$ are in the \dom{} of the map or not. 
 	
-We assume that the tuple is not in the domain of the map $m_{R_k}$ and the initial value for the map regarding to that tuple will be different from 0.
+We assume that the tuple is not in the \dom{} of the map $m_{R_k}$ and the initial value for the map regarding to that tuple will be different from 0.
 $$m_{R_k}[][x_i,\cdots,x_j]\not= 0$$
 If this is true then the query that can be generated for the map $m_{R_k}$:
 \begin{align*}
@@ -155,43 +158,50 @@ If this is true then the query that can be generated for the map $m_{R_k}$:
 &(\forall l,m\in\{1\cdots n\}-\{k\}\land l\not=m)\\
 &\mbox{GROUP BY } x_i,\cdots,x_j
 \end{align*}
-will produce a table, that will have a record with the specified tuple, therefore the tuple will be in the domain of the map, $\{x_i,\cdots,x_j\in domain(m_{R_k}) \}$. This contradicts the sentence we assumed at first. Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the domain will only provoke a zero initialization of the map for that tuple.
+ produces a table, that has a record with the specified tuple, therefore the tuple will be in the \dom{} of the map, $\{x_i,\cdots,x_j\in \dom(m_{R_k}) \}$. This contradicts the sentence we assumed at first. 
+ %Furthermore, when invoking the query for the given values the result of the query will not be $NULL$, and therefore contradicting the fact the that tuple is not defined in the table and the query result should be $NULL$. And therefore any time, a new tuple that is not in the \dom{} will only provoke a zero initialization of the map for that tuple.
 
 \begin{theorem}
 \label{thm:1}
-The value of a map for a specific tuple, which is not in the domain of the map, will always be 0.
+The value of a map for a specific tuple, which is not in the \dom{} of the map, will always be 0.
 \end{theorem}
 $$\vec{y}\notin\dom{}_{\vec{x}}(q)\Rightarrow m_q[][\vec{y}]=0$$
 
 \begin{proof}
 We will give a proof based on induction on the parse tree.
 
-We presume that the map will be defined over a simple relation: $m_R[][\vec{y}]::R(\vec{y})$. The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore the following statement is true: $\dom{}_{\vec{x}}(m_R[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$.
+We presume that the map is defined over a simple relation: $m_R[][\vec{y}]\coloneqq R(\vec{y})$. The vector $\vec{y}$ from the output variables of the maps will correspond to the $\vec{y}$ from the simple relation. Therefore the following statement is true: $\dom{}_{\vec{x}}(m_R[][\vec{y}])=\dom{}_{\vec{x}}(R(\vec{y}))$.
 
-If we add tuple $\vec{y_1}=\textless y_1,y_2,\cdots,y_n\textgreater$ to the relation $R$, we are going to have two situations:
+If we add tuple $\vec{y_1}=\langle y_1,y_2,\cdots,y_n\rangle$ to the relation $R$, we are going to have two situations:
 \begin{enumerate}
-\item $\vec{y_1}\in\dom{}_{\vec{x}}(R(\vec{y}))$, therefore the domain of the relation will remain the same and the map is already instantiated
-\item $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the domain then: $$\dom{}_{\vec x}(R(\vec y))\cup=\vec{y_1}\mbox{ and }m_{R}[][\vec{y_1}]=0$$ because the order of multiplicity of that tuple in $R$ was zero and thus any operation (sum, count) will produce a NULL result.
+\item $\vec{y_1}\in\dom{}_{\vec{x}}(R(\vec{y}))$, therefore the \dom{} of the relation remains the same and the map is already instantiated.
+\item $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))$. If the tuple is not in the \dom{}, then $$\dom{}_{\vec x}(R(\vec y))\cup=\vec{y_1}\mbox{ and }m_{R}[][\vec{y_1}]=0$$ because the order of multiplicity of that tuple in $R$ was zero and thus any operation (sum, count) produces a NULL result.
 \end{enumerate}
+Therefore, $\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))\Rightarrow m_R[][\vec{y_1}]=0$ and the base case is true.
 
-$\vec{y_1}\notin\dom{}_{\vec{x}}(R(\vec{y}))\Rightarrow m_R[][\vec{y_1}]=0$ and therefore the base case is true.
-
-First we will talk about join relations and maps defined over a join of expressions: $m_q[][\vec{y}]::q_1\cdot q_2$. Definition \ref{def:join} says that the domain of a join expression is the intersection between the domains of $q_1$ and $q_2$. If $\vec{y_1}\notin\dom{}_{\vec{x}}(q_1\cdot q_2)$ then we will have the following cases:
+First we talk about join relations and maps defined over a join of expressions: $m_q[][\vec{y}]:=q_1\cdot q_2$. Definition \ref{def:join} says that the \dom{} of a join expression is the intersection between the \dom{}s of $q_1$ and $q_2$. If $\vec{y_1}\notin\dom{}_{\vec{x}}(q_1\cdot q_2)$ then we will have the following cases:
 \begin{enumerate}
 \item $\vec{y_1}\notin\dom{}_{\vec{x}}(q_1)$ which means that the map defined over the relation $q_1$ will be 0 for that tuple.
-$$m_{q_1}[][\vec{y_1}]=0\land m_q[][\vec{y_1}]: m_{q_1}[][\vec{y_1}]*m_{q_2}[][\vec{y_1}]\Rightarrow m_{q}[][\vec{y_1}]=0*m_{q_2}[][\vec{y_1}]=0$$
-where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
-\item $\vec{y}\notin\dom{}_{\vec{x}}(q_2)$ the same proof as in the first case, but now for the expression $q_2$.
+\begin{equation}
+\Big(\big((\llbracket q_{1}\rrbracket(\cdot)=0)\land (q\coloneqq q_{1}*q_{2})\big)\Rightarrow (\llbracket q\rrbracket(\cdot)=0)\Big)\Rightarrow m_{q}[][\vec{y_{1}}]=0
+%m_{q_1}[][\vec{y_1}]=0\land m_q[][\vec{y_1}]: m_{q_1}[][\vec{y_1}]*m_{q_2}[][\vec{y_1}]\Rightarrow m_{q}[][\vec{y_1}]=0*m_{q_2}[][\vec{y_1}]=0
+\end{equation}
+%where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
+\item $\vec{y_{1}}\notin\dom{}_{\vec{x}}(q_2)$ the same proof as in the first case, but now for the expression $q_2$.
 \end{enumerate}
 
-Secondly we will talk about union expressions and maps defined over union expressions: $m_q[][\vec{y}]::q_1+q_2$. Definition \ref{def:plus} says that the domain of a union expression is the union between the domains of $q_1$ and $q_2$. Therefore, if $\vec{y}\notin\dom{}_{\vec{x}}(q_1+q_2)$ then: $\vec{y}\notin\dom{}_{\vec{x}}(q_1)\land \vec{y}\notin\dom{}_{\vec{x}}(q_2)$.
-
-$$m_{q_1}[][\vec{y_1}]=0\land m_{q_2}[][\vec{y_1}]=0\land m_q[][\vec{y_1}]: m_{q_1}[][\vec{y_1}]+m_{q_2}[][\vec{y_1}]\Rightarrow m_q[][\vec{y_1}]=0$$
-where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
+Secondly we consider union expressions and maps defined over union expressions: $m_q[][\vec{y}]::q_1+q_2$. Definition \ref{def:plus} says that the \dom{} of a union expression is the union between the \dom{}s of $q_1$ and $q_2$. Therefore, if $\vec{y_{1}}\notin\dom{}_{\vec{x}}(q_1+q_2)$ then: $\vec{y_{1}}\notin\dom{}_{\vec{x}}(q_1)\land \vec{y_{1}}\notin\dom{}_{\vec{x}}(q_2)$.
+\begin{equation}
+\Big(\big((\llbracket q_{1}\rrbracket(\cdot)=0)\land (\llbracket q_{2}\rrbracket(\cdot)=0)\land(q\coloneqq q_{1}+q_{2})\big)\Rightarrow (\llbracket q\rrbracket(\cdot)=0)\Big)\Rightarrow m_{q}[][\vec{y_{1}}]=0
+\end{equation}
+%where $m_{q_1}[][\vec{y_1}]::q_1$ and $m_{q_2}[][\vec{y_1}]::q_2$.
 \end{proof}
-
-Another problem of initial value computation, besides the problem of with which value should a map be initialized, is the problem of how fast to do the initialization. We have two different sort of initializations: an eager one and a lazy one. The eager one will initialize the right side of a trigger expression, when the left side of the expression will be initialized. The right side will be initialized if and only if it needs initialization. And the lazy one is based on the fact that only the left side will be initialized, and the right side no, leaving the rest side of the initialization to be done when the appropriate trigger is called.
-
+As the result of Theorem~\ref{thm:1}, we can consider Algorithm Compile in \cite{1}. Algorithm Compile uses the initial value of map $t$ as $t_{init}$. As a consequence of Theorem~\ref{thm:1}, we can say that whenever $t$ consists of only equal joins we know that the $t_{init}$ is always zero, otherwise we need to compute it as before.\\ \par
+Another problem of initial value computation, besides the problem of with which value should a map be initialized, is the problem of how fast to do the initialization. We have two different sorts of initializations: an eager one and a lazy one. The eager one initializes the right side of a trigger expression, when the left side of the expression is initialized. The right side is initialized if and only if it needs initialization. And the lazy one is based on the fact that only the left side will be initialized, and the right side no, leaving the rest side of the initialization to be done when the appropriate trigger is called.
+\subsection{A practical usage in DBToaster}
+Our goal is to use Theorem~\ref{thm:1} during the compilation process in DBToaster, so we need to integrate somehow the theorem in DBToaster compilation process. This section is completely connected with query compilation section(section 7)  of \cite{1}.  Thus, we want to  use Theorem~\ref{thm:1} to  enhance  the algorithm $Compile(m,\vec{b},t)$.  Before continuing this part the reader should have read \cite{1}. \par
+In algorithm $Compile(m,\vec{b},t)$, they shows the initial value of expression $t$ as $t_{init}$. So, we check if $t$ is a simple query contains only equal joins then the initial value of it is always zero, otherwise we need to compute the initial value. 
+%For computing the initial value of $t$, they already used the result of the theorem for 
 \section{Simple inequalities}
 
 Joins between relations can be easily made also by using inequalities between the variables of those relations. For example, if we have the following query:
@@ -200,7 +210,7 @@ Joins between relations can be easily made also by using inequalities between th
 \mbox{FROM } R(a,b),S(c,d)\\
 \mbox{WHERE } b\textless c 
 \end{align*}
-the result will depend on the evaluation of the inequality $b\textless c$, where $b$ comes from relation $R$ and $c$ comes from relation $S$.
+the result depends on the evaluation of the inequality $b\textless c$, where $b$ comes from relation $R$ and $c$ comes from relation $S$.
 
 The delta regarding to the relation $R$ will be: 
 \begin{align*}
@@ -208,38 +218,38 @@ a*\mbox{SELECT }sum(d)\\
 \mbox{FROM }S(c,d)\\
 \mbox{WHERE } b\textless c 
 \end{align*}
-where the new query will be replaced by a map which will have an input variable $m_R[b][]$. The domain of the map be will given by the values offered by relation R, however the result of the map will be influenced by the value of $c$ from the relation $S$.
+where the new query will be replaced by a map which will have an input variable $m_R[b][]$. The \dom{} of the map is given by the values offered by relation R, however the result of the map is influenced by the value of $c$ from the relation $S$.
 
-The initial value of the map $m_R[b][]$ will be influenced by the relation $S$. Therefore we will have the following situations:
+The initial value of the map $m_R[b][]$ is influenced by the relation $S$. Therefore we will have the following situations:
 \begin{enumerate}
-\item the relation $S$ is empty and therefore no value of $c$ can be produced and thus the initialization of the map $m_R[b][]$ will always be 0, because b cannot be compared with any value of $c$
-\item if relation $S$ is not empty then every update to relation $R$ will need a check with every value c from $S$. Therefore we can say that the initial value of map $m_R[b][]=\sum_{\forall c>b} S(c,d)*d$
+\item the relation $S$ is empty and therefore no value of $c$ can be produced and thus the initialization of the map $m_R[b][]$ is always 0, because b cannot be compared with any value of $c$
+\item if relation $S$ is not empty then every update to relation $R$  needs a check with every value c from $S$. Therefore we can say that the initial value of map $m_R[b][]=\sum_{\forall c>b} S(c,d)*d$
 \end{enumerate}
 
-When relation $S$ is not empty, the initialization of map $m_R[b][]$ can easily be maintained incrementally, because knowing a value of the map for a specific $b$, the other one can be easily deduced. We will have $sum=m_R[b_{1}][]$, where $b_{1}$ is a value that we had to compute the result of the map from scratch. When adding a value $b_{2}$ to the relation $R$, we will have the following cases:
+When relation $S$ is not empty, the initialization of map $m_R[b][]$ can easily be maintained incrementally, because knowing a value of the map for a specific $b$, the other one can be easily deduced. We have $sum=m_R[b_{1}][]$, where $b_{1}$ is a value that we had to compute the result of the map from scratch. When adding a value $b_{2}$ to the relation $R$, we have the following cases:
 
 \begin{enumerate}
 \item $b_{1}>b_{2}$ then $m_R[b_{2}][]=sum + \sum_{\forall\mbox{c where }b_{2}<c\leq b_{1}} S(c,d)*d$
 \item $b_{1}<b_{2}$ then $m_R[b_{2}][]=sum - \sum_{\forall\mbox{c where }b_{1}\leq c<b_{2}} S(c,d)*d$
 \end{enumerate}
 
-Starting from this example we will offer a generalization and a proof that the initial value of maps, when talking about joins done by inequalities, are going to be exactly like in the example.
+Starting from this example we offer a generalization and a proof that the initial value of maps, when talking about joins done by inequalities, are going to be exactly like in the example.
 \section{A method for inequalities}
-In this section we are going to propose an algorithm for computing the initial value of a map for an input value which is not present in the domain. What we have presented in Theorem~\ref{thm:1} is not true any more for queries with inequalities. As an example XXX
+In this section we are going to propose an algorithm for computing the initial value of a map for an input value which is not present in the \dom{}. What we have presented in Theorem~\ref{thm:1} is not true any more for queries with inequalities. %As an example XXX
 
-We will introduce the notion of graph dependency between the variables and afterwards present the algorithm for the value computation. Suppose we are given a map $m[\cdot][\cdot]$ and for it we want to know the value of $m[\vec{x'}][\cdot]$. In other words, we want to know the initial value of a new input value $\vec{x'}$ for the specified map. In any expression which is represented by a map we will have 3 types of variables: input variables(IV), output variables(OV) and intermediate variables(ITO). The intermediate variables are the variables which are not input nor output variables. 
-We will not have any comparisons between input and output variables, except for equality. Thus, in this section we don't consider the equality operator as a comparison operator. 
+We will introduce the notion of graph dependency between the variables and afterwards present the algorithm for the value computation. Suppose we are given a map $m[\cdot][\cdot]$ and for it we want to know the value of $m[\vec{x'}][\cdot]$. In other words, we want to know the initial value of a new input value $\vec{x'}$ for the specified map. In any expression which is represented by a map, we have 3 types of variables: input variables(IV), output variables(OV) and intermediate variables(ITO). The intermediate variables are the variables which are not input nor output variables. 
+We do not have any comparisons between input and output variables, except for equality. Thus, in this section we do not consider the equality operator as a comparison operator. 
 We use $x_{i}, y_{j}$ to show the input and intermediate variables. Now, suppose we have a comparison operator $v_{1}\theta v_{2}$. There are 3 cases for $v_{1},v_{2}$: 
 \begin{itemize}
-\item $v_{1}=x_{i}, v_{2}=x_{j}$, in other words, both of the variables in the comparison are from input variables. We don't need to worry about this case and we can easily ignore it, since we can enforce it by applying it to the input value.
-\item $v_{1}=y_{i}, v_{2}=y_{j}$, in other words, both of variables in the comparison are from intermediate variables. We don't need to consider this case either. 
+\item $v_{1}=x_{i}, v_{2}=x_{j}$, in other words, both of the variables in the comparison are from input variables. We do not need to worry about this case and we can easily ignore it, since we can enforce it by applying it to the input value.
+\item $v_{1}=y_{i}, v_{2}=y_{j}$, in other words, both of variables in the comparison are from intermediate variables. We do not need to consider this case either. 
 \item $v_{1}=x_{i}, v_{2}=y_{j}$. When we have a comparison operator between an input and intermediate variable. This is the only case which we need to consider. 
 \end{itemize}
 
 We can model the comparisons with bipartite graph $G(\mathcal{A}\cup \mathcal{B}, E)$ as follows. $\mathcal{A}$ is the set of all input variables and $\mathcal{B}$ is the set of all intermediate variables. For each comparison which contains an input variable and an intermediate variable, we add an edge between the corresponding vertices. This bipartite graph may contain some cycles.
 
 \subsection{Method}
-Before starting this subsection we have to stipulate that the following arguments and paragraphs are true as long as we don't have any ``$\neq$'' operators.
+Before starting this subsection we have to stipulate that the following arguments and paragraphs are true as long as we do not have any ``$\neq$'' operators.
 In this section we are going to propose an efficient way to evaluate the initial value of a map for a new input value.
 
 We build a Range Tree(or Kd-Tree) data structure (DS) over the intermediate variables. Let $\vec{x'}$ to be the new input value for which we want to initialize the map. Since the comparison operators contain the input variables and the value of input variables are fixed, thus, these values($\vec{x'}$) define a volume in the search space of the intermediate variables, in other words, the search space of the DS.
@@ -251,7 +261,7 @@ We just need to consider all the tuples in this space for answering the query wh
 We can compute the initial value of a map for a new value in $O(\log^{d-1}{n} +k)$ where $n$ is the number of tuples in the whole search space and $k$ is the number of tuples induced by the input variables. $d$ is the number of intermediate variables.
 \end{lemma}
 \begin{proof}
-As be said before, we build a Rang Tree on the intermediate variables. Any region on this data structure can be identify in $O(\log^{d-1}{n}+k)$. 
+As be said before, we build a range tree on the intermediate variables. Any region on this data structure can be identified in $O(\log^{d-1}{n}+k)$. 
 \end{proof}
 We can also use KD-tree data structure whose order is $O(n^{(1-s/d)}+k)$ where $s<d$  is the number of input variables. 
 \subsection{Another Method}
@@ -260,35 +270,35 @@ In this part we propose another method which in some situations is more efficien
 The core idea behind this method is exploiting the fact that the queries are aggregate. Suppose we want to evaluate a query over a set of tuples. We can incrementally introduce the tuples one by one and then verify the query over it. Here we can use a memoization method to reduce the cost of reevaluating the tuples. \par
 
 We build a range tree(or again a Kd-tree) over the input variables. In the other words the DS is defined over the input of the map.
-Suppose we want to know the initial value of $\vec{x'}$. $\vec{x'}$ represents a point in the space of DS. In order to evaluate the map with the new point we can use the fact that each point in this space is evaluated over a volume of space and if we find another point which has already evaluated, we just need to evaluate the difference between the volumes.
+Suppose we want to know the initial value of $\vec{x'}$. The tuple $\vec{x'}$ represents a point in the space of DS. In order to evaluate the map with the new point we can use the fact that each point in this space is evaluated over a volume of space and if we find another point which has already evaluated, we just need to evaluate the difference between the volumes.
 \section{Map initialization}
 
-The maps used for the materialized view of the delta queries, are functions which have two types of arguments: input variables and output variables. Input variables are those variables that have the domain dependent on the relations that are not present in the underlying expression of the map. Whereas, output variables are variables that are bounded to the relations that appear in the underlying expression of the map.
+The maps used for the materialized view of the delta queries, are functions which have two types of arguments: input variables and output variables. Input variables are those variables that have the \dom{} dependent on the relations that are not present in the underlying expression of the map. Whereas, output variables are variables that are bounded to the relations that appear in the underlying expression of the map.
 
 For example:
 $$m[\vec{x}][\vec{y}]::q$$
-is a map defined over the expression q. Expression $q$ is defined by AGCA expressions in \ref{def:agca}. Vector $\vec{x}$ will represent the vector of input variables of map $m$, and these variables will depend on the domains of other relations. Vector $\vec{y}$ will represent the vector of output variables of map $m$, an these variables will depend on the domains of the relations inside expression $q$.
+is a map defined over the expression q. Expression $q$ is defined by AGCA expressions in \ref{def:agca}. Vector $\vec{x}$ will represent the vector of input variables of map $m$, and these variables will depend on the \dom{}s of other relations. Vector $\vec{y}$ will represent the vector of output variables of map $m$, an these variables will depend on the \dom{}s of the relations inside expression $q$.
 
 We will start by giving a short example. If we have the following query and $\Delta$ regarding to $R$, written in DBToaster Calculus \cite{1}:
 $$q[][]=R(a,b)\cdot S(b,c)\cdot T(c,d)\cdot (a<d)$$
 $$\Delta_R(a',b') = S(b',c)\cdot T(c,d)\cdot (a'<d)$$
 then $\Delta_R(a',b')$ will be replaced by a map which will have variable $a$ as an input variables and variable $b$ as an output variable: $m_R[a][b]$. This map will appear in the trigger of $onR$ regarding to an update which is done to relation $R$
 
-When an insertion is made to relation $R$, the map should be initialized with a value. However if the value for variable $b$ is not in the domain $\dom{}_{b}(m[a][b])$, the map will be initialized by 0, regardless of the fact that the map has an input variable.
+When an insertion is made to relation $R$, the map should be initialized with a value. However if the value for variable $b$ is not in the  $\dom{}_{b}(m[a][b])$, the map will be initialized by 0, regardless of the fact that the map has an input variable.
 
 \begin{theorem}
-A map with output variables will always be initialized with 0, when adding a tuple to the underlying expression of the map and the subtuple of the added tuple coresponding to the output variables is not in the domain of the map's output variables. 
+A map with output variables will always be initialized with 0, when adding a tuple to the underlying expression of the map and the subtuple of the added tuple coresponding to the output variables is not in the \dom{} of the map's output variables. 
 \end{theorem}
 $$m[\vec{x}][\vec{y}]::q$$
-$$\vec{z1}=<\vec{x1},\vec{y1}>\mbox{ the tuple that will be added to the map's expression } q$$
-where $\vec{x1}$ corresponds to the input variables of the map $m$ and $\vec{y1}$ corresponds to the output variables of the map $m$
+$$\vec{z_{1}}=<\vec{x_{1}},\vec{y_{1}}>\mbox{ the tuple that will be added to the map's expression } q$$
+where $\vec{x_{1}}$ corresponds to the input variables of the map $m$ and $\vec{y_{1}}$ corresponds to the output variables of the map $m$
 
-$$\vec{y1}\notin\dom{}_{\vec{y}}(m[\vec{x}][\vec{y}])\Rightarrow m[\vec{x1}][\vec{y1}]=0$$
+$$\vec{y_{1}}\notin\dom{}_{\vec{y}}(m[\vec{x}][\vec{y}])\Rightarrow (m[\vec{x_{1}}][\vec{y_{1}}]=0)$$
 
 \begin{proof}
-The proof is based on the theorem \ref{thm:1}, because equijoins will have only output variables. The property from the equijoins will be kept to maps with input and output variables.
+The proof is based on the Theorem~\ref{thm:1}, because equijoins will have only output variables. The property from the equijoins will be kept to maps with input and output variables.
 
-Domains of output variables will always depend on relation that appear in the map's underlying expression $q$ and therefore the domain can be easily computed. Exactly as we said in theorem \ref{thm:1}, if the tuple is not in the domain then the initial value of the map will always be 0.
+Domains of output variables will always depend on relations that appear in the map's underlying expression $q$ and therefore the \dom{} can be easily computed. Exactly as we showed in Theorem~\ref{thm:1}, if the tuple is not in the \dom{} then the initial value of the map is 0.
 \end{proof}
 
 \begin{thebibliography}{9}
