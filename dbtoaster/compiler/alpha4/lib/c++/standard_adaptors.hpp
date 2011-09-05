@@ -10,14 +10,14 @@
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/functional/hash.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/tuple/tuple.hpp>
 
-#include "runtime.hpp"
+#include "streams.hpp"
 
 namespace dbtoaster {
-  namespace runtime {
+  namespace adaptors {
 
     using namespace std;
+    using namespace dbtoaster::streams;
 
     struct csv_adaptor : public stream_adaptor
     {
@@ -25,7 +25,7 @@ namespace dbtoaster {
       stream_event_type type;
       string schema;
       string delimiter;
-//      boost::hash<std::string> field_hash;
+      boost::hash<std::string> field_hash;
 
       csv_adaptor(stream_id i) : id(i) {}
 
@@ -139,7 +139,9 @@ namespace dbtoaster {
         }
       }
     };
+  }
 
+  namespace datasets {
 
     //////////////////////////////
     //
@@ -147,9 +149,7 @@ namespace dbtoaster {
 
     namespace order_books
     {
-      using namespace std;
-      using namespace boost;
-      using namespace dbtoaster::runtime;
+      using namespace dbtoaster::adaptors;
 
       enum order_book_type { tbids, tasks, both };
 
@@ -415,6 +415,88 @@ namespace dbtoaster {
             }
         }
       };
+
+      // Command line initialization of orderbook datasets.
+      struct order_book_streams {
+        // stream name, adaptor params
+        typedef pair<string, vector<pair<string, string> > > stream_params;
+        stream_registry r;
+        map<string, int> stream_identifiers;
+        int sid;
+        string data_file;
+
+        order_book_streams(string file_name, string params,
+                           shared_ptr<stream_multiplexer> m)
+          : r(m), sid(0), data_file(file_name)
+        {
+          init(parse_params(params));
+        }
+
+        vector<stream_params> parse_params(string params) {
+          vector<stream_params> r;
+          shared_ptr<stream_params> current;
+
+          vector<string> tmp; split(tmp, params, is_any_of(","));
+          for (vector<string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
+            string p = *it;
+            vector<string> p_parts; split(p_parts, p, is_any_of(":"));
+            if ( p_parts.size() == 2 ) {
+              if ( p_parts[0] == "book" ) {
+                if ( current ) r.push_back(*current);
+                current = shared_ptr<stream_params>(new stream_params());
+                to_lower(p_parts[1]);
+                current->first = p_parts[1];
+                current->second.push_back(make_pair(p_parts[0], p_parts[1]));
+              } else if ( current ){
+                current->second.push_back(make_pair(p_parts[0], p_parts[1]));
+              } else {
+                cout << "must declare order book before parameter " << p << endl;
+              }
+            } else {
+              cout << "invalid order book adaptor parameter " << p << endl;
+            }
+          }
+
+          return r;
+        }
+
+        void init(vector<stream_params> params) {
+          if ( !data_file.empty() ) {
+            for (int i = 0; i < params.size(); ++i) {
+              stream_params& p = params[i];
+              frame_descriptor fdesc("\n");
+              shared_ptr<order_book_adaptor> a = shared_ptr<order_book_adaptor>(
+                new order_book_adaptor(sid, p.second.size(), &(p.second[0])));
+              if ( a ) {
+                r.register_adaptor(p.first, a);
+                shared_ptr<source> s = r.initialize_file_source(p.first, data_file, fdesc);
+                if ( s ) {
+                  stream_identifiers[p.first] = sid;
+                  ++sid;
+                } else {
+                  cout << "failed to initialize source for " << p.first << endl;
+                }
+              } else {
+                cout << "failed to create adaptor for " << p.first << endl;
+              }
+            }
+          } else {
+            cout << "No data file specified for order book streams" << endl;
+          }
+        }
+
+        map<string, int>& get_stream_identifiers() { return stream_identifiers; }
+
+        int get_stream_id(string name) {
+          int r = -1;
+          if ( stream_identifiers.find(name) != stream_identifiers.end() )
+            r = stream_identifiers[name];
+          return r;
+        }
+
+        int get_bids_stream_id() { return get_stream_id("bids"); }
+        int get_asks_stream_id() { return get_stream_id("asks"); }
+      };
     }
 
     //////////////////////////////
@@ -423,6 +505,8 @@ namespace dbtoaster {
 
     namespace tpch
     {
+      using namespace dbtoaster::adaptors;
+
       struct tpch_adaptor : public csv_adaptor {
         int num_fields;
 

@@ -1054,7 +1054,7 @@ end (* Typing *)
            (if r.[(String.length r)-1] = '.' then r^"0" else r)^
            (if neg then ")" else "")
          | CString s ->
-           "static_cast<int>(field_hash(\""^(String.escaped s)^"\"))"
+           "static_cast<int>(string_hash(\""^(String.escaped s)^"\"))"
        end)
  
     | Var (_,(v,_)) -> inl(v)
@@ -2080,7 +2080,10 @@ end (* Typing *)
         "using namespace ::boost::lambda;";
         "using namespace ::boost::multi_index;";
         "using namespace ::dbtoaster;";
+        "using namespace ::dbtoaster::adaptors;";
+        "using namespace ::dbtoaster::datasets;";
         "using namespace ::dbtoaster::runtime;";
+        "using namespace ::dbtoaster::streams;";
         "using namespace ::dbtoaster::util;"]@
        (if not opts.profile then [] else
        ["using namespace ::dbtoaster::statistics;"])) 

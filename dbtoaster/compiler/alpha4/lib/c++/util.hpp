@@ -1,6 +1,9 @@
 #ifndef DBTOASTER_UTIL_H
 #define DBTOASTER_UTIL_H
 
+#include <cstddef>
+#include <boost/functional/hash.hpp>
+
 namespace dbtoaster {
   namespace util {
 
