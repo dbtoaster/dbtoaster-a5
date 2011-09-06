@@ -16,7 +16,7 @@
 \newtheorem{lemma}{Lemma}
 \newtheorem{definition}{Definition}
 \usetikzlibrary{fit}
-
+\renewcommand{\algorithmiccomment}[1]{// #1}
 \begin{document}
 
 \title{Draft of Hypertree Decomposition}
@@ -48,7 +48,8 @@ The dual graph of query $Q$ is a graph $G(V,E)$. where $V=relations(Q)$ and for 
 The definition of dual graphs~\eqref{def:dualgraph} came from the dual of hypergraph. 
 \subsection{Generalization for inequalities and nested queries}
 \label{sec:generalization}
-In the previous section we have presented the notions of graph and hyper graph models for queries which only contain equal joins. In those models we can not have any inequalities or any nested queries. But in this section we want to generalize those models for these two case. We consider each inequalities as an imaginary relation between two variables. Imaginary here means that we don't need to materialize it. Thus, in hyper graph representation each inequality $a\theta b$ is a hyper edge on $a$ and $b$. In dual graph modelling it is a vertex which is connected to other vertices which have the same variables as the inequality's operator.\par
+In the previous section we have presented the notions of graph and hyper graph models for queries which only contain equal joins. In those models we can not have any inequalities or any nested queries. But in this section we want to generalize those models for these two case. We consider each inequalities as an imaginary relation between two variables. Imaginary here means that we don't need to materialize it. Thus, in hyper graph representation each inequality $a\theta b$ is a hyper edge on $a$ and $b$. In dual graph modelling it is a vertex which is connected to other vertices which have the same variables as the inequality's operator.\\\par
+Join trees 
 For the nested queries, we can also consider them as a imaginary relation. A sub query is an assignment. Lets suppose that we have an sub query $t\gets q$ where $q$ represents the sub query body and $t$ is the name of the variable which is given to it for the representation. This is the same as the alpha5 notation in DBToaster\cite{1}. The imaginary relation for the nested query contains $t$ and all the participating variables in the body of $q$. In this way we preserve the meanings of these variables, they are related to each other like an ordinary relation. Thus, in hyper graph model we have an hyper edge for the sub query and in the dual model we have a vertex for it. We use $R\in t$ to denote weather or not $R$ has appeared on the right hand side of assignment operator for $t$. \\\par
 When talking about inequalities, the hyper edge between the variables that compose the inequality is a simple edge like in a normal graph. When having $a\theta b$ we can replace it with $F(\theta,a,b)$, where $F$ is a imaginary relation. 
 
@@ -160,46 +161,46 @@ which is polynomial for a fixed $k$.
 \end{proof}
 
 There is another theorem like Theorem~\ref{thm:1} but for the structure of all possible trees.
-\begin{theorem}
-\label{thm:2}
-The number of different structures of all these trees are polynomial for a constant hypertree width.
-\end{theorem}
-\begin{proof}
-If $\Delta_{\pm R}$ applies to a join tree it won't change the nodes that do not contain relation $R$. Thus, without loss of generality we can assume that $R$ has appeared in all nodes  for the worst case(i.e. Figure~\ref{fig2}). \par
-
-When we apply $\Delta_{\pm R}$ to a tree, each node splits into 3 different nodes($\Delta(R\Join S)=\Delta(R)\Join S+R\Join\Delta(S)+\Delta(R)\Join\Delta(S)$) \cite{2}. In the worst case, for each node at most 3 new nodes is created, thus, the number of nodes remains linear in term of the number of original nodes in the hypertree. \par
-We can say the same thing for the cost of evaluation of the hypertrees. 
-If we consider each $+,\Join$ as one operation, evaluation of $\Delta(R\Join S)$ needs at most 5 operations. Thus, the cost of evaluation of all $\Delta$ trees is $O(n)\times(\text{Cost of join operator})$.
-\begin{figure}[htbp]
-\begin{center}
-\begin{tikzpicture}%[level/.style={sibling distance=40mm,level distance=15mm}]
-[
-    %
-    level 1/.style={rectangle, draw,scale=1.0, fill=red,
-    level distance=30pt, sibling distance=130pt},
-    level 2/.style={rectangle, draw, scale=1.0,
-    level distance=50pt, sibling distance=70pt}]
-    \tikzstyle{every node}=[rectangle,draw,fill=red!20]
-    \node {$\cdots R\bowtie \cdots$}
-        child { 
-            node {$\cdots R\bowtie \cdots$}
-        }
-        child { 
-        		node {$\cdots R\bowtie \cdots$}
-		child{
-       		node {$\cdots R\bowtie \cdots$}
-		}
-		child{
-       		node {$\cdots R\bowtie \cdots$}
-		}		
-	}
-    ;
-\end{tikzpicture}
-\end{center}
-\caption{A worst case tree for Theorem~\ref{thm:2}}
-\label{fig2}
-\end{figure}
-\end{proof}
+%\begin{theorem}
+%\label{thm:2}
+%The number of different structures of all these trees are polynomial for a constant hypertree width.
+%\end{theorem}
+%\begin{proof}
+%If $\Delta_{\pm R}$ applies to a join tree it won't change the nodes that do not contain relation $R$. Thus, without loss of generality we can assume that $R$ has appeared in all nodes  for the worst case(i.e. Figure~\ref{fig2}). \par
+%
+%When we apply $\Delta_{\pm R}$ to a tree, each node splits into 3 different nodes($\Delta(R\Join S)=\Delta(R)\Join S+R\Join\Delta(S)+\Delta(R)\Join\Delta(S)$) \cite{2}. In the worst case, for each node at most 3 new nodes is created, thus, the number of nodes remains linear in term of the number of original nodes in the hypertree. \par
+%We can say the same thing for the cost of evaluation of the hypertrees. 
+%If we consider each $+,\Join$ as one operation, evaluation of $\Delta(R\Join S)$ needs at most 5 operations. Thus, the cost of evaluation of all $\Delta$ trees is $O(n)\times(\text{Cost of join operator})$.
+%\begin{figure}[htbp]
+%\begin{center}
+%\begin{tikzpicture}%[level/.style={sibling distance=40mm,level distance=15mm}]
+%[
+%    %
+%    level 1/.style={rectangle, draw,scale=1.0, fill=red,
+%    level distance=30pt, sibling distance=130pt},
+%    level 2/.style={rectangle, draw, scale=1.0,
+%    level distance=50pt, sibling distance=70pt}]
+%    \tikzstyle{every node}=[rectangle,draw,fill=red!20]
+%    \node {$\cdots R\bowtie \cdots$}
+%        child { 
+%            node {$\cdots R\bowtie \cdots$}
+%        }
+%        child { 
+%        		node {$\cdots R\bowtie \cdots$}
+%		child{
+%       		node {$\cdots R\bowtie \cdots$}
+%		}
+%		child{
+%       		node {$\cdots R\bowtie \cdots$}
+%		}		
+%	}
+%    ;
+%\end{tikzpicture}
+%\end{center}
+%\caption{A worst case tree for Theorem~\ref{thm:2}}
+%\label{fig2}
+%\end{figure}
+%\end{proof}
 \subsection{Hypertree Decomposition}
 Gottlob et al. have shown that for each Hypertree there exists a join tree with the same tree structure(Lemma 4.6)\cite{1}. Thus, we have these results for join trees too. The advantage of hyperrtrees over the join trees is that the hypertree width is always less than or equal to the tree width. Also, acyclic queries may have unbounded tree width\cite{1}.\\\par
 
@@ -209,7 +210,9 @@ If we want to find a hypertree decomposition using the dual graph, for each node
 For hypergraph model we can do the same process, but here we select a set of vertices which are the variables and contract them together.
 \section{Algorithms}
 In this section we present an algorithm for computing  $\Delta$ of a hypertree of a query with respect to a relation.
-Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{thm:2} for the worst case we can assume that every node contains relation $R$ (i.e. \ref{fig3}) or has a variable which represents a subquery that contains $R$.
+Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. 
+%As we had in Theorem~\ref{thm:2} for 
+The worst case is when every node contains relation $R$ (i.e. \ref{fig3}) or has a variable which represents a subquery that contains $R$.
 \begin{figure}[htbp]
 \begin{center}
 \usetikzlibrary{fit}
@@ -262,11 +265,11 @@ Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{t
 \textbf{Input:} node $v$ as the root of $HT_{Q}$ and relation $R$ as the $\Delta$ variable.\\
 \textbf{Output:} Calculus expression for $\Delta_{R}$ for node $v$
 \begin{algorithmic}[1]
-\STATE $J\gets $ all relations and variables in $v$
+\STATE $J\gets $ delta of expresion containing in $v$
 \FORALL{Child $i$ of node $v$}
 \IF{ $T_{i}$ has any node labeled by $R$ or a $t$ for which $R\in t$}
-\STATE Computes the $\Delta_{R}$ of $i$ recursively and store it in $\Delta[i]$ if it is not already computed.
-\STATE add $i$ to $J$
+\STATE $\delta[i]\gets\Delta_{\pm R}(i)$% Computes the $\Delta_{R}$ of $i$ recursively and store it in $\Delta[i]$ if it is not already computed.
+\STATE $J\gets J\cup\{i\}$%add $i$ to $J$
 \ENDIF
 \ENDFOR
 %\STATE $Exp\gets\emptyset$
